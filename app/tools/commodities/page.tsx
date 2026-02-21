@@ -36,6 +36,60 @@ interface CommoditiesResponse {
   lastUpdate: string;
 }
 
+interface EconomicIndicatorsResponse {
+  rates?: {
+    treasury10y?: { value: number | null; history?: { date: string; value: number }[] };
+  };
+  inflation?: {
+    inflationRate?: { value: number | null; history?: { date: string; value: number }[] };
+  };
+  growth?: {
+    realGDP?: { value: number | null; history?: { date: string; value: number }[] };
+  };
+  regime?: {
+    riskLevel?: 'low' | 'medium' | 'high';
+  };
+}
+
+type CategoryKey = 'Energy' | 'Metals' | 'Agriculture';
+type PermissionState = 'YES' | 'CONDITIONAL' | 'NO';
+type ImpulseType = 'INFLATION' | 'GROWTH' | 'DEFLATION' | 'MIXED';
+type TrendDirection = 'UP' | 'FLAT' | 'DOWN';
+type DriverState = 'TAILWIND' | 'NEUTRAL' | 'HEADWIND';
+type RateState = 'SUPPORTIVE' | 'NEUTRAL' | 'RESTRICTIVE';
+type VolRegime = 'COMPRESSION' | 'EXPANSION';
+
+interface DerivedState {
+  impulseType: ImpulseType;
+  rotationLeader: CategoryKey;
+  permission: PermissionState;
+  permissionReason: string;
+  usdImpact: DriverState;
+  realRatesImpact: RateState;
+  volRegime: VolRegime;
+  breadthScore: number;
+  longsAllowed: boolean;
+  shortsAllowed: boolean;
+  breakoutsAllowed: boolean;
+  meanReversionAllowed: boolean;
+  score: number;
+  signalQuality: 'HIGH' | 'MEDIUM' | 'LOW';
+  impulseStability: 'STABLE' | 'CHOPPY';
+  usdTrend: TrendDirection;
+  realRatesTrend: TrendDirection;
+  growthTrend: TrendDirection;
+  growthSupport: 'SUPPORTIVE' | 'NEUTRAL' | 'FADING';
+  macroRiskState: 'RISK_ON' | 'NEUTRAL' | 'RISK_OFF';
+  topGainer: CommodityData | null;
+  topLoser: CommodityData | null;
+  relative: {
+    energyVsMetals: number;
+    metalsVsAg: number;
+    copperVsGold: number;
+  };
+  categoryAvg: Record<CategoryKey, number>;
+}
+
 // Category icons and colors
 const CATEGORY_CONFIG = {
   Energy: { icon: '⛽', color: '#f59e0b', bgColor: 'rgba(245, 158, 11, 0.1)' },
@@ -53,10 +107,71 @@ const COMMODITY_ICONS: { [key: string]: string } = {
   WHEAT: '🌾',
 };
 
+const permissionBadge = {
+  YES: 'border-emerald-400/40 bg-emerald-500/10 text-emerald-300',
+  CONDITIONAL: 'border-amber-400/40 bg-amber-500/10 text-amber-300',
+  NO: 'border-rose-400/40 bg-rose-500/10 text-rose-300',
+};
+
+const chipTone = {
+  good: 'border-emerald-400/40 bg-emerald-500/10 text-emerald-300',
+  warn: 'border-amber-400/40 bg-amber-500/10 text-amber-300',
+  bad: 'border-rose-400/40 bg-rose-500/10 text-rose-300',
+  neutral: 'border-white/15 bg-black/20 text-white/75',
+};
+
+const trendIcon: Record<TrendDirection, string> = {
+  UP: '↑',
+  FLAT: '→',
+  DOWN: '↓',
+};
+
+function trendFromHistory(history?: { date: string; value: number }[], threshold = 0.08): TrendDirection {
+  if (!history || history.length < 2) return 'FLAT';
+  const latest = history[0]?.value;
+  const previous = history[1]?.value;
+  if (!Number.isFinite(latest) || !Number.isFinite(previous)) return 'FLAT';
+  const delta = latest - previous;
+  if (Math.abs(delta) < threshold) return 'FLAT';
+  return delta > 0 ? 'UP' : 'DOWN';
+}
+
+function clampScore(value: number): number {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function sparklineBars(history: { date: string; value: number }[], isPositive: boolean) {
+  if (!history || history.length < 5) return null;
+  const segment = history.slice(0, 7).reverse();
+  const values = segment.map((point) => point.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+
+  return (
+    <div className="mt-3">
+      <div className="mb-1 text-[10px] text-white/45">Last 7 days</div>
+      <div className="flex h-8 items-end gap-1">
+        {segment.map((point, index) => {
+          const height = ((point.value - min) / range) * 100;
+          return (
+            <div
+              key={`${point.date}-${index}`}
+              className={`flex-1 rounded-sm ${isPositive ? 'bg-emerald-400/70' : 'bg-rose-400/70'}`}
+              style={{ height: `${Math.max(12, height)}%` }}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function CommoditiesPage() {
   const { tier } = useUserTier();
   const { setPageData } = useAIPageContext();
   const [data, setData] = useState<CommoditiesResponse | null>(null);
+  const [macroInputs, setMacroInputs] = useState<EconomicIndicatorsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'Energy' | 'Metals' | 'Agriculture'>('all');
@@ -65,14 +180,22 @@ export default function CommoditiesPage() {
   const fetchCommodities = useCallback(async () => {
     try {
       setError(null);
-      const res = await fetch('/api/commodities');
-      const json = await res.json();
+      const [commoditiesRes, indicatorsRes] = await Promise.all([
+        fetch('/api/commodities'),
+        fetch('/api/economic-indicators?all=true'),
+      ]);
+      const json = await commoditiesRes.json();
+      let indicatorsJson: EconomicIndicatorsResponse | null = null;
+      if (indicatorsRes.ok) {
+        indicatorsJson = await indicatorsRes.json();
+      }
       
-      if (!res.ok || !json.success) {
+      if (!commoditiesRes.ok || !json.success) {
         throw new Error(json.error || 'Failed to fetch commodities');
       }
       
       setData(json);
+      setMacroInputs(indicatorsJson);
     } catch (err: any) {
       console.error('Failed to fetch commodities:', err);
       setError(err.message || 'Failed to load commodity data');
@@ -89,6 +212,176 @@ export default function CommoditiesPage() {
     const num = safeNumber(value);
     return num === null ? fallback : num.toFixed(digits);
   };
+
+  const signed = (value: number, digits = 2) => `${value >= 0 ? '+' : ''}${value.toFixed(digits)}%`;
+
+  const derivedState: DerivedState | null = (() => {
+    if (!data?.commodities?.length) return null;
+
+    const byCategory = {
+      Energy: data.byCategory?.Energy || [],
+      Metals: data.byCategory?.Metals || [],
+      Agriculture: data.byCategory?.Agriculture || [],
+    } as const;
+
+    const categoryAvg = (Object.keys(byCategory) as CategoryKey[]).reduce((acc, category) => {
+      const bucket = byCategory[category];
+      if (!bucket.length) {
+        acc[category] = 0;
+      } else {
+        acc[category] = bucket.reduce((sum, item) => sum + (safeNumber(item.changePercent) ?? 0), 0) / bucket.length;
+      }
+      return acc;
+    }, {} as Record<CategoryKey, number>);
+
+    const sortedCats = (Object.keys(categoryAvg) as CategoryKey[]).sort(
+      (a, b) => categoryAvg[b] - categoryAvg[a]
+    );
+    const rotationLeader = sortedCats[0];
+    const secondCategory = sortedCats[1];
+    const rotationClarityRaw = Math.abs(categoryAvg[rotationLeader] - categoryAvg[secondCategory]);
+    const rotationClarity = clampScore(rotationClarityRaw * 20);
+
+    const commodities = data.commodities;
+    const gainers = commodities.filter((item) => (safeNumber(item.changePercent) ?? 0) > 0).length;
+    const breadthScore = clampScore((gainers / commodities.length) * 100);
+    const avgAbsMove =
+      commodities.reduce((sum, item) => sum + Math.abs(safeNumber(item.changePercent) ?? 0), 0) / commodities.length;
+    const volRegime: VolRegime = avgAbsMove >= 1.4 ? 'EXPANSION' : 'COMPRESSION';
+
+    const getBySymbol = (symbol: string) => commodities.find((item) => item.symbol === symbol);
+    const copperChange = safeNumber(getBySymbol('COPPER')?.changePercent) ?? 0;
+    const goldChange = safeNumber(getBySymbol('GOLD')?.changePercent) ?? 0;
+    const energyLead = categoryAvg.Energy > 0.2;
+    const metalsLead = categoryAvg.Metals > 0.2;
+    const agLead = categoryAvg.Agriculture > 0.2;
+
+    const usdProxyRaw = -((categoryAvg.Energy + categoryAvg.Metals + categoryAvg.Agriculture) / 3);
+    const usdTrend: TrendDirection = usdProxyRaw > 0.2 ? 'UP' : usdProxyRaw < -0.2 ? 'DOWN' : 'FLAT';
+    const usdImpact: DriverState = usdTrend === 'UP' ? 'HEADWIND' : usdTrend === 'DOWN' ? 'TAILWIND' : 'NEUTRAL';
+
+    const nominalTrend = trendFromHistory(macroInputs?.rates?.treasury10y?.history, 0.04);
+    const inflationTrend = trendFromHistory(macroInputs?.inflation?.inflationRate?.history, 0.04);
+    const realRatesTrend: TrendDirection =
+      nominalTrend === inflationTrend
+        ? 'FLAT'
+        : nominalTrend === 'UP' && inflationTrend !== 'UP'
+          ? 'UP'
+          : nominalTrend === 'DOWN' && inflationTrend !== 'DOWN'
+            ? 'DOWN'
+            : 'FLAT';
+
+    const realRatesImpact: RateState =
+      realRatesTrend === 'UP' ? 'RESTRICTIVE' : realRatesTrend === 'DOWN' ? 'SUPPORTIVE' : 'NEUTRAL';
+
+    const growthProxyRaw = copperChange + categoryAvg.Energy - goldChange;
+    const growthTrend: TrendDirection = growthProxyRaw > 0.8 ? 'UP' : growthProxyRaw < -0.8 ? 'DOWN' : 'FLAT';
+    const growthSupport = growthTrend === 'UP' ? 'SUPPORTIVE' : growthTrend === 'DOWN' ? 'FADING' : 'NEUTRAL';
+
+    let impulseType: ImpulseType = 'MIXED';
+    if (energyLead && copperChange > 0 && usdTrend !== 'UP' && realRatesTrend !== 'UP') {
+      impulseType = 'GROWTH';
+    } else if (goldChange > 0.25 && usdTrend === 'DOWN' && realRatesTrend === 'DOWN') {
+      impulseType = 'INFLATION';
+    } else if (!energyLead && !metalsLead && !agLead && usdTrend === 'UP' && realRatesTrend === 'UP') {
+      impulseType = 'DEFLATION';
+    }
+
+    const usdAlignment =
+      impulseType === 'DEFLATION'
+        ? usdTrend === 'UP'
+          ? 95
+          : usdTrend === 'FLAT'
+            ? 65
+            : 35
+        : usdTrend === 'DOWN'
+          ? 90
+          : usdTrend === 'FLAT'
+            ? 65
+            : 35;
+
+    const ratesAlignment =
+      impulseType === 'INFLATION'
+        ? realRatesTrend === 'DOWN'
+          ? 90
+          : realRatesTrend === 'FLAT'
+            ? 65
+            : 30
+        : impulseType === 'GROWTH'
+          ? realRatesTrend === 'FLAT'
+            ? 85
+            : realRatesTrend === 'DOWN'
+              ? 75
+              : 40
+          : realRatesTrend === 'UP'
+            ? 85
+            : 55;
+
+    const volSuitability =
+      impulseType === 'MIXED' ? (volRegime === 'EXPANSION' ? 70 : 55) : volRegime === 'EXPANSION' ? 85 : 70;
+
+    const score = clampScore(
+      breadthScore * 0.25 +
+        rotationClarity * 0.2 +
+        usdAlignment * 0.2 +
+        ratesAlignment * 0.2 +
+        volSuitability * 0.15
+    );
+
+    const permission: PermissionState = score >= 70 ? 'YES' : score >= 45 ? 'CONDITIONAL' : 'NO';
+    const longsAllowed = permission !== 'NO' && impulseType !== 'DEFLATION';
+    const shortsAllowed = permission === 'YES' || impulseType === 'DEFLATION';
+    const breakoutsAllowed = permission === 'YES' && volRegime === 'EXPANSION';
+    const meanReversionAllowed = permission !== 'NO' && (volRegime === 'EXPANSION' || impulseType === 'MIXED');
+
+    const signalQuality: 'HIGH' | 'MEDIUM' | 'LOW' = score >= 72 ? 'HIGH' : score >= 50 ? 'MEDIUM' : 'LOW';
+    const impulseStability: 'STABLE' | 'CHOPPY' = rotationClarity >= 40 && breadthScore >= 55 ? 'STABLE' : 'CHOPPY';
+
+    const permissionReason =
+      permission === 'YES'
+        ? `${impulseType === 'MIXED' ? 'Mixed but tradable' : impulseType} impulse confirmed with broad participation.`
+        : permission === 'CONDITIONAL'
+          ? `${impulseType} setup is incomplete; size down and avoid low-quality breakouts.`
+          : `Low participation and poor alignment with USD/rates backdrop; treat as noise.`;
+
+    const macroRiskState: 'RISK_ON' | 'NEUTRAL' | 'RISK_OFF' =
+      macroInputs?.regime?.riskLevel === 'low'
+        ? 'RISK_ON'
+        : macroInputs?.regime?.riskLevel === 'high'
+          ? 'RISK_OFF'
+          : 'NEUTRAL';
+
+    return {
+      impulseType,
+      rotationLeader,
+      permission,
+      permissionReason,
+      usdImpact,
+      realRatesImpact,
+      volRegime,
+      breadthScore,
+      longsAllowed,
+      shortsAllowed,
+      breakoutsAllowed,
+      meanReversionAllowed,
+      score,
+      signalQuality,
+      impulseStability,
+      usdTrend,
+      realRatesTrend,
+      growthTrend,
+      growthSupport,
+      macroRiskState,
+      topGainer: data.summary?.topGainer || null,
+      topLoser: data.summary?.topLoser || null,
+      relative: {
+        energyVsMetals: categoryAvg.Energy - categoryAvg.Metals,
+        metalsVsAg: categoryAvg.Metals - categoryAvg.Agriculture,
+        copperVsGold: copperChange - goldChange,
+      },
+      categoryAvg,
+    };
+  })();
 
   useEffect(() => {
     fetchCommodities();
@@ -111,7 +404,8 @@ export default function CommoditiesPage() {
       const summaryText = data.summary ? 
         `Commodities: ${data.summary.gainers} gainers, ${data.summary.losers} losers. ` +
         `Top Gainer: ${topGainerName} (+${topGainerPct}%). ` +
-        `Top Loser: ${topLoserName} (${topLoserPct}%)` : 
+        `Top Loser: ${topLoserName} (${topLoserPct}%). ` +
+        `Impulse: ${derivedState?.impulseType || 'MIXED'} | Permission: ${derivedState?.permission || 'CONDITIONAL'}` : 
         'Loading commodity data...';
       
       setPageData({
@@ -122,11 +416,12 @@ export default function CommoditiesPage() {
           summary: data.summary,
           selectedCategory,
           lastUpdate: data.lastUpdate,
+          commodityGate: derivedState,
         },
         summary: summaryText,
       });
     }
-  }, [data, selectedCategory, setPageData]);
+  }, [data, selectedCategory, setPageData, derivedState]);
 
   const filteredCommodities = data?.commodities.filter(c => 
     selectedCategory === 'all' || c.category === selectedCategory
@@ -166,17 +461,17 @@ export default function CommoditiesPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: '2rem', color: '#fff', minHeight: '100vh', background: '#0f172a' }}>
+      <div className="min-h-screen bg-[#0f172a] p-6 text-white">
         <ToolsPageHeader 
           badge="Commodities"
           title="Commodities Dashboard" 
-          subtitle="Find real-time commodity prices with live energy, metals, and agriculture context"
+          subtitle="Real-time commodity impulse, rotation, and inflation/growth confirmation"
           icon="🛢️"
         />
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem', animation: 'pulse 2s infinite' }}>⛽🔩🌾</div>
-            <div style={{ color: '#94a3b8' }}>Loading commodity data...</div>
+        <div className="flex h-[50vh] items-center justify-center">
+          <div className="text-center">
+            <div className="mb-4 text-5xl animate-pulse">⛽🔩🌾</div>
+            <div className="text-white/60">Loading commodity data...</div>
           </div>
         </div>
       </div>
@@ -185,35 +480,19 @@ export default function CommoditiesPage() {
 
   if (error) {
     return (
-      <div style={{ padding: '2rem', color: '#fff', minHeight: '100vh', background: '#0f172a' }}>
+      <div className="min-h-screen bg-[#0f172a] p-6 text-white">
         <ToolsPageHeader 
           badge="Commodities"
           title="Commodities Dashboard" 
-          subtitle="Find real-time commodity prices with live energy, metals, and agriculture context"
+          subtitle="Real-time commodity impulse, rotation, and inflation/growth confirmation"
           icon="🛢️"
         />
-        <div style={{ 
-          background: 'rgba(239, 68, 68, 0.1)', 
-          border: '1px solid rgba(239, 68, 68, 0.3)',
-          borderRadius: '12px',
-          padding: '2rem',
-          textAlign: 'center',
-          maxWidth: '600px',
-          margin: '2rem auto'
-        }}>
-          <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⚠️</div>
-          <div style={{ color: '#ef4444', marginBottom: '1rem' }}>{error}</div>
+        <div className="mx-auto mt-8 max-w-xl rounded-xl border border-rose-400/30 bg-rose-500/10 p-8 text-center">
+          <div className="mb-3 text-3xl">⚠️</div>
+          <div className="mb-4 text-rose-300">{error}</div>
           <button
             onClick={fetchCommodities}
-            style={{
-              background: 'var(--msp-accent)',
-              color: '#fff',
-              border: 'none',
-              padding: '0.75rem 1.5rem',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '1rem',
-            }}
+            className="rounded-md border border-emerald-400/40 bg-emerald-500/20 px-4 py-2 text-sm font-semibold text-emerald-200"
           >
             Retry
           </button>
@@ -223,296 +502,336 @@ export default function CommoditiesPage() {
   }
 
   return (
-    <div style={{ padding: '2rem', color: '#fff', minHeight: '100vh', background: '#0f172a' }}>
+    <div className="min-h-screen bg-[#0f172a] text-white">
       <ToolsPageHeader 
         badge="Commodities"
         title="Commodities Dashboard" 
-        subtitle="Find real-time commodity prices across energy, metals, and agriculture"
+        subtitle="Real-time commodity impulse, rotation, and inflation/growth confirmation"
         icon="🛢️"
-      />
-
-      {/* Summary Cards */}
-      {data?.summary && (
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-          gap: '1rem', 
-          marginBottom: '2rem' 
-        }}>
-          {/* Top Gainer */}
-          {data.summary.topGainer && (
-            <div style={{
-              background: 'rgba(34, 197, 94, 0.1)',
-              border: '1px solid rgba(34, 197, 94, 0.3)',
-              borderRadius: '12px',
-              padding: '1.25rem',
-            }}>
-              <div style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '0.5rem' }}>Top Gainer</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ fontSize: '1.5rem' }}>{COMMODITY_ICONS[data.summary.topGainer.symbol] || '📊'}</span>
-                <div>
-                  <div style={{ fontWeight: 600, color: '#22c55e' }}>{data.summary.topGainer.name}</div>
-                  <div style={{ color: '#22c55e', fontSize: '0.9rem' }}>
-                    +{safeFixed(data.summary.topGainer.changePercent, 2, '0.00')}%
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Top Loser */}
-          {data.summary.topLoser && (
-            <div style={{
-              background: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              borderRadius: '12px',
-              padding: '1.25rem',
-            }}>
-              <div style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '0.5rem' }}>Top Loser</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ fontSize: '1.5rem' }}>{COMMODITY_ICONS[data.summary.topLoser.symbol] || '📊'}</span>
-                <div>
-                  <div style={{ fontWeight: 600, color: '#ef4444' }}>{data.summary.topLoser.name}</div>
-                  <div style={{ color: '#ef4444', fontSize: '0.9rem' }}>
-                    {safeFixed(data.summary.topLoser.changePercent, 2, '0.00')}%
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Gainers vs Losers */}
-          <div style={{
-            background: 'rgba(59, 130, 246, 0.1)',
-            border: '1px solid rgba(59, 130, 246, 0.3)',
-            borderRadius: '12px',
-            padding: '1.25rem',
-          }}>
-            <div style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '0.5rem' }}>Market Breadth</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div>
-                <span style={{ color: '#22c55e', fontWeight: 600, fontSize: '1.25rem' }}>{data.summary.gainers}</span>
-                <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}> ↑</span>
-              </div>
-              <div>
-                <span style={{ color: '#ef4444', fontWeight: 600, fontSize: '1.25rem' }}>{data.summary.losers}</span>
-                <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}> ↓</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Average Change */}
-          <div style={{
-            background: 'rgba(148, 163, 184, 0.1)',
-            border: '1px solid rgba(148, 163, 184, 0.3)',
-            borderRadius: '12px',
-            padding: '1.25rem',
-          }}>
-            <div style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '0.5rem' }}>Avg Change</div>
-            <div style={{ 
-              fontWeight: 600, 
-              fontSize: '1.25rem',
-              color: (safeNumber(data.summary.avgChange) ?? 0) >= 0 ? '#22c55e' : '#ef4444'
-            }}>
-              {(safeNumber(data.summary.avgChange) ?? 0) >= 0 ? '+' : ''}{safeFixed(data.summary.avgChange, 2, '0.00')}%
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Category Filters */}
-      <div style={{ 
-        display: 'flex', 
-        gap: '0.75rem', 
-        marginBottom: '1.5rem',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-      }}>
-        <button
-          onClick={() => setSelectedCategory('all')}
-          style={{
-            background: selectedCategory === 'all' ? 'var(--msp-accent)' : 'var(--msp-panel)',
-            border: `1px solid ${selectedCategory === 'all' ? 'var(--msp-accent)' : 'var(--msp-border)'}`,
-            color: '#fff',
-            padding: '0.5rem 1rem',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '0.9rem',
-          }}
-        >
-          📊 All ({data?.commodities.length || 0})
-        </button>
-        {(['Energy', 'Metals', 'Agriculture'] as const).map(cat => (
-          <button
-            key={cat}
-            onClick={() => setSelectedCategory(cat)}
-            style={{
-              background: selectedCategory === cat ? CATEGORY_CONFIG[cat].color : CATEGORY_CONFIG[cat].bgColor,
-              border: `1px solid ${CATEGORY_CONFIG[cat].color}`,
-              color: '#fff',
-              padding: '0.5rem 1rem',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '0.9rem',
-            }}
-          >
-            {CATEGORY_CONFIG[cat].icon} {cat} ({data?.byCategory[cat].length || 0})
-          </button>
-        ))}
-
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <label style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
-            <input
-              type="checkbox"
-              checked={autoRefresh}
-              onChange={(e) => setAutoRefresh(e.target.checked)}
-              style={{ marginRight: '0.5rem' }}
-            />
-            Auto-refresh
-          </label>
-          <button
-            onClick={fetchCommodities}
-            style={{
-              background: 'var(--msp-panel)',
-              border: '1px solid var(--msp-border)',
-              color: 'var(--msp-accent)',
-              padding: '0.5rem 1rem',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-            }}
-          >
-            ⟳ Refresh
-          </button>
-        </div>
-      </div>
-
-      {/* Commodities Grid */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', 
-        gap: '1rem' 
-      }}>
-        {filteredCommodities.map((commodity) => {
-          const safeCommodityChangePercent = safeNumber(commodity.changePercent) ?? 0;
-          const isPositive = safeCommodityChangePercent >= 0;
-          const catConfig = CATEGORY_CONFIG[commodity.category as keyof typeof CATEGORY_CONFIG];
-          
-          return (
-            <div
-              key={commodity.symbol}
-              style={{
-                background: 'rgba(30, 41, 59, 0.5)',
-                border: '1px solid rgba(148, 163, 184, 0.2)',
-                borderRadius: '12px',
-                padding: '1.25rem',
-                transition: 'all 0.2s',
-              }}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/60">US/Eastern aligned</span>
+            <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/60">
+              {data?.lastUpdate ? `Updated ${new Date(data.lastUpdate).toLocaleTimeString()}` : 'Awaiting update'}
+            </span>
+            <label className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/70">
+              <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />
+              Auto refresh (15m)
+            </label>
+            <button
+              onClick={fetchCommodities}
+              className="rounded-md border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold text-emerald-200"
             >
-              {/* Header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <span style={{ fontSize: '2rem' }}>{COMMODITY_ICONS[commodity.symbol] || '📊'}</span>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>{commodity.name}</div>
-                    <div style={{ 
-                      fontSize: '0.75rem', 
-                      color: catConfig.color,
-                      background: catConfig.bgColor,
-                      padding: '0.15rem 0.5rem',
-                      borderRadius: '4px',
-                      display: 'inline-block',
-                    }}>
-                      {catConfig.icon} {commodity.category}
-                    </div>
+              Refresh
+            </button>
+          </div>
+        }
+      />
+      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+        {derivedState && (
+          <>
+            <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <article className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <h2 className="text-sm font-semibold text-white/90">Commodities Deployment Gate</h2>
+                  <span className={`rounded-md border px-2 py-1 text-[11px] font-semibold ${permissionBadge[derivedState.permission]}`}>
+                    PERMISSION: {derivedState.permission}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <span className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-black/20 px-2 py-1 text-white/75">
+                    Impulse: {derivedState.impulseType}
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-black/20 px-2 py-1 text-white/75">
+                    Rotation: {derivedState.rotationLeader}
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-black/20 px-2 py-1 text-white/75">
+                    USD: {derivedState.usdImpact}
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-black/20 px-2 py-1 text-white/75">
+                    Real Rates: {derivedState.realRatesImpact}
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-black/20 px-2 py-1 text-white/75">
+                    Vol: {derivedState.volRegime}
+                  </span>
+                </div>
+                <p className="mt-3 text-sm text-white/70">{derivedState.permissionReason}</p>
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                  <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
+                    <span className="text-white/60">Longs</span>
+                    <span className={derivedState.longsAllowed ? 'text-emerald-300' : 'text-rose-300'}>
+                      {derivedState.longsAllowed ? 'Allowed' : 'Restricted'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
+                    <span className="text-white/60">Shorts</span>
+                    <span className={derivedState.shortsAllowed ? 'text-emerald-300' : 'text-rose-300'}>
+                      {derivedState.shortsAllowed ? 'Allowed' : 'Restricted'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
+                    <span className="text-white/60">Breakouts</span>
+                    <span className={derivedState.breakoutsAllowed ? 'text-emerald-300' : 'text-amber-300'}>
+                      {derivedState.breakoutsAllowed ? 'Allowed' : 'Restricted'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
+                    <span className="text-white/60">Mean Reversion</span>
+                    <span className={derivedState.meanReversionAllowed ? 'text-emerald-300' : 'text-amber-300'}>
+                      {derivedState.meanReversionAllowed ? 'Allowed' : 'Restricted'}
+                    </span>
                   </div>
                 </div>
-              </div>
+              </article>
 
-              {/* Price */}
-              <div style={{ marginBottom: '0.75rem' }}>
-                <div style={{ fontSize: '1.75rem', fontWeight: 700 }}>
-                  {formatPrice(commodity.price, commodity.unit)}
-                </div>
-                <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{commodity.unit}</div>
-              </div>
-
-              {/* Change */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.5rem 0.75rem',
-                borderRadius: '8px',
-                background: isPositive ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                color: isPositive ? '#22c55e' : '#ef4444',
-                fontSize: '0.95rem',
-                fontWeight: 500,
-              }}>
-                <span>{isPositive ? '▲' : '▼'}</span>
-                <span>{formatChange(commodity.change, commodity.changePercent)}</span>
-              </div>
-
-              {/* Mini Sparkline (simple visual) */}
-              {commodity.history && commodity.history.length > 5 && (
-                <div style={{ marginTop: '1rem' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '0.25rem' }}>
-                    Last 7 days
+              <article className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur">
+                <h2 className="mb-3 text-sm font-semibold text-white/90">Environment Breakdown</h2>
+                <div className="space-y-1 text-sm">
+                  <div className="flex items-center justify-between border-b border-white/5 py-1">
+                    <span className="text-white/60">Macro Regime</span>
+                    <span className="text-white/80">{derivedState.macroRiskState}</span>
                   </div>
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'flex-end', 
-                    gap: '3px', 
-                    height: '30px' 
-                  }}>
-                    {commodity.history.slice(0, 7).reverse().map((point, i) => {
-                      const min = Math.min(...commodity.history.slice(0, 7).map(p => p.value));
-                      const max = Math.max(...commodity.history.slice(0, 7).map(p => p.value));
-                      const range = max - min || 1;
-                      const height = ((point.value - min) / range) * 100;
-                      
-                      return (
-                        <div
-                          key={i}
-                          style={{
-                            flex: 1,
-                            height: `${Math.max(10, height)}%`,
-                            background: isPositive ? 'rgba(34,197,94,0.7)' : 'rgba(239,68,68,0.7)',
-                            borderRadius: '2px',
-                          }}
-                        />
-                      );
-                    })}
+                  <div className="flex items-center justify-between border-b border-white/5 py-1">
+                    <span className="text-white/60">USD Trend</span>
+                    <span className="text-white/80">{trendIcon[derivedState.usdTrend]} {derivedState.usdTrend} ({derivedState.usdImpact})</span>
+                  </div>
+                  <div className="flex items-center justify-between border-b border-white/5 py-1">
+                    <span className="text-white/60">Real Rates Trend</span>
+                    <span className="text-white/80">{trendIcon[derivedState.realRatesTrend]} {derivedState.realRatesTrend} ({derivedState.realRatesImpact})</span>
+                  </div>
+                  <div className="flex items-center justify-between border-b border-white/5 py-1">
+                    <span className="text-white/60">Growth Proxy</span>
+                    <span className="text-white/80">{trendIcon[derivedState.growthTrend]} {derivedState.growthTrend} ({derivedState.growthSupport})</span>
+                  </div>
+                  <div className="flex items-center justify-between py-1">
+                    <span className="text-white/60">Commodity Breadth</span>
+                    <span className="text-white/80">{derivedState.breadthScore}/100</span>
                   </div>
                 </div>
-              )}
+                {(derivedState.volRegime === 'EXPANSION' && derivedState.signalQuality !== 'HIGH') && (
+                  <p className="mt-3 rounded-md border border-amber-400/30 bg-amber-500/10 px-2 py-1 text-xs text-amber-200">
+                    Correlation warning: high cross-asset volatility, reduce leverage until signal quality improves.
+                  </p>
+                )}
+              </article>
+            </section>
 
-              {/* Last Update */}
-              <div style={{ 
-                marginTop: '0.75rem', 
-                fontSize: '0.75rem', 
-                color: '#64748b',
-                textAlign: 'right',
-              }}>
-                Updated: {commodity.date}
+            <section className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <article className="rounded-xl border border-white/10 bg-white/5 p-4">
+                <h3 className="mb-2 text-sm font-semibold text-white/90">Rotation Leader Strip</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
+                    <span className="text-white/60">Energy vs Metals</span>
+                    <span className={derivedState.relative.energyVsMetals >= 0 ? 'text-emerald-300' : 'text-rose-300'}>
+                      {signed(derivedState.relative.energyVsMetals)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
+                    <span className="text-white/60">Metals vs Ag</span>
+                    <span className={derivedState.relative.metalsVsAg >= 0 ? 'text-emerald-300' : 'text-rose-300'}>
+                      {signed(derivedState.relative.metalsVsAg)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
+                    <span className="text-white/60">Copper vs Gold</span>
+                    <span className={derivedState.relative.copperVsGold >= 0 ? 'text-emerald-300' : 'text-rose-300'}>
+                      {signed(derivedState.relative.copperVsGold)}
+                    </span>
+                  </div>
+                </div>
+                <div className="mt-3 inline-flex items-center gap-2 rounded-md border border-emerald-400/30 bg-emerald-500/10 px-2 py-1 text-xs text-emerald-200">
+                  Leader: {derivedState.rotationLeader}
+                </div>
+              </article>
+
+              <article className="rounded-xl border border-white/10 bg-white/5 p-4">
+                <h3 className="mb-2 text-sm font-semibold text-white/90">Breadth & Participation</h3>
+                <div className="text-2xl font-bold text-white/90">{derivedState.breadthScore}</div>
+                <div className="text-xs text-white/60">Breadth Score (0-100)</div>
+                <div className="mt-3 flex items-center gap-3 text-sm">
+                  <span className="text-emerald-300">{data?.summary.gainers} Advancing</span>
+                  <span className="text-rose-300">{data?.summary.losers} Declining</span>
+                </div>
+                <div className="mt-2 text-xs text-white/70">
+                  Participation: {derivedState.breadthScore >= 65 ? 'Strong' : derivedState.breadthScore >= 45 ? 'Mixed' : 'Weak'}
+                </div>
+              </article>
+
+              <article className="rounded-xl border border-white/10 bg-white/5 p-4">
+                <h3 className="mb-2 text-sm font-semibold text-white/90">Trend Quality</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
+                    <span className="text-white/60">Impulse Stability</span>
+                    <span className="text-white/80">{derivedState.impulseStability}</span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
+                    <span className="text-white/60">Volatility</span>
+                    <span className="text-white/80">{derivedState.volRegime}</span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
+                    <span className="text-white/60">Signal Quality</span>
+                    <span className="text-white/80">{derivedState.signalQuality}</span>
+                  </div>
+                </div>
+              </article>
+            </section>
+
+            <section className="mt-4 rounded-xl border border-white/10 bg-white/5 p-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => setSelectedCategory('all')}
+                    className={`rounded-md border px-3 py-1 text-xs ${selectedCategory === 'all' ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-200' : 'border-white/15 bg-black/20 text-white/70'}`}
+                  >
+                    All ({data?.commodities.length || 0})
+                  </button>
+                  {(['Energy', 'Metals', 'Agriculture'] as const).map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`rounded-md border px-3 py-1 text-xs ${selectedCategory === cat ? 'border-white/30 bg-white/10 text-white' : 'border-white/15 bg-black/20 text-white/70'}`}
+                    >
+                      {CATEGORY_CONFIG[cat].icon} {cat} ({data?.byCategory[cat]?.length || 0})
+                    </button>
+                  ))}
+                </div>
+                <div className="text-xs text-white/60">Sort: Market Impact (default)</div>
               </div>
-            </div>
-          );
-        })}
-      </div>
 
-      {/* Footer */}
-      {data?.lastUpdate && (
-        <div style={{ 
-          marginTop: '2rem', 
-          textAlign: 'center', 
-          color: '#64748b', 
-          fontSize: '0.85rem' 
-        }}>
-          Data from Alpha Vantage • Last update: {new Date(data.lastUpdate).toLocaleTimeString()}
-          {autoRefresh && ' • Auto-refreshing every 15 minutes'}
-        </div>
-      )}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {filteredCommodities.map((commodity) => {
+                  const safeCommodityChangePercent = safeNumber(commodity.changePercent) ?? 0;
+                  const isPositive = safeCommodityChangePercent >= 0;
+                  const catConfig = CATEGORY_CONFIG[commodity.category as keyof typeof CATEGORY_CONFIG];
+                  const inflationSensitive = commodity.category === 'Energy' || commodity.symbol === 'GOLD';
+                  const growthSensitive = commodity.symbol === 'WTI' || commodity.symbol === 'COPPER' || commodity.category === 'Energy';
+                  const usdSensitive = commodity.symbol === 'GOLD' || commodity.symbol === 'SILVER';
+                  const longAllowed = derivedState.longsAllowed && safeCommodityChangePercent > -1.5;
+                  const shortAllowed = derivedState.shortsAllowed && safeCommodityChangePercent < 1.5;
+
+                  return (
+                    <article key={commodity.symbol} className="rounded-xl border border-white/10 bg-white/5 p-4 transition hover:bg-white/[0.07]">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">{COMMODITY_ICONS[commodity.symbol] || '📊'}</span>
+                          <div>
+                            <div className="text-sm font-semibold text-white/90">{commodity.name}</div>
+                            <div
+                              className="mt-1 inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px]"
+                              style={{ color: catConfig.color, background: catConfig.bgColor }}
+                            >
+                              {catConfig.icon} {commodity.category}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-3">
+                        <div className="text-2xl font-bold text-white/90">{formatPrice(commodity.price, commodity.unit)}</div>
+                        <div className="text-[11px] text-white/45">{commodity.unit}</div>
+                      </div>
+
+                      <div className={`mt-2 flex items-center gap-2 rounded-md px-2 py-1 text-sm ${isPositive ? 'bg-emerald-500/10 text-emerald-300' : 'bg-rose-500/10 text-rose-300'}`}>
+                        <span>{isPositive ? '▲' : '▼'}</span>
+                        <span>{formatChange(commodity.change, commodity.changePercent)}</span>
+                      </div>
+
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {inflationSensitive && <span className={`rounded px-1.5 py-0.5 text-[10px] border ${chipTone.warn}`}>Inflation-sensitive</span>}
+                        {growthSensitive && <span className={`rounded px-1.5 py-0.5 text-[10px] border ${chipTone.good}`}>Growth-sensitive</span>}
+                        {usdSensitive && <span className={`rounded px-1.5 py-0.5 text-[10px] border ${chipTone.neutral}`}>USD-sensitive</span>}
+                        {Math.abs(safeCommodityChangePercent) > 1.4 && (
+                          <span className={`rounded px-1.5 py-0.5 text-[10px] border ${chipTone.bad}`}>Breakout watch</span>
+                        )}
+                      </div>
+
+                      {sparklineBars(commodity.history, isPositive)}
+
+                      <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
+                        <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
+                          <span className="text-white/55">Long</span>
+                          <span className={longAllowed ? 'text-emerald-300' : 'text-amber-300'}>{longAllowed ? 'Allowed' : 'Restricted'}</span>
+                        </div>
+                        <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
+                          <span className="text-white/55">Short</span>
+                          <span className={shortAllowed ? 'text-emerald-300' : 'text-amber-300'}>{shortAllowed ? 'Allowed' : 'Restricted'}</span>
+                        </div>
+                      </div>
+
+                      <div className="mt-2 text-right text-[10px] text-white/40">Updated: {commodity.date}</div>
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <article className="rounded-xl border border-white/10 bg-white/5 p-4">
+                <h3 className="mb-2 text-sm font-semibold text-white/90">USD Driver (DXY proxy)</h3>
+                <p className="text-sm text-white/80">{trendIcon[derivedState.usdTrend]} {derivedState.usdTrend} → {derivedState.usdImpact}</p>
+                <p className="mt-2 text-xs text-white/60">What this means: stronger USD suppresses commodities; weaker USD supports broad upside.</p>
+              </article>
+              <article className="rounded-xl border border-white/10 bg-white/5 p-4">
+                <h3 className="mb-2 text-sm font-semibold text-white/90">Rates Driver (Real yield proxy)</h3>
+                <p className="text-sm text-white/80">{trendIcon[derivedState.realRatesTrend]} {derivedState.realRatesTrend} → {derivedState.realRatesImpact}</p>
+                <p className="mt-2 text-xs text-white/60">What this means: rising real rates pressure metals, falling real rates support gold and inflation trades.</p>
+              </article>
+              <article className="rounded-xl border border-white/10 bg-white/5 p-4">
+                <h3 className="mb-2 text-sm font-semibold text-white/90">Inflation/Growth Driver</h3>
+                <p className="text-sm text-white/80">{trendIcon[derivedState.growthTrend]} {derivedState.growthTrend} → {derivedState.growthSupport}</p>
+                <p className="mt-2 text-xs text-white/60">What this means: copper + energy leadership confirms growth impulse; weak ag dampens food inflation pressure.</p>
+              </article>
+            </section>
+
+            <section className="mt-4 rounded-xl border border-white/10 bg-white/5 p-4">
+              <h3 className="mb-3 text-sm font-semibold text-white/90">Trading Implications</h3>
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 text-sm">
+                <div className="rounded-md border border-white/10 bg-black/20 p-3">
+                  <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/70">If You&apos;re Long</div>
+                  <p className="text-white/75">
+                    {derivedState.rotationLeader === 'Energy' ? 'Prefer Energy leaders.' : `Prefer ${derivedState.rotationLeader} leaders.`}{' '}
+                    {derivedState.realRatesTrend === 'UP' ? 'Avoid aggressive Gold breakout longs.' : 'Gold longs can be tactical if breadth improves.'}
+                  </p>
+                </div>
+                <div className="rounded-md border border-white/10 bg-black/20 p-3">
+                  <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/70">If You&apos;re Short</div>
+                  <p className="text-white/75">
+                    {derivedState.impulseType === 'DEFLATION'
+                      ? 'Deflation pressure supports tactical shorts in weakest complex.'
+                      : 'Fade only overextended spikes when volatility expands and breadth weakens.'}
+                  </p>
+                </div>
+                <div className="rounded-md border border-white/10 bg-black/20 p-3">
+                  <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/70">Portfolio Positioning</div>
+                  <p className="text-white/75">
+                    {derivedState.impulseType === 'INFLATION' && 'Inflation impulse building; reduce duration risk and overweight real assets.'}
+                    {derivedState.impulseType === 'GROWTH' && 'Growth impulse active; favor cyclicals and copper-linked exposure.'}
+                    {derivedState.impulseType === 'DEFLATION' && 'Deflation pressure rising; de-risk high beta and avoid weak breakouts.'}
+                    {derivedState.impulseType === 'MIXED' && 'Mixed impulse; keep sizing smaller and prioritize confirmation over anticipation.'}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/75">
+                Operator summary: {derivedState.impulseType} impulse, {derivedState.rotationLeader} leading, permission {derivedState.permission.toLowerCase()} ({derivedState.score}/100).
+              </div>
+            </section>
+
+            <section className="mt-4 flex flex-wrap justify-end gap-2">
+              <button className="rounded-md border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/75">Create Alert</button>
+              <button className="rounded-md border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/75">Add to Watchlist</button>
+              <button className="rounded-md border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/75">Run Confluence Scan</button>
+              <button className="rounded-md border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/75">Open Journal Draft</button>
+            </section>
+          </>
+        )}
+
+        {data?.lastUpdate && (
+          <div className="mt-6 text-center text-xs text-white/45">
+            Data from Alpha Vantage • Last update: {new Date(data.lastUpdate).toLocaleTimeString()}
+            {autoRefresh && ' • Auto-refreshing every 15 minutes'}
+          </div>
+        )}
+      </main>
     </div>
   );
 }

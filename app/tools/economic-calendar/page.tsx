@@ -1,6 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import ToolsPageHeader from '@/components/ToolsPageHeader';
+import { useUserTier } from '@/lib/useUserTier';
 
 interface EconomicEvent {
   date: string;
@@ -22,6 +25,9 @@ interface CalendarData {
   daysUntilMajor: number | null;
 }
 
+type SessionTag = 'PRE' | 'RTH' | 'AH';
+type PermissionState = 'YES' | 'CONDITIONAL' | 'NO';
+
 const CATEGORY_ICONS: Record<string, string> = {
   employment: '👔',
   inflation: '📈',
@@ -31,387 +37,471 @@ const CATEGORY_ICONS: Record<string, string> = {
   manufacturing: '🏭',
 };
 
-const CATEGORY_COLORS: Record<string, string> = {
-  employment: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  inflation: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-  central_bank: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-  gdp: 'bg-green-500/20 text-green-400 border-green-500/30',
-  consumer: 'bg-pink-500/20 text-pink-400 border-pink-500/30',
-  manufacturing: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
-};
+const categoryList = ['employment', 'inflation', 'central_bank', 'gdp', 'consumer', 'manufacturing'];
 
 function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', { 
-    weekday: 'short', 
-    month: 'short', 
-    day: 'numeric' 
-  });
+  return new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
-function formatTime(time: string): string {
+function toMinutes(time: string): number {
+  const [h, m] = time.split(':').map((item) => parseInt(item, 10));
+  return h * 60 + m;
+}
+
+function formatEt(time: string): string {
   const [hours, minutes] = time.split(':');
-  const hour = parseInt(hours);
+  const hour = parseInt(hours, 10);
   const ampm = hour >= 12 ? 'PM' : 'AM';
-  const hour12 = hour % 12 || 12;
-  return `${hour12}:${minutes} ${ampm} ET`;
+  const h12 = hour % 12 || 12;
+  return `${h12}:${minutes} ${ampm} ET`;
 }
 
-function getDaysUntil(dateStr: string): number {
-  const eventDate = new Date(dateStr);
-  const now = new Date();
-  return Math.ceil((eventDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
+function inferSession(minuteOfDay: number): SessionTag {
+  if (minuteOfDay < 570) return 'PRE';
+  if (minuteOfDay <= 960) return 'RTH';
+  return 'AH';
 }
 
-function ImpactBadge({ impact }: { impact: string }) {
-  const colors = {
-    high: 'bg-red-500/20 text-red-400 border-red-500/50',
-    medium: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50',
-    low: 'bg-gray-500/20 text-gray-400 border-gray-500/50',
+function etNowParts() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(new Date());
+  const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return {
+    date: `${map.year}-${map.month}-${map.day}`,
+    minutes: parseInt(map.hour, 10) * 60 + parseInt(map.minute, 10),
   };
-  
-  return (
-    <span className={`px-2 py-0.5 rounded text-xs font-medium border ${colors[impact as keyof typeof colors] || colors.low}`}>
-      {impact.toUpperCase()}
-    </span>
-  );
+}
+
+function isFedDayEvent(eventName: string) {
+  const normalized = eventName.toLowerCase();
+  return normalized.includes('fomc') || normalized.includes('powell') || normalized.includes('rate decision');
+}
+
+function isJobsOrCpiEvent(eventName: string) {
+  const normalized = eventName.toLowerCase();
+  return normalized.includes('payroll') || normalized.includes('unemployment') || normalized.includes('cpi');
 }
 
 export default function EconomicCalendarPage() {
+  const { isAdmin } = useUserTier();
   const [data, setData] = useState<CalendarData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | 'high' | 'medium'>('all');
   const [days, setDays] = useState(30);
-  const [expandedDates, setExpandedDates] = useState<Set<string>>(new Set());
-
-  const toggleDate = (date: string) => {
-    setExpandedDates(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(date)) {
-        newSet.delete(date);
-      } else {
-        newSet.add(date);
-      }
-      return newSet;
-    });
-  };
+  const [impactFilter, setImpactFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
+  const [hideLowImpact, setHideLowImpact] = useState(false);
+  const [showET, setShowET] = useState(true);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   useEffect(() => {
+    const fetchCalendar = async () => {
+      try {
+        setLoading(true);
+        const params = new URLSearchParams({ days: days.toString(), impact: 'all' });
+        const res = await fetch(`/api/economic-calendar?${params}`);
+        if (!res.ok) throw new Error('Failed to fetch calendar');
+        const json = await res.json();
+        setData(json);
+        setError(null);
+      } catch (err) {
+        setError('Failed to load economic calendar');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchCalendar();
-  }, [filter, days]);
+  }, [days]);
 
-  async function fetchCalendar() {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams({
-        days: days.toString(),
-        impact: filter,
-      });
-      const res = await fetch(`/api/economic-calendar?${params}`);
-      if (!res.ok) throw new Error('Failed to fetch calendar');
-      const json = await res.json();
-      setData(json);
-      setError(null);
-    } catch (err) {
-      setError('Failed to load economic calendar');
-      console.error(err);
-    } finally {
-      setLoading(false);
+  const enrichedEvents = useMemo(() => {
+    if (!data?.events) return [];
+    return data.events
+      .map((event) => {
+        const minuteOfDay = toMinutes(event.time);
+        return {
+          ...event,
+          minuteOfDay,
+          session: inferSession(minuteOfDay),
+        };
+      })
+      .filter((event) => (impactFilter === 'all' ? true : event.impact === impactFilter))
+      .filter((event) => (hideLowImpact ? event.impact !== 'low' : true))
+      .filter((event) => (selectedCategories.length ? selectedCategories.includes(event.category) : true));
+  }, [data, impactFilter, hideLowImpact, selectedCategories]);
+
+  const grouped = useMemo(() => {
+    const map: Record<string, (EconomicEvent & { minuteOfDay: number; session: SessionTag })[]> = {};
+    for (const event of enrichedEvents) {
+      if (!map[event.date]) map[event.date] = [];
+      map[event.date].push(event);
     }
-  }
+    Object.keys(map).forEach((date) => {
+      map[date].sort((a, b) => a.minuteOfDay - b.minuteOfDay);
+    });
+    return map;
+  }, [enrichedEvents]);
+
+  const gate = useMemo(() => {
+    const nowEt = etNowParts();
+    const next24 = enrichedEvents.filter((event) => {
+      const eventDate = new Date(`${event.date}T00:00:00`);
+      const nowDate = new Date(`${nowEt.date}T00:00:00`);
+      const dayDiff = Math.round((eventDate.getTime() - nowDate.getTime()) / 86400000);
+      const minutesToEvent = dayDiff * 1440 + (event.minuteOfDay - nowEt.minutes);
+      return minutesToEvent >= 0 && minutesToEvent <= 1440;
+    });
+
+    const nextHigh = next24.filter((event) => event.impact === 'high');
+    const closestHighMinutes = nextHigh
+      .map((event) => {
+        const eventDate = new Date(`${event.date}T00:00:00`);
+        const nowDate = new Date(`${nowEt.date}T00:00:00`);
+        const dayDiff = Math.round((eventDate.getTime() - nowDate.getTime()) / 86400000);
+        return dayDiff * 1440 + (event.minuteOfDay - nowEt.minutes);
+      })
+      .filter((minutes) => minutes >= 0)
+      .sort((a, b) => a - b)[0] ?? 9999;
+
+    const isFedDay = next24.some((event) => isFedDayEvent(event.event));
+    const isJobsOrCpi = next24.some((event) => isJobsOrCpiEvent(event.event));
+    const highImpactCountNext24h = nextHigh.length;
+    const highImpactWithinNext120m = nextHigh.some((event) => {
+      const eventDate = new Date(`${event.date}T00:00:00`);
+      const nowDate = new Date(`${nowEt.date}T00:00:00`);
+      const dayDiff = Math.round((eventDate.getTime() - nowDate.getTime()) / 86400000);
+      const mins = dayDiff * 1440 + (event.minuteOfDay - nowEt.minutes);
+      return mins >= 0 && mins <= 120;
+    });
+
+    let permission: PermissionState = 'YES';
+    if (closestHighMinutes <= 30) permission = 'NO';
+    else if (highImpactCountNext24h >= 2 || isFedDay) permission = 'CONDITIONAL';
+
+    const volRegime = closestHighMinutes <= 60 || isFedDay
+      ? 'Event Shock'
+      : highImpactCountNext24h >= 2
+        ? 'Expansion'
+        : 'Compression';
+
+    const riskState = isFedDay || isJobsOrCpi ? 'Risk-Off' : highImpactCountNext24h ? 'Neutral' : 'Risk-On';
+    const liquidity = closestHighMinutes <= 60 ? 'Spiky' : highImpactCountNext24h >= 2 ? 'Thin' : 'Stable';
+    const density = highImpactCountNext24h >= 3 ? 'High' : highImpactCountNext24h >= 1 ? 'Medium' : 'Low';
+    const executionMode = permission === 'NO' ? 'Sit Out' : volRegime === 'Compression' ? 'Trend' : 'Mean Revert';
+    const sessionNow = inferSession(nowEt.minutes);
+
+    const nextMajorEvent = enrichedEvents.find((event) => event.impact === 'high') || null;
+    const countdown = (() => {
+      if (!nextMajorEvent) return 'No major catalyst';
+      const eventDate = new Date(`${nextMajorEvent.date}T00:00:00`);
+      const nowDate = new Date(`${nowEt.date}T00:00:00`);
+      const dayDiff = Math.round((eventDate.getTime() - nowDate.getTime()) / 86400000);
+      const totalMinutes = Math.max(0, dayDiff * 1440 + (nextMajorEvent.minuteOfDay - nowEt.minutes));
+      const daysOut = Math.floor(totalMinutes / 1440);
+      const hoursOut = Math.floor((totalMinutes % 1440) / 60);
+      return `${daysOut}d ${hoursOut}h`;
+    })();
+
+    const shockEvent = nextMajorEvent ? (isFedDayEvent(nextMajorEvent.event) || isJobsOrCpiEvent(nextMajorEvent.event)) : false;
+    const dangerWindow = shockEvent ? 'T-30 → T+30' : 'T-15 → T+15';
+
+    return {
+      permission,
+      riskState,
+      volRegime,
+      liquidity,
+      density,
+      executionMode,
+      sessionNow,
+      highImpactCountNext24h,
+      highImpactWithinNext120m,
+      isFedDay,
+      isJobsOrCpi,
+      closestHighMinutes,
+      nextMajorEvent,
+      countdown,
+      dangerWindow,
+      reason:
+        permission === 'NO'
+          ? 'High-impact print is inside immediate danger window; avoid new deployment.'
+          : permission === 'CONDITIONAL'
+            ? 'Catalyst density is elevated; deploy selectively with tighter risk.'
+            : 'No immediate high-impact shock window; normal deployment permitted.',
+    };
+  }, [enrichedEvents]);
+
+  const todayEvents = useMemo(() => {
+    const today = etNowParts().date;
+    return enrichedEvents.filter((event) => event.date === today);
+  }, [enrichedEvents]);
+
+  const toggleCategory = (category: string) => {
+    setSelectedCategories((prev) =>
+      prev.includes(category) ? prev.filter((item) => item !== category) : [...prev, category]
+    );
+  };
 
   return (
-    <div className="min-h-screen text-white">
-      <div className="max-w-6xl mx-auto px-4 py-8 pt-24">
-        {/* Hero Section */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
-              Economic Calendar
-            </span>
-          </h1>
-          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-            Find market-moving events fast—FOMC decisions, jobs reports, inflation data, and more.
-          </p>
-        </div>
-
-        {/* Next Major Event Card */}
-        {data?.nextMajorEvent && (
-          <div className="bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 border border-emerald-500/30 rounded-xl p-6 mb-8">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div>
-                <div className="text-sm text-emerald-400 font-medium mb-1">NEXT MAJOR EVENT</div>
-                <div className="text-2xl font-bold text-white mb-1">
-                  {CATEGORY_ICONS[data.nextMajorEvent.category]} {data.nextMajorEvent.event}
-                </div>
-                <div className="text-gray-400">
-                  {formatDate(data.nextMajorEvent.date)} at {formatTime(data.nextMajorEvent.time)}
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-4xl font-bold text-emerald-400">
-                  {data.daysUntilMajor}
-                </div>
-                <div className="text-sm text-gray-400">days away</div>
-              </div>
-            </div>
-            {(data.nextMajorEvent.forecast || data.nextMajorEvent.previous) && (
-              <div className="mt-4 pt-4 border-t border-emerald-500/20 flex gap-6">
-                {data.nextMajorEvent.forecast && (
-                  <div>
-                    <span className="text-gray-400 text-sm">Forecast:</span>
-                    <span className="ml-2 text-white font-medium">{data.nextMajorEvent.forecast}</span>
-                  </div>
-                )}
-                {data.nextMajorEvent.previous && (
-                  <div>
-                    <span className="text-gray-400 text-sm">Previous:</span>
-                    <span className="ml-2 text-white font-medium">{data.nextMajorEvent.previous}</span>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Filters */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+    <div className="min-h-screen bg-[#0f172a] text-white">
+      <ToolsPageHeader
+        badge="MACRO CALENDAR"
+        title="Economic Calendar"
+        subtitle="Market-moving events fast — FOMC, jobs, inflation, rates."
+        icon="📅"
+        actions={
           <div className="flex items-center gap-2">
-            <span className="text-gray-400 text-sm">Impact:</span>
-            <div className="flex bg-gray-800/50 rounded-lg p-1">
-              {(['all', 'high', 'medium'] as const).map((level) => (
-                <button
-                  key={level}
-                  onClick={() => setFilter(level)}
-                  className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                    filter === level
-                      ? 'bg-emerald-500 text-white'
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  {level === 'all' ? 'All Events' : level.charAt(0).toUpperCase() + level.slice(1) + ' Impact'}
-                </button>
-              ))}
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <span className="text-gray-400 text-sm">Show next:</span>
             <select
               value={days}
-              onChange={(e) => setDays(parseInt(e.target.value))}
-              className="bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+              onChange={(event) => setDays(parseInt(event.target.value, 10))}
+              className="rounded-md border border-white/15 bg-black/20 px-2 py-1 text-xs text-white"
             >
-              <option value={7}>7 days</option>
-              <option value={14}>14 days</option>
-              <option value={30}>30 days</option>
-              <option value={60}>60 days</option>
-              <option value={90}>90 days</option>
+              <option value={7}>Show next: 7d</option>
+              <option value={14}>Show next: 14d</option>
+              <option value={30}>Show next: 30d</option>
             </select>
-          </div>
-        </div>
-
-        {/* Calendar Legend */}
-        <div className="flex flex-wrap gap-3 mb-6">
-          {Object.entries(CATEGORY_ICONS).map(([category, icon]) => (
-            <div
-              key={category}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${CATEGORY_COLORS[category]}`}
-            >
-              <span>{icon}</span>
-              <span className="text-sm capitalize">{category.replace('_', ' ')}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Loading State */}
-        {loading && (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500 mx-auto mb-4"></div>
-            <p className="text-gray-400">Finding upcoming economic events...</p>
-          </div>
-        )}
-
-        {/* Error State */}
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 text-center">
-            <p className="text-red-400">{error}</p>
-            <button
-              onClick={fetchCalendar}
-              className="mt-2 text-sm text-emerald-400 hover:text-emerald-300"
-            >
-              Try again
+            <button onClick={() => setDays((current) => current)} className="rounded-md border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-200">
+              Refresh
             </button>
           </div>
-        )}
+        }
+      />
 
-        {/* Events List */}
-        {!loading && !error && data && (
-          <div className="space-y-4">
-            {data.count === 0 ? (
-              <div className="text-center py-12 text-gray-400">
-                <p className="text-xl mb-2">📅</p>
-                <p>No events found in this range. Try expanding your timeframe.</p>
+      <main className="mx-auto max-w-6xl px-4 pb-16">
+        {loading && <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-8 text-center text-sm text-white/60">Loading macro catalyst map...</div>}
+        {error && <div className="mt-6 rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-300">{error}</div>}
+
+        {!loading && !error && (
+          <>
+            <section className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <article className="rounded-2xl border border-white/10 bg-white/5 p-4 shadow-sm lg:col-span-2">
+                <div className="mb-2 flex items-center justify-between">
+                  <h2 className="text-sm font-semibold text-white/90">Macro Permission Gate</h2>
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
+                    gate.permission === 'YES'
+                      ? 'bg-emerald-500/20 text-emerald-300'
+                      : gate.permission === 'NO'
+                        ? 'bg-rose-500/20 text-rose-300'
+                        : 'bg-amber-500/20 text-amber-300'
+                  }`}>
+                    PERMISSION: {gate.permission}
+                  </span>
+                </div>
+                <p className="mb-3 text-sm text-white/70">{gate.reason}</p>
+                <div className="mb-3 flex flex-wrap gap-2">
+                  {[
+                    `Risk State: ${gate.riskState}`,
+                    `Volatility Risk: ${gate.volRegime}`,
+                    `Liquidity Window: ${gate.liquidity}`,
+                    `Catalyst Density: ${gate.density}`,
+                    `Execution Mode: ${gate.executionMode}`,
+                  ].map((chip) => (
+                    <span key={chip} className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-semibold text-white/80">
+                      {chip}
+                    </span>
+                  ))}
+                </div>
+                <ul className="space-y-1 text-xs text-white/70">
+                  <li>• No new size 15 min pre/post high-impact prints.</li>
+                  <li>• Trade leaders only and reduce leverage during expansion.</li>
+                  <li>• Avoid breakout chasing when event shock risk is active.</li>
+                </ul>
+              </article>
+
+              <article className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/10 to-white/5 p-4">
+                <h3 className="mb-2 text-sm font-semibold text-white/90">Next Major Event Countdown</h3>
+                {gate.nextMajorEvent ? (
+                  <>
+                    <p className="text-sm font-semibold text-white/90">{CATEGORY_ICONS[gate.nextMajorEvent.category]} {gate.nextMajorEvent.event}</p>
+                    <p className="mt-1 text-xs text-white/65">{formatDate(gate.nextMajorEvent.date)} • {formatEt(gate.nextMajorEvent.time)}</p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="rounded-full bg-rose-500/20 px-2 py-0.5 text-xs text-rose-300">High Impact</span>
+                      <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-white/70">{gate.countdown}</span>
+                    </div>
+                    <p className="mt-2 text-xs text-amber-300">Danger window: {gate.dangerWindow}</p>
+                  </>
+                ) : (
+                  <p className="text-xs text-white/60">No upcoming high-impact event in selected horizon.</p>
+                )}
+              </article>
+            </section>
+
+            <section className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-3">
+              <div className="mb-2 flex items-center justify-between text-xs text-white/60">
+                <span>US Session Timeline</span>
+                <span>Current session: {gate.sessionNow}</span>
               </div>
-            ) : (
-              Object.entries(data.grouped).map(([date, events]) => {
-                const daysUntil = getDaysUntil(date);
-                const isToday = daysUntil === 0;
-                const isTomorrow = daysUntil === 1;
-                const isExpanded = expandedDates.has(date);
-                
-                return (
-                  <div
-                    key={date}
-                    className={`bg-gray-800/30 border rounded-xl overflow-hidden transition-all ${
-                      isToday 
-                        ? 'border-emerald-500/50 bg-emerald-500/5' 
-                        : 'border-gray-700/50 hover:border-gray-600/50'
-                    }`}
+              <div className="relative h-10 rounded-lg border border-white/10 bg-black/20">
+                <div className="absolute inset-y-0 left-0 w-[34%] border-r border-white/10" title="Pre-market" />
+                <div className="absolute inset-y-0 left-[34%] w-[10%] border-r border-white/10" title="Open" />
+                <div className="absolute inset-y-0 left-[44%] w-[32%] border-r border-white/10" title="Midday" />
+                <div className="absolute inset-y-0 left-[76%] w-[16%] border-r border-white/10" title="Power Hour" />
+                <div className="absolute inset-y-0 right-0 w-[8%]" title="Close" />
+                {todayEvents.map((event) => {
+                  const left = Math.min(100, Math.max(0, ((event.minuteOfDay - 240) / (1200 - 240)) * 100));
+                  return (
+                    <span
+                      key={`${event.date}-${event.time}-${event.event}`}
+                      title={`${event.event} • ${formatEt(event.time)} • ${event.impact.toUpperCase()}`}
+                      className={`absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full ${event.impact === 'high' ? 'bg-rose-400' : event.impact === 'medium' ? 'bg-amber-400' : 'bg-slate-400'}`}
+                      style={{ left: `${left}%` }}
+                    />
+                  );
+                })}
+              </div>
+              <div className="mt-2 flex justify-between text-[10px] text-white/45">
+                <span>Pre-market</span><span>Open</span><span>Midday</span><span>Power hour</span><span>Close</span>
+              </div>
+            </section>
+
+            <section className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-white/10 bg-white/5 p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                {(['all', 'high', 'medium', 'low'] as const).map((impact) => (
+                  <button
+                    key={impact}
+                    onClick={() => setImpactFilter(impact)}
+                    className={`inline-flex items-center rounded-lg border px-3 py-1.5 text-xs ${impactFilter === impact ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-200' : 'border-white/10 bg-white/5 text-white/70'}`}
                   >
-                    {/* Date Header */}
-                    <button
-                      onClick={() => toggleDate(date)}
-                      className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-700/20 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-12 h-12 rounded-lg flex flex-col items-center justify-center ${
-                          isToday ? 'bg-emerald-500' : 'bg-gray-700'
-                        }`}>
-                          <span className="text-xs font-medium text-white/70">
-                            {new Date(date).toLocaleDateString('en-US', { weekday: 'short' })}
-                          </span>
-                          <span className="text-lg font-bold text-white">
-                            {new Date(date).getDate()}
-                          </span>
-                        </div>
-                        <div className="text-left">
-                          <div className="font-medium text-white">
-                            {formatDate(date)}
-                            {isToday && <span className="ml-2 text-emerald-400 text-sm">(Today)</span>}
-                            {isTomorrow && <span className="ml-2 text-yellow-400 text-sm">(Tomorrow)</span>}
-                          </div>
-                          <div className="text-sm text-gray-400">
-                            {events.length} event{events.length !== 1 ? 's' : ''} • 
-                            {events.filter(e => e.impact === 'high').length} high impact
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex -space-x-1">
-                          {events.slice(0, 4).map((event, i) => (
-                            <span
-                              key={i}
-                              className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-sm border-2 border-gray-800"
-                              title={event.event}
-                            >
-                              {CATEGORY_ICONS[event.category] || '📅'}
-                            </span>
-                          ))}
-                          {events.length > 4 && (
-                            <span className="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center text-xs text-white border-2 border-gray-800">
-                              +{events.length - 4}
-                            </span>
-                          )}
-                        </div>
-                        <svg
-                          className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </div>
-                    </button>
-                    
-                    {/* Events Detail */}
-                    {isExpanded && (
-                      <div className="border-t border-gray-700/50">
-                        {events.map((event, index) => (
-                          <div
-                            key={index}
-                            className={`px-4 py-3 flex items-center justify-between gap-4 ${
-                              index !== events.length - 1 ? 'border-b border-gray-700/30' : ''
-                            }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <span className="text-2xl">{CATEGORY_ICONS[event.category] || '📅'}</span>
-                              <div>
-                                <div className="font-medium text-white">{event.event}</div>
-                                <div className="text-sm text-gray-400">
-                                  {formatTime(event.time)} • {event.country}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-4">
-                              {(event.forecast || event.previous) && (
-                                <div className="text-right text-sm hidden sm:block">
-                                  {event.forecast && (
-                                    <div>
-                                      <span className="text-gray-500">Forecast:</span>
-                                      <span className="ml-1 text-white">{event.forecast}</span>
-                                    </div>
-                                  )}
-                                  {event.previous && (
-                                    <div>
-                                      <span className="text-gray-500">Previous:</span>
-                                      <span className="ml-1 text-gray-400">{event.previous}</span>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                              <ImpactBadge impact={event.impact} />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    {impact === 'all' ? 'All' : impact[0].toUpperCase() + impact.slice(1)} Impact
+                  </button>
+                ))}
+                {categoryList.map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => toggleCategory(category)}
+                    className={`inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs ${selectedCategories.includes(category) ? 'border-cyan-400/40 bg-cyan-500/15 text-cyan-200' : 'border-white/10 bg-white/5 text-white/70'}`}
+                  >
+                    <span>{CATEGORY_ICONS[category]}</span>
+                    <span>{category.replace('_', ' ')}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="inline-flex items-center gap-1 text-xs text-white/70">
+                  <input type="checkbox" checked={hideLowImpact} onChange={(event) => setHideLowImpact(event.target.checked)} /> Hide Low Impact
+                </label>
+                <button
+                  onClick={() => setShowET((current) => !current)}
+                  className="inline-flex items-center rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/70"
+                >
+                  {showET ? 'Show ET' : 'Show Local'}
+                </button>
+              </div>
+            </section>
+
+            <section className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+              {[
+                { title: 'Total Events', value: enrichedEvents.length },
+                { title: 'High Impact', value: enrichedEvents.filter((event) => event.impact === 'high').length },
+                { title: 'Central Bank', value: enrichedEvents.filter((event) => event.category === 'central_bank').length },
+                {
+                  title:
+                    enrichedEvents.filter((event) => event.category === 'inflation').length >= enrichedEvents.filter((event) => event.category === 'employment').length
+                      ? 'Inflation'
+                      : 'Jobs',
+                  value:
+                    enrichedEvents.filter((event) => event.category === 'inflation').length >= enrichedEvents.filter((event) => event.category === 'employment').length
+                      ? enrichedEvents.filter((event) => event.category === 'inflation').length
+                      : enrichedEvents.filter((event) => event.category === 'employment').length,
+                },
+              ].map((item) => (
+                <article key={item.title} className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <div className="text-2xl font-bold text-white/90">{item.value}</div>
+                  <div className="text-xs text-white/60">{item.title}</div>
+                  <div className={`mt-1 text-[10px] ${gate.highImpactCountNext24h > 1 ? 'text-amber-300' : 'text-emerald-300'}`}>
+                    {gate.highImpactCountNext24h > 1 ? 'Event risk elevated' : 'Risk manageable'}
                   </div>
+                </article>
+              ))}
+            </section>
+
+            <section className="mt-4 space-y-3">
+              {Object.entries(grouped).map(([date, events]) => {
+                const highImpactCount = events.filter((event) => event.impact === 'high').length;
+                const density = events.length >= 5 || highImpactCount >= 2 ? 'High' : events.length >= 3 ? 'Medium' : 'Low';
+                return (
+                  <article key={date} className="rounded-xl border border-white/10 bg-white/5 p-3">
+                    <div className="mb-2 flex items-center justify-between">
+                      <div>
+                        <h3 className="text-sm font-semibold text-white/90">{formatDate(date)}</h3>
+                        <p className="text-xs text-white/55">{highImpactCount} high impact / {events.length} total</p>
+                      </div>
+                      <span className={`rounded-full px-2.5 py-1 text-xs ${density === 'High' ? 'bg-rose-500/20 text-rose-300' : density === 'Medium' ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-300'}`}>
+                        Density: {density}
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {events.map((event) => (
+                        <div key={`${event.date}-${event.time}-${event.event}`} className="grid grid-cols-12 items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-3 hover:bg-white/[0.07]">
+                          <div className="col-span-12 sm:col-span-2 text-xs text-white/70">
+                            <div>{showET ? formatEt(event.time) : new Date(`${event.date}T${event.time}:00`).toLocaleTimeString()}</div>
+                            <span className="rounded bg-black/20 px-1.5 py-0.5 text-[10px] text-white/60">{event.session}</span>
+                          </div>
+                          <div className="col-span-12 sm:col-span-5">
+                            <p className="text-sm font-medium text-white/90">{CATEGORY_ICONS[event.category]} {event.event}</p>
+                            <p className="text-xs text-white/55">{event.category.replace('_', ' ')} • {event.country}</p>
+                          </div>
+                          <div className="col-span-12 sm:col-span-2 text-xs text-white/65">
+                            <div>F: {event.forecast || '--'}</div>
+                            <div>P: {event.previous || '--'}</div>
+                            <div>A: {event.actual || '--'}</div>
+                          </div>
+                          <div className="col-span-4 sm:col-span-1">
+                            <span className={`rounded-full px-2 py-0.5 text-xs ${event.impact === 'high' ? 'bg-rose-500/20 text-rose-300' : event.impact === 'medium' ? 'bg-amber-500/20 text-amber-300' : 'bg-slate-500/20 text-slate-300'}`}>
+                              {event.impact.toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="col-span-8 sm:col-span-2 flex flex-wrap justify-end gap-1">
+                            <button className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/70">Set Alert</button>
+                            <Link href="/tools/macro" className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/70">Open Macro</Link>
+                            {isAdmin ? <button className="rounded-md border border-amber-400/30 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-300">Post</button> : null}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
                 );
-              })
-            )}
-          </div>
-        )}
+              })}
+            </section>
 
-        {/* Stats Summary */}
-        {!loading && data && data.count > 0 && (
-          <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-white">{data.count}</div>
-              <div className="text-sm text-gray-400">Total Events</div>
-            </div>
-            <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-red-400">
-                {data.events.filter(e => e.impact === 'high').length}
-              </div>
-              <div className="text-sm text-gray-400">High Impact</div>
-            </div>
-            <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-purple-400">
-                {data.events.filter(e => e.category === 'central_bank').length}
-              </div>
-              <div className="text-sm text-gray-400">Fed Events</div>
-            </div>
-            <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-blue-400">
-                {data.events.filter(e => e.category === 'employment').length}
-              </div>
-              <div className="text-sm text-gray-400">Jobs Data</div>
-            </div>
-          </div>
-        )}
+            <section className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <article className="rounded-xl border border-white/10 bg-white/5 p-4">
+                <h3 className="mb-2 text-sm font-semibold text-white/90">If High Impact Today</h3>
+                <ul className="space-y-1 text-xs text-white/65">
+                  <li>• Expect vol expansion and opening whipsaw around print windows.</li>
+                  <li>• Trade leaders only and reduce position size.</li>
+                  <li>• Avoid breakout chasing until post-window confirmation.</li>
+                </ul>
+              </article>
+              <article className="rounded-xl border border-white/10 bg-white/5 p-4">
+                <h3 className="mb-2 text-sm font-semibold text-white/90">If Low Impact Today</h3>
+                <ul className="space-y-1 text-xs text-white/65">
+                  <li>• Trend-following permission is generally open.</li>
+                  <li>• Standard sizing is allowed with normal risk controls.</li>
+                  <li>• Best windows are post-open trend continuation and power hour.</li>
+                </ul>
+              </article>
+            </section>
 
-        {/* Disclaimer */}
-        <div className="mt-8 p-4 bg-gray-800/20 border border-gray-700/30 rounded-lg">
-          <p className="text-xs text-gray-500 text-center">
-            <strong>Disclaimer:</strong> Economic calendar data is provided for informational purposes only. 
-            Event times are in Eastern Time (ET). Actual release times may vary. Always verify with official sources 
-            before making trading decisions. Past events do not guarantee future results.
-          </p>
-        </div>
-      </div>
+            {isAdmin ? (
+              <details className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3">
+                <summary className="cursor-pointer text-sm font-semibold text-white/85">Admin Tools</summary>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button className="rounded-md border border-amber-400/30 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-300">Post daily macro summary to Discord</button>
+                  <button className="rounded-md border border-amber-400/30 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-300">Schedule pre/post alerts</button>
+                  <button className="rounded-md border border-rose-400/30 bg-rose-500/10 px-3 py-1.5 text-xs text-rose-300">Override permission output</button>
+                </div>
+              </details>
+            ) : null}
+          </>
+        )}
+      </main>
     </div>
   );
 }
