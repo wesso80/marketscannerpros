@@ -8,7 +8,7 @@ import { usePathname } from 'next/navigation';
 import { AIPageProvider, useAIPageContext } from '@/lib/ai/pageContext';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import type { PageSkill } from '@/lib/ai/types';
-import { CommandLayout, TerminalLayout, getToolsLayoutMode } from './LayoutContracts';
+import { CommandLayout, TerminalLayout, getToolsLayoutMode, getToolsContainerVariant } from './LayoutContracts';
 import { RiskPermissionProvider } from '@/components/risk/RiskPermissionContext';
 import CapitalControlStrip from '@/components/risk/CapitalControlStrip';
 
@@ -51,8 +51,9 @@ export default function ToolsLayoutClient({
   const pathname = usePathname();
   const skill = getSkillFromPath(pathname);
   const layoutMode = getToolsLayoutMode(pathname);
+  const containerVariant = getToolsContainerVariant(pathname);
   const wrappedChildren = layoutMode === 'terminal'
-    ? <TerminalLayout>{children}</TerminalLayout>
+    ? <TerminalLayout containerVariant={containerVariant}>{children}</TerminalLayout>
     : <CommandLayout>{children}</CommandLayout>;
 
   return (
