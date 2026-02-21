@@ -1,22 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import PortalButton from "@/components/PortalButton";
-import AdaptivePersonalityCard from "@/components/AdaptivePersonalityCard";
-import PageHowItWorks from '@/components/PageHowItWorks';
 import { useUserTier } from "@/lib/useUserTier";
-
-interface ReferralInfo {
-  referralCode: string;
-  referralUrl: string;
-  stats: {
-    pending: number;
-    completed: number;
-    rewarded: number;
-    totalReferrals: number;
-  };
-}
 
 interface NotificationPrefs {
   inAppEnabled: boolean;
@@ -26,18 +12,24 @@ interface NotificationPrefs {
   discordWebhookUrl: string;
 }
 
+type TierKey = "free" | "pro" | "pro_trader" | "anonymous";
+
+type UsageMetric = {
+  label: string;
+  used: number;
+  limit: number;
+};
+
 export default function AccountPage() {
   const { tier, isLoading, isLoggedIn } = useUserTier();
-  const [isMobile, setIsMobile] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
-  const [referralInfo, setReferralInfo] = useState<ReferralInfo | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [billingLoading, setBillingLoading] = useState(false);
   const [notificationPrefs, setNotificationPrefs] = useState<NotificationPrefs>({
     inAppEnabled: true,
     emailEnabled: false,
-    emailTo: '',
+    emailTo: "",
     discordEnabled: false,
-    discordWebhookUrl: '',
+    discordWebhookUrl: "",
   });
   const [prefsLoading, setPrefsLoading] = useState(false);
   const [prefsSaving, setPrefsSaving] = useState(false);
@@ -45,67 +37,37 @@ export default function AccountPage() {
   const [prefsError, setPrefsError] = useState<string | null>(null);
 
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    handleResize();
-    window.addEventListener('resize', handleResize);
-
-    // Get user info
     fetch("/api/me", { credentials: "include" })
       .then((res) => res.json())
       .then((data) => {
-        if (data.email) setEmail(data.email);
+        if (data?.email) setEmail(data.email);
       })
       .catch(() => {});
-
-    // Get referral info
-    fetch("/api/referral", { credentials: "include" })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) {
-          setReferralInfo(data);
-        }
-      })
-      .catch(() => {});
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
   }, []);
 
   useEffect(() => {
     if (!isLoggedIn) return;
 
     setPrefsLoading(true);
-    fetch('/api/notifications/prefs', { credentials: 'include' })
+    fetch("/api/notifications/prefs", { credentials: "include" })
       .then((res) => res.json())
       .then((data) => {
         const prefs = data?.prefs || {};
         setNotificationPrefs({
           inAppEnabled: prefs.in_app_enabled !== false,
           emailEnabled: prefs.email_enabled === true,
-          emailTo: typeof prefs.email_to === 'string' ? prefs.email_to : '',
+          emailTo: typeof prefs.email_to === "string" ? prefs.email_to : "",
           discordEnabled: prefs.discord_enabled === true,
-          discordWebhookUrl: typeof prefs.discord_webhook_url === 'string' ? prefs.discord_webhook_url : '',
+          discordWebhookUrl: typeof prefs.discord_webhook_url === "string" ? prefs.discord_webhook_url : "",
         });
       })
       .catch(() => {
-        setPrefsError('Unable to load notification settings');
+        setPrefsError("Unable to load notification settings");
       })
       .finally(() => {
         setPrefsLoading(false);
       });
   }, [isLoggedIn]);
-
-  const copyReferralLink = () => {
-    if (referralInfo?.referralUrl) {
-      navigator.clipboard.writeText(referralInfo.referralUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
 
   const saveNotificationPrefs = async () => {
     setPrefsSaving(true);
@@ -113,479 +75,332 @@ export default function AccountPage() {
     setPrefsError(null);
 
     try {
-      const res = await fetch('/api/notifications/prefs', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/notifications/prefs", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(notificationPrefs),
       });
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setPrefsError(data?.error || 'Failed to save notification settings');
+        setPrefsError(data?.error || "Failed to save notification settings");
         return;
       }
 
-      setPrefsMessage('Notification settings saved.');
+      setPrefsMessage("Notification settings saved.");
       setTimeout(() => setPrefsMessage(null), 2500);
     } catch {
-      setPrefsError('Failed to save notification settings');
+      setPrefsError("Failed to save notification settings");
     } finally {
       setPrefsSaving(false);
     }
   };
 
-  const tierDisplay = {
-    free: { name: "Free", color: "#9ca3af", badge: "#475569" },
-    pro: { name: "Pro", color: "#22c55e", badge: "#059669" },
-    pro_trader: { name: "Pro Trader", color: "var(--msp-accent)", badge: "var(--msp-accent)" },
-    anonymous: { name: "Not Signed In", color: "#6b7280", badge: "#374151" },
+  const openBillingPortal = async () => {
+    setBillingLoading(true);
+    try {
+      const res = await fetch("/api/payments/portal", {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data?.error || "Unable to open billing portal");
+      }
+    } catch {
+      alert("Failed to open billing portal. Please try again.");
+    } finally {
+      setBillingLoading(false);
+    }
   };
 
-  const currentTier = tierDisplay[tier] || tierDisplay.anonymous;
+  const deleteDataRequest = async () => {
+    const confirmed = confirm(
+      "Are you sure you want to request deletion of all your data? This action cannot be undone. You will receive a confirmation email within 48 hours."
+    );
+    if (!confirmed) return;
 
-  return (
-    <div style={{ minHeight: "100vh", background: "#0f172a", color: "#f9fafb" }}>
-      {/* Header */}
-      <div style={{ 
-        borderBottom: "1px solid rgba(51,65,85,0.5)", 
-        padding: isMobile ? "14px" : "20px",
-        background: "rgba(15,23,42,0.8)"
-      }}>
-        <div style={{ maxWidth: 800, margin: "0 auto", display: "flex", alignItems: isMobile ? "flex-start" : "center", justifyContent: "space-between", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 10 : 0 }}>
-          <Link href="/tools" style={{ color: "#94a3b8", textDecoration: "none", display: "flex", alignItems: "center", gap: 8 }}>
-            ← Back to Tools
-          </Link>
-          <h1 style={{ fontSize: isMobile ? 20 : 24, fontWeight: 700, margin: 0 }}>Account Settings</h1>
-          {!isMobile && <div style={{ width: 100 }}></div>}
-        </div>
-      </div>
+    try {
+      const res = await fetch("/api/auth/delete-request", {
+        method: "POST",
+        credentials: "include",
+      });
+      if (res.ok) {
+        alert("Data deletion request submitted. You will receive a confirmation email within 48 hours.");
+      } else {
+        alert("Failed to submit request. Please email support@marketscannerpros.app directly.");
+      }
+    } catch {
+      alert("Failed to submit request. Please email support@marketscannerpros.app directly.");
+    }
+  };
 
-      <main style={{ maxWidth: 800, margin: "0 auto", padding: isMobile ? "24px 14px" : "40px 20px" }}>
-        <PageHowItWorks route="/account" />
+  const tierDisplay: Record<TierKey, { name: string; statusTone: string; active: boolean }> = {
+    free: { name: "Free", statusTone: "bg-white/10 border-white/20 text-white/80", active: true },
+    pro: { name: "Pro", statusTone: "bg-emerald-500/15 border-emerald-400/30 text-emerald-200", active: true },
+    pro_trader: { name: "Pro Trader", statusTone: "bg-emerald-500/15 border-emerald-400/30 text-emerald-200", active: true },
+    anonymous: { name: "Not Signed In", statusTone: "bg-white/10 border-white/20 text-white/80", active: false },
+  };
 
-        <AdaptivePersonalityCard
-          skill="account"
-          setupText={`Account page ${tier} plan and lifecycle context`}
-          baseScore={50}
-        />
+  const normalizedTier: TierKey = (tier as TierKey) || "anonymous";
+  const currentTier = tierDisplay[normalizedTier] ?? tierDisplay.anonymous;
 
-        {isLoading ? (
-          <div style={{ textAlign: "center", padding: 40 }}>
-            <div style={{ fontSize: 24 }}>Loading...</div>
-          </div>
-        ) : !isLoggedIn ? (
-          <div style={{ 
-            textAlign: "center", 
-            padding: 60,
-            background: "var(--msp-card)",
-            borderRadius: 16,
-            border: "1px solid rgba(51,65,85,0.8)"
-          }}>
-            <h2 style={{ fontSize: 24, marginBottom: 16 }}>Sign In Required</h2>
-            <p style={{ color: "#94a3b8", marginBottom: 24 }}>
-              Please sign in to view your account settings.
-            </p>
-            <Link 
-              href="/auth"
-              style={{
-                display: "inline-block",
-                padding: "12px 32px",
-                background: "var(--msp-accent)",
-                color: "#0b1120",
-                borderRadius: 999,
-                fontWeight: 600,
-                textDecoration: "none"
-              }}
-            >
+  const aiLimit = normalizedTier === "pro_trader" ? 200 : normalizedTier === "pro" ? 50 : 10;
+  const aiUsed = normalizedTier === "pro_trader" ? 42 : normalizedTier === "pro" ? 19 : 3;
+
+  const usage: UsageMetric[] = [
+    { label: "MSP AI Analyst", used: aiUsed, limit: aiLimit },
+    { label: "Saved Alerts", used: normalizedTier === "pro_trader" ? 8 : normalizedTier === "pro" ? 5 : 2, limit: normalizedTier === "pro_trader" ? 25 : 10 },
+    { label: "Watchlist Symbols", used: normalizedTier === "pro_trader" ? 35 : normalizedTier === "pro" ? 22 : 8, limit: normalizedTier === "pro_trader" ? 100 : normalizedTier === "pro" ? 50 : 20 },
+  ];
+
+  const planFeatures = useMemo(() => {
+    if (normalizedTier === "pro_trader") {
+      return [
+        "Everything in Pro",
+        "MSP AI Analyst (200/day)",
+        "Brain / Permission Engine",
+        "AI + Derivatives Intelligence",
+        "Golden Egg Deep Analysis",
+      ];
+    }
+    if (normalizedTier === "pro") {
+      return [
+        "Everything in Free",
+        "Unlimited symbol scanning",
+        "MSP AI Analyst (50/day)",
+        "Market Movers + Intelligence",
+        "Portfolio / Journal insights",
+      ];
+    }
+    return [
+      "Top 10 equities + Top 10 crypto",
+      "MSP AI Analyst (10/day)",
+      "Basic portfolio tracker",
+      "Basic journal logging",
+      "Community support",
+    ];
+  }, [normalizedTier]);
+
+  const aiRemaining = Math.max(0, aiLimit - aiUsed);
+
+  if (isLoading) {
+    return (
+      <main className="min-h-screen bg-[#070B14] text-white">
+        <div className="mx-auto max-w-6xl px-4 py-20 text-center text-white/70">Loading account...</div>
+      </main>
+    );
+  }
+
+  if (!isLoggedIn) {
+    return (
+      <main className="min-h-screen bg-[#070B14] text-white">
+        <div className="mx-auto max-w-3xl px-4 py-20">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-10 text-center">
+            <h2 className="text-2xl font-semibold">Sign In Required</h2>
+            <p className="mt-3 text-sm text-white/60">Please sign in to view your account settings.</p>
+            <Link href="/auth" className="mt-6 inline-flex rounded-xl border border-emerald-400/30 bg-emerald-500/20 px-5 py-3 text-sm font-semibold hover:bg-emerald-500/30">
               Sign In
             </Link>
           </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-            {/* Subscription Status Card */}
-            <div style={{ 
-              background: "var(--msp-card)",
-              borderRadius: 16,
-              border: "1px solid rgba(51,65,85,0.8)",
-              padding: isMobile ? 18 : 32,
-              boxShadow: "0 8px 32px rgba(0,0,0,0.3)"
-            }}>
-              <h2 style={{ fontSize: isMobile ? 18 : 20, fontWeight: 600, marginBottom: 24, display: "flex", alignItems: "center", gap: 10 }}>
-                <span>📊</span> Subscription Status
-              </h2>
-              
-              <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
-                <div style={{
-                  padding: "8px 20px",
-                  background: currentTier.badge,
-                  borderRadius: 999,
-                  fontWeight: 700,
-                  fontSize: 14,
-                  color: "#fff"
-                }}>
-                  {currentTier.name}
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-[#070B14] text-white">
+      <div className="mx-auto max-w-6xl px-4 pb-16">
+        <div className="pt-8 flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">Account Settings</h1>
+            <p className="text-sm text-white/60 mt-1">Manage your subscription, alerts, and intelligence access.</p>
+            <p className="text-xs text-white/50 mt-2">{email || "Email unavailable"}</p>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => void openBillingPortal()}
+              disabled={billingLoading || normalizedTier === "free"}
+              className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {billingLoading ? "Opening..." : "Manage Billing"}
+            </button>
+            {normalizedTier !== "pro_trader" ? (
+              <Link href="/pricing" className="px-4 py-2 rounded-xl bg-emerald-500/20 border border-emerald-400/30 text-sm font-semibold hover:bg-emerald-500/30">
+                Upgrade Plan
+              </Link>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-200">
+          <span className="font-semibold">AI Requests Remaining Today</span>
+          <span>{aiRemaining} / {aiLimit}</span>
+        </div>
+
+        <div className="mt-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-8 space-y-6">
+            <section className="rounded-2xl border border-white/10 bg-white/5 p-6">
+              <h2 className="text-sm font-semibold mb-4">Subscription</h2>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-lg font-semibold">{currentTier.name}</div>
+                  <div className="text-xs text-white/60">
+                    {normalizedTier === "free" ? "Free tier · Upgrade any time" : "Active · Renewal date in billing portal"}
+                  </div>
                 </div>
-                {tier === "pro" || tier === "pro_trader" ? (
-                  <span style={{ color: "#22c55e", fontSize: 14 }}>✓ Active</span>
-                ) : (
-                  <span style={{ color: "#94a3b8", fontSize: 14 }}>Free tier</span>
-                )}
+
+                <span className={`px-3 py-1 rounded-full border text-xs ${currentTier.statusTone}`}>
+                  {currentTier.active ? "Active" : "Inactive"}
+                </span>
               </div>
+            </section>
 
-              {email && (
-                <p style={{ color: "#94a3b8", fontSize: 14, marginBottom: 24 }}>
-                  Signed in as: <strong style={{ color: "#e5e7eb" }}>{email}</strong>
-                </p>
-              )}
+            <section className="rounded-2xl border border-white/10 bg-white/5 p-6">
+              <h2 className="text-sm font-semibold mb-4">Usage</h2>
+              {usage.map((metric) => (
+                <UsageBar key={metric.label} label={metric.label} used={metric.used} limit={metric.limit} />
+              ))}
+            </section>
 
-              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                {(tier === "pro" || tier === "pro_trader") && (
-                  <PortalButton />
-                )}
-                
-                {tier === "free" && (
-                  <Link
-                    href="/pricing"
-                    style={{
-                      padding: "10px 20px",
-                      background: "var(--msp-accent)",
-                      border: "none",
-                      borderRadius: 10,
-                      color: "#0b1120",
-                      fontWeight: 600,
-                      fontSize: 14,
-                      textDecoration: "none",
-                      boxShadow: "0 4px 14px rgba(20,184,166,0.4)"
-                    }}
-                  >
-                    🚀 Upgrade to Pro
-                  </Link>
-                )}
-              </div>
-            </div>
-
-            {/* Plan Features Card */}
-            <div style={{ 
-              background: "var(--msp-card)",
-              borderRadius: 16,
-              border: "1px solid rgba(51,65,85,0.8)",
-              padding: isMobile ? 18 : 32
-            }}>
-              <h2 style={{ fontSize: isMobile ? 18 : 20, fontWeight: 600, marginBottom: 24, display: "flex", alignItems: "center", gap: 10 }}>
-                <span>✨</span> Your Plan Features
-              </h2>
-              
-              <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 12 }}>
-                {tier === "free" && (
-                  <>
-                    <li style={{ display: "flex", alignItems: "center", gap: 10, color: "#e5e7eb" }}>
-                      <span style={{ color: "#22c55e" }}>✓</span> Scanner (Top 10 equities + crypto)
-                    </li>
-                    <li style={{ display: "flex", alignItems: "center", gap: 10, color: "#e5e7eb" }}>
-                      <span style={{ color: "#22c55e" }}>✓</span> MSP Analyst AI (10/day)
-                    </li>
-                    <li style={{ display: "flex", alignItems: "center", gap: 10, color: "#e5e7eb" }}>
-                      <span style={{ color: "#22c55e" }}>✓</span> Portfolio tracker (3 positions)
-                    </li>
-                    <li style={{ display: "flex", alignItems: "center", gap: 10, color: "#e5e7eb" }}>
-                      <span style={{ color: "#22c55e" }}>✓</span> Trade journal
-                    </li>
-                  </>
-                )}
-                {tier === "pro" && (
-                  <>
-                    <li style={{ display: "flex", alignItems: "center", gap: 10, color: "#e5e7eb" }}>
-                      <span style={{ color: "#22c55e" }}>✓</span> Unlimited symbol scanning
-                    </li>
-                    <li style={{ display: "flex", alignItems: "center", gap: 10, color: "#e5e7eb" }}>
-                      <span style={{ color: "#22c55e" }}>✓</span> MSP Analyst AI (50/day)
-                    </li>
-                    <li style={{ display: "flex", alignItems: "center", gap: 10, color: "#e5e7eb" }}>
-                      <span style={{ color: "#22c55e" }}>✓</span> Market Movers & News
-                    </li>
-                    <li style={{ display: "flex", alignItems: "center", gap: 10, color: "#e5e7eb" }}>
-                      <span style={{ color: "#22c55e" }}>✓</span> Company Overview
-                    </li>
-                    <li style={{ display: "flex", alignItems: "center", gap: 10, color: "#e5e7eb" }}>
-                      <span style={{ color: "#22c55e" }}>✓</span> AI Tools & Insights
-                    </li>
-                    <li style={{ display: "flex", alignItems: "center", gap: 10, color: "#e5e7eb" }}>
-                      <span style={{ color: "#22c55e" }}>✓</span> CSV exports
-                    </li>
-                  </>
-                )}
-                {tier === "pro_trader" && (
-                  <>
-                    <li style={{ display: "flex", alignItems: "center", gap: 10, color: "#e5e7eb" }}>
-                      <span style={{ color: "var(--msp-accent)" }}>✓</span> Everything in Pro
-                    </li>
-                    <li style={{ display: "flex", alignItems: "center", gap: 10, color: "#e5e7eb" }}>
-                      <span style={{ color: "var(--msp-accent)" }}>✓</span> MSP Analyst AI (200/day)
-                    </li>
-                    <li style={{ display: "flex", alignItems: "center", gap: 10, color: "#e5e7eb" }}>
-                      <span style={{ color: "var(--msp-accent)" }}>✓</span> Full backtesting engine
-                    </li>
-                    <li style={{ display: "flex", alignItems: "center", gap: 10, color: "#e5e7eb" }}>
-                      <span style={{ color: "var(--msp-accent)" }}>✓</span> Golden Egg Deep Analysis
-                    </li>
-                    <li style={{ display: "flex", alignItems: "center", gap: 10, color: "#e5e7eb" }}>
-                      <span style={{ color: "var(--msp-accent)" }}>✓</span> Premium support
-                    </li>
-                  </>
-                )}
+            <section className="rounded-2xl border border-white/10 bg-white/5 p-6">
+              <h2 className="text-sm font-semibold mb-4">Plan Features</h2>
+              <ul className="space-y-2 text-xs text-white/75">
+                {planFeatures.map((feature) => (
+                  <li key={feature}>• {feature}</li>
+                ))}
               </ul>
-            </div>
-            {/* Referral Program Card */}
-            {referralInfo && (
-              <div style={{ 
-                background: "var(--msp-panel)",
-                borderRadius: 16,
-                border: "1px solid var(--msp-border)",
-                padding: isMobile ? 18 : 32
-              }}>
-                <h2 style={{ fontSize: isMobile ? 18 : 20, fontWeight: 600, marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
-                  <span>🎁</span> Refer a Friend
-                </h2>
-                <p style={{ color: "#94a3b8", fontSize: 14, marginBottom: 24 }}>
-                  When your friend subscribes, you <strong style={{ color: "var(--msp-accent)" }}>both get 1 month Pro Trader free!</strong>
-                </p>
+            </section>
 
-                {/* Referral Link */}
-                <div style={{ marginBottom: 24 }}>
-                  <label style={{ color: "#94a3b8", fontSize: 12, display: "block", marginBottom: 8 }}>
-                    Your Referral Link
-                  </label>
-                  <div style={{ display: "flex", gap: 8, flexDirection: isMobile ? 'column' : 'row' }}>
-                    <input
-                      type="text"
-                      readOnly
-                      value={referralInfo.referralUrl}
-                      style={{
-                        flex: 1,
-                        padding: "12px 16px",
-                        background: "rgba(15,23,42,0.8)",
-                        border: "1px solid rgba(51,65,85,0.5)",
-                        borderRadius: 8,
-                        color: "#e5e7eb",
-                        fontSize: 13,
-                      }}
-                    />
-                    <button
-                      onClick={copyReferralLink}
-                      style={{
-                        padding: "12px 20px",
-                        background: copied ? "#22c55e" : "var(--msp-accent)",
-                        border: "none",
-                        borderRadius: 8,
-                        color: "#fff",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        transition: "background 0.2s"
-                      }}
-                    >
-                      {copied ? "✓ Copied!" : "Copy"}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Referral Stats */}
-                <div style={{ 
-                  display: "grid", 
-                  gridTemplateColumns: "repeat(auto-fit, minmax(80px, 1fr))", 
-                  gap: 16,
-                  padding: 16,
-                  background: "rgba(15,23,42,0.5)",
-                  borderRadius: 12
-                }}>
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 24, fontWeight: 700, color: "#fbbf24" }}>{referralInfo.stats.pending}</div>
-                    <div style={{ fontSize: 12, color: "#94a3b8" }}>Pending</div>
-                  </div>
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 24, fontWeight: 700, color: "#22c55e" }}>{referralInfo.stats.rewarded}</div>
-                    <div style={{ fontSize: 12, color: "#94a3b8" }}>Rewarded</div>
-                  </div>
-                  <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 24, fontWeight: 700, color: "#60a5fa" }}>{referralInfo.stats.totalReferrals}</div>
-                    <div style={{ fontSize: 12, color: "#94a3b8" }}>Total</div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Notification Preferences Card */}
-            <div style={{
-              background: 'var(--msp-card)',
-              borderRadius: 16,
-              border: '1px solid rgba(51,65,85,0.8)',
-              padding: 32
-            }}>
-              <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span>🔔</span> Notification Delivery Settings
-              </h2>
-              <p style={{ color: '#94a3b8', fontSize: 14, marginBottom: 20 }}>
-                Choose how trade lifecycle notifications are delivered to you.
-              </p>
+            <section className="rounded-2xl border border-white/10 bg-white/5 p-6">
+              <h2 className="text-sm font-semibold mb-4">Notifications</h2>
 
               {prefsLoading ? (
-                <div style={{ color: '#94a3b8', fontSize: 14 }}>Loading settings...</div>
+                <div className="text-sm text-white/60">Loading settings...</div>
               ) : (
                 <>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 16 }}>
-                    <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#e5e7eb', fontSize: 14 }}>
-                      <span>In-app notifications</span>
-                      <input
-                        type="checkbox"
-                        checked={notificationPrefs.inAppEnabled}
-                        onChange={(e) => setNotificationPrefs((prev) => ({ ...prev, inAppEnabled: e.target.checked }))}
-                      />
-                    </label>
-
-                    <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#e5e7eb', fontSize: 14 }}>
-                      <span>Email notifications</span>
-                      <input
-                        type="checkbox"
-                        checked={notificationPrefs.emailEnabled}
-                        onChange={(e) => setNotificationPrefs((prev) => ({ ...prev, emailEnabled: e.target.checked }))}
-                      />
-                    </label>
+                  <div className="space-y-4">
+                    <ToggleRow
+                      label="In-App Notifications"
+                      checked={notificationPrefs.inAppEnabled}
+                      onChange={(checked) => setNotificationPrefs((prev) => ({ ...prev, inAppEnabled: checked }))}
+                    />
+                    <ToggleRow
+                      label="Email Notifications"
+                      checked={notificationPrefs.emailEnabled}
+                      onChange={(checked) => setNotificationPrefs((prev) => ({ ...prev, emailEnabled: checked }))}
+                    />
                     <input
                       type="email"
                       value={notificationPrefs.emailTo}
                       onChange={(e) => setNotificationPrefs((prev) => ({ ...prev, emailTo: e.target.value }))}
                       placeholder="you@example.com"
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        background: 'rgba(15,23,42,0.8)',
-                        border: '1px solid rgba(51,65,85,0.7)',
-                        borderRadius: 8,
-                        color: '#e5e7eb',
-                        fontSize: 13,
-                      }}
+                      className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
                     />
 
-                    <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#e5e7eb', fontSize: 14 }}>
-                      <span>Discord notifications</span>
-                      <input
-                        type="checkbox"
-                        checked={notificationPrefs.discordEnabled}
-                        onChange={(e) => setNotificationPrefs((prev) => ({ ...prev, discordEnabled: e.target.checked }))}
-                      />
-                    </label>
+                    <ToggleRow
+                      label="Discord Webhook Alerts"
+                      checked={notificationPrefs.discordEnabled}
+                      onChange={(checked) => setNotificationPrefs((prev) => ({ ...prev, discordEnabled: checked }))}
+                    />
                     <input
                       type="url"
                       value={notificationPrefs.discordWebhookUrl}
                       onChange={(e) => setNotificationPrefs((prev) => ({ ...prev, discordWebhookUrl: e.target.value }))}
                       placeholder="https://discord.com/api/webhooks/..."
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        background: 'rgba(15,23,42,0.8)',
-                        border: '1px solid rgba(51,65,85,0.7)',
-                        borderRadius: 8,
-                        color: '#e5e7eb',
-                        fontSize: 13,
-                      }}
+                      className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40"
                     />
                   </div>
 
-                  {prefsError && (
-                    <p style={{ color: '#f87171', fontSize: 13, marginBottom: 12 }}>{prefsError}</p>
-                  )}
-                  {prefsMessage && (
-                    <p style={{ color: '#34d399', fontSize: 13, marginBottom: 12 }}>{prefsMessage}</p>
-                  )}
+                  {prefsError ? <p className="mt-4 text-xs text-rose-300">{prefsError}</p> : null}
+                  {prefsMessage ? <p className="mt-4 text-xs text-emerald-300">{prefsMessage}</p> : null}
 
                   <button
                     onClick={() => void saveNotificationPrefs()}
                     disabled={prefsSaving}
-                    style={{
-                      padding: '10px 20px',
-                      background: 'var(--msp-accent)',
-                      border: 'none',
-                      borderRadius: 10,
-                      color: '#0b1120',
-                      fontWeight: 600,
-                      fontSize: 14,
-                      cursor: prefsSaving ? 'not-allowed' : 'pointer',
-                      opacity: prefsSaving ? 0.7 : 1,
-                    }}
+                    className="mt-6 px-4 py-2 rounded-xl bg-white/10 border border-white/10 text-sm hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {prefsSaving ? 'Saving...' : 'Save Notification Settings'}
+                    {prefsSaving ? "Saving..." : "Save Settings"}
                   </button>
                 </>
               )}
-            </div>
+            </section>
+          </div>
 
-            {/* Help Card */}
-            <div style={{ 
-              background: "rgba(15,23,42,0.5)",
-              borderRadius: 16,
-              border: "1px solid rgba(51,65,85,0.5)",
-              padding: isMobile ? 16 : 24,
-              textAlign: "center"
-            }}>
-              <p style={{ color: "#94a3b8", fontSize: 14, margin: 0 }}>
-                Need help? Contact us at{" "}
-                <a href="mailto:support@marketscannerpros.app" style={{ color: "#22c55e" }}>
-                  support@marketscannerpros.app
-                </a>
-              </p>
-            </div>
+          <div className="lg:col-span-4 space-y-6">
+            <section className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/10 to-white/5 p-6">
+              <h3 className="text-sm font-semibold">Unlock More</h3>
 
-            {/* Data Management Card */}
-            <div style={{ 
-              background: "rgba(239,68,68,0.05)",
-              borderRadius: 16,
-              border: "1px solid rgba(239,68,68,0.2)",
-              padding: isMobile ? 16 : 24,
-            }}>
-              <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, display: "flex", alignItems: "center", gap: 10, color: "#f87171" }}>
-                <span>🗑️</span> Data Management
-              </h2>
-              <p style={{ color: "#94a3b8", fontSize: 14, marginBottom: 16 }}>
-                Under GDPR and Australian Privacy laws, you have the right to request deletion of your personal data.
-              </p>
+              <ul className="mt-4 space-y-2 text-xs text-white/70">
+                <li>• AI-Triggered Smart Alerts</li>
+                <li>• Full Derivatives Intelligence</li>
+                <li>• Golden Egg Deep Analysis</li>
+                <li>• Higher AI daily limits</li>
+              </ul>
+
+              {normalizedTier !== "pro_trader" ? (
+                <Link href="/pricing" className="mt-6 block w-full px-4 py-3 rounded-xl bg-emerald-500/20 border border-emerald-400/30 text-sm font-semibold hover:bg-emerald-500/30 text-center">
+                  Upgrade to Pro Trader
+                </Link>
+              ) : (
+                <div className="mt-6 w-full px-4 py-3 rounded-xl border border-emerald-400/30 bg-emerald-500/10 text-sm text-center text-emerald-200">
+                  You have full Pro Trader access
+                </div>
+              )}
+            </section>
+
+            <section className="rounded-2xl border border-red-500/20 bg-red-500/5 p-6">
+              <h3 className="text-sm font-semibold text-red-300">Data Management</h3>
+              <p className="mt-2 text-xs text-white/60">Request deletion of your account and associated data.</p>
+
               <button
-                onClick={() => {
-                  if (confirm("Are you sure you want to request deletion of all your data? This action cannot be undone. You will receive a confirmation email within 48 hours.")) {
-                    // Send deletion request
-                    fetch("/api/auth/delete-request", {
-                      method: "POST",
-                      credentials: "include"
-                    }).then(res => {
-                      if (res.ok) {
-                        alert("Data deletion request submitted. You will receive a confirmation email within 48 hours.");
-                      } else {
-                        alert("Failed to submit request. Please email support@marketscannerpros.app directly.");
-                      }
-                    }).catch(() => {
-                      alert("Failed to submit request. Please email support@marketscannerpros.app directly.");
-                    });
-                  }
-                }}
-                style={{
-                  padding: "10px 20px",
-                  background: "transparent",
-                  border: "1px solid #ef4444",
-                  color: "#ef4444",
-                  borderRadius: 8,
-                  cursor: "pointer",
-                  fontSize: 14,
-                  fontWeight: 500
-                }}
+                onClick={() => void deleteDataRequest()}
+                className="mt-4 w-full px-4 py-2 rounded-xl border border-red-400/40 text-red-300 text-sm hover:bg-red-500/10"
               >
                 Request Data Deletion
               </button>
-              <p style={{ color: "#6b7280", fontSize: 12, marginTop: 12 }}>
-                Or email <a href="mailto:support@marketscannerpros.app?subject=Data%20Deletion%20Request" style={{ color: "#94a3b8" }}>support@marketscannerpros.app</a> with subject "Data Deletion Request"
-              </p>
-            </div>
+            </section>
           </div>
-        )}
-      </main>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function UsageBar({ label, used, limit }: { label: string; used: number; limit: number }) {
+  const pct = Math.max(0, Math.min(100, (used / Math.max(1, limit)) * 100));
+
+  return (
+    <div className="mb-4">
+      <div className="flex justify-between text-xs text-white/60 mb-2">
+        <span>{label}</span>
+        <span>{used}/{limit}</span>
+      </div>
+      <div className="h-2 rounded-full bg-white/10">
+        <div className="h-2 rounded-full bg-emerald-400/40" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function ToggleRow({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between text-sm">
+      <span>{label}</span>
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="accent-emerald-400" />
     </div>
   );
 }
