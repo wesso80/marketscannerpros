@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
+import { timingSafeEqual } from 'crypto';
 
-// Verify admin secret
+// Verify admin secret (timing-safe)
 function verifyAdmin(req: NextRequest): boolean {
   const auth = req.headers.get('authorization');
   if (!auth?.startsWith('Bearer ')) return false;
   const secret = auth.slice(7);
-  return secret === process.env.ADMIN_SECRET;
+  const adminSecret = process.env.ADMIN_SECRET || '';
+  if (!secret || !adminSecret || secret.length !== adminSecret.length) return false;
+  return timingSafeEqual(Buffer.from(secret), Buffer.from(adminSecret));
 }
 
 // Subscription pricing

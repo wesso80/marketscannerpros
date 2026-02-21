@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPriceBySymbol, COINGECKO_ID_MAP, symbolToId } from "@/lib/coingecko";
 import { shouldUseCache, canFallbackToAV, getCacheMode } from "@/lib/cacheMode";
 import { getQuote } from "@/lib/onDemandFetch";
+import { apiLimiter, getClientIP } from "@/lib/rateLimit";
 
 /**
  * /api/quote?symbol=XRPUSD&type=crypto&market=USD
@@ -25,6 +26,16 @@ const COINGECKO_API_KEY = process.env.COINGECKO_API_KEY;
 type AssetType = "crypto" | "stock" | "fx";
 
 export async function GET(req: NextRequest) {
+  // Rate limit: 60 req/min per IP to prevent quota exhaustion
+  const ip = getClientIP(req);
+  const rateCheck = apiLimiter.check(ip);
+  if (!rateCheck.allowed) {
+    return NextResponse.json(
+      { ok: false, error: "Too many requests. Please slow down.", retryAfter: rateCheck.retryAfter },
+      { status: 429, headers: { "Retry-After": String(rateCheck.retryAfter) } }
+    );
+  }
+
   try {
     const url = new URL(req.url);
     const symbol = url.searchParams.get("symbol")?.toUpperCase() || "";

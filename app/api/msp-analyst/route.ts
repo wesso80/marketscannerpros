@@ -131,27 +131,12 @@ export async function POST(req: NextRequest) {
       } as any;
     }
 
-    // Allow anonymous users with 10 free AI questions per day
+    // Require authentication — no anonymous AI access (prevents OpenAI credit burning)
     if (!session) {
-      // Generate anonymous workspace ID from request fingerprint
-      const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || 
-                 req.headers.get('x-real-ip') || 
-                 'unknown';
-      const userAgent = req.headers.get('user-agent') || 'unknown';
-      
-      // Create a simple fingerprint hash
-      const encoder = new TextEncoder();
-      const data = encoder.encode(`anon_${ip}_${userAgent.slice(0, 50)}`);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const fingerprint = hashArray.slice(0, 16).map(b => b.toString(16).padStart(2, '0')).join('');
-      
-      session = {
-        workspaceId: `anon_${fingerprint}`,
-        tier: "free",
-        exp: Math.floor(Date.now() / 1000) + 3600,
-      } as any;
-      isAnonymous = true;
+      return new Response(
+        JSON.stringify({ error: "Authentication required. Please log in to use AI analyst.", authRequired: true }),
+        { status: 401 }
+      );
     }
 
     const workspaceId = session!.workspaceId;

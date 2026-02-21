@@ -1,6 +1,7 @@
 // Admin API for managing user trials
 import { NextRequest, NextResponse } from "next/server";
 import { q } from "@/lib/db";
+import { timingSafeEqual } from 'crypto';
 
 // Admin secret - MUST be set in environment variables
 const ADMIN_SECRET = process.env.ADMIN_SECRET;
@@ -10,7 +11,8 @@ function isAuthorized(req: NextRequest): boolean {
   if (!ADMIN_SECRET) return false; // Locked if env not set
   const authHeader = req.headers.get("authorization");
   const secret = authHeader?.replace("Bearer ", "");
-  return secret === ADMIN_SECRET;
+  if (!secret || secret.length !== ADMIN_SECRET.length) return false;
+  return timingSafeEqual(Buffer.from(secret), Buffer.from(ADMIN_SECRET));
 }
 
 // GET - List all trials (active and expired)

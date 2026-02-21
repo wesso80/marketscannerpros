@@ -26,12 +26,15 @@ function isStrategy(value: string): value is StrategyTag {
 
 export async function POST(req: NextRequest) {
   try {
+    // Require authentication — risk evaluation must be user-scoped
+    const session = await getSessionFromCookie();
+    if (!session?.workspaceId) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
     const body = await req.json();
     const guardEnabled = req.cookies.get('msp_risk_guard')?.value !== 'off';
-    const session = await getSessionFromCookie();
-    const runtimeInput = session?.workspaceId
-      ? await getRuntimeRiskSnapshotInput(session.workspaceId).catch(() => null)
-      : null;
+    const runtimeInput = await getRuntimeRiskSnapshotInput(session.workspaceId).catch(() => null);
     const input = body?.trade_intent || body;
 
     const strategy = String(input?.strategy_tag || '').toUpperCase();

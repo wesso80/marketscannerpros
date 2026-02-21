@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { q } from "@/lib/db";
+import { timingSafeEqual } from 'crypto';
+
+function timingSafeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
   const secret = authHeader?.replace("Bearer ", "");
+  const adminSecret = process.env.ADMIN_SECRET || '';
   
-  if (!secret || secret !== process.env.ADMIN_SECRET) {
+  if (!secret || !adminSecret || !timingSafeCompare(secret, adminSecret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
