@@ -23,7 +23,14 @@ export function getToolsLayoutMode(pathname: string): ToolsLayoutMode {
 }
 
 export function getToolsContainerVariant(pathname: string): ToolsContainerVariant {
-  if (pathname.startsWith('/tools/portfolio') || pathname.startsWith('/tools/backtest')) {
+  const fullWidthPaths = [
+    '/tools/portfolio',
+    '/tools/backtest',
+    '/tools/scanner',
+    '/tools/journal',
+    '/tools/confluence-scanner',
+  ];
+  if (fullWidthPaths.some((p) => pathname.startsWith(p))) {
     return 'full';
   }
 

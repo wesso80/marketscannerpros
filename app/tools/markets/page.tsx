@@ -81,7 +81,7 @@ export default function MarketsPage() {
 
   return (
     <div className="min-h-screen bg-[var(--msp-bg)] px-2 py-3 text-slate-100 md:px-3">
-      <div className="mx-auto grid w-full max-w-[1500px] gap-2">
+      <div className="mx-auto grid w-full max-w-none gap-2">
         <nav className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-card)] px-3 py-2 text-[11px] font-semibold">
           {[
             ['Tools', '/tools'],

@@ -320,7 +320,7 @@ export default function CryptoDashboard() {
   const decisionDrivers = [fundingDriver, oiDriver, liquidationDriver];
 
   return (
-    <div className="mx-auto w-full max-w-[1280px] px-4 pb-24 pt-6 md:px-6">
+    <div className="mx-auto w-full max-w-none px-4 pb-24 pt-6 md:px-6">
       {/* Page Header */}
       <div className="mb-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">

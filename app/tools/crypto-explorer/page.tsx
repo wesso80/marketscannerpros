@@ -426,7 +426,7 @@ function CryptoDetailPageContent() {
 
   return (
     <div className="min-h-screen bg-[var(--msp-bg)] text-white">
-      <div className="mx-auto w-full max-w-[1500px] space-y-2 px-2 pb-6 pt-3 md:px-3">
+      <div className="mx-auto w-full max-w-none space-y-2 px-2 pb-6 pt-3 md:px-3">
         <header className="rounded-lg border border-slate-700 bg-slate-900 p-2">
           <h1 className="text-lg font-bold text-teal-300">🔍 Crypto Asset Explorer</h1>
           <p className="text-xs text-slate-400">Decision-grade asset view: status, permission, context, then details.</p>
