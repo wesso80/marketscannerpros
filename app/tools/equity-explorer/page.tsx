@@ -450,7 +450,7 @@ export default function EquityExplorerPage() {
   // Gate Pro Trader features
   if (!tierLoading && tier !== 'pro_trader' && tier !== 'pro') {
     return (
-      <div className="min-h-screen bg-slate-950 p-8">
+      <div className="min-h-screen bg-slate-950 px-3 py-6 sm:p-8">
         <UpgradeGate 
           requiredTier="pro" 
           feature="Equity Explorer"

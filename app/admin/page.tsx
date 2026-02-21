@@ -440,8 +440,8 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
               📊 Symbol Win Rates
             </h3>
             {stats?.learning?.stats?.length ? (
-              <div style={{ maxHeight: "300px", overflowY: "auto" }}>
-                <table style={{ width: "100%", fontSize: "0.85rem" }}>
+              <div style={{ maxHeight: "300px", overflowY: "auto", overflowX: "auto" }}>
+                <table style={{ width: "100%", fontSize: "0.85rem", minWidth: 400 }}>
                   <thead>
                     <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
                       <th style={{ textAlign: "left", padding: "0.5rem", color: "#9CA3AF" }}>Symbol</th>
@@ -482,8 +482,8 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
               🔮 Recent Predictions
             </h3>
             {stats?.learning?.recentPredictions?.length ? (
-              <div style={{ maxHeight: "300px", overflowY: "auto" }}>
-                <table style={{ width: "100%", fontSize: "0.8rem" }}>
+              <div style={{ maxHeight: "300px", overflowY: "auto", overflowX: "auto" }}>
+                <table style={{ width: "100%", fontSize: "0.8rem", minWidth: 420 }}>
                   <thead>
                     <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
                       <th style={{ textAlign: "left", padding: "0.4rem", color: "#9CA3AF" }}>Symbol</th>

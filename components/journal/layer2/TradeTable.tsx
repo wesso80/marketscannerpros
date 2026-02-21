@@ -27,8 +27,8 @@ export default function TradeTable({ rows, sort, onSort, onSelectTrade, onQuickC
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/5 bg-slate-900/40">
-      <table className="w-full text-sm">
+    <div className="overflow-x-auto rounded-2xl border border-white/5 bg-slate-900/40">
+      <table className="w-full min-w-[640px] text-sm">
         <thead className="border-b border-white/5 bg-white/5 text-slate-300">
           <tr>
             <th className="px-3 py-2 text-left">Symbol</th>

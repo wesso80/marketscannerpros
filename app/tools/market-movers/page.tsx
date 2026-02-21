@@ -631,8 +631,8 @@ export default function MarketMoversPage() {
                   </div>
                 )}
 
-                <div className="h-auto overflow-visible rounded-md border border-slate-700 bg-slate-950/60 md:h-[520px] md:overflow-y-auto">
-                  <table className="w-full text-[11px]">
+                <div className="h-auto overflow-x-auto overflow-y-visible rounded-md border border-slate-700 bg-slate-950/60 md:h-[520px] md:overflow-y-auto">
+                  <table className="w-full min-w-[640px] text-[11px]">
                     <thead className="sticky top-0 bg-slate-900/95">
                       <tr className="text-[10px] uppercase text-slate-400">
                         <th className="px-2 py-1 text-left">Symbol</th>

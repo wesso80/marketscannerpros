@@ -14,7 +14,7 @@ export default function UpgradeGate({ requiredTier, feature, children }: Upgrade
   
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-5 py-10">
-      <div className="msp-card w-full max-w-[480px] rounded-[20px] px-10 py-12 text-center">
+      <div className="msp-card w-full max-w-[480px] rounded-[20px] px-5 py-8 text-center sm:px-10 sm:py-12">
         <div style={{ fontSize: "56px", marginBottom: "20px" }}>🔒</div>
         
         <h2 style={{

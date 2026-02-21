@@ -4324,8 +4324,8 @@ export default function OptionsConfluenceScanner() {
                       📊 Strike Analysis with Greeks ({result.openInterestAnalysis.highOIStrikes.length} strikes)
                     </summary>
                     <div className="mt-3">
-                      <div className="greeks-table-container">
-                        <table className="greeks-table w-full border-collapse text-[0.8rem]">
+                      <div className="greeks-table-container overflow-x-auto">
+                        <table className="greeks-table w-full min-w-[480px] border-collapse text-[0.8rem]">
                           <thead>
                             <tr className="border-b border-[var(--msp-border-strong)]">
                               <th className="p-2 text-left font-medium text-slate-400">Strike</th>

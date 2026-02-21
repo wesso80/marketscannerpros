@@ -226,7 +226,7 @@ export default function RiskApplicationOverlay({ trades, openTrades }: Props) {
           </div>
         </div>
 
-        <div className="grid grid-cols-8 gap-2">
+        <div className="grid grid-cols-4 gap-2 md:grid-cols-8">
           {BIN_LABELS.map((label, index) => {
             const closedHeight = Math.round((closedBins[index] / maxBin) * 130);
             const openHeight = Math.round((openBins[index] / maxBin) * 130);

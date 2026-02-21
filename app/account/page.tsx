@@ -199,7 +199,7 @@ export default function AccountPage() {
     return (
       <main className="min-h-screen bg-[var(--msp-bg)] text-white">
         <div className="mx-auto max-w-3xl px-4 py-20">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-10 text-center">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-center sm:p-10">
             <h2 className="text-2xl font-semibold">Sign In Required</h2>
             <p className="mt-3 text-sm text-white/60">Please sign in to view your account settings.</p>
             <Link href="/auth" className="mt-6 inline-flex rounded-xl border border-emerald-400/30 bg-emerald-500/20 px-5 py-3 text-sm font-semibold hover:bg-emerald-500/30">

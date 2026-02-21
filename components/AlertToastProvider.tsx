@@ -57,7 +57,7 @@ function AlertToast({
     <div
       className={`
         relative overflow-hidden rounded-lg border border-emerald-500/30 bg-slate-800/95 
-        backdrop-blur-sm shadow-2xl shadow-emerald-500/20 p-4 min-w-[320px] max-w-[400px]
+        backdrop-blur-sm shadow-2xl shadow-emerald-500/20 p-4 min-w-[280px] max-w-[400px] w-full sm:min-w-[320px]
         transform transition-all duration-300 ease-out
         ${isExiting ? 'opacity-0 translate-x-full' : 'opacity-100 translate-x-0'}
       `}

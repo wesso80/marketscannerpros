@@ -1097,7 +1097,7 @@ export default function IntradayChartsPage() {
                 {hoveredBar && (
                   <div className="mt-3 rounded-lg border border-slate-700 bg-slate-800/60 p-3 text-xs">
                     <div className="mb-1 text-slate-400">{formatTime(hoveredBar.timestamp)} • {formatDate(hoveredBar.timestamp)}</div>
-                    <div className="grid grid-cols-4 gap-2 text-slate-100">
+                    <div className="grid grid-cols-2 gap-2 text-slate-100 md:grid-cols-4">
                       <div>O ${formatPrice(hoveredBar.open)}</div>
                       <div className="text-emerald-300">H ${formatPrice(hoveredBar.high)}</div>
                       <div className="text-rose-300">L ${formatPrice(hoveredBar.low)}</div>
