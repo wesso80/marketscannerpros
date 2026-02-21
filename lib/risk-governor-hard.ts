@@ -403,6 +403,25 @@ export function evaluateCandidate(snapshot: PermissionMatrixSnapshot, candidate:
     }
   }
 
+  // ─── Stop direction validation ───
+  // LONG: stop must be below entry. SHORT: stop must be above entry.
+  if (candidate.direction === 'LONG' && candidate.stop_price >= candidate.entry_price) {
+    permission = 'BLOCK';
+    reasonCodes.push('STOP_WRONG_SIDE');
+    requiredActions.push('LONG stop must be below entry price.');
+  } else if (candidate.direction === 'SHORT' && candidate.stop_price <= candidate.entry_price) {
+    permission = 'BLOCK';
+    reasonCodes.push('STOP_WRONG_SIDE');
+    requiredActions.push('SHORT stop must be above entry price.');
+  }
+
+  // ─── Stop === Entry explicit check ───
+  if (candidate.stop_price === candidate.entry_price) {
+    permission = 'BLOCK';
+    reasonCodes.push('STOP_EQUALS_ENTRY');
+    requiredActions.push('Stop price cannot equal entry price.');
+  }
+
   const stopDistance = Math.abs(candidate.entry_price - candidate.stop_price);
   const stopMinDistance = minStopAtrMultiplier(candidate.strategy_tag, candidate.asset_class) * candidate.atr;
   if (stopDistance < stopMinDistance) {

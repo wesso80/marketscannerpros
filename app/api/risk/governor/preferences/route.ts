@@ -21,7 +21,7 @@ export async function PUT(req: NextRequest) {
       name: COOKIE_NAME,
       value: enabled ? 'on' : 'off',
       path: '/',
-      httpOnly: false,
+      httpOnly: true,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
       maxAge: 60 * 60 * 24 * 365,

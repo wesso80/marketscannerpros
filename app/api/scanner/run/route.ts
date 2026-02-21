@@ -5,6 +5,8 @@ import { avCircuit } from "@/lib/circuitBreaker";
 import { shouldUseCache, canFallbackToAV, getCacheMode } from "@/lib/cacheMode";
 import { getCachedScanData, getBulkCachedScanData, CachedScanData } from "@/lib/scannerCache";
 import { recordSignalsBatch, RecordSignalParams } from "@/lib/signalRecorder";
+import { getRuntimeRiskSnapshotInput } from "@/lib/risk/runtimeSnapshot";
+import { buildPermissionSnapshot } from "@/lib/risk-governor-hard";
 import { getAdaptiveLayer } from "@/lib/adaptiveTrader";
 import { computeInstitutionalFilter, inferStrategyFromText } from "@/lib/institutionalFilter";
 import { computeCapitalFlowEngine } from "@/lib/capitalFlowEngine";
@@ -280,6 +282,20 @@ export async function POST(req: NextRequest) {
         { error: "Please log in to use the scanner" },
         { status: 401 }
       );
+    }
+
+    // ─── Risk Governor awareness ───
+    // Fetch current risk state so we can tag results with regime context
+    let riskSnapshot: ReturnType<typeof buildPermissionSnapshot> | null = null;
+    try {
+      const riskInput = await getRuntimeRiskSnapshotInput(session.workspaceId);
+      const guardCookie = req.cookies.get('msp_risk_guard')?.value;
+      riskSnapshot = buildPermissionSnapshot({
+        enabled: guardCookie !== 'off',
+        ...riskInput,
+      });
+    } catch (riskErr) {
+      console.warn('[scanner] Risk governor lookup failed, continuing without regime:', riskErr);
     }
     
     const body = (await req.json()) as ScanRequest;
@@ -1538,6 +1554,17 @@ export async function POST(req: NextRequest) {
           profile: adaptive.profile,
           match: adaptive.match,
         },
+        riskGovernor: riskSnapshot ? {
+          regime: riskSnapshot.regime,
+          riskMode: riskSnapshot.risk_mode,
+          permission: riskSnapshot.risk_mode === 'LOCKED' ? 'BLOCKED' : 'ACTIVE',
+          globalBlocks: riskSnapshot.global_blocks,
+          warning: riskSnapshot.risk_mode === 'LOCKED'
+            ? 'Risk governor is LOCKED — new entries disabled. These signals are informational only.'
+            : riskSnapshot.risk_mode === 'DEFENSIVE'
+            ? 'Risk governor is DEFENSIVE — reduced sizing enforced.'
+            : null,
+        } : null,
       },
     }, {
       headers: {

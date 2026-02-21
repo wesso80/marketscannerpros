@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { q } from "@/lib/db";
 import { getSessionFromCookie } from "@/lib/auth";
+import { getRuntimeRiskSnapshotInput } from "@/lib/risk/runtimeSnapshot";
+import { buildPermissionSnapshot } from "@/lib/risk-governor-hard";
 
 interface Position {
   id: number;
@@ -180,6 +182,30 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { positions, closedPositions, performanceHistory, cashState } = body;
 
+    // ─── Risk Governor check: warn if LOCKED and new open positions are being added ───
+    let riskWarning: string | null = null;
+    try {
+      const existingPositions = await q(
+        `SELECT symbol FROM portfolio_positions WHERE workspace_id = $1`,
+        [workspaceId]
+      );
+      const existingSymbols = new Set(existingPositions.map((r: any) => r.symbol));
+      const newPositions = (positions || []).filter((p: any) => !existingSymbols.has(p.symbol));
+
+      if (newPositions.length > 0) {
+        const guardCookie = req.cookies.get('msp_risk_guard')?.value;
+        if (guardCookie !== 'off') {
+          const riskInput = await getRuntimeRiskSnapshotInput(workspaceId);
+          const snapshot = buildPermissionSnapshot({ enabled: true, ...riskInput });
+          if (snapshot.risk_mode === 'LOCKED') {
+            riskWarning = 'Risk governor is LOCKED — new position entries should be reviewed. Sync allowed for data integrity.';
+          } else if (snapshot.risk_mode === 'DEFENSIVE') {
+            riskWarning = 'Risk governor is DEFENSIVE — reduced sizing enforced for new entries.';
+          }
+        }
+      }
+    } catch { /* risk check is advisory, don't block sync */ }
+
     // Clear existing and insert new (simple sync approach)
     await q(`DELETE FROM portfolio_positions WHERE workspace_id = $1`, [workspaceId]);
     await q(`DELETE FROM portfolio_closed WHERE workspace_id = $1`, [workspaceId]);
@@ -238,7 +264,7 @@ export async function POST(req: NextRequest) {
       console.warn('Failed to persist portfolio cash state (table may not exist yet)');
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, riskWarning });
   } catch (error) {
     console.error("Portfolio POST error:", error);
     return NextResponse.json({ error: "Failed to save portfolio" }, { status: 500 });
