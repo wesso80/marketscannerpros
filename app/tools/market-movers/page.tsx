@@ -502,7 +502,7 @@ export default function MarketMoversPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0B1120] text-white">
+    <div className="min-h-screen bg-[var(--msp-bg)] text-white">
       <ToolsPageHeader
         title="Market Movers"
         subtitle="Status → Action Console → Audit Log → Capabilities"

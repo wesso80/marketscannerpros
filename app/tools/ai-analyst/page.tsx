@@ -246,7 +246,7 @@ function AiAnalystContent() {
   const actionLinks = useMemo(() => getActionLinks(symbol.toUpperCase(), timeframe.toUpperCase(), query), [symbol, timeframe, query]);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-[var(--msp-bg)] text-slate-100">
       <ToolsPageHeader
         badge="ANALYST"
         title="MSP AI Analyst"
@@ -511,7 +511,7 @@ export default function AiAnalystPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-100">
+        <div className="flex min-h-screen items-center justify-center bg-[var(--msp-bg)] text-slate-100">
           Loading AI Analyst...
         </div>
       }

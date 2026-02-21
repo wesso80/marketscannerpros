@@ -63,7 +63,7 @@ function WidgetSkeleton({ height = '280px' }: { height?: string }) {
 
 function PageLoadingSkeleton() {
   return (
-    <div className="min-h-screen bg-slate-950 p-4">
+    <div className="min-h-screen bg-[var(--msp-bg)] p-4">
       <div className="mx-auto max-w-[1500px] animate-pulse space-y-3">
         <div className="h-7 w-64 rounded bg-slate-700" />
         <div className="h-4 w-44 rounded bg-slate-700/60" />
@@ -432,7 +432,7 @@ function CryptoCommandCenterContent() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-[var(--msp-bg)] text-slate-100">
       <main className="mx-auto w-full max-w-[1500px] space-y-2 px-2 pb-6 pt-3 md:px-3">
         <section className="sticky top-2 z-20 flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/95 p-1.5 backdrop-blur">
           {[

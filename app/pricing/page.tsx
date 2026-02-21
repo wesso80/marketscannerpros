@@ -177,7 +177,7 @@ export default function PricingPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#070B14] text-white">
+    <main className="min-h-screen bg-[var(--msp-bg)] text-white">
       <div className="mx-auto max-w-6xl px-4 pb-16">
         <header className="pt-10 text-center">
           <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">

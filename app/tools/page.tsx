@@ -208,7 +208,7 @@ export default function ToolsPage() {
   }, [stats]);
 
   return (
-    <main className="min-h-screen bg-[#0F172A] text-white">
+    <main className="min-h-screen bg-[var(--msp-bg)] text-white">
       <div className="sticky top-0 z-40 border-b border-white/10 bg-[#0b1220]/90 backdrop-blur">
         <div className="mx-auto flex max-w-[1280px] items-center justify-between px-4 py-3 md:px-6">
           <div className="flex flex-wrap items-center gap-2">

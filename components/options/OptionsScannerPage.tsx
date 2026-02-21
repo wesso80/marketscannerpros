@@ -134,7 +134,7 @@ function OptionsScannerPageContent() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-[var(--msp-bg)] text-slate-100">
       <main className="mx-auto w-full max-w-[1440px] space-y-5 px-4 py-4 lg:px-6 lg:py-6">
         {error && <div className="text-sm text-rose-300">{error}</div>}
 
@@ -212,7 +212,7 @@ function OptionsScannerPageContent() {
 
 export default function OptionsScannerPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-slate-950" />}>
+    <Suspense fallback={<div className="min-h-screen bg-[var(--msp-bg)]" />}>
       <OptionsScannerPageContent />
     </Suspense>
   );

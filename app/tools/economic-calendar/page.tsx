@@ -248,7 +248,7 @@ export default function EconomicCalendarPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-white">
+    <div className="min-h-screen bg-[var(--msp-bg)] text-white">
       <ToolsPageHeader
         badge="MACRO CALENDAR"
         title="Economic Calendar"

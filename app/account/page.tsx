@@ -189,7 +189,7 @@ export default function AccountPage() {
 
   if (isLoading) {
     return (
-      <main className="min-h-screen bg-[#070B14] text-white">
+      <main className="min-h-screen bg-[var(--msp-bg)] text-white">
         <div className="mx-auto max-w-6xl px-4 py-20 text-center text-white/70">Loading account...</div>
       </main>
     );
@@ -197,7 +197,7 @@ export default function AccountPage() {
 
   if (!isLoggedIn) {
     return (
-      <main className="min-h-screen bg-[#070B14] text-white">
+      <main className="min-h-screen bg-[var(--msp-bg)] text-white">
         <div className="mx-auto max-w-3xl px-4 py-20">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-10 text-center">
             <h2 className="text-2xl font-semibold">Sign In Required</h2>
@@ -212,7 +212,7 @@ export default function AccountPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#070B14] text-white">
+    <main className="min-h-screen bg-[var(--msp-bg)] text-white">
       <div className="mx-auto max-w-6xl px-4 pb-16">
         <div className="pt-8 flex items-start justify-between">
           <div>

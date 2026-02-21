@@ -399,7 +399,7 @@ function CryptoDetailPageContent() {
 
   if (!tier || tier === 'free') {
     return (
-      <div className="min-h-screen bg-[#0F172A]">
+      <div className="min-h-screen bg-[var(--msp-bg)]">
         <div className="container mx-auto px-4 py-16">
           <UpgradeGate requiredTier="pro" feature="Crypto Asset Explorer" />
         </div>
@@ -425,7 +425,7 @@ function CryptoDetailPageContent() {
     : 'Blocked by governance profile or global gate';
 
   return (
-    <div className="min-h-screen bg-[#0F172A] text-white">
+    <div className="min-h-screen bg-[var(--msp-bg)] text-white">
       <div className="mx-auto w-full max-w-[1500px] space-y-2 px-2 pb-6 pt-3 md:px-3">
         <header className="rounded-lg border border-slate-700 bg-slate-900 p-2">
           <h1 className="text-lg font-bold text-teal-300">🔍 Crypto Asset Explorer</h1>
@@ -736,7 +736,7 @@ function CryptoDetailPageContent() {
 
 function PageLoadingSkeleton() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0F172A]">
+    <div className="flex min-h-screen items-center justify-center bg-[var(--msp-bg)]">
       <div className="h-12 w-12 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
     </div>
   );

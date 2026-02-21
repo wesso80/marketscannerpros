@@ -16,7 +16,7 @@ export default function GoldenEggPage() {
   const noTrade = isNoTrade(payload);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-screen bg-[var(--msp-bg)] text-slate-100">
       <GEHeaderBar />
       <main className="mx-auto w-full max-w-[1280px] px-4 pb-24">
         <GECommandStrip meta={payload.meta} layer1={payload.layer1} />

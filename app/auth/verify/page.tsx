@@ -71,7 +71,7 @@ function VerifyMagicLinkContent() {
         : "border-white/10 bg-white/5 text-white/70";
 
   return (
-    <main className="min-h-screen bg-[#070B14] text-white">
+    <main className="min-h-screen bg-[var(--msp-bg)] text-white">
       <div className="pointer-events-none fixed inset-0">
         <div className="absolute left-1/2 top-24 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-emerald-500/10 blur-3xl" />
       </div>
@@ -102,7 +102,7 @@ export default function VerifyMagicLinkPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen bg-[#070B14] text-white">
+        <main className="min-h-screen bg-[var(--msp-bg)] text-white">
           <div className="mx-auto flex min-h-screen max-w-7xl items-center justify-center px-4 text-white/60">Verifying...</div>
         </main>
       }

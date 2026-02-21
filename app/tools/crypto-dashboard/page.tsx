@@ -117,7 +117,7 @@ export default function CryptoDashboard() {
   // Must be after ALL hooks to comply with React rules
   if (!canAccessCryptoCommandCenter(tier)) {
     return (
-      <div className="min-h-screen bg-[#0B1120] text-white flex items-center justify-center">
+      <div className="min-h-screen bg-[var(--msp-bg)] text-white flex items-center justify-center">
         <UpgradeGate feature="Crypto Derivatives Dashboard" requiredTier="pro" />
       </div>
     );

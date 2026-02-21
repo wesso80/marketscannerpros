@@ -262,7 +262,7 @@ export default function MacroDashboardPage() {
   }, [data, gate, setPageData]);
 
   return (
-    <div className="min-h-screen bg-[#0B1120] text-white">
+    <div className="min-h-screen bg-[var(--msp-bg)] text-white">
       <ToolsPageHeader
         title="Macro Dashboard"
         subtitle="Global regime layer for permission, sizing, and cross-asset deployment"

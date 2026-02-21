@@ -461,7 +461,7 @@ export default function CommoditiesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0f172a] p-6 text-white">
+      <div className="min-h-screen bg-[var(--msp-bg)] p-6 text-white">
         <ToolsPageHeader 
           badge="Commodities"
           title="Commodities Dashboard" 
@@ -480,7 +480,7 @@ export default function CommoditiesPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#0f172a] p-6 text-white">
+      <div className="min-h-screen bg-[var(--msp-bg)] p-6 text-white">
         <ToolsPageHeader 
           badge="Commodities"
           title="Commodities Dashboard" 
@@ -502,7 +502,7 @@ export default function CommoditiesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-white">
+    <div className="min-h-screen bg-[var(--msp-bg)] text-white">
       <ToolsPageHeader 
         badge="Commodities"
         title="Commodities Dashboard" 

@@ -1,6 +1,6 @@
 export default function ResourcesLayout({ children }: { children: React.ReactNode }) {
   return (
-    <main className="min-h-screen bg-[#070B14] text-white">
+    <main className="min-h-screen bg-[var(--msp-bg)] text-white">
       <div className="pointer-events-none fixed inset-0">
         <div className="absolute left-1/2 top-20 h-[620px] w-[620px] -translate-x-1/2 rounded-full bg-emerald-500/10 blur-3xl" />
         <div className="absolute left-1/2 top-56 h-[820px] w-[820px] -translate-x-1/2 rounded-full bg-cyan-500/5 blur-3xl" />

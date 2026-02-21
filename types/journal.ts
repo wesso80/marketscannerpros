@@ -7,6 +7,7 @@ export type TradeStatus = 'open' | 'closed';
 export type JournalHeaderModel = {
   accountId: string;
   asOfTs: string;
+  title?: string;
   mode: 'observe' | 'evaluate' | 'execute' | 'review';
   health: 'ok' | 'degraded' | 'down';
   subtitle: string;

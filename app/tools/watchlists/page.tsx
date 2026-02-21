@@ -19,7 +19,7 @@ function WatchlistsContent() {
   }, [setPageData]);
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-[var(--msp-bg)]">
       <main className="pt-6 pb-16">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="mb-8">

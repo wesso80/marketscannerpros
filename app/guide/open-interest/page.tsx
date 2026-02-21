@@ -84,7 +84,7 @@ export default function OpenInterestGuidePage() {
   const [activeTab, setActiveTab] = useState<'basics' | 'scenarios' | 'funding' | 'longshort' | 'tips'>('basics');
 
   return (
-    <div className="min-h-screen bg-[#0F172A] text-white">
+    <div className="min-h-screen bg-[var(--msp-bg)] text-white">
       {/* Header */}
       <div className="bg-gradient-to-r from-emerald-900/50 to-blue-900/50 border-b border-slate-700">
         <div className="max-w-5xl mx-auto px-4 py-8">

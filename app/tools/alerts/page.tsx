@@ -438,7 +438,7 @@ function AlertsContent() {
 
 export default function AlertsPage() {
   return (
-    <div className="min-h-screen bg-[#0F172A] text-white">
+    <div className="min-h-screen bg-[var(--msp-bg)] text-white">
       <ToolsPageHeader 
         badge="TOOLS"
         title="Alert Intelligence"

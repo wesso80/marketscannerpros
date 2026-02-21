@@ -12,7 +12,7 @@ export default function CryptoHeatmapPage() {
   }, [router]);
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+    <main className="min-h-screen bg-[var(--msp-bg)] flex items-center justify-center">
       <div className="text-center">
         <div className="text-4xl mb-4 animate-pulse">🗺️</div>
         <p className="text-slate-400">Redirecting to Crypto Command Center...</p>

@@ -770,7 +770,7 @@ export default function IntradayChartsPage() {
   const blockedActionReason = permissionState === 'No' ? 'Execution blocked by session risk state' : '';
 
   return (
-    <div className="min-h-screen bg-[#0F172A] text-white">
+    <div className="min-h-screen bg-[var(--msp-bg)] text-white">
       <main className="mx-auto w-full max-w-[1500px] space-y-2 px-2 pb-6 pt-3 md:px-3">
         <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-700 bg-slate-900 p-2">
           <div className="text-xs text-slate-400 uppercase tracking-wide">Intraday Console</div>
