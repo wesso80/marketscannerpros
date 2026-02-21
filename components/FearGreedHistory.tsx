@@ -300,7 +300,7 @@ export default function FearGreedHistory({
 
       {/* Footer stats */}
       <div className="px-4 pb-4">
-        <div className="grid grid-cols-4 gap-2 text-center">
+        <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
           <div className="bg-slate-800/50 rounded-lg p-2">
             <div className="text-xs text-slate-500">High</div>
             <div className="text-sm font-semibold text-green-400">

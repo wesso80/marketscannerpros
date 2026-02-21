@@ -245,7 +245,7 @@ function AlertsContent() {
             <StatusBadge label="Webhook" state={prefs?.discord_enabled && prefs?.discord_webhook_url ? 'Connected' : 'Not Set'} />
           </div>
 
-          <div className="flex justify-start gap-2 lg:justify-end">
+          <div className="flex flex-wrap justify-start gap-2 lg:justify-end">
             <div className="inline-flex rounded-lg border border-slate-700 bg-slate-950/30 p-1">
               <button onClick={() => { setActiveZone4Tab('basic'); setZone4Open(true); }} className={`h-7 rounded-md px-2 text-[11px] font-semibold ${activeZone4Tab === 'basic' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>
                 Basic
@@ -293,16 +293,16 @@ function AlertsContent() {
                   const status = deriveStatus(alert);
                   const type = classifyAlertType(alert);
                   return (
-                    <div key={alert.id} className="group h-[60px] border-b border-slate-800 px-3">
-                      <div className="flex h-full items-center justify-between gap-3">
-                        <div className="flex items-center gap-3 overflow-hidden">
+                    <div key={alert.id} className="group border-b border-slate-800 px-3 py-2 sm:h-[60px] sm:py-0">
+                      <div className="flex h-full flex-col justify-center gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                        <div className="flex items-center gap-2 overflow-hidden sm:gap-3">
                           <span className="min-w-[56px] rounded-md border border-slate-700 bg-slate-950/40 px-2 py-1 text-xs font-semibold text-slate-100">{alert.symbol}</span>
                           <span className="truncate text-sm font-semibold text-slate-100">{alert.condition_type.replaceAll('_', ' ')} {alert.condition_value}</span>
-                          <span className="rounded bg-white/5 px-2 py-0.5 text-xs text-slate-400">{type}</span>
+                          <span className="hidden rounded bg-white/5 px-2 py-0.5 text-xs text-slate-400 sm:inline">{type}</span>
                         </div>
 
-                        <div className="ml-auto flex items-center gap-2 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100">
-                          <span className="text-xs text-slate-400">Triggered {alert.trigger_count}x</span>
+                        <div className="flex items-center gap-2 sm:ml-auto sm:opacity-0 sm:transition sm:group-hover:opacity-100">
+                          <span className="hidden text-xs text-slate-400 sm:inline">Triggered {alert.trigger_count}x</span>
                           <span className={`rounded-full px-2 py-0.5 text-[11px] ${status === 'Armed' ? 'bg-emerald-500/15 text-emerald-200' : status === 'Cooldown' ? 'bg-amber-500/15 text-amber-200' : 'bg-slate-700 text-slate-300'}`}>
                             {status}
                           </span>
@@ -345,7 +345,7 @@ function AlertsContent() {
           </summary>
           <div className="border-t border-slate-800 px-4 py-3">
             <div className="max-h-[420px] overflow-auto rounded-lg border border-slate-800">
-              <table className="w-full text-sm">
+              <table className="min-w-[540px] w-full text-sm">
                 <thead className="sticky top-0 z-10 bg-[#0b1220]/95 text-slate-300 backdrop-blur">
                   <tr>
                     <th className="px-3 py-2 text-left">Time</th>
@@ -402,7 +402,7 @@ function AlertsContent() {
 
             <div className="rounded-xl border border-slate-800 bg-slate-950/30 p-3">
               <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Plan & Limits</div>
-              <div className="grid grid-cols-3 gap-2 text-sm">
+              <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-3">
                 <div className={`rounded-lg p-2 ${tier === 'free' ? 'bg-emerald-500/10 border border-emerald-500/30' : 'bg-slate-800/60'}`}>
                   <div className="text-slate-400">Free</div>
                   <div className="font-semibold text-slate-100">3</div>

@@ -1968,7 +1968,7 @@ function PortfolioContent() {
                     <select value={deployDraft.side} onChange={(e) => setDeployDraft((prev) => ({ ...prev, side: e.target.value as 'LONG' | 'SHORT' }))} className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"><option value="LONG">LONG</option><option value="SHORT">SHORT</option></select>
                     <input value={deployDraft.strategyTag} onChange={(e) => setDeployDraft((prev) => ({ ...prev, strategyTag: e.target.value }))} placeholder="Strategy Tag" className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100" />
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                     <input type="number" value={deployDraft.entry} onChange={(e) => setDeployDraft((prev) => ({ ...prev, entry: e.target.value }))} placeholder="Entry" className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100" />
                     <input type="number" value={deployDraft.stop} onChange={(e) => setDeployDraft((prev) => ({ ...prev, stop: e.target.value }))} placeholder="Stop" className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100" />
                     <input type="number" value={deployDraft.target} onChange={(e) => setDeployDraft((prev) => ({ ...prev, target: e.target.value }))} placeholder="Target" className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100" />

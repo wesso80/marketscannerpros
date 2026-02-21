@@ -556,7 +556,7 @@ export default function CommoditiesPage() {
                   </span>
                 </div>
                 <p className="mt-3 text-sm text-white/70">{derivedState.permissionReason}</p>
-                <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                <div className="mt-3 grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
                   <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
                     <span className="text-white/60">Longs</span>
                     <span className={derivedState.longsAllowed ? 'text-emerald-300' : 'text-rose-300'}>

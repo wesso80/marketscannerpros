@@ -536,8 +536,8 @@ function CryptoCommandCenterContent() {
                         : 'border-slate-700 bg-slate-900 text-slate-300'
                     }`}
                   >
-                    <div className="text-[10px] font-semibold">{item.icon} {item.label}</div>
-                    <div className="mt-0.5 text-[9px] text-slate-500">{item.description}</div>
+                    <div className="text-[11px] font-semibold sm:text-[10px]">{item.icon} {item.label}</div>
+                    <div className="mt-0.5 text-[10px] text-slate-500 sm:text-[9px]">{item.description}</div>
                   </button>
                 ))}
               </div>

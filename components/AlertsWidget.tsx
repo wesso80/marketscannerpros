@@ -922,7 +922,7 @@ export default function AlertsWidget({
                       <div className="mb-3 p-3 bg-slate-800/50 rounded-lg border border-emerald-500/20">
                         <p className="text-xs text-emerald-400 mb-2">📊 Configure your strategy alert:</p>
                         
-                        <div className="grid grid-cols-3 gap-3 mb-3">
+                        <div className="grid grid-cols-1 gap-3 mb-3 sm:grid-cols-3">
                           <div>
                             <label className="text-xs text-white block mb-1">🎯 Ticker *</label>
                             <input

@@ -15,7 +15,7 @@ export default function DecompositionMatrix({ rows, primaryDirection }: Decompos
       </div>
 
       <div className="overflow-hidden rounded-lg border border-white/5">
-        <div className="grid grid-cols-5 gap-0 bg-white/5 px-3 py-2 text-xs text-slate-300">
+        <div className="grid grid-cols-5 gap-0 bg-white/5 px-3 py-2 text-[10px] text-slate-300 sm:text-xs">
           <div>TF</div>
           <div>State</div>
           <div>Bias</div>
@@ -24,7 +24,7 @@ export default function DecompositionMatrix({ rows, primaryDirection }: Decompos
         </div>
 
         {rows.map((row) => (
-          <div key={row.tfLabel} className="grid grid-cols-5 gap-0 px-3 py-2 text-xs text-slate-200">
+          <div key={row.tfLabel} className="grid grid-cols-5 gap-0 px-3 py-2 text-[10px] text-slate-200 sm:text-xs">
             <div className="font-semibold">{row.tfLabel}</div>
             <div className="text-slate-300">{row.state}</div>
             <div className="text-slate-200">{row.closeBias}</div>

@@ -722,7 +722,7 @@ export default function WatchlistWidget() {
                         {row.momentumState === 'Rising' && <span>🔥 Momentum Shift</span>}
                       </div>
 
-                      <div className="mt-3 grid grid-cols-4 gap-1.5">
+                      <div className="mt-3 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
                         <button onClick={() => launchTool('scan', item.symbol)} className="rounded border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-1 text-[10px] font-semibold uppercase text-emerald-300">Scan</button>
                         <button onClick={() => launchTool('deep', item.symbol)} className="rounded border border-slate-600 bg-slate-800 px-1.5 py-1 text-[10px] font-semibold uppercase text-slate-200">Deep</button>
                         <button onClick={() => launchTool('flow', item.symbol)} className="rounded border border-purple-500/40 bg-purple-500/10 px-1.5 py-1 text-[10px] font-semibold uppercase text-purple-300">Options</button>

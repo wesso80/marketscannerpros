@@ -1317,7 +1317,7 @@ function ScannerContent() {
               <div className="mb-2 text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">
                 Primary Action Zone • Discover → Rank → Decide
               </div>
-              <div className="mt-3 grid grid-cols-3 gap-2">
+              <div className="mt-3 grid grid-cols-3 gap-1.5 sm:gap-2">
                 {[
                   { step: 1, label: 'Discover' },
                   { step: 2, label: 'Rank' },

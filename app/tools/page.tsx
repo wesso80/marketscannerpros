@@ -210,7 +210,7 @@ export default function ToolsPage() {
   return (
     <main className="min-h-screen bg-[var(--msp-bg)] text-white">
       <div className="sticky top-0 z-40 border-b border-white/10 bg-[#0b1220]/90 backdrop-blur">
-        <div className="mx-auto flex max-w-none items-center justify-between px-4 py-3 md:px-6">
+        <div className="mx-auto flex max-w-none flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between md:px-6">
           <div className="flex flex-wrap items-center gap-2">
             <StatusPill label="Regime" value={regime} />
             <StatusPill label="Risk" value={risk} />
