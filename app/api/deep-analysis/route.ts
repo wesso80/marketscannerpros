@@ -4,10 +4,12 @@ import { estimateGreeks } from '@/lib/options-confluence-analyzer';
 import { hasProTraderAccess } from '@/lib/proTraderAccess';
 import { getCoinDetail, getGlobalData, resolveSymbolToId } from '@/lib/coingecko';
 import { deepAnalysisLimiter, getClientIP } from '@/lib/rateLimit';
+import { avFetch } from '@/lib/avRateGovernor';
+import { getIndicators } from '@/lib/onDemandFetch';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
-// NOTE: Using HISTORICAL_OPTIONS (end-of-day data) - available with 75 req/min premium plan
+// NOTE: Using HISTORICAL_OPTIONS / REALTIME_OPTIONS - available with 600 RPM premium plan
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 // Get the Friday of the current week (or next week if past Friday)
@@ -41,47 +43,33 @@ async function fetchOptionsData(symbol: string) {
   console.log(`✅ API key exists (length: ${ALPHA_VANTAGE_API_KEY.length})`);
   
   try {
-    // Get current price first for reference
+    // Get current price first for reference — rate governed
     const quoteUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&entitlement=delayed&apikey=${ALPHA_VANTAGE_API_KEY}`;
-    console.log(`📊 Fetching quote for ${symbol}...`);
-    const quoteRes = await fetch(quoteUrl);
-    const quoteData = await quoteRes.json();
-    console.log(`📊 Quote response:`, JSON.stringify(quoteData).substring(0, 200));
+    console.log(`[deep-analysis] Fetching quote for ${symbol}...`);
+    const quoteData = await avFetch(quoteUrl, `QUOTE ${symbol}`);
+    console.log(`[deep-analysis] Quote response keys:`, quoteData ? Object.keys(quoteData).join(', ') : 'null');
     
     // Handle both realtime and delayed response formats
-    // Delayed API returns: "Global Quote - DATA DELAYED BY 15 MINUTES" as key
-    const globalQuote = quoteData['Global Quote'] || quoteData['Global Quote - DATA DELAYED BY 15 MINUTES'];
+    const globalQuote = quoteData?.['Global Quote'] || quoteData?.['Global Quote - DATA DELAYED BY 15 MINUTES'];
     const currentPrice = parseFloat(globalQuote?.['05. price'] || '0');
     
     if (!currentPrice) {
-      console.log(`❌ No price data for ${symbol}, skipping options. Keys found: ${Object.keys(quoteData).join(', ')}`);
+      console.log(`[deep-analysis] No price data for ${symbol}, skipping options.`);
       return null;
     }
-    console.log(`✅ Got price for ${symbol}: $${currentPrice}`);
+    console.log(`[deep-analysis] Got price for ${symbol}: $${currentPrice}`);
 
-    // Alpha Vantage HISTORICAL_OPTIONS endpoint (end-of-day data)
-    // When date is not specified, returns data from the previous trading session
-    const optionsUrl = `https://www.alphavantage.co/query?function=HISTORICAL_OPTIONS&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-    
-    console.log(`📈 Fetching HISTORICAL_OPTIONS for ${symbol}...`);
-    const optionsRes = await fetch(optionsUrl);
-    console.log(`📈 Options response status: ${optionsRes.status}`);
-    
-    if (!optionsRes.ok) {
-      console.log('❌ Alpha Vantage options fetch failed:', optionsRes.status);
-      return null;
+    // Alpha Vantage options endpoint — REALTIME_OPTIONS (FMV) preferred, HISTORICAL_OPTIONS fallback
+    // Rate governed to protect 600 RPM quota
+    let optionsData: any = null;
+    const realtimeUrl = `https://www.alphavantage.co/query?function=REALTIME_OPTIONS&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
+    optionsData = await avFetch(realtimeUrl, `REALTIME_OPTIONS ${symbol}`);
+    if (!optionsData?.data?.length) {
+      const historicalUrl = `https://www.alphavantage.co/query?function=HISTORICAL_OPTIONS&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
+      optionsData = await avFetch(historicalUrl, `HISTORICAL_OPTIONS ${symbol}`);
     }
     
-    const optionsData = await optionsRes.json();
-    console.log(`📈 Options response keys: ${Object.keys(optionsData).join(', ')}`);
-    
-    // Check for API errors
-    if (optionsData.Note || optionsData.Error || optionsData['Error Message']) {
-      console.log(`❌ Alpha Vantage options error for ${symbol}:`, optionsData.Note || optionsData.Error || optionsData['Error Message']);
-      return null;
-    }
-    
-    const rawData = optionsData.data;
+    const rawData = optionsData?.data;
     
     if (!rawData || rawData.length === 0) {
       console.log(`❌ No options data available for ${symbol}`);
@@ -395,15 +383,15 @@ async function fetchPriceData(symbol: string, assetType: string) {
         }))
       };
     } else {
-      // Use Alpha Vantage for stocks/forex/commodities
+      // Use Alpha Vantage for stocks/forex/commodities — rate governed
       const func = assetType === 'forex' ? 'FX_DAILY' : 'TIME_SERIES_DAILY';
       const symbolParam = assetType === 'forex' 
         ? `from_symbol=${symbol.slice(0,3)}&to_symbol=${symbol.slice(3,6)}`
         : `symbol=${symbol}`;
       
       const url = `https://www.alphavantage.co/query?function=${func}&${symbolParam}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-      const res = await fetch(url);
-      const data = await res.json();
+      const data = await avFetch(url, `${func} ${symbol}`);
+      if (!data) throw new Error('No data from AV');
       
       const timeSeriesKey = Object.keys(data).find(k => k.includes('Time Series'));
       if (!timeSeriesKey) throw new Error('No time series data');
@@ -483,38 +471,47 @@ async function fetchTechnicalIndicators(symbol: string, assetType: string) {
         priceVsSma50: sma50 ? ((closes[closes.length - 1] - sma50) / sma50) * 100 : null,
       };
     } else {
-      // Use Alpha Vantage for stocks - fetch in batches to avoid rate limits
-      // Batch 1: Core indicators
-      const [rsiRes, macdRes, smaRes, sma50Res] = await Promise.all([
-        fetch(`https://www.alphavantage.co/query?function=RSI&symbol=${symbol}&interval=daily&time_period=14&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`),
-        fetch(`https://www.alphavantage.co/query?function=MACD&symbol=${symbol}&interval=daily&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`),
-        fetch(`https://www.alphavantage.co/query?function=SMA&symbol=${symbol}&interval=daily&time_period=20&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`),
-        fetch(`https://www.alphavantage.co/query?function=SMA&symbol=${symbol}&interval=daily&time_period=50&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`)
+      // STOCK indicators: Try worker-populated cache first (Redis → DB),
+      // saving up to 6 AV calls. Fallback to rate-governed AV if cache miss.
+      const cachedInd = await getIndicators(symbol, 'daily');
+      if (cachedInd) {
+        console.log(`[deep-analysis] ${symbol} indicators from ${cachedInd.source} — saved 6 AV calls`);
+        return {
+          rsi: cachedInd.rsi14 ?? null,
+          macd: cachedInd.macdLine ?? null,
+          macdSignal: cachedInd.macdSignal ?? null,
+          macdHist: cachedInd.macdHist ?? null,
+          sma20: cachedInd.sma20 ?? null,
+          sma50: cachedInd.sma50 ?? null,
+          bbUpper: cachedInd.bbUpper ?? null,
+          bbMiddle: cachedInd.bbMiddle ?? null,
+          bbLower: cachedInd.bbLower ?? null,
+          adx: cachedInd.adx14 ?? null,
+        };
+      }
+
+      // Cache miss — rate-governed AV fallback (6 calls)
+      console.log(`[deep-analysis] ${symbol} indicators not cached, falling back to AV`);
+      // Batch 1: Core indicators (4 calls, rate governed)
+      const [rsiData, macdData, smaData, sma50Data] = await Promise.all([
+        avFetch(`https://www.alphavantage.co/query?function=RSI&symbol=${symbol}&interval=daily&time_period=14&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`, `RSI ${symbol}`),
+        avFetch(`https://www.alphavantage.co/query?function=MACD&symbol=${symbol}&interval=daily&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`, `MACD ${symbol}`),
+        avFetch(`https://www.alphavantage.co/query?function=SMA&symbol=${symbol}&interval=daily&time_period=20&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`, `SMA20 ${symbol}`),
+        avFetch(`https://www.alphavantage.co/query?function=SMA&symbol=${symbol}&interval=daily&time_period=50&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`, `SMA50 ${symbol}`),
       ]);
       
-      const rsiData = await rsiRes.json();
-      const macdData = await macdRes.json();
-      const smaData = await smaRes.json();
-      const sma50Data = await sma50Res.json();
-      
-      // Wait 300ms before batch 2 to respect Alpha Vantage 5 req/sec limit
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Batch 2: Additional indicators (Bollinger Bands, ADX)
-      const [bbandsRes, adxRes] = await Promise.all([
-        fetch(`https://www.alphavantage.co/query?function=BBANDS&symbol=${symbol}&interval=daily&time_period=20&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`),
-        fetch(`https://www.alphavantage.co/query?function=ADX&symbol=${symbol}&interval=daily&time_period=14&apikey=${ALPHA_VANTAGE_API_KEY}`)
+      // Batch 2: Additional indicators (2 calls, rate governed)
+      const [bbandsData, adxData] = await Promise.all([
+        avFetch(`https://www.alphavantage.co/query?function=BBANDS&symbol=${symbol}&interval=daily&time_period=20&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`, `BBANDS ${symbol}`),
+        avFetch(`https://www.alphavantage.co/query?function=ADX&symbol=${symbol}&interval=daily&time_period=14&apikey=${ALPHA_VANTAGE_API_KEY}`, `ADX ${symbol}`),
       ]);
       
-      const bbandsData = await bbandsRes.json();
-      const adxData = await adxRes.json();
-      
-      const rsiValues = rsiData['Technical Analysis: RSI'];
-      const macdValues = macdData['Technical Analysis: MACD'];
-      const smaValues = smaData['Technical Analysis: SMA'];
-      const sma50Values = sma50Data['Technical Analysis: SMA'];
-      const bbandsValues = bbandsData['Technical Analysis: BBANDS'];
-      const adxValues = adxData['Technical Analysis: ADX'];
+      const rsiValues = rsiData?.['Technical Analysis: RSI'];
+      const macdValues = macdData?.['Technical Analysis: MACD'];
+      const smaValues = smaData?.['Technical Analysis: SMA'];
+      const sma50Values = sma50Data?.['Technical Analysis: SMA'];
+      const bbandsValues = bbandsData?.['Technical Analysis: BBANDS'];
+      const adxValues = adxData?.['Technical Analysis: ADX'];
       
       const latestRsi = rsiValues ? parseFloat((Object.values(rsiValues)[0] as any)?.RSI) || null : null;
       const latestMacd = macdValues ? Object.values(macdValues)[0] as any : null;
@@ -542,11 +539,10 @@ async function fetchTechnicalIndicators(symbol: string, assetType: string) {
   }
 }
 
-// Fetch company overview (for stocks)
+// Fetch company overview (for stocks) — rate governed
 async function fetchCompanyOverview(symbol: string) {
   try {
-    const res = await fetch(`https://www.alphavantage.co/query?function=OVERVIEW&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`);
-    const data = await res.json();
+    const data = await avFetch(`https://www.alphavantage.co/query?function=OVERVIEW&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`, `OVERVIEW ${symbol}`);
     
     if (!data.Symbol) return null;
     
@@ -582,11 +578,10 @@ async function fetchNewsSentiment(symbol: string, assetType: string) {
       return await fetchCryptoNews(symbol);
     }
     
-    // Use Alpha Vantage for stocks
-    const res = await fetch(`https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=${symbol}&limit=5&apikey=${ALPHA_VANTAGE_API_KEY}`);
-    const data = await res.json();
+    // Use Alpha Vantage for stocks — rate governed
+    const data = await avFetch(`https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=${symbol}&limit=5&apikey=${ALPHA_VANTAGE_API_KEY}`, `NEWS ${symbol}`);
     
-    if (!data.feed) return null;
+    if (!data?.feed) return null;
     
     return data.feed.slice(0, 5).map((article: any) => ({
       title: article.title,
@@ -644,11 +639,10 @@ async function fetchCryptoNews(symbol: string) {
       });
     }
     
-    // Fallback: Try Alpha Vantage with crypto topic
-    const avRes = await fetch(`https://www.alphavantage.co/query?function=NEWS_SENTIMENT&topics=blockchain,cryptocurrency&limit=5&apikey=${ALPHA_VANTAGE_API_KEY}`);
-    const avData = await avRes.json();
+    // Fallback: Try Alpha Vantage with crypto topic — rate governed
+    const avData = await avFetch(`https://www.alphavantage.co/query?function=NEWS_SENTIMENT&topics=blockchain,cryptocurrency&limit=5&apikey=${ALPHA_VANTAGE_API_KEY}`, `NEWS crypto`);
     
-    if (avData.feed) {
+    if (avData?.feed) {
       return avData.feed.slice(0, 5).map((article: any) => ({
         title: article.title,
         summary: article.summary,
@@ -713,14 +707,13 @@ async function fetchCryptoData(symbol: string) {
   }
 }
 
-// Fetch earnings data for stocks
+// Fetch earnings data for stocks — rate governed
 async function fetchEarningsData(symbol: string) {
   try {
     const url = `https://www.alphavantage.co/query?function=EARNINGS&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-    const res = await fetch(url);
-    const data = await res.json();
+    const data = await avFetch(url, `EARNINGS ${symbol}`);
     
-    if (!data.annualEarnings && !data.quarterlyEarnings) {
+    if (!data?.annualEarnings && !data?.quarterlyEarnings) {
       return null;
     }
     

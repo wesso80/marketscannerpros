@@ -69,20 +69,21 @@ export class TokenBucket {
 // Pre-configured rate limiters for different providers
 export const rateLimiters = {
   /**
-   * Alpha Vantage: Standard plan = 75 calls/minute
-   * Premium plans vary, adjust capacity accordingly
+   * Alpha Vantage: 600 RPM premium (Realtime Nasdaq BX + FMV Options + API suite).
+   * NOTE: The global rate governor in lib/avRateGovernor.ts is the PRIMARY
+   * choke point for API routes. This limiter is used inside the worker only.
    */
-  alphaVantage: new TokenBucket(70, 70 / 60), // 70 RPM with small buffer
+  alphaVantage: new TokenBucket(15, 600 / 60), // 600 RPM, burst 15
   
   /**
-   * Nasdaq BX Options: 300 RPM
+   * Nasdaq BX Equities: included in 600 RPM plan (shared quota)
    */
-  nasdaq: new TokenBucket(280, 280 / 60), // 280 RPM with buffer
+  nasdaq: new TokenBucket(15, 600 / 60), // 600 RPM shared
   
   /**
-   * CoinGecko: Free = 10-30 calls/minute, Pro = higher
+   * CoinGecko: Commercial plan
    */
-  coinGecko: new TokenBucket(25, 25 / 60), // Conservative free tier
+  coinGecko: new TokenBucket(25, 25 / 60), // Conservative
 };
 
 /**

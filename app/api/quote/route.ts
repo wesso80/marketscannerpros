@@ -3,6 +3,7 @@ import { getPriceBySymbol, COINGECKO_ID_MAP, symbolToId, getMarketData, resolveS
 import { shouldUseCache, canFallbackToAV, getCacheMode } from "@/lib/cacheMode";
 import { getQuote } from "@/lib/onDemandFetch";
 import { apiLimiter, getClientIP } from "@/lib/rateLimit";
+import { avFetch } from "@/lib/avRateGovernor";
 
 /**
  * /api/quote?symbol=XRPUSD&type=crypto&market=USD
@@ -272,14 +273,13 @@ async function getStockQuoteFull(symbol: string, options?: { strict?: boolean })
     }
   }
 
-  // Fallback to direct AV call (if allowed)
+  // Fallback to direct AV call (if allowed) — rate governed
   if (allowAVFallback && ALPHA_VANTAGE_API_KEY) {
     try {
       const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-      const res = await fetch(url, { cache: 'no-store' });
-      const data = await res.json();
+      const data = await avFetch(url, `QUOTE ${symbol}`);
 
-      const gq = data["Global Quote"];
+      const gq = data?.["Global Quote"] || data?.["Global Quote - DATA DELAYED BY 15 MINUTES"];
       const price = gq?.["05. price"];
       if (price) {
         console.log(`[quote] ${symbol} served from direct AV call (${getCacheMode()} mode)`);
@@ -334,14 +334,13 @@ async function getFxPrice(symbol: string, market: string, options?: { strict?: b
     }
   }
 
-  // Fallback to direct AV call (if allowed)
+  // Fallback to direct AV call (if allowed) — rate governed
   if (allowAVFallback && ALPHA_VANTAGE_API_KEY) {
     try {
       const url = `https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=${symbol}&to_currency=${market}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-      const res = await fetch(url, { cache: 'no-store' });
-      const data = await res.json();
+      const data = await avFetch(url, `FX ${symbol}${market}`);
 
-      const rate = data["Realtime Currency Exchange Rate"]?.[
+      const rate = data?.["Realtime Currency Exchange Rate"]?.[
         "5. Exchange Rate"
       ];
       if (rate) {

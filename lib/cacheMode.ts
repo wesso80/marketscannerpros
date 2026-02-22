@@ -6,7 +6,8 @@
  * - 'prefer_cache': Try cache first, fallback to AV if missing
  * - 'cache_only': Only use cache, never call AV (after worker is stable)
  * 
- * Set via CACHE_MODE env var. Default is 'legacy' for safety.
+ * Set via CACHE_MODE env var. Default is 'prefer_cache' (use worker data first).
+ * Set to 'legacy' only if the worker is offline and you need direct AV calls.
  */
 
 export type CacheMode = 'legacy' | 'prefer_cache' | 'cache_only';
@@ -14,11 +15,12 @@ export type CacheMode = 'legacy' | 'prefer_cache' | 'cache_only';
 export function getCacheMode(): CacheMode {
   const mode = process.env.CACHE_MODE?.toLowerCase();
   
-  if (mode === 'prefer_cache' || mode === 'prefer-cache') return 'prefer_cache';
+  if (mode === 'legacy') return 'legacy';
   if (mode === 'cache_only' || mode === 'cache-only') return 'cache_only';
   
-  // Default to legacy (no behavior change until explicitly enabled)
-  return 'legacy';
+  // Default to prefer_cache — the worker pre-populates Redis/DB,
+  // so we should use that data first and only call AV on cache miss.
+  return 'prefer_cache';
 }
 
 /**

@@ -58,15 +58,15 @@ export const CACHE_KEYS = {
 
 // Default TTLs in seconds
 export const CACHE_TTL = {
-  quote: 30,           // 30 seconds - prices update frequently
-  bars: 60,            // 1 minute - intraday bars
-  indicators: 60,      // 1 minute - computed indicators
-  optionsChain: 30,    // 30 seconds - options quotes
-  optionsMetrics: 30,  // 30 seconds - computed options metrics
-  scannerResult: 60,   // 1 minute - scanner outputs
+  quote: 120,          // 2 minutes - worker refreshes Tier 1 every 30-60s
+  bars: 300,           // 5 minutes - worker refreshes bars each cycle
+  indicators: 300,     // 5 minutes - worker computes indicators each cycle
+  optionsChain: 120,   // 2 minutes - options data
+  optionsMetrics: 120, // 2 minutes - computed options metrics
+  scannerResult: 120,  // 2 minutes - scanner outputs
   fundamentals: 3600,  // 1 hour - fundamentals change slowly
   news: 300,           // 5 minutes - news updates periodically
-  marketStatus: 60,    // 1 minute - market status
+  marketStatus: 120,   // 2 minutes - market status
   sectorPerformance: 300, // 5 minutes - sector data
   fearGreed: 900,      // 15 minutes - fear/greed index
 } as const;

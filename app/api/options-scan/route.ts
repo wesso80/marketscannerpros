@@ -9,6 +9,8 @@ import { getLatestStateMachine, upsertStateMachine } from '@/lib/state-machine-s
 import { hasProTraderAccess } from '@/lib/proTraderAccess';
 import { buildDealerIntelligence, calculateDealerGammaSnapshot } from '@/lib/options-gex';
 import { AVOptionRow, scoreOptionCandidatesV21 } from '@/lib/scoring/options-v21';
+import { avFetch } from '@/lib/avRateGovernor';
+import { getCached, setCached, CACHE_KEYS, CACHE_TTL } from '@/lib/redis';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 const AV_OPTIONS_REALTIME_ENABLED = (process.env.AV_OPTIONS_REALTIME_ENABLED ?? 'true').toLowerCase() !== 'false';
@@ -22,6 +24,20 @@ async function fetchRawOptionsRows(symbol: string, expirationDate?: string): Pro
     return { rows: [], provider: 'none', warnings: ['missing_alpha_vantage_key'] };
   }
 
+  // Check Redis cache first (saves AV calls for repeat views)
+  const cacheKey = CACHE_KEYS.optionsChain(symbol);
+  const cached = await getCached<{ rows: AVOptionRow[]; provider: string }>(cacheKey);
+  if (cached && Array.isArray(cached.rows) && cached.rows.length > 0) {
+    const rows = expirationDate
+      ? cached.rows.filter((row) => String(row.expiration || '') === expirationDate)
+      : cached.rows;
+    if (rows.length > 0) {
+      console.log(`[options-scan] ${symbol} served from Redis cache (${rows.length} rows)`);
+      return { rows, provider: cached.provider as any, warnings: ['cache_hit'] };
+    }
+  }
+
+  // REALTIME_OPTIONS (FMV) is primary with 600 RPM plan
   const providers = AV_OPTIONS_REALTIME_ENABLED
     ? ['REALTIME_OPTIONS', 'HISTORICAL_OPTIONS']
     : ['HISTORICAL_OPTIONS'];
@@ -29,19 +45,10 @@ async function fetchRawOptionsRows(symbol: string, expirationDate?: string): Pro
   const warnings: string[] = [];
   for (const fn of providers) {
     const url = `https://www.alphavantage.co/query?function=${fn}&symbol=${encodeURIComponent(symbol)}&apikey=${ALPHA_VANTAGE_KEY}`;
-    const response = await fetch(url);
-    const payload = await response.json();
+    const payload = await avFetch(url, `${fn} ${symbol}`);
 
-    if (payload?.['Error Message']) {
-      warnings.push(`${fn}:error_message`);
-      continue;
-    }
-    if (payload?.['Note']) {
-      warnings.push(`${fn}:note`);
-      continue;
-    }
-    if (payload?.['Information']) {
-      warnings.push(`${fn}:information`);
+    if (!payload) {
+      warnings.push(`${fn}:fetch_failed`);
       continue;
     }
 
@@ -50,6 +57,9 @@ async function fetchRawOptionsRows(symbol: string, expirationDate?: string): Pro
       warnings.push(`${fn}:empty_data`);
       continue;
     }
+
+    // Cache the full chain for subsequent requests
+    await setCached(cacheKey, { rows: data, provider: fn }, CACHE_TTL.optionsChain).catch(() => {});
 
     const rows = expirationDate
       ? data.filter((row) => String(row.expiration || '') === expirationDate)
@@ -70,8 +80,7 @@ async function fetchRawOptionsRows(symbol: string, expirationDate?: string): Pro
   return { rows: [], provider: 'none', warnings };
 }
 
-// NOTE: In-memory cache doesn't persist across serverless invocations
-// Each request fetches fresh data (75 calls/min on premium is sufficient)
+// Rate governed + Redis cached — 600 RPM premium plan
 
 export async function POST(request: NextRequest) {
   try {

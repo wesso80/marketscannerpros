@@ -5,6 +5,9 @@ import { computeCapitalFlowEngine } from '@/lib/capitalFlowEngine';
 import { getDerivativesForSymbols, getGlobalData, getOHLC, resolveSymbolToId } from '@/lib/coingecko';
 import { getLatestStateMachine, upsertStateMachine } from '@/lib/state-machine-store';
 import { hasProTraderAccess } from '@/lib/proTraderAccess';
+import { avFetch } from '@/lib/avRateGovernor';
+import { q } from '@/lib/db';
+import { getCached, setCached, CACHE_KEYS, CACHE_TTL } from '@/lib/redis';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -19,20 +22,77 @@ function safeNumber(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+/**
+ * Try to load daily bars from the worker's cache (Redis → DB) before hitting AV.
+ * Returns parsed daily rows (date, open, high, low, close) or null on miss.
+ */
+async function getCachedDailyBars(symbol: string): Promise<Array<{ date: string; open: number; high: number; low: number; close: number }> | null> {
+  const sym = symbol.toUpperCase().trim();
+  const cacheKey = CACHE_KEYS.bars(sym, 'daily');
+
+  // 1. Redis
+  const cached = await getCached<any[]>(cacheKey);
+  if (cached && Array.isArray(cached) && cached.length > 5) {
+    console.log(`[flow] ${sym} daily bars from Redis (${cached.length} rows)`);
+    return cached.map((b: any) => ({ date: b.timestamp || b.date, open: +b.open, high: +b.high, low: +b.low, close: +b.close }));
+  }
+
+  // 2. DB (ohlcv_bars table written by worker)
+  try {
+    const rows = await q<any>(
+      `SELECT timestamp, open, high, low, close FROM ohlcv_bars
+       WHERE symbol = $1 AND timeframe = 'daily'
+       ORDER BY timestamp DESC LIMIT 100`,
+      [sym]
+    );
+    if (rows && rows.length > 5) {
+      console.log(`[flow] ${sym} daily bars from DB (${rows.length} rows)`);
+      const bars = rows.map((r: any) => ({
+        date: typeof r.timestamp === 'string' ? r.timestamp : new Date(r.timestamp).toISOString().slice(0, 10),
+        open: +r.open, high: +r.high, low: +r.low, close: +r.close,
+      }));
+      // Backfill Redis
+      await setCached(cacheKey, bars, CACHE_TTL.bars).catch(() => {});
+      return bars;
+    }
+  } catch {
+    // fall through to live fetch
+  }
+
+  return null;
+}
+
 async function fetchLiquidityLevels(symbol: string): Promise<{ levels: Array<{ level: number; label: string }>; vwap?: number }> {
   if (!ALPHA_VANTAGE_KEY) return { levels: [] };
 
   try {
-    const intradayUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(symbol)}&interval=60min&outputsize=compact&entitlement=delayed&apikey=${ALPHA_VANTAGE_KEY}`;
-    const dailyUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${encodeURIComponent(symbol)}&outputsize=compact&entitlement=delayed&apikey=${ALPHA_VANTAGE_KEY}`;
+    // Try cached daily bars first (written by worker) to avoid 1 AV call
+    const cachedDaily = await getCachedDailyBars(symbol);
 
-    const [intradayRes, dailyRes] = await Promise.all([fetch(intradayUrl, { cache: 'no-store' }), fetch(dailyUrl, { cache: 'no-store' })]);
-    const [intradayData, dailyData] = await Promise.all([intradayRes.json(), dailyRes.json()]);
+    const intradayUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(symbol)}&interval=60min&outputsize=compact&entitlement=delayed&apikey=${ALPHA_VANTAGE_KEY}`;
+
+    // Rate-governed intraday fetch (still needed for VWAP / overnight levels)
+    const intradayData = await avFetch(intradayUrl, `INTRADAY ${symbol}`);
+
+    // Use cached daily if available, otherwise rate-governed live fetch
+    let dailyData: any = null;
+    if (cachedDaily && cachedDaily.length > 5) {
+      // Simulate AV shape from cached bars
+      const ts: Record<string, Record<string, string>> = {};
+      for (const b of cachedDaily) {
+        ts[b.date] = { '1. open': String(b.open), '2. high': String(b.high), '3. low': String(b.low), '4. close': String(b.close), '5. volume': '0' };
+      }
+      dailyData = { 'Time Series (Daily)': ts };
+      console.log(`[flow] ${symbol} daily bars served from cache — saved 1 AV call`);
+    } else {
+      const dailyUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${encodeURIComponent(symbol)}&outputsize=compact&entitlement=delayed&apikey=${ALPHA_VANTAGE_KEY}`;
+      dailyData = await avFetch(dailyUrl, `DAILY ${symbol}`);
+    }
 
     const levels: Array<{ level: number; label: string }> = [];
     let vwap: number | undefined;
 
-    const intradaySeries = intradayData['Time Series (60min)'] as Record<string, Record<string, string>> | undefined;
+    const intradaySeries = intradayData?.['Time Series (60min)'] as Record<string, Record<string, string>> | undefined;
     if (intradaySeries && Object.keys(intradaySeries).length > 0) {
       const entries = Object.entries(intradaySeries)
         .map(([timestamp, values]) => {
@@ -82,7 +142,7 @@ async function fetchLiquidityLevels(symbol: string): Promise<{ levels: Array<{ l
       }
     }
 
-    const dailySeries = dailyData['Time Series (Daily)'] as Record<string, Record<string, string>> | undefined;
+    const dailySeries = dailyData?.['Time Series (Daily)'] as Record<string, Record<string, string>> | undefined;
     if (dailySeries && Object.keys(dailySeries).length > 0) {
       const dailyRows = Object.entries(dailySeries)
         .map(([date, values]) => {

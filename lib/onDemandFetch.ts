@@ -13,19 +13,12 @@
 import { q } from '@/lib/db';
 import { getCached, setCached, CACHE_KEYS, CACHE_TTL } from '@/lib/redis';
 import { calculateAllIndicators, detectSqueeze, getIndicatorWarmupStatus, IndicatorWarmupStatus, OHLCVBar } from '@/lib/indicators';
+import { avTryToken } from '@/lib/avRateGovernor';
 
-// Simple in-memory rate limiter for on-demand requests
-// Allows 10 on-demand fetches per minute (worker uses the rest of the 70 RPM)
-let lastFetchTime = 0;
-const MIN_FETCH_INTERVAL_MS = 6000; // 6 seconds between on-demand calls
-
+// On-demand AV calls now go through the global rate governor (600 RPM shared).
+// avTryToken() is non-blocking — returns false when the quota is exhausted.
 async function canFetchNow(): Promise<boolean> {
-  const now = Date.now();
-  if (now - lastFetchTime >= MIN_FETCH_INTERVAL_MS) {
-    lastFetchTime = now;
-    return true;
-  }
-  return false;
+  return avTryToken();
 }
 
 export interface QuoteData {
