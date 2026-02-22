@@ -15,6 +15,11 @@ export interface QuoteData {
   low?: number;
   open?: number;
   source?: string;
+  /* Crypto-specific (from CoinGecko market data) */
+  marketCap?: number;
+  marketCapRank?: number;
+  circulatingSupply?: number;
+  totalSupply?: number;
 }
 
 export interface FlowData {
@@ -100,6 +105,35 @@ export interface OptionsData {
   dex?: number;
 }
 
+/**
+ * Crypto derivatives data — funding rates, OI, L/S ratio, liquidations.
+ * Replaces Options data when assetClass === 'crypto'.
+ */
+export interface CryptoDerivatives {
+  symbol: string;
+  fundingRate: number;          // current funding rate (e.g. 0.01 = 0.01%)
+  fundingAnnualized?: number;   // annualized funding rate %
+  openInterest?: number;        // aggregate OI in USD
+  longShortRatio?: number;      // > 1 = longs dominant
+  sentiment?: string;           // 'Bullish' | 'Bearish' | 'Neutral'
+  basis?: number;               // futures premium %
+  volume24h?: number;           // 24h derivatives volume
+  exchangeCount?: number;       // # of exchanges reporting
+  liquidations?: {
+    long24h: number;            // long liquidations 24h USD
+    short24h: number;           // short liquidations 24h USD
+    total24h: number;           // total liquidations 24h USD
+  };
+  topContracts?: Array<{
+    exchange: string;
+    symbol: string;
+    fundingRate: number;
+    openInterest: number;
+    volume24h: number;
+    spread?: number;
+  }>;
+}
+
 export interface TickerContext {
   symbol: string;
   assetClass: AssetClass;
@@ -107,6 +141,7 @@ export interface TickerContext {
   scanner: ScannerResult | null;
   flow: FlowData | null;
   options: OptionsData | null;
+  cryptoDerivatives: CryptoDerivatives | null;
   news: NewsItem[];
   earnings: EarningsEvent[];
   economic: EconomicEvent[];

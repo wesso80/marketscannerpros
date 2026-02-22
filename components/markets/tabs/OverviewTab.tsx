@@ -14,7 +14,8 @@ const TradingViewChart = dynamic(
  * Absorbs the top half of what was the Equity/Crypto Explorer.
  */
 export default function OverviewTab({ ctx }: { ctx: TickerContext }) {
-  const { symbol, quote, scanner, loading } = ctx;
+  const { symbol, assetClass, quote, scanner, loading } = ctx;
+  const isCrypto = assetClass === 'crypto';
 
   if (loading) {
     return <div className="h-[400px] animate-pulse rounded-md bg-[var(--msp-panel-2)]" />;
@@ -64,10 +65,20 @@ export default function OverviewTab({ ctx }: { ctx: TickerContext }) {
       {/* Key stats row */}
       {quote && (
         <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-          <StatCard label="Open" value={`$${quote.open?.toFixed(2) ?? '—'}`} />
-          <StatCard label="High" value={`$${quote.high?.toFixed(2) ?? '—'}`} />
-          <StatCard label="Low" value={`$${quote.low?.toFixed(2) ?? '—'}`} />
-          <StatCard label="Prev Close" value={`$${quote.previousClose?.toFixed(2) ?? '—'}`} />
+          <StatCard label={isCrypto ? '24h High' : 'Open'} value={isCrypto ? fmtPrice(quote.high) : fmtPrice(quote.open)} />
+          <StatCard label={isCrypto ? '24h Low' : 'High'} value={isCrypto ? fmtPrice(quote.low) : fmtPrice(quote.high)} />
+          <StatCard label={isCrypto ? '24h Volume' : 'Low'} value={isCrypto ? fmtLarge(quote.volume) : fmtPrice(quote.low)} />
+          <StatCard label={isCrypto ? 'Market Cap' : 'Prev Close'} value={isCrypto ? fmtLarge(quote.marketCap) : fmtPrice(quote.previousClose)} />
+        </div>
+      )}
+
+      {/* Crypto extra stats row */}
+      {isCrypto && quote && (quote.marketCapRank || quote.circulatingSupply) && (
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+          {quote.marketCapRank && <StatCard label="MCap Rank" value={`#${quote.marketCapRank}`} />}
+          {quote.circulatingSupply && <StatCard label="Circ. Supply" value={fmtSupply(quote.circulatingSupply)} />}
+          {quote.totalSupply && <StatCard label="Total Supply" value={fmtSupply(quote.totalSupply)} />}
+          {quote.open != null && <StatCard label="Open (est.)" value={fmtPrice(quote.open)} />}
         </div>
       )}
 
@@ -95,4 +106,32 @@ function StatCard({ label, value }: { label: string; value: string }) {
       <p className="text-xs font-bold text-[var(--msp-text)]">{value}</p>
     </div>
   );
+}
+
+/** Format a price value with appropriate decimal places */
+function fmtPrice(v: number | undefined | null): string {
+  if (v == null || !Number.isFinite(v)) return '$—';
+  if (v >= 1000) return `$${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (v >= 1) return `$${v.toFixed(2)}`;
+  if (v >= 0.01) return `$${v.toFixed(4)}`;
+  return `$${v.toFixed(6)}`;
+}
+
+/** Format large numbers (volume, market cap) */
+function fmtLarge(v: number | undefined | null): string {
+  if (v == null || !Number.isFinite(v)) return '$—';
+  if (v >= 1_000_000_000_000) return `$${(v / 1_000_000_000_000).toFixed(2)}T`;
+  if (v >= 1_000_000_000) return `$${(v / 1_000_000_000).toFixed(2)}B`;
+  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
+  if (v >= 1_000) return `$${(v / 1_000).toFixed(1)}K`;
+  return `$${v.toFixed(0)}`;
+}
+
+/** Format supply numbers (no $ sign) */
+function fmtSupply(v: number | undefined | null): string {
+  if (v == null || !Number.isFinite(v)) return '—';
+  if (v >= 1_000_000_000) return `${(v / 1_000_000_000).toFixed(2)}B`;
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
+  if (v >= 1_000) return `${(v / 1_000).toFixed(1)}K`;
+  return v.toFixed(0);
 }

@@ -8,7 +8,8 @@ import type { TickerContext } from '../types';
  * Gated to Pro Trader tier.
  */
 export default function FlowTab({ ctx }: { ctx: TickerContext }) {
-  const { symbol, flow, loading } = ctx;
+  const { symbol, assetClass, flow, loading } = ctx;
+  const isCrypto = assetClass === 'crypto';
 
   if (loading) {
     return <div className="h-[300px] animate-pulse rounded-md bg-[var(--msp-panel-2)]" />;
@@ -18,7 +19,9 @@ export default function FlowTab({ ctx }: { ctx: TickerContext }) {
     return (
       <div className="rounded-md border border-dashed border-[var(--msp-border)] bg-[var(--msp-panel)] p-6 text-center">
         <p className="text-sm font-semibold text-[var(--msp-text-muted)]">No flow data available</p>
-        <p className="mt-1 text-[10px] text-[var(--msp-text-faint)]">Capital flow / options flow data requires Pro Trader tier for {symbol}</p>
+        <p className="mt-1 text-[10px] text-[var(--msp-text-faint)]">
+          {isCrypto ? 'Capital flow / leverage data' : 'Capital flow / options flow data'} requires Pro Trader tier for {symbol}
+        </p>
       </div>
     );
   }
@@ -34,13 +37,15 @@ export default function FlowTab({ ctx }: { ctx: TickerContext }) {
     <div className="grid gap-3">
       <div>
         <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Flow Analysis</p>
-        <h3 className="text-xs font-bold text-[var(--msp-text)]">{symbol} — Capital Flow, Gamma, Liquidity</h3>
+        <h3 className="text-xs font-bold text-[var(--msp-text)]">
+          {symbol} — {isCrypto ? 'Capital Flow, OI, Leverage' : 'Capital Flow, Gamma, Liquidity'}
+        </h3>
       </div>
 
       {/* Top metrics */}
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         <FlowCard label="Market Mode" value={marketMode.toUpperCase()} color={modeColor} />
-        <FlowCard label="Gamma State" value={gammaState} color={gammaColor} />
+        <FlowCard label={isCrypto ? 'OI State' : 'Gamma State'} value={gammaState} color={gammaColor} />
         <FlowCard label="Bias" value={bias.toUpperCase()} color={biasColor} />
         <FlowCard label="Conviction" value={`${Math.round(flow.conviction ?? 0)}%`} color={(flow.conviction ?? 0) > 60 ? 'text-emerald-400' : 'text-amber-400'} />
       </div>
@@ -48,7 +53,9 @@ export default function FlowTab({ ctx }: { ctx: TickerContext }) {
       {/* Key strikes */}
       {flow.key_strikes && flow.key_strikes.length > 0 && (
         <div className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2">
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--msp-text-faint)]">Key Strikes — Gravity Centers</p>
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--msp-text-faint)]">
+            {isCrypto ? 'Key Levels — OI Concentration' : 'Key Strikes — Gravity Centers'}
+          </p>
           <div className="space-y-1">
             {flow.key_strikes.slice(0, 6).map((ks, i) => (
               <div key={i} className="flex items-center justify-between text-[11px]">
@@ -78,7 +85,9 @@ export default function FlowTab({ ctx }: { ctx: TickerContext }) {
       {/* Flip zones */}
       {flow.flip_zones && flow.flip_zones.length > 0 && (
         <div className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2">
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--msp-text-faint)]">Gamma Flip Zones</p>
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--msp-text-faint)]">
+            {isCrypto ? 'Liquidation / Flip Zones' : 'Gamma Flip Zones'}
+          </p>
           <div className="grid grid-cols-2 gap-2">
             {flow.flip_zones.map((fz, i) => (
               <div key={i} className="flex items-center gap-2 text-[11px]">

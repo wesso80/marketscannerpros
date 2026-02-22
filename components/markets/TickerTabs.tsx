@@ -9,10 +9,10 @@ import FlowTab from './tabs/FlowTab';
 import NewsTab from './tabs/NewsTab';
 import TimeTab from './tabs/TimeTab';
 
-const TABS: { key: TickerTab; label: string }[] = [
+const TABS: { key: TickerTab; label: string; cryptoLabel?: string }[] = [
   { key: 'overview', label: 'Overview' },
   { key: 'structure', label: 'Structure' },
-  { key: 'options', label: 'Options' },
+  { key: 'options', label: 'Options', cryptoLabel: 'Derivatives' },
   { key: 'flow', label: 'Flow' },
   { key: 'news', label: 'News & Events' },
   { key: 'time', label: 'Time' },
@@ -37,7 +37,7 @@ export default function TickerTabs({ ctx }: TickerTabsProps) {
     <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-card)]">
       {/* Tab bar */}
       <div className="flex items-center gap-0.5 overflow-x-auto border-b border-[var(--msp-border)] px-2 py-1">
-        {TABS.map(({ key, label }) => (
+        {TABS.map(({ key, label, cryptoLabel }) => (
           <button
             key={key}
             onClick={() => setActiveTab(key)}
@@ -47,7 +47,7 @@ export default function TickerTabs({ ctx }: TickerTabsProps) {
                 : 'text-[var(--msp-text-muted)] hover:text-[var(--msp-text)]'
             }`}
           >
-            {label}
+            {ctx.assetClass === 'crypto' && cryptoLabel ? cryptoLabel : label}
           </button>
         ))}
       </div>

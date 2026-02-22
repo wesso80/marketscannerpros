@@ -8,6 +8,7 @@ import type {
   ScannerResult,
   FlowData,
   OptionsData,
+  CryptoDerivatives,
   NewsItem,
   EarningsEvent,
   EconomicEvent,
@@ -26,6 +27,7 @@ export function useTickerData(symbol: string | null, assetClass: AssetClass): Ti
     scanner: null,
     flow: null,
     options: null,
+    cryptoDerivatives: null,
     news: [],
     earnings: [],
     economic: [],
@@ -44,66 +46,84 @@ export function useTickerData(symbol: string | null, assetClass: AssetClass): Ti
 
     const signal = controller.signal;
     const type = ac === 'crypto' ? 'crypto' : 'stock';
+    const isCrypto = ac === 'crypto';
 
-    // Fire all requests in parallel
-    const [quoteRes, scannerRes, flowRes, optionsRes, newsRes, earningsRes, econRes] =
-      await Promise.allSettled([
-        // 1. Quote
-        fetch(`/api/quote?symbol=${sym}&type=${type}`, { signal })
-          .then(r => r.ok ? r.json() : null)
-          .catch(() => null),
+    // Build request array — different for crypto vs equities
+    const requests: Promise<any>[] = [
+      // 0. Quote (always)
+      fetch(`/api/quote?symbol=${sym}&type=${type}`, { signal })
+        .then(r => r.ok ? r.json() : null)
+        .catch(() => null),
 
-        // 2. Scanner single-symbol scan
-        fetch('/api/scanner/run', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: ac === 'crypto' ? 'crypto' : 'equity', timeframe: 'daily', minScore: 0, symbols: [sym] }),
-          signal,
-        })
-          .then(r => r.ok ? r.json() : null)
-          .catch(() => null),
+      // 1. Scanner single-symbol scan (always)
+      fetch('/api/scanner/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: isCrypto ? 'crypto' : 'equity', timeframe: 'daily', minScore: 0, symbols: [sym] }),
+        signal,
+      })
+        .then(r => r.ok ? r.json() : null)
+        .catch(() => null),
 
-        // 3. Flow / Capital data (Pro Trader)
-        fetch(`/api/flow?symbol=${sym}`, { signal })
-          .then(r => r.ok ? r.json() : null)
-          .catch(() => null),
+      // 2. Flow / Capital data — pass marketType for crypto
+      fetch(`/api/flow?symbol=${sym}${isCrypto ? '&marketType=crypto' : ''}`, { signal })
+        .then(r => r.ok ? r.json() : null)
+        .catch(() => null),
 
-        // 4. Options scan (Pro Trader) — requires POST
-        fetch('/api/options-scan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ symbol: sym, scanMode: 'intraday_1h' }),
-          signal,
-        })
-          .then(r => r.ok ? r.json() : null)
-          .catch(() => null),
+      // 3. Options (equity only) OR Funding rates (crypto only)
+      isCrypto
+        ? fetch(`/api/funding-rates`, { signal })
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null)
+        : fetch('/api/options-scan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ symbol: sym, scanMode: 'intraday_1h' }),
+            signal,
+          })
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null),
 
-        // 5. News sentiment
-        fetch(`/api/news-sentiment?tickers=${sym}`, { signal })
-          .then(r => r.ok ? r.json() : null)
-          .catch(() => null),
+      // 4. News sentiment (always)
+      fetch(`/api/news-sentiment?tickers=${sym}`, { signal })
+        .then(r => r.ok ? r.json() : null)
+        .catch(() => null),
 
-        // 6. Earnings calendar
-        fetch(`/api/earnings-calendar?symbol=${sym}`, { signal })
-          .then(r => r.ok ? r.json() : null)
-          .catch(() => null),
+      // 5. Earnings (equity only) OR Long/Short ratio (crypto only)
+      isCrypto
+        ? fetch(`/api/long-short-ratio`, { signal })
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null)
+        : fetch(`/api/earnings-calendar?symbol=${sym}`, { signal })
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null),
 
-        // 7. Economic calendar
-        fetch('/api/economic-calendar?days=14&impact=high', { signal })
-          .then(r => r.ok ? r.json() : null)
-          .catch(() => null),
-      ]);
+      // 6. Economic calendar (always)
+      fetch('/api/economic-calendar?days=14&impact=high', { signal })
+        .then(r => r.ok ? r.json() : null)
+        .catch(() => null),
+
+      // 7. Crypto liquidations (crypto only, null for equities)
+      isCrypto
+        ? fetch(`/api/crypto/liquidations?symbol=${sym}`, { signal })
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null)
+        : Promise.resolve(null),
+    ];
+
+    const results = await Promise.allSettled(requests);
 
     if (signal.aborted) return;
 
     // Parse results
-    const quoteRaw = quoteRes.status === 'fulfilled' ? quoteRes.value : null;
-    const scannerRaw = scannerRes.status === 'fulfilled' ? scannerRes.value : null;
-    const flowRaw = flowRes.status === 'fulfilled' ? flowRes.value : null;
-    const optionsRaw = optionsRes.status === 'fulfilled' ? optionsRes.value : null;
-    const newsRaw = newsRes.status === 'fulfilled' ? newsRes.value : null;
-    const earningsRaw = earningsRes.status === 'fulfilled' ? earningsRes.value : null;
-    const econRaw = econRes.status === 'fulfilled' ? econRes.value : null;
+    const quoteRaw       = results[0].status === 'fulfilled' ? results[0].value : null;
+    const scannerRaw     = results[1].status === 'fulfilled' ? results[1].value : null;
+    const flowRaw        = results[2].status === 'fulfilled' ? results[2].value : null;
+    const slotRaw        = results[3].status === 'fulfilled' ? results[3].value : null; // options OR funding rates
+    const newsRaw        = results[4].status === 'fulfilled' ? results[4].value : null;
+    const slot5Raw       = results[5].status === 'fulfilled' ? results[5].value : null; // earnings OR L/S ratio
+    const econRaw        = results[6].status === 'fulfilled' ? results[6].value : null;
+    const liquidationsRaw = results[7].status === 'fulfilled' ? results[7].value : null;
 
     // Build quote
     let quote: QuoteData | null = null;
@@ -119,6 +139,13 @@ export function useTickerData(symbol: string | null, assetClass: AssetClass): Ti
         low: quoteRaw.low,
         open: quoteRaw.open,
         source: quoteRaw.source,
+        // Crypto-specific fields from CoinGecko market data
+        ...(isCrypto ? {
+          marketCap: quoteRaw.marketCap,
+          marketCapRank: quoteRaw.marketCapRank,
+          circulatingSupply: quoteRaw.circulatingSupply,
+          totalSupply: quoteRaw.totalSupply,
+        } : {}),
       };
     }
 
@@ -188,43 +215,106 @@ export function useTickerData(symbol: string | null, assetClass: AssetClass): Ti
     // Build flow — unwrap { success, data } envelope
     const flow: FlowData | null = (flowRaw?.success && flowRaw?.data) ? flowRaw.data : null;
 
-    // Build options — reject docs response (GET returns API documentation, not scan data)
-    // Options-scan POST returns { success, data: { ...analysis, capitalFlow, dealerGamma, ... } }
+    // Build options (equity only) OR crypto derivatives
     let options: OptionsData | null = null;
-    if (optionsRaw?.success && optionsRaw?.data) {
-      const d = optionsRaw.data;
-      const ivAnalysis = d.ivAnalysis;
-      const oiAnalysis = d.openInterestAnalysis;
-      const dealerGamma = d.dealerGamma;
-      options = {
-        symbol: sym,
-        iv: Number(ivAnalysis?.currentIV ?? ivAnalysis?.avgImpliedVol ?? 0) * (ivAnalysis?.currentIV > 1 ? 1 : 100),
-        ivRank: Number(ivAnalysis?.ivRank ?? ivAnalysis?.ivRankHeuristic ?? 0),
-        expectedMove: Number(d.expectedMove?.selectedExpiryPercent ?? 0),
-        putCallRatio: Number(oiAnalysis?.pcRatio ?? 0),
-        maxPain: Number(oiAnalysis?.maxPainStrike ?? dealerGamma?.maxPainStrike ?? 0),
-        topStrikes: (oiAnalysis?.highOIStrikes ?? []).slice(0, 10).map((s: any) => ({
-          strike: s.strike ?? 0,
-          type: (s.dominantSide ?? 'call').toLowerCase().includes('put') ? 'put' as const : 'call' as const,
-          volume: s.volume ?? 0,
-          oi: s.totalOI ?? ((s.callOI ?? 0) + (s.putOI ?? 0)),
-        })),
-        gex: dealerGamma?.netGammaExposure ?? undefined,
-        dex: dealerGamma?.netDeltaExposure ?? undefined,
-      };
+    let cryptoDerivatives: CryptoDerivatives | null = null;
+
+    if (isCrypto) {
+      // Assemble crypto derivatives from funding-rates, long-short-ratio, liquidations endpoints
+      const fundingRaw = slotRaw;   // /api/funding-rates response
+      const lsRaw = slot5Raw;       // /api/long-short-ratio response
+
+      // Find this symbol's data in the aggregated responses
+      // Both APIs return { coins: [...], average: {...} }
+      const symUpper = sym.toUpperCase();
+      const fundingEntry = (fundingRaw?.coins ?? []).find?.((r: any) =>
+        (r.symbol ?? '').toUpperCase().replace(/-USD$|USDT$/i, '') === symUpper
+      );
+      const lsEntry = (lsRaw?.coins ?? []).find?.((r: any) =>
+        (r.symbol ?? '').toUpperCase().replace(/-USD$|USDT$/i, '') === symUpper
+      );
+
+      if (fundingEntry || lsEntry) {
+        cryptoDerivatives = {
+          symbol: sym,
+          fundingRate: Number(fundingEntry?.fundingRatePercent ?? fundingEntry?.fundingRate ?? 0),
+          fundingAnnualized: Number(fundingEntry?.annualized ?? 0),
+          openInterest: undefined, // Not in funding-rates endpoint; flow API may provide
+          longShortRatio: Number(lsEntry?.longShortRatio ?? 0) || undefined,
+          sentiment: fundingEntry?.sentiment ?? (lsRaw?.average?.sentiment) ?? undefined,
+          basis: undefined,
+          volume24h: undefined,
+          exchangeCount: fundingEntry?.exchanges ?? undefined,
+        };
+
+        // Add liquidation data if available
+        // Liquidations API returns { summary, coins: [...] }
+        if (liquidationsRaw?.coins?.length > 0) {
+          const liqEntry = liquidationsRaw.coins.find((l: any) =>
+            (l.symbol ?? '').toUpperCase() === symUpper
+          );
+          if (liqEntry) {
+            cryptoDerivatives.liquidations = {
+              long24h: Number(liqEntry.longValue ?? 0),
+              short24h: Number(liqEntry.shortValue ?? 0),
+              total24h: Number(liqEntry.totalValue ?? 0),
+            };
+          }
+        }
+
+        // Add top contracts from funding data
+        const contracts = fundingEntry?.contracts ?? fundingEntry?.exchanges ?? [];
+        if (Array.isArray(contracts) && contracts.length > 0) {
+          cryptoDerivatives.topContracts = contracts.slice(0, 8).map((c: any) => ({
+            exchange: c.exchange ?? c.name ?? '',
+            symbol: c.symbol ?? c.pair ?? '',
+            fundingRate: Number(c.fundingRate ?? 0),
+            openInterest: Number(c.openInterest ?? c.oi ?? 0),
+            volume24h: Number(c.volume24h ?? c.volume ?? 0),
+            spread: Number(c.spread ?? 0) || undefined,
+          }));
+        }
+      }
+    } else {
+      // Equity options-scan POST response
+      const optionsRaw = slotRaw;
+      if (optionsRaw?.success && optionsRaw?.data) {
+        const d = optionsRaw.data;
+        const ivAnalysis = d.ivAnalysis;
+        const oiAnalysis = d.openInterestAnalysis;
+        const dealerGamma = d.dealerGamma;
+        options = {
+          symbol: sym,
+          iv: Number(ivAnalysis?.currentIV ?? ivAnalysis?.avgImpliedVol ?? 0) * (ivAnalysis?.currentIV > 1 ? 1 : 100),
+          ivRank: Number(ivAnalysis?.ivRank ?? ivAnalysis?.ivRankHeuristic ?? 0),
+          expectedMove: Number(d.expectedMove?.selectedExpiryPercent ?? 0),
+          putCallRatio: Number(oiAnalysis?.pcRatio ?? 0),
+          maxPain: Number(oiAnalysis?.maxPainStrike ?? dealerGamma?.maxPainStrike ?? 0),
+          topStrikes: (oiAnalysis?.highOIStrikes ?? []).slice(0, 10).map((s: any) => ({
+            strike: s.strike ?? 0,
+            type: (s.dominantSide ?? 'call').toLowerCase().includes('put') ? 'put' as const : 'call' as const,
+            volume: s.volume ?? 0,
+            oi: s.totalOI ?? ((s.callOI ?? 0) + (s.putOI ?? 0)),
+          })),
+          gex: dealerGamma?.netGammaExposure ?? undefined,
+          dex: dealerGamma?.netDeltaExposure ?? undefined,
+        };
+      }
     }
 
-    // Build news
-    const news: NewsItem[] = (newsRaw?.recentHeadlines ?? []).map((h: any) => ({
+    // Build news — API returns 'articles' (main key) or 'recentHeadlines' (legacy)
+    const rawArticles = newsRaw?.articles ?? newsRaw?.recentHeadlines ?? [];
+    const news: NewsItem[] = rawArticles.map((h: any) => ({
       title: h.title,
       source: h.source,
-      publishedAt: h.publishedAt,
+      publishedAt: h.publishedAt ?? h.time_published ?? h.published_at ?? '',
       url: h.url,
-      sentiment: h.overallSentiment ?? { score: 0, label: 'Neutral' },
+      sentiment: h.overallSentiment ?? h.sentiment ?? { score: 0, label: 'Neutral' },
     }));
 
-    // Build earnings
-    const earnings: EarningsEvent[] = (earningsRaw?.earnings ?? earningsRaw?.events ?? []).slice(0, 10);
+    // Build earnings (equity only — slot5 has earnings for equities)
+    const earningsRaw = isCrypto ? null : slot5Raw;
+    const earnings: EarningsEvent[] = isCrypto ? [] : (earningsRaw?.earnings ?? earningsRaw?.events ?? []).slice(0, 10);
 
     // Build economic events
     const economic: EconomicEvent[] = (econRaw?.events ?? econRaw?.calendar ?? []).slice(0, 20);
@@ -236,6 +326,7 @@ export function useTickerData(symbol: string | null, assetClass: AssetClass): Ti
       scanner,
       flow,
       options,
+      cryptoDerivatives,
       news,
       earnings,
       economic,
@@ -247,7 +338,7 @@ export function useTickerData(symbol: string | null, assetClass: AssetClass): Ti
     if (symbol && symbol.trim().length > 0) {
       fetchAll(symbol.toUpperCase(), assetClass);
     } else {
-      setCtx(prev => ({ ...prev, symbol: '', loading: false, quote: null, scanner: null, flow: null, options: null, news: [], earnings: [], economic: [] }));
+      setCtx(prev => ({ ...prev, symbol: '', loading: false, quote: null, scanner: null, flow: null, options: null, cryptoDerivatives: null, news: [], earnings: [], economic: [] }));
     }
   }, [symbol, assetClass, fetchAll]);
 

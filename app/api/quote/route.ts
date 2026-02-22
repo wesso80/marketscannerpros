@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPriceBySymbol, COINGECKO_ID_MAP, symbolToId } from "@/lib/coingecko";
+import { getPriceBySymbol, COINGECKO_ID_MAP, symbolToId, getMarketData, resolveSymbolToId } from "@/lib/coingecko";
 import { shouldUseCache, canFallbackToAV, getCacheMode } from "@/lib/cacheMode";
 import { getQuote } from "@/lib/onDemandFetch";
 import { apiLimiter, getClientIP } from "@/lib/rateLimit";
@@ -56,9 +56,24 @@ export async function GET(req: NextRequest) {
     let extraFields: Record<string, any> = {};
 
     if (type === "crypto") {
-      const cryptoQuote = await getCryptoPrice(symbol, market);
-      price = cryptoQuote?.price ?? null;
-      source = cryptoQuote?.source;
+      const cryptoQuote = await getCryptoQuoteFull(symbol, market);
+      if (cryptoQuote) {
+        price = cryptoQuote.price;
+        source = cryptoQuote.source;
+        extraFields = {
+          open: cryptoQuote.open,
+          high: cryptoQuote.high,
+          low: cryptoQuote.low,
+          previousClose: cryptoQuote.previousClose,
+          change: cryptoQuote.change,
+          changePercent: cryptoQuote.changePercent,
+          volume: cryptoQuote.volume,
+          marketCap: cryptoQuote.marketCap,
+          marketCapRank: cryptoQuote.marketCapRank,
+          circulatingSupply: cryptoQuote.circulatingSupply,
+          totalSupply: cryptoQuote.totalSupply,
+        };
+      }
     } else if (type === "stock") {
       const stockResult = await getStockQuoteFull(symbol, { strict });
       if (stockResult) {
@@ -150,9 +165,58 @@ async function getCoinGeckoPrice(symbol: string): Promise<number | null> {
 
 /**
  * Fetch crypto price using CoinGecko Commercial API (primary)
+ * Returns full market data: price, 24h OHLC, change, volume, market cap
  */
-async function getCryptoPrice(symbol: string, _market: string): Promise<{ price: number; source: 'coingecko' } | null> {
-  // Primary: Use CoinGecko Commercial API for all crypto
+interface CryptoQuoteFull {
+  price: number;
+  open?: number;
+  high?: number;
+  low?: number;
+  previousClose?: number;
+  change?: number;
+  changePercent?: number;
+  volume?: number;
+  marketCap?: number;
+  marketCapRank?: number;
+  circulatingSupply?: number;
+  totalSupply?: number;
+  source: string;
+}
+
+async function getCryptoQuoteFull(symbol: string, _market: string): Promise<CryptoQuoteFull | null> {
+  // Try getMarketData first — returns full 24h stats
+  const coinId = await resolveSymbolToId(symbol) || symbolToId(symbol) || COINGECKO_ID_MAP[symbol.toUpperCase()];
+  if (coinId) {
+    try {
+      const marketData = await getMarketData({ ids: [coinId], per_page: 1 });
+      if (marketData && marketData.length > 0) {
+        const d = marketData[0];
+        const price = d.current_price;
+        const change24h = d.price_change_24h ?? 0;
+        // CoinGecko doesn't have "open" directly, but we can derive it: open ≈ price - change24h
+        const open = price - change24h;
+        return {
+          price,
+          open: Number.isFinite(open) ? open : undefined,
+          high: d.high_24h ?? undefined,
+          low: d.low_24h ?? undefined,
+          previousClose: Number.isFinite(open) ? open : undefined,
+          change: Number.isFinite(change24h) ? change24h : undefined,
+          changePercent: Number.isFinite(d.price_change_percentage_24h) ? d.price_change_percentage_24h : undefined,
+          volume: d.total_volume ?? undefined,
+          marketCap: d.market_cap ?? undefined,
+          marketCapRank: d.market_cap_rank ?? undefined,
+          circulatingSupply: d.circulating_supply ?? undefined,
+          totalSupply: d.total_supply ?? undefined,
+          source: 'coingecko',
+        };
+      }
+    } catch (err) {
+      console.warn(`[quote] CoinGecko market data failed for ${symbol}:`, err);
+    }
+  }
+
+  // Fallback: simple price only
   const geckoPrice = await getCoinGeckoPrice(symbol);
   if (geckoPrice !== null) {
     return { price: geckoPrice, source: 'coingecko' };
