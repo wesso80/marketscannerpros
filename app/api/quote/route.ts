@@ -53,13 +53,27 @@ export async function GET(req: NextRequest) {
     // Try to fetch price based on asset type
     let price: number | null = null;
     let source: string | undefined;
+    let extraFields: Record<string, any> = {};
 
     if (type === "crypto") {
       const cryptoQuote = await getCryptoPrice(symbol, market);
       price = cryptoQuote?.price ?? null;
       source = cryptoQuote?.source;
     } else if (type === "stock") {
-      price = await getStockPrice(symbol, { strict });
+      const stockResult = await getStockQuoteFull(symbol, { strict });
+      if (stockResult) {
+        price = stockResult.price;
+        source = stockResult.source;
+        extraFields = {
+          open: stockResult.open,
+          high: stockResult.high,
+          low: stockResult.low,
+          previousClose: stockResult.previousClose,
+          change: stockResult.change,
+          changePercent: stockResult.changePercent,
+          volume: stockResult.volume,
+        };
+      }
     } else if (type === "fx") {
       price = await getFxPrice(symbol, market, { strict });
     }
@@ -78,6 +92,7 @@ export async function GET(req: NextRequest) {
       type,
       strict,
       ...(source ? { source } : {}),
+      ...extraFields,
       timestamp: new Date().toISOString(),
     });
   } catch (err: any) {
@@ -153,7 +168,19 @@ async function getCryptoPrice(symbol: string, _market: string): Promise<{ price:
  * - prefer_cache: Cache first, AV fallback
  * - cache_only: Cache only
  */
-async function getStockPrice(symbol: string, options?: { strict?: boolean }): Promise<number | null> {
+interface StockQuoteFull {
+  price: number;
+  open?: number;
+  high?: number;
+  low?: number;
+  previousClose?: number;
+  change?: number;
+  changePercent?: number;
+  volume?: number;
+  source?: string;
+}
+
+async function getStockQuoteFull(symbol: string, options?: { strict?: boolean }): Promise<StockQuoteFull | null> {
   const strict = Boolean(options?.strict);
   const useCache = shouldUseCache();
   const allowAVFallback = canFallbackToAV();
@@ -164,7 +191,17 @@ async function getStockPrice(symbol: string, options?: { strict?: boolean }): Pr
       const cachedQuote = await getQuote(symbol);
       if (cachedQuote?.price) {
         console.log(`[quote] ${symbol} served from ${cachedQuote.source} (${getCacheMode()} mode)`);
-        return cachedQuote.price;
+        return {
+          price: cachedQuote.price,
+          open: Number.isFinite(cachedQuote.open) ? cachedQuote.open : undefined,
+          high: Number.isFinite(cachedQuote.high) ? cachedQuote.high : undefined,
+          low: Number.isFinite(cachedQuote.low) ? cachedQuote.low : undefined,
+          previousClose: Number.isFinite(cachedQuote.prevClose) ? cachedQuote.prevClose : undefined,
+          change: Number.isFinite(cachedQuote.changeAmt) ? cachedQuote.changeAmt : undefined,
+          changePercent: Number.isFinite(cachedQuote.changePct) ? cachedQuote.changePct : undefined,
+          volume: cachedQuote.volume,
+          source: cachedQuote.source,
+        };
       }
     } catch (err) {
       console.warn(`[quote] Cache lookup failed for ${symbol}:`, err);
@@ -178,10 +215,22 @@ async function getStockPrice(symbol: string, options?: { strict?: boolean }): Pr
       const res = await fetch(url, { cache: 'no-store' });
       const data = await res.json();
 
-      const price = data["Global Quote"]?.["05. price"];
+      const gq = data["Global Quote"];
+      const price = gq?.["05. price"];
       if (price) {
         console.log(`[quote] ${symbol} served from direct AV call (${getCacheMode()} mode)`);
-        return parseFloat(price);
+        const pf = (v: string | undefined) => v ? parseFloat(v) : undefined;
+        return {
+          price: parseFloat(price),
+          open: pf(gq["02. open"]),
+          high: pf(gq["03. high"]),
+          low: pf(gq["04. low"]),
+          previousClose: pf(gq["08. previous close"]),
+          change: pf(gq["09. change"]),
+          changePercent: pf(gq["10. change percent"]?.replace('%', '')),
+          volume: gq["06. volume"] ? parseInt(gq["06. volume"], 10) : undefined,
+          source: 'alphavantage',
+        };
       }
     } catch (err) {
       console.warn("Alpha Vantage stock fetch failed:", err);

@@ -68,8 +68,13 @@ export function useTickerData(symbol: string | null, assetClass: AssetClass): Ti
           .then(r => r.ok ? r.json() : null)
           .catch(() => null),
 
-        // 4. Options scan (Pro Trader)
-        fetch(`/api/options-scan?symbol=${sym}`, { signal })
+        // 4. Options scan (Pro Trader) — requires POST
+        fetch('/api/options-scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ symbol: sym, scanMode: 'intraday_1h' }),
+          signal,
+        })
           .then(r => r.ok ? r.json() : null)
           .catch(() => null),
 
@@ -120,29 +125,94 @@ export function useTickerData(symbol: string | null, assetClass: AssetClass): Ti
     // Build scanner result (picks best match for this symbol)
     let scanner: ScannerResult | null = null;
     if (scannerRaw?.results?.length > 0) {
-      const match = scannerRaw.results.find((r: any) => r.symbol?.toUpperCase() === sym.toUpperCase());
+      // Match by symbol (scanner returns e.g. "TSLA" or "BTC-USD")
+      const match = scannerRaw.results.find((r: any) => {
+        const s = (r.symbol ?? '').toUpperCase().replace(/-USD$/, '');
+        return s === sym.toUpperCase() || (r.symbol ?? '').toUpperCase() === sym.toUpperCase();
+      }) || scannerRaw.results[0];
       if (match) {
+        // Translate scanner direction to expected enum
+        const dir: 'LONG' | 'SHORT' = match.direction === 'bearish' ? 'SHORT' : 'LONG';
+        // Compute entry/stop/target from price + ATR if not already set
+        const price = match.price ?? 0;
+        const atr = match.atr ?? 0;
+        const entry = match.entry ?? price;
+        const stop = match.stop ?? (dir === 'LONG' ? price - atr * 1.5 : price + atr * 1.5);
+        const target = match.target ?? (dir === 'LONG' ? price + atr * 3 : price - atr * 3);
+        const riskPerUnit = Math.abs(entry - stop);
+        const rMultiple = match.rMultiple ?? (riskPerUnit > 0 ? Math.abs(target - entry) / riskPerUnit : 0);
+
+        // Build support/resistance from EMA and chart data
+        const levels: { support: number[]; resistance: number[] } = match.levels ?? { support: [], resistance: [] };
+        if (levels.support.length === 0 && levels.resistance.length === 0 && price > 0) {
+          const ema200 = match.ema200;
+          if (ema200 && ema200 > 0) {
+            if (ema200 < price) levels.support.push(ema200);
+            else levels.resistance.push(ema200);
+          }
+          if (stop > 0 && dir === 'LONG') levels.support.push(stop);
+          if (stop > 0 && dir === 'SHORT') levels.resistance.push(stop);
+          if (target > 0 && dir === 'LONG') levels.resistance.push(target);
+          if (target > 0 && dir === 'SHORT') levels.support.push(target);
+        }
+
         scanner = {
           symbol: match.symbol,
           score: match.score ?? 0,
-          direction: match.direction ?? 'LONG',
-          confidence: match.confidence ?? 0,
-          setup: match.setup ?? '',
-          entry: match.entry ?? 0,
-          stop: match.stop ?? 0,
-          target: match.target ?? 0,
-          rMultiple: match.rMultiple ?? 0,
-          indicators: match.indicators ?? {},
-          levels: match.levels,
+          direction: dir,
+          confidence: match.confidence ?? Math.min(99, Math.abs(match.score ?? 0)),
+          setup: match.setup ?? (match.signals ? `${match.signals.bullish}B/${match.signals.bearish}Be signals` : ''),
+          entry,
+          stop: Math.max(0, stop),
+          target: Math.max(0, target),
+          rMultiple,
+          indicators: {
+            rsi: match.rsi,
+            macd_hist: match.macd_hist,
+            ema200: match.ema200,
+            atr: match.atr,
+            adx: match.adx,
+            stoch_k: match.stoch_k,
+            stoch_d: match.stoch_d,
+            cci: match.cci,
+            aroon_up: match.aroon_up,
+            aroon_down: match.aroon_down,
+            obv: match.obv,
+            chartData: match.chartData,
+          },
+          levels,
         };
       }
     }
 
-    // Build flow
-    const flow: FlowData | null = flowRaw ?? null;
+    // Build flow — unwrap { success, data } envelope
+    const flow: FlowData | null = (flowRaw?.success && flowRaw?.data) ? flowRaw.data : null;
 
-    // Build options
-    const options: OptionsData | null = optionsRaw ?? null;
+    // Build options — reject docs response (GET returns API documentation, not scan data)
+    // Options-scan POST returns { success, data: { ...analysis, capitalFlow, dealerGamma, ... } }
+    let options: OptionsData | null = null;
+    if (optionsRaw?.success && optionsRaw?.data) {
+      const d = optionsRaw.data;
+      const ivAnalysis = d.ivAnalysis;
+      const oiAnalysis = d.openInterestAnalysis;
+      const dealerGamma = d.dealerGamma;
+      options = {
+        symbol: sym,
+        iv: Number(ivAnalysis?.currentIV ?? ivAnalysis?.avgImpliedVol ?? 0) * (ivAnalysis?.currentIV > 1 ? 1 : 100),
+        ivRank: Number(ivAnalysis?.ivRank ?? ivAnalysis?.ivRankHeuristic ?? 0),
+        expectedMove: Number(d.expectedMove?.selectedExpiryPercent ?? 0),
+        putCallRatio: Number(oiAnalysis?.pcRatio ?? 0),
+        maxPain: Number(oiAnalysis?.maxPainStrike ?? dealerGamma?.maxPainStrike ?? 0),
+        topStrikes: (oiAnalysis?.highOIStrikes ?? []).slice(0, 10).map((s: any) => ({
+          strike: s.strike ?? 0,
+          type: (s.dominantSide ?? 'call').toLowerCase().includes('put') ? 'put' as const : 'call' as const,
+          volume: s.volume ?? 0,
+          oi: s.totalOI ?? ((s.callOI ?? 0) + (s.putOI ?? 0)),
+        })),
+        gex: dealerGamma?.netGammaExposure ?? undefined,
+        dex: dealerGamma?.netDeltaExposure ?? undefined,
+      };
+    }
 
     // Build news
     const news: NewsItem[] = (newsRaw?.recentHeadlines ?? []).map((h: any) => ({

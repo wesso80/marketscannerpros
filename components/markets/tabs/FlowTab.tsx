@@ -42,7 +42,7 @@ export default function FlowTab({ ctx }: { ctx: TickerContext }) {
         <FlowCard label="Market Mode" value={marketMode.toUpperCase()} color={modeColor} />
         <FlowCard label="Gamma State" value={gammaState} color={gammaColor} />
         <FlowCard label="Bias" value={bias.toUpperCase()} color={biasColor} />
-        <FlowCard label="Conviction" value={`${Math.round((flow.conviction ?? 0) * 100)}%`} color={(flow.conviction ?? 0) > 0.6 ? 'text-emerald-400' : 'text-amber-400'} />
+        <FlowCard label="Conviction" value={`${Math.round(flow.conviction ?? 0)}%`} color={(flow.conviction ?? 0) > 60 ? 'text-emerald-400' : 'text-amber-400'} />
       </div>
 
       {/* Key strikes */}
