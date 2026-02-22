@@ -4,8 +4,8 @@ import dynamic from 'next/dynamic';
 import type { TickerContext } from '../types';
 import { SentimentBadge } from '@/components/NewsSentiment';
 
-const TradingViewChart = dynamic(
-  () => import('@/components/scanner/TradingViewChart').then(m => ({ default: m.TradingViewChart })),
+const PriceChart = dynamic(
+  () => import('@/components/scanner/PriceChart').then(m => ({ default: m.PriceChart })),
   { ssr: false, loading: () => <div className="h-[300px] animate-pulse rounded-md bg-[var(--msp-panel-2)]" /> }
 );
 
@@ -54,7 +54,7 @@ export default function OverviewTab({ ctx }: { ctx: TickerContext }) {
 
       {/* Chart */}
       <div className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2">
-        <TradingViewChart
+        <PriceChart
           symbol={symbol}
           interval="daily"
           price={quote?.price}

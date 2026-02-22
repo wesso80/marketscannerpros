@@ -15,7 +15,7 @@ import CommandStrip, { type TerminalDensity } from "@/components/terminal/Comman
 import DecisionCockpit from "@/components/terminal/DecisionCockpit";
 import SignalRail from "@/components/terminal/SignalRail";
 import OperatorProposalRail from "@/components/operator/OperatorProposalRail";
-import { TradingViewChart, type ChartData } from "@/components/scanner/TradingViewChart";
+import { PriceChart, type ChartData } from "@/components/scanner/PriceChart";
 import { PreTradeChecklistModal, type PreTradeChecklistState } from "@/components/scanner/PreTradeChecklistModal";
 import { useUserTier } from "@/lib/useUserTier";
 import { useAIPageContext } from "@/lib/ai/pageContext";
@@ -4833,9 +4833,9 @@ function ScannerContent() {
 
             {showAdvancedEngineeringPanels && (
               <>
-                {/* TradingView Chart */}
+                {/* Price Chart (Chart.js) */}
                 <div style={{ marginBottom: "2rem", borderRadius: "12px", overflow: "hidden", border: "1px solid rgba(16, 185, 129, 0.2)" }}>
-                  <TradingViewChart 
+                  <PriceChart 
                     symbol={result.symbol.replace("-USD", "")} 
                     interval={timeframe} 
                     price={result.price} 

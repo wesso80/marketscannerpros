@@ -9,11 +9,14 @@ export interface ChartData {
   macd: { macd: number; signal: number; hist: number }[];
 }
 
-export function TradingViewChart({ 
+/** @deprecated Use PriceChart instead — kept for barrel-export compat */
+export const TradingViewChart = PriceChart;
+
+export function PriceChart({ 
   symbol, 
   interval, 
   price,
-  chartData 
+  chartData: chartDataProp 
 }: { 
   symbol: string; 
   interval: string; 
@@ -26,6 +29,37 @@ export function TradingViewChart({
   const priceChartRef = React.useRef<any>(null);
   const rsiChartRef = React.useRef<any>(null);
   const macdChartRef = React.useRef<any>(null);
+
+  // Self-fetch bars from /api/bars when scanner didn't provide chartData
+  const [fetchedData, setFetchedData] = React.useState<ChartData | null>(null);
+  const [barSource, setBarSource] = React.useState<string>('');
+
+  React.useEffect(() => {
+    if (chartDataProp && chartDataProp.candles.length > 0) {
+      setFetchedData(null);
+      setBarSource('scanner');
+      return;
+    }
+    // No inline chart data — fetch from cache API
+    let cancelled = false;
+    const timeframe = interval === 'daily' || interval === 'weekly' ? interval : 'daily';
+    fetch(`/api/bars?symbol=${encodeURIComponent(symbol)}&timeframe=${timeframe}&limit=50`)
+      .then(r => r.ok ? r.json() : null)
+      .then(json => {
+        if (cancelled || !json?.ok) return;
+        setFetchedData({
+          candles: json.candles,
+          ema200: json.ema200,
+          rsi: json.rsi,
+          macd: json.macd,
+        });
+        setBarSource(json.source ?? 'cache');
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [symbol, interval, chartDataProp]);
+
+  const chartData = chartDataProp ?? fetchedData;
 
   React.useEffect(() => {
     if (!priceCanvasRef.current) return;
@@ -60,7 +94,7 @@ export function TradingViewChart({
           macdLine = chartData.macd.map(m => Number.isFinite(m.macd) ? m.macd : 0);
           signalLine = chartData.macd.map(m => Number.isFinite(m.signal) ? m.signal : 0);
         } else {
-          const basePrice = price || 45000;
+          const basePrice = price || 100;
           const now = new Date();
           labels = Array.from({ length: 20 }, (_, i) => {
             const d = new Date(now);
@@ -312,6 +346,9 @@ export function TradingViewChart({
     };
   }, [symbol, interval, price, chartData]);
 
+  const hasData = chartData && chartData.candles.length > 0;
+  const sourceLabel = chartDataProp ? 'via scanner' : barSource ? `via ${barSource}` : '';
+
   return (
     <div style={{ background: 'var(--msp-panel)', borderRadius: '8px', padding: '12px' }}>
       <div style={{ height: '280px', marginBottom: '8px' }}>
@@ -326,10 +363,10 @@ export function TradingViewChart({
       <div style={{ 
         textAlign: 'right', 
         fontSize: '10px', 
-        color: chartData ? 'var(--msp-bull)' : 'var(--msp-neutral)',
+        color: hasData ? 'var(--msp-bull)' : 'var(--msp-neutral)',
         marginTop: '4px'
       }}>
-        {chartData ? '● Live Data' : '○ No Live Bars'}
+        {hasData ? `● Live Data ${sourceLabel}` : '○ Awaiting bar data'}
       </div>
     </div>
   );
