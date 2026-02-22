@@ -1415,7 +1415,7 @@ export default function OperatorDashboardPage() {
   const workflowTodaySection = showWorkflowToday ? (
     <section className={`mb-4 rounded-xl bg-slate-800/40 p-3 ${isPriority('workflow_today') ? 'border border-cyan-500/40' : 'border border-slate-700'}`}>
       <div className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">Today's Workflow</div>
-      <div className="grid gap-2 md:grid-cols-12">
+      <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-12">
         <div className="rounded-md border border-slate-700 bg-slate-900/50 px-3 py-2 text-xs">
           <div className="text-slate-400 uppercase tracking-wide">Signals</div>
           <div className="font-bold text-emerald-300">{workflowToday?.signals ?? 0}</div>
@@ -1615,7 +1615,7 @@ export default function OperatorDashboardPage() {
   ) : null;
 
   const operatorKpisSection = (
-    <div className={`mb-4 grid gap-2 md:grid-cols-5 ${isPriority('operator_kpis') ? 'rounded-xl border border-cyan-500/40 p-2' : ''}`}>
+    <div className={`mb-4 grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 ${isPriority('operator_kpis') ? 'rounded-xl border border-cyan-500/40 p-2' : ''}`}>
       <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs">
         <div className="text-emerald-300 uppercase tracking-wide">Operator Mode</div>
         <div className="font-bold">{operatorMode}</div>

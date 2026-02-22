@@ -1820,7 +1820,7 @@ function ScannerContent() {
               disabled={bulkScanLoading}
               style={{
                 flex: "1",
-                minWidth: "200px",
+                minWidth: "min(200px, 100%)",
                 padding: "16px 24px",
                 background: bulkScanLoading && bulkScanType === 'crypto' 
                   ? "var(--msp-warn-tint)" 
@@ -1857,7 +1857,7 @@ function ScannerContent() {
               disabled={bulkScanLoading}
               style={{
                 flex: "1",
-                minWidth: "200px",
+                minWidth: "min(200px, 100%)",
                 padding: "16px 24px",
                 background: bulkScanLoading && bulkScanType === 'equity' 
                   ? "var(--msp-bull-tint)" 
@@ -1983,7 +1983,7 @@ function ScannerContent() {
               
               <div style={{ 
                 display: "grid", 
-                gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", 
+                gridTemplateColumns: "repeat(auto-fill, minmax(min(280px, 100%), 1fr))", 
                 gap: "12px" 
               }}>
                 {bulkScanResults.topPicks.map((pick, idx) => (
@@ -3165,8 +3165,7 @@ function ScannerContent() {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     gap: '0.8rem',
-                    flexWrap: 'nowrap',
-                    overflowX: 'auto',
+                    flexWrap: 'wrap',
                   }}>
                     <div style={{ color: directionColor, fontSize: 'clamp(1.08rem, 4.4vw, 1.5rem)', fontWeight: 900, letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>{directionLabel}</div>
                     <div style={{ color: confidence >= 70 ? 'var(--msp-bull)' : confidence >= 50 ? 'var(--msp-warn)' : 'var(--msp-bear)', fontSize: 'clamp(0.92rem, 3.8vw, 1.26rem)', fontWeight: 900, letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>
@@ -3728,7 +3727,7 @@ function ScannerContent() {
                           {autopilotState === 'READY' ? ' • EXECUTION WINDOW OPEN' : ''}
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.6rem', marginBottom: '0.55rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '0.6rem', marginBottom: '0.55rem' }}>
                           <div style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border-strong)', borderRadius: '8px', padding: '0.58rem' }}>
                             <div style={{ color: 'var(--msp-neutral)', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.24rem' }}>Market Watch</div>
                             <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.74rem', display: 'grid', gap: '0.14rem' }}>
@@ -3804,7 +3803,7 @@ function ScannerContent() {
                       <div style={{
                         marginBottom: '0.95rem',
                         display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(270px, 1fr))',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(min(270px, 100%), 1fr))',
                         gap: '0.75rem',
                         alignItems: 'start',
                       }}>
@@ -3865,7 +3864,6 @@ function ScannerContent() {
                           borderRadius: '12px',
                           padding: edgeCollapsed ? '0.72rem 0.82rem' : '1rem',
                           boxShadow: 'none',
-                          transform: strongEdge ? 'scale(1.03)' : 'scale(1)',
                           transformOrigin: 'center top',
                         }}>
                           <div style={{ color: 'var(--msp-accent)', fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.28rem' }}>
@@ -3963,9 +3961,8 @@ function ScannerContent() {
                           border: executionHidden ? '1px dashed var(--msp-border-strong)' : '1px solid var(--msp-border-strong)',
                           borderRadius: '10px',
                           padding: '0.8rem 0.9rem',
-                          transform: strongEdge && !executionHidden ? 'scale(1.04)' : 'scale(1)',
                           transformOrigin: 'center top',
-                          boxShadow: 'none',
+                          boxShadow: strongEdge && !executionHidden ? '0 0 0 1px var(--msp-accent)' : 'none',
                         }}>
                           <div style={{ color: 'var(--msp-text)', fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.42rem' }}>
                             Right Panel • Execution & Risk (The Money)
@@ -4176,10 +4173,12 @@ function ScannerContent() {
                   
                   <div style={{
                     display: "grid",
-                    gridTemplateColumns: "1fr auto",
-                    gap: "1.5rem",
+                    gridTemplateColumns: "1fr",
+                    gap: "1rem",
                     alignItems: "center"
-                  }}>
+                  }}
+                  className="sm:[grid-template-columns:1fr_auto] sm:gap-6"
+                  >
                     {/* Left: Verdict Info */}
                     <div>
                       <div style={{ 
@@ -4232,6 +4231,7 @@ function ScannerContent() {
                       {result.signals && (
                         <div style={{
                           display: "flex",
+                          flexWrap: "wrap",
                           gap: "1rem",
                           marginTop: "1rem",
                           fontSize: "0.85rem"
