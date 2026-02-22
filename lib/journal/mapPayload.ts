@@ -83,7 +83,10 @@ export function mapJournalResponseToPayload(raw: any): JournalPayload {
       risk: {
         missingStops: openTrades.filter((trade) => trade.stop == null).length,
         oversizeFlags: openTrades.filter((trade) => (trade.qty || 0) > 100).length,
-        blocker: 'Missing stop or oversize trade detected.',
+        blocker:
+          openTrades.filter((trade) => trade.stop == null).length > 0 || openTrades.filter((trade) => (trade.qty || 0) > 100).length > 0
+            ? 'Missing stop or oversize trade detected.'
+            : '',
       },
       review: {
         queue: closedTrades

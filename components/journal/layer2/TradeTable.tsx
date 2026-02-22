@@ -4,6 +4,14 @@ import { Fragment, useState } from 'react';
 import TradeRowExpanded from '@/components/journal/layer2/TradeRowExpanded';
 import { SortModel, TradeRowModel } from '@/types/journal';
 
+/** Smart price format: 2 decimals for prices >= $1, up to 6 for tiny crypto */
+function fmtPrice(p: number): string {
+  if (p === 0) return '0.00';
+  if (p >= 1) return p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (p >= 0.01) return p.toFixed(4);
+  return p.toFixed(6);
+}
+
 type TradeTableProps = {
   rows: TradeRowModel[];
   sort: SortModel;
@@ -84,9 +92,9 @@ export default function TradeTable({ rows, sort, onSort, onSelectTrade, onQuickC
                 <td className="px-3 py-2 font-semibold text-slate-100">{row.symbol}</td>
                 <td className="px-3 py-2 text-slate-300">{row.status}</td>
                 <td className="px-3 py-2 text-slate-300">{row.side}</td>
-                <td className="px-3 py-2 text-slate-300">{row.entry.price.toFixed(2)} · {new Date(row.entry.ts).toLocaleDateString()}</td>
-                <td className="px-3 py-2 text-slate-300">{row.stop != null ? row.stop.toFixed(2) : '—'}</td>
-                <td className="px-3 py-2 text-slate-300">{row.exit?.price != null ? row.exit.price.toFixed(2) : 'Open'}</td>
+                <td className="px-3 py-2 text-slate-300">{fmtPrice(row.entry.price)} · {new Date(row.entry.ts).toLocaleDateString()}</td>
+                <td className="px-3 py-2 text-slate-300">{row.stop != null ? fmtPrice(row.stop) : '—'}</td>
+                <td className="px-3 py-2 text-slate-300">{row.exit?.price != null ? fmtPrice(row.exit.price) : 'Open'}</td>
                 <td className={`px-3 py-2 ${Number(row.pnlUsd || 0) >= 0 ? 'text-emerald-200' : 'text-rose-200'}`}>{Number(row.pnlUsd || 0).toFixed(2)} / {Number(row.pnlPct || 0).toFixed(2)}%</td>
                 <td className="px-3 py-2 text-slate-300">{row.rMultiple != null ? row.rMultiple.toFixed(2) : '—'}</td>
                 <td className="px-3 py-2 text-slate-300">{row.strategyTag || '—'}</td>
