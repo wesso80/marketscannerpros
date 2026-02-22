@@ -399,7 +399,7 @@ export default function WatchlistWidget() {
         if (bias !== biasFilter) return false;
       }
       if (row.confidence < confidenceFilter) return false;
-      if (volatilityFilter !== 'all' && row.volatilityState.toLowerCase() !== volatilityFilter) return false;
+      if (volatilityFilter !== 'all' && (row.volatilityState ?? '').toLowerCase() !== volatilityFilter) return false;
       if (row.alignmentScore < alignmentFilter) return false;
       return true;
     });
@@ -538,7 +538,7 @@ export default function WatchlistWidget() {
               <div className="grid gap-3 md:grid-cols-3">
                 <div>
                   <div className="text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-slate-400">Watchlist</div>
-                  <div className="mt-1 text-lg font-black text-white">{selectedWatchlist.name.toUpperCase()}</div>
+                  <div className="mt-1 text-lg font-black text-white">{(selectedWatchlist.name ?? '').toUpperCase()}</div>
                   <div className="mt-1 text-xs font-semibold uppercase tracking-[0.06em] text-slate-300">Mode: {watchlistMode}</div>
                   <div className={`mt-1 text-xs font-semibold uppercase tracking-[0.06em] ${biasLabel === 'Bullish' ? 'text-emerald-400' : biasLabel === 'Bearish' ? 'text-red-400' : 'text-amber-300'}`}>
                     Bias: {biasLabel}

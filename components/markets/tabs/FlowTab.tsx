@@ -23,9 +23,12 @@ export default function FlowTab({ ctx }: { ctx: TickerContext }) {
     );
   }
 
-  const biasColor = flow.bias === 'bullish' ? 'text-emerald-400' : flow.bias === 'bearish' ? 'text-rose-400' : 'text-slate-400';
-  const gammaColor = flow.gamma_state === 'Positive' ? 'text-emerald-400' : flow.gamma_state === 'Negative' ? 'text-rose-400' : 'text-amber-400';
-  const modeColor = flow.market_mode === 'launch' ? 'text-emerald-400' : flow.market_mode === 'pin' ? 'text-cyan-400' : 'text-amber-400';
+  const bias = flow.bias ?? 'neutral';
+  const gammaState = flow.gamma_state ?? 'Unknown';
+  const marketMode = flow.market_mode ?? 'chop';
+  const biasColor = bias === 'bullish' ? 'text-emerald-400' : bias === 'bearish' ? 'text-rose-400' : 'text-slate-400';
+  const gammaColor = gammaState === 'Positive' ? 'text-emerald-400' : gammaState === 'Negative' ? 'text-rose-400' : 'text-amber-400';
+  const modeColor = marketMode === 'launch' ? 'text-emerald-400' : marketMode === 'pin' ? 'text-cyan-400' : 'text-amber-400';
 
   return (
     <div className="grid gap-3">
@@ -36,10 +39,10 @@ export default function FlowTab({ ctx }: { ctx: TickerContext }) {
 
       {/* Top metrics */}
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-        <FlowCard label="Market Mode" value={flow.market_mode.toUpperCase()} color={modeColor} />
-        <FlowCard label="Gamma State" value={flow.gamma_state} color={gammaColor} />
-        <FlowCard label="Bias" value={flow.bias.toUpperCase()} color={biasColor} />
-        <FlowCard label="Conviction" value={`${Math.round(flow.conviction * 100)}%`} color={flow.conviction > 0.6 ? 'text-emerald-400' : 'text-amber-400'} />
+        <FlowCard label="Market Mode" value={marketMode.toUpperCase()} color={modeColor} />
+        <FlowCard label="Gamma State" value={gammaState} color={gammaColor} />
+        <FlowCard label="Bias" value={bias.toUpperCase()} color={biasColor} />
+        <FlowCard label="Conviction" value={`${Math.round((flow.conviction ?? 0) * 100)}%`} color={(flow.conviction ?? 0) > 0.6 ? 'text-emerald-400' : 'text-amber-400'} />
       </div>
 
       {/* Key strikes */}
@@ -50,11 +53,11 @@ export default function FlowTab({ ctx }: { ctx: TickerContext }) {
             {flow.key_strikes.slice(0, 6).map((ks, i) => (
               <div key={i} className="flex items-center justify-between text-[11px]">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-[var(--msp-text)]">${ks.strike.toFixed(2)}</span>
+                  <span className="font-mono text-[var(--msp-text)]">${(ks.strike ?? 0).toFixed(2)}</span>
                   <span className={`text-[10px] font-semibold ${
                     ks.type === 'call-heavy' ? 'text-emerald-400' : ks.type === 'put-heavy' ? 'text-rose-400' : 'text-amber-400'
                   }`}>
-                    {ks.type}
+                    {ks.type ?? 'unknown'}
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -64,7 +67,7 @@ export default function FlowTab({ ctx }: { ctx: TickerContext }) {
                       style={{ width: `${Math.min(100, ks.gravity)}%` }}
                     />
                   </div>
-                  <span className="text-[10px] text-[var(--msp-text-faint)]">{ks.gravity.toFixed(0)}%</span>
+                  <span className="text-[10px] text-[var(--msp-text-faint)]">{(ks.gravity ?? 0).toFixed(0)}%</span>
                 </div>
               </div>
             ))}
@@ -79,7 +82,7 @@ export default function FlowTab({ ctx }: { ctx: TickerContext }) {
           <div className="grid grid-cols-2 gap-2">
             {flow.flip_zones.map((fz, i) => (
               <div key={i} className="flex items-center gap-2 text-[11px]">
-                <span className="font-mono text-[var(--msp-text)]">${fz.level.toFixed(2)}</span>
+                <span className="font-mono text-[var(--msp-text)]">${(fz.level ?? 0).toFixed(2)}</span>
                 <span className={`text-[10px] font-semibold ${fz.direction === 'bullish_above' ? 'text-emerald-400' : 'text-rose-400'}`}>
                   {fz.direction === 'bullish_above' ? '▲ Bullish Above' : '▼ Bearish Below'}
                 </span>
@@ -97,10 +100,10 @@ export default function FlowTab({ ctx }: { ctx: TickerContext }) {
             {flow.liquidity_levels.slice(0, 5).map((ll, i) => (
               <div key={i} className="flex items-center justify-between text-[11px]">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-[var(--msp-text)]">${ll.level.toFixed(2)}</span>
-                  <span className="text-[var(--msp-text-muted)]">{ll.label}</span>
+                  <span className="font-mono text-[var(--msp-text)]">${(ll.level ?? 0).toFixed(2)}</span>
+                  <span className="text-[var(--msp-text-muted)]">{ll.label ?? ''}</span>
                 </div>
-                <span className="text-[10px] text-cyan-400">{(ll.prob * 100).toFixed(0)}%</span>
+                <span className="text-[10px] text-cyan-400">{((ll.prob ?? 0) * 100).toFixed(0)}%</span>
               </div>
             ))}
           </div>

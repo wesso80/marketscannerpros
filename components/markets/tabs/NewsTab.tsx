@@ -102,7 +102,7 @@ export default function NewsTab({ ctx }: { ctx: TickerContext }) {
               return (
                 <div key={i} className="flex items-center gap-2 text-[11px]">
                   <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${impactColor}`}>
-                    {ev.impact.toUpperCase()}
+                    {(ev.impact ?? 'low').toUpperCase()}
                   </span>
                   <span className="text-[var(--msp-text-muted)]">
                     {new Date(ev.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}

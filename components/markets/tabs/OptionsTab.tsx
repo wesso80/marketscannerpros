@@ -80,12 +80,12 @@ export default function OptionsTab({ ctx }: { ctx: TickerContext }) {
             <tbody>
               {options.topStrikes.slice(0, 8).map((s, i) => (
                 <tr key={i} className="border-t border-[var(--msp-divider)]">
-                  <td className="py-1 pr-2 font-mono text-[var(--msp-text)]">${s.strike.toFixed(2)}</td>
+                  <td className="py-1 pr-2 font-mono text-[var(--msp-text)]">${(s.strike ?? 0).toFixed(2)}</td>
                   <td className={`py-1 pr-2 font-semibold ${s.type === 'call' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    {s.type.toUpperCase()}
+                    {(s.type ?? 'call').toUpperCase()}
                   </td>
-                  <td className="py-1 pr-2 text-[var(--msp-text-muted)]">{s.volume.toLocaleString()}</td>
-                  <td className="py-1 text-[var(--msp-text-muted)]">{s.oi.toLocaleString()}</td>
+                  <td className="py-1 pr-2 text-[var(--msp-text-muted)]">{(s.volume ?? 0).toLocaleString()}</td>
+                  <td className="py-1 text-[var(--msp-text-muted)]">{(s.oi ?? 0).toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>

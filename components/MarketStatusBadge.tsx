@@ -73,7 +73,7 @@ export default function MarketStatusBadge({
       <div className="flex items-center gap-2">
         <div className={`w-2 h-2 rounded-full ${colors.dot} shadow-lg ${colors.glow} animate-pulse`} />
         <span className={`text-xs font-medium ${colors.text}`}>
-          {status.us.session === 'regular' ? 'OPEN' : status.us.session.toUpperCase().replace('-', ' ')}
+          {status.us.session === 'regular' ? 'OPEN' : (status.us.session ?? 'closed').toUpperCase().replace('-', ' ')}
         </span>
       </div>
     );

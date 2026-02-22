@@ -214,7 +214,7 @@ export default function DecisionLens({ ctx }: DecisionLensProps) {
           <LensMetric label="Vol State" value={lens.volState} color="text-slate-300" />
           <LensMetric
             label="Event Risk"
-            value={lens.eventRisk.toUpperCase()}
+            value={(lens.eventRisk ?? 'low').toUpperCase()}
             color={lens.eventRisk === 'high' ? 'text-red-400' : lens.eventRisk === 'medium' ? 'text-amber-400' : 'text-emerald-400'}
           />
           <LensMetric
