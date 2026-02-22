@@ -87,7 +87,7 @@ export function RiskPermissionProvider({ children }: { children: React.ReactNode
       snapshot.data_health.status === 'DOWN' ||
       snapshot.session.remaining_daily_R <= 0
     );
-  }, [snapshot]);
+  }, [snapshot, guardEnabled]);
 
   const value = useMemo<RiskPermissionContextValue>(
     () => ({ snapshot, loading, guardEnabled, isLocked, refresh, setGuardEnabled, evaluate }),

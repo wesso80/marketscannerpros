@@ -26,6 +26,8 @@ export interface CachedScanData {
   stochK: number;
   stochD: number;
   cci: number;
+  aroonUp: number;
+  aroonDown: number;
   source: 'cache' | 'database' | 'unavailable';
 }
 
@@ -70,6 +72,8 @@ export async function getCachedScanData(symbol: string): Promise<CachedScanData 
       stochK: ind?.stochK ?? NaN,
       stochD: ind?.stochD ?? NaN,
       cci: ind?.cci20 ?? NaN,
+      aroonUp: (ind as any)?.aroonUp ?? NaN,
+      aroonDown: (ind as any)?.aroonDown ?? NaN,
       source: q.source === 'live' ? 'database' : q.source,
     };
 

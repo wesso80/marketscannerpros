@@ -435,7 +435,7 @@ export function computeACLFromScoring(
 ): ACLResult {
   return computeACL({
     weightedScore: scoring.weightedScore,
-    regimeConfidence: opts.regimeConfidence ?? 55, // Default conservative — at REGIME_LOW threshold
+    regimeConfidence: opts.regimeConfidence ?? 60, // Default conservative — safely above REGIME_LOW cap threshold (55)
     regime: scoring.regime,
     setupType: opts.setupType,
     eventRisk: opts.eventRisk,

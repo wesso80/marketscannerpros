@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "node server.js",
     "test:contracts": "vitest run test/contracts.v1.test.ts",
+    "test:audit": "vitest run test/institutional-audit.test.ts",
+    "test:all": "vitest run",
     "worker:ingest": "npx tsx worker/ingest-data.ts",
     "worker:ingest:once": "npx tsx worker/ingest-data.ts --once",
     "worker:ingest:crypto": "npx tsx worker/ingest-data.ts --crypto-only",

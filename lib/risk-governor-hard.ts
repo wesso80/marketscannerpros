@@ -222,7 +222,7 @@ export function buildPermissionSnapshot(input?: {
   consecutiveLosses?: number;
 }): PermissionMatrixSnapshot {
   const enabled = input?.enabled !== false;
-  const regime = input?.regime ?? 'TREND_UP';
+  const regime = input?.regime ?? 'RANGE_NEUTRAL'; // Conservative default — was TREND_UP (too permissive)
   const eventSeverity = input?.eventSeverity ?? 'none';
   const dataStatus = input?.dataStatus ?? 'OK';
   const realizedDailyR = input?.realizedDailyR ?? -1.2;

@@ -1024,7 +1024,8 @@ function ScannerContent() {
 
   const executeRankCandidateDeploy = async (pick: any) => {
     if (riskLocked) {
-      console.warn('[Scanner] Rule Guard advisory: tracking locked, proceeding anyway (educational mode).');
+      console.warn('[Scanner] Rule Guard: risk governor LOCKED — blocking trade deployment.');
+      return; // Hard block — do not proceed when risk governor is locked
     }
 
     const entry = Number(pick?.indicators?.price ?? 0);
@@ -1107,7 +1108,11 @@ function ScannerContent() {
   };
 
   const deployRankCandidate = (pick: any) => {
-    // Pre-trade checklist bypassed — educational platform, not broker-level yet
+    // Pre-trade validation: evaluate risk state before executing
+    if (riskLocked) {
+      console.warn('[Scanner] Rule Guard: risk governor LOCKED — deploy blocked.');
+      return;
+    }
     void executeRankCandidateDeploy(pick);
   };
 
@@ -1537,7 +1542,7 @@ function ScannerContent() {
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {rankedCandidates.map((pick: any) => {
                     const permission = getPickPermission(pick);
-                    const blocked = false; // Educational mode — no blocking gates
+                    const blocked = riskLocked || permission === 'BLOCK';
                     const complianceText = toComplianceLabel(permission);
                     const strategyTag = mapPickToStrategyTag(pick).replaceAll('_', ' ');
                     const borderColor = pick._direction === 'long' && pick._confidence >= 70
@@ -2807,10 +2812,10 @@ function ScannerContent() {
                 : null;
 
               const recommendation = result.institutionalFilter?.recommendation;
-              // Educational mode: show status as advisory only, not blocking
-              const tradeReady = recommendation === 'TRADE_READY' && quality !== 'LOW' && direction !== 'neutral';
-              const executionAllowed = true; // Educational platform — never block
-              const tactical = !tradeReady && quality === 'MEDIUM' && direction !== 'neutral';
+              // Risk enforcement: evaluate institutional filter + risk governor state
+              const tradeReady = recommendation === 'TRADE_READY' && quality !== 'LOW' && direction !== 'neutral' && !riskLocked;
+              const executionAllowed = !riskLocked && recommendation !== 'NO_TRADE';
+              const tactical = !tradeReady && quality === 'MEDIUM' && direction !== 'neutral' && !riskLocked;
               const executionStatus = tradeReady ? 'HIGH CONVICTION' : tactical ? 'MODERATE SETUP' : 'LOW SETUP — REVIEW';
               const statusColor = tradeReady ? 'var(--msp-bull)' : tactical ? 'var(--msp-warn)' : 'var(--msp-bear)';
               const statusBorder = tradeReady ? 'var(--msp-bull)' : tactical ? 'var(--msp-warn)' : 'var(--msp-border-strong)';
@@ -2949,7 +2954,7 @@ function ScannerContent() {
                         <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2.5 text-[0.74rem] text-[var(--msp-text-muted)]">
                           <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-[var(--msp-text-faint)]">Risk Governor</div>
                           <div>Capital Allocation: <span className={`font-bold ${tradeReady ? 'text-[var(--msp-bull)]' : 'text-[var(--msp-warn)]'}`}>{tradeReady ? '0.5% risk' : 'Review sizing'}</span></div>
-                          <div>Active Constraint: <span className="font-bold text-[var(--msp-text)]">{tradeReady ? 'Tactical sizing' : 'Educational mode'}</span></div>
+                          <div>Active Constraint: <span className="font-bold text-[var(--msp-text)]">{riskLocked ? 'RISK GOVERNOR LOCKED' : tradeReady ? 'Tactical sizing' : 'Risk constraints active'}</span></div>
                         </div>
 
                         <div className="flex flex-wrap gap-2">
@@ -4361,7 +4366,7 @@ function ScannerContent() {
                       marginBottom: '1rem',
                     }}>
                       <div style={{ color: '#FBBF24', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: '0.45rem' }}>
-                        🛑 No-Trade Environment Detected (Educational)
+                        🛑 No-Trade Environment Detected
                       </div>
                       <div style={{ display: 'grid', gap: '0.35rem', marginBottom: '0.45rem' }}>
                         {noTradeReasons.map((reason, idx) => (
@@ -4369,7 +4374,7 @@ function ScannerContent() {
                         ))}
                       </div>
                       <div style={{ color: '#94A3B8', fontSize: '0.75rem' }}>
-                        Educational signal state only — not financial advice, and not an execution instruction.
+                        Risk governor enforced — not financial advice. Execution blocked until conditions improve.
                       </div>
                     </div>
                   )}

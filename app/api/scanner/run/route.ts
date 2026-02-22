@@ -11,6 +11,9 @@ import { getAdaptiveLayer } from "@/lib/adaptiveTrader";
 import { computeInstitutionalFilter, inferStrategyFromText } from "@/lib/institutionalFilter";
 import { computeCapitalFlowEngine } from "@/lib/capitalFlowEngine";
 import { getDerivativesForSymbols, getGlobalData, getOHLC, resolveSymbolToId } from "@/lib/coingecko";
+import { classifyRegime } from "@/lib/regime-classifier";
+import { estimateComponentsFromContext, computeRegimeScore, deriveRegimeConfidence } from "@/lib/ai/regimeScoring";
+import { computeACLFromScoring } from "@/lib/ai/adaptiveConfidenceLens";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic"; // Disable static optimization
@@ -520,28 +523,18 @@ export async function POST(req: NextRequest) {
           throw new Error('CoinGecko global dominance unavailable');
         }
         
-        // Create synthetic candles based on current dominance
+        // Return single-point candle array for USDT dominance — NO synthetic history.
+        // Previous implementation used Math.random() which made all TA indicators meaningless.
+        // USDT.D is a macro-level metric, not a chartable instrument.
         const now = Date.now();
-        const candles: Candle[] = [];
-        
-        const candleCount = timeframe === '1d' ? 30 : timeframe === '4h' ? 42 : timeframe === '1h' ? 48 : 60;
-        const candleMs = timeframe === '1d' ? 86400000 : timeframe === '4h' ? 14400000 : timeframe === '1h' ? 3600000 : 1800000;
-        
-        for (let i = candleCount - 1; i >= 0; i--) {
-          const timestamp = now - (i * candleMs);
-          // Add small random variance to simulate movement (±0.3%)
-          const variance = (Math.random() - 0.5) * 0.006 * usdtDominance;
-          const value = usdtDominance + variance;
-          
-          candles.push({
-            t: new Date(timestamp).toISOString(),
-            open: value - (variance * 0.2),
-            high: value + Math.abs(variance) * 0.5,
-            low: value - Math.abs(variance) * 0.5,
-            close: value,
-            volume: 0 // No volume data for dominance
-          });
-        }
+        const candles: Candle[] = [{
+          t: new Date(now).toISOString(),
+          open: usdtDominance,
+          high: usdtDominance,
+          low: usdtDominance,
+          close: usdtDominance,
+          volume: 0,
+        }];
         
         console.info(`[scanner] USDT Dominance (CoinGecko): Generated ${candles.length} candles, current: ${usdtDominance.toFixed(2)}%`);
         return candles;
@@ -1223,9 +1216,9 @@ export async function POST(req: NextRequest) {
             const stochD = cachedData.stochD;
             const cciVal = cachedData.cci;
             
-            // Aroon not cached yet - use NaN (won't affect scoring much)
-            const aroonUp = NaN;
-            const aroonDown = NaN;
+            // Aroon from cache (added to cache pipeline) — fall back to computed estimate
+            const aroonUp = cachedData.aroonUp ?? NaN;
+            const aroonDown = cachedData.aroonDown ?? NaN;
             
             const scoreResult = computeScore(price, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxVal, stochK, aroonUp, aroonDown, cciVal, 0, 0);
             const item: ScanResult & { direction?: string; signals?: any } = {
@@ -1386,12 +1379,51 @@ export async function POST(req: NextRequest) {
       const atrPct = Number.isFinite(result.atr) && Number.isFinite(result.price) && result.price && result.price > 0
         ? (result.atr! / result.price) * 100
         : undefined;
-      const regime = Number.isFinite(adxValue)
-        ? (adxValue >= 22 ? 'trending' : adxValue <= 18 ? 'ranging' : 'unknown')
-        : 'unknown';
+
+      // === UNIFIED REGIME CLASSIFICATION (single source of truth) ===
+      const unifiedRegime = classifyRegime({
+        adx: adxValue,
+        rsi: Number.isFinite(result.rsi) ? result.rsi : undefined,
+        atrPercent: atrPct,
+        aroonUp: Number.isFinite(result.aroon_up) ? result.aroon_up : undefined,
+        aroonDown: Number.isFinite(result.aroon_down) ? result.aroon_down : undefined,
+        direction: result.direction as 'bullish' | 'bearish' | 'neutral' | undefined,
+        ema200Above: Number.isFinite(result.price) && Number.isFinite(result.ema200)
+          ? result.price! >= result.ema200!
+          : undefined,
+      });
+
+      const regime = unifiedRegime.institutional;
       const volatilityState = typeof atrPct === 'number'
         ? (atrPct > 7 ? 'extreme' : atrPct > 4 ? 'expanded' : atrPct < 1 ? 'compressed' : 'normal')
         : 'normal';
+
+      // === ACL PIPELINE (wired into scanner response) ===
+      const components = estimateComponentsFromContext({
+        scannerScore: result.score,
+        regime: unifiedRegime.governor,
+        adx: adxValue,
+        rsi: result.rsi,
+        cci: result.cci,
+        aroonUp: result.aroon_up,
+        aroonDown: result.aroon_down,
+        session: 'regular',
+        derivativesAvailable: !!(result as any).derivatives,
+        fundingRate: (result as any).derivatives?.fundingRate,
+        oiChange24h: (result as any).derivatives?.oiChangePercent,
+      });
+      const regimeScoreResult = computeRegimeScore(components, unifiedRegime.scoring);
+      const regimeConfResult = deriveRegimeConfidence({
+        adx: adxValue,
+        rsi: result.rsi,
+        aroonUp: result.aroon_up,
+        aroonDown: result.aroon_down,
+        inferredRegime: unifiedRegime.scoring,
+      });
+      const aclResult = computeACLFromScoring(regimeScoreResult, {
+        regimeConfidence: regimeConfResult.confidence,
+        dataComponentsProvided: [result.rsi, result.adx, result.cci, result.aroon_up, result.stoch_k, result.ema200].filter(v => Number.isFinite(v)).length,
+      });
 
       const institutionalFilter = computeInstitutionalFilter({
         baseScore: result.score,
@@ -1468,6 +1500,30 @@ export async function POST(req: NextRequest) {
         ...result,
         institutionalFilter,
         capitalFlow: capitalFlow ?? undefined,
+        // === V2 Scoring: Full ACL pipeline output ===
+        scoreV2: {
+          regime: {
+            governor: unifiedRegime.governor,
+            scoring: unifiedRegime.scoring,
+            institutional: unifiedRegime.institutional,
+            label: unifiedRegime.label,
+            confidence: unifiedRegime.confidence,
+          },
+          regimeScore: {
+            weightedScore: regimeScoreResult.weightedScore,
+            tradeBias: regimeScoreResult.tradeBias,
+            gated: regimeScoreResult.gated,
+            gateViolations: regimeScoreResult.gateViolations,
+          },
+          acl: {
+            confidence: aclResult.confidence,
+            authorization: aclResult.authorization,
+            throttle: aclResult.throttle,
+            penalties: aclResult.penalties,
+            hardCaps: aclResult.hardCaps,
+            reasonCodes: aclResult.reasonCodes,
+          },
+        },
       };
     });
 
