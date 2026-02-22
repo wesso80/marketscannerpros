@@ -6,8 +6,12 @@ import { useRiskPermission } from '@/components/risk/RiskPermissionContext';
 import { useRegime, regimeLabel, regimeBadgeColor } from '@/lib/useRegime';
 
 export default function ToolsSettingsPage() {
-  const { guardEnabled, setGuardEnabled, snapshot, loading } = useRiskPermission();
+  const { guardEnabled, setGuardEnabled, snapshot, loading, guardPendingDisable, guardCooldownRemainingMs, guardRBudgetHalved, cancelGuardDisable } = useRiskPermission();
   const { data: regime, loading: regimeLoading } = useRegime();
+
+  const cooldownSec = Math.ceil(guardCooldownRemainingMs / 1000);
+  const cooldownMin = Math.floor(cooldownSec / 60);
+  const cooldownRemSec = cooldownSec % 60;
 
   return (
     <div className="min-h-screen bg-[var(--msp-bg)]">
@@ -42,22 +46,50 @@ export default function ToolsSettingsPage() {
               <button
                 disabled={loading}
                 onClick={() => {
-                  void setGuardEnabled(!guardEnabled);
+                  if (guardPendingDisable) {
+                    void cancelGuardDisable();
+                  } else {
+                    void setGuardEnabled(!guardEnabled);
+                  }
                 }}
                 className={`rounded-md border px-3 py-2 text-xs font-semibold uppercase tracking-[0.06em] disabled:opacity-50 ${
-                  guardEnabled
+                  guardPendingDisable
+                    ? 'border-amber-500/40 bg-amber-500/15 text-amber-200 animate-pulse'
+                    : guardEnabled
                     ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-200'
                     : 'border-slate-600 bg-slate-800 text-slate-300'
                 }`}
               >
-                {guardEnabled ? 'ON' : 'OFF'}
+                {guardPendingDisable ? 'CANCEL DISABLE' : guardEnabled ? 'ON' : 'OFF'}
               </button>
             </div>
+
+            {/* Cooldown Warning */}
+            {guardPendingDisable && (
+              <div className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+                <div className="font-semibold">⏳ Disable Cooldown Active</div>
+                <div className="mt-1 text-amber-400">
+                  Rule Guard will disable in {cooldownMin}:{cooldownRemSec.toString().padStart(2, '0')}. 
+                  Click &quot;Cancel Disable&quot; to abort. This 10-minute delay prevents impulsive deactivation during drawdown.
+                </div>
+              </div>
+            )}
+
+            {/* R Budget Halved Warning */}
+            {guardRBudgetHalved && !guardEnabled && (
+              <div className="mt-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                <div className="font-semibold">⚠️ Daily R Budget Halved</div>
+                <div className="mt-1 text-red-400">
+                  While Rule Guard is disabled, your daily R budget is automatically halved to limit exposure. 
+                  Re-enable the guard to restore full budget. Guard auto-re-enables after 24 hours.
+                </div>
+              </div>
+            )}
 
             <div className="mt-3 grid gap-2 text-xs text-slate-300 md:grid-cols-3">
               <div className="rounded-md border border-slate-700 bg-slate-900/40 px-3 py-2">
                 <div className="text-[10px] uppercase tracking-[0.08em] text-slate-500">Current State</div>
-                <div className="mt-1 font-semibold text-slate-100">{guardEnabled ? 'Rule Guard ON' : 'Rule Guard OFF'}</div>
+                <div className="mt-1 font-semibold text-slate-100">{guardPendingDisable ? 'Disabling...' : guardEnabled ? 'Rule Guard ON' : 'Rule Guard OFF'}</div>
               </div>
               <div className="rounded-md border border-slate-700 bg-slate-900/40 px-3 py-2">
                 <div className="text-[10px] uppercase tracking-[0.08em] text-slate-500">Risk Mode</div>

@@ -26,6 +26,12 @@ export type PermissionMatrixSnapshot = {
     open_risk_R: number;
     max_open_risk_R: number;
     consecutive_losses: number;
+    /** Trades executed this session */
+    trades_today: number;
+    /** Maximum trades allowed per day (hard limit) */
+    max_trades_per_day: number;
+    /** Whether the trade count hard limit has been reached */
+    trade_count_blocked: boolean;
   };
   data_health: {
     status: 'OK' | 'DEGRADED' | 'DOWN';
@@ -93,6 +99,9 @@ const MAX_OPEN_R = 3;
 const LOSS_STREAK_THROTTLE = 3;
 const LOSS_STREAK_LOCK = 4;
 const MAX_CORRELATED_SAME_CLUSTER = 2;
+/** Hard daily trade count limits — configurable per asset class */
+const MAX_TRADES_PER_DAY_EQUITY = 8;
+const MAX_TRADES_PER_DAY_CRYPTO = 12;
 
 const CONFIDENCE_THRESHOLD = {
   ALLOW: 70,
@@ -220,6 +229,12 @@ export function buildPermissionSnapshot(input?: {
   realizedDailyR?: number;
   openRiskR?: number;
   consecutiveLosses?: number;
+  /** When true, daily R budget is halved (guard disabled penalty) */
+  rBudgetHalved?: boolean;
+  /** Number of trades executed today */
+  tradesToday?: number;
+  /** Primary asset class for trade count limits */
+  assetClass?: 'equities' | 'crypto';
 }): PermissionMatrixSnapshot {
   const enabled = input?.enabled !== false;
   const regime = input?.regime ?? 'RANGE_NEUTRAL'; // Conservative default — was TREND_UP (too permissive)
@@ -228,7 +243,8 @@ export function buildPermissionSnapshot(input?: {
   const realizedDailyR = input?.realizedDailyR ?? -1.2;
   const openRiskR = input?.openRiskR ?? 2.2;
   const consecutiveLosses = input?.consecutiveLosses ?? 1;
-  const remainingDailyR = Math.max(0, round2(MAX_DAILY_R + realizedDailyR));
+  const effectiveMaxDailyR = input?.rBudgetHalved ? MAX_DAILY_R * 0.5 : MAX_DAILY_R;
+  const remainingDailyR = Math.max(0, round2(effectiveMaxDailyR + realizedDailyR));
   const dataAge = Math.max(0, input?.dataAgeSeconds ?? 3);
 
   const riskMode = inferRiskMode({
@@ -257,16 +273,27 @@ export function buildPermissionSnapshot(input?: {
     });
   }
 
+  const tradesToday = input?.tradesToday ?? 0;
+  const maxTradesPerDay = input?.assetClass === 'crypto' ? MAX_TRADES_PER_DAY_CRYPTO : MAX_TRADES_PER_DAY_EQUITY;
+  const tradeCountBlocked = enabled && tradesToday >= maxTradesPerDay;
+
+  if (enabled && tradeCountBlocked) {
+    globalBlocks.push({ code: 'TRADE_COUNT_LIMIT', severity: 'BLOCK', msg: `Daily trade count limit reached (${tradesToday}/${maxTradesPerDay}). No new trades allowed.` });
+  }
+
   return {
     guard_enabled: enabled,
     risk_mode: enabled ? riskMode : 'NORMAL',
     regime,
     session: {
       remaining_daily_R: remainingDailyR,
-      max_daily_R: MAX_DAILY_R,
+      max_daily_R: effectiveMaxDailyR,
       open_risk_R: round2(openRiskR),
       max_open_risk_R: MAX_OPEN_R,
       consecutive_losses: consecutiveLosses,
+      trades_today: tradesToday,
+      max_trades_per_day: maxTradesPerDay,
+      trade_count_blocked: tradeCountBlocked,
     },
     data_health: {
       status: dataStatus,
@@ -358,6 +385,13 @@ export function evaluateCandidate(snapshot: PermissionMatrixSnapshot, candidate:
     permission = 'BLOCK';
     reasonCodes.push('RISK_MODE_LOCKED');
     requiredActions.push('Reduce or close risk before new entries.');
+  }
+
+  // ─── Daily trade count hard limit ───
+  if (snapshot.session.trade_count_blocked) {
+    permission = 'BLOCK';
+    reasonCodes.push('TRADE_COUNT_LIMIT');
+    requiredActions.push(`Daily trade limit reached (${snapshot.session.trades_today}/${snapshot.session.max_trades_per_day}). No new trades allowed today.`);
   }
 
   if (snapshot.data_health.status === 'DOWN') {

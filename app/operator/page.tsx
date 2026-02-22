@@ -21,6 +21,9 @@ import RiskApplicationOverlay from '@/components/risk/RiskApplicationOverlay';
 import ToolPageLayout from '@/components/tools/ToolPageLayout';
 import type { Permission, PermissionMatrixSnapshot } from '@/lib/risk-governor-hard';
 import { amountToR, formatDollar, formatR, rToDollar } from '@/lib/riskDisplay';
+import SessionPhaseStrip from '@/components/operator/SessionPhaseStrip';
+import CorrelationMatrix from '@/components/operator/CorrelationMatrix';
+import RiskManagerMode from '@/components/operator/RiskManagerMode';
 
 type Tone = 'aligned' | 'building' | 'conflict';
 type PipelineStage = 'Detected' | 'Qualified' | 'Validated' | 'Ready' | 'Active' | 'Closed';
@@ -1969,6 +1972,15 @@ export default function OperatorDashboardPage() {
                 </div>
               </div>
             </section>
+
+            {/* ── Session Phase & Correlation ── */}
+            <section className="grid gap-4 lg:grid-cols-2">
+              <SessionPhaseStrip />
+              <CorrelationMatrix />
+            </section>
+
+            {/* ── Risk Manager Mode (toggle view) ── */}
+            <RiskManagerMode />
 
             <RiskApplicationOverlay trades={overlayTrades} openTrades={overlayOpenTrades} />
           </div>

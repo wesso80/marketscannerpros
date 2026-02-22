@@ -13,6 +13,7 @@ import { CommandLayout, TerminalLayout, getToolsLayoutMode, getToolsContainerVar
 import { RiskPermissionProvider } from '@/components/risk/RiskPermissionContext';
 import { RegimeProvider } from '@/lib/useRegime';
 import CapitalControlStrip from '@/components/risk/CapitalControlStrip';
+import SessionStartBriefing from '@/components/operator/SessionStartBriefing';
 
 function getSkillFromPath(pathname: string): PageSkill {
   if (pathname.includes('/scanner')) return 'scanner';
@@ -80,7 +81,9 @@ export default function ToolsLayoutClient({
             <CapitalControlStrip />
           </div>
         </ErrorBoundary>
-        <ErrorBoundary>{wrappedChildren}</ErrorBoundary>
+        <ErrorBoundary>
+          <SessionStartBriefing>{wrappedChildren}</SessionStartBriefing>
+        </ErrorBoundary>
         <ErrorBoundary fallback={null}>
           <CopilotWithContext fallbackSkill={skill} />
         </ErrorBoundary>

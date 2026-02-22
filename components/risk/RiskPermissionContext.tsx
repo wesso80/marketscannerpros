@@ -8,8 +8,15 @@ type RiskPermissionContextValue = {
   loading: boolean;
   guardEnabled: boolean;
   isLocked: boolean;
+  /** Guard disable has been requested but cooldown is still active */
+  guardPendingDisable: boolean;
+  /** Milliseconds remaining in cooldown before guard actually disables */
+  guardCooldownRemainingMs: number;
+  /** Daily R budget is halved because guard is disabled */
+  guardRBudgetHalved: boolean;
   refresh: () => Promise<void>;
   setGuardEnabled: (enabled: boolean) => Promise<void>;
+  cancelGuardDisable: () => Promise<void>;
   evaluate: (intent: CandidateIntent) => Promise<EvaluateResult | null>;
 };
 
@@ -19,6 +26,9 @@ export function RiskPermissionProvider({ children }: { children: React.ReactNode
   const [snapshot, setSnapshot] = useState<PermissionMatrixSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [guardEnabled, setGuardEnabledState] = useState(true);
+  const [guardPendingDisable, setGuardPendingDisable] = useState(false);
+  const [guardCooldownRemainingMs, setGuardCooldownRemainingMs] = useState(0);
+  const [guardRBudgetHalved, setGuardRBudgetHalved] = useState(false);
 
   const loadPreference = useCallback(async () => {
     try {
@@ -26,6 +36,9 @@ export function RiskPermissionProvider({ children }: { children: React.ReactNode
       if (!res.ok) return;
       const data = await res.json();
       setGuardEnabledState(data?.enabled !== false);
+      setGuardPendingDisable(data?.pendingDisable === true);
+      setGuardCooldownRemainingMs(data?.cooldownRemainingMs ?? 0);
+      setGuardRBudgetHalved(data?.rBudgetHalved === true);
     } catch {
     }
   }, []);
@@ -59,11 +72,49 @@ export function RiskPermissionProvider({ children }: { children: React.ReactNode
         body: JSON.stringify({ enabled }),
       });
       if (!res.ok) return;
-      setGuardEnabledState(enabled);
+      const data = await res.json();
+      setGuardEnabledState(data?.enabled !== false);
+      setGuardPendingDisable(data?.pendingDisable === true);
+      setGuardCooldownRemainingMs(data?.cooldownRemainingMs ?? 0);
+      setGuardRBudgetHalved(data?.rBudgetHalved === true);
       await refresh();
     } catch {
     }
   }, [refresh]);
+
+  const cancelGuardDisable = useCallback(async () => {
+    try {
+      const res = await fetch('/api/risk/governor/preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: true, cancelPending: true }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      setGuardEnabledState(true);
+      setGuardPendingDisable(false);
+      setGuardCooldownRemainingMs(0);
+      setGuardRBudgetHalved(false);
+      await refresh();
+    } catch {
+    }
+  }, [refresh]);
+
+  // Tick down the cooldown timer client-side
+  useEffect(() => {
+    if (!guardPendingDisable || guardCooldownRemainingMs <= 0) return;
+    const interval = window.setInterval(() => {
+      setGuardCooldownRemainingMs(prev => {
+        if (prev <= 1000) {
+          // Cooldown expired — reload preference to get actual disabled state
+          void loadPreference();
+          return 0;
+        }
+        return prev - 1000;
+      });
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, [guardPendingDisable, guardCooldownRemainingMs, loadPreference]);
 
   const evaluate = useCallback(async (intent: CandidateIntent): Promise<EvaluateResult | null> => {
     try {
@@ -90,8 +141,8 @@ export function RiskPermissionProvider({ children }: { children: React.ReactNode
   }, [snapshot, guardEnabled]);
 
   const value = useMemo<RiskPermissionContextValue>(
-    () => ({ snapshot, loading, guardEnabled, isLocked, refresh, setGuardEnabled, evaluate }),
-    [snapshot, loading, guardEnabled, isLocked, refresh, setGuardEnabled, evaluate]
+    () => ({ snapshot, loading, guardEnabled, isLocked, guardPendingDisable, guardCooldownRemainingMs, guardRBudgetHalved, refresh, setGuardEnabled, cancelGuardDisable, evaluate }),
+    [snapshot, loading, guardEnabled, isLocked, guardPendingDisable, guardCooldownRemainingMs, guardRBudgetHalved, refresh, setGuardEnabled, cancelGuardDisable, evaluate]
   );
 
   return <RiskPermissionContext.Provider value={value}>{children}</RiskPermissionContext.Provider>;

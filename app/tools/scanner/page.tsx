@@ -27,6 +27,7 @@ import { createDecisionPacketFromScan } from "@/lib/workflow/decisionPacket";
 import { candidateOutcomeFromConfidence, clampConfidence } from "@/lib/workflow/scoring";
 import type { AssetClass, CandidateEvaluation, DecisionPacket, TradePlan, UnifiedSignal } from "@/lib/workflow/types";
 import type { CandidateIntent, Permission, StrategyTag } from "@/lib/risk-governor-hard";
+import SessionPhaseStrip from "@/components/operator/SessionPhaseStrip";
 
 type TimeframeOption = "1h" | "30m" | "1d";
 type AssetType = "equity" | "crypto" | "forex";
@@ -262,6 +263,14 @@ function ScannerContent() {
     risk: false,
     eventWindow: false,
   });
+  // Risk block modal (shown when governor returns BLOCK on deploy)
+  const [showRiskBlockModal, setShowRiskBlockModal] = useState(false);
+  const [riskBlockReason, setRiskBlockReason] = useState<string>('');
+  // Behavioral overtrading screen
+  const [showBehavioralScreen, setShowBehavioralScreen] = useState(false);
+  const [behavioralScreenData, setBehavioralScreenData] = useState<{ tradesToday: number; avgTradesPerSession: number } | null>(null);
+  // Bulk scan expand/collapse
+  const [bulkScanExpanded, setBulkScanExpanded] = useState(false);
   const [rankDirection, setRankDirection] = useState<'all' | 'long' | 'short'>('all');
   const [sectorFilter, setSectorFilter] = useState<'all' | 'tech' | 'finance' | 'energy'>('all');
   const [scanIntentMode, setScanIntentMode] = useState<'observe' | 'decide'>('observe');
@@ -1055,11 +1064,14 @@ function ScannerContent() {
       event_severity: 'none',
     };
 
-    // Rule Guard evaluation is advisory for plan creation — log but don't block
+    // Rule Guard evaluation — BLOCK permission is enforced, not advisory
     const evaluation = await evaluateRiskIntent(intent);
     if (evaluation?.permission === 'BLOCK') {
-      const reason = evaluation.reason_codes?.[0] || 'Rule compliance failed';
-      console.warn(`[Scanner] Rule Guard advisory: ${reason} for ${intent.symbol}`);
+      const reason = evaluation.reason_codes?.join(', ') || 'Rule compliance failed';
+      console.warn(`[Scanner] Rule Guard BLOCK: ${reason} for ${intent.symbol}`);
+      setRiskBlockReason(reason);
+      setShowRiskBlockModal(true);
+      return; // Hard block — do not proceed
     }
 
     const edgeScore = Math.max(1, Math.min(99, Math.round(pick?.scoreV2?.final?.confidence ?? pick.score ?? 50)));
@@ -1113,6 +1125,24 @@ function ScannerContent() {
       console.warn('[Scanner] Rule Guard: risk governor LOCKED — deploy blocked.');
       return;
     }
+
+    // Trade count hard block
+    if (riskSnapshot?.session?.trade_count_blocked) {
+      setRiskBlockReason(`Daily trade count limit reached (${riskSnapshot.session.trades_today}/${riskSnapshot.session.max_trades_per_day}). No new trades allowed today.`);
+      setShowRiskBlockModal(true);
+      return;
+    }
+
+    // Behavioral overtrading screen: warn if trade count exceeds 30-day average
+    const tradesToday = riskSnapshot?.session?.trades_today ?? 0;
+    const avgTradesPerSession = 4.5; // TODO: fetch from journal KPI endpoint
+    if (tradesToday > 0 && tradesToday >= avgTradesPerSession * 1.5) {
+      setPendingDeployPick(pick);
+      setBehavioralScreenData({ tradesToday, avgTradesPerSession });
+      setShowBehavioralScreen(true);
+      return;
+    }
+
     void executeRankCandidateDeploy(pick);
   };
 
@@ -1316,6 +1346,66 @@ function ScannerContent() {
           />
         }
         primary={<div className="w-full max-w-none">
+
+        {/* ─── Session Phase Strip ─── */}
+        <SessionPhaseStrip />
+
+        {/* ─── Session P&L Strip (always visible on scanner) ─── */}
+        {riskSnapshot && (
+          <div className={`mb-3 rounded-lg border px-3 py-2 text-xs flex flex-wrap items-center gap-3 ${
+            riskSnapshot.session.remaining_daily_R <= 0
+              ? 'border-red-500/40 bg-red-500/10'
+              : riskSnapshot.risk_mode === 'DEFENSIVE' || riskSnapshot.risk_mode === 'THROTTLED'
+              ? 'border-amber-500/40 bg-amber-500/10'
+              : 'border-[var(--msp-border)] bg-[var(--msp-panel-2)]'
+          }`}>
+            <div className="flex items-center gap-1.5">
+              <span className={`h-2 w-2 rounded-full ${
+                riskSnapshot.risk_mode === 'LOCKED' ? 'bg-red-500 animate-pulse'
+                : riskSnapshot.risk_mode === 'DEFENSIVE' ? 'bg-red-400'
+                : riskSnapshot.risk_mode === 'THROTTLED' ? 'bg-amber-400'
+                : 'bg-emerald-400'
+              }`} />
+              <span className="font-extrabold uppercase tracking-wider text-[var(--msp-text-faint)]">Session</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-[var(--msp-text-faint)]">R Budget:</span>
+              <span className={`font-bold ${riskSnapshot.session.remaining_daily_R <= 0.5 ? 'text-red-400' : 'text-[var(--msp-text)]'}`}>
+                {riskSnapshot.session.remaining_daily_R.toFixed(1)}R / {riskSnapshot.session.max_daily_R}R
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-[var(--msp-text-faint)]">Open Risk:</span>
+              <span className="font-bold text-[var(--msp-text)]">{riskSnapshot.session.open_risk_R.toFixed(1)}R</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-[var(--msp-text-faint)]">Losses:</span>
+              <span className={`font-bold ${riskSnapshot.session.consecutive_losses >= 3 ? 'text-red-400' : 'text-[var(--msp-text)]'}`}>
+                {riskSnapshot.session.consecutive_losses}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-[var(--msp-text-faint)]">Trades:</span>
+              <span className={`font-bold ${riskSnapshot.session.trade_count_blocked ? 'text-red-400' : 'text-[var(--msp-text)]'}`}>
+                {riskSnapshot.session.trades_today}/{riskSnapshot.session.max_trades_per_day}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-[var(--msp-text-faint)]">Mode:</span>
+              <span className={`font-bold uppercase ${
+                riskSnapshot.risk_mode === 'LOCKED' ? 'text-red-400'
+                : riskSnapshot.risk_mode === 'DEFENSIVE' ? 'text-red-300'
+                : riskSnapshot.risk_mode === 'THROTTLED' ? 'text-amber-400'
+                : 'text-emerald-400'
+              }`}>{riskSnapshot.risk_mode}</span>
+            </div>
+            {riskSnapshot.session.trade_count_blocked && (
+              <span className="rounded border border-red-500/40 bg-red-500/20 px-2 py-0.5 text-[10px] font-bold uppercase text-red-300">
+                TRADE LIMIT REACHED
+              </span>
+            )}
+          </div>
+        )}
         {useScannerFlowV2 && (
           <>
             <div className="sticky top-[68px] z-30 mb-3 rounded-xl border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] px-4 py-3">
@@ -1957,7 +2047,7 @@ function ScannerContent() {
                 borderBottom: "1px solid var(--msp-border)"
               }}>
                 <h4 style={{ color: "var(--msp-text)", fontSize: "16px", fontWeight: "600", margin: 0 }}>
-                  🏆 Market-Wide Top 10 {bulkScanResults.type === 'crypto' ? 'Crypto' : 'Stocks'} ({bulkScanResults.timeframe === '1d' ? 'Daily' : bulkScanResults.timeframe})
+                  🏆 Market-Wide Top {bulkScanExpanded ? bulkScanResults.topPicks.length : Math.min(5, bulkScanResults.topPicks.length)} {bulkScanResults.type === 'crypto' ? 'Crypto' : 'Stocks'} ({bulkScanResults.timeframe === '1d' ? 'Daily' : bulkScanResults.timeframe})
                 </h4>
                 <span style={{ color: "var(--msp-text-faint)", fontSize: "12px" }}>
                   {bulkScanResults.scanned} ranked • {bulkScanResults.duration}
@@ -1984,6 +2074,28 @@ function ScannerContent() {
                 fontWeight: 600,
               }}>
                 Scope: this list is market-wide. Click a card to load that symbol as your active analysis below.
+                {!bulkScanExpanded && bulkScanResults.topPicks.length > 5 && (
+                  <span style={{ marginLeft: "8px", color: "var(--msp-text-faint)", fontSize: "11px" }}>
+                    Showing top 5 of {bulkScanResults.topPicks.length} — 
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setBulkScanExpanded(true); }}
+                      style={{ background: "none", border: "none", color: "var(--msp-accent)", cursor: "pointer", textDecoration: "underline", fontSize: "11px", padding: 0, marginLeft: "4px" }}
+                    >
+                      Show All
+                    </button>
+                  </span>
+                )}
+                {bulkScanExpanded && bulkScanResults.topPicks.length > 5 && (
+                  <span style={{ marginLeft: "8px", color: "var(--msp-text-faint)", fontSize: "11px" }}>
+                    Showing all {bulkScanResults.topPicks.length} — 
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setBulkScanExpanded(false); }}
+                      style={{ background: "none", border: "none", color: "var(--msp-accent)", cursor: "pointer", textDecoration: "underline", fontSize: "11px", padding: 0, marginLeft: "4px" }}
+                    >
+                      Show Top 5 Only
+                    </button>
+                  </span>
+                )}
               </div>
               
               <div style={{ 
@@ -1991,7 +2103,7 @@ function ScannerContent() {
                 gridTemplateColumns: "repeat(auto-fill, minmax(min(280px, 100%), 1fr))", 
                 gap: "12px" 
               }}>
-                {bulkScanResults.topPicks.map((pick, idx) => (
+                {(bulkScanExpanded ? bulkScanResults.topPicks : bulkScanResults.topPicks.slice(0, 5)).map((pick, idx) => (
                   <div
                     key={pick.symbol}
                     onClick={() => {
@@ -5304,6 +5416,74 @@ function ScannerContent() {
             Past performance does not guarantee future results. Always do your own research and consult a licensed financial advisor.
           </p>
         </div>
+
+        {/* ─── Risk Block Modal (shown when governor BLOCK is enforced) ─── */}
+        {showRiskBlockModal && (
+          <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 px-4">
+            <div className="w-full max-w-md rounded-xl border border-red-500/40 bg-[var(--msp-panel)] p-5">
+              <div className="mb-2 flex items-center gap-2">
+                <span className="text-2xl">🚫</span>
+                <div className="text-[0.9rem] font-extrabold uppercase tracking-[0.08em] text-red-400">Trade Blocked by Risk Governor</div>
+              </div>
+              <div className="mb-3 rounded-md border border-red-500/20 bg-red-500/10 px-3 py-2 text-[0.78rem] text-red-300">
+                {riskBlockReason}
+              </div>
+              <div className="mb-3 text-[0.74rem] text-[var(--msp-text-muted)]">
+                The risk governor has blocked this trade. This is not a suggestion — the action has been prevented to protect capital.
+                Review the reason above, adjust your approach, or wait for conditions to improve.
+              </div>
+              <button
+                onClick={() => setShowRiskBlockModal(false)}
+                className="h-9 w-full rounded-md border border-red-500/30 bg-red-500/10 px-3 text-[0.7rem] font-extrabold uppercase text-red-300 hover:bg-red-500/20"
+              >
+                Understood
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ─── Behavioral Overtrading Screen ─── */}
+        {showBehavioralScreen && behavioralScreenData && (
+          <div className="fixed inset-0 z-[85] flex items-center justify-center bg-black/60 px-4">
+            <div className="w-full max-w-md rounded-xl border border-amber-500/40 bg-[var(--msp-panel)] p-5">
+              <div className="mb-2 flex items-center gap-2">
+                <span className="text-2xl">⚠️</span>
+                <div className="text-[0.9rem] font-extrabold uppercase tracking-[0.08em] text-amber-400">Overtrading Warning</div>
+              </div>
+              <div className="mb-3 rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-[0.78rem] text-amber-300">
+                You have taken <strong>{behavioralScreenData.tradesToday}</strong> trades today.
+                Your 30-day average is <strong>{behavioralScreenData.avgTradesPerSession.toFixed(1)}</strong> trades per session.
+              </div>
+              <div className="mb-3 text-[0.74rem] text-[var(--msp-text-muted)]">
+                Elevated trade frequency is a leading indicator of tilt. Consider whether this next trade meets your quality bar
+                or if you&apos;re reacting to the desire to &quot;get it back.&quot;
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setShowBehavioralScreen(false);
+                    setBehavioralScreenData(null);
+                  }}
+                  className="h-9 flex-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 text-[0.7rem] font-extrabold uppercase text-amber-300"
+                >
+                  Step Back — Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setShowBehavioralScreen(false);
+                    setBehavioralScreenData(null);
+                    if (pendingDeployPick) {
+                      setShowPreTradeChecklist(true);
+                    }
+                  }}
+                  className="h-9 flex-1 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 text-[0.7rem] font-extrabold uppercase text-[var(--msp-text-muted)]"
+                >
+                  I Confirm — Proceed
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>}
       />
     </div>
