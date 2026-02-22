@@ -35,10 +35,10 @@ export default function OptionsTab({ ctx }: { ctx: TickerContext }) {
 
       {/* Top metrics row */}
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-        <MetricCard label="IV" value={`${options.iv.toFixed(1)}%`} sub="Implied Volatility" />
-        <MetricCard label="IV Rank" value={`${options.ivRank.toFixed(0)}%`} sub="Percentile" color={ivColor} />
-        <MetricCard label="Expected Move" value={`±${options.expectedMove.toFixed(1)}%`} sub="Next expiry" />
-        <MetricCard label="Put/Call" value={options.putCallRatio.toFixed(2)} sub="Volume ratio" color={pcrColor} />
+        <MetricCard label="IV" value={`${(options.iv ?? 0).toFixed(1)}%`} sub="Implied Volatility" />
+        <MetricCard label="IV Rank" value={`${(options.ivRank ?? 0).toFixed(0)}%`} sub="Percentile" color={ivColor} />
+        <MetricCard label="Expected Move" value={`±${(options.expectedMove ?? 0).toFixed(1)}%`} sub="Next expiry" />
+        <MetricCard label="Put/Call" value={(options.putCallRatio ?? 0).toFixed(2)} sub="Volume ratio" color={pcrColor} />
       </div>
 
       {/* GEX + Max Pain + DEX */}
@@ -52,7 +52,7 @@ export default function OptionsTab({ ctx }: { ctx: TickerContext }) {
         </div>
         <div className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2 text-center">
           <p className="text-[10px] font-semibold uppercase text-[var(--msp-text-faint)]">Max Pain</p>
-          <p className="text-sm font-black text-cyan-400">${options.maxPain.toFixed(2)}</p>
+          <p className="text-sm font-black text-cyan-400">${(options.maxPain ?? 0).toFixed(2)}</p>
           <p className="text-[9px] text-[var(--msp-text-faint)]">Strike price</p>
         </div>
         <div className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2 text-center">

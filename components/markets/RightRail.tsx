@@ -29,11 +29,11 @@ export default function RightRail({ ctx }: { ctx: TickerContext }) {
         <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-card)] p-2">
           <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Quick Stats</p>
           <div className="grid grid-cols-2 gap-1.5">
-            <QuickStat label="Price" value={`$${ctx.quote.price.toFixed(2)}`} />
+            <QuickStat label="Price" value={`$${(ctx.quote.price ?? 0).toFixed(2)}`} />
             <QuickStat
               label="Change"
-              value={`${ctx.quote.changePercent >= 0 ? '+' : ''}${ctx.quote.changePercent.toFixed(2)}%`}
-              color={ctx.quote.changePercent >= 0 ? 'text-emerald-400' : 'text-rose-400'}
+              value={`${(ctx.quote.changePercent ?? 0) >= 0 ? '+' : ''}${(ctx.quote.changePercent ?? 0).toFixed(2)}%`}
+              color={(ctx.quote.changePercent ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}
             />
             {ctx.quote.volume !== undefined && (
               <QuickStat label="Volume" value={formatVolume(ctx.quote.volume)} />
@@ -47,8 +47,8 @@ export default function RightRail({ ctx }: { ctx: TickerContext }) {
             )}
             {ctx.options && (
               <>
-                <QuickStat label="IV Rank" value={`${ctx.options.ivRank.toFixed(0)}%`} />
-                <QuickStat label="Exp Move" value={`±${ctx.options.expectedMove.toFixed(1)}%`} />
+                <QuickStat label="IV Rank" value={`${(ctx.options.ivRank ?? 0).toFixed(0)}%`} />
+                <QuickStat label="Exp Move" value={`±${(ctx.options.expectedMove ?? 0).toFixed(1)}%`} />
               </>
             )}
           </div>
@@ -68,20 +68,20 @@ export default function RightRail({ ctx }: { ctx: TickerContext }) {
             </div>
             <div className="flex justify-between">
               <span className="text-[var(--msp-text-faint)]">Entry</span>
-              <span className="text-[var(--msp-text)]">${ctx.scanner.entry.toFixed(2)}</span>
+              <span className="text-[var(--msp-text)]">${(ctx.scanner.entry ?? 0).toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-[var(--msp-text-faint)]">Stop</span>
-              <span className="text-rose-400">${ctx.scanner.stop.toFixed(2)}</span>
+              <span className="text-rose-400">${(ctx.scanner.stop ?? 0).toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-[var(--msp-text-faint)]">Target</span>
-              <span className="text-emerald-400">${ctx.scanner.target.toFixed(2)}</span>
+              <span className="text-emerald-400">${(ctx.scanner.target ?? 0).toFixed(2)}</span>
             </div>
             <div className="flex justify-between border-t border-[var(--msp-divider)] pt-1">
               <span className="text-[var(--msp-text-faint)]">R-Multiple</span>
-              <span className={`font-black ${ctx.scanner.rMultiple >= 2 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                {ctx.scanner.rMultiple.toFixed(1)}R
+              <span className={`font-black ${(ctx.scanner.rMultiple ?? 0) >= 2 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                {(ctx.scanner.rMultiple ?? 0).toFixed(1)}R
               </span>
             </div>
           </div>

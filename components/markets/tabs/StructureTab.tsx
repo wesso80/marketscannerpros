@@ -77,15 +77,15 @@ export default function StructureTab({ ctx }: { ctx: TickerContext }) {
           <div className="grid grid-cols-3 gap-3 text-center">
             <div>
               <p className="text-[10px] text-[var(--msp-text-faint)]">Entry</p>
-              <p className="text-sm font-bold text-cyan-400">${scanner.entry.toFixed(2)}</p>
+              <p className="text-sm font-bold text-cyan-400">${(scanner.entry ?? 0).toFixed(2)}</p>
             </div>
             <div>
               <p className="text-[10px] text-[var(--msp-text-faint)]">Stop</p>
-              <p className="text-sm font-bold text-rose-400">${scanner.stop.toFixed(2)}</p>
+              <p className="text-sm font-bold text-rose-400">${(scanner.stop ?? 0).toFixed(2)}</p>
             </div>
             <div>
               <p className="text-[10px] text-[var(--msp-text-faint)]">Target</p>
-              <p className="text-sm font-bold text-emerald-400">${scanner.target.toFixed(2)}</p>
+              <p className="text-sm font-bold text-emerald-400">${(scanner.target ?? 0).toFixed(2)}</p>
             </div>
           </div>
 

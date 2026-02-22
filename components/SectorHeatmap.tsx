@@ -250,7 +250,7 @@ export default function SectorHeatmap() {
       {/* Heatmap */}
       <div className="relative" style={{ height: '400px' }}>
         {layout.map(item => {
-          const change = getChangeValue(item.sector);
+          const change = getChangeValue(item.sector) ?? 0;
           const isHovered = hoveredSector === item.sector.symbol;
           
           return (
@@ -274,7 +274,7 @@ export default function SectorHeatmap() {
                   {item.sector.name}
                 </span>
                 <span className="text-base sm:text-lg md:text-xl font-bold drop-shadow-lg text-white">
-                  {change >= 0 ? '+' : ''}{change.toFixed(2)}%
+                  {(change ?? 0) >= 0 ? '+' : ''}{(change ?? 0).toFixed(2)}%
                 </span>
                 <span className="text-white/70 text-xs drop-shadow">
                   {item.sector.symbol}
@@ -291,8 +291,8 @@ export default function SectorHeatmap() {
                   </div>
                   <div className="flex justify-between text-white/80 gap-4 mt-1">
                     <span>Change:</span>
-                    <span className={`font-medium ${change >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {change >= 0 ? '+' : ''}{change.toFixed(2)}%
+                    <span className={`font-medium ${(change ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {(change ?? 0) >= 0 ? '+' : ''}{(change ?? 0).toFixed(2)}%
                     </span>
                   </div>
                   {item.sector.price && (
@@ -334,7 +334,7 @@ export default function SectorHeatmap() {
               <div className="flex items-center gap-1">
                 <span className="text-slate-400">Best:</span>
                 <span className="text-emerald-400 font-medium">
-                  {bestPerformer.name} (+{getChangeValue(bestPerformer).toFixed(2)}%)
+                  {bestPerformer.name} (+{(getChangeValue(bestPerformer) ?? 0).toFixed(2)}%)
                 </span>
               </div>
             )}
@@ -342,7 +342,7 @@ export default function SectorHeatmap() {
               <div className="flex items-center gap-1">
                 <span className="text-slate-400">Worst:</span>
                 <span className="text-red-400 font-medium">
-                  {worstPerformer.name} ({getChangeValue(worstPerformer).toFixed(2)}%)
+                  {worstPerformer.name} ({(getChangeValue(worstPerformer) ?? 0).toFixed(2)}%)
                 </span>
               </div>
             )}

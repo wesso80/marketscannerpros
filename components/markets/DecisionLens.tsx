@@ -63,14 +63,14 @@ export default function DecisionLens({ ctx }: DecisionLensProps) {
     // ── R Budget ──
     const remainR = snapshot?.session?.remaining_daily_R ?? 0;
     const maxR = snapshot?.session?.max_daily_R ?? 6;
-    const ruBudget = `${remainR.toFixed(1)}R / ${maxR}R`;
+    const ruBudget = `${(remainR ?? 0).toFixed(1)}R / ${maxR}R`;
 
     // ── Scenarios ──
     const bullScenario = scan
-      ? `${scan.direction === 'LONG' ? 'Long' : 'Short'} ${scan.setup || 'setup'} → target $${scan.target?.toFixed(2) ?? '—'}`
+      ? `${scan.direction === 'LONG' ? 'Long' : 'Short'} ${scan.setup || 'setup'} \u2192 target $${(scan.target ?? 0).toFixed(2) ?? '\u2014'}`
       : flow?.most_likely_path?.[0] ?? 'Awaiting scan data';
     const bearScenario = scan
-      ? `Stop breach below $${scan.stop?.toFixed(2) ?? '—'} invalidates thesis`
+      ? `Stop breach below $${(scan.stop ?? 0).toFixed(2) ?? '\u2014'} invalidates thesis`
       : flow?.risk?.[0] ?? 'No risk factors loaded';
 
     // ── R-Multiple ──
@@ -102,9 +102,9 @@ export default function DecisionLens({ ctx }: DecisionLensProps) {
 
     // ── Expected Move ──
     const expectedMove = opts?.expectedMove
-      ? `±${opts.expectedMove.toFixed(1)}%`
+      ? `±${(opts.expectedMove ?? 0).toFixed(1)}%`
       : ctx.quote
-        ? `±${(Math.abs(ctx.quote.changePercent) * 1.5).toFixed(1)}%`
+        ? `±${(Math.abs(ctx.quote.changePercent ?? 0) * 1.5).toFixed(1)}%`
         : '—';
 
     // ── Verdict ──
@@ -204,7 +204,7 @@ export default function DecisionLens({ ctx }: DecisionLensProps) {
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-semibold text-[var(--msp-text-faint)]">R-Multiple</span>
             <span className={`text-sm font-black ${lens.rMultiple >= 2 ? 'text-emerald-400' : lens.rMultiple >= 1 ? 'text-amber-400' : 'text-red-400'}`}>
-              {lens.rMultiple.toFixed(1)}R
+              {(lens.rMultiple ?? 0).toFixed(1)}R
             </span>
           </div>
         </div>
