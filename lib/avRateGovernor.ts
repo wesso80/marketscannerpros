@@ -22,9 +22,9 @@ let governor: TokenBucket | null = null;
 
 function getGovernor(): TokenBucket {
   if (!governor) {
-    const rpm = parseInt(process.env.ALPHA_VANTAGE_RPM || '600', 10);
-    // Burst capacity = min(rpm, 15) → avoids stampede at startup
-    const burst = Math.min(rpm, 15);
+    const rpm = parseInt(process.env.ALPHA_VANTAGE_RPM || '70', 10);
+    // Burst capacity = min(rpm, 10) → avoids stampede at startup
+    const burst = Math.min(rpm, 10);
     governor = new TokenBucket(burst, rpm / 60);
     console.log(`[avRateGovernor] Initialised: ${rpm} RPM, burst ${burst}`);
   }

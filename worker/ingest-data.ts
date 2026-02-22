@@ -229,13 +229,14 @@ function isDueForFetch(lastFetchedAt: Date | string | null | undefined, interval
   return Date.now() - parsed.getTime() >= intervalSeconds * 1000;
 }
 
-// Rate limiter: Alpha Vantage 600 RPM premium (Realtime Nasdaq BX + FMV Options)
-// Worker reserves ~400 RPM, leaving ~200 RPM headroom for on-demand API route calls
+// Rate limiter: Alpha Vantage 75 RPM premium (current plan)
+// Worker reserves ~50 RPM, leaving ~20 RPM headroom for on-demand API route calls
+// When upgraded to 600 RPM, set ALPHA_VANTAGE_RPM=400 in env
 let rateLimiter: TokenBucket | null = null;
 function getRateLimiter(): TokenBucket {
   if (!rateLimiter) {
-    const rpm = parseInt(getEnv('ALPHA_VANTAGE_RPM') || '400', 10);
-    const burstPerSecond = parseInt(getEnv('ALPHA_VANTAGE_BURST_PER_SECOND') || '10', 10);
+    const rpm = parseInt(getEnv('ALPHA_VANTAGE_RPM') || '50', 10);
+    const burstPerSecond = parseInt(getEnv('ALPHA_VANTAGE_BURST_PER_SECOND') || '4', 10);
     const burstCapacity = Math.max(1, Math.min(rpm, burstPerSecond));
     rateLimiter = new TokenBucket(burstCapacity, rpm / 60);
   }
