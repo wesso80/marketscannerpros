@@ -6,6 +6,7 @@ import { useJournalActions } from '@/components/journal/hooks/useJournalActions'
 import { useJournalData } from '@/components/journal/hooks/useJournalData';
 import { useJournalState } from '@/components/journal/hooks/useJournalState';
 import { useJournalTrade } from '@/components/journal/hooks/useJournalTrade';
+import { useLivePrices, enrichTradesWithLivePrices } from '@/components/journal/hooks/useLivePrices';
 import JournalLayout from '@/components/journal/layout/JournalLayout';
 import CloseTradeModal from '@/components/journal/modals/CloseTradeModal';
 import SnapshotCaptureModal from '@/components/journal/modals/SnapshotCaptureModal';
@@ -15,6 +16,30 @@ import { JournalDockKey, TradeModel } from '@/types/journal';
 export default function JournalPage() {
   const { query, sort, onQueryChange, onSort, onResetFilters } = useJournalState();
   const { payload, pageRows, total, loading, error, refresh } = useJournalData(query, sort);
+
+  // Live price fetching for open trades
+  const allTrades = payload?.trades || [];
+  const { prices: livePrices, lastUpdated: livePriceTs } = useLivePrices(allTrades);
+  const enrichedTrades = useMemo(
+    () => enrichTradesWithLivePrices(allTrades, livePrices),
+    [allTrades, livePrices],
+  );
+  
+  // Re-derive pageRows from enriched trades
+  const enrichedPageRows = useMemo(() => {
+    return pageRows.map((row) => {
+      const enriched = enrichedTrades.find((t) => t.id === row.id);
+      return enriched || row;
+    });
+  }, [pageRows, enrichedTrades]);
+
+  // Compute enriched KPIs (unrealized P&L from live prices)
+  const enrichedKpis = useMemo(() => {
+    if (!payload?.kpis) return payload?.kpis;
+    const openTrades = enrichedTrades.filter((t) => t.status === 'open');
+    const unrealizedPnlOpen = openTrades.reduce((sum, t) => sum + Number(t.pnlUsd || 0), 0);
+    return { ...payload.kpis, unrealizedPnlOpen };
+  }, [payload?.kpis, enrichedTrades]);
 
   const [selectedTradeId, setSelectedTradeId] = useState<string | undefined>(undefined);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -89,7 +114,7 @@ export default function JournalPage() {
       <main className="mx-auto w-full max-w-none space-y-4 px-4 py-4 md:px-6">
         <JournalLayout
           header={payload?.header}
-          kpis={payload?.kpis}
+          kpis={enrichedKpis}
           actions={headerActions}
           viewMode={viewMode}
           onToggleViewMode={() => setViewMode((prev) => (prev === 'normal' ? 'compact' : 'normal'))}
@@ -97,7 +122,7 @@ export default function JournalPage() {
           query={query}
           onQueryChange={onQueryChange}
           onResetFilters={onResetFilters}
-          rows={pageRows}
+          rows={enrichedPageRows}
           total={total}
           sort={sort}
           onSort={onSort}
@@ -122,6 +147,7 @@ export default function JournalPage() {
             setSelectedTradeId(id);
             setSnapshotModalOpen(true);
           }}
+          livePriceTs={livePriceTs}
         />
       </main>
 

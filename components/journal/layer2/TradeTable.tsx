@@ -94,8 +94,27 @@ export default function TradeTable({ rows, sort, onSort, onSelectTrade, onQuickC
                 <td className="px-3 py-2 text-slate-300">{row.side}</td>
                 <td className="px-3 py-2 text-slate-300">{fmtPrice(row.entry.price)} · {new Date(row.entry.ts).toLocaleDateString()}</td>
                 <td className="px-3 py-2 text-slate-300">{row.stop != null ? fmtPrice(row.stop) : '—'}</td>
-                <td className="px-3 py-2 text-slate-300">{row.exit?.price != null ? fmtPrice(row.exit.price) : 'Open'}</td>
-                <td className={`px-3 py-2 ${Number(row.pnlUsd || 0) >= 0 ? 'text-emerald-200' : 'text-rose-200'}`}>{Number(row.pnlUsd || 0).toFixed(2)} / {Number(row.pnlPct || 0).toFixed(2)}%</td>
+                <td className="px-3 py-2 text-slate-300">
+                  {row.status === 'open' && (row as any)._isLive ? (
+                    <span className="flex items-center gap-1">
+                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="font-mono">{fmtPrice(row.exit?.price ?? 0)}</span>
+                    </span>
+                  ) : row.exit?.price != null && row.status === 'closed' ? (
+                    fmtPrice(row.exit.price)
+                  ) : (
+                    <span className="text-slate-500">Open</span>
+                  )}
+                </td>
+                <td className={`px-3 py-2 ${Number(row.pnlUsd || 0) >= 0 ? 'text-emerald-200' : 'text-rose-200'}`}>
+                  {row.status === 'open' && (row as any)._isLive ? (
+                    <span className="font-mono">
+                      {Number(row.pnlUsd || 0) >= 0 ? '+' : ''}{Number(row.pnlUsd || 0).toFixed(2)} / {Number(row.pnlPct || 0) >= 0 ? '+' : ''}{Number(row.pnlPct || 0).toFixed(2)}%
+                    </span>
+                  ) : (
+                    <>{Number(row.pnlUsd || 0).toFixed(2)} / {Number(row.pnlPct || 0).toFixed(2)}%</>
+                  )}
+                </td>
                 <td className="px-3 py-2 text-slate-300">{row.rMultiple != null ? row.rMultiple.toFixed(2) : '—'}</td>
                 <td className="px-3 py-2 text-slate-300">{row.strategyTag || '—'}</td>
                 <td className="px-3 py-2">

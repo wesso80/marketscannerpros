@@ -41,6 +41,7 @@ type JournalLayoutProps = {
   onSelectTrade: (id: string) => void;
   onQuickClose: (id: string) => void;
   onSnapshot: (id: string) => void;
+  livePriceTs?: Date | null;
 };
 
 export default function JournalLayout(props: JournalLayoutProps) {
