@@ -71,6 +71,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: "/admin/ai-usage", label: "AI Usage", icon: "🤖" },
     { href: "/admin/trials", label: "Trials", icon: "🎁" },
     { href: "/admin/delete-requests", label: "Delete Requests", icon: "🗑️" },
+    { href: "/admin/reporting", label: "Nasdaq Reporting", icon: "📋" },
   ];
 
   if (!isAuthed) {
