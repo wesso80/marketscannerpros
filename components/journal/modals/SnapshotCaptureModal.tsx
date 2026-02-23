@@ -16,7 +16,7 @@ export default function SnapshotCaptureModal({ open, tradeId, onClose, onSubmit 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40">
+    <div className="fixed inset-0 z-[100] bg-black/40">
       <div className="absolute left-1/2 top-1/2 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/10 bg-slate-950 p-4">
         <div className="text-lg font-semibold text-slate-100">Capture Snapshot {tradeId ? `• ${tradeId}` : ''}</div>
 
