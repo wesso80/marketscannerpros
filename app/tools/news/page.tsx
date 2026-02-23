@@ -172,14 +172,16 @@ function getMarketCapRank(symbol: string): { rank: 'top10' | 'top25' | 'top100' 
   return { rank: null, label: '', color: '', bgColor: '' };
 }
 
+// Session tag is estimated — Alpha Vantage doesn't provide report timing.
+// Most large-cap earnings report PRE or AH; RTH is rare.
+// Default to PRE for top-25 companies, AH for others, RTH for mid-caps as a rough heuristic.
 function inferSessionTag(symbol: string): SessionTag {
-  const hash = symbol
-    .toUpperCase()
-    .split('')
-    .reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  if (hash % 3 === 0) return 'PRE';
-  if (hash % 3 === 1) return 'RTH';
-  return 'AH';
+  const sym = symbol.toUpperCase();
+  if (TOP_25_COMPANIES.includes(sym)) return 'PRE';
+  if (TOP_100_COMPANIES.includes(sym)) return 'AH';
+  // For unknown companies, alternate PRE/AH based on symbol
+  const hash = sym.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return hash % 2 === 0 ? 'PRE' : 'AH';
 }
 
 function getImpactTier(symbol: string): ImpactTier {
@@ -256,6 +258,7 @@ export default function NewsSentimentPage() {
   
   // Track if initial earnings fetch has been done
   const earningsInitialFetchDone = useRef(false);
+  const newsInitialFetchDone = useRef(false);
   
   // Auto-fetch earnings when tab switches to earnings (load today's earnings)
   useEffect(() => {
@@ -288,6 +291,13 @@ export default function NewsSentimentPage() {
       autoFetchEarnings();
     }
   }, [activeTab, earnings.length, earningsLoading, earningsHorizon]);
+
+  // Re-fetch when horizon changes after initial load
+  useEffect(() => {
+    if (!earningsInitialFetchDone.current) return;
+    handleEarningsSearch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [earningsHorizon]);
   
   // Filter earnings based on selected filter
   const getFilteredEarnings = (): EarningsEvent[] => {
@@ -461,6 +471,15 @@ export default function NewsSentimentPage() {
     }
   };
 
+  // Auto-fetch news on first visit to news tab
+  useEffect(() => {
+    if (activeTab === 'news' && !newsInitialFetchDone.current && articles.length === 0 && !loading && tickers.trim()) {
+      newsInitialFetchDone.current = true;
+      handleSearch();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
   const handleEarningsSearch = async () => {
     setEarningsLoading(true);
     setEarningsError("");
@@ -494,7 +513,6 @@ export default function NewsSentimentPage() {
 
   // Fetch analyst data for a selected stock
   const fetchAnalystData = async (event: EarningsEvent) => {
-    console.log('📊 Fetching analyst data for:', event.symbol);
     setSelectedEarning(event);
     setAnalystLoading(true);
     setAnalystData(null);
@@ -502,7 +520,6 @@ export default function NewsSentimentPage() {
     try {
       const response = await fetch(`/api/analyst-ratings?symbol=${event.symbol}`);
       const result = await response.json();
-      console.log('📊 Analyst API response:', result);
       
       if (result.success) {
         setAnalystData(result.data);
@@ -531,7 +548,6 @@ export default function NewsSentimentPage() {
         });
       }
     } catch (err) {
-      console.error('📊 Analyst API error:', err);
       setAnalystData({
         symbol: event.symbol,
         name: event.name,
@@ -660,7 +676,7 @@ export default function NewsSentimentPage() {
     const byBucket = byQuery.filter((item) => {
       if (newsBucket === 'ALL') return true;
       if (newsBucket === 'HIGH_IMPACT') return item.impact === 'HIGH';
-      return item.tags.map((tag) => tag.toUpperCase()).includes(newsBucket.replace('_', ' ')) || item.tags.map((tag) => tag.toUpperCase()).includes(newsBucket);
+      return item.tags.map((tag) => tag.toUpperCase()).includes(newsBucket.replaceAll('_', ' ')) || item.tags.map((tag) => tag.toUpperCase()).includes(newsBucket);
     });
 
     const byQuality = hideLowQualityNews ? byBucket.filter((item) => item.quality >= 35) : byBucket;
@@ -891,7 +907,7 @@ export default function NewsSentimentPage() {
                       onClick={() => setNewsBucket(bucket)}
                       className={`rounded-lg border px-3 py-1.5 text-xs ${newsBucket === bucket ? 'border-white/25 bg-white/10 text-white' : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10'}`}
                     >
-                      {bucket.replace('_', ' ')}
+                      {bucket.replaceAll('_', ' ')}
                     </button>
                   ))}
                 </div>
@@ -1061,7 +1077,7 @@ export default function NewsSentimentPage() {
                     type="text"
                     value={earningsSymbol}
                     onChange={(e) => setEarningsSymbol(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && handleEarningsSearch()}
+                    onKeyDown={(e) => e.key === "Enter" && handleEarningsSearch()}
                     placeholder="AAPL, MSFT, NVDA"
                     className="rounded-md border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white outline-none"
                   />
@@ -1207,8 +1223,8 @@ export default function NewsSentimentPage() {
                             <div className="flex flex-wrap items-center gap-1">
                               <Link href={`/tools/equity-explorer?symbol=${event.symbol}`} className="rounded-md border border-white/15 bg-black/20 px-2 py-1 text-[11px] text-white/75">Open Explorer</Link>
                               <Link href={`/tools/intraday-charts?symbol=${event.symbol}`} className="rounded-md border border-white/15 bg-black/20 px-2 py-1 text-[11px] text-white/75">Open Chart</Link>
-                              <button onClick={() => fetchAnalystData(event)} className="rounded-md border border-white/15 bg-black/20 px-2 py-1 text-[11px] text-white/75">Create Alert</button>
-                              <button className="rounded-md border border-white/15 bg-black/20 px-2 py-1 text-[11px] text-white/75">Journal Draft</button>
+                              <button onClick={() => fetchAnalystData(event)} className="rounded-md border border-white/15 bg-black/20 px-2 py-1 text-[11px] text-white/75">Analyst Data</button>
+                              <Link href={`/tools/journal?symbol=${event.symbol}`} className="rounded-md border border-white/15 bg-black/20 px-2 py-1 text-[11px] text-white/75">Journal Draft</Link>
                             </div>
                           </div>
                         ))}
@@ -1303,16 +1319,5 @@ export default function NewsSentimentPage() {
       </div>
     </main>
     </div>
-  );
-}
-
-function FilterButton({ label, value, active, onClick }: { label: string; value: string; active: boolean; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{ padding: "0.5rem 1rem", background: active ? "rgba(16, 185, 129, 0.2)" : "rgba(30, 41, 59, 0.5)", border: active ? "1px solid #10B981" : "1px solid rgba(16, 185, 129, 0.1)", borderRadius: "8px", color: active ? "#10B981" : "#94A3B8", fontWeight: "600", cursor: "pointer", fontSize: "0.875rem" }}
-    >
-      {label}
-    </button>
   );
 }

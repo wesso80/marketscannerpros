@@ -99,6 +99,7 @@ export default function EconomicCalendarPage() {
   const [hideLowImpact, setHideLowImpact] = useState(false);
   const [showET, setShowET] = useState(true);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     const fetchCalendar = async () => {
@@ -118,7 +119,7 @@ export default function EconomicCalendarPage() {
       }
     };
     fetchCalendar();
-  }, [days]);
+  }, [days, refreshKey]);
 
   const enrichedEvents = useMemo(() => {
     if (!data?.events) return [];
@@ -265,7 +266,7 @@ export default function EconomicCalendarPage() {
               <option value={14}>Show next: 14d</option>
               <option value={30}>Show next: 30d</option>
             </select>
-            <button onClick={() => setDays((current) => current)} className="rounded-md border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-200">
+            <button onClick={() => setRefreshKey((k) => k + 1)} className="rounded-md border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-200">
               Refresh
             </button>
           </div>
@@ -377,7 +378,7 @@ export default function EconomicCalendarPage() {
                     className={`inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs ${selectedCategories.includes(category) ? 'border-cyan-400/40 bg-cyan-500/15 text-cyan-200' : 'border-white/10 bg-white/5 text-white/70'}`}
                   >
                     <span>{CATEGORY_ICONS[category]}</span>
-                    <span>{category.replace('_', ' ')}</span>
+                    <span>{category.replaceAll('_', ' ')}</span>
                   </button>
                 ))}
               </div>
@@ -389,7 +390,7 @@ export default function EconomicCalendarPage() {
                   onClick={() => setShowET((current) => !current)}
                   className="inline-flex items-center rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/70"
                 >
-                  {showET ? 'Show ET' : 'Show Local'}
+                  {showET ? 'Switch to Local' : 'Switch to ET'}
                 </button>
               </div>
             </section>
@@ -445,7 +446,7 @@ export default function EconomicCalendarPage() {
                           </div>
                           <div className="col-span-12 sm:col-span-5">
                             <p className="text-sm font-medium text-white/90">{CATEGORY_ICONS[event.category]} {event.event}</p>
-                            <p className="text-xs text-white/55">{event.category.replace('_', ' ')} • {event.country}</p>
+                            <p className="text-xs text-white/55">{event.category.replaceAll('_', ' ')} • {event.country}</p>
                           </div>
                           <div className="col-span-12 sm:col-span-2 text-xs text-white/65">
                             <div>F: {event.forecast || '--'}</div>
@@ -458,9 +459,9 @@ export default function EconomicCalendarPage() {
                             </span>
                           </div>
                           <div className="col-span-8 sm:col-span-2 flex flex-wrap justify-end gap-1">
-                            <button className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/70">Set Alert</button>
+                            <button onClick={() => { /* Future: create alert for this event */ }} className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/70">Set Alert</button>
                             <Link href="/tools/macro" className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/70">Open Macro</Link>
-                            {isAdmin ? <button className="rounded-md border border-amber-400/30 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-300">Post</button> : null}
+                            {isAdmin ? <button onClick={() => { /* Future: post event to Discord */ }} className="rounded-md border border-amber-400/30 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-300">Post</button> : null}
                           </div>
                         </div>
                       ))}
