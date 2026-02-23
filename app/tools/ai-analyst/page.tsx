@@ -200,7 +200,7 @@ function AiAnalystContent() {
 
     if (symbol.trim()) context.symbol = symbol.trim().toUpperCase();
     if (timeframe.trim()) context.timeframe = timeframe.trim();
-    if (!Number.isNaN(priceNum)) context.currentPrice = priceNum;
+    if (currentPrice.trim() !== '' && !Number.isNaN(priceNum)) context.currentPrice = priceNum;
     if (parsedLevels.length > 0) context.keyLevels = parsedLevels;
 
     const scannerPayload = loadedFromScanner
@@ -230,6 +230,10 @@ function AiAnalystContent() {
         }),
       });
 
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        throw new Error(`Unexpected response (${res.status})`);
+      }
       const data = await res.json();
       if (res.status === 429) {
         throw new Error(data.error || "Daily limit reached. Upgrade for more AI questions.");
@@ -250,7 +254,8 @@ function AiAnalystContent() {
     }
   }
 
-  const scoreLabel = scannerMeta.score ? Number(scannerMeta.score) : 50;
+  const rawScore = scannerMeta.score ? Number(scannerMeta.score) : 50;
+  const scoreLabel = Number.isNaN(rawScore) ? 50 : rawScore;
   const actionLinks = useMemo(() => getActionLinks(symbol.toUpperCase(), timeframe.toUpperCase(), query), [symbol, timeframe, query]);
 
   return (
@@ -373,7 +378,7 @@ function AiAnalystContent() {
               <div className="rounded-md border border-slate-800 bg-slate-950 p-1.5">
                 <p className="text-[10px] uppercase tracking-wide text-slate-400">Regime Summary</p>
                 <p className="mt-0.5 text-[11px] text-slate-300">
-                  {regimeData ? `${regimeLabel(regimeData.regime)} · ${regimeData.riskLevel.toUpperCase()} · ${regimeData.permission}` : 'Loading...'}
+                  {regimeData ? `${regimeLabel(regimeData.regime)} · ${(regimeData.riskLevel ?? 'unknown').toUpperCase()} · ${regimeData.permission ?? '—'}` : 'Loading...'}
                 </p>
                 {scannerMeta.direction && (
                   <p className="mt-0.5 text-[10px] text-slate-500">Scanner: {scannerMeta.direction?.toUpperCase()} · Strength {scannerMeta.score || "—"}</p>

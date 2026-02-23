@@ -136,7 +136,7 @@ export default function AdaptivePersonalityCard(props: AdaptivePersonalityCardPr
               fontSize: '0.75rem',
               fontWeight: 800,
             }}>
-              {data.institutionalFilter.finalGrade} • {data.institutionalFilter.finalScore.toFixed(0)} • {data.institutionalFilter.recommendation.replace('_', ' ')}
+              {data.institutionalFilter.finalGrade} • {(data.institutionalFilter.finalScore ?? 0).toFixed(0)} • {(data.institutionalFilter.recommendation ?? 'UNKNOWN').replace('_', ' ')}
             </span>
           </div>
 

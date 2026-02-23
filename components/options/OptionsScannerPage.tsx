@@ -58,6 +58,12 @@ function OptionsScannerPageContent() {
         body: JSON.stringify({ symbol: effectiveSymbol, scanMode: effectiveScanMode }),
       });
 
+      if (!response.ok) {
+        const errBody = await response.json().catch(() => null);
+        setError(errBody?.error || `HTTP ${response.status}`);
+        setPayload(null);
+        return;
+      }
       const json = await response.json();
       if (!json?.success) {
         setError(json?.error || 'Scan failed');

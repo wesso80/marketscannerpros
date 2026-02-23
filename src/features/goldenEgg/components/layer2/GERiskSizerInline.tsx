@@ -9,8 +9,8 @@ type GERiskSizerInlineProps = {
 export default function GERiskSizerInline({ rr, sizingHint }: GERiskSizerInlineProps) {
   return (
     <div className="space-y-2">
-      <GEKeyValueRow label="Expected R" value={rr.expectedR.toFixed(2)} />
-      <GEKeyValueRow label="Min R" value={rr.minR.toFixed(2)} />
+      <GEKeyValueRow label="Expected R" value={(rr.expectedR ?? 0).toFixed(2)} />
+      <GEKeyValueRow label="Min R" value={(rr.minR ?? 0).toFixed(2)} />
       {sizingHint && (
         <GEKeyValueRow
           label="Sizing Hint"

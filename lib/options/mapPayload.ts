@@ -51,12 +51,12 @@ export function mapOptionsScanResponseToV3(raw: any, symbol: string): OptionsSca
     'Wait for cleaner trigger + liquidity confirmation';
 
   const stop = data?.tradeLevels?.stopLoss
-    ? `${Number(data.tradeLevels.stopLoss).toFixed(2)} (${data?.stopLossStrategy || 'structural'})`
+    ? `${Number.isFinite(Number(data.tradeLevels.stopLoss)) ? Number(data.tradeLevels.stopLoss).toFixed(2) : '?'} (${data?.stopLossStrategy || 'structural'})`
     : 'Not available';
 
   const targets = [data?.tradeLevels?.target1, data?.tradeLevels?.target2, data?.tradeLevels?.target3]
     .filter(Boolean)
-    .map((target: any) => `${Number(target.price).toFixed(2)} (${target.reason || 'target'})`);
+    .map((target: any) => `${Number.isFinite(Number(target.price)) ? Number(target.price).toFixed(2) : '?'} (${target.reason || 'target'})`);
 
   return {
     header: {

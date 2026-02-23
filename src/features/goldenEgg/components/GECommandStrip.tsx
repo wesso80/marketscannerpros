@@ -13,7 +13,7 @@ export default function GECommandStrip({ meta, layer1 }: GECommandStripProps) {
       <GEKpiPill label="Permission" value={layer1.permission} />
       <GEKpiPill label="Direction" value={layer1.direction} />
       <GEKpiPill label="Confidence" value={`${layer1.confidence}% (${layer1.grade})`} />
-      <GEKpiPill label="Price" value={meta.price.toFixed(2)} />
+      <GEKpiPill label="Price" value={(meta.price ?? 0).toFixed(2)} />
     </div>
   );
 }

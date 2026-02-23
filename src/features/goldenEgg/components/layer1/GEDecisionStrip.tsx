@@ -45,11 +45,11 @@ export default function GEDecisionStrip({ layer1, meta }: GEDecisionStripProps) 
           <GESectionHeader title="What flips it" />
           <GEFlipConditions items={layer1.flipConditions} />
           <div className="mt-3 flex gap-2">
-            <button className="rounded-lg bg-emerald-500/20 px-3 py-2 text-sm font-semibold text-emerald-200 ring-1 ring-emerald-500/30">
+            <button disabled className="cursor-not-allowed opacity-50 rounded-lg bg-emerald-500/20 px-3 py-2 text-sm font-semibold text-emerald-200 ring-1 ring-emerald-500/30">
               {ctaLabel(layer1.cta.primary)}
             </button>
             {layer1.cta.secondary && (
-              <button className="rounded-lg bg-white/5 px-3 py-2 text-sm font-semibold text-slate-200 ring-1 ring-white/10">
+              <button disabled className="cursor-not-allowed opacity-50 rounded-lg bg-white/5 px-3 py-2 text-sm font-semibold text-slate-200 ring-1 ring-white/10">
                 {ctaLabel(layer1.cta.secondary)}
               </button>
             )}

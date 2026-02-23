@@ -196,6 +196,10 @@ export default function AIConfluenceScanner() {
         }),
       });
 
+      if (!response.ok) {
+        const errBody = await response.json().catch(() => null);
+        throw new Error(errBody?.error || `HTTP ${response.status}`);
+      }
       const data = await response.json();
 
       if (!data.success) {
@@ -232,6 +236,7 @@ export default function AIConfluenceScanner() {
 
   // Format price with appropriate precision (4 decimals for crypto)
   const formatPrice = (price: number) => {
+    if (price == null || isNaN(price)) return '—';
     if (price >= 1000) return price.toFixed(2);
     if (price >= 1) return price.toFixed(4);
     return price.toFixed(6); // For small coins like SHIB
@@ -345,7 +350,7 @@ export default function AIConfluenceScanner() {
     ? `${clusteredCount} close cluster${clusteredCount === 1 ? '' : 's'}${activeWindow ? ` • ${activeWindow.name}` : ''}`
     : 'Awaiting Scan';
   const riskLabel = hierarchicalResult?.tradeSetup
-    ? `${hierarchicalResult.tradeSetup.riskPercent.toFixed(2)}% stop risk`
+    ? `${(hierarchicalResult.tradeSetup.riskPercent ?? 0).toFixed(2)}% stop risk`
     : 'No setup risk yet';
   const actionLabel = !hierarchicalResult
     ? 'Run scan'
@@ -1457,7 +1462,7 @@ export default function AIConfluenceScanner() {
                         {hierarchicalResult.scoreBreakdown.clusterScore}
                       </div>
                       <div style={{ fontSize: '0.6rem', color: '#64748B' }}>
-                        {Math.round(hierarchicalResult.scoreBreakdown.dominantClusterRatio * 100)}% ratio
+                        {Math.round((hierarchicalResult.scoreBreakdown.dominantClusterRatio ?? 0) * 100)}% ratio
                       </div>
                     </div>
 
@@ -1615,7 +1620,7 @@ export default function AIConfluenceScanner() {
                       ${formatPrice(hierarchicalResult.tradeSetup.stopLoss)}
                     </div>
                     <div style={{ fontSize: '0.75rem', color: '#F87171' }}>
-                      -{hierarchicalResult.tradeSetup.riskPercent.toFixed(2)}%
+                      -{(hierarchicalResult.tradeSetup.riskPercent ?? 0).toFixed(2)}%
                     </div>
                   </div>
                   
@@ -1634,7 +1639,7 @@ export default function AIConfluenceScanner() {
                       ${formatPrice(hierarchicalResult.tradeSetup.takeProfit)}
                     </div>
                     <div style={{ fontSize: '0.75rem', color: '#34D399' }}>
-                      +{hierarchicalResult.tradeSetup.rewardPercent.toFixed(2)}%
+                      +{(hierarchicalResult.tradeSetup.rewardPercent ?? 0).toFixed(2)}%
                     </div>
                   </div>
                 </div>
@@ -1651,13 +1656,13 @@ export default function AIConfluenceScanner() {
                   gap: '1rem',
                 }}>
                   <span style={{ color: '#EF4444', fontSize: '0.9rem' }}>
-                    Risk: {hierarchicalResult.tradeSetup.riskPercent.toFixed(2)}%
+                    Risk: {(hierarchicalResult.tradeSetup.riskPercent ?? 0).toFixed(2)}%
                   </span>
                   <span style={{ fontSize: '1.2rem', color: '#F59E0B', fontWeight: 'bold' }}>
-                    ⚖️ {hierarchicalResult.tradeSetup.riskRewardRatio}:1 R:R
+                    ⚖️ {(hierarchicalResult.tradeSetup.riskRewardRatio ?? 0).toFixed(1)}:1 R:R
                   </span>
                   <span style={{ color: '#10B981', fontSize: '0.9rem' }}>
-                    Reward: {hierarchicalResult.tradeSetup.rewardPercent.toFixed(2)}%
+                    Reward: {(hierarchicalResult.tradeSetup.rewardPercent ?? 0).toFixed(2)}%
                   </span>
                 </div>
               </div>
@@ -1692,7 +1697,7 @@ export default function AIConfluenceScanner() {
                     }}>
                       <div style={{
                         position: 'absolute',
-                        left: `${50 + hierarchicalResult.decompression.pullBias / 2}%`,
+                        left: `${50 + (hierarchicalResult.decompression.pullBias ?? 0) / 2}%`,
                         top: '-4px',
                         width: '20px',
                         height: '20px',
@@ -1703,7 +1708,7 @@ export default function AIConfluenceScanner() {
                       }} />
                     </div>
                     <div style={{ textAlign: 'center', marginTop: '0.5rem', color: '#94A3B8' }}>
-                      Pull Bias: {hierarchicalResult.decompression.pullBias.toFixed(0)}% ({hierarchicalResult.decompression.netPullDirection})
+                      Pull Bias: {(hierarchicalResult.decompression.pullBias ?? 0).toFixed(0)}% ({hierarchicalResult.decompression.netPullDirection})
                     </div>
                   </div>
 
@@ -1807,7 +1812,7 @@ export default function AIConfluenceScanner() {
                             fontSize: '0.7rem', 
                             color: level.distance > 0 ? '#10B981' : level.distance < 0 ? '#EF4444' : '#64748B'
                           }}>
-                            {level.distance > 0 ? '+' : ''}{level.distance.toFixed(4)}%
+                            {level.distance > 0 ? '+' : ''}{(level.distance ?? 0).toFixed(4)}%
                           </div>
                         </div>
                       </div>

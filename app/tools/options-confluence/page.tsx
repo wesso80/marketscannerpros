@@ -979,10 +979,10 @@ export default function OptionsConfluenceScanner() {
         confidence: result.unusualActivity.alertLevel === 'high' ? 0.95 
           : result.unusualActivity.alertLevel === 'moderate' ? 0.75 
           : result.unusualActivity.alertLevel === 'low' ? 0.5 : 0.3,
-        callPremium: result.unusualActivity.unusualStrikes
+        callPremium: (result.unusualActivity.unusualStrikes ?? [])
           .filter(s => s.type === 'call')
           .reduce((sum, s) => sum + s.volume * 100, 0), // Rough premium estimate
-        putPremium: result.unusualActivity.unusualStrikes
+        putPremium: (result.unusualActivity.unusualStrikes ?? [])
           .filter(s => s.type === 'put')
           .reduce((sum, s) => sum + s.volume * 100, 0),
         alertLevel: result.unusualActivity.alertLevel,
@@ -1044,6 +1044,11 @@ export default function OptionsConfluenceScanner() {
     
     try {
       const response = await fetch(`/api/options/expirations?symbol=${encodeURIComponent(sym.trim())}`);
+      if (!response.ok) {
+        const errBody = await response.json().catch(() => null);
+        setExpirationsError(errBody?.error || `HTTP ${response.status}`);
+        return;
+      }
       const data = await response.json();
       
       if (data.success && data.expirations) {
@@ -1099,6 +1104,11 @@ export default function OptionsConfluenceScanner() {
         }),
       });
 
+      if (!response.ok) {
+        const errBody = await response.json().catch(() => null);
+        setError(errBody?.error || `HTTP ${response.status}`);
+        return;
+      }
       const data = await response.json();
 
       if (!data.success) {
@@ -1115,6 +1125,7 @@ export default function OptionsConfluenceScanner() {
   };
 
   const formatPrice = (price: number) => {
+    if (price == null || isNaN(price)) return '—';
     if (price >= 1000) return price.toFixed(2);
     if (price >= 1) return price.toFixed(4);
     return price.toFixed(6);

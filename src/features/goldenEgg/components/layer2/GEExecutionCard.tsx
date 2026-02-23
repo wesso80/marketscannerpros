@@ -25,7 +25,7 @@ export default function GEExecutionCard({ execution, permission }: GEExecutionCa
               label="Entry"
               value={execution.entry.type === 'market' ? 'Market' : `${execution.entry.type.toUpperCase()} ${execution.entry.price?.toFixed(2) || ''}`}
             />
-            <GEKeyValueRow label="Stop" value={`${execution.stop.price.toFixed(2)} · ${execution.stop.logic}`} />
+            <GEKeyValueRow label="Stop" value={`${(execution.stop.price ?? 0).toFixed(2)} · ${execution.stop.logic}`} />
             <div>
               <GESectionHeader title="Targets" />
               <div className="mt-2">
