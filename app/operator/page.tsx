@@ -1,14 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
-import { ToolsPageHeader } from '@/components/ToolsPageHeader';
 import ToolsNavBar from '@/components/ToolsNavBar';
-import CommandCenterStateBar from '@/components/CommandCenterStateBar';
-import DecisionCockpit from '@/components/terminal/DecisionCockpit';
 import AdaptivePersonalityCard from '@/components/AdaptivePersonalityCard';
-import FocusStrip from '@/components/operator/FocusStrip';
-import OperatorProposalRail from '@/components/operator/OperatorProposalRail';
 import { writeOperatorState } from '@/lib/operatorState';
 import { createWorkflowEvent, emitWorkflowEvents } from '@/lib/workflow/client';
 import { useUserTier, canAccessBrain } from '@/lib/useUserTier';
@@ -1034,7 +1028,9 @@ export default function OperatorDashboardPage() {
     ? classifyPhase(focusSignal.score || 0, activeSymbols.has((focusSignal.symbol || '').toUpperCase()))
     : 'Detected';
 
-  const edgeScore = focusSignal ? Math.max(1, Math.min(99, Math.round(focusSignal.score || 50))) : 0;
+  const edgeScore = focusSignal && Number.isFinite(focusSignal.score) && focusSignal.score > 0
+    ? Math.max(1, Math.min(99, Math.round(focusSignal.score)))
+    : 0;
   const bias = focusSignal?.direction || 'neutral';
   const quality = !focusSignal ? 'Awaiting' : edgeScore >= 74 ? 'High' : edgeScore >= 60 ? 'Medium' : 'Low';
 
@@ -1054,9 +1050,10 @@ export default function OperatorDashboardPage() {
 
   const regimeLayer = layerToneLabel(regimeADX >= 25 ? 75 : 62);
   const liquidityLayer = layerToneLabel(100 - Math.min(exposurePct, 100), 45);
-  const volatilityLayer = atrRatio <= 2.5 ? { tone: 'aligned' as Tone, label: 'Aligned' } : atrRatio <= 4 ? { tone: 'building' as Tone, label: 'Building' } : { tone: 'conflict' as Tone, label: 'Conflict' };
+  const volatilityLayer = atrRatio === 0 ? { tone: 'building' as Tone, label: 'Awaiting' } : atrRatio <= 2.5 ? { tone: 'aligned' as Tone, label: 'Aligned' } : atrRatio <= 4 ? { tone: 'building' as Tone, label: 'Building' } : { tone: 'conflict' as Tone, label: 'Conflict' };
   const timingLayer = layerToneLabel(edgeScore, 56);
   const momentumLayer = (() => {
+    if (rsi === 0) return { tone: 'building' as Tone, label: 'Awaiting' };
     if (bias === 'bullish' && rsi >= 50 && rsi <= 68) return { tone: 'aligned' as Tone, label: 'Aligned' };
     if (bias === 'bearish' && rsi <= 50 && rsi >= 32) return { tone: 'aligned' as Tone, label: 'Aligned' };
     if (rsi > 74 || rsi < 26) return { tone: 'conflict' as Tone, label: 'Conflict' };
@@ -1088,6 +1085,8 @@ export default function OperatorDashboardPage() {
   }, []);
 
   const operatorScore = useMemo(() => {
+    // No real signal data → return 0 instead of phantom score
+    if (edgeScore === 0 && adaptiveScore === 0) return 0;
     const regimeScore = regimeADX >= 25 ? 78 : 62;
     const volatilityScore = atrRatio <= 2.5 ? 76 : atrRatio <= 4 ? 62 : 40;
     const riskScore = drawdownState === 'Stable' ? 76 : drawdownState === 'Warming' ? 58 : 35;
@@ -1231,7 +1230,7 @@ export default function OperatorDashboardPage() {
   const symbolModeBySymbol = useMemo(() => {
     const map = new Map<string, NonNullable<OperatorPresenceSummary['symbolExperienceModes']>[number]>();
     for (const item of presence?.symbolExperienceModes || []) {
-      map.set(item.symbol.toUpperCase(), item);
+      if (item.symbol) map.set(item.symbol.toUpperCase(), item);
     }
     return map;
   }, [presence?.symbolExperienceModes]);
@@ -1643,11 +1642,11 @@ export default function OperatorDashboardPage() {
       </div>
       <div className="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-xs">
         <div className="text-slate-400 uppercase tracking-wide">Adaptive Confidence</div>
-        <div className="font-bold text-emerald-300">{adaptiveScore}%</div>
+        <div className="font-bold text-emerald-300">{adaptiveScore > 0 ? `${adaptiveScore}%` : '—'}</div>
       </div>
       <div className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-3 py-2 text-xs">
         <div className="text-indigo-300 uppercase tracking-wide">MSP Operator Score™</div>
-        <div className="font-bold text-indigo-200">{operatorScore}/100</div>
+        <div className="font-bold text-indigo-200">{focusSignal || adaptiveScore > 0 ? `${operatorScore}/100` : '—'}</div>
       </div>
     </div>
   );
@@ -1730,7 +1729,7 @@ export default function OperatorDashboardPage() {
   const formatRiskPairFromAmount = (amount: number) => (
     <>
       <span className="metric-r">{formatR(amountToR(amount, portfolioValue || 100000, riskPerTradeFraction))}</span>
-      <span className="metric-dollar">({amount >= 0 ? '+' : '-'}{formatDollar(amount)})</span>
+      <span className="metric-dollar">({Number.isFinite(amount) ? (amount >= 0 ? '+' : '-') : ''}{formatDollar(amount)})</span>
     </>
   );
 
@@ -1750,7 +1749,7 @@ export default function OperatorDashboardPage() {
           Number.isFinite(entryEquity) && entryEquity > 0 ? entryEquity : (portfolioValue || 100000),
           Number.isFinite(entryRiskPerTrade) && entryRiskPerTrade > 0 ? entryRiskPerTrade : riskPerTradeFraction
         );
-    const multiplier = normalizedR !== 0 ? dynamicR / normalizedR : 1;
+    const multiplier = Number.isFinite(normalizedR) && normalizedR !== 0 && Number.isFinite(dynamicR) ? dynamicR / normalizedR : 1;
     const throttleReason: 'regime' | 'vol' | 'event' | 'none' = multiplier < 0.95
       ? volatilityLabel === 'HIGH'
         ? 'vol'
@@ -1850,9 +1849,9 @@ export default function OperatorDashboardPage() {
                   </table>
                 </div>
                 <div className="mt-3 grid gap-1 text-[0.72rem] text-[var(--msp-text-muted)]">
-                  <div>Loss Streak: <span className="font-semibold text-[var(--msp-text)]">{permissionSnapshot?.session.consecutive_losses ?? 0}</span></div>
-                  <div>Throttle Multiplier: <span className="font-semibold text-[var(--msp-text)]">{formatNumber((permissionSnapshot?.caps.risk_per_trade ?? 0.005) / 0.005)}</span></div>
-                  <div>Effective Risk/Trade: <span className="font-semibold text-[var(--msp-text)]">{formatNumber((permissionSnapshot?.caps.risk_per_trade ?? 0) * 100)}%</span></div>
+                  <div>Loss Streak: <span className="font-semibold text-[var(--msp-text)]">{permissionSnapshot ? (permissionSnapshot.session.consecutive_losses ?? 0) : '—'}</span></div>
+                  <div>Throttle Multiplier: <span className="font-semibold text-[var(--msp-text)]">{permissionSnapshot && Number.isFinite(permissionSnapshot.caps.risk_per_trade) ? formatNumber(permissionSnapshot.caps.risk_per_trade / 0.005) : '—'}</span></div>
+                  <div>Effective Risk/Trade: <span className="font-semibold text-[var(--msp-text)]">{permissionSnapshot && Number.isFinite(permissionSnapshot.caps.risk_per_trade) ? `${formatNumber(permissionSnapshot.caps.risk_per_trade * 100)}%` : '—'}</span></div>
                 </div>
               </div>
 
@@ -1870,11 +1869,11 @@ export default function OperatorDashboardPage() {
               <div className={`msp-elite-panel ${deploymentBlocked ? 'border-l-2 border-l-[var(--msp-bear)]' : ''}`}>
                 <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Active Constraints</div>
                 <div className="grid gap-1 text-[0.74rem] text-[var(--msp-text-muted)]">
-                  <div className="msp-elite-row flex justify-between"><span>Max Daily Loss</span><span className="font-semibold text-[var(--msp-text)]">{formatRiskPairFromR(permissionSnapshot?.session.max_daily_R ?? 5)}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Remaining Daily Loss</span><span className="font-semibold text-[var(--msp-text)]">{formatRiskPairFromR(permissionSnapshot?.session.remaining_daily_R ?? 0)}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Max Open Risk</span><span className="font-semibold text-[var(--msp-text)]">{formatRiskPairFromR(permissionSnapshot?.session.max_open_risk_R ?? 5)}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Current Open Risk</span><span className="font-semibold text-[var(--msp-text)]">{formatRiskPairFromR(permissionSnapshot?.session.open_risk_R ?? 0)}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Vol Multiplier</span><span className="font-semibold text-[var(--msp-text)]">{formatNumber((permissionSnapshot?.caps.risk_per_trade ?? 0.005) / 0.005)}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Max Daily Loss</span><span className="font-semibold text-[var(--msp-text)]">{permissionSnapshot ? formatRiskPairFromR(permissionSnapshot.session.max_daily_R ?? 0) : '—'}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Remaining Daily Loss</span><span className="font-semibold text-[var(--msp-text)]">{permissionSnapshot ? formatRiskPairFromR(permissionSnapshot.session.remaining_daily_R ?? 0) : '—'}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Max Open Risk</span><span className="font-semibold text-[var(--msp-text)]">{permissionSnapshot ? formatRiskPairFromR(permissionSnapshot.session.max_open_risk_R ?? 0) : '—'}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Current Open Risk</span><span className="font-semibold text-[var(--msp-text)]">{permissionSnapshot ? formatRiskPairFromR(permissionSnapshot.session.open_risk_R ?? 0) : '—'}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Vol Multiplier</span><span className="font-semibold text-[var(--msp-text)]">{permissionSnapshot && Number.isFinite(permissionSnapshot.caps.risk_per_trade) ? formatNumber(permissionSnapshot.caps.risk_per_trade / 0.005) : '—'}</span></div>
                   <div className="msp-elite-row flex justify-between"><span>Event Restrictions</span><span className="font-semibold text-[var(--msp-text)]">{deploymentBlocked ? 'ACTIVE' : 'NORMAL'}</span></div>
                 </div>
               </div>
@@ -1942,7 +1941,7 @@ export default function OperatorDashboardPage() {
                 </div>
               </div>
               <div className="msp-elite-panel">
-                <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Strategy Performance By Regime</div>
+                <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Strategy Performance By Regime <span className="normal-case tracking-normal font-normal text-[var(--msp-text-muted)]">(reference)</span></div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-[0.72rem]">
                     <thead className="text-[var(--msp-text-faint)]">
@@ -1973,7 +1972,7 @@ export default function OperatorDashboardPage() {
               <div className="msp-elite-panel">
                 <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">System Diagnostics</div>
                 <div className="grid gap-1 text-[0.74rem] text-[var(--msp-text-muted)]">
-                  <div className="msp-elite-row flex justify-between"><span>Data Freshness</span><span className="font-semibold text-[var(--msp-text)]">{permissionSnapshot?.data_health.age_s ?? presence?.dataFreshness?.marketDataAgeSec ?? '—'}s</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Data Freshness</span><span className="font-semibold text-[var(--msp-text)]">{(() => { const age = permissionSnapshot?.data_health.age_s ?? presence?.dataFreshness?.marketDataAgeSec; return age != null ? `${age}s` : '—'; })()}</span></div>
                   <div className="msp-elite-row flex justify-between"><span>API Status</span><span className="font-semibold text-[var(--msp-text)]">{presence?.systemHealth?.status || 'OK'}</span></div>
                   <div className="msp-elite-row flex justify-between"><span>IRG Status</span><span className="font-semibold text-[var(--msp-text)]">{deploymentBlocked ? 'LOCKED' : 'ACTIVE'}</span></div>
                   <div className="msp-elite-row flex justify-between"><span>Snapshot Source</span><span className="font-semibold text-[var(--msp-text)]">{permissionSnapshot?.data_health.source || 'operator_presence'}</span></div>
