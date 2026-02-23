@@ -258,6 +258,11 @@ export interface ComputeStudyOptions {
  * This is the core engine: fetches events, computes returns per event,
  * aggregates into distributions, and produces an auditable result.
  */
+
+// Maximum events to process per study to respect AV rate limits.
+// Each event needs ~6 AV API calls; 50 events = ~300 calls max.
+const MAX_EVENTS_PER_STUDY = 50;
+
 export async function computeEventStudy(opts: ComputeStudyOptions): Promise<EventStudyResult> {
   const { ticker, subtype, lookbackDays, cohort } = opts;
   const cutoff = new Date(Date.now() - lookbackDays * 86_400_000);
@@ -282,11 +287,40 @@ export async function computeEventStudy(opts: ComputeStudyOptions): Promise<Even
               event_timestamp_utc, event_timestamp_et, session, anchor_timestamp_et,
               confidence, severity, classification_reason, raw_payload, created_at
        FROM catalyst_events WHERE ${scope}
-       ORDER BY event_timestamp_et DESC`,
+       ORDER BY event_timestamp_et DESC
+       LIMIT ${MAX_EVENTS_PER_STUDY * 2}`,
       params
     );
 
     events = (rows || []).map(mapRowToEvent);
+
+    // For MARKET cohort, sample diverse tickers — take most recent N
+    // events but ensure no single ticker dominates the sample.
+    if (cohort === 'MARKET' && events.length > MAX_EVENTS_PER_STUDY) {
+      const tickerBuckets = new Map<string, CatalystEvent[]>();
+      for (const e of events) {
+        const bucket = tickerBuckets.get(e.ticker) || [];
+        bucket.push(e);
+        tickerBuckets.set(e.ticker, bucket);
+      }
+      // Round-robin pick from each ticker to get a diverse sample
+      const sampled: CatalystEvent[] = [];
+      let round = 0;
+      while (sampled.length < MAX_EVENTS_PER_STUDY) {
+        let added = false;
+        for (const [, bucket] of tickerBuckets) {
+          if (round < bucket.length && sampled.length < MAX_EVENTS_PER_STUDY) {
+            sampled.push(bucket[round]);
+            added = true;
+          }
+        }
+        if (!added) break;
+        round++;
+      }
+      events = sampled;
+    } else if (events.length > MAX_EVENTS_PER_STUDY) {
+      events = events.slice(0, MAX_EVENTS_PER_STUDY);
+    }
   }
 
   // ── Compute returns per event ───────────────────────────────────

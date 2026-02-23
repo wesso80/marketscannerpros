@@ -61,14 +61,17 @@ const EDGAR_FILING_BASE = 'https://www.sec.gov/Archives/edgar/data';
 interface EftsHit {
   _id: string;
   _source: {
-    file_date: string;        // YYYY-MM-DD
-    display_date_time: string; // e.g. "2026-02-23T15:30:00.000Z"
-    form_type: string;
-    entity_name: string;
-    file_num: string;
-    biz_locations?: string;
+    file_date: string;         // YYYY-MM-DD
+    ciks: string[];            // ["0000737758"]
+    display_names: string[];   // ["TORO CO  (TTC)  (CIK 0000737758)"]
+    root_forms: string[];      // ["8-K"]
+    form: string;              // "8-K/A"
+    file_type: string;         // "8-K/A"
+    adsh: string;              // "0001628280-26-008467"
+    file_num: string[];        // ["001-08649"]
+    biz_locations?: string[];
     file_description?: string;
-    items?: string;            // "5.02, 9.01"
+    items?: string[];           // ["5.02", "9.01"]
   };
 }
 
@@ -81,50 +84,70 @@ export async function queryEdgar(formTypes: string[], startDate: string, endDate
 
   for (const formType of formTypes) {
     try {
-      const params = new URLSearchParams({
-        q: `"${formType}"`,
-        dateRange: 'custom',
-        startdt: startDate,
-        enddt: endDate,
-        forms: formType,
-      });
+      // Paginate through results (EFTS max 100 per page)
+      let from = 0;
+      const size = 100;
+      let hasMore = true;
 
-      const res = await fetch(`${EFTS_BASE}?${params}`, {
-        headers: { 'User-Agent': 'MarketScannerPros/1.0 (contact@marketscannerpros.app)', Accept: 'application/json' },
-      });
+      while (hasMore) {
+        const params = new URLSearchParams({
+          q: `"${formType}"`,
+          dateRange: 'custom',
+          startdt: startDate,
+          enddt: endDate,
+          forms: formType,
+          from: String(from),
+          size: String(size),
+        });
 
-      if (!res.ok) {
-        console.error(`[SEC] EFTS query failed for ${formType}: ${res.status}`);
-        continue;
-      }
+        const res = await fetch(`${EFTS_BASE}?${params}`, {
+          headers: { 'User-Agent': 'MarketScannerPros/1.0 (contact@marketscannerpros.app)', Accept: 'application/json' },
+        });
 
-      const body = await res.json();
-      const hits: EftsHit[] = body.hits?.hits ?? [];
+        if (!res.ok) {
+          console.error(`[SEC] EFTS query failed for ${formType}: ${res.status}`);
+          break;
+        }
 
-      for (const hit of hits) {
-        const src = hit._source;
-        const accession = hit._id.replace(/-/g, '');
-        const cik = accession.slice(0, 10);
-        const ticker = tickerMap.get(cik) ?? null;
+        const body = await res.json();
+        const hits: EftsHit[] = body.hits?.hits ?? [];
 
-        // Parse items from 8-K filings
-        const items = src.items
-          ? src.items.split(',').map(s => s.trim()).filter(Boolean)
-          : [];
+        for (const hit of hits) {
+          const src = hit._source;
+          // Use ciks array directly; fall back to parsing from _id
+          const cik = src.ciks?.[0] ?? hit._id.replace(/-/g, '').slice(0, 10);
+          const ticker = tickerMap.get(cik) ?? null;
 
-        const filing: EdgarFiling = {
-          accessionNumber: hit._id,
-          cik,
-          ticker,
-          companyName: src.entity_name || '',
-          formType: src.form_type || formType,
-          filingDate: src.file_date,
-          filingTimestamp: new Date(src.display_date_time || `${src.file_date}T16:00:00Z`),
-          primaryDocUrl: `${EDGAR_FILING_BASE}/${cik}/${accession}`,
-          items,
-        };
+          // Items are already an array from EFTS
+          const items = Array.isArray(src.items) ? src.items : [];
 
-        results.push(filing);
+          // Extract company name from display_names: "TORO CO  (TTC)  (CIK 0000737758)"
+          const displayName = src.display_names?.[0] ?? '';
+          const companyName = displayName.replace(/\s*\(.*$/, '').trim();
+
+          // Accession number (clean, without :filename suffix)
+          const accessionNumber = src.adsh ?? hit._id.split(':')[0];
+          const accessionFlat = accessionNumber.replace(/-/g, '');
+
+          const filing: EdgarFiling = {
+            accessionNumber,
+            cik,
+            ticker,
+            companyName,
+            formType: src.root_forms?.[0] ?? src.form ?? formType,
+            filingDate: src.file_date,
+            filingTimestamp: new Date(`${src.file_date}T16:00:00Z`),
+            primaryDocUrl: `${EDGAR_FILING_BASE}/${cik}/${accessionFlat}`,
+            items,
+          };
+
+          results.push(filing);
+        }
+
+        // Pagination: stop if fewer results than page size or hit 10k ES limit
+        const totalHits = body.hits?.total?.value ?? 0;
+        from += hits.length;
+        hasMore = hits.length === size && from < totalHits && from < 10_000;
       }
     } catch (err) {
       console.error(`[SEC] Error querying EFTS for ${formType}:`, err);
