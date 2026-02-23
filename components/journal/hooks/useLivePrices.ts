@@ -18,7 +18,14 @@ const CRYPTO_SYMBOLS = new Set([
   'dash', 'waves', 'kava', 'celo', 'bnb', 'shib', 'pepe', 'wif', 'bonk',
   'floki', 'ape', 'imx', 'op', 'arb', 'sui', 'sei', 'tia', 'inj', 'fet',
   'rndr', 'render', 'jup', 'kas', 'xcn', 'pyth', 'pendle', 'blur', 'om',
-  'aztec', 'orca', 'grk', 'io', 'drea', 'rndr',
+  'aztec', 'orca', 'grk', 'io', 'drea', 'kite', 'cat', 'grx', 'dm',
+  'apt', 'ton', 'trx', 'ondo', 'wld', 'jto', 'mew', 'popcat', 'ray',
+  'msol', 'jito', 'w', 'zro', 'strk', 'manta', 'alt', 'pixel', 'aevo',
+]);
+
+/** Known equity tickers that collide with crypto symbols */
+const EQUITY_TICKERS = new Set([
+  'kite', 'cat', 'grx', 'dm', 'orca', 'om', 'ar', 'flow', 'sand', 'neo',
 ]);
 
 function normalizeSymbol(raw: string): string {
@@ -29,20 +36,32 @@ function normalizeSymbol(raw: string): string {
   return s;
 }
 
-function isLikelyCrypto(symbol: string): boolean {
-  const s = normalizeSymbol(symbol).toLowerCase();
-  if (CRYPTO_SYMBOLS.has(s)) return true;
-  // Symbols ending with -USD or containing USD hint at crypto
-  if (symbol.toUpperCase().includes('USD')) return true;
-  // Short symbols (1-3 chars) default to crypto
-  if (s.length <= 3) return true;
-  return false;
+/**
+ * Determine whether a trade should fetch crypto vs stock prices.
+ * Uses: 1) explicit assetClass from trade, 2) symbol suffix heuristic, 3) symbol set.
+ * NEVER falls back to the other asset type — prevents cross-contamination.
+ */
+function resolveTradeType(trade: { symbol: string; assetClass?: string }): 'crypto' | 'stock' {
+  // 1. Trust the explicit assetClass from the journal entry
+  if (trade.assetClass === 'crypto') return 'crypto';
+  if (trade.assetClass === 'equity') return 'stock';
+  if (trade.assetClass === 'forex') return 'stock'; // handled via FX but stock fallback
+  if (trade.assetClass === 'commodity') return 'stock';
+
+  // 2. Symbol suffix: -USD, -USDT, /USD, _USD → crypto pair
+  const upper = trade.symbol.toUpperCase().trim();
+  if (/[-_/](USDT?|EUR|PERP)$/i.test(upper)) return 'crypto';
+
+  // 3. Known crypto symbol
+  const base = normalizeSymbol(trade.symbol).toLowerCase();
+  if (CRYPTO_SYMBOLS.has(base)) return 'crypto';
+
+  // 4. Default to stock (equities are the safe default — no fallback)
+  return 'stock';
 }
 
-async function fetchPrice(symbol: string): Promise<number | null> {
+async function fetchPrice(symbol: string, type: 'crypto' | 'stock'): Promise<number | null> {
   const s = normalizeSymbol(symbol);
-  const isCrypto = isLikelyCrypto(symbol);
-  const type = isCrypto ? 'crypto' : 'stock';
 
   try {
     const res = await fetch(`/api/quote?symbol=${encodeURIComponent(s)}&type=${type}&market=USD&_t=${Date.now()}`, {
@@ -53,18 +72,19 @@ async function fetchPrice(symbol: string): Promise<number | null> {
     if (json?.ok && typeof json.price === 'number') return json.price;
   } catch { /* ignore */ }
 
-  // Fallback: try the other type
-  const fallbackType = isCrypto ? 'stock' : 'crypto';
-  try {
-    const res = await fetch(`/api/quote?symbol=${encodeURIComponent(s)}&type=${fallbackType}&market=USD&_t=${Date.now()}`, {
-      cache: 'no-store',
-    });
-    if (!res.ok) return null;
-    const json = await res.json();
-    if (json?.ok && typeof json.price === 'number') return json.price;
-  } catch { /* ignore */ }
-
+  // NO FALLBACK to the other type — prevents cross-contamination
+  // (e.g. crypto KITE-USD falling back to equity KITE at $179)
   return null;
+}
+
+/**
+ * Sanity check: reject prices wildly inconsistent with entry.
+ * If fetched price is >50x or <0.02x the entry, something is wrong.
+ */
+function isSanePrice(fetchedPrice: number, entryPrice: number): boolean {
+  if (entryPrice <= 0 || fetchedPrice <= 0) return true; // can't validate
+  const ratio = fetchedPrice / entryPrice;
+  return ratio < 50 && ratio > 0.02;
 }
 
 /**
@@ -82,15 +102,16 @@ export function useLivePrices(trades: TradeRowModel[]): {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Deduplicate open trade symbols
-  const openSymbols = Array.from(
-    new Set(
-      trades
-        .filter((t) => t.status === 'open')
-        .map((t) => normalizeSymbol(t.symbol))
-        .filter((s) => s.length > 0)
-    )
-  );
+  // Build a map of symbol → resolved type using trade assetClass
+  const openTrades = trades.filter((t) => t.status === 'open');
+  const tradeTypeMap = new Map<string, 'crypto' | 'stock'>();
+  for (const t of openTrades) {
+    const sym = normalizeSymbol(t.symbol);
+    if (!tradeTypeMap.has(sym)) {
+      tradeTypeMap.set(sym, resolveTradeType({ symbol: t.symbol, assetClass: t.assetClass }));
+    }
+  }
+  const openSymbols = Array.from(tradeTypeMap.keys());
 
   const refreshPrices = useCallback(async () => {
     if (openSymbols.length === 0) return;
@@ -102,7 +123,8 @@ export function useLivePrices(trades: TradeRowModel[]): {
       const batch = openSymbols.slice(i, i + 5);
       const results = await Promise.allSettled(
         batch.map(async (sym) => {
-          const price = await fetchPrice(sym);
+          const type = tradeTypeMap.get(sym) || 'stock';
+          const price = await fetchPrice(sym, type);
           return { sym, price };
         })
       );
@@ -144,6 +166,9 @@ export function useLivePrices(trades: TradeRowModel[]): {
  *  - Open trades get a `livePrice` property
  *  - P&L is recalculated from live price
  *  - R-multiple is recalculated if stop exists
+ *
+ * Includes sanity check: rejects prices wildly inconsistent with entry
+ * to prevent cross-contamination (e.g. equity KITE at $179 vs crypto KITE-USD at $0.24).
  */
 export function enrichTradesWithLivePrices(
   trades: TradeRowModel[],
@@ -158,6 +183,9 @@ export function enrichTradesWithLivePrices(
 
     const entry = trade.entry.price;
     if (!entry || entry <= 0) return trade;
+
+    // Sanity check: reject prices that are wildly inconsistent with entry
+    if (!isSanePrice(livePrice, entry)) return trade;
 
     const qty = trade.qty || 0;
     const isLong = trade.side === 'long';

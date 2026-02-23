@@ -6,7 +6,10 @@ import { emitTradeLifecycleEvent, hashDedupeKey } from '@/lib/notifications/trad
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
-type ExitReason = 'tp' | 'sl' | 'time';
+type ExitReason = 'tp' | 'sl' | 'time' | 'drawdown';
+
+/** Emergency drawdown threshold — auto-close if trade loses more than 30% */
+const MAX_DRAWDOWN_PCT = 30;
 
 type OpenJournalRow = {
   id: number;
@@ -109,6 +112,17 @@ function evaluateCloseReason(entry: OpenJournalRow, currentPrice: number): ExitR
   const timeOpenDays = computeTimeOpenDays(entry.trade_date);
   if (timeOpenDays >= 5) {
     return 'time';
+  }
+
+  // Emergency drawdown protection — close trades bleeding > MAX_DRAWDOWN_PCT
+  const entryPrice = parseNumber(entry.entry_price);
+  if (entryPrice && entryPrice > 0) {
+    const pnlPct = side === 'LONG'
+      ? ((currentPrice - entryPrice) / entryPrice) * 100
+      : ((entryPrice - currentPrice) / entryPrice) * 100;
+    if (pnlPct <= -MAX_DRAWDOWN_PCT) {
+      return 'drawdown';
+    }
   }
 
   return null;
@@ -278,6 +292,16 @@ export async function POST(req: NextRequest) {
       if (!currentPrice) {
         priceUnavailable += 1;
         continue;
+      }
+
+      // Sanity check: reject prices wildly inconsistent with entry (cross-contamination guard)
+      const ep = parseNumber(entry.entry_price);
+      if (ep && ep > 0) {
+        const ratio = currentPrice / ep;
+        if (ratio > 50 || ratio < 0.02) {
+          skipped.push({ workspaceId: entry.workspace_id, journalEntryId: entry.id, symbol: entry.symbol, reason: 'insane_price' });
+          continue;
+        }
       }
 
       const closeReason = evaluateCloseReason(entry, currentPrice);
