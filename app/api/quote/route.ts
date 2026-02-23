@@ -4,6 +4,7 @@ import { shouldUseCache, canFallbackToAV, getCacheMode } from "@/lib/cacheMode";
 import { getQuote } from "@/lib/onDemandFetch";
 import { apiLimiter, getClientIP } from "@/lib/rateLimit";
 import { avFetch } from "@/lib/avRateGovernor";
+import { getSessionFromCookie } from "@/lib/auth";
 
 /**
  * /api/quote?symbol=XRPUSD&type=crypto&market=USD
@@ -27,6 +28,12 @@ const COINGECKO_API_KEY = process.env.COINGECKO_API_KEY;
 type AssetType = "crypto" | "stock" | "fx";
 
 export async function GET(req: NextRequest) {
+  // Auth guard: AV license requires authenticated users only
+  const session = await getSessionFromCookie();
+  if (!session?.workspaceId) {
+    return NextResponse.json({ ok: false, error: 'Please log in to access market data' }, { status: 401 });
+  }
+
   // Rate limit: 60 req/min per IP to prevent quota exhaustion
   const ip = getClientIP(req);
   const rateCheck = apiLimiter.check(ip);

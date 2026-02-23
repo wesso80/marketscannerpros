@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSessionFromCookie } from '@/lib/auth';
 
 // Cache for 1 hour (earnings data doesn't change frequently)
 let calendarCache: { data: any; timestamp: number } | null = null;
@@ -7,6 +8,12 @@ const CALENDAR_CACHE_DURATION = 60 * 60 * 1000; // 1 hour
 const SYMBOL_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
 export async function GET(req: NextRequest) {
+  // Auth guard: AV license requires authenticated users only
+  const session = await getSessionFromCookie();
+  if (!session?.workspaceId) {
+    return NextResponse.json({ error: 'Please log in to access market data' }, { status: 401 });
+  }
+
   try {
     const { searchParams } = new URL(req.url);
     const symbol = searchParams.get('symbol');

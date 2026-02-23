@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { getCached, setCached, CACHE_KEYS, CACHE_TTL } from '@/lib/redis';
 import { calculateAllIndicators } from '@/lib/indicators';
+import { getSessionFromCookie } from '@/lib/auth';
 
 /**
  * GET /api/bars?symbol=AAPL&timeframe=daily&limit=50
@@ -13,6 +14,12 @@ import { calculateAllIndicators } from '@/lib/indicators';
  * { ok, candles[], ema200[], rsi[], macd[], source }
  */
 export async function GET(req: NextRequest) {
+  // Auth guard: AV license requires authenticated users only
+  const session = await getSessionFromCookie();
+  if (!session?.workspaceId) {
+    return NextResponse.json({ ok: false, error: 'Please log in to access market data' }, { status: 401 });
+  }
+
   const { searchParams } = new URL(req.url);
   const symbol = (searchParams.get('symbol') || '').toUpperCase().trim();
   const timeframe = searchParams.get('timeframe') || 'daily';

@@ -1,6 +1,6 @@
 /**
  * Token Bucket Rate Limiter for API calls
- * Used by workers to stay under provider rate limits (e.g., 300 RPM for Nasdaq, 75 RPM for Alpha Vantage)
+ * Used by workers to stay under provider rate limits (e.g., 300 RPM for Nasdaq, 600 RPM for Alpha Vantage)
  */
 
 export class TokenBucket {
@@ -69,12 +69,12 @@ export class TokenBucket {
 // Pre-configured rate limiters for different providers
 export const rateLimiters = {
   /**
-   * Alpha Vantage: 75 RPM premium plan (current).
-   * When upgraded to 600 RPM, update ALPHA_VANTAGE_RPM env var.
-   * NOTE: The global rate governor in lib/avRateGovernor.ts is the PRIMARY
-   * choke point for API routes. This limiter is used inside the worker only.
+   * Alpha Vantage: 600 RPM commercial license.
+   * ALPHA_VANTAGE_RPM env var controls the global governor in lib/avRateGovernor.ts.
+   * NOTE: The global rate governor is the PRIMARY choke point for API routes.
+   * This limiter is used inside the worker only as a secondary guard.
    */
-  alphaVantage: new TokenBucket(4, 70 / 60), // 70 RPM with small buffer
+  alphaVantage: new TokenBucket(8, 500 / 60), // 500 RPM (100 RPM headroom)
   
   /**
    * Nasdaq BX Options: 300 RPM (when enabled)

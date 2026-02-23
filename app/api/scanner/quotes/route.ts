@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSessionFromCookie } from '@/lib/auth';
 
 // POST /api/scanner/quotes - Get current prices for multiple symbols
 export async function POST(req: NextRequest) {
+  // Auth guard: AV license requires authenticated users only
+  const session = await getSessionFromCookie();
+  if (!session?.workspaceId) {
+    return NextResponse.json({ error: 'Please log in to access market data' }, { status: 401 });
+  }
+
   try {
     const body = await req.json();
     const { symbols } = body;

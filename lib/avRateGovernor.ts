@@ -6,7 +6,7 @@
  * - On-demand fetcher
  * - Background worker (when deployed alongside)
  * 
- * Configured via ALPHA_VANTAGE_RPM env var (default: 600 for premium plan).
+ * Configured via ALPHA_VANTAGE_RPM env var (default: 500; contract allows 600 RPM).
  * 
  * Every AV call in the codebase should go through `avFetch()` or `avTakeToken()`
  * to ensure we never exceed the global quota.
@@ -22,7 +22,7 @@ let governor: TokenBucket | null = null;
 
 function getGovernor(): TokenBucket {
   if (!governor) {
-    const rpm = parseInt(process.env.ALPHA_VANTAGE_RPM || '70', 10);
+    const rpm = parseInt(process.env.ALPHA_VANTAGE_RPM || '500', 10);
     // Burst capacity = min(rpm, 10) → avoids stampede at startup
     const burst = Math.min(rpm, 10);
     governor = new TokenBucket(burst, rpm / 60);

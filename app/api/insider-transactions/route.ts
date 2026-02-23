@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getSessionFromCookie } from '@/lib/auth';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
 export async function GET(request: NextRequest) {
+  // Auth guard: AV license requires authenticated users only
+  const session = await getSessionFromCookie();
+  if (!session?.workspaceId) {
+    return NextResponse.json({ success: false, error: 'Please log in to access market data' }, { status: 401 });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const symbol = searchParams.get("symbol");

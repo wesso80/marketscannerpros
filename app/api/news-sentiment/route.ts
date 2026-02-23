@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSessionFromCookie } from '@/lib/auth';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -140,6 +141,12 @@ Be concise and actionable. Max 300 words.`;
 }
 
 export async function GET(request: NextRequest) {
+  // Auth guard: AV license requires authenticated users only
+  const session = await getSessionFromCookie();
+  if (!session?.workspaceId) {
+    return NextResponse.json({ error: 'Please log in to access market data' }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
   const tickers = searchParams.get('tickers') || 'AAPL,MSFT,GOOGL';
   const limit = searchParams.get('limit') || '50';

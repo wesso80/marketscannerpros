@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOHLC, resolveSymbolToId, COINGECKO_ID_MAP } from "@/lib/coingecko";
+import { getSessionFromCookie } from '@/lib/auth';
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -377,6 +378,12 @@ async function analyzeAsset(
 }
 
 export async function GET(req: NextRequest) {
+  // Auth guard: AV license requires authenticated users only
+  const session = await getSessionFromCookie();
+  if (!session?.workspaceId) {
+    return NextResponse.json({ error: 'Please log in to access market data' }, { status: 401 });
+  }
+
   const { searchParams } = new URL(req.url);
   const assetClass = searchParams.get("assetClass") as "equity" | "crypto" | "commodity" | null;
 

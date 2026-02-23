@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSessionFromCookie } from '@/lib/auth';
 
 // Cache for 5 minutes
 let cache: { data: MarketStatusResponse | null; timestamp: number } = { data: null, timestamp: 0 };
@@ -20,6 +21,12 @@ interface MarketStatusResponse {
 }
 
 export async function GET(req: NextRequest) {
+  // Auth guard: AV license requires authenticated users only
+  const session = await getSessionFromCookie();
+  if (!session?.workspaceId) {
+    return NextResponse.json({ error: 'Please log in to access market data' }, { status: 401 });
+  }
+
   try {
     const now = Date.now();
     

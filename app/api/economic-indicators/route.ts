@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSessionFromCookie } from '@/lib/auth';
 
 // Cache for 1 hour (economic data updates infrequently)
 const cache = new Map<string, { data: any; timestamp: number }>();
@@ -27,6 +28,12 @@ const INDICATORS = {
 };
 
 export async function GET(req: NextRequest) {
+  // Auth guard: AV license requires authenticated users only
+  const session = await getSessionFromCookie();
+  if (!session?.workspaceId) {
+    return NextResponse.json({ error: 'Please log in to access market data' }, { status: 401 });
+  }
+
   try {
     const { searchParams } = new URL(req.url);
     const indicator = searchParams.get('indicator');

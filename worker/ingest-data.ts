@@ -229,13 +229,12 @@ function isDueForFetch(lastFetchedAt: Date | string | null | undefined, interval
   return Date.now() - parsed.getTime() >= intervalSeconds * 1000;
 }
 
-// Rate limiter: Alpha Vantage 75 RPM premium (current plan)
-// Worker reserves ~50 RPM, leaving ~20 RPM headroom for on-demand API route calls
-// When upgraded to 600 RPM, set ALPHA_VANTAGE_RPM=400 in env
+// Rate limiter: Alpha Vantage 600 RPM commercial license
+// Worker uses ALPHA_VANTAGE_RPM env (default 500), leaving 100 RPM for on-demand API routes
 let rateLimiter: TokenBucket | null = null;
 function getRateLimiter(): TokenBucket {
   if (!rateLimiter) {
-    const rpm = parseInt(getEnv('ALPHA_VANTAGE_RPM') || '50', 10);
+    const rpm = parseInt(getEnv('ALPHA_VANTAGE_RPM') || '500', 10);
     const burstPerSecond = parseInt(getEnv('ALPHA_VANTAGE_BURST_PER_SECOND') || '4', 10);
     const burstCapacity = Math.max(1, Math.min(rpm, burstPerSecond));
     rateLimiter = new TokenBucket(burstCapacity, rpm / 60);
@@ -1472,7 +1471,7 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const rpm = parseInt(getEnv('ALPHA_VANTAGE_RPM') || '70', 10);
+  const rpm = parseInt(getEnv('ALPHA_VANTAGE_RPM') || '500', 10);
   const burstPerSecond = parseInt(getEnv('ALPHA_VANTAGE_BURST_PER_SECOND') || '4', 10);
   console.log(`[worker] Rate limit: ${rpm} requests/minute`);
   console.log(`[worker] Burst cap: ${burstPerSecond} requests/second`);

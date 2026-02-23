@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOHLC, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
+import { getSessionFromCookie } from '@/lib/auth';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -46,6 +47,12 @@ interface IntradayResponse {
 }
 
 export async function GET(req: NextRequest) {
+  // Auth guard: AV license requires authenticated users only
+  const session = await getSessionFromCookie();
+  if (!session?.workspaceId) {
+    return NextResponse.json({ error: 'Please log in to access market data' }, { status: 401 });
+  }
+
   const { searchParams } = new URL(req.url);
   const symbol = searchParams.get('symbol')?.toUpperCase();
   const interval = (searchParams.get('interval') || '5min') as IntradayInterval;

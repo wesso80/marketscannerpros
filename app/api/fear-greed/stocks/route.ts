@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSessionFromCookie } from '@/lib/auth';
 
 /**
  * Stock Market Fear & Greed Index
@@ -25,6 +26,12 @@ interface IndicatorScore {
 }
 
 export async function GET(req: NextRequest) {
+  // Auth guard: AV license requires authenticated users only
+  const session = await getSessionFromCookie();
+  if (!session?.workspaceId) {
+    return NextResponse.json({ error: 'Please log in to access market data' }, { status: 401 });
+  }
+
   // Check cache
   if (cache && Date.now() - cache.timestamp < CACHE_DURATION * 1000) {
     return NextResponse.json(cache.data);

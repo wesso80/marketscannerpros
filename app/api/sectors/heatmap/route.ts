@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSessionFromCookie } from '@/lib/auth';
 
 // Sector ETF mappings
 const SECTOR_ETFS = [
@@ -42,6 +43,12 @@ interface SectorData {
 
 // GET /api/sectors/heatmap - Get sector performance data
 export async function GET(req: NextRequest) {
+  // Auth guard: AV license requires authenticated users only
+  const session = await getSessionFromCookie();
+  if (!session?.workspaceId) {
+    return NextResponse.json({ error: 'Please log in to access market data' }, { status: 401 });
+  }
+
   try {
     const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
     
