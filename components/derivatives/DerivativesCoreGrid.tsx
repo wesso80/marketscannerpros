@@ -21,7 +21,7 @@ export default function DerivativesCoreGrid({ data, volRegime, liquidityState }:
               {(data.fundingRates?.coins || []).slice(0, 6).map((fr) => (
                 <div key={fr.symbol} className="flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-2">
                   <div className="text-xs text-white/70">{fr.symbol}</div>
-                  <div className="text-xs font-semibold text-white">{fr.fundingRatePercent.toFixed(4)}%</div>
+                  <div className="text-xs font-semibold text-white">{Number.isFinite(fr.fundingRatePercent) ? fr.fundingRatePercent.toFixed(4) : '0.0000'}%</div>
                 </div>
               ))}
             </div>
@@ -34,7 +34,7 @@ export default function DerivativesCoreGrid({ data, volRegime, liquidityState }:
                 <div key={ls.symbol} className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold text-white">{ls.symbol}</span>
-                    <span className="text-white/60">{ls.longAccount.toFixed(1)} / {ls.shortAccount.toFixed(1)}</span>
+                    <span className="text-white/60">{(ls.longAccount ?? 0).toFixed(1)} / {(ls.shortAccount ?? 0).toFixed(1)}</span>
                   </div>
                   <div className="mt-2 h-2 w-full rounded bg-black/30 overflow-hidden">
                     <div className="h-2 rounded bg-emerald-500/60" style={{ width: `${ls.longAccount}%` }} />
@@ -50,7 +50,7 @@ export default function DerivativesCoreGrid({ data, volRegime, liquidityState }:
               {(data.openInterest?.coins || []).slice(0, 6).map((coin) => (
                 <div key={coin.symbol} className="flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-2">
                   <div className="text-xs text-white/70">{coin.symbol}</div>
-                  <div className="text-xs font-semibold text-white">{coin.change24h >= 0 ? '+' : ''}{coin.change24h.toFixed(2)}%</div>
+                  <div className="text-xs font-semibold text-white">{(coin.change24h ?? 0) >= 0 ? '+' : ''}{(coin.change24h ?? 0).toFixed(2)}%</div>
                 </div>
               ))}
             </div>
@@ -82,7 +82,7 @@ export default function DerivativesCoreGrid({ data, volRegime, liquidityState }:
                 <div key={coin.symbol} className="rounded-lg border border-white/10 bg-black/20 px-3 py-2">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold text-white">{coin.symbol}</span>
-                    <span className="text-white/60">L ${(coin.longValue / 1e6).toFixed(1)}M • S ${(coin.shortValue / 1e6).toFixed(1)}M</span>
+                    <span className="text-white/60">L ${((coin.longValue || 0) / 1e6).toFixed(1)}M • S ${((coin.shortValue || 0) / 1e6).toFixed(1)}M</span>
                   </div>
                 </div>
               ))}

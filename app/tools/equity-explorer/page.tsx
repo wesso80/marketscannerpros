@@ -395,7 +395,7 @@ export default function EquityExplorerPage() {
       ]);
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Failed to fetch data');
       }
 
@@ -577,10 +577,10 @@ export default function EquityExplorerPage() {
               {[
                 ['Asset', `${data.company.symbol} • ${data.company.exchange}`],
                 ['Price', formatPrice(data.quote.price)],
-                ['24h', `${data.quote.changePercent >= 0 ? '+' : ''}${data.quote.changePercent.toFixed(2)}%`],
+                ['24h', `${(data.quote.changePercent ?? 0) >= 0 ? '+' : ''}${(data.quote.changePercent ?? 0).toFixed(2)}%`],
                 ['Permission', upeSignal ? (upeSignal.eligibilityUser === 'eligible' ? 'Eligible' : upeSignal.eligibilityUser === 'conditional' ? 'Conditional' : 'Blocked') : 'Pending'],
-                ['CRCS', upeSignal ? upeSignal.crcsUser.toFixed(1) : '—'],
-                ['ΔHr', upeSignal ? `${upeSignal.microAdjustment >= 0 ? '+' : ''}${upeSignal.microAdjustment.toFixed(2)}` : '—'],
+                ['CRCS', upeSignal && Number.isFinite(upeSignal.crcsUser) ? upeSignal.crcsUser.toFixed(1) : '—'],
+                ['ΔHr', upeSignal && Number.isFinite(upeSignal.microAdjustment) ? `${upeSignal.microAdjustment >= 0 ? '+' : ''}${upeSignal.microAdjustment.toFixed(2)}` : '—'],
                 ['Trend', getQuickSignals(data).trend.label],
                 ['Momentum', getQuickSignals(data).momentum.label],
                 ['Volatility', getQuickSignals(data).volatility.label],
@@ -625,8 +625,8 @@ export default function EquityExplorerPage() {
                 <div className="text-right">
                   <p className="text-2xl font-bold">{formatPrice(data.quote.price)}</p>
                   <div className="mt-1 flex items-center justify-end gap-2">
-                    <span className={`text-xs ${data.quote.change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {data.quote.change >= 0 ? '+' : ''}{data.quote.change.toFixed(2)}
+                    <span className={`text-xs ${(data.quote.change ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {(data.quote.change ?? 0) >= 0 ? '+' : ''}{(data.quote.change ?? 0).toFixed(2)}
                     </span>
                     <PercentBadge value={data.quote.changePercent} />
                   </div>
@@ -734,7 +734,7 @@ export default function EquityExplorerPage() {
                   </div>
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                     <p className="text-[10px] uppercase text-slate-500">Relative Strength</p>
-                    <p className="text-xs text-slate-200">vs SPY: <span className={`font-semibold ${data.quote.changePercent >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>{data.quote.changePercent >= 0 ? '+' : ''}{data.quote.changePercent.toFixed(2)}%</span> • vs Sector: <span className="font-semibold text-slate-300">proxy</span></p>
+                    <p className="text-xs text-slate-200">vs SPY: <span className={`font-semibold ${(data.quote.changePercent ?? 0) >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>{(data.quote.changePercent ?? 0) >= 0 ? '+' : ''}{(data.quote.changePercent ?? 0).toFixed(2)}%</span> • vs Sector: <span className="font-semibold text-slate-300">proxy</span></p>
                   </div>
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                     <p className="text-[10px] uppercase text-slate-500">Volatility + Liquidity</p>
@@ -845,7 +845,7 @@ export default function EquityExplorerPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-400">EPS (TTM)</p>
-                    <p className="font-semibold">${data.fundamentals.eps.toFixed(2)}</p>
+                    <p className="font-semibold">${Number.isFinite(data.fundamentals.eps) ? data.fundamentals.eps.toFixed(2) : 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">Revenue</p>
@@ -905,7 +905,7 @@ export default function EquityExplorerPage() {
                     </div>
                     <div>
                       <p className="text-sm text-gray-400">Beta</p>
-                      <p className="font-semibold">{data.technicals.beta.toFixed(2)}</p>
+                      <p className="font-semibold">{Number.isFinite(data.technicals.beta) ? data.technicals.beta.toFixed(2) : 'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-400">Day Range</p>
@@ -966,11 +966,11 @@ export default function EquityExplorerPage() {
                         <tr key={i} className="border-b border-slate-700/50">
                           <td className="py-2">{e.fiscalDate}</td>
                           <td className="text-right text-gray-400">{e.reportedDate}</td>
-                          <td className="text-right">${e.estimatedEPS.toFixed(2)}</td>
-                          <td className="text-right">${e.reportedEPS.toFixed(2)}</td>
+                          <td className="text-right">${Number.isFinite(e.estimatedEPS) ? e.estimatedEPS.toFixed(2) : 'N/A'}</td>
+                          <td className="text-right">${Number.isFinite(e.reportedEPS) ? e.reportedEPS.toFixed(2) : 'N/A'}</td>
                           <td className="text-right">
-                            <span className={e.surprisePercent >= 0 ? 'text-green-400' : 'text-red-400'}>
-                              {e.surprisePercent >= 0 ? '+' : ''}{e.surprisePercent.toFixed(1)}%
+                            <span className={(e.surprisePercent ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}>
+                              {(e.surprisePercent ?? 0) >= 0 ? '+' : ''}{Number.isFinite(e.surprisePercent) ? e.surprisePercent.toFixed(1) : '0.0'}%
                             </span>
                           </td>
                         </tr>

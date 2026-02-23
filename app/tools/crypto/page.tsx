@@ -434,9 +434,9 @@ function CryptoCommandCenterContent() {
       <main className="mx-auto w-full max-w-none space-y-2 px-2 pb-6 pt-3 md:px-3">
         <section className="sticky top-2 z-20 flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/95 p-1.5 backdrop-blur">
           {[
-            ['Regime', 'Crypto Risk-On'],
-            ['Risk', 'Moderate'],
-            ['Dominance', getDominanceValue(marketData?.market?.dominance, 'BTC') ? `${getDominanceValue(marketData?.market?.dominance, 'BTC').toFixed(1)}% BTC` : 'N/A'],
+            ['Regime', morningDecision.riskState === 'Risk-On' ? 'Crypto Risk-On' : morningDecision.riskState === 'Risk-Off' ? 'Crypto Risk-Off' : 'Crypto Neutral'],
+            ['Risk', morningDecision.riskState === 'Risk-On' ? 'Low' : morningDecision.riskState === 'Risk-Off' ? 'Elevated' : 'Moderate'],
+            ['Dominance', (() => { const v = getDominanceValue(marketData?.market?.dominance, 'BTC'); return v ? `${v.toFixed(1)}% BTC` : 'N/A'; })()],
             ['Mkt Cap', marketData?.market?.totalMarketCapFormatted || 'N/A'],
             [
               '24h',
@@ -444,14 +444,14 @@ function CryptoCommandCenterContent() {
                 ? `${marketData.market.marketCapChange24h >= 0 ? '+' : ''}${marketData.market.marketCapChange24h.toFixed(2)}%`
                 : 'N/A',
             ],
-            ['Data', 'CoinGecko Live'],
+            ['Data', marketData ? 'CoinGecko Live' : 'Loading…'],
             ['Last Refresh', lastUpdate ? lastUpdate.toLocaleTimeString() : '—'],
           ].map(([k, v]) => (
             <div key={k} className="rounded-full border border-slate-700 px-2 py-0.5 text-[10px] text-slate-300">
               <span className="font-semibold text-slate-100">{k}</span> · {v}
             </div>
           ))}
-          <span className="ml-auto rounded-full border border-emerald-500/50 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">LIVE</span>
+          {marketData && <span className="ml-auto rounded-full border border-emerald-500/50 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">LIVE</span>}
         </section>
 
         <section className="rounded-lg border border-slate-700 bg-slate-900 p-2">

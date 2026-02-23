@@ -285,9 +285,10 @@ export function useTickerData(symbol: string | null, assetClass: AssetClass): Ti
         const ivAnalysis = d.ivAnalysis;
         const oiAnalysis = d.openInterestAnalysis;
         const dealerGamma = d.dealerGamma;
+        const ivRaw = Number(ivAnalysis?.currentIV ?? ivAnalysis?.avgImpliedVol ?? 0);
         options = {
           symbol: sym,
-          iv: Number(ivAnalysis?.currentIV ?? ivAnalysis?.avgImpliedVol ?? 0) * (ivAnalysis?.currentIV > 1 ? 1 : 100),
+          iv: ivRaw * (ivRaw > 1 ? 1 : 100),
           ivRank: Number(ivAnalysis?.ivRank ?? ivAnalysis?.ivRankHeuristic ?? 0),
           expectedMove: Number(d.expectedMove?.selectedExpiryPercent ?? 0),
           putCallRatio: Number(oiAnalysis?.pcRatio ?? 0),

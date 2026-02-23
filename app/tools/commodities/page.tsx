@@ -184,13 +184,17 @@ export default function CommoditiesPage() {
         fetch('/api/commodities'),
         fetch('/api/economic-indicators?all=true'),
       ]);
+      if (!commoditiesRes.ok) {
+        const errJson = await commoditiesRes.json().catch(() => ({}));
+        throw new Error(errJson.error || 'Failed to fetch commodities');
+      }
       const json = await commoditiesRes.json();
       let indicatorsJson: EconomicIndicatorsResponse | null = null;
       if (indicatorsRes.ok) {
         indicatorsJson = await indicatorsRes.json();
       }
       
-      if (!commoditiesRes.ok || !json.success) {
+      if (!json.success) {
         throw new Error(json.error || 'Failed to fetch commodities');
       }
       
@@ -213,7 +217,10 @@ export default function CommoditiesPage() {
     return num === null ? fallback : num.toFixed(digits);
   };
 
-  const signed = (value: number, digits = 2) => `${value >= 0 ? '+' : ''}${value.toFixed(digits)}%`;
+  const signed = (value: number, digits = 2) => {
+    if (!Number.isFinite(value)) return 'N/A';
+    return `${value >= 0 ? '+' : ''}${value.toFixed(digits)}%`;
+  };
 
   const derivedState: DerivedState | null = (() => {
     if (!data?.commodities?.length) return null;
@@ -403,8 +410,8 @@ export default function CommoditiesPage() {
       const topLoserPct = safeFixed(data.summary?.topLoser?.changePercent, 2);
       const summaryText = data.summary ? 
         `Commodities: ${data.summary.gainers} gainers, ${data.summary.losers} losers. ` +
-        `Top Gainer: ${topGainerName} (+${topGainerPct}%). ` +
-        `Top Loser: ${topLoserName} (${topLoserPct}%). ` +
+        `Top Gainer: ${topGainerName} (${topGainerPct === 'N/A' ? 'N/A' : `+${topGainerPct}%`}). ` +
+        `Top Loser: ${topLoserName} (${topLoserPct === 'N/A' ? 'N/A' : `${topLoserPct}%`}). ` +
         `Impulse: ${derivedState?.impulseType || 'MIXED'} | Permission: ${derivedState?.permission || 'CONDITIONAL'}` : 
         'Loading commodity data...';
       
@@ -817,10 +824,10 @@ export default function CommoditiesPage() {
             </section>
 
             <section className="mt-4 flex flex-wrap justify-end gap-2">
-              <button className="rounded-md border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/75">Create Alert</button>
-              <button className="rounded-md border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/75">Add to Watchlist</button>
-              <button className="rounded-md border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/75">Run Confluence Scan</button>
-              <button className="rounded-md border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/75">Open Journal Draft</button>
+              <button disabled className="cursor-not-allowed rounded-md border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/45" title="Coming soon">Create Alert</button>
+              <button disabled className="cursor-not-allowed rounded-md border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/45" title="Coming soon">Add to Watchlist</button>
+              <button disabled className="cursor-not-allowed rounded-md border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/45" title="Coming soon">Run Confluence Scan</button>
+              <button disabled className="cursor-not-allowed rounded-md border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/45" title="Coming soon">Open Journal Draft</button>
             </section>
           </>
         )}

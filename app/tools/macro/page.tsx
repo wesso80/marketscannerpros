@@ -76,6 +76,7 @@ function trendDirection(history?: { date: string; value: number }[]) {
   if (!history || history.length < 2) return 'flat';
   const recent = history[0]?.value;
   const prior = history[Math.min(4, history.length - 1)]?.value;
+  if (typeof recent !== 'number' || typeof prior !== 'number') return 'flat';
   if (recent > prior) return 'up';
   if (recent < prior) return 'down';
   return 'flat';
@@ -433,13 +434,13 @@ export default function MacroDashboardPage() {
             </section>
 
             <section className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
-              <div className="text-sm font-semibold text-white">Scheduled Events (US ET)</div>
-              <div className="mt-1 text-xs text-white/50">Next 24h / 7d macro catalysts</div>
+              <div className="text-sm font-semibold text-white">Macro Event Awareness</div>
+              <div className="mt-1 text-xs text-white/50">Key recurring catalysts to monitor</div>
               <div className="mt-3 grid gap-2">
                 {[
-                  { label: 'Fed Governor Speech', time: 'Tomorrow 10:00 ET', impact: 'High' },
-                  { label: 'Initial Jobless Claims', time: 'Thursday 08:30 ET', impact: 'High' },
-                  { label: 'PCE Inflation Release', time: 'Friday 08:30 ET', impact: 'High' },
+                  { label: 'FOMC Rate Decision / Minutes', time: 'See Fed calendar', impact: 'High' },
+                  { label: 'Initial Jobless Claims', time: 'Thursdays 08:30 ET', impact: 'High' },
+                  { label: 'PCE / CPI Inflation Release', time: 'Monthly schedule', impact: 'High' },
                 ].map((event) => (
                   <div key={event.label} className="flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-2">
                     <div>
@@ -450,6 +451,7 @@ export default function MacroDashboardPage() {
                   </div>
                 ))}
               </div>
+              <p className="mt-2 text-[10px] text-white/40 text-center">Check an economic calendar for exact dates and times.</p>
             </section>
 
             <details className="rounded-xl border border-white/10 bg-white/5" open={false}>

@@ -119,7 +119,7 @@ const POPULAR_COINS = [
 ];
 
 function formatNumber(num: number | undefined, decimals = 2): string {
-  if (num === undefined || num === null) return 'N/A';
+  if (num === undefined || num === null || isNaN(num)) return 'N/A';
   if (num >= 1e12) return `$${(num / 1e12).toFixed(decimals)}T`;
   if (num >= 1e9) return `$${(num / 1e9).toFixed(decimals)}B`;
   if (num >= 1e6) return `$${(num / 1e6).toFixed(decimals)}M`;
@@ -128,7 +128,7 @@ function formatNumber(num: number | undefined, decimals = 2): string {
 }
 
 function formatPrice(price: number | undefined): string {
-  if (price === undefined || price === null) return 'N/A';
+  if (price === undefined || price === null || isNaN(price)) return 'N/A';
   if (price < 0.00001) return `$${price.toFixed(10)}`;
   if (price < 0.01) return `$${price.toFixed(6)}`;
   if (price < 1) return `$${price.toFixed(4)}`;
@@ -137,7 +137,7 @@ function formatPrice(price: number | undefined): string {
 }
 
 function PercentBadge({ value }: { value: number | undefined }) {
-  if (value === undefined || value === null) return <span className="text-slate-500">N/A</span>;
+  if (value === undefined || value === null || isNaN(value)) return <span className="text-slate-500">N/A</span>;
   const isPositive = value >= 0;
   return (
     <span className={`rounded px-2 py-0.5 text-xs font-semibold ${isPositive ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
@@ -318,6 +318,7 @@ function CryptoDetailPageContent() {
     setIsSearching(true);
     try {
       const res = await fetch(`/api/crypto/detail?action=search&q=${encodeURIComponent(query)}`);
+      if (!res.ok) { setSearchResults([]); return; }
       const data = await res.json();
       setSearchResults(data.coins || []);
       setShowDropdown(true);
@@ -397,6 +398,8 @@ function CryptoDetailPageContent() {
     }
   }, [initialCoinId, loadCoinBySymbolOrId, tier]);
 
+  const decision = useMemo(() => computeDecisionState(coinData, btc7dChange), [coinData, btc7dChange]);
+
   if (!tier || tier === 'free') {
     return (
       <div className="min-h-screen bg-[var(--msp-bg)]">
@@ -406,8 +409,6 @@ function CryptoDetailPageContent() {
       </div>
     );
   }
-
-  const decision = useMemo(() => computeDecisionState(coinData, btc7dChange), [coinData, btc7dChange]);
   const permissionLabel = upeSignal
     ? upeSignal.eligibilityUser === 'eligible'
       ? 'Eligible'
@@ -516,8 +517,8 @@ function CryptoDetailPageContent() {
                 ['Micro', upeMicroState || 'neutral'],
                 ['Risk', decision.riskTag],
                 ['Permission', permissionLabel],
-                ['CRCS', upeSignal ? upeSignal.crcsUser.toFixed(1) : '—'],
-                ['ΔHr', upeSignal ? `${upeSignal.microAdjustment >= 0 ? '+' : ''}${upeSignal.microAdjustment.toFixed(2)}` : '—'],
+                ['CRCS', upeSignal && Number.isFinite(upeSignal.crcsUser) ? upeSignal.crcsUser.toFixed(1) : '—'],
+                ['ΔHr', upeSignal && Number.isFinite(upeSignal.microAdjustment) ? `${upeSignal.microAdjustment >= 0 ? '+' : ''}${upeSignal.microAdjustment.toFixed(2)}` : '—'],
               ].map(([k, v]) => (
                 <div key={k} className="rounded-full border border-slate-700 px-1.5 py-0.5 text-[9px] leading-tight text-slate-300 md:px-2 md:text-[10px]">
                   <span className="font-semibold text-slate-100">{k}</span> · {v}

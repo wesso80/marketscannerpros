@@ -178,7 +178,7 @@ export default function CryptoDashboard() {
     else if (bearishScore > bullishScore) bias = 'LEAN BEARISH';
     else bias = 'NEUTRAL';
 
-    return { bias, confidence: confidence || 50, signals, bullishScore, bearishScore };
+    return { bias, confidence: confidence ?? 50, signals, bullishScore, bearishScore };
   };
 
   const marketBias = getMarketBias();

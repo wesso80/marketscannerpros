@@ -60,7 +60,7 @@ export default function DecisionLens({ ctx }: DecisionLensProps) {
       confidence = Math.min(99, Math.abs(scan.score));
     }
     if (flow?.conviction) {
-      confidence = Math.round((confidence + flow.conviction * 100) / 2);
+      confidence = Math.round((confidence + flow.conviction) / 2);
     }
     // If no scanner at all but we have quote data, show minimal confidence rather than 0
     if (confidence === 0 && quote) {

@@ -570,7 +570,7 @@ function VolumeChart({ data, width = 800, height = 80 }: { data: IntradayBar[]; 
   const chartWidth = width - padding.left - padding.right;
   const chartHeight = height - padding.top - padding.bottom;
   
-  const maxVolume = Math.max(...data.map(d => d.volume));
+  const maxVolume = Math.max(1, ...data.map(d => d.volume));
   const barWidth = Math.max(1, Math.min(12, (chartWidth / data.length) * 0.8));
   const barGap = Math.max(1, (chartWidth / data.length) * 0.2);
 
@@ -634,8 +634,9 @@ export default function IntradayChartsPage() {
       const response = await fetch(
         `/api/options/gex?symbol=${encodeURIComponent(sym)}&scanMode=${encodeURIComponent(scanModeMap[int])}`
       );
+      if (!response.ok) { setDealerOverlay(null); return; }
       const payload = await response.json();
-      if (!response.ok || !payload?.success) {
+      if (!payload?.success) {
         setDealerOverlay(null);
         return;
       }
@@ -665,11 +666,12 @@ export default function IntradayChartsPage() {
       const response = await fetch(
         `/api/intraday?symbol=${encodeURIComponent(sym)}&interval=${int}&outputsize=compact&extended_hours=true`
       );
-      const result = await response.json();
 
       if (!response.ok) {
+        const result = await response.json().catch(() => ({}));
         throw new Error(result.error || 'Failed to fetch data');
       }
+      const result = await response.json();
 
       setData(result);
       setSymbol(sym);
@@ -718,17 +720,17 @@ export default function IntradayChartsPage() {
   };
 
   // Calculate stats
-  const stats = data?.data ? (() => {
+  const stats = data?.data?.length ? (() => {
     const bars = data.data;
     const first = bars[0];
     const last = bars[bars.length - 1];
     const change = last.close - first.open;
-    const changePercent = (change / first.open) * 100;
+    const changePercent = first.open !== 0 ? (change / first.open) * 100 : 0;
     const high = Math.max(...bars.map(b => b.high));
     const low = Math.min(...bars.map(b => b.low));
     const totalVolume = bars.reduce((sum, b) => sum + b.volume, 0);
-    const avgVolume = totalVolume / bars.length;
-    const vwap = bars.reduce((sum, b) => sum + ((b.high + b.low + b.close) / 3) * b.volume, 0) / totalVolume;
+    const avgVolume = bars.length > 0 ? totalVolume / bars.length : 0;
+    const vwap = totalVolume > 0 ? bars.reduce((sum, b) => sum + ((b.high + b.low + b.close) / 3) * b.volume, 0) / totalVolume : last.close;
 
     return { first, last, change, changePercent, high, low, totalVolume, avgVolume, vwap };
   })() : null;

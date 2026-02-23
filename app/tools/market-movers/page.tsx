@@ -144,26 +144,26 @@ export default function MarketMoversPage() {
               topGainers:
                 result.topGainers?.map((g: any) => ({
                   ticker: g.ticker,
-                  price: parseFloat(g.price),
-                  change: parseFloat(g.change_amount),
-                  changePercent: parseFloat(g.change_percentage?.replace('%', '') || '0'),
-                  volume: parseInt(g.volume),
+                  price: parseFloat(g.price) || 0,
+                  change: parseFloat(g.change_amount) || 0,
+                  changePercent: parseFloat(g.change_percentage?.replace('%', '') || '0') || 0,
+                  volume: parseInt(g.volume, 10) || 0,
                 })) || [],
               topLosers:
                 result.topLosers?.map((l: any) => ({
                   ticker: l.ticker,
-                  price: parseFloat(l.price),
-                  change: parseFloat(l.change_amount),
-                  changePercent: parseFloat(l.change_percentage?.replace('%', '') || '0'),
-                  volume: parseInt(l.volume),
+                  price: parseFloat(l.price) || 0,
+                  change: parseFloat(l.change_amount) || 0,
+                  changePercent: parseFloat(l.change_percentage?.replace('%', '') || '0') || 0,
+                  volume: parseInt(l.volume, 10) || 0,
                 })) || [],
               mostActive:
                 result.mostActive?.map((a: any) => ({
                   ticker: a.ticker,
-                  price: parseFloat(a.price),
-                  change: parseFloat(a.change_amount),
-                  changePercent: parseFloat(a.change_percentage?.replace('%', '') || '0'),
-                  volume: parseInt(a.volume),
+                  price: parseFloat(a.price) || 0,
+                  change: parseFloat(a.change_amount) || 0,
+                  changePercent: parseFloat(a.change_percentage?.replace('%', '') || '0') || 0,
+                  volume: parseInt(a.volume, 10) || 0,
                 })) || [],
             }
           : result;
@@ -495,6 +495,7 @@ export default function MarketMoversPage() {
   }, [data, loading, evaluatedRows, environment]);
 
   const formatVolume = (vol: number) => {
+    if (!Number.isFinite(vol)) return 'N/A';
     if (vol >= 1e9) return `${(vol / 1e9).toFixed(1)}B`;
     if (vol >= 1e6) return `${(vol / 1e6).toFixed(1)}M`;
     if (vol >= 1e3) return `${(vol / 1e3).toFixed(1)}K`;
@@ -654,12 +655,12 @@ export default function MarketMoversPage() {
                             {mover.ticker}
                             <div className="text-[9px] text-slate-500">{toTitleCluster(mover.cluster)}</div>
                           </td>
-                          <td className={`px-2 py-1.5 text-right font-semibold ${mover.changePercent >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
-                            {mover.changePercent >= 0 ? '+' : ''}{mover.changePercent?.toFixed(2) || '0'}%
+                          <td className={`px-2 py-1.5 text-right font-semibold ${(mover.changePercent || 0) >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
+                            {(mover.changePercent || 0) >= 0 ? '+' : ''}{(mover.changePercent || 0).toFixed(2)}%
                           </td>
-                          <td className="px-2 py-1.5 text-right text-slate-200">{mover.relVolume.toFixed(2)}x</td>
+                          <td className="px-2 py-1.5 text-right text-slate-200">{(mover.relVolume || 0).toFixed(2)}x</td>
                           <td className="px-2 py-1.5 text-slate-300">{mover.structureBias}</td>
-                          <td className="px-2 py-1.5 text-right text-cyan-300">{mover.crcsUser !== undefined ? mover.crcsUser.toFixed(1) : '—'}</td>
+                          <td className="px-2 py-1.5 text-right text-cyan-300">{mover.crcsUser !== undefined && Number.isFinite(mover.crcsUser) ? mover.crcsUser.toFixed(1) : '—'}</td>
                           <td className={`px-2 py-1.5 text-right ${
                             mover.microAdjustment === undefined
                               ? 'text-slate-500'

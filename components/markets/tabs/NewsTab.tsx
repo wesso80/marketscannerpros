@@ -47,7 +47,7 @@ export default function NewsTab({ ctx }: { ctx: TickerContext }) {
                   <div className="flex-1 min-w-0">
                     <p className="text-[11px] font-medium text-[var(--msp-text)] truncate">{item.title}</p>
                     <p className="text-[10px] text-[var(--msp-text-faint)]">
-                      {item.source} · {new Date(item.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      {item.source} · {item.publishedAt && !isNaN(new Date(item.publishedAt).getTime()) ? new Date(item.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recent'}
                     </p>
                   </div>
                 </a>
