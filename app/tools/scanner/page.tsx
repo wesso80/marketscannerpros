@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
+// Link import removed (unused)
 import CapitalFlowCard from "@/components/CapitalFlowCard";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
 import ToolIdentityHeader from "@/components/tools/ToolIdentityHeader";
@@ -185,6 +185,22 @@ const QUICK_PICKS: Record<AssetType, string[]> = {
   forex: ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "NZDUSD"],
 };
 
+/* Sector mapping for equity tickers – used by the Sector Filter dropdown in V2 Discover.
+   Tickers not in this map are excluded when a specific sector is selected. */
+const TICKER_SECTOR: Record<string, 'tech' | 'finance' | 'energy'> = {
+  // Mega-cap tech + semiconductors + growth tech
+  AAPL: 'tech', MSFT: 'tech', GOOGL: 'tech', AMZN: 'tech', NVDA: 'tech', META: 'tech',
+  TSLA: 'tech', AVGO: 'tech', ORCL: 'tech', CRM: 'tech', AMD: 'tech', INTC: 'tech',
+  QCOM: 'tech', MU: 'tech', AMAT: 'tech', NFLX: 'tech', UBER: 'tech', ABNB: 'tech',
+  SQ: 'tech', SHOP: 'tech', SNOW: 'tech', PLTR: 'tech', CRWD: 'tech',
+  ADBE: 'tech', NOW: 'tech', INTU: 'tech', PYPL: 'tech', DIS: 'tech',
+  // Finance
+  JPM: 'finance', V: 'finance', MA: 'finance', BAC: 'finance', WFC: 'finance',
+  GS: 'finance', MS: 'finance', BLK: 'finance',
+  // Energy
+  XOM: 'energy', CVX: 'energy', COP: 'energy', SLB: 'energy',
+};
+
 const TRUSTED_CRYPTO_LIST = [
   "BTC", "ETH", "BNB", "SOL", "XRP", "ADA", "DOGE", "AVAX", "DOT", "LINK",
   "TRX", "LTC", "BCH", "ATOM", "MATIC", "NEAR", "HBAR", "ARB", "OP", "INJ",
@@ -239,6 +255,8 @@ function ScannerContent() {
   const [advancedIntelligenceOpen, setAdvancedIntelligenceOpen] = useState(false);
   const [advancedDiscoverOpen, setAdvancedDiscoverOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
+  const [decisionTimerStart, setDecisionTimerStart] = useState<number | null>(null);
+  const [decisionElapsed, setDecisionElapsed] = useState(0);
   const [scannerCollapsed, setScannerCollapsed] = useState(false);
   const [orientationCollapsed, setOrientationCollapsed] = useState(true);
   const [operatorTransition, setOperatorTransition] = useState<OperatorTransitionSummary | null>(null);
@@ -367,6 +385,23 @@ function ScannerContent() {
     }, 30000);
     return () => clearInterval(timer);
   }, [result?.symbol]);
+
+  // Decision timer — starts when result is set (Step 3), resets when cleared
+  useEffect(() => {
+    if (result) {
+      setDecisionTimerStart(Date.now());
+      setDecisionElapsed(0);
+    } else {
+      setDecisionTimerStart(null);
+      setDecisionElapsed(0);
+    }
+  }, [result?.symbol]);
+
+  useEffect(() => {
+    if (!decisionTimerStart) return;
+    const iv = setInterval(() => setDecisionElapsed(Math.floor((Date.now() - decisionTimerStart) / 1000)), 1000);
+    return () => clearInterval(iv);
+  }, [decisionTimerStart]);
 
   useEffect(() => {
     if (!result) return;
@@ -995,6 +1030,12 @@ function ScannerContent() {
       if (rankQuality !== 'all' && pick._quality !== rankQuality) return false;
       if (pick._tfAlignment < rankTfAlignment) return false;
       if (rankVolatility !== 'all' && pick._volatility !== rankVolatility) return false;
+      // Sector filter (equity only – crypto/forex pass through)
+      if (sectorFilter !== 'all') {
+        const sym = (pick.symbol ?? '').toUpperCase();
+        const sector = TICKER_SECTOR[sym];
+        if (!sector || sector !== sectorFilter) return false;
+      }
       return true;
     });
 
@@ -1006,7 +1047,7 @@ function ScannerContent() {
     });
 
     return filtered.slice(0, 9);
-  }, [bulkScanResults, rankDirection, rankMinConfidence, rankQuality, rankTfAlignment, rankVolatility, rankSort]);
+  }, [bulkScanResults, rankDirection, rankMinConfidence, rankQuality, rankTfAlignment, rankVolatility, rankSort, sectorFilter]);
 
   const mapPickToStrategyTag = (pick: any): StrategyTag => {
     const setup = String(pick?.setup || pick?.setupClass || pick?.pattern || '').toLowerCase();
@@ -1753,7 +1794,7 @@ function ScannerContent() {
         {!useScannerFlowV2 && result?.institutionalFilter && (
           <div className={`msp-panel mb-4 border px-3.5 py-3 ${result.institutionalFilter.noTrade ? 'border-[color:var(--msp-bear)]' : 'border-[var(--msp-border-strong)]'}`}>
             <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
-              <div className="text-[0.72rem] font-extrabold uppercase text-[var(--msp-text-faint)]">Institutional Filter Engine</div>
+              <div className="text-[0.72rem] font-extrabold uppercase text-[var(--msp-text-faint)]">Setup Quality Check</div>
               <div className={`text-[0.76rem] font-extrabold ${result.institutionalFilter.noTrade ? 'text-[var(--msp-bear)]' : 'text-[var(--msp-bull)]'}`}>
                 {result.institutionalFilter.finalGrade} • {result.institutionalFilter.finalScore.toFixed(0)} • {result.institutionalFilter.recommendation.replace('_', ' ')}
               </div>
@@ -2199,7 +2240,7 @@ function ScannerContent() {
                           fontWeight: "600",
                           marginTop: "4px"
                         }}>
-                          {pick.direction === 'bullish' ? '🟢' : pick.direction === 'bearish' ? '🔴' : '⚪'} {pick.direction?.toUpperCase()}
+                          {pick.direction === 'bullish' ? '🟢' : pick.direction === 'bearish' ? '🔴' : '⚪'} {(pick.direction || 'neutral').toUpperCase()}
                         </div>
                       </div>
                       
@@ -2214,7 +2255,7 @@ function ScannerContent() {
                         }}>
                           {pick.score}
                         </div>
-                        {pick.change24h !== undefined && (
+                        {pick.change24h != null && Number.isFinite(pick.change24h) && (
                           <div style={{
                             color: pick.change24h >= 0 ? "var(--msp-bull)" : "var(--msp-bear)",
                             fontSize: "12px",
@@ -2973,11 +3014,14 @@ function ScannerContent() {
                     </div>
 
                     <div className="md:col-span-3">
-                      <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Confidence & Quality</div>
-                      <div className="mt-1 text-[1.25rem] font-black text-[var(--msp-text)] md:text-[1.45rem]">{confidence}%</div>
-                      <div className={`text-[0.76rem] font-extrabold uppercase ${quality === 'HIGH' ? 'text-[var(--msp-bull)]' : quality === 'MEDIUM' ? 'text-[var(--msp-warn)]' : 'text-[var(--msp-bear)]'}`}>
-                        Quality: {quality}
-                      </div>
+                      <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Setup Quality</div>
+                      <div className="mt-1 text-[1.25rem] font-black text-[var(--msp-text)] md:text-[1.45rem]">{confidence >= 75 ? 'A' : confidence >= 60 ? 'B' : confidence >= 45 ? 'C' : 'D'} Setup</div>
+                      <div className="text-[0.72rem] font-semibold text-[var(--msp-text-muted)]">{confidence}% · {quality}</div>
+                      {decisionElapsed > 0 && (
+                        <div className={`mt-1.5 text-[0.68rem] font-bold tabular-nums ${decisionElapsed >= 120 ? 'text-[var(--msp-bear)]' : decisionElapsed >= 60 ? 'text-[var(--msp-warn)]' : 'text-[var(--msp-text-muted)]'}`}>
+                          ⏱ {Math.floor(decisionElapsed / 60)}:{String(decisionElapsed % 60).padStart(2, '0')} decision time
+                        </div>
+                      )}
                       <div className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--msp-panel-2)]">
                         <div style={{ width: `${confidence}%`, background: confidenceBarColor, height: '100%' }} />
                       </div>
@@ -2985,9 +3029,9 @@ function ScannerContent() {
 
                     <div className="md:col-span-3">
                       <div className="rounded-lg border p-3" style={{ borderColor: statusBorder, background: 'var(--msp-panel-2)' }}>
-                        <div className="text-[0.66rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Execution Permission</div>
+                        <div className="text-[0.66rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Trade Readiness</div>
                         <div className="mt-1 text-[0.88rem] font-black uppercase" style={{ color: statusColor }}>
-                          Execution Status: {executionStatus}
+                          {executionStatus}
                         </div>
                         <div className="mt-2 grid gap-1 text-[0.72rem] text-[var(--msp-text-muted)]">
                           {blockReasons.map((reason) => (
@@ -3072,14 +3116,60 @@ function ScannerContent() {
                         <div className="flex flex-wrap gap-2">
                           {executionAllowed ? (
                             <>
-                              <button className="rounded-md border border-[var(--msp-bull)] bg-[var(--msp-bull-tint)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-bull)]">Enter Trade</button>
-                              <button className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-muted)]">Set Alert</button>
-                              <button className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-muted)]">Add to Watchlist</button>
+                              <button
+                                onClick={() => {
+                                  if (result) {
+                                    deployRankCandidate({
+                                      symbol: result.symbol,
+                                      indicators: { price: result.price, atr: result.atr },
+                                      direction: result.direction || direction,
+                                      score: result.score,
+                                    });
+                                  }
+                                }}
+                                className="rounded-md border border-[var(--msp-bull)] bg-[var(--msp-bull-tint)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-bull)]"
+                              >Log Trade Plan</button>
+                              <button
+                                onClick={() => {
+                                  if (result) {
+                                    window.location.href = `/tools/alerts?symbol=${encodeURIComponent(result.symbol)}&price=${result.price || ''}&direction=${result.direction || ''}`;
+                                  }
+                                }}
+                                className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-muted)]"
+                              >Set Alert</button>
+                              <button
+                                onClick={() => {
+                                  if (result) {
+                                    void addScannerCandidateToWatchlist({
+                                      symbol: result.symbol,
+                                      indicators: { price: result.price },
+                                    });
+                                  }
+                                }}
+                                className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-muted)]"
+                              >Add to Watchlist</button>
                             </>
                           ) : (
                             <>
-                              <button className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-muted)]">Set Alert</button>
-                              <button className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-muted)]">Pin for Review</button>
+                              <button
+                                onClick={() => {
+                                  if (result) {
+                                    window.location.href = `/tools/alerts?symbol=${encodeURIComponent(result.symbol)}&price=${result.price || ''}&direction=${result.direction || ''}`;
+                                  }
+                                }}
+                                className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-muted)]"
+                              >Set Alert</button>
+                              <button
+                                onClick={() => {
+                                  if (result) {
+                                    void addScannerCandidateToWatchlist({
+                                      symbol: result.symbol,
+                                      indicators: { price: result.price },
+                                    });
+                                  }
+                                }}
+                                className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-muted)]"
+                              >Add to Watchlist</button>
                             </>
                           )}
                         </div>
@@ -3097,7 +3187,7 @@ function ScannerContent() {
                     </button>
                     {advancedIntelligenceOpen && (
                       <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-                        <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2.5 text-[0.73rem] text-[var(--msp-text-muted)]"><div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-[var(--msp-text-faint)]">Institutional Filter Engine</div><div>{result.institutionalFilter?.recommendation?.replace('_', ' ') ?? 'No filter output'}</div></div>
+                        <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2.5 text-[0.73rem] text-[var(--msp-text-muted)]"><div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-[var(--msp-text-faint)]">Setup Quality Check</div><div>{result.institutionalFilter?.recommendation?.replace('_', ' ') ?? 'No filter output'}</div></div>
                         <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2.5 text-[0.73rem] text-[var(--msp-text-muted)]"><div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-[var(--msp-text-faint)]">AI Narrative Summary</div><div>{trendAligned && momentumAligned ? 'Structure and momentum aligned. Monitor trigger break for execution.' : 'Setup developing. Wait for stronger structure alignment before deployment.'}</div></div>
                         <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2.5 text-[0.73rem] text-[var(--msp-text-muted)]"><div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-[var(--msp-text-faint)]">Autopilot Layer</div><div>State: <span className="font-bold text-[var(--msp-text)]">{presenceState}</span> • Mode: <span className="font-bold text-[var(--msp-text)]">{presenceMode}</span></div></div>
                         <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2.5 text-[0.73rem] text-[var(--msp-text-muted)]"><div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-[var(--msp-text-faint)]">Personality Match</div><div>Profile: <span className="font-bold text-[var(--msp-text)]">{personalityMode === 'adaptive' ? 'Adaptive' : personalityMode}</span></div></div>
@@ -3286,7 +3376,7 @@ function ScannerContent() {
                   }}>
                     <div style={{ color: directionColor, fontSize: 'clamp(1.08rem, 4.4vw, 1.5rem)', fontWeight: 900, letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>{directionLabel}</div>
                     <div style={{ color: confidence >= 70 ? 'var(--msp-bull)' : confidence >= 50 ? 'var(--msp-warn)' : 'var(--msp-bear)', fontSize: 'clamp(0.92rem, 3.8vw, 1.26rem)', fontWeight: 900, letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>
-                      {confidence}% CONF
+                      {confidence >= 75 ? 'A' : confidence >= 60 ? 'B' : confidence >= 45 ? 'C' : 'D'} · {confidence}%
                     </div>
                     <div style={{ color: qualityColor, fontSize: 'clamp(0.9rem, 3.6vw, 1.2rem)', fontWeight: 900, letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>{quality}</div>
                   </div>
@@ -3727,9 +3817,7 @@ function ScannerContent() {
 
                   const opportunityList = [
                     { symbol: result.symbol, label: `${qualityGate === 'HIGH' ? 'A+' : qualityGate === 'MODERATE' ? 'A' : 'B'} EDGE`, thesis: `${institutionalIntent.replace('_', ' ')} setup`, score: executionEdgeScore },
-                    { symbol: quickRecoverySymbols[0] ?? 'SPY', label: 'A EDGE', thesis: 'Time activation candidate', score: Math.max(40, executionEdgeScore - 8) },
-                    { symbol: quickRecoverySymbols[1] ?? 'QQQ', label: 'B+ EDGE', thesis: 'Compression break watch', score: Math.max(35, executionEdgeScore - 15) },
-                  ].sort((a, b) => b.score - a.score);
+                  ];
 
                   const riskGuardAlerts = [
                     confidenceDropRisk ? `⚠ Direction confidence soft (${confidence}%)` : null,
@@ -3762,10 +3850,10 @@ function ScannerContent() {
                   const activeHeartbeat = liveEdgeEvents[heartbeatIndex];
                   const heartbeatAction = executionEnabled ? 'Action now: execution enabled.' : strongEdge ? 'Action now: prepare execution plan.' : 'Action now: stay in watch mode.';
                   const watchZoneEvents = [
-                    { t: '13:41', text: `${result.symbol} IV environment: ${ivEnvironment}` },
-                    { t: '13:44', text: `OI / flow bias shifted ${capitalFlow?.bias?.toUpperCase() ?? direction.toUpperCase()}` },
-                    { t: '13:46', text: `Time edge ${timeTriggerState.toLowerCase()} (${timeClusterMinutes}m)` },
-                    { t: '13:47', text: `Setup quality ${qualityGate} • ${executionEdgeScore}% execution edge` },
+                    { t: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }), text: `${result.symbol} IV environment: ${ivEnvironment}` },
+                    { t: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }), text: `OI / flow bias shifted ${capitalFlow?.bias?.toUpperCase() ?? direction.toUpperCase()}` },
+                    { t: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }), text: `Time edge ${timeTriggerState.toLowerCase()} (${timeClusterMinutes}m)` },
+                    { t: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }), text: `Setup quality ${qualityGate} • ${executionEdgeScore}% execution edge` },
                   ];
 
                   return (
@@ -3778,7 +3866,7 @@ function ScannerContent() {
                         padding: '0.62rem 0.75rem',
                       }}>
                         <div style={{ color: 'var(--msp-accent)', fontSize: '0.68rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.28rem' }}>
-                          AI Trader Presence
+                          Market State
                         </div>
                         <div style={{ color: 'var(--msp-text)', fontSize: '0.76rem', lineHeight: 1.45 }}>
                           <div><span style={{ color: 'var(--msp-neutral)' }}>Bias:</span> {commanderVerdict}</div>
@@ -3855,7 +3943,7 @@ function ScannerContent() {
                           </div>
 
                           <div style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border-strong)', borderRadius: '8px', padding: '0.58rem' }}>
-                            <div style={{ color: 'var(--msp-accent)', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.24rem' }}>Opportunity Engine</div>
+                            <div style={{ color: 'var(--msp-accent)', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.24rem' }}>Setup Radar</div>
                             <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.74rem', display: 'grid', gap: '0.14rem' }}>
                               {opportunityList.map((item, idx) => (
                                 <div key={item.symbol + idx}>{idx + 1}) {item.symbol} — {item.label} ({item.thesis})</div>
@@ -3875,7 +3963,7 @@ function ScannerContent() {
                           <div style={{ color: 'var(--msp-accent)', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.22rem' }}>Action Feed</div>
                           <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.74rem', display: 'grid', gap: '0.12rem' }}>
                             {actionFeedEvents.map((event, idx) => (
-                              <div key={event}><span style={{ color: 'var(--msp-neutral)' }}>{`13:${(41 + idx).toString().padStart(2, '0')}`}</span> — {event}</div>
+                              <div key={event}><span style={{ color: 'var(--msp-neutral)' }}>{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}</span> — {event}</div>
                             ))}
                           </div>
                         </div>
@@ -4180,9 +4268,14 @@ function ScannerContent() {
                                         cursor: 'pointer',
                                       }}
                                     >
-                                      {executionEnabled ? 'Enter Trade' : 'Enter Trade (Review)'}
+                                      {executionEnabled ? 'Log Trade Plan' : 'Log Trade Plan (Review)'}
                                     </button>
                                     <button
+                                      onClick={() => {
+                                        // Dismiss — user chooses to wait for stronger signal
+                                        setResult(null);
+                                        setOperatorTransition(null);
+                                      }}
                                       style={{
                                         padding: '0.4rem 0.72rem',
                                         borderRadius: '8px',
@@ -5473,6 +5566,7 @@ function ScannerContent() {
                     setShowBehavioralScreen(false);
                     setBehavioralScreenData(null);
                     if (pendingDeployPick) {
+                      setPreTradeChecklist({ thesis: false, risk: false, eventWindow: false });
                       setShowPreTradeChecklist(true);
                     }
                   }}

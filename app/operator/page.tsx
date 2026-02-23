@@ -545,6 +545,7 @@ export default function OperatorDashboardPage() {
   const [proposalBusyId, setProposalBusyId] = useState<string | null>(null);
   const [proposalFeedback, setProposalFeedback] = useState<string | null>(null);
   const [dismissedProposalIds, setDismissedProposalIds] = useState<Record<string, true>>({});
+  const [focusMode, setFocusMode] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -1641,12 +1642,12 @@ export default function OperatorDashboardPage() {
         <div className="font-bold uppercase">{timingDNA}</div>
       </div>
       <div className="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-2 text-xs">
-        <div className="text-slate-400 uppercase tracking-wide">Adaptive Confidence</div>
-        <div className="font-bold text-emerald-300">{adaptiveScore > 0 ? `${adaptiveScore}%` : '—'}</div>
+        <div className="text-slate-400 uppercase tracking-wide">Adaptive Match</div>
+        <div className="font-bold text-emerald-300">{adaptiveScore > 0 ? (adaptiveScore >= 75 ? 'HIGH' : adaptiveScore >= 55 ? 'MODERATE' : 'LOW') : '—'}</div>
       </div>
       <div className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-3 py-2 text-xs">
-        <div className="text-indigo-300 uppercase tracking-wide">MSP Operator Score™</div>
-        <div className="font-bold text-indigo-200">{focusSignal || adaptiveScore > 0 ? `${operatorScore}/100` : '—'}</div>
+        <div className="text-indigo-300 uppercase tracking-wide">Setup Score</div>
+        <div className="font-bold text-indigo-200">{focusSignal || adaptiveScore > 0 ? (operatorScore >= 75 ? 'HIGH' : operatorScore >= 55 ? 'MODERATE' : 'LOW') : '—'}</div>
       </div>
     </div>
   );
@@ -1799,6 +1800,39 @@ export default function OperatorDashboardPage() {
       <ToolPageLayout
         identity={
           <div className="msp-elite-panel">
+            <div className="mb-2 flex items-center justify-between">
+              <div />
+              <button
+                onClick={() => setFocusMode((prev) => !prev)}
+                className={`rounded-md border px-3 py-1 text-[0.66rem] font-extrabold uppercase tracking-[0.08em] transition-all ${focusMode ? 'border-[var(--msp-accent)] bg-[var(--msp-accent)]/10 text-[var(--msp-accent)]' : 'border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text-muted)]'}`}
+              >
+                {focusMode ? '← Full View' : 'Focus Mode'}
+              </button>
+            </div>
+            {focusMode ? (
+              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-5">
+                <div className="rounded-lg border border-[var(--msp-border-strong)] bg-[var(--msp-panel-2)] px-3 py-2.5">
+                  <div className="text-[0.64rem] font-bold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">R Budget</div>
+                  <div className="mt-1 text-[1.05rem] font-black text-[var(--msp-text)]">{permissionSnapshot ? `${(permissionSnapshot.session.remaining_daily_R ?? 0).toFixed(1)}R` : '—'}<span className="ml-1 text-[0.7rem] font-semibold text-[var(--msp-text-faint)]">/ {permissionSnapshot ? `${permissionSnapshot.session.max_daily_R ?? 0}R` : '—'}</span></div>
+                </div>
+                <div className="rounded-lg border border-[var(--msp-border-strong)] bg-[var(--msp-panel-2)] px-3 py-2.5">
+                  <div className="text-[0.64rem] font-bold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Regime</div>
+                  <div className="mt-1 text-[1.05rem] font-black text-[var(--msp-text)]">{!focusSignal && !presence ? 'AWAITING' : regimeADX >= 25 ? 'TRENDING' : 'RANGE'}</div>
+                </div>
+                <div className="rounded-lg border border-[var(--msp-border-strong)] bg-[var(--msp-panel-2)] px-3 py-2.5">
+                  <div className="text-[0.64rem] font-bold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Bias</div>
+                  <div className={`mt-1 text-[1.05rem] font-black ${bias === 'bullish' ? 'text-[var(--msp-bull)]' : bias === 'bearish' ? 'text-[var(--msp-bear)]' : 'text-[var(--msp-text-muted)]'}`}>{bias === 'neutral' && !focusSignal ? 'AWAITING' : bias.toUpperCase()}</div>
+                </div>
+                <div className="rounded-lg border border-[var(--msp-border-strong)] bg-[var(--msp-panel-2)] px-3 py-2.5">
+                  <div className="text-[0.64rem] font-bold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Exposure</div>
+                  <div className="mt-1 text-[1.05rem] font-black text-[var(--msp-text)]">{portfolioValue > 0 ? `${((totalExposure / portfolioValue) * 100).toFixed(0)}%` : '0%'}</div>
+                </div>
+                <div className="rounded-lg border border-[var(--msp-border-strong)] bg-[var(--msp-panel-2)] px-3 py-2.5">
+                  <div className="text-[0.64rem] font-bold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Risk State</div>
+                  <div className={`mt-1 text-[1.05rem] font-black ${deploymentBlocked ? 'text-[var(--msp-bear)]' : 'text-[var(--msp-bull)]'}`}>{deploymentBlocked ? 'LOCKED' : volatilityLabel === 'HIGH' ? 'ELEVATED' : 'NORMAL'}</div>
+                </div>
+              </div>
+            ) : (
             <div className="grid gap-4 lg:grid-cols-12">
               <div className="lg:col-span-6">
                 <div className="text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Command State</div>
@@ -1817,14 +1851,21 @@ export default function OperatorDashboardPage() {
                   <div className="msp-elite-row flex justify-between"><span>Liquidity</span><span className="font-semibold">{liquidityLayer.label.toUpperCase()}</span></div>
                   <div className="msp-elite-row flex justify-between"><span>Gamma</span><span className="font-semibold">{presence?.marketState?.volatilityState || 'NEUTRAL'}</span></div>
                   <div className="msp-elite-row flex justify-between"><span>Risk Environment</span><span className="font-semibold">{riskGovernorDebug?.snapshot.riskEnvironment || presence?.riskLoad?.environment || 'MODERATE'}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Confidence</span><span className="font-semibold">{operatorScore > 0 ? `${operatorScore}%` : '—'}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Setup Quality</span><span className="font-semibold">{operatorScore > 0 ? (operatorScore >= 75 ? 'HIGH' : operatorScore >= 55 ? 'MODERATE' : 'LOW') : '—'}</span></div>
                 </div>
               </div>
             </div>
+            )}
           </div>
         }
         primary={
           <div className="space-y-6">
+            {focusMode ? (
+              <div className="msp-elite-panel text-center py-8 text-[0.82rem] text-[var(--msp-text-muted)]">
+                Focus Mode active — showing key metrics only.
+                <button onClick={() => setFocusMode(false)} className="ml-2 underline text-[var(--msp-accent)]">Show Full Dashboard</button>
+              </div>
+            ) : (<>
             <section className="grid gap-4 lg:grid-cols-3">
               <div className="msp-elite-panel">
                 <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Rule Compliance</div>
@@ -1926,6 +1967,7 @@ export default function OperatorDashboardPage() {
                 </div>
               </div>
             </section>
+          </>)}
           </div>
         }
         secondary={
