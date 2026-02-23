@@ -29,6 +29,7 @@ export default function DecisionLens({ ctx }: DecisionLensProps) {
     const scan = ctx.scanner;
     const flow = ctx.flow;
     const opts = ctx.options;
+    const quote = ctx.quote;
 
     // ── Alignment (regime + scanner direction agreement) ──
     let alignment = 50;
@@ -43,12 +44,27 @@ export default function DecisionLens({ ctx }: DecisionLensProps) {
       } else {
         alignment = Math.max(20, 50 - scan.score / 2);
       }
+    } else if (quote && regime) {
+      // When scanner hasn't loaded, derive basic alignment from price direction + regime
+      const priceBull = (quote.changePercent ?? 0) >= 0;
+      const regimeBull = ['TREND_UP', 'VOL_CONTRACTION'].includes(regime.regime);
+      if ((regimeBull && priceBull) || (!regimeBull && !priceBull)) {
+        alignment = 60;
+      }
     }
 
     // ── Confidence (scanner score + flow conviction) ──
     let confidence = scan?.confidence ?? 0;
+    // If scanner returned 0 confidence but has a valid score, derive confidence from score
+    if (confidence === 0 && scan?.score && scan.score > 0) {
+      confidence = Math.min(99, Math.abs(scan.score));
+    }
     if (flow?.conviction) {
       confidence = Math.round((confidence + flow.conviction * 100) / 2);
+    }
+    // If no scanner at all but we have quote data, show minimal confidence rather than 0
+    if (confidence === 0 && quote) {
+      confidence = 15; // Minimal — data available but no scan
     }
     confidence = Math.min(100, Math.max(0, confidence));
 
@@ -66,15 +82,24 @@ export default function DecisionLens({ ctx }: DecisionLensProps) {
     const ruBudget = `${(remainR ?? 0).toFixed(1)}R / ${maxR}R`;
 
     // ── Scenarios ──
-    const bullScenario = scan
-      ? `${scan.direction === 'LONG' ? 'Long' : 'Short'} ${scan.setup || 'setup'} \u2192 target $${(scan.target ?? 0).toFixed(2) ?? '\u2014'}`
-      : flow?.most_likely_path?.[0] ?? 'Awaiting scan data';
-    const bearScenario = scan
-      ? `Stop breach below $${(scan.stop ?? 0).toFixed(2) ?? '\u2014'} invalidates thesis`
-      : flow?.risk?.[0] ?? 'No risk factors loaded';
+    let bullScenario: string;
+    let bearScenario: string;
+    if (scan) {
+      const targetStr = Number.isFinite(scan.target) ? `$${scan.target.toFixed(2)}` : '—';
+      const stopStr = Number.isFinite(scan.stop) ? `$${scan.stop.toFixed(2)}` : '—';
+      bullScenario = `${scan.direction === 'LONG' ? 'Long' : 'Short'} ${scan.setup || 'setup'} \u2192 target ${targetStr}`;
+      bearScenario = `Stop breach at ${stopStr} invalidates thesis`;
+    } else if (quote) {
+      const chgDir = (quote.changePercent ?? 0) >= 0 ? 'bullish' : 'bearish';
+      bullScenario = flow?.most_likely_path?.[0] ?? `Price ${chgDir} at $${quote.price.toFixed(2)} — awaiting scan`;
+      bearScenario = flow?.risk?.[0] ?? `Monitor for reversal — no stop computed yet`;
+    } else {
+      bullScenario = flow?.most_likely_path?.[0] ?? 'Loading market data...';
+      bearScenario = flow?.risk?.[0] ?? 'Loading risk factors...';
+    }
 
     // ── R-Multiple ──
-    const rMultiple = scan?.rMultiple ?? 0;
+    const rMultiple = Number.isFinite(scan?.rMultiple) ? scan!.rMultiple : 0;
 
     // ── Vol State ──
     const volState = regimeLabel(regime?.regime);

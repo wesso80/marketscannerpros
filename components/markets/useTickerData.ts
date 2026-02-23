@@ -161,38 +161,40 @@ export function useTickerData(symbol: string | null, assetClass: AssetClass): Ti
         // Translate scanner direction to expected enum
         const dir: 'LONG' | 'SHORT' = match.direction === 'bearish' ? 'SHORT' : 'LONG';
         // Compute entry/stop/target from price + ATR if not already set
-        const price = match.price ?? 0;
-        const atr = match.atr ?? 0;
-        const entry = match.entry ?? price;
-        const stop = match.stop ?? (dir === 'LONG' ? price - atr * 1.5 : price + atr * 1.5);
-        const target = match.target ?? (dir === 'LONG' ? price + atr * 3 : price - atr * 3);
+        // Use Number.isFinite guards to prevent NaN propagation (NaN ?? 0 does NOT catch NaN)
+        const price = Number.isFinite(match.price) ? match.price : 0;
+        const atr = Number.isFinite(match.atr) ? match.atr : (price > 0 ? price * 0.02 : 0); // Fallback: 2% of price
+        const entry = Number.isFinite(match.entry) ? match.entry : price;
+        const stop = Number.isFinite(match.stop) ? match.stop : (dir === 'LONG' ? price - atr * 1.5 : price + atr * 1.5);
+        const target = Number.isFinite(match.target) ? match.target : (dir === 'LONG' ? price + atr * 3 : price - atr * 3);
         const riskPerUnit = Math.abs(entry - stop);
-        const rMultiple = match.rMultiple ?? (riskPerUnit > 0 ? Math.abs(target - entry) / riskPerUnit : 0);
+        const rMultiple = Number.isFinite(match.rMultiple) ? match.rMultiple : (riskPerUnit > 0 ? Math.abs(target - entry) / riskPerUnit : 0);
+        const confidence = Number.isFinite(match.confidence) ? match.confidence : Math.min(99, Math.abs(match.score ?? 0));
 
         // Build support/resistance from EMA and chart data
         const levels: { support: number[]; resistance: number[] } = match.levels ?? { support: [], resistance: [] };
         if (levels.support.length === 0 && levels.resistance.length === 0 && price > 0) {
           const ema200 = match.ema200;
-          if (ema200 && ema200 > 0) {
+          if (Number.isFinite(ema200) && ema200 > 0) {
             if (ema200 < price) levels.support.push(ema200);
             else levels.resistance.push(ema200);
           }
-          if (stop > 0 && dir === 'LONG') levels.support.push(stop);
-          if (stop > 0 && dir === 'SHORT') levels.resistance.push(stop);
-          if (target > 0 && dir === 'LONG') levels.resistance.push(target);
-          if (target > 0 && dir === 'SHORT') levels.support.push(target);
+          if (Number.isFinite(stop) && stop > 0 && dir === 'LONG') levels.support.push(stop);
+          if (Number.isFinite(stop) && stop > 0 && dir === 'SHORT') levels.resistance.push(stop);
+          if (Number.isFinite(target) && target > 0 && dir === 'LONG') levels.resistance.push(target);
+          if (Number.isFinite(target) && target > 0 && dir === 'SHORT') levels.support.push(target);
         }
 
         scanner = {
           symbol: match.symbol,
           score: match.score ?? 0,
           direction: dir,
-          confidence: match.confidence ?? Math.min(99, Math.abs(match.score ?? 0)),
+          confidence,
           setup: match.setup ?? (match.signals ? `${match.signals.bullish}B/${match.signals.bearish}Be signals` : ''),
           entry,
           stop: Math.max(0, stop),
           target: Math.max(0, target),
-          rMultiple,
+          rMultiple: Math.round(rMultiple * 10) / 10,
           indicators: {
             rsi: match.rsi,
             macd_hist: match.macd_hist,

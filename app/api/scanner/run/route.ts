@@ -133,6 +133,13 @@ interface ScanResult {
   aroon_down?: number;
   obv?: number;
   lastCandleTime?: string;
+  // Computed trade setup fields (populated by both cached and AV paths)
+  confidence?: number;
+  setup?: string;
+  entry?: number;
+  stop?: number;
+  target?: number;
+  rMultiple?: number;
   // Chart data for visualization
   chartData?: {
     candles: { t: string; o: number; h: number; l: number; c: number }[];
@@ -1221,11 +1228,29 @@ export async function POST(req: NextRequest) {
             const aroonDown = cachedData.aroonDown ?? NaN;
             
             const scoreResult = computeScore(price, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxVal, stochK, aroonUp, aroonDown, cciVal, 0, 0);
+
+            // Compute trade setup fields from cached data (same logic as useTickerData fallbacks, but server-side)
+            const dirLabel = scoreResult.direction === 'bearish' ? 'SHORT' : 'LONG';
+            const atrSafe = Number.isFinite(atrVal) ? atrVal : price * 0.02; // Fallback: 2% of price if ATR missing
+            const entryPrice = price;
+            const stopPrice = dirLabel === 'LONG' ? price - atrSafe * 1.5 : price + atrSafe * 1.5;
+            const targetPrice = dirLabel === 'LONG' ? price + atrSafe * 3 : price - atrSafe * 3;
+            const riskPerUnit = Math.abs(entryPrice - stopPrice);
+            const rMultipleCalc = riskPerUnit > 0 ? Math.abs(targetPrice - entryPrice) / riskPerUnit : 0;
+            const confidenceCalc = Math.min(99, Math.abs(scoreResult.score));
+            const setupLabel = `${scoreResult.signals.bullish}B/${scoreResult.signals.bearish}Be signals`;
+
             const item: ScanResult & { direction?: string; signals?: any } = {
               symbol: sym,
               score: scoreResult.score,
               direction: scoreResult.direction,
               signals: scoreResult.signals,
+              confidence: confidenceCalc,
+              setup: setupLabel,
+              entry: entryPrice,
+              stop: Math.max(0, stopPrice),
+              target: Math.max(0, targetPrice),
+              rMultiple: Math.round(rMultipleCalc * 10) / 10,
               timeframe,
               type,
               price,
@@ -1324,11 +1349,28 @@ export async function POST(req: NextRequest) {
               obvPrev
             );
 
+            // Compute trade setup fields (AV path — same logic as cached path)
+            const dirLabelAV = scoreResult.direction === 'bearish' ? 'SHORT' : 'LONG';
+            const atrSafeAV = Number.isFinite(atrVal) ? atrVal : price * 0.02;
+            const entryPriceAV = price;
+            const stopPriceAV = dirLabelAV === 'LONG' ? price - atrSafeAV * 1.5 : price + atrSafeAV * 1.5;
+            const targetPriceAV = dirLabelAV === 'LONG' ? price + atrSafeAV * 3 : price - atrSafeAV * 3;
+            const riskPerUnitAV = Math.abs(entryPriceAV - stopPriceAV);
+            const rMultipleCalcAV = riskPerUnitAV > 0 ? Math.abs(targetPriceAV - entryPriceAV) / riskPerUnitAV : 0;
+            const confidenceCalcAV = Math.min(99, Math.abs(scoreResult.score));
+            const setupLabelAV = `${scoreResult.signals.bullish}B/${scoreResult.signals.bearish}Be signals`;
+
             const item: ScanResult & { direction?: string; signals?: any } = {
               symbol: sym,
               score: scoreResult.score,
               direction: scoreResult.direction,
               signals: scoreResult.signals,
+              confidence: confidenceCalcAV,
+              setup: setupLabelAV,
+              entry: entryPriceAV,
+              stop: Math.max(0, stopPriceAV),
+              target: Math.max(0, targetPriceAV),
+              rMultiple: Math.round(rMultipleCalcAV * 10) / 10,
               timeframe,
               type,
               price,
