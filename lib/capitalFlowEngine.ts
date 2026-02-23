@@ -2,6 +2,9 @@ import { computeInstitutionalFlowState, InstitutionalFlowStateOutput } from './i
 import { computeFlowTradePermission } from './flow-trade-permission';
 import { computeInstitutionalRiskGovernor } from './institutional-risk-governor';
 import { computeBrainDecision } from './institutional-brain';
+import { detectSessionPhase } from './ai/sessionPhase';
+import { computeSessionLiquidityFromPhase, SessionLiquidityProfile } from './session-liquidity-engine';
+import { computeSessionPermissionOverlayFromPhase, SessionPermissionOverlay } from './session-permission-overlay';
 
 export type FlowBias = 'bullish' | 'bearish' | 'neutral';
 export type MarketMode = 'pin' | 'launch' | 'chop';
@@ -293,6 +296,22 @@ export interface CapitalFlowResult {
     last_chain_update_sec: number | null;
     fallback_active: boolean;
   };
+  session_overlay: {
+    phase: string;
+    assetClass: 'equities' | 'crypto';
+    liquidityExpectation: 'LOW' | 'LOW_MEDIUM' | 'MEDIUM' | 'MEDIUM_HIGH' | 'HIGH';
+    liquidityScore: number;
+    slippageMultiplier: number;
+    ruCapMultiplier: number;
+    tradable: boolean;
+    tpsAdjustment: number;
+    sizeMultiplierCap: number;
+    minimumTps: number;
+    restrictive: boolean;
+    sessionAllowed: string[];
+    sessionBlocked: string[];
+    reason: string;
+  };
 }
 
 type OIStrike = {
@@ -306,6 +325,8 @@ export interface CapitalFlowInput {
   symbol: string;
   marketType?: 'equity' | 'crypto';
   spot: number;
+  /** Optional timestamp override for session detection (defaults to Date.now) */
+  now?: Date;
   vwap?: number;
   atr?: number;
   dte?: number;
@@ -555,6 +576,13 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
   const timeWeight = dte === null ? 0.3 : 1 / (1 + dte);
   const gravityRange = Math.max(spot * 0.01, 0.5);
   const vwap = Number.isFinite(input.vwap) ? Number(input.vwap) : undefined;
+
+  // ── Session Phase Detection ─────────────────────────────────────
+  const assetClassForSession = marketType === 'crypto' ? 'crypto' as const : 'equities' as const;
+  const sessionNow = input.now ?? new Date();
+  const sessionPhase = detectSessionPhase(assetClassForSession, sessionNow);
+  const sessionLiquidity = computeSessionLiquidityFromPhase(sessionPhase, assetClassForSession);
+  const sessionOverlay = computeSessionPermissionOverlayFromPhase(sessionPhase, assetClassForSession);
 
   const strikeMap = new Map<number, { callOi: number; putOi: number; gravityRaw: number }>();
   if (marketType === 'equity') {
@@ -937,6 +965,11 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
         : 'reversal_confirmed';
 
   const maxInstitutionalProbability = Math.max(pTrend, pPin, pExpansion);
+
+  // Apply session-aware liquidity modifier to the liquidity clarity score
+  const sessionLiquidityWeight = Math.max(0.30, sessionLiquidity.liquidityScore / 100);
+  const sessionAdjustedLiquidityClarity = liquidityScore * sessionLiquidityWeight;
+
   const ftpm = computeFlowTradePermission({
     state: ifse.state,
     stateConfidence: ifse.confidence,
@@ -945,10 +978,11 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
     pPin,
     pExpansion,
     dataHealthScore: dataScore,
-    liquidityClarity: liquidityScore,
+    liquidityClarity: sessionAdjustedLiquidityClarity,
     volatilityCompression: compressionLevel,
     atrExpansionRate: clamp(atrPercent * (marketType === 'crypto' ? 15 : 30), 0, 100),
     preferredArchetype,
+    sessionOverlay,
   });
 
   const irg = computeInstitutionalRiskGovernor({
@@ -1003,7 +1037,8 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
     (executionAllowed ? irg.sizing.riskGovernorMultiplier : 0) *
     irg.drawdown.sizeMultiplier *
     irg.volatility.sizeMultiplier *
-    irg.sizing.personalPerformanceMultiplier
+    irg.sizing.personalPerformanceMultiplier *
+    sessionOverlay.ruCapMultiplier // Session RU cap
   ).toFixed(2));
 
   const expectedMove = marketType === 'equity'
@@ -1209,5 +1244,21 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
       high: chopHigh,
     },
     data_health: dataHealth,
+    session_overlay: {
+      phase: sessionOverlay.phase,
+      assetClass: sessionOverlay.assetClass,
+      liquidityExpectation: sessionLiquidity.liquidityExpectation,
+      liquidityScore: sessionLiquidity.liquidityScore,
+      slippageMultiplier: sessionOverlay.slippageMultiplier,
+      ruCapMultiplier: sessionOverlay.ruCapMultiplier,
+      tradable: sessionLiquidity.tradable,
+      tpsAdjustment: sessionOverlay.tpsAdjustment,
+      sizeMultiplierCap: sessionOverlay.sizeMultiplierCap,
+      minimumTps: sessionOverlay.minimumTps,
+      restrictive: sessionOverlay.restrictive,
+      sessionAllowed: sessionOverlay.sessionAllowed,
+      sessionBlocked: sessionOverlay.sessionBlocked,
+      reason: sessionOverlay.reason,
+    },
   };
 }

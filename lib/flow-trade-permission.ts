@@ -1,4 +1,5 @@
 import { InstitutionalFlowState } from './institutional-flow-state-engine';
+import { SessionPermissionOverlay } from './session-permission-overlay';
 
 export type TradeArchetype =
   | 'trend_continuation'
@@ -22,6 +23,8 @@ export interface FlowTradePermissionInput {
   volatilityCompression: number; // 0-100
   atrExpansionRate: number; // 0-100
   preferredArchetype: TradeArchetype;
+  /** Optional session overlay — when provided, adjusts TPS, sizing, and allowed/blocked lists */
+  sessionOverlay?: SessionPermissionOverlay | null;
 }
 
 export interface FlowTradePermission {
@@ -39,6 +42,14 @@ export interface FlowTradePermission {
   blockedTrades: string[];
   alignmentByArchetype: Record<TradeArchetype, number>;
   selectedArchetype: TradeArchetype;
+  /** Present when session overlay was applied */
+  sessionAdjustment?: {
+    phase: string;
+    tpsAdjustment: number;
+    sizeCapApplied: boolean;
+    restrictive: boolean;
+    reason: string;
+  };
 }
 
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
@@ -157,11 +168,38 @@ export function computeFlowTradePermission(input: FlowTradePermissionInput): Flo
   const dataHealth = clamp01(input.dataHealthScore / 100);
   const liquidityClarity = clamp01(input.liquidityClarity / 100);
 
-  const tps =
+  let tps =
     (institutionalProbability * 0.5) +
     (stateAlignmentScore * 0.3) +
     (dataHealth * 0.1) +
     (liquidityClarity * 0.1);
+
+  // ── Session Overlay Adjustments ─────────────────────────────────
+  const so = input.sessionOverlay ?? null;
+  let sessionAdjustment: FlowTradePermission['sessionAdjustment'];
+  let sizeCapApplied = false;
+
+  if (so) {
+    // Apply additive TPS modifier (scaled to 0-1 range)
+    tps = tps + (so.tpsAdjustment / 100);
+    tps = Math.max(0, Math.min(1, tps));
+
+    // Session gates — block if confidence or liquidity below session minimums
+    const failsConfidenceGate = so.minimumConfidence > 0 && input.stateConfidence < so.minimumConfidence;
+    const failsLiquidityGate = so.minimumLiquidityClarity > 0 && (input.liquidityClarity) < so.minimumLiquidityClarity;
+
+    if (failsConfidenceGate || failsLiquidityGate) {
+      tps = Math.min(tps, (so.minimumTps - 1) / 100); // ensure it falls below the session TPS threshold
+    }
+
+    sessionAdjustment = {
+      phase: so.phase,
+      tpsAdjustment: so.tpsAdjustment,
+      sizeCapApplied: false, // updated below
+      restrictive: so.restrictive,
+      reason: so.reason,
+    };
+  }
 
   const lowVolatility = input.volatilityCompression >= 70 && input.atrExpansionRate <= 35;
   const unclearLiquidity = input.liquidityClarity < 45;
@@ -171,14 +209,40 @@ export function computeFlowTradePermission(input: FlowTradePermissionInput): Flo
     (input.state === 'ACCUMULATION' && lowVolatility && unclearLiquidity) ||
     staleData;
 
-  const blocked = autoNoTrade || tps < 0.65;
+  // Use session-specific minimum TPS if provided, otherwise base threshold
+  const tpsThreshold = so ? so.minimumTps / 100 : 0.65;
+  const blocked = autoNoTrade || tps < tpsThreshold;
 
   let reason = 'Permission granted';
   if (autoNoTrade && staleData) reason = 'NO-TRADE MODE: data health stale';
   else if (autoNoTrade) reason = 'NO-TRADE MODE: accumulation + low volatility + unclear liquidity';
-  else if (tps < 0.65) reason = `BLOCKED: Trade Permission Score ${Math.round(tps * 100)} below threshold`;
+  else if (tps < tpsThreshold) reason = `BLOCKED: Trade Permission Score ${Math.round(tps * 100)} below threshold (${Math.round(tpsThreshold * 100)})`;
 
-  const scaledSize = blocked ? Math.min(policy.sizeMultiplier, 0.35) : policy.sizeMultiplier;
+  let scaledSize = blocked ? Math.min(policy.sizeMultiplier, 0.35) : policy.sizeMultiplier;
+
+  // Apply session size cap
+  if (so) {
+    if (scaledSize > so.sizeMultiplierCap) {
+      scaledSize = so.sizeMultiplierCap;
+      sizeCapApplied = true;
+    }
+    if (sessionAdjustment) {
+      sessionAdjustment.sizeCapApplied = sizeCapApplied;
+    }
+  }
+
+  // Merge allowed/blocked lists with session overrides
+  let mergedAllowed = [...policy.allowed];
+  let mergedBlocked = [...policy.blockedTrades];
+  let stopStyle = policy.stopStyle;
+
+  if (so) {
+    mergedAllowed = [...mergedAllowed, ...so.sessionAllowed];
+    mergedBlocked = [...mergedBlocked, ...so.sessionBlocked];
+    if (so.stopStyleOverride) {
+      stopStyle = so.stopStyleOverride;
+    }
+  }
 
   return {
     state: input.state,
@@ -190,10 +254,11 @@ export function computeFlowTradePermission(input: FlowTradePermissionInput): Flo
     },
     riskMode: blocked ? 'high' : policy.riskMode,
     sizeMultiplier: Number(scaledSize.toFixed(2)),
-    stopStyle: policy.stopStyle,
-    allowed: policy.allowed,
-    blockedTrades: policy.blockedTrades,
+    stopStyle,
+    allowed: mergedAllowed,
+    blockedTrades: mergedBlocked,
     alignmentByArchetype: alignment,
     selectedArchetype: input.preferredArchetype,
+    ...(sessionAdjustment ? { sessionAdjustment } : {}),
   };
 }
