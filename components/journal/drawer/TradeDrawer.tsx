@@ -26,7 +26,7 @@ export default function TradeDrawer({ open, trade, onClose, onRequestCloseTrade,
   const isNewTrade = !trade;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div className="fixed inset-0 z-[70] bg-black/40" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="absolute right-0 top-0 h-full w-full max-w-2xl overflow-y-auto border-l border-white/10 bg-slate-950 p-4">
         <div className="mb-3 flex items-center justify-between">
           <div>

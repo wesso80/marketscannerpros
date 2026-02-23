@@ -44,6 +44,15 @@ export async function POST(req: NextRequest) {
     const notes = body.notes || null;
     const tradeDate = body.tradeDate || new Date().toISOString().slice(0, 10);
 
+    // Options-specific fields
+    const optionType = tradeType === 'Options' && body.optionType ? String(body.optionType).toUpperCase() : null;
+    const strikePrice = tradeType === 'Options' && body.strikePrice ? parseFloat(body.strikePrice) : null;
+    const expirationDate = tradeType === 'Options' && body.expirationDate ? body.expirationDate : null;
+    const premium = tradeType === 'Options' && body.premium ? parseFloat(body.premium) : null;
+
+    // Leverage for Futures / Margin
+    const leverage = (tradeType === 'Futures' || tradeType === 'Margin') && body.leverage ? parseFloat(body.leverage) : null;
+
     // Calculate risk metrics if stop loss provided
     let riskAmount: number | null = null;
     let plannedRR: number | null = null;
@@ -60,11 +69,13 @@ export async function POST(req: NextRequest) {
       `INSERT INTO journal_entries (
         workspace_id, trade_date, symbol, side, trade_type, asset_class,
         quantity, entry_price, stop_loss, target, risk_amount, planned_rr,
-        strategy, setup, notes, outcome, tags, is_open, status
+        strategy, setup, notes, outcome, tags, is_open, status,
+        option_type, strike_price, expiration_date, premium, leverage
       ) VALUES (
         $1, $2, $3, $4, $5, $6,
         $7, $8, $9, $10, $11, $12,
-        $13, $14, $15, 'open', $16, true, 'OPEN'
+        $13, $14, $15, 'open', $16, true, 'OPEN',
+        $17, $18, $19, $20, $21
       ) RETURNING id`,
       [
         workspaceId,
@@ -83,6 +94,11 @@ export async function POST(req: NextRequest) {
         setup,
         notes,
         body.tags || [],
+        optionType,
+        strikePrice,
+        expirationDate,
+        premium,
+        leverage,
       ]
     );
 

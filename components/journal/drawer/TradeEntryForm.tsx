@@ -15,6 +15,13 @@ export interface TradeEntryPayload {
   setup?: string;
   notes?: string;
   tradeDate: string;
+  // Options fields
+  optionType?: 'CALL' | 'PUT';
+  strikePrice?: number;
+  expirationDate?: string;
+  premium?: number;
+  // Leverage fields (Futures / Margin)
+  leverage?: number;
 }
 
 interface TradeEntryFormProps {
@@ -44,6 +51,15 @@ export default function TradeEntryForm({ onSubmit, onCancel }: TradeEntryFormPro
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Options-specific state
+  const [optionType, setOptionType] = useState<'CALL' | 'PUT'>('CALL');
+  const [strikePrice, setStrikePrice] = useState('');
+  const [expirationDate, setExpirationDate] = useState('');
+  const [premium, setPremium] = useState('');
+
+  // Leverage state (Futures / Margin)
+  const [leverage, setLeverage] = useState('');
+
   // Computed risk metrics
   const ep = parseFloat(entryPrice);
   const sl = parseFloat(stopLoss);
@@ -64,6 +80,10 @@ export default function TradeEntryForm({ onSubmit, onCancel }: TradeEntryFormPro
 
     setSubmitting(true);
     try {
+      const sp = parseFloat(strikePrice);
+      const prem = parseFloat(premium);
+      const lev = parseFloat(leverage);
+
       await onSubmit({
         symbol: symbol.trim().toUpperCase(),
         side,
@@ -77,6 +97,17 @@ export default function TradeEntryForm({ onSubmit, onCancel }: TradeEntryFormPro
         setup: setup.trim() || undefined,
         notes: notes.trim() || undefined,
         tradeDate,
+        // Options extras
+        ...(tradeType === 'Options' && {
+          optionType,
+          strikePrice: Number.isFinite(sp) && sp > 0 ? sp : undefined,
+          expirationDate: expirationDate || undefined,
+          premium: Number.isFinite(prem) && prem > 0 ? prem : undefined,
+        }),
+        // Leverage extras
+        ...((tradeType === 'Futures' || tradeType === 'Margin') && {
+          leverage: Number.isFinite(lev) && lev > 0 ? lev : undefined,
+        }),
       });
     } catch (err: any) {
       setError(err?.message || 'Failed to create trade');
@@ -153,6 +184,110 @@ export default function TradeEntryForm({ onSubmit, onCancel }: TradeEntryFormPro
             </select>
           </div>
         </div>
+
+        {/* Options Fields */}
+        {tradeType === 'Options' && (
+          <div className="mb-3 rounded-lg border border-purple-500/20 bg-purple-500/5 p-3">
+            <div className="mb-2 text-xs font-semibold text-purple-300">Options Details</div>
+            <div className="mb-2 grid grid-cols-2 gap-3">
+              <div>
+                <label className={LABEL}>Option Type *</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setOptionType('CALL')}
+                    className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                      optionType === 'CALL'
+                        ? 'border-emerald-500/40 bg-emerald-500/20 text-emerald-300'
+                        : 'border-white/15 bg-black/20 text-slate-400 hover:border-white/25'
+                    }`}
+                  >
+                    Call
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOptionType('PUT')}
+                    className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                      optionType === 'PUT'
+                        ? 'border-red-500/40 bg-red-500/20 text-red-300'
+                        : 'border-white/15 bg-black/20 text-slate-400 hover:border-white/25'
+                    }`}
+                  >
+                    Put
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className={LABEL}>Strike Price</label>
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  className={INPUT}
+                  placeholder="0.00"
+                  value={strikePrice}
+                  onChange={(e) => setStrikePrice(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={LABEL}>Expiration Date</label>
+                <input
+                  type="date"
+                  className={INPUT}
+                  value={expirationDate}
+                  onChange={(e) => setExpirationDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className={LABEL}>Premium (per contract)</label>
+                <input
+                  type="number"
+                  step="any"
+                  min="0"
+                  className={INPUT}
+                  placeholder="0.00"
+                  value={premium}
+                  onChange={(e) => setPremium(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Leverage Fields (Futures / Margin) */}
+        {(tradeType === 'Futures' || tradeType === 'Margin') && (
+          <div className="mb-3 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
+            <div className="mb-2 text-xs font-semibold text-amber-300">
+              {tradeType} Details
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={LABEL}>Leverage</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="any"
+                    min="1"
+                    className={INPUT}
+                    placeholder="e.g. 10"
+                    value={leverage}
+                    onChange={(e) => setLeverage(e.target.value)}
+                  />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">x</span>
+                </div>
+              </div>
+              <div className="flex items-end">
+                {Number.isFinite(parseFloat(leverage)) && parseFloat(leverage) > 0 && Number.isFinite(ep) && Number.isFinite(qty) && (
+                  <div className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-xs text-slate-300">
+                    Notional: <span className="font-semibold text-amber-300">${(ep * qty * parseFloat(leverage)).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Row 3: Entry Price + Quantity */}
         <div className="mb-3 grid grid-cols-2 gap-3">
