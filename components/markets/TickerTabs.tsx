@@ -8,6 +8,7 @@ import OptionsTab from './tabs/OptionsTab';
 import FlowTab from './tabs/FlowTab';
 import NewsTab from './tabs/NewsTab';
 import TimeTab from './tabs/TimeTab';
+import CatalystTab from './tabs/CatalystTab';
 
 const TABS: { key: TickerTab; label: string; cryptoLabel?: string }[] = [
   { key: 'overview', label: 'Overview' },
@@ -16,6 +17,7 @@ const TABS: { key: TickerTab; label: string; cryptoLabel?: string }[] = [
   { key: 'flow', label: 'Flow' },
   { key: 'news', label: 'News & Events' },
   { key: 'time', label: 'Time' },
+  { key: 'catalyst', label: 'Catalyst' },
 ];
 
 interface TickerTabsProps {
@@ -60,6 +62,7 @@ export default function TickerTabs({ ctx }: TickerTabsProps) {
         {activeTab === 'flow' && <FlowTab ctx={ctx} />}
         {activeTab === 'news' && <NewsTab ctx={ctx} />}
         {activeTab === 'time' && <TimeTab ctx={ctx} />}
+        {activeTab === 'catalyst' && <CatalystTab ctx={ctx} />}
       </div>
     </div>
   );

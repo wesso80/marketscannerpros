@@ -2,7 +2,7 @@
 
 export type AssetClass = 'equities' | 'crypto' | 'macro' | 'commodities';
 
-export type TickerTab = 'overview' | 'structure' | 'options' | 'flow' | 'news' | 'time';
+export type TickerTab = 'overview' | 'structure' | 'options' | 'flow' | 'news' | 'time' | 'catalyst';
 
 export interface QuoteData {
   symbol: string;
