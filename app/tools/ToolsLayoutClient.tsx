@@ -13,6 +13,7 @@ import { CommandLayout, TerminalLayout, getToolsLayoutMode, getToolsContainerVar
 import { RiskPermissionProvider } from '@/components/risk/RiskPermissionContext';
 import { RegimeProvider } from '@/lib/useRegime';
 import CapitalControlStrip from '@/components/risk/CapitalControlStrip';
+import GlobalSessionBar from '@/components/GlobalSessionBar';
 import SessionStartBriefing from '@/components/operator/SessionStartBriefing';
 
 function getSkillFromPath(pathname: string): PageSkill {
@@ -79,6 +80,9 @@ export default function ToolsLayoutClient({
         <ErrorBoundary fallback={null}>
           <div className="sticky top-[64px] z-30 mx-auto w-full max-w-none px-3 pb-2 md:px-4">
             <CapitalControlStrip />
+            <div className="mt-1">
+              <GlobalSessionBar />
+            </div>
           </div>
         </ErrorBoundary>
         <ErrorBoundary>

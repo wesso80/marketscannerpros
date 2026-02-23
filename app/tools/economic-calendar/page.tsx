@@ -195,7 +195,6 @@ export default function EconomicCalendarPage() {
     const liquidity = closestHighMinutes <= 60 ? 'Spiky' : highImpactCountNext24h >= 2 ? 'Thin' : 'Stable';
     const density = highImpactCountNext24h >= 3 ? 'High' : highImpactCountNext24h >= 1 ? 'Medium' : 'Low';
     const executionMode = permission === 'NO' ? 'Sit Out' : volRegime === 'Compression' ? 'Trend' : 'Mean Revert';
-    const sessionNow = inferSession(nowEt.minutes);
 
     const nextMajorEvent = enrichedEvents.find((event) => event.impact === 'high') || null;
     const countdown = (() => {
@@ -219,7 +218,6 @@ export default function EconomicCalendarPage() {
       liquidity,
       density,
       executionMode,
-      sessionNow,
       highImpactCountNext24h,
       highImpactWithinNext120m,
       isFedDay,
@@ -335,7 +333,7 @@ export default function EconomicCalendarPage() {
             <section className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-3">
               <div className="mb-2 flex items-center justify-between text-xs text-white/60">
                 <span>US Session Timeline</span>
-                <span>Current session: {gate.sessionNow}</span>
+                <span className="text-white/40">Current session shown in global bar above</span>
               </div>
               <div className="relative h-10 rounded-lg border border-white/10 bg-black/20">
                 <div className="absolute inset-y-0 left-0 w-[34%] border-r border-white/10" title="Pre-market" />
