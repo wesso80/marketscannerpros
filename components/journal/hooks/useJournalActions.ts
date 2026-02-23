@@ -77,9 +77,38 @@ export function useJournalActions({ rows, onRefresh }: UseJournalActionsArgs) {
     await onRefresh();
   };
 
+  const createTrade = async (payload: {
+    symbol: string;
+    side: string;
+    assetClass: string;
+    tradeType: string;
+    entryPrice: number;
+    quantity: number;
+    stopLoss?: number;
+    target?: number;
+    strategy?: string;
+    setup?: string;
+    notes?: string;
+    tradeDate: string;
+  }) => {
+    const response = await fetch('/api/journal/add-trade', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const json = await response.json().catch(() => ({}));
+      throw new Error(json?.error || 'Failed to create trade');
+    }
+
+    await onRefresh();
+  };
+
   return {
     onExport,
     closeTrade,
     captureSnapshot,
+    createTrade,
   };
 }

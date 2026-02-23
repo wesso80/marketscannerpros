@@ -1,0 +1,303 @@
+'use client';
+
+import { useState, type FormEvent } from 'react';
+
+export interface TradeEntryPayload {
+  symbol: string;
+  side: 'LONG' | 'SHORT';
+  assetClass: 'equity' | 'crypto' | 'forex' | 'commodity';
+  tradeType: 'Spot' | 'Options' | 'Futures' | 'Margin';
+  entryPrice: number;
+  quantity: number;
+  stopLoss?: number;
+  target?: number;
+  strategy?: string;
+  setup?: string;
+  notes?: string;
+  tradeDate: string;
+}
+
+interface TradeEntryFormProps {
+  onSubmit: (payload: TradeEntryPayload) => Promise<void>;
+  onCancel: () => void;
+}
+
+const INPUT =
+  'w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-500/50 focus:outline-none focus:ring-1 focus:ring-emerald-500/30';
+const LABEL = 'block text-xs font-medium text-slate-400 mb-1';
+const SELECT =
+  'w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-slate-100 focus:border-emerald-500/50 focus:outline-none focus:ring-1 focus:ring-emerald-500/30';
+
+export default function TradeEntryForm({ onSubmit, onCancel }: TradeEntryFormProps) {
+  const [symbol, setSymbol] = useState('');
+  const [side, setSide] = useState<'LONG' | 'SHORT'>('LONG');
+  const [assetClass, setAssetClass] = useState<'equity' | 'crypto' | 'forex' | 'commodity'>('equity');
+  const [tradeType, setTradeType] = useState<'Spot' | 'Options' | 'Futures' | 'Margin'>('Spot');
+  const [entryPrice, setEntryPrice] = useState('');
+  const [quantity, setQuantity] = useState('');
+  const [stopLoss, setStopLoss] = useState('');
+  const [target, setTarget] = useState('');
+  const [strategy, setStrategy] = useState('');
+  const [setup, setSetup] = useState('');
+  const [notes, setNotes] = useState('');
+  const [tradeDate, setTradeDate] = useState(new Date().toISOString().slice(0, 10));
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Computed risk metrics
+  const ep = parseFloat(entryPrice);
+  const sl = parseFloat(stopLoss);
+  const tp = parseFloat(target);
+  const qty = parseFloat(quantity);
+  const riskPerUnit = Number.isFinite(ep) && Number.isFinite(sl) ? Math.abs(ep - sl) : undefined;
+  const riskUsd = riskPerUnit && Number.isFinite(qty) ? riskPerUnit * qty : undefined;
+  const rewardPerUnit = Number.isFinite(ep) && Number.isFinite(tp) ? Math.abs(tp - ep) : undefined;
+  const rrRatio = riskPerUnit && rewardPerUnit && riskPerUnit > 0 ? (rewardPerUnit / riskPerUnit) : undefined;
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!symbol.trim()) { setError('Symbol is required'); return; }
+    if (!Number.isFinite(ep) || ep <= 0) { setError('Entry price must be a positive number'); return; }
+    if (!Number.isFinite(qty) || qty <= 0) { setError('Quantity must be a positive number'); return; }
+
+    setSubmitting(true);
+    try {
+      await onSubmit({
+        symbol: symbol.trim().toUpperCase(),
+        side,
+        assetClass,
+        tradeType,
+        entryPrice: ep,
+        quantity: qty,
+        stopLoss: Number.isFinite(sl) && sl > 0 ? sl : undefined,
+        target: Number.isFinite(tp) && tp > 0 ? tp : undefined,
+        strategy: strategy.trim() || undefined,
+        setup: setup.trim() || undefined,
+        notes: notes.trim() || undefined,
+        tradeDate,
+      });
+    } catch (err: any) {
+      setError(err?.message || 'Failed to create trade');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
+        <h3 className="mb-3 text-sm font-semibold text-emerald-300">New Manual Trade</h3>
+
+        {/* Row 1: Symbol + Side */}
+        <div className="mb-3 grid grid-cols-2 gap-3">
+          <div>
+            <label className={LABEL}>Symbol *</label>
+            <input
+              type="text"
+              className={INPUT}
+              placeholder="AAPL, BTC-USD…"
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className={LABEL}>Side *</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setSide('LONG')}
+                className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                  side === 'LONG'
+                    ? 'border-emerald-500/40 bg-emerald-500/20 text-emerald-300'
+                    : 'border-white/15 bg-black/20 text-slate-400 hover:border-white/25'
+                }`}
+              >
+                Long
+              </button>
+              <button
+                type="button"
+                onClick={() => setSide('SHORT')}
+                className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold transition ${
+                  side === 'SHORT'
+                    ? 'border-red-500/40 bg-red-500/20 text-red-300'
+                    : 'border-white/15 bg-black/20 text-slate-400 hover:border-white/25'
+                }`}
+              >
+                Short
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Row 2: Asset Class + Trade Type */}
+        <div className="mb-3 grid grid-cols-2 gap-3">
+          <div>
+            <label className={LABEL}>Asset Class</label>
+            <select className={SELECT} value={assetClass} onChange={(e) => setAssetClass(e.target.value as any)}>
+              <option value="equity">Equity</option>
+              <option value="crypto">Crypto</option>
+              <option value="forex">Forex</option>
+              <option value="commodity">Commodity</option>
+            </select>
+          </div>
+          <div>
+            <label className={LABEL}>Trade Type</label>
+            <select className={SELECT} value={tradeType} onChange={(e) => setTradeType(e.target.value as any)}>
+              <option value="Spot">Spot</option>
+              <option value="Options">Options</option>
+              <option value="Futures">Futures</option>
+              <option value="Margin">Margin</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Row 3: Entry Price + Quantity */}
+        <div className="mb-3 grid grid-cols-2 gap-3">
+          <div>
+            <label className={LABEL}>Entry Price *</label>
+            <input
+              type="number"
+              step="any"
+              min="0"
+              className={INPUT}
+              placeholder="0.00"
+              value={entryPrice}
+              onChange={(e) => setEntryPrice(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className={LABEL}>Quantity *</label>
+            <input
+              type="number"
+              step="any"
+              min="0"
+              className={INPUT}
+              placeholder="0"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Row 4: Stop Loss + Target */}
+        <div className="mb-3 grid grid-cols-2 gap-3">
+          <div>
+            <label className={LABEL}>Stop Loss</label>
+            <input
+              type="number"
+              step="any"
+              min="0"
+              className={INPUT}
+              placeholder="Optional"
+              value={stopLoss}
+              onChange={(e) => setStopLoss(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className={LABEL}>Target</label>
+            <input
+              type="number"
+              step="any"
+              min="0"
+              className={INPUT}
+              placeholder="Optional"
+              value={target}
+              onChange={(e) => setTarget(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Risk Metrics Preview */}
+        {(riskUsd || rrRatio) && (
+          <div className="mb-3 flex items-center gap-4 rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-xs">
+            {riskUsd !== undefined && (
+              <span className="text-amber-400">
+                Risk: ${riskUsd.toFixed(2)}
+              </span>
+            )}
+            {rrRatio !== undefined && (
+              <span className={rrRatio >= 2 ? 'text-emerald-400' : rrRatio >= 1 ? 'text-amber-400' : 'text-red-400'}>
+                R:R {rrRatio.toFixed(2)}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Row 5: Date */}
+        <div className="mb-3">
+          <label className={LABEL}>Trade Date</label>
+          <input
+            type="date"
+            className={INPUT}
+            value={tradeDate}
+            onChange={(e) => setTradeDate(e.target.value)}
+          />
+        </div>
+
+        {/* Row 6: Strategy + Setup */}
+        <div className="mb-3 grid grid-cols-2 gap-3">
+          <div>
+            <label className={LABEL}>Strategy</label>
+            <input
+              type="text"
+              className={INPUT}
+              placeholder="e.g. Breakout, Mean Reversion"
+              value={strategy}
+              onChange={(e) => setStrategy(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className={LABEL}>Setup</label>
+            <input
+              type="text"
+              className={INPUT}
+              placeholder="e.g. Bull Flag, Gap Fill"
+              value={setup}
+              onChange={(e) => setSetup(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Row 7: Notes */}
+        <div className="mb-3">
+          <label className={LABEL}>Notes</label>
+          <textarea
+            className={`${INPUT} min-h-[60px] resize-y`}
+            placeholder="Entry thesis, observations…"
+            rows={2}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* Error */}
+      {error && (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+          {error}
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={submitting}
+          className="flex-1 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-50"
+        >
+          {submitting ? 'Creating…' : 'Create Trade'}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-lg border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-slate-300 transition hover:bg-white/10"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}

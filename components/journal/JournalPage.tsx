@@ -157,6 +157,10 @@ export default function JournalPage() {
         onClose={() => setDrawerOpen(false)}
         onRequestCloseTrade={() => setCloseModalOpen(true)}
         onRequestSnapshot={() => setSnapshotModalOpen(true)}
+        onCreateTrade={async (payload) => {
+          await actions.createTrade(payload);
+          setDrawerOpen(false);
+        }}
       />
 
       <CloseTradeModal
