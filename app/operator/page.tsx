@@ -488,8 +488,10 @@ function createHeartbeatMonologues(presence: OperatorPresenceSummary | null): st
 
 function formatNumber(value: number) {
   if (!Number.isFinite(value)) return '—';
+  if (value === 0) return '0';
   if (Math.abs(value) >= 1000) return value.toLocaleString('en-US', { maximumFractionDigits: 2 });
   if (Math.abs(value) >= 1) return value.toFixed(2);
+  if (Math.abs(value) >= 0.01) return value.toFixed(2);
   return value.toFixed(4);
 }
 
@@ -1027,17 +1029,17 @@ export default function OperatorDashboardPage() {
   const concentrationLabel = concentrationPct >= 36 ? 'HIGH' : concentrationPct >= 22 ? 'MEDIUM' : 'LOW';
   const drawdownState = drawdownPct >= 12 ? 'Stressed' : drawdownPct >= 6 ? 'Warming' : 'Stable';
 
-  const activeSymbols = useMemo(() => new Set(positions.map((p) => p.symbol.toUpperCase())), [positions]);
+  const activeSymbols = useMemo(() => new Set(positions.map((p) => (p.symbol || '').toUpperCase())), [positions]);
   const currentStage = focusSignal
     ? classifyPhase(focusSignal.score || 0, activeSymbols.has((focusSignal.symbol || '').toUpperCase()))
     : 'Detected';
 
-  const edgeScore = Math.max(1, Math.min(99, Math.round(focusSignal?.score || 50)));
+  const edgeScore = focusSignal ? Math.max(1, Math.min(99, Math.round(focusSignal.score || 50))) : 0;
   const bias = focusSignal?.direction || 'neutral';
-  const quality = edgeScore >= 74 ? 'High' : edgeScore >= 60 ? 'Medium' : 'Low';
+  const quality = !focusSignal ? 'Awaiting' : edgeScore >= 74 ? 'High' : edgeScore >= 60 ? 'Medium' : 'Low';
 
   const currentPrice = focusSignal?.price || 0;
-  const atr = focusSignal?.indicators?.atr || (currentPrice * 0.02);
+  const atr = currentPrice > 0 ? (focusSignal?.indicators?.atr || (currentPrice * 0.02)) : 0;
 
   const bullish = bias === 'bullish';
   const entryLow = bullish ? currentPrice - atr * 0.4 : currentPrice;
@@ -1046,9 +1048,9 @@ export default function OperatorDashboardPage() {
   const targetOne = bullish ? currentPrice + atr * 1.6 : currentPrice - atr * 1.6;
   const targetTwo = bullish ? currentPrice + atr * 2.5 : currentPrice - atr * 2.5;
 
-  const regimeADX = Number(focusSignal?.indicators?.adx || 20);
-  const rsi = Number(focusSignal?.indicators?.rsi || 50);
-  const atrRatio = currentPrice > 0 ? (atr / currentPrice) * 100 : 2;
+  const regimeADX = focusSignal?.indicators?.adx != null && Number.isFinite(Number(focusSignal.indicators.adx)) ? Number(focusSignal.indicators.adx) : 0;
+  const rsi = focusSignal?.indicators?.rsi != null && Number.isFinite(Number(focusSignal.indicators.rsi)) ? Number(focusSignal.indicators.rsi) : 0;
+  const atrRatio = currentPrice > 0 && atr > 0 ? (atr / currentPrice) * 100 : 0;
 
   const regimeLayer = layerToneLabel(regimeADX >= 25 ? 75 : 62);
   const liquidityLayer = layerToneLabel(100 - Math.min(exposurePct, 100), 45);
@@ -1074,10 +1076,10 @@ export default function OperatorDashboardPage() {
       ? 'Recent pattern: expectancy is positive. Suggestion: keep position sizing consistent and let winners complete target ladder.'
       : 'Recent pattern: sample size still building. Suggestion: focus on disciplined entries and complete post-trade journal notes.';
 
-  const adaptiveScore = Math.round(adaptive?.match?.adaptiveScore || 50);
-  const personalityMatch = Math.round(adaptive?.match?.personalityMatch || 50);
-  const riskDNA = adaptive?.profile?.riskDNA || 'warming_up';
-  const timingDNA = adaptive?.profile?.decisionTiming?.replace('_', ' ') || 'warming_up';
+  const adaptiveScore = Math.round(adaptive?.match?.adaptiveScore ?? 0);
+  const personalityMatch = Math.round(adaptive?.match?.personalityMatch ?? 0);
+  const riskDNA = adaptive?.profile?.riskDNA || 'awaiting';
+  const timingDNA = adaptive?.profile?.decisionTiming?.replace('_', ' ') || 'awaiting';
 
   const pipeline: PipelineStage[] = ['Detected', 'Qualified', 'Validated', 'Ready', 'Active', 'Closed'];
   const workflowId = useMemo(() => {
@@ -1706,9 +1708,15 @@ export default function OperatorDashboardPage() {
 
   const riskEvents = [
     presence?.lastPresenceTs ? `${new Date(presence.lastPresenceTs).toLocaleTimeString()} — Presence heartbeat updated` : null,
-    riskGovernorDebug?.decisions.autoAlert.reason ? `${new Date().toLocaleTimeString()} — ${riskGovernorDebug.decisions.autoAlert.reason}` : null,
-    riskGovernorDebug?.snapshot.riskEnvironment ? `${new Date().toLocaleTimeString()} — Risk environment ${riskGovernorDebug.snapshot.riskEnvironment}` : null,
-    ...(presence?.systemHealth?.reasons?.map((reason) => `${new Date().toLocaleTimeString()} — ${reason}`) || []),
+    riskGovernorDebug?.decisions.autoAlert.reason && riskGovernorDebug?.snapshot.stateUpdatedAt
+      ? `${new Date(riskGovernorDebug.snapshot.stateUpdatedAt).toLocaleTimeString()} — ${riskGovernorDebug.decisions.autoAlert.reason}`
+      : riskGovernorDebug?.decisions.autoAlert.reason
+      ? `${riskGovernorDebug.decisions.autoAlert.reason}`
+      : null,
+    riskGovernorDebug?.snapshot.riskEnvironment
+      ? `Risk environment: ${riskGovernorDebug.snapshot.riskEnvironment}`
+      : null,
+    ...(presence?.systemHealth?.reasons?.map((reason) => reason) || []),
   ].filter(Boolean) as string[];
 
   const riskPerTradeFraction = permissionSnapshot?.caps.risk_per_trade ?? 0.005;
@@ -1797,9 +1805,9 @@ export default function OperatorDashboardPage() {
                 <div className="text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Command State</div>
                 <div className="mt-1 text-[1.05rem] font-bold uppercase tracking-[0.03em] text-[var(--msp-text)]">Operator Dashboard</div>
                 <div className="mt-3 grid gap-2 text-[0.76rem]">
-                  <div className="msp-elite-row flex justify-between"><span>MARKET REGIME</span><span className="font-semibold">{regimeADX >= 25 ? 'TRENDING' : 'TRANSITIONAL'}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>EXECUTION BIAS</span><span className="font-semibold">{bias.toUpperCase()} CONTINUATION</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>STRATEGY MODE</span><span className="font-semibold">{strategyModeLabel}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>MARKET REGIME</span><span className="font-semibold">{!focusSignal && !presence ? 'AWAITING DATA' : regimeADX >= 25 ? 'TRENDING' : 'TRANSITIONAL'}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>EXECUTION BIAS</span><span className="font-semibold">{bias === 'neutral' && !focusSignal ? 'AWAITING SIGNAL' : `${bias.toUpperCase()} CONTINUATION`}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>STRATEGY MODE</span><span className="font-semibold">{!focusSignal ? 'AWAITING SCAN' : strategyModeLabel}</span></div>
                 </div>
               </div>
               <div className="lg:col-span-6">
@@ -1810,7 +1818,7 @@ export default function OperatorDashboardPage() {
                   <div className="msp-elite-row flex justify-between"><span>Liquidity</span><span className="font-semibold">{liquidityLayer.label.toUpperCase()}</span></div>
                   <div className="msp-elite-row flex justify-between"><span>Gamma</span><span className="font-semibold">{presence?.marketState?.volatilityState || 'NEUTRAL'}</span></div>
                   <div className="msp-elite-row flex justify-between"><span>Risk Environment</span><span className="font-semibold">{riskGovernorDebug?.snapshot.riskEnvironment || presence?.riskLoad?.environment || 'MODERATE'}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Confidence</span><span className="font-semibold">{operatorScore}%</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Confidence</span><span className="font-semibold">{operatorScore > 0 ? `${operatorScore}%` : '—'}</span></div>
                 </div>
               </div>
             </div>
@@ -1844,7 +1852,7 @@ export default function OperatorDashboardPage() {
                 <div className="mt-3 grid gap-1 text-[0.72rem] text-[var(--msp-text-muted)]">
                   <div>Loss Streak: <span className="font-semibold text-[var(--msp-text)]">{permissionSnapshot?.session.consecutive_losses ?? 0}</span></div>
                   <div>Throttle Multiplier: <span className="font-semibold text-[var(--msp-text)]">{formatNumber((permissionSnapshot?.caps.risk_per_trade ?? 0.005) / 0.005)}</span></div>
-                  <div>Effective Risk/Trade: <span className="font-semibold text-[var(--msp-text)]">{formatNumber(permissionSnapshot?.caps.risk_per_trade ?? 0)}%</span></div>
+                  <div>Effective Risk/Trade: <span className="font-semibold text-[var(--msp-text)]">{formatNumber((permissionSnapshot?.caps.risk_per_trade ?? 0) * 100)}%</span></div>
                 </div>
               </div>
 
@@ -1854,8 +1862,8 @@ export default function OperatorDashboardPage() {
                   <div className="msp-elite-row flex justify-between"><span>Total Exposure</span><span className="font-semibold text-[var(--msp-text)]">{formatNumber(exposurePct)}%</span></div>
                   <div className="msp-elite-row flex justify-between"><span>Net Long</span><span className="font-semibold text-[var(--msp-text)]">{formatNumber(netExposurePct)}%</span></div>
                   <div className="msp-elite-row flex justify-between"><span>Cluster Exposure</span><span className="font-semibold text-[var(--msp-text)]">{formatNumber(clusterExposurePct)}%</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Largest Position</span><span className="font-semibold text-[var(--msp-text)]">{largestPosition ? `${largestPosition.symbol} ${formatNumber((largestPosition.notional / Math.max(portfolioValue, 1)) * 100)}%` : '—'}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Long / Short Split</span><span className="font-semibold text-[var(--msp-text)]">{formatNumber((longExposureValue / Math.max(totalExposure, 1)) * 100)} / {formatNumber((shortExposureValue / Math.max(totalExposure, 1)) * 100)}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Largest Position</span><span className="font-semibold text-[var(--msp-text)]">{largestPosition && portfolioValue > 0 ? `${largestPosition.symbol} ${formatNumber((largestPosition.notional / portfolioValue) * 100)}%` : '—'}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Long / Short Split</span><span className="font-semibold text-[var(--msp-text)]">{totalExposure > 0 ? `${formatNumber((longExposureValue / totalExposure) * 100)} / ${formatNumber((shortExposureValue / totalExposure) * 100)}` : '— / —'}</span></div>
                 </div>
               </div>
 
@@ -1927,10 +1935,10 @@ export default function OperatorDashboardPage() {
               <div className="msp-elite-panel">
                 <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Trade Journal Snapshot</div>
                 <div className="grid gap-1 text-[0.74rem] text-[var(--msp-text-muted)]">
-                  <div className="msp-elite-row flex justify-between"><span>Win Rate</span><span className="font-semibold text-[var(--msp-text)]">{closedTrades.length ? formatNumber((wins / closedTrades.length) * 100) : '0'}%</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Avg Win</span><span className="font-semibold text-[var(--msp-text)]">{formatRiskPairFromAmount(avgWin)}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Avg Loss</span><span className="font-semibold text-[var(--msp-text)]">{formatRiskPairFromAmount(-avgLoss)}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Expectancy</span><span className="font-semibold text-[var(--msp-text)]">{formatRiskPairFromAmount(avgWin - avgLoss)}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Win Rate</span><span className="font-semibold text-[var(--msp-text)]">{closedTrades.length ? `${formatNumber((wins / closedTrades.length) * 100)}%` : '—'}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Avg Win</span><span className="font-semibold text-[var(--msp-text)]">{wins > 0 ? formatRiskPairFromAmount(avgWin) : '—'}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Avg Loss</span><span className="font-semibold text-[var(--msp-text)]">{losses.length > 0 ? formatRiskPairFromAmount(-avgLoss) : '—'}</span></div>
+                  <div className="msp-elite-row flex justify-between"><span>Expectancy</span><span className="font-semibold text-[var(--msp-text)]">{closedTrades.length > 0 ? formatRiskPairFromAmount(avgWin - avgLoss) : '—'}</span></div>
                 </div>
               </div>
               <div className="msp-elite-panel">

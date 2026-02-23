@@ -1,8 +1,10 @@
 export function formatDollar(value: number): string {
+  if (!Number.isFinite(value)) return '$—';
   return `$${Math.abs(value).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 }
 
 export function formatR(value: number): string {
+  if (!Number.isFinite(value)) return '—R';
   const sign = value > 0 ? '+' : value < 0 ? '-' : '';
   return `${sign}${Math.abs(value).toFixed(2)}R`;
 }
