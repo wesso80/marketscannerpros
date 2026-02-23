@@ -1,5 +1,5 @@
 /**
- * POST /api/catalyst/study/compute
+ * POST /api/catalyst/study/compute?limit=5
  *
  * Background cron endpoint that pre-computes catalyst event studies
  * with full Alpha Vantage price data. Iterates through tickers
@@ -8,9 +8,15 @@
  *
  * Protected by CRON_SECRET — only callable by Render cron jobs.
  *
- * Rate-limit aware: processes ~5 tickers per run (each ticker/subtype
- * study uses ~6–60 AV calls depending on cohort). Runs every 30 min
- * so entire universe is covered progressively.
+ * Two modes:
+ *  - Regular (limit=5):   Every 30 min, fills in a few studies
+ *  - Overnight (limit=50): After market close, bulk backfill
+ *
+ * Rate-limit aware: 850ms delay between studies keeps us well
+ * within Alpha Vantage Premium 75 calls/min limit. Each TICKER
+ * cohort study uses ~2 AV calls (daily cached per ticker +
+ * intraday per event). MARKET cohort studies are skipped during
+ * regular runs (deferred to overnight).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -22,9 +28,15 @@ export const runtime = 'nodejs';
 export const maxDuration = 300; // 5 minutes
 
 const AUTO_COHORT_THRESHOLD = 10;
-const MAX_STUDIES_PER_RUN = 5; // Limit per invocation to stay within AV rate limits
+const DEFAULT_LIMIT = 5;
+const MAX_LIMIT = 100;
+const DELAY_BETWEEN_STUDIES_MS = 2000; // 2s between studies for breathing room
+
+function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
 
 export async function POST(req: NextRequest) {
+  const startTime = Date.now();
+
   try {
     // ── Auth ───────────────────────────────────────────────────────
     const cronSecret = process.env.CRON_SECRET;
@@ -39,8 +51,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // ── Parse limit from query string ─────────────────────────────
+    const { searchParams } = new URL(req.url);
+    const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || String(DEFAULT_LIMIT), 10) || DEFAULT_LIMIT, 1), MAX_LIMIT);
+
     // ── Find top ticker+subtype combos needing computation ────────
-    // Priority: tickers with most events that don't have a fresh cached study
     const lookbackDays = 1825; // 5 years default
     const cutoff = new Date(Date.now() - lookbackDays * 86_400_000);
 
@@ -49,9 +64,9 @@ export async function POST(req: NextRequest) {
        FROM catalyst_events ce
        WHERE ce.event_timestamp_utc >= $1
        GROUP BY ce.ticker, ce.catalyst_subtype
-       HAVING COUNT(*) >= 3
+       HAVING COUNT(*) >= 2
        ORDER BY COUNT(*) DESC
-       LIMIT 100`,
+       LIMIT 500`,
       [cutoff]
     );
 
@@ -64,19 +79,31 @@ export async function POST(req: NextRequest) {
     const needsCompute: { ticker: string; subtype: CatalystSubtype; cohort: StudyCohort; count: number }[] = [];
 
     for (const row of combos) {
-      if (needsCompute.length >= MAX_STUDIES_PER_RUN * 3) break; // Check a few extra to find enough stale ones
+      if (needsCompute.length >= limit * 2) break; // Check extra to find enough stale ones
 
-      const cached = await q(
-        `SELECT computed_at FROM catalyst_event_studies
-         WHERE ticker = $1 AND catalyst_subtype = $2 AND lookback_days = $3
-         LIMIT 1`,
-        [row.ticker, row.catalyst_subtype, lookbackDays]
-      );
+      try {
+        const cached = await q(
+          `SELECT computed_at FROM catalyst_event_studies
+           WHERE ticker = $1 AND catalyst_subtype = $2 AND lookback_days = $3
+           LIMIT 1`,
+          [row.ticker, row.catalyst_subtype, lookbackDays]
+        );
 
-      const isFresh = cached?.[0]?.computed_at &&
-        (Date.now() - new Date(cached[0].computed_at).getTime()) < staleThresholdMs;
+        const isFresh = cached?.[0]?.computed_at &&
+          (Date.now() - new Date(cached[0].computed_at).getTime()) < staleThresholdMs;
 
-      if (!isFresh) {
+        if (!isFresh) {
+          const count = parseInt(row.cnt, 10);
+          const cohort: StudyCohort = count >= AUTO_COHORT_THRESHOLD ? 'TICKER' : 'MARKET';
+          needsCompute.push({
+            ticker: row.ticker,
+            subtype: row.catalyst_subtype as CatalystSubtype,
+            cohort,
+            count,
+          });
+        }
+      } catch (err) {
+        // Table may not exist — treat as needing compute
         const count = parseInt(row.cnt, 10);
         const cohort: StudyCohort = count >= AUTO_COHORT_THRESHOLD ? 'TICKER' : 'MARKET';
         needsCompute.push({
@@ -88,11 +115,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── Compute studies (sequentially to respect AV rate limits) ──
-    const results: { ticker: string; subtype: string; cohort: string; sampleN: number; error?: string }[] = [];
+    // ── Compute studies sequentially with rate-limit delays ───────
+    const results: { ticker: string; subtype: string; cohort: string; sampleN: number; durationMs: number; error?: string }[] = [];
     let computed = 0;
 
-    for (const item of needsCompute.slice(0, MAX_STUDIES_PER_RUN)) {
+    for (const item of needsCompute.slice(0, limit)) {
+      // Guard: stop if we're approaching the 5-minute timeout
+      if (Date.now() - startTime > 270_000) { // 4.5 min safety
+        console.log(`[CatalystCron] Approaching timeout after ${computed} studies, stopping.`);
+        break;
+      }
+
+      const studyStart = Date.now();
       try {
         console.log(`[CatalystCron] Computing study: ${item.ticker} / ${item.subtype} (${item.cohort}, n=${item.count})`);
 
@@ -103,14 +137,16 @@ export async function POST(req: NextRequest) {
           cohort: item.cohort,
         }, true); // fullCompute = true → runs AV calls and caches
 
+        const duration = Date.now() - studyStart;
         results.push({
           ticker: item.ticker,
           subtype: item.subtype,
           cohort: item.cohort,
           sampleN: result.study.sampleN,
+          durationMs: duration,
         });
         computed++;
-        console.log(`[CatalystCron] ✓ ${item.ticker}/${item.subtype}: n=${result.study.sampleN}, Q${result.study.dataQuality.score}`);
+        console.log(`[CatalystCron] ✓ ${item.ticker}/${item.subtype}: n=${result.study.sampleN}, Q${result.study.dataQuality.score}, ${duration}ms`);
       } catch (err: any) {
         console.error(`[CatalystCron] ✗ ${item.ticker}/${item.subtype}:`, err.message);
         results.push({
@@ -118,15 +154,23 @@ export async function POST(req: NextRequest) {
           subtype: item.subtype,
           cohort: item.cohort,
           sampleN: 0,
+          durationMs: Date.now() - studyStart,
           error: err.message,
         });
       }
+
+      // Rate limit delay between studies
+      if (computed < limit) {
+        await sleep(DELAY_BETWEEN_STUDIES_MS);
+      }
     }
 
+    const totalDuration = Date.now() - startTime;
     return NextResponse.json({
-      message: `Computed ${computed} catalyst studies`,
+      message: `Computed ${computed} catalyst studies in ${(totalDuration / 1000).toFixed(1)}s`,
       computed,
-      pending: Math.max(0, needsCompute.length - MAX_STUDIES_PER_RUN),
+      pending: Math.max(0, needsCompute.length - limit),
+      totalDurationMs: totalDuration,
       results,
     });
   } catch (error: any) {

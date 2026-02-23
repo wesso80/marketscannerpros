@@ -81,6 +81,12 @@ export default function CatalystDetailsDrawer({ study, open, onClose }: Props) {
 
   if (!open) return null;
 
+  // Detect whether price return data has been computed
+  const hasPriceData = study.horizons.day1.sampleN > 0;
+  const isPending = !hasPriceData && study.dataQuality.notes.some(n =>
+    n.includes('PENDING_PRICE_ANALYSIS') || n.includes('COMPUTATION_ERROR')
+  );
+
   const tabs: { key: DrawerTab; label: string }[] = [
     { key: 'distributions', label: 'Distributions' },
     { key: 'intraday', label: 'Intraday Path' },
@@ -138,66 +144,94 @@ export default function CatalystDetailsDrawer({ study, open, onClose }: Props) {
         {/* ── Tab: Distributions ── */}
         {activeTab === 'distributions' && (
           <div className="space-y-3">
-            {/* Summary table */}
-            <div className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2">
-              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--msp-text-faint)] mb-1">
-                Median Returns by Horizon
-              </p>
-              <div className="grid grid-cols-5 gap-2">
-                {HORIZON_ORDER.map(h => {
-                  const s = study.horizons[h];
-                  return (
-                    <div key={h} className="text-center">
-                      <p className="text-[9px] font-semibold uppercase text-[var(--msp-text-faint)]">
-                        {HORIZON_LABELS[h].split(' (')[0]}
-                      </p>
-                      <p className={`text-[13px] font-bold ${s.median > 0.5 ? 'text-emerald-400' : s.median < -0.5 ? 'text-rose-400' : 'text-slate-400'}`}>
-                        {s.median >= 0 ? '+' : ''}{s.median.toFixed(2)}%
-                      </p>
-                      <p className="text-[8px] text-[var(--msp-text-faint)]">
-                        σ={s.stdDev.toFixed(1)} | {(s.winRateAbove1Pct * 100).toFixed(0)}%W
-                      </p>
-                    </div>
-                  );
-                })}
+            {isPending ? (
+              <div className="rounded-md border border-amber-500/20 bg-amber-500/5 p-6 text-center space-y-2">
+                <p className="text-[13px] font-semibold text-amber-400">
+                  ⏳ Price Return Analysis Computing
+                </p>
+                <p className="text-[11px] text-[var(--msp-text-faint)]">
+                  {study.memberEvents.length} catalyst event{study.memberEvents.length !== 1 ? 's' : ''} detected.
+                  Historical price returns are being computed in the background.
+                </p>
+                <p className="text-[10px] text-[var(--msp-text-faint)]">
+                  Data is processed during off-market hours to optimize API usage.
+                  Check back after the next computation cycle.
+                </p>
               </div>
-            </div>
-
-            {/* Box-whisker charts for each horizon */}
-            <div className="space-y-1.5">
-              {HORIZON_ORDER.map(h => (
-                <DistributionChart
-                  key={h}
-                  label={HORIZON_LABELS[h]}
-                  stats={study.horizons[h]}
-                  height={70}
-                />
-              ))}
-            </div>
-
-            {/* Tail risk comparison */}
-            <div className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2">
-              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--msp-text-faint)] mb-1">
-                Tail Risk (Worst 10% Average)
-              </p>
-              <div className="grid grid-cols-5 gap-2">
-                {HORIZON_ORDER.map(h => (
-                  <div key={h} className="text-center">
-                    <p className="text-[9px] font-semibold uppercase text-[var(--msp-text-faint)]">{HORIZON_LABELS[h].split(' (')[0]}</p>
-                    <p className={`text-[12px] font-bold ${study.horizons[h].tailRiskAvg < -3 ? 'text-rose-400' : 'text-slate-400'}`}>
-                      {study.horizons[h].tailRiskAvg.toFixed(1)}%
-                    </p>
+            ) : !hasPriceData ? (
+              <div className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-6 text-center">
+                <p className="text-[11px] text-[var(--msp-text-faint)]">
+                  No price return data available for this study yet.
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Summary table */}
+                <div className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--msp-text-faint)] mb-1">
+                    Median Returns by Horizon
+                  </p>
+                  <div className="grid grid-cols-5 gap-2">
+                    {HORIZON_ORDER.map(h => {
+                      const s = study.horizons[h];
+                      return (
+                        <div key={h} className="text-center">
+                          <p className="text-[9px] font-semibold uppercase text-[var(--msp-text-faint)]">
+                            {HORIZON_LABELS[h].split(' (')[0]}
+                          </p>
+                          <p className={`text-[13px] font-bold ${s.median > 0.5 ? 'text-emerald-400' : s.median < -0.5 ? 'text-rose-400' : 'text-slate-400'}`}>
+                            {s.median >= 0 ? '+' : ''}{s.median.toFixed(2)}%
+                          </p>
+                          <p className="text-[8px] text-[var(--msp-text-faint)]">
+                            σ={s.stdDev.toFixed(1)} | {(s.winRateAbove1Pct * 100).toFixed(0)}%W
+                          </p>
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
+
+                {/* Box-whisker charts for each horizon */}
+                <div className="space-y-1.5">
+                  {HORIZON_ORDER.map(h => (
+                    <DistributionChart
+                      key={h}
+                      label={HORIZON_LABELS[h]}
+                      stats={study.horizons[h]}
+                      height={70}
+                    />
+                  ))}
+                </div>
+
+                {/* Tail risk comparison */}
+                <div className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--msp-text-faint)] mb-1">
+                    Tail Risk (Worst 10% Average)
+                  </p>
+                  <div className="grid grid-cols-5 gap-2">
+                    {HORIZON_ORDER.map(h => (
+                      <div key={h} className="text-center">
+                        <p className="text-[9px] font-semibold uppercase text-[var(--msp-text-faint)]">{HORIZON_LABELS[h].split(' (')[0]}</p>
+                        <p className={`text-[12px] font-bold ${study.horizons[h].tailRiskAvg < -3 ? 'text-rose-400' : 'text-slate-400'}`}>
+                          {study.horizons[h].tailRiskAvg.toFixed(1)}%
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
 
         {/* ── Tab: Intraday Path ── */}
         {activeTab === 'intraday' && (
           <div className="space-y-3">
-            {study.intradayPath ? (
+            {isPending ? (
+              <div className="rounded-md border border-amber-500/20 bg-amber-500/5 p-6 text-center">
+                <p className="text-[11px] text-amber-400">⏳ Intraday path data will be available after background computation completes.</p>
+              </div>
+            ) : study.intradayPath ? (
               <>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2 space-y-1">

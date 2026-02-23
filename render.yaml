@@ -110,9 +110,21 @@ services:
   - type: cron
     name: catalyst-study-compute
     runtime: node
-    schedule: "*/30 * * * *"  # Every 30 minutes - pre-compute catalyst event studies
+    schedule: "*/30 * * * *"  # Every 30 minutes - incremental catalyst study computation
     buildCommand: echo "Cron job ready"
-    startCommand: curl -X POST "$RENDER_EXTERNAL_URL/api/catalyst/study/compute" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
+    startCommand: curl -X POST "$RENDER_EXTERNAL_URL/api/catalyst/study/compute?limit=5" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
+    envVars:
+      - key: RENDER_EXTERNAL_URL
+        sync: false
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
+    name: catalyst-overnight-bulk
+    runtime: node
+    schedule: "0 22 * * *"  # 10 PM UTC (5 PM ET) - bulk compute after market close
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -X POST "$RENDER_EXTERNAL_URL/api/catalyst/study/compute?limit=50" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
       - key: RENDER_EXTERNAL_URL
         sync: false

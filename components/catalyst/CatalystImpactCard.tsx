@@ -217,8 +217,8 @@ export default function CatalystImpactCard({ ticker, subtype, onViewDetails }: P
         </div>
       )}
 
-      {/* View details button */}
-      {onViewDetails && (
+      {/* View details button — only show when price data exists */}
+      {onViewDetails && hasPriceData && (
         <button
           onClick={() => onViewDetails(study)}
           className="w-full rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel)] py-1 text-[10px] font-semibold text-[var(--msp-accent)] hover:bg-[var(--msp-accent-glow)] transition-colors"
