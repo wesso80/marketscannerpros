@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { TradeModel } from '@/types/journal';
 
 type CloseTradeModalProps = {
@@ -51,6 +51,20 @@ export default function CloseTradeModal({ open, trade, onClose, onSubmit }: Clos
     | 'unknown'
   >('none');
   const [reviewText, setReviewText] = useState('');
+
+  // Reset form state when modal opens or trade changes
+  useEffect(() => {
+    if (open) {
+      setExitPrice('');
+      setExitTs(new Date().toISOString().slice(0, 16));
+      setCloseReason('manual');
+      setOutcome('breakeven');
+      setSetupQuality('B');
+      setFollowedPlan(true);
+      setErrorType('none');
+      setReviewText('');
+    }
+  }, [open, trade?.id]);
 
   const canSubmit = useMemo(() => {
     return Number(exitPrice) > 0 && Boolean(exitTs) && Boolean(closeReason) && Boolean(outcome) && Boolean(setupQuality);

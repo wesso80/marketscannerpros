@@ -47,7 +47,7 @@ export function useJournalActions({ rows, onRefresh }: UseJournalActionsArgs) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        journalEntryId: Number(trade.id),
+        journalEntryId: trade.id,
         exitPrice: req.exitPrice,
         exitTs: req.exitTs,
         exitReason: req.closeReason === 'invalid' ? 'invalidated' : req.closeReason === 'signal_flip' || req.closeReason === 'risk_off' ? 'manual' : req.closeReason,

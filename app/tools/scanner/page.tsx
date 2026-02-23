@@ -1344,28 +1344,28 @@ function ScannerContent() {
   const complianceMatrix: Array<{ strategy: string; long: Permission; short: Permission }> = [
     {
       strategy: 'Breakout',
-      long: riskSnapshot?.matrix.BREAKOUT_CONTINUATION.LONG ?? 'BLOCK',
-      short: riskSnapshot?.matrix.BREAKOUT_CONTINUATION.SHORT ?? 'BLOCK',
+      long: riskSnapshot?.matrix?.BREAKOUT_CONTINUATION?.LONG ?? 'BLOCK',
+      short: riskSnapshot?.matrix?.BREAKOUT_CONTINUATION?.SHORT ?? 'BLOCK',
     },
     {
       strategy: 'Pullback',
-      long: riskSnapshot?.matrix.TREND_PULLBACK.LONG ?? 'BLOCK',
-      short: riskSnapshot?.matrix.TREND_PULLBACK.SHORT ?? 'BLOCK',
+      long: riskSnapshot?.matrix?.TREND_PULLBACK?.LONG ?? 'BLOCK',
+      short: riskSnapshot?.matrix?.TREND_PULLBACK?.SHORT ?? 'BLOCK',
     },
     {
       strategy: 'Mean Rev',
-      long: riskSnapshot?.matrix.MEAN_REVERSION.LONG ?? 'BLOCK',
-      short: riskSnapshot?.matrix.MEAN_REVERSION.SHORT ?? 'BLOCK',
+      long: riskSnapshot?.matrix?.MEAN_REVERSION?.LONG ?? 'BLOCK',
+      short: riskSnapshot?.matrix?.MEAN_REVERSION?.SHORT ?? 'BLOCK',
     },
     {
       strategy: 'Range Fade',
-      long: riskSnapshot?.matrix.RANGE_FADE.LONG ?? 'BLOCK',
-      short: riskSnapshot?.matrix.RANGE_FADE.SHORT ?? 'BLOCK',
+      long: riskSnapshot?.matrix?.RANGE_FADE?.LONG ?? 'BLOCK',
+      short: riskSnapshot?.matrix?.RANGE_FADE?.SHORT ?? 'BLOCK',
     },
   ];
 
-  const riskPerTradePct = ((riskSnapshot?.caps.risk_per_trade ?? 0) * 100).toFixed(2);
-  const throttleMultiplier = Math.max(0.35, Math.min(1, (riskSnapshot?.caps.risk_per_trade ?? 0.0075) / 0.0075)).toFixed(2);
+  const riskPerTradePct = ((riskSnapshot?.caps?.risk_per_trade ?? 0) * 100).toFixed(2);
+  const throttleMultiplier = Math.max(0.35, Math.min(1, (riskSnapshot?.caps?.risk_per_trade ?? 0.0075) / 0.0075)).toFixed(2);
   const eventMultiplier = riskSnapshot?.risk_mode === 'LOCKED' ? '0.00' : riskSnapshot?.risk_mode === 'THROTTLED' ? '0.50' : riskSnapshot?.risk_mode === 'DEFENSIVE' ? '0.35' : '1.00';
 
   return (
@@ -1376,7 +1376,7 @@ function ScannerContent() {
             toolName="Market Scanner"
             description="Multi-factor opportunity discovery engine"
             modeLabel={presenceMode}
-            confidenceLabel={result ? `${Math.round(result.score)}%` : 'N/A'}
+            confidenceLabel={result ? `${Math.round(result.score ?? 50)}%` : 'N/A'}
             lastUpdatedLabel={lastUpdated ? new Date(lastUpdated).toLocaleTimeString() : 'Not scanned'}
           />
         }
@@ -1796,7 +1796,7 @@ function ScannerContent() {
             <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
               <div className="text-[0.72rem] font-extrabold uppercase text-[var(--msp-text-faint)]">Setup Quality Check</div>
               <div className={`text-[0.76rem] font-extrabold ${result.institutionalFilter.noTrade ? 'text-[var(--msp-bear)]' : 'text-[var(--msp-bull)]'}`}>
-                {result.institutionalFilter.finalGrade} • {result.institutionalFilter.finalScore.toFixed(0)} • {result.institutionalFilter.recommendation.replace('_', ' ')}
+                {result.institutionalFilter.finalGrade} • {(result.institutionalFilter.finalScore ?? 0).toFixed(0)} • {(result.institutionalFilter.recommendation ?? '').replace('_', ' ')}
               </div>
             </div>
             <div className="grid gap-0.5">

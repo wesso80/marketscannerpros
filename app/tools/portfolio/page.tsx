@@ -806,7 +806,8 @@ function PortfolioContent() {
           const pl = p.side === 'LONG' 
             ? (update.price - p.entryPrice) * p.quantity 
             : (p.entryPrice - update.price) * p.quantity;
-          const plPercent = ((pl / (p.entryPrice * p.quantity)) * 100);
+          const denom = p.entryPrice * p.quantity;
+          const plPercent = denom > 0 ? ((pl / denom) * 100) : 0;
           return { ...p, currentPrice: update.price, pl, plPercent };
         }
         return p;
@@ -978,7 +979,8 @@ function PortfolioContent() {
     const pl = newPosition.side === 'LONG' 
       ? (current - entry) * qty 
       : (entry - current) * qty;
-    const plPercent = ((pl / (entry * qty)) * 100);
+    const denom = entry * qty;
+    const plPercent = denom > 0 ? ((pl / denom) * 100) : 0;
 
     const position: Position = {
       id: Date.now(),
@@ -1166,7 +1168,8 @@ function PortfolioContent() {
         const pl = p.side === 'LONG' 
           ? (newPrice - p.entryPrice) * p.quantity 
           : (p.entryPrice - newPrice) * p.quantity;
-        const plPercent = ((pl / (p.entryPrice * p.quantity)) * 100);
+        const denom = p.entryPrice * p.quantity;
+        const plPercent = denom > 0 ? ((pl / denom) * 100) : 0;
         
         return {
           ...p,

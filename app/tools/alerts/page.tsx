@@ -59,7 +59,8 @@ function StatusBadge({ label, state }: { label: string; state: string }) {
 
 function classifyAlertType(alert: AlertItem): 'Basic' | 'Strategy' | 'Multi' {
   if (alert.is_multi_condition) return 'Multi';
-  if (alert.is_smart_alert || alert.condition_type.startsWith('strategy_') || alert.condition_type.startsWith('scanner_')) {
+  const ct = alert.condition_type ?? '';
+  if (alert.is_smart_alert || ct.startsWith('strategy_') || ct.startsWith('scanner_')) {
     return 'Strategy';
   }
   return 'Basic';
@@ -151,7 +152,7 @@ function AlertsContent() {
 
   const smartPct = useMemo(() => {
     if (activeAlerts.length === 0) return 0;
-    const smart = activeAlerts.filter((a) => a.is_smart_alert || a.condition_type.startsWith('strategy_') || a.condition_type.startsWith('scanner_')).length;
+    const smart = activeAlerts.filter((a) => a.is_smart_alert || (a.condition_type ?? '').startsWith('strategy_') || (a.condition_type ?? '').startsWith('scanner_')).length;
     return Math.round((smart / activeAlerts.length) * 100);
   }, [activeAlerts]);
 
@@ -176,7 +177,7 @@ function AlertsContent() {
 
   const alertRows = useMemo(() => {
     const filtered = activeAlerts.filter((alert) => {
-      const isSmart = Boolean(alert.is_smart_alert || alert.condition_type.startsWith('strategy_') || alert.condition_type.startsWith('scanner_'));
+      const isSmart = Boolean(alert.is_smart_alert || (alert.condition_type ?? '').startsWith('strategy_') || (alert.condition_type ?? '').startsWith('scanner_'));
       const isMulti = Boolean(alert.is_multi_condition);
       if (consoleTab === 'basic') return !isSmart && !isMulti;
       if (consoleTab === 'strategy') return isSmart && !isMulti;
@@ -298,7 +299,7 @@ function AlertsContent() {
                       <div className="flex h-full flex-col justify-center gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                         <div className="flex items-center gap-2 overflow-hidden sm:gap-3">
                           <span className="min-w-[56px] rounded-md border border-slate-700 bg-slate-950/40 px-2 py-1 text-xs font-semibold text-slate-100">{alert.symbol}</span>
-                          <span className="truncate text-sm font-semibold text-slate-100">{alert.condition_type.replaceAll('_', ' ')} {alert.condition_value}</span>
+                          <span className="truncate text-sm font-semibold text-slate-100">{(alert.condition_type ?? '').replaceAll('_', ' ')} {Number.isFinite(alert.condition_value) ? alert.condition_value : '—'}</span>
                           <span className="hidden rounded bg-white/5 px-2 py-0.5 text-xs text-slate-400 sm:inline">{type}</span>
                         </div>
 

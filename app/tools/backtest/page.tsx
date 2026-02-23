@@ -2368,8 +2368,8 @@ function BacktestContent() {
                   fontSize: '12px'
                 }}>
                   <div style={{ color: '#94a3b8', marginBottom: '4px' }}>Directional Invalidation</div>
-                  <div style={{ color: '#e2e8f0', fontWeight: 600 }}>{results.diagnostics.invalidation.rule}</div>
-                  <div style={{ color: '#cbd5e1', marginTop: '4px' }}>{results.diagnostics.invalidation.reason}</div>
+                  <div style={{ color: '#e2e8f0', fontWeight: 600 }}>{results.diagnostics.invalidation?.rule ?? '—'}</div>
+                  <div style={{ color: '#cbd5e1', marginTop: '4px' }}>{results.diagnostics.invalidation?.reason ?? '—'}</div>
                 </div>
 
                 {results.diagnostics.adjustments.length > 0 && (
@@ -2814,7 +2814,7 @@ function BacktestContent() {
                 borderRadius: '8px',
                 padding: '20px'
               }}>
-                <svg width="100%" height="100%" style={{ overflow: 'visible' }}>
+                <svg width="100%" height="100%" viewBox="0 0 1000 400" preserveAspectRatio="xMidYMid meet" style={{ overflow: 'visible' }}>
                   {(() => {
                     const width = 1000;
                     const height = 360;
@@ -2853,7 +2853,8 @@ function BacktestContent() {
 
                     // Scale functions for trade bars
                     const tradeBarY = padding.top + equityCurveHeight + gap;
-                    const maxTradeReturn = Math.max(...results.trades.map(t => Math.abs(t.return)), 1);
+                    const safeTrades = results.trades || [];
+                    const maxTradeReturn = Math.max(...safeTrades.map(t => Math.abs(t.return)), 1);
                     const scaleTradeBar = (value: number) => (value / maxTradeReturn) * (tradeBarHeight / 2);
 
                     return (
@@ -2939,7 +2940,7 @@ function BacktestContent() {
                         />
 
                         {/* Trade bars */}
-                        {results.trades.map((trade, i) => {
+                        {safeTrades.map((trade, i) => {
                           const x = scaleX(i + 1);
                           const barHeight = scaleTradeBar(trade.return);
                           const barY = trade.return >= 0 
@@ -3033,14 +3034,14 @@ function BacktestContent() {
                     fontSize: '22px', 
                     fontWeight: '700' 
                   }}>
-                    {results.totalReturn >= 0 ? '+' : ''}{results.totalReturn.toFixed(2)}%
+                    {results.totalReturn >= 0 ? '+' : ''}{Number.isFinite(results.totalReturn) ? results.totalReturn.toFixed(2) : '—'}%
                   </div>
                 </div>
 
                 <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
                   <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Win Rate</div>
                   <div style={{ color: '#94a3b8', fontSize: '20px', fontWeight: '600' }}>
-                    {results.winRate.toFixed(1)}%
+                    {Number.isFinite(results.winRate) ? results.winRate.toFixed(1) : '—'}%
                   </div>
                   <div style={{ color: '#64748b', fontSize: '10px', marginTop: '2px' }}>
                     (context matters more than %)
@@ -3068,7 +3069,7 @@ function BacktestContent() {
                     fontSize: '24px', 
                     fontWeight: '800' 
                   }}>
-                    {results.profitFactor.toFixed(2)}
+                    {Number.isFinite(results.profitFactor) ? results.profitFactor.toFixed(2) : '—'}
                   </div>
                   <div style={{ color: '#64748b', fontSize: '10px', marginTop: '2px' }}>
                     {results.profitFactor >= 1.5 ? 'Strong edge' : results.profitFactor >= 1 ? 'Break-even' : 'Losing money'}
@@ -3078,7 +3079,7 @@ function BacktestContent() {
                 <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
                   <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sharpe Ratio</div>
                   <div style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700' }}>
-                    {results.sharpeRatio.toFixed(2)}
+                    {Number.isFinite(results.sharpeRatio) ? results.sharpeRatio.toFixed(2) : '—'}
                   </div>
                 </div>
 
@@ -3096,7 +3097,7 @@ function BacktestContent() {
                     fontSize: '24px', 
                     fontWeight: '800' 
                   }}>
-                    {results.maxDrawdown.toFixed(2)}%
+                    {Number.isFinite(results.maxDrawdown) ? results.maxDrawdown.toFixed(2) : '—'}%
                   </div>
                   <div style={{ color: '#64748b', fontSize: '10px', marginTop: '2px' }}>
                     {results.maxDrawdown <= 10 ? 'Controlled risk' : results.maxDrawdown <= 20 ? 'Moderate risk' : 'High risk'}
@@ -3106,49 +3107,49 @@ function BacktestContent() {
                 <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
                   <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Avg Win</div>
                   <div style={{ color: '#10b981', fontSize: '22px', fontWeight: '700' }}>
-                    ${results.avgWin.toFixed(2)}
+                    ${Number.isFinite(results.avgWin) ? results.avgWin.toFixed(2) : '—'}
                   </div>
                 </div>
 
                 <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
                   <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Avg Loss</div>
                   <div style={{ color: '#ef4444', fontSize: '22px', fontWeight: '700' }}>
-                    ${results.avgLoss.toFixed(2)}
+                    ${Number.isFinite(results.avgLoss) ? results.avgLoss.toFixed(2) : '—'}
                   </div>
                 </div>
 
                 <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
                   <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>CAGR</div>
                   <div style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700' }}>
-                    {results.cagr >= 0 ? '+' : ''}{results.cagr.toFixed(2)}%
+                    {results.cagr >= 0 ? '+' : ''}{Number.isFinite(results.cagr) ? results.cagr.toFixed(2) : '—'}%
                   </div>
                 </div>
 
                 <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
                   <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Volatility (Ann.)</div>
                   <div style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700' }}>
-                    {results.volatility.toFixed(2)}%
+                    {Number.isFinite(results.volatility) ? results.volatility.toFixed(2) : '—'}%
                   </div>
                 </div>
 
                 <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
                   <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sortino Ratio</div>
                   <div style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700' }}>
-                    {results.sortinoRatio.toFixed(2)}
+                    {Number.isFinite(results.sortinoRatio) ? results.sortinoRatio.toFixed(2) : '—'}
                   </div>
                 </div>
 
                 <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
                   <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Calmar Ratio</div>
                   <div style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700' }}>
-                    {results.calmarRatio.toFixed(2)}
+                    {Number.isFinite(results.calmarRatio) ? results.calmarRatio.toFixed(2) : '—'}
                   </div>
                 </div>
 
                 <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
                   <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Time in Market</div>
                   <div style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700' }}>
-                    {results.timeInMarket.toFixed(1)}%
+                    {Number.isFinite(results.timeInMarket) ? results.timeInMarket.toFixed(1) : '—'}%
                   </div>
                 </div>
 
@@ -3226,7 +3227,7 @@ function BacktestContent() {
                     </tr>
                   </thead>
                   <tbody>
-                    {results.trades.map((trade, idx) => (
+                    {(results.trades || []).map((trade, idx) => (
                       <tr key={idx} style={{ borderBottom: '1px solid #334155' }}>
                         <td style={{ padding: '16px 20px', color: '#94a3b8', fontSize: '14px' }}>
                           {new Date(trade.entryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}

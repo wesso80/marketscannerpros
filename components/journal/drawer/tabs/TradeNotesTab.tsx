@@ -15,7 +15,7 @@ export default function TradeNotesTab({ trade }: { trade?: TradeModel }) {
         placeholder="Manual note"
         className="min-h-24 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100"
       />
-      <button className="rounded bg-white/10 px-3 py-1.5 text-xs text-slate-100">Add Note</button>
+      <button disabled className="rounded bg-white/10 px-3 py-1.5 text-xs text-slate-100 opacity-40 cursor-not-allowed">Add Note (coming soon)</button>
       <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-slate-400">AI notes stream placeholder (collapsed list).</div>
     </div>
   );
