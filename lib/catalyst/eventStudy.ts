@@ -278,15 +278,17 @@ export async function computeEventStudy(opts: ComputeStudyOptions): Promise<Even
   if (opts.events) {
     events = opts.events;
   } else {
-    const scope = cohort === 'TICKER'
-      ? `ticker = $1 AND catalyst_subtype = $2 AND event_timestamp_utc >= $3`
-      : cohort === 'MARKET'
-      ? `catalyst_subtype = $2 AND event_timestamp_utc >= $3`
-      : `catalyst_subtype = $2 AND event_timestamp_utc >= $3`; // SECTOR: would need sector mapping
+    let scope: string;
+    let params: any[];
 
-    const params = cohort === 'TICKER'
-      ? [ticker, subtype, cutoff]
-      : [ticker, subtype, cutoff]; // $1 unused for MARKET/SECTOR
+    if (cohort === 'TICKER') {
+      scope = `ticker = $1 AND catalyst_subtype = $2 AND event_timestamp_utc >= $3`;
+      params = [ticker, subtype, cutoff];
+    } else {
+      // MARKET / SECTOR: no ticker filter — use $1/$2 only
+      scope = `catalyst_subtype = $1 AND event_timestamp_utc >= $2`;
+      params = [subtype, cutoff];
+    }
 
     const rows = await q(
       `SELECT id, ticker, source, headline, url, catalyst_type, catalyst_subtype,
@@ -535,20 +537,24 @@ export async function getOrComputeStudy(
   opts: ComputeStudyOptions,
   fullCompute = false
 ): Promise<{ study: EventStudyResult; cached: boolean; cacheAge: number | null; pendingPriceData: boolean }> {
-  // Check cache
-  const cached = await q(
-    `SELECT id, result_json, computed_at FROM catalyst_event_studies
-     WHERE ticker = $1 AND catalyst_subtype = $2 AND cohort = $3 AND lookback_days = $4
-     LIMIT 1`,
-    [opts.ticker, opts.subtype, opts.cohort, opts.lookbackDays]
-  );
+  // Check cache (wrapped in try/catch in case table doesn't exist yet)
+  try {
+    const cached = await q(
+      `SELECT id, result_json, computed_at FROM catalyst_event_studies
+       WHERE ticker = $1 AND catalyst_subtype = $2 AND cohort = $3 AND lookback_days = $4
+       LIMIT 1`,
+      [opts.ticker, opts.subtype, opts.cohort, opts.lookbackDays]
+    );
 
-  if (cached && cached.length > 0) {
-    const row = cached[0];
-    const age = (Date.now() - new Date(row.computed_at).getTime()) / 1000;
-    if (age < STUDY_CACHE_TTL_HOURS * 3600 && !fullCompute) {
-      return { study: row.result_json as EventStudyResult, cached: true, cacheAge: age, pendingPriceData: false };
+    if (cached && cached.length > 0) {
+      const row = cached[0];
+      const age = (Date.now() - new Date(row.computed_at).getTime()) / 1000;
+      if (age < STUDY_CACHE_TTL_HOURS * 3600 && !fullCompute) {
+        return { study: row.result_json as EventStudyResult, cached: true, cacheAge: age, pendingPriceData: false };
+      }
     }
+  } catch (err) {
+    console.warn('[EventStudy] Cache lookup failed (table may not exist):', (err as Error).message);
   }
 
   // ── Fast DB-only study for inline API requests ──────────────────

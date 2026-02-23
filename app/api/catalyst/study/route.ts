@@ -91,7 +91,7 @@ export async function GET(req: NextRequest) {
       study: result.study,
     });
   } catch (error: any) {
-    console.error('Catalyst study error:', error);
+    console.error('Catalyst study error:', error?.message, error?.stack);
     return NextResponse.json({ error: 'Failed to compute study', detail: error.message }, { status: 500 });
   }
 }
