@@ -108,6 +108,18 @@ services:
         sync: false
 
   - type: cron
+    name: catalyst-study-compute
+    runtime: node
+    schedule: "*/30 * * * *"  # Every 30 minutes - pre-compute catalyst event studies
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -X POST "$RENDER_EXTERNAL_URL/api/catalyst/study/compute" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
+    envVars:
+      - key: RENDER_EXTERNAL_URL
+        sync: false
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
     name: learning-outcomes
     runtime: node
     schedule: "*/15 * * * *"  # Every 15 minutes - process learning machine predictions

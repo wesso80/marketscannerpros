@@ -251,4 +251,6 @@ export interface CatalystStudyResponse {
   study: EventStudyResult;
   cached: boolean;
   cacheAge: number | null; // seconds since computation
+  /** True when price return data hasn't been computed yet (background job pending) */
+  pendingPriceData: boolean;
 }

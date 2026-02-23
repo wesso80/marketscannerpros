@@ -110,10 +110,11 @@ export default function CatalystImpactCard({ ticker, subtype, onViewDetails }: P
     );
   }
 
-  const { study, cached, cacheAge } = data;
+  const { study, cached, cacheAge, pendingPriceData } = data;
   const qc = qualityColor(study.dataQuality.score);
   const day1 = study.horizons.day1;
   const primaryHorizons: StudyHorizon[] = ['close_to_open', 'open_to_close', 'day1', 'day2', 'day5'];
+  const hasPriceData = !pendingPriceData && day1.sampleN > 0;
 
   return (
     <div className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2.5 space-y-2">
@@ -137,33 +138,46 @@ export default function CatalystImpactCard({ ticker, subtype, onViewDetails }: P
       </div>
 
       {/* Key metrics row */}
-      <div className="grid grid-cols-5 gap-1">
-        {primaryHorizons.map(h => (
-          <button
-            key={h}
-            onClick={() => setExpandedHorizon(expandedHorizon === h ? null : h)}
-            className={`rounded-md border p-1 transition-colors ${
-              expandedHorizon === h
-                ? 'border-[var(--msp-accent)] bg-[var(--msp-accent-glow)]'
-                : 'border-[var(--msp-border)] bg-[var(--msp-panel)] hover:border-[var(--msp-border-strong)]'
-            }`}
-          >
-            <MiniStat label={HORIZON_LABELS[h]} value={study.horizons[h].median} />
-          </button>
-        ))}
-      </div>
+      {hasPriceData ? (
+        <div className="grid grid-cols-5 gap-1">
+          {primaryHorizons.map(h => (
+            <button
+              key={h}
+              onClick={() => setExpandedHorizon(expandedHorizon === h ? null : h)}
+              className={`rounded-md border p-1 transition-colors ${
+                expandedHorizon === h
+                  ? 'border-[var(--msp-accent)] bg-[var(--msp-accent-glow)]'
+                  : 'border-[var(--msp-border)] bg-[var(--msp-panel)] hover:border-[var(--msp-border-strong)]'
+              }`}
+            >
+              <MiniStat label={HORIZON_LABELS[h]} value={study.horizons[h].median} />
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-md border border-amber-500/20 bg-amber-500/5 p-2.5 text-center">
+          <p className="text-[10px] font-semibold text-amber-400">
+            ⏳ Price Return Analysis Computing
+          </p>
+          <p className="text-[9px] text-[var(--msp-text-faint)] mt-0.5">
+            {study.sampleN} event{study.sampleN !== 1 ? 's' : ''} detected · Historical return data is processed in the background
+          </p>
+        </div>
+      )}
 
       {/* Day 1 win/loss bar */}
-      <div className="space-y-0.5">
-        <div className="flex items-center justify-between text-[9px] text-[var(--msp-text-faint)]">
-          <span>Win &gt;1%: {(day1.winRateAbove1Pct * 100).toFixed(0)}%</span>
-          <span>Loss &lt;−1%: {(day1.lossRateBelow1Pct * 100).toFixed(0)}%</span>
+      {hasPriceData && (
+        <div className="space-y-0.5">
+          <div className="flex items-center justify-between text-[9px] text-[var(--msp-text-faint)]">
+            <span>Win &gt;1%: {(day1.winRateAbove1Pct * 100).toFixed(0)}%</span>
+            <span>Loss &lt;−1%: {(day1.lossRateBelow1Pct * 100).toFixed(0)}%</span>
+          </div>
+          <WinLossBar winRate={day1.winRateAbove1Pct} lossRate={day1.lossRateBelow1Pct} />
         </div>
-        <WinLossBar winRate={day1.winRateAbove1Pct} lossRate={day1.lossRateBelow1Pct} />
-      </div>
+      )}
 
       {/* Intraday path snippet */}
-      {study.intradayPath && (
+      {hasPriceData && study.intradayPath && (
         <div className="grid grid-cols-3 gap-1.5 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel)] p-1.5">
           <MiniStat label="MFE" value={study.intradayPath.mfePercent.median} />
           <MiniStat label="MAE" value={study.intradayPath.maePercent.median} />
@@ -177,7 +191,7 @@ export default function CatalystImpactCard({ ticker, subtype, onViewDetails }: P
       )}
 
       {/* Expanded distribution chart */}
-      {expandedHorizon && (
+      {hasPriceData && expandedHorizon && (
         <DistributionChart
           label={HORIZON_LABELS[expandedHorizon]}
           stats={study.horizons[expandedHorizon]}
@@ -196,7 +210,7 @@ export default function CatalystImpactCard({ ticker, subtype, onViewDetails }: P
       )}
 
       {/* Tail risk */}
-      {day1.tailRiskAvg < -3 && (
+      {hasPriceData && day1.tailRiskAvg < -3 && (
         <div className="flex items-center gap-1 text-[9px] text-rose-400/80">
           <span className="text-[11px]">⚠</span>
           <span>Tail risk: worst 10% avg {day1.tailRiskAvg.toFixed(1)}%</span>

@@ -250,6 +250,12 @@ export interface ComputeStudyOptions {
   cohort: StudyCohort;
   /** If provided, these events are used instead of querying DB. */
   events?: CatalystEvent[];
+  /**
+   * When true, skip all Alpha Vantage API calls and return event metadata only.
+   * Horizons will have sampleN: 0. Use for fast inline responses;
+   * full price analysis runs in background cron.
+   */
+  dbOnly?: boolean;
 }
 
 /**
@@ -264,7 +270,7 @@ export interface ComputeStudyOptions {
 const MAX_EVENTS_PER_STUDY = 50;
 
 export async function computeEventStudy(opts: ComputeStudyOptions): Promise<EventStudyResult> {
-  const { ticker, subtype, lookbackDays, cohort } = opts;
+  const { ticker, subtype, lookbackDays, cohort, dbOnly = false } = opts;
   const cutoff = new Date(Date.now() - lookbackDays * 86_400_000);
 
   // ── Fetch events ────────────────────────────────────────────────
@@ -339,48 +345,9 @@ export async function computeEventStudy(opts: ComputeStudyOptions): Promise<Even
   let totalMissingBars = 0;
   let confoundedCount = 0;
 
-  for (const event of events) {
-    // Check confounding
-    const confounded = await isEarningsConfounded(event.ticker, event.eventTimestampUtc);
-    if (confounded) {
-      confoundedCount++;
-      members.push({
-        eventId: event.id,
-        ticker: event.ticker,
-        headline: event.headline,
-        eventTimestampEt: event.eventTimestampEt,
-        session: event.session,
-        included: false,
-        exclusionReason: 'earnings_confound',
-        returns: null,
-      });
-      continue;
-    }
-
-    // Compute returns
-    try {
-      const { returns, intraday, missingBars } = await computeEventReturns(
-        event.ticker,
-        event.anchorTimestampEt,
-        event.session
-      );
-      totalMissingBars += missingBars;
-
-      const partialReturns: Partial<Record<StudyHorizon, number>> = {};
-      for (const [h, val] of Object.entries(returns) as [StudyHorizon, number | null][]) {
-        if (val !== null) {
-          horizonValues[h].push(val);
-          partialReturns[h] = val;
-        }
-      }
-
-      if (intraday) {
-        intradayMFE.push(intraday.mfePercent);
-        intradayMAE.push(intraday.maePercent);
-        intradayReversal.push(intraday.reversalWithin90m);
-        intradayTimeToMax.push(intraday.timeToMaxExcursionMinutes);
-      }
-
+  if (dbOnly) {
+    // ── DB-only mode: skip all AV calls, just list events as members ──
+    for (const event of events) {
       members.push({
         eventId: event.id,
         ticker: event.ticker,
@@ -389,19 +356,75 @@ export async function computeEventStudy(opts: ComputeStudyOptions): Promise<Even
         session: event.session,
         included: true,
         exclusionReason: null,
-        returns: partialReturns,
-      });
-    } catch (err: any) {
-      members.push({
-        eventId: event.id,
-        ticker: event.ticker,
-        headline: event.headline,
-        eventTimestampEt: event.eventTimestampEt,
-        session: event.session,
-        included: false,
-        exclusionReason: `price_data_error: ${err.message}`,
         returns: null,
       });
+    }
+  } else {
+    // ── Full mode: fetch price data from AV and compute returns ───────
+    for (const event of events) {
+      // Check confounding
+      const confounded = await isEarningsConfounded(event.ticker, event.eventTimestampUtc);
+      if (confounded) {
+        confoundedCount++;
+        members.push({
+          eventId: event.id,
+          ticker: event.ticker,
+          headline: event.headline,
+          eventTimestampEt: event.eventTimestampEt,
+          session: event.session,
+          included: false,
+          exclusionReason: 'earnings_confound',
+          returns: null,
+        });
+        continue;
+      }
+
+      // Compute returns
+      try {
+        const { returns, intraday, missingBars } = await computeEventReturns(
+          event.ticker,
+          event.anchorTimestampEt,
+          event.session
+        );
+        totalMissingBars += missingBars;
+
+        const partialReturns: Partial<Record<StudyHorizon, number>> = {};
+        for (const [h, val] of Object.entries(returns) as [StudyHorizon, number | null][]) {
+          if (val !== null) {
+            horizonValues[h].push(val);
+            partialReturns[h] = val;
+          }
+        }
+
+        if (intraday) {
+          intradayMFE.push(intraday.mfePercent);
+          intradayMAE.push(intraday.maePercent);
+          intradayReversal.push(intraday.reversalWithin90m);
+          intradayTimeToMax.push(intraday.timeToMaxExcursionMinutes);
+        }
+
+        members.push({
+          eventId: event.id,
+          ticker: event.ticker,
+          headline: event.headline,
+          eventTimestampEt: event.eventTimestampEt,
+          session: event.session,
+          included: true,
+          exclusionReason: null,
+          returns: partialReturns,
+        });
+      } catch (err: any) {
+        members.push({
+          eventId: event.id,
+          ticker: event.ticker,
+          headline: event.headline,
+          eventTimestampEt: event.eventTimestampEt,
+          session: event.session,
+          included: false,
+          exclusionReason: `price_data_error: ${err.message}`,
+          returns: null,
+        });
+      }
     }
   }
 
@@ -427,20 +450,24 @@ export async function computeEventStudy(opts: ComputeStudyOptions): Promise<Even
   const avgConfidence = events.length > 0
     ? events.reduce((s, e) => s + e.confidence, 0) / events.length
     : 0;
-  const pctMissing = includedCount > 0 ? totalMissingBars / (includedCount * 5) : 0; // 5 bars expected per event
+  const pctMissing = (!dbOnly && includedCount > 0) ? totalMissingBars / (includedCount * 5) : 0; // 5 bars expected per event
 
   const notes: string[] = [];
+  if (dbOnly) notes.push('PENDING_PRICE_ANALYSIS: Price return data is computed in background. Check back shortly.');
   if (includedCount < 5) notes.push('LOW_SAMPLE_SIZE: fewer than 5 events included.');
   if (confoundedCount > 0) notes.push(`${confoundedCount} event(s) excluded due to earnings confound.`);
-  if (pctMissing > 0.2) notes.push(`HIGH_MISSING_DATA: ${(pctMissing * 100).toFixed(0)}% of expected price bars missing.`);
+  if (!dbOnly && pctMissing > 0.2) notes.push(`HIGH_MISSING_DATA: ${(pctMissing * 100).toFixed(0)}% of expected price bars missing.`);
 
   // Score: 10 = perfect: deduct for small sample, missing data, low confidence
   let score = 10;
-  if (includedCount < 5) score -= 4;
-  else if (includedCount < 10) score -= 2;
-  if (pctMissing > 0.3) score -= 3;
-  else if (pctMissing > 0.1) score -= 1;
-  if (avgConfidence < 0.5) score -= 2;
+  if (dbOnly) score = 1; // DB-only studies always score low until price data arrives
+  else {
+    if (includedCount < 5) score -= 4;
+    else if (includedCount < 10) score -= 2;
+    if (pctMissing > 0.3) score -= 3;
+    else if (pctMissing > 0.1) score -= 1;
+    if (avgConfidence < 0.5) score -= 2;
+  }
   score = Math.max(0, Math.min(10, score));
 
   const dataQuality: DataQualityReport = {
@@ -496,8 +523,18 @@ const STUDY_CACHE_TTL_HOURS = 6;
 /**
  * Get a cached study or compute a fresh one.
  * Stores result in catalyst_event_studies for fast retrieval.
+ *
+ * When `fullCompute` is false (default for API requests):
+ *   - Returns cached study if available and fresh
+ *   - Otherwise returns a fast DB-only study (no AV calls, no caching)
+ *
+ * When `fullCompute` is true (cron background jobs):
+ *   - Always computes with full AV price data and caches the result
  */
-export async function getOrComputeStudy(opts: ComputeStudyOptions): Promise<{ study: EventStudyResult; cached: boolean; cacheAge: number | null }> {
+export async function getOrComputeStudy(
+  opts: ComputeStudyOptions,
+  fullCompute = false
+): Promise<{ study: EventStudyResult; cached: boolean; cacheAge: number | null; pendingPriceData: boolean }> {
   // Check cache
   const cached = await q(
     `SELECT id, result_json, computed_at FROM catalyst_event_studies
@@ -509,13 +546,20 @@ export async function getOrComputeStudy(opts: ComputeStudyOptions): Promise<{ st
   if (cached && cached.length > 0) {
     const row = cached[0];
     const age = (Date.now() - new Date(row.computed_at).getTime()) / 1000;
-    if (age < STUDY_CACHE_TTL_HOURS * 3600) {
-      return { study: row.result_json as EventStudyResult, cached: true, cacheAge: age };
+    if (age < STUDY_CACHE_TTL_HOURS * 3600 && !fullCompute) {
+      return { study: row.result_json as EventStudyResult, cached: true, cacheAge: age, pendingPriceData: false };
     }
   }
 
-  // Compute fresh
-  const study = await computeEventStudy(opts);
+  // ── Fast DB-only study for inline API requests ──────────────────
+  if (!fullCompute) {
+    const study = await computeEventStudy({ ...opts, dbOnly: true });
+    // Don't cache DB-only results — let the cron fill in the full study
+    return { study, cached: false, cacheAge: null, pendingPriceData: true };
+  }
+
+  // ── Full compute with AV price data (cron/background) ──────────
+  const study = await computeEventStudy({ ...opts, dbOnly: false });
 
   // Upsert cache
   try {
@@ -555,5 +599,5 @@ export async function getOrComputeStudy(opts: ComputeStudyOptions): Promise<{ st
     console.error('[EventStudy] Member audit insert failed:', err);
   }
 
-  return { study, cached: false, cacheAge: null };
+  return { study, cached: false, cacheAge: null, pendingPriceData: false };
 }

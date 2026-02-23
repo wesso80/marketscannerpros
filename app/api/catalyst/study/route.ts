@@ -86,6 +86,7 @@ export async function GET(req: NextRequest) {
       lookbackDays,
       cached: result.cached,
       cacheAge: result.cacheAge,
+      pendingPriceData: result.pendingPriceData,
       warnings,
       study: result.study,
     });
