@@ -1,546 +1,325 @@
 "use client";
 
-import React, { Suspense, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import React, { Suspense } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import Link from "next/link";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
-import AdaptivePersonalityCard from "@/components/AdaptivePersonalityCard";
-import { useRegime, regimeLabel } from "@/lib/useRegime";
+import { useAnalystContext, type AnalystTab } from "@/lib/ai/useAnalystContext";
 import { useUserTier } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
 
-type AssetType = "crypto" | "stock" | "fx";
-type OutputView = "thesis" | "risk" | "checklist" | "execution";
+// ─── Tab Config ─────────────────────────────────────
 
-type ModeOption = {
-  value: string;
-  label: string;
-  description: string;
-};
-
-const MODES: ModeOption[] = [
-  { value: "analysis", label: "General", description: "Any market, asset, or setup." },
-  { value: "macro", label: "Macro", description: "Multi-timeframe outlook." },
-  { value: "scanner-explain", label: "Signal Explain", description: "Why a signal fired." },
-  { value: "pine", label: "Pine / Code", description: "Indicators and strategy logic." },
+const TAB_CONFIG: { key: AnalystTab; label: string; icon: string; description: string }[] = [
+  { key: "explain", label: "Explain", icon: "\uD83D\uDD0D", description: "What the platform sees right now" },
+  { key: "plan", label: "Plan", icon: "\uD83D\uDCCB", description: "Scenario planning based on regime" },
+  { key: "act", label: "Act", icon: "\u26A1", description: "Execution checklist gated by authorization" },
+  { key: "learn", label: "Learn", icon: "\uD83D\uDCDA", description: "Historical context & insights" },
 ];
 
-const PRESET_QUERIES: Record<string, string> = {
-  analysis: "Give me the market structure, directional bias, and most probable next path for this setup.",
-  macro: "Provide a top-down macro cycle read with bullish and bearish paths and key invalidation levels.",
-  "scanner-explain": "Explain why this scanner signal triggered, what phase we are in, and how to manage risk.",
-  pine: "Design or improve a Pine Script logic for this setup with clear entry, invalidation, and exit rules.",
-};
+// ─── Status Badge Component ─────────────────────────
 
-function getActionLinks(symbol: string, timeframe: string, query: string) {
-  const s = encodeURIComponent(symbol || "BTCUSD");
-  const tf = encodeURIComponent(timeframe || "1H");
-  const q = encodeURIComponent(query || "Review this setup and generate a trade plan.");
-
-  return {
-    scanner: `/tools/scanner?symbol=${s}&tf=${tf}`,
-    backtest: `/tools/backtest?symbol=${s}&timeframe=${tf}`,
-    alerts: `/tools/alerts?symbol=${s}&tf=${tf}`,
-    journal: `/tools/journal?note=${q}`,
-  };
-}
-
-function normalizeDirection(direction?: string) {
-  const d = direction?.toLowerCase();
-  if (d === "long" || d === "bullish") return "bullish";
-  if (d === "short" || d === "bearish") return "bearish";
-  if (d === "neutral") return "neutral";
-  return undefined;
-}
-
-function AiAnalystContent() {
-  const searchParams = useSearchParams();
-  const { data: regimeData } = useRegime();
-  const { tier, isLoading: tierLoading } = useUserTier();
-
-  if (tierLoading) return <div className="min-h-screen bg-[var(--msp-bg)]" />;
-  if (!tier || tier === 'free' || tier === 'anonymous') return <UpgradeGate requiredTier="pro" feature="MSP AI Analyst" />;
-
-  const [query, setQuery] = useState(
-    "Give me a macro outlook for this ticker with bullish and bearish scenarios."
-  );
-  const [mode, setMode] = useState<string>("macro");
-  const [answer, setAnswer] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [outputView, setOutputView] = useState<OutputView>("thesis");
-
-  const [assetType, setAssetType] = useState<AssetType>("crypto");
-  const [symbol, setSymbol] = useState<string>("XRPUSD");
-  const [timeframe, setTimeframe] = useState<string>("1H");
-  const [currentPrice, setCurrentPrice] = useState<string>("");
-  const [keyLevelsText, setKeyLevelsText] = useState<string>("");
-  const [priceLoading, setPriceLoading] = useState<boolean>(false);
-
-  const [loadedFromScanner, setLoadedFromScanner] = useState<boolean>(false);
-  const [scannerMeta, setScannerMeta] = useState<{
-    signal?: string;
-    direction?: string;
-    score?: string;
-  }>({});
-
-  useEffect(() => {
-    if (!searchParams) return;
-
-    const modeParam = searchParams.get("mode");
-    const fromParam = searchParams.get("from");
-    const s = searchParams.get("symbol");
-    const tfParam = searchParams.get("tf") || searchParams.get("timeframe");
-    const priceParam = searchParams.get("price");
-    const directionParam = searchParams.get("dir") || searchParams.get("direction");
-    const scoreParam = searchParams.get("score");
-    const levelsParam = searchParams.get("levels");
-    const signalParam = searchParams.get("signal");
-
-    const isFromScanner = modeParam === "scanner-explain" || fromParam === "scanner";
-    if (!isFromScanner) return;
-
-    const asset = searchParams.get("asset") as AssetType | null;
-    if (asset === "crypto" || asset === "stock" || asset === "fx") {
-      setAssetType(asset);
-    } else if (s) {
-      setAssetType(/(USD|USDT|BTC|ETH)$/i.test(s) ? "crypto" : "stock");
-    }
-
-    if (s) setSymbol(s);
-    if (tfParam) setTimeframe(tfParam.toUpperCase());
-    if (priceParam) setCurrentPrice(priceParam);
-    if (levelsParam) setKeyLevelsText(levelsParam);
-
-    const defaultPromptParts: string[] = [];
-    defaultPromptParts.push(
-      `Explain the latest scanner signal for ${s || "this ticker"} on the ${tfParam || timeframe} timeframe.`
-    );
-
-    if (signalParam) defaultPromptParts.push(`Signal type: "${signalParam}".`);
-    if (directionParam) {
-      const direction =
-        directionParam.toLowerCase() === "long"
-          ? "Bullish"
-          : directionParam.toLowerCase() === "short"
-            ? "Bearish"
-            : directionParam;
-      defaultPromptParts.push(`Bias: ${direction.toUpperCase()}.`);
-    }
-    if (scoreParam) defaultPromptParts.push(`Signal strength score: ${scoreParam}.`);
-
-    defaultPromptParts.push(
-      "Give a structured breakdown with: executive summary, context, bullish and bearish scenarios, key levels and invalidation, risk management, and how to use this signal."
-    );
-
-    setQuery(defaultPromptParts.join(" "));
-    setLoadedFromScanner(true);
-    setScannerMeta({
-      signal: signalParam || undefined,
-      direction: directionParam || undefined,
-      score: scoreParam || undefined,
-    });
-    setMode("scanner-explain");
-  }, [searchParams, timeframe]);
-
-  async function handleAutoPrice() {
-    if (!symbol.trim()) return;
-
-    setPriceLoading(true);
-    setError(null);
-
-    try {
-      let cleanSymbol = symbol.trim().toUpperCase();
-      if (assetType === "crypto") {
-        cleanSymbol = cleanSymbol.replace(/(USD|USDT|EUR|BTC)$/i, "");
-      }
-
-      const params = new URLSearchParams({
-        symbol: cleanSymbol,
-        type: assetType === "stock" ? "stock" : assetType,
-        market: "USD",
-      });
-
-      const res = await fetch(`/api/quote?${params.toString()}`);
-      const contentType = res.headers.get("content-type");
-      if (!contentType?.includes("application/json")) {
-        throw new Error(`Server returned ${contentType} instead of JSON`);
-      }
-
-      const data: { ok: boolean; price?: number; error?: string } = await res.json();
-      if (!res.ok || !data.ok || typeof data.price !== "number") {
-        throw new Error(data.error || `Quote HTTP ${res.status}`);
-      }
-
-      setCurrentPrice(data.price.toFixed(4));
-    } catch (err: any) {
-      console.error("Auto price error:", err);
-      setError(err.message || "Could not fetch live price.");
-    } finally {
-      setPriceLoading(false);
-    }
-  }
-
-  async function handleAsk(e: React.FormEvent) {
-    e.preventDefault();
-    if (!query.trim()) return;
-
-    setLoading(true);
-    setError(null);
-    setAnswer("");
-
-    const priceNum = Number(currentPrice);
-    const parsedLevels = keyLevelsText
-      .split(",")
-      .map((v) => Number(v.trim()))
-      .filter((n) => !Number.isNaN(n));
-
-    const context: {
-      symbol?: string;
-      timeframe?: string;
-      currentPrice?: number;
-      keyLevels?: number[];
-    } = {};
-
-    if (symbol.trim()) context.symbol = symbol.trim().toUpperCase();
-    if (timeframe.trim()) context.timeframe = timeframe.trim();
-    if (currentPrice.trim() !== '' && !Number.isNaN(priceNum)) context.currentPrice = priceNum;
-    if (parsedLevels.length > 0) context.keyLevels = parsedLevels;
-
-    const scannerPayload = loadedFromScanner
-      ? {
-          source: "msp-web-scanner",
-          signal: scannerMeta.signal,
-          direction: scannerMeta.direction,
-          score: scannerMeta.score ? Number(scannerMeta.score) : undefined,
-        }
-      : undefined;
-
-    try {
-      const res = await fetch("/api/msp-analyst", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query,
-          mode,
-          context,
-          scanner: scannerPayload,
-          regime: regimeData ? {
-            regime: regimeData.regime,
-            riskLevel: regimeData.riskLevel,
-            permission: regimeData.permission,
-            sizing: regimeData.sizing,
-          } : undefined,
-        }),
-      });
-
-      const contentType = res.headers.get('content-type') || '';
-      if (!contentType.includes('application/json')) {
-        throw new Error(`Unexpected response (${res.status})`);
-      }
-      const data = await res.json();
-      if (res.status === 429) {
-        throw new Error(data.error || "Daily limit reached. Upgrade for more AI questions.");
-      }
-      if (!res.ok) {
-        throw new Error(data.error || `HTTP ${res.status}`);
-      }
-      if (!data.ok) {
-        throw new Error(data.error || "Unknown error from MSP Analyst API");
-      }
-
-      setAnswer(data.text ?? "");
-    } catch (err: any) {
-      console.error("AI Analyst UI error:", err);
-      setError(err.message || "Something went wrong.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const rawScore = scannerMeta.score ? Number(scannerMeta.score) : 50;
-  const scoreLabel = Number.isNaN(rawScore) ? 50 : rawScore;
-  const actionLinks = useMemo(() => getActionLinks(symbol.toUpperCase(), timeframe.toUpperCase(), query), [symbol, timeframe, query]);
+function AuthorizationBadge({ authorization }: { authorization: string }) {
+  const config = {
+    AUTHORIZED: { bg: "bg-emerald-500/20", text: "text-emerald-400", border: "border-emerald-500/30", label: "AUTHORIZED", icon: "\u2705" },
+    CONDITIONAL: { bg: "bg-amber-500/20", text: "text-amber-400", border: "border-amber-500/30", label: "CONDITIONAL", icon: "\u26A0\uFE0F" },
+    BLOCKED: { bg: "bg-red-500/20", text: "text-red-400", border: "border-red-500/30", label: "BLOCKED", icon: "\u26D4" },
+  }[authorization] ?? { bg: "bg-slate-500/20", text: "text-slate-400", border: "border-slate-500/30", label: authorization, icon: "" };
 
   return (
-    <div className="min-h-screen bg-[var(--msp-bg)] text-slate-100">
-      <ToolsPageHeader
-        badge="ANALYST"
-        title="MSP AI Analyst"
-        subtitle="State → Context → Query → Output → Action"
-        icon="🧠"
-        backHref="/tools/markets"
-      />
+    <span className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider border ${config.bg} ${config.text} ${config.border}`}>
+      {config.icon} {config.label}
+    </span>
+  );
+}
 
-      <main className="mx-auto w-full max-w-none space-y-2 px-2 pb-6 pt-3 md:px-3">
-        <section className="sticky top-0 z-20 grid grid-cols-1 gap-1.5 rounded-lg border border-slate-800 bg-slate-900/95 p-1.5 backdrop-blur md:grid-cols-[2fr_1fr]">
-          <div className="grid grid-cols-2 gap-1.5 md:grid-cols-4">
-            <div className="rounded-md border border-slate-700 bg-slate-900 p-1.5">
-              <p className="text-[10px] uppercase tracking-wide text-slate-400">Asset</p>
-              <p className="text-xs font-semibold text-emerald-300">{symbol.toUpperCase()}</p>
-            </div>
-            <div className="rounded-md border border-slate-700 bg-slate-900 p-1.5">
-              <p className="text-[10px] uppercase tracking-wide text-slate-400">Timeframe</p>
-              <p className="text-xs font-semibold text-emerald-300">{timeframe.toUpperCase()}</p>
-            </div>
-            <div className="rounded-md border border-slate-700 bg-slate-900 p-1.5">
-              <p className="text-[10px] uppercase tracking-wide text-slate-400">Price</p>
-              <p className="text-xs font-semibold text-emerald-300">{currentPrice || "—"}</p>
-            </div>
-            <div className="rounded-md border border-slate-700 bg-slate-900 p-1.5">
-              <p className="text-[10px] uppercase tracking-wide text-slate-400">Mode</p>
-              <p className="text-xs font-semibold text-emerald-300">{mode}</p>
-            </div>
+function DataQualityBadge({ quality }: { quality: string }) {
+  const config = {
+    complete: { text: "text-emerald-400", label: "Data Complete" },
+    partial: { text: "text-amber-400", label: "Partial Data" },
+    stale: { text: "text-orange-400", label: "Stale Data" },
+    unavailable: { text: "text-red-400", label: "No Data" },
+  }[quality] ?? { text: "text-slate-400", label: quality };
+
+  return <span className={`text-[11px] font-medium ${config.text}`}>{config.label}</span>;
+}
+
+// ─── Context Status Bar ─────────────────────────────
+
+function ContextStatusBar({ context, isRefreshing }: { context: ReturnType<typeof useAnalystContext>["context"]; isRefreshing: boolean }) {
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[#1E293B] bg-[#0B1120] px-4 py-3 text-[12px] text-slate-400">
+      {/* Ticker */}
+      <div className="flex items-center gap-1.5">
+        <span className="text-slate-500">Ticker:</span>
+        <span className="font-semibold text-white">{context.ticker || "\u2014"}</span>
+      </div>
+
+      <span className="text-slate-700">|</span>
+
+      {/* Regime */}
+      <div className="flex items-center gap-1.5">
+        <span className="text-slate-500">Regime:</span>
+        <span className="font-medium text-slate-200">{context.regimeLabel}</span>
+      </div>
+
+      <span className="text-slate-700">|</span>
+
+      {/* Session Phase */}
+      <div className="flex items-center gap-1.5">
+        <span className="text-slate-500">Session:</span>
+        <span className="font-medium text-slate-200">{context.sessionPhaseLabel}</span>
+      </div>
+
+      <span className="text-slate-700">|</span>
+
+      {/* Authorization */}
+      <AuthorizationBadge authorization={context.authorization} />
+
+      <span className="text-slate-700">|</span>
+
+      {/* Data Quality */}
+      <DataQualityBadge quality={context.dataQuality} />
+
+      {/* Throttle */}
+      {context.authorization !== "BLOCKED" && (
+        <>
+          <span className="text-slate-700">|</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-slate-500">RU:</span>
+            <span className="font-mono text-slate-200">{Math.round(context.ruThrottle * 100)}%</span>
           </div>
+        </>
+      )}
 
-          <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-1.5">
-            <p className="text-[10px] uppercase tracking-wide text-emerald-200/80">Analyst State</p>
-            <p className="text-[11px] text-emerald-100/90">
-              {loading ? "Inference running..." : answer ? "Response ready for execution" : "Awaiting prompt"}
-            </p>
-            {loadedFromScanner && (
-              <p className="mt-0.5 text-[10px] text-emerald-200/90">
-                Scanner: {scannerMeta.signal || "signal"} · {scannerMeta.direction?.toUpperCase() || "N/A"} · Score {scannerMeta.score || "—"}
-              </p>
-            )}
-          </div>
-        </section>
-
-        <section className="grid grid-cols-1 gap-2 lg:grid-cols-[2fr_1fr]">
-          <div className="rounded-lg border border-slate-800 bg-slate-900 p-2">
-            <div className="mb-1.5 flex items-center justify-between">
-              <h2 className="text-xs font-semibold text-slate-200">Context Bar</h2>
-              <span className="text-[11px] text-slate-400">Live market framing</span>
-            </div>
-
-            <div className="grid grid-cols-1 gap-1.5 md:grid-cols-2 xl:grid-cols-5">
-              <label className="space-y-0.5 xl:col-span-1">
-                <span className="text-[10px] text-slate-400">Asset Type</span>
-                <select
-                  value={assetType}
-                  onChange={(e) => setAssetType(e.target.value as AssetType)}
-                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-100 outline-none"
-                >
-                  <option value="crypto">Crypto</option>
-                  <option value="stock">Stock / ETF</option>
-                  <option value="fx">FX Pair</option>
-                </select>
-              </label>
-
-              <label className="space-y-0.5 xl:col-span-1">
-                <span className="text-[10px] text-slate-400">Symbol</span>
-                <input
-                  value={symbol}
-                  onChange={(e) => setSymbol(e.target.value)}
-                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-100 outline-none"
-                />
-              </label>
-
-              <label className="space-y-0.5 xl:col-span-1">
-                <span className="text-[10px] text-slate-400">Timeframe</span>
-                <input
-                  value={timeframe}
-                  onChange={(e) => setTimeframe(e.target.value)}
-                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-100 outline-none"
-                />
-              </label>
-
-              <label className="space-y-0.5 xl:col-span-2">
-                <span className="text-[10px] text-slate-400">Current Price</span>
-                <div className="flex gap-1.5">
-                  <input
-                    type="number"
-                    step="0.0001"
-                    value={currentPrice}
-                    onChange={(e) => setCurrentPrice(e.target.value)}
-                    placeholder="Auto or manual"
-                    className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-100 outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAutoPrice}
-                    disabled={priceLoading || !symbol.trim()}
-                    className="rounded-full border border-emerald-500/60 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-200 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-slate-800 disabled:text-slate-400"
-                  >
-                    {priceLoading ? "Fetching" : "Auto"}
-                  </button>
-                </div>
-              </label>
-            </div>
-
-            <div className="mt-1.5 grid grid-cols-1 gap-1.5 xl:grid-cols-[2fr_1fr]">
-              <label className="space-y-0.5">
-                <span className="text-[10px] text-slate-400">Key Levels (comma separated)</span>
-                <input
-                  value={keyLevelsText}
-                  onChange={(e) => setKeyLevelsText(e.target.value)}
-                  placeholder="1.95, 2.10, 2.25"
-                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-100 outline-none"
-                />
-              </label>
-
-              <div className="rounded-md border border-slate-800 bg-slate-950 p-1.5">
-                <p className="text-[10px] uppercase tracking-wide text-slate-400">Regime Summary</p>
-                <p className="mt-0.5 text-[11px] text-slate-300">
-                  {regimeData ? `${regimeLabel(regimeData.regime)} · ${(regimeData.riskLevel ?? 'unknown').toUpperCase()} · ${regimeData.permission ?? '—'}` : 'Loading...'}
-                </p>
-                {scannerMeta.direction && (
-                  <p className="mt-0.5 text-[10px] text-slate-500">Scanner: {scannerMeta.direction?.toUpperCase()} · Strength {scannerMeta.score || "—"}</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-slate-800 bg-slate-900 p-2">
-            <AdaptivePersonalityCard
-              skill="ai_analyst"
-              setupText={`${symbol} ${timeframe} ${query.slice(0, 80)}`}
-              direction={normalizeDirection(scannerMeta.direction)}
-              timeframe={timeframe}
-              baseScore={scoreLabel}
-            />
-          </div>
-        </section>
-
-        <section className="grid grid-cols-1 gap-2 xl:grid-cols-[1.2fr_1fr]">
-          <form onSubmit={handleAsk} className="space-y-2 rounded-lg border border-slate-800 bg-slate-900 p-2">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xs font-semibold text-slate-200">Query Workbench</h2>
-              <button
-                type="submit"
-                disabled={loading || !query.trim()}
-                className="rounded-md bg-emerald-400 px-2.5 py-1 text-[11px] font-semibold text-slate-950 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
-              >
-                {loading ? "Analyzing" : "Run Analysis"}
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-1.5 lg:grid-cols-4">
-              {MODES.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => {
-                    setMode(option.value);
-                    setQuery(PRESET_QUERIES[option.value]);
-                  }}
-                  className={`rounded-md border px-2 py-1.5 text-left text-[11px] ${
-                    mode === option.value
-                      ? "border-emerald-400 bg-emerald-500/10 text-emerald-100"
-                      : "border-slate-700 bg-slate-950 text-slate-300"
-                  }`}
-                >
-                  <p className="font-semibold">{option.label}</p>
-                  <p className="mt-0.5 text-[10px] text-slate-400">{option.description}</p>
-                </button>
-              ))}
-            </div>
-
-            <div className="flex flex-wrap gap-1">
-              {Object.entries(PRESET_QUERIES).map(([key, value]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => {
-                    setMode(key);
-                    setQuery(value);
-                  }}
-                  className="rounded-full border border-slate-700 bg-slate-950 px-2 py-0.5 text-[10px] text-slate-300 hover:border-emerald-400/50 hover:text-emerald-200"
-                >
-                  {key}
-                </button>
-              ))}
-            </div>
-
-            <textarea
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              rows={6}
-              placeholder="State intent, setup conditions, and desired output format."
-              className="w-full resize-y rounded-md border border-slate-700 bg-slate-950 p-2 text-xs leading-5 text-slate-100 outline-none"
-            />
-
-            {error && (
-              <p className="rounded-md border border-red-500/40 bg-red-950/40 px-2 py-1 text-[11px] text-red-200">{error}</p>
-            )}
-          </form>
-
-          <section className="space-y-1.5 rounded-lg border border-slate-800 bg-slate-900 p-2">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xs font-semibold text-slate-200">Output Console</h2>
-              <div className="flex gap-0.5">
-                {([
-                  ["thesis", "Thesis"],
-                  ["risk", "Risk"],
-                  ["checklist", "Checklist"],
-                  ["execution", "Execution"],
-                ] as const).map(([value, label]) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setOutputView(value)}
-                    className={`rounded-md border px-1.5 py-0.5 text-[10px] ${
-                      outputView === value
-                        ? "border-emerald-400 bg-emerald-500/10 text-emerald-100"
-                        : "border-slate-700 bg-slate-950 text-slate-300"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <p className="text-[10px] text-slate-400">
-              {outputView === "thesis" && "High-level directional thesis and rationale."}
-              {outputView === "risk" && "Risk, invalidation, and downside pathways."}
-              {outputView === "checklist" && "Pre-trade validation checklist and confirmation stack."}
-              {outputView === "execution" && "Action plan routing into scanner, alerts, journal, and backtest."}
-            </p>
-
-            <div className="min-h-[300px] rounded-md border border-slate-700 bg-slate-950 p-2 text-xs leading-5 text-slate-100">
-              {loading && !answer && <span className="text-slate-400">Waiting for MSP Analyst response...</span>}
-              {!loading && !answer && !error && <span className="text-slate-400">Run a query to populate the institutional output console.</span>}
-              {answer && (
-                <div className="prose prose-invert max-w-none prose-p:my-1 prose-li:my-0 prose-headings:my-1">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{answer}</ReactMarkdown>
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-1.5">
-              <Link href={actionLinks.journal} className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-center text-[11px] text-slate-200 hover:border-emerald-400/50">
-                Send to Journal
-              </Link>
-              <Link href={actionLinks.scanner} className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-center text-[11px] text-slate-200 hover:border-emerald-400/50">
-                Open Scanner
-              </Link>
-              <Link href={actionLinks.alerts} className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-center text-[11px] text-slate-200 hover:border-emerald-400/50">
-                Create Alert
-              </Link>
-              <Link href={actionLinks.backtest} className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-center text-[11px] text-slate-200 hover:border-emerald-400/50">
-                Backtest Idea
-              </Link>
-            </div>
-          </section>
-        </section>
-      </main>
+      {/* Refresh indicator */}
+      {isRefreshing && (
+        <>
+          <span className="text-slate-700">|</span>
+          <span className="animate-pulse text-emerald-400">{"\u25CF"} Refreshing\u2026</span>
+        </>
+      )}
     </div>
   );
 }
 
+// ─── Blocked State ──────────────────────────────────
+
+function BlockedPanel({ reason }: { reason: string | null }) {
+  return (
+    <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-6">
+      <div className="flex items-start gap-3">
+        <span className="text-2xl">{"\u26D4"}</span>
+        <div>
+          <h3 className="text-base font-bold text-red-400">Analysis Blocked</h3>
+          <p className="mt-1 text-sm text-red-300/80">{reason || "Authorization denied for current state."}</p>
+          <div className="mt-4 rounded border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-slate-300">
+            <p className="font-medium text-red-300 mb-2">What this means:</p>
+            <ul className="list-disc list-inside space-y-1 text-slate-400">
+              <li>No trade plan will be generated in this state</li>
+              <li>The risk governor or your subscription tier has restricted access</li>
+              <li>Monitor for regime change or upgrade your plan</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Stale/Missing Data State ───────────────────────
+
+function StaleDataPanel({ quality, missingFields }: { quality: string; missingFields: string[] }) {
+  return (
+    <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
+      <div className="flex items-start gap-3">
+        <span className="text-xl">{"\u26A0\uFE0F"}</span>
+        <div>
+          <h4 className="text-sm font-semibold text-amber-400">
+            {quality === "unavailable" ? "Context Not Available" : "Limited Data Available"}
+          </h4>
+          <p className="mt-1 text-xs text-amber-300/70">
+            {quality === "unavailable"
+              ? "Navigate to a tool page (Scanner, Options, etc.) to provide context for analysis."
+              : "Some context is missing. Analysis may be less precise."}
+          </p>
+          {missingFields.length > 0 && (
+            <p className="mt-2 text-xs text-slate-400">
+              Missing: {missingFields.join(", ")}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Tab Content Panel ──────────────────────────────
+
+function TabContentPanel({ tab }: { tab: ReturnType<typeof useAnalystContext>["tabs"][AnalystTab] }) {
+  if (tab.loading) {
+    return (
+      <div className="flex items-center gap-3 p-8">
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-400 border-t-transparent" />
+        <span className="text-sm text-slate-400">Generating contextual analysis\u2026</span>
+      </div>
+    );
+  }
+
+  if (tab.error) {
+    return (
+      <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-4">
+        <p className="text-sm text-red-400">{"\u26A0"} {tab.error}</p>
+      </div>
+    );
+  }
+
+  if (!tab.content) {
+    return (
+      <div className="p-8 text-center text-sm text-slate-500">
+        Waiting for context\u2026 Navigate to a tool page to generate analysis.
+      </div>
+    );
+  }
+
+  return (
+    <div className="prose prose-invert max-w-none text-sm leading-relaxed
+      prose-headings:text-slate-200 prose-headings:font-semibold prose-headings:text-[14px]
+      prose-p:text-slate-300 prose-p:mb-2
+      prose-li:text-slate-300 prose-li:my-0.5
+      prose-strong:text-emerald-400
+      prose-code:text-cyan-300 prose-code:bg-[#1a2235] prose-code:px-1 prose-code:rounded
+      prose-a:text-emerald-400 prose-a:no-underline hover:prose-a:underline">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{tab.content}</ReactMarkdown>
+      {tab.generatedAt && (
+        <p className="mt-4 text-[10px] text-slate-600">
+          Generated {new Date(tab.generatedAt).toLocaleTimeString()}
+          {tab.contextFingerprint ? ` \u00B7 fp:${tab.contextFingerprint.slice(0, 12)}` : ""}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Analyst Component ─────────────────────────
+
+function MspAnalystIntelligence() {
+  const { tier, isLoading: tierLoading } = useUserTier();
+  const analyst = useAnalystContext();
+  const { context, tabs, activeTab, setActiveTab, isRefreshing, lastRefresh, refreshNow, isBlocked, blockedReason } = analyst;
+
+  if (tierLoading) return <div className="min-h-screen bg-[var(--msp-bg)]" />;
+  if (!tier || tier === "free" || tier === "anonymous") return <UpgradeGate requiredTier="pro" feature="MSP AI Analyst" />;
+
+  return (
+    <div className="mx-auto max-w-5xl space-y-4 px-4 py-4">
+      <ToolsPageHeader
+        badge="Intelligence"
+        title="MSP Analyst"
+        subtitle="Contextual intelligence layer \u2014 auto-reads platform state"
+        icon="\uD83E\uDDE0"
+      />
+
+      {/* Context status bar */}
+      <ContextStatusBar context={context} isRefreshing={isRefreshing} />
+
+      {/* Missing data / stale warning */}
+      {(context.dataQuality === "stale" || context.dataQuality === "unavailable") && !isBlocked && (
+        <StaleDataPanel quality={context.dataQuality} missingFields={context.missingDataFields} />
+      )}
+
+      {/* Blocked state */}
+      {isBlocked ? (
+        <BlockedPanel reason={blockedReason} />
+      ) : (
+        <>
+          {/* Tab selector */}
+          <div className="flex gap-1 rounded-lg border border-[#1E293B] bg-[#0B1120] p-1">
+            {TAB_CONFIG.map(({ key, label, icon }) => (
+              <button
+                key={key}
+                onClick={() => setActiveTab(key)}
+                className={`flex-1 rounded-md px-3 py-2.5 text-sm font-medium transition-all
+                  ${activeTab === key
+                    ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                    : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 border border-transparent"
+                  }`}
+              >
+                <span className="mr-1.5">{icon}</span>
+                {label}
+                {tabs[key].loading && <span className="ml-1.5 inline-block h-2 w-2 animate-pulse rounded-full bg-emerald-400" />}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab description */}
+          <p className="text-xs text-slate-500 px-1">
+            {TAB_CONFIG.find(t => t.key === activeTab)?.description}
+          </p>
+
+          {/* Tab content */}
+          <div className="rounded-lg border border-[#1E293B] bg-[#0F172A] p-5 min-h-[200px]">
+            <TabContentPanel tab={tabs[activeTab]} />
+          </div>
+        </>
+      )}
+
+      {/* Action links — only when we have a ticker and are authorized */}
+      {context.ticker && !isBlocked && (
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href={`/tools/scanner?symbol=${encodeURIComponent(context.ticker)}`}
+            className="rounded-md border border-[#1E293B] bg-[#0B1120] px-3 py-2 text-xs text-slate-300 hover:border-emerald-500/30 hover:text-emerald-400 transition-colors no-underline"
+          >
+            {"\uD83D\uDCCA"} Scanner
+          </Link>
+          <Link
+            href={`/tools/backtest?symbol=${encodeURIComponent(context.ticker)}`}
+            className="rounded-md border border-[#1E293B] bg-[#0B1120] px-3 py-2 text-xs text-slate-300 hover:border-emerald-500/30 hover:text-emerald-400 transition-colors no-underline"
+          >
+            {"\uD83D\uDCC8"} Backtest
+          </Link>
+          <Link
+            href={`/tools/alerts?symbol=${encodeURIComponent(context.ticker)}`}
+            className="rounded-md border border-[#1E293B] bg-[#0B1120] px-3 py-2 text-xs text-slate-300 hover:border-emerald-500/30 hover:text-emerald-400 transition-colors no-underline"
+          >
+            {"\uD83D\uDD14"} Alerts
+          </Link>
+          <Link
+            href="/tools/journal"
+            className="rounded-md border border-[#1E293B] bg-[#0B1120] px-3 py-2 text-xs text-slate-300 hover:border-emerald-500/30 hover:text-emerald-400 transition-colors no-underline"
+          >
+            {"\uD83D\uDCD3"} Journal
+          </Link>
+        </div>
+      )}
+
+      {/* Refresh info */}
+      <div className="flex items-center justify-between text-[11px] text-slate-600 px-1">
+        <span>
+          {lastRefresh
+            ? `Last refresh: ${new Date(lastRefresh).toLocaleTimeString()}`
+            : "Auto-refreshes on context change"}
+        </span>
+        <button
+          onClick={refreshNow}
+          disabled={isRefreshing || isBlocked}
+          className="text-slate-500 hover:text-emerald-400 disabled:opacity-30 transition-colors"
+        >
+          {"\u21BB"} Force refresh
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Page Export ─────────────────────────────────────
+
 export default function AiAnalystPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center bg-[var(--msp-bg)] text-slate-100">
-          Loading AI Analyst...
-        </div>
-      }
-    >
-      <AiAnalystContent />
+    <Suspense fallback={<div className="flex items-center justify-center h-64 text-slate-500">Loading analyst\u2026</div>}>
+      <MspAnalystIntelligence />
     </Suspense>
   );
 }
