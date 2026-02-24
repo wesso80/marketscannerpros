@@ -59,6 +59,8 @@ async function fetchCommodity(symbol: keyof typeof COMMODITIES): Promise<Commodi
     console.log(`[Commodities] Fetching ${symbol}...`);
     
     await avTakeToken();
+    const res = await fetch(url, { 
+      next: { revalidate: 900 } // 15 min cache
     });
     
     if (!res.ok) {
