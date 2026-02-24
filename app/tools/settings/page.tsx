@@ -4,14 +4,27 @@ import { useState } from 'react';
 import ToolsPageHeader from '@/components/ToolsPageHeader';
 import { useRiskPermission } from '@/components/risk/RiskPermissionContext';
 import { useRegime, regimeLabel, regimeBadgeColor } from '@/lib/useRegime';
+import { useUserTier } from '@/lib/useUserTier';
+import Link from 'next/link';
 
 export default function ToolsSettingsPage() {
+  const { tier, isLoading: tierLoading, isLoggedIn } = useUserTier();
   const { guardEnabled, setGuardEnabled, snapshot, loading, guardPendingDisable, guardCooldownRemainingMs, guardRBudgetHalved, cancelGuardDisable } = useRiskPermission();
   const { data: regime, loading: regimeLoading } = useRegime();
 
   const cooldownSec = Math.ceil(guardCooldownRemainingMs / 1000);
   const cooldownMin = Math.floor(cooldownSec / 60);
   const cooldownRemSec = cooldownSec % 60;
+
+  if (tierLoading) return <div className="min-h-screen bg-[var(--msp-bg)]" />;
+  if (!isLoggedIn) return (
+    <div className="min-h-screen bg-[var(--msp-bg)] text-white flex items-center justify-center">
+      <div className="text-center">
+        <p className="text-lg mb-4">Sign in to access settings</p>
+        <Link href="/auth" className="rounded-xl border border-emerald-400/30 bg-emerald-500/20 px-5 py-3 text-sm font-semibold hover:bg-emerald-500/30">Sign In</Link>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-[var(--msp-bg)]">

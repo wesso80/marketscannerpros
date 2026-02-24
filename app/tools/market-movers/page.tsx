@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState } from 'react';
 import ToolsPageHeader from '@/components/ToolsPageHeader';
 import MarketStatusBadge from '@/components/MarketStatusBadge';
 import { useAIPageContext } from '@/lib/ai/pageContext';
+import { useUserTier, canAccessPortfolioInsights } from '@/lib/useUserTier';
+import UpgradeGate from '@/components/UpgradeGate';
 
 interface Mover {
   ticker: string;
@@ -101,6 +103,7 @@ function toReasonLabel(reason: string) {
 }
 
 export default function MarketMoversPage() {
+  const { tier, isLoading: tierLoading } = useUserTier();
   const [data, setData] = useState<MoversData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -501,6 +504,9 @@ export default function MarketMoversPage() {
     if (vol >= 1e3) return `${(vol / 1e3).toFixed(1)}K`;
     return vol.toString();
   };
+
+  if (tierLoading) return <div className="min-h-screen bg-[var(--msp-bg)]" />;
+  if (!canAccessPortfolioInsights(tier)) return <UpgradeGate requiredTier="pro" feature="Market Movers" />;
 
   return (
     <div className="min-h-screen bg-[var(--msp-bg)] text-white">

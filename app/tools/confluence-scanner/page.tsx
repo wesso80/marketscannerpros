@@ -242,11 +242,12 @@ export default function AIConfluenceScanner() {
     return price.toFixed(6); // For small coins like SHIB
   };
 
-  // Get current time info for key trading times
+  // Get current time info for key trading times (DST-aware)
   const now = new Date();
-  const utcHour = now.getUTCHours();
+  const etFormatter = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: 'numeric', hour12: false });
+  const etParts = etFormatter.formatToParts(now);
+  const estHour = Number(etParts.find(p => p.type === 'hour')?.value ?? 0);
   const utcMin = now.getUTCMinutes();
-  const estHour = (utcHour - 5 + 24) % 24; // EST offset
   
   // Key institutional trading times (in EST)
   const TRADING_WINDOWS = [

@@ -35,6 +35,7 @@ export default function AccountPage() {
   const [prefsSaving, setPrefsSaving] = useState(false);
   const [prefsMessage, setPrefsMessage] = useState<string | null>(null);
   const [prefsError, setPrefsError] = useState<string | null>(null);
+  const [realUsage, setRealUsage] = useState<{ aiUsed: number; alertCount: number; watchlistCount: number } | null>(null);
 
   useEffect(() => {
     fetch("/api/me", { credentials: "include" })
@@ -44,6 +45,35 @@ export default function AccountPage() {
       })
       .catch(() => {});
   }, []);
+
+  // Fetch real usage data instead of hardcoded values
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    Promise.all([
+      fetch("/api/msp-analyst", { method: "HEAD", credentials: "include" }).then(async () => {
+        // Try to get AI usage from the entitlements / usage endpoint
+        try {
+          const res = await fetch("/api/entitlements", { credentials: "include" });
+          if (res.ok) { const d = await res.json(); return d?.aiUsedToday ?? 0; }
+        } catch {}
+        return 0;
+      }),
+      fetch("/api/alerts", { credentials: "include" }).then(async (res) => {
+        if (res.ok) { const d = await res.json(); return Array.isArray(d?.alerts) ? d.alerts.length : 0; }
+        return 0;
+      }).catch(() => 0),
+      fetch("/api/watchlists", { credentials: "include" }).then(async (res) => {
+        if (res.ok) {
+          const d = await res.json();
+          const lists = Array.isArray(d?.watchlists) ? d.watchlists : [];
+          return lists.reduce((sum: number, w: any) => sum + (Array.isArray(w?.items) ? w.items.length : 0), 0);
+        }
+        return 0;
+      }).catch(() => 0),
+    ]).then(([aiUsed, alertCount, watchlistCount]) => {
+      setRealUsage({ aiUsed: aiUsed as number, alertCount: alertCount as number, watchlistCount: watchlistCount as number });
+    });
+  }, [isLoggedIn]);
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -149,12 +179,12 @@ export default function AccountPage() {
   const currentTier = tierDisplay[normalizedTier] ?? tierDisplay.anonymous;
 
   const aiLimit = normalizedTier === "pro_trader" ? 200 : normalizedTier === "pro" ? 50 : 10;
-  const aiUsed = normalizedTier === "pro_trader" ? 42 : normalizedTier === "pro" ? 19 : 3;
+  const aiUsed = realUsage?.aiUsed ?? 0;
 
   const usage: UsageMetric[] = [
     { label: "MSP AI Analyst", used: aiUsed, limit: aiLimit },
-    { label: "Saved Alerts", used: normalizedTier === "pro_trader" ? 8 : normalizedTier === "pro" ? 5 : 2, limit: normalizedTier === "pro_trader" ? 25 : 10 },
-    { label: "Watchlist Symbols", used: normalizedTier === "pro_trader" ? 35 : normalizedTier === "pro" ? 22 : 8, limit: normalizedTier === "pro_trader" ? 100 : normalizedTier === "pro" ? 50 : 20 },
+    { label: "Saved Alerts", used: realUsage?.alertCount ?? 0, limit: normalizedTier === "pro_trader" ? 25 : 10 },
+    { label: "Watchlist Symbols", used: realUsage?.watchlistCount ?? 0, limit: normalizedTier === "pro_trader" ? 100 : normalizedTier === "pro" ? 50 : 20 },
   ];
 
   const planFeatures = useMemo(() => {

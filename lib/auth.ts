@@ -12,7 +12,11 @@ function verify(token: string) {
   const [body, sig] = token.split(".");
   if (!body || !sig) return null;
   const expected = crypto.createHmac("sha256", APP_SIGNING_SECRET).update(body).digest("base64url");
-  if (sig !== expected) return null;
+  try {
+    if (!crypto.timingSafeEqual(Buffer.from(sig, 'base64url'), Buffer.from(expected, 'base64url'))) return null;
+  } catch {
+    return null; // Length mismatch or encoding error
+  }
   const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8"));
   if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) return null;
   return payload as { cid: string; tier: string; workspaceId: string; exp: number };
@@ -42,7 +46,7 @@ export function verifyToken(t:string){
   if(!t||typeof t!=="string") throw new Error("No token");
   const [p,sig]=t.split("."); if(!p||!sig) throw new Error("Malformed");
   const expSig=crypto.createHmac("sha256",secret()).update(p).digest("base64url");
-  if(expSig!==sig) throw new Error("Bad signature");
+  try { if(!crypto.timingSafeEqual(Buffer.from(sig,'base64url'),Buffer.from(expSig,'base64url'))) throw new Error("Bad signature"); } catch { throw new Error("Bad signature"); }
   const payload=JSON.parse(Buffer.from(p,"base64url").toString("utf8"));
   if(payload?.exp && Number(payload.exp) < Math.floor(Date.now()/1000)) throw new Error("Expired");
   return payload;

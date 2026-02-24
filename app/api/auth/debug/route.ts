@@ -1,9 +1,17 @@
 // app/api/auth/debug/route.ts
+// SECURITY: This endpoint is restricted to admin use only.
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 
 export async function POST(req: NextRequest) {
   try {
+    // Admin auth: require CRON_SECRET or ADMIN_SECRET header
+    const adminSecret = process.env.ADMIN_SECRET || process.env.CRON_SECRET;
+    const headerSecret = req.headers.get('x-admin-secret') || req.headers.get('x-cron-secret');
+    if (!adminSecret || headerSecret !== adminSecret) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { email } = await req.json();
     if (!email || !email.includes("@")) {
       return NextResponse.json({ error: "Invalid email" }, { status: 400 });

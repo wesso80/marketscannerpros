@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import ExplorerActionGrid from '@/components/explorer/ExplorerActionGrid';
+import { useUserTier, canAccessPortfolioInsights } from '@/lib/useUserTier';
+import UpgradeGate from '@/components/UpgradeGate';
 
 interface IntradayBar {
   timestamp: string;
@@ -602,6 +604,7 @@ function VolumeChart({ data, width = 800, height = 80 }: { data: IntradayBar[]; 
 }
 
 export default function IntradayChartsPage() {
+  const { tier, isLoading: tierLoading } = useUserTier();
   const [symbol, setSymbol] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [interval, setInterval] = useState<Interval>('5min');
@@ -770,6 +773,9 @@ export default function IntradayChartsPage() {
       : 'Wait for reclaim/reject at VWAP before committing.';
 
   const blockedActionReason = permissionState === 'No' ? 'Execution blocked by session risk state' : '';
+
+  if (tierLoading) return <div className="min-h-screen bg-[var(--msp-bg)]" />;
+  if (!canAccessPortfolioInsights(tier)) return <UpgradeGate requiredTier="pro" feature="Intraday Charts" />;
 
   return (
     <div className="min-h-screen bg-[var(--msp-bg)] text-white">

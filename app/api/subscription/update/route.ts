@@ -1,9 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@vercel/postgres';
+import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-06-20' as any });
 
 export async function POST(request: NextRequest) {
   try {
-    const { stripeSubscriptionId, customerEmail, planType, status } = await request.json();
+    // SECURITY: Verify this is a legitimate internal call via webhook secret or cron secret
+    const cronSecret = process.env.CRON_SECRET;
+    const headerSecret = request.headers.get('x-cron-secret');
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const stripeSignature = request.headers.get('stripe-signature');
+
+    const isCronAuth = cronSecret && headerSecret === cronSecret;
+    let isStripeWebhook = false;
+
+    // Read body once so it can be reused for both verification and parsing
+    const rawBody = await request.text();
+
+    if (webhookSecret && stripeSignature) {
+      try {
+        stripe.webhooks.constructEvent(rawBody, stripeSignature, webhookSecret);
+        isStripeWebhook = true;
+      } catch {
+        // Signature invalid
+      }
+    }
+
+    if (!isCronAuth && !isStripeWebhook) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { stripeSubscriptionId, customerEmail, planType, status } = JSON.parse(rawBody);
 
     if (!stripeSubscriptionId) {
       return NextResponse.json({ error: 'Missing subscription ID' }, { status: 400 });

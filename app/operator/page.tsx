@@ -519,6 +519,7 @@ export default function OperatorDashboardPage() {
   const canUseBrain = canAccessBrain(tier);
   const lastSignalEventKeyRef = useRef('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [operatorMode, setOperatorMode] = useState<OperatorMode>('OBSERVE');
   const [opportunities, setOpportunities] = useState<DailyPick[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
@@ -552,7 +553,7 @@ export default function OperatorDashboardPage() {
 
     const load = async () => {
       try {
-        const [dailyPicksRes, portfolioRes, alertsRes, adaptiveRes, journalRes, workflowTodayRes, workflowTasksRes, presenceRes, riskGovernorRes, permissionSnapshotRes] = await Promise.all([
+        const results = await Promise.allSettled([
           fetch('/api/scanner/daily-picks?limit=6&type=top', { cache: 'no-store' }),
           fetch('/api/portfolio', { cache: 'no-store' }),
           fetch('/api/alerts/recent', { cache: 'no-store' }),
@@ -565,16 +566,17 @@ export default function OperatorDashboardPage() {
           fetch('/api/risk/governor/permission-snapshot', { cache: 'no-store' }),
         ]);
 
-        const dailyPicks = dailyPicksRes.ok ? await dailyPicksRes.json() : null;
-        const portfolio = portfolioRes.ok ? await portfolioRes.json() : null;
-        const alertData = alertsRes.ok ? await alertsRes.json() : null;
-        const adaptiveData = adaptiveRes.ok ? await adaptiveRes.json() : null;
-        const journal = journalRes.ok ? await journalRes.json() : null;
-        const workflowData = workflowTodayRes.ok ? await workflowTodayRes.json() : null;
-        const workflowTasksData = workflowTasksRes.ok ? await workflowTasksRes.json() : null;
-        const presenceData = presenceRes.ok ? await presenceRes.json() : null;
-        const riskGovernorData = riskGovernorRes.ok ? await riskGovernorRes.json() : null;
-        const permissionSnapshotData = permissionSnapshotRes.ok ? await permissionSnapshotRes.json() : null;
+        const safeJson = async (r: PromiseSettledResult<Response>) =>
+          r.status === 'fulfilled' && r.value.ok ? r.value.json().catch(() => null) : null;
+
+        const [dailyPicks, portfolio, alertData, adaptiveData, journal, workflowData, workflowTasksData, presenceData, riskGovernorData, permissionSnapshotData] = await Promise.all(
+          results.map(safeJson)
+        );
+
+        const failedCount = results.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.ok)).length;
+        if (failedCount > 0) {
+          setLoadError(`${failedCount} of 10 data sources unavailable. Some sections may show incomplete data.`);
+        }
 
         if (!mounted) return;
 
@@ -596,6 +598,8 @@ export default function OperatorDashboardPage() {
         setCoachTasksQueue(workflowTasksData?.tasks || []);
         setRiskGovernorDebug((riskGovernorData || null) as RiskGovernorDebugResponse | null);
         setPermissionSnapshot((permissionSnapshotData || null) as PermissionMatrixSnapshot | null);
+      } catch (err) {
+        if (mounted) setLoadError('Failed to load operator dashboard. Please refresh.');
       } finally {
         if (mounted) setLoading(false);
       }
@@ -1790,6 +1794,12 @@ export default function OperatorDashboardPage() {
     <RegimeProvider>
     <RiskPermissionProvider>
     <div className="min-h-screen bg-[var(--msp-bg)] text-[var(--msp-text)]">
+      {loadError && (
+        <div className="mx-4 mt-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-200">
+          ⚠️ {loadError}
+          <button onClick={() => setLoadError(null)} className="ml-3 text-amber-400 hover:text-white">Dismiss</button>
+        </div>
+      )}
       <ToolsNavBar />
       <div className="sticky top-0 z-40 border-b border-[var(--msp-border)] bg-[var(--msp-bg)] px-4 py-2">
         <div className={deploymentBlocked ? 'border-t-2 border-[var(--msp-bear)] pt-2' : ''}>

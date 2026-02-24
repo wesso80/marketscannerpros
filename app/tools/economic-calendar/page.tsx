@@ -3,7 +3,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import ToolsPageHeader from '@/components/ToolsPageHeader';
-import { useUserTier } from '@/lib/useUserTier';
+import { useUserTier, canAccessPortfolioInsights } from '@/lib/useUserTier';
+import UpgradeGate from '@/components/UpgradeGate';
 
 interface EconomicEvent {
   date: string;
@@ -90,7 +91,7 @@ function isJobsOrCpiEvent(eventName: string) {
 }
 
 export default function EconomicCalendarPage() {
-  const { isAdmin } = useUserTier();
+  const { isAdmin, tier, isLoading: tierLoading } = useUserTier();
   const [data, setData] = useState<CalendarData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -245,6 +246,9 @@ export default function EconomicCalendarPage() {
       prev.includes(category) ? prev.filter((item) => item !== category) : [...prev, category]
     );
   };
+
+  if (tierLoading) return <div className="min-h-screen bg-[var(--msp-bg)]" />;
+  if (!canAccessPortfolioInsights(tier)) return <UpgradeGate requiredTier="pro" feature="Economic Calendar" />;
 
   return (
     <div className="min-h-screen bg-[var(--msp-bg)] text-white">

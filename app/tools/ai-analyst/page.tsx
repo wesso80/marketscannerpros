@@ -8,6 +8,8 @@ import Link from "next/link";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
 import AdaptivePersonalityCard from "@/components/AdaptivePersonalityCard";
 import { useRegime, regimeLabel } from "@/lib/useRegime";
+import { useUserTier } from "@/lib/useUserTier";
+import UpgradeGate from "@/components/UpgradeGate";
 
 type AssetType = "crypto" | "stock" | "fx";
 type OutputView = "thesis" | "risk" | "checklist" | "execution";
@@ -56,6 +58,10 @@ function normalizeDirection(direction?: string) {
 function AiAnalystContent() {
   const searchParams = useSearchParams();
   const { data: regimeData } = useRegime();
+  const { tier, isLoading: tierLoading } = useUserTier();
+
+  if (tierLoading) return <div className="min-h-screen bg-[var(--msp-bg)]" />;
+  if (!tier || tier === 'free' || tier === 'anonymous') return <UpgradeGate requiredTier="pro" feature="MSP AI Analyst" />;
 
   const [query, setQuery] = useState(
     "Give me a macro outlook for this ticker with bullish and bearish scenarios."

@@ -3,8 +3,14 @@
 import SectorHeatmap from '@/components/SectorHeatmap';
 import { ToolsPageHeader } from '@/components/ToolsPageHeader';
 import RegimeBanner from '@/components/RegimeBanner';
+import { useUserTier, canAccessPortfolioInsights } from '@/lib/useUserTier';
+import UpgradeGate from '@/components/UpgradeGate';
 
 export default function HeatmapPage() {
+  const { tier, isLoading } = useUserTier();
+  if (isLoading) return <div className="min-h-screen bg-[var(--msp-bg)]" />;
+  if (!canAccessPortfolioInsights(tier)) return <UpgradeGate requiredTier="pro" feature="Sector Heat Map" />;
+
   return (
     <main className="min-h-screen bg-[var(--msp-bg)] text-white">
       <ToolsPageHeader

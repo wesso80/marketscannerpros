@@ -35,6 +35,13 @@ function directionFromMove(movePct: number): 'up' | 'down' | 'flat' {
 }
 
 export async function POST(_req: NextRequest) {
+  // SECURITY: Validate inbound cron secret
+  const cronSecret = process.env.CRON_SECRET;
+  const headerSecret = _req.headers.get('x-cron-secret');
+  if (!cronSecret || headerSecret !== cronSecret) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const start = Date.now();
   const processed: string[] = [];
   const errors: string[] = [];

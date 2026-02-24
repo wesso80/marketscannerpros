@@ -17,7 +17,8 @@ import SignalRail from "@/components/terminal/SignalRail";
 import OperatorProposalRail from "@/components/operator/OperatorProposalRail";
 import { PriceChart, type ChartData } from "@/components/scanner/PriceChart";
 import { PreTradeChecklistModal, type PreTradeChecklistState } from "@/components/scanner/PreTradeChecklistModal";
-import { useUserTier } from "@/lib/useUserTier";
+import { useUserTier, canAccessUnlimitedScanning } from "@/lib/useUserTier";
+import UpgradeGate from "@/components/UpgradeGate";
 import { useAIPageContext } from "@/lib/ai/pageContext";
 import { readOperatorState, writeOperatorState } from "@/lib/operatorState";
 import { useRiskPermission } from "@/components/risk/RiskPermissionContext";
@@ -209,7 +210,7 @@ const TRUSTED_CRYPTO_LIST = [
 
 function ScannerContent() {
   const searchParams = useSearchParams();
-  const { isAdmin } = useUserTier();
+  const { isAdmin, tier, isLoading: tierLoading } = useUserTier();
   const { snapshot: riskSnapshot, isLocked: riskLocked, evaluate: evaluateRiskIntent } = useRiskPermission();
   const [assetType, setAssetType] = useState<AssetType>("crypto");
   const [ticker, setTicker] = useState<string>("BTC");
@@ -1367,6 +1368,9 @@ function ScannerContent() {
   const riskPerTradePct = ((riskSnapshot?.caps?.risk_per_trade ?? 0) * 100).toFixed(2);
   const throttleMultiplier = Math.max(0.35, Math.min(1, (riskSnapshot?.caps?.risk_per_trade ?? 0.0075) / 0.0075)).toFixed(2);
   const eventMultiplier = riskSnapshot?.risk_mode === 'LOCKED' ? '0.00' : riskSnapshot?.risk_mode === 'THROTTLED' ? '0.50' : riskSnapshot?.risk_mode === 'DEFENSIVE' ? '0.35' : '1.00';
+
+  if (tierLoading) return <div style={{ minHeight: "100vh", background: "var(--msp-bg, #0A101C)" }} />;
+  if (!canAccessUnlimitedScanning(tier)) return <UpgradeGate requiredTier="pro" feature="Market Scanner" />;
 
   return (
     <div className="min-h-screen bg-[var(--msp-bg)]">

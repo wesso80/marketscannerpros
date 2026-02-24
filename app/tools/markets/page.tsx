@@ -10,6 +10,8 @@ import {
   useTickerData,
 } from '@/components/markets';
 import type { AssetClass } from '@/components/markets/types';
+import { useUserTier, canAccessPortfolioInsights } from '@/lib/useUserTier';
+import UpgradeGate from '@/components/UpgradeGate';
 
 /**
  * Unified Markets Page
@@ -36,10 +38,14 @@ import type { AssetClass } from '@/components/markets/types';
  *   └──────────────────────────────┴─────────────────────────┘
  */
 export default function MarketsPage() {
+  const { tier, isLoading } = useUserTier();
   const [assetClass, setAssetClass] = useState<AssetClass>('equities');
   const [symbol, setSymbol] = useState<string>('');
 
   const ctx = useTickerData(symbol || null, assetClass);
+
+  if (isLoading) return <div className="min-h-screen bg-[var(--msp-bg)]" />;
+  if (!canAccessPortfolioInsights(tier)) return <UpgradeGate requiredTier="pro" feature="Markets Cockpit" />;
 
   return (
     <div className="min-h-screen bg-[var(--msp-bg)] px-2 py-3 text-slate-100 md:px-3">
