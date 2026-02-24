@@ -15,8 +15,11 @@ import { q } from '@/lib/db';
 import { getOrComputeStudy, computeDistribution } from '@/lib/catalyst/eventStudy';
 import { CatalystSubtype, type StudyCohort, type EventStudyResult } from '@/lib/catalyst/types';
 
+export const runtime = 'nodejs';
+export const maxDuration = 120; // 2 min — inline study may need AV price fetches
+
 const AUTO_COHORT_THRESHOLD = 10;
-const BUILD_VERSION = '2026-02-23T12:00:00Z'; // Lets us verify which code is deployed
+const BUILD_VERSION = '2026-02-24T08:00:00Z'; // Lets us verify which code is deployed
 
 /** Return a minimal valid study result when computation fails */
 function pendingStudy(ticker: string, subtype: CatalystSubtype, cohort: StudyCohort, lookbackDays: number, reason: string): EventStudyResult {
@@ -102,7 +105,7 @@ export async function GET(req: NextRequest) {
       subtype: subtypeParam,
       lookbackDays,
       cohort,
-    });
+    }, true);  // fullCompute=true — compute with AV price data inline
     study = result.study;
     cached = result.cached;
     cacheAge = result.cacheAge;
