@@ -348,14 +348,13 @@ async function triggerSmartAlert(alert: SmartAlert, result: CheckResult) {
   // Record in history
   await q(
     `INSERT INTO alert_history (
-      alert_id, workspace_id, triggered_at, trigger_price, condition_met,
-      symbol, condition_type, condition_value, notification_sent, notification_channel
-    ) VALUES ($1, $2, NOW(), $3, $4, $5, $6, $7, $8, $9)`,
+      alert_id, workspace_id, triggered_at, triggered_price,
+      symbol, condition_type, condition_value, notification_sent, notification_type
+    ) VALUES ($1, $2, NOW(), $3, $4, $5, $6, $7, $8)`,
     [
       alert.id,
       alert.workspace_id,
       result.value || 0,
-      result.message || `Smart alert triggered: ${alert.condition_type}`,
       alert.symbol || 'MARKET',
       alert.condition_type,
       alert.condition_value,

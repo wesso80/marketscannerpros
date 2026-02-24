@@ -108,9 +108,12 @@ async function checkSignalAlerts(req: NextRequest) {
         const assetType = isCrypto ? 'crypto' : 'equity';
 
         // Run scanner for this symbol
+        const scanHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (process.env.CRON_SECRET) scanHeaders['x-cron-secret'] = process.env.CRON_SECRET;
+
         const scanRes = await fetch(`${baseUrl}/api/scanner/run`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: scanHeaders,
           body: JSON.stringify({
             type: assetType,
             timeframe: 'daily',

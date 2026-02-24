@@ -288,7 +288,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Auth check - require valid session to use scanner
-    const session = await getSessionFromCookie();
+    // Allow internal cron jobs to bypass auth via x-cron-secret header
+    const cronSecret = process.env.CRON_SECRET;
+    const headerCronSecret = req.headers.get('x-cron-secret');
+    const isCronBypass = cronSecret && headerCronSecret === cronSecret;
+
+    const session = isCronBypass
+      ? { workspaceId: 'system-cron', tier: 'pro_trader' as const, cid: 'system' }
+      : await getSessionFromCookie();
     if (!session?.workspaceId) {
       return NextResponse.json(
         { error: "Please log in to use the scanner" },

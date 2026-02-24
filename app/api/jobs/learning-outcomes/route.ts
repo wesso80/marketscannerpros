@@ -16,7 +16,9 @@ interface PredictionRow {
 async function fetchLatestPrice(symbol: string, assetType: string): Promise<number | null> {
   try {
     const url = `${APP_URL}/api/quote?symbol=${encodeURIComponent(symbol)}&type=${encodeURIComponent(assetType)}`;
-    const res = await fetch(url, { cache: 'no-store' });
+    const headers: Record<string, string> = {};
+    if (process.env.CRON_SECRET) headers['x-cron-secret'] = process.env.CRON_SECRET;
+    const res = await fetch(url, { cache: 'no-store', headers });
     if (!res.ok) return null;
     const data = await res.json();
     return typeof data.price === 'number' ? data.price : null;

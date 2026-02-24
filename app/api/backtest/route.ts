@@ -1523,12 +1523,19 @@ export async function POST(req: NextRequest) {
     }
 
     // Pro Trader tier required
-    const session = await getSessionFromCookie();
-    if (!session?.workspaceId) {
-      return NextResponse.json({ error: 'Please log in to use Backtesting' }, { status: 401 });
-    }
-    if (!hasProTraderAccess(session.tier)) {
-      return NextResponse.json({ error: 'Pro Trader subscription required for Backtesting' }, { status: 403 });
+    // Allow internal cron jobs to bypass auth via x-cron-secret header
+    const cronSecret = process.env.CRON_SECRET;
+    const headerCronSecret = req.headers.get('x-cron-secret');
+    const isCronBypass = cronSecret && headerCronSecret === cronSecret;
+
+    if (!isCronBypass) {
+      const session = await getSessionFromCookie();
+      if (!session?.workspaceId) {
+        return NextResponse.json({ error: 'Please log in to use Backtesting' }, { status: 401 });
+      }
+      if (!hasProTraderAccess(session.tier)) {
+        return NextResponse.json({ error: 'Pro Trader subscription required for Backtesting' }, { status: 403 });
+      }
     }
 
     // Validate request body with Zod

@@ -113,9 +113,12 @@ async function checkStrategyAlerts(req: NextRequest) {
 
       try {
         // Run backtest for this symbol/strategy to get current signals
+        const btHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (process.env.CRON_SECRET) btHeaders['x-cron-secret'] = process.env.CRON_SECRET;
+
         const backtestRes = await fetch(`${baseUrl}/api/backtest`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: btHeaders,
           body: JSON.stringify({
             symbol,
             strategy,

@@ -29,9 +29,16 @@ type AssetType = "crypto" | "stock" | "fx";
 
 export async function GET(req: NextRequest) {
   // Auth guard: AV license requires authenticated users only
-  const session = await getSessionFromCookie();
-  if (!session?.workspaceId) {
-    return NextResponse.json({ ok: false, error: 'Please log in to access market data' }, { status: 401 });
+  // Allow internal cron jobs to bypass auth via x-cron-secret header
+  const cronSecret = process.env.CRON_SECRET;
+  const headerSecret = req.headers.get('x-cron-secret');
+  const isCronBypass = cronSecret && headerSecret === cronSecret;
+
+  if (!isCronBypass) {
+    const session = await getSessionFromCookie();
+    if (!session?.workspaceId) {
+      return NextResponse.json({ ok: false, error: 'Please log in to access market data' }, { status: 401 });
+    }
   }
 
   // Rate limit: 60 req/min per IP to prevent quota exhaustion

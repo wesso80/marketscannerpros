@@ -83,7 +83,10 @@ async function fetchCurrentPrice(req: NextRequest, symbol: string, assetClass: '
   quoteUrl.searchParams.set('market', quote.market);
   quoteUrl.searchParams.set('strict', '1');
 
-  const response = await fetch(quoteUrl.toString(), { cache: 'no-store' });
+  const headers: Record<string, string> = {};
+  if (process.env.CRON_SECRET) headers['x-cron-secret'] = process.env.CRON_SECRET;
+
+  const response = await fetch(quoteUrl.toString(), { cache: 'no-store', headers });
   if (!response.ok) return null;
   const data = await response.json().catch(() => null);
   const price = Number(data?.price);
