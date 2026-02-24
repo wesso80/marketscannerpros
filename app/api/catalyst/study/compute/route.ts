@@ -31,8 +31,18 @@ const AUTO_COHORT_THRESHOLD = 10;
 const DEFAULT_LIMIT = 15;
 const MAX_LIMIT = 100;
 const DELAY_BETWEEN_STUDIES_MS = 1500; // 1.5s between studies (was 2s)
+const PER_STUDY_TIMEOUT_MS = 60_000;   // 60s max per individual study
+const WALL_CLOCK_LIMIT_MS = 240_000;   // 4 min hard stop (leaves buffer for response)
 
 function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
+
+/** Run a promise with an AbortController-style timeout */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`Timeout after ${ms}ms: ${label}`)), ms);
+    promise.then(v => { clearTimeout(timer); resolve(v); }, e => { clearTimeout(timer); reject(e); });
+  });
+}
 
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
@@ -153,8 +163,8 @@ export async function POST(req: NextRequest) {
     let computed = 0;
 
     for (const item of needsCompute.slice(0, limit)) {
-      // Guard: stop if we're approaching the 5-minute timeout
-      if (Date.now() - startTime > 270_000) { // 4.5 min safety
+      // Guard: stop if we're approaching the wall-clock limit
+      if (Date.now() - startTime > WALL_CLOCK_LIMIT_MS) {
         console.log(`[CatalystCron] Approaching timeout after ${computed} studies, stopping.`);
         break;
       }
@@ -163,12 +173,16 @@ export async function POST(req: NextRequest) {
       try {
         console.log(`[CatalystCron] Computing study: ${item.ticker} / ${item.subtype} (${item.cohort}, n=${item.count})`);
 
-        const result = await getOrComputeStudy({
-          ticker: item.ticker,
-          subtype: item.subtype,
-          lookbackDays,
-          cohort: item.cohort,
-        }, true); // fullCompute = true → runs AV calls and caches
+        const result = await withTimeout(
+          getOrComputeStudy({
+            ticker: item.ticker,
+            subtype: item.subtype,
+            lookbackDays,
+            cohort: item.cohort,
+          }, true), // fullCompute = true → runs AV calls and caches
+          PER_STUDY_TIMEOUT_MS,
+          `${item.ticker}/${item.subtype}`
+        );
 
         const duration = Date.now() - studyStart;
         results.push({

@@ -114,7 +114,7 @@ services:
     runtime: node
     schedule: "14,44 * * * *"  # Every 30 minutes (offset :14) - incremental catalyst study computation
     buildCommand: echo "Cron job ready"
-    startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 290 -X POST "$WEB_URL/api/catalyst/study/compute?limit=5" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
+    startCommand: curl -fL --retry 1 --retry-delay 10 --retry-all-errors --connect-timeout 10 --max-time 270 -X POST "$WEB_URL/api/catalyst/study/compute?limit=5" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
       - key: WEB_URL
         value: "https://marketscannerpros.onrender.com"
@@ -126,7 +126,7 @@ services:
     runtime: node
     schedule: "0 22 * * *"  # 10 PM UTC (5 PM ET) - bulk compute after market close
     buildCommand: echo "Cron job ready"
-    startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 290 -X POST "$WEB_URL/api/catalyst/study/compute?limit=50" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
+    startCommand: curl -fL --retry 1 --retry-delay 10 --retry-all-errors --connect-timeout 10 --max-time 270 -X POST "$WEB_URL/api/catalyst/study/compute?limit=50" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
       - key: WEB_URL
         value: "https://marketscannerpros.onrender.com"
