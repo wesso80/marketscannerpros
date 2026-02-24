@@ -165,18 +165,39 @@ export async function POST(req: NextRequest) {
     }
 
     // Add context summary with V2 regime scoring + ACL
-    const scoringRegime = mapToScoringRegime(
-      context.marketState?.regime === 'risk-off' ? 'RISK_OFF_STRESS' :
-      context.marketState?.regime === 'risk-on' ? 'TREND_UP' :
-      context.marketState?.regime === 'transitioning' ? 'TRANSITION' : 'RANGE_NEUTRAL'
-    );
+    // When the page provides IDL data (Markets cockpit), use it directly
+    // instead of re-computing from sparse marketState defaults
+    const pageVerdict = typeof pageData?.verdict === 'string' ? pageData.verdict : null;
+    const pageAuthorization = typeof pageData?.authorization === 'string' ? pageData.authorization : null;
+    const pageAlignment = typeof pageData?.alignment === 'number' ? pageData.alignment : null;
+    const pageConfidence = typeof pageData?.confidence === 'number' ? pageData.confidence : null;
+    const pageVolState = typeof pageData?.volState === 'string' ? pageData.volState : null;
+
+    const scoringRegime = pageVolState
+      ? mapToScoringRegime(pageVolState)
+      : mapToScoringRegime(
+          context.marketState?.regime === 'risk-off' ? 'RISK_OFF_STRESS' :
+          context.marketState?.regime === 'risk-on' ? 'TREND_UP' :
+          context.marketState?.regime === 'transitioning' ? 'TRANSITION' : 'RANGE_NEUTRAL'
+        );
     const components = estimateComponentsFromContext({
-      scannerScore: typeof pageData?.score === 'number' ? pageData.score : 50,
+      scannerScore: typeof pageData?.scannerScore === 'number' ? pageData.scannerScore
+        : typeof pageData?.score === 'number' ? pageData.score : 50,
       regime: scoringRegime,
       session: 'regular',
     });
     const regimeScoring = computeRegimeScore(components, scoringRegime);
-    const aclResult = computeACLFromScoring(regimeScoring, {
+
+    // If the page already computed IDL authorization + confidence, use those
+    // instead of re-deriving from raw regime data (which loses page-level signals)
+    const aclResult = (pageAuthorization && pageConfidence !== null) ? {
+      confidence: pageConfidence,
+      authorization: pageAuthorization === 'ALLOW' ? 'AUTHORIZED'
+        : pageAuthorization === 'ALLOW_REDUCED' ? 'CONDITIONAL'
+        : 'BLOCKED',
+      throttle: pageAuthorization === 'BLOCK' ? 1.0 : pageAuthorization === 'ALLOW_REDUCED' ? 0.6 : 0.3,
+      reasonCodes: pageVerdict === 'blocked' ? ['RISK_GOVERNOR_BLOCK'] : pageVerdict === 'noise' ? ['LOW_ALIGNMENT'] : [],
+    } : computeACLFromScoring(regimeScoring, {
       regimeConfidence: 60,
     });
 
@@ -391,9 +412,12 @@ function buildSystemPromptV2(
 
   // Check if we have page data
   const hasPageData = context.pageData && Object.keys(context.pageData).length > 0;
-  const pageDataNote = hasPageData 
-    ? `\n\nIMPORTANT: You have access to the current scan/page results in the "PAGE DATA" section below. USE THIS DATA to answer user questions about the current scan. Reference specific values like symbol, price, direction, signals, etc.`
-    : '';
+  const hasIDL = hasPageData && 'verdict' in context.pageData;
+  const pageDataNote = hasIDL
+    ? `\n\nCRITICAL — PAGE DATA BINDING:\nThe user is viewing LIVE instrument data in the Markets cockpit. The "PAGE DATA" section below contains the EXACT values shown on their screen — including the Institutional Decision Lens (verdict, alignment, confidence, authorization), Flow analysis (market mode, gamma state, conviction, key strikes), Scanner results, and Risk context. You MUST reference these exact values. Do NOT hallucinate different regime classifications, authorization states, or confidence numbers. If the data says authorization=ALLOW, do not say BLOCKED. If the data says conviction=92%, use that number. Ground every statement in the provided pageData.`
+    : hasPageData 
+      ? `\n\nIMPORTANT: You have access to the current scan/page results in the "PAGE DATA" section below. USE THIS DATA to answer user questions about the current scan. Reference specific values like symbol, price, direction, signals, etc. Do NOT invent data points — use only what is provided.`
+      : '';
 
   // V2: Base prompt is the institutional system prompt + skill-specific additions
   const basePrompt = `${MSP_ANALYST_V2_PROMPT}

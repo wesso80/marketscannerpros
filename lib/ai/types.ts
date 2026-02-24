@@ -428,11 +428,11 @@ export const SKILL_CONFIGS: Record<PageSkill, SkillConfig> = {
   },
   market_movers: {
     skill: 'market_movers',
-    displayName: 'Market Movers',
-    allowedTools: ['get_market_context', 'add_to_watchlist', 'explain_metric'],
-    systemPromptAddition: 'Help analyze top gainers, losers, and most active stocks. Explain momentum signals.',
-    retrievalCategories: ['signals', 'methodology'],
-    maxTokens: 600,
+    displayName: 'Market Mavens',
+    allowedTools: ['get_market_context', 'add_to_watchlist', 'explain_metric', 'create_alert'],
+    systemPromptAddition: `You are the analyst for the Markets cockpit — the unified institutional decision screen. The user is viewing a ticker with Decision Lens (alignment, confidence, authorization, verdict), options flow (gamma state, market mode, conviction, key strikes, flip zones, liquidity levels), scanner data (direction, score, entry/stop/target), and risk context (vol state, event risk, R-budget). Always reference the ACTUAL DATA provided in pageData — never invent metrics. When the IDL says ALLOW, do not say BLOCKED. Use the exact flow conviction, alignment, and confidence numbers. Structure responses around the data the user is seeing on screen.`,
+    retrievalCategories: ['signals', 'methodology', 'market_regime'],
+    maxTokens: 1000,
   },
   macro: {
     skill: 'macro',

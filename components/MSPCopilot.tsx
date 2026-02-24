@@ -62,29 +62,75 @@ export default function MSPCopilot({
       const quality = pageData.tradeQuality as string;
       const confluence = pageData.confluenceStack as number;
       const signalStrength = pageData.signalStrength as string;
+
+      // Markets page IDL fields
+      const verdict = pageData.verdict as string;
+      const alignment = pageData.alignment as number;
+      const confidence = pageData.confidence as number;
+      const authorization = pageData.authorization as string;
+      const ruBudget = pageData.ruBudget as string;
+      const bullScenario = pageData.bullScenario as string;
+      const bearScenario = pageData.bearScenario as string;
+      const rMultiple = pageData.rMultiple as number;
+      const volState = pageData.volState as string;
+      const eventRisk = pageData.eventRisk as string;
+      const liquidityGrade = pageData.liquidityGrade as string;
+      const expectedMove = pageData.expectedMove as string;
+
+      // Flow fields
+      const marketMode = pageData.marketMode as string;
+      const gammaState = pageData.gammaState as string;
+      const flowBias = pageData.flowBias as string;
+      const flowConviction = pageData.flowConviction as number;
+
+      // Is this from the Markets page? (has verdict = IDL data present)
+      const isMarketsPage = !!verdict;
       
+      const explainContent = isMarketsPage ? [
+        { label: 'Symbol', value: symbol, highlight: true },
+        { label: 'Price', value: price && typeof price === 'number' ? `$${price.toFixed(2)}` : 'N/A' },
+        { label: 'Verdict', value: verdict.toUpperCase(), color: verdict === 'tradable' ? '#10B981' : verdict === 'conditional' ? '#F59E0B' : verdict === 'blocked' ? '#EF4444' : '#64748B' },
+        { label: 'Alignment', value: alignment !== undefined ? `${alignment}%` : 'N/A', color: alignment >= 70 ? '#10B981' : alignment >= 50 ? '#F59E0B' : '#EF4444' },
+        { label: 'Confidence', value: confidence !== undefined ? `${confidence}%` : 'N/A', color: confidence >= 60 ? '#10B981' : confidence >= 40 ? '#F59E0B' : '#EF4444' },
+        { label: 'Authorization', value: authorization || 'N/A', color: authorization === 'ALLOW' ? '#10B981' : authorization === 'ALLOW_REDUCED' ? '#F59E0B' : '#EF4444' },
+        { label: 'Vol State', value: volState || 'N/A' },
+        { label: 'Event Risk', value: (eventRisk || 'N/A').toUpperCase(), color: eventRisk === 'high' ? '#EF4444' : eventRisk === 'medium' ? '#F59E0B' : '#10B981' },
+      ] : [
+        { label: 'Symbol', value: symbol, highlight: true },
+        { label: 'Price', value: price && typeof price === 'number' ? `$${price.toFixed(2)}` : 'N/A' },
+        { label: 'Direction', value: direction?.toUpperCase() || 'Neutral', color: direction === 'bullish' ? '#10B981' : direction === 'bearish' ? '#EF4444' : '#64748B' },
+        { label: 'Quality', value: quality || 'N/A', color: quality === 'A+' || quality === 'A' ? '#10B981' : quality === 'B' ? '#F59E0B' : '#64748B' },
+        { label: 'Confluence', value: confluence !== undefined ? `${confluence}/8` : 'N/A' },
+        { label: 'Signal', value: signalStrength || 'N/A' },
+      ];
+
+      const planContent = isMarketsPage ? [
+        { label: 'Bull', value: bullScenario || 'N/A', color: '#10B981' },
+        { label: 'Bear', value: bearScenario || 'N/A', color: '#EF4444' },
+        { label: 'R-Multiple', value: rMultiple !== undefined ? `${rMultiple.toFixed(1)}R` : 'N/A', color: rMultiple >= 2 ? '#10B981' : rMultiple >= 1 ? '#F59E0B' : '#EF4444' },
+        { label: 'R Budget', value: ruBudget || 'N/A' },
+        { label: 'Exp. Move', value: expectedMove || 'N/A' },
+        ...(marketMode ? [{ label: 'Flow Mode', value: `${marketMode.toUpperCase()} / ${gammaState || '?'} gamma`, color: flowBias === 'bullish' ? '#10B981' : flowBias === 'bearish' ? '#EF4444' : '#64748B' }] : []),
+        ...(flowConviction ? [{ label: 'Conviction', value: `${flowConviction}%`, color: flowConviction >= 70 ? '#10B981' : flowConviction >= 40 ? '#F59E0B' : '#64748B' }] : []),
+      ] : direction ? [
+        { label: 'Bias', value: direction.toUpperCase(), color: direction === 'bullish' ? '#10B981' : '#EF4444' },
+        { label: 'Entry', value: pageData.entryTiming ? (pageData.entryTiming as { idealEntryWindow?: string })?.idealEntryWindow || 'See timing' : 'Wait for confirmation' },
+        { label: 'Strategy', value: pageData.strategyRecommendation ? (pageData.strategyRecommendation as { name?: string })?.name || 'Review options' : 'Ask for recommendation' },
+        { label: 'Risk', value: pageData.tradeLevels && typeof (pageData.tradeLevels as { stopLoss?: number })?.stopLoss === 'number' ? `Stop: $${((pageData.tradeLevels as { stopLoss?: number }).stopLoss as number).toFixed(2)}` : 'Define your stop' },
+      ] : [];
+
       return {
         explain: {
-          title: '📊 Scan Results Summary',
-          content: [
-            { label: 'Symbol', value: symbol, highlight: true },
-            { label: 'Price', value: price && typeof price === 'number' ? `$${price.toFixed(2)}` : 'N/A' },
-            { label: 'Direction', value: direction?.toUpperCase() || 'Neutral', color: direction === 'bullish' ? '#10B981' : direction === 'bearish' ? '#EF4444' : '#64748B' },
-            { label: 'Quality', value: quality || 'N/A', color: quality === 'A+' || quality === 'A' ? '#10B981' : quality === 'B' ? '#F59E0B' : '#64748B' },
-            { label: 'Confluence', value: confluence !== undefined ? `${confluence}/8` : 'N/A' },
-            { label: 'Signal', value: signalStrength || 'N/A' },
-          ],
-          footer: 'Ask me to explain any specific metric or signal.',
+          title: isMarketsPage ? '🏛️ Institutional Decision Lens' : '📊 Scan Results Summary',
+          content: explainContent,
+          footer: isMarketsPage ? 'Ask me about any metric, flow data, or risk factor.' : 'Ask me to explain any specific metric or signal.',
         },
         plan: {
-          title: '📋 Trade Plan',
-          content: direction ? [
-            { label: 'Bias', value: direction.toUpperCase(), color: direction === 'bullish' ? '#10B981' : '#EF4444' },
-            { label: 'Entry', value: pageData.entryTiming ? (pageData.entryTiming as { idealEntryWindow?: string })?.idealEntryWindow || 'See timing' : 'Wait for confirmation' },
-            { label: 'Strategy', value: pageData.strategyRecommendation ? (pageData.strategyRecommendation as { name?: string })?.name || 'Review options' : 'Ask for recommendation' },
-            { label: 'Risk', value: pageData.tradeLevels && typeof (pageData.tradeLevels as { stopLoss?: number })?.stopLoss === 'number' ? `Stop: $${((pageData.tradeLevels as { stopLoss?: number }).stopLoss as number).toFixed(2)}` : 'Define your stop' },
-          ] : [],
-          footer: direction ? 'Ask me to build a complete trade plan.' : 'Run a scan first to get trade planning.',
+          title: isMarketsPage ? '📋 Scenario & Execution Plan' : '📋 Trade Plan',
+          content: planContent,
+          footer: isMarketsPage
+            ? (authorization === 'ALLOW' ? 'Ask me to build a full execution plan.' : 'Authorization restricted — ask me why.')
+            : (direction ? 'Ask me to build a complete trade plan.' : 'Run a scan first to get trade planning.'),
         },
         act: {
           title: '⚡ Suggested Actions',
@@ -97,8 +143,13 @@ export default function MSPCopilot({
           footer: 'Click an action or ask me to help.',
         },
         learn: {
-          title: '📚 Learn From This Scan',
-          topics: [
+          title: '📚 Learn From This Setup',
+          topics: isMarketsPage ? [
+            { icon: '🏛️', label: 'What does this verdict mean?', question: `Explain why ${symbol} is ${verdict} right now — what drove the alignment and confidence scores?` },
+            { icon: '📊', label: 'Explain the flow data', question: `Break down the ${symbol} flow data: ${marketMode || ''} mode, ${gammaState || ''} gamma, and what the key strikes mean` },
+            { icon: '⚠️', label: 'What are the risks?', question: `What specific risks should I watch for with ${symbol} given the current ${volState || 'market'} environment and ${eventRisk || 'current'} event risk?` },
+            { icon: '🎯', label: 'How to trade this setup', question: `Given ${symbol} is ${verdict} with ${alignment || '?'}% alignment and ${rMultiple || '?'}R multiple, what\'s the optimal approach?` },
+          ] : [
             { icon: '💡', label: 'Why this signal matters', question: `Explain why ${direction || 'this'} signal on ${symbol} is significant` },
             { icon: '📈', label: 'What confluence means', question: 'Explain what confluence stack means and how to use it' },
             { icon: '⚠️', label: 'Risk considerations', question: `What are the risks of this ${symbol} trade?` },
@@ -306,6 +357,12 @@ export default function MSPCopilot({
           'Summarize the key signals',
           'What\'s the invalidation?',
           'Create a trade plan',
+        ];
+      case 'market_movers':
+        return [
+          'Is this tradable right now?',
+          'Explain the flow and gamma state',
+          'What\'s the risk/reward here?',
         ];
       default:
         return [

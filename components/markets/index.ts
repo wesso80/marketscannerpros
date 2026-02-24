@@ -4,4 +4,5 @@ export { default as DecisionLens } from './DecisionLens';
 export { default as TickerTabs } from './TickerTabs';
 export { default as RightRail } from './RightRail';
 export { useTickerData } from './useTickerData';
+export { useDecisionLens } from './useDecisionLens';
 export type * from './types';

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   InstitutionalStateStrip,
   MarketsToolbar,
@@ -8,10 +8,12 @@ import {
   TickerTabs,
   RightRail,
   useTickerData,
+  useDecisionLens,
 } from '@/components/markets';
 import type { AssetClass } from '@/components/markets/types';
 import { useUserTier, canAccessPortfolioInsights } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
+import { useRegisterPageData } from '@/lib/ai/pageContext';
 
 /**
  * Unified Markets Page
@@ -43,6 +45,125 @@ export default function MarketsPage() {
   const [symbol, setSymbol] = useState<string>('');
 
   const ctx = useTickerData(symbol || null, assetClass);
+  const lens = useDecisionLens(ctx);
+
+  // ── Register ALL page data with the AI context system ──
+  // This feeds the MSPCopilot floating panel with real data instead of generic hallucinations.
+  const aiData = useMemo<Record<string, unknown>>(() => {
+    if (!ctx.symbol) return {};
+
+    const data: Record<string, unknown> = {
+      symbol: ctx.symbol,
+      assetClass: ctx.assetClass,
+    };
+
+    // Quote
+    if (ctx.quote) {
+      data.currentPrice = ctx.quote.price;
+      data.change = ctx.quote.change;
+      data.changePercent = ctx.quote.changePercent;
+      data.volume = ctx.quote.volume;
+    }
+
+    // Decision Lens (the exact same values shown in the IDL card)
+    if (lens) {
+      data.verdict = lens.verdict;
+      data.alignment = lens.alignment;
+      data.confidence = lens.confidence;
+      data.authorization = lens.authorization;
+      data.ruBudget = lens.ruBudget;
+      data.bullScenario = lens.bullScenario;
+      data.bearScenario = lens.bearScenario;
+      data.rMultiple = lens.rMultiple;
+      data.volState = lens.volState;
+      data.eventRisk = lens.eventRisk;
+      data.liquidityGrade = lens.liquidityGrade;
+      data.expectedMove = lens.expectedMove;
+    }
+
+    // Scanner
+    if (ctx.scanner) {
+      data.direction = ctx.scanner.direction === 'LONG' ? 'bullish' : 'bearish';
+      data.scannerScore = ctx.scanner.score;
+      data.scannerConfidence = ctx.scanner.confidence;
+      data.setup = ctx.scanner.setup;
+      data.entry = ctx.scanner.entry;
+      data.stop = ctx.scanner.stop;
+      data.target = ctx.scanner.target;
+      data.scannerRMultiple = ctx.scanner.rMultiple;
+      data.indicators = ctx.scanner.indicators;
+      data.levels = ctx.scanner.levels;
+    }
+
+    // Flow (options flow / gamma / conviction)
+    if (ctx.flow) {
+      data.marketMode = ctx.flow.market_mode;
+      data.gammaState = ctx.flow.gamma_state;
+      data.flowBias = ctx.flow.bias;
+      data.flowConviction = ctx.flow.conviction;
+      data.keyStrikes = ctx.flow.key_strikes?.slice(0, 6);
+      data.gammaFlipZones = ctx.flow.flip_zones?.slice(0, 4);
+      data.liquidityLevels = ctx.flow.liquidity_levels?.slice(0, 5);
+      data.mostLikelyPath = ctx.flow.most_likely_path;
+      data.riskFactors = ctx.flow.risk;
+      if (ctx.flow.probability_matrix) {
+        data.probabilityMatrix = ctx.flow.probability_matrix;
+      }
+    }
+
+    // Options (equity only)
+    if (ctx.options) {
+      data.iv = ctx.options.iv;
+      data.ivRank = ctx.options.ivRank;
+      data.optionsExpectedMove = ctx.options.expectedMove;
+      data.putCallRatio = ctx.options.putCallRatio;
+      data.maxPain = ctx.options.maxPain;
+      data.gex = ctx.options.gex;
+      data.dex = ctx.options.dex;
+      data.topStrikes = ctx.options.topStrikes?.slice(0, 5);
+    }
+
+    // Crypto derivatives
+    if (ctx.cryptoDerivatives) {
+      data.fundingRate = ctx.cryptoDerivatives.fundingRate;
+      data.longShortRatio = ctx.cryptoDerivatives.longShortRatio;
+      data.cryptoSentiment = ctx.cryptoDerivatives.sentiment;
+      data.openInterest = ctx.cryptoDerivatives.openInterest;
+      if (ctx.cryptoDerivatives.liquidations) {
+        data.liquidations = ctx.cryptoDerivatives.liquidations;
+      }
+    }
+
+    // Upcoming events (for event risk awareness)
+    if (ctx.earnings.length > 0) {
+      data.upcomingEarnings = ctx.earnings.slice(0, 3).map(e => ({
+        symbol: e.symbol, reportDate: e.reportDate, estimate: e.estimate,
+      }));
+    }
+    if (ctx.economic.length > 0) {
+      data.upcomingEconomic = ctx.economic.slice(0, 3).map(e => ({
+        event: e.event, date: e.date, impact: e.impact,
+      }));
+    }
+
+    return data;
+  }, [ctx, lens]);
+
+  const aiSummary = useMemo(() => {
+    if (!ctx.symbol || !lens) return undefined;
+    return `${ctx.symbol} (${ctx.assetClass}) — Verdict: ${lens.verdict.toUpperCase()}, ` +
+      `Alignment: ${lens.alignment}%, Confidence: ${lens.confidence}%, ` +
+      `Authorization: ${lens.authorization}, R-Budget: ${lens.ruBudget}` +
+      (ctx.flow ? `, Flow: ${ctx.flow.market_mode}/${ctx.flow.gamma_state}/${ctx.flow.bias} (${ctx.flow.conviction}% conviction)` : '') +
+      (ctx.scanner ? `, Scanner: ${ctx.scanner.direction} ${ctx.scanner.setup} score=${ctx.scanner.score}` : '');
+  }, [ctx, lens]);
+
+  useRegisterPageData(
+    'market_movers',
+    aiData,
+    ctx.symbol ? [ctx.symbol] : [],
+    aiSummary,
+  );
 
   if (isLoading) return <div className="min-h-screen bg-[var(--msp-bg)]" />;
   if (!canAccessPortfolioInsights(tier)) return <UpgradeGate requiredTier="pro" feature="Markets Cockpit" />;
