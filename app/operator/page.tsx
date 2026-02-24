@@ -1801,7 +1801,7 @@ export default function OperatorDashboardPage() {
         </div>
       )}
       <ToolsNavBar />
-      <div className="sticky top-0 z-40 border-b border-[var(--msp-border)] bg-[var(--msp-bg)] px-4 py-2">
+      <div className="sticky top-0 z-40 border-b border-[var(--msp-border)] bg-[var(--msp-bg)] px-4 py-2 overflow-hidden">
         <div className={deploymentBlocked ? 'border-t-2 border-[var(--msp-bear)] pt-2' : ''}>
           <CapitalControlStrip />
         </div>
@@ -1848,20 +1848,20 @@ export default function OperatorDashboardPage() {
                 <div className="text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Command State</div>
                 <div className="mt-1 text-[1.05rem] font-bold uppercase tracking-[0.03em] text-[var(--msp-text)]">Operator Dashboard</div>
                 <div className="mt-3 grid gap-2 text-[0.76rem]">
-                  <div className="msp-elite-row flex justify-between"><span>MARKET REGIME</span><span className="font-semibold">{!focusSignal && !presence ? 'AWAITING DATA' : regimeADX >= 25 ? 'TRENDING' : 'TRANSITIONAL'}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>EXECUTION BIAS</span><span className="font-semibold">{bias === 'neutral' && !focusSignal ? 'AWAITING SIGNAL' : `${bias.toUpperCase()} CONTINUATION`}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>STRATEGY MODE</span><span className="font-semibold">{!focusSignal ? 'AWAITING SCAN' : strategyModeLabel}</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">MARKET REGIME</span><span className="font-semibold truncate text-right">{!focusSignal && !presence ? 'AWAITING DATA' : regimeADX >= 25 ? 'TRENDING' : 'TRANSITIONAL'}</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">EXECUTION BIAS</span><span className="font-semibold truncate text-right">{bias === 'neutral' && !focusSignal ? 'AWAITING SIGNAL' : `${bias.toUpperCase()} CONTINUATION`}</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">STRATEGY MODE</span><span className="font-semibold truncate text-right">{!focusSignal ? 'AWAITING SCAN' : strategyModeLabel}</span></div>
                 </div>
               </div>
               <div className="lg:col-span-6">
                 <div className="text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Environment Diagnostics</div>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 text-[0.74rem]">
-                  <div className="msp-elite-row flex justify-between"><span>Volatility</span><span className="font-semibold">{volatilityLabel}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Breadth</span><span className="font-semibold">{breadthLabel}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Liquidity</span><span className="font-semibold">{liquidityLayer.label.toUpperCase()}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Gamma</span><span className="font-semibold">{presence?.marketState?.volatilityState || 'NEUTRAL'}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Risk Environment</span><span className="font-semibold">{riskGovernorDebug?.snapshot.riskEnvironment || presence?.riskLoad?.environment || 'MODERATE'}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Setup Quality</span><span className="font-semibold">{operatorScore > 0 ? (operatorScore >= 75 ? 'HIGH' : operatorScore >= 55 ? 'MODERATE' : 'LOW') : '—'}</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">Volatility</span><span className="font-semibold truncate">{volatilityLabel}</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">Breadth</span><span className="font-semibold truncate">{breadthLabel}</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">Liquidity</span><span className="font-semibold truncate">{liquidityLayer.label.toUpperCase()}</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">Gamma</span><span className="font-semibold truncate">{presence?.marketState?.volatilityState || 'NEUTRAL'}</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">Risk Environment</span><span className="font-semibold truncate">{riskGovernorDebug?.snapshot.riskEnvironment || presence?.riskLoad?.environment || 'MODERATE'}</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">Setup Quality</span><span className="font-semibold truncate">{operatorScore > 0 ? (operatorScore >= 75 ? 'HIGH' : operatorScore >= 55 ? 'MODERATE' : 'LOW') : '—'}</span></div>
                 </div>
               </div>
             </div>
@@ -1909,23 +1909,23 @@ export default function OperatorDashboardPage() {
               <div className="msp-elite-panel">
                 <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Exposure Profile</div>
                 <div className="grid gap-1 text-[0.74rem] text-[var(--msp-text-muted)]">
-                  <div className="msp-elite-row flex justify-between"><span>Total Exposure</span><span className="font-semibold text-[var(--msp-text)]">{formatNumber(exposurePct)}%</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Net Long</span><span className="font-semibold text-[var(--msp-text)]">{formatNumber(netExposurePct)}%</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Cluster Exposure</span><span className="font-semibold text-[var(--msp-text)]">{formatNumber(clusterExposurePct)}%</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Largest Position</span><span className="font-semibold text-[var(--msp-text)]">{largestPosition && portfolioValue > 0 ? `${largestPosition.symbol} ${formatNumber((largestPosition.notional / portfolioValue) * 100)}%` : '—'}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Long / Short Split</span><span className="font-semibold text-[var(--msp-text)]">{totalExposure > 0 ? `${formatNumber((longExposureValue / totalExposure) * 100)} / ${formatNumber((shortExposureValue / totalExposure) * 100)}` : '— / —'}</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">Total Exposure</span><span className="font-semibold text-[var(--msp-text)] truncate">{formatNumber(exposurePct)}%</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">Net Long</span><span className="font-semibold text-[var(--msp-text)] truncate">{formatNumber(netExposurePct)}%</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">Cluster Exposure</span><span className="font-semibold text-[var(--msp-text)] truncate">{formatNumber(clusterExposurePct)}%</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">Largest Position</span><span className="font-semibold text-[var(--msp-text)] truncate">{largestPosition && portfolioValue > 0 ? `${largestPosition.symbol} ${formatNumber((largestPosition.notional / portfolioValue) * 100)}%` : '—'}</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">Long / Short Split</span><span className="font-semibold text-[var(--msp-text)] truncate">{totalExposure > 0 ? `${formatNumber((longExposureValue / totalExposure) * 100)} / ${formatNumber((shortExposureValue / totalExposure) * 100)}` : '— / —'}</span></div>
                 </div>
               </div>
 
               <div className={`msp-elite-panel ${deploymentBlocked ? 'border-l-2 border-l-[var(--msp-bear)]' : ''}`}>
                 <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Active Constraints</div>
                 <div className="grid gap-1 text-[0.74rem] text-[var(--msp-text-muted)]">
-                  <div className="msp-elite-row flex justify-between"><span>Max Daily Loss</span><span className="font-semibold text-[var(--msp-text)]">{permissionSnapshot ? formatRiskPairFromR(permissionSnapshot.session.max_daily_R ?? 0) : '—'}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Remaining Daily Loss</span><span className="font-semibold text-[var(--msp-text)]">{permissionSnapshot ? formatRiskPairFromR(permissionSnapshot.session.remaining_daily_R ?? 0) : '—'}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Max Open Risk</span><span className="font-semibold text-[var(--msp-text)]">{permissionSnapshot ? formatRiskPairFromR(permissionSnapshot.session.max_open_risk_R ?? 0) : '—'}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Current Open Risk</span><span className="font-semibold text-[var(--msp-text)]">{permissionSnapshot ? formatRiskPairFromR(permissionSnapshot.session.open_risk_R ?? 0) : '—'}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Vol Multiplier</span><span className="font-semibold text-[var(--msp-text)]">{permissionSnapshot && Number.isFinite(permissionSnapshot.caps.risk_per_trade) ? formatNumber(permissionSnapshot.caps.risk_per_trade / 0.005) : '—'}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Event Restrictions</span><span className="font-semibold text-[var(--msp-text)]">{deploymentBlocked ? 'ACTIVE' : 'NORMAL'}</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">Max Daily Loss</span><span className="font-semibold text-[var(--msp-text)] truncate">{permissionSnapshot ? formatRiskPairFromR(permissionSnapshot.session.max_daily_R ?? 0) : '—'}</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">Remaining Daily Loss</span><span className="font-semibold text-[var(--msp-text)] truncate">{permissionSnapshot ? formatRiskPairFromR(permissionSnapshot.session.remaining_daily_R ?? 0) : '—'}</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">Max Open Risk</span><span className="font-semibold text-[var(--msp-text)] truncate">{permissionSnapshot ? formatRiskPairFromR(permissionSnapshot.session.max_open_risk_R ?? 0) : '—'}</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">Current Open Risk</span><span className="font-semibold text-[var(--msp-text)] truncate">{permissionSnapshot ? formatRiskPairFromR(permissionSnapshot.session.open_risk_R ?? 0) : '—'}</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">Vol Multiplier</span><span className="font-semibold text-[var(--msp-text)] truncate">{permissionSnapshot && Number.isFinite(permissionSnapshot.caps.risk_per_trade) ? formatNumber(permissionSnapshot.caps.risk_per_trade / 0.005) : '—'}</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">Event Restrictions</span><span className="font-semibold text-[var(--msp-text)] truncate">{deploymentBlocked ? 'ACTIVE' : 'NORMAL'}</span></div>
                 </div>
               </div>
             </section>
@@ -1986,10 +1986,10 @@ export default function OperatorDashboardPage() {
               <div className="msp-elite-panel">
                 <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Trade Journal Snapshot</div>
                 <div className="grid gap-1 text-[0.74rem] text-[var(--msp-text-muted)]">
-                  <div className="msp-elite-row flex justify-between"><span>Win Rate</span><span className="font-semibold text-[var(--msp-text)]">{closedTrades.length ? `${formatNumber((wins / closedTrades.length) * 100)}%` : '—'}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Avg Win</span><span className="font-semibold text-[var(--msp-text)]">{wins > 0 ? formatRiskPairFromAmount(avgWin) : '—'}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Avg Loss</span><span className="font-semibold text-[var(--msp-text)]">{losses.length > 0 ? formatRiskPairFromAmount(-avgLoss) : '—'}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Expectancy</span><span className="font-semibold text-[var(--msp-text)]">{closedTrades.length > 0 ? formatRiskPairFromAmount(avgWin - avgLoss) : '—'}</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">Win Rate</span><span className="font-semibold text-[var(--msp-text)] truncate">{closedTrades.length ? `${formatNumber((wins / closedTrades.length) * 100)}%` : '—'}</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">Avg Win</span><span className="font-semibold text-[var(--msp-text)] truncate">{wins > 0 ? formatRiskPairFromAmount(avgWin) : '—'}</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">Avg Loss</span><span className="font-semibold text-[var(--msp-text)] truncate">{losses.length > 0 ? formatRiskPairFromAmount(-avgLoss) : '—'}</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">Expectancy</span><span className="font-semibold text-[var(--msp-text)] truncate">{closedTrades.length > 0 ? formatRiskPairFromAmount(avgWin - avgLoss) : '—'}</span></div>
                 </div>
               </div>
               <div className="msp-elite-panel">
@@ -2024,10 +2024,10 @@ export default function OperatorDashboardPage() {
               <div className="msp-elite-panel">
                 <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">System Diagnostics</div>
                 <div className="grid gap-1 text-[0.74rem] text-[var(--msp-text-muted)]">
-                  <div className="msp-elite-row flex justify-between"><span>Data Freshness</span><span className="font-semibold text-[var(--msp-text)]">{(() => { const age = permissionSnapshot?.data_health.age_s ?? presence?.dataFreshness?.marketDataAgeSec; return age != null ? `${age}s` : '—'; })()}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>API Status</span><span className="font-semibold text-[var(--msp-text)]">{presence?.systemHealth?.status || 'OK'}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>IRG Status</span><span className="font-semibold text-[var(--msp-text)]">{deploymentBlocked ? 'LOCKED' : 'ACTIVE'}</span></div>
-                  <div className="msp-elite-row flex justify-between"><span>Snapshot Source</span><span className="font-semibold text-[var(--msp-text)]">{permissionSnapshot?.data_health.source || 'operator_presence'}</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">Data Freshness</span><span className="font-semibold text-[var(--msp-text)] truncate">{(() => { const age = permissionSnapshot?.data_health.age_s ?? presence?.dataFreshness?.marketDataAgeSec; return age != null ? `${age}s` : '—'; })()}</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">API Status</span><span className="font-semibold text-[var(--msp-text)] truncate">{presence?.systemHealth?.status || 'OK'}</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">IRG Status</span><span className="font-semibold text-[var(--msp-text)] truncate">{deploymentBlocked ? 'LOCKED' : 'ACTIVE'}</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">Snapshot Source</span><span className="font-semibold text-[var(--msp-text)] truncate">{permissionSnapshot?.data_health.source || 'operator_presence'}</span></div>
                 </div>
               </div>
             </section>

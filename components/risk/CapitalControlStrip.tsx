@@ -51,15 +51,15 @@ export default function CapitalControlStrip() {
       <div className="flex flex-wrap items-center gap-2 text-[11px]">
         <span className={`rounded-md border px-2 py-1 font-semibold ${tone(modeTone)}`}>Risk Mode: {snapshot.risk_mode}</span>
         <span className="rounded-md border border-slate-700 bg-slate-950/50 px-2 py-1 text-slate-200">
-          Remaining: <span className="metric-r">{snapshot.session.remaining_daily_R.toFixed(1)}R</span>
+          Remaining: <span className="metric-r">{Number(snapshot.session.remaining_daily_R).toFixed(1)}R</span>
           <span className="metric-dollar">({formatDollar(remainingDollar)})</span>
         </span>
         <span className="rounded-md border border-slate-700 bg-slate-950/50 px-2 py-1 text-slate-200">
-          Open Risk: <span className="metric-r">{snapshot.session.open_risk_R.toFixed(1)}R</span>
+          Open Risk: <span className="metric-r">{Number(snapshot.session.open_risk_R).toFixed(1)}R</span>
           <span className="metric-dollar">({formatDollar(openRiskDollar)})</span>
         </span>
-        <span className="rounded-md border border-slate-700 bg-slate-950/50 px-2 py-1 text-slate-200">Gross: {snapshot.caps.gross_max.toFixed(2)}x</span>
-        <span className="rounded-md border border-slate-700 bg-slate-950/50 px-2 py-1 text-slate-200">Cluster: {snapshot.caps.cluster_max.toFixed(2)}x</span>
+        <span className="rounded-md border border-slate-700 bg-slate-950/50 px-2 py-1 text-slate-200">Gross: {Number(snapshot.caps.gross_max).toFixed(2)}x</span>
+        <span className="rounded-md border border-slate-700 bg-slate-950/50 px-2 py-1 text-slate-200">Cluster: {Number(snapshot.caps.cluster_max).toFixed(2)}x</span>
         <span className={`rounded-md border px-2 py-1 font-semibold ${tone(dataTone)}`}>Data: {snapshot.data_health.status}</span>
         <span className="rounded-md border border-slate-700 bg-slate-950/50 px-2 py-1 text-slate-200">Add-ons: {snapshot.caps.add_ons_allowed ? 'Enabled' : 'Disabled'}</span>
         <button
@@ -69,7 +69,7 @@ export default function CapitalControlStrip() {
         >
           Rule Guard: {guardEnabled ? 'ON' : 'OFF'}
         </button>
-        <span className="ml-auto text-[10px] text-slate-400">Educational guardrails only — no brokerage execution</span>
+        <span className="ml-auto text-[10px] text-slate-400 shrink-0 hidden sm:inline">Educational guardrails only — no brokerage execution</span>
       </div>
       {isLocked && (
         <div className="mt-2 rounded-md border border-rose-500/30 bg-rose-500/10 px-2 py-1 text-[11px] font-semibold text-rose-200">

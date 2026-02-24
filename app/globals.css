@@ -221,6 +221,8 @@ a:hover {
   border-radius: 12px;
   padding: var(--msp-panel-padding);
   box-shadow: none;
+  overflow: hidden;
+  min-width: 0;
 }
 
 .msp-elite-row {
@@ -228,6 +230,8 @@ a:hover {
   background: var(--msp-panel-2);
   border-radius: 10px;
   padding: 10px 12px;
+  overflow: hidden;
+  min-width: 0;
 }
 
 .msp-container {
@@ -236,6 +240,7 @@ a:hover {
   margin: 0 auto;
   padding-left: 16px;
   padding-right: 16px;
+  overflow: hidden;
 }
 
 @media (min-width: 1280px) {
