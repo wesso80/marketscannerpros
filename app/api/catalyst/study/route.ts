@@ -16,55 +16,38 @@ import { getOrComputeStudy, computeDistribution } from '@/lib/catalyst/eventStud
 import { CatalystSubtype, type StudyCohort, type EventStudyResult } from '@/lib/catalyst/types';
 
 export const runtime = 'nodejs';
-export const maxDuration = 30; // Fast: returns cache or DB-only stub
+export const maxDuration = 60; // Allow inline compute up to 25s + overhead
 
 const AUTO_COHORT_THRESHOLD = 10;
-const BUILD_VERSION = '2026-02-24T09:00:00Z'; // v2: fast-path + background compute
+const BUILD_VERSION = '2026-02-24T16:00:00Z'; // v3: inline compute — no fire-and-forget
+const INLINE_COMPUTE_TIMEOUT_MS = 25_000; // 25s max for inline full compute
 
 /**
- * Fire-and-forget: POST to the compute endpoint for a specific ticker+subtype.
- * On Render (persistent Node.js process), this runs in the background
- * after the response is returned. Errors are swallowed silently.
- *
- * Includes in-memory deduplication: the same (ticker, subtype, cohort, lookback)
- * combo will only trigger one background compute per DEDUP_WINDOW_MS.
+ * Inline background compute with dedup.
+ * Instead of fire-and-forget HTTP POST (which fails when RENDER_EXTERNAL_URL
+ * is misconfigured), compute directly in a detached promise.
  */
 const DEDUP_WINDOW_MS = 120_000; // 2 minutes
-const _pendingTriggers = new Map<string, number>();
+const _pendingComputes = new Map<string, number>();
 
-function triggerBackgroundCompute(ticker: string, subtype: string, cohort: string, lookbackDays: number) {
-  const baseUrl = process.env.RENDER_EXTERNAL_URL || process.env.NEXT_PUBLIC_BASE_URL || '';
-  if (!baseUrl) return;
-
-  // ── Dedup: skip if we already triggered this combo recently ────
+function startInlineCompute(ticker: string, subtype: CatalystSubtype, cohort: StudyCohort, lookbackDays: number) {
   const key = `${ticker}:${subtype}:${cohort}:${lookbackDays}`;
   const now = Date.now();
-  const lastTrigger = _pendingTriggers.get(key);
-  if (lastTrigger && (now - lastTrigger) < DEDUP_WINDOW_MS) {
-    return; // Already triggered within the dedup window
-  }
-  _pendingTriggers.set(key, now);
+  const last = _pendingComputes.get(key);
+  if (last && (now - last) < DEDUP_WINDOW_MS) return; // Already computing
+  _pendingComputes.set(key, now);
 
-  // Housekeep: prune stale entries when map grows large
-  if (_pendingTriggers.size > 200) {
-    for (const [k, ts] of _pendingTriggers) {
-      if ((now - ts) > DEDUP_WINDOW_MS) _pendingTriggers.delete(k);
+  // Housekeep
+  if (_pendingComputes.size > 200) {
+    for (const [k, ts] of _pendingComputes) {
+      if ((now - ts) > DEDUP_WINDOW_MS) _pendingComputes.delete(k);
     }
   }
 
-  const url = `${baseUrl}/api/catalyst/study/compute?ticker=${encodeURIComponent(ticker)}&subtype=${encodeURIComponent(subtype)}&cohort=${cohort}&lookback=${lookbackDays}&limit=1`;
-  const cronSecret = process.env.CRON_SECRET || '';
-
-  // Fire-and-forget — don't await
-  fetch(url, {
-    method: 'POST',
-    headers: {
-      'x-cron-secret': cronSecret,
-      'x-trigger': 'inline-study',
-    },
-  }).catch(err => {
-    console.warn('[CatalystStudy] Background compute trigger failed:', err.message);
-  });
+  // Fire-and-forget direct function call — no HTTP needed
+  getOrComputeStudy({ ticker, subtype, lookbackDays, cohort }, true)
+    .then(r => console.log(`[CatalystStudy] Background compute done: ${ticker}/${subtype} n=${r.study.sampleN}`))
+    .catch(err => console.warn(`[CatalystStudy] Background compute failed: ${ticker}/${subtype}:`, err.message));
 }
 
 /** Return a minimal valid study result when computation fails */
@@ -138,36 +121,61 @@ export async function GET(req: NextRequest) {
     console.error('[CatalystStudy] Cohort detection failed, defaulting to MARKET:', (err as Error).message);
   }
 
-  // ── Retrieve cached study or return fast DB-only stub ────────
-  // Full AV-backed compute now runs ONLY in the background cron.
-  // Inline requests return cached or pending results instantly.
+  // ── v3: Inline compute with timeout ──────────────────────────
+  // 1. Try cache first (instant).
+  // 2. On miss → full compute inline with 25s timeout.
+  // 3. If timeout → return DB-only stub and compute in background.
   let study: EventStudyResult;
   let cached = false;
   let cacheAge: number | null = null;
   let isPending = true;
   const warnings: string[] = [];
 
-  try {
-    const result = await getOrComputeStudy({
-      ticker,
-      subtype: subtypeParam,
-      lookbackDays,
-      cohort,
-    }, false);  // fullCompute=false — instant: return cache or DB-only stub
-    study = result.study;
-    cached = result.cached;
-    cacheAge = result.cacheAge;
-    isPending = result.pendingPriceData;
+  const opts = { ticker, subtype: subtypeParam, lookbackDays, cohort };
 
-    // Trigger background compute when pending OR when cached study is empty
-    // (empty cache = computed before events existed, needs refresh)
-    if (isPending || (result.cached && study.sampleN === 0)) {
-      triggerBackgroundCompute(ticker, subtypeParam, cohort, lookbackDays);
+  try {
+    // Fast path: check cache only (no AV calls)
+    const fastResult = await getOrComputeStudy(opts, false);
+
+    if (fastResult.cached && !fastResult.pendingPriceData) {
+      // Cache HIT with real data — return instantly
+      study = fastResult.study;
+      cached = fastResult.cached;
+      cacheAge = fastResult.cacheAge;
+      isPending = false;
+    } else {
+      // Cache MISS or stale — try inline full compute with timeout
+      const fullResult = await Promise.race([
+        getOrComputeStudy(opts, true),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), INLINE_COMPUTE_TIMEOUT_MS)),
+      ]);
+
+      if (fullResult) {
+        // Inline compute completed within timeout
+        study = fullResult.study;
+        cached = fullResult.cached;
+        cacheAge = fullResult.cacheAge;
+        isPending = fullResult.pendingPriceData;
+      } else {
+        // Timeout — return DB-only stub and compute in background
+        study = fastResult.study;
+        cached = false;
+        cacheAge = null;
+        isPending = true;
+        warnings.push('INLINE_COMPUTE_TIMEOUT: Study is being computed in the background. Results will refresh automatically.');
+        startInlineCompute(ticker, subtypeParam, cohort, lookbackDays);
+      }
+    }
+
+    // If cache returned an empty study, kick off background recompute
+    if (cached && study.sampleN === 0) {
+      startInlineCompute(ticker, subtypeParam, cohort, lookbackDays);
     }
   } catch (err) {
     console.error('[CatalystStudy] Computation failed, returning pending stub:', (err as Error).message, (err as Error).stack);
     study = pendingStudy(ticker, subtypeParam, cohort, lookbackDays, (err as Error).message);
     warnings.push(`COMPUTATION_ERROR: Study could not be computed. Background job will retry.`);
+    startInlineCompute(ticker, subtypeParam, cohort, lookbackDays);
   }
 
   // ── Quality warnings ──────────────────────────────────────────
