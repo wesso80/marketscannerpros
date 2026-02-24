@@ -220,20 +220,28 @@ function nextPrevWeekday(etDateStr: string): string {
 
 /**
  * Check if an event falls within ±24h of a known earnings date.
- * Uses Alpha Vantage EARNINGS endpoint (cached).
+ * Uses the catalyst_events table to detect nearby 10-K/10-Q filings.
+ *
+ * IMPORTANT: When studying SEC_10K_10Q events themselves, this check
+ * is skipped by the caller to avoid self-referencing (every 10-K event
+ * would find ITSELF and be excluded).
  */
-async function isEarningsConfounded(ticker: string, eventDate: Date): Promise<boolean> {
-  // Simple heuristic: check if any 10-K/10-Q filing exists within ±2 days
-  // (Full earnings calendar integration is a v2 enhancement)
+async function isEarningsConfounded(ticker: string, eventDate: Date, selfEventId?: string): Promise<boolean> {
   try {
     const windowStart = new Date(eventDate.getTime() - 2 * 86_400_000);
     const windowEnd = new Date(eventDate.getTime() + 2 * 86_400_000);
+
+    // Exclude self to avoid circular confound detection
+    const excludeClause = selfEventId ? ` AND id != $5` : '';
+    const params: any[] = [ticker, CatalystSubtype.SEC_10K_10Q, windowStart, windowEnd];
+    if (selfEventId) params.push(selfEventId);
+
     const rows = await q(
       `SELECT id FROM catalyst_events
        WHERE ticker = $1 AND catalyst_subtype = $2
-       AND event_timestamp_utc BETWEEN $3 AND $4
+       AND event_timestamp_utc BETWEEN $3 AND $4${excludeClause}
        LIMIT 1`,
-      [ticker, CatalystSubtype.SEC_10K_10Q, windowStart, windowEnd]
+      params
     );
     return (rows?.length ?? 0) > 0;
   } catch {
@@ -372,8 +380,12 @@ export async function computeEventStudy(opts: ComputeStudyOptions): Promise<Even
       const batch = events.slice(batchStart, batchStart + PARALLEL_BATCH_SIZE);
 
       const batchResults = await Promise.allSettled(batch.map(async (event) => {
-        // Check confounding
-        const confounded = await isEarningsConfounded(event.ticker, event.eventTimestampUtc);
+        // Skip confound check for SEC_10K_10Q studies (they ARE the earnings proxy)
+        // For other subtypes, check if event is near a 10-K/10-Q filing (exclude self)
+        const skipConfound = subtype === CatalystSubtype.SEC_10K_10Q;
+        const confounded = skipConfound
+          ? false
+          : await isEarningsConfounded(event.ticker, event.eventTimestampUtc, event.id);
         if (confounded) {
           return {
             event,
@@ -570,9 +582,10 @@ export async function getOrComputeStudy(
       const age = (Date.now() - new Date(row.computed_at).getTime()) / 1000;
       const study = row.result_json as EventStudyResult;
 
-      // Don't serve empty cached studies — they likely computed before events existed.
-      // Use a shorter TTL (30 min) so new events get picked up quickly.
-      const effectiveTtl = study.sampleN === 0 ? 1800 : STUDY_CACHE_TTL_HOURS * 3600;
+      // Don't serve empty cached studies — they likely computed with a bug or
+      // before events existed. Use a very short TTL (5 min) so fixes and new
+      // events get picked up promptly.
+      const effectiveTtl = study.sampleN === 0 ? 300 : STUDY_CACHE_TTL_HOURS * 3600;
 
       if (age < effectiveTtl && !fullCompute) {
         return { study, cached: true, cacheAge: age, pendingPriceData: false };
