@@ -5,8 +5,6 @@ import { useEffect, useState, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import NotificationBell from './NotificationBell';
 import { useUserTier } from '@/lib/useUserTier';
-import ModeToggle from './ModeToggle';
-import { tierDisplayName } from '@/lib/planPrices';
 
 interface DropdownItem {
   href: string;
@@ -180,12 +178,9 @@ export default function Header() {
           <Link href="/pricing" className="hover:text-teal-300 whitespace-nowrap">Pricing</Link>
           <Link href="/account" className="hover:text-teal-300 whitespace-nowrap">Account</Link>
           {tierLoading ? null : isLoggedIn ? (
-            <>
-              <ModeToggle compact={isTerminalMode} />
-              <span className={`flex items-center gap-2 bg-teal-500/10 border border-slate-700 rounded-lg text-teal-300 text-xs ${isTerminalMode ? 'px-2 py-1' : 'px-3 py-1.5'}`}>
-                {tier === 'pro_trader' ? '🏛 Institutional' : tier === 'pro' ? '🟢 Retail' : 'Free'}
-              </span>
-            </>
+            <span className={`ml-2 flex items-center gap-2 bg-teal-500/10 border border-slate-700 rounded-lg text-teal-300 text-xs ${isTerminalMode ? 'px-2 py-1' : 'px-3 py-1.5'}`}>
+              {tier === 'pro_trader' ? '⭐ Pro Trader' : tier === 'pro' ? '✨ Pro' : 'Free'}
+            </span>
           ) : (
             <Link href="/auth" className={`ml-2 bg-teal-500/20 hover:bg-teal-500/30 border border-slate-700 rounded-lg text-teal-300 font-medium whitespace-nowrap transition-all ${isTerminalMode ? 'px-3 py-1' : 'px-4 py-1.5'}`}>Sign In</Link>
           )}
@@ -231,14 +226,9 @@ export default function Header() {
               
               <div className="mt-4 pt-4 border-t border-slate-700/90">
                 {isLoggedIn ? (
-                  <>
-                    <div className="flex items-center justify-center mb-3">
-                      <ModeToggle />
-                    </div>
-                    <Link href="/account" className="flex items-center justify-center gap-2 px-4 py-3 bg-teal-500/10 border border-slate-700 rounded-lg text-teal-300 font-medium transition-all" onClick={() => setIsOpen(false)}>
-                      {tier === 'pro_trader' ? '🏛 Institutional' : tier === 'pro' ? '🟢 Retail' : '👤 Account'}
-                    </Link>
-                  </>
+                  <Link href="/account" className="flex items-center justify-center gap-2 px-4 py-3 bg-teal-500/10 border border-slate-700 rounded-lg text-teal-300 font-medium transition-all" onClick={() => setIsOpen(false)}>
+                    {tier === 'pro_trader' ? '⭐ Pro Trader' : tier === 'pro' ? '✨ Pro' : '👤 Account'}
+                  </Link>
                 ) : (
                   <Link href="/auth" className="flex items-center justify-center gap-2 px-4 py-3 bg-teal-500/20 hover:bg-teal-500/30 border border-slate-700 rounded-lg text-teal-300 font-medium transition-all" onClick={() => setIsOpen(false)}>🔐 Sign In</Link>
                 )}

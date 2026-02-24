@@ -1,9 +1,7 @@
-"use client";
+import { redirect } from 'next/navigation';
 
-import { useDisplayMode } from "@/lib/displayMode";
-import { redirect } from "next/navigation";
+export const dynamic = 'force-dynamic';
 
 export default function DashboardPage() {
-  const { isRetail } = useDisplayMode();
-  redirect(isRetail ? "/tools/dashboard" : "/tools/command-hub");
+  redirect('/tools/markets');
 }

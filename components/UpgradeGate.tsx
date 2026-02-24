@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { PLAN_PRICES, tierDisplayName } from '@/lib/planPrices';
+import { PLAN_PRICES } from '@/lib/planPrices';
 
 interface UpgradeGateProps {
   requiredTier: "pro" | "pro_trader";
@@ -10,7 +10,7 @@ interface UpgradeGateProps {
 }
 
 export default function UpgradeGate({ requiredTier, feature, children }: UpgradeGateProps) {
-  const tierName = tierDisplayName(requiredTier);
+  const tierName = requiredTier === "pro_trader" ? "Pro Trader" : "Pro";
   const price = requiredTier === "pro_trader" ? PLAN_PRICES.pro_trader.monthly : PLAN_PRICES.pro.monthly;
   
   return (
@@ -41,7 +41,7 @@ export default function UpgradeGate({ requiredTier, feature, children }: Upgrade
 
         <div className="mb-6 rounded-panel border border-msp-borderStrong bg-msp-panel p-4">
           <div style={{ color: "var(--msp-accent)", fontWeight: "600", fontSize: "14px", marginBottom: "4px" }}>
-            Unlock {tierName}
+            Unlock {requiredTier === "pro_trader" ? "Pro Trader" : "Pro"}
           </div>
           <div style={{ color: "var(--msp-text)", fontSize: "24px", fontWeight: "700" }}>
             {price}<span style={{ fontSize: "14px", fontWeight: "400" }}>/month</span>
