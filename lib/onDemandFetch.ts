@@ -207,6 +207,33 @@ async function fetchBarsAndIndicatorsFromAV(symbol: string): Promise<{
     source: 'live',
   };
 
+  // Store bars in ohlcv_bars so /api/bars and scanner cached path can find them
+  try {
+    if (bars.length > 0) {
+      const batch = bars.slice(-50);
+      const values: string[] = [];
+      const params: any[] = [];
+      let idx = 1;
+      for (const b of batch) {
+        values.push(`($${idx}, $${idx + 1}, $${idx + 2}, $${idx + 3}, $${idx + 4}, $${idx + 5}, $${idx + 6}, $${idx + 7})`);
+        params.push(symbol.toUpperCase(), 'daily', b.timestamp.slice(0, 10), b.open, b.high, b.low, b.close, b.volume);
+        idx += 8;
+      }
+      await q(
+        `INSERT INTO ohlcv_bars (symbol, timeframe, ts, open, high, low, close, volume)
+         VALUES ${values.join(',')}
+         ON CONFLICT (symbol, timeframe, ts) DO UPDATE SET
+           open = EXCLUDED.open, high = EXCLUDED.high, low = EXCLUDED.low,
+           close = EXCLUDED.close, volume = EXCLUDED.volume`,
+        params
+      );
+      console.log(`[onDemand] Stored ${batch.length} bars in ohlcv_bars for ${symbol}`);
+    }
+  } catch (barStoreErr: any) {
+    // Non-fatal — chart will fall back to /api/bars AV fetch
+    console.warn(`[onDemand] Failed to store bars for ${symbol}:`, barStoreErr?.message);
+  }
+
   return { bars, indicators };
   } catch (err: any) {
     console.error(`[onDemand] Error fetching bars for ${symbol}:`, err?.message || err);

@@ -3,12 +3,13 @@ import { q } from '@/lib/db';
 import { getCached, setCached, CACHE_KEYS, CACHE_TTL } from '@/lib/redis';
 import { calculateAllIndicators } from '@/lib/indicators';
 import { getSessionFromCookie } from '@/lib/auth';
+import { avTryToken } from '@/lib/avRateGovernor';
 
 /**
  * GET /api/bars?symbol=AAPL&timeframe=daily&limit=50
  *
  * Returns OHLCV bars + computed chart overlays (EMA-200, RSI, MACD)
- * from cache (Redis → DB). Does NOT call Alpha Vantage — zero API cost.
+ * from cache (Redis → DB → Alpha Vantage fallback).
  *
  * Response shape matches the ChartData interface in PriceChart:
  * { ok, candles[], ema200[], rsi[], macd[], source }
@@ -55,7 +56,8 @@ export async function GET(req: NextRequest) {
     );
 
     if (!rows || rows.length === 0) {
-      return NextResponse.json({ ok: false, error: 'No bars cached for this symbol' }, { status: 404 });
+      // DB empty — try Alpha Vantage as fallback
+      return fetchFromAVFallback(symbol, timeframe, limit, cacheKey);
     }
 
     // Reverse to oldest-first for charting
@@ -110,8 +112,102 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, ...payload, source: 'database' });
   } catch (err: any) {
     console.error('[bars] DB error:', err?.message || err);
-    return NextResponse.json({ ok: false, error: 'Internal error' }, { status: 500 });
+    // DB error — try AV fallback
+    return fetchFromAVFallback(symbol, timeframe, limit, cacheKey);
   }
+}
+
+// ── Alpha Vantage fallback when ohlcv_bars is empty ─────────────────────
+
+async function fetchFromAVFallback(
+  symbol: string,
+  timeframe: string,
+  limit: number,
+  cacheKey: string,
+): Promise<NextResponse> {
+  const apiKey = process.env.ALPHA_VANTAGE_API_KEY || '';
+  if (!apiKey || !(await avTryToken())) {
+    return NextResponse.json({ ok: false, error: 'No bars available for this symbol' }, { status: 404 });
+  }
+
+  try {
+    console.log(`[bars] AV fallback for ${symbol}`);
+    const url = timeframe === 'daily'
+      ? `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${encodeURIComponent(symbol)}&outputsize=compact&entitlement=realtime&apikey=${apiKey}`
+      : `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(symbol)}&interval=60min&outputsize=compact&entitlement=realtime&apikey=${apiKey}`;
+
+    const res = await fetch(url, { signal: AbortSignal.timeout(15000), cache: 'no-store' });
+    if (!res.ok) {
+      return NextResponse.json({ ok: false, error: 'Upstream error' }, { status: 502 });
+    }
+    const json = await res.json();
+    const tsKey = Object.keys(json).find(k => k.startsWith('Time Series ('));
+    const ts = tsKey ? json[tsKey] : null;
+    if (!ts || Object.keys(ts).length === 0) {
+      return NextResponse.json({ ok: false, error: 'No data from provider' }, { status: 404 });
+    }
+
+    // Parse candles oldest-first
+    const allCandles = Object.entries(ts)
+      .map(([date, v]: any) => ({
+        t: date.slice(0, 10),
+        o: Number(v['1. open']),
+        h: Number(v['2. high']),
+        l: Number(v['3. low']),
+        c: Number(v['4. close']),
+        vol: Number(v['5. volume'] ?? v['6. volume'] ?? 0),
+      }))
+      .filter(c => Number.isFinite(c.c))
+      .sort((a, b) => a.t.localeCompare(b.t));
+
+    const candles = allCandles.slice(-limit);
+    const closes = candles.map(c => c.c);
+
+    const payload = {
+      candles: candles.map(c => ({ t: c.t, o: c.o, h: c.h, l: c.l, c: c.c })),
+      ema200: computeEmaArray(closes, 200),
+      rsi: computeRsiArray(closes, 14),
+      macd: computeMacdArrays(closes, 12, 26, 9),
+    };
+
+    // Cache for 10 min
+    await setCached(cacheKey, payload, 600).catch(() => {});
+
+    // Store to ohlcv_bars in background so next request comes from DB
+    storeBarsToDB(symbol, timeframe, allCandles).catch(() => {});
+
+    return NextResponse.json({ ok: true, ...payload, source: 'alpha-vantage' });
+  } catch (err: any) {
+    console.error('[bars] AV fallback error:', err?.message || err);
+    return NextResponse.json({ ok: false, error: 'No bars available' }, { status: 404 });
+  }
+}
+
+async function storeBarsToDB(
+  symbol: string,
+  timeframe: string,
+  candles: { t: string; o: number; h: number; l: number; c: number; vol: number }[],
+): Promise<void> {
+  if (!candles.length) return;
+  // Batch insert up to 50
+  const batch = candles.slice(-50);
+  const values: string[] = [];
+  const params: any[] = [];
+  let idx = 1;
+  for (const c of batch) {
+    values.push(`($${idx}, $${idx + 1}, $${idx + 2}, $${idx + 3}, $${idx + 4}, $${idx + 5}, $${idx + 6}, $${idx + 7})`);
+    params.push(symbol, timeframe, c.t, c.o, c.h, c.l, c.c, c.vol);
+    idx += 8;
+  }
+  await q(
+    `INSERT INTO ohlcv_bars (symbol, timeframe, ts, open, high, low, close, volume)
+     VALUES ${values.join(',')}
+     ON CONFLICT (symbol, timeframe, ts) DO UPDATE SET
+       open = EXCLUDED.open, high = EXCLUDED.high, low = EXCLUDED.low,
+       close = EXCLUDED.close, volume = EXCLUDED.volume`,
+    params
+  );
+  console.log(`[bars] Stored ${batch.length} bars for ${symbol}/${timeframe}`);
 }
 
 // ── Indicator helpers (compute full arrays for charting) ──────────────────
