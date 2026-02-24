@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
-// Next.js marketing site URL (NOT Streamlit)
-import { APP_URL } from '@/lib/appUrl';
+// ── Internal fetch base URL ──────────────────────────────────────
+// Use RENDER_EXTERNAL_URL (set by Render on web services) or fall back to WEB_URL/APP_URL
+const INTERNAL_BASE_URL = process.env.RENDER_EXTERNAL_URL
+  || process.env.WEB_URL
+  || process.env.NEXT_PUBLIC_BASE_URL
+  || 'https://marketscannerpros.onrender.com';
 
 const QUOTE_FETCH_TIMEOUT_MS = 10_000; // 10s max for price fetch
 const WALL_CLOCK_LIMIT_MS = 90_000;     // 90s hard stop (leaves buffer for curl's 120s max-time)
@@ -60,7 +64,7 @@ interface PredictionRow {
 
 async function fetchLatestPrice(symbol: string, assetType: string): Promise<number | null> {
   try {
-    const url = `${APP_URL}/api/quote?symbol=${encodeURIComponent(symbol)}&type=${encodeURIComponent(assetType)}`;
+    const url = `${INTERNAL_BASE_URL}/api/quote?symbol=${encodeURIComponent(symbol)}&type=${encodeURIComponent(assetType)}`;
     const headers: Record<string, string> = {};
     if (process.env.CRON_SECRET) headers['x-cron-secret'] = process.env.CRON_SECRET;
     const res = await fetch(url, { cache: 'no-store', headers, signal: AbortSignal.timeout(QUOTE_FETCH_TIMEOUT_MS) });

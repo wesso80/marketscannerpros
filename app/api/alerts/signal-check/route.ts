@@ -14,6 +14,21 @@ import { sendPushToUser } from '@/lib/pushServer';
  */
 
 const CRON_SECRET = process.env.CRON_SECRET;
+const SCANNER_FETCH_TIMEOUT_MS = 30_000; // 30s max for scanner API call
+const WALL_CLOCK_LIMIT_MS = 90_000;        // 90s hard stop (leaves buffer for curl's 120s max-time)
+
+/** Ensure smart alert columns exist (self-healing schema) */
+async function ensureSmartAlertSchema() {
+  try {
+    await q(`ALTER TABLE alerts ADD COLUMN IF NOT EXISTS is_smart_alert BOOLEAN DEFAULT false`);
+    await q(`ALTER TABLE alerts ADD COLUMN IF NOT EXISTS smart_alert_context JSONB`);
+    await q(`ALTER TABLE alerts ADD COLUMN IF NOT EXISTS last_derivative_value DECIMAL(20, 8)`);
+    await q(`ALTER TABLE alerts ADD COLUMN IF NOT EXISTS cooldown_minutes INT DEFAULT 60`);
+    await q(`ALTER TABLE alerts ADD COLUMN IF NOT EXISTS last_checked_at TIMESTAMPTZ`);
+  } catch (e) {
+    console.warn('[signal-check] ensureSmartAlertSchema warning:', e);
+  }
+}
 
 interface SignalAlert {
   id: string;
@@ -52,12 +67,15 @@ export async function POST(req: NextRequest) {
 }
 
 async function checkSignalAlerts(req: NextRequest) {
+  const routeStart = Date.now();
   const secret = req.headers.get('x-cron-secret');
   if (CRON_SECRET && secret !== CRON_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
+    await ensureSmartAlertSchema();
+
     // Get all active signal alerts
     const alerts = await q<SignalAlert>(`
       SELECT id, workspace_id, symbol, condition_type, condition_value,
@@ -99,6 +117,11 @@ async function checkSignalAlerts(req: NextRequest) {
     const scannedSymbols: string[] = [];
 
     for (const [symbol, alertsForSymbol] of symbolAlerts) {
+      // Wall-clock guard: stop processing if approaching curl timeout
+      if (Date.now() - routeStart > WALL_CLOCK_LIMIT_MS) {
+        console.warn('[signal-check] Approaching wall-clock limit, stopping early');
+        break;
+      }
       try {
         // Skip MARKET alerts - they need different handling
         if (symbol === 'MARKET') continue;
@@ -120,7 +143,8 @@ async function checkSignalAlerts(req: NextRequest) {
             minScore: 0,
             symbols: [symbol]
           }),
-          cache: 'no-store'
+          cache: 'no-store',
+          signal: AbortSignal.timeout(SCANNER_FETCH_TIMEOUT_MS),
         });
 
         if (!scanRes.ok) {
