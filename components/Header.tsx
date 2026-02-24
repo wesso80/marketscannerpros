@@ -184,8 +184,8 @@ export default function Header() {
               </span>
               <button
                 onClick={async () => {
-                  await fetch('/api/auth/logout', { method: 'POST' });
-                  window.location.href = '/';
+                  await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+                  window.location.replace('/');
                 }}
                 className={`ml-1 border border-slate-700 rounded-lg text-red-300/80 hover:text-red-300 hover:bg-red-500/10 whitespace-nowrap transition-all ${isTerminalMode ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-xs'}`}
               >
@@ -243,8 +243,8 @@ export default function Header() {
                     </Link>
                     <button
                       onClick={async () => {
-                        await fetch('/api/auth/logout', { method: 'POST' });
-                        window.location.href = '/';
+                        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+                        window.location.replace('/');
                       }}
                       className="flex items-center justify-center gap-2 w-full px-4 py-3 border border-red-400/30 rounded-lg text-red-300 font-medium hover:bg-red-500/10 transition-all"
                     >
