@@ -1,4 +1,4 @@
-services:
+﻿services:
   - type: web
     name: marketscannerpros
     runtime: node
@@ -45,7 +45,7 @@ services:
     startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/alerts/check" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
       - key: WEB_URL
-        value: "https://marketscannerpros.onrender.com"
+        value: "https://marketscannerpros.app"
       - key: CRON_SECRET
         sync: false
 
@@ -57,7 +57,7 @@ services:
     startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/alerts/signal-check" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
       - key: WEB_URL
-        value: "https://marketscannerpros.onrender.com"
+        value: "https://marketscannerpros.app"
       - key: CRON_SECRET
         sync: false
 
@@ -69,7 +69,7 @@ services:
     startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/alerts/smart-check" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
       - key: WEB_URL
-        value: "https://marketscannerpros.onrender.com"
+        value: "https://marketscannerpros.app"
       - key: CRON_SECRET
         sync: false
 
@@ -81,7 +81,7 @@ services:
     startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/alerts/strategy-check" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
       - key: WEB_URL
-        value: "https://marketscannerpros.onrender.com"
+        value: "https://marketscannerpros.app"
       - key: CRON_SECRET
         sync: false
 
@@ -93,7 +93,7 @@ services:
     startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/jobs/generate-market-focus" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
       - key: WEB_URL
-        value: "https://marketscannerpros.onrender.com"
+        value: "https://marketscannerpros.app"
       - key: CRON_SECRET
         sync: false
 
@@ -105,7 +105,7 @@ services:
     startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 290 -X POST "$WEB_URL/api/jobs/scan-daily" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
       - key: WEB_URL
-        value: "https://marketscannerpros.onrender.com"
+        value: "https://marketscannerpros.app"
       - key: CRON_SECRET
         sync: false
 
@@ -117,7 +117,7 @@ services:
     startCommand: curl -fL --retry 1 --retry-delay 10 --retry-all-errors --connect-timeout 10 --max-time 270 -X POST "$WEB_URL/api/catalyst/study/compute?limit=5" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
       - key: WEB_URL
-        value: "https://marketscannerpros.onrender.com"
+        value: "https://marketscannerpros.app"
       - key: CRON_SECRET
         sync: false
 
@@ -129,7 +129,7 @@ services:
     startCommand: curl -fL --retry 1 --retry-delay 10 --retry-all-errors --connect-timeout 10 --max-time 270 -X POST "$WEB_URL/api/catalyst/study/compute?limit=50" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
       - key: WEB_URL
-        value: "https://marketscannerpros.onrender.com"
+        value: "https://marketscannerpros.app"
       - key: CRON_SECRET
         sync: false
 
@@ -141,7 +141,7 @@ services:
     startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/jobs/learning-outcomes" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
       - key: WEB_URL
-        value: "https://marketscannerpros.onrender.com"
+        value: "https://marketscannerpros.app"
       - key: CRON_SECRET
         sync: false
 
@@ -153,7 +153,7 @@ services:
     startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/jobs/journal-auto-close?limit=200" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
       - key: WEB_URL
-        value: "https://marketscannerpros.onrender.com"
+        value: "https://marketscannerpros.app"
       - key: CRON_SECRET
         sync: false
 
