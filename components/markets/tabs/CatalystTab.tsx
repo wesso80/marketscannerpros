@@ -95,7 +95,10 @@ export default function CatalystTab({ ctx }: { ctx: TickerContext }) {
   }
 
   // Unique subtypes found in recent events
-  const subtypes = [...new Set(events.map(e => e.catalystSubtype))] as CatalystSubtype[];
+  // Exclude SEC_10K_10Q — MARKET cohort studies are too expensive (15-30 AV calls).
+  // 10-K/10-Q events still show in the timeline above for context.
+  const subtypes = [...new Set(events.map(e => e.catalystSubtype))]
+    .filter(s => s !== 'SEC_10K_10Q') as CatalystSubtype[];
 
   const rb = RISK_BADGES[riskLevel] || RISK_BADGES.NONE;
 

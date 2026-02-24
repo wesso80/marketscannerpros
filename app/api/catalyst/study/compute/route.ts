@@ -117,11 +117,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'No ticker/subtype combos to process', computed: 0 });
     }
 
+    // Skip SEC_10K_10Q — MARKET cohort studies are too expensive (15-30 AV calls per study)
+    const eligibleCombos = combos.filter((row: any) => row.catalyst_subtype !== 'SEC_10K_10Q');
+
     // Filter out combos that already have a fresh cached study
     const staleThresholdMs = 24 * 3600 * 1000; // 24 hours — matches eventStudy.ts cache TTL
     const needsCompute: { ticker: string; subtype: CatalystSubtype; cohort: StudyCohort; count: number }[] = [];
 
-    for (const row of combos) {
+    for (const row of eligibleCombos) {
       if (needsCompute.length >= limit * 2) break; // Check extra to find enough stale ones
 
       try {
