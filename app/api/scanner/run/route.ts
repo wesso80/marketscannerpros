@@ -1395,6 +1395,21 @@ export async function POST(req: NextRequest) {
               aroon_down: aroonObj.down,
               obv: obvCurrent,
               lastCandleTime,
+              // Chart data (last 50 candles) for equity AV path
+              chartData: (() => {
+                const chartLen = Math.min(50, candles.length);
+                const chartOff = candles.length - chartLen;
+                return {
+                  candles: candles.slice(chartOff).map(c => ({ t: c.t, o: c.open, h: c.high, l: c.low, c: c.close })),
+                  ema200: emaArr.slice(chartOff),
+                  rsi: rsiArr.slice(chartOff),
+                  macd: macObj.macdLine.slice(chartOff).map((m, i) => ({
+                    macd: m,
+                    signal: macObj.signalLine[chartOff + i],
+                    hist: macObj.hist[chartOff + i],
+                  })),
+                };
+              })(),
             };
 
             if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);

@@ -33,20 +33,34 @@ export function PriceChart({
   // Self-fetch bars from /api/bars when scanner didn't provide chartData
   const [fetchedData, setFetchedData] = React.useState<ChartData | null>(null);
   const [barSource, setBarSource] = React.useState<string>('');
+  const [loading, setLoading] = React.useState(false);
+  const prevSymbolRef = React.useRef(symbol);
+
+  // Reset fetched data when symbol changes to prevent stale chart
+  React.useEffect(() => {
+    if (prevSymbolRef.current !== symbol) {
+      setFetchedData(null);
+      setBarSource('');
+      prevSymbolRef.current = symbol;
+    }
+  }, [symbol]);
 
   React.useEffect(() => {
     if (chartDataProp && chartDataProp.candles.length > 0) {
       setFetchedData(null);
       setBarSource('scanner');
+      setLoading(false);
       return;
     }
     // No inline chart data — fetch from cache API
     let cancelled = false;
+    setLoading(true);
     const timeframe = interval === 'daily' || interval === 'weekly' ? interval : 'daily';
     fetch(`/api/bars?symbol=${encodeURIComponent(symbol)}&timeframe=${timeframe}&limit=50`)
       .then(r => r.ok ? r.json() : null)
       .then(json => {
-        if (cancelled || !json?.ok) return;
+        if (cancelled) return;
+        if (!json?.ok) { setLoading(false); return; }
         setFetchedData({
           candles: json.candles,
           ema200: json.ema200,
@@ -54,8 +68,9 @@ export function PriceChart({
           macd: json.macd,
         });
         setBarSource(json.source ?? 'cache');
+        setLoading(false);
       })
-      .catch(() => {});
+      .catch(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [symbol, interval, chartDataProp]);
 
@@ -366,7 +381,7 @@ export function PriceChart({
         color: hasData ? 'var(--msp-bull)' : 'var(--msp-neutral)',
         marginTop: '4px'
       }}>
-        {hasData ? `● Live Data ${sourceLabel}` : '○ Awaiting bar data'}
+        {hasData ? `● Live Data ${sourceLabel}` : loading ? '⟳ Loading chart data…' : '○ Awaiting bar data'}
       </div>
     </div>
   );
