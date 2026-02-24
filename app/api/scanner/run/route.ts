@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromCookie } from "@/lib/auth";
+import { q as dbQuery } from "@/lib/db";
 import { scannerLimiter, getClientIP } from "@/lib/rateLimit";
 import { avCircuit } from "@/lib/circuitBreaker";
 import { avTakeToken } from "@/lib/avRateGovernor";
@@ -1276,6 +1277,36 @@ export async function POST(req: NextRequest) {
               obv: NaN,
               lastCandleTime: new Date().toISOString(),
             };
+
+            // Fetch chartData from ohlcv_bars (populated by worker alongside the cache)
+            try {
+              const barRows = await dbQuery<{ ts: string; open: number; high: number; low: number; close: number; volume: number }>(
+                `SELECT ts, open, high, low, close, volume FROM ohlcv_bars WHERE symbol = $1 AND timeframe = 'daily' ORDER BY ts DESC LIMIT 50`,
+                [sym]
+              );
+              if (barRows && barRows.length > 0) {
+                const sorted = barRows.reverse();
+                const bCloses = sorted.map(r => Number(r.close));
+                const bHighs = sorted.map(r => Number(r.high));
+                const bLows = sorted.map(r => Number(r.low));
+                const emaArr = ema(bCloses, 200);
+                const rsiArr = rsi(bCloses, 14);
+                const macObj = macd(bCloses, 12, 26, 9);
+                (item as any).chartData = {
+                  candles: sorted.map(r => ({
+                    t: typeof r.ts === 'string' ? r.ts.slice(0, 10) : new Date(r.ts).toISOString().slice(0, 10),
+                    o: Number(r.open), h: Number(r.high), l: Number(r.low), c: Number(r.close),
+                  })),
+                  ema200: emaArr,
+                  rsi: rsiArr,
+                  macd: macObj.macdLine.map((m, i) => ({ macd: m, signal: macObj.signalLine[i], hist: macObj.hist[i] })),
+                };
+              }
+            } catch (chartErr) {
+              // Non-fatal — chart will fall back to /api/bars on client
+              console.warn(`[scanner] chartData fetch failed for ${sym}:`, (chartErr as any)?.message);
+            }
+
             if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
             
           } else if (canFallbackToAV()) {
