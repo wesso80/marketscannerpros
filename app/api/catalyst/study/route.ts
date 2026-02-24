@@ -25,10 +25,32 @@ const BUILD_VERSION = '2026-02-24T09:00:00Z'; // v2: fast-path + background comp
  * Fire-and-forget: POST to the compute endpoint for a specific ticker+subtype.
  * On Render (persistent Node.js process), this runs in the background
  * after the response is returned. Errors are swallowed silently.
+ *
+ * Includes in-memory deduplication: the same (ticker, subtype, cohort, lookback)
+ * combo will only trigger one background compute per DEDUP_WINDOW_MS.
  */
+const DEDUP_WINDOW_MS = 120_000; // 2 minutes
+const _pendingTriggers = new Map<string, number>();
+
 function triggerBackgroundCompute(ticker: string, subtype: string, cohort: string, lookbackDays: number) {
   const baseUrl = process.env.RENDER_EXTERNAL_URL || process.env.NEXT_PUBLIC_BASE_URL || '';
   if (!baseUrl) return;
+
+  // ── Dedup: skip if we already triggered this combo recently ────
+  const key = `${ticker}:${subtype}:${cohort}:${lookbackDays}`;
+  const now = Date.now();
+  const lastTrigger = _pendingTriggers.get(key);
+  if (lastTrigger && (now - lastTrigger) < DEDUP_WINDOW_MS) {
+    return; // Already triggered within the dedup window
+  }
+  _pendingTriggers.set(key, now);
+
+  // Housekeep: prune stale entries when map grows large
+  if (_pendingTriggers.size > 200) {
+    for (const [k, ts] of _pendingTriggers) {
+      if ((now - ts) > DEDUP_WINDOW_MS) _pendingTriggers.delete(k);
+    }
+  }
 
   const url = `${baseUrl}/api/catalyst/study/compute?ticker=${encodeURIComponent(ticker)}&subtype=${encodeURIComponent(subtype)}&cohort=${cohort}&lookback=${lookbackDays}&limit=1`;
   const cronSecret = process.env.CRON_SECRET || '';
