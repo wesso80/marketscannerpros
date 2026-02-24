@@ -295,12 +295,12 @@ export function useTickerData(symbol: string | null, assetClass: AssetClass): Ti
           maxPain: Number(oiAnalysis?.maxPainStrike ?? dealerGamma?.maxPainStrike ?? 0),
           topStrikes: (oiAnalysis?.highOIStrikes ?? []).slice(0, 10).map((s: any) => ({
             strike: s.strike ?? 0,
-            type: (s.dominantSide ?? 'call').toLowerCase().includes('put') ? 'put' as const : 'call' as const,
+            type: (s.type ?? s.dominantSide ?? 'call').toLowerCase().includes('put') ? 'put' as const : 'call' as const,
             volume: s.volume ?? 0,
-            oi: s.totalOI ?? ((s.callOI ?? 0) + (s.putOI ?? 0)),
+            oi: s.openInterest ?? s.totalOI ?? ((s.callOI ?? 0) + (s.putOI ?? 0)),
           })),
-          gex: dealerGamma?.netGammaExposure ?? undefined,
-          dex: dealerGamma?.netDeltaExposure ?? undefined,
+          gex: dealerGamma?.netGexUsd ?? undefined,
+          dex: dealerGamma?.netDexUsd ?? undefined,
         };
       }
     }

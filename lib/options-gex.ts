@@ -14,6 +14,7 @@ export interface DealerGammaSnapshot {
   netGexUsd: number;
   callGexUsd: number;
   putGexUsd: number;
+  netDexUsd: number;
   gammaFlipPrice: number | null;
   flipDistancePct: number | null;
   pinZone: 'IN' | 'OUT' | 'UNKNOWN';
@@ -59,6 +60,7 @@ export function calculateDealerGammaSnapshot(
       netGexUsd: 0,
       callGexUsd: 0,
       putGexUsd: 0,
+      netDexUsd: 0,
       gammaFlipPrice: null,
       flipDistancePct: null,
       pinZone: 'UNKNOWN',
@@ -70,15 +72,31 @@ export function calculateDealerGammaSnapshot(
   }
 
   const byStrike = new Map<number, { callGexUsd: number; putGexUsd: number }>();
+  let netDexUsd = 0;
 
   for (const contract of openInterestAnalysis.highOIStrikes || []) {
     const strike = Number(contract.strike);
     const openInterest = Number(contract.openInterest);
     const gamma = Math.abs(Number(contract.gamma ?? 0));
+    const delta = Number(contract.delta ?? 0);
 
-    if (!Number.isFinite(strike) || !Number.isFinite(openInterest) || !Number.isFinite(gamma) || strike <= 0 || openInterest <= 0 || gamma <= 0) {
+    if (!Number.isFinite(strike) || !Number.isFinite(openInterest) || strike <= 0 || openInterest <= 0) {
       continue;
     }
+
+    // DEX: Net Delta Exposure in USD
+    // Dealers are short calls / long puts → net delta exposure = -call_delta + put_delta (dealer perspective)
+    if (Number.isFinite(delta) && delta !== 0) {
+      const dexContractUsd = Math.abs(delta) * openInterest * 100 * currentPrice;
+      if (contract.type === 'call') {
+        netDexUsd -= dexContractUsd;  // Dealer short calls → negative delta
+      } else {
+        netDexUsd += dexContractUsd;  // Dealer long puts → positive delta (short stock)
+      }
+    }
+
+    // GEX: skip if gamma missing
+    if (!Number.isFinite(gamma) || gamma <= 0) continue;
 
     const exposure = gamma * openInterest * 100 * currentPrice * currentPrice * 0.01;
     const bucket = byStrike.get(strike) || { callGexUsd: 0, putGexUsd: 0 };
@@ -129,6 +147,7 @@ export function calculateDealerGammaSnapshot(
     netGexUsd,
     callGexUsd,
     putGexUsd,
+    netDexUsd,
     gammaFlipPrice,
     flipDistancePct,
     pinZone: flipDistancePct == null ? 'UNKNOWN' : (flipDistancePct <= PIN_ZONE_PCT ? 'IN' : 'OUT'),
