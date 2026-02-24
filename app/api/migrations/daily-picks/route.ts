@@ -10,10 +10,20 @@ import { q } from "@/lib/db";
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
+  // Auth: require admin secret via header (not query param)
+  const authHeader = req.headers.get('authorization');
+  const secret = authHeader?.replace('Bearer ', '');
+  const adminSecret = process.env.ADMIN_SECRET || '';
+  
+  // Also support legacy query param (but prefer header)
   const { searchParams } = new URL(req.url);
   const adminKey = searchParams.get("key");
   
-  if (adminKey !== process.env.ADMIN_SECRET && adminKey !== process.env.ADMIN_API_KEY) {
+  const isAuthed = (secret && adminSecret && secret === adminSecret) || 
+                   (adminKey === process.env.ADMIN_SECRET) || 
+                   (adminKey === process.env.ADMIN_API_KEY);
+  
+  if (!isAuthed) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -22,8 +22,8 @@ export async function POST(request: NextRequest) {
       try {
         stripe.webhooks.constructEvent(rawBody, stripeSignature, webhookSecret);
         isStripeWebhook = true;
-      } catch {
-        // Signature invalid
+      } catch (err) {
+        console.warn('[subscription/update] Stripe webhook signature failed:', err instanceof Error ? err.message : err);
       }
     }
 

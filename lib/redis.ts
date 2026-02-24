@@ -11,8 +11,12 @@ import { Redis } from '@upstash/redis';
 
 // Singleton pattern for Redis client
 let redis: Redis | null = null;
+let redisDisabled = false;
+let consecutiveErrors = 0;
+const MAX_CONSECUTIVE_ERRORS = 5;
 
 export function getRedis(): Redis | null {
+  if (redisDisabled) return null;
   if (redis) return redis;
 
   const url = process.env.UPSTASH_REDIS_REST_URL;
@@ -20,11 +24,27 @@ export function getRedis(): Redis | null {
 
   if (!url || !token) {
     console.warn('[redis] Missing UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN - caching disabled');
+    redisDisabled = true;
     return null;
   }
 
   redis = new Redis({ url, token });
   return redis;
+}
+
+/** Reset client after repeated failures so next call re-initialises */
+function onRedisError(err: unknown) {
+  consecutiveErrors++;
+  console.error(`[redis] Error (${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}):`, err);
+  if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+    console.error('[redis] Too many errors — resetting client');
+    redis = null;
+    consecutiveErrors = 0;
+  }
+}
+
+function onRedisSuccess() {
+  consecutiveErrors = 0;
 }
 
 // Cache key prefixes for organization
@@ -80,9 +100,10 @@ export async function getCached<T>(key: string): Promise<T | null> {
   
   try {
     const value = await r.get<T>(key);
+    onRedisSuccess();
     return value;
   } catch (err) {
-    console.error(`[redis] get error for ${key}:`, err);
+    onRedisError(err);
     return null;
   }
 }
@@ -96,9 +117,10 @@ export async function setCached<T>(key: string, value: T, ttlSeconds: number): P
   
   try {
     await r.set(key, value, { ex: ttlSeconds });
+    onRedisSuccess();
     return true;
   } catch (err) {
-    console.error(`[redis] set error for ${key}:`, err);
+    onRedisError(err);
     return false;
   }
 }
@@ -112,9 +134,10 @@ export async function deleteCached(key: string): Promise<boolean> {
   
   try {
     await r.del(key);
+    onRedisSuccess();
     return true;
   } catch (err) {
-    console.error(`[redis] del error for ${key}:`, err);
+    onRedisError(err);
     return false;
   }
 }
@@ -128,9 +151,10 @@ export async function getCachedMulti<T>(keys: string[]): Promise<(T | null)[]> {
   
   try {
     const values = await r.mget<T[]>(...keys);
+    onRedisSuccess();
     return values;
   } catch (err) {
-    console.error(`[redis] mget error:`, err);
+    onRedisError(err);
     return keys.map(() => null);
   }
 }
@@ -138,7 +162,7 @@ export async function getCachedMulti<T>(keys: string[]): Promise<(T | null)[]> {
 /**
  * Set multiple cached values at once (pipeline)
  */
-export async function setCachedMulti(entries: { key: string; value: any; ttl: number }[]): Promise<boolean> {
+export async function setCachedMulti(entries: { key: string; value: unknown; ttl: number }[]): Promise<boolean> {
   const r = getRedis();
   if (!r) return false;
   
@@ -148,9 +172,10 @@ export async function setCachedMulti(entries: { key: string; value: any; ttl: nu
       pipeline.set(key, value, { ex: ttl });
     }
     await pipeline.exec();
+    onRedisSuccess();
     return true;
   } catch (err) {
-    console.error(`[redis] pipeline set error:`, err);
+    onRedisError(err);
     return false;
   }
 }

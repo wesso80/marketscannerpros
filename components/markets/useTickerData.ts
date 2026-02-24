@@ -339,7 +339,14 @@ export function useTickerData(symbol: string | null, assetClass: AssetClass): Ti
 
   useEffect(() => {
     if (symbol && symbol.trim().length > 0) {
-      fetchAll(symbol.toUpperCase(), assetClass);
+      // Debounce rapid symbol changes (e.g. typing) by 300ms
+      const timer = setTimeout(() => {
+        fetchAll(symbol.toUpperCase(), assetClass);
+      }, 300);
+      return () => {
+        clearTimeout(timer);
+        abortRef.current?.abort();
+      };
     } else {
       setCtx(prev => ({ ...prev, symbol: '', loading: false, quote: null, scanner: null, flow: null, options: null, cryptoDerivatives: null, news: [], earnings: [], economic: [] }));
     }

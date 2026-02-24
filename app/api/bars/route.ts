@@ -4,6 +4,7 @@ import { getCached, setCached, CACHE_KEYS, CACHE_TTL } from '@/lib/redis';
 import { calculateAllIndicators } from '@/lib/indicators';
 import { getSessionFromCookie } from '@/lib/auth';
 import { avTryToken } from '@/lib/avRateGovernor';
+import { apiLimiter, getClientIP } from '@/lib/rateLimit';
 
 /**
  * GET /api/bars?symbol=AAPL&timeframe=daily&limit=50
@@ -19,6 +20,13 @@ export async function GET(req: NextRequest) {
   const session = await getSessionFromCookie();
   if (!session?.workspaceId) {
     return NextResponse.json({ ok: false, error: 'Please log in to access market data' }, { status: 401 });
+  }
+
+  // Rate limit
+  const ip = getClientIP(req);
+  const rateCheck = apiLimiter.check(ip);
+  if (!rateCheck.allowed) {
+    return NextResponse.json({ ok: false, error: 'Too many requests' }, { status: 429 });
   }
 
   const { searchParams } = new URL(req.url);

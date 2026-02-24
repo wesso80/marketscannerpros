@@ -1993,7 +1993,7 @@ export default function OperatorDashboardPage() {
                 </div>
               </div>
               <div className="msp-elite-panel">
-                <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Strategy Performance By Regime <span className="normal-case tracking-normal font-normal text-[var(--msp-text-muted)]">(reference)</span></div>
+                <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Strategy Performance By Regime <span className="normal-case tracking-normal font-normal text-[var(--msp-warn)]">(static reference — connect to journal for live data)</span></div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-[0.72rem]">
                     <thead className="text-[var(--msp-text-faint)]">

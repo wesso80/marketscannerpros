@@ -73,9 +73,16 @@ export default function CloseTradeModal({ open, trade, onClose, onSubmit }: Clos
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/40">
-      <div className="absolute left-1/2 top-1/2 w-full max-w-xl -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/10 bg-slate-950 p-4">
-        <div className="mb-3 text-lg font-semibold text-slate-100">Close Trade {trade ? `• ${trade.symbol}` : ''}</div>
+    <div
+      className="fixed inset-0 z-[100] bg-black/40"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="close-trade-title"
+      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
+      onClick={onClose}
+    >
+      <div className="absolute left-1/2 top-1/2 w-full max-w-xl -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/10 bg-slate-950 p-4" onClick={(e) => e.stopPropagation()}>
+        <div id="close-trade-title" className="mb-3 text-lg font-semibold text-slate-100">Close Trade {trade ? `• ${trade.symbol}` : ''}</div>
 
         {trade?.stop == null && (
           <div className="mb-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">

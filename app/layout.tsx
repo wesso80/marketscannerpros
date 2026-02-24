@@ -52,6 +52,9 @@ export const viewport = {
   maximumScale: 5,
 };
 import AppUrlFixer from "@/components/AppUrlFixer";
+import { UserTierProvider } from "@/lib/UserTierProvider";
+import { DisplayModeProvider } from "@/lib/displayMode";
+import StaleDataBanner from "@/components/StaleDataBanner";
 
 export default function RootLayout({
   children,
@@ -62,14 +65,21 @@ export default function RootLayout({
     <html lang="en" className="overflow-x-hidden">
       <body className="min-h-screen antialiased overflow-x-hidden">
         <ErrorBoundary>
-          <AppUrlFixer />
-          <Suspense>
-            <OperatorHeartbeat />
-          </Suspense>
-          <RouteChrome>{children}</RouteChrome>
-          <Suspense>
-            <AnalyticsLoader />
-          </Suspense>
+          <UserTierProvider>
+            <DisplayModeProvider>
+              <AppUrlFixer />
+              <Suspense>
+                <OperatorHeartbeat />
+              </Suspense>
+              <RouteChrome>{children}</RouteChrome>
+              <Suspense>
+                <AnalyticsLoader />
+              </Suspense>
+              <Suspense>
+                <StaleDataBanner />
+              </Suspense>
+            </DisplayModeProvider>
+          </UserTierProvider>
         </ErrorBoundary>
       </body>
     </html>

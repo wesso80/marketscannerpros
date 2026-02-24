@@ -462,7 +462,7 @@ export async function computeEventStudy(opts: ComputeStudyOptions): Promise<Even
   }
 
   // ── Aggregate distributions ─────────────────────────────────────
-  const horizons: Record<StudyHorizon, DistributionStats> = {} as any;
+  const horizons = {} as Record<StudyHorizon, DistributionStats>;
   for (const [h, vals] of Object.entries(horizonValues) as [StudyHorizon, number[]][]) {
     horizons[h] = computeDistribution(vals);
   }

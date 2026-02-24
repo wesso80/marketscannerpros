@@ -5,6 +5,7 @@ import { useUserTier } from '@/lib/useUserTier';
 import { readOperatorState } from '@/lib/operatorState';
 import PushNotificationSettings from './PushNotificationSettings';
 import MultiConditionAlertBuilder from './MultiConditionAlertBuilder';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 interface AlertCondition {
   id: string;
@@ -213,9 +214,16 @@ export default function AlertsWidget({
     }
   };
 
-  const deleteAlert = async (id: string) => {
-    if (!confirm('Delete this alert?')) return;
-    
+  const [pendingDeleteAlertId, setPendingDeleteAlertId] = useState<string | null>(null);
+
+  const deleteAlert = (id: string) => {
+    setPendingDeleteAlertId(id);
+  };
+
+  const confirmDeleteAlert = async () => {
+    const id = pendingDeleteAlertId;
+    setPendingDeleteAlertId(null);
+    if (!id) return;
     try {
       await fetch(`/api/alerts?id=${id}`, { method: 'DELETE' });
       fetchAlerts();
@@ -1441,6 +1449,16 @@ export default function AlertsWidget({
       <div className="p-4 border-t border-slate-700">
         <PushNotificationSettings compact />
       </div>
+
+      <ConfirmDialog
+        open={!!pendingDeleteAlertId}
+        title="Delete Alert"
+        message="Delete this alert? This cannot be undone."
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={confirmDeleteAlert}
+        onCancel={() => setPendingDeleteAlertId(null)}
+      />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
+import { apiLimiter, getClientIP } from '@/lib/rateLimit';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-09-30.clover",
@@ -14,6 +15,13 @@ const PRICE_IDS = {
 };
 
 export async function POST(req: NextRequest) {
+  // Rate limit: prevent checkout session spam
+  const ip = getClientIP(req);
+  const rateCheck = apiLimiter.check(ip);
+  if (!rateCheck.allowed) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
+
   try {
     const { plan, billing, email, referralCode } = await req.json();
 

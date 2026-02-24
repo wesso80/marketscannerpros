@@ -20,16 +20,18 @@ export function useUserTier(): TierInfo {
   const [email, setEmail] = useState<string | null>(null);
 
   useEffect(() => {
-    async function checkTier() {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
 
+    async function checkTier() {
       try {
         const res = await fetch("/api/me", {
           credentials: "include",
           signal: controller.signal,
         });
         
+        if (controller.signal.aborted) return;
+
         if (res.ok) {
           const data = await res.json();
           setTier(data.tier || "free");
@@ -43,17 +45,23 @@ export function useUserTier(): TierInfo {
           setEmail(null);
         }
       } catch {
+        if (controller.signal.aborted) return;
         setTier("anonymous");
         setIsLoggedIn(false);
         setIsAdmin(false);
         setEmail(null);
       } finally {
         clearTimeout(timeout);
-        setIsLoading(false);
+        if (!controller.signal.aborted) setIsLoading(false);
       }
     }
     
     checkTier();
+
+    return () => {
+      controller.abort();
+      clearTimeout(timeout);
+    };
   }, []);
 
   return { tier, isLoading, isLoggedIn, isAdmin, email };
@@ -64,8 +72,6 @@ export const canAccessBacktest = (tier: UserTier) => tier === "pro_trader";
 export const canAccessBrain = (tier: UserTier) => tier === "pro_trader";
 export const canAccessUnlimitedScanning = (tier: UserTier) => tier === "pro" || tier === "pro_trader";
 export const canExportCSV = (tier: UserTier) => tier === "pro" || tier === "pro_trader";
-// TradingView scripts no longer available
-// export const canAccessTradingViewScripts = (tier: UserTier) => tier === "pro_trader";
 export const canAccessAdvancedJournal = (tier: UserTier) => tier === "pro" || tier === "pro_trader";
 export const canAccessPortfolioInsights = (tier: UserTier) => tier === "pro" || tier === "pro_trader";
 export const canAccessCryptoCommandCenter = (tier: UserTier) => tier === "pro" || tier === "pro_trader";

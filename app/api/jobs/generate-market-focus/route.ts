@@ -118,9 +118,10 @@ export async function POST(req: Request) {
 }
 
 async function runMarketFocusJob(req: Request) {
-  // Optional secret check - only enforced if CRON_SECRET is set
-  const secret = req.headers.get("x-cron-secret");
-  if (process.env.CRON_SECRET && secret !== process.env.CRON_SECRET) {
+  // Strict secret check - reject if CRON_SECRET not configured or mismatched
+  const secret = req.headers.get("x-cron-secret") || req.headers.get("authorization")?.replace('Bearer ', '');
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret || secret !== cronSecret) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

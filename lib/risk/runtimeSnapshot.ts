@@ -12,6 +12,7 @@ export type RuntimeRiskSnapshotInput = {
   realizedDailyR: number;
   openRiskR: number;
   consecutiveLosses: number;
+  tradesToday: number;
 };
 
 function toFinite(value: unknown, fallback = 0): number {
@@ -92,6 +93,7 @@ export async function getRuntimeRiskSnapshotInput(workspaceId: string): Promise<
     realizedRows,
     openRiskRows,
     streakRows,
+    tradesTodayRows,
   ] = await Promise.all([
     q<{ risk_environment: string | null; context_state: Record<string, any> | null; updated_at: string | null }>(
       `SELECT risk_environment, context_state, updated_at
@@ -132,6 +134,13 @@ export async function getRuntimeRiskSnapshotInput(workspaceId: string): Promise<
         LIMIT 10`,
       [workspaceId]
     ),
+    q<{ count: string | number }>(
+      `SELECT COUNT(*)::int AS count
+         FROM journal_entries
+        WHERE workspace_id = $1
+          AND trade_date = CURRENT_DATE`,
+      [workspaceId]
+    ),
   ]);
 
   const state = stateRows[0];
@@ -151,5 +160,6 @@ export async function getRuntimeRiskSnapshotInput(workspaceId: string): Promise<
     realizedDailyR: clamp(toFinite(realizedRows[0]?.realized_daily_r, 0), -20, 20),
     openRiskR: clamp(toFinite(openRiskRows[0]?.open_risk_r, 0), 0, 20),
     consecutiveLosses: computeConsecutiveLosses(streakRows),
+    tradesToday: toFinite(tradesTodayRows[0]?.count, 0),
   };
 }

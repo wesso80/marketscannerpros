@@ -58,6 +58,13 @@ export default function SessionStartBriefing({ children }: { children: React.Rea
 
   const goNoGoColor = goNoGoStatus === 'GO' ? 'emerald' : goNoGoStatus === 'CONDITIONAL' ? 'amber' : 'red';
 
+  // Tailwind JIT requires full class names — cannot use string interpolation
+  const goNoGoClasses = {
+    emerald: { badge: 'border-emerald-500/60 bg-emerald-500/10', text: 'text-emerald-400' },
+    amber:   { badge: 'border-amber-500/60 bg-amber-500/10',     text: 'text-amber-400' },
+    red:     { badge: 'border-red-500/60 bg-red-500/10',         text: 'text-red-400' },
+  }[goNoGoColor];
+
   if (!mounted || acknowledged) return <>{children}</>;
 
   return (
@@ -78,11 +85,11 @@ export default function SessionStartBriefing({ children }: { children: React.Rea
 
         {/* Go / No-Go Badge */}
         <div className="mb-4 flex justify-center">
-          <div className={`rounded-lg border-2 px-6 py-3 text-center border-${goNoGoColor}-500/60 bg-${goNoGoColor}-500/10`}>
-            <div className={`text-[0.6rem] font-extrabold uppercase tracking-[0.12em] text-${goNoGoColor}-400`}>
+          <div className={`rounded-lg border-2 px-6 py-3 text-center ${goNoGoClasses.badge}`}>
+            <div className={`text-[0.6rem] font-extrabold uppercase tracking-[0.12em] ${goNoGoClasses.text}`}>
               Session Assessment
             </div>
-            <div className={`mt-1 text-xl font-black text-${goNoGoColor}-400`}>
+            <div className={`mt-1 text-xl font-black ${goNoGoClasses.text}`}>
               {goNoGoStatus === 'GO' ? '✅ GO' : goNoGoStatus === 'CONDITIONAL' ? '⚠️ CONDITIONAL' : '🚫 NO-GO'}
             </div>
           </div>

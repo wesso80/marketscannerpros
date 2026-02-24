@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-// Simulated live signals that rotate - gives the impression of real-time market intelligence
+// Simulated example signals for demo/marketing — NOT live data
 const LIVE_SIGNALS = [
   {
     symbol: 'NVDA',
@@ -68,15 +68,15 @@ const LIVE_SIGNALS = [
 ];
 
 const STATS = [
-  { value: '2,847', label: 'Signals Today', icon: '📡' },
-  { value: '94%', label: 'AI Accuracy', icon: '🎯' },
-  { value: '1.2M', label: 'Scans Run', icon: '🔍' },
+  { value: '—', label: 'Signals Today', icon: '📡' },
+  { value: '—', label: 'AI Accuracy', icon: '🎯' },
+  { value: '—', label: 'Scans Run', icon: '🔍' },
 ];
 
 export default function LiveMarketPulse() {
   const [currentSignal, setCurrentSignal] = useState(0);
   const [isAnimating, setIsAnimating] = useState(true);
-  const [pulseCount, setPulseCount] = useState(2847);
+  const [pulseCount, setPulseCount] = useState(0);
 
   // Rotate through signals
   useEffect(() => {
@@ -89,16 +89,8 @@ export default function LiveMarketPulse() {
     }, 4000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, []);;
 
-  // Increment signal counter randomly
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPulseCount((prev) => prev + Math.floor(Math.random() * 3) + 1);
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, []);
 
   const signal = LIVE_SIGNALS[currentSignal];
 

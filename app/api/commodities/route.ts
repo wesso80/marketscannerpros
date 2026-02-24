@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSessionFromCookie } from '@/lib/auth';
 import { avTakeToken } from '@/lib/avRateGovernor';
+import { deepAnalysisLimiter, getClientIP } from '@/lib/rateLimit';
 
 // Alpha Vantage commodity endpoints
 // https://www.alphavantage.co/documentation/#commodities
@@ -143,6 +145,19 @@ async function fetchCommodity(symbol: keyof typeof COMMODITIES): Promise<Commodi
 }
 
 export async function GET(req: NextRequest) {
+  // Auth guard: AV license requires authenticated users only
+  const session = await getSessionFromCookie();
+  if (!session?.workspaceId) {
+    return NextResponse.json({ error: 'Please log in to access commodity data' }, { status: 401 });
+  }
+
+  // Rate limit: expensive endpoint (up to 6 AV calls)
+  const ip = getClientIP(req);
+  const rateCheck = deepAnalysisLimiter.check(ip);
+  if (!rateCheck.allowed) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
+
   try {
     const { searchParams } = new URL(req.url);
     const symbol = searchParams.get('symbol')?.toUpperCase();

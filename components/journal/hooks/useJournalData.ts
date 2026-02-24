@@ -37,26 +37,30 @@ export function useJournalData(query: JournalQueryState, sort: SortModel) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/journal', { cache: 'no-store' });
+      const response = await fetch('/api/journal', { cache: 'no-store', signal });
+      if (signal?.aborted) return;
       const json = await response.json();
       if (!response.ok) {
         throw new Error(json?.error || 'Failed to load journal');
       }
       setPayload(mapJournalResponseToPayload(json));
     } catch (e) {
+      if (signal?.aborted) return;
       setError(e instanceof Error ? e.message : 'Unknown error');
       setPayload(null);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    void fetchData();
+    const controller = new AbortController();
+    void fetchData(controller.signal);
+    return () => controller.abort();
   }, [fetchData]);
 
   const filteredRows = useMemo(() => {

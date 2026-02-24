@@ -4,6 +4,5 @@ export async function GET() {
     process.env.APP_SIGNING_SECRET || process.env.NEXTAUTH_SECRET || "";
   return NextResponse.json({
     secretPresent: !!secret,
-    secretLength: secret.length ? secret.length : 0,
   });
 }

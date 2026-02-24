@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getSessionFromCookie } from '@/lib/auth';
 import { avTakeToken } from '@/lib/avRateGovernor';
+import { deepAnalysisLimiter, getClientIP } from '@/lib/rateLimit';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -93,6 +95,19 @@ async function generateEarningsAIAnalysis(recentResults: Array<{
 }
 
 export async function GET(request: NextRequest) {
+  // Auth guard: AV license requires authenticated users only
+  const session = await getSessionFromCookie();
+  if (!session?.workspaceId) {
+    return NextResponse.json({ success: false, error: 'Please log in to access earnings data' }, { status: 401 });
+  }
+
+  // Rate limit: expensive endpoint (AV + OpenAI)
+  const ip = getClientIP(request);
+  const rateCheck = deepAnalysisLimiter.check(ip);
+  if (!rateCheck.allowed) {
+    return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const symbol = searchParams.get("symbol") || "";

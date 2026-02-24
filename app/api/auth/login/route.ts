@@ -9,15 +9,15 @@ import { loginLimiter, getClientIP } from "@/lib/rateLimit";
 const PRICE_PRO = process.env.NEXT_PUBLIC_PRICE_PRO ?? "";
 const PRICE_PRO_TRADER = process.env.NEXT_PUBLIC_PRICE_PRO_TRADER ?? "";
 
-// New Live Price IDs
+// Price IDs from env vars with hardcoded fallbacks
 const PRO_PRICE_IDS = [
-  "price_1SfcQJLyhHN1qVrAfOpufz0L", // Pro Monthly
-  "price_1SfcRsLyhHN1qVrAuRE6IRU1", // Pro Yearly
-];
+  process.env.STRIPE_PRICE_PRO_MONTHLY || "price_1SfcQJLyhHN1qVrAfOpufz0L",
+  process.env.STRIPE_PRICE_PRO_YEARLY || "price_1SfcRsLyhHN1qVrAuRE6IRU1",
+].filter(Boolean);
 const PRO_TRADER_PRICE_IDS = [
-  "price_1SfcSZLyhHN1qVrAaVrilpyO", // Pro Trader Monthly
-  "price_1SfcTALyhHN1qVrAoIHo4LN1", // Pro Trader Yearly
-];
+  process.env.STRIPE_PRICE_PRO_TRADER_MONTHLY || "price_1SfcSZLyhHN1qVrAaVrilpyO",
+  process.env.STRIPE_PRICE_PRO_TRADER_YEARLY || "price_1SfcTALyhHN1qVrAoIHo4LN1",
+].filter(Boolean);
 
 function detectTierFromPrices(ids: string[]): "free" | "pro" | "pro_trader" {
   const arr = ids.filter(Boolean);
@@ -147,7 +147,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const { email } = await req.json();
-    if (!email || !email.includes("@")) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || typeof email !== 'string' || !emailRegex.test(email.trim())) {
       return NextResponse.json({ error: "Invalid email" }, { status: 400 });
     }
 
@@ -240,8 +241,9 @@ export async function POST(req: NextRequest) {
     const token = signToken({ cid: customerId, tier, workspaceId, exp });
     const url = new URL(req.url);
     const debug = url.searchParams.get("debug") === "1";
+    const isAdminDebug = debug && (req.headers.get("x-admin-secret") === process.env.ADMIN_SECRET);
     const body: any = { ok: true, tier, workspaceId, message: "Subscription activated successfully!" };
-    if (debug) {
+    if (isAdminDebug) {
       body.debug = {
         priceIds,
         env: {
@@ -250,6 +252,8 @@ export async function POST(req: NextRequest) {
         },
       };
     }
+    // Reset rate limit on successful login
+    loginLimiter.reset(ip);
     const res = NextResponse.json(body);
     res.cookies.set("ms_auth", token, getAuthCookieOptions(req));
     const originHeader = req.headers.get("origin");
@@ -258,7 +262,11 @@ export async function POST(req: NextRequest) {
     return res;
   } catch (err) {
     console.error("Login error:", err);
-    return NextResponse.json({ error: "Authentication failed. Please try again." }, { status: 500 });
+    const errRes = NextResponse.json({ error: "Authentication failed. Please try again." }, { status: 500 });
+    const originHeader = req.headers.get("origin");
+    const headers = corsHeaders(originHeader);
+    for (const [k, v] of Object.entries(headers)) errRes.headers.set(k, v);
+    return errRes;
   }
 }
 

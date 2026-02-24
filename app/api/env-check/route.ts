@@ -5,7 +5,14 @@ export function GET(req: NextRequest) {
   const isDevMode = process.env.NODE_ENV === 'development';
   const authHeader = req.headers.get('authorization');
   const adminSecret = process.env.ADMIN_SECRET;
-  const isAdmin = adminSecret && authHeader === `Bearer ${adminSecret}`;
+  let isAdmin = false;
+  if (adminSecret && authHeader) {
+    try {
+      const expected = Buffer.from(`Bearer ${adminSecret}`);
+      const actual = Buffer.from(authHeader);
+      isAdmin = expected.length === actual.length && require('crypto').timingSafeEqual(expected, actual);
+    } catch { isAdmin = false; }
+  }
 
   if (!isDevMode && !isAdmin) {
     return NextResponse.json({ error: "Not available" }, { status: 403 });

@@ -88,11 +88,11 @@ export default function LiveDeskFeedPanel() {
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem', gap: '0.6rem', flexWrap: 'wrap' }}>
         <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--msp-text-faint)', fontWeight: 800 }}>
-          Live Desk Feed
+          Desk Feed <span style={{ fontSize: '0.6rem', fontWeight: 500, color: 'var(--msp-warn)', letterSpacing: '0.04em' }}>DEMO</span>
         </div>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--msp-text-muted)' }}>
-          <span className="msp-live-dot" style={{ width: 7, height: 7, borderRadius: 999, background: 'var(--msp-bull)', boxShadow: '0 0 8px rgba(16,185,129,0.8)' }} />
-          <span>Stream Active</span>
+          <span style={{ width: 7, height: 7, borderRadius: 999, background: 'var(--msp-warn)', opacity: 0.7 }} />
+          <span>Simulated Preview</span>
         </div>
       </div>
 

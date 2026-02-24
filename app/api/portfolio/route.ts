@@ -182,7 +182,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { positions, closedPositions, performanceHistory, cashState } = body;
 
-    // ─── Risk Governor check: warn if LOCKED and new open positions are being added ───
+    // ─── Risk Governor check: BLOCK if LOCKED, warn if DEFENSIVE ───
     let riskWarning: string | null = null;
     try {
       const existingPositions = await q(
@@ -198,13 +198,16 @@ export async function POST(req: NextRequest) {
           const riskInput = await getRuntimeRiskSnapshotInput(workspaceId);
           const snapshot = buildPermissionSnapshot({ enabled: true, ...riskInput });
           if (snapshot.risk_mode === 'LOCKED') {
-            riskWarning = 'Risk governor is LOCKED — new position entries should be reviewed. Sync allowed for data integrity.';
+            return NextResponse.json(
+              { error: 'Risk governor is LOCKED — new positions are blocked. Close existing positions or wait for daily reset.', riskMode: 'LOCKED' },
+              { status: 403 }
+            );
           } else if (snapshot.risk_mode === 'DEFENSIVE') {
             riskWarning = 'Risk governor is DEFENSIVE — reduced sizing enforced for new entries.';
           }
         }
       }
-    } catch { /* risk check is advisory, don't block sync */ }
+    } catch { /* risk check fallback: allow sync for data integrity */ }
 
     // Clear existing and insert new (simple sync approach)
     await q(`DELETE FROM portfolio_positions WHERE workspace_id = $1`, [workspaceId]);

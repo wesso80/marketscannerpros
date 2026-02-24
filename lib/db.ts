@@ -13,9 +13,10 @@ function getPool(): Pool {
     
     global.__pgPool = new Pool({
       connectionString: process.env.DATABASE_URL,
-      max: 15,
+      max: parseInt(process.env.PG_POOL_MAX ?? '15', 10),
       connectionTimeoutMillis: 5_000,   // 5s to acquire connection
       idleTimeoutMillis: 10_000,        // release idle clients after 10s
+      statement_timeout: 30_000,        // 30s query timeout (pool-level)
       ssl: requiresSSL ? { rejectUnauthorized: false } : undefined,
     });
 
@@ -25,6 +26,9 @@ function getPool(): Pool {
   }
   return global.__pgPool;
 }
+
+/** Preferred parameter types for queries. Loose enough for existing code. */
+export type QueryParam = string | number | boolean | null | undefined | Date | Buffer | string[];
 
 // Export pool getter for backwards compatibility
 export const pool = {
@@ -36,7 +40,7 @@ export const pool = {
 export async function q<T = any>(text: string, params: any[] = []): Promise<T[]> {
   const client = await getPool().connect();
   try {
-    await client.query('SET statement_timeout = 30000'); // 30s query timeout
+    // statement_timeout now set at pool level — no per-query SET needed
     const res = await client.query(text, params);
     return res.rows as T[];
   } finally {

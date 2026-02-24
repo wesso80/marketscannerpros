@@ -249,7 +249,7 @@ function ScannerContent() {
   } | null>(null);
   const [bulkScanError, setBulkScanError] = useState<string | null>(null);
   const showDeskPreludePanels = false;
-  const showAdvancedEngineeringPanels = false;
+  const showAdvancedEngineeringPanels = true;
   const showLegacyTopAnalysis = false;
   const useScannerFlowV2 = true;
   const useInstitutionalDecisionCockpitV2 = true;

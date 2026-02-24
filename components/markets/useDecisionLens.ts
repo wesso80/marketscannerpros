@@ -124,6 +124,8 @@ export function useDecisionLens(ctx: TickerContext): DecisionLensData | null {
     let verdict: DecisionVerdict = 'noise';
     if (authorization === 'BLOCK') {
       verdict = 'blocked';
+    } else if (remainR <= 0) {
+      verdict = 'blocked'; // R-budget exhausted — no new risk allowed
     } else if (alignment >= 70 && confidence >= 60 && rMultiple >= 1.5) {
       verdict = 'tradable';
     } else if (alignment >= 50 && confidence >= 40) {

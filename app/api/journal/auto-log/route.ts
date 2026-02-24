@@ -199,7 +199,16 @@ export async function POST(req: NextRequest) {
     }
 
     const guardEnabled = req.cookies.get('msp_risk_guard')?.value !== 'off';
-    const snapshot = buildPermissionSnapshot({ enabled: guardEnabled });
+    const riskInput = await import('@/lib/risk/runtimeSnapshot').then(m => m.getRuntimeRiskSnapshotInput(session.workspaceId)).catch(() => ({}));
+    const snapshot = buildPermissionSnapshot({ enabled: guardEnabled, ...riskInput });
+    
+    // Enforce governor: reject auto-log when risk mode is LOCKED
+    if (snapshot.risk_mode === 'LOCKED') {
+      return NextResponse.json(
+        { error: 'Risk governor is LOCKED — auto-log blocked. No new risk entries allowed.', riskMode: 'LOCKED' },
+        { status: 403 }
+      );
+    }
     const equityAtEntry = await getLatestPortfolioEquity(session.workspaceId);
     const entryRisk = computeEntryRiskMetrics({
       equityAtEntry,

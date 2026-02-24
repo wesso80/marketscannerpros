@@ -148,7 +148,7 @@ export class AIConfluenceAgent {
     const bars: OHLCV[] = [];
 
     for (const [timestamp, values] of Object.entries(timeSeries)) {
-      const v = values as any;
+      const v = values as Record<string, string>;
       bars.push({
         time: new Date(timestamp).getTime(),
         open: parseFloat(v['1. open']),
@@ -185,7 +185,7 @@ export class AIConfluenceAgent {
     const bars: OHLCV[] = [];
 
     for (const [timestamp, values] of Object.entries(timeSeries)) {
-      const v = values as any;
+      const v = values as Record<string, string>;
       bars.push({
         time: new Date(timestamp).getTime(),
         open: parseFloat(v['1. open'] || v['1a. open (USD)']),

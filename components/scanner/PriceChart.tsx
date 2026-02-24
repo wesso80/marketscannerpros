@@ -9,9 +9,6 @@ export interface ChartData {
   macd: { macd: number; signal: number; hist: number }[];
 }
 
-/** @deprecated Use PriceChart instead — kept for barrel-export compat */
-export const TradingViewChart = PriceChart;
-
 export function PriceChart({ 
   symbol, 
   interval, 

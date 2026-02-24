@@ -110,25 +110,26 @@ export async function avFetch<T = any>(
     };
 
     // AV returns 200 even on quota/error — detect these
-    if ((json as any)?.Note) {
-      console.warn(`[avRateGovernor] ${tag} QUOTA NOTE: ${(json as any).Note}`);
+    if (json.Note) {
+      console.warn(`[avRateGovernor] ${tag} QUOTA NOTE: ${json.Note}`);
       return null;
     }
-    if ((json as any)?.['Error Message']) {
-      console.warn(`[avRateGovernor] ${tag} ERROR: ${(json as any)['Error Message']}`);
+    if (json['Error Message']) {
+      console.warn(`[avRateGovernor] ${tag} ERROR: ${json['Error Message']}`);
       return null;
     }
-    if ((json as any)?.Information) {
-      console.warn(`[avRateGovernor] ${tag} INFO: ${(json as any).Information}`);
+    if (json.Information) {
+      console.warn(`[avRateGovernor] ${tag} INFO: ${json.Information}`);
       return null;
     }
 
     return json;
-  } catch (err: any) {
-    if (err?.name === 'TimeoutError' || err?.name === 'AbortError') {
+  } catch (err: unknown) {
+    const e = err as { name?: string; message?: string };
+    if (e?.name === 'TimeoutError' || e?.name === 'AbortError') {
       console.warn(`[avRateGovernor] ${tag} timed out`);
     } else {
-      console.error(`[avRateGovernor] ${tag} fetch error:`, err?.message || err);
+      console.error(`[avRateGovernor] ${tag} fetch error:`, e?.message || err);
     }
     return null;
   }

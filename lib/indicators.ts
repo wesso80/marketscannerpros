@@ -91,7 +91,8 @@ function estimateCoverageDays(timeframe: string, barCount: number): number | nul
   const intervalMins = minuteMap[tf];
   if (!intervalMins) return null;
 
-  const barsPerTradingDay = Math.max(1, Math.floor(390 / intervalMins));
+  const US_TRADING_MINUTES = 390; // 6.5h regular session
+  const barsPerTradingDay = Math.max(1, Math.floor(US_TRADING_MINUTES / intervalMins));
   return Math.round((barCount / barsPerTradingDay) * 10) / 10;
 }
 

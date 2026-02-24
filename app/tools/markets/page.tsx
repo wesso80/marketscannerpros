@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   InstitutionalStateStrip,
   MarketsToolbar,
@@ -14,6 +14,8 @@ import type { AssetClass } from '@/components/markets/types';
 import { useUserTier, canAccessPortfolioInsights } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
 import { useRegisterPageData } from '@/lib/ai/pageContext';
+import { useDisplayMode } from '@/lib/displayMode';
+import RetailTickerView from '@/components/retail/RetailTickerView';
 
 /**
  * Unified Markets Page
@@ -41,11 +43,14 @@ import { useRegisterPageData } from '@/lib/ai/pageContext';
  */
 export default function MarketsPage() {
   const { tier, isLoading } = useUserTier();
+  const { isRetail, setMode } = useDisplayMode();
   const [assetClass, setAssetClass] = useState<AssetClass>('equities');
   const [symbol, setSymbol] = useState<string>('');
 
   const ctx = useTickerData(symbol || null, assetClass);
   const lens = useDecisionLens(ctx);
+
+  const switchToInstitutional = useCallback(() => setMode('institutional'), [setMode]);
 
   // ── Register ALL page data with the AI context system ──
   // This feeds the MSPCopilot floating panel with real data instead of generic hallucinations.
@@ -171,10 +176,7 @@ export default function MarketsPage() {
   return (
     <div className="min-h-screen bg-[var(--msp-bg)] px-2 py-3 text-slate-100 md:px-3">
       <div className="mx-auto grid w-full max-w-none gap-2">
-        {/* 1. Institutional State Strip — sticky regime/risk/R-budget bar */}
-        <InstitutionalStateStrip />
-
-        {/* 2. Toolbar — asset class toggle + unified ticker search */}
+        {/* Toolbar — asset class toggle + unified ticker search (always shown) */}
         <MarketsToolbar
           assetClass={assetClass}
           onAssetClassChange={setAssetClass}
@@ -182,26 +184,41 @@ export default function MarketsPage() {
           onSymbolChange={setSymbol}
         />
 
-        {/* 3. Main content: Decision Lens + Tabs (left) + Right Rail */}
-        <div className="grid gap-2 xl:grid-cols-[1fr_320px]">
-          {/* Left column — Decision Lens on top, TickerTabs below */}
-          <div className="grid gap-2">
-            <DecisionLens ctx={ctx} />
-            <TickerTabs ctx={ctx} />
-          </div>
+        {isRetail && symbol ? (
+          /* ── Retail Mode: simplified ticker view ── */
+          <RetailTickerView
+            ctx={ctx}
+            lens={lens}
+            onSwitchToInstitutional={switchToInstitutional}
+          />
+        ) : (
+          /* ── Institutional Mode: full cockpit ── */
+          <>
+            {/* 1. Institutional State Strip — sticky regime/risk/R-budget bar */}
+            <InstitutionalStateStrip />
 
-          {/* Right rail — contextual support */}
-          <aside className="hidden xl:block">
-            <div className="sticky top-[52px]">
+            {/* 3. Main content: Decision Lens + Tabs (left) + Right Rail */}
+            <div className="grid gap-2 xl:grid-cols-[1fr_320px]">
+              {/* Left column — Decision Lens on top, TickerTabs below */}
+              <div className="grid gap-2">
+                <DecisionLens ctx={ctx} />
+                <TickerTabs ctx={ctx} />
+              </div>
+
+              {/* Right rail — contextual support */}
+              <aside className="hidden xl:block">
+                <div className="sticky top-[52px]">
+                  <RightRail ctx={ctx} />
+                </div>
+              </aside>
+            </div>
+
+            {/* Mobile right rail — stacked below on smaller screens */}
+            <div className="xl:hidden">
               <RightRail ctx={ctx} />
             </div>
-          </aside>
-        </div>
-
-        {/* Mobile right rail — stacked below on smaller screens */}
-        <div className="xl:hidden">
-          <RightRail ctx={ctx} />
-        </div>
+          </>
+        )}
       </div>
     </div>
   );

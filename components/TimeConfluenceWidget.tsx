@@ -15,6 +15,8 @@ interface TimeConfluenceWidgetProps {
   showTWAP?: boolean;
   showCalendar?: boolean;
   compact?: boolean;
+  /** Active ticker symbol for context display */
+  symbol?: string;
 }
 
 // Simulated historical hit rate based on confluence score patterns
@@ -64,6 +66,7 @@ export default function TimeConfluenceWidget({
   showTWAP = true,
   showCalendar = true,
   compact = false,
+  symbol,
 }: TimeConfluenceWidgetProps) {
   const [state, setState] = useState(() => getTimeConfluenceState());
   const [activeTab, setActiveTab] = useState<'now' | 'today' | 'macro' | 'calendar'>('now');

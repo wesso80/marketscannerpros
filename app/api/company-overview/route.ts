@@ -1,9 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSessionFromCookie } from '@/lib/auth';
 import { avTakeToken } from '@/lib/avRateGovernor';
+import { apiLimiter, getClientIP } from '@/lib/rateLimit';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY;
 
 export async function GET(request: NextRequest) {
+  // Auth guard: AV license requires authenticated users only
+  const session = await getSessionFromCookie();
+  if (!session?.workspaceId) {
+    return NextResponse.json({ error: 'Please log in to access company data' }, { status: 401 });
+  }
+
+  // Rate limit
+  const ip = getClientIP(request);
+  const rateCheck = apiLimiter.check(ip);
+  if (!rateCheck.allowed) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
+
   const { searchParams } = new URL(request.url);
   const symbol = searchParams.get('symbol');
   const includeQuote = searchParams.get('includeQuote') === '1';

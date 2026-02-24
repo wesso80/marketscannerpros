@@ -1,6 +1,8 @@
 // components/Pricing.tsx
 "use client";
 
+import { PLAN_PRICES } from '@/lib/planPrices';
+
 type Props = {
   loading: string | null;
   onLaunch: () => void;                           // Free plan action
@@ -42,28 +44,31 @@ export default function Pricing({ loading, onLaunch, onCheckout }: Props) {
             </p>
           </div>
 
-          {/* Pro (Most Popular) */}
+          {/* Retail (Most Popular) */}
           <div className={`${baseCard} border-emerald-500/40 ring-1 ring-emerald-500/30`}>
             <div className="mb-2">
               <span className="rounded-full bg-emerald-500/20 border border-emerald-500/40 px-2 py-1 text-xs text-emerald-400 font-bold">
                 Most Popular
               </span>
             </div>
-            <h3 className="text-xl font-semibold">Pro</h3>
+            <h3 className="text-xl font-semibold">🟢 Retail</h3>
+            <p className="mt-0.5 text-sm text-neutral-400">
+              Everything you need to trade confidently
+            </p>
             <p className="mt-1 text-2xl font-bold">
-              <span className="text-emerald-400">$39.99</span>
+              <span className="text-emerald-400">{PLAN_PRICES.pro.monthly}</span>
               <span className="text-sm font-normal text-neutral-400"> / month</span>
             </p>
             <p className="text-xs text-neutral-400 mt-1">
-              or <span className="text-emerald-400">$399.99/year</span> <span className="text-amber-400">(2 months free)</span>
+              or <span className="text-emerald-400">{PLAN_PRICES.pro.yearly}/year</span> <span className="text-amber-400">({PLAN_PRICES.pro.yearlySavings})</span>
             </p>
             <ul className="mt-6 space-y-3">
               <li className={featureItem}>• Everything in Free</li>
               <li className={featureItem}>• Unlimited symbol scanning</li>
               <li className={featureItem}>• 🤖 MSP Analyst AI (50/day)</li>
-              <li className={featureItem}>• 📊 Market Movers & News</li>
+              <li className={featureItem}>• 📊 Curated Market Dashboard</li>
               <li className={featureItem}>• 🏢 Company Overview</li>
-              <li className={featureItem}>• 🤖 AI Tools & Insights</li>
+              <li className={featureItem}>• 🎯 Setup Strength Badges</li>
               <li className={featureItem}>• CSV exports (all tools)</li>
             </ul>
             <button
@@ -71,35 +76,38 @@ export default function Pricing({ loading, onLaunch, onCheckout }: Props) {
               disabled={loading === "pro"}
               className="mt-6 w-full rounded-lg bg-emerald-500 px-4 py-2 font-medium text-neutral-900 hover:bg-emerald-400 disabled:opacity-60"
             >
-              {loading === "pro" ? "Processing…" : "Upgrade to Pro"}
+              {loading === "pro" ? "Processing…" : "Upgrade to Retail"}
             </button>
             <p className="mt-3 text-xs text-neutral-500">
               Cancel anytime
             </p>
           </div>
 
-          {/* Full Pro Trader */}
+          {/* Institutional — Full Access */}
           <div className={baseCard}>
             <div className="mb-2">
               <span className="rounded-full bg-blue-500/20 border border-blue-500/40 px-2 py-1 text-xs text-blue-400 font-bold">
                 Full Access
               </span>
             </div>
-            <h3 className="text-xl font-semibold text-blue-400">Pro Trader</h3>
+            <h3 className="text-xl font-semibold text-blue-400">🏛 Institutional</h3>
+            <p className="mt-0.5 text-sm text-neutral-400">
+              Full decision architecture — no simplification
+            </p>
             <p className="mt-1 text-2xl font-bold">
-              <span className="text-blue-400">$89.99</span>
+              <span className="text-blue-400">{PLAN_PRICES.pro_trader.monthly}</span>
               <span className="text-sm font-normal text-neutral-400"> / month</span>
             </p>
             <p className="text-xs text-neutral-400 mt-1">
-              or <span className="text-blue-400">$899.99/year</span> <span className="text-amber-400">(2 months free)</span>
+              or <span className="text-blue-400">{PLAN_PRICES.pro_trader.yearly}/year</span> <span className="text-amber-400">({PLAN_PRICES.pro_trader.yearlySavings})</span>
             </p>
             <ul className="mt-6 space-y-3">
-              <li className={featureItem}>• Everything in Pro</li>
+              <li className={featureItem}>• Everything in Retail</li>
               <li className={featureItem}>• 🤖 MSP Analyst AI (200/day)</li>
               <li className={featureItem}>• 📈 Full backtesting engine</li>
-              <li className={featureItem}>• Golden Egg Deep Analysis</li>
-              <li className={featureItem}>• AI Confluence Scanner</li>
-              <li className={featureItem}>• Options Confluence Scanner</li>
+              <li className={featureItem}>• 🔬 Institutional Decision Lens</li>
+              <li className={featureItem}>• 🧠 AI Confluence Scanner</li>
+              <li className={featureItem}>• ⚡ Options Flow & Greeks</li>
               <li className={featureItem}>• Premium support</li>
             </ul>
             <button
@@ -107,7 +115,7 @@ export default function Pricing({ loading, onLaunch, onCheckout }: Props) {
               disabled={loading === "pro_trader"}
               className="mt-6 w-full rounded-lg bg-blue-500 px-4 py-2 font-medium text-white hover:bg-blue-400 disabled:opacity-60"
             >
-              {loading === "pro_trader" ? "Processing…" : "Upgrade to Pro Trader"}
+              {loading === "pro_trader" ? "Processing…" : "Upgrade to Institutional"}
             </button>
             <p className="mt-3 text-xs text-neutral-500">
               Cancel anytime

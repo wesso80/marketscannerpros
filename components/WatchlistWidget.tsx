@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useUserTier } from '@/lib/useUserTier';
 import { useRiskPermission } from '@/components/risk/RiskPermissionContext';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 interface Watchlist {
   id: string;
@@ -213,8 +214,12 @@ export default function WatchlistWidget() {
   };
 
   // Delete watchlist
-  const deleteWatchlist = async (id: string) => {
-    if (!confirm('Delete this watchlist and all its items?')) return;
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+
+  const confirmDeleteWatchlist = async () => {
+    const id = pendingDeleteId;
+    setPendingDeleteId(null);
+    if (!id) return;
 
     try {
       const res = await fetch(`/api/watchlists?id=${id}`, { method: 'DELETE' });
@@ -227,6 +232,10 @@ export default function WatchlistWidget() {
     } catch (err) {
       setError('Failed to delete watchlist');
     }
+  };
+
+  const deleteWatchlist = (id: string) => {
+    setPendingDeleteId(id);
   };
 
   // Add symbol
@@ -894,6 +903,16 @@ export default function WatchlistWidget() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!pendingDeleteId}
+        title="Delete Watchlist"
+        message="Delete this watchlist and all its items?"
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={confirmDeleteWatchlist}
+        onCancel={() => setPendingDeleteId(null)}
+      />
     </div>
   );
 }

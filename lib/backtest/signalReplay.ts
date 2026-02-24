@@ -76,14 +76,17 @@ async function fetchStockPriceData(symbol: string, timeframe: string): Promise<P
     throw new Error(`Failed to fetch stock data for ${symbol}`);
   }
 
+  interface AVTimeSeries { '1. open': string; '2. high': string; '3. low': string; '4. close': string; '5. volume': string }
+
   const parsed: PriceData = {};
   for (const [date, values] of Object.entries(timeSeries)) {
+    const v = values as AVTimeSeries;
     parsed[date] = {
-      open: Number((values as any)['1. open']),
-      high: Number((values as any)['2. high']),
-      low: Number((values as any)['3. low']),
-      close: Number((values as any)['4. close']),
-      volume: Number((values as any)['5. volume']),
+      open: Number(v['1. open']),
+      high: Number(v['2. high']),
+      low: Number(v['3. low']),
+      close: Number(v['4. close']),
+      volume: Number(v['5. volume']),
     };
   }
   if (parsedTimeframe.needsResample && parsedTimeframe.minutes > parsedTimeframe.sourceMinutes) {

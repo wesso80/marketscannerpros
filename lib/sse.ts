@@ -11,14 +11,15 @@
 
 import type { SSEEventType } from '@/app/api/sse/stream/route';
 
+// __sseBus global is declared in app/api/sse/stream/route.ts
+
 export function publishSSE(
   type: SSEEventType,
   data: Record<string, unknown>,
   workspaceId?: string | null,
 ): void {
   try {
-    // Dynamic import to avoid SSR issues - the bus is only available on the server
-    const bus = (global as any).__sseBus;
+    const bus = global.__sseBus;
     if (!bus) return; // No SSE bus initialized yet (no clients connected)
 
     bus.publish({

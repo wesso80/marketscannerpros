@@ -71,7 +71,7 @@ export default function JournalPage() {
         setDrawerOpen(true);
       },
       onExport: actions.onExport,
-      onImport: () => {},
+      // onImport intentionally removed — no CSV import backend yet
     }),
     [actions.onExport],
   );

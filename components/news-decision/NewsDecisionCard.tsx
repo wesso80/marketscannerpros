@@ -63,10 +63,10 @@ export default function NewsDecisionCard({ item, gate, isOpen, isAdmin, onToggle
               <div className="mb-2 text-white/60">Trade Permission</div>
               <div className="mb-2">{gate.permission} • {gate.executionMode}</div>
               <div className="grid grid-cols-2 gap-2">
-                <button className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs hover:bg-white/10">Create Alert</button>
-                <button className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs hover:bg-white/10">Draft Trade Plan</button>
-                <button className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs hover:bg-white/10">Extract Signal</button>
-                {isAdmin ? <button className="rounded-xl border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-xs text-amber-200 hover:bg-amber-300/20">Log to Journal</button> : null}
+                <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/40 text-center" title="Coming soon">Create Alert</span>
+                <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/40 text-center" title="Coming soon">Draft Trade Plan</span>
+                <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/40 text-center" title="Coming soon">Extract Signal</span>
+                {isAdmin ? <span className="rounded-xl border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-xs text-amber-200/40 text-center" title="Coming soon">Log to Journal</span> : null}
               </div>
             </div>
           </div>

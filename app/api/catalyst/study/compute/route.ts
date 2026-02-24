@@ -53,7 +53,10 @@ export async function POST(req: NextRequest) {
     const headerSecret = req.headers.get('x-cron-secret');
     const authHeader = req.headers.get('authorization');
 
-    if (cronSecret) {
+    if (!cronSecret) {
+      return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 });
+    }
+    {
       const validHeader = headerSecret === cronSecret;
       const validBearer = authHeader === `Bearer ${cronSecret}`;
       if (!validHeader && !validBearer) {

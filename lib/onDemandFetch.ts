@@ -216,7 +216,7 @@ async function fetchBarsAndIndicatorsFromAV(symbol: string): Promise<{
       let idx = 1;
       for (const b of batch) {
         values.push(`($${idx}, $${idx + 1}, $${idx + 2}, $${idx + 3}, $${idx + 4}, $${idx + 5}, $${idx + 6}, $${idx + 7})`);
-        params.push(symbol.toUpperCase(), 'daily', b.timestamp.slice(0, 10), b.open, b.high, b.low, b.close, b.volume);
+        params.push(symbol.toUpperCase(), 'daily', String(b.timestamp).slice(0, 10), b.open, b.high, b.low, b.close, b.volume);
         idx += 8;
       }
       await q(

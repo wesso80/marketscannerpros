@@ -57,6 +57,7 @@ export async function GET(req: NextRequest) {
       realizedDailyR: runtimeInput?.realizedDailyR ?? toNumber(url.searchParams.get('realizedDailyR'), -1.2),
       openRiskR: runtimeInput?.openRiskR ?? toNumber(url.searchParams.get('openRiskR'), 2.2),
       consecutiveLosses: runtimeInput?.consecutiveLosses ?? toNumber(url.searchParams.get('consecutiveLosses'), 1),
+      tradesToday: runtimeInput?.tradesToday ?? 0,
     });
 
     return NextResponse.json(snapshot);

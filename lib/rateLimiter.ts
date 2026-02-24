@@ -29,15 +29,20 @@ export class TokenBucket {
   }
 
   /**
-   * Take n tokens, waiting if necessary
+   * Take n tokens, waiting if necessary (with a max wait timeout)
    * @param n Number of tokens to take (default: 1)
+   * @param maxWaitMs Maximum ms to wait before throwing (default: 30000)
    */
-  async take(n = 1): Promise<void> {
+  async take(n = 1, maxWaitMs = 30_000): Promise<void> {
+    const deadline = Date.now() + maxWaitMs;
     while (true) {
       this.refill();
       if (this.tokens >= n) {
         this.tokens -= n;
         return;
+      }
+      if (Date.now() >= deadline) {
+        throw new Error(`TokenBucket: timed out waiting for ${n} tokens after ${maxWaitMs}ms`);
       }
       // Wait a bit and try again
       await new Promise((resolve) => setTimeout(resolve, 50));

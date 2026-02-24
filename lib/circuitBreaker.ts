@@ -39,6 +39,7 @@ export class CircuitBreaker {
   private state: CircuitState = 'CLOSED';
   private failureCount = 0;
   private lastFailureTime = 0;
+  private halfOpenProbeActive = false;
   private readonly name: string;
   private readonly failureThreshold: number;
   private readonly resetTimeoutMs: number;
@@ -56,10 +57,18 @@ export class CircuitBreaker {
     if (this.state === 'OPEN') {
       const elapsed = Date.now() - this.lastFailureTime;
       if (elapsed >= this.resetTimeoutMs) {
+        // Only allow ONE probe through at a time to prevent stampede
+        if (this.halfOpenProbeActive) {
+          throw new CircuitBreakerOpenError(this.name, 1000);
+        }
+        this.halfOpenProbeActive = true;
         this.transition('HALF_OPEN');
       } else {
         throw new CircuitBreakerOpenError(this.name, this.resetTimeoutMs - elapsed);
       }
+    } else if (this.state === 'HALF_OPEN' && this.halfOpenProbeActive) {
+      // Another request while the probe is in-flight — reject
+      throw new CircuitBreakerOpenError(this.name, 1000);
     }
 
     try {
@@ -73,6 +82,7 @@ export class CircuitBreaker {
   }
 
   private onSuccess(): void {
+    this.halfOpenProbeActive = false;
     if (this.state === 'HALF_OPEN' || this.state === 'OPEN') {
       this.transition('CLOSED');
     }
@@ -80,6 +90,7 @@ export class CircuitBreaker {
   }
 
   private onFailure(): void {
+    this.halfOpenProbeActive = false;
     this.failureCount++;
     this.lastFailureTime = Date.now();
 

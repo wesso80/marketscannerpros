@@ -82,7 +82,8 @@ export async function GET(req: NextRequest) {
     // TODO: Check database entitlements table
 
     return NextResponse.json({ tier: "free", status: "active" });
-  } catch {
+  } catch (err) {
+    console.error('[entitlements] Failed to resolve tier — defaulting to free:', err);
     return NextResponse.json({ tier: "free", status: "active" });
   }
 }

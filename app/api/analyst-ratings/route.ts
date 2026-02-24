@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getSessionFromCookie } from '@/lib/auth';
 import { avTakeToken } from '@/lib/avRateGovernor';
+import { apiLimiter, getClientIP } from '@/lib/rateLimit';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -15,6 +17,19 @@ function formatMarketCap(value: string | number | undefined): string {
 }
 
 export async function GET(request: NextRequest) {
+  // Auth guard: AV license requires authenticated users only
+  const session = await getSessionFromCookie();
+  if (!session?.workspaceId) {
+    return NextResponse.json({ success: false, error: 'Please log in to access analyst data' }, { status: 401 });
+  }
+
+  // Rate limit
+  const ip = getClientIP(request);
+  const rateCheck = apiLimiter.check(ip);
+  if (!rateCheck.allowed) {
+    return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const symbol = searchParams.get("symbol");

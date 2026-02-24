@@ -72,8 +72,8 @@ export async function getCachedScanData(symbol: string): Promise<CachedScanData 
       stochK: ind?.stochK ?? NaN,
       stochD: ind?.stochD ?? NaN,
       cci: ind?.cci20 ?? NaN,
-      aroonUp: (ind as any)?.aroonUp ?? NaN,
-      aroonDown: (ind as any)?.aroonDown ?? NaN,
+      aroonUp: (ind as unknown as Record<string, number | undefined>)?.aroonUp ?? NaN,
+      aroonDown: (ind as unknown as Record<string, number | undefined>)?.aroonDown ?? NaN,
       source: q.source === 'live' ? 'database' : q.source,
     };
 

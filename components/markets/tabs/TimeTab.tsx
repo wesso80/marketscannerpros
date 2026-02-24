@@ -33,6 +33,7 @@ export default function TimeTab({ ctx }: { ctx: TickerContext }) {
           showMicro
           showTWAP
           showCalendar
+          symbol={symbol}
         />
       </div>
 
