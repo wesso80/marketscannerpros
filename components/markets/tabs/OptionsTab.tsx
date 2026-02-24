@@ -67,7 +67,7 @@ export default function OptionsTab({ ctx }: { ctx: TickerContext }) {
         </div>
 
         {/* Basis + Volume + Exchange count */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <div className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2 text-center">
             <p className="text-[10px] font-semibold uppercase text-[var(--msp-text-faint)]">Basis</p>
             <p className={`text-sm font-black ${(cryptoDerivatives.basis ?? 0) > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
@@ -95,7 +95,7 @@ export default function OptionsTab({ ctx }: { ctx: TickerContext }) {
         {cryptoDerivatives.liquidations && cryptoDerivatives.liquidations.total24h > 0 && (
           <div className="rounded-md border border-rose-500/20 bg-rose-500/5 p-2">
             <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-rose-400">24h Liquidations</p>
-            <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="grid grid-cols-1 gap-2 text-center sm:grid-cols-3">
               <div>
                 <p className="text-[10px] text-[var(--msp-text-faint)]">Longs</p>
                 <p className="text-sm font-black text-rose-400">{formatLargeNumber(cryptoDerivatives.liquidations.long24h)}</p>
@@ -126,6 +126,7 @@ export default function OptionsTab({ ctx }: { ctx: TickerContext }) {
         {cryptoDerivatives.topContracts && cryptoDerivatives.topContracts.length > 0 && (
           <div className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2">
             <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--msp-text-faint)]">Top Perpetual Contracts</p>
+            <div className="overflow-x-auto">
             <table className="w-full text-[11px]">
               <thead>
                 <tr className="text-left text-[10px] uppercase text-[var(--msp-text-faint)]">
@@ -148,6 +149,7 @@ export default function OptionsTab({ ctx }: { ctx: TickerContext }) {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>
@@ -181,7 +183,7 @@ export default function OptionsTab({ ctx }: { ctx: TickerContext }) {
         <MetricCard label="Put/Call" value={(options.putCallRatio ?? 0).toFixed(2)} sub="Volume ratio" color={pcrColor} />
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         <div className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2 text-center">
           <p className="text-[10px] font-semibold uppercase text-[var(--msp-text-faint)]">GEX</p>
           <p className={`text-sm font-black ${(options.gex ?? 0) > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
@@ -206,6 +208,7 @@ export default function OptionsTab({ ctx }: { ctx: TickerContext }) {
       {options.topStrikes && options.topStrikes.length > 0 && (
         <div className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2">
           <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--msp-text-faint)]">Top Strikes by Volume</p>
+          <div className="overflow-x-auto">
           <table className="w-full text-[11px]">
             <thead>
               <tr className="text-left text-[10px] uppercase text-[var(--msp-text-faint)]">
@@ -228,6 +231,7 @@ export default function OptionsTab({ ctx }: { ctx: TickerContext }) {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

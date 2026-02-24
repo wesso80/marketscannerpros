@@ -28,7 +28,7 @@ export default function DerivativesMarketStrip({ items }: DerivativesMarketStrip
                 )}
               </div>
 
-              <div className="mt-2 grid grid-cols-3 gap-2">
+              <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <div className="rounded-lg border border-white/10 bg-black/20 px-2 py-1">
                   <div className="text-[11px] text-white/50">OI Δ</div>
                   <div className="text-xs font-semibold text-white/80">{item.oiDelta >= 0 ? '+' : ''}{item.oiDelta.toFixed(2)}%</div>

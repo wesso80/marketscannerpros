@@ -798,7 +798,7 @@ export default function NewsSentimentPage() {
         backHref="/dashboard"
       />
       <main style={{ minHeight: "100vh", padding: "24px 16px", width: '100%' }}>
-        <div style={{ maxWidth: "none", margin: "0 auto", padding: 0, width: '100%' }}>
+        <div style={{ maxWidth: "none", margin: "0 auto", padding: 0, width: '100%', overflowX: 'hidden' }}>
 
         {/* Tabs */}
         <div
@@ -1206,7 +1206,7 @@ export default function NewsSentimentPage() {
                               <div>{formatRelativeDate(event.reportDate)}</div>
                               <div className="font-semibold">{event.session} • ET</div>
                             </div>
-                            <div className="min-w-[220px] flex-1">
+                            <div className="min-w-0 sm:min-w-[220px] flex-1">
                               <div className="flex items-center gap-2">
                                 <span className="text-sm font-bold text-emerald-300">{event.symbol}</span>
                                 <span className="rounded border border-white/15 bg-black/20 px-1.5 py-0.5 text-[10px] text-white/70">Impact {event.impactTier}</span>

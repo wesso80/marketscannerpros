@@ -171,7 +171,7 @@ export default function CatalystDetailsDrawer({ study, open, onClose }: Props) {
                   <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--msp-text-faint)] mb-1">
                     Median Returns by Horizon
                   </p>
-                  <div className="grid grid-cols-5 gap-2">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                     {HORIZON_ORDER.map(h => {
                       const s = study.horizons[h];
                       return (
@@ -208,7 +208,7 @@ export default function CatalystDetailsDrawer({ study, open, onClose }: Props) {
                   <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--msp-text-faint)] mb-1">
                     Tail Risk (Worst 10% Average)
                   </p>
-                  <div className="grid grid-cols-5 gap-2">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                     {HORIZON_ORDER.map(h => (
                       <div key={h} className="text-center">
                         <p className="text-[9px] font-semibold uppercase text-[var(--msp-text-faint)]">{HORIZON_LABELS[h].split(' (')[0]}</p>

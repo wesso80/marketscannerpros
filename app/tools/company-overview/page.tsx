@@ -346,7 +346,7 @@ function CompanyOverviewContent() {
         backHref="/dashboard"
       />
       <main style={{ minHeight: "100vh", padding: "24px 16px" }}>
-        <div style={{ maxWidth: "none", margin: "0 auto", padding: 0 }}>
+        <div style={{ maxWidth: "none", margin: "0 auto", padding: 0, overflowX: 'hidden' }}>
 
         {/* Regime & Personality Context */}
         <div style={{ marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>

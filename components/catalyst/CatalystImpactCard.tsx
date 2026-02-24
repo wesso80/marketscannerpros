@@ -165,7 +165,7 @@ export default function CatalystImpactCard({ ticker, subtype, onViewDetails }: P
 
       {/* Key metrics row */}
       {hasPriceData ? (
-        <div className="grid grid-cols-5 gap-1">
+        <div className="grid grid-cols-2 gap-1 sm:grid-cols-5">
           {primaryHorizons.map(h => (
             <button
               key={h}

@@ -63,6 +63,7 @@ export default function NewsTab({ ctx }: { ctx: TickerContext }) {
       <div className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2">
         <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--msp-text-faint)]">Earnings Events</p>
         {earnings.length > 0 ? (
+          <div className="overflow-x-auto">
           <table className="w-full text-[11px]">
             <thead>
               <tr className="text-left text-[10px] uppercase text-[var(--msp-text-faint)]">
@@ -87,6 +88,7 @@ export default function NewsTab({ ctx }: { ctx: TickerContext }) {
               ))}
             </tbody>
           </table>
+          </div>
         ) : (
           <p className="text-[11px] text-[var(--msp-text-faint)] text-center py-3">No upcoming earnings</p>
         )}

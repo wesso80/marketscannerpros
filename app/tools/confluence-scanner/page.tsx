@@ -396,7 +396,7 @@ export default function AIConfluenceScanner() {
       padding: '2rem',
       color: 'white'
     }}>
-      <div style={{ width: '100%', maxWidth: 'none', margin: '0 auto' }}>
+      <div style={{ width: '100%', maxWidth: 'none', margin: '0 auto', overflowX: 'hidden' }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <h1 style={{ 

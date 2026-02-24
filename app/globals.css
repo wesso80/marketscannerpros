@@ -53,10 +53,8 @@ html, body {
   color: var(--msp-text);
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
   overflow-x: hidden;
-  max-width: 100vw;
+  max-width: 100%;
 }
-
-/* Global app shell */
 .msp-main-shell {
   width: 100%;
   max-width: 100%;
@@ -81,7 +79,7 @@ html, body {
 /* Options page container - prevent overflow */
 .options-page-container {
   width: 100%;
-  max-width: 100vw;
+  max-width: 100%;
   overflow-x: hidden;
   box-sizing: border-box;
   word-break: break-word;
@@ -891,7 +889,7 @@ input, textarea, select, button {
 /* Ensure pages don't overflow horizontally, but allow table scrolling */
 body, html {
   overflow-x: hidden;
-  max-width: 100vw;
+  max-width: 100%;
 }
 
 /* Don't constrain elements that need horizontal scroll */
@@ -904,7 +902,7 @@ body, html {
 /* Common container width restrictions */
 .page-container,
 [class*="-page-container"] {
-  max-width: 100vw;
+  max-width: 100%;
   box-sizing: border-box;
 }
 

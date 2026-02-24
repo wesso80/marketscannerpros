@@ -2028,7 +2028,7 @@ export default function OptionsConfluenceScanner() {
       accentBorderClass: 'border-l-emerald-500',
       reason: 'Directional structure + confluence alignment dominate.',
       layout: {
-        columnsClass: '[grid-template-columns:minmax(240px,0.95fr)_minmax(360px,1.5fr)_minmax(240px,1fr)]',
+        columnsClass: '[grid-template-columns:repeat(auto-fit,minmax(260px,1fr))] lg:[grid-template-columns:minmax(240px,0.95fr)_minmax(360px,1.5fr)_minmax(240px,1fr)]',
         signalOrderClass: 'order-1',
         marketOrderClass: 'order-2',
         execOrderClass: 'order-3',
@@ -3084,7 +3084,7 @@ export default function OptionsConfluenceScanner() {
                   <div><span className="font-bold uppercase text-slate-500">Market Mode:</span> <span className="font-extrabold text-slate-50">{marketStateLabel || 'Unknown'} {thesisDirection === 'bullish' ? '↑' : thesisDirection === 'bearish' ? '↓' : '→'}</span></div>
                   <div><span className="font-bold uppercase text-slate-500">Setup Type:</span> <span className="font-extrabold text-slate-50">{setupLabel || 'Awaiting Confirmation'}</span></div>
                 </div>
-                <div className={`min-w-[190px] justify-self-end rounded-[10px] p-[0.45rem_0.6rem] text-right ${commandStatusToneCardClass}`}>
+                <div className={`min-w-0 sm:min-w-[190px] justify-self-end rounded-[10px] p-[0.45rem_0.6rem] text-right ${commandStatusToneCardClass}`}>
                   <div className="text-[0.66rem] font-bold uppercase text-slate-500">Setup Score</div>
                   <div className={`text-[1.15rem] font-black ${commandStatusClass}`}>{setupScore}%</div>
                 </div>
