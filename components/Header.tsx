@@ -178,9 +178,21 @@ export default function Header() {
           <Link href="/pricing" className="hover:text-teal-300 whitespace-nowrap">Pricing</Link>
           <Link href="/account" className="hover:text-teal-300 whitespace-nowrap">Account</Link>
           {tierLoading ? null : isLoggedIn ? (
-            <span className={`ml-2 flex items-center gap-2 bg-teal-500/10 border border-slate-700 rounded-lg text-teal-300 text-xs ${isTerminalMode ? 'px-2 py-1' : 'px-3 py-1.5'}`}>
-              {tier === 'pro_trader' ? '⭐ Pro Trader' : tier === 'pro' ? '✨ Pro' : 'Free'}
-            </span>
+            <>
+              <span className={`ml-2 flex items-center gap-2 bg-teal-500/10 border border-slate-700 rounded-lg text-teal-300 text-xs ${isTerminalMode ? 'px-2 py-1' : 'px-3 py-1.5'}`}>
+                {tier === 'pro_trader' ? '⭐ Pro Trader' : tier === 'pro' ? '✨ Pro' : 'Free'}
+              </span>
+              <button
+                onClick={() => {
+                  document.cookie = 'ms_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; domain=.marketscannerpros.app';
+                  document.cookie = 'ms_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+                  window.location.href = '/';
+                }}
+                className={`ml-1 border border-slate-700 rounded-lg text-red-300/80 hover:text-red-300 hover:bg-red-500/10 whitespace-nowrap transition-all ${isTerminalMode ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-xs'}`}
+              >
+                Sign Out
+              </button>
+            </>
           ) : (
             <Link href="/auth" className={`ml-2 bg-teal-500/20 hover:bg-teal-500/30 border border-slate-700 rounded-lg text-teal-300 font-medium whitespace-nowrap transition-all ${isTerminalMode ? 'px-3 py-1' : 'px-4 py-1.5'}`}>Sign In</Link>
           )}
@@ -224,11 +236,23 @@ export default function Header() {
                 <Link href="/account" className="flex items-center gap-3 px-4 py-3 text-white hover:bg-teal-500/10 hover:text-teal-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>👤 Account</Link>
               </div>
               
-              <div className="mt-4 pt-4 border-t border-slate-700/90">
+              <div className="mt-4 pt-4 border-t border-slate-700/90 space-y-2">
                 {isLoggedIn ? (
-                  <Link href="/account" className="flex items-center justify-center gap-2 px-4 py-3 bg-teal-500/10 border border-slate-700 rounded-lg text-teal-300 font-medium transition-all" onClick={() => setIsOpen(false)}>
-                    {tier === 'pro_trader' ? '⭐ Pro Trader' : tier === 'pro' ? '✨ Pro' : '👤 Account'}
-                  </Link>
+                  <>
+                    <Link href="/account" className="flex items-center justify-center gap-2 px-4 py-3 bg-teal-500/10 border border-slate-700 rounded-lg text-teal-300 font-medium transition-all" onClick={() => setIsOpen(false)}>
+                      {tier === 'pro_trader' ? '⭐ Pro Trader' : tier === 'pro' ? '✨ Pro' : '👤 Account'}
+                    </Link>
+                    <button
+                      onClick={() => {
+                        document.cookie = 'ms_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; domain=.marketscannerpros.app';
+                        document.cookie = 'ms_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+                        window.location.href = '/';
+                      }}
+                      className="flex items-center justify-center gap-2 w-full px-4 py-3 border border-red-400/30 rounded-lg text-red-300 font-medium hover:bg-red-500/10 transition-all"
+                    >
+                      Sign Out
+                    </button>
+                  </>
                 ) : (
                   <Link href="/auth" className="flex items-center justify-center gap-2 px-4 py-3 bg-teal-500/20 hover:bg-teal-500/30 border border-slate-700 rounded-lg text-teal-300 font-medium transition-all" onClick={() => setIsOpen(false)}>🔐 Sign In</Link>
                 )}

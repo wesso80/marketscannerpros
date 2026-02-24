@@ -264,6 +264,16 @@ export default function AccountPage() {
                 Upgrade Plan
               </Link>
             ) : null}
+            <button
+              onClick={() => {
+                document.cookie = 'ms_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; domain=.marketscannerpros.app';
+                document.cookie = 'ms_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+                window.location.href = '/';
+              }}
+              className="px-4 py-2 rounded-xl border border-red-400/30 bg-red-500/10 text-red-300 text-sm hover:bg-red-500/20"
+            >
+              Sign Out
+            </button>
           </div>
         </div>
 
