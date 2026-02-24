@@ -696,7 +696,7 @@ export interface OpenInterestData {
     totalOI: number;
     reliable: boolean;
   };
-  highOIStrikes: { strike: number; openInterest: number; type: 'call' | 'put'; delta?: number; gamma?: number; theta?: number; vega?: number; iv?: number }[];
+  highOIStrikes: { strike: number; openInterest: number; volume: number; type: 'call' | 'put'; delta?: number; gamma?: number; theta?: number; vega?: number; iv?: number }[];
   expirationDate: string;       // The expiration date being analyzed
 }
 
@@ -1159,6 +1159,7 @@ function analyzeOpenInterest(
   const contractsWithGreeks: Array<{
     strike: number;
     openInterest: number;
+    volume: number;
     type: 'call' | 'put';
     delta?: number;
     gamma?: number;
@@ -1237,6 +1238,7 @@ function analyzeOpenInterest(
         const apiGamma = getOptionalNumericField(call as unknown as Record<string, unknown>, ['gamma', 'Gamma']);
         const apiTheta = getOptionalNumericField(call as unknown as Record<string, unknown>, ['theta', 'Theta']);
         const apiVega = getOptionalNumericField(call as unknown as Record<string, unknown>, ['vega', 'Vega']);
+        const vol = getIntField(call as unknown as Record<string, unknown>, ['volume', 'trade_volume'], 0);
         // Use normalized IV (handles both 0.25 and 25 formats)
         const iv = normalizeIV(call.implied_volatility, 0.25);
         
@@ -1253,6 +1255,7 @@ function analyzeOpenInterest(
         contractsWithGreeks.push({
           strike,
           openInterest: oi,
+          volume: vol,
           type: 'call',
           delta,
           gamma,
@@ -1285,6 +1288,7 @@ function analyzeOpenInterest(
         const apiGamma = getOptionalNumericField(put as unknown as Record<string, unknown>, ['gamma', 'Gamma']);
         const apiTheta = getOptionalNumericField(put as unknown as Record<string, unknown>, ['theta', 'Theta']);
         const apiVega = getOptionalNumericField(put as unknown as Record<string, unknown>, ['vega', 'Vega']);
+        const vol = getIntField(put as unknown as Record<string, unknown>, ['volume', 'trade_volume'], 0);
         // Use normalized IV (handles both 0.25 and 25 formats)
         const iv = normalizeIV(put.implied_volatility, 0.25);
         
@@ -1301,6 +1305,7 @@ function analyzeOpenInterest(
         contractsWithGreeks.push({
           strike,
           openInterest: oi,
+          volume: vol,
           type: 'put',
           delta,
           gamma,
