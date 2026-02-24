@@ -96,9 +96,10 @@ export default function CatalystImpactCard({ ticker, subtype, onViewDetails }: P
     return () => { cancelled = true; };
   }, [ticker, subtype]);
 
-  // Auto-poll when study is pending price data (background compute in progress)
+  // Auto-poll when study is pending price data OR empty (background recompute triggered)
   useEffect(() => {
-    if (!data?.pendingPriceData || pollCount >= MAX_POLLS) return;
+    const shouldPoll = data?.pendingPriceData || (data && !data.pendingPriceData && data.study.sampleN === 0 && data.cached);
+    if (!shouldPoll || pollCount >= MAX_POLLS) return;
 
     const timer = setTimeout(() => {
       fetch(`/api/catalyst/study?ticker=${encodeURIComponent(ticker)}&subtype=${subtype}&cohort=auto`)
@@ -139,6 +140,7 @@ export default function CatalystImpactCard({ ticker, subtype, onViewDetails }: P
   const day1 = study.horizons.day1;
   const primaryHorizons: StudyHorizon[] = ['close_to_open', 'open_to_close', 'day1', 'day2', 'day5'];
   const hasPriceData = !pendingPriceData && day1.sampleN > 0;
+  const isEmptyStudy = !pendingPriceData && study.sampleN === 0 && cached;
 
   return (
     <div className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2.5 space-y-2">
@@ -177,6 +179,16 @@ export default function CatalystImpactCard({ ticker, subtype, onViewDetails }: P
               <MiniStat label={HORIZON_LABELS[h]} value={study.horizons[h].median} />
             </button>
           ))}
+        </div>
+      ) : isEmptyStudy ? (
+        <div className="rounded-md border border-slate-500/20 bg-slate-500/5 p-2.5 text-center">
+          <p className="text-[10px] font-semibold text-slate-400">
+            No events found in lookback window
+          </p>
+          <p className="text-[9px] text-[var(--msp-text-faint)] mt-0.5">
+            No {SUBTYPE_LABELS[subtype] || subtype} events with sufficient data in the last {study.lookbackDays} days.
+            New filings will be picked up automatically.
+          </p>
         </div>
       ) : (
         <div className="rounded-md border border-amber-500/20 bg-amber-500/5 p-2.5 text-center">

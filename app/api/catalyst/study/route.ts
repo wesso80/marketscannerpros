@@ -137,8 +137,9 @@ export async function GET(req: NextRequest) {
     cacheAge = result.cacheAge;
     isPending = result.pendingPriceData;
 
-    // If pending, trigger background compute for this specific study
-    if (isPending) {
+    // Trigger background compute when pending OR when cached study is empty
+    // (empty cache = computed before events existed, needs refresh)
+    if (isPending || (result.cached && study.sampleN === 0)) {
       triggerBackgroundCompute(ticker, subtypeParam, cohort, lookbackDays);
     }
   } catch (err) {

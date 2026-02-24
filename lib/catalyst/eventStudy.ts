@@ -568,8 +568,14 @@ export async function getOrComputeStudy(
     if (cached && cached.length > 0) {
       const row = cached[0];
       const age = (Date.now() - new Date(row.computed_at).getTime()) / 1000;
-      if (age < STUDY_CACHE_TTL_HOURS * 3600 && !fullCompute) {
-        return { study: row.result_json as EventStudyResult, cached: true, cacheAge: age, pendingPriceData: false };
+      const study = row.result_json as EventStudyResult;
+
+      // Don't serve empty cached studies — they likely computed before events existed.
+      // Use a shorter TTL (30 min) so new events get picked up quickly.
+      const effectiveTtl = study.sampleN === 0 ? 1800 : STUDY_CACHE_TTL_HOURS * 3600;
+
+      if (age < effectiveTtl && !fullCompute) {
+        return { study, cached: true, cacheAge: age, pendingPriceData: false };
       }
     }
   } catch (err) {
