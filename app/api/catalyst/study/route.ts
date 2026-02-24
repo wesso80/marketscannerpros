@@ -16,10 +16,34 @@ import { getOrComputeStudy, computeDistribution } from '@/lib/catalyst/eventStud
 import { CatalystSubtype, type StudyCohort, type EventStudyResult } from '@/lib/catalyst/types';
 
 export const runtime = 'nodejs';
-export const maxDuration = 120; // 2 min — inline study may need AV price fetches
+export const maxDuration = 30; // Fast: returns cache or DB-only stub
 
 const AUTO_COHORT_THRESHOLD = 10;
-const BUILD_VERSION = '2026-02-24T08:00:00Z'; // Lets us verify which code is deployed
+const BUILD_VERSION = '2026-02-24T09:00:00Z'; // v2: fast-path + background compute
+
+/**
+ * Fire-and-forget: POST to the compute endpoint for a specific ticker+subtype.
+ * On Render (persistent Node.js process), this runs in the background
+ * after the response is returned. Errors are swallowed silently.
+ */
+function triggerBackgroundCompute(ticker: string, subtype: string, cohort: string, lookbackDays: number) {
+  const baseUrl = process.env.RENDER_EXTERNAL_URL || process.env.NEXT_PUBLIC_BASE_URL || '';
+  if (!baseUrl) return;
+
+  const url = `${baseUrl}/api/catalyst/study/compute?ticker=${encodeURIComponent(ticker)}&subtype=${encodeURIComponent(subtype)}&cohort=${cohort}&lookback=${lookbackDays}&limit=1`;
+  const cronSecret = process.env.CRON_SECRET || '';
+
+  // Fire-and-forget — don't await
+  fetch(url, {
+    method: 'POST',
+    headers: {
+      'x-cron-secret': cronSecret,
+      'x-trigger': 'inline-study',
+    },
+  }).catch(err => {
+    console.warn('[CatalystStudy] Background compute trigger failed:', err.message);
+  });
+}
 
 /** Return a minimal valid study result when computation fails */
 function pendingStudy(ticker: string, subtype: CatalystSubtype, cohort: StudyCohort, lookbackDays: number, reason: string): EventStudyResult {
@@ -92,7 +116,9 @@ export async function GET(req: NextRequest) {
     console.error('[CatalystStudy] Cohort detection failed, defaulting to MARKET:', (err as Error).message);
   }
 
-  // ── Compute or retrieve cached study (fail-safe) ──────────────
+  // ── Retrieve cached study or return fast DB-only stub ────────
+  // Full AV-backed compute now runs ONLY in the background cron.
+  // Inline requests return cached or pending results instantly.
   let study: EventStudyResult;
   let cached = false;
   let cacheAge: number | null = null;
@@ -105,11 +131,16 @@ export async function GET(req: NextRequest) {
       subtype: subtypeParam,
       lookbackDays,
       cohort,
-    }, true);  // fullCompute=true — compute with AV price data inline
+    }, false);  // fullCompute=false — instant: return cache or DB-only stub
     study = result.study;
     cached = result.cached;
     cacheAge = result.cacheAge;
     isPending = result.pendingPriceData;
+
+    // If pending, trigger background compute for this specific study
+    if (isPending) {
+      triggerBackgroundCompute(ticker, subtypeParam, cohort, lookbackDays);
+    }
   } catch (err) {
     console.error('[CatalystStudy] Computation failed, returning pending stub:', (err as Error).message, (err as Error).stack);
     study = pendingStudy(ticker, subtypeParam, cohort, lookbackDays, (err as Error).message);

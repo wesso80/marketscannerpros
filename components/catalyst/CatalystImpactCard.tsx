@@ -76,11 +76,16 @@ export default function CatalystImpactCard({ ticker, subtype, onViewDetails }: P
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedHorizon, setExpandedHorizon] = useState<StudyHorizon | null>(null);
+  const [pollCount, setPollCount] = useState(0);
+
+  const MAX_POLLS = 15;        // 15 × 20s = 5 minutes max
+  const POLL_INTERVAL = 20_000; // 20 seconds between polls
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
+    setPollCount(0);
 
     fetch(`/api/catalyst/study?ticker=${encodeURIComponent(ticker)}&subtype=${subtype}&cohort=auto`)
       .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json(); })
@@ -90,6 +95,25 @@ export default function CatalystImpactCard({ ticker, subtype, onViewDetails }: P
 
     return () => { cancelled = true; };
   }, [ticker, subtype]);
+
+  // Auto-poll when study is pending price data (background compute in progress)
+  useEffect(() => {
+    if (!data?.pendingPriceData || pollCount >= MAX_POLLS) return;
+
+    const timer = setTimeout(() => {
+      fetch(`/api/catalyst/study?ticker=${encodeURIComponent(ticker)}&subtype=${subtype}&cohort=auto`)
+        .then(r => r.ok ? r.json() : null)
+        .then((resp: CatalystStudyResponse | null) => {
+          if (resp) {
+            setData(resp);
+            setPollCount(prev => prev + 1);
+          }
+        })
+        .catch(() => { /* silent — will retry */ });
+    }, POLL_INTERVAL);
+
+    return () => clearTimeout(timer);
+  }, [data, pollCount, ticker, subtype]);
 
   if (loading) {
     return (
@@ -160,8 +184,12 @@ export default function CatalystImpactCard({ ticker, subtype, onViewDetails }: P
             ⏳ Price Return Analysis Computing
           </p>
           <p className="text-[9px] text-[var(--msp-text-faint)] mt-0.5">
-            {study.sampleN} event{study.sampleN !== 1 ? 's' : ''} detected · Historical return data is processed in the background
+            {study.sampleN} event{study.sampleN !== 1 ? 's' : ''} detected · Background analysis in progress
+            {pollCount > 0 && ` · Checking... (${pollCount}/${MAX_POLLS})`}
           </p>
+          <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-slate-700/50">
+            <div className="h-full rounded-full bg-amber-500/60 transition-all duration-1000 animate-pulse" style={{ width: `${Math.min(100, (pollCount / MAX_POLLS) * 100 + 10)}%` }} />
+          </div>
         </div>
       )}
 

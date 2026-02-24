@@ -28,9 +28,9 @@ export const runtime = 'nodejs';
 export const maxDuration = 300; // 5 minutes
 
 const AUTO_COHORT_THRESHOLD = 10;
-const DEFAULT_LIMIT = 5;
+const DEFAULT_LIMIT = 15;
 const MAX_LIMIT = 100;
-const DELAY_BETWEEN_STUDIES_MS = 2000; // 2s between studies for breathing room
+const DELAY_BETWEEN_STUDIES_MS = 1500; // 1.5s between studies (was 2s)
 
 function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -51,9 +51,42 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── Parse limit from query string ─────────────────────────────
+    // ── Parse params ──────────────────────────────────────────────
     const { searchParams } = new URL(req.url);
     const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || String(DEFAULT_LIMIT), 10) || DEFAULT_LIMIT, 1), MAX_LIMIT);
+
+    // ── Targeted compute: specific ticker+subtype (triggered by inline route) ──
+    const targetTicker = searchParams.get('ticker')?.toUpperCase().trim();
+    const targetSubtype = searchParams.get('subtype') as CatalystSubtype | null;
+    const targetCohort = searchParams.get('cohort') as StudyCohort | null;
+    const targetLookback = parseInt(searchParams.get('lookback') || '1825', 10);
+
+    if (targetTicker && targetSubtype) {
+      // Compute a single specific study — triggered by inline study route
+      const cohort: StudyCohort = targetCohort || 'MARKET';
+      console.log(`[CatalystCron] Targeted compute: ${targetTicker}/${targetSubtype} (${cohort})`);
+
+      const studyStart = Date.now();
+      const result = await getOrComputeStudy({
+        ticker: targetTicker,
+        subtype: targetSubtype,
+        lookbackDays: targetLookback,
+        cohort,
+      }, true);
+
+      const duration = Date.now() - studyStart;
+      return NextResponse.json({
+        message: `Targeted study computed in ${(duration / 1000).toFixed(1)}s`,
+        computed: 1,
+        results: [{
+          ticker: targetTicker,
+          subtype: targetSubtype,
+          cohort,
+          sampleN: result.study.sampleN,
+          durationMs: duration,
+        }],
+      });
+    }
 
     // ── Find top ticker+subtype combos needing computation ────────
     const lookbackDays = 1825; // 5 years default
@@ -75,7 +108,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Filter out combos that already have a fresh cached study
-    const staleThresholdMs = 6 * 3600 * 1000; // 6 hours
+    const staleThresholdMs = 24 * 3600 * 1000; // 24 hours — matches eventStudy.ts cache TTL
     const needsCompute: { ticker: string; subtype: CatalystSubtype; cohort: StudyCohort; count: number }[] = [];
 
     for (const row of combos) {

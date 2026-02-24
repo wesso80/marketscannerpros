@@ -1,0 +1,290 @@
+﻿   [1m[38;2;173;127;168mΓû▓ Next.js 16.0.10[39m[22m (Turbopack)
+   - Environments: .env.local
+
+ [37m[1m [22m[39m Creating an optimized production build ...
+ [32m[1mΓ£ô[22m[39m Compiled successfully in 6.1s
+ [37m[1m [22m[39m Running TypeScript ...
+ [37m[1m [22m[39m Collecting page data using 11 workers ...
+{"level":"info","message":"Environment variables validated successfully","timestamp":"2026-02-23T22:33:20.761Z","service":"msp-api","data":{"nodeEnv":"production","hasDatabase":true,"hasRedis":true,"hasAlphaVantage":true}}
+{"level":"info","message":"Environment variables validated successfully","timestamp":"2026-02-23T22:33:23.035Z","service":"msp-api","data":{"nodeEnv":"production","hasDatabase":true,"hasRedis":true,"hasAlphaVantage":true}}
+{"level":"info","message":"Environment variables validated successfully","timestamp":"2026-02-23T22:33:23.046Z","service":"msp-api","data":{"nodeEnv":"production","hasDatabase":true,"hasRedis":true,"hasAlphaVantage":true}}
+{"level":"info","message":"Environment variables validated successfully","timestamp":"2026-02-23T22:33:23.053Z","service":"msp-api","data":{"nodeEnv":"production","hasDatabase":true,"hasRedis":true,"hasAlphaVantage":true}}
+{"level":"info","message":"Environment variables validated successfully","timestamp":"2026-02-23T22:33:23.071Z","service":"msp-api","data":{"nodeEnv":"production","hasDatabase":true,"hasRedis":true,"hasAlphaVantage":true}}
+{"level":"info","message":"Environment variables validated successfully","timestamp":"2026-02-23T22:33:23.071Z","service":"msp-api","data":{"nodeEnv":"production","hasDatabase":true,"hasRedis":true,"hasAlphaVantage":true}}
+{"level":"info","message":"Environment variables validated successfully","timestamp":"2026-02-23T22:33:23.074Z","service":"msp-api","data":{"nodeEnv":"production","hasDatabase":true,"hasRedis":true,"hasAlphaVantage":true}}
+{"level":"info","message":"Environment variables validated successfully","timestamp":"2026-02-23T22:33:23.090Z","service":"msp-api","data":{"nodeEnv":"production","hasDatabase":true,"hasRedis":true,"hasAlphaVantage":true}}
+{"level":"info","message":"Environment variables validated successfully","timestamp":"2026-02-23T22:33:23.138Z","service":"msp-api","data":{"nodeEnv":"production","hasDatabase":true,"hasRedis":true,"hasAlphaVantage":true}}
+{"level":"info","message":"Environment variables validated successfully","timestamp":"2026-02-23T22:33:23.152Z","service":"msp-api","data":{"nodeEnv":"production","hasDatabase":true,"hasRedis":true,"hasAlphaVantage":true}}
+{"level":"info","message":"Environment variables validated successfully","timestamp":"2026-02-23T22:33:23.165Z","service":"msp-api","data":{"nodeEnv":"production","hasDatabase":true,"hasRedis":true,"hasAlphaVantage":true}}
+ [37m[1m [22m[39m Generating static pages using 11 workers (0/230) ...
+{"level":"info","message":"Environment variables validated successfully","timestamp":"2026-02-23T22:33:24.817Z","service":"msp-api","data":{"nodeEnv":"production","hasDatabase":true,"hasRedis":true,"hasAlphaVantage":true}}
+ [37m[1m [22m[39m Generating static pages using 11 workers (57/230) 
+{"level":"info","message":"Environment variables validated successfully","timestamp":"2026-02-23T22:33:24.865Z","service":"msp-api","data":{"nodeEnv":"production","hasDatabase":true,"hasRedis":true,"hasAlphaVantage":true}}
+ [37m[1m [22m[39m Generating static pages using 11 workers (114/230) 
+{"level":"info","message":"Environment variables validated successfully","timestamp":"2026-02-23T22:33:24.922Z","service":"msp-api","data":{"nodeEnv":"production","hasDatabase":true,"hasRedis":true,"hasAlphaVantage":true}}
+{"level":"info","message":"Environment variables validated successfully","timestamp":"2026-02-23T22:33:24.948Z","service":"msp-api","data":{"nodeEnv":"production","hasDatabase":true,"hasRedis":true,"hasAlphaVantage":true}}
+ [37m[1m [22m[39m Generating static pages using 11 workers (172/230) 
+ [32m[1mΓ£ô[22m[39m Generating static pages using 11 workers (230/230) in 1660.2ms
+ [37m[1m [22m[39m Finalizing page optimization ...
+
+[4mRoute (app)[24m
+Γöî Γùï /
+Γö£ Γùï /_not-found
+Γö£ Γùï /account
+Γö£ Γùï /admin
+Γö£ Γùï /admin/ai-usage
+Γö£ Γùï /admin/costs
+Γö£ Γùï /admin/delete-requests
+Γö£ Γùï /admin/income
+Γö£ Γùï /admin/reporting
+Γö£ Γùï /admin/subscriptions
+Γö£ Γùï /admin/trials
+Γö£ Γùï /after-checkout
+Γö£ ╞Æ /api/actions/execute
+Γö£ ╞Æ /api/adaptive/profile
+Γö£ ╞Æ /api/admin/ai-usage
+Γö£ ╞Æ /api/admin/check-db
+Γö£ ╞Æ /api/admin/costs
+Γö£ ╞Æ /api/admin/delete-requests
+Γö£ ╞Æ /api/admin/income
+Γö£ ╞Æ /api/admin/reporting
+Γö£ ╞Æ /api/admin/stats
+Γö£ ╞Æ /api/admin/subscriptions
+Γö£ ╞Æ /api/admin/trials
+Γö£ ╞Æ /api/admin/verify
+Γö£ ╞Æ /api/ai-market-focus
+Γö£ ╞Æ /api/ai-scanner/alert
+Γö£ ╞Æ /api/ai-scanner/alerts
+Γö£ ╞Æ /api/ai-scanner/status
+Γö£ ╞Æ /api/ai-scanner/test
+Γö£ ╞Æ /api/ai/accuracy
+Γö£ ╞Æ /api/ai/actions
+Γö£ ╞Æ /api/ai/context
+Γö£ ╞Æ /api/ai/copilot
+Γö£ ╞Æ /api/ai/events
+Γö£ ╞Æ /api/ai/explain
+Γö£ ╞Æ /api/ai/feedback
+Γö£ ╞Æ /api/ai/memory
+Γö£ ╞Æ /api/ai/suggest
+Γö£ ╞Æ /api/alerts
+Γö£ ╞Æ /api/alerts/acknowledge
+Γö£ ╞Æ /api/alerts/check
+Γö£ ╞Æ /api/alerts/create-from-focus
+Γö£ ╞Æ /api/alerts/debug
+Γö£ ╞Æ /api/alerts/history
+Γö£ ╞Æ /api/alerts/recent
+Γö£ ╞Æ /api/alerts/signal-check
+Γö£ ╞Æ /api/alerts/smart-check
+Γö£ ╞Æ /api/alerts/strategy-check
+Γö£ ╞Æ /api/alerts/unread
+Γö£ ╞Æ /api/analyst-ratings
+Γö£ ╞Æ /api/app-token
+Γö£ ╞Æ /api/auth/debug
+Γö£ ╞Æ /api/auth/delete-request
+Γö£ ╞Æ /api/auth/health
+Γö£ ╞Æ /api/auth/login
+Γö£ ╞Æ /api/auth/magic-link
+Γö£ ╞Æ /api/auth/magic-link/verify
+Γö£ ╞Æ /api/auth/session
+Γö£ ╞Æ /api/backtest
+Γö£ ╞Æ /api/backtest/brain
+Γö£ ╞Æ /api/backtest/options
+Γö£ ╞Æ /api/backtest/symbol-range
+Γö£ ╞Æ /api/backtest/time-scanner
+Γö£ ╞Æ /api/bars
+Γö£ ╞Æ /api/cached/bulk-quotes
+Γö£ ╞Æ /api/cached/indicators
+Γö£ ╞Æ /api/cached/quote
+Γö£ ╞Æ /api/cached/scanner
+Γö£ ╞Æ /api/cached/status
+Γö£ ╞Æ /api/cached/symbol
+Γö£ ╞Æ /api/cached/universe
+Γö£ ╞Æ /api/catalyst/events
+Γö£ ╞Æ /api/catalyst/ingest
+Γö£ ╞Æ /api/catalyst/study
+Γö£ ╞Æ /api/catalyst/study/compute
+Γö£ ╞Æ /api/command-hub/summary
+Γö£ ╞Æ /api/commodities
+Γö£ ╞Æ /api/company-overview
+Γö£ ╞Æ /api/confluence-scan
+Γö£ ╞Æ /api/context/heartbeat
+Γö£ ╞Æ /api/correlation-regime
+Γö£ ╞Æ /api/crypto/categories
+Γö£ ╞Æ /api/crypto/defi
+Γö£ ╞Æ /api/crypto/defi-stats
+Γö£ ╞Æ /api/crypto/detail
+Γö£ ╞Æ /api/crypto/dex-pools
+Γö£ ╞Æ /api/crypto/heatmap
+Γö£ ╞Æ /api/crypto/liquidations
+Γö£ ╞Æ /api/crypto/market-overview
+Γö£ ╞Æ /api/crypto/new-listings
+Γö£ ╞Æ /api/crypto/new-pools
+Γö£ ╞Æ /api/crypto/open-interest
+Γö£ ╞Æ /api/crypto/search
+Γö£ ╞Æ /api/crypto/top-movers
+Γö£ ╞Æ /api/crypto/trending
+Γö£ ╞Æ /api/crypto/trending-pools
+Γö£ ╞Æ /api/deep-analysis
+Γö£ ╞Æ /api/earnings
+Γö£ ╞Æ /api/earnings-calendar
+Γö£ ╞Æ /api/economic-calendar
+Γö£ ╞Æ /api/economic-indicators
+Γö£ ╞Æ /api/economics
+Γö£ ╞Æ /api/entitlements
+Γö£ ╞Æ /api/env-check
+Γö£ ╞Æ /api/equity/detail
+Γö£ ╞Æ /api/etf
+Γö£ ╞Æ /api/evolution
+Γö£ ╞Æ /api/fear-greed
+Γö£ ╞Æ /api/fear-greed-custom
+Γö£ ╞Æ /api/fear-greed/stocks
+Γö£ ╞Æ /api/flow
+Γö£ ╞Æ /api/fundamentals
+Γö£ ╞Æ /api/funding-rates
+Γö£ ╞Æ /api/health
+Γö£ ╞Æ /api/insider-transactions
+Γö£ ╞Æ /api/intraday
+Γö£ ╞Æ /api/jobs/generate-market-focus
+Γö£ ╞Æ /api/jobs/journal-auto-close
+Γö£ ╞Æ /api/jobs/learning-outcomes
+Γö£ ╞Æ /api/jobs/scan-daily
+Γö£ ╞Æ /api/jobs/scan-universe
+Γö£ ╞Æ /api/journal
+Γö£ ╞Æ /api/journal/add-trade
+Γö£ ╞Æ /api/journal/analyze
+Γö£ ╞Æ /api/journal/auto-log
+Γö£ ╞Æ /api/journal/close-trade
+Γö£ ╞Æ /api/journal/exit-verdict
+Γö£ ╞Æ /api/journal/trade/[id]/snapshot
+Γö£ ╞Æ /api/long-short-ratio
+Γö£ ╞Æ /api/market-focus/candidates
+Γö£ ╞Æ /api/market-focus/generate
+Γö£ ╞Æ /api/market-movers
+Γö£ ╞Æ /api/market-status
+Γö£ ╞Æ /api/me
+Γö£ ╞Æ /api/migrations/daily-picks
+Γö£ ╞Æ /api/migrations/market-focus
+Γö£ ╞Æ /api/msp-analyst
+Γö£ ╞Æ /api/news-sentiment
+Γö£ ╞Æ /api/notifications
+Γö£ ╞Æ /api/notifications/prefs
+Γö£ ╞Æ /api/open-interest
+Γö£ ╞Æ /api/operator/attention
+Γö£ ╞Æ /api/operator/focus/pin
+Γö£ ╞Æ /api/operator/focus/snooze
+Γö£ ╞Æ /api/operator/presence
+Γö£ ╞Æ /api/operator/proposals
+Γö£ ╞Æ /api/operator/risk-governor
+Γö£ ╞Æ /api/operator/state
+Γö£ ╞Æ /api/options
+Γö£ ╞Æ /api/options-scan
+Γö£ ╞Æ /api/options/expirations
+Γö£ ╞Æ /api/options/gex
+Γö£ ╞Æ /api/payments/checkout
+Γö£ ╞Æ /api/payments/portal
+Γö£ ╞Æ /api/plans/draft-from-focus
+Γö£ ╞Æ /api/portfolio
+Γö£ ╞Æ /api/portfolio/analyze
+Γö£ ╞Æ /api/push/send
+Γö£ ╞Æ /api/push/subscribe
+Γö£ ╞Æ /api/push/test
+Γö£ ╞Æ /api/quote
+Γö£ ╞Æ /api/referral
+Γö£ ╞Æ /api/regime
+Γö£ ╞Æ /api/risk/governor/evaluate
+Γö£ ╞Æ /api/risk/governor/permission-snapshot
+Γö£ ╞Æ /api/risk/governor/preferences
+Γö£ ╞Æ /api/scanner/bulk
+Γö£ ╞Æ /api/scanner/daily-picks
+Γö£ ╞Æ /api/scanner/quotes
+Γö£ ╞Æ /api/scanner/run
+Γö£ ╞Æ /api/sectors/heatmap
+Γö£ ╞Æ /api/signals/label-outcomes
+Γö£ ╞Æ /api/sse/stream
+Γö£ ╞Æ /api/state-machine
+Γö£ ╞Æ /api/subscription/update
+Γö£ ╞Æ /api/test-email
+Γö£ ╞Æ /api/trades/close
+Γö£ ╞Æ /api/upe/crcs/latest
+Γö£ ╞Æ /api/upe/crcs/symbol
+Γö£ ╞Æ /api/upe/snapshot/global
+Γö£ ╞Æ /api/watchlists
+Γö£ ╞Æ /api/watchlists/items
+Γö£ ╞Æ /api/webhooks/stripe
+Γö£ ╞Æ /api/workflow/decision-packet
+Γö£ ╞Æ /api/workflow/events
+Γö£ ╞Æ /api/workflow/feedback
+Γö£ ╞Æ /api/workflow/tasks
+Γö£ ╞Æ /api/workflow/today
+Γö£ Γùï /auth
+Γö£ Γùï /auth/verify
+Γö£ Γùï /blog
+Γö£ ΓùÅ /blog/[slug]
+Γöé Γö£ /blog/what-is-short-squeeze
+Γöé Γö£ /blog/best-free-crypto-screeners-2025
+Γöé Γöö /blog/multi-timeframe-confluence-trading
+Γö£ Γùï /contact
+Γö£ Γùï /cookie-policy
+Γö£ ╞Æ /dashboard
+Γö£ Γùï /disclaimer
+Γö£ Γùï /guide
+Γö£ Γùï /guide/open-interest
+Γö£ Γùï /icon.svg
+Γö£ ╞Æ /launch
+Γö£ Γùï /legal/cookie-policy
+Γö£ Γùï /legal/privacy
+Γö£ Γùï /legal/refund-policy
+Γö£ Γùï /legal/terms
+Γö£ Γùï /operator
+Γö£ Γùï /partners
+Γö£ Γùï /pricing
+Γö£ Γùï /privacy
+Γö£ Γùï /refund-policy
+Γö£ Γùï /resources
+Γö£ ╞Æ /resources/platform-guide
+Γö£ Γùï /resources/trading-guides
+Γö£ Γùï /reviews
+Γö£ Γùï /robots.txt
+Γö£ Γùï /sitemap.xml
+Γö£ Γùï /terms
+Γö£ Γùï /tools
+Γö£ Γùï /tools/ai-analyst
+Γö£ Γùï /tools/ai-tools
+Γö£ Γùï /tools/alerts
+Γö£ Γùï /tools/backtest
+Γö£ Γùï /tools/commodities
+Γö£ Γùï /tools/company-overview
+Γö£ Γùï /tools/confluence-scanner
+Γö£ Γùï /tools/crypto
+Γö£ Γùï /tools/crypto-dashboard
+Γö£ Γùï /tools/crypto-explorer
+Γö£ Γùï /tools/crypto-heatmap
+Γö£ Γùï /tools/deep-analysis
+Γö£ Γùï /tools/earnings
+Γö£ Γùï /tools/earnings-calendar
+Γö£ Γùï /tools/economic-calendar
+Γö£ Γùï /tools/equity-explorer
+Γö£ Γùï /tools/gainers-losers
+Γö£ Γùï /tools/golden-egg
+Γö£ Γùï /tools/heatmap
+Γö£ Γùï /tools/intraday-charts
+Γö£ Γùï /tools/journal
+Γö£ Γùï /tools/macro
+Γö£ Γùï /tools/market-movers
+Γö£ Γùï /tools/markets
+Γö£ Γùï /tools/news
+Γö£ Γùï /tools/options
+Γö£ Γùï /tools/options-confluence
+Γö£ Γùï /tools/portfolio
+Γö£ Γùï /tools/scanner
+Γö£ Γùï /tools/settings
+Γö£ Γùï /tools/time
+Γöö Γùï /tools/watchlists
+
+
+╞Æ Proxy (Middleware)
+
+Γùï  (Static)   prerendered as static content
+ΓùÅ  (SSG)      prerendered as static HTML (uses [36mgenerateStaticParams[39m)
+╞Æ  (Dynamic)  server-rendered on demand
+
