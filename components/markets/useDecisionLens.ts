@@ -67,19 +67,19 @@ export function useDecisionLens(ctx: TickerContext): DecisionLensData | null {
     // ── R Budget ──
     const remainR = snapshot?.session?.remaining_daily_R ?? 0;
     const maxR = snapshot?.session?.max_daily_R ?? 6;
-    const ruBudget = `${(remainR ?? 0).toFixed(1)}R / ${maxR}R`;
+    const ruBudget = `${Number(remainR ?? 0).toFixed(1)}R / ${maxR}R`;
 
     // ── Scenarios ──
     let bullScenario: string;
     let bearScenario: string;
     if (scan) {
-      const targetStr = Number.isFinite(scan.target) ? `$${scan.target.toFixed(2)}` : '—';
-      const stopStr = Number.isFinite(scan.stop) ? `$${scan.stop.toFixed(2)}` : '—';
+      const targetStr = Number.isFinite(Number(scan.target)) ? `$${Number(scan.target).toFixed(2)}` : '—';
+      const stopStr = Number.isFinite(Number(scan.stop)) ? `$${Number(scan.stop).toFixed(2)}` : '—';
       bullScenario = `${scan.direction === 'LONG' ? 'Long' : 'Short'} ${scan.setup || 'setup'} \u2192 target ${targetStr}`;
       bearScenario = `Stop breach at ${stopStr} invalidates thesis`;
     } else if (quote) {
       const chgDir = (quote.changePercent ?? 0) >= 0 ? 'bullish' : 'bearish';
-      bullScenario = flow?.most_likely_path?.[0] ?? `Price ${chgDir} at $${quote.price.toFixed(2)} — awaiting scan`;
+      bullScenario = flow?.most_likely_path?.[0] ?? `Price ${chgDir} at $${Number(quote.price).toFixed(2)} — awaiting scan`;
       bearScenario = flow?.risk?.[0] ?? `Monitor for reversal — no stop computed yet`;
     } else {
       bullScenario = flow?.most_likely_path?.[0] ?? 'Loading market data...';
@@ -115,9 +115,9 @@ export function useDecisionLens(ctx: TickerContext): DecisionLensData | null {
 
     // ── Expected Move ──
     const expectedMove = opts?.expectedMove
-      ? `±${(opts.expectedMove ?? 0).toFixed(1)}%`
+      ? `±${Number(opts.expectedMove ?? 0).toFixed(1)}%`
       : ctx.quote
-        ? `±${(Math.abs(ctx.quote.changePercent ?? 0) * 1.5).toFixed(1)}%`
+        ? `±${(Math.abs(Number(ctx.quote.changePercent ?? 0)) * 1.5).toFixed(1)}%`
         : '—';
 
     // ── Verdict ──

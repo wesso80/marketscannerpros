@@ -985,7 +985,7 @@ export default function OperatorDashboardPage() {
   const focusSignal = opportunities[0] || null;
 
   const totalExposure = useMemo(() => {
-    return positions.reduce((sum, pos) => sum + Math.abs(pos.quantity * pos.currentPrice), 0);
+    return positions.reduce((sum, pos) => sum + Math.abs(Number(pos.quantity) * Number(pos.currentPrice)), 0);
   }, [positions]);
 
   const portfolioValue = useMemo(() => {
@@ -1039,8 +1039,8 @@ export default function OperatorDashboardPage() {
   const bias = focusSignal?.direction || 'neutral';
   const quality = !focusSignal ? 'Awaiting' : edgeScore >= 74 ? 'High' : edgeScore >= 60 ? 'Medium' : 'Low';
 
-  const currentPrice = focusSignal?.price || 0;
-  const atr = currentPrice > 0 ? (focusSignal?.indicators?.atr || (currentPrice * 0.02)) : 0;
+  const currentPrice = Number(focusSignal?.price) || 0;
+  const atr = currentPrice > 0 ? (Number(focusSignal?.indicators?.atr) || (currentPrice * 0.02)) : 0;
 
   const bullish = bias === 'bullish';
   const entryLow = bullish ? currentPrice - atr * 0.4 : currentPrice;
@@ -1261,20 +1261,20 @@ export default function OperatorDashboardPage() {
       drivers: [
         { category: 'trend', name: 'edge_score', value: edgeScore, weight: 0.42, note: 'Operator edge' },
         { category: 'sentiment', name: 'adaptive_confidence', value: adaptiveScore, weight: 0.22, note: 'AI confidence' },
-        { category: 'volatility', name: 'atr_ratio', value: Number(atrRatio.toFixed(2)), weight: 0.12, note: 'Risk expansion proxy' },
+        { category: 'volatility', name: 'atr_ratio', value: Number(Number(atrRatio).toFixed(2)), weight: 0.12, note: 'Risk expansion proxy' },
         { category: 'risk', name: 'drawdown_state', value: drawdownState, weight: 0.1, note: 'Portfolio stress state' },
       ],
       levels: {
-        trigger: Number(entryHigh.toFixed(2)),
-        key_support: Number(stop.toFixed(2)),
-        key_resistance: Number(targetOne.toFixed(2)),
+        trigger: Number(Number(entryHigh).toFixed(2)),
+        key_support: Number(Number(stop).toFixed(2)),
+        key_resistance: Number(Number(targetOne).toFixed(2)),
       },
       evidence: {
         inputs: {
           stage: currentStage,
-          adx: Number(regimeADX.toFixed(2)),
-          rsi: Number(rsi.toFixed(2)),
-          exposure_pct: Number(exposurePct.toFixed(2)),
+          adx: Number(Number(regimeADX).toFixed(2)),
+          rsi: Number(Number(rsi).toFixed(2)),
+          exposure_pct: Number(Number(exposurePct).toFixed(2)),
         },
       },
       operator_context_ref: {
@@ -1311,20 +1311,20 @@ export default function OperatorDashboardPage() {
     const operatorContext: OperatorContext = {
       as_of: new Date().toISOString(),
       market_session: 'US_CLOSED',
-      mood: { label: bias, score: Number((operatorScore / 100).toFixed(2)) },
+      mood: { label: bias, score: Number((Number(operatorScore) / 100).toFixed(2)) },
       regime: {
-        volatility: { label: volatilityLayer.label.toLowerCase(), score: Number((atrRatio / 5).toFixed(2)) },
-        trend: { label: regimeLayer.label.toLowerCase(), score: Number((regimeADX / 40).toFixed(2)) },
-        liquidity: { label: liquidityLayer.label.toLowerCase(), score: Number((Math.max(1, 100 - exposurePct) / 100).toFixed(2)) },
+        volatility: { label: volatilityLayer.label.toLowerCase(), score: Number((Number(atrRatio) / 5).toFixed(2)) },
+        trend: { label: regimeLayer.label.toLowerCase(), score: Number((Number(regimeADX) / 40).toFixed(2)) },
+        liquidity: { label: liquidityLayer.label.toLowerCase(), score: Number((Math.max(1, 100 - Number(exposurePct)) / 100).toFixed(2)) },
       },
       derivatives: {
-        crypto_bias: { label: bias, score: Number((operatorScore / 100).toFixed(2)) },
+        crypto_bias: { label: bias, score: Number((Number(operatorScore) / 100).toFixed(2)) },
       },
       risk_dna: {
         profile: riskDNA,
         per_trade_risk_pct: 0.25,
       },
-      adaptive_confidence: Number((adaptiveScore / 100).toFixed(2)),
+      adaptive_confidence: Number((Number(adaptiveScore) / 100).toFixed(2)),
       notes: modeActionable.actionableNow,
     };
 
@@ -1823,7 +1823,7 @@ export default function OperatorDashboardPage() {
               <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-5">
                 <div className="rounded-lg border border-[var(--msp-border-strong)] bg-[var(--msp-panel-2)] px-3 py-2.5">
                   <div className="text-[0.64rem] font-bold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">R Budget</div>
-                  <div className="mt-1 text-[1.05rem] font-black text-[var(--msp-text)]">{permissionSnapshot ? `${(permissionSnapshot.session.remaining_daily_R ?? 0).toFixed(1)}R` : '—'}<span className="ml-1 text-[0.7rem] font-semibold text-[var(--msp-text-faint)]">/ {permissionSnapshot ? `${permissionSnapshot.session.max_daily_R ?? 0}R` : '—'}</span></div>
+                  <div className="mt-1 text-[1.05rem] font-black text-[var(--msp-text)]">{permissionSnapshot ? `${Number(permissionSnapshot.session.remaining_daily_R ?? 0).toFixed(1)}R` : '—'}<span className="ml-1 text-[0.7rem] font-semibold text-[var(--msp-text-faint)]">/ {permissionSnapshot ? `${Number(permissionSnapshot.session.max_daily_R ?? 0)}R` : '—'}</span></div>
                 </div>
                 <div className="rounded-lg border border-[var(--msp-border-strong)] bg-[var(--msp-panel-2)] px-3 py-2.5">
                   <div className="text-[0.64rem] font-bold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Regime</div>
@@ -1835,7 +1835,7 @@ export default function OperatorDashboardPage() {
                 </div>
                 <div className="rounded-lg border border-[var(--msp-border-strong)] bg-[var(--msp-panel-2)] px-3 py-2.5">
                   <div className="text-[0.64rem] font-bold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Exposure</div>
-                  <div className="mt-1 text-[1.05rem] font-black text-[var(--msp-text)]">{portfolioValue > 0 ? `${((totalExposure / portfolioValue) * 100).toFixed(0)}%` : '0%'}</div>
+                  <div className="mt-1 text-[1.05rem] font-black text-[var(--msp-text)]">{portfolioValue > 0 ? `${((Number(totalExposure) / Number(portfolioValue)) * 100).toFixed(0)}%` : '0%'}</div>
                 </div>
                 <div className="rounded-lg border border-[var(--msp-border-strong)] bg-[var(--msp-panel-2)] px-3 py-2.5">
                   <div className="text-[0.64rem] font-bold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Risk State</div>

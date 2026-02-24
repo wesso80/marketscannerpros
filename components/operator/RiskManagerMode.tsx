@@ -111,13 +111,13 @@ export default function RiskManagerMode({ onExit }: { onExit?: () => void } = {}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="rounded-md border border-slate-700 bg-slate-950/40 px-3 py-2">
                 <div className="text-[9px] uppercase text-slate-500">Open Risk</div>
-                <div className="mt-1 text-lg font-black text-slate-100">{snapshot.session.open_risk_R.toFixed(1)}R</div>
+                <div className="mt-1 text-lg font-black text-slate-100">{Number(snapshot.session.open_risk_R).toFixed(1)}R</div>
                 <div className="text-[10px] text-slate-500">Max: {snapshot.session.max_open_risk_R}R</div>
               </div>
               <div className="rounded-md border border-slate-700 bg-slate-950/40 px-3 py-2">
                 <div className="text-[9px] uppercase text-slate-500">Remaining Daily R</div>
                 <div className={`mt-1 text-lg font-black ${snapshot.session.remaining_daily_R <= 0.5 ? 'text-red-400' : 'text-slate-100'}`}>
-                  {snapshot.session.remaining_daily_R.toFixed(1)}R
+                  {Number(snapshot.session.remaining_daily_R).toFixed(1)}R
                 </div>
                 <div className="text-[10px] text-slate-500">Budget: {snapshot.session.max_daily_R}R</div>
               </div>

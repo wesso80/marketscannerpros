@@ -260,7 +260,7 @@ export default function OperatorProposalRail({
                     #{proposal.rank} · {(proposal.symbol || symbolFallback || '—').toUpperCase()} · {proposal.action.type.replaceAll('_', ' ')}
                   </div>
                   <div className="text-indigo-200/80">
-                    score {(proposal.score * 100).toFixed(1)} · conf {(proposal.confidence * 100).toFixed(1)}%
+                    score {(Number(proposal.score) * 100).toFixed(1)} · conf {(Number(proposal.confidence) * 100).toFixed(1)}%
                   </div>
                 </div>
 

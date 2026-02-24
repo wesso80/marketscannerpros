@@ -144,10 +144,10 @@ export default function SessionStartBriefing({ children }: { children: React.Rea
             {snapshot ? (
               <>
                 <div className={`mt-1 text-sm font-black ${snapshot.session.remaining_daily_R <= 0.5 ? 'text-red-400' : 'text-slate-100'}`}>
-                  {snapshot.session.remaining_daily_R.toFixed(1)}R / {snapshot.session.max_daily_R}R
+                  {Number(snapshot.session.remaining_daily_R).toFixed(1)}R / {snapshot.session.max_daily_R}R
                 </div>
                 <div className="mt-1 text-[10px] text-slate-400">
-                  Open Risk: {snapshot.session.open_risk_R.toFixed(1)}R • Losses: {snapshot.session.consecutive_losses}
+                  Open Risk: {Number(snapshot.session.open_risk_R).toFixed(1)}R • Losses: {snapshot.session.consecutive_losses}
                 </div>
               </>
             ) : (

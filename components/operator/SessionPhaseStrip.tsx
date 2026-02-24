@@ -89,7 +89,7 @@ export default function SessionPhaseStrip({ assetClass = 'equity' }: { assetClas
       <span className="font-extrabold uppercase tracking-wider">{phase.label}</span>
       <span className="text-[10px] opacity-70">|</span>
       <span className="text-[10px]">
-        Breakout ×{phase.breakoutMultiplier.toFixed(2)} • MeanRev ×{phase.meanRevMultiplier.toFixed(2)}
+        Breakout ×{Number(phase.breakoutMultiplier).toFixed(2)} • MeanRev ×{Number(phase.meanRevMultiplier).toFixed(2)}
       </span>
       {phase.favorable.length > 0 && (
         <>
