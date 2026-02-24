@@ -34,10 +34,17 @@ export function useUserTier(): TierInfo {
 
         if (res.ok) {
           const data = await res.json();
-          setTier(data.tier || "free");
-          setIsLoggedIn(true);
-          setIsAdmin(data.isAdmin || false);
-          setEmail(data.email || null);
+          if (data.authenticated) {
+            setTier(data.tier || "free");
+            setIsLoggedIn(true);
+            setIsAdmin(data.isAdmin || false);
+            setEmail(data.email || null);
+          } else {
+            setTier("anonymous");
+            setIsLoggedIn(false);
+            setIsAdmin(false);
+            setEmail(null);
+          }
         } else {
           setTier("anonymous");
           setIsLoggedIn(false);
