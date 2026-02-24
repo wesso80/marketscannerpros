@@ -6,6 +6,7 @@
 
 import OpenAI from 'openai';
 import { getOHLC, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
+import { avTakeToken } from '@/lib/avRateGovernor';
 
 // Types
 interface OHLCV {
@@ -130,9 +131,10 @@ export class AIConfluenceAgent {
     }
 
     let url: string;
-    // Stock endpoint (15-minute delayed data)
-    url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=${interval}&outputsize=${outputSize}&entitlement=delayed&apikey=${ALPHA_VANTAGE_KEY}`;
+    // Stock endpoint (realtime data)
+    url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=${interval}&outputsize=${outputSize}&entitlement=realtime&apikey=${ALPHA_VANTAGE_KEY}`;
 
+    await avTakeToken();
     const response = await fetch(url);
     const data = await response.json();
 
@@ -169,9 +171,10 @@ export class AIConfluenceAgent {
     }
 
     let url: string;
-    // Use delayed entitlement for stock data (15-minute delayed)
-    url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=full&entitlement=delayed&apikey=${ALPHA_VANTAGE_KEY}`;
+    // Use delayed entitlement for stock data (realtime)
+    url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${symbol}&outputsize=full&entitlement=realtime&apikey=${ALPHA_VANTAGE_KEY}`;
 
+    await avTakeToken();
     const response = await fetch(url);
     const data = await response.json();
 

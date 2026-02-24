@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { avTakeToken } from '@/lib/avRateGovernor';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY;
 const BASE_URL = 'https://www.alphavantage.co/query';
@@ -103,11 +104,12 @@ export async function GET(request: NextRequest) {
   const session = await getSessionFromCookie();
 
   try {
-    // Fetch all data in parallel
+    // Fetch all data in parallel — reserve 6 tokens first
+    for (let i = 0; i < 6; i++) await avTakeToken();
     const [overviewRes, quoteRes, dailyRes, incomeRes, earningsRes, newsRes] = await Promise.all([
       fetch(`${BASE_URL}?function=OVERVIEW&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`),
-      fetch(`${BASE_URL}?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`),
-      fetch(`${BASE_URL}?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=compact&apikey=${ALPHA_VANTAGE_API_KEY}`),
+      fetch(`${BASE_URL}?function=GLOBAL_QUOTE&symbol=${symbol}&entitlement=realtime&apikey=${ALPHA_VANTAGE_API_KEY}`),
+      fetch(`${BASE_URL}?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${symbol}&outputsize=compact&entitlement=realtime&apikey=${ALPHA_VANTAGE_API_KEY}`),
       fetch(`${BASE_URL}?function=INCOME_STATEMENT&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`),
       fetch(`${BASE_URL}?function=EARNINGS&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`),
       fetch(`${BASE_URL}?function=NEWS_SENTIMENT&tickers=${symbol}&limit=10&apikey=${ALPHA_VANTAGE_API_KEY}`),

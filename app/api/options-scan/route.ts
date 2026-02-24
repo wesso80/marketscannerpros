@@ -17,7 +17,7 @@ const AV_OPTIONS_REALTIME_ENABLED = (process.env.AV_OPTIONS_REALTIME_ENABLED ?? 
 
 async function fetchRawOptionsRows(symbol: string, expirationDate?: string): Promise<{
   rows: AVOptionRow[];
-  provider: 'REALTIME_OPTIONS' | 'HISTORICAL_OPTIONS' | 'none';
+  provider: 'REALTIME_OPTIONS_FMV' | 'HISTORICAL_OPTIONS' | 'none';
   warnings: string[];
 }> {
   if (!ALPHA_VANTAGE_KEY) {
@@ -37,9 +37,9 @@ async function fetchRawOptionsRows(symbol: string, expirationDate?: string): Pro
     }
   }
 
-  // REALTIME_OPTIONS (FMV) is primary with 600 RPM plan
+  // REALTIME_OPTIONS_FMV (FMV) is primary with 600 RPM plan
   const providers = AV_OPTIONS_REALTIME_ENABLED
-    ? ['REALTIME_OPTIONS', 'HISTORICAL_OPTIONS']
+    ? ['REALTIME_OPTIONS_FMV', 'HISTORICAL_OPTIONS']
     : ['HISTORICAL_OPTIONS'];
 
   const warnings: string[] = [];
@@ -72,7 +72,7 @@ async function fetchRawOptionsRows(symbol: string, expirationDate?: string): Pro
 
     return {
       rows,
-      provider: fn as 'REALTIME_OPTIONS' | 'HISTORICAL_OPTIONS',
+      provider: fn as 'REALTIME_OPTIONS_FMV' | 'HISTORICAL_OPTIONS',
       warnings,
     };
   }

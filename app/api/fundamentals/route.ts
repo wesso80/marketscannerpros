@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { avTakeToken } from '@/lib/avRateGovernor';
 
 // Cache per symbol for 1 hour (fundamentals don't change frequently)
 const cache = new Map<string, { data: any; timestamp: number }>();
@@ -44,6 +45,7 @@ export async function GET(req: NextRequest) {
       default: functionName = 'OVERVIEW';
     }
     
+    await avTakeToken();
     const response = await fetch(
       `https://www.alphavantage.co/query?function=${functionName}&symbol=${symbol}&apikey=${apiKey}`
     );

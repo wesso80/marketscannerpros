@@ -283,7 +283,7 @@ async function getStockQuoteFull(symbol: string, options?: { strict?: boolean })
   // Fallback to direct AV call (if allowed) — rate governed
   if (allowAVFallback && ALPHA_VANTAGE_API_KEY) {
     try {
-      const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
+      const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&entitlement=realtime&apikey=${ALPHA_VANTAGE_API_KEY}`;
       const data = await avFetch(url, `QUOTE ${symbol}`);
 
       const gq = data?.["Global Quote"] || data?.["Global Quote - DATA DELAYED BY 15 MINUTES"];

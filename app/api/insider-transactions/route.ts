@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromCookie } from '@/lib/auth';
+import { avTakeToken } from '@/lib/avRateGovernor';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -26,6 +27,7 @@ export async function GET(request: NextRequest) {
     url.searchParams.append("symbol", symbol.toUpperCase());
     url.searchParams.append("apikey", ALPHA_VANTAGE_API_KEY);
 
+    await avTakeToken();
     const response = await fetch(url.toString(), {
       headers: {
         "User-Agent": "MarketScannerPros/1.0",

@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { avTakeToken } from '@/lib/avRateGovernor';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 const AV_OPTIONS_REALTIME_ENABLED = (process.env.AV_OPTIONS_REALTIME_ENABLED ?? 'true').toLowerCase() !== 'false';
@@ -39,19 +40,20 @@ export async function GET(request: NextRequest) {
     
     const providers = AV_OPTIONS_REALTIME_ENABLED
       ? [
-          { fn: 'REALTIME_OPTIONS', requireGreeks: false },
+          { fn: 'REALTIME_OPTIONS_FMV', requireGreeks: false },
           { fn: 'HISTORICAL_OPTIONS', requireGreeks: false },
         ]
       : [{ fn: 'HISTORICAL_OPTIONS', requireGreeks: false }];
 
     let data: any = null;
     let options: any[] = [];
-    let sourceFunction: 'REALTIME_OPTIONS' | 'HISTORICAL_OPTIONS' | null = null;
+    let sourceFunction: 'REALTIME_OPTIONS_FMV' | 'HISTORICAL_OPTIONS' | null = null;
 
     for (const provider of providers) {
       const requireGreeks = provider.requireGreeks ? '&require_greeks=true' : '';
       const url = `https://www.alphavantage.co/query?function=${provider.fn}&symbol=${normalizedSymbol}${requireGreeks}&apikey=${ALPHA_VANTAGE_KEY}`;
 
+      await avTakeToken();
       const response = await fetch(url);
       const payload = await response.json();
 
@@ -77,7 +79,7 @@ export async function GET(request: NextRequest) {
 
       data = payload;
       options = providerOptions;
-      sourceFunction = provider.fn as 'REALTIME_OPTIONS' | 'HISTORICAL_OPTIONS';
+      sourceFunction = provider.fn as 'REALTIME_OPTIONS_FMV' | 'HISTORICAL_OPTIONS';
       break;
     }
 

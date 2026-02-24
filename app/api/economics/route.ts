@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { avTakeToken } from '@/lib/avRateGovernor';
 
 
 // Map economic indicator keys to Alpha Vantage function names and params
@@ -35,6 +36,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    await avTakeToken();
     const res = await fetch(`${BASE_URL}?${params.toString()}`);
     const data = await res.json();
     let value = null;

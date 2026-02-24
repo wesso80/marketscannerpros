@@ -10,6 +10,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { q } from "@/lib/db";
+import { avTakeToken } from "@/lib/avRateGovernor";
 
 export const runtime = "nodejs";
 export const maxDuration = 300; // 5 minutes max
@@ -59,6 +60,7 @@ async function sleep(ms: number) {
 async function fetchWithRetry(url: string, retries = 2): Promise<any> {
   for (let i = 0; i <= retries; i++) {
     try {
+      await avTakeToken();
       const res = await fetch(url);
       const data = await res.json();
       if (data.Note || data.Information) {
@@ -185,7 +187,7 @@ async function scanEquity(symbol: string, apiKey: string): Promise<any | null> {
     const baseUrl = "https://www.alphavantage.co/query";
     
     // Fetch daily prices
-    const priceUrl = `${baseUrl}?function=TIME_SERIES_DAILY&symbol=${symbol}&apikey=${apiKey}`;
+    const priceUrl = `${baseUrl}?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${symbol}&entitlement=realtime&apikey=${apiKey}`;
     const priceData = await fetchWithRetry(priceUrl);
     await sleep(RATE_LIMIT_DELAY);
     

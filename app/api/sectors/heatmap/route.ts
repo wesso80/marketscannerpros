@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { avTakeToken } from '@/lib/avRateGovernor';
 
 // Sector ETF mappings
 const SECTOR_ETFS = [
@@ -58,6 +59,7 @@ export async function GET(req: NextRequest) {
     
     // Try Alpha Vantage sector performance endpoint first
     try {
+      await avTakeToken();
       const res = await fetch(
         `https://www.alphavantage.co/query?function=SECTOR&apikey=${apiKey}`
       );
@@ -128,8 +130,9 @@ export async function GET(req: NextRequest) {
     console.log('Using ETF quotes fallback...');
     const sectorPromises = SECTOR_ETFS.map(async (etf) => {
       try {
+        await avTakeToken();
         const res = await fetch(
-          `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${etf.symbol}&entitlement=delayed&apikey=${apiKey}`
+          `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${etf.symbol}&entitlement=realtime&apikey=${apiKey}`
         );
         const data = await res.json();
         

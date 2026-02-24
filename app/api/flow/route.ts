@@ -69,7 +69,7 @@ async function fetchLiquidityLevels(symbol: string): Promise<{ levels: Array<{ l
     // Try cached daily bars first (written by worker) to avoid 1 AV call
     const cachedDaily = await getCachedDailyBars(symbol);
 
-    const intradayUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(symbol)}&interval=60min&outputsize=compact&entitlement=delayed&apikey=${ALPHA_VANTAGE_KEY}`;
+    const intradayUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(symbol)}&interval=60min&outputsize=compact&entitlement=realtime&apikey=${ALPHA_VANTAGE_KEY}`;
 
     // Rate-governed intraday fetch (still needed for VWAP / overnight levels)
     const intradayData = await avFetch(intradayUrl, `INTRADAY ${symbol}`);
@@ -85,7 +85,7 @@ async function fetchLiquidityLevels(symbol: string): Promise<{ levels: Array<{ l
       dailyData = { 'Time Series (Daily)': ts };
       console.log(`[flow] ${symbol} daily bars served from cache — saved 1 AV call`);
     } else {
-      const dailyUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${encodeURIComponent(symbol)}&outputsize=compact&entitlement=delayed&apikey=${ALPHA_VANTAGE_KEY}`;
+      const dailyUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${encodeURIComponent(symbol)}&outputsize=compact&entitlement=realtime&apikey=${ALPHA_VANTAGE_KEY}`;
       dailyData = await avFetch(dailyUrl, `DAILY ${symbol}`);
     }
 

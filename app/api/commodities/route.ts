@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { avTakeToken } from '@/lib/avRateGovernor';
 
 // Alpha Vantage commodity endpoints
 // https://www.alphavantage.co/documentation/#commodities
@@ -57,8 +58,7 @@ async function fetchCommodity(symbol: keyof typeof COMMODITIES): Promise<Commodi
     
     console.log(`[Commodities] Fetching ${symbol}...`);
     
-    const res = await fetch(url, { 
-      next: { revalidate: 900 } // 15 min cache
+    await avTakeToken();
     });
     
     if (!res.ok) {

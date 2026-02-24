@@ -3,6 +3,7 @@ import { q } from '@/lib/db';
 import { sendAlertEmail } from '@/lib/email';
 import { sendPushToUser, PushTemplates } from '@/lib/pushServer';
 import { getPriceBySymbol } from '@/lib/coingecko';
+import { avTakeToken } from '@/lib/avRateGovernor';
 
 /**
  * Alert Price Checker
@@ -144,8 +145,9 @@ async function fetchPrice(symbol: string, assetType: string): Promise<number | n
       const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
       if (!apiKey) return null;
       
+      await avTakeToken();
       const res = await fetch(
-        `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&entitlement=delayed&apikey=${apiKey}`
+        `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&entitlement=realtime&apikey=${apiKey}`
       );
       if (!res.ok) return null;
       const data = await res.json();

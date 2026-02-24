@@ -85,7 +85,7 @@ async function fetchQuoteFromAV(symbol: string): Promise<QuoteData | null> {
 
   console.log(`[onDemand] Fetching quote for ${symbol}...`);
   
-  const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(symbol)}&entitlement=delayed&apikey=${apiKey}`;
+  const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(symbol)}&entitlement=realtime&apikey=${apiKey}`;
   
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
@@ -136,7 +136,7 @@ async function fetchBarsAndIndicatorsFromAV(symbol: string): Promise<{
 
   console.log(`[onDemand] Fetching bars for ${symbol}...`);
 
-  const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${encodeURIComponent(symbol)}&outputsize=compact&entitlement=delayed&apikey=${apiKey}`;
+  const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${encodeURIComponent(symbol)}&outputsize=compact&entitlement=realtime&apikey=${apiKey}`;
   
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(15000) });

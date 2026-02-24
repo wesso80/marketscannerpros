@@ -35,6 +35,7 @@ import { runCoreStrategyStep } from '@/lib/backtest/strategyExecutors';
 import { getBacktestStrategy } from '@/lib/strategies/registry';
 import { getOHLC, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
 import { hasProTraderAccess } from '@/lib/proTraderAccess';
+import { avTakeToken } from '@/lib/avRateGovernor';
 import {
   parseBacktestTimeframe,
   isStrategyTimeframeCompatible,
@@ -175,14 +176,15 @@ async function fetchStockPriceData(symbol: string, timeframe: string = 'daily'):
   let timeSeriesKey: string;
   
   if (parsedTimeframe.kind === 'daily') {
-    url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=full&apikey=${ALPHA_VANTAGE_KEY}`;
+    url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${symbol}&outputsize=full&entitlement=realtime&apikey=${ALPHA_VANTAGE_KEY}`;
     timeSeriesKey = 'Time Series (Daily)';
   } else {
     const interval = parsedTimeframe.alphaInterval || '1min';
-    url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=${interval}&outputsize=full&apikey=${ALPHA_VANTAGE_KEY}`;
+    url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=${interval}&outputsize=full&entitlement=realtime&apikey=${ALPHA_VANTAGE_KEY}`;
     timeSeriesKey = `Time Series (${interval})`;
   }
   
+  await avTakeToken();
   const response = await fetch(url);
   const data = await response.json();
   const timeSeries = data[timeSeriesKey];

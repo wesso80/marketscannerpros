@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { avTakeToken } from '@/lib/avRateGovernor';
 
 /**
  * Stock Market Fear & Greed Index
@@ -178,8 +179,9 @@ export async function GET(req: NextRequest) {
 // Fetch quote from Alpha Vantage
 async function fetchQuote(symbol: string): Promise<{ price: number; changePercent: number } | null> {
   try {
+    await avTakeToken();
     const res = await fetch(
-      `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_KEY}`
+      `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&entitlement=realtime&apikey=${ALPHA_VANTAGE_KEY}`
     );
     const data = await res.json();
     const quote = data['Global Quote'];
@@ -199,6 +201,8 @@ async function fetchQuote(symbol: string): Promise<{ price: number; changePercen
 // Fetch technical indicators
 async function fetchTechnical(symbol: string): Promise<{ sma: number; rsi: number } | null> {
   try {
+    await avTakeToken();
+    await avTakeToken();
     const [smaRes, rsiRes] = await Promise.all([
       fetch(`https://www.alphavantage.co/query?function=SMA&symbol=${symbol}&interval=daily&time_period=125&series_type=close&apikey=${ALPHA_VANTAGE_KEY}`),
       fetch(`https://www.alphavantage.co/query?function=RSI&symbol=${symbol}&interval=daily&time_period=14&series_type=close&apikey=${ALPHA_VANTAGE_KEY}`),

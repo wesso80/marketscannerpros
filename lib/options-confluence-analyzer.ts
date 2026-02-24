@@ -12,6 +12,7 @@
 import { HierarchicalScanResult, ConfluenceLearningAgent, ScanMode, CandleCloseConfluence } from './confluence-learning-agent';
 import { scanPatterns, Candle as PatternCandle } from './patterns/pattern-engine';
 import { getOHLC, resolveSymbolToId, COINGECKO_ID_MAP } from './coingecko';
+import { avTakeToken } from '@/lib/avRateGovernor';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // HELPER UTILITIES (Production-grade parsing)
@@ -132,9 +133,10 @@ async function fetchPatternCandlesFallback(
       const to = symbol.slice(3, 6);
       intradayUrl = `${base}?function=FX_INTRADAY&from_symbol=${encodeURIComponent(from)}&to_symbol=${encodeURIComponent(to)}&interval=60min&outputsize=compact&apikey=${ALPHA_VANTAGE_KEY}`;
     } else {
-      intradayUrl = `${base}?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(symbol)}&interval=60min&outputsize=compact&entitlement=delayed&apikey=${ALPHA_VANTAGE_KEY}`;
+      intradayUrl = `${base}?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(symbol)}&interval=60min&outputsize=compact&entitlement=realtime&apikey=${ALPHA_VANTAGE_KEY}`;
     }
 
+    await avTakeToken();
     const intradayRes = await fetch(intradayUrl);
     const intradayData = await intradayRes.json();
     const intradaySeries = intradayData['Time Series (60min)'] || intradayData['Time Series FX (60min)'] || intradayData['Time Series Crypto (60min)'];
@@ -147,9 +149,10 @@ async function fetchPatternCandlesFallback(
       const to = symbol.slice(3, 6);
       dailyUrl = `${base}?function=FX_DAILY&from_symbol=${encodeURIComponent(from)}&to_symbol=${encodeURIComponent(to)}&outputsize=compact&apikey=${ALPHA_VANTAGE_KEY}`;
     } else {
-      dailyUrl = `${base}?function=TIME_SERIES_DAILY&symbol=${encodeURIComponent(symbol)}&outputsize=compact&entitlement=delayed&apikey=${ALPHA_VANTAGE_KEY}`;
+      dailyUrl = `${base}?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${encodeURIComponent(symbol)}&outputsize=compact&entitlement=realtime&apikey=${ALPHA_VANTAGE_KEY}`;
     }
 
+    await avTakeToken();
     const dailyRes = await fetch(dailyUrl);
     const dailyData = await dailyRes.json();
     const dailySeries = dailyData['Time Series (Daily)'] || dailyData['Time Series FX (Daily)'] || dailyData['Time Series (Digital Currency Daily)'];
@@ -906,7 +909,7 @@ interface AVOptionContract {
   rho?: string;
 }
 
-type AVOptionsFunction = 'REALTIME_OPTIONS' | 'HISTORICAL_OPTIONS';
+type AVOptionsFunction = 'REALTIME_OPTIONS_FMV' | 'HISTORICAL_OPTIONS';
 
 const AV_OPTIONS_REALTIME_ENABLED = (process.env.AV_OPTIONS_REALTIME_ENABLED ?? 'true').toLowerCase() !== 'false';
 
@@ -1007,7 +1010,7 @@ async function fetchOptionsChain(symbol: string, targetExpiration?: string): Pro
   try {
     const providers: Array<{ fn: AVOptionsFunction; freshness: 'REALTIME' | 'EOD'; requireGreeks: boolean }> = AV_OPTIONS_REALTIME_ENABLED
       ? [
-          { fn: 'REALTIME_OPTIONS', freshness: 'REALTIME', requireGreeks: true },
+          { fn: 'REALTIME_OPTIONS_FMV', freshness: 'REALTIME', requireGreeks: true },
           { fn: 'HISTORICAL_OPTIONS', freshness: 'EOD', requireGreeks: false },
         ]
       : [{ fn: 'HISTORICAL_OPTIONS', freshness: 'EOD', requireGreeks: false }];
@@ -1021,6 +1024,7 @@ async function fetchOptionsChain(symbol: string, targetExpiration?: string): Pro
       const url = `https://www.alphavantage.co/query?function=${provider.fn}&symbol=${symbol}${requireGreeks}&apikey=${ALPHA_VANTAGE_KEY}`;
       console.log(`📊 Fetching ${provider.freshness} options chain via ${provider.fn} for ${symbol}${targetExpiration ? ` (target expiry ${targetExpiration})` : ''}...`);
 
+      await avTakeToken();
       const response = await fetch(url);
       const payload = await response.json();
 
@@ -1055,7 +1059,7 @@ async function fetchOptionsChain(symbol: string, targetExpiration?: string): Pro
     }
 
     if (!selectedProvider || !data || options.length === 0) {
-      console.warn('⚠️ No options data returned from REALTIME_OPTIONS/HISTORICAL_OPTIONS providers');
+      console.warn('⚠️ No options data returned from REALTIME_OPTIONS_FMV/HISTORICAL_OPTIONS providers');
       return null;
     }
     

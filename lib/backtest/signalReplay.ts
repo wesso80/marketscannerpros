@@ -5,6 +5,7 @@ import { parseBacktestTimeframe, resamplePriceData, computeCoverage } from '@/li
 import { buildBacktestDiagnostics, inferStrategyDirection } from '@/lib/backtest/diagnostics';
 import { enrichTradesWithMetadata } from '@/lib/backtest/tradeForensics';
 import { buildValidationPayload } from '@/lib/backtest/validationPayload';
+import { avTakeToken } from '@/lib/avRateGovernor';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -62,9 +63,10 @@ async function fetchStockPriceData(symbol: string, timeframe: string): Promise<P
   const interval = parsedTimeframe.alphaInterval || '1min';
   const timeSeriesKey = isDaily ? 'Time Series (Daily)' : `Time Series (${interval})`;
   const url = isDaily
-    ? `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=full&apikey=${ALPHA_VANTAGE_KEY}`
-    : `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=${interval}&outputsize=full&apikey=${ALPHA_VANTAGE_KEY}`;
+    ? `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${symbol}&outputsize=full&entitlement=realtime&apikey=${ALPHA_VANTAGE_KEY}`
+    : `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=${interval}&outputsize=full&entitlement=realtime&apikey=${ALPHA_VANTAGE_KEY}`;
 
+  await avTakeToken();
   const response = await fetch(url);
   const data = await response.json();
   const timeSeries = data[timeSeriesKey];

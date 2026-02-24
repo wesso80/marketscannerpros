@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { avTakeToken } from '@/lib/avRateGovernor';
 
 // Cache for 1 hour (earnings data doesn't change frequently)
 let calendarCache: { data: any; timestamp: number } | null = null;
@@ -32,7 +33,8 @@ export async function GET(req: NextRequest) {
         return NextResponse.json(calendarCache.data);
       }
       
-      const response = await fetch(
+await avTakeToken();
+    const response = await fetch(
         `https://www.alphavantage.co/query?function=EARNINGS_CALENDAR&horizon=3month&apikey=${apiKey}`
       );
       
@@ -60,6 +62,7 @@ export async function GET(req: NextRequest) {
     
     if (type === 'history') {
       // Historical earnings
+      await avTakeToken();
       const response = await fetch(
         `https://www.alphavantage.co/query?function=EARNINGS&symbol=${symbol}&apikey=${apiKey}`
       );
@@ -73,6 +76,7 @@ export async function GET(req: NextRequest) {
     if (type === 'estimates') {
       // Earnings estimates (analyst consensus)
       // Note: This might require a different endpoint or premium
+      await avTakeToken();
       const response = await fetch(
         `https://www.alphavantage.co/query?function=EARNINGS&symbol=${symbol}&apikey=${apiKey}`
       );

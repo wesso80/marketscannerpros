@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { avTakeToken } from '@/lib/avRateGovernor';
 
 // POST /api/scanner/quotes - Get current prices for multiple symbols
 export async function POST(req: NextRequest) {
@@ -44,6 +45,7 @@ export async function POST(req: NextRequest) {
 
         if (isCrypto) {
           // Use crypto endpoint
+          await avTakeToken();
           const res = await fetch(
             `https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=${symbol}&to_currency=USD&apikey=${apiKey}`
           );
@@ -60,9 +62,10 @@ export async function POST(req: NextRequest) {
             };
           }
         } else {
-          // Use stock endpoint (15-minute delayed data)
+          // Use stock endpoint (realtime data)
+          await avTakeToken();
           const res = await fetch(
-            `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&entitlement=delayed&apikey=${apiKey}`
+            `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&entitlement=realtime&apikey=${apiKey}`
           );
           const data = await res.json();
           

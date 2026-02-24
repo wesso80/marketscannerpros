@@ -12,6 +12,7 @@
 import OpenAI from 'openai';
 import { q } from '@/lib/db';
 import { getOHLC, getPriceBySymbol, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
+import { avTakeToken } from '@/lib/avRateGovernor';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -490,8 +491,9 @@ export class ConfluenceLearningAgent {
           return price.price;
         }
       } else {
-        // Use delayed entitlement for stock data (15-minute delayed)
-        const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&entitlement=delayed&apikey=${ALPHA_VANTAGE_KEY}`;
+        // Use delayed entitlement for stock data (realtime)
+        const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&entitlement=realtime&apikey=${ALPHA_VANTAGE_KEY}`;
+        await avTakeToken();
         const response = await fetch(url);
         const data = await response.json();
         
@@ -536,9 +538,10 @@ export class ConfluenceLearningAgent {
         .sort((a, b) => a.time - b.time);
     }
 
-    // Use delayed entitlement for stock data (15-minute delayed)
-    const url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=${interval}&outputsize=full&entitlement=delayed&apikey=${ALPHA_VANTAGE_KEY}`;
+    // Use delayed entitlement for stock data (realtime)
+    const url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=${interval}&outputsize=full&entitlement=realtime&apikey=${ALPHA_VANTAGE_KEY}`;
 
+    await avTakeToken();
     const response = await fetch(url);
     const data = await response.json();
 
@@ -548,7 +551,7 @@ export class ConfluenceLearningAgent {
     // Fallback to daily data if intraday is not available (common for smaller ETFs)
     if (!timeSeries && !isCrypto) {
       console.log(`⚠️ No intraday data for ${symbol}, falling back to daily data`);
-      const dailyUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=full&entitlement=delayed&apikey=${ALPHA_VANTAGE_KEY}`;
+      const dailyUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${symbol}&outputsize=full&entitlement=realtime&apikey=${ALPHA_VANTAGE_KEY}`;
       const dailyResponse = await fetch(dailyUrl);
       const dailyData = await dailyResponse.json();
       

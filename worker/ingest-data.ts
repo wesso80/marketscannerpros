@@ -230,7 +230,7 @@ function isDueForFetch(lastFetchedAt: Date | string | null | undefined, interval
 }
 
 // Rate limiter: Alpha Vantage 600 RPM commercial license
-// Worker uses ALPHA_VANTAGE_RPM env (default 500), leaving 100 RPM for on-demand API routes
+// Budget split: worker=200 RPM (ALPHA_VANTAGE_RPM env), web=400 RPM (avRateGovernor)
 let rateLimiter: TokenBucket | null = null;
 function getRateLimiter(): TokenBucket {
   if (!rateLimiter) {
@@ -391,10 +391,10 @@ async function fetchAVTimeSeries(
   await getRateLimiter().take(1);
 
   const functionName = interval === 'daily' 
-    ? 'TIME_SERIES_DAILY' 
+    ? 'TIME_SERIES_DAILY_ADJUSTED' 
     : 'TIME_SERIES_INTRADAY';
   
-  let url = `https://www.alphavantage.co/query?function=${functionName}&symbol=${encodeURIComponent(symbol)}&outputsize=${outputsize}&entitlement=delayed&apikey=${getEnv('ALPHA_VANTAGE_API_KEY')}`;
+  let url = `https://www.alphavantage.co/query?function=${functionName}&symbol=${encodeURIComponent(symbol)}&outputsize=${outputsize}&entitlement=realtime&apikey=${getEnv('ALPHA_VANTAGE_API_KEY')}`;
   
   if (interval !== 'daily') {
     url += `&interval=${interval}`;
@@ -456,7 +456,7 @@ async function fetchAVGlobalQuote(symbol: string): Promise<{
 } | null> {
   await getRateLimiter().take(1);
 
-  const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(symbol)}&entitlement=delayed&apikey=${getEnv('ALPHA_VANTAGE_API_KEY')}`;
+  const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(symbol)}&entitlement=realtime&apikey=${getEnv('ALPHA_VANTAGE_API_KEY')}`;
   
   const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
   if (!res.ok) {
@@ -487,7 +487,7 @@ async function fetchAVBulkQuotes(symbols: string[]): Promise<Map<string, any>> {
   await getRateLimiter().take(1);
 
   const symbolList = symbols.join(',');
-  const url = `https://www.alphavantage.co/query?function=REALTIME_BULK_QUOTES&symbol=${encodeURIComponent(symbolList)}&entitlement=delayed&apikey=${getEnv('ALPHA_VANTAGE_API_KEY')}`;
+  const url = `https://www.alphavantage.co/query?function=REALTIME_BULK_QUOTES&symbol=${encodeURIComponent(symbolList)}&entitlement=realtime&apikey=${getEnv('ALPHA_VANTAGE_API_KEY')}`;
   
   const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
   if (!res.ok) {

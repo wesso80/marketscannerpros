@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { avTakeToken } from '@/lib/avRateGovernor';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -16,6 +17,7 @@ async function fetchEarningsResults(symbol: string): Promise<{
 } | null> {
   try {
     const url = `https://www.alphavantage.co/query?function=EARNINGS&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
+    await avTakeToken();
     const res = await fetch(url);
     if (!res.ok) return null;
     
@@ -106,6 +108,7 @@ export async function GET(request: NextRequest) {
     url.searchParams.append("horizon", horizon);
     url.searchParams.append("apikey", ALPHA_VANTAGE_API_KEY);
 
+    await avTakeToken();
     const response = await fetch(url.toString(), {
       headers: {
         "User-Agent": "MarketScannerPros/1.0",

@@ -11,6 +11,7 @@
  */
 
 import type { PriceBar } from './types';
+import { avFetch } from '@/lib/avRateGovernor';
 
 const AV_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 const AV_BASE = 'https://www.alphavantage.co/query';
@@ -52,7 +53,7 @@ export async function getDaily(ticker: string, start: Date, end: Date): Promise<
   const cached = getCached(key);
   if (cached) return filterByRange(cached, start, end);
 
-  const url = `${AV_BASE}?function=TIME_SERIES_DAILY&symbol=${encodeURIComponent(ticker)}&outputsize=full&apikey=${AV_KEY}`;
+  const url = `${AV_BASE}?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${encodeURIComponent(ticker)}&outputsize=full&entitlement=realtime&apikey=${AV_KEY}`;
   const bars = await fetchAVTimeSeries(url, 'Time Series (Daily)');
   if (bars.length > 0) setCache(key, bars);
   return filterByRange(bars, start, end);
@@ -77,7 +78,7 @@ export async function getBars(
   if (cached) return filterByRange(cached, start, end);
 
   const extParam = includeExtended ? '&extended_hours=true' : '';
-  const url = `${AV_BASE}?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(ticker)}&interval=${timeframe}&outputsize=full${extParam}&apikey=${AV_KEY}`;
+  const url = `${AV_BASE}?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(ticker)}&interval=${timeframe}&outputsize=full${extParam}&entitlement=realtime&apikey=${AV_KEY}`;
   const seriesKey = `Time Series (${timeframe})`;
   const bars = await fetchAVTimeSeries(url, seriesKey);
   if (bars.length > 0) setCache(key, bars);
@@ -137,21 +138,17 @@ export async function getNTradingDays(ticker: string, fromDate: Date, n: number)
 
 async function fetchAVTimeSeries(url: string, seriesKey: string): Promise<PriceBar[]> {
   try {
-    const res = await fetch(url);
-    if (!res.ok) {
-      console.error(`[PriceService] AV fetch failed: ${res.status} ${res.statusText}`);
-      return [];
-    }
-    const data = await res.json();
+    const label = url.match(/function=([A-Z_]+)/)?.[1] || 'AV';
+    const data = await avFetch<Record<string, any>>(url, `PriceService:${label}`);
 
-    if (data['Note'] || data['Information']) {
-      console.warn(`[PriceService] AV rate limit or info message:`, data['Note'] || data['Information']);
+    if (!data) {
+      console.warn(`[PriceService] avFetch returned null for ${label}`);
       return [];
     }
 
     const series = data[seriesKey];
     if (!series) {
-      console.warn(`[PriceService] No "${seriesKey}" key in AV response for URL`);
+      console.warn(`[PriceService] No "${seriesKey}" key in AV response for ${label}`);
       return [];
     }
 

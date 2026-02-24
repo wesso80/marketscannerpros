@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOHLC, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
 import { getSessionFromCookie } from '@/lib/auth';
+import { avTakeToken } from '@/lib/avRateGovernor';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -144,8 +145,10 @@ export async function GET(req: NextRequest) {
     url.searchParams.set('outputsize', outputSize);
     url.searchParams.set('adjusted', adjusted.toString());
     url.searchParams.set('extended_hours', extendedHours.toString());
+    url.searchParams.set('entitlement', 'realtime');
     url.searchParams.set('apikey', ALPHA_VANTAGE_KEY);
 
+    await avTakeToken();
     const response = await fetch(url.toString(), {
       headers: { 'User-Agent': 'MarketScannerPros/1.0' },
       next: { revalidate: 60 } // Cache for 1 minute

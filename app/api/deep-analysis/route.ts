@@ -9,7 +9,7 @@ import { getIndicators } from '@/lib/onDemandFetch';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
-// NOTE: Using HISTORICAL_OPTIONS / REALTIME_OPTIONS - available with 600 RPM premium plan
+// NOTE: Using HISTORICAL_OPTIONS / REALTIME_OPTIONS_FMV - available with 600 RPM premium plan
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 // Get the Friday of the current week (or next week if past Friday)
@@ -44,7 +44,7 @@ async function fetchOptionsData(symbol: string) {
   
   try {
     // Get current price first for reference — rate governed
-    const quoteUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&entitlement=delayed&apikey=${ALPHA_VANTAGE_API_KEY}`;
+    const quoteUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&entitlement=realtime&apikey=${ALPHA_VANTAGE_API_KEY}`;
     console.log(`[deep-analysis] Fetching quote for ${symbol}...`);
     const quoteData = await avFetch(quoteUrl, `QUOTE ${symbol}`);
     console.log(`[deep-analysis] Quote response keys:`, quoteData ? Object.keys(quoteData).join(', ') : 'null');
@@ -59,11 +59,11 @@ async function fetchOptionsData(symbol: string) {
     }
     console.log(`[deep-analysis] Got price for ${symbol}: $${currentPrice}`);
 
-    // Alpha Vantage options endpoint — REALTIME_OPTIONS (FMV) preferred, HISTORICAL_OPTIONS fallback
+    // Alpha Vantage options endpoint — REALTIME_OPTIONS_FMV (FMV) preferred, HISTORICAL_OPTIONS fallback
     // Rate governed to protect 600 RPM quota
     let optionsData: any = null;
-    const realtimeUrl = `https://www.alphavantage.co/query?function=REALTIME_OPTIONS&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-    optionsData = await avFetch(realtimeUrl, `REALTIME_OPTIONS ${symbol}`);
+    const realtimeUrl = `https://www.alphavantage.co/query?function=REALTIME_OPTIONS_FMV&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
+    optionsData = await avFetch(realtimeUrl, `REALTIME_OPTIONS_FMV ${symbol}`);
     if (!optionsData?.data?.length) {
       const historicalUrl = `https://www.alphavantage.co/query?function=HISTORICAL_OPTIONS&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
       optionsData = await avFetch(historicalUrl, `HISTORICAL_OPTIONS ${symbol}`);
@@ -384,7 +384,7 @@ async function fetchPriceData(symbol: string, assetType: string) {
       };
     } else {
       // Use Alpha Vantage for stocks/forex/commodities — rate governed
-      const func = assetType === 'forex' ? 'FX_DAILY' : 'TIME_SERIES_DAILY';
+      const func = assetType === 'forex' ? 'FX_DAILY' : 'TIME_SERIES_DAILY_ADJUSTED';
       const symbolParam = assetType === 'forex' 
         ? `from_symbol=${symbol.slice(0,3)}&to_symbol=${symbol.slice(3,6)}`
         : `symbol=${symbol}`;

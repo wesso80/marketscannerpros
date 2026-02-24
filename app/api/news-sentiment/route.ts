@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { avTakeToken } from '@/lib/avRateGovernor';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -163,6 +164,7 @@ export async function GET(request: NextRequest) {
     if (stockTickers.length > 0) {
       const url = `https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers=${stockTickers.join(',')}&limit=${limit}&apikey=${ALPHA_VANTAGE_API_KEY}`;
       
+      await avTakeToken();
       const response = await fetch(url);
       const data = await response.json();
       
@@ -197,6 +199,7 @@ export async function GET(request: NextRequest) {
     // If no tickers matched, try Alpha Vantage as fallback for general crypto news
     if (allArticles.length === 0 && cryptoTickers.length > 0) {
       const url = `https://www.alphavantage.co/query?function=NEWS_SENTIMENT&topics=blockchain,cryptocurrency&limit=${limit}&apikey=${ALPHA_VANTAGE_API_KEY}`;
+      await avTakeToken();
       const response = await fetch(url);
       const data = await response.json();
       

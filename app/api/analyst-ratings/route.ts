@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { avTakeToken } from '@/lib/avRateGovernor';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -27,8 +28,9 @@ export async function GET(request: NextRequest) {
 
     // Fetch company overview from Alpha Vantage
     const url = `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
+    await avTakeToken();
     const response = await fetch(url);
-    
+
     if (!response.ok) {
       throw new Error(`Alpha Vantage API error: ${response.status}`);
     }

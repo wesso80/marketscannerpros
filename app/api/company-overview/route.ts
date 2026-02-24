@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { avTakeToken } from '@/lib/avRateGovernor';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY;
 
@@ -12,6 +13,7 @@ export async function GET(request: NextRequest) {
   }
   
   try {
+    await avTakeToken();
     const overviewResponse = await fetch(
       `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`
     );
@@ -20,8 +22,9 @@ export async function GET(request: NextRequest) {
 
     let quoteData: any = null;
     if (includeQuote) {
+      await avTakeToken();
       const quoteResponse = await fetch(
-        `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`
+        `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&entitlement=realtime&apikey=${ALPHA_VANTAGE_API_KEY}`
       );
       quoteData = await quoteResponse.json();
     }

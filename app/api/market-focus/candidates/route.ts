@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOHLC, resolveSymbolToId, COINGECKO_ID_MAP } from "@/lib/coingecko";
 import { getSessionFromCookie } from '@/lib/auth';
+import { avTakeToken } from '@/lib/avRateGovernor';
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -84,6 +85,7 @@ async function batchProcess<T, R>(
 async function fetchAlphaJson(url: string, tag: string, retries = 2): Promise<any> {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
+      await avTakeToken();
       const res = await fetch(url, { cache: "no-store" });
       if (!res.ok) {
         if (attempt < retries && (res.status === 503 || res.status === 429)) {
@@ -177,7 +179,7 @@ function atr(highs: number[], lows: number[], closes: number[], period = 14): nu
 
 // ============ DATA FETCHERS ============
 async function fetchEquityDaily(symbol: string): Promise<Candle[]> {
-  const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=compact&apikey=${ALPHA_KEY}`;
+  const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${symbol}&outputsize=compact&entitlement=realtime&apikey=${ALPHA_KEY}`;
   const j = await fetchAlphaJson(url, `EQUITY_DAILY ${symbol}`);
   const ts = j["Time Series (Daily)"] || {};
   return Object.entries(ts).map(([date, v]: any) => ({

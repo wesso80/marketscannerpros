@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromCookie } from "@/lib/auth";
 import { scannerLimiter, getClientIP } from "@/lib/rateLimit";
 import { avCircuit } from "@/lib/circuitBreaker";
+import { avTakeToken } from "@/lib/avRateGovernor";
 import { shouldUseCache, canFallbackToAV, getCacheMode } from "@/lib/cacheMode";
 import { getCachedScanData, getBulkCachedScanData, CachedScanData } from "@/lib/scannerCache";
 import { recordSignalsBatch, RecordSignalParams } from "@/lib/signalRecorder";
@@ -39,6 +40,7 @@ function isStablecoinSymbol(symbol: string): boolean {
 // Friendly handler for Alpha Vantage throttling/premium notices
 // Wrapped in circuit breaker to prevent cascading failures
 async function fetchAlphaJson(url: string, tag: string) {
+  await avTakeToken();
   return avCircuit.call(async () => {
   // Add cache-busting timestamp
   const cacheBustUrl = url + (url.includes('?') ? '&' : '?') + `_nocache=${Date.now()}`;
@@ -387,7 +389,7 @@ export async function POST(req: NextRequest) {
     // Commercial use requires expensive data licensing ($1000+/month)
 
     async function fetchRSI(sym: string) {
-      const url = `https://www.alphavantage.co/query?function=RSI&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&time_period=14&series_type=close&entitlement=delayed&apikey=${ALPHA_KEY}`;
+      const url = `https://www.alphavantage.co/query?function=RSI&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&time_period=14&series_type=close&entitlement=realtime&apikey=${ALPHA_KEY}`;
       const j = await fetchAlphaJson(url, `RSI ${sym}`);
       const ta = j["Technical Analysis: RSI"] || {};
       const first = Object.values(ta)[0] as any;
@@ -396,7 +398,7 @@ export async function POST(req: NextRequest) {
     }
 
     async function fetchMACD(sym: string) {
-      const url = `https://www.alphavantage.co/query?function=MACD&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&series_type=close&entitlement=delayed&apikey=${ALPHA_KEY}`;
+      const url = `https://www.alphavantage.co/query?function=MACD&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&series_type=close&entitlement=realtime&apikey=${ALPHA_KEY}`;
       const j = await fetchAlphaJson(url, `MACD ${sym}`);
       const ta = j["Technical Analysis: MACD"] || {};
       const first = Object.values(ta)[0] as any;
@@ -410,7 +412,7 @@ export async function POST(req: NextRequest) {
     }
 
     async function fetchEMA200(sym: string) {
-      const url = `https://www.alphavantage.co/query?function=EMA&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&time_period=200&series_type=close&entitlement=delayed&apikey=${ALPHA_KEY}`;
+      const url = `https://www.alphavantage.co/query?function=EMA&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&time_period=200&series_type=close&entitlement=realtime&apikey=${ALPHA_KEY}`;
       const j = await fetchAlphaJson(url, `EMA200 ${sym}`);
       const ta = j["Technical Analysis: EMA"] || {};
       const first = Object.values(ta)[0] as any;
@@ -419,7 +421,7 @@ export async function POST(req: NextRequest) {
     }
 
     async function fetchATR(sym: string) {
-      const url = `https://www.alphavantage.co/query?function=ATR&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&time_period=14&entitlement=delayed&apikey=${ALPHA_KEY}`;
+      const url = `https://www.alphavantage.co/query?function=ATR&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&time_period=14&entitlement=realtime&apikey=${ALPHA_KEY}`;
       const j = await fetchAlphaJson(url, `ATR ${sym}`);
       const ta = j["Technical Analysis: ATR"] || {};
       const first = Object.values(ta)[0] as any;
@@ -428,7 +430,7 @@ export async function POST(req: NextRequest) {
     }
 
     async function fetchADX(sym: string) {
-      const url = `https://www.alphavantage.co/query?function=ADX&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&time_period=14&entitlement=delayed&apikey=${ALPHA_KEY}`;
+      const url = `https://www.alphavantage.co/query?function=ADX&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&time_period=14&entitlement=realtime&apikey=${ALPHA_KEY}`;
       const j = await fetchAlphaJson(url, `ADX ${sym}`);
       const ta = j["Technical Analysis: ADX"] || {};
       const first = Object.values(ta)[0] as any;
@@ -437,7 +439,7 @@ export async function POST(req: NextRequest) {
     }
 
     async function fetchSTOCH(sym: string) {
-      const url = `https://www.alphavantage.co/query?function=STOCH&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&entitlement=delayed&apikey=${ALPHA_KEY}`;
+      const url = `https://www.alphavantage.co/query?function=STOCH&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&entitlement=realtime&apikey=${ALPHA_KEY}`;
       const j = await fetchAlphaJson(url, `STOCH ${sym}`);
       const ta = j["Technical Analysis: STOCH"] || {};
       const first = Object.values(ta)[0] as any;
@@ -446,7 +448,7 @@ export async function POST(req: NextRequest) {
     }
 
     async function fetchCCI(sym: string) {
-      const url = `https://www.alphavantage.co/query?function=CCI&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&time_period=20&entitlement=delayed&apikey=${ALPHA_KEY}`;
+      const url = `https://www.alphavantage.co/query?function=CCI&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&time_period=20&entitlement=realtime&apikey=${ALPHA_KEY}`;
       const j = await fetchAlphaJson(url, `CCI ${sym}`);
       const ta = j["Technical Analysis: CCI"] || {};
       const first = Object.values(ta)[0] as any;
@@ -455,7 +457,7 @@ export async function POST(req: NextRequest) {
     }
 
     async function fetchAROON(sym: string) {
-      const url = `https://www.alphavantage.co/query?function=AROON&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&time_period=25&entitlement=delayed&apikey=${ALPHA_KEY}`;
+      const url = `https://www.alphavantage.co/query?function=AROON&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&time_period=25&entitlement=realtime&apikey=${ALPHA_KEY}`;
       const j = await fetchAlphaJson(url, `AROON ${sym}`);
       const ta = j["Technical Analysis: AROON"] || {};
       const first = Object.values(ta)[0] as any;
@@ -464,7 +466,7 @@ export async function POST(req: NextRequest) {
     }
 
     async function fetchEquityPrice(sym: string) {
-      const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(sym)}&entitlement=delayed&apikey=${ALPHA_KEY}`;
+      const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(sym)}&entitlement=realtime&apikey=${ALPHA_KEY}`;
       const j = await fetchAlphaJson(url, `QUOTE ${sym}`);
       // Handle both realtime and delayed response formats
       const quote = j["Global Quote"] || j["Global Quote - DATA DELAYED BY 15 MINUTES"] || {};
@@ -489,7 +491,7 @@ export async function POST(req: NextRequest) {
       
       for (const batch of batches) {
         const symbolList = batch.join(',');
-        const url = `https://www.alphavantage.co/query?function=REALTIME_BULK_QUOTES&symbol=${encodeURIComponent(symbolList)}&entitlement=delayed&apikey=${ALPHA_KEY}`;
+        const url = `https://www.alphavantage.co/query?function=REALTIME_BULK_QUOTES&symbol=${encodeURIComponent(symbolList)}&entitlement=realtime&apikey=${ALPHA_KEY}`;
         
         try {
           console.info(`[scanner] Fetching BULK QUOTES for ${batch.length} symbols`);
@@ -1275,8 +1277,8 @@ export async function POST(req: NextRequest) {
             console.info(`[scanner] Fetching EQUITY ${sym} via Alpha Vantage candles (${avInterval}) - ${getCacheMode()} mode`);
 
             const seriesUrl = avInterval === "daily"
-              ? `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${encodeURIComponent(sym)}&outputsize=full&entitlement=delayed&apikey=${ALPHA_KEY}`
-              : `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&outputsize=full&entitlement=delayed&apikey=${ALPHA_KEY}`;
+              ? `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${encodeURIComponent(sym)}&outputsize=full&entitlement=realtime&apikey=${ALPHA_KEY}`
+              : `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&outputsize=full&entitlement=realtime&apikey=${ALPHA_KEY}`;
 
             const seriesJson = await fetchAlphaJson(seriesUrl, `EQUITY_SERIES ${sym}`);
             const expectedTsKey = avInterval === "daily" ? "Time Series (Daily)" : `Time Series (${avInterval})`;

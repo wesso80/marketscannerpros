@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { avTakeToken } from '@/lib/avRateGovernor';
 
 // Cache for 1 hour (economic data updates infrequently)
 const cache = new Map<string, { data: any; timestamp: number }>();
@@ -71,6 +72,7 @@ export async function GET(req: NextRequest) {
       url += `&maturity=${maturity}`;
     }
     
+    await avTakeToken();
     const response = await fetch(url);
     const data = await response.json();
     
@@ -109,6 +111,7 @@ async function fetchAllIndicators(apiKey: string, now: number) {
       let url = `https://www.alphavantage.co/query?function=${ind.func}&apikey=${apiKey}`;
       if (ind.maturity) url += `&maturity=${ind.maturity}`;
       
+      await avTakeToken();
       const response = await fetch(url);
       const data = await response.json();
       

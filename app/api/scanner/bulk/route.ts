@@ -15,6 +15,7 @@ import { adx, cci, ema, getIndicatorWarmupStatus, macd, OHLCVBar, rsi, stochasti
 import { getSessionFromCookie } from '@/lib/auth';
 import { getAdaptiveLayer } from '@/lib/adaptiveTrader';
 import { computeInstitutionalFilter, inferStrategyFromText } from '@/lib/institutionalFilter';
+import { avTakeToken } from '@/lib/avRateGovernor';
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // 60 seconds max for client requests
@@ -521,14 +522,14 @@ async function fetchAlphaVantageData(symbol: string, timeframe: string = '1d'): 
     let tsKey: string;
     
     if (interval === 'daily') {
-      url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${encodeURIComponent(symbol)}&outputsize=compact&entitlement=delayed&apikey=${ALPHA_KEY}`;
+      url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${encodeURIComponent(symbol)}&outputsize=compact&entitlement=realtime&apikey=${ALPHA_KEY}`;
       tsKey = 'Time Series (Daily)';
     } else {
-      url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(symbol)}&interval=${interval}&outputsize=compact&entitlement=delayed&apikey=${ALPHA_KEY}`;
+      url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(symbol)}&interval=${interval}&outputsize=compact&entitlement=realtime&apikey=${ALPHA_KEY}`;
       tsKey = `Time Series (${interval})`;
     }
     
-    const res = await fetch(url, { cache: 'no-store' });
+    const res = await (async () => { await avTakeToken(); return fetch(url, { cache: 'no-store' }); })();
     if (!res.ok) return null;
     
     const data = await res.json();
@@ -1119,6 +1120,7 @@ async function fetchAlphaTopMovers(): Promise<{
 
   try {
     const url = `https://www.alphavantage.co/query?function=TOP_GAINERS_LOSERS&apikey=${ALPHA_KEY}`;
+    await avTakeToken();
     const response = await fetch(url, { cache: 'no-store' });
     const data = await response.json();
 
@@ -1154,9 +1156,10 @@ async function fetchAlphaBulkQuotes(
     if (apiCallsUsed >= maxApiCalls) break;
     const batch = symbols.slice(index, index + batchSize);
     const symbolList = batch.join(',');
-    const url = `https://www.alphavantage.co/query?function=REALTIME_BULK_QUOTES&symbol=${encodeURIComponent(symbolList)}&entitlement=delayed&apikey=${ALPHA_KEY}`;
+    const url = `https://www.alphavantage.co/query?function=REALTIME_BULK_QUOTES&symbol=${encodeURIComponent(symbolList)}&entitlement=realtime&apikey=${ALPHA_KEY}`;
 
     try {
+      await avTakeToken();
       const response = await fetch(url, { cache: 'no-store' });
       const data = await response.json();
       apiCallsUsed += 1;
@@ -1188,7 +1191,7 @@ async function fetchAlphaBulkQuotes(
     const maxFallbackSymbols = Math.min(symbols.length, 40);
     for (let i = 0; i < maxFallbackSymbols && apiCallsUsed < maxApiCalls; i += 1) {
       const symbol = symbols[i];
-      const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(symbol)}&entitlement=delayed&apikey=${ALPHA_KEY}`;
+      const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(symbol)}&entitlement=realtime&apikey=${ALPHA_KEY}`;
       try {
         const response = await fetch(url, { cache: 'no-store' });
         const data = await response.json();

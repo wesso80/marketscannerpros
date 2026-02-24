@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { avTakeToken } from '@/lib/avRateGovernor';
 
 // Cache for 5 minutes
 let cache: { data: MarketStatusResponse | null; timestamp: number } = { data: null, timestamp: 0 };
@@ -40,6 +41,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
     }
     
+    await avTakeToken();
     const response = await fetch(
       `https://www.alphavantage.co/query?function=MARKET_STATUS&apikey=${apiKey}`
     );
