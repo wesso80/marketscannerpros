@@ -203,6 +203,7 @@ async function runMarketFocusJob(req: Request) {
       `update daily_market_focus set status='failed', notes=$2, updated_at=now() where id=$1`,
       [focusId, String(err?.message ?? err)]
     );
-    return NextResponse.json({ status: "failed", error: String(err?.message ?? err) }, { status: 500 });
+    // Return 200 with error details — prevents cron exit-22 for transient failures
+    return NextResponse.json({ status: "failed", error: String(err?.message ?? err) });
   }
 }

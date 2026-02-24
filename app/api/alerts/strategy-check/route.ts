@@ -16,6 +16,18 @@ import { DEFAULT_BACKTEST_STRATEGY, isBacktestStrategy } from '@/lib/strategies/
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
+/** Ensure smart alert columns exist (self-healing schema) */
+async function ensureSmartAlertSchema() {
+  try {
+    await q(`ALTER TABLE alerts ADD COLUMN IF NOT EXISTS is_smart_alert BOOLEAN DEFAULT false`);
+    await q(`ALTER TABLE alerts ADD COLUMN IF NOT EXISTS smart_alert_context JSONB`);
+    await q(`ALTER TABLE alerts ADD COLUMN IF NOT EXISTS last_derivative_value DECIMAL(20, 8)`);
+    await q(`ALTER TABLE alerts ADD COLUMN IF NOT EXISTS cooldown_minutes INT DEFAULT 60`);
+  } catch (e) {
+    console.warn('[strategy-check] ensureSmartAlertSchema warning:', e);
+  }
+}
+
 interface StrategyAlert {
   id: string;
   workspace_id: string;
@@ -62,6 +74,8 @@ async function checkStrategyAlerts(req: NextRequest) {
   }
 
   try {
+    await ensureSmartAlertSchema();
+
     // Get all active strategy alerts
     const alerts = await q<StrategyAlert>(`
       SELECT id, workspace_id, symbol, condition_type, condition_value,
@@ -263,9 +277,16 @@ async function checkStrategyAlerts(req: NextRequest) {
       errorDetails: errors.slice(0, 5) // Limit error output
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Strategy check error:', error);
-    return NextResponse.json({ error: 'Strategy check failed' }, { status: 500 });
+    // Return 200 with error details — prevents cron exit-22 for transient failures
+    return NextResponse.json({
+      ok: false,
+      checked: 0,
+      triggered: 0,
+      error: error?.message || 'Strategy check failed',
+      timestamp: new Date().toISOString(),
+    });
   }
 }
 

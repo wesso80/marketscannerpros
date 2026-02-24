@@ -40,7 +40,7 @@ services:
   - type: cron
     name: alerts-price-check
     runtime: node
-    schedule: "*/5 * * * *"  # Every 5 minutes
+    schedule: "0-59/5 * * * *"  # Every 5 minutes (offset :00)
     buildCommand: echo "Cron job ready"
     startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/alerts/check" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
@@ -52,7 +52,7 @@ services:
   - type: cron
     name: alerts-signal-check
     runtime: node
-    schedule: "*/10 * * * *"  # Every 10 minutes
+    schedule: "3-59/10 * * * *"  # Every 10 minutes (offset :03)
     buildCommand: echo "Cron job ready"
     startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/alerts/signal-check" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
@@ -64,7 +64,7 @@ services:
   - type: cron
     name: alerts-smart-check
     runtime: node
-    schedule: "*/5 * * * *"  # Every 5 minutes - derivatives/OI/funding alerts
+    schedule: "1-59/5 * * * *"  # Every 5 minutes (offset :01) - derivatives/OI/funding alerts
     buildCommand: echo "Cron job ready"
     startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/alerts/smart-check" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
@@ -76,7 +76,7 @@ services:
   - type: cron
     name: alerts-strategy-check
     runtime: node
-    schedule: "*/15 * * * *"  # Every 15 minutes
+    schedule: "4,19,34,49 * * * *"  # Every 15 minutes (offset :04)
     buildCommand: echo "Cron job ready"
     startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/alerts/strategy-check" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
@@ -112,7 +112,7 @@ services:
   - type: cron
     name: catalyst-study-compute
     runtime: node
-    schedule: "*/30 * * * *"  # Every 30 minutes - incremental catalyst study computation
+    schedule: "14,44 * * * *"  # Every 30 minutes (offset :14) - incremental catalyst study computation
     buildCommand: echo "Cron job ready"
     startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 290 -X POST "$WEB_URL/api/catalyst/study/compute?limit=5" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
@@ -136,7 +136,7 @@ services:
   - type: cron
     name: learning-outcomes
     runtime: node
-    schedule: "*/15 * * * *"  # Every 15 minutes - process learning machine predictions
+    schedule: "9,24,39,54 * * * *"  # Every 15 minutes (offset :09) - process learning machine predictions
     buildCommand: echo "Cron job ready"
     startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/jobs/learning-outcomes" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
@@ -148,7 +148,7 @@ services:
   - type: cron
     name: journal-auto-close
     runtime: node
-    schedule: "*/5 * * * *"  # Every 5 minutes - auto-close TP/SL/time-stop eligible journal trades
+    schedule: "2-59/5 * * * *"  # Every 5 minutes (offset :02) - auto-close TP/SL/time-stop eligible journal trades
     buildCommand: echo "Cron job ready"
     startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/jobs/journal-auto-close?limit=200" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
@@ -200,7 +200,7 @@ services:
   - type: cron
     name: upe-crcs-hourly
     runtime: node
-    schedule: "5 * * * *"  # Hourly at :05
+    schedule: "8 * * * *"  # Hourly at :08 (staggered from other crons)
     buildCommand: npm install
     startCommand: npm run worker:upe:crcs:hourly
     envVars:

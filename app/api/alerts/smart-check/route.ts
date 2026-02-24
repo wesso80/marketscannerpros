@@ -15,6 +15,18 @@ import { sendPushToUser } from '@/lib/pushServer';
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
+/** Ensure smart alert columns exist (self-healing schema) */
+async function ensureSmartAlertSchema() {
+  try {
+    await q(`ALTER TABLE alerts ADD COLUMN IF NOT EXISTS is_smart_alert BOOLEAN DEFAULT false`);
+    await q(`ALTER TABLE alerts ADD COLUMN IF NOT EXISTS smart_alert_context JSONB`);
+    await q(`ALTER TABLE alerts ADD COLUMN IF NOT EXISTS last_derivative_value DECIMAL(20, 8)`);
+    await q(`ALTER TABLE alerts ADD COLUMN IF NOT EXISTS cooldown_minutes INT DEFAULT 60`);
+  } catch (e) {
+    console.warn('[smart-check] ensureSmartAlertSchema warning:', e);
+  }
+}
+
 interface SmartAlert {
   id: string;
   workspace_id: string;
@@ -66,6 +78,8 @@ async function checkSmartAlerts(req: NextRequest) {
   }
 
   try {
+    await ensureSmartAlertSchema();
+
     // Get all active smart alerts
     const alerts = await q<SmartAlert>(`
       SELECT id, workspace_id, symbol, condition_type, condition_value,
@@ -127,9 +141,16 @@ async function checkSmartAlerts(req: NextRequest) {
       },
       timestamp: new Date().toISOString(),
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Smart alert check error:', error);
-    return NextResponse.json({ error: 'Failed to check smart alerts' }, { status: 500 });
+    // Return 200 with error details — prevents cron exit-22 for transient failures
+    return NextResponse.json({
+      ok: false,
+      checked: 0,
+      triggered: 0,
+      error: error?.message || 'Failed to check smart alerts',
+      timestamp: new Date().toISOString(),
+    });
   }
 }
 

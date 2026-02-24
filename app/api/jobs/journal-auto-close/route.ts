@@ -402,8 +402,13 @@ export async function POST(req: NextRequest) {
       closedTrades,
       skipped,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('[jobs/journal-auto-close] error:', error);
-    return NextResponse.json({ error: 'Failed to run journal auto-close sweep' }, { status: 500 });
+    // Return 200 with error details — prevents cron exit-22 for transient failures
+    return NextResponse.json({
+      success: false,
+      error: error?.message || 'Failed to run journal auto-close sweep',
+      timestamp: new Date().toISOString(),
+    });
   }
 }

@@ -606,9 +606,10 @@ async function runDailyScan(req: NextRequest) {
 
   } catch (error) {
     console.error("Daily scan error:", error);
+    // Return 200 with error details — prevents cron exit-22 for transient failures
     return NextResponse.json({ 
       success: false, 
       error: error instanceof Error ? error.message : "Scan failed" 
-    }, { status: 500 });
+    });
   }
 }

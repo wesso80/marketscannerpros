@@ -2,6 +2,47 @@ import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { APP_URL } from '@/lib/appUrl';
 
+/** Ensure learning tables exist (self-healing schema) */
+async function ensureLearningSchema() {
+  try {
+    await q(`CREATE TABLE IF NOT EXISTS learning_predictions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      workspace_id UUID,
+      symbol VARCHAR(20) NOT NULL,
+      asset_type VARCHAR(20) DEFAULT 'crypto',
+      current_price DECIMAL(20, 8) NOT NULL,
+      prediction_direction VARCHAR(10) NOT NULL,
+      target_price DECIMAL(20, 8),
+      stop_loss DECIMAL(20, 8),
+      confidence DECIMAL(5, 2),
+      status VARCHAR(20) DEFAULT 'pending',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`);
+    await q(`CREATE TABLE IF NOT EXISTS learning_outcomes (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      prediction_id UUID NOT NULL,
+      minutes_since_prediction INT NOT NULL,
+      price_at_measure DECIMAL(20, 8) NOT NULL,
+      move_pct DECIMAL(10, 4),
+      direction VARCHAR(10),
+      hit_target BOOLEAN DEFAULT false,
+      hit_stop BOOLEAN DEFAULT false,
+      outcome_window_mins INT DEFAULT 60,
+      measured_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`);
+    await q(`CREATE TABLE IF NOT EXISTS learning_stats (
+      symbol VARCHAR(20) PRIMARY KEY,
+      total_predictions INT DEFAULT 0,
+      win_rate DECIMAL(6, 2) DEFAULT 0,
+      avg_move_pct DECIMAL(10, 4) DEFAULT 0,
+      avg_time_to_move_mins DECIMAL(10, 2) DEFAULT 0,
+      last_updated TIMESTAMPTZ DEFAULT NOW()
+    )`);
+  } catch (e) {
+    console.warn('[learning-outcomes] ensureLearningSchema warning:', e);
+  }
+}
+
 interface PredictionRow {
   id: string;
   symbol: string;
@@ -41,6 +82,8 @@ export async function POST(_req: NextRequest) {
   if (!cronSecret || headerSecret !== cronSecret) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  await ensureLearningSchema();
 
   const start = Date.now();
   const processed: string[] = [];

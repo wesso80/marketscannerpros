@@ -127,9 +127,16 @@ async function checkAlerts(req: NextRequest) {
       errors: errors.length > 0 ? errors : undefined,
       timestamp: new Date().toISOString(),
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Alert check error:', error);
-    return NextResponse.json({ error: 'Failed to check alerts' }, { status: 500 });
+    // Return 200 with error details — prevents cron exit-22 for transient failures
+    return NextResponse.json({
+      ok: false,
+      checked: 0,
+      triggered: 0,
+      error: error?.message || 'Failed to check alerts',
+      timestamp: new Date().toISOString(),
+    });
   }
 }
 
