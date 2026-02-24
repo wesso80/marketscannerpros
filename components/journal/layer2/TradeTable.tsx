@@ -18,7 +18,7 @@ type TradeTableProps = {
   onSort: (s: SortModel) => void;
   onSelectTrade: (id: string) => void;
   onQuickClose: (id: string) => void;
-  onSnapshot: (id: string) => void;
+  onSnapshot?: (id: string) => void;
   loading: boolean;
   error: string | null;
 };
@@ -120,7 +120,7 @@ export default function TradeTable({ rows, sort, onSort, onSelectTrade, onQuickC
                 <td className="px-3 py-2">
                   <div className="flex gap-1">
                     <button onClick={() => onSelectTrade(row.id)} className="rounded bg-white/10 px-2 py-1 text-xs text-slate-100">View</button>
-                    <button onClick={() => onSnapshot(row.id)} className="rounded bg-white/10 px-2 py-1 text-xs text-slate-100">Snapshot</button>
+                    {onSnapshot && <button onClick={() => onSnapshot(row.id)} className="rounded bg-white/10 px-2 py-1 text-xs text-slate-100">Snapshot</button>}
                     <button onClick={() => onQuickClose(row.id)} className="rounded bg-rose-500/20 px-2 py-1 text-xs text-rose-200">Close</button>
                     <button onClick={() => setExpandedId((prev) => (prev === row.id ? null : row.id))} className="rounded bg-white/10 px-2 py-1 text-xs text-slate-100">Expand</button>
                   </div>

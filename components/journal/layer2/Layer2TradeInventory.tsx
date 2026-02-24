@@ -24,7 +24,7 @@ type Layer2TradeInventoryProps = {
   equityCurve?: EquityCurveModel;
   onSelectTrade: (id: string) => void;
   onQuickClose: (id: string) => void;
-  onSnapshot: (id: string) => void;
+  onSnapshot?: (id: string) => void;
 };
 
 export default function Layer2TradeInventory(props: Layer2TradeInventoryProps) {

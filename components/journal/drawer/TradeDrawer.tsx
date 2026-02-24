@@ -13,7 +13,7 @@ type TradeDrawerProps = {
   trade?: TradeModel;
   onClose: () => void;
   onRequestCloseTrade: () => void;
-  onRequestSnapshot: () => void;
+  onRequestSnapshot?: () => void;
   onCreateTrade?: (payload: TradeEntryPayload) => Promise<void>;
 };
 
@@ -43,7 +43,7 @@ export default function TradeDrawer({ open, trade, onClose, onRequestCloseTrade,
           <div className="flex gap-2">
             {!isNewTrade && (
               <>
-                <button onClick={onRequestSnapshot} className="rounded bg-white/10 px-3 py-1 text-sm text-slate-100">Snapshot</button>
+                {onRequestSnapshot && <button onClick={onRequestSnapshot} className="rounded bg-white/10 px-3 py-1 text-sm text-slate-100">Snapshot</button>}
                 <button onClick={onRequestCloseTrade} className="rounded bg-rose-500/20 px-3 py-1 text-sm text-rose-200">Close</button>
               </>
             )}

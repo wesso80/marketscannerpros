@@ -73,6 +73,8 @@ export const canAccessBrain = (tier: UserTier) => tier === "pro_trader";
 export const canAccessUnlimitedScanning = (tier: UserTier) => tier === "pro" || tier === "pro_trader";
 export const canExportCSV = (tier: UserTier) => tier === "pro" || tier === "pro_trader";
 export const canAccessAdvancedJournal = (tier: UserTier) => tier === "pro" || tier === "pro_trader";
+export const canAccessJournal = (tier: UserTier) => tier === "pro" || tier === "pro_trader";
+export const canAccessJournalIntelligence = (tier: UserTier) => tier === "pro_trader";
 export const canAccessPortfolioInsights = (tier: UserTier) => tier === "pro" || tier === "pro_trader";
 export const canAccessCryptoCommandCenter = (tier: UserTier) => tier === "pro" || tier === "pro_trader";
 export const canAccessCatalystStudy = (tier: UserTier) => tier === "pro_trader";

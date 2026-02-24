@@ -11,9 +11,11 @@ import JournalLayout from '@/components/journal/layout/JournalLayout';
 import CloseTradeModal from '@/components/journal/modals/CloseTradeModal';
 import SnapshotCaptureModal from '@/components/journal/modals/SnapshotCaptureModal';
 import { buildDockOpenState, getAutoOpenDockKeys } from '@/lib/journal/autoOpenDock';
+import { canAccessJournalIntelligence } from '@/lib/useUserTier';
 import { JournalDockKey, TradeModel } from '@/types/journal';
+import type { UserTier } from '@/lib/useUserTier';
 
-export default function JournalPage() {
+export default function JournalPage({ tier }: { tier: UserTier }) {
   const { query, sort, onQueryChange, onSort, onResetFilters } = useJournalState();
   const { payload, pageRows, total, loading, error, refresh } = useJournalData(query, sort);
 
@@ -109,6 +111,8 @@ export default function JournalPage() {
     setCloseModalOpen(false);
   };
 
+  const isProTrader = canAccessJournalIntelligence(tier);
+
   return (
     <div className="min-h-screen bg-[var(--msp-bg)] text-slate-100">
       <main className="mx-auto w-full max-w-none space-y-4 px-4 py-4 md:px-6">
@@ -129,8 +133,8 @@ export default function JournalPage() {
           loading={loading}
           error={error}
           equityCurve={payload?.equityCurve}
-          dockSummary={payload?.dockSummary}
-          dockModules={payload?.dockModules}
+          dockSummary={isProTrader ? payload?.dockSummary : undefined}
+          dockModules={isProTrader ? payload?.dockModules : undefined}
           dockOpen={dockOpen}
           onToggleDock={(key) => setDockOpen((prev) => ({ ...prev, [key]: !prev[key] }))}
           onExpandAllDock={() => setDockOpen({ risk: true, review: true, labeling: true, evidence: true })}
@@ -143,10 +147,10 @@ export default function JournalPage() {
             setSelectedTradeId(id);
             setCloseModalOpen(true);
           }}
-          onSnapshot={(id) => {
+          onSnapshot={isProTrader ? (id) => {
             setSelectedTradeId(id);
             setSnapshotModalOpen(true);
-          }}
+          } : undefined}
           livePriceTs={livePriceTs}
         />
       </main>
@@ -156,7 +160,7 @@ export default function JournalPage() {
         trade={selectedTrade}
         onClose={() => setDrawerOpen(false)}
         onRequestCloseTrade={() => setCloseModalOpen(true)}
-        onRequestSnapshot={() => setSnapshotModalOpen(true)}
+        onRequestSnapshot={isProTrader ? () => setSnapshotModalOpen(true) : undefined}
         onCreateTrade={async (payload) => {
           await actions.createTrade(payload);
           setDrawerOpen(false);
