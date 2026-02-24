@@ -154,16 +154,18 @@ async function checkSmartAlerts(req: NextRequest) {
   }
 }
 
+const INTERNAL_FETCH_TIMEOUT_MS = 15_000; // 15s max per internal API call
+
 async function fetchDerivativesData(req: NextRequest): Promise<DerivativesData> {
   const host = req.headers.get('host') || 'localhost:5000';
   const protocol = host.includes('localhost') ? 'http' : 'https';
   const baseUrl = `${protocol}://${host}`;
 
   const [oiRes, fundingRes, lsRes, fgRes] = await Promise.all([
-    fetch(`${baseUrl}/api/open-interest`, { cache: 'no-store' }).then(r => r.json()).catch(() => null),
-    fetch(`${baseUrl}/api/funding-rates`, { cache: 'no-store' }).then(r => r.json()).catch(() => null),
-    fetch(`${baseUrl}/api/long-short-ratio`, { cache: 'no-store' }).then(r => r.json()).catch(() => null),
-    fetch(`${baseUrl}/api/fear-greed`, { cache: 'no-store' }).then(r => r.json()).catch(() => null),
+    fetch(`${baseUrl}/api/open-interest`, { cache: 'no-store', signal: AbortSignal.timeout(INTERNAL_FETCH_TIMEOUT_MS) }).then(r => r.json()).catch(() => null),
+    fetch(`${baseUrl}/api/funding-rates`, { cache: 'no-store', signal: AbortSignal.timeout(INTERNAL_FETCH_TIMEOUT_MS) }).then(r => r.json()).catch(() => null),
+    fetch(`${baseUrl}/api/long-short-ratio`, { cache: 'no-store', signal: AbortSignal.timeout(INTERNAL_FETCH_TIMEOUT_MS) }).then(r => r.json()).catch(() => null),
+    fetch(`${baseUrl}/api/fear-greed`, { cache: 'no-store', signal: AbortSignal.timeout(INTERNAL_FETCH_TIMEOUT_MS) }).then(r => r.json()).catch(() => null),
   ]);
 
   return {

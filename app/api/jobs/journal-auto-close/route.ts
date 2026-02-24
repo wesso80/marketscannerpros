@@ -6,6 +6,9 @@ import { emitTradeLifecycleEvent, hashDedupeKey } from '@/lib/notifications/trad
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
+const QUOTE_FETCH_TIMEOUT_MS = 10_000; // 10s max for price fetch
+const WALL_CLOCK_LIMIT_MS = 90_000;     // 90s hard stop (leaves buffer for curl's 120s max-time)
+
 type ExitReason = 'tp' | 'sl' | 'time' | 'drawdown';
 
 /** Emergency drawdown threshold — auto-close if trade loses more than 30% */
@@ -86,7 +89,7 @@ async function fetchCurrentPrice(req: NextRequest, symbol: string, assetClass: '
   const headers: Record<string, string> = {};
   if (process.env.CRON_SECRET) headers['x-cron-secret'] = process.env.CRON_SECRET;
 
-  const response = await fetch(quoteUrl.toString(), { cache: 'no-store', headers });
+  const response = await fetch(quoteUrl.toString(), { cache: 'no-store', headers, signal: AbortSignal.timeout(QUOTE_FETCH_TIMEOUT_MS) });
   if (!response.ok) return null;
   const data = await response.json().catch(() => null);
   const price = Number(data?.price);
@@ -246,6 +249,7 @@ async function closeEntry(args: {
 
 export async function POST(req: NextRequest) {
   try {
+    const routeStart = Date.now();
     const cronSecret = process.env.CRON_SECRET;
     const headerSecret = req.headers.get('x-cron-secret');
     const authHeader = req.headers.get('authorization');
@@ -288,6 +292,11 @@ export async function POST(req: NextRequest) {
     const skipped: Array<{ workspaceId: string; journalEntryId: number; symbol: string; reason: string }> = [];
 
     for (const entry of openEntries) {
+      // Wall-clock guard: stop processing if approaching curl timeout
+      if (Date.now() - routeStart > WALL_CLOCK_LIMIT_MS) {
+        console.warn(`[journal-auto-close] Approaching wall-clock limit after ${checked} entries, stopping early`);
+        break;
+      }
       checked += 1;
 
       const assetClass = normalizeAssetClass(entry.asset_class || inferAssetClassFromSymbol(entry.symbol));

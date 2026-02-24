@@ -15,6 +15,8 @@ import { DEFAULT_BACKTEST_STRATEGY, isBacktestStrategy } from '@/lib/strategies/
  */
 
 const CRON_SECRET = process.env.CRON_SECRET;
+const BACKTEST_FETCH_TIMEOUT_MS = 30_000; // 30s max for backtest API call
+const WALL_CLOCK_LIMIT_MS = 90_000;        // 90s hard stop (leaves buffer for curl's 120s max-time)
 
 /** Ensure smart alert columns exist (self-healing schema) */
 async function ensureSmartAlertSchema() {
@@ -68,6 +70,7 @@ export async function POST(req: NextRequest) {
 }
 
 async function checkStrategyAlerts(req: NextRequest) {
+  const routeStart = Date.now();
   const secret = req.headers.get('x-cron-secret');
   if (CRON_SECRET && secret !== CRON_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -123,6 +126,11 @@ async function checkStrategyAlerts(req: NextRequest) {
     const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
     for (const [key, alertsForGroup] of alertGroups) {
+      // Wall-clock guard: stop processing if approaching curl timeout
+      if (Date.now() - routeStart > WALL_CLOCK_LIMIT_MS) {
+        console.warn('[strategy-check] Approaching wall-clock limit, stopping early');
+        break;
+      }
       const [symbol, strategy, timeframe] = key.split('|');
 
       try {
@@ -141,7 +149,8 @@ async function checkStrategyAlerts(req: NextRequest) {
             initialCapital: 10000,
             timeframe
           }),
-          cache: 'no-store'
+          cache: 'no-store',
+          signal: AbortSignal.timeout(BACKTEST_FETCH_TIMEOUT_MS),
         });
 
         if (!backtestRes.ok) {

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
+// Next.js marketing site URL (NOT Streamlit)
 import { APP_URL } from '@/lib/appUrl';
+
+const QUOTE_FETCH_TIMEOUT_MS = 10_000; // 10s max for price fetch
+const WALL_CLOCK_LIMIT_MS = 90_000;     // 90s hard stop (leaves buffer for curl's 120s max-time)
 
 /** Ensure learning tables exist (self-healing schema) */
 async function ensureLearningSchema() {
@@ -59,7 +63,7 @@ async function fetchLatestPrice(symbol: string, assetType: string): Promise<numb
     const url = `${APP_URL}/api/quote?symbol=${encodeURIComponent(symbol)}&type=${encodeURIComponent(assetType)}`;
     const headers: Record<string, string> = {};
     if (process.env.CRON_SECRET) headers['x-cron-secret'] = process.env.CRON_SECRET;
-    const res = await fetch(url, { cache: 'no-store', headers });
+    const res = await fetch(url, { cache: 'no-store', headers, signal: AbortSignal.timeout(QUOTE_FETCH_TIMEOUT_MS) });
     if (!res.ok) return null;
     const data = await res.json();
     return typeof data.price === 'number' ? data.price : null;
@@ -100,6 +104,12 @@ export async function POST(_req: NextRequest) {
     );
 
     for (const pred of rows) {
+      // Wall-clock guard: stop processing if approaching curl timeout
+      if (Date.now() - start > WALL_CLOCK_LIMIT_MS) {
+        console.warn(`[learning-outcomes] Approaching wall-clock limit after ${processed.length} predictions, stopping early`);
+        break;
+      }
+
       const latestPrice = await fetchLatestPrice(pred.symbol, pred.asset_type || 'crypto');
       if (!latestPrice || pred.current_price <= 0) {
         errors.push(`${pred.symbol}: price unavailable`);
