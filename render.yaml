@@ -42,7 +42,7 @@ services:
     runtime: node
     schedule: "*/5 * * * *"  # Every 5 minutes
     buildCommand: echo "Cron job ready"
-    startCommand: curl -f --retry 2 --retry-delay 5 --max-time 120 -X POST "$WEB_URL/api/alerts/check" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
+    startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/alerts/check" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
       - key: WEB_URL
         value: "https://marketscannerpros.onrender.com"
@@ -54,7 +54,7 @@ services:
     runtime: node
     schedule: "*/10 * * * *"  # Every 10 minutes
     buildCommand: echo "Cron job ready"
-    startCommand: curl -f --retry 2 --retry-delay 5 --max-time 120 -X POST "$WEB_URL/api/alerts/signal-check" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
+    startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/alerts/signal-check" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
       - key: WEB_URL
         value: "https://marketscannerpros.onrender.com"
@@ -66,7 +66,7 @@ services:
     runtime: node
     schedule: "*/5 * * * *"  # Every 5 minutes - derivatives/OI/funding alerts
     buildCommand: echo "Cron job ready"
-    startCommand: curl -f --retry 2 --retry-delay 5 --max-time 120 -X POST "$WEB_URL/api/alerts/smart-check" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
+    startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/alerts/smart-check" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
       - key: WEB_URL
         value: "https://marketscannerpros.onrender.com"
@@ -78,7 +78,7 @@ services:
     runtime: node
     schedule: "*/15 * * * *"  # Every 15 minutes
     buildCommand: echo "Cron job ready"
-    startCommand: curl -f --retry 2 --retry-delay 5 --max-time 120 -X POST "$WEB_URL/api/alerts/strategy-check" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
+    startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/alerts/strategy-check" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
       - key: WEB_URL
         value: "https://marketscannerpros.onrender.com"
@@ -90,7 +90,7 @@ services:
     runtime: node
     schedule: "0 21 * * *"  # 9 PM UTC daily
     buildCommand: echo "Cron job ready"
-    startCommand: curl -f --retry 2 --retry-delay 5 --max-time 120 -X POST "$WEB_URL/api/jobs/generate-market-focus" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
+    startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/jobs/generate-market-focus" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
       - key: WEB_URL
         value: "https://marketscannerpros.onrender.com"
@@ -102,7 +102,7 @@ services:
     runtime: node
     schedule: "30 21 * * *"  # 9:30 PM UTC daily
     buildCommand: echo "Cron job ready"
-    startCommand: curl -f --retry 2 --retry-delay 5 --max-time 290 -X POST "$WEB_URL/api/jobs/scan-daily" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
+    startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 290 -X POST "$WEB_URL/api/jobs/scan-daily" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
       - key: WEB_URL
         value: "https://marketscannerpros.onrender.com"
@@ -114,7 +114,7 @@ services:
     runtime: node
     schedule: "*/30 * * * *"  # Every 30 minutes - incremental catalyst study computation
     buildCommand: echo "Cron job ready"
-    startCommand: curl -f --retry 3 --retry-delay 10 --max-time 290 -X POST "$WEB_URL/api/catalyst/study/compute?limit=5" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
+    startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 290 -X POST "$WEB_URL/api/catalyst/study/compute?limit=5" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
       - key: WEB_URL
         value: "https://marketscannerpros.onrender.com"
@@ -126,7 +126,7 @@ services:
     runtime: node
     schedule: "0 22 * * *"  # 10 PM UTC (5 PM ET) - bulk compute after market close
     buildCommand: echo "Cron job ready"
-    startCommand: curl -f --retry 3 --retry-delay 10 --max-time 290 -X POST "$WEB_URL/api/catalyst/study/compute?limit=50" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
+    startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 290 -X POST "$WEB_URL/api/catalyst/study/compute?limit=50" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
       - key: WEB_URL
         value: "https://marketscannerpros.onrender.com"
@@ -138,7 +138,7 @@ services:
     runtime: node
     schedule: "*/15 * * * *"  # Every 15 minutes - process learning machine predictions
     buildCommand: echo "Cron job ready"
-    startCommand: curl -f --retry 2 --retry-delay 5 --max-time 120 -X POST "$WEB_URL/api/jobs/learning-outcomes" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
+    startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/jobs/learning-outcomes" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
       - key: WEB_URL
         value: "https://marketscannerpros.onrender.com"
@@ -150,7 +150,7 @@ services:
     runtime: node
     schedule: "*/5 * * * *"  # Every 5 minutes - auto-close TP/SL/time-stop eligible journal trades
     buildCommand: echo "Cron job ready"
-    startCommand: curl -f --retry 2 --retry-delay 5 --max-time 120 -X POST "$WEB_URL/api/jobs/journal-auto-close?limit=200" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
+    startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/jobs/journal-auto-close?limit=200" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
       - key: WEB_URL
         value: "https://marketscannerpros.onrender.com"
