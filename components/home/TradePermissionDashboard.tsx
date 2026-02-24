@@ -23,7 +23,8 @@ type Candidate = {
   event_severity: 'none' | 'medium' | 'high';
 };
 
-const CANDIDATES: Candidate[] = [
+/** Static fallback shown when no live scanner data is available. */
+const FALLBACK_CANDIDATES: Candidate[] = [
   { symbol: 'BTCUSD', structure: 'Volatility Expansion', strategy_tag: 'BREAKOUT_CONTINUATION', direction: 'LONG', confidence: 77, asset_class: 'crypto', entry_price: 64420, stop_price: 63770, atr: 620, event_severity: 'none' },
   { symbol: 'NVDA', structure: 'Trend Pullback', strategy_tag: 'TREND_PULLBACK', direction: 'LONG', confidence: 74, asset_class: 'equities', entry_price: 937, stop_price: 928, atr: 14, event_severity: 'none' },
   { symbol: 'MSFT', structure: 'Range Reclaim', strategy_tag: 'MEAN_REVERSION', direction: 'LONG', confidence: 69, asset_class: 'equities', entry_price: 421, stop_price: 415.2, atr: 8.5, event_severity: 'none' },
@@ -74,6 +75,31 @@ export default function TradePermissionDashboard() {
   const [evalBySymbol, setEvalBySymbol] = useState<Record<string, EvaluateResult>>({});
   const [permissionFilter, setPermissionFilter] = useState<'ALL' | Permission>('ALL');
   const [matrixMessage, setMatrixMessage] = useState<string>('');
+  const [liveCandidates, setLiveCandidates] = useState<Candidate[]>(FALLBACK_CANDIDATES);
+  const [candidateSource, setCandidateSource] = useState<string>('fallback');
+
+  // Fetch live candidates from scanner
+  useEffect(() => {
+    let active = true;
+
+    const loadCandidates = async () => {
+      try {
+        const res = await fetch('/api/scanner/candidates', { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (active && data.candidates?.length) {
+          setLiveCandidates(data.candidates);
+          setCandidateSource(data.source || 'live');
+        }
+      } catch {
+        // Keep fallback candidates
+      }
+    };
+
+    loadCandidates();
+    const id = window.setInterval(loadCandidates, 60_000); // refresh every 60s
+    return () => { active = false; window.clearInterval(id); };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -99,7 +125,7 @@ export default function TradePermissionDashboard() {
   useEffect(() => {
     if (!snapshot) return;
 
-    const eligible = CANDIDATES.filter((candidate) => {
+    const eligible = liveCandidates.filter((candidate) => {
       const local = snapshot.matrix[candidate.strategy_tag]?.[candidate.direction] || 'BLOCK';
       return local !== 'BLOCK' && snapshot.risk_mode !== 'LOCKED';
     });
@@ -142,7 +168,7 @@ export default function TradePermissionDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [snapshot]);
+  }, [snapshot, liveCandidates]);
 
   const globalLocked = !!snapshot && (
     snapshot.risk_mode === 'LOCKED' ||
@@ -153,7 +179,7 @@ export default function TradePermissionDashboard() {
   const candidates = useMemo(() => {
     if (!snapshot) return [];
 
-    return CANDIDATES
+    return liveCandidates
       .map((candidate) => {
         const localPermission = snapshot.matrix[candidate.strategy_tag]?.[candidate.direction] || 'BLOCK';
         const evaluated = evalBySymbol[candidate.symbol];
@@ -165,7 +191,7 @@ export default function TradePermissionDashboard() {
         const rank: Record<Permission, number> = { ALLOW: 3, ALLOW_REDUCED: 2, ALLOW_TIGHTENED: 1, BLOCK: 0 };
         return rank[b.permission] - rank[a.permission] || b.confidence - a.confidence;
       });
-  }, [snapshot, evalBySymbol, permissionFilter]);
+  }, [snapshot, evalBySymbol, permissionFilter, liveCandidates]);
 
   const onMatrixCellClick = (strategy: StrategyTag, direction: Direction) => {
     if (!snapshot) return;
@@ -232,8 +258,13 @@ export default function TradePermissionDashboard() {
 
           <section className="col-span-12 xl:col-span-8" style={{ borderRadius: 14, border: '1px solid var(--msp-border)', background: 'var(--msp-card)', padding: '0.9rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.7rem', flexWrap: 'wrap', marginBottom: '0.65rem' }}>
-              <div style={{ fontSize: '0.82rem', letterSpacing: '0.06em', color: 'var(--msp-text-faint)', textTransform: 'uppercase', fontWeight: 800 }}>
-                Permission-Filtered Candidates
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.82rem', letterSpacing: '0.06em', color: 'var(--msp-text-faint)', textTransform: 'uppercase', fontWeight: 800 }}>
+                  Permission-Filtered Candidates
+                </span>
+                <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.12rem 0.4rem', borderRadius: 999, background: candidateSource === 'daily_picks' ? 'rgba(16,185,129,0.18)' : 'rgba(251,191,36,0.15)', color: candidateSource === 'daily_picks' ? '#10b981' : '#fbbf24' }}>
+                  {candidateSource === 'daily_picks' ? 'LIVE' : 'DEMO'}
+                </span>
               </div>
               <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
                 {(['ALL', 'ALLOW', 'ALLOW_REDUCED', 'ALLOW_TIGHTENED', 'BLOCK'] as const).map((filter) => (
