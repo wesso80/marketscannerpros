@@ -210,7 +210,7 @@ export default function TradePermissionDashboard() {
             </div>
             <div style={{ display: 'grid', gap: '0.45rem' }}>
               {STRATEGIES.map((strategy) => (
-                <div key={strategy} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '0.45rem', alignItems: 'center' }}>
+                <div key={strategy} style={{ display: 'grid', gridTemplateColumns: 'minmax(80px, 1fr) auto auto', gap: '0.45rem', alignItems: 'center' }}>
                   <div style={{ color: '#cbd5e1', fontSize: '0.74rem', fontWeight: 700 }}>{strategy.replaceAll('_', ' ')}</div>
                   {DIRECTIONS.map((direction) => {
                     const permission = snapshot?.matrix?.[strategy]?.[direction] || 'BLOCK';

@@ -27,7 +27,7 @@ export default function Newsletter() {
           {status === 'done' ? (
             <p className="mt-4 text-emerald-400 text-sm">Thanks! We&apos;ll be in touch.</p>
           ) : (
-            <form className="mt-4 flex gap-3" onSubmit={handleSubscribe}>
+            <form className="mt-4 flex flex-col gap-3 sm:flex-row" onSubmit={handleSubscribe}>
               <input
                 type="email"
                 required

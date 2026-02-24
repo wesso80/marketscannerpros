@@ -209,7 +209,7 @@ export default function CapitalFlowCard({
             <strong>Plan:</strong> {flow.brain_decision.plan.entryType.toUpperCase()} • Size {Math.round(flow.brain_decision.plan.size * 100)}% • {flow.brain_decision.plan.stopRule}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : '1fr 1fr', gap: '0.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.5rem' }}>
             <div style={{ color: '#A7F3D0', fontSize: '0.7rem' }}>
               <strong>✔ Allowed</strong>
               {brainAllowed.slice(0, 2).map((entry, index) => (
@@ -334,7 +334,7 @@ export default function CapitalFlowCard({
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : '1fr 1fr', gap: '0.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.5rem' }}>
             <div style={{ color: '#A7F3D0', fontSize: '0.7rem' }}>
               <strong>✔ Allowed</strong>
               {ftpAllowed.slice(0, 3).map((entry, index) => (
@@ -391,7 +391,7 @@ export default function CapitalFlowCard({
             {toNum(flow.institutional_risk_governor.sizing?.baseSize).toFixed(2)} × {toNum(flow.institutional_risk_governor.sizing?.flowStateMultiplier).toFixed(2)} × {toNum(flow.institutional_risk_governor.sizing?.riskGovernorMultiplier).toFixed(2)} × {toNum(flow.institutional_risk_governor.sizing?.personalPerformanceMultiplier).toFixed(2)} = {toNum(flow.institutional_risk_governor.sizing?.finalSize).toFixed(2)}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : '1fr 1fr', gap: '0.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.5rem' }}>
             <div style={{ color: '#A7F3D0', fontSize: '0.7rem' }}>
               <strong>✔ Allowed</strong>
               {irgAllowed.slice(0, 3).map((entry, index) => (

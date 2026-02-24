@@ -31,7 +31,7 @@ export default function DecisionLens({ ctx }: DecisionLensProps) {
 
   if (ctx.loading || !lens) {
     return (
-      <div className="grid grid-cols-3 gap-2 rounded-lg border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-3 animate-pulse">
+      <div className="grid grid-cols-1 gap-2 rounded-lg border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-3 animate-pulse md:grid-cols-3">
         {[0, 1, 2].map(i => (
           <div key={i} className="h-32 rounded-md bg-[var(--msp-panel-2)]" />
         ))}

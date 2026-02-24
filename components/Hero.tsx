@@ -117,7 +117,7 @@ export default function Hero() {
                 </div>
               </div>
 
-              <h1 style={{ fontSize: 32, lineHeight: 1.2, marginBottom: 12, fontWeight: 700 }}>
+              <h1 style={{ fontSize: 'clamp(22px, 5vw, 32px)', lineHeight: 1.2, marginBottom: 12, fontWeight: 700 }}>
                 Stop Guessing the Market.
                 <br />
                 <span style={{ color: '#22c55e' }}>Start Understanding It.</span>

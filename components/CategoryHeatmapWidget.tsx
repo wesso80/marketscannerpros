@@ -144,8 +144,8 @@ export default function CategoryHeatmapWidget() {
       <div style={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
-        alignItems: 'center',
-        marginBottom: '16px'
+        alignItems: 'center',        flexWrap: 'wrap',
+        gap: '8px',        marginBottom: '16px'
       }}>
         <h3 style={{ 
           color: '#f1f5f9', 

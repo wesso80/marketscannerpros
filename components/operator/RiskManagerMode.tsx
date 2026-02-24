@@ -108,7 +108,7 @@ export default function RiskManagerMode({ onExit }: { onExit?: () => void } = {}
           {/* Exposure Panel */}
           <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
             <div className="mb-3 text-[10px] font-extrabold uppercase tracking-[0.08em] text-slate-500">Exposure Profile</div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="rounded-md border border-slate-700 bg-slate-950/40 px-3 py-2">
                 <div className="text-[9px] uppercase text-slate-500">Open Risk</div>
                 <div className="mt-1 text-lg font-black text-slate-100">{snapshot.session.open_risk_R.toFixed(1)}R</div>

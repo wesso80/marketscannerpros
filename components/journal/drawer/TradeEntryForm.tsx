@@ -122,7 +122,7 @@ export default function TradeEntryForm({ onSubmit, onCancel }: TradeEntryFormPro
         <h3 className="mb-3 text-sm font-semibold text-emerald-300">New Manual Trade</h3>
 
         {/* Row 1: Symbol + Side */}
-        <div className="mb-3 grid grid-cols-2 gap-3">
+        <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className={LABEL}>Symbol *</label>
             <input
@@ -164,7 +164,7 @@ export default function TradeEntryForm({ onSubmit, onCancel }: TradeEntryFormPro
         </div>
 
         {/* Row 2: Asset Class + Trade Type */}
-        <div className="mb-3 grid grid-cols-2 gap-3">
+        <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className={LABEL}>Asset Class</label>
             <select className={SELECT} value={assetClass} onChange={(e) => setAssetClass(e.target.value as any)}>
@@ -189,7 +189,7 @@ export default function TradeEntryForm({ onSubmit, onCancel }: TradeEntryFormPro
         {tradeType === 'Options' && (
           <div className="mb-3 rounded-lg border border-purple-500/20 bg-purple-500/5 p-3">
             <div className="mb-2 text-xs font-semibold text-purple-300">Options Details</div>
-            <div className="mb-2 grid grid-cols-2 gap-3">
+            <div className="mb-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label className={LABEL}>Option Type *</label>
                 <div className="flex gap-2">
@@ -230,7 +230,7 @@ export default function TradeEntryForm({ onSubmit, onCancel }: TradeEntryFormPro
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label className={LABEL}>Expiration Date</label>
                 <input
@@ -262,7 +262,7 @@ export default function TradeEntryForm({ onSubmit, onCancel }: TradeEntryFormPro
             <div className="mb-2 text-xs font-semibold text-amber-300">
               {tradeType} Details
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label className={LABEL}>Leverage</label>
                 <div className="relative">
@@ -290,7 +290,7 @@ export default function TradeEntryForm({ onSubmit, onCancel }: TradeEntryFormPro
         )}
 
         {/* Row 3: Entry Price + Quantity */}
-        <div className="mb-3 grid grid-cols-2 gap-3">
+        <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className={LABEL}>Entry Price *</label>
             <input
@@ -318,7 +318,7 @@ export default function TradeEntryForm({ onSubmit, onCancel }: TradeEntryFormPro
         </div>
 
         {/* Row 4: Stop Loss + Target */}
-        <div className="mb-3 grid grid-cols-2 gap-3">
+        <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className={LABEL}>Stop Loss</label>
             <input
@@ -373,7 +373,7 @@ export default function TradeEntryForm({ onSubmit, onCancel }: TradeEntryFormPro
         </div>
 
         {/* Row 6: Strategy + Setup */}
-        <div className="mb-3 grid grid-cols-2 gap-3">
+        <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className={LABEL}>Strategy</label>
             <input

@@ -180,7 +180,7 @@ export default function LiveMarketPulse() {
           background: 'var(--msp-card)',
           borderRadius: 20,
           border: '1px solid rgba(34,197,94,0.3)',
-          padding: '28px',
+          padding: 'clamp(14px, 3vw, 28px)',
           position: 'relative',
           animation: isAnimating ? 'glow 3s ease-in-out infinite' : 'none',
           overflow: 'hidden'
@@ -353,7 +353,7 @@ export default function LiveMarketPulse() {
           {STATS.map((stat, i) => (
             <div key={i} style={{
               textAlign: 'center',
-              padding: '16px 24px',
+              padding: 'clamp(10px, 2vw, 16px) clamp(14px, 3vw, 24px)',
               background: 'rgba(15,23,42,0.5)',
               borderRadius: 12,
               border: '1px solid rgba(148,163,184,0.1)'
@@ -384,10 +384,11 @@ export default function LiveMarketPulse() {
               gap: 10,
               background: 'var(--msp-accent)',
               color: '#0b1120',
-              padding: '16px 32px',
+              padding: 'clamp(12px, 2vw, 16px) clamp(20px, 4vw, 32px)',
               borderRadius: 999,
               fontWeight: 700,
-              fontSize: 17,
+              fontSize: 'clamp(14px, 2.5vw, 17px)',
+              textAlign: 'center',
               textDecoration: 'none',
               boxShadow: '0 4px 20px rgba(34,197,94,0.4), 0 0 40px rgba(34,197,94,0.1)',
               transition: 'all 0.3s ease'

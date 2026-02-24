@@ -197,7 +197,7 @@ export default function CryptoHeatmap() {
       </div>
 
       {/* Heatmap */}
-      <div className="relative" style={{ height: '450px' }}>
+      <div className="relative" style={{ height: 'clamp(280px, 50vw, 450px)' }}>
         {layout.map(item => {
           const isHovered = hoveredCrypto === item.crypto.symbol;
           

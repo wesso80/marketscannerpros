@@ -204,7 +204,7 @@ export default function Header() {
       )}
 
       {/* Mobile Menu Drawer */}
-      <div className={`fixed top-0 right-0 h-[100dvh] w-80 bg-[#111C2D] z-50 transform transition-transform duration-300 ease-in-out md:hidden border-l border-slate-700/90 shadow-2xl ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div className={`fixed top-0 right-0 h-[100dvh] w-[min(320px,85vw)] bg-[#111C2D] z-50 transform transition-transform duration-300 ease-in-out md:hidden border-l border-slate-700/90 shadow-2xl ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         <div className="flex flex-col h-full min-h-0 overscroll-contain">
           <div className="flex items-center justify-between p-5 border-b border-slate-700/90 flex-shrink-0">
             <span className="text-lg font-semibold text-teal-300">Menu</span>

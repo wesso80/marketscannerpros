@@ -543,7 +543,7 @@ export default function AlertsWidget({
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-4 mt-4">
+        <div className="flex gap-4 mt-4 overflow-x-auto [&>button]:flex-shrink-0">
           <button
             onClick={() => setActiveTab('basic')}
             className={`text-sm pb-2 border-b-2 transition-colors ${
@@ -629,7 +629,7 @@ export default function AlertsWidget({
             </select>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+          <div className="grid grid-cols-1 gap-3 mb-3 sm:grid-cols-2 md:grid-cols-4">
             <input
               type="text"
               placeholder="Symbol (BTC, AAPL)"

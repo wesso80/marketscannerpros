@@ -244,14 +244,14 @@ export default function AccountPage() {
   return (
     <main className="min-h-screen bg-[var(--msp-bg)] text-white">
       <div className="mx-auto max-w-6xl px-4 pb-16">
-        <div className="pt-8 flex items-start justify-between">
+        <div className="pt-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold">Account Settings</h1>
             <p className="text-sm text-white/60 mt-1">Manage your subscription, alerts, and intelligence access.</p>
             <p className="text-xs text-white/50 mt-2">{email || "Email unavailable"}</p>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <button
               onClick={() => void openBillingPortal()}
               disabled={billingLoading || normalizedTier === "free"}
