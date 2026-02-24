@@ -8,7 +8,7 @@ import { CACHE_KEYS } from '@/lib/redis';
  * and recent. Used by the StaleDataBanner component.
  */
 export async function GET() {
-  const STALE_THRESHOLD_SEC = 600; // 10 minutes
+  const STALE_THRESHOLD_SEC = 3600; // 1 hour
 
   try {
     // Check a few representative cache keys
