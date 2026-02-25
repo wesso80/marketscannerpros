@@ -43,9 +43,26 @@ function normalizeAssetClass(value: unknown): 'crypto' | 'equity' | 'forex' | 'c
   return 'equity';
 }
 
+/** Well-known crypto base symbols — catches tickers stored without a -USD suffix */
+const KNOWN_CRYPTO = new Set([
+  'BTC','ETH','XRP','SOL','DOGE','ADA','AVAX','DOT','MATIC','LINK',
+  'UNI','LTC','BCH','XLM','ATOM','NEAR','APT','ARB','OP','FIL',
+  'HBAR','ICP','VET','ALGO','FTM','SAND','MANA','AXS','CRV','LDO',
+  'AAVE','MKR','COMP','SNX','SUSHI','YFI','GRT','ENS','RNDR','IMX',
+  'INJ','SUI','SEI','TIA','JUP','WIF','PEPE','BONK','FLOKI','SHIB',
+  'GMX','ORCA','PENDLE','STX','RUNE','KAS','TON','TRX','ETC','FET',
+  'THETA','EOS','NEO','ZEC','DASH','XMR','IOTA','EGLD','FLOW','ROSE',
+  'CELO','ONE','ZIL','KDA','KAVA','OSMO','JUNO','LUNC','BNB','LEO',
+  'OKB','CRO','QNT','RPL','CFX','BLUR','MAGIC','RDNT','JOE','CAKE',
+]);
+
 function inferAssetClassFromSymbol(symbol: string): 'crypto' | 'equity' {
-  const upper = String(symbol || '').toUpperCase();
+  const upper = String(symbol || '').toUpperCase().replace(/[-_\/]/g, '');
+  // Ends with USD / USDT (covers BTC-USD, XRPUSD, SOLUSD, etc.)
   if (upper.endsWith('USD') || upper.endsWith('USDT')) return 'crypto';
+  // Contains a separator followed by USD (already caught above after strip)
+  // Raw base symbol in known list
+  if (KNOWN_CRYPTO.has(upper)) return 'crypto';
   return 'equity';
 }
 
@@ -53,9 +70,11 @@ function resolveQuoteParams(symbol: string, assetClass: 'crypto' | 'equity' | 'f
   const upper = symbol.toUpperCase().trim();
 
   if (assetClass === 'crypto') {
+    // Strip separators first, then quote currency suffixes: BTC-USD → BTC, XRPUSDT → XRP
+    const cleaned = upper.replace(/[-_\/]/g, '').replace(/USDT$/, '').replace(/USD$/, '');
     return {
       type: 'crypto' as const,
-      symbol: upper.replace(/USDT$/, '').replace(/USD$/, ''),
+      symbol: cleaned,
       market: 'USD',
     };
   }
@@ -84,7 +103,7 @@ async function fetchCurrentPrice(req: NextRequest, symbol: string, assetClass: '
   quoteUrl.searchParams.set('symbol', quote.symbol);
   quoteUrl.searchParams.set('type', quote.type);
   quoteUrl.searchParams.set('market', quote.market);
-  quoteUrl.searchParams.set('strict', '1');
+  // Do NOT set strict=1 — use cached prices to avoid burning AV rate limit
 
   const headers: Record<string, string> = {};
   if (process.env.CRON_SECRET) headers['x-cron-secret'] = process.env.CRON_SECRET;
