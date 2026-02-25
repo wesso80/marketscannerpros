@@ -24,9 +24,22 @@ export interface TradeEntryPayload {
   leverage?: number;
 }
 
+export interface TradeEntryInitialValues {
+  symbol?: string;
+  side?: 'LONG' | 'SHORT';
+  assetClass?: 'equity' | 'crypto' | 'forex' | 'commodity';
+  tradeType?: 'Spot' | 'Options' | 'Futures' | 'Margin';
+  entryPrice?: string;
+  quantity?: string;
+  strategy?: string;
+  setup?: string;
+  notes?: string;
+}
+
 interface TradeEntryFormProps {
   onSubmit: (payload: TradeEntryPayload) => Promise<void>;
   onCancel: () => void;
+  initialValues?: TradeEntryInitialValues;
 }
 
 const INPUT =
@@ -35,18 +48,19 @@ const LABEL = 'block text-xs font-medium text-slate-400 mb-1';
 const SELECT =
   'w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-slate-100 focus:border-emerald-500/50 focus:outline-none focus:ring-1 focus:ring-emerald-500/30';
 
-export default function TradeEntryForm({ onSubmit, onCancel }: TradeEntryFormProps) {
-  const [symbol, setSymbol] = useState('');
-  const [side, setSide] = useState<'LONG' | 'SHORT'>('LONG');
-  const [assetClass, setAssetClass] = useState<'equity' | 'crypto' | 'forex' | 'commodity'>('equity');
-  const [tradeType, setTradeType] = useState<'Spot' | 'Options' | 'Futures' | 'Margin'>('Spot');
-  const [entryPrice, setEntryPrice] = useState('');
-  const [quantity, setQuantity] = useState('');
+export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: TradeEntryFormProps) {
+  const iv = initialValues;
+  const [symbol, setSymbol] = useState(iv?.symbol || '');
+  const [side, setSide] = useState<'LONG' | 'SHORT'>(iv?.side || 'LONG');
+  const [assetClass, setAssetClass] = useState<'equity' | 'crypto' | 'forex' | 'commodity'>(iv?.assetClass || 'equity');
+  const [tradeType, setTradeType] = useState<'Spot' | 'Options' | 'Futures' | 'Margin'>(iv?.tradeType || 'Spot');
+  const [entryPrice, setEntryPrice] = useState(iv?.entryPrice || '');
+  const [quantity, setQuantity] = useState(iv?.quantity || '');
   const [stopLoss, setStopLoss] = useState('');
   const [target, setTarget] = useState('');
-  const [strategy, setStrategy] = useState('');
-  const [setup, setSetup] = useState('');
-  const [notes, setNotes] = useState('');
+  const [strategy, setStrategy] = useState(iv?.strategy || '');
+  const [setup, setSetup] = useState(iv?.setup || '');
+  const [notes, setNotes] = useState(iv?.notes || '');
   const [tradeDate, setTradeDate] = useState(new Date().toISOString().slice(0, 10));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);

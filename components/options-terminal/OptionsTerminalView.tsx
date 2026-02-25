@@ -8,7 +8,7 @@
  */
 
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useOptionsChain } from '@/hooks/useOptionsChain';
 import type {
   OptionsContract,
@@ -27,6 +27,7 @@ type CPFilter = 'BOTH' | 'CALLS' | 'PUTS';
    ───────────────────────────────────────────────────────────────── */
 export default function OptionsTerminalView() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const initialSymbol = searchParams.get('symbol')?.toUpperCase() || '';
 
   /* ── Live data ─────────────────────────────────────────────── */
@@ -42,6 +43,8 @@ export default function OptionsTerminalView() {
   const [minVol, setMinVol] = useState(0);
   const [maxSpreadPct, setMaxSpreadPct] = useState(50);
   const [selected, setSelected] = useState<{ side: 'CALL' | 'PUT'; strike: number } | null>(null);
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [watchlistMsg, setWatchlistMsg] = useState('');
 
   /* ── Auto-fetch on ticker/expiry change ────────────────────── */
   useEffect(() => {
@@ -92,6 +95,25 @@ export default function OptionsTerminalView() {
   }, [selectedRow, selected]);
 
   /* ── Handlers ──────────────────────────────────────────────── */
+  const applyFilter = useCallback((name: string) => {
+    if (activeFilter === name) {
+      // toggle off – reset to defaults
+      setActiveFilter(null);
+      setRangePct(20); setMinOI(0); setMinVol(0); setMaxSpreadPct(50);
+      return;
+    }
+    setActiveFilter(name);
+    // reset first
+    setRangePct(20); setMinOI(0); setMinVol(0); setMaxSpreadPct(50);
+    switch (name) {
+      case 'ATM Focus':      setRangePct(5); break;
+      case '25Δ Focus':      setRangePct(15); break;
+      case 'High OI':        setMinOI(500); break;
+      case 'High Volume':    setMinVol(100); break;
+      case 'Tight Spreads':  setMaxSpreadPct(5); break;
+    }
+  }, [activeFilter]);
+
   const handleTickerChange = useCallback((s: string) => {
     setTicker(s.toUpperCase());
     setSelectedExpiry('');
@@ -242,11 +264,9 @@ export default function OptionsTerminalView() {
                 <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4 space-y-3">
                   <div className="text-xs font-semibold">Quick Filters</div>
                   <div className="flex flex-wrap gap-2">
-                    <Chip>ATM Focus</Chip>
-                    <Chip>25Δ Focus</Chip>
-                    <Chip>High OI</Chip>
-                    <Chip>High Volume</Chip>
-                    <Chip>Tight Spreads</Chip>
+                    {['ATM Focus', '25Δ Focus', 'High OI', 'High Volume', 'Tight Spreads'].map((f) => (
+                      <Chip key={f} active={activeFilter === f} onClick={() => applyFilter(f)}>{f}</Chip>
+                    ))}
                   </div>
                 </div>
 
@@ -485,13 +505,86 @@ export default function OptionsTerminalView() {
 
                   {/* Actions */}
                   <div className="grid grid-cols-1 gap-3">
-                    <button className="w-full rounded-2xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm font-semibold hover:bg-zinc-800 transition">
-                      Add to Watchlist
+                    <button
+                      onClick={async () => {
+                        try {
+                          // Fetch user's watchlists, pick first or create "Options"
+                          const res = await fetch('/api/watchlists', { credentials: 'include' });
+                          if (!res.ok) throw new Error('Failed to fetch watchlists');
+                          const { watchlists } = await res.json();
+                          let wlId = watchlists?.[0]?.id;
+                          if (!wlId) {
+                            const createRes = await fetch('/api/watchlists', {
+                              method: 'POST', credentials: 'include',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ name: 'Options' }),
+                            });
+                            if (!createRes.ok) throw new Error('Failed to create watchlist');
+                            const created = await createRes.json();
+                            wlId = created.watchlist?.id;
+                          }
+                          // Add the contract symbol
+                          const contractSymbol = `${ticker} ${selectedContract!.expiration} ${selectedContract!.strike}${selected!.side === 'CALL' ? 'C' : 'P'}`;
+                          const addRes = await fetch('/api/watchlists/items', {
+                            method: 'POST', credentials: 'include',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              watchlistId: wlId,
+                              symbol: ticker,
+                              assetType: 'option',
+                              notes: contractSymbol,
+                              addedPrice: selectedContract!.mark,
+                            }),
+                          });
+                          if (!addRes.ok) throw new Error('Failed to add to watchlist');
+                          setWatchlistMsg('✓ Added to watchlist');
+                          setTimeout(() => setWatchlistMsg(''), 3000);
+                        } catch (e: any) {
+                          setWatchlistMsg(`⚠ ${e.message}`);
+                          setTimeout(() => setWatchlistMsg(''), 3000);
+                        }
+                      }}
+                      className="w-full rounded-2xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm font-semibold hover:bg-zinc-800 transition"
+                    >
+                      {watchlistMsg || 'Add to Watchlist'}
                     </button>
-                    <button className="w-full rounded-2xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm font-semibold hover:bg-zinc-800 transition">
+                    <button
+                      onClick={() => {
+                        const c = selectedContract!;
+                        const label = `${ticker} ${c.expiration} ${c.strike}${selected!.side === 'CALL' ? 'C' : 'P'}`;
+                        const notes = `Options play: ${label}\nMark: $${c.mark.toFixed(2)}\nIV: ${(c.iv * 100).toFixed(1)}%\nDelta: ${c.delta.toFixed(3)}\nOI: ${c.openInterest.toLocaleString()}\nSpread: $${c.spread.toFixed(2)} (${c.spreadPct.toFixed(1)}%)`;
+                        const params = new URLSearchParams({
+                          symbol: ticker,
+                          side: selected!.side === 'CALL' ? 'LONG' : 'SHORT',
+                          entryPrice: c.mark.toFixed(2),
+                          notes,
+                          strategy: 'Options',
+                          setup: label,
+                        });
+                        router.push(`/tools/journal?prefill=true&${params.toString()}`);
+                      }}
+                      className="w-full rounded-2xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm font-semibold hover:bg-zinc-800 transition"
+                    >
                       Save Play
                     </button>
-                    <button className="w-full rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-zinc-950 hover:bg-emerald-500 transition">
+                    <button
+                      onClick={() => {
+                        const c = selectedContract!;
+                        const label = `${ticker} ${c.expiration} ${c.strike}${selected!.side === 'CALL' ? 'C' : 'P'}`;
+                        const params = new URLSearchParams({
+                          symbol: ticker,
+                          side: selected!.side === 'CALL' ? 'LONG' : 'SHORT',
+                          entryPrice: c.mark.toFixed(2),
+                          quantity: '1',
+                          notes: `Trade plan: ${label}\nIV: ${(c.iv * 100).toFixed(1)}% | Δ ${c.delta.toFixed(3)} | OI ${c.openInterest.toLocaleString()}`,
+                          strategy: 'Options',
+                          setup: label,
+                          tradeType: 'Options',
+                        });
+                        router.push(`/tools/journal?prefill=true&${params.toString()}`);
+                      }}
+                      className="w-full rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-zinc-950 hover:bg-emerald-500 transition"
+                    >
                       Create Trade Plan
                     </button>
                   </div>
@@ -577,9 +670,12 @@ function Badge({ children, tone = 'neutral' }: { children: React.ReactNode; tone
   return <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs ${cls}`}>{children}</span>;
 }
 
-function Chip({ children }: { children: React.ReactNode }) {
+function Chip({ children, active, onClick }: { children: React.ReactNode; active?: boolean; onClick?: () => void }) {
   return (
-    <button className="rounded-full border border-zinc-800 bg-zinc-950/40 px-3 py-1 text-xs text-zinc-300 hover:bg-zinc-800 transition">
+    <button
+      onClick={onClick}
+      className={`rounded-full border px-3 py-1 text-xs transition ${active ? 'border-emerald-600/40 bg-emerald-600/20 text-emerald-300' : 'border-zinc-800 bg-zinc-950/40 text-zinc-300 hover:bg-zinc-800'}`}
+    >
       {children}
     </button>
   );

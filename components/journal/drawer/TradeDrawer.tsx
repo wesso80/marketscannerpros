@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import TradeEntryForm, { type TradeEntryPayload } from '@/components/journal/drawer/TradeEntryForm';
+import TradeEntryForm, { type TradeEntryPayload, type TradeEntryInitialValues } from '@/components/journal/drawer/TradeEntryForm';
 import TradeIntelligenceTab from '@/components/journal/drawer/tabs/TradeIntelligenceTab';
 import TradeNotesTab from '@/components/journal/drawer/tabs/TradeNotesTab';
 import TradeOverviewTab from '@/components/journal/drawer/tabs/TradeOverviewTab';
@@ -15,11 +15,12 @@ type TradeDrawerProps = {
   onRequestCloseTrade: () => void;
   onRequestSnapshot?: () => void;
   onCreateTrade?: (payload: TradeEntryPayload) => Promise<void>;
+  prefillValues?: TradeEntryInitialValues;
 };
 
 type TabKey = 'overview' | 'intelligence' | 'snapshots' | 'notes';
 
-export default function TradeDrawer({ open, trade, onClose, onRequestCloseTrade, onRequestSnapshot, onCreateTrade }: TradeDrawerProps) {
+export default function TradeDrawer({ open, trade, onClose, onRequestCloseTrade, onRequestSnapshot, onCreateTrade, prefillValues }: TradeDrawerProps) {
   const [tab, setTab] = useState<TabKey>('overview');
   if (!open) return null;
 
@@ -52,7 +53,7 @@ export default function TradeDrawer({ open, trade, onClose, onRequestCloseTrade,
         </div>
 
         {isNewTrade && onCreateTrade ? (
-          <TradeEntryForm onSubmit={onCreateTrade} onCancel={onClose} />
+          <TradeEntryForm onSubmit={onCreateTrade} onCancel={onClose} initialValues={prefillValues} />
         ) : (
           <>
             <div className="mb-3 flex gap-2">

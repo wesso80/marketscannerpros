@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import TradeDrawer from '@/components/journal/drawer/TradeDrawer';
+import { type TradeEntryInitialValues } from '@/components/journal/drawer/TradeEntryForm';
 import { useJournalActions } from '@/components/journal/hooks/useJournalActions';
 import { useJournalData } from '@/components/journal/hooks/useJournalData';
 import { useJournalState } from '@/components/journal/hooks/useJournalState';
@@ -56,6 +58,37 @@ export default function JournalPage({ tier }: { tier: UserTier }) {
   });
 
   const selectedTrade = useJournalTrade(selectedTradeId, payload?.trades || []);
+
+  /* ── Prefill support: auto-open new-trade drawer from URL query params ── */
+  const searchParams = useSearchParams();
+  const [prefillValues, setPrefillValues] = useState<TradeEntryInitialValues | undefined>(undefined);
+  const [prefillConsumed, setPrefillConsumed] = useState(false);
+
+  useEffect(() => {
+    if (prefillConsumed) return;
+    if (searchParams.get('prefill') !== 'true') return;
+
+    const validSides = ['LONG', 'SHORT'] as const;
+    const validTradeTypes = ['Spot', 'Options', 'Futures', 'Margin'] as const;
+    const sideParam = searchParams.get('side')?.toUpperCase();
+    const ttParam = searchParams.get('tradeType');
+
+    const iv: TradeEntryInitialValues = {
+      symbol: searchParams.get('symbol') || undefined,
+      side: validSides.includes(sideParam as typeof validSides[number]) ? (sideParam as 'LONG' | 'SHORT') : undefined,
+      tradeType: validTradeTypes.includes(ttParam as typeof validTradeTypes[number]) ? (ttParam as TradeEntryInitialValues['tradeType']) : undefined,
+      entryPrice: searchParams.get('entryPrice') || undefined,
+      quantity: searchParams.get('quantity') || undefined,
+      strategy: searchParams.get('strategy') || undefined,
+      setup: searchParams.get('setup') || undefined,
+      notes: searchParams.get('notes') || undefined,
+    };
+
+    setPrefillValues(iv);
+    setSelectedTradeId(undefined);
+    setDrawerOpen(true);
+    setPrefillConsumed(true);
+  }, [searchParams, prefillConsumed]);
 
   useEffect(() => {
     const autoOpen = getAutoOpenDockKeys(selectedTrade);
@@ -172,13 +205,15 @@ export default function JournalPage({ tier }: { tier: UserTier }) {
       <TradeDrawer
         open={drawerOpen}
         trade={selectedTrade}
-        onClose={() => setDrawerOpen(false)}
+        onClose={() => { setDrawerOpen(false); setPrefillValues(undefined); }}
         onRequestCloseTrade={() => setCloseModalOpen(true)}
         onRequestSnapshot={isProTrader ? () => setSnapshotModalOpen(true) : undefined}
         onCreateTrade={async (payload) => {
           await actions.createTrade(payload);
           setDrawerOpen(false);
+          setPrefillValues(undefined);
         }}
+        prefillValues={prefillValues}
       />
 
       <CloseTradeModal
