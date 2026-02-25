@@ -8,6 +8,7 @@ import { buildExitPlan } from '@/lib/execution/exits';
 import { computePositionSize } from '@/lib/execution/positionSizing';
 import { computeLeverage } from '@/lib/execution/leverage';
 import { evaluateGovernor } from '@/lib/execution/riskGovernor';
+import { fetchATR } from '@/lib/execution/fetchATR';
 import type { TradeIntent, AssetClass } from '@/lib/execution/types';
 import type { Regime, StrategyTag, Direction } from '@/lib/risk-governor-hard';
 
@@ -193,14 +194,25 @@ export async function POST(req: NextRequest) {
     const engineStrategy: StrategyTag = strategyMap[rawStrategyId] ?? 'TREND_PULLBACK';
     const engineDirection: Direction = side as Direction;
 
-    // ATR: use passed value from scanner, or estimate from % stop
+    // ATR: use passed value from scanner, or fetch real ATR from Alpha Vantage
     const rawAtr = Number(body.atr);
-    const estimatedAtr = safeAssetClass === 'crypto'
-      ? entryPrice * 0.035
-      : safeAssetClass === 'forex'
-        ? entryPrice * 0.008
-        : entryPrice * 0.015;
-    const atr = Number.isFinite(rawAtr) && rawAtr > 0 ? rawAtr : estimatedAtr;
+    let atr: number;
+    if (Number.isFinite(rawAtr) && rawAtr > 0) {
+      atr = rawAtr;
+    } else {
+      // Fetch real ATR — no guessing
+      const fetchedAtr = await fetchATR(safeSymbol, safeAssetClass);
+      if (fetchedAtr && fetchedAtr > 0) {
+        atr = fetchedAtr;
+        console.info(`[auto-log] Fetched ATR for ${safeSymbol}: ${atr.toFixed(4)}`);
+      } else {
+        // Cannot compute exit strategy without ATR — reject
+        return NextResponse.json(
+          { error: `No ATR available for ${safeSymbol} — cannot compute exit strategy. Trade rejected.` },
+          { status: 422 },
+        );
+      }
+    }
 
     // Resolve account equity
     const equityAtEntry = await getLatestPortfolioEquity(session.workspaceId);
@@ -239,6 +251,20 @@ export async function POST(req: NextRequest) {
       regime: engineRegime,
       strategy_tag: engineStrategy,
     });
+
+    // Validate exit plan — reject if stop or TP is invalid
+    const stopOk = Number.isFinite(exits.stop_price) && exits.stop_price > 0;
+    const tpOk = Number.isFinite(exits.take_profit_1) && exits.take_profit_1 > 0;
+    const rrOk = Number.isFinite(exits.rr_at_tp1) && exits.rr_at_tp1 >= 1;
+    if (!stopOk || !tpOk || !rrOk) {
+      return NextResponse.json(
+        {
+          error: `Exit strategy invalid for ${safeSymbol} — stop: ${exits.stop_price}, tp1: ${exits.take_profit_1}, R:R ${exits.rr_at_tp1}. Trade rejected.`,
+          exits,
+        },
+        { status: 422 },
+      );
+    }
 
     const atrPct = entryPrice > 0 ? (atr / entryPrice) * 100 : 2;
 

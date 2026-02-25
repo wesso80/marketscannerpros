@@ -21,6 +21,7 @@ import { useUserTier, canAccessUnlimitedScanning } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
 import { useAIPageContext } from "@/lib/ai/pageContext";
 import { readOperatorState, writeOperatorState } from "@/lib/operatorState";
+import { fireAutoLog } from "@/lib/autoLog";
 import { useRiskPermission } from "@/components/risk/RiskPermissionContext";
 import PermissionChip from "@/components/risk/PermissionChip";
 import { createWorkflowEvent, emitWorkflowEvents } from "@/lib/workflow/client";
@@ -564,6 +565,31 @@ function ScannerContent() {
             'scanner.bulk',
             { assetType: type, timeframe: requestedTimeframe }
           );
+        }
+
+        // ── Auto-log ALL qualifying topPicks to execution engine (paper trade) ──
+        if (journalMonitorEnabled && Array.isArray(data.topPicks)) {
+          const ac = type === 'crypto' ? 'crypto' as const : 'equity' as const;
+          for (const pick of data.topPicks) {
+            const pickScore = pick.score ?? 0;
+            const pickDir = String(pick.direction || '').toLowerCase();
+            if (!pick.symbol || pickDir === 'neutral' || pickScore < journalMonitorThreshold) continue;
+            const dedupeKey = `bulk:${type}:${pick.symbol}:${requestedTimeframe}`;
+            const now = Date.now();
+            const lastAt = journalMonitorLastLoggedRef.current[dedupeKey] || 0;
+            const cooldownMs = Math.max(5, journalMonitorCooldownMinutes) * 60 * 1000;
+            if (now - lastAt < cooldownMs) continue;
+            journalMonitorLastLoggedRef.current[dedupeKey] = now;
+            fireAutoLog({
+              symbol: String(pick.symbol).toUpperCase(),
+              conditionType: `bulk_scan_${type}`,
+              conditionMet: `${pickDir.toUpperCase()}_SCORE_${pickScore}`,
+              triggerPrice: pick.indicators?.price ?? pick.price ?? 0,
+              source: 'scanner_bulk',
+              assetClass: ac,
+              atr: pick.indicators?.atr ?? null,
+            }).catch(() => {});
+          }
         }
       } else {
         setBulkScanError(data.error || 'Scan failed');

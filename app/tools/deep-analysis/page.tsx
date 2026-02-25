@@ -6,6 +6,7 @@ import { useUserTier, canAccessBacktest } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
 import { useAIPageContext } from "@/lib/ai/pageContext";
 import { writeOperatorState } from "@/lib/operatorState";
+import { fireAutoLog } from "@/lib/autoLog";
 import CommandStrip, { type TerminalDensity } from "@/components/terminal/CommandStrip";
 import DecisionCockpit from "@/components/terminal/DecisionCockpit";
 import SignalRail from "@/components/terminal/SignalRail";
@@ -661,6 +662,24 @@ export default function DeepAnalysisPage() {
         setError(data.error || "Analysis failed");
       } else {
         setResult(data);
+
+        // ── Auto-log to execution engine (paper trade) ──
+        const signal = String(data?.signals?.signal || '').toUpperCase();
+        const score = data?.signals?.score ?? 0;
+        if ((signal.includes('BUY') || signal.includes('SELL')) && score >= 60) {
+          const dir = signal.includes('BUY') ? 'BULLISH' : 'BEARISH';
+          const assetType = String(data?.assetType || 'stock').toLowerCase();
+          const ac = assetType === 'crypto' ? 'crypto' as const : assetType === 'forex' ? 'forex' as const : 'equity' as const;
+          fireAutoLog({
+            symbol: symbol.trim().toUpperCase(),
+            conditionType: 'deep_analysis',
+            conditionMet: `${dir}_SCORE_${score}`,
+            triggerPrice: data?.price?.price ?? 0,
+            source: 'deep_analysis',
+            assetClass: ac,
+            atr: data?.indicators?.atr ?? null,
+          }).catch(() => {});
+        }
       }
     } catch (err) {
       setError("Network error - please try again");

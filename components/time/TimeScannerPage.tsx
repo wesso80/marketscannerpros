@@ -1,11 +1,12 @@
 "use client";
 
-import { ReactNode, useEffect, useMemo, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import DebugDrawer from '@/components/time/DebugDrawer';
 import TimeScannerShell from '@/components/time/TimeScannerShell';
 import { computeTimeConfluenceV2 } from '@/components/time/scoring';
 import { DecompositionTFRow, Direction, TimeConfluenceV2Inputs } from '@/components/time/types';
+import { fireAutoLog } from '@/lib/autoLog';
 
 type ScanModeType = 'intraday_1h' | 'intraday_4h' | 'swing_1d';
 
@@ -257,6 +258,7 @@ export default function TimeScannerPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [initialScanDone, setInitialScanDone] = useState(false);
+  const timeAutoLogRef = useRef<string>('');
 
   const runScan = async (overrides?: { symbol?: string; scanMode?: ScanModeType }) => {
     const effectiveSymbol = (overrides?.symbol ?? symbol).trim().toUpperCase();
@@ -282,7 +284,28 @@ export default function TimeScannerPage() {
         return;
       }
 
-      setInput(mapScanToInput(effectiveSymbol, effectiveMode, json.data));
+      const mapped = mapScanToInput(effectiveSymbol, effectiveMode, json.data);
+      setInput(mapped);
+
+      // ── Auto-log to execution engine (paper trade) ──
+      const tOut = computeTimeConfluenceV2(mapped);
+      const dir = mapped.setup.primaryDirection;
+      if (tOut.permission === 'ALLOW' && dir !== 'neutral' && tOut.timeConfluenceScore >= 60) {
+        const key = `${effectiveSymbol}:${dir}:${Math.round(tOut.timeConfluenceScore)}`;
+        if (timeAutoLogRef.current !== key) {
+          timeAutoLogRef.current = key;
+          const isCrypto = effectiveSymbol.includes('BTC') || effectiveSymbol.includes('ETH') || effectiveSymbol.includes('SOL') || effectiveSymbol.endsWith('USD');
+          fireAutoLog({
+            symbol: effectiveSymbol,
+            conditionType: 'time_scanner',
+            conditionMet: `${dir.toUpperCase()}_SCORE_${Math.round(tOut.timeConfluenceScore)}`,
+            triggerPrice: json.data?.currentPrice || json.data?.price || 0,
+            source: 'time_scanner',
+            assetClass: isCrypto ? 'crypto' : 'equity',
+            atr: json.data?.indicators?.atr ?? null,
+          }).catch(() => {});
+        }
+      }
     } catch (scanError) {
       setError(scanError instanceof Error ? scanError.message : 'Network error');
     } finally {

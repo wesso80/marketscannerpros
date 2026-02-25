@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { fireAutoLog } from '@/lib/autoLog';
 import {
   InstitutionalStateStrip,
   MarketsToolbar,
@@ -46,6 +47,28 @@ export default function MarketsPage() {
 
   const ctx = useTickerData(symbol || null, assetClass);
   const lens = useDecisionLens(ctx);
+
+  // ── Auto-log to execution engine when Markets scanner produces a signal ──
+  const marketsAutoLogRef = useRef<string>('');
+  useEffect(() => {
+    if (!ctx.scanner || !ctx.symbol) return;
+    const { direction, score, entry } = ctx.scanner;
+    if (!direction || (score ?? 0) < 60) return;
+    if (lens && lens.authorization === 'BLOCK') return;
+    const key = `${ctx.symbol}:${direction}:${score}`;
+    if (marketsAutoLogRef.current === key) return;
+    marketsAutoLogRef.current = key;
+    const ac = ctx.assetClass === 'crypto' ? 'crypto' as const : 'equity' as const;
+    fireAutoLog({
+      symbol: ctx.symbol.toUpperCase(),
+      conditionType: 'markets_cockpit',
+      conditionMet: `${direction}_SCORE_${score}`,
+      triggerPrice: entry ?? ctx.quote?.price ?? 0,
+      source: 'markets_dashboard',
+      assetClass: ac,
+      atr: null,
+    }).catch(() => {});
+  }, [ctx.scanner, ctx.symbol, ctx.assetClass, ctx.quote?.price, lens]);
 
   // ── Register ALL page data with the AI context system ──
   // This feeds the MSPCopilot floating panel with real data instead of generic hallucinations.

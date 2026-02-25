@@ -6,6 +6,7 @@ import UpgradeGate from "@/components/UpgradeGate";
 import TimeConfluenceWidget from "@/components/TimeConfluenceWidget";
 import { SetupConfidenceCard, DataHealthBadges } from "@/components/TradeDecisionCards";
 import RegimeBanner from '@/components/RegimeBanner';
+import { fireAutoLog } from '@/lib/autoLog';
 
 // Hierarchical Scan Result type
 interface HierarchicalResult {
@@ -207,7 +208,24 @@ export default function AIConfluenceScanner() {
       } else {
         setIsCached(!!data.cached);
         setLastUpdated(new Date());
-        setHierarchicalResult(data.data as HierarchicalResult);
+        const hr = data.data as HierarchicalResult;
+        setHierarchicalResult(hr);
+
+        // ── Auto-log to execution engine (paper trade) ──
+        const dir = hr?.prediction?.direction;
+        const conf = hr?.prediction?.confidence ?? 0;
+        const strength = hr?.signalStrength;
+        if (dir && dir !== 'neutral' && conf >= 60 && (strength === 'strong' || strength === 'moderate')) {
+          fireAutoLog({
+            symbol: symbol.trim().toUpperCase(),
+            conditionType: 'confluence_scanner',
+            conditionMet: `${String(dir).toUpperCase()}_CONF_${Math.round(conf)}`,
+            triggerPrice: hr?.tradeSetup?.entryPrice ?? hr?.currentPrice ?? 0,
+            source: 'confluence_scanner',
+            assetClass: 'equity',
+            atr: null,
+          }).catch(() => {});
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Network error');

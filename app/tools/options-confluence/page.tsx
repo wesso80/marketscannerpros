@@ -22,6 +22,7 @@ import Pill from "@/components/terminal/Pill";
 import DepthCard from "@/components/DepthCard";
 import OperatorProposalRail from "@/components/operator/OperatorProposalRail";
 import { writeOperatorState } from "@/lib/operatorState";
+import { fireAutoLog } from "@/lib/autoLog";
 import { createWorkflowEvent, emitWorkflowEvents } from "@/lib/workflow/client";
 import { createDecisionPacketFromScan } from "@/lib/workflow/decisionPacket";
 import { candidateOutcomeFromConfidence, clampConfidence, qualityTierFromConfidence } from "@/lib/workflow/scoring";
@@ -1115,7 +1116,27 @@ export default function OptionsConfluenceScanner() {
         setError(data.error || 'Scan failed');
       } else {
         setLastUpdated(data.timestamp ? new Date(data.timestamp) : new Date());
-        setResult(normalizeOptionsSetup(data.data));
+        const normalized = normalizeOptionsSetup(data.data);
+        setResult(normalized);
+
+        // ── Auto-log to execution engine (paper trade) ──
+        const dir = normalized?.direction || normalized?.compositeScore?.finalDirection;
+        const conf = normalized?.compositeScore?.confidence ?? 0;
+        const instRec = normalized?.institutionalFilter?.recommendation;
+        if (dir && dir !== 'neutral' && conf >= 60 && instRec !== 'NO_TRADE') {
+          const entryMid = normalized?.tradeLevels?.entryZone
+            ? (normalized.tradeLevels.entryZone.low + normalized.tradeLevels.entryZone.high) / 2
+            : normalized?.currentPrice ?? 0;
+          fireAutoLog({
+            symbol: symbol.trim().toUpperCase(),
+            conditionType: 'options_confluence',
+            conditionMet: `${String(dir).toUpperCase()}_CONF_${conf}`,
+            triggerPrice: entryMid,
+            source: 'options_confluence_scanner',
+            assetClass: 'equity',
+            atr: null,
+          }).catch(() => {});
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Network error');

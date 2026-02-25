@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useUserTier, canAccessCryptoCommandCenter } from '@/lib/useUserTier';
+import { fireAutoLog } from '@/lib/autoLog';
 import UpgradeGate from '@/components/UpgradeGate';
 import { useAIPageContext } from '@/lib/ai/pageContext';
 import CryptoMorningDecisionCard from '@/components/CryptoMorningDecisionCard';
@@ -80,6 +81,31 @@ export default function CryptoDashboard() {
       if (interval) clearInterval(interval);
     };
   }, [fetchData, autoRefresh]);
+
+  // ── Auto-log crypto trade ideas to execution engine (paper trade) ──
+  const cryptoAutoLogRef = useRef<string>('');
+  useEffect(() => {
+    if (!data.prices.BTC) return; // data not loaded yet
+    const ideas = [
+      { sym: 'BTC', dir: (data.prices.BTC?.change24h || 0) > 0 ? 'Long' : 'Short', price: data.prices.BTC?.price },
+      { sym: 'ETH', dir: (data.prices.ETH?.change24h || 0) > 0 ? 'Long' : 'Short', price: data.prices.ETH?.price },
+      { sym: 'SOL', dir: (data.prices.SOL?.change24h || 0) > 0 ? 'Long' : 'Short', price: data.prices.SOL?.price },
+    ].filter(i => i.price && i.price > 0);
+    for (const idea of ideas) {
+      const key = `${idea.sym}:${idea.dir}`;
+      if (cryptoAutoLogRef.current.includes(key)) continue;
+      cryptoAutoLogRef.current += key + ',';
+      fireAutoLog({
+        symbol: `${idea.sym}-USD`,
+        conditionType: 'crypto_derivatives',
+        conditionMet: `${idea.dir.toUpperCase()}_DERIVATIVES`,
+        triggerPrice: idea.price!,
+        source: 'crypto_dashboard',
+        assetClass: 'crypto',
+        atr: null,
+      }).catch(() => {});
+    }
+  }, [data.prices]);
 
   // AI Page Context - share derivatives data with copilot
   const { setPageData } = useAIPageContext();

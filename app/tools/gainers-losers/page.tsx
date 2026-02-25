@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
 import { useUserTier, canAccessPortfolioInsights } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
 import { useAIPageContext } from "@/lib/ai/pageContext";
+import { fireAutoLog } from "@/lib/autoLog";
 
 interface MarketMover {
   ticker: string;
@@ -288,6 +289,29 @@ export default function GainersLosersPage() {
   }, [rawData, environment, setupMode, minPrice, hideBlocked, sortField, sortDirection]);
 
   const eligibleCount = useMemo(() => currentData.filter((item) => item.deployment === "Eligible").length, [currentData]);
+
+  // ── Auto-log Eligible movers to execution engine (paper trade) ──
+  const moversAutoLogRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!currentData.length) return;
+    const eligible = currentData.filter(m => m.deployment === 'Eligible' && m.setupClass !== 'Watch');
+    for (const mover of eligible) {
+      const key = `${mover.ticker}:${activeTab}:${mover.setupClass}`;
+      if (moversAutoLogRef.current.has(key)) continue;
+      moversAutoLogRef.current.add(key);
+      const changePct = parseFloat(mover.change_percentage.replace('%', '') || '0');
+      const dir = activeTab === 'gainers' ? 'LONG' : activeTab === 'losers' ? 'SHORT' : changePct > 0 ? 'LONG' : 'SHORT';
+      fireAutoLog({
+        symbol: mover.ticker.toUpperCase(),
+        conditionType: 'gainers_losers',
+        conditionMet: `${dir}_${mover.setupClass.toUpperCase().replace(/ /g, '_')}_SCORE_${mover.confluenceScore}`,
+        triggerPrice: parseFloat(mover.price || '0'),
+        source: 'gainers_losers',
+        assetClass: 'equity',
+        atr: null,
+      }).catch(() => {});
+    }
+  }, [currentData, activeTab]);
 
   useEffect(() => {
     if (!currentData.length) return;

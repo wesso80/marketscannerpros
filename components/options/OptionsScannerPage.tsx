@@ -1,8 +1,9 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import OptionsScannerLayout from '@/components/options/layout/OptionsScannerLayout';
+import { fireAutoLog } from '@/lib/autoLog';
 import { buildInitialEvidenceOpen, getAutoOpenKeys } from '@/lib/options/autoOpenLogic';
 import { mapOptionsScanResponseToV3 } from '@/lib/options/mapPayload';
 import {
@@ -43,6 +44,7 @@ function OptionsScannerPageContent() {
     riskCompliance: false,
   });
   const [initialScanDone, setInitialScanDone] = useState(false);
+  const optionsAutoLogRef = useRef<string>('');
 
   const runScan = async (overrides?: { symbol?: string; scanMode?: ScanModeType }) => {
     const effectiveSymbol = (overrides?.symbol ?? symbol).trim().toUpperCase();
@@ -81,6 +83,27 @@ function OptionsScannerPageContent() {
       const autoOpen = getAutoOpenKeys(mapped);
       setEvidenceOpen(buildInitialEvidenceOpen(autoOpen));
       setPayload(mapped);
+
+      // ── Auto-log to execution engine (paper trade) ──
+      const dir = mapped?.decision?.direction;
+      const conf = mapped?.decision?.confidence ?? 0;
+      const perm = mapped?.decision?.permission;
+      if (dir && dir !== 'NEUTRAL' && conf >= 60 && perm === 'GO') {
+        const sym = effectiveSymbol;
+        const key = `${sym}:${dir}:${conf}`;
+        if (optionsAutoLogRef.current !== key) {
+          optionsAutoLogRef.current = key;
+          fireAutoLog({
+            symbol: sym,
+            conditionType: 'options_scanner',
+            conditionMet: `${dir}_CONF_${conf}`,
+            triggerPrice: mapped?.header?.underlyingPrice ?? 0,
+            source: 'options_scanner',
+            assetClass: 'equity',
+            atr: null,
+          }).catch(() => {});
+        }
+      }
     } catch (scanError) {
       setError(scanError instanceof Error ? scanError.message : 'Network error');
       setPayload(null);
