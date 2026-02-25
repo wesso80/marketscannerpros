@@ -105,6 +105,7 @@ export default function Header() {
     '/tools/journal',
     '/tools/backtest',
     '/tools/confluence-scanner',
+    '/tools/crypto-terminal',
   ];
   const isTerminalMode = terminalPrefixes.some((prefix) => pathname.startsWith(prefix));
 
@@ -146,6 +147,7 @@ export default function Header() {
     { href: '/tools/commodities', label: 'Commodities', icon: '🛢️' },
     { href: '/tools/macro', label: 'Macro Dashboard', icon: '🏛️' },
     { href: '/tools/options-terminal', label: 'Options Terminal', icon: '📋' },
+    { href: '/tools/crypto-terminal', label: 'Crypto Derivatives', icon: '⚡' },
   ];
 
   const calendarItems: DropdownItem[] = [

@@ -15,6 +15,7 @@ export function isTerminalModePath(pathname: string): boolean {
     '/tools/backtest',
     '/tools/confluence-scanner',
     '/tools/markets',
+    '/tools/crypto-terminal',
   ];
 
   return terminalPrefixes.some((prefix) => pathname.startsWith(prefix));
@@ -33,6 +34,7 @@ export function getToolsContainerVariant(pathname: string): ToolsContainerVarian
     '/tools/confluence-scanner',
     '/tools/markets',
     '/tools/options-terminal',
+    '/tools/crypto-terminal',
   ];
   if (fullWidthPaths.some((p) => pathname.startsWith(p))) {
     return 'full';
