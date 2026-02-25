@@ -138,7 +138,7 @@ export default function OptionsTerminalView() {
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
       {/* ── Sticky Top Strip ──────────────────────────────── */}
       <div className="sticky top-0 z-50 border-b border-zinc-800 bg-zinc-950/90 backdrop-blur">
-        <div className="mx-auto max-w-[1600px] px-6 py-3">
+        <div className="w-full px-4 py-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             {/* Left: Ticker */}
             <div className="flex items-center gap-3">
@@ -205,7 +205,7 @@ export default function OptionsTerminalView() {
 
       {/* ── Error banner ──────────────────────────────────── */}
       {chain.error && (
-        <div className="mx-auto max-w-[1600px] px-6 pt-4">
+        <div className="w-full px-4 pt-4">
           <div className="rounded-2xl border border-red-600/30 bg-red-600/10 px-4 py-3 text-sm text-red-300">
             ⚠️ {chain.error}
           </div>
@@ -213,10 +213,9 @@ export default function OptionsTerminalView() {
       )}
 
       {/* ── Page shell ────────────────────────────────────── */}
-      <div className="mx-auto max-w-[1600px] px-6 py-6 space-y-6">
+      <div className="w-full px-4 py-4 space-y-4">
         {/* === DESK GRID === */}
-        <div className="grid grid-cols-12 gap-6">
-
+        <div className="grid grid-cols-12 gap-4">
           {/* ── Left: Chain Navigator ─────────────────────── */}
           <div className="col-span-12 xl:col-span-3 space-y-6">
             <Card title="Chain Navigator" right={<span className="text-xs text-zinc-400">{chain.expirations.length} expirations</span>}>
@@ -305,7 +304,7 @@ export default function OptionsTerminalView() {
 
               {/* Chain Table */}
               <div className="mt-4 rounded-2xl border border-zinc-800 overflow-hidden">
-                <div className="max-h-[560px] overflow-auto">
+                <div className="max-h-[calc(100vh-320px)] min-h-[400px] overflow-auto">
                   <table className="w-full border-collapse">
                     <thead className="sticky top-0 z-10 bg-zinc-900">
                       <tr className="text-left">
@@ -504,8 +503,8 @@ export default function OptionsTerminalView() {
         </div>
 
         {/* === ANALYTICS ROW === */}
-        <div className="grid grid-cols-12 gap-6">
-          {/* IV & Expected Move */}
+        <div className="grid grid-cols-12 gap-4">
+          {/* ── IV & Expected Move ─────────────────────── */}
           <div className="col-span-12 xl:col-span-4">
             <Card title="IV & Expected Move" right={<span className="text-xs text-zinc-400">{selectedExpiry || 'all expirations'}</span>}>
               <div className="grid grid-cols-2 gap-4">
