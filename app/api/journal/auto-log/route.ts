@@ -161,6 +161,22 @@ export async function POST(req: NextRequest) {
       assetType,
     });
 
+    // ── Auto-compute stop-loss & target when not provided ──
+    const stopPct = safeAssetClass === 'crypto' ? 0.05 : safeAssetClass === 'forex' ? 0.015 : 0.02;
+    const targetPct = stopPct * 2; // 1:2 risk-reward
+    const autoStopLoss =
+      side === 'LONG'
+        ? +(entryPrice * (1 - stopPct)).toFixed(8)
+        : +(entryPrice * (1 + stopPct)).toFixed(8);
+    const autoTarget =
+      side === 'LONG'
+        ? +(entryPrice * (1 + targetPct)).toFixed(8)
+        : +(entryPrice * (1 - targetPct)).toFixed(8);
+    const autoRiskPerUnit = Math.abs(entryPrice - autoStopLoss);
+    const autoRiskAmount = autoRiskPerUnit * 1; // quantity = 1
+    const autoRewardPerUnit = Math.abs(autoTarget - entryPrice);
+    const autoPlannedRR = autoRiskPerUnit > 0 ? +(autoRewardPerUnit / autoRiskPerUnit).toFixed(4) : null;
+
     const tradeStory = [
       'AUTO TRADE STORY',
       `Signal Source: ${safeSource}`,
@@ -218,12 +234,14 @@ export async function POST(req: NextRequest) {
     const inserted = await q(
       `INSERT INTO journal_entries (
         workspace_id, trade_date, symbol, side, trade_type, quantity, entry_price,
+        stop_loss, target, risk_amount, planned_rr,
         strategy, setup, notes, emotions, outcome, tags, is_open, asset_class,
         normalized_r, dynamic_r, risk_per_trade_at_entry, equity_at_entry
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7,
-        $8, $9, $10, $11, $12, $13, $14, $15,
-        $16, $17, $18, $19
+        $8, $9, $10, $11,
+        $12, $13, $14, $15, $16, $17, $18, $19,
+        $20, $21, $22, $23
       )
       RETURNING id`,
       [
@@ -234,6 +252,10 @@ export async function POST(req: NextRequest) {
         'Spot',
         1,
         entryPrice,
+        autoStopLoss,
+        autoTarget,
+        autoRiskAmount,
+        autoPlannedRR,
         strategyId,
         safeCondition,
         notes,

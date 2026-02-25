@@ -6,9 +6,12 @@ import { CACHE_KEYS } from '@/lib/redis';
  * GET /api/health/data
  * Lightweight freshness probe — checks if key market data caches are populated
  * and recent. Used by the StaleDataBanner component.
+ *
+ * Only flags stale when a cache key EXISTS but is too old.
+ * Missing keys are ignored (cache simply hasn't been populated yet).
  */
 export async function GET() {
-  const STALE_THRESHOLD_SEC = 3600; // 1 hour
+  const STALE_THRESHOLD_SEC = 7200; // 2 hours
 
   try {
     // Check a few representative cache keys
@@ -27,14 +30,15 @@ export async function GET() {
     const now = Date.now();
     let stale = false;
     let staleSources: string[] = [];
+    let populatedCount = 0;
 
     for (let i = 0; i < values.length; i++) {
       const val = values[i];
       if (!val) {
-        stale = true;
-        staleSources.push(keys[i]);
+        // Key not in cache — skip (no data to be stale about)
         continue;
       }
+      populatedCount++;
       // Check _ts (epoch ms) or timestamp (ISO string)
       const ts = val._ts ?? (val.timestamp ? new Date(val.timestamp).getTime() : 0);
       if (ts > 0 && now - ts > STALE_THRESHOLD_SEC * 1000) {
@@ -52,6 +56,7 @@ export async function GET() {
     });
   } catch (err) {
     console.error('[health/data] Error:', err);
-    return NextResponse.json({ ok: false, stale: true, source: 'Health check failed' });
+    // On error, don't assume stale — avoid false-positive banner
+    return NextResponse.json({ ok: false, stale: false });
   }
 }

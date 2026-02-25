@@ -39,10 +39,26 @@ export async function POST(req: NextRequest) {
     const assetClass = body.assetClass || 'equity';
     const strategy = body.strategy || null;
     const setup = body.setup || null;
-    const stopLoss = body.stopLoss ? parseFloat(body.stopLoss) : null;
-    const target = body.target ? parseFloat(body.target) : null;
     const notes = body.notes || null;
     const tradeDate = body.tradeDate || new Date().toISOString().slice(0, 10);
+
+    // Auto-compute stop-loss & target when not provided
+    let stopLoss = body.stopLoss ? parseFloat(body.stopLoss) : null;
+    let target = body.target ? parseFloat(body.target) : null;
+    if (!stopLoss || !Number.isFinite(stopLoss)) {
+      const ac = String(assetClass).toLowerCase();
+      const pct = ac === 'crypto' ? 0.05 : ac === 'forex' ? 0.015 : 0.02;
+      stopLoss = side === 'LONG'
+        ? +(entryPrice * (1 - pct)).toFixed(8)
+        : +(entryPrice * (1 + pct)).toFixed(8);
+    }
+    if (!target || !Number.isFinite(target)) {
+      const ac = String(assetClass).toLowerCase();
+      const pct = ac === 'crypto' ? 0.10 : ac === 'forex' ? 0.030 : 0.04;
+      target = side === 'LONG'
+        ? +(entryPrice * (1 + pct)).toFixed(8)
+        : +(entryPrice * (1 - pct)).toFixed(8);
+    }
 
     // Options-specific fields
     const optionType = tradeType === 'Options' && body.optionType ? String(body.optionType).toUpperCase() : null;
