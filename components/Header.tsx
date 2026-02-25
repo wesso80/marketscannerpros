@@ -97,6 +97,7 @@ export default function Header() {
   const terminalPrefixes = [
     '/operator',
     '/tools/options-confluence',
+    '/tools/options-terminal',
     '/tools/scanner',
     '/tools/deep-analysis',
     '/tools/portfolio',
@@ -124,6 +125,7 @@ export default function Header() {
     { href: '/tools/backtest', label: 'Backtester', icon: '📈' },
     { href: '/tools/journal', label: 'Trade Journal', icon: '📓' },
     { href: '/tools/alerts', label: 'Price Alerts', icon: '🔔' },
+    { href: '/tools/options-terminal', label: 'Options Terminal', icon: '📋' },
   ];
 
   const aiItems: DropdownItem[] = [
