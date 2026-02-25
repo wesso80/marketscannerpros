@@ -55,7 +55,8 @@ export default function CloseTradeModal({ open, trade, onClose, onSubmit }: Clos
   // Reset form state when modal opens or trade changes
   useEffect(() => {
     if (open) {
-      setExitPrice('');
+      // Pre-fill with current/live price when available (enrichment sets exit.price for open trades)
+      setExitPrice(trade?.exit?.price ? String(trade.exit.price) : '');
       setExitTs(new Date().toISOString().slice(0, 16));
       setCloseReason('manual');
       setOutcome('breakeven');
