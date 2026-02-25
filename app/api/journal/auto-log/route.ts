@@ -4,6 +4,12 @@ import { getSessionFromCookie } from '@/lib/auth';
 import { emitTradeLifecycleEvent, hashDedupeKey } from '@/lib/notifications/tradeEvents';
 import { buildPermissionSnapshot } from '@/lib/risk-governor-hard';
 import { computeEntryRiskMetrics, getLatestPortfolioEquity } from '@/lib/journal/riskAtEntry';
+import { buildExitPlan } from '@/lib/execution/exits';
+import { computePositionSize } from '@/lib/execution/positionSizing';
+import { computeLeverage } from '@/lib/execution/leverage';
+import { evaluateGovernor } from '@/lib/execution/riskGovernor';
+import type { TradeIntent, AssetClass } from '@/lib/execution/types';
+import type { Regime, StrategyTag, Direction } from '@/lib/risk-governor-hard';
 
 function normalizeJournalAssetClass(value: unknown): 'crypto' | 'equity' | 'forex' | 'commodity' {
   const normalized = String(value || '').toLowerCase();
@@ -161,63 +167,86 @@ export async function POST(req: NextRequest) {
       assetType,
     });
 
-    // ── Auto-compute stop-loss & target when not provided ──
-    const stopPct = safeAssetClass === 'crypto' ? 0.05 : safeAssetClass === 'forex' ? 0.015 : 0.02;
-    const targetPct = stopPct * 2; // 1:2 risk-reward
-    const autoStopLoss =
-      side === 'LONG'
-        ? +(entryPrice * (1 - stopPct)).toFixed(8)
-        : +(entryPrice * (1 + stopPct)).toFixed(8);
-    const autoTarget =
-      side === 'LONG'
-        ? +(entryPrice * (1 + targetPct)).toFixed(8)
-        : +(entryPrice * (1 - targetPct)).toFixed(8);
-    const autoRiskPerUnit = Math.abs(entryPrice - autoStopLoss);
-    const autoRiskAmount = autoRiskPerUnit * 1; // quantity = 1
-    const autoRewardPerUnit = Math.abs(autoTarget - entryPrice);
-    const autoPlannedRR = autoRiskPerUnit > 0 ? +(autoRewardPerUnit / autoRiskPerUnit).toFixed(4) : null;
+    // ── Execution Engine: build full paper trade ──────────────────────
+    // Map regime string → engine Regime type
+    const regimeMap: Record<string, Regime> = {
+      'trend': 'TREND_UP', 'trend up': 'TREND_UP', 'trend_up': 'TREND_UP', 'bullish': 'TREND_UP',
+      'trend down': 'TREND_DOWN', 'trend_down': 'TREND_DOWN', 'bearish': 'TREND_DOWN',
+      'range': 'RANGE_NEUTRAL', 'range_neutral': 'RANGE_NEUTRAL', 'neutral': 'RANGE_NEUTRAL',
+      'volatility expansion': 'VOL_EXPANSION', 'vol_expansion': 'VOL_EXPANSION',
+      'volatility contraction': 'VOL_CONTRACTION', 'vol_contraction': 'VOL_CONTRACTION',
+      'risk off': 'RISK_OFF_STRESS', 'risk_off_stress': 'RISK_OFF_STRESS', 'defensive': 'RISK_OFF_STRESS',
+    };
+    const engineRegime: Regime = regimeMap[safeRegime.toLowerCase()] ?? 'RANGE_NEUTRAL';
 
-    const tradeStory = [
-      'AUTO TRADE STORY',
-      `Signal Source: ${safeSource}`,
-      `Market Mode: ${safeOperatorMode}`,
-      `Macro Bias: ${safeBias}`,
-      `Risk State: ${safeRisk}`,
-      `Regime: ${safeRegime}`,
-      `Market Mood: ${safeMood}`,
-      `Derivatives Sentiment: ${safeDerivativesBias}`,
-      `Sector Strength: ${safeSectorStrength}`,
-      `Entry Reason: ${safeCondition}`,
-      `Operator Edge: ${edge}`,
-    ].join(' • ');
-
-    const psychologyPrompt = 'Psychology Prompt: Did you follow your original plan? Was sizing correct? What emotion did you feel at entry?';
-
-    const strategyId = conditionType && String(conditionType).startsWith('strategy_')
+    // Map strategy from condition type
+    const strategyMap: Record<string, StrategyTag> = {
+      'scanner_signal': 'TREND_PULLBACK',
+      'strategy_signal': 'BREAKOUT_CONTINUATION',
+      'alert_intelligence': 'MOMENTUM_REVERSAL',
+    };
+    const rawStrategyId = conditionType && String(conditionType).startsWith('strategy_')
       ? 'strategy_signal'
       : conditionType && String(conditionType).startsWith('scanner_')
       ? 'scanner_signal'
       : 'alert_intelligence';
+    const engineStrategy: StrategyTag = strategyMap[rawStrategyId] ?? 'TREND_PULLBACK';
+    const engineDirection: Direction = side as Direction;
 
-    const notes = [
-      'Auto-created from triggered signal feed.',
-      `Condition: ${safeCondition}`,
-      `Triggered Price: ${entryPrice}`,
-      `Triggered At: ${triggeredAt || new Date().toISOString()}`,
-      `Decision Packet: ${safeDecisionPacketId || 'n/a'}`,
-      tradeStory,
-      psychologyPrompt,
-    ].join('\n');
+    // ATR: use passed value from scanner, or estimate from % stop
+    const rawAtr = Number(body.atr);
+    const estimatedAtr = safeAssetClass === 'crypto'
+      ? entryPrice * 0.035
+      : safeAssetClass === 'forex'
+        ? entryPrice * 0.008
+        : entryPrice * 0.015;
+    const atr = Number.isFinite(rawAtr) && rawAtr > 0 ? rawAtr : estimatedAtr;
 
-    const tags = ['auto_alert', 'triggered_feed', safeSource, `mode_${safeOperatorMode.toLowerCase()}`, `asset_class_${safeAssetClass}`];
-    if (safeDecisionPacketId) {
-      tags.push(`dp_${safeDecisionPacketId}`);
-    }
+    // Resolve account equity
+    const equityAtEntry = await getLatestPortfolioEquity(session.workspaceId);
+    const accountEquity = equityAtEntry ?? 100_000;
 
+    // Build trade intent for execution engine
+    const intent: TradeIntent = {
+      symbol: safeSymbol,
+      asset_class: (safeAssetClass === 'commodity' ? 'equity' : safeAssetClass) as AssetClass,
+      direction: engineDirection,
+      strategy_tag: engineStrategy,
+      confidence: edge,
+      regime: engineRegime,
+      entry_price: entryPrice,
+      atr,
+      account_equity: accountEquity,
+    };
+
+    // Get open positions for correlation check
+    const openRows = await q<{ symbol: string; side: string; asset_class: string }>(
+      `SELECT symbol, side, asset_class FROM journal_entries WHERE workspace_id = $1 AND is_open = true`,
+      [session.workspaceId],
+    );
+    intent.open_positions = openRows.map((r) => ({
+      symbol: r.symbol,
+      direction: r.side.toUpperCase() as Direction,
+      asset_class: (r.asset_class || 'equity') as AssetClass,
+    }));
+
+    // ── Execution Engine pipeline ──────────────────────────────────────
+    const exits = buildExitPlan({
+      direction: engineDirection,
+      entry_price: entryPrice,
+      atr,
+      asset_class: intent.asset_class,
+      regime: engineRegime,
+      strategy_tag: engineStrategy,
+    });
+
+    const atrPct = entryPrice > 0 ? (atr / entryPrice) * 100 : 2;
+
+    // Build permission snapshot for governor
     const guardEnabled = req.cookies.get('msp_risk_guard')?.value !== 'off';
     const riskInput = await import('@/lib/risk/runtimeSnapshot').then(m => m.getRuntimeRiskSnapshotInput(session.workspaceId)).catch(() => ({}));
     const snapshot = buildPermissionSnapshot({ enabled: guardEnabled, ...riskInput });
-    
+
     // Enforce governor: reject auto-log when risk mode is LOCKED
     if (snapshot.risk_mode === 'LOCKED') {
       return NextResponse.json(
@@ -225,23 +254,128 @@ export async function POST(req: NextRequest) {
         { status: 403 }
       );
     }
-    const equityAtEntry = await getLatestPortfolioEquity(session.workspaceId);
-    const entryRisk = computeEntryRiskMetrics({
-      equityAtEntry,
-      dynamicRiskPerTrade: snapshot.caps.risk_per_trade,
+
+    // Governor check (execution layer with daily loss, heat, open count)
+    const dailyLossRows = await q<{ daily_loss: string }>(
+      `SELECT COALESCE(SUM(pl), 0) AS daily_loss FROM journal_entries
+       WHERE workspace_id = $1 AND is_open = false AND exit_date::date = CURRENT_DATE`,
+      [session.workspaceId],
+    );
+    const dailyLossPct = accountEquity > 0
+      ? Math.abs(Number(dailyLossRows[0]?.daily_loss ?? 0)) / accountEquity
+      : 0;
+    const openCount = openRows.length;
+    const portfolioHeatRows = await q<{ total_risk: string }>(
+      `SELECT COALESCE(SUM(risk_amount), 0)::text AS total_risk FROM journal_entries
+       WHERE workspace_id = $1 AND is_open = true`,
+      [session.workspaceId],
+    );
+    const portfolioHeat = accountEquity > 0
+      ? Number(portfolioHeatRows[0]?.total_risk ?? 0) / accountEquity
+      : 0;
+
+    const governor = await evaluateGovernor(intent, exits, {
+      snapshot,
+      current_daily_loss_pct: dailyLossPct,
+      current_portfolio_heat_pct: portfolioHeat,
+      current_open_trade_count: openCount,
     });
+
+    // Block if governor says no
+    if (!governor.allowed) {
+      return NextResponse.json(
+        {
+          error: `Execution engine blocked: ${governor.reason_codes.join(', ')}`,
+          riskMode: governor.risk_mode,
+          governor,
+        },
+        { status: 403 },
+      );
+    }
+
+    // Leverage
+    const leverageResult = computeLeverage({
+      asset_class: intent.asset_class,
+      regime: engineRegime,
+      risk_mode: governor.risk_mode,
+      atr_percent: atrPct,
+    });
+
+    // Position sizing
+    const sizing = computePositionSize(intent, {
+      governor_risk_per_trade: governor.risk_per_trade,
+      governor_max_position_size: governor.max_position_size,
+      effective_leverage: leverageResult.recommended_leverage,
+    });
+
+    const entryRisk = computeEntryRiskMetrics({
+      equityAtEntry: accountEquity,
+      dynamicRiskPerTrade: sizing.risk_pct,
+    });
+
+    // Determine trade type
+    let tradeType = 'Spot';
+    if (leverageResult.recommended_leverage > 1) tradeType = 'Margin';
+
+    const tradeStory = [
+      'AUTO TRADE — EXECUTION ENGINE (PAPER)',
+      `Signal Source: ${safeSource}`,
+      `Market Mode: ${safeOperatorMode}`,
+      `Macro Bias: ${safeBias}`,
+      `Risk State: ${safeRisk}`,
+      `Regime: ${safeRegime} → ${engineRegime}`,
+      `Market Mood: ${safeMood}`,
+      `Derivatives Sentiment: ${safeDerivativesBias}`,
+      `Sector Strength: ${safeSectorStrength}`,
+      `Entry Reason: ${safeCondition}`,
+      `Confidence: ${edge}`,
+      `ATR: ${atr.toFixed(4)}`,
+      `Stop: ${exits.stop_price} | TP1: ${exits.take_profit_1} | TP2: ${exits.take_profit_2 ?? 'n/a'}`,
+      `Trail: ${exits.trail_rule} | Time Stop: ${exits.time_stop_minutes}m`,
+      `Qty: ${sizing.quantity} | Risk: $${sizing.total_risk_usd.toFixed(2)} (${(sizing.risk_pct * 100).toFixed(2)}%)`,
+      `Leverage: ${leverageResult.recommended_leverage}× | Notional: $${sizing.notional_usd.toFixed(0)}`,
+      `R:R ${exits.rr_at_tp1}:1`,
+    ].join(' • ');
+
+    const psychologyPrompt = 'Psychology Prompt: Did you follow your original plan? Was sizing correct? What emotion did you feel at entry?';
+
+    const notes = [
+      'PAPER TRADE — Execution Engine auto-created from triggered signal.',
+      `Condition: ${safeCondition}`,
+      `Triggered Price: ${entryPrice}`,
+      `Triggered At: ${triggeredAt || new Date().toISOString()}`,
+      `Decision Packet: ${safeDecisionPacketId || 'n/a'}`,
+      tradeStory,
+      psychologyPrompt,
+      JSON.stringify({
+        execution_engine: true,
+        mode: 'PAPER',
+        trail_rule: exits.trail_rule,
+        time_stop_minutes: exits.time_stop_minutes,
+        tp2: exits.take_profit_2,
+        leverage: leverageResult,
+        governor_codes: governor.reason_codes,
+      }),
+    ].join('\n');
+
+    const tags = ['auto_alert', 'execution_engine', 'paper_trade', safeSource, `mode_${safeOperatorMode.toLowerCase()}`, `asset_class_${safeAssetClass}`];
+    if (safeDecisionPacketId) {
+      tags.push(`dp_${safeDecisionPacketId}`);
+    }
 
     const inserted = await q(
       `INSERT INTO journal_entries (
         workspace_id, trade_date, symbol, side, trade_type, quantity, entry_price,
         stop_loss, target, risk_amount, planned_rr,
         strategy, setup, notes, emotions, outcome, tags, is_open, asset_class,
-        normalized_r, dynamic_r, risk_per_trade_at_entry, equity_at_entry
+        normalized_r, dynamic_r, risk_per_trade_at_entry, equity_at_entry,
+        leverage, execution_mode, trail_rule, time_stop_minutes, take_profit_2
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7,
         $8, $9, $10, $11,
         $12, $13, $14, $15, $16, $17, $18, $19,
-        $20, $21, $22, $23
+        $20, $21, $22, $23,
+        $24, $25, $26, $27, $28
       )
       RETURNING id`,
       [
@@ -249,14 +383,14 @@ export async function POST(req: NextRequest) {
         tradeDate,
         safeSymbol,
         side,
-        'Spot',
-        1,
+        tradeType,
+        sizing.quantity,
         entryPrice,
-        autoStopLoss,
-        autoTarget,
-        autoRiskAmount,
-        autoPlannedRR,
-        strategyId,
+        exits.stop_price,
+        exits.take_profit_1,
+        sizing.total_risk_usd,
+        exits.rr_at_tp1,
+        rawStrategyId,
         safeCondition,
         notes,
         '',
@@ -268,6 +402,11 @@ export async function POST(req: NextRequest) {
         entryRisk.dynamicR,
         entryRisk.riskPerTradeAtEntry,
         entryRisk.equityAtEntry,
+        leverageResult.recommended_leverage,
+        'PAPER',
+        exits.trail_rule,
+        exits.time_stop_minutes,
+        exits.take_profit_2,
       ]
     );
 
@@ -291,9 +430,17 @@ export async function POST(req: NextRequest) {
           symbol: safeSymbol,
           side,
           tradeDate,
-          quantity: 1,
+          quantity: sizing.quantity,
           entryPrice,
-          strategy: strategyId,
+          stopLoss: exits.stop_price,
+          takeProfit1: exits.take_profit_1,
+          takeProfit2: exits.take_profit_2,
+          riskUsd: sizing.total_risk_usd,
+          rr: exits.rr_at_tp1,
+          leverage: leverageResult.recommended_leverage,
+          trailRule: exits.trail_rule,
+          executionMode: 'PAPER',
+          strategy: rawStrategyId,
           setup: safeCondition,
           source: 'journal_auto_log',
           decisionPacketId: safeDecisionPacketId,
@@ -327,7 +474,7 @@ export async function POST(req: NextRequest) {
           JSON.stringify({
             symbol: safeSymbol,
             entryId: inserted[0]?.id || null,
-            strategy: strategyId,
+            strategy: rawStrategyId,
             source: safeSource,
             mode: safeOperatorMode,
             confidence: edge,
@@ -359,6 +506,18 @@ export async function POST(req: NextRequest) {
       success: true,
       entryId: inserted[0]?.id || null,
       tradeStory,
+      executionEngine: {
+        mode: 'PAPER',
+        quantity: sizing.quantity,
+        stop: exits.stop_price,
+        tp1: exits.take_profit_1,
+        tp2: exits.take_profit_2,
+        riskUsd: sizing.total_risk_usd,
+        rr: exits.rr_at_tp1,
+        leverage: leverageResult.recommended_leverage,
+        trailRule: exits.trail_rule,
+        timeStopMin: exits.time_stop_minutes,
+      },
     });
   } catch (error) {
     console.error('Journal auto-log error:', error);

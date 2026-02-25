@@ -932,6 +932,7 @@ function ScannerContent() {
                 triggeredAt: new Date().toISOString(),
                 source: 'scanner_background_monitor',
                 assetClass: toWorkflowAssetClass(requestedAssetType),
+                atr: scanResult.atr || null,
                 operatorMode: operatorState.mode,
                 operatorBias: operatorState.bias,
                 operatorRisk: operatorState.risk,

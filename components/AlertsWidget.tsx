@@ -443,6 +443,7 @@ export default function AlertsWidget({
           triggeredAt: entry.triggered_at,
           source: 'alerts_triggered_feed',
           assetClass: inferredAssetClass,
+          atr: null,
           operatorMode: operatorState.mode,
           operatorBias: operatorState.bias,
           operatorRisk: operatorState.risk,
