@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Suspense } from 'react';
-import { useUserTier, canAccessPortfolioInsights } from '@/lib/useUserTier';
+import { useUserTier, canAccessOptionsTerminal } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
 import OptionsTerminalView from '@/components/options-terminal/OptionsTerminalView';
 
@@ -12,8 +12,8 @@ function OptionsTerminalInner() {
     return <div className="min-h-screen" style={{ background: 'var(--msp-bg)' }} />;
   }
 
-  if (!canAccessPortfolioInsights(tier)) {
-    return <UpgradeGate requiredTier="pro" feature="Options Terminal" />;
+  if (!canAccessOptionsTerminal(tier)) {
+    return <UpgradeGate requiredTier="pro_trader" feature="Options Terminal" />;
   }
 
   return <OptionsTerminalView />;

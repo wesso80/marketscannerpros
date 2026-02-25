@@ -125,7 +125,6 @@ export default function Header() {
     { href: '/tools/backtest', label: 'Backtester', icon: '📈' },
     { href: '/tools/journal', label: 'Trade Journal', icon: '📓' },
     { href: '/tools/alerts', label: 'Price Alerts', icon: '🔔' },
-    { href: '/tools/options-terminal', label: 'Options Terminal', icon: '📋' },
   ];
 
   const aiItems: DropdownItem[] = [
@@ -146,6 +145,7 @@ export default function Header() {
     { href: '/tools/crypto-dashboard', label: 'Crypto Derivatives', icon: '📊' },
     { href: '/tools/commodities', label: 'Commodities', icon: '🛢️' },
     { href: '/tools/macro', label: 'Macro Dashboard', icon: '🏛️' },
+    { href: '/tools/options-terminal', label: 'Options Terminal', icon: '📋' },
   ];
 
   const calendarItems: DropdownItem[] = [
