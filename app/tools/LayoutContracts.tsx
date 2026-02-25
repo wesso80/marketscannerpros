@@ -6,6 +6,7 @@ export type ToolsContainerVariant = 'standard' | 'wide' | 'full';
 export function isTerminalModePath(pathname: string): boolean {
   const terminalPrefixes = [
     '/tools/options-confluence',
+    '/tools/options-terminal',
     '/tools/scanner',
     '/tools/deep-analysis',
     '/tools/portfolio',
@@ -31,6 +32,7 @@ export function getToolsContainerVariant(pathname: string): ToolsContainerVarian
     '/tools/journal',
     '/tools/confluence-scanner',
     '/tools/markets',
+    '/tools/options-terminal',
   ];
   if (fullWidthPaths.some((p) => pathname.startsWith(p))) {
     return 'full';

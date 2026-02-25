@@ -7,6 +7,7 @@ const NAV_LINKS: [string, string][] = [
   ["Home", "/tools"],
   ["Markets", "/tools/markets"],
   ["Scanner", "/tools/scanner"],
+  ["Options", "/tools/options-terminal"],
   ["Crypto", "/tools/crypto"],
   ["Portfolio", "/tools/portfolio"],
   ["Journal", "/tools/journal"],
