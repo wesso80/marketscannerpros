@@ -22,6 +22,9 @@ export default function JournalCommandBar({ header, actions, viewMode, onToggleV
       {actions.onImport && (
         <button onClick={actions.onImport} className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-sm text-slate-100">Import</button>
       )}
+      {actions.onClear && (
+        <button onClick={actions.onClear} className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">Clear All</button>
+      )}
       <button onClick={onToggleViewMode} className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100">{viewMode === 'normal' ? 'Compact' : 'Normal'}</button>
     </>
   );

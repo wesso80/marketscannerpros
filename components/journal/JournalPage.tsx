@@ -66,6 +66,18 @@ export default function JournalPage({ tier }: { tier: UserTier }) {
 
   const actions = useJournalActions({ rows: payload?.trades || [], onRefresh: refresh });
 
+  const onClearJournal = async () => {
+    if (!window.confirm('Clear ALL journal entries? This cannot be undone.')) return;
+    try {
+      const res = await fetch('/api/journal/clear', { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to clear journal');
+      refresh();
+    } catch (err) {
+      console.error('[JournalPage] clear error', err);
+      alert('Failed to clear journal — check console for details.');
+    }
+  };
+
   const headerActions = useMemo(
     () => ({
       onNewTrade: () => {
@@ -73,9 +85,11 @@ export default function JournalPage({ tier }: { tier: UserTier }) {
         setDrawerOpen(true);
       },
       onExport: actions.onExport,
+      onClear: onClearJournal,
       // onImport intentionally removed — no CSV import backend yet
     }),
-    [actions.onExport],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [actions.onExport, refresh],
   );
 
   const onCloseTradeSubmit = async (req: {

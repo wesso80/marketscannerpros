@@ -144,6 +144,7 @@ export type JournalHeaderActions = {
   onNewTrade: () => void;
   onExport: () => void;
   onImport?: () => void;
+  onClear?: () => void;
 };
 
 export type TradeModel = TradeRowModel & {
