@@ -498,15 +498,27 @@ async function handleJournalPrefill(job: {
     tags.push(`dp_${plan.decision_packet_id}`);
   }
 
+  // Infer asset class from symbol
+  const assetClass = symbol.endsWith('USD') || symbol.endsWith('USDT') ? 'crypto' : 'equity';
+  tags.push(`asset_class_${assetClass}`);
+
+  // Compute risk_amount and planned_rr from plan data
+  const stopLoss = asFinite(risk.invalidation);
+  const targetPrice = Array.isArray(risk.targets) ? asFinite(risk.targets[0]) : null;
+  const riskAmount = (stopLoss != null && entryPrice > 0) ? Math.abs(entryPrice - stopLoss) : null;
+  const plannedRr = (riskAmount != null && riskAmount > 0 && targetPrice != null && entryPrice > 0)
+    ? Math.abs(targetPrice - entryPrice) / riskAmount
+    : null;
+
   const inserted = await q<{ id: number }>(
     `INSERT INTO journal_entries (
       workspace_id, trade_date, symbol, side, trade_type, quantity, entry_price,
-      strategy, setup, notes, emotions, outcome, tags, is_open,
-      stop_loss, target, planned_rr
+      strategy, setup, notes, emotions, outcome, tags, is_open, asset_class,
+      stop_loss, target, risk_amount, planned_rr, execution_mode
     ) VALUES (
       $1, $2, $3, $4, $5, $6, $7,
-      $8, $9, $10, $11, $12, $13, $14,
-      $15, $16, $17
+      $8, $9, $10, $11, $12, $13, $14, $15,
+      $16, $17, $18, $19, $20
     )
     RETURNING id`,
     [
@@ -524,9 +536,12 @@ async function handleJournalPrefill(job: {
       'open',
       tags,
       true,
-      asFinite(risk.invalidation),
-      Array.isArray(risk.targets) ? asFinite(risk.targets[0]) : null,
-      null,
+      assetClass,
+      stopLoss,
+      targetPrice,
+      riskAmount,
+      plannedRr != null ? Math.round(plannedRr * 100) / 100 : null,
+      'PAPER',
     ]
   );
 

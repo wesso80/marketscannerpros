@@ -16,6 +16,7 @@ import {
 } from '@/lib/operator/riskGovernor';
 import { buildPermissionSnapshot } from '@/lib/risk-governor-hard';
 import { computeEntryRiskMetrics, getLatestPortfolioEquity } from '@/lib/journal/riskAtEntry';
+import { runExecutionPipeline } from '@/lib/execution/runPipeline';
 
 const ALLOWED_EVENT_TYPES = new Set<WorkflowEventType>([
   'operator.session.started',
@@ -814,43 +815,87 @@ async function autoCreateJournalDraftForEvent(workspaceId: string, event: MSPEve
     tags.push(`dp_${decisionPacketId}`);
   }
 
-  const snapshot = buildPermissionSnapshot({ enabled: true });
-  const equityAtEntry = await getLatestPortfolioEquity(workspaceId);
-  const entryRisk = computeEntryRiskMetrics({
-    equityAtEntry,
-    dynamicRiskPerTrade: snapshot.caps.risk_per_trade,
+  // ── Run execution engine pipeline for proper stops/targets ────────
+  const pipeline = await runExecutionPipeline({
+    workspaceId,
+    symbol,
+    side,
+    entryPrice,
+    assetClass: assetClass as 'crypto' | 'equity' | 'forex' | 'commodity',
+    confidence: Math.max(1, Math.min(99, Math.round(Number(planPayload?.risk?.risk_score ?? 50)))),
+    regime: String(planPayload?.regime || 'Trend'),
+    strategyTag: strategy,
+    atr: null,
+    guardEnabled: true,
   });
+
+  if (!pipeline.ok) {
+    console.warn(`[workflow/events] Execution pipeline rejected ${symbol}: ${pipeline.reason}`);
+    // Still create the entry but with fallback risk metrics (no execution engine)
+    const snapshot = buildPermissionSnapshot({ enabled: true });
+    const equityAtEntry = await getLatestPortfolioEquity(workspaceId);
+    const entryRisk = computeEntryRiskMetrics({
+      equityAtEntry,
+      dynamicRiskPerTrade: snapshot.caps.risk_per_trade,
+    });
+    // Insert WITHOUT stops — but tag it so we know it's incomplete
+    tags.push('missing_execution_engine');
+    const incompleteNotes = notes + `\n⚠️ Execution engine rejected: ${pipeline.reason}`;
+    await q(
+      `INSERT INTO journal_entries (
+        workspace_id, trade_date, symbol, side, trade_type, quantity, entry_price,
+        strategy, setup, notes, emotions, outcome, tags, is_open, asset_class,
+        normalized_r, dynamic_r, risk_per_trade_at_entry, equity_at_entry, execution_mode
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7,
+        $8, $9, $10, $11, $12, $13, $14, $15,
+        $16, $17, $18, $19, $20
+      )`,
+      [
+        workspaceId, tradeDate, symbol, side, 'Spot', 1, entryPrice,
+        strategy, setupSource, incompleteNotes, '', 'open', tags, true, assetClass,
+        entryRisk.normalizedR, entryRisk.dynamicR, entryRisk.riskPerTradeAtEntry, entryRisk.equityAtEntry,
+        'DRY_RUN',
+      ]
+    );
+    return true;
+  }
+
+  const { exits, sizing, leverage: leverageResult, entryRisk, atr } = pipeline.result;
+
+  const engineNotes = [
+    notes,
+    '',
+    'EXECUTION ENGINE (PAPER)',
+    `ATR: ${atr.toFixed(4)}`,
+    `Stop: ${exits.stop_price} | TP1: ${exits.take_profit_1} | TP2: ${exits.take_profit_2 ?? 'n/a'}`,
+    `Trail: ${exits.trail_rule} | Time Stop: ${exits.time_stop_minutes}m`,
+    `Qty: ${sizing.quantity} | Risk: $${sizing.total_risk_usd.toFixed(2)} (${(sizing.risk_pct * 100).toFixed(2)}%)`,
+    `Leverage: ${leverageResult.recommended_leverage}× | R:R ${exits.rr_at_tp1}:1`,
+  ].join('\n');
+
+  tags.push('execution_engine', 'paper_trade');
 
   await q(
     `INSERT INTO journal_entries (
       workspace_id, trade_date, symbol, side, trade_type, quantity, entry_price,
+      stop_loss, target, risk_amount, planned_rr,
       strategy, setup, notes, emotions, outcome, tags, is_open, asset_class,
-      normalized_r, dynamic_r, risk_per_trade_at_entry, equity_at_entry
+      normalized_r, dynamic_r, risk_per_trade_at_entry, equity_at_entry,
+      leverage, execution_mode, trail_rule, time_stop_minutes, take_profit_2
     ) VALUES (
       $1, $2, $3, $4, $5, $6, $7,
-      $8, $9, $10, $11, $12, $13, $14, $15,
-      $16, $17, $18, $19
+      $8, $9, $10, $11,
+      $12, $13, $14, $15, $16, $17, $18, $19,
+      $20, $21, $22, $23,
+      $24, $25, $26, $27, $28
     )`,
     [
-      workspaceId,
-      tradeDate,
-      symbol,
-      side,
-      'Spot',
-      1,
-      entryPrice,
-      strategy,
-      setupSource,
-      notes,
-      '',
-      'open',
-      tags,
-      true,
-      assetClass,
-      entryRisk.normalizedR,
-      entryRisk.dynamicR,
-      entryRisk.riskPerTradeAtEntry,
-      entryRisk.equityAtEntry,
+      workspaceId, tradeDate, symbol, side, pipeline.result.tradeType, sizing.quantity, entryPrice,
+      exits.stop_price, exits.take_profit_1, sizing.total_risk_usd, exits.rr_at_tp1,
+      strategy, setupSource, engineNotes, '', 'open', tags, true, assetClass,
+      entryRisk.normalizedR, entryRisk.dynamicR, entryRisk.riskPerTradeAtEntry, entryRisk.equityAtEntry,
+      leverageResult.recommended_leverage, 'PAPER', exits.trail_rule, exits.time_stop_minutes, exits.take_profit_2,
     ]
   );
 

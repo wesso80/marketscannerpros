@@ -89,13 +89,15 @@ export async function POST(req: NextRequest) {
         quantity, entry_price, stop_loss, target, risk_amount, planned_rr,
         strategy, setup, notes, outcome, tags, is_open, status,
         option_type, strike_price, expiration_date, premium, leverage,
-        normalized_r, dynamic_r, risk_per_trade_at_entry, equity_at_entry
+        normalized_r, dynamic_r, risk_per_trade_at_entry, equity_at_entry,
+        execution_mode, trail_rule, time_stop_minutes, take_profit_2
       ) VALUES (
         $1,  $2,  $3,  $4,  $5,  $6,
         $7,  $8,  $9,  $10, $11, $12,
         $13, $14, $15, 'open', $16, true, 'OPEN',
         $17, $18, $19, $20, $21,
-        $22, $23, $24, $25
+        $22, $23, $24, $25,
+        $26, $27, $28, $29
       ) RETURNING id`,
       [
         workspaceId,                                    // $1
@@ -114,9 +116,6 @@ export async function POST(req: NextRequest) {
         `Execution Engine — ${proposal.summary}`,       // $14 setup
         JSON.stringify({                                // $15 notes (structured)
           proposal_id: proposal.proposal_id,
-          trail_rule: exits.trail_rule,
-          time_stop_minutes: exits.time_stop_minutes,
-          tp2: exits.take_profit_2,
           leverage: proposal.leverage,
           options: proposal.options ?? null,
           governor_codes: governor.reason_codes,
@@ -131,6 +130,10 @@ export async function POST(req: NextRequest) {
         riskMetrics.dynamicR,                           // $23
         riskMetrics.riskPerTradeAtEntry,                // $24
         riskMetrics.equityAtEntry,                      // $25
+        mode === 'LIVE' ? 'LIVE' : 'PAPER',            // $26 execution_mode
+        exits.trail_rule,                               // $27 trail_rule
+        exits.time_stop_minutes,                        // $28 time_stop_minutes
+        exits.take_profit_2 ?? null,                    // $29 take_profit_2
       ],
     );
 

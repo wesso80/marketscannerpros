@@ -11,6 +11,7 @@ import type { AIToolName, ActionStatus, AIActionResult, PageSkill } from '@/lib/
 import { AI_TOOLS, assertToolAllowedForSkill, generateIdempotencyKey, getToolPolicy, isToolCacheable, getToolCacheTTL } from '@/lib/ai/tools';
 import { buildPermissionSnapshot } from '@/lib/risk-governor-hard';
 import { computeEntryRiskMetrics, getLatestPortfolioEquity } from '@/lib/journal/riskAtEntry';
+import { runExecutionPipeline } from '@/lib/execution/runPipeline';
 
 interface ActionRequest {
   tool: AIToolName;
@@ -687,6 +688,101 @@ async function executeJournalTrade(
       return { success: false, error: 'Symbol and direction required' };
     }
 
+    const safeSymbol = (symbol as string).toUpperCase();
+    const side = String(direction).toUpperCase().includes('SHORT') || String(direction).toUpperCase().includes('SELL')
+      ? 'SHORT' as const : 'LONG' as const;
+    const safePriceRaw = Number(entryPrice);
+    const safePrice = Number.isFinite(safePriceRaw) && safePriceRaw > 0 ? safePriceRaw : 0;
+
+    // Infer asset class from symbol
+    const inferredAssetClass = safeSymbol.endsWith('USD') || safeSymbol.endsWith('USDT')
+      ? 'crypto' as const : 'equity' as const;
+
+    // Run execution pipeline for stops, targets, sizing
+    if (safePrice > 0) {
+      const pipeline = await runExecutionPipeline({
+        workspaceId,
+        symbol: safeSymbol,
+        side,
+        entryPrice: safePrice,
+        assetClass: inferredAssetClass,
+        confidence: 50,
+        regime: 'Trend',
+        strategyTag: 'alert_intelligence',
+        atr: null,
+        guardEnabled: true,
+      });
+
+      if (pipeline.ok) {
+        const { exits, sizing, leverage: leverageResult, entryRisk } = pipeline.result;
+        const engineNotes = [
+          notes || 'AI-initiated trade with execution engine.',
+          '',
+          `EXECUTION ENGINE: Stop ${exits.stop_price} | TP1 ${exits.take_profit_1} | R:R ${exits.rr_at_tp1}:1`,
+        ].join('\n');
+
+        const result = await q(
+          `INSERT INTO journal_entries (
+            workspace_id, trade_date, symbol, side, trade_type, quantity, entry_price,
+            stop_loss, target, risk_amount, planned_rr,
+            strategy, setup, notes, emotions, outcome, tags, is_open, asset_class,
+            normalized_r, dynamic_r, risk_per_trade_at_entry, equity_at_entry,
+            leverage, execution_mode, trail_rule, time_stop_minutes, take_profit_2,
+            created_at
+          ) VALUES (
+            $1, $2, $3, $4, $5, $6, $7,
+            $8, $9, $10, $11,
+            $12, $13, $14, $15, $16, $17, $18, $19,
+            $20, $21, $22, $23,
+            $24, $25, $26, $27, $28,
+            NOW()
+          )
+          RETURNING id`,
+          [
+            workspaceId,
+            new Date().toISOString().slice(0, 10),
+            safeSymbol,
+            side,
+            pipeline.result.tradeType,
+            sizing.quantity,
+            safePrice,
+            exits.stop_price,
+            exits.take_profit_1,
+            sizing.total_risk_usd,
+            exits.rr_at_tp1,
+            String(setupType || 'ai_trade'),
+            'ai_chatbot',
+            engineNotes,
+            '',
+            'open',
+            ['ai_trade', 'execution_engine', 'paper_trade'],
+            true,
+            inferredAssetClass,
+            entryRisk.normalizedR,
+            entryRisk.dynamicR,
+            entryRisk.riskPerTradeAtEntry,
+            entryRisk.equityAtEntry,
+            leverageResult.recommended_leverage,
+            'PAPER',
+            exits.trail_rule,
+            exits.time_stop_minutes,
+            exits.take_profit_2,
+          ]
+        );
+
+        return {
+          success: true,
+          data: {
+            entryId: result[0]?.id,
+            message: `Journal entry created for ${safeSymbol} ${side} with execution engine (stop: ${exits.stop_price}, tp1: ${exits.take_profit_1})`,
+          },
+        };
+      }
+      // Pipeline rejected — fall through to basic insert
+      console.warn(`[ai/actions] Execution pipeline rejected ${safeSymbol}: ${pipeline.reason}`);
+    }
+
+    // Fallback: basic insert without execution engine
     const snapshot = buildPermissionSnapshot({ enabled: true });
     const equityAtEntry = await getLatestPortfolioEquity(workspaceId);
     const entryRisk = computeEntryRiskMetrics({
@@ -696,14 +792,16 @@ async function executeJournalTrade(
 
     const result = await q(
       `INSERT INTO journal_entries 
-       (workspace_id, symbol, side, entry_price, exit_price, setup_type, notes, mistakes, lessons, normalized_r, dynamic_r, risk_per_trade_at_entry, equity_at_entry, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())
+       (workspace_id, symbol, side, entry_price, exit_price, setup_type, notes, mistakes, lessons, 
+        normalized_r, dynamic_r, risk_per_trade_at_entry, equity_at_entry, asset_class, execution_mode, 
+        outcome, is_open, tags, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, NOW())
        RETURNING id`,
       [
         workspaceId,
-        (symbol as string).toUpperCase(),
-        direction,
-        entryPrice || null,
+        safeSymbol,
+        side,
+        safePrice > 0 ? safePrice : null,
         exitPrice || null,
         setupType || 'other',
         notes || null,
@@ -713,6 +811,11 @@ async function executeJournalTrade(
         entryRisk.dynamicR,
         entryRisk.riskPerTradeAtEntry,
         entryRisk.equityAtEntry,
+        inferredAssetClass,
+        'DRY_RUN',
+        'open',
+        true,
+        ['ai_trade', 'missing_execution_engine'],
       ]
     );
 
@@ -720,7 +823,7 @@ async function executeJournalTrade(
       success: true, 
       data: { 
         entryId: result[0]?.id,
-        message: `Journal entry created for ${symbol} ${direction}`
+        message: `Journal entry created for ${safeSymbol} ${side} (no execution engine — ATR unavailable)`
       }
     };
   } catch (error) {

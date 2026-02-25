@@ -6,6 +6,7 @@ import { getRiskGovernorThresholdsFromEnv } from '@/lib/operator/riskGovernor';
 import { buildPermissionSnapshot, evaluateCandidate, type StrategyTag } from '@/lib/risk-governor-hard';
 import { computeEntryRiskMetrics, getLatestPortfolioEquity } from '@/lib/journal/riskAtEntry';
 import { getRuntimeRiskSnapshotInput } from '@/lib/risk/runtimeSnapshot';
+import { runExecutionPipeline } from '@/lib/execution/runPipeline';
 
 type CanonicalActionType =
   | 'alert.create'
@@ -327,37 +328,126 @@ async function createJournalOpen(workspaceId: string, payload: Record<string, an
     equityAtEntry,
   });
 
+  // ── Run execution pipeline for stops, targets, sizing ──────────────
+  const direction = side === 'SHORT' || side === 'SELL' || side === 'BEARISH' ? 'SHORT' as const : 'LONG' as const;
+  const pipeline = await runExecutionPipeline({
+    workspaceId,
+    symbol,
+    side: direction,
+    entryPrice,
+    assetClass: assetClass as 'crypto' | 'equity' | 'forex' | 'commodity',
+    confidence: Math.max(1, Math.min(99, Math.round(asNumber(payload.confidence, 70)))),
+    regime: String(runtimeInput?.regime || 'Trend'),
+    strategyTag: String(payload.strategy || 'operator_signal'),
+    atr: asNumber(payload.atr, 0) || null,
+    guardEnabled,
+  });
+
+  if (pipeline.ok) {
+    const { exits, sizing, leverage: leverageResult } = pipeline.result;
+    const pipelineEntryRisk = pipeline.result.entryRisk;
+
+    const inserted = await q<{ id: number }>(
+      `INSERT INTO journal_entries (
+        workspace_id, trade_date, symbol, side, trade_type, quantity, entry_price,
+        stop_loss, target, risk_amount, planned_rr,
+        strategy, setup, notes, emotions, outcome, tags, is_open, asset_class,
+        normalized_r, dynamic_r, risk_per_trade_at_entry, equity_at_entry,
+        leverage, execution_mode, trail_rule, time_stop_minutes, take_profit_2
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7,
+        $8, $9, $10, $11,
+        $12, $13, $14, $15, $16, $17, $18, $19,
+        $20, $21, $22, $23,
+        $24, $25, $26, $27, $28
+      )
+      RETURNING id`,
+      [
+        workspaceId,
+        tradeDate,
+        symbol,
+        direction,
+        pipeline.result.tradeType,
+        sizing.quantity,
+        entryPrice,
+        exits.stop_price,
+        exits.take_profit_1,
+        sizing.total_risk_usd,
+        exits.rr_at_tp1,
+        String(payload.strategy || 'operator_signal').slice(0, 100),
+        String(payload.setup || 'operator_open').slice(0, 120),
+        String(payload.notes || 'Operator-created trade with execution engine').slice(0, 3000),
+        '',
+        'open',
+        [...tags, 'execution_engine', 'paper_trade'],
+        true,
+        assetClass,
+        pipelineEntryRisk.normalizedR,
+        pipelineEntryRisk.dynamicR,
+        pipelineEntryRisk.riskPerTradeAtEntry,
+        pipelineEntryRisk.equityAtEntry,
+        leverageResult.recommended_leverage,
+        'PAPER',
+        exits.trail_rule,
+        exits.time_stop_minutes,
+        exits.take_profit_2,
+      ]
+    );
+
+    return {
+      kind: 'journal_open',
+      journalEntryId: inserted[0]?.id || null,
+      symbol,
+      side,
+    };
+  }
+
+  // Pipeline rejected — fallback: still create entry with whatever stop the user provided
+  const riskAmount = (stopPrice > 0 && entryPrice > 0) ? Math.abs(entryPrice - stopPrice) : 0;
+  const plannedRr = (stopPrice > 0 && entryPrice > 0)
+    ? (asNumber(payload.target ?? payload.takeProfit ?? 0, 0) > 0
+      ? Math.abs(asNumber(payload.target ?? payload.takeProfit ?? 0, 0) - entryPrice) / Math.abs(entryPrice - stopPrice)
+      : null)
+    : null;
+
   const inserted = await q<{ id: number }>(
     `INSERT INTO journal_entries (
       workspace_id, trade_date, symbol, side, trade_type, quantity, entry_price,
+      stop_loss, target, risk_amount, planned_rr,
       strategy, setup, notes, emotions, outcome, tags, is_open, asset_class,
-      normalized_r, dynamic_r, risk_per_trade_at_entry, equity_at_entry
+      normalized_r, dynamic_r, risk_per_trade_at_entry, equity_at_entry, execution_mode
     ) VALUES (
       $1, $2, $3, $4, $5, $6, $7,
-      $8, $9, $10, $11, $12, $13, $14, $15,
-      $16, $17, $18, $19
+      $8, $9, $10, $11,
+      $12, $13, $14, $15, $16, $17, $18, $19,
+      $20, $21, $22, $23, $24
     )
     RETURNING id`,
     [
       workspaceId,
       tradeDate,
       symbol,
-      side === 'SHORT' || side === 'SELL' || side === 'BEARISH' ? 'SHORT' : 'LONG',
+      direction,
       String(payload.tradeType || 'Spot').slice(0, 30),
       1,
       entryPrice,
+      stopPrice > 0 ? stopPrice : null,
+      asNumber(payload.target ?? payload.takeProfit ?? 0, 0) > 0 ? asNumber(payload.target ?? payload.takeProfit ?? 0, 0) : null,
+      riskAmount > 0 ? riskAmount : null,
+      plannedRr,
       String(payload.strategy || 'operator_signal').slice(0, 100),
       String(payload.setup || 'operator_open').slice(0, 120),
-      String(payload.notes || 'Operator-created open trade draft').slice(0, 3000),
+      `${String(payload.notes || 'Operator-created open trade draft').slice(0, 3000)}\n⚠️ Execution engine: ${!pipeline.ok ? pipeline.reason : 'rejected'}`,
       '',
       'open',
-      tags,
+      [...tags, 'missing_execution_engine'],
       true,
       assetClass,
       entryRisk.normalizedR,
       entryRisk.dynamicR,
       entryRisk.riskPerTradeAtEntry,
       entryRisk.equityAtEntry,
+      'DRY_RUN',
     ]
   );
 
