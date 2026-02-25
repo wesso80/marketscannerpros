@@ -81,6 +81,17 @@ async function ensureJournalSchema() {
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS dynamic_r DECIMAL(12,6)`);
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS risk_per_trade_at_entry DECIMAL(10,6)`);
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS equity_at_entry DECIMAL(20,8)`);
+
+  // ── Execution engine columns (migration 044) ──
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS leverage DECIMAL(10,2)`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS trail_rule VARCHAR(30) DEFAULT 'NONE'`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS time_stop_minutes INTEGER DEFAULT 0`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS take_profit_2 DECIMAL(18,8)`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS execution_mode VARCHAR(10) DEFAULT 'DRY_RUN'`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS max_loss_usd DECIMAL(18,2)`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS status_reason VARCHAR(120)`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS proposal_id UUID`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS broker_order_id VARCHAR(120)`);
 }
 
 function inferSide(conditionType?: string, conditionMet?: string): 'LONG' | 'SHORT' {

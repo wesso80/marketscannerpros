@@ -6,6 +6,7 @@ import { emitTradeLifecycleEvent, hashDedupeKey } from "@/lib/notifications/trad
 import { buildPermissionSnapshot, evaluateCandidate, type StrategyTag } from "@/lib/risk-governor-hard";
 import { computeEntryRiskMetrics, getLatestPortfolioEquity } from "@/lib/journal/riskAtEntry";
 import { getRuntimeRiskSnapshotInput } from "@/lib/risk/runtimeSnapshot";
+import { runExecutionPipeline } from "@/lib/execution/runPipeline";
 
 interface JournalEntry {
   id: number;
@@ -218,6 +219,17 @@ async function ensureJournalSchema() {
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS risk_per_trade_at_entry DECIMAL(10,6)`);
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS equity_at_entry DECIMAL(20,8)`);
 
+  // ── Execution engine columns (migration 044) ──
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS leverage DECIMAL(10,2)`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS trail_rule VARCHAR(30) DEFAULT 'NONE'`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS time_stop_minutes INTEGER DEFAULT 0`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS take_profit_2 DECIMAL(18,8)`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS execution_mode VARCHAR(10) DEFAULT 'DRY_RUN'`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS max_loss_usd DECIMAL(18,2)`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS status_reason VARCHAR(120)`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS proposal_id UUID`);
+  await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS broker_order_id VARCHAR(120)`);
+
   await q(`
     UPDATE journal_entries
        SET asset_class = CASE
@@ -272,6 +284,82 @@ export async function GET(req: NextRequest) {
     const workspaceId = session.workspaceId;
 
     await ensureJournalSchema();
+
+    // ── Auto-backfill: fix open trades missing stops ──────────────────
+    try {
+      const missingStops = await q<{
+        id: number;
+        symbol: string;
+        side: string;
+        entry_price: string;
+        asset_class: string;
+      }>(
+        `SELECT id, symbol, side, entry_price::text, COALESCE(asset_class, 'equity') AS asset_class
+         FROM journal_entries
+         WHERE workspace_id = $1
+           AND is_open = true
+           AND (stop_loss IS NULL OR target IS NULL)
+           AND entry_price > 0
+         LIMIT 10`,
+        [workspaceId]
+      );
+
+      for (const row of missingStops) {
+        const entryPrice = Number(row.entry_price);
+        if (!Number.isFinite(entryPrice) || entryPrice <= 0) continue;
+        const side = row.side === 'SHORT' ? 'SHORT' as const : 'LONG' as const;
+        const ac = (row.asset_class || 'equity') as 'crypto' | 'equity' | 'forex' | 'commodity';
+
+        const pipeline = await runExecutionPipeline({
+          workspaceId,
+          symbol: row.symbol,
+          side,
+          entryPrice,
+          assetClass: ac,
+          confidence: 50,
+          regime: 'Trend',
+          strategyTag: 'alert_intelligence',
+          atr: null,
+          guardEnabled: false, // don't block backfill
+        });
+
+        if (pipeline.ok) {
+          const { exits, sizing, leverage: lev, entryRisk } = pipeline.result;
+          await q(
+            `UPDATE journal_entries
+             SET stop_loss = $2, target = $3, risk_amount = $4, planned_rr = $5,
+                 trail_rule = $6, time_stop_minutes = $7, take_profit_2 = $8,
+                 leverage = $9, execution_mode = COALESCE(execution_mode, 'PAPER'),
+                 quantity = CASE WHEN quantity <= 1 THEN $10 ELSE quantity END,
+                 normalized_r = COALESCE(normalized_r, $11),
+                 dynamic_r = COALESCE(dynamic_r, $12),
+                 risk_per_trade_at_entry = COALESCE(risk_per_trade_at_entry, $13),
+                 equity_at_entry = COALESCE(equity_at_entry, $14)
+             WHERE id = $1 AND workspace_id = $15 AND is_open = true`,
+            [
+              row.id,
+              exits.stop_price,
+              exits.take_profit_1,
+              sizing.total_risk_usd,
+              exits.rr_at_tp1,
+              exits.trail_rule,
+              exits.time_stop_minutes,
+              exits.take_profit_2,
+              lev.recommended_leverage,
+              sizing.quantity,
+              entryRisk.normalizedR,
+              entryRisk.dynamicR,
+              entryRisk.riskPerTradeAtEntry,
+              entryRisk.equityAtEntry,
+              workspaceId,
+            ]
+          );
+          console.info(`[journal/backfill] Fixed stops for ${row.symbol} (id=${row.id}): stop=${exits.stop_price}, tp1=${exits.take_profit_1}`);
+        }
+      }
+    } catch (backfillErr) {
+      console.warn('[journal/backfill] Non-fatal backfill error:', backfillErr instanceof Error ? backfillErr.message : backfillErr);
+    }
 
     const entriesRaw = await q(
       `SELECT *
