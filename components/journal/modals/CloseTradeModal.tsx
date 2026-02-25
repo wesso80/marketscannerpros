@@ -91,8 +91,8 @@ export default function CloseTradeModal({ open, trade, onClose, onSubmit }: Clos
         )}
 
         <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-          <input value={exitPrice} onChange={(event) => setExitPrice(event.target.value)} placeholder="Exit price" className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100" />
-          <input type="datetime-local" value={exitTs} onChange={(event) => setExitTs(event.target.value)} className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100" />
+          <input id="close-exit-price" name="exitPrice" value={exitPrice} onChange={(event) => setExitPrice(event.target.value)} placeholder="Exit price" className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100" />
+          <input id="close-exit-ts" name="exitTs" type="datetime-local" value={exitTs} onChange={(event) => setExitTs(event.target.value)} className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100" />
 
           <select value={closeReason} onChange={(event) => setCloseReason(event.target.value as typeof closeReason)} className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100">
             <option value="tp">tp</option>
@@ -126,7 +126,7 @@ export default function CloseTradeModal({ open, trade, onClose, onSubmit }: Clos
         </div>
 
         <label className="mt-3 flex items-center gap-2 text-sm text-slate-200">
-          <input type="checkbox" checked={followedPlan} onChange={(event) => setFollowedPlan(event.target.checked)} />
+          <input id="close-followed-plan" name="followedPlan" type="checkbox" checked={followedPlan} onChange={(event) => setFollowedPlan(event.target.checked)} />
           Followed plan
         </label>
 

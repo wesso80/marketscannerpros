@@ -126,6 +126,8 @@ export default function TradeEntryForm({ onSubmit, onCancel }: TradeEntryFormPro
           <div>
             <label className={LABEL}>Symbol *</label>
             <input
+              id="trade-symbol"
+              name="symbol"
               type="text"
               className={INPUT}
               placeholder="AAPL, BTC-USD…"
@@ -220,6 +222,8 @@ export default function TradeEntryForm({ onSubmit, onCancel }: TradeEntryFormPro
               <div>
                 <label className={LABEL}>Strike Price</label>
                 <input
+                  id="trade-strike-price"
+                  name="strikePrice"
                   type="number"
                   step="any"
                   min="0"
@@ -234,6 +238,8 @@ export default function TradeEntryForm({ onSubmit, onCancel }: TradeEntryFormPro
               <div>
                 <label className={LABEL}>Expiration Date</label>
                 <input
+                  id="trade-expiration"
+                  name="expirationDate"
                   type="date"
                   className={INPUT}
                   value={expirationDate}
@@ -243,6 +249,8 @@ export default function TradeEntryForm({ onSubmit, onCancel }: TradeEntryFormPro
               <div>
                 <label className={LABEL}>Premium (per contract)</label>
                 <input
+                  id="trade-premium"
+                  name="premium"
                   type="number"
                   step="any"
                   min="0"
@@ -267,6 +275,8 @@ export default function TradeEntryForm({ onSubmit, onCancel }: TradeEntryFormPro
                 <label className={LABEL}>Leverage</label>
                 <div className="relative">
                   <input
+                    id="trade-leverage"
+                    name="leverage"
                     type="number"
                     step="any"
                     min="1"
@@ -294,6 +304,8 @@ export default function TradeEntryForm({ onSubmit, onCancel }: TradeEntryFormPro
           <div>
             <label className={LABEL}>Entry Price *</label>
             <input
+              id="trade-entry-price"
+              name="entryPrice"
               type="number"
               step="any"
               min="0"
@@ -306,6 +318,8 @@ export default function TradeEntryForm({ onSubmit, onCancel }: TradeEntryFormPro
           <div>
             <label className={LABEL}>Quantity *</label>
             <input
+              id="trade-quantity"
+              name="quantity"
               type="number"
               step="any"
               min="0"
@@ -322,6 +336,8 @@ export default function TradeEntryForm({ onSubmit, onCancel }: TradeEntryFormPro
           <div>
             <label className={LABEL}>Stop Loss</label>
             <input
+              id="trade-stop-loss"
+              name="stopLoss"
               type="number"
               step="any"
               min="0"
@@ -334,6 +350,8 @@ export default function TradeEntryForm({ onSubmit, onCancel }: TradeEntryFormPro
           <div>
             <label className={LABEL}>Target</label>
             <input
+              id="trade-target"
+              name="target"
               type="number"
               step="any"
               min="0"
@@ -365,6 +383,8 @@ export default function TradeEntryForm({ onSubmit, onCancel }: TradeEntryFormPro
         <div className="mb-3">
           <label className={LABEL}>Trade Date</label>
           <input
+            id="trade-date"
+            name="tradeDate"
             type="date"
             className={INPUT}
             value={tradeDate}
@@ -377,6 +397,8 @@ export default function TradeEntryForm({ onSubmit, onCancel }: TradeEntryFormPro
           <div>
             <label className={LABEL}>Strategy</label>
             <input
+              id="trade-strategy"
+              name="strategy"
               type="text"
               className={INPUT}
               placeholder="e.g. Breakout, Mean Reversion"
@@ -387,6 +409,8 @@ export default function TradeEntryForm({ onSubmit, onCancel }: TradeEntryFormPro
           <div>
             <label className={LABEL}>Setup</label>
             <input
+              id="trade-setup"
+              name="setup"
               type="text"
               className={INPUT}
               placeholder="e.g. Bull Flag, Gap Fill"

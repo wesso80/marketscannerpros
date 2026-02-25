@@ -386,7 +386,7 @@ export default function EconomicCalendarPage() {
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <label className="inline-flex items-center gap-1 text-xs text-white/70">
-                  <input type="checkbox" checked={hideLowImpact} onChange={(event) => setHideLowImpact(event.target.checked)} /> Hide Low Impact
+                  <input id="hide-low-impact" name="hideLowImpact" type="checkbox" checked={hideLowImpact} onChange={(event) => setHideLowImpact(event.target.checked)} /> Hide Low Impact
                 </label>
                 <button
                   onClick={() => setShowET((current) => !current)}

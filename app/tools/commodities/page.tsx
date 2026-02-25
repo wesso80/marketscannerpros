@@ -522,7 +522,7 @@ export default function CommoditiesPage() {
               {data?.lastUpdate ? `Updated ${new Date(data.lastUpdate).toLocaleTimeString()}` : 'Awaiting update'}
             </span>
             <label className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/70">
-              <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />
+              <input id="auto-refresh" name="autoRefresh" type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />
               Auto refresh (15m)
             </label>
             <button

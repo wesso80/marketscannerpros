@@ -452,7 +452,7 @@ export default function GainersLosersPage() {
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", marginBottom: 16, padding: "12px 16px", background: "rgba(30, 41, 59, 0.5)", borderRadius: 10, border: "1px solid rgba(51,65,85,0.6)" }}>
             <label style={{ display: "flex", alignItems: "center", gap: 6, color: "#94A3B8", fontSize: 13, cursor: "pointer" }}>
-              <input type="checkbox" checked={hideBlocked} onChange={(e) => setHideBlocked(e.target.checked)} style={{ accentColor: "#10B981" }} />
+              <input id="hide-blocked" name="hideBlocked" type="checkbox" checked={hideBlocked} onChange={(e) => setHideBlocked(e.target.checked)} style={{ accentColor: "#10B981" }} />
               Hide Blocked
             </label>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>

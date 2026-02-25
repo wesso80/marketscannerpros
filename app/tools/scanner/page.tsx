@@ -1619,15 +1619,15 @@ function ScannerContent() {
                       <div className="mt-3 grid gap-3 md:grid-cols-3">
                         <label className="grid gap-1 text-[0.72rem] text-[var(--msp-text-muted)]">
                           <span>Journal Monitor</span>
-                          <input type="checkbox" checked={journalMonitorEnabled} onChange={(e) => setJournalMonitorEnabled(e.target.checked)} />
+                          <input id="scanner-adv-jm" name="journalMonitorEnabled" type="checkbox" checked={journalMonitorEnabled} onChange={(e) => setJournalMonitorEnabled(e.target.checked)} />
                         </label>
                         <label className="grid gap-1 text-[0.72rem] text-[var(--msp-text-muted)]">
                           <span>Cooldown (minutes)</span>
-                          <input type="number" min={5} max={1440} value={journalMonitorCooldownMinutes} onChange={(e) => setJournalMonitorCooldownMinutes(Math.max(5, Math.min(1440, Number(e.target.value || 120))))} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1 text-[var(--msp-text)]" />
+                          <input id="scanner-adv-cooldown" name="cooldownMinutes" type="number" min={5} max={1440} value={journalMonitorCooldownMinutes} onChange={(e) => setJournalMonitorCooldownMinutes(Math.max(5, Math.min(1440, Number(e.target.value || 120))))} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1 text-[var(--msp-text)]" />
                         </label>
                         <label className="grid gap-1 text-[0.72rem] text-[var(--msp-text-muted)]">
                           <span>Auto-rescan (sec)</span>
-                          <input type="number" min={30} max={3600} value={journalMonitorAutoScanSeconds} onChange={(e) => setJournalMonitorAutoScanSeconds(Math.max(30, Math.min(3600, Number(e.target.value || 180))))} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1 text-[var(--msp-text)]" />
+                          <input id="scanner-adv-autoscan" name="autoScanSeconds" type="number" min={30} max={3600} value={journalMonitorAutoScanSeconds} onChange={(e) => setJournalMonitorAutoScanSeconds(Math.max(30, Math.min(3600, Number(e.target.value || 180))))} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1 text-[var(--msp-text)]" />
                         </label>
                       </div>
                     )}
@@ -1927,6 +1927,8 @@ function ScannerContent() {
               <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
                 <span style={{ color: "var(--msp-text-muted)", fontSize: "13px", fontWeight: 600 }}>Universe size:</span>
                 <input
+                  id="scanner-universe-size"
+                  name="universeSize"
                   type="number"
                   min={100}
                   max={15000}
@@ -2505,6 +2507,8 @@ function ScannerContent() {
             </label>
             <div style={{ position: "relative", marginBottom: "0.5rem" }}>
               <input
+                id="scanner-ticker"
+                name="ticker"
                 type="text"
                 value={ticker}
                 onChange={(e) => {
@@ -2676,6 +2680,8 @@ function ScannerContent() {
               <div style={{ color: 'var(--msp-text)', fontWeight: 700, fontSize: '0.88rem' }}>Journal Monitor (Auto-draft on threshold)</div>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--msp-text-muted)', fontSize: '0.82rem' }}>
                 <input
+                  id="scanner-jm-enabled"
+                  name="jmEnabled"
                   type="checkbox"
                   checked={journalMonitorEnabled}
                   onChange={(e) => setJournalMonitorEnabled(e.target.checked)}
@@ -2688,6 +2694,8 @@ function ScannerContent() {
               <label style={{ display: 'grid', gap: '5px', color: 'var(--msp-text-muted)', fontSize: '0.78rem' }}>
                 <span>Score Threshold</span>
                 <input
+                  id="scanner-jm-threshold"
+                  name="jmThreshold"
                   type="number"
                   min={50}
                   max={98}
@@ -2709,6 +2717,8 @@ function ScannerContent() {
               <label style={{ display: 'grid', gap: '5px', color: 'var(--msp-text-muted)', fontSize: '0.78rem' }}>
                 <span>Cooldown (minutes)</span>
                 <input
+                  id="scanner-jm-cooldown"
+                  name="jmCooldown"
                   type="number"
                   min={5}
                   max={1440}
@@ -2731,6 +2741,8 @@ function ScannerContent() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--msp-text-muted)', fontSize: '0.8rem' }}>
                 <input
+                  id="scanner-jm-autoscan-enabled"
+                  name="jmAutoScanEnabled"
                   type="checkbox"
                   checked={journalMonitorAutoScanEnabled}
                   onChange={(e) => setJournalMonitorAutoScanEnabled(e.target.checked)}
@@ -2740,6 +2752,8 @@ function ScannerContent() {
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--msp-text-muted)', fontSize: '0.8rem' }}>
                 Every
                 <input
+                  id="scanner-jm-autoscan-sec"
+                  name="jmAutoScanSeconds"
                   type="number"
                   min={30}
                   max={3600}
@@ -5452,6 +5466,8 @@ function ScannerContent() {
               <div className="grid gap-2 text-[0.78rem] text-[var(--msp-text)]">
                 <label className="flex items-start gap-2 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2.5 py-2">
                   <input
+                    id="pretrade-thesis"
+                    name="thesis"
                     type="checkbox"
                     checked={preTradeChecklist.thesis}
                     onChange={(e) => setPreTradeChecklist((prev) => ({ ...prev, thesis: e.target.checked }))}
@@ -5461,6 +5477,8 @@ function ScannerContent() {
                 </label>
                 <label className="flex items-start gap-2 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2.5 py-2">
                   <input
+                    id="pretrade-risk"
+                    name="risk"
                     type="checkbox"
                     checked={preTradeChecklist.risk}
                     onChange={(e) => setPreTradeChecklist((prev) => ({ ...prev, risk: e.target.checked }))}
@@ -5470,6 +5488,8 @@ function ScannerContent() {
                 </label>
                 <label className="flex items-start gap-2 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2.5 py-2">
                   <input
+                    id="pretrade-event-window"
+                    name="eventWindow"
                     type="checkbox"
                     checked={preTradeChecklist.eventWindow}
                     onChange={(e) => setPreTradeChecklist((prev) => ({ ...prev, eventWindow: e.target.checked }))}

@@ -12,6 +12,8 @@ export default function TradeFiltersBar({ filtersMeta, filters, onChange, onRese
     <div className="rounded-2xl border border-white/5 bg-slate-900/40 p-3">
       <div className="grid grid-cols-1 gap-2 md:grid-cols-7">
         <input
+          id="journal-search"
+          name="journal-search"
           value={filters.q || ''}
           onChange={(event) => onChange({ q: event.target.value, page: 1 })}
           placeholder="Search"
