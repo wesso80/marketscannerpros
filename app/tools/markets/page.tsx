@@ -14,6 +14,7 @@ import {
 import type { AssetClass } from '@/components/markets/types';
 import { useUserTier, canAccessPortfolioInsights } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
+import CorrelationConfluenceCard from '@/components/CorrelationConfluenceCard';
 import { useRegisterPageData } from '@/lib/ai/pageContext';
 
 /**
@@ -211,6 +212,12 @@ export default function MarketsPage() {
           <div className="grid gap-2">
             <DecisionLens ctx={ctx} />
             <TickerTabs ctx={ctx} />
+            {symbol && (
+              <CorrelationConfluenceCard
+                symbol={symbol}
+                type={assetClass === 'crypto' ? 'crypto' : 'equity'}
+              />
+            )}
           </div>
 
           {/* Right rail — contextual support */}

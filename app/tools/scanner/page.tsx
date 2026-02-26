@@ -7,6 +7,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 // Link import removed (unused)
 import CapitalFlowCard from "@/components/CapitalFlowCard";
+import CorrelationConfluenceCard from "@/components/CorrelationConfluenceCard";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
 import ToolIdentityHeader from "@/components/tools/ToolIdentityHeader";
 import CommandContextPanel from "@/components/tools/CommandContextPanel";
@@ -3277,6 +3278,15 @@ function ScannerContent() {
               );
             })()}
           </div>
+        )}
+
+        {/* Correlation Confluence */}
+        {ticker && (
+          <CorrelationConfluenceCard
+            symbol={ticker}
+            type={assetType === 'crypto' ? 'crypto' : assetType === 'forex' ? 'forex' : 'equity'}
+            className="mb-4"
+          />
         )}
 
         {/* Active Symbol Cockpit Header */}
