@@ -1239,6 +1239,16 @@ function PortfolioContent() {
     closeManual();
   };
 
+  const deletePosition = (id: number) => {
+    if (!confirm('Delete this position? This cannot be undone.')) return;
+    setPositions((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const deleteClosedTrade = (id: number) => {
+    if (!confirm('Delete this closed trade? This cannot be undone.')) return;
+    setClosedPositions((prev) => prev.filter((p) => p.id !== id));
+  };
+
   const applyCashFlow = () => {
     const amount = Number(cashFlowDraft.amount || 0);
     if (!Number.isFinite(amount) || amount <= 0) {
@@ -1889,19 +1899,58 @@ function PortfolioContent() {
                       {showDrawdownOverlay ? 'Hide Drawdown Overlay' : 'Show Drawdown Overlay'}
                     </button>
                   </div>
-                  <div className="grid h-44 grid-cols-12 items-end gap-1">
-                    {(performanceHistory.length ? performanceHistory.slice(-12) : [{ totalValue } as PerformanceSnapshot]).map((point, index, arr) => {
-                      const min = Math.min(...arr.map((p: any) => p.totalValue || totalValue));
-                      const max = Math.max(...arr.map((p: any) => p.totalValue || totalValue));
-                      const value = (point as any).totalValue || totalValue;
-                      const h = max === min ? 40 : Math.max(8, ((value - min) / (max - min)) * 100);
-                      return (
-                        <div key={`${(point as any).timestamp || index}`} className="relative rounded-t bg-emerald-500/60" style={{ height: `${h}%` }}>
-                          {showDrawdownOverlay && value < max && <span className="absolute inset-x-0 bottom-0 h-1 bg-red-500/60" />}
-                        </div>
-                      );
-                    })}
-                  </div>
+                  {(() => {
+                    const pts = performanceHistory.length ? performanceHistory.slice(-30) : [{ totalValue, timestamp: new Date().toISOString() } as PerformanceSnapshot];
+                    const values = pts.map((p: any) => p.totalValue || totalValue);
+                    const min = Math.min(...values);
+                    const max = Math.max(...values);
+                    const range = max - min || 1;
+                    const W = 600;
+                    const H = 176;
+                    const pad = { top: 12, bottom: 24, left: 48, right: 8 };
+                    const cW = W - pad.left - pad.right;
+                    const cH = H - pad.top - pad.bottom;
+                    const sx = (i: number) => pad.left + (pts.length > 1 ? (i / (pts.length - 1)) * cW : cW / 2);
+                    const sy = (v: number) => pad.top + cH - ((v - min) / range) * cH;
+                    const linePts = values.map((v: number, i: number) => `${sx(i)},${sy(v)}`).join(' ');
+                    const gradPts = `${sx(0)},${sy(values[0])} ${linePts} ${sx(values.length - 1)},${pad.top + cH} ${sx(0)},${pad.top + cH}`;
+                    const peakVal = max;
+                    const gridLines = 4;
+                    return (
+                      <svg viewBox={`0 0 ${W} ${H}`} className="h-44 w-full" preserveAspectRatio="none">
+                        <defs>
+                          <linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#10B981" stopOpacity="0.35" />
+                            <stop offset="100%" stopColor="#10B981" stopOpacity="0.02" />
+                          </linearGradient>
+                        </defs>
+                        {Array.from({ length: gridLines }).map((_, gi) => {
+                          const v = min + (range / (gridLines - 1)) * gi;
+                          return (
+                            <g key={gi}>
+                              <line x1={pad.left} y1={sy(v)} x2={W - pad.right} y2={sy(v)} stroke="#334155" strokeWidth="0.5" strokeDasharray="3,3" />
+                              <text x={pad.left - 4} y={sy(v) + 3} textAnchor="end" fill="#64748b" fontSize="8">${(v / 1000).toFixed(1)}k</text>
+                            </g>
+                          );
+                        })}
+                        <polygon points={gradPts} fill="url(#eqGrad)" />
+                        <polyline points={linePts} fill="none" stroke="#10B981" strokeWidth="2" strokeLinejoin="round" />
+                        {values.map((v: number, i: number) => (
+                          <circle key={i} cx={sx(i)} cy={sy(v)} r="3" fill={v >= peakVal ? '#10B981' : '#10B981'} stroke="#0F172A" strokeWidth="1.5" />
+                        ))}
+                        {showDrawdownOverlay && values.map((v: number, i: number) => {
+                          if (v >= peakVal) return null;
+                          const ddPct = ((peakVal - v) / peakVal) * 100;
+                          return <circle key={`dd-${i}`} cx={sx(i)} cy={sy(v)} r="3" fill="#ef4444" stroke="#0F172A" strokeWidth="1.5" />;
+                        })}
+                        {pts.length >= 2 && pts.filter((_, i) => i % Math.max(1, Math.floor(pts.length / 6)) === 0 || i === pts.length - 1).map((p, i, filtered) => {
+                          const origIdx = pts.indexOf(p);
+                          const dateStr = new Date(p.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                          return <text key={i} x={sx(origIdx)} y={H - 4} textAnchor="middle" fill="#64748b" fontSize="7">{dateStr}</text>;
+                        })}
+                      </svg>
+                    );
+                  })()}
                   <div className="mt-2 text-xs text-slate-500">Risk event markers: {isRiskEvent ? '🔴 Active' : isRiskElevated ? '🟡 Elevated' : '🟢 Stable'}</div>
                 </div>
                 <div className="lg:col-span-2 space-y-3">
@@ -2130,10 +2179,11 @@ function PortfolioContent() {
                             <div className="mb-1 h-1.5 overflow-hidden rounded bg-slate-700">
                               <div className="h-full bg-emerald-400" style={{ width: `${Math.max(5, Math.min(100, riskRemainingPct))}%` }} />
                             </div>
-                            <div className="flex gap-1">
+                            <div className="flex flex-wrap gap-1">
                               <button onClick={() => closePosition(position.id)} className="rounded border border-red-500/40 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-red-300">Close</button>
                               <button onClick={() => reducePositionHalf(position.id)} className="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-300">Reduce 50%</button>
                               <button onClick={() => moveStopToBreakeven(position.id)} className="rounded border border-blue-500/40 bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-blue-300">Move Stop</button>
+                              <button onClick={() => deletePosition(position.id)} className="rounded border border-zinc-500/40 bg-zinc-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-zinc-400 hover:text-red-300 hover:border-red-500/40" title="Delete this position (mistake entry)">✕ Delete</button>
                             </div>
                           </td>
                         </tr>
@@ -2165,14 +2215,44 @@ function PortfolioContent() {
 
               <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3">
                 <div className="mb-2 text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Closed Trades Equity Curve</div>
-                <div className="grid h-24 grid-cols-12 items-end gap-1">
-                  {(cumulativeClosedEquity.length ? cumulativeClosedEquity.slice(-12) : [{ equity: 0, timestamp: 'now' }]).map((point, idx, arr) => {
-                    const min = Math.min(...arr.map((p) => p.equity));
-                    const max = Math.max(...arr.map((p) => p.equity));
-                    const h = max === min ? 40 : Math.max(8, ((point.equity - min) / (max - min)) * 100);
-                    return <div key={`${point.timestamp}-${idx}`} className="rounded-t bg-cyan-400/70" style={{ height: `${h}%` }} />;
-                  })}
-                </div>
+                {(() => {
+                  const pts = cumulativeClosedEquity.length ? cumulativeClosedEquity.slice(-30) : [{ equity: 0, timestamp: new Date().toISOString() }];
+                  const values = pts.map((p) => p.equity);
+                  const min = Math.min(...values);
+                  const max = Math.max(...values);
+                  const range = max - min || 1;
+                  const W = 600;
+                  const H = 120;
+                  const pad = { top: 10, bottom: 20, left: 48, right: 8 };
+                  const cW = W - pad.left - pad.right;
+                  const cH = H - pad.top - pad.bottom;
+                  const sx = (i: number) => pad.left + (pts.length > 1 ? (i / (pts.length - 1)) * cW : cW / 2);
+                  const sy = (v: number) => pad.top + cH - ((v - min) / range) * cH;
+                  const linePts = values.map((v, i) => `${sx(i)},${sy(v)}`).join(' ');
+                  const gradPts = `${sx(0)},${sy(values[0])} ${linePts} ${sx(values.length - 1)},${pad.top + cH} ${sx(0)},${pad.top + cH}`;
+                  const zeroY = sy(0);
+                  return (
+                    <svg viewBox={`0 0 ${W} ${H}`} className="h-24 w-full" preserveAspectRatio="none">
+                      <defs>
+                        <linearGradient id="clGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.3" />
+                          <stop offset="100%" stopColor="#22d3ee" stopOpacity="0.02" />
+                        </linearGradient>
+                      </defs>
+                      {min <= 0 && max >= 0 && <line x1={pad.left} y1={zeroY} x2={W - pad.right} y2={zeroY} stroke="#475569" strokeWidth="0.5" strokeDasharray="4,3" />}
+                      <polygon points={gradPts} fill="url(#clGrad)" />
+                      <polyline points={linePts} fill="none" stroke="#22d3ee" strokeWidth="2" strokeLinejoin="round" />
+                      {values.map((v, i) => (
+                        <circle key={i} cx={sx(i)} cy={sy(v)} r="2.5" fill={v >= 0 ? '#22d3ee' : '#ef4444'} stroke="#0F172A" strokeWidth="1" />
+                      ))}
+                      {pts.length >= 2 && pts.filter((_, i) => i % Math.max(1, Math.floor(pts.length / 5)) === 0 || i === pts.length - 1).map((p, i) => {
+                        const origIdx = pts.indexOf(p);
+                        const dateStr = new Date(p.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        return <text key={i} x={sx(origIdx)} y={H - 3} textAnchor="middle" fill="#64748b" fontSize="7">{dateStr}</text>;
+                      })}
+                    </svg>
+                  );
+                })()}
               </div>
 
               <div className="overflow-x-auto rounded-lg border border-slate-700 bg-slate-900/40">
@@ -2185,6 +2265,7 @@ function PortfolioContent() {
                       <th className="px-2 py-2 text-right">Holding Time</th>
                       <th className="px-2 py-2 text-left">Setup Tag</th>
                       <th className="px-2 py-2 text-left">Outcome</th>
+                      <th className="px-2 py-2 text-center"></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2202,10 +2283,13 @@ function PortfolioContent() {
                           <td className="px-2 py-2 text-right">{holdDays}d</td>
                           <td className="px-2 py-2">{trade.strategy || '—'}</td>
                           <td className="px-2 py-2">{outcomeType}</td>
+                          <td className="px-2 py-2 text-center">
+                            <button onClick={() => deleteClosedTrade(trade.id)} className="rounded border border-zinc-500/40 bg-zinc-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-zinc-400 hover:text-red-300 hover:border-red-500/40" title="Delete this closed trade">✕</button>
+                          </td>
                         </tr>
                       );
                     })}
-                    {closedPositions.length === 0 && <tr><td colSpan={6} className="px-2 py-3 text-slate-500">No closed trades.</td></tr>}
+                    {closedPositions.length === 0 && <tr><td colSpan={7} className="px-2 py-3 text-slate-500">No closed trades.</td></tr>}
                   </tbody>
                 </table>
               </div>
