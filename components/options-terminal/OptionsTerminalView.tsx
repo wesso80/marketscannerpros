@@ -138,6 +138,28 @@ export default function OptionsTerminalView() {
           One ticker — the entire options decision surface. Enter a symbol to see
           the full chain with Greeks, IV, OI, volume, and suggested plays.
         </p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const val = (e.currentTarget.elements.namedItem('sym') as HTMLInputElement)?.value?.trim().toUpperCase();
+            if (val) handleTickerChange(val);
+          }}
+          className="flex items-center gap-2 mb-6 w-full max-w-xs"
+        >
+          <input
+            name="sym"
+            type="text"
+            autoFocus
+            placeholder="Enter symbol…"
+            className="flex-1 rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/40"
+          />
+          <button
+            type="submit"
+            className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-emerald-500 transition"
+          >
+            Go
+          </button>
+        </form>
         <div className="flex flex-wrap justify-center gap-2">
           {['AAPL', 'SPY', 'TSLA', 'NVDA', 'QQQ', 'AMZN'].map((t) => (
             <button
