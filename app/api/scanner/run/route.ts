@@ -344,9 +344,15 @@ export async function POST(req: NextRequest) {
       "BTC-USD", "ETH-USD", "BNB-USD", "SOL-USD", "XRP-USD",
       "ADA-USD", "DOGE-USD", "TRX-USD", "AVAX-USD", "DOT-USD"
     ];
+    const DEFAULT_FOREX = [
+      "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "NZDUSD",
+      "USDCAD", "USDCHF", "EURGBP", "EURJPY", "GBPJPY"
+    ];
     let symbolsToScan = inputSymbols.length
       ? inputSymbols
-      : (type === "crypto" ? DEFAULT_CRYPTO : DEFAULT_EQUITIES);
+      : type === "crypto" ? DEFAULT_CRYPTO
+      : type === "forex"  ? DEFAULT_FOREX
+      : DEFAULT_EQUITIES;
 
     // Normalize crypto symbols and exclude stablecoins from scan universe.
     if (type === "crypto") {

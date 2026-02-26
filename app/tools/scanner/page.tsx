@@ -184,7 +184,7 @@ const CRYPTO_LIST = [
 const QUICK_PICKS: Record<AssetType, string[]> = {
   equity: ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA", "META", "NFLX", "JPM", "BAC"],
   crypto: ["BTC", "ETH", "BNB", "SOL", "XRP", "ADA", "DOGE", "AVAX", "DOT", "LINK"],
-  forex: ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "NZDUSD"],
+  forex: ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "NZDUSD", "USDCAD", "USDCHF", "EURGBP", "EURJPY", "GBPJPY"],
 };
 
 /* Sector mapping for equity tickers – used by the Sector Filter dropdown in V2 Discover.
@@ -497,16 +497,47 @@ function ScannerContent() {
 
   // Run bulk scan
   const runBulkScan = async (
-    type: 'equity' | 'crypto',
+    type: 'equity' | 'crypto' | 'forex',
     overrides?: { mode?: 'deep' | 'light' }
   ) => {
     const requestedTimeframe = bulkScanTimeframe;
-    setBulkScanType(type);
+    setBulkScanType(type as any);
     setBulkScanLoading(true);
     setBulkScanError(null);
     setBulkScanResults(null);
     
     try {
+      // Forex: scan pairs via /api/scanner/run in parallel (small universe)
+      if (type === 'forex') {
+        const forexPairs = QUICK_PICKS.forex.length > 0
+          ? QUICK_PICKS.forex
+          : ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'NZDUSD', 'USDCAD', 'USDCHF', 'EURGBP', 'EURJPY', 'GBPJPY'];
+        const results = await Promise.allSettled(
+          forexPairs.map(async (pair) => {
+            const r = await fetch(`/api/scanner/run?_t=${Date.now()}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ type: 'forex', timeframe: requestedTimeframe, minScore: 0, symbols: [pair] }),
+            });
+            const d = await r.json();
+            if (d.success && d.results?.length > 0) return d.results[0];
+            return null;
+          })
+        );
+        const topPicks = results
+          .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled' && r.value !== null)
+          .map((r) => r.value)
+          .sort((a: any, b: any) => (b.score || 0) - (a.score || 0));
+        setBulkScanResults({
+          topPicks,
+          scanned: forexPairs.length,
+          duration: '—',
+          errors: [],
+          effectiveUniverseSize: forexPairs.length,
+        });
+        return;
+      }
+
       const payload: any = { type, timeframe: requestedTimeframe };
       if (type === 'crypto') {
         const resolvedMode = overrides?.mode ?? bulkCryptoScanMode;
@@ -1629,7 +1660,7 @@ function ScannerContent() {
 
                   <div className="mb-3 flex justify-end">
                     <button
-                      onClick={() => runBulkScan(assetType === 'crypto' ? 'crypto' : 'equity')}
+                      onClick={() => runBulkScan(assetType === 'crypto' ? 'crypto' : assetType === 'forex' ? 'forex' : 'equity')}
                       disabled={bulkScanLoading}
                       className="msp-btn-elite-primary w-[220px] px-6 py-3 text-[0.78rem] font-semibold uppercase tracking-[0.08em]"
                     >
