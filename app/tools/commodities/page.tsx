@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useUserTier, canAccessPortfolioInsights } from '@/lib/useUserTier';
 import { ToolsPageHeader } from '@/components/ToolsPageHeader';
 import { useAIPageContext } from '@/lib/ai/pageContext';
@@ -222,7 +222,7 @@ export default function CommoditiesPage() {
     return `${value >= 0 ? '+' : ''}${value.toFixed(digits)}%`;
   };
 
-  const derivedState: DerivedState | null = (() => {
+  const derivedState: DerivedState | null = useMemo(() => {
     if (!data?.commodities?.length) return null;
 
     const byCategory = {
@@ -388,7 +388,7 @@ export default function CommoditiesPage() {
       },
       categoryAvg,
     };
-  })();
+  }, [data, macroInputs]);
 
   useEffect(() => {
     fetchCommodities();
@@ -428,7 +428,8 @@ export default function CommoditiesPage() {
         summary: summaryText,
       });
     }
-  }, [data, selectedCategory, setPageData, derivedState]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, selectedCategory]);
 
   const filteredCommodities = data?.commodities.filter(c => 
     selectedCategory === 'all' || c.category === selectedCategory
