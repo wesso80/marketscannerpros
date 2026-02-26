@@ -5,6 +5,8 @@ import { useUserTier, type UserTier } from '@/lib/useUserTier';
 
 /* ── Types ─────────────────────────────────────────────────── */
 
+interface ChartPoint { date: string; target: number; compare: number }
+
 interface CorrelationItem {
   symbol: string;
   name: string;
@@ -12,6 +14,7 @@ interface CorrelationItem {
   label: 'HIGH' | 'MEDIUM' | 'LOW' | 'INVERSE' | 'NONE';
   diverging: boolean;
   leadLag: string | null;
+  chart: ChartPoint[];
 }
 
 interface CorrelationData {
@@ -51,6 +54,126 @@ const REGIME_BADGE: Record<string, { label: string; color: string }> = {
 
 const WINDOW_OPTIONS = [7, 30, 90] as const;
 
+/* ── SVG Chart helper ────────────────────────────────────── */
+
+function CorrelationChart({ chart, targetSymbol, compareSymbol }: {
+  chart: ChartPoint[];
+  targetSymbol: string;
+  compareSymbol: string;
+}) {
+  if (!chart.length) {
+    return <div className="py-3 text-center text-[10px] text-zinc-600">No chart data available</div>;
+  }
+
+  const W = 440;
+  const H = 140;
+  const PAD = { top: 16, right: 12, bottom: 28, left: 42 };
+  const plotW = W - PAD.left - PAD.right;
+  const plotH = H - PAD.top - PAD.bottom;
+
+  const allVals = chart.flatMap(p => [p.target, p.compare]);
+  const minY = Math.min(...allVals);
+  const maxY = Math.max(...allVals);
+  const rangeY = maxY - minY || 1;
+
+  const xScale = (i: number) => PAD.left + (i / (chart.length - 1)) * plotW;
+  const yScale = (v: number) => PAD.top + plotH - ((v - minY) / rangeY) * plotH;
+
+  const buildPath = (accessor: (p: ChartPoint) => number) =>
+    chart
+      .map((p, i) => `${i === 0 ? 'M' : 'L'}${xScale(i).toFixed(1)},${yScale(accessor(p)).toFixed(1)}`)
+      .join(' ');
+
+  const targetPath = buildPath(p => p.target);
+  const comparePath = buildPath(p => p.compare);
+
+  // Y-axis ticks (5 ticks)
+  const yTicks: number[] = [];
+  for (let i = 0; i <= 4; i++) yTicks.push(minY + (rangeY * i) / 4);
+
+  // X-axis date labels (show first, middle, last)
+  const dateLabels = [
+    { i: 0, label: chart[0].date.slice(5) },
+    { i: Math.floor(chart.length / 2), label: chart[Math.floor(chart.length / 2)].date.slice(5) },
+    { i: chart.length - 1, label: chart[chart.length - 1].date.slice(5) },
+  ];
+
+  // Zero line
+  const zeroY = yScale(0);
+  const showZero = minY < 0 && maxY > 0;
+
+  return (
+    <div className="mt-2 mb-1">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ maxHeight: 160 }}>
+        {/* Grid lines */}
+        {yTicks.map((t, i) => (
+          <line
+            key={i}
+            x1={PAD.left} y1={yScale(t)} x2={W - PAD.right} y2={yScale(t)}
+            stroke="rgba(255,255,255,0.04)" strokeWidth={1}
+          />
+        ))}
+
+        {/* Zero line */}
+        {showZero && (
+          <line
+            x1={PAD.left} y1={zeroY} x2={W - PAD.right} y2={zeroY}
+            stroke="rgba(255,255,255,0.12)" strokeWidth={1} strokeDasharray="3,3"
+          />
+        )}
+
+        {/* Target line (emerald) */}
+        <path d={targetPath} fill="none" stroke="#34d399" strokeWidth={1.8} strokeLinejoin="round" />
+
+        {/* Compare line (amber) */}
+        <path d={comparePath} fill="none" stroke="#fbbf24" strokeWidth={1.8} strokeLinejoin="round" />
+
+        {/* Y-axis labels */}
+        {yTicks.map((t, i) => (
+          <text
+            key={i}
+            x={PAD.left - 4}
+            y={yScale(t) + 3}
+            textAnchor="end"
+            fill="rgba(255,255,255,0.3)"
+            fontSize={9}
+            fontFamily="monospace"
+          >
+            {t >= 0 ? '+' : ''}{t.toFixed(1)}%
+          </text>
+        ))}
+
+        {/* X-axis date labels */}
+        {dateLabels.map(({ i, label }) => (
+          <text
+            key={i}
+            x={xScale(i)}
+            y={H - 4}
+            textAnchor="middle"
+            fill="rgba(255,255,255,0.25)"
+            fontSize={9}
+            fontFamily="monospace"
+          >
+            {label}
+          </text>
+        ))}
+      </svg>
+
+      {/* Legend */}
+      <div className="flex items-center justify-center gap-4 mt-1">
+        <div className="flex items-center gap-1">
+          <div className="h-[2px] w-3 rounded bg-emerald-400" />
+          <span className="text-[9px] text-emerald-400/70">{targetSymbol}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="h-[2px] w-3 rounded bg-amber-400" />
+          <span className="text-[9px] text-amber-400/70">{compareSymbol}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Component ────────────────────────────────────────────── */
 
 export default function CorrelationConfluenceCard({ symbol, type, className = '', maxResults = 5 }: Props) {
@@ -63,6 +186,7 @@ export default function CorrelationConfluenceCard({ symbol, type, className = ''
   const [error, setError] = useState<string | null>(null);
   const [customInput, setCustomInput] = useState('');
   const [customSymbols, setCustomSymbols] = useState<string[]>([]);
+  const [expandedSymbol, setExpandedSymbol] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const fetchCorrelation = useCallback(async () => {
@@ -128,7 +252,15 @@ export default function CorrelationConfluenceCard({ symbol, type, className = ''
     setCustomSymbols(prev => prev.filter(s => s !== sym));
   };
 
-  const topCorrelations = data?.correlations.slice(0, maxResults) ?? [];
+  // Always show custom symbols in results, even if they're not in the top N
+  const topCorrelations = (() => {
+    if (!data?.correlations.length) return [];
+    const customUpper = new Set(customSymbols.map(s => s.toUpperCase()));
+    const autoResults = data.correlations.filter(c => !customUpper.has(c.symbol.toUpperCase()));
+    const customResults = data.correlations.filter(c => customUpper.has(c.symbol.toUpperCase()));
+    // Top N from auto-universe + ALL custom symbols (always visible)
+    return [...autoResults.slice(0, maxResults), ...customResults];
+  })();
   const regime = data ? REGIME_BADGE[data.regime] : null;
 
   return (
@@ -191,40 +323,62 @@ export default function CorrelationConfluenceCard({ symbol, type, className = ''
           <div className="space-y-1.5">
             {topCorrelations.map((item) => {
               const style = LABEL_STYLES[item.label] || LABEL_STYLES.NONE;
+              const isExpanded = expandedSymbol === item.symbol;
+              const hasChart = item.chart && item.chart.length > 1;
               return (
-                <div
-                  key={item.symbol}
-                  className="flex items-center justify-between rounded border border-white/5 bg-white/[0.02] px-3 py-2"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-xs font-medium text-white truncate">{item.name}</span>
-                    <span className="text-[10px] text-zinc-500">{item.symbol}</span>
-                    {item.diverging && (
-                      <span className="flex-shrink-0 rounded bg-amber-500/10 px-1 py-0.5 text-[9px] text-amber-400">
-                        diverging
+                <div key={item.symbol}>
+                  <div
+                    onClick={() => hasChart && setExpandedSymbol(isExpanded ? null : item.symbol)}
+                    className={`flex items-center justify-between rounded border px-3 py-2 transition-colors ${
+                      isExpanded
+                        ? 'border-emerald-400/20 bg-emerald-500/[0.04]'
+                        : 'border-white/5 bg-white/[0.02]'
+                    } ${hasChart ? 'cursor-pointer hover:border-white/10' : ''}`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      {hasChart && (
+                        <span className={`text-[10px] text-zinc-500 transition-transform ${isExpanded ? 'rotate-90' : ''}`}>▶</span>
+                      )}
+                      <span className="text-xs font-medium text-white truncate">{item.name}</span>
+                      <span className="text-[10px] text-zinc-500">{item.symbol}</span>
+                      {item.diverging && (
+                        <span className="flex-shrink-0 rounded bg-amber-500/10 px-1 py-0.5 text-[9px] text-amber-400">
+                          diverging
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {/* Institutional: show numeric coefficient */}
+                      {isInstitutional && (
+                        <span className="text-[11px] font-mono text-zinc-400">
+                          {item.coefficient.toFixed(2)}
+                        </span>
+                      )}
+
+                      {/* Label badge */}
+                      <span
+                        className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${style.bg} ${style.text} ${style.border}`}
+                      >
+                        {item.label === 'HIGH' && 'Moves Together'}
+                        {item.label === 'MEDIUM' && 'Moderate'}
+                        {item.label === 'LOW' && 'Weak'}
+                        {item.label === 'INVERSE' && 'Moves Opposite'}
+                        {item.label === 'NONE' && 'No Data'}
                       </span>
-                    )}
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {/* Institutional: show numeric coefficient */}
-                    {isInstitutional && (
-                      <span className="text-[11px] font-mono text-zinc-400">
-                        {item.coefficient.toFixed(2)}
-                      </span>
-                    )}
-
-                    {/* Label badge */}
-                    <span
-                      className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${style.bg} ${style.text} ${style.border}`}
-                    >
-                      {item.label === 'HIGH' && 'Moves Together'}
-                      {item.label === 'MEDIUM' && 'Moderate'}
-                      {item.label === 'LOW' && 'Weak'}
-                      {item.label === 'INVERSE' && 'Moves Opposite'}
-                      {item.label === 'NONE' && 'No Data'}
-                    </span>
-                  </div>
+                  {/* Expanded chart */}
+                  {isExpanded && hasChart && (
+                    <div className="rounded-b border border-t-0 border-white/5 bg-[#0a1020] px-3 py-2">
+                      <CorrelationChart
+                        chart={item.chart}
+                        targetSymbol={symbol.toUpperCase()}
+                        compareSymbol={item.symbol}
+                      />
+                    </div>
+                  )}
                 </div>
               );
             })}

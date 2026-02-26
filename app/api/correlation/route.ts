@@ -36,6 +36,8 @@ const FOREX_UNIVERSE = ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'NZDUSD', 'USDCA
 
 interface DailyClose { date: string; close: number }
 
+interface ChartPoint { date: string; target: number; compare: number }
+
 interface CorrelationResult {
   symbol: string;
   name: string;
@@ -43,6 +45,7 @@ interface CorrelationResult {
   label: 'HIGH' | 'MEDIUM' | 'LOW' | 'INVERSE' | 'NONE';
   diverging: boolean;
   leadLag: string | null;  // e.g. "leads by ~1 bar" or null
+  chart: ChartPoint[];     // normalized price series for visual comparison
 }
 
 interface CorrelationResponse {
@@ -264,6 +267,39 @@ function alignReturns(
 }
 
 /**
+ * Align two close-price series by date, normalize to % change from start, trim to window.
+ * Both series start at 0 (so visuals show relative movement).
+ */
+function alignNormalizedCloses(
+  a: DailyClose[],
+  b: DailyClose[],
+  window: number,
+): ChartPoint[] {
+  const bMap = new Map(b.map(d => [d.date, d.close]));
+  const pairs: { date: string; closeA: number; closeB: number }[] = [];
+
+  for (const dA of a) {
+    const closeB = bMap.get(dA.date);
+    if (closeB !== undefined) {
+      pairs.push({ date: dA.date, closeA: dA.close, closeB: closeB });
+    }
+  }
+
+  const trimmed = pairs.slice(-window);
+  if (!trimmed.length) return [];
+
+  const baseA = trimmed[0].closeA;
+  const baseB = trimmed[0].closeB;
+  if (!baseA || !baseB) return [];
+
+  return trimmed.map(p => ({
+    date: p.date,
+    target: ((p.closeA - baseA) / baseA) * 100,
+    compare: ((p.closeB - baseB) / baseB) * 100,
+  }));
+}
+
+/**
  * Classify a correlation coefficient
  */
 function classify(r: number): 'HIGH' | 'MEDIUM' | 'LOW' | 'INVERSE' | 'NONE' {
@@ -342,9 +378,14 @@ export async function GET(request: NextRequest) {
     /* ── 3. Fetch daily closes ───────────────────────────────────── */
 
     // Detect type for each custom symbol (they might be from a different asset class)
+    // When target is crypto, bias custom symbols toward crypto (they're more likely crypto)
     function detectSymbolType(sym: string): string {
       if (universe.includes(sym)) return type;
-      return detectType(sym);
+      const detected = detectType(sym);
+      // If auto-detect says equity but target is crypto, try crypto first
+      // (many small-cap crypto tickers aren't in the static map but are on CoinGecko)
+      if (detected === 'equity' && type === 'crypto') return 'crypto';
+      return detected;
     }
 
     // Fetch target and all comparison symbols in parallel
@@ -396,6 +437,9 @@ export async function GET(request: NextRequest) {
       // Lead/lag detection
       const leadLag = detectLeadLag(alignedA, alignedB);
 
+      // Normalized price chart data
+      const chart = alignNormalizedCloses(targetCloses, compCloses, window);
+
       const compType = detectSymbolType(compSymbol);
       correlations.push({
         symbol: compSymbol,
@@ -404,6 +448,7 @@ export async function GET(request: NextRequest) {
         label,
         diverging,
         leadLag: leadLag ? `${compSymbol} ${leadLag}` : null,
+        chart,
       });
     }
 
