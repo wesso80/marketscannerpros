@@ -119,12 +119,19 @@ async function fetchCryptoDailyCloses(symbol: string, days: number): Promise<Dai
   const ohlc = await getOHLC(coinId, ohlcDays as any, { timeoutMs: 12_000 });
   if (!ohlc || !ohlc.length) return [];
 
-  return ohlc
-    .map(row => ({
-      date: new Date(row[0]).toISOString().slice(0, 10),
-      close: Number(row[4]),
-    }))
-    .filter(d => Number.isFinite(d.close) && d.close > 0)
+  // CoinGecko returns sub-daily candles for small windows (4hr for ≤30d).
+  // Deduplicate by date, keeping the LAST candle per day (end-of-day close).
+  const byDate = new Map<string, number>();
+  for (const row of ohlc) {
+    const date = new Date(row[0]).toISOString().slice(0, 10);
+    const close = Number(row[4]);
+    if (Number.isFinite(close) && close > 0) {
+      byDate.set(date, close); // last candle of the day wins
+    }
+  }
+
+  return Array.from(byDate.entries())
+    .map(([date, close]) => ({ date, close }))
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
