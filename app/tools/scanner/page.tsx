@@ -530,9 +530,10 @@ function ScannerContent() {
           .sort((a: any, b: any) => (b.score || 0) - (a.score || 0));
         setBulkScanResults({
           topPicks,
+          type: 'forex',
+          timeframe: requestedTimeframe,
           scanned: forexPairs.length,
           duration: '—',
-          errors: [],
           effectiveUniverseSize: forexPairs.length,
         });
         return;
