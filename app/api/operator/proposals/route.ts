@@ -4,15 +4,13 @@ import { q } from '@/lib/db';
 import { getRiskGovernorThresholdsFromEnv } from '@/lib/operator/riskGovernor';
 
 type DecisionPacketRow = {
-  id: number;
   packet_id: string;
   symbol: string | null;
   asset_class: string | null;
   status: string | null;
   signal_score: number | string | null;
-  confidence: number | string | null;
   risk_score: number | string | null;
-  packet_data: Record<string, any> | string | null;
+  metadata: Record<string, any> | string | null;
   updated_at: string;
   created_at: string;
 };
@@ -177,7 +175,7 @@ export async function GET(req: NextRequest) {
     try {
       [packets, stateRows] = await Promise.all([
         q<DecisionPacketRow>(
-          `SELECT id, packet_id, symbol, asset_class, status, signal_score, confidence, risk_score, packet_data, updated_at, created_at
+          `SELECT packet_id, symbol, asset_class, status, signal_score, risk_score, metadata, updated_at, created_at
            FROM decision_packets
            WHERE workspace_id = $1
              AND updated_at >= NOW() - INTERVAL '7 days'
@@ -218,14 +216,14 @@ export async function GET(req: NextRequest) {
 
     const scored = packets.map((packet) => {
       const signalScore = num(packet.signal_score, 0);
-      const confidenceRaw = num(packet.confidence, NaN);
+      const packetData = parseObj(packet.metadata);
+      const confidenceRaw = num(packetData?.confidence, NaN);
       const confidence = Number.isFinite(confidenceRaw)
         ? confidenceRaw > 1
           ? Math.min(1, confidenceRaw / 100)
           : Math.max(0, Math.min(1, confidenceRaw))
         : Math.max(0, Math.min(1, signalScore / 100));
 
-      const packetData = parseObj(packet.packet_data);
       const packetFitRaw = num(packetData?.operator_fit, NaN);
       const packetFit = Number.isFinite(packetFitRaw)
         ? packetFitRaw > 1

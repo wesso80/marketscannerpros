@@ -65,7 +65,7 @@ export async function GET() {
                    OR LOWER(COALESCE(signal_source, '')) = 'options.confluence'
                    OR LOWER(COALESCE(signal_source, '')) LIKE 'options.confluence%'
                    OR LOWER(COALESCE(signal_source, '')) LIKE '%options_scanner%'
-                   OR LOWER(COALESCE(packet_data::text, '')) LIKE '%options.confluence%'
+                   OR LOWER(COALESCE(metadata::text, '')) LIKE '%options.confluence%'
                  )
              )::int AS options_signals,
              COUNT(*) FILTER (
@@ -77,8 +77,8 @@ export async function GET() {
                    OR LOWER(COALESCE(signal_source, '')) LIKE 'scanner.bulk%'
                    OR LOWER(COALESCE(signal_source, '')) LIKE '%time_scanner%'
                    OR LOWER(COALESCE(signal_source, '')) LIKE '%time.confluence%'
-                   OR LOWER(COALESCE(packet_data::text, '')) LIKE '%time confluence%'
-                   OR LOWER(COALESCE(packet_data::text, '')) LIKE '%confluence_scan%'
+                   OR LOWER(COALESCE(metadata::text, '')) LIKE '%time confluence%'
+                   OR LOWER(COALESCE(metadata::text, '')) LIKE '%confluence_scan%'
                  )
                  AND LOWER(COALESCE(market, '')) <> 'options'
                  AND LOWER(COALESCE(signal_source, '')) NOT LIKE 'options.confluence%'

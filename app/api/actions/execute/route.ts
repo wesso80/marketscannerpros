@@ -531,7 +531,7 @@ async function createPlanDraft(workspaceId: string, payload: Record<string, any>
     await q(
       `UPDATE decision_packets
        SET status = 'planned',
-           packet_data = COALESCE(packet_data, '{}'::jsonb) || $2::jsonb,
+           metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
            updated_at = NOW()
        WHERE workspace_id = $1
          AND packet_id = $3`,
