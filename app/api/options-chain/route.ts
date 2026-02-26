@@ -156,6 +156,23 @@ function computeExpirations(contracts: OptionsContract[]): ExpirationMeta[] {
     .sort((a, b) => a.dte - b.dte);
 }
 
+/**
+ * Fetch the real underlying price via Alpha Vantage GLOBAL_QUOTE.
+ * Falls back to inferring from the options chain if the quote fails.
+ */
+async function fetchSpot(symbol: string): Promise<number> {
+  try {
+    const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(symbol)}&entitlement=realtime&apikey=${AV_KEY}`;
+    const data = await avFetch<Record<string, any>>(url, `GLOBAL_QUOTE ${symbol}`);
+    const gq = data?.['Global Quote'] ?? data?.['Global Quote - DATA DELAYED BY 15 MINUTES'];
+    const price = parseFloat(gq?.['05. price']);
+    if (price > 0) return price;
+  } catch (e) {
+    console.warn('[options-chain] GLOBAL_QUOTE failed for', symbol, e);
+  }
+  return 0;
+}
+
 function inferSpot(contracts: OptionsContract[]): number {
   // Find the ATM strike where call delta ≈ 0.50
   const nearAtm = contracts
@@ -250,7 +267,7 @@ export async function GET(request: NextRequest) {
     }
 
     /* ── 3. Compute spot & cache ─────────────────────────────────── */
-    const spot = inferSpot(allContracts);
+    const spot = (await fetchSpot(symbol)) || inferSpot(allContracts);
     const ts = Date.now();
 
     await setCached(cacheKey, { contracts: allContracts, provider: usedProvider, spot, ts }, CACHE_TTL.optionsChain).catch(() => {});
