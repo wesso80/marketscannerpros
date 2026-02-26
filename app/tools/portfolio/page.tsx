@@ -1031,6 +1031,7 @@ function PortfolioContent() {
     setPositions([...positions, position]);
     setNewPosition({ symbol: '', side: 'LONG', quantity: '', entryPrice: '', currentPrice: '', strategy: '' });
     setShowAddForm(false);
+    setActiveTab('active-positions');
   };
 
   const deployCapitalTrade = (quantity: number, entry: number) => {
@@ -1573,6 +1574,7 @@ function PortfolioContent() {
 
   const modeItems = [
     { key: 'overview', label: 'Overview' },
+    { key: 'add-manual', label: '➕ Add Position' },
     { key: 'deploy-capital', label: 'Model Allocation' },
     { key: 'risk-model', label: 'Risk Model' },
     { key: 'active-positions', label: 'Active Positions' },
@@ -1686,6 +1688,12 @@ function PortfolioContent() {
                 🗑️ Clear All Data
               </button>
             )}
+            <button
+              onClick={() => setActiveTab('add-manual')}
+              className="rounded-[10px] border border-emerald-500 px-4 py-2.5 text-[13px] font-semibold text-emerald-400"
+            >
+              + Add Position
+            </button>
             <button
               onClick={() => {
                 // Soft friction: warn during drawdown
@@ -2053,6 +2061,96 @@ function PortfolioContent() {
                   {aiLoading ? 'Analyzing portfolio...' : aiError ? aiError : aiAnalysis || 'Run analysis to generate AI review.'}
                 </div>
               </details>
+            </div>
+          )}
+
+          {activeTab === 'add-manual' && (
+            <div className="space-y-4">
+              <div className="max-w-xl">
+                <div className="mb-4">
+                  <div className="text-sm font-semibold text-slate-100">Add New Position</div>
+                  <div className="mt-1 text-xs text-slate-400">Manually add a position to track in your portfolio. Use the refresh button on active positions to fetch live prices.</div>
+                </div>
+                <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3 mb-4">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-emerald-400 mb-1">Symbol Tips</div>
+                  <div className="text-xs text-slate-400 leading-relaxed">
+                    <strong className="text-slate-300">Crypto:</strong> BTC, ETH, XRP, SOL &nbsp;·&nbsp;
+                    <strong className="text-slate-300">Stocks:</strong> AAPL, TSLA, NVDA &nbsp;·&nbsp;
+                    <strong className="text-slate-300">Forex:</strong> EURUSD, GBPUSD
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <input
+                    value={newPosition.symbol}
+                    onChange={(e) => setNewPosition({ ...newPosition, symbol: e.target.value.toUpperCase() })}
+                    placeholder="Symbol (e.g. BTC, AAPL)"
+                    className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500"
+                  />
+                  <div className="grid grid-cols-2 gap-3">
+                    <select
+                      value={newPosition.side}
+                      onChange={(e) => setNewPosition({ ...newPosition, side: e.target.value as 'LONG' | 'SHORT' })}
+                      className="rounded border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 [&>option]:bg-slate-900 [&>option]:text-slate-100"
+                    >
+                      <option value="LONG">LONG</option>
+                      <option value="SHORT">SHORT</option>
+                    </select>
+                    <select
+                      value={newPosition.strategy || ''}
+                      onChange={(e) => setNewPosition({ ...newPosition, strategy: (e.target.value || '') as Position['strategy'] | '' })}
+                      className="rounded border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 [&>option]:bg-slate-900 [&>option]:text-slate-100"
+                    >
+                      <option value="">Strategy (optional)</option>
+                      <option value="swing">Swing</option>
+                      <option value="longterm">Long Term</option>
+                      <option value="options">Options</option>
+                      <option value="breakout">Breakout</option>
+                      <option value="ai_signal">AI Signal</option>
+                      <option value="daytrade">Day Trade</option>
+                      <option value="dividend">Dividend</option>
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="mb-1 block text-[11px] uppercase tracking-[0.06em] text-slate-500">Quantity</label>
+                      <input
+                        type="number"
+                        value={newPosition.quantity}
+                        onChange={(e) => setNewPosition({ ...newPosition, quantity: e.target.value })}
+                        placeholder="0"
+                        className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[11px] uppercase tracking-[0.06em] text-slate-500">Entry Price</label>
+                      <input
+                        type="number"
+                        value={newPosition.entryPrice}
+                        onChange={(e) => setNewPosition({ ...newPosition, entryPrice: e.target.value })}
+                        placeholder="0.00"
+                        className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[11px] uppercase tracking-[0.06em] text-slate-500">Current Price</label>
+                      <input
+                        type="number"
+                        value={newPosition.currentPrice}
+                        onChange={(e) => setNewPosition({ ...newPosition, currentPrice: e.target.value })}
+                        placeholder="0.00"
+                        className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    onClick={addPosition}
+                    disabled={!newPosition.symbol || !newPosition.quantity || !newPosition.entryPrice || !newPosition.currentPrice}
+                    className="w-full rounded-md bg-emerald-500 px-4 py-3 text-sm font-bold uppercase tracking-[0.06em] text-white transition hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    ➕ Add Position
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
