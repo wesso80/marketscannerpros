@@ -1900,17 +1900,34 @@ function PortfolioContent() {
                     </button>
                   </div>
                   {(() => {
-                    const pts = performanceHistory.length ? performanceHistory.slice(-30) : [{ totalValue, timestamp: new Date().toISOString() } as PerformanceSnapshot];
+                    // Build full equity curve anchored to cost basis
+                    const costBasis = positions.reduce((s, p) => s + p.entryPrice * p.quantity, 0);
+                    const earliestEntry = positions.length
+                      ? positions.reduce((earliest, p) => {
+                          const d = new Date(p.entryDate).getTime();
+                          return d < earliest ? d : earliest;
+                        }, Infinity)
+                      : Date.now();
+                    // Prepend cost basis as the starting point
+                    const entryPoint: PerformanceSnapshot = { timestamp: new Date(earliestEntry).toISOString(), totalValue: costBasis, totalPL: 0 };
+                    const rawPts = performanceHistory.length ? performanceHistory.slice(-30) : [];
+                    // Only prepend if cost basis point is before or at the first snapshot
+                    const pts = costBasis > 0 && (rawPts.length === 0 || new Date(entryPoint.timestamp) <= new Date(rawPts[0].timestamp))
+                      ? [entryPoint, ...rawPts]
+                      : rawPts.length > 0 ? rawPts : [{ totalValue, timestamp: new Date().toISOString(), totalPL: 0 } as PerformanceSnapshot];
                     const values = pts.map((p: any) => p.totalValue || totalValue);
-                    const min = Math.min(...values);
-                    const max = Math.max(...values);
+                    // Make sure y-range includes cost basis
+                    const dataMin = Math.min(...values);
+                    const dataMax = Math.max(...values);
+                    const min = costBasis > 0 ? Math.min(dataMin, costBasis) : dataMin;
+                    const max = costBasis > 0 ? Math.max(dataMax, costBasis) : dataMax;
                     const range = max - min || 1;
                     const fmtVal = (v: number) => v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v.toFixed(0)}`;
-                    const peakVal = max;
-                    const gridLines = 4;
+                    const gridLines = 5;
+                    const costBasisPct = costBasis > 0 ? ((max - costBasis) / range) : -1; // 0=top, 1=bottom
                     return (
-                      <div className="relative h-52 w-full">
-                        {/* Y-axis labels (HTML so they never distort) */}
+                      <div className="relative h-56 w-full">
+                        {/* Y-axis labels */}
                         <div className="absolute left-0 top-0 bottom-6 w-14 flex flex-col justify-between text-right pr-1">
                           {Array.from({ length: gridLines }).map((_, gi) => {
                             const v = max - (range / (gridLines - 1)) * gi;
@@ -1918,40 +1935,60 @@ function PortfolioContent() {
                           })}
                         </div>
                         {/* Chart area */}
-                        <div className="ml-14 mr-1 h-full pb-6">
+                        <div className="ml-14 mr-1 h-full pb-6 relative">
                           <svg width="100%" height="100%" viewBox="0 0 400 200" preserveAspectRatio="none" className="overflow-visible">
                             <defs>
-                              <linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1">
+                              <linearGradient id="eqGradGreen" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="0%" stopColor="#10B981" stopOpacity="0.35" />
-                                <stop offset="100%" stopColor="#10B981" stopOpacity="0.02" />
+                                <stop offset="100%" stopColor="#10B981" stopOpacity="0.05" />
+                              </linearGradient>
+                              <linearGradient id="eqGradRed" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#ef4444" stopOpacity="0.08" />
+                                <stop offset="100%" stopColor="#ef4444" stopOpacity="0.25" />
                               </linearGradient>
                             </defs>
+                            {/* Grid lines */}
                             {Array.from({ length: gridLines }).map((_, gi) => {
                               const y = (gi / (gridLines - 1)) * 200;
                               return <line key={gi} x1="0" y1={y} x2="400" y2={y} stroke="#334155" strokeWidth="0.5" strokeDasharray="3,3" vectorEffect="non-scaling-stroke" />;
                             })}
+                            {/* Cost basis reference line */}
+                            {costBasis > 0 && costBasisPct >= 0 && costBasisPct <= 1 && (
+                              <line x1="0" y1={costBasisPct * 200} x2="400" y2={costBasisPct * 200} stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="6,4" vectorEffect="non-scaling-stroke" />
+                            )}
                             {(() => {
                               const sx = (i: number) => pts.length > 1 ? (i / (pts.length - 1)) * 400 : 200;
                               const sy = (v: number) => 200 - ((v - min) / range) * 200;
+                              const cbY = costBasis > 0 ? sy(costBasis) : 0;
                               const linePts = values.map((v: number, i: number) => `${sx(i)},${sy(v)}`).join(' ');
+                              // Fill: green above cost basis, red below
+                              const lastVal = values[values.length - 1];
+                              const fillColor = lastVal >= costBasis ? 'url(#eqGradGreen)' : 'url(#eqGradRed)';
                               const gradPts = `${sx(0)},${sy(values[0])} ${linePts} ${sx(values.length - 1)},200 ${sx(0)},200`;
+                              const lineColor = lastVal >= costBasis ? '#10B981' : '#ef4444';
                               return (
                                 <>
-                                  <polygon points={gradPts} fill="url(#eqGrad)" />
-                                  <polyline points={linePts} fill="none" stroke="#10B981" strokeWidth="2" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                                  <polygon points={gradPts} fill={fillColor} />
+                                  <polyline points={linePts} fill="none" stroke={lineColor} strokeWidth="2" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
                                   {values.map((v: number, i: number) => (
-                                    <circle key={i} cx={sx(i)} cy={sy(v)} r="1" fill="#10B981" stroke="#0F172A" strokeWidth="0.5" vectorEffect="non-scaling-stroke" />
+                                    <circle key={i} cx={sx(i)} cy={sy(v)} r="1" fill={v >= costBasis ? '#10B981' : '#ef4444'} stroke="#0F172A" strokeWidth="0.5" vectorEffect="non-scaling-stroke" />
                                   ))}
                                   {showDrawdownOverlay && values.map((v: number, i: number) => {
-                                    if (v >= peakVal) return null;
+                                    if (v >= max) return null;
                                     return <circle key={`dd-${i}`} cx={sx(i)} cy={sy(v)} r="1.2" fill="#ef4444" stroke="#0F172A" strokeWidth="0.5" vectorEffect="non-scaling-stroke" />;
                                   })}
                                 </>
                               );
                             })()}
                           </svg>
+                          {/* Cost basis label */}
+                          {costBasis > 0 && costBasisPct >= 0 && costBasisPct <= 1 && (
+                            <div className="absolute right-0 -translate-y-1/2 bg-amber-500/20 border border-amber-500/40 rounded px-1.5 py-0.5 text-[10px] font-bold text-amber-300" style={{ top: `${costBasisPct * 100}%` }}>
+                              Cost Basis {fmtVal(costBasis)}
+                            </div>
+                          )}
                         </div>
-                        {/* X-axis labels (HTML) */}
+                        {/* X-axis labels */}
                         <div className="ml-14 mr-1 flex justify-between -mt-1">
                           {pts.filter((_, i) => i % Math.max(1, Math.floor(pts.length / 5)) === 0 || i === pts.length - 1).map((p, i) => (
                             <span key={i} className="text-[11px] text-slate-400 font-medium">{new Date(p.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
