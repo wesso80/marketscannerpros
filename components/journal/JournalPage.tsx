@@ -57,7 +57,7 @@ export default function JournalPage({ tier }: { tier: UserTier }) {
     evidence: false,
   });
 
-  const selectedTrade = useJournalTrade(selectedTradeId, payload?.trades || []);
+  const selectedTrade = useJournalTrade(selectedTradeId, enrichedTrades);
 
   /* ── Prefill support: auto-open new-trade drawer from URL query params ── */
   const searchParams = useSearchParams();

@@ -56,7 +56,8 @@ export default function CloseTradeModal({ open, trade, onClose, onSubmit }: Clos
   useEffect(() => {
     if (open) {
       // Pre-fill with current/live price when available (enrichment sets exit.price for open trades)
-      setExitPrice(trade?.exit?.price ? String(trade.exit.price) : '');
+      const livePrice = trade?.exit?.price;
+      setExitPrice(livePrice ? String(livePrice) : '');
       setExitTs(new Date().toISOString().slice(0, 16));
       setCloseReason('manual');
       setOutcome('breakeven');
@@ -64,8 +65,24 @@ export default function CloseTradeModal({ open, trade, onClose, onSubmit }: Clos
       setFollowedPlan(true);
       setErrorType('none');
       setReviewText('');
+
+      // If no live price available yet, fetch it directly as fallback
+      if (!livePrice && trade?.symbol) {
+        const sym = trade.symbol.toUpperCase().trim();
+        const isCrypto = /[-_/](USDT?|EUR|PERP)$/i.test(sym) || trade.assetClass === 'crypto';
+        const base = sym.replace(/[-_/]?USDT?$/i, '').replace(/[-_/]?EUR$/i, '').replace(/[-_/]?PERP$/i, '');
+        const type = isCrypto ? 'crypto' : 'stock';
+        fetch(`/api/quote?symbol=${encodeURIComponent(base)}&type=${type}&market=USD&_t=${Date.now()}`, { cache: 'no-store' })
+          .then(r => r.json())
+          .then(j => {
+            if (j?.ok && typeof j.price === 'number' && j.price > 0) {
+              setExitPrice(String(j.price));
+            }
+          })
+          .catch(() => {});
+      }
     }
-  }, [open, trade?.id]);
+  }, [open, trade?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const canSubmit = useMemo(() => {
     return Number(exitPrice) > 0 && Boolean(exitTs) && Boolean(closeReason) && Boolean(outcome) && Boolean(setupQuality);
