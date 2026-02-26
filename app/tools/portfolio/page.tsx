@@ -1905,50 +1905,59 @@ function PortfolioContent() {
                     const min = Math.min(...values);
                     const max = Math.max(...values);
                     const range = max - min || 1;
-                    const W = 600;
-                    const H = 176;
-                    const pad = { top: 12, bottom: 24, left: 48, right: 8 };
-                    const cW = W - pad.left - pad.right;
-                    const cH = H - pad.top - pad.bottom;
-                    const sx = (i: number) => pad.left + (pts.length > 1 ? (i / (pts.length - 1)) * cW : cW / 2);
-                    const sy = (v: number) => pad.top + cH - ((v - min) / range) * cH;
-                    const linePts = values.map((v: number, i: number) => `${sx(i)},${sy(v)}`).join(' ');
-                    const gradPts = `${sx(0)},${sy(values[0])} ${linePts} ${sx(values.length - 1)},${pad.top + cH} ${sx(0)},${pad.top + cH}`;
+                    const fmtVal = (v: number) => v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : `$${v.toFixed(0)}`;
                     const peakVal = max;
                     const gridLines = 4;
                     return (
-                      <svg viewBox={`0 0 ${W} ${H}`} className="h-44 w-full" preserveAspectRatio="none">
-                        <defs>
-                          <linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#10B981" stopOpacity="0.35" />
-                            <stop offset="100%" stopColor="#10B981" stopOpacity="0.02" />
-                          </linearGradient>
-                        </defs>
-                        {Array.from({ length: gridLines }).map((_, gi) => {
-                          const v = min + (range / (gridLines - 1)) * gi;
-                          return (
-                            <g key={gi}>
-                              <line x1={pad.left} y1={sy(v)} x2={W - pad.right} y2={sy(v)} stroke="#334155" strokeWidth="0.5" strokeDasharray="3,3" />
-                              <text x={pad.left - 4} y={sy(v) + 3} textAnchor="end" fill="#64748b" fontSize="8">${(v / 1000).toFixed(1)}k</text>
-                            </g>
-                          );
-                        })}
-                        <polygon points={gradPts} fill="url(#eqGrad)" />
-                        <polyline points={linePts} fill="none" stroke="#10B981" strokeWidth="2" strokeLinejoin="round" />
-                        {values.map((v: number, i: number) => (
-                          <circle key={i} cx={sx(i)} cy={sy(v)} r="3" fill={v >= peakVal ? '#10B981' : '#10B981'} stroke="#0F172A" strokeWidth="1.5" />
-                        ))}
-                        {showDrawdownOverlay && values.map((v: number, i: number) => {
-                          if (v >= peakVal) return null;
-                          const ddPct = ((peakVal - v) / peakVal) * 100;
-                          return <circle key={`dd-${i}`} cx={sx(i)} cy={sy(v)} r="3" fill="#ef4444" stroke="#0F172A" strokeWidth="1.5" />;
-                        })}
-                        {pts.length >= 2 && pts.filter((_, i) => i % Math.max(1, Math.floor(pts.length / 6)) === 0 || i === pts.length - 1).map((p, i, filtered) => {
-                          const origIdx = pts.indexOf(p);
-                          const dateStr = new Date(p.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                          return <text key={i} x={sx(origIdx)} y={H - 4} textAnchor="middle" fill="#64748b" fontSize="7">{dateStr}</text>;
-                        })}
-                      </svg>
+                      <div className="relative h-52 w-full">
+                        {/* Y-axis labels (HTML so they never distort) */}
+                        <div className="absolute left-0 top-0 bottom-6 w-14 flex flex-col justify-between text-right pr-1">
+                          {Array.from({ length: gridLines }).map((_, gi) => {
+                            const v = max - (range / (gridLines - 1)) * gi;
+                            return <span key={gi} className="text-[11px] leading-none text-slate-400 font-medium">{fmtVal(v)}</span>;
+                          })}
+                        </div>
+                        {/* Chart area */}
+                        <div className="ml-14 mr-1 h-full pb-6">
+                          <svg width="100%" height="100%" viewBox="0 0 400 200" preserveAspectRatio="none" className="overflow-visible">
+                            <defs>
+                              <linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#10B981" stopOpacity="0.35" />
+                                <stop offset="100%" stopColor="#10B981" stopOpacity="0.02" />
+                              </linearGradient>
+                            </defs>
+                            {Array.from({ length: gridLines }).map((_, gi) => {
+                              const y = (gi / (gridLines - 1)) * 200;
+                              return <line key={gi} x1="0" y1={y} x2="400" y2={y} stroke="#334155" strokeWidth="0.5" strokeDasharray="3,3" vectorEffect="non-scaling-stroke" />;
+                            })}
+                            {(() => {
+                              const sx = (i: number) => pts.length > 1 ? (i / (pts.length - 1)) * 400 : 200;
+                              const sy = (v: number) => 200 - ((v - min) / range) * 200;
+                              const linePts = values.map((v: number, i: number) => `${sx(i)},${sy(v)}`).join(' ');
+                              const gradPts = `${sx(0)},${sy(values[0])} ${linePts} ${sx(values.length - 1)},200 ${sx(0)},200`;
+                              return (
+                                <>
+                                  <polygon points={gradPts} fill="url(#eqGrad)" />
+                                  <polyline points={linePts} fill="none" stroke="#10B981" strokeWidth="2" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                                  {values.map((v: number, i: number) => (
+                                    <circle key={i} cx={sx(i)} cy={sy(v)} r="1" fill="#10B981" stroke="#0F172A" strokeWidth="0.5" vectorEffect="non-scaling-stroke" />
+                                  ))}
+                                  {showDrawdownOverlay && values.map((v: number, i: number) => {
+                                    if (v >= peakVal) return null;
+                                    return <circle key={`dd-${i}`} cx={sx(i)} cy={sy(v)} r="1.2" fill="#ef4444" stroke="#0F172A" strokeWidth="0.5" vectorEffect="non-scaling-stroke" />;
+                                  })}
+                                </>
+                              );
+                            })()}
+                          </svg>
+                        </div>
+                        {/* X-axis labels (HTML) */}
+                        <div className="ml-14 mr-1 flex justify-between -mt-1">
+                          {pts.filter((_, i) => i % Math.max(1, Math.floor(pts.length / 5)) === 0 || i === pts.length - 1).map((p, i) => (
+                            <span key={i} className="text-[11px] text-slate-400 font-medium">{new Date(p.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                          ))}
+                        </div>
+                      </div>
                     );
                   })()}
                   <div className="mt-2 text-xs text-slate-500">Risk event markers: {isRiskEvent ? '🔴 Active' : isRiskElevated ? '🟡 Elevated' : '🟢 Stable'}</div>
@@ -2221,36 +2230,55 @@ function PortfolioContent() {
                   const min = Math.min(...values);
                   const max = Math.max(...values);
                   const range = max - min || 1;
-                  const W = 600;
-                  const H = 120;
-                  const pad = { top: 10, bottom: 20, left: 48, right: 8 };
-                  const cW = W - pad.left - pad.right;
-                  const cH = H - pad.top - pad.bottom;
-                  const sx = (i: number) => pad.left + (pts.length > 1 ? (i / (pts.length - 1)) * cW : cW / 2);
-                  const sy = (v: number) => pad.top + cH - ((v - min) / range) * cH;
-                  const linePts = values.map((v, i) => `${sx(i)},${sy(v)}`).join(' ');
-                  const gradPts = `${sx(0)},${sy(values[0])} ${linePts} ${sx(values.length - 1)},${pad.top + cH} ${sx(0)},${pad.top + cH}`;
-                  const zeroY = sy(0);
+                  const fmtVal = (v: number) => v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : v <= -1000 ? `-$${(Math.abs(v) / 1000).toFixed(1)}k` : `$${v.toFixed(0)}`;
+                  const gridLines = 3;
                   return (
-                    <svg viewBox={`0 0 ${W} ${H}`} className="h-24 w-full" preserveAspectRatio="none">
-                      <defs>
-                        <linearGradient id="clGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.3" />
-                          <stop offset="100%" stopColor="#22d3ee" stopOpacity="0.02" />
-                        </linearGradient>
-                      </defs>
-                      {min <= 0 && max >= 0 && <line x1={pad.left} y1={zeroY} x2={W - pad.right} y2={zeroY} stroke="#475569" strokeWidth="0.5" strokeDasharray="4,3" />}
-                      <polygon points={gradPts} fill="url(#clGrad)" />
-                      <polyline points={linePts} fill="none" stroke="#22d3ee" strokeWidth="2" strokeLinejoin="round" />
-                      {values.map((v, i) => (
-                        <circle key={i} cx={sx(i)} cy={sy(v)} r="2.5" fill={v >= 0 ? '#22d3ee' : '#ef4444'} stroke="#0F172A" strokeWidth="1" />
-                      ))}
-                      {pts.length >= 2 && pts.filter((_, i) => i % Math.max(1, Math.floor(pts.length / 5)) === 0 || i === pts.length - 1).map((p, i) => {
-                        const origIdx = pts.indexOf(p);
-                        const dateStr = new Date(p.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                        return <text key={i} x={sx(origIdx)} y={H - 3} textAnchor="middle" fill="#64748b" fontSize="7">{dateStr}</text>;
-                      })}
-                    </svg>
+                    <div className="relative h-32 w-full">
+                      <div className="absolute left-0 top-0 bottom-5 w-14 flex flex-col justify-between text-right pr-1">
+                        {Array.from({ length: gridLines }).map((_, gi) => {
+                          const v = max - (range / (gridLines - 1)) * gi;
+                          return <span key={gi} className="text-[11px] leading-none text-slate-400 font-medium">{fmtVal(v)}</span>;
+                        })}
+                      </div>
+                      <div className="ml-14 mr-1 h-full pb-5">
+                        <svg width="100%" height="100%" viewBox="0 0 400 120" preserveAspectRatio="none" className="overflow-visible">
+                          <defs>
+                            <linearGradient id="clGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.3" />
+                              <stop offset="100%" stopColor="#22d3ee" stopOpacity="0.02" />
+                            </linearGradient>
+                          </defs>
+                          {Array.from({ length: gridLines }).map((_, gi) => {
+                            const y = (gi / (gridLines - 1)) * 120;
+                            return <line key={gi} x1="0" y1={y} x2="400" y2={y} stroke="#334155" strokeWidth="0.5" strokeDasharray="3,3" vectorEffect="non-scaling-stroke" />;
+                          })}
+                          {min <= 0 && max >= 0 && (() => {
+                            const zy = 120 - ((0 - min) / range) * 120;
+                            return <line x1="0" y1={zy} x2="400" y2={zy} stroke="#475569" strokeWidth="1" strokeDasharray="4,3" vectorEffect="non-scaling-stroke" />;
+                          })()}
+                          {(() => {
+                            const sx = (i: number) => pts.length > 1 ? (i / (pts.length - 1)) * 400 : 200;
+                            const sy = (v: number) => 120 - ((v - min) / range) * 120;
+                            const linePts = values.map((v, i) => `${sx(i)},${sy(v)}`).join(' ');
+                            const gradPts = `${sx(0)},${sy(values[0])} ${linePts} ${sx(values.length - 1)},120 ${sx(0)},120`;
+                            return (
+                              <>
+                                <polygon points={gradPts} fill="url(#clGrad)" />
+                                <polyline points={linePts} fill="none" stroke="#22d3ee" strokeWidth="2" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                                {values.map((v, i) => (
+                                  <circle key={i} cx={sx(i)} cy={sy(v)} r="1" fill={v >= 0 ? '#22d3ee' : '#ef4444'} stroke="#0F172A" strokeWidth="0.5" vectorEffect="non-scaling-stroke" />
+                                ))}
+                              </>
+                            );
+                          })()}
+                        </svg>
+                      </div>
+                      <div className="ml-14 mr-1 flex justify-between -mt-0.5">
+                        {pts.filter((_, i) => i % Math.max(1, Math.floor(pts.length / 5)) === 0 || i === pts.length - 1).map((p, i) => (
+                          <span key={i} className="text-[11px] text-slate-400 font-medium">{new Date(p.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                        ))}
+                      </div>
+                    </div>
                   );
                 })()}
               </div>
