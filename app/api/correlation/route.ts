@@ -115,7 +115,7 @@ async function fetchCryptoDailyCloses(symbol: string, days: number): Promise<Dai
   const coinId = COINGECKO_ID_MAP[base] || await resolveSymbolToId(base);
   if (!coinId) return [];
 
-  const ohlcDays = days <= 7 ? 7 : days <= 30 ? 30 : days <= 90 ? 90 : 180;
+  const ohlcDays = days <= 7 ? 14 : days <= 30 ? 90 : days <= 90 ? 180 : 365;
   const ohlc = await getOHLC(coinId, ohlcDays as any, { timeoutMs: 12_000 });
   if (!ohlc || !ohlc.length) return [];
 
@@ -430,6 +430,7 @@ export async function GET(request: NextRequest) {
       if (alignedA.length < 5) continue;
 
       const coeff = pearson(alignedA, alignedB);
+      if (!Number.isFinite(coeff)) continue;
       const label = classify(coeff);
 
       // Divergence: compare short-term (7 bars) vs full window

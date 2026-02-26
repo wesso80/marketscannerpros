@@ -240,6 +240,14 @@ export default function CorrelationConfluenceCard({ symbol, type, className = ''
     return () => abortRef.current?.abort();
   }, [fetchCorrelation]);
 
+  // Auto-expand the first result so the chart is immediately visible
+  useEffect(() => {
+    if (data?.correlations?.length && !expandedSymbol) {
+      const first = data.correlations[0];
+      if (first?.chart?.length > 1) setExpandedSymbol(first.symbol);
+    }
+  }, [data]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Add custom symbol
   const addCustomSymbol = () => {
     const sym = customInput.toUpperCase().trim();
@@ -321,6 +329,7 @@ export default function CorrelationConfluenceCard({ symbol, type, className = ''
         {/* Results */}
         {!loading && !error && topCorrelations.length > 0 && (
           <div className="space-y-1.5">
+            <div className="mb-1 text-[10px] text-zinc-600 italic">Click any row to expand price chart</div>
             {topCorrelations.map((item) => {
               const style = LABEL_STYLES[item.label] || LABEL_STYLES.NONE;
               const isExpanded = expandedSymbol === item.symbol;
