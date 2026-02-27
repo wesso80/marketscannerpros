@@ -42,6 +42,7 @@ interface ScoreInput {
   optionsRows: AVOptionRow[];
   timePermission?: 'ALLOW' | 'WAIT' | 'BLOCK';
   timeQuality?: number;
+  marketSession?: 'premarket' | 'regular' | 'afterhours' | 'closed';
 }
 
 type CandidateScored = {
@@ -424,7 +425,13 @@ function scoreCandidate(input: ScoreInput, candidate: MSPOptionCandidate): Candi
   const blockers: string[] = [];
   const warnings: string[] = [];
 
-  const staleBlocked = input.freshness === 'REALTIME' && input.staleSeconds > OPTIONS_SCORING_THRESHOLDS.MAX_STALE_SEC_REALTIME;
+  // During non-regular sessions (after-hours, premarket, closed), data is naturally old
+  // so use a much larger threshold (16 hours) to avoid false stale blocks
+  const isRegularSession = !input.marketSession || input.marketSession === 'regular';
+  const maxStaleSec = isRegularSession
+    ? OPTIONS_SCORING_THRESHOLDS.MAX_STALE_SEC_REALTIME
+    : 57600; // 16 hours — covers overnight + most of weekend
+  const staleBlocked = input.freshness === 'REALTIME' && input.staleSeconds > maxStaleSec;
   if (staleBlocked || input.freshness === 'STALE') blockers.push('data_stale_or_missing');
 
   if (candidate.legs.some((leg, i) => legSpreadPcts[i] > OPTIONS_SCORING_THRESHOLDS.MAX_SPREAD_PCT)) blockers.push('leg_spread_too_wide');

@@ -344,6 +344,7 @@ export async function POST(request: NextRequest) {
       optionsRows: rawOptions.rows,
       timePermission,
       timeQuality,
+      marketSession: analysis.entryTiming?.marketSession || undefined,
     });
 
     console.log(`✅ Options scan complete: ${symbol.toUpperCase()} - ${analysis.direction} signal, Grade: ${analysis.tradeQuality}`);

@@ -152,9 +152,11 @@ export function mapOptionsScanResponseToV3(raw: any, symbol: string): OptionsSca
       },
       riskCompliance: {
         dataIntegrity: data?.dataQuality?.freshness || 'Unknown',
-        latency: data?.dataQuality?.lastUpdated
-          ? `${Math.max(0, Math.round((Date.now() - new Date(data.dataQuality.lastUpdated).getTime()) / 1000))}s`
-          : 'Unknown',
+        latency: (() => {
+          if (!data?.dataQuality?.lastUpdated) return 'Unknown';
+          const ms = Date.now() - new Date(data.dataQuality.lastUpdated).getTime();
+          return Number.isFinite(ms) ? `${Math.max(0, Math.round(ms / 1000))}s` : 'Unknown';
+        })(),
         whyBlocked: blockers[0] || 'No hard blocker',
       },
     },
