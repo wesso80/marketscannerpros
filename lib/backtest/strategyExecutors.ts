@@ -1,6 +1,7 @@
-import type { BacktestTrade } from './engine';
+﻿import type { BacktestTrade } from './engine';
 
 export interface BacktestPosition {
+  side: 'LONG' | 'SHORT';
   entry: number;
   entryDate: string;
   entryIdx: number;
@@ -99,7 +100,7 @@ export function runCoreStrategyStep(ctx: CoreStrategyStepContext): CoreStrategyS
 
   if (strategy === 'ema_crossover' && ema9[i] && ema21[i] && ema9[i - 1] && ema21[i - 1]) {
     if (!position && ema9[i - 1] <= ema21[i - 1] && ema9[i] > ema21[i]) {
-      position = { entry: close, entryDate: date, entryIdx: i };
+      position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
     } else if (position && ema9[i - 1] >= ema21[i - 1] && ema9[i] < ema21[i]) {
       position = closeLongPosition(position, close, date, i, symbol, initialCapital, trades, highs, lows, 'signal_flip');
     }
@@ -108,7 +109,7 @@ export function runCoreStrategyStep(ctx: CoreStrategyStepContext): CoreStrategyS
 
   if (strategy === 'sma_crossover' && sma50[i] && sma200[i] && sma50[i - 1] && sma200[i - 1]) {
     if (!position && sma50[i - 1] <= sma200[i - 1] && sma50[i] > sma200[i]) {
-      position = { entry: close, entryDate: date, entryIdx: i };
+      position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
     } else if (position && sma50[i - 1] >= sma200[i - 1] && sma50[i] < sma200[i]) {
       position = closeLongPosition(position, close, date, i, symbol, initialCapital, trades, highs, lows, 'signal_flip');
     }
@@ -117,7 +118,7 @@ export function runCoreStrategyStep(ctx: CoreStrategyStepContext): CoreStrategyS
 
   if (strategy === 'rsi_reversal' && rsi[i] && rsi[i - 1]) {
     if (!position && rsi[i] < 30) {
-      position = { entry: close, entryDate: date, entryIdx: i };
+      position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
     } else if (position && rsi[i] > 70) {
       position = closeLongPosition(position, close, date, i, symbol, initialCapital, trades, highs, lows, 'signal_flip');
     }
@@ -126,7 +127,7 @@ export function runCoreStrategyStep(ctx: CoreStrategyStepContext): CoreStrategyS
 
   if (strategy === 'rsi_trend' && rsi[i] && rsi[i - 1]) {
     if (!position && rsi[i] < 40 && rsi[i] > rsi[i - 1]) {
-      position = { entry: close, entryDate: date, entryIdx: i };
+      position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
     } else if (position && rsi[i] > 60) {
       position = closeLongPosition(position, close, date, i, symbol, initialCapital, trades, highs, lows, 'signal_flip');
     }
@@ -137,7 +138,7 @@ export function runCoreStrategyStep(ctx: CoreStrategyStepContext): CoreStrategyS
     const { macd, signal } = macdData;
     if (macd[i] !== undefined && signal[i] !== undefined && macd[i - 1] !== undefined && signal[i - 1] !== undefined) {
       if (!position && macd[i - 1] <= signal[i - 1] && macd[i] > signal[i]) {
-        position = { entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
       } else if (position && macd[i - 1] >= signal[i - 1] && macd[i] < signal[i]) {
         position = closeLongPosition(position, close, date, i, symbol, initialCapital, trades, highs, lows, 'signal_flip');
       }
@@ -148,7 +149,7 @@ export function runCoreStrategyStep(ctx: CoreStrategyStepContext): CoreStrategyS
   if ((strategy === 'bbands_squeeze' || strategy === 'bbands_breakout') && bbands) {
     if (bbands.lower[i] && bbands.upper[i]) {
       if (!position && close <= bbands.lower[i]) {
-        position = { entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
       } else if (position && close >= bbands.upper[i]) {
         position = closeLongPosition(position, close, date, i, symbol, initialCapital, trades, highs, lows, 'target');
       }
@@ -158,7 +159,7 @@ export function runCoreStrategyStep(ctx: CoreStrategyStepContext): CoreStrategyS
 
   if (strategy === 'multi_ema_rsi' && ema9[i] && ema21[i] && rsi[i] && ema9[i - 1] && ema21[i - 1]) {
     if (!position && ema9[i - 1] <= ema21[i - 1] && ema9[i] > ema21[i] && rsi[i] < 70) {
-      position = { entry: close, entryDate: date, entryIdx: i };
+      position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
     } else if (position && ((ema9[i - 1] >= ema21[i - 1] && ema9[i] < ema21[i]) || rsi[i] > 75)) {
       position = closeLongPosition(position, close, date, i, symbol, initialCapital, trades, highs, lows, 'signal_flip');
     }
@@ -169,7 +170,7 @@ export function runCoreStrategyStep(ctx: CoreStrategyStepContext): CoreStrategyS
     const { macd, signal } = macdData;
     if (macd[i] !== undefined && signal[i] !== undefined && macd[i - 1] !== undefined && signal[i - 1] !== undefined) {
       if (!position && macd[i - 1] <= signal[i - 1] && macd[i] > signal[i] && macd[i] > 0) {
-        position = { entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
       } else if (position && ((macd[i - 1] >= signal[i - 1] && macd[i] < signal[i]) || macd[i] < 0)) {
         position = closeLongPosition(position, close, date, i, symbol, initialCapital, trades, highs, lows, 'signal_flip');
       }
@@ -181,7 +182,7 @@ export function runCoreStrategyStep(ctx: CoreStrategyStepContext): CoreStrategyS
     const { k, d } = stochData;
     if (k[i] !== undefined && d[i] !== undefined && k[i - 1] !== undefined) {
       if (!position && k[i - 1] < d[i - 1] && k[i] > d[i] && k[i] < 25) {
-        position = { entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
       } else if (position && k[i] > 80) {
         position = closeLongPosition(position, close, date, i, symbol, initialCapital, trades, highs, lows, 'target');
       }
@@ -193,7 +194,7 @@ export function runCoreStrategyStep(ctx: CoreStrategyStepContext): CoreStrategyS
     const { adx, diPlus, diMinus } = adxData;
     if (adx[i] !== undefined && diPlus[i] !== undefined && diMinus[i] !== undefined) {
       if (!position && adx[i] > 25 && diPlus[i] > diMinus[i] && diPlus[i - 1] <= diMinus[i - 1]) {
-        position = { entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
       } else if (position && (adx[i] < 20 || (diMinus[i] > diPlus[i] && diMinus[i - 1] <= diPlus[i - 1]))) {
         position = closeLongPosition(position, close, date, i, symbol, initialCapital, trades, highs, lows, 'signal_flip');
       }
@@ -203,7 +204,7 @@ export function runCoreStrategyStep(ctx: CoreStrategyStepContext): CoreStrategyS
 
   if (strategy === 'cci_reversal' && cci[i] !== undefined && cci[i - 1] !== undefined) {
     if (!position && cci[i - 1] <= -100 && cci[i] > -100) {
-      position = { entry: close, entryDate: date, entryIdx: i };
+      position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
     } else if (position && (cci[i] > 100 || cci[i] < -100)) {
       position = closeLongPosition(position, close, date, i, symbol, initialCapital, trades, highs, lows, 'signal_flip');
     }
@@ -218,7 +219,7 @@ export function runCoreStrategyStep(ctx: CoreStrategyStepContext): CoreStrategyS
     const obvBelowSMAPrev = obv[i - 1] <= (obv.slice(i - 21, i).reduce((a, b) => a + b, 0) / 21);
 
     if (!position && obvAboveSMA && obvBelowSMAPrev && close > closes[i - 1]) {
-      position = { entry: close, entryDate: date, entryIdx: i };
+      position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
     } else if (position && obv[i] < obvSMA) {
       position = closeLongPosition(position, close, date, i, symbol, initialCapital, trades, highs, lows, 'signal_flip');
     }
@@ -229,7 +230,7 @@ export function runCoreStrategyStep(ctx: CoreStrategyStepContext): CoreStrategyS
     const { k } = stochData;
     if (bbands.lower[i] && bbands.upper[i] && k[i] !== undefined) {
       if (!position && close <= bbands.lower[i] && k[i] < 25) {
-        position = { entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
       } else if (position && (close >= bbands.upper[i] || k[i] > 80)) {
         position = closeLongPosition(position, close, date, i, symbol, initialCapital, trades, highs, lows, 'target');
       }

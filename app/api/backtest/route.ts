@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Backtest API
  * 
  * @route POST /api/backtest
@@ -33,49 +33,42 @@ import { createRateLimiter, getClientIP } from '@/lib/rateLimit';
 import { buildBacktestEngineResult, type BacktestTrade } from '@/lib/backtest/engine';
 import { runCoreStrategyStep } from '@/lib/backtest/strategyExecutors';
 import { getBacktestStrategy } from '@/lib/strategies/registry';
-import { getOHLC, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
 import { hasProTraderAccess } from '@/lib/proTraderAccess';
-import { avTakeToken } from '@/lib/avRateGovernor';
 import {
   parseBacktestTimeframe,
   isStrategyTimeframeCompatible,
-  resamplePriceData,
   computeCoverage,
 } from '@/lib/backtest/timeframe';
 import { buildBacktestDiagnostics, inferStrategyDirection } from '@/lib/backtest/diagnostics';
 import { enrichTradesWithMetadata } from '@/lib/backtest/tradeForensics';
 import { buildValidationPayload } from '@/lib/backtest/validationPayload';
 
-const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
+// â”€â”€â”€ Extracted modules (2026-02-27 audit) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+import {
+  calculateEMA,
+  calculateSMA,
+  calculateRSI,
+  calculateMACD,
+  calculateATR,
+  calculateADX,
+  calculateBollingerBands,
+  calculateStochastic,
+  calculateCCI,
+  calculateOBV,
+} from '@/lib/backtest/indicators';
+import {
+  fetchPriceData,
+  isCryptoSymbol,
+  normalizeSymbol,
+  type PriceData,
+  type PriceFetchResult,
+} from '@/lib/backtest/providers';
 
 /** Backtest: 10 per minute per IP (heavy compute) */
 const backtestLimiter = createRateLimiter('backtest', {
   windowMs: 60 * 1000,
   max: 10,
 });
-
-// Known crypto symbols for detection
-const KNOWN_CRYPTO = [
-  'BTC', 'ETH', 'XRP', 'SOL', 'ADA', 'DOGE', 'DOT', 'AVAX', 'MATIC', 'LINK',
-  'UNI', 'ATOM', 'LTC', 'BCH', 'XLM', 'ALGO', 'VET', 'FIL', 'AAVE', 'EOS',
-  'XTZ', 'THETA', 'XMR', 'NEO', 'MKR', 'COMP', 'SNX', 'SUSHI', 'YFI', 'CRV',
-  'GRT', 'ENJ', 'MANA', 'SAND', 'AXS', 'CHZ', 'HBAR', 'FTM', 'NEAR', 'EGLD',
-  'FLOW', 'ICP', 'AR', 'HNT', 'STX', 'KSM', 'ZEC', 'DASH', 'WAVES', 'KAVA',
-  'BNB', 'SHIB', 'PEPE', 'WIF', 'BONK', 'FLOKI', 'APE', 'IMX', 'OP', 'ARB',
-  'SUI', 'SEI', 'TIA', 'INJ', 'FET', 'RNDR', 'RENDER', 'JUP', 'KAS', 'HBAR',
-  'RUNE', 'OSMO', 'CELO', 'ONE', 'ZIL', 'ICX', 'QTUM', 'ONT', 'ZRX', 'BAT'
-];
-
-// Detect if symbol is crypto
-function isCryptoSymbol(symbol: string): boolean {
-  const upper = symbol.toUpperCase().replace(/-?USD$/, '').replace(/-?USDT$/, '');
-  return KNOWN_CRYPTO.includes(upper);
-}
-
-// Normalize symbol (remove USD suffix for crypto)
-function normalizeSymbol(symbol: string): string {
-  return symbol.toUpperCase().replace(/-?USD$/, '').replace(/-?USDT$/, '');
-}
 
 interface Trade {
   entryDate: string;
@@ -102,7 +95,7 @@ interface StrategyResult {
 }
 
 type Position = {
-  side?: 'LONG' | 'SHORT';
+  side: 'LONG' | 'SHORT';
   entry: number;
   entryDate: string;
   entryIdx: number;
@@ -146,412 +139,6 @@ function checkHitSLTP(
   const hitSL = side === 'LONG' ? low <= sl : high >= sl;
   const hitTP = side === 'LONG' ? high >= tp : low <= tp;
   return { hitSL, hitTP };
-}
-
-interface PriceData {
-  [date: string]: {
-    open: number;
-    high: number;
-    low: number;
-    close: number;
-    volume: number;
-  };
-}
-
-type PriceDataSource = 'alpha_vantage' | 'coingecko';
-
-interface PriceFetchResult {
-  priceData: PriceData;
-  source: PriceDataSource;
-}
-
-// Fetch daily price data from Alpha Vantage (Stocks)
-async function fetchStockPriceData(symbol: string, timeframe: string = 'daily'): Promise<PriceData> {
-  const parsedTimeframe = parseBacktestTimeframe(timeframe);
-  if (!parsedTimeframe) {
-    throw new Error(`Unsupported timeframe: ${timeframe}`);
-  }
-
-  let url: string;
-  let timeSeriesKey: string;
-  
-  if (parsedTimeframe.kind === 'daily') {
-    url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${symbol}&outputsize=full&entitlement=realtime&apikey=${ALPHA_VANTAGE_KEY}`;
-    timeSeriesKey = 'Time Series (Daily)';
-  } else {
-    const interval = parsedTimeframe.alphaInterval || '1min';
-    url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${symbol}&interval=${interval}&outputsize=full&entitlement=realtime&apikey=${ALPHA_VANTAGE_KEY}`;
-    timeSeriesKey = `Time Series (${interval})`;
-  }
-  
-  await avTakeToken();
-  const response = await fetch(url);
-  const data = await response.json();
-  const timeSeries = data[timeSeriesKey];
-  
-  if (!timeSeries) {
-    // Check for error messages
-    if (data['Error Message']) {
-      throw new Error(`Invalid symbol ${symbol}: ${data['Error Message']}`);
-    }
-    if (data['Note']) {
-      throw new Error(`API rate limit exceeded. Please try again in a minute.`);
-    }
-    throw new Error(`Failed to fetch price data for ${symbol}`);
-  }
-
-  const priceData: PriceData = {};
-  for (const [date, values] of Object.entries(timeSeries)) {
-    priceData[date] = {
-      open: parseFloat((values as any)['1. open']),
-      high: parseFloat((values as any)['2. high']),
-      low: parseFloat((values as any)['3. low']),
-      close: parseFloat((values as any)['4. close']),
-      volume: parseFloat((values as any)['5. volume'])
-    };
-  }
-  
-  if (parsedTimeframe.needsResample && parsedTimeframe.minutes > parsedTimeframe.sourceMinutes) {
-    return resamplePriceData(priceData, parsedTimeframe.minutes, parsedTimeframe.sourceMinutes);
-  }
-
-  return priceData;
-}
-
-// Fetch crypto price data from CoinGecko
-async function fetchCryptoPriceDataCoinGecko(symbol: string, timeframe: string = 'daily'): Promise<PriceData> {
-  const cleanSymbol = normalizeSymbol(symbol);
-  logger.info(`Fetching crypto data for ${cleanSymbol} (${timeframe}) via CoinGecko`);
-
-  const parsedTimeframe = parseBacktestTimeframe(timeframe);
-  if (!parsedTimeframe) {
-    throw new Error(`Unsupported timeframe: ${timeframe}`);
-  }
-
-  const coinId = COINGECKO_ID_MAP[cleanSymbol] || await resolveSymbolToId(cleanSymbol);
-  if (!coinId) {
-    throw new Error(`No CoinGecko mapping found for ${cleanSymbol}`);
-  }
-
-  const days: 1 | 7 | 14 | 30 | 90 | 180 | 365 = parsedTimeframe.kind === 'daily' ? 365 : 7;
-  const ohlc = await getOHLC(coinId, days);
-  if (!ohlc || ohlc.length === 0) {
-    throw new Error(`Failed to fetch CoinGecko OHLC data for ${cleanSymbol}`);
-  }
-
-  const priceData: PriceData = {};
-  for (const candle of ohlc) {
-    const date = new Date(candle[0]);
-    const key = parsedTimeframe.kind === 'daily'
-      ? date.toISOString().slice(0, 10)
-      : date.toISOString().replace('T', ' ').slice(0, 19);
-
-    priceData[key] = {
-      open: Number(candle[1]),
-      high: Number(candle[2]),
-      low: Number(candle[3]),
-      close: Number(candle[4]),
-      volume: 0,
-    };
-  }
-  
-  const finalPriceData = parsedTimeframe.needsResample && parsedTimeframe.minutes > parsedTimeframe.sourceMinutes
-    ? resamplePriceData(priceData, parsedTimeframe.minutes, parsedTimeframe.sourceMinutes)
-    : priceData;
-
-  logger.info(`Fetched ${Object.keys(finalPriceData).length} ${timeframe} bars of crypto data for ${cleanSymbol} (CoinGecko)`);
-  return finalPriceData;
-}
-
-// Crypto fetch (CoinGecko-only under commercial contract)
-async function fetchCryptoPriceData(symbol: string, timeframe: string, _startDate: string, _endDate: string): Promise<PriceFetchResult> {
-  return {
-    priceData: await fetchCryptoPriceDataCoinGecko(symbol, timeframe),
-    source: 'coingecko',
-  };
-}
-
-// Smart fetch - detects crypto vs stock and supports intraday for both
-async function fetchPriceData(symbol: string, timeframe: string = 'daily', startDate: string = '', endDate: string = ''): Promise<PriceFetchResult> {
-  if (isCryptoSymbol(symbol)) {
-    return fetchCryptoPriceData(symbol, timeframe, startDate, endDate);
-  } else {
-    return {
-      priceData: await fetchStockPriceData(symbol, timeframe),
-      source: 'alpha_vantage',
-    };
-  }
-}
-
-// Calculate EMA
-function calculateEMA(prices: number[], period: number): number[] {
-  const ema: number[] = [];
-  const multiplier = 2 / (period + 1);
-  
-  let sum = 0;
-  for (let i = 0; i < period && i < prices.length; i++) {
-    sum += prices[i];
-  }
-  ema[period - 1] = sum / period;
-  
-  for (let i = period; i < prices.length; i++) {
-    ema[i] = (prices[i] - ema[i - 1]) * multiplier + ema[i - 1];
-  }
-  
-  return ema;
-}
-
-// Calculate SMA
-function calculateSMA(prices: number[], period: number): number[] {
-  const sma: number[] = [];
-  
-  for (let i = period - 1; i < prices.length; i++) {
-    let sum = 0;
-    for (let j = 0; j < period; j++) {
-      sum += prices[i - j];
-    }
-    sma[i] = sum / period;
-  }
-  
-  return sma;
-}
-
-// Calculate RSI
-function calculateRSI(prices: number[], period: number = 14): number[] {
-  const rsi: number[] = [];
-  let gains = 0;
-  let losses = 0;
-  
-  for (let i = 1; i < prices.length; i++) {
-    const change = prices[i] - prices[i - 1];
-    
-    if (i <= period) {
-      if (change > 0) gains += change;
-      else losses += Math.abs(change);
-      
-      if (i === period) {
-        const avgGain = gains / period;
-        const avgLoss = losses / period;
-        const rs = avgGain / (avgLoss || 0.0001);
-        rsi[i] = 100 - (100 / (1 + rs));
-      }
-    } else {
-      const prevAvgGain = (rsi[i-1] >= 50) ? ((100 - 100/(1 + rsi[i-1]/100)) * period - (change > 0 ? change : 0)) / period : 0;
-      const prevAvgLoss = (rsi[i-1] < 50) ? ((100/(1 - rsi[i-1]/100) - 100) * period - (change < 0 ? Math.abs(change) : 0)) / period : 0;
-      
-      const avgGain = (prevAvgGain * (period - 1) + (change > 0 ? change : 0)) / period;
-      const avgLoss = (prevAvgLoss * (period - 1) + (change < 0 ? Math.abs(change) : 0)) / period;
-      const rs = avgGain / (avgLoss || 0.0001);
-      rsi[i] = 100 - (100 / (1 + rs));
-    }
-  }
-  
-  return rsi;
-}
-
-// Calculate MACD
-function calculateMACD(prices: number[]): { macd: number[], signal: number[], histogram: number[] } {
-  const ema12 = calculateEMA(prices, 12);
-  const ema26 = calculateEMA(prices, 26);
-  const macd: number[] = [];
-  
-  for (let i = 0; i < prices.length; i++) {
-    if (ema12[i] !== undefined && ema26[i] !== undefined) {
-      macd[i] = ema12[i] - ema26[i];
-    }
-  }
-  
-  const macdValues = macd.filter(v => v !== undefined);
-  const signal = calculateEMA(macdValues, 9);
-  const histogram: number[] = [];
-  
-  let signalIdx = 0;
-  for (let i = 0; i < macd.length; i++) {
-    if (macd[i] !== undefined && signal[signalIdx] !== undefined) {
-      histogram[i] = macd[i] - signal[signalIdx];
-      signalIdx++;
-    }
-  }
-  
-  return { macd, signal, histogram };
-}
-
-// Calculate ATR
-function calculateATR(highs: number[], lows: number[], closes: number[], period: number = 14): number[] {
-  const atr: number[] = [];
-  const tr: number[] = [];
-  
-  for (let i = 1; i < closes.length; i++) {
-    const hl = highs[i] - lows[i];
-    const hc = Math.abs(highs[i] - closes[i - 1]);
-    const lc = Math.abs(lows[i] - closes[i - 1]);
-    tr[i] = Math.max(hl, hc, lc);
-  }
-  
-  // First ATR is simple average
-  let sum = 0;
-  for (let i = 1; i <= period; i++) {
-    sum += tr[i] || 0;
-  }
-  atr[period] = sum / period;
-  
-  // Subsequent ATRs use smoothing
-  for (let i = period + 1; i < closes.length; i++) {
-    atr[i] = (atr[i - 1] * (period - 1) + tr[i]) / period;
-  }
-  
-  return atr;
-}
-
-// Calculate ADX
-function calculateADX(highs: number[], lows: number[], closes: number[], period: number = 14): { adx: number[], diPlus: number[], diMinus: number[] } {
-  const adx: number[] = [];
-  const diPlus: number[] = [];
-  const diMinus: number[] = [];
-  const tr: number[] = [];
-  const dmPlus: number[] = [];
-  const dmMinus: number[] = [];
-  
-  for (let i = 1; i < closes.length; i++) {
-    const hl = highs[i] - lows[i];
-    const hc = Math.abs(highs[i] - closes[i - 1]);
-    const lc = Math.abs(lows[i] - closes[i - 1]);
-    tr[i] = Math.max(hl, hc, lc);
-    
-    const upMove = highs[i] - highs[i - 1];
-    const downMove = lows[i - 1] - lows[i];
-    
-    dmPlus[i] = upMove > downMove && upMove > 0 ? upMove : 0;
-    dmMinus[i] = downMove > upMove && downMove > 0 ? downMove : 0;
-  }
-  
-  // Smoothed values
-  let smoothedTR = 0, smoothedDMPlus = 0, smoothedDMMinus = 0;
-  
-  for (let i = 1; i <= period; i++) {
-    smoothedTR += tr[i] || 0;
-    smoothedDMPlus += dmPlus[i] || 0;
-    smoothedDMMinus += dmMinus[i] || 0;
-  }
-  
-  for (let i = period; i < closes.length; i++) {
-    if (i > period) {
-      smoothedTR = smoothedTR - (smoothedTR / period) + (tr[i] || 0);
-      smoothedDMPlus = smoothedDMPlus - (smoothedDMPlus / period) + (dmPlus[i] || 0);
-      smoothedDMMinus = smoothedDMMinus - (smoothedDMMinus / period) + (dmMinus[i] || 0);
-    }
-    
-    diPlus[i] = smoothedTR > 0 ? (smoothedDMPlus / smoothedTR) * 100 : 0;
-    diMinus[i] = smoothedTR > 0 ? (smoothedDMMinus / smoothedTR) * 100 : 0;
-    
-    const diDiff = Math.abs(diPlus[i] - diMinus[i]);
-    const diSum = diPlus[i] + diMinus[i];
-    const dx = diSum > 0 ? (diDiff / diSum) * 100 : 0;
-    
-    if (i === period) {
-      adx[i] = dx;
-    } else if (adx[i - 1] !== undefined) {
-      adx[i] = (adx[i - 1] * (period - 1) + dx) / period;
-    }
-  }
-  
-  return { adx, diPlus, diMinus };
-}
-
-// Calculate Bollinger Bands
-function calculateBollingerBands(prices: number[], period: number = 20, stdDev: number = 2) {
-  const bands: { upper: number[], middle: number[], lower: number[] } = {
-    upper: [],
-    middle: [],
-    lower: []
-  };
-  
-  for (let i = period - 1; i < prices.length; i++) {
-    const slice = prices.slice(i - period + 1, i + 1);
-    const avg = slice.reduce((a, b) => a + b) / period;
-    const variance = slice.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / period;
-    const std = Math.sqrt(variance);
-    
-    bands.middle[i] = avg;
-    bands.upper[i] = avg + (stdDev * std);
-    bands.lower[i] = avg - (stdDev * std);
-  }
-  
-  return bands;
-}
-
-// Calculate Stochastic Oscillator
-function calculateStochastic(highs: number[], lows: number[], closes: number[], kPeriod: number = 14, dPeriod: number = 3): { k: number[], d: number[] } {
-  const k: number[] = [];
-  const d: number[] = [];
-  
-  for (let i = kPeriod - 1; i < closes.length; i++) {
-    const highSlice = highs.slice(i - kPeriod + 1, i + 1);
-    const lowSlice = lows.slice(i - kPeriod + 1, i + 1);
-    const highestHigh = Math.max(...highSlice);
-    const lowestLow = Math.min(...lowSlice);
-    
-    if (highestHigh - lowestLow > 0) {
-      k[i] = ((closes[i] - lowestLow) / (highestHigh - lowestLow)) * 100;
-    } else {
-      k[i] = 50;
-    }
-  }
-  
-  // Calculate %D (SMA of %K)
-  for (let i = kPeriod - 1 + dPeriod - 1; i < closes.length; i++) {
-    let sum = 0;
-    for (let j = 0; j < dPeriod; j++) {
-      sum += k[i - j] || 0;
-    }
-    d[i] = sum / dPeriod;
-  }
-  
-  return { k, d };
-}
-
-// Calculate CCI (Commodity Channel Index)
-function calculateCCI(highs: number[], lows: number[], closes: number[], period: number = 20): number[] {
-  const cci: number[] = [];
-  const tp: number[] = [];
-  
-  // Calculate Typical Price
-  for (let i = 0; i < closes.length; i++) {
-    tp[i] = (highs[i] + lows[i] + closes[i]) / 3;
-  }
-  
-  for (let i = period - 1; i < closes.length; i++) {
-    const tpSlice = tp.slice(i - period + 1, i + 1);
-    const sma = tpSlice.reduce((a, b) => a + b, 0) / period;
-    
-    // Mean deviation
-    const meanDev = tpSlice.reduce((sum, val) => sum + Math.abs(val - sma), 0) / period;
-    
-    if (meanDev > 0) {
-      cci[i] = (tp[i] - sma) / (0.015 * meanDev);
-    } else {
-      cci[i] = 0;
-    }
-  }
-  
-  return cci;
-}
-
-// Calculate OBV (On Balance Volume)
-function calculateOBV(closes: number[], volumes: number[]): number[] {
-  const obv: number[] = [0];
-  
-  for (let i = 1; i < closes.length; i++) {
-    if (closes[i] > closes[i - 1]) {
-      obv[i] = obv[i - 1] + volumes[i];
-    } else if (closes[i] < closes[i - 1]) {
-      obv[i] = obv[i - 1] - volumes[i];
-    } else {
-      obv[i] = obv[i - 1];
-    }
-  }
-  
-  return obv;
 }
 
 // Run backtest based on strategy using real price data and indicators
@@ -610,6 +197,7 @@ function runStrategy(
   let sma50: number[] = [];
   let sma200: number[] = [];
   let rsi: number[] = [];
+  let rsi21: number[] = []; // P0-2: Precomputed RSI-21 (was O(nÂ²) inside loop)
   let macdData: { macd: number[], signal: number[], histogram: number[] } | null = null;
   let bbands: { upper: number[], middle: number[], lower: number[] } | null = null;
   let adxData: { adx: number[], diPlus: number[], diMinus: number[] } | null = null;
@@ -646,6 +234,7 @@ function runStrategy(
   
   if (strategy.includes('rsi') || strategy === 'multi_ema_rsi' || needsFullIndicators) {
     rsi = calculateRSI(closes, 14);
+    rsi21 = calculateRSI(closes, 21); // P0-2: Precomputed once â€” O(n)
   }
   
   if (strategy.includes('macd') || strategy === 'multi_macd_adx' || needsFullIndicators) {
@@ -728,9 +317,9 @@ function runStrategy(
       continue;
     }
     
-    // ═══════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // MSP MULTI-TF DASHBOARD STRATEGY
-    // ═══════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     
     if ((strategy === 'msp_multi_tf' || strategy === 'msp_multi_tf_strict') && adxData && macdData) {
       const { adx, diPlus, diMinus } = adxData;
@@ -747,8 +336,8 @@ function runStrategy(
       
       // TF2 (medium) - using medium EMAs  
       const tf2Trend = close > ema21[i] && ema21[i] > ema55[i] ? 1 : close < ema21[i] && ema21[i] < ema55[i] ? -1 : 0;
-      const rsi21 = calculateRSI(closes.slice(0, i+1), 21);
-      const tf2RSI = (rsi21[rsi21.length-1] || 50) > 55 ? 1 : (rsi21[rsi21.length-1] || 50) < 45 ? -1 : 0;
+      // P0-2: Use precomputed rsi21[i] instead of O(nÂ²) slice recalculation
+      const tf2RSI = (rsi21[i] || 50) > 55 ? 1 : (rsi21[i] || 50) < 45 ? -1 : 0;
       const tf2Bias = tf2Trend + tf2RSI + tf1MACD;
       
       // TF3 (slow) - using slow EMAs
@@ -782,7 +371,7 @@ function runStrategy(
       } else if (!position && shortSignal) {
         position = { side: 'SHORT', entry: close, entryDate: date, entryIdx: i };
       } else if (position) {
-        const side = position.side ?? 'LONG';
+        const side = position.side;
         const entryPrice = position.entry;
         const atrVal = (atr[i] || close * 0.02);
         const { sl, tp } = computeSLTP(side, entryPrice, atrVal, slATR, tpATR);
@@ -819,9 +408,9 @@ function runStrategy(
       }
     }
     
-    // ═══════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // MSP DAY TRADER STRATEGIES
-    // ═══════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     
     if ((strategy === 'msp_day_trader' || strategy === 'msp_day_trader_strict' || strategy === 'msp_day_trader_v3' || strategy === 'msp_day_trader_v3_aggressive' || strategy === 'msp_trend_pullback' || strategy === 'msp_liquidity_reversal') && adxData && macdData) {
       const { adx, diPlus, diMinus } = adxData;
@@ -923,7 +512,7 @@ function runStrategy(
       } else if (!position && shortSignal) {
         position = { side: 'SHORT', entry: close, entryDate: date, entryIdx: i };
       } else if (position) {
-        const side = position.side ?? 'LONG';
+        const side = position.side;
         const entryPrice = position.entry;
         const atrVal = (atr[i] || close * 0.02);
         const { sl, tp } = computeSLTP(side, entryPrice, atrVal, slATR, tpATR);
@@ -971,9 +560,9 @@ function runStrategy(
       }
     }
     
-    // ═══════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // INTRADAY SCALPING STRATEGIES
-    // ═══════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     
     // VWAP Bounce Scalper - Simple VWAP approximation using typical price
     if (strategy === 'scalp_vwap_bounce') {
@@ -992,7 +581,7 @@ function runStrategy(
       const bounceUp = close > closes[i-1] && lows[i] <= vwap * 1.003;
       
       if (!position && nearVWAP && bounceUp && rsi[i] > 40 && rsi[i] < 60) {
-        position = { entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
       } else if (position) {
         const gain = (close - position.entry) / position.entry;
         const barsHeld = i - position.entryIdx;
@@ -1025,7 +614,7 @@ function runStrategy(
       const breakoutUp = close > orbHigh && volumes[i] > (volSMA[i] || 0) * 1.2;
       
       if (!position && breakoutUp && i > 3) {
-        position = { entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
       } else if (position) {
         const entryPrice = position.entry;
         const target = entryPrice + orbRange;
@@ -1057,7 +646,7 @@ function runStrategy(
         volumes[i] > (volSMA[i] || 0) * 1.5;
       
       if (!position && momentumBurst) {
-        position = { entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
       } else if (position) {
         const gain = (close - position.entry) / position.entry;
         const barsHeld = i - position.entryIdx;
@@ -1090,7 +679,7 @@ function runStrategy(
       const oversold = close <= bbands.lower[i] && rsi[i] < 30;
       
       if (!position && oversold) {
-        position = { entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
       } else if (position) {
         const revertedToMean = close >= bbands.middle[i];
         const gain = (close - position.entry) / position.entry;
@@ -1112,9 +701,9 @@ function runStrategy(
       }
     }
     
-    // ═══════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // SWING TRADING STRATEGIES
-    // ═══════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     
     // Pullback Buy Setup
     if (strategy === 'swing_pullback_buy') {
@@ -1123,7 +712,7 @@ function runStrategy(
       const reversing = close > closes[i-1] && rsi[i] > 40;
       
       if (!position && uptrend && pullback && reversing) {
-        position = { entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
       } else if (position) {
         const gain = (close - position.entry) / position.entry;
         const barsHeld = i - position.entryIdx;
@@ -1158,7 +747,7 @@ function runStrategy(
       const trendConfirm = ema21[i] > ema55[i];
       
       if (!position && breakout && trendConfirm) {
-        position = { entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
       } else if (position) {
         const gain = (close - position.entry) / position.entry;
         const barsHeld = i - position.entryIdx;
@@ -1188,7 +777,7 @@ function runStrategy(
       const volumeSpike = volumes[i] > (volSMA[i] || 0) * 3;
       
       if (!position && positiveGap && volumeSpike) {
-        position = { entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
       } else if (position) {
         const gain = (close - position.entry) / position.entry;
         const barsHeld = i - position.entryIdx;
@@ -1210,9 +799,9 @@ function runStrategy(
       }
     }
     
-    // ═══════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // ADDITIONAL ELITE STRATEGIES
-    // ═══════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     
     // Triple EMA Ribbon
     if (strategy === 'triple_ema') {
@@ -1220,7 +809,7 @@ function runStrategy(
       const ribbonBullPrev = ema9[i-1] <= ema21[i-1] || ema21[i-1] <= ema55[i-1];
       
       if (!position && ribbonBull && ribbonBullPrev) {
-        position = { entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
       } else if (position) {
         const ribbonBear = ema9[i] < ema21[i];
         const barsHeld = i - position.entryIdx;
@@ -1249,7 +838,7 @@ function runStrategy(
       const superTrendBullPrev = closes[i-1] <= ((highs[i-1] + lows[i-1]) / 2 - atrMultiplier * (atr[i-1] || closes[i-1] * 0.02));
       
       if (!position && superTrendBull && superTrendBullPrev) {
-        position = { entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
       } else if (position) {
         const superTrendBear = close < lowerBand;
         const barsHeld = i - position.entryIdx;
@@ -1275,7 +864,7 @@ function runStrategy(
       const volumeBreakout = volumes[i] > (volSMA[i] || 0) * 2;
       
       if (!position && priceBreakout && volumeBreakout) {
-        position = { entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
       } else if (position) {
         const gain = (close - position.entry) / position.entry;
         const volumeDry = volumes[i] < (volSMA[i] || 0) * 0.5;
@@ -1311,7 +900,7 @@ function runStrategy(
       const potentialReversal = climaxVolume && bearishCandle && longWick && rsi[i] < 35;
       
       if (!position && potentialReversal) {
-        position = { entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
       } else if (position) {
         const gain = (close - position.entry) / position.entry;
         const barsHeld = i - position.entryIdx;
@@ -1342,7 +931,7 @@ function runStrategy(
       
       // Oversold bounce
       if (!position && williamsR < -80 && close > closes[i-1]) {
-        position = { entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
       } else if (position) {
         const williamsROverbought = williamsR > -20;
         const barsHeld = i - position.entryIdx;
@@ -1369,7 +958,7 @@ function runStrategy(
       const histReversalUp = histogram[i] > histogram[i-1] && histogram[i-1] < histogram[i-2] && histogram[i] < 0;
       
       if (!position && histReversalUp) {
-        position = { entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
       } else if (position) {
         const histCrossedZero = histogram[i] > 0 && histogram[i-1] <= 0;
         const histPeaked = histogram[i] < histogram[i-1] && histogram[i] > 0;
@@ -1399,7 +988,7 @@ function runStrategy(
       const bullishDivergence = priceLowerLow && rsiHigherLow && rsi[i] < 40;
       
       if (!position && bullishDivergence) {
-        position = { entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
       } else if (position) {
         const gain = (close - position.entry) / position.entry;
         const barsHeld = i - position.entryIdx;
@@ -1428,7 +1017,7 @@ function runStrategy(
       const breakoutUp = close > keltnerUpper && closes[i-1] <= (ema21[i-1] + 2 * (atr[i-1] || closes[i-1] * 0.02));
       
       if (!position && breakoutUp) {
-        position = { entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
       } else if (position) {
         const backInsideChannel = close < ema21[i];
         const barsHeld = i - position.entryIdx;
@@ -1460,7 +1049,7 @@ function runStrategy(
       const confluenceScore = [emaBull, rsiBull, macdBull, aboveBBMid, adxStrong].filter(Boolean).length;
       
       if (!position && confluenceScore >= 4) {
-        position = { entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
       } else if (position) {
         const exitScore = [emaBull, rsiBull, macdBull, aboveBBMid, adxStrong].filter(Boolean).length;
         const barsHeld = i - position.entryIdx;
@@ -1483,7 +1072,7 @@ function runStrategy(
   }
   
   if (position) {
-    const side = position.side ?? 'LONG';
+    const side = position.side;
     const lastIdx = dates.length - 1;
     const exitDate = dates[lastIdx];
     const exitPrice = closes[lastIdx];
@@ -1584,8 +1173,8 @@ export async function POST(req: NextRequest) {
 
     // Fetch real historical price data
     logger.debug(`Fetching ${isCrypto ? 'crypto (CoinGecko)' : 'stock (Alpha Vantage)'} price data for ${normalizedSymbol} (${parsedTimeframe.normalized})...`);
-    const { priceData, source: priceDataSource } = await fetchPriceData(normalizedSymbol, parsedTimeframe.normalized, startDate, endDate);
-    logger.debug(`Fetched ${Object.keys(priceData).length} bars of price data`);
+    const { priceData, source: priceDataSource, volumeUnavailable, closeType } = await fetchPriceData(normalizedSymbol, parsedTimeframe.normalized, startDate, endDate);
+    logger.debug(`Fetched ${Object.keys(priceData).length} bars of price data (closeType=${closeType}, volumeUnavailable=${volumeUnavailable})`);
 
     const coverage = computeCoverage(priceData, startDate, endDate);
 
@@ -1622,6 +1211,8 @@ export async function POST(req: NextRequest) {
       dataSources: {
         priceData: priceDataSource,
         assetType: isCrypto ? 'crypto' : 'stock',
+        closeType,
+        volumeUnavailable,
       },
       dataCoverage: {
         requested: {
