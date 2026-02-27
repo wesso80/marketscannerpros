@@ -346,3 +346,68 @@ export function calculateOBV(closes: number[], volumes: number[]): number[] {
 
   return obv;
 }
+
+// ─── Ichimoku Cloud ───────────────────────────────────────────────────────
+/**
+ * Standard Ichimoku Kinko Hyo (9 / 26 / 52 periods).
+ *
+ * Returns arrays aligned to input length:
+ *  - tenkan (Conversion Line): midpoint of 9-period high/low
+ *  - kijun  (Base Line):       midpoint of 26-period high/low
+ *  - senkouA (Leading Span A): (tenkan+kijun)/2 — shifted forward 26 periods
+ *  - senkouB (Leading Span B): midpoint of 52-period high/low — shifted forward 26 periods
+ *
+ * Because senkouA/B are projected forward by 26 bars we pad NaN at the start
+ * and truncate so every array has the same length as inputs.
+ */
+export function calculateIchimoku(
+  highs: number[],
+  lows: number[],
+  tenkanPeriod = 9,
+  kijunPeriod = 26,
+  senkouBPeriod = 52,
+  displacement = 26,
+): {
+  tenkan: number[];
+  kijun: number[];
+  senkouA: number[];
+  senkouB: number[];
+} {
+  const n = highs.length;
+  const tenkan: number[] = new Array(n).fill(NaN);
+  const kijun: number[] = new Array(n).fill(NaN);
+  const senkouA: number[] = new Array(n).fill(NaN);
+  const senkouB: number[] = new Array(n).fill(NaN);
+
+  function midpoint(arr: number[], arrLow: number[], end: number, period: number): number {
+    if (end - period + 1 < 0) return NaN;
+    let hi = -Infinity;
+    let lo = Infinity;
+    for (let j = end - period + 1; j <= end; j++) {
+      if (arr[j] > hi) hi = arr[j];
+      if (arrLow[j] < lo) lo = arrLow[j];
+    }
+    return (hi + lo) / 2;
+  }
+
+  for (let i = 0; i < n; i++) {
+    if (i >= tenkanPeriod - 1) tenkan[i] = midpoint(highs, lows, i, tenkanPeriod);
+    if (i >= kijunPeriod - 1) kijun[i] = midpoint(highs, lows, i, kijunPeriod);
+
+    // Senkou A/B are "displaced" forward by `displacement` bars.
+    // At index i we store the cloud line that corresponds to bar i,
+    // meaning it was computed `displacement` bars ago.
+    const srcIdx = i - displacement;
+    if (srcIdx >= 0) {
+      const t = srcIdx >= tenkanPeriod - 1 ? midpoint(highs, lows, srcIdx, tenkanPeriod) : NaN;
+      const k = srcIdx >= kijunPeriod - 1 ? midpoint(highs, lows, srcIdx, kijunPeriod) : NaN;
+      if (!isNaN(t) && !isNaN(k)) senkouA[i] = (t + k) / 2;
+
+      if (srcIdx >= senkouBPeriod - 1) {
+        senkouB[i] = midpoint(highs, lows, srcIdx, senkouBPeriod);
+      }
+    }
+  }
+
+  return { tenkan, kijun, senkouA, senkouB };
+}
