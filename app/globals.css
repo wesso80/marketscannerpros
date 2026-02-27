@@ -58,6 +58,7 @@ html, body {
 .msp-main-shell {
   width: 100%;
   max-width: 100%;
+  overflow-x: hidden;
 }
 
 /* Ultra-wide desktop readability rail */

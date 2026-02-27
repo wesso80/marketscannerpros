@@ -72,6 +72,8 @@ export default function AdaptiveTraderPersonalityBar({ skill }: { skill: PageSki
       padding: '0.55rem 0.75rem',
       display: 'grid',
       gap: '0.4rem',
+      overflow: 'hidden',
+      minWidth: 0,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
         <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.72rem', textTransform: 'uppercase', fontWeight: 800 }}>

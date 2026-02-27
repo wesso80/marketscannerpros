@@ -2511,7 +2511,7 @@ function PortfolioContent() {
             maxWidth: 'none', 
             margin: '0 auto', 
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))',
             gap: '16px'
           }}>
             {/* Portfolio Health Score */}
