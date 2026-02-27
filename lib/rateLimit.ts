@@ -158,7 +158,7 @@ export const deepAnalysisLimiter = createRateLimiter("deep-analysis", {
  * Get client IP from Next.js request
  */
 export function getClientIP(req: Request): string {
-  // Render/Vercel set these headers
+  // Render sets these headers
   const forwarded = req.headers.get("x-forwarded-for");
   if (forwarded) {
     return forwarded.split(",")[0].trim();

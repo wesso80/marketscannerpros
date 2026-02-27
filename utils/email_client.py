@@ -1,10 +1,10 @@
 import os, requests
 
 def send_email(to: str, subject: str, html: str) -> dict:
-    url = os.getenv("VERCEL_ALERTS_URL") or _from_streamlit("VERCEL_ALERTS_URL")
-    key = os.getenv("VERCEL_ALERTS_KEY") or _from_streamlit("VERCEL_ALERTS_KEY")
+    url = os.getenv("ALERTS_API_URL") or _from_streamlit("ALERTS_API_URL")
+    key = os.getenv("ALERTS_API_KEY") or _from_streamlit("ALERTS_API_KEY")
     if not url or not key:
-        raise RuntimeError("Missing VERCEL_ALERTS_URL or VERCEL_ALERTS_KEY")
+        raise RuntimeError("Missing ALERTS_API_URL or ALERTS_API_KEY")
 
     r = requests.post(
         url,

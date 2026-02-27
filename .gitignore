@@ -1,23 +1,12 @@
 node_modules/
 .next/
 out/
-.vercel/
 .env*
+.env.local
+.env*.local
 backups/
 attached_assets/
-marketscannerpros.zip
-.next/
 *.zip
-*.zip
-.next/
-*.zip
-*.zip
-*.zip
-.vercel
-.env.local
-
-.vercel
-.env*.local
 
 # Worker build artifacts
 .tmp-worker/

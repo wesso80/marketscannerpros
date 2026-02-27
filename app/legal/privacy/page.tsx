@@ -75,7 +75,7 @@ export default function PrivacyPage() {
               <li style={liStyle}><strong style={{ color: '#10B981' }}>Stripe</strong> (payments & portal).</li>
               <li style={liStyle}><strong style={{ color: '#10B981' }}>OpenAI</strong> (MSP Analyst AI chatbot powered by GPT-4 - does not train on your data).</li>
               <li style={liStyle}><strong style={{ color: '#10B981' }}>Alpha Vantage</strong> (real-time and historical market data provider).</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Vercel</strong> (application hosting and serverless functions).</li>
+              <li style={liStyle}><strong style={{ color: '#10B981' }}>Render</strong> (application hosting and web services).</li>
               <li style={liStyle}><strong style={{ color: '#10B981' }}>Neon</strong> (PostgreSQL database hosting).</li>
             </ul>
           </Section>

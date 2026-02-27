@@ -6,7 +6,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-09-30.clover",
 });
 
-// Price IDs from environment variables (set in .env.local and Vercel)
+// Price IDs from environment variables (set in .env.local and Render)
 const PRICE_IDS = {
   pro_monthly: process.env.STRIPE_PRICE_PRO_MONTHLY || "",
   pro_yearly: process.env.STRIPE_PRICE_PRO_YEARLY || "",

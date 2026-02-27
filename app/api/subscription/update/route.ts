@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@vercel/postgres';
+import { q } from '@/lib/db';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-06-20' as any });
@@ -37,12 +37,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing subscription ID' }, { status: 400 });
     }
 
-    const client = createClient({
-      connectionString: process.env.DATABASE_URL,
-    });
-
-    await client.connect();
-
     if (status === 'active' && customerEmail && planType) {
       // Create/update active subscription
       // For simplicity, we'll use email as workspace identifier
@@ -55,7 +49,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Insert or update subscription
-      const query = `
+      await q(`
         INSERT INTO user_subscriptions 
         (workspace_id, plan_id, platform, billing_period, subscription_status, stripe_subscription_id, current_period_start, current_period_end)
         VALUES ($1, $2, 'web', 'monthly', 'active', $3, now(), now() + interval '1 month')
@@ -66,26 +60,20 @@ export async function POST(request: NextRequest) {
           stripe_subscription_id = $3,
           current_period_start = now(),
           current_period_end = now() + interval '1 month'
-      `;
-      
-      await client.query(query, [workspaceId, planId, stripeSubscriptionId]);
+      `, [workspaceId, planId, stripeSubscriptionId]);
       
       console.log(`Updated subscription for ${customerEmail}: ${planType} plan active`);
 
     } else if (status === 'cancelled') {
       // Cancel subscription
-      const query = `
+      await q(`
         UPDATE user_subscriptions 
         SET subscription_status = 'cancelled', cancelled_at = now()
         WHERE stripe_subscription_id = $1
-      `;
-      
-      await client.query(query, [stripeSubscriptionId]);
+      `, [stripeSubscriptionId]);
       
       console.log(`Cancelled subscription: ${stripeSubscriptionId}`);
     }
-
-    await client.end();
 
     return NextResponse.json({ success: true });
 

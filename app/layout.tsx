@@ -6,12 +6,12 @@ import { validateEnv } from "@/lib/env";
 import { Suspense } from "react";
 import RouteChrome from "@/components/layout/RouteChrome";
 
-// Validate environment variables on the server. In Vercel/production we require
+// Validate environment variables on the server. In production (Render) we require
 // all mandatory envs; locally we allow missing to avoid blocking builds.
 if (typeof window === 'undefined') {
-  const isVercel = process.env.VERCEL === '1';
+  const isProduction = process.env.RENDER === 'true' || process.env.NODE_ENV === 'production';
   try {
-    validateEnv({ allowMissing: !isVercel });
+    validateEnv({ allowMissing: !isProduction });
   } catch (error) {
     console.error(error);
   }

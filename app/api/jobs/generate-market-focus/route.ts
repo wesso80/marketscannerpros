@@ -29,9 +29,9 @@ function todayKeyUTC(): string {
 
 async function fetchCandidates(assetClass: Candidate["assetClass"]): Promise<Candidate[]> {
   // Use local API endpoint instead of external SCANNER_BASE_URL
-  const baseUrl = process.env.VERCEL_URL 
-    ? `https://${process.env.VERCEL_URL}` 
-    : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const baseUrl = process.env.RENDER_EXTERNAL_URL
+    || process.env.NEXT_PUBLIC_APP_URL
+    || "http://localhost:3000";
   
   const url = `${baseUrl}/api/market-focus/candidates?assetClass=${assetClass}`;
 

@@ -288,9 +288,9 @@ async function checkUpcomingEarnings(symbol: string, daysAhead: number = 7): Pro
 } | null> {
   try {
     // Use internal API to check earnings calendar
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const baseUrl = process.env.RENDER_EXTERNAL_URL
+      || process.env.NEXT_PUBLIC_BASE_URL
+      || 'http://localhost:3000';
     
     const response = await fetch(`${baseUrl}/api/earnings?type=calendar`, {
       headers: { 'Content-Type': 'application/json' },

@@ -23,7 +23,7 @@ const SUBSCRIPTION_PRICES = {
 const FIXED_COSTS = {
   render: 25.00,        // Render hosting
   github: 4.00,         // GitHub Pro (will be overwritten by API if available)
-  vercel_db: 0,         // Neon free tier
+  neon_db: 0,           // Neon free tier
   domain: 1.50,         // ~$18/year = $1.50/month
   alpha_vantage: 49.99, // Alpha Vantage Premium
   stripe_base: 0,       // No monthly fee
