@@ -101,7 +101,6 @@ export default function Header() {
     '/tools/scanner',
     '/tools/deep-analysis',
     '/tools/portfolio',
-    '/tools/ai-analyst',
     '/tools/journal',
     '/tools/backtest',
     '/tools/confluence-scanner',
@@ -130,7 +129,6 @@ export default function Header() {
   ];
 
   const aiItems: DropdownItem[] = [
-    { href: '/tools/ai-analyst', label: 'MSP Analyst', icon: '🤖' },
     { href: '/tools/deep-analysis', label: 'Golden Egg Analysis', icon: '🥚' },
     { href: '/tools/confluence-scanner', label: 'Confluence Scanner', icon: '🔮' },
     { href: '/tools/options-confluence', label: 'Options Confluence', icon: '🎯' },
