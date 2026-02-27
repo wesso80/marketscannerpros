@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense } from "react";
+import React, { Suspense, useState, useRef, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import Link from "next/link";
@@ -204,6 +204,147 @@ function TabContentPanel({ tab }: { tab: ReturnType<typeof useAnalystContext>["t
 
 // ─── Main Analyst Component ─────────────────────────
 
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+}
+
+function ChatSection({ context }: { context: ReturnType<typeof useAnalystContext>["context"] }) {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const sendMessage = useCallback(async () => {
+    const text = input.trim();
+    if (!text || isLoading) return;
+
+    const userMsg: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: text,
+      timestamp: new Date().toISOString(),
+    };
+    setMessages(prev => [...prev, userMsg]);
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      const res = await fetch('/api/ai/copilot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: text,
+          pageContext: { name: 'analyst', symbols: context.ticker ? [context.ticker] : [], timeframes: [context.timeframe || '1D'] },
+          pageData: {
+            symbol: context.ticker,
+            currentPrice: context.currentPrice,
+            direction: context.regime,
+            regime: context.regimeLabel,
+            sessionPhase: context.sessionPhaseLabel,
+            authorization: context.authorization,
+            dataQuality: context.dataQuality,
+          },
+          conversationHistory: messages.slice(-10),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || 'Request failed');
+
+      setMessages(prev => [...prev, {
+        id: data.responseId || crypto.randomUUID(),
+        role: 'assistant',
+        content: data.content,
+        timestamp: new Date().toISOString(),
+      }]);
+    } catch (err) {
+      setMessages(prev => [...prev, {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: err instanceof Error ? err.message : 'Something went wrong. Please try again.',
+        timestamp: new Date().toISOString(),
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [input, isLoading, messages, context]);
+
+  return (
+    <div className="rounded-lg border border-[#1E293B] bg-[#0F172A] overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center gap-2 border-b border-[#1E293B] bg-[#0B1120] px-4 py-3">
+        <span className="text-sm">{"\uD83D\uDCAC"}</span>
+        <h3 className="text-sm font-semibold text-slate-200">Ask the Analyst</h3>
+        <span className="text-[11px] text-slate-500">— freeform questions about your current context</span>
+      </div>
+
+      {/* Messages */}
+      {messages.length > 0 && (
+        <div className="max-h-[400px] overflow-y-auto p-4 space-y-3">
+          {messages.map(msg => (
+            <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[85%] rounded-lg px-3.5 py-2.5 text-sm ${
+                msg.role === 'user'
+                  ? 'bg-emerald-500/15 border border-emerald-500/20 text-emerald-100'
+                  : 'bg-[#1a2235] border border-[#1E293B] text-slate-300'
+              }`}>
+                {msg.role === 'assistant' ? (
+                  <div className="prose prose-invert prose-sm max-w-none prose-p:mb-1.5 prose-li:my-0.5 prose-strong:text-emerald-400 prose-code:text-cyan-300 prose-code:bg-[#0B1120] prose-code:px-1 prose-code:rounded">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                  </div>
+                ) : (
+                  <p>{msg.content}</p>
+                )}
+              </div>
+            </div>
+          ))}
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="rounded-lg bg-[#1a2235] border border-[#1E293B] px-4 py-3">
+                <div className="flex items-center gap-2 text-sm text-slate-400">
+                  <div className="h-3 w-3 animate-spin rounded-full border-2 border-emerald-400 border-t-transparent" />
+                  Thinking...
+                </div>
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+      )}
+
+      {/* Input */}
+      <div className="flex items-center gap-2 border-t border-[#1E293B] p-3">
+        <input
+          ref={inputRef}
+          type="text"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+          placeholder="Ask about this ticker, regime, strategy, risk..."
+          className="flex-1 rounded-md border border-[#1E293B] bg-[#0B1120] px-3 py-2.5 text-sm text-slate-200 placeholder:text-slate-500 focus:border-emerald-500/40 focus:outline-none focus:ring-1 focus:ring-emerald-500/20 transition-colors"
+          disabled={isLoading}
+        />
+        <button
+          onClick={sendMessage}
+          disabled={isLoading || !input.trim()}
+          className="rounded-md bg-emerald-500/15 border border-emerald-500/30 px-4 py-2.5 text-sm font-medium text-emerald-400 hover:bg-emerald-500/25 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          Send
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function MspAnalystIntelligence() {
   const { tier, isLoading: tierLoading } = useUserTier();
   const analyst = useAnalystContext();
@@ -262,6 +403,9 @@ function MspAnalystIntelligence() {
           <div className="rounded-lg border border-[#1E293B] bg-[#0F172A] p-5 min-h-[200px]">
             <TabContentPanel tab={tabs[activeTab]} />
           </div>
+
+          {/* Ask the Analyst — freeform chat */}
+          <ChatSection context={context} />
         </>
       )}
 
