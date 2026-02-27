@@ -18,6 +18,9 @@ const AUTO_STRATEGY_TAGS = new Set([
   'scanner_signal',
   'strategy_signal',
   'alert_intelligence',
+  'confluence_scan',
+  'confluence_scanner',
+  'options_confluence_scanner',
 ]);
 
 function isAutoTrade(row: TradeRowModel): boolean {
@@ -25,7 +28,7 @@ function isAutoTrade(row: TradeRowModel): boolean {
   const tag = row.strategyTag.toLowerCase();
   if (AUTO_STRATEGY_TAGS.has(tag)) return true;
   // Any tag that contains known auto-log identifiers
-  if (tag.includes('scanner') || tag.includes('alert') || tag.includes('auto')) return true;
+  if (tag.includes('scanner') || tag.includes('alert') || tag.includes('auto') || tag.includes('confluence') || tag.includes('_scan')) return true;
   return false;
 }
 

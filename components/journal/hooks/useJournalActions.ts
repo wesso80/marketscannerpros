@@ -43,7 +43,7 @@ export function useJournalActions({ rows, onRefresh }: UseJournalActionsArgs) {
     errorType: string;
     reviewText?: string;
   }) => {
-    await fetch('/api/journal/close-trade', {
+    const res = await fetch('/api/journal/close-trade', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -56,6 +56,10 @@ export function useJournalActions({ rows, onRefresh }: UseJournalActionsArgs) {
         notes: `${req.errorType}${req.reviewText ? ` | ${req.reviewText}` : ''}`,
       }),
     });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      throw new Error(json?.error || 'Failed to close trade');
+    }
     await onRefresh();
   };
 

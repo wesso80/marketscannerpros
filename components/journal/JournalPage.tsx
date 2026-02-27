@@ -147,15 +147,20 @@ export default function JournalPage({ tier }: { tier: UserTier }) {
     reviewText?: string;
   }) => {
     if (!selectedTrade) return;
-    await actions.closeTrade(selectedTrade, {
-      exitPrice: req.exitPrice,
-      exitTs: req.exitTs,
-      closeReason: req.closeReason,
-      followedPlan: req.followedPlan,
-      errorType: req.errorType,
-      reviewText: `${req.outcome} | ${req.setupQuality}${req.reviewText ? ` | ${req.reviewText}` : ''}`,
-    });
-    setCloseModalOpen(false);
+    try {
+      await actions.closeTrade(selectedTrade, {
+        exitPrice: req.exitPrice,
+        exitTs: req.exitTs,
+        closeReason: req.closeReason,
+        followedPlan: req.followedPlan,
+        errorType: req.errorType,
+        reviewText: `${req.outcome} | ${req.setupQuality}${req.reviewText ? ` | ${req.reviewText}` : ''}`,
+      });
+      setCloseModalOpen(false);
+    } catch (err) {
+      console.error('[JournalPage] close trade error:', err);
+      alert(`Failed to close trade: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
   };
 
   const isProTrader = canAccessJournalIntelligence(tier);
