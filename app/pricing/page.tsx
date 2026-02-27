@@ -41,7 +41,7 @@ export default function PricingPage() {
 
   const handleCheckout = async (planId: Plan["id"]) => {
     if (planId === "free") {
-      window.location.href = "/tools/scanner";
+      window.location.href = "/auth";
       return;
     }
 
@@ -75,30 +75,30 @@ export default function PricingPage() {
     {
       id: "free",
       name: "Free",
-      tagline: "Get started with core scanning + a taste of the command center.",
+      tagline: "Explore the platform with limited tools. Sign in with email verification.",
       priceMonthly: 0,
       priceYearly: 0,
       cta: "Get Started Free",
-      subCta: "No card required",
+      subCta: "Email verification required",
       includes: [
-        "Top 10 equities + Top 10 crypto (daily)",
-        "Basic operator dashboard",
-        "Basic portfolio tracker (lite)",
-        "Trade journal (basic logging)",
+        "Portfolio tracker (up to 3 positions)",
+        "Watchlists",
+        "Macro dashboard",
+        "Account settings + preferences",
         "Community support",
       ],
       excludes: [
-        "Unlimited symbols",
+        "Market scanner + unlimited symbols",
         "MSP AI Analyst",
-        "Derivatives intelligence",
-        "Golden Egg deep analysis",
-        "Alerts + automation",
+        "Trade journal",
+        "Market intelligence + news",
+        "Backtesting + deep analysis",
       ],
     },
     {
       id: "pro",
       name: "Pro",
-      tagline: "For active traders who want full scanning + decision context.",
+      tagline: "Full scanning, market intelligence, and portfolio analytics for active traders.",
       priceMonthly: 39.99,
       priceYearly: 399.99,
       cta: "Upgrade to Pro",
@@ -107,25 +107,30 @@ export default function PricingPage() {
       badge: "Most Popular",
       includes: [
         "Everything in Free",
-        "Unlimited symbols scanning",
-        "Market Movers (gainers/losers/most active)",
+        "Unlimited market scanner",
+        "MSP AI Analyst (50 questions/day)",
+        "Trade journal with analytics",
+        "Markets command center",
+        "Market Movers + Gainers/Losers",
         "Equity Explorer + Crypto Explorer",
-        "Macro + Commodities dashboards",
+        "Sector heatmap + intraday charts",
         "News & Market Intelligence",
-        "Portfolio insights & P/L tracking",
-        "Journal insights & analytics",
+        "Economic calendar",
+        "Options scanner",
+        "Portfolio insights + CSV export",
         "Priority support",
       ],
       excludes: [
-        "Pro Trader exclusive brain access",
-        "Advanced alerts automation (full)",
-        "Derivatives intelligence suite (full)",
+        "Backtesting engine",
+        "Options terminal + confluence",
+        "Golden Egg + Deep Analysis",
+        "Time confluence scanner",
       ],
     },
     {
       id: "pro_trader",
       name: "Pro Trader",
-      tagline: "Institutional-style workflow. Permission engine + derivatives context.",
+      tagline: "Institutional-style workflow with backtesting, derivatives, and decision engine.",
       priceMonthly: 89.99,
       priceYearly: 899.99,
       cta: "Upgrade to Pro Trader",
@@ -133,13 +138,16 @@ export default function PricingPage() {
       badge: "Best Value",
       includes: [
         "Everything in Pro",
-        "MSP AI Analyst (higher daily limit)",
-        "Brain / Permission engine access",
-        "Smart Alerts (AI-triggered)",
-        "AI + Derivatives Intelligence",
+        "MSP AI Analyst (200 questions/day)",
+        "Strategy backtesting engine",
+        "Options terminal + derivatives intelligence",
+        "Options confluence scanner",
+        "AI confluence scanner + execution assist",
         "Golden Egg deep analysis",
-        "Confluence scanner + execution assist",
-        "Real-time (where supported) market data",
+        "Deep Analysis reports",
+        "Time confluence scanner",
+        "Journal intelligence dock",
+        "Catalyst event studies",
         "Premium support",
       ],
     },
@@ -148,11 +156,15 @@ export default function PricingPage() {
   const faqs: FAQ[] = [
     {
       q: "What is MSP AI Analyst?",
-      a: "MSP AI Analyst is your decision-layer copilot. It turns scans + context into structured bias, rotation, volatility warnings, and trade plans. Usage limits depend on your plan.",
+      a: "MSP AI Analyst is your decision-layer copilot. It turns scans + context into structured bias, rotation, volatility warnings, and trade plans. Pro gets 50 questions/day, Pro Trader gets 200.",
     },
     {
-      q: "What’s the difference between Pro and Pro Trader?",
-      a: "Pro is the full scanning + explorers + dashboards. Pro Trader adds the permission engine + derivatives intelligence + smart alerts + deeper decision workflows.",
+      q: "What's the difference between Pro and Pro Trader?",
+      a: "Pro gives you full market scanning, explorers, news intelligence, trade journal analytics, and options scanner. Pro Trader adds the backtesting engine, options terminal, AI confluence scanner, Golden Egg deep analysis, time confluence, catalyst studies, and 4x the AI Analyst quota.",
+    },
+    {
+      q: "How does the free tier work?",
+      a: "Sign up with your email and we send a secure verification link. Free tier gives you a portfolio tracker (up to 3 positions), watchlists, and macro dashboard. No card required.",
     },
     {
       q: "Can I cancel anytime?",
@@ -160,7 +172,7 @@ export default function PricingPage() {
     },
     {
       q: "Do you offer refunds?",
-      a: "If you’re unhappy, contact support. We’ll review your request and help resolve issues quickly. (Define your exact policy text here.)",
+      a: "We offer a 7-day money-back guarantee. If you're unhappy, contact support within 7 days of purchase for a full refund.",
     },
     {
       q: "Do you provide financial advice?",

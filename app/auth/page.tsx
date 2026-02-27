@@ -1,19 +1,17 @@
 "use client";
 import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 type StatusState = { tone: "idle" | "loading" | "success" | "error"; text: string };
 
 function AuthContent() {
   const [email, setEmail] = useState("");
-  const [activationLoading, setActivationLoading] = useState(false);
   const [magicLoading, setMagicLoading] = useState(false);
   const [status, setStatus] = useState<StatusState>({ tone: "idle", text: "" });
-  const [success, setSuccess] = useState(false);
-  const router = useRouter();
+  const [success] = useState(false);
   const searchParams = useSearchParams();
-  const plan = searchParams.get("plan");
+  void searchParams; // keep for Suspense boundary
 
   const clearStatus = () => setStatus({ tone: "idle", text: "" });
 
@@ -51,57 +49,7 @@ function AuthContent() {
     }
   };
 
-  const handleActivateSubscription = async () => {
-    if (!email || !email.includes("@")) {
-      setStatus({ tone: "error", text: "Enter a valid email address." });
-      return;
-    }
 
-    setActivationLoading(true);
-    setStatus({ tone: "loading", text: "Verifying your subscription..." });
-
-    try {
-      const res = await fetch(`/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-        credentials: "include",
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        setSuccess(true);
-        setStatus({ tone: "success", text: "Subscription activated. Redirecting..." });
-        setTimeout(() => {
-          router.push("/tools/markets");
-        }, 1500);
-      } else if (res.status === 404 && plan) {
-        const checkoutRes = await fetch("/api/payments/checkout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ 
-            plan: plan === "pro_trader" ? "pro_trader" : "pro",
-            billing: "monthly",
-            email,
-          }),
-        });
-        const checkoutData = await checkoutRes.json();
-        if (checkoutData.url) {
-          window.location.href = checkoutData.url;
-        } else {
-          setStatus({ tone: "error", text: "Failed to start checkout. Please try again." });
-        }
-      } else {
-        setStatus({ tone: "error", text: data.error || "Authentication failed." });
-      }
-    } catch {
-      setStatus({ tone: "error", text: "Network error. Please try again." });
-    } finally {
-      setActivationLoading(false);
-    }
-  };
 
   const statusClassName =
     status.tone === "error"
@@ -168,19 +116,10 @@ function AuthContent() {
 
                 <button
                   type="submit"
-                  disabled={magicLoading || activationLoading}
+                  disabled={magicLoading}
                   className="w-full rounded-2xl border border-emerald-400/30 bg-emerald-500/20 px-4 py-3 text-sm font-semibold transition hover:bg-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {magicLoading ? "⏳ Sending..." : "✉️ Send Sign-In Link"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => void handleActivateSubscription()}
-                  disabled={activationLoading || magicLoading}
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {activationLoading ? "⏳ Verifying..." : "🚀 Activate Subscription"}
                 </button>
 
                 <div className="pt-1 text-center text-xs text-white/50">
