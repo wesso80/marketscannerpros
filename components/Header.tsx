@@ -125,6 +125,7 @@ export default function Header() {
     { href: '/tools/portfolio', label: 'Portfolio Tracker', icon: '💼' },
     { href: '/tools/backtest', label: 'Backtester', icon: '📈' },
     { href: '/tools/journal', label: 'Trade Journal', icon: '📓' },
+    { href: '/tools/options', label: 'Options Scanner', icon: '🎯' },
     { href: '/tools/alerts', label: 'Price Alerts', icon: '🔔' },
   ];
 
@@ -132,7 +133,7 @@ export default function Header() {
     { href: '/tools/ai-analyst', label: 'MSP Analyst', icon: '🤖' },
     { href: '/tools/deep-analysis', label: 'Golden Egg Analysis', icon: '🥚' },
     { href: '/tools/confluence-scanner', label: 'Confluence Scanner', icon: '🔮' },
-    { href: '/tools/options-confluence', label: 'Options Scanner', icon: '🎯' },
+    { href: '/tools/options-confluence', label: 'Options Confluence', icon: '🎯' },
     { href: '/tools/ai-tools', label: 'AI Tools', icon: '✨' },
   ];
 
