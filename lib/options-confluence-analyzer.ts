@@ -1761,14 +1761,21 @@ function calculateTradeLevels(
   const stopLossPercent = Math.abs((stopLoss - currentPrice) / currentPrice) * 100;
   
   // Targets: Based on 50% levels and clusters in direction of trade
+  // Require targets to be at least 0.5% away from current price to avoid
+  // near-zero R:R ratios (e.g. SPY target 1 cent from entry)
+  const minTargetDistance = currentPrice * 0.005;
   const targetLevels = mid50Levels
-    .filter(l => isLong ? l.level > currentPrice : l.level < currentPrice)
+    .filter(l => {
+      const dist = Math.abs(l.level - currentPrice);
+      if (dist < minTargetDistance) return false;  // Too close to be useful
+      return isLong ? l.level > currentPrice : l.level < currentPrice;
+    })
     .sort((a, b) => isLong 
       ? a.level - b.level  // Closest first for longs
       : b.level - a.level  // Closest first for shorts
     );
   
-  // Target 1: Nearest 50% level or cluster
+  // Target 1: Nearest 50% level or cluster (must be meaningful distance away)
   const t1Level = targetLevels.length > 0 ? targetLevels[0] : null;
   const t1Price = t1Level?.level || currentPrice * (isLong ? 1.02 : 0.98);
   const target1 = {
@@ -1823,6 +1830,10 @@ function calculateTradeLevels(
   const risk = Math.abs(currentPrice - stopLoss);
   const reward = Math.abs(target1.price - currentPrice);
   const riskRewardRatio = risk > 0 ? reward / risk : 0;
+  
+  if (riskRewardRatio < 0.3) {
+    console.warn(`⚠️ R:R very low (${riskRewardRatio.toFixed(2)}:1) for ${direction} at $${currentPrice.toFixed(2)} — T1 $${target1.price.toFixed(2)}, Stop $${stopLoss.toFixed(2)}`);
+  }
   
   // Build reasoning
   const reasoning = `Entry ${isLong ? 'above' : 'below'} $${entryZone.low.toFixed(2)}-$${entryZone.high.toFixed(2)}. ` +
