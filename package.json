@@ -33,6 +33,7 @@
     "@react-email/render": "^1.4.0",
     "@tailwindcss/typography": "^0.5.19",
     "@types/node": "^20.19.17",
+    "@types/pg": "^8.16.0",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.1",
     "@types/web-push": "^3.6.4",
@@ -61,7 +62,6 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
-    "@types/pg": "^8.16.0",
     "baseline-browser-mapping": "^2.10.0",
     "postcss-scss": "^4.0.9",
     "stylelint": "^16.26.1",
