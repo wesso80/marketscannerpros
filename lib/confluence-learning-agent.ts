@@ -545,15 +545,40 @@ export class ConfluenceLearningAgent {
     const response = await fetch(url);
     const data = await response.json();
 
+    // Check for AV rate-limit / premium notices
+    const avNote = data?.Note || data?.Information;
+    const avErr = data?.['Error Message'];
+    if (avNote) {
+      console.warn(`[confluence] AV rate limit for ${symbol}:`, String(avNote).substring(0, 120));
+      throw new Error(`API rate limit reached. Please wait a moment and retry.`);
+    }
+    if (avErr) {
+      console.error(`[confluence] AV error for ${symbol}:`, avErr);
+      throw new Error(`Symbol "${symbol}" not recognised by data provider. Check the ticker and try again.`);
+    }
+
     let timeSeriesKey = Object.keys(data).find(k => k.includes('Time Series'));
     let timeSeries = timeSeriesKey ? data[timeSeriesKey] : null;
     
     // Fallback to daily data if intraday is not available (common for smaller ETFs)
     if (!timeSeries && !isCrypto) {
       console.log(`⚠️ No intraday data for ${symbol}, falling back to daily data`);
+      await avTakeToken();
       const dailyUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${symbol}&outputsize=full&entitlement=realtime&apikey=${ALPHA_VANTAGE_KEY}`;
       const dailyResponse = await fetch(dailyUrl);
       const dailyData = await dailyResponse.json();
+
+      // Check daily fallback for AV errors too
+      const dailyNote = dailyData?.Note || dailyData?.Information;
+      const dailyErr = dailyData?.['Error Message'];
+      if (dailyNote) {
+        console.warn(`[confluence] AV rate limit (daily fallback) for ${symbol}:`, String(dailyNote).substring(0, 120));
+        throw new Error(`API rate limit reached. Please wait a moment and retry.`);
+      }
+      if (dailyErr) {
+        console.error(`[confluence] AV error (daily fallback) for ${symbol}:`, dailyErr);
+        throw new Error(`Symbol "${symbol}" not recognised by data provider. Check the ticker and try again.`);
+      }
       
       timeSeriesKey = Object.keys(dailyData).find(k => k.includes('Time Series'));
       timeSeries = timeSeriesKey ? dailyData[timeSeriesKey] : null;
@@ -1809,7 +1834,7 @@ export class ConfluenceLearningAgent {
     // Get historical price data for analysis
     const baseBars = await this.fetchHistoricalData(symbol, '30min');
     if (!baseBars || baseBars.length === 0) {
-      throw new Error(`No price data for ${symbol}`);
+      throw new Error(`No price data for ${symbol}. The symbol may not be supported or data is temporarily unavailable — please check the ticker and try again.`);
     }
     
     // Fetch LIVE real-time price (fallback to last bar close if unavailable)
