@@ -1659,13 +1659,20 @@ function ScannerContent() {
                     </div>
                   </div>
 
-                  <div className="mb-3 flex justify-end">
+                  <div className="mb-3 flex justify-center">
                     <button
                       onClick={() => runBulkScan(assetType === 'crypto' ? 'crypto' : assetType === 'forex' ? 'forex' : 'equity')}
                       disabled={bulkScanLoading}
-                      className="msp-btn-elite-primary w-[220px] px-6 py-3 text-[0.78rem] font-semibold uppercase tracking-[0.08em]"
+                      className="w-full max-w-md px-8 py-3.5 rounded-lg text-[0.85rem] font-bold uppercase tracking-[0.1em] transition-all duration-150"
+                      style={{
+                        background: bulkScanLoading ? 'rgba(16, 185, 129, 0.25)' : 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                        color: bulkScanLoading ? 'rgba(255,255,255,0.6)' : '#0F172A',
+                        border: '1px solid rgba(16, 185, 129, 0.4)',
+                        boxShadow: bulkScanLoading ? 'none' : '0 0 20px rgba(16, 185, 129, 0.25), 0 4px 12px rgba(0, 0, 0, 0.3)',
+                        cursor: bulkScanLoading ? 'not-allowed' : 'pointer',
+                      }}
                     >
-                      {bulkScanLoading ? 'Scanning...' : 'Scan For Setups'}
+                      {bulkScanLoading ? '⏳ Scanning...' : '🔎 Scan For Setups'}
                     </button>
                   </div>
 
