@@ -120,11 +120,13 @@ export default function Header() {
   const toolsItems: DropdownItem[] = [
     { href: '/operator', label: 'Operator Dashboard', icon: '🧭' },
     { href: '/tools/scanner', label: 'Market Scanner', icon: '📊' },
+    { href: '/tools/confluence-scanner', label: 'Time Confluence Scanner', icon: '🔮' },
+    { href: '/tools/options', label: 'Options Scanner', icon: '🎯' },
+    { href: '/tools/deep-analysis', label: 'Golden Egg', icon: '🥚' },
     { href: '/tools/watchlists', label: 'Watchlists', icon: '📋' },
     { href: '/tools/portfolio', label: 'Portfolio Tracker', icon: '💼' },
     { href: '/tools/backtest', label: 'Backtester', icon: '📈' },
     { href: '/tools/journal', label: 'Trade Journal', icon: '📓' },
-    { href: '/tools/options', label: 'Options Scanner', icon: '🎯' },
     { href: '/tools/alerts', label: 'Price Alerts', icon: '🔔' },
   ];
 
