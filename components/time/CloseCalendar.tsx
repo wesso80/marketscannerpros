@@ -20,13 +20,42 @@ const ANCHOR_OPTIONS: { value: CloseCalendarAnchor; label: string }[] = [
 
 const HORIZON_OPTIONS = [1, 3, 7, 14, 30] as const;
 
+type AssetClass = "crypto" | "equity";
+
 // ── Helpers ──
 
-function formatDate(iso: string): string {
+function formatDate(iso: string, assetClass: AssetClass): string {
   const d = new Date(iso);
-  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  return `${days[d.getUTCDay()]} ${months[d.getUTCMonth()]} ${d.getUTCDate()} ${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")} UTC`;
+  if (assetClass === "crypto") {
+    // Crypto: display in UTC (TradingView-style)
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "UTC",
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).formatToParts(d);
+    const v = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+    return `${v("weekday")} ${v("month")} ${v("day")} ${v("hour")}:${v("minute")} UTC`;
+  }
+  // Equity: display in NY timezone
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(d);
+  const v = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  const tzLabel = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    timeZoneName: "short",
+  }).formatToParts(d).find((p) => p.type === "timeZoneName")?.value ?? "ET";
+  return `${v("weekday")} ${v("month")} ${v("day")} ${v("hour")}:${v("minute")} ${tzLabel}`;
 }
 
 function formatMinsShort(mins: number | null): string {
@@ -78,6 +107,7 @@ export default function CloseCalendar() {
   const [anchor, setAnchor] = useState<CloseCalendarAnchor>("NOW");
   const [horizon, setHorizon] = useState<number>(7);
   const [customDate, setCustomDate] = useState("");
+  const [assetClass, setAssetClass] = useState<AssetClass>("crypto");
   const [data, setData] = useState<ForwardCloseCalendar | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,11 +118,12 @@ export default function CloseCalendar() {
     setLoading(true);
     setError(null);
     try {
+      const symbol = assetClass === "crypto" ? "BTCUSD" : "AAPL";
       const res = await fetch("/api/confluence-scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          symbol: "BTCUSD", // symbol not used for calendar mode but API requires it
+          symbol,
           mode: "calendar",
           anchor,
           horizonDays: horizon,
@@ -110,7 +141,7 @@ export default function CloseCalendar() {
     } finally {
       setLoading(false);
     }
-  }, [anchor, horizon, customDate]);
+  }, [anchor, horizon, customDate, assetClass]);
 
   // Auto-fetch on mount and when anchor/horizon change
   useEffect(() => {
@@ -196,6 +227,26 @@ export default function CloseCalendar() {
             ))}
           </div>
         </div>
+
+        <div>
+          <label className="mb-1 block text-[10px] uppercase tracking-wider text-slate-500">Asset</label>
+          <div className="flex gap-1">
+            {(["crypto", "equity"] as const).map((ac) => (
+              <button
+                key={ac}
+                type="button"
+                onClick={() => setAssetClass(ac)}
+                className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                  assetClass === ac
+                    ? "bg-violet-500/20 text-violet-400 border border-violet-500/40"
+                    : "bg-slate-950/40 text-slate-400 border border-slate-800 hover:text-slate-200"
+                }`}
+              >
+                {ac === "crypto" ? "₿ Crypto (UTC)" : "📈 Equity (NY)"}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {error && (
@@ -207,10 +258,10 @@ export default function CloseCalendar() {
           {/* ── Anchor info strip ── */}
           <div className="flex flex-wrap items-center gap-4 rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2 text-xs">
             <span className="text-slate-400">
-              Anchor: <span className="font-semibold text-slate-200">{formatDate(data.anchorTimeISO)}</span>
+              Anchor: <span className="font-semibold text-slate-200">{formatDate(data.anchorTimeISO, assetClass)}</span>
             </span>
             <span className="text-slate-400">
-              Horizon: <span className="font-semibold text-slate-200">{data.horizonDays}d → {formatDate(data.horizonEndISO)}</span>
+              Horizon: <span className="font-semibold text-slate-200">{data.horizonDays}d → {formatDate(data.horizonEndISO, assetClass)}</span>
             </span>
             <span className="text-slate-400">
               Daily+ closes in window: <span className="font-semibold text-emerald-400">{data.totalCloseEventsInHorizon}</span>
@@ -270,9 +321,9 @@ export default function CloseCalendar() {
 
           {/* ── Table ── */}
           {showAnchorDay ? (
-            <AnchorDayTable rows={anchorDayRows} />
+            <AnchorDayTable rows={anchorDayRows} assetClass={assetClass} />
           ) : (
-            <FullScheduleTable rows={filteredSchedule} />
+            <FullScheduleTable rows={filteredSchedule} assetClass={assetClass} />
           )}
         </>
       )}
@@ -304,7 +355,7 @@ function ClusterCard({ cluster }: { cluster: ForwardCloseCluster }) {
   );
 }
 
-function AnchorDayTable({ rows }: { rows: ForwardCloseScheduleRow[] }) {
+function AnchorDayTable({ rows, assetClass }: { rows: ForwardCloseScheduleRow[]; assetClass: AssetClass }) {
   if (rows.length === 0) {
     return <div className="py-6 text-center text-xs text-slate-500">No daily+ timeframes close on the anchor day.</div>;
   }
@@ -344,7 +395,7 @@ function AnchorDayTable({ rows }: { rows: ForwardCloseScheduleRow[] }) {
                     <tr key={row.tf} className={`border-b border-slate-800/50 ${categoryBg(cat)}`}>
                       <td className={`py-1.5 pr-3 font-semibold ${categoryColor(cat)}`}>{row.tf}</td>
                       <td className="py-1.5 pr-3 font-mono text-slate-300">
-                        {row.firstCloseAtISO ? formatDate(row.firstCloseAtISO) : "—"}
+                        {row.firstCloseAtISO ? formatDate(row.firstCloseAtISO, assetClass) : "—"}
                       </td>
                       <td className="py-1.5 pr-3 font-mono text-slate-400">
                         {formatMinsShort(row.minsToFirstClose)}
@@ -362,7 +413,7 @@ function AnchorDayTable({ rows }: { rows: ForwardCloseScheduleRow[] }) {
   );
 }
 
-function FullScheduleTable({ rows }: { rows: ForwardCloseScheduleRow[] }) {
+function FullScheduleTable({ rows, assetClass }: { rows: ForwardCloseScheduleRow[]; assetClass: AssetClass }) {
   if (rows.length === 0) {
     return <div className="py-6 text-center text-xs text-slate-500">No closes in selected range.</div>;
   }
@@ -391,7 +442,7 @@ function FullScheduleTable({ rows }: { rows: ForwardCloseScheduleRow[] }) {
                 </span>
               </td>
               <td className="py-1.5 pr-3 font-mono text-slate-300">
-                {row.firstCloseAtISO ? formatDate(row.firstCloseAtISO) : "—"}
+                {row.firstCloseAtISO ? formatDate(row.firstCloseAtISO, assetClass) : "—"}
               </td>
               <td className="py-1.5 pr-3 font-mono text-slate-400">
                 {formatMinsShort(row.minsToFirstClose)}

@@ -123,8 +123,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
         const anchor = (body.anchor || 'NOW') as CloseCalendarAnchor;
         const horizonDays = Math.max(1, Math.min(30, Number(body.horizonDays) || 7));
         const anchorTime = body.anchorTime || undefined;
-        console.log(`📅 Close Calendar: anchor=${anchor}, horizon=${horizonDays}d`);
-        result = confluenceLearningAgent.computeForwardCloseCalendar(anchor, horizonDays, anchorTime);
+        // Detect asset class from symbol (default crypto for calendar)
+        const calendarAsset = confluenceLearningAgent.detectAssetClass(normalizedSymbol);
+        console.log(`📅 Close Calendar: anchor=${anchor}, horizon=${horizonDays}d, asset=${calendarAsset}`);
+        result = confluenceLearningAgent.computeForwardCloseCalendar(anchor, horizonDays, anchorTime, calendarAsset);
         break;
 
       case 'quick':

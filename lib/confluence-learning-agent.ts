@@ -190,6 +190,7 @@ const TIMEFRAMES: TimeframeConfig[] = [
   { tf: '240', label: '4h',  minutes: 240, postCloseWindow: 25, preCloseStart: 25, preCloseEnd: 20, decompStart: 12 },
   { tf: '360', label: '6h',  minutes: 360, postCloseWindow: 30, preCloseStart: 30, preCloseEnd: 25, decompStart: 20 },
   { tf: '480', label: '8h',  minutes: 480, postCloseWindow: 35, preCloseStart: 35, preCloseEnd: 30, decompStart: 20 },
+  { tf: '720', label: '12h', minutes: 720, postCloseWindow: 45, preCloseStart: 45, preCloseEnd: 40, decompStart: 30 },
   // Daily - ALL day cycles (1D through 7D)
   { tf: 'D',   label: '1D',  minutes: 1440,  postCloseWindow: 60,  decompStart: 60 },
   { tf: '2D',  label: '2D',  minutes: 2880,  postCloseWindow: 90,  decompStart: 120 },
@@ -403,6 +404,7 @@ export interface ForwardCloseCalendar {
   anchorTimeISO: string;
   horizonDays: number;
   horizonEndISO: string;
+  assetClass: 'crypto' | 'equity';
   schedule: ForwardCloseScheduleRow[];
   forwardClusters: ForwardCloseCluster[];
   closesOnAnchorDay: ForwardCloseScheduleRow[];
@@ -830,19 +832,141 @@ export class ConfluenceLearningAgent {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // CANDLE CLOSE TIME CALCULATION (Calendar-based)
+  // ASSET CLASS TYPE
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /** Detect asset class from symbol for correct close-time anchoring */
+  detectAssetClass(symbol: string): 'crypto' | 'equity' {
+    const upper = symbol.toUpperCase();
+    if (upper.endsWith('USD') || upper.endsWith('USDT') || upper.includes('/USD')) return 'crypto';
+    const tokens = ['BTC','ETH','SOL','XRP','ADA','DOGE','BNB','AVAX','DOT','MATIC','LINK','SHIB','LTC','UNI','AAVE'];
+    if (tokens.some(t => upper === t || upper.startsWith(t))) return 'crypto';
+    return 'equity';
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // TRADINGVIEW-STYLE CRYPTO CLOSE ENGINE
+  //
+  // Crypto bars are anchored to fixed UTC boundaries, NOT rolling timers.
+  //   Minutes/Hours: ceil(now / tfMs) * tfMs
+  //   Daily: 00:00 UTC
+  //   Weekly: Monday 00:00 UTC
+  //   Monthly: 1st of next month 00:00 UTC
+  //   Yearly: Jan 1 00:00 UTC
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  private getNextCloseCrypto(now: Date, tfConfig: Pick<TimeframeConfig, 'tf' | 'label' | 'minutes'>): number | null {
+    const nowMs = now.getTime();
+    const tfId = this.getCanonicalTimeframeId(tfConfig);
+    const DAY_MS = 86_400_000;
+
+    // ── Intraday (5m through 12h): ceil(now / tfMs) * tfMs ──
+    if (tfConfig.minutes <= 720) {
+      const tfMs = tfConfig.minutes * 60_000;
+      const periodEnd = Math.ceil(nowMs / tfMs) * tfMs;
+      return Math.max(0, Math.floor((periodEnd - nowMs) / 60_000));
+    }
+
+    // ── Daily: midnight UTC (00:00) ──
+    if (tfId === '1D') {
+      const nextMidnight = Math.ceil(nowMs / DAY_MS) * DAY_MS;
+      return Math.max(0, Math.floor((nextMidnight - nowMs) / 60_000));
+    }
+
+    // ── Multi-day (2D–7D): fixed UTC boundaries from epoch ──
+    const multiDayMatch = tfId.match(/^(\d)D$/);
+    if (multiDayMatch) {
+      const N = parseInt(multiDayMatch[1]);
+      const periodMs = N * DAY_MS;
+      const periodEnd = Math.ceil(nowMs / periodMs) * periodMs;
+      return Math.max(0, Math.floor((periodEnd - nowMs) / 60_000));
+    }
+
+    // ── Weekly: Monday 00:00 UTC ──
+    // Epoch (Jan 1 1970) was Thursday. First Monday = Jan 5 = epoch + 4 days.
+    if (tfId === '1W') {
+      const WEEK_MS = 7 * DAY_MS;
+      const MONDAY_EPOCH_MS = 4 * DAY_MS;
+      const aligned = nowMs - MONDAY_EPOCH_MS;
+      const periodEnd = Math.ceil(aligned / WEEK_MS) * WEEK_MS + MONDAY_EPOCH_MS;
+      return Math.max(0, Math.floor((periodEnd - nowMs) / 60_000));
+    }
+
+    // ── Multi-week (2W–4W): every Nth Monday 00:00 UTC ──
+    const multiWeekMatch = tfId.match(/^(\d)W$/);
+    if (multiWeekMatch) {
+      const N = parseInt(multiWeekMatch[1]);
+      const WEEK_MS = 7 * DAY_MS;
+      const MONDAY_EPOCH_MS = 4 * DAY_MS;
+      const periodMs = N * WEEK_MS;
+      const aligned = nowMs - MONDAY_EPOCH_MS;
+      const periodEnd = Math.ceil(aligned / periodMs) * periodMs + MONDAY_EPOCH_MS;
+      return Math.max(0, Math.floor((periodEnd - nowMs) / 60_000));
+    }
+
+    // ── Monthly: 1st of next month 00:00 UTC ──
+    if (tfId === '1M') {
+      const close = Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1);
+      return Math.max(0, Math.floor((close - nowMs) / 60_000));
+    }
+
+    // ── Multi-month (2M–11M): aligned to January epoch ──
+    const multiMonthMatch = tfId.match(/^(\d+)M$/);
+    if (multiMonthMatch && tfId !== '1M') {
+      const N = parseInt(multiMonthMatch[1]);
+      const m = now.getUTCMonth();   // 0-11
+      const y = now.getUTCFullYear();
+      const absMonth = y * 12 + m;
+      const nextBoundary = (Math.floor(absMonth / N) + 1) * N;
+      const targetYear = Math.floor(nextBoundary / 12);
+      const targetMonth = nextBoundary % 12;
+      const close = Date.UTC(targetYear, targetMonth, 1);
+      if (close <= nowMs) {
+        // Exactly at or past boundary — advance one more period
+        const after = nextBoundary + N;
+        return Math.max(0, Math.floor((Date.UTC(Math.floor(after / 12), after % 12, 1) - nowMs) / 60_000));
+      }
+      return Math.max(0, Math.floor((close - nowMs) / 60_000));
+    }
+
+    // ── Yearly: Jan 1 00:00 UTC ──
+    if (tfId === '1Y') {
+      const close = Date.UTC(now.getUTCFullYear() + 1, 0, 1);
+      return Math.max(0, Math.floor((close - nowMs) / 60_000));
+    }
+
+    // Fallback: epoch-based alignment
+    const tfMs = tfConfig.minutes * 60_000;
+    const periodEnd = Math.ceil(nowMs / tfMs) * tfMs;
+    return Math.max(0, Math.floor((periodEnd - nowMs) / 60_000));
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CANDLE CLOSE TIME CALCULATION
+  //
+  // For crypto: delegates to getNextCloseCrypto() (UTC boundaries)
+  // For equity: uses calendar-based NY session close logic
   // ═══════════════════════════════════════════════════════════════════════════
 
   /**
    * Calculate minutes until a specific timeframe candle closes.
-   * KEY INSIGHT: All timeframes close at MARKET CLOSE (21:00 UTC) on their cycle end day.
-   * So 1D, 3D, W, M can all close at the SAME minute if today is the end of their cycles.
+   * assetClass determines anchoring:
+   *   'crypto'  → UTC fixed boundaries (TradingView-style)
+   *   'equity'  → NY market close (4:00 PM ET) session boundaries
    */
-  getMinutesToTimeframeClose(now: Date, tfConfig: Pick<TimeframeConfig, 'tf' | 'label' | 'minutes'>): number | null {
+  getMinutesToTimeframeClose(
+    now: Date,
+    tfConfig: Pick<TimeframeConfig, 'tf' | 'label' | 'minutes'>,
+    assetClass: 'crypto' | 'equity' = 'crypto',
+  ): number | null {
+    // Crypto: TradingView-style UTC-boundary engine
+    if (assetClass === 'crypto') return this.getNextCloseCrypto(now, tfConfig);
+
+    // ── Equity path: NY session-based close logic ──
     const currentTime = now.getTime();
     
-    // For intraday TFs (5m to 8h), use minute-based periods
-    if (tfConfig.minutes <= 480) { // 8 hours or less
+    // For intraday TFs (5m to 12h), use minute-based periods anchored to UTC epoch
+    if (tfConfig.minutes <= 720) { // 12 hours or less
       const tfMs = tfConfig.minutes * 60 * 1000;
       const periodEnd = Math.ceil(currentTime / tfMs) * tfMs;
       return Math.floor((periodEnd - currentTime) / 60000);
@@ -1392,59 +1516,113 @@ export class ConfluenceLearningAgent {
     anchor: 'NOW' | 'TODAY' | 'EOW' | 'EOM' | 'CUSTOM',
     horizonDays: number = 7,
     anchorTimeISO?: string,
+    assetClass: 'crypto' | 'equity' = 'crypto',
   ): ForwardCloseCalendar {
     const now = new Date();
     const clampedHorizon = Math.max(1, Math.min(30, horizonDays));
 
     // ── Resolve anchor to a concrete Date ──
     let anchorDate: Date;
-    switch (anchor) {
-      case 'TODAY': {
-        // Start-of-day in NY timezone
-        const ny = this.getNYDateTimeParts(now);
-        anchorDate = new Date(this.getNYMarketCloseUtcMs(ny.year, ny.month, ny.day));
-        // Roll back to midnight NY (approx: close - 16h)
-        anchorDate = new Date(anchorDate.getTime() - 16 * 3600_000);
-        break;
-      }
-      case 'EOW': {
-        // Next Friday 16:00 NY
-        const ny = this.getNYDateTimeParts(now);
-        let daysToFri = (5 - ny.dayOfWeek + 7) % 7;
-        if (daysToFri === 0 && ny.hour >= 16) daysToFri = 7; // already past Friday close
-        const fri = new Date(now.getTime() + daysToFri * 86400_000);
-        const friNy = this.getNYDateTimeParts(fri);
-        anchorDate = new Date(this.getNYMarketCloseUtcMs(friNy.year, friNy.month, friNy.day));
-        break;
-      }
-      case 'EOM': {
-        // Last trading day of current month at market close
-        const ny = this.getNYDateTimeParts(now);
-        const lastDay = new Date(Date.UTC(ny.year, ny.month + 1, 0)).getUTCDate();
-        let d = lastDay;
-        // Walk backward to skip weekends
-        while (d > 0) {
-          const testDate = new Date(Date.UTC(ny.year, ny.month, d, 12, 0, 0));
-          const dow = testDate.getUTCDay();
-          if (dow !== 0 && dow !== 6) break;
-          d--;
+
+    if (assetClass === 'crypto') {
+      // Crypto uses UTC boundaries throughout
+      switch (anchor) {
+        case 'TODAY': {
+          // Start of today UTC (00:00)
+          anchorDate = new Date(Math.floor(now.getTime() / 86400_000) * 86400_000);
+          break;
         }
-        anchorDate = new Date(this.getNYMarketCloseUtcMs(ny.year, ny.month, d));
-        break;
+        case 'EOW': {
+          // Next Monday 00:00 UTC (weekly close boundary for crypto)
+          const dayOfWeek = now.getUTCDay(); // 0=Sun
+          let daysToMon = (8 - dayOfWeek) % 7;
+          if (daysToMon === 0) daysToMon = 7;
+          const monMs = Math.floor(now.getTime() / 86400_000) * 86400_000 + daysToMon * 86400_000;
+          anchorDate = new Date(monMs);
+          break;
+        }
+        case 'EOM': {
+          // 1st of next month 00:00 UTC (monthly close boundary for crypto)
+          let eomYear = now.getUTCFullYear();
+          let eomMonth = now.getUTCMonth() + 1;
+          if (eomMonth > 11) { eomMonth = 0; eomYear++; }
+          const eomMs = Date.UTC(eomYear, eomMonth, 1);
+          // If we're past this boundary already (shouldn't happen), advance
+          if (eomMs <= now.getTime()) {
+            eomMonth++;
+            if (eomMonth > 11) { eomMonth = 0; eomYear++; }
+          }
+          anchorDate = new Date(Date.UTC(eomYear, eomMonth, 1));
+          break;
+        }
+        case 'CUSTOM': {
+          anchorDate = anchorTimeISO ? new Date(anchorTimeISO) : now;
+          break;
+        }
+        case 'NOW':
+        default:
+          anchorDate = now;
+          break;
       }
-      case 'CUSTOM': {
-        anchorDate = anchorTimeISO ? new Date(anchorTimeISO) : now;
-        break;
+    } else {
+      // Equity uses NY timezone session boundaries
+      switch (anchor) {
+        case 'TODAY': {
+          const ny = this.getNYDateTimeParts(now);
+          anchorDate = new Date(this.getNYMarketCloseUtcMs(ny.year, ny.month, ny.day) - 16 * 3600_000);
+          break;
+        }
+        case 'EOW': {
+          const ny = this.getNYDateTimeParts(now);
+          let daysToFri = (5 - ny.dayOfWeek + 7) % 7;
+          if (daysToFri === 0 && ny.hour >= 16) daysToFri = 7;
+          const fri = new Date(now.getTime() + daysToFri * 86400_000);
+          const friNy = this.getNYDateTimeParts(fri);
+          anchorDate = new Date(this.getNYMarketCloseUtcMs(friNy.year, friNy.month, friNy.day) - 16 * 3600_000);
+          break;
+        }
+        case 'EOM': {
+          const ny = this.getNYDateTimeParts(now);
+          let eomYear = ny.year;
+          let eomMonth = ny.month;
+          const findLastTradingDay = (yr: number, mo: number): number => {
+            const lastDay = new Date(Date.UTC(yr, mo + 1, 0)).getUTCDate();
+            let d = lastDay;
+            while (d > 0) {
+              const testDate = new Date(Date.UTC(yr, mo, d, 12, 0, 0));
+              const dow = testDate.getUTCDay();
+              if (dow !== 0 && dow !== 6) break;
+              d--;
+            }
+            return d;
+          };
+          let eomDay = findLastTradingDay(eomYear, eomMonth);
+          const eomCloseMs = this.getNYMarketCloseUtcMs(eomYear, eomMonth, eomDay);
+          if (now.getTime() > eomCloseMs) {
+            eomMonth++;
+            if (eomMonth > 11) { eomMonth = 0; eomYear++; }
+            eomDay = findLastTradingDay(eomYear, eomMonth);
+          }
+          anchorDate = new Date(this.getNYMarketCloseUtcMs(eomYear, eomMonth, eomDay) - 16 * 3600_000);
+          break;
+        }
+        case 'CUSTOM': {
+          anchorDate = anchorTimeISO ? new Date(anchorTimeISO) : now;
+          break;
+        }
+        case 'NOW':
+        default:
+          anchorDate = now;
+          break;
       }
-      case 'NOW':
-      default:
-        anchorDate = now;
-        break;
     }
 
     const anchorMs = anchorDate.getTime();
     const horizonEndMs = anchorMs + clampedHorizon * 86400_000;
-    const anchorDayStart = this.startOfDayNY(anchorDate);
+    // Anchor day boundaries: UTC for crypto, NY for equity
+    const anchorDayStart = assetClass === 'crypto'
+      ? Math.floor(anchorMs / 86400_000) * 86400_000
+      : this.startOfDayNY(anchorDate);
     const anchorDayEnd = anchorDayStart + 86400_000;
 
     // TF weights (same as close confluence)
@@ -1453,7 +1631,7 @@ export class ConfluenceLearningAgent {
       '6M': 42, '5M': 38, '4M': 36, '3M': 34, '2M': 32, '1M': 30,
       '4W': 28, '3W': 26, '2W': 24, '1W': 20,
       '7D': 18, '6D': 17, '5D': 16, '4D': 15, '3D': 14, '2D': 12, '1D': 10,
-      '8h': 6, '6h': 5, '4h': 4, '3h': 3, '2h': 2, '1h': 1.5,
+      '12h': 8, '8h': 6, '6h': 5, '4h': 4, '3h': 3, '2h': 2, '1h': 1.5,
       '30m': 1, '15m': 0.5, '10m': 0.3, '5m': 0.2,
     };
 
@@ -1468,7 +1646,7 @@ export class ConfluenceLearningAgent {
 
       // Compute the FIRST close at or after anchor
       let cursor = new Date(anchorMs);
-      const minsToFirst = this.getMinutesToTimeframeClose(cursor, tfConfig);
+      const minsToFirst = this.getMinutesToTimeframeClose(cursor, tfConfig, assetClass);
       if (minsToFirst === null) continue;
       let nextCloseMs = anchorMs + minsToFirst * 60_000;
 
@@ -1483,7 +1661,7 @@ export class ConfluenceLearningAgent {
         // Step forward by TF period + 1 minute, recompute
         const stepMs = Math.max(tfConfig.minutes * 60_000, 60_000);
         const nextCursor = new Date(nextCloseMs + stepMs);
-        const minsToNext = this.getMinutesToTimeframeClose(nextCursor, tfConfig);
+        const minsToNext = this.getMinutesToTimeframeClose(nextCursor, tfConfig, assetClass);
         if (minsToNext === null) break;
         nextCloseMs = nextCursor.getTime() + minsToNext * 60_000;
         iter++;
@@ -1506,7 +1684,7 @@ export class ConfluenceLearningAgent {
         closesOnAnchorDay,
         weight,
         // Group category
-        category: tfConfig.minutes <= 480 ? 'intraday'
+        category: tfConfig.minutes <= 720 ? 'intraday'
           : tfConfig.minutes <= 10080 ? 'daily'
           : tfConfig.minutes <= 40320 ? 'weekly'
           : tfConfig.minutes <= 525600 ? 'monthly'
@@ -1562,6 +1740,7 @@ export class ConfluenceLearningAgent {
       anchorTimeISO: anchorDate.toISOString(),
       horizonDays: clampedHorizon,
       horizonEndISO: new Date(horizonEndMs).toISOString(),
+      assetClass,
       schedule,
       forwardClusters: forwardClusters.slice(0, 20), // top 20
       closesOnAnchorDay,
@@ -1599,7 +1778,7 @@ export class ConfluenceLearningAgent {
    * - Computes peakCloseCluster (densest rolling window)
    * - All 32 TFs are always scanned regardless of scan mode
    */
-  calculateCandleCloseConfluence(currentTime: number): CandleCloseConfluence {
+  calculateCandleCloseConfluence(currentTime: number, assetClass: 'crypto' | 'equity' = 'crypto'): CandleCloseConfluence {
     const now = new Date(currentTime);
     
     // ── TF weights based on significance (higher TF = more weight) ──
@@ -1609,7 +1788,7 @@ export class ConfluenceLearningAgent {
       '6M': 42, '5M': 38, '4M': 36, '3M': 34, '2M': 32, '1M': 30,
       '4W': 28, '3W': 26, '2W': 24, '1W': 20,
       '7D': 18, '6D': 17, '5D': 16, '4D': 15, '3D': 14, '2D': 12, '1D': 10,
-      '8h': 6, '6h': 5, '4h': 4, '3h': 3, '2h': 2, '1h': 1.5,
+      '12h': 8, '8h': 6, '6h': 5, '4h': 4, '3h': 3, '2h': 2, '1h': 1.5,
       '30m': 1, '15m': 0.5, '10m': 0.3, '5m': 0.2
     };
     
@@ -1617,7 +1796,7 @@ export class ConfluenceLearningAgent {
     const tfCloses: { tf: string; minutes: number; minsAway: number; weight: number; nextCloseAt: string }[] = [];
     
     for (const tfConfig of TIMEFRAMES) {
-      const minsAway = this.getMinutesToTimeframeClose(now, tfConfig);
+      const minsAway = this.getMinutesToTimeframeClose(now, tfConfig, assetClass);
       if (minsAway !== null && minsAway >= 0) {
         const nextCloseMs = currentTime + minsAway * 60 * 1000;
         tfCloses.push({
@@ -1916,12 +2095,12 @@ export class ConfluenceLearningAgent {
   // and calculates which direction price is being "pulled" toward 50% levels
   // ═══════════════════════════════════════════════════════════════════════════
 
-  analyzeDecompressionPull(baseBars: OHLCV[], currentPrice: number, currentTime: number): DecompressionAnalysis {
+  analyzeDecompressionPull(baseBars: OHLCV[], currentPrice: number, currentTime: number, assetClass: 'crypto' | 'equity' = 'crypto'): DecompressionAnalysis {
     const decompressions: DecompressionPull[] = [];
     const now = new Date(currentTime);
     
     for (const tfConfig of TIMEFRAMES) {
-      const minsToClose = this.getMinutesToTimeframeClose(now, tfConfig);
+      const minsToClose = this.getMinutesToTimeframeClose(now, tfConfig, assetClass);
       if (minsToClose === null || minsToClose < 0) continue;
       
       // Get resampled bars for this TF
@@ -2152,14 +2331,17 @@ export class ConfluenceLearningAgent {
     const mid50Levels: { tf: string; level: number; distance: number; isDecompressing: boolean }[] = [];
     const resampledBarsByTf: Record<string, OHLCV[]> = {};
     
-    // Detect if this is likely a stock (not crypto) - crypto symbols contain USD
-    const isCrypto = symbol.includes('USD') && !symbol.includes('/');
+    // Detect asset class from symbol
+    const assetClass = this.detectAssetClass(symbol);
+    
+    // Detect if this is likely a stock (not crypto)
+    const isCrypto = assetClass === 'crypto';
     
     const now = new Date(currentTime);
     const isMarketClosed = !isCrypto && !this.isUsEquityMarketOpen(now);
     
     for (const tfConfig of includedTFConfigs) {
-      const minsToClose = this.getMinutesToTimeframeClose(now, tfConfig);
+      const minsToClose = this.getMinutesToTimeframeClose(now, tfConfig, assetClass);
       if (minsToClose === null) continue;
       
       // Resample for 50% level
@@ -2633,7 +2815,7 @@ export class ConfluenceLearningAgent {
     };
     
     // Calculate Candle Close Confluence - when multiple TFs close together
-    const candleCloseConfluence = this.calculateCandleCloseConfluence(currentTime);
+    const candleCloseConfluence = this.calculateCandleCloseConfluence(currentTime, assetClass);
     
     // Boost confidence if high candle close confluence
     if (candleCloseConfluence.confluenceRating === 'extreme') {
@@ -3162,7 +3344,8 @@ export class ConfluenceLearningAgent {
     // DECOMPRESSION PULL ANALYSIS - The core prediction driver
     // Scan all TFs for active decompression windows and calculate pull direction
     // ═══════════════════════════════════════════════════════════════════════════
-    const decompPull = this.analyzeDecompressionPull(baseBars, currentPrice, currentTime);
+    const forecastAssetClass = this.detectAssetClass(symbol);
+    const decompPull = this.analyzeDecompressionPull(baseBars, currentPrice, currentTime, forecastAssetClass);
     console.log(`🔄 Decompression Analysis: ${decompPull.activeCount} TFs active, pull=${decompPull.netPullDirection} (bias: ${decompPull.pullBias.toFixed(1)})`);
     
     // Build prediction using learned patterns + decompression pull
