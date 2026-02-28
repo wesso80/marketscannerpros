@@ -1,5 +1,5 @@
-import TradePermissionDashboard from '@/components/home/TradePermissionDashboard';
+import CommandHub from '@/components/home/CommandHub';
 
 export default function HomePage() {
-  return <TradePermissionDashboard />;
+  return <CommandHub />;
 }
