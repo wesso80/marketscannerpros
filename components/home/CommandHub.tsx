@@ -59,6 +59,8 @@ const featuredTools = [
 /* ─── Secondary tools (small tiles) ─── */
 const secondaryTools = [
   { href: '/operator', icon: '🧭', title: 'Operator Dashboard', description: 'Unified execution surface for signal flow and risk command.' },
+  { href: '/tools/markets', icon: '🗺️', title: 'Markets Dashboard', description: 'Central hub for all market data, indices, and sector overview.' },
+  { href: '/tools/crypto', icon: '₿', title: 'Crypto Command Center', description: 'Full crypto dashboard with prices, dominance, and market structure.' },
   { href: '/tools/gainers-losers', icon: '🚀', title: 'Top Gainers & Losers', description: 'Track strongest movers, laggards, and active symbols.' },
   { href: '/tools/company-overview', icon: '🏢', title: 'Company Overview', description: 'Fundamentals, valuation, growth, and analyst context.' },
   { href: '/tools/news', icon: '📰', title: 'News & Sentiment', description: 'Headline flow and sentiment intelligence by symbol.' },
@@ -68,6 +70,9 @@ const secondaryTools = [
   { href: '/tools/commodities', icon: '🛢️', title: 'Commodities', description: 'Energy, metals, and agriculture price dashboard.' },
   { href: '/tools/market-movers', icon: '📈', title: 'Market Movers', description: 'Institutional watchlist of high-impact daily movers.' },
   { href: '/tools/macro', icon: '🏛️', title: 'Macro Dashboard', description: 'Rates, inflation, employment, and macro regime data.' },
+  { href: '/tools/crypto-explorer', icon: '🔍', title: 'Crypto Explorer', description: 'Deep-dive into any crypto asset with technicals and on-chain metrics.' },
+  { href: '/tools/equity-explorer', icon: '📊', title: 'Equity Explorer', description: 'Full equity analysis with fundamentals, technicals, and ownership data.' },
+  { href: '/tools/options-terminal', icon: '📋', title: 'Options Terminal', description: 'Options chain viewer with Greeks, IV skew, and flow analysis.' },
   { href: '/tools/news?tab=earnings', icon: '📅', title: 'Earnings Calendar', description: 'Event-risk map for upcoming earnings windows.' },
   { href: '/tools/intraday-charts', icon: '⏱️', title: 'Intraday Charts', description: 'Fast intraday charting and session-level views.' },
   { href: '/tools/ai-analyst', icon: '🧠', title: 'AI Analyst', description: 'Structured AI decision support for active workflows.' },
