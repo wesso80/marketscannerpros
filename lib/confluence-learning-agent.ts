@@ -581,21 +581,41 @@ export class ConfluenceLearningAgent {
         return [];
       }
 
-      const days: 1 | 7 | 14 | 30 = interval === '1min' || interval === '5min' ? 1 : 7;
-      const ohlc = await getOHLC(coinId, days);
-      if (!ohlc || ohlc.length === 0) return [];
+      // Fetch TWO ranges and merge for better resolution:
+      //   days=1  → 30-min candles (~48 bars)  — intraday mid50 quality
+      //   days=30 → 4-hour candles (~180 bars) — daily/weekly/monthly mid50
+      const parseOHLC = (raw: number[][] | null): OHLCV[] =>
+        (raw || [])
+          .map((row) => ({
+            time: Number(row[0]),
+            open: Number(row[1]),
+            high: Number(row[2]),
+            low: Number(row[3]),
+            close: Number(row[4]),
+            volume: 0,
+          }))
+          .filter((bar) => Number.isFinite(bar.time) && Number.isFinite(bar.open) && Number.isFinite(bar.high) && Number.isFinite(bar.low) && Number.isFinite(bar.close));
 
-      return ohlc
-        .map((row) => ({
-          time: Number(row[0]),
-          open: Number(row[1]),
-          high: Number(row[2]),
-          low: Number(row[3]),
-          close: Number(row[4]),
-          volume: 0,
-        }))
-        .filter((bar) => Number.isFinite(bar.time) && Number.isFinite(bar.open) && Number.isFinite(bar.high) && Number.isFinite(bar.low) && Number.isFinite(bar.close))
-        .sort((a, b) => a.time - b.time);
+      // Fetch both in parallel
+      const [ohlc1d, ohlc30d] = await Promise.all([
+        getOHLC(coinId, 1),   // 30-min candles for last 24h
+        getOHLC(coinId, 30),  // 4-hour candles for last 30d
+      ]);
+
+      const bars1d = parseOHLC(ohlc1d);
+      const bars30d = parseOHLC(ohlc30d);
+
+      if (bars1d.length === 0 && bars30d.length === 0) return [];
+
+      // Merge: use 30d as base, then overlay 1d bars (higher resolution)
+      // Remove 30d bars that overlap with the 1d window
+      const cutoff = bars1d.length > 0 ? bars1d[0].time : Infinity;
+      const merged = [
+        ...bars30d.filter(b => b.time < cutoff),
+        ...bars1d,
+      ].sort((a, b) => a.time - b.time);
+
+      return merged;
     }
 
     // Use delayed entitlement for stock data (realtime)
@@ -2098,6 +2118,20 @@ export class ConfluenceLearningAgent {
   analyzeDecompressionPull(baseBars: OHLCV[], currentPrice: number, currentTime: number, assetClass: 'crypto' | 'equity' = 'crypto'): DecompressionAnalysis {
     const decompressions: DecompressionPull[] = [];
     const now = new Date(currentTime);
+
+    // Detect actual base bar resolution (gap between bars)
+    // Crypto: merged data has 30m bars (recent) + 4h bars (older)
+    // Equities: 30m bars from Alpha Vantage
+    let baseBarMins = 30; // default
+    if (baseBars.length >= 3) {
+      const gaps: number[] = [];
+      for (let i = Math.max(0, baseBars.length - 10); i < baseBars.length - 1; i++) {
+        gaps.push((baseBars[i + 1].time - baseBars[i].time) / (60 * 1000));
+      }
+      gaps.sort((a, b) => a - b);
+      baseBarMins = Math.round(gaps[Math.floor(gaps.length / 2)]);
+      if (baseBarMins < 1) baseBarMins = 30;
+    }
     
     for (const tfConfig of TIMEFRAMES) {
       const minsToClose = this.getMinutesToTimeframeClose(now, tfConfig, assetClass);
@@ -2107,9 +2141,10 @@ export class ConfluenceLearningAgent {
       const tfBars = this.resampleBars(baseBars, tfConfig.minutes);
       if (tfBars.length < 2) continue;
       
-      // Get prior candle's 50% level
-      const mid50Level = this.hl2(tfBars[tfBars.length - 2]);
-      const distanceToMid50 = ((currentPrice - mid50Level) / mid50Level) * 100;
+      // Get prior candle's 50% level (only meaningful when TF > base bar size)
+      const canResample = tfConfig.minutes > baseBarMins;
+      const mid50Level = canResample ? this.hl2(tfBars[tfBars.length - 2]) : 0;
+      const distanceToMid50 = canResample ? ((currentPrice - mid50Level) / mid50Level) * 100 : 0;
       
       // Check if this TF is in decompression window
       const decompStart = tfConfig.decompStart || 0;
@@ -2340,6 +2375,22 @@ export class ConfluenceLearningAgent {
     const now = new Date(currentTime);
     const isMarketClosed = !isCrypto && !this.isUsEquityMarketOpen(now);
     
+    // Detect actual base bar resolution (gap between bars)
+    // Crypto: merged data has 30m bars (recent) + 4h bars (older)
+    // Equities: 30m bars from Alpha Vantage
+    let baseBarMins = 30; // default
+    if (baseBars.length >= 3) {
+      // Check the gap between the last few bars to detect actual resolution
+      const gaps: number[] = [];
+      for (let i = Math.max(0, baseBars.length - 10); i < baseBars.length - 1; i++) {
+        gaps.push((baseBars[i + 1].time - baseBars[i].time) / (60 * 1000));
+      }
+      gaps.sort((a, b) => a - b);
+      // Use median gap as the base resolution
+      baseBarMins = Math.round(gaps[Math.floor(gaps.length / 2)]);
+      if (baseBarMins < 1) baseBarMins = 30;
+    }
+
     for (const tfConfig of includedTFConfigs) {
       const minsToClose = this.getMinutesToTimeframeClose(now, tfConfig, assetClass);
       if (minsToClose === null) continue;
@@ -2350,8 +2401,9 @@ export class ConfluenceLearningAgent {
       resampledBarsByTf[tfId] = tfBars;
       if (tfBars.length < 2) continue;
       
-      const mid50Level = this.hl2(tfBars[tfBars.length - 2]);
-      const distanceToMid50 = ((currentPrice - mid50Level) / mid50Level) * 100;
+      const canResample = tfConfig.minutes > baseBarMins;
+      const mid50Level = canResample ? this.hl2(tfBars[tfBars.length - 2]) : 0;
+      const distanceToMid50 = canResample ? ((currentPrice - mid50Level) / mid50Level) * 100 : 0;
       
       // For stocks on weekend/closed hours: use PROXIMITY-based analysis instead of timing
       // Price within 1% of 50% level = strong pull, within 2% = moderate
@@ -3304,8 +3356,8 @@ export class ConfluenceLearningAgent {
         hotZoneTFs.push(tfConfig.label);
       }
       
-      // 50% level
-      if (tfBars.length >= 2) {
+      // 50% level (only meaningful when TF > base bar resolution of 30m)
+      if (tfBars.length >= 2 && tfConfig.minutes > 30) {
         const mid50 = this.hl2(tfBars[tfBars.length - 2]);
         const distance = ((currentPrice - mid50) / mid50) * 100;
         mid50Levels.push({ tf: tfConfig.label, level: mid50, distance });
