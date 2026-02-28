@@ -103,22 +103,48 @@ function clusterScoreColor(score: number): string {
 
 // ── Main Component ──
 
-export default function CloseCalendar() {
+interface CloseCalendarProps {
+  symbol?: string;
+}
+
+/** Detect asset class from symbol (mirrors ConfluenceLearningAgent.detectAssetClass) */
+function detectAssetClass(sym: string): AssetClass {
+  const s = sym.toUpperCase();
+  if (
+    s.endsWith('USD') || s.endsWith('USDT') || s.endsWith('USDC') ||
+    s.endsWith('BTC') || s.endsWith('ETH') ||
+    s.includes('BTC') || s.includes('ETH') || s.includes('SOL') ||
+    s.includes('DOGE') || s.includes('ADA') || s.includes('XRP') ||
+    s.includes('AVAX') || s.includes('MATIC') || s.includes('DOT') ||
+    s.includes('LINK') || s.includes('UNI') || s.includes('SHIB')
+  ) {
+    return 'crypto';
+  }
+  return 'equity';
+}
+
+export default function CloseCalendar({ symbol: propSymbol }: CloseCalendarProps) {
+  const inferredAsset = propSymbol ? detectAssetClass(propSymbol) : 'crypto';
   const [anchor, setAnchor] = useState<CloseCalendarAnchor>("NOW");
   const [horizon, setHorizon] = useState<number>(7);
   const [customDate, setCustomDate] = useState("");
-  const [assetClass, setAssetClass] = useState<AssetClass>("crypto");
+  const [assetClass, setAssetClass] = useState<AssetClass>(inferredAsset);
   const [data, setData] = useState<ForwardCloseCalendar | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "daily" | "weekly" | "monthly" | "yearly">("all");
   const [showAnchorDay, setShowAnchorDay] = useState(true);
 
+  // Re-sync asset class when the parent symbol changes
+  useEffect(() => {
+    if (propSymbol) setAssetClass(detectAssetClass(propSymbol));
+  }, [propSymbol]);
+
   const fetchCalendar = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const symbol = assetClass === "crypto" ? "BTCUSD" : "AAPL";
+      const symbol = propSymbol || (assetClass === "crypto" ? "BTCUSD" : "AAPL");
       const res = await fetch("/api/confluence-scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -141,7 +167,7 @@ export default function CloseCalendar() {
     } finally {
       setLoading(false);
     }
-  }, [anchor, horizon, customDate, assetClass]);
+  }, [anchor, horizon, customDate, assetClass, propSymbol]);
 
   // Auto-fetch on mount and when anchor/horizon change
   useEffect(() => {

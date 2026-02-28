@@ -534,7 +534,7 @@ export default function TimeScannerPage() {
         </section>
 
         {/* ═══ ROW 2: CLOSE CALENDAR (Forward Schedule) ═══ */}
-        <CloseCalendar />
+        <CloseCalendar symbol={symbol} />
 
         {/* ═══ ROW 3: CONFLUENCE ENGINE + EXECUTION (collapsible) ═══ */}
         <details className="w-full rounded-2xl border border-slate-800 bg-slate-900/30" open>

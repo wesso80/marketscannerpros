@@ -1065,8 +1065,15 @@ export class ConfluenceLearningAgent {
     const dayOfWeek = nyNow.dayOfWeek;
     const tfId = this.getCanonicalTimeframeId(tfConfig);
 
-    const closeAt = (targetYear: number, targetMonth: number, targetDate: number): Date =>
-      new Date(this.getNYMarketCloseUtcMs(targetYear, targetMonth, targetDate));
+    const closeAt = (targetYear: number, targetMonth: number, targetDate: number): Date => {
+      // Skip weekends: if the computed date lands on Sat/Sun, advance to Monday
+      const d = new Date(Date.UTC(targetYear, targetMonth, targetDate, 12));
+      const dow = d.getUTCDay();
+      let adjustedDate = targetDate;
+      if (dow === 6) adjustedDate += 2;      // Saturday → Monday
+      else if (dow === 0) adjustedDate += 1;  // Sunday → Monday
+      return new Date(this.getNYMarketCloseUtcMs(targetYear, targetMonth, adjustedDate));
+    };
 
     // Today's market close time
     const todayClose = closeAt(year, month, date);
