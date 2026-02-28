@@ -130,9 +130,11 @@ export default function Header() {
     { href: '/tools/alerts', label: 'Price Alerts', icon: '🔔' },
   ];
 
-  const aiItems: DropdownItem[] = [
-    { href: '/tools/ai-analyst', label: 'MSP Analyst', icon: '🧠' },
-    { href: '/tools/ai-tools', label: 'AI Tools', icon: '✨' },
+  const scannerItems: DropdownItem[] = [
+    { href: '/tools/scanner', label: 'Market Scanner', icon: '📊' },
+    { href: '/tools/confluence-scanner', label: 'Time Confluence Scanner', icon: '🔮' },
+    { href: '/tools/options', label: 'Options Scanner', icon: '🎯' },
+    { href: '/tools/deep-analysis', label: 'Golden Egg', icon: '🥚' },
   ];
 
   const marketItems: DropdownItem[] = [
@@ -173,7 +175,7 @@ export default function Header() {
         {/* Desktop Navigation with Dropdowns */}
         <nav className={`flex items-center max-md:hidden overflow-visible text-teal-300/90 ${isTerminalMode ? 'gap-3 text-xs' : 'gap-5 text-sm'}`}>
           <Dropdown label="Tools" items={toolsItems} compact={isTerminalMode} />
-          <Dropdown label="AI" items={aiItems} compact={isTerminalMode} />
+          <Dropdown label="Scanners" items={scannerItems} compact={isTerminalMode} />
           <Dropdown label="Markets" items={marketItems} compact={isTerminalMode} />
           <Dropdown label="Calendar" items={calendarItems} align="right" compact={isTerminalMode} />
           <Dropdown label="Resources" items={resourceItems} align="right" compact={isTerminalMode} />
@@ -228,7 +230,7 @@ export default function Header() {
           <div className="flex-1 overflow-y-auto p-4 min-h-0">
             <div className="flex flex-col gap-1">
               <MobileAccordion label="🛠️ Tools" items={toolsItems} isOpen={mobileDropdown === 'tools'} onToggle={() => setMobileDropdown(mobileDropdown === 'tools' ? null : 'tools')} onLinkClick={() => setIsOpen(false)} />
-              <MobileAccordion label="🤖 AI Features" items={aiItems} isOpen={mobileDropdown === 'ai'} onToggle={() => setMobileDropdown(mobileDropdown === 'ai' ? null : 'ai')} onLinkClick={() => setIsOpen(false)} />
+              <MobileAccordion label="🔎 Scanners" items={scannerItems} isOpen={mobileDropdown === 'scanners'} onToggle={() => setMobileDropdown(mobileDropdown === 'scanners' ? null : 'scanners')} onLinkClick={() => setIsOpen(false)} />
               <MobileAccordion label="📈 Markets" items={marketItems} isOpen={mobileDropdown === 'markets'} onToggle={() => setMobileDropdown(mobileDropdown === 'markets' ? null : 'markets')} onLinkClick={() => setIsOpen(false)} />
               <MobileAccordion label="� Calendar & News" items={calendarItems} isOpen={mobileDropdown === 'calendar'} onToggle={() => setMobileDropdown(mobileDropdown === 'calendar' ? null : 'calendar')} onLinkClick={() => setIsOpen(false)} />
               <MobileAccordion label="�📚 Resources" items={resourceItems} isOpen={mobileDropdown === 'resources'} onToggle={() => setMobileDropdown(mobileDropdown === 'resources' ? null : 'resources')} onLinkClick={() => setIsOpen(false)} />
