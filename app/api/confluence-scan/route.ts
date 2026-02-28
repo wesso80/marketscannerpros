@@ -79,19 +79,24 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
 
     // Normalize symbol
     const normalizedSymbol = symbol.toUpperCase().trim();
-    const cacheKey = `${normalizedSymbol}-${mode}`;
 
-    // Check cache (except for learn mode or force refresh)
-    if (mode !== 'learn' && !forceRefresh) {
-      const cached = getCached(cacheKey, mode === 'forecast' ? FORECAST_CACHE_TTL : CACHE_TTL);
-      if (cached) {
-        return NextResponse.json({
-          success: true,
-          data: cached.data,
-          cached: true,
-          cacheAgeMs: cached.age,
-          mode,
-        });
+    // Calendar mode is pure computation (no API calls) — skip cache entirely
+    // so anchor / horizon / date changes always return fresh data
+    if (mode !== 'calendar') {
+      const cacheKey = `${normalizedSymbol}-${mode}`;
+
+      // Check cache (except for learn mode or force refresh)
+      if (mode !== 'learn' && !forceRefresh) {
+        const cached = getCached(cacheKey, mode === 'forecast' ? FORECAST_CACHE_TTL : CACHE_TTL);
+        if (cached) {
+          return NextResponse.json({
+            success: true,
+            data: cached.data,
+            cached: true,
+            cacheAgeMs: cached.age,
+            mode,
+          });
+        }
       }
     }
 
@@ -179,8 +184,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
       }
     }
 
-    // Cache the result
-    setCache(cacheKey, result);
+    // Cache the result (skip for calendar — pure computation, always fresh)
+    if (mode !== 'calendar') {
+      const cacheKey = `${normalizedSymbol}-${mode}`;
+      setCache(cacheKey, result);
+    }
 
     return NextResponse.json({
       success: true,
