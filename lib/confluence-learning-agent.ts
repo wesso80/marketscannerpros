@@ -313,7 +313,19 @@ interface DecompressionAnalysis {
 // CANDLE CLOSE CONFLUENCE - Temporal alignment of multiple timeframe closes
 // ═══════════════════════════════════════════════════════════════════════════
 
+/** Single row in the full TF close schedule (like TradingView's Next Close column) */
+export interface TFCloseRow {
+  tf: string;                   // Label e.g. "1h", "4h", "10D", "1M"
+  tfMinutes: number;            // Canonical minutes for this TF
+  nextCloseAt: string;          // ISO-8601 UTC timestamp of next close
+  minsToClose: number;          // Minutes from now until that close
+  weight: number;               // TF importance weight (higher TF = more weight)
+}
+
 export interface CandleCloseConfluence {
+  // ── Full TF close schedule (always ALL timeframes) ──
+  closes: TFCloseRow[];
+
   // Current close confluence window
   closingNow: {
     count: number;              // How many TFs closing within next 5 mins
@@ -328,6 +340,15 @@ export interface CandleCloseConfluence {
     timeframes: { tf: string; minsAway: number; weight: number }[];
     peakConfluenceIn: number;   // Minutes until most TFs close together
     peakCount: number;          // How many TFs close at peak
+  };
+
+  // ── Close cluster metrics (sliding-window over full universe) ──
+  peakCloseCluster: {
+    count: number;              // TFs closing in densest window
+    timeframes: string[];       // Which TFs
+    windowStartMins: number;    // Start of densest window (mins from now)
+    windowEndMins: number;      // End of densest window
+    weightedScore: number;      // Sum of TF weights in that cluster
   };
   
   // Special events
@@ -1325,48 +1346,39 @@ export class ConfluenceLearningAgent {
    * Calculate when multiple timeframe candles close together.
    * This is the key insight: more candles closing = higher probability move.
    * 
-   * Example: If it's the last day of the month with 3 hours to go:
-   * - Monthly candle closing
-   * - Weekly candle (if Friday)
-   * - Daily candle
-   * - 8h, 4h, 2h, 1h candles
-   * = MASSIVE confluence = high probability volatility
+   * v3.0 CHANGES (TradingView-style):
+   * - Returns full TF close schedule (closes[]) with nextCloseAt timestamps
+   * - Uses SLIDING WINDOW cluster detection across the ENTIRE TF universe
+   * - Computes peakCloseCluster (densest rolling window)
+   * - All 32 TFs are always scanned regardless of scan mode
    */
   calculateCandleCloseConfluence(currentTime: number): CandleCloseConfluence {
     const now = new Date(currentTime);
     
-    // Calculate time to close for each timeframe
-    const tfCloses: { tf: string; minutes: number; minsAway: number; weight: number }[] = [];
-    
-    // TF weights based on significance (higher TF = more weight)
-    // These weights determine how important each timeframe close is for confluence
+    // ── TF weights based on significance (higher TF = more weight) ──
     const tfWeights: Record<string, number> = {
-      // Yearly - MASSIVE significance
       '1Y': 100,
-      // Monthly cycles - scale by months (longer = more significant)
       '11M': 55, '10M': 50, '9M': 48, '8M': 46, '7M': 44,
       '6M': 42, '5M': 38, '4M': 36, '3M': 34, '2M': 32, '1M': 30,
-      // Weekly cycles - scale by weeks
       '4W': 28, '3W': 26, '2W': 24, '1W': 20,
-      // Daily cycles - scale by days
       '7D': 18, '6D': 17, '5D': 16, '4D': 15, '3D': 14, '2D': 12, '1D': 10,
-      // Intraday - Moderate significance
       '8h': 6, '6h': 5, '4h': 4, '3h': 3, '2h': 2, '1h': 1.5,
-      // Micro - Lower significance
       '30m': 1, '15m': 0.5, '10m': 0.3, '5m': 0.2
     };
     
+    // ── Build full close schedule for EVERY timeframe ──
+    const tfCloses: { tf: string; minutes: number; minsAway: number; weight: number; nextCloseAt: string }[] = [];
+    
     for (const tfConfig of TIMEFRAMES) {
-      // For calendar-based timeframes, calculate actual calendar close time
-      // rather than simple minute-based math
       const minsAway = this.getMinutesToTimeframeClose(now, tfConfig);
-      
       if (minsAway !== null && minsAway >= 0) {
+        const nextCloseMs = currentTime + minsAway * 60 * 1000;
         tfCloses.push({
           tf: tfConfig.label,
           minutes: tfConfig.minutes,
-          minsAway: minsAway,
-          weight: tfWeights[tfConfig.label] || 1
+          minsAway,
+          weight: tfWeights[tfConfig.label] || 1,
+          nextCloseAt: new Date(nextCloseMs).toISOString(),
         });
       }
     }
@@ -1374,31 +1386,69 @@ export class ConfluenceLearningAgent {
     // Sort by time to close
     tfCloses.sort((a, b) => a.minsAway - b.minsAway);
     
-    // 1. CLOSING NOW (within 5 minutes)
+    // ── Build closes[] output (always ALL TFs) ──
+    const closes: TFCloseRow[] = tfCloses.map(t => ({
+      tf: t.tf,
+      tfMinutes: t.minutes,
+      nextCloseAt: t.nextCloseAt,
+      minsToClose: t.minsAway,
+      weight: t.weight,
+    }));
+    
+    // ── 1. CLOSING NOW (within 5 minutes) ──
     const closingNowTFs = tfCloses.filter(t => t.minsAway <= 5);
     const highestClosingNow = closingNowTFs.reduce((max, t) => 
       t.weight > (max?.weight || 0) ? t : max, null as typeof tfCloses[0] | null);
     const hasMonthlyPlus = closingNowTFs.some(t => ['M', '3M', 'Y'].includes(t.tf.replace(/[0-9]/g, '')));
     
-    // 2. CLOSING SOON (within 4 hours = 240 minutes)
+    // ── 2. CLOSING SOON (within 4 hours = 240 minutes) ──
     const closingSoonTFs = tfCloses.filter(t => t.minsAway > 5 && t.minsAway <= 240);
     
-    // Find peak confluence - when do most TFs close together?
-    // Group closes into 15-minute windows
+    // ── 3. PEAK CLOSE CLUSTER (sliding window over full universe) ──
+    // Use a configurable cluster window — 120 minutes lets us catch the
+    // "1D + 1W + 1M all closing together" pattern even if they're offset by
+    // up to 2h (e.g. Friday 4pm close for daily vs 4pm close for weekly).
+    const CLUSTER_WINDOW_MINS = 120;
+    
+    // Two-pointer sliding window: find densest window by weighted score
+    let bestClusterStart = 0;
+    let bestClusterEnd = 0;
+    let bestClusterScore = 0;
+    let bestClusterCount = 0;
+    let bestClusterTFs: string[] = [];
+    
+    for (let i = 0; i < tfCloses.length; i++) {
+      let j = i;
+      let windowScore = 0;
+      const windowTFs: string[] = [];
+      
+      while (j < tfCloses.length && tfCloses[j].minsAway - tfCloses[i].minsAway <= CLUSTER_WINDOW_MINS) {
+        windowScore += tfCloses[j].weight;
+        windowTFs.push(tfCloses[j].tf);
+        j++;
+      }
+      
+      if (windowScore > bestClusterScore) {
+        bestClusterScore = windowScore;
+        bestClusterStart = tfCloses[i].minsAway;
+        bestClusterEnd = j > i ? tfCloses[j - 1].minsAway : tfCloses[i].minsAway;
+        bestClusterCount = windowTFs.length;
+        bestClusterTFs = [...windowTFs];
+      }
+    }
+    
+    // Also do a 15-min bin search for the "closing soon" peak (backwards compat)
     const windowSize = 15;
     const windows: Map<number, typeof tfCloses> = new Map();
-    
     for (const tf of tfCloses.filter(t => t.minsAway <= 240)) {
       const windowKey = Math.floor(tf.minsAway / windowSize) * windowSize;
       if (!windows.has(windowKey)) windows.set(windowKey, []);
       windows.get(windowKey)!.push(tf);
     }
     
-    // Find the window with highest weighted count
     let peakWindow = 0;
     let peakScore = 0;
     let peakCount = 0;
-    
     for (const [windowStart, tfs] of windows) {
       const windowScore = tfs.reduce((sum, t) => sum + t.weight, 0);
       if (windowScore > peakScore) {
@@ -1408,49 +1458,42 @@ export class ConfluenceLearningAgent {
       }
     }
     
-    // 3. SPECIAL EVENTS
-    const dayOfWeek = now.getUTCDay(); // 0 = Sunday, 5 = Friday
+    // ── 4. SPECIAL EVENTS ──
+    const dayOfWeek = now.getUTCDay();
     const dayOfMonth = now.getUTCDate();
     const month = now.getUTCMonth();
     const daysInMonth = new Date(now.getUTCFullYear(), month + 1, 0).getDate();
     const hour = now.getUTCHours();
     
     const isMonthEnd = dayOfMonth >= daysInMonth - 1;
-    const isWeekEnd = dayOfWeek === 5; // Friday
-    const isQuarterEnd = isMonthEnd && [2, 5, 8, 11].includes(month); // March, June, Sept, Dec
-    const isYearEnd = isMonthEnd && month === 11; // December
+    const isWeekEnd = dayOfWeek === 5;
+    const isQuarterEnd = isMonthEnd && [2, 5, 8, 11].includes(month);
+    const isYearEnd = isMonthEnd && month === 11;
     
-    // Trading session close detection (UTC times)
     let sessionClose: 'ny' | 'london' | 'asia' | 'none' = 'none';
-    if (hour >= 20 && hour <= 21) sessionClose = 'ny';      // NY close ~21:00 UTC
-    else if (hour >= 16 && hour <= 17) sessionClose = 'london'; // London close ~16:30 UTC
-    else if (hour >= 6 && hour <= 7) sessionClose = 'asia';    // Asia close ~07:00 UTC
+    if (hour >= 20 && hour <= 21) sessionClose = 'ny';
+    else if (hour >= 16 && hour <= 17) sessionClose = 'london';
+    else if (hour >= 6 && hour <= 7) sessionClose = 'asia';
     
-    // 4. CALCULATE CONFLUENCE SCORE
-    // Formula: sum of weights for closing TFs + bonuses for special events
+    // ── 5. CONFLUENCE SCORE ──
     let score = 0;
-    
-    // Closing now gets full weight
     score += closingNowTFs.reduce((sum, t) => sum + t.weight * 2, 0);
-    
-    // Closing soon gets partial weight (decreasing by distance)
     for (const tf of closingSoonTFs) {
-      const distanceFactor = 1 - (tf.minsAway / 240); // 1 at 0 mins, 0 at 240 mins
+      const distanceFactor = 1 - (tf.minsAway / 240);
       score += tf.weight * distanceFactor;
     }
+    // Bonus: peak cluster adds extra weight when it's strong
+    if (bestClusterCount >= 3) score += bestClusterScore * 0.15;
     
-    // Bonuses for special events
     if (isYearEnd) score += 50;
     else if (isQuarterEnd) score += 30;
     else if (isMonthEnd) score += 20;
     if (isWeekEnd) score += 10;
     if (sessionClose !== 'none') score += 5;
     
-    // Normalize to 0-100
-    const maxPossibleScore = 200; // Rough estimate of max
+    const maxPossibleScore = 200;
     const normalizedScore = Math.min(100, Math.round((score / maxPossibleScore) * 100));
     
-    // Rating based on score
     let rating: 'extreme' | 'high' | 'moderate' | 'low' | 'none';
     if (normalizedScore >= 80) rating = 'extreme';
     else if (normalizedScore >= 50) rating = 'high';
@@ -1458,23 +1501,23 @@ export class ConfluenceLearningAgent {
     else if (normalizedScore >= 10) rating = 'low';
     else rating = 'none';
     
-    // 5. BEST ENTRY WINDOW
-    // Optimal entry is typically 5-15 minutes BEFORE peak confluence
+    // ── 6. BEST ENTRY WINDOW ──
     const entryStart = Math.max(0, peakWindow - 15);
     const entryEnd = peakWindow + 5;
     
     let entryReason = '';
-    if (peakCount >= 5) {
-      entryReason = `${peakCount} timeframes closing together - HIGH volatility expected`;
+    if (bestClusterCount >= 5) {
+      entryReason = `${bestClusterCount} timeframes stacking in ${bestClusterStart}-${bestClusterEnd}m window - HIGH volatility expected`;
     } else if (peakCount >= 3) {
       entryReason = `${peakCount} timeframes closing - moderate confluence`;
     } else {
       entryReason = 'Standard market conditions';
     }
     
-    console.log(`📊 Candle Close Confluence: ${closingNowTFs.length} closing now, ${closingSoonTFs.length} closing soon, Score: ${normalizedScore} (${rating})`);
+    console.log(`📊 Candle Close Confluence: ${closingNowTFs.length} closing now, ${closingSoonTFs.length} closing soon, Peak cluster: ${bestClusterCount} TFs (${bestClusterTFs.join(',')}) Score: ${normalizedScore} (${rating})`);
     
     return {
+      closes,
       closingNow: {
         count: closingNowTFs.length,
         timeframes: closingNowTFs.map(t => t.tf),
@@ -1486,6 +1529,13 @@ export class ConfluenceLearningAgent {
         timeframes: closingSoonTFs.map(t => ({ tf: t.tf, minsAway: t.minsAway, weight: t.weight })),
         peakConfluenceIn: peakWindow,
         peakCount
+      },
+      peakCloseCluster: {
+        count: bestClusterCount,
+        timeframes: bestClusterTFs,
+        windowStartMins: bestClusterStart,
+        windowEndMins: bestClusterEnd,
+        weightedScore: bestClusterScore,
       },
       specialEvents: {
         isMonthEnd,

@@ -8,15 +8,36 @@ import { computeTimeConfluenceV2 } from '@/components/time/scoring';
 import { DecompositionTFRow, Direction, TimeConfluenceV2Inputs } from '@/components/time/types';
 import { fireAutoLog } from '@/lib/autoLog';
 
-type ScanModeType = 'intraday_1h' | 'intraday_4h' | 'swing_1d';
+type ScanModeType = 'scalping' | 'intraday_30m' | 'intraday_1h' | 'intraday_4h' | 'swing_1d' | 'swing_3d' | 'swing_1w' | 'macro_monthly' | 'macro_yearly';
 
 const TF_TO_MINUTES: Record<ScanModeType, number> = {
+  scalping: 15,
+  intraday_30m: 30,
   intraday_1h: 60,
   intraday_4h: 240,
   swing_1d: 1440,
+  swing_3d: 4320,
+  swing_1w: 10080,
+  macro_monthly: 43200,
+  macro_yearly: 525600,
 };
 
-const TIMEFRAME_OPTIONS: ScanModeType[] = ['intraday_1h', 'intraday_4h', 'swing_1d'];
+const SCAN_MODE_LABELS: Record<ScanModeType, string> = {
+  scalping: '⚡ Scalp 15m',
+  intraday_30m: '📊 30min',
+  intraday_1h: '📊 1H',
+  intraday_4h: '📊 4H',
+  swing_1d: '📅 Daily',
+  swing_3d: '📅 3-Day',
+  swing_1w: '📅 Weekly',
+  macro_monthly: '🏛️ Monthly',
+  macro_yearly: '🏛️ Yearly',
+};
+
+const TIMEFRAME_OPTIONS: ScanModeType[] = [
+  'scalping', 'intraday_30m', 'intraday_1h', 'intraday_4h',
+  'swing_1d', 'swing_3d', 'swing_1w', 'macro_monthly', 'macro_yearly',
+];
 
 const FALLBACK_INPUT: TimeConfluenceV2Inputs = {
   context: {
@@ -91,6 +112,32 @@ function scoreDot(score: number) {
   return 'bg-rose-400';
 }
 
+/** Format minsToClose like TradingView: "2m" / "1h 30m" / "2d 5h" / "14d" */
+function formatMinsToClose(mins: number): string {
+  if (mins <= 0) return 'NOW';
+  if (mins < 60) return `${Math.round(mins)}m`;
+  if (mins < 1440) {
+    const h = Math.floor(mins / 60);
+    const m = Math.round(mins % 60);
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  }
+  const d = Math.floor(mins / 1440);
+  const h = Math.round((mins % 1440) / 60);
+  if (d >= 30) {
+    const mo = Math.round(d / 30);
+    return mo === 1 ? '1mo' : `${mo}mo`;
+  }
+  return h > 0 ? `${d}d ${h}h` : `${d}d`;
+}
+
+/** Pick a state-based color for the close schedule row */
+function closeRowColor(mins: number): string {
+  if (mins <= 5) return 'text-emerald-400';
+  if (mins <= 60) return 'text-amber-400';
+  if (mins <= 240) return 'text-slate-300';
+  return 'text-slate-500';
+}
+
 function ConfluenceRow({ label, score }: { label: string; score: number }) {
   return (
     <div className="grid grid-cols-[1.2fr_2fr_56px_20px] items-center gap-2.5">
@@ -139,28 +186,89 @@ function normalizeDirection(value: unknown): Direction {
 
 function mapScanToInput(symbol: string, scanMode: ScanModeType, scan: any): TimeConfluenceV2Inputs {
   const direction = normalizeDirection(scan?.prediction?.direction);
-  const decompressions = Array.isArray(scan?.decompression?.decompressions)
+
+  // ── Build decomposition rows from the FULL close table (not just decompressions) ──
+  // This is the key change: we merge the close schedule (all TFs) with
+  // decompression pull data (only active TFs) so the UI always sees every TF.
+  const closeTable: any[] = Array.isArray(scan?.candleCloseConfluence?.closes)
+    ? scan.candleCloseConfluence.closes
+    : [];
+  const decompressions: any[] = Array.isArray(scan?.decompression?.decompressions)
     ? scan.decompression.decompressions
     : [];
 
-  const decompositionRows: DecompositionTFRow[] = decompressions.map((row: any) => {
-    const closeBias: Direction =
-      row?.pullDirection === 'up' ? 'bullish' : row?.pullDirection === 'down' ? 'bearish' : 'neutral';
-    const strength = clamp01(Number(row?.pullStrength || 0) / 10);
-    const minsToClose = Math.max(0, Number(row?.minsToClose || 0));
-    const isDecompressing = !!row?.isDecompressing;
-    const state = isDecompressing ? (minsToClose <= 5 ? 'confirmed' : 'forming') : 'fading';
+  // Index decompressions by TF label for O(1) lookup
+  const decompByTf = new Map<string, any>();
+  for (const row of decompressions) {
+    if (row?.tf) decompByTf.set(String(row.tf), row);
+  }
+
+  // Build rows: prefer close table (has minsToClose + nextCloseAt for ALL TFs),
+  // enrich with decompression data (has pullDirection, pullStrength, isDecompressing).
+  const decompositionRows: DecompositionTFRow[] = closeTable.map((closeRow: any) => {
+    const tfLabel = String(closeRow?.tf || 'n/a');
+    const tfMinutes = Math.max(1, Number(closeRow?.tfMinutes || 1));
+    const minsToClose = Math.max(0, Number(closeRow?.minsToClose || 0));
+    const nextCloseAt = String(closeRow?.nextCloseAt || '');
+    const decompRow = decompByTf.get(tfLabel);
+
+    const closeBias: Direction = decompRow
+      ? (decompRow.pullDirection === 'up' ? 'bullish' : decompRow.pullDirection === 'down' ? 'bearish' : 'neutral')
+      : 'neutral';
+    const strength = decompRow ? clamp01(Number(decompRow.pullStrength || 0) / 10) : 0;
+    const isDecompressing = decompRow ? !!decompRow.isDecompressing : false;
+
+    // ── FIX: Confirmed threshold relative to TF (2% of TF minutes, min 2m) ──
+    const confirmMins = Math.max(2, Math.round(tfMinutes * 0.02));
+    const state: 'forming' | 'confirmed' | 'fading' = isDecompressing
+      ? (minsToClose <= confirmMins ? 'confirmed' : 'forming')
+      : 'fading';
+
+    // ── FIX: Proximity scales by the TF itself (not hardcoded / 240) ──
+    // Use 3× the TF duration as the proximity denominator, capped at 7 days
+    const proximityDenom = Math.max(30, Math.min(3 * tfMinutes, 7 * 1440));
+    const closeProximityPct = clamp01(1 - minsToClose / proximityDenom);
 
     return {
-      tfLabel: String(row?.tf || 'n/a'),
-      tfMinutes: Math.max(1, Number(row?.tfMinutes || 1)),
+      tfLabel,
+      tfMinutes,
       closeBias,
       state,
       strength,
       alignedToPrimary: direction !== 'neutral' && closeBias === direction,
-      closeProximityPct: clamp01(1 - minsToClose / 240),
+      closeProximityPct,
+      nextCloseAt: nextCloseAt || undefined,
+      minsToClose,
     };
   });
+
+  // If close table was empty (legacy API response), fall back to decompressions only
+  if (decompositionRows.length === 0) {
+    for (const row of decompressions) {
+      const tfMinutes = Math.max(1, Number(row?.tfMinutes || 1));
+      const minsToClose = Math.max(0, Number(row?.minsToClose || 0));
+      const closeBias: Direction =
+        row?.pullDirection === 'up' ? 'bullish' : row?.pullDirection === 'down' ? 'bearish' : 'neutral';
+      const strength = clamp01(Number(row?.pullStrength || 0) / 10);
+      const isDecompressing = !!row?.isDecompressing;
+      const confirmMins = Math.max(2, Math.round(tfMinutes * 0.02));
+      const state: 'forming' | 'confirmed' | 'fading' = isDecompressing
+        ? (minsToClose <= confirmMins ? 'confirmed' : 'forming')
+        : 'fading';
+      const proximityDenom = Math.max(30, Math.min(3 * tfMinutes, 7 * 1440));
+
+      decompositionRows.push({
+        tfLabel: String(row?.tf || 'n/a'),
+        tfMinutes,
+        closeBias,
+        state,
+        strength,
+        alignedToPrimary: direction !== 'neutral' && closeBias === direction,
+        closeProximityPct: clamp01(1 - minsToClose / proximityDenom),
+        minsToClose,
+      });
+    }
+  }
 
   const tfCount = Math.max(1, decompositionRows.length);
   const alignmentCount = decompositionRows.filter((row) => row.alignedToPrimary).length;
@@ -168,16 +276,21 @@ function mapScanToInput(symbol: string, scanMode: ScanModeType, scan: any): Time
   const clusterRatio = clamp01(Number(scan?.decompression?.clusteringRatio || 0));
   const confluenceScore = clamp01(Number(scan?.candleCloseConfluence?.confluenceScore || 0) / 100);
 
+  // ── Use peakCloseCluster for improved cluster metrics ──
+  const peakCluster = scan?.candleCloseConfluence?.peakCloseCluster;
+  const peakClusterCount = Number(peakCluster?.count || 0);
+  const peakClusterWeight = Number(peakCluster?.weightedScore || 0);
+
   const warnings: TimeConfluenceV2Inputs['setup']['warnings'] = [];
   if (alignmentCount / tfCount < 0.5) warnings.push('LOW_ALIGNMENT_COUNT');
-  if (clusterRatio < 0.55) warnings.push('LOW_CLUSTER_INTEGRITY');
+  if (clusterRatio < 0.55 && peakClusterCount < 3) warnings.push('LOW_CLUSTER_INTEGRITY');
   if (directionScore < 0.5) warnings.push('MIXED_DIRECTION');
   if (confluenceScore < 0.55) warnings.push('WEAK_CLOSE_STRENGTH');
 
   const specialEvents = scan?.candleCloseConfluence?.specialEvents || {};
   const extremeConditions: TimeConfluenceV2Inputs['context']['extremeConditions'] = [];
   if (specialEvents.isMonthEnd || specialEvents.isQuarterEnd || specialEvents.isYearEnd) extremeConditions.push('NEWS_RISK');
-  if ((scan?.decompression?.clusteredCount || 0) >= 4) extremeConditions.push('PRICE_MAGNET');
+  if ((scan?.decompression?.clusteredCount || 0) >= 4 || peakClusterCount >= 5) extremeConditions.push('PRICE_MAGNET');
   if (directionScore < 0.35) extremeConditions.push('HTF_CONFLICT');
 
   const closeNowCount = Number(scan?.candleCloseConfluence?.closingNow?.count || 0);
@@ -186,6 +299,11 @@ function mapScanToInput(symbol: string, scanMode: ScanModeType, scan: any): Time
 
   const riskState: TimeConfluenceV2Inputs['execution']['riskState'] =
     directionScore >= 0.65 && clusterRatio >= 0.6 ? 'controlled' : directionScore >= 0.45 ? 'elevated' : 'high';
+
+  // Improved cluster integrity: blend decompression clusterRatio with peak cluster score
+  const blendedClusterIntegrity = clamp01(
+    0.5 * clusterRatio + 0.5 * clamp01(peakClusterWeight / 50)
+  );
 
   return {
     context: {
@@ -222,11 +340,14 @@ function mapScanToInput(symbol: string, scanMode: ScanModeType, scan: any): Time
       primaryDirection: direction,
       decomposition: decompositionRows,
       window: {
-        status: closeNowCount > 0 || closeSoonCount > 0 ? 'ACTIVE' : 'INACTIVE',
+        status: closeNowCount > 0 || closeSoonCount > 0 || peakClusterCount >= 3 ? 'ACTIVE' : 'INACTIVE',
         durationHours: Math.max(1, Math.round((Number(scan?.candleCloseConfluence?.bestEntryWindow?.endMins || 60) - Number(scan?.candleCloseConfluence?.bestEntryWindow?.startMins || 0)) / 60)),
         timeRemainingMinutes: Number(scan?.candleCloseConfluence?.bestEntryWindow?.startMins || 0),
-        strength: clamp01(Number(scan?.decompression?.temporalCluster?.score || 0) / 100),
-        clusterIntegrity: clusterRatio,
+        strength: clamp01(Math.max(
+          Number(scan?.decompression?.temporalCluster?.score || 0) / 100,
+          peakClusterWeight / 100,
+        )),
+        clusterIntegrity: blendedClusterIntegrity,
         directionConsistency: clamp01(directionScore),
         alignmentCount,
         tfCount,
@@ -319,7 +440,7 @@ export default function TimeScannerPage() {
 
     const symbolParam = (searchParams.get('symbol') || '').trim().toUpperCase();
     const tfParam = String(searchParams.get('tf') || '').trim() as ScanModeType;
-    const validTf = tfParam === 'intraday_1h' || tfParam === 'intraday_4h' || tfParam === 'swing_1d';
+    const validTf = TIMEFRAME_OPTIONS.includes(tfParam);
 
     const initialSymbol = symbolParam || 'BTCUSD';
     const initialTf = validTf ? tfParam : 'intraday_1h';
@@ -367,7 +488,7 @@ export default function TimeScannerPage() {
                   className="rounded-lg border border-slate-800 bg-slate-950/50 px-2 py-1.5 text-xs text-slate-200"
                 >
                   {TIMEFRAME_OPTIONS.map((option) => (
-                    <option key={option} value={option}>{option}</option>
+                    <option key={option} value={option}>{SCAN_MODE_LABELS[option]}</option>
                   ))}
                 </select>
                 <button
@@ -382,7 +503,7 @@ export default function TimeScannerPage() {
                 </button>
               </div>
               <div className="mt-1.5 truncate text-xs text-slate-400">
-                {out.direction} • {scanMode} • {displaySymbol}
+                {out.direction} • {SCAN_MODE_LABELS[scanMode]} • {displaySymbol}
               </div>
             </div>
 
@@ -448,6 +569,62 @@ export default function TimeScannerPage() {
               </div>
             </div>
           </div>
+        </section>
+
+        {/* ── Close Schedule (TradingView-style full TF universe) ── */}
+        <section className="w-full rounded-2xl border border-slate-800 bg-slate-900/30 p-3 lg:p-5">
+          <div className="mb-3">
+            <div className="text-sm font-semibold text-slate-100">📊 Close Schedule — All Timeframes</div>
+            <div className="text-xs text-slate-400">
+              Next bar close for every TF in the universe • Cluster window highlights stacking closes
+            </div>
+          </div>
+
+          {/* Close table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-slate-800 text-[10px] uppercase tracking-wider text-slate-500">
+                  <th className="pb-2 pr-3 font-medium">TF</th>
+                  <th className="pb-2 pr-3 font-medium">Next Close</th>
+                  <th className="pb-2 pr-3 font-medium">Mins</th>
+                  <th className="pb-2 pr-3 font-medium">State</th>
+                  <th className="pb-2 font-medium">Wt</th>
+                </tr>
+              </thead>
+              <tbody>
+                {input.setup.decomposition.slice(0, 32).map((row) => {
+                  const mins = row.minsToClose ?? 0;
+                  const isClosingNow = mins <= 5;
+                  const isClosingSoon = mins > 5 && mins <= 60;
+                  return (
+                    <tr
+                      key={row.tfLabel}
+                      className={`border-b border-slate-800/50 ${isClosingNow ? 'bg-emerald-500/10' : isClosingSoon ? 'bg-amber-500/5' : ''}`}
+                    >
+                      <td className="py-1.5 pr-3 font-semibold text-slate-100">{row.tfLabel}</td>
+                      <td className={`py-1.5 pr-3 font-mono ${closeRowColor(mins)}`}>{formatMinsToClose(mins)}</td>
+                      <td className="py-1.5 pr-3 font-mono text-slate-400">{mins > 0 ? Math.round(mins) : '—'}</td>
+                      <td className="py-1.5 pr-3">
+                        {row.state === 'confirmed' ? (
+                          <span className="inline-block rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-400">CONFIRMED</span>
+                        ) : row.state === 'forming' ? (
+                          <span className="inline-block rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-400">FORMING</span>
+                        ) : (
+                          <span className="inline-block rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">—</span>
+                        )}
+                      </td>
+                      <td className="py-1.5 text-slate-500">{row.closeProximityPct ? `${Math.round(row.closeProximityPct * 100)}%` : '—'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {input.setup.decomposition.length === 0 && (
+            <div className="py-6 text-center text-xs text-slate-500">Run a scan to load the close schedule.</div>
+          )}
         </section>
 
         <section className="space-y-3">

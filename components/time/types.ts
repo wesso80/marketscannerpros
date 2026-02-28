@@ -40,6 +40,10 @@ export interface DecompositionTFRow {
   strength: number;
   alignedToPrimary: boolean;
   closeProximityPct?: number;
+  /** ISO-8601 UTC timestamp of next bar close (from close schedule) */
+  nextCloseAt?: string;
+  /** Raw minutes to close */
+  minsToClose?: number;
 }
 
 export interface TimeSetupInputs {
