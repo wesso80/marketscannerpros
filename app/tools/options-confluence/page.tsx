@@ -235,6 +235,7 @@ interface CandleCloseConfluence {
     endMins: number;
     reason: string;
   };
+  isMarketOpen?: boolean;
 }
 
 // Data quality tracking from backend
@@ -4024,6 +4025,17 @@ export default function OptionsConfluenceScanner() {
             {/* 🕐 CANDLE CLOSE CONFLUENCE - When multiple TFs close together */}
             {institutionalLensMode === 'OBSERVE' && result.candleCloseConfluence && (
               <div className={`rounded-[16px] border bg-[var(--msp-card)] p-[1.15rem] shadow-msp-soft ${result.candleCloseConfluence.confluenceRating === 'extreme' ? 'border-red-500/50' : result.candleCloseConfluence.confluenceRating === 'high' ? 'border-amber-500/50' : 'border-[var(--msp-border)]'}`}>
+                {result.candleCloseConfluence.isMarketOpen === false && (
+                  <div className="mb-4 flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5">
+                    <span className="text-base">🔒</span>
+                    <div>
+                      <div className="text-xs font-semibold text-amber-400">MARKET CLOSED</div>
+                      <div className="text-[10px] text-amber-400/70">
+                        US equity markets are closed — close times shown are for the next trading session (Mon–Fri 9:30 AM – 4:00 PM ET)
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
                   <h3 className="m-0 mb-4 text-[0.98rem] font-extrabold tracking-[0.3px] text-amber-500">
                     🕐 Candle Close Confluence

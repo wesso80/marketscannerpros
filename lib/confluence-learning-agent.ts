@@ -365,6 +365,9 @@ export interface CandleCloseConfluence {
   confluenceScore: number;
   confluenceRating: 'extreme' | 'high' | 'moderate' | 'low' | 'none';
   
+  // Market status (for equity: false on weekends/after-hours)
+  isMarketOpen: boolean;
+  
   // Best entry window
   bestEntryWindow: {
     startMins: number;          // Minutes from now to start watching
@@ -851,6 +854,46 @@ export class ConfluenceLearningAgent {
     return mins >= openMins && mins < closeMins;
   }
 
+  /**
+   * Get the next equity session open and close in UTC ms.
+   * Handles weekends + after-hours by looking forward to Mon-Fri 9:30 AM ET.
+   * Returns { openMs, closeMs } — the next full RTH session boundaries.
+   */
+  private getNextEquitySession(now: Date): { openMs: number; closeMs: number } {
+    const nyNow = this.getNYDateTimeParts(now);
+    const nowMs = now.getTime();
+    
+    // Build today's open/close in UTC ms
+    const nyOffsetMins = this.getTimezoneOffsetMinutes(now, 'America/New_York');
+    const todayOpenMs = Date.UTC(nyNow.year, nyNow.month, nyNow.day, 9, 30, 0) - nyOffsetMins * 60_000;
+    const todayCloseMs = Date.UTC(nyNow.year, nyNow.month, nyNow.day, 16, 0, 0) - nyOffsetMins * 60_000;
+    
+    // If currently IN session (between open and close), return today's session
+    if (nyNow.dayOfWeek >= 1 && nyNow.dayOfWeek <= 5 && nowMs >= todayOpenMs && nowMs < todayCloseMs) {
+      return { openMs: todayOpenMs, closeMs: todayCloseMs };
+    }
+    
+    // Otherwise find the next trading day's session
+    let daysAhead = 1;
+    if (nyNow.dayOfWeek >= 1 && nyNow.dayOfWeek <= 5 && nowMs < todayOpenMs) {
+      // Before open on a weekday — session is today
+      return { openMs: todayOpenMs, closeMs: todayCloseMs };
+    }
+    // Skip to Monday if we're on weekend or after Friday close
+    if (nyNow.dayOfWeek === 5 && nowMs >= todayCloseMs) daysAhead = 3; // Fri after close → Mon
+    else if (nyNow.dayOfWeek === 6) daysAhead = 2; // Saturday → Mon
+    else if (nyNow.dayOfWeek === 0) daysAhead = 1; // Sunday → Mon
+    // Weekday after close: next day
+    
+    const nextDate = new Date(nowMs + daysAhead * 86_400_000);
+    const nextNy = this.getNYDateTimeParts(nextDate);
+    const nextOffset = this.getTimezoneOffsetMinutes(nextDate, 'America/New_York');
+    const nextOpenMs = Date.UTC(nextNy.year, nextNy.month, nextNy.day, 9, 30, 0) - nextOffset * 60_000;
+    const nextCloseMs = Date.UTC(nextNy.year, nextNy.month, nextNy.day, 16, 0, 0) - nextOffset * 60_000;
+    
+    return { openMs: nextOpenMs, closeMs: nextCloseMs };
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // ASSET CLASS TYPE
   // ═══════════════════════════════════════════════════════════════════════════
@@ -985,11 +1028,30 @@ export class ConfluenceLearningAgent {
     // ── Equity path: NY session-based close logic ──
     const currentTime = now.getTime();
     
-    // For intraday TFs (5m to 12h), use minute-based periods anchored to UTC epoch
+    // For intraday TFs (5m to 12h), anchor to RTH session boundaries
+    // Equity intraday candles only form during market hours (9:30-16:00 ET).
+    // When market is closed, compute minutes until the first intraday close
+    // of the NEXT session.
     if (tfConfig.minutes <= 720) { // 12 hours or less
-      const tfMs = tfConfig.minutes * 60 * 1000;
-      const periodEnd = Math.ceil(currentTime / tfMs) * tfMs;
-      return Math.floor((periodEnd - currentTime) / 60000);
+      const session = this.getNextEquitySession(now);
+      
+      if (currentTime >= session.openMs && currentTime < session.closeMs) {
+        // DURING session: minutes since open, find next TF boundary within session
+        const minsSinceOpen = (currentTime - session.openMs) / 60_000;
+        const nextCloseMinsFromOpen = Math.ceil(minsSinceOpen / tfConfig.minutes) * tfConfig.minutes;
+        const sessionLenMins = (session.closeMs - session.openMs) / 60_000; // 390 mins
+        
+        if (nextCloseMinsFromOpen >= sessionLenMins) {
+          // Next boundary is at or past session close — close at session end (=daily close)
+          return Math.max(0, Math.floor((session.closeMs - currentTime) / 60_000));
+        }
+        return Math.max(0, Math.round(nextCloseMinsFromOpen - minsSinceOpen));
+      } else {
+        // OUTSIDE session (weekend, after-hours, pre-market):
+        // Next close = session open + first TF boundary
+        const minsToOpen = Math.max(0, Math.floor((session.openMs - currentTime) / 60_000));
+        return minsToOpen + tfConfig.minutes; // first close is one TF period after open
+      }
     }
     
     // For daily and above, all closes are anchored to NY market close (4:00 PM ET, DST-aware)
@@ -1992,6 +2054,7 @@ export class ConfluenceLearningAgent {
       },
       confluenceScore: normalizedScore,
       confluenceRating: rating,
+      isMarketOpen: assetClass === 'crypto' ? true : this.isUsEquityMarketOpen(now),
       bestEntryWindow: {
         startMins: entryStart,
         endMins: entryEnd,

@@ -386,6 +386,7 @@ export default function TimeScannerPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [initialScanDone, setInitialScanDone] = useState(false);
+  const [isMarketOpen, setIsMarketOpen] = useState<boolean>(true);
   const timeAutoLogRef = useRef<string>('');
 
   const runScan = async (overrides?: { symbol?: string; scanMode?: ScanModeType }) => {
@@ -414,6 +415,7 @@ export default function TimeScannerPage() {
 
       const mapped = mapScanToInput(effectiveSymbol, effectiveMode, json.data);
       setInput(mapped);
+      setIsMarketOpen(json.data?.candleCloseConfluence?.isMarketOpen !== false);
 
       // ── Auto-log to execution engine (paper trade) ──
       const tOut = computeTimeConfluenceV2(mapped);
@@ -601,6 +603,19 @@ export default function TimeScannerPage() {
               Next bar close for every TF • Prior bar 50% levels • Where price is being pulled
             </div>
           </div>
+
+          {/* ── Market Closed Banner (equities only) ── */}
+          {!isMarketOpen && (
+            <div className="mb-4 flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5">
+              <span className="text-base">🔒</span>
+              <div>
+                <div className="text-xs font-semibold text-amber-400">MARKET CLOSED</div>
+                <div className="text-[10px] text-amber-400/70">
+                  US equity markets are closed — close times shown are for the next trading session (Mon–Fri 9:30 AM – 4:00 PM ET)
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* ── Price Pull Prediction ── */}
           {(() => {
