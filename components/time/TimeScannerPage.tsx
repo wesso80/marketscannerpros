@@ -240,9 +240,9 @@ function mapScanToInput(symbol: string, scanMode: ScanModeType, scan: any): Time
       closeProximityPct,
       nextCloseAt: nextCloseAt || undefined,
       minsToClose,
-      mid50Level: decompRow ? Number(decompRow.mid50Level || 0) : undefined,
-      distanceToMid50: decompRow ? Number(decompRow.distanceToMid50 || 0) : undefined,
-      pullDirection: decompRow?.pullDirection || undefined,
+      mid50Level: Number(closeRow?.mid50Level || decompRow?.mid50Level || 0) || undefined,
+      distanceToMid50: Number(closeRow?.distanceToMid50 || decompRow?.distanceToMid50 || 0) || undefined,
+      pullDirection: closeRow?.pullDirection || decompRow?.pullDirection || undefined,
     };
   });
 

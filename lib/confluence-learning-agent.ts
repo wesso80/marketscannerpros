@@ -321,6 +321,9 @@ export interface TFCloseRow {
   nextCloseAt: string;          // ISO-8601 UTC timestamp of next close
   minsToClose: number;          // Minutes from now until that close
   weight: number;               // TF importance weight (higher TF = more weight)
+  mid50Level?: number;          // Prior candle HL2 (50%) level
+  distanceToMid50?: number;     // % distance from current price to mid50
+  pullDirection?: 'up' | 'down' | 'none'; // Is 50% above or below price?
 }
 
 export interface CandleCloseConfluence {
@@ -2931,7 +2934,37 @@ export class ConfluenceLearningAgent {
     
     // Calculate Candle Close Confluence - when multiple TFs close together
     const candleCloseConfluence = this.calculateCandleCloseConfluence(currentTime, assetClass);
-    
+
+    // ── Enrich closes[] with mid50 data for ALL TFs ──
+    // The decompression analysis (allDecomps) only covers TFs within the scan
+    // mode's maxTFMinutes limit. But the close schedule shows ALL 33 TFs, so we
+    // compute mid50 for every TF that can be resampled from baseBars.
+    const allDecompsByTf = new Map(allDecomps.map(d => [d.tf, d]));
+    for (const row of candleCloseConfluence.closes) {
+      const decompRow = allDecompsByTf.get(row.tf);
+      if (decompRow && decompRow.mid50Level !== 0) {
+        // Use existing data from decompression analysis
+        row.mid50Level = decompRow.mid50Level;
+        row.distanceToMid50 = decompRow.distanceToMid50;
+        row.pullDirection = decompRow.pullDirection;
+      } else {
+        // Compute fresh for TFs outside the scan mode's range
+        const tfConfig = TIMEFRAMES.find(t => t.label === row.tf);
+        if (tfConfig && tfConfig.minutes > baseBarMins) {
+          const tfId = this.getCanonicalTimeframeId(tfConfig);
+          const tfBars = resampledBarsByTf[tfId] || this.resampleBars(baseBars, tfConfig.minutes);
+          if (tfBars.length >= 2) {
+            const mid50 = this.hl2(tfBars[tfBars.length - 2]);
+            if (mid50 > 0) {
+              row.mid50Level = mid50;
+              row.distanceToMid50 = ((currentPrice - mid50) / mid50) * 100;
+              row.pullDirection = mid50 > currentPrice ? 'up' : mid50 < currentPrice ? 'down' : 'none';
+            }
+          }
+        }
+      }
+    }
+
     // Boost confidence if high candle close confluence
     if (candleCloseConfluence.confluenceRating === 'extreme') {
       confidence = Math.min(95, confidence + 15);
