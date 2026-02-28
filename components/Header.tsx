@@ -131,9 +131,7 @@ export default function Header() {
   ];
 
   const aiItems: DropdownItem[] = [
-    { href: '/tools/deep-analysis', label: 'Golden Egg Analysis', icon: '🥚' },
-    { href: '/tools/confluence-scanner', label: 'Confluence Scanner', icon: '🔮' },
-    { href: '/tools/options-confluence', label: 'Options Confluence', icon: '🎯' },
+    { href: '/tools/ai-analyst', label: 'MSP Analyst', icon: '🧠' },
     { href: '/tools/ai-tools', label: 'AI Tools', icon: '✨' },
   ];
 
