@@ -240,6 +240,9 @@ function mapScanToInput(symbol: string, scanMode: ScanModeType, scan: any): Time
       closeProximityPct,
       nextCloseAt: nextCloseAt || undefined,
       minsToClose,
+      mid50Level: decompRow ? Number(decompRow.mid50Level || 0) : undefined,
+      distanceToMid50: decompRow ? Number(decompRow.distanceToMid50 || 0) : undefined,
+      pullDirection: decompRow?.pullDirection || undefined,
     };
   });
 
@@ -267,6 +270,9 @@ function mapScanToInput(symbol: string, scanMode: ScanModeType, scan: any): Time
         alignedToPrimary: direction !== 'neutral' && closeBias === direction,
         closeProximityPct: clamp01(1 - minsToClose / proximityDenom),
         minsToClose,
+        mid50Level: Number(row?.mid50Level || 0) || undefined,
+        distanceToMid50: Number(row?.distanceToMid50 || 0) || undefined,
+        pullDirection: row?.pullDirection || undefined,
       });
     }
   }
@@ -592,9 +598,68 @@ export default function TimeScannerPage() {
           <div className="mb-3">
             <div className="text-sm font-semibold text-slate-100">📊 Close Schedule — All Timeframes</div>
             <div className="text-xs text-slate-400">
-              Next bar close for every TF in the universe • Cluster window highlights stacking closes
+              Next bar close for every TF • Prior bar 50% levels • Where price is being pulled
             </div>
           </div>
+
+          {/* ── Price Pull Prediction ── */}
+          {(() => {
+            const rowsWithMid50 = input.setup.decomposition.filter(r => r.mid50Level && r.mid50Level > 0);
+            const activeDecomps = rowsWithMid50.filter(r => r.state === 'forming' || r.state === 'confirmed');
+            const pullingUp = activeDecomps.filter(r => r.pullDirection === 'up');
+            const pullingDown = activeDecomps.filter(r => r.pullDirection === 'down');
+            const totalPull = pullingUp.length + pullingDown.length;
+            const netBias = totalPull > 0 ? (pullingUp.length - pullingDown.length) / totalPull : 0;
+            const biasLabel = netBias > 0.2 ? 'BULLISH' : netBias < -0.2 ? 'BEARISH' : 'NEUTRAL';
+            const biasColor = netBias > 0.2 ? 'text-emerald-400' : netBias < -0.2 ? 'text-rose-400' : 'text-slate-400';
+            const biasBg = netBias > 0.2 ? 'bg-emerald-500/10 border-emerald-500/30' : netBias < -0.2 ? 'bg-rose-500/10 border-rose-500/30' : 'bg-slate-800/50 border-slate-700';
+
+            // Find strongest pull levels (closest to current price)
+            const sorted = [...rowsWithMid50]
+              .sort((a, b) => Math.abs(a.distanceToMid50 || 99) - Math.abs(b.distanceToMid50 || 99))
+              .slice(0, 3);
+
+            if (rowsWithMid50.length === 0) return null;
+
+            return (
+              <div className={`mb-4 rounded-xl border ${biasBg} p-3`}>
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-slate-300">🧲 50% Pull Prediction</span>
+                    <span className={`rounded px-2 py-0.5 text-xs font-bold ${biasColor} ${netBias > 0.2 ? 'bg-emerald-500/20' : netBias < -0.2 ? 'bg-rose-500/20' : 'bg-slate-700'}`}>
+                      {biasLabel}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-500">
+                    {pullingUp.length} TFs pulling ↑ • {pullingDown.length} TFs pulling ↓ • {activeDecomps.length} active
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {sorted.map(r => {
+                    const dist = r.distanceToMid50 ?? 0;
+                    const arrow = dist > 0 ? '↑' : dist < 0 ? '↓' : '→';
+                    const dColor = dist > 0 ? 'text-emerald-400' : dist < 0 ? 'text-rose-400' : 'text-slate-400';
+                    return (
+                      <div key={r.tfLabel} className="rounded-lg border border-slate-700 bg-slate-950/40 px-2.5 py-1.5">
+                        <div className="text-[10px] font-semibold text-slate-300">{r.tfLabel}</div>
+                        <div className="font-mono text-xs text-slate-100">${r.mid50Level?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                        <div className={`text-[10px] font-mono ${dColor}`}>{arrow} {Math.abs(dist).toFixed(2)}%</div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {sorted.length > 0 && (
+                  <div className="mt-2 text-[10px] text-slate-500">
+                    Nearest magnet: <span className="font-semibold text-slate-300">{sorted[0].tfLabel} @ ${sorted[0].mid50Level?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    {' '}({Math.abs(sorted[0].distanceToMid50 ?? 0).toFixed(2)}% away)
+                    {biasLabel !== 'NEUTRAL' && (
+                      <span className={biasColor}> — Price likely heading {netBias > 0 ? 'UP' : 'DOWN'} toward stacked 50% levels</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Close table */}
           <div className="overflow-x-auto">
@@ -604,15 +669,22 @@ export default function TimeScannerPage() {
                   <th className="pb-2 pr-3 font-medium">TF</th>
                   <th className="pb-2 pr-3 font-medium">Next Close</th>
                   <th className="pb-2 pr-3 font-medium">Mins</th>
+                  <th className="pb-2 pr-3 font-medium">Prev 50%</th>
+                  <th className="pb-2 pr-3 font-medium">Dist %</th>
+                  <th className="pb-2 pr-3 font-medium">Pull</th>
                   <th className="pb-2 pr-3 font-medium">State</th>
                   <th className="pb-2 font-medium">Wt</th>
                 </tr>
               </thead>
               <tbody>
-                {input.setup.decomposition.slice(0, 32).map((row) => {
+                {input.setup.decomposition.slice(0, 33).map((row) => {
                   const mins = row.minsToClose ?? 0;
+                  const dist = row.distanceToMid50 ?? 0;
                   const isClosingNow = mins <= 5;
                   const isClosingSoon = mins > 5 && mins <= 60;
+                  const distColor = dist > 0 ? 'text-emerald-400' : dist < 0 ? 'text-rose-400' : 'text-slate-500';
+                  const pullArrow = row.pullDirection === 'up' ? '▲' : row.pullDirection === 'down' ? '▼' : '—';
+                  const pullColor = row.pullDirection === 'up' ? 'text-emerald-400' : row.pullDirection === 'down' ? 'text-rose-400' : 'text-slate-600';
                   return (
                     <tr
                       key={row.tfLabel}
@@ -621,6 +693,19 @@ export default function TimeScannerPage() {
                       <td className="py-1.5 pr-3 font-semibold text-slate-100">{row.tfLabel}</td>
                       <td className={`py-1.5 pr-3 font-mono ${closeRowColor(mins)}`}>{formatMinsToClose(mins)}</td>
                       <td className="py-1.5 pr-3 font-mono text-slate-400">{mins > 0 ? Math.round(mins) : '—'}</td>
+                      <td className="py-1.5 pr-3 font-mono text-slate-200">
+                        {row.mid50Level && row.mid50Level > 0
+                          ? `$${row.mid50Level.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          : <span className="text-slate-600">—</span>
+                        }
+                      </td>
+                      <td className={`py-1.5 pr-3 font-mono ${distColor}`}>
+                        {row.mid50Level && row.mid50Level > 0
+                          ? `${dist >= 0 ? '+' : ''}${dist.toFixed(2)}%`
+                          : <span className="text-slate-600">—</span>
+                        }
+                      </td>
+                      <td className={`py-1.5 pr-3 font-semibold ${pullColor}`}>{pullArrow}</td>
                       <td className="py-1.5 pr-3">
                         {row.state === 'confirmed' ? (
                           <span className="inline-block rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-400">CONFIRMED</span>

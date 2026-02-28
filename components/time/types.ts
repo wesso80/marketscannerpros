@@ -44,6 +44,12 @@ export interface DecompositionTFRow {
   nextCloseAt?: string;
   /** Raw minutes to close */
   minsToClose?: number;
+  /** Prior bar 50% level (HL2 of previous candle) */
+  mid50Level?: number;
+  /** % distance from current price to mid-50 level */
+  distanceToMid50?: number;
+  /** Pull direction: up = price being pulled toward higher 50%, down = lower */
+  pullDirection?: 'up' | 'down' | 'none';
 }
 
 export interface TimeSetupInputs {
