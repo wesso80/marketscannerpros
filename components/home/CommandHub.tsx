@@ -1,7 +1,20 @@
 'use client';
 
 import Link from 'next/link';
-import { useRiskPermission } from '@/components/risk/RiskPermissionContext';
+import { useContext } from 'react';
+
+// Safe import — avoid throwing during static prerender when provider is absent
+function useSafeRiskLocked(): boolean {
+  try {
+    // Dynamic require to avoid hard import crash during SSR
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { useRiskPermission } = require('@/components/risk/RiskPermissionContext');
+    const ctx = useRiskPermission();
+    return ctx?.isLocked ?? false;
+  } catch {
+    return false;
+  }
+}
 
 /* ─── Featured scanners (big tiles) ─── */
 const featuredTools = [
@@ -135,7 +148,7 @@ function SmallTile({
 
 /* ─── Main Component ─── */
 export default function CommandHub() {
-  const { isLocked: riskLocked } = useRiskPermission();
+  const riskLocked = useSafeRiskLocked();
   const lockSensitiveTools = new Set([
     '/operator',
     '/tools/scanner',
