@@ -2205,6 +2205,11 @@ export class ConfluenceLearningAgent {
       baseBarMins = Math.round(gaps[Math.floor(gaps.length / 2)]);
       if (baseBarMins < 1) baseBarMins = 30;
     }
+
+    // Data span check: skip TFs whose period is > 1/3 of available data
+    const decompDataSpanMs = baseBars.length >= 2
+      ? baseBars[baseBars.length - 1].time - baseBars[0].time : 0;
+    const decompDataSpanMins = decompDataSpanMs / 60_000;
     
     for (const tfConfig of TIMEFRAMES) {
       const minsToClose = this.getMinutesToTimeframeClose(now, tfConfig, assetClass);
@@ -2214,8 +2219,11 @@ export class ConfluenceLearningAgent {
       const tfBars = this.resampleBars(baseBars, tfConfig.minutes);
       if (tfBars.length < 2) continue;
       
-      // Get prior candle's 50% level (only meaningful when TF > base bar size)
-      const canResample = tfConfig.minutes > baseBarMins;
+      // Get prior candle's 50% level (only meaningful when TF > base bar size
+      // AND we have enough data for a reliable prior bar)
+      const canResample = tfConfig.minutes > baseBarMins
+        && tfBars.length >= 3
+        && decompDataSpanMins >= tfConfig.minutes * 3;
       const mid50Level = canResample ? this.hl2(tfBars[tfBars.length - 2]) : 0;
       const distanceToMid50 = canResample ? ((currentPrice - mid50Level) / mid50Level) * 100 : 0;
       
@@ -2464,6 +2472,11 @@ export class ConfluenceLearningAgent {
       if (baseBarMins < 1) baseBarMins = 30;
     }
 
+    // Data span for quality-gating mid50 computation
+    const scanDataSpanMs = baseBars.length >= 2
+      ? baseBars[baseBars.length - 1].time - baseBars[0].time : 0;
+    const scanDataSpanMins = scanDataSpanMs / 60_000;
+
     for (const tfConfig of includedTFConfigs) {
       const minsToClose = this.getMinutesToTimeframeClose(now, tfConfig, assetClass);
       if (minsToClose === null) continue;
@@ -2474,7 +2487,11 @@ export class ConfluenceLearningAgent {
       resampledBarsByTf[tfId] = tfBars;
       if (tfBars.length < 2) continue;
       
-      const canResample = tfConfig.minutes > baseBarMins;
+      // Quality gate: need TF > base bar size, ≥ 3 resampled bars, and
+      // enough data span (3× TF period) for a reliable prior candle
+      const canResample = tfConfig.minutes > baseBarMins
+        && tfBars.length >= 3
+        && scanDataSpanMins >= tfConfig.minutes * 3;
       const mid50Level = canResample ? this.hl2(tfBars[tfBars.length - 2]) : 0;
       const distanceToMid50 = canResample ? ((currentPrice - mid50Level) / mid50Level) * 100 : 0;
       
@@ -2946,26 +2963,50 @@ export class ConfluenceLearningAgent {
     // The decompression analysis (allDecomps) only covers TFs within the scan
     // mode's maxTFMinutes limit. But the close schedule shows ALL 33 TFs, so we
     // compute mid50 for every TF that can be resampled from baseBars.
+    //
+    // Quality gate: require ≥ 3 resampled bars (2 complete + 1 forming) so the
+    // "prior candle" is meaningful.  Also compute the total data span and reject
+    // TFs whose period is > 1/3 of the data span (too few bars → unreliable).
+    const dataSpanMs = baseBars.length >= 2
+      ? baseBars[baseBars.length - 1].time - baseBars[0].time
+      : 0;
+    const dataSpanMins = dataSpanMs / 60_000;
+
+    // Track which tfMinutes values we've already placed a mid50 for, so
+    // duplicates (e.g. 7D = 1W, both 10080 min) don't repeat the same value.
+    const seenTfMinutes = new Set<number>();
+
     const allDecompsByTf = new Map(allDecomps.map(d => [d.tf, d]));
     for (const row of candleCloseConfluence.closes) {
       const decompRow = allDecompsByTf.get(row.tf);
       if (decompRow && decompRow.mid50Level !== 0) {
-        // Use existing data from decompression analysis
-        row.mid50Level = decompRow.mid50Level;
-        row.distanceToMid50 = decompRow.distanceToMid50;
-        row.pullDirection = decompRow.pullDirection;
+        // Use existing data from decompression analysis (already quality-checked)
+        if (!seenTfMinutes.has(row.tfMinutes)) {
+          row.mid50Level = decompRow.mid50Level;
+          row.distanceToMid50 = decompRow.distanceToMid50;
+          row.pullDirection = decompRow.pullDirection;
+          seenTfMinutes.add(row.tfMinutes);
+        }
       } else {
         // Compute fresh for TFs outside the scan mode's range
         const tfConfig = TIMEFRAMES.find(t => t.label === row.tf);
         if (tfConfig && tfConfig.minutes > baseBarMins) {
+          // Skip if another TF with the same period already has mid50 (e.g. 7D=1W)
+          if (seenTfMinutes.has(tfConfig.minutes)) continue;
+
+          // Skip if data span is too short for this TF to produce reliable bars
+          // Need at least 3 TF periods of data
+          if (dataSpanMins < tfConfig.minutes * 3) continue;
+
           const tfId = this.getCanonicalTimeframeId(tfConfig);
           const tfBars = resampledBarsByTf[tfId] || this.resampleBars(baseBars, tfConfig.minutes);
-          if (tfBars.length >= 2) {
+          if (tfBars.length >= 3) {
             const mid50 = this.hl2(tfBars[tfBars.length - 2]);
             if (mid50 > 0) {
               row.mid50Level = mid50;
               row.distanceToMid50 = ((currentPrice - mid50) / mid50) * 100;
               row.pullDirection = mid50 > currentPrice ? 'up' : mid50 < currentPrice ? 'down' : 'none';
+              seenTfMinutes.add(tfConfig.minutes);
             }
           }
         }
