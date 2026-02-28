@@ -10,7 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { confluenceLearningAgent, getScanModes, type ScanMode } from '@/lib/confluence-learning-agent';
+import { confluenceLearningAgent, getScanModes, type ScanMode, type CloseCalendarAnchor } from '@/lib/confluence-learning-agent';
 import { confluenceAgent, type Forecast, type ConfluenceState } from '@/lib/ai-confluence-agent';
 import { q } from '@/lib/db';
 import { getSessionFromCookie } from '@/lib/auth';
@@ -20,9 +20,13 @@ export const maxDuration = 120; // Allow up to 2 minutes for full history scan
 
 interface ScanRequest {
   symbol: string;
-  mode?: 'full' | 'quick' | 'state-only' | 'learn' | 'forecast' | 'hierarchical';
+  mode?: 'full' | 'quick' | 'state-only' | 'learn' | 'forecast' | 'hierarchical' | 'calendar';
   scanMode?: ScanMode;  // For hierarchical scans
   forceRefresh?: boolean;
+  // Forward Close Calendar params
+  anchor?: CloseCalendarAnchor;
+  anchorTime?: string;   // ISO-8601 for CUSTOM anchor
+  horizonDays?: number;  // 1-30
 }
 
 interface ScanResponse {
@@ -112,6 +116,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
         const scanMode = (body as any).scanMode || 'intraday_1h';
         console.log(`📊 Hierarchical ${scanMode} scan for ${normalizedSymbol}...`);
         result = await confluenceLearningAgent.scanHierarchical(normalizedSymbol, scanMode);
+        break;
+
+      case 'calendar':
+        // Forward Close Calendar — no price data needed, pure schedule computation
+        const anchor = (body.anchor || 'NOW') as CloseCalendarAnchor;
+        const horizonDays = Math.max(1, Math.min(30, Number(body.horizonDays) || 7));
+        const anchorTime = body.anchorTime || undefined;
+        console.log(`📅 Close Calendar: anchor=${anchor}, horizon=${horizonDays}d`);
+        result = confluenceLearningAgent.computeForwardCloseCalendar(anchor, horizonDays, anchorTime);
         break;
 
       case 'quick':

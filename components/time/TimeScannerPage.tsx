@@ -2,6 +2,7 @@
 
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import CloseCalendar from '@/components/time/CloseCalendar';
 import DebugDrawer from '@/components/time/DebugDrawer';
 import TimeScannerShell from '@/components/time/TimeScannerShell';
 import { computeTimeConfluenceV2 } from '@/components/time/scoring';
@@ -524,7 +525,21 @@ export default function TimeScannerPage() {
           </div>
         </section>
 
-        <section className="w-full rounded-2xl border border-slate-800 bg-slate-900/30 p-3 lg:p-5">
+        {/* ═══ ROW 2: CLOSE CALENDAR (Forward Schedule) ═══ */}
+        <CloseCalendar />
+
+        {/* ═══ ROW 3: CONFLUENCE ENGINE + EXECUTION (collapsible) ═══ */}
+        <details className="w-full rounded-2xl border border-slate-800 bg-slate-900/30" open>
+          <summary className="cursor-pointer list-none px-3 py-3 lg:px-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-sm font-semibold text-slate-100">⏱ Time Confluence Engine</span>
+                <span className="ml-2 text-xs text-slate-400">Permission score, decompression & execution</span>
+              </div>
+              <div className="text-xs text-slate-500">▾ expand</div>
+            </div>
+          </summary>
+          <div className="border-t border-slate-800 p-3 lg:p-5">
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-[2fr_1fr] lg:gap-6">
             <div className="space-y-3">
               <div>
@@ -569,7 +584,8 @@ export default function TimeScannerPage() {
               </div>
             </div>
           </div>
-        </section>
+          </div>
+        </details>
 
         {/* ── Close Schedule (TradingView-style full TF universe) ── */}
         <section className="w-full rounded-2xl border border-slate-800 bg-slate-900/30 p-3 lg:p-5">

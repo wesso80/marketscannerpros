@@ -372,6 +372,43 @@ export interface CandleCloseConfluence {
   };
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// FORWARD CLOSE CALENDAR TYPES
+// ═══════════════════════════════════════════════════════════════════════════
+
+export type CloseCalendarAnchor = 'NOW' | 'TODAY' | 'EOW' | 'EOM' | 'CUSTOM';
+
+export interface ForwardCloseScheduleRow {
+  tf: string;
+  tfMinutes: number;
+  closesInHorizon: number;
+  firstCloseAtISO: string | null;
+  minsToFirstClose: number | null;
+  closesOnAnchorDay: boolean;
+  weight: number;
+  category: 'intraday' | 'daily' | 'weekly' | 'monthly' | 'yearly';
+}
+
+export interface ForwardCloseCluster {
+  windowStartISO: string;
+  windowEndISO: string;
+  tfs: string[];
+  weight: number;
+  clusterScore: number;
+  label: string;
+}
+
+export interface ForwardCloseCalendar {
+  anchor: CloseCalendarAnchor;
+  anchorTimeISO: string;
+  horizonDays: number;
+  horizonEndISO: string;
+  schedule: ForwardCloseScheduleRow[];
+  forwardClusters: ForwardCloseCluster[];
+  closesOnAnchorDay: ForwardCloseScheduleRow[];
+  totalCloseEventsInHorizon: number;
+}
+
 export interface ScanCandle {
   ts: number;
   open: number;
@@ -1339,11 +1376,221 @@ export class ConfluenceLearningAgent {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // FORWARD CLOSE CALENDAR — computes close schedule from an anchor date
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Compute a forward-looking close calendar from an anchor point.
+   * anchor: 'NOW' | 'TODAY' | 'EOW' | 'EOM' | 'CUSTOM'
+   * anchorTime: ISO-8601 string (used when anchor='CUSTOM')
+   * horizonDays: how many days forward to look (1-30)
+   *
+   * Returns: schedule (per-TF forward closes), forwardClusters (stacking windows),
+   *          closesOnAnchorDay (which TFs close on the anchor date itself).
+   */
+  computeForwardCloseCalendar(
+    anchor: 'NOW' | 'TODAY' | 'EOW' | 'EOM' | 'CUSTOM',
+    horizonDays: number = 7,
+    anchorTimeISO?: string,
+  ): ForwardCloseCalendar {
+    const now = new Date();
+    const clampedHorizon = Math.max(1, Math.min(30, horizonDays));
+
+    // ── Resolve anchor to a concrete Date ──
+    let anchorDate: Date;
+    switch (anchor) {
+      case 'TODAY': {
+        // Start-of-day in NY timezone
+        const ny = this.getNYDateTimeParts(now);
+        anchorDate = new Date(this.getNYMarketCloseUtcMs(ny.year, ny.month, ny.day));
+        // Roll back to midnight NY (approx: close - 16h)
+        anchorDate = new Date(anchorDate.getTime() - 16 * 3600_000);
+        break;
+      }
+      case 'EOW': {
+        // Next Friday 16:00 NY
+        const ny = this.getNYDateTimeParts(now);
+        let daysToFri = (5 - ny.dayOfWeek + 7) % 7;
+        if (daysToFri === 0 && ny.hour >= 16) daysToFri = 7; // already past Friday close
+        const fri = new Date(now.getTime() + daysToFri * 86400_000);
+        const friNy = this.getNYDateTimeParts(fri);
+        anchorDate = new Date(this.getNYMarketCloseUtcMs(friNy.year, friNy.month, friNy.day));
+        break;
+      }
+      case 'EOM': {
+        // Last trading day of current month at market close
+        const ny = this.getNYDateTimeParts(now);
+        const lastDay = new Date(Date.UTC(ny.year, ny.month + 1, 0)).getUTCDate();
+        let d = lastDay;
+        // Walk backward to skip weekends
+        while (d > 0) {
+          const testDate = new Date(Date.UTC(ny.year, ny.month, d, 12, 0, 0));
+          const dow = testDate.getUTCDay();
+          if (dow !== 0 && dow !== 6) break;
+          d--;
+        }
+        anchorDate = new Date(this.getNYMarketCloseUtcMs(ny.year, ny.month, d));
+        break;
+      }
+      case 'CUSTOM': {
+        anchorDate = anchorTimeISO ? new Date(anchorTimeISO) : now;
+        break;
+      }
+      case 'NOW':
+      default:
+        anchorDate = now;
+        break;
+    }
+
+    const anchorMs = anchorDate.getTime();
+    const horizonEndMs = anchorMs + clampedHorizon * 86400_000;
+    const anchorDayStart = this.startOfDayNY(anchorDate);
+    const anchorDayEnd = anchorDayStart + 86400_000;
+
+    // TF weights (same as close confluence)
+    const tfWeights: Record<string, number> = {
+      '1Y': 100, '11M': 55, '10M': 50, '9M': 48, '8M': 46, '7M': 44,
+      '6M': 42, '5M': 38, '4M': 36, '3M': 34, '2M': 32, '1M': 30,
+      '4W': 28, '3W': 26, '2W': 24, '1W': 20,
+      '7D': 18, '6D': 17, '5D': 16, '4D': 15, '3D': 14, '2D': 12, '1D': 10,
+      '8h': 6, '6h': 5, '4h': 4, '3h': 3, '2h': 2, '1h': 1.5,
+      '30m': 1, '15m': 0.5, '10m': 0.3, '5m': 0.2,
+    };
+
+    // For each TF, generate all close times from anchorDate to horizon
+    const schedule: ForwardCloseScheduleRow[] = [];
+    const allCloseEvents: { tf: string; closeAtMs: number; weight: number }[] = [];
+
+    for (const tfConfig of TIMEFRAMES) {
+      // Walk forward from anchor to horizon, finding each close boundary
+      const tfLabel = tfConfig.label;
+      const weight = tfWeights[tfLabel] || 1;
+
+      // Compute the FIRST close at or after anchor
+      let cursor = new Date(anchorMs);
+      const minsToFirst = this.getMinutesToTimeframeClose(cursor, tfConfig);
+      if (minsToFirst === null) continue;
+      let nextCloseMs = anchorMs + minsToFirst * 60_000;
+
+      // Collect all closes within horizon
+      const closeTimes: number[] = [];
+      const maxIter = 5000; // safety
+      let iter = 0;
+      while (nextCloseMs <= horizonEndMs && iter < maxIter) {
+        closeTimes.push(nextCloseMs);
+        allCloseEvents.push({ tf: tfLabel, closeAtMs: nextCloseMs, weight });
+
+        // Step forward by TF period + 1 minute, recompute
+        const stepMs = Math.max(tfConfig.minutes * 60_000, 60_000);
+        const nextCursor = new Date(nextCloseMs + stepMs);
+        const minsToNext = this.getMinutesToTimeframeClose(nextCursor, tfConfig);
+        if (minsToNext === null) break;
+        nextCloseMs = nextCursor.getTime() + minsToNext * 60_000;
+        iter++;
+      }
+
+      // Does this TF close on the anchor day?
+      const closesOnAnchorDay = closeTimes.some(
+        (ct) => ct >= anchorDayStart && ct < anchorDayEnd,
+      );
+
+      // First close within horizon
+      const firstClose = closeTimes[0] ?? null;
+
+      schedule.push({
+        tf: tfLabel,
+        tfMinutes: tfConfig.minutes,
+        closesInHorizon: closeTimes.length,
+        firstCloseAtISO: firstClose ? new Date(firstClose).toISOString() : null,
+        minsToFirstClose: firstClose ? Math.max(0, Math.round((firstClose - anchorMs) / 60_000)) : null,
+        closesOnAnchorDay,
+        weight,
+        // Group category
+        category: tfConfig.minutes <= 480 ? 'intraday'
+          : tfConfig.minutes <= 10080 ? 'daily'
+          : tfConfig.minutes <= 40320 ? 'weekly'
+          : tfConfig.minutes <= 525600 ? 'monthly'
+          : 'yearly',
+      });
+    }
+
+    // ── Build forward clusters ──
+    // Bucket all close events into 60-min windows, then merge adjacent dense windows
+    const BUCKET_MINS = 60;
+    const buckets = new Map<number, { tf: string; weight: number }[]>();
+
+    for (const evt of allCloseEvents) {
+      // Only cluster daily+ TFs (intraday TFs close constantly)
+      const tfCfg = TIMEFRAMES.find((t) => t.label === evt.tf);
+      if (!tfCfg || tfCfg.minutes < 1440) continue; // skip intraday for clustering
+
+      const bucketKey = Math.floor((evt.closeAtMs - anchorMs) / (BUCKET_MINS * 60_000));
+      if (!buckets.has(bucketKey)) buckets.set(bucketKey, []);
+      buckets.get(bucketKey)!.push({ tf: evt.tf, weight: evt.weight });
+    }
+
+    // Sort buckets and find dense windows (weight >= 20 or count >= 2)
+    const forwardClusters: ForwardCloseCluster[] = [];
+    const sortedKeys = [...buckets.keys()].sort((a, b) => a - b);
+
+    for (const key of sortedKeys) {
+      const items = buckets.get(key)!;
+      const totalWeight = items.reduce((s, i) => s + i.weight, 0);
+      if (items.length < 2 && totalWeight < 20) continue;
+
+      const windowStartMs = anchorMs + key * BUCKET_MINS * 60_000;
+      const windowEndMs = windowStartMs + BUCKET_MINS * 60_000;
+
+      forwardClusters.push({
+        windowStartISO: new Date(windowStartMs).toISOString(),
+        windowEndISO: new Date(windowEndMs).toISOString(),
+        tfs: items.map((i) => i.tf),
+        weight: totalWeight,
+        clusterScore: Math.min(100, Math.round(totalWeight * items.length * 0.5)),
+        label: this.clusterLabel(new Date(windowStartMs)),
+      });
+    }
+
+    // Sort by score desc
+    forwardClusters.sort((a, b) => b.clusterScore - a.clusterScore);
+
+    // Closes on anchor day summary
+    const closesOnAnchorDay = schedule.filter((s) => s.closesOnAnchorDay);
+
+    return {
+      anchor,
+      anchorTimeISO: anchorDate.toISOString(),
+      horizonDays: clampedHorizon,
+      horizonEndISO: new Date(horizonEndMs).toISOString(),
+      schedule,
+      forwardClusters: forwardClusters.slice(0, 20), // top 20
+      closesOnAnchorDay,
+      totalCloseEventsInHorizon: allCloseEvents.filter(
+        (e) => TIMEFRAMES.find((t) => t.label === e.tf)!.minutes >= 1440,
+      ).length,
+    };
+  }
+
+  /** Human-readable label for a cluster window timestamp */
+  private clusterLabel(date: Date): string {
+    const ny = this.getNYDateTimeParts(date);
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${days[ny.dayOfWeek]} ${months[ny.month]} ${ny.day} ${String(ny.hour).padStart(2, '0')}:${String(ny.minute).padStart(2, '0')}`;
+  }
+
+  /** Start-of-day in NY timezone (midnight) as epoch ms */
+  private startOfDayNY(date: Date): number {
+    const ny = this.getNYDateTimeParts(date);
+    return this.getNYMarketCloseUtcMs(ny.year, ny.month, ny.day) - 16 * 3600_000;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // CANDLE CLOSE CONFLUENCE CALCULATION
   // ═══════════════════════════════════════════════════════════════════════════
 
   /**
-   * Calculate when multiple timeframe candles close together.
+   * Calculate when multiple timeframe candle close together.
    * This is the key insight: more candles closing = higher probability move.
    * 
    * v3.0 CHANGES (TradingView-style):
