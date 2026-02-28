@@ -68,8 +68,8 @@ export default function SessionStartBriefing({ children }: { children: React.Rea
   if (!mounted || acknowledged) return <>{children}</>;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0F172A] px-4">
-      <div className="w-full max-w-2xl">
+    <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-[#0F172A] px-4 py-6 sm:items-center sm:py-4">
+      <div className="w-full max-w-2xl pb-8">
         {/* Header */}
         <div className="mb-6 text-center">
           <div className="text-[0.65rem] font-extrabold uppercase tracking-[0.15em] text-slate-500">
@@ -96,7 +96,7 @@ export default function SessionStartBriefing({ children }: { children: React.Rea
         </div>
 
         {/* Grid: Regime + Risk + Data + Limits */}
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {/* Regime */}
           <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-3">
             <div className="text-[10px] font-extrabold uppercase tracking-[0.08em] text-slate-500">Market Regime</div>
