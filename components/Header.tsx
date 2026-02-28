@@ -129,7 +129,7 @@ export default function Header() {
   const scannerItems: DropdownItem[] = [
     { href: '/tools/scanner', label: 'Market Scanner', icon: '📊' },
     { href: '/tools/confluence-scanner', label: 'Time Confluence Scanner', icon: '🔮' },
-    { href: '/tools/options', label: 'Options Scanner', icon: '🎯' },
+    { href: '/tools/options-confluence', label: 'Options Confluence Scanner', icon: '🎯' },
     { href: '/tools/deep-analysis', label: 'Golden Egg', icon: '🥚' },
   ];
 
