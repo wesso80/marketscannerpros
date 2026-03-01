@@ -512,7 +512,11 @@ export default function TimeScannerPage() {
                 />
                 <select
                   value={scanMode}
-                  onChange={(event) => setScanMode(event.target.value as ScanModeType)}
+                  onChange={(event) => {
+                    const newMode = event.target.value as ScanModeType;
+                    setScanMode(newMode);
+                    void runScan({ scanMode: newMode });
+                  }}
                   className="rounded-lg border border-slate-800 bg-slate-950/50 px-2 py-1.5 text-xs text-slate-200"
                 >
                   {TIMEFRAME_OPTIONS.map((option) => (
