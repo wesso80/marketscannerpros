@@ -84,7 +84,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
     // Calendar mode is pure computation (no API calls) — skip cache entirely
     // so anchor / horizon / date changes always return fresh data
     if (mode !== 'calendar') {
-      const cacheKey = `${normalizedSymbol}-${mode}`;
+      // Include scanMode + sessionMode in cache key so different dropdown
+      // selections never collide (e.g. "BTCUSD-hierarchical-macro_yearly-extended")
+      const scanSuffix = mode === 'hierarchical'
+        ? `-${body.scanMode || 'intraday_1h'}-${body.sessionMode || 'extended'}`
+        : '';
+      const cacheKey = `${normalizedSymbol}-${mode}${scanSuffix}`;
 
       // Check cache (except for learn mode or force refresh)
       if (mode !== 'learn' && !forceRefresh) {
@@ -189,7 +194,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
 
     // Cache the result (skip for calendar — pure computation, always fresh)
     if (mode !== 'calendar') {
-      const cacheKey = `${normalizedSymbol}-${mode}`;
+      const scanSuffix = mode === 'hierarchical'
+        ? `-${body.scanMode || 'intraday_1h'}-${body.sessionMode || 'extended'}`
+        : '';
+      const cacheKey = `${normalizedSymbol}-${mode}${scanSuffix}`;
       setCache(cacheKey, result);
     }
 
