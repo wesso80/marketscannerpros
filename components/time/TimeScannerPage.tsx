@@ -365,6 +365,23 @@ export default function TimeScannerPage() {
   const [initialScanDone, setInitialScanDone] = useState(false);
   const [isMarketOpen, setIsMarketOpen] = useState<boolean>(true);
   const timeAutoLogRef = useRef<string>('');
+  const [scanData, setScanData] = useState<{
+    currentPrice: number;
+    direction: 'bullish' | 'bearish' | 'neutral';
+    confidence: number;
+    targetLevel: number;
+    reasoning: string;
+    expectedMoveTime: string;
+    entry: number;
+    stopLoss: number;
+    takeProfit: number;
+    riskReward: number;
+    riskPct: number;
+    rewardPct: number;
+    signalStrength: string;
+    netPull: string;
+    mid50Levels: { tf: string; level: number; distance: number }[];
+  } | null>(null);
 
   const runScan = async (overrides?: { symbol?: string; scanMode?: ScanModeType }) => {
     const effectiveSymbol = (overrides?.symbol ?? symbol).trim().toUpperCase();
@@ -394,6 +411,30 @@ export default function TimeScannerPage() {
       const mapped = mapScanToInput(effectiveSymbol, effectiveMode, json.data);
       setInput(mapped);
       setIsMarketOpen(json.data?.candleCloseConfluence?.isMarketOpen !== false);
+
+      // ── Capture raw scan output for Direction + Target panel ──
+      const sd = json.data;
+      setScanData({
+        currentPrice: Number(sd?.currentPrice || sd?.price || 0),
+        direction: String(sd?.prediction?.direction || 'neutral') as 'bullish' | 'bearish' | 'neutral',
+        confidence: Number(sd?.prediction?.confidence || 0),
+        targetLevel: Number(sd?.prediction?.targetLevel || 0),
+        reasoning: String(sd?.prediction?.reasoning || ''),
+        expectedMoveTime: String(sd?.prediction?.expectedMoveTime || ''),
+        entry: Number(sd?.tradeSetup?.entryPrice || sd?.currentPrice || 0),
+        stopLoss: Number(sd?.tradeSetup?.stopLoss || 0),
+        takeProfit: Number(sd?.tradeSetup?.takeProfit || 0),
+        riskReward: Number(sd?.tradeSetup?.riskRewardRatio || 0),
+        riskPct: Number(sd?.tradeSetup?.riskPercent || 0),
+        rewardPct: Number(sd?.tradeSetup?.rewardPercent || 0),
+        signalStrength: String(sd?.signalStrength || 'no_signal'),
+        netPull: String(sd?.decompression?.netPullDirection || 'neutral'),
+        mid50Levels: Array.isArray(sd?.mid50Levels) ? sd.mid50Levels.slice(0, 6).map((m: any) => ({
+          tf: String(m.tf || ''),
+          level: Number(m.level || 0),
+          distance: Number(m.distance || 0),
+        })) : [],
+      });
 
       // ── Auto-log to execution engine (paper trade) ──
       const tOut = computeTimeConfluenceV2(mapped);
@@ -523,6 +564,130 @@ export default function TimeScannerPage() {
             </div>
           </div>
         </section>
+
+        {/* ═══ SCAN OUTPUT: Direction + Price Target ═══ */}
+        {scanData && scanData.direction !== 'neutral' && (
+          <section className="w-full rounded-2xl border bg-slate-900/50 p-4 lg:p-5" style={{
+            borderColor: scanData.direction === 'bullish' ? 'rgba(16,185,129,0.35)' : 'rgba(239,68,68,0.35)',
+          }}>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1.5fr]">
+              {/* Left: Direction + Price */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className={`rounded-xl px-3 py-1.5 text-lg font-bold tracking-wide ${
+                    scanData.direction === 'bullish'
+                      ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                  }`}>
+                    {scanData.direction === 'bullish' ? '↑ BULLISH' : '↓ BEARISH'}
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    Confidence: <span className="font-semibold text-slate-200">{Math.round(scanData.confidence * 100)}%</span>
+                    {scanData.signalStrength !== 'no_signal' && (
+                      <span className={`ml-2 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
+                        scanData.signalStrength === 'strong' ? 'bg-emerald-500/15 text-emerald-400'
+                        : scanData.signalStrength === 'moderate' ? 'bg-amber-500/15 text-amber-400'
+                        : 'bg-slate-700 text-slate-400'
+                      }`}>{scanData.signalStrength}</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-xl border border-slate-800 bg-slate-950/30 px-3 py-2">
+                    <div className="text-[10px] uppercase tracking-wider text-slate-500">Current</div>
+                    <div className="text-base font-bold text-slate-100">${scanData.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                  </div>
+                  <div className={`rounded-xl border px-3 py-2 ${
+                    scanData.direction === 'bullish'
+                      ? 'border-emerald-500/25 bg-emerald-500/5'
+                      : 'border-rose-500/25 bg-rose-500/5'
+                  }`}>
+                    <div className="text-[10px] uppercase tracking-wider text-slate-500">Target</div>
+                    <div className={`text-base font-bold ${
+                      scanData.direction === 'bullish' ? 'text-emerald-400' : 'text-rose-400'
+                    }`}>${scanData.targetLevel > 0 ? scanData.targetLevel.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}</div>
+                  </div>
+                </div>
+
+                {/* Entry / Stop / Take Profit */}
+                {scanData.entry > 0 && scanData.stopLoss > 0 && (
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <div className="rounded-lg border border-slate-800 bg-slate-950/25 px-2 py-1.5 text-center">
+                      <div className="text-[9px] uppercase tracking-wider text-slate-500">Entry</div>
+                      <div className="text-xs font-semibold text-slate-200">${scanData.entry.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                    </div>
+                    <div className="rounded-lg border border-rose-500/20 bg-rose-500/5 px-2 py-1.5 text-center">
+                      <div className="text-[9px] uppercase tracking-wider text-slate-500">Stop</div>
+                      <div className="text-xs font-semibold text-rose-400">${scanData.stopLoss.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      {scanData.riskPct > 0 && <div className="text-[9px] text-rose-500">-{scanData.riskPct.toFixed(1)}%</div>}
+                    </div>
+                    <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-2 py-1.5 text-center">
+                      <div className="text-[9px] uppercase tracking-wider text-slate-500">TP</div>
+                      <div className="text-xs font-semibold text-emerald-400">${scanData.takeProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      {scanData.rewardPct > 0 && <div className="text-[9px] text-emerald-500">+{scanData.rewardPct.toFixed(1)}%</div>}
+                    </div>
+                  </div>
+                )}
+
+                {scanData.riskReward > 0 && (
+                  <div className="flex items-center gap-2 text-xs text-slate-400">
+                    R:R Ratio: <span className={`font-bold ${
+                      scanData.riskReward >= 2 ? 'text-emerald-400' : scanData.riskReward >= 1.5 ? 'text-amber-400' : 'text-rose-400'
+                    }`}>{scanData.riskReward.toFixed(2)}</span>
+                    {scanData.expectedMoveTime && (
+                      <span className="text-slate-500">· Expected: {scanData.expectedMoveTime}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Right: Reasoning + 50% Levels */}
+              <div className="space-y-3">
+                <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2.5">
+                  <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Analysis</div>
+                  <div className="text-xs leading-relaxed text-slate-300">{scanData.reasoning || 'Run scan for analysis.'}</div>
+                </div>
+
+                {scanData.mid50Levels.length > 0 && (
+                  <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2.5">
+                    <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                      50% Pull Levels <span className={`ml-1 ${
+                        scanData.netPull === 'bullish' ? 'text-emerald-400' : scanData.netPull === 'bearish' ? 'text-rose-400' : 'text-slate-500'
+                      }`}>({scanData.netPull})</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs">
+                      {scanData.mid50Levels.map((m) => (
+                        <div key={m.tf} className="flex items-center justify-between">
+                          <span className="font-medium text-slate-400">{m.tf}</span>
+                          <span className="font-mono text-slate-300">${m.level.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            <span className={`ml-1 text-[10px] ${m.distance > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                              {m.distance > 0 ? '+' : ''}{m.distance.toFixed(1)}%
+                            </span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {scanData && scanData.direction === 'neutral' && (
+          <section className="w-full rounded-2xl border border-slate-700/50 bg-slate-900/30 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl border border-slate-700 bg-slate-800/30 px-3 py-1.5 text-sm font-bold text-slate-400">↔ NEUTRAL</div>
+              <div className="text-xs text-slate-400">
+                No directional bias detected — {scanData.reasoning || 'mixed signals across timeframes'}
+              </div>
+              {scanData.currentPrice > 0 && (
+                <div className="ml-auto text-sm font-semibold text-slate-200">${scanData.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* ═══ ROW 2: STATIC INTRADAY SCHEDULE (equities only) + CLOSE CALENDAR ═══ */}
         {input.context.assetClass === 'equity' && (
