@@ -174,11 +174,19 @@ export default function CloseCalendar({ symbol: propSymbol }: CloseCalendarProps
     void fetchCalendar();
   }, [fetchCalendar]);
 
-  const filteredSchedule = data?.schedule.filter(
-    (r) => filter === "all" || r.category === filter,
-  ) ?? [];
+  // For equities, hide intraday rows — their close times are fixed and shown
+  // in the static schedule above. Only daily+ timeframes have variable dates.
+  const isEquity = assetClass === 'equity';
+  const stripIntraday = (rows: ForwardCloseScheduleRow[]) =>
+    isEquity ? rows.filter((r) => r.category !== 'intraday') : rows;
 
-  const anchorDayRows = data?.closesOnAnchorDay ?? [];
+  const filteredSchedule = stripIntraday(
+    data?.schedule.filter(
+      (r) => filter === "all" || r.category === filter,
+    ) ?? [],
+  );
+
+  const anchorDayRows = stripIntraday(data?.closesOnAnchorDay ?? []);
 
   return (
     <section className="w-full space-y-4 rounded-2xl border border-slate-800 bg-slate-900/30 p-3 lg:p-5">
