@@ -200,14 +200,28 @@ const TIMEFRAMES: TimeframeConfig[] = [
   { tf: '360', label: '6h',  minutes: 360, postCloseWindow: 30, preCloseStart: 30, preCloseEnd: 25, decompStart: 20 },
   { tf: '480', label: '8h',  minutes: 480, postCloseWindow: 35, preCloseStart: 35, preCloseEnd: 30, decompStart: 20 },
   { tf: '720', label: '12h', minutes: 720, postCloseWindow: 45, preCloseStart: 45, preCloseEnd: 40, decompStart: 30 },
-  // Daily - ALL day cycles (1D through 7D)
-  { tf: 'D',   label: '1D',  minutes: 1440,  postCloseWindow: 60,  decompStart: 60 },
-  { tf: '2D',  label: '2D',  minutes: 2880,  postCloseWindow: 90,  decompStart: 120 },
-  { tf: '3D',  label: '3D',  minutes: 4320,  postCloseWindow: 120, decompStart: 180 },
-  { tf: '4D',  label: '4D',  minutes: 5760,  postCloseWindow: 150, decompStart: 240 },
-  { tf: '5D',  label: '5D',  minutes: 7200,  postCloseWindow: 180, decompStart: 300 },
-  { tf: '6D',  label: '6D',  minutes: 8640,  postCloseWindow: 210, decompStart: 360 },
-  { tf: '7D',  label: '7D',  minutes: 10080, postCloseWindow: 240, decompStart: 390 },
+  // Daily - ALL multi-day cycles (1D through 20D)
+  // ~22 trading days per month, so 20D covers nearly a full month
+  { tf: 'D',   label: '1D',  minutes: 1440,   postCloseWindow: 60,  decompStart: 60 },
+  { tf: '2D',  label: '2D',  minutes: 2880,   postCloseWindow: 90,  decompStart: 120 },
+  { tf: '3D',  label: '3D',  minutes: 4320,   postCloseWindow: 120, decompStart: 180 },
+  { tf: '4D',  label: '4D',  minutes: 5760,   postCloseWindow: 150, decompStart: 240 },
+  { tf: '5D',  label: '5D',  minutes: 7200,   postCloseWindow: 180, decompStart: 300 },
+  { tf: '6D',  label: '6D',  minutes: 8640,   postCloseWindow: 210, decompStart: 360 },
+  { tf: '7D',  label: '7D',  minutes: 10080,  postCloseWindow: 240, decompStart: 390 },
+  { tf: '8D',  label: '8D',  minutes: 11520,  postCloseWindow: 270, decompStart: 420 },
+  { tf: '9D',  label: '9D',  minutes: 12960,  postCloseWindow: 300, decompStart: 450 },
+  { tf: '10D', label: '10D', minutes: 14400,  postCloseWindow: 330, decompStart: 480 },
+  { tf: '11D', label: '11D', minutes: 15840,  postCloseWindow: 360, decompStart: 510 },
+  { tf: '12D', label: '12D', minutes: 17280,  postCloseWindow: 390, decompStart: 540 },
+  { tf: '13D', label: '13D', minutes: 18720,  postCloseWindow: 420, decompStart: 570 },
+  { tf: '14D', label: '14D', minutes: 20160,  postCloseWindow: 450, decompStart: 600 },
+  { tf: '15D', label: '15D', minutes: 21600,  postCloseWindow: 480, decompStart: 630 },
+  { tf: '16D', label: '16D', minutes: 23040,  postCloseWindow: 510, decompStart: 660 },
+  { tf: '17D', label: '17D', minutes: 24480,  postCloseWindow: 540, decompStart: 690 },
+  { tf: '18D', label: '18D', minutes: 25920,  postCloseWindow: 570, decompStart: 720 },
+  { tf: '19D', label: '19D', minutes: 27360,  postCloseWindow: 600, decompStart: 750 },
+  { tf: '20D', label: '20D', minutes: 28800,  postCloseWindow: 630, decompStart: 780 },
   // Weekly - ALL week cycles (1W through 4W)
   { tf: 'W',   label: '1W',  minutes: 10080, postCloseWindow: 240, decompStart: 390 },
   { tf: '2W',  label: '2W',  minutes: 20160, postCloseWindow: 480, decompStart: 780 },
@@ -522,6 +536,13 @@ export interface HierarchicalScanResult {
 export class ConfluenceLearningAgent {
   private openai: OpenAI;
   private learningCache: Map<string, SymbolLearning> = new Map();
+
+  /**
+   * Sorted list of UTC-midnight timestamps for every weekday NYSE holiday
+   * between the trading-day epoch (Dec 30 2019) and 2035.
+   * Built lazily on first access, then binary-searched for O(log N) lookups.
+   */
+  private sortedHolidayMs: number[] | null = null;
 
   constructor() {
     this.openai = new OpenAI({
@@ -853,10 +874,47 @@ export class ConfluenceLearningAgent {
   }
 
   /**
-   * Compute a monotonically increasing trading-day index (Mon–Fri only).
-   * Anchored to Monday Dec 30, 2019 (tdIndex=0).
+   * Build and cache a sorted list of UTC-midnight timestamps for every weekday
+   * NYSE holiday after the trading-day epoch (Dec 30, 2019) through 2035.
+   */
+  private ensureHolidayList(): number[] {
+    if (this.sortedHolidayMs) return this.sortedHolidayMs;
+    const epochMs = Date.UTC(2019, 11, 30);
+    const endMs   = Date.UTC(2035, 11, 31);
+    const list: number[] = [];
+    for (let ms = epochMs + 86_400_000; ms <= endMs; ms += 86_400_000) {
+      const d = new Date(ms);
+      const dow = d.getUTCDay();
+      if (dow === 0 || dow === 6) continue; // skip weekends
+      if (isUSMarketHoliday(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())) {
+        list.push(ms);
+      }
+    }
+    this.sortedHolidayMs = list;
+    return list;
+  }
+
+  /** Count weekday NYSE holidays from epoch (exclusive) through targetMs (inclusive). */
+  private countHolidaysUpTo(targetMs: number): number {
+    const list = this.ensureHolidayList();
+    // Binary search: find the number of entries <= targetMs
+    let lo = 0, hi = list.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (list[mid] <= targetMs) lo = mid + 1;
+      else hi = mid;
+    }
+    return lo;
+  }
+
+  /**
+   * Compute a monotonically increasing TRUE trading-day index (Mon–Fri,
+   * excluding NYSE holidays). Anchored to Monday Dec 30, 2019 (tdIndex=0).
    * Sat/Sun map to the previous Friday's index.
-   * Week-aligned: Monday=0%5, Friday=4%5 — so 5D always closes Friday.
+   *
+   * Holiday-aware: subtracts all weekday holidays between the epoch and the
+   * given date so the index counts only actual trading sessions. This ensures
+   * multi-day equity candle boundaries (2D, 3D, 5D, etc.) match TradingView.
    */
   private getTradingDayIndex(date: Date): number {
     const ny = this.getNYDateTimeParts(date);
@@ -866,7 +924,11 @@ export class ConfluenceLearningAgent {
     const fullWeeks = Math.floor(calDays / 7);
     const dayInWeek = ((calDays % 7) + 7) % 7; // 0=Mon, ..., 4=Fri, 5=Sat, 6=Sun
     const tradingDayInWeek = Math.min(dayInWeek, 4); // Clamp weekends → Friday
-    return fullWeeks * 5 + tradingDayInWeek;
+    const weekdayIndex = fullWeeks * 5 + tradingDayInWeek;
+
+    // Subtract weekday holidays so the index counts only real trading sessions
+    const holidayCount = this.countHolidaysUpTo(todayMs);
+    return weekdayIndex - holidayCount;
   }
 
   private getCanonicalTimeframeId(tfConfig: Pick<TimeframeConfig, 'tf' | 'label'>): string {
@@ -1139,17 +1201,15 @@ export class ConfluenceLearningAgent {
         return minsToTodayClose;
       }
       
-      // ── Multi-day equity candles (2D–7D): trading-day cycle alignment ──
-      // Uses getTradingDayIndex() which counts only Mon–Fri from a Monday epoch.
+      // ── Multi-day equity candles (2D–20D): trading-day cycle alignment ──
+      // Uses getTradingDayIndex() which counts only actual trading sessions
+      // (Mon–Fri excluding NYSE holidays) from a Monday epoch.
       // N-day candle closes when (tradingDayIndex % N) === N-1.
-      // Results: 5D always closes on Friday, 2D alternates every other trading day, etc.
-      case '2D':
-      case '3D':
-      case '4D':
-      case '5D':
-      case '6D':
-      case '7D': {
-        const N = parseInt(tfId); // "2D" → 2, "5D" → 5, etc.
+      case '2D':  case '3D':  case '4D':  case '5D':
+      case '6D':  case '7D':  case '8D':  case '9D':  case '10D':
+      case '11D': case '12D': case '13D': case '14D': case '15D':
+      case '16D': case '17D': case '18D': case '19D': case '20D': {
+        const N = parseInt(tfId); // "2D" → 2, "10D" → 10, "20D" → 20, etc.
 
         // Check if today is a close day, it's a trading day, and session hasn't ended
         if (isWeekday && !todayIsHoliday && (tdIdx % N === N - 1) && currentTime < todayCloseMs) {
@@ -1157,7 +1217,8 @@ export class ConfluenceLearningAgent {
         }
 
         // Walk forward through calendar days to find the next N-day close
-        for (let d = 1; d <= 20; d++) {
+        // Range must cover worst-case: 20 trading days ≈ 30 calendar days + weekends/holidays
+        for (let d = 1; d <= 60; d++) {
           const futureDate = new Date(currentTime + d * 86_400_000);
           const futureNy = this.getNYDateTimeParts(futureDate);
           if (futureNy.dayOfWeek === 0 || futureNy.dayOfWeek === 6) continue; // skip weekends
@@ -1172,7 +1233,7 @@ export class ConfluenceLearningAgent {
       }
       
       case '1W': {
-        // Weekly (trading week) closes on last trading day of the week (usually Friday)
+        // Weekly closes on last trading day of the week (usually Friday).
         const isFriday = dayOfWeek === 5;
         if (isFriday && !todayIsHoliday && currentTime < todayCloseMs) {
           return minsToTodayClose; // Closes today!
@@ -1676,10 +1737,11 @@ export class ConfluenceLearningAgent {
         minsToFirstClose: firstClose ? Math.max(0, Math.round((firstClose - anchorMs) / 60_000)) : null,
         closesOnAnchorDay,
         weight,
-        // Group category
+        // Group category — use tf identifier to distinguish daily multi-day
+        // blocks (2D–20D) from weekly cycles (W, 2W–4W) which share minute ranges
         category: tfConfig.minutes <= 720 ? 'intraday'
-          : tfConfig.minutes <= 10080 ? 'daily'
-          : tfConfig.minutes <= 40320 ? 'weekly'
+          : /^\d*D$/i.test(tfConfig.tf) ? 'daily'
+          : /^\d*W$/i.test(tfConfig.tf) ? 'weekly'
           : tfConfig.minutes <= 525600 ? 'monthly'
           : 'yearly',
       });
