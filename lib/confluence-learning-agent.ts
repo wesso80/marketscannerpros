@@ -13,6 +13,14 @@ import OpenAI from 'openai';
 import { q } from '@/lib/db';
 import { getOHLC, getPriceBySymbol, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
 import { avTakeToken } from '@/lib/avRateGovernor';
+import {
+  getNextCloseIntraday,
+  getSessionBounds,
+  isMarketOpenForSession,
+  type SessionMode,
+} from '@/lib/time/sessionCloseEngine';
+
+export type { SessionMode } from '@/lib/time/sessionCloseEngine';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -847,14 +855,8 @@ export class ConfluenceLearningAgent {
     return rawLabel;
   }
 
-  private isUsEquityMarketOpen(now: Date): boolean {
-    const nyNow = this.getNYDateTimeParts(now);
-    if (nyNow.dayOfWeek === 0 || nyNow.dayOfWeek === 6) return false;
-
-    const mins = nyNow.hour * 60 + nyNow.minute;
-    const openMins = 9 * 60 + 30;
-    const closeMins = 16 * 60;
-    return mins >= openMins && mins < closeMins;
+  private isUsEquityMarketOpen(now: Date, sessionMode: SessionMode = 'extended'): boolean {
+    return isMarketOpenForSession(now, sessionMode);
   }
 
   /**
@@ -1024,40 +1026,26 @@ export class ConfluenceLearningAgent {
     now: Date,
     tfConfig: Pick<TimeframeConfig, 'tf' | 'label' | 'minutes'>,
     assetClass: 'crypto' | 'equity' = 'crypto',
+    sessionMode: SessionMode = 'extended',
   ): number | null {
     // Crypto: TradingView-style UTC-boundary engine
     if (assetClass === 'crypto') return this.getNextCloseCrypto(now, tfConfig);
 
-    // ── Equity path: NY session-based close logic ──
-    const currentTime = now.getTime();
-    
-    // For intraday TFs (5m to 12h), anchor to RTH session boundaries
-    // Equity intraday candles only form during market hours (9:30-16:00 ET).
-    // When market is closed, compute minutes until the first intraday close
-    // of the NEXT session.
+    // ── Equity path: TradingView-style anchor-based close logic ──
+    // Intraday TFs (5m to 12h) use the session close engine which anchors
+    // candle boundaries to the session open (09:30 for regular, 04:00 for
+    // extended) — exactly matching TradingView's behaviour.
     if (tfConfig.minutes <= 720) { // 12 hours or less
-      const session = this.getNextEquitySession(now);
-      
-      if (currentTime >= session.openMs && currentTime < session.closeMs) {
-        // DURING session: minutes since open, find next TF boundary within session
-        const minsSinceOpen = (currentTime - session.openMs) / 60_000;
-        const nextCloseMinsFromOpen = Math.ceil(minsSinceOpen / tfConfig.minutes) * tfConfig.minutes;
-        const sessionLenMins = (session.closeMs - session.openMs) / 60_000; // 390 mins
-        
-        if (nextCloseMinsFromOpen >= sessionLenMins) {
-          // Next boundary is at or past session close — close at session end (=daily close)
-          return Math.max(0, Math.floor((session.closeMs - currentTime) / 60_000));
-        }
-        return Math.max(0, Math.round(nextCloseMinsFromOpen - minsSinceOpen));
-      } else {
-        // OUTSIDE session (weekend, after-hours, pre-market):
-        // Next close = session open + first TF boundary
-        const minsToOpen = Math.max(0, Math.floor((session.openMs - currentTime) / 60_000));
-        return minsToOpen + tfConfig.minutes; // first close is one TF period after open
-      }
+      const { minsToClose } = getNextCloseIntraday({
+        now,
+        tfMinutes: tfConfig.minutes,
+        sessionMode,
+      });
+      return minsToClose;
     }
     
     // For daily and above, all closes are anchored to NY market close (4:00 PM ET, DST-aware)
+    const currentTime = now.getTime();
     const nyNow = this.getNYDateTimeParts(now);
     const year = nyNow.year;
     const month = nyNow.month;
@@ -1870,7 +1858,7 @@ export class ConfluenceLearningAgent {
    * - Computes peakCloseCluster (densest rolling window)
    * - All 32 TFs are always scanned regardless of scan mode
    */
-  calculateCandleCloseConfluence(currentTime: number, assetClass: 'crypto' | 'equity' = 'crypto'): CandleCloseConfluence {
+  calculateCandleCloseConfluence(currentTime: number, assetClass: 'crypto' | 'equity' = 'crypto', sessionMode: SessionMode = 'extended'): CandleCloseConfluence {
     const now = new Date(currentTime);
     
     // ── TF weights based on significance (higher TF = more weight) ──
@@ -1888,7 +1876,7 @@ export class ConfluenceLearningAgent {
     const tfCloses: { tf: string; minutes: number; minsAway: number; weight: number; nextCloseAt: string }[] = [];
     
     for (const tfConfig of TIMEFRAMES) {
-      const minsAway = this.getMinutesToTimeframeClose(now, tfConfig, assetClass);
+      const minsAway = this.getMinutesToTimeframeClose(now, tfConfig, assetClass, sessionMode);
       if (minsAway !== null && minsAway >= 0) {
         const nextCloseMs = currentTime + minsAway * 60 * 1000;
         tfCloses.push({
@@ -2064,7 +2052,7 @@ export class ConfluenceLearningAgent {
       },
       confluenceScore: normalizedScore,
       confluenceRating: rating,
-      isMarketOpen: assetClass === 'crypto' ? true : this.isUsEquityMarketOpen(now),
+      isMarketOpen: assetClass === 'crypto' ? true : this.isUsEquityMarketOpen(now, sessionMode),
       bestEntryWindow: {
         startMins: entryStart,
         endMins: entryEnd,
@@ -2188,7 +2176,7 @@ export class ConfluenceLearningAgent {
   // and calculates which direction price is being "pulled" toward 50% levels
   // ═══════════════════════════════════════════════════════════════════════════
 
-  analyzeDecompressionPull(baseBars: OHLCV[], currentPrice: number, currentTime: number, assetClass: 'crypto' | 'equity' = 'crypto'): DecompressionAnalysis {
+  analyzeDecompressionPull(baseBars: OHLCV[], currentPrice: number, currentTime: number, assetClass: 'crypto' | 'equity' = 'crypto', sessionMode: SessionMode = 'extended'): DecompressionAnalysis {
     const decompressions: DecompressionPull[] = [];
     const now = new Date(currentTime);
 
@@ -2212,7 +2200,7 @@ export class ConfluenceLearningAgent {
     const decompDataSpanMins = decompDataSpanMs / 60_000;
     
     for (const tfConfig of TIMEFRAMES) {
-      const minsToClose = this.getMinutesToTimeframeClose(now, tfConfig, assetClass);
+      const minsToClose = this.getMinutesToTimeframeClose(now, tfConfig, assetClass, sessionMode);
       if (minsToClose === null || minsToClose < 0) continue;
       
       // Get resampled bars for this TF
@@ -2419,7 +2407,7 @@ export class ConfluenceLearningAgent {
   // HIERARCHICAL SCAN - Scan with all TFs below the selected mode
   // ═══════════════════════════════════════════════════════════════════════════
 
-  async scanHierarchical(symbol: string, scanMode: ScanMode): Promise<HierarchicalScanResult> {
+  async scanHierarchical(symbol: string, scanMode: ScanMode, sessionMode: SessionMode = 'extended'): Promise<HierarchicalScanResult> {
     const modeConfig = SCAN_MODES.find(m => m.mode === scanMode);
     if (!modeConfig) throw new Error(`Unknown scan mode: ${scanMode}`);
     
@@ -2454,7 +2442,7 @@ export class ConfluenceLearningAgent {
     const isCrypto = assetClass === 'crypto';
     
     const now = new Date(currentTime);
-    const isMarketClosed = !isCrypto && !this.isUsEquityMarketOpen(now);
+    const isMarketClosed = !isCrypto && !this.isUsEquityMarketOpen(now, sessionMode);
     
     // Detect actual base bar resolution (gap between bars)
     // Crypto: merged data has 30m bars (recent) + 4h bars (older)
@@ -2478,7 +2466,7 @@ export class ConfluenceLearningAgent {
     const scanDataSpanMins = scanDataSpanMs / 60_000;
 
     for (const tfConfig of includedTFConfigs) {
-      const minsToClose = this.getMinutesToTimeframeClose(now, tfConfig, assetClass);
+      const minsToClose = this.getMinutesToTimeframeClose(now, tfConfig, assetClass, sessionMode);
       if (minsToClose === null) continue;
       
       // Resample for 50% level
@@ -2957,7 +2945,7 @@ export class ConfluenceLearningAgent {
     };
     
     // Calculate Candle Close Confluence - when multiple TFs close together
-    const candleCloseConfluence = this.calculateCandleCloseConfluence(currentTime, assetClass);
+    const candleCloseConfluence = this.calculateCandleCloseConfluence(currentTime, assetClass, sessionMode);
 
     // ── Enrich closes[] with mid50 data for ALL TFs ──
     // The decompression analysis (allDecomps) only covers TFs within the scan

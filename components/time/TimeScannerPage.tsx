@@ -382,6 +382,7 @@ export default function TimeScannerPage() {
   const searchParams = useSearchParams();
   const [symbol, setSymbol] = useState('BTCUSD');
   const [scanMode, setScanMode] = useState<ScanModeType>('intraday_1h');
+  const [sessionMode, setSessionMode] = useState<'regular' | 'extended' | 'full'>('extended');
   const [input, setInput] = useState<TimeConfluenceV2Inputs>(FALLBACK_INPUT);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -404,6 +405,7 @@ export default function TimeScannerPage() {
           symbol: effectiveSymbol,
           mode: 'hierarchical',
           scanMode: effectiveMode,
+          sessionMode,
         }),
       });
 
@@ -500,6 +502,19 @@ export default function TimeScannerPage() {
                     <option key={option} value={option}>{SCAN_MODE_LABELS[option]}</option>
                   ))}
                 </select>
+                {/* Session Mode selector — only visible for equities */}
+                {!(symbol.includes('BTC') || symbol.includes('ETH') || symbol.includes('SOL') || symbol.endsWith('USD')) && (
+                  <select
+                    value={sessionMode}
+                    onChange={(event) => setSessionMode(event.target.value as 'regular' | 'extended' | 'full')}
+                    className="rounded-lg border border-slate-800 bg-slate-950/50 px-2 py-1.5 text-xs text-slate-200"
+                    title="Session hours — affects intraday candle close anchors"
+                  >
+                    <option value="regular">RTH (9:30–16:00)</option>
+                    <option value="extended">Extended (4:00–20:00)</option>
+                    <option value="full">Full (00:00–24:00)</option>
+                  </select>
+                )}
                 <button
                   type="button"
                   onClick={() => {
@@ -512,7 +527,7 @@ export default function TimeScannerPage() {
                 </button>
               </div>
               <div className="mt-1.5 truncate text-xs text-slate-400">
-                {out.direction} • {SCAN_MODE_LABELS[scanMode]} • {displaySymbol}
+                {out.direction} • {SCAN_MODE_LABELS[scanMode]} • {displaySymbol}{!(symbol.includes('BTC') || symbol.includes('ETH') || symbol.includes('SOL') || symbol.endsWith('USD')) ? ` • ${sessionMode === 'regular' ? 'RTH' : sessionMode === 'extended' ? 'Extended' : 'Full'}` : ''}
               </div>
             </div>
 
@@ -611,7 +626,7 @@ export default function TimeScannerPage() {
               <div>
                 <div className="text-xs font-semibold text-amber-400">MARKET CLOSED</div>
                 <div className="text-[10px] text-amber-400/70">
-                  US equity markets are closed — close times shown are for the next trading session (Mon–Fri 9:30 AM – 4:00 PM ET)
+                  US equity markets are closed — close times shown are for the next {sessionMode === 'regular' ? 'RTH session (Mon–Fri 9:30 AM – 4:00 PM ET)' : sessionMode === 'extended' ? 'extended session (Mon–Fri 4:00 AM – 8:00 PM ET)' : 'full session (Mon–Fri 00:00 – 24:00 ET)'}
                 </div>
               </div>
             </div>

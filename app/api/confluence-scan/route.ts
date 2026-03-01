@@ -10,7 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { confluenceLearningAgent, getScanModes, type ScanMode, type CloseCalendarAnchor } from '@/lib/confluence-learning-agent';
+import { confluenceLearningAgent, getScanModes, type ScanMode, type CloseCalendarAnchor, type SessionMode } from '@/lib/confluence-learning-agent';
 import { confluenceAgent, type Forecast, type ConfluenceState } from '@/lib/ai-confluence-agent';
 import { q } from '@/lib/db';
 import { getSessionFromCookie } from '@/lib/auth';
@@ -22,6 +22,7 @@ interface ScanRequest {
   symbol: string;
   mode?: 'full' | 'quick' | 'state-only' | 'learn' | 'forecast' | 'hierarchical' | 'calendar';
   scanMode?: ScanMode;  // For hierarchical scans
+  sessionMode?: SessionMode; // regular | extended | full (equity session hours)
   forceRefresh?: boolean;
   // Forward Close Calendar params
   anchor?: CloseCalendarAnchor;
@@ -119,8 +120,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
       case 'hierarchical':
         // Hierarchical scan with selected mode (scalping, intraday, swing, macro)
         const scanMode = (body as any).scanMode || 'intraday_1h';
-        console.log(`📊 Hierarchical ${scanMode} scan for ${normalizedSymbol}...`);
-        result = await confluenceLearningAgent.scanHierarchical(normalizedSymbol, scanMode);
+        const sessionModeParam: SessionMode = (['regular', 'extended', 'full'].includes(body.sessionMode || '') ? body.sessionMode : 'extended') as SessionMode;
+        console.log(`📊 Hierarchical ${scanMode} scan for ${normalizedSymbol} (session: ${sessionModeParam})...`);
+        result = await confluenceLearningAgent.scanHierarchical(normalizedSymbol, scanMode, sessionModeParam);
         break;
 
       case 'calendar':
