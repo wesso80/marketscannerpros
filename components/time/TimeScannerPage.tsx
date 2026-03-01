@@ -613,9 +613,11 @@ export default function TimeScannerPage() {
         {/* ── Close Schedule (TradingView-style full TF universe) ── */}
         <section className="w-full rounded-2xl border border-slate-800 bg-slate-900/30 p-3 lg:p-5">
           <div className="mb-3">
-            <div className="text-sm font-semibold text-slate-100">📊 Close Schedule — All Timeframes</div>
+            <div className="text-sm font-semibold text-slate-100">📊 Close Schedule — {input.context.assetClass === 'equity' ? 'Daily+ Timeframes' : 'All Timeframes'}</div>
             <div className="text-xs text-slate-400">
-              Next bar close for every TF • Prior bar 50% levels • Where price is being pulled
+              {input.context.assetClass === 'equity'
+                ? 'Daily+ variable close dates • Intraday closes are fixed (see schedule below)'
+                : 'Next bar close for every TF • Prior bar 50% levels • Where price is being pulled'}
             </div>
           </div>
 
@@ -692,69 +694,211 @@ export default function TimeScannerPage() {
           })()}
 
           {/* Close table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-slate-800 text-[10px] uppercase tracking-wider text-slate-500">
-                  <th className="pb-2 pr-3 font-medium">TF</th>
-                  <th className="pb-2 pr-3 font-medium">Next Close</th>
-                  <th className="pb-2 pr-3 font-medium">Mins</th>
-                  <th className="pb-2 pr-3 font-medium">Prev 50%</th>
-                  <th className="pb-2 pr-3 font-medium">Dist %</th>
-                  <th className="pb-2 pr-3 font-medium">Pull</th>
-                  <th className="pb-2 pr-3 font-medium">State</th>
-                  <th className="pb-2 font-medium">Wt</th>
-                </tr>
-              </thead>
-              <tbody>
-                {input.setup.decomposition.slice(0, 33).map((row) => {
-                  const mins = row.minsToClose ?? 0;
-                  const dist = row.distanceToMid50 ?? 0;
-                  const isClosingNow = mins <= 5;
-                  const isClosingSoon = mins > 5 && mins <= 60;
-                  const distColor = dist > 0 ? 'text-emerald-400' : dist < 0 ? 'text-rose-400' : 'text-slate-500';
-                  const pullArrow = row.pullDirection === 'up' ? '▲' : row.pullDirection === 'down' ? '▼' : '—';
-                  const pullColor = row.pullDirection === 'up' ? 'text-emerald-400' : row.pullDirection === 'down' ? 'text-rose-400' : 'text-slate-600';
-                  return (
-                    <tr
-                      key={row.tfLabel}
-                      className={`border-b border-slate-800/50 ${isClosingNow ? 'bg-emerald-500/10' : isClosingSoon ? 'bg-amber-500/5' : ''}`}
-                    >
-                      <td className="py-1.5 pr-3 font-semibold text-slate-100">{row.tfLabel}</td>
-                      <td className={`py-1.5 pr-3 font-mono ${closeRowColor(mins)}`}>{formatMinsToClose(mins)}</td>
-                      <td className="py-1.5 pr-3 font-mono text-slate-400">{mins > 0 ? Math.round(mins) : '—'}</td>
-                      <td className="py-1.5 pr-3 font-mono text-slate-200">
-                        {row.mid50Level && row.mid50Level > 0
-                          ? `$${row.mid50Level.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                          : <span className="text-slate-600">—</span>
-                        }
-                      </td>
-                      <td className={`py-1.5 pr-3 font-mono ${distColor}`}>
-                        {row.mid50Level && row.mid50Level > 0
-                          ? `${dist >= 0 ? '+' : ''}${dist.toFixed(2)}%`
-                          : <span className="text-slate-600">—</span>
-                        }
-                      </td>
-                      <td className={`py-1.5 pr-3 font-semibold ${pullColor}`}>{pullArrow}</td>
-                      <td className="py-1.5 pr-3">
-                        {row.state === 'confirmed' ? (
-                          <span className="inline-block rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-400">CONFIRMED</span>
-                        ) : row.state === 'forming' ? (
-                          <span className="inline-block rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-400">FORMING</span>
-                        ) : (
-                          <span className="inline-block rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">—</span>
-                        )}
-                      </td>
-                      <td className="py-1.5 text-slate-500">{row.closeProximityPct ? `${Math.round(row.closeProximityPct * 100)}%` : '—'}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          {(() => {
+            const isEquity = input.context.assetClass === 'equity';
+            const INTRADAY_TFS = new Set(['5m','10m','15m','30m','1h','2h','3h','4h','6h','8h','12h']);
+            const visibleRows = isEquity
+              ? input.setup.decomposition.slice(0, 33).filter(r => !INTRADAY_TFS.has(r.tfLabel))
+              : input.setup.decomposition.slice(0, 33);
+
+            return (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-800 text-[10px] uppercase tracking-wider text-slate-500">
+                        <th className="pb-2 pr-3 font-medium">TF</th>
+                        <th className="pb-2 pr-3 font-medium">Next Close</th>
+                        <th className="pb-2 pr-3 font-medium">Mins</th>
+                        <th className="pb-2 pr-3 font-medium">Prev 50%</th>
+                        <th className="pb-2 pr-3 font-medium">Dist %</th>
+                        <th className="pb-2 pr-3 font-medium">Pull</th>
+                        <th className="pb-2 pr-3 font-medium">State</th>
+                        <th className="pb-2 font-medium">Wt</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visibleRows.map((row) => {
+                        const mins = row.minsToClose ?? 0;
+                        const dist = row.distanceToMid50 ?? 0;
+                        const isClosingNow = mins <= 5;
+                        const isClosingSoon = mins > 5 && mins <= 60;
+                        const distColor = dist > 0 ? 'text-emerald-400' : dist < 0 ? 'text-rose-400' : 'text-slate-500';
+                        const pullArrow = row.pullDirection === 'up' ? '▲' : row.pullDirection === 'down' ? '▼' : '—';
+                        const pullColor = row.pullDirection === 'up' ? 'text-emerald-400' : row.pullDirection === 'down' ? 'text-rose-400' : 'text-slate-600';
+                        return (
+                          <tr
+                            key={row.tfLabel}
+                            className={`border-b border-slate-800/50 ${isClosingNow ? 'bg-emerald-500/10' : isClosingSoon ? 'bg-amber-500/5' : ''}`}
+                          >
+                            <td className="py-1.5 pr-3 font-semibold text-slate-100">{row.tfLabel}</td>
+                            <td className={`py-1.5 pr-3 font-mono ${closeRowColor(mins)}`}>{formatMinsToClose(mins)}</td>
+                            <td className="py-1.5 pr-3 font-mono text-slate-400">{mins > 0 ? Math.round(mins) : '—'}</td>
+                            <td className="py-1.5 pr-3 font-mono text-slate-200">
+                              {row.mid50Level && row.mid50Level > 0
+                                ? `$${row.mid50Level.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                : <span className="text-slate-600">—</span>
+                              }
+                            </td>
+                            <td className={`py-1.5 pr-3 font-mono ${distColor}`}>
+                              {row.mid50Level && row.mid50Level > 0
+                                ? `${dist >= 0 ? '+' : ''}${dist.toFixed(2)}%`
+                                : <span className="text-slate-600">—</span>
+                              }
+                            </td>
+                            <td className={`py-1.5 pr-3 font-semibold ${pullColor}`}>{pullArrow}</td>
+                            <td className="py-1.5 pr-3">
+                              {row.state === 'confirmed' ? (
+                                <span className="inline-block rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-400">CONFIRMED</span>
+                              ) : row.state === 'forming' ? (
+                                <span className="inline-block rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-400">FORMING</span>
+                              ) : (
+                                <span className="inline-block rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">—</span>
+                              )}
+                            </td>
+                            <td className="py-1.5 text-slate-500">{row.closeProximityPct ? `${Math.round(row.closeProximityPct * 100)}%` : '—'}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {visibleRows.length === 0 && input.setup.decomposition.length > 0 && isEquity && (
+                  <div className="py-4 text-center text-xs text-slate-500">Intraday rows hidden for equities — only daily+ timeframes shown above.</div>
+                )}
+              </>
+            );
+          })()}
 
           {input.setup.decomposition.length === 0 && (
             <div className="py-6 text-center text-xs text-slate-500">Run a scan to load the close schedule.</div>
+          )}
+
+          {/* ── Static Intraday Close Reference (equities only) ── */}
+          {input.context.assetClass === 'equity' && (
+            <details className="mt-4 rounded-xl border border-slate-800 bg-slate-950/25">
+              <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-slate-300">🕐 Intraday Equity Close Schedule</span>
+                  <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-500">FIXED</span>
+                </div>
+                <span className="text-[10px] text-slate-500">▾</span>
+              </summary>
+              <div className="border-t border-slate-800 px-4 py-3">
+                <div className="mb-2 text-[10px] text-slate-500">
+                  Intraday candle closes are deterministic — they repeat every session based on {sessionMode === 'regular' ? 'RTH (9:30–16:00 ET)' : sessionMode === 'extended' ? 'Extended (4:00–20:00 ET)' : 'Full (00:00–24:00 ET)'} anchoring. These never change for equities.
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-[11px]">
+                    <thead>
+                      <tr className="border-b border-slate-800 text-[10px] uppercase tracking-wider text-slate-500">
+                        <th className="pb-1.5 pr-4 font-medium">Time (ET)</th>
+                        <th className="pb-1.5 pr-4 font-medium">Event</th>
+                        <th className="pb-1.5 font-medium">Candle Closes</th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-slate-300">
+                      {sessionMode !== 'regular' && (
+                        <>
+                          <tr className="border-b border-slate-800/40">
+                            <td className="py-1.5 pr-4 font-mono text-slate-400">{sessionMode === 'full' ? '00:00' : '04:00'}</td>
+                            <td className="py-1.5 pr-4 text-slate-500">Session Open</td>
+                            <td className="py-1.5 text-slate-500">New bars begin anchoring</td>
+                          </tr>
+                          <tr className="border-b border-slate-800/40">
+                            <td className="py-1.5 pr-4 font-mono text-amber-400/80">08:00</td>
+                            <td className="py-1.5 pr-4">Early Pre-Market</td>
+                            <td className="py-1.5">
+                              <span className="text-slate-400">
+                                {sessionMode === 'extended' ? '4H (4:00–8:00) · 2H (6:00–8:00) · 1H (7:00–8:00)' : '8H (0:00–8:00) · 4H (4:00–8:00) · 2H (6:00–8:00) · 1H (7:00–8:00)'}
+                              </span>
+                            </td>
+                          </tr>
+                          <tr className="border-b border-slate-800/40">
+                            <td className="py-1.5 pr-4 font-mono text-amber-400/80">09:00</td>
+                            <td className="py-1.5 pr-4">Late Pre-Market</td>
+                            <td className="py-1.5 text-slate-400">1H (8:00–9:00) · 30M (8:30–9:00)</td>
+                          </tr>
+                        </>
+                      )}
+                      <tr className="border-b border-slate-800/40 bg-emerald-500/5">
+                        <td className="py-1.5 pr-4 font-mono font-semibold text-emerald-400">09:30</td>
+                        <td className="py-1.5 pr-4 font-semibold text-emerald-300">NYSE Open</td>
+                        <td className="py-1.5 text-slate-400">New 30M, 1H, 2H, 4H bars begin — surge in volume</td>
+                      </tr>
+                      <tr className="border-b border-slate-800/40">
+                        <td className="py-1.5 pr-4 font-mono text-slate-200">10:00</td>
+                        <td className="py-1.5 pr-4">Opening Range Close</td>
+                        <td className="py-1.5 text-slate-400">
+                          {sessionMode === 'regular'
+                            ? '30M (9:30–10:00) · 1H (9:00–10:00)'
+                            : '30M (9:30–10:00) · 1H (9:00–10:00) · 2H (8:00–10:00) · 3H (7:00–10:00) · 6H (4:00–10:00)'}
+                        </td>
+                      </tr>
+                      <tr className="border-b border-slate-800/40">
+                        <td className="py-1.5 pr-4 font-mono text-slate-200">11:30</td>
+                        <td className="py-1.5 pr-4">European Close</td>
+                        <td className="py-1.5 text-slate-400">30M (11:00–11:30) · 1H (10:30–11:30) · 2H (9:30–11:30)</td>
+                      </tr>
+                      <tr className="border-b border-slate-800/40">
+                        <td className="py-1.5 pr-4 font-mono text-slate-200">12:00</td>
+                        <td className="py-1.5 pr-4">Midday</td>
+                        <td className="py-1.5 text-slate-400">
+                          {sessionMode === 'regular'
+                            ? '1H (11:00–12:00) · 2H (10:00–12:00)'
+                            : '1H (11:00–12:00) · 2H (10:00–12:00) · 4H (8:00–12:00) · 8H (4:00–12:00)'}
+                        </td>
+                      </tr>
+                      <tr className="border-b border-slate-800/40">
+                        <td className="py-1.5 pr-4 font-mono text-slate-200">14:00</td>
+                        <td className="py-1.5 pr-4">Mid-Afternoon</td>
+                        <td className="py-1.5 text-slate-400">
+                          {sessionMode === 'regular'
+                            ? '30M (1:30–2:00) · 1H (1:00–2:00) · 2H (12:00–2:00) · 4H (10:00–2:00)'
+                            : '30M (1:30–2:00) · 1H (1:00–2:00) · 2H (12:00–2:00) · 4H (10:00–2:00)'}
+                        </td>
+                      </tr>
+                      <tr className="border-b border-slate-800/40">
+                        <td className="py-1.5 pr-4 font-mono text-slate-200">15:30</td>
+                        <td className="py-1.5 pr-4">Final Half-Hour</td>
+                        <td className="py-1.5 text-slate-400">30M (3:00–3:30) · 1H (2:30–3:30)</td>
+                      </tr>
+                      <tr className="border-b border-slate-800/40 bg-emerald-500/5">
+                        <td className="py-1.5 pr-4 font-mono font-semibold text-emerald-400">16:00</td>
+                        <td className="py-1.5 pr-4 font-semibold text-emerald-300">NYSE Close</td>
+                        <td className="py-1.5 text-slate-400">
+                          {sessionMode === 'regular'
+                            ? '30M · 1H · 2H · 4H · Daily — end of day candle sets final price'
+                            : '30M (3:30–4:00) · 1H (3:00–4:00) · 2H (2:00–4:00) · 4H (12:00–4:00)'}
+                        </td>
+                      </tr>
+                      {sessionMode !== 'regular' && (
+                        <tr className="border-b border-slate-800/40 bg-slate-800/20">
+                          <td className="py-1.5 pr-4 font-mono font-semibold text-amber-400/80">20:00</td>
+                          <td className="py-1.5 pr-4 font-semibold text-amber-300/80">After-Hours Close</td>
+                          <td className="py-1.5 text-slate-400">
+                            {sessionMode === 'extended'
+                              ? '4H (16:00–20:00) · 8H (12:00–20:00) · Daily — end of extended session'
+                              : '4H (16:00–20:00) · 2H (18:00–20:00) · 1H (19:00–20:00)'}
+                          </td>
+                        </tr>
+                      )}
+                      {sessionMode === 'full' && (
+                        <tr className="border-b border-slate-800/40 bg-slate-800/20">
+                          <td className="py-1.5 pr-4 font-mono font-semibold text-slate-400">00:00</td>
+                          <td className="py-1.5 pr-4 font-semibold text-slate-400">Full Session Close</td>
+                          <td className="py-1.5 text-slate-400">8H (16:00–00:00) · 12H (12:00–00:00) · Daily — full 24h candle</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="mt-2 text-[10px] text-slate-600">
+                  These times repeat identically every trading day (Mon–Fri, excluding NYSE holidays). Only daily+ timeframes have variable close dates.
+                </div>
+              </div>
+            </details>
           )}
         </section>
 
