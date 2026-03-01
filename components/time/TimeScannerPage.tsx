@@ -364,6 +364,7 @@ export default function TimeScannerPage() {
   const [error, setError] = useState<string | null>(null);
   const [initialScanDone, setInitialScanDone] = useState(false);
   const [isMarketOpen, setIsMarketOpen] = useState<boolean>(true);
+  const [scanTrigger, setScanTrigger] = useState(0);
   const timeAutoLogRef = useRef<string>('');
   const [scanData, setScanData] = useState<{
     currentPrice: number;
@@ -462,6 +463,7 @@ export default function TimeScannerPage() {
     }
   };
 
+  // Initial scan from URL params
   useEffect(() => {
     if (initialScanDone || loading) return;
     setInitialScanDone(true);
@@ -477,6 +479,13 @@ export default function TimeScannerPage() {
     setScanMode(initialTf);
     void runScan({ symbol: initialSymbol, scanMode: initialTf });
   }, [initialScanDone, loading, searchParams]);
+
+  // Re-scan whenever scanMode or sessionMode changes via dropdown
+  useEffect(() => {
+    if (!initialScanDone || scanTrigger === 0) return;
+    void runScan();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scanTrigger]);
 
   const out = computeTimeConfluenceV2(input);
   const displaySymbol = useMemo(() => input.context.symbol || symbol, [input.context.symbol, symbol]);
@@ -513,9 +522,8 @@ export default function TimeScannerPage() {
                 <select
                   value={scanMode}
                   onChange={(event) => {
-                    const newMode = event.target.value as ScanModeType;
-                    setScanMode(newMode);
-                    void runScan({ scanMode: newMode });
+                    setScanMode(event.target.value as ScanModeType);
+                    setScanTrigger((n) => n + 1);
                   }}
                   className="rounded-lg border border-slate-800 bg-slate-950/50 px-2 py-1.5 text-xs text-slate-200"
                 >
@@ -527,7 +535,10 @@ export default function TimeScannerPage() {
                 {!(symbol.includes('BTC') || symbol.includes('ETH') || symbol.includes('SOL') || symbol.endsWith('USD')) && (
                   <select
                     value={sessionMode}
-                    onChange={(event) => setSessionMode(event.target.value as 'regular' | 'extended' | 'full')}
+                    onChange={(event) => {
+                      setSessionMode(event.target.value as 'regular' | 'extended' | 'full');
+                      setScanTrigger((n) => n + 1);
+                    }}
                     className="rounded-lg border border-slate-800 bg-slate-950/50 px-2 py-1.5 text-xs text-slate-200"
                     title="Session hours — affects intraday candle close anchors"
                   >
