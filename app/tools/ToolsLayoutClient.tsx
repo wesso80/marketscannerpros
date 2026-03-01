@@ -67,24 +67,42 @@ export default function ToolsLayoutClient({
         <ErrorBoundary fallback={null}>
           <ToolsNavBar />
         </ErrorBoundary>
-        <ErrorBoundary fallback={null}>
-          <AdaptiveTraderPersonalityBar skill={skill} />
-        </ErrorBoundary>
-        <ErrorBoundary fallback={null}>
-          <div className="mx-auto w-full max-w-none px-3 md:px-4">
-            <Suspense fallback={null}>
-              <OperatorCommandStrip />
-            </Suspense>
+
+        {/* ── Operator HUD: collapsed by default to reduce visual overload ── */}
+        <details className="group mx-auto w-full max-w-none">
+          <summary
+            className="sticky top-[48px] z-40 flex cursor-pointer items-center gap-2 border-b border-slate-700/40 bg-slate-900/90 px-3 py-1.5 text-[11px] font-semibold text-slate-400 backdrop-blur select-none list-none [&::-webkit-details-marker]:hidden"
+          >
+            <span className="text-cyan-400">&#9654;</span>
+            <span className="uppercase tracking-wider">Operator HUD</span>
+            <span className="text-slate-600">|</span>
+            <span className="text-slate-500 font-normal">Personality &middot; Flow &middot; Risk &middot; Session</span>
+            <span className="ml-auto text-[10px] text-slate-600 group-open:hidden">Click to expand</span>
+            <span className="ml-auto text-[10px] text-slate-600 hidden group-open:inline">Click to collapse</span>
+          </summary>
+
+          <div className="border-b border-slate-700/30 pb-2">
+            <ErrorBoundary fallback={null}>
+              <AdaptiveTraderPersonalityBar skill={skill} />
+            </ErrorBoundary>
+            <ErrorBoundary fallback={null}>
+              <div className="mx-auto w-full max-w-none px-3 md:px-4">
+                <Suspense fallback={null}>
+                  <OperatorCommandStrip />
+                </Suspense>
+              </div>
+            </ErrorBoundary>
+            <ErrorBoundary fallback={null}>
+              <div className="mx-auto w-full max-w-none px-3 pb-2 md:px-4">
+                <CapitalControlStrip />
+                <div className="mt-1">
+                  <GlobalSessionBar />
+                </div>
+              </div>
+            </ErrorBoundary>
           </div>
-        </ErrorBoundary>
-        <ErrorBoundary fallback={null}>
-          <div className="sticky top-[64px] z-30 mx-auto w-full max-w-none px-3 pb-2 md:px-4">
-            <CapitalControlStrip />
-            <div className="mt-1">
-              <GlobalSessionBar />
-            </div>
-          </div>
-        </ErrorBoundary>
+        </details>
+
         <ErrorBoundary>
           <SessionStartBriefing>{wrappedChildren}</SessionStartBriefing>
         </ErrorBoundary>
