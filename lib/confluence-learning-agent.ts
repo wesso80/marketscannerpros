@@ -19,6 +19,7 @@ import {
   isMarketOpenForSession,
   type SessionMode,
 } from '@/lib/time/sessionCloseEngine';
+import { isUSMarketHoliday, isNonTradingDay, lastTradingDayOfMonth } from '@/lib/time/marketHolidays';
 
 export type { SessionMode } from '@/lib/time/sessionCloseEngine';
 
@@ -1082,13 +1083,18 @@ export class ConfluenceLearningAgent {
     const tfId = this.getCanonicalTimeframeId(tfConfig);
 
     const closeAt = (targetYear: number, targetMonth: number, targetDate: number): Date => {
-      // Skip weekends: if the computed date lands on Sat/Sun, advance to Monday
-      const d = new Date(Date.UTC(targetYear, targetMonth, targetDate, 12));
-      const dow = d.getUTCDay();
-      let adjustedDate = targetDate;
-      if (dow === 6) adjustedDate += 2;      // Saturday → Monday
-      else if (dow === 0) adjustedDate += 1;  // Sunday → Monday
-      return new Date(this.getEquitySessionCloseUtcMs(targetYear, targetMonth, adjustedDate, sessionMode));
+      // Advance past weekends and market holidays
+      let d = new Date(Date.UTC(targetYear, targetMonth, targetDate, 12));
+      for (let _s = 0; _s < 10; _s++) {
+        const dow = d.getUTCDay();
+        if (dow === 6) { d = new Date(d.getTime() + 2 * 86_400_000); continue; }
+        if (dow === 0) { d = new Date(d.getTime() + 86_400_000); continue; }
+        if (isUSMarketHoliday(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())) {
+          d = new Date(d.getTime() + 86_400_000); continue;
+        }
+        break;
+      }
+      return new Date(this.getEquitySessionCloseUtcMs(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), sessionMode));
     };
 
     // Today's market close time
@@ -1107,19 +1113,25 @@ export class ConfluenceLearningAgent {
     // Trading-day index for multi-day cycle alignment (Mon–Fri only)
     const tdIdx = this.getTradingDayIndex(now);
     const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
+    const todayIsHoliday = isWeekday && isUSMarketHoliday(year, month, date);
     
     switch (tfId) {
       case '1D': {
         // Daily ALWAYS closes today at market close (if market is open)
-        // Skip weekends for traditional markets
+        // Skip weekends and holidays
         if (dayOfWeek === 0 || dayOfWeek === 6) {
-          // Weekend - next close is Monday
+          // Weekend - next close is Monday (closeAt skips holidays)
           const daysToMonday = dayOfWeek === 0 ? 1 : 2;
           const mondayClose = closeAt(year, month, date + daysToMonday);
           return Math.floor((mondayClose.getTime() - currentTime) / 60000);
         }
+        if (todayIsHoliday) {
+          // Holiday — next close is next trading day
+          const nextClose = closeAt(year, month, date + 1);
+          return Math.floor((nextClose.getTime() - currentTime) / 60000);
+        }
         if (currentTime >= todayCloseMs) {
-          // Past today's close, next is tomorrow (or Monday)
+          // Past today's close, next is tomorrow (or Monday; closeAt skips holidays)
           const nextDay = dayOfWeek === 5 ? 3 : 1; // Friday -> Monday, else tomorrow
           const nextClose = closeAt(year, month, date + nextDay);
           return Math.floor((nextClose.getTime() - currentTime) / 60000);
@@ -1139,8 +1151,8 @@ export class ConfluenceLearningAgent {
       case '7D': {
         const N = parseInt(tfId); // "2D" → 2, "5D" → 5, etc.
 
-        // Check if today is a close day and session hasn't ended yet
-        if (isWeekday && (tdIdx % N === N - 1) && currentTime < todayCloseMs) {
+        // Check if today is a close day, it's a trading day, and session hasn't ended
+        if (isWeekday && !todayIsHoliday && (tdIdx % N === N - 1) && currentTime < todayCloseMs) {
           return minsToTodayClose;
         }
 
@@ -1149,6 +1161,7 @@ export class ConfluenceLearningAgent {
           const futureDate = new Date(currentTime + d * 86_400_000);
           const futureNy = this.getNYDateTimeParts(futureDate);
           if (futureNy.dayOfWeek === 0 || futureNy.dayOfWeek === 6) continue; // skip weekends
+          if (isUSMarketHoliday(futureNy.year, futureNy.month, futureNy.day)) continue; // skip holidays
           const futureTdIdx = this.getTradingDayIndex(futureDate);
           if (futureTdIdx % N === N - 1) {
             const closeMs = this.getEquitySessionCloseUtcMs(futureNy.year, futureNy.month, futureNy.day, sessionMode);
@@ -1159,23 +1172,30 @@ export class ConfluenceLearningAgent {
       }
       
       case '1W': {
-        // Weekly (trading week) closes on FRIDAY at market close
+        // Weekly (trading week) closes on last trading day of the week (usually Friday)
         const isFriday = dayOfWeek === 5;
-        if (isFriday && currentTime < todayCloseMs) {
+        if (isFriday && !todayIsHoliday && currentTime < todayCloseMs) {
           return minsToTodayClose; // Closes today!
         }
         // Days until next Friday
         let daysToFriday = (5 - dayOfWeek + 7) % 7;
-        if (daysToFriday === 0 && currentTime >= todayCloseMs) daysToFriday = 7;
-        const fridayClose = closeAt(year, month, date + daysToFriday);
+        if (daysToFriday === 0 && (currentTime >= todayCloseMs || todayIsHoliday)) daysToFriday = 7;
+        // If target Friday is a holiday, step back to last trading day of that week
+        let wkTarget = new Date(Date.UTC(year, month, date + daysToFriday, 12));
+        for (let _s = 0; _s < 5; _s++) {
+          const dow = wkTarget.getUTCDay();
+          if (dow >= 1 && dow <= 5 && !isUSMarketHoliday(wkTarget.getUTCFullYear(), wkTarget.getUTCMonth(), wkTarget.getUTCDate())) break;
+          wkTarget = new Date(wkTarget.getTime() - 86_400_000);
+        }
+        const fridayClose = closeAt(wkTarget.getUTCFullYear(), wkTarget.getUTCMonth(), wkTarget.getUTCDate());
         return Math.floor((fridayClose.getTime() - currentTime) / 60000);
       }
       
       case '2W': {
-        // 2-Week: closes every OTHER Friday
+        // 2-Week: closes every OTHER Friday (or last trading day if Friday is holiday)
         const isFriday = dayOfWeek === 5;
         const is2WCloseFriday = weeksSinceEpoch % 2 === 0;
-        if (isFriday && is2WCloseFriday && currentTime < todayCloseMs) {
+        if (isFriday && !todayIsHoliday && is2WCloseFriday && currentTime < todayCloseMs) {
           return minsToTodayClose; // Closes today!
         }
         // Find next 2W Friday
@@ -1184,50 +1204,63 @@ export class ConfluenceLearningAgent {
         let weeksToAdd = 0;
         const nextFridayWeek = Math.floor((daysSinceEpoch + daysToFriday) / 7);
         if (nextFridayWeek % 2 !== 0) weeksToAdd = 7;
-        const targetClose = closeAt(year, month, date + daysToFriday + weeksToAdd);
+        // Step back from target if it's a holiday
+        let wk2Target = new Date(Date.UTC(year, month, date + daysToFriday + weeksToAdd, 12));
+        for (let _s = 0; _s < 5; _s++) {
+          const dow = wk2Target.getUTCDay();
+          if (dow >= 1 && dow <= 5 && !isUSMarketHoliday(wk2Target.getUTCFullYear(), wk2Target.getUTCMonth(), wk2Target.getUTCDate())) break;
+          wk2Target = new Date(wk2Target.getTime() - 86_400_000);
+        }
+        const targetClose = closeAt(wk2Target.getUTCFullYear(), wk2Target.getUTCMonth(), wk2Target.getUTCDate());
         return Math.floor((targetClose.getTime() - currentTime) / 60000);
       }
       
       case '3W': {
-        // 3-Week: closes every 3rd Friday
+        // 3-Week: closes every 3rd Friday (or last trading day if Friday is holiday)
         const isFriday = dayOfWeek === 5;
         const is3WCloseFriday = weeksSinceEpoch % 3 === 0;
-        if (isFriday && is3WCloseFriday && currentTime < todayCloseMs) {
+        if (isFriday && !todayIsHoliday && is3WCloseFriday && currentTime < todayCloseMs) {
           return minsToTodayClose;
         }
         let daysToFriday = (5 - dayOfWeek + 7) % 7;
         if (daysToFriday === 0) daysToFriday = 7;
         const weeksUntil3W = (3 - (weeksSinceEpoch % 3)) % 3;
-        const targetClose = closeAt(year, month, date + daysToFriday + (weeksUntil3W * 7));
+        let wk3Target = new Date(Date.UTC(year, month, date + daysToFriday + (weeksUntil3W * 7), 12));
+        for (let _s = 0; _s < 5; _s++) {
+          const dow = wk3Target.getUTCDay();
+          if (dow >= 1 && dow <= 5 && !isUSMarketHoliday(wk3Target.getUTCFullYear(), wk3Target.getUTCMonth(), wk3Target.getUTCDate())) break;
+          wk3Target = new Date(wk3Target.getTime() - 86_400_000);
+        }
+        const targetClose = closeAt(wk3Target.getUTCFullYear(), wk3Target.getUTCMonth(), wk3Target.getUTCDate());
         return Math.floor((targetClose.getTime() - currentTime) / 60000);
       }
       
       case '4W': {
-        // 4-Week: closes every 4th Friday
+        // 4-Week: closes every 4th Friday (or last trading day if Friday is holiday)
         const isFriday = dayOfWeek === 5;
         const is4WCloseFriday = weeksSinceEpoch % 4 === 0;
-        if (isFriday && is4WCloseFriday && currentTime < todayCloseMs) {
+        if (isFriday && !todayIsHoliday && is4WCloseFriday && currentTime < todayCloseMs) {
           return minsToTodayClose;
         }
         let daysToFriday = (5 - dayOfWeek + 7) % 7;
         if (daysToFriday === 0) daysToFriday = 7;
         const weeksUntil4W = (4 - (weeksSinceEpoch % 4)) % 4;
-        const targetClose = closeAt(year, month, date + daysToFriday + (weeksUntil4W * 7));
+        let wk4Target = new Date(Date.UTC(year, month, date + daysToFriday + (weeksUntil4W * 7), 12));
+        for (let _s = 0; _s < 5; _s++) {
+          const dow = wk4Target.getUTCDay();
+          if (dow >= 1 && dow <= 5 && !isUSMarketHoliday(wk4Target.getUTCFullYear(), wk4Target.getUTCMonth(), wk4Target.getUTCDate())) break;
+          wk4Target = new Date(wk4Target.getTime() - 86_400_000);
+        }
+        const targetClose = closeAt(wk4Target.getUTCFullYear(), wk4Target.getUTCMonth(), wk4Target.getUTCDate());
         return Math.floor((targetClose.getTime() - currentTime) / 60000);
       }
       
       case '1M': {
         // Monthly: closes LAST TRADING DAY of month at market close
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        let lastTradingDay = daysInMonth;
-        // Adjust for weekends (find last weekday)
-        const lastDayOfMonth = new Date(Date.UTC(year, month, daysInMonth));
-        const lastDayDOW = lastDayOfMonth.getUTCDay();
-        if (lastDayDOW === 0) lastTradingDay -= 2; // Sunday -> Friday
-        else if (lastDayDOW === 6) lastTradingDay -= 1; // Saturday -> Friday
+        const lastTradingDay = lastTradingDayOfMonth(year, month);
         
         const isMonthEnd = date === lastTradingDay;
-        if (isMonthEnd && currentTime < todayCloseMs) {
+        if (isMonthEnd && !todayIsHoliday && currentTime < todayCloseMs) {
           return minsToTodayClose; // Monthly closes TODAY!
         }
         // Find next month end
@@ -1237,11 +1270,7 @@ export class ConfluenceLearningAgent {
           targetMonth++;
           if (targetMonth > 11) { targetMonth = 0; targetYear++; }
         }
-        const nextMonthDays = new Date(targetYear, targetMonth + 1, 0).getDate();
-        let nextLastTradingDay = nextMonthDays;
-        const nextLastDOW = new Date(Date.UTC(targetYear, targetMonth, nextMonthDays)).getUTCDay();
-        if (nextLastDOW === 0) nextLastTradingDay -= 2;
-        else if (nextLastDOW === 6) nextLastTradingDay -= 1;
+        const nextLastTradingDay = lastTradingDayOfMonth(targetYear, targetMonth);
         
         const monthEndClose = closeAt(targetYear, targetMonth, nextLastTradingDay);
         return Math.floor((monthEndClose.getTime() - currentTime) / 60000);
@@ -1253,13 +1282,8 @@ export class ConfluenceLearningAgent {
         const isBiMonthlyMonth = biMonthlyEnds.includes(month);
         
         if (isBiMonthlyMonth) {
-          const daysInMonth = new Date(year, month + 1, 0).getDate();
-          let lastTradingDay = daysInMonth;
-          const lastDOW = new Date(Date.UTC(year, month, daysInMonth)).getUTCDay();
-          if (lastDOW === 0) lastTradingDay -= 2;
-          else if (lastDOW === 6) lastTradingDay -= 1;
-          
-          if (date === lastTradingDay && currentTime < todayCloseMs) {
+          const lastTradingDay = lastTradingDayOfMonth(year, month);
+          if (date === lastTradingDay && !todayIsHoliday && currentTime < todayCloseMs) {
             return minsToTodayClose; // 2M closes today!
           }
         }
@@ -1268,12 +1292,7 @@ export class ConfluenceLearningAgent {
         let targetYear = year;
         if (targetMonth <= month) targetYear++;
         
-        const tgtDays = new Date(targetYear, targetMonth + 1, 0).getDate();
-        let tgtLastDay = tgtDays;
-        const tgtDOW = new Date(Date.UTC(targetYear, targetMonth, tgtDays)).getUTCDay();
-        if (tgtDOW === 0) tgtLastDay -= 2;
-        else if (tgtDOW === 6) tgtLastDay -= 1;
-        
+        const tgtLastDay = lastTradingDayOfMonth(targetYear, targetMonth);
         const closeDate = closeAt(targetYear, targetMonth, tgtLastDay);
         return Math.floor((closeDate.getTime() - currentTime) / 60000);
       }
@@ -1284,13 +1303,8 @@ export class ConfluenceLearningAgent {
         const isQuarterMonth = quarterEnds.includes(month);
         
         if (isQuarterMonth) {
-          const daysInMonth = new Date(year, month + 1, 0).getDate();
-          let lastTradingDay = daysInMonth;
-          const lastDOW = new Date(Date.UTC(year, month, daysInMonth)).getUTCDay();
-          if (lastDOW === 0) lastTradingDay -= 2;
-          else if (lastDOW === 6) lastTradingDay -= 1;
-          
-          if (date === lastTradingDay && currentTime < todayCloseMs) {
+          const lastTradingDay = lastTradingDayOfMonth(year, month);
+          if (date === lastTradingDay && !todayIsHoliday && currentTime < todayCloseMs) {
             return minsToTodayClose; // Quarter closes today!
           }
         }
@@ -1298,12 +1312,7 @@ export class ConfluenceLearningAgent {
         let targetYear = year;
         if (targetMonth <= month) targetYear++;
         
-        const tgtDays = new Date(targetYear, targetMonth + 1, 0).getDate();
-        let tgtLastDay = tgtDays;
-        const tgtDOW = new Date(Date.UTC(targetYear, targetMonth, tgtDays)).getUTCDay();
-        if (tgtDOW === 0) tgtLastDay -= 2;
-        else if (tgtDOW === 6) tgtLastDay -= 1;
-        
+        const tgtLastDay = lastTradingDayOfMonth(targetYear, targetMonth);
         const closeDate = closeAt(targetYear, targetMonth, tgtLastDay);
         return Math.floor((closeDate.getTime() - currentTime) / 60000);
       }
@@ -1314,13 +1323,8 @@ export class ConfluenceLearningAgent {
         const is4MonthlyMonth = fourMonthEnds.includes(month);
         
         if (is4MonthlyMonth) {
-          const daysInMonth = new Date(year, month + 1, 0).getDate();
-          let lastTradingDay = daysInMonth;
-          const lastDOW = new Date(Date.UTC(year, month, daysInMonth)).getUTCDay();
-          if (lastDOW === 0) lastTradingDay -= 2;
-          else if (lastDOW === 6) lastTradingDay -= 1;
-          
-          if (date === lastTradingDay && currentTime < todayCloseMs) {
+          const lastTradingDay = lastTradingDayOfMonth(year, month);
+          if (date === lastTradingDay && !todayIsHoliday && currentTime < todayCloseMs) {
             return minsToTodayClose;
           }
         }
@@ -1328,12 +1332,7 @@ export class ConfluenceLearningAgent {
         let targetYear = year;
         if (targetMonth <= month) targetYear++;
         
-        const tgtDays = new Date(targetYear, targetMonth + 1, 0).getDate();
-        let tgtLastDay = tgtDays;
-        const tgtDOW = new Date(Date.UTC(targetYear, targetMonth, tgtDays)).getUTCDay();
-        if (tgtDOW === 0) tgtLastDay -= 2;
-        else if (tgtDOW === 6) tgtLastDay -= 1;
-        
+        const tgtLastDay = lastTradingDayOfMonth(targetYear, targetMonth);
         const closeDate = closeAt(targetYear, targetMonth, tgtLastDay);
         return Math.floor((closeDate.getTime() - currentTime) / 60000);
       }
@@ -1344,13 +1343,8 @@ export class ConfluenceLearningAgent {
         const is5MonthlyMonth = fiveMonthEnds.includes(month);
         
         if (is5MonthlyMonth) {
-          const daysInMonth = new Date(year, month + 1, 0).getDate();
-          let lastTradingDay = daysInMonth;
-          const lastDOW = new Date(Date.UTC(year, month, daysInMonth)).getUTCDay();
-          if (lastDOW === 0) lastTradingDay -= 2;
-          else if (lastDOW === 6) lastTradingDay -= 1;
-          
-          if (date === lastTradingDay && currentTime < todayCloseMs) {
+          const lastTradingDay = lastTradingDayOfMonth(year, month);
+          if (date === lastTradingDay && !todayIsHoliday && currentTime < todayCloseMs) {
             return minsToTodayClose;
           }
         }
@@ -1358,12 +1352,7 @@ export class ConfluenceLearningAgent {
         let targetYear = year;
         if (targetMonth <= month) targetYear++;
         
-        const tgtDays = new Date(targetYear, targetMonth + 1, 0).getDate();
-        let tgtLastDay = tgtDays;
-        const tgtDOW = new Date(Date.UTC(targetYear, targetMonth, tgtDays)).getUTCDay();
-        if (tgtDOW === 0) tgtLastDay -= 2;
-        else if (tgtDOW === 6) tgtLastDay -= 1;
-        
+        const tgtLastDay = lastTradingDayOfMonth(targetYear, targetMonth);
         const closeDate = closeAt(targetYear, targetMonth, tgtLastDay);
         return Math.floor((closeDate.getTime() - currentTime) / 60000);
       }
@@ -1374,13 +1363,8 @@ export class ConfluenceLearningAgent {
         const isHalfYearMonth = halfYearEnds.includes(month);
         
         if (isHalfYearMonth) {
-          const daysInMonth = new Date(year, month + 1, 0).getDate();
-          let lastTradingDay = daysInMonth;
-          const lastDOW = new Date(Date.UTC(year, month, daysInMonth)).getUTCDay();
-          if (lastDOW === 0) lastTradingDay -= 2;
-          else if (lastDOW === 6) lastTradingDay -= 1;
-          
-          if (date === lastTradingDay && currentTime < todayCloseMs) {
+          const lastTradingDay = lastTradingDayOfMonth(year, month);
+          if (date === lastTradingDay && !todayIsHoliday && currentTime < todayCloseMs) {
             return minsToTodayClose;
           }
         }
@@ -1388,12 +1372,7 @@ export class ConfluenceLearningAgent {
         let targetYear = year;
         if (targetMonth <= month) targetYear++;
         
-        const tgtDays = new Date(targetYear, targetMonth + 1, 0).getDate();
-        let tgtLastDay = tgtDays;
-        const tgtDOW = new Date(Date.UTC(targetYear, targetMonth, tgtDays)).getUTCDay();
-        if (tgtDOW === 0) tgtLastDay -= 2;
-        else if (tgtDOW === 6) tgtLastDay -= 1;
-        
+        const tgtLastDay = lastTradingDayOfMonth(targetYear, targetMonth);
         const closeDate = closeAt(targetYear, targetMonth, tgtLastDay);
         return Math.floor((closeDate.getTime() - currentTime) / 60000);
       }
@@ -1404,24 +1383,14 @@ export class ConfluenceLearningAgent {
         const is7MonthlyMonth = sevenMonthEnds.includes(month);
         
         if (is7MonthlyMonth) {
-          const daysInMonth = new Date(year, month + 1, 0).getDate();
-          let lastTradingDay = daysInMonth;
-          const lastDOW = new Date(Date.UTC(year, month, daysInMonth)).getUTCDay();
-          if (lastDOW === 0) lastTradingDay -= 2;
-          else if (lastDOW === 6) lastTradingDay -= 1;
-          
-          if (date === lastTradingDay && currentTime < todayCloseMs) {
+          const lastTradingDay = lastTradingDayOfMonth(year, month);
+          if (date === lastTradingDay && !todayIsHoliday && currentTime < todayCloseMs) {
             return minsToTodayClose;
           }
         }
         // Next July
         let targetYear = month >= 6 ? year + 1 : year;
-        const tgtDays = new Date(targetYear, 7, 0).getDate(); // July
-        let tgtLastDay = tgtDays;
-        const tgtDOW = new Date(Date.UTC(targetYear, 6, tgtDays)).getUTCDay();
-        if (tgtDOW === 0) tgtLastDay -= 2;
-        else if (tgtDOW === 6) tgtLastDay -= 1;
-        
+        const tgtLastDay = lastTradingDayOfMonth(targetYear, 6);
         const closeDate = closeAt(targetYear, 6, tgtLastDay);
         return Math.floor((closeDate.getTime() - currentTime) / 60000);
       }
@@ -1432,24 +1401,14 @@ export class ConfluenceLearningAgent {
         const is8MonthlyMonth = eightMonthEnds.includes(month);
         
         if (is8MonthlyMonth) {
-          const daysInMonth = new Date(year, month + 1, 0).getDate();
-          let lastTradingDay = daysInMonth;
-          const lastDOW = new Date(Date.UTC(year, month, daysInMonth)).getUTCDay();
-          if (lastDOW === 0) lastTradingDay -= 2;
-          else if (lastDOW === 6) lastTradingDay -= 1;
-          
-          if (date === lastTradingDay && currentTime < todayCloseMs) {
+          const lastTradingDay = lastTradingDayOfMonth(year, month);
+          if (date === lastTradingDay && !todayIsHoliday && currentTime < todayCloseMs) {
             return minsToTodayClose;
           }
         }
         // Next August
         let targetYear = month >= 7 ? year + 1 : year;
-        const tgtDays = new Date(targetYear, 8, 0).getDate(); // August
-        let tgtLastDay = tgtDays;
-        const tgtDOW = new Date(Date.UTC(targetYear, 7, tgtDays)).getUTCDay();
-        if (tgtDOW === 0) tgtLastDay -= 2;
-        else if (tgtDOW === 6) tgtLastDay -= 1;
-        
+        const tgtLastDay = lastTradingDayOfMonth(targetYear, 7);
         const closeDate = closeAt(targetYear, 7, tgtLastDay);
         return Math.floor((closeDate.getTime() - currentTime) / 60000);
       }
@@ -1460,24 +1419,14 @@ export class ConfluenceLearningAgent {
         const is9MonthlyMonth = nineMonthEnds.includes(month);
         
         if (is9MonthlyMonth) {
-          const daysInMonth = new Date(year, month + 1, 0).getDate();
-          let lastTradingDay = daysInMonth;
-          const lastDOW = new Date(Date.UTC(year, month, daysInMonth)).getUTCDay();
-          if (lastDOW === 0) lastTradingDay -= 2;
-          else if (lastDOW === 6) lastTradingDay -= 1;
-          
-          if (date === lastTradingDay && currentTime < todayCloseMs) {
+          const lastTradingDay = lastTradingDayOfMonth(year, month);
+          if (date === lastTradingDay && !todayIsHoliday && currentTime < todayCloseMs) {
             return minsToTodayClose;
           }
         }
         // Next September
         let targetYear = month >= 8 ? year + 1 : year;
-        const tgtDays = new Date(targetYear, 9, 0).getDate(); // September
-        let tgtLastDay = tgtDays;
-        const tgtDOW = new Date(Date.UTC(targetYear, 8, tgtDays)).getUTCDay();
-        if (tgtDOW === 0) tgtLastDay -= 2;
-        else if (tgtDOW === 6) tgtLastDay -= 1;
-        
+        const tgtLastDay = lastTradingDayOfMonth(targetYear, 8);
         const closeDate = closeAt(targetYear, 8, tgtLastDay);
         return Math.floor((closeDate.getTime() - currentTime) / 60000);
       }
@@ -1488,24 +1437,14 @@ export class ConfluenceLearningAgent {
         const is10MonthlyMonth = tenMonthEnds.includes(month);
         
         if (is10MonthlyMonth) {
-          const daysInMonth = new Date(year, month + 1, 0).getDate();
-          let lastTradingDay = daysInMonth;
-          const lastDOW = new Date(Date.UTC(year, month, daysInMonth)).getUTCDay();
-          if (lastDOW === 0) lastTradingDay -= 2;
-          else if (lastDOW === 6) lastTradingDay -= 1;
-          
-          if (date === lastTradingDay && currentTime < todayCloseMs) {
+          const lastTradingDay = lastTradingDayOfMonth(year, month);
+          if (date === lastTradingDay && !todayIsHoliday && currentTime < todayCloseMs) {
             return minsToTodayClose;
           }
         }
         // Next October
         let targetYear = month >= 9 ? year + 1 : year;
-        const tgtDays = new Date(targetYear, 10, 0).getDate(); // October
-        let tgtLastDay = tgtDays;
-        const tgtDOW = new Date(Date.UTC(targetYear, 9, tgtDays)).getUTCDay();
-        if (tgtDOW === 0) tgtLastDay -= 2;
-        else if (tgtDOW === 6) tgtLastDay -= 1;
-        
+        const tgtLastDay = lastTradingDayOfMonth(targetYear, 9);
         const closeDate = closeAt(targetYear, 9, tgtLastDay);
         return Math.floor((closeDate.getTime() - currentTime) / 60000);
       }
@@ -1516,47 +1455,29 @@ export class ConfluenceLearningAgent {
         const is11MonthlyMonth = elevenMonthEnds.includes(month);
         
         if (is11MonthlyMonth) {
-          const daysInMonth = new Date(year, month + 1, 0).getDate();
-          let lastTradingDay = daysInMonth;
-          const lastDOW = new Date(Date.UTC(year, month, daysInMonth)).getUTCDay();
-          if (lastDOW === 0) lastTradingDay -= 2;
-          else if (lastDOW === 6) lastTradingDay -= 1;
-          
-          if (date === lastTradingDay && currentTime < todayCloseMs) {
+          const lastTradingDay = lastTradingDayOfMonth(year, month);
+          if (date === lastTradingDay && !todayIsHoliday && currentTime < todayCloseMs) {
             return minsToTodayClose;
           }
         }
         // Next November
         let targetYear = month >= 10 ? year + 1 : year;
-        const tgtDays = new Date(targetYear, 11, 0).getDate(); // November
-        let tgtLastDay = tgtDays;
-        const tgtDOW = new Date(Date.UTC(targetYear, 10, tgtDays)).getUTCDay();
-        if (tgtDOW === 0) tgtLastDay -= 2;
-        else if (tgtDOW === 6) tgtLastDay -= 1;
-        
+        const tgtLastDay = lastTradingDayOfMonth(targetYear, 10);
         const closeDate = closeAt(targetYear, 10, tgtLastDay);
         return Math.floor((closeDate.getTime() - currentTime) / 60000);
       }
       
       case '1Y': {
         // Yearly: closes last trading day of December
-        const daysInDec = new Date(year, 12, 0).getDate(); // Dec has 31 days
-        let lastTradingDay = daysInDec;
-        const lastDOW = new Date(Date.UTC(year, 11, daysInDec)).getUTCDay();
-        if (lastDOW === 0) lastTradingDay -= 2;
-        else if (lastDOW === 6) lastTradingDay -= 1;
+        const lastTradingDay = lastTradingDayOfMonth(year, 11);
         
         const isYearEnd = month === 11 && date === lastTradingDay;
-        if (isYearEnd && currentTime < todayCloseMs) {
+        if (isYearEnd && !todayIsHoliday && currentTime < todayCloseMs) {
           return minsToTodayClose; // Yearly closes today!
         }
         // Next year end
         const targetYear = month === 11 && date >= lastTradingDay ? year + 1 : year;
-        const nextDecDays = new Date(targetYear, 12, 0).getDate();
-        let nextLastDay = nextDecDays;
-        const nextDOW = new Date(Date.UTC(targetYear, 11, nextDecDays)).getUTCDay();
-        if (nextDOW === 0) nextLastDay -= 2;
-        else if (nextDOW === 6) nextLastDay -= 1;
+        const nextLastDay = lastTradingDayOfMonth(targetYear, 11);
         
         const yearEndClose = closeAt(targetYear, 11, nextLastDay);
         return Math.floor((yearEndClose.getTime() - currentTime) / 60000);
@@ -1663,7 +1584,7 @@ export class ConfluenceLearningAgent {
             while (d > 0) {
               const testDate = new Date(Date.UTC(yr, mo, d, 12, 0, 0));
               const dow = testDate.getUTCDay();
-              if (dow !== 0 && dow !== 6) break;
+              if (dow !== 0 && dow !== 6 && !isUSMarketHoliday(yr, mo, d)) break;
               d--;
             }
             return d;

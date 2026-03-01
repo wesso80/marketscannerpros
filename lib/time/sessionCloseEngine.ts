@@ -19,6 +19,8 @@
  *   1h closes: 10:30, 11:30, 12:30, 13:30, 14:30, 15:30, (then 16:00 daily)
  */
 
+import { isUSMarketHoliday } from './marketHolidays';
+
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 export type SessionMode = 'regular' | 'extended' | 'full';
@@ -186,9 +188,11 @@ export function getNextCloseIntraday(opts: {
 
   const nowMs = now.getTime();
   const isWeekday = z.dayOfWeek >= 1 && z.dayOfWeek <= 5;
+  // z.month is 1-indexed from Intl.DateTimeFormat; isUSMarketHoliday expects 0-indexed
+  const isHoliday = isWeekday && isUSMarketHoliday(z.year, z.month - 1, z.day);
 
-  // ── Check if we are inside today's session ──
-  if (isWeekday && nowMs >= sessionOpenToday.getTime() && nowMs < sessionCloseToday.getTime()) {
+  // ── Check if we are inside today's session (and it's a trading day) ──
+  if (isWeekday && !isHoliday && nowMs >= sessionOpenToday.getTime() && nowMs < sessionCloseToday.getTime()) {
     // Inside session — compute next close from anchor
     const result = computeNextCloseFromAnchor(now, anchorToday, tfMinutes);
 
@@ -201,11 +205,11 @@ export function getNextCloseIntraday(opts: {
     return result;
   }
 
-  // ── Outside session: find the next trading day's first close ──
+  // ── Outside session or holiday: find the next trading day's first close ──
   let daysAhead = 0;
 
-  if (isWeekday && nowMs < sessionOpenToday.getTime()) {
-    // Before session open on a weekday — first close is today
+  if (isWeekday && !isHoliday && nowMs < sessionOpenToday.getTime()) {
+    // Before session open on a trading day — first close is today
     daysAhead = 0;
   } else if (z.dayOfWeek === 5 && nowMs >= sessionCloseToday.getTime()) {
     daysAhead = 3; // Friday after close → Monday
@@ -214,12 +218,19 @@ export function getNextCloseIntraday(opts: {
   } else if (z.dayOfWeek === 0) {
     daysAhead = 1; // Sunday → Monday
   } else {
-    // Weekday after close
+    // Weekday after close or holiday → tomorrow
     daysAhead = 1;
   }
 
-  // Build next session's anchor
-  const nextDate = new Date(nowMs + daysAhead * 86_400_000);
+  // Build next session's anchor, advancing past any holidays
+  let nextDate = new Date(nowMs + daysAhead * 86_400_000);
+  for (let _s = 0; _s < 10; _s++) {
+    const nd = getZonedParts(nextDate, tz);
+    if (nd.dayOfWeek === 6) { nextDate = new Date(nextDate.getTime() + 2 * 86_400_000); continue; }
+    if (nd.dayOfWeek === 0) { nextDate = new Date(nextDate.getTime() + 86_400_000); continue; }
+    if (isUSMarketHoliday(nd.year, nd.month - 1, nd.day)) { nextDate = new Date(nextDate.getTime() + 86_400_000); continue; }
+    break;
+  }
   const nextAnchor = zonedTimeToUtc(nextDate, tz, template.anchorHH, template.anchorMM);
   const nextSessionOpen = zonedTimeToUtc(nextDate, tz, template.sessionOpenHH, template.sessionOpenMM);
 
