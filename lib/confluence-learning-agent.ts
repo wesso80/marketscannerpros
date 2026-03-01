@@ -840,6 +840,34 @@ export class ConfluenceLearningAgent {
     return Date.UTC(year, month, day, 16, 0, 0) - nyOffsetMins * 60 * 1000;
   }
 
+  /**
+   * Get equity session close time in UTC ms, respecting sessionMode.
+   * Regular: 16:00 ET, Extended: 20:00 ET.
+   */
+  private getEquitySessionCloseUtcMs(year: number, month: number, day: number, sessionMode: SessionMode): number {
+    const noonUtc = new Date(Date.UTC(year, month, day, 12, 0, 0));
+    const nyOffsetMins = this.getTimezoneOffsetMinutes(noonUtc, 'America/New_York');
+    const closeHour = sessionMode === 'extended' ? 20 : 16;
+    return Date.UTC(year, month, day, closeHour, 0, 0) - nyOffsetMins * 60 * 1000;
+  }
+
+  /**
+   * Compute a monotonically increasing trading-day index (Mon–Fri only).
+   * Anchored to Monday Dec 30, 2019 (tdIndex=0).
+   * Sat/Sun map to the previous Friday's index.
+   * Week-aligned: Monday=0%5, Friday=4%5 — so 5D always closes Friday.
+   */
+  private getTradingDayIndex(date: Date): number {
+    const ny = this.getNYDateTimeParts(date);
+    const refMs = Date.UTC(2019, 11, 30); // Monday Dec 30, 2019
+    const todayMs = Date.UTC(ny.year, ny.month, ny.day);
+    const calDays = Math.floor((todayMs - refMs) / 86_400_000);
+    const fullWeeks = Math.floor(calDays / 7);
+    const dayInWeek = ((calDays % 7) + 7) % 7; // 0=Mon, ..., 4=Fri, 5=Sat, 6=Sun
+    const tradingDayInWeek = Math.min(dayInWeek, 4); // Clamp weekends → Friday
+    return fullWeeks * 5 + tradingDayInWeek;
+  }
+
   private getCanonicalTimeframeId(tfConfig: Pick<TimeframeConfig, 'tf' | 'label'>): string {
     const rawTf = (tfConfig.tf || '').toUpperCase();
     if (rawTf === 'D') return '1D';
@@ -1060,7 +1088,7 @@ export class ConfluenceLearningAgent {
       let adjustedDate = targetDate;
       if (dow === 6) adjustedDate += 2;      // Saturday → Monday
       else if (dow === 0) adjustedDate += 1;  // Sunday → Monday
-      return new Date(this.getNYMarketCloseUtcMs(targetYear, targetMonth, adjustedDate));
+      return new Date(this.getEquitySessionCloseUtcMs(targetYear, targetMonth, adjustedDate, sessionMode));
     };
 
     // Today's market close time
@@ -1075,6 +1103,10 @@ export class ConfluenceLearningAgent {
     
     // Helper: get week number since epoch
     const weeksSinceEpoch = Math.floor(daysSinceEpoch / 7);
+
+    // Trading-day index for multi-day cycle alignment (Mon–Fri only)
+    const tdIdx = this.getTradingDayIndex(now);
+    const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
     
     switch (tfId) {
       case '1D': {
@@ -1095,76 +1127,35 @@ export class ConfluenceLearningAgent {
         return minsToTodayClose;
       }
       
-      case '2D': {
-        // 2-Day candle: closes every 2nd trading day
-        const cycleDay = daysSinceEpoch % 2;
-        const is2DCloseDay = cycleDay === 1; // Day 2 of cycle
-        if (is2DCloseDay && currentTime < todayCloseMs) {
-          return minsToTodayClose; // Closes today!
-        }
-        const daysToNext = (2 - cycleDay) % 2 || 2;
-        const nextClose = closeAt(year, month, date + daysToNext);
-        return Math.floor((nextClose.getTime() - currentTime) / 60000);
-      }
-      
-      case '3D': {
-        // 3-Day candle: closes every 3rd day
-        const cycleDay = daysSinceEpoch % 3;
-        const is3DCloseDay = cycleDay === 2; // Day 3 of cycle (0-indexed = 2)
-        if (is3DCloseDay && currentTime < todayCloseMs) {
-          return minsToTodayClose; // Closes today!
-        }
-        const daysToNext = (3 - cycleDay) % 3 || 3;
-        const nextClose = closeAt(year, month, date + daysToNext);
-        return Math.floor((nextClose.getTime() - currentTime) / 60000);
-      }
-      
-      case '4D': {
-        // 4-Day candle: closes every 4th day
-        const cycleDay = daysSinceEpoch % 4;
-        const is4DCloseDay = cycleDay === 3; // Day 4 of cycle
-        if (is4DCloseDay && currentTime < todayCloseMs) {
-          return minsToTodayClose;
-        }
-        const daysToNext = (4 - cycleDay) % 4 || 4;
-        const nextClose = closeAt(year, month, date + daysToNext);
-        return Math.floor((nextClose.getTime() - currentTime) / 60000);
-      }
-      
-      case '5D': {
-        // 5-Day candle: closes every 5th day
-        const cycleDay = daysSinceEpoch % 5;
-        const is5DCloseDay = cycleDay === 4; // Day 5 of cycle
-        if (is5DCloseDay && currentTime < todayCloseMs) {
-          return minsToTodayClose;
-        }
-        const daysToNext = (5 - cycleDay) % 5 || 5;
-        const nextClose = closeAt(year, month, date + daysToNext);
-        return Math.floor((nextClose.getTime() - currentTime) / 60000);
-      }
-      
-      case '6D': {
-        // 6-Day candle: closes every 6th day
-        const cycleDay = daysSinceEpoch % 6;
-        const is6DCloseDay = cycleDay === 5; // Day 6 of cycle
-        if (is6DCloseDay && currentTime < todayCloseMs) {
-          return minsToTodayClose;
-        }
-        const daysToNext = (6 - cycleDay) % 6 || 6;
-        const nextClose = closeAt(year, month, date + daysToNext);
-        return Math.floor((nextClose.getTime() - currentTime) / 60000);
-      }
-      
+      // ── Multi-day equity candles (2D–7D): trading-day cycle alignment ──
+      // Uses getTradingDayIndex() which counts only Mon–Fri from a Monday epoch.
+      // N-day candle closes when (tradingDayIndex % N) === N-1.
+      // Results: 5D always closes on Friday, 2D alternates every other trading day, etc.
+      case '2D':
+      case '3D':
+      case '4D':
+      case '5D':
+      case '6D':
       case '7D': {
-        // 7-Day candle: closes every 7th day (calendar week, not trading week)
-        const cycleDay = daysSinceEpoch % 7;
-        const is7DCloseDay = cycleDay === 6; // Day 7 of cycle
-        if (is7DCloseDay && currentTime < todayCloseMs) {
+        const N = parseInt(tfId); // "2D" → 2, "5D" → 5, etc.
+
+        // Check if today is a close day and session hasn't ended yet
+        if (isWeekday && (tdIdx % N === N - 1) && currentTime < todayCloseMs) {
           return minsToTodayClose;
         }
-        const daysToNext = (7 - cycleDay) % 7 || 7;
-        const nextClose = closeAt(year, month, date + daysToNext);
-        return Math.floor((nextClose.getTime() - currentTime) / 60000);
+
+        // Walk forward through calendar days to find the next N-day close
+        for (let d = 1; d <= 20; d++) {
+          const futureDate = new Date(currentTime + d * 86_400_000);
+          const futureNy = this.getNYDateTimeParts(futureDate);
+          if (futureNy.dayOfWeek === 0 || futureNy.dayOfWeek === 6) continue; // skip weekends
+          const futureTdIdx = this.getTradingDayIndex(futureDate);
+          if (futureTdIdx % N === N - 1) {
+            const closeMs = this.getEquitySessionCloseUtcMs(futureNy.year, futureNy.month, futureNy.day, sessionMode);
+            return Math.floor((closeMs - currentTime) / 60_000);
+          }
+        }
+        return null; // safety fallback
       }
       
       case '1W': {
