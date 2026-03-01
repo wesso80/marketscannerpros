@@ -14,7 +14,6 @@ import { RiskPermissionProvider } from '@/components/risk/RiskPermissionContext'
 import { RegimeProvider } from '@/lib/useRegime';
 import CapitalControlStrip from '@/components/risk/CapitalControlStrip';
 import GlobalSessionBar from '@/components/GlobalSessionBar';
-import SessionStartBriefing from '@/components/operator/SessionStartBriefing';
 
 function getSkillFromPath(pathname: string): PageSkill {
   if (pathname.includes('/scanner')) return 'scanner';
@@ -104,7 +103,7 @@ export default function ToolsLayoutClient({
         </details>
 
         <ErrorBoundary>
-          <SessionStartBriefing>{wrappedChildren}</SessionStartBriefing>
+          {wrappedChildren}
         </ErrorBoundary>
         <ErrorBoundary fallback={null}>
           <CopilotWithContext fallbackSkill={skill} />
