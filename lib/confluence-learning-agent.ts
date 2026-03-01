@@ -1068,12 +1068,18 @@ export class ConfluenceLearningAgent {
       return Math.max(0, Math.floor((nextMidnight - nowMs) / 60_000));
     }
 
-    // ── Multi-day (2D–30D): fixed UTC boundaries from epoch ──
+    // ── Multi-day (2D–30D): TradingView-calibrated UTC boundaries ──
+    // Raw Unix-epoch alignment is off by 1 day for some cycles vs TradingView.
+    // Calibration: TradingView shows 12D and 25D closing at midnight UTC on
+    // March 2, 2026 (not 13D/26D).  Offset of 114 calendar days aligns our
+    // bar boundaries to TV's actual multi-day crypto candle grid.
     const multiDayMatch = tfId.match(/^(\d+)D$/);
     if (multiDayMatch) {
       const N = parseInt(multiDayMatch[1]);
+      const CRYPTO_MD_OFFSET = 114 * DAY_MS; // TradingView calibration
       const periodMs = N * DAY_MS;
-      const periodEnd = Math.ceil(nowMs / periodMs) * periodMs;
+      const adjusted = nowMs - CRYPTO_MD_OFFSET;
+      const periodEnd = Math.ceil(adjusted / periodMs) * periodMs + CRYPTO_MD_OFFSET;
       return Math.max(0, Math.floor((periodEnd - nowMs) / 60_000));
     }
 
