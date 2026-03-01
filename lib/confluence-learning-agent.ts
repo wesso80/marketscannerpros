@@ -1597,6 +1597,7 @@ export class ConfluenceLearningAgent {
     horizonDays: number = 7,
     anchorTimeISO?: string,
     assetClass: 'crypto' | 'equity' = 'crypto',
+    sessionMode: SessionMode = 'extended',
   ): ForwardCloseCalendar {
     const now = new Date();
     const clampedHorizon = Math.max(1, Math.min(30, horizonDays));
@@ -1726,7 +1727,7 @@ export class ConfluenceLearningAgent {
 
       // Compute the FIRST close at or after anchor
       let cursor = new Date(anchorMs);
-      const minsToFirst = this.getMinutesToTimeframeClose(cursor, tfConfig, assetClass);
+      const minsToFirst = this.getMinutesToTimeframeClose(cursor, tfConfig, assetClass, sessionMode);
       if (minsToFirst === null) continue;
       let nextCloseMs = anchorMs + minsToFirst * 60_000;
 
@@ -1741,7 +1742,7 @@ export class ConfluenceLearningAgent {
         // Step forward by TF period + 1 minute, recompute
         const stepMs = Math.max(tfConfig.minutes * 60_000, 60_000);
         const nextCursor = new Date(nextCloseMs + stepMs);
-        const minsToNext = this.getMinutesToTimeframeClose(nextCursor, tfConfig, assetClass);
+        const minsToNext = this.getMinutesToTimeframeClose(nextCursor, tfConfig, assetClass, sessionMode);
         if (minsToNext === null) break;
         nextCloseMs = nextCursor.getTime() + minsToNext * 60_000;
         iter++;

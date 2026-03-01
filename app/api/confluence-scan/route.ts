@@ -132,8 +132,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
         const anchorTime = body.anchorTime || undefined;
         // Detect asset class from symbol (default crypto for calendar)
         const calendarAsset = confluenceLearningAgent.detectAssetClass(normalizedSymbol);
-        console.log(`📅 Close Calendar: anchor=${anchor}, horizon=${horizonDays}d, asset=${calendarAsset}`);
-        result = confluenceLearningAgent.computeForwardCloseCalendar(anchor, horizonDays, anchorTime, calendarAsset);
+        const calendarSession: SessionMode = (['regular', 'extended', 'full'].includes(body.sessionMode || '') ? body.sessionMode : 'extended') as SessionMode;
+        console.log(`📅 Close Calendar: anchor=${anchor}, horizon=${horizonDays}d, asset=${calendarAsset}, session=${calendarSession}`);
+        result = confluenceLearningAgent.computeForwardCloseCalendar(anchor, horizonDays, anchorTime, calendarAsset, calendarSession);
         break;
 
       case 'quick':
