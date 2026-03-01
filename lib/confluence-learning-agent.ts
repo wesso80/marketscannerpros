@@ -222,6 +222,16 @@ const TIMEFRAMES: TimeframeConfig[] = [
   { tf: '18D', label: '18D', minutes: 25920,  postCloseWindow: 570, decompStart: 720 },
   { tf: '19D', label: '19D', minutes: 27360,  postCloseWindow: 600, decompStart: 750 },
   { tf: '20D', label: '20D', minutes: 28800,  postCloseWindow: 630, decompStart: 780 },
+  { tf: '21D', label: '21D', minutes: 30240,  postCloseWindow: 660, decompStart: 810 },
+  { tf: '22D', label: '22D', minutes: 31680,  postCloseWindow: 690, decompStart: 840 },
+  { tf: '23D', label: '23D', minutes: 33120,  postCloseWindow: 720, decompStart: 870 },
+  { tf: '24D', label: '24D', minutes: 34560,  postCloseWindow: 750, decompStart: 900 },
+  { tf: '25D', label: '25D', minutes: 36000,  postCloseWindow: 780, decompStart: 930 },
+  { tf: '26D', label: '26D', minutes: 37440,  postCloseWindow: 810, decompStart: 960 },
+  { tf: '27D', label: '27D', minutes: 38880,  postCloseWindow: 840, decompStart: 990 },
+  { tf: '28D', label: '28D', minutes: 40320,  postCloseWindow: 870, decompStart: 1020 },
+  { tf: '29D', label: '29D', minutes: 41760,  postCloseWindow: 900, decompStart: 1050 },
+  { tf: '30D', label: '30D', minutes: 43200,  postCloseWindow: 930, decompStart: 1080 },
   // Weekly - ALL week cycles (1W through 4W)
   { tf: 'W',   label: '1W',  minutes: 10080, postCloseWindow: 240, decompStart: 390 },
   { tf: '2W',  label: '2W',  minutes: 20160, postCloseWindow: 480, decompStart: 780 },
@@ -543,6 +553,13 @@ export class ConfluenceLearningAgent {
    * Built lazily on first access, then binary-searched for O(log N) lookups.
    */
   private sortedHolidayMs: number[] | null = null;
+
+  /**
+   * TradingView multi-day candle epoch calibration offset.
+   * Computed lazily from a known calibration point (March 2, 2026)
+   * where TradingView shows 2D, 4D, 5D, 8D, 10D, 20D all closing.
+   */
+  private tvCalibrationOffset: number | null = null;
 
   constructor() {
     this.openai = new OpenAI({
@@ -908,15 +925,10 @@ export class ConfluenceLearningAgent {
   }
 
   /**
-   * Compute a monotonically increasing TRUE trading-day index (Mon–Fri,
-   * excluding NYSE holidays). Anchored to Monday Dec 30, 2019 (tdIndex=0).
-   * Sat/Sun map to the previous Friday's index.
-   *
-   * Holiday-aware: subtracts all weekday holidays between the epoch and the
-   * given date so the index counts only actual trading sessions. This ensures
-   * multi-day equity candle boundaries (2D, 3D, 5D, etc.) match TradingView.
+   * Compute a raw trading-day index (Mon–Fri, excluding NYSE holidays)
+   * anchored to Monday Dec 30, 2019. Used internally before TV calibration.
    */
-  private getTradingDayIndex(date: Date): number {
+  private getRawTradingDayIndex(date: Date): number {
     const ny = this.getNYDateTimeParts(date);
     const refMs = Date.UTC(2019, 11, 30); // Monday Dec 30, 2019
     const todayMs = Date.UTC(ny.year, ny.month, ny.day);
@@ -925,10 +937,34 @@ export class ConfluenceLearningAgent {
     const dayInWeek = ((calDays % 7) + 7) % 7; // 0=Mon, ..., 4=Fri, 5=Sat, 6=Sun
     const tradingDayInWeek = Math.min(dayInWeek, 4); // Clamp weekends → Friday
     const weekdayIndex = fullWeeks * 5 + tradingDayInWeek;
-
-    // Subtract weekday holidays so the index counts only real trading sessions
     const holidayCount = this.countHolidaysUpTo(todayMs);
     return weekdayIndex - holidayCount;
+  }
+
+  /**
+   * Compute the TradingView-calibrated trading-day index.
+   *
+   * The raw index (from Dec 30 2019 epoch) is shifted by a constant so that
+   * N-day candle close boundaries (2D–30D) align exactly with TradingView.
+   *
+   * Calibration reference: March 2, 2026 (Monday)
+   * TradingView shows these TFs closing that day: 2D, 4D, 5D, 8D, 10D, 20D.
+   * Close condition: tdIdx % N === N-1  →  tdIdx(Mar 2) must be ≡ 39 (mod 40).
+   * Full verification against TV screenshots:
+   *   tdIdx 39: 2D(1) 4D(3) 5D(4) 8D(7) 10D(9) 20D(19) ✓ all = N-1
+   *   tdIdx 41 (Mar 4): 3D(2) 6D(5) 7D(6) ✓
+   *   tdIdx 44 (Mar 9): 9D(8) 15D(14) ✓
+   *   tdIdx 49 (Mar 16): 25D(24) ✓
+   *   tdIdx 59 (Mar 30): 30D(29) ✓
+   */
+  private getTradingDayIndex(date: Date): number {
+    if (this.tvCalibrationOffset === null) {
+      // Auto-calibrate: compute offset so that March 2, 2026 → tdIdx 39
+      const calibrationDate = new Date(Date.UTC(2026, 2, 2, 12)); // March 2, 2026 noon UTC
+      const rawCalib = this.getRawTradingDayIndex(calibrationDate);
+      this.tvCalibrationOffset = 39 - rawCalib;
+    }
+    return this.getRawTradingDayIndex(date) + this.tvCalibrationOffset;
   }
 
   private getCanonicalTimeframeId(tfConfig: Pick<TimeframeConfig, 'tf' | 'label'>): string {
@@ -1032,8 +1068,8 @@ export class ConfluenceLearningAgent {
       return Math.max(0, Math.floor((nextMidnight - nowMs) / 60_000));
     }
 
-    // ── Multi-day (2D–7D): fixed UTC boundaries from epoch ──
-    const multiDayMatch = tfId.match(/^(\d)D$/);
+    // ── Multi-day (2D–30D): fixed UTC boundaries from epoch ──
+    const multiDayMatch = tfId.match(/^(\d+)D$/);
     if (multiDayMatch) {
       const N = parseInt(multiDayMatch[1]);
       const periodMs = N * DAY_MS;
@@ -1201,30 +1237,34 @@ export class ConfluenceLearningAgent {
         return minsToTodayClose;
       }
       
-      // ── Multi-day equity candles (2D–20D): trading-day cycle alignment ──
-      // Uses getTradingDayIndex() which counts only actual trading sessions
-      // (Mon–Fri excluding NYSE holidays) from a Monday epoch.
-      // N-day candle closes when (tradingDayIndex % N) === N-1.
+      // ── Multi-day equity candles (2D–30D): trading-day cycle alignment ──
+      // Uses TradingView-calibrated getTradingDayIndex() which counts only
+      // actual trading sessions (Mon–Fri excluding NYSE holidays).
+      // N-day candle closes when (tdIdx % N) === N-1.
+      // Safe modulo handles negative calibrated indices for older dates.
       case '2D':  case '3D':  case '4D':  case '5D':
       case '6D':  case '7D':  case '8D':  case '9D':  case '10D':
       case '11D': case '12D': case '13D': case '14D': case '15D':
-      case '16D': case '17D': case '18D': case '19D': case '20D': {
-        const N = parseInt(tfId); // "2D" → 2, "10D" → 10, "20D" → 20, etc.
+      case '16D': case '17D': case '18D': case '19D': case '20D':
+      case '21D': case '22D': case '23D': case '24D': case '25D':
+      case '26D': case '27D': case '28D': case '29D': case '30D': {
+        const N = parseInt(tfId); // "2D" → 2, "10D" → 10, "30D" → 30, etc.
+        const safeMod = (v: number, n: number) => ((v % n) + n) % n;
 
         // Check if today is a close day, it's a trading day, and session hasn't ended
-        if (isWeekday && !todayIsHoliday && (tdIdx % N === N - 1) && currentTime < todayCloseMs) {
+        if (isWeekday && !todayIsHoliday && safeMod(tdIdx, N) === N - 1 && currentTime < todayCloseMs) {
           return minsToTodayClose;
         }
 
         // Walk forward through calendar days to find the next N-day close
-        // Range must cover worst-case: 20 trading days ≈ 30 calendar days + weekends/holidays
-        for (let d = 1; d <= 60; d++) {
+        // Range must cover worst-case: 30 trading days ≈ 45 calendar days + weekends/holidays
+        for (let d = 1; d <= 90; d++) {
           const futureDate = new Date(currentTime + d * 86_400_000);
           const futureNy = this.getNYDateTimeParts(futureDate);
           if (futureNy.dayOfWeek === 0 || futureNy.dayOfWeek === 6) continue; // skip weekends
           if (isUSMarketHoliday(futureNy.year, futureNy.month, futureNy.day)) continue; // skip holidays
           const futureTdIdx = this.getTradingDayIndex(futureDate);
-          if (futureTdIdx % N === N - 1) {
+          if (safeMod(futureTdIdx, N) === N - 1) {
             const closeMs = this.getEquitySessionCloseUtcMs(futureNy.year, futureNy.month, futureNy.day, sessionMode);
             return Math.floor((closeMs - currentTime) / 60_000);
           }
