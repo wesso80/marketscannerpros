@@ -212,7 +212,7 @@ const TRUSTED_CRYPTO_LIST = [
 function ScannerContent() {
   const searchParams = useSearchParams();
   const { isAdmin, tier, isLoading: tierLoading } = useUserTier();
-  const { snapshot: riskSnapshot, isLocked: riskLocked, evaluate: evaluateRiskIntent } = useRiskPermission();
+  const { snapshot: riskSnapshot, isLocked: riskLocked, guardEnabled, evaluate: evaluateRiskIntent } = useRiskPermission();
   const [assetType, setAssetType] = useState<AssetType>("crypto");
   const [ticker, setTicker] = useState<string>("BTC");
   const [timeframe, setTimeframe] = useState<TimeframeOption>("1h");
@@ -1133,7 +1133,7 @@ function ScannerContent() {
   };
 
   const executeRankCandidateDeploy = async (pick: any) => {
-    if (riskLocked) {
+    if (guardEnabled && riskLocked) {
       console.warn('[Scanner] Rule Guard: risk governor LOCKED — blocking trade deployment.');
       return; // Hard block — do not proceed when risk governor is locked
     }
@@ -1165,14 +1165,16 @@ function ScannerContent() {
       event_severity: 'none',
     };
 
-    // Rule Guard evaluation — BLOCK permission is enforced, not advisory
-    const evaluation = await evaluateRiskIntent(intent);
-    if (evaluation?.permission === 'BLOCK') {
-      const reason = evaluation.reason_codes?.join(', ') || 'Rule compliance failed';
-      console.warn(`[Scanner] Rule Guard BLOCK: ${reason} for ${intent.symbol}`);
-      setRiskBlockReason(reason);
-      setShowRiskBlockModal(true);
-      return; // Hard block — do not proceed
+    // Rule Guard evaluation — BLOCK permission is enforced only when guard is enabled
+    if (guardEnabled) {
+      const evaluation = await evaluateRiskIntent(intent);
+      if (evaluation?.permission === 'BLOCK') {
+        const reason = evaluation.reason_codes?.join(', ') || 'Rule compliance failed';
+        console.warn(`[Scanner] Rule Guard BLOCK: ${reason} for ${intent.symbol}`);
+        setRiskBlockReason(reason);
+        setShowRiskBlockModal(true);
+        return; // Hard block — do not proceed
+      }
     }
 
     const edgeScore = Math.max(1, Math.min(99, Math.round(pick?.scoreV2?.final?.confidence ?? pick.score ?? 50)));
@@ -1222,13 +1224,13 @@ function ScannerContent() {
 
   const deployRankCandidate = (pick: any) => {
     // Pre-trade validation: evaluate risk state before executing
-    if (riskLocked) {
+    if (guardEnabled && riskLocked) {
       console.warn('[Scanner] Rule Guard: risk governor LOCKED — deploy blocked.');
       return;
     }
 
-    // Trade count hard block
-    if (riskSnapshot?.session?.trade_count_blocked) {
+    // Trade count hard block (only when guard is enabled)
+    if (guardEnabled && riskSnapshot?.session?.trade_count_blocked) {
       setRiskBlockReason(`Daily trade count limit reached (${riskSnapshot.session.trades_today}/${riskSnapshot.session.max_trades_per_day}). No new trades allowed today.`);
       setShowRiskBlockModal(true);
       return;
