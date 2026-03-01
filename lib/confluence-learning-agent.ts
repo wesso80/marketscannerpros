@@ -3027,6 +3027,63 @@ export class ConfluenceLearningAgent {
       }
     }
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CALENDAR-AWARE DIRECTION OVERRIDE
+    //
+    // The decomp-based direction only considers TFs within the scan mode's
+    // maxTFMinutes. For crypto (24/7 market) on lower-TF modes, tiny decomp
+    // windows often produce "neutral" even when 20+ daily TFs with clear mid50
+    // pull are closing today. Use the enriched close schedule (ALL TFs) to
+    // derive direction from the weight of mid50 pull across every TF.
+    // ═══════════════════════════════════════════════════════════════════════════
+    {
+      // Only daily+ TFs (weight ≥ 10) contribute — intraday is noisy
+      const calRows = candleCloseConfluence.closes.filter(
+        (r) => r.mid50Level && r.mid50Level > 0 && r.pullDirection && r.pullDirection !== 'none' && r.weight >= 10,
+      );
+
+      if (calRows.length >= 2) {
+        let calBullW = 0;
+        let calBearW = 0;
+        for (const r of calRows) {
+          if (r.pullDirection === 'up') calBullW += r.weight;
+          else if (r.pullDirection === 'down') calBearW += r.weight;
+        }
+        const calTotal = calBullW + calBearW;
+        const calBias = calTotal > 0 ? ((calBullW - calBearW) / calTotal) * 100 : 0;
+
+        let calDir: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+        if (calBias > 15) calDir = 'bullish';
+        else if (calBias < -15) calDir = 'bearish';
+
+        // If decomp-based direction is neutral but calendar is clear, adopt it
+        if (direction === 'neutral' && calDir !== 'neutral') {
+          direction = calDir;
+          const calScore = Math.round(Math.abs(calBias));
+          reasoningParts.push(`Direction from ${calRows.length} close-schedule TFs: ${calDir.toUpperCase()} (${calScore})`);
+          // Re-derive trade setup for new direction
+          if (direction === 'bullish') {
+            stopLoss = swingLow;
+            const risk = entryPrice - stopLoss;
+            takeProfit = entryPrice + (risk * rrRatio);
+          } else {
+            stopLoss = swingHigh;
+            const risk = stopLoss - entryPrice;
+            takeProfit = entryPrice - (risk * rrRatio);
+          }
+          tradeSetup.stopLoss = stopLoss;
+          tradeSetup.takeProfit = takeProfit;
+          tradeSetup.riskPercent = Math.abs((entryPrice - stopLoss) / entryPrice) * 100;
+          tradeSetup.rewardPercent = Math.abs((takeProfit - entryPrice) / entryPrice) * 100;
+        }
+        // If decomp direction agrees, boost confidence
+        else if (direction !== 'neutral' && direction === calDir) {
+          confidence = Math.min(95, confidence + 8);
+          reasoningParts.push(`Calendar confirms ${calDir.toUpperCase()} (${calRows.length} TFs)`);
+        }
+      }
+    }
+
     // Boost confidence if high candle close confluence
     if (candleCloseConfluence.confluenceRating === 'extreme') {
       confidence = Math.min(95, confidence + 15);
