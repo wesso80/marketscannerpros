@@ -488,7 +488,7 @@ export default function TimeScannerPage() {
     { label: 'Close Confirmation', score: out.executionScore },
     { label: 'Cluster Integrity', score: input.setup.window.clusterIntegrity * 100 },
     { label: 'Window Quality', score: input.execution.entryWindowQuality * 100 },
-  ];
+  ].filter((row) => Math.round(row.score) > 0);
 
   return (
     <TimeScannerShell>
@@ -582,7 +582,7 @@ export default function TimeScannerPage() {
                     {scanData.direction === 'bullish' ? '↑ BULLISH' : '↓ BEARISH'}
                   </div>
                   <div className="text-xs text-slate-400">
-                    Confidence: <span className="font-semibold text-slate-200">{Math.round(scanData.confidence * 100)}%</span>
+                    Confidence: <span className="font-semibold text-slate-200">{Math.min(100, Math.round(scanData.confidence <= 1 ? scanData.confidence * 100 : scanData.confidence))}%</span>
                     {scanData.signalStrength !== 'no_signal' && (
                       <span className={`ml-2 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
                         scanData.signalStrength === 'strong' ? 'bg-emerald-500/15 text-emerald-400'
@@ -610,8 +610,8 @@ export default function TimeScannerPage() {
                   </div>
                 </div>
 
-                {/* Entry / Stop / Take Profit */}
-                {scanData.entry > 0 && scanData.stopLoss > 0 && (
+                {/* Entry / Stop / Take Profit — only show when they differ meaningfully */}
+                {scanData.entry > 0 && scanData.stopLoss > 0 && Math.abs(scanData.entry - scanData.stopLoss) > 0.01 && (
                   <div className="grid grid-cols-3 gap-1.5">
                     <div className="rounded-lg border border-slate-800 bg-slate-950/25 px-2 py-1.5 text-center">
                       <div className="text-[9px] uppercase tracking-wider text-slate-500">Entry</div>
@@ -630,12 +630,12 @@ export default function TimeScannerPage() {
                   </div>
                 )}
 
-                {scanData.riskReward > 0 && (
+                {scanData.riskReward > 0 && Math.abs(scanData.entry - scanData.stopLoss) > 0.01 && (
                   <div className="flex items-center gap-2 text-xs text-slate-400">
                     R:R Ratio: <span className={`font-bold ${
                       scanData.riskReward >= 2 ? 'text-emerald-400' : scanData.riskReward >= 1.5 ? 'text-amber-400' : 'text-rose-400'
                     }`}>{scanData.riskReward.toFixed(2)}</span>
-                    {scanData.expectedMoveTime && (
+                    {scanData.expectedMoveTime && !scanData.expectedMoveTime.startsWith('-') && (
                       <span className="text-slate-500">· Expected: {scanData.expectedMoveTime}</span>
                     )}
                   </div>
@@ -649,27 +649,31 @@ export default function TimeScannerPage() {
                   <div className="text-xs leading-relaxed text-slate-300">{scanData.reasoning || 'Run scan for analysis.'}</div>
                 </div>
 
-                {scanData.mid50Levels.length > 0 && (
-                  <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2.5">
-                    <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                      50% Pull Levels <span className={`ml-1 ${
-                        scanData.netPull === 'bullish' ? 'text-emerald-400' : scanData.netPull === 'bearish' ? 'text-rose-400' : 'text-slate-500'
-                      }`}>({scanData.netPull})</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs">
-                      {scanData.mid50Levels.map((m) => (
-                        <div key={m.tf} className="flex items-center justify-between">
-                          <span className="font-medium text-slate-400">{m.tf}</span>
-                          <span className="font-mono text-slate-300">${m.level.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            <span className={`ml-1 text-[10px] ${m.distance > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                              {m.distance > 0 ? '+' : ''}{m.distance.toFixed(1)}%
+                {(() => {
+                  const validLevels = scanData.mid50Levels.filter((m) => m.level > 0);
+                  if (validLevels.length === 0) return null;
+                  return (
+                    <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2.5">
+                      <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                        50% Pull Levels <span className={`ml-1 ${
+                          scanData.netPull === 'bullish' ? 'text-emerald-400' : scanData.netPull === 'bearish' ? 'text-rose-400' : 'text-slate-500'
+                        }`}>({scanData.netPull})</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs">
+                        {validLevels.map((m) => (
+                          <div key={m.tf} className="flex items-center justify-between">
+                            <span className="font-medium text-slate-400">{m.tf}</span>
+                            <span className="font-mono text-slate-300">${m.level.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              <span className={`ml-1 text-[10px] ${m.distance > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                {m.distance > 0 ? '+' : ''}{m.distance.toFixed(1)}%
+                              </span>
                             </span>
-                          </span>
-                        </div>
-                      ))}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             </div>
           </section>
@@ -805,8 +809,8 @@ export default function TimeScannerPage() {
 
         <CloseCalendar symbol={symbol} />
 
-        {/* ═══ ROW 3: CONFLUENCE ENGINE + EXECUTION (collapsible) ═══ */}
-        <details className="w-full rounded-2xl border border-slate-800 bg-slate-900/30" open>
+        {/* ═══ ROW 3: CONFLUENCE ENGINE + EXECUTION (collapsible — collapsed by default) ═══ */}
+        <details className="w-full rounded-2xl border border-slate-800 bg-slate-900/30">
           <summary className="cursor-pointer list-none px-3 py-3 lg:px-5">
             <div className="flex items-center justify-between">
               <div>
@@ -864,52 +868,7 @@ export default function TimeScannerPage() {
           </div>
         </details>
 
-        {/* ── Close Schedule — hidden from UI, data still computed in background ── */}
-        {/* All close schedule data (decomposition rows, minsToClose, mid50 levels, pull directions)
-            continues to power: scoring engine, permission gates, cluster integrity, 50% pull prediction,
-            close calendar, and AI signal breakdown. The table is simply not rendered. */}
-
-
-        <section className="space-y-3">
-          <IntelAccordionSection title="AI Signal Breakdown" summary="Why timing permission is GO / WAIT / BLOCK">
-            <ul className="space-y-1.5 text-sm text-slate-200">
-              {out.reasons.length === 0 ? <li>No reasons available.</li> : out.reasons.slice(0, 8).map((reason) => <li key={reason}>• {reason}</li>)}
-            </ul>
-          </IntelAccordionSection>
-
-          <IntelAccordionSection title="Institutional Flow" summary="Cluster + close timing structure">
-            <div>Cluster Integrity: {Math.round(input.setup.window.clusterIntegrity * 100)}%</div>
-            <div>Direction Consistency: {Math.round(input.setup.window.directionConsistency * 100)}%</div>
-            <div>Close Strength: {Math.round(input.execution.closeStrength * 100)}%</div>
-          </IntelAccordionSection>
-
-          <IntelAccordionSection title="Pattern Confirmation" summary="HTF/Regime context and alignment">
-            <div>Macro Bias: {input.context.macroBias}</div>
-            <div>HTF Bias: {input.context.htfBias}</div>
-            <div>Regime: {input.context.regime}</div>
-            <div>Vol State: {input.context.volState}</div>
-          </IntelAccordionSection>
-
-          <IntelAccordionSection title="Risk Warnings" summary="Timing and execution blockers">
-            <div className="space-y-1.5">
-              {input.setup.warnings.length === 0 ? <div>No warnings.</div> : input.setup.warnings.map((warning) => <div key={warning}>• {warning}</div>)}
-            </div>
-          </IntelAccordionSection>
-
-          <IntelAccordionSection title="Narrative Context" summary="Execution notes and scanner context">
-            <div className="space-y-1.5">
-              {(input.execution.notes || []).length === 0 ? (
-                <div>No narrative notes.</div>
-              ) : (
-                (input.execution.notes || []).map((note) => <div key={note}>• {note}</div>)
-              )}
-            </div>
-          </IntelAccordionSection>
-
-          <IntelAccordionSection title="Snapshot History" summary="Debug payload and internals">
-            <DebugDrawer debug={out.debug} />
-          </IntelAccordionSection>
-        </section>
+        {/* ── Intel accordion sections removed — core purpose is cluster + direction output ── */}
       </main>
     </TimeScannerShell>
   );
