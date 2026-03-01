@@ -209,6 +209,41 @@ export default function CommandHub() {
         </div>
       </section>
 
+      {/* ─── Data Provider Logos ─── */}
+      <section className="border-b border-white/5 bg-slate-950/40">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-x-10 gap-y-4 px-4 py-5">
+          <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">Powered by</span>
+
+          {/* Nasdaq */}
+          <a href="https://www.nasdaq.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 opacity-60 transition hover:opacity-100">
+            <svg viewBox="0 0 120 28" className="h-6 w-auto" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M16.2 2L10.8 8.4V2H5.4v24h5.4V14.4L16.2 26h6.6l-7.2-12L22.8 2h-6.6z" fill="#fff"/>
+              <text x="30" y="21" fill="#fff" fontSize="18" fontWeight="700" fontFamily="system-ui,sans-serif">NASDAQ</text>
+            </svg>
+          </a>
+
+          {/* CoinGecko */}
+          <a href="https://www.coingecko.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 opacity-60 transition hover:opacity-100">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="12" r="12" fill="#8DC63F"/>
+              <circle cx="9" cy="10" r="2.5" fill="#fff"/>
+              <circle cx="9" cy="10" r="1.2" fill="#222"/>
+            </svg>
+            <span className="text-sm font-semibold text-slate-300">CoinGecko</span>
+          </a>
+
+          {/* Alpha Vantage */}
+          <a href="https://www.alphavantage.co" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 opacity-60 transition hover:opacity-100">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="24" height="24" rx="4" fill="#1A1A2E"/>
+              <path d="M12 4l8 16H4L12 4z" fill="#E94560" opacity="0.9"/>
+              <path d="M12 8l5 10H7L12 8z" fill="#0F3460"/>
+            </svg>
+            <span className="text-sm font-semibold text-slate-300">Alpha Vantage</span>
+          </a>
+        </div>
+      </section>
+
       {/* ─── Content ─── */}
       <div className="mx-auto w-full max-w-7xl space-y-8 px-4 pb-16 pt-8 md:px-6">
         {/* Featured Scanners — 4 big tiles */}
