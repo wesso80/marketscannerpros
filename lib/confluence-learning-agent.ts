@@ -1820,7 +1820,7 @@ export class ConfluenceLearningAgent {
         tfs: items.map((i) => i.tf),
         weight: totalWeight,
         clusterScore: Math.min(100, Math.round(totalWeight * items.length * 0.5)),
-        label: this.clusterLabel(new Date(windowStartMs)),
+        label: this.clusterLabel(new Date(windowStartMs), assetClass),
       });
     }
 
@@ -1846,10 +1846,15 @@ export class ConfluenceLearningAgent {
   }
 
   /** Human-readable label for a cluster window timestamp */
-  private clusterLabel(date: Date): string {
-    const ny = this.getNYDateTimeParts(date);
+  private clusterLabel(date: Date, assetClass: 'crypto' | 'equity' = 'equity'): string {
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    if (assetClass === 'crypto') {
+      // Crypto: use UTC (TradingView-style) — avoids NY offset pushing dates back 1 day
+      return `${days[date.getUTCDay()]} ${months[date.getUTCMonth()]} ${date.getUTCDate()} ${String(date.getUTCHours()).padStart(2, '0')}:${String(date.getUTCMinutes()).padStart(2, '0')}`;
+    }
+    // Equity: use NY timezone
+    const ny = this.getNYDateTimeParts(date);
     return `${days[ny.dayOfWeek]} ${months[ny.month]} ${ny.day} ${String(ny.hour).padStart(2, '0')}:${String(ny.minute).padStart(2, '0')}`;
   }
 
