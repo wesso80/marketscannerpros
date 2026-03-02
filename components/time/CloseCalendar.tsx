@@ -125,8 +125,8 @@ function detectAssetClass(sym: string): AssetClass {
 
 export default function CloseCalendar({ symbol: propSymbol }: CloseCalendarProps) {
   const inferredAsset = propSymbol ? detectAssetClass(propSymbol) : 'crypto';
-  const [anchor, setAnchor] = useState<CloseCalendarAnchor>("NOW");
-  const [horizon, setHorizon] = useState<number>(7);
+  const [anchor, setAnchor] = useState<CloseCalendarAnchor>("TODAY");
+  const [horizon, setHorizon] = useState<number>(1);
   const [customDate, setCustomDate] = useState("");
   const [assetClass, setAssetClass] = useState<AssetClass>(inferredAsset);
   const [data, setData] = useState<ForwardCloseCalendar | null>(null);
