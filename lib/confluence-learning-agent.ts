@@ -1622,14 +1622,18 @@ export class ConfluenceLearningAgent {
     const clampedHorizon = Math.max(1, Math.min(30, horizonDays));
 
     // ── Resolve anchor to a concrete Date ──
+    // anchorDate  = the starting point for the forward scan (always >= now for TODAY/EOW/EOM)
+    // anchorDayDate = used only for "closesOnAnchorDay" boundaries (can be start-of-day)
     let anchorDate: Date;
+    let anchorDayDate: Date | null = null; // null → derive from anchorDate
 
     if (assetClass === 'crypto') {
       // Crypto uses UTC boundaries throughout
       switch (anchor) {
         case 'TODAY': {
-          // Start of today UTC (00:00)
-          anchorDate = new Date(Math.floor(now.getTime() / 86400_000) * 86400_000);
+          // Scan from NOW (skip already-elapsed closes) but anchor-day = full UTC day
+          anchorDate = now;
+          anchorDayDate = new Date(Math.floor(now.getTime() / 86400_000) * 86400_000);
           break;
         }
         case 'EOW': {
@@ -1668,8 +1672,10 @@ export class ConfluenceLearningAgent {
       // Equity uses NY timezone session boundaries
       switch (anchor) {
         case 'TODAY': {
+          // Scan from NOW (skip already-elapsed closes) but anchor-day = full NY trading day
           const ny = this.getNYDateTimeParts(now);
-          anchorDate = new Date(this.getNYMarketCloseUtcMs(ny.year, ny.month, ny.day) - 16 * 3600_000);
+          anchorDayDate = new Date(this.getNYMarketCloseUtcMs(ny.year, ny.month, ny.day) - 16 * 3600_000);
+          anchorDate = now.getTime() > anchorDayDate.getTime() ? now : anchorDayDate;
           break;
         }
         case 'EOW': {
@@ -1720,9 +1726,11 @@ export class ConfluenceLearningAgent {
     const anchorMs = anchorDate.getTime();
     const horizonEndMs = anchorMs + clampedHorizon * 86400_000;
     // Anchor day boundaries: UTC for crypto, NY for equity
+    // Use anchorDayDate when set (e.g. TODAY → full day) otherwise derive from anchorDate
+    const dayRef = anchorDayDate ?? anchorDate;
     const anchorDayStart = assetClass === 'crypto'
-      ? Math.floor(anchorMs / 86400_000) * 86400_000
-      : this.startOfDayNY(anchorDate);
+      ? Math.floor(dayRef.getTime() / 86400_000) * 86400_000
+      : this.startOfDayNY(dayRef);
     const anchorDayEnd = anchorDayStart + 86400_000;
 
     // TF weights (same as close confluence)
@@ -1838,7 +1846,7 @@ export class ConfluenceLearningAgent {
 
     return {
       anchor,
-      anchorTimeISO: anchorDate.toISOString(),
+      anchorTimeISO: (anchorDayDate ?? anchorDate).toISOString(),
       horizonDays: clampedHorizon,
       horizonEndISO: new Date(horizonEndMs).toISOString(),
       assetClass,

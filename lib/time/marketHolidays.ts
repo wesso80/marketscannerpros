@@ -118,6 +118,10 @@ function buildHolidaySet(year: number): Set<string> {
   // 10. Christmas Day (Dec 25, observed)
   holidays.add(observedKey(year, 11, 25));
 
+  // ── One-off / irregular market closures ──
+  // National Day of Mourning for President Jimmy Carter (Jan 9, 2025)
+  if (year === 2025) holidays.add(dateKey(2025, 0, 9));
+
   return holidays;
 }
 

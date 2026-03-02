@@ -17,7 +17,7 @@ import SignalRail from "@/components/terminal/SignalRail";
 import OperatorProposalRail from "@/components/operator/OperatorProposalRail";
 import { PriceChart, type ChartData } from "@/components/scanner/PriceChart";
 import { PreTradeChecklistModal, type PreTradeChecklistState } from "@/components/scanner/PreTradeChecklistModal";
-import { useUserTier, canAccessUnlimitedScanning } from "@/lib/useUserTier";
+import { useUserTier, canAccessScanner, canAccessUnlimitedScanning, FREE_DAILY_SCAN_LIMIT } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
 import { useAIPageContext } from "@/lib/ai/pageContext";
 import { readOperatorState, writeOperatorState } from "@/lib/operatorState";
@@ -227,6 +227,26 @@ function ScannerContent() {
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [scanKey, setScanKey] = useState<number>(0); // Force re-render on each scan
   const [capitalFlow, setCapitalFlow] = useState<ScanResult['capitalFlow'] | null>(null);
+
+  // Free-tier daily scan limit
+  const isFree = tier === 'free';
+  const [dailyScansUsed, setDailyScansUsed] = useState<number>(() => {
+    if (typeof window === 'undefined') return 0;
+    try {
+      const stored = JSON.parse(localStorage.getItem('msp_free_scans') || '{}');
+      const today = new Date().toISOString().slice(0, 10);
+      return stored.date === today ? stored.count : 0;
+    } catch { return 0; }
+  });
+  const freeScanLimitReached = isFree && dailyScansUsed >= FREE_DAILY_SCAN_LIMIT;
+
+  const incrementDailyScan = () => {
+    if (!isFree) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const next = dailyScansUsed + 1;
+    setDailyScansUsed(next);
+    try { localStorage.setItem('msp_free_scans', JSON.stringify({ date: today, count: next })); } catch {}
+  };
   
   // Bulk scan state
   const [bulkScanType, setBulkScanType] = useState<'equity' | 'crypto' | null>(null);
@@ -893,6 +913,11 @@ function ScannerContent() {
     const effectiveTicker = symbolOverride?.trim() || ticker.trim();
     if (loading) return;
 
+    if (freeScanLimitReached) {
+      setError(`Free plan limit reached (${FREE_DAILY_SCAN_LIMIT} scans/day). Upgrade to Pro for unlimited scanning.`);
+      return;
+    }
+
     if (!effectiveTicker) {
       setError("Please enter or select a ticker");
       return;
@@ -942,6 +967,7 @@ function ScannerContent() {
       }
 
       if (data.success && data.results?.length > 0) {
+        incrementDailyScan();
         console.log('Scanner API Response:', data.results[0]);
         console.log('ATR value:', data.results[0].atr, 'isFinite:', Number.isFinite(data.results[0].atr));
         console.log('Candle time:', data.results[0].lastCandleTime);
@@ -1431,10 +1457,32 @@ function ScannerContent() {
   const eventMultiplier = riskSnapshot?.risk_mode === 'LOCKED' ? '0.00' : riskSnapshot?.risk_mode === 'THROTTLED' ? '0.50' : riskSnapshot?.risk_mode === 'DEFENSIVE' ? '0.35' : '1.00';
 
   if (tierLoading) return <div style={{ minHeight: "100vh", background: "var(--msp-bg, #0A101C)" }} />;
-  if (!canAccessUnlimitedScanning(tier)) return <UpgradeGate requiredTier="pro" feature="Market Scanner" />;
+  if (!canAccessScanner(tier)) return <UpgradeGate requiredTier="pro" feature="Market Scanner" />;
 
   return (
     <div className="min-h-screen bg-[var(--msp-bg)]">
+      {isFree && (
+        <div style={{
+          background: 'linear-gradient(90deg, rgba(16,185,129,0.12) 0%, rgba(16,185,129,0.04) 100%)',
+          border: '1px solid rgba(16,185,129,0.25)',
+          borderRadius: '10px',
+          padding: '10px 16px',
+          margin: '8px 12px 0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontSize: '13px',
+          color: 'var(--msp-text-muted)',
+        }}>
+          <span>
+            <strong style={{ color: 'var(--msp-accent)' }}>Free Plan</strong>
+            {' · '}{FREE_DAILY_SCAN_LIMIT - dailyScansUsed} of {FREE_DAILY_SCAN_LIMIT} scans remaining today
+          </span>
+          <a href="/pricing" style={{ color: 'var(--msp-accent)', fontWeight: 600, textDecoration: 'none', fontSize: '13px' }}>
+            Upgrade for unlimited →
+          </a>
+        </div>
+      )}
       <ToolPageLayout
         identity={
           <ToolIdentityHeader
