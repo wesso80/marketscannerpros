@@ -16,6 +16,8 @@ import { getSessionFromCookie } from '@/lib/auth';
 import { getAdaptiveLayer } from '@/lib/adaptiveTrader';
 import { computeInstitutionalFilter, inferStrategyFromText } from '@/lib/institutionalFilter';
 import { avTakeToken } from '@/lib/avRateGovernor';
+import { getBulkCachedScanData, CachedScanData } from '@/lib/scannerCache';
+import { q as dbQuery } from '@/lib/db';
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // 60 seconds max for client requests
@@ -1091,7 +1093,7 @@ async function runLightCryptoScan(maxCoins: number, startTime: number, timeframe
 
   return {
     scanned: ranked.length,
-    topPicks: ranked.slice(0, 10),
+    topPicks: ranked.slice(0, 25),
     sourceCoinsFetched: markets.length,
     apiCallsUsed,
     apiCallsCap: LIGHT_SCAN_MAX_API_CALLS,
@@ -1291,6 +1293,225 @@ function scoreLightEquityCandidate(
   };
 }
 
+// ─── Cache-first equity scan ─────────────────────────────────────────────────
+// Uses the worker-populated quotes_latest + indicators_latest tables.
+// Zero AV API calls — reads pre-cached data with full 9-signal scoring.
+// Falls back to light (AV bulk quotes) if cache has < 10 symbols.
+// ─────────────────────────────────────────────────────────────────────────────
+function computeFullScore(data: CachedScanData): {
+  score: number;
+  direction: 'bullish' | 'bearish' | 'neutral';
+  signals: { bullish: number; bearish: number; neutral: number };
+  indicators: {
+    price: number; rsi?: number; adx?: number; atr?: number; ema200?: number;
+    macd_hist?: number; stoch_k?: number; cci?: number;
+    atr_percent?: number;
+  };
+} {
+  const { price, rsi: rsiVal, macdLine, macdSignal, macdHist, ema200, atr, adx: adxVal, stochK, cci: cciVal } = data;
+  let bullish = 0, bearish = 0, neutral = 0;
+
+  // ADX trend multiplier (same logic as /api/scanner/run)
+  let tm = 1.0;
+  if (Number.isFinite(adxVal)) {
+    if (adxVal >= 40) tm = 1.4;
+    else if (adxVal >= 25) tm = 1.25;
+    else if (adxVal >= 20) tm = 1.0;
+    else tm = 0.7;
+  }
+
+  // 1. EMA200 trend (weight 2 × tm)
+  if (Number.isFinite(ema200) && Number.isFinite(price)) {
+    const w = 2 * tm;
+    if (price > ema200 * 1.01) bullish += w;
+    else if (price < ema200 * 0.99) bearish += w;
+    else neutral += 1;
+  }
+  // 2. MACD histogram (weight 1 × tm)
+  if (Number.isFinite(macdHist)) {
+    const w = 1 * tm;
+    if (macdHist > 0) bullish += w; else bearish += w;
+  }
+  // 3. MACD vs signal (weight 1 × tm)
+  if (Number.isFinite(macdLine) && Number.isFinite(macdSignal)) {
+    const w = 1 * tm;
+    if (macdLine > macdSignal) bullish += w; else bearish += w;
+  }
+  // 4. Aroon (from cache — may be NaN)
+  if (Number.isFinite(data.aroonUp) && Number.isFinite(data.aroonDown)) {
+    const w = 1 * tm;
+    if (data.aroonUp > data.aroonDown && data.aroonUp > 70) bullish += w;
+    else if (data.aroonDown > data.aroonUp && data.aroonDown > 70) bearish += w;
+    else neutral += 0.5;
+  }
+  // 5. RSI
+  if (Number.isFinite(rsiVal)) {
+    if (rsiVal >= 55 && rsiVal <= 70) bullish += 1;
+    else if (rsiVal > 70) bearish += 1;
+    else if (rsiVal <= 45 && rsiVal >= 30) bearish += 1;
+    else if (rsiVal < 30) bullish += 1;
+    else neutral += 1;
+  }
+  // 6. Stochastic
+  if (Number.isFinite(stochK)) {
+    if (stochK > 80) bearish += 1;
+    else if (stochK < 20) bullish += 1;
+    else if (stochK >= 50) bullish += 0.5;
+    else bearish += 0.5;
+  }
+  // 7. CCI
+  if (Number.isFinite(cciVal)) {
+    if (cciVal > 100) bullish += 1;
+    else if (cciVal > 0) bullish += 0.5;
+    else if (cciVal < -100) bearish += 1;
+    else bearish += 0.5;
+  }
+  // 8. ATR volatility caution
+  const atrPercent = Number.isFinite(atr) && Number.isFinite(price) && price > 0 ? (atr / price) * 100 : 0;
+  if (atrPercent > 5) neutral += 1;
+
+  const total = bullish + bearish + neutral;
+  let direction: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+  if (bullish > bearish * 1.15) direction = 'bullish';
+  else if (bearish > bullish * 1.15) direction = 'bearish';
+
+  const diff = bullish - bearish;
+  const maxSig = 10 * tm;
+  const score = Math.max(0, Math.min(100, Math.round(50 + (diff / maxSig) * 50)));
+
+  return {
+    score,
+    direction,
+    signals: {
+      bullish: Math.round(bullish * 10) / 10,
+      bearish: Math.round(bearish * 10) / 10,
+      neutral: Math.round(neutral * 10) / 10,
+    },
+    indicators: {
+      price,
+      rsi: rsiVal,
+      adx: adxVal,
+      atr,
+      ema200,
+      macd_hist: macdHist,
+      stoch_k: stochK,
+      cci: cciVal,
+      atr_percent: Number.isFinite(atrPercent) ? Math.round(atrPercent * 100) / 100 : undefined,
+    },
+  };
+}
+
+async function runCachedEquityScan(startTime: number, timeframe: string, universeSize: number) {
+  console.log(`[bulk-scan/cached] Scanning equities from worker cache (0 AV calls)...`);
+
+  // Read pre-cached indicators for the full equity universe
+  const symbolsToScan = EQUITY_UNIVERSE.slice(0, Math.max(30, universeSize));
+  const cacheMap = await getBulkCachedScanData(symbolsToScan);
+
+  // Also grab AV top movers to enrich bias (1 API call — worth it for fresh context)
+  const moverData = await fetchAlphaTopMovers();
+  const moverBiasMap = new Map<string, number>();
+  for (const row of moverData.gainers) {
+    const ticker = normalizeTicker(row?.ticker || row?.symbol);
+    if (ticker) moverBiasMap.set(ticker, 1);
+  }
+  for (const row of moverData.losers) {
+    const ticker = normalizeTicker(row?.ticker || row?.symbol);
+    if (ticker) moverBiasMap.set(ticker, -1);
+  }
+  for (const row of moverData.active) {
+    const ticker = normalizeTicker(row?.ticker || row?.symbol);
+    if (ticker && !moverBiasMap.has(ticker)) moverBiasMap.set(ticker, 0.4);
+  }
+
+  // Any top-mover symbols not in EQUITY_UNIVERSE get added
+  for (const ticker of moverBiasMap.keys()) {
+    if (!symbolsToScan.includes(ticker)) symbolsToScan.push(ticker);
+  }
+
+  // If cache didn't have enough data, fall back to light scan
+  if (cacheMap.size < 10) {
+    console.warn(`[bulk-scan/cached] Only ${cacheMap.size} symbols in cache, falling back to light scan`);
+    return null; // Caller will use runLightEquityScan
+  }
+
+  // Score every cached symbol with full 9-signal scoring
+  const scored: Array<ReturnType<typeof computeFullScore> & { symbol: string; change24h: number }> = [];
+  for (const [symbol, cached] of cacheMap.entries()) {
+    const result = computeFullScore(cached);
+    // Try to get daily change from quotes_latest
+    let change24h = 0;
+    try {
+      const rows = await dbQuery<{ change_percent: string }>(
+        `SELECT change_percent FROM quotes_latest WHERE symbol = $1`,
+        [symbol]
+      );
+      if (rows.length > 0) change24h = parseFloat(rows[0].change_percent) || 0;
+    } catch { /* non-fatal */ }
+
+    scored.push({ ...result, symbol, change24h });
+  }
+
+  // Also score movers that weren't in cache using bulk quotes fallback
+  const uncachedMovers = Array.from(moverBiasMap.keys()).filter(t => !cacheMap.has(t));
+  if (uncachedMovers.length > 0) {
+    const quoteResult = await fetchAlphaBulkQuotes(uncachedMovers, Math.max(0, 3));
+    for (const [sym, quote] of quoteResult.priceMap.entries()) {
+      const light = scoreLightEquityCandidate(sym, quote, timeframe, moverBiasMap.get(sym) ?? 0);
+      if (light) scored.push({ ...light, indicators: { ...light.indicators } });
+    }
+  }
+
+  // Fetch chartData from ohlcv_bars for each scored result
+  for (const item of scored) {
+    try {
+      const barRows = await dbQuery<{ ts: string; open: number; high: number; low: number; close: number; volume: number }>(
+        `SELECT ts, open, high, low, close, volume FROM ohlcv_bars WHERE symbol = $1 AND timeframe = 'daily' ORDER BY ts DESC LIMIT 50`,
+        [item.symbol]
+      );
+      if (barRows && barRows.length > 5) {
+        const sorted = [...barRows].reverse();
+        const bCloses = sorted.map(r => Number(r.close));
+        const emaArr = (ema(bCloses, 200) ?? []) as number[];
+        const rsiArr = (rsi(bCloses, 14) ?? []) as number[];
+        // Build MACD arrays for chart (the imported macd() returns a single point, so we compute inline)
+        const ema12Arr = (ema(bCloses, 12) ?? []) as number[];
+        const ema26Arr = (ema(bCloses, 26) ?? []) as number[];
+        const macdLineArr = ema12Arr.map((v: number, i: number) => (Number.isFinite(v) && Number.isFinite(ema26Arr[i])) ? v - ema26Arr[i] : NaN);
+        const validMacd = macdLineArr.filter((v: number) => Number.isFinite(v));
+        const signalArr = validMacd.length >= 9 ? ((ema(validMacd, 9) ?? []) as number[]) : [] as number[];
+        const macdChartArr = macdLineArr.map((m: number, i: number) => {
+          const si = i - (macdLineArr.length - (signalArr as number[]).length);
+          const sig = si >= 0 && si < (signalArr as number[]).length ? (signalArr as number[])[si] : NaN;
+          return { macd: m, signal: sig, hist: Number.isFinite(m) && Number.isFinite(sig) ? m - sig : NaN };
+        });
+        (item as any).chartData = {
+          candles: sorted.map(r => ({
+            t: typeof r.ts === 'string' ? r.ts.slice(0, 10) : new Date(r.ts).toISOString().slice(0, 10),
+            o: Number(r.open), h: Number(r.high), l: Number(r.low), c: Number(r.close),
+          })),
+          ema200: emaArr,
+          rsi: rsiArr,
+          macd: macdChartArr,
+        };
+      }
+    } catch { /* non-fatal — chart will fall back on client */ }
+  }
+
+  // Rank by conviction strength
+  const ranked = scored.sort((a, b) => Math.abs(b.score - 50) - Math.abs(a.score - 50));
+
+  return {
+    scanned: scored.length,
+    topPicks: ranked.slice(0, 25),
+    sourceSymbols: symbolsToScan.length,
+    apiCallsUsed: moverData.apiCallsUsed,
+    apiCallsCap: LIGHT_EQUITY_MAX_API_CALLS,
+    effectiveUniverseSize: symbolsToScan.length,
+    cacheHitRate: `${cacheMap.size}/${symbolsToScan.length}`,
+  };
+}
+
 async function runLightEquityScan(startTime: number, timeframe: string, universeSize: number) {
   const moverData = await fetchAlphaTopMovers();
 
@@ -1340,7 +1561,7 @@ async function runLightEquityScan(startTime: number, timeframe: string, universe
 
   return {
     scanned: ranked.length,
-    topPicks: ranked.slice(0, 10),
+    topPicks: ranked.slice(0, 25),
     sourceSymbols: candidates.length,
     apiCallsUsed: moverData.apiCallsUsed + quoteResult.apiCallsUsed,
     apiCallsCap: LIGHT_EQUITY_MAX_API_CALLS,
@@ -1412,15 +1633,20 @@ function applyInstitutionalFilterToTopPicks(
     };
   });
 
-  const filtered = withFilter.filter((pick) => !pick.institutionalFilter.noTrade && pick.scoreV2?.execution?.permission !== 'blocked');
-  const blockedCount = withFilter.length - filtered.length;
+  // Don't remove results from discovery — tag them with warnings but keep them visible.
+  // Users need to SEE what's out there, then the institutional filter badge guides decisions.
+  const blockedCount = withFilter.filter((pick) => pick.institutionalFilter.noTrade || pick.scoreV2?.execution?.permission === 'blocked').length;
   const ranked = [...withFilter].sort((a, b) => {
+    // Sort trade-ready results first, then by rank score
+    const aBlocked = a.institutionalFilter.noTrade || a.scoreV2?.execution?.permission === 'blocked' ? 1 : 0;
+    const bBlocked = b.institutionalFilter.noTrade || b.scoreV2?.execution?.permission === 'blocked' ? 1 : 0;
+    if (aBlocked !== bBlocked) return aBlocked - bBlocked;
     const left = Number(a?.scoreV2?.final?.rankScore ?? a?.score ?? 0);
     const right = Number(b?.scoreV2?.final?.rankScore ?? b?.score ?? 0);
     return right - left;
   });
   return {
-    topPicks: filtered.length > 0 ? filtered : (ranked.length > 0 ? [ranked[0]] : []),
+    topPicks: ranked,
     blockedCount,
   };
 }
@@ -1521,14 +1747,15 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    if (type === 'equity' && isLightMode) {
-      console.log(`[bulk-scan/light] Scanning up to ${universeSize} equities using hybrid movers + bulk quotes...`);
-      const lightResult = await runLightEquityScan(startTime, selectedTimeframe, universeSize);
+    if (type === 'equity') {
+      // Try cache-first scan (reads worker-populated DB, 0–1 AV calls)
+      const cachedResult = await runCachedEquityScan(startTime, selectedTimeframe, universeSize);
+      const equityResult = cachedResult ?? await runLightEquityScan(startTime, selectedTimeframe, universeSize);
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-      const institutional = applyInstitutionalFilterToTopPicks(lightResult.topPicks, {
+      const institutional = applyInstitutionalFilterToTopPicks(equityResult.topPicks, {
         type,
         timeframe: selectedTimeframe,
-        mode,
+        mode: cachedResult ? 'deep' : (isLightMode ? 'hybrid' : mode),
         traderRiskDNA: adaptive?.profile?.riskDNA,
       });
 
@@ -1536,15 +1763,16 @@ export async function POST(req: NextRequest) {
         success: true,
         type,
         timeframe: selectedTimeframe,
-        mode: isLightMode ? 'hybrid' : mode,
-        scanned: lightResult.scanned,
+        mode: cachedResult ? 'cached' : (isLightMode ? 'hybrid' : mode),
+        scanned: equityResult.scanned,
         duration: `${duration}s`,
         topPicks: institutional.topPicks,
-        sourceSymbols: lightResult.sourceSymbols,
+        sourceSymbols: equityResult.sourceSymbols,
         blockedByInstitutionalFilter: institutional.blockedCount,
-        apiCallsUsed: lightResult.apiCallsUsed,
-        apiCallsCap: lightResult.apiCallsCap,
-        effectiveUniverseSize: lightResult.effectiveUniverseSize,
+        apiCallsUsed: equityResult.apiCallsUsed,
+        apiCallsCap: equityResult.apiCallsCap,
+        effectiveUniverseSize: equityResult.effectiveUniverseSize,
+        cacheHitRate: (equityResult as any).cacheHitRate,
         errors: [],
       });
     }
@@ -1623,7 +1851,7 @@ export async function POST(req: NextRequest) {
     // Sort by conviction strength — distance from 50 — so both bullish AND bearish setups rank high
     const topPicks = results
       .sort((a, b) => Math.abs(b.score - 50) - Math.abs(a.score - 50))
-      .slice(0, 10);
+      .slice(0, 25);
     const institutional = applyInstitutionalFilterToTopPicks(topPicks, {
       type,
       timeframe: selectedTimeframe,

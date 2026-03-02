@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 // Link import removed (unused)
 import CapitalFlowCard from "@/components/CapitalFlowCard";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
@@ -16,7 +17,8 @@ import DecisionCockpit from "@/components/terminal/DecisionCockpit";
 import SignalRail from "@/components/terminal/SignalRail";
 import OperatorProposalRail from "@/components/operator/OperatorProposalRail";
 import { PriceChart, type ChartData } from "@/components/scanner/PriceChart";
-import InteractiveChart from "@/components/scanner/InteractiveChart";
+// InteractiveChart uses lightweight-charts (browser-only) — must skip SSR
+const InteractiveChart = dynamic(() => import("@/components/scanner/InteractiveChart"), { ssr: false });
 import ScreenerTable, { type ScreenerRow } from "@/components/scanner/ScreenerTable";
 import ScanTemplatesBar, { type ScanTemplate } from "@/components/scanner/ScanTemplatesBar";
 import { PreTradeChecklistModal, type PreTradeChecklistState } from "@/components/scanner/PreTradeChecklistModal";
@@ -319,7 +321,7 @@ function ScannerContent() {
   const [rankDirection, setRankDirection] = useState<'all' | 'long' | 'short'>('all');
   const [sectorFilter, setSectorFilter] = useState<'all' | 'tech' | 'finance' | 'energy'>('all');
   const [scanIntentMode, setScanIntentMode] = useState<'observe' | 'decide'>('observe');
-  const [rankMinConfidence, setRankMinConfidence] = useState<50 | 60 | 70 | 80>(70);
+  const [rankMinConfidence, setRankMinConfidence] = useState<50 | 60 | 70 | 80>(50);
   const [rankQuality, setRankQuality] = useState<'all' | 'high' | 'medium'>('all');
   const [rankTfAlignment, setRankTfAlignment] = useState<2 | 3>(2);
   const [rankVolatility, setRankVolatility] = useState<'all' | 'low' | 'moderate' | 'high'>('all');
@@ -572,7 +574,9 @@ function ScannerContent() {
           payload.universeSize = bulkCryptoUniverseSize;
         }
       } else {
-        const resolvedMode: 'deep' = 'deep';
+        // Use hybrid mode for equities — uses AV movers + bulk quotes (2-3 API calls)
+        // instead of deep mode which makes 67+ individual calls and times out
+        const resolvedMode: 'hybrid' = 'hybrid';
         payload.mode = resolvedMode;
       }
 
@@ -1087,7 +1091,7 @@ function ScannerContent() {
     if (!bulkScanResults?.topPicks?.length) return [] as Array<any>;
 
     const isFastModeResults = bulkScanResults.mode === 'light' || bulkScanResults.mode === 'hybrid';
-    const effectiveMinConfidence = isFastModeResults ? Math.min(rankMinConfidence, 60) : rankMinConfidence;
+    const effectiveMinConfidence = isFastModeResults ? Math.min(rankMinConfidence, 45) : rankMinConfidence;
 
     const withMeta = bulkScanResults.topPicks.map((pick: any, idx: number) => {
       const rawScore = pick?.scoreV2?.final?.confidence ?? pick.score ?? 50;
@@ -1137,7 +1141,7 @@ function ScannerContent() {
       return a._rank - b._rank;
     });
 
-    return filtered.slice(0, 9);
+    return filtered.slice(0, 25);
   }, [bulkScanResults, rankDirection, rankMinConfidence, rankQuality, rankTfAlignment, rankVolatility, rankSort, sectorFilter]);
 
   const mapPickToStrategyTag = (pick: any): StrategyTag => {
