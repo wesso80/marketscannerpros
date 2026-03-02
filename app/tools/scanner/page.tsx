@@ -217,7 +217,7 @@ function ScannerContent() {
   const { isAdmin, tier, isLoading: tierLoading } = useUserTier();
   const { snapshot: riskSnapshot, isLocked: riskLocked, guardEnabled, evaluate: evaluateRiskIntent } = useRiskPermission();
   const [assetType, setAssetType] = useState<AssetType>("crypto");
-  const [ticker, setTicker] = useState<string>("BTC");
+  const [ticker, setTicker] = useState<string>("");
   const [timeframe, setTimeframe] = useState<TimeframeOption>("1h");
   const [loading, setLoading] = useState<boolean>(false);
   const [result, setResult] = useState<ScanResult | null>(null);
@@ -1850,7 +1850,7 @@ function ScannerContent() {
                         const sym = (pick.symbol ?? '').replace(/-USD$/, '');
                         setTicker(sym);
                         setAssetType(bulkScanResults!.type === 'crypto' ? 'crypto' : 'equity');
-                        void runScan();
+                        void runScan(sym);
                       }
                     }}
                   />
@@ -1870,7 +1870,7 @@ function ScannerContent() {
                       ? 'var(--msp-bear)'
                       : 'var(--msp-warn)';
                     return (
-                      <div key={pick.symbol} className="flex min-h-[220px] h-full flex-col rounded-xl border bg-[var(--msp-panel)] p-3 transition-all duration-200 hover:border-[var(--msp-border-strong)]" style={{ borderColor }}>
+                      <div key={pick.symbol} className="flex min-h-[220px] h-full flex-col rounded-xl border bg-[var(--msp-panel)] p-3 transition-all duration-200 hover:border-[var(--msp-border-strong)] cursor-pointer" style={{ borderColor }} onClick={() => { const sym = (pick.symbol ?? '').replace(/-USD$/, ''); setTicker(sym); setAssetType(bulkScanResults!.type === 'crypto' ? 'crypto' : 'equity'); void runScan(sym); }}>
                         <div className="mb-2 flex items-center justify-between gap-2">
                           <div className="flex items-center gap-1.5">
                             <span className="text-[0.95rem] font-semibold text-[var(--msp-text)]">{pick.symbol}</span>
@@ -1892,7 +1892,7 @@ function ScannerContent() {
                           <div>Liquidity: <span className="font-bold text-[var(--msp-text)]">{pick.indicators?.volume ? 'ACTIVE' : 'NORMAL'}</span></div>
                         </div>
                         <div className="mb-2 border-t border-[var(--msp-divider)]" />
-                        <div className="mt-auto flex gap-2">
+                        <div className="mt-auto flex gap-2" onClick={(e) => e.stopPropagation()}>
                           <button
                             onClick={() => { void deployRankCandidate(pick); }}
                             disabled={blocked}
