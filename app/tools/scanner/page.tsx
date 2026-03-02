@@ -16,6 +16,9 @@ import DecisionCockpit from "@/components/terminal/DecisionCockpit";
 import SignalRail from "@/components/terminal/SignalRail";
 import OperatorProposalRail from "@/components/operator/OperatorProposalRail";
 import { PriceChart, type ChartData } from "@/components/scanner/PriceChart";
+import InteractiveChart from "@/components/scanner/InteractiveChart";
+import ScreenerTable, { type ScreenerRow } from "@/components/scanner/ScreenerTable";
+import ScanTemplatesBar, { type ScanTemplate } from "@/components/scanner/ScanTemplatesBar";
 import { PreTradeChecklistModal, type PreTradeChecklistState } from "@/components/scanner/PreTradeChecklistModal";
 import { useUserTier, canAccessScanner, canAccessUnlimitedScanning, FREE_DAILY_SCAN_LIMIT } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
@@ -275,6 +278,8 @@ function ScannerContent() {
   const useScannerFlowV2 = true;
   const useInstitutionalDecisionCockpitV2 = true;
   const [advancedIntelligenceOpen, setAdvancedIntelligenceOpen] = useState(false);
+  const [activeTemplateId, setActiveTemplateId] = useState<string | undefined>(undefined);
+  const [bulkViewMode, setBulkViewMode] = useState<'table' | 'cards'>('table');
   const [advancedDiscoverOpen, setAdvancedDiscoverOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [decisionTimerStart, setDecisionTimerStart] = useState<number | null>(null);
@@ -1782,14 +1787,77 @@ function ScannerContent() {
 
             {bulkScanResults && (
               <div className={`mb-4 transition-all duration-300 ease-out ${scannerStep === 2 ? 'translate-x-0 opacity-100' : 'translate-x-1 opacity-95'}`}>
+                {/* Scan Templates Bar */}
+                <ScanTemplatesBar
+                  activeId={activeTemplateId}
+                  onSelect={(tpl: ScanTemplate) => {
+                    setActiveTemplateId(tpl.id);
+                    const confMap: Record<number, 50 | 60 | 70 | 80> = { 55: 50, 60: 60, 65: 70, 70: 70, 75: 80, 80: 80 };
+                    setRankMinConfidence(confMap[tpl.config.minConfidence] ?? 60);
+                    setRankTfAlignment((tpl.config.mtfAlignment >= 3 ? 3 : 2) as 2 | 3);
+                    if (tpl.config.direction) setRankDirection(tpl.config.direction as any);
+                    if (tpl.config.quality) setRankQuality(tpl.config.quality as any);
+                    if (tpl.config.volatilityState && tpl.config.volatilityState !== 'all') setRankVolatility(tpl.config.volatilityState as any);
+                    else setRankVolatility('all');
+                  }}
+                />
+
                 <div className="msp-card mb-3 px-4 py-3">
-                  <div className="grid gap-2 md:grid-cols-3">
-                    <select value={rankDirection} onChange={(e) => setRankDirection(e.target.value as 'all' | 'long' | 'short')} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-bold text-[var(--msp-text)]"><option value="all">Direction: All</option><option value="long">Direction: Long</option><option value="short">Direction: Short</option></select>
-                    <select value={rankQuality} onChange={(e) => setRankQuality(e.target.value as 'all' | 'high' | 'medium')} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-bold text-[var(--msp-text)]"><option value="all">Quality: All</option><option value="high">Quality: High</option><option value="medium">Quality: Medium</option></select>
+                  <div className="grid gap-2 md:grid-cols-4">
+                    <select value={rankDirection} onChange={(e) => { setRankDirection(e.target.value as 'all' | 'long' | 'short'); setActiveTemplateId(undefined); }} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-bold text-[var(--msp-text)]"><option value="all">Direction: All</option><option value="long">Direction: Long</option><option value="short">Direction: Short</option></select>
+                    <select value={rankQuality} onChange={(e) => { setRankQuality(e.target.value as 'all' | 'high' | 'medium'); setActiveTemplateId(undefined); }} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-bold text-[var(--msp-text)]"><option value="all">Quality: All</option><option value="high">Quality: High</option><option value="medium">Quality: Medium</option></select>
                     <select value={rankSort} onChange={(e) => setRankSort(e.target.value as 'rank' | 'confidence' | 'volatility' | 'trend')} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-bold text-[var(--msp-text)]"><option value="rank">Sort: Rank</option><option value="confidence">Sort: Confidence</option><option value="volatility">Sort: Volatility</option><option value="trend">Sort: Trend Quality</option></select>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setBulkViewMode('table')}
+                        className={`rounded-md px-3 py-1.5 text-[0.72rem] font-bold transition-colors ${bulkViewMode === 'table' ? 'bg-[var(--msp-accent)] text-white' : 'border border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text)]'}`}
+                      >
+                        Table
+                      </button>
+                      <button
+                        onClick={() => setBulkViewMode('cards')}
+                        className={`rounded-md px-3 py-1.5 text-[0.72rem] font-bold transition-colors ${bulkViewMode === 'cards' ? 'bg-[var(--msp-accent)] text-white' : 'border border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text)]'}`}
+                      >
+                        Cards
+                      </button>
+                    </div>
                   </div>
                 </div>
 
+                {/* Screener Table View */}
+                {bulkViewMode === 'table' && (
+                  <ScreenerTable
+                    rows={rankedCandidates.map((pick: any, idx: number) => ({
+                      rank: idx + 1,
+                      symbol: pick.symbol ?? '',
+                      direction: pick._direction === 'long' ? 'LONG' as const : pick._direction === 'short' ? 'SHORT' as const : 'NEUTRAL' as const,
+                      confidence: pick._confidence ?? 0,
+                      quality: pick._quality ?? 'low',
+                      strategy: mapPickToStrategyTag(pick).replaceAll('_', ' '),
+                      rsi: pick.indicators?.rsi,
+                      adx: pick.indicators?.adx,
+                      atrPct: pick.indicators?.atr_percent,
+                      tfAlignment: pick._tfAlignment,
+                      volume24h: pick.indicators?.volume,
+                      price: pick.indicators?.price,
+                      change24h: pick.change24h,
+                      permission: toComplianceLabel(getPickPermission(pick)) as any,
+                    }))}
+                    selectedSymbol={ticker}
+                    onRowClick={(row) => {
+                      const pick = rankedCandidates.find((p: any) => p.symbol === row.symbol);
+                      if (pick) {
+                        const sym = (pick.symbol ?? '').replace(/-USD$/, '');
+                        setTicker(sym);
+                        setAssetType(bulkScanResults!.type === 'crypto' ? 'crypto' : 'equity');
+                        void runScan();
+                      }
+                    }}
+                  />
+                )}
+
+                {/* Card Grid View (original) */}
+                {bulkViewMode === 'cards' && (
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {rankedCandidates.map((pick: any) => {
                     const permission = getPickPermission(pick);
@@ -1839,6 +1907,7 @@ function ScannerContent() {
                     );
                   })}
                 </div>
+                )}
                 <div className="mt-3 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel)] px-3 py-2 text-[0.72rem] font-bold text-[var(--msp-text-muted)]">
                   Market Bias Context • Regime: {presenceMode.replace(' MODE', '')} • Most setups: {rankedCandidates.filter((p: any) => p._direction === 'long').length >= rankedCandidates.filter((p: any) => p._direction === 'short').length ? 'Long' : 'Short'}
                 </div>
@@ -5060,14 +5129,26 @@ function ScannerContent() {
 
             {showAdvancedEngineeringPanels && (
               <>
-                {/* Price Chart (Chart.js) */}
+                {/* Interactive Price Chart (TradingView Lightweight Charts) */}
                 <div style={{ marginBottom: "2rem", borderRadius: "12px", overflow: "hidden", border: "1px solid rgba(16, 185, 129, 0.2)" }}>
-                  <PriceChart 
-                    symbol={result.symbol.replace("-USD", "")} 
-                    interval={timeframe} 
-                    price={result.price} 
-                    chartData={result.chartData}
-                  />
+                  {result.chartData?.candles?.length ? (
+                    <InteractiveChart
+                      candles={result.chartData.candles}
+                      ema200={result.chartData.ema200}
+                      symbol={result.symbol.replace("-USD", "")}
+                      interval={timeframe}
+                      height={420}
+                      showEMA={true}
+                      showVolume={true}
+                    />
+                  ) : (
+                    <PriceChart 
+                      symbol={result.symbol.replace("-USD", "")} 
+                      interval={timeframe} 
+                      price={result.price} 
+                      chartData={result.chartData}
+                    />
+                  )}
                 </div>
 
                 {/* Score Explanation */}

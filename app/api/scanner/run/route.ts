@@ -12,10 +12,11 @@ import { buildPermissionSnapshot } from "@/lib/risk-governor-hard";
 import { getAdaptiveLayer } from "@/lib/adaptiveTrader";
 import { computeInstitutionalFilter, inferStrategyFromText } from "@/lib/institutionalFilter";
 import { computeCapitalFlowEngine } from "@/lib/capitalFlowEngine";
-import { getDerivativesForSymbols, getGlobalData, getOHLC, resolveSymbolToId } from "@/lib/coingecko";
+import { getDerivativesForSymbols, getGlobalData, getOHLC, getOHLCWithVolume, resolveSymbolToId } from "@/lib/coingecko";
 import { classifyRegime } from "@/lib/regime-classifier";
 import { estimateComponentsFromContext, computeRegimeScore, deriveRegimeConfidence } from "@/lib/ai/regimeScoring";
 import { computeACLFromScoring } from "@/lib/ai/adaptiveConfidenceLens";
+import { computeScanEnhancements, type ScanEnhancements } from "@/lib/scannerEnhancements";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic"; // Disable static optimization
@@ -153,6 +154,8 @@ interface ScanResult {
   // Derivatives data for crypto (OI, Funding Rate, L/S)
   derivatives?: DerivativesData;
   capitalFlow?: any;
+  // Phase 6+ enhancements
+  enhancements?: ScanEnhancements;
 }
 
 // Fetch derivatives data from CoinGecko commercial derivatives endpoint
@@ -592,19 +595,36 @@ export async function POST(req: NextRequest) {
         throw new Error(`No CoinGecko mapping for ${baseSymbol}`);
       }
 
-      const ohlc = await getOHLC(coinId, days as 1 | 7 | 14 | 30 | 90 | 180 | 365);
-      if (!ohlc || ohlc.length === 0) {
-        throw new Error(`No CoinGecko OHLC data for ${baseSymbol}`);
+      const ohlcv = await getOHLCWithVolume(coinId, days as 1 | 7 | 14 | 30 | 90 | 180 | 365);
+      if (!ohlcv || ohlcv.length === 0) {
+        // Fallback to plain OHLC (no volume) if combined fetch fails
+        const ohlcFallback = await getOHLC(coinId, days as 1 | 7 | 14 | 30 | 90 | 180 | 365);
+        if (!ohlcFallback || ohlcFallback.length === 0) {
+          throw new Error(`No CoinGecko OHLC data for ${baseSymbol}`);
+        }
+        const candles: Candle[] = ohlcFallback
+          .map((row: number[]) => ({
+            t: new Date(row[0]).toISOString(),
+            open: Number(row[1]),
+            high: Number(row[2]),
+            low: Number(row[3]),
+            close: Number(row[4]),
+            volume: 0,
+          }))
+          .filter((c: Candle) => Number.isFinite(c.close))
+          .sort((a, b) => a.t.localeCompare(b.t));
+        console.info(`[scanner] CoinGecko ${baseSymbol}: ${candles.length} candles (no volume fallback)`);
+        return candles;
       }
 
-      const candles: Candle[] = ohlc
-        .map((row: number[]) => ({
-          t: new Date(row[0]).toISOString(),
-          open: Number(row[1]),
-          high: Number(row[2]),
-          low: Number(row[3]),
-          close: Number(row[4]),
-          volume: 0,
+      const candles: Candle[] = ohlcv
+        .map((row) => ({
+          t: new Date(row.t).toISOString(),
+          open: row.o,
+          high: row.h,
+          low: row.l,
+          close: row.c,
+          volume: row.v,
         }))
         .filter((c: Candle) => Number.isFinite(c.close))
         .sort((a, b) => a.t.localeCompare(b.t));
@@ -984,6 +1004,28 @@ export async function POST(req: NextRequest) {
       bulkPriceMap = await fetchBulkQuotes(equitySymbols);
     }
 
+    // PRE-FETCH: Benchmark change % for relative strength (non-blocking)
+    let benchmarkChangePct = 0;
+    const benchmarkName = type === 'crypto' ? 'BTC' : 'SPY';
+    try {
+      if (type === 'crypto') {
+        const btcId = await resolveSymbolToId('BTC');
+        if (btcId) {
+          const btcOhlc = await getOHLC(btcId, 1);
+          if (btcOhlc && btcOhlc.length >= 2) {
+            const firstClose = Number(btcOhlc[0][4]);
+            const lastClose = Number(btcOhlc[btcOhlc.length - 1][4]);
+            if (Number.isFinite(firstClose) && firstClose > 0) {
+              benchmarkChangePct = ((lastClose - firstClose) / firstClose) * 100;
+            }
+          }
+        }
+      }
+      // For equities, benchmarkChangePct stays 0 (SPY data would require an extra AV call)
+    } catch (bmErr) {
+      console.warn('[scanner] Benchmark fetch for RS failed, using 0:', bmErr);
+    }
+
     for (const sym of limited) {
       try {
         if (type === "crypto") {
@@ -1100,6 +1142,21 @@ export async function POST(req: NextRequest) {
             }
           }
           
+          // Compute enhancements: EMA stack, squeeze, relative strength
+          try {
+            const changePct = closes.length >= 2
+              ? ((closes[closes.length - 1] - closes[0]) / closes[0]) * 100
+              : 0;
+            item.enhancements = computeScanEnhancements({
+              closes, highs, lows, price,
+              changePct,
+              benchmarkChangePct,
+              benchmarkName,
+            });
+          } catch (enhErr) {
+            console.warn('[scanner] Enhancement computation failed for', baseSym, enhErr);
+          }
+          
           if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
         } else if (type === "forex") {
           // FOREX: Use FX_INTRADAY or FX_DAILY endpoints
@@ -1211,6 +1268,20 @@ export async function POST(req: NextRequest) {
             obv: obvArr[last] ?? NaN,
             lastCandleTime,
           };
+          // Compute enhancements for forex
+          try {
+            const changePct = closes.length >= 2
+              ? ((closes[closes.length - 1] - closes[0]) / closes[0]) * 100
+              : 0;
+            item.enhancements = computeScanEnhancements({
+              closes, highs, lows, price,
+              changePct,
+              benchmarkChangePct: 0, // no benchmark for forex
+              benchmarkName: 'USD',
+            });
+          } catch (enhErr) {
+            console.warn('[scanner] Enhancement computation failed for', sym, enhErr);
+          }
           if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
         } else {
           // EQUITIES: Try cached data first, fall back to Alpha Vantage
@@ -1448,6 +1519,21 @@ export async function POST(req: NextRequest) {
                 };
               })(),
             };
+
+            // Compute enhancements for equity (AV path)
+            try {
+              const changePct = closes.length >= 2
+                ? ((closes[closes.length - 1] - closes[0]) / closes[0]) * 100
+                : 0;
+              item.enhancements = computeScanEnhancements({
+                closes, highs, lows, price,
+                changePct,
+                benchmarkChangePct: 0,
+                benchmarkName: 'SPY',
+              });
+            } catch (enhErr) {
+              console.warn('[scanner] Enhancement computation failed for', sym, enhErr);
+            }
 
             if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
           } else {

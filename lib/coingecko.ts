@@ -436,6 +436,72 @@ export async function getOHLC(
   }
 }
 
+/**
+ * Fetch OHLC candles WITH volume data by combining /ohlc + /market_chart endpoints.
+ * CoinGecko's /ohlc endpoint returns no volume — this merges volume from /market_chart
+ * by matching timestamps (nearest within 2h bucket). Returns candles with real volume.
+ */
+export async function getOHLCWithVolume(
+  coinId: string,
+  days: 1 | 7 | 14 | 30 | 90 | 180 | 365 = 7,
+  requestOptions?: { retries?: number; timeoutMs?: number }
+): Promise<{ t: number; o: number; h: number; l: number; c: number; v: number }[] | null> {
+  try {
+    // Fetch OHLC and market_chart (which has total_volumes) in parallel
+    const [ohlc, chart] = await Promise.all([
+      getOHLC(coinId, days, requestOptions),
+      cgFetch<{
+        prices: [number, number][];
+        total_volumes: [number, number][];
+      }>(`/coins/${coinId}/market_chart`, {
+        params: new URLSearchParams({ vs_currency: 'usd', days: String(days) }),
+        init: { next: { revalidate: 300 } },
+        retries: requestOptions?.retries,
+        timeoutMs: requestOptions?.timeoutMs,
+      }),
+    ]);
+
+    if (!ohlc || ohlc.length === 0) return null;
+
+    // Build volume lookup from market_chart total_volumes (timestamp → volume)
+    const volMap = new Map<number, number>();
+    if (chart?.total_volumes) {
+      for (const [ts, vol] of chart.total_volumes) {
+        volMap.set(ts, vol);
+      }
+    }
+
+    // Merge: for each OHLC candle, find nearest volume entry within 2h window
+    const TWO_HOURS = 2 * 60 * 60 * 1000;
+    const volTimestamps = chart?.total_volumes?.map(v => v[0]) ?? [];
+
+    return ohlc.map((row) => {
+      const candleTs = row[0];
+      // Find nearest volume timestamp
+      let bestVol = 0;
+      let bestDist = Infinity;
+      for (const vTs of volTimestamps) {
+        const dist = Math.abs(vTs - candleTs);
+        if (dist < bestDist && dist < TWO_HOURS) {
+          bestDist = dist;
+          bestVol = volMap.get(vTs) ?? 0;
+        }
+      }
+      return {
+        t: candleTs,
+        o: Number(row[1]),
+        h: Number(row[2]),
+        l: Number(row[3]),
+        c: Number(row[4]),
+        v: bestVol,
+      };
+    }).filter(c => Number.isFinite(c.c));
+  } catch (error) {
+    console.error('[CoinGecko] OHLC+Volume fetch error:', error);
+    return null;
+  }
+}
+
 export async function getOHLCRange(
   coinId: string,
   fromUnixSeconds: number,

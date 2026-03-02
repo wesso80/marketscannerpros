@@ -43,6 +43,7 @@
     "chartjs-chart-financial": "^0.2.1",
     "dotenv": "^17.2.4",
     "jose": "^5.2.0",
+    "lightweight-charts": "^5.1.0",
     "next": "^16.0.10",
     "nodemailer": "^6.9.8",
     "openai": "^6.10.0",
