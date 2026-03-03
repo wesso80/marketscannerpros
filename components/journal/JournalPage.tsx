@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useAIPageContext } from '@/lib/ai/pageContext';
 import TradeDrawer from '@/components/journal/drawer/TradeDrawer';
 import { type TradeEntryInitialValues } from '@/components/journal/drawer/TradeEntryForm';
 import { useJournalActions } from '@/components/journal/hooks/useJournalActions';
@@ -98,6 +99,45 @@ export default function JournalPage({ tier }: { tier: UserTier }) {
   }, [selectedTrade]);
 
   const actions = useJournalActions({ rows: payload?.trades || [], onRefresh: refresh });
+
+  // ── AI Page Context: share journal stats + recent trades with ARCA AI ──
+  const { setPageData } = useAIPageContext();
+  useEffect(() => {
+    if (!payload) return;
+    const kpis = enrichedKpis || payload.kpis;
+    const openTrades = enrichedTrades.filter((t) => t.status === 'open');
+    const closedTrades = enrichedTrades.filter((t) => t.status === 'closed');
+    const recentTrades = enrichedTrades.slice(0, 10).map((t) => ({
+      symbol: t.symbol,
+      side: t.side,
+      status: t.status,
+      pnlUsd: Number(t.pnlUsd || 0),
+      pnlPct: Number(t.pnlPct || 0),
+      rMultiple: t.rMultiple,
+      strategy: t.strategyTag,
+      assetClass: t.assetClass,
+    }));
+    setPageData({
+      skill: 'journal',
+      symbols: [...new Set(enrichedTrades.slice(0, 20).map((t) => t.symbol))],
+      data: {
+        totalTrades: enrichedTrades.length,
+        openCount: openTrades.length,
+        closedCount: closedTrades.length,
+        equity: kpis?.equity,
+        realizedPnl30d: kpis?.realizedPnl30d,
+        unrealizedPnlOpen: kpis?.unrealizedPnlOpen,
+        winRate30d: kpis?.winRate30d,
+        profitFactor30d: kpis?.profitFactor30d,
+        maxDrawdown90d: kpis?.maxDrawdown90d,
+        avgMfe30d: kpis?.avgMfe30d,
+        avgMae30d: kpis?.avgMae30d,
+        avgR30d: kpis?.avgR30d,
+        recentTrades,
+      },
+      summary: `Journal: ${enrichedTrades.length} trades (${openTrades.length} open, ${closedTrades.length} closed). Win rate ${((kpis?.winRate30d ?? 0) * 100).toFixed(0)}%, PF ${(kpis?.profitFactor30d ?? 0).toFixed(2)}, Avg R ${(kpis?.avgR30d ?? 0).toFixed(2)}.`,
+    });
+  }, [enrichedTrades, enrichedKpis, payload, setPageData]);
 
   const onClearJournal = async () => {
     if (!window.confirm('Clear ALL journal entries? This cannot be undone.')) return;

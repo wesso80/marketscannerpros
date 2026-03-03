@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect, useCallback, useRef, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useUserTier } from '@/lib/useUserTier';
+import { useAIPageContext } from '@/lib/ai/pageContext';
 import UpgradeGate from '@/components/UpgradeGate';
 import CryptoMorningDecisionCard from '@/components/CryptoMorningDecisionCard';
 import ExplorerActionGrid from '@/components/explorer/ExplorerActionGrid';
@@ -399,6 +400,46 @@ function CryptoDetailPageContent() {
   }, [initialCoinId, loadCoinBySymbolOrId, tier]);
 
   const decision = useMemo(() => computeDecisionState(coinData, btc7dChange), [coinData, btc7dChange]);
+
+  // ── AI Page Context: share coin data with ARCA AI ──
+  const { setPageData } = useAIPageContext();
+  useEffect(() => {
+    if (!coinData) return;
+    const m = coinData.market;
+    const symbol = coinData.coin.symbol.toUpperCase();
+    setPageData({
+      skill: 'derivatives',
+      symbols: [symbol],
+      data: {
+        symbol,
+        name: coinData.coin.name,
+        price: m.price_usd,
+        marketCap: m.market_cap,
+        rank: m.rank,
+        volume24h: m.total_volume_24h,
+        high24h: m.high_24h,
+        low24h: m.low_24h,
+        circulatingSupply: m.circulating_supply,
+        priceChanges: coinData.price_changes,
+        ath: m.ath,
+        atl: m.atl,
+        sentiment: coinData.sentiment,
+        derivatives: coinData.derivatives,
+        developer: coinData.developer,
+        decision: {
+          structureBias: decision.structureBias,
+          tradePermission: decision.tradePermission,
+          alignmentScore: decision.alignmentScore,
+          volatilityState: decision.volatilityState,
+          regimeTag: decision.regimeTag,
+          riskTag: decision.riskTag,
+        },
+        upeEligibility: upeSignal?.eligibilityUser,
+        upeCrcs: upeSignal?.crcsFinal,
+      },
+      summary: `Crypto Explorer: ${symbol} ($${(m.price_usd ?? 0).toFixed(2)}) — Rank #${m.rank || '?'}, 24h ${(coinData.price_changes?.['24h'] ?? 0).toFixed(1)}%, 7d ${(coinData.price_changes?.['7d'] ?? 0).toFixed(1)}%, Bias: ${decision.structureBias}, Permission: ${decision.tradePermission}.`,
+    });
+  }, [coinData, decision, upeSignal, setPageData]);
 
   if (!tier || tier === 'free') {
     return (

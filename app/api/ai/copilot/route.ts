@@ -182,9 +182,20 @@ export async function POST(req: NextRequest) {
         );
     const components = estimateComponentsFromContext({
       scannerScore: typeof pageData?.scannerScore === 'number' ? pageData.scannerScore
-        : typeof pageData?.score === 'number' ? pageData.score : 50,
+        : typeof pageData?.score === 'number' ? pageData.score
+        : typeof pageData?.averageConfidence === 'number' ? pageData.averageConfidence : 50,
       regime: scoringRegime,
       session: 'regular',
+      rsi: typeof pageData?.rsi === 'number' ? pageData.rsi : undefined,
+      adx: typeof pageData?.adx === 'number' ? pageData.adx : undefined,
+      volumeRatio: typeof pageData?.volumeRatio === 'number' ? pageData.volumeRatio : undefined,
+      mtfAlignment: typeof pageData?.mtfAlignment === 'number' ? pageData.mtfAlignment
+        : (Array.isArray(pageData?.topPicks) ? 3 : undefined),
+      derivativesAvailable: !!(pageData?.derivatives || pageData?.fundingRates || pageData?.openInterest),
+      fundingRate: typeof pageData?.fundingRate === 'number' ? pageData.fundingRate : undefined,
+      oiChange24h: typeof pageData?.oiChange24h === 'number' ? pageData.oiChange24h : undefined,
+      fearGreed: typeof (context.marketState as any)?.fearGreedIndex === 'number'
+        ? (context.marketState as any).fearGreedIndex : undefined,
     });
     const regimeScoring = computeRegimeScore(components, scoringRegime);
 
@@ -413,10 +424,11 @@ function buildSystemPromptV2(
   // Check if we have page data
   const hasPageData = context.pageData && Object.keys(context.pageData).length > 0;
   const hasIDL = hasPageData && 'verdict' in context.pageData;
+  const hasBulkScan = hasPageData && Array.isArray(context.pageData.topPicks);
   const pageDataNote = hasIDL
     ? `\n\nCRITICAL — PAGE DATA BINDING:\nThe user is viewing LIVE instrument data in the Markets cockpit. The "PAGE DATA" section below contains the EXACT values shown on their screen — including the Institutional Decision Lens (verdict, alignment, confidence, authorization), Flow analysis (market mode, gamma state, conviction, key strikes), Scanner results, and Risk context. You MUST reference these exact values. Do NOT hallucinate different regime classifications, authorization states, or confidence numbers. If the data says authorization=ALLOW, do not say BLOCKED. If the data says conviction=92%, use that number. Ground every statement in the provided pageData.`
     : hasPageData 
-      ? `\n\nIMPORTANT: You have access to the current scan/page results in the "PAGE DATA" section below. USE THIS DATA to answer user questions about the current scan. Reference specific values like symbol, price, direction, signals, etc. Do NOT invent data points — use only what is provided.`
+      ? `\n\n=== CRITICAL: ANALYZE THE ACTUAL PAGE DATA ===\nThe PAGE DATA section below contains the REAL data currently displayed on the user's screen. Your PRIMARY job is to analyze THIS data — the specific symbols, indicators, scores, directions, and metrics shown.\n\nDO NOT output a generic regime template with zeroed-out scores when you have real data to analyze.\nDO NOT say "BLOCKED" or "Authorization: BLOCKED" if the page data shows active scan results with live scores.\nDO reference the actual symbols, prices, directions, confidence scores, and indicators from the page data.\nDO provide specific, actionable analysis of what the user is actually seeing.\n\nThe 7-layer regime template is SECONDARY context. Lead with analysis of the actual data, then optionally add regime framing if relevant.${hasBulkScan ? '\n\nBULK SCAN DATA: You have a table of scan results with multiple symbols. Analyze the overall scan — which setups are strongest, what the market bias is across results, and which specific symbols stand out and why.' : ''}`
       : '';
 
   // V2: Base prompt is the institutional system prompt + skill-specific additions

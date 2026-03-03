@@ -48,7 +48,7 @@ export default function MSPCopilot({
   
   // Check if we have meaningful page data
   const hasPageData = useMemo(() => {
-    return pageData && Object.keys(pageData).length > 0 && (pageData.symbol || pageData.topPicks);
+    return pageData && Object.keys(pageData).length > 0;
   }, [pageData]);
 
   // Is this a bulk scan result?
