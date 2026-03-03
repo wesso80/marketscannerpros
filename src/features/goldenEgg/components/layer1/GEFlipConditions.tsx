@@ -13,8 +13,8 @@ export default function GEFlipConditions({ items }: GEFlipConditionsProps) {
     <ul className="mt-2 space-y-2">
       {items.map((item) => (
         <li key={item.id} className="rounded-lg border border-white/5 bg-white/5 px-3 py-2 text-sm">
-          <div className="flex items-start justify-between gap-2">
-            <span className="text-slate-100">{item.text}</span>
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <span className="min-w-0 text-slate-100">{item.text}</span>
             <GETag tone={toneOf(item.severity)} text={item.severity.toUpperCase()} />
           </div>
         </li>

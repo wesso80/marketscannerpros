@@ -1800,11 +1800,11 @@ export default function DeepAnalysisPage() {
                         transition: "background 0.2s"
                       }}
                     >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", marginBottom: "0.5rem", flexWrap: "wrap" }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ color: "#E2E8F0", fontSize: "0.95rem", fontWeight: "600", marginBottom: "0.25rem", lineHeight: "1.4" }}>
-                            {item.title}
-                          </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                        <div style={{ color: "#E2E8F0", fontSize: "0.95rem", fontWeight: "600", lineHeight: "1.4" }}>
+                          {item.title}
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#64748B", fontSize: "0.75rem" }}>
                             <span style={{ fontWeight: "500" }}>{item.source}</span>
                             {item.publishedAt && (
@@ -1814,8 +1814,6 @@ export default function DeepAnalysisPage() {
                               </>
                             )}
                           </div>
-                        </div>
-                        <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0, flexWrap: "wrap" }}>
                           {/* Impact Tag */}
                           {(() => {
                             const impact = getNewsImpact(item.title, item.summary || '');
