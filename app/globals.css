@@ -99,12 +99,14 @@ body {
   max-width: 100%;
   box-sizing: border-box;
   word-break: break-word;
-  overflow-wrap: break-word;
+  overflow-wrap: anywhere;
   min-width: 0;
+  overflow-x: hidden;
 }
 .options-page-container *:not(svg):not(svg *) {
   max-width: 100%;
   box-sizing: border-box;
+  min-width: 0;
 }
 .options-page-container > div {
   width: 100%;
