@@ -27,7 +27,7 @@ export default function GEDecisionStrip({ layer1, meta }: GEDecisionStripProps) 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
         <div className="lg:col-span-4 space-y-3">
           <GEConfidenceBadge confidence={layer1.confidence} grade={layer1.grade} permission={layer1.permission} />
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <GEKpiPill label="Permission" value={layer1.permission} />
             <GEKpiPill label="Direction" value={layer1.direction} />
             <GEKpiPill label="TF" value={meta.timeframe} />

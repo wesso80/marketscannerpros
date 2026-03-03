@@ -194,12 +194,59 @@ export default function ScreenerTable({ rows, onRowClick, selectedSymbol }: Scre
   }
 
   return (
-    <div style={{
-      overflowX: 'auto',
-      borderRadius: 12,
-      border: '1px solid rgba(51, 65, 85, 0.4)',
-      background: 'rgba(15, 23, 42, 0.3)',
-    }}>
+    <>
+      {/* ── Mobile: finger-expandable cards ── */}
+      <div className="md:hidden space-y-2">
+        {sorted.map((row) => {
+          const isSelected = selectedSymbol && row.symbol === selectedSymbol;
+          return (
+            <details
+              key={row.symbol}
+              className={`rounded-xl border ${isSelected ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-[rgba(51,65,85,0.4)] bg-[rgba(15,23,42,0.3)]'}`}
+            >
+              <summary
+                className="flex items-center justify-between gap-2 px-3 py-2.5 cursor-pointer list-none [&::-webkit-details-marker]:hidden"
+                onClick={(e) => { if (onRowClick) { e.preventDefault(); onRowClick(row); } }}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b' }}>#{row.rank}</span>
+                  <span style={{ fontWeight: 700, color: '#e2e8f0', letterSpacing: '0.02em' }}>{row.symbol}</span>
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, color: dirColor(row.direction),
+                    background: `${dirColor(row.direction)}18`, borderRadius: 4, padding: '1px 5px',
+                  }}>{row.direction}</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span style={{ fontWeight: 700, color: confColor(row.confidence), fontSize: 13 }}>{row.confidence}%</span>
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, color: permColor(row.permission),
+                    background: `${permColor(row.permission)}15`, borderRadius: 4, padding: '1px 5px',
+                  }}>{row.permission ?? '—'}</span>
+                  <span style={{ color: '#475569', fontSize: 12 }}>▸</span>
+                </div>
+              </summary>
+              <div className="border-t border-white/5 px-3 py-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                <div><span className="text-slate-500">Quality</span> <span className="font-semibold" style={{ color: qualityColor(row.quality) }}>{row.quality}</span></div>
+                <div><span className="text-slate-500">Strategy</span> <span className="font-semibold text-slate-200">{row.strategy || '—'}</span></div>
+                <div><span className="text-slate-500">RSI</span> <span className="font-semibold text-slate-200">{formatNum(row.rsi, 0)}</span></div>
+                <div><span className="text-slate-500">ADX</span> <span className="font-semibold text-slate-200">{formatNum(row.adx, 0)}</span></div>
+                <div><span className="text-slate-500">Vol%</span> <span className="font-semibold text-slate-200">{row.atrPct != null ? `${formatNum(row.atrPct)}%` : '—'}</span></div>
+                <div><span className="text-slate-500">MTF</span> <span className="font-semibold text-slate-200">{row.tfAlignment != null ? `${row.tfAlignment}/4` : '—'}</span></div>
+                <div><span className="text-slate-500">Volume</span> <span className="font-semibold text-slate-200">{formatVol(row.volume24h)}</span></div>
+                <div><span className="text-slate-500">Price</span> <span className="font-semibold text-slate-200">{row.price ? `$${row.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : '—'}</span></div>
+              </div>
+            </details>
+          );
+        })}
+      </div>
+
+      {/* ── Desktop: full table ── */}
+      <div className="hidden md:block" style={{
+        overflowX: 'auto',
+        borderRadius: 12,
+        border: '1px solid rgba(51, 65, 85, 0.4)',
+        background: 'rgba(15, 23, 42, 0.3)',
+      }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
           <tr>
@@ -275,5 +322,6 @@ export default function ScreenerTable({ rows, onRowClick, selectedSymbol }: Scre
         </tbody>
       </table>
     </div>
+    </>
   );
 }

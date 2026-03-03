@@ -1469,7 +1469,7 @@ function ScannerContent() {
   if (!canAccessScanner(tier)) return <UpgradeGate requiredTier="pro" feature="Market Scanner" />;
 
   return (
-    <div className="min-h-screen bg-[var(--msp-bg)]">
+    <div className="min-h-screen bg-[var(--msp-bg)] overflow-x-hidden">
       {isFree && (
         <div style={{
           background: 'linear-gradient(90deg, rgba(16,185,129,0.12) 0%, rgba(16,185,129,0.04) 100%)',
@@ -1575,7 +1575,7 @@ function ScannerContent() {
               <div className="mb-2 text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">
                 Primary Action Zone • Discover → Rank → Decide
               </div>
-              <div className="mt-3 grid grid-cols-3 gap-1.5 sm:gap-2">
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-1.5 sm:gap-2">
                 {[
                   { step: 1, label: 'Discover' },
                   { step: 2, label: 'Rank' },
@@ -2145,13 +2145,13 @@ function ScannerContent() {
             )}
           </div>
 
-          <div style={{ display: "flex", gap: "12px", marginBottom: "20px", flexWrap: "wrap" }}>
+          <div className="flex flex-col sm:flex-row gap-3 mb-5 flex-wrap">
             <button
               onClick={() => runBulkScan('crypto')}
               disabled={bulkScanLoading}
               style={{
                 flex: "1",
-                minWidth: "min(200px, 100%)",
+                minWidth: "0",
                 padding: "16px 24px",
                 background: bulkScanLoading && bulkScanType === 'crypto' 
                   ? "var(--msp-warn-tint)" 
@@ -2188,7 +2188,7 @@ function ScannerContent() {
               disabled={bulkScanLoading}
               style={{
                 flex: "1",
-                minWidth: "min(200px, 100%)",
+                minWidth: "0",
                 padding: "16px 24px",
                 background: bulkScanLoading && bulkScanType === 'equity' 
                   ? "var(--msp-bull-tint)" 

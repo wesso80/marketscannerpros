@@ -74,7 +74,7 @@ export default function StructureTab({ ctx }: { ctx: TickerContext }) {
       {scanner && (
         <div className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2">
           <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--msp-text-faint)]">Trade Structure</p>
-          <div className="grid grid-cols-3 gap-3 text-center">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
             <div>
               <p className="text-[10px] text-[var(--msp-text-faint)]">Entry</p>
               <p className="text-sm font-bold text-cyan-400">${(scanner.entry ?? 0).toFixed(2)}</p>

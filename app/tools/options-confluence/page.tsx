@@ -2050,7 +2050,7 @@ export default function OptionsConfluenceScanner() {
       accentBorderClass: 'border-l-emerald-500',
       reason: 'Directional structure + confluence alignment dominate.',
       layout: {
-        columnsClass: '[grid-template-columns:repeat(auto-fit,minmax(260px,1fr))] lg:[grid-template-columns:minmax(240px,0.95fr)_minmax(360px,1.5fr)_minmax(240px,1fr)]',
+        columnsClass: '[grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr))] lg:[grid-template-columns:minmax(240px,0.95fr)_minmax(360px,1.5fr)_minmax(min(240px,100%),1fr)]',
         signalOrderClass: 'order-1',
         marketOrderClass: 'order-2',
         execOrderClass: 'order-3',
@@ -2063,7 +2063,7 @@ export default function OptionsConfluenceScanner() {
       accentBorderClass: 'border-l-amber-500',
       reason: 'Low directional edge; prioritize boundaries and risk control.',
       layout: {
-        columnsClass: '[grid-template-columns:repeat(auto-fit,minmax(260px,1fr))]',
+        columnsClass: '[grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr))]',
         signalOrderClass: 'order-1',
         marketOrderClass: 'order-2',
         execOrderClass: 'order-3',
@@ -2076,7 +2076,7 @@ export default function OptionsConfluenceScanner() {
       accentBorderClass: 'border-l-red-500',
       reason: 'IV/expected-move expansion detected; risk and flow prioritized.',
       layout: {
-        columnsClass: '[grid-template-columns:repeat(auto-fit,minmax(260px,1fr))]',
+        columnsClass: '[grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr))]',
         signalOrderClass: 'order-1',
         marketOrderClass: 'order-3',
         execOrderClass: 'order-2',
@@ -2089,7 +2089,7 @@ export default function OptionsConfluenceScanner() {
       accentBorderClass: 'border-l-sky-400',
       reason: 'Momentum/flow shift underway; confirmation sequencing in focus.',
       layout: {
-        columnsClass: '[grid-template-columns:repeat(auto-fit,minmax(260px,1fr))]',
+        columnsClass: '[grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr))]',
         signalOrderClass: 'order-2',
         marketOrderClass: 'order-1',
         execOrderClass: 'order-3',
@@ -2648,7 +2648,7 @@ export default function OptionsConfluenceScanner() {
             )}
 
             {trapDoors.evidence && focusMode && (
-              <div className="grid gap-[0.45rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] p-[0.72rem_0.82rem] [grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]">
+              <div className="grid gap-[0.45rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] p-[0.72rem_0.82rem] [grid-template-columns:repeat(auto-fit,minmax(min(180px,100%),1fr))]">
                 <div><div className="text-[0.64rem] font-bold uppercase text-slate-500">Direction</div><div className={`font-black ${thesisDirection === 'bullish' ? 'text-emerald-500' : thesisDirection === 'bearish' ? 'text-red-500' : 'text-amber-500'}`}>{thesisDirection.toUpperCase()}</div></div>
                 <div><div className="text-[0.64rem] font-bold uppercase text-slate-500">Confidence</div><div className="font-black text-slate-200">{(result.compositeScore?.confidence ?? 0).toFixed(0)}%</div></div>
                 <div><div className="text-[0.64rem] font-bold uppercase text-slate-500">Entry</div><div className="font-extrabold text-[var(--msp-text)]">{result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)}-${result.tradeLevels.entryZone.high.toFixed(2)}` : 'N/A'}</div></div>
@@ -3101,7 +3101,7 @@ export default function OptionsConfluenceScanner() {
                 </div>
               </div>
 
-              <div className="grid items-start gap-2 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
+              <div className="grid items-start gap-2 [grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr))]">
                 <div className="text-[0.83rem] leading-[1.5] text-slate-300">
                   <div><span className="font-bold uppercase text-slate-500">Market Mode:</span> <span className="font-extrabold text-slate-50">{marketStateLabel || 'Unknown'} {thesisDirection === 'bullish' ? '↑' : thesisDirection === 'bearish' ? '↓' : '→'}</span></div>
                   <div><span className="font-bold uppercase text-slate-500">Setup Type:</span> <span className="font-extrabold text-slate-50">{setupLabel || 'Awaiting Confirmation'}</span></div>
@@ -3123,7 +3123,7 @@ export default function OptionsConfluenceScanner() {
 
               <div className={`rounded-xl border p-[0.7rem_0.75rem] ${unifiedPermission === 'ALLOW' ? 'border-emerald-500/40 bg-emerald-500/10' : unifiedPermission === 'BLOCK' ? 'border-red-500/40 bg-red-500/10' : 'border-amber-500/40 bg-amber-500/10'}`}>
                 <div className="mb-[0.35rem] text-[0.72rem] font-extrabold uppercase text-[var(--msp-muted)]">MSP Deployment Status</div>
-                <div className="grid gap-[0.35rem] [grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]">
+                <div className="grid gap-[0.35rem] [grid-template-columns:repeat(auto-fit,minmax(min(180px,100%),1fr))]">
                   <div className="text-[0.8rem] text-slate-100">Permission: <span className="font-black">{unifiedPermission}</span></div>
                   <div className="text-[0.8rem] text-slate-100">Confidence: <span className="font-black">{unifiedConfidence}%</span></div>
                   <div className="text-[0.8rem] text-slate-100">Quality: <span className="font-black">{unifiedQuality}</span></div>
@@ -3295,7 +3295,7 @@ export default function OptionsConfluenceScanner() {
               </div>
 
               {/* Z-Flow 2x2: info-left/action-right */}
-              <div className="grid gap-[0.7rem] [grid-template-columns:repeat(auto-fit,minmax(260px,1fr))]">
+              <div className="grid gap-[0.7rem] [grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr))]">
                 {/* Top Left: Bias / Regime / Trend */}
                 <div className="rounded-[10px] border border-slate-400/25 bg-black/20 p-[0.65rem]">
                   <div className="mb-[0.45rem] text-[0.72rem] font-extrabold uppercase text-[var(--msp-muted)]">Top Left • Market Condition</div>
