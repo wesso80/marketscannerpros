@@ -103,6 +103,7 @@ interface DealerGammaSnapshot {
   netGexUsd: number;
   callGexUsd: number;
   putGexUsd: number;
+  netDexUsd: number;
   gammaFlipPrice: number | null;
   flipDistancePct: number | null;
   pinZone: 'IN' | 'OUT' | 'UNKNOWN';
@@ -439,6 +440,25 @@ interface OptionsSetup {
     most_likely_path: string[];
     risk: string[];
   };
+  // CROSS-ASSET FLOW INTELLIGENCE
+  crossAssetFlow?: {
+    regime: 'RISK_ON' | 'RISK_OFF' | 'DIVERGENT' | 'DECORRELATED' | 'STRESS';
+    vixRegime: 'LOW' | 'NORMAL' | 'ELEVATED' | 'EXTREME';
+    sectorRotation: 'GROWTH_LEADING' | 'VALUE_LEADING' | 'DEFENSIVE' | 'MIXED';
+    btcSpyCorrelation: number;
+    dxyTrend: 'strengthening' | 'weakening' | 'neutral';
+    riskScore: number;
+    sizeMultiplier: number;
+    warnings: string[];
+    recommendation: string;
+    components: {
+      btcMomentum: number;
+      spyMomentum: number;
+      vixLevel: number;
+      dxyLevel: number;
+      goldSafeHaven: boolean;
+    };
+  } | null;
   universalScoringV21?: {
     version: 'msp.score.v2.1';
     mode: 'options_scanner';
@@ -2958,6 +2978,531 @@ export default function OptionsConfluenceScanner() {
                       </div>
                     </details>
                   </>
+                )}
+              </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════════════════
+                 INSTITUTIONAL PANEL 1 — ENHANCED DEALER POSITIONING ENGINE
+                 Gamma / Vanna / DEX / Charm Map with dealer pressure direction
+            ═══════════════════════════════════════════════════════════════════ */}
+            {trapDoors.evidence && dealerGamma && (
+              <div className="rounded-[14px] border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[0.85rem_0.95rem]">
+                <div className="flex flex-wrap items-center justify-between gap-[0.6rem]">
+                  <div className="text-[0.72rem] font-bold uppercase text-slate-400">Dealer Positioning Engine</div>
+                  <div className={`text-[0.84rem] font-black tracking-[0.3px] ${dealerGamma.regime === 'SHORT_GAMMA' ? 'text-red-400' : dealerGamma.regime === 'LONG_GAMMA' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {dealerGamma.regime === 'SHORT_GAMMA' ? '🔴 SHORT GAMMA' : dealerGamma.regime === 'LONG_GAMMA' ? '🟢 LONG GAMMA' : '🟡 NEUTRAL'}
+                  </div>
+                </div>
+
+                {/* GEX / DEX / Structure Row */}
+                <div className="mt-[0.55rem] grid gap-[0.35rem] [grid-template-columns:repeat(auto-fit,minmax(min(145px,100%),1fr))]">
+                  <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
+                    <div className="text-[0.62rem] font-bold uppercase text-slate-500">Net GEX</div>
+                    <div className={`text-[0.82rem] font-black ${dealerGamma.netGexUsd >= 0 ? 'text-emerald-300' : 'text-red-300'}`}>
+                      {formatUsdCompact(dealerGamma.netGexUsd)}
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
+                    <div className="text-[0.62rem] font-bold uppercase text-slate-500">Net DEX (Vanna)</div>
+                    <div className={`text-[0.82rem] font-black ${dealerGamma.netDexUsd >= 0 ? 'text-emerald-300' : 'text-red-300'}`}>
+                      {formatUsdCompact(dealerGamma.netDexUsd)}
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
+                    <div className="text-[0.62rem] font-bold uppercase text-slate-500">Gamma Flip</div>
+                    <div className="text-[0.82rem] font-extrabold text-slate-200">
+                      ${dealerGamma.gammaFlipPrice?.toFixed(2) || 'N/A'}
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
+                    <div className="text-[0.62rem] font-bold uppercase text-slate-500">Flip Distance</div>
+                    <div className={`text-[0.82rem] font-extrabold ${dealerGamma.flipDistancePct != null && Math.abs(dealerGamma.flipDistancePct) < 1 ? 'text-amber-300' : 'text-slate-200'}`}>
+                      {dealerGamma.flipDistancePct != null ? `${dealerGamma.flipDistancePct.toFixed(2)}%` : 'N/A'}
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
+                    <div className="text-[0.62rem] font-bold uppercase text-slate-500">Call Wall</div>
+                    <div className="text-[0.82rem] font-extrabold text-emerald-200">
+                      ${dealerIntel?.dealerStructure?.callWall?.toFixed(2) || 'N/A'}
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
+                    <div className="text-[0.62rem] font-bold uppercase text-slate-500">Put Wall</div>
+                    <div className="text-[0.82rem] font-extrabold text-red-200">
+                      ${dealerIntel?.dealerStructure?.putWall?.toFixed(2) || 'N/A'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Vanna / Charm Flow Indicators */}
+                <div className="mt-[0.55rem] grid gap-[0.35rem] md:grid-cols-2">
+                  <div className="rounded-lg border border-slate-500/20 bg-slate-900/35 p-[0.45rem_0.55rem]">
+                    <div className="text-[0.64rem] font-bold uppercase text-slate-500">Vanna Flow Direction</div>
+                    <div className="mt-[0.15rem] text-[0.78rem] font-extrabold text-slate-200">
+                      {dealerGamma.netDexUsd > 0
+                        ? '📈 Positive Vanna — IV decline lifts delta, dealers buy underlying'
+                        : dealerGamma.netDexUsd < 0
+                          ? '📉 Negative Vanna — IV rise pushes delta down, dealers sell underlying'
+                          : '➡️ Flat Vanna — Minimal directional delta/vanna pressure'}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-slate-500/20 bg-slate-900/35 p-[0.45rem_0.55rem]">
+                    <div className="text-[0.64rem] font-bold uppercase text-slate-500">Charm Decay Pressure</div>
+                    <div className="mt-[0.15rem] text-[0.78rem] font-extrabold text-slate-200">
+                      {dealerGamma.callGexUsd > dealerGamma.putGexUsd
+                        ? '⏳ Call-heavy — Charm decay adds upward delta pressure into expiry'
+                        : dealerGamma.putGexUsd > dealerGamma.callGexUsd
+                          ? '⏳ Put-heavy — Charm decay adds downward delta pressure into expiry'
+                          : '⏳ Balanced — Charm decay neutral across strikes'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dealer Pressure Summary */}
+                <div className={`mt-[0.55rem] rounded-lg border p-[0.45rem_0.55rem] ${
+                  dealerGamma.regime === 'SHORT_GAMMA'
+                    ? 'border-red-500/25 bg-red-500/10'
+                    : dealerGamma.regime === 'LONG_GAMMA'
+                      ? 'border-emerald-500/25 bg-emerald-500/10'
+                      : 'border-amber-500/25 bg-amber-500/10'
+                }`}>
+                  <div className="text-[0.64rem] font-bold uppercase text-slate-400">Dealer Pressure Summary</div>
+                  <div className="mt-[0.2rem] text-[0.78rem] font-bold text-slate-200">
+                    {dealerGamma.regime === 'SHORT_GAMMA'
+                      ? `⚡ Dealers are short gamma — expect AMPLIFIED moves. Pin zone: ${dealerGamma.pinZone || 'N/A'}. Volatility state: ${dealerVolatilityBias}. ${dealerIntel?.attention?.triggered ? `⚠ ${dealerIntel.attention.reason}` : 'No immediate attention triggers.'}`
+                      : dealerGamma.regime === 'LONG_GAMMA'
+                        ? `🛡️ Dealers are long gamma — expect DAMPENED moves toward pin. Pin zone: ${dealerGamma.pinZone || 'N/A'}. Volatility state: ${dealerVolatilityBias}. Price likely gravitates to gamma flip.`
+                        : `⚖️ Neutral gamma environment — low dealer hedging pressure. Watch for regime shift near $${dealerGamma.gammaFlipPrice?.toFixed(2) || 'N/A'}.`}
+                  </div>
+                </div>
+
+                {/* Pin Zone & Top Nodes (if available) */}
+                {dealerIntel?.dealerStructure?.topNodes && dealerIntel.dealerStructure.topNodes.length > 0 && (
+                  <div className="mt-[0.45rem]">
+                    <div className="text-[0.64rem] font-bold uppercase text-slate-500">Top GEX Nodes</div>
+                    <div className="mt-[0.2rem] flex flex-wrap gap-[0.35rem]">
+                      {dealerIntel.dealerStructure.topNodes.slice(0, 5).map((node, idx) => (
+                        <span key={idx} className="rounded-full border border-slate-400/25 bg-black/20 px-2 py-[2px] text-[0.7rem] font-bold text-slate-300">
+                          ${typeof node === 'object' ? (node as any).strike?.toFixed(0) || node : node}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════════════════
+                 INSTITUTIONAL PANEL 2 — LIQUIDITY & STOP MAP
+                 Where traders will get liquidated - liquidity pools, OI walls, key zones
+            ═══════════════════════════════════════════════════════════════════ */}
+            {trapDoors.evidence && (result.capitalFlow || result.institutionalIntent || result.locationContext) && (
+              <div className="rounded-[14px] border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[0.85rem_0.95rem]">
+                <div className="flex flex-wrap items-center justify-between gap-[0.6rem]">
+                  <div className="text-[0.72rem] font-bold uppercase text-slate-400">Liquidity & Stop Map</div>
+                  <div className="text-[0.78rem] font-extrabold text-[var(--msp-accent)]">
+                    {(result.capitalFlow?.liquidity_levels?.length || 0) + (result.institutionalIntent?.key_levels?.liquidity_pools?.length || 0) + (result.locationContext?.keyZones?.length || 0)} Levels Mapped
+                  </div>
+                </div>
+
+                {/* Liquidity Levels from Capital Flow */}
+                {result.capitalFlow?.liquidity_levels && result.capitalFlow.liquidity_levels.length > 0 && (
+                  <div className="mt-[0.55rem]">
+                    <div className="text-[0.64rem] font-bold uppercase text-slate-500">Liquidity Magnet Levels</div>
+                    <div className="mt-[0.25rem] grid gap-[0.2rem]">
+                      {result.capitalFlow.liquidity_levels.slice(0, 6).map((lvl, idx) => (
+                        <div key={idx} className="flex items-center justify-between gap-2 rounded-lg bg-black/20 p-[0.38rem_0.5rem]">
+                          <div className="flex items-center gap-[0.4rem]">
+                            <span className="text-[0.78rem] font-extrabold text-slate-200">${typeof lvl.level === 'number' ? lvl.level.toFixed(2) : lvl.level}</span>
+                            <span className="text-[0.7rem] text-slate-400">{lvl.label}</span>
+                          </div>
+                          <div className="flex items-center gap-[0.3rem]">
+                            <div className="h-[5px] w-[50px] overflow-hidden rounded-full bg-slate-500/25">
+                              <div className="h-full rounded-full bg-cyan-400/70" style={{ width: `${Math.min(100, (lvl.prob || 0) * 100)}%` }} />
+                            </div>
+                            <span className="text-[0.68rem] font-bold text-cyan-300">{((lvl.prob || 0) * 100).toFixed(0)}%</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* OI Walls from Institutional Intent */}
+                {result.institutionalIntent?.key_levels?.oi_walls && result.institutionalIntent.key_levels.oi_walls.length > 0 && (
+                  <div className="mt-[0.55rem]">
+                    <div className="text-[0.64rem] font-bold uppercase text-slate-500">Open Interest Walls</div>
+                    <div className="mt-[0.25rem] grid gap-[0.2rem]">
+                      {result.institutionalIntent.key_levels.oi_walls.slice(0, 5).map((wall, idx) => (
+                        <div key={idx} className="flex items-center justify-between gap-2 rounded-lg bg-black/20 p-[0.38rem_0.5rem]">
+                          <div className="flex items-center gap-[0.4rem]">
+                            <span className={`text-[0.68rem] font-extrabold ${wall.side === 'CALL' ? 'text-emerald-400' : wall.side === 'PUT' ? 'text-red-400' : 'text-amber-400'}`}>
+                              {wall.side}
+                            </span>
+                            <span className="text-[0.78rem] font-extrabold text-slate-200">${wall.strike.toFixed(2)}</span>
+                          </div>
+                          <div className="flex items-center gap-[0.3rem]">
+                            <div className="h-[5px] w-[50px] overflow-hidden rounded-full bg-slate-500/25">
+                              <div className={`h-full rounded-full ${wall.side === 'CALL' ? 'bg-emerald-400/70' : wall.side === 'PUT' ? 'bg-red-400/70' : 'bg-amber-400/70'}`} style={{ width: `${Math.min(100, (wall.strength || 0) * 100)}%` }} />
+                            </div>
+                            <span className="text-[0.68rem] font-bold text-slate-300">{((wall.strength || 0) * 100).toFixed(0)}%</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Key Strikes (Gravity) from Capital Flow */}
+                {result.capitalFlow?.key_strikes && result.capitalFlow.key_strikes.length > 0 && (
+                  <div className="mt-[0.55rem]">
+                    <div className="text-[0.64rem] font-bold uppercase text-slate-500">Strike Gravity Map</div>
+                    <div className="mt-[0.25rem] flex flex-wrap gap-[0.35rem]">
+                      {result.capitalFlow.key_strikes.slice(0, 6).map((ks, idx) => (
+                        <div key={idx} className={`rounded-full border px-[0.5rem] py-[3px] text-[0.7rem] font-bold ${
+                          ks.type === 'call-heavy' ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-300'
+                          : ks.type === 'put-heavy' ? 'border-red-400/30 bg-red-400/10 text-red-300'
+                          : 'border-slate-400/30 bg-slate-400/10 text-slate-300'
+                        }`}>
+                          ${ks.strike.toFixed(0)} • {ks.type} • G:{ks.gravity.toFixed(1)}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Flip Zones */}
+                {result.capitalFlow?.flip_zones && result.capitalFlow.flip_zones.length > 0 && (
+                  <div className="mt-[0.55rem]">
+                    <div className="text-[0.64rem] font-bold uppercase text-slate-500">Gamma Flip Zones</div>
+                    <div className="mt-[0.25rem] flex flex-wrap gap-[0.35rem]">
+                      {result.capitalFlow.flip_zones.map((fz, idx) => (
+                        <div key={idx} className={`rounded-full border px-[0.5rem] py-[3px] text-[0.7rem] font-bold ${
+                          fz.direction === 'bullish_above' ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-300' : 'border-red-400/30 bg-red-400/10 text-red-300'
+                        }`}>
+                          ${fz.level.toFixed(2)} — {fz.direction === 'bullish_above' ? '↑ Bullish Above' : '↓ Bearish Below'}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Key Zones from Location Context */}
+                {result.locationContext?.keyZones && result.locationContext.keyZones.length > 0 && (
+                  <div className="mt-[0.55rem]">
+                    <div className="text-[0.64rem] font-bold uppercase text-slate-500">Structural Key Zones</div>
+                    <div className="mt-[0.25rem] grid gap-[0.2rem]">
+                      {result.locationContext.keyZones.slice(0, 5).map((zone, idx) => (
+                        <div key={idx} className="flex items-center justify-between gap-2 rounded-lg bg-black/20 p-[0.38rem_0.5rem]">
+                          <div className="flex items-center gap-[0.4rem]">
+                            <span className={`text-[0.62rem] font-extrabold uppercase ${
+                              zone.type === 'demand' || zone.type === 'support' ? 'text-emerald-400'
+                              : zone.type === 'supply' || zone.type === 'resistance' ? 'text-red-400'
+                              : 'text-cyan-400'
+                            }`}>
+                              {zone.type.replace('_', ' ')}
+                            </span>
+                            <span className="text-[0.78rem] font-extrabold text-slate-200">${zone.level.toFixed(2)}</span>
+                          </div>
+                          <div className="flex items-center gap-[0.3rem]">
+                            <span className={`rounded-full border px-[0.35rem] py-[1px] text-[0.6rem] font-bold ${
+                              zone.strength === 'strong' ? 'border-emerald-400/30 text-emerald-300' : zone.strength === 'moderate' ? 'border-amber-400/30 text-amber-300' : 'border-slate-400/30 text-slate-400'
+                            }`}>
+                              {zone.strength}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Liquidity Pools from Institutional Intent */}
+                {result.institutionalIntent?.key_levels?.liquidity_pools && result.institutionalIntent.key_levels.liquidity_pools.length > 0 && (
+                  <div className="mt-[0.55rem]">
+                    <div className="text-[0.64rem] font-bold uppercase text-slate-500">Institutional Liquidity Pools</div>
+                    <div className="mt-[0.25rem] flex flex-wrap gap-[0.35rem]">
+                      {result.institutionalIntent.key_levels.liquidity_pools.map((pool, idx) => (
+                        <span key={idx} className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-[0.5rem] py-[3px] text-[0.7rem] font-bold text-cyan-300">
+                          🏊 {pool}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Most Likely Path */}
+                {result.capitalFlow?.most_likely_path && result.capitalFlow.most_likely_path.length > 0 && (
+                  <div className="mt-[0.55rem] rounded-lg border border-slate-500/20 bg-slate-900/35 p-[0.45rem_0.55rem]">
+                    <div className="text-[0.64rem] font-bold uppercase text-slate-500">Most Likely Price Path</div>
+                    <div className="mt-[0.15rem] grid gap-[0.15rem]">
+                      {result.capitalFlow.most_likely_path.slice(0, 4).map((step, idx) => (
+                        <div key={idx} className="text-[0.76rem] text-slate-300">
+                          {idx + 1}. {step}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Risk Notes */}
+                {result.capitalFlow?.risk && result.capitalFlow.risk.length > 0 && (
+                  <div className="mt-[0.45rem]">
+                    {result.capitalFlow.risk.slice(0, 3).map((r, idx) => (
+                      <div key={idx} className="text-[0.72rem] text-red-300/80">⚠ {r}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════════════════
+                 INSTITUTIONAL PANEL 3 — CROSS-ASSET FLOW INTELLIGENCE
+                 SPY/VIX/DXY/Gold correlation regime, risk score, size multiplier
+            ═══════════════════════════════════════════════════════════════════ */}
+            {trapDoors.evidence && result.crossAssetFlow && (
+              <div className="rounded-[14px] border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[0.85rem_0.95rem]">
+                <div className="flex flex-wrap items-center justify-between gap-[0.6rem]">
+                  <div className="text-[0.72rem] font-bold uppercase text-slate-400">Cross-Asset Flow Intelligence</div>
+                  <div className={`text-[0.84rem] font-black tracking-[0.3px] ${
+                    result.crossAssetFlow.regime === 'RISK_ON' ? 'text-emerald-400'
+                    : result.crossAssetFlow.regime === 'RISK_OFF' ? 'text-red-400'
+                    : result.crossAssetFlow.regime === 'STRESS' ? 'text-red-500'
+                    : result.crossAssetFlow.regime === 'DIVERGENT' ? 'text-amber-400'
+                    : 'text-slate-400'
+                  }`}>
+                    {result.crossAssetFlow.regime === 'RISK_ON' ? '🟢' : result.crossAssetFlow.regime === 'RISK_OFF' ? '🔴' : result.crossAssetFlow.regime === 'STRESS' ? '🚨' : result.crossAssetFlow.regime === 'DIVERGENT' ? '🟡' : '⚪'} {result.crossAssetFlow.regime.replace('_', ' ')}
+                  </div>
+                </div>
+
+                {/* Regime / VIX / DXY / Risk Score Row */}
+                <div className="mt-[0.55rem] grid gap-[0.35rem] [grid-template-columns:repeat(auto-fit,minmax(min(130px,100%),1fr))]">
+                  <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
+                    <div className="text-[0.62rem] font-bold uppercase text-slate-500">VIX Regime</div>
+                    <div className={`text-[0.82rem] font-black ${
+                      result.crossAssetFlow.vixRegime === 'LOW' ? 'text-emerald-300'
+                      : result.crossAssetFlow.vixRegime === 'NORMAL' ? 'text-slate-200'
+                      : result.crossAssetFlow.vixRegime === 'ELEVATED' ? 'text-amber-300'
+                      : 'text-red-400'
+                    }`}>
+                      {result.crossAssetFlow.vixRegime}
+                      {result.crossAssetFlow.components?.vixLevel ? ` (${result.crossAssetFlow.components.vixLevel.toFixed(1)})` : ''}
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
+                    <div className="text-[0.62rem] font-bold uppercase text-slate-500">DXY Trend</div>
+                    <div className={`text-[0.82rem] font-black ${
+                      result.crossAssetFlow.dxyTrend === 'strengthening' ? 'text-amber-300'
+                      : result.crossAssetFlow.dxyTrend === 'weakening' ? 'text-emerald-300'
+                      : 'text-slate-300'
+                    }`}>
+                      {result.crossAssetFlow.dxyTrend === 'strengthening' ? '💪 Strengthening' : result.crossAssetFlow.dxyTrend === 'weakening' ? '📉 Weakening' : '➡️ Neutral'}
+                      {result.crossAssetFlow.components?.dxyLevel ? ` (${result.crossAssetFlow.components.dxyLevel.toFixed(2)})` : ''}
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
+                    <div className="text-[0.62rem] font-bold uppercase text-slate-500">Risk Score</div>
+                    <div className={`text-[0.82rem] font-black ${
+                      result.crossAssetFlow.riskScore <= 30 ? 'text-emerald-300'
+                      : result.crossAssetFlow.riskScore <= 60 ? 'text-amber-300'
+                      : 'text-red-400'
+                    }`}>
+                      {result.crossAssetFlow.riskScore.toFixed(0)}/100
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
+                    <div className="text-[0.62rem] font-bold uppercase text-slate-500">Size Multiplier</div>
+                    <div className={`text-[0.82rem] font-black ${result.crossAssetFlow.sizeMultiplier >= 1 ? 'text-emerald-300' : 'text-amber-300'}`}>
+                      {result.crossAssetFlow.sizeMultiplier.toFixed(2)}x
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
+                    <div className="text-[0.62rem] font-bold uppercase text-slate-500">Sector Rotation</div>
+                    <div className="text-[0.82rem] font-extrabold text-slate-200">
+                      {result.crossAssetFlow.sectorRotation?.replace('_', ' ') || 'N/A'}
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
+                    <div className="text-[0.62rem] font-bold uppercase text-slate-500">Gold Safe Haven</div>
+                    <div className="text-[0.82rem] font-extrabold text-slate-200">
+                      {result.crossAssetFlow.components?.goldSafeHaven ? '🟡 ACTIVE' : '⚪ Inactive'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Asset Momentum Bars */}
+                <div className="mt-[0.55rem] grid gap-[0.35rem] md:grid-cols-2">
+                  <div className="rounded-lg border border-slate-500/20 bg-slate-900/35 p-[0.45rem_0.55rem]">
+                    <div className="text-[0.64rem] font-bold uppercase text-slate-500">SPY Momentum</div>
+                    <div className="mt-[0.15rem] flex items-center gap-2">
+                      <div className="h-[6px] flex-1 overflow-hidden rounded-full bg-slate-500/25">
+                        <div className={`h-full rounded-full ${(result.crossAssetFlow.components?.spyMomentum ?? 0) >= 0 ? 'bg-emerald-400/70' : 'bg-red-400/70'}`}
+                          style={{ width: `${Math.min(100, Math.abs(result.crossAssetFlow.components?.spyMomentum ?? 0))}%`, marginLeft: (result.crossAssetFlow.components?.spyMomentum ?? 0) >= 0 ? '50%' : `${50 - Math.min(50, Math.abs(result.crossAssetFlow.components?.spyMomentum ?? 0) / 2)}%` }} />
+                      </div>
+                      <span className="text-[0.72rem] font-bold text-slate-300">{(result.crossAssetFlow.components?.spyMomentum ?? 0).toFixed(1)}%</span>
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-slate-500/20 bg-slate-900/35 p-[0.45rem_0.55rem]">
+                    <div className="text-[0.64rem] font-bold uppercase text-slate-500">BTC Momentum</div>
+                    <div className="mt-[0.15rem] flex items-center gap-2">
+                      <div className="h-[6px] flex-1 overflow-hidden rounded-full bg-slate-500/25">
+                        <div className={`h-full rounded-full ${(result.crossAssetFlow.components?.btcMomentum ?? 0) >= 0 ? 'bg-emerald-400/70' : 'bg-red-400/70'}`}
+                          style={{ width: `${Math.min(100, Math.abs(result.crossAssetFlow.components?.btcMomentum ?? 0))}%`, marginLeft: (result.crossAssetFlow.components?.btcMomentum ?? 0) >= 0 ? '50%' : `${50 - Math.min(50, Math.abs(result.crossAssetFlow.components?.btcMomentum ?? 0) / 2)}%` }} />
+                      </div>
+                      <span className="text-[0.72rem] font-bold text-slate-300">{(result.crossAssetFlow.components?.btcMomentum ?? 0).toFixed(1)}%</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recommendation */}
+                {result.crossAssetFlow.recommendation && (
+                  <div className="mt-[0.55rem] rounded-lg border border-[var(--msp-accent)]/25 bg-[var(--msp-accent-glow)] p-[0.45rem_0.55rem]">
+                    <div className="text-[0.64rem] font-bold uppercase text-[var(--msp-accent)]">Cross-Asset Recommendation</div>
+                    <div className="mt-[0.15rem] text-[0.78rem] font-bold text-slate-200">{result.crossAssetFlow.recommendation}</div>
+                  </div>
+                )}
+
+                {/* Warnings */}
+                {result.crossAssetFlow.warnings && result.crossAssetFlow.warnings.length > 0 && (
+                  <div className="mt-[0.45rem]">
+                    {result.crossAssetFlow.warnings.map((warning, idx) => (
+                      <div key={idx} className="text-[0.72rem] text-amber-300/80">⚠ {warning}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════════════════
+                 INSTITUTIONAL PANEL 4 — MARKET PLAYBOOK ENGINE
+                 Scenario analysis: Bull / Base / Bear with triggers, targets, strategies
+            ═══════════════════════════════════════════════════════════════════ */}
+            {trapDoors.evidence && result.aiMarketState?.scenarios && (
+              <div className="rounded-[14px] border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[0.85rem_0.95rem]">
+                <div className="flex flex-wrap items-center justify-between gap-[0.6rem]">
+                  <div className="text-[0.72rem] font-bold uppercase text-slate-400">Market Playbook Engine</div>
+                  <div className="text-[0.78rem] font-extrabold text-[var(--msp-accent)]">
+                    {result.aiMarketState.scenarios.base?.probability
+                      ? `Base: ${result.aiMarketState.scenarios.base.probability}%`
+                      : 'Scenarios Active'}
+                  </div>
+                </div>
+
+                {/* Scenario Cards - 3 column grid */}
+                <div className="mt-[0.55rem] grid gap-[0.45rem] md:grid-cols-3">
+                  {/* Bull Scenario */}
+                  <div className="rounded-[10px] border border-emerald-500/25 bg-emerald-500/5 p-[0.55rem_0.65rem]">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-[0.66rem] font-extrabold uppercase text-emerald-400">🐂 Bull Case</div>
+                      {result.aiMarketState.scenarios.bull?.probability != null && (
+                        <div className="text-[0.78rem] font-black text-emerald-300">{result.aiMarketState.scenarios.bull.probability}%</div>
+                      )}
+                    </div>
+                    {result.aiMarketState.scenarios.bull?.target != null && (
+                      <div className="mt-[0.2rem] text-[0.82rem] font-extrabold text-emerald-200">
+                        Target: ${result.aiMarketState.scenarios.bull.target.toFixed(2)}
+                      </div>
+                    )}
+                    <div className="mt-[0.15rem] text-[0.74rem] text-slate-300">
+                      {result.aiMarketState.scenarios.bull?.catalyst || 'Awaiting catalyst data'}
+                    </div>
+                    {result.strategyRecommendation?.strategy && result.direction === 'bullish' && (
+                      <div className="mt-[0.25rem] rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-[2px] text-[0.66rem] font-bold text-emerald-300 inline-block">
+                        Strategy: {result.strategyRecommendation.strategy}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Base Scenario */}
+                  <div className="rounded-[10px] border border-slate-400/25 bg-slate-400/5 p-[0.55rem_0.65rem]">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-[0.66rem] font-extrabold uppercase text-slate-400">📊 Base Case</div>
+                      {result.aiMarketState.scenarios.base?.probability != null && (
+                        <div className="text-[0.78rem] font-black text-slate-200">{result.aiMarketState.scenarios.base.probability}%</div>
+                      )}
+                    </div>
+                    {result.aiMarketState.scenarios.base?.target != null && (
+                      <div className="mt-[0.2rem] text-[0.82rem] font-extrabold text-slate-200">
+                        Target: ${result.aiMarketState.scenarios.base.target.toFixed(2)}
+                      </div>
+                    )}
+                    <div className="mt-[0.15rem] text-[0.74rem] text-slate-300">
+                      {result.aiMarketState.scenarios.base?.catalyst || 'Range-bound continuation'}
+                    </div>
+                  </div>
+
+                  {/* Bear Scenario */}
+                  <div className="rounded-[10px] border border-red-500/25 bg-red-500/5 p-[0.55rem_0.65rem]">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-[0.66rem] font-extrabold uppercase text-red-400">🐻 Bear Case</div>
+                      {result.aiMarketState.scenarios.bear?.probability != null && (
+                        <div className="text-[0.78rem] font-black text-red-300">{result.aiMarketState.scenarios.bear.probability}%</div>
+                      )}
+                    </div>
+                    {result.aiMarketState.scenarios.bear?.target != null && (
+                      <div className="mt-[0.2rem] text-[0.82rem] font-extrabold text-red-200">
+                        Target: ${result.aiMarketState.scenarios.bear.target.toFixed(2)}
+                      </div>
+                    )}
+                    <div className="mt-[0.15rem] text-[0.74rem] text-slate-300">
+                      {result.aiMarketState.scenarios.bear?.catalyst || 'Awaiting catalyst data'}
+                    </div>
+                    {result.strategyRecommendation?.strategy && result.direction === 'bearish' && (
+                      <div className="mt-[0.25rem] rounded-full border border-red-400/30 bg-red-400/10 px-2 py-[2px] text-[0.66rem] font-bold text-red-300 inline-block">
+                        Strategy: {result.strategyRecommendation.strategy}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Trigger Levels Integration */}
+                {result.tradeLevels && (
+                  <div className="mt-[0.55rem] grid gap-[0.35rem] md:grid-cols-3">
+                    <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
+                      <div className="text-[0.62rem] font-bold uppercase text-slate-500">Bull Trigger</div>
+                      <div className="text-[0.78rem] font-extrabold text-emerald-300">
+                        Above ${result.tradeLevels.target1?.price?.toFixed(2) || 'N/A'}
+                      </div>
+                    </div>
+                    <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
+                      <div className="text-[0.62rem] font-bold uppercase text-slate-500">Gamma Flip Trigger</div>
+                      <div className="text-[0.78rem] font-extrabold text-amber-300">
+                        ${dealerGamma?.gammaFlipPrice?.toFixed(2) || 'N/A'}
+                      </div>
+                    </div>
+                    <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
+                      <div className="text-[0.62rem] font-bold uppercase text-slate-500">Bear Trigger</div>
+                      <div className="text-[0.78rem] font-extrabold text-red-300">
+                        Below ${result.tradeLevels.stopLoss?.toFixed(2) || 'N/A'}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Edge & Thesis Summary */}
+                {result.aiMarketState.edges && (
+                  <div className="mt-[0.55rem] rounded-lg border border-slate-500/20 bg-slate-900/35 p-[0.45rem_0.55rem]">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-[0.64rem] font-bold uppercase text-slate-500">Primary Edge</div>
+                      <div className="text-[0.74rem] font-extrabold text-[var(--msp-accent)]">
+                        {result.aiMarketState.edges.primaryEdge || 'None'} • {result.aiMarketState.edges.edgeType?.toUpperCase() || 'N/A'} • Strength {result.aiMarketState.edges.edgeStrength?.toFixed(0) || 0}%
+                      </div>
+                    </div>
+                    {result.aiMarketState.thesis?.summary && (
+                      <div className="mt-[0.2rem] text-[0.76rem] text-slate-300">{result.aiMarketState.thesis.summary}</div>
+                    )}
+                    {result.aiMarketState.thesis?.timeHorizon && (
+                      <div className="mt-[0.15rem] text-[0.7rem] text-slate-400">Time Horizon: {result.aiMarketState.thesis.timeHorizon}</div>
+                    )}
+                  </div>
+                )}
+
+                {/* Invalidation Level */}
+                {result.aiMarketState.thesis?.invalidationLevel != null && (
+                  <div className="mt-[0.45rem] text-[0.74rem] font-bold text-red-300/80">
+                    ⛔ Playbook invalidation: Below ${result.aiMarketState.thesis.invalidationLevel.toFixed(2)} — all scenarios void
+                  </div>
                 )}
               </div>
             )}

@@ -11,6 +11,7 @@ import { buildDealerIntelligence, calculateDealerGammaSnapshot } from '@/lib/opt
 import { AVOptionRow, scoreOptionCandidatesV21 } from '@/lib/scoring/options-v21';
 import { avFetch } from '@/lib/avRateGovernor';
 import { getCached, setCached, CACHE_KEYS, CACHE_TTL } from '@/lib/redis';
+import { computeCorrelationRegime, type CorrelationRegimeOutput } from '@/lib/correlation-regime-engine';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 const AV_OPTIONS_REALTIME_ENABLED = (process.env.AV_OPTIONS_REALTIME_ENABLED ?? 'true').toLowerCase() !== 'false';
@@ -281,6 +282,42 @@ export async function POST(request: NextRequest) {
       ];
     }
 
+    // ── Cross-Asset Correlation Regime (best-effort, never blocks scan) ──
+    let crossAssetFlow: CorrelationRegimeOutput | null = null;
+    try {
+      const macroSymbols = ['SPY', 'VIX', 'DXY', 'GLD'];
+      const macroCacheKey = `msp:macro:quotes:${macroSymbols.join(',')}`;
+      let macroQuotes = await getCached<Record<string, { price: number; change24h: number }>>(macroCacheKey);
+
+      if (!macroQuotes && ALPHA_VANTAGE_KEY) {
+        const quoteUrl = `https://www.alphavantage.co/query?function=REALTIME_BULK_QUOTES&symbol=${macroSymbols.join(',')}&apikey=${ALPHA_VANTAGE_KEY}`;
+        const bulk = await avFetch(quoteUrl, 'BULK_MACRO').catch(() => null);
+        if (bulk?.data && Array.isArray(bulk.data)) {
+          macroQuotes = {};
+          for (const row of bulk.data) {
+            const sym = String(row.symbol || '');
+            const price = Number(row.close || row.last || 0);
+            const prev = Number(row.prev_close || row.previous_close || price);
+            const change24h = prev > 0 ? ((price - prev) / prev) * 100 : 0;
+            if (sym && price > 0) macroQuotes[sym] = { price, change24h };
+          }
+          await setCached(macroCacheKey, macroQuotes, 300).catch(() => {}); // 5 min cache
+        }
+      }
+
+      if (macroQuotes && macroQuotes['SPY']) {
+        crossAssetFlow = computeCorrelationRegime({
+          btc: { symbol: 'BTC', price: 0, change24h: 0, timestamp: new Date().toISOString() },
+          spy: { symbol: 'SPY', price: macroQuotes['SPY'].price, change24h: macroQuotes['SPY'].change24h, timestamp: new Date().toISOString() },
+          vix: macroQuotes['VIX'] ? { symbol: 'VIX', price: macroQuotes['VIX'].price, change24h: macroQuotes['VIX'].change24h, timestamp: new Date().toISOString() } : undefined,
+          dxy: macroQuotes['DXY'] ? { symbol: 'DXY', price: macroQuotes['DXY'].price, change24h: macroQuotes['DXY'].change24h, timestamp: new Date().toISOString() } : undefined,
+          gold: macroQuotes['GLD'] ? { symbol: 'GLD', price: macroQuotes['GLD'].price, change24h: macroQuotes['GLD'].change24h, timestamp: new Date().toISOString() } : undefined,
+        });
+      }
+    } catch (err) {
+      console.warn('[options-scan] cross-asset flow failed (non-blocking):', err);
+    }
+
     const stateMachine = capitalFlow.brain_decision_v1?.state_machine;
     if (stateMachine) {
       const transition = {
@@ -361,6 +398,7 @@ export async function POST(request: NextRequest) {
         capitalFlow,
         dealerGamma,
         dealerIntelligence,
+        crossAssetFlow,
         universalScoringV21: {
           version: 'msp.score.v2.1',
           mode: 'options_scanner',
