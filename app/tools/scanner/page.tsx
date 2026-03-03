@@ -855,6 +855,48 @@ function ScannerContent() {
     }
   }, [result, timeframe, assetType, setPageData]);
 
+  // AI Page Context — share BULK scan results when on Step 2 (table view)
+  useEffect(() => {
+    if (result) return; // Step 3 single-symbol handled above
+    if (!bulkScanResults?.topPicks?.length) return;
+
+    const picks = rankedCandidates.slice(0, 15); // top 15 for prompt budget
+    const bullish = picks.filter((p: any) => p._direction === 'long').length;
+    const bearish = picks.filter((p: any) => p._direction === 'short').length;
+    const avgConf = picks.length
+      ? Math.round(picks.reduce((s: number, p: any) => s + (p._confidence || 0), 0) / picks.length)
+      : 0;
+
+    setPageData({
+      skill: 'scanner',
+      symbols: picks.map((p: any) => p.symbol),
+      data: {
+        scanType: bulkScanResults.type,
+        timeframe: bulkScanResults.timeframe || timeframe,
+        mode: bulkScanResults.mode,
+        totalScanned: bulkScanResults.scanned,
+        totalResults: bulkScanResults.topPicks.length,
+        displayedResults: picks.length,
+        averageConfidence: avgConf,
+        bullishCount: bullish,
+        bearishCount: bearish,
+        topPicks: picks.map((p: any) => ({
+          symbol: p.symbol,
+          direction: p._direction,
+          confidence: p._confidence,
+          quality: p._quality,
+          strategy: p.setup || p.setupClass || p.pattern || 'MOMENTUM_REVERSAL',
+          rsi: p.indicators?.rsi,
+          adx: p.indicators?.adx,
+          atrPercent: p.indicators?.atr_percent,
+          price: p.indicators?.price || p.price,
+          volume: p.indicators?.volume,
+        })),
+      },
+      summary: `Bulk scan (${bulkScanResults.type}): ${bulkScanResults.topPicks.length} setups from ${bulkScanResults.scanned} scanned. ${bullish} bullish, ${bearish} bearish. Avg confidence ${avgConf}%. Top pick: ${picks[0]?.symbol} (${picks[0]?._direction}, ${picks[0]?._confidence}% conf).`,
+    });
+  }, [result, bulkScanResults, rankedCandidates, timeframe, setPageData]);
+
   // Daily picks call intentionally disabled to avoid background API load
   useEffect(() => {
     setDailyPicksLoading(false);

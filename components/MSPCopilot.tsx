@@ -48,14 +48,85 @@ export default function MSPCopilot({
   
   // Check if we have meaningful page data
   const hasPageData = useMemo(() => {
-    return pageData && Object.keys(pageData).length > 0 && pageData.symbol;
+    return pageData && Object.keys(pageData).length > 0 && (pageData.symbol || pageData.topPicks);
   }, [pageData]);
+
+  // Is this a bulk scan result?
+  const isBulkScan = useMemo(() => {
+    return hasPageData && Array.isArray(pageData.topPicks) && (pageData.topPicks as unknown[]).length > 0;
+  }, [hasPageData, pageData]);
 
   // Generate tab-specific content based on page data
   const getTabContent = useMemo(() => {
     if (!hasPageData) return null;
     
     try {
+      // ── Bulk scan results (Step 2 table view) ──
+      if (isBulkScan) {
+        const picks = pageData.topPicks as Array<Record<string, unknown>>;
+        const totalResults = (pageData.totalResults as number) || picks.length;
+        const totalScanned = (pageData.totalScanned as number) || 0;
+        const avgConf = (pageData.averageConfidence as number) || 0;
+        const bullish = (pageData.bullishCount as number) || 0;
+        const bearish = (pageData.bearishCount as number) || 0;
+        const scanType = (pageData.scanType as string) || 'equity';
+        const tf = (pageData.timeframe as string) || 'Daily';
+        const top3 = picks.slice(0, 3);
+
+        const explainContent = [
+          { label: 'Scan Type', value: `${scanType.toUpperCase()} · ${tf}`, highlight: true },
+          { label: 'Results', value: `${totalResults} setups from ${totalScanned} scanned` },
+          { label: 'Bias', value: `${bullish} Bullish / ${bearish} Bearish`, color: bullish > bearish ? '#10B981' : bearish > bullish ? '#EF4444' : '#64748B' },
+          { label: 'Avg Confidence', value: `${avgConf}%`, color: avgConf >= 65 ? '#10B981' : avgConf >= 50 ? '#F59E0B' : '#EF4444' },
+          ...top3.map((p, i) => ({
+            label: `#${i + 1}`,
+            value: `${p.symbol} · ${String(p.direction).toUpperCase()} · ${p.confidence}%`,
+            color: p.direction === 'long' ? '#10B981' : '#EF4444',
+          })),
+        ];
+
+        const planContent = [
+          { label: 'Strongest Setup', value: top3[0] ? `${top3[0].symbol} (${top3[0].confidence}%)` : 'N/A', color: '#10B981' },
+          { label: 'Strategy', value: top3[0] ? String(top3[0].strategy || 'MOMENTUM_REVERSAL').replace(/_/g, ' ') : 'N/A' },
+          { label: 'Market Lean', value: bullish > bearish ? 'Bullish bias across scan' : bearish > bullish ? 'Bearish bias across scan' : 'Mixed / neutral', color: bullish > bearish ? '#10B981' : bearish > bullish ? '#EF4444' : '#64748B' },
+          { label: 'Quality Filter', value: `${picks.filter((p: any) => p.quality === 'high').length} high quality setups` },
+        ];
+
+        return {
+          explain: {
+            title: '📊 Scan Results Overview',
+            content: explainContent,
+            footer: 'Ask me to analyze any symbol, compare setups, or explain the scan bias.',
+          },
+          plan: {
+            title: '📋 Scan Strategy Summary',
+            content: planContent,
+            footer: 'Ask me which setup is best for your trading style or to build a trade plan.',
+          },
+          act: {
+            title: '⚡ Suggested Actions',
+            actions: [
+              { icon: '🔍', label: `Deep scan ${top3[0]?.symbol || 'top pick'}`, action: 'deep_scan' },
+              { icon: '📝', label: 'Log top pick to journal', action: 'journal_trade' },
+              { icon: '🔔', label: 'Create alerts for top 3', action: 'create_alert' },
+              { icon: '📊', label: 'Compare top setups', action: 'compare_setups' },
+            ],
+            footer: 'Click an action or ask me to help.',
+          },
+          learn: {
+            title: '📚 Learn From This Scan',
+            topics: [
+              { icon: '📊', label: 'Why these symbols scored highest', question: `Analyze the top 3 scan results: ${top3.map(p => `${p.symbol} (${p.direction}, ${p.confidence}%)`).join(', ')}. What makes them stand out?` },
+              { icon: '🔄', label: 'Bullish vs bearish bias', question: `The scan found ${bullish} bullish and ${bearish} bearish setups. What does this tell us about current market conditions?` },
+              { icon: '⚡', label: 'Best setup to trade now', question: `Out of these ${totalResults} scan results, which setup has the best risk/reward and why?` },
+              { icon: '🎯', label: 'How to filter these results', question: 'How should I filter and prioritize these scan results for the best trades?' },
+            ],
+            footer: 'Click a topic to learn more.',
+          },
+        };
+      }
+
+      // ── Single symbol result (Step 3 deep analysis) ──
       const symbol = pageData.symbol as string || 'N/A';
       const price = pageData.currentPrice as number || pageData.price as number;
       const direction = pageData.direction as string;
@@ -162,7 +233,7 @@ export default function MSPCopilot({
       console.error('Error generating tab content:', e);
       return null;
     }
-  }, [hasPageData, pageData]);
+  }, [hasPageData, isBulkScan, pageData]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
