@@ -1181,13 +1181,6 @@ function ScannerContent() {
         const sector = TICKER_SECTOR[sym];
         if (!sector || sector !== sectorFilter) return false;
       }
-      // Filter out equity tickers with no real technical indicator data (only price-based scoring)
-      // Crypto light scans don't have RSI/ADX by design, so skip this filter for crypto
-      if (bulkScanResults?.type !== 'crypto') {
-        const ind = pick.indicators ?? {};
-        const hasRealIndicators = Number.isFinite(ind.rsi) || Number.isFinite(ind.adx) || Number.isFinite(ind.ema200) || Number.isFinite(ind.atr_percent);
-        if (!hasRealIndicators) return false;
-      }
       return true;
     });
 
