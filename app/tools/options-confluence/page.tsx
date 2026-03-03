@@ -2718,22 +2718,6 @@ export default function OptionsConfluenceScanner() {
                 ))}
               </div>
 
-              <div className={`grid gap-[0.6rem] rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel)] p-3 ${adaptiveModeMeta.layout.marketOrderClass}`}>
-                <div className="text-[0.7rem] font-bold uppercase text-slate-400">Market Surface</div>
-                <div className="grid grid-cols-2 gap-[0.35rem]">
-                  <div className="rounded-lg bg-black/20 p-[0.45rem]">
-                    <div className="text-[0.62rem] font-bold uppercase text-slate-500">Current Price</div>
-                    <div className="text-[0.8rem] font-extrabold text-slate-50">${formatPrice(result.currentPrice)}</div>
-                  </div>
-                  <div className="rounded-lg bg-black/20 p-[0.45rem]">
-                    <div className="text-[0.62rem] font-bold uppercase text-slate-500">Expected Move</div>
-                    <div className={`font-extrabold ${adaptiveTerminalMode === 'HIGH_VOL_EVENT_MODE' ? 'text-[1rem] text-red-300' : 'text-[0.8rem] text-slate-50'}`}>
-                      {result.expectedMove ? `±${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'N/A'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               <div className={`grid gap-[0.45rem] rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel)] p-3 ${adaptiveModeMeta.layout.execOrderClass} ${adaptiveModeMeta.layout.execOpacityClass}`}>
                 <div className="text-[0.7rem] font-bold uppercase text-slate-400">Execution Panel</div>
                 <div className="rounded-lg bg-black/20 p-[0.45rem]">
@@ -2779,7 +2763,11 @@ export default function OptionsConfluenceScanner() {
               <div className="rounded-[14px] border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[0.9rem_1rem]">
                 <div className="flex flex-wrap items-center justify-between gap-[0.6rem]">
                   <div className="text-[0.72rem] font-bold uppercase text-slate-400">MSP Signature • Confluence Radar</div>
-                  <div className="text-[0.9rem] font-black text-[var(--msp-accent)]">Composite {confluenceRadar.composite}%</div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="rounded-md border border-slate-400/20 bg-black/20 px-[0.45rem] py-[0.15rem] text-[0.72rem] font-extrabold text-slate-100">${formatPrice(result.currentPrice)}</span>
+                    <span className={`rounded-md border border-slate-400/20 bg-black/20 px-[0.45rem] py-[0.15rem] text-[0.72rem] font-extrabold ${adaptiveTerminalMode === 'HIGH_VOL_EVENT_MODE' ? 'text-red-300' : 'text-slate-300'}`}>EM {result.expectedMove ? `±${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'N/A'}</span>
+                    <span className="text-[0.9rem] font-black text-[var(--msp-accent)]">Composite {confluenceRadar.composite}%</span>
+                  </div>
                 </div>
 
                 <div className="mt-[0.55rem] grid items-center gap-3 [grid-template-columns:1fr] sm:[grid-template-columns:minmax(220px,260px)_minmax(0,1fr)]">
