@@ -61,18 +61,19 @@ function detectCurrentPhase(assetClass: 'equity' | 'crypto'): SessionPhaseInfo {
   return CRYPTO_PHASES.OVERNIGHT;
 }
 
+// Stable default for SSR — avoids hydration mismatch from new Date() during render
+const SSR_DEFAULT: SessionPhaseInfo = EQUITY_PHASES.PRE_MARKET;
+
 export default function SessionPhaseStrip({ assetClass = 'equity' }: { assetClass?: 'equity' | 'crypto' }) {
-  const [phase, setPhase] = useState<SessionPhaseInfo>(() => detectCurrentPhase(assetClass));
+  const [phase, setPhase] = useState<SessionPhaseInfo>(SSR_DEFAULT);
 
   useEffect(() => {
+    // Set the real phase on mount (client only)
+    setPhase(detectCurrentPhase(assetClass));
     const interval = window.setInterval(() => {
       setPhase(detectCurrentPhase(assetClass));
-    }, 30_000); // Update every 30 seconds
+    }, 30_000);
     return () => window.clearInterval(interval);
-  }, [assetClass]);
-
-  useEffect(() => {
-    setPhase(detectCurrentPhase(assetClass));
   }, [assetClass]);
 
   const colorMap: Record<string, string> = {

@@ -122,11 +122,15 @@ export default function OptionsTerminalView() {
 
   const spot = chain.underlyingPrice;
   const changePct = 0; // AV doesn't return change — use 0
-  const updatedLabel = chain.loading
-    ? 'Loading…'
-    : chain.lastFetchedAt
-      ? `Updated ${Math.round((Date.now() - chain.lastFetchedAt) / 1000)}s ago`
-      : '';
+  const [updatedLabel, setUpdatedLabel] = useState('');
+  useEffect(() => {
+    if (chain.loading) { setUpdatedLabel('Loading…'); return; }
+    if (!chain.lastFetchedAt) { setUpdatedLabel(''); return; }
+    const tick = () => setUpdatedLabel(`Updated ${Math.round((Date.now() - chain.lastFetchedAt) / 1000)}s ago`);
+    tick();
+    const id = window.setInterval(tick, 5_000);
+    return () => window.clearInterval(id);
+  }, [chain.loading, chain.lastFetchedAt]);
 
   /* ── Landing state (no ticker) ─────────────────────────────── */
   if (!ticker && chain.contracts.length === 0) {

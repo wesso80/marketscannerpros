@@ -188,47 +188,59 @@ type RiskGovernorRuntime = {
 };
 
 async function createRiskGovernorRuntime(workspaceId: string): Promise<RiskGovernorRuntime> {
-  const [stateRows, alertCountRows] = await Promise.all([
-    q<{
-      risk_environment: string | null;
-      cognitive_load: number | null;
-      context_state: Record<string, unknown> | null;
-    }>(
-      `SELECT risk_environment, cognitive_load, context_state
-       FROM operator_state
-       WHERE workspace_id = $1
-       LIMIT 1`,
-      [workspaceId]
-    ),
-    q<{ alerts_last_hour: number; alerts_today: number }>(
-      `SELECT
-         COUNT(*) FILTER (
-           WHERE created_at >= NOW() - INTERVAL '1 hour'
-         )::int AS alerts_last_hour,
-         COUNT(*) FILTER (
-           WHERE created_at >= CURRENT_DATE
-         )::int AS alerts_today
-       FROM alerts
-       WHERE workspace_id = $1
-         AND is_smart_alert = true
-         AND smart_alert_context->>'source' = 'workflow.auto'`,
-      [workspaceId]
-    ),
-  ]);
+  try {
+    const [stateRows, alertCountRows] = await Promise.all([
+      q<{
+        risk_environment: string | null;
+        cognitive_load: number | null;
+        context_state: Record<string, unknown> | null;
+      }>(
+        `SELECT risk_environment, cognitive_load, context_state
+         FROM operator_state
+         WHERE workspace_id = $1
+         LIMIT 1`,
+        [workspaceId]
+      ),
+      q<{ alerts_last_hour: number; alerts_today: number }>(
+        `SELECT
+           COUNT(*) FILTER (
+             WHERE created_at >= NOW() - INTERVAL '1 hour'
+           )::int AS alerts_last_hour,
+           COUNT(*) FILTER (
+             WHERE created_at >= CURRENT_DATE
+           )::int AS alerts_today
+         FROM alerts
+         WHERE workspace_id = $1
+           AND is_smart_alert = true
+           AND smart_alert_context->>'source' = 'workflow.auto'`,
+        [workspaceId]
+      ),
+    ]);
 
-  const state = stateRows[0];
-  const counts = alertCountRows[0];
-  const context = (state?.context_state || {}) as Record<string, unknown>;
-  const contextOptIn = context.executionAutomationOptIn;
+    const state = stateRows[0];
+    const counts = alertCountRows[0];
+    const context = (state?.context_state || {}) as Record<string, unknown>;
+    const contextOptIn = context.executionAutomationOptIn;
 
-  return {
-    thresholds: getRiskGovernorThresholdsFromEnv(),
-    executionOptIn: contextOptIn === true || String(contextOptIn || '').toLowerCase() === 'true',
-    riskEnvironment: state?.risk_environment || null,
-    cognitiveLoad: toFiniteNumber(state?.cognitive_load),
-    autoAlertsLastHour: Number(counts?.alerts_last_hour || 0),
-    autoAlertsToday: Number(counts?.alerts_today || 0),
-  };
+    return {
+      thresholds: getRiskGovernorThresholdsFromEnv(),
+      executionOptIn: contextOptIn === true || String(contextOptIn || '').toLowerCase() === 'true',
+      riskEnvironment: state?.risk_environment || null,
+      cognitiveLoad: toFiniteNumber(state?.cognitive_load),
+      autoAlertsLastHour: Number(counts?.alerts_last_hour || 0),
+      autoAlertsToday: Number(counts?.alerts_today || 0),
+    };
+  } catch (error) {
+    console.warn('[workflow/events] createRiskGovernorRuntime failed (table may not exist):', error);
+    return {
+      thresholds: getRiskGovernorThresholdsFromEnv(),
+      executionOptIn: false,
+      riskEnvironment: null,
+      cognitiveLoad: null,
+      autoAlertsLastHour: 0,
+      autoAlertsToday: 0,
+    };
+  }
 }
 
 function createRiskGovernorEvent(args: {
@@ -1398,34 +1410,46 @@ export async function POST(req: NextRequest) {
     const autoCoachTaskEvents: MSPEvent[] = [];
     const riskGovernorEvents: MSPEvent[] = [];
     for (const event of normalized) {
-      const autoAlertResult = await autoCreatePlanAlertForEvent(session.workspaceId, event, riskGovernorRuntime);
-      if (autoAlertResult.created) {
-        autoAlertsCreated += 1;
-      }
-      if (autoAlertResult.blockedEvent) {
-        riskGovernorEvents.push(autoAlertResult.blockedEvent);
-        riskGovernorBlocks += 1;
-      }
-      if (autoAlertResult.hasAlert && autoAlertResult.decisionPacketId) {
-        alertTransitionPacketIds.add(autoAlertResult.decisionPacketId);
-      }
-      if (await autoCreateJournalDraftForEvent(session.workspaceId, event)) {
-        autoJournalDraftsCreated += 1;
-      }
-
-      const coachEvent = await autoGenerateCoachEventForClosedTrade(session.workspaceId, event);
-      if (coachEvent) {
-        autoCoachEvents.push(coachEvent);
-
-        const taskEvents = await autoCreateCoachActionTaskEvents(session.workspaceId, coachEvent);
-        if (taskEvents.length > 0) {
-          autoCoachTaskEvents.push(...taskEvents);
-          autoCoachActionTasksCreated += taskEvents.length;
+      try {
+        const autoAlertResult = await autoCreatePlanAlertForEvent(session.workspaceId, event, riskGovernorRuntime);
+        if (autoAlertResult.created) {
+          autoAlertsCreated += 1;
         }
-
-        if (await attachCoachSummaryToJournalDraft(session.workspaceId, coachEvent)) {
-          autoCoachJournalUpdates += 1;
+        if (autoAlertResult.blockedEvent) {
+          riskGovernorEvents.push(autoAlertResult.blockedEvent);
+          riskGovernorBlocks += 1;
         }
+        if (autoAlertResult.hasAlert && autoAlertResult.decisionPacketId) {
+          alertTransitionPacketIds.add(autoAlertResult.decisionPacketId);
+        }
+      } catch (err) {
+        console.warn(`[workflow/events] autoCreatePlanAlertForEvent failed for ${event.event_type}:`, err);
+      }
+      try {
+        if (await autoCreateJournalDraftForEvent(session.workspaceId, event)) {
+          autoJournalDraftsCreated += 1;
+        }
+      } catch (err) {
+        console.warn(`[workflow/events] autoCreateJournalDraftForEvent failed for ${event.event_type}:`, err);
+      }
+
+      try {
+        const coachEvent = await autoGenerateCoachEventForClosedTrade(session.workspaceId, event);
+        if (coachEvent) {
+          autoCoachEvents.push(coachEvent);
+
+          const taskEvents = await autoCreateCoachActionTaskEvents(session.workspaceId, coachEvent);
+          if (taskEvents.length > 0) {
+            autoCoachTaskEvents.push(...taskEvents);
+            autoCoachActionTasksCreated += taskEvents.length;
+          }
+
+          if (await attachCoachSummaryToJournalDraft(session.workspaceId, coachEvent)) {
+            autoCoachJournalUpdates += 1;
+          }
+        }
+      } catch (err) {
+        console.warn(`[workflow/events] autoCoach pipeline failed for ${event.event_type}:`, err);
       }
     }
 
@@ -1454,40 +1478,52 @@ export async function POST(req: NextRequest) {
     );
 
     for (const event of normalized) {
-      const mutation = buildDecisionPacketMutation(event);
-      if (!mutation) continue;
-      await persistDecisionPacketMutation(session.workspaceId, mutation);
-      decisionPacketsUpserted += 1;
+      try {
+        const mutation = buildDecisionPacketMutation(event);
+        if (!mutation) continue;
+        await persistDecisionPacketMutation(session.workspaceId, mutation);
+        decisionPacketsUpserted += 1;
+      } catch (err) {
+        console.warn(`[workflow/events] persistDecisionPacketMutation failed for ${event.event_type}:`, err);
+      }
     }
 
-    for (const packetId of alertTransitionPacketIds) {
-      await q(
-        `UPDATE decision_packets dp
-         SET
-           status = CASE
-             WHEN dp.status IN ('executed', 'closed') THEN dp.status
-             ELSE 'alerted'
-           END,
-           alerted_event_id = COALESCE(dp.alerted_event_id, dp.last_event_id),
-           updated_at = NOW()
-         WHERE dp.workspace_id = $1
-           AND (
-             dp.packet_id = $2
-             OR dp.packet_id = (
-               SELECT dpa.packet_id
-               FROM decision_packet_aliases dpa
-               WHERE dpa.workspace_id = $1
-                 AND dpa.alias_id = $2
-               LIMIT 1
-             )
-           )`,
-        [session.workspaceId, packetId]
-      );
-      decisionPacketsUpserted += 1;
+    try {
+      for (const packetId of alertTransitionPacketIds) {
+        await q(
+          `UPDATE decision_packets dp
+           SET
+             status = CASE
+               WHEN dp.status IN ('executed', 'closed') THEN dp.status
+               ELSE 'alerted'
+             END,
+             alerted_event_id = COALESCE(dp.alerted_event_id, dp.last_event_id),
+             updated_at = NOW()
+           WHERE dp.workspace_id = $1
+             AND (
+               dp.packet_id = $2
+               OR dp.packet_id = (
+                 SELECT dpa.packet_id
+                 FROM decision_packet_aliases dpa
+                 WHERE dpa.workspace_id = $1
+                   AND dpa.alias_id = $2
+                 LIMIT 1
+               )
+             )`,
+          [session.workspaceId, packetId]
+        );
+        decisionPacketsUpserted += 1;
+      }
+    } catch (err) {
+      console.warn('[workflow/events] alertTransition update failed:', err);
     }
 
-    if (decisionPacketsUpserted > 0) {
-      await projectOperatorStateFromPackets(session.workspaceId);
+    try {
+      if (decisionPacketsUpserted > 0) {
+        await projectOperatorStateFromPackets(session.workspaceId);
+      }
+    } catch (err) {
+      console.warn('[workflow/events] projectOperatorStateFromPackets failed:', err);
     }
 
     return NextResponse.json({
