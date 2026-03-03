@@ -210,15 +210,15 @@ export default function CloseCalendar({ symbol: propSymbol }: CloseCalendarProps
 
       {/* ── Anchor + Horizon selectors ── */}
       <div className="flex flex-wrap items-end gap-3">
-        <div>
+        <div className="min-w-0 max-w-full">
           <label className="mb-1 block text-[10px] uppercase tracking-wider text-slate-500">Anchor</label>
-          <div className="flex gap-1">
+          <div className="flex gap-1 overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
             {ANCHOR_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
                 type="button"
                 onClick={() => setAnchor(opt.value)}
-                className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                className={`shrink-0 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
                   anchor === opt.value
                     ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
                     : "bg-slate-950/40 text-slate-400 border border-slate-800 hover:text-slate-200"
@@ -244,13 +244,13 @@ export default function CloseCalendar({ symbol: propSymbol }: CloseCalendarProps
 
         <div>
           <label className="mb-1 block text-[10px] uppercase tracking-wider text-slate-500">Horizon</label>
-          <div className="flex gap-1">
+          <div className="flex gap-1 overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
             {HORIZON_OPTIONS.map((d) => (
               <button
                 key={d}
                 type="button"
                 onClick={() => setHorizon(d)}
-                className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                className={`shrink-0 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
                   horizon === d
                     ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/40"
                     : "bg-slate-950/40 text-slate-400 border border-slate-800 hover:text-slate-200"
@@ -264,13 +264,13 @@ export default function CloseCalendar({ symbol: propSymbol }: CloseCalendarProps
 
         <div>
           <label className="mb-1 block text-[10px] uppercase tracking-wider text-slate-500">Asset</label>
-          <div className="flex gap-1">
+          <div className="flex gap-1 overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
             {(["crypto", "equity"] as const).map((ac) => (
               <button
                 key={ac}
                 type="button"
                 onClick={() => setAssetClass(ac)}
-                className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                className={`shrink-0 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
                   assetClass === ac
                     ? "bg-violet-500/20 text-violet-400 border border-violet-500/40"
                     : "bg-slate-950/40 text-slate-400 border border-slate-800 hover:text-slate-200"
@@ -336,13 +336,13 @@ export default function CloseCalendar({ symbol: propSymbol }: CloseCalendarProps
             </button>
 
             {!showAnchorDay && (
-              <div className="ml-auto flex gap-1">
+              <div className="ml-auto flex gap-1 overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
                 {(["all", "daily", "weekly", "monthly", "yearly"] as const).map((f) => (
                   <button
                     key={f}
                     type="button"
                     onClick={() => setFilter(f)}
-                    className={`rounded px-2 py-1 text-[10px] font-medium uppercase ${
+                    className={`shrink-0 whitespace-nowrap rounded px-2 py-1 text-[10px] font-medium uppercase ${
                       filter === f ? "bg-slate-700 text-slate-100" : "text-slate-500 hover:text-slate-300"
                     }`}
                   >

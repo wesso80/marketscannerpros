@@ -50,8 +50,10 @@
 /* Reset max-width for elements that need to overflow their container */
 svg, svg *, img, video, canvas, iframe,
 table, thead, tbody, tr, th, td,
+button, a, input, select, textarea, label,
 .overflow-x-auto, .overflow-x-auto *,
-[style*="overflowX: auto"] *, [style*="overflow-x: auto"] * {
+[style*="overflowX: auto"] *, [style*="overflow-x: auto"] *,
+[style*="overflowX: 'auto'"] *, [style*="overflow-x: auto"] * {
   max-width: none;
 }
 
