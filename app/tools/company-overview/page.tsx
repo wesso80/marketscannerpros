@@ -346,7 +346,7 @@ function CompanyOverviewContent() {
         backHref="/dashboard"
       />
       <main style={{ minHeight: "100vh", padding: "24px 16px" }}>
-        <div style={{ maxWidth: "none", margin: "0 auto", padding: 0, overflowX: 'hidden' }}>
+        <div style={{ maxWidth: "none", margin: "0 auto", padding: 0 }}>
 
         {/* Regime & Personality Context */}
         <div style={{ marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -446,7 +446,7 @@ function CompanyOverviewContent() {
 
             {/* Bull & Bear Cases - Pro+ only */}
             {(bullCase.length > 0 || bearCase.length > 0) && canAccessPortfolioInsights(tier) && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "20px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(300px, 100%), 1fr))", gap: "20px" }}>
                 {/* Bull Case */}
                 <div style={{ background: "var(--msp-bull-tint)", borderRadius: "16px", border: "1px solid var(--msp-bull)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
                   <h3 style={{ fontSize: "1.1rem", fontWeight: "bold", color: "var(--msp-bull)", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>

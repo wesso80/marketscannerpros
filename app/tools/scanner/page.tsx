@@ -1516,7 +1516,7 @@ function ScannerContent() {
   if (!canAccessScanner(tier)) return <UpgradeGate requiredTier="pro" feature="Market Scanner" />;
 
   return (
-    <div className="min-h-screen bg-[var(--msp-bg)] overflow-x-hidden">
+    <div className="min-h-screen bg-[var(--msp-bg)]">
       {isFree && (
         <div style={{
           background: 'linear-gradient(90deg, rgba(16,185,129,0.12) 0%, rgba(16,185,129,0.04) 100%)',
@@ -1876,35 +1876,54 @@ function ScannerContent() {
                 </div>
 
                 {/* Screener Table View */}
-                {bulkViewMode === 'table' && (
-                  <ScreenerTable
-                    rows={rankedCandidates.map((pick: any, idx: number) => ({
-                      rank: idx + 1,
-                      symbol: pick.symbol ?? '',
-                      direction: pick._direction === 'long' ? 'LONG' as const : pick._direction === 'short' ? 'SHORT' as const : 'NEUTRAL' as const,
-                      confidence: pick._confidence ?? 0,
-                      quality: pick._quality ?? 'low',
-                      strategy: mapPickToStrategyTag(pick).replaceAll('_', ' '),
-                      rsi: pick.indicators?.rsi,
-                      adx: pick.indicators?.adx,
-                      atrPct: pick.indicators?.atr_percent,
-                      tfAlignment: pick._tfAlignment,
-                      volume24h: pick.indicators?.volume,
-                      price: pick.indicators?.price,
-                      change24h: pick.change24h,
-                      permission: toComplianceLabel(getPickPermission(pick)) as any,
-                    }))}
-                    selectedSymbol={ticker}
-                    onRowClick={(row) => {
-                      const pick = rankedCandidates.find((p: any) => p.symbol === row.symbol);
-                      if (pick) {
-                        const sym = (pick.symbol ?? '').replace(/-USD$/, '');
-                        setTicker(sym);
-                        setAssetType(bulkScanResults!.type === 'crypto' ? 'crypto' : 'equity');
-                        void runScan(sym);
-                      }
-                    }}
-                  />
+                {bulkViewMode === 'table' && rankedCandidates.length > 0 && (
+                  <div style={{ display: 'block', visibility: 'visible', minHeight: 100 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '40px 100px 65px 65px 70px 130px 55px 55px 60px 50px 90px 85px', gap: 0, borderRadius: 12, border: '1px solid rgba(51, 65, 85, 0.4)', background: 'rgba(15, 23, 42, 0.3)', overflowX: 'auto', fontSize: 13 }}>
+                      {/* Header */}
+                      {['#', 'Symbol', 'Dir', 'Conf', 'Quality', 'Strategy', 'RSI', 'ADX', 'Vol%', 'MTF', 'Volume', 'Rule'].map((h) => (
+                        <div key={h} style={{ padding: '8px', color: '#64748b', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid rgba(51, 65, 85, 0.5)', background: 'rgba(15, 23, 42, 0.95)', whiteSpace: 'nowrap' }}>{h}</div>
+                      ))}
+                      {/* Rows */}
+                      {rankedCandidates.map((pick: any, idx: number) => {
+                        const dir = pick._direction === 'long' ? 'LONG' : pick._direction === 'short' ? 'SHORT' : 'NEUTRAL';
+                        const conf = pick._confidence ?? 0;
+                        const quality = pick._quality ?? 'low';
+                        const strategy = mapPickToStrategyTag(pick).replaceAll('_', ' ');
+                        const dirCol = dir === 'LONG' ? '#10B981' : dir === 'SHORT' ? '#EF4444' : '#94a3b8';
+                        const confCol = conf >= 75 ? '#10B981' : conf >= 60 ? '#FBBF24' : '#94a3b8';
+                        const qualCol = quality === 'high' ? '#10B981' : quality === 'medium' ? '#FBBF24' : '#94a3b8';
+                        const perm = toComplianceLabel(getPickPermission(pick));
+                        const vol = pick.indicators?.volume;
+                        const volStr = vol == null || !Number.isFinite(vol) ? '—' : vol >= 1e9 ? `$${(vol/1e9).toFixed(1)}B` : vol >= 1e6 ? `$${(vol/1e6).toFixed(1)}M` : vol >= 1e3 ? `$${(vol/1e3).toFixed(0)}K` : `$${vol.toFixed(0)}`;
+                        const rsi = pick.indicators?.rsi;
+                        const adx = pick.indicators?.adx;
+                        const atrPct = pick.indicators?.atr_percent;
+                        const cellStyle = { padding: '7px 8px', color: '#cbd5e1', whiteSpace: 'nowrap' as const, borderBottom: '1px solid rgba(51, 65, 85, 0.2)', cursor: 'pointer' };
+                        const handleClick = () => {
+                          const sym = (pick.symbol ?? '').replace(/-USD$/, '');
+                          setTicker(sym);
+                          setAssetType(bulkScanResults!.type === 'crypto' ? 'crypto' : 'equity');
+                          void runScan(sym);
+                        };
+                        return (
+                          <React.Fragment key={pick.symbol}>
+                            <div style={cellStyle} onClick={handleClick}>{idx + 1}</div>
+                            <div style={{ ...cellStyle, fontWeight: 700, color: '#e2e8f0' }} onClick={handleClick}>{pick.symbol ?? ''}</div>
+                            <div style={cellStyle} onClick={handleClick}><span style={{ fontSize: 11, fontWeight: 700, color: dirCol, background: `${dirCol}18`, borderRadius: 4, padding: '2px 6px' }}>{dir}</span></div>
+                            <div style={cellStyle} onClick={handleClick}><span style={{ fontWeight: 700, color: confCol }}>{conf}%</span></div>
+                            <div style={cellStyle} onClick={handleClick}><span style={{ fontSize: 11, fontWeight: 600, color: qualCol, textTransform: 'uppercase' }}>{quality}</span></div>
+                            <div style={cellStyle} onClick={handleClick}>{strategy}</div>
+                            <div style={{ ...cellStyle, textAlign: 'right' }} onClick={handleClick}>{rsi != null && Number.isFinite(rsi) ? rsi.toFixed(0) : '—'}</div>
+                            <div style={{ ...cellStyle, textAlign: 'right' }} onClick={handleClick}>{adx != null && Number.isFinite(adx) ? adx.toFixed(0) : '—'}</div>
+                            <div style={{ ...cellStyle, textAlign: 'right' }} onClick={handleClick}>{atrPct != null ? `${atrPct.toFixed(1)}%` : '—'}</div>
+                            <div style={{ ...cellStyle, textAlign: 'center' }} onClick={handleClick}>{pick._tfAlignment != null ? `${pick._tfAlignment}/4` : '—'}</div>
+                            <div style={{ ...cellStyle, textAlign: 'right' }} onClick={handleClick}>{volStr}</div>
+                            <div style={cellStyle} onClick={handleClick}><span style={{ fontSize: 10, fontWeight: 700, color: perm === 'COMPLIANT' ? '#10B981' : perm === 'TIGHT' ? '#FBBF24' : '#EF4444', background: `${perm === 'COMPLIANT' ? '#10B981' : perm === 'TIGHT' ? '#FBBF24' : '#EF4444'}15`, borderRadius: 4, padding: '1px 5px' }}>{perm ?? '—'}</span></div>
+                          </React.Fragment>
+                        );
+                      })}
+                    </div>
+                  </div>
                 )}
 
                 {/* Card Grid View (original) */}

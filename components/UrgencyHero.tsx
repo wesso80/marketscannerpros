@@ -176,7 +176,8 @@ export default function UrgencyHero() {
             borderRadius: 16,
             padding: '20px 28px',
             textAlign: 'center',
-            minWidth: 180
+            minWidth: 'min(180px, 100%)',
+            flex: '1 1 140px'
           }}>
             <div style={{ color: '#6b7280', fontSize: 12, textTransform: 'uppercase', marginBottom: 6 }}>
               Signals You Missed Today
@@ -197,7 +198,8 @@ export default function UrgencyHero() {
             borderRadius: 16,
             padding: '20px 28px',
             textAlign: 'center',
-            minWidth: 180
+            minWidth: 'min(180px, 100%)',
+            flex: '1 1 140px'
           }}>
             <div style={{ color: '#6b7280', fontSize: 12, textTransform: 'uppercase', marginBottom: 6 }}>
               Signals Found Today
@@ -217,7 +219,8 @@ export default function UrgencyHero() {
             borderRadius: 16,
             padding: '20px 28px',
             textAlign: 'center',
-            minWidth: 180
+            minWidth: 'min(180px, 100%)',
+            flex: '1 1 140px'
           }}>
             <div style={{ color: '#6b7280', fontSize: 12, textTransform: 'uppercase', marginBottom: 6 }}>
               Active Traders Now

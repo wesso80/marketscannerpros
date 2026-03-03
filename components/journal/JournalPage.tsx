@@ -206,7 +206,7 @@ export default function JournalPage({ tier }: { tier: UserTier }) {
   const isProTrader = canAccessJournalIntelligence(tier);
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[var(--msp-bg)] text-slate-100">
+    <div className="min-h-screen bg-[var(--msp-bg)] text-slate-100">
       <main className="mx-auto w-full max-w-none space-y-4 px-4 py-4 md:px-6">
         <JournalLayout
           header={payload?.header}

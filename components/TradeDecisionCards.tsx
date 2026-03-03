@@ -108,7 +108,7 @@ export function SetupConfidenceCard({
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "0.75rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(240px, 100%), 1fr))", gap: "0.75rem" }}>
         <div>
           <div style={{ fontSize: "0.72rem", color: "#64748B", textTransform: "uppercase", marginBottom: "0.45rem" }}>
             Why this setup

@@ -193,7 +193,7 @@ export default function MarketsPage() {
   if (!canAccessPortfolioInsights(tier)) return <UpgradeGate requiredTier="pro" feature="Markets Cockpit" />;
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[var(--msp-bg)] px-2 py-3 text-slate-100 md:px-3">
+    <div className="min-h-screen bg-[var(--msp-bg)] px-2 py-3 text-slate-100 md:px-3">
       <div className="mx-auto grid w-full max-w-none gap-2">
         {/* 1. Institutional State Strip — sticky regime/risk/R-budget bar */}
         <InstitutionalStateStrip />

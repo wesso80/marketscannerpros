@@ -410,7 +410,7 @@ export default function CapitalFlowCard({
 
       <div style={{
         display: 'grid',
-        gridTemplateColumns: compact ? '1fr' : 'repeat(auto-fit, minmax(220px, 1fr))',
+        gridTemplateColumns: compact ? '1fr' : 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))',
         gap: '0.45rem',
       }}>
         <div style={{ color: '#CBD5E1', fontSize: '0.72rem' }}>

@@ -380,7 +380,7 @@ export default function TimeConfluenceWidget({
             }}>
               {!alertSet ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <div style={{ flex: 1, minWidth: '150px' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ color: '#E2E8F0', fontSize: '0.85rem', fontWeight: 500 }}>
                       🔔 Set Confluence Alert
                     </div>

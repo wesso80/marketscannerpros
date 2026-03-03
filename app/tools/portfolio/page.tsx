@@ -2833,7 +2833,7 @@ function PortfolioContent() {
       </div>
 
       {/* Main Content */}
-      <div style={{ width: '100%', maxWidth: 'none', margin: '0 auto', padding: '24px 16px', overflowX: 'hidden' }}>
+      <div style={{ width: '100%', maxWidth: 'none', margin: '0 auto', padding: '24px 16px' }}>
         {activeTab === 'overview' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <div style={{

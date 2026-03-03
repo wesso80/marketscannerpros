@@ -188,7 +188,7 @@ function OHLCChart({ data, height = 220 }: { data: [number, number, number, numb
       <svg
         viewBox={`0 0 ${Math.max(chartWidth, data.length * spacing + 40)} ${height}`}
         className="w-full"
-        style={{ minWidth: '420px', maxHeight: `${height}px` }}
+        style={{ minWidth: 'min(420px, 100%)', maxHeight: `${height}px` }}
       >
         {[0, 0.25, 0.5, 0.75, 1].map((pct, i) => {
           const y = 20 + pct * (height - 40);
@@ -467,7 +467,7 @@ function CryptoDetailPageContent() {
     : 'Blocked by governance profile or global gate';
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[var(--msp-bg)] text-white">
+    <div className="min-h-screen bg-[var(--msp-bg)] text-white">
       <div className="mx-auto w-full max-w-none space-y-2 px-2 pb-6 pt-3 md:px-3">
         <header className="rounded-lg border border-slate-700 bg-slate-900 p-2">
           <h1 className="text-lg font-bold text-teal-300">🔍 Crypto Asset Explorer</h1>

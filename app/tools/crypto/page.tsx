@@ -430,7 +430,7 @@ function CryptoCommandCenterContent() {
   }
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[var(--msp-bg)] text-slate-100">
+    <div className="min-h-screen bg-[var(--msp-bg)] text-slate-100">
       <main className="mx-auto w-full max-w-none space-y-2 px-2 pb-6 pt-3 md:px-3">
         <section className="sticky top-2 z-20 flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/95 p-1.5 backdrop-blur">
           {[

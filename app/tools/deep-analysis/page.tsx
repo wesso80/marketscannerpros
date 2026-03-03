@@ -635,7 +635,7 @@ export default function DeepAnalysisPage() {
   // Pro Trader feature gate
   if (!canAccessBacktest(tier)) {
     return (
-      <div className="min-h-screen bg-[var(--msp-bg)] overflow-x-hidden">
+      <div className="min-h-screen bg-[var(--msp-bg)]">
         <ToolsPageHeader badge="PRO TRADER" title="Golden Egg Deep Analysis" subtitle="Find AI-powered market context with structured multi-factor analysis" icon="🥚" />
         <main className="max-w-none px-4 py-8">
           <UpgradeGate requiredTier="pro_trader" feature="Deep Analysis" />
@@ -689,7 +689,7 @@ export default function DeepAnalysisPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--msp-bg)] overflow-x-hidden">
+    <div className="min-h-screen bg-[var(--msp-bg)]">
       <ToolsPageHeader badge="PRO TRADER" title="Golden Egg Deep Analysis" subtitle="Find AI-powered market context with structured multi-factor analysis" icon="🥚" />
       
       <main className="max-w-none px-4 py-8">

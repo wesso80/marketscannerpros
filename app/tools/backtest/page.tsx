@@ -1212,7 +1212,7 @@ function BacktestContent() {
         icon="🧪"
         backHref="/dashboard"
       />
-      <div style={{ maxWidth: 'none', margin: '0 auto', padding: '20px', overflowX: 'hidden' }}>
+      <div style={{ maxWidth: 'none', margin: '0 auto', padding: '20px' }}>
         <div style={{ marginBottom: '12px' }}>
           <RegimeBanner />
         </div>

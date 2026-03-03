@@ -94,7 +94,7 @@ export default function CommandCenterStateBar({ mode, actionableNow, nextStep, h
         Command Center State
       </div>
 
-      <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))' }}>
+      <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit,minmax(min(170px,100%),1fr))' }}>
         <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
           <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Regime</div>
           <div style={{ color: '#e2e8f0', fontSize: '14px', fontWeight: 700 }}>{regime}</div>

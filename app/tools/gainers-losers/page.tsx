@@ -392,7 +392,7 @@ export default function GainersLosersPage() {
         backHref="/dashboard"
       />
       <main style={{ padding: "24px 16px", width: "100%" }}>
-        <div style={{ maxWidth: "none", margin: "0 auto", width: "100%", overflowX: "hidden" }}>
+        <div style={{ maxWidth: "none", margin: "0 auto", width: "100%" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
             <div style={{ color: "#64748b", fontSize: 13 }}>
               {marketDate && <div>📅 Market data: {marketDate}</div>}
@@ -418,7 +418,7 @@ export default function GainersLosersPage() {
             </button>
           </div>
 
-          <div style={{ display: "grid", gap: 12, gridTemplateColumns: "1.15fr 1fr", marginBottom: 16 }}>
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-[1.15fr_1fr]" style={{ marginBottom: 16 }}>
             <div style={{ padding: "12px 14px", background: "var(--msp-panel)", border: "1px solid var(--msp-border)", borderRadius: 10 }}>
               <div style={{ fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase", color: "#64748B", fontWeight: 700 }}>Market Deployment Status</div>
               <div style={{ marginTop: 6, fontSize: 18, fontWeight: 800, color: environment.deploymentMode === "YES" ? "#10B981" : environment.deploymentMode === "CONDITIONAL" ? "#FBBF24" : "#EF4444" }}>
@@ -501,6 +501,7 @@ export default function GainersLosersPage() {
             <div style={{ textAlign: "center", padding: "3rem", color: "#94A3B8" }}>Finding market movers...</div>
           ) : (
             <div style={{ background: "var(--msp-card)", borderRadius: 16, border: "1px solid rgba(51,65,85,0.8)", overflow: "auto", width: "100%" }}>
+              <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
               <div style={{ minWidth: 980, width: "100%" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
@@ -557,6 +558,7 @@ export default function GainersLosersPage() {
                     )}
                   </tbody>
                 </table>
+              </div>
               </div>
             </div>
           )}

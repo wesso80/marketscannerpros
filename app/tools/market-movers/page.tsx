@@ -509,7 +509,7 @@ export default function MarketMoversPage() {
   if (!canAccessPortfolioInsights(tier)) return <UpgradeGate requiredTier="pro" feature="Market Movers" />;
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[var(--msp-bg)] text-white">
+    <div className="min-h-screen bg-[var(--msp-bg)] text-white">
       <ToolsPageHeader
         title="Market Movers"
         subtitle="Status → Action Console → Audit Log → Capabilities"

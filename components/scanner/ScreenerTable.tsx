@@ -194,13 +194,16 @@ export default function ScreenerTable({ rows, onRowClick, selectedSymbol }: Scre
   }
 
   return (
-      <div style={{
-        overflowX: 'auto',
-        borderRadius: 12,
-        border: '1px solid rgba(51, 65, 85, 0.4)',
-        background: 'rgba(15, 23, 42, 0.3)',
-      }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+    <div style={{
+      display: 'block',
+      visibility: 'visible',
+      overflowX: 'auto',
+      borderRadius: 12,
+      border: '1px solid rgba(51, 65, 85, 0.4)',
+      background: 'rgba(15, 23, 42, 0.3)',
+      minHeight: 60,
+    }}>
+      <table style={{ display: 'table', visibility: 'visible', width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
           <tr>
             {COLUMNS.map((col) => (
