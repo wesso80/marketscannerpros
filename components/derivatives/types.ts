@@ -15,8 +15,10 @@ export interface LongShortRatio {
 export interface OpenInterestCoin {
   symbol: string;
   openInterestValue: number;
+  openInterestFormatted?: string;
   change24h: number;
   signal: string;
+  exchanges?: number;
 }
 
 export interface LiquidationCoin {

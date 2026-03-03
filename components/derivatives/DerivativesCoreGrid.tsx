@@ -1,5 +1,12 @@
 import { DashboardData } from './types';
 
+function formatOI(value: number): string {
+  if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
+  if (value >= 1e6) return `$${(value / 1e6).toFixed(0)}M`;
+  if (value >= 1e3) return `$${(value / 1e3).toFixed(0)}K`;
+  return `$${value.toFixed(0)}`;
+}
+
 interface DerivativesCoreGridProps {
   data: DashboardData;
   volRegime: string;
@@ -45,14 +52,26 @@ export default function DerivativesCoreGrid({ data, volRegime, liquidityState }:
           </div>
 
           <div className="rounded-xl border border-white/10 bg-black/10 p-3">
-            <div className="text-xs font-semibold text-white/80 mb-2">Open Interest (Δ 24h)</div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs font-semibold text-white/80">Open Interest</div>
+              {data.openInterest?.summary?.totalOpenInterestFormatted && (
+                <div className="text-xs text-emerald-400 font-mono">{data.openInterest.summary.totalOpenInterestFormatted} total</div>
+              )}
+            </div>
             <div className="grid gap-2">
-              {(data.openInterest?.coins || []).slice(0, 6).map((coin) => (
-                <div key={coin.symbol} className="flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-2">
-                  <div className="text-xs text-white/70">{coin.symbol}</div>
-                  <div className="text-xs font-semibold text-white">{(coin.change24h ?? 0) >= 0 ? '+' : ''}{(coin.change24h ?? 0).toFixed(2)}%</div>
-                </div>
-              ))}
+              {(data.openInterest?.coins || []).slice(0, 6).map((coin) => {
+                const chg = coin.change24h ?? 0;
+                const colorCls = chg > 0 ? 'text-emerald-400' : chg < 0 ? 'text-red-400' : 'text-white/50';
+                return (
+                  <div key={coin.symbol} className="flex items-center justify-between rounded-lg border border-white/10 bg-black/20 px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-white">{coin.symbol}</span>
+                      <span className="text-[11px] text-white/40 font-mono">{coin.openInterestFormatted || formatOI(coin.openInterestValue)}</span>
+                    </div>
+                    <div className={`text-xs font-semibold font-mono ${colorCls}`}>{chg >= 0 ? '+' : ''}{chg.toFixed(2)}%</div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
