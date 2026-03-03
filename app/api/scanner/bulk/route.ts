@@ -346,6 +346,7 @@ interface Indicators {
   aroonDown?: number;
   cci?: number;
   change24h?: number;
+  volume?: number;
 }
 
 function computeScore(indicators: Indicators): { 
@@ -630,6 +631,8 @@ function analyzeAssetByTimeframe(
   const cciValue = cci(bars);
   const rsiValue = rsi(closes);
   
+  // Get volume from last OHLCV bar
+  const lastVolume = ohlcv[ohlcv.length - 1]?.volume;
   const indicators: Indicators = {
     price,
     ema200: emaValue ?? Number.NaN,
@@ -641,7 +644,8 @@ function analyzeAssetByTimeframe(
     aroonUp: aroon.up,
     aroonDown: aroon.down,
     cci: cciValue ?? Number.NaN,
-    change24h
+    change24h,
+    volume: Number.isFinite(lastVolume) && lastVolume > 0 ? lastVolume : undefined,
   };
   
   const { score, direction, signals } = computeScore(indicators);
@@ -980,7 +984,7 @@ function scoreLightCryptoCandidate(coin: {
   direction: 'bullish' | 'bearish' | 'neutral';
   change24h: number;
   signals: { bullish: number; bearish: number; neutral: number };
-  indicators: { price: number };
+  indicators: { price: number; volume?: number };
 } | null {
   const symbol = coin.symbol.toUpperCase();
   const price = Number(coin.current_price);
@@ -1037,7 +1041,7 @@ function scoreLightCryptoCandidate(coin: {
     direction,
     change24h,
     signals: { bullish, bearish, neutral },
-    indicators: { price }
+    indicators: { price, volume: Number.isFinite(volume) && volume > 0 ? volume : undefined }
   };
 }
 
@@ -1229,7 +1233,7 @@ function scoreLightEquityCandidate(
   direction: 'bullish' | 'bearish' | 'neutral';
   change24h: number;
   signals: { bullish: number; bearish: number; neutral: number };
-  indicators: { price: number };
+  indicators: { price: number; volume?: number };
 } | null {
   const price = parseAlphaNumber(quote?.['05. price'] || quote?.price);
   const open = parseAlphaNumber(quote?.['02. open'] || quote?.open);
@@ -1289,7 +1293,7 @@ function scoreLightEquityCandidate(
     direction,
     change24h: dailyChange,
     signals: { bullish, bearish, neutral },
-    indicators: { price },
+    indicators: { price, volume: Number.isFinite(volume) && volume > 0 ? volume : undefined },
   };
 }
 
@@ -1305,7 +1309,7 @@ function computeFullScore(data: CachedScanData): {
   indicators: {
     price: number; rsi?: number; adx?: number; atr?: number; ema200?: number;
     macd_hist?: number; stoch_k?: number; cci?: number;
-    atr_percent?: number;
+    atr_percent?: number; volume?: number;
   };
 } {
   const { price, rsi: rsiVal, macdLine, macdSignal, macdHist, ema200, atr, adx: adxVal, stochK, cci: cciVal } = data;
@@ -1397,6 +1401,7 @@ function computeFullScore(data: CachedScanData): {
       stoch_k: stochK,
       cci: cciVal,
       atr_percent: Number.isFinite(atrPercent) ? Math.round(atrPercent * 100) / 100 : undefined,
+      volume: Number.isFinite(data.volume) && (data.volume ?? 0) > 0 ? data.volume : undefined,
     },
   };
 }
