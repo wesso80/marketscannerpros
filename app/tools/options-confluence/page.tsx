@@ -2728,19 +2728,6 @@ export default function OptionsConfluenceScanner() {
 
               <div className={`grid gap-[0.6rem] rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel)] p-3 ${adaptiveModeMeta.layout.marketOrderClass}`}>
                 <div className="text-[0.7rem] font-bold uppercase text-slate-400">Market Surface</div>
-                {confluenceRadar && (
-                  <div className="flex items-center justify-center">
-                    <svg width="190" height="190" viewBox={`0 0 ${confluenceRadar.size} ${confluenceRadar.size}`} role="img" aria-label="Confluence Radar Mini">
-                      {confluenceRadar.ringPolygons.map((ring, idx) => (
-                        <polygon key={`mini-ring-${idx}`} points={ring} fill="none" stroke="var(--msp-border)" strokeWidth={idx === confluenceRadar.ringPolygons.length - 1 ? 1.15 : 0.85} />
-                      ))}
-                      {confluenceRadar.axisLines.map((line, idx) => (
-                        <line key={`mini-axis-${idx}`} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} stroke="var(--msp-text-faint)" strokeWidth={1} />
-                      ))}
-                      <polygon points={confluenceRadar.dataPolygon} fill="var(--msp-accent-glow)" stroke="var(--msp-accent)" strokeWidth={2} />
-                    </svg>
-                  </div>
-                )}
                 <div className="grid grid-cols-2 gap-[0.35rem]">
                   <div className="rounded-lg bg-black/20 p-[0.45rem]">
                     <div className="text-[0.62rem] font-bold uppercase text-slate-500">Current Price</div>
