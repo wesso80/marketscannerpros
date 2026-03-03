@@ -1472,7 +1472,7 @@ export default function DeepAnalysisPage() {
                   Options Flow (Weekly Expiry)
                   <span style={{ marginLeft: "auto", fontSize: "0.7rem", background: "rgba(16,185,129,0.2)", padding: "2px 8px", borderRadius: "10px", color: "#10B981" }}>ADMIN PREVIEW</span>
                 </h3>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "1rem" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(120px, 100%), 1fr))", gap: "1rem" }}>
                   <div style={{ textAlign: "center", padding: "1rem", background: "rgba(0,0,0,0.2)", borderRadius: "10px" }}>
                     <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.25rem" }}>Put/Call Ratio</div>
                     <div style={{ color: result.optionsData.putCallRatio > 1 ? "#EF4444" : "#10B981", fontSize: "1.25rem", fontWeight: "bold" }}>

@@ -443,7 +443,7 @@ export default function GainersLosersPage() {
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(140px, 100%), 1fr))", gap: 12, marginBottom: 16 }}>
             <button onClick={() => setActiveTab("gainers")} style={{ padding: "14px 20px", background: activeTab === "gainers" ? "rgba(16,185,129,0.2)" : "rgba(15,23,42,0.8)", border: activeTab === "gainers" ? "1px solid rgba(16,185,129,0.5)" : "1px solid rgba(51,65,85,0.8)", borderRadius: 12, color: activeTab === "gainers" ? "#10B981" : "#94A3B8", fontWeight: 600, cursor: "pointer" }}>🚀 Top Gainers</button>
             <button onClick={() => setActiveTab("losers")} style={{ padding: "14px 20px", background: activeTab === "losers" ? "rgba(239,68,68,0.2)" : "rgba(15,23,42,0.8)", border: activeTab === "losers" ? "1px solid rgba(239,68,68,0.5)" : "1px solid rgba(51,65,85,0.8)", borderRadius: 12, color: activeTab === "losers" ? "#EF4444" : "#94A3B8", fontWeight: 600, cursor: "pointer" }}>📉 Top Losers</button>
             <button onClick={() => setActiveTab("active")} style={{ padding: "14px 20px", background: activeTab === "active" ? "var(--msp-panel)" : "rgba(15,23,42,0.8)", border: activeTab === "active" ? "1px solid var(--msp-border)" : "1px solid rgba(51,65,85,0.8)", borderRadius: 12, color: activeTab === "active" ? "var(--msp-accent)" : "#94A3B8", fontWeight: 600, cursor: "pointer" }}>🔥 Most Active</button>

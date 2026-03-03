@@ -158,7 +158,7 @@ export default function AdminCostsPage() {
       </div>
 
       {/* Key cost metrics */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(180px, 100%), 1fr))", gap: "1rem", marginBottom: "2rem" }}>
         <div style={statBoxStyle}>
           <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "#10B981" }}>
             {formatCost(stats?.today.cost || 0)}

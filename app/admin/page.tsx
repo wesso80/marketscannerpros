@@ -217,7 +217,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
       </div>
 
       {/* Key metrics */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(200px, 100%), 1fr))", gap: "1rem", marginBottom: "2rem" }}>
         <div style={statBoxStyle}>
           <div style={{ fontSize: "2rem", fontWeight: 700, color: "#10B981" }}>
             {stats?.overview.totalWorkspaces || 0}
@@ -400,7 +400,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
         </div>
 
         {/* Learning Totals */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(140px, 100%), 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
           <div style={statBoxStyle}>
             <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#A855F7" }}>
               {stats?.learning?.totals?.total_predictions || 0}

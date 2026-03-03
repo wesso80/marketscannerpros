@@ -185,7 +185,7 @@ export default function AdminTrialsPage() {
           )}
 
           <form onSubmit={grantTrial}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "16px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(200px, 100%), 1fr))", gap: "16px", marginBottom: "16px" }}>
               <div>
                 <label style={{ display: "block", color: "#94a3b8", fontSize: "13px", marginBottom: "6px" }}>
                   Email Address *

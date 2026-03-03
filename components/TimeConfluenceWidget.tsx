@@ -306,6 +306,7 @@ export default function TimeConfluenceWidget({
                   borderRadius: '10px',
                   padding: '1rem',
                   width: '280px',
+                  maxWidth: '90vw',
                   zIndex: 100,
                   textAlign: 'left',
                   boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
@@ -689,7 +690,7 @@ export default function TimeConfluenceWidget({
               <div style={{ color: '#64748B', fontSize: '0.75rem', marginBottom: '0.75rem' }}>
                 MACRO TIMEFRAME GUIDE
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '0.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100px, 100%), 1fr))', gap: '0.5rem' }}>
                 {[
                   { label: 'Daily', days: '1', color: '#64748B' },
                   { label: 'Weekly', days: '5', color: 'var(--msp-accent)' },

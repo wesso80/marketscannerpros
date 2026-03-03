@@ -140,7 +140,7 @@ export default function PartnersPage() {
 
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))',
             gap: 24,
             marginBottom: 40
           }}>
@@ -213,7 +213,7 @@ export default function PartnersPage() {
 
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))',
             gap: 16,
             marginBottom: 32
           }}>
@@ -273,7 +273,7 @@ export default function PartnersPage() {
 
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))',
             gap: 32,
             marginBottom: 40
           }}>
@@ -526,7 +526,7 @@ export default function PartnersPage() {
 
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))',
               gap: 16,
               marginBottom: 24
             }}>
@@ -570,7 +570,7 @@ export default function PartnersPage() {
 
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))',
             gap: 24,
             marginBottom: 40
           }}>
@@ -670,7 +670,7 @@ export default function PartnersPage() {
 
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(250px, 100%), 1fr))',
             gap: 20
           }}>
             {[

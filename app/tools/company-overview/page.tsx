@@ -523,7 +523,7 @@ function CompanyOverviewContent() {
                   </span>
                 )}
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(180px, 100%), 1fr))", gap: "1rem" }}>
                 <MetricCard label="Market Cap" value={formatMarketCap(data.marketCap)} />
                 <MetricCard label="P/E Ratio" value={formatValue(data.pe)} />
                 <MetricCard label="PEG Ratio" value={formatValue(data.peg)} />
@@ -544,7 +544,7 @@ function CompanyOverviewContent() {
             {/* Profitability */}
             <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid var(--msp-border)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
               <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "var(--msp-bull)", marginBottom: "20px" }}>💰 Profitability</h3>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(180px, 100%), 1fr))", gap: "1rem" }}>
                 <MetricCard label="Profit Margin" value={formatPercentRaw(data.profitMargin)} />
                 <MetricCard label="Operating Margin" value={formatPercentRaw(data.operatingMargin)} />
                 <MetricCard label="ROE" value={formatPercentRaw(data.returnOnEquity)} />
@@ -556,7 +556,7 @@ function CompanyOverviewContent() {
             {/* Growth & Revenue */}
             <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid var(--msp-border)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
               <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "var(--msp-bull)", marginBottom: "20px" }}>📈 Growth & Revenue</h3>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(180px, 100%), 1fr))", gap: "1rem" }}>
                 <MetricCard label="Revenue TTM" value={formatMarketCap(data.revenue)} />
                 <MetricCard label="Gross Profit TTM" value={formatMarketCap(data.grossProfit)} />
                 <MetricCard 
@@ -575,7 +575,7 @@ function CompanyOverviewContent() {
             {/* Technical Indicators */}
             <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid var(--msp-border)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
               <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "var(--msp-bull)", marginBottom: "20px" }}>📉 Technical</h3>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(180px, 100%), 1fr))", gap: "1rem" }}>
                 <MetricCard label="50-Day MA" value={`$${formatValue(data.day50MA)}`} />
                 <MetricCard label="200-Day MA" value={`$${formatValue(data.day200MA)}`} />
                 <MetricCard label="52-Week High" value={`$${formatValue(data.week52High)}`} />
@@ -587,7 +587,7 @@ function CompanyOverviewContent() {
             {data.dividendYield && parseFloat(data.dividendYield) > 0 && (
               <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid var(--msp-border)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
                 <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "var(--msp-bull)", marginBottom: "20px" }}>💵 Dividends</h3>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(180px, 100%), 1fr))", gap: "1rem" }}>
                   <MetricCard label="Dividend Yield" value={formatPercentRaw(data.dividendYield)} />
                 </div>
               </div>

@@ -118,7 +118,7 @@ export default function AdminIncomePage() {
         <h2 style={{ fontSize: "1.25rem", fontWeight: 600, color: "#10B981", marginBottom: "1rem" }}>
           📈 This Month&apos;s Summary
         </h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "1rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(150px, 100%), 1fr))", gap: "1rem" }}>
           <div style={statBoxStyle}>
             <div style={{ color: "#9CA3AF", fontSize: "0.75rem", marginBottom: "0.25rem" }}>
               Gross Revenue
@@ -163,7 +163,7 @@ export default function AdminIncomePage() {
       </div>
 
       {/* Two column layout */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "1.5rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(300px, 100%), 1fr))", gap: "1.5rem" }}>
         
         {/* Revenue Section */}
         <div style={cardStyle}>

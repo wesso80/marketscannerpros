@@ -126,7 +126,7 @@ export default function AdminAIUsagePage() {
       )}
 
       {/* Summary stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(180px, 100%), 1fr))", gap: "1rem", marginBottom: "2rem" }}>
         <div style={{ ...cardStyle, textAlign: "center" }}>
           <div style={{ fontSize: "2rem", fontWeight: 700, color: "var(--msp-accent)" }}>{totalQuestionsToday}</div>
           <div style={{ color: "#9CA3AF", fontSize: "0.875rem" }}>Questions Today</div>

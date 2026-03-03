@@ -1878,7 +1878,8 @@ function ScannerContent() {
                 {/* Screener Table View */}
                 {bulkViewMode === 'table' && rankedCandidates.length > 0 && (
                   <div style={{ display: 'block', visibility: 'visible', minHeight: 100 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '40px 100px 65px 65px 70px 130px 55px 55px 60px 50px 90px 85px', gap: 0, borderRadius: 12, border: '1px solid rgba(51, 65, 85, 0.4)', background: 'rgba(15, 23, 42, 0.3)', overflowX: 'auto', fontSize: 13 }}>
+                    <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '40px 100px 65px 65px 70px 130px 55px 55px 60px 50px 90px 85px', gap: 0, borderRadius: 12, border: '1px solid rgba(51, 65, 85, 0.4)', background: 'rgba(15, 23, 42, 0.3)', fontSize: 13, minWidth: 865 }}>
                       {/* Header */}
                       {['#', 'Symbol', 'Dir', 'Conf', 'Quality', 'Strategy', 'RSI', 'ADX', 'Vol%', 'MTF', 'Volume', 'Rule'].map((h) => (
                         <div key={h} style={{ padding: '8px', color: '#64748b', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid rgba(51, 65, 85, 0.5)', background: 'rgba(15, 23, 42, 0.95)', whiteSpace: 'nowrap' }}>{h}</div>
@@ -1922,6 +1923,7 @@ function ScannerContent() {
                           </React.Fragment>
                         );
                       })}
+                    </div>
                     </div>
                   </div>
                 )}
@@ -2945,7 +2947,7 @@ function ScannerContent() {
               </label>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', marginBottom: '0.6rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: '10px', marginBottom: '0.6rem' }}>
               <label style={{ display: 'grid', gap: '5px', color: 'var(--msp-text-muted)', fontSize: '0.78rem' }}>
                 <span>Score Threshold</span>
                 <input
@@ -3692,7 +3694,7 @@ function ScannerContent() {
                   <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.66rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.35rem' }}>
                     Signal Blocks • Instant Read
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.38rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(150px, 100%), 1fr))', gap: '0.38rem' }}>
                     {[
                       { label: 'Structure', value: trendAligned ? '✔ ALIGNED' : '⚠ MISALIGNED', tone: trendAligned ? 'var(--msp-bull)' : 'var(--msp-bear)' },
                       { label: 'Momentum', value: momentumAligned ? '✔ CONFIRMED' : '⚠ WEAK', tone: momentumAligned ? 'var(--msp-bull)' : 'var(--msp-warn)' },
@@ -3791,7 +3793,7 @@ function ScannerContent() {
                   borderRadius: '10px',
                   padding: '0.75rem 0.8rem',
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))',
                   gap: '0.45rem',
                 }}>
                   <div><div style={{ color: 'var(--msp-neutral)', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Direction</div><div style={{ color: direction === 'bullish' ? 'var(--msp-bull)' : direction === 'bearish' ? 'var(--msp-bear)' : 'var(--msp-warn)', fontWeight: 900 }}>{direction.toUpperCase()}</div></div>
@@ -4413,7 +4415,7 @@ function ScannerContent() {
 
                                 <div style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border-strong)', borderRadius: '8px', padding: '0.7rem' }}>
                                   <div style={{ color: 'var(--msp-accent)', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.36rem' }}>Layer C • Execution Trigger</div>
-                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.34rem', color: 'var(--msp-text-muted)', fontSize: '0.74rem' }}>
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: '0.34rem', color: 'var(--msp-text-muted)', fontSize: '0.74rem' }}>
                                     <div>Direction: <span style={{ color: directionColor, fontWeight: 900 }}>{direction.toUpperCase()}</span></div>
                                     <div>Confidence: <span style={{ color: 'var(--msp-text)', fontWeight: 900 }}>{confidence}%</span></div>
                                     <div>Quality: <span style={{ color: qualityGate === 'HIGH' ? 'var(--msp-bull)' : qualityGate === 'MODERATE' ? 'var(--msp-warn)' : 'var(--msp-bear)', fontWeight: 900 }}>{qualityGate}</span></div>
@@ -4506,7 +4508,7 @@ function ScannerContent() {
                                     ))}
                                   </div>
 
-                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.35rem', marginBottom: '0.48rem' }}>
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(150px, 100%), 1fr))', gap: '0.35rem', marginBottom: '0.48rem' }}>
                                     <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.73rem' }}>Edge: <span style={{ color: executionEdgeColor, fontWeight: 900 }}>{executionEdgeScore}%</span></div>
                                     <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.73rem' }}>Time: <span style={{ color: timeTriggerColor, fontWeight: 900 }}>{timeTriggerState}</span></div>
                                     <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.73rem' }}>Permission: <span style={{ color: permissionColor, fontWeight: 900 }}>{permissionAllowed ? 'YES' : 'NO'}</span></div>
@@ -4864,7 +4866,7 @@ function ScannerContent() {
             {result && (
               <div style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                gridTemplateColumns: "repeat(auto-fit, minmax(min(200px, 100%), 1fr))",
                 gap: "1rem",
                 marginBottom: "1.5rem",
               }}>
@@ -5232,7 +5234,7 @@ function ScannerContent() {
               <div style={{ color: "#60A5FA", fontWeight: "600", marginBottom: "0.75rem", fontSize: "0.9rem" }}>
                 📊 How Your Score is Calculated
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", fontSize: "0.85rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(200px, 100%), 1fr))", gap: "1rem", fontSize: "0.85rem" }}>
                 <div>
                   <div style={{ color: "#94A3B8", fontWeight: "500", marginBottom: "0.3rem" }}>
                     ✓ EMA200 Trend
@@ -5312,7 +5314,7 @@ function ScannerContent() {
                 </div>
                 <div style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(min(110px, 100%), 1fr))",
                   gap: "1rem",
                 }}>
               {/* Score */}

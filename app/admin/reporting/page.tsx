@@ -309,7 +309,7 @@ export default function AdminReportingPage() {
         <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#10B981", marginTop: 0, marginBottom: "1rem" }}>
           📡 Live Subscriber Snapshot
         </h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "0.75rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(140px, 100%), 1fr))", gap: "0.75rem" }}>
           <div style={statBox}>
             <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "#E5E7EB" }}>{snapshot?.total ?? 0}</div>
             <div style={{ fontSize: "0.75rem", color: "#9CA3AF" }}>Total Active</div>
@@ -516,7 +516,7 @@ export default function AdminReportingPage() {
               { label: "Delayed", value: latest.delayed_users, color: "#6B7280" },
             ];
             return (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "0.75rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(130px, 100%), 1fr))", gap: "0.75rem" }}>
                 {items.map(it => (
                   <div key={it.label} style={statBox}>
                     <div style={{ fontSize: "1.5rem", fontWeight: 700, color: it.color }}>{it.value}</div>
