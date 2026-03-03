@@ -2006,7 +2006,7 @@ function BacktestContent() {
                   {showInverseComparison ? 'Hide Inverse Compare' : 'Run Inverse (Short) Compare'}
                 </button>
               </div>
-              <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))' }}>
+              <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit,minmax(min(170px,100%),1fr))' }}>
                 <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
                   <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Edge State</div>
                   <div style={{ color: results.profitFactor >= 1.25 ? '#10b981' : results.profitFactor >= 1 ? '#fbbf24' : '#ef4444', fontSize: '14px', fontWeight: 700 }}>
@@ -2047,7 +2047,7 @@ function BacktestContent() {
                   <div style={{ color: '#fecaca', fontSize: '12px', marginBottom: '8px' }}>
                     Mirrors each signal direction in the same sample window to simulate long-fail vs short-side outcome.
                   </div>
-                  <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))' }}>
+                  <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit,minmax(min(170px,100%),1fr))' }}>
                     <div style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(148,163,184,0.28)', borderRadius: '8px', padding: '8px 10px' }}>
                       <div style={{ color: '#94a3b8', fontSize: '11px' }}>Return</div>
                       <div style={{ color: '#e2e8f0', fontSize: '12px' }}>Base: {results.totalReturn >= 0 ? '+' : ''}{results.totalReturn.toFixed(2)}%</div>

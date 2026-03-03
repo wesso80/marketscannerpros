@@ -3160,7 +3160,7 @@ function ScannerContent() {
               <div className="mb-2 text-base font-extrabold text-[var(--msp-text)]">
                 {operatorTransition.symbol} — {operatorTransition.timeframe.toUpperCase()}
               </div>
-              <div className="grid gap-2 text-left [grid-template-columns:repeat(auto-fit,minmax(145px,1fr))]">
+              <div className="grid gap-2 text-left [grid-template-columns:repeat(auto-fit,minmax(min(145px,100%),1fr))]">
                 <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2.5 py-2">
                   <div className="text-[0.62rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Edge Score</div>
                   <div className="text-[0.84rem] font-extrabold text-[var(--msp-text)]">{operatorTransition.edgeScore} ({operatorTransition.quality})</div>

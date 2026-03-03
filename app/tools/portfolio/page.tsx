@@ -2466,7 +2466,7 @@ function PortfolioContent() {
 
       {/* Top Stats Bar */}
       <div className="border-b border-slate-700/60 bg-[var(--msp-bg)] px-4 py-6">
-        <div className="grid w-full max-w-none gap-4 [grid-template-columns:repeat(auto-fit,minmax(140px,1fr))]">
+        <div className="grid w-full max-w-none gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(140px,100%),1fr))]">
           <div className="rounded-xl border border-slate-700/50 bg-[var(--msp-panel)] p-4">
             <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.05em] text-slate-400">Market Value</div>
             <div className="text-[22px] font-bold text-slate-200">
@@ -2846,7 +2846,7 @@ function PortfolioContent() {
               <div style={{ color: '#94a3b8', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px' }}>
                 Executive Summary
               </div>
-              <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))' }}>
+              <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit,minmax(min(180px,100%),1fr))' }}>
                 <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
                   <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Portfolio Health</div>
                   <div style={{ color: portfolioHealthLabel.includes('Needs') ? '#f59e0b' : portfolioHealthLabel === 'Strong' ? '#10b981' : '#e2e8f0', fontSize: '14px', fontWeight: 700 }}>{portfolioHealthLabel}</div>

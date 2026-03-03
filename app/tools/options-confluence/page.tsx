@@ -2670,7 +2670,7 @@ export default function OptionsConfluenceScanner() {
                   <span className="text-slate-400">{adaptiveModeMeta.reason}</span>
                 </div>
 
-                <div className="mt-[0.55rem] grid gap-[0.4rem] [grid-template-columns:repeat(auto-fit,minmax(175px,1fr))]">
+                <div className="mt-[0.55rem] grid gap-[0.4rem] [grid-template-columns:repeat(auto-fit,minmax(min(175px,100%),1fr))]">
                   <div className="rounded-lg bg-[var(--msp-panel-2)] p-2">
                     <div className="text-[0.64rem] font-bold uppercase text-slate-500">Direction</div>
                     <div className="text-[0.82rem] font-black text-slate-50">{terminalDecisionCard.direction}</div>
@@ -2803,7 +2803,7 @@ export default function OptionsConfluenceScanner() {
                   <div className="text-[0.9rem] font-black text-[var(--msp-accent)]">Composite {confluenceRadar.composite}%</div>
                 </div>
 
-                <div className="mt-[0.55rem] grid items-center gap-3 [grid-template-columns:minmax(220px,260px)_minmax(0,1fr)]">
+                <div className="mt-[0.55rem] grid items-center gap-3 [grid-template-columns:1fr] sm:[grid-template-columns:minmax(220px,260px)_minmax(0,1fr)]">
                   <div className="flex justify-center">
                     <svg width={confluenceRadar.size} height={confluenceRadar.size} viewBox={`0 0 ${confluenceRadar.size} ${confluenceRadar.size}`} role="img" aria-label="Confluence Radar">
                       {confluenceRadar.ringPolygons.map((ring, idx) => (
@@ -2852,7 +2852,7 @@ export default function OptionsConfluenceScanner() {
                     </svg>
                   </div>
 
-                  <div className="grid gap-[0.35rem] [grid-template-columns:repeat(auto-fit,minmax(145px,1fr))]">
+                  <div className="grid gap-[0.35rem] [grid-template-columns:repeat(auto-fit,minmax(min(145px,100%),1fr))]">
                     {confluenceRadar.axes.map((axis) => (
                       <div key={axis.key} className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
                         <div className="text-[0.64rem] font-bold uppercase text-slate-500">{axis.key}</div>
@@ -2877,7 +2877,7 @@ export default function OptionsConfluenceScanner() {
                 {institutionalLensMode === 'ARMED' && 'Institutional alignment confirmed. Execution panel prioritized; non-essential analysis collapsed.'}
                 {institutionalLensMode === 'EXECUTE' && (hasActiveTradeForSymbol ? 'Live management mode active. Focus on risk, flow shifts, and exit discipline.' : 'Extreme confidence focus mode active. Only execution-critical data remains visible.')}
               </div>
-              <div className="mt-2 grid gap-[0.35rem] [grid-template-columns:repeat(auto-fit,minmax(165px,1fr))]">
+              <div className="mt-2 grid gap-[0.35rem] [grid-template-columns:repeat(auto-fit,minmax(min(165px,100%),1fr))]">
                 <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
                   <div className="text-[0.64rem] font-bold uppercase text-slate-500">MRI Regime</div>
                   <div className="text-[0.77rem] font-extrabold text-slate-200">{marketRegimeIntel?.regime || 'UNKNOWN'}</div>
@@ -2933,7 +2933,7 @@ export default function OptionsConfluenceScanner() {
                       </div>
                     </div>
 
-                    <div className="mt-[0.55rem] grid gap-[0.35rem] [grid-template-columns:repeat(auto-fit,minmax(170px,1fr))]">
+                    <div className="mt-[0.55rem] grid gap-[0.35rem] [grid-template-columns:repeat(auto-fit,minmax(min(170px,100%),1fr))]">
                       <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
                         <div className="text-[0.64rem] font-bold uppercase text-slate-500">Expected Path</div>
                         <div className="text-[0.77rem] font-extrabold text-slate-200">
@@ -2980,7 +2980,7 @@ export default function OptionsConfluenceScanner() {
                 {institutionalLensMode === 'ARMED' ? (
                   <>
                     <div className="text-[0.95rem] font-black tracking-[0.35px] text-slate-200">████ EXECUTION CARD ████</div>
-                    <div className="grid gap-[0.55rem] [grid-template-columns:repeat(auto-fit,minmax(210px,1fr))]">
+                    <div className="grid gap-[0.55rem] [grid-template-columns:repeat(auto-fit,minmax(min(210px,100%),1fr))]">
                       <div className="rounded-[10px] bg-black/20 p-[0.55rem_0.65rem]">
                         <div className="text-[0.66rem] font-bold uppercase text-slate-500">Entry Zone</div>
                         <div className="text-[0.88rem] font-extrabold text-slate-200">{result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)} - ${result.tradeLevels.entryZone.high.toFixed(2)}` : 'Await trigger'}</div>
@@ -3008,7 +3008,7 @@ export default function OptionsConfluenceScanner() {
                 ) : (
                   <>
                     <div className="text-[0.95rem] font-black tracking-[0.35px] text-slate-200">████ LIVE MANAGEMENT ████</div>
-                    <div className="grid gap-[0.55rem] [grid-template-columns:repeat(auto-fit,minmax(210px,1fr))]">
+                    <div className="grid gap-[0.55rem] [grid-template-columns:repeat(auto-fit,minmax(min(210px,100%),1fr))]">
                       <div className="rounded-[10px] bg-black/20 p-[0.55rem_0.65rem]">
                         <div className="text-[0.66rem] font-bold uppercase text-slate-500">Live PnL</div>
                         <div className="text-[0.88rem] font-extrabold text-slate-200">Track in Journal / Broker</div>
@@ -3040,7 +3040,7 @@ export default function OptionsConfluenceScanner() {
                 <span>Context Layer</span>
                 <span className="rounded-full border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-[2px] text-[0.67rem] text-slate-300">Context Score {contextScore}</span>
               </div>
-              <div className="mb-[0.55rem] grid gap-[0.45rem] [grid-template-columns:repeat(auto-fit,minmax(170px,1fr))]">
+              <div className="mb-[0.55rem] grid gap-[0.45rem] [grid-template-columns:repeat(auto-fit,minmax(min(170px,100%),1fr))]">
                 <div className="rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.45rem_0.55rem]">
                   <div className="text-[0.6rem] font-bold uppercase text-slate-500">Vol Fit</div>
                   <div className="text-[0.82rem] font-extrabold text-slate-100">{typeof layerMetricVolFit === 'number' ? layerMetricVolFit.toFixed(2) : '—'}</div>
@@ -3054,7 +3054,7 @@ export default function OptionsConfluenceScanner() {
                   <div className="text-[0.82rem] font-extrabold text-slate-100">{typeof layerMetricLiquidity === 'number' ? layerMetricLiquidity.toFixed(2) : '—'}</div>
                 </div>
               </div>
-              <div className="grid gap-[0.45rem] [grid-template-columns:repeat(auto-fit,minmax(210px,1fr))]">
+              <div className="grid gap-[0.45rem] [grid-template-columns:repeat(auto-fit,minmax(min(210px,100%),1fr))]">
                 <div className="rounded-[10px] border border-slate-500/20 bg-slate-900/35 p-[0.5rem_0.6rem] opacity-[0.88]">
                   <div className="text-[0.66rem] font-bold uppercase text-slate-500">Flow State</div>
                   <div className="text-[0.85rem] font-extrabold text-slate-200">{institutionalFlowState}</div>
@@ -3114,7 +3114,7 @@ export default function OptionsConfluenceScanner() {
 
               <div className="rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.6rem_0.7rem]">
                 <div className="mb-1 text-[0.66rem] font-bold uppercase text-slate-400">Execution Layer</div>
-                <div className="grid gap-[0.4rem] [grid-template-columns:repeat(auto-fit,minmax(160px,1fr))]">
+                <div className="grid gap-[0.4rem] [grid-template-columns:repeat(auto-fit,minmax(min(160px,100%),1fr))]">
                   <div className="text-[0.78rem] text-slate-200">Execution Score <span className="font-black">{executionScore}</span></div>
                   <div className="text-[0.78rem] text-slate-200">Fill Quality <span className="font-black">{typeof layerMetricFill === 'number' ? layerMetricFill.toFixed(2) : '—'}</span></div>
                   <div className="text-[0.78rem] text-slate-200">Time Fit <span className="font-black">{typeof layerMetricTimeFit === 'number' ? layerMetricTimeFit.toFixed(2) : '—'}</span></div>
@@ -3148,7 +3148,7 @@ export default function OptionsConfluenceScanner() {
                   )}
                 </div>
 
-                <div className="grid items-center gap-[0.4rem] [grid-template-columns:repeat(auto-fit,minmax(210px,1fr))]">
+                <div className="grid items-center gap-[0.4rem] [grid-template-columns:repeat(auto-fit,minmax(min(210px,100%),1fr))]">
                   <div>
                     <div className="text-[0.67rem] font-bold uppercase text-slate-400">Setup Fit Score</div>
                     <div className="text-[1.02rem] font-black text-slate-50">
@@ -3216,7 +3216,7 @@ export default function OptionsConfluenceScanner() {
                 </div>
               </div>
 
-              <div className="grid items-center gap-2 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
+              <div className="grid items-center gap-2 [grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr))]">
                 <div className="text-[0.8rem] text-slate-300">
                   <span className="font-bold uppercase text-slate-500">Risk State:</span>{' '}
                   <span className={`font-extrabold ${riskState === 'NORMAL' ? 'text-emerald-500' : riskState === 'ELEVATED' ? 'text-amber-500' : 'text-red-500'}`}>{riskState}</span>
@@ -3285,7 +3285,7 @@ export default function OptionsConfluenceScanner() {
                 <div className="text-[0.72rem] text-slate-500">Left → Center → Right → Down</div>
               </div>
 
-              <div className="grid gap-[0.45rem] [grid-template-columns:repeat(auto-fit,minmax(130px,1fr))]">
+              <div className="grid gap-[0.45rem] [grid-template-columns:repeat(auto-fit,minmax(min(130px,100%),1fr))]">
                 {heatSignalStrip.map((item) => (
                   <div key={item.label} className="flex items-center justify-between gap-[0.45rem] rounded-lg border border-slate-400/25 bg-black/20 p-[0.42rem_0.5rem] text-[0.7rem]">
                     <span className="font-bold text-slate-400">{item.label}</span>
@@ -3519,7 +3519,7 @@ export default function OptionsConfluenceScanner() {
                     </span>
                   </div>
 
-                  <div className="grid gap-[0.45rem] [grid-template-columns:repeat(auto-fit,minmax(200px,1fr))]">
+                  <div className="grid gap-[0.45rem] [grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr))]">
                     <div className="rounded-[10px] bg-black/20 p-[0.5rem_0.6rem]">
                       <div className="text-[0.66rem] font-bold uppercase text-slate-500">Pattern</div>
                         <div className={`text-[0.86rem] font-extrabold ${!bestPattern ? 'text-amber-500' : bestPattern.bias === 'bullish' ? 'text-emerald-500' : bestPattern.bias === 'bearish' ? 'text-red-500' : 'text-amber-500'}`}>{bestPattern?.name || 'No clear pattern yet'}</div>
