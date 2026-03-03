@@ -263,7 +263,7 @@ function ScannerContent() {
   const [bulkScanResults, setBulkScanResults] = useState<{
     type: string;
     timeframe: string;
-    mode?: 'deep' | 'light' | 'hybrid';
+    mode?: 'deep' | 'light' | 'hybrid' | 'cached';
     sourceCoinsFetched?: number;
     sourceSymbols?: number;
     apiCallsUsed?: number;
@@ -864,9 +864,7 @@ function ScannerContent() {
     const rawPicks = bulkScanResults.topPicks.slice(0, 15).map((pick: any) => {
       const rawScore = pick?.scoreV2?.final?.confidence ?? pick.score ?? 50;
       const dir = pick.direction === 'bullish' ? 'long' : pick.direction === 'bearish' ? 'short' : 'neutral';
-      const conf = dir === 'short'
-        ? Math.max(1, Math.min(99, Math.round(100 - rawScore)))
-        : Math.max(1, Math.min(99, Math.round(rawScore)));
+      const conf = Math.max(1, Math.min(99, Math.round(rawScore)));
       return { ...pick, _direction: dir, _confidence: conf, _quality: conf >= 70 ? 'high' : conf >= 55 ? 'medium' : 'low' };
     });
     const bullish = rawPicks.filter((p: any) => p._direction === 'long').length;
@@ -1140,16 +1138,15 @@ function ScannerContent() {
   const rankedCandidates = React.useMemo(() => {
     if (!bulkScanResults?.topPicks?.length) return [] as Array<any>;
 
-    const isFastModeResults = bulkScanResults.mode === 'light' || bulkScanResults.mode === 'hybrid';
+    const isFastModeResults = bulkScanResults.mode === 'light' || bulkScanResults.mode === 'hybrid' || bulkScanResults.mode === 'cached';
     const effectiveMinConfidence = isFastModeResults ? Math.min(rankMinConfidence, 45) : rankMinConfidence;
 
     const withMeta = bulkScanResults.topPicks.map((pick: any, idx: number) => {
       const rawScore = pick?.scoreV2?.final?.confidence ?? pick.score ?? 50;
       const direction = pick.direction === 'bullish' ? 'long' : pick.direction === 'bearish' ? 'short' : 'all';
-      // For bearish picks, confidence is inverted: score 25 → 75% confident bearish
-      const confidence = direction === 'short'
-        ? Math.max(1, Math.min(99, Math.round(100 - rawScore)))
-        : Math.max(1, Math.min(99, Math.round(rawScore)));
+      // Score already represents signal strength — higher = stronger signal regardless of direction
+      // e.g. score 89 bearish = 89% confidence short, score 74 bullish = 74% confidence long
+      const confidence = Math.max(1, Math.min(99, Math.round(rawScore)));
       const quality = (pick?.scoreV2?.final?.qualityTier as 'high' | 'medium' | 'low' | undefined) ?? (confidence >= 70 ? 'high' : confidence >= 55 ? 'medium' : 'low');
       const atrPercent = Number(pick.indicators?.atr_percent ?? 0);
       const volatility = atrPercent >= 3 ? 'high' : atrPercent >= 1.5 ? 'moderate' : 'low';
