@@ -860,27 +860,35 @@ function ScannerContent() {
     if (result) return; // Step 3 single-symbol handled above
     if (!bulkScanResults?.topPicks?.length) return;
 
-    const picks = rankedCandidates.slice(0, 15); // top 15 for prompt budget
-    const bullish = picks.filter((p: any) => p._direction === 'long').length;
-    const bearish = picks.filter((p: any) => p._direction === 'short').length;
-    const avgConf = picks.length
-      ? Math.round(picks.reduce((s: number, p: any) => s + (p._confidence || 0), 0) / picks.length)
+    // Build lightweight picks directly from bulkScanResults (rankedCandidates declared later)
+    const rawPicks = bulkScanResults.topPicks.slice(0, 15).map((pick: any) => {
+      const rawScore = pick?.scoreV2?.final?.confidence ?? pick.score ?? 50;
+      const dir = pick.direction === 'bullish' ? 'long' : pick.direction === 'bearish' ? 'short' : 'neutral';
+      const conf = dir === 'short'
+        ? Math.max(1, Math.min(99, Math.round(100 - rawScore)))
+        : Math.max(1, Math.min(99, Math.round(rawScore)));
+      return { ...pick, _direction: dir, _confidence: conf, _quality: conf >= 70 ? 'high' : conf >= 55 ? 'medium' : 'low' };
+    });
+    const bullish = rawPicks.filter((p: any) => p._direction === 'long').length;
+    const bearish = rawPicks.filter((p: any) => p._direction === 'short').length;
+    const avgConf = rawPicks.length
+      ? Math.round(rawPicks.reduce((s: number, p: any) => s + (p._confidence || 0), 0) / rawPicks.length)
       : 0;
 
     setPageData({
       skill: 'scanner',
-      symbols: picks.map((p: any) => p.symbol),
+      symbols: rawPicks.map((p: any) => p.symbol),
       data: {
         scanType: bulkScanResults.type,
         timeframe: bulkScanResults.timeframe || timeframe,
         mode: bulkScanResults.mode,
         totalScanned: bulkScanResults.scanned,
         totalResults: bulkScanResults.topPicks.length,
-        displayedResults: picks.length,
+        displayedResults: rawPicks.length,
         averageConfidence: avgConf,
         bullishCount: bullish,
         bearishCount: bearish,
-        topPicks: picks.map((p: any) => ({
+        topPicks: rawPicks.map((p: any) => ({
           symbol: p.symbol,
           direction: p._direction,
           confidence: p._confidence,
@@ -893,9 +901,9 @@ function ScannerContent() {
           volume: p.indicators?.volume,
         })),
       },
-      summary: `Bulk scan (${bulkScanResults.type}): ${bulkScanResults.topPicks.length} setups from ${bulkScanResults.scanned} scanned. ${bullish} bullish, ${bearish} bearish. Avg confidence ${avgConf}%. Top pick: ${picks[0]?.symbol} (${picks[0]?._direction}, ${picks[0]?._confidence}% conf).`,
+      summary: `Bulk scan (${bulkScanResults.type}): ${bulkScanResults.topPicks.length} setups from ${bulkScanResults.scanned} scanned. ${bullish} bullish, ${bearish} bearish. Avg confidence ${avgConf}%. Top pick: ${rawPicks[0]?.symbol} (${rawPicks[0]?._direction}, ${rawPicks[0]?._confidence}% conf).`,
     });
-  }, [result, bulkScanResults, rankedCandidates, timeframe, setPageData]);
+  }, [result, bulkScanResults, timeframe, setPageData]);
 
   // Daily picks call intentionally disabled to avoid background API load
   useEffect(() => {
