@@ -1,7 +1,7 @@
 // =====================================================
-// MSP ANALYST CONTEXT INTELLIGENCE HOOK
+// ARCA AI CONTEXT INTELLIGENCE HOOK
 // Aggregates all platform state into a unified context
-// for the MSP Analyst contextual intelligence layer.
+// for the ARCA AI contextual intelligence layer.
 // Auto-detects changes and triggers re-evaluation.
 // =====================================================
 
@@ -177,7 +177,7 @@ function assessAuthorization(opts: {
   riskLevel: string | null;
 }): { auth: AnalystAuthorization; reason: string | null } {
   if (!opts.isLoggedIn) return { auth: 'BLOCKED', reason: 'Not authenticated — sign in to access analyst.' };
-  if (opts.tier === 'free' || opts.tier === 'anonymous') return { auth: 'BLOCKED', reason: 'MSP Analyst requires Pro or higher tier.' };
+  if (opts.tier === 'free' || opts.tier === 'anonymous') return { auth: 'BLOCKED', reason: 'ARCA AI requires Pro or higher tier.' };
   if (opts.permission === 'NO') return { auth: 'BLOCKED', reason: `Trading blocked by risk governor (risk level: ${opts.riskLevel}).` };
   if (opts.permission === 'CONDITIONAL') return { auth: 'CONDITIONAL', reason: 'Conditional authorization — reduced sizing recommended.' };
   return { auth: 'AUTHORIZED', reason: null };

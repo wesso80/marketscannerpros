@@ -63,7 +63,7 @@ export default function DisclaimerPage() {
         <section>
           <h2 id="accuracy" style={{ fontSize: 22, fontWeight: 650, marginBottom: 12, marginTop: 24, color: '#f9fafb' }}>Data, Signals, AI & Accuracy</h2>
           <p style={{ fontSize: 14, color: '#9ca3af', lineHeight: 1.6 }}>
-            Scores, indicators, signals, and AI-generated insights (MSP Analyst powered by GPT-4) may be incomplete, 
+            Scores, indicators, signals, and AI-generated insights (ARCA AI powered by GPT-4) may be incomplete, 
             delayed, or inaccurate. Market data is sourced from Alpha Vantage Premium API. Availability can be 
             affected by third-party providers. AI responses are for educational purposes only and should not be 
             construed as financial advice. No accuracy or uptime guarantees are made.

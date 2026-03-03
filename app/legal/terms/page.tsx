@@ -65,7 +65,7 @@ export default function TermsPage() {
             <ul style={ulStyle}>
               <li style={liStyle}>The App is provided for educational purposes only.</li>
               <li style={liStyle}><strong style={{ color: '#F59E0B' }}>We do not provide financial, investment, or trading advice.</strong></li>
-              <li style={liStyle}>MSP Analyst AI chatbot (powered by OpenAI GPT-4) provides educational insights only, not financial advice.</li>
+              <li style={liStyle}>ARCA AI chatbot (powered by OpenAI GPT-4) provides educational insights only, not financial advice.</li>
               <li style={liStyle}>AI responses may contain errors or inaccuracies. Always verify information independently.</li>
               <li style={liStyle}>AI usage is subject to daily limits based on your subscription tier (5/50/unlimited questions per day).</li>
               <li style={liStyle}>You are solely responsible for your trading and investment decisions.</li>
@@ -76,7 +76,7 @@ export default function TermsPage() {
             <ul style={ulStyle}>
               <li style={liStyle}>The App offers Free, Pro ($39.99/mo), and Pro Trader ($89.99/mo) plans.</li>
               <li style={liStyle}>Payments are processed securely via Stripe (web/Android) or Apple In-App Purchase (iOS).</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Free Plan:</strong> Limited to Top 10 equities and Top 10 crypto symbols. Includes 5 AI questions per day with MSP Analyst.</li>
+              <li style={liStyle}><strong style={{ color: '#10B981' }}>Free Plan:</strong> Limited to Top 10 equities and Top 10 crypto symbols. Includes 5 AI questions per day with ARCA AI.</li>
               <li style={liStyle}><strong style={{ color: '#10B981' }}>Pro Plan ($39.99/mo):</strong> Unlimited symbol scanning, 50 AI questions per day, CSV exports, advanced charts, and priority support.</li>
               <li style={liStyle}><strong style={{ color: '#10B981' }}>Pro Trader Plan ($89.99/mo):</strong> Unlimited AI questions, real Alpha Vantage backtesting, TradingView script access, and premium support.</li>
               <li style={liStyle}><strong style={{ color: '#10B981' }}>Email Required:</strong> You must provide a valid email address to verify trial eligibility.</li>

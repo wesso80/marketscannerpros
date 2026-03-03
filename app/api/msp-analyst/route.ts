@@ -861,7 +861,7 @@ Always mention which derivatives signals support or contradict your analysis.
       stack: err?.stack?.split('\n').slice(0, 5).join('\n')
     };
     
-    logger.error('MSP Analyst API error', errorDetails);
+    logger.error('ARCA AI API error', errorDetails);
 
     // Return detailed error in development, generic in production
     const isDev = process.env.NODE_ENV === 'development';
@@ -869,7 +869,7 @@ Always mention which derivatives signals support or contradict your analysis.
     return new Response(
       JSON.stringify({
         ok: false,
-        error: err?.message || "Unknown error calling MSP Analyst",
+        error: err?.message || "Unknown error calling ARCA AI",
         ...(isDev || true ? { debug: errorDetails } : {}) // Always show debug for now
       }),
       { status: 500, headers: { "Content-Type": "application/json" } }

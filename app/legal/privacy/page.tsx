@@ -52,7 +52,7 @@ export default function PrivacyPage() {
               <li style={liStyle}><strong style={{ color: '#10B981' }}>Billing:</strong> Processed by Stripe (web/Android) or Apple (iOS); we store minimal subscription status and payment metadata.</li>
               <li style={liStyle}><strong style={{ color: '#10B981' }}>Trial Usage Tracking:</strong> Email address, plan type, workspace ID, and Stripe customer ID stored to prevent trial abuse (one trial per email per plan).</li>
               <li style={liStyle}><strong style={{ color: '#10B981' }}>Usage & Logs:</strong> Diagnostics, error tracking (via Sentry), and server logs for reliability and abuse prevention.</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>AI Interactions:</strong> Questions asked to MSP Analyst (AI chatbot) are tracked by workspace ID for tier limit enforcement. We store question count, tier level, and timestamps. Question content may be logged for debugging but is not used for training.</li>
+              <li style={liStyle}><strong style={{ color: '#10B981' }}>AI Interactions:</strong> Questions asked to ARCA AI (AI chatbot) are tracked by workspace ID for tier limit enforcement. We store question count, tier level, and timestamps. Question content may be logged for debugging but is not used for training.</li>
               <li style={liStyle}><strong style={{ color: '#10B981' }}>Cookies/Storage:</strong> Session cookies for authentication, workspace ID tracking, and user preferences.</li>
               <li style={liStyle}><strong style={{ color: '#10B981' }}>Device Information:</strong> Browser type, IP address, and device fingerprints for fraud prevention and rate limiting.</li>
             </ul>
@@ -73,7 +73,7 @@ export default function PrivacyPage() {
           <Section title="Sharing & processors">
             <ul style={ulStyle}>
               <li style={liStyle}><strong style={{ color: '#10B981' }}>Stripe</strong> (payments & portal).</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>OpenAI</strong> (MSP Analyst AI chatbot powered by GPT-4 - does not train on your data).</li>
+              <li style={liStyle}><strong style={{ color: '#10B981' }}>OpenAI</strong> (ARCA AI chatbot powered by GPT-4 - does not train on your data).</li>
               <li style={liStyle}><strong style={{ color: '#10B981' }}>Alpha Vantage</strong> (real-time and historical market data provider).</li>
               <li style={liStyle}><strong style={{ color: '#10B981' }}>Render</strong> (application hosting and web services).</li>
               <li style={liStyle}><strong style={{ color: '#10B981' }}>Neon</strong> (PostgreSQL database hosting).</li>

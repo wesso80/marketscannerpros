@@ -386,7 +386,7 @@ export default function MSPCopilot({
         }}
       >
         <span style={{ fontSize: '1.25rem' }}>🤖</span>
-        <span>MSP Analyst</span>
+        <span>ARCA AI</span>
       </button>
     );
   }
@@ -417,7 +417,7 @@ export default function MSPCopilot({
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <span style={{ fontSize: '1.5rem' }}>🤖</span>
           <div>
-            <div style={{ fontWeight: '700', color: '#E2E8F0' }}>MSP Analyst</div>
+            <div style={{ fontWeight: '700', color: '#E2E8F0' }}>ARCA AI</div>
             <div style={{ fontSize: '0.75rem', color: '#64748B' }}>{skillConfig.displayName}</div>
           </div>
         </div>
