@@ -3720,109 +3720,17 @@ export default function OptionsConfluenceScanner() {
             </div>
             )}
 
-            {/* Trader Eye Path Layout (Z-Flow) */}
-            {institutionalLensMode === 'OBSERVE' && (
-            <div className="grid gap-[0.9rem] rounded-2xl border border-[var(--msp-border)] bg-[var(--msp-panel)] p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="text-[0.85rem] font-extrabold tracking-[0.4px] text-slate-200">
-                  👁️ TRADER EYE PATH
-                </div>
-                <div className="text-[0.72rem] text-slate-500">Left → Center → Right → Down</div>
-              </div>
-
-              <div className="grid gap-[0.45rem] [grid-template-columns:repeat(auto-fit,minmax(min(130px,100%),1fr))]">
+            {/* Heat Signal Strip — compact residual from Trader Eye Path (unique data only) */}
+            {trapDoors.evidence && institutionalLensMode === 'OBSERVE' && (
+            <div className="rounded-[14px] border border-[var(--msp-border)] bg-[var(--msp-panel)] p-[0.7rem_0.85rem]">
+              <div className="mb-[0.35rem] text-[0.68rem] font-extrabold uppercase tracking-[0.04em] text-slate-400">Heat Signals</div>
+              <div className="grid gap-[0.35rem] [grid-template-columns:repeat(auto-fit,minmax(min(120px,100%),1fr))]">
                 {heatSignalStrip.map((item) => (
-                  <div key={item.label} className="flex items-center justify-between gap-[0.45rem] rounded-lg border border-slate-400/25 bg-black/20 p-[0.42rem_0.5rem] text-[0.7rem]">
-                    <span className="font-bold text-slate-400">{item.label}</span>
+                  <div key={item.label} className="flex items-center justify-between gap-[0.35rem] rounded-lg border border-slate-400/20 bg-black/15 p-[0.32rem_0.45rem] text-[0.68rem]">
+                    <span className="font-bold text-slate-500">{item.label}</span>
                     <span className="font-bold text-slate-200">{item.state} {item.value}</span>
                   </div>
                 ))}
-              </div>
-
-              {/* Z-Flow 2x2: info-left/action-right */}
-              <div className="grid gap-[0.7rem] [grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr))]">
-                {/* Top Left: Bias / Regime / Trend */}
-                <div className="rounded-[10px] border border-slate-400/25 bg-black/20 p-[0.65rem]">
-                  <div className="mb-[0.45rem] text-[0.72rem] font-extrabold uppercase text-[var(--msp-muted)]">Top Left • Market Condition</div>
-                  <div className="mb-[0.3rem] text-[1rem] font-black text-slate-50">
-                    {result.symbol} — {thesisDirection.toUpperCase()} BIAS
-                  </div>
-                  <div className="text-[0.78rem] leading-[1.45] text-slate-300">
-                    <div>Regime: {marketStateLabel || 'Unknown'}</div>
-                    <div>Trend Alignment: {trendStrength}</div>
-                    <div>Session: {result.entryTiming.marketSession || 'n/a'}</div>
-                  </div>
-                </div>
-
-                {/* Top Right: Setup Status */}
-                <div className="rounded-[10px] border border-slate-400/25 bg-black/20 p-[0.65rem]">
-                  <div className="mb-[0.45rem] text-[0.72rem] font-extrabold uppercase text-amber-300">Top Right • Setup Status</div>
-                  <div className={`mb-[0.4rem] rounded-[10px] p-[0.55rem_0.65rem] ${commandStatusToneCardClass}`}>
-                    <div className={`text-[1rem] font-black ${commandStatusClass}`}>{commandStatus}</div>
-                    <div className="text-[0.76rem] text-slate-300">Pipeline {pipelineComplete}/{ladderSteps.length} complete</div>
-                  </div>
-                  <div className="text-[0.76rem] text-slate-300">
-                    Confidence {(result.compositeScore?.confidence ?? 0).toFixed(0)}% • Data {dataHealth}
-                  </div>
-                </div>
-
-                {/* Bottom Left: Pattern + Confluence */}
-                <div className="rounded-[10px] border border-slate-400/25 bg-black/20 p-[0.65rem]">
-                  <div className="mb-[0.45rem] text-[0.72rem] font-extrabold uppercase text-emerald-200">Bottom Left • Pattern + Confluence</div>
-                  <div className="text-[0.78rem] leading-[1.45] text-slate-200">
-                    <div>Pattern: {hasConfirmedPattern && bestPattern ? bestPattern.name : 'No clean pattern'}</div>
-                    <div>HTF: {result.confluenceStack >= 3 ? 'Aligned' : 'Mixed'}</div>
-                    <div>Confluence: {(result.compositeScore?.confidence ?? 0).toFixed(0)}%</div>
-                    <div>Direction Score: {result.compositeScore?.directionScore?.toFixed(0) ?? '0'}</div>
-                  </div>
-                </div>
-
-                {/* Bottom Right: Execution + Risk */}
-                <div className="rounded-[10px] border border-slate-400/25 bg-black/20 p-[0.65rem]">
-                  <div className="mb-[0.45rem] text-[0.72rem] font-extrabold uppercase text-violet-300">Bottom Right • Execution + Risk</div>
-                  <div className="text-[0.77rem] leading-[1.45] text-slate-200">
-                    <div>ENTRY: {result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)} - ${result.tradeLevels.entryZone.high.toFixed(2)}` : 'WAIT'}</div>
-                    <div>STOP: {result.tradeLevels ? result.tradeLevels.stopLoss.toFixed(2) : 'N/A'}</div>
-                    <div>R:R: {result.tradeLevels ? `${result.tradeLevels.riskRewardRatio.toFixed(1)}:1` : 'N/A'}</div>
-                    <div>Expected Move: {result.expectedMove ? `${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'N/A'}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Dominant Trader Decision Block */}
-              <div className="rounded-xl border border-[var(--msp-border-strong)] border-l-[3px] border-l-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.8rem_0.9rem] shadow-[var(--msp-shadow)]">
-                <div className="mb-[0.3rem] text-[0.69rem] uppercase tracking-[0.45px] text-slate-400">
-                  Trader Decision
-                </div>
-                <div className={`mb-[0.45rem] text-[1.05rem] font-black ${commandStatusClass}`}>
-                  SETUP STATUS: {commandStatus}
-                </div>
-
-                <div className="mb-[0.35rem] text-[0.77rem] text-slate-300">
-                  <span className="font-bold text-slate-50">Reason:</span>
-                </div>
-                <div className="mb-[0.55rem] grid gap-1">
-                  {(decisionReasons.length ? decisionReasons : ['Momentum divergence', 'Liquidity below ideal threshold', 'Confluence below activation threshold']).map((reason, idx) => (
-                    <div key={idx} className="text-[0.76rem] text-slate-300">• {reason}</div>
-                  ))}
-                </div>
-
-                <div className="text-[0.77rem] text-slate-300">
-                  <span className="font-bold text-slate-50">Next Trigger:</span> {decisionTrigger}
-                </div>
-                <div className="mt-[0.45rem] text-[0.72rem] text-[var(--msp-muted)]">
-                  Powered by Nasdaq BX + FMV Options (LIVE)
-                </div>
-              </div>
-
-              {/* Lower Why Panel */}
-              <div className="rounded-[10px] border border-slate-400/25 bg-black/20 p-[0.65rem]">
-                <div className="mb-[0.4rem] text-[0.72rem] font-extrabold uppercase text-violet-300">🧠 Why Panel</div>
-                <div className="text-[0.76rem] leading-[1.5] text-slate-300">
-                  {(result.tradeSnapshot?.why && result.tradeSnapshot.why.length > 0)
-                    ? result.tradeSnapshot.why.slice(0, 4).join(' • ')
-                    : `${result.unusualActivity?.hasUnusualActivity ? 'Unusual activity detected' : 'No unusual options flow'} • OI sentiment ${result.openInterestAnalysis?.sentiment || 'neutral'} • ${hasConfirmedPattern && bestPattern ? `Pattern ${bestPattern.name}` : 'Pattern not confirmed'} • ${result.aiMarketState?.thesis?.summary || 'Awaiting stronger thesis confirmation'}`}
-                </div>
               </div>
             </div>
             )}
