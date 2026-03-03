@@ -509,7 +509,7 @@ export default function MarketMoversPage() {
   if (!canAccessPortfolioInsights(tier)) return <UpgradeGate requiredTier="pro" feature="Market Movers" />;
 
   return (
-    <div className="min-h-screen bg-[var(--msp-bg)] text-white">
+    <div className="min-h-screen overflow-x-hidden bg-[var(--msp-bg)] text-white">
       <ToolsPageHeader
         title="Market Movers"
         subtitle="Status → Action Console → Audit Log → Capabilities"
@@ -638,7 +638,62 @@ export default function MarketMoversPage() {
                   </div>
                 )}
 
-                <div className="h-auto overflow-x-auto overflow-y-visible rounded-md border border-slate-700 bg-slate-950/60 md:h-[520px] md:overflow-y-auto">
+                {/* ── Mobile: expandable card list ── */}
+                <div className="space-y-1.5 md:hidden">
+                  {evaluatedRows.map((mover, idx) => (
+                    <details key={`m-${mover.ticker}-${idx}`} className={`group rounded-md border border-slate-700 bg-slate-950/60 ${mover.deployment === 'blocked' ? 'opacity-55' : ''}`}>
+                      <summary className="flex cursor-pointer list-none items-center justify-between px-2.5 py-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-white text-[13px]">{mover.ticker}</span>
+                          <span className={`text-[12px] font-semibold ${(mover.changePercent || 0) >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
+                            {(mover.changePercent || 0) >= 0 ? '+' : ''}{(mover.changePercent || 0).toFixed(2)}%
+                          </span>
+                          <span
+                            className={`rounded-full border px-1.5 py-0.5 text-[9px] ${
+                              mover.deployment === 'eligible'
+                                ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
+                                : mover.deployment === 'conditional'
+                                ? 'border-amber-500/50 bg-amber-500/10 text-amber-300'
+                                : 'border-slate-600 bg-slate-800 text-slate-400'
+                            }`}
+                          >
+                            {mover.deployment === 'eligible' ? 'Eligible' : mover.deployment === 'conditional' ? 'Conditional' : 'Blocked'}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-slate-500 transition-transform group-open:rotate-90">▶</span>
+                      </summary>
+                      <div className="border-t border-slate-700/50 px-2.5 pb-2.5 pt-2">
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
+                          <div className="text-slate-400">Cluster</div><div className="text-slate-200">{toTitleCluster(mover.cluster)}</div>
+                          <div className="text-slate-400">RelVol</div><div className="text-slate-200">{(mover.relVolume || 0).toFixed(2)}x</div>
+                          <div className="text-slate-400">Structure</div><div className="text-slate-300">{mover.structureBias}</div>
+                          <div className="text-slate-400">CRCS</div><div className="text-cyan-300">{mover.crcsUser !== undefined && Number.isFinite(mover.crcsUser) ? mover.crcsUser.toFixed(1) : '—'}</div>
+                          <div className="text-slate-400">ΔHr</div>
+                          <div className={mover.microAdjustment === undefined ? 'text-slate-500' : mover.microAdjustment >= 0 ? 'text-emerald-300' : 'text-rose-300'}>
+                            {mover.microAdjustment === undefined ? '—' : `${mover.microAdjustment >= 0 ? '+' : ''}${mover.microAdjustment.toFixed(2)}`}
+                          </div>
+                          <div className="text-slate-400">Confluence</div><div className="text-slate-200">{mover.confluenceScore}</div>
+                          <div className="text-slate-400">Liquidity</div><div className="text-slate-400">{mover.liquidityScore}</div>
+                        </div>
+                        <div className="mt-2">
+                          {mover.deployment === 'blocked' ? (
+                            <span className="text-[10px] text-slate-500">{mover.overlayReasons?.map(toReasonLabel).join(' • ') || mover.blockReason || 'Blocked by governance'}</span>
+                          ) : (
+                            <Link
+                              href={`/tools/options-confluence?symbol=${mover.ticker}&setupClass=${encodeURIComponent(mover.setupClass)}&eligibility=${mover.deployment}&confluence=${mover.confluenceScore}&deploymentMode=${environment.deploymentMode}`}
+                              className="inline-block rounded border border-emerald-500/50 bg-emerald-500/10 px-3 py-1 text-[11px] text-emerald-200"
+                            >
+                              Open Confluence Panel
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+                    </details>
+                  ))}
+                </div>
+
+                {/* ── Desktop: full table ── */}
+                <div className="hidden md:block h-auto overflow-x-auto overflow-y-visible rounded-md border border-slate-700 bg-slate-950/60 md:h-[520px] md:overflow-y-auto">
                   <table className="w-full min-w-[640px] text-[11px]">
                     <thead className="sticky top-0 bg-slate-900/95">
                       <tr className="text-[10px] uppercase text-slate-400">

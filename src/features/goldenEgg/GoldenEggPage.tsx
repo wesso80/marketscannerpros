@@ -16,7 +16,7 @@ export default function GoldenEggPage() {
   const noTrade = isNoTrade(payload);
 
   return (
-    <div className="min-h-screen bg-[var(--msp-bg)] text-slate-100">
+    <div className="min-h-screen overflow-x-hidden bg-[var(--msp-bg)] text-slate-100">
       <GEHeaderBar />
       {/* DEMO DATA BANNER — all data on this page is illustrative only */}
       <div className="mx-auto w-full max-w-[1280px] px-4 pt-2">

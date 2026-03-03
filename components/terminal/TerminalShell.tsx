@@ -10,7 +10,7 @@ interface TerminalShellProps {
 
 export default function TerminalShell({ title, subtitle, children, actions, className = '' }: TerminalShellProps) {
   return (
-    <section className={`options-page-container min-h-screen bg-[var(--msp-bg)] text-[var(--msp-text)] px-2 py-3 md:px-4 md:py-6 ${className}`}>
+    <section className={`options-page-container min-h-screen overflow-x-hidden bg-[var(--msp-bg)] text-[var(--msp-text)] px-2 py-3 md:px-4 md:py-6 ${className}`}>
       <div className="w-full">
         <header className="msp-surface mb-4 rounded-xl border border-[var(--msp-border)] p-4 md:p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
