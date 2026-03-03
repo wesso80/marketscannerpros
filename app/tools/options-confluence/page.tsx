@@ -2592,6 +2592,32 @@ export default function OptionsConfluenceScanner() {
               </div>
             </div>
 
+            {/* Compact KPI Strip — consolidated from removed Decision Engine card */}
+            <div className="-mt-[0.35rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] p-[0.5rem_0.65rem]">
+              <div className="flex flex-wrap gap-[0.45rem]">
+                <div className="rounded-[8px] border border-slate-400/20 bg-slate-900/40 px-[0.5rem] py-[0.25rem]">
+                  <span className="text-[0.6rem] font-bold uppercase text-slate-500">Edge </span>
+                  <span className="text-[0.74rem] font-extrabold text-slate-200">{probabilityResult?.winProbability ? `${probabilityResult.winProbability.toFixed(0)}%` : '—'}</span>
+                </div>
+                <div className="rounded-[8px] border border-slate-400/20 bg-slate-900/40 px-[0.5rem] py-[0.25rem]">
+                  <span className="text-[0.6rem] font-bold uppercase text-slate-500">R:R </span>
+                  <span className="text-[0.74rem] font-extrabold text-slate-200">{result.tradeLevels ? `1:${result.tradeLevels.riskRewardRatio.toFixed(1)}` : '—'}</span>
+                </div>
+                <div className="rounded-[8px] border border-slate-400/20 bg-slate-900/40 px-[0.5rem] py-[0.25rem]">
+                  <span className="text-[0.6rem] font-bold uppercase text-slate-500">Flow </span>
+                  <span className="text-[0.74rem] font-extrabold text-slate-200">{result.openInterestAnalysis?.sentiment?.toUpperCase() || 'NEUTRAL'}</span>
+                </div>
+                <div className="rounded-[8px] border border-slate-400/20 bg-slate-900/40 px-[0.5rem] py-[0.25rem]">
+                  <span className="text-[0.6rem] font-bold uppercase text-slate-500">Window </span>
+                  <span className="text-[0.74rem] font-extrabold text-slate-200">{result.entryTiming.idealEntryWindow}</span>
+                </div>
+                <div className="rounded-[8px] border border-slate-400/20 bg-slate-900/40 px-[0.5rem] py-[0.25rem]">
+                  <span className="text-[0.6rem] font-bold uppercase text-slate-500">Session </span>
+                  <span className="text-[0.74rem] font-extrabold text-slate-200">{result.entryTiming.marketSession === 'regular' ? '🟢 Open' : result.entryTiming.marketSession === 'premarket' ? '🌅 Pre' : result.entryTiming.marketSession === 'afterhours' ? '🌙 After' : '🔒 Closed'}</span>
+                </div>
+              </div>
+            </div>
+
             {isGuidedMode && (
               <div className="-mt-[0.35rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-[0.7rem] py-[0.55rem]">
                 <div className="flex flex-wrap items-center justify-between gap-2 text-[0.74rem]">
@@ -2664,16 +2690,6 @@ export default function OptionsConfluenceScanner() {
               <div ref={(element) => { sectionAnchorsRef.current.evidence = element; }} className="-mt-[0.2rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-[0.7rem] py-[0.4rem] text-[0.72rem]">
                 <span className="font-extrabold uppercase tracking-[0.04em] text-slate-300">Section 1 — Evidence</span>
                 <span className="ml-2 text-slate-500">Confluence + structure + setup confirmation</span>
-              </div>
-            )}
-
-            {trapDoors.evidence && focusMode && (
-              <div className="grid gap-[0.45rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] p-[0.72rem_0.82rem] [grid-template-columns:repeat(auto-fit,minmax(min(180px,100%),1fr))]">
-                <div><div className="text-[0.64rem] font-bold uppercase text-slate-500">Direction</div><div className={`font-black ${thesisDirection === 'bullish' ? 'text-emerald-500' : thesisDirection === 'bearish' ? 'text-red-500' : 'text-amber-500'}`}>{thesisDirection.toUpperCase()}</div></div>
-                <div><div className="text-[0.64rem] font-bold uppercase text-slate-500">Confidence</div><div className="font-black text-slate-200">{(result.compositeScore?.confidence ?? 0).toFixed(0)}%</div></div>
-                <div><div className="text-[0.64rem] font-bold uppercase text-slate-500">Entry</div><div className="font-extrabold text-[var(--msp-text)]">{result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)}-${result.tradeLevels.entryZone.high.toFixed(2)}` : 'N/A'}</div></div>
-                <div><div className="text-[0.64rem] font-bold uppercase text-slate-500">Invalidation</div><div className="font-extrabold text-red-300">{result.tradeLevels ? result.tradeLevels.stopLoss.toFixed(2) : 'N/A'}</div></div>
-                <div className="col-[1/-1]"><div className="text-[0.64rem] font-bold uppercase text-slate-500">Targets</div><div className="font-extrabold text-emerald-300">{result.tradeLevels ? `${result.tradeLevels.target1.price.toFixed(2)}${result.tradeLevels.target2 ? ` / ${result.tradeLevels.target2.price.toFixed(2)}` : ''}` : 'N/A'}</div></div>
               </div>
             )}
 
@@ -3507,62 +3523,6 @@ export default function OptionsConfluenceScanner() {
               </div>
             )}
 
-            {trapDoors.evidence && (institutionalLensMode === 'ARMED' || institutionalLensMode === 'EXECUTE') && (
-              <div className={`grid gap-[0.9rem] rounded-[18px] border border-[var(--msp-border-strong)] border-l-[3px] bg-[var(--msp-panel)] p-[1rem_1.1rem] ${modeAccentBorderClass}`}>
-                {institutionalLensMode === 'ARMED' ? (
-                  <>
-                    <div className="text-[0.95rem] font-black tracking-[0.35px] text-slate-200">████ EXECUTION CARD ████</div>
-                    <div className="grid gap-[0.55rem] [grid-template-columns:repeat(auto-fit,minmax(min(210px,100%),1fr))]">
-                      <div className="rounded-[10px] bg-black/20 p-[0.55rem_0.65rem]">
-                        <div className="text-[0.66rem] font-bold uppercase text-slate-500">Entry Zone</div>
-                        <div className="text-[0.88rem] font-extrabold text-slate-200">{result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)} - ${result.tradeLevels.entryZone.high.toFixed(2)}` : 'Await trigger'}</div>
-                      </div>
-                      <div className="rounded-[10px] bg-black/20 p-[0.55rem_0.65rem]">
-                        <div className="text-[0.66rem] font-bold uppercase text-slate-500">Invalidation</div>
-                        <div className="text-[0.88rem] font-extrabold text-red-300">{result.tradeLevels ? `${result.tradeLevels.stopLoss.toFixed(2)}` : 'N/A'}</div>
-                      </div>
-                      <div className="rounded-[10px] bg-black/20 p-[0.55rem_0.65rem]">
-                        <div className="text-[0.66rem] font-bold uppercase text-slate-500">Targets</div>
-                        <div className="text-[0.88rem] font-extrabold text-emerald-300">{result.tradeLevels ? `${result.tradeLevels.target1.price.toFixed(2)} / ${result.tradeLevels.target2?.price?.toFixed(2) || '—'}` : 'N/A'}</div>
-                      </div>
-                      <div className="rounded-[10px] bg-black/20 p-[0.55rem_0.65rem]">
-                        <div className="text-[0.66rem] font-bold uppercase text-slate-500">R:R + Size</div>
-                        <div className="text-[0.88rem] font-extrabold text-slate-200">{result.tradeLevels ? `${result.tradeLevels.riskRewardRatio.toFixed(1)}:1` : '—'} • {result.maxRiskPercent}%</div>
-                      </div>
-                    </div>
-                    <div className="text-[0.8rem] text-slate-300">
-                      <span className="font-bold text-emerald-200">Why this trade:</span> {(result.tradeSnapshot?.why || primaryWhyItems).slice(0, 2).join(' • ')}
-                    </div>
-                    <div className="text-[0.8rem] text-slate-300">
-                      <span className="font-bold text-red-300">Risk summary:</span> {riskState} • {decisionTrigger}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-[0.95rem] font-black tracking-[0.35px] text-slate-200">████ LIVE MANAGEMENT ████</div>
-                    <div className="grid gap-[0.55rem] [grid-template-columns:repeat(auto-fit,minmax(min(210px,100%),1fr))]">
-                      <div className="rounded-[10px] bg-black/20 p-[0.55rem_0.65rem]">
-                        <div className="text-[0.66rem] font-bold uppercase text-slate-500">Live PnL</div>
-                        <div className="text-[0.88rem] font-extrabold text-slate-200">Track in Journal / Broker</div>
-                      </div>
-                      <div className="rounded-[10px] bg-black/20 p-[0.55rem_0.65rem]">
-                        <div className="text-[0.66rem] font-bold uppercase text-slate-500">Risk Exposure</div>
-                        <div className="text-[0.88rem] font-extrabold text-red-300">{result.maxRiskPercent}% max risk • {riskState}</div>
-                      </div>
-                      <div className="rounded-[10px] bg-black/20 p-[0.55rem_0.65rem]">
-                        <div className="text-[0.66rem] font-bold uppercase text-slate-500">Flow Changes</div>
-                        <div className="text-[0.88rem] font-extrabold text-slate-200">{institutionalFlowState}</div>
-                      </div>
-                      <div className="rounded-[10px] bg-black/20 p-[0.55rem_0.65rem]">
-                        <div className="text-[0.66rem] font-bold uppercase text-slate-500">Exit Conditions</div>
-                        <div className="text-[0.88rem] font-extrabold text-emerald-300">{result.tradeSnapshot?.risk?.invalidationReason || 'Stop/invalidation breached'}</div>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-
             {(
               <>
 
@@ -3972,68 +3932,7 @@ export default function OptionsConfluenceScanner() {
               </details>
             )}
 
-            {/* 3-SECOND VIEW - Trade Snapshot */}
-            <div className="rounded-2xl border border-[var(--msp-border-strong)] border-l-[3px] border-l-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[1rem_1.1rem] shadow-[var(--msp-shadow)]">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <div className="text-[0.95rem] font-extrabold tracking-[0.4px] text-slate-200">
-                  🚨 TRADE SNAPSHOT (3-SECOND VIEW)
-                </div>
-                <div className={`text-[0.9rem] font-extrabold ${result.direction === 'bullish' ? 'text-emerald-500' : result.direction === 'bearish' ? 'text-red-500' : 'text-amber-500'}`}>
-                  {result.symbol} — {result.tradeSnapshot?.verdict ? result.tradeSnapshot.verdict.replace('_', ' ') : (result.direction === 'bullish' ? 'BULLISH EDGE' : result.direction === 'bearish' ? 'BEARISH EDGE' : 'WAIT / NEUTRAL')} ({result.tradeSnapshot?.setupGrade || result.tradeQuality})
-                </div>
-              </div>
-
-              {((result.tradeSnapshot?.timing?.catalyst && result.tradeSnapshot.timing.catalyst.length > 0) ||
-                (result.candleCloseConfluence && result.candleCloseConfluence.bestEntryWindow.endMins > 0)) && (
-                <div className="mb-3 rounded-[10px] border border-amber-400/35 bg-amber-400/10 p-[0.45rem_0.6rem] text-[0.85rem] font-bold text-amber-300">
-                  🔥 {result.tradeSnapshot?.timing?.catalyst || (`TIME EDGE ACTIVE: ${result.candleCloseConfluence?.bestEntryWindow.startMins === 0 ? 'NOW' : `${result.candleCloseConfluence?.bestEntryWindow.startMins} min`} until TF compression release`)}
-                </div>
-              )}
-
-              <div className="grid gap-[0.45rem]">
-                {result.tradeSnapshot?.oneLine && (
-                  <div className="text-[0.87rem] text-slate-200">
-                    <span className="font-bold text-emerald-200">WHAT:</span>{' '}
-                    {result.tradeSnapshot.oneLine}
-                  </div>
-                )}
-
-                <div className="text-[0.87rem] text-slate-200">
-                  <span className="font-bold text-[var(--msp-muted)]">WHY:</span>{' '}
-                  {result.tradeSnapshot?.why?.length
-                    ? result.tradeSnapshot.why.join(' • ')
-                    : result.professionalTradeStack
-                      ? `${result.professionalTradeStack.structureState.state} + ${result.professionalTradeStack.liquidityContext.state} + ${result.professionalTradeStack.timeEdge.state} + ${result.professionalTradeStack.optionsEdge.state}`
-                      : `${result.signalStrength.toUpperCase()} signal with ${result.confluenceStack} TF confluence and ${result.openInterestAnalysis?.sentiment || 'neutral'} options sentiment`}
-                </div>
-
-                <div className="text-[0.87rem] text-slate-200">
-                  <span className="font-bold text-red-300">RISK:</span>{' '}
-                  {result.tradeSnapshot?.risk?.invalidationReason
-                    ? result.tradeSnapshot.risk.invalidationReason
-                    : result.tradeLevels
-                    ? `Lose $${result.tradeLevels.stopLoss.toFixed(2)} → setup invalid`
-                    : result.aiMarketState?.thesis?.invalidationLevel
-                      ? `Lose $${result.aiMarketState.thesis.invalidationLevel.toFixed(2)} → setup invalid`
-                      : 'Directional invalidation not clear yet — reduce size / wait'}
-                </div>
-
-                <div className="text-[0.87rem] text-slate-200">
-                  <span className="font-bold text-emerald-300">ACTION:</span>{' '}
-                  {result.tradeSnapshot?.action?.entryTrigger
-                    ? `${result.tradeSnapshot.action.entryTrigger}${result.tradeSnapshot.action.targets?.[0] ? ` • Target ${result.tradeSnapshot.action.targets[0].price.toFixed(2)}` : ''}`
-                    : result.tradeLevels
-                    ? result.direction === 'bullish'
-                      ? `Entry above $${result.tradeLevels.entryZone.high.toFixed(2)} • Target $${result.tradeLevels.target1.price.toFixed(2)}`
-                      : result.direction === 'bearish'
-                        ? `Entry below $${result.tradeLevels.entryZone.low.toFixed(2)} • Target $${result.tradeLevels.target1.price.toFixed(2)}`
-                        : `Wait for breakout from $${result.tradeLevels.entryZone.low.toFixed(2)} - $${result.tradeLevels.entryZone.high.toFixed(2)}`
-                    : 'Wait for cleaner trigger, then execute with defined invalidation'}
-                </div>
-              </div>
-            </div>
-
-            {/* 📈 PATTERN FORMATION - moved before Decision Engine (WHY before ACT) */}
+            {/* 📈 PATTERN FORMATION */}
             {(() => {
               const biasAligned = !!bestPattern && (
                 bestPattern.bias === 'neutral' ||
@@ -4069,124 +3968,6 @@ export default function OptionsConfluenceScanner() {
               );
             })()}
             
-            {/* ═══════════════════════════════════════════════════════════════════════════ */}
-            {/* 🎯 DECISION ENGINE - The ONE card that answers "Should I trade this?" */}
-            {/* ═══════════════════════════════════════════════════════════════════════════ */}
-            <div className="rounded-[20px] border border-[var(--msp-border-strong)] border-l-[3px] border-l-[var(--msp-border-strong)] bg-[var(--msp-card)] p-[clamp(1rem,3vw,1.75rem)] shadow-[var(--msp-shadow)]">
-              {/* Header Row */}
-              <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-slate-400/20 pb-4">
-                <div className="flex flex-wrap items-center gap-4">
-                  <span className="rounded-[10px] bg-[var(--msp-accent)] px-4 py-[6px] text-[13px] font-bold tracking-[0.5px] text-white">
-                    🎯 DECISION ENGINE
-                  </span>
-                  <span className="text-[14px] text-slate-500">
-                    {symbol.toUpperCase()} • ${result.currentPrice.toFixed(2)}
-                  </span>
-                </div>
-                
-                {/* Entry Status Badge */}
-                <div className={`flex items-center gap-2 rounded-xl border px-4 py-2 ${result.entryTiming.urgency === 'immediate' || result.entryTiming.urgency === 'within_hour' ? 'border-emerald-500/50 bg-emerald-500/20' : result.entryTiming.urgency === 'wait' ? 'border-amber-500/50 bg-amber-500/20' : 'border-red-500/50 bg-red-500/20'}`}>
-                  <span className="text-[0.9rem]">{urgencyEmoji(result.entryTiming.urgency)}</span>
-                  <span className={`text-[13px] font-bold uppercase ${result.entryTiming.urgency === 'immediate' || result.entryTiming.urgency === 'within_hour' ? 'text-emerald-500' : result.entryTiming.urgency === 'wait' ? 'text-amber-500' : 'text-red-500'}`}>
-                    {result.entryTiming.urgency === 'no_trade' ? 'NO TRADE' : result.entryTiming.urgency.replace('_', ' ')}
-                  </span>
-                </div>
-              </div>
-
-              {/* Compressed KPI Strip */}
-              <div className="mb-[1.2rem] flex flex-wrap gap-2">
-                <div className="rounded-[10px] border border-slate-400/25 bg-slate-900/45 p-[0.45rem_0.65rem]">
-                  <div className="text-[0.62rem] font-bold uppercase text-slate-500">Edge</div>
-                  <div className="text-[0.85rem] font-extrabold text-slate-200">{probabilityResult?.winProbability ? `${probabilityResult.winProbability.toFixed(0)}%` : '—'}</div>
-                </div>
-                <div className="rounded-[10px] border border-slate-400/25 bg-slate-900/45 p-[0.45rem_0.65rem]">
-                  <div className="text-[0.62rem] font-bold uppercase text-slate-500">Probability</div>
-                  <div className="text-[0.85rem] font-extrabold text-slate-200">{(result.compositeScore?.confidence ?? 0).toFixed(0)}%</div>
-                </div>
-                <div className="rounded-[10px] border border-slate-400/25 bg-slate-900/45 p-[0.45rem_0.65rem]">
-                  <div className="text-[0.62rem] font-bold uppercase text-slate-500">Risk</div>
-                  <div className="text-[0.85rem] font-extrabold text-slate-200">{result.tradeLevels ? `1:${result.tradeLevels.riskRewardRatio.toFixed(1)}` : '—'}</div>
-                </div>
-                <div className="rounded-[10px] border border-slate-400/25 bg-slate-900/45 p-[0.45rem_0.65rem]">
-                  <div className="text-[0.62rem] font-bold uppercase text-slate-500">Flow</div>
-                  <div className="text-[0.85rem] font-extrabold text-slate-200">{result.openInterestAnalysis?.sentiment?.toUpperCase() || 'NEUTRAL'}</div>
-                </div>
-                <div className="rounded-[10px] border border-slate-400/25 bg-slate-900/45 p-[0.45rem_0.65rem]">
-                  <div className="text-[0.62rem] font-bold uppercase text-slate-500">Strategy</div>
-                  <div className="text-[0.85rem] font-extrabold text-slate-200">{(result.strategyRecommendation?.strategy || 'N/A').toUpperCase()}</div>
-                </div>
-              </div>
-
-              {/* Conflicts Warning (if any) */}
-              {(result.compositeScore?.conflicts?.length ?? 0) > 0 && (
-                <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4">
-                  <div className="mb-2 flex items-center gap-2 font-bold text-red-500">
-                    ⚠️ SIGNAL CONFLICTS DETECTED
-                  </div>
-                  <div className="text-[0.8rem] text-red-300">
-                    {result.compositeScore?.conflicts?.map((conflict, i) => (
-                      <div key={i} className="mb-1">• {conflict}</div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Entry Window Info */}
-              <div className="entry-timing-row rounded-xl bg-[var(--msp-panel-2)] p-4">
-                <div>
-                  <div className="mb-1 text-[0.75rem] font-semibold text-[var(--msp-muted)]">
-                    ENTRY WINDOW
-                  </div>
-                  <div className="font-medium text-slate-200">
-                    {result.entryTiming.idealEntryWindow}
-                  </div>
-                </div>
-                <div>
-                  <div className="mb-1 text-[0.75rem] font-semibold text-[var(--msp-muted)]">
-                    SESSION
-                  </div>
-                  <div className="font-medium text-slate-200">
-                    {result.entryTiming.marketSession === 'regular' ? '🟢 Market Open' :
-                     result.entryTiming.marketSession === 'premarket' ? '🌅 Pre-Market' :
-                     result.entryTiming.marketSession === 'afterhours' ? '🌙 After Hours' :
-                     '🔒 Closed'}
-                  </div>
-                </div>
-                <div>
-                  <div className="mb-1 text-[0.75rem] font-semibold text-[var(--msp-muted)]">
-                    CONFLUENCE
-                  </div>
-                  <div className="font-medium text-slate-200">
-                    {result.candleCloseConfluence 
-                      ? `${result.candleCloseConfluence.confluenceRating.toUpperCase()} (${result.candleCloseConfluence.confluenceScore}%)`
-                      : `${result.confluenceStack} TFs`}
-                  </div>
-                </div>
-                <div>
-                  <div className="mb-1 text-[0.75rem] font-semibold text-[var(--msp-muted)]">
-                    ALIGNMENT
-                  </div>
-                  <div className={`font-semibold ${result.compositeScore && result.compositeScore.confidence >= 70 ? 'text-emerald-500' : result.compositeScore && result.compositeScore.confidence >= 50 ? 'text-amber-500' : 'text-slate-400'}`}>
-                    {result.compositeScore ? `${result.compositeScore.confidence.toFixed(0)}%` : '—'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Quality Reasons (collapsible summary) */}
-              <details className="mt-4">
-                <summary className="cursor-pointer py-2 text-[0.8rem] text-slate-500">
-                  📋 Quality Factors ({result.qualityReasons.length})
-                </summary>
-                <div className="mt-2 pl-4 text-[0.75rem] text-slate-400">
-                  {result.qualityReasons.map((r, i) => (
-                    <div key={i} className="mb-1">• {r}</div>
-                  ))}
-                </div>
-              </details>
-            </div>
-
-            {/* Pattern panel intentionally rendered above Decision Engine */}
-
             {/* PRO TRADER SECTION - Collapsible */}
             {narrativeVisible && (
               <div ref={(element) => { sectionAnchorsRef.current.narrative = element; }} className="-mt-[0.2rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-[0.7rem] py-[0.4rem] text-[0.72rem]">
