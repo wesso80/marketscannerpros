@@ -582,7 +582,7 @@ export default function OptionsConfluenceScanner() {
   const [cursorLight, setCursorLight] = useState({ x: 50, y: 20, active: false });
   const [operatorModeHydrated, setOperatorModeHydrated] = useState(false);
   const [trapDoors, setTrapDoors] = useState<Record<TrapDoorKey, boolean>>({
-    evidence: true,
+    evidence: false,
     contracts: false,
     narrative: false,
     logs: false,
@@ -611,14 +611,16 @@ export default function OptionsConfluenceScanner() {
   }, []);
 
   const activateSection = (key: TrapDoorKey) => {
-    setTrapDoors((previousState) => ({ ...previousState, [key]: true }));
-
-    const scrollToAnchor = () => {
-      sectionAnchorsRef.current[key]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
-
-    requestAnimationFrame(() => {
-      setTimeout(scrollToAnchor, 40);
+    setTrapDoors((previousState) => {
+      const next = !previousState[key];
+      if (next) {
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            sectionAnchorsRef.current[key]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 40);
+        });
+      }
+      return { ...previousState, [key]: next };
     });
   };
 
@@ -2596,15 +2598,6 @@ export default function OptionsConfluenceScanner() {
               </div>
             )}
 
-            <div className="-mt-[0.35rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] p-[0.58rem_0.72rem]">
-              <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.04em] text-slate-400">Workflow Layers</div>
-              <div className="mt-[0.35rem] grid gap-[0.25rem] text-[0.72rem] text-slate-300 md:grid-cols-2">
-                <div><span className="font-extrabold text-slate-200">Layer 1 — Decision Panel:</span> score, bias, risk, trigger, tradeability</div>
-                <div><span className="font-extrabold text-slate-200">Layer 2 — Evidence Stack:</span> confluence proof, contracts, greeks, validation</div>
-                <div><span className="font-extrabold text-slate-200">Layer 3 — Analyst Mode (Advanced):</span> narrative + diagnostics, collapsed by default</div>
-              </div>
-            </div>
-
             <div className="-mt-[0.45rem] flex flex-wrap items-center gap-[0.45rem]">
               {([
                 { key: 'evidence', label: '1) Evidence', count: `${result.confluenceStack} TF` },
@@ -3681,7 +3674,7 @@ export default function OptionsConfluenceScanner() {
             )}
 
             {/* Decision Ladder - Institutional validation pipeline */}
-            {institutionalLensMode === 'OBSERVE' && (
+            {trapDoors.evidence && institutionalLensMode === 'OBSERVE' && (
             <div className="rounded-[14px] border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[0.9rem_1rem]">
               <div className="mb-[0.8rem] flex flex-wrap items-center justify-between gap-3">
                 <div className="text-[0.9rem] font-extrabold tracking-[0.4px] text-slate-200">
@@ -3794,7 +3787,7 @@ export default function OptionsConfluenceScanner() {
             )}
 
             {/* 📈 PATTERN FORMATION */}
-            {(() => {
+            {trapDoors.evidence && (() => {
               const biasAligned = !!bestPattern && (
                 bestPattern.bias === 'neutral' ||
                 bestPattern.bias === result.direction
@@ -4157,7 +4150,7 @@ export default function OptionsConfluenceScanner() {
             )}
 
             {/* Confluence Info - Collapsible */}
-            {institutionalLensMode === 'OBSERVE' && (
+            {trapDoors.evidence && institutionalLensMode === 'OBSERVE' && (
             <details className="rounded-[16px] border border-[var(--msp-border)] bg-[var(--msp-card)] p-[1.15rem] shadow-msp-soft">
               <summary className="mb-4 flex cursor-pointer list-none items-center gap-2 border-b border-[var(--msp-border)] pb-3 text-violet-400">
                 <span className="text-violet-500">🔮</span>
@@ -4197,7 +4190,7 @@ export default function OptionsConfluenceScanner() {
             )}
 
             {/* 🕐 CANDLE CLOSE CONFLUENCE - When multiple TFs close together */}
-            {institutionalLensMode === 'OBSERVE' && result.candleCloseConfluence && (
+            {trapDoors.evidence && institutionalLensMode === 'OBSERVE' && result.candleCloseConfluence && (
               <div className={`rounded-[16px] border bg-[var(--msp-card)] p-[1.15rem] shadow-msp-soft ${result.candleCloseConfluence.confluenceRating === 'extreme' ? 'border-red-500/50' : result.candleCloseConfluence.confluenceRating === 'high' ? 'border-amber-500/50' : 'border-[var(--msp-border)]'}`}>
                 {result.candleCloseConfluence.isMarketOpen === false && (
                   <div className="mb-4 flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5">
