@@ -3,14 +3,14 @@
  * 
  * Based on your handwritten Time → 50% decompression timing model.
  * 
- * This tells traders WHEN a move to the midpoint is likely to happen,
- * preventing early entries during the compression phase.
+ * Decompression happens BEFORE the candle CLOSES — ALL timeframes.
+ * The window is when price is most likely to reach the 50% midpoint.
  * 
- * Timing Windows (from your sheet):
- * - 1H:  7–9 min from open
- * - 4H:  9–12 min from open
- * - 6H:  15–20 min from open
- * - 8H:  15–20 min from open
+ * Timing Windows (minutes before candle close):
+ * - 1H:  7–9 min before close
+ * - 4H:  9–12 min before close
+ * - 6H:  15–20 min before close
+ * - 8H:  15–20 min before close
  * - 1D:  ~1 hr before close
  * - 2D:  ~2 hrs before close
  * - 3D:  ~3 hrs before close
@@ -25,6 +25,9 @@
  * - 2Y:  ~26 days before close
  * - 4Y:  ~52 days before close
  * - 5Y:  ~104 days before close
+ * 
+ * IMPORTANT: Decompression is checked against the CURRENT live candle,
+ * not the historical candle that created the midpoint.
  */
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -32,45 +35,155 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Decompression window definition
- * startMin/startMax: When decompression window BEGINS (minutes from open or before close)
- * fromOpen: true = measure from candle open, false = measure before candle close
+ * Decompression window definition — ALL measured before candle CLOSE.
+ * windowStart: Window OPENS this many minutes before close (outer edge)
+ * windowEnd:   Window CLOSES this many minutes before close (inner edge, closer to close)
  */
 interface DecompressionWindow {
   timeframe: string;
-  startMin: number;  // Minimum time (minutes)
-  startMax: number;  // Maximum time (minutes)
-  fromOpen: boolean; // true = from open, false = before close
+  windowStart: number;  // Minutes before close when window OPENS
+  windowEnd: number;    // Minutes before close when window CLOSES
 }
 
 /**
- * Complete decompression timing map
+ * Complete decompression timing map — all before candle close
  */
 export const DECOMPRESSION_WINDOWS: Record<string, DecompressionWindow> = {
-  // Intraday (from candle open)
-  '1H': { timeframe: '1H', startMin: 7, startMax: 9, fromOpen: true },
-  '2H': { timeframe: '2H', startMin: 8, startMax: 11, fromOpen: true },
-  '3H': { timeframe: '3H', startMin: 8, startMax: 12, fromOpen: true },
-  '4H': { timeframe: '4H', startMin: 9, startMax: 12, fromOpen: true },
-  '6H': { timeframe: '6H', startMin: 15, startMax: 20, fromOpen: true },
-  '8H': { timeframe: '8H', startMin: 15, startMax: 20, fromOpen: true },
+  // Intraday — decompression in final minutes before close
+  '1H': { timeframe: '1H', windowStart: 9, windowEnd: 7 },       // 7–9 min before close
+  '2H': { timeframe: '2H', windowStart: 11, windowEnd: 8 },      // 8–11 min before close
+  '3H': { timeframe: '3H', windowStart: 12, windowEnd: 8 },      // 8–12 min before close
+  '4H': { timeframe: '4H', windowStart: 12, windowEnd: 9 },      // 9–12 min before close
+  '6H': { timeframe: '6H', windowStart: 20, windowEnd: 15 },     // 15–20 min before close
+  '8H': { timeframe: '8H', windowStart: 20, windowEnd: 15 },     // 15–20 min before close
   
-  // Daily+ (before candle close)
-  '1D': { timeframe: '1D', startMin: 60, startMax: 60, fromOpen: false },      // 1 hr before close
-  '2D': { timeframe: '2D', startMin: 120, startMax: 120, fromOpen: false },    // 2 hrs before close
-  '3D': { timeframe: '3D', startMin: 180, startMax: 180, fromOpen: false },    // 3 hrs before close
-  '4D': { timeframe: '4D', startMin: 240, startMax: 240, fromOpen: false },    // 4 hrs before close
-  '5D': { timeframe: '5D', startMin: 312, startMax: 312, fromOpen: false },    // 5.2 hrs before close
-  '1W': { timeframe: '1W', startMin: 390, startMax: 390, fromOpen: false },    // 6.5 hrs before close
-  '2W': { timeframe: '2W', startMin: 780, startMax: 780, fromOpen: false },    // 13 hrs before close
-  '1M': { timeframe: '1M', startMin: 1560, startMax: 1560, fromOpen: false },  // 26 hrs before close
-  '2M': { timeframe: '2M', startMin: 3120, startMax: 3120, fromOpen: false },  // 52 hrs before close
-  '6M': { timeframe: '6M', startMin: 9360, startMax: 9360, fromOpen: false },  // 6.5 days before close
-  '1Y': { timeframe: '1Y', startMin: 18720, startMax: 18720, fromOpen: false }, // 13 days before close
-  '2Y': { timeframe: '2Y', startMin: 37440, startMax: 37440, fromOpen: false }, // 26 days before close
-  '4Y': { timeframe: '4Y', startMin: 74880, startMax: 74880, fromOpen: false }, // 52 days before close
-  '5Y': { timeframe: '5Y', startMin: 149760, startMax: 149760, fromOpen: false }, // 104 days before close
+  // Daily+ — decompression in final hours/days before close
+  '1D': { timeframe: '1D', windowStart: 60, windowEnd: 48 },       // ~1 hr before close
+  '2D': { timeframe: '2D', windowStart: 120, windowEnd: 96 },      // ~2 hrs before close
+  '3D': { timeframe: '3D', windowStart: 180, windowEnd: 144 },     // ~3 hrs before close
+  '4D': { timeframe: '4D', windowStart: 240, windowEnd: 192 },     // ~4 hrs before close
+  '5D': { timeframe: '5D', windowStart: 312, windowEnd: 250 },     // ~5.2 hrs before close
+  '1W': { timeframe: '1W', windowStart: 390, windowEnd: 312 },     // ~6.5 hrs before close
+  '2W': { timeframe: '2W', windowStart: 780, windowEnd: 624 },     // ~13 hrs before close
+  '1M': { timeframe: '1M', windowStart: 1560, windowEnd: 1248 },   // ~26 hrs before close
+  '2M': { timeframe: '2M', windowStart: 3120, windowEnd: 2496 },   // ~52 hrs before close
+  '6M': { timeframe: '6M', windowStart: 9360, windowEnd: 7488 },   // ~6.5 days before close
+  '1Y': { timeframe: '1Y', windowStart: 18720, windowEnd: 14976 }, // ~13 days before close
+  '2Y': { timeframe: '2Y', windowStart: 37440, windowEnd: 29952 }, // ~26 days before close
+  '4Y': { timeframe: '4Y', windowStart: 74880, windowEnd: 59904 }, // ~52 days before close
+  '5Y': { timeframe: '5Y', windowStart: 149760, windowEnd: 119808 }, // ~104 days before close
 };
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CURRENT CANDLE BOUNDARY CALCULATION
+// ═══════════════════════════════════════════════════════════════════════════
+
+const MS_HOUR = 3_600_000;
+const MS_DAY = 86_400_000;
+
+/** Duration lookup for simple epoch-aligned timeframes */
+const TF_DURATION_MS: Record<string, number> = {
+  '1H': MS_HOUR,
+  '2H': MS_HOUR * 2,
+  '3H': MS_HOUR * 3,
+  '4H': MS_HOUR * 4,
+  '6H': MS_HOUR * 6,
+  '8H': MS_HOUR * 8,
+  '1D': MS_DAY,
+  '2D': MS_DAY * 2,
+  '3D': MS_DAY * 3,
+  '4D': MS_DAY * 4,
+  '5D': MS_DAY * 5,
+};
+
+/**
+ * Get the CURRENT live candle boundaries for a given timeframe.
+ * Decompression timing must be checked against the current bar, not the
+ * historical candle that generated the midpoint.
+ */
+export function getCurrentCandleBoundaries(
+  timeframe: string,
+  currentTime: Date = new Date()
+): { open: Date; close: Date } {
+  const t = currentTime.getTime();
+
+  // Epoch-aligned timeframes (1H–5D)
+  const duration = TF_DURATION_MS[timeframe];
+  if (duration) {
+    const open = Math.floor(t / duration) * duration;
+    return { open: new Date(open), close: new Date(open + duration) };
+  }
+
+  // Weekly: Monday 00:00 UTC → Sunday 24:00 UTC
+  if (timeframe === '1W') {
+    const d = new Date(currentTime);
+    d.setUTCHours(0, 0, 0, 0);
+    const day = d.getUTCDay(); // 0=Sun
+    const daysBack = day === 0 ? 6 : day - 1;
+    d.setUTCDate(d.getUTCDate() - daysBack);
+    const open = d.getTime();
+    return { open: new Date(open), close: new Date(open + 7 * MS_DAY) };
+  }
+
+  if (timeframe === '2W') {
+    const twoWeeks = 14 * MS_DAY;
+    const open = Math.floor(t / twoWeeks) * twoWeeks;
+    return { open: new Date(open), close: new Date(open + twoWeeks) };
+  }
+
+  // Monthly
+  if (timeframe === '1M') {
+    const d = new Date(currentTime);
+    const open = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
+    const close = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1));
+    return { open, close };
+  }
+  if (timeframe === '2M') {
+    const d = new Date(currentTime);
+    const pair = Math.floor(d.getUTCMonth() / 2) * 2;
+    const open = new Date(Date.UTC(d.getUTCFullYear(), pair, 1));
+    const close = new Date(Date.UTC(d.getUTCFullYear(), pair + 2, 1));
+    return { open, close };
+  }
+  if (timeframe === '6M') {
+    const d = new Date(currentTime);
+    const half = d.getUTCMonth() < 6 ? 0 : 6;
+    const open = new Date(Date.UTC(d.getUTCFullYear(), half, 1));
+    const close = new Date(Date.UTC(d.getUTCFullYear(), half + 6, 1));
+    return { open, close };
+  }
+  if (timeframe === '1Y') {
+    const d = new Date(currentTime);
+    const open = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    const close = new Date(Date.UTC(d.getUTCFullYear() + 1, 0, 1));
+    return { open, close };
+  }
+  if (timeframe === '2Y') {
+    const d = new Date(currentTime);
+    const base = Math.floor(d.getUTCFullYear() / 2) * 2;
+    const open = new Date(Date.UTC(base, 0, 1));
+    const close = new Date(Date.UTC(base + 2, 0, 1));
+    return { open, close };
+  }
+  if (timeframe === '4Y') {
+    const d = new Date(currentTime);
+    const base = Math.floor(d.getUTCFullYear() / 4) * 4;
+    const open = new Date(Date.UTC(base, 0, 1));
+    const close = new Date(Date.UTC(base + 4, 0, 1));
+    return { open, close };
+  }
+  if (timeframe === '5Y') {
+    const d = new Date(currentTime);
+    const base = Math.floor(d.getUTCFullYear() / 5) * 5;
+    const open = new Date(Date.UTC(base, 0, 1));
+    const close = new Date(Date.UTC(base + 5, 0, 1));
+    return { open, close };
+  }
+
+  // Fallback: treat as 1D
+  const open = Math.floor(t / MS_DAY) * MS_DAY;
+  return { open: new Date(open), close: new Date(open + MS_DAY) };
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -100,7 +213,8 @@ export interface DecompressionState {
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Calculate decompression state for a given timeframe
+ * Calculate decompression state for the CURRENT live candle of a given timeframe.
+ * Always measured before candle close — all timeframes.
  */
 export function calculateDecompressionState(
   timeframe: string,
@@ -109,10 +223,9 @@ export function calculateDecompressionState(
   currentTime: Date = new Date(),
   midpointTagged: boolean = false
 ): DecompressionState {
-  const window = DECOMPRESSION_WINDOWS[timeframe];
+  const win = DECOMPRESSION_WINDOWS[timeframe];
   
-  if (!window) {
-    // Unknown timeframe, return neutral state
+  if (!win) {
     return {
       timeframe,
       status: 'COMPRESSION',
@@ -126,13 +239,16 @@ export function calculateDecompressionState(
     };
   }
   
+  const minutesIntoCandle = (currentTime.getTime() - candleOpenTime.getTime()) / 60_000;
+  const minutesUntilClose = (candleCloseTime.getTime() - currentTime.getTime()) / 60_000;
+  
   // If midpoint already tagged, mark as TAGGED
   if (midpointTagged) {
     return {
       timeframe,
       status: 'TAGGED',
-      minutesIntoCandle: (currentTime.getTime() - candleOpenTime.getTime()) / (1000 * 60),
-      minutesUntilClose: (candleCloseTime.getTime() - currentTime.getTime()) / (1000 * 60),
+      minutesIntoCandle,
+      minutesUntilClose,
       minutesUntilWindowStart: null,
       minutesUntilWindowEnd: null,
       isInWindow: false,
@@ -141,101 +257,65 @@ export function calculateDecompressionState(
     };
   }
   
-  const msIntoCandle = currentTime.getTime() - candleOpenTime.getTime();
-  const msUntilClose = candleCloseTime.getTime() - currentTime.getTime();
-  const minutesIntoCandle = msIntoCandle / (1000 * 60);
-  const minutesUntilClose = msUntilClose / (1000 * 60);
+  // All windows: measured BEFORE CLOSE
+  // windowStart = outer edge (further from close), windowEnd = inner edge (closer to close)
+  // Window is ACTIVE when:  windowEnd <= minutesUntilClose <= windowStart
+  const { windowStart, windowEnd } = win;
   
-  let minutesUntilWindowStart: number | null = null;
-  let minutesUntilWindowEnd: number | null = null;
+  // How long until we enter the window (positive = still waiting)
+  const minutesUntilWindowStart = minutesUntilClose - windowStart;
+  // How long until window ends (positive = still in or before window)
+  const minutesUntilWindowEnd = minutesUntilClose - windowEnd;
+  
   let isInWindow = false;
   let status: DecompressionStatus = 'COMPRESSION';
   
-  if (window.fromOpen) {
-    // Window measured from candle open (intraday timeframes)
-    const windowStartTime = window.startMin;
-    const windowEndTime = window.startMax;
-    
-    minutesUntilWindowStart = windowStartTime - minutesIntoCandle;
-    minutesUntilWindowEnd = windowEndTime - minutesIntoCandle;
-    
-    if (minutesIntoCandle >= windowStartTime && minutesIntoCandle <= windowEndTime) {
-      isInWindow = true;
-      status = 'ACTIVE';
-    } else if (minutesIntoCandle < windowStartTime) {
-      // Approaching window
-      if (minutesUntilWindowStart <= 3) {
-        status = 'PRE_WINDOW';
-      } else {
-        status = 'COMPRESSION';
-      }
+  if (minutesUntilClose <= windowStart && minutesUntilClose >= windowEnd) {
+    // Inside the window
+    isInWindow = true;
+    status = 'ACTIVE';
+  } else if (minutesUntilClose > windowStart) {
+    // Still in compression — window hasn't started yet
+    // PRE_WINDOW if approaching (within 3 min for intraday, 2 hrs for daily+)
+    const preThreshold = windowStart <= 20 ? 3 : 120; // 3 min for ≤8H, 2 hrs for daily+
+    if (minutesUntilWindowStart <= preThreshold) {
+      status = 'PRE_WINDOW';
     } else {
-      status = 'POST_WINDOW';
+      status = 'COMPRESSION';
     }
   } else {
-    // Window measured before candle close (daily+ timeframes)
-    const windowStartBeforeClose = window.startMin;
-    const windowEndBeforeClose = window.startMax * 0.8; // End slightly before
-    
-    minutesUntilWindowStart = minutesUntilClose - windowStartBeforeClose;
-    minutesUntilWindowEnd = minutesUntilClose - windowEndBeforeClose;
-    
-    if (minutesUntilClose <= windowStartBeforeClose && minutesUntilClose >= windowEndBeforeClose) {
-      isInWindow = true;
-      status = 'ACTIVE';
-    } else if (minutesUntilClose > windowStartBeforeClose) {
-      // Approaching window
-      const hoursUntilWindow = (minutesUntilClose - windowStartBeforeClose) / 60;
-      if (hoursUntilWindow <= 2) {
-        status = 'PRE_WINDOW';
-      } else {
-        status = 'COMPRESSION';
-      }
-    } else {
-      status = 'POST_WINDOW';
-    }
+    // Past the window (minutesUntilClose < windowEnd)
+    status = 'POST_WINDOW';
   }
   
-  // Calculate window progress (0-100%)
+  // Window progress (0-100%)
+  const windowDuration = windowStart - windowEnd;
   let windowProgress = 0;
-  if (window.fromOpen) {
-    const windowDuration = window.startMax - window.startMin;
-    if (minutesIntoCandle < window.startMin) {
-      windowProgress = 0;
-    } else if (minutesIntoCandle > window.startMax) {
-      windowProgress = 100;
-    } else {
-      windowProgress = ((minutesIntoCandle - window.startMin) / windowDuration) * 100;
-    }
-  } else {
-    const windowDuration = window.startMin - (window.startMax * 0.8);
-    if (minutesUntilClose > window.startMin) {
-      windowProgress = 0;
-    } else if (minutesUntilClose < window.startMax * 0.8) {
-      windowProgress = 100;
-    } else {
-      windowProgress = ((window.startMin - minutesUntilClose) / windowDuration) * 100;
-    }
+  if (minutesUntilClose > windowStart) {
+    windowProgress = 0; // Before window
+  } else if (minutesUntilClose < windowEnd) {
+    windowProgress = 100; // Past window
+  } else if (windowDuration > 0) {
+    windowProgress = ((windowStart - minutesUntilClose) / windowDuration) * 100;
   }
   
   // Visual indicator
-  let visualIndicator = '⚪'; // Default (COMPRESSION)
+  let visualIndicator = '⚪';
   if (status === 'ACTIVE') {
-    visualIndicator = '🟢'; // Green - active window
+    visualIndicator = '🟢';
   } else if (status === 'PRE_WINDOW') {
-    visualIndicator = '🟡'; // Yellow - approaching
+    visualIndicator = '🟡';
   } else if (status === 'POST_WINDOW') {
-    visualIndicator = '🔴'; // Red - window passed
+    visualIndicator = '🔴';
   }
-  // Note: TAGGED status is handled by early return above
   
   return {
     timeframe,
     status,
     minutesIntoCandle,
     minutesUntilClose,
-    minutesUntilWindowStart,
-    minutesUntilWindowEnd,
+    minutesUntilWindowStart: minutesUntilWindowStart > 0 ? minutesUntilWindowStart : null,
+    minutesUntilWindowEnd: minutesUntilWindowEnd > 0 ? minutesUntilWindowEnd : null,
     isInWindow,
     windowProgress: Math.max(0, Math.min(100, windowProgress)),
     visualIndicator,
@@ -306,19 +386,19 @@ export function getNextWindowTiming(state: DecompressionState): string {
 }
 
 /**
- * Example usage
+ * Example usage — uses CURRENT candle boundaries
  */
 export function exampleDecompressionTiming() {
   const now = new Date();
-  const candleOpen = new Date(now.getTime() - 30 * 60 * 1000); // 30 min ago
-  const candleClose = new Date(now.getTime() + 30 * 60 * 1000); // 30 min from now
+  const { open, close } = getCurrentCandleBoundaries('1H', now);
   
-  const state1H = calculateDecompressionState('1H', candleOpen, candleClose, now, false);
+  const state1H = calculateDecompressionState('1H', open, close, now, false);
   
   console.log('=== DECOMPRESSION TIMING EXAMPLE ===');
   console.log(`Timeframe: ${state1H.timeframe}`);
+  console.log(`Current 1H candle: ${open.toISOString()} → ${close.toISOString()}`);
   console.log(`Status: ${state1H.status} ${state1H.visualIndicator}`);
-  console.log(`Minutes into candle: ${state1H.minutesIntoCandle.toFixed(1)}`);
+  console.log(`Minutes until close: ${state1H.minutesUntilClose.toFixed(1)}`);
   console.log(`Window progress: ${generateProgressBar(state1H.windowProgress)} ${state1H.windowProgress.toFixed(0)}%`);
   console.log(`Next window: ${getNextWindowTiming(state1H)}`);
   

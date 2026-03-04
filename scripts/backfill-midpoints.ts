@@ -48,11 +48,13 @@ const SYMBOL_MAP: Record<string, string> = {
 };
 
 // Timeframe configurations
+// CoinGecko OHLC endpoint accepts: 1, 7, 14, 30, 90, 180, 365 (not 730)
+// For 1W we use 365 days max — enough for ~52 weekly candles
 const TIMEFRAME_CONFIG = [
   { timeframe: '1H', days: 7, name: '1 Hour' },
   { timeframe: '4H', days: 30, name: '4 Hours' },
   { timeframe: '1D', days: 365, name: '1 Day' },
-  { timeframe: '1W', days: 365 * 2, name: '1 Week' },
+  { timeframe: '1W', days: 365, name: '1 Week' },
 ];
 
 interface BackfillStats {

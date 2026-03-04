@@ -17,6 +17,7 @@
 
 import {
   calculateDecompressionState,
+  getCurrentCandleBoundaries,
   type DecompressionState,
   type DecompressionStatus,
 } from './decompressionTiming';
@@ -280,11 +281,14 @@ export function computeTimeGravityMap(
   currentTime: Date = new Date()
 ): TimeGravityMap {
   // 1. Calculate gravity points with decompression state
+  //    Decompression is checked against the CURRENT live candle for each
+  //    timeframe — not the historical candle that generated the midpoint.
   const allPoints: GravityPoint[] = midpoints.map(midpoint => {
+    const { open, close } = getCurrentCandleBoundaries(midpoint.timeframe, currentTime);
     const decompressionState = calculateDecompressionState(
       midpoint.timeframe,
-      midpoint.candleOpenTime,
-      midpoint.candleCloseTime,
+      open,
+      close,
       currentTime,
       midpoint.tagged
     );
