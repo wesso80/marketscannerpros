@@ -898,7 +898,7 @@ export default function TimeScannerPage() {
           <div className="border-t border-slate-800 p-3 lg:p-5">
             <TimeGravityMapWidget
               symbol={symbol}
-              currentPrice={scanData.currentPrice || undefined}
+              currentPrice={scanData?.currentPrice || undefined}
               assetType={input.context.assetClass === 'equity' ? 'stock' : 'crypto'}
             />
           </div>
