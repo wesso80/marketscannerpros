@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs><radialGradient id="g" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#EC4899" stop-opacity="0.2"/><stop offset="100%" stop-color="#EC4899" stop-opacity="0"/></radialGradient></defs>
+  <rect width="512" height="512" rx="32" fill="#0A101C"/><circle cx="256" cy="240" r="180" fill="url(#g)"/>
+  <!-- Candlesticks -->
+  <line x1="150" y1="160" x2="150" y2="300" stroke="#22C55E" stroke-width="2" opacity="0.5"/>
+  <rect x="140" y="190" width="20" height="60" fill="#22C55E" opacity="0.5"/>
+  <line x1="200" y1="140" x2="200" y2="280" stroke="#EF4444" stroke-width="2" opacity="0.5"/>
+  <rect x="190" y="160" width="20" height="80" fill="#EF4444" opacity="0.5"/>
+  <line x1="250" y1="170" x2="250" y2="310" stroke="#22C55E" stroke-width="2" opacity="0.5"/>
+  <rect x="240" y="200" width="20" height="70" fill="#22C55E" opacity="0.5"/>
+  <line x1="300" y1="130" x2="300" y2="270" stroke="#22C55E" stroke-width="2" opacity="0.5"/>
+  <rect x="290" y="150" width="20" height="80" fill="#22C55E" opacity="0.5"/>
+  <line x1="350" y1="150" x2="350" y2="290" stroke="#EF4444" stroke-width="2" opacity="0.5"/>
+  <rect x="340" y="170" width="20" height="75" fill="#EF4444" opacity="0.5"/>
+  <!-- OI line overlay -->
+  <polyline points="150,300 200,280 250,260 300,230 350,250" stroke="#EC4899" stroke-width="2.5" fill="none" opacity="0.7" stroke-dasharray="6,3"/>
+  <circle cx="300" cy="230" r="4" fill="#EC4899" opacity="0.8"/>
+  <text x="256" y="440" text-anchor="middle" fill="#EC4899" font-family="monospace" font-size="16" font-weight="bold" opacity="0.5">CRYPTO DERIVATIVES</text>
+</svg>

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs><radialGradient id="g" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#06B6D4" stop-opacity="0.2"/><stop offset="100%" stop-color="#06B6D4" stop-opacity="0"/></radialGradient></defs>
+  <rect width="512" height="512" rx="32" fill="#0A101C"/><circle cx="256" cy="240" r="180" fill="url(#g)"/>
+  <!-- Fast candlesticks - tightly packed -->
+  <line x1="130" y1="180" x2="130" y2="300" stroke="#22C55E" stroke-width="1.5" opacity="0.5"/>
+  <rect x="124" y="210" width="12" height="50" fill="#22C55E" opacity="0.5"/>
+  <line x1="158" y1="160" x2="158" y2="290" stroke="#EF4444" stroke-width="1.5" opacity="0.5"/>
+  <rect x="152" y="180" width="12" height="70" fill="#EF4444" opacity="0.5"/>
+  <line x1="186" y1="170" x2="186" y2="280" stroke="#22C55E" stroke-width="1.5" opacity="0.5"/>
+  <rect x="180" y="190" width="12" height="55" fill="#22C55E" opacity="0.5"/>
+  <line x1="214" y1="150" x2="214" y2="270" stroke="#22C55E" stroke-width="1.5" opacity="0.5"/>
+  <rect x="208" y="170" width="12" height="60" fill="#22C55E" opacity="0.5"/>
+  <line x1="242" y1="140" x2="242" y2="260" stroke="#EF4444" stroke-width="1.5" opacity="0.5"/>
+  <rect x="236" y="160" width="12" height="65" fill="#EF4444" opacity="0.5"/>
+  <line x1="270" y1="130" x2="270" y2="250" stroke="#22C55E" stroke-width="1.5" opacity="0.5"/>
+  <rect x="264" y="148" width="12" height="60" fill="#22C55E" opacity="0.5"/>
+  <line x1="298" y1="120" x2="298" y2="240" stroke="#22C55E" stroke-width="1.5" opacity="0.5"/>
+  <rect x="292" y="135" width="12" height="65" fill="#22C55E" opacity="0.5"/>
+  <line x1="326" y1="140" x2="326" y2="260" stroke="#EF4444" stroke-width="1.5" opacity="0.5"/>
+  <rect x="320" y="155" width="12" height="60" fill="#EF4444" opacity="0.5"/>
+  <line x1="354" y1="125" x2="354" y2="245" stroke="#22C55E" stroke-width="1.5" opacity="0.5"/>
+  <rect x="348" y="140" width="12" height="62" fill="#22C55E" opacity="0.5"/>
+  <!-- Speed lines -->
+  <line x1="370" y1="180" x2="400" y2="170" stroke="#06B6D4" stroke-width="1.5" opacity="0.4"/>
+  <line x1="370" y1="200" x2="395" y2="195" stroke="#06B6D4" stroke-width="1.5" opacity="0.3"/>
+  <line x1="370" y1="220" x2="390" y2="218" stroke="#06B6D4" stroke-width="1.5" opacity="0.2"/>
+  <text x="256" y="440" text-anchor="middle" fill="#06B6D4" font-family="monospace" font-size="16" font-weight="bold" opacity="0.5">INTRADAY CHARTS</text>
+</svg>

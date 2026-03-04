@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs><radialGradient id="g" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#06B6D4" stop-opacity="0.2"/><stop offset="100%" stop-color="#06B6D4" stop-opacity="0"/></radialGradient></defs>
+  <rect width="512" height="512" rx="32" fill="#0A101C"/><circle cx="256" cy="240" r="180" fill="url(#g)"/>
+  <!-- 5 ascending bars -->
+  <rect x="120" y="280" width="40" height="60" rx="4" fill="#06B6D4" opacity="0.3" stroke="#06B6D4" stroke-width="2"/>
+  <rect x="176" y="240" width="40" height="100" rx="4" fill="#06B6D4" opacity="0.35" stroke="#06B6D4" stroke-width="2"/>
+  <rect x="232" y="200" width="40" height="140" rx="4" fill="#06B6D4" opacity="0.4" stroke="#06B6D4" stroke-width="2"/>
+  <rect x="288" y="160" width="40" height="180" rx="4" fill="#06B6D4" opacity="0.5" stroke="#06B6D4" stroke-width="2"/>
+  <rect x="344" y="120" width="40" height="220" rx="4" fill="#06B6D4" opacity="0.6" stroke="#06B6D4" stroke-width="2"/>
+  <!-- baseline -->
+  <line x1="100" y1="340" x2="404" y2="340" stroke="#06B6D4" stroke-width="2" opacity="0.4"/>
+  <text x="256" y="440" text-anchor="middle" fill="#06B6D4" font-family="monospace" font-size="16" font-weight="bold" opacity="0.5">MARKETS DASHBOARD</text>
+</svg>

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs><radialGradient id="g" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#EF4444" stop-opacity="0.2"/><stop offset="100%" stop-color="#EF4444" stop-opacity="0"/></radialGradient></defs>
+  <rect width="512" height="512" rx="32" fill="#0A101C"/><circle cx="256" cy="240" r="180" fill="url(#g)"/>
+  <!-- Bell body -->
+  <path d="M200,260 C200,180 215,130 256,120 C297,130 312,180 312,260" stroke="#EF4444" stroke-width="2.5" fill="#EF4444" fill-opacity="0.1"/>
+  <!-- Bell base -->
+  <line x1="185" y1="260" x2="327" y2="260" stroke="#EF4444" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
+  <!-- Bell top -->
+  <circle cx="256" cy="115" r="8" fill="#EF4444" opacity="0.5"/>
+  <!-- Clapper -->
+  <circle cx="256" cy="275" r="10" fill="#EF4444" opacity="0.4"/>
+  <!-- Signal waves right -->
+  <path d="M330,200 C345,190 345,230 330,220" stroke="#EF4444" stroke-width="2" fill="none" opacity="0.4"/>
+  <path d="M350,185 C370,175 370,245 350,235" stroke="#EF4444" stroke-width="2" fill="none" opacity="0.3"/>
+  <path d="M370,170 C395,160 395,260 370,250" stroke="#EF4444" stroke-width="1.5" fill="none" opacity="0.2"/>
+  <!-- Signal waves left -->
+  <path d="M182,200 C167,190 167,230 182,220" stroke="#EF4444" stroke-width="2" fill="none" opacity="0.4"/>
+  <path d="M162,185 C142,175 142,245 162,235" stroke="#EF4444" stroke-width="2" fill="none" opacity="0.3"/>
+  <path d="M142,170 C117,160 117,260 142,250" stroke="#EF4444" stroke-width="1.5" fill="none" opacity="0.2"/>
+  <text x="256" y="440" text-anchor="middle" fill="#EF4444" font-family="monospace" font-size="16" font-weight="bold" opacity="0.5">ALERTS</text>
+</svg>

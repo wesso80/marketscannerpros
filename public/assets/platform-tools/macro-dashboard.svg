@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs><radialGradient id="g" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#8B5CF6" stop-opacity="0.2"/><stop offset="100%" stop-color="#8B5CF6" stop-opacity="0"/></radialGradient></defs>
+  <rect width="512" height="512" rx="32" fill="#0A101C"/><circle cx="256" cy="240" r="180" fill="url(#g)"/>
+  <!-- Institution columns -->
+  <rect x="140" y="200" width="30" height="130" rx="2" fill="#8B5CF6" fill-opacity="0.12" stroke="#8B5CF6" stroke-width="2"/>
+  <rect x="190" y="170" width="30" height="160" rx="2" fill="#8B5CF6" fill-opacity="0.12" stroke="#8B5CF6" stroke-width="2"/>
+  <rect x="240" y="150" width="30" height="180" rx="2" fill="#8B5CF6" fill-opacity="0.12" stroke="#8B5CF6" stroke-width="2"/>
+  <rect x="290" y="180" width="30" height="150" rx="2" fill="#8B5CF6" fill-opacity="0.12" stroke="#8B5CF6" stroke-width="2"/>
+  <rect x="340" y="160" width="30" height="170" rx="2" fill="#8B5CF6" fill-opacity="0.12" stroke="#8B5CF6" stroke-width="2"/>
+  <!-- Pediment / triangle -->
+  <polygon points="130,200 260,110 390,200" fill="none" stroke="#8B5CF6" stroke-width="2" opacity="0.4"/>
+  <!-- Baseline -->
+  <line x1="120" y1="330" x2="390" y2="330" stroke="#8B5CF6" stroke-width="2" opacity="0.35"/>
+  <!-- Data dots -->
+  <circle cx="155" cy="200" r="3" fill="#8B5CF6" opacity="0.6"/>
+  <circle cx="205" cy="170" r="3" fill="#8B5CF6" opacity="0.6"/>
+  <circle cx="255" cy="150" r="3" fill="#8B5CF6" opacity="0.6"/>
+  <circle cx="305" cy="180" r="3" fill="#8B5CF6" opacity="0.6"/>
+  <circle cx="355" cy="160" r="3" fill="#8B5CF6" opacity="0.6"/>
+  <text x="256" y="440" text-anchor="middle" fill="#8B5CF6" font-family="monospace" font-size="16" font-weight="bold" opacity="0.5">MACRO DASHBOARD</text>
+</svg>

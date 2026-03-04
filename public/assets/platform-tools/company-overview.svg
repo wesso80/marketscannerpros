@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs><radialGradient id="g" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#6366F1" stop-opacity="0.2"/><stop offset="100%" stop-color="#6366F1" stop-opacity="0"/></radialGradient></defs>
+  <rect width="512" height="512" rx="32" fill="#0A101C"/><circle cx="256" cy="240" r="180" fill="url(#g)"/>
+  <!-- Building -->
+  <rect x="196" y="120" width="120" height="220" rx="6" fill="#6366F1" fill-opacity="0.1" stroke="#6366F1" stroke-width="2.5"/>
+  <!-- Windows -->
+  <rect x="214" y="150" width="24" height="18" rx="2" fill="#6366F1" opacity="0.4"/>
+  <rect x="274" y="150" width="24" height="18" rx="2" fill="#6366F1" opacity="0.4"/>
+  <rect x="214" y="190" width="24" height="18" rx="2" fill="#6366F1" opacity="0.3"/>
+  <rect x="274" y="190" width="24" height="18" rx="2" fill="#6366F1" opacity="0.3"/>
+  <rect x="214" y="230" width="24" height="18" rx="2" fill="#6366F1" opacity="0.25"/>
+  <rect x="274" y="230" width="24" height="18" rx="2" fill="#6366F1" opacity="0.25"/>
+  <!-- Data lines -->
+  <line x1="340" y1="160" x2="410" y2="160" stroke="#6366F1" stroke-width="2" opacity="0.4"/>
+  <line x1="340" y1="190" x2="390" y2="190" stroke="#6366F1" stroke-width="2" opacity="0.3"/>
+  <line x1="340" y1="220" x2="400" y2="220" stroke="#6366F1" stroke-width="2" opacity="0.35"/>
+  <line x1="340" y1="250" x2="380" y2="250" stroke="#6366F1" stroke-width="2" opacity="0.25"/>
+  <text x="256" y="440" text-anchor="middle" fill="#6366F1" font-family="monospace" font-size="16" font-weight="bold" opacity="0.5">COMPANY OVERVIEW</text>
+</svg>

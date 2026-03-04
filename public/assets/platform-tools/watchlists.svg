@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs><radialGradient id="g" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#06B6D4" stop-opacity="0.2"/><stop offset="100%" stop-color="#06B6D4" stop-opacity="0"/></radialGradient></defs>
+  <rect width="512" height="512" rx="32" fill="#0A101C"/><circle cx="256" cy="240" r="180" fill="url(#g)"/>
+  <!-- Eye shape -->
+  <path d="M120,230 C170,160 340,160 392,230 C340,300 170,300 120,230 Z" stroke="#06B6D4" stroke-width="2.5" fill="#06B6D4" fill-opacity="0.06"/>
+  <!-- Iris -->
+  <circle cx="256" cy="230" r="50" stroke="#06B6D4" stroke-width="2" fill="#06B6D4" fill-opacity="0.1"/>
+  <!-- Pupil -->
+  <circle cx="256" cy="230" r="25" fill="#06B6D4" opacity="0.3"/>
+  <!-- Pupil highlight -->
+  <circle cx="268" cy="220" r="8" fill="#06B6D4" opacity="0.5"/>
+  <!-- Target overlay - crosshair -->
+  <line x1="256" y1="170" x2="256" y2="195" stroke="#06B6D4" stroke-width="1.5" opacity="0.5"/>
+  <line x1="256" y1="265" x2="256" y2="290" stroke="#06B6D4" stroke-width="1.5" opacity="0.5"/>
+  <line x1="196" y1="230" x2="221" y2="230" stroke="#06B6D4" stroke-width="1.5" opacity="0.5"/>
+  <line x1="291" y1="230" x2="316" y2="230" stroke="#06B6D4" stroke-width="1.5" opacity="0.5"/>
+  <!-- Target ring -->
+  <circle cx="256" cy="230" r="70" stroke="#06B6D4" stroke-width="1" fill="none" opacity="0.25" stroke-dasharray="6,4"/>
+  <text x="256" y="440" text-anchor="middle" fill="#06B6D4" font-family="monospace" font-size="16" font-weight="bold" opacity="0.5">WATCHLISTS</text>
+</svg>

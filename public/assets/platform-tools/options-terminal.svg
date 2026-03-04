@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs><radialGradient id="g" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#A78BFA" stop-opacity="0.2"/><stop offset="100%" stop-color="#A78BFA" stop-opacity="0"/></radialGradient></defs>
+  <rect width="512" height="512" rx="32" fill="#0A101C"/><circle cx="256" cy="240" r="180" fill="url(#g)"/>
+  <!-- Terminal screen -->
+  <rect x="130" y="120" width="252" height="200" rx="10" fill="#A78BFA" fill-opacity="0.06" stroke="#A78BFA" stroke-width="2.5"/>
+  <!-- Title bar -->
+  <line x1="130" y1="148" x2="382" y2="148" stroke="#A78BFA" stroke-width="1.5" opacity="0.3"/>
+  <circle cx="150" cy="134" r="4" fill="#EF4444" opacity="0.5"/>
+  <circle cx="166" cy="134" r="4" fill="#F59E0B" opacity="0.5"/>
+  <circle cx="182" cy="134" r="4" fill="#22C55E" opacity="0.5"/>
+  <!-- Options chain rows -->
+  <line x1="145" y1="175" x2="367" y2="175" stroke="#A78BFA" stroke-width="1" opacity="0.2"/>
+  <line x1="145" y1="200" x2="367" y2="200" stroke="#A78BFA" stroke-width="1" opacity="0.2"/>
+  <line x1="145" y1="225" x2="367" y2="225" stroke="#A78BFA" stroke-width="1" opacity="0.2"/>
+  <line x1="145" y1="250" x2="367" y2="250" stroke="#A78BFA" stroke-width="1" opacity="0.2"/>
+  <!-- Strike column -->
+  <line x1="256" y1="148" x2="256" y2="320" stroke="#A78BFA" stroke-width="1.5" opacity="0.3"/>
+  <!-- Call/Put labels -->
+  <text x="195" y="166" text-anchor="middle" fill="#22C55E" font-family="monospace" font-size="11" opacity="0.5">CALLS</text>
+  <text x="320" y="166" text-anchor="middle" fill="#EF4444" font-family="monospace" font-size="11" opacity="0.5">PUTS</text>
+  <!-- Data cells -->
+  <rect x="155" y="180" width="40" height="14" rx="2" fill="#22C55E" opacity="0.15"/>
+  <rect x="155" y="205" width="55" height="14" rx="2" fill="#22C55E" opacity="0.2"/>
+  <rect x="310" y="230" width="45" height="14" rx="2" fill="#EF4444" opacity="0.15"/>
+  <rect x="310" y="255" width="35" height="14" rx="2" fill="#EF4444" opacity="0.2"/>
+  <text x="256" y="440" text-anchor="middle" fill="#A78BFA" font-family="monospace" font-size="16" font-weight="bold" opacity="0.5">OPTIONS TERMINAL</text>
+</svg>

@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" fill="none">
+  <defs>
+    <radialGradient id="glow-cyan" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#06B6D4" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#06B6D4" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="900" height="600" fill="#0A101C"/>
+  <circle cx="450" cy="280" r="280" fill="url(#glow-cyan)"/>
+  <!-- Grid -->
+  <g stroke="#06B6D4" stroke-opacity="0.06" stroke-width="1">
+    <line x1="0" y1="100" x2="900" y2="100"/><line x1="0" y1="200" x2="900" y2="200"/>
+    <line x1="0" y1="300" x2="900" y2="300"/><line x1="0" y1="400" x2="900" y2="400"/>
+    <line x1="150" y1="0" x2="150" y2="600"/><line x1="300" y1="0" x2="300" y2="600"/>
+    <line x1="450" y1="0" x2="450" y2="600"/><line x1="600" y1="0" x2="600" y2="600"/>
+  </g>
+  <!-- Clock face -->
+  <circle cx="450" cy="260" r="150" stroke="#06B6D4" stroke-opacity="0.3" stroke-width="2" fill="none"/>
+  <circle cx="450" cy="260" r="145" stroke="#06B6D4" stroke-opacity="0.1" stroke-width="1" fill="none"/>
+  <!-- Clock ticks -->
+  <g stroke="#06B6D4" stroke-opacity="0.4" stroke-width="2">
+    <line x1="450" y1="115" x2="450" y2="130"/><line x1="450" y1="390" x2="450" y2="405"/>
+    <line x1="305" y1="260" x2="320" y2="260"/><line x1="580" y1="260" x2="595" y2="260"/>
+    <line x1="344" y1="154" x2="352" y2="167"/><line x1="556" y1="154" x2="548" y2="167"/>
+    <line x1="344" y1="366" x2="352" y2="353"/><line x1="556" y1="366" x2="548" y2="353"/>
+  </g>
+  <!-- Clock hands -->
+  <line x1="450" y1="260" x2="450" y2="155" stroke="#06B6D4" stroke-opacity="0.8" stroke-width="3" stroke-linecap="round"/>
+  <line x1="450" y1="260" x2="530" y2="220" stroke="#22D3EE" stroke-opacity="0.6" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="450" cy="260" r="6" fill="#06B6D4"/>
+  <!-- Timeframe rings -->
+  <circle cx="450" cy="260" r="80" stroke="#06B6D4" stroke-opacity="0.15" stroke-width="1" stroke-dasharray="4 6" fill="none"/>
+  <circle cx="450" cy="260" r="50" stroke="#22D3EE" stroke-opacity="0.2" stroke-width="1" stroke-dasharray="3 5" fill="none"/>
+  <!-- 50% midpoint line -->
+  <line x1="280" y1="260" x2="620" y2="260" stroke="#22D3EE" stroke-opacity="0.2" stroke-width="1" stroke-dasharray="6 4"/>
+  <text x="640" y="264" fill="#22D3EE" font-family="monospace" font-size="10" opacity="0.5">50%</text>
+  <!-- Decompression window arcs -->
+  <path d="M 510 155 A 150 150 0 0 1 580 210" stroke="#06B6D4" stroke-opacity="0.5" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M 340 350 A 150 150 0 0 1 380 380" stroke="#0891B2" stroke-opacity="0.3" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <!-- TF labels -->
+  <text x="450" y="240" text-anchor="middle" fill="#06B6D4" font-family="monospace" font-size="14" font-weight="bold" opacity="0.5">1H</text>
+  <text x="510" y="275" fill="#22D3EE" font-family="monospace" font-size="10" opacity="0.4">4H</text>
+  <text x="420" y="305" fill="#67E8F9" font-family="monospace" font-size="10" opacity="0.4">1D</text>
+  <text x="450" y="510" text-anchor="middle" fill="#06B6D4" font-family="monospace" font-size="18" font-weight="bold" opacity="0.6">TIME CONFLUENCE SCANNER</text>
+  <text x="450" y="535" text-anchor="middle" fill="#94A3B8" font-family="monospace" font-size="12" opacity="0.5">Decompression · Midpoints · Gravity Windows</text>
+</svg>

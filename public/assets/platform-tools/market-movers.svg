@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs><radialGradient id="g" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#14B8A6" stop-opacity="0.2"/><stop offset="100%" stop-color="#14B8A6" stop-opacity="0"/></radialGradient></defs>
+  <rect width="512" height="512" rx="32" fill="#0A101C"/><circle cx="256" cy="240" r="180" fill="url(#g)"/>
+  <!-- Lightning bolt -->
+  <polygon points="270,100 220,230 260,230 240,370 310,210 270,210" fill="#14B8A6" fill-opacity="0.15" stroke="#14B8A6" stroke-width="2.5"/>
+  <!-- Chart lines on the right -->
+  <polyline points="330,180 350,200 370,170 390,190 410,150" stroke="#14B8A6" stroke-width="2" fill="none" opacity="0.5"/>
+  <polyline points="330,230 350,250 370,220 390,240 410,210" stroke="#14B8A6" stroke-width="1.5" fill="none" opacity="0.3"/>
+  <!-- Dots -->
+  <circle cx="410" cy="150" r="3" fill="#14B8A6" opacity="0.7"/>
+  <circle cx="410" cy="210" r="3" fill="#14B8A6" opacity="0.5"/>
+  <text x="256" y="440" text-anchor="middle" fill="#14B8A6" font-family="monospace" font-size="16" font-weight="bold" opacity="0.5">MARKET MOVERS</text>
+</svg>

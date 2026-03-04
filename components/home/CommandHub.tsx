@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useContext } from 'react';
 
 // Safe import — avoid throwing during static prerender when provider is absent
 function useSafeRiskLocked(): boolean {
@@ -21,72 +20,77 @@ const featuredTools = [
   {
     href: '/tools/scanner',
     icon: '📊',
+    image: '/assets/scanners/multi-market-scanner.png',
     title: 'Multi-Market Scanner',
     description: 'Scan equities, crypto, and forex with structured filters across all markets.',
     gradient: 'from-emerald-500/20 to-emerald-900/10',
     border: 'border-emerald-500/30',
-    glow: 'hover:shadow-emerald-500/10',
+    glow: 'hover:shadow-[0_0_20px_rgba(16,185,129,.35)]',
   },
   {
     href: '/tools/options-confluence',
     icon: '🎯',
+    image: '/assets/scanners/options-confluence.png',
     title: 'Options Confluence Scanner',
     description: 'Strike and expiry recommendations with flow, structure, and Greeks context.',
     gradient: 'from-violet-500/20 to-violet-900/10',
     border: 'border-violet-500/30',
-    glow: 'hover:shadow-violet-500/10',
+    glow: 'hover:shadow-[0_0_20px_rgba(139,92,246,.35)]',
   },
   {
     href: '/tools/confluence-scanner',
     icon: '🔮',
+    image: '/assets/scanners/time-confluence.png',
     title: 'Time Confluence Scanner',
     description: 'Detect multi-timeframe decompression events and 50% magnet windows.',
     gradient: 'from-cyan-500/20 to-cyan-900/10',
     border: 'border-cyan-500/30',
-    glow: 'hover:shadow-cyan-500/10',
+    glow: 'hover:shadow-[0_0_20px_rgba(6,182,212,.35)]',
   },
   {
     href: '/tools/golden-egg',
     icon: '🥚',
+    image: '/assets/scanners/golden-egg.png',
     title: 'Golden Egg',
     description: 'Deep conviction scoring with evidence layering and narrative alignment.',
     gradient: 'from-amber-500/20 to-amber-900/10',
     border: 'border-amber-500/30',
-    glow: 'hover:shadow-amber-500/10',
+    glow: 'hover:shadow-[0_0_20px_rgba(245,158,11,.35)]',
   },
 ];
 
 /* ─── Secondary tools (small tiles) ─── */
 const secondaryTools = [
-  { href: '/operator', icon: '🧭', title: 'Operator Dashboard', description: 'Unified execution surface for signal flow and risk command.' },
-  { href: '/tools/markets', icon: '🗺️', title: 'Markets Dashboard', description: 'Central hub for all market data, indices, and sector overview.' },
-  { href: '/tools/crypto', icon: '₿', title: 'Crypto Command Center', description: 'Full crypto dashboard with prices, dominance, and market structure.' },
-  { href: '/tools/gainers-losers', icon: '🚀', title: 'Top Gainers & Losers', description: 'Track strongest movers, laggards, and active symbols.' },
-  { href: '/tools/company-overview', icon: '🏢', title: 'Company Overview', description: 'Fundamentals, valuation, growth, and analyst context.' },
-  { href: '/tools/news', icon: '📰', title: 'News & Sentiment', description: 'Headline flow and sentiment intelligence by symbol.' },
-  { href: '/tools/heatmap', icon: '🗺️', title: 'Sector Heatmap', description: 'S&P sector rotation view across key time horizons.' },
-  { href: '/tools/crypto-heatmap', icon: '🪙', title: 'Crypto Heatmap', description: 'Visual leadership map for major crypto assets.' },
-  { href: '/tools/crypto-dashboard', icon: '₿', title: 'Crypto Derivatives', description: 'Funding, OI, and derivatives pressure diagnostics.' },
-  { href: '/tools/commodities', icon: '🛢️', title: 'Commodities', description: 'Energy, metals, and agriculture price dashboard.' },
-  { href: '/tools/market-movers', icon: '📈', title: 'Market Movers', description: 'Institutional watchlist of high-impact daily movers.' },
-  { href: '/tools/macro', icon: '🏛️', title: 'Macro Dashboard', description: 'Rates, inflation, employment, and macro regime data.' },
-  { href: '/tools/crypto-explorer', icon: '🔍', title: 'Crypto Explorer', description: 'Deep-dive into any crypto asset with technicals and on-chain metrics.' },
-  { href: '/tools/equity-explorer', icon: '📊', title: 'Equity Explorer', description: 'Full equity analysis with fundamentals, technicals, and ownership data.' },
-  { href: '/tools/options-terminal', icon: '📋', title: 'Options Terminal', description: 'Options chain viewer with Greeks, IV skew, and flow analysis.' },
-  { href: '/tools/news?tab=earnings', icon: '📅', title: 'Earnings Calendar', description: 'Event-risk map for upcoming earnings windows.' },
-  { href: '/tools/intraday-charts', icon: '⏱️', title: 'Intraday Charts', description: 'Fast intraday charting and session-level views.' },
-  { href: '/tools/ai-analyst', icon: '🧠', title: 'AI Analyst', description: 'Structured AI decision support for active workflows.' },
-  { href: '/tools/backtest', icon: '📈', title: 'Backtest', description: 'Validate strategy logic against historical data.' },
-  { href: '/tools/portfolio', icon: '💼', title: 'Portfolio', description: 'Position tracking with P&L and performance snapshots.' },
-  { href: '/tools/journal', icon: '📓', title: 'Trade Journal', description: 'Log, review, and learn from every trade.' },
-  { href: '/tools/alerts', icon: '🔔', title: 'Alerts', description: 'Custom triggers and notification management.' },
-  { href: '/tools/watchlists', icon: '👁️', title: 'Watchlists', description: 'Track symbols across your workspace.' },
+  { href: '/operator', icon: '🧭', image: '/assets/platform-tools/operator-dashboard.png', title: 'Operator Dashboard', description: 'Unified execution surface for signal flow and risk command.' },
+  { href: '/tools/markets', icon: '🗺️', image: '/assets/platform-tools/markets-dashboard.png', title: 'Markets Dashboard', description: 'Central hub for all market data, indices, and sector overview.' },
+  { href: '/tools/crypto', icon: '₿', image: '/assets/platform-tools/crypto-command.png', title: 'Crypto Command Center', description: 'Full crypto dashboard with prices, dominance, and market structure.' },
+  { href: '/tools/gainers-losers', icon: '🚀', image: '/assets/platform-tools/top-gainers.png', title: 'Top Gainers & Losers', description: 'Track strongest movers, laggards, and active symbols.' },
+  { href: '/tools/company-overview', icon: '🏢', image: '/assets/platform-tools/company-overview.png', title: 'Company Overview', description: 'Fundamentals, valuation, growth, and analyst context.' },
+  { href: '/tools/news', icon: '📰', image: '/assets/platform-tools/news-sentiment.png', title: 'News & Sentiment', description: 'Headline flow and sentiment intelligence by symbol.' },
+  { href: '/tools/heatmap', icon: '🗺️', image: '/assets/platform-tools/sector-heatmap.png', title: 'Sector Heatmap', description: 'S&P sector rotation view across key time horizons.' },
+  { href: '/tools/crypto-heatmap', icon: '🪙', image: '/assets/platform-tools/crypto-heatmap.svg', title: 'Crypto Heatmap', description: 'Visual leadership map for major crypto assets.' },
+  { href: '/tools/crypto-dashboard', icon: '₿', image: '/assets/platform-tools/crypto-derivatives.svg', title: 'Crypto Derivatives', description: 'Funding, OI, and derivatives pressure diagnostics.' },
+  { href: '/tools/commodities', icon: '🛢️', image: '/assets/platform-tools/commodities.svg', title: 'Commodities', description: 'Energy, metals, and agriculture price dashboard.' },
+  { href: '/tools/market-movers', icon: '📈', image: '/assets/platform-tools/market-movers.png', title: 'Market Movers', description: 'Institutional watchlist of high-impact daily movers.' },
+  { href: '/tools/macro', icon: '🏛️', image: '/assets/platform-tools/macro-dashboard.png', title: 'Macro Dashboard', description: 'Rates, inflation, employment, and macro regime data.' },
+  { href: '/tools/crypto-explorer', icon: '🔍', image: '/assets/platform-tools/crypto-explorer.png', title: 'Crypto Explorer', description: 'Deep-dive into any crypto asset with technicals and on-chain metrics.' },
+  { href: '/tools/equity-explorer', icon: '📊', image: '/assets/platform-tools/equity-explorer.png', title: 'Equity Explorer', description: 'Full equity analysis with fundamentals, technicals, and ownership data.' },
+  { href: '/tools/options-terminal', icon: '📋', image: '/assets/platform-tools/options-terminal.svg', title: 'Options Terminal', description: 'Options chain viewer with Greeks, IV skew, and flow analysis.' },
+  { href: '/tools/news?tab=earnings', icon: '📅', image: '/assets/platform-tools/earnings-calendar.png', title: 'Earnings Calendar', description: 'Event-risk map for upcoming earnings windows.' },
+  { href: '/tools/intraday-charts', icon: '⏱️', image: '/assets/platform-tools/intraday-charts.svg', title: 'Intraday Charts', description: 'Fast intraday charting and session-level views.' },
+  { href: '/tools/ai-analyst', icon: '🧠', image: '/assets/platform-tools/ai-analyst.svg', title: 'AI Analyst', description: 'Structured AI decision support for active workflows.' },
+  { href: '/tools/backtest', icon: '📈', image: '/assets/platform-tools/backtest.svg', title: 'Backtest', description: 'Validate strategy logic against historical data.' },
+  { href: '/tools/portfolio', icon: '💼', image: '/assets/platform-tools/portfolio.svg', title: 'Portfolio', description: 'Position tracking with P&L and performance snapshots.' },
+  { href: '/tools/journal', icon: '📓', image: '/assets/platform-tools/trade-journal.png', title: 'Trade Journal', description: 'Log, review, and learn from every trade.' },
+  { href: '/tools/alerts', icon: '🔔', image: '/assets/platform-tools/alerts.svg', title: 'Alerts', description: 'Custom triggers and notification management.' },
+  { href: '/tools/watchlists', icon: '👁️', image: '/assets/platform-tools/watchlists.svg', title: 'Watchlists', description: 'Track symbols across your workspace.' },
 ];
 
 /* ─── Featured tile component ─── */
 function FeaturedTile({
   href,
   icon,
+  image,
   title,
   description,
   gradient,
@@ -95,6 +99,7 @@ function FeaturedTile({
 }: {
   href: string;
   icon: string;
+  image: string;
   title: string;
   description: string;
   gradient: string;
@@ -104,16 +109,26 @@ function FeaturedTile({
   return (
     <Link
       href={href}
-      className={`group relative flex flex-col justify-between overflow-hidden rounded-2xl border ${border} bg-gradient-to-br ${gradient} p-6 transition-all duration-200 hover:scale-[1.02] hover:shadow-xl ${glow}`}
-      style={{ minHeight: 200 }}
+      className={`group relative flex flex-col overflow-hidden rounded-2xl border ${border} bg-gradient-to-br ${gradient} transition-all duration-200 hover:scale-[1.02] hover:shadow-xl ${glow}`}
     >
-      <div>
-        <div className="text-4xl">{icon}</div>
-        <h3 className="mt-4 text-xl font-bold text-white">{title}</h3>
-        <p className="mt-2 text-sm leading-relaxed text-slate-300">{description}</p>
+      {/* Image hero */}
+      <div className="relative h-40 w-full overflow-hidden">
+        <img
+          src={image}
+          alt={title}
+          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent" />
       </div>
-      <div className="mt-4 flex items-center gap-1 text-sm font-semibold text-white/70 transition group-hover:text-white">
-        Open Scanner <span className="transition-transform group-hover:translate-x-1">→</span>
+      {/* Content */}
+      <div className="flex flex-1 flex-col justify-between p-5">
+        <div>
+          <h3 className="text-lg font-bold text-white">{title}</h3>
+          <p className="mt-1.5 text-sm leading-relaxed text-slate-300">{description}</p>
+        </div>
+        <div className="mt-4 flex items-center gap-1 text-sm font-semibold text-white/70 transition group-hover:text-white">
+          Open Scanner <span className="transition-transform group-hover:translate-x-1">→</span>
+        </div>
       </div>
     </Link>
   );
@@ -123,12 +138,14 @@ function FeaturedTile({
 function SmallTile({
   href,
   icon,
+  image,
   title,
   description,
   locked,
 }: {
   href: string;
   icon: string;
+  image?: string;
   title: string;
   description: string;
   locked?: boolean;
@@ -136,12 +153,31 @@ function SmallTile({
   return (
     <Link
       href={href}
-      className="group flex items-start gap-3 rounded-xl border border-slate-700/60 bg-slate-900/40 p-4 transition-all duration-150 hover:border-slate-600 hover:bg-slate-900/70"
+      className="group flex flex-col overflow-hidden rounded-xl border border-slate-700/60 bg-slate-900/40 transition-all duration-150 hover:border-slate-600 hover:bg-slate-900/70 hover:shadow-[0_0_15px_rgba(16,185,129,.15)]"
     >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-700/60 bg-slate-950/50 text-xl">
-        {icon}
+      {/* Image thumbnail */}
+      <div className="relative h-28 w-full overflow-hidden bg-slate-950/50">
+        <img
+          src={image || ''}
+          alt={title}
+          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          onError={(e) => {
+            // Hide broken image and show emoji fallback
+            (e.target as HTMLImageElement).style.display = 'none';
+            const fallback = (e.target as HTMLImageElement).nextElementSibling;
+            if (fallback) (fallback as HTMLElement).style.display = 'flex';
+          }}
+        />
+        <div
+          className="absolute inset-0 items-center justify-center text-3xl"
+          style={{ display: 'none' }}
+        >
+          {icon}
+        </div>
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent" />
       </div>
-      <div className="min-w-0">
+      {/* Content */}
+      <div className="p-3">
         <div className="text-sm font-semibold text-slate-100">
           {locked ? '🔒 ' : ''}{title}
         </div>

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs><radialGradient id="g" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#3B82F6" stop-opacity="0.2"/><stop offset="100%" stop-color="#3B82F6" stop-opacity="0"/></radialGradient></defs>
+  <rect width="512" height="512" rx="32" fill="#0A101C"/><circle cx="256" cy="240" r="180" fill="url(#g)"/>
+  <!-- Pie chart -->
+  <circle cx="256" cy="220" r="100" stroke="#3B82F6" stroke-width="2" fill="none" opacity="0.3"/>
+  <!-- Segment 1 - large -->
+  <path d="M256,220 L256,120 A100,100 0 0,1 346,270 Z" fill="#3B82F6" fill-opacity="0.25" stroke="#3B82F6" stroke-width="1.5"/>
+  <!-- Segment 2 -->
+  <path d="M256,220 L346,270 A100,100 0 0,1 200,300 Z" fill="#06B6D4" fill-opacity="0.2" stroke="#06B6D4" stroke-width="1.5"/>
+  <!-- Segment 3 -->
+  <path d="M256,220 L200,300 A100,100 0 0,1 170,180 Z" fill="#8B5CF6" fill-opacity="0.2" stroke="#8B5CF6" stroke-width="1.5"/>
+  <!-- Segment 4 -->
+  <path d="M256,220 L170,180 A100,100 0 0,1 256,120 Z" fill="#22C55E" fill-opacity="0.2" stroke="#22C55E" stroke-width="1.5"/>
+  <!-- Center hole -->
+  <circle cx="256" cy="220" r="40" fill="#0A101C"/>
+  <!-- Center text -->
+  <text x="256" y="226" text-anchor="middle" fill="#3B82F6" font-family="monospace" font-size="16" font-weight="bold" opacity="0.6">P/L</text>
+  <text x="256" y="440" text-anchor="middle" fill="#3B82F6" font-family="monospace" font-size="16" font-weight="bold" opacity="0.5">PORTFOLIO</text>
+</svg>

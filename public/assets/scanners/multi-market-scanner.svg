@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" fill="none">
+  <defs>
+    <radialGradient id="glow-emerald" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#10B981" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#10B981" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="grid-fade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#10B981" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#10B981" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="900" height="600" fill="#0A101C"/>
+  <!-- Glow -->
+  <circle cx="450" cy="300" r="280" fill="url(#glow-emerald)"/>
+  <!-- Grid lines -->
+  <g stroke="#10B981" stroke-opacity="0.08" stroke-width="1">
+    <line x1="0" y1="100" x2="900" y2="100"/><line x1="0" y1="200" x2="900" y2="200"/>
+    <line x1="0" y1="300" x2="900" y2="300"/><line x1="0" y1="400" x2="900" y2="400"/>
+    <line x1="0" y1="500" x2="900" y2="500"/>
+    <line x1="150" y1="0" x2="150" y2="600"/><line x1="300" y1="0" x2="300" y2="600"/>
+    <line x1="450" y1="0" x2="450" y2="600"/><line x1="600" y1="0" x2="600" y2="600"/>
+    <line x1="750" y1="0" x2="750" y2="600"/>
+  </g>
+  <!-- Globe wireframe -->
+  <circle cx="450" cy="285" r="160" stroke="#10B981" stroke-opacity="0.3" stroke-width="1.5" fill="none"/>
+  <ellipse cx="450" cy="285" rx="160" ry="60" stroke="#10B981" stroke-opacity="0.2" stroke-width="1" fill="none"/>
+  <ellipse cx="450" cy="285" rx="60" ry="160" stroke="#10B981" stroke-opacity="0.2" stroke-width="1" fill="none"/>
+  <ellipse cx="450" cy="285" rx="120" ry="160" stroke="#10B981" stroke-opacity="0.15" stroke-width="1" fill="none"/>
+  <!-- Data points on globe -->
+  <circle cx="380" cy="220" r="5" fill="#10B981" opacity="0.9"/><circle cx="380" cy="220" r="12" stroke="#10B981" stroke-opacity="0.3" fill="none"/>
+  <circle cx="520" cy="260" r="4" fill="#10B981" opacity="0.7"/><circle cx="520" cy="260" r="10" stroke="#10B981" stroke-opacity="0.2" fill="none"/>
+  <circle cx="430" cy="340" r="6" fill="#10B981" opacity="0.8"/><circle cx="430" cy="340" r="14" stroke="#10B981" stroke-opacity="0.3" fill="none"/>
+  <circle cx="500" cy="190" r="3" fill="#34D399" opacity="0.6"/>
+  <circle cx="360" cy="310" r="4" fill="#6EE7B7" opacity="0.5"/>
+  <circle cx="540" cy="330" r="3" fill="#34D399" opacity="0.7"/>
+  <!-- Connection lines between data points -->
+  <line x1="380" y1="220" x2="520" y2="260" stroke="#10B981" stroke-opacity="0.2" stroke-width="1" stroke-dasharray="4 4"/>
+  <line x1="520" y1="260" x2="430" y2="340" stroke="#10B981" stroke-opacity="0.15" stroke-width="1" stroke-dasharray="4 4"/>
+  <line x1="380" y1="220" x2="430" y2="340" stroke="#10B981" stroke-opacity="0.15" stroke-width="1" stroke-dasharray="4 4"/>
+  <!-- Scanning ring animation hint -->
+  <circle cx="450" cy="285" r="200" stroke="#10B981" stroke-opacity="0.1" stroke-width="2" stroke-dasharray="8 12" fill="none"/>
+  <!-- Title area -->
+  <text x="450" y="510" text-anchor="middle" fill="#10B981" font-family="monospace" font-size="18" font-weight="bold" opacity="0.6">MULTI-MARKET SCANNER</text>
+  <text x="450" y="535" text-anchor="middle" fill="#94A3B8" font-family="monospace" font-size="12" opacity="0.5">Equities · Crypto · Forex · Commodities</text>
+</svg>
