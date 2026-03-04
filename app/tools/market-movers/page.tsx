@@ -654,8 +654,8 @@ export default function MarketMoversPage() {
                   </div>
                 )}
 
-                {/* ── Mobile: expandable card list ── */}
-                <div className="space-y-1.5 md:hidden">
+                {/* ── Mobile: expandable card list (small screens only) ── */}
+                <div className="space-y-1.5" style={{ display: 'none' }} data-mobile-cards>
                   {evaluatedRows.map((mover, idx) => (
                     <details key={`m-${mover.ticker}-${idx}`} className={`group rounded-md border border-slate-700 bg-slate-950/60 ${mover.deployment === 'blocked' ? 'opacity-55' : ''}`}>
                       <summary className="flex cursor-pointer list-none items-center justify-between px-2.5 py-2">
@@ -708,8 +708,8 @@ export default function MarketMoversPage() {
                   ))}
                 </div>
 
-                {/* ── Desktop: full table ── */}
-                <div className="hidden md:block overflow-x-auto rounded-md border border-slate-700 bg-slate-950/60" style={{ maxHeight: '560px', overflowY: 'auto' }}>
+                {/* ── Movers table ── */}
+                <div className="overflow-x-auto rounded-md border border-slate-700 bg-slate-950/60" style={{ maxHeight: '560px', overflowY: 'auto' }}>
                   <table className="w-full min-w-[640px] text-xs">
                     <thead className="sticky top-0 z-10 bg-slate-900">
                       <tr className="text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-700">
