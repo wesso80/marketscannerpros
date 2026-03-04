@@ -232,11 +232,59 @@ const TIMEFRAMES: TimeframeConfig[] = [
   { tf: '28D', label: '28D', minutes: 40320,  postCloseWindow: 870, decompStart: 1020 },
   { tf: '29D', label: '29D', minutes: 41760,  postCloseWindow: 900, decompStart: 1050 },
   { tf: '30D', label: '30D', minutes: 43200,  postCloseWindow: 930, decompStart: 1080 },
-  // Weekly - ALL week cycles (1W through 4W)
-  { tf: 'W',   label: '1W',  minutes: 10080, postCloseWindow: 240, decompStart: 390 },
-  { tf: '2W',  label: '2W',  minutes: 20160, postCloseWindow: 480, decompStart: 780 },
-  { tf: '3W',  label: '3W',  minutes: 30240, postCloseWindow: 600, decompStart: 1170 },
-  { tf: '4W',  label: '4W',  minutes: 40320, postCloseWindow: 720, decompStart: 1560 },
+  // Weekly - ALL week cycles (1W through 52W)
+  { tf: 'W',   label: '1W',  minutes: 10080,  postCloseWindow: 240,  decompStart: 390 },
+  { tf: '2W',  label: '2W',  minutes: 20160,  postCloseWindow: 480,  decompStart: 780 },
+  { tf: '3W',  label: '3W',  minutes: 30240,  postCloseWindow: 600,  decompStart: 1170 },
+  { tf: '4W',  label: '4W',  minutes: 40320,  postCloseWindow: 720,  decompStart: 1560 },
+  { tf: '5W',  label: '5W',  minutes: 50400,  postCloseWindow: 840,  decompStart: 1950 },
+  { tf: '6W',  label: '6W',  minutes: 60480,  postCloseWindow: 960,  decompStart: 2340 },
+  { tf: '7W',  label: '7W',  minutes: 70560,  postCloseWindow: 1080, decompStart: 2730 },
+  { tf: '8W',  label: '8W',  minutes: 80640,  postCloseWindow: 1200, decompStart: 3120 },
+  { tf: '9W',  label: '9W',  minutes: 90720,  postCloseWindow: 1320, decompStart: 3510 },
+  { tf: '10W', label: '10W', minutes: 100800, postCloseWindow: 1440, decompStart: 3900 },
+  { tf: '11W', label: '11W', minutes: 110880, postCloseWindow: 1560, decompStart: 4290 },
+  { tf: '12W', label: '12W', minutes: 120960, postCloseWindow: 1680, decompStart: 4680 },
+  { tf: '13W', label: '13W', minutes: 131040, postCloseWindow: 1800, decompStart: 5070 },
+  { tf: '14W', label: '14W', minutes: 141120, postCloseWindow: 1920, decompStart: 5460 },
+  { tf: '15W', label: '15W', minutes: 151200, postCloseWindow: 2040, decompStart: 5850 },
+  { tf: '16W', label: '16W', minutes: 161280, postCloseWindow: 2160, decompStart: 6240 },
+  { tf: '17W', label: '17W', minutes: 171360, postCloseWindow: 2280, decompStart: 6630 },
+  { tf: '18W', label: '18W', minutes: 181440, postCloseWindow: 2400, decompStart: 7020 },
+  { tf: '19W', label: '19W', minutes: 191520, postCloseWindow: 2520, decompStart: 7410 },
+  { tf: '20W', label: '20W', minutes: 201600, postCloseWindow: 2640, decompStart: 7800 },
+  { tf: '21W', label: '21W', minutes: 211680, postCloseWindow: 2760, decompStart: 8190 },
+  { tf: '22W', label: '22W', minutes: 221760, postCloseWindow: 2880, decompStart: 8580 },
+  { tf: '23W', label: '23W', minutes: 231840, postCloseWindow: 3000, decompStart: 8970 },
+  { tf: '24W', label: '24W', minutes: 241920, postCloseWindow: 3120, decompStart: 9360 },
+  { tf: '25W', label: '25W', minutes: 252000, postCloseWindow: 3240, decompStart: 9750 },
+  { tf: '26W', label: '26W', minutes: 262080, postCloseWindow: 3360, decompStart: 10140 },
+  { tf: '27W', label: '27W', minutes: 272160, postCloseWindow: 3480, decompStart: 10530 },
+  { tf: '28W', label: '28W', minutes: 282240, postCloseWindow: 3600, decompStart: 10920 },
+  { tf: '29W', label: '29W', minutes: 292320, postCloseWindow: 3720, decompStart: 11310 },
+  { tf: '30W', label: '30W', minutes: 302400, postCloseWindow: 3840, decompStart: 11700 },
+  { tf: '31W', label: '31W', minutes: 312480, postCloseWindow: 3960, decompStart: 12090 },
+  { tf: '32W', label: '32W', minutes: 322560, postCloseWindow: 4080, decompStart: 12480 },
+  { tf: '33W', label: '33W', minutes: 332640, postCloseWindow: 4200, decompStart: 12870 },
+  { tf: '34W', label: '34W', minutes: 342720, postCloseWindow: 4320, decompStart: 13260 },
+  { tf: '35W', label: '35W', minutes: 352800, postCloseWindow: 4440, decompStart: 13650 },
+  { tf: '36W', label: '36W', minutes: 362880, postCloseWindow: 4560, decompStart: 14040 },
+  { tf: '37W', label: '37W', minutes: 372960, postCloseWindow: 4680, decompStart: 14430 },
+  { tf: '38W', label: '38W', minutes: 383040, postCloseWindow: 4800, decompStart: 14820 },
+  { tf: '39W', label: '39W', minutes: 393120, postCloseWindow: 4920, decompStart: 15210 },
+  { tf: '40W', label: '40W', minutes: 403200, postCloseWindow: 5040, decompStart: 15600 },
+  { tf: '41W', label: '41W', minutes: 413280, postCloseWindow: 5160, decompStart: 15990 },
+  { tf: '42W', label: '42W', minutes: 423360, postCloseWindow: 5280, decompStart: 16380 },
+  { tf: '43W', label: '43W', minutes: 433440, postCloseWindow: 5400, decompStart: 16770 },
+  { tf: '44W', label: '44W', minutes: 443520, postCloseWindow: 5520, decompStart: 17160 },
+  { tf: '45W', label: '45W', minutes: 453600, postCloseWindow: 5640, decompStart: 17550 },
+  { tf: '46W', label: '46W', minutes: 463680, postCloseWindow: 5760, decompStart: 17940 },
+  { tf: '47W', label: '47W', minutes: 473760, postCloseWindow: 5880, decompStart: 18330 },
+  { tf: '48W', label: '48W', minutes: 483840, postCloseWindow: 6000, decompStart: 18720 },
+  { tf: '49W', label: '49W', minutes: 493920, postCloseWindow: 6120, decompStart: 19110 },
+  { tf: '50W', label: '50W', minutes: 504000, postCloseWindow: 6240, decompStart: 19500 },
+  { tf: '51W', label: '51W', minutes: 514080, postCloseWindow: 6360, decompStart: 19890 },
+  { tf: '52W', label: '52W', minutes: 524160, postCloseWindow: 6480, decompStart: 20280 },
   // Monthly - ALL month cycles (1M through 12M)
   { tf: 'M',   label: '1M',  minutes: 43200,  postCloseWindow: 720,  decompStart: 1560 },
   { tf: '2M',  label: '2M',  minutes: 86400,  postCloseWindow: 1080, decompStart: 3120 },
@@ -1085,25 +1133,16 @@ export class ConfluenceLearningAgent {
       return Math.max(0, Math.floor((periodEnd - nowMs) / 60_000));
     }
 
-    // ── Weekly: Monday 00:00 UTC ──
-    // Epoch (Jan 1 1970) was Thursday. First Monday = Jan 5 = epoch + 4 days.
-    if (tfId === '1W') {
+    // ── Weekly & Multi-week (1W–52W): TradingView anchor = Jan 5 2026 (Monday) ──
+    // Epoch day 20458 = Jan 5 2026. All N-week periods align to this anchor.
+    const weekMatch = tfId.match(/^(\d+)W$/);
+    if (weekMatch) {
+      const N = parseInt(weekMatch[1]);
       const WEEK_MS = 7 * DAY_MS;
-      const MONDAY_EPOCH_MS = 4 * DAY_MS;
-      const aligned = nowMs - MONDAY_EPOCH_MS;
-      const periodEnd = Math.ceil(aligned / WEEK_MS) * WEEK_MS + MONDAY_EPOCH_MS;
-      return Math.max(0, Math.floor((periodEnd - nowMs) / 60_000));
-    }
-
-    // ── Multi-week (2W–4W): every Nth Monday 00:00 UTC ──
-    const multiWeekMatch = tfId.match(/^(\d)W$/);
-    if (multiWeekMatch) {
-      const N = parseInt(multiWeekMatch[1]);
-      const WEEK_MS = 7 * DAY_MS;
-      const MONDAY_EPOCH_MS = 4 * DAY_MS;
+      const TV_WEEK_ANCHOR_MS = 20458 * DAY_MS; // Jan 5, 2026 00:00 UTC (Monday)
       const periodMs = N * WEEK_MS;
-      const aligned = nowMs - MONDAY_EPOCH_MS;
-      const periodEnd = Math.ceil(aligned / periodMs) * periodMs + MONDAY_EPOCH_MS;
+      const diff = nowMs - TV_WEEK_ANCHOR_MS;
+      const periodEnd = Math.ceil(diff / periodMs) * periodMs + TV_WEEK_ANCHOR_MS;
       return Math.max(0, Math.floor((periodEnd - nowMs) / 60_000));
     }
 
