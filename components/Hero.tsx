@@ -3,8 +3,6 @@
 import Link from "next/link";
 
 export default function Hero() {
-  const emailLink = "mailto:support@marketscannerpros.app?subject=Free%20Trial%20Request%20-%20MarketScannerPros&body=Hi%2C%0A%0AI%27d%20like%20to%20request%20a%20free%20trial%20of%20MarketScannerPros.%0A%0AThanks%2C%0A";
-
   return (
     <>
       <style jsx global>{`
@@ -24,222 +22,102 @@ export default function Hero() {
         }
       `}</style>
 
-      <section style={{
-        width: '100%',
-        background: 'var(--msp-bg)',
-        color: 'var(--text-main)',
-        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif',
-        borderBottom: '1px solid var(--border-subtle)'
-      }}>
-        <div style={{ maxWidth: 1120, padding: '48px 20px 60px', margin: '0 auto' }}>
-          <div 
-            className="grid-2-col-responsive"
-            style={{
-              marginBottom: 40
-            }}>
-            {/* Hero section */}
-            <div 
-              className="hero-section"
-              style={{
-              background: 'var(--msp-card)',
-              borderRadius: 'var(--radius-lg)',
-              border: '1px solid var(--border-subtle)',
-              boxShadow: 'var(--shadow-soft)',
-              padding: '28px 26px 26px',
-              position: 'relative',
-              overflow: 'hidden'
-            }}>
-              <div style={{
-                position: 'absolute',
-                right: -40,
-                top: -40,
-                width: 280,
-                height: 280,
-                background: 'var(--msp-accent-glow)',
-                filter: 'blur(1px)',
-                opacity: 0.8
-              }} aria-hidden="true"></div>
-              
-              <div style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                fontSize: 11,
-                color: 'var(--text-muted)',
-                padding: '3px 9px',
-                borderRadius: 999,
-                background: 'rgba(15,23,42,0.9)',
-                border: '1px solid rgba(148,163,184,0.25)',
-                marginBottom: 12
-              }}>
-                <span style={{
-                  padding: '3px 8px',
-                  borderRadius: 999,
-                  background: 'rgba(34,197,94,0.12)',
-                  color: '#bbf7d0',
-                  fontSize: 11
-                }}>100% Free</span>
-                <span>No credit card required</span>
-              </div>
+      {/* ─── Cinematic Hero ─── */}
+      <section className="relative w-full overflow-hidden" style={{ background: 'var(--msp-bg)', borderBottom: '1px solid var(--border-subtle)' }}>
+        {/* Ambient glow effects */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -left-40 top-0 h-[500px] w-[500px] rounded-full bg-emerald-500/[0.06] blur-[120px]" />
+          <div className="absolute -right-20 bottom-0 h-[400px] w-[400px] rounded-full bg-cyan-500/[0.04] blur-[100px]" />
+        </div>
+        {/* Top accent line */}
+        <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent" />
 
-              {/* Logo */}
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 16, 
-                marginBottom: 16 
-              }}>
-                <img 
-                  src="/logos/msp-logo.png" 
-                  alt="MarketScannerPros Logo" 
-                  style={{ 
-                    width: 80, 
-                    height: 80, 
-                    objectFit: 'contain' 
-                  }} 
-                />
-                <div>
-                  <div style={{ 
-                    fontSize: 24, 
-                    fontWeight: 700, 
-                    color: '#f9fafb',
-                    marginBottom: 4
-                  }}>
-                    MarketScannerPros
-                  </div>
-                  <div style={{ 
-                    fontSize: 13, 
-                    color: 'var(--msp-accent)',
-                    fontWeight: 500
-                  }}>
-                    Phase-Based Market Intelligence
-                  </div>
-                </div>
-              </div>
-
-              <h1 style={{ fontSize: 'clamp(22px, 5vw, 32px)', lineHeight: 1.2, marginBottom: 12, fontWeight: 700 }}>
-                Stop Guessing the Market.
-                <br />
-                <span style={{ color: '#22c55e' }}>Start Understanding It.</span>
-              </h1>
-              <p style={{ fontSize: 15, color: 'var(--text-muted)', maxWidth: 520, lineHeight: 1.6, marginBottom: 12 }}>
-                MarketScanner Pros is a phase-based market intelligence platform that scans markets, explains signals with AI, and teaches traders how to interpret structure using institutional logic.
-              </p>
-              <p style={{ fontSize: 15, color: '#e5e7eb', maxWidth: 520, lineHeight: 1.5, marginBottom: 12, fontWeight: 500 }}>
-                Reduce noise, understand market context, and make decisions with structure — not emotion.
-              </p>
-              <p style={{ fontSize: 14, color: '#9ca3af', maxWidth: 520, lineHeight: 1.5 }}>
-                No hype. No black boxes. Just clarity across multiple timeframes.
-              </p>
-
-              <div style={{
-                margin: '22px 0 24px',
-                fontSize: 13,
-                color: 'var(--text-muted)'
-              }}>
-                <div style={{ marginBottom: 12, fontSize: 12, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Used daily by active traders analysing:
-                </div>
-                <div style={{ marginBottom: 16, color: '#e5e7eb' }}>
-                  Crypto • Stocks • Indices • FX
-                </div>
-                <div style={{ marginBottom: 8, fontSize: 12, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Powered by:
-                </div>
-                <div style={{ color: '#e5e7eb' }}>
-                  Multi-Timeframe Analysis • Phase Logic • AI Signal Interpretation
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', marginBottom: 14, zIndex: 2, position: 'relative' }}>
-                <Link href="/tools/scanner" style={{
-                  borderRadius: 999,
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: 15,
-                  padding: '12px 24px',
-                  fontWeight: 600,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  whiteSpace: 'nowrap',
-                  background: 'var(--accent)',
-                  color: '#0b1120',
-                  boxShadow: 'var(--shadow-small)',
-                  textDecoration: 'none'
-                }}>
-                  <span>Get Started Free</span>
-                </Link>
-                <Link href="/pricing" style={{
-                  borderRadius: 999,
-                  cursor: 'pointer',
-                  fontSize: 15,
-                  padding: '12px 24px',
-                  fontWeight: 500,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  whiteSpace: 'nowrap',
-                  background: 'transparent',
-                  color: 'var(--text-muted)',
-                  border: '1px solid var(--border-subtle)',
-                  textDecoration: 'none'
-                }}>
-                  See How the AI Analyst Works
-                </Link>
-              </div>
-
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
-                Trusted by 1,000+ traders · Educational use only
-              </p>
+        <div className="relative mx-auto flex max-w-[1200px] flex-col items-center gap-8 px-5 pb-12 pt-12 md:flex-row md:gap-12 md:pb-16 md:pt-16 lg:gap-16">
+          {/* ─── Left column: Copy ─── */}
+          <div className="flex-1 text-center md:text-left">
+            {/* Logo wordmark */}
+            <div className="mb-6 text-xl font-bold tracking-tight text-white md:text-2xl">
+              Market<span className="text-emerald-400">Scanner</span>Pros
             </div>
 
-            {/* Side card */}
-            <aside style={{
-              background: 'var(--msp-card)',
-              borderRadius: 'var(--radius-lg)',
-              border: '1px solid var(--border-subtle)',
-              boxShadow: 'var(--shadow-soft)',
-              padding: '20px 20px 18px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 16
-            }}>
-              <div>
-                <h3 style={{ fontSize: 16, margin: '0 0 6px', fontWeight: 600 }}>What you get for free</h3>
-                <p style={{ fontSize: 13, margin: 0, color: 'var(--text-muted)' }}>
-                  Everything you need to start scanning markets and finding high-probability setups.
-                </p>
+            <h1 className="mb-5 text-4xl font-extrabold leading-[1.1] tracking-tight text-white md:text-5xl lg:text-6xl">
+              See The Market<br />
+              <span className="text-emerald-400">Before It Moves</span>
+            </h1>
+
+            <p className="mx-auto mb-2 max-w-lg text-base leading-relaxed text-slate-400 md:mx-0 md:text-lg">
+              Institutional-grade scanning, confluence detection,
+              options flow and AI market intelligence —<br />
+              all in one platform.
+            </p>
+
+            <p className="mx-auto mb-8 max-w-lg text-sm text-slate-500 md:mx-0">
+              Scan 10,000+ assets across crypto, equities, options and commodities
+            </p>
+
+            {/* CTAs */}
+            <div className="flex flex-wrap justify-center gap-4 md:justify-start">
+              <Link
+                href="/tools/scanner"
+                className="inline-flex items-center rounded-lg bg-emerald-500 px-7 py-3.5 text-[15px] font-semibold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-400 hover:shadow-emerald-400/30"
+              >
+                Start Scanning
+              </Link>
+              <Link
+                href="/pricing"
+                className="inline-flex items-center rounded-lg border border-slate-600 bg-slate-900/50 px-7 py-3.5 text-[15px] font-semibold text-slate-300 transition hover:border-slate-500 hover:bg-slate-800/60"
+              >
+                Explore Platform
+              </Link>
+            </div>
+
+            {/* Trusted Data Providers */}
+            <div className="mt-10">
+              <p className="mb-3 text-xs font-medium uppercase tracking-widest text-slate-500">
+                Trusted Market Data Providers
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-6 md:justify-start">
+                {/* Nasdaq */}
+                <div className="flex items-center gap-2 opacity-70">
+                  <svg viewBox="0 0 120 28" className="h-5 w-auto" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M16.2 2L10.8 8.4V2H5.4v24h5.4V14.4L16.2 26h6.6l-7.2-12L22.8 2h-6.6z" fill="#fff"/>
+                    <text x="30" y="21" fill="#fff" fontSize="18" fontWeight="700" fontFamily="system-ui,sans-serif">NASDAQ</text>
+                  </svg>
+                </div>
+                {/* CoinGecko */}
+                <div className="flex items-center gap-1.5 opacity-70">
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="12" fill="#8DC63F"/>
+                    <circle cx="9" cy="10" r="2.5" fill="#fff"/>
+                    <circle cx="9" cy="10" r="1.2" fill="#222"/>
+                  </svg>
+                  <span className="text-sm font-semibold text-slate-300">CoinGecko</span>
+                </div>
+                {/* Alpha Vantage */}
+                <div className="flex items-center gap-1.5 opacity-70">
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="24" height="24" rx="4" fill="#1A1A2E"/>
+                    <path d="M12 4l8 16H4L12 4z" fill="#E94560" opacity="0.9"/>
+                    <path d="M12 8l5 10H7L12 8z" fill="#0F3460"/>
+                  </svg>
+                  <span className="text-sm font-semibold text-slate-300">Alpha Vantage</span>
+                </div>
               </div>
-              <ul style={{ fontSize: 13, marginTop: 4, listStyle: 'none', paddingLeft: 0 }}>
-                <li style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(15,23,42,0.85)' }}>
-                  <span>Multi-Asset Scanners</span>
-                  <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 999, background: 'rgba(22,163,74,0.1)', border: '1px solid rgba(34,197,94,0.7)', color: '#bbf7d0' }}>Unlimited</span>
-                </li>
-                <li style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(15,23,42,0.85)' }}>
-                  <span>AI Signal Explanations</span>
-                  <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 999, background: 'rgba(22,163,74,0.1)', border: '1px solid rgba(34,197,94,0.7)', color: '#bbf7d0' }}>Included</span>
-                </li>
-                <li style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(15,23,42,0.85)' }}>
-                  <span>Multi-Timeframe Analysis</span>
-                  <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 999, background: 'rgba(22,163,74,0.1)', border: '1px solid rgba(34,197,94,0.7)', color: '#bbf7d0' }}>Included</span>
-                </li>
-                <li style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(15,23,42,0.85)' }}>
-                  <span>Portfolio Tracker</span>
-                  <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 999, background: 'rgba(22,163,74,0.1)', border: '1px solid rgba(34,197,94,0.7)', color: '#bbf7d0' }}>Included</span>
-                </li>
-                <li style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
-                  <span>Trade Journal</span>
-                  <span style={{ fontSize: 11, padding: '3px 8px', borderRadius: 999, background: 'rgba(22,163,74,0.1)', border: '1px solid rgba(34,197,94,0.7)', color: '#bbf7d0' }}>Included</span>
-                </li>
-              </ul>
-              <p style={{ fontSize: 13, margin: '0 0 12px', color: 'var(--text-muted)' }}>
-                <strong style={{ color: 'var(--text-main)' }}>Pro features available</strong> — backtesting, advanced structure tools, and TradingView integration when you're ready to upgrade.
-              </p>
-              <p style={{ fontSize: 12, margin: 0, color: '#9ca3af', fontStyle: 'italic' }}>
-                Upgrade only when you need advanced structure tools and backtesting.
-              </p>
-            </aside>
+            </div>
+          </div>
+
+          {/* ─── Right column: Hero Image ─── */}
+          <div className="relative flex-1">
+            <div className="relative">
+              {/* Glow behind image */}
+              <div className="pointer-events-none absolute -inset-4 rounded-2xl bg-gradient-to-br from-cyan-500/10 via-transparent to-emerald-500/10 blur-2xl" />
+              <img
+                src="/logos/landing-hero.png"
+                alt="MarketScannerPros Platform"
+                className="relative w-full max-w-[560px] rounded-xl shadow-2xl shadow-black/50"
+                style={{ aspectRatio: '16/10', objectFit: 'cover' }}
+              />
+            </div>
           </div>
         </div>
       </section>
