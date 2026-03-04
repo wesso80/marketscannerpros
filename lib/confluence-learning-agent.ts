@@ -1319,87 +1319,48 @@ export class ConfluenceLearningAgent {
         return null; // safety fallback
       }
       
-      case '1W': {
-        // Weekly closes on last trading day of the week (usually Friday).
+      case '1W': case '2W': case '3W': case '4W': case '5W':
+      case '6W': case '7W': case '8W': case '9W': case '10W':
+      case '11W': case '12W': case '13W': case '14W': case '15W':
+      case '16W': case '17W': case '18W': case '19W': case '20W':
+      case '21W': case '22W': case '23W': case '24W': case '25W':
+      case '26W': case '27W': case '28W': case '29W': case '30W':
+      case '31W': case '32W': case '33W': case '34W': case '35W':
+      case '36W': case '37W': case '38W': case '39W': case '40W':
+      case '41W': case '42W': case '43W': case '44W': case '45W':
+      case '46W': case '47W': case '48W': case '49W': case '50W':
+      case '51W': case '52W': {
+        // Generic N-week: closes every Nth Friday (or last trading day of that week if Friday is holiday)
+        const N = parseInt(tfId); // "1W" → 1, "12W" → 12, "52W" → 52
         const isFriday = dayOfWeek === 5;
-        if (isFriday && !todayIsHoliday && currentTime < todayCloseMs) {
-          return minsToTodayClose; // Closes today!
+        const isNWCloseFriday = N === 1 || weeksSinceEpoch % N === 0;
+        
+        // If today IS the close Friday and market still open, return time to today's close
+        if (isFriday && !todayIsHoliday && isNWCloseFriday && currentTime < todayCloseMs) {
+          return minsToTodayClose;
         }
-        // Days until next Friday
+        
+        // Find next NW close Friday
         let daysToFriday = (5 - dayOfWeek + 7) % 7;
-        if (daysToFriday === 0 && (currentTime >= todayCloseMs || todayIsHoliday)) daysToFriday = 7;
-        // If target Friday is a holiday, step back to last trading day of that week
+        if (daysToFriday === 0) daysToFriday = N === 1 ? 7 : 7; // past this Friday, go to next
+
+        if (N === 1) {
+          // 1W: just next Friday
+        } else {
+          // Multi-week: find next Friday where weeksSinceEpoch is divisible by N
+          const nextFridayWeek = Math.floor((daysSinceEpoch + daysToFriday) / 7);
+          const weeksUntilNW = (N - (nextFridayWeek % N)) % N;
+          daysToFriday += weeksUntilNW * 7;
+        }
+        
+        // Step back from target Friday if it's a holiday → last trading day of that week
         let wkTarget = new Date(Date.UTC(year, month, date + daysToFriday, 12));
         for (let _s = 0; _s < 5; _s++) {
           const dow = wkTarget.getUTCDay();
           if (dow >= 1 && dow <= 5 && !isUSMarketHoliday(wkTarget.getUTCFullYear(), wkTarget.getUTCMonth(), wkTarget.getUTCDate())) break;
           wkTarget = new Date(wkTarget.getTime() - 86_400_000);
         }
-        const fridayClose = closeAt(wkTarget.getUTCFullYear(), wkTarget.getUTCMonth(), wkTarget.getUTCDate());
-        return Math.floor((fridayClose.getTime() - currentTime) / 60000);
-      }
-      
-      case '2W': {
-        // 2-Week: closes every OTHER Friday (or last trading day if Friday is holiday)
-        const isFriday = dayOfWeek === 5;
-        const is2WCloseFriday = weeksSinceEpoch % 2 === 0;
-        if (isFriday && !todayIsHoliday && is2WCloseFriday && currentTime < todayCloseMs) {
-          return minsToTodayClose; // Closes today!
-        }
-        // Find next 2W Friday
-        let daysToFriday = (5 - dayOfWeek + 7) % 7;
-        if (daysToFriday === 0) daysToFriday = 7;
-        let weeksToAdd = 0;
-        const nextFridayWeek = Math.floor((daysSinceEpoch + daysToFriday) / 7);
-        if (nextFridayWeek % 2 !== 0) weeksToAdd = 7;
-        // Step back from target if it's a holiday
-        let wk2Target = new Date(Date.UTC(year, month, date + daysToFriday + weeksToAdd, 12));
-        for (let _s = 0; _s < 5; _s++) {
-          const dow = wk2Target.getUTCDay();
-          if (dow >= 1 && dow <= 5 && !isUSMarketHoliday(wk2Target.getUTCFullYear(), wk2Target.getUTCMonth(), wk2Target.getUTCDate())) break;
-          wk2Target = new Date(wk2Target.getTime() - 86_400_000);
-        }
-        const targetClose = closeAt(wk2Target.getUTCFullYear(), wk2Target.getUTCMonth(), wk2Target.getUTCDate());
-        return Math.floor((targetClose.getTime() - currentTime) / 60000);
-      }
-      
-      case '3W': {
-        // 3-Week: closes every 3rd Friday (or last trading day if Friday is holiday)
-        const isFriday = dayOfWeek === 5;
-        const is3WCloseFriday = weeksSinceEpoch % 3 === 0;
-        if (isFriday && !todayIsHoliday && is3WCloseFriday && currentTime < todayCloseMs) {
-          return minsToTodayClose;
-        }
-        let daysToFriday = (5 - dayOfWeek + 7) % 7;
-        if (daysToFriday === 0) daysToFriday = 7;
-        const weeksUntil3W = (3 - (weeksSinceEpoch % 3)) % 3;
-        let wk3Target = new Date(Date.UTC(year, month, date + daysToFriday + (weeksUntil3W * 7), 12));
-        for (let _s = 0; _s < 5; _s++) {
-          const dow = wk3Target.getUTCDay();
-          if (dow >= 1 && dow <= 5 && !isUSMarketHoliday(wk3Target.getUTCFullYear(), wk3Target.getUTCMonth(), wk3Target.getUTCDate())) break;
-          wk3Target = new Date(wk3Target.getTime() - 86_400_000);
-        }
-        const targetClose = closeAt(wk3Target.getUTCFullYear(), wk3Target.getUTCMonth(), wk3Target.getUTCDate());
-        return Math.floor((targetClose.getTime() - currentTime) / 60000);
-      }
-      
-      case '4W': {
-        // 4-Week: closes every 4th Friday (or last trading day if Friday is holiday)
-        const isFriday = dayOfWeek === 5;
-        const is4WCloseFriday = weeksSinceEpoch % 4 === 0;
-        if (isFriday && !todayIsHoliday && is4WCloseFriday && currentTime < todayCloseMs) {
-          return minsToTodayClose;
-        }
-        let daysToFriday = (5 - dayOfWeek + 7) % 7;
-        if (daysToFriday === 0) daysToFriday = 7;
-        const weeksUntil4W = (4 - (weeksSinceEpoch % 4)) % 4;
-        let wk4Target = new Date(Date.UTC(year, month, date + daysToFriday + (weeksUntil4W * 7), 12));
-        for (let _s = 0; _s < 5; _s++) {
-          const dow = wk4Target.getUTCDay();
-          if (dow >= 1 && dow <= 5 && !isUSMarketHoliday(wk4Target.getUTCFullYear(), wk4Target.getUTCMonth(), wk4Target.getUTCDate())) break;
-          wk4Target = new Date(wk4Target.getTime() - 86_400_000);
-        }
-        const targetClose = closeAt(wk4Target.getUTCFullYear(), wk4Target.getUTCMonth(), wk4Target.getUTCDate());
+        const targetClose = closeAt(wkTarget.getUTCFullYear(), wkTarget.getUTCMonth(), wkTarget.getUTCDate());
         return Math.floor((targetClose.getTime() - currentTime) / 60000);
       }
       
