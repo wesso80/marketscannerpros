@@ -241,6 +241,68 @@ export default function CommandHub() {
             </svg>
             <span className="text-sm font-semibold text-slate-300">Alpha Vantage</span>
           </a>
+
+          {/* ARCxA Engine */}
+          <span className="flex items-center gap-2 opacity-70">
+            <img src="/logos/arcxa-chip.svg" alt="ARCxA" className="h-5 w-5" />
+            <span className="text-sm font-semibold text-red-400">ARCxA</span>
+          </span>
+        </div>
+      </section>
+
+      {/* ─── ARCxA Intelligence Engine ─── */}
+      <section className="relative overflow-hidden border-b border-white/5">
+        {/* Red radial glow behind chip */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-red-500/[0.07] blur-3xl" />
+        </div>
+
+        <div className="relative mx-auto flex max-w-4xl flex-col items-center px-4 py-10 text-center md:py-14">
+          {/* Chip icon */}
+          <div className="relative mb-5">
+            <div className="absolute -inset-4 animate-pulse rounded-full bg-red-500/10 blur-xl" />
+            <img
+              src="/logos/arcxa-chip.svg"
+              alt="ARCxA Intelligence Engine"
+              className="relative h-16 w-16 drop-shadow-[0_0_20px_rgba(239,68,68,0.4)] md:h-20 md:w-20"
+            />
+          </div>
+
+          {/* Title */}
+          <h2 className="text-2xl font-bold tracking-tight text-white md:text-3xl">
+            <span className="text-red-400">ARCxA</span> Intelligence Engine
+          </h2>
+
+          <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-slate-400 md:text-base">
+            The AI processing core behind MarketScannerPros.<br />
+            Multi-asset analysis · Multi-timeframe confluence · Institutional signal detection.
+          </p>
+
+          {/* Architecture diagram */}
+          <div className="mt-8 w-full max-w-lg">
+            <div className="flex items-center justify-center gap-2">
+              <span className="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-[11px] font-semibold text-slate-300">Time Engine</span>
+              <span className="text-slate-600">│</span>
+              <span className="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-[11px] font-semibold text-slate-300">Options Flow</span>
+              <span className="text-slate-600">│</span>
+              <span className="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-[11px] font-semibold text-slate-300">Market Scanner</span>
+              <span className="text-slate-600">│</span>
+              <span className="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-[11px] font-semibold text-slate-300">AI Analyst</span>
+            </div>
+            <div className="mx-auto mt-2 h-4 w-px bg-gradient-to-b from-slate-600 to-transparent" />
+            <div className="mx-auto mt-0 flex items-center justify-center">
+              <span className="rounded-md border border-red-500/30 bg-red-500/10 px-4 py-1.5 text-[11px] font-bold tracking-wide text-red-400">
+                Institutional Decision Engine
+              </span>
+            </div>
+          </div>
+
+          <Link
+            href="/tools/options-confluence"
+            className="mt-6 inline-flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-5 py-2.5 text-sm font-semibold text-red-400 transition hover:bg-red-500/20 hover:text-red-300"
+          >
+            Explore the AI Engine <span>→</span>
+          </Link>
         </div>
       </section>
 
