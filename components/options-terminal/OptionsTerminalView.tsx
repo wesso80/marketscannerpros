@@ -136,7 +136,9 @@ export default function OptionsTerminalView() {
   if (!ticker && chain.contracts.length === 0) {
     return (
       <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center justify-center p-8">
-        <div className="text-5xl mb-5">📊</div>
+        <div className="w-16 h-16 rounded-2xl overflow-hidden mb-5">
+          <img src="/assets/platform-tools/options-terminal.png" alt="Options Terminal" className="h-full w-full object-contain p-1" />
+        </div>
         <h2 className="text-xl font-bold mb-2">Options Terminal</h2>
         <p className="text-sm text-zinc-400 mb-6 max-w-md text-center">
           One ticker — the entire options decision surface. Enter a symbol to see
