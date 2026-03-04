@@ -71,19 +71,20 @@ export async function GET(request: NextRequest) {
         const service = getMidpointService();
 
         // ── PRE-TAG: mark midpoints the current price has touched ──────
-        // Use a 0.5% buffer around current price for the "current bar" range
-        const tagBuffer = currentPrice * 0.005;
+        // Use a 0.1% buffer around current price for the "current bar" range
+        const tagBuffer = currentPrice * 0.001;
         const touchTagged = await service.checkAndTagMidpoints(
           symbol,
           currentPrice + tagBuffer,
           currentPrice - tagBuffer
         );
 
-        // ── OVERSHOOT TAG: mark midpoints price has blown past ─────────
+        // ── OVERSHOOT TAG: mark midpoints price has clearly blown past ──
+        // 5% threshold — only tags midpoints that are way behind price
         const overshootTagged = await service.tagOvershootMidpoints(
           symbol,
           currentPrice,
-          0.005  // 0.5% overshoot threshold
+          0.05  // 5% overshoot threshold
         );
 
         if (touchTagged > 0 || overshootTagged > 0) {

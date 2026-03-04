@@ -201,3 +201,37 @@ export async function PUT(request: NextRequest) {
     );
   }
 }
+
+/**
+ * DELETE /api/midpoints?symbol=BTCUSD
+ * 
+ * Reset (untag) all tagged midpoints for a symbol so they become active again.
+ * If no symbol is provided, resets ALL tagged midpoints.
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const symbol = searchParams.get('symbol') || undefined;
+    
+    const service = getMidpointService();
+    const resetCount = await service.resetTaggedMidpoints(symbol);
+    
+    return NextResponse.json({
+      success: true,
+      symbol: symbol || 'ALL',
+      resetCount,
+      timestamp: new Date().toISOString(),
+      message: `Reset ${resetCount} tagged midpoint(s)`,
+    });
+    
+  } catch (error) {
+    console.error('Midpoints Reset API Error:', error);
+    return NextResponse.json(
+      {
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
+  }
+}

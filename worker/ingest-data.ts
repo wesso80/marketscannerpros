@@ -20,6 +20,7 @@ import { TokenBucket, sleep, retryWithBackoff } from '../lib/rateLimiter';
 import { calculateAllIndicators, detectSqueeze, getIndicatorWarmupStatus, OHLCVBar } from '../lib/indicators';
 import { CACHE_KEYS, CACHE_TTL } from '../lib/redis';
 import { recordSignalsBatch } from '../lib/signalService';
+import { getCandleProcessor } from '../lib/candleProcessor';
 import {
   COINGECKO_ID_MAP,
   getOHLC as getCoinGeckoOHLC,
@@ -1166,6 +1167,35 @@ async function processEquitySymbol(symbol: string): Promise<{ apiCalls: number; 
     if (bars.length > 0) {
       await upsertBars(symbol, 'daily', bars);
 
+      // ── Store midpoints for Time Gravity Map ──
+      try {
+        const processor = getCandleProcessor();
+        const recentBars = bars.slice(-30); // Last 30 daily candles
+        const midpointCount = await processor.processCandleBatch(
+          symbol,
+          'daily',
+          recentBars.map(b => ({
+            time: new Date(b.timestamp),
+            open: b.open,
+            high: b.high,
+            low: b.low,
+            close: b.close,
+            volume: b.volume,
+          })),
+          'equity'
+        );
+        // Also tag midpoints that current price has hit
+        const latestBar = bars[bars.length - 1];
+        if (latestBar) {
+          await processor.updateTaggingStatus(symbol, latestBar.high, latestBar.low);
+        }
+        if (midpointCount > 0) {
+          console.log(`[worker] ${symbol}: Stored ${midpointCount} midpoints for TGM`);
+        }
+      } catch (mpErr: any) {
+        console.warn(`[worker] ${symbol}: Midpoint storage failed (non-fatal):`, mpErr?.message);
+      }
+
       // 3. Compute indicators locally (no API call!)
       const ohlcvBars: OHLCVBar[] = bars.map(b => ({
         timestamp: b.timestamp,
@@ -1271,6 +1301,34 @@ async function processCryptoSymbol(symbol: string): Promise<{
 
       await upsertQuote(symbol, quote);
       await cacheQuote(symbol, quote);
+
+      // ── Store midpoints for Time Gravity Map ──
+      try {
+        const processor = getCandleProcessor();
+        const recentBars = bars.slice(-30); // Last 30 daily candles
+        const midpointCount = await processor.processCandleBatch(
+          symbol,
+          'daily',
+          recentBars.map(b => ({
+            time: new Date(b.timestamp),
+            open: b.open,
+            high: b.high,
+            low: b.low,
+            close: b.close,
+            volume: b.volume,
+          })),
+          'crypto'
+        );
+        // Tag midpoints that current price has hit
+        if (latest) {
+          await processor.updateTaggingStatus(symbol, latest.high, latest.low);
+        }
+        if (midpointCount > 0) {
+          console.log(`[worker] ${symbol}: Stored ${midpointCount} midpoints for TGM`);
+        }
+      } catch (mpErr: any) {
+        console.warn(`[worker] ${symbol}: Midpoint storage failed (non-fatal):`, mpErr?.message);
+      }
 
       // Compute indicators
       const ohlcvBars: OHLCVBar[] = bars.map(b => ({

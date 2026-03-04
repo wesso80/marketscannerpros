@@ -421,6 +421,27 @@ export class MidpointService {
   }
   
   /**
+   * Reset (untag) all midpoints for a symbol so they become active again.
+   * Useful after fixing tagging thresholds or re-backfilling.
+   */
+  async resetTaggedMidpoints(symbol?: string): Promise<number> {
+    const query = symbol
+      ? `UPDATE timeframe_midpoints SET tagged = FALSE, tagged_at = NULL, tagged_price = NULL, updated_at = NOW() WHERE tagged = TRUE AND symbol = $1 RETURNING id`
+      : `UPDATE timeframe_midpoints SET tagged = FALSE, tagged_at = NULL, tagged_price = NULL, updated_at = NOW() WHERE tagged = TRUE RETURNING id`;
+    
+    try {
+      const params = symbol ? [symbol] : [];
+      const result = await this.pool.query(query, params);
+      const count = result.rows.length;
+      console.log(`[MidpointService] Reset ${count} tagged midpoints${symbol ? ` for ${symbol}` : ''}`);
+      return count;
+    } catch (error) {
+      console.error('Failed to reset tagged midpoints:', error);
+      return 0;
+    }
+  }
+  
+  /**
    * Map database row to StoredMidpoint
    */
   private mapToStoredMidpoint(row: any): StoredMidpoint {
