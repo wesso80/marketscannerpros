@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { computeTimeGravityMap } from '@/lib/time/timeGravityMap';
+import { computeTimeGravityMap, type ComputeTGMOptions } from '@/lib/time/timeGravityMap';
 import type { MidpointRecord } from '@/lib/time/midpointDebt';
 import { getMidpointService } from '@/lib/midpointService';
 
@@ -14,8 +14,10 @@ import { getMidpointService } from '@/lib/midpointService';
  * - maxDistance: Max distance % to fetch midpoints (default: 10)
  * - midpoints: JSON array of midpoint records (optional, overrides database)
  * 
- * Response:
- * - TimeGravityMap object with zones, targets, heatmap, etc.
+ * New behaviour:
+ * - Tags midpoints that the current price has touched or overshot BEFORE
+ *   computing the gravity map, so stale targets are cleared every request.
+ * - Returns `targetStatus` and `taggingStats` for reactive UI.
  */
 
 export async function GET(request: NextRequest) {
@@ -63,10 +65,34 @@ export async function GET(request: NextRequest) {
         );
       }
     }
-    // Priority 2: Fetch from database
+    // Priority 2: Fetch from database (with pre-tagging)
     else {
       try {
         const service = getMidpointService();
+
+        // ── PRE-TAG: mark midpoints the current price has touched ──────
+        // Use a 0.5% buffer around current price for the "current bar" range
+        const tagBuffer = currentPrice * 0.005;
+        const touchTagged = await service.checkAndTagMidpoints(
+          symbol,
+          currentPrice + tagBuffer,
+          currentPrice - tagBuffer
+        );
+
+        // ── OVERSHOOT TAG: mark midpoints price has blown past ─────────
+        const overshootTagged = await service.tagOvershootMidpoints(
+          symbol,
+          currentPrice,
+          0.005  // 0.5% overshoot threshold
+        );
+
+        if (touchTagged > 0 || overshootTagged > 0) {
+          console.log(
+            `[TGM API] Pre-tagged ${touchTagged} touch + ${overshootTagged} overshoot midpoints for ${symbol}`
+          );
+        }
+
+        // ── NOW fetch only the remaining untagged midpoints ────────────
         midpoints = await service.getUntaggedMidpoints(symbol, currentPrice, {
           maxDistancePercent: maxDistance,
           limit: 100,
@@ -84,18 +110,11 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // No midpoints found — tell the client clearly
-    if (midpoints.length === 0) {
-      return NextResponse.json({
-        success: false,
-        error: `No midpoints found for ${symbol} within ${maxDistance}% of $${currentPrice}`,
-        hint: 'Run backfill: npm run backfill:midpoints (crypto) or npm run backfill:equities',
-        symbol,
-        midpointCount: 0,
-      }, { status: 404 });
-    }
+    // No midpoints found — could mean all were tagged (target hit!)
+    // Still compute TGM so the state machine returns TARGET_HIT / OVERSHOT
+    // instead of a static "no data" error.
     
-    // Compute Time Gravity Map
+    // Compute Time Gravity Map with the engine's own in-memory tagging
     const tgm = computeTimeGravityMap(midpoints, currentPrice);
     
     // Determine data source
@@ -108,6 +127,7 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
       dataSource,
       midpointCount: midpoints.length,
+      targetStatus: tgm.targetStatus,
       data: tgm,
     });
     

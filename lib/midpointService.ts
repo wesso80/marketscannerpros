@@ -215,6 +215,49 @@ export class MidpointService {
   }
   
   /**
+   * Tag midpoints that price has clearly overshot.
+   *
+   * Logic: Every midpoint was created from a candle where price was AT that level.
+   * If the current price is now >overshootPct away, price must have crossed through
+   * the midpoint to get where it is. We tag these as "completed / overshot".
+   *
+   * Safety: only tags midpoints older than 60 min to avoid tagging fresh ones
+   * from a candle that just closed (where price may still be nearby and oscillating).
+   */
+  async tagOvershootMidpoints(
+    symbol: string,
+    currentPrice: number,
+    overshootPct: number = 0.005  // 0.5%
+  ): Promise<number> {
+    const query = `
+      UPDATE timeframe_midpoints
+      SET 
+        tagged = TRUE,
+        tagged_at = NOW(),
+        tagged_price = $2,
+        updated_at = NOW()
+      WHERE 
+        symbol = $1
+        AND tagged = FALSE
+        AND ABS((midpoint - $2) / NULLIF(midpoint, 0)) > $3
+        AND candle_close_time < NOW() - INTERVAL '60 minutes'
+      RETURNING id
+    `;
+    
+    try {
+      const result = await this.pool.query(query, [symbol, currentPrice, overshootPct]);
+      const count = result.rows.length;
+      if (count > 0) {
+        console.log(`[MidpointService] Tagged ${count} overshot midpoints for ${symbol} (price=${currentPrice})`);
+      }
+      return count;
+    } catch (error) {
+      console.error('Failed to tag overshot midpoints:', error);
+      return 0;
+    }
+  }
+  
+  /**
    * Get untagged midpoints for Time Gravity Map calculations
    */
   async getUntaggedMidpoints(

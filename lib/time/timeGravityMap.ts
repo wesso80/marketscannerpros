@@ -31,6 +31,13 @@ import {
   TF_WEIGHTS,
 } from './midpointDebt';
 
+import {
+  computeMomentumOverride,
+  type MomentumOverrideInput,
+  type MomentumOverrideState,
+  type ExpansionTarget,
+} from './momentumOverride';
+
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════════════════════════════════════
@@ -73,6 +80,15 @@ export interface GravityZone {
   label: string;
 }
 
+/** Target lifecycle state */
+export type TargetStatus =
+  | 'ACTIVE'            // Target is live, price approaching
+  | 'TARGET_HIT'        // Price tagged the target zone
+  | 'OVERSHOT'          // Price blew through the target by >0.2%
+  | 'RECOMPUTING'       // Previous target invalidated, calculating next
+  | 'EXPANSION'         // Momentum override — expansion targets replace magnets
+  | 'NO_TARGET';        // No viable gravity zones found
+
 export interface TimeGravityMap {
   timestamp: Date;
   currentPrice: number;
@@ -82,12 +98,22 @@ export interface TimeGravityMap {
   strongestPull: GravityPoint | null;
   targetPrice: number | null;
   targetRange: [number, number] | null;
+  targetStatus: TargetStatus;
   confidence: number;             // 0-100
   debtAnalysis: MidpointDebtAnalysis;
+  momentumOverride: MomentumOverrideState | null;
+  expansionTargets: ExpansionTarget[];
   heatmap: number[];             // Array of gravity values for visualization
   heatmapPrices: number[];       // Corresponding prices
   summary: string;
   alert: string | null;
+
+  /** Stats from pre-computation tagging pass */
+  taggingStats: {
+    taggedThisCycle: number;      // Midpoints tagged in this computation
+    overshotTagged: number;       // Auto-tagged because price blew past
+    remainingUntagged: number;    // Still active
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -305,17 +331,80 @@ function buildGravityZone(points: GravityPoint[]): GravityZone {
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
+ * Options for the gravity engine.
+ * When OHLC bars are provided the momentum override module runs.
+ */
+export interface ComputeTGMOptions {
+  /** Recent OHLC bars for momentum override (oldest → newest, min 6).
+   *  If omitted, momentum override is skipped. */
+  ohlcBars?: { open: number; high: number; low: number; close: number }[];
+  /** Prior swing references for break-hold detection */
+  priorSwingHigh?: number;
+  priorSwingLow?: number;
+  /** Overshoot threshold to auto-tag midpoints (default 0.2%) */
+  overshootPct?: number;
+}
+
+/**
  * Compute complete Time Gravity Map
+ *
+ * CHANGES from previous version:
+ * 1. Pre-computation TAGGING — midpoints where price has overshot are
+ *    filtered out before gravity calculation. This prevents stale targets.
+ * 2. TARGET STATE MACHINE — returns a `targetStatus` indicating TARGET_HIT,
+ *    OVERSHOT, EXPANSION, etc. so the UI can show the correct state.
+ * 3. MOMENTUM OVERRIDE — when OHLC data is provided, impulse expansion
+ *    dampens gravity by 0.25× and switches to expansion targets.
  */
 export function computeTimeGravityMap(
   midpoints: MidpointRecord[],
   currentPrice: number,
-  currentTime: Date = new Date()
+  currentTime: Date = new Date(),
+  options: ComputeTGMOptions = {}
 ): TimeGravityMap {
-  // 1. Calculate gravity points with decompression state
-  //    Decompression is checked against the CURRENT live candle for each
-  //    timeframe — not the historical candle that generated the midpoint.
-  const allPoints: GravityPoint[] = midpoints.map(midpoint => {
+  const {
+    ohlcBars,
+    priorSwingHigh,
+    priorSwingLow,
+    overshootPct = 0.002,  // 0.2%
+  } = options;
+
+  // ─── 0. PRE-COMPUTATION TAGGING ────────────────────────────────────
+  // Tag midpoints that the current price has already passed through.
+  // This is done IN-MEMORY — the DB tagging is the API route's job.
+  let taggedThisCycle = 0;
+  let overshotTagged = 0;
+
+  const liveMidpoints = midpoints.map(mp => {
+    if (mp.tagged) return mp;  // Already tagged
+
+    const distance = Math.abs(mp.midpoint - currentPrice) / mp.midpoint;
+
+    // Overshoot: price is >overshootPct away from midpoint.
+    // Since the midpoint was created from a candle AT that level,
+    // price must have crossed through it to be this far away.
+    if (distance > overshootPct) {
+      overshotTagged++;
+      taggedThisCycle++;
+      return { ...mp, tagged: true, taggedAt: currentTime };
+    }
+
+    // Direct touch: current price is within the midpoint range
+    if (currentPrice >= mp.low && currentPrice <= mp.high) {
+      taggedThisCycle++;
+      return { ...mp, tagged: true, taggedAt: currentTime };
+    }
+
+    return mp;
+  });
+
+  // Separate active (untagged) from tagged
+  const activeMidpoints = liveMidpoints.filter(mp => !mp.tagged);
+  const remainingUntagged = activeMidpoints.length;
+
+  // ─── 1. GRAVITY POINTS ──────────────────────────────────────────────
+  // Compute gravity for active (untagged) midpoints only.
+  const allPoints: GravityPoint[] = activeMidpoints.map(midpoint => {
     const { open, close } = getCurrentCandleBoundaries(midpoint.timeframe, currentTime);
     const decompressionState = calculateDecompressionState(
       midpoint.timeframe,
@@ -327,55 +416,132 @@ export function computeTimeGravityMap(
     
     return calculateGravityPoint(midpoint, decompressionState, currentPrice);
   });
-  
-  // 2. Create gravity zones
+
+  // ─── 2. MOMENTUM OVERRIDE ──────────────────────────────────────────
+  let momentumOverride: MomentumOverrideState | null = null;
+  let expansionTargets: ExpansionTarget[] = [];
+
+  if (ohlcBars && ohlcBars.length >= 6) {
+    const closes = ohlcBars.map(b => b.close);
+    const highs = ohlcBars.map(b => b.high);
+    const lows = ohlcBars.map(b => b.low);
+
+    // Compute ATR(14) and avgRange(20) from provided bars
+    const { computeATR, computeAvgRange } = require('./momentumOverride');
+    const atr14 = computeATR(highs, lows, closes, 14);
+    const avgRangeN = computeAvgRange(highs, lows, 20);
+
+    const overrideInput: MomentumOverrideInput = {
+      closes,
+      highs,
+      lows,
+      atr14,
+      avgRangeN,
+      priorSwingHigh,
+      priorSwingLow,
+    };
+
+    momentumOverride = computeMomentumOverride(overrideInput);
+
+    // If override active, dampen gravity
+    if (momentumOverride.isOverride) {
+      allPoints.forEach(p => {
+        p.adjustedGravity *= momentumOverride!.gravityMultiplier; // 0.25
+        p.visualStrength = Math.min(100, (p.adjustedGravity / 1000) * 100);
+      });
+
+      // Compute expansion targets (fib extensions from the impulse)
+      const impulseStart = Math.min(...lows.slice(-6));
+      const impulseEnd = currentPrice;
+      const { computeExpansionTargets } = require('./momentumOverride');
+      expansionTargets = computeExpansionTargets(impulseStart, impulseEnd);
+    }
+  }
+
+  // ─── 3. GRAVITY ZONES ──────────────────────────────────────────────
   const zones = createGravityZones(allPoints, 0.5);
-  
-  // 3. Find top zone
   const topZone = zones.length > 0 ? zones[0] : null;
-  
-  // 4. Find strongest individual pull
+
+  // ─── 4. STRONGEST PULL ──────────────────────────────────────────────
   const strongestPull = allPoints.length > 0
     ? allPoints.reduce((max, point) => point.adjustedGravity > max.adjustedGravity ? point : max, allPoints[0])
     : null;
-  
-  // 5. Determine target
+
+  // ─── 5. TARGET + STATE MACHINE ──────────────────────────────────────
   let targetPrice: number | null = null;
   let targetRange: [number, number] | null = null;
-  
-  if (topZone) {
+  let targetStatus: TargetStatus = 'NO_TARGET';
+
+  if (momentumOverride?.isOverride) {
+    // Expansion mode — use extension targets instead of midpoint magnets
+    targetStatus = 'EXPANSION';
+    if (expansionTargets.length > 0) {
+      targetPrice = expansionTargets[0].price;
+      targetRange = [
+        expansionTargets[0].price * 0.998,
+        expansionTargets[0].price * 1.002,
+      ];
+    }
+  } else if (taggedThisCycle > 0 && remainingUntagged === 0) {
+    // All midpoints just got tagged — nothing left
+    targetStatus = overshotTagged > 0 ? 'OVERSHOT' : 'TARGET_HIT';
+  } else if (taggedThisCycle > 0 && remainingUntagged > 0) {
+    // Some tagged, more remain — recomputed to next target
+    targetStatus = 'RECOMPUTING';
+    if (topZone) {
+      targetPrice = topZone.centerPrice;
+      targetRange = [topZone.minPrice, topZone.maxPrice];
+      targetStatus = 'ACTIVE';  // New target is live
+    }
+  } else if (topZone) {
+    // Normal operation — active target
     targetPrice = topZone.centerPrice;
     targetRange = [topZone.minPrice, topZone.maxPrice];
+    targetStatus = 'ACTIVE';
   }
-  
-  // 6. Calculate overall confidence
-  const confidence = topZone?.confidence || 0;
-  
-  // 7. Run debt analysis
-  const debtAnalysis = analyzeMidpointDebt(midpoints, currentPrice);
-  
-  // 8. Generate heatmap data (price levels with gravity values)
+
+  // ─── 6. CONFIDENCE ─────────────────────────────────────────────────
+  let confidence = topZone?.confidence || 0;
+  if (momentumOverride?.isOverride) {
+    // Reduce confidence for midpoint targets during expansion
+    confidence = Math.round(confidence * momentumOverride.gravityMultiplier);
+  }
+
+  // ─── 7. DEBT ANALYSIS ──────────────────────────────────────────────
+  const debtAnalysis = analyzeMidpointDebt(activeMidpoints, currentPrice);
+
+  // ─── 8. HEATMAP ────────────────────────────────────────────────────
   const { heatmap, heatmapPrices } = generateHeatmap(allPoints, currentPrice);
-  
-  // 9. Generate summary
+
+  // ─── 9. SUMMARY ────────────────────────────────────────────────────
   let summary = '';
-  if (zones.length === 0) {
+  if (momentumOverride?.isOverride) {
+    summary = `⚡ MOMENTUM OVERRIDE: ${momentumOverride.reasons.join(' + ')}. Midpoint magnets dampened. Expansion targets active.`;
+  } else if (targetStatus === 'TARGET_HIT') {
+    summary = `✅ TARGET HIT — All ${taggedThisCycle} midpoint(s) tagged this cycle. Awaiting new midpoints.`;
+  } else if (targetStatus === 'OVERSHOT') {
+    summary = `🚀 TARGET OVERSHOT — Price blew past ${overshotTagged} midpoint(s). ${remainingUntagged > 0 ? `${remainingUntagged} still active.` : 'No active targets remain.'}`;
+  } else if (zones.length === 0) {
     summary = 'No significant gravity zones detected.';
   } else if (topZone) {
     const direction = topZone.centerPrice > currentPrice ? 'above' : 'below';
     summary = `Strongest gravity ${direction} at ${topZone.centerPrice.toFixed(2)} (${topZone.dominantTimeframes.join(', ')}). ${topZone.activeDecompressionCount} active decompression windows.`;
   }
-  
-  // 10. Generate alert
+
+  // ─── 10. ALERT ──────────────────────────────────────────────────────
   let alert: string | null = null;
-  if (topZone && topZone.confidence >= 80) {
+  if (momentumOverride?.isOverride) {
+    alert = `⚡ MOMENTUM OVERRIDE: ${momentumOverride.reasons.join(' + ')} | Mode: EXPANSION | Gravity dampened to ${Math.round(momentumOverride.gravityMultiplier * 100)}%`;
+  } else if (targetStatus === 'TARGET_HIT' || targetStatus === 'OVERSHOT') {
+    alert = `✅ TARGET ${targetStatus === 'TARGET_HIT' ? 'HIT' : 'OVERSHOT'} — ${taggedThisCycle} midpoint(s) cleared | ${remainingUntagged} remaining`;
+  } else if (topZone && topZone.confidence >= 80) {
     const decompActive = topZone.activeDecompressionCount;
     const debt = topZone.debtCount;
     alert = `🎯 HIGH PROBABILITY TARGET: ${topZone.centerPrice.toFixed(2)} | ${decompActive} active decompression windows | ${debt} unresolved debt midpoints | Confidence: ${topZone.confidence}%`;
   } else if (topZone && topZone.confidence >= 60) {
     alert = `⚠️ Moderate gravity zone at ${topZone.centerPrice.toFixed(2)} | Confidence: ${topZone.confidence}%`;
   }
-  
+
   return {
     timestamp: currentTime,
     currentPrice,
@@ -385,12 +551,20 @@ export function computeTimeGravityMap(
     strongestPull,
     targetPrice,
     targetRange,
+    targetStatus,
     confidence,
     debtAnalysis,
+    momentumOverride,
+    expansionTargets,
     heatmap,
     heatmapPrices,
     summary,
     alert,
+    taggingStats: {
+      taggedThisCycle,
+      overshotTagged,
+      remainingUntagged,
+    },
   };
 }
 
@@ -551,7 +725,10 @@ export function exampleTimeGravityMap() {
   console.log('═══════════════════════════════════════════\n');
   console.log(`Current Price: ${currentPrice}`);
   console.log(`Target: ${tgm.targetPrice?.toFixed(2) || 'N/A'}`);
-  console.log(`Confidence: ${tgm.confidence}%\n`);
+  console.log(`Target Status: ${tgm.targetStatus}`);
+  console.log(`Confidence: ${tgm.confidence}%`);
+  console.log(`Tagged this cycle: ${tgm.taggingStats.taggedThisCycle}`);
+  console.log(`Remaining active: ${tgm.taggingStats.remainingUntagged}\n`);
   
   if (tgm.topZone) {
     console.log('Top Gravity Zone:');

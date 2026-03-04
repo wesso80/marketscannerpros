@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { computeTimeGravityMap, type TimeGravityMap, type GravityZone, type GravityPoint } from '@/lib/time/timeGravityMap';
+import { computeTimeGravityMap, type TimeGravityMap, type GravityZone, type GravityPoint, type TargetStatus } from '@/lib/time/timeGravityMap';
 import type { MidpointRecord } from '@/lib/time/midpointDebt';
+import type { MomentumOverrideState, ExpansionTarget } from '@/lib/time/momentumOverride';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -71,6 +72,159 @@ function PriceGravityHeatmap({ tgm }: { tgm: TimeGravityMap }) {
             </div>
           );
         }).reverse()}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Target Status Banner — shows real-time target lifecycle
+ */
+function TargetStatusBanner({ tgm }: { tgm: TimeGravityMap }) {
+  const status = tgm.targetStatus;
+  const stats = tgm.taggingStats;
+
+  const statusConfig: Record<TargetStatus, { bg: string; border: string; icon: string; text: string; textColor: string }> = {
+    ACTIVE: {
+      bg: 'bg-green-950/30',
+      border: 'border-green-500/50',
+      icon: '🎯',
+      text: `TARGET ACTIVE: ${tgm.targetPrice?.toFixed(2) || '—'}`,
+      textColor: 'text-green-400',
+    },
+    TARGET_HIT: {
+      bg: 'bg-emerald-950/40',
+      border: 'border-emerald-400',
+      icon: '✅',
+      text: 'TARGET HIT — All midpoints tagged',
+      textColor: 'text-emerald-400',
+    },
+    OVERSHOT: {
+      bg: 'bg-amber-950/40',
+      border: 'border-amber-400',
+      icon: '🚀',
+      text: `TARGET OVERSHOT — Price blew past ${stats.overshotTagged} midpoint(s)`,
+      textColor: 'text-amber-400',
+    },
+    EXPANSION: {
+      bg: 'bg-purple-950/40',
+      border: 'border-purple-400',
+      icon: '⚡',
+      text: 'MOMENTUM OVERRIDE — Expansion targets active',
+      textColor: 'text-purple-400',
+    },
+    RECOMPUTING: {
+      bg: 'bg-blue-950/30',
+      border: 'border-blue-500/50',
+      icon: '🔄',
+      text: 'RECOMPUTING — Finding next target...',
+      textColor: 'text-blue-400',
+    },
+    NO_TARGET: {
+      bg: 'bg-gray-900/40',
+      border: 'border-gray-700',
+      icon: '⏳',
+      text: 'No active gravity targets',
+      textColor: 'text-gray-400',
+    },
+  };
+
+  const cfg = statusConfig[status];
+
+  return (
+    <div className={`${cfg.bg} border ${cfg.border} rounded-lg p-3 mb-3`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">{cfg.icon}</span>
+          <span className={`text-sm font-bold ${cfg.textColor}`}>{cfg.text}</span>
+        </div>
+        {tgm.targetPrice && status === 'ACTIVE' && (
+          <span className="text-xs text-gray-400">
+            Confidence: {tgm.confidence}%
+          </span>
+        )}
+      </div>
+
+      {/* Tagging stats row */}
+      {(stats.taggedThisCycle > 0 || stats.remainingUntagged > 0) && (
+        <div className="flex items-center gap-4 mt-2 text-[10px] text-gray-500">
+          {stats.taggedThisCycle > 0 && (
+            <span className="text-green-500">
+              ✓ {stats.taggedThisCycle} tagged this cycle
+            </span>
+          )}
+          {stats.overshotTagged > 0 && (
+            <span className="text-amber-500">
+              🚀 {stats.overshotTagged} overshot
+            </span>
+          )}
+          <span>
+            {stats.remainingUntagged} active target{stats.remainingUntagged !== 1 ? 's' : ''}
+          </span>
+        </div>
+      )}
+
+      {/* Next target preview when recomputing */}
+      {status === 'RECOMPUTING' && tgm.topZone && (
+        <div className="mt-2 text-xs text-blue-300">
+          → Next target: {tgm.topZone.centerPrice.toFixed(2)} ({tgm.topZone.dominantTimeframes.join(' • ')})
+        </div>
+      )}
+
+      {/* Expansion targets */}
+      {status === 'EXPANSION' && tgm.expansionTargets.length > 0 && (
+        <div className="mt-2 space-y-1">
+          {tgm.expansionTargets.slice(0, 3).map((target, i) => (
+            <div key={i} className="flex items-center gap-2 text-xs">
+              <span className="text-purple-400">{target.label}</span>
+              <span className="text-white font-mono">{target.price.toFixed(2)}</span>
+              <span className="text-gray-600 text-[10px]">{target.type}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Momentum Override Banner
+ */
+function MomentumOverrideBanner({ override }: { override: MomentumOverrideState }) {
+  if (!override.isOverride) return null;
+
+  return (
+    <div className="bg-gradient-to-r from-purple-950/60 to-red-950/40 border border-purple-500 rounded-lg p-3 mb-3 animate-pulse">
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">⚡</span>
+          <span className="text-sm font-bold text-purple-300">MOMENTUM OVERRIDE: ON</span>
+        </div>
+        <span className="text-xs text-purple-400 font-mono">
+          Mode: {override.mode}
+        </span>
+      </div>
+
+      <div className="text-xs text-gray-300 mb-2">
+        Reason: {override.reasons.join(' + ')}
+      </div>
+
+      {/* Severity bar */}
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] text-gray-500">Severity</span>
+        <div className="flex-1 bg-gray-900/50 h-1.5 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-yellow-500 to-red-500"
+            style={{ width: `${override.severity01 * 100}%` }}
+          />
+        </div>
+        <span className="text-[10px] text-gray-400">
+          {(override.severity01 * 100).toFixed(0)}%
+        </span>
+      </div>
+
+      <div className="mt-2 text-[10px] text-gray-500">
+        Gravity dampened to {Math.round(override.gravityMultiplier * 100)}% — midpoints are LOW PRIORITY
       </div>
     </div>
   );
@@ -512,10 +666,19 @@ export default function TimeGravityMapWidget({
             <p className="text-xs text-gray-400">{symbol}</p>
           </div>
           <div className="text-right">
-            <div className="text-lg font-mono text-white">
-              {tgm.targetPrice?.toFixed(2) || '—'}
+            <div className={`text-lg font-mono ${
+              tgm.targetStatus === 'TARGET_HIT' ? 'text-emerald-400' :
+              tgm.targetStatus === 'OVERSHOT' ? 'text-amber-400' :
+              tgm.targetStatus === 'EXPANSION' ? 'text-purple-400' :
+              'text-white'
+            }`}>
+              {tgm.targetStatus === 'TARGET_HIT' ? '✅ HIT' :
+               tgm.targetStatus === 'OVERSHOT' ? '🚀 OVERSHOT' :
+               tgm.targetPrice?.toFixed(2) || '—'}
             </div>
-            <div className="text-xs text-gray-400">Target</div>
+            <div className="text-xs text-gray-400">
+              {tgm.targetStatus === 'ACTIVE' ? 'Target' : tgm.targetStatus}
+            </div>
           </div>
         </div>
         
@@ -540,15 +703,33 @@ export default function TimeGravityMapWidget({
           <p className="text-sm text-gray-400">{symbol} • {resolvedPrice > 0 ? resolvedPrice.toFixed(2) : '—'}</p>
         </div>
         <div className="text-right">
-          <div className="text-2xl font-mono font-bold text-cyan-400">
-            {tgm.confidence}%
+          <div className={`text-2xl font-mono font-bold ${
+            tgm.targetStatus === 'TARGET_HIT' ? 'text-emerald-400' :
+            tgm.targetStatus === 'OVERSHOT' ? 'text-amber-400' :
+            tgm.targetStatus === 'EXPANSION' ? 'text-purple-400' :
+            'text-cyan-400'
+          }`}>
+            {tgm.targetStatus === 'TARGET_HIT' ? '✅' :
+             tgm.targetStatus === 'OVERSHOT' ? '🚀' :
+             tgm.targetStatus === 'EXPANSION' ? '⚡' :
+             `${tgm.confidence}%`}
           </div>
-          <div className="text-xs text-gray-400">Confidence</div>
+          <div className="text-xs text-gray-400">
+            {tgm.targetStatus === 'ACTIVE' ? 'Confidence' : tgm.targetStatus}
+          </div>
         </div>
       </div>
       
-      {/* Alert Banner */}
-      {tgm.alert && (
+      {/* Target Status Banner */}
+      <TargetStatusBanner tgm={tgm} />
+      
+      {/* Momentum Override Banner (when active) */}
+      {tgm.momentumOverride?.isOverride && (
+        <MomentumOverrideBanner override={tgm.momentumOverride} />
+      )}
+      
+      {/* Alert Banner (non-override alerts only) */}
+      {tgm.alert && !tgm.momentumOverride?.isOverride && (
         <div className="bg-gradient-to-r from-purple-950/60 to-blue-950/60 border border-purple-500 rounded-lg p-3 mb-4">
           <div className="text-sm font-mono text-white">{tgm.alert}</div>
         </div>
@@ -574,7 +755,9 @@ export default function TimeGravityMapWidget({
       {/* Footer */}
       <div className="mt-4 pt-3 border-t border-gray-800 flex items-center justify-between text-xs text-gray-500">
         <span>Last update: {lastUpdate.toLocaleTimeString()}</span>
-        <span>{tgm.allPoints.length} midpoints tracked</span>
+        <span>
+          {tgm.allPoints.length} active • {tgm.taggingStats.taggedThisCycle > 0 ? `${tgm.taggingStats.taggedThisCycle} tagged` : '0 tagged'}
+        </span>
       </div>
     </div>
   );
