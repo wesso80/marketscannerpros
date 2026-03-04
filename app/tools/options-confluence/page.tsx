@@ -409,6 +409,52 @@ interface OptionsSetup {
   aiMarketState?: AIMarketState | null;
   institutionalIntent?: InstitutionalIntentOutput | null;
   professionalTradeStack?: ProfessionalTradeStack | null;
+  // DECOMPRESSION STACK — Multi-TF 50% Framework
+  decompressionStack?: {
+    stackScore: number;
+    stackRating: 'extreme' | 'high' | 'moderate' | 'low' | 'none';
+    levels: Array<{
+      tfLabel: string;
+      tfMinutes: number;
+      anchor: 'postOpen' | 'preClose';
+      weight: number;
+      mid50Level: number;
+      distanceToMid50Pct: number;
+      pullDirection: 'up' | 'down' | 'none';
+      windowActive: boolean;
+      tagged: boolean;
+      score: number;
+      scoreReason: string;
+    }>;
+    activeWindowCount: number;
+    totalTFCount: number;
+    activeTFs: string[];
+    netPullDirection: 'bullish' | 'bearish' | 'neutral';
+    netPullBias: number;
+    bullishPullWeight: number;
+    bearishPullWeight: number;
+    midpointClusters: Array<{
+      avgLevel: number;
+      bandLow: number;
+      bandHigh: number;
+      tfs: string[];
+      weightSum: number;
+      maxWeight: number;
+      highestTF: string;
+      pullDirection: 'up' | 'down' | 'at';
+      quality: number;
+    }>;
+    primaryAOI: {
+      avgLevel: number;
+      tfs: string[];
+      pullDirection: 'up' | 'down' | 'at';
+      quality: number;
+    } | null;
+    clusteredTFCount: number;
+    taggedCount: number;
+    untaggedActiveCount: number;
+    reasoning: string;
+  } | null;
   tradeSnapshot?: TradeSnapshot;
   locationContext?: LocationContext | null;
   // DATA QUALITY & COMPLIANCE
@@ -2587,6 +2633,71 @@ export default function OptionsConfluenceScanner() {
                 </div>
               </div>
             </div>
+
+            {/* ── Decompression Stack — Multi-TF 50% Magnet Levels ── */}
+            {result.decompressionStack && result.decompressionStack.stackScore > 0 && (
+              <div className="-mt-[0.35rem] rounded-[12px] border border-violet-500/30 bg-[var(--msp-panel)] p-[0.65rem_0.75rem]">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-[0.4rem]">
+                  <div className="flex items-center gap-[0.35rem]">
+                    <span className="text-[0.72rem]">🎯</span>
+                    <span className="text-[0.7rem] font-bold uppercase tracking-[0.04em] text-violet-400">Decompression Stack</span>
+                  </div>
+                  <div className="flex items-center gap-[0.4rem]">
+                    <span className={`rounded-md px-[0.4rem] py-[0.12rem] text-[0.66rem] font-extrabold ${result.decompressionStack.stackRating === 'extreme' ? 'bg-red-500/20 text-red-300' : result.decompressionStack.stackRating === 'high' ? 'bg-amber-500/20 text-amber-300' : result.decompressionStack.stackRating === 'moderate' ? 'bg-violet-500/20 text-violet-300' : 'bg-slate-500/20 text-slate-400'}`}>
+                      {result.decompressionStack.stackScore.toFixed(0)}
+                    </span>
+                    <span className={`text-[0.66rem] font-bold ${result.decompressionStack.netPullDirection === 'bullish' ? 'text-emerald-400' : result.decompressionStack.netPullDirection === 'bearish' ? 'text-red-400' : 'text-slate-400'}`}>
+                      {result.decompressionStack.netPullDirection === 'bullish' ? '▲ BULL' : result.decompressionStack.netPullDirection === 'bearish' ? '▼ BEAR' : '— NEUTRAL'} ({result.decompressionStack.netPullBias > 0 ? '+' : ''}{result.decompressionStack.netPullBias})
+                    </span>
+                  </div>
+                </div>
+
+                {/* Active windows summary */}
+                <div className="flex flex-wrap gap-[0.35rem] mb-[0.4rem]">
+                  {result.decompressionStack.activeTFs.length > 0 ? result.decompressionStack.activeTFs.map((tf: string) => {
+                    const level = result.decompressionStack?.levels?.find((l: any) => l.tfLabel === tf);
+                    return (
+                      <span key={tf} className={`inline-flex items-center gap-[0.2rem] rounded-full border px-[0.45rem] py-[0.12rem] text-[0.64rem] font-bold ${level && !level.tagged ? 'border-violet-500/40 bg-violet-500/20 text-violet-200' : 'border-slate-500/30 bg-slate-500/15 text-slate-400'}`}>
+                        {tf}
+                        {level && <span className="text-[0.58rem]">{level.score.toFixed(0)}</span>}
+                        {level?.tagged && <span className="text-[0.54rem] text-slate-500">✓tag</span>}
+                      </span>
+                    );
+                  }) : (
+                    <span className="text-[0.64rem] text-slate-500">No active decompression windows</span>
+                  )}
+                  <span className="text-[0.6rem] text-slate-500 self-center">
+                    {result.decompressionStack.untaggedActiveCount > 0 && `${result.decompressionStack.untaggedActiveCount} untagged`}
+                    {result.decompressionStack.taggedCount > 0 && ` • ${result.decompressionStack.taggedCount} tagged`}
+                  </span>
+                </div>
+
+                {/* AOI Clusters */}
+                {result.decompressionStack.midpointClusters && result.decompressionStack.midpointClusters.length > 0 && (
+                  <div className="grid gap-[0.3rem]">
+                    {result.decompressionStack.midpointClusters.slice(0, 3).map((aoi: any, i: number) => (
+                      <div key={i} className={`flex flex-wrap items-center justify-between gap-[0.35rem] rounded-lg px-[0.5rem] py-[0.3rem] text-[0.66rem] ${i === 0 ? 'border border-violet-500/30 bg-violet-500/10' : 'bg-slate-900/40'}`}>
+                        <div className="flex items-center gap-[0.3rem]">
+                          <span className={`font-extrabold ${aoi.pullDirection === 'up' ? 'text-emerald-400' : aoi.pullDirection === 'down' ? 'text-red-400' : 'text-slate-300'}`}>
+                            ${formatPrice(aoi.avgLevel)}
+                          </span>
+                          <span className="text-slate-500">AOI</span>
+                          <span className="text-slate-400">{aoi.tfs.join(' · ')}</span>
+                        </div>
+                        <div className="flex items-center gap-[0.25rem]">
+                          <span className="text-[0.6rem] text-slate-500">Q{aoi.quality}</span>
+                          <span className={`text-[0.58rem] ${aoi.pullDirection === 'up' ? 'text-emerald-500' : aoi.pullDirection === 'down' ? 'text-red-500' : 'text-slate-500'}`}>
+                            {aoi.pullDirection === 'up' ? '▲' : aoi.pullDirection === 'down' ? '▼' : '—'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="mt-[0.35rem] text-[0.62rem] text-slate-500">{result.decompressionStack.reasoning}</div>
+              </div>
+            )}
 
             {isGuidedMode && (
               <div className="-mt-[0.35rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-[0.7rem] py-[0.55rem]">

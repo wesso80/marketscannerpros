@@ -13,6 +13,8 @@ import { HierarchicalScanResult, ConfluenceLearningAgent, ScanMode, CandleCloseC
 import { scanPatterns, Candle as PatternCandle } from './patterns/pattern-engine';
 import { getOHLC, resolveSymbolToId, COINGECKO_ID_MAP } from './coingecko';
 import { avTakeToken } from '@/lib/avRateGovernor';
+import { bridgeFromScanData, computeAllDecompressionStates } from '@/lib/time/decompressionEngine';
+import { computeDecompressionStack, type DecompressionStackResult } from '@/lib/time/decompressionStack';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // HELPER UTILITIES (Production-grade parsing)
@@ -470,6 +472,9 @@ export interface OptionsSetup {
 
   // PROFESSIONAL DECISION STACK (trader-native presentation)
   professionalTradeStack: ProfessionalTradeStack | null;
+
+  // DECOMPRESSION STACK — Multi-TF 50% Framework
+  decompressionStack: DecompressionStackResult | null;
 
   // 3-second brain view (always present)
   tradeSnapshot: TradeSnapshot;
@@ -4018,6 +4023,22 @@ export class OptionsConfluenceAnalyzer {
     const confluenceResult = await this.confluenceAgent.scanHierarchical(symbol, scanMode);
     
     const { currentPrice, decompression, prediction, signalStrength, clusters, mid50Levels, candleCloseConfluence } = confluenceResult;
+
+    // ── Decompression Stack (multi-TF 50% framework) ──
+    let decompressionStack: DecompressionStackResult | null = null;
+    try {
+      const stackInputs = bridgeFromScanData(
+        decompression.decompressions,
+        currentPrice,
+        confluenceResult.candlesByTf as Record<string, { open: number; high: number; low: number; close: number }[]>,
+      );
+      if (stackInputs.length > 0) {
+        const tfResults = computeAllDecompressionStates(stackInputs);
+        decompressionStack = computeDecompressionStack(tfResults, currentPrice);
+      }
+    } catch (err) {
+      console.warn('[options-analyzer] decompression stack failed (non-blocking):', err);
+    }
     
     // Initialize data quality tracking
     const dataQuality: DataQuality = {
@@ -4487,6 +4508,8 @@ export class OptionsConfluenceAnalyzer {
       aiMarketState,
       institutionalIntent,
       professionalTradeStack,
+      // DECOMPRESSION STACK — Multi-TF 50% Framework
+      decompressionStack,
       // PRODUCTION ADDITIONS - Data Quality & Compliance
       assetType,
       optionsQualityScore,
