@@ -341,8 +341,6 @@ export interface ComputeTGMOptions {
   /** Prior swing references for break-hold detection */
   priorSwingHigh?: number;
   priorSwingLow?: number;
-  /** Overshoot threshold to auto-tag midpoints (default 0.2%) */
-  overshootPct?: number;
 }
 
 /**
@@ -366,30 +364,20 @@ export function computeTimeGravityMap(
     ohlcBars,
     priorSwingHigh,
     priorSwingLow,
-    overshootPct = 0.002,  // 0.2%
   } = options;
 
   // ─── 0. PRE-COMPUTATION TAGGING ────────────────────────────────────
-  // Tag midpoints that the current price has already passed through.
-  // This is done IN-MEMORY — the DB tagging is the API route's job.
+  // Only tag midpoints whose candle range contains the current price
+  // (i.e., price is literally inside the original candle).
+  // Distance-based overshoot tagging is handled by the DB layer in the
+  // API route — we do NOT duplicate it here to avoid false kills.
   let taggedThisCycle = 0;
   let overshotTagged = 0;
 
   const liveMidpoints = midpoints.map(mp => {
     if (mp.tagged) return mp;  // Already tagged
 
-    const distance = Math.abs(mp.midpoint - currentPrice) / mp.midpoint;
-
-    // Overshoot: price is >overshootPct away from midpoint.
-    // Since the midpoint was created from a candle AT that level,
-    // price must have crossed through it to be this far away.
-    if (distance > overshootPct) {
-      overshotTagged++;
-      taggedThisCycle++;
-      return { ...mp, tagged: true, taggedAt: currentTime };
-    }
-
-    // Direct touch: current price is within the midpoint range
+    // Direct touch: current price is within the midpoint's candle range
     if (currentPrice >= mp.low && currentPrice <= mp.high) {
       taggedThisCycle++;
       return { ...mp, tagged: true, taggedAt: currentTime };
