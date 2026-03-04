@@ -5,11 +5,25 @@ import { deepAnalysisLimiter, getClientIP } from '@/lib/rateLimit';
 
 // Alpha Vantage commodity endpoints
 // https://www.alphavantage.co/documentation/#commodities
+//
+// IMPORTANT: AV's WTI / NATURAL_GAS / COPPER / WHEAT endpoints return
+// EIA/USDA historical data that is 1-30+ days delayed.
+// For near-real-time pricing we use GLOBAL_QUOTE on commodity-tracking ETFs
+// as the *primary* source and fall back to the legacy endpoint only when
+// the ETF quote is unavailable.
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
-// Core commodities - simplified for reliability
-// GOLD_SILVER_SPOT returns real-time spot price (different format than other commodities)
+// ETF proxies for real-time commodity prices
+// These trade in real-time and closely track the underlying commodity
+const ETF_PROXIES: Record<string, { etf: string; multiplier: number; description: string }> = {
+  WTI:         { etf: 'USO',  multiplier: 1,   description: 'United States Oil Fund' },
+  NATURAL_GAS: { etf: 'UNG',  multiplier: 1,   description: 'United States Natural Gas Fund' },
+  COPPER:      { etf: 'CPER', multiplier: 1,   description: 'United States Copper Index Fund' },
+  WHEAT:       { etf: 'WEAT', multiplier: 1,   description: 'Teucrium Wheat Fund' },
+};
+
+// Core commodities config (legacy endpoints used as fallback only)
 const COMMODITIES = {
   WTI: { function: 'WTI', name: 'WTI Crude Oil', unit: '$/barrel', category: 'Energy', interval: 'daily' },
   NATURAL_GAS: { function: 'NATURAL_GAS', name: 'Natural Gas', unit: '$/MMBtu', category: 'Energy', interval: 'daily' },
@@ -35,6 +49,27 @@ interface CommodityData {
   history: { date: string; value: number }[];
 }
 
+async function fetchETFQuote(etfSymbol: string): Promise<{ price: number; change: number; changePercent: number; date: string } | null> {
+  try {
+    await avTakeToken();
+    const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${etfSymbol}&entitlement=realtime&apikey=${ALPHA_VANTAGE_API_KEY}`;
+    const res = await fetch(url, { next: { revalidate: 300 } });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const quote = json['Global Quote'] || json['Global Quote - DATA DELAYED BY 15 MINUTES'];
+    if (!quote || !quote['05. price']) return null;
+    return {
+      price: parseFloat(quote['05. price']),
+      change: parseFloat(quote['09. change'] || '0'),
+      changePercent: parseFloat((quote['10. change percent'] || '0').replace('%', '')),
+      date: quote['07. latest trading day'] || new Date().toISOString().split('T')[0],
+    };
+  } catch (err) {
+    console.error(`[Commodities] ETF quote failed for ${etfSymbol}:`, err);
+    return null;
+  }
+}
+
 async function fetchCommodity(symbol: keyof typeof COMMODITIES): Promise<CommodityData | null> {
   const cacheKey = `commodity_${symbol}`;
   const cached = cache.get(cacheKey);
@@ -46,19 +81,41 @@ async function fetchCommodity(symbol: keyof typeof COMMODITIES): Promise<Commodi
 
   try {
     const config = COMMODITIES[symbol];
-    
-    // Build URL based on commodity type
+
+    // ── Strategy 1: ETF proxy via GLOBAL_QUOTE (real-time) ──
+    const proxy = ETF_PROXIES[symbol];
+    if (proxy) {
+      console.log(`[Commodities] Trying real-time ETF proxy ${proxy.etf} for ${symbol}...`);
+      const etfQuote = await fetchETFQuote(proxy.etf);
+      if (etfQuote && etfQuote.price > 0) {
+        console.log(`[Commodities] ✓ ETF proxy ${proxy.etf} → $${etfQuote.price} (${etfQuote.changePercent}%)`);
+        const result: CommodityData = {
+          symbol,
+          name: config.name,
+          price: etfQuote.price,
+          change: etfQuote.change,
+          changePercent: etfQuote.changePercent,
+          unit: config.unit,
+          category: config.category,
+          date: etfQuote.date,
+          history: [{ date: etfQuote.date, value: etfQuote.price }],
+        };
+        cache.set(cacheKey, { data: result, timestamp: Date.now() });
+        return result;
+      }
+      console.log(`[Commodities] ETF proxy ${proxy.etf} unavailable, falling back to legacy endpoint`);
+    }
+
+    // ── Strategy 2: GOLD_SILVER_SPOT or legacy commodity endpoint ──
     let url: string;
     if ('isPreciousMetal' in config && config.isPreciousMetal) {
-      // Gold/Silver use GOLD_SILVER_SPOT endpoint (no interval needed)
       url = `https://www.alphavantage.co/query?function=GOLD_SILVER_SPOT&symbol=${config.symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
     } else {
-      // Other commodities use their function directly with interval
       const interval = 'interval' in config ? config.interval : 'monthly';
       url = `https://www.alphavantage.co/query?function=${config.function}&interval=${interval}&apikey=${ALPHA_VANTAGE_API_KEY}`;
     }
     
-    console.log(`[Commodities] Fetching ${symbol}...`);
+    console.log(`[Commodities] Fetching ${symbol} via legacy endpoint...`);
     
     await avTakeToken();
     const res = await fetch(url, { 
