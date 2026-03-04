@@ -1247,14 +1247,6 @@ export class ConfluenceLearningAgent {
     const todayCloseMs = todayClose.getTime();
     const minsToTodayClose = Math.floor((todayCloseMs - currentTime) / 60000);
     
-    // Helper: calculate days since a reference epoch for multi-day cycles
-    // Using Jan 1, 2020 as epoch (a Wednesday, but we'll adjust)
-    const epochMs = Date.UTC(2020, 0, 1, 0, 0, 0);
-    const daysSinceEpoch = Math.floor((currentTime - epochMs) / (24 * 60 * 60 * 1000));
-    
-    // Helper: get week number since epoch
-    const weeksSinceEpoch = Math.floor(daysSinceEpoch / 7);
-
     // Trading-day index for multi-day cycle alignment (Mon–Fri only)
     const tdIdx = this.getTradingDayIndex(now);
     const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
@@ -1330,38 +1322,40 @@ export class ConfluenceLearningAgent {
       case '41W': case '42W': case '43W': case '44W': case '45W':
       case '46W': case '47W': case '48W': case '49W': case '50W':
       case '51W': case '52W': {
-        // Generic N-week: closes every Nth Friday (or last trading day of that week if Friday is holiday)
-        const N = parseInt(tfId); // "1W" → 1, "12W" → 12, "52W" → 52
-        const isFriday = dayOfWeek === 5;
-        const isNWCloseFriday = N === 1 || weeksSinceEpoch % N === 0;
-        
-        // If today IS the close Friday and market still open, return time to today's close
-        if (isFriday && !todayIsHoliday && isNWCloseFriday && currentTime < todayCloseMs) {
-          return minsToTodayClose;
-        }
-        
-        // Find next NW close Friday
-        let daysToFriday = (5 - dayOfWeek + 7) % 7;
-        if (daysToFriday === 0) daysToFriday = N === 1 ? 7 : 7; // past this Friday, go to next
+        // Equity N-week: closes every Nth Friday at market close.
+        // Uses same TradingView anchor as crypto (Jan 5, 2026 Monday = epoch day 20458).
+        // Equity close = last Friday of each N-week period (3 days before Monday boundary).
+        // If Friday is a holiday, steps back to last trading day of that week.
+        const N = parseInt(tfId); // "1W" → 1, "52W" → 52
+        const DAY_MS_L = 86_400_000;
+        const TV_WEEK_ANCHOR_DAY = 20458; // Jan 5, 2026 (Monday) — TradingView weekly anchor
+        const periodDays = N * 7;
+        const nowEpochDay = Math.floor(currentTime / DAY_MS_L);
 
-        if (N === 1) {
-          // 1W: just next Friday
-        } else {
-          // Multi-week: find next Friday where weeksSinceEpoch is divisible by N
-          const nextFridayWeek = Math.floor((daysSinceEpoch + daysToFriday) / 7);
-          const weeksUntilNW = (N - (nextFridayWeek % N)) % N;
-          daysToFriday += weeksUntilNW * 7;
+        // Find which period we're in relative to anchor
+        const daysSinceAnchor = nowEpochDay - TV_WEEK_ANCHOR_DAY;
+        const periodsElapsed = Math.floor(daysSinceAnchor / periodDays);
+
+        // Close Friday = next Monday period boundary - 3 calendar days
+        // Try current period first, then next if already past close
+        for (let p = 0; p <= 1; p++) {
+          const mondayBoundary = TV_WEEK_ANCHOR_DAY + (periodsElapsed + 1 + p) * periodDays;
+          const fridayEpochDay = mondayBoundary - 3;
+
+          // Step back from Friday if it's a weekend or holiday
+          let target = new Date(fridayEpochDay * DAY_MS_L + 12 * 3_600_000); // noon UTC
+          for (let _s = 0; _s < 5; _s++) {
+            const dow = target.getUTCDay();
+            if (dow >= 1 && dow <= 5 && !isUSMarketHoliday(target.getUTCFullYear(), target.getUTCMonth(), target.getUTCDate())) break;
+            target = new Date(target.getTime() - DAY_MS_L);
+          }
+
+          const closeMs = this.getEquitySessionCloseUtcMs(target.getUTCFullYear(), target.getUTCMonth(), target.getUTCDate(), sessionMode);
+          if (closeMs > currentTime) {
+            return Math.floor((closeMs - currentTime) / 60_000);
+          }
         }
-        
-        // Step back from target Friday if it's a holiday → last trading day of that week
-        let wkTarget = new Date(Date.UTC(year, month, date + daysToFriday, 12));
-        for (let _s = 0; _s < 5; _s++) {
-          const dow = wkTarget.getUTCDay();
-          if (dow >= 1 && dow <= 5 && !isUSMarketHoliday(wkTarget.getUTCFullYear(), wkTarget.getUTCMonth(), wkTarget.getUTCDate())) break;
-          wkTarget = new Date(wkTarget.getTime() - 86_400_000);
-        }
-        const targetClose = closeAt(wkTarget.getUTCFullYear(), wkTarget.getUTCMonth(), wkTarget.getUTCDate());
-        return Math.floor((targetClose.getTime() - currentTime) / 60000);
+        return null; // safety fallback
       }
       
       case '1M': {
