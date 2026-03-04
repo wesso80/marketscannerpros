@@ -172,8 +172,8 @@ export default function CommandHub() {
         <img
           src="/logos/landing-hero.png"
           alt="MarketScannerPros — See The Market Before It Moves"
-          className="w-full object-cover"
-          style={{ maxHeight: '600px' }}
+          className="mx-auto w-full"
+          style={{ maxHeight: '380px', objectFit: 'contain' }}
         />
       </section>
 
