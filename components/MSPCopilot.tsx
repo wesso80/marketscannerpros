@@ -456,7 +456,7 @@ export default function MSPCopilot({
           boxShadow: '0 4px 20px rgba(16, 185, 129, 0.4)',
         }}
       >
-        <span style={{ fontSize: '1.25rem' }}>🤖</span>
+        <img src="/logos/arcxa-chip.png" alt="ARCA AI" style={{ height: '1.75rem', width: '1.75rem', borderRadius: '4px', objectFit: 'cover' }} />
         <span>ARCA AI</span>
       </button>
     );
@@ -486,7 +486,7 @@ export default function MSPCopilot({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <span style={{ fontSize: '1.5rem' }}>🤖</span>
+          <img src="/logos/arcxa-chip.png" alt="ARCA AI" style={{ height: '2rem', width: '2rem', borderRadius: '4px', objectFit: 'cover' }} />
           <div>
             <div style={{ fontWeight: '700', color: '#E2E8F0' }}>ARCA AI</div>
             <div style={{ fontSize: '0.75rem', color: '#64748B' }}>{skillConfig.displayName}</div>
