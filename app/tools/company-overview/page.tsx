@@ -424,7 +424,7 @@ function CompanyOverviewContent() {
                   </div>
                 )}
               </div>
-              <p style={{ color: "var(--msp-text-muted)", lineHeight: "1.7", fontSize: "14px" }}>{data.description}</p>
+              <p style={{ color: "var(--msp-text-muted)", lineHeight: "1.7", fontSize: "14px", overflowWrap: "anywhere", wordBreak: "break-word" }}>{data.description}</p>
             </div>
 
             {/* AI Decision Lens - Pro feature */}

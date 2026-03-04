@@ -124,7 +124,7 @@ function PositionSizerCalculator() {
   return (
     <div className="msp-card" style={{
       borderRadius: '16px',
-      padding: '32px',
+      padding: 'clamp(16px, 4vw, 32px)',
       maxWidth: '800px',
       margin: '0 auto'
     }}>

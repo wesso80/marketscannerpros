@@ -164,7 +164,8 @@ export default function Header() {
         <div className={`mx-auto flex max-w-none items-center justify-between ${isTerminalMode ? 'h-12 px-3' : 'h-14 px-4'}`}>
         <Link href="/" className="flex items-center gap-2 text-xl font-semibold tracking-tight text-teal-300 flex-shrink-0 mr-6">
           <img src="/logos/msp-logo.png" alt="MarketScannerPros" className="h-8 w-8 object-contain" />
-          <span>MarketScannerPros</span>
+          <span className="hidden min-[400px]:inline">MarketScannerPros</span>
+          <span className="min-[400px]:hidden">MSP</span>
         </Link>
 
         {/* Desktop Navigation with Dropdowns */}

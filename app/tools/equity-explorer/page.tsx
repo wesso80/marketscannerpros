@@ -216,7 +216,7 @@ function MiniChart({ data }: { data: Array<{ close: number }> }) {
   }).join(' ');
 
   return (
-    <svg width={width} height={height} className="block">
+    <svg viewBox={`0 0 ${width} ${height}`} className="block w-full max-w-[200px]" preserveAspectRatio="none">
       <polyline
         fill="none"
         stroke={color}

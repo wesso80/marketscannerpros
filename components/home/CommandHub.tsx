@@ -206,13 +206,13 @@ export default function CommandHub() {
 
           {/* Architecture diagram */}
           <div className="mt-5 w-full max-w-lg">
-            <div className="flex items-center justify-center gap-2">
+            <div className="flex flex-wrap items-center justify-center gap-2">
               <span className="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-[11px] font-semibold text-slate-300">Time Engine</span>
-              <span className="text-slate-600">│</span>
+              <span className="hidden text-slate-600 sm:inline">│</span>
               <span className="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-[11px] font-semibold text-slate-300">Options Flow</span>
-              <span className="text-slate-600">│</span>
+              <span className="hidden text-slate-600 sm:inline">│</span>
               <span className="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-[11px] font-semibold text-slate-300">Market Scanner</span>
-              <span className="text-slate-600">│</span>
+              <span className="hidden text-slate-600 sm:inline">│</span>
               <span className="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-[11px] font-semibold text-slate-300">AI Analyst</span>
             </div>
             <div className="mx-auto mt-2 h-4 w-px bg-gradient-to-b from-slate-600 to-transparent" />
