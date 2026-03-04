@@ -1,10 +1,4 @@
-"use client";
-
-import React from "react";
-import Link from "next/link";
-import { usePathname } from 'next/navigation';
-import { getGuideByPath } from '@/lib/guides/toolGuides';
-import TerminalPageHeader from '@/components/terminal/TerminalPageHeader';
+"use client";\n\nimport React from "react";\nimport Link from "next/link";\nimport { usePathname } from 'next/navigation';\nimport { getGuideByPath } from '@/lib/guides/toolGuides';\nimport TerminalPageHeader from '@/components/terminal/TerminalPageHeader';\nimport { getToolImage } from '@/lib/toolImages';
 
 interface ToolsPageHeaderProps {
   badge: string;
@@ -18,6 +12,7 @@ interface ToolsPageHeaderProps {
 export function ToolsPageHeader({ badge, title, subtitle, icon, actions, backHref }: ToolsPageHeaderProps) {
   const pathname = usePathname();
   const pageGuide = getGuideByPath(pathname || '');
+  const toolImage = getToolImage(pathname || '');
   const [activeHelpTab, setActiveHelpTab] = React.useState<'overview' | 'steps' | 'tips'>('overview');
   const [helpOpen, setHelpOpen] = React.useState(false);
 
@@ -61,6 +56,7 @@ export function ToolsPageHeader({ badge, title, subtitle, icon, actions, backHre
         title={title}
         subtitle={subtitle}
         icon={icon}
+        image={toolImage}
         actions={headerActions}
         meta={headerMeta}
       />

@@ -5,6 +5,7 @@ import { useEffect, useState, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import NotificationBell from './NotificationBell';
 import { useUserTier } from '@/lib/useUserTier';
+import { getToolImage } from '@/lib/toolImages';
 
 interface DropdownItem {
   href: string;
@@ -46,12 +47,19 @@ function Dropdown({ label, items, align = 'left', compact = false }: DropdownPro
       </button>
       {isOpen && (
         <div className={`absolute top-full mt-2 py-2 bg-slate-900 border border-slate-700 rounded-lg shadow-xl min-w-48 z-[110] ${align === 'right' ? 'right-0' : 'left-0'}`}>
-          {items.map((item) => (
-            <Link key={item.href} href={item.href} className="flex items-center gap-2 px-4 py-2 text-sm text-slate-300 hover:bg-teal-500/10 hover:text-teal-300 transition-colors" onClick={() => setIsOpen(false)}>
-              {item.icon && <span>{item.icon}</span>}
-              {item.label}
-            </Link>
-          ))}
+          {items.map((item) => {
+            const img = getToolImage(item.href);
+            return (
+              <Link key={item.href} href={item.href} className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-300 hover:bg-teal-500/10 hover:text-teal-300 transition-colors" onClick={() => setIsOpen(false)}>
+                {img ? (
+                  <img src={img} alt="" className="h-5 w-5 rounded object-contain" />
+                ) : item.icon ? (
+                  <span>{item.icon}</span>
+                ) : null}
+                {item.label}
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>
@@ -78,8 +86,8 @@ function MobileAccordion({ label, items, isOpen, onToggle, onLinkClick }: Mobile
       {isOpen && (
         <div className="pl-4 pb-2">
           {items.map((item) => (
-            <Link key={item.href} href={item.href} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-400 hover:bg-teal-500/10 hover:text-teal-300 rounded-lg transition-all" onClick={onLinkClick}>
-              {item.icon && <span>{item.icon}</span>}
+            <Link key={item.href} href={item.href} className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-400 hover:bg-teal-500/10 hover:text-teal-300 rounded-lg transition-all" onClick={onLinkClick}>
+              {(() => { const img = getToolImage(item.href); return img ? <img src={img} alt="" className="h-5 w-5 rounded object-contain" /> : item.icon ? <span>{item.icon}</span> : null; })()}
               {item.label}
             </Link>
           ))}

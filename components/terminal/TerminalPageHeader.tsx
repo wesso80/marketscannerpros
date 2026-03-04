@@ -5,6 +5,7 @@ type TerminalPageHeaderProps = {
   title: string;
   subtitle?: string;
   icon?: string;
+  image?: string;
   actions?: React.ReactNode;
   meta?: React.ReactNode;
   className?: string;
@@ -15,6 +16,7 @@ export default function TerminalPageHeader({
   title,
   subtitle,
   icon,
+  image,
   actions,
   meta,
   className,
@@ -24,7 +26,11 @@ export default function TerminalPageHeader({
       <div className="msp-grid-12 items-start" style={{ rowGap: '12px' }}>
         <div className="col-span-12 lg:col-span-8">
           <div className="flex items-start gap-3">
-            {icon ? (
+            {image ? (
+              <div className="grid h-[40px] w-[40px] place-items-center rounded-[12px] border border-[var(--msp-border-strong)] bg-[var(--msp-panel-2)] overflow-hidden">
+                <img src={image} alt="" className="h-full w-full object-contain p-1" />
+              </div>
+            ) : icon ? (
               <div className="grid h-[40px] w-[40px] place-items-center rounded-[12px] border border-[var(--msp-border-strong)] bg-[var(--msp-panel-2)] text-[20px] leading-none text-[var(--msp-accent)]">
                 {icon}
               </div>
