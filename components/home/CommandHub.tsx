@@ -78,11 +78,10 @@ const secondaryTools = [
   { href: '/tools/options-terminal', icon: '📋', image: '/assets/platform-tools/options-terminal.png', title: 'Options Terminal', description: 'Options chain viewer with Greeks, IV skew, and flow analysis.' },
   { href: '/tools/news?tab=earnings', icon: '📅', image: '/assets/platform-tools/earnings-calendar.png', title: 'Earnings Calendar', description: 'Event-risk map for upcoming earnings windows.' },
   { href: '/tools/intraday-charts', icon: '⏱️', image: '/assets/platform-tools/intraday-charts.png', title: 'Intraday Charts', description: 'Fast intraday charting and session-level views.' },
-  { href: '/tools/ai-analyst', icon: '🧠', image: '/assets/platform-tools/ai-analyst.svg', title: 'AI Analyst', description: 'Structured AI decision support for active workflows.' },
   { href: '/tools/backtest', icon: '📈', image: '/assets/platform-tools/backtest.png', title: 'Backtest', description: 'Validate strategy logic against historical data.' },
   { href: '/tools/portfolio', icon: '💼', image: '/assets/platform-tools/portfolio.png', title: 'Portfolio', description: 'Position tracking with P&L and performance snapshots.' },
   { href: '/tools/journal', icon: '📓', image: '/assets/platform-tools/trade-journal.png', title: 'Trade Journal', description: 'Log, review, and learn from every trade.' },
-  { href: '/tools/alerts', icon: '🔔', image: '/assets/platform-tools/alerts.svg', title: 'Alerts', description: 'Custom triggers and notification management.' },
+  { href: '/tools/alerts', icon: '🔔', image: '/assets/platform-tools/alerts.png', title: 'Alerts', description: 'Custom triggers and notification management.' },
   { href: '/tools/watchlists', icon: '👁️', image: '/assets/platform-tools/watchlists.png', title: 'Watchlists', description: 'Track symbols across your workspace.' },
 ];
 
