@@ -174,9 +174,9 @@ export default function CommandHub() {
         <div className="relative mx-auto flex max-w-5xl flex-col items-center px-4 pb-8 pt-10 text-center md:pb-10 md:pt-14">
           <div className="flex items-center gap-4">
             <img
-              src="/logos/msp-logo.png"
+              src="/logos/msp.png"
               alt="MarketScannerPros"
-              className="h-14 w-14 object-contain drop-shadow-lg md:h-20 md:w-20"
+              className="h-20 w-20 rounded-lg object-cover drop-shadow-lg md:h-28 md:w-28"
             />
             <h1 className="text-3xl font-bold tracking-tight text-white md:text-5xl">
               Market<span className="text-emerald-400">Scanner</span>Pros
