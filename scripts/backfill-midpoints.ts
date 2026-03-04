@@ -11,7 +11,7 @@
 
 import * as dotenv from 'dotenv';
 import * as path from 'path';
-import { CandleProcessor } from '../lib/candleProcessor';
+import { CandleProcessor, parseCoinGeckoOHLC } from '../lib/candleProcessor';
 import { getOHLC } from '../lib/coingecko';
 
 dotenv.config({ path: path.join(process.cwd(), '.env.local') });
@@ -93,8 +93,8 @@ async function backfillSymbol(
     
     console.log(`    ✓ Fetched ${ohlcData.length} candles`);
     
-    // Convert CoinGecko format to our candle format
-    const candles = processor.parseCoinGeckoOHLC(ohlcData, symbol, timeframe);
+    // Convert CoinGecko format to our candle format using the processor's parser
+    const candles = parseCoinGeckoOHLC(ohlcData);
     
     if (candles.length === 0) {
       console.log(`    ⚠️  No candles after parsing`);
@@ -104,23 +104,18 @@ async function backfillSymbol(
     console.log(`    ✓ Parsed ${candles.length} candles`);
     stats.candlesProcessed = candles.length;
     
-    // Store midpoints in batches of 100 for better performance
-    const batchSize = 100;
-    for (let i = 0; i < candles.length; i += batchSize) {
-      const batch = candles.slice(i, i + batchSize);
+    // Store midpoints using batch processor
+    try {
+      const stored = await processor.processCandleBatch(symbol, timeframe, candles, 'crypto');
+      stats.midpointsStored = stored;
       
-      try {
-        const result = await processor.processCandleBatch(batch);
-        stats.midpointsStored += result.successful;
-        stats.errors += result.failed;
-        
-        if (result.failed > 0) {
-          console.log(`    ⚠️  Batch ${Math.floor(i / batchSize) + 1}: ${result.failed} failures`);
-        }
-      } catch (error: any) {
-        console.error(`    ❌ Batch ${Math.floor(i / batchSize) + 1} failed:`, error.message);
-        stats.errors += batch.length;
+      if (stored < candles.length) {
+        stats.errors = candles.length - stored;
+        console.log(`    ⚠️  ${stats.errors} candles failed to store`);
       }
+    } catch (error: any) {
+      console.error(`    ❌ Batch processing failed:`, error.message);
+      stats.errors = candles.length;
     }
     
     stats.duration = Date.now() - startTime;

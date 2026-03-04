@@ -11,6 +11,7 @@
     "test:all": "vitest run",
     "migrate:midpoints": "npx tsx scripts/run-midpoints-migration.ts",
     "backfill:midpoints": "npx tsx scripts/backfill-midpoints.ts",
+    "backfill:equities": "npx tsx scripts/backfill-equities.ts",
     "worker:ingest": "npx tsx worker/ingest-data.ts",
     "worker:ingest:once": "npx tsx worker/ingest-data.ts --once",
     "worker:ingest:crypto": "npx tsx worker/ingest-data.ts --crypto-only",
