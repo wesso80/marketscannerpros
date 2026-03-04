@@ -18,9 +18,12 @@
 
 export interface MidpointRecord {
   timeframe: string;
-  midpoint: number;
+  midpoint: number;             // 50% retracement (target — strongest pull)
   high: number;
   low: number;
+  range: number;                // high - low
+  retrace30High: number;        // 30% retrace from high = high - range * 0.3
+  retrace30Low: number;         // 30% retrace from low  = low  + range * 0.3
   createdAt: Date;
   candleOpenTime: Date;
   candleCloseTime: Date;
@@ -104,6 +107,23 @@ export function calculate50Midpoint(high: number, low: number): number {
 }
 
 /**
+ * Calculate 30% retracement levels from high and low.
+ * retrace30High = 30% retrace from high (entry zone when approaching from above)
+ * retrace30Low  = 30% retrace from low  (entry zone when approaching from below)
+ */
+export function calculateRetrace30(
+  high: number,
+  low: number
+): { range: number; retrace30High: number; retrace30Low: number } {
+  const range = high - low;
+  return {
+    range,
+    retrace30High: high - range * 0.3,
+    retrace30Low: low + range * 0.3,
+  };
+}
+
+/**
  * Check if price has tagged a midpoint
  * Uses a small tolerance for floating point comparison
  */
@@ -143,6 +163,7 @@ export function createMidpointRecord(
   currentTime: Date = new Date()
 ): MidpointRecord {
   const midpoint = calculate50Midpoint(high, low);
+  const { range, retrace30High, retrace30Low } = calculateRetrace30(high, low);
   const tagged = hasPriceTaggedMidpoint(midpoint, priceHigh, priceLow);
   const distance = calculateDistance(currentPrice, midpoint);
   const ageMs = currentTime.getTime() - candleCloseTime.getTime();
@@ -155,6 +176,9 @@ export function createMidpointRecord(
     midpoint,
     high,
     low,
+    range,
+    retrace30High,
+    retrace30Low,
     createdAt: candleCloseTime,
     candleOpenTime,
     candleCloseTime,

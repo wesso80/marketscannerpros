@@ -407,13 +407,19 @@ export class MidpointService {
    */
   private mapToMidpointRecord(row: any, currentPrice: number): MidpointRecord {
     const midpoint = parseFloat(row.midpoint);
+    const high = parseFloat(row.high);
+    const low = parseFloat(row.low);
+    const range = high - low;
     const distanceFromPrice = ((midpoint - currentPrice) / currentPrice) * 100;
     
     return {
       timeframe: row.timeframe,
       midpoint,
-      high: parseFloat(row.high),
-      low: parseFloat(row.low),
+      high,
+      low,
+      range,
+      retrace30High: high - range * 0.3,
+      retrace30Low: low + range * 0.3,
       createdAt: new Date(row.created_at),
       candleOpenTime: new Date(row.candle_open_time),
       candleCloseTime: new Date(row.candle_close_time),

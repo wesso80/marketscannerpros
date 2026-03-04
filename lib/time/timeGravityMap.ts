@@ -37,9 +37,13 @@ import {
 
 export interface GravityPoint {
   timeframe: string;
-  midpoint: number;
+  midpoint: number;              // 50% level (target — strongest pull)
+  retrace30High: number;         // 30% from high — shallow entry zone top
+  retrace30Low: number;          // 30% from low  — shallow entry zone bottom
+  zoneLow: number;               // Lower edge of relevant 30-50% zone
+  zoneHigh: number;              // Upper edge of relevant 30-50% zone
   weight: number;
-  distance: number;              // Distance from current price (%)
+  distance: number;              // Distance from current price to midpoint (%)
   distanceAbs: number;           // Absolute distance
   decompressionState: DecompressionState;
   decompressionMultiplier: number; // 1x-5x boost when window active
@@ -122,7 +126,13 @@ function getDebtMultiplier(isDebt: boolean): number {
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Calculate gravity for a single midpoint
+ * Calculate gravity for a single midpoint with 30-50% zone.
+ *
+ * The gravity zone is directional:
+ * - If price is ABOVE the midpoint → zone runs from retrace30High (30%) down to midpoint (50%)
+ * - If price is BELOW the midpoint → zone runs from midpoint (50%) up to retrace30Low (30%)
+ *
+ * Gravity is strongest at the 50% midpoint and fades towards the 30% edge.
  */
 export function calculateGravityPoint(
   midpoint: MidpointRecord,
@@ -133,18 +143,36 @@ export function calculateGravityPoint(
   const distanceAbs = Math.abs(midpoint.midpoint - currentPrice);
   const weight = midpoint.weight;
   
+  // Directional zone: which 30% edge is relevant?
+  const isAbove = currentPrice > midpoint.midpoint;
+  const zoneLow  = isAbove ? midpoint.midpoint : midpoint.midpoint;
+  const zoneHigh = isAbove ? midpoint.retrace30High : midpoint.retrace30Low;
+  // Ensure zoneLow <= zoneHigh
+  const zoneLowFinal = Math.min(zoneLow, zoneHigh);
+  const zoneHighFinal = Math.max(zoneLow, zoneHigh);
+  
+  // Graduated gravity: peak at 50% midpoint, tapering to 60% at the 30% edge
+  // If price is between 30% and 50%, boost gravity proportionally
+  let zoneProximityBoost = 1.0;
+  if (currentPrice >= zoneLowFinal && currentPrice <= zoneHighFinal) {
+    // Inside the zone — interpolate: 1.0 at 30% edge → 1.5 at 50% midpoint
+    const zoneWidth = zoneHighFinal - zoneLowFinal;
+    const distToMidpoint = Math.abs(currentPrice - midpoint.midpoint);
+    const pctToTarget = zoneWidth > 0 ? 1 - (distToMidpoint / zoneWidth) : 1;
+    zoneProximityBoost = 1.0 + pctToTarget * 0.5;  // 1.0 → 1.5
+  }
+  
   // Base gravity = weight / distance
-  // Add small epsilon to avoid division by zero
   const rawGravity = distance > 0 ? weight / (distance + 0.01) : weight * 100;
   
   // Apply multipliers
   const decompressionMultiplier = getDecompressionMultiplier(decompressionState.status);
   const debtMultiplier = getDebtMultiplier(!midpoint.tagged);
   
-  const adjustedGravity = rawGravity * decompressionMultiplier * debtMultiplier;
+  const adjustedGravity = rawGravity * decompressionMultiplier * debtMultiplier * zoneProximityBoost;
   
   // Visual strength (0-100 for UI)
-  const maxGravity = 1000; // Normalize
+  const maxGravity = 1000;
   const visualStrength = Math.min(100, (adjustedGravity / maxGravity) * 100);
   
   const label = `${midpoint.timeframe} ${decompressionState.visualIndicator} ${midpoint.midpoint.toFixed(2)}`;
@@ -152,6 +180,10 @@ export function calculateGravityPoint(
   return {
     timeframe: midpoint.timeframe,
     midpoint: midpoint.midpoint,
+    retrace30High: midpoint.retrace30High,
+    retrace30Low: midpoint.retrace30Low,
+    zoneLow: zoneLowFinal,
+    zoneHigh: zoneHighFinal,
     weight,
     distance,
     distanceAbs,
@@ -363,7 +395,9 @@ export function computeTimeGravityMap(
 }
 
 /**
- * Generate heatmap data for visualization
+ * Generate heatmap data for visualization.
+ * Gravity is spread across the 30-50% zone band for each point,
+ * giving the heatmap a "zone" appearance rather than single spikes.
  */
 function generateHeatmap(
   points: GravityPoint[],
@@ -374,8 +408,8 @@ function generateHeatmap(
     return { heatmap: [], heatmapPrices: [] };
   }
   
-  // Find price range
-  const allPrices = points.map(p => p.midpoint);
+  // Find price range — include zone edges, not just midpoints
+  const allPrices = points.flatMap(p => [p.midpoint, p.zoneLow, p.zoneHigh]);
   const minPrice = Math.min(...allPrices, currentPrice * 0.98);
   const maxPrice = Math.max(...allPrices, currentPrice * 1.02);
   
@@ -389,6 +423,17 @@ function generateHeatmap(
     
     // Calculate total gravity at this price level
     const gravity = points.reduce((sum, point) => {
+      // Inside the 30-50% zone? Gravity is boosted and flatter (zone pull)
+      if (price >= point.zoneLow && price <= point.zoneHigh) {
+        // Graduated: full gravity at midpoint, 60% at the 30% edge
+        const zoneWidth = point.zoneHigh - point.zoneLow;
+        const distToMid = Math.abs(price - point.midpoint);
+        const pctToTarget = zoneWidth > 0 ? 1 - (distToMid / zoneWidth) : 1;
+        const zoneFactor = 0.6 + pctToTarget * 0.4;  // 0.6 → 1.0
+        return sum + point.adjustedGravity * zoneFactor;
+      }
+      
+      // Outside zone — decay by distance
       const distance = Math.abs(((price - point.midpoint) / point.midpoint) * 100);
       const localGravity = distance > 0 ? point.adjustedGravity / (distance + 0.1) : point.adjustedGravity * 10;
       return sum + localGravity;
@@ -448,6 +493,9 @@ export function exampleTimeGravityMap() {
       midpoint: 68462,
       high: 68500,
       low: 68424,
+      range: 76,
+      retrace30High: 68500 - 76 * 0.3,
+      retrace30Low: 68424 + 76 * 0.3,
       createdAt: now,
       candleOpenTime: new Date(now.getTime() - 60 * 60 * 1000),
       candleCloseTime: now,
@@ -463,6 +511,9 @@ export function exampleTimeGravityMap() {
       midpoint: 68510,
       high: 68550,
       low: 68470,
+      range: 80,
+      retrace30High: 68550 - 80 * 0.3,
+      retrace30Low: 68470 + 80 * 0.3,
       createdAt: now,
       candleOpenTime: new Date(now.getTime() - 4 * 60 * 60 * 1000),
       candleCloseTime: now,
@@ -478,6 +529,9 @@ export function exampleTimeGravityMap() {
       midpoint: 68495,
       high: 68540,
       low: 68450,
+      range: 90,
+      retrace30High: 68540 - 90 * 0.3,
+      retrace30Low: 68450 + 90 * 0.3,
       createdAt: now,
       candleOpenTime: new Date(now.getTime() - 24 * 60 * 60 * 1000),
       candleCloseTime: now,

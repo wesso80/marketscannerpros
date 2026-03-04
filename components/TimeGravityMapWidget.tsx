@@ -203,6 +203,9 @@ function MidpointLadder({ points }: { points: GravityPoint[] }) {
                 <span className="w-8 text-gray-300">{tf}</span>
                 <span className={iconColor}>{icon}</span>
                 <span className="text-white">{point.midpoint.toFixed(2)}</span>
+                <span className="text-gray-600 text-[10px]">
+                  ({point.zoneLow.toFixed(0)}–{point.zoneHigh.toFixed(0)})
+                </span>
                 <span className="text-gray-500">
                   {point.distance > 0 ? '+' : ''}{point.distance.toFixed(2)}%
                 </span>
