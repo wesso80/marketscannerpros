@@ -62,6 +62,13 @@ html {
   padding: 0;
   overflow-x: hidden;
 }
+
+/* Ensure select dropdown options are visible on dark themes */
+option {
+  background-color: #1e293b;
+  color: #f1f5f9;
+}
+
 body {
   margin: 0;
   padding: 0;

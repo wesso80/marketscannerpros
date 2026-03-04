@@ -916,12 +916,12 @@ export default function NewsSentimentPage() {
                   <select
                     value={newsSort}
                     onChange={(e) => setNewsSort(e.target.value as typeof newsSort)}
-                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white"
+                    className="rounded-xl border border-white/10 bg-slate-800 px-3 py-2 text-xs text-white"
                   >
-                    <option value="MOST_RELEVANT">Most Relevant</option>
-                    <option value="NEWEST">Newest</option>
-                    <option value="HIGHEST_IMPACT">Highest Impact</option>
-                    <option value="MOST_MENTIONED">Most Mentioned</option>
+                    <option value="MOST_RELEVANT" className="bg-slate-800 text-white">Most Relevant</option>
+                    <option value="NEWEST" className="bg-slate-800 text-white">Newest</option>
+                    <option value="HIGHEST_IMPACT" className="bg-slate-800 text-white">Highest Impact</option>
+                    <option value="MOST_MENTIONED" className="bg-slate-800 text-white">Most Mentioned</option>
                   </select>
                   <label className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/75">
                     <input type="checkbox" checked={hideLowQualityNews} onChange={(e) => setHideLowQualityNews(e.target.checked)} className="h-3.5 w-3.5" />
