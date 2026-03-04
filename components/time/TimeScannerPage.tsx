@@ -8,6 +8,7 @@ import TimeScannerShell from '@/components/time/TimeScannerShell';
 import { computeTimeConfluenceV2 } from '@/components/time/scoring';
 import { DecompositionTFRow, Direction, TimeConfluenceV2Inputs } from '@/components/time/types';
 import { fireAutoLog } from '@/lib/autoLog';
+import TimeGravityMapWidget from '@/components/TimeGravityMapWidget';
 
 type ScanModeType = 'scalping' | 'intraday_30m' | 'intraday_1h' | 'intraday_4h' | 'swing_1d' | 'swing_3d' | 'swing_1w' | 'macro_monthly' | 'macro_yearly';
 
@@ -880,6 +881,26 @@ export default function TimeScannerPage() {
               </div>
             </div>
           </div>
+          </div>
+        </details>
+
+        {/* ═══ ROW 4: TIME GRAVITY MAP (collapsible) ═══ */}
+        <details className="w-full rounded-2xl border border-slate-800 bg-slate-900/30">
+          <summary className="cursor-pointer list-none px-3 py-3 lg:px-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-sm font-semibold text-slate-100">🧲 Time Gravity Map</span>
+                <span className="ml-2 text-xs text-slate-400">Midpoint debt, decompression windows & gravity fields</span>
+              </div>
+              <div className="text-xs text-slate-500">▾ expand</div>
+            </div>
+          </summary>
+          <div className="border-t border-slate-800 p-3 lg:p-5">
+            <TimeGravityMapWidget
+              symbol={symbol}
+              currentPrice={scanData.currentPrice || undefined}
+              assetType={input.context.assetClass === 'equity' ? 'stock' : 'crypto'}
+            />
           </div>
         </details>
 

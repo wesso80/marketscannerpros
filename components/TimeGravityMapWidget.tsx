@@ -10,8 +10,9 @@ import type { MidpointRecord } from '@/lib/time/midpointDebt';
 
 interface TimeGravityMapWidgetProps {
   symbol: string;
-  currentPrice: number;
-  midpoints: MidpointRecord[];
+  currentPrice?: number;
+  midpoints?: MidpointRecord[];
+  assetType?: 'crypto' | 'stock' | 'forex';
   autoRefresh?: boolean;
   refreshInterval?: number;
   variant?: 'full' | 'compact';
@@ -381,7 +382,8 @@ function AIAnalystCommentary({ tgm }: { tgm: TimeGravityMap }) {
 export default function TimeGravityMapWidget({
   symbol,
   currentPrice,
-  midpoints,
+  midpoints: externalMidpoints,
+  assetType = 'crypto',
   autoRefresh = true,
   refreshInterval = 30000,
   variant = 'full',
@@ -389,28 +391,104 @@ export default function TimeGravityMapWidget({
 }: TimeGravityMapWidgetProps) {
   const [tgm, setTGM] = useState<TimeGravityMap | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [resolvedPrice, setResolvedPrice] = useState<number>(currentPrice || 0);
   
-  // Initial calculation
-  useEffect(() => {
-    if (midpoints.length > 0) {
-      const result = computeTimeGravityMap(midpoints, currentPrice);
-      setTGM(result);
-      setLastUpdate(new Date());
+  // Fetch TGM data from API
+  const fetchTGM = async () => {
+    if (!symbol) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const params = new URLSearchParams({ symbol });
+      if (currentPrice) params.set('price', String(currentPrice));
+      if (assetType) params.set('assetType', assetType);
+      
+      const res = await fetch(`/api/time-gravity-map?${params}`);
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `HTTP ${res.status}`);
+      }
+      
+      const data = await res.json();
+      
+      if (data.data) {
+        setTGM(data.data);
+        setResolvedPrice(currentPrice || 0);
+        setLastUpdate(new Date());
+      } else if (data.midpoints && data.midpoints.length > 0) {
+        // Fallback: compute client-side from midpoints
+        const price = data.currentPrice || currentPrice || 0;
+        if (price > 0) {
+          const result = computeTimeGravityMap(data.midpoints, price);
+          setTGM(result);
+          setResolvedPrice(price);
+          setLastUpdate(new Date());
+        }
+      } else {
+        setError('No midpoint data available. Run backfill first.');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to load Time Gravity Map');
+      
+      // Fallback to external midpoints if provided
+      if (externalMidpoints && externalMidpoints.length > 0 && (currentPrice || 0) > 0) {
+        const result = computeTimeGravityMap(externalMidpoints, currentPrice!);
+        setTGM(result);
+        setResolvedPrice(currentPrice!);
+        setLastUpdate(new Date());
+        setError(null);
+      }
+    } finally {
+      setLoading(false);
     }
-  }, [midpoints, currentPrice]);
+  };
+  
+  // Initial fetch
+  useEffect(() => {
+    fetchTGM();
+  }, [symbol, currentPrice]);
   
   // Auto-refresh
   useEffect(() => {
-    if (!autoRefresh || midpoints.length === 0) return;
+    if (!autoRefresh) return;
     
     const interval = setInterval(() => {
-      const result = computeTimeGravityMap(midpoints, currentPrice);
-      setTGM(result);
-      setLastUpdate(new Date());
+      fetchTGM();
     }, refreshInterval);
     
     return () => clearInterval(interval);
-  }, [autoRefresh, refreshInterval, midpoints, currentPrice]);
+  }, [autoRefresh, refreshInterval, symbol, currentPrice]);
+  
+  if (loading && !tgm) {
+    return (
+      <div className={`bg-slate-900/60 border border-slate-800 rounded-lg p-6 ${className}`}>
+        <div className="text-center text-slate-500">
+          <div className="animate-pulse">Loading Time Gravity Map...</div>
+        </div>
+      </div>
+    );
+  }
+  
+  if (error && !tgm) {
+    return (
+      <div className={`bg-slate-900/60 border border-slate-800 rounded-lg p-6 ${className}`}>
+        <div className="text-center">
+          <div className="text-slate-400 text-sm mb-2">🧲 Time Gravity Map</div>
+          <div className="text-amber-400/80 text-xs">{error}</div>
+          <button 
+            onClick={fetchTGM}
+            className="mt-3 px-3 py-1.5 text-xs border border-slate-700 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
   
   if (!tgm) {
     return (
@@ -456,7 +534,7 @@ export default function TimeGravityMapWidget({
       <div className="flex items-start justify-between mb-4">
         <div>
           <h2 className="text-lg font-bold text-white">⏰ Time Gravity Map</h2>
-          <p className="text-sm text-gray-400">{symbol} • {currentPrice.toFixed(2)}</p>
+          <p className="text-sm text-gray-400">{symbol} • {resolvedPrice > 0 ? resolvedPrice.toFixed(2) : '—'}</p>
         </div>
         <div className="text-right">
           <div className="text-2xl font-mono font-bold text-cyan-400">
