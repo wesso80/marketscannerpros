@@ -1,4 +1,11 @@
-"use client";\n\nimport React from "react";\nimport Link from "next/link";\nimport { usePathname } from 'next/navigation';\nimport { getGuideByPath } from '@/lib/guides/toolGuides';\nimport TerminalPageHeader from '@/components/terminal/TerminalPageHeader';\nimport { getToolImage } from '@/lib/toolImages';
+"use client";
+
+import React from "react";
+import Link from "next/link";
+import { usePathname } from 'next/navigation';
+import { getGuideByPath } from '@/lib/guides/toolGuides';
+import TerminalPageHeader from '@/components/terminal/TerminalPageHeader';
+import { getToolImage } from '@/lib/toolImages';
 
 interface ToolsPageHeaderProps {
   badge: string;
