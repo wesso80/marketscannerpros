@@ -11,8 +11,9 @@ export default function CryptoTimeConfluencePage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header */}
         <div className="text-center mb-12">
+          <div className="mx-auto mb-4 h-16 w-16 overflow-hidden rounded-2xl"><img src="/assets/scanners/time-confluence.png" alt="Time Confluence" className="h-full w-full object-contain p-1" /></div>
           <h1 className="text-4xl font-bold text-white mb-4">
-            ⏰ Crypto Time Confluence Engine
+            Crypto Time Confluence Engine
           </h1>
           <p className="text-lg text-gray-400 max-w-3xl mx-auto">
             Track crypto market cycles from 1 to 365 days, all anchored to the UTC daily close.

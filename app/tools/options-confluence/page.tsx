@@ -2234,10 +2234,9 @@ export default function OptionsConfluenceScanner() {
     return (
       <div className="min-h-screen bg-[var(--msp-bg)]">
         <main className="max-w-none px-4 py-8 text-slate-200">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="h-8 w-8 flex-shrink-0 rounded-lg overflow-hidden"><img src="/assets/scanners/options-confluence.png" alt="" className="h-full w-full object-contain p-0.5" /></div>
-            <h1 className="text-[clamp(1.25rem,3vw,1.75rem)] font-bold">Loading Options Confluence Scanner...</h1>
-          </div>
+          <h1 className="mb-2 text-[clamp(1.25rem,3vw,1.75rem)] font-bold">
+            <span className="inline-flex items-center gap-2"><img src="/assets/scanners/options-confluence.png" alt="" className="inline h-7 w-7 rounded-lg object-contain" /> Loading Options Confluence Scanner...</span>
+          </h1>
           <p className="text-sm text-slate-400">
             Checking account access and initializing scanner state.
           </p>
@@ -2252,10 +2251,9 @@ export default function OptionsConfluenceScanner() {
       <div className="min-h-screen bg-[var(--msp-bg)]">
         <header className="max-w-none px-4 py-8 text-center">
           <span className="inline-flex rounded-full border border-[var(--msp-border)] bg-[var(--msp-panel)] px-3 py-1 text-[11px] font-semibold text-[var(--msp-accent)]">PRO TRADER</span>
-          <div className="flex items-center justify-center gap-3 my-3">
-            <div className="h-9 w-9 flex-shrink-0 rounded-lg overflow-hidden"><img src="/assets/scanners/options-confluence.png" alt="" className="h-full w-full object-contain p-0.5" /></div>
-            <h1 className="text-[clamp(1.5rem,4vw,2rem)] font-bold text-slate-100">Options Confluence Scanner</h1>
-          </div>
+          <h1 className="my-3 text-[clamp(1.5rem,4vw,2rem)] font-bold text-slate-100">
+            <span className="inline-flex items-center gap-2"><img src="/assets/scanners/options-confluence.png" alt="" className="inline h-8 w-8 rounded-lg object-contain" /> Options Confluence Scanner</span>
+          </h1>
           <p className="text-sm text-slate-400">Strike & Expiration Recommendations Based on Time Confluence</p>
         </header>
         <main className="max-w-none px-4 pb-8">
@@ -2268,8 +2266,8 @@ export default function OptionsConfluenceScanner() {
   return (
     <TerminalShell
       title="Options Confluence Scanner"
-      subtitle="Get intelligent strike & expiration recommendations based on Time Confluence analysis. Uses 50% levels, decompression timing, and Greeks-aware risk assessment."
       image="/assets/scanners/options-confluence.png"
+      subtitle="Get intelligent strike & expiration recommendations based on Time Confluence analysis. Uses 50% levels, decompression timing, and Greeks-aware risk assessment."
     >
 
       <div

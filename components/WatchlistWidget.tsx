@@ -494,7 +494,7 @@ export default function WatchlistWidget() {
 
         {watchlists.length === 0 ? (
           <div className="py-10 text-center">
-            <div className="mb-3 text-4xl">📋</div>
+            <div className="mx-auto mb-3 h-12 w-12 overflow-hidden rounded-xl"><img src="/assets/platform-tools/watchlists.png" alt="Watchlists" className="h-full w-full object-contain p-0.5" /></div>
             <p className="mb-1 text-slate-300">No active watchlists</p>
             <p className="mb-4 text-sm text-slate-500">Initialize your first idea pipeline</p>
             <button

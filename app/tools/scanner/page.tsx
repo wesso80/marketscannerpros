@@ -2090,7 +2090,7 @@ function ScannerContent() {
           <div className="absolute left-0 right-0 top-0 h-[3px] bg-[var(--msp-accent)]" />
           
           <div className="mb-5 flex items-center gap-3">
-            <span className="text-[28px]">🔍</span>
+            <img src="/assets/scanners/multi-market-scanner.png" alt="Scanner" className="h-7 w-7 rounded-lg object-contain" />
             <div>
               <h3 className="m-0 text-lg font-bold uppercase tracking-[0.05em] text-[var(--msp-text)]">
                 Live Edge Scanner (Market-Wide)
@@ -2691,7 +2691,7 @@ function ScannerContent() {
               textAlign: "center",
               color: "var(--msp-text-muted)"
             }}>
-              <span style={{ fontSize: "40px", display: "block", marginBottom: "12px" }}>🎯</span>
+              <span style={{ fontSize: "40px", display: "block", marginBottom: "12px" }}><img src="/assets/scanners/multi-market-scanner.png" alt="Scanner" style={{ width: 40, height: 40, borderRadius: 10, objectFit: 'contain' }} /></span>
               <p style={{ fontSize: "15px", margin: "0 0 8px 0", color: "var(--msp-text)" }}>
                 Click a button above to discover today's best opportunities
               </p>

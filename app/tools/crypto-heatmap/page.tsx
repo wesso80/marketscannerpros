@@ -14,7 +14,7 @@ export default function CryptoHeatmapPage() {
   return (
     <main className="min-h-screen bg-[var(--msp-bg)] flex items-center justify-center">
       <div className="text-center">
-        <div className="text-4xl mb-4 animate-pulse">🗺️</div>
+        <div className="mx-auto mb-4 h-14 w-14 overflow-hidden rounded-2xl animate-pulse"><img src="/assets/platform-tools/crypto-heatmap.png" alt="Crypto Heatmap" className="h-full w-full object-contain p-1" /></div>
         <p className="text-slate-400">Redirecting to Crypto Command Center...</p>
       </div>
     </main>

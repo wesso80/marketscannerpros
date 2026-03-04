@@ -704,7 +704,7 @@ export default function AlertsWidget({
           (() => {
             return basicAlerts.length === 0 ? (
             <div className="text-center py-8">
-              <div className="text-4xl mb-3">🔕</div>
+              <div className="mx-auto mb-3 h-12 w-12 overflow-hidden rounded-xl"><img src="/assets/platform-tools/alerts.png" alt="Alerts" className="h-full w-full object-contain p-0.5" /></div>
               <p className="text-slate-400 mb-2">No basic alerts yet</p>
               <p className="text-sm text-slate-500">
                 Create baseline price alerts to anchor your event flow
@@ -1360,7 +1360,7 @@ export default function AlertsWidget({
           // Triggered feed tab
           history.length === 0 ? (
             <div className="text-center py-8">
-              <div className="text-4xl mb-3">⚡</div>
+              <div className="mx-auto mb-3 h-12 w-12 overflow-hidden rounded-xl"><img src="/assets/platform-tools/alerts.png" alt="Alerts" className="h-full w-full object-contain p-0.5" /></div>
               <p className="text-slate-400">No triggered events yet</p>
             </div>
           ) : (

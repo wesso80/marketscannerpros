@@ -484,7 +484,7 @@ export default function CryptoTerminalView() {
             ) : (
               <Card title="Inspector">
                 <div className="flex flex-col items-center justify-center py-12 text-zinc-500">
-                  <p className="text-4xl mb-3">👈</p>
+                  <div className="mx-auto mb-3 h-12 w-12 overflow-hidden rounded-xl"><img src="/assets/platform-tools/crypto-command.png" alt="Crypto Terminal" className="h-full w-full object-contain p-0.5" /></div>
                   <p className="text-sm">Click an exchange row</p>
                   <p className="text-xs text-zinc-600 mt-1">to inspect derivatives detail</p>
                 </div>

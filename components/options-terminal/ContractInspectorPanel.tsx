@@ -39,7 +39,7 @@ export default function ContractInspectorPanel({ contract, spot, mode }: Props) 
         className="flex flex-col items-center justify-center h-full rounded-xl border p-6 text-center"
         style={{ background: 'var(--msp-card)', borderColor: 'var(--msp-border)' }}
       >
-        <div className="text-3xl mb-3">📋</div>
+        <div className="mx-auto mb-3 h-10 w-10 overflow-hidden rounded-xl"><img src="/assets/platform-tools/options-terminal.png" alt="Options Terminal" className="h-full w-full object-contain p-0.5" /></div>
         <p className="text-sm font-semibold mb-1" style={{ color: 'var(--msp-text-muted)' }}>
           No contract selected
         </p>
