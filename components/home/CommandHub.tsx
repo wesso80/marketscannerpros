@@ -244,7 +244,7 @@ export default function CommandHub() {
 
           {/* ARCxA Engine */}
           <span className="flex items-center gap-2 opacity-70">
-            <img src="/logos/arcxa-chip.svg" alt="ARCxA" className="h-5 w-5" />
+            <img src="/logos/arcxa-chip.png" alt="ARCxA" className="h-5 w-5 rounded-sm" />
             <span className="text-sm font-semibold text-red-400">ARCxA</span>
           </span>
         </div>
@@ -262,9 +262,9 @@ export default function CommandHub() {
           <div className="relative mb-5">
             <div className="absolute -inset-4 animate-pulse rounded-full bg-red-500/10 blur-xl" />
             <img
-              src="/logos/arcxa-chip.svg"
+              src="/logos/arcxa-chip.png"
               alt="ARCxA Intelligence Engine"
-              className="relative h-16 w-16 drop-shadow-[0_0_20px_rgba(239,68,68,0.4)] md:h-20 md:w-20"
+              className="relative h-24 w-auto rounded-lg drop-shadow-[0_0_30px_rgba(239,68,68,0.5)] md:h-32"
             />
           </div>
 
