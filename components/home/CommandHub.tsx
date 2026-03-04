@@ -112,11 +112,11 @@ function FeaturedTile({
       className={`group relative flex flex-col overflow-hidden rounded-2xl border ${border} bg-gradient-to-br ${gradient} transition-all duration-200 hover:scale-[1.02] hover:shadow-xl ${glow}`}
     >
       {/* Image hero */}
-      <div className="relative h-40 w-full overflow-hidden">
+      <div className="relative h-48 w-full overflow-hidden bg-slate-950/40">
         <img
           src={image}
           alt={title}
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          className="h-full w-full object-contain object-center p-1 transition-transform duration-300 group-hover:scale-105"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent" />
       </div>
@@ -156,11 +156,11 @@ function SmallTile({
       className="group flex flex-col overflow-hidden rounded-xl border border-slate-700/60 bg-slate-900/40 transition-all duration-150 hover:border-slate-600 hover:bg-slate-900/70 hover:shadow-[0_0_15px_rgba(16,185,129,.15)]"
     >
       {/* Image thumbnail */}
-      <div className="relative h-28 w-full overflow-hidden bg-slate-950/50">
+      <div className="relative h-36 w-full overflow-hidden bg-slate-950/50">
         <img
           src={image || ''}
           alt={title}
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          className="h-full w-full object-contain object-center p-1 transition-transform duration-300 group-hover:scale-105"
           onError={(e) => {
             // Hide broken image and show emoji fallback
             (e.target as HTMLImageElement).style.display = 'none';
