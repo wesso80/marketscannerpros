@@ -9,6 +9,8 @@
     "test:contracts": "vitest run test/contracts.v1.test.ts",
     "test:audit": "vitest run test/institutional-audit.test.ts",
     "test:all": "vitest run",
+    "migrate:midpoints": "npx tsx scripts/run-midpoints-migration.ts",
+    "backfill:midpoints": "npx tsx scripts/backfill-midpoints.ts",
     "worker:ingest": "npx tsx worker/ingest-data.ts",
     "worker:ingest:once": "npx tsx worker/ingest-data.ts --once",
     "worker:ingest:crypto": "npx tsx worker/ingest-data.ts --crypto-only",

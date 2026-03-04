@@ -1,0 +1,515 @@
+/**
+ * Time Gravity Map (TGM) Engine
+ * 
+ * The most advanced feature: models price as a gravitational field
+ * where each timeframe midpoint acts as a mass that pulls price.
+ * 
+ * Formula:
+ * gravity = (tf_weight × decompression_multiplier) / distance
+ * 
+ * This creates a dynamic "pull map" showing where price is most likely to move.
+ * 
+ * Integrates:
+ * 1. Decompression timing (boosts gravity when window active)
+ * 2. Midpoint debt (unresolved midpoints have stronger pull)
+ * 3. Multi-TF clustering (combined gravity creates AOI zones)
+ */
+
+import {
+  calculateDecompressionState,
+  type DecompressionState,
+  type DecompressionStatus,
+} from './decompressionTiming';
+
+import {
+  analyzeMidpointDebt,
+  clusterMidpoints,
+  type MidpointRecord,
+  type MidpointCluster,
+  type MidpointDebtAnalysis,
+  TF_WEIGHTS,
+} from './midpointDebt';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TYPES
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface GravityPoint {
+  timeframe: string;
+  midpoint: number;
+  weight: number;
+  distance: number;              // Distance from current price (%)
+  distanceAbs: number;           // Absolute distance
+  decompressionState: DecompressionState;
+  decompressionMultiplier: number; // 1x-5x boost when window active
+  isDebt: boolean;               // Unresolved midpoint = stronger pull
+  debtMultiplier: number;        // 2x boost for debt
+  rawGravity: number;            // weight / distance
+  adjustedGravity: number;       // rawGravity × decompression × debt
+  visualStrength: number;        // 0-100 for heatmap
+  label: string;
+}
+
+export interface GravityZone {
+  minPrice: number;
+  maxPrice: number;
+  centerPrice: number;
+  spread: number;
+  spreadBps: number;
+  points: GravityPoint[];
+  totalGravity: number;
+  averageGravity: number;
+  dominantTimeframes: string[];
+  debtCount: number;
+  activeDecompressionCount: number;
+  rank: number;                  // 1 = strongest zone
+  confidence: number;            // 0-100
+  visualIntensity: number;       // 0-100 for heatmap
+  label: string;
+}
+
+export interface TimeGravityMap {
+  timestamp: Date;
+  currentPrice: number;
+  allPoints: GravityPoint[];
+  zones: GravityZone[];
+  topZone: GravityZone | null;
+  strongestPull: GravityPoint | null;
+  targetPrice: number | null;
+  targetRange: [number, number] | null;
+  confidence: number;             // 0-100
+  debtAnalysis: MidpointDebtAnalysis;
+  heatmap: number[];             // Array of gravity values for visualization
+  heatmapPrices: number[];       // Corresponding prices
+  summary: string;
+  alert: string | null;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DECOMPRESSION MULTIPLIERS
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Calculate decompression multiplier based on window status
+ */
+function getDecompressionMultiplier(status: DecompressionStatus): number {
+  switch (status) {
+    case 'ACTIVE':
+      return 5.0;  // 5x boost when in decompression window
+    case 'PRE_WINDOW':
+      return 2.0;  // 2x boost when approaching
+    case 'COMPRESSION':
+      return 1.0;  // Normal gravity
+    case 'POST_WINDOW':
+      return 0.5;  // Reduced (window passed)
+    case 'TAGGED':
+      return 0.1;  // Minimal (already hit)
+    default:
+      return 1.0;
+  }
+}
+
+/**
+ * Calculate debt multiplier
+ */
+function getDebtMultiplier(isDebt: boolean): number {
+  return isDebt ? 2.0 : 1.0;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GRAVITY CALCULATIONS
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Calculate gravity for a single midpoint
+ */
+export function calculateGravityPoint(
+  midpoint: MidpointRecord,
+  decompressionState: DecompressionState,
+  currentPrice: number
+): GravityPoint {
+  const distance = Math.abs(midpoint.distanceFromPrice);
+  const distanceAbs = Math.abs(midpoint.midpoint - currentPrice);
+  const weight = midpoint.weight;
+  
+  // Base gravity = weight / distance
+  // Add small epsilon to avoid division by zero
+  const rawGravity = distance > 0 ? weight / (distance + 0.01) : weight * 100;
+  
+  // Apply multipliers
+  const decompressionMultiplier = getDecompressionMultiplier(decompressionState.status);
+  const debtMultiplier = getDebtMultiplier(!midpoint.tagged);
+  
+  const adjustedGravity = rawGravity * decompressionMultiplier * debtMultiplier;
+  
+  // Visual strength (0-100 for UI)
+  const maxGravity = 1000; // Normalize
+  const visualStrength = Math.min(100, (adjustedGravity / maxGravity) * 100);
+  
+  const label = `${midpoint.timeframe} ${decompressionState.visualIndicator} ${midpoint.midpoint.toFixed(2)}`;
+  
+  return {
+    timeframe: midpoint.timeframe,
+    midpoint: midpoint.midpoint,
+    weight,
+    distance,
+    distanceAbs,
+    decompressionState,
+    decompressionMultiplier,
+    isDebt: !midpoint.tagged,
+    debtMultiplier,
+    rawGravity,
+    adjustedGravity,
+    visualStrength,
+    label,
+  };
+}
+
+/**
+ * Create gravity zones from gravity points
+ */
+export function createGravityZones(
+  points: GravityPoint[],
+  clusterThreshold: number = 0.5
+): GravityZone[] {
+  if (points.length === 0) return [];
+  
+  // Sort by price
+  const sorted = [...points].sort((a, b) => a.midpoint - b.midpoint);
+  
+  const zones: GravityZone[] = [];
+  let currentZone: GravityPoint[] = [sorted[0]];
+  
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = sorted[i - 1];
+    const curr = sorted[i];
+    
+    // Calculate distance between midpoints
+    const distancePct = Math.abs(((curr.midpoint - prev.midpoint) / prev.midpoint) * 100);
+    
+    if (distancePct <= clusterThreshold) {
+      currentZone.push(curr);
+    } else {
+      if (currentZone.length > 0) {
+        zones.push(buildGravityZone(currentZone));
+      }
+      currentZone = [curr];
+    }
+  }
+  
+  // Add final zone
+  if (currentZone.length > 0) {
+    zones.push(buildGravityZone(currentZone));
+  }
+  
+  // Rank zones by total gravity
+  const ranked = zones.sort((a, b) => b.totalGravity - a.totalGravity);
+  ranked.forEach((zone, index) => {
+    zone.rank = index + 1;
+  });
+  
+  return ranked;
+}
+
+/**
+ * Build a gravity zone from a group of points
+ */
+function buildGravityZone(points: GravityPoint[]): GravityZone {
+  const prices = points.map(p => p.midpoint);
+  const minPrice = Math.min(...prices);
+  const maxPrice = Math.max(...prices);
+  const centerPrice = (minPrice + maxPrice) / 2;
+  const spread = ((maxPrice - minPrice) / centerPrice) * 100;
+  const spreadBps = spread * 100;
+  
+  const totalGravity = points.reduce((sum, p) => sum + p.adjustedGravity, 0);
+  const averageGravity = totalGravity / points.length;
+  
+  const debtCount = points.filter(p => p.isDebt).length;
+  const activeDecompressionCount = points.filter(p => p.decompressionState.status === 'ACTIVE').length;
+  
+  // Get dominant timeframes (highest weight)
+  const dominantTimeframes = points
+    .sort((a, b) => b.weight - a.weight)
+    .slice(0, 3)
+    .map(p => p.timeframe);
+  
+  // Calculate confidence (0-100)
+  let confidence = 50; // Base
+  confidence += Math.min(30, points.length * 10);  // More TFs = more confidence
+  confidence += Math.min(20, debtCount * 10);      // Debt adds confidence
+  confidence += Math.min(20, activeDecompressionCount * 10); // Active windows add confidence
+  confidence = Math.min(100, confidence);
+  
+  // Visual intensity for heatmap
+  const maxGravity = 500;
+  const visualIntensity = Math.min(100, (totalGravity / maxGravity) * 100);
+  
+  const tfs = points.map(p => p.timeframe).join(' • ');
+  const label = `${minPrice.toFixed(2)}–${maxPrice.toFixed(2)} (${tfs})`;
+  
+  return {
+    minPrice,
+    maxPrice,
+    centerPrice,
+    spread,
+    spreadBps,
+    points,
+    totalGravity,
+    averageGravity,
+    dominantTimeframes,
+    debtCount,
+    activeDecompressionCount,
+    rank: 0, // Will be set later
+    confidence,
+    visualIntensity,
+    label,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MAIN TIME GRAVITY MAP ENGINE
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Compute complete Time Gravity Map
+ */
+export function computeTimeGravityMap(
+  midpoints: MidpointRecord[],
+  currentPrice: number,
+  currentTime: Date = new Date()
+): TimeGravityMap {
+  // 1. Calculate gravity points with decompression state
+  const allPoints: GravityPoint[] = midpoints.map(midpoint => {
+    const decompressionState = calculateDecompressionState(
+      midpoint.timeframe,
+      midpoint.candleOpenTime,
+      midpoint.candleCloseTime,
+      currentTime,
+      midpoint.tagged
+    );
+    
+    return calculateGravityPoint(midpoint, decompressionState, currentPrice);
+  });
+  
+  // 2. Create gravity zones
+  const zones = createGravityZones(allPoints, 0.5);
+  
+  // 3. Find top zone
+  const topZone = zones.length > 0 ? zones[0] : null;
+  
+  // 4. Find strongest individual pull
+  const strongestPull = allPoints.length > 0
+    ? allPoints.reduce((max, point) => point.adjustedGravity > max.adjustedGravity ? point : max, allPoints[0])
+    : null;
+  
+  // 5. Determine target
+  let targetPrice: number | null = null;
+  let targetRange: [number, number] | null = null;
+  
+  if (topZone) {
+    targetPrice = topZone.centerPrice;
+    targetRange = [topZone.minPrice, topZone.maxPrice];
+  }
+  
+  // 6. Calculate overall confidence
+  const confidence = topZone?.confidence || 0;
+  
+  // 7. Run debt analysis
+  const debtAnalysis = analyzeMidpointDebt(midpoints, currentPrice);
+  
+  // 8. Generate heatmap data (price levels with gravity values)
+  const { heatmap, heatmapPrices } = generateHeatmap(allPoints, currentPrice);
+  
+  // 9. Generate summary
+  let summary = '';
+  if (zones.length === 0) {
+    summary = 'No significant gravity zones detected.';
+  } else if (topZone) {
+    const direction = topZone.centerPrice > currentPrice ? 'above' : 'below';
+    summary = `Strongest gravity ${direction} at ${topZone.centerPrice.toFixed(2)} (${topZone.dominantTimeframes.join(', ')}). ${topZone.activeDecompressionCount} active decompression windows.`;
+  }
+  
+  // 10. Generate alert
+  let alert: string | null = null;
+  if (topZone && topZone.confidence >= 80) {
+    const decompActive = topZone.activeDecompressionCount;
+    const debt = topZone.debtCount;
+    alert = `🎯 HIGH PROBABILITY TARGET: ${topZone.centerPrice.toFixed(2)} | ${decompActive} active decompression windows | ${debt} unresolved debt midpoints | Confidence: ${topZone.confidence}%`;
+  } else if (topZone && topZone.confidence >= 60) {
+    alert = `⚠️ Moderate gravity zone at ${topZone.centerPrice.toFixed(2)} | Confidence: ${topZone.confidence}%`;
+  }
+  
+  return {
+    timestamp: currentTime,
+    currentPrice,
+    allPoints,
+    zones,
+    topZone,
+    strongestPull,
+    targetPrice,
+    targetRange,
+    confidence,
+    debtAnalysis,
+    heatmap,
+    heatmapPrices,
+    summary,
+    alert,
+  };
+}
+
+/**
+ * Generate heatmap data for visualization
+ */
+function generateHeatmap(
+  points: GravityPoint[],
+  currentPrice: number,
+  resolution: number = 20
+): { heatmap: number[], heatmapPrices: number[] } {
+  if (points.length === 0) {
+    return { heatmap: [], heatmapPrices: [] };
+  }
+  
+  // Find price range
+  const allPrices = points.map(p => p.midpoint);
+  const minPrice = Math.min(...allPrices, currentPrice * 0.98);
+  const maxPrice = Math.max(...allPrices, currentPrice * 1.02);
+  
+  const priceStep = (maxPrice - minPrice) / resolution;
+  const heatmap: number[] = [];
+  const heatmapPrices: number[] = [];
+  
+  for (let i = 0; i <= resolution; i++) {
+    const price = minPrice + (i * priceStep);
+    heatmapPrices.push(price);
+    
+    // Calculate total gravity at this price level
+    const gravity = points.reduce((sum, point) => {
+      const distance = Math.abs(((price - point.midpoint) / point.midpoint) * 100);
+      const localGravity = distance > 0 ? point.adjustedGravity / (distance + 0.1) : point.adjustedGravity * 10;
+      return sum + localGravity;
+    }, 0);
+    
+    heatmap.push(gravity);
+  }
+  
+  return { heatmap, heatmapPrices };
+}
+
+/**
+ * Format gravity zone for display
+ */
+export function formatGravityZone(zone: GravityZone): string {
+  const range = `${zone.minPrice.toFixed(2)}–${zone.maxPrice.toFixed(2)}`;
+  const tfs = zone.dominantTimeframes.join(' • ');
+  const confidence = `${zone.confidence}%`;
+  return `${range} (${tfs}) - Confidence: ${confidence}`;
+}
+
+/**
+ * Generate ASCII heatmap for terminal display
+ */
+export function generateASCIIHeatmap(
+  heatmap: number[],
+  heatmapPrices: number[],
+  height: number = 10
+): string[] {
+  const maxGravity = Math.max(...heatmap);
+  const lines: string[] = [];
+  
+  for (let i = heatmap.length - 1; i >= 0; i--) {
+    const gravity = heatmap[i];
+    const price = heatmapPrices[i];
+    const normalizedGravity = maxGravity > 0 ? gravity / maxGravity : 0;
+    const barWidth = Math.round(normalizedGravity * 20);
+    const bar = '█'.repeat(barWidth) + '░'.repeat(20 - barWidth);
+    const line = `${price.toFixed(2).padStart(10)}  ${bar}`;
+    lines.push(line);
+  }
+  
+  return lines;
+}
+
+/**
+ * Example usage
+ */
+export function exampleTimeGravityMap() {
+  const currentPrice = 68075;
+  const now = new Date();
+  
+  // Create sample midpoints (in real usage, these come from candle data)
+  const midpoints: MidpointRecord[] = [
+    {
+      timeframe: '1H',
+      midpoint: 68462,
+      high: 68500,
+      low: 68424,
+      createdAt: now,
+      candleOpenTime: new Date(now.getTime() - 60 * 60 * 1000),
+      candleCloseTime: now,
+      tagged: false,
+      taggedAt: null,
+      distanceFromPrice: ((68462 - currentPrice) / currentPrice) * 100,
+      ageMinutes: 0,
+      weight: TF_WEIGHTS['1H'],
+      isAbovePrice: true,
+    },
+    {
+      timeframe: '4H',
+      midpoint: 68510,
+      high: 68550,
+      low: 68470,
+      createdAt: now,
+      candleOpenTime: new Date(now.getTime() - 4 * 60 * 60 * 1000),
+      candleCloseTime: now,
+      tagged: false,
+      taggedAt: null,
+      distanceFromPrice: ((68510 - currentPrice) / currentPrice) * 100,
+      ageMinutes: 0,
+      weight: TF_WEIGHTS['4H'],
+      isAbovePrice: true,
+    },
+    {
+      timeframe: '1D',
+      midpoint: 68495,
+      high: 68540,
+      low: 68450,
+      createdAt: now,
+      candleOpenTime: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+      candleCloseTime: now,
+      tagged: false,
+      taggedAt: null,
+      distanceFromPrice: ((68495 - currentPrice) / currentPrice) * 100,
+      ageMinutes: 0,
+      weight: TF_WEIGHTS['1D'],
+      isAbovePrice: true,
+    },
+  ];
+  
+  const tgm = computeTimeGravityMap(midpoints, currentPrice, now);
+  
+  console.log('═══════════════════════════════════════════');
+  console.log('TIME GRAVITY MAP');
+  console.log('═══════════════════════════════════════════\n');
+  console.log(`Current Price: ${currentPrice}`);
+  console.log(`Target: ${tgm.targetPrice?.toFixed(2) || 'N/A'}`);
+  console.log(`Confidence: ${tgm.confidence}%\n`);
+  
+  if (tgm.topZone) {
+    console.log('Top Gravity Zone:');
+    console.log(formatGravityZone(tgm.topZone));
+    console.log(`  Active Decompression: ${tgm.topZone.activeDecompressionCount}`);
+    console.log(`  Unresolved Debt: ${tgm.topZone.debtCount}\n`);
+  }
+  
+  console.log('Gravity Heatmap:');
+  const heatmapLines = generateASCIIHeatmap(tgm.heatmap, tgm.heatmapPrices, 10);
+  heatmapLines.forEach(line => console.log(line));
+  
+  console.log(`\n${tgm.summary}`);
+  if (tgm.alert) {
+    console.log(`\n${tgm.alert}`);
+  }
+  
+  return tgm;
+}
