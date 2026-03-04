@@ -6,8 +6,9 @@
  * - On-demand fetcher
  * - Background worker (when deployed alongside)
  * 
- * Configured via ALPHA_VANTAGE_RPM env var (default: 400; contract allows 600 RPM).
- * Budget split: web=400 RPM (this governor), worker=200 RPM (own TokenBucket).
+ * Configured via ALPHA_VANTAGE_RPM env var (default: 400; contract allows 600 RPM, uncapped monthly).
+ * Budget split: web=400 RPM (this governor), worker=200 RPM (own TokenBucket in ingest-data.ts).
+ * Total across web + worker must not exceed 600 RPM contract limit.
  * 
  * Every AV call in the codebase should go through `avFetch()` or `avTakeToken()`
  * to ensure we never exceed the global quota.

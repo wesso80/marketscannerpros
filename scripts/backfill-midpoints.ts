@@ -192,9 +192,9 @@ async function backfillAll() {
       
       console.log(`  Progress: ${completedOps}/${totalOps} operations complete`);
       
-      // Rate limiting: Wait 1.5s between requests (CoinGecko free tier: 30 req/min)
+      // Rate limiting: CoinGecko 500 RPM (500K/month cap) → 120ms between requests
       if (completedOps < totalOps) {
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        await new Promise(resolve => setTimeout(resolve, 120));
       }
     }
   }

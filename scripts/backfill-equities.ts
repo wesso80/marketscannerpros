@@ -53,8 +53,7 @@ interface BackfillStats {
 
 /**
  * Rate limiter for Alpha Vantage API
- * Free tier: 25 requests/day, 5 requests/minute
- * Premium: 75 requests/minute, 600 requests/minute (commercial)
+ * Commercial license: 600 requests/minute (uncapped monthly)
  */
 class RateLimiter {
   private queue: (() => void)[] = [];
@@ -62,7 +61,7 @@ class RateLimiter {
   private requestsThisMinute: number = 0;
   private minuteStartTime: number = Date.now();
 
-  constructor(rpm: number = 5) {
+  constructor(rpm: number = 600) {
     this.requestsPerMinute = rpm;
   }
 
@@ -90,7 +89,7 @@ class RateLimiter {
 }
 
 const rateLimiter = new RateLimiter(
-  parseInt(process.env.ALPHA_VANTAGE_RPM || '5', 10)
+  parseInt(process.env.ALPHA_VANTAGE_RPM || '600', 10)
 );
 
 /**
@@ -279,16 +278,16 @@ async function backfillAll() {
     process.exit(1);
   }
   
-  const rpm = parseInt(process.env.ALPHA_VANTAGE_RPM || '5', 10);
-  console.log(`API Rate Limit: ${rpm} requests/minute`);
+  const rpm = parseInt(process.env.ALPHA_VANTAGE_RPM || '600', 10);
+  console.log(`API Rate Limit: ${rpm} requests/minute (commercial license)`);
   console.log(`Symbols: ${EQUITY_SYMBOLS.length}`);
   console.log(`Timeframes: ${TIMEFRAME_CONFIG.length}`);
   console.log(`Total operations: ${EQUITY_SYMBOLS.length * TIMEFRAME_CONFIG.length}\n`);
   
-  if (rpm <= 5) {
-    console.log('⚠️  WARNING: Using free tier rate limit (5 req/min)');
-    console.log('   This will take ~' + Math.ceil(EQUITY_SYMBOLS.length * TIMEFRAME_CONFIG.length / 5) + ' minutes');
-    console.log('   Consider upgrading to premium or using --symbol flag for selective backfill\n');
+  if (rpm <= 75) {
+    console.log('⚠️  WARNING: Running below commercial rate limit');
+    console.log('   Estimated: ~' + Math.ceil(EQUITY_SYMBOLS.length * TIMEFRAME_CONFIG.length / rpm) + ' minutes');
+    console.log('   Set ALPHA_VANTAGE_RPM=600 for full speed\n');
   }
   
   const allStats: BackfillStats[] = [];

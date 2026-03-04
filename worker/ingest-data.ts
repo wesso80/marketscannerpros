@@ -229,12 +229,13 @@ function isDueForFetch(lastFetchedAt: Date | string | null | undefined, interval
   return Date.now() - parsed.getTime() >= intervalSeconds * 1000;
 }
 
-// Rate limiter: Alpha Vantage 600 RPM commercial license
-// Budget split: worker=200 RPM (ALPHA_VANTAGE_RPM env), web=400 RPM (avRateGovernor)
+// Rate limiter: Alpha Vantage 600 RPM commercial license (uncapped monthly)
+// Budget split: worker gets ALPHA_VANTAGE_RPM env (default 200), web gets remainder via avRateGovernor
+// Total across all instances must not exceed 600 RPM contract limit
 let rateLimiter: TokenBucket | null = null;
 function getRateLimiter(): TokenBucket {
   if (!rateLimiter) {
-    const rpm = parseInt(getEnv('ALPHA_VANTAGE_RPM') || '500', 10);
+    const rpm = parseInt(getEnv('ALPHA_VANTAGE_RPM') || '200', 10);
     const burstPerSecond = parseInt(getEnv('ALPHA_VANTAGE_BURST_PER_SECOND') || '4', 10);
     const burstCapacity = Math.max(1, Math.min(rpm, burstPerSecond));
     rateLimiter = new TokenBucket(burstCapacity, rpm / 60);

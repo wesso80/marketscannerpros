@@ -74,12 +74,12 @@ export class TokenBucket {
 // Pre-configured rate limiters for different providers
 export const rateLimiters = {
   /**
-   * Alpha Vantage: 600 RPM commercial license.
+   * Alpha Vantage: 600 RPM commercial license (uncapped monthly).
    * ALPHA_VANTAGE_RPM env var controls the global governor in lib/avRateGovernor.ts.
    * NOTE: The global rate governor is the PRIMARY choke point for API routes.
    * This limiter is used inside the worker only as a secondary guard.
    */
-  alphaVantage: new TokenBucket(8, 500 / 60), // 500 RPM (100 RPM headroom)
+  alphaVantage: new TokenBucket(15, 600 / 60), // 600 RPM (full contract)
   
   /**
    * Nasdaq BX Options: 300 RPM (when enabled)
@@ -87,9 +87,11 @@ export const rateLimiters = {
   nasdaq: new TokenBucket(4, 70 / 60), // Shared with AV quota for now
   
   /**
-   * CoinGecko: Commercial plan
+   * CoinGecko: Commercial Analyst plan — 500 RPM, 500K calls/month cap.
+   * Monthly budget: ~11.5 calls/min sustained if spread evenly across 30 days.
+   * Burst to 500 RPM is fine; monitor monthly usage via CoinGecko dashboard.
    */
-  coinGecko: new TokenBucket(25, 25 / 60), // Conservative
+  coinGecko: new TokenBucket(30, 500 / 60), // 500 RPM burst, 30 token capacity
 };
 
 /**
