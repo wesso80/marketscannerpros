@@ -1055,6 +1055,11 @@ export class ConfluenceLearningAgent {
     const tfId = this.getCanonicalTimeframeId(tfConfig);
     const DAY_MS = 86_400_000;
 
+    // TradingView crypto multi-day anchor: epoch day 20454 = Jan 1 2026 00:00 UTC.
+    // Empirically verified against TV BTCUSDT 1D–30D candle boundaries.
+    // Formula: boundaries at days where (epochDay - 20454) % N === 0.
+    const TV_ANCHOR_MS = 20454 * DAY_MS; // 1,767,225,600,000
+
     // ── Intraday (5m through 12h): ceil(now / tfMs) * tfMs ──
     if (tfConfig.minutes <= 720) {
       const tfMs = tfConfig.minutes * 60_000;
@@ -1068,14 +1073,15 @@ export class ConfluenceLearningAgent {
       return Math.max(0, Math.floor((nextMidnight - nowMs) / 60_000));
     }
 
-    // ── Multi-day (2D–30D): fixed UTC boundaries from epoch ──
-    // Crypto multi-day candles use raw Unix-epoch alignment (midnight UTC).
-    // TradingView anchors N-day crypto candles to epoch day 0.
+    // ── Multi-day (2D–30D): TradingView-aligned UTC boundaries ──
+    // Multi-day candles close at midnight UTC on days satisfying
+    // (epochDay − anchor) mod N === 0, matching TradingView exactly.
     const multiDayMatch = tfId.match(/^(\d+)D$/);
     if (multiDayMatch) {
       const N = parseInt(multiDayMatch[1]);
       const periodMs = N * DAY_MS;
-      const periodEnd = Math.ceil(nowMs / periodMs) * periodMs;
+      const diff = nowMs - TV_ANCHOR_MS;
+      const periodEnd = Math.ceil(diff / periodMs) * periodMs + TV_ANCHOR_MS;
       return Math.max(0, Math.floor((periodEnd - nowMs) / 60_000));
     }
 
