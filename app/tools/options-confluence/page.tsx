@@ -1440,11 +1440,16 @@ export default function OptionsConfluenceScanner() {
       ].filter(Boolean).slice(0, 3)
     : [];
 
-  const layerMetricVolFit = universalTopCandidate?.features?.context?.volFit;
-  const layerMetricRegime = universalTopCandidate?.features?.context?.underlyingRegimeAlignment;
-  const layerMetricLiquidity = universalTopCandidate?.features?.context?.liquidityHealth;
+  const layerMetricVolFit = universalTopCandidate?.features?.context?.volFit
+    ?? (result?.ivAnalysis?.ivRank != null ? (100 - Math.abs(result.ivAnalysis.ivRank - 50)) / 100 : undefined);
+  const layerMetricRegime = universalTopCandidate?.features?.context?.underlyingRegimeAlignment
+    ?? (result?.aiMarketState?.regime?.confidence != null ? result.aiMarketState.regime.confidence / 100 : undefined);
+  const layerMetricLiquidity = universalTopCandidate?.features?.context?.liquidityHealth
+    ?? (result?.openInterestAnalysis?.totalCallOI || result?.openInterestAnalysis?.totalPutOI ? 0.65 : undefined);
   const layerMetricFill = universalTopCandidate?.features?.execution?.fillQuality;
   const layerMetricTimeFit = universalTopCandidate?.scores?.timeWindowFit;
+  const hasContextMetrics = typeof layerMetricVolFit === 'number' || typeof layerMetricRegime === 'number' || typeof layerMetricLiquidity === 'number';
+  const hasExecutionMetrics = typeof layerMetricFill === 'number' || typeof layerMetricTimeFit === 'number';
   const deploymentReasons = (
     universalTopCandidate
       ? [
@@ -3477,6 +3482,7 @@ export default function OptionsConfluenceScanner() {
                 <span>Context Layer</span>
                 <span className="rounded-full border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-[2px] text-[0.67rem] text-slate-300">Context Score {contextScore}</span>
               </div>
+              {hasContextMetrics && (
               <div className="mb-[0.55rem] grid gap-[0.45rem] [grid-template-columns:repeat(auto-fit,minmax(min(170px,100%),1fr))]">
                 <div className="rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.45rem_0.55rem]">
                   <div className="text-[0.6rem] font-bold uppercase text-slate-500">Vol Fit</div>
@@ -3491,6 +3497,7 @@ export default function OptionsConfluenceScanner() {
                   <div className="text-[0.82rem] font-extrabold text-slate-100">{typeof layerMetricLiquidity === 'number' ? layerMetricLiquidity.toFixed(2) : '—'}</div>
                 </div>
               </div>
+              )}
               <div className="grid gap-[0.45rem] [grid-template-columns:repeat(auto-fit,minmax(min(210px,100%),1fr))]">
                 <div className="rounded-[10px] border border-slate-500/20 bg-slate-900/35 p-[0.5rem_0.6rem] opacity-[0.88]">
                   <div className="text-[0.66rem] font-bold uppercase text-slate-500">Flow State</div>
@@ -3537,6 +3544,7 @@ export default function OptionsConfluenceScanner() {
                 </div>
               </div>
 
+              {hasExecutionMetrics && (
               <div className="rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.6rem_0.7rem]">
                 <div className="mb-1 text-[0.66rem] font-bold uppercase text-slate-400">Execution Layer</div>
                 <div className="grid gap-[0.4rem] [grid-template-columns:repeat(auto-fit,minmax(min(160px,100%),1fr))]">
@@ -3545,6 +3553,7 @@ export default function OptionsConfluenceScanner() {
                   <div className="text-[0.78rem] text-slate-200">Time Fit <span className="font-black">{typeof layerMetricTimeFit === 'number' ? layerMetricTimeFit.toFixed(2) : '—'}</span></div>
                 </div>
               </div>
+              )}
 
               <div className={`rounded-xl border p-[0.7rem_0.75rem] ${unifiedPermission === 'ALLOW' ? 'border-emerald-500/40 bg-emerald-500/10' : unifiedPermission === 'BLOCK' ? 'border-red-500/40 bg-red-500/10' : 'border-amber-500/40 bg-amber-500/10'}`}>
                 <div className="mb-[0.35rem] text-[0.72rem] font-extrabold uppercase text-[var(--msp-muted)]">MSP Deployment Status</div>
