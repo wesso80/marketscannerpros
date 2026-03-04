@@ -463,8 +463,13 @@ export default function EquityExplorerPage() {
     <div className="min-h-screen bg-[var(--msp-bg)] text-white">
       <div className="mx-auto w-full max-w-none space-y-2 px-2 pb-6 pt-3 md:px-3">
         <header className="rounded-lg border border-slate-700 bg-slate-900 p-2">
-          <h1 className="text-lg font-bold text-teal-300">📈 Equity Explorer</h1>
-          <p className="text-xs text-slate-400">Decision-grade equity view: valuation, trend, risk, and catalyst context.</p>
+          <div className="flex items-center gap-2.5">
+            <div className="h-8 w-8 flex-shrink-0 rounded-lg overflow-hidden"><img src="/assets/platform-tools/equity-explorer.png" alt="" className="h-full w-full object-contain p-0.5" /></div>
+            <div>
+              <h1 className="text-lg font-bold text-teal-300">Equity Explorer</h1>
+              <p className="text-xs text-slate-400">Decision-grade equity view: valuation, trend, risk, and catalyst context.</p>
+            </div>
+          </div>
         </header>
 
         <section className="rounded-lg border border-slate-700 bg-slate-900 p-2">
@@ -1079,7 +1084,7 @@ export default function EquityExplorerPage() {
         {/* Empty State */}
         {!data && !loading && !error && (
           <div className="rounded-lg border border-slate-700 bg-slate-900 p-10 text-center">
-            <p className="mb-2 text-4xl">📊</p>
+            <div className="mx-auto mb-3 h-14 w-14 rounded-2xl overflow-hidden"><img src="/assets/platform-tools/equity-explorer.png" alt="" className="h-full w-full object-contain p-1" /></div>
             <h3 className="text-lg font-semibold text-slate-200">Ready to evaluate an equity setup?</h3>
             <p className="mt-1 text-sm text-slate-500">Search or choose a popular symbol to generate decision context.</p>
           </div>

@@ -351,8 +351,13 @@ export default function CryptoDashboard() {
       <div className="mb-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">₿ Crypto Derivatives Dashboard</h1>
-            <p className="text-gray-400">Bias → Rotation → Volatility → Execution</p>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 flex-shrink-0 rounded-xl overflow-hidden"><img src="/assets/platform-tools/crypto-derivatives.png" alt="" className="h-full w-full object-contain p-0.5" /></div>
+              <div>
+                <h1 className="text-3xl font-bold text-white mb-2">Crypto Derivatives Dashboard</h1>
+                <p className="text-gray-400">Bias → Rotation → Volatility → Execution</p>
+              </div>
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">

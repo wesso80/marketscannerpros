@@ -41,6 +41,7 @@ export default function JournalCommandBar({ header, actions, viewMode, onToggleV
       title={header?.title || 'Trade Journal'}
       subtitle={header?.subtitle || 'Learning loop + truth source for scanner, options, and time.'}
       icon="🧾"
+      image="/assets/platform-tools/trade-journal.png"
       actions={headerActions}
       meta={headerMeta}
       className="bg-slate-900/40"
