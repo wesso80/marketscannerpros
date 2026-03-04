@@ -1068,18 +1068,14 @@ export class ConfluenceLearningAgent {
       return Math.max(0, Math.floor((nextMidnight - nowMs) / 60_000));
     }
 
-    // ── Multi-day (2D–30D): TradingView-calibrated UTC boundaries ──
-    // Raw Unix-epoch alignment is off by 1 day for some cycles vs TradingView.
-    // Calibration: TradingView shows 12D and 25D closing at midnight UTC on
-    // March 2, 2026 (not 13D/26D).  Offset of 114 calendar days aligns our
-    // bar boundaries to TV's actual multi-day crypto candle grid.
+    // ── Multi-day (2D–30D): fixed UTC boundaries from epoch ──
+    // Crypto multi-day candles use raw Unix-epoch alignment (midnight UTC).
+    // TradingView anchors N-day crypto candles to epoch day 0.
     const multiDayMatch = tfId.match(/^(\d+)D$/);
     if (multiDayMatch) {
       const N = parseInt(multiDayMatch[1]);
-      const CRYPTO_MD_OFFSET = 114 * DAY_MS; // TradingView calibration
       const periodMs = N * DAY_MS;
-      const adjusted = nowMs - CRYPTO_MD_OFFSET;
-      const periodEnd = Math.ceil(adjusted / periodMs) * periodMs + CRYPTO_MD_OFFSET;
+      const periodEnd = Math.ceil(nowMs / periodMs) * periodMs;
       return Math.max(0, Math.floor((periodEnd - nowMs) / 60_000));
     }
 
@@ -1756,7 +1752,19 @@ export class ConfluenceLearningAgent {
       let cursor = new Date(anchorMs);
       const minsToFirst = this.getMinutesToTimeframeClose(cursor, tfConfig, assetClass, sessionMode);
       if (minsToFirst === null) continue;
+      // Snap close timestamp to its exact boundary so fractional-second
+      // drift from the anchor doesn't shift displayed times (e.g. :57 vs :00).
       let nextCloseMs = anchorMs + minsToFirst * 60_000;
+      if (assetClass === 'crypto') {
+        if (tfConfig.minutes >= 1440) {
+          // Daily+: close at midnight UTC — snap to nearest day boundary
+          nextCloseMs = Math.round(nextCloseMs / 86_400_000) * 86_400_000;
+        } else {
+          // Intraday: snap to nearest TF-period boundary
+          const tfMs = tfConfig.minutes * 60_000;
+          nextCloseMs = Math.round(nextCloseMs / tfMs) * tfMs;
+        }
+      }
 
       // Collect all closes within horizon
       const closeTimes: number[] = [];
@@ -1771,7 +1779,16 @@ export class ConfluenceLearningAgent {
         const nextCursor = new Date(nextCloseMs + stepMs);
         const minsToNext = this.getMinutesToTimeframeClose(nextCursor, tfConfig, assetClass, sessionMode);
         if (minsToNext === null) break;
-        nextCloseMs = nextCursor.getTime() + minsToNext * 60_000;
+        let rawNextMs = nextCursor.getTime() + minsToNext * 60_000;
+        if (assetClass === 'crypto') {
+          if (tfConfig.minutes >= 1440) {
+            rawNextMs = Math.round(rawNextMs / 86_400_000) * 86_400_000;
+          } else {
+            const tfMs2 = tfConfig.minutes * 60_000;
+            rawNextMs = Math.round(rawNextMs / tfMs2) * tfMs2;
+          }
+        }
+        nextCloseMs = rawNextMs;
         iter++;
       }
 
