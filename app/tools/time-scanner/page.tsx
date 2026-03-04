@@ -267,11 +267,15 @@ function generateDemoMidpoints(currentPrice: number): MidpointRecord[] {
     const candleOpenTime = new Date(now.getTime() - hoursAgo * 60 * 60 * 1000);
     const candleCloseTime = new Date(candleOpenTime.getTime() + hoursAgo * 60 * 60 * 1000);
     
+    const range = high - low;
     midpoints.push({
       timeframe: tf,
       midpoint,
       high,
       low,
+      range,
+      retrace30High: high - range * 0.3,
+      retrace30Low: low + range * 0.3,
       createdAt: candleOpenTime,
       candleOpenTime,
       candleCloseTime,

@@ -86,7 +86,7 @@ async function backfillSymbol(
     console.log(`  📊 Fetching ${timeframe} data for ${symbol} (${days} days)...`);
     
     // Fetch OHLC data from CoinGecko
-    const ohlcData = await getOHLC(coingeckoId, days);
+    const ohlcData = await getOHLC(coingeckoId, days as any);
     
     if (!ohlcData || ohlcData.length === 0) {
       console.log(`    ⚠️  No data returned from CoinGecko`);
@@ -96,7 +96,7 @@ async function backfillSymbol(
     console.log(`    ✓ Fetched ${ohlcData.length} candles`);
     
     // Convert CoinGecko format to our candle format using the processor's parser
-    const candles = parseCoinGeckoOHLC(ohlcData);
+    const candles = parseCoinGeckoOHLC(ohlcData as [number, number, number, number, number][]);
     
     if (candles.length === 0) {
       console.log(`    ⚠️  No candles after parsing`);
