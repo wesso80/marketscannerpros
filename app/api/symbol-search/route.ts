@@ -6,7 +6,7 @@ const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
 // In-memory cache: keyword → { results, timestamp }
 const cache: Map<string, { data: any[]; timestamp: number }> = new Map();
-const CACHE_TTL = 60 * 60 * 1000; // 1 hour — symbol mappings rarely change
+const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours — symbol mappings rarely change
 
 export async function GET(req: NextRequest) {
   const session = await getSessionFromCookie();

@@ -4,9 +4,9 @@ import { avTakeToken } from '@/lib/avRateGovernor';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
-// Cache per symbol, 1 hour TTL
+// Cache per symbol, 6 hour TTL
 const cache: Map<string, { data: any; timestamp: number }> = new Map();
-const CACHE_TTL = 60 * 60 * 1000;
+const CACHE_TTL = 6 * 60 * 60 * 1000;
 
 export async function GET(req: NextRequest) {
   const session = await getSessionFromCookie();

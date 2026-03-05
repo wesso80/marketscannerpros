@@ -4,9 +4,9 @@ import { avTakeToken } from '@/lib/avRateGovernor';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
-// Cache: 1 hour (IPO lists update infrequently)
+// Cache: 6 hours (IPO lists update infrequently)
 let ipoCache: { data: any; timestamp: number } | null = null;
-const CACHE_TTL = 60 * 60 * 1000;
+const CACHE_TTL = 6 * 60 * 60 * 1000;
 
 export async function GET(req: NextRequest) {
   const session = await getSessionFromCookie();
