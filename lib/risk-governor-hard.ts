@@ -67,6 +67,8 @@ export type CandidateIntent = {
   stop_price: number;
   atr: number;
   event_severity?: 'none' | 'medium' | 'high';
+  /** Account equity for position sizing — avoids hardcoded $100K fallback */
+  account_equity?: number;
   /** Current open positions for correlation enforcement */
   open_positions?: Array<{
     symbol: string;
@@ -356,7 +358,8 @@ export function evaluateCandidate(snapshot: PermissionMatrixSnapshot, candidate:
     const stopDistance = Math.abs(candidate.entry_price - candidate.stop_price);
     const riskPerTrade = snapshot.caps.risk_per_trade;
     const rPerUnit = Math.max(0.0001, stopDistance);
-    const maxPositionSize = Math.floor((100000 * riskPerTrade) / rPerUnit);
+    const equity = candidate.account_equity && candidate.account_equity > 0 ? candidate.account_equity : 10_000;
+    const maxPositionSize = Math.floor((equity * riskPerTrade) / rPerUnit);
 
     return {
       permission: 'ALLOW',
@@ -474,7 +477,8 @@ export function evaluateCandidate(snapshot: PermissionMatrixSnapshot, candidate:
 
   const riskPerTrade = snapshot.caps.risk_per_trade;
   const rPerUnit = Math.max(0.0001, stopDistance);
-  const maxPositionSize = Math.floor((100000 * riskPerTrade) / rPerUnit);
+  const equity = candidate.account_equity && candidate.account_equity > 0 ? candidate.account_equity : 10_000;
+  const maxPositionSize = Math.floor((equity * riskPerTrade) / rPerUnit);
 
   return {
     permission,

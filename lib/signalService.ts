@@ -346,14 +346,16 @@ export async function findSignals(params: {
   }
   
   const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-  const limit = params.limit || 50;
+  // S4 FIX: Parameterize LIMIT to prevent SQL injection
+  const safeLimit = Math.min(Math.max(1, parseInt(String(params.limit || 50), 10) || 50), 500);
+  values.push(safeLimit);
   
   return q(`
     SELECT id, symbol, signal_type, direction, score, signal_at, price_at_signal, timeframe
     FROM signals_fired
     ${where}
     ORDER BY signal_at DESC
-    LIMIT ${limit}
+    LIMIT $${paramIdx}
   `, values);
 }
 

@@ -1,7 +1,12 @@
 import { JournalKpisModel, TradeRowModel } from '@/types/journal';
 import { isLoss, isWin, toPnlUsd } from '@/lib/journal/tradeMath';
 
-export function computeKpis(trades: TradeRowModel[]): JournalKpisModel {
+/**
+ * @param trades - All journal trade rows
+ * @param startingEquity - User's starting account equity (from portfolio_performance or user input).
+ *                         Defaults to 0 so equity = pure realized + unrealized P&L.
+ */
+export function computeKpis(trades: TradeRowModel[], startingEquity = 0): JournalKpisModel {
   const closed = trades.filter((trade) => trade.status === 'closed');
   const open = trades.filter((trade) => trade.status === 'open');
 
@@ -30,7 +35,7 @@ export function computeKpis(trades: TradeRowModel[]): JournalKpisModel {
     }
   }
 
-  const equity = 100000 + realizedPnl30d + unrealizedPnlOpen;
+  const equity = startingEquity + realizedPnl30d + unrealizedPnlOpen;
 
   return {
     equity,

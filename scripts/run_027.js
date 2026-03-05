@@ -1,9 +1,17 @@
 const { Pool } = require('pg');
 const fs = require('fs');
 
+require('dotenv').config({ path: '.env.local' });
+
 const sql = fs.readFileSync('migrations/027_trim_crypto_top100.sql', 'utf8');
+
+if (!process.env.DATABASE_URL) {
+  console.error('ERROR: DATABASE_URL is not set. Add it to .env.local');
+  process.exit(1);
+}
+
 const pool = new Pool({
-  connectionString: 'postgresql://neondb_owner:npg_Q8nXeM0RisqL@ep-plain-recipe-a7bmaq00-pooler.ap-southeast-2.aws.neon.tech/neondb?sslmode=require',
+  connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
 

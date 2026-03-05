@@ -1,7 +1,7 @@
 // app/api/auth/login/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
-import { hashWorkspaceId, signToken } from "@/lib/auth";
+import { hashWorkspaceId, signToken, verifyToken } from "@/lib/auth";
 import { q } from "@/lib/db";
 import { loginLimiter, getClientIP } from "@/lib/rateLimit";
 
@@ -146,13 +146,34 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { email } = await req.json();
+    const { email, loginNonce } = await req.json();
+
+    // ========================================
+    // SECURITY: Require a valid login nonce from magic-link verification.
+    // This prevents direct calls to /api/auth/login with just an email.
+    // ========================================
+    if (!loginNonce || typeof loginNonce !== "string") {
+      return NextResponse.json({ error: "Missing login verification. Please use the sign-in link sent to your email." }, { status: 403 });
+    }
+    let noncePayload: { purpose?: string; email?: string };
+    try {
+      noncePayload = verifyToken(loginNonce) as { purpose?: string; email?: string };
+    } catch {
+      return NextResponse.json({ error: "Login verification expired or invalid. Please request a new sign-in link." }, { status: 403 });
+    }
+    if (noncePayload?.purpose !== "login_nonce" || !noncePayload?.email) {
+      return NextResponse.json({ error: "Invalid login verification." }, { status: 403 });
+    }
+
+    // Use the email from the verified nonce, not from the request body (prevents tampering)
+    const emailFromNonce = noncePayload.email;
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email || typeof email !== 'string' || !emailRegex.test(email.trim())) {
+    if (!emailFromNonce || !emailRegex.test(emailFromNonce.trim())) {
       return NextResponse.json({ error: "Invalid email" }, { status: 400 });
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedEmail = emailFromNonce.toLowerCase().trim();
 
     // ========================================
     // STEP 1: Check for active trial FIRST

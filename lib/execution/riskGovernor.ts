@@ -50,6 +50,7 @@ export async function evaluateGovernor(
     stop_price: exits.stop_price,
     atr: intent.atr,
     event_severity: intent.event_severity,
+    account_equity: intent.account_equity,
     open_positions: intent.open_positions?.map((p) => ({
       symbol: p.symbol,
       direction: p.direction,
@@ -98,7 +99,7 @@ export async function evaluateGovernor(
   }
 
   // 5. Single trade risk cap
-  const equity = intent.account_equity ?? 100_000;
+  const equity = intent.account_equity ?? 10_000;
   const riskPct = intent.risk_pct ?? raw.risk_per_trade;
   if (riskPct > MAX_SINGLE_TRADE_RISK_PCT) {
     allowed = false;

@@ -29,7 +29,7 @@ function VerifyMagicLinkContent() {
         });
 
         const verifyData = await verifyRes.json().catch(() => ({}));
-        if (!verifyRes.ok || !verifyData?.email) {
+        if (!verifyRes.ok || !verifyData?.email || !verifyData?.loginNonce) {
           setState("error");
           setMessage(verifyData?.error || "Sign-in link is invalid or expired.");
           return;
@@ -39,7 +39,7 @@ function VerifyMagicLinkContent() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ email: verifyData.email }),
+          body: JSON.stringify({ email: verifyData.email, loginNonce: verifyData.loginNonce }),
         });
 
         const loginData = await loginRes.json().catch(() => ({}));

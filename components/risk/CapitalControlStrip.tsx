@@ -12,7 +12,7 @@ function tone(value: 'ok' | 'warn' | 'block') {
 
 export default function CapitalControlStrip() {
   const { snapshot, loading, isLocked, guardEnabled, setGuardEnabled } = useRiskPermission();
-  const [accountSize, setAccountSize] = useState(100000);
+  const [accountSize, setAccountSize] = useState(0);
 
   const oneRiskFraction = useMemo(() => Math.max(0.001, snapshot?.caps?.risk_per_trade ?? 0.005), [snapshot?.caps?.risk_per_trade]);
 
@@ -25,7 +25,7 @@ export default function CapitalControlStrip() {
         const data = await res.json();
         const latestValue = Number(data?.performanceHistory?.[data.performanceHistory.length - 1]?.totalValue || 0);
         const fallback = Number(data?.totalValue || 0);
-        const next = latestValue > 0 ? latestValue : fallback > 0 ? fallback : 100000;
+        const next = latestValue > 0 ? latestValue : fallback > 0 ? fallback : 0;
         if (mounted) setAccountSize(next);
       } catch {
       }

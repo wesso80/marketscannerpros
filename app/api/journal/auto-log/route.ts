@@ -227,7 +227,7 @@ export async function POST(req: NextRequest) {
 
     // Resolve account equity
     const equityAtEntry = await getLatestPortfolioEquity(session.workspaceId);
-    const accountEquity = equityAtEntry ?? 100_000;
+    const accountEquity = equityAtEntry ?? 10_000;
 
     // Build trade intent for execution engine
     const intent: TradeIntent = {

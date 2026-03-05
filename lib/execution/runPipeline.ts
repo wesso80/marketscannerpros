@@ -139,7 +139,7 @@ export async function runExecutionPipeline(input: PipelineInput): Promise<Pipeli
 
   // ── 2. Account equity ──────────────────────────────────────────────
   const equityAtEntry = await getLatestPortfolioEquity(workspaceId);
-  const accountEquity = equityAtEntry ?? 100_000;
+  const accountEquity = equityAtEntry ?? 10_000;
 
   // ── 3. Build intent ────────────────────────────────────────────────
   const intent: TradeIntent = {

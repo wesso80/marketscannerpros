@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
     // ── 2. Resolve account equity if not provided ────────────────────
     if (!intent.account_equity) {
       const equity = await getLatestPortfolioEquity(session.workspaceId);
-      intent.account_equity = equity ?? 100_000;
+      intent.account_equity = equity ?? 10_000;
     }
 
     // ── 3. Resolve open positions for correlation check ──────────────

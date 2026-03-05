@@ -16,7 +16,7 @@ import type {
 /* ------------------------------------------------------------------ */
 
 const DEFAULT_RISK_PCT = 0.0075;          // 0.75 % per trade (matches BASE_RISK)
-const DEFAULT_ACCOUNT_EQUITY = 100_000;   // fallback if no equity provided
+const DEFAULT_ACCOUNT_EQUITY = 10_000;    // fallback if no equity provided (conservative default)
 const MAX_NOTIONAL_PCT = 0.25;            // single position ≤ 25% of equity
 const MIN_QUANTITY = 0.0001;              // sub-penny coins allowed
 const KELLY_DAMPER = 0.25;               // quarter-Kelly ceiling

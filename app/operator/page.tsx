@@ -1728,12 +1728,12 @@ export default function OperatorDashboardPage() {
   const formatRiskPairFromR = (valueR: number) => (
     <>
       <span className="metric-r">{formatR(valueR)}</span>
-      <span className="metric-dollar">({formatDollar(rToDollar(valueR, portfolioValue || 100000, riskPerTradeFraction))})</span>
+      <span className="metric-dollar">({formatDollar(rToDollar(valueR, portfolioValue || 10000, riskPerTradeFraction))})</span>
     </>
   );
   const formatRiskPairFromAmount = (amount: number) => (
     <>
-      <span className="metric-r">{formatR(amountToR(amount, portfolioValue || 100000, riskPerTradeFraction))}</span>
+      <span className="metric-r">{formatR(amountToR(amount, portfolioValue || 10000, riskPerTradeFraction))}</span>
       <span className="metric-dollar">({Number.isFinite(amount) ? (amount >= 0 ? '+' : '-') : ''}{formatDollar(amount)})</span>
     </>
   );
@@ -1746,12 +1746,12 @@ export default function OperatorDashboardPage() {
     const entryRiskPerTrade = Number(entry.riskPerTradeAtEntry);
     const normalizedR = Number.isFinite(persistedNormalized)
       ? persistedNormalized
-      : amountToR(amount, Number.isFinite(entryEquity) && entryEquity > 0 ? entryEquity : (portfolioValue || 100000), normalizedRiskFraction);
+      : amountToR(amount, Number.isFinite(entryEquity) && entryEquity > 0 ? entryEquity : (portfolioValue || 10000), normalizedRiskFraction);
     const dynamicR = Number.isFinite(persistedDynamic)
       ? persistedDynamic
       : amountToR(
           amount,
-          Number.isFinite(entryEquity) && entryEquity > 0 ? entryEquity : (portfolioValue || 100000),
+          Number.isFinite(entryEquity) && entryEquity > 0 ? entryEquity : (portfolioValue || 10000),
           Number.isFinite(entryRiskPerTrade) && entryRiskPerTrade > 0 ? entryRiskPerTrade : riskPerTradeFraction
         );
     const multiplier = Number.isFinite(normalizedR) && normalizedR !== 0 && Number.isFinite(dynamicR) ? dynamicR / normalizedR : 1;
