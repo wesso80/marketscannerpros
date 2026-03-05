@@ -19,18 +19,28 @@ dotenv.config();
 
 const processor = new CandleProcessor();
 
-// Priority crypto symbols to backfill
+// Tier 1 crypto symbols to backfill (top 20 by market cap)
 const CRYPTO_SYMBOLS = [
-  'bitcoin',      // BTCUSD
-  'ethereum',     // ETHUSD
-  'solana',       // SOLUSD
-  'ripple',       // XRPUSD
-  'cardano',      // ADAUSD
-  'avalanche-2',  // AVAXUSD
-  'polkadot',     // DOTUSD
-  'dogecoin',     // DOGEUSD
-  'chainlink',    // LINKUSD
-  'matic-network' // MATICUSD
+  'bitcoin',              // BTCUSD
+  'ethereum',             // ETHUSD
+  'solana',               // SOLUSD
+  'binancecoin',          // BNBUSD
+  'ripple',               // XRPUSD
+  'cardano',              // ADAUSD
+  'dogecoin',             // DOGEUSD
+  'avalanche-2',          // AVAXUSD
+  'chainlink',            // LINKUSD
+  'polkadot',             // DOTUSD
+  'tron',                 // TRXUSD
+  'the-open-network',     // TONUSD
+  'shiba-inu',            // SHIBUSD
+  'litecoin',             // LTCUSD
+  'bitcoin-cash',         // BCHUSD
+  'stellar',              // XLMUSD
+  'hedera-hashgraph',     // HBARUSD
+  'sui',                  // SUIUSD
+  'aptos',                // APTUSD
+  'near',                 // NEARUSD
 ];
 
 // Mapping of CoinGecko IDs to trading symbols
@@ -38,13 +48,23 @@ const SYMBOL_MAP: Record<string, string> = {
   'bitcoin': 'BTCUSD',
   'ethereum': 'ETHUSD',
   'solana': 'SOLUSD',
+  'binancecoin': 'BNBUSD',
   'ripple': 'XRPUSD',
   'cardano': 'ADAUSD',
-  'avalanche-2': 'AVAXUSD',
-  'polkadot': 'DOTUSD',
   'dogecoin': 'DOGEUSD',
+  'avalanche-2': 'AVAXUSD',
   'chainlink': 'LINKUSD',
-  'matic-network': 'MATICUSD'
+  'polkadot': 'DOTUSD',
+  'tron': 'TRXUSD',
+  'the-open-network': 'TONUSD',
+  'shiba-inu': 'SHIBUSD',
+  'litecoin': 'LTCUSD',
+  'bitcoin-cash': 'BCHUSD',
+  'stellar': 'XLMUSD',
+  'hedera-hashgraph': 'HBARUSD',
+  'sui': 'SUIUSD',
+  'aptos': 'APTUSD',
+  'near': 'NEARUSD',
 };
 
 // Timeframe configurations
