@@ -11,6 +11,7 @@
  */
 
 import { Pool, PoolClient } from 'pg';
+import { q, tx } from '@/lib/db';
 import type { MidpointRecord } from './time/midpointDebt';
 import { TF_WEIGHTS } from './time/midpointDebt';
 
@@ -139,7 +140,8 @@ export class MidpointService {
   }
   
   /**
-   * Store multiple candles in a batch
+   * Store multiple candles in a batch — uses multi-row INSERT for efficiency
+   * (was O(n) individual INSERTs per candle → now single query)
    */
   async storeMidpointBatch(
     candles: CandleData[],
@@ -152,38 +154,36 @@ export class MidpointService {
     try {
       await client.query('BEGIN');
       
-      let insertedCount = 0;
+      // Build multi-row VALUES clause
+      const values: any[] = [];
+      const placeholders: string[] = [];
       
-      for (const candle of candles) {
+      for (let i = 0; i < candles.length; i++) {
+        const candle = candles[i];
         const midpoint = MidpointService.calculateMidpoint(candle.high, candle.low);
-        
-        const query = `
-          INSERT INTO timeframe_midpoints (
-            symbol, asset_type, timeframe, candle_open_time, candle_close_time,
-            high, low, midpoint, open_price, close_price, volume
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-          ON CONFLICT (symbol, timeframe, candle_close_time) DO NOTHING
-        `;
-        
-        const result = await client.query(query, [
-          candle.symbol,
-          assetType,
-          candle.timeframe,
-          candle.openTime,
-          candle.closeTime,
-          candle.high,
-          candle.low,
-          midpoint,
-          candle.open,
-          candle.close,
-          candle.volume || null,
-        ]);
-        
-        insertedCount += result.rowCount || 0;
+        const offset = i * 11;
+        placeholders.push(
+          `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11})`
+        );
+        values.push(
+          candle.symbol, assetType, candle.timeframe,
+          candle.openTime, candle.closeTime,
+          candle.high, candle.low, midpoint,
+          candle.open, candle.close, candle.volume || null
+        );
       }
       
+      const query = `
+        INSERT INTO timeframe_midpoints (
+          symbol, asset_type, timeframe, candle_open_time, candle_close_time,
+          high, low, midpoint, open_price, close_price, volume
+        ) VALUES ${placeholders.join(', ')}
+        ON CONFLICT (symbol, timeframe, candle_close_time) DO NOTHING
+      `;
+      
+      const result = await client.query(query, values);
       await client.query('COMMIT');
-      return insertedCount;
+      return result.rowCount || 0;
     } catch (error) {
       await client.query('ROLLBACK');
       console.error('Failed to store midpoint batch:', error);
@@ -404,15 +404,16 @@ export class MidpointService {
    * Delete old tagged midpoints to keep database clean
    */
   async cleanupOldMidpoints(daysToKeep: number = 90): Promise<number> {
+    // Parameterized query — no SQL interpolation (was B20: SQL injection)
     const query = `
       DELETE FROM timeframe_midpoints
       WHERE 
         tagged = TRUE
-        AND tagged_at < NOW() - INTERVAL '${daysToKeep} days'
+        AND tagged_at < NOW() - make_interval(days => $1)
     `;
     
     try {
-      const result = await this.pool.query(query);
+      const result = await this.pool.query(query, [Math.floor(daysToKeep)]);
       return result.rowCount || 0;
     } catch (error) {
       console.error('Failed to cleanup old midpoints:', error);

@@ -464,34 +464,36 @@ export async function getFullSymbolData(symbol: string): Promise<{
 }> {
   const sym = symbol.toUpperCase().trim();
   
-  // Try cache/db first
-  let quote = await getQuote(sym);
-  let indicators = await getIndicators(sym);
+  // Parallel cache/db lookups (was sequential)
+  let [quote, indicators] = await Promise.all([
+    getQuote(sym),
+    getIndicators(sym),
+  ]);
 
-  // If neither found, do a combined fetch
+  // If neither found, do a combined fetch (single canFetchNow check)
   if (!quote && !indicators) {
     if (await canFetchNow()) {
-      // Fetch quote
-      quote = await fetchQuoteFromAV(sym);
-      if (quote) {
+      // Fetch quote and bars in parallel
+      const [fetchedQuote, barsResult] = await Promise.all([
+        fetchQuoteFromAV(sym),
+        fetchBarsAndIndicatorsFromAV(sym),
+      ]);
+
+      if (fetchedQuote) {
+        quote = fetchedQuote;
         await storeQuote(quote);
         await setCached(CACHE_KEYS.quote(sym), quote, CACHE_TTL.quote);
       }
-    }
-    
-    if (await canFetchNow()) {
-      // Fetch bars and compute indicators
-      const result = await fetchBarsAndIndicatorsFromAV(sym);
-      if (result) {
-        indicators = result.indicators;
+
+      if (barsResult) {
+        indicators = barsResult.indicators;
         await storeIndicators(indicators);
         await setCached(CACHE_KEYS.indicators(sym, 'daily'), indicators, CACHE_TTL.indicators);
       }
-    }
 
-    // Add to universe for worker
-    if (quote || indicators) {
-      await addToUniverse(sym);
+      if (quote || indicators) {
+        await addToUniverse(sym);
+      }
     }
   }
 

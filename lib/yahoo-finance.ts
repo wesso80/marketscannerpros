@@ -251,69 +251,42 @@ export async function getMarketMovers(): Promise<{
 }> {
   const result = { gainers: [] as YahooQuote[], losers: [] as YahooQuote[], mostActive: [] as YahooQuote[] };
   
+  const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
+  const mapQuotes = (quotes: any[]): YahooQuote[] =>
+    quotes.map((q: any) => ({
+      symbol: q.symbol,
+      price: q.regularMarketPrice,
+      change: q.regularMarketChange,
+      changePercent: q.regularMarketChangePercent,
+      open: q.regularMarketOpen,
+      high: q.regularMarketDayHigh,
+      low: q.regularMarketDayLow,
+      previousClose: q.regularMarketPreviousClose,
+      volume: q.regularMarketVolume,
+    }));
+
+  const fetchScreener = async (scrId: string): Promise<YahooQuote[]> => {
+    try {
+      const res = await fetch(
+        `https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved?scrIds=${scrId}&count=20`,
+        { headers: { 'User-Agent': UA } }
+      );
+      if (!res.ok) return [];
+      const data = await res.json();
+      return mapQuotes(data.finance?.result?.[0]?.quotes || []);
+    } catch { return []; }
+  };
+
   try {
-    // Day Gainers
-    const gainersUrl = 'https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved?scrIds=day_gainers&count=20';
-    const gainersRes = await fetch(gainersUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
-    });
-    if (gainersRes.ok) {
-      const data = await gainersRes.json();
-      const quotes = data.finance?.result?.[0]?.quotes || [];
-      result.gainers = quotes.map((q: any) => ({
-        symbol: q.symbol,
-        price: q.regularMarketPrice,
-        change: q.regularMarketChange,
-        changePercent: q.regularMarketChangePercent,
-        open: q.regularMarketOpen,
-        high: q.regularMarketDayHigh,
-        low: q.regularMarketDayLow,
-        previousClose: q.regularMarketPreviousClose,
-        volume: q.regularMarketVolume,
-      }));
-    }
-    
-    // Day Losers
-    const losersUrl = 'https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved?scrIds=day_losers&count=20';
-    const losersRes = await fetch(losersUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
-    });
-    if (losersRes.ok) {
-      const data = await losersRes.json();
-      const quotes = data.finance?.result?.[0]?.quotes || [];
-      result.losers = quotes.map((q: any) => ({
-        symbol: q.symbol,
-        price: q.regularMarketPrice,
-        change: q.regularMarketChange,
-        changePercent: q.regularMarketChangePercent,
-        open: q.regularMarketOpen,
-        high: q.regularMarketDayHigh,
-        low: q.regularMarketDayLow,
-        previousClose: q.regularMarketPreviousClose,
-        volume: q.regularMarketVolume,
-      }));
-    }
-    
-    // Most Active
-    const activeUrl = 'https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved?scrIds=most_actives&count=20';
-    const activeRes = await fetch(activeUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
-    });
-    if (activeRes.ok) {
-      const data = await activeRes.json();
-      const quotes = data.finance?.result?.[0]?.quotes || [];
-      result.mostActive = quotes.map((q: any) => ({
-        symbol: q.symbol,
-        price: q.regularMarketPrice,
-        change: q.regularMarketChange,
-        changePercent: q.regularMarketChangePercent,
-        open: q.regularMarketOpen,
-        high: q.regularMarketDayHigh,
-        low: q.regularMarketDayLow,
-        previousClose: q.regularMarketPreviousClose,
-        volume: q.regularMarketVolume,
-      }));
-    }
+    // Fetch all 3 screeners in parallel (was sequential — ~3s → ~1s)
+    const [gainers, losers, mostActive] = await Promise.all([
+      fetchScreener('day_gainers'),
+      fetchScreener('day_losers'),
+      fetchScreener('most_actives'),
+    ]);
+    result.gainers = gainers;
+    result.losers = losers;
+    result.mostActive = mostActive;
   } catch (err) {
     console.error('Yahoo Finance market movers error:', err);
   }
@@ -348,10 +321,22 @@ export function calculateIndicators(bars: YahooHistoricalBar[]) {
   const ema26 = calculateEMA(closes, 26);
   const ema200 = calculateEMA(closes, 200);
   
-  // MACD
-  const macdLine = ema12 - ema26;
-  const macdSignal = calculateEMA([macdLine], 9);
-  const macdHist = macdLine - macdSignal;
+  // MACD — build full series so signal line is a proper 9-period EMA
+  const ema12Series = calculateEMASeries(closes, 12);
+  const ema26Series = calculateEMASeries(closes, 26);
+  const macdSeries: number[] = [];
+  for (let i = 0; i < closes.length; i++) {
+    if (i < 25 || isNaN(ema12Series[i]) || isNaN(ema26Series[i])) continue;
+    macdSeries.push(ema12Series[i] - ema26Series[i]);
+  }
+  const macdLine = macdSeries.length > 0 ? macdSeries[macdSeries.length - 1] : 0;
+  let macdSignal = macdLine;
+  let macdHist = 0;
+  if (macdSeries.length >= 9) {
+    const signalSeries = calculateEMASeries(macdSeries, 9);
+    macdSignal = signalSeries[signalSeries.length - 1];
+    macdHist = macdLine - macdSignal;
+  }
   
   // SMA 20, 50
   const sma20 = calculateSMA(closes, 20);
@@ -387,6 +372,20 @@ export function calculateIndicators(bars: YahooHistoricalBar[]) {
 }
 
 // Helper functions
+
+/** Returns full EMA series (same length as input). First `period-1` values are NaN. */
+export function calculateEMASeries(data: number[], period: number): number[] {
+  const result: number[] = [];
+  const k = 2 / (period + 1);
+  let ema = data.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  for (let i = 0; i < data.length; i++) {
+    if (i < period - 1) { result.push(NaN); }
+    else if (i === period - 1) { result.push(ema); }
+    else { ema = data[i] * k + ema * (1 - k); result.push(ema); }
+  }
+  return result;
+}
+
 export function calculateSMA(data: number[], period: number): number {
   if (data.length < period) return data[data.length - 1];
   const slice = data.slice(-period);

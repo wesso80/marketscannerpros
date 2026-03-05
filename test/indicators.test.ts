@@ -20,6 +20,8 @@ import {
   calculateStochastic,
   calculateSMA,
   calculateEMA as yahooEMA,
+  calculateEMASeries as yahooEMASeries,
+  calculateIndicators,
 } from '../lib/yahoo-finance';
 
 // ─── Helper: deterministic price series ────────────────────────────────────
@@ -317,5 +319,37 @@ describe('Cross-module consistency', () => {
   it('finnhub EMA ≈ yahoo EMA on same closes', () => {
     const data = linearPrices(30, 100, 1.5);
     expect(finnhubEMA(data, 9)).toBeCloseTo(yahooEMA(data, 9), 8);
+  });
+});
+
+// ─── Yahoo MACD fix (B2) — signal ≠ macdLine ───────────────────────────────
+describe('Yahoo MACD signal line (B2 fix)', () => {
+  it('yahooEMASeries returns correct length and NaN-pads', () => {
+    const data = linearPrices(20, 100, 1);
+    const series = yahooEMASeries(data, 5);
+    expect(series.length).toBe(20);
+    for (let i = 0; i < 4; i++) expect(series[i]).toBeNaN();
+    expect(series[4]).toBeCloseTo(102, 0); // SMA of first 5 = (100+101+102+103+104)/5 = 102
+    expect(Number.isFinite(series[19])).toBe(true);
+  });
+
+  it('MACD signal ≠ MACD line on trending data (was broken: signal === line)', () => {
+    // Build 50 bars of uptrend to ensure MACD series has ≥ 9 values
+    const bars = Array.from({ length: 60 }, (_, i) => ({
+      date: `2024-01-${String(i + 1).padStart(2, '0')}`,
+      open: 100 + i * 0.8,
+      high: 101 + i * 0.9,
+      low: 99 + i * 0.7,
+      close: 100.5 + i * 0.85,
+      volume: 1000000,
+    }));
+    const result = calculateIndicators(bars);
+    expect(result).not.toBeNull();
+    if (!result) return;
+    // With the fix: signal is a proper 9-EMA of MACD series, NOT identical to macdLine
+    expect(result.macdSignal).not.toBe(result.macd);
+    expect(result.macdHist).not.toBe(0);
+    // Histogram = macd - signal
+    expect(result.macdHist).toBeCloseTo(result.macd - result.macdSignal, 10);
   });
 });
