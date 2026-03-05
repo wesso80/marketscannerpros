@@ -509,38 +509,60 @@ export async function getOHLCWithVolume(
     if (!ohlc || ohlc.length === 0) return null;
 
     // Build volume lookup from market_chart total_volumes (timestamp → volume)
-    const volMap = new Map<number, number>();
+    // Use sorted array + binary search for O(n log n) instead of O(n²)
+    const volEntries: { ts: number; vol: number }[] = [];
     if (chart?.total_volumes) {
       for (const [ts, vol] of chart.total_volumes) {
-        volMap.set(ts, vol);
-      }
-    }
-
-    // Merge: for each OHLC candle, find nearest volume entry within 2h window
-    const TWO_HOURS = 2 * 60 * 60 * 1000;
-    const volTimestamps = chart?.total_volumes?.map(v => v[0]) ?? [];
-
-    return ohlc.map((row) => {
-      const candleTs = row[0];
-      // Find nearest volume timestamp
-      let bestVol = 0;
-      let bestDist = Infinity;
-      for (const vTs of volTimestamps) {
-        const dist = Math.abs(vTs - candleTs);
-        if (dist < bestDist && dist < TWO_HOURS) {
-          bestDist = dist;
-          bestVol = volMap.get(vTs) ?? 0;
+        if (Number.isFinite(vol) && vol >= 0) {
+          volEntries.push({ ts, vol });
         }
       }
-      return {
-        t: candleTs,
-        o: Number(row[1]),
-        h: Number(row[2]),
-        l: Number(row[3]),
-        c: Number(row[4]),
-        v: bestVol,
-      };
-    }).filter(c => Number.isFinite(c.c));
+      volEntries.sort((a, b) => a.ts - b.ts);
+    }
+
+    // Binary search helper: find nearest volume timestamp within window
+    const TWO_HOURS = 2 * 60 * 60 * 1000;
+    function findNearestVol(targetTs: number): number {
+      if (volEntries.length === 0) return 0;
+      let lo = 0, hi = volEntries.length - 1;
+      while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        if (volEntries[mid].ts < targetTs) lo = mid + 1;
+        else hi = mid;
+      }
+      // Check lo and lo-1 for closest
+      let bestVol = 0;
+      let bestDist = Infinity;
+      for (const idx of [lo - 1, lo, lo + 1]) {
+        if (idx >= 0 && idx < volEntries.length) {
+          const dist = Math.abs(volEntries[idx].ts - targetTs);
+          if (dist < bestDist && dist < TWO_HOURS) {
+            bestDist = dist;
+            bestVol = volEntries[idx].vol;
+          }
+        }
+      }
+      return bestVol;
+    }
+
+    const merged = ohlc.map((row) => ({
+      t: row[0],
+      o: Number(row[1]),
+      h: Number(row[2]),
+      l: Number(row[3]),
+      c: Number(row[4]),
+      v: findNearestVol(row[0]),
+    })).filter(c => Number.isFinite(c.c));
+
+    // Volume quality check: warn if >50% of candles have zero volume
+    const zeroVolCount = merged.filter(c => c.v === 0).length;
+    if (merged.length > 0 && zeroVolCount / merged.length > 0.5) {
+      console.warn(
+        `[CoinGecko] Volume quality warning for ${coinId}: ${zeroVolCount}/${merged.length} candles have zero volume`
+      );
+    }
+
+    return merged;
   } catch (error) {
     console.error('[CoinGecko] OHLC+Volume fetch error:', error);
     return null;

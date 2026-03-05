@@ -6,6 +6,12 @@ import { getCoinDetail, getGlobalData, resolveSymbolToId } from '@/lib/coingecko
 import { deepAnalysisLimiter, getClientIP } from '@/lib/rateLimit';
 import { avFetch } from '@/lib/avRateGovernor';
 import { getIndicators } from '@/lib/onDemandFetch';
+import {
+  calculateEMA as calcEMA,
+  calculateRSI as calcRSI,
+  calculateStochastic as calcStochastic,
+  calculateATR as calcATR,
+} from '@/lib/yahoo-finance';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -447,12 +453,12 @@ async function fetchTechnicalIndicators(symbol: string, assetType: string) {
       // Calculate indicators
       const sma20 = closes.slice(-20).reduce((a: number, b: number) => a + b, 0) / 20;
       const sma50 = closes.length >= 50 ? closes.slice(-50).reduce((a: number, b: number) => a + b, 0) / 50 : null;
-      const ema12 = calculateEMA(closes, 12);
-      const ema26 = calculateEMA(closes, 26);
+      const ema12 = calcEMA(closes, 12);
+      const ema26 = calcEMA(closes, 26);
       const macd = ema12 - ema26;
-      const rsi = calculateRSI(closes, 14);
-      const { stochK, stochD } = calculateStochastic(closes, highs, lows, 14, 3);
-      const atr = calculateATR(highs, lows, closes, 14);
+      const rsi = calcRSI(closes, 14);
+      const { k: stochK, d: stochD } = calcStochastic(highs, lows, closes, 14, 3);
+      const atr = calcATR(highs, lows, closes, 14);
       const avgVolume = volumes.slice(-20).reduce((a: number, b: number) => a + b, 0) / 20;
       const volumeRatio = volumes[volumes.length - 1] / avgVolume;
       
@@ -909,62 +915,7 @@ function buildAnalysisPrompt(data: any): string {
   return prompt;
 }
 
-// Helper functions for technical indicators
-function calculateEMA(data: number[], period: number): number {
-  const k = 2 / (period + 1);
-  let ema = data.slice(0, period).reduce((a: number, b: number) => a + b, 0) / period;
-  for (let i = period; i < data.length; i++) {
-    ema = data[i] * k + ema * (1 - k);
-  }
-  return ema;
-}
-
-function calculateRSI(closes: number[], period: number): number {
-  let gains = 0, losses = 0;
-  for (let i = closes.length - period; i < closes.length; i++) {
-    const diff = closes[i] - closes[i - 1];
-    if (diff > 0) gains += diff;
-    else losses -= diff;
-  }
-  const rs = gains / (losses || 1);
-  return 100 - (100 / (1 + rs));
-}
-
-function calculateStochastic(closes: number[], highs: number[], lows: number[], kPeriod: number, dPeriod: number) {
-  if (closes.length < kPeriod + dPeriod - 1) return { stochK: 50, stochD: 50 };
-  
-  // Build %K series over the full window needed for %D smoothing
-  const kValues: number[] = [];
-  for (let i = kPeriod - 1; i < closes.length; i++) {
-    const sliceHighs = highs.slice(i - kPeriod + 1, i + 1);
-    const sliceLows = lows.slice(i - kPeriod + 1, i + 1);
-    const highestHigh = Math.max(...sliceHighs);
-    const lowestLow = Math.min(...sliceLows);
-    const range = highestHigh - lowestLow;
-    kValues.push(range > 0 ? ((closes[i] - lowestLow) / range) * 100 : 50);
-  }
-  
-  const stochK = kValues[kValues.length - 1];
-  
-  // %D = dPeriod-SMA of %K values
-  const dSlice = kValues.slice(-dPeriod);
-  const stochD = dSlice.reduce((a, b) => a + b, 0) / dSlice.length;
-  
-  return { stochK, stochD };
-}
-
-function calculateATR(highs: number[], lows: number[], closes: number[], period: number): number {
-  const trs: number[] = [];
-  for (let i = 1; i < highs.length; i++) {
-    const tr = Math.max(
-      highs[i] - lows[i],
-      Math.abs(highs[i] - closes[i - 1]),
-      Math.abs(lows[i] - closes[i - 1])
-    );
-    trs.push(tr);
-  }
-  return trs.slice(-period).reduce((a: number, b: number) => a + b, 0) / period;
-}
+// Technical indicators imported from lib/yahoo-finance.ts
 
 // Generate trading signals
 function generateSignals(data: any): { signal: string; score: number; reasons: string[]; bullishCount: number; bearishCount: number } {

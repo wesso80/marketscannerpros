@@ -421,7 +421,7 @@ export function calculateRSI(data: number[], period: number): number {
   return 100 - (100 / (1 + rs));
 }
 
-function calculateATR(highs: number[], lows: number[], closes: number[], period: number): number {
+export function calculateATR(highs: number[], lows: number[], closes: number[], period: number): number {
   if (highs.length < period + 1) return 0;
   
   const trueRanges: number[] = [];
