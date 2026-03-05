@@ -41,6 +41,7 @@ export interface IndicatorResult {
   obv?: number;
   vwap?: number;
   vwapIntraday?: number;
+  mfi14?: number;
   atrPercent14?: number;
   bbWidthPercent20?: number;
 }
@@ -573,6 +574,26 @@ export function calculateAllIndicators(bars: OHLCVBar[]): IndicatorResult {
   const bbWidthPercentValue = bbWidthPercent(closes, 20, 2);
   if (bbWidthPercentValue !== null) result.bbWidthPercent20 = Math.round(bbWidthPercentValue * 100) / 100;
   
+  // MFI (Money Flow Index)
+  const mfiPeriod = 14;
+  if (bars.length > mfiPeriod) {
+    const volumes = bars.map(b => b.volume ?? 0);
+    const hasVol = volumes.some(v => v > 0);
+    if (hasVol) {
+      const tpArr = bars.map(b => (b.high + b.low + b.close) / 3);
+      let posFlow = 0, negFlow = 0;
+      for (let j = bars.length - mfiPeriod; j < bars.length; j++) {
+        const flow = tpArr[j] * volumes[j];
+        if (j > 0 && tpArr[j] > tpArr[j - 1]) posFlow += flow;
+        else negFlow += flow;
+      }
+      const mfiValue = negFlow > 0
+        ? Math.round((100 - (100 / (1 + posFlow / negFlow))) * 10) / 10
+        : 100;
+      result.mfi14 = mfiValue;
+    }
+  }
+
   // OBV
   const obvValue = obv(bars);
   if (obvValue !== null) result.obv = obvValue;

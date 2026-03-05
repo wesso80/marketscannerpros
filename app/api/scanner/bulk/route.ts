@@ -1368,9 +1368,9 @@ function computeFullScore(data: CachedScanData): {
   direction: 'bullish' | 'bearish' | 'neutral';
   signals: { bullish: number; bearish: number; neutral: number };
   indicators: {
-    price: number; rsi?: number; adx?: number; atr?: number; ema200?: number;
+    price?: number; rsi?: number; adx?: number; atr?: number; ema200?: number;
     macd_hist?: number; stoch_k?: number; cci?: number;
-    atr_percent?: number; volume?: number;
+    atr_percent?: number; volume?: number; obv?: number; vwap?: number; mfi?: number;
   };
 } {
   const { price, rsi: rsiVal, macdLine, macdSignal, macdHist, ema200, atr, adx: adxVal, stochK, cci: cciVal } = data;
@@ -1453,16 +1453,19 @@ function computeFullScore(data: CachedScanData): {
       neutral: Math.round(neutral * 10) / 10,
     },
     indicators: {
-      price,
-      rsi: rsiVal,
-      adx: adxVal,
-      atr,
-      ema200,
-      macd_hist: macdHist,
-      stoch_k: stochK,
-      cci: cciVal,
-      atr_percent: Number.isFinite(atrPercent) ? Math.round(atrPercent * 100) / 100 : undefined,
+      price: Number.isFinite(price) ? price : undefined,
+      rsi: Number.isFinite(rsiVal) ? Math.round(rsiVal * 10) / 10 : undefined,
+      adx: Number.isFinite(adxVal) ? Math.round(adxVal * 10) / 10 : undefined,
+      atr: Number.isFinite(atr) ? atr : undefined,
+      ema200: Number.isFinite(ema200) ? ema200 : undefined,
+      macd_hist: Number.isFinite(macdHist) ? macdHist : undefined,
+      stoch_k: Number.isFinite(stochK) ? stochK : undefined,
+      cci: Number.isFinite(cciVal) ? cciVal : undefined,
+      atr_percent: Number.isFinite(atrPercent) ? Math.round(atrPercent * 100) / 100 : (Number.isFinite(data.atrPercent) ? data.atrPercent : undefined),
       volume: Number.isFinite(data.volume) && (data.volume ?? 0) > 0 ? data.volume : undefined,
+      obv: data.obv != null && Number.isFinite(data.obv) ? data.obv : undefined,
+      vwap: data.vwap != null && Number.isFinite(data.vwap) ? data.vwap : undefined,
+      mfi: data.mfi != null && Number.isFinite(data.mfi) ? data.mfi : undefined,
     },
   };
 }

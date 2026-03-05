@@ -666,6 +666,17 @@ async function fetchCoinGeckoDaily(symbol: string): Promise<AVBar[]> {
 // Database Operations
 // ============================================================================
 
+// Stablecoins to exclude from ingestion (waste of API calls, no tradeable signals)
+const WORKER_STABLECOINS = new Set([
+  'USDT', 'USDC', 'DAI', 'BUSD', 'TUSD', 'USDP', 'GUSD', 'FRAX', 'LUSD',
+  'FDUSD', 'PYUSD', 'USDD', 'USDE', 'USDS', 'USD1', 'CRVUSD', 'GHO',
+  'MIM', 'RAI', 'SUSD', 'DOLA', 'HAY', 'USDX', 'ZUSD', 'HUSD', 'ALUSD',
+  'CUSD', 'USDJ', 'UST', 'USDB', 'USDZ', 'USDK', 'TRIBE', 'FEI',
+  'FLEXUSD', 'MIMATIC', 'USDN', 'USDFL',
+  'EURC', 'EURS', 'EURT', 'EUROC', 'AGEUR',
+  'USDCE', 'USDTE', 'XAUT', 'PAXG',
+]);
+
 async function getSymbolsToFetch(
   tier?: number,
   options?: { includeForex?: boolean }
@@ -688,7 +699,8 @@ async function getSymbolsToFetch(
   query += ' ORDER BY tier ASC, last_fetched_at ASC NULLS FIRST';
 
   const result = await db.query(query, params);
-  return result.rows;
+  // Filter out stablecoins (they may exist in symbol_universe but produce no tradeable signals)
+  return result.rows.filter((row: any) => !WORKER_STABLECOINS.has(String(row.symbol || '').toUpperCase()));
 }
 
 function normalizeBarTimestamp(timestamp: string): string {
@@ -710,6 +722,11 @@ async function ensureIngestionSchema(): Promise<void> {
   await db.query(`
     ALTER TABLE indicators_latest
     ADD COLUMN IF NOT EXISTS warmup_json JSONB
+  `);
+
+  await db.query(`
+    ALTER TABLE indicators_latest
+    ADD COLUMN IF NOT EXISTS mfi14 NUMERIC
   `);
 
   await db.query(`
@@ -805,10 +822,10 @@ async function upsertIndicators(symbol: string, timeframe: string, indicators: a
       symbol, timeframe, rsi14, macd_line, macd_signal, macd_hist,
       ema9, ema20, ema50, ema200, sma20, sma50, sma200,
       atr14, adx14, plus_di, minus_di, stoch_k, stoch_d, cci20,
-      bb_upper, bb_middle, bb_lower, obv, vwap, in_squeeze, squeeze_strength, warmup_json, computed_at
+      bb_upper, bb_middle, bb_lower, obv, vwap, mfi14, in_squeeze, squeeze_strength, warmup_json, computed_at
     ) VALUES (
       $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-      $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28::jsonb, NOW()
+      $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29::jsonb, NOW()
     )
     ON CONFLICT (symbol, timeframe) DO UPDATE SET
       rsi14 = EXCLUDED.rsi14,
@@ -834,6 +851,7 @@ async function upsertIndicators(symbol: string, timeframe: string, indicators: a
       bb_lower = EXCLUDED.bb_lower,
       obv = EXCLUDED.obv,
       vwap = EXCLUDED.vwap,
+      mfi14 = EXCLUDED.mfi14,
       in_squeeze = EXCLUDED.in_squeeze,
       squeeze_strength = EXCLUDED.squeeze_strength,
         warmup_json = EXCLUDED.warmup_json,
@@ -864,6 +882,7 @@ async function upsertIndicators(symbol: string, timeframe: string, indicators: a
     indicators.bbLower ?? null,
     indicators.obv != null ? Math.round(indicators.obv) : null, // Round OBV to BIGINT
     indicators.vwap ?? null,
+    indicators.mfi14 ?? null,
     indicators.inSqueeze ?? null,
     indicators.squeezeStrength ?? null,
     indicators.warmup ? JSON.stringify(indicators.warmup) : null,

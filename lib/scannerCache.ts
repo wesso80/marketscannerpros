@@ -29,6 +29,10 @@ export interface CachedScanData {
   aroonUp: number;
   aroonDown: number;
   volume?: number;
+  obv?: number;
+  vwap?: number;
+  mfi?: number;
+  atrPercent?: number;
   source: 'cache' | 'database' | 'unavailable';
 }
 
@@ -76,6 +80,10 @@ export async function getCachedScanData(symbol: string): Promise<CachedScanData 
       aroonUp: (ind as unknown as Record<string, number | undefined>)?.aroonUp ?? NaN,
       aroonDown: (ind as unknown as Record<string, number | undefined>)?.aroonDown ?? NaN,
       volume: Number.isFinite(q.volume) && q.volume > 0 ? q.volume : undefined,
+      obv: ind?.obv != null ? ind.obv : undefined,
+      vwap: ind?.vwap != null ? ind.vwap : undefined,
+      mfi: ind?.mfi14 != null ? ind.mfi14 : undefined,
+      atrPercent: ind?.atrPercent14 != null ? ind.atrPercent14 : undefined,
       source: q.source === 'live' ? 'database' : q.source,
     };
 

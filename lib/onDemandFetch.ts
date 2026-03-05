@@ -63,6 +63,7 @@ export interface IndicatorData {
   obv?: number;
   vwap?: number;
   vwapIntraday?: number;
+  mfi14?: number;
   atrPercent14?: number;
   bbWidthPercent20?: number;
   inSqueeze?: boolean;
@@ -198,6 +199,7 @@ async function fetchBarsAndIndicatorsFromAV(symbol: string): Promise<{
     obv: computed.obv,
     vwap: computed.vwap,
     vwapIntraday: computed.vwapIntraday,
+    mfi14: computed.mfi14,
     atrPercent14: computed.atrPercent14,
     bbWidthPercent20: computed.bbWidthPercent20,
     inSqueeze: squeeze?.inSqueeze ?? false,
@@ -284,10 +286,10 @@ async function storeIndicators(ind: IndicatorData): Promise<void> {
         symbol, timeframe, rsi14, macd_line, macd_signal, macd_hist,
         ema9, ema20, ema50, ema200, sma20, sma50, sma200,
         atr14, adx14, plus_di, minus_di, stoch_k, stoch_d, cci20,
-        bb_upper, bb_middle, bb_lower, obv, vwap, in_squeeze, squeeze_strength, warmup_json, computed_at
+        bb_upper, bb_middle, bb_lower, obv, vwap, mfi14, in_squeeze, squeeze_strength, warmup_json, computed_at
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-        $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28::jsonb, NOW()
+        $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29::jsonb, NOW()
       )
       ON CONFLICT (symbol, timeframe) DO UPDATE SET
         rsi14 = EXCLUDED.rsi14, macd_line = EXCLUDED.macd_line, macd_signal = EXCLUDED.macd_signal,
@@ -297,7 +299,7 @@ async function storeIndicators(ind: IndicatorData): Promise<void> {
         adx14 = EXCLUDED.adx14, plus_di = EXCLUDED.plus_di, minus_di = EXCLUDED.minus_di,
         stoch_k = EXCLUDED.stoch_k, stoch_d = EXCLUDED.stoch_d, cci20 = EXCLUDED.cci20,
         bb_upper = EXCLUDED.bb_upper, bb_middle = EXCLUDED.bb_middle, bb_lower = EXCLUDED.bb_lower,
-        obv = EXCLUDED.obv, vwap = EXCLUDED.vwap, in_squeeze = EXCLUDED.in_squeeze,
+        obv = EXCLUDED.obv, vwap = EXCLUDED.vwap, mfi14 = EXCLUDED.mfi14, in_squeeze = EXCLUDED.in_squeeze,
         squeeze_strength = EXCLUDED.squeeze_strength, warmup_json = EXCLUDED.warmup_json, computed_at = NOW()
     `, [
       ind.symbol, ind.timeframe, ind.rsi14, ind.macdLine, ind.macdSignal, ind.macdHist,
@@ -305,7 +307,7 @@ async function storeIndicators(ind: IndicatorData): Promise<void> {
       ind.atr14, ind.adx14, ind.plusDI, ind.minusDI, ind.stochK, ind.stochD, ind.cci20,
       ind.bbUpper, ind.bbMiddle, ind.bbLower, 
       ind.obv != null ? Math.round(ind.obv) : null, 
-      ind.vwap, ind.inSqueeze, ind.squeezeStrength, ind.warmup ? JSON.stringify(ind.warmup) : null
+      ind.vwap, ind.mfi14 ?? null, ind.inSqueeze, ind.squeezeStrength, ind.warmup ? JSON.stringify(ind.warmup) : null
     ]);
   } catch (err) {
     console.error('[onDemand] Failed to store indicators:', err);
@@ -418,6 +420,7 @@ export async function getIndicators(symbol: string, timeframe: string = 'daily')
         obv: row.obv,
         vwap: row.vwap ? parseFloat(row.vwap) : undefined,
         vwapIntraday: row.vwap_intraday ? parseFloat(row.vwap_intraday) : undefined,
+        mfi14: row.mfi14 ? parseFloat(row.mfi14) : undefined,
         atrPercent14: row.atr_percent14 ? parseFloat(row.atr_percent14) : undefined,
         bbWidthPercent20: row.bb_width_percent20 ? parseFloat(row.bb_width_percent20) : undefined,
         inSqueeze: row.in_squeeze,
