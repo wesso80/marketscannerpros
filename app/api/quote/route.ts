@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPriceBySymbol, COINGECKO_ID_MAP, symbolToId, getMarketData, resolveSymbolToId } from "@/lib/coingecko";
+import { getPriceBySymbol, COINGECKO_ID_MAP, symbolToId, getMarketData, resolveSymbolToId, getSimplePrices } from "@/lib/coingecko";
 import { shouldUseCache, canFallbackToAV, getCacheMode } from "@/lib/cacheMode";
 import { getQuote } from "@/lib/onDemandFetch";
 import { apiLimiter, getClientIP } from "@/lib/rateLimit";
@@ -23,7 +23,6 @@ import { getSessionFromCookie } from "@/lib/auth";
  */
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || "";
-const COINGECKO_API_KEY = process.env.COINGECKO_API_KEY;
 
 type AssetType = "crypto" | "stock" | "fx";
 
@@ -139,42 +138,25 @@ export async function GET(req: NextRequest) {
  * Uses API key for higher rate limits and commercial usage rights
  */
 async function getCoinGeckoPrice(symbol: string): Promise<number | null> {
-  // Try the new centralized library first
+  // Use the centralized library (budget-tracked, retries, timeout)
   const priceData = await getPriceBySymbol(symbol);
   if (priceData) {
     return priceData.price;
   }
-  
-  // Fallback: try to find CoinGecko ID directly
+
+  // Fallback: try direct ID lookup via getSimplePrices (still budget-tracked)
   const geckoId = symbolToId(symbol) || COINGECKO_ID_MAP[symbol.toUpperCase()];
   if (!geckoId) return null;
-  
+
   try {
-    const baseUrl = COINGECKO_API_KEY 
-      ? 'https://pro-api.coingecko.com/api/v3' 
-      : 'https://api.coingecko.com/api/v3';
-    
-    const headers: HeadersInit = { 'Accept': 'application/json' };
-    if (COINGECKO_API_KEY) {
-      headers['x-cg-pro-api-key'] = COINGECKO_API_KEY;
-    }
-    
-    const url = `${baseUrl}/simple/price?ids=${geckoId}&vs_currencies=usd`;
-    const res = await fetch(url, { 
-      cache: 'no-store',
-      headers
-    });
-    
-    if (res.ok) {
-      const data = await res.json();
-      if (data[geckoId]?.usd) {
-        return data[geckoId].usd;
-      }
+    const prices = await getSimplePrices([geckoId]);
+    if (prices?.[geckoId]?.usd) {
+      return prices[geckoId].usd;
     }
   } catch (err) {
     console.warn(`CoinGecko fetch failed for ${symbol}:`, err);
   }
-  
+
   return null;
 }
 

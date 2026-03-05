@@ -1,19 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { COINGECKO_ID_MAP, getOHLC, getAggregatedFundingRates, getAggregatedOpenInterest } from '@/lib/coingecko';
-
-const COINGECKO_API_KEY = process.env.COINGECKO_API_KEY;
-const BASE_URL = 'https://pro-api.coingecko.com/api/v3';
-const FREE_URL = 'https://api.coingecko.com/api/v3';
-
-const getBaseUrl = () => COINGECKO_API_KEY ? BASE_URL : FREE_URL;
-const getHeaders = (): HeadersInit => {
-  const headers: HeadersInit = { 'Accept': 'application/json' };
-  if (COINGECKO_API_KEY) {
-    headers['x-cg-pro-api-key'] = COINGECKO_API_KEY;
-  }
-  return headers;
-};
+import {
+  COINGECKO_ID_MAP,
+  getOHLC,
+  getAggregatedFundingRates,
+  getAggregatedOpenInterest,
+  getCoinDetailFull,
+  searchCoins,
+  getMarketChartFull,
+} from '@/lib/coingecko';
 
 interface CoinDetail {
   id: string;
@@ -100,75 +95,6 @@ interface CoinDetail {
   }>;
 }
 
-async function getCoinDetail(coinId: string): Promise<CoinDetail | null> {
-  try {
-    const params = new URLSearchParams({
-      localization: 'false',
-      tickers: 'true',
-      market_data: 'true',
-      community_data: 'false',
-      developer_data: 'true',
-      sparkline: 'true',
-    });
-    
-    const response = await fetch(
-      `${getBaseUrl()}/coins/${coinId}?${params}`,
-      { headers: getHeaders(), cache: 'no-store' }
-    );
-    
-    if (!response.ok) {
-      console.error('CoinGecko coin detail error:', response.status);
-      return null;
-    }
-    
-    return response.json();
-  } catch (error) {
-    console.error('Error fetching coin detail:', error);
-    return null;
-  }
-}
-
-async function searchCoins(query: string): Promise<Array<{ id: string; symbol: string; name: string; thumb: string }>> {
-  try {
-    const response = await fetch(
-      `${getBaseUrl()}/search?query=${encodeURIComponent(query)}`,
-      { headers: getHeaders(), next: { revalidate: 300 } }
-    );
-    
-    if (!response.ok) return [];
-    
-    const data = await response.json();
-    return (data.coins || []).slice(0, 10).map((c: { id: string; symbol: string; name: string; thumb: string }) => ({
-      id: c.id,
-      symbol: c.symbol,
-      name: c.name,
-      thumb: c.thumb
-    }));
-  } catch (error) {
-    console.error('Error searching coins:', error);
-    return [];
-  }
-}
-
-async function getCoinMarketChart(coinId: string, days: number = 30): Promise<{
-  prices: [number, number][];
-  market_caps: [number, number][];
-  total_volumes: [number, number][];
-} | null> {
-  try {
-    const response = await fetch(
-      `${getBaseUrl()}/coins/${coinId}/market_chart?vs_currency=usd&days=${days}`,
-      { headers: getHeaders(), next: { revalidate: 60 } }
-    );
-    
-    if (!response.ok) return null;
-    return response.json();
-  } catch (error) {
-    console.error('Error fetching market chart:', error);
-    return null;
-  }
-}
-
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const action = searchParams.get('action');
@@ -179,7 +105,7 @@ export async function GET(req: NextRequest) {
   // Simple coin lookup by ID (for search widget - no auth required)
   if (coinIdParam && !action) {
     console.log('[CryptoDetail] Fetching coin:', coinIdParam);
-    const coinDetail = await getCoinDetail(coinIdParam);
+    const coinDetail = await getCoinDetailFull(coinIdParam);
     if (!coinDetail) {
       console.error('[CryptoDetail] Failed to fetch:', coinIdParam);
       return NextResponse.json({ error: 'Coin not found' }, { status: 404 });
@@ -197,7 +123,13 @@ export async function GET(req: NextRequest) {
   // Search for coins
   if (action === 'search' && query) {
     const results = await searchCoins(query);
-    return NextResponse.json({ coins: results });
+    const coins = (results?.coins || []).slice(0, 10).map((c: any) => ({
+      id: c.id,
+      symbol: c.symbol,
+      name: c.name,
+      thumb: c.thumb,
+    }));
+    return NextResponse.json({ coins });
   }
   
   // Get comprehensive coin detail
@@ -207,9 +139,9 @@ export async function GET(req: NextRequest) {
     
     // Fetch all data in parallel
     const [coinDetail, ohlcData, chartData] = await Promise.all([
-      getCoinDetail(coinId),
+      getCoinDetailFull(coinId),
       getOHLC(coinId, 30).catch(() => []),
-      getCoinMarketChart(coinId, 30).catch(() => null),
+      getMarketChartFull(coinId, 30).catch(() => null),
     ]);
     
     if (!coinDetail) {
@@ -308,7 +240,7 @@ export async function GET(req: NextRequest) {
         additions_4_weeks: coinDetail.developer_data.code_additions_deletions_4_weeks?.additions,
         deletions_4_weeks: coinDetail.developer_data.code_additions_deletions_4_weeks?.deletions,
       } : null,
-      tickers: (coinDetail.tickers || []).slice(0, 20).map(t => ({
+      tickers: (coinDetail.tickers || []).slice(0, 20).map((t: any) => ({
         exchange: t.market.name,
         pair: `${t.base}/${t.target}`,
         price: t.last,

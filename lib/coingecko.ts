@@ -1267,3 +1267,361 @@ export async function getNewPools(): Promise<{ data: TrendingPool[] } | null> {
     return null;
   }
 }
+
+// ============================================
+// COIN TICKERS (Where to Trade)
+// ============================================
+
+export interface CoinTicker {
+  base: string;
+  target: string;
+  market: { name: string; identifier: string; has_trading_incentive: boolean };
+  last: number;
+  volume: number;
+  converted_last: { btc: number; eth: number; usd: number };
+  converted_volume: { btc: number; eth: number; usd: number };
+  trust_score: 'green' | 'yellow' | 'red' | null;
+  bid_ask_spread_percentage: number | null;
+  timestamp: string;
+  last_traded_at: string;
+  last_fetch_at: string;
+  is_anomaly: boolean;
+  is_stale: boolean;
+  trade_url: string | null;
+  coin_id: string;
+  target_coin_id?: string;
+}
+
+/**
+ * Get exchange tickers for a coin (where to trade, spreads, trust)
+ * Endpoint: /coins/{id}/tickers
+ * FREE — returns paginated tickers across all exchanges
+ */
+export async function getCoinTickers(
+  coinId: string,
+  options?: { exchange_ids?: string; include_exchange_logo?: boolean; page?: number; depth?: boolean }
+): Promise<{ tickers: CoinTicker[] } | null> {
+  try {
+    const params = new URLSearchParams({ include_exchange_logo: 'true', depth: 'true' });
+    if (options?.exchange_ids) params.set('exchange_ids', options.exchange_ids);
+    if (options?.page) params.set('page', String(options.page));
+    return await cgFetch<{ tickers: CoinTicker[] }>(`/coins/${coinId}/tickers`, {
+      params,
+      init: { next: { revalidate: 120 } },
+    });
+  } catch (error) {
+    console.error('[CoinGecko] Coin tickers error:', error);
+    return null;
+  }
+}
+
+// ============================================
+// PUBLIC TREASURY (BTC/ETH Holdings)
+// ============================================
+
+export interface PublicTreasuryCompany {
+  name: string;
+  symbol: string;
+  country: string;
+  total_holdings: number;
+  total_entry_value_usd: number;
+  total_current_value_usd: number;
+  percentage_of_total_supply: number;
+}
+
+export interface PublicTreasuryData {
+  total_holdings: number;
+  total_value_usd: number;
+  market_cap_dominance: number;
+  companies: PublicTreasuryCompany[];
+}
+
+/**
+ * Get public companies' crypto holdings (BTC or ETH)
+ * Endpoint: /companies/public_treasury/{coin_id}
+ * FREE — returns MicroStrategy, Tesla, etc.
+ */
+export async function getPublicTreasury(
+  coinId: 'bitcoin' | 'ethereum'
+): Promise<PublicTreasuryData | null> {
+  try {
+    return await cgFetch<PublicTreasuryData>(`/companies/public_treasury/${coinId}`, {
+      init: { next: { revalidate: 600 } },
+    });
+  } catch (error) {
+    console.error('[CoinGecko] Public treasury error:', error);
+    return null;
+  }
+}
+
+// ============================================
+// EXCHANGE RATES (BTC → Fiat)
+// ============================================
+
+export interface ExchangeRates {
+  rates: Record<string, { name: string; unit: string; value: number; type: 'fiat' | 'crypto' | 'commodity' }>;
+}
+
+/**
+ * Get BTC exchange rates vs all fiat/crypto currencies
+ * Endpoint: /exchange_rates
+ * FREE — ~60 currencies
+ */
+export async function getExchangeRates(): Promise<ExchangeRates | null> {
+  try {
+    return await cgFetch<ExchangeRates>('/exchange_rates', {
+      init: { next: { revalidate: 120 } },
+    });
+  } catch (error) {
+    console.error('[CoinGecko] Exchange rates error:', error);
+    return null;
+  }
+}
+
+// ============================================
+// EXCHANGES (CEX Rankings)
+// ============================================
+
+export interface ExchangeInfo {
+  id: string;
+  name: string;
+  year_established: number | null;
+  country: string | null;
+  description: string;
+  url: string;
+  image: string;
+  has_trading_incentive: boolean;
+  trust_score: number;
+  trust_score_rank: number;
+  trade_volume_24h_btc: number;
+  trade_volume_24h_btc_normalized: number;
+}
+
+/**
+ * Get top exchanges ranked by trust score and volume
+ * Endpoint: /exchanges
+ * FREE — paginated, 100 per page
+ */
+export async function getExchanges(
+  options?: { per_page?: number; page?: number }
+): Promise<ExchangeInfo[] | null> {
+  try {
+    const params = new URLSearchParams({
+      per_page: String(options?.per_page ?? 50),
+      page: String(options?.page ?? 1),
+    });
+    return await cgFetch<ExchangeInfo[]>('/exchanges', {
+      params,
+      init: { next: { revalidate: 300 } },
+    });
+  } catch (error) {
+    console.error('[CoinGecko] Exchanges list error:', error);
+    return null;
+  }
+}
+
+/**
+ * Get detailed exchange data including tickers
+ * Endpoint: /exchanges/{id}
+ * FREE
+ */
+export async function getExchangeDetail(exchangeId: string): Promise<any | null> {
+  try {
+    return await cgFetch<any>(`/exchanges/${exchangeId}`, {
+      init: { next: { revalidate: 300 } },
+    });
+  } catch (error) {
+    console.error('[CoinGecko] Exchange detail error:', error);
+    return null;
+  }
+}
+
+// ============================================
+// HISTORICAL COIN DATA (Snapshot at Date)
+// ============================================
+
+/**
+ * Get coin snapshot at a specific date
+ * Endpoint: /coins/{id}/history
+ * FREE — date format dd-mm-yyyy
+ */
+export async function getCoinHistory(
+  coinId: string,
+  date: string // dd-mm-yyyy
+): Promise<any | null> {
+  try {
+    const params = new URLSearchParams({ date, localization: 'false' });
+    return await cgFetch<any>(`/coins/${coinId}/history`, {
+      params,
+      init: { next: { revalidate: 3600 } },
+    });
+  } catch (error) {
+    console.error('[CoinGecko] Coin history error:', error);
+    return null;
+  }
+}
+
+// ============================================
+// MARKET CHART RANGE (Arbitrary Date Range)
+// ============================================
+
+/**
+ * Get historical chart data for an arbitrary date range
+ * Endpoint: /coins/{id}/market_chart/range
+ * FREE — returns price, market_cap, total_volumes
+ */
+export async function getMarketChartRange(
+  coinId: string,
+  fromUnixSeconds: number,
+  toUnixSeconds: number
+): Promise<{
+  prices: [number, number][];
+  market_caps: [number, number][];
+  total_volumes: [number, number][];
+} | null> {
+  try {
+    const params = new URLSearchParams({
+      vs_currency: 'usd',
+      from: String(Math.floor(fromUnixSeconds)),
+      to: String(Math.floor(toUnixSeconds)),
+    });
+    return await cgFetch<{
+      prices: [number, number][];
+      market_caps: [number, number][];
+      total_volumes: [number, number][];
+    }>(`/coins/${coinId}/market_chart/range`, {
+      params,
+      init: { next: { revalidate: 900 } },
+    });
+  } catch (error) {
+    console.error('[CoinGecko] Market chart range error:', error);
+    return null;
+  }
+}
+
+// ============================================
+// COIN DETAIL (Extended — with tickers, dev data, sparkline)
+// ============================================
+
+/**
+ * Get full coin detail including tickers, developer data, sparkline
+ * Endpoint: /coins/{id} (with all optional fields)
+ * FREE
+ */
+export async function getCoinDetailFull(coinId: string): Promise<any | null> {
+  try {
+    const params = new URLSearchParams({
+      localization: 'false',
+      tickers: 'true',
+      market_data: 'true',
+      community_data: 'false',
+      developer_data: 'true',
+      sparkline: 'true',
+    });
+    return await cgFetch<any>(`/coins/${coinId}`, {
+      params,
+      init: { next: { revalidate: 300 } },
+    });
+  } catch (error) {
+    console.error('[CoinGecko] Coin detail full error:', error);
+    return null;
+  }
+}
+
+// ============================================
+// MARKET CHART (Full — with volumes & market caps)
+// ============================================
+
+/**
+ * Get market chart with prices, market caps, and volumes
+ * Endpoint: /coins/{id}/market_chart (full response)
+ * FREE
+ */
+export async function getMarketChartFull(
+  coinId: string,
+  days: number = 30
+): Promise<{
+  prices: [number, number][];
+  market_caps: [number, number][];
+  total_volumes: [number, number][];
+} | null> {
+  try {
+    const params = new URLSearchParams({
+      vs_currency: 'usd',
+      days: String(days),
+    });
+    return await cgFetch<{
+      prices: [number, number][];
+      market_caps: [number, number][];
+      total_volumes: [number, number][];
+    }>(`/coins/${coinId}/market_chart`, {
+      params,
+      init: { next: { revalidate: 60 } },
+    });
+  } catch (error) {
+    console.error('[CoinGecko] Market chart full error:', error);
+    return null;
+  }
+}
+
+// ============================================
+// API USAGE (💼 Analyst Plan)
+// ============================================
+
+/**
+ * Check API key usage stats
+ * Endpoint: /key (💼 Analyst Plan)
+ * Returns monthly usage, remaining credits, plan info
+ */
+export async function getApiUsage(): Promise<any | null> {
+  try {
+    return await cgFetch<any>('/key', {
+      init: { next: { revalidate: 60 } },
+    });
+  } catch (error) {
+    console.error('[CoinGecko] API usage error:', error);
+    return null;
+  }
+}
+
+// ============================================
+// DERIVATIVES EXCHANGES (with data)
+// ============================================
+
+export interface DerivativesExchangeData {
+  name: string;
+  id: string;
+  open_interest_btc: number;
+  trade_volume_24h_btc: string;
+  number_of_perpetual_pairs: number;
+  number_of_futures_pairs: number;
+  image: string;
+  year_established: number | null;
+  country: string | null;
+  description: string;
+  url: string;
+}
+
+/**
+ * Get derivatives exchanges with OI, volume, pair counts
+ * Endpoint: /derivatives/exchanges (with full data)
+ * FREE
+ */
+export async function getDerivativesExchangesData(
+  options?: { per_page?: number; page?: number }
+): Promise<DerivativesExchangeData[] | null> {
+  try {
+    const params = new URLSearchParams({
+      per_page: String(options?.per_page ?? 50),
+      page: String(options?.page ?? 1),
+      order: 'open_interest_btc_desc',
+    });
+    return await cgFetch<DerivativesExchangeData[]>('/derivatives/exchanges', {
+      params,
+      init: { next: { revalidate: 300 } },
+    });
+  } catch (error) {
+    console.error('[CoinGecko] Derivatives exchanges data error:', error);
+    return null;
+  }
+}

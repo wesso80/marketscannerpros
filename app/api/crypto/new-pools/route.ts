@@ -1,28 +1,13 @@
 import { NextResponse } from 'next/server';
-
-const COINGECKO_API_KEY = process.env.COINGECKO_API_KEY;
-const BASE_URL = COINGECKO_API_KEY 
-  ? 'https://pro-api.coingecko.com/api/v3'
-  : 'https://api.coingecko.com/api/v3';
+import { getNewPools } from '@/lib/coingecko';
 
 export async function GET() {
   try {
-    const headers: HeadersInit = { 'Accept': 'application/json' };
-    if (COINGECKO_API_KEY) {
-      headers['x-cg-pro-api-key'] = COINGECKO_API_KEY;
-    }
-
-    const res = await fetch(`${BASE_URL}/onchain/networks/new_pools`, {
-      headers,
-      next: { revalidate: 300 },
-    });
-
-    if (!res.ok) {
-      console.error('[NewPools] Fetch failed:', res.status);
+    const data = await getNewPools();
+    if (!data) {
+      console.error('[NewPools] Fetch failed');
       return NextResponse.json({ error: 'Failed to fetch new pools' }, { status: 500 });
     }
-
-    const data = await res.json();
     
     // Transform to simpler format
     const pools = (data.data || []).slice(0, 20).map((pool: any) => {
