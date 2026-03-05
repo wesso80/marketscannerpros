@@ -7,11 +7,17 @@
 export type AssetClass = 'crypto' | 'equity';
 
 const KNOWN_CRYPTO_BASES = new Set([
+  // Tier 1 — large cap
   'BTC', 'ETH', 'SOL', 'XRP', 'ADA', 'DOGE', 'DOT', 'AVAX', 'MATIC', 'POL',
   'LINK', 'UNI', 'SHIB', 'ATOM', 'LTC', 'BCH', 'APT', 'SUI', 'TON', 'TRX',
   'NEAR', 'FIL', 'AAVE', 'ARB', 'OP', 'INJ', 'TIA', 'SEI', 'HBAR', 'XLM',
-  'FET', 'RENDER', 'ICP', 'IMX', 'GRT', 'PEPE', 'WIF', 'BONK', 'FLOKI',
+  'FET', 'RENDER', 'RNDR', 'ICP', 'IMX', 'GRT', 'PEPE', 'WIF', 'BONK', 'FLOKI',
   'BNB', 'CRO', 'MKR', 'RUNE', 'SNX', 'COMP', 'ALGO',
+  // Tier 2 — mid cap & DeFi / gaming / infrastructure
+  'EOS', 'XTZ', 'THETA', 'XMR', 'NEO', 'SUSHI', 'YFI', 'CRV', 'BAL', 'REN',
+  '1INCH', 'ENJ', 'MANA', 'SAND', 'AXS', 'CHZ', 'FTM', 'EGLD', 'FLOW',
+  'AR', 'HNT', 'STX', 'KSM', 'ZEC', 'DASH', 'WAVES', 'KAVA', 'CELO',
+  'JUP', 'KAS', 'XCN', 'PYTH', 'PENDLE', 'BLUR', 'APE', 'VET',
 ]);
 
 const CRYPTO_QUOTE_SUFFIXES = ['USD', 'USDT', 'USDC', 'BUSD', 'BTC', 'ETH'];

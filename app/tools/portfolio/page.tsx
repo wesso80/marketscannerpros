@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { Suspense, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
@@ -15,6 +15,8 @@ import DecisionCockpit from '@/components/terminal/DecisionCockpit';
 import SignalRail from '@/components/terminal/SignalRail';
 import { useRiskPermission } from '@/components/risk/RiskPermissionContext';
 import { amountToR, formatDollar, formatR } from '@/lib/riskDisplay';
+import { detectAssetClass } from '@/lib/detectAssetClass';
+import { formatPrice, formatPriceRaw } from '@/lib/formatPrice';
 
 interface Position {
   id: number;
@@ -130,7 +132,7 @@ function PositionSizerCalculator() {
     }}>
       <div style={{ marginBottom: '24px' }}>
         <h2 style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          🎯 Position Sizing Calculator
+          ðŸŽ¯ Position Sizing Calculator
         </h2>
         <p style={{ color: 'var(--msp-text-muted)', fontSize: '14px' }}>
           Calculate optimal position sizes based on your risk tolerance and trading setup.
@@ -154,7 +156,7 @@ function PositionSizerCalculator() {
             transition: 'all 0.2s'
           }}
         >
-          📊 Fixed Fractional
+          ðŸ“Š Fixed Fractional
         </button>
         <button
           onClick={() => setMethod('kelly')}
@@ -171,7 +173,7 @@ function PositionSizerCalculator() {
             transition: 'all 0.2s'
           }}
         >
-          📐 Kelly Criterion
+          ðŸ“ Kelly Criterion
         </button>
       </div>
 
@@ -238,7 +240,7 @@ function PositionSizerCalculator() {
                 cursor: 'pointer'
               }}
             >
-              📈 LONG
+              ðŸ“ˆ LONG
             </button>
             <button
               onClick={() => setSide('SHORT')}
@@ -253,7 +255,7 @@ function PositionSizerCalculator() {
                 cursor: 'pointer'
               }}
             >
-              📉 SHORT
+              ðŸ“‰ SHORT
             </button>
           </div>
         </div>
@@ -338,7 +340,7 @@ function PositionSizerCalculator() {
           marginBottom: '24px'
         }}>
           <h4 style={{ color: '#a78bfa', fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>
-            📐 Kelly Criterion Parameters
+            ðŸ“ Kelly Criterion Parameters
           </h4>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))', gap: '12px' }}>
             <div>
@@ -416,7 +418,7 @@ function PositionSizerCalculator() {
         padding: '24px'
       }}>
         <h3 style={{ color: '#10b981', fontSize: '16px', fontWeight: '700', marginBottom: '16px' }}>
-          📊 Position Size Results
+          ðŸ“Š Position Size Results
         </h3>
         
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))', gap: '16px', marginBottom: '20px' }}>
@@ -484,7 +486,7 @@ function PositionSizerCalculator() {
         borderRadius: '8px'
       }}>
         <div style={{ color: '#fbbf24', fontSize: '12px' }}>
-          ⚠️ <strong>Risk Disclaimer:</strong> This calculator is for educational purposes only. 
+          âš ï¸ <strong>Risk Disclaimer:</strong> This calculator is for educational purposes only. 
           Always use proper risk management and never risk more than you can afford to lose.
         </div>
       </div>
@@ -549,6 +551,7 @@ function PortfolioContent() {
   const [aiAutoRequested, setAiAutoRequested] = useState(false);
 
   // Price update helpers
+  const [refreshingAll, setRefreshingAll] = useState(false);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [manualPosition, setManualPosition] = useState<Position | null>(null);
   const [manualValue, setManualValue] = useState('');
@@ -625,56 +628,16 @@ function PortfolioContent() {
     let s = raw.toUpperCase().trim();
     
     // Remove common suffixes that APIs don't need (but preserve the base ticker)
-    s = s.replace(/[-_\/]?USDT?$/i, ''); // BTCUSDT → BTC, XRP-USD → XRP
+    s = s.replace(/[-_\/]?USDT?$/i, ''); // BTCUSDT â†’ BTC, XRP-USD â†’ XRP
     s = s.replace(/[-_\/]?EUR$/i, '');
     s = s.replace(/[-_\/]?PERP$/i, '');    // Futures suffix
     
     return s;
   }
 
-  // Detect if a symbol is likely a stock vs crypto
+  // Detect if a symbol is likely a stock vs crypto â€” delegates to shared detectAssetClass()
   function isLikelyStock(symbol: string): boolean {
-    // Common US stock symbols (popular ones that might conflict with crypto)
-    const knownStocks = [
-      'AAPL', 'MSFT', 'GOOGL', 'GOOG', 'AMZN', 'NVDA', 'META', 'TSLA', 
-      'BRK', 'JPM', 'JNJ', 'V', 'UNH', 'HD', 'PG', 'MA', 'DIS', 'PYPL',
-      'NFLX', 'ADBE', 'CRM', 'INTC', 'AMD', 'CSCO', 'PEP', 'KO', 'ABT',
-      'NKE', 'MRK', 'TMO', 'COST', 'WMT', 'CVX', 'XOM', 'BA', 'CAT', 
-      'MMM', 'IBM', 'GE', 'GM', 'F', 'T', 'VZ', 'SPY', 'QQQ', 'IWM',
-      'VOO', 'VTI', 'ARKK', 'PLTR', 'SQ', 'COIN', 'HOOD', 'RBLX', 'UBER',
-      'ABNB', 'SNAP', 'PINS', 'TWLO', 'ZM', 'DOCU', 'NET', 'CRWD', 'DDOG'
-    ];
-    
-    // Known crypto symbols
-    const knownCrypto = [
-      'BTC', 'ETH', 'XRP', 'SOL', 'ADA', 'DOGE', 'DOT', 'AVAX', 'MATIC',
-      'LINK', 'UNI', 'ATOM', 'LTC', 'BCH', 'XLM', 'ALGO', 'VET', 'FIL',
-      'AAVE', 'EOS', 'XTZ', 'THETA', 'XMR', 'NEO', 'MKR', 'COMP', 'SNX',
-      'SUSHI', 'YFI', 'CRV', 'BAL', 'REN', '1INCH', 'GRT', 'ENJ', 'MANA',
-      'SAND', 'AXS', 'CHZ', 'HBAR', 'FTM', 'NEAR', 'EGLD', 'FLOW', 'ICP',
-      'AR', 'HNT', 'STX', 'KSM', 'ZEC', 'DASH', 'WAVES', 'KAVA', 'CELO',
-      'BNB', 'SHIB', 'PEPE', 'WIF', 'BONK', 'FLOKI', 'APE', 'IMX', 'OP',
-      'ARB', 'SUI', 'SEI', 'TIA', 'INJ', 'FET', 'RNDR', 'RENDER', 'JUP', 'KAS',
-      'XCN', 'PYTH', 'PENDLE', 'BLUR'
-    ];
-    
-    const upper = symbol.toUpperCase();
-    
-    // If explicitly known as stock, return true
-    if (knownStocks.includes(upper)) return true;
-    
-    // If explicitly known as crypto, return false
-    if (knownCrypto.includes(upper)) return false;
-    
-    // Heuristic: Most stock symbols are 1-5 chars, crypto can be longer
-    // Symbols with numbers are usually stocks (e.g., BRK.B)
-    if (/\d/.test(symbol)) return true;
-    
-    // Default: If 4+ chars and not in crypto list, likely a stock
-    if (symbol.length >= 4) return true;
-    
-    // Short symbols (1-3 chars) default to crypto (BTC, ETH, etc.)
-    return false;
+    return detectAssetClass(symbol) === 'equity';
   }
 
   // Fetch price from backend quote API; smart detection of crypto vs stock
@@ -779,16 +742,26 @@ function PortfolioContent() {
     void emitWorkflowEvents([tradeUpdatedEvent]);
   }
 
-  // Auto-refresh prices for all positions
+  // Auto-refresh prices for all positions (parallel in batches of 4)
   const refreshAllPrices = async (positionsToUpdate: Position[]) => {
     if (positionsToUpdate.length === 0) return;
+    setRefreshingAll(true);
     
     const updates: { id: number; price: number }[] = [];
+    const BATCH_SIZE = 4;
     
-    for (const position of positionsToUpdate) {
-      const fetched = await fetchAutoPrice(position.symbol);
-      if (fetched !== null && !isNaN(fetched)) {
-        updates.push({ id: position.id, price: fetched });
+    for (let i = 0; i < positionsToUpdate.length; i += BATCH_SIZE) {
+      const batch = positionsToUpdate.slice(i, i + BATCH_SIZE);
+      const results = await Promise.all(
+        batch.map(async (position) => {
+          const fetched = await fetchAutoPrice(position.symbol);
+          return { id: position.id, price: fetched };
+        })
+      );
+      for (const r of results) {
+        if (r.price !== null && !isNaN(r.price)) {
+          updates.push({ id: r.id, price: r.price });
+        }
       }
     }
     
@@ -813,7 +786,50 @@ function PortfolioContent() {
         return p;
       }));
     }
+    setRefreshingAll(false);
   };
+
+  // Periodic auto-refresh: every 120 seconds, paused when tab is hidden
+  const positionsRef = useRef<Position[]>(positions);
+  positionsRef.current = positions;
+
+  useEffect(() => {
+    if (!dataLoaded) return;
+    const INTERVAL_MS = 120_000; // 2 minutes
+    let timer: ReturnType<typeof setInterval> | null = null;
+
+    const start = () => {
+      if (timer) return;
+      timer = setInterval(() => {
+        if (positionsRef.current.length > 0) {
+          refreshAllPrices(positionsRef.current);
+        }
+      }, INTERVAL_MS);
+    };
+
+    const stop = () => {
+      if (timer) { clearInterval(timer); timer = null; }
+    };
+
+    const onVisChange = () => {
+      if (document.hidden) {
+        stop();
+      } else {
+        // Refresh immediately when tab becomes visible, then restart timer
+        if (positionsRef.current.length > 0) {
+          refreshAllPrices(positionsRef.current);
+        }
+        start();
+      }
+    };
+
+    start();
+    document.addEventListener('visibilitychange', onVisChange);
+    return () => {
+      stop();
+      document.removeEventListener('visibilitychange', onVisChange);
+    };
+  }, [dataLoaded]);
 
   // Load positions from database (with localStorage fallback for migration)
   useEffect(() => {
@@ -1311,8 +1327,8 @@ function PortfolioContent() {
       p.symbol,
       p.side,
       p.quantity,
-      p.entryPrice.toFixed(2),
-      p.currentPrice.toFixed(2),
+      formatPriceRaw(p.entryPrice),
+      formatPriceRaw(p.currentPrice),
       p.pl.toFixed(2),
       p.plPercent.toFixed(2),
       new Date(p.entryDate).toLocaleDateString()
@@ -1389,7 +1405,7 @@ function PortfolioContent() {
     ? 'Medium'
     : 'Low';
   const portfolioHealthLabel = totalReturn < -20
-    ? '⚠ Needs Work'
+    ? 'âš  Needs Work'
     : totalReturn < -5
     ? 'Review Needed'
     : totalReturn > 12
@@ -1456,8 +1472,9 @@ function PortfolioContent() {
     : 0;
 
   const classifySector = (symbol: string) => {
-    const normalized = symbol.toUpperCase().replace('-USD', '');
-    if (['BTC', 'ETH', 'SOL', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT', 'LINK'].includes(normalized)) return 'Crypto Majors';
+    const normalized = symbol.toUpperCase().replace(/-USD$/, '');
+    // Use shared detectAssetClass for crypto detection instead of a tiny hard-coded list
+    if (detectAssetClass(normalized) === 'crypto') return 'Crypto';
     if (['AAPL', 'MSFT', 'NVDA', 'AMD', 'META', 'GOOGL', 'TSLA'].includes(normalized)) return 'Mega Cap Tech';
     if (['XOM', 'CVX', 'COP', 'SLB'].includes(normalized)) return 'Energy';
     if (['JPM', 'BAC', 'GS', 'MS', 'V'].includes(normalized)) return 'Financials';
@@ -1487,7 +1504,7 @@ function PortfolioContent() {
   const isRiskElevated = !isRiskEvent && (currentDrawdownPct > (riskSettings.maxDrawdownThreshold * 0.6) || correlationRiskPct > (riskSettings.maxCorrelatedExposure * 0.75) || deploymentPct > 75);
   const riskStateLabel = isRiskEvent ? 'RISK EVENT' : isRiskElevated ? 'ELEVATED' : 'STABLE';
   const riskStateTone = isRiskEvent ? '#ef4444' : isRiskElevated ? '#f59e0b' : '#10b981';
-  const riskStateIcon = isRiskEvent ? '🔴' : isRiskElevated ? '🟡' : '🟢';
+  const riskStateIcon = isRiskEvent ? 'ðŸ”´' : isRiskElevated ? 'ðŸŸ¡' : 'ðŸŸ¢';
   const portfolioRiskProfile = isRiskEvent ? 'Aggressive' : isRiskElevated ? 'Moderate' : 'Low';
   const longExposurePct = capitalBase > 0 ? (longExposureValue / capitalBase) * 100 : 0;
   const shortExposurePct = capitalBase > 0 ? (shortExposureValue / capitalBase) * 100 : 0;
@@ -1574,7 +1591,7 @@ function PortfolioContent() {
 
   const modeItems = [
     { key: 'overview', label: 'Overview' },
-    { key: 'add-manual', label: '➕ Add Position' },
+    { key: 'add-manual', label: 'âž• Add Position' },
     { key: 'deploy-capital', label: 'Model Allocation' },
     { key: 'risk-model', label: 'Risk Model' },
     { key: 'active-positions', label: 'Active Positions' },
@@ -1648,7 +1665,7 @@ function PortfolioContent() {
         badge="PORTFOLIO TRACKER"
         title="Portfolio Tracking"
         subtitle="Track live prices, modeled allocation, and performance in real-time (educational mode)."
-        icon="📊"
+        icon="ðŸ“Š"
         backHref="/dashboard"
         actions={
           <>
@@ -1663,7 +1680,7 @@ function PortfolioContent() {
                 }}
                 className={`rounded-md border px-4 py-2 text-[13px] font-medium transition ${canExportCSV(tier) ? 'border-emerald-500 text-emerald-500 opacity-100' : 'border-slate-600 text-slate-500 opacity-60'}`}
               >
-                📥 Export Positions {!canExportCSV(tier) && '🔒'}
+                ðŸ“¥ Export Positions {!canExportCSV(tier) && 'ðŸ”’'}
               </button>
             )}
             {closedPositions.length > 0 && (
@@ -1677,7 +1694,7 @@ function PortfolioContent() {
                 }}
                 className={`rounded-md border border-[var(--msp-border)] px-4 py-2 text-[13px] font-medium transition ${canExportCSV(tier) ? 'text-[var(--msp-text-muted)]' : 'text-slate-500'}`}
               >
-                📥 Export History
+                ðŸ“¥ Export History
               </button>
             )}
             {(positions.length > 0 || closedPositions.length > 0) && (
@@ -1685,7 +1702,7 @@ function PortfolioContent() {
                 onClick={clearAllData}
                 className="rounded-[10px] border border-slate-500/40 bg-transparent px-4 py-2.5 text-[13px] font-semibold text-red-500"
               >
-                🗑️ Clear All Data
+                ðŸ—‘ï¸ Clear All Data
               </button>
             )}
             <button
@@ -1700,7 +1717,7 @@ function PortfolioContent() {
                 const inDrawdown = totalReturn < -20 && positions.length > 0;
                 if (inDrawdown && activeTab !== 'deploy-capital' && !drawdownAcknowledged) {
                   const proceed = confirm(
-                    '⚠️ Your portfolio is currently in a significant drawdown (-' + Math.abs(totalReturn).toFixed(1) + '%).\n\n' +
+                    'âš ï¸ Your portfolio is currently in a significant drawdown (-' + Math.abs(totalReturn).toFixed(1) + '%).\n\n' +
                     'Consider reviewing your risk exposure before adding new positions.\n\n' +
                     'Click OK to proceed anyway, or Cancel to review first.'
                   );
@@ -1722,7 +1739,7 @@ function PortfolioContent() {
         <CommandCenterStateBar
           mode="MANAGE"
           actionableNow={positions.length > 0
-            ? `Live book: ${positions.length} open positions • Top concentration ${topAllocation?.symbol || 'N/A'}`
+            ? `Live book: ${positions.length} open positions â€¢ Top concentration ${topAllocation?.symbol || 'N/A'}`
             : 'No active exposure. Build watchlist-to-portfolio plan before adding risk.'}
           nextStep={positions.length > 0
             ? totalReturn < 0
@@ -1777,9 +1794,9 @@ function PortfolioContent() {
           >
             <div className="mb-3 flex items-center justify-between">
               <div className="font-bold text-slate-200">Update price for {manualPosition.symbol}</div>
-              <button onClick={closeManual} className="cursor-pointer border-none bg-transparent text-[20px] text-slate-400">✕</button>
+              <button onClick={closeManual} className="cursor-pointer border-none bg-transparent text-[20px] text-slate-400">âœ•</button>
             </div>
-            <div className="mb-2.5 text-[13px] text-slate-400">Enter a price. This showed because the API didn’t return a value for this symbol.</div>
+            <div className="mb-2.5 text-[13px] text-slate-400">Enter a price. This showed because the API didnâ€™t return a value for this symbol.</div>
             <input
               autoFocus
               value={manualValue}
@@ -2005,7 +2022,7 @@ function PortfolioContent() {
                       </div>
                     );
                   })()}
-                  <div className="mt-2 text-xs text-slate-500">Risk event markers: {isRiskEvent ? '🔴 Active' : isRiskElevated ? '🟡 Elevated' : '🟢 Stable'}</div>
+                  <div className="mt-2 text-xs text-slate-500">Risk event markers: {isRiskEvent ? 'ðŸ”´ Active' : isRiskElevated ? 'ðŸŸ¡ Elevated' : 'ðŸŸ¢ Stable'}</div>
                 </div>
                 <div className="lg:col-span-2 space-y-3">
                   <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3">
@@ -2020,7 +2037,7 @@ function PortfolioContent() {
                       {allocationData.length === 0 && <div className="text-xs text-slate-500">No active allocation</div>}
                     </div>
                     <div className="mt-2 border-t border-slate-700 pt-2 text-xs text-slate-400">
-                      Long {longExposurePct.toFixed(1)}% • Short {shortExposurePct.toFixed(1)}%
+                      Long {longExposurePct.toFixed(1)}% â€¢ Short {shortExposurePct.toFixed(1)}%
                     </div>
                   </div>
                   <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3 text-xs">
@@ -2074,8 +2091,8 @@ function PortfolioContent() {
                 <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3 mb-4">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-emerald-400 mb-1">Symbol Tips</div>
                   <div className="text-xs text-slate-400 leading-relaxed">
-                    <strong className="text-slate-300">Crypto:</strong> BTC, ETH, XRP, SOL &nbsp;·&nbsp;
-                    <strong className="text-slate-300">Stocks:</strong> AAPL, TSLA, NVDA &nbsp;·&nbsp;
+                    <strong className="text-slate-300">Crypto:</strong> BTC, ETH, XRP, SOL &nbsp;Â·&nbsp;
+                    <strong className="text-slate-300">Stocks:</strong> AAPL, TSLA, NVDA &nbsp;Â·&nbsp;
                     <strong className="text-slate-300">Forex:</strong> EURUSD, GBPUSD
                   </div>
                 </div>
@@ -2147,7 +2164,7 @@ function PortfolioContent() {
                     disabled={!newPosition.symbol || !newPosition.quantity || !newPosition.entryPrice || !newPosition.currentPrice}
                     className="w-full rounded-md bg-emerald-500 px-4 py-3 text-sm font-bold uppercase tracking-[0.06em] text-white transition hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    ➕ Add Position
+                    âž• Add Position
                   </button>
                 </div>
               </div>
@@ -2183,7 +2200,7 @@ function PortfolioContent() {
               </div>
               <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-slate-200">
                 <div className="text-xs font-semibold uppercase tracking-[0.06em] text-emerald-300">Simulate Portfolio After Entry</div>
-                <div className="mt-1">Projected gross exposure {projectedDeploymentPct.toFixed(2)}% • Risk budget used {formatMoney(draftRiskBudget)}</div>
+                <div className="mt-1">Projected gross exposure {projectedDeploymentPct.toFixed(2)}% â€¢ Risk budget used {formatMoney(draftRiskBudget)}</div>
               </div>
               <button
                 onClick={() => deployCapitalTrade(Math.max(0, suggestedQuantity), draftEntry)}
@@ -2260,7 +2277,7 @@ function PortfolioContent() {
                           <td className="px-2 py-1.5 font-semibold text-slate-100">{risk.symbol}</td>
                           <td className="px-2 py-1.5 text-right">{risk.concentrationPct.toFixed(1)}%</td>
                           <td className="px-2 py-1.5 text-right">{formatMoney(risk.dollarRisk)}</td>
-                          <td className="px-2 py-1.5">{risk.concentrationPct > riskSettings.maxPositionSize ? '⚠ Concentration warning' : 'Normal'}</td>
+                          <td className="px-2 py-1.5">{risk.concentrationPct > riskSettings.maxPositionSize ? 'âš  Concentration warning' : 'Normal'}</td>
                         </tr>
                       ))}
                       {riskContributors.length === 0 && (
@@ -2281,6 +2298,17 @@ function PortfolioContent() {
                 <div className="rounded-lg border border-slate-700 bg-slate-900/40 px-3 py-2"><div className="text-[10px] uppercase text-slate-500">Net R Exposure</div><div className="text-sm font-bold text-slate-100">{(positions.length ? positions.reduce((sum, p) => sum + (p.plPercent / Math.max(1, riskSettings.maxRiskPerTrade)), 0) : 0).toFixed(2)}R</div></div>
               </div>
 
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-xs text-slate-500">Prices refresh every 2 min</div>
+                <button
+                  onClick={() => refreshAllPrices(positions)}
+                  disabled={refreshingAll}
+                  className="flex items-center gap-1.5 rounded border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:border-emerald-500/50 hover:text-emerald-300 disabled:opacity-50 transition-colors"
+                >
+                  <span className={refreshingAll ? 'animate-spin' : ''}>ðŸ”„</span>
+                  {refreshingAll ? 'Refreshingâ€¦' : 'Refresh Prices'}
+                </button>
+              </div>
               <div className="overflow-x-auto rounded-lg border border-slate-700 bg-slate-900/40">
                 <table className="w-full text-xs">
                   <thead>
@@ -2303,19 +2331,30 @@ function PortfolioContent() {
                       const sizePct = totalValue > 0 ? (notional / totalValue) * 100 : 0;
                       const stop = positionStopMap[position.id] ?? (position.side === 'LONG' ? position.entryPrice * 0.95 : position.entryPrice * 1.05);
                       const initialRiskUnit = Math.abs(position.entryPrice - stop);
+                      // Signed R Multiple: negative when trade moves against you
+                      const isWinning = position.side === 'LONG'
+                        ? position.currentPrice >= position.entryPrice
+                        : position.currentPrice <= position.entryPrice;
                       const currentMove = Math.abs(position.currentPrice - position.entryPrice);
-                      const rMultipleOpen = initialRiskUnit > 0 ? currentMove / initialRiskUnit : 0;
+                      const rMultipleOpen = initialRiskUnit > 0
+                        ? (isWinning ? 1 : -1) * (currentMove / initialRiskUnit)
+                        : 0;
                       const stopDistancePct = position.currentPrice > 0 ? (Math.abs(position.currentPrice - stop) / position.currentPrice) * 100 : 0;
-                      const riskRemainingPct = Math.max(0, Math.min(100, stopDistancePct / Math.max(1, riskSettings.maxRiskPerTrade) * 100));
+                      // Risk Remaining: how much of initial risk budget is left before stop
+                      // 100% = stop hasn't been approached, 0% = at stop level
+                      const distFromEntry = Math.abs(position.currentPrice - position.entryPrice);
+                      const riskRemainingPct = initialRiskUnit > 0
+                        ? Math.max(0, Math.min(100, ((initialRiskUnit - distFromEntry) / initialRiskUnit) * 100))
+                        : 0;
 
                       return (
                         <tr key={position.id} className="border-b border-slate-800/60 text-slate-300">
                           <td className="px-2 py-2 font-semibold text-slate-100">{position.symbol}</td>
                           <td className="px-2 py-2">{position.side}</td>
                           <td className="px-2 py-2 text-right">{sizePct.toFixed(1)}%</td>
-                          <td className="px-2 py-2 text-right">{position.entryPrice.toFixed(2)}</td>
-                          <td className="px-2 py-2 text-right">{position.currentPrice.toFixed(2)}</td>
-                          <td className="px-2 py-2 text-right">{rMultipleOpen.toFixed(2)}R</td>
+                          <td className="px-2 py-2 text-right">{formatPriceRaw(position.entryPrice)}</td>
+                          <td className="px-2 py-2 text-right">{formatPriceRaw(position.currentPrice)}</td>
+                          <td className={`px-2 py-2 text-right ${rMultipleOpen >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{rMultipleOpen >= 0 ? '+' : ''}{rMultipleOpen.toFixed(2)}R</td>
                           <td className={`px-2 py-2 text-right font-semibold ${position.plPercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatPct(position.plPercent)}</td>
                           <td className="px-2 py-2 text-right">{riskRemainingPct.toFixed(0)}%</td>
                           <td className="px-2 py-2 text-right">{stopDistancePct.toFixed(2)}%</td>
@@ -2327,7 +2366,7 @@ function PortfolioContent() {
                               <button onClick={() => closePosition(position.id)} className="rounded border border-red-500/40 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-red-300">Close</button>
                               <button onClick={() => reducePositionHalf(position.id)} className="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-300">Reduce 50%</button>
                               <button onClick={() => moveStopToBreakeven(position.id)} className="rounded border border-blue-500/40 bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-blue-300">Move Stop</button>
-                              <button onClick={() => deletePosition(position.id)} className="rounded border border-zinc-500/40 bg-zinc-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-zinc-400 hover:text-red-300 hover:border-red-500/40" title="Delete this position (mistake entry)">✕ Delete</button>
+                              <button onClick={() => deletePosition(position.id)} className="rounded border border-zinc-500/40 bg-zinc-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-zinc-400 hover:text-red-300 hover:border-red-500/40" title="Delete this position (mistake entry)">âœ• Delete</button>
                             </div>
                           </td>
                         </tr>
@@ -2444,10 +2483,10 @@ function PortfolioContent() {
                           <td className="px-2 py-2">{trade.closePrice.toFixed(2)}</td>
                           <td className={`px-2 py-2 text-right font-semibold ${r >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{r.toFixed(2)}R</td>
                           <td className="px-2 py-2 text-right">{holdDays}d</td>
-                          <td className="px-2 py-2">{trade.strategy || '—'}</td>
+                          <td className="px-2 py-2">{trade.strategy || 'â€”'}</td>
                           <td className="px-2 py-2">{outcomeType}</td>
                           <td className="px-2 py-2 text-center">
-                            <button onClick={() => deleteClosedTrade(trade.id)} className="rounded border border-zinc-500/40 bg-zinc-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-zinc-400 hover:text-red-300 hover:border-red-500/40" title="Delete this closed trade">✕</button>
+                            <button onClick={() => deleteClosedTrade(trade.id)} className="rounded border border-zinc-500/40 bg-zinc-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-zinc-400 hover:text-red-300 hover:border-red-500/40" title="Delete this closed trade">âœ•</button>
                           </td>
                         </tr>
                       );
@@ -2461,1696 +2500,10 @@ function PortfolioContent() {
         </div>
       </div>
 
-      {false && (
-        <>
-
-      {/* Top Stats Bar */}
-      <div className="border-b border-slate-700/60 bg-[var(--msp-bg)] px-4 py-6">
-        <div className="grid w-full max-w-none gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(140px,100%),1fr))]">
-          <div className="rounded-xl border border-slate-700/50 bg-[var(--msp-panel)] p-4">
-            <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.05em] text-slate-400">Market Value</div>
-            <div className="text-[22px] font-bold text-slate-200">
-              ${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-            </div>
-          </div>
-          <div className={`rounded-xl bg-[var(--msp-panel)] p-4 ${totalReturn >= 0 ? 'border border-emerald-500/30' : 'border border-red-500/30'}`}>
-            <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.05em] text-slate-400">Total Return</div>
-            <div className={`text-[22px] font-bold ${totalReturn >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-              {totalReturn >= 0 ? '+' : ''}{totalReturn.toFixed(2)}%
-            </div>
-          </div>
-          <div className={`rounded-xl bg-[var(--msp-panel)] p-4 ${unrealizedPL >= 0 ? 'border border-emerald-500/30' : 'border border-red-500/30'}`}>
-            <div className="mb-1.5 text-[11px] font-medium uppercase tracking-[0.05em] text-slate-400">Unrealized P&L</div>
-            <div className={`text-[22px] font-bold ${unrealizedPL >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-              ${unrealizedPL >= 0 ? '+' : ''}{unrealizedPL.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-            </div>
-          </div>
-          <div style={{
-            background: 'var(--msp-panel)',
-            borderRadius: '12px',
-            padding: '16px',
-            border: '1px solid rgba(51,65,85,0.5)'
-          }}>
-            <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Positions</div>
-            <div style={{ fontSize: '22px', fontWeight: '700', color: '#e2e8f0' }}>
-              {numPositions}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* PRO FEATURES: Portfolio Health Score & Risk Metrics */}
-      {positions.length > 0 && (
-        <div style={{ 
-          background: 'rgba(15,23,42,0.6)',
-          padding: '20px 16px',
-          borderBottom: '1px solid rgba(51,65,85,0.4)'
-        }}>
-          <div style={{ 
-            width: '100%',
-            maxWidth: 'none', 
-            margin: '0 auto', 
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))',
-            gap: '16px'
-          }}>
-            {/* Portfolio Health Score */}
-            {(() => {
-              // Calculate portfolio health metrics
-              const diversificationScore = Math.min(100, numPositions * 12); // More positions = better diversification (up to ~8)
-              const concentrationPenalty = allocationData[0]?.percentage > 50 ? 20 : allocationData[0]?.percentage > 30 ? 10 : 0;
-              const drawdownPenalty = totalReturn < -30 ? 30 : totalReturn < -20 ? 20 : totalReturn < -10 ? 10 : 0;
-              const winRatePenalty = closedPositions.length > 0 
-                ? (closedPositions.filter(p => p.realizedPL > 0).length / closedPositions.length) < 0.4 ? 15 : 0
-                : 0;
-              
-              let healthScore = Math.max(0, Math.min(100, 
-                50 + // Base score
-                (diversificationScore * 0.3) - // Diversification bonus
-                concentrationPenalty - // Concentration penalty
-                drawdownPenalty - // Drawdown penalty
-                winRatePenalty + // Win rate penalty
-                (totalReturn > 0 ? Math.min(20, totalReturn * 0.5) : 0) // Profit bonus
-              ));
-              
-              let riskLevel = 'Low';
-              let riskColor = '#10b981';
-              if (healthScore < 40) { riskLevel = 'High'; riskColor = '#ef4444'; }
-              else if (healthScore < 60) { riskLevel = 'Medium-High'; riskColor = '#f59e0b'; }
-              else if (healthScore < 75) { riskLevel = 'Medium'; riskColor = 'var(--msp-accent)'; }
-              else { riskLevel = 'Low'; riskColor = '#10b981'; }
-              
-              return (
-                <div style={{
-                  background: 'var(--msp-panel)',
-                  borderRadius: '12px',
-                  padding: '20px',
-                  border: '1px solid rgba(100,116,139,0.3)',
-                }}>
-                  <div style={{ 
-                    fontSize: '0.7rem', 
-                    color: '#64748B', 
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    marginBottom: '12px',
-                  }}>
-                    Portfolio Health
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <div style={{
-                      width: '80px',
-                      height: '80px',
-                      borderRadius: '50%',
-                      background: `conic-gradient(${riskColor} ${healthScore * 3.6}deg, rgba(30,41,59,0.8) 0deg)`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}>
-                      <div style={{
-                        width: '64px',
-                        height: '64px',
-                        borderRadius: '50%',
-                        background: 'rgba(15,23,42,0.95)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexDirection: 'column',
-                      }}>
-                        <span style={{ fontSize: '1.5rem', fontWeight: '800', color: riskColor }}>
-                          {Math.round(healthScore)}
-                        </span>
-                      </div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '1.1rem', fontWeight: '600', color: '#E2E8F0', marginBottom: '4px' }}>
-                        {healthScore >= 75 ? '💪 Strong' : healthScore >= 60 ? '👍 Good' : healthScore >= 40 ? '⚠️ Needs Work' : '🚨 At Risk'}
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '0.8rem', color: '#94A3B8' }}>Risk Level:</span>
-                        <span style={{ 
-                          fontSize: '0.8rem', 
-                          fontWeight: '600',
-                          color: riskColor,
-                          padding: '2px 8px',
-                          background: `${riskColor}20`,
-                          borderRadius: '4px',
-                        }}>
-                          {riskLevel}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Risk Metrics */}
-            {(() => {
-              // Calculate risk metrics
-              const positionValues = positions.map(p => p.currentPrice * p.quantity);
-              const avgPositionValue = positionValues.length > 0 ? positionValues.reduce((a, b) => a + b, 0) / positionValues.length : 0;
-              const maxPositionValue = Math.max(...positionValues, 0);
-              const riskPerPosition = totalValue > 0 ? (maxPositionValue / totalValue * 100) : 0;
-              
-              // Portfolio volatility (simplified - based on P&L distribution)
-              const plPercentages = positions.map(p => p.plPercent);
-              const avgPL = plPercentages.length > 0 ? plPercentages.reduce((a, b) => a + b, 0) / plPercentages.length : 0;
-              const variance = plPercentages.length > 0 
-                ? plPercentages.reduce((sum, pl) => sum + Math.pow(pl - avgPL, 2), 0) / plPercentages.length 
-                : 0;
-              const volatility = Math.sqrt(variance);
-              
-              // Max drawdown (from performance history or current)
-              const maxDrawdown = Math.min(0, totalReturn);
-              
-              return (
-                <div style={{
-                  background: 'var(--msp-panel)',
-                  borderRadius: '12px',
-                  padding: '20px',
-                  border: '1px solid rgba(100,116,139,0.3)',
-                }}>
-                  <div style={{ 
-                    fontSize: '0.7rem', 
-                    color: '#64748B', 
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    marginBottom: '12px',
-                  }}>
-                    Risk Metrics
-                  </div>
-                  <div style={{ display: 'grid', gap: '10px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.85rem', color: '#94A3B8' }}>Portfolio Volatility</span>
-                      <span style={{ 
-                        fontSize: '0.9rem', 
-                        fontWeight: '600',
-                        color: volatility > 30 ? '#ef4444' : volatility > 15 ? '#f59e0b' : '#10b981',
-                      }}>
-                        {volatility.toFixed(1)}%
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.85rem', color: '#94A3B8' }}>Max Drawdown</span>
-                      <span style={{ 
-                        fontSize: '0.9rem', 
-                        fontWeight: '600',
-                        color: maxDrawdown < -20 ? '#ef4444' : maxDrawdown < -10 ? '#f59e0b' : '#10b981',
-                      }}>
-                        {maxDrawdown.toFixed(1)}%
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.85rem', color: '#94A3B8' }}>Max Position Risk</span>
-                      <span style={{ 
-                        fontSize: '0.9rem', 
-                        fontWeight: '600',
-                        color: riskPerPosition > 40 ? '#ef4444' : riskPerPosition > 25 ? '#f59e0b' : '#10b981',
-                      }}>
-                        {riskPerPosition.toFixed(1)}%
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.85rem', color: '#94A3B8' }}>Avg Position Size</span>
-                      <span style={{ fontSize: '0.9rem', fontWeight: '600', color: '#E2E8F0' }}>
-                        ${avgPositionValue.toFixed(0)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Strategy Performance */}
-            {(() => {
-              // Group positions by strategy
-              const strategyLabels: Record<string, string> = {
-                swing: '🔄 Swing',
-                longterm: '📈 Long Term',
-                options: '📊 Options',
-                breakout: '🚀 Breakout',
-                ai_signal: '🤖 AI Signal',
-                daytrade: '⚡ Day Trade',
-                dividend: '💰 Dividend',
-                undefined: '❓ Untagged',
-              };
-              
-              const strategyStats = positions.reduce((acc, p) => {
-                const strat = p.strategy || 'undefined';
-                if (!acc[strat]) acc[strat] = { count: 0, totalPL: 0, totalValue: 0 };
-                acc[strat].count++;
-                acc[strat].totalPL += p.pl;
-                acc[strat].totalValue += p.currentPrice * p.quantity;
-                return acc;
-              }, {} as Record<string, { count: number; totalPL: number; totalValue: number }>);
-              
-              const strategies = Object.entries(strategyStats)
-                .map(([key, val]) => ({
-                  strategy: key,
-                  label: strategyLabels[key] || key,
-                  ...val,
-                  plPercent: val.totalValue > 0 ? (val.totalPL / val.totalValue) * 100 : 0,
-                }))
-                .sort((a, b) => b.totalPL - a.totalPL);
-              
-              return (
-                <div style={{
-                  background: 'var(--msp-panel)',
-                  borderRadius: '12px',
-                  padding: '20px',
-                  border: '1px solid rgba(100,116,139,0.3)',
-                }}>
-                  <div style={{ 
-                    fontSize: '0.7rem', 
-                    color: '#64748B', 
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    marginBottom: '12px',
-                  }}>
-                    Strategy Performance
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {strategies.slice(0, 4).map((s, i) => (
-                      <div key={i} style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        padding: '6px 10px',
-                        background: 'rgba(0,0,0,0.2)',
-                        borderRadius: '6px',
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '0.85rem' }}>{s.label}</span>
-                          <span style={{ fontSize: '0.7rem', color: '#64748B' }}>({s.count})</span>
-                        </div>
-                        <span style={{ 
-                          fontSize: '0.85rem', 
-                          fontWeight: '600',
-                          color: s.totalPL >= 0 ? '#10b981' : '#ef4444',
-                        }}>
-                          {s.totalPL >= 0 ? '+' : ''}{s.plPercent.toFixed(1)}%
-                        </span>
-                      </div>
-                    ))}
-                    {strategies.length === 0 && (
-                      <div style={{ fontSize: '0.8rem', color: '#64748B', textAlign: 'center', padding: '10px' }}>
-                        Tag positions to track strategy performance
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-        </div>
-      )}
-
-      {/* View Tabs */}
-      <div style={{ padding: '0 16px' }}>
-        <div style={{
-          width: '100%',
-          maxWidth: 'none',
-          margin: '0 auto',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(min(120px, 100%), 1fr))',
-          gap: '8px',
-          padding: '16px 0',
-          borderBottom: '1px solid rgba(148,163,184,0.1)'
-        }}>
-          {[
-            { key: 'overview', label: 'Overview', icon: '📊' },
-            { key: 'add position', label: 'Add', icon: '➕' },
-            { key: 'position sizer', label: 'Position Sizer', icon: '🎯' },
-            { key: 'holdings', label: 'Holdings', icon: '💼' },
-            { key: 'history', label: 'History', icon: '📜' },
-          ].map((tab) => {
-            const isActive = activeTab === tab.key;
-            return (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                style={{
-                  position: 'relative',
-                  padding: '14px 12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  background: isActive
-                    ? 'var(--msp-panel-2)'
-                    : 'rgba(255,255,255,0.03)',
-                  border: isActive ? '1px solid rgba(16,185,129,0.55)' : '1px solid rgba(148,163,184,0.2)',
-                  boxShadow: isActive ? 'var(--msp-shadow)' : 'none',
-                  color: isActive ? '#e2e8f0' : '#94a3b8',
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  letterSpacing: '0.04em',
-                  textTransform: 'uppercase',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                <span style={{ fontSize: '16px' }}>{tab.icon}</span>
-                <span>{tab.label}</span>
-                {isActive && (
-                  <span
-                    style={{
-                      position: 'absolute',
-                      bottom: '4px',
-                      left: '12px',
-                      right: '12px',
-                      height: '3px',
-                      borderRadius: '999px',
-                      background: 'var(--msp-accent)'
-                    }}
-                  />
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div style={{ width: '100%', maxWidth: 'none', margin: '0 auto', padding: '24px 16px' }}>
-        {activeTab === 'overview' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <div style={{
-              background: 'var(--msp-card)',
-              border: '1px solid var(--msp-border-strong)',
-              borderRadius: '16px',
-              padding: '16px 20px',
-              boxShadow: 'var(--msp-shadow)'
-            }}>
-              <div style={{ color: '#94a3b8', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '12px' }}>
-                Executive Summary
-              </div>
-              <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit,minmax(min(180px,100%),1fr))' }}>
-                <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
-                  <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Portfolio Health</div>
-                  <div style={{ color: portfolioHealthLabel.includes('Needs') ? '#f59e0b' : portfolioHealthLabel === 'Strong' ? '#10b981' : '#e2e8f0', fontSize: '14px', fontWeight: 700 }}>{portfolioHealthLabel}</div>
-                </div>
-                <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
-                  <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Edge State</div>
-                  <div style={{ color: edgeStateLabel === 'Offensive' ? '#10b981' : edgeStateLabel === 'Defensive' ? '#f59e0b' : '#e2e8f0', fontSize: '14px', fontWeight: 700 }}>{edgeStateLabel}</div>
-                </div>
-                <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
-                  <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Risk Load</div>
-                  <div style={{ color: riskLoadLabel === 'High' ? '#ef4444' : riskLoadLabel === 'Medium' ? '#f59e0b' : '#10b981', fontSize: '14px', fontWeight: 700 }}>{riskLoadLabel}</div>
-                </div>
-                <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
-                  <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Bias</div>
-                  <div style={{ color: biasLabel === 'Bullish' ? '#10b981' : biasLabel === 'Bearish' ? '#ef4444' : '#e2e8f0', fontSize: '14px', fontWeight: 700 }}>{biasLabel}</div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Portfolio Intelligence Summary - Only show when there are positions AND user is Pro+ */}
-            {positions.length > 0 && canAccessPortfolioInsights(tier) && (() => {
-              const topAsset = allocationData[0];
-              const isConcentrated = topAsset && topAsset.percentage > 50;
-              const inDrawdown = totalReturn < -10;
-              const severeDrawdown = totalReturn < -30;
-              const isCryptoHeavy = positions.filter(p => 
-                ['BTC', 'ETH', 'XRP', 'SOL', 'ADA', 'DOGE', 'AVAX', 'DOT', 'LINK', 'MATIC', 'HBAR', 'FET', 'KAS', 'RENDER', 'XLM', 'JUP', 'XCN'].includes(p.symbol.toUpperCase().replace('-USD', ''))
-              ).reduce((sum, p) => sum + (p.currentPrice * p.quantity), 0) / totalValue > 0.7;
-              
-              // Determine portfolio state
-              let portfolioState = 'Growth Phase';
-              let stateColor = '#10b981';
-              let stateIcon = '📈';
-              if (severeDrawdown) {
-                portfolioState = 'Significant Drawdown';
-                stateColor = '#ef4444';
-                stateIcon = '📉';
-              } else if (inDrawdown) {
-                portfolioState = 'Drawdown Phase';
-                stateColor = '#f59e0b';
-                stateIcon = '⚠️';
-              } else if (totalReturn > 20) {
-                portfolioState = 'Strong Performance';
-                stateColor = '#10b981';
-                stateIcon = '🚀';
-              }
-              
-              // Build insight text
-              let insight = '';
-              if (severeDrawdown && isConcentrated) {
-                insight = `Your portfolio is experiencing a significant drawdown (${totalReturn.toFixed(1)}%), primarily driven by high exposure to ${topAsset.symbol} (${topAsset.percentage.toFixed(0)}% allocation). ${isCryptoHeavy ? 'Heavy crypto weighting increases correlation to market cycles.' : ''} Consider reviewing concentration risk.`;
-              } else if (inDrawdown) {
-                insight = `Portfolio is in a drawdown phase. ${isConcentrated ? `Top holding ${topAsset.symbol} represents ${topAsset.percentage.toFixed(0)}% of value, amplifying volatility.` : 'Diversification may help reduce drawdown severity.'} Focus on risk management over new entries.`;
-              } else if (isConcentrated) {
-                insight = `${topAsset.symbol} represents ${topAsset.percentage.toFixed(0)}% of your portfolio. While conviction positions can outperform, concentration increases single-asset risk. Consider rebalancing if unintentional.`;
-              } else {
-                insight = `Portfolio is well-distributed across ${positions.length} positions. Current exposure is ${isCryptoHeavy ? 'crypto-weighted, tied to digital asset cycles' : 'balanced across asset types'}.`;
-              }
-              
-              return (
-                <div style={{
-                  order: 2,
-                  background: 'var(--msp-card)',
-                  border: '1px solid var(--msp-border-strong)',
-                  borderLeft: `3px solid ${severeDrawdown ? 'rgba(239,68,68,0.65)' : inDrawdown ? 'rgba(245,158,11,0.65)' : 'rgba(16,185,129,0.65)'}`,
-                  borderRadius: '16px',
-                  padding: '20px 24px',
-                  boxShadow: 'var(--msp-shadow)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '20px' }}>🧠</span>
-                    <h3 style={{ color: '#e2e8f0', fontSize: '15px', fontWeight: '600', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      Portfolio Insight
-                    </h3>
-                    <span style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '4px 12px',
-                      background: `${stateColor}20`,
-                      border: `1px solid ${stateColor}40`,
-                      borderRadius: '20px',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      color: stateColor
-                    }}>
-                      {stateIcon} {portfolioState}
-                    </span>
-                    {isConcentrated && (
-                      <span style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        padding: '4px 10px',
-                        background: 'rgba(245,158,11,0.15)',
-                        border: '1px solid rgba(245,158,11,0.3)',
-                        borderRadius: '20px',
-                        fontSize: '11px',
-                        fontWeight: '600',
-                        color: '#fbbf24'
-                      }}>
-                        ⚠️ High Concentration
-                      </span>
-                    )}
-                  </div>
-                  <p style={{ color: '#94a3b8', fontSize: '14px', lineHeight: '1.6', margin: 0 }}>
-                    {insight}
-                  </p>
-                </div>
-              );
-            })()}
-
-            {/* AI Portfolio Analysis Section */}
-            <div style={{
-              order: 1,
-              background: 'var(--msp-card)',
-              border: '1px solid var(--msp-border)',
-              borderRadius: '16px',
-              padding: '20px 24px',
-              boxShadow: 'var(--msp-shadow)',
-              position: 'relative',
-              overflow: 'hidden'
-            }}>
-              {/* Gradient accent */}
-              <div style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                height: '3px',
-                background: 'var(--msp-accent)'
-              }} />
-              
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: showAiAnalysis ? '16px' : 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ 
-                    fontSize: '24px',
-                    background: 'var(--msp-panel-2)',
-                    borderRadius: '10px',
-                    padding: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>🤖</span>
-                  <div>
-                    <h3 style={{ color: '#e2e8f0', fontSize: '15px', fontWeight: '600', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      AI Portfolio Review
-                    </h3>
-                    <p style={{ color: '#94a3b8', fontSize: '12px', margin: '4px 0 0 0' }}>
-                      Get personalized insights on your positions & trade history
-                    </p>
-                  </div>
-                </div>
-                
-                <button
-                  onClick={runAiAnalysis}
-                  disabled={aiLoading || (positions.length === 0 && closedPositions.length === 0)}
-                  style={{
-                    padding: '10px 20px',
-                    background: aiLoading 
-                      ? 'rgba(100,116,139,0.35)' 
-                      : 'var(--msp-accent)',
-                    border: 'none',
-                    borderRadius: '10px',
-                    color: '#fff',
-                    fontWeight: '600',
-                    fontSize: '14px',
-                    cursor: aiLoading || (positions.length === 0 && closedPositions.length === 0) ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    transition: 'all 0.2s ease',
-                    boxShadow: aiLoading ? 'none' : 'var(--msp-shadow)'
-                  }}
-                >
-                  {aiLoading ? (
-                    <>
-                      <span style={{ 
-                        animation: 'spin 1s linear infinite',
-                        display: 'inline-block'
-                      }}>⏳</span>
-                      Finding Portfolio Edge...
-                    </>
-                  ) : (
-                    <>
-                      ✨ Find Portfolio Edge
-                    </>
-                  )}
-                </button>
-              </div>
-              
-              {/* AI Error */}
-              {aiError && (
-                <div style={{
-                  background: 'rgba(239,68,68,0.1)',
-                  border: '1px solid rgba(239,68,68,0.3)',
-                  borderRadius: '8px',
-                  padding: '12px 16px',
-                  color: '#f87171',
-                  fontSize: '14px',
-                  marginTop: '12px'
-                }}>
-                  ⚠️ {aiError}
-                </div>
-              )}
-              
-              {/* AI Analysis Results */}
-              {showAiAnalysis && aiAnalysis && (
-                <div style={{
-                  background: 'rgba(30,41,59,0.5)',
-                  borderRadius: '12px',
-                  padding: '20px',
-                  marginTop: '4px',
-                  border: '1px solid var(--msp-border)'
-                }}>
-                  <div style={{
-                    color: '#e2e8f0',
-                    fontSize: '14px',
-                    lineHeight: '1.8',
-                    whiteSpace: 'pre-wrap'
-                  }}>
-                    {(aiAnalysis ?? '').split('\n').map((line, i) => {
-                      // Style headers
-                      if (line.startsWith('##') || line.startsWith('**') && line.endsWith('**')) {
-                        return (
-                          <div key={i} style={{ 
-                            fontWeight: '700', 
-                            fontSize: '16px', 
-                            color: '#f1f5f9',
-                            marginTop: i > 0 ? '16px' : 0,
-                            marginBottom: '8px'
-                          }}>
-                            {line.replace(/[#*]/g, '').trim()}
-                          </div>
-                        );
-                      }
-                      // Style emoji headers (like 📊 Portfolio Health)
-                      if (/^[📊🏆⚠️🔍💡🎯📈📉✅❌]/.test(line.trim())) {
-                        return (
-                          <div key={i} style={{ 
-                            fontWeight: '600', 
-                            fontSize: '15px', 
-                            color: '#a78bfa',
-                            marginTop: '16px',
-                            marginBottom: '8px'
-                          }}>
-                            {line}
-                          </div>
-                        );
-                      }
-                      // Style bullet points
-                      if (line.trim().startsWith('-') || line.trim().startsWith('•')) {
-                        return (
-                          <div key={i} style={{ 
-                            paddingLeft: '16px',
-                            color: '#cbd5e1',
-                            marginBottom: '4px'
-                          }}>
-                            {line}
-                          </div>
-                        );
-                      }
-                      // Empty lines
-                      if (!line.trim()) {
-                        return <div key={i} style={{ height: '8px' }} />;
-                      }
-                      // Regular text
-                      return <div key={i} style={{ marginBottom: '4px' }}>{line}</div>;
-                    })}
-                  </div>
-                  
-                  <button
-                    onClick={() => setShowAiAnalysis(false)}
-                    style={{
-                      marginTop: '16px',
-                      padding: '8px 16px',
-                      background: 'transparent',
-                      border: '1px solid rgba(148,163,184,0.3)',
-                      borderRadius: '8px',
-                      color: '#94a3b8',
-                      fontSize: '13px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Hide Analysis
-                  </button>
-                  
-                  {/* Financial Disclaimer */}
-                  <div style={{
-                    marginTop: '16px',
-                    padding: '12px 16px',
-                    background: 'rgba(251,191,36,0.1)',
-                    border: '1px solid rgba(251,191,36,0.3)',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    color: '#fbbf24',
-                    lineHeight: '1.5'
-                  }}>
-                    <strong>⚠️ Disclaimer:</strong> This AI analysis is for educational and informational purposes only. It does not constitute financial advice, investment recommendations, or a solicitation to buy or sell any securities. Past performance does not guarantee future results. Always conduct your own research and consult a qualified financial advisor before making investment decisions.
-                  </div>
-                </div>
-              )}
-
-              {showAiAnalysis && !aiAnalysis && !aiLoading && !aiError && (
-                <div style={{
-                  background: 'rgba(30,41,59,0.4)',
-                  borderRadius: '12px',
-                  padding: '14px 16px',
-                  marginTop: '8px',
-                  border: '1px solid rgba(51,65,85,0.45)',
-                  color: '#94a3b8',
-                  fontSize: '13px'
-                }}>
-                  Operator briefing is ready. Generate the AI narrative to get portfolio health, underperformer focus, and action priorities.
-                </div>
-              )}
-              
-              {/* Loading skeleton */}
-              {aiLoading && (
-                <div style={{
-                  background: 'rgba(30,41,59,0.5)',
-                  borderRadius: '12px',
-                  padding: '20px',
-                  marginTop: '16px'
-                }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {[1, 2, 3, 4, 5].map(i => (
-                      <div 
-                        key={i}
-                        style={{
-                          height: '16px',
-                          background: 'rgba(100,116,139,0.22)',
-                          borderRadius: '4px',
-                          width: `${100 - (i * 10)}%`,
-                          animation: 'pulse 1.5s ease-in-out infinite'
-                        }}
-                      />
-                    ))}
-                  </div>
-                  <p style={{ color: '#94a3b8', fontSize: '13px', marginTop: '16px', textAlign: 'center' }}>
-                    🔮 Analyzing {positions.length} positions and {closedPositions.length} closed trades...
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div style={{
-              background: 'var(--msp-card)',
-              border: '1px solid rgba(51,65,85,0.8)',
-              borderRadius: '14px',
-              padding: '14px 16px',
-              boxShadow: 'var(--msp-shadow)'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-                <div>
-                  <div style={{ color: '#e2e8f0', fontSize: '14px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Analytics Layer
-                  </div>
-                  <div style={{ color: '#64748b', fontSize: '12px' }}>Evidence and diagnostics for deeper review</div>
-                </div>
-                <button
-                  onClick={() => setShowAnalyticsLayer((prev) => !prev)}
-                  style={{
-                    padding: '8px 14px',
-                    borderRadius: '10px',
-                    border: '1px solid rgba(16,185,129,0.4)',
-                    background: showAnalyticsLayer ? 'rgba(16,185,129,0.18)' : 'rgba(16,185,129,0.08)',
-                    color: '#10b981',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.04em'
-                  }}
-                >
-                  {showAnalyticsLayer ? 'Hide Analytics' : 'Show Analytics'}
-                </button>
-              </div>
-            </div>
-
-            {showAnalyticsLayer && (
-              <>
-            {/* Charts Row - responsive grid */}
-            <div className="portfolio-charts-grid" style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 450px), 1fr))', 
-              gap: '24px' 
-            }}>
-              {/* Portfolio Allocation Chart */}
-              <div style={{ 
-                background: 'var(--msp-card)',
-                border: '1px solid rgba(51,65,85,0.8)',
-                borderRadius: '16px',
-                padding: '24px',
-                boxShadow: 'var(--msp-shadow)'
-              }}>
-                <h2 style={{ 
-                  color: '#f1f5f9', 
-                  fontSize: '15px', 
-                  fontWeight: '600', 
-                  marginBottom: '24px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em'
-                }}>
-                  <span style={{ 
-                    background: 'var(--msp-panel-2)',
-                    borderRadius: '8px',
-                    padding: '6px 8px',
-                    fontSize: '14px'
-                  }}>🥧</span>
-                  Portfolio Allocation
-                </h2>
-                {positions.length > 0 ? (
-                  <div style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column',
-                    gap: '24px', 
-                    alignItems: 'center'
-                  }}>
-                    {/* Pie Chart - responsive SVG */}
-                    <div style={{ width: '100%', maxWidth: '220px', aspectRatio: '1' }}>
-                      <svg viewBox="0 0 280 280" style={{ width: '100%', height: '100%' }}>
-                        <g transform="translate(140, 140)">
-                          {allocationData.map((item, index) => {
-                            const startAngle = allocationData.slice(0, index).reduce((sum, d) => sum + (d.percentage * 3.6), 0);
-                            const angle = item.percentage * 3.6;
-                            const endAngle = startAngle + angle;
-                            
-                            const x1 = 100 * Math.cos((startAngle - 90) * Math.PI / 180);
-                            const y1 = 100 * Math.sin((startAngle - 90) * Math.PI / 180);
-                            const x2 = 100 * Math.cos((endAngle - 90) * Math.PI / 180);
-                            const y2 = 100 * Math.sin((endAngle - 90) * Math.PI / 180);
-                            
-                            const largeArc = angle > 180 ? 1 : 0;
-                            
-                            return (
-                              <path
-                                key={item.symbol}
-                                d={`M 0 0 L ${x1} ${y1} A 100 100 0 ${largeArc} 1 ${x2} ${y2} Z`}
-                                fill={colors[index % colors.length]}
-                                stroke="#0f172a"
-                                strokeWidth="2"
-                              />
-                            );
-                          })}
-                          {/* Inner circle to make donut */}
-                          <circle cx="0" cy="0" r="50" fill="#0f172a" />
-                          {/* Center text */}
-                          <text 
-                            x="0" 
-                            y="-5" 
-                            textAnchor="middle" 
-                            fill="#94a3b8" 
-                            fontSize="11"
-                            fontWeight="500"
-                          >
-                            Total
-                          </text>
-                          <text 
-                            x="0" 
-                            y="15" 
-                            textAnchor="middle" 
-                            fill="#f1f5f9" 
-                            fontSize="14"
-                            fontWeight="700"
-                          >
-                            {positions.length}
-                          </text>
-                        </g>
-                      </svg>
-                    </div>
-                    
-                    {/* Legend */}
-                    <div style={{ width: '100%' }}>
-                      {allocationData.slice(0, 9).map((item, index) => (
-                        <div key={item.symbol} style={{ 
-                          display: 'flex', 
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          marginBottom: '8px',
-                          padding: '10px 12px',
-                          background: 'rgba(30,41,59,0.6)',
-                          borderRadius: '8px',
-                          border: '1px solid rgba(51,65,85,0.5)'
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{ 
-                              width: '14px', 
-                              height: '14px', 
-                              background: colors[index % colors.length],
-                              borderRadius: '4px',
-                              boxShadow: `0 2px 8px ${colors[index % colors.length]}40`
-                            }} />
-                            <span style={{ color: '#f1f5f9', fontSize: '14px', fontWeight: '600' }}>
-                              {item.symbol}
-                            </span>
-                          </div>
-                          <div style={{ textAlign: 'right' }}>
-                            <span style={{ color: '#10b981', fontSize: '14px', fontWeight: '700' }}>
-                              {item.percentage.toFixed(1)}%
-                            </span>
-                            <div style={{ color: '#64748b', fontSize: '11px' }}>
-                              ${item.value.toFixed(2)}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ 
-                    textAlign: 'center', 
-                    padding: '60px 20px', 
-                    color: '#64748b',
-                    background: 'rgba(30,41,59,0.3)',
-                    borderRadius: '12px'
-                  }}>
-                    <div style={{ fontSize: '48px', marginBottom: '12px' }}>📊</div>
-                    <div style={{ color: '#94a3b8', fontWeight: '500' }}>No positions to display</div>
-                    <div style={{ fontSize: '13px', marginTop: '8px' }}>Add positions to see allocation</div>
-                  </div>
-                )}
-              </div>
-
-              {/* Performance Chart */}
-              <div style={{ 
-                background: 'var(--msp-card)',
-                border: '1px solid rgba(51,65,85,0.8)',
-                borderRadius: '16px',
-                padding: '24px',
-                boxShadow: 'var(--msp-shadow)'
-              }}>
-                <h2 style={{ 
-                  color: '#f1f5f9', 
-                  fontSize: '15px', 
-                  fontWeight: '600', 
-                  marginBottom: '24px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em'
-                }}>
-                  <span style={{ 
-                    background: 'var(--msp-panel-2)',
-                    borderRadius: '8px',
-                    padding: '6px 8px',
-                    fontSize: '14px'
-                  }}>📈</span>
-                  Performance Over Time
-                </h2>
-                <div style={{ 
-                  minHeight: '280px',
-                  position: 'relative',
-                  background: 'rgba(30,41,59,0.4)',
-                  borderRadius: '12px',
-                  padding: '16px',
-                  border: '1px solid rgba(51,65,85,0.3)'
-                }}>
-                  {performanceHistory.length > 0 ? (
-                    <svg 
-                      viewBox="0 0 400 200" 
-                      preserveAspectRatio="xMidYMid meet"
-                      style={{ width: '100%', height: '100%', minHeight: '200px' }}
-                    >
-                      {(() => {
-                        const width = 400;
-                        const height = 200;
-                        const padding = { top: 15, right: 15, bottom: 25, left: 45 };
-                        const chartWidth = width - padding.left - padding.right;
-                        const chartHeight = height - padding.top - padding.bottom;
-
-                        // Get min/max values for scaling
-                        const values = performanceHistory.map(s => s.totalValue);
-                        const minValue = Math.min(...values, 0);
-                        const maxValue = Math.max(...values);
-                        const valueRange = maxValue - minValue || 1;
-
-                        // Scale functions
-                        const scaleX = (index: number) => padding.left + (index / Math.max(performanceHistory.length - 1, 1)) * chartWidth;
-                        const scaleY = (value: number) => padding.top + chartHeight - ((value - minValue) / valueRange) * chartHeight;
-
-                        // Generate path
-                        const pathData = performanceHistory.map((snapshot, i) => {
-                          const x = scaleX(i);
-                          const y = scaleY(snapshot.totalValue);
-                          return i === 0 ? `M ${x} ${y}` : `L ${x} ${y}`;
-                        }).join(' ');
-
-                        // Generate gradient path (area under curve)
-                        const gradientPath = pathData + ` L ${scaleX(performanceHistory.length - 1)} ${padding.top + chartHeight} L ${padding.left} ${padding.top + chartHeight} Z`;
-
-                        return (
-                          <g>
-                            {/* Gradient definition */}
-                            <defs>
-                              <linearGradient id="performanceGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" stopColor="#10b981" stopOpacity="0.4" />
-                                <stop offset="100%" stopColor="#10b981" stopOpacity="0.05" />
-                              </linearGradient>
-                            </defs>
-
-                            {/* Grid lines */}
-                            {[0, 0.5, 1].map((ratio, i) => {
-                              const y = padding.top + chartHeight * ratio;
-                              const value = maxValue - (valueRange * ratio);
-                              return (
-                                <g key={i}>
-                                  <line
-                                    x1={padding.left}
-                                    y1={y}
-                                    x2={padding.left + chartWidth}
-                                    y2={y}
-                                    stroke="#334155"
-                                    strokeWidth="0.5"
-                                    strokeDasharray="3,3"
-                                  />
-                                  <text
-                                    x={padding.left - 5}
-                                    y={y + 3}
-                                    fill="#64748b"
-                                    fontSize="8"
-                                    textAnchor="end"
-                                  >
-                                    ${value.toFixed(0)}
-                                  </text>
-                                </g>
-                              );
-                            })}
-
-                            {/* Area under curve */}
-                            <path
-                              d={gradientPath}
-                              fill="url(#performanceGradient)"
-                            />
-
-                            {/* Main line */}
-                            <path
-                              d={pathData}
-                              fill="none"
-                              stroke="#10b981"
-                              strokeWidth="2"
-                            />
-
-                            {/* Data points */}
-                            {performanceHistory.map((snapshot, i) => (
-                              <circle
-                                key={i}
-                                cx={scaleX(i)}
-                                cy={scaleY(snapshot.totalValue)}
-                                r="3"
-                                fill="#10b981"
-                                stroke="#0f172a"
-                                strokeWidth="1.5"
-                              />
-                            ))}
-
-                            {/* X-axis labels */}
-                            {performanceHistory.map((snapshot, i) => {
-                              if (performanceHistory.length > 5 && i % Math.ceil(performanceHistory.length / 4) !== 0) return null;
-                              const date = new Date(snapshot.timestamp);
-                              const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                              return (
-                                <text
-                                  key={`label-${i}`}
-                                  x={scaleX(i)}
-                                  y={padding.top + chartHeight + 15}
-                                  fill="#64748b"
-                                  fontSize="8"
-                                  textAnchor="middle"
-                                >
-                                  {label}
-                                </text>
-                              );
-                            })}
-                          </g>
-                        );
-                      })()}
-                    </svg>
-                  ) : (
-                    <div style={{ 
-                      height: '100%',
-                      minHeight: '200px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#64748b'
-                    }}>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '48px', marginBottom: '12px' }}>📈</div>
-                        <div style={{ color: '#94a3b8', fontWeight: '500' }}>Performance tracking</div>
-                        <div style={{ fontSize: '13px', marginTop: '8px' }}>Add positions to track over time</div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Portfolio Metrics Table */}
-            <div style={{ 
-              background: 'var(--msp-card)',
-              border: '1px solid rgba(51,65,85,0.8)',
-              borderRadius: '16px',
-              padding: '24px',
-              boxShadow: 'var(--msp-shadow)'
-            }}>
-              <h2 style={{ 
-                color: '#f1f5f9', 
-                fontSize: '15px', 
-                fontWeight: '600', 
-                marginBottom: '20px', 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '10px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em'
-              }}>
-                <span style={{ 
-                  background: 'var(--msp-panel-2)',
-                  borderRadius: '8px',
-                  padding: '6px 8px',
-                  fontSize: '14px'
-                }}>📊</span>
-                Portfolio Metrics
-              </h2>
-              <div className="metrics-grid" style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', 
-                gap: '12px' 
-              }}>
-                {metricsData.map((metric) => (
-                  <div key={metric.label} style={{ 
-                    background: 'rgba(30,41,59,0.5)',
-                    borderRadius: '12px',
-                    padding: '16px',
-                    border: '1px solid rgba(51,65,85,0.4)'
-                  }}>
-                    <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '6px', fontWeight: '500' }}>
-                      {metric.label}
-                    </div>
-                    <div style={{ 
-                      fontSize: '18px',
-                      fontWeight: '700',
-                      color: metric.label.includes('P&L') || metric.label.includes('Return') 
-                        ? (metric.value.includes('-') ? '#ef4444' : '#10b981')
-                        : '#f1f5f9'
-                    }}>
-                      {metric.value}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'add position' && (
-          <div style={{
-            background: '#0f172a',
-            border: '1px solid #334155',
-            borderRadius: '8px',
-            padding: '32px',
-            maxWidth: '600px',
-            margin: '0 auto'
-          }}>
-            <h2 style={{ color: '#f1f5f9', fontSize: '18px', fontWeight: '600', marginBottom: '8px' }}>
-              Add New Position
-            </h2>
-            <div style={{ 
-              background: 'rgba(16,185,129,0.1)', 
-              border: '1px solid rgba(16,185,129,0.3)',
-              borderRadius: '6px',
-              padding: '12px 16px',
-              marginBottom: '24px'
-            }}>
-              <div style={{ color: '#10b981', fontSize: '13px', fontWeight: '600', marginBottom: '4px' }}>
-                💡 How to enter symbols:
-              </div>
-              <div style={{ color: '#94a3b8', fontSize: '12px', lineHeight: '1.6' }}>
-                <strong>Crypto:</strong> BTC, ETH, XRP, SOL, DOGE (without -USD suffix)<br/>
-                <strong>Stocks:</strong> AAPL, TSLA, NVDA, XXRP (exact ticker)<br/>
-                <strong>Note:</strong> Use the 🔄 refresh button to auto-fetch live prices
-              </div>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
-                  Symbol <span style={{ color: '#64748b', fontSize: '11px' }}>(e.g., BTC, AAPL, TSLA)</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="BTC, AAPL, XRP, etc."
-                  value={newPosition.symbol}
-                  onChange={(e) => setNewPosition({...newPosition, symbol: e.target.value})}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: '#1e293b',
-                    border: '1px solid #334155',
-                    borderRadius: '6px',
-                    color: '#f1f5f9',
-                    fontSize: '14px'
-                  }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
-                  Side
-                </label>
-                <select
-                  value={newPosition.side}
-                  onChange={(e) => setNewPosition({...newPosition, side: e.target.value as 'LONG' | 'SHORT'})}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: '#1e293b',
-                    border: '1px solid #334155',
-                    borderRadius: '6px',
-                    color: '#f1f5f9',
-                    fontSize: '14px'
-                  }}
-                >
-                  <option value="LONG">LONG</option>
-                  <option value="SHORT">SHORT</option>
-                </select>
-              </div>
-              <div>
-                <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
-                  Quantity
-                </label>
-                <input
-                  type="number"
-                  step="any"
-                  placeholder="0.00"
-                  value={newPosition.quantity}
-                  onChange={(e) => setNewPosition({...newPosition, quantity: e.target.value})}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: '#1e293b',
-                    border: '1px solid #334155',
-                    borderRadius: '6px',
-                    color: '#f1f5f9',
-                    fontSize: '14px'
-                  }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
-                  Entry Price
-                </label>
-                <input
-                  type="number"
-                  step="any"
-                  placeholder="0.00"
-                  value={newPosition.entryPrice}
-                  onChange={(e) => setNewPosition({...newPosition, entryPrice: e.target.value})}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: '#1e293b',
-                    border: '1px solid #334155',
-                    borderRadius: '6px',
-                    color: '#f1f5f9',
-                    fontSize: '14px'
-                  }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
-                  Current Price
-                </label>
-                <input
-                  type="number"
-                  step="any"
-                  placeholder="0.00"
-                  value={newPosition.currentPrice}
-                  onChange={(e) => setNewPosition({...newPosition, currentPrice: e.target.value})}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: '#1e293b',
-                    border: '1px solid #334155',
-                    borderRadius: '6px',
-                    color: '#f1f5f9',
-                    fontSize: '14px'
-                  }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
-                  Strategy Tag <span style={{ color: '#64748b', fontSize: '11px' }}>(optional)</span>
-                </label>
-                <select
-                  value={newPosition.strategy || ''}
-                  onChange={(e) => setNewPosition({...newPosition, strategy: e.target.value as Position['strategy'] || undefined})}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    background: '#1e293b',
-                    border: '1px solid #334155',
-                    borderRadius: '6px',
-                    color: '#f1f5f9',
-                    fontSize: '14px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <option value="">Select strategy...</option>
-                  <option value="swing">🔄 Swing Trade</option>
-                  <option value="longterm">📈 Long Term</option>
-                  <option value="options">📊 Options Play</option>
-                  <option value="breakout">🚀 Breakout</option>
-                  <option value="ai_signal">🤖 AI Signal</option>
-                  <option value="daytrade">⚡ Day Trade</option>
-                  <option value="dividend">💰 Dividend</option>
-                </select>
-              </div>
-              <button
-                onClick={addPosition}
-                style={{
-                  width: '100%',
-                  padding: '14px',
-                  background: '#10B981',
-                  border: 'none',
-                  borderRadius: '6px',
-                  color: '#fff',
-                  fontSize: '15px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  marginTop: '8px'
-                }}
-              >
-                ➕ Add Position
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Position Sizing Calculator */}
-        {activeTab === 'position sizer' && (
-          <PositionSizerCalculator />
-        )}
-
-        {activeTab === 'holdings' && (
-          <div style={{
-            background: '#0f172a',
-            border: '1px solid #334155',
-            borderRadius: '8px',
-            overflow: 'hidden'
-          }}>
-            <div style={{ 
-              padding: '20px 24px',
-              borderBottom: '1px solid #334155',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <h2 style={{ color: '#f1f5f9', fontSize: '16px', fontWeight: '600', margin: 0 }}>
-                💼 Holdings
-              </h2>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  onClick={() => setActiveTab('add position')}
-                  style={{
-                    padding: '8px 16px',
-                    background: 'var(--msp-accent)',
-                    border: 'none',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    fontSize: '13px',
-                    fontWeight: '500',
-                    cursor: 'pointer'
-                  }}
-                >
-                  ➕ ADD POSITION
-                </button>
-              </div>
-            </div>
-            {positions.length === 0 ? (
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '80px 20px',
-                color: '#64748b'
-              }}>
-                <div style={{ fontSize: '64px', marginBottom: '16px' }}>📊</div>
-                <div style={{ fontSize: '18px', fontWeight: '500', marginBottom: '8px', color: '#94a3b8' }}>
-                  Ready to track your first position?
-                </div>
-                <div style={{ fontSize: '14px', marginBottom: '24px' }}>
-                  Add a position to start tracking P&L, risk, and performance trends
-                </div>
-                <button
-                  onClick={() => setActiveTab('add position')}
-                  style={{
-                    padding: '12px 24px',
-                    background: '#10b981',
-                    border: 'none',
-                    borderRadius: '6px',
-                    color: '#fff',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Add Your First Position
-                </button>
-              </div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ background: '#1e293b', borderBottom: '1px solid #334155' }}>
-                      <th style={{ padding: '14px 20px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Symbol</th>
-                      <th style={{ padding: '14px 20px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Side</th>
-                      <th style={{ padding: '14px 20px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Strategy</th>
-                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Quantity</th>
-                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Entry Price</th>
-                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Current Price</th>
-                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Market Value</th>
-                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>P&L</th>
-                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>P&L %</th>
-                      <th style={{ padding: '14px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {positions.map((position) => (
-                      <tr 
-                        key={position.id}
-                        style={{ borderBottom: '1px solid #334155' }}
-                      >
-                        <td style={{ padding: '16px 20px', color: '#f1f5f9', fontSize: '14px', fontWeight: '600' }}>
-                          {position.symbol}
-                        </td>
-                        <td style={{ padding: '16px 20px' }}>
-                          <span style={{
-                            padding: '4px 10px',
-                            borderRadius: '4px',
-                            fontSize: '11px',
-                            fontWeight: '600',
-                            background: position.side === 'LONG' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
-                            color: position.side === 'LONG' ? '#10b981' : '#ef4444',
-                            border: `1px solid ${position.side === 'LONG' ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`
-                          }}>
-                            {position.side}
-                          </span>
-                        </td>
-                        <td style={{ padding: '16px 20px' }}>
-                          {position.strategy ? (
-                            <span style={{
-                              padding: '4px 10px',
-                              borderRadius: '4px',
-                              fontSize: '10px',
-                              fontWeight: '600',
-                              background: 'rgba(99,102,241,0.15)',
-                              color: '#a5b4fc',
-                              border: '1px solid rgba(99,102,241,0.3)'
-                            }}>
-                              {position.strategy === 'swing' ? '🔄 Swing' :
-                               position.strategy === 'longterm' ? '📈 Long' :
-                               position.strategy === 'options' ? '📊 Options' :
-                               position.strategy === 'breakout' ? '🚀 Breakout' :
-                               position.strategy === 'ai_signal' ? '🤖 AI' :
-                               position.strategy === 'daytrade' ? '⚡ Day' :
-                               position.strategy === 'dividend' ? '💰 Div' : position.strategy}
-                            </span>
-                          ) : (
-                            <span style={{ color: '#64748b', fontSize: '11px' }}>—</span>
-                          )}
-                        </td>
-                        <td style={{ padding: '16px 20px', textAlign: 'right', color: '#f1f5f9', fontSize: '14px' }}>
-                          {position.quantity}
-                        </td>
-                        <td style={{ padding: '16px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '14px' }}>
-                          ${position.entryPrice.toFixed(2)}
-                        </td>
-                        <td style={{ padding: '16px 20px', textAlign: 'right' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={position.currentPrice}
-                              onChange={(e) => {
-                                const newPrice = parseFloat(e.target.value);
-                                if (!isNaN(newPrice)) {
-                                  updatePrice(position.id, newPrice);
-                                }
-                              }}
-                              style={{
-                                width: '100px',
-                                padding: '6px 10px',
-                                background: '#1e293b',
-                                border: '1px solid #334155',
-                                borderRadius: '4px',
-                                color: '#f1f5f9',
-                                fontSize: '14px',
-                                fontWeight: '500',
-                                textAlign: 'right'
-                              }}
-                            />
-                            <button
-                              onClick={() => updateSinglePrice(position)}
-                              disabled={updatingId === position.id}
-                              style={{
-                                padding: '6px 8px',
-                                background: updatingId === position.id ? '#334155' : '#10b981',
-                                border: 'none',
-                                borderRadius: '4px',
-                                color: '#fff',
-                                fontSize: '12px',
-                                cursor: updatingId === position.id ? 'wait' : 'pointer',
-                                opacity: updatingId === position.id ? 0.6 : 1,
-                                transition: 'all 0.2s'
-                              }}
-                            >
-                              {updatingId === position.id ? '...' : '🔄'}
-                            </button>
-                          </div>
-                        </td>
-                        <td style={{ padding: '16px 20px', textAlign: 'right', color: '#f1f5f9', fontSize: '14px' }}>
-                          ${(position.currentPrice * position.quantity).toFixed(2)}
-                        </td>
-                        <td style={{ 
-                          padding: '16px 20px', 
-                          textAlign: 'right', 
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          color: position.pl >= 0 ? '#10b981' : '#ef4444'
-                        }}>
-                          {position.pl >= 0 ? '+' : ''}${position.pl.toFixed(2)}
-                        </td>
-                        <td style={{ 
-                          padding: '16px 20px', 
-                          textAlign: 'right', 
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          color: position.pl >= 0 ? '#10b981' : '#ef4444'
-                        }}>
-                          {position.plPercent >= 0 ? '+' : ''}{position.plPercent.toFixed(2)}%
-                        </td>
-                        <td style={{ padding: '16px 20px', textAlign: 'center' }}>
-                          <button
-                            onClick={() => closePosition(position.id)}
-                            style={{
-                              padding: '6px 14px',
-                              background: 'rgba(239,68,68,0.1)',
-                              border: '1px solid rgba(239,68,68,0.3)',
-                              borderRadius: '4px',
-                              color: '#ef4444',
-                              fontSize: '12px',
-                              fontWeight: '500',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            Close
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'history' && (
-          <div style={{
-            background: '#0f172a',
-            border: '1px solid #334155',
-            borderRadius: '8px',
-            overflow: 'hidden'
-          }}>
-            <div style={{ 
-              padding: '20px 24px',
-              borderBottom: '1px solid #334155'
-            }}>
-              <h2 style={{ color: '#f1f5f9', fontSize: '16px', fontWeight: '600', margin: 0 }}>
-                📜 Trade History
-              </h2>
-            </div>
-            {closedPositions.length === 0 ? (
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '80px 20px',
-                color: '#64748b'
-              }}>
-                <div style={{ fontSize: '64px', marginBottom: '16px' }}>📜</div>
-                <div style={{ fontSize: '18px', fontWeight: '500', marginBottom: '8px', color: '#94a3b8' }}>
-                  No closed positions yet
-                </div>
-                <div style={{ fontSize: '14px' }}>
-                  Your closed trades will appear here
-                </div>
-              </div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ background: '#1e293b', borderBottom: '1px solid #334155' }}>
-                      <th style={{ padding: '14px 20px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Symbol</th>
-                      <th style={{ padding: '14px 20px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Side</th>
-                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Quantity</th>
-                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Entry Price</th>
-                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Close Price</th>
-                      <th style={{ padding: '14px 20px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Entry Date</th>
-                      <th style={{ padding: '14px 20px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Close Date</th>
-                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Realized P&L</th>
-                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Return %</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {closedPositions.map((position) => (
-                      <tr 
-                        key={position.id}
-                        style={{ borderBottom: '1px solid #334155' }}
-                      >
-                        <td style={{ padding: '16px 20px', color: '#f1f5f9', fontSize: '14px', fontWeight: '600' }}>
-                          {position.symbol}
-                        </td>
-                        <td style={{ padding: '16px 20px' }}>
-                          <span style={{
-                            padding: '4px 10px',
-                            borderRadius: '4px',
-                            fontSize: '11px',
-                            fontWeight: '600',
-                            background: position.side === 'LONG' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
-                            color: position.side === 'LONG' ? '#10b981' : '#ef4444',
-                            border: `1px solid ${position.side === 'LONG' ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`
-                          }}>
-                            {position.side}
-                          </span>
-                        </td>
-                        <td style={{ padding: '16px 20px', textAlign: 'right', color: '#f1f5f9', fontSize: '14px' }}>
-                          {position.quantity}
-                        </td>
-                        <td style={{ padding: '16px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '14px' }}>
-                          ${position.entryPrice.toFixed(2)}
-                        </td>
-                        <td style={{ padding: '16px 20px', textAlign: 'right', color: '#f1f5f9', fontSize: '14px', fontWeight: '500' }}>
-                          ${position.closePrice.toFixed(2)}
-                        </td>
-                        <td style={{ padding: '16px 20px', color: '#94a3b8', fontSize: '13px' }}>
-                          {new Date(position.entryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </td>
-                        <td style={{ padding: '16px 20px', color: '#94a3b8', fontSize: '13px' }}>
-                          {new Date(position.closeDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </td>
-                        <td style={{ 
-                          padding: '16px 20px', 
-                          textAlign: 'right', 
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          color: position.realizedPL >= 0 ? '#10b981' : '#ef4444'
-                        }}>
-                          {position.realizedPL >= 0 ? '+' : ''}${position.realizedPL.toFixed(2)}
-                        </td>
-                        <td style={{ 
-                          padding: '16px 20px', 
-                          textAlign: 'right', 
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          color: position.realizedPL >= 0 ? '#10b981' : '#ef4444'
-                        }}>
-                          {position.realizedPL >= 0 ? '+' : ''}{((position.realizedPL / (position.entryPrice * position.quantity)) * 100).toFixed(2)}%
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Performance Chart placeholder section */}
-        {activeTab === 'overview' && positions.length > 0 && (
-          <div style={{
-            background: '#0f172a',
-            border: '1px solid #334155',
-            borderRadius: '8px',
-            padding: '80px 20px',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '64px', marginBottom: '16px' }}>📜</div>
-            <div style={{ color: '#94a3b8', fontSize: '18px', fontWeight: '500', marginBottom: '8px' }}>
-              Trade History Coming Soon
-            </div>
-            <div style={{ color: '#64748b', fontSize: '14px' }}>
-              View your closed positions and trading history
-            </div>
-          </div>
-        )}
-      </div>
-        </>
-      )}
     </div>
   );
 }
+
 
 export default function PortfolioPage() {
   return (

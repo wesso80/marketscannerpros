@@ -8,6 +8,7 @@ import TimeScannerShell from '@/components/time/TimeScannerShell';
 import { computeTimeConfluenceV2 } from '@/components/time/scoring';
 import { DecompositionTFRow, Direction, TimeConfluenceV2Inputs } from '@/components/time/types';
 import { fireAutoLog } from '@/lib/autoLog';
+import { formatPrice } from '@/lib/formatPrice';
 import TimeGravityMapWidget from '@/components/TimeGravityMapWidget';
 import { detectAssetClass } from '@/lib/detectAssetClass';
 import { useUserTier, canAccessBacktest } from '@/lib/useUserTier';
@@ -359,13 +360,7 @@ function mapScanToInput(symbol: string, scanMode: ScanModeType, scan: any): Time
 }
 
 /** Adaptive price formatting: 2 decimals for > $1, up to 8 for sub-cent */
-function formatPrice(price: number): string {
-  if (price === 0) return '$0.00';
-  if (price >= 1) return `$${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  if (price >= 0.01) return `$${price.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`;
-  if (price >= 0.0001) return `$${price.toLocaleString(undefined, { minimumFractionDigits: 6, maximumFractionDigits: 6 })}`;
-  return `$${price.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })}`;
-}
+// formatPrice imported from shared lib/formatPrice.ts
 
 export default function TimeScannerPage() {
   const { tier, isLoading: tierLoading } = useUserTier();
