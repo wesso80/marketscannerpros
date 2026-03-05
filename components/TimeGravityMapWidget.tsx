@@ -15,6 +15,7 @@ interface TimeGravityMapWidgetProps {
   midpoints?: MidpointRecord[];
   assetType?: 'crypto' | 'stock' | 'forex';
   autoRefresh?: boolean;
+  /** Refresh interval in ms (default: 120000 = 2 minutes) */
   refreshInterval?: number;
   variant?: 'full' | 'compact';
   className?: string;
@@ -542,7 +543,7 @@ export default function TimeGravityMapWidget({
   midpoints: externalMidpoints,
   assetType = 'crypto',
   autoRefresh = true,
-  refreshInterval = 30000,
+  refreshInterval = 120_000,
   variant = 'full',
   className = '',
 }: TimeGravityMapWidgetProps) {
@@ -644,15 +645,30 @@ export default function TimeGravityMapWidget({
     fetchTGM();
   }, [symbol, currentPrice]);
   
-  // Auto-refresh
+  // Auto-refresh — pauses when the browser tab is hidden to save resources
   useEffect(() => {
     if (!autoRefresh) return;
     
-    const interval = setInterval(() => {
-      fetchTGM();
-    }, refreshInterval);
-    
-    return () => clearInterval(interval);
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    const start = () => {
+      if (interval) return;
+      interval = setInterval(() => { fetchTGM(); }, refreshInterval);
+    };
+    const stop = () => {
+      if (interval) { clearInterval(interval); interval = null; }
+    };
+
+    const onVisibility = () => {
+      if (document.hidden) { stop(); } else { start(); }
+    };
+
+    start();
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      stop();
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [autoRefresh, refreshInterval, symbol, currentPrice]);
   
   if (loading && !tgm) {

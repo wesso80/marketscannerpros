@@ -9,6 +9,9 @@ import { computeTimeConfluenceV2 } from '@/components/time/scoring';
 import { DecompositionTFRow, Direction, TimeConfluenceV2Inputs } from '@/components/time/types';
 import { fireAutoLog } from '@/lib/autoLog';
 import TimeGravityMapWidget from '@/components/TimeGravityMapWidget';
+import { detectAssetClass } from '@/lib/detectAssetClass';
+import { useUserTier, canAccessBacktest } from '@/lib/useUserTier';
+import UpgradeGate from '@/components/UpgradeGate';
 
 type ScanModeType = 'scalping' | 'intraday_30m' | 'intraday_1h' | 'intraday_4h' | 'swing_1d' | 'swing_3d' | 'swing_1w' | 'macro_monthly' | 'macro_yearly';
 
@@ -292,7 +295,7 @@ function mapScanToInput(symbol: string, scanMode: ScanModeType, scan: any): Time
   return {
     context: {
       symbol,
-      assetClass: symbol.includes('USD') ? 'crypto' : 'equity',
+      assetClass: detectAssetClass(symbol),
       primaryTfMinutes: TF_TO_MINUTES[scanMode],
       lookbackBars: 500,
       macroBias: normalizeDirection(scan?.decompression?.netPullDirection),
@@ -355,7 +358,17 @@ function mapScanToInput(symbol: string, scanMode: ScanModeType, scan: any): Time
   };
 }
 
+/** Adaptive price formatting: 2 decimals for > $1, up to 8 for sub-cent */
+function formatPrice(price: number): string {
+  if (price === 0) return '$0.00';
+  if (price >= 1) return `$${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (price >= 0.01) return `$${price.toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`;
+  if (price >= 0.0001) return `$${price.toLocaleString(undefined, { minimumFractionDigits: 6, maximumFractionDigits: 6 })}`;
+  return `$${price.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })}`;
+}
+
 export default function TimeScannerPage() {
+  const { tier, isLoading: tierLoading } = useUserTier();
   const searchParams = useSearchParams();
   const [symbol, setSymbol] = useState('BTCUSD');
   const [scanMode, setScanMode] = useState<ScanModeType>('intraday_1h');
@@ -445,7 +458,7 @@ export default function TimeScannerPage() {
         const key = `${effectiveSymbol}:${dir}:${Math.round(tOut.timeConfluenceScore)}`;
         if (timeAutoLogRef.current !== key) {
           timeAutoLogRef.current = key;
-          const isCrypto = effectiveSymbol.includes('BTC') || effectiveSymbol.includes('ETH') || effectiveSymbol.includes('SOL') || effectiveSymbol.endsWith('USD');
+          const isCrypto = detectAssetClass(effectiveSymbol) === 'crypto';
           fireAutoLog({
             symbol: effectiveSymbol,
             conditionType: 'time_scanner',
@@ -488,17 +501,38 @@ export default function TimeScannerPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scanTrigger]);
 
+  const isCrypto = useMemo(() => detectAssetClass(symbol) === 'crypto', [symbol]);
+
   const out = computeTimeConfluenceV2(input);
   const displaySymbol = useMemo(() => input.context.symbol || symbol, [input.context.symbol, symbol]);
   const tone = permissionTone(out.permission);
-  const rrEstimate = out.executionScore >= 70 ? '2.3' : out.executionScore >= 45 ? '1.7' : '1.2';
+  // Use real R:R from scan when available, otherwise fall back to estimate
+  const rrDisplay = scanData && scanData.riskReward > 0 && Math.abs(scanData.entry - scanData.stopLoss) > 0.01
+    ? scanData.riskReward.toFixed(1)
+    : out.executionScore >= 70 ? '2.3' : out.executionScore >= 45 ? '1.7' : '—';
   const confluenceRows = [
     { label: 'Trend Alignment', score: out.contextScore },
     { label: 'Flow Strength', score: out.setupScore },
     { label: 'Close Confirmation', score: out.executionScore },
     { label: 'Cluster Integrity', score: input.setup.window.clusterIntegrity * 100 },
     { label: 'Window Quality', score: input.execution.entryWindowQuality * 100 },
-  ].filter((row) => Math.round(row.score) > 0);
+  ];
+
+  // Tier gate: require Pro Trader
+  if (tierLoading) {
+    return (
+      <TimeScannerShell>
+        <div className="flex min-h-[60vh] items-center justify-center text-slate-500">Loading…</div>
+      </TimeScannerShell>
+    );
+  }
+  if (!canAccessBacktest(tier)) {
+    return (
+      <TimeScannerShell>
+        <UpgradeGate requiredTier="pro_trader" feature="Time Scanner" />
+      </TimeScannerShell>
+    );
+  }
 
   return (
     <TimeScannerShell>
@@ -533,7 +567,7 @@ export default function TimeScannerPage() {
                   ))}
                 </select>
                 {/* Session Mode selector — only visible for equities */}
-                {!(symbol.includes('BTC') || symbol.includes('ETH') || symbol.includes('SOL') || symbol.endsWith('USD')) && (
+                {!isCrypto && (
                   <select
                     value={sessionMode}
                     onChange={(event) => {
@@ -560,7 +594,7 @@ export default function TimeScannerPage() {
                 </button>
               </div>
               <div className="mt-1.5 truncate text-xs text-slate-400">
-                {out.direction} • {SCAN_MODE_LABELS[scanMode]} • {displaySymbol}{!(symbol.includes('BTC') || symbol.includes('ETH') || symbol.includes('SOL') || symbol.endsWith('USD')) ? ` • ${sessionMode === 'regular' ? 'RTH' : sessionMode === 'extended' ? 'Extended' : 'Full'}` : ''}
+                {out.direction} • {SCAN_MODE_LABELS[scanMode]} • {displaySymbol}{!isCrypto ? ` • ${sessionMode === 'regular' ? 'RTH' : sessionMode === 'extended' ? 'Extended' : 'Full'}` : ''}
               </div>
             </div>
 
@@ -575,7 +609,7 @@ export default function TimeScannerPage() {
               <div className="grid grid-cols-3 gap-2">
                 <MetricPill label="Conf" value={`${Math.round(out.timeConfluenceScore)}%`} />
                 <MetricPill label="Risk" value={riskLabel(out.permission)} />
-                <MetricPill label="R:R" value={rrEstimate} />
+                <MetricPill label="R:R" value={rrDisplay} />
               </div>
             </div>
           </div>
@@ -612,7 +646,7 @@ export default function TimeScannerPage() {
                 <div className="grid grid-cols-2 gap-2">
                   <div className="rounded-xl border border-slate-800 bg-slate-950/30 px-3 py-2">
                     <div className="text-[10px] uppercase tracking-wider text-slate-500">Current</div>
-                    <div className="text-base font-bold text-slate-100">${scanData.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                    <div className="text-base font-bold text-slate-100">{formatPrice(scanData.currentPrice)}</div>
                   </div>
                   <div className={`rounded-xl border px-3 py-2 ${
                     scanData.direction === 'bullish'
@@ -622,7 +656,7 @@ export default function TimeScannerPage() {
                     <div className="text-[10px] uppercase tracking-wider text-slate-500">Target</div>
                     <div className={`text-base font-bold ${
                       scanData.direction === 'bullish' ? 'text-emerald-400' : 'text-rose-400'
-                    }`}>${scanData.targetLevel > 0 ? scanData.targetLevel.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}</div>
+                    }`}>{scanData.targetLevel > 0 ? formatPrice(scanData.targetLevel) : '—'}</div>
                   </div>
                 </div>
 
@@ -631,16 +665,16 @@ export default function TimeScannerPage() {
                   <div className="grid grid-cols-3 gap-1.5">
                     <div className="rounded-lg border border-slate-800 bg-slate-950/25 px-2 py-1.5 text-center">
                       <div className="text-[9px] uppercase tracking-wider text-slate-500">Entry</div>
-                      <div className="text-xs font-semibold text-slate-200">${scanData.entry.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      <div className="text-xs font-semibold text-slate-200">{formatPrice(scanData.entry)}</div>
                     </div>
                     <div className="rounded-lg border border-rose-500/20 bg-rose-500/5 px-2 py-1.5 text-center">
                       <div className="text-[9px] uppercase tracking-wider text-slate-500">Stop</div>
-                      <div className="text-xs font-semibold text-rose-400">${scanData.stopLoss.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      <div className="text-xs font-semibold text-rose-400">{formatPrice(scanData.stopLoss)}</div>
                       {scanData.riskPct > 0 && <div className="text-[9px] text-rose-500">-{scanData.riskPct.toFixed(1)}%</div>}
                     </div>
                     <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-2 py-1.5 text-center">
                       <div className="text-[9px] uppercase tracking-wider text-slate-500">TP</div>
-                      <div className="text-xs font-semibold text-emerald-400">${scanData.takeProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      <div className="text-xs font-semibold text-emerald-400">{formatPrice(scanData.takeProfit)}</div>
                       {scanData.rewardPct > 0 && <div className="text-[9px] text-emerald-500">+{scanData.rewardPct.toFixed(1)}%</div>}
                     </div>
                   </div>
@@ -679,7 +713,7 @@ export default function TimeScannerPage() {
                         {validLevels.map((m) => (
                           <div key={m.tf} className="flex items-center justify-between">
                             <span className="font-medium text-slate-400">{m.tf}</span>
-                            <span className="font-mono text-slate-300">${m.level.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            <span className="font-mono text-slate-300">{formatPrice(m.level)}
                               <span className={`ml-1 text-[10px] ${m.distance > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                                 {m.distance > 0 ? '+' : ''}{m.distance.toFixed(1)}%
                               </span>
@@ -703,14 +737,14 @@ export default function TimeScannerPage() {
                 No directional bias detected — {scanData.reasoning || 'mixed signals across timeframes'}
               </div>
               {scanData.currentPrice > 0 && (
-                <div className="ml-auto text-sm font-semibold text-slate-200">${scanData.currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                <div className="ml-auto text-sm font-semibold text-slate-200">{formatPrice(scanData.currentPrice)}</div>
               )}
             </div>
           </section>
         )}
 
         {/* ═══ ROW 2: STATIC INTRADAY SCHEDULE (equities only) + CLOSE CALENDAR ═══ */}
-        {input.context.assetClass === 'equity' && (
+        {!isCrypto && (
           <section className="w-full rounded-2xl border border-slate-800 bg-slate-900/30 p-3 lg:p-5">
             <div className="mb-3">
               <div className="text-sm font-semibold text-slate-100">🕐 Intraday Equity Close Schedule</div>
@@ -846,9 +880,13 @@ export default function TimeScannerPage() {
 
               <div className="rounded-2xl border border-slate-800 bg-slate-950/25 p-3">
                 <div className="space-y-3">
-                  {confluenceRows.map((row) => (
-                    <ConfluenceRow key={row.label} label={row.label} score={row.score} />
-                  ))}
+                  {confluenceRows.filter((row) => Math.round(row.score) > 0).length > 0 ? (
+                    confluenceRows.filter((row) => Math.round(row.score) > 0).map((row) => (
+                      <ConfluenceRow key={row.label} label={row.label} score={row.score} />
+                    ))
+                  ) : (
+                    <div className="py-2 text-center text-xs text-slate-500">Run a scan to populate confluence data</div>
+                  )}
                 </div>
                 <div className="mt-3 text-xs text-slate-500">
                   Alignment {input.setup.window.alignmentCount}/{input.setup.window.tfCount} • Window {input.setup.window.status}

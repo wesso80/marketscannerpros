@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { detectAssetClass } from '@/lib/detectAssetClass';
 import type {
   CloseCalendarAnchor,
   ForwardCloseCalendar,
@@ -107,40 +108,24 @@ interface CloseCalendarProps {
   symbol?: string;
 }
 
-/** Detect asset class from symbol (mirrors ConfluenceLearningAgent.detectAssetClass) */
-function detectAssetClass(sym: string): AssetClass {
-  const s = sym.toUpperCase();
-  if (
-    s.endsWith('USD') || s.endsWith('USDT') || s.endsWith('USDC') ||
-    s.endsWith('BTC') || s.endsWith('ETH') ||
-    s.includes('BTC') || s.includes('ETH') || s.includes('SOL') ||
-    s.includes('DOGE') || s.includes('ADA') || s.includes('XRP') ||
-    s.includes('AVAX') || s.includes('MATIC') || s.includes('DOT') ||
-    s.includes('LINK') || s.includes('UNI') || s.includes('SHIB')
-  ) {
-    return 'crypto';
-  }
-  return 'equity';
-}
-
 export default function CloseCalendar({ symbol: propSymbol }: CloseCalendarProps) {
-  const inferredAsset = propSymbol ? detectAssetClass(propSymbol) : 'crypto';
+  const assetClass = propSymbol ? detectAssetClass(propSymbol) : 'crypto';
   const [anchor, setAnchor] = useState<CloseCalendarAnchor>("TODAY");
   const [horizon, setHorizon] = useState<number>(1);
   const [customDate, setCustomDate] = useState("");
-  const [assetClass, setAssetClass] = useState<AssetClass>(inferredAsset);
   const [data, setData] = useState<ForwardCloseCalendar | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "daily" | "weekly" | "monthly" | "yearly">("all");
   const [showAnchorDay, setShowAnchorDay] = useState(true);
-
-  // Re-sync asset class when the parent symbol changes
-  useEffect(() => {
-    if (propSymbol) setAssetClass(detectAssetClass(propSymbol));
-  }, [propSymbol]);
+  const abortRef = useRef<AbortController | null>(null);
 
   const fetchCalendar = useCallback(async () => {
+    // Abort any in-flight request before starting a new one
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setLoading(true);
     setError(null);
     try {
@@ -155,6 +140,7 @@ export default function CloseCalendar({ symbol: propSymbol }: CloseCalendarProps
           horizonDays: horizon,
           anchorTime: anchor === "CUSTOM" && customDate ? new Date(customDate).toISOString() : undefined,
         }),
+        signal: controller.signal,
       });
       const json = await res.json();
       if (!res.ok || !json?.success) {
@@ -163,6 +149,7 @@ export default function CloseCalendar({ symbol: propSymbol }: CloseCalendarProps
       }
       setData(json.data as ForwardCloseCalendar);
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
       setError(err instanceof Error ? err.message : "Network error");
     } finally {
       setLoading(false);
@@ -257,26 +244,6 @@ export default function CloseCalendar({ symbol: propSymbol }: CloseCalendarProps
                 }`}
               >
                 {d}d
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <label className="mb-1 block text-[10px] uppercase tracking-wider text-slate-500">Asset</label>
-          <div className="flex gap-1 overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-            {(["crypto", "equity"] as const).map((ac) => (
-              <button
-                key={ac}
-                type="button"
-                onClick={() => setAssetClass(ac)}
-                className={`shrink-0 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                  assetClass === ac
-                    ? "bg-violet-500/20 text-violet-400 border border-violet-500/40"
-                    : "bg-slate-950/40 text-slate-400 border border-slate-800 hover:text-slate-200"
-                }`}
-              >
-                {ac === "crypto" ? "₿ Crypto (UTC)" : "📈 Equity (NY)"}
               </button>
             ))}
           </div>
