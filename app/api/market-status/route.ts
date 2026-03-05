@@ -33,7 +33,9 @@ export async function GET(req: NextRequest) {
     
     // Return cached data if fresh
     if (cache.data && (now - cache.timestamp) < CACHE_DURATION) {
-      return NextResponse.json(formatResponse(cache.data));
+      return NextResponse.json(formatResponse(cache.data), {
+        headers: { 'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=300' },
+      });
     }
     
     const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
@@ -55,7 +57,9 @@ export async function GET(req: NextRequest) {
     // Cache the response
     cache = { data, timestamp: now };
     
-    return NextResponse.json(formatResponse(data));
+    return NextResponse.json(formatResponse(data), {
+      headers: { 'Cache-Control': 'public, s-maxage=120, stale-while-revalidate=300' },
+    });
   } catch (error) {
     console.error('Market status error:', error);
     return NextResponse.json({ error: 'Failed to fetch market status' }, { status: 500 });

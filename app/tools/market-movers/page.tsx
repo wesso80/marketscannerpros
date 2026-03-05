@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { usePolling } from '@/hooks/usePolling';
 import ToolsPageHeader from '@/components/ToolsPageHeader';
 import MarketStatusBadge from '@/components/MarketStatusBadge';
 import { useAIPageContext } from '@/lib/ai/pageContext';
@@ -114,92 +115,89 @@ export default function MarketMoversPage() {
 
   const { setPageData } = useAIPageContext();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [res, upeRes] = await Promise.all([
-          fetch('/api/market-movers'),
-          fetch('/api/upe/crcs/latest?asset_class=crypto&limit=300', { cache: 'no-store' }),
-        ]);
+  const fetchData = useCallback(async () => {
+    try {
+      const [res, upeRes] = await Promise.all([
+        fetch('/api/market-movers'),
+        fetch('/api/upe/crcs/latest?asset_class=crypto&limit=300', { cache: 'no-store' }),
+      ]);
 
-        if (!res.ok) throw new Error('Failed to fetch market movers');
-        const result = await res.json();
-        const upeResult = upeRes.ok ? await upeRes.json() : null;
+      if (!res.ok) throw new Error('Failed to fetch market movers');
+      const result = await res.json();
+      const upeResult = upeRes.ok ? await upeRes.json() : null;
 
-        if (result.error) {
-          setError(result.error);
-          return;
-        }
-
-        const formatted: MoversData = result.topGainers
-          ? {
-              timestamp: new Date().toISOString(),
-              lastUpdated: result.lastUpdated || new Date().toISOString(),
-              marketMood: 'neutral',
-              summary: {
-                avgGainerChange: 0,
-                avgLoserChange: 0,
-                topGainerTicker: result.topGainers?.[0]?.ticker,
-                topGainerChange: parseFloat(result.topGainers?.[0]?.change_percentage?.replace('%', '') || '0'),
-                topLoserTicker: result.topLosers?.[0]?.ticker,
-                topLoserChange: parseFloat(result.topLosers?.[0]?.change_percentage?.replace('%', '') || '0'),
-              },
-              topGainers:
-                result.topGainers?.map((g: any) => ({
-                  ticker: g.ticker,
-                  price: parseFloat(g.price) || 0,
-                  change: parseFloat(g.change_amount) || 0,
-                  changePercent: parseFloat(g.change_percentage?.replace('%', '') || '0') || 0,
-                  volume: parseInt(g.volume, 10) || 0,
-                })) || [],
-              topLosers:
-                result.topLosers?.map((l: any) => ({
-                  ticker: l.ticker,
-                  price: parseFloat(l.price) || 0,
-                  change: parseFloat(l.change_amount) || 0,
-                  changePercent: parseFloat(l.change_percentage?.replace('%', '') || '0') || 0,
-                  volume: parseInt(l.volume, 10) || 0,
-                })) || [],
-              mostActive:
-                result.mostActive?.map((a: any) => ({
-                  ticker: a.ticker,
-                  price: parseFloat(a.price) || 0,
-                  change: parseFloat(a.change_amount) || 0,
-                  changePercent: parseFloat(a.change_percentage?.replace('%', '') || '0') || 0,
-                  volume: parseInt(a.volume, 10) || 0,
-                })) || [],
-            }
-          : result;
-
-        setData(formatted);
-
-        const nextUpeBySymbol: Record<string, UpeMoverRow> = {};
-        for (const row of upeResult?.rows || []) {
-          const symbol = String(row.symbol || '').toUpperCase();
-          if (!symbol) continue;
-          nextUpeBySymbol[symbol] = {
-            symbol,
-            globalEligibility: row.globalEligibility,
-            eligibilityUser: row.eligibilityUser,
-            crcsFinal: Number(row.crcsFinal || 0),
-            crcsUser: Number(row.crcsUser || 0),
-            microAdjustment: Number(row.microAdjustment || 0),
-            overlayReasons: Array.isArray(row.overlayReasons) ? row.overlayReasons : [],
-            profileName: String(row.profileName || 'balanced'),
-          };
-        }
-        setUpeBySymbol(nextUpeBySymbol);
-      } catch (e: any) {
-        setError(e.message);
-      } finally {
-        setLoading(false);
+      if (result.error) {
+        setError(result.error);
+        return;
       }
-    };
 
-    fetchData();
-    const interval = setInterval(fetchData, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [setPageData]);
+      const formatted: MoversData = result.topGainers
+        ? {
+            timestamp: new Date().toISOString(),
+            lastUpdated: result.lastUpdated || new Date().toISOString(),
+            marketMood: 'neutral',
+            summary: {
+              avgGainerChange: 0,
+              avgLoserChange: 0,
+              topGainerTicker: result.topGainers?.[0]?.ticker,
+              topGainerChange: parseFloat(result.topGainers?.[0]?.change_percentage?.replace('%', '') || '0'),
+              topLoserTicker: result.topLosers?.[0]?.ticker,
+              topLoserChange: parseFloat(result.topLosers?.[0]?.change_percentage?.replace('%', '') || '0'),
+            },
+            topGainers:
+              result.topGainers?.map((g: any) => ({
+                ticker: g.ticker,
+                price: parseFloat(g.price) || 0,
+                change: parseFloat(g.change_amount) || 0,
+                changePercent: parseFloat(g.change_percentage?.replace('%', '') || '0') || 0,
+                volume: parseInt(g.volume, 10) || 0,
+              })) || [],
+            topLosers:
+              result.topLosers?.map((l: any) => ({
+                ticker: l.ticker,
+                price: parseFloat(l.price) || 0,
+                change: parseFloat(l.change_amount) || 0,
+                changePercent: parseFloat(l.change_percentage?.replace('%', '') || '0') || 0,
+                volume: parseInt(l.volume, 10) || 0,
+              })) || [],
+            mostActive:
+              result.mostActive?.map((a: any) => ({
+                ticker: a.ticker,
+                price: parseFloat(a.price) || 0,
+                change: parseFloat(a.change_amount) || 0,
+                changePercent: parseFloat(a.change_percentage?.replace('%', '') || '0') || 0,
+                volume: parseInt(a.volume, 10) || 0,
+              })) || [],
+          }
+        : result;
+
+      setData(formatted);
+
+      const nextUpeBySymbol: Record<string, UpeMoverRow> = {};
+      for (const row of upeResult?.rows || []) {
+        const symbol = String(row.symbol || '').toUpperCase();
+        if (!symbol) continue;
+        nextUpeBySymbol[symbol] = {
+          symbol,
+          globalEligibility: row.globalEligibility,
+          eligibilityUser: row.eligibilityUser,
+          crcsFinal: Number(row.crcsFinal || 0),
+          crcsUser: Number(row.crcsUser || 0),
+          microAdjustment: Number(row.microAdjustment || 0),
+          overlayReasons: Array.isArray(row.overlayReasons) ? row.overlayReasons : [],
+          profileName: String(row.profileName || 'balanced'),
+        };
+      }
+      setUpeBySymbol(nextUpeBySymbol);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData, setPageData]);
+  usePolling(fetchData, 5 * 60 * 1000);
 
   const rows = useMemo(
     () => (activeTab === 'gainers' ? data?.topGainers : activeTab === 'losers' ? data?.topLosers : data?.mostActive) || [],

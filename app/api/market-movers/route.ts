@@ -56,6 +56,8 @@ export async function GET(request: NextRequest) {
       topGainers: (topMovers.top_gainers || []).slice(0, 20).map(normalizeTopMover),
       topLosers: (topMovers.top_losers || []).slice(0, 20).map(normalizeTopMover),
       mostActive: (mostActive || []).slice(0, 20).map(normalizeMostActive),
+    }, {
+      headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300' },
     });
   } catch (error) {
     console.error('[Market Movers API] Error:', error);

@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { usePolling } from '@/hooks/usePolling';
 import ToolsPageHeader from '@/components/ToolsPageHeader';
 import MarketStatusBadge from '@/components/MarketStatusBadge';
 import { useAIPageContext } from '@/lib/ai/pageContext';
@@ -203,34 +204,29 @@ export default function MacroDashboardPage() {
   const { isAdmin } = useUserTier();
   const { setPageData } = useAIPageContext();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setError(null);
-        const res = await fetch('/api/economic-indicators?all=true');
-        if (!res.ok) throw new Error('Failed to fetch economic data');
-        const result = await res.json();
+  const fetchData = useCallback(async () => {
+    try {
+      setError(null);
+      const res = await fetch('/api/economic-indicators?all=true');
+      if (!res.ok) throw new Error('Failed to fetch economic data');
+      const result = await res.json();
 
-        if (result.error) {
-          setError(result.error);
-          return;
-        }
-
-        setData(result);
-        setLastRefresh(new Date().toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: false }));
-      } catch (e: any) {
-        setError(e.message);
-      } finally {
-        setLoading(false);
+      if (result.error) {
+        setError(result.error);
+        return;
       }
-    };
 
-    fetchData();
-    if (autoRefresh) {
-      const interval = setInterval(fetchData, 60 * 60 * 1000);
-      return () => clearInterval(interval);
+      setData(result);
+      setLastRefresh(new Date().toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: false }));
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
     }
-  }, [autoRefresh]);
+  }, []);
+
+  // Auto-refresh hourly (pauses when tab hidden)
+  usePolling(fetchData, autoRefresh ? 60 * 60 * 1000 : null, { immediate: true });
 
   const gate = useMemo(() => computeMacroGate(data), [data]);
 

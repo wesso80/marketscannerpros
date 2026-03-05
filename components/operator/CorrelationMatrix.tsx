@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
+import { usePolling } from '@/hooks/usePolling';
 
 interface Position {
   symbol: string;
@@ -44,28 +45,25 @@ export default function CorrelationMatrix() {
   const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function loadPositions() {
-      try {
-        const res = await fetch('/api/portfolio?view=positions', { cache: 'no-store' });
-        if (!res.ok) return;
-        const data = await res.json();
-        const mapped: Position[] = (data?.positions ?? data ?? []).map((p: any) => ({
-          symbol: String(p.symbol ?? p.ticker ?? '').toUpperCase(),
-          direction: (p.direction ?? p.side ?? 'LONG').toUpperCase() as 'LONG' | 'SHORT',
-          riskR: Number(p.risk_r ?? p.riskR ?? 0.5),
-          cluster: inferCluster(String(p.symbol ?? p.ticker ?? '')),
-          unrealizedR: p.unrealized_r ?? p.unrealizedR,
-        }));
-        setPositions(mapped);
-      } catch {} finally {
-        setLoading(false);
-      }
+  const loadPositions = useCallback(async () => {
+    try {
+      const res = await fetch('/api/portfolio?view=positions', { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      const mapped: Position[] = (data?.positions ?? data ?? []).map((p: any) => ({
+        symbol: String(p.symbol ?? p.ticker ?? '').toUpperCase(),
+        direction: (p.direction ?? p.side ?? 'LONG').toUpperCase() as 'LONG' | 'SHORT',
+        riskR: Number(p.risk_r ?? p.riskR ?? 0.5),
+        cluster: inferCluster(String(p.symbol ?? p.ticker ?? '')),
+        unrealizedR: p.unrealized_r ?? p.unrealizedR,
+      }));
+      setPositions(mapped);
+    } catch {} finally {
+      setLoading(false);
     }
-    void loadPositions();
-    const interval = window.setInterval(() => { void loadPositions(); }, 30_000);
-    return () => window.clearInterval(interval);
   }, []);
+
+  usePolling(loadPositions, 30_000, { immediate: true });
 
   const clusters = useMemo(() => {
     const map: Record<string, { long: Position[]; short: Position[]; totalRiskR: number }> = {};

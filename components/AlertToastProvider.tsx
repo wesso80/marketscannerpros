@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import { usePolling } from '@/hooks/usePolling';
 
 interface AlertTrigger {
   id: string;
@@ -165,12 +166,8 @@ export function AlertToastProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Poll every 30 seconds
-  useEffect(() => {
-    checkForNewAlerts();
-    const interval = setInterval(checkForNewAlerts, 30000);
-    return () => clearInterval(interval);
-  }, [checkForNewAlerts]);
+  // Poll every 30 seconds (pauses when tab hidden)
+  usePolling(checkForNewAlerts, 30_000, { immediate: true });
 
   const dismissToast = useCallback(async (id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id));

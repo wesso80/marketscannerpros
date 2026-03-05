@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { usePolling } from '@/hooks/usePolling';
 
 type EvolutionRow = {
   id: number;
@@ -39,32 +40,23 @@ function formatAdaptationMessage(change: EvolutionRow['changes_json'][number]): 
 export default function EvolutionStatusCard({ compact = true }: { compact?: boolean }) {
   const [rows, setRows] = useState<EvolutionRow[]>([]);
 
-  useEffect(() => {
-    let active = true;
-
-    const load = async () => {
-      try {
-        const response = await fetch('/api/evolution?limit=3', {
-          credentials: 'include',
-          cache: 'no-store',
-        });
-        if (!response.ok || !active) return;
-        const payload = await response.json();
-        if (active && payload?.success && Array.isArray(payload?.data)) {
-          setRows(payload.data);
-        }
-      } catch {
-        if (active) setRows([]);
+  const load = useCallback(async () => {
+    try {
+      const response = await fetch('/api/evolution?limit=3', {
+        credentials: 'include',
+        cache: 'no-store',
+      });
+      if (!response.ok) return;
+      const payload = await response.json();
+      if (payload?.success && Array.isArray(payload?.data)) {
+        setRows(payload.data);
       }
-    };
-
-    load();
-    const timer = setInterval(load, 30000);
-    return () => {
-      active = false;
-      clearInterval(timer);
-    };
+    } catch {
+      setRows([]);
+    }
   }, []);
+
+  usePolling(load, 30_000, { immediate: true });
 
   if (!rows.length) return null;
 

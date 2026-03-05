@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { usePolling } from '@/hooks/usePolling';
 
 interface MarketStatus {
   us: {
@@ -25,26 +26,21 @@ export default function MarketStatusBadge({
   const [status, setStatus] = useState<MarketStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchStatus = async () => {
-      try {
-        const res = await fetch('/api/market-status');
-        if (res.ok) {
-          const data = await res.json();
-          setStatus(data);
-        }
-      } catch (e) {
-        console.error('Failed to fetch market status:', e);
-      } finally {
-        setLoading(false);
+  const fetchStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/market-status');
+      if (res.ok) {
+        const data = await res.json();
+        setStatus(data);
       }
-    };
-
-    fetchStatus();
-    // Refresh every 5 minutes
-    const interval = setInterval(fetchStatus, 5 * 60 * 1000);
-    return () => clearInterval(interval);
+    } catch (e) {
+      console.error('Failed to fetch market status:', e);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  usePolling(fetchStatus, 5 * 60 * 1000, { immediate: true });
 
   if (loading) {
     return (
@@ -116,25 +112,21 @@ export function useMarketStatus() {
   const [status, setStatus] = useState<MarketStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchStatus = async () => {
-      try {
-        const res = await fetch('/api/market-status');
-        if (res.ok) {
-          const data = await res.json();
-          setStatus(data);
-        }
-      } catch (e) {
-        console.error('Failed to fetch market status:', e);
-      } finally {
-        setLoading(false);
+  const fetchStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/market-status');
+      if (res.ok) {
+        const data = await res.json();
+        setStatus(data);
       }
-    };
-
-    fetchStatus();
-    const interval = setInterval(fetchStatus, 5 * 60 * 1000);
-    return () => clearInterval(interval);
+    } catch (e) {
+      console.error('Failed to fetch market status:', e);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  usePolling(fetchStatus, 5 * 60 * 1000, { immediate: true });
 
   const isMarketOpen = status?.us.session === 'regular';
   const isPreMarket = status?.us.session === 'pre-market';

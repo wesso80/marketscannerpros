@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { usePolling } from '@/hooks/usePolling';
 import { useRiskPermission } from '@/components/risk/RiskPermissionContext';
 import { useRegime, regimeBadgeColor } from '@/lib/useRegime';
 
@@ -18,20 +19,17 @@ export default function RiskManagerMode({ onExit }: { onExit?: () => void } = {}
   const [portfolioData, setPortfolioData] = useState<any>(null);
   const [collapsed, setCollapsed] = useState(!onExit); // auto-collapse when embedded
 
-  useEffect(() => {
-    async function loadPortfolio() {
-      try {
-        const res = await fetch('/api/portfolio?view=summary', { cache: 'no-store' });
-        if (res.ok) {
-          const data = await res.json();
-          setPortfolioData(data);
-        }
-      } catch {}
-    }
-    void loadPortfolio();
-    const interval = window.setInterval(() => { void loadPortfolio(); }, 15_000);
-    return () => window.clearInterval(interval);
+  const loadPortfolio = useCallback(async () => {
+    try {
+      const res = await fetch('/api/portfolio?view=summary', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        setPortfolioData(data);
+      }
+    } catch {}
   }, []);
+
+  usePolling(loadPortfolio, 15_000, { immediate: true });
 
   const handleEmergencyLock = useCallback(async () => {
     if (!confirm('EMERGENCY LOCK: This will disable all new trades immediately. Are you sure?')) return;

@@ -51,7 +51,9 @@ export async function GET(req: NextRequest) {
     // Fetch all indicators for dashboard
     if (all) {
       const allData = await fetchAllIndicators(apiKey, now);
-      return NextResponse.json(allData);
+      return NextResponse.json(allData, {
+        headers: { 'Cache-Control': 'private, max-age=1800, stale-while-revalidate=3600' },
+      });
     }
     
     if (!indicator) {
@@ -64,7 +66,9 @@ export async function GET(req: NextRequest) {
     const cacheKey = `${indicator}_${maturity}`;
     const cached = cache.get(cacheKey);
     if (cached && (now - cached.timestamp) < CACHE_DURATION) {
-      return NextResponse.json(cached.data);
+      return NextResponse.json(cached.data, {
+        headers: { 'Cache-Control': 'private, max-age=1800, stale-while-revalidate=3600' },
+      });
     }
     
     let url = `https://www.alphavantage.co/query?function=${indicator}&apikey=${apiKey}`;
@@ -79,7 +83,9 @@ export async function GET(req: NextRequest) {
     const formatted = formatIndicator(indicator, data, maturity);
     cache.set(cacheKey, { data: formatted, timestamp: now });
     
-    return NextResponse.json(formatted);
+    return NextResponse.json(formatted, {
+      headers: { 'Cache-Control': 'private, max-age=1800, stale-while-revalidate=3600' },
+    });
   } catch (error) {
     console.error('Economic indicators error:', error);
     return NextResponse.json({ error: 'Failed to fetch economic data' }, { status: 500 });

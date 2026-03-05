@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
+import { usePolling } from '@/hooks/usePolling';
 import type { Regime } from '@/lib/risk-governor-hard';
 
 type RiskLevel = 'low' | 'moderate' | 'elevated' | 'extreme';
@@ -68,12 +69,7 @@ export function RegimeProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  useEffect(() => {
-    fetchRegime();
-    // Poll every 30 seconds for regime updates
-    const interval = setInterval(fetchRegime, 30_000);
-    return () => clearInterval(interval);
-  }, [fetchRegime]);
+  usePolling(fetchRegime, 30_000, { immediate: true });
 
   return (
     <RegimeContext.Provider value={{ data, loading, error, refresh: fetchRegime }}>

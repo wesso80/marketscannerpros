@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { usePolling } from '@/hooks/usePolling';
 
 /**
  * Global stale-data indicator. When API responses include a `dataAge`
@@ -12,28 +13,23 @@ export default function StaleDataBanner() {
   const [source, setSource] = useState('');
   const [dismissed, setDismissed] = useState(false);
 
-  useEffect(() => {
-    // Check market data freshness every 60s
-    const check = async () => {
-      try {
-        const res = await fetch('/api/health/data', { cache: 'no-store' });
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data?.stale) {
-          setStale(true);
-          setSource(data.source || 'market data');
-        } else {
-          setStale(false);
-        }
-      } catch {
-        // Silent — this is best-effort
+  const check = useCallback(async () => {
+    try {
+      const res = await fetch('/api/health/data', { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data?.stale) {
+        setStale(true);
+        setSource(data.source || 'market data');
+      } else {
+        setStale(false);
       }
-    };
-
-    check();
-    const interval = setInterval(check, 60_000);
-    return () => clearInterval(interval);
+    } catch {
+      // Silent — this is best-effort
+    }
   }, []);
+
+  usePolling(check, 60_000, { immediate: true });
 
   if (!stale || dismissed) return null;
 

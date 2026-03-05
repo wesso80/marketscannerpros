@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { usePolling } from '@/hooks/usePolling';
 
 interface TriggeredAlert {
   id: string;
@@ -62,17 +63,8 @@ export default function AlertToast() {
     }
   }, [isAuthenticated]);
 
-  // Poll every 30 seconds
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    // Initial check
-    checkForAlerts();
-
-    // Set up polling
-    const interval = setInterval(checkForAlerts, 30000);
-    return () => clearInterval(interval);
-  }, [isAuthenticated, checkForAlerts]);
+  // Poll every 30 seconds (pauses when tab hidden)
+  usePolling(checkForAlerts, isAuthenticated ? 30_000 : null, { immediate: true });
 
   // Auto-dismiss toasts after 10 seconds
   useEffect(() => {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { usePolling } from '@/hooks/usePolling';
 import { useUserTier, canAccessPortfolioInsights } from '@/lib/useUserTier';
 import { ToolsPageHeader } from '@/components/ToolsPageHeader';
 import { useAIPageContext } from '@/lib/ai/pageContext';
@@ -390,15 +391,9 @@ export default function CommoditiesPage() {
     };
   }, [data, macroInputs]);
 
-  useEffect(() => {
-    fetchCommodities();
-    
-    // Auto-refresh every 15 minutes (commodities update less frequently)
-    if (autoRefresh) {
-      const interval = setInterval(fetchCommodities, 15 * 60 * 1000);
-      return () => clearInterval(interval);
-    }
-  }, [fetchCommodities, autoRefresh]);
+  useEffect(() => { fetchCommodities(); }, [fetchCommodities]);
+  // Auto-refresh every 15 minutes (pauses when tab hidden)
+  usePolling(fetchCommodities, autoRefresh ? 15 * 60 * 1000 : null);
 
   // Push data to AI context
   useEffect(() => {

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
+import { usePolling } from '@/hooks/usePolling';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useUserTier, canAccessCryptoCommandCenter } from '@/lib/useUserTier';
@@ -175,11 +176,7 @@ function CryptoCommandCenterContent() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchOverview();
-    const interval = setInterval(fetchOverview, 300000);
-    return () => clearInterval(interval);
-  }, [fetchOverview]);
+  usePolling(fetchOverview, 300_000, { immediate: true });
 
   const { setPageData } = useAIPageContext();
 
