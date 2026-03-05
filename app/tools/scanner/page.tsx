@@ -1879,9 +1879,9 @@ function ScannerContent() {
                 {bulkViewMode === 'table' && rankedCandidates.length > 0 && (
                   <div style={{ display: 'block', visibility: 'visible', minHeight: 100 }}>
                     <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '40px 100px 65px 65px 70px 130px 55px 55px 60px 50px 90px 85px', gap: 0, borderRadius: 12, border: '1px solid rgba(51, 65, 85, 0.4)', background: 'rgba(15, 23, 42, 0.3)', fontSize: 13, minWidth: 865 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '40px 100px 65px 65px 70px 130px 55px 55px 50px 50px 55px 60px 50px 90px 85px', gap: 0, borderRadius: 12, border: '1px solid rgba(51, 65, 85, 0.4)', background: 'rgba(15, 23, 42, 0.3)', fontSize: 13, minWidth: 1060 }}>
                       {/* Header */}
-                      {['#', 'Symbol', 'Dir', 'Conf', 'Quality', 'Strategy', 'RSI', 'ADX', 'Vol%', 'MTF', 'Volume', 'Rule'].map((h) => (
+                      {['#', 'Symbol', 'Dir', 'Conf', 'Quality', 'Strategy', 'RSI', 'ADX', 'MFI', 'OBV', 'VWAP', 'Vol%', 'MTF', 'Volume', 'Rule'].map((h) => (
                         <div key={h} style={{ padding: '8px', color: '#64748b', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid rgba(51, 65, 85, 0.5)', background: 'rgba(15, 23, 42, 0.95)', whiteSpace: 'nowrap' }}>{h}</div>
                       ))}
                       {/* Rows */}
@@ -1898,6 +1898,9 @@ function ScannerContent() {
                         const volStr = vol == null || !Number.isFinite(vol) ? '—' : vol >= 1e9 ? `$${(vol/1e9).toFixed(1)}B` : vol >= 1e6 ? `$${(vol/1e6).toFixed(1)}M` : vol >= 1e3 ? `$${(vol/1e3).toFixed(0)}K` : `$${vol.toFixed(0)}`;
                         const rsi = pick.indicators?.rsi;
                         const adx = pick.indicators?.adx;
+                        const mfiVal = pick.indicators?.mfi;
+                        const obvVal = pick.indicators?.obv;
+                        const vwapVal = pick.indicators?.vwap;
                         const atrPct = pick.indicators?.atr_percent;
                         const cellStyle = { padding: '7px 8px', color: '#cbd5e1', whiteSpace: 'nowrap' as const, borderBottom: '1px solid rgba(51, 65, 85, 0.2)', cursor: 'pointer' };
                         const handleClick = () => {
@@ -1916,6 +1919,9 @@ function ScannerContent() {
                             <div style={cellStyle} onClick={handleClick}>{strategy}</div>
                             <div style={{ ...cellStyle, textAlign: 'right' }} onClick={handleClick}>{rsi != null && Number.isFinite(rsi) ? rsi.toFixed(0) : '—'}</div>
                             <div style={{ ...cellStyle, textAlign: 'right' }} onClick={handleClick}>{adx != null && Number.isFinite(adx) ? adx.toFixed(0) : '—'}</div>
+                            <div style={{ ...cellStyle, textAlign: 'right' }} onClick={handleClick}>{mfiVal != null && Number.isFinite(mfiVal) ? mfiVal.toFixed(0) : '—'}</div>
+                            <div style={{ ...cellStyle, textAlign: 'right', fontSize: 11 }} onClick={handleClick}>{obvVal != null && Number.isFinite(obvVal) ? (Math.abs(obvVal) >= 1e9 ? `${(obvVal/1e9).toFixed(1)}B` : Math.abs(obvVal) >= 1e6 ? `${(obvVal/1e6).toFixed(1)}M` : Math.abs(obvVal) >= 1e3 ? `${(obvVal/1e3).toFixed(0)}K` : obvVal.toFixed(0)) : '—'}</div>
+                            <div style={{ ...cellStyle, textAlign: 'right', fontSize: 11 }} onClick={handleClick}>{vwapVal != null && Number.isFinite(vwapVal) ? (vwapVal >= 1000 ? `$${vwapVal.toFixed(0)}` : vwapVal >= 1 ? `$${vwapVal.toFixed(2)}` : `$${vwapVal.toFixed(4)}`) : '—'}</div>
                             <div style={{ ...cellStyle, textAlign: 'right' }} onClick={handleClick}>{atrPct != null ? `${atrPct.toFixed(1)}%` : '—'}</div>
                             <div style={{ ...cellStyle, textAlign: 'center' }} onClick={handleClick}>{pick._tfAlignment != null ? `${pick._tfAlignment}/4` : '—'}</div>
                             <div style={{ ...cellStyle, textAlign: 'right' }} onClick={handleClick}>{volStr}</div>
