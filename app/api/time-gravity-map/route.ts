@@ -3,6 +3,7 @@ import { computeTimeGravityMap, type ComputeTGMOptions } from '@/lib/time/timeGr
 import type { MidpointRecord } from '@/lib/time/midpointDebt';
 import { getMidpointService } from '@/lib/midpointService';
 import { getCandleProcessor, parseCoinGeckoOHLC } from '@/lib/candleProcessor';
+import type { OHLCVBar } from '@/lib/candleProcessor';
 import { getOHLC, resolveSymbolToId, symbolToId } from '@/lib/coingecko';
 import { avTryToken } from '@/lib/avRateGovernor';
 import { q } from '@/lib/db';
@@ -38,21 +39,102 @@ function isCryptoSymbol(symbol: string): boolean {
   return false;
 }
 
+// ── Candle aggregation helpers ─────────────────────────────────────────────
+function aggregate1HTo4H(bars: OHLCVBar[]): OHLCVBar[] {
+  const result: OHLCVBar[] = [];
+  for (let i = 0; i < bars.length; i += 4) {
+    const chunk = bars.slice(i, i + 4);
+    if (chunk.length === 0) continue;
+    result.push({
+      time: chunk[chunk.length - 1].time,
+      open: chunk[0].open,
+      high: Math.max(...chunk.map(b => b.high)),
+      low: Math.min(...chunk.map(b => b.low)),
+      close: chunk[chunk.length - 1].close,
+      volume: chunk.reduce((s, b) => s + (b.volume || 0), 0),
+    });
+  }
+  return result;
+}
+
+function aggregateDailyToWeekly(bars: OHLCVBar[]): OHLCVBar[] {
+  const result: OHLCVBar[] = [];
+  // Group by ISO week (Mon–Fri)
+  let weekBars: OHLCVBar[] = [];
+  let currentWeek = -1;
+  for (const bar of bars) {
+    const d = bar.time;
+    // ISO week number
+    const jan4 = new Date(d.getFullYear(), 0, 4);
+    const weekNum = Math.ceil(((d.getTime() - jan4.getTime()) / 86400000 + jan4.getDay() + 1) / 7);
+    const weekKey = d.getFullYear() * 100 + weekNum;
+    if (weekKey !== currentWeek && weekBars.length > 0) {
+      result.push({
+        time: weekBars[weekBars.length - 1].time,
+        open: weekBars[0].open,
+        high: Math.max(...weekBars.map(b => b.high)),
+        low: Math.min(...weekBars.map(b => b.low)),
+        close: weekBars[weekBars.length - 1].close,
+        volume: weekBars.reduce((s, b) => s + (b.volume || 0), 0),
+      });
+      weekBars = [];
+    }
+    currentWeek = weekKey;
+    weekBars.push(bar);
+  }
+  if (weekBars.length > 0) {
+    result.push({
+      time: weekBars[weekBars.length - 1].time,
+      open: weekBars[0].open,
+      high: Math.max(...weekBars.map(b => b.high)),
+      low: Math.min(...weekBars.map(b => b.low)),
+      close: weekBars[weekBars.length - 1].close,
+      volume: weekBars.reduce((s, b) => s + (b.volume || 0), 0),
+    });
+  }
+  return result;
+}
+
+// ── Parse Alpha Vantage time series JSON into OHLCVBar[] ──────────────────
+function parseAVTimeSeries(timeSeries: Record<string, any>): OHLCVBar[] {
+  return Object.entries(timeSeries)
+    .map(([ts, v]: [string, any]) => ({
+      time: new Date(ts),
+      open: parseFloat(v['1. open']),
+      high: parseFloat(v['2. high']),
+      low: parseFloat(v['3. low']),
+      close: parseFloat(v['4. close']),
+      volume: parseInt(v['5. volume'] || v['6. volume'] || '0', 10),
+    }))
+    .filter(b => !isNaN(b.open) && !isNaN(b.close) && b.open > 0)
+    .sort((a, b) => a.time.getTime() - b.time.getTime());
+}
+
+// ── On-demand generation result ───────────────────────────────────────────
+interface OnDemandResult {
+  totalStored: number;
+  timeframesGenerated: string[];
+  rateLimited: boolean;
+  error?: string;
+}
+
 // ── On-demand midpoint generation cache (prevent parallel fetches) ─────────
-const onDemandInFlight = new Map<string, Promise<number>>();
+const onDemandInFlight = new Map<string, Promise<OnDemandResult>>();
 
 /**
  * Fetch candle data and generate midpoints on-demand for a new symbol.
- * Returns the number of midpoints stored.
+ * Generates multi-timeframe midpoints (1H, 4H, 1D, 1W for equity; daily + sub-hour for crypto).
  */
-async function generateMidpointsOnDemand(symbol: string, assetType: 'crypto' | 'equity'): Promise<number> {
+async function generateMidpointsOnDemand(symbol: string, assetType: 'crypto' | 'equity'): Promise<OnDemandResult> {
   const key = `${symbol}:${assetType}`;
   const existing = onDemandInFlight.get(key);
   if (existing) return existing;
 
-  const work = (async () => {
+  const work = (async (): Promise<OnDemandResult> => {
     const processor = getCandleProcessor();
     let totalStored = 0;
+    const timeframesGenerated: string[] = [];
+    let rateLimited = false;
 
     if (assetType === 'crypto') {
       // Strip trailing currency suffix for CoinGecko resolution
@@ -60,58 +142,133 @@ async function generateMidpointsOnDemand(symbol: string, assetType: 'crypto' | '
       const coinId = symbolToId(baseSymbol) || await resolveSymbolToId(baseSymbol);
       if (!coinId) {
         console.warn(`[TGM on-demand] Could not resolve CoinGecko ID for ${symbol}`);
-        return 0;
+        return { totalStored: 0, timeframesGenerated: [], rateLimited: false, error: `Could not resolve symbol ${symbol}` };
       }
 
       // Fetch 30-day daily OHLC (gives ~30 candles)
-      const ohlc30 = await getOHLC(coinId, 30);
-      if (ohlc30 && ohlc30.length > 0) {
-        const bars30 = parseCoinGeckoOHLC(ohlc30 as [number, number, number, number, number][]);
-        totalStored += await processor.processCandleBatch(symbol, 'daily', bars30, 'crypto');
+      try {
+        const ohlc30 = await getOHLC(coinId, 30);
+        if (ohlc30 && ohlc30.length > 0) {
+          const bars30 = parseCoinGeckoOHLC(ohlc30 as [number, number, number, number, number][]);
+          const stored = await processor.processCandleBatch(symbol, 'daily', bars30, 'crypto');
+          totalStored += stored;
+          if (stored > 0) timeframesGenerated.push('1D');
+
+          // Aggregate daily to weekly
+          const weeklyBars = aggregateDailyToWeekly(bars30);
+          if (weeklyBars.length > 0) {
+            const wStored = await processor.processCandleBatch(symbol, '1w', weeklyBars, 'crypto');
+            totalStored += wStored;
+            if (wStored > 0) timeframesGenerated.push('1W');
+          }
+        }
+      } catch (err: any) {
+        console.warn(`[TGM on-demand] CoinGecko daily fetch failed for ${symbol}:`, err?.message);
       }
 
       // Fetch 1-day OHLC (gives ~288 5-min candles → compressed to ~24 1H candles)
-      const ohlc1 = await getOHLC(coinId, 1);
-      if (ohlc1 && ohlc1.length > 0) {
-        const bars1 = parseCoinGeckoOHLC(ohlc1 as [number, number, number, number, number][]);
-        totalStored += await processor.processCandleBatch(symbol, '30min', bars1, 'crypto');
+      try {
+        const ohlc1 = await getOHLC(coinId, 1);
+        if (ohlc1 && ohlc1.length > 0) {
+          const bars1 = parseCoinGeckoOHLC(ohlc1 as [number, number, number, number, number][]);
+          const stored = await processor.processCandleBatch(symbol, '30min', bars1, 'crypto');
+          totalStored += stored;
+          if (stored > 0) timeframesGenerated.push('30m');
+        }
+      } catch (err: any) {
+        console.warn(`[TGM on-demand] CoinGecko intraday fetch failed for ${symbol}:`, err?.message);
       }
 
-      console.log(`[TGM on-demand] Generated ${totalStored} midpoints for crypto ${symbol} (coinId: ${coinId})`);
+      console.log(`[TGM on-demand] Generated ${totalStored} midpoints for crypto ${symbol} (${timeframesGenerated.join(', ')})`);
     } else {
-      // Equity: fetch daily bars from Alpha Vantage
-      const canFetch = await avTryToken();
-      if (!canFetch) {
-        console.warn(`[TGM on-demand] AV rate limit hit, skipping ${symbol}`);
-        return 0;
+      // ── Equity: Multi-timeframe on-demand generation ──────────────
+      const apiKey = process.env.ALPHA_VANTAGE_API_KEY || '';
+      if (!apiKey) {
+        return { totalStored: 0, timeframesGenerated: [], rateLimited: false, error: 'No API key configured' };
       }
 
-      const apiKey = process.env.ALPHA_VANTAGE_API_KEY || '';
-      const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${encodeURIComponent(symbol)}&outputsize=compact&entitlement=realtime&apikey=${apiKey}`;
-      const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
-      if (!res.ok) return 0;
+      // 1. Fetch daily bars (compact = ~100 trading days)
+      const canFetchDaily = avTryToken();
+      if (!canFetchDaily) {
+        console.warn(`[TGM on-demand] AV rate limit hit for daily fetch, skipping ${symbol}`);
+        rateLimited = true;
+      } else {
+        try {
+          const dailyUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${encodeURIComponent(symbol)}&outputsize=compact&entitlement=realtime&apikey=${apiKey}`;
+          const dailyRes = await fetch(dailyUrl, { signal: AbortSignal.timeout(15000) });
+          if (dailyRes.ok) {
+            const dailyJson = await dailyRes.json();
+            if (dailyJson['Error Message']) {
+              console.warn(`[TGM on-demand] AV error for ${symbol} daily:`, dailyJson['Error Message']);
+            } else if (dailyJson['Note'] || dailyJson['Information']) {
+              console.warn(`[TGM on-demand] AV limit note for ${symbol}:`, dailyJson['Note'] || dailyJson['Information']);
+              rateLimited = true;
+            } else {
+              const tsKey = Object.keys(dailyJson).find(k => k.startsWith('Time Series'));
+              if (tsKey && dailyJson[tsKey]) {
+                const dailyBars = parseAVTimeSeries(dailyJson[tsKey]);
 
-      const json = await res.json();
-      if (json['Error Message'] || json['Note']) return 0;
+                // Store daily midpoints (last 100 bars)
+                if (dailyBars.length > 0) {
+                  const dStored = await processor.processCandleBatch(symbol, 'daily', dailyBars.slice(-100), 'equity');
+                  totalStored += dStored;
+                  if (dStored > 0) timeframesGenerated.push('1D');
 
-      const tsKey = Object.keys(json).find(k => k.startsWith('Time Series'));
-      if (!tsKey || !json[tsKey]) return 0;
+                  // Aggregate daily → weekly (no extra API call)
+                  const weeklyBars = aggregateDailyToWeekly(dailyBars);
+                  if (weeklyBars.length > 0) {
+                    const wStored = await processor.processCandleBatch(symbol, '1w', weeklyBars, 'equity');
+                    totalStored += wStored;
+                    if (wStored > 0) timeframesGenerated.push('1W');
+                  }
+                }
+              }
+            }
+          }
+        } catch (err: any) {
+          console.warn(`[TGM on-demand] AV daily fetch failed for ${symbol}:`, err?.message);
+        }
+      }
 
-      const timeSeries = json[tsKey];
-      const avBars = Object.entries(timeSeries)
-        .map(([ts, v]: [string, any]) => ({
-          time: new Date(ts),
-          open: parseFloat(v['1. open']),
-          high: parseFloat(v['2. high']),
-          low: parseFloat(v['3. low']),
-          close: parseFloat(v['4. close']),
-          volume: parseInt(v['5. volume'] || '0', 10),
-        }))
-        .sort((a, b) => a.time.getTime() - b.time.getTime())
-        .slice(-30); // Last 30 days
+      // 2. Fetch intraday 60min bars for 1H + 4H (1 extra API call)
+      const canFetchIntraday = avTryToken();
+      if (!canFetchIntraday) {
+        console.warn(`[TGM on-demand] AV rate limit hit for intraday fetch, skipping ${symbol}`);
+        if (totalStored === 0) rateLimited = true;
+      } else {
+        try {
+          const intradayUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(symbol)}&interval=60min&outputsize=compact&entitlement=realtime&apikey=${apiKey}`;
+          const intradayRes = await fetch(intradayUrl, { signal: AbortSignal.timeout(15000) });
+          if (intradayRes.ok) {
+            const intradayJson = await intradayRes.json();
+            if (!intradayJson['Error Message'] && !intradayJson['Note'] && !intradayJson['Information']) {
+              const tsKey = Object.keys(intradayJson).find(k => k.startsWith('Time Series'));
+              if (tsKey && intradayJson[tsKey]) {
+                const hourlyBars = parseAVTimeSeries(intradayJson[tsKey]);
 
-      totalStored = await processor.processCandleBatch(symbol, 'daily', avBars, 'equity');
-      console.log(`[TGM on-demand] Generated ${totalStored} midpoints for equity ${symbol}`);
+                // Store 1H midpoints
+                if (hourlyBars.length > 0) {
+                  const hStored = await processor.processCandleBatch(symbol, '1H', hourlyBars, 'equity');
+                  totalStored += hStored;
+                  if (hStored > 0) timeframesGenerated.push('1H');
+
+                  // Aggregate 1H → 4H (no extra API call)
+                  const fourHourBars = aggregate1HTo4H(hourlyBars);
+                  if (fourHourBars.length > 0) {
+                    const fhStored = await processor.processCandleBatch(symbol, '4H', fourHourBars, 'equity');
+                    totalStored += fhStored;
+                    if (fhStored > 0) timeframesGenerated.push('4H');
+                  }
+                }
+              }
+            }
+          }
+        } catch (err: any) {
+          console.warn(`[TGM on-demand] AV intraday fetch failed for ${symbol}:`, err?.message);
+        }
+      }
+
+      console.log(`[TGM on-demand] Generated ${totalStored} midpoints for equity ${symbol} (${timeframesGenerated.join(', ') || 'none'})`);
     }
 
     // Add to symbol_universe so the worker maintains it going forward
@@ -124,7 +281,7 @@ async function generateMidpointsOnDemand(symbol: string, assetType: 'crypto' | '
       );
     } catch { /* non-fatal */ }
 
-    return totalStored;
+    return { totalStored, timeframesGenerated, rateLimited };
   })();
 
   onDemandInFlight.set(key, work);
@@ -143,6 +300,7 @@ export async function GET(request: NextRequest) {
     const priceStr = searchParams.get('price');
     const midpointsStr = searchParams.get('midpoints');
     const maxDistance = parseFloat(searchParams.get('maxDistance') || '10');
+    const forceGenerate = searchParams.get('forceGenerate') === '1';
     
     if (!symbol) {
       return NextResponse.json(
@@ -168,6 +326,8 @@ export async function GET(request: NextRequest) {
     }
     
     let midpoints: MidpointRecord[] = [];
+    let generationAttempted = false;
+    let generationResult: OnDemandResult | null = null;
     
     // Priority 1: Custom midpoints from query param
     if (midpointsStr) {
@@ -214,18 +374,19 @@ export async function GET(request: NextRequest) {
           limit: 100,
         });
 
-        // ── ON-DEMAND: No midpoints in DB → fetch candles & generate ──
-        if (midpoints.length === 0) {
+        // ── ON-DEMAND: No midpoints in DB or user forced regeneration ──
+        if (midpoints.length === 0 || forceGenerate) {
           const assetType = isCryptoSymbol(symbol) ? 'crypto' : 'equity';
-          console.log(`[TGM API] No midpoints for ${symbol}, generating on-demand (${assetType})...`);
-          const generated = await generateMidpointsOnDemand(symbol, assetType);
-          if (generated > 0) {
+          console.log(`[TGM API] ${forceGenerate ? 'Force generating' : 'No midpoints for'} ${symbol}, on-demand (${assetType})...`);
+          generationResult = await generateMidpointsOnDemand(symbol, assetType);
+          generationAttempted = true;
+          if (generationResult.totalStored > 0) {
             // Re-fetch the freshly stored midpoints
             midpoints = await service.getUntaggedMidpoints(symbol, currentPrice, {
               maxDistancePercent: maxDistance,
               limit: 100,
             });
-            console.log(`[TGM API] On-demand: ${generated} stored, ${midpoints.length} within range for ${symbol}`);
+            console.log(`[TGM API] On-demand: ${generationResult.totalStored} stored, ${midpoints.length} within range for ${symbol}`);
           }
         }
       } catch (error) {
@@ -251,7 +412,7 @@ export async function GET(request: NextRequest) {
     // Determine data source
     const dataSource = midpointsStr ? 'custom' : 'database';
     
-    // Return full TGM data
+    // Return full TGM data with generation status
     return NextResponse.json({
       success: true,
       symbol,
@@ -260,6 +421,14 @@ export async function GET(request: NextRequest) {
       midpointCount: midpoints.length,
       targetStatus: tgm.targetStatus,
       data: tgm,
+      // On-demand generation status (helps widget show proper feedback)
+      generationAttempted,
+      generationResult: generationAttempted ? {
+        stored: generationResult?.totalStored ?? 0,
+        timeframes: generationResult?.timeframesGenerated ?? [],
+        rateLimited: generationResult?.rateLimited ?? false,
+        error: generationResult?.error,
+      } : undefined,
     });
     
   } catch (error) {

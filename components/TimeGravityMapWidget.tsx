@@ -549,20 +549,35 @@ export default function TimeGravityMapWidget({
   const [tgm, setTGM] = useState<TimeGravityMap | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resolvedPrice, setResolvedPrice] = useState<number>(currentPrice || 0);
+  const [midpointCount, setMidpointCount] = useState<number>(-1); // -1 = unknown
+  const [generationInfo, setGenerationInfo] = useState<{
+    attempted: boolean;
+    stored: number;
+    timeframes: string[];
+    rateLimited: boolean;
+    error?: string;
+  } | null>(null);
   
   // Fetch TGM data from API
-  const fetchTGM = async () => {
+  const fetchTGM = async (forceGenerate = false) => {
     if (!symbol) return;
     
-    setLoading(true);
+    if (forceGenerate) {
+      setGenerating(true);
+    } else {
+      setLoading(true);
+    }
     setError(null);
+    setGenerationInfo(null);
     
     try {
       const params = new URLSearchParams({ symbol });
       if (currentPrice) params.set('price', String(currentPrice));
       if (assetType) params.set('assetType', assetType);
+      if (forceGenerate) params.set('forceGenerate', '1');
       
       const res = await fetch(`/api/time-gravity-map?${params}`);
       if (!res.ok) {
@@ -572,10 +587,29 @@ export default function TimeGravityMapWidget({
       
       const data = await res.json();
       
+      // Track midpoint count and generation info from API
+      const apiMidpointCount = data.midpointCount ?? 0;
+      setMidpointCount(apiMidpointCount);
+      
+      if (data.generationAttempted) {
+        setGenerationInfo({
+          attempted: true,
+          stored: data.generationResult?.stored ?? 0,
+          timeframes: data.generationResult?.timeframes ?? [],
+          rateLimited: data.generationResult?.rateLimited ?? false,
+          error: data.generationResult?.error,
+        });
+      }
+      
       if (data.data) {
         setTGM(data.data);
         setResolvedPrice(currentPrice || 0);
         setLastUpdate(new Date());
+        
+        // If we got TGM data but zero midpoints, don't treat as success
+        if (apiMidpointCount === 0 && !data.generationAttempted) {
+          // First load with no data — will show empty state with generate button
+        }
       } else if (data.midpoints && data.midpoints.length > 0) {
         // Fallback: compute client-side from midpoints
         const price = data.currentPrice || currentPrice || 0;
@@ -584,9 +618,8 @@ export default function TimeGravityMapWidget({
           setTGM(result);
           setResolvedPrice(price);
           setLastUpdate(new Date());
+          setMidpointCount(data.midpoints.length);
         }
-      } else {
-        setError('No midpoint data available. Run backfill first.');
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load Time Gravity Map');
@@ -597,10 +630,12 @@ export default function TimeGravityMapWidget({
         setTGM(result);
         setResolvedPrice(currentPrice!);
         setLastUpdate(new Date());
+        setMidpointCount(externalMidpoints.length);
         setError(null);
       }
     } finally {
       setLoading(false);
+      setGenerating(false);
     }
   };
   
@@ -629,18 +664,30 @@ export default function TimeGravityMapWidget({
       </div>
     );
   }
+
+  if (generating) {
+    return (
+      <div className={`bg-slate-900/60 border border-slate-800 rounded-lg p-6 ${className}`}>
+        <div className="text-center">
+          <div className="text-slate-400 text-sm mb-2">🧲 Time Gravity Map</div>
+          <div className="animate-pulse text-cyan-400 text-sm mb-1">Generating midpoint data for {symbol}...</div>
+          <div className="text-slate-500 text-xs">Fetching candles across multiple timeframes (1H, 4H, 1D, 1W)</div>
+        </div>
+      </div>
+    );
+  }
   
   if (error && !tgm) {
     return (
       <div className={`bg-slate-900/60 border border-slate-800 rounded-lg p-6 ${className}`}>
         <div className="text-center">
           <div className="text-slate-400 text-sm mb-2">🧲 Time Gravity Map</div>
-          <div className="text-amber-400/80 text-xs">{error}</div>
+          <div className="text-amber-400/80 text-xs mb-2">{error}</div>
           <button 
-            onClick={fetchTGM}
-            className="mt-3 px-3 py-1.5 text-xs border border-slate-700 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors"
+            onClick={() => fetchTGM(true)}
+            className="mt-1 px-4 py-2 text-xs font-semibold border border-cyan-600 bg-cyan-950/40 rounded-lg text-cyan-300 hover:bg-cyan-900/60 transition-colors"
           >
-            Retry
+            🔄 Generate Data for {symbol}
           </button>
         </div>
       </div>
@@ -656,6 +703,13 @@ export default function TimeGravityMapWidget({
       </div>
     );
   }
+
+  // ── Empty state: TGM loaded but zero midpoints ──────────────────────────
+  const hasNoData = midpointCount === 0 && tgm.allPoints.length === 0;
+  
+  // Check if generation was attempted but produced nothing useful
+  const generationFailed = generationInfo?.attempted && generationInfo.stored === 0;
+  const wasRateLimited = generationInfo?.rateLimited;
   
   if (variant === 'compact') {
     return (
@@ -722,6 +776,60 @@ export default function TimeGravityMapWidget({
       
       {/* Target Status Banner */}
       <TargetStatusBanner tgm={tgm} />
+
+      {/* ── Empty state: No midpoint data for this symbol ────────────── */}
+      {hasNoData && (
+        <div className="bg-slate-950/60 border border-slate-700 rounded-lg p-5 mb-4 text-center">
+          <div className="text-slate-300 text-sm font-semibold mb-1">
+            No midpoint data for {symbol}
+          </div>
+          {wasRateLimited ? (
+            <p className="text-amber-400/80 text-xs mb-3">
+              API rate limit reached — try again in a moment.
+            </p>
+          ) : generationFailed ? (
+            <p className="text-amber-400/80 text-xs mb-3">
+              {generationInfo?.error || 'On-demand generation returned no data. The symbol may not be available via the market data provider.'}
+            </p>
+          ) : generationInfo?.attempted && generationInfo.stored > 0 ? (
+            <p className="text-green-400/80 text-xs mb-3">
+              Generated {generationInfo.stored} midpoints ({generationInfo.timeframes.join(', ')}), but none are within the current price range. Try widening the search distance.
+            </p>
+          ) : (
+            <p className="text-slate-500 text-xs mb-3">
+              This symbol hasn&apos;t been scanned yet. Click below to generate gravity map data across multiple timeframes.
+            </p>
+          )}
+          <button
+            onClick={() => fetchTGM(true)}
+            disabled={generating}
+            className="px-5 py-2.5 text-sm font-semibold border border-cyan-600 bg-cyan-950/40 rounded-lg text-cyan-300 hover:bg-cyan-900/60 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            {generating ? (
+              <span className="flex items-center gap-2">
+                <span className="animate-spin inline-block w-3 h-3 border-2 border-cyan-400 border-t-transparent rounded-full" />
+                Generating...
+              </span>
+            ) : wasRateLimited ? (
+              '🔄 Retry Generation'
+            ) : (
+              '🧲 Generate Gravity Map Data'
+            )}
+          </button>
+          <p className="text-slate-600 text-[10px] mt-2">
+            Fetches 1H, 4H, Daily & Weekly candle data and stores midpoints for the Time Gravity Map.
+            Data persists and is maintained by the background worker going forward.
+          </p>
+        </div>
+      )}
+
+      {/* Generation success banner (when data was just generated for the first time) */}
+      {generationInfo?.attempted && generationInfo.stored > 0 && !hasNoData && (
+        <div className="bg-green-950/30 border border-green-600/40 rounded-lg px-3 py-2 mb-3 text-xs text-green-400 flex items-center gap-2">
+          <span>✅</span>
+          <span>Generated {generationInfo.stored} midpoints ({generationInfo.timeframes.join(', ')}) — data is now stored for future scans</span>
+        </div>
+      )}
       
       {/* Momentum Override Banner (when active) */}
       {tgm.momentumOverride?.isOverride && (

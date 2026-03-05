@@ -20,8 +20,9 @@ const processor = new CandleProcessor();
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
-// Priority equity symbols to backfill
+// Priority equity symbols to backfill — Top 25 stocks for Time Gravity Map
 const EQUITY_SYMBOLS = [
+  // Mega-cap tech
   'AAPL',   // Apple
   'MSFT',   // Microsoft
   'GOOGL',  // Google
@@ -29,9 +30,30 @@ const EQUITY_SYMBOLS = [
   'NVDA',   // NVIDIA
   'TSLA',   // Tesla
   'META',   // Meta
+  // Semiconductors
+  'AMD',    // AMD
+  'AVGO',   // Broadcom
+  'MU',     // Micron
+  // Software / Cloud
+  'CRM',    // Salesforce
+  'ADBE',   // Adobe
+  'NFLX',   // Netflix
+  // Financials
+  'JPM',    // JPMorgan Chase
+  'V',      // Visa
+  'MA',     // Mastercard
+  // Consumer / Industrial
+  'COST',   // Costco
+  'HD',     // Home Depot
+  'DIS',    // Disney
+  'BA',     // Boeing
+  // Crypto-adjacent / Fintech
+  'COIN',   // Coinbase
+  'PYPL',   // PayPal
+  // Major ETFs
   'SPY',    // S&P 500 ETF
   'QQQ',    // Nasdaq ETF
-  'IWM'     // Russell 2000 ETF
+  'IWM',    // Russell 2000 ETF
 ];
 
 // Timeframe configurations for equities
