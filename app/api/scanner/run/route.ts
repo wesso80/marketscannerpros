@@ -136,6 +136,8 @@ interface ScanResult {
   aroon_up?: number;
   aroon_down?: number;
   obv?: number;
+  mfi?: number;
+  vwap?: number;
   lastCandleTime?: string;
   // Computed trade setup fields (populated by both cached and AV paths)
   confidence?: number;
@@ -480,6 +482,37 @@ export async function POST(req: NextRequest) {
       const first = Object.values(ta)[0] as any;
       console.debug("[scanner] AROON", { sym, avInterval, hasTA: !!first });
       return { up: first ? Number(first?.["Aroon Up"]) : NaN, down: first ? Number(first?.["Aroon Down"]) : NaN };
+    }
+
+    async function fetchVWAP(sym: string) {
+      // VWAP is only available for intraday intervals
+      if (avInterval === 'daily') return NaN;
+      const url = `https://www.alphavantage.co/query?function=VWAP&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&entitlement=realtime&apikey=${ALPHA_KEY}`;
+      const j = await fetchAlphaJson(url, `VWAP ${sym}`);
+      const ta = j["Technical Analysis: VWAP"] || {};
+      const first = Object.values(ta)[0] as any;
+      console.debug("[scanner] VWAP", { sym, avInterval, hasTA: !!first });
+      return first ? Number(first?.VWAP) : NaN;
+    }
+
+    async function fetchOBV(sym: string) {
+      const url = `https://www.alphavantage.co/query?function=OBV&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&entitlement=realtime&apikey=${ALPHA_KEY}`;
+      const j = await fetchAlphaJson(url, `OBV ${sym}`);
+      const ta = j["Technical Analysis: OBV"] || {};
+      const entries = Object.values(ta) as any[];
+      const current = entries[0] ? Number(entries[0]?.OBV) : NaN;
+      const prev = entries[1] ? Number(entries[1]?.OBV) : NaN;
+      console.debug("[scanner] OBV", { sym, avInterval, current });
+      return { obv: current, obvPrev: prev };
+    }
+
+    async function fetchMFI(sym: string) {
+      const url = `https://www.alphavantage.co/query?function=MFI&symbol=${encodeURIComponent(sym)}&interval=${avInterval}&time_period=14&entitlement=realtime&apikey=${ALPHA_KEY}`;
+      const j = await fetchAlphaJson(url, `MFI ${sym}`);
+      const ta = j["Technical Analysis: MFI"] || {};
+      const first = Object.values(ta)[0] as any;
+      console.debug("[scanner] MFI", { sym, avInterval, hasTA: !!first });
+      return first ? Number(first?.MFI) : NaN;
     }
 
     async function fetchEquityPrice(sym: string) {
@@ -832,6 +865,38 @@ export async function POST(req: NextRequest) {
       return obv_vals;
     }
 
+    // Money Flow Index (volume-weighted RSI, 0-100)
+    function mfi(highs: number[], lows: number[], closes: number[], volumes: number[], period = 14): number[] {
+      const result: number[] = new Array(closes.length).fill(NaN);
+      const typicalPrices = closes.map((c, i) => (highs[i] + lows[i] + c) / 3);
+      const rawMF = typicalPrices.map((tp, i) => tp * volumes[i]);
+      for (let i = period; i < closes.length; i++) {
+        let posFlow = 0;
+        let negFlow = 0;
+        for (let j = i - period + 1; j <= i; j++) {
+          if (typicalPrices[j] > typicalPrices[j - 1]) posFlow += rawMF[j];
+          else if (typicalPrices[j] < typicalPrices[j - 1]) negFlow += rawMF[j];
+        }
+        const ratio = negFlow > 0 ? posFlow / negFlow : 100;
+        result[i] = 100 - 100 / (1 + ratio);
+      }
+      return result;
+    }
+
+    // VWAP (cumulative within the candle set — resets daily in real intraday, here runs across full set)
+    function vwap(highs: number[], lows: number[], closes: number[], volumes: number[]): number[] {
+      const result: number[] = [];
+      let cumTPV = 0;
+      let cumVol = 0;
+      for (let i = 0; i < closes.length; i++) {
+        const tp = (highs[i] + lows[i] + closes[i]) / 3;
+        cumTPV += tp * volumes[i];
+        cumVol += volumes[i];
+        result.push(cumVol > 0 ? cumTPV / cumVol : tp);
+      }
+      return result;
+    }
+
     function computeScore(
       close: number | undefined, 
       ema200: number, 
@@ -1060,6 +1125,8 @@ export async function POST(req: NextRequest) {
           const cciVal = cci(highs, lows, closes, 20);
           const aroonObj = aroon(highs, lows, 25);
           const obvArr = obv(closes, volumes);
+          const mfiArr = mfi(highs, lows, closes, volumes, 14);
+          const vwapArr = vwap(highs, lows, closes, volumes);
           
           const last = closes.length - 1;
           const rsiVal = rsiArr[last];
@@ -1072,6 +1139,8 @@ export async function POST(req: NextRequest) {
           const price = close;
           const obvCurrent = obvArr[last];
           const obvPrev = obvArr[last - 1];
+          const mfiVal = mfiArr[last];
+          const vwapVal = vwapArr[last];
           
           // Prepare chart data (last 50 candles for visualization)
           const chartLength = Math.min(50, candles.length);
@@ -1111,6 +1180,8 @@ export async function POST(req: NextRequest) {
             aroon_up: aroonObj.up,
             aroon_down: aroonObj.down,
             obv: obvArr[last] ?? NaN,
+            mfi: mfiVal,
+            vwap: vwapVal,
             lastCandleTime,
             chartData: {
               candles: chartCandles,
@@ -1233,6 +1304,8 @@ export async function POST(req: NextRequest) {
           const cciVal = cci(highs, lows, closes, 20);
           const aroonObj = aroon(highs, lows, 25);
           const obvArr = obv(closes, volumes);
+          const mfiArr = mfi(highs, lows, closes, volumes, 14);
+          const vwapArr = vwap(highs, lows, closes, volumes);
           
           const last = closes.length - 1;
           const rsiVal = rsiArr[last];
@@ -1245,6 +1318,8 @@ export async function POST(req: NextRequest) {
           const price = close;
           const obvCurrent = obvArr[last];
           const obvPrev = obvArr[last - 1];
+          const mfiValForex = mfiArr[last];
+          const vwapValForex = vwapArr[last];
           
           const scoreResult = computeScore(close, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxObj.adx, stochObj.k, aroonObj.up, aroonObj.down, cciVal, obvCurrent, obvPrev);
           const item: ScanResult & { direction?: string; signals?: any } = {
@@ -1266,6 +1341,8 @@ export async function POST(req: NextRequest) {
             aroon_up: aroonObj.up,
             aroon_down: aroonObj.down,
             obv: obvArr[last] ?? NaN,
+            mfi: mfiValForex,
+            vwap: vwapValForex,
             lastCandleTime,
           };
           // Compute enhancements for forex
@@ -1431,6 +1508,8 @@ export async function POST(req: NextRequest) {
             const cciVal = cci(highs, lows, closes, 20);
             const aroonObj = aroon(highs, lows, 25);
             const obvArr = obv(closes, volumes);
+            const mfiArr = mfi(highs, lows, closes, volumes, 14);
+            const vwapArr = vwap(highs, lows, closes, volumes);
 
             const last = closes.length - 1;
             let price = closes[last];
@@ -1447,6 +1526,8 @@ export async function POST(req: NextRequest) {
             const atrVal = atrArr[last - 1];
             const obvCurrent = obvArr[last];
             const obvPrev = obvArr[last - 1];
+            const mfiValEq = mfiArr.length ? mfiArr[mfiArr.length - 1] : undefined;
+            const vwapValEq = vwapArr.length ? vwapArr[vwapArr.length - 1] : undefined;
             const lastCandleTime = candles[last]?.t;
 
             const scoreResult = computeScore(
@@ -1502,6 +1583,8 @@ export async function POST(req: NextRequest) {
               aroon_up: aroonObj.up,
               aroon_down: aroonObj.down,
               obv: obvCurrent,
+              mfi: mfiValEq,
+              vwap: vwapValEq,
               lastCandleTime,
               // Chart data (last 50 candles) for equity AV path
               chartData: (() => {

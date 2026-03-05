@@ -18,19 +18,29 @@ const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 // These trade in real-time and closely track the underlying commodity
 const ETF_PROXIES: Record<string, { etf: string; multiplier: number; description: string }> = {
   WTI:         { etf: 'USO',  multiplier: 1,   description: 'United States Oil Fund' },
+  BRENT:       { etf: 'BNO',  multiplier: 1,   description: 'United States Brent Oil Fund' },
   NATURAL_GAS: { etf: 'UNG',  multiplier: 1,   description: 'United States Natural Gas Fund' },
   COPPER:      { etf: 'CPER', multiplier: 1,   description: 'United States Copper Index Fund' },
   WHEAT:       { etf: 'WEAT', multiplier: 1,   description: 'Teucrium Wheat Fund' },
+  CORN:        { etf: 'CORN', multiplier: 1,   description: 'Teucrium Corn Fund' },
+  SUGAR:       { etf: 'CANE', multiplier: 1,   description: 'Teucrium Sugar Fund' },
+  COFFEE:      { etf: 'JO',   multiplier: 1,   description: 'iPath Series B Bloomberg Coffee ETN' },
 };
 
 // Core commodities config (legacy endpoints used as fallback only)
 const COMMODITIES = {
   WTI: { function: 'WTI', name: 'WTI Crude Oil', unit: '$/barrel', category: 'Energy', interval: 'daily' },
+  BRENT: { function: 'BRENT', name: 'Brent Crude Oil', unit: '$/barrel', category: 'Energy', interval: 'daily' },
   NATURAL_GAS: { function: 'NATURAL_GAS', name: 'Natural Gas', unit: '$/MMBtu', category: 'Energy', interval: 'daily' },
   GOLD: { function: 'GOLD_SILVER_SPOT', symbol: 'GOLD', name: 'Gold', unit: '$/oz', category: 'Metals', isPreciousMetal: true },
   SILVER: { function: 'GOLD_SILVER_SPOT', symbol: 'SILVER', name: 'Silver', unit: '$/oz', category: 'Metals', isPreciousMetal: true },
   COPPER: { function: 'COPPER', name: 'Copper', unit: '$/lb', category: 'Metals', interval: 'monthly' },
+  ALUMINUM: { function: 'ALUMINUM', name: 'Aluminum', unit: '$/metric ton', category: 'Metals', interval: 'monthly' },
   WHEAT: { function: 'WHEAT', name: 'Wheat', unit: '$/bushel', category: 'Agriculture', interval: 'monthly' },
+  CORN: { function: 'CORN', name: 'Corn', unit: '$/bushel', category: 'Agriculture', interval: 'monthly' },
+  COTTON: { function: 'COTTON', name: 'Cotton', unit: '$/lb', category: 'Agriculture', interval: 'monthly' },
+  SUGAR: { function: 'SUGAR', name: 'Sugar', unit: '$/lb', category: 'Agriculture', interval: 'monthly' },
+  COFFEE: { function: 'COFFEE', name: 'Coffee', unit: '$/lb', category: 'Agriculture', interval: 'monthly' },
 };
 
 // Cache for commodity data (15 minute TTL - commodities update less frequently)
