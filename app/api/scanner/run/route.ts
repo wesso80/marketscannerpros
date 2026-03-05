@@ -1172,11 +1172,29 @@ export async function POST(req: NextRequest) {
           }));
           
           const scoreResult = computeScore(close, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxObj.adx, stochObj.k, aroonObj.up, aroonObj.down, cciVal, obvCurrent, obvPrev);
+
+          // Compute trade setup fields (same logic as equity cached/AV paths)
+          const dirLabelCrypto = scoreResult.direction === 'bearish' ? 'SHORT' : 'LONG';
+          const atrSafeCrypto = Number.isFinite(atrVal) ? atrVal : price * 0.02;
+          const entryPriceCrypto = price;
+          const stopPriceCrypto = dirLabelCrypto === 'LONG' ? price - atrSafeCrypto * 1.5 : price + atrSafeCrypto * 1.5;
+          const targetPriceCrypto = dirLabelCrypto === 'LONG' ? price + atrSafeCrypto * 3 : price - atrSafeCrypto * 3;
+          const riskPerUnitCrypto = Math.abs(entryPriceCrypto - stopPriceCrypto);
+          const rMultipleCalcCrypto = riskPerUnitCrypto > 0 ? Math.abs(targetPriceCrypto - entryPriceCrypto) / riskPerUnitCrypto : 0;
+          const confidenceCalcCrypto = Math.min(99, Math.abs(scoreResult.score));
+          const setupLabelCrypto = `${scoreResult.signals.bullish}B/${scoreResult.signals.bearish}Be signals`;
+
           const item: ScanResult & { direction?: string; signals?: any } = {
             symbol: `${baseSym}-USD`,
             score: scoreResult.score,
             direction: scoreResult.direction,
             signals: scoreResult.signals,
+            confidence: confidenceCalcCrypto,
+            setup: setupLabelCrypto,
+            entry: entryPriceCrypto,
+            stop: Math.max(0, stopPriceCrypto),
+            target: Math.max(0, targetPriceCrypto),
+            rMultiple: Math.round(rMultipleCalcCrypto * 10) / 10,
             timeframe,
             type,
             price,
@@ -1333,11 +1351,29 @@ export async function POST(req: NextRequest) {
           const vwapValForex = vwapArr[last];
           
           const scoreResult = computeScore(close, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxObj.adx, stochObj.k, aroonObj.up, aroonObj.down, cciVal, obvCurrent, obvPrev);
+
+          // Compute trade setup fields for forex (same ATR-based logic as equity/crypto)
+          const dirLabelFx = scoreResult.direction === 'bearish' ? 'SHORT' : 'LONG';
+          const atrSafeFx = Number.isFinite(atrVal) ? atrVal : price * 0.002; // Forex fallback: 0.2% of price (20 pips)
+          const entryPriceFx = price;
+          const stopPriceFx = dirLabelFx === 'LONG' ? price - atrSafeFx * 1.5 : price + atrSafeFx * 1.5;
+          const targetPriceFx = dirLabelFx === 'LONG' ? price + atrSafeFx * 3 : price - atrSafeFx * 3;
+          const riskPerUnitFx = Math.abs(entryPriceFx - stopPriceFx);
+          const rMultipleCalcFx = riskPerUnitFx > 0 ? Math.abs(targetPriceFx - entryPriceFx) / riskPerUnitFx : 0;
+          const confidenceCalcFx = Math.min(99, Math.abs(scoreResult.score));
+          const setupLabelFx = `${scoreResult.signals.bullish}B/${scoreResult.signals.bearish}Be signals`;
+
           const item: ScanResult & { direction?: string; signals?: any } = {
             symbol: sym,
             score: scoreResult.score,
             direction: scoreResult.direction,
             signals: scoreResult.signals,
+            confidence: confidenceCalcFx,
+            setup: setupLabelFx,
+            entry: entryPriceFx,
+            stop: Math.max(0, stopPriceFx),
+            target: Math.max(0, targetPriceFx),
+            rMultiple: Math.round(rMultipleCalcFx * 10) / 10,
             timeframe,
             type,
             price,

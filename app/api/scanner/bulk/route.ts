@@ -11,7 +11,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getDerivativesForSymbols, getOHLC, getMarketData, COINGECKO_ID_MAP } from '@/lib/coingecko';
-import { adx, cci, ema, getIndicatorWarmupStatus, macd, OHLCVBar, rsi, stochastic } from '@/lib/indicators';
+import { adx, atr as atrFn, atrPercent as atrPctFn, cci, ema, getIndicatorWarmupStatus, macd, OHLCVBar, rsi, stochastic } from '@/lib/indicators';
 import { getSessionFromCookie } from '@/lib/auth';
 import {
   OHLCV,
@@ -174,6 +174,8 @@ interface Indicators {
   mfi?: number;
   obv?: number;
   vwap?: number;
+  atr?: number;
+  atr_percent?: number;
 }
 
 function computeScore(indicators: Indicators): { 
@@ -300,6 +302,95 @@ const AV_INTERVAL_MAP: Record<string, string> = {
   '1h': '60min',
   '1d': 'daily'
 };
+
+// ── Alpha Vantage individual indicator fetchers for crypto fallback ──
+// These are used when CoinGecko OHLC enrichment fails (coin not mapped, API error, etc.)
+// AV crypto symbols use format like BTCUSD
+async function fetchAVCryptoIndicators(
+  symbol: string,
+  timeframe: string
+): Promise<Partial<Indicators> | null> {
+  if (!ALPHA_KEY) return null;
+  const avInterval = AV_INTERVAL_MAP[timeframe] || 'daily';
+  // Convert crypto symbol to AV format: BTC → BTCUSD
+  const avSym = `${symbol.toUpperCase()}USD`;
+
+  const safeFetch = async (url: string, label: string): Promise<any> => {
+    try {
+      await avTakeToken();
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) return null;
+      const j = await res.json();
+      if (j.Note || j.Information || j['Error Message']) {
+        console.warn(`[bulk-scan/AV] ${label} rate-limited or error for ${avSym}`);
+        return null;
+      }
+      return j;
+    } catch (err: any) {
+      console.warn(`[bulk-scan/AV] ${label} fetch error for ${avSym}:`, err.message);
+      return null;
+    }
+  };
+
+  // Fire 4 AV calls in parallel: RSI, ADX, ATR, MACD
+  const [rsiJ, adxJ, atrJ, macdJ] = await Promise.all([
+    safeFetch(
+      `https://www.alphavantage.co/query?function=RSI&symbol=${encodeURIComponent(avSym)}&interval=${avInterval}&time_period=14&series_type=close&entitlement=realtime&apikey=${ALPHA_KEY}`,
+      'RSI'
+    ),
+    safeFetch(
+      `https://www.alphavantage.co/query?function=ADX&symbol=${encodeURIComponent(avSym)}&interval=${avInterval}&time_period=14&entitlement=realtime&apikey=${ALPHA_KEY}`,
+      'ADX'
+    ),
+    safeFetch(
+      `https://www.alphavantage.co/query?function=ATR&symbol=${encodeURIComponent(avSym)}&interval=${avInterval}&time_period=14&entitlement=realtime&apikey=${ALPHA_KEY}`,
+      'ATR'
+    ),
+    safeFetch(
+      `https://www.alphavantage.co/query?function=MACD&symbol=${encodeURIComponent(avSym)}&interval=${avInterval}&series_type=close&entitlement=realtime&apikey=${ALPHA_KEY}`,
+      'MACD'
+    ),
+  ]);
+
+  const result: Partial<Indicators> = {};
+  let anyValid = false;
+
+  // Parse RSI
+  const rsiTA = rsiJ?.["Technical Analysis: RSI"];
+  if (rsiTA) {
+    const first = Object.values(rsiTA)[0] as any;
+    if (first?.RSI) { result.rsi = Number(first.RSI); anyValid = true; }
+  }
+
+  // Parse ADX
+  const adxTA = adxJ?.["Technical Analysis: ADX"];
+  if (adxTA) {
+    const first = Object.values(adxTA)[0] as any;
+    if (first?.ADX) { result.adx = Number(first.ADX); anyValid = true; }
+  }
+
+  // Parse ATR
+  const atrTA = atrJ?.["Technical Analysis: ATR"];
+  if (atrTA) {
+    const first = Object.values(atrTA)[0] as any;
+    if (first?.ATR) { result.atr = Number(first.ATR); anyValid = true; }
+  }
+
+  // Parse MACD
+  const macdTA = macdJ?.["Technical Analysis: MACD"];
+  if (macdTA) {
+    const first = Object.values(macdTA)[0] as any;
+    if (first?.MACD) {
+      result.macd = Number(first.MACD);
+      result.macdSignal = Number(first.MACD_Signal);
+      anyValid = true;
+    }
+  }
+
+  if (!anyValid) return null;
+  console.log(`[bulk-scan/AV] Got indicators for ${avSym}: RSI=${result.rsi}, ADX=${result.adx}, ATR=${result.atr}, MACD=${result.macd}`);
+  return result;
+}
 
 // Fetch crypto OHLCV data from CoinGecko (Commercial licensed - 500 calls/min)
 async function fetchCoinGeckoData(symbol: string, timeframe: string = '1d'): Promise<OHLCV[] | null> {
@@ -502,6 +593,10 @@ function analyzeAssetByTimeframe(
     vwapValue = cumVol > 0 ? cumTPV / cumVol : undefined;
   }
 
+  // ATR (Average True Range)
+  const atrValue = atrFn(bars);
+  const atrPctValue = atrPctFn(bars);
+
   const indicators: Indicators = {
     price,
     ema200: emaValue ?? Number.NaN,
@@ -518,6 +613,8 @@ function analyzeAssetByTimeframe(
     mfi: Number.isFinite(mfiValue) ? Math.round(mfiValue! * 10) / 10 : undefined,
     obv: Number.isFinite(obvValue) ? obvValue : undefined,
     vwap: Number.isFinite(vwapValue) ? Math.round(vwapValue! * 100) / 100 : undefined,
+    atr: Number.isFinite(atrValue) ? atrValue! : undefined,
+    atr_percent: Number.isFinite(atrPctValue) ? Math.round(atrPctValue! * 100) / 100 : undefined,
   };
   
   const { score, direction, signals } = computeScore(indicators);
@@ -930,6 +1027,95 @@ function scoreLightCryptoCandidate(coin: {
   };
 }
 
+// ── Shared enrichment helpers for crypto picks ──────────────────────────────
+
+/** Classify strategy label from indicator values */
+function classifyStrategy(ind: Indicators, direction: string): string {
+  const rsiVal = Number(ind.rsi);
+  const adxVal = Number(ind.adx);
+  const macdVal = Number(ind.macd);
+  const macdSig = Number(ind.macdSignal);
+  const arUp = Number(ind.aroonUp);
+  const arDn = Number(ind.aroonDown);
+  const stochK = Number(ind.stochK);
+  const ema200 = Number(ind.ema200);
+  const price = ind.price;
+
+  if (adxVal > 25 && Math.abs(arUp - arDn) > 30) {
+    return price > ema200 ? 'TREND_PULLBACK' : 'BREAKOUT_CONTINUATION';
+  }
+  if (rsiVal < 30 || rsiVal > 70) return 'MEAN_REVERSION';
+  if (adxVal < 20 && stochK > 20 && stochK < 80) return 'RANGE_FADE';
+  if (Math.sign(macdVal - macdSig) !== Math.sign(direction === 'bearish' ? -1 : 1)) {
+    return 'MOMENTUM_REVERSAL';
+  }
+  return 'MOMENTUM_REVERSAL';
+}
+
+/** Compute entry / stop / target from ATR and direction */
+function computeTradeParams(price: number, atrVal: number | undefined, direction: string) {
+  const atrSafe = Number.isFinite(atrVal) && atrVal! > 0 ? atrVal! : price * 0.02;
+  const dirLabel = direction === 'bearish' ? 'SHORT' : 'LONG';
+  const entry = price;
+  const stop = dirLabel === 'LONG' ? price - atrSafe * 1.5 : price + atrSafe * 1.5;
+  const target = dirLabel === 'LONG' ? price + atrSafe * 3 : price - atrSafe * 3;
+  const risk = Math.abs(entry - stop);
+  const rMultiple = risk > 0 ? Math.round((Math.abs(target - entry) / risk) * 10) / 10 : 0;
+  return { entry, stop: Math.max(0, stop), target: Math.max(0, target), rMultiple };
+}
+
+/** Enrich a crypto pick with full CoinGecko OHLC-derived indicators */
+function enrichCryptoPick(pick: any, enriched: any): any {
+  const ind = enriched.indicators as Indicators;
+  const setup = classifyStrategy(ind, enriched.direction);
+  const trade = computeTradeParams(ind.price, ind.atr, enriched.direction);
+
+  return {
+    ...pick,
+    score: enriched.score,
+    direction: enriched.direction,
+    signals: enriched.signals,
+    change24h: enriched.change24h,
+    indicators: {
+      ...enriched.indicators,
+      volume: pick.indicators.volume ?? enriched.indicators.volume,
+    },
+    setup,
+    ...trade,
+  };
+}
+
+/** Enrich a crypto pick with Alpha Vantage individual indicator values (fallback) */
+function enrichCryptoPickFromAV(pick: any, avInd: Partial<Indicators>): any {
+  const price = pick.indicators.price ?? 0;
+  const merged: Indicators = {
+    price,
+    ...avInd,
+    volume: pick.indicators.volume,
+  };
+  const direction = (avInd.rsi && avInd.rsi < 40) ? 'bearish'
+    : (avInd.rsi && avInd.rsi > 60) ? 'bullish'
+    : pick.direction;
+  const setup = classifyStrategy(merged, direction);
+  const trade = computeTradeParams(price, avInd.atr, direction);
+
+  // Re-score based on available AV indicators
+  let score = pick.score;
+  if (Number.isFinite(avInd.rsi)) {
+    const rsiDist = Math.abs((avInd.rsi ?? 50) - 50);
+    score = Math.round(clamp(50 + (direction === 'bullish' ? rsiDist : -rsiDist), 5, 95));
+  }
+
+  return {
+    ...pick,
+    score,
+    direction,
+    indicators: merged,
+    setup,
+    ...trade,
+  };
+}
+
 async function runLightCryptoScan(maxCoins: number, startTime: number, timeframe: string) {
   const maxCoinsByApiCap = LIGHT_SCAN_MAX_API_CALLS * LIGHT_SCAN_PER_PAGE;
   const cappedCoins = clamp(maxCoins, 100, Math.min(15000, maxCoinsByApiCap));
@@ -980,9 +1166,56 @@ async function runLightCryptoScan(maxCoins: number, startTime: number, timeframe
     .filter((item): item is NonNullable<ReturnType<typeof scoreLightCryptoCandidate>> => item !== null)
     .sort((a, b) => Math.abs(b.score - 50) - Math.abs(a.score - 50));
 
+  // ── Enrichment phase: fetch OHLC + compute real indicators for top 10 ──
+  // The light scan uses market-data only (price change, volume, market cap)
+  // which produces identical "—" columns for RSI/ADX/ATR/etc.  Enrichment
+  // fills in real indicators via CoinGecko OHLC first, then AV fallback.
+  const top10 = ranked.slice(0, 10);
+  const ENRICH_BATCH = 5;
+  const ENRICH_DELAY = 200;
+  const enrichedPicks: any[] = [];
+
+  for (let i = 0; i < top10.length; i += ENRICH_BATCH) {
+    if (Date.now() - startTime > 50000) {
+      console.log('[bulk-scan/light] Enrichment time limit — returning remaining picks un-enriched');
+      enrichedPicks.push(...top10.slice(i));
+      break;
+    }
+    const batch = top10.slice(i, i + ENRICH_BATCH);
+    const batchResults = await Promise.all(batch.map(async (pick) => {
+      try {
+        // ── Strategy 1: CoinGecko OHLC → full local indicator computation ──
+        const ohlcv = await fetchCoinGeckoData(pick.symbol, timeframe);
+        if (ohlcv && ohlcv.length >= 20) {
+          apiCallsUsed += 1;
+          const enriched = analyzeAssetByTimeframe(pick.symbol, ohlcv, timeframe);
+          if (enriched) return enrichCryptoPick(pick, enriched);
+        }
+
+        // ── Strategy 2: Alpha Vantage individual indicators (fallback) ──
+        console.log(`[bulk-scan/light] CoinGecko OHLC unavailable for ${pick.symbol}, trying AV fallback`);
+        const avInd = await fetchAVCryptoIndicators(pick.symbol, timeframe);
+        if (avInd) {
+          apiCallsUsed += 4; // 4 parallel AV calls
+          return enrichCryptoPickFromAV(pick, avInd);
+        }
+
+        // No enrichment available — keep original light-scored pick
+        return pick;
+      } catch (err: any) {
+        console.warn(`[bulk-scan/light] Enrichment failed for ${pick.symbol}:`, err.message);
+        return pick;
+      }
+    }));
+    enrichedPicks.push(...batchResults);
+    if (i + ENRICH_BATCH < top10.length) {
+      await new Promise(r => setTimeout(r, ENRICH_DELAY));
+    }
+  }
+
   return {
     scanned: ranked.length,
-    topPicks: ranked.slice(0, 25),
+    topPicks: enrichedPicks,
     sourceCoinsFetched: markets.length,
     apiCallsUsed,
     apiCallsCap: LIGHT_SCAN_MAX_API_CALLS,
@@ -1434,7 +1667,7 @@ async function runCachedEquityScan(startTime: number, timeframe: string, univers
 
   return {
     scanned: scored.length,
-    topPicks: ranked.slice(0, 25),
+    topPicks: ranked.slice(0, 10),
     sourceSymbols: symbolsToScan.length,
     apiCallsUsed: moverData.apiCallsUsed,
     apiCallsCap: LIGHT_EQUITY_MAX_API_CALLS,
@@ -1492,7 +1725,7 @@ async function runLightEquityScan(startTime: number, timeframe: string, universe
 
   return {
     scanned: ranked.length,
-    topPicks: ranked.slice(0, 25),
+    topPicks: ranked.slice(0, 10),
     sourceSymbols: candidates.length,
     apiCallsUsed: moverData.apiCallsUsed + quoteResult.apiCallsUsed,
     apiCallsCap: LIGHT_EQUITY_MAX_API_CALLS,
@@ -1556,11 +1789,77 @@ function applyInstitutionalFilterToTopPicks(
       },
     });
 
+    // ------- Universal entry/stop/target enrichment -------
+    // If the pick doesn't already have trade parameters, derive them from ATR + direction
+    const pickPrice = Number(pick?.indicators?.price ?? pick?.price ?? 0);
+    const pickAtr   = Number(pick?.indicators?.atr ?? 0);
+    const pickDir   = pick?.direction === 'bearish' ? 'bearish' : pick?.direction === 'bullish' ? 'bullish' : 'neutral';
+    const hasEntry  = Number.isFinite(pick?.entry) && (pick?.entry ?? 0) > 0;
+
+    let enrichedEntry  = pick?.entry;
+    let enrichedStop   = pick?.stop;
+    let enrichedTarget = pick?.target;
+    let enrichedRMultiple = pick?.rMultiple;
+    let enrichedSetup  = pick?.setup;
+    let enrichedConfidence = pick?.confidence;
+
+    if (!hasEntry && pickPrice > 0) {
+      const atrSafe = Number.isFinite(pickAtr) && pickAtr > 0
+        ? pickAtr
+        : pickPrice * 0.02; // fallback 2% of price
+      if (pickDir === 'bullish') {
+        enrichedEntry  = Math.round(pickPrice * 100) / 100;
+        enrichedStop   = Math.round((pickPrice - 1.5 * atrSafe) * 100) / 100;
+        enrichedTarget = Math.round((pickPrice + 3 * atrSafe) * 100) / 100;
+      } else if (pickDir === 'bearish') {
+        enrichedEntry  = Math.round(pickPrice * 100) / 100;
+        enrichedStop   = Math.round((pickPrice + 1.5 * atrSafe) * 100) / 100;
+        enrichedTarget = Math.round((pickPrice - 3 * atrSafe) * 100) / 100;
+      } else {
+        // neutral — still provide levels based on range expectation
+        enrichedEntry  = Math.round(pickPrice * 100) / 100;
+        enrichedStop   = Math.round((pickPrice - 1.0 * atrSafe) * 100) / 100;
+        enrichedTarget = Math.round((pickPrice + 1.5 * atrSafe) * 100) / 100;
+      }
+      const risk = Math.abs(enrichedEntry - enrichedStop);
+      const reward = Math.abs(enrichedTarget - enrichedEntry);
+      enrichedRMultiple = risk > 0 ? Math.round((reward / risk) * 100) / 100 : 0;
+    }
+
+    // Derive a setup label from indicator signature if missing
+    if (!enrichedSetup) {
+      const adxVal = Number(pick?.indicators?.adx ?? 0);
+      const rsiVal = Number(pick?.indicators?.rsi ?? 50);
+      const arUp   = Number(pick?.indicators?.aroonUp ?? pick?.indicators?.aroon_up ?? 0);
+      const arDn   = Number(pick?.indicators?.aroonDown ?? pick?.indicators?.aroon_down ?? 0);
+      if (adxVal >= 25 && (arUp > 70 || arDn > 70)) {
+        enrichedSetup = pickDir === 'bullish' ? 'trend_pullback_long' : 'trend_pullback_short';
+      } else if (adxVal >= 25 && Math.abs(arUp - arDn) > 40) {
+        enrichedSetup = 'breakout';
+      } else if (rsiVal > 70 || rsiVal < 30) {
+        enrichedSetup = 'mean_reversion';
+      } else if (adxVal < 20) {
+        enrichedSetup = 'range_fade';
+      } else {
+        enrichedSetup = 'momentum_reversal';
+      }
+    }
+
+    if (!Number.isFinite(enrichedConfidence) || enrichedConfidence == null) {
+      enrichedConfidence = scoreV2.final.confidence;
+    }
+
     return {
       ...pick,
       scoreV2,
       score: scoreV2.final.confidence,
       institutionalFilter,
+      entry: enrichedEntry,
+      stop: enrichedStop,
+      target: enrichedTarget,
+      rMultiple: enrichedRMultiple,
+      setup: enrichedSetup,
+      confidence: enrichedConfidence,
     };
   });
 
@@ -1806,7 +2105,7 @@ export async function POST(req: NextRequest) {
     // Sort by conviction strength — distance from 50 — so both bullish AND bearish setups rank high
     const topPicks = results
       .sort((a, b) => Math.abs(b.score - 50) - Math.abs(a.score - 50))
-      .slice(0, 25);
+      .slice(0, 10);
     const institutional = applyInstitutionalFilterToTopPicks(topPicks, {
       type,
       timeframe: selectedTimeframe,
