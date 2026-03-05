@@ -53,18 +53,20 @@ function getEnv(key: string): string {
 }
 
 // Refresh intervals by tier (in seconds)
-// - Crypto defaults are tuned for CoinGecko value/coverage
-// - Non-crypto defaults preserve legacy behavior
+// - CoinGecko fetches historical OHLC data (daily candles) — no need for sub-minute polling
+// - Analyst plan: 500K calls/month cap. 170 crypto symbols × aggressive polling = budget blowout
+// - Previous rates (45s/120s/600s) burned ~49K calls/day; new rates target ~5K calls/day
+// - For live price updates, use quotes_latest table (populated by worker each cycle)
 const CRYPTO_TIER_REFRESH_INTERVALS: Record<number, number> = {
-  1: 45,   // Tier 1: every 45 seconds
-  2: 120,  // Tier 2: every 2 minutes
-  3: 600,  // Tier 3: every 10 minutes
+  1: 600,    // Tier 1: every 10 minutes (was 45s — daily OHLC doesn't change that fast)
+  2: 900,    // Tier 2: every 15 minutes (was 120s)
+  3: 3600,   // Tier 3: every 1 hour (was 600s — low-cap coins, minimal user traffic)
 };
 
 const CRYPTO_OFFHOURS_TIER_REFRESH_INTERVALS: Record<number, number> = {
-  1: 120,   // Tier 1: every 2 minutes
-  2: 300,   // Tier 2: every 5 minutes
-  3: 900,   // Tier 3: every 15 minutes
+  1: 1800,   // Tier 1: every 30 minutes (was 120s)
+  2: 3600,   // Tier 2: every 1 hour (was 300s)
+  3: 7200,   // Tier 3: every 2 hours (was 900s)
 };
 
 const NON_CRYPTO_TIER_REFRESH_INTERVALS: Record<number, number> = {
@@ -522,8 +524,21 @@ async function fetchAVBulkQuotes(symbols: string[]): Promise<Map<string, any>> {
 /**
  * Fetch crypto OHLC from CoinGecko (preferred - no rate limit issues)
  * Returns multi-year daily candles when range endpoint is available
+ * 
+ * Worker-level in-memory cache prevents redundant CoinGecko HTTP calls
+ * when fallback chains fire or when the worker cycle is faster than
+ * the cache TTL. Historical OHLC data changes at most once per day.
  */
+const workerCGCache = new Map<string, { data: AVBar[]; expiresAt: number }>();
+const WORKER_CG_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes — longer than any tier interval
+
 async function fetchCoinGeckoDaily(symbol: string): Promise<AVBar[]> {
+  // Check worker-level cache first (prevents redundant HTTP calls)
+  const cached = workerCGCache.get(symbol.toUpperCase());
+  if (cached && cached.expiresAt > Date.now() && cached.data.length > 0) {
+    return cached.data;
+  }
+
   // Map symbol to CoinGecko ID
   const normalized = symbol.toUpperCase();
   const allowDynamicResolve = getBoolFromEnv('WORKER_CG_RESOLVE_UNMAPPED', false);
@@ -632,6 +647,12 @@ async function fetchCoinGeckoDaily(symbol: string): Promise<AVBar[]> {
     // Sort oldest first
     bars.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
     
+    // Cache successful fetch to prevent redundant HTTP calls
+    workerCGCache.set(symbol.toUpperCase(), {
+      data: bars,
+      expiresAt: Date.now() + WORKER_CG_CACHE_TTL_MS,
+    });
+
     console.log(`[worker] CoinGecko: Got ${bars.length} bars for ${symbol} (requested ${historyDays}d)`);
     return bars;
 

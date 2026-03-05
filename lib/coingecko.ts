@@ -34,6 +34,40 @@ const getHeaders = (): HeadersInit => {
 const DERIVATIVES_CACHE_TTL_MS = 45_000;
 const SYMBOL_RESOLUTION_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
+// ── Global CoinGecko Daily Budget Counter ────────────────────────────
+// Analyst plan: 500,000 calls/month = ~16,129/day
+// Hard cap prevents runaway usage from burning through the entire monthly quota
+const CG_DAILY_BUDGET = parseInt(process.env.CG_DAILY_BUDGET || '14000', 10); // ~10% safety margin
+let cgDailyCallCount = 0;
+let cgDailyResetAt = 0;
+
+function checkAndIncrementCGBudget(): boolean {
+  const now = Date.now();
+  if (now > cgDailyResetAt) {
+    cgDailyCallCount = 0;
+    // Reset at next midnight UTC
+    const tomorrow = new Date(now);
+    tomorrow.setUTCHours(24, 0, 0, 0);
+    cgDailyResetAt = tomorrow.getTime();
+  }
+  if (cgDailyCallCount >= CG_DAILY_BUDGET) {
+    return false; // Budget exhausted
+  }
+  cgDailyCallCount++;
+  return true;
+}
+
+/** Get current daily CoinGecko API call stats (for monitoring) */
+export function getCGDailyStats(): { used: number; budget: number; remaining: number; resetsAt: string } {
+  return {
+    used: cgDailyCallCount,
+    budget: CG_DAILY_BUDGET,
+    remaining: Math.max(0, CG_DAILY_BUDGET - cgDailyCallCount),
+    resetsAt: new Date(cgDailyResetAt).toISOString(),
+  };
+}
+// ─────────────────────────────────────────────────────────────────────
+
 let derivativesCache: { value: DerivativeTicker[]; fetchedAt: number } | null = null;
 let derivativesInFlight: Promise<DerivativeTicker[] | null> | null = null;
 
@@ -74,6 +108,14 @@ async function cgFetch<T>(
   const timeoutMs = options?.timeoutMs ?? 12_000;
 
   const execute = async (remainingRetries: number): Promise<T> => {
+    // Enforce daily budget cap to prevent runaway quota exhaustion
+    if (!checkAndIncrementCGBudget()) {
+      throw new Error(
+        `[CoinGecko] Daily budget exhausted (${cgDailyCallCount}/${CG_DAILY_BUDGET}). ` +
+        `Resets at ${new Date(cgDailyResetAt).toISOString()}`
+      );
+    }
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
