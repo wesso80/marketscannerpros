@@ -347,6 +347,9 @@ interface Indicators {
   cci?: number;
   change24h?: number;
   volume?: number;
+  mfi?: number;
+  obv?: number;
+  vwap?: number;
 }
 
 function computeScore(indicators: Indicators): { 
@@ -633,6 +636,49 @@ function analyzeAssetByTimeframe(
   
   // Get volume from last OHLCV bar
   const lastVolume = ohlcv[ohlcv.length - 1]?.volume;
+
+  // Compute MFI, OBV, VWAP from candle data (requires volume > 0)
+  const highs = ohlcv.map(d => d.high);
+  const lows = ohlcv.map(d => d.low);
+  const volumes = ohlcv.map(d => d.volume);
+  const hasVolume = volumes.some(v => v > 0);
+
+  let mfiValue: number | undefined;
+  let obvValue: number | undefined;
+  let vwapValue: number | undefined;
+
+  if (hasVolume) {
+    // MFI (Money Flow Index) — period 14
+    const mfiPeriod = 14;
+    if (ohlcv.length > mfiPeriod) {
+      const tp = ohlcv.map(d => (d.high + d.low + d.close) / 3);
+      let posFlow = 0, negFlow = 0;
+      for (let j = ohlcv.length - mfiPeriod; j < ohlcv.length; j++) {
+        const flow = tp[j] * volumes[j];
+        if (j > 0 && tp[j] > tp[j - 1]) posFlow += flow;
+        else negFlow += flow;
+      }
+      mfiValue = negFlow > 0 ? 100 - (100 / (1 + posFlow / negFlow)) : 100;
+    }
+
+    // OBV (On-Balance Volume)
+    let obv = 0;
+    for (let j = 1; j < closes.length; j++) {
+      if (closes[j] > closes[j - 1]) obv += volumes[j];
+      else if (closes[j] < closes[j - 1]) obv -= volumes[j];
+    }
+    obvValue = obv;
+
+    // VWAP
+    let cumTPV = 0, cumVol = 0;
+    for (let j = 0; j < ohlcv.length; j++) {
+      const tp = (highs[j] + lows[j] + closes[j]) / 3;
+      cumTPV += tp * volumes[j];
+      cumVol += volumes[j];
+    }
+    vwapValue = cumVol > 0 ? cumTPV / cumVol : undefined;
+  }
+
   const indicators: Indicators = {
     price,
     ema200: emaValue ?? Number.NaN,
@@ -646,6 +692,9 @@ function analyzeAssetByTimeframe(
     cci: cciValue ?? Number.NaN,
     change24h,
     volume: Number.isFinite(lastVolume) && lastVolume > 0 ? lastVolume : undefined,
+    mfi: Number.isFinite(mfiValue) ? Math.round(mfiValue! * 10) / 10 : undefined,
+    obv: Number.isFinite(obvValue) ? obvValue : undefined,
+    vwap: Number.isFinite(vwapValue) ? Math.round(vwapValue! * 100) / 100 : undefined,
   };
   
   const { score, direction, signals } = computeScore(indicators);
@@ -1477,6 +1526,9 @@ async function runCachedEquityScan(startTime: number, timeframe: string, univers
       if (barRows && barRows.length > 5) {
         const sorted = [...barRows].reverse();
         const bCloses = sorted.map(r => Number(r.close));
+        const bHighs = sorted.map(r => Number(r.high));
+        const bLows = sorted.map(r => Number(r.low));
+        const bVolumes = sorted.map(r => Number(r.volume));
         const emaArr = (ema(bCloses, 200) ?? []) as number[];
         const rsiArr = (rsi(bCloses, 14) ?? []) as number[];
         // Build MACD arrays for chart (the imported macd() returns a single point, so we compute inline)
@@ -1490,6 +1542,41 @@ async function runCachedEquityScan(startTime: number, timeframe: string, univers
           const sig = si >= 0 && si < (signalArr as number[]).length ? (signalArr as number[])[si] : NaN;
           return { macd: m, signal: sig, hist: Number.isFinite(m) && Number.isFinite(sig) ? m - sig : NaN };
         });
+
+        // Compute MFI, OBV, VWAP from OHLCV bars
+        const hasBarVolume = bVolumes.some(v => v > 0);
+        if (hasBarVolume) {
+          // MFI
+          const mfiPeriod = 14;
+          if (sorted.length > mfiPeriod) {
+            const tp = sorted.map(r => (Number(r.high) + Number(r.low) + Number(r.close)) / 3);
+            let posFlow = 0, negFlow = 0;
+            for (let j = sorted.length - mfiPeriod; j < sorted.length; j++) {
+              const flow = tp[j] * bVolumes[j];
+              if (j > 0 && tp[j] > tp[j - 1]) posFlow += flow;
+              else negFlow += flow;
+            }
+            (item as any).indicators.mfi = negFlow > 0
+              ? Math.round((100 - (100 / (1 + posFlow / negFlow))) * 10) / 10
+              : 100;
+          }
+          // OBV
+          let obv = 0;
+          for (let j = 1; j < bCloses.length; j++) {
+            if (bCloses[j] > bCloses[j - 1]) obv += bVolumes[j];
+            else if (bCloses[j] < bCloses[j - 1]) obv -= bVolumes[j];
+          }
+          (item as any).indicators.obv = obv;
+          // VWAP
+          let cumTPV = 0, cumVol = 0;
+          for (let j = 0; j < sorted.length; j++) {
+            const tp = (bHighs[j] + bLows[j] + bCloses[j]) / 3;
+            cumTPV += tp * bVolumes[j];
+            cumVol += bVolumes[j];
+          }
+          if (cumVol > 0) (item as any).indicators.vwap = Math.round((cumTPV / cumVol) * 100) / 100;
+        }
+
         (item as any).chartData = {
           candles: sorted.map(r => ({
             t: typeof r.ts === 'string' ? r.ts.slice(0, 10) : new Date(r.ts).toISOString().slice(0, 10),
@@ -1788,15 +1875,34 @@ export async function POST(req: NextRequest) {
     
     console.log(`[bulk-scan] Scanning ${universe.length} ${type} on ${selectedTimeframe} timeframe...`);
     
-    // For crypto, pre-fetch all derivatives data in parallel
+    // For crypto, pre-fetch all derivatives data AND market volumes in parallel
     const derivativesMap = new Map<string, DerivativesData>();
+    const marketVolumeMap = new Map<string, number>();
     if (type === 'crypto') {
-      const derivPromises = CRYPTO_UNIVERSE.map(async (symbol) => {
-        const data = await fetchCryptoDerivatives(symbol);
-        if (data) derivativesMap.set(symbol, data);
-      });
-      await Promise.all(derivPromises);
-      console.log(`[bulk-scan] Fetched derivatives for ${derivativesMap.size} coins`);
+      const [, marketDataPage] = await Promise.all([
+        (async () => {
+          const derivPromises = CRYPTO_UNIVERSE.map(async (symbol) => {
+            const data = await fetchCryptoDerivatives(symbol);
+            if (data) derivativesMap.set(symbol, data);
+          });
+          await Promise.all(derivPromises);
+        })(),
+        getMarketData({
+          order: 'market_cap_desc',
+          per_page: 250,
+          page: 1,
+          sparkline: false,
+          price_change_percentage: ['24h'],
+        }),
+      ]);
+      if (marketDataPage && Array.isArray(marketDataPage)) {
+        for (const coin of marketDataPage) {
+          const sym = String(coin.symbol || '').toUpperCase();
+          const vol = Number(coin.total_volume);
+          if (sym && Number.isFinite(vol) && vol > 0) marketVolumeMap.set(sym, vol);
+        }
+      }
+      console.log(`[bulk-scan] Fetched derivatives for ${derivativesMap.size} coins, market volumes for ${marketVolumeMap.size} coins`);
     }
     
     // Crypto: CoinGecko (licensed, slower - 10 per batch)
@@ -1821,6 +1927,11 @@ export async function POST(req: NextRequest) {
           
           const result = analyzeAssetByTimeframe(id, ohlcv, selectedTimeframe);
           if (result && type === 'crypto') {
+            // Inject 24h volume from market data (CoinGecko OHLC lacks volume)
+            const mktVol = marketVolumeMap.get(id.toUpperCase());
+            if (Number.isFinite(mktVol) && mktVol! > 0 && (!result.indicators.volume || result.indicators.volume <= 0)) {
+              result.indicators.volume = mktVol;
+            }
             // Add derivatives data
             const derivData = derivativesMap.get(id);
             if (derivData && result.indicators?.price) {
