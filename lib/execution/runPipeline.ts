@@ -67,7 +67,7 @@ export interface PipelineResult {
 
 export type PipelineOutcome =
   | { ok: true; result: PipelineResult }
-  | { ok: false; reason: string; code: 'NO_ATR' | 'BAD_EXITS' | 'GOVERNOR_BLOCK' | 'RISK_LOCKED' };
+  | { ok: false; reason: string; code: 'NO_ATR' | 'BAD_EXITS' | 'GOVERNOR_BLOCK' | 'RISK_LOCKED' | 'ZERO_SIZE' };
 
 /* ------------------------------------------------------------------ */
 /*  Mappings                                                           */
@@ -255,7 +255,12 @@ export async function runExecutionPipeline(input: PipelineInput): Promise<Pipeli
     equityAtEntry: rawEntryRisk.equityAtEntry ?? accountEquity,
   };
 
-  // ── 9. Trade type ─────────────────────────────────────────────────
+  // ── 9. Zero-quantity guard (B12) ──────────────────────────────────
+  if (!sizing.quantity || sizing.quantity <= 0) {
+    return { ok: false, reason: 'Zero position size — risk parameters too restrictive or account equity too low', code: 'ZERO_SIZE' };
+  }
+
+  // ── 10. Trade type ────────────────────────────────────────────────
   let tradeType = 'Spot';
   if (leverageResult.recommended_leverage > 1) tradeType = 'Margin';
 

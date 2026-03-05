@@ -12,6 +12,10 @@ export async function GET(request: NextRequest) {
     if (!session?.workspaceId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
+    // S6 FIX: Enforce Pro Trader tier for state machine endpoint
+    if (session.tier !== 'pro_trader') {
+      return NextResponse.json({ success: false, error: 'Pro Trader subscription required' }, { status: 403 });
+    }
 
     const url = new URL(request.url);
     const symbol = (url.searchParams.get('symbol') || '').toUpperCase().trim();

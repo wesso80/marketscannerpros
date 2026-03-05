@@ -14,6 +14,10 @@ export async function GET(req: NextRequest) {
     if (!session?.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    // S6 FIX: Enforce Pro Trader tier
+    if (session.tier !== 'pro_trader') {
+      return NextResponse.json({ error: 'Pro Trader subscription required' }, { status: 403 });
+    }
 
     const url = new URL(req.url);
     const status = url.searchParams.get('status') || 'pending';

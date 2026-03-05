@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
+import { hashWorkspaceId } from '@/lib/auth';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-06-20' as any });
@@ -38,9 +39,15 @@ export async function POST(request: NextRequest) {
     }
 
     if (status === 'active' && customerEmail && planType) {
-      // Create/update active subscription
-      // For simplicity, we'll use email as workspace identifier
-      const workspaceId = customerEmail.replace('@', '_at_').replace('.', '_dot_');
+      // B7 FIX: Use hashWorkspaceId(customerId) consistent with auth + webhooks.
+      // Was: email.replace('@','_at_').replace('.','_dot_') — never matched.
+      // Look up Stripe customer by email to get customer ID for hashing.
+      const customers = await stripe.customers.list({ email: customerEmail, limit: 1 });
+      const customerId = customers.data[0]?.id;
+      if (!customerId) {
+        return NextResponse.json({ error: 'No Stripe customer for email' }, { status: 404 });
+      }
+      const workspaceId = hashWorkspaceId(customerId);
       
       // First, get or create plan ID
       let planId = 1; // Default to Pro

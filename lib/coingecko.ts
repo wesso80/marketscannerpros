@@ -89,11 +89,8 @@ function buildCoinGeckoUrl(path: string, params?: URLSearchParams): string {
     url.search = params.toString();
   }
 
-  const key = getApiKey();
-  if (key && !url.searchParams.has('x_cg_pro_api_key')) {
-    url.searchParams.set('x_cg_pro_api_key', key);
-  }
-
+  // B14 FIX: API key sent via header only (was also in URL, leaking to logs/CDN)
+  // URL parameter removed — cgFetch sends key in x-cg-pro-api-key header
   return url.toString();
 }
 

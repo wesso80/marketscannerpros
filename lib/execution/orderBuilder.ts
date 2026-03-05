@@ -27,7 +27,7 @@ export function buildOrder(input: {
   leverage: LeverageResult;
   options?: OptionsSelection;
   proposal_id: string;
-}): OrderInstruction {
+}): OrderInstruction | OrderInstruction[] {
   const { intent, sizing, exits, leverage, options, proposal_id } = input;
 
   const side: 'BUY' | 'SELL' = intent.direction === 'LONG' ? 'BUY' : 'SELL';
@@ -66,16 +66,23 @@ export function buildOrder(input: {
 
   // Options augmentation
   if (options && options.structure !== 'NONE') {
-    order.option_type =
-      options.structure.includes('CALL') || options.structure === 'STRADDLE'
-        ? 'CALL'
-        : 'PUT';
-    order.strike = options.strike;
-    if (options.dte > 0) {
-      const exp = new Date();
-      exp.setDate(exp.getDate() + options.dte);
-      order.expiration = exp.toISOString().slice(0, 10);
+    const expDate = options.dte > 0
+      ? (() => { const d = new Date(); d.setDate(d.getDate() + options.dte); return d.toISOString().slice(0, 10); })()
+      : undefined;
+
+    if (options.structure === 'STRADDLE') {
+      // B11 FIX: Straddle requires both CALL and PUT legs
+      order.option_type = 'CALL';
+      order.strike = options.strike;
+      order.expiration = expDate;
+      // Return array: CALL leg + PUT leg
+      const putOrder = { ...order, option_type: 'PUT' as const, client_order_id: randomUUID() };
+      return [order, putOrder];
     }
+
+    order.option_type = options.structure.includes('CALL') ? 'CALL' : 'PUT';
+    order.strike = options.strike;
+    order.expiration = expDate;
   }
 
   return order;

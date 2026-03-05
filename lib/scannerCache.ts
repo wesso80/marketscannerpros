@@ -65,20 +65,25 @@ export async function getCachedScanData(symbol: string): Promise<CachedScanData 
       return null;
     }
 
+    // B10 FIX: Use 0 instead of NaN for missing indicators.
+    // NaN propagates through all arithmetic (NaN + 5 = NaN), corrupting composite scores.
+    const safeNum = (v: number | null | undefined): number =>
+      v != null && Number.isFinite(v) ? v : 0;
+
     const result: CachedScanData = {
       price: q.price,
-      rsi: ind?.rsi14 ?? NaN,
-      macdLine: ind?.macdLine ?? NaN,
-      macdSignal: ind?.macdSignal ?? NaN,
-      macdHist: ind?.macdHist ?? NaN,
-      ema200: ind?.ema200 ?? NaN,
-      atr: ind?.atr14 ?? NaN,
-      adx: ind?.adx14 ?? NaN,
-      stochK: ind?.stochK ?? NaN,
-      stochD: ind?.stochD ?? NaN,
-      cci: ind?.cci20 ?? NaN,
-      aroonUp: (ind as unknown as Record<string, number | undefined>)?.aroonUp ?? NaN,
-      aroonDown: (ind as unknown as Record<string, number | undefined>)?.aroonDown ?? NaN,
+      rsi: safeNum(ind?.rsi14),
+      macdLine: safeNum(ind?.macdLine),
+      macdSignal: safeNum(ind?.macdSignal),
+      macdHist: safeNum(ind?.macdHist),
+      ema200: safeNum(ind?.ema200),
+      atr: safeNum(ind?.atr14),
+      adx: safeNum(ind?.adx14),
+      stochK: safeNum(ind?.stochK),
+      stochD: safeNum(ind?.stochD),
+      cci: safeNum(ind?.cci20),
+      aroonUp: safeNum((ind as unknown as Record<string, number | undefined>)?.aroonUp),
+      aroonDown: safeNum((ind as unknown as Record<string, number | undefined>)?.aroonDown),
       volume: Number.isFinite(q.volume) && q.volume > 0 ? q.volume : undefined,
       obv: ind?.obv != null ? ind.obv : undefined,
       vwap: ind?.vwap != null ? ind.vwap : undefined,

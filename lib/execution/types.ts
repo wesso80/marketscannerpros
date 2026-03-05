@@ -212,7 +212,7 @@ export interface TradeProposal {
   exits: ExitPlan;
   leverage: LeverageResult;
   options?: OptionsSelection;
-  order: OrderInstruction;
+  order: OrderInstruction | OrderInstruction[];
   validation_errors: ValidationError[];
   /** Overall verdict: can this trade go ahead? */
   executable: boolean;

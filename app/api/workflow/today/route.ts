@@ -8,6 +8,10 @@ export async function GET() {
     if (!session?.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    // S6 FIX: Enforce Pro Trader tier for workflow endpoints
+    if (session.tier !== 'pro_trader') {
+      return NextResponse.json({ error: 'Pro Trader subscription required' }, { status: 403 });
+    }
 
     const [eventRows, autoAlertRows, autoDraftRows, latestCoachRows, coachJournalRows] = await Promise.all([
       q(

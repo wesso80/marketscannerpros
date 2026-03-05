@@ -69,7 +69,8 @@ export async function POST(req: NextRequest) {
     const intent = proposal.intent;
     const exits = proposal.exits;
     const sizing = proposal.sizing;
-    const order = proposal.order;
+    // B11: order may be array (straddle) — use first leg for journal entry
+    const order = Array.isArray(proposal.order) ? proposal.order[0] : proposal.order;
 
     const tradeDate = new Date().toISOString().slice(0, 10);
     const side = intent.direction;
