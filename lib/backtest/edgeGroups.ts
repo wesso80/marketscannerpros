@@ -7,7 +7,8 @@ export type EdgeGroupId =
   | 'mean_reversion'
   | 'breakdown_play_bears'
   | 'breakout'
-  | 'liquidity_play';
+  | 'liquidity_play'
+  | 'time_confluence';
 
 export interface StrategyEdgeGroup {
   id: EdgeGroupId;
@@ -50,6 +51,11 @@ export const STRATEGY_EDGE_GROUPS: readonly StrategyEdgeGroup[] = [
     id: 'liquidity_play',
     label: 'Liquidity Play',
     categoryIds: ['multi_indicator'],
+  },
+  {
+    id: 'time_confluence',
+    label: 'Time Confluence',
+    categoryIds: ['time_confluence'],
   },
 ] as const;
 
@@ -118,6 +124,7 @@ export function getPreferredStrategyForEdgeGroup(
     breakdown_play_bears: ['msp_day_trader_strict', 'supertrend', 'adx_trend', 'macd_momentum'],
     breakout: ['swing_breakout'],
     liquidity_play: ['multi_confluence_5', 'multi_macd_adx'],
+    time_confluence: ['lone_daily_close'],
   };
 
   const preferred = preferredByGroup[edgeGroupId];

@@ -116,6 +116,15 @@ const RAW_BACKTEST_STRATEGY_CATEGORIES: readonly BacktestStrategyCategory[] = [
       { id: 'multi_confluence_5', label: '5-Indicator Confluence', timeframes: ALL_TIMEFRAMES },
     ],
   },
+  {
+    id: 'time_confluence',
+    label: '⏰ Time Confluence',
+    strategies: [
+      { id: 'lone_daily_close', label: 'Lone Daily Close (Rare Event)', timeframes: ALL_TIMEFRAMES, direction: 'both' as BacktestStrategyDirection, patternType: 'mean_reversion' as BacktestStrategyPatternType },
+      { id: 'tc_low_stack_drift', label: 'Low Stack Drift (Stack ≤ 1)', timeframes: ALL_TIMEFRAMES, direction: 'both' as BacktestStrategyDirection, patternType: 'mean_reversion' as BacktestStrategyPatternType },
+      { id: 'tc_high_stack_breakout', label: 'High Stack Breakout (Stack ≥ 6)', timeframes: ALL_TIMEFRAMES, direction: 'both' as BacktestStrategyDirection, patternType: 'breakout' as BacktestStrategyPatternType },
+    ],
+  },
 ] as const;
 
 function inferDirectionFromStrategyId(strategyId: string): BacktestStrategyDirection {

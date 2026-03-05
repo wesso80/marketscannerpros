@@ -172,7 +172,8 @@ export function runStrategy(
   const isMSP = strategy.startsWith('msp_');
   const isScalp = strategy.startsWith('scalp_');
   const isSwing = strategy.startsWith('swing_');
-  const needsFullIndicators = isMSP || isScalp || isSwing
+  const isTimeConfluence = strategy.startsWith('tc_') || strategy === 'lone_daily_close';
+  const needsFullIndicators = isMSP || isScalp || isSwing || isTimeConfluence
     || strategy === 'supertrend'
     || strategy === 'multi_confluence_5'
     || strategy === 'triple_ema'
@@ -863,6 +864,171 @@ export function runStrategy(
             exitReason, holdingPeriodDays: barsHeld + 1,
           });
           position = null;
+        }
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // TIME CONFLUENCE STRATEGIES
+    // Simulates the Time Confluence Windows concept using daily bar data.
+    //
+    // "Confluence stack" is approximated by counting how many timeframe
+    // midpoints (simulated via multi-period hl2 lookbacks) are clustered
+    // near price.  When the stack is extremely low (only daily 50% is
+    // relevant), it signals a rare "lone daily close" drought.
+    // ═══════════════════════════════════════════════════════════════════
+
+    if (isTimeConfluence && adxData && macdData) {
+      // Simulate multi-TF 50% levels using rolling HL2 over different lookbacks
+      // These approximate what the live indicator sees on 30m/1h/2h/4h/8h/D
+      const halfBarWindows = [1, 2, 4, 8, 16]; // ~30m, 1h, 2h, 4h, 8h (in daily bars)
+      let stackCount = 0;
+      const atrVal = atr[i] || close * 0.02;
+      const clusterThreshold = atrVal * 1.0; // 1x ATR = "near price"
+      const dailyMid = (highs[i] + lows[i]) / 2;
+
+      for (const window of halfBarWindows) {
+        if (i >= window) {
+          const windowHigh = Math.max(...highs.slice(i - window, i + 1));
+          const windowLow  = Math.min(...lows.slice(i - window, i + 1));
+          const windowMid  = (windowHigh + windowLow) / 2;
+          // Is this TF midpoint near current price?
+          if (Math.abs(close - windowMid) <= clusterThreshold) {
+            stackCount += 1;
+          }
+        }
+      }
+
+      // Daily 50% proximity
+      const dailyNear = Math.abs(close - dailyMid) <= clusterThreshold;
+      const distToDailyMidPct = ((close - dailyMid) / dailyMid) * 100;
+      const priceAboveDailyMid = close > dailyMid;
+      const priceBelowDailyMid = close < dailyMid;
+
+      // ── LONE DAILY CLOSE ──
+      // Condition: stack is 0 or 1 (only daily midpoint may be relevant,
+      //   all shorter-TF midpoints are far from price = "time drought")
+      // Trade: mean-revert toward the daily 50% level
+      if (strategy === 'lone_daily_close') {
+        const isLoneDailyEvent = stackCount <= 1 && !dailyNear && Math.abs(distToDailyMidPct) > 0.3;
+
+        if (!position && isLoneDailyEvent) {
+          // Enter toward the daily 50%
+          const side: 'LONG' | 'SHORT' = priceBelowDailyMid ? 'LONG' : 'SHORT';
+          position = { side, entry: close, entryDate: date, entryIdx: i };
+        } else if (position) {
+          const side = position.side;
+          const entryPrice = position.entry;
+          const barsHeld = i - position.entryIdx;
+
+          // Exit conditions
+          const reachedDailyMid = side === 'LONG'
+            ? highs[i] >= dailyMid
+            : lows[i] <= dailyMid;
+          const { sl, tp } = computeSLTP(side, entryPrice, atrVal, 1.5, 2.5);
+          const { hitSL, hitTP } = checkHitSLTP(side, highs[i], lows[i], sl, tp);
+          const timeExit = barsHeld >= 10;
+
+          if (reachedDailyMid || hitSL || hitTP || timeExit) {
+            let exitPrice = close;
+            if (reachedDailyMid) exitPrice = dailyMid;
+            if (hitSL) exitPrice = sl;
+            if (hitTP) exitPrice = tp;
+            const exitReason: BacktestTrade['exitReason'] = reachedDailyMid ? 'target' : hitSL ? 'stop' : hitTP ? 'target' : 'timeout';
+            const shares = (initialCapital * 0.95) / entryPrice;
+            trades.push({
+              entryDate: position.entryDate, exitDate: date, symbol, side,
+              entry: entryPrice, exit: exitPrice,
+              return: calcReturnDollars(side, entryPrice, exitPrice, shares),
+              returnPercent: calcReturnPercent(side, entryPrice, exitPrice),
+              exitReason, holdingPeriodDays: barsHeld + 1,
+            });
+            position = null;
+          }
+        }
+      }
+
+      // ── LOW STACK DRIFT ──
+      // Condition: stack ≤ 1 (minimal TF confluence = price is drifting freely)
+      // Trade: follow the EMA trend direction (drift tends to continue)
+      if (strategy === 'tc_low_stack_drift') {
+        const isLowStack = stackCount <= 1;
+        const emaBullish = ema9[i] > ema21[i];
+        const emaBearish = ema9[i] < ema21[i];
+
+        if (!position && isLowStack) {
+          const side: 'LONG' | 'SHORT' = emaBullish ? 'LONG' : emaBearish ? 'SHORT' : 'LONG';
+          if (emaBullish || emaBearish) {
+            position = { side, entry: close, entryDate: date, entryIdx: i };
+          }
+        } else if (position) {
+          const side = position.side;
+          const entryPrice = position.entry;
+          const barsHeld = i - position.entryIdx;
+          const stackReturned = stackCount >= 3; // Confluence returning = exit drift
+          const { sl, tp } = computeSLTP(side, entryPrice, atrVal, 1.2, 3.0);
+          const { hitSL, hitTP } = checkHitSLTP(side, highs[i], lows[i], sl, tp);
+          const timeExit = barsHeld >= 15;
+
+          if (stackReturned || hitSL || hitTP || timeExit) {
+            let exitPrice = close;
+            if (hitSL) exitPrice = sl;
+            if (hitTP) exitPrice = tp;
+            const exitReason: BacktestTrade['exitReason'] = stackReturned ? 'signal_flip' : hitSL ? 'stop' : hitTP ? 'target' : 'timeout';
+            const shares = (initialCapital * 0.95) / entryPrice;
+            trades.push({
+              entryDate: position.entryDate, exitDate: date, symbol, side,
+              entry: entryPrice, exit: exitPrice,
+              return: calcReturnDollars(side, entryPrice, exitPrice, shares),
+              returnPercent: calcReturnPercent(side, entryPrice, exitPrice),
+              exitReason, holdingPeriodDays: barsHeld + 1,
+            });
+            position = null;
+          }
+        }
+      }
+
+      // ── HIGH STACK BREAKOUT ──
+      // Condition: stack ≥ 6 (many TF midpoints clustered near price = compression)
+      // Trade: breakout when the compression resolves (price breaks out of cluster)
+      if (strategy === 'tc_high_stack_breakout') {
+        const isHighStack = stackCount >= 4; // 4 out of 5 windows clustered
+        const prevHighStack = i > 0; // We'll track state change
+        const { macd, signal, histogram } = macdData;
+        const macdBullish = histogram[i] > 0 && histogram[i] > (histogram[i - 1] || 0);
+        const macdBearish = histogram[i] < 0 && histogram[i] < (histogram[i - 1] || 0);
+
+        if (!position && isHighStack) {
+          // Breakout direction from MACD momentum
+          if (macdBullish && close > dailyMid) {
+            position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
+          } else if (macdBearish && close < dailyMid) {
+            position = { side: 'SHORT', entry: close, entryDate: date, entryIdx: i };
+          }
+        } else if (position) {
+          const side = position.side;
+          const entryPrice = position.entry;
+          const barsHeld = i - position.entryIdx;
+          const stackDissipated = stackCount <= 2; // Breakout completed
+          const { sl, tp } = computeSLTP(side, entryPrice, atrVal, 1.0, 3.5);
+          const { hitSL, hitTP } = checkHitSLTP(side, highs[i], lows[i], sl, tp);
+          const timeExit = barsHeld >= 12;
+
+          if (stackDissipated || hitSL || hitTP || timeExit) {
+            let exitPrice = close;
+            if (hitSL) exitPrice = sl;
+            if (hitTP) exitPrice = tp;
+            const exitReason: BacktestTrade['exitReason'] = stackDissipated ? 'signal_flip' : hitSL ? 'stop' : hitTP ? 'target' : 'timeout';
+            const shares = (initialCapital * 0.95) / entryPrice;
+            trades.push({
+              entryDate: position.entryDate, exitDate: date, symbol, side,
+              entry: entryPrice, exit: exitPrice,
+              return: calcReturnDollars(side, entryPrice, exitPrice, shares),
+              returnPercent: calcReturnPercent(side, entryPrice, exitPrice),
+              exitReason, holdingPeriodDays: barsHeld + 1,
+            });
+            position = null;
+          }
         }
       }
     }
