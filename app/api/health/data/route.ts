@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getCached } from '@/lib/redis';
 import { CACHE_KEYS } from '@/lib/redis';
+import { avCircuit, coinGeckoCircuit, openAICircuit } from '@/lib/circuitBreaker';
 
 /**
  * GET /api/health/data
@@ -14,10 +15,15 @@ export async function GET() {
   const STALE_THRESHOLD_SEC = 7200; // 2 hours
 
   try {
-    // Check a few representative cache keys
+    // Check a broad set of representative cache keys across data tiers
     const keys = [
       CACHE_KEYS.quote('SPY'),
+      CACHE_KEYS.quote('BTC-USD'),
+      CACHE_KEYS.bars('SPY', '1D'),
+      CACHE_KEYS.indicators('SPY', '1D'),
       CACHE_KEYS.scannerResult('confluence', 'equity'),
+      CACHE_KEYS.marketStatus(),
+      CACHE_KEYS.fearGreed(),
     ];
 
     const values = await Promise.all(
@@ -50,9 +56,16 @@ export async function GET() {
     return NextResponse.json({
       ok: true,
       stale,
+      populatedCount,
+      checkedCount: keys.length,
       source: stale ? 'Market data cache' : undefined,
       checkedAt: new Date().toISOString(),
       details: staleSources.length > 0 ? staleSources : undefined,
+      circuits: {
+        alphaVantage: avCircuit.getSnapshot(),
+        coinGecko: coinGeckoCircuit.getSnapshot(),
+        openAI: openAICircuit.getSnapshot(),
+      },
     });
   } catch (err) {
     console.error('[health/data] Error:', err);

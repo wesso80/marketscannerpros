@@ -17,8 +17,10 @@ export type CircuitState = 'CLOSED' | 'OPEN' | 'HALF_OPEN';
 export interface CircuitBreakerOptions {
   /** Number of consecutive failures before opening the circuit. Default: 5 */
   failureThreshold?: number;
-  /** Time in ms the circuit stays OPEN before moving to HALF_OPEN. Default: 60 000 (1 min) */
+  /** Base time in ms the circuit stays OPEN before moving to HALF_OPEN. Default: 60 000 (1 min) */
   resetTimeoutMs?: number;
+  /** Maximum backoff ceiling in ms. Default: 300 000 (5 min) */
+  maxResetTimeoutMs?: number;
   /** Optional callback when state changes */
   onStateChange?: (name: string, from: CircuitState, to: CircuitState) => void;
 }
@@ -40,23 +42,34 @@ export class CircuitBreaker {
   private failureCount = 0;
   private lastFailureTime = 0;
   private halfOpenProbeActive = false;
+  private consecutiveTrips = 0;  // exponential backoff counter
   private readonly name: string;
   private readonly failureThreshold: number;
   private readonly resetTimeoutMs: number;
+  private readonly maxResetTimeoutMs: number;
   private readonly onStateChange?: (name: string, from: CircuitState, to: CircuitState) => void;
 
   constructor(name: string, options: CircuitBreakerOptions = {}) {
     this.name = name;
     this.failureThreshold = options.failureThreshold ?? 5;
     this.resetTimeoutMs = options.resetTimeoutMs ?? 60_000;
+    this.maxResetTimeoutMs = options.maxResetTimeoutMs ?? 300_000;  // 5 min ceiling
     this.onStateChange = options.onStateChange;
+  }
+
+  /** Current effective cooldown, growing with each consecutive trip. */
+  private get effectiveResetMs(): number {
+    // Exponential backoff: base * 2^trips, capped
+    const ms = this.resetTimeoutMs * Math.pow(2, Math.min(this.consecutiveTrips, 5));
+    return Math.min(ms, this.maxResetTimeoutMs);
   }
 
   /** Execute a function through the circuit breaker. */
   async call<T>(fn: () => Promise<T>): Promise<T> {
     if (this.state === 'OPEN') {
       const elapsed = Date.now() - this.lastFailureTime;
-      if (elapsed >= this.resetTimeoutMs) {
+      const cooldown = this.effectiveResetMs;
+      if (elapsed >= cooldown) {
         // Only allow ONE probe through at a time to prevent stampede
         if (this.halfOpenProbeActive) {
           throw new CircuitBreakerOpenError(this.name, 1000);
@@ -64,7 +77,7 @@ export class CircuitBreaker {
         this.halfOpenProbeActive = true;
         this.transition('HALF_OPEN');
       } else {
-        throw new CircuitBreakerOpenError(this.name, this.resetTimeoutMs - elapsed);
+        throw new CircuitBreakerOpenError(this.name, cooldown - elapsed);
       }
     } else if (this.state === 'HALF_OPEN' && this.halfOpenProbeActive) {
       // Another request while the probe is in-flight — reject
@@ -84,6 +97,7 @@ export class CircuitBreaker {
   private onSuccess(): void {
     this.halfOpenProbeActive = false;
     if (this.state === 'HALF_OPEN' || this.state === 'OPEN') {
+      this.consecutiveTrips = 0;  // reset backoff on recovery
       this.transition('CLOSED');
     }
     this.failureCount = 0;
@@ -95,7 +109,8 @@ export class CircuitBreaker {
     this.lastFailureTime = Date.now();
 
     if (this.state === 'HALF_OPEN') {
-      // Probe failed — reopen
+      // Probe failed — reopen with escalated backoff
+      this.consecutiveTrips++;
       this.transition('OPEN');
     } else if (this.failureCount >= this.failureThreshold) {
       this.transition('OPEN');
@@ -120,6 +135,8 @@ export class CircuitBreaker {
       lastFailureTime: this.lastFailureTime,
       failureThreshold: this.failureThreshold,
       resetTimeoutMs: this.resetTimeoutMs,
+      consecutiveTrips: this.consecutiveTrips,
+      effectiveResetMs: this.effectiveResetMs,
     };
   }
 }

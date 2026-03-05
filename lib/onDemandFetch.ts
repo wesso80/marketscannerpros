@@ -14,6 +14,7 @@ import { q } from '@/lib/db';
 import { getCached, setCached, CACHE_KEYS, CACHE_TTL } from '@/lib/redis';
 import { calculateAllIndicators, detectSqueeze, getIndicatorWarmupStatus, IndicatorWarmupStatus, OHLCVBar } from '@/lib/indicators';
 import { avTryToken } from '@/lib/avRateGovernor';
+import { avCircuit } from '@/lib/circuitBreaker';
 
 // On-demand AV calls now go through the global rate governor (600 RPM shared).
 // avTryToken() is non-blocking — returns false when the quota is exhausted.
@@ -89,7 +90,7 @@ async function fetchQuoteFromAV(symbol: string): Promise<QuoteData | null> {
   const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(symbol)}&entitlement=realtime&apikey=${apiKey}`;
   
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+    const res = await avCircuit.call(() => fetch(url, { signal: AbortSignal.timeout(15000) }));
     if (!res.ok) {
       console.warn(`[onDemand] AV HTTP error for ${symbol}: ${res.status}`);
       return null;
@@ -140,7 +141,7 @@ async function fetchBarsAndIndicatorsFromAV(symbol: string): Promise<{
   const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${encodeURIComponent(symbol)}&outputsize=compact&entitlement=realtime&apikey=${apiKey}`;
   
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+    const res = await avCircuit.call(() => fetch(url, { signal: AbortSignal.timeout(15000) }));
     if (!res.ok) return null;
 
     const json = await res.json();

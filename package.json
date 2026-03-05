@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "node server.js",
     "test:contracts": "vitest run test/contracts.v1.test.ts",
+    "test:indicators": "vitest run test/indicators.test.ts",
+    "test:dataQuality": "vitest run test/dataQuality.test.ts",
     "test:audit": "vitest run test/institutional-audit.test.ts",
     "test:all": "vitest run",
     "migrate:midpoints": "npx tsx scripts/run-midpoints-migration.ts",

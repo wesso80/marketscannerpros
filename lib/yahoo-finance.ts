@@ -5,6 +5,8 @@
  * Data provided by Yahoo Finance - used under fair use with attribution
  */
 
+import { validateYahooBars } from './dataQuality';
+
 export interface YahooQuote {
   symbol: string;
   price: number;
@@ -324,11 +326,19 @@ export async function getMarketMovers(): Promise<{
  */
 export function calculateIndicators(bars: YahooHistoricalBar[]) {
   if (bars.length < 20) return null;
+
+  // Data quality gate — filter out NaN / Infinity / negative prices
+  const validated = validateYahooBars(bars);
+  if (validated.warnings.length > 0) {
+    console.warn('[DQ][yahoo]', validated.warnings);
+  }
+  const cleanBars = validated.data;
+  if (cleanBars.length < 20) return null;
   
-  const closes = bars.map(b => b.close);
-  const highs = bars.map(b => b.high);
-  const lows = bars.map(b => b.low);
-  const volumes = bars.map(b => b.volume);
+  const closes = cleanBars.map(b => b.close);
+  const highs = cleanBars.map(b => b.high);
+  const lows = cleanBars.map(b => b.low);
+  const volumes = cleanBars.map(b => b.volume);
   
   // RSI (14-period)
   const rsi = calculateRSI(closes, 14);
@@ -377,13 +387,13 @@ export function calculateIndicators(bars: YahooHistoricalBar[]) {
 }
 
 // Helper functions
-function calculateSMA(data: number[], period: number): number {
+export function calculateSMA(data: number[], period: number): number {
   if (data.length < period) return data[data.length - 1];
   const slice = data.slice(-period);
   return slice.reduce((a, b) => a + b, 0) / period;
 }
 
-function calculateEMA(data: number[], period: number): number {
+export function calculateEMA(data: number[], period: number): number {
   if (data.length < period) return data[data.length - 1];
   const k = 2 / (period + 1);
   let ema = data.slice(0, period).reduce((a, b) => a + b, 0) / period;
@@ -393,7 +403,7 @@ function calculateEMA(data: number[], period: number): number {
   return ema;
 }
 
-function calculateRSI(data: number[], period: number): number {
+export function calculateRSI(data: number[], period: number): number {
   if (data.length < period + 1) return 50;
   
   let gains = 0, losses = 0;
@@ -427,7 +437,7 @@ function calculateATR(highs: number[], lows: number[], closes: number[], period:
   return calculateSMA(trueRanges, period);
 }
 
-function calculateStochastic(highs: number[], lows: number[], closes: number[], kPeriod: number, dPeriod: number) {
+export function calculateStochastic(highs: number[], lows: number[], closes: number[], kPeriod: number, dPeriod: number) {
   if (closes.length < kPeriod + dPeriod - 1) return { k: 50, d: 50 };
   
   // Build %K series over the full window needed for %D smoothing

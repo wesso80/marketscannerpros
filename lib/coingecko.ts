@@ -19,6 +19,9 @@ const FREE_URL = 'https://api.coingecko.com/api/v3';
 // Use Pro API if key is available, otherwise fall back to free tier
 const getBaseUrl = () => getApiKey() ? BASE_URL : FREE_URL;
 
+// Circuit breaker — trips after repeated non-429 failures (500s, timeouts)
+import { coinGeckoCircuit } from '@/lib/circuitBreaker';
+
 // Request headers with API key
 const getHeaders = (): HeadersInit => {
   const headers: HeadersInit = {
@@ -120,14 +123,14 @@ async function cgFetch<T>(
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const response = await fetch(url, {
+      const response = await coinGeckoCircuit.call(() => fetch(url, {
         ...(options?.init || {}),
         headers: {
           ...getHeaders(),
           ...(options?.init?.headers || {}),
         },
         signal: controller.signal,
-      });
+      }));
 
       if (response.status === 429 && remainingRetries > 0) {
         const retryAfterSeconds = Number(response.headers.get('retry-after') || '0');

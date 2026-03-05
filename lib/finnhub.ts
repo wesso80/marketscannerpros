@@ -4,6 +4,8 @@
  * Attribution required: "Data provided by Finnhub"
  */
 
+import { validateFinnhubCandles } from './dataQuality';
+
 const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || '';
 const BASE_URL = 'https://finnhub.io/api/v1';
 
@@ -337,11 +339,19 @@ export function calculateIndicators(candles: FinnhubCandle) {
   if (!candles || !candles.c || candles.c.length < 20) {
     return null;
   }
+
+  // Data quality gate — filter out NaN / Infinity / negative prices
+  const validated = validateFinnhubCandles(candles);
+  if (validated.warnings.length > 0) {
+    console.warn('[DQ][finnhub]', validated.warnings);
+  }
+  const clean = validated.data;
+  if (clean.c.length < 20) return null;  // not enough data after cleanup
   
-  const closes = candles.c;
-  const highs = candles.h;
-  const lows = candles.l;
-  const volumes = candles.v;
+  const closes = clean.c;
+  const highs = clean.h;
+  const lows = clean.l;
+  const volumes = clean.v;
   
   // Simple Moving Averages
   const sma20 = closes.slice(-20).reduce((a, b) => a + b, 0) / 20;
@@ -380,7 +390,7 @@ export function calculateIndicators(candles: FinnhubCandle) {
   };
 }
 
-function calculateRSI(closes: number[], period: number = 14): number {
+export function calculateRSI(closes: number[], period: number = 14): number {
   if (closes.length < period + 1) return 50;
   
   let gains = 0;
@@ -400,7 +410,7 @@ function calculateRSI(closes: number[], period: number = 14): number {
   return 100 - (100 / (1 + rs));
 }
 
-function calculateMACD(closes: number[]): { macd: number; signal: number; histogram: number } | null {
+export function calculateMACD(closes: number[]): { macd: number; signal: number; histogram: number } | null {
   if (closes.length < 35) return null; // Need 26 + 9 for signal EMA
   
   // Build full EMA-12 and EMA-26 series
@@ -424,7 +434,7 @@ function calculateMACD(closes: number[]): { macd: number; signal: number; histog
   return { macd: macdLine, signal, histogram };
 }
 
-function calculateEMA(data: number[], period: number): number {
+export function calculateEMA(data: number[], period: number): number {
   const k = 2 / (period + 1);
   let ema = data.slice(0, period).reduce((a, b) => a + b, 0) / period;
   
@@ -436,7 +446,7 @@ function calculateEMA(data: number[], period: number): number {
 }
 
 /** Returns full EMA series (same length as input). First `period-1` values are NaN. */
-function calculateEMASeries(data: number[], period: number): number[] {
+export function calculateEMASeries(data: number[], period: number): number[] {
   const result: number[] = [];
   const k = 2 / (period + 1);
   let ema = data.slice(0, period).reduce((a, b) => a + b, 0) / period;

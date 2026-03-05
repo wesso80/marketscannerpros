@@ -109,14 +109,18 @@ export async function getCached<T>(key: string): Promise<T | null> {
 }
 
 /**
- * Set cached value with TTL
+ * Set cached value with TTL — automatically embeds `_ts` for staleness detection.
  */
 export async function setCached<T>(key: string, value: T, ttlSeconds: number): Promise<boolean> {
   const r = getRedis();
   if (!r) return false;
   
   try {
-    await r.set(key, value, { ex: ttlSeconds });
+    // Embed timestamp for staleness detection by health endpoint
+    const wrapped = typeof value === 'object' && value !== null
+      ? { ...value, _ts: Date.now() }
+      : value;
+    await r.set(key, wrapped, { ex: ttlSeconds });
     onRedisSuccess();
     return true;
   } catch (err) {
