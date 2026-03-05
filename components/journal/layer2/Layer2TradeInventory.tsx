@@ -71,10 +71,6 @@ export default function Layer2TradeInventory(props: Layer2TradeInventoryProps) {
     const auto: TradeRowModel[] = [];
     for (const row of props.rows) {
       if (isAutoTrade(row)) {
-        // When status filter is 'all', hide closed auto-trades so they don't
-        // clutter the active view.  They remain visible when the user
-        // explicitly selects the 'closed' filter.
-        if (props.query.status === 'all' && row.status === 'closed') continue;
         auto.push(row);
       } else {
         manual.push(row);
