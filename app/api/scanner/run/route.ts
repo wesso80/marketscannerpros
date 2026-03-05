@@ -28,7 +28,18 @@ export const revalidate = 0; // Disable ISR caching
 const SCANNER_VERSION = 'v3.0';
 const ALPHA_KEY = process.env.ALPHA_VANTAGE_API_KEY;
 const STABLECOIN_SYMBOLS = new Set([
-  'USDT', 'USDC', 'DAI', 'BUSD', 'TUSD', 'USDP', 'GUSD', 'FRAX', 'LUSD', 'SUSD', 'USDD', 'FDUSD', 'PYUSD', 'USDE'
+  // USD-pegged
+  'USDT', 'USDC', 'DAI', 'BUSD', 'TUSD', 'USDP', 'GUSD', 'FRAX', 'LUSD',
+  'FDUSD', 'PYUSD', 'USDD', 'USDE', 'USDS', 'USD1', 'CRVUSD', 'GHO',
+  'MIM', 'RAI', 'SUSD', 'DOLA', 'HAY', 'USDX', 'ZUSD', 'HUSD', 'ALUSD',
+  'CUSD', 'USDJ', 'UST', 'USDB', 'USDZ', 'USDK', 'TRIBE', 'FEI',
+  'FLEXUSD', 'MIMATIC', 'USDN', 'USDFL',
+  // EUR-pegged
+  'EURC', 'EURS', 'EURT', 'EUROC', 'AGEUR',
+  // Bridged variants
+  'USDCE', 'USDTE',
+  // Gold-pegged (no directional signals)
+  'XAUT', 'PAXG',
 ]);
 
 function normalizeCryptoSymbol(symbol: string): string {

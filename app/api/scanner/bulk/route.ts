@@ -481,8 +481,7 @@ const AV_INTERVAL_MAP: Record<string, string> = {
 async function fetchCoinGeckoData(symbol: string, timeframe: string = '1d'): Promise<OHLCV[] | null> {
   try {
     // Skip stablecoins
-    const stablecoins = ['USDT', 'USDC', 'DAI', 'BUSD', 'TUSD', 'USDP', 'GUSD', 'FRAX', 'LUSD'];
-    if (stablecoins.includes(symbol.toUpperCase())) return null;
+    if (STABLECOINS.has(symbol.toUpperCase())) return null;
     
     // Get CoinGecko ID from symbol
     const coinId = SYMBOL_TO_COINGECKO[symbol.toUpperCase()];
@@ -771,7 +770,20 @@ interface InstitutionalPickScoreV2 {
   };
 }
 
-const STABLECOINS = ['USDT', 'USDC', 'DAI', 'BUSD', 'TUSD', 'USDP', 'GUSD', 'FRAX', 'LUSD'];
+const STABLECOINS = new Set([
+  // USD-pegged
+  'USDT', 'USDC', 'DAI', 'BUSD', 'TUSD', 'USDP', 'GUSD', 'FRAX', 'LUSD',
+  'FDUSD', 'PYUSD', 'USDD', 'USDE', 'USDS', 'USD1', 'CRVUSD', 'GHO',
+  'MIM', 'RAI', 'SUSD', 'DOLA', 'HAY', 'USDX', 'ZUSD', 'HUSD', 'ALUSD',
+  'CUSD', 'USDJ', 'UST', 'USDB', 'USDZ', 'USDK', 'TRIBE', 'FEI',
+  'UXDUSDC', 'FLEXUSD', 'MIMATIC', 'USDN', 'USDFL',
+  // EUR-pegged
+  'EURC', 'EURS', 'EURT', 'EUROC', 'AGEUR',
+  // Wrapped / bridged stablecoin variants
+  'USDC.E', 'USDCE', 'USDT.E', 'USDTE',
+  // Gold-pegged (no directional signals)
+  'XAUT', 'PAXG'
+]);
 const LIGHT_SCAN_PER_PAGE = 250;
 const LIGHT_SCAN_MAX_API_CALLS = Math.max(1, Number(process.env.SCANNER_LIGHT_MAX_CG_CALLS || 30));
 const LIGHT_EQUITY_MAX_API_CALLS = Math.max(2, Number(process.env.SCANNER_LIGHT_MAX_AV_CALLS || 8));
@@ -1133,7 +1145,7 @@ async function runLightCryptoScan(maxCoins: number, startTime: number, timeframe
   const dedupedBySymbol = new Map<string, any>();
   for (const coin of markets) {
     const symbol = String(coin.symbol || '').toUpperCase();
-    if (!symbol || STABLECOINS.includes(symbol)) continue;
+    if (!symbol || STABLECOINS.has(symbol)) continue;
     if (!dedupedBySymbol.has(symbol)) {
       dedupedBySymbol.set(symbol, coin);
     }
