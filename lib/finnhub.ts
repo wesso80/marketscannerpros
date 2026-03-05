@@ -401,15 +401,24 @@ function calculateRSI(closes: number[], period: number = 14): number {
 }
 
 function calculateMACD(closes: number[]): { macd: number; signal: number; histogram: number } | null {
-  if (closes.length < 26) return null;
+  if (closes.length < 35) return null; // Need 26 + 9 for signal EMA
   
-  const ema12 = calculateEMA(closes, 12);
-  const ema26 = calculateEMA(closes, 26);
-  const macdLine = ema12 - ema26;
+  // Build full EMA-12 and EMA-26 series
+  const ema12Series = calculateEMASeries(closes, 12);
+  const ema26Series = calculateEMASeries(closes, 26);
   
-  // For signal line, we'd need historical MACD values
-  // Simplified: use current MACD as approximation
-  const signal = macdLine * 0.9; // Rough approximation
+  // MACD line series = EMA12 - EMA26 (valid from index 25 onward)
+  const macdSeries: number[] = [];
+  for (let i = 25; i < closes.length; i++) {
+    macdSeries.push(ema12Series[i] - ema26Series[i]);
+  }
+  
+  if (macdSeries.length < 9) return null;
+  
+  // Signal = 9-period EMA of MACD line series
+  const signalSeries = calculateEMASeries(macdSeries, 9);
+  const macdLine = macdSeries[macdSeries.length - 1];
+  const signal = signalSeries[signalSeries.length - 1];
   const histogram = macdLine - signal;
   
   return { macd: macdLine, signal, histogram };
@@ -424,6 +433,25 @@ function calculateEMA(data: number[], period: number): number {
   }
   
   return ema;
+}
+
+/** Returns full EMA series (same length as input). First `period-1` values are NaN. */
+function calculateEMASeries(data: number[], period: number): number[] {
+  const result: number[] = [];
+  const k = 2 / (period + 1);
+  let ema = data.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  
+  for (let i = 0; i < data.length; i++) {
+    if (i < period - 1) {
+      result.push(NaN);
+    } else if (i === period - 1) {
+      result.push(ema);
+    } else {
+      ema = data[i] * k + ema * (1 - k);
+      result.push(ema);
+    }
+  }
+  return result;
 }
 
 function calculateATR(highs: number[], lows: number[], closes: number[], period: number = 14): number {

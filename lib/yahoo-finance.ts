@@ -428,18 +428,24 @@ function calculateATR(highs: number[], lows: number[], closes: number[], period:
 }
 
 function calculateStochastic(highs: number[], lows: number[], closes: number[], kPeriod: number, dPeriod: number) {
-  if (closes.length < kPeriod) return { k: 50, d: 50 };
+  if (closes.length < kPeriod + dPeriod - 1) return { k: 50, d: 50 };
   
-  const recentHighs = highs.slice(-kPeriod);
-  const recentLows = lows.slice(-kPeriod);
-  const highestHigh = Math.max(...recentHighs);
-  const lowestLow = Math.min(...recentLows);
+  // Build %K series over the full window needed for %D smoothing
+  const kValues: number[] = [];
+  for (let i = kPeriod - 1; i < closes.length; i++) {
+    const sliceHighs = highs.slice(i - kPeriod + 1, i + 1);
+    const sliceLows = lows.slice(i - kPeriod + 1, i + 1);
+    const highestHigh = Math.max(...sliceHighs);
+    const lowestLow = Math.min(...sliceLows);
+    const range = highestHigh - lowestLow;
+    kValues.push(range > 0 ? ((closes[i] - lowestLow) / range) * 100 : 50);
+  }
   
-  const currentClose = closes[closes.length - 1];
-  const k = ((currentClose - lowestLow) / (highestHigh - lowestLow)) * 100;
+  const k = kValues[kValues.length - 1];
   
-  // Simplified D (would need historical K values for accurate D)
-  const d = k;
+  // %D = dPeriod-SMA of %K values
+  const dSlice = kValues.slice(-dPeriod);
+  const d = dSlice.reduce((a, b) => a + b, 0) / dSlice.length;
   
   return { k, d };
 }

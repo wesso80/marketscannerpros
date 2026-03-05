@@ -11,6 +11,9 @@ const nextConfig = {
   turbopack: {
     root: __dirname,
   },
+  experimental: {
+    optimizePackageImports: ['react-icons', '@heroicons/react', 'chart.js', 'react-markdown'],
+  },
   async headers() {
     return [
       {

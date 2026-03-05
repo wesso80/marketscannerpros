@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useUserTier, canAccessBacktest } from "@/lib/useUserTier";
+import { useUserTier, canAccessOptionsConfluence } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
 import { 
   calculateOptionsProbability, 
@@ -2246,7 +2246,7 @@ export default function OptionsConfluenceScanner() {
   }
 
   // Pro Trader feature gate
-  if (!canAccessBacktest(tier)) {
+  if (!canAccessOptionsConfluence(tier)) {
     return (
       <div className="min-h-screen bg-[var(--msp-bg)]">
         <header className="max-w-none px-4 py-8 text-center">

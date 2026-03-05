@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
-import { useUserTier, canAccessBacktest } from "@/lib/useUserTier";
+import { useUserTier, canAccessDeepAnalysis } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
 import { useAIPageContext } from "@/lib/ai/pageContext";
 import { writeOperatorState } from "@/lib/operatorState";
@@ -633,7 +633,7 @@ export default function DeepAnalysisPage() {
   }, [result]);
 
   // Pro Trader feature gate
-  if (!canAccessBacktest(tier)) {
+  if (!canAccessDeepAnalysis(tier)) {
     return (
       <div className="min-h-screen bg-[var(--msp-bg)]">
         <ToolsPageHeader badge="PRO TRADER" title="Golden Egg Deep Analysis" subtitle="Find AI-powered market context with structured multi-factor analysis" icon="🥚" />

@@ -931,16 +931,24 @@ function calculateRSI(closes: number[], period: number): number {
 }
 
 function calculateStochastic(closes: number[], highs: number[], lows: number[], kPeriod: number, dPeriod: number) {
-  const recentCloses = closes.slice(-kPeriod);
-  const recentHighs = highs.slice(-kPeriod);
-  const recentLows = lows.slice(-kPeriod);
+  if (closes.length < kPeriod + dPeriod - 1) return { stochK: 50, stochD: 50 };
   
-  const highestHigh = Math.max(...recentHighs);
-  const lowestLow = Math.min(...recentLows);
-  const currentClose = closes[closes.length - 1];
+  // Build %K series over the full window needed for %D smoothing
+  const kValues: number[] = [];
+  for (let i = kPeriod - 1; i < closes.length; i++) {
+    const sliceHighs = highs.slice(i - kPeriod + 1, i + 1);
+    const sliceLows = lows.slice(i - kPeriod + 1, i + 1);
+    const highestHigh = Math.max(...sliceHighs);
+    const lowestLow = Math.min(...sliceLows);
+    const range = highestHigh - lowestLow;
+    kValues.push(range > 0 ? ((closes[i] - lowestLow) / range) * 100 : 50);
+  }
   
-  const stochK = ((currentClose - lowestLow) / (highestHigh - lowestLow)) * 100;
-  const stochD = stochK; // Simplified
+  const stochK = kValues[kValues.length - 1];
+  
+  // %D = dPeriod-SMA of %K values
+  const dSlice = kValues.slice(-dPeriod);
+  const stochD = dSlice.reduce((a, b) => a + b, 0) / dSlice.length;
   
   return { stochK, stochD };
 }

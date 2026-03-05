@@ -89,6 +89,10 @@ export const canAccessCryptoCommandCenter = (tier: UserTier) => tier === "pro" |
 export const canAccessCatalystStudy = (tier: UserTier) => tier === "pro_trader";
 export const canAccessOptionsTerminal = (tier: UserTier) => tier === "pro_trader";
 export const canAccessTimeScanner = (tier: UserTier) => tier === "pro_trader";
+export const canAccessDeepAnalysis = (tier: UserTier) => tier === "pro_trader";
+export const canAccessGoldenEgg = (tier: UserTier) => tier === "pro_trader";
+export const canAccessOptionsConfluence = (tier: UserTier) => tier === "pro_trader";
+export const canAccessConfluenceScanner = (tier: UserTier) => tier === "pro_trader";
 export const getPortfolioLimit = (tier: UserTier) => tier === "anonymous" || tier === "free" ? 3 : Infinity;
 export const getAILimit = (tier: UserTier) => {
   switch (tier) {

@@ -4,20 +4,21 @@ import { stripe } from "@/lib/stripe";
 import { hashWorkspaceId, signToken, verifyToken } from "@/lib/auth";
 import { q } from "@/lib/db";
 import { loginLimiter, getClientIP } from "@/lib/rateLimit";
+import { isValidAdminSecret } from "@/lib/adminAuth";
 
 // server-side envs
 const PRICE_PRO = process.env.NEXT_PUBLIC_PRICE_PRO ?? "";
 const PRICE_PRO_TRADER = process.env.NEXT_PUBLIC_PRICE_PRO_TRADER ?? "";
 
-// Price IDs from env vars with hardcoded fallbacks
+// Price IDs from env vars — no hardcoded fallbacks (stale IDs cause tier mismatch)
 const PRO_PRICE_IDS = [
-  process.env.STRIPE_PRICE_PRO_MONTHLY || "price_1SfcQJLyhHN1qVrAfOpufz0L",
-  process.env.STRIPE_PRICE_PRO_YEARLY || "price_1SfcRsLyhHN1qVrAuRE6IRU1",
-].filter(Boolean);
+  process.env.STRIPE_PRICE_PRO_MONTHLY,
+  process.env.STRIPE_PRICE_PRO_YEARLY,
+].filter(Boolean) as string[];
 const PRO_TRADER_PRICE_IDS = [
-  process.env.STRIPE_PRICE_PRO_TRADER_MONTHLY || "price_1SfcSZLyhHN1qVrAaVrilpyO",
-  process.env.STRIPE_PRICE_PRO_TRADER_YEARLY || "price_1SfcTALyhHN1qVrAoIHo4LN1",
-].filter(Boolean);
+  process.env.STRIPE_PRICE_PRO_TRADER_MONTHLY,
+  process.env.STRIPE_PRICE_PRO_TRADER_YEARLY,
+].filter(Boolean) as string[];
 
 function detectTierFromPrices(ids: string[]): "free" | "pro" | "pro_trader" {
   const arr = ids.filter(Boolean);
@@ -262,7 +263,7 @@ export async function POST(req: NextRequest) {
     const token = signToken({ cid: customerId, tier, workspaceId, exp });
     const url = new URL(req.url);
     const debug = url.searchParams.get("debug") === "1";
-    const isAdminDebug = debug && (req.headers.get("x-admin-secret") === process.env.ADMIN_SECRET);
+    const isAdminDebug = debug && isValidAdminSecret(req.headers.get("x-admin-secret"), process.env.ADMIN_SECRET);
     const body: any = { ok: true, tier, workspaceId, message: "Subscription activated successfully!" };
     if (isAdminDebug) {
       body.debug = {

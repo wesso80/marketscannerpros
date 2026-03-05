@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { searchCoins } from '@/lib/coingecko';
+import { getSessionFromCookie } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
+  const session = await getSessionFromCookie();
+  if (!session?.workspaceId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   const { searchParams } = new URL(request.url);
   const query = searchParams.get('q');
 

@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getNewPools } from '@/lib/coingecko';
+import { getSessionFromCookie } from '@/lib/auth';
 
 export async function GET() {
+  const session = await getSessionFromCookie();
+  if (!session?.workspaceId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const data = await getNewPools();
     if (!data) {

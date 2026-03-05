@@ -11,7 +11,7 @@ import { fireAutoLog } from '@/lib/autoLog';
 import { formatPrice } from '@/lib/formatPrice';
 import TimeGravityMapWidget from '@/components/TimeGravityMapWidget';
 import { detectAssetClass } from '@/lib/detectAssetClass';
-import { useUserTier, canAccessBacktest } from '@/lib/useUserTier';
+import { useUserTier, canAccessTimeScanner } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
 
 type ScanModeType = 'scalping' | 'intraday_30m' | 'intraday_1h' | 'intraday_4h' | 'swing_1d' | 'swing_3d' | 'swing_1w' | 'macro_monthly' | 'macro_yearly';
@@ -521,7 +521,7 @@ export default function TimeScannerPage() {
       </TimeScannerShell>
     );
   }
-  if (!canAccessBacktest(tier)) {
+  if (!canAccessTimeScanner(tier)) {
     return (
       <TimeScannerShell>
         <UpgradeGate requiredTier="pro_trader" feature="Time Scanner" />
