@@ -125,7 +125,11 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
     setProcessingLearning(true);
     setLearningResult(null);
     try {
-      const res = await fetch("/api/jobs/learning-outcomes", { method: "POST" });
+      const secret = sessionStorage.getItem("admin_secret");
+      const res = await fetch("/api/jobs/learning-outcomes", {
+        method: "POST",
+        headers: secret ? { Authorization: `Bearer ${secret}` } : {},
+      });
       const data = await res.json();
       setLearningResult(data);
       // Refresh stats after processing

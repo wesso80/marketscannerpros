@@ -138,6 +138,7 @@ function CryptoCommandCenterContent() {
   const [logTab, setLogTab] = useState<LogTab>('alerts');
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [marketData, setMarketData] = useState<any>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     const sectionParam = searchParams.get('section');
@@ -171,8 +172,10 @@ function CryptoCommandCenterContent() {
       ]);
       setMarketData({ market: marketRes?.data, trending: trendingRes, funding: fundingRes, oi: oiRes });
       setLastUpdate(new Date());
+      setFetchError(null);
     } catch (e) {
       console.error('Overview fetch failed:', e);
+      setFetchError('Failed to load crypto market data — retrying shortly');
     }
   }, []);
 
@@ -428,6 +431,12 @@ function CryptoCommandCenterContent() {
 
   return (
     <div className="min-h-screen bg-[var(--msp-bg)] text-slate-100">
+      {fetchError && (
+        <div className="mx-2 mt-2 flex items-center justify-between rounded-md border border-red-500/40 bg-red-900/20 px-4 py-2 text-[13px] text-red-300">
+          <span>⚠️ {fetchError}</span>
+          <button onClick={() => setFetchError(null)} className="ml-4 text-red-400 hover:text-white">✕</button>
+        </div>
+      )}
       <main className="mx-auto w-full max-w-none space-y-2 px-2 pb-6 pt-3 md:px-3">
         <section className="sticky top-2 z-20 flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/95 p-1.5 backdrop-blur">
           {[

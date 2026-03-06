@@ -188,7 +188,7 @@ async function generateMidpointsOnDemand(symbol: string, assetType: 'crypto' | '
       }
 
       // 1. Fetch daily bars (compact = ~100 trading days)
-      const canFetchDaily = avTryToken();
+      const canFetchDaily = await avTryToken();
       if (!canFetchDaily) {
         console.warn(`[TGM on-demand] AV rate limit hit for daily fetch, skipping ${symbol}`);
         rateLimited = true;
@@ -231,7 +231,7 @@ async function generateMidpointsOnDemand(symbol: string, assetType: 'crypto' | '
       }
 
       // 2. Fetch intraday 60min bars for 1H + 4H (1 extra API call)
-      const canFetchIntraday = avTryToken();
+      const canFetchIntraday = await avTryToken();
       if (!canFetchIntraday) {
         console.warn(`[TGM on-demand] AV rate limit hit for intraday fetch, skipping ${symbol}`);
         if (totalStored === 0) rateLimited = true;

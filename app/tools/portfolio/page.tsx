@@ -1008,7 +1008,7 @@ function PortfolioContent() {
     const plPercent = denom > 0 ? ((pl / denom) * 100) : 0;
 
     const position: Position = {
-      id: Date.now(),
+      id: Date.now() + Math.random(),
       symbol: newPosition.symbol.toUpperCase(),
       side: newPosition.side,
       quantity: qty,
@@ -1070,7 +1070,7 @@ function PortfolioContent() {
     }
 
     const position: Position = {
-      id: Date.now(),
+      id: Date.now() + Math.random(),
       symbol: deployDraft.symbol.toUpperCase(),
       side: deployDraft.side,
       quantity,
@@ -1282,7 +1282,7 @@ function PortfolioContent() {
       return;
     }
     const entry: CashLedgerEntry = {
-      id: `${Date.now()}`,
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       type: cashFlowDraft.type,
       amount,
       timestamp: new Date().toISOString(),

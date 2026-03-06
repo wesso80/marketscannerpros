@@ -108,9 +108,12 @@ export default function AdminCostsPage() {
     textAlign: "center",
   };
 
-  // Calculate projected monthly cost
+  // Calculate projected monthly cost by extrapolating current month pace
   const dayOfMonth = new Date().getDate();
-  const projectedMonthly = stats ? (stats.last30Days.cost / 30) * 30 : 0;
+  const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+  const projectedMonthly = stats && dayOfMonth > 0
+    ? (stats.last30Days.cost / dayOfMonth) * daysInMonth
+    : 0;
 
   return (
     <div>

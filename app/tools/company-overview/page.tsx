@@ -370,7 +370,7 @@ function CompanyOverviewContent() {
             type="text"
             value={symbol}
             onChange={(e) => setSymbol(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && handleSearch()}
+            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             placeholder="Enter ticker symbol (e.g., AAPL)"
             style={{ flex: 1, minWidth: "200px", padding: "14px 16px", background: "var(--msp-card)", border: "1px solid var(--msp-border)", borderRadius: "12px", color: "var(--msp-text)", fontSize: "15px" }}
           />
