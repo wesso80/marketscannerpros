@@ -330,6 +330,9 @@ function ScannerContent() {
   const lastFlowSymbolRef = React.useRef<string | null>(null);
   const journalMonitorLastLoggedRef = React.useRef<Record<string, number>>({});
   const monitorAutoScanBusyRef = React.useRef(false);
+  // When clicking a bulk scan row, carry the bulk direction to the detail view so
+  // the user doesn't see SHORT in the table but BULLISH in the detail panel.
+  const bulkPickDirectionRef = React.useRef<'bullish' | 'bearish' | 'neutral' | null>(null);
   const previousPresenceRef = React.useRef<{
     state: 'WATCHING' | 'PREPARING' | 'READY' | 'INVALIDATED';
     mode: 'TREND MODE' | 'RANGE MODE' | 'CHAOS MODE';
@@ -969,6 +972,8 @@ function ScannerContent() {
   const runScan = async (symbolOverride?: string) => {
     const effectiveTicker = symbolOverride?.trim() || ticker.trim();
     if (loading) return;
+    // Clear bulk direction override for manual scans (no symbolOverride = typed ticker)
+    if (!symbolOverride) bulkPickDirectionRef.current = null;
 
     if (freeScanLimitReached) {
       setError(`Free plan limit reached (${FREE_DAILY_SCAN_LIMIT} scans/day). Upgrade to Pro for unlimited scanning.`);
@@ -1029,6 +1034,11 @@ function ScannerContent() {
         console.log('ATR value:', data.results[0].atr, 'isFinite:', Number.isFinite(data.results[0].atr));
         console.log('Candle time:', data.results[0].lastCandleTime);
         const scanResult = data.results[0] as ScanResult;
+        // If navigated from bulk scan row, use the bulk scan's direction for consistency
+        if (bulkPickDirectionRef.current) {
+          scanResult.direction = bulkPickDirectionRef.current;
+          bulkPickDirectionRef.current = null;
+        }
         const scanScore = Math.max(1, Math.min(99, Math.round(scanResult.score ?? 50)));
         const scanAtrPercent = scanResult.atr && scanResult.price ? (scanResult.atr / scanResult.price) * 100 : 0;
         const signalIntensity = scanResult.signals ? (scanResult.signals.bullish + scanResult.signals.bearish) : 0;
@@ -1915,6 +1925,7 @@ function ScannerContent() {
                         const cellStyle = { padding: '7px 8px', color: '#cbd5e1', whiteSpace: 'nowrap' as const, borderBottom: '1px solid rgba(51, 65, 85, 0.2)', cursor: 'pointer' };
                         const handleClick = () => {
                           const sym = (pick.symbol ?? '').replace(/-USD$/, '');
+                          bulkPickDirectionRef.current = pick.direction ?? null;
                           setTicker(sym);
                           setAssetType(bulkScanResults!.type === 'crypto' ? 'crypto' : 'equity');
                           void runScan(sym);
@@ -1958,7 +1969,7 @@ function ScannerContent() {
                       ? 'var(--msp-bear)'
                       : 'var(--msp-warn)';
                     return (
-                      <div key={pick.symbol} className="flex min-h-[220px] h-full flex-col rounded-xl border bg-[var(--msp-panel)] p-3 transition-all duration-200 hover:border-[var(--msp-border-strong)] cursor-pointer" style={{ borderColor }} onClick={() => { const sym = (pick.symbol ?? '').replace(/-USD$/, ''); setTicker(sym); setAssetType(bulkScanResults!.type === 'crypto' ? 'crypto' : 'equity'); void runScan(sym); }}>
+                      <div key={pick.symbol} className="flex min-h-[220px] h-full flex-col rounded-xl border bg-[var(--msp-panel)] p-3 transition-all duration-200 hover:border-[var(--msp-border-strong)] cursor-pointer" style={{ borderColor }} onClick={() => { const sym = (pick.symbol ?? '').replace(/-USD$/, ''); bulkPickDirectionRef.current = pick.direction ?? null; setTicker(sym); setAssetType(bulkScanResults!.type === 'crypto' ? 'crypto' : 'equity'); void runScan(sym); }}>
                         <div className="mb-2 flex items-center justify-between gap-2">
                           <div className="flex items-center gap-1.5">
                             <span className="text-[0.95rem] font-semibold text-[var(--msp-text)]">{pick.symbol}</span>
