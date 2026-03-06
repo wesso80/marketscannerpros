@@ -375,6 +375,9 @@ export default function TimeScannerPage() {
   const [isMarketOpen, setIsMarketOpen] = useState<boolean>(true);
   const [scanTrigger, setScanTrigger] = useState(0);
   const timeAutoLogRef = useRef<string>('');
+  const [selectedClusterTFs, setSelectedClusterTFs] = useState<string[] | null>(null);
+  const [activeClusterLabel, setActiveClusterLabel] = useState<string | null>(null);
+  const [selectedMid50TF, setSelectedMid50TF] = useState<string>('all');
   const [scanData, setScanData] = useState<{
     currentPrice: number;
     direction: 'bullish' | 'bearish' | 'neutral';
@@ -400,6 +403,9 @@ export default function TimeScannerPage() {
 
     setLoading(true);
     setError(null);
+    setSelectedClusterTFs(null);
+    setActiveClusterLabel(null);
+    setSelectedMid50TF('all');
     try {
       const response = await fetch('/api/confluence-scan', {
         method: 'POST',
@@ -713,27 +719,69 @@ export default function TimeScannerPage() {
                 </div>
 
                 {(() => {
-                  const validLevels = scanData.mid50Levels.filter((m) => m.level > 0);
-                  if (validLevels.length === 0) return null;
+                  const allLevels = scanData.mid50Levels.filter((m) => m.level > 0);
+                  if (allLevels.length === 0) return null;
+
+                  // Filter by selected cluster TFs (if any)
+                  const clusterFiltered = selectedClusterTFs
+                    ? allLevels.filter((m) => selectedClusterTFs.includes(m.tf))
+                    : allLevels;
+
+                  // Then filter by individual TF dropdown
+                  const validLevels = selectedMid50TF === 'all'
+                    ? clusterFiltered
+                    : clusterFiltered.filter((m) => m.tf === selectedMid50TF);
+
+                  // Build dropdown options from the cluster-filtered set
+                  const dropdownTFs = clusterFiltered.map((m) => m.tf);
+
                   return (
                     <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2.5">
-                      <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                        50% Pull Levels <span className={`ml-1 ${
-                          scanData.netPull === 'bullish' ? 'text-emerald-400' : scanData.netPull === 'bearish' ? 'text-rose-400' : 'text-slate-500'
-                        }`}>({scanData.netPull})</span>
+                      <div className="mb-1.5 flex items-center justify-between">
+                        <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                          50% Pull Levels <span className={`ml-1 ${
+                            scanData.netPull === 'bullish' ? 'text-emerald-400' : scanData.netPull === 'bearish' ? 'text-rose-400' : 'text-slate-500'
+                          }`}>({scanData.netPull})</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          {selectedClusterTFs && (
+                            <button
+                              type="button"
+                              onClick={() => { setSelectedClusterTFs(null); setActiveClusterLabel(null); setSelectedMid50TF('all'); }}
+                              className="rounded px-1.5 py-0.5 text-[9px] font-medium text-slate-500 hover:bg-slate-800 hover:text-slate-300"
+                              title="Show all TF levels"
+                            >
+                              ✕ Clear
+                            </button>
+                          )}
+                          <select
+                            value={selectedMid50TF}
+                            onChange={(e) => setSelectedMid50TF(e.target.value)}
+                            className="rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-[10px] text-slate-300"
+                          >
+                            <option value="all">All TFs ({clusterFiltered.length})</option>
+                            {dropdownTFs.map((tf) => (
+                              <option key={tf} value={tf}>{tf}</option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs">
-                        {validLevels.map((m) => (
-                          <div key={m.tf} className="flex items-center justify-between">
-                            <span className="font-medium text-slate-400">{m.tf}</span>
-                            <span className="font-mono text-slate-300">{formatPrice(m.level)}
-                              <span className={`ml-1 text-[10px] ${m.distance > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                {m.distance > 0 ? '+' : ''}{m.distance.toFixed(1)}%
+                      {validLevels.length > 0 ? (
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs">
+                          {validLevels.map((m) => (
+                            <div key={m.tf} className="flex items-center justify-between">
+                              <span className="font-medium text-slate-400">{m.tf}</span>
+                              <span className="font-mono text-slate-300">{formatPrice(m.level)}
+                                <span className={`ml-1 text-[10px] ${m.distance > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                  {m.distance > 0 ? '+' : ''}{m.distance.toFixed(1)}%
+                                </span>
                               </span>
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-[10px] text-slate-500">No mid50 data for this selection — click a cluster tile below to load levels.</div>
+                      )}
                     </div>
                   );
                 })()}
@@ -870,7 +918,22 @@ export default function TimeScannerPage() {
           </section>
         )}
 
-        <CloseCalendar symbol={symbol} />
+        <CloseCalendar
+          symbol={symbol}
+          activeClusterLabel={activeClusterLabel ?? undefined}
+          onClusterClick={(tfs, label) => {
+            // Toggle: clicking the same cluster again deselects it
+            if (activeClusterLabel === label) {
+              setSelectedClusterTFs(null);
+              setActiveClusterLabel(null);
+              setSelectedMid50TF('all');
+            } else {
+              setSelectedClusterTFs(tfs);
+              setActiveClusterLabel(label);
+              setSelectedMid50TF('all');
+            }
+          }}
+        />
 
         {/* ═══ ROW 3: CONFLUENCE ENGINE + EXECUTION (collapsible — collapsed by default) ═══ */}
         <details className="w-full rounded-2xl border border-slate-800 bg-slate-900/30">

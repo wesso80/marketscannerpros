@@ -106,9 +106,11 @@ function clusterScoreColor(score: number): string {
 
 interface CloseCalendarProps {
   symbol?: string;
+  onClusterClick?: (tfs: string[], clusterLabel: string) => void;
+  activeClusterLabel?: string;
 }
 
-export default function CloseCalendar({ symbol: propSymbol }: CloseCalendarProps) {
+export default function CloseCalendar({ symbol: propSymbol, onClusterClick, activeClusterLabel }: CloseCalendarProps) {
   const assetClass = propSymbol ? detectAssetClass(propSymbol) : 'crypto';
   const [anchor, setAnchor] = useState<CloseCalendarAnchor>("TODAY");
   const [horizon, setHorizon] = useState<number>(1);
@@ -275,7 +277,12 @@ export default function CloseCalendar({ symbol: propSymbol }: CloseCalendarProps
               <div className="mb-2 text-xs font-semibold text-slate-300">🔥 Close Cluster Timeline</div>
               <div className="flex flex-wrap gap-2">
                 {data.forwardClusters.slice(0, 8).map((cluster, i) => (
-                  <ClusterCard key={i} cluster={cluster} />
+                  <ClusterCard
+                    key={i}
+                    cluster={cluster}
+                    isActive={activeClusterLabel === cluster.label}
+                    onClick={() => onClusterClick?.(cluster.tfs, cluster.label)}
+                  />
                 ))}
               </div>
             </div>
@@ -338,9 +345,19 @@ export default function CloseCalendar({ symbol: propSymbol }: CloseCalendarProps
 
 // ── Sub-components ──
 
-function ClusterCard({ cluster }: { cluster: ForwardCloseCluster }) {
+function ClusterCard({ cluster, isActive, onClick }: { cluster: ForwardCloseCluster; isActive?: boolean; onClick?: () => void }) {
   return (
-    <div className={`rounded-xl border px-3 py-2 ${clusterScoreColor(cluster.clusterScore)}`}>
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick?.(); }}
+      className={`cursor-pointer rounded-xl border px-3 py-2 transition-all ${
+        isActive
+          ? 'border-emerald-400/60 bg-emerald-500/15 ring-1 ring-emerald-400/30'
+          : clusterScoreColor(cluster.clusterScore)
+      } hover:ring-1 hover:ring-slate-500/40`}
+    >
       <div className="text-[11px] font-semibold text-slate-100">{cluster.label}</div>
       <div className="mt-0.5 flex flex-wrap gap-1">
         {cluster.tfs.map((tf) => (
