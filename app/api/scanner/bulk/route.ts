@@ -1226,7 +1226,23 @@ async function runLightCryptoScan(maxCoins: number, startTime: number, timeframe
         if (ohlcv && ohlcv.length >= 20) {
           apiCallsUsed += 1;
           const enriched = analyzeAssetByTimeframe(pick.symbol, ohlcv, timeframe);
-          if (enriched) return enrichCryptoPick(pick, enriched);
+          if (enriched) {
+            const result = enrichCryptoPick(pick, enriched);
+            // CoinGecko OHLC has no volume data → MFI/OBV/VWAP are empty.
+            // Supplement with AV MFI call to fill the gap.
+            if (!result.indicators?.mfi) {
+              try {
+                const avInd = await fetchAVCryptoIndicators(pick.symbol, timeframe);
+                if (avInd) {
+                  apiCallsUsed += 7;
+                  if (Number.isFinite(avInd.mfi)) result.indicators.mfi = avInd.mfi;
+                  // Also grab OBV proxy: not available from AV, but MACD/Stoch may be
+                  // more accurate from AV than local CG computation. Leave existing values.
+                }
+              } catch { /* non-critical — CG indicators already populated */ }
+            }
+            return result;
+          }
         }
 
         // ── Strategy 2: Alpha Vantage individual indicators (fallback) ──
