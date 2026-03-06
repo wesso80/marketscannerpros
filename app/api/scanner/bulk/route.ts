@@ -332,8 +332,8 @@ async function fetchAVCryptoIndicators(
     }
   };
 
-  // Fire 4 AV calls in parallel: RSI, ADX, ATR, MACD
-  const [rsiJ, adxJ, atrJ, macdJ] = await Promise.all([
+  // Fire 7 AV calls in parallel: RSI, ADX, ATR, MACD, STOCH, CCI, MFI
+  const [rsiJ, adxJ, atrJ, macdJ, stochJ, cciJ, mfiJ] = await Promise.all([
     safeFetch(
       `https://www.alphavantage.co/query?function=RSI&symbol=${encodeURIComponent(avSym)}&interval=${avInterval}&time_period=14&series_type=close&entitlement=realtime&apikey=${ALPHA_KEY}`,
       'RSI'
@@ -349,6 +349,18 @@ async function fetchAVCryptoIndicators(
     safeFetch(
       `https://www.alphavantage.co/query?function=MACD&symbol=${encodeURIComponent(avSym)}&interval=${avInterval}&series_type=close&entitlement=realtime&apikey=${ALPHA_KEY}`,
       'MACD'
+    ),
+    safeFetch(
+      `https://www.alphavantage.co/query?function=STOCH&symbol=${encodeURIComponent(avSym)}&interval=${avInterval}&entitlement=realtime&apikey=${ALPHA_KEY}`,
+      'STOCH'
+    ),
+    safeFetch(
+      `https://www.alphavantage.co/query?function=CCI&symbol=${encodeURIComponent(avSym)}&interval=${avInterval}&time_period=20&entitlement=realtime&apikey=${ALPHA_KEY}`,
+      'CCI'
+    ),
+    safeFetch(
+      `https://www.alphavantage.co/query?function=MFI&symbol=${encodeURIComponent(avSym)}&interval=${avInterval}&time_period=14&entitlement=realtime&apikey=${ALPHA_KEY}`,
+      'MFI'
     ),
   ]);
 
@@ -387,8 +399,29 @@ async function fetchAVCryptoIndicators(
     }
   }
 
+  // Parse STOCH
+  const stochTA = stochJ?.["Technical Analysis: STOCH"];
+  if (stochTA) {
+    const first = Object.values(stochTA)[0] as any;
+    if (first?.SlowK) { result.stochK = Number(first.SlowK); anyValid = true; }
+  }
+
+  // Parse CCI
+  const cciTA = cciJ?.["Technical Analysis: CCI"];
+  if (cciTA) {
+    const first = Object.values(cciTA)[0] as any;
+    if (first?.CCI) { result.cci = Number(first.CCI); anyValid = true; }
+  }
+
+  // Parse MFI
+  const mfiTA = mfiJ?.["Technical Analysis: MFI"];
+  if (mfiTA) {
+    const first = Object.values(mfiTA)[0] as any;
+    if (first?.MFI) { result.mfi = Number(first.MFI); anyValid = true; }
+  }
+
   if (!anyValid) return null;
-  console.log(`[bulk-scan/AV] Got indicators for ${avSym}: RSI=${result.rsi}, ADX=${result.adx}, ATR=${result.atr}, MACD=${result.macd}`);
+  console.log(`[bulk-scan/AV] Got indicators for ${avSym}: RSI=${result.rsi}, ADX=${result.adx}, ATR=${result.atr}, MACD=${result.macd}, Stoch=${result.stochK}, CCI=${result.cci}, MFI=${result.mfi}`);
   return result;
 }
 
@@ -1196,7 +1229,7 @@ async function runLightCryptoScan(maxCoins: number, startTime: number, timeframe
         console.log(`[bulk-scan/light] CoinGecko OHLC unavailable for ${pick.symbol}, trying AV fallback`);
         const avInd = await fetchAVCryptoIndicators(pick.symbol, timeframe);
         if (avInd) {
-          apiCallsUsed += 4; // 4 parallel AV calls
+          apiCallsUsed += 7; // 7 parallel AV calls
           return enrichCryptoPickFromAV(pick, avInd);
         }
 

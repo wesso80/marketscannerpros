@@ -1879,9 +1879,9 @@ function ScannerContent() {
                 {bulkViewMode === 'table' && rankedCandidates.length > 0 && (
                   <div style={{ display: 'block', visibility: 'visible', minHeight: 100 }}>
                     <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '40px 100px 65px 65px 70px 130px 55px 55px 55px 85px 80px 85px 50px 90px 85px', gap: 0, borderRadius: 12, border: '1px solid rgba(51, 65, 85, 0.4)', background: 'rgba(15, 23, 42, 0.3)', fontSize: 13, minWidth: 1150 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '35px 90px 55px 55px 65px 115px 48px 48px 58px 48px 50px 48px 70px 55px 55px 50px 80px 75px', gap: 0, borderRadius: 12, border: '1px solid rgba(51, 65, 85, 0.4)', background: 'rgba(15, 23, 42, 0.3)', fontSize: 13, minWidth: 1230 }}>
                       {/* Header */}
-                      {['#', 'Symbol', 'Dir', 'Conf', 'Quality', 'Strategy', 'RSI', 'ADX', 'ATR%', 'Entry', 'Stop', 'Target', 'R:R', 'Volume', 'Rule'].map((h) => (
+                      {['#', 'Symbol', 'Dir', 'Conf', 'Quality', 'Strategy', 'RSI', 'ADX', 'MACD', 'Stoch', 'CCI', 'MFI', 'OBV', 'VWAP', 'Aroon', 'ATR%', 'Volume', 'Rule'].map((h) => (
                         <div key={h} style={{ padding: '8px', color: '#64748b', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid rgba(51, 65, 85, 0.5)', background: 'rgba(15, 23, 42, 0.95)', whiteSpace: 'nowrap' }}>{h}</div>
                       ))}
                       {/* Rows */}
@@ -1898,11 +1898,23 @@ function ScannerContent() {
                         const volStr = vol == null || !Number.isFinite(vol) ? '—' : vol >= 1e9 ? `$${(vol/1e9).toFixed(1)}B` : vol >= 1e6 ? `$${(vol/1e6).toFixed(1)}M` : vol >= 1e3 ? `$${(vol/1e3).toFixed(0)}K` : `$${vol.toFixed(0)}`;
                         const rsi = pick.indicators?.rsi;
                         const adx = pick.indicators?.adx;
+                        const macdVal = pick.indicators?.macd;
+                        const stochKVal = pick.indicators?.stochK;
+                        const cciVal = pick.indicators?.cci;
+                        const mfiVal = pick.indicators?.mfi;
+                        const obvVal = pick.indicators?.obv;
+                        const vwapVal = pick.indicators?.vwap;
+                        const aroonUpVal = pick.indicators?.aroonUp;
+                        const aroonDnVal = pick.indicators?.aroonDown;
                         const atrPct = pick.indicators?.atr_percent;
-                        const entryVal = pick.entry;
-                        const stopVal = pick.stop;
-                        const targetVal = pick.target;
-                        const rrVal = pick.rMultiple;
+                        const fmtCompact = (v: number | null | undefined) => {
+                          if (v == null || !Number.isFinite(v)) return '—';
+                          const abs = Math.abs(v);
+                          if (abs >= 1e9) return `${(v/1e9).toFixed(1)}B`;
+                          if (abs >= 1e6) return `${(v/1e6).toFixed(1)}M`;
+                          if (abs >= 1e3) return `${(v/1e3).toFixed(0)}K`;
+                          return v.toFixed(0);
+                        };
                         const fmtPrice = (v: number | null | undefined) => {
                           if (v == null || !Number.isFinite(v)) return '—';
                           return v >= 1000 ? `$${v.toFixed(0)}` : v >= 1 ? `$${v.toFixed(2)}` : `$${v.toFixed(4)}`;
@@ -1924,11 +1936,14 @@ function ScannerContent() {
                             <div style={cellStyle} onClick={handleClick}>{strategy}</div>
                             <div style={{ ...cellStyle, textAlign: 'right' }} onClick={handleClick}>{rsi != null && Number.isFinite(rsi) ? rsi.toFixed(0) : '—'}</div>
                             <div style={{ ...cellStyle, textAlign: 'right' }} onClick={handleClick}>{adx != null && Number.isFinite(adx) ? adx.toFixed(0) : '—'}</div>
+                            <div style={{ ...cellStyle, textAlign: 'right', fontSize: 11 }} onClick={handleClick}>{macdVal != null && Number.isFinite(macdVal) ? (macdVal >= 0 ? '+' : '') + macdVal.toFixed(2) : '—'}</div>
+                            <div style={{ ...cellStyle, textAlign: 'right' }} onClick={handleClick}>{stochKVal != null && Number.isFinite(stochKVal) ? stochKVal.toFixed(0) : '—'}</div>
+                            <div style={{ ...cellStyle, textAlign: 'right', fontSize: 11 }} onClick={handleClick}>{cciVal != null && Number.isFinite(cciVal) ? cciVal.toFixed(0) : '—'}</div>
+                            <div style={{ ...cellStyle, textAlign: 'right' }} onClick={handleClick}>{mfiVal != null && Number.isFinite(mfiVal) ? mfiVal.toFixed(0) : '—'}</div>
+                            <div style={{ ...cellStyle, textAlign: 'right', fontSize: 11 }} onClick={handleClick}>{fmtCompact(obvVal)}</div>
+                            <div style={{ ...cellStyle, textAlign: 'right', fontSize: 11 }} onClick={handleClick}>{vwapVal != null && Number.isFinite(vwapVal) ? fmtPrice(vwapVal) : '—'}</div>
+                            <div style={{ ...cellStyle, textAlign: 'right', fontSize: 11 }} onClick={handleClick}>{aroonUpVal != null && Number.isFinite(aroonUpVal) ? `${aroonUpVal.toFixed(0)}/${(aroonDnVal ?? 0).toFixed(0)}` : '—'}</div>
                             <div style={{ ...cellStyle, textAlign: 'right' }} onClick={handleClick}>{atrPct != null && Number.isFinite(atrPct) ? `${atrPct.toFixed(1)}%` : '—'}</div>
-                            <div style={{ ...cellStyle, textAlign: 'right', fontSize: 11 }} onClick={handleClick}>{fmtPrice(entryVal)}</div>
-                            <div style={{ ...cellStyle, textAlign: 'right', fontSize: 11 }} onClick={handleClick}><span style={{ color: dir === 'LONG' ? '#EF4444' : '#10B981' }}>{fmtPrice(stopVal)}</span></div>
-                            <div style={{ ...cellStyle, textAlign: 'right', fontSize: 11 }} onClick={handleClick}><span style={{ color: dir === 'LONG' ? '#10B981' : '#EF4444' }}>{fmtPrice(targetVal)}</span></div>
-                            <div style={{ ...cellStyle, textAlign: 'right' }} onClick={handleClick}>{rrVal != null && Number.isFinite(rrVal) ? `${rrVal.toFixed(1)}` : '—'}</div>
                             <div style={{ ...cellStyle, textAlign: 'right' }} onClick={handleClick}>{volStr}</div>
                             <div style={cellStyle} onClick={handleClick}><span style={{ fontSize: 10, fontWeight: 700, color: perm === 'COMPLIANT' ? '#10B981' : perm === 'TIGHT' ? '#FBBF24' : '#EF4444', background: `${perm === 'COMPLIANT' ? '#10B981' : perm === 'TIGHT' ? '#FBBF24' : '#EF4444'}15`, borderRadius: 4, padding: '1px 5px' }}>{perm ?? '—'}</span></div>
                           </React.Fragment>
