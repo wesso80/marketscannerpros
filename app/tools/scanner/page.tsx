@@ -1879,9 +1879,9 @@ function ScannerContent() {
                 {bulkViewMode === 'table' && rankedCandidates.length > 0 && (
                   <div style={{ display: 'block', visibility: 'visible', minHeight: 100 }}>
                     <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '35px 82px 52px 50px 60px 95px 44px 44px 55px 44px 48px 44px 62px 55px 52px 48px 78px 75px', gap: 0, borderRadius: 12, border: '1px solid rgba(51, 65, 85, 0.4)', background: 'rgba(15, 23, 42, 0.3)', fontSize: 12, minWidth: 1180 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '35px 90px 52px 50px 60px 105px 48px 48px 60px 48px 52px 58px 52px 85px 75px', gap: 0, borderRadius: 12, border: '1px solid rgba(51, 65, 85, 0.4)', background: 'rgba(15, 23, 42, 0.3)', fontSize: 12, minWidth: 980 }}>
                       {/* Header */}
-                      {['#', 'Symbol', 'Dir', 'Conf', 'Quality', 'Strategy', 'RSI', 'ADX', 'MACD', 'Stoch', 'CCI', 'MFI', 'OBV', 'VWAP', 'Aroon', 'ATR%', 'Volume', 'Rule'].map((h) => (
+                      {['#', 'Symbol', 'Dir', 'Conf', 'Quality', 'Strategy', 'RSI', 'ADX', 'MACD', 'Stoch', 'CCI', 'Aroon', 'ATR%', 'Volume', 'Rule'].map((h) => (
                         <div key={h} style={{ padding: '8px', color: '#64748b', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid rgba(51, 65, 85, 0.5)', background: 'rgba(15, 23, 42, 0.95)', whiteSpace: 'nowrap' }}>{h}</div>
                       ))}
                       {/* Rows */}
@@ -1909,24 +1909,9 @@ function ScannerContent() {
                         const macdVal = pick.indicators?.macd;
                         const stochKVal = pick.indicators?.stochK;
                         const cciVal = pick.indicators?.cci;
-                        const mfiVal = pick.indicators?.mfi;
-                        const obvVal = pick.indicators?.obv;
-                        const vwapVal = pick.indicators?.vwap;
                         const aroonUpVal = pick.indicators?.aroonUp;
                         const aroonDnVal = pick.indicators?.aroonDown;
                         const atrPct = pick.indicators?.atr_percent;
-                        const fmtCompact = (v: number | null | undefined) => {
-                          if (v == null || !Number.isFinite(v)) return '—';
-                          const abs = Math.abs(v);
-                          if (abs >= 1e9) return `${(v/1e9).toFixed(1)}B`;
-                          if (abs >= 1e6) return `${(v/1e6).toFixed(1)}M`;
-                          if (abs >= 1e3) return `${(v/1e3).toFixed(0)}K`;
-                          return v.toFixed(0);
-                        };
-                        const fmtPrice = (v: number | null | undefined) => {
-                          if (v == null || !Number.isFinite(v)) return '—';
-                          return v >= 1000 ? `$${v.toFixed(0)}` : v >= 1 ? `$${v.toFixed(2)}` : `$${v.toFixed(4)}`;
-                        };
                         const cellStyle = { padding: '7px 8px', color: '#cbd5e1', whiteSpace: 'nowrap' as const, borderBottom: '1px solid rgba(51, 65, 85, 0.2)', cursor: 'pointer' };
                         const handleClick = () => {
                           const sym = (pick.symbol ?? '').replace(/-USD$/, '');
@@ -1947,9 +1932,6 @@ function ScannerContent() {
                             <div style={{ ...cellStyle, textAlign: 'right', fontSize: 11 }} onClick={handleClick}>{macdVal != null && Number.isFinite(macdVal) ? (macdVal >= 0 ? '+' : '') + macdVal.toFixed(2) : '—'}</div>
                             <div style={{ ...cellStyle, textAlign: 'right' }} onClick={handleClick}>{stochKVal != null && Number.isFinite(stochKVal) ? stochKVal.toFixed(0) : '—'}</div>
                             <div style={{ ...cellStyle, textAlign: 'right', fontSize: 11 }} onClick={handleClick}>{cciVal != null && Number.isFinite(cciVal) ? cciVal.toFixed(0) : '—'}</div>
-                            <div style={{ ...cellStyle, textAlign: 'right' }} onClick={handleClick}>{mfiVal != null && Number.isFinite(mfiVal) ? mfiVal.toFixed(0) : '—'}</div>
-                            <div style={{ ...cellStyle, textAlign: 'right', fontSize: 11 }} onClick={handleClick}>{fmtCompact(obvVal)}</div>
-                            <div style={{ ...cellStyle, textAlign: 'right', fontSize: 11 }} onClick={handleClick}>{vwapVal != null && Number.isFinite(vwapVal) ? fmtPrice(vwapVal) : '—'}</div>
                             <div style={{ ...cellStyle, textAlign: 'right', fontSize: 11 }} onClick={handleClick}>{aroonUpVal != null && Number.isFinite(aroonUpVal) ? `${aroonUpVal.toFixed(0)}/${(aroonDnVal ?? 0).toFixed(0)}` : '—'}</div>
                             <div style={{ ...cellStyle, textAlign: 'right' }} onClick={handleClick}>{atrPct != null && Number.isFinite(atrPct) ? `${atrPct.toFixed(1)}%` : '—'}</div>
                             <div style={{ ...cellStyle, textAlign: 'right' }} onClick={handleClick}>{volStr}</div>
