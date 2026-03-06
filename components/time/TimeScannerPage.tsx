@@ -439,11 +439,29 @@ export default function TimeScannerPage() {
         rewardPct: Number(sd?.tradeSetup?.rewardPercent || 0),
         signalStrength: String(sd?.signalStrength || 'no_signal'),
         netPull: String(sd?.decompression?.netPullDirection || 'neutral'),
-        mid50Levels: Array.isArray(sd?.mid50Levels) ? sd.mid50Levels.slice(0, 6).map((m: any) => ({
-          tf: String(m.tf || ''),
-          level: Number(m.level || 0),
-          distance: Number(m.distance || 0),
-        })) : [],
+        mid50Levels: (() => {
+          // Pull mid50 from the enriched close schedule (covers ALL TFs, not just
+          // those within the scan mode's maxTFMinutes). This ensures the 50% Pull
+          // Levels section shows every TF that appears in the Close Cluster Timeline.
+          const closes: any[] = Array.isArray(sd?.candleCloseConfluence?.closes)
+            ? sd.candleCloseConfluence.closes
+            : [];
+          const fromCloses = closes
+            .filter((r: any) => r?.mid50Level && Number(r.mid50Level) > 0 && Number(r.tfMinutes || 0) >= 60)
+            .map((r: any) => ({
+              tf: String(r.tf || ''),
+              level: Number(r.mid50Level),
+              distance: Number(r.distanceToMid50 || 0),
+            }));
+          // De-duplicate by level (e.g. 7D and 1W are both 10080 min)
+          const seen = new Set<string>();
+          return fromCloses.filter((m: any) => {
+            const key = `${m.level.toFixed(2)}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+        })(),
       });
 
       // ── Auto-log to execution engine (paper trade) ──

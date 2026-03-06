@@ -697,22 +697,28 @@ export class ConfluenceLearningAgent {
           }))
           .filter((bar) => Number.isFinite(bar.time) && Number.isFinite(bar.open) && Number.isFinite(bar.high) && Number.isFinite(bar.low) && Number.isFinite(bar.close));
 
-      // Fetch both in parallel
-      const [ohlc1d, ohlc30d] = await Promise.all([
+      // Fetch THREE ranges and merge for maximum coverage:
+      //   days=1   → 30-min candles (~48 bars)  — intraday mid50 quality
+      //   days=30  → 4-hour candles (~180 bars) — daily/weekly mid50
+      //   days=90  → daily candles  (~90 bars)  — multi-week/monthly mid50
+      const [ohlc1d, ohlc30d, ohlc90d] = await Promise.all([
         getOHLC(coinId, 1),   // 30-min candles for last 24h
         getOHLC(coinId, 30),  // 4-hour candles for last 30d
+        getOHLC(coinId, 90),  // daily candles for last 90d
       ]);
 
       const bars1d = parseOHLC(ohlc1d);
       const bars30d = parseOHLC(ohlc30d);
+      const bars90d = parseOHLC(ohlc90d);
 
-      if (bars1d.length === 0 && bars30d.length === 0) return [];
+      if (bars1d.length === 0 && bars30d.length === 0 && bars90d.length === 0) return [];
 
-      // Merge: use 30d as base, then overlay 1d bars (higher resolution)
-      // Remove 30d bars that overlap with the 1d window
-      const cutoff = bars1d.length > 0 ? bars1d[0].time : Infinity;
+      // Merge: 90d as widest base, overlay 30d (higher res), overlay 1d (highest res)
+      const cutoff30 = bars30d.length > 0 ? bars30d[0].time : Infinity;
+      const cutoff1 = bars1d.length > 0 ? bars1d[0].time : Infinity;
       const merged = [
-        ...bars30d.filter(b => b.time < cutoff),
+        ...bars90d.filter(b => b.time < cutoff30),
+        ...bars30d.filter(b => b.time < cutoff1),
         ...bars1d,
       ].sort((a, b) => a.time - b.time);
 
@@ -2527,10 +2533,10 @@ export class ConfluenceLearningAgent {
       if (tfBars.length < 2) continue;
       
       // Quality gate: need TF > base bar size, ≥ 3 resampled bars, and
-      // enough data span (3× TF period) for a reliable prior candle
+      // enough data span (2× TF period) for a reliable prior candle
       const canResample = tfConfig.minutes > baseBarMins
         && tfBars.length >= 3
-        && scanDataSpanMins >= tfConfig.minutes * 3;
+        && scanDataSpanMins >= tfConfig.minutes * 2;
       const mid50Level = canResample ? this.hl2(tfBars[tfBars.length - 2]) : 0;
       const distanceToMid50 = canResample ? ((currentPrice - mid50Level) / mid50Level) * 100 : 0;
       
@@ -3034,8 +3040,8 @@ export class ConfluenceLearningAgent {
           if (seenTfMinutes.has(tfConfig.minutes)) continue;
 
           // Skip if data span is too short for this TF to produce reliable bars
-          // Need at least 3 TF periods of data
-          if (dataSpanMins < tfConfig.minutes * 3) continue;
+          // Need at least 2 TF periods of data (prior candle + forming candle)
+          if (dataSpanMins < tfConfig.minutes * 2) continue;
 
           const tfId = this.getCanonicalTimeframeId(tfConfig);
           const tfBars = resampledBarsByTf[tfId] || this.resampleBars(baseBars, tfConfig.minutes);
