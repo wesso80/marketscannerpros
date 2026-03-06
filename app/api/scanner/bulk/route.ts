@@ -303,17 +303,16 @@ const AV_INTERVAL_MAP: Record<string, string> = {
   '1d': 'daily'
 };
 
-// ── Alpha Vantage individual indicator fetchers for crypto fallback ──
-// These are used when CoinGecko OHLC enrichment fails (coin not mapped, API error, etc.)
-// AV crypto symbols use format like BTCUSD
-async function fetchAVCryptoIndicators(
+// ── Alpha Vantage individual indicator fetchers (works for both crypto & equity) ──
+// Crypto: symbol like BTCUSD;  Equity: symbol like AAPL
+async function fetchAVIndicators(
   symbol: string,
-  timeframe: string
+  timeframe: string,
+  assetType: 'crypto' | 'equity' = 'crypto'
 ): Promise<Partial<Indicators> | null> {
   if (!ALPHA_KEY) return null;
   const avInterval = AV_INTERVAL_MAP[timeframe] || 'daily';
-  // Convert crypto symbol to AV format: BTC → BTCUSD
-  const avSym = `${symbol.toUpperCase()}USD`;
+  const avSym = assetType === 'crypto' ? `${symbol.toUpperCase()}USD` : symbol.toUpperCase();
 
   const safeFetch = async (url: string, label: string): Promise<any> => {
     try {
@@ -423,6 +422,11 @@ async function fetchAVCryptoIndicators(
   if (!anyValid) return null;
   console.log(`[bulk-scan/AV] Got indicators for ${avSym}: RSI=${result.rsi}, ADX=${result.adx}, ATR=${result.atr}, MACD=${result.macd}, Stoch=${result.stochK}, CCI=${result.cci}, MFI=${result.mfi}`);
   return result;
+}
+
+// Convenience wrapper for crypto (backward compat)
+async function fetchAVCryptoIndicators(symbol: string, timeframe: string) {
+  return fetchAVIndicators(symbol, timeframe, 'crypto');
 }
 
 // Fetch crypto OHLCV data from CoinGecko (Commercial licensed - 500 calls/min)
@@ -1457,11 +1461,7 @@ function computeFullScore(data: CachedScanData): {
   score: number;
   direction: 'bullish' | 'bearish' | 'neutral';
   signals: { bullish: number; bearish: number; neutral: number };
-  indicators: {
-    price?: number; rsi?: number; adx?: number; atr?: number; ema200?: number;
-    macd_hist?: number; stoch_k?: number; cci?: number;
-    atr_percent?: number; volume?: number; obv?: number; vwap?: number; mfi?: number;
-  };
+  indicators: Partial<Indicators>;
 } {
   const { price, rsi: rsiVal, macdLine, macdSignal, macdHist, ema200, atr, adx: adxVal, stochK, cci: cciVal } = data;
   let bullish = 0, bearish = 0, neutral = 0;
@@ -1548,9 +1548,12 @@ function computeFullScore(data: CachedScanData): {
       adx: Number.isFinite(adxVal) ? Math.round(adxVal * 10) / 10 : undefined,
       atr: Number.isFinite(atr) ? atr : undefined,
       ema200: Number.isFinite(ema200) ? ema200 : undefined,
-      macd_hist: Number.isFinite(macdHist) ? macdHist : undefined,
-      stoch_k: Number.isFinite(stochK) ? stochK : undefined,
+      macd: Number.isFinite(macdLine) ? macdLine : undefined,
+      macdSignal: Number.isFinite(macdSignal) ? macdSignal : undefined,
+      stochK: Number.isFinite(stochK) ? stochK : undefined,
       cci: Number.isFinite(cciVal) ? cciVal : undefined,
+      aroonUp: Number.isFinite(data.aroonUp) ? data.aroonUp : undefined,
+      aroonDown: Number.isFinite(data.aroonDown) ? data.aroonDown : undefined,
       atr_percent: Number.isFinite(atrPercent) ? Math.round(atrPercent * 100) / 100 : (Number.isFinite(data.atrPercent) ? data.atrPercent : undefined),
       volume: Number.isFinite(data.volume) && (data.volume ?? 0) > 0 ? data.volume : undefined,
       obv: data.obv != null && Number.isFinite(data.obv) ? data.obv : undefined,
@@ -1756,9 +1759,53 @@ async function runLightEquityScan(startTime: number, timeframe: string, universe
     .filter((item): item is NonNullable<ReturnType<typeof scoreLightEquityCandidate>> => item !== null)
     .sort((left, right) => Math.abs(right.score - 50) - Math.abs(left.score - 50));
 
+  // \u2500\u2500 Enrichment phase: fetch AV indicators for top 10 equity picks \u2500\u2500
+  // Light scan only has price/volume. Enrich with RSI, ADX, MACD, Stoch, CCI, MFI, ATR.
+  const top10Equity = ranked.slice(0, 10);
+  const EQ_ENRICH_BATCH = 3; // Fewer parallel batches for equity (7 AV calls per symbol)
+  const EQ_ENRICH_DELAY = 300;
+  const enrichedEquity: any[] = [];
+
+  for (let i = 0; i < top10Equity.length; i += EQ_ENRICH_BATCH) {
+    if (Date.now() - startTime > 50000) {
+      console.log('[bulk-scan/light-eq] Enrichment time limit \u2014 returning remaining picks un-enriched');
+      enrichedEquity.push(...top10Equity.slice(i));
+      break;
+    }
+    const batch = top10Equity.slice(i, i + EQ_ENRICH_BATCH);
+    const batchResults = await Promise.all(batch.map(async (pick) => {
+      try {
+        const avInd = await fetchAVIndicators(pick.symbol, timeframe, 'equity');
+        if (!avInd) return pick;
+
+        const price = pick.indicators.price ?? 0;
+        const merged: Indicators = { price, ...avInd, volume: pick.indicators.volume };
+        const direction = (avInd.rsi && avInd.rsi < 40) ? 'bearish'
+          : (avInd.rsi && avInd.rsi > 60) ? 'bullish'
+          : pick.direction;
+        const setup = classifyStrategy(merged, direction);
+        const trade = computeTradeParams(price, avInd.atr, direction);
+
+        // Compute ATR%
+        if (Number.isFinite(avInd.atr) && price > 0) {
+          merged.atr_percent = Math.round(((avInd.atr! / price) * 100) * 100) / 100;
+        }
+
+        return { ...pick, direction, indicators: merged, setup, ...trade };
+      } catch (err: any) {
+        console.warn(`[bulk-scan/light-eq] Enrichment failed for ${pick.symbol}:`, err.message);
+        return pick;
+      }
+    }));
+    enrichedEquity.push(...batchResults);
+    if (i + EQ_ENRICH_BATCH < top10Equity.length) {
+      await new Promise(r => setTimeout(r, EQ_ENRICH_DELAY));
+    }
+  }
+
   return {
     scanned: ranked.length,
-    topPicks: ranked.slice(0, 10),
+    topPicks: enrichedEquity,
     sourceSymbols: candidates.length,
     apiCallsUsed: moverData.apiCallsUsed + quoteResult.apiCallsUsed,
     apiCallsCap: LIGHT_EQUITY_MAX_API_CALLS,

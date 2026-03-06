@@ -1879,7 +1879,7 @@ function ScannerContent() {
                 {bulkViewMode === 'table' && rankedCandidates.length > 0 && (
                   <div style={{ display: 'block', visibility: 'visible', minHeight: 100 }}>
                     <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '35px 90px 55px 55px 65px 115px 48px 48px 58px 48px 50px 48px 70px 55px 55px 50px 80px 75px', gap: 0, borderRadius: 12, border: '1px solid rgba(51, 65, 85, 0.4)', background: 'rgba(15, 23, 42, 0.3)', fontSize: 13, minWidth: 1230 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '35px 82px 52px 50px 60px 95px 44px 44px 55px 44px 48px 44px 62px 55px 52px 48px 78px 75px', gap: 0, borderRadius: 12, border: '1px solid rgba(51, 65, 85, 0.4)', background: 'rgba(15, 23, 42, 0.3)', fontSize: 12, minWidth: 1180 }}>
                       {/* Header */}
                       {['#', 'Symbol', 'Dir', 'Conf', 'Quality', 'Strategy', 'RSI', 'ADX', 'MACD', 'Stoch', 'CCI', 'MFI', 'OBV', 'VWAP', 'Aroon', 'ATR%', 'Volume', 'Rule'].map((h) => (
                         <div key={h} style={{ padding: '8px', color: '#64748b', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid rgba(51, 65, 85, 0.5)', background: 'rgba(15, 23, 42, 0.95)', whiteSpace: 'nowrap' }}>{h}</div>
@@ -1889,7 +1889,15 @@ function ScannerContent() {
                         const dir = pick._direction === 'long' ? 'LONG' : pick._direction === 'short' ? 'SHORT' : 'NEUTRAL';
                         const conf = pick._confidence ?? 0;
                         const quality = pick._quality ?? 'low';
-                        const strategy = mapPickToStrategyTag(pick).replaceAll('_', ' ');
+                        const strategyRaw = mapPickToStrategyTag(pick).replaceAll('_', ' ');
+                        const strategyAbbrev: Record<string, string> = {
+                          'MOMENTUM REVERSAL': 'MOM REV',
+                          'TREND PULLBACK': 'TREND PB',
+                          'BREAKOUT CONTINUATION': 'BRKOUT',
+                          'RANGE FADE': 'RANGE',
+                          'MEAN REVERSION': 'MEAN REV',
+                        };
+                        const strategy = strategyAbbrev[strategyRaw] ?? strategyRaw;
                         const dirCol = dir === 'LONG' ? '#10B981' : dir === 'SHORT' ? '#EF4444' : '#94a3b8';
                         const confCol = conf >= 75 ? '#10B981' : conf >= 60 ? '#FBBF24' : '#94a3b8';
                         const qualCol = quality === 'high' ? '#10B981' : quality === 'medium' ? '#FBBF24' : '#94a3b8';
@@ -1933,7 +1941,7 @@ function ScannerContent() {
                             <div style={cellStyle} onClick={handleClick}><span style={{ fontSize: 11, fontWeight: 700, color: dirCol, background: `${dirCol}18`, borderRadius: 4, padding: '2px 6px' }}>{dir}</span></div>
                             <div style={cellStyle} onClick={handleClick}><span style={{ fontWeight: 700, color: confCol }}>{conf}%</span></div>
                             <div style={cellStyle} onClick={handleClick}><span style={{ fontSize: 11, fontWeight: 600, color: qualCol, textTransform: 'uppercase' }}>{quality}</span></div>
-                            <div style={cellStyle} onClick={handleClick}>{strategy}</div>
+                            <div style={{ ...cellStyle, overflow: 'hidden', textOverflow: 'ellipsis' }} onClick={handleClick}><span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.02em' }} title={strategyRaw}>{strategy}</span></div>
                             <div style={{ ...cellStyle, textAlign: 'right' }} onClick={handleClick}>{rsi != null && Number.isFinite(rsi) ? rsi.toFixed(0) : '—'}</div>
                             <div style={{ ...cellStyle, textAlign: 'right' }} onClick={handleClick}>{adx != null && Number.isFinite(adx) ? adx.toFixed(0) : '—'}</div>
                             <div style={{ ...cellStyle, textAlign: 'right', fontSize: 11 }} onClick={handleClick}>{macdVal != null && Number.isFinite(macdVal) ? (macdVal >= 0 ? '+' : '') + macdVal.toFixed(2) : '—'}</div>
