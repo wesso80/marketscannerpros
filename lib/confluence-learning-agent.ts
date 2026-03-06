@@ -2895,15 +2895,8 @@ export class ConfluenceLearningAgent {
       banners.push('HIGH CONFIDENCE');
     }
     
-    // Find target: nearest cluster or strongest decompressing 50%
+    // Target level computed after trade setup (needs mid50Above/mid50Below)
     let targetLevel = currentPrice;
-    if (clusters.length > 0) {
-      clusters.sort((a, b) => Math.abs(a.avgLevel - currentPrice) - Math.abs(b.avgLevel - currentPrice));
-      targetLevel = clusters[0].avgLevel;
-    } else if (activeDecomps.length > 0) {
-      const strongest = activeDecomps.sort((a, b) => b.pullStrength - a.pullStrength)[0];
-      targetLevel = strongest.mid50Level;
-    }
     
     // Build reasoning with score breakdown
     const reasoningParts: string[] = [];
@@ -2940,8 +2933,12 @@ export class ConfluenceLearningAgent {
     };
     
     // ═══════════════════════════════════════════════════════════════════════════
-    // TRADE SETUP CALCULATION (Swing Stop + 2.5 R:R)
-    // Uses RESAMPLED bars for the PRIMARY timeframe to get proper swing levels
+    // TRADE SETUP CALCULATION (Mid50-driven Target + Swing Stop fallback)
+    //
+    // 1. Target = weighted avg of mid50 levels pulling IN the trade direction
+    //    (bearish → mid50 below price, bullish → mid50 above price)
+    // 2. Stop   = nearest mid50 level in the OPPOSITE direction, else swing H/L
+    // 3. R:R    = computed from actual distances (not hardcoded)
     // ═══════════════════════════════════════════════════════════════════════════
     
     // Get primary TF minutes from mode config
@@ -2949,57 +2946,103 @@ export class ConfluenceLearningAgent {
       tf.label.toLowerCase() === modeConfig.primaryTF.toLowerCase()
     ) || includedTFConfigs[includedTFConfigs.length - 1];  // fallback to largest TF
     
-    // Resample base bars to primary TF for swing calculation
+    // Resample base bars to primary TF for swing calculation (fallback)
     const primaryTFBars = this.resampleBars(baseBars, primaryTFConfig.minutes);
     
-    // Calculate swing high/low from recent PRIMARY TF bars (not base bars)
-    const swingLookback = 5;  // 5 bars of the PRIMARY timeframe
+    const swingLookback = 5;
     const recentPrimaryBars = primaryTFBars.slice(-swingLookback);
-    
-    // Fallback to base bars if not enough resampled bars
     const swingBars = recentPrimaryBars.length >= 3 ? recentPrimaryBars : baseBars.slice(-swingLookback);
     
     const swingLow = Math.min(...swingBars.map(b => b.low));
     const swingHigh = Math.max(...swingBars.map(b => b.high));
     
-    console.log(`📊 Trade Setup: Using ${primaryTFConfig.label} bars (${swingBars.length} bars) - Swing Low: ${swingLow.toFixed(2)}, Swing High: ${swingHigh.toFixed(2)}`);
-    
     // Entry is current price
     const entryPrice = currentPrice;
     
-    // Stop loss based on swing (direction-dependent)
+    // Gather ALL valid mid50 levels (from decompression analysis + any extras)
+    // These are enriched later from the close schedule, but for the initial
+    // trade setup we use what we have from the scan mode's included TFs.
+    const validMid50s = mid50Levels
+      .filter(m => m.level > 0 && Math.abs(m.distance) > 0.02); // exclude levels right at price
+    
+    // Split by direction relative to current price
+    const mid50Above = validMid50s
+      .filter(m => m.level > entryPrice)
+      .sort((a, b) => a.level - b.level);      // nearest first
+    const mid50Below = validMid50s
+      .filter(m => m.level < entryPrice)
+      .sort((a, b) => b.level - a.level);       // nearest first
+
+    // Weight mid50 levels: higher TF = more weight
+    const weightMid50 = (levels: typeof validMid50s): number => {
+      if (levels.length === 0) return 0;
+      let wSum = 0, wTotal = 0;
+      for (const m of levels) {
+        const tfConf = includedTFConfigs.find(t => t.label === m.tf);
+        const w = tfConf ? Math.log2(Math.max(tfConf.minutes, 60) / 5) : 1;
+        wSum += m.level * w;
+        wTotal += w;
+      }
+      return wTotal > 0 ? wSum / wTotal : 0;
+    };
+
     let stopLoss: number;
     let takeProfit: number;
-    const rrRatio = 2.5;  // From strategy settings
     
     if (direction === 'bullish') {
-      // Long: stop below swing low
-      stopLoss = swingLow;
-      const risk = entryPrice - stopLoss;
-      takeProfit = entryPrice + (risk * rrRatio);
+      // Target = weighted avg of mid50 above price (where it's being pulled up to)
+      const mid50Target = mid50Above.length > 0 ? weightMid50(mid50Above) : 0;
+      // Stop = nearest mid50 below price, or swing low
+      stopLoss = mid50Below.length > 0 ? mid50Below[0].level : swingLow;
+      takeProfit = mid50Target > entryPrice ? mid50Target : entryPrice + (entryPrice - stopLoss) * 2.5;
     } else if (direction === 'bearish') {
-      // Short: stop above swing high
-      stopLoss = swingHigh;
-      const risk = stopLoss - entryPrice;
-      takeProfit = entryPrice - (risk * rrRatio);
+      // Target = weighted avg of mid50 below price (where it's being pulled down to)
+      const mid50Target = mid50Below.length > 0 ? weightMid50(mid50Below) : 0;
+      // Stop = nearest mid50 above price, or swing high
+      stopLoss = mid50Above.length > 0 ? mid50Above[0].level : swingHigh;
+      takeProfit = mid50Target > 0 && mid50Target < entryPrice ? mid50Target : entryPrice - (stopLoss - entryPrice) * 2.5;
     } else {
       // Neutral: use ATR-based default
       const atrStop = atr * 2;
       stopLoss = entryPrice - atrStop;
-      takeProfit = entryPrice + (atrStop * rrRatio);
+      takeProfit = entryPrice + (atrStop * 2.5);
     }
     
+    // Safety: ensure stop isn't unreasonably far (> 15% from entry)
+    const maxStopPct = 0.15;
+    if (Math.abs(stopLoss - entryPrice) / entryPrice > maxStopPct) {
+      stopLoss = direction === 'bearish' 
+        ? entryPrice * (1 + maxStopPct)
+        : entryPrice * (1 - maxStopPct);
+    }
+
     const riskPercent = Math.abs((entryPrice - stopLoss) / entryPrice) * 100;
     const rewardPercent = Math.abs((takeProfit - entryPrice) / entryPrice) * 100;
+    const rrRatio = riskPercent > 0 ? rewardPercent / riskPercent : 0;
+    
+    console.log(`📊 Trade Setup: mid50-driven | Entry ${entryPrice.toFixed(2)} | Stop ${stopLoss.toFixed(2)} (${riskPercent.toFixed(1)}%) | TP ${takeProfit.toFixed(2)} (${rewardPercent.toFixed(1)}%) | R:R ${rrRatio.toFixed(2)}`);
     
     const tradeSetup = {
       entryPrice,
       stopLoss,
       takeProfit,
-      riskRewardRatio: rrRatio,
+      riskRewardRatio: Math.round(rrRatio * 100) / 100,
       riskPercent,
       rewardPercent,
     };
+
+    // Now compute targetLevel (deferred here because it needs mid50Above/mid50Below/weightMid50)
+    if (direction === 'bullish' && mid50Above.length > 0) {
+      targetLevel = weightMid50(mid50Above);
+    } else if (direction === 'bearish' && mid50Below.length > 0) {
+      targetLevel = weightMid50(mid50Below);
+    } else if (clusters.length > 0) {
+      clusters.sort((a, b) => Math.abs(a.avgLevel - currentPrice) - Math.abs(b.avgLevel - currentPrice));
+      targetLevel = clusters[0].avgLevel;
+    } else if (activeDecomps.length > 0) {
+      const strongest = activeDecomps.sort((a, b) => b.pullStrength - a.pullStrength)[0];
+      targetLevel = strongest.mid50Level;
+    }
     
     // Calculate Candle Close Confluence - when multiple TFs close together
     const candleCloseConfluence = this.calculateCandleCloseConfluence(currentTime, assetClass, sessionMode);
@@ -3092,20 +3135,23 @@ export class ConfluenceLearningAgent {
           direction = calDir;
           const calScore = Math.round(Math.abs(calBias));
           reasoningParts.push(`Direction from ${calRows.length} close-schedule TFs: ${calDir.toUpperCase()} (${calScore})`);
-          // Re-derive trade setup for new direction
+          // Re-derive trade setup using mid50 levels for new direction
           if (direction === 'bullish') {
-            stopLoss = swingLow;
-            const risk = entryPrice - stopLoss;
-            takeProfit = entryPrice + (risk * rrRatio);
+            stopLoss = mid50Below.length > 0 ? mid50Below[0].level : swingLow;
+            const mid50Target = mid50Above.length > 0 ? weightMid50(mid50Above) : 0;
+            takeProfit = mid50Target > entryPrice ? mid50Target : entryPrice + (entryPrice - stopLoss) * 2.5;
           } else {
-            stopLoss = swingHigh;
-            const risk = stopLoss - entryPrice;
-            takeProfit = entryPrice - (risk * rrRatio);
+            stopLoss = mid50Above.length > 0 ? mid50Above[0].level : swingHigh;
+            const mid50Target = mid50Below.length > 0 ? weightMid50(mid50Below) : 0;
+            takeProfit = mid50Target > 0 && mid50Target < entryPrice ? mid50Target : entryPrice - (stopLoss - entryPrice) * 2.5;
           }
           tradeSetup.stopLoss = stopLoss;
           tradeSetup.takeProfit = takeProfit;
           tradeSetup.riskPercent = Math.abs((entryPrice - stopLoss) / entryPrice) * 100;
           tradeSetup.rewardPercent = Math.abs((takeProfit - entryPrice) / entryPrice) * 100;
+          tradeSetup.riskRewardRatio = tradeSetup.riskPercent > 0
+            ? Math.round((tradeSetup.rewardPercent / tradeSetup.riskPercent) * 100) / 100
+            : 0;
         }
         // If decomp direction agrees, boost confidence
         else if (direction !== 'neutral' && direction === calDir) {
