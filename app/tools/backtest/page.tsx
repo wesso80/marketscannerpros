@@ -196,8 +196,11 @@ function BacktestContent() {
   const fromOptionsScanner = searchParams.get('from') === 'options-scanner';
   
   const [symbol, setSymbol] = useState(urlSymbol?.toUpperCase() || 'SPY');
-  const [startDate, setStartDate] = useState('2024-01-01');
-  const [endDate, setEndDate] = useState('2024-12-31');
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date(); d.setFullYear(d.getFullYear() - 1);
+    return d.toISOString().slice(0, 10);
+  });
+  const [endDate, setEndDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [initialCapital, setInitialCapital] = useState('10000');
   const [strategy, setStrategy] = useState(DEFAULT_BACKTEST_STRATEGY);
   const [edgeGroup, setEdgeGroup] = useState<EdgeGroupId>('msp_aio_systems');
@@ -223,8 +226,11 @@ function BacktestContent() {
   const [universeScanError, setUniverseScanError] = useState<string | null>(null);
   const [recommendationStrategy, setRecommendationStrategy] = useState(DEFAULT_BACKTEST_STRATEGY);
   const [recommendationTimeframe, setRecommendationTimeframe] = useState('daily');
-  const [recommendationStartDate, setRecommendationStartDate] = useState('2024-01-01');
-  const [recommendationEndDate, setRecommendationEndDate] = useState('2024-12-31');
+  const [recommendationStartDate, setRecommendationStartDate] = useState(() => {
+    const d = new Date(); d.setFullYear(d.getFullYear() - 1);
+    return d.toISOString().slice(0, 10);
+  });
+  const [recommendationEndDate, setRecommendationEndDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [recommendationMinSignalScore, setRecommendationMinSignalScore] = useState(60);
   const [planEventId, setPlanEventId] = useState<string | null>(null);
   const [dateAnchorInfo, setDateAnchorInfo] = useState<DateAnchorInfo | null>(null);

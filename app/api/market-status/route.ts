@@ -100,9 +100,13 @@ function formatResponse(data: MarketStatusResponse) {
   
   // Calculate time until next open/close
   const now = new Date();
-  const estOffset = -5; // EST offset (simplified, doesn't account for DST)
-  const estHour = (now.getUTCHours() + estOffset + 24) % 24;
-  const estMinute = now.getUTCMinutes();
+  // Use Intl to get real ET hour (handles EST/EDT automatically)
+  const _etParts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    hour: 'numeric', hour12: false, minute: 'numeric',
+  }).formatToParts(now);
+  const estHour = Number(_etParts.find(p => p.type === 'hour')?.value ?? 0) % 24;
+  const estMinute = Number(_etParts.find(p => p.type === 'minute')?.value ?? 0);
   const dayOfWeek = now.getUTCDay();
   
   let nextEvent = '';

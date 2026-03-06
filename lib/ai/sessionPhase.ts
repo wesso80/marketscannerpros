@@ -150,9 +150,14 @@ export function detectSessionPhase(
     return 'CRYPTO_OVERNIGHT';
   }
 
-  // Equities: Convert to ET (UTC-5 — conservative, ignores DST for safety)
-  const etHour = (utcHour - 5 + 24) % 24;
-  const etTotal = etHour * 60 + utcMin; // Minutes since midnight ET
+  // Equities: Convert to ET using Intl (handles EST/EDT automatically)
+  const etParts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    hour: 'numeric', hour12: false, minute: 'numeric',
+  }).formatToParts(d);
+  const etHour = Number(etParts.find(p => p.type === 'hour')?.value ?? 0) % 24;
+  const etMin  = Number(etParts.find(p => p.type === 'minute')?.value ?? 0);
+  const etTotal = etHour * 60 + etMin; // Minutes since midnight ET
 
   if (etTotal < 9 * 60 + 30) return 'PRE_MARKET';           // Before 9:30
   if (etTotal < 10 * 60) return 'OPENING_RANGE';             // 9:30-10:00
@@ -195,7 +200,16 @@ export function computeSessionPhaseOverlay(
 
   const d = now ?? new Date();
   const utcHour = d.getUTCHours();
-  const displayHour = assetClass === 'crypto' ? utcHour : (utcHour - 5 + 24) % 24;
+  let displayHour: number;
+  if (assetClass === 'crypto') {
+    displayHour = utcHour;
+  } else {
+    const etParts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      hour: 'numeric', hour12: false,
+    }).formatToParts(d);
+    displayHour = Number(etParts.find(p => p.type === 'hour')?.value ?? 0) % 24;
+  }
 
   // Determine if favorable
   let favorable = multiplier >= 0.95;

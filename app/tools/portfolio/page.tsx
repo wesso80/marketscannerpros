@@ -556,6 +556,14 @@ function PortfolioContent() {
   const [manualPosition, setManualPosition] = useState<Position | null>(null);
   const [manualValue, setManualValue] = useState('');
   const [manualOpen, setManualOpen] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+
+  // Auto-dismiss sync error after 8s
+  useEffect(() => {
+    if (!syncError) return;
+    const t = setTimeout(() => setSyncError(null), 8000);
+    return () => clearTimeout(t);
+  }, [syncError]);
 
   // AI Page Context - share portfolio data with copilot
   const { setPageData } = useAIPageContext();
@@ -940,6 +948,7 @@ function PortfolioContent() {
         });
       } catch (e) {
         console.error('Failed to sync portfolio to server');
+        setSyncError('Portfolio sync failed — changes saved locally only');
       }
     };
     
@@ -1661,6 +1670,12 @@ function PortfolioContent() {
 
   return (
     <div className="min-h-screen bg-[var(--msp-bg)]">
+      {syncError && (
+        <div className="mx-4 mt-2 flex items-center justify-between rounded-md border border-amber-500/40 bg-amber-900/20 px-4 py-2 text-[13px] text-amber-300">
+          <span>⚠️ {syncError}</span>
+          <button onClick={() => setSyncError(null)} className="ml-4 text-amber-400 hover:text-white">✕</button>
+        </div>
+      )}
       <ToolsPageHeader
         badge="PORTFOLIO TRACKER"
         title="Portfolio Tracking"
