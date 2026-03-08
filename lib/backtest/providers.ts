@@ -11,7 +11,7 @@
 
 import { logger } from '@/lib/logger';
 import { avTakeToken } from '@/lib/avRateGovernor';
-import { getOHLC, getMarketChartFull, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
+import { getOHLC, getOHLCRange, getMarketChartFull, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
 import { getCached, setCached } from '@/lib/redis';
 import {
   parseBacktestTimeframe,
@@ -228,10 +228,15 @@ export async function fetchCryptoPriceData(
     return { priceData, source: 'coingecko', volumeUnavailable: false, closeType: 'n/a' };
   }
 
-  // ──── Daily: /ohlc with 365 days — proper OHLC candles ────
-  const days: 1 | 7 | 14 | 30 | 90 | 180 | 365 = 365;
+  // ──── Daily: /ohlc/range with interval=daily — proper daily OHLC candles ────
+  // CoinGecko /ohlc with days=365 auto-selects 4-day granularity (~92 bars),
+  // far too few for EMA200 warmup.  /ohlc/range with interval=daily returns
+  // true daily candles for the requested window (Analyst plan required).
+  const now = Math.floor(Date.now() / 1000);
+  const LOOKBACK_DAYS = 1095; // ~3 years of daily candles
+  const from = now - LOOKBACK_DAYS * 86400;
 
-  const ck = cacheKey('cg', cleanSymbol, parsedTimeframe.normalized, String(days));
+  const ck = cacheKey('cg-range', cleanSymbol, 'daily', String(LOOKBACK_DAYS));
 
   const cached = await getCached<PriceData>(ck);
   if (cached && Object.keys(cached).length > 0) {
@@ -240,9 +245,9 @@ export async function fetchCryptoPriceData(
     return { priceData: final, source: 'coingecko', volumeUnavailable: true, closeType: 'n/a' };
   }
 
-  const ohlc = await getOHLC(coinId, days);
+  const ohlc = await getOHLCRange(coinId, from, now);
   if (!ohlc || ohlc.length === 0) {
-    throw new Error(`Failed to fetch CoinGecko OHLC data for ${cleanSymbol}`);
+    throw new Error(`Failed to fetch CoinGecko OHLC range data for ${cleanSymbol}`);
   }
 
   const priceData: PriceData = {};
@@ -255,14 +260,14 @@ export async function fetchCryptoPriceData(
       high: Number(candle[2]),
       low: Number(candle[3]),
       close: Number(candle[4]),
-      volume: 0, // CoinGecko OHLC never returns volume
+      volume: 0, // CoinGecko OHLC range does not return volume
     };
   }
 
   await setCached(ck, priceData, TTL.coingecko);
 
   const final = applyResample(priceData, parsedTimeframe);
-  logger.info(`Fetched ${Object.keys(final).length} ${timeframe} bars of crypto data for ${cleanSymbol} (CoinGecko)`);
+  logger.info(`Fetched ${Object.keys(final).length} daily bars of crypto data for ${cleanSymbol} (CoinGecko ohlc/range)`);
   return { priceData: final, source: 'coingecko', volumeUnavailable: true, closeType: 'n/a' };
 }
 
