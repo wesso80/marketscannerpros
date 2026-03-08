@@ -6,7 +6,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-// Link import removed (unused)
+import Link from "next/link";
 import CapitalFlowCard from "@/components/CapitalFlowCard";
 import ToolPageLayout from "@/components/tools/ToolPageLayout";
 import ToolIdentityHeader from "@/components/tools/ToolIdentityHeader";
@@ -2281,6 +2281,17 @@ function ScannerContent() {
             </button>
           </div>
 
+          {/* Scanner Backtest Link */}
+          <div className="mb-5 flex justify-center">
+            <Link
+              href="/tools/scanner/backtest"
+              className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/8 px-5 py-2.5 text-sm font-bold text-emerald-400 no-underline transition-all hover:bg-emerald-500/15 hover:border-emerald-500/50"
+            >
+              <span style={{ fontSize: '16px' }}>📊</span>
+              Scanner Backtest — Validate Signals Against History
+            </Link>
+          </div>
+
           {/* Error Display */}
           {bulkScanError && (
             <div style={{
@@ -3252,7 +3263,13 @@ function ScannerContent() {
               return (
                 <>
                   {useScannerFlowV2 && (
-                    <div className="mb-2 flex justify-end">
+                    <div className="mb-2 flex items-center justify-end gap-2">
+                      <Link
+                        href={`/tools/scanner/backtest?symbol=${encodeURIComponent(ticker)}`}
+                        className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-emerald-400 no-underline hover:bg-emerald-500/20 transition-colors"
+                      >
+                        📊 Backtest This Symbol
+                      </Link>
                       <button
                         onClick={() => {
                           setResult(null);
