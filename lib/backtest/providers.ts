@@ -93,8 +93,9 @@ export async function fetchStockPriceData(
   const isIntraday = parsedTimeframe.kind === 'intraday';
   const interval = parsedTimeframe.alphaInterval || '1min';
 
-  // P0-3: Use compact for intraday (full is huge + slow + wastes quota)
-  const outputsize = isIntraday ? 'compact' : 'full';
+  // Backtest needs full intraday history for EMA200 warmup (230+ bars).
+  // AV compact only returns ~100 points — always use full for backtests.
+  const outputsize = 'full';
 
   const ck = cacheKey('av', symbol, isIntraday ? interval : 'daily', outputsize);
 
