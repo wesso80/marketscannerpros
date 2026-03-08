@@ -11,7 +11,7 @@
 
 import { logger } from '@/lib/logger';
 import { avTakeToken } from '@/lib/avRateGovernor';
-import { getOHLC, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
+import { getOHLC, getMarketChartFull, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
 import { getCached, setCached } from '@/lib/redis';
 import {
   parseBacktestTimeframe,
@@ -164,8 +164,72 @@ export async function fetchCryptoPriceData(
   const coinId = COINGECKO_ID_MAP[cleanSymbol] || (await resolveSymbolToId(cleanSymbol));
   if (!coinId) throw new Error(`No CoinGecko mapping found for ${cleanSymbol}`);
 
-  const days: 1 | 7 | 14 | 30 | 90 | 180 | 365 =
-    parsedTimeframe.kind === 'daily' ? 365 : 7;
+  // ──── Intraday: /market_chart gives hourly data for up to 90 days ────
+  // CoinGecko /ohlc only returns 4H candles for 7-day windows (~42 bars),
+  // which is far too few for EMA200 warmup.  /market_chart with days=90
+  // yields ~2160 hourly data-points — plenty for indicator warm-up.
+  if (parsedTimeframe.kind === 'intraday') {
+    const ck = cacheKey('cg-mc', cleanSymbol, parsedTimeframe.normalized, '90');
+
+    const cached = await getCached<PriceData>(ck);
+    if (cached && Object.keys(cached).length > 0) {
+      logger.debug(`[backtest/providers] cache hit ${ck}`);
+      return { priceData: cached, source: 'coingecko', volumeUnavailable: false, closeType: 'n/a' };
+    }
+
+    const chart = await getMarketChartFull(coinId, 90);
+    if (!chart || !chart.prices || chart.prices.length === 0) {
+      throw new Error(`Failed to fetch CoinGecko market chart data for ${cleanSymbol}`);
+    }
+
+    // Build volume lookup from total_volumes (round to nearest hour)
+    const HOUR_MS = 3_600_000;
+    const volMap = new Map<number, number>();
+    if (chart.total_volumes) {
+      for (const [ts, vol] of chart.total_volumes) {
+        if (Number.isFinite(vol) && vol >= 0) {
+          const hourKey = Math.round(ts / HOUR_MS) * HOUR_MS;
+          volMap.set(hourKey, vol);
+        }
+      }
+    }
+
+    // Group hourly price points into target-timeframe buckets
+    const bucketMs = parsedTimeframe.minutes * 60_000;
+    const buckets = new Map<number, { prices: number[]; vol: number }>();
+
+    for (const [ts, price] of chart.prices) {
+      if (!Number.isFinite(price)) continue;
+      const bk = Math.floor(ts / bucketMs) * bucketMs;
+      let bucket = buckets.get(bk);
+      if (!bucket) { bucket = { prices: [], vol: 0 }; buckets.set(bk, bucket); }
+      bucket.prices.push(price);
+      const hourKey = Math.round(ts / HOUR_MS) * HOUR_MS;
+      bucket.vol += volMap.get(hourKey) || 0;
+    }
+
+    const priceData: PriceData = {};
+    for (const [bk, bucket] of buckets.entries()) {
+      const date = new Date(bk);
+      const key = date.toISOString().replace('T', ' ').slice(0, 19);
+      priceData[key] = {
+        open:   bucket.prices[0],
+        high:   Math.max(...bucket.prices),
+        low:    Math.min(...bucket.prices),
+        close:  bucket.prices[bucket.prices.length - 1],
+        volume: bucket.vol,
+      };
+    }
+
+    await setCached(ck, priceData, TTL.coingecko);
+    logger.info(
+      `Fetched ${Object.keys(priceData).length} ${timeframe} bars of crypto data for ${cleanSymbol} (CoinGecko market_chart)`,
+    );
+    return { priceData, source: 'coingecko', volumeUnavailable: false, closeType: 'n/a' };
+  }
+
+  // ──── Daily: /ohlc with 365 days — proper OHLC candles ────
+  const days: 1 | 7 | 14 | 30 | 90 | 180 | 365 = 365;
 
   const ck = cacheKey('cg', cleanSymbol, parsedTimeframe.normalized, String(days));
 
@@ -184,10 +248,7 @@ export async function fetchCryptoPriceData(
   const priceData: PriceData = {};
   for (const candle of ohlc) {
     const date = new Date(candle[0]);
-    const key =
-      parsedTimeframe.kind === 'daily'
-        ? date.toISOString().slice(0, 10)
-        : date.toISOString().replace('T', ' ').slice(0, 19);
+    const key = date.toISOString().slice(0, 10);
 
     priceData[key] = {
       open: Number(candle[1]),
