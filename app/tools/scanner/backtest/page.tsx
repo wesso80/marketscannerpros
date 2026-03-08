@@ -9,6 +9,11 @@ import UpgradeGate from '@/components/UpgradeGate';
 import { useUserTier, canAccessBacktest } from '@/lib/useUserTier';
 import { formatPrice } from '@/lib/formatPrice';
 
+// NaN/null safety – JSON serialises NaN as null
+function n(v: number | null | undefined, fallback = 0): number {
+  return v != null && Number.isFinite(v) ? v : fallback;
+}
+
 // ─── Types ─────────────────────────────────────────────────────────────────
 
 interface Trade {
@@ -98,8 +103,8 @@ function pctColor(val: number) {
 // ─── Equity Curve (pure CSS) ───────────────────────────────────────────────
 
 function EquityCurveChart({ data }: { data: EquityPoint[] }) {
-  if (data.length < 2) return null;
-  const values = data.map(d => d.equity);
+  if (!data || data.length < 2) return null;
+  const values = data.map(d => n(d.equity));
   const min = Math.min(...values);
   const max = Math.max(...values);
   const range = max - min || 1;
@@ -250,13 +255,13 @@ function TradeTable({ trades }: { trades: Trade[] }) {
                 </td>
                 <td className="px-3 py-1.5 font-mono text-slate-400">{t.entryDate?.slice(0, 10)}</td>
                 <td className="px-3 py-1.5 font-mono text-slate-400">{t.exitDate?.slice(0, 10)}</td>
-                <td className="px-3 py-1.5 font-mono text-slate-300">{formatPrice(t.entry)}</td>
-                <td className="px-3 py-1.5 font-mono text-slate-300">{formatPrice(t.exit)}</td>
-                <td className={`px-3 py-1.5 font-mono font-semibold ${pctColor(t.returnPercent)}`}>
-                  {t.returnPercent > 0 ? '+' : ''}{t.returnPercent.toFixed(2)}%
+                <td className="px-3 py-1.5 font-mono text-slate-300">{formatPrice(n(t.entry))}</td>
+                <td className="px-3 py-1.5 font-mono text-slate-300">{formatPrice(n(t.exit))}</td>
+                <td className={`px-3 py-1.5 font-mono font-semibold ${pctColor(n(t.returnPercent))}`}>
+                  {n(t.returnPercent) > 0 ? '+' : ''}{n(t.returnPercent).toFixed(2)}%
                 </td>
-                <td className={`px-3 py-1.5 font-mono ${pctColor(t.return)}`}>
-                  {t.return > 0 ? '+' : ''}${t.return.toFixed(2)}
+                <td className={`px-3 py-1.5 font-mono ${pctColor(n(t.return))}`}>
+                  {n(t.return) > 0 ? '+' : ''}${n(t.return).toFixed(2)}
                 </td>
                 <td className="px-3 py-1.5 text-slate-500">{t.holdingPeriodDays}</td>
                 <td className="px-3 py-1.5">
@@ -487,28 +492,28 @@ function ScannerBacktestContent() {
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-7">
-                  <StatCard label="Total Trades" value={String(result.totalTrades)} />
-                  <StatCard label="Win Rate" value={`${result.winRate.toFixed(1)}%`}
-                    color={result.winRate >= 50 ? 'text-emerald-400' : 'text-rose-400'} />
-                  <StatCard label="Total Return" value={`${result.totalReturn > 0 ? '+' : ''}${result.totalReturn.toFixed(2)}%`}
-                    color={pctColor(result.totalReturn)} />
-                  <StatCard label="Max Drawdown" value={`-${result.maxDrawdown.toFixed(2)}%`} color="text-rose-400" />
-                  <StatCard label="Sharpe" value={result.sharpeRatio.toFixed(2)}
-                    color={result.sharpeRatio >= 1 ? 'text-emerald-400' : result.sharpeRatio >= 0 ? 'text-amber-400' : 'text-rose-400'} />
-                  <StatCard label="Profit Factor" value={result.profitFactor.toFixed(2)}
-                    color={result.profitFactor >= 1.5 ? 'text-emerald-400' : result.profitFactor >= 1 ? 'text-amber-400' : 'text-rose-400'} />
-                  <StatCard label="CAGR" value={`${result.cagr.toFixed(2)}%`}
-                    color={pctColor(result.cagr)} />
+                  <StatCard label="Total Trades" value={String(n(result.totalTrades))} />
+                  <StatCard label="Win Rate" value={`${n(result.winRate).toFixed(1)}%`}
+                    color={n(result.winRate) >= 50 ? 'text-emerald-400' : 'text-rose-400'} />
+                  <StatCard label="Total Return" value={`${n(result.totalReturn) > 0 ? '+' : ''}${n(result.totalReturn).toFixed(2)}%`}
+                    color={pctColor(n(result.totalReturn))} />
+                  <StatCard label="Max Drawdown" value={`-${n(result.maxDrawdown).toFixed(2)}%`} color="text-rose-400" />
+                  <StatCard label="Sharpe" value={n(result.sharpeRatio).toFixed(2)}
+                    color={n(result.sharpeRatio) >= 1 ? 'text-emerald-400' : n(result.sharpeRatio) >= 0 ? 'text-amber-400' : 'text-rose-400'} />
+                  <StatCard label="Profit Factor" value={n(result.profitFactor).toFixed(2)}
+                    color={n(result.profitFactor) >= 1.5 ? 'text-emerald-400' : n(result.profitFactor) >= 1 ? 'text-amber-400' : 'text-rose-400'} />
+                  <StatCard label="CAGR" value={`${n(result.cagr).toFixed(2)}%`}
+                    color={pctColor(n(result.cagr))} />
                 </div>
 
                 {/* Secondary stats */}
                 <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-7">
-                  <StatCard label="Avg Win" value={`+$${result.avgWin.toFixed(2)}`} color="text-emerald-400" />
-                  <StatCard label="Avg Loss" value={`$${result.avgLoss.toFixed(2)}`} color="text-rose-400" />
-                  <StatCard label="Sortino" value={result.sortinoRatio.toFixed(2)} />
-                  <StatCard label="Calmar" value={result.calmarRatio.toFixed(2)} />
-                  <StatCard label="Volatility" value={`${result.volatility.toFixed(2)}%`} />
-                  <StatCard label="Time In Market" value={`${result.timeInMarket.toFixed(1)}%`} />
+                  <StatCard label="Avg Win" value={`+$${n(result.avgWin).toFixed(2)}`} color="text-emerald-400" />
+                  <StatCard label="Avg Loss" value={`$${n(result.avgLoss).toFixed(2)}`} color="text-rose-400" />
+                  <StatCard label="Sortino" value={n(result.sortinoRatio).toFixed(2)} />
+                  <StatCard label="Calmar" value={n(result.calmarRatio).toFixed(2)} />
+                  <StatCard label="Volatility" value={`${n(result.volatility).toFixed(2)}%`} />
+                  <StatCard label="Time In Market" value={`${n(result.timeInMarket).toFixed(1)}%`} />
                   <StatCard label="W/L" value={`${result.winningTrades}/${result.losingTrades}`} />
                 </div>
 
@@ -536,7 +541,7 @@ function ScannerBacktestContent() {
                         <div className="text-xs text-slate-300">
                           {result.bestTrade.side} {result.bestTrade.symbol} · {result.bestTrade.entryDate?.slice(0, 10)} →
                           {' '}{result.bestTrade.exitDate?.slice(0, 10)} ·
-                          {' '}<span className="font-semibold text-emerald-400">+{result.bestTrade.returnPercent.toFixed(2)}%</span>
+                          {' '}<span className="font-semibold text-emerald-400">+{n(result.bestTrade.returnPercent).toFixed(2)}%</span>
                         </div>
                       </div>
                     )}
@@ -546,7 +551,7 @@ function ScannerBacktestContent() {
                         <div className="text-xs text-slate-300">
                           {result.worstTrade.side} {result.worstTrade.symbol} · {result.worstTrade.entryDate?.slice(0, 10)} →
                           {' '}{result.worstTrade.exitDate?.slice(0, 10)} ·
-                          {' '}<span className="font-semibold text-rose-400">{result.worstTrade.returnPercent.toFixed(2)}%</span>
+                          {' '}<span className="font-semibold text-rose-400">{n(result.worstTrade.returnPercent).toFixed(2)}%</span>
                         </div>
                       </div>
                     )}
