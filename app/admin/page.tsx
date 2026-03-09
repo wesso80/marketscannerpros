@@ -381,7 +381,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
               }}>
                 {learningResult.ok 
                   ? `✓ Processed ${learningResult.processed} predictions` 
-                  : `✗ ${learningResult.errors.join(", ")}`}
+                  : `✗ ${(learningResult.errors || ['Unknown error']).join(", ")}`}
               </span>
             )}
             <button

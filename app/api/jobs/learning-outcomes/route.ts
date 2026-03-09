@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
+import { timingSafeEqual } from 'crypto';
+
+function safeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
 // ── Internal fetch base URL ──────────────────────────────────────
 // Use RENDER_EXTERNAL_URL (set by Render on web services) or fall back to WEB_URL/APP_URL
 const INTERNAL_BASE_URL = process.env.RENDER_EXTERNAL_URL
@@ -84,11 +90,17 @@ function directionFromMove(movePct: number): 'up' | 'down' | 'flat' {
 }
 
 export async function POST(_req: NextRequest) {
-  // SECURITY: Validate inbound cron secret
+  // SECURITY: Accept cron secret (automated jobs) or admin secret (manual trigger)
   const cronSecret = process.env.CRON_SECRET;
-  const headerSecret = _req.headers.get('x-cron-secret');
-  if (!cronSecret || headerSecret !== cronSecret) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const adminSecret = process.env.ADMIN_SECRET;
+  const headerCron = _req.headers.get('x-cron-secret');
+  const headerAuth = _req.headers.get('authorization')?.replace('Bearer ', '');
+
+  const cronOk = cronSecret && headerCron && safeCompare(headerCron, cronSecret);
+  const adminOk = adminSecret && headerAuth && safeCompare(headerAuth, adminSecret);
+
+  if (!cronOk && !adminOk) {
+    return NextResponse.json({ ok: false, processed: 0, errors: ['Unauthorized'] }, { status: 401 });
   }
 
   await ensureLearningSchema();
