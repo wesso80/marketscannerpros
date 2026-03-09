@@ -22,6 +22,7 @@ const InteractiveChart = dynamic(() => import("@/components/scanner/InteractiveC
 import ScreenerTable, { type ScreenerRow } from "@/components/scanner/ScreenerTable";
 import ScanTemplatesBar, { type ScanTemplate } from "@/components/scanner/ScanTemplatesBar";
 import { PreTradeChecklistModal, type PreTradeChecklistState } from "@/components/scanner/PreTradeChecklistModal";
+import ResearchCaseModal, { type ScanPick } from "@/components/scanner/ResearchCaseModal";
 import { useUserTier, canAccessScanner, canAccessUnlimitedScanning, FREE_DAILY_SCAN_LIMIT } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
 import { useAIPageContext } from "@/lib/ai/pageContext";
@@ -278,6 +279,8 @@ function ScannerContent() {
   // Risk block modal (shown when governor returns BLOCK on deploy)
   const [showRiskBlockModal, setShowRiskBlockModal] = useState(false);
   const [riskBlockReason, setRiskBlockReason] = useState<string>('');
+  // Research case modal
+  const [researchCasePick, setResearchCasePick] = useState<ScanPick | null>(null);
   // Flash message (replaces native alert())
   const [flashMsg, setFlashMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   // Behavioral overtrading screen
@@ -2676,6 +2679,30 @@ function ScannerContent() {
                         }}
                       >
                         ⭐ Add to Watchlist
+                      </button>
+                      <button type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setResearchCasePick(pick as ScanPick);
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: "6px 10px",
+                          fontSize: "11px",
+                          fontWeight: "600",
+                          background: "var(--msp-accent-tint)",
+                          color: "var(--msp-accent)",
+                          border: "1px solid var(--msp-accent)",
+                          borderRadius: "6px",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "4px",
+                          transition: "all 0.2s ease"
+                        }}
+                      >
+                        📋 Research Case
                       </button>
                     </div>
                   </div>
@@ -5814,6 +5841,16 @@ function ScannerContent() {
             Past performance does not guarantee future results. Always do your own research and consult a licensed financial advisor.
           </p>
         </div>
+
+        {/* ─── Research Case Modal ─── */}
+        {researchCasePick && (
+          <ResearchCaseModal
+            pick={researchCasePick}
+            assetType={bulkScanResults?.type || 'equity'}
+            timeframe={bulkScanResults?.timeframe || '1d'}
+            onClose={() => setResearchCasePick(null)}
+          />
+        )}
 
         {/* ─── Risk Block Modal (shown when governor BLOCK is enforced) ─── */}
         {showRiskBlockModal && (
