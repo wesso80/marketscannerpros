@@ -10,6 +10,7 @@ import { DecompositionTFRow, Direction, TimeConfluenceV2Inputs } from '@/compone
 import { fireAutoLog } from '@/lib/autoLog';
 import { formatPrice } from '@/lib/formatPrice';
 import TimeGravityMapWidget from '@/components/TimeGravityMapWidget';
+import MarketPressureWidget from '@/components/MarketPressureWidget';
 import { detectAssetClass } from '@/lib/detectAssetClass';
 import { useUserTier, canAccessTimeScanner } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
@@ -802,6 +803,28 @@ export default function TimeScannerPage() {
               )}
             </div>
           </section>
+        )}
+
+        {/* ═══ MARKET PRESSURE ENGINE ═══ */}
+        {scanData && (
+          <details className="w-full rounded-2xl border border-slate-800 bg-slate-900/30" open>
+            <summary className="cursor-pointer list-none px-3 py-3 lg:px-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-sm font-semibold text-slate-100">🔥 Market Pressure Engine</span>
+                  <span className="ml-2 text-xs text-slate-400">Composite pressure from time, volatility, liquidity & options</span>
+                </div>
+                <div className="text-xs text-slate-500">▾ expand</div>
+              </div>
+            </summary>
+            <div className="border-t border-slate-800 p-3 lg:p-5">
+              <MarketPressureWidget
+                symbol={symbol}
+                scanMode={scanMode}
+                sessionMode={sessionMode}
+              />
+            </div>
+          </details>
         )}
 
         {/* ═══ ROW 2: STATIC INTRADAY SCHEDULE (equities only) + CLOSE CALENDAR ═══ */}
