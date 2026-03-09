@@ -309,18 +309,24 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    if (!priceStr) {
-      return NextResponse.json(
-        { error: 'Missing required parameter: price' },
-        { status: 400 }
-      );
+    let currentPrice = priceStr ? parseFloat(priceStr) : 0;
+    
+    // Auto-resolve price from quotes_latest when not provided
+    if (!currentPrice || isNaN(currentPrice) || currentPrice <= 0) {
+      try {
+        const rows = await q(
+          'SELECT price FROM quotes_latest WHERE symbol = $1 LIMIT 1',
+          [symbol.toUpperCase()]
+        );
+        if (rows.length > 0 && rows[0].price) {
+          currentPrice = parseFloat(rows[0].price);
+        }
+      } catch { /* ignore — will fall through to error */ }
     }
     
-    const currentPrice = parseFloat(priceStr);
-    
-    if (isNaN(currentPrice) || currentPrice <= 0) {
+    if (!currentPrice || isNaN(currentPrice) || currentPrice <= 0) {
       return NextResponse.json(
-        { error: 'Invalid price value' },
+        { error: 'Missing price — provide ?price= or ensure quotes_latest has data for this symbol' },
         { status: 400 }
       );
     }

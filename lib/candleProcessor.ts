@@ -41,8 +41,10 @@ export const TIMEFRAME_MAP: Record<string, string> = {
   '4hour': '4H',
   
   // Daily+
+  '1d': '1D',
   'daily': '1D',
   '1day': '1D',
+  '1w': '1W',
   'weekly': '1W',
   '1week': '1W',
   'monthly': '1M',

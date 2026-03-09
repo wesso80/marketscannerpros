@@ -604,7 +604,7 @@ export default function TimeGravityMapWidget({
       
       if (data.data) {
         setTGM(data.data);
-        setResolvedPrice(currentPrice || 0);
+        setResolvedPrice(data.data.currentPrice || currentPrice || 0);
         setLastUpdate(new Date());
         
         // If we got TGM data but zero midpoints, don't treat as success
