@@ -89,6 +89,7 @@ const secondaryTools = [
   { href: '/tools/watchlists', icon: '👁️', image: '/assets/platform-tools/watchlists.png', title: 'Watchlists', description: 'Track symbols across your workspace.' },
   { href: '/tools/markets?tab=correlation', icon: '🔗', image: '/assets/platform-tools/markets-dashboard.png', title: 'Cross-Asset Correlation', description: 'Rolling correlation matrix across equities, crypto, and macro assets.' },
   { href: '/tools/ai-analyst', icon: '🤖', image: '/assets/platform-tools/operator-dashboard.png', title: 'AI Analyst', description: 'AI-powered market analysis and trade research assistant.' },
+  { href: '/tools/liquidity-sweep', icon: '🌊', image: '/assets/platform-tools/operator-dashboard.png', title: 'Liquidity Sweep Scanner', description: 'Detect stop hunts and sweep/rejection patterns at key liquidity levels.' },
 ];
 
 /* ─── Featured tile component ─── */
