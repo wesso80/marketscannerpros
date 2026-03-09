@@ -25,12 +25,15 @@
 14. [Portfolio](#14-portfolio)
 15. [Trade Journal](#15-trade-journal)
 16. [Cross-System Intelligence Layer](#16-cross-system-intelligence-layer)
-17. [The 5 Biggest Trading Edge Improvements](#17-the-5-biggest-trading-edge-improvements)
-18. [The 3 Most Powerful Scanners That Should Exist](#18-the-3-most-powerful-scanners-that-should-exist)
-19. [Trader Experience Audit](#19-trader-experience-audit)
-20. [Professional Tool Comparison](#20-professional-tool-comparison)
-21. [Final Trading Platform Score](#21-final-trading-platform-score)
-22. [Final Verdict](#22-final-verdict)
+17. [Market Pressure Engine (Proposed)](#17-market-pressure-engine-proposed)
+18. [The 5 Biggest Trading Edge Improvements](#18-the-5-biggest-trading-edge-improvements)
+19. [The 3 Most Powerful Scanners That Should Exist](#19-the-3-most-powerful-scanners-that-should-exist)
+20. [Trader Experience Audit](#20-trader-experience-audit)
+21. [Professional Tool Comparison](#21-professional-tool-comparison)
+22. [Product Hierarchy](#22-product-hierarchy)
+23. [Implementation Roadmap](#23-implementation-roadmap)
+24. [Final Trading Platform Score](#24-final-trading-platform-score)
+25. [Final Verdict](#25-final-verdict)
 
 ---
 
@@ -92,6 +95,18 @@ Separate but connected: Options flow (separate scanner, but Capital Flow Engine 
 
 **Verdict:** The scanner has genuine intelligence layering — not just isolated dashboards. The 6-factor regime-calibrated model with hard gating is sophisticated architecture.
 
+### TRADING DESK ASSESSMENT
+
+| Dimension | Score | Notes |
+|---|---|---|
+| **Structure** | **9/10** | Architecture is institutional-grade. 6-factor regime-calibrated model with hard gating, institutional filter, capital flow overlay — this is how prop desks build signal pipelines. |
+| **Trader Workflow** | **9/10** | The scan → filter → score → gate → output pipeline is clean. Regime-adaptive weighting means the scanner thinks like a trader adjusting to conditions. |
+| **Signal Edge** | **6/10** | The architecture is excellent but the underlying indicators are traditional lagging signals (RSI, MACD, Stochastic, CCI). These confirm moves, rarely predict them. The edge comes from the gating and weighting, not from the raw indicators themselves. |
+| **Innovation** | **7/10** | Regime-adaptive weighting matrices are genuinely innovative for retail. Pattern detection with confidence scoring is solid. Missing: volatility compression scanner, liquidity targeting logic, smarter ranking beyond raw confluence score. |
+| **Overall** | **7.5/10** | |
+
+**Key weakness:** The 14 indicators are mostly momentum/trend-following (RSI, MACD, Stochastic, CCI, Aroon, ADX). Professional edge increasingly comes from volatility compression detection (Bollinger squeeze + Keltner), liquidity targeting (where are the stops?), and order flow — none of which are in the core indicator stack. The regime-adaptive architecture is the real edge here, not the indicators feeding it.
+
 ---
 
 ## 2. Options Confluence Scanner
@@ -150,6 +165,18 @@ Options strike selection, dealer positioning insight, entry timing via options f
 ### CONFLUENCE LOGIC
 True multi-layer confluence: ✅ Options flow, ✅ Technical, ✅ Time cycles, ✅ Volatility (IV), ✅ Macro, ✅ Regime
 The scoring system (`options-v21.ts`) integrates 7 distinct signal types with base win rates into a weighted composite — this is genuine intelligence layering.
+
+### TRADING DESK ASSESSMENT
+
+| Dimension | Score | Notes |
+|---|---|---|
+| **Depth** | **8/10** | GEX computation, gamma flip prices, 7 confluence signal types with base win rates, permission-gated scoring multipliers — this is deeper than most retail options tools. |
+| **Professional Utility** | **8/10** | Strike recommendations with Greeks, DTE bucketing by style, macro event suppression — gives traders what they need to structure a trade. |
+| **Edge** | **7/10** | Dealer gamma positioning is genuinely anticipatory. Unusual activity detection adds forward value. Limited by snapshot-based data (not streaming options tape). |
+| **Clarity** | **6/10** | The confluence scoring is opaque — traders need to understand how TF confluence + IV rank + regime + macro + time permission combine into the final score. Needs clearer decomposition in the UI. |
+| **Overall** | **7.5/10** | |
+
+**Key weakness:** The platform computes GEX and gamma flip levels, but the options flow detection is based on volume/OI ratios rather than actual trade prints. Real options flow intelligence requires classifying individual prints (bought at ask vs. sold at bid, block vs. sweep, opening vs. closing). The current approach approximates smart money activity rather than directly observing it.
 
 ---
 
@@ -213,6 +240,23 @@ Volatility expansion timing via multi-timeframe candle close confluence detectio
 
 ### CONFLUENCE LOGIC
 The Time Confluence system is itself a confluence tool — it stacks multiple timeframes. It integrates with the broader platform via the regime classifier and probability matrix, but the UI experience is somewhat isolated from the scanner and options tools.
+
+### TRADING DESK ASSESSMENT
+
+| Dimension | Score | Notes |
+|---|---|---|
+| **Innovation** | **9.5/10** | This is the platform's most original contribution. Multi-timeframe candle close clustering, gravitational midpoint debt tracking, decompression windows — none of this exists elsewhere in retail. Genuine research-grade methodology. |
+| **Usefulness** | **8/10** | Traders who understand time cycle theory will find this immediately actionable. The close calendar, gravity map, and decompression windows give precise timing context that no other tool provides. |
+| **Clarity** | **6/10** | The system uses confidence language that needs recalibration. "100% confidence" is dangerous language for any probabilistic system — should be expressed as Probability, Alignment Strength, or Confluence Score. Traders must understand these are probability-weighted windows, not certainties. |
+| **Edge Potential** | **9/10** | If the time confluence thesis holds (that multi-TF close clustering precedes volatility expansion), this is a genuine predictive edge. The decompression window timing adds precision that transforms a directional thesis into a timed entry. |
+| **Overall** | **8.5/10** | |
+
+**Key weakness:** The confidence scoring language needs recalibration. Any system displaying "100% confluence" or similar language creates false certainty. Professional systems express this as:
+- **Probability Score:** P(volatility expansion | confluence ≥ 6) = 72%
+- **Alignment Strength:** 8/10 timeframes aligned (not "100% confident")
+- **Confluence Grade:** EXTREME (score 7+) / HIGH (5-6) / MODERATE (3-4) / LOW (1-2)
+
+The underlying mathematics are sound — the presentation should match the probabilistic reality.
 
 ---
 
@@ -782,31 +826,93 @@ The platform has a genuine intelligence layer that connects disconnected data st
 
 ---
 
-## 17. The 5 Biggest Trading Edge Improvements
+## 17. Market Pressure Engine (Proposed)
 
-### 1. Live Options Flow Tape
-**Impact: EXTREME**
-Add real-time options print classification (buy/sell at bid/ask, block vs. sweep, size relative to OI). This single feature would transform the Options Confluence Scanner from 65% to potentially 70%+ win rate signals. Unusual Whales built a business on this alone.
+The single most impactful architectural addition to the platform. The Market Pressure Engine (MPE) would unify the four core pressure dimensions that drive every tradeable move into a single composite reading.
 
-### 2. Golden Egg Live Data Integration
-**Impact: HIGH**
-Connect the Golden Egg framework to live scanner/options/time/macro data feeds. The architecture is already built — it just needs real-time population. This would create a single-screen trade decisioning experience that no other retail platform offers.
+### CONCEPT
 
-### 3. Cross-Asset Correlation Matrix with Rolling Windows
-**Impact: HIGH**
-Real-time correlation tracking between SPY/VIX/DXY/GLD/BTC/TNX (treasuries). When correlations break (e.g., BTC becomes correlated with gold), it creates regime shift signals. This would supercharge the macro dashboard and regime classifier.
+Every trade setup exists within a pressure field. The MPE quantifies four orthogonal pressures and produces a weighted composite that answers: *"How much force is behind this setup right now?"*
 
-### 4. Broker API Integration
-**Impact: HIGH**
-Auto-import positions and executed trades. Eliminates manual entry friction, enables automatic journal population, portfolio-level risk analytics calculation, and eventually alert-triggered execution. Without this, the platform remains an intelligence layer disconnected from the execution layer.
+### THE FOUR PRESSURES
 
-### 5. Liquidity Sweep + Momentum Ignition Scanner
-**Impact: HIGH**
-Detect stop hunts (price sweeps above resistance then reverses), liquidity grabs (price tags level and immediately rejects), and momentum ignition (sudden volume + price acceleration from a level). These are the highest-edge setups for day traders and the scanner infrastructure already supports this with PDH/PDL/EQH/EQL level detection — it just needs the sweep/rejection logic.
+| Pressure | Weight | Source | What It Measures |
+|---|---|---|---|
+| **Time Pressure** | 0.25 | Time Confluence Engine | How many timeframe closes are clustering? Decompression windows active? Midpoint debt outstanding? |
+| **Volatility Pressure** | 0.25 | Regime Classifier + ATR/ADX/VIX | Is volatility compressing (coiled spring) or expanding (trending)? IV rank position? |
+| **Liquidity Pressure** | 0.30 | Funding rates, OI, L/S ratio, exchange flows | Where is capital positioned? Crowded? Divergent? Building or unwinding? |
+| **Options Pressure** | 0.20 | GEX, gamma flip, unusual activity, P/C ratio | Where are dealers hedging? What is the options market pricing in? |
+
+### INTERFACE
+
+```typescript
+interface MarketPressureReading {
+  symbol: string;
+  timestamp: number;
+  pressures: {
+    time:       { score: number; weight: 0.25; components: string[] };
+    volatility: { score: number; weight: 0.25; components: string[] };
+    liquidity:  { score: number; weight: 0.30; components: string[] };
+    options:    { score: number; weight: 0.20; components: string[] };
+  };
+  composite:    number;  // 0–100 weighted sum
+  direction:    'LONG' | 'SHORT' | 'NEUTRAL';
+  regime:       string;
+  confidence:   number;  // 0–1.0
+}
+```
+
+### SCORING
+
+```typescript
+function computeMPE(p: MarketPressureReading['pressures']): number {
+  return (
+    p.time.score       * p.time.weight +
+    p.volatility.score * p.volatility.weight +
+    p.liquidity.score  * p.liquidity.weight +
+    p.options.score    * p.options.weight
+  );
+}
+```
+
+### WHY THIS MATTERS
+
+The platform already computes each of these pressures independently across different tools. The MPE unifies them into a single pressure reading per symbol. This transforms MSP from "check 4 different screens" to "one number tells you the pressure state."
+
+**MPE ≥ 75:** High pressure — volatility expansion likely, full sizing
+**MPE 50–74:** Building pressure — watch for trigger, reduced sizing
+**MPE 25–49:** Low pressure — range-bound or dissipating, probe only
+**MPE < 25:** No pressure — no trade
+
+The MPE feeds directly into the Golden Egg framework as the primary pressure input for Decision Permission.
 
 ---
 
-## 18. The 3 Most Powerful Scanners That Should Exist
+## 18. The 5 Biggest Trading Edge Improvements
+
+### 1. Golden Egg Live Data Integration
+**Impact: EXTREME**
+Connect the Golden Egg framework to live scanner/options/time/macro data feeds. The architecture is already built — it just needs real-time population. Auto-generate Golden Egg candidates from highest-confluence scanner results. This would create a single-screen trade decisioning experience that no other retail platform offers.
+
+### 2. Market Pressure Engine (MPE)
+**Impact: EXTREME**
+Implement the 4-pressure composite engine (Time 0.25, Volatility 0.25, Liquidity 0.30, Options 0.20) described in Section 17. This transforms 4 separate tool screens into a single actionable number per symbol. Every other improvement becomes more powerful when filtered through MPE.
+
+### 3. Research Case Outputs
+**Impact: HIGH**
+Every scan result should generate a "research case" — a structured, exportable document containing: setup thesis, confluence evidence, pressure state, risk parameters, time window, and invalidation conditions. This positions MSP as a research terminal, not just a signal generator. Traders can save, compare, and review cases over time.
+
+### 4. Live Options Flow Tape
+**Impact: HIGH**
+Add real-time options print classification (buy/sell at bid/ask, block vs. sweep, size relative to OI). This would transform the Options Confluence Scanner’s unusual activity detection from volume-based approximation to direct observation. Integrating flow data into the existing GEX/gamma framework would create the most comprehensive options intelligence tool in retail.
+
+### 5. Cross-Asset Correlation Engine
+**Impact: HIGH**
+Real-time correlation tracking between SPY/VIX/DXY/GLD/BTC/TNX with rolling windows. When correlations break (e.g., BTC becomes correlated with gold) or converge unexpectedly, it creates regime shift signals. This supercharges the already-strong macro dashboard and feeds directly into the regime classifier.
+
+---
+
+## 19. The 3 Most Powerful Scanners That Should Exist
 
 ### Scanner 1: Liquidity Sweep + Reversal Scanner
 **Detects:** Price sweeping key liquidity levels (PDH/PDL/ONH/ONL/EQH/EQL) then rejecting
@@ -843,7 +949,7 @@ Detect stop hunts (price sweeps above resistance then reverses), liquidity grabs
 
 ---
 
-## 19. Trader Experience Audit
+## 20. Trader Experience Audit
 
 **Can a trader go from: market open → idea → trade → exit → review using only this platform?**
 
@@ -856,15 +962,15 @@ Detect stop hunts (price sweeps above resistance then reverses), liquidity grabs
 
 **Verdict:** Strong idea generation pipeline with multi-system integration.
 
-### Idea → Trade Entry ⚠️ (Gap)
+### Idea → Trade Entry ⚠️ (Decision Operationalization Gap)
 1. Intraday Charts → Visualize setup on chart
 2. Scanner provides entry zone, stop, targets
 3. Options scanner provides strike recommendation
-4. **GAP:** No one-click execution or broker integration
+4. **GAP:** No structured research case output (thesis + evidence + risk in one exportable view)
 5. **GAP:** Must manually enter position in Portfolio
 6. **GAP:** Golden Egg framework (the decision screen) uses demo data
 
-**Verdict:** The intelligence exists to support entry decisions, but the execution step requires manual external action.
+**Verdict:** The intelligence exists to support entry decisions, but the decision operationalization step — turning intelligence into a structured, actionable trade plan — requires manual assembly across multiple screens. This is not an execution gap (broker integration) but a decision framing gap (the platform knows the answer but doesn’t package it for action).
 
 ### Trade Management ⚠️ (Gap)
 1. Portfolio tracks P&L ✅
@@ -884,12 +990,12 @@ Detect stop hunts (price sweeps above resistance then reverses), liquidity grabs
 
 **Verdict:** Strong review loop with genuine signal feedback. The outcome labeling → signal quality feedback is institutional-grade.
 
-### Overall Workflow Score: **7/10**
-Strong on idea generation and post-trade review. Weak on execution and active management. The intelligence layer is sophisticated but the last-mile execution interface is the gap.
+### Overall Workflow Score: **7.5/10**
+Strong on idea generation and post-trade review. The gap is not execution (broker integration is a "later" concern) but decision operationalization — packaging the platform’s intelligence into structured, actionable research cases. The intelligence layer is sophisticated; it needs a presentation layer that matches.
 
 ---
 
-## 20. Professional Tool Comparison
+## 21. Professional Tool Comparison
 
 | Capability | MSP | TradingView | TrendSpider | Unusual Whales | CoinGlass | Koyfin | Glassnode |
 |---|---|---|---|---|---|---|---|
@@ -914,66 +1020,149 @@ Strong on idea generation and post-trade review. Weak on execution and active ma
 4. **Signal replay backtesting** — Testing actual historical signals (not just indicator rules) is unique
 5. **Outcome labeling feedback loop** — Journal → signal accuracy → Bayesian probability update is institutional-grade
 
-### Where MSP is Weaker
-1. **Charting** — TradingView is vastly superior for manual chart analysis
-2. **Options flow tape** — Unusual Whales has real-time options print data MSP lacks
-3. **On-chain analytics** — Glassnode dominates crypto on-chain data
-4. **Execution** — No broker integration (TradingView has it)
-5. **Community/alerting** — TradingView's social trading and alert ecosystem is unmatched at scale
+### Where MSP is Weaker (And Why Some Don't Matter)
+1. **Charting** — TradingView is vastly superior for manual chart analysis. **But this doesn't matter.** MSP is not a charting platform and should not try to be one. Traders will always have TradingView open alongside MSP. Charting is not the competitive battlefield.
+2. **Options flow tape** — Unusual Whales has real-time options print data MSP lacks. This is a genuine gap worth closing because it would integrate into MSP's superior confluence framework.
+3. **On-chain analytics** — Glassnode dominates crypto on-chain data. MSP's edge is in derivatives + time confluence, not on-chain.
+4. **Execution** — No broker integration. This is a **later** concern — reframed as "execution-adjacent workflow integration." The priority is decision intelligence, not trade execution.
+5. **Community/alerting** — TradingView's social trading ecosystem is unmatched at scale. MSP competes on intelligence depth, not social breadth.
 
 ---
 
-## 21. Final Trading Platform Score
+## 22. Product Hierarchy
+
+MSP's intelligence stack naturally forms a 5-layer product hierarchy. Each layer builds on the previous and creates increasing decision quality:
+
+### Layer 1: Market Permission
+*"Should I be trading at all right now?"*
+
+**Tools:** Macro Dashboard, Regime Classifier, Hard Blockers
+**Output:** RISK_ON / NEUTRAL / RISK_OFF → Position sizing permission
+**Value:** Prevents trading into hostile environments. This alone avoids significant drawdowns.
+
+### Layer 2: Opportunity Discovery
+*"What setups exist across all markets?"*
+
+**Tools:** Multi-Market Scanner, Market Movers, Sector/Crypto Heatmaps, Crypto Command Center
+**Output:** Ranked list of high-confluence setups with regime-adaptive scoring
+**Value:** Finds setups the trader would miss using manual chart scanning.
+
+### Layer 3: Confluence Validation
+*"Does this specific setup have multi-dimensional support?"*
+
+**Tools:** Time Confluence Engine, Options Confluence Scanner, Capital Flow Engine, Institutional Filter
+**Output:** Pressure reading across time, volatility, liquidity, options dimensions
+**Value:** Eliminates single-indicator trades. Forces multi-dimensional confirmation.
+
+### Layer 4: Decision Framing
+*"Should I take this trade, with what sizing, at what time, and at what risk?"*
+
+**Tools:** Golden Egg Framework, Market Pressure Engine (proposed), State Machine, Research Case Outputs (proposed)
+**Output:** Structured decision with permission, plan, evidence stack, and invalidation conditions
+**Value:** Transforms intelligence into an actionable, documented trade plan.
+
+### Layer 5: Feedback & Learning
+*"Did it work? Why or why not? How do I improve?"*
+
+**Tools:** Trade Journal, Outcome Labeler, Backtest Engine, Forward Test Tracker, Probability Engine (Bayesian)
+**Output:** Signal accuracy metrics, strategy health diagnostics, probability updates
+**Value:** Closes the loop. Every trade outcome improves future signal quality.
+
+### Hierarchy Insight
+Most retail platforms operate at Layers 1–2 only (basic scanning). MSP has genuine infrastructure at all 5 layers. The gap is in Layer 4 (Decision Framing) — the Golden Egg framework exists architecturally but needs live data, and research case outputs don't exist yet. Filling Layer 4 is the single highest-impact improvement for the platform.
+
+---
+
+## 23. Implementation Roadmap
+
+### NOW (Immediate Priority)
+These are the highest-impact items that leverage existing architecture:
+
+1. **Golden Egg Live Data Integration** — Connect to scanner/options/time/macro feeds. Architecture exists. Wire it up.
+2. **Market Pressure Engine** — Implement the 4-pressure composite (Section 17). All component data already exists in separate tools.
+3. **Research Case Outputs** — Every scan result generates a structured, exportable research case. This is the Layer 4 gap filler.
+4. **Time Confluence Confidence Language** — Replace "100% confidence" with Probability/Alignment/Confluence Strength scoring.
+
+### NEXT (Near-Term)
+Build new intelligence capabilities using the existing infrastructure:
+
+5. **Liquidity Sweep Scanner** — Detect stop hunts at PDH/PDL/ONH/ONL/EQH/EQL. The level detection exists; add sweep/rejection pattern logic.
+6. **Options Flow Enhancement** — Move from volume/OI approximation to actual trade print classification where data sources permit.
+7. **Cross-Asset Correlation Engine** — Rolling correlation matrix for SPY/VIX/DXY/GLD/BTC/TNX. Feeds into regime classifier.
+8. **Volatility Compression Scanner** — Bollinger squeeze + Keltner channel compression detection. The highest-probability setup type missing from the scanner.
+
+### LATER (Strategic)
+Longer-term improvements that require new infrastructure or external dependencies:
+
+9. **Execution-Adjacent Workflow Integration** — Broker API for position import, journal auto-population, and portfolio risk analytics. Not trade execution — data import and workflow integration.
+10. **Deeper Charting Enhancements** — Volume profile, multi-timeframe split views, drawing tools. Selective improvements, not competing with TradingView.
+11. **Advanced Automation** — Algorithm deployment from backtested strategies, auto-rebalancing, alert-triggered position sizing.
+12. **On-Chain Analytics (Crypto)** — Whale wallet tracking, exchange flow analysis, stablecoin supply monitoring.
+
+### Roadmap Rationale
+The NOW items fill the Layer 4 decision framing gap using existing architecture. The NEXT items expand the signal edge. The LATER items add infrastructure that requires external integration (brokers, on-chain data sources). This sequence maximizes impact while minimizing new infrastructure requirements.
+
+---
+
+## 24. Final Trading Platform Score
 
 | Category | Score | Justification |
 |---|---|---|
-| **Signal Quality** | **7.5/10** | 14-indicator scanner with regime-adaptive weighting, options dealer gamma, time confluence. Missing: real-time options flow, order flow, on-chain. |
-| **Edge Potential** | **8/10** | Genuine unique features (time confluence, regime-adaptive scoring, institutional state machine, probability matrix). Few retail platforms have this architecture. |
-| **Professional Utility** | **6.5/10** | Strong intelligence layer but gap in execution (no broker integration), basic charting, manual position entry. |
-| **Decision Support** | **7.5/10** | Answers all 4 questions (What/When/Where Risk/Where Target) via scanner + options + macro + backtest. Golden Egg framework excellent but needs live data. |
+| **Signal Quality** | **7.5/10** | 14-indicator scanner with regime-adaptive weighting, options dealer gamma, time confluence. Architecture is excellent; underlying indicators are traditional (RSI/MACD/Stoch). Missing: real-time options flow, volatility compression detection. |
+| **Edge Potential** | **8.5/10** | Time confluence is genuinely unique (9.5/10 innovation). Regime-adaptive scoring, institutional state machine, probability matrix, gravitational midpoint model — few retail platforms have this depth. Upgraded from 8.0 based on unique methodology assessment. |
+| **Professional Utility** | **7.5/10** | Strong intelligence layer across all 5 product hierarchy layers. Decision operationalization gap (Layer 4) is the primary weakness, not broker integration. Charting weakness is irrelevant — MSP is not a charting platform. Upgraded from 6.5. |
+| **Decision Support** | **8/10** | Answers all 4 questions (What/When/Where Risk/Where Target) via scanner + options + macro + backtest. Golden Egg framework is architecturally excellent. MPE concept would push this to 9+. Upgraded from 7.5. |
 | **Automation Potential** | **7/10** | State machine, alerts, signal recording infrastructure all exist. Missing: auto-execution, algorithm deployment, portfolio rebalancing. |
 
-### **Composite Score: 7.3/10**
+### **Composite Score: 7.7/10**
+
+*Potential with NOW roadmap items completed: 8.5+/10*
 
 ---
 
-## 22. Final Verdict
+## 25. Final Verdict
 
-### What MarketScanner Pros IS Currently
+### What MarketScanner Pros IS
 
-**A genuine trading intelligence platform with research dashboard characteristics.**
+**A confluence-based market intelligence terminal for trade research, scenario mapping, and signal validation.**
 
-It is NOT merely a data aggregator or cosmetic dashboard. The platform has:
-- Real signal generation (scanner confluence, options dealer gamma, time cycles)
+This is not a scanner. It is not a charting tool. It is not a trade execution platform. It is an **intelligence terminal** — a system that ingests market data across multiple dimensions (technical, derivatives, time cycles, macro, volatility) and produces weighted, regime-adaptive decision intelligence.
+
+The platform has:
+- Real signal generation via multi-dimensional confluence (scanner + options + time + macro + regime)
 - Genuine intelligence layering (regime classifier → institutional filter → probability matrix → state machine)
-- Unique methodology (time gravity map, decompression windows, midpoint debt tracking)
-- Signal feedback loops (outcome labeler → Bayesian probability updates)
-- 60+ backtestable strategies with signal replay
+- Unique, research-grade methodology (time gravity map, decompression windows, midpoint debt tracking, gravitational modeling)
+- Signal feedback loops (outcome labeler → Bayesian probability updates → improving future signals)
+- A complete 5-layer product hierarchy from Market Permission through Feedback & Learning
+- 60+ backtestable strategies with signal replay validation
 
-### What It Is NOT Yet
+### What It Is NOT (And Shouldn't Try To Be)
 
-- Not a complete execution platform (no broker integration)
-- Not a real-time streaming platform (snapshot-based, not tick-by-tick)
-- Not an on-chain analytics platform (no wallet tracking, no exchange flows)
-- Not a charting platform (cannot compete with TradingView for manual analysis)
+- **Not a charting platform** — Don't compete with TradingView. Traders will always have TV open. MSP's job is to tell the trader *what to look at on the chart*, not to be the chart.
+- **Not a trade execution platform** — Broker integration is a workflow convenience, not the core value proposition. Execution-adjacent import (not execution itself) belongs in the LATER roadmap.
+- **Not a social trading platform** — Depth of intelligence, not breadth of community, is the competitive moat.
 
-### What Would Transform It Into a True Professional Trading Intelligence Platform
+### The Core Gap
 
-1. **Connect the Golden Egg to live data** — The 3-layer decision framework is already built. Populating it with real-time scanner/options/time/macro data would create the industry's most complete single-screen trade decisioning tool for retail traders.
+The platform's primary gap is **decision operationalization** — not execution, not charting, not data.
 
-2. **Add real-time options flow tape** — The dealer gamma infrastructure is already sophisticated. Adding actual options print data (block trades, sweeps, size classification) would close the gap with Unusual Whales while integrating it into a vastly superior confluence framework.
+The intelligence layer is sophisticated. The backend decision engine is strong. But the journey from "the platform has computed a high-confluence setup" to "the trader is holding a documented, structured research case with entry/stop/target/thesis/invalidation" requires manual assembly across multiple screens.
 
-3. **Broker API integration** — Portfolio, Journal, Alerts, and the State Machine are all ready for execution automation. The intelligence layer is built — it needs the last-mile connection to markets.
+Filling this gap (Golden Egg live data + MPE + research case outputs) would create the most complete trade research terminal available to retail traders.
 
-4. **Activate the state machine as the primary workflow** — The SCAN → WATCH → STALK → ARMED → EXECUTE → MANAGE → COOLDOWN lifecycle is architecturally complete with 9 gate validation. Making this the primary trading interface (not buried as infrastructure) would create an experience no other retail platform offers.
+### Three Core Engines — Assessed
 
-5. **Cross-asset correlation engine** — Add rolling correlation matrix between major assets. When correlations break or converge, it creates regime shift signals that would supercharge the already-strong macro dashboard.
+| Engine | Innovation | Overall | Key Strength |
+|---|---|---|---|
+| **Multi-Market Scanner** | 7/10 | **7.5/10** | Regime-adaptive architecture is institutional-grade. Indicator stack is traditional but the gating/weighting creates genuine edge. |
+| **Time Confluence** | 9.5/10 | **8.5/10** | The platform's crown jewel. No equivalent exists in retail. Gravitational midpoint debt + decompression windows = original research-grade methodology. |
+| **Options Confluence** | 7/10 | **7.5/10** | Deep confluence scoring with 7 signal types. GEX computation and gamma flip levels are institutional-quality. Limited by snapshot data vs. streaming flow. |
 
 ### Bottom Line
 
-MarketScanner Pros has **more sophisticated trading intelligence architecture than any retail platform audited.** The regime-adaptive scoring, institutional state machine, time confluence methodology, and signal feedback loops are institutional-grade infrastructure.
+MarketScanner Pros has **more sophisticated trading intelligence architecture than any retail platform audited.** The regime-adaptive scoring, institutional state machine, time confluence methodology, and signal feedback loops are institutional-grade infrastructure wrapped in a retail-accessible interface.
 
-The platform's weakness is not intelligence — it's the gap between intelligence and execution. The backend decision engine is strong. The trader workflow from "I have a signal" to "I'm in a trade" to "I'm managing risk" needs the same level of engineering attention that the signal generation layer has already received.
+The competitive positioning is clear: **MSP is the intelligence layer that sits between market data and trade decisions.** It doesn't need to be the chart, the broker, or the social network. It needs to be the place where traders go to answer: *"What is the market telling me, across all dimensions, right now — and what should I do about it?"*
 
-**Current classification:** Trading intelligence platform with signal generation capability
-**Potential classification (with 5 changes above):** Complete professional trading intelligence and execution platform
+**Current classification:** Confluence-based market intelligence terminal with signal generation and research capability
+**Potential classification (with NOW roadmap):** Complete professional trade research and decision intelligence platform

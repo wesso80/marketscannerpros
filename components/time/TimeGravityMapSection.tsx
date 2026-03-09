@@ -180,7 +180,7 @@ export default function TimeGravityMapSection({
                   <div className="flex justify-between items-baseline">
                     <span className="text-lg font-bold text-slate-100 font-mono">${topZone.centerPrice.toFixed(2)}</span>
                     <span className={`text-xs font-bold ${tgm.confidence >= 70 ? 'text-emerald-400' : tgm.confidence >= 40 ? 'text-yellow-400' : 'text-slate-500'}`}>
-                      {tgm.confidence}% conf
+                      {tgm.confidence}% alignment
                     </span>
                   </div>
                   <div className="text-[10px] text-slate-500">Range: ${topZone.minPrice.toFixed(2)} – ${topZone.maxPrice.toFixed(2)}</div>

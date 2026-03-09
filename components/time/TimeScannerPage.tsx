@@ -651,7 +651,7 @@ export default function TimeScannerPage() {
                     {scanData.direction === 'bullish' ? '↑ BULLISH' : '↓ BEARISH'}
                   </div>
                   <div className="text-xs text-slate-400">
-                    Confidence: <span className="font-semibold text-slate-200">{Math.min(100, Math.round(scanData.confidence <= 1 ? scanData.confidence * 100 : scanData.confidence))}%</span>
+                    Alignment: <span className="font-semibold text-slate-200">{Math.min(100, Math.round(scanData.confidence <= 1 ? scanData.confidence * 100 : scanData.confidence))}%</span>
                     {scanData.signalStrength !== 'no_signal' && (
                       <span className={`ml-2 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
                         scanData.signalStrength === 'strong' ? 'bg-emerald-500/15 text-emerald-400'

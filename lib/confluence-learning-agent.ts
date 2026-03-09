@@ -2936,9 +2936,9 @@ export class ConfluenceLearningAgent {
       }
     }
     
-    // HIGH CONFIDENCE
+    // HIGH ALIGNMENT
     if (confidence >= 80) {
-      banners.push('HIGH CONFIDENCE');
+      banners.push('HIGH ALIGNMENT');
     }
     
     // Target level computed after trade setup (needs mid50Above/mid50Below)
@@ -4036,7 +4036,7 @@ LEARNED PATTERNS (${learning.totalEvents} historical events):
 - Hot zone outcomes: ${learning.hotZoneStats.upPct.toFixed(0)}% up, avg move ${learning.hotZoneStats.avgMagnitude.toFixed(2)}%
 - 50% level reaction: ${this.getTypicalMid50Reaction(learning)}
 
-PREDICTION: ${context.prediction.direction.toUpperCase()} (${context.prediction.confidence}% confidence)
+PREDICTION: ${context.prediction.direction.toUpperCase()} (${context.prediction.confidence}% alignment)
 - Target: $${context.prediction.targetPrice.toFixed(2)}
 - Stop: $${context.prediction.stopLoss.toFixed(2)}
 - Expected move in: ${context.prediction.expectedDecompMins} minutes
