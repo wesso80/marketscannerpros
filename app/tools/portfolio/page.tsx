@@ -132,7 +132,7 @@ function PositionSizerCalculator() {
     }}>
       <div style={{ marginBottom: '24px' }}>
         <h2 style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          ðŸŽ¯ Position Sizing Calculator
+          🎯 Position Sizing Calculator
         </h2>
         <p style={{ color: 'var(--msp-text-muted)', fontSize: '14px' }}>
           Calculate optimal position sizes based on your risk tolerance and trading setup.
@@ -156,7 +156,7 @@ function PositionSizerCalculator() {
             transition: 'all 0.2s'
           }}
         >
-          ðŸ“Š Fixed Fractional
+          📊 Fixed Fractional
         </button>
         <button
           onClick={() => setMethod('kelly')}
@@ -173,7 +173,7 @@ function PositionSizerCalculator() {
             transition: 'all 0.2s'
           }}
         >
-          ðŸ“ Kelly Criterion
+          📐 Kelly Criterion
         </button>
       </div>
 
@@ -240,7 +240,7 @@ function PositionSizerCalculator() {
                 cursor: 'pointer'
               }}
             >
-              ðŸ“ˆ LONG
+              📈 LONG
             </button>
             <button
               onClick={() => setSide('SHORT')}
@@ -255,7 +255,7 @@ function PositionSizerCalculator() {
                 cursor: 'pointer'
               }}
             >
-              ðŸ“‰ SHORT
+              📉 SHORT
             </button>
           </div>
         </div>
@@ -340,7 +340,7 @@ function PositionSizerCalculator() {
           marginBottom: '24px'
         }}>
           <h4 style={{ color: '#a78bfa', fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>
-            ðŸ“ Kelly Criterion Parameters
+            📐 Kelly Criterion Parameters
           </h4>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))', gap: '12px' }}>
             <div>
@@ -418,7 +418,7 @@ function PositionSizerCalculator() {
         padding: '24px'
       }}>
         <h3 style={{ color: '#10b981', fontSize: '16px', fontWeight: '700', marginBottom: '16px' }}>
-          ðŸ“Š Position Size Results
+          📊 Position Size Results
         </h3>
         
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))', gap: '16px', marginBottom: '20px' }}>
@@ -486,7 +486,7 @@ function PositionSizerCalculator() {
         borderRadius: '8px'
       }}>
         <div style={{ color: '#fbbf24', fontSize: '12px' }}>
-          âš ï¸ <strong>Risk Disclaimer:</strong> This calculator is for educational purposes only. 
+          ⚠️ <strong>Risk Disclaimer:</strong> This calculator is for educational purposes only. 
           Always use proper risk management and never risk more than you can afford to lose.
         </div>
       </div>
@@ -635,14 +635,14 @@ function PortfolioContent() {
     let s = raw.toUpperCase().trim();
     
     // Remove common suffixes that APIs don't need (but preserve the base ticker)
-    s = s.replace(/[-_\/]?USDT?$/i, ''); // BTCUSDT â†’ BTC, XRP-USD â†’ XRP
+    s = s.replace(/[-_\/]?USDT?$/i, ''); // BTCUSDT → BTC, XRP-USD → XRP
     s = s.replace(/[-_\/]?EUR$/i, '');
     s = s.replace(/[-_\/]?PERP$/i, '');    // Futures suffix
     
     return s;
   }
 
-  // Detect if a symbol is likely a stock vs crypto â€” delegates to shared detectAssetClass()
+  // Detect if a symbol is likely a stock vs crypto — delegates to shared detectAssetClass()
   function isLikelyStock(symbol: string): boolean {
     return detectAssetClass(symbol) === 'equity';
   }
@@ -1413,7 +1413,7 @@ function PortfolioContent() {
     ? 'Medium'
     : 'Low';
   const portfolioHealthLabel = totalReturn < -20
-    ? 'âš  Needs Work'
+    ? '⚠ Needs Work'
     : totalReturn < -5
     ? 'Review Needed'
     : totalReturn > 12
@@ -1512,7 +1512,7 @@ function PortfolioContent() {
   const isRiskElevated = !isRiskEvent && (currentDrawdownPct > (riskSettings.maxDrawdownThreshold * 0.6) || correlationRiskPct > (riskSettings.maxCorrelatedExposure * 0.75) || deploymentPct > 75);
   const riskStateLabel = isRiskEvent ? 'RISK EVENT' : isRiskElevated ? 'ELEVATED' : 'STABLE';
   const riskStateTone = isRiskEvent ? '#ef4444' : isRiskElevated ? '#f59e0b' : '#10b981';
-  const riskStateIcon = isRiskEvent ? 'ðŸ”´' : isRiskElevated ? 'ðŸŸ¡' : 'ðŸŸ¢';
+  const riskStateIcon = isRiskEvent ? '🔴' : isRiskElevated ? '🟡' : '🟢';
   const portfolioRiskProfile = isRiskEvent ? 'Aggressive' : isRiskElevated ? 'Moderate' : 'Low';
   const longExposurePct = capitalBase > 0 ? (longExposureValue / capitalBase) * 100 : 0;
   const shortExposurePct = capitalBase > 0 ? (shortExposureValue / capitalBase) * 100 : 0;
@@ -1599,7 +1599,7 @@ function PortfolioContent() {
 
   const modeItems = [
     { key: 'overview', label: 'Overview' },
-    { key: 'add-manual', label: 'âž• Add Position' },
+    { key: 'add-manual', label: '➕ Add Position' },
     { key: 'deploy-capital', label: 'Model Allocation' },
     { key: 'risk-model', label: 'Risk Model' },
     { key: 'active-positions', label: 'Active Positions' },
@@ -1702,7 +1702,7 @@ function PortfolioContent() {
         badge="PORTFOLIO TRACKER"
         title="Portfolio Tracking"
         subtitle="Track live prices, modeled allocation, and performance in real-time (educational mode)."
-        icon="ðŸ“Š"
+        icon="📊"
         backHref="/dashboard"
         actions={
           <>
@@ -1717,7 +1717,7 @@ function PortfolioContent() {
                 }}
                 className={`rounded-md border px-4 py-2 text-[13px] font-medium transition ${canExportCSV(tier) ? 'border-emerald-500 text-emerald-500 opacity-100' : 'border-slate-600 text-slate-500 opacity-60'}`}
               >
-                ðŸ“¥ Export Positions {!canExportCSV(tier) && 'ðŸ”’'}
+                📥 Export Positions {!canExportCSV(tier) && '🔒'}
               </button>
             )}
             {closedPositions.length > 0 && (
@@ -1731,7 +1731,7 @@ function PortfolioContent() {
                 }}
                 className={`rounded-md border border-[var(--msp-border)] px-4 py-2 text-[13px] font-medium transition ${canExportCSV(tier) ? 'text-[var(--msp-text-muted)]' : 'text-slate-500'}`}
               >
-                ðŸ“¥ Export History
+                📥 Export History
               </button>
             )}
             {(positions.length > 0 || closedPositions.length > 0) && (
@@ -1739,7 +1739,7 @@ function PortfolioContent() {
                 onClick={clearAllData}
                 className="rounded-[10px] border border-slate-500/40 bg-transparent px-4 py-2.5 text-[13px] font-semibold text-red-500"
               >
-                ðŸ—‘ï¸ Clear All Data
+                🗑️ Clear All Data
               </button>
             )}
             <button
@@ -1754,7 +1754,7 @@ function PortfolioContent() {
                 const inDrawdown = totalReturn < -20 && positions.length > 0;
                 if (inDrawdown && activeTab !== 'deploy-capital' && !drawdownAcknowledged) {
                   const proceed = confirm(
-                    'âš ï¸ Your portfolio is currently in a significant drawdown (-' + Math.abs(totalReturn).toFixed(1) + '%).\n\n' +
+                    '⚠️ Your portfolio is currently in a significant drawdown (-' + Math.abs(totalReturn).toFixed(1) + '%).\n\n' +
                     'Consider reviewing your risk exposure before adding new positions.\n\n' +
                     'Click OK to proceed anyway, or Cancel to review first.'
                   );
@@ -1776,7 +1776,7 @@ function PortfolioContent() {
         <CommandCenterStateBar
           mode="MANAGE"
           actionableNow={positions.length > 0
-            ? `Live book: ${positions.length} open positions â€¢ Top concentration ${topAllocation?.symbol || 'N/A'}`
+            ? `Live book: ${positions.length} open positions • Top concentration ${topAllocation?.symbol || 'N/A'}`
             : 'No active exposure. Build watchlist-to-portfolio plan before adding risk.'}
           nextStep={positions.length > 0
             ? totalReturn < 0
@@ -1831,9 +1831,9 @@ function PortfolioContent() {
           >
             <div className="mb-3 flex items-center justify-between">
               <div className="font-bold text-slate-200">Update price for {manualPosition.symbol}</div>
-              <button onClick={closeManual} className="cursor-pointer border-none bg-transparent text-[20px] text-slate-400">âœ•</button>
+              <button onClick={closeManual} className="cursor-pointer border-none bg-transparent text-[20px] text-slate-400">✕</button>
             </div>
-            <div className="mb-2.5 text-[13px] text-slate-400">Enter a price. This showed because the API didnâ€™t return a value for this symbol.</div>
+            <div className="mb-2.5 text-[13px] text-slate-400">Enter a price. This showed because the API didn’t return a value for this symbol.</div>
             <input
               autoFocus
               value={manualValue}
@@ -2059,7 +2059,7 @@ function PortfolioContent() {
                       </div>
                     );
                   })()}
-                  <div className="mt-2 text-xs text-slate-500">Risk event markers: {isRiskEvent ? 'ðŸ”´ Active' : isRiskElevated ? 'ðŸŸ¡ Elevated' : 'ðŸŸ¢ Stable'}</div>
+                  <div className="mt-2 text-xs text-slate-500">Risk event markers: {isRiskEvent ? '🔴 Active' : isRiskElevated ? '🟡 Elevated' : '🟢 Stable'}</div>
                 </div>
                 <div className="lg:col-span-2 space-y-3">
                   <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3">
@@ -2074,7 +2074,7 @@ function PortfolioContent() {
                       {allocationData.length === 0 && <div className="text-xs text-slate-500">No active allocation</div>}
                     </div>
                     <div className="mt-2 border-t border-slate-700 pt-2 text-xs text-slate-400">
-                      Long {longExposurePct.toFixed(1)}% â€¢ Short {shortExposurePct.toFixed(1)}%
+                      Long {longExposurePct.toFixed(1)}% • Short {shortExposurePct.toFixed(1)}%
                     </div>
                   </div>
                   <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3 text-xs">
@@ -2128,8 +2128,8 @@ function PortfolioContent() {
                 <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3 mb-4">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-emerald-400 mb-1">Symbol Tips</div>
                   <div className="text-xs text-slate-400 leading-relaxed">
-                    <strong className="text-slate-300">Crypto:</strong> BTC, ETH, XRP, SOL &nbsp;Â·&nbsp;
-                    <strong className="text-slate-300">Stocks:</strong> AAPL, TSLA, NVDA &nbsp;Â·&nbsp;
+                    <strong className="text-slate-300">Crypto:</strong> BTC, ETH, XRP, SOL &nbsp;·&nbsp;
+                    <strong className="text-slate-300">Stocks:</strong> AAPL, TSLA, NVDA &nbsp;·&nbsp;
                     <strong className="text-slate-300">Forex:</strong> EURUSD, GBPUSD
                   </div>
                 </div>
@@ -2201,7 +2201,7 @@ function PortfolioContent() {
                     disabled={!newPosition.symbol || !newPosition.quantity || !newPosition.entryPrice || !newPosition.currentPrice}
                     className="w-full rounded-md bg-emerald-500 px-4 py-3 text-sm font-bold uppercase tracking-[0.06em] text-white transition hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    âž• Add Position
+                    ➕ Add Position
                   </button>
                 </div>
               </div>
@@ -2237,7 +2237,7 @@ function PortfolioContent() {
               </div>
               <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-slate-200">
                 <div className="text-xs font-semibold uppercase tracking-[0.06em] text-emerald-300">Simulate Portfolio After Entry</div>
-                <div className="mt-1">Projected gross exposure {projectedDeploymentPct.toFixed(2)}% â€¢ Risk budget used {formatMoney(draftRiskBudget)}</div>
+                <div className="mt-1">Projected gross exposure {projectedDeploymentPct.toFixed(2)}% • Risk budget used {formatMoney(draftRiskBudget)}</div>
               </div>
               <button
                 onClick={() => deployCapitalTrade(Math.max(0, suggestedQuantity), draftEntry)}
@@ -2314,7 +2314,7 @@ function PortfolioContent() {
                           <td className="px-2 py-1.5 font-semibold text-slate-100">{risk.symbol}</td>
                           <td className="px-2 py-1.5 text-right">{risk.concentrationPct.toFixed(1)}%</td>
                           <td className="px-2 py-1.5 text-right">{formatMoney(risk.dollarRisk)}</td>
-                          <td className="px-2 py-1.5">{risk.concentrationPct > riskSettings.maxPositionSize ? 'âš  Concentration warning' : 'Normal'}</td>
+                          <td className="px-2 py-1.5">{risk.concentrationPct > riskSettings.maxPositionSize ? '⚠ Concentration warning' : 'Normal'}</td>
                         </tr>
                       ))}
                       {riskContributors.length === 0 && (
@@ -2342,8 +2342,8 @@ function PortfolioContent() {
                   disabled={refreshingAll}
                   className="flex items-center gap-1.5 rounded border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:border-emerald-500/50 hover:text-emerald-300 disabled:opacity-50 transition-colors"
                 >
-                  <span className={refreshingAll ? 'animate-spin' : ''}>ðŸ”„</span>
-                  {refreshingAll ? 'Refreshingâ€¦' : 'Refresh Prices'}
+                  <span className={refreshingAll ? 'animate-spin' : ''}>🔄</span>
+                  {refreshingAll ? 'Refreshing…' : 'Refresh Prices'}
                 </button>
               </div>
               <div className="overflow-x-auto rounded-lg border border-slate-700 bg-slate-900/40">
@@ -2403,7 +2403,7 @@ function PortfolioContent() {
                               <button onClick={() => closePosition(position.id)} className="rounded border border-red-500/40 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-red-300">Close</button>
                               <button onClick={() => reducePositionHalf(position.id)} className="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-300">Reduce 50%</button>
                               <button onClick={() => moveStopToBreakeven(position.id)} className="rounded border border-blue-500/40 bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-blue-300">Move Stop</button>
-                              <button onClick={() => deletePosition(position.id)} className="rounded border border-zinc-500/40 bg-zinc-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-zinc-400 hover:text-red-300 hover:border-red-500/40" title="Delete this position (mistake entry)">âœ• Delete</button>
+                              <button onClick={() => deletePosition(position.id)} className="rounded border border-zinc-500/40 bg-zinc-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-zinc-400 hover:text-red-300 hover:border-red-500/40" title="Delete this position (mistake entry)">✕ Delete</button>
                             </div>
                           </td>
                         </tr>
@@ -2520,10 +2520,10 @@ function PortfolioContent() {
                           <td className="px-2 py-2">{trade.closePrice.toFixed(2)}</td>
                           <td className={`px-2 py-2 text-right font-semibold ${r >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{r.toFixed(2)}R</td>
                           <td className="px-2 py-2 text-right">{holdDays}d</td>
-                          <td className="px-2 py-2">{trade.strategy || 'â€”'}</td>
+                          <td className="px-2 py-2">{trade.strategy || '—'}</td>
                           <td className="px-2 py-2">{outcomeType}</td>
                           <td className="px-2 py-2 text-center">
-                            <button onClick={() => deleteClosedTrade(trade.id)} className="rounded border border-zinc-500/40 bg-zinc-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-zinc-400 hover:text-red-300 hover:border-red-500/40" title="Delete this closed trade">âœ•</button>
+                            <button onClick={() => deleteClosedTrade(trade.id)} className="rounded border border-zinc-500/40 bg-zinc-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-zinc-400 hover:text-red-300 hover:border-red-500/40" title="Delete this closed trade">✕</button>
                           </td>
                         </tr>
                       );

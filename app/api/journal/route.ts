@@ -379,20 +379,24 @@ export async function GET(req: NextRequest) {
 
     const symbolUniverseBySymbol = new Map<string, Set<'crypto' | 'equity' | 'forex' | 'commodity'>>();
     if (symbols.length > 0) {
-      const universeRows = await q<{ symbol: string; asset_type: string }>(
-        `SELECT symbol, asset_type
-           FROM symbol_universe
-          WHERE symbol = ANY($1::text[])`,
-        [symbols]
-      );
+      try {
+        const universeRows = await q<{ symbol: string; asset_type: string }>(
+          `SELECT symbol, asset_type
+             FROM symbol_universe
+            WHERE symbol = ANY($1::text[])`,
+          [symbols]
+        );
 
-      for (const row of universeRows) {
-        const key = String(row.symbol || '').toUpperCase();
-        if (!key) continue;
-        if (!symbolUniverseBySymbol.has(key)) {
-          symbolUniverseBySymbol.set(key, new Set());
+        for (const row of universeRows) {
+          const key = String(row.symbol || '').toUpperCase();
+          if (!key) continue;
+          if (!symbolUniverseBySymbol.has(key)) {
+            symbolUniverseBySymbol.set(key, new Set());
+          }
+          symbolUniverseBySymbol.get(key)!.add(normalizeUniverseAssetType(row.asset_type));
         }
-        symbolUniverseBySymbol.get(key)!.add(normalizeUniverseAssetType(row.asset_type));
+      } catch (e) {
+        console.warn('[journal] symbol_universe lookup failed (non-fatal):', e instanceof Error ? e.message : e);
       }
     }
 
@@ -406,23 +410,27 @@ export async function GET(req: NextRequest) {
 
     const packetAssetClassById = new Map<string, string>();
     if (packetIds.length > 0) {
-      const packetRows = await q<{ packet_id: string; asset_class: string | null; market: string | null }>(
-        `SELECT packet_id, asset_class, market
-           FROM decision_packets
-          WHERE workspace_id = $1
-            AND packet_id = ANY($2::text[])`,
-        [workspaceId, packetIds]
-      );
+      try {
+        const packetRows = await q<{ packet_id: string; asset_class: string | null; market: string | null }>(
+          `SELECT packet_id, asset_class, market
+             FROM decision_packets
+            WHERE workspace_id = $1
+              AND packet_id = ANY($2::text[])`,
+          [workspaceId, packetIds]
+        );
 
-      for (const row of packetRows) {
-        if (row.packet_id) {
-          const packetAssetClass = row.asset_class
-            ? normalizeJournalAssetClass(row.asset_class)
-            : normalizePacketMarketToAssetClass(row.market);
-          if (packetAssetClass) {
-            packetAssetClassById.set(row.packet_id, packetAssetClass);
+        for (const row of packetRows) {
+          if (row.packet_id) {
+            const packetAssetClass = row.asset_class
+              ? normalizeJournalAssetClass(row.asset_class)
+              : normalizePacketMarketToAssetClass(row.market);
+            if (packetAssetClass) {
+              packetAssetClassById.set(row.packet_id, packetAssetClass);
+            }
           }
         }
+      } catch (e) {
+        console.warn('[journal] decision_packets lookup failed (non-fatal):', e instanceof Error ? e.message : e);
       }
     }
 

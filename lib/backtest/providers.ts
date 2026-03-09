@@ -248,7 +248,49 @@ export async function fetchCryptoPriceData(
 
   const ohlc = await getOHLCRange(coinId, from, now);
   if (!ohlc || ohlc.length === 0) {
-    throw new Error(`Failed to fetch CoinGecko OHLC range data for ${cleanSymbol}`);
+    // Fallback: /market_chart (available on all tiers) when /ohlc/range fails
+    logger.warn(`[backtest/providers] /ohlc/range failed for ${cleanSymbol}, falling back to /market_chart`);
+    const chart = await getMarketChartFull(coinId, LOOKBACK_DAYS);
+    if (!chart || !chart.prices || chart.prices.length === 0) {
+      throw new Error(`Failed to fetch CoinGecko price data for ${cleanSymbol}`);
+    }
+
+    // Build daily bars from hourly/daily price points
+    const DAY_MS = 86_400_000;
+    const volMap = new Map<string, number>();
+    if (chart.total_volumes) {
+      for (const [ts, vol] of chart.total_volumes) {
+        if (Number.isFinite(vol) && vol >= 0) {
+          const dayKey = new Date(Math.floor(ts / DAY_MS) * DAY_MS).toISOString().slice(0, 10);
+          volMap.set(dayKey, (volMap.get(dayKey) || 0) + vol);
+        }
+      }
+    }
+
+    const dailyBuckets = new Map<string, number[]>();
+    for (const [ts, price] of chart.prices) {
+      if (!Number.isFinite(price)) continue;
+      const dayKey = new Date(Math.floor(ts / DAY_MS) * DAY_MS).toISOString().slice(0, 10);
+      let bucket = dailyBuckets.get(dayKey);
+      if (!bucket) { bucket = []; dailyBuckets.set(dayKey, bucket); }
+      bucket.push(price);
+    }
+
+    const fallbackData: PriceData = {};
+    for (const [dayKey, prices] of dailyBuckets.entries()) {
+      fallbackData[dayKey] = {
+        open: prices[0],
+        high: Math.max(...prices),
+        low: Math.min(...prices),
+        close: prices[prices.length - 1],
+        volume: volMap.get(dayKey) || 0,
+      };
+    }
+
+    await setCached(ck, fallbackData, TTL.coingecko);
+    const final = applyResample(fallbackData, parsedTimeframe);
+    logger.info(`Fetched ${Object.keys(final).length} daily bars for ${cleanSymbol} (CoinGecko market_chart fallback)`);
+    return { priceData: final, source: 'coingecko', volumeUnavailable: false, closeType: 'n/a' };
   }
 
   const priceData: PriceData = {};
