@@ -1636,7 +1636,10 @@ export class ConfluenceLearningAgent {
           // Prior calendar day for crypto (e.g. Sunday if today is Monday)
           const todayStartUtc = Math.floor(now.getTime() / 86400_000) * 86400_000;
           const priorDayStartUtc = todayStartUtc - 86400_000;
-          anchorDate = new Date(priorDayStartUtc);
+          // Offset by 1ms so the forward scan finds the NEXT close boundary
+          // after midnight, not midnight itself (which is the close of the
+          // day-before-prior-day's candle, not the prior day's candle).
+          anchorDate = new Date(priorDayStartUtc + 1);
           anchorDayDate = new Date(priorDayStartUtc);
           break;
         }
@@ -1833,8 +1836,17 @@ export class ConfluenceLearningAgent {
       }
 
       // Does this TF close on the anchor day?
+      // For crypto, candle closes occur at UTC midnight boundaries. A close
+      // at midnight belongs to the PRECEDING day's candle (e.g. the March 8
+      // 1D candle closes at March 9 00:00 UTC). Use (start, end] so that
+      // midnight at the END of the day is attributed correctly.
+      // Boundary-based anchors (EOW/EOM) keep [start, end) because their
+      // anchor IS the close event at midnight.
+      const useEndInclusive = assetClass === 'crypto' && anchor !== 'EOW' && anchor !== 'EOM';
       const closesOnAnchorDay = closeTimes.some(
-        (ct) => ct >= anchorDayStart && ct < anchorDayEnd,
+        (ct) => useEndInclusive
+          ? ct > anchorDayStart && ct <= anchorDayEnd
+          : ct >= anchorDayStart && ct < anchorDayEnd,
       );
 
       // First close within horizon
