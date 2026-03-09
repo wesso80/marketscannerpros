@@ -4,7 +4,9 @@
  * GET /api/market-pressure?symbol=BTCUSD
  *
  * Aggregates Time, Volatility, Liquidity, and Options pressure data from
- * existing platform sources and returns a unified composite reading.
+ * live data sources and returns a unified composite reading.
+ *
+ * All data is fetched directly from source functions — no HTTP round-trips.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -13,6 +15,10 @@ import { computeMarketPressure, type MarketPressureInput, type TimePressureInput
 import { confluenceLearningAgent, type ScanMode, type SessionMode } from '@/lib/confluence-learning-agent';
 import { classifyRegime } from '@/lib/regime-classifier';
 import { getIndicators } from '@/lib/onDemandFetch';
+import { getAggregatedFundingRates, getAggregatedOpenInterest } from '@/lib/coingecko';
+import { optionsAnalyzer } from '@/lib/options-confluence-analyzer';
+import { calculateDealerGammaSnapshot } from '@/lib/options-gex';
+import { hasProTraderAccess } from '@/lib/proTraderAccess';
 
 // ── Asset class detection ──────────────────────────────────────────────
 const CRYPTO_SUFFIXES = ['USD', 'USDT', 'USDC', 'BTC', 'ETH', 'BUSD'];
@@ -53,18 +59,14 @@ export async function GET(request: NextRequest) {
 
     const assetClass = isCrypto(symbol) ? 'crypto' : 'equity';
 
-    // ── 1. TIME PRESSURE — from confluence scan ─────────────────────
+    // ── 1. TIME PRESSURE — live from confluence scan ────────────────
     const timePressure: Partial<TimePressureInput> = {};
     try {
       const scanResult = await confluenceLearningAgent.scanHierarchical(symbol, scanMode, sessionMode);
       if (scanResult) {
-        // prediction.confidence is the composite time-confluence score
         timePressure.confluenceScore = scanResult.prediction?.confidence ?? 0;
-        // scoreBreakdown.activeTFs counts how many TFs are contributing
         timePressure.activeTFCount = scanResult.scoreBreakdown?.activeTFs ?? 0;
-        // Decompression active count from the analysis object
         timePressure.decompressionActiveCount = scanResult.decompression?.activeCount ?? 0;
-        // Midpoint debt from mid50 levels
         timePressure.midpointDebtCount = Array.isArray(scanResult.mid50Levels)
           ? scanResult.mid50Levels.length
           : 0;
@@ -74,7 +76,7 @@ export async function GET(request: NextRequest) {
       console.warn(`[MPE] Time pressure failed for ${symbol}:`, (err as Error).message);
     }
 
-    // ── 2. VOLATILITY PRESSURE — from indicators + regime ───────────
+    // ── 2. VOLATILITY PRESSURE — live from AV indicators + regime ───
     const volPressure: Partial<VolatilityPressureInput> = {};
     try {
       const indRow = await getIndicators(symbol, 'daily');
@@ -98,70 +100,82 @@ export async function GET(request: NextRequest) {
       console.warn(`[MPE] Volatility pressure failed for ${symbol}:`, (err as Error).message);
     }
 
-    // ── 3. LIQUIDITY PRESSURE — from funding/OI/L-S (crypto only) ──
+    // ── 3. LIQUIDITY PRESSURE — live from CoinGecko (crypto only) ──
     const liqPressure: Partial<LiquidityPressureInput> = {};
     if (assetClass === 'crypto') {
       try {
+        const baseSymbol = symbol.replace(/(USD|USDT|USDC|BUSD)$/i, '').toUpperCase();
+        const symbols = [baseSymbol];
+
         const [fundingData, oiData] = await Promise.all([
-          fetchJSON(`/api/funding-rates`, request),
-          fetchJSON(`/api/crypto/open-interest?symbol=${encodeURIComponent(symbol)}`, request),
+          getAggregatedFundingRates(symbols),
+          getAggregatedOpenInterest(symbols),
         ]);
 
-        if (fundingData) {
-          // Find this symbol in funding data
-          const baseSymbol = symbol.replace(/(USD|USDT|USDC|BUSD)$/i, '').toUpperCase();
-          const coin = fundingData.coins?.find((c: any) =>
-            c.symbol?.toUpperCase().startsWith(baseSymbol)
-          );
+        // Funding rates — live from CoinGecko derivatives
+        if (fundingData && fundingData.length > 0) {
+          const coin = fundingData.find(c => c.symbol.toUpperCase() === baseSymbol);
           if (coin) {
             liqPressure.fundingRatePercent = coin.fundingRatePercent ?? 0;
             liqPressure.fundingAnnualized = coin.annualized ?? 0;
             liqPressure.fundingSentiment = coin.sentiment ?? 'Neutral';
-          } else if (fundingData.average) {
-            liqPressure.fundingRatePercent = fundingData.average.fundingRatePercent ?? 0;
-            liqPressure.fundingAnnualized = fundingData.average.annualized ?? 0;
-            liqPressure.fundingSentiment = fundingData.average.sentiment ?? 'Neutral';
+          } else {
+            // Fallback: average of all returned symbols
+            const avgRate = fundingData.reduce((s, r) => s + r.fundingRatePercent, 0) / fundingData.length;
+            const avgAnn = fundingData.reduce((s, r) => s + r.annualized, 0) / fundingData.length;
+            liqPressure.fundingRatePercent = avgRate;
+            liqPressure.fundingAnnualized = avgAnn;
+            liqPressure.fundingSentiment = avgRate > 0.02 ? 'Bullish' : avgRate < -0.01 ? 'Bearish' : 'Neutral';
           }
         }
 
-        if (oiData) {
-          liqPressure.oiTotalUsd = oiData.openInterest ?? 0;
-          liqPressure.oi24hChangePct = oiData.change24h ?? 0;
-          liqPressure.oiSignal = oiData.signal ?? 'neutral';
-          liqPressure.longShortRatio = oiData.longShortRatio ?? 1.0;
+        // Open interest — live from CoinGecko derivatives
+        if (oiData && oiData.length > 0) {
+          const coinOI = oiData.find(c => c.symbol.toUpperCase() === baseSymbol);
+          if (coinOI) {
+            liqPressure.oiTotalUsd = coinOI.totalOpenInterest ?? 0;
+            // CoinGecko doesn't provide 24h change directly — set 0 (no anchor comparison)
+            liqPressure.oi24hChangePct = 0;
+            liqPressure.oiSignal = 'neutral';
+          }
         }
       } catch (err) {
         console.warn(`[MPE] Liquidity pressure failed for ${symbol}:`, (err as Error).message);
       }
     }
 
-    // ── 4. OPTIONS PRESSURE — GEX + options scan (equity only) ──────
+    // ── 4. OPTIONS PRESSURE — live from Alpha Vantage (equity only) ─
     const optPressure: Partial<OptionsPressureInput> = {};
-    if (assetClass === 'equity') {
+    if (assetClass === 'equity' && hasProTraderAccess(session.tier)) {
       try {
-        const gexData = await fetchJSON(
-          `/api/options/gex?symbol=${encodeURIComponent(symbol)}&scanMode=${scanMode}`,
-          request
-        );
-        if (gexData?.snapshot) {
-          const snap = gexData.snapshot;
-          optPressure.gexRegime = snap.regime ?? 'NEUTRAL';
-          optPressure.netGexUsd = snap.netGexUsd ?? 0;
-          optPressure.gammaFlipPrice = snap.gammaFlipPrice ?? undefined;
-          optPressure.gammaFlipDistancePct = snap.flipDistancePct ?? undefined;
+        const analysis = await optionsAnalyzer.analyzeForOptions(symbol, scanMode);
+
+        // GEX from dealer gamma snapshot
+        if (analysis.openInterestAnalysis) {
+          const snapshot = calculateDealerGammaSnapshot(
+            analysis.openInterestAnalysis,
+            analysis.currentPrice,
+          );
+          optPressure.gexRegime = snapshot.regime ?? 'NEUTRAL';
+          optPressure.netGexUsd = snapshot.netGexUsd ?? 0;
+          optPressure.gammaFlipPrice = snapshot.gammaFlipPrice ?? undefined;
+          optPressure.gammaFlipDistancePct = snapshot.flipDistancePct ?? undefined;
+
+          // Open interest metrics
+          optPressure.putCallRatio = analysis.openInterestAnalysis.pcRatio ?? 1.0;
+          optPressure.maxPainStrike = analysis.openInterestAnalysis.maxPainStrike ?? undefined;
         }
-        if (gexData?.openInterest) {
-          const oi = gexData.openInterest;
-          optPressure.putCallRatio = oi.pcRatio ?? 1.0;
-          optPressure.maxPainStrike = oi.maxPainStrike ?? undefined;
+
+        // Unusual activity detection
+        if (analysis.unusualActivity) {
+          optPressure.unusualActivityDetected = analysis.unusualActivity.hasUnusualActivity ?? false;
+          optPressure.smartMoneyBias = analysis.unusualActivity.smartMoneyDirection ?? 'neutral';
         }
-        if (gexData?.unusualActivity) {
-          optPressure.unusualActivityDetected = gexData.unusualActivity.hasUnusualActivity ?? false;
-          optPressure.smartMoneyBias = gexData.unusualActivity.smartMoneyDirection ?? 'neutral';
-        }
-        if (gexData?.ivAnalysis) {
-          optPressure.ivRank = gexData.ivAnalysis.ivRank ?? undefined;
-          volPressure.ivRank = gexData.ivAnalysis.ivRank ?? undefined;
+
+        // IV analysis
+        if (analysis.ivAnalysis) {
+          optPressure.ivRank = analysis.ivAnalysis.ivRank ?? undefined;
+          volPressure.ivRank = analysis.ivAnalysis.ivRank ?? undefined;
         }
       } catch (err) {
         console.warn(`[MPE] Options pressure failed for ${symbol}:`, (err as Error).message);
@@ -202,28 +216,5 @@ export async function GET(request: NextRequest) {
       { success: false, error: 'Market Pressure Engine error' },
       { status: 500 }
     );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// HELPERS
-// ═══════════════════════════════════════════════════════════════════════════
-
-/** Fetch JSON from an internal API route (reusing the request's cookies) */
-async function fetchJSON(path: string, originalRequest: NextRequest) {
-  try {
-    const origin = new URL(originalRequest.url).origin;
-    const url = path.startsWith('http') ? path : `${origin}${path}`;
-    const res = await fetch(url, {
-      headers: {
-        cookie: originalRequest.headers.get('cookie') || '',
-      },
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!res.ok) return null;
-    const json = await res.json();
-    return json?.success === false ? null : json;
-  } catch {
-    return null;
   }
 }
