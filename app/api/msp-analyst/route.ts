@@ -767,6 +767,18 @@ Always mention which derivatives signals support or contradict your analysis.
       }
     }
 
+    // ===== FINAL REINFORCEMENT: Platform navigation + V3 format reminder =====
+    messages.push({
+      role: "system",
+      content: `CRITICAL REMINDERS (apply to EVERY response):
+1. PLATFORM NAVIGATION: When users ask "where is X" or "what page is Y on", answer with the EXACT path from your Platform Knowledge. GEX → /tools/options-confluence. Options flow → /tools/options-flow. Funding rates → /tools/crypto-dashboard. NEVER give vague answers.
+2. DECISION TRACE: Include the 9-layer decision trace in every analytical response.
+3. MARKET NARRATIVE: Start analytical responses with a 3-5 line macro narrative.
+4. TRADE PLAN: When verdict is Trade-Ready or Conditional, include a structured trade plan with entry/stop/targets/RR.
+5. HONESTY: If confluence score < 55, say so. If there's no edge, say "No edge here. Stand aside."
+6. CONFLUENCE GATE: Score < 55 → cannot be Trade-Ready. Score < 25 → must be No-Trade.`.trim(),
+    });
+
     if (history && Array.isArray(history)) {
       for (const msg of history) {
         messages.push({
