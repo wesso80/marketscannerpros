@@ -68,8 +68,8 @@ const toolSections = [
     title: 'Scanners',
     icon: '🔎',
     items: [
-      { href: '/tools/liquidity-sweep', icon: '🌊', image: '/assets/platform-tools/operator-dashboard.png', title: 'Liquidity Sweep Scanner', description: 'Detect stop hunts and sweep/rejection patterns at key liquidity levels.' },
-      { href: '/tools/options-flow', icon: '💸', image: '/assets/platform-tools/operator-dashboard.png', title: 'Options Flow Intelligence', description: 'Trade direction classification, block/sweep detection, and smart money scoring.' },
+      { href: '/tools/liquidity-sweep', icon: '🌊', image: '/assets/platform-tools/liquidity-sweep.png', title: 'Liquidity Sweep Scanner', description: 'Detect stop hunts and sweep/rejection patterns at key liquidity levels.' },
+      { href: '/tools/options-flow', icon: '💸', image: '/assets/platform-tools/options-flow.png', title: 'Options Flow Intelligence', description: 'Trade direction classification, block/sweep detection, and smart money scoring.' },
     ],
   },
   {
@@ -102,7 +102,7 @@ const toolSections = [
     icon: '📋',
     items: [
       { href: '/tools/options-terminal', icon: '📋', image: '/assets/platform-tools/options-terminal.png', title: 'Options Terminal', description: 'Options chain viewer with Greeks, IV skew, and flow analysis.' },
-      { href: '/tools/markets?tab=correlation', icon: '🔗', image: '/assets/platform-tools/markets-dashboard.png', title: 'Cross-Asset Correlation', description: 'Rolling correlation matrix across equities, crypto, and macro assets.' },
+      { href: '/tools/markets?tab=correlation', icon: '🔗', image: '/assets/platform-tools/cross-asset-correlation.png', title: 'Cross-Asset Correlation', description: 'Rolling correlation matrix across equities, crypto, and macro assets.' },
     ],
   },
   {

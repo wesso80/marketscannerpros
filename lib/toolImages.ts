@@ -33,6 +33,11 @@ export const TOOL_IMAGES: Record<string, string> = {
   '/tools/portfolio': '/assets/platform-tools/portfolio.png',
   '/tools/news?tab=earnings': '/assets/platform-tools/earnings-calendar.png',
   '/tools/economic-calendar': '/assets/platform-tools/earnings-calendar.png',
+  '/tools/liquidity-sweep': '/assets/platform-tools/liquidity-sweep.png',
+  '/tools/options-flow': '/assets/platform-tools/options-flow.png',
+  '/tools/markets?tab=correlation': '/assets/platform-tools/cross-asset-correlation.png',
+  '/tools/golden-egg': '/assets/scanners/golden-egg.png',
+  '/tools/ai-analyst': '/assets/platform-tools/ai-analyst.png',
 };
 
 /** Look up the image for a tool href. Returns undefined if no image. */
