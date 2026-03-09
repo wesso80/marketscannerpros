@@ -19,13 +19,15 @@ const SUBSCRIPTION_PRICES = {
   free: 0,
 };
 
-// Monthly fixed costs (estimate)
+// Monthly fixed costs
 const FIXED_COSTS = {
-  render: 25.00,        // Render hosting
-  github: 4.00,         // GitHub Pro (will be overwritten by API if available)
-  neon_db: 0,           // Neon free tier
+  render: 40.00,        // Render hosting
+  github: 25.00,        // GitHub
+  neon_db: 20.00,       // Neon database
   domain: 1.50,         // ~$18/year = $1.50/month
-  alpha_vantage: 49.99, // Alpha Vantage Premium
+  alpha_vantage: 350.00, // Alpha Vantage Premium
+  coingecko: 141.00,    // CoinGecko API
+  nasdaq: 100.00,       // Nasdaq data license
   stripe_base: 0,       // No monthly fee
 };
 
