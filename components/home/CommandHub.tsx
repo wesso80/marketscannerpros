@@ -87,6 +87,8 @@ const secondaryTools = [
   { href: '/tools/journal', icon: '📓', image: '/assets/platform-tools/trade-journal.png', title: 'Trade Journal', description: 'Log, review, and learn from every trade.' },
   { href: '/tools/alerts', icon: '🔔', image: '/assets/platform-tools/alerts.png', title: 'Alerts', description: 'Custom triggers and notification management.' },
   { href: '/tools/watchlists', icon: '👁️', image: '/assets/platform-tools/watchlists.png', title: 'Watchlists', description: 'Track symbols across your workspace.' },
+  { href: '/tools/markets?tab=correlation', icon: '🔗', image: '/assets/platform-tools/markets-dashboard.png', title: 'Cross-Asset Correlation', description: 'Rolling correlation matrix across equities, crypto, and macro assets.' },
+  { href: '/tools/ai-analyst', icon: '🤖', image: '/assets/platform-tools/operator-dashboard.png', title: 'AI Analyst', description: 'AI-powered market analysis and trade research assistant.' },
 ];
 
 /* ─── Featured tile component ─── */

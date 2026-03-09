@@ -11,7 +11,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getDerivativesForSymbols, getOHLC, getMarketData, COINGECKO_ID_MAP } from '@/lib/coingecko';
-import { adx, atr as atrFn, atrPercent as atrPctFn, cci, ema, getIndicatorWarmupStatus, macd, OHLCVBar, rsi, stochastic } from '@/lib/indicators';
+import { adx, atr as atrFn, atrPercent as atrPctFn, cci, ema, getIndicatorWarmupStatus, macd, OHLCVBar, rsi, stochastic, detectSqueeze } from '@/lib/indicators';
 import { getSessionFromCookie } from '@/lib/auth';
 import {
   OHLCV,
@@ -176,6 +176,8 @@ interface Indicators {
   vwap?: number;
   atr?: number;
   atr_percent?: number;
+  squeeze?: boolean;
+  squeezeStrength?: number;
 }
 
 function computeScore(indicators: Indicators): { 
@@ -653,6 +655,13 @@ function analyzeAssetByTimeframe(
     atr: Number.isFinite(atrValue) ? atrValue! : undefined,
     atr_percent: Number.isFinite(atrPctValue) ? Math.round(atrPctValue! * 100) / 100 : undefined,
   };
+
+  // Volatility compression / squeeze detection (BB inside KC)
+  const squeezeResult = detectSqueeze(bars);
+  if (squeezeResult) {
+    indicators.squeeze = squeezeResult.inSqueeze;
+    indicators.squeezeStrength = squeezeResult.squeezeStrength;
+  }
   
   const { score, direction, signals } = computeScore(indicators);
   return { symbol, score, direction, signals, indicators, change24h };

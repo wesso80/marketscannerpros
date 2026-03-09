@@ -295,6 +295,7 @@ function ScannerContent() {
   const [rankQuality, setRankQuality] = useState<'all' | 'high' | 'medium'>('all');
   const [rankTfAlignment, setRankTfAlignment] = useState<2 | 3>(2);
   const [rankVolatility, setRankVolatility] = useState<'all' | 'low' | 'moderate' | 'high'>('all');
+  const [rankSqueeze, setRankSqueeze] = useState<'all' | 'squeeze'>('all');
   const [rankSort, setRankSort] = useState<'rank' | 'confidence' | 'volatility' | 'trend'>('rank');
   const flowFetchAbortRef = React.useRef<AbortController | null>(null);
   const lastFlowSymbolRef = React.useRef<string | null>(null);
@@ -1149,6 +1150,7 @@ function ScannerContent() {
       if (rankQuality !== 'all' && pick._quality !== rankQuality) return false;
       if (pick._tfAlignment < rankTfAlignment) return false;
       if (rankVolatility !== 'all' && pick._volatility !== rankVolatility) return false;
+      if (rankSqueeze === 'squeeze' && !pick.indicators?.squeeze) return false;
       // Sector filter (equity only – crypto/forex pass through)
       if (sectorFilter !== 'all') {
         const sym = (pick.symbol ?? '').toUpperCase();
@@ -1166,7 +1168,7 @@ function ScannerContent() {
     });
 
     return filtered.slice(0, 10);
-  }, [bulkScanResults, rankDirection, rankMinConfidence, rankQuality, rankTfAlignment, rankVolatility, rankSort, sectorFilter]);
+  }, [bulkScanResults, rankDirection, rankMinConfidence, rankQuality, rankTfAlignment, rankVolatility, rankSqueeze, rankSort, sectorFilter]);
 
   const mapPickToStrategyTag = (pick: any): StrategyTag => {
     const setup = String(pick?.setup || pick?.setupClass || pick?.pattern || '').toLowerCase();
@@ -1711,6 +1713,13 @@ function ScannerContent() {
                               <option value="low">Low</option>
                               <option value="moderate">Moderate</option>
                               <option value="high">High</option>
+                            </select>
+                          </label>
+                          <label className="grid gap-1 text-[0.68rem] text-[var(--msp-text-muted)]">
+                            <span>Squeeze</span>
+                            <select value={rankSqueeze} onChange={(e) => setRankSqueeze(e.target.value as 'all' | 'squeeze')} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-semibold text-[var(--msp-text)]">
+                              <option value="all">All</option>
+                              <option value="squeeze">In Squeeze</option>
                             </select>
                           </label>
                         </div>
@@ -2554,6 +2563,19 @@ function ScannerContent() {
                       )}
                       {pick.indicators?.adx && (
                         <span>ADX: <span style={{ color: pick.indicators.adx > 25 ? 'var(--msp-warn)' : 'var(--msp-text-muted)' }}>{pick.indicators.adx.toFixed(0)}</span></span>
+                      )}
+                      {pick.indicators?.squeeze && (
+                        <span style={{
+                          background: 'rgba(168,85,247,0.15)',
+                          color: '#a855f7',
+                          padding: '1px 6px',
+                          borderRadius: '4px',
+                          fontWeight: 700,
+                          fontSize: '10px',
+                          letterSpacing: '0.04em',
+                        }} title={`Squeeze strength: ${pick.indicators.squeezeStrength ?? 0}%`}>
+                          🔒 SQUEEZE{pick.indicators.squeezeStrength > 50 ? ' ⬆' : ''}
+                        </span>
                       )}
                       {pick.signals && (
                         <span style={{ marginLeft: "auto" }}>
