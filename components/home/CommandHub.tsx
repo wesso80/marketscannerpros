@@ -90,6 +90,7 @@ const secondaryTools = [
   { href: '/tools/markets?tab=correlation', icon: '🔗', image: '/assets/platform-tools/markets-dashboard.png', title: 'Cross-Asset Correlation', description: 'Rolling correlation matrix across equities, crypto, and macro assets.' },
   { href: '/tools/ai-analyst', icon: '🤖', image: '/assets/platform-tools/operator-dashboard.png', title: 'AI Analyst', description: 'AI-powered market analysis and trade research assistant.' },
   { href: '/tools/liquidity-sweep', icon: '🌊', image: '/assets/platform-tools/operator-dashboard.png', title: 'Liquidity Sweep Scanner', description: 'Detect stop hunts and sweep/rejection patterns at key liquidity levels.' },
+  { href: '/tools/options-flow', icon: '💸', image: '/assets/platform-tools/operator-dashboard.png', title: 'Options Flow Intelligence', description: 'Trade direction classification, block/sweep detection, and smart money scoring from options flow.' },
 ];
 
 /* ─── Featured tile component ─── */
