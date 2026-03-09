@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
 import Hero from './Hero';
 import SocialProof from './SocialProof';
 import WhyMSP from './WhyMSP';
@@ -63,34 +62,71 @@ const featuredTools = [
   },
 ];
 
-/* ─── Secondary tools (small tiles) ─── */
-const secondaryTools = [
-  { href: '/operator', icon: '🧭', image: '/assets/platform-tools/operator-dashboard.png', title: 'Operator Dashboard', description: 'Unified execution surface for signal flow and risk command.' },
-  { href: '/tools/markets', icon: '🗺️', image: '/assets/platform-tools/markets-dashboard.png', title: 'Markets Dashboard', description: 'Central hub for all market data, indices, and sector overview.' },
-  { href: '/tools/crypto', icon: '₿', image: '/assets/platform-tools/crypto-command.png', title: 'Crypto Command Center', description: 'Full crypto dashboard with prices, dominance, and market structure.' },
-  { href: '/tools/gainers-losers', icon: '🚀', image: '/assets/platform-tools/top-gainers.png', title: 'Top Gainers & Losers', description: 'Track strongest movers, laggards, and active symbols.' },
-  { href: '/tools/company-overview', icon: '🏢', image: '/assets/platform-tools/company-overview.png', title: 'Company Overview', description: 'Fundamentals, valuation, growth, and analyst context.' },
-  { href: '/tools/news', icon: '📰', image: '/assets/platform-tools/news-sentiment.png', title: 'News & Sentiment', description: 'Headline flow and sentiment intelligence by symbol.' },
-  { href: '/tools/heatmap', icon: '🗺️', image: '/assets/platform-tools/sector-heatmap.png', title: 'Sector Heatmap', description: 'S&P sector rotation view across key time horizons.' },
-  { href: '/tools/crypto-heatmap', icon: '🪙', image: '/assets/platform-tools/crypto-heatmap.png', title: 'Crypto Heatmap', description: 'Visual leadership map for major crypto assets.' },
-  { href: '/tools/crypto-dashboard', icon: '₿', image: '/assets/platform-tools/crypto-derivatives.png', title: 'Crypto Derivatives', description: 'Funding, OI, and derivatives pressure diagnostics.' },
-  { href: '/tools/commodities', icon: '🛢️', image: '/assets/platform-tools/commodities.png', title: 'Commodities', description: 'Energy, metals, and agriculture price dashboard.' },
-  { href: '/tools/market-movers', icon: '📈', image: '/assets/platform-tools/market-movers.png', title: 'Market Movers', description: 'Institutional watchlist of high-impact daily movers.' },
-  { href: '/tools/macro', icon: '🏛️', image: '/assets/platform-tools/macro-dashboard.png', title: 'Macro Dashboard', description: 'Rates, inflation, employment, and macro regime data.' },
-  { href: '/tools/crypto-explorer', icon: '🔍', image: '/assets/platform-tools/crypto-explorer.png', title: 'Crypto Explorer', description: 'Deep-dive into any crypto asset with technicals and on-chain metrics.' },
-  { href: '/tools/equity-explorer', icon: '📊', image: '/assets/platform-tools/equity-explorer.png', title: 'Equity Explorer', description: 'Full equity analysis with fundamentals, technicals, and ownership data.' },
-  { href: '/tools/options-terminal', icon: '📋', image: '/assets/platform-tools/options-terminal.png', title: 'Options Terminal', description: 'Options chain viewer with Greeks, IV skew, and flow analysis.' },
-  { href: '/tools/news?tab=earnings', icon: '📅', image: '/assets/platform-tools/earnings-calendar.png', title: 'Earnings Calendar', description: 'Event-risk map for upcoming earnings windows.' },
-  { href: '/tools/intraday-charts', icon: '⏱️', image: '/assets/platform-tools/intraday-charts.png', title: 'Intraday Charts', description: 'Fast intraday charting and session-level views.' },
-  { href: '/tools/backtest', icon: '📈', image: '/assets/platform-tools/backtest.png', title: 'Backtest', description: 'Validate strategy logic against historical data.' },
-  { href: '/tools/portfolio', icon: '💼', image: '/assets/platform-tools/portfolio.png', title: 'Portfolio', description: 'Position tracking with P&L and performance snapshots.' },
-  { href: '/tools/journal', icon: '📓', image: '/assets/platform-tools/trade-journal.png', title: 'Trade Journal', description: 'Log, review, and learn from every trade.' },
-  { href: '/tools/alerts', icon: '🔔', image: '/assets/platform-tools/alerts.png', title: 'Alerts', description: 'Custom triggers and notification management.' },
-  { href: '/tools/watchlists', icon: '👁️', image: '/assets/platform-tools/watchlists.png', title: 'Watchlists', description: 'Track symbols across your workspace.' },
-  { href: '/tools/markets?tab=correlation', icon: '🔗', image: '/assets/platform-tools/markets-dashboard.png', title: 'Cross-Asset Correlation', description: 'Rolling correlation matrix across equities, crypto, and macro assets.' },
-  { href: '/tools/ai-analyst', icon: '🤖', image: '/assets/platform-tools/operator-dashboard.png', title: 'AI Analyst', description: 'AI-powered market analysis and trade research assistant.' },
-  { href: '/tools/liquidity-sweep', icon: '🌊', image: '/assets/platform-tools/operator-dashboard.png', title: 'Liquidity Sweep Scanner', description: 'Detect stop hunts and sweep/rejection patterns at key liquidity levels.' },
-  { href: '/tools/options-flow', icon: '💸', image: '/assets/platform-tools/operator-dashboard.png', title: 'Options Flow Intelligence', description: 'Trade direction classification, block/sweep detection, and smart money scoring from options flow.' },
+/* ─── Tool sections (categorized) ─── */
+const toolSections = [
+  {
+    title: 'Scanners',
+    icon: '🔎',
+    items: [
+      { href: '/tools/liquidity-sweep', icon: '🌊', image: '/assets/platform-tools/operator-dashboard.png', title: 'Liquidity Sweep Scanner', description: 'Detect stop hunts and sweep/rejection patterns at key liquidity levels.' },
+      { href: '/tools/options-flow', icon: '💸', image: '/assets/platform-tools/operator-dashboard.png', title: 'Options Flow Intelligence', description: 'Trade direction classification, block/sweep detection, and smart money scoring.' },
+    ],
+  },
+  {
+    title: 'Equities',
+    icon: '📈',
+    items: [
+      { href: '/tools/markets', icon: '🗺️', image: '/assets/platform-tools/markets-dashboard.png', title: 'Markets Dashboard', description: 'Central hub for all market data, indices, and sector overview.' },
+      { href: '/tools/equity-explorer', icon: '📊', image: '/assets/platform-tools/equity-explorer.png', title: 'Equity Explorer', description: 'Full equity analysis with fundamentals, technicals, and ownership data.' },
+      { href: '/tools/company-overview', icon: '🏢', image: '/assets/platform-tools/company-overview.png', title: 'Company Overview', description: 'Fundamentals, valuation, growth, and analyst context.' },
+      { href: '/tools/market-movers', icon: '📈', image: '/assets/platform-tools/market-movers.png', title: 'Market Movers', description: 'Institutional watchlist of high-impact daily movers.' },
+      { href: '/tools/gainers-losers', icon: '🚀', image: '/assets/platform-tools/top-gainers.png', title: 'Top Gainers & Losers', description: 'Track strongest movers, laggards, and active symbols.' },
+      { href: '/tools/heatmap', icon: '🗺️', image: '/assets/platform-tools/sector-heatmap.png', title: 'Sector Heatmap', description: 'S&P sector rotation view across key time horizons.' },
+      { href: '/tools/intraday-charts', icon: '⏱️', image: '/assets/platform-tools/intraday-charts.png', title: 'Intraday Charts', description: 'Fast intraday charting and session-level views.' },
+    ],
+  },
+  {
+    title: 'Crypto',
+    icon: '₿',
+    items: [
+      { href: '/tools/crypto', icon: '₿', image: '/assets/platform-tools/crypto-command.png', title: 'Crypto Command Center', description: 'Full crypto dashboard with prices, dominance, and market structure.' },
+      { href: '/tools/crypto-explorer', icon: '🔍', image: '/assets/platform-tools/crypto-explorer.png', title: 'Crypto Explorer', description: 'Deep-dive into any crypto asset with technicals and on-chain metrics.' },
+      { href: '/tools/crypto-heatmap', icon: '🪙', image: '/assets/platform-tools/crypto-heatmap.png', title: 'Crypto Heatmap', description: 'Visual leadership map for major crypto assets.' },
+      { href: '/tools/crypto-dashboard', icon: '₿', image: '/assets/platform-tools/crypto-derivatives.png', title: 'Crypto Derivatives', description: 'Funding, OI, and derivatives pressure diagnostics.' },
+      { href: '/tools/crypto-time-confluence', icon: '🔮', image: '/assets/scanners/time-confluence.png', title: 'Crypto Time Confluence', description: 'Track crypto market cycles and detect volatility expansion windows.' },
+      { href: '/tools/crypto-terminal', icon: '💹', image: '/assets/platform-tools/crypto-command.png', title: 'Crypto Terminal', description: 'Advanced crypto charting with session-level analysis.' },
+    ],
+  },
+  {
+    title: 'Options & Derivatives',
+    icon: '📋',
+    items: [
+      { href: '/tools/options-terminal', icon: '📋', image: '/assets/platform-tools/options-terminal.png', title: 'Options Terminal', description: 'Options chain viewer with Greeks, IV skew, and flow analysis.' },
+      { href: '/tools/markets?tab=correlation', icon: '🔗', image: '/assets/platform-tools/markets-dashboard.png', title: 'Cross-Asset Correlation', description: 'Rolling correlation matrix across equities, crypto, and macro assets.' },
+    ],
+  },
+  {
+    title: 'Trading Tools',
+    icon: '🛠️',
+    items: [
+      { href: '/operator', icon: '🧭', image: '/assets/platform-tools/operator-dashboard.png', title: 'Operator Dashboard', description: 'Unified execution surface for signal flow and risk command.' },
+      { href: '/tools/backtest', icon: '📈', image: '/assets/platform-tools/backtest.png', title: 'Backtest', description: 'Validate strategy logic against historical data.' },
+      { href: '/tools/portfolio', icon: '💼', image: '/assets/platform-tools/portfolio.png', title: 'Portfolio', description: 'Position tracking with P&L and performance snapshots.' },
+      { href: '/tools/journal', icon: '📓', image: '/assets/platform-tools/trade-journal.png', title: 'Trade Journal', description: 'Log, review, and learn from every trade.' },
+      { href: '/tools/alerts', icon: '🔔', image: '/assets/platform-tools/alerts.png', title: 'Alerts', description: 'Custom triggers and notification management.' },
+      { href: '/tools/watchlists', icon: '👁️', image: '/assets/platform-tools/watchlists.png', title: 'Watchlists', description: 'Track symbols across your workspace.' },
+    ],
+  },
+  {
+    title: 'Research & Macro',
+    icon: '📰',
+    items: [
+      { href: '/tools/news', icon: '📰', image: '/assets/platform-tools/news-sentiment.png', title: 'News & Sentiment', description: 'Headline flow and sentiment intelligence by symbol.' },
+      { href: '/tools/news?tab=earnings', icon: '📅', image: '/assets/platform-tools/earnings-calendar.png', title: 'Earnings Calendar', description: 'Event-risk map for upcoming earnings windows.' },
+      { href: '/tools/macro', icon: '🏛️', image: '/assets/platform-tools/macro-dashboard.png', title: 'Macro Dashboard', description: 'Rates, inflation, employment, and macro regime data.' },
+      { href: '/tools/commodities', icon: '🛢️', image: '/assets/platform-tools/commodities.png', title: 'Commodities', description: 'Energy, metals, and agriculture price dashboard.' },
+    ],
+  },
 ];
 
 /* ─── Featured tile component ─── */
@@ -197,7 +233,6 @@ function SmallTile({
 /* ─── Main Component ─── */
 export default function CommandHub() {
   const riskLocked = useSafeRiskLocked();
-  const [showAllTools, setShowAllTools] = useState(false);
   const lockSensitiveTools = new Set([
     '/operator',
     '/tools/scanner',
@@ -207,8 +242,6 @@ export default function CommandHub() {
     '/tools/journal',
     '/tools/alerts',
   ]);
-
-  const visibleTools = showAllTools ? secondaryTools : secondaryTools.slice(0, 8);
 
   return (
     <main className="min-h-screen bg-[var(--msp-bg)] text-white">
@@ -278,33 +311,24 @@ export default function CommandHub() {
         </div>
       </section>
 
-      {/* ─── Platform Tools (collapsible) ─── */}
-      <div className="mx-auto w-full max-w-7xl space-y-4 px-4 pb-8 pt-10 md:px-6">
-        <section>
-          <h2 className="mb-6 text-2xl font-bold text-white">Platform Tools</h2>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {visibleTools.map((tool) => (
-              <SmallTile
-                key={tool.href}
-                {...tool}
-                locked={riskLocked && lockSensitiveTools.has(tool.href)}
-              />
-            ))}
-          </div>
-          {!showAllTools && secondaryTools.length > 8 && (
-            <div className="mt-6 flex justify-center">
-              <button
-                onClick={() => setShowAllTools(true)}
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800/50 px-6 py-2.5 text-sm font-semibold text-slate-300 transition hover:border-slate-600 hover:bg-slate-800 hover:text-white"
-              >
-                View All {secondaryTools.length} Tools
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
+      {/* ─── Platform Tools (categorized) ─── */}
+      <div className="mx-auto w-full max-w-7xl space-y-10 px-4 pb-8 pt-10 md:px-6">
+        {toolSections.map((section) => (
+          <section key={section.title}>
+            <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-white">
+              <span>{section.icon}</span>{section.title}
+            </h2>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              {section.items.map((tool) => (
+                <SmallTile
+                  key={tool.href}
+                  {...tool}
+                  locked={riskLocked && lockSensitiveTools.has(tool.href)}
+                />
+              ))}
             </div>
-          )}
-        </section>
+          </section>
+        ))}
       </div>
 
       {/* ─── Bottom CTA ─── */}

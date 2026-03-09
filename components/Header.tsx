@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, Fragment } from 'react';
 import { usePathname } from 'next/navigation';
 import NotificationBell from './NotificationBell';
 import { useUserTier } from '@/lib/useUserTier';
@@ -11,6 +11,7 @@ interface DropdownItem {
   href: string;
   label: string;
   icon?: string;
+  section?: string;
 }
 
 interface DropdownProps {
@@ -46,18 +47,25 @@ function Dropdown({ label, items, align = 'left', compact = false }: DropdownPro
         </svg>
       </button>
       {isOpen && (
-        <div className={`absolute top-full mt-2 py-2 bg-slate-900 border border-slate-700 rounded-lg shadow-xl min-w-48 z-[110] ${align === 'right' ? 'right-0' : 'left-0'}`}>
-          {items.map((item) => {
+        <div className={`absolute top-full mt-2 py-2 bg-slate-900 border border-slate-700 rounded-lg shadow-xl min-w-48 z-[110] max-h-[80vh] overflow-y-auto ${align === 'right' ? 'right-0' : 'left-0'}`}>
+          {items.map((item, idx) => {
             const img = getToolImage(item.href);
             return (
-              <Link key={item.href} href={item.href} className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-300 hover:bg-teal-500/10 hover:text-teal-300 transition-colors" onClick={() => setIsOpen(false)}>
-                {img ? (
-                  <img src={img} alt="" className="h-5 w-5 rounded object-contain" />
-                ) : item.icon ? (
-                  <span>{item.icon}</span>
-                ) : null}
-                {item.label}
-              </Link>
+              <Fragment key={item.href}>
+                {item.section && (
+                  <div className={`px-4 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 ${idx > 0 ? 'mt-1.5 border-t border-slate-700/60 pt-2' : 'pt-1'}`}>
+                    {item.section}
+                  </div>
+                )}
+                <Link href={item.href} className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-300 hover:bg-teal-500/10 hover:text-teal-300 transition-colors" onClick={() => setIsOpen(false)}>
+                  {img ? (
+                    <img src={img} alt="" className="h-5 w-5 rounded object-contain" />
+                  ) : item.icon ? (
+                    <span>{item.icon}</span>
+                  ) : null}
+                  {item.label}
+                </Link>
+              </Fragment>
             );
           })}
         </div>
@@ -85,11 +93,18 @@ function MobileAccordion({ label, items, isOpen, onToggle, onLinkClick }: Mobile
       </button>
       {isOpen && (
         <div className="pl-4 pb-2">
-          {items.map((item) => (
-            <Link key={item.href} href={item.href} className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-400 hover:bg-teal-500/10 hover:text-teal-300 rounded-lg transition-all" onClick={onLinkClick}>
-              {(() => { const img = getToolImage(item.href); return img ? <img src={img} alt="" className="h-5 w-5 rounded object-contain" /> : item.icon ? <span>{item.icon}</span> : null; })()}
-              {item.label}
-            </Link>
+          {items.map((item, idx) => (
+            <Fragment key={item.href}>
+              {item.section && (
+                <div className={`px-4 pb-1 text-[9px] font-bold uppercase tracking-wider text-slate-500 ${idx > 0 ? 'mt-1.5 border-t border-slate-700/60 pt-2' : 'pt-1'}`}>
+                  {item.section}
+                </div>
+              )}
+              <Link href={item.href} className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-400 hover:bg-teal-500/10 hover:text-teal-300 rounded-lg transition-all" onClick={onLinkClick}>
+                {(() => { const img = getToolImage(item.href); return img ? <img src={img} alt="" className="h-5 w-5 rounded object-contain" /> : item.icon ? <span>{item.icon}</span> : null; })()}
+                {item.label}
+              </Link>
+            </Fragment>
           ))}
         </div>
       )}
@@ -136,22 +151,31 @@ export default function Header() {
 
   const scannerItems: DropdownItem[] = [
     { href: '/tools/scanner', label: 'Market Scanner', icon: '📊' },
-    { href: '/tools/confluence-scanner', label: 'Time Confluence Scanner', icon: '🔮' },
-    { href: '/tools/options-confluence', label: 'Options Confluence Scanner', icon: '🎯' },
-    { href: '/tools/deep-analysis', label: 'Golden Egg', icon: '🥚' },
+    { href: '/tools/options-confluence', label: 'Options Confluence', icon: '🎯' },
+    { href: '/tools/confluence-scanner', label: 'Time Confluence', icon: '🔮' },
+    { href: '/tools/golden-egg', label: 'Golden Egg', icon: '🥚' },
+    { href: '/tools/liquidity-sweep', label: 'Liquidity Sweep', icon: '🌊' },
+    { href: '/tools/options-flow', label: 'Options Flow', icon: '💸' },
   ];
 
   const marketItems: DropdownItem[] = [
-    { href: '/tools/markets', label: 'Markets Dashboard', icon: '🧭' },
-    { href: '/tools/crypto', label: 'Crypto Command Center', icon: '₿' },
+    { href: '/tools/markets', label: 'Markets Dashboard', icon: '🧭', section: 'Equities' },
+    { href: '/tools/equity-explorer', label: 'Equity Explorer', icon: '📊' },
+    { href: '/tools/company-overview', label: 'Company Overview', icon: '🏢' },
     { href: '/tools/market-movers', label: 'Market Movers', icon: '📈' },
+    { href: '/tools/gainers-losers', label: 'Gainers & Losers', icon: '🚀' },
+    { href: '/tools/heatmap', label: 'Sector Heatmap', icon: '🗺️' },
+    { href: '/tools/intraday-charts', label: 'Intraday Charts', icon: '⏱️' },
+    { href: '/tools/crypto', label: 'Crypto Command Center', icon: '₿', section: 'Crypto' },
     { href: '/tools/crypto-explorer', label: 'Crypto Explorer', icon: '🔍' },
-    { href: '/tools/equity-explorer', label: 'Equity Explorer', icon: '📈' },
-    { href: '/tools/intraday-charts', label: 'Intraday Charts', icon: '📈' },
+    { href: '/tools/crypto-heatmap', label: 'Crypto Heatmap', icon: '🪙' },
     { href: '/tools/crypto-dashboard', label: 'Crypto Derivatives', icon: '📊' },
-    { href: '/tools/commodities', label: 'Commodities', icon: '🛢️' },
+    { href: '/tools/crypto-time-confluence', label: 'Crypto Time Confluence', icon: '🔮' },
+    { href: '/tools/crypto-terminal', label: 'Crypto Terminal', icon: '💹' },
+    { href: '/tools/options-terminal', label: 'Options Terminal', icon: '📋', section: 'Macro & Options' },
     { href: '/tools/macro', label: 'Macro Dashboard', icon: '🏛️' },
-    { href: '/tools/options-terminal', label: 'Options Terminal', icon: '📋' },
+    { href: '/tools/commodities', label: 'Commodities', icon: '🛢️' },
+    { href: '/tools/markets?tab=correlation', label: 'Cross-Asset Correlation', icon: '🔗' },
   ];
 
   const calendarItems: DropdownItem[] = [
