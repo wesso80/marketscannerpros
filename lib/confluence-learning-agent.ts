@@ -464,7 +464,7 @@ export interface CandleCloseConfluence {
 // FORWARD CLOSE CALENDAR TYPES
 // ═══════════════════════════════════════════════════════════════════════════
 
-export type CloseCalendarAnchor = 'NOW' | 'TODAY' | 'EOW' | 'EOM' | 'CUSTOM';
+export type CloseCalendarAnchor = 'NOW' | 'TODAY' | 'PRIOR_DAY' | 'EOW' | 'EOM' | 'CUSTOM';
 
 export interface ForwardCloseScheduleRow {
   tf: string;
@@ -1614,7 +1614,7 @@ export class ConfluenceLearningAgent {
    *          closesOnAnchorDay (which TFs close on the anchor date itself).
    */
   computeForwardCloseCalendar(
-    anchor: 'NOW' | 'TODAY' | 'EOW' | 'EOM' | 'CUSTOM',
+    anchor: 'NOW' | 'TODAY' | 'PRIOR_DAY' | 'EOW' | 'EOM' | 'CUSTOM',
     horizonDays: number = 7,
     anchorTimeISO?: string,
     assetClass: 'crypto' | 'equity' = 'crypto',
@@ -1632,6 +1632,14 @@ export class ConfluenceLearningAgent {
     if (assetClass === 'crypto') {
       // Crypto uses UTC boundaries throughout
       switch (anchor) {
+        case 'PRIOR_DAY': {
+          // Prior calendar day for crypto (e.g. Sunday if today is Monday)
+          const todayStartUtc = Math.floor(now.getTime() / 86400_000) * 86400_000;
+          const priorDayStartUtc = todayStartUtc - 86400_000;
+          anchorDate = new Date(priorDayStartUtc);
+          anchorDayDate = new Date(priorDayStartUtc);
+          break;
+        }
         case 'TODAY': {
           // Scan from NOW (skip already-elapsed closes) but anchor-day = full UTC day
           anchorDate = now;
@@ -1673,6 +1681,32 @@ export class ConfluenceLearningAgent {
     } else {
       // Equity uses NY timezone session boundaries
       switch (anchor) {
+        case 'PRIOR_DAY': {
+          // Prior trading day for equities (e.g. Friday if today is Monday)
+          const nyPd = this.getNYDateTimeParts(now);
+          let pdYear = nyPd.year;
+          let pdMonth = nyPd.month;
+          let pdDay = nyPd.day;
+          // Step back one day at a time until we find a trading day
+          let stepsBack = 0;
+          do {
+            stepsBack++;
+            const prev = new Date(now.getTime() - stepsBack * 86400_000);
+            const prevNy = this.getNYDateTimeParts(prev);
+            pdYear = prevNy.year;
+            pdMonth = prevNy.month;
+            pdDay = prevNy.day;
+          } while (
+            stepsBack < 10 &&
+            (new Date(Date.UTC(pdYear, pdMonth, pdDay, 12)).getUTCDay() === 0 ||
+             new Date(Date.UTC(pdYear, pdMonth, pdDay, 12)).getUTCDay() === 6 ||
+             isUSMarketHoliday(pdYear, pdMonth, pdDay))
+          );
+          const pdStartMs = this.getNYMarketCloseUtcMs(pdYear, pdMonth, pdDay) - 16 * 3600_000;
+          anchorDate = new Date(pdStartMs);
+          anchorDayDate = new Date(pdStartMs);
+          break;
+        }
         case 'TODAY': {
           // Scan from NOW (skip already-elapsed closes) but anchor-day = full NY trading day
           const ny = this.getNYDateTimeParts(now);

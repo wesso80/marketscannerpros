@@ -14,6 +14,7 @@ import type {
 const ANCHOR_OPTIONS: { value: CloseCalendarAnchor; label: string }[] = [
   { value: "NOW", label: "Now" },
   { value: "TODAY", label: "Today" },
+  { value: "PRIOR_DAY", label: "Prior Day" },
   { value: "EOW", label: "End of Week" },
   { value: "EOM", label: "End of Month" },
   { value: "CUSTOM", label: "Pick Date" },
@@ -114,6 +115,7 @@ export default function CloseCalendar({ symbol: propSymbol, onClusterClick, acti
   const assetClass = propSymbol ? detectAssetClass(propSymbol) : 'crypto';
   const [anchor, setAnchor] = useState<CloseCalendarAnchor>("TODAY");
   const [horizon, setHorizon] = useState<number>(1);
+  const isPriorDay = anchor === 'PRIOR_DAY';
   const [customDate, setCustomDate] = useState("");
   const [data, setData] = useState<ForwardCloseCalendar | null>(null);
   const [loading, setLoading] = useState(false);
@@ -132,6 +134,8 @@ export default function CloseCalendar({ symbol: propSymbol, onClusterClick, acti
     setError(null);
     try {
       const symbol = propSymbol || (assetClass === "crypto" ? "BTCUSD" : "AAPL");
+      // Prior Day: always use 1-day horizon to show just that day's closes
+      const effectiveHorizon = anchor === 'PRIOR_DAY' ? 1 : horizon;
       const res = await fetch("/api/confluence-scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -139,7 +143,7 @@ export default function CloseCalendar({ symbol: propSymbol, onClusterClick, acti
           symbol,
           mode: "calendar",
           anchor,
-          horizonDays: horizon,
+          horizonDays: effectiveHorizon,
           anchorTime: anchor === "CUSTOM" && customDate ? new Date(customDate).toISOString() : undefined,
         }),
         signal: controller.signal,
@@ -157,6 +161,11 @@ export default function CloseCalendar({ symbol: propSymbol, onClusterClick, acti
       setLoading(false);
     }
   }, [anchor, horizon, customDate, assetClass, propSymbol]);
+
+  // Auto-select "Closes on Anchor Day" when Prior Day is chosen
+  useEffect(() => {
+    if (anchor === 'PRIOR_DAY') setShowAnchorDay(true);
+  }, [anchor]);
 
   // Auto-fetch on mount and when anchor/horizon change
   useEffect(() => {
@@ -182,9 +191,13 @@ export default function CloseCalendar({ symbol: propSymbol, onClusterClick, acti
       {/* ── Header + Controls ── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="text-sm font-semibold text-slate-100">📅 Close Calendar — Forward Schedule</div>
+          <div className="text-sm font-semibold text-slate-100">
+            {isPriorDay ? '📋 Close Calendar — Prior Day Closes' : '📅 Close Calendar — Forward Schedule'}
+          </div>
           <div className="text-xs text-slate-400">
-            Which timeframes close on your target day? Where do closes stack?
+            {isPriorDay
+              ? `Which timeframes closed on the most recent ${assetClass === 'equity' ? 'trading' : 'calendar'} day?`
+              : 'Which timeframes close on your target day? Where do closes stack?'}
           </div>
         </div>
         <button
@@ -232,23 +245,27 @@ export default function CloseCalendar({ symbol: propSymbol, onClusterClick, acti
         )}
 
         <div>
-          <label className="mb-1 block text-[10px] uppercase tracking-wider text-slate-500">Horizon</label>
-          <div className="flex gap-1 overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
-            {HORIZON_OPTIONS.map((d) => (
-              <button
-                key={d}
-                type="button"
-                onClick={() => setHorizon(d)}
-                className={`shrink-0 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                  horizon === d
-                    ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/40"
-                    : "bg-slate-950/40 text-slate-400 border border-slate-800 hover:text-slate-200"
-                }`}
-              >
-                {d}d
-              </button>
-            ))}
-          </div>
+          {!isPriorDay && (
+            <>
+              <label className="mb-1 block text-[10px] uppercase tracking-wider text-slate-500">Horizon</label>
+              <div className="flex gap-1 overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+                {HORIZON_OPTIONS.map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setHorizon(d)}
+                    className={`shrink-0 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                      horizon === d
+                        ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/40"
+                        : "bg-slate-950/40 text-slate-400 border border-slate-800 hover:text-slate-200"
+                    }`}
+                  >
+                    {d}d
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -261,11 +278,13 @@ export default function CloseCalendar({ symbol: propSymbol, onClusterClick, acti
           {/* ── Anchor info strip ── */}
           <div className="flex flex-wrap items-center gap-4 rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2 text-xs">
             <span className="text-slate-400">
-              Anchor: <span className="font-semibold text-slate-200">{formatDate(data.anchorTimeISO, assetClass)}</span>
+              {isPriorDay ? 'Prior Day' : 'Anchor'}: <span className="font-semibold text-slate-200">{formatDate(data.anchorTimeISO, assetClass)}</span>
             </span>
-            <span className="text-slate-400">
-              Horizon: <span className="font-semibold text-slate-200">{data.horizonDays}d → {formatDate(data.horizonEndISO, assetClass)}</span>
-            </span>
+            {!isPriorDay && (
+              <span className="text-slate-400">
+                Horizon: <span className="font-semibold text-slate-200">{data.horizonDays}d → {formatDate(data.horizonEndISO, assetClass)}</span>
+              </span>
+            )}
             <span className="text-slate-400">
               Daily+ closes in window: <span className="font-semibold text-emerald-400">{data.totalCloseEventsInHorizon}</span>
             </span>
@@ -297,17 +316,19 @@ export default function CloseCalendar({ symbol: propSymbol, onClusterClick, acti
                 showAnchorDay ? "bg-emerald-500/20 text-emerald-400" : "text-slate-400 hover:text-slate-200"
               }`}
             >
-              Closes on Anchor Day ({anchorDayRows.length})
+              {isPriorDay ? 'Prior Day Closes' : 'Closes on Anchor Day'} ({anchorDayRows.length})
             </button>
-            <button
-              type="button"
-              onClick={() => setShowAnchorDay(false)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
-                !showAnchorDay ? "bg-cyan-500/20 text-cyan-400" : "text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              Full Schedule ({filteredSchedule.length})
-            </button>
+            {!isPriorDay && (
+              <button
+                type="button"
+                onClick={() => setShowAnchorDay(false)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
+                  !showAnchorDay ? "bg-cyan-500/20 text-cyan-400" : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                Full Schedule ({filteredSchedule.length})
+              </button>
+            )}
 
             {!showAnchorDay && (
               <div className="ml-auto flex gap-1 overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
