@@ -268,7 +268,7 @@ export default function EconomicCalendarPage() {
               <option value={14}>Show next: 14d</option>
               <option value={30}>Show next: 30d</option>
             </select>
-            <button onClick={() => setRefreshKey((k) => k + 1)} className="rounded-md border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-200">
+            <button type="button" onClick={() => setRefreshKey((k) => k + 1)} className="rounded-md border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-200">
               Refresh
             </button>
           </div>
@@ -366,6 +366,7 @@ export default function EconomicCalendarPage() {
               <div className="flex flex-wrap items-center gap-2">
                 {(['all', 'high', 'medium', 'low'] as const).map((impact) => (
                   <button
+                    type="button"
                     key={impact}
                     onClick={() => setImpactFilter(impact)}
                     className={`inline-flex items-center rounded-lg border px-3 py-1.5 text-xs ${impactFilter === impact ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-200' : 'border-white/10 bg-white/5 text-white/70'}`}
@@ -375,6 +376,7 @@ export default function EconomicCalendarPage() {
                 ))}
                 {categoryList.map((category) => (
                   <button
+                    type="button"
                     key={category}
                     onClick={() => toggleCategory(category)}
                     className={`inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs ${selectedCategories.includes(category) ? 'border-cyan-400/40 bg-cyan-500/15 text-cyan-200' : 'border-white/10 bg-white/5 text-white/70'}`}
@@ -389,6 +391,7 @@ export default function EconomicCalendarPage() {
                   <input id="hide-low-impact" name="hideLowImpact" type="checkbox" checked={hideLowImpact} onChange={(event) => setHideLowImpact(event.target.checked)} /> Hide Low Impact
                 </label>
                 <button
+                  type="button"
                   onClick={() => setShowET((current) => !current)}
                   className="inline-flex items-center rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/70"
                 >
@@ -461,9 +464,9 @@ export default function EconomicCalendarPage() {
                             </span>
                           </div>
                           <div className="col-span-8 sm:col-span-2 flex flex-wrap justify-end gap-1">
-                            <button onClick={() => { /* Future: create alert for this event */ }} className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/70">Set Alert</button>
+                            <button type="button" onClick={() => { /* Future: create alert for this event */ }} className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/70">Set Alert</button>
                             <Link href="/tools/macro" className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/70">Open Macro</Link>
-                            {isAdmin ? <button onClick={() => { /* Future: post event to Discord */ }} className="rounded-md border border-amber-400/30 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-300">Post</button> : null}
+                            {isAdmin ? <button type="button" onClick={() => { /* Future: post event to Discord */ }} className="rounded-md border border-amber-400/30 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-300">Post</button> : null}
                           </div>
                         </div>
                       ))}
@@ -496,9 +499,9 @@ export default function EconomicCalendarPage() {
               <details className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3">
                 <summary className="cursor-pointer text-sm font-semibold text-white/85">Admin Tools</summary>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <button className="rounded-md border border-amber-400/30 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-300">Post daily macro summary to Discord</button>
-                  <button className="rounded-md border border-amber-400/30 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-300">Schedule pre/post alerts</button>
-                  <button className="rounded-md border border-rose-400/30 bg-rose-500/10 px-3 py-1.5 text-xs text-rose-300">Override permission output</button>
+                  <button type="button" className="rounded-md border border-amber-400/30 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-300">Post daily macro summary to Discord</button>
+                  <button type="button" className="rounded-md border border-amber-400/30 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-300">Schedule pre/post alerts</button>
+                  <button type="button" className="rounded-md border border-rose-400/30 bg-rose-500/10 px-3 py-1.5 text-xs text-rose-300">Override permission output</button>
                 </div>
               </details>
             ) : null}

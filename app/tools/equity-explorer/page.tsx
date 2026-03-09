@@ -481,6 +481,7 @@ export default function EquityExplorerPage() {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value.toUpperCase())}
                 placeholder="Enter stock symbol (e.g., AAPL, MSFT, GOOGL)"
+                aria-label="Stock symbol"
                 className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white placeholder-slate-500 outline-none focus:border-emerald-500"
               />
             </div>
@@ -508,6 +509,7 @@ export default function EquityExplorerPage() {
           <div className="mt-2 flex flex-wrap gap-1">
             {POPULAR_STOCKS.map((stock) => (
               <button
+                type="button"
                 key={stock.symbol}
                 onClick={() => {
                   setSearchInput(stock.symbol);
@@ -606,6 +608,7 @@ export default function EquityExplorerPage() {
                     <h2 className="text-xs font-bold">Price + Permission Console</h2>
                   </div>
                   <button
+                    type="button"
                     onClick={handleRefresh}
                     disabled={refreshing}
                     className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-slate-300"

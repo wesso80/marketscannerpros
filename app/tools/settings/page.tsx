@@ -57,6 +57,7 @@ export default function ToolsSettingsPage() {
               </div>
 
               <button
+                type="button"
                 disabled={loading}
                 onClick={() => {
                   if (guardPendingDisable) {

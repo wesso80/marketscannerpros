@@ -813,6 +813,7 @@ export default function NewsSentimentPage() {
           }}
         >
           <button
+            type="button"
             onClick={() => setActiveTab("news")}
             style={{
               padding: "1rem 1.5rem",
@@ -829,6 +830,7 @@ export default function NewsSentimentPage() {
             📰 News & Sentiment
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab("earnings")}
             style={{
               padding: "1rem 1.5rem",
@@ -899,10 +901,12 @@ export default function NewsSentimentPage() {
                     value={newsQuery}
                     onChange={(e) => setNewsQuery(e.target.value)}
                     placeholder="Search symbol/topic (AAPL, inflation, BTC...)"
+                    aria-label="Search news"
                     className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40 lg:w-[420px]"
                   />
                   {(['ALL', 'HIGH_IMPACT', 'EARNINGS', 'MACRO', 'CRYPTO', 'GEOPOLITICS', 'AI', 'COMMODITIES'] as const).map((bucket) => (
                     <button
+                      type="button"
                       key={bucket}
                       onClick={() => setNewsBucket(bucket)}
                       className={`rounded-lg border px-3 py-1.5 text-xs ${newsBucket === bucket ? 'border-white/25 bg-white/10 text-white' : 'border-white/10 bg-white/5 text-white/70 hover:bg-white/10'}`}
@@ -932,6 +936,7 @@ export default function NewsSentimentPage() {
                     Group by Narrative
                   </label>
                   <button
+                    type="button"
                     onClick={handleSearch}
                     disabled={loading}
                     className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-200"
@@ -958,8 +963,8 @@ export default function NewsSentimentPage() {
                       <div>• Trade leaders, not mid-pack laggards.</div>
                     </div>
                     <div className="mt-3 grid grid-cols-2 gap-2">
-                      <button className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs hover:bg-white/10">Create Alert</button>
-                      <button className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs hover:bg-white/10">Add to Watchlist</button>
+                      <button type="button" className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs hover:bg-white/10">Create Alert</button>
+                      <button type="button" className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs hover:bg-white/10">Add to Watchlist</button>
                     </div>
                   </article>
                 </div>
@@ -993,7 +998,7 @@ export default function NewsSentimentPage() {
                     {newsGate.briefAllowed.map((line) => <div key={line}>• {line}</div>)}
                     <div className="mt-2 mb-1">Avoid:</div>
                     {newsGate.briefAvoid.map((line) => <div key={line}>• {line}</div>)}
-                    {isAdmin ? <button className="mt-3 rounded-xl border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-xs text-amber-200 hover:bg-amber-300/20">Post Daily Brief (Admin)</button> : null}
+                    {isAdmin ? <button type="button" className="mt-3 rounded-xl border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-xs text-amber-200 hover:bg-amber-300/20">Post Daily Brief (Admin)</button> : null}
                   </div>
                 </div>
                 <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3 text-xs text-white/70 whitespace-pre-wrap">{newsAIAnalysis}</div>
@@ -1079,10 +1084,12 @@ export default function NewsSentimentPage() {
                     onChange={(e) => setEarningsSymbol(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleEarningsSearch()}
                     placeholder="AAPL, MSFT, NVDA"
+                    aria-label="Search earnings by symbol"
                     className="rounded-md border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white outline-none"
                   />
                   {(['my', 'mag7', 'spy100', 'all'] as const).map((scope) => (
                     <button
+                      type="button"
                       key={scope}
                       onClick={() => setMarketScope(scope)}
                       className={`rounded-md border px-2 py-1 text-xs ${marketScope === scope ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-200' : 'border-white/15 bg-black/20 text-white/70'}`}
@@ -1102,24 +1109,28 @@ export default function NewsSentimentPage() {
                     <option value="12month">12 Months</option>
                   </select>
                   <button
+                    type="button"
                     onClick={() => setSessionFilter('PRE')}
                     className={`rounded-md border px-2 py-1 text-xs ${sessionFilter === 'PRE' ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-200' : 'border-white/15 bg-black/20 text-white/70'}`}
                   >
                     Pre-market
                   </button>
                   <button
+                    type="button"
                     onClick={() => setSessionFilter('AH')}
                     className={`rounded-md border px-2 py-1 text-xs ${sessionFilter === 'AH' ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-200' : 'border-white/15 bg-black/20 text-white/70'}`}
                   >
                     After-hours
                   </button>
                   <button
+                    type="button"
                     onClick={() => setSessionFilter('all')}
                     className={`rounded-md border px-2 py-1 text-xs ${sessionFilter === 'all' ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-200' : 'border-white/15 bg-black/20 text-white/70'}`}
                   >
                     All sessions
                   </button>
                   <button
+                    type="button"
                     onClick={() => setHighImpactOnly((prev) => !prev)}
                     className={`rounded-md border px-2 py-1 text-xs ${highImpactOnly ? 'border-amber-400/40 bg-amber-500/15 text-amber-200' : 'border-white/15 bg-black/20 text-white/70'}`}
                   >
@@ -1135,6 +1146,7 @@ export default function NewsSentimentPage() {
                     <option value="marketcap">Sort: Market Cap</option>
                   </select>
                   <button
+                    type="button"
                     onClick={handleEarningsSearch}
                     disabled={earningsLoading}
                     className="rounded-md border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-200"
@@ -1223,7 +1235,7 @@ export default function NewsSentimentPage() {
                             <div className="flex flex-wrap items-center gap-1">
                               <Link href={`/tools/equity-explorer?symbol=${event.symbol}`} className="rounded-md border border-white/15 bg-black/20 px-2 py-1 text-[11px] text-white/75">Open Explorer</Link>
                               <Link href={`/tools/intraday-charts?symbol=${event.symbol}`} className="rounded-md border border-white/15 bg-black/20 px-2 py-1 text-[11px] text-white/75">Open Chart</Link>
-                              <button onClick={() => fetchAnalystData(event)} className="rounded-md border border-white/15 bg-black/20 px-2 py-1 text-[11px] text-white/75">Analyst Data</button>
+                              <button type="button" onClick={() => fetchAnalystData(event)} className="rounded-md border border-white/15 bg-black/20 px-2 py-1 text-[11px] text-white/75">Analyst Data</button>
                               <Link href={`/tools/journal?symbol=${event.symbol}`} className="rounded-md border border-white/15 bg-black/20 px-2 py-1 text-[11px] text-white/75">Journal Draft</Link>
                             </div>
                           </div>
@@ -1274,6 +1286,7 @@ export default function NewsSentimentPage() {
                     <div className="mb-2 flex items-center justify-between">
                       <h3 className="text-sm font-semibold text-white/85">Recent Results Tape</h3>
                       <button
+                        type="button"
                         onClick={() => setShowRecentResults(!showRecentResults)}
                         className="rounded-md border border-white/15 bg-black/20 px-2 py-1 text-xs text-white/70"
                       >

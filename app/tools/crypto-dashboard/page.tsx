@@ -366,10 +366,12 @@ export default function CryptoDashboard() {
                 checked={autoRefresh}
                 onChange={(e) => setAutoRefresh(e.target.checked)}
                 className="w-4 h-4 rounded bg-gray-700 border-gray-600"
+                aria-label="Toggle auto-refresh"
               />
               Auto-refresh (60s)
             </label>
             <button
+              type="button"
               onClick={fetchData}
               disabled={loading}
               className="px-4 py-2 bg-[#10B981] text-white rounded-lg hover:bg-[#059669] disabled:opacity-50 transition-all"

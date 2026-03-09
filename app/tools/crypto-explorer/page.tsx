@@ -487,6 +487,7 @@ function CryptoDetailPageContent() {
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => searchResults.length > 0 && setShowDropdown(true)}
               placeholder="Search any coin (e.g., XRP, Bitcoin, SOL)..."
+              aria-label="Search cryptocurrency"
               className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white placeholder-slate-500 outline-none"
             />
             {isSearching && (
@@ -499,6 +500,7 @@ function CryptoDetailPageContent() {
               <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-72 overflow-y-auto rounded-md border border-slate-700 bg-slate-900">
                 {searchResults.map((coin) => (
                   <button
+                    type="button"
                     key={coin.id}
                     onClick={() => loadCoinBySymbolOrId(coin.id)}
                     className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-slate-800"
@@ -515,6 +517,7 @@ function CryptoDetailPageContent() {
           <div className="mt-2 flex flex-wrap gap-1">
             {POPULAR_COINS.map((coin) => (
               <button
+                type="button"
                 key={coin.symbol}
                 onClick={() => loadCoinBySymbolOrId(coin.symbol)}
                 className={`rounded-full border px-2 py-0.5 text-[10px] ${
@@ -538,6 +541,7 @@ function CryptoDetailPageContent() {
           <div className="rounded-lg border border-rose-500/50 bg-rose-500/10 p-4 text-center">
             <p className="text-sm text-rose-300">❌ {error}</p>
             <button
+              type="button"
               onClick={() => selectedCoin && loadCoinBySymbolOrId(selectedCoin)}
               className="mt-2 rounded bg-emerald-500 px-3 py-1 text-xs font-semibold text-white"
             >
@@ -578,6 +582,7 @@ function CryptoDetailPageContent() {
                     <h2 className="text-xs font-bold">Price + Permission Console</h2>
                   </div>
                   <button
+                    type="button"
                     onClick={() => selectedCoin && loadCoinBySymbolOrId(selectedCoin)}
                     className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-slate-300"
                   >
@@ -594,12 +599,14 @@ function CryptoDetailPageContent() {
 
                     <div className="mb-2 flex gap-1 rounded bg-slate-800/70 p-1">
                       <button
+                        type="button"
                         onClick={() => setChartView('ohlc')}
                         className={`rounded px-2 py-1 text-[10px] ${chartView === 'ohlc' ? 'bg-emerald-500 text-white' : 'text-slate-300'}`}
                       >
                         Candles
                       </button>
                       <button
+                        type="button"
                         onClick={() => setChartView('sparkline')}
                         className={`rounded px-2 py-1 text-[10px] ${chartView === 'sparkline' ? 'bg-emerald-500 text-white' : 'text-slate-300'}`}
                       >

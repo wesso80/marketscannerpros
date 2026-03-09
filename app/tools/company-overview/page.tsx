@@ -372,9 +372,11 @@ function CompanyOverviewContent() {
             onChange={(e) => setSymbol(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             placeholder="Enter ticker symbol (e.g., AAPL)"
+            aria-label="Ticker symbol"
             style={{ flex: 1, minWidth: "200px", padding: "14px 16px", background: "var(--msp-card)", border: "1px solid var(--msp-border)", borderRadius: "12px", color: "var(--msp-text)", fontSize: "15px" }}
           />
           <button
+            type="button"
             onClick={handleSearch}
             disabled={loading}
             style={{ padding: "14px 28px", background: "var(--msp-accent)", border: "none", borderRadius: "12px", color: "var(--msp-bg)", fontWeight: "600", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.6 : 1, boxShadow: "var(--msp-shadow)" }}

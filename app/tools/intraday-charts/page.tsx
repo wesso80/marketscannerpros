@@ -834,6 +834,7 @@ export default function IntradayChartsPage() {
             <div className="flex items-center gap-2">
               <div className="flex rounded-lg bg-slate-800 p-1">
                 <button
+                  type="button"
                   onClick={() => {
                     setAssetType('stocks');
                     fetchData('AAPL', interval);
@@ -847,6 +848,7 @@ export default function IntradayChartsPage() {
                   Stocks
                 </button>
                 <button
+                  type="button"
                   onClick={() => {
                     setAssetType('crypto');
                     fetchData('BTC', interval);
@@ -871,6 +873,7 @@ export default function IntradayChartsPage() {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value.toUpperCase())}
                 placeholder={assetType === 'crypto' ? 'Symbol (e.g., BTC)' : 'Symbol (e.g., AAPL)'}
+                aria-label="Symbol"
                 className="h-10 flex-1 rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none"
               />
               <button
@@ -886,6 +889,7 @@ export default function IntradayChartsPage() {
           <div className="mt-2 flex flex-wrap gap-1">
             {(assetType === 'stocks' ? POPULAR_STOCKS : POPULAR_CRYPTO).slice(0, 8).map((item) => (
               <button
+                type="button"
                 key={item.symbol}
                 onClick={() => {
                   setSearchInput(item.symbol);
@@ -938,6 +942,7 @@ export default function IntradayChartsPage() {
                     <div className="flex gap-1 rounded-lg bg-slate-800 p-1">
                       {INTERVALS.map((int) => (
                         <button
+                          type="button"
                           key={int.value}
                           onClick={() => handleIntervalChange(int.value)}
                           className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
@@ -957,6 +962,7 @@ export default function IntradayChartsPage() {
                         checked={autoRefresh}
                         onChange={(e) => setAutoRefresh(e.target.checked)}
                         className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-emerald-600 focus:ring-emerald-500"
+                        aria-label="Toggle auto-refresh"
                       />
                       Auto 60s
                     </label>
@@ -966,6 +972,7 @@ export default function IntradayChartsPage() {
                 <div className="mb-1 flex flex-wrap items-center gap-2 border-t border-slate-700 pt-2">
                   <span className="mr-1 text-xs text-gray-400">Overlays</span>
                   <button
+                    type="button"
                     onClick={() => toggleIndicator('ema9')}
                     className={`px-3 py-1 rounded-full text-xs font-medium transition ${
                       indicators.includes('ema9')
@@ -976,6 +983,7 @@ export default function IntradayChartsPage() {
                     EMA 9
                   </button>
                   <button
+                    type="button"
                     onClick={() => toggleIndicator('ema21')}
                     className={`px-3 py-1 rounded-full text-xs font-medium transition ${
                       indicators.includes('ema21')
@@ -986,6 +994,7 @@ export default function IntradayChartsPage() {
                     EMA 21
                   </button>
                   <button
+                    type="button"
                     onClick={() => toggleIndicator('sma20')}
                     className={`px-3 py-1 rounded-full text-xs font-medium transition ${
                       indicators.includes('sma20')
@@ -996,6 +1005,7 @@ export default function IntradayChartsPage() {
                     SMA 20
                   </button>
                   <button
+                    type="button"
                     onClick={() => toggleIndicator('sma50')}
                     className={`px-3 py-1 rounded-full text-xs font-medium transition ${
                       indicators.includes('sma50')
@@ -1006,6 +1016,7 @@ export default function IntradayChartsPage() {
                     SMA 50
                   </button>
                   <button
+                    type="button"
                     onClick={() => toggleIndicator('vwap')}
                     className={`px-3 py-1 rounded-full text-xs font-medium transition ${
                       indicators.includes('vwap')
@@ -1016,6 +1027,7 @@ export default function IntradayChartsPage() {
                     VWAP
                   </button>
                   <button
+                    type="button"
                     onClick={() => toggleIndicator('bollinger')}
                     className={`px-3 py-1 rounded-full text-xs font-medium transition ${
                       indicators.includes('bollinger')
@@ -1027,6 +1039,7 @@ export default function IntradayChartsPage() {
                   </button>
                   {indicators.length > 0 && (
                     <button
+                      type="button"
                       onClick={() => setIndicators([])}
                       className="ml-1 px-2 py-1 text-xs text-gray-500 hover:text-red-400 transition"
                     >

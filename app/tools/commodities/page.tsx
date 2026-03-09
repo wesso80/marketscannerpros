@@ -494,6 +494,7 @@ export default function CommoditiesPage() {
           <div className="mb-3 text-3xl">⚠️</div>
           <div className="mb-4 text-rose-300">{error}</div>
           <button
+            type="button"
             onClick={fetchCommodities}
             className="rounded-md border border-emerald-400/40 bg-emerald-500/20 px-4 py-2 text-sm font-semibold text-emerald-200"
           >
@@ -522,6 +523,7 @@ export default function CommoditiesPage() {
               Auto refresh (15m)
             </label>
             <button
+              type="button"
               onClick={fetchCommodities}
               className="rounded-md border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold text-emerald-200"
             >
@@ -683,6 +685,7 @@ export default function CommoditiesPage() {
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <button
+                    type="button"
                     onClick={() => setSelectedCategory('all')}
                     className={`rounded-md border px-3 py-1 text-xs ${selectedCategory === 'all' ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-200' : 'border-white/15 bg-black/20 text-white/70'}`}
                   >
@@ -690,6 +693,7 @@ export default function CommoditiesPage() {
                   </button>
                   {(['Energy', 'Metals', 'Agriculture'] as const).map((cat) => (
                     <button
+                      type="button"
                       key={cat}
                       onClick={() => setSelectedCategory(cat)}
                       className={`rounded-md border px-3 py-1 text-xs ${selectedCategory === cat ? 'border-white/30 bg-white/10 text-white' : 'border-white/15 bg-black/20 text-white/70'}`}
@@ -820,10 +824,10 @@ export default function CommoditiesPage() {
             </section>
 
             <section className="mt-4 flex flex-wrap justify-end gap-2">
-              <button disabled className="cursor-not-allowed rounded-md border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/45" title="Coming soon">Create Alert</button>
-              <button disabled className="cursor-not-allowed rounded-md border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/45" title="Coming soon">Add to Watchlist</button>
-              <button disabled className="cursor-not-allowed rounded-md border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/45" title="Coming soon">Run Confluence Scan</button>
-              <button disabled className="cursor-not-allowed rounded-md border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/45" title="Coming soon">Open Journal Draft</button>
+              <button type="button" disabled className="cursor-not-allowed rounded-md border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/45" title="Coming soon">Create Alert</button>
+              <button type="button" disabled className="cursor-not-allowed rounded-md border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/45" title="Coming soon">Add to Watchlist</button>
+              <button type="button" disabled className="cursor-not-allowed rounded-md border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/45" title="Coming soon">Run Confluence Scan</button>
+              <button type="button" disabled className="cursor-not-allowed rounded-md border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/45" title="Coming soon">Open Journal Draft</button>
             </section>
           </>
         )}
