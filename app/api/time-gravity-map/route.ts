@@ -5,8 +5,9 @@ import { getMidpointService } from '@/lib/midpointService';
 import { getCandleProcessor, parseCoinGeckoOHLC } from '@/lib/candleProcessor';
 import type { OHLCVBar } from '@/lib/candleProcessor';
 import { getOHLC, resolveSymbolToId, symbolToId } from '@/lib/coingecko';
-import { avTryToken } from '@/lib/avRateGovernor';
+import { avFetch } from '@/lib/avRateGovernor';
 import { q } from '@/lib/db';
+import { getQuote } from '@/lib/onDemandFetch';
 
 /**
  * Time Gravity Map API Endpoint
@@ -187,85 +188,71 @@ async function generateMidpointsOnDemand(symbol: string, assetType: 'crypto' | '
         return { totalStored: 0, timeframesGenerated: [], rateLimited: false, error: 'No API key configured' };
       }
 
-      // 1. Fetch daily bars (compact = ~100 trading days)
-      const canFetchDaily = await avTryToken();
-      if (!canFetchDaily) {
-        console.warn(`[TGM on-demand] AV rate limit hit for daily fetch, skipping ${symbol}`);
-        rateLimited = true;
-      } else {
-        try {
-          const dailyUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${encodeURIComponent(symbol)}&outputsize=compact&entitlement=realtime&apikey=${apiKey}`;
-          const dailyRes = await fetch(dailyUrl, { signal: AbortSignal.timeout(15000) });
-          if (dailyRes.ok) {
-            const dailyJson = await dailyRes.json();
-            if (dailyJson['Error Message']) {
-              console.warn(`[TGM on-demand] AV error for ${symbol} daily:`, dailyJson['Error Message']);
-            } else if (dailyJson['Note'] || dailyJson['Information']) {
-              console.warn(`[TGM on-demand] AV limit note for ${symbol}:`, dailyJson['Note'] || dailyJson['Information']);
-              rateLimited = true;
-            } else {
-              const tsKey = Object.keys(dailyJson).find(k => k.startsWith('Time Series'));
-              if (tsKey && dailyJson[tsKey]) {
-                const dailyBars = parseAVTimeSeries(dailyJson[tsKey]);
+      // 1. Fetch daily bars (compact = ~100 trading days) — avFetch blocks until token available
+      try {
+        const dailyUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${encodeURIComponent(symbol)}&outputsize=compact&entitlement=realtime&apikey=${apiKey}`;
+        const dailyJson = await avFetch<Record<string, any>>(dailyUrl, `TGM_DAILY ${symbol}`);
+        if (dailyJson) {
+          if (dailyJson['Error Message']) {
+            console.warn(`[TGM on-demand] AV error for ${symbol} daily:`, dailyJson['Error Message']);
+          } else if (dailyJson['Note'] || dailyJson['Information']) {
+            console.warn(`[TGM on-demand] AV limit note for ${symbol}:`, dailyJson['Note'] || dailyJson['Information']);
+            rateLimited = true;
+          } else {
+            const tsKey = Object.keys(dailyJson).find(k => k.startsWith('Time Series'));
+            if (tsKey && dailyJson[tsKey]) {
+              const dailyBars = parseAVTimeSeries(dailyJson[tsKey]);
 
-                // Store daily midpoints (last 100 bars)
-                if (dailyBars.length > 0) {
-                  const dStored = await processor.processCandleBatch(symbol, 'daily', dailyBars.slice(-100), 'equity');
-                  totalStored += dStored;
-                  if (dStored > 0) timeframesGenerated.push('1D');
+              // Store daily midpoints (last 100 bars)
+              if (dailyBars.length > 0) {
+                const dStored = await processor.processCandleBatch(symbol, 'daily', dailyBars.slice(-100), 'equity');
+                totalStored += dStored;
+                if (dStored > 0) timeframesGenerated.push('1D');
 
-                  // Aggregate daily → weekly (no extra API call)
-                  const weeklyBars = aggregateDailyToWeekly(dailyBars);
-                  if (weeklyBars.length > 0) {
-                    const wStored = await processor.processCandleBatch(symbol, '1w', weeklyBars, 'equity');
-                    totalStored += wStored;
-                    if (wStored > 0) timeframesGenerated.push('1W');
-                  }
+                // Aggregate daily → weekly (no extra API call)
+                const weeklyBars = aggregateDailyToWeekly(dailyBars);
+                if (weeklyBars.length > 0) {
+                  const wStored = await processor.processCandleBatch(symbol, '1w', weeklyBars, 'equity');
+                  totalStored += wStored;
+                  if (wStored > 0) timeframesGenerated.push('1W');
                 }
               }
             }
           }
-        } catch (err: any) {
-          console.warn(`[TGM on-demand] AV daily fetch failed for ${symbol}:`, err?.message);
         }
+      } catch (err: any) {
+        console.warn(`[TGM on-demand] AV daily fetch failed for ${symbol}:`, err?.message);
       }
 
-      // 2. Fetch intraday 60min bars for 1H + 4H (1 extra API call)
-      const canFetchIntraday = await avTryToken();
-      if (!canFetchIntraday) {
-        console.warn(`[TGM on-demand] AV rate limit hit for intraday fetch, skipping ${symbol}`);
-        if (totalStored === 0) rateLimited = true;
-      } else {
-        try {
-          const intradayUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(symbol)}&interval=60min&outputsize=compact&entitlement=realtime&apikey=${apiKey}`;
-          const intradayRes = await fetch(intradayUrl, { signal: AbortSignal.timeout(15000) });
-          if (intradayRes.ok) {
-            const intradayJson = await intradayRes.json();
-            if (!intradayJson['Error Message'] && !intradayJson['Note'] && !intradayJson['Information']) {
-              const tsKey = Object.keys(intradayJson).find(k => k.startsWith('Time Series'));
-              if (tsKey && intradayJson[tsKey]) {
-                const hourlyBars = parseAVTimeSeries(intradayJson[tsKey]);
+      // 2. Fetch intraday 60min bars for 1H + 4H (1 extra API call) — avFetch blocks until token
+      try {
+        const intradayUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(symbol)}&interval=60min&outputsize=compact&entitlement=realtime&apikey=${apiKey}`;
+        const intradayJson = await avFetch<Record<string, any>>(intradayUrl, `TGM_INTRADAY ${symbol}`);
+        if (intradayJson) {
+          if (!intradayJson['Error Message'] && !intradayJson['Note'] && !intradayJson['Information']) {
+            const tsKey = Object.keys(intradayJson).find(k => k.startsWith('Time Series'));
+            if (tsKey && intradayJson[tsKey]) {
+              const hourlyBars = parseAVTimeSeries(intradayJson[tsKey]);
 
-                // Store 1H midpoints
-                if (hourlyBars.length > 0) {
-                  const hStored = await processor.processCandleBatch(symbol, '1H', hourlyBars, 'equity');
-                  totalStored += hStored;
-                  if (hStored > 0) timeframesGenerated.push('1H');
+              // Store 1H midpoints
+              if (hourlyBars.length > 0) {
+                const hStored = await processor.processCandleBatch(symbol, '1H', hourlyBars, 'equity');
+                totalStored += hStored;
+                if (hStored > 0) timeframesGenerated.push('1H');
 
-                  // Aggregate 1H → 4H (no extra API call)
-                  const fourHourBars = aggregate1HTo4H(hourlyBars);
-                  if (fourHourBars.length > 0) {
-                    const fhStored = await processor.processCandleBatch(symbol, '4H', fourHourBars, 'equity');
-                    totalStored += fhStored;
-                    if (fhStored > 0) timeframesGenerated.push('4H');
-                  }
+                // Aggregate 1H → 4H (no extra API call)
+                const fourHourBars = aggregate1HTo4H(hourlyBars);
+                if (fourHourBars.length > 0) {
+                  const fhStored = await processor.processCandleBatch(symbol, '4H', fourHourBars, 'equity');
+                  totalStored += fhStored;
+                  if (fhStored > 0) timeframesGenerated.push('4H');
                 }
               }
             }
           }
-        } catch (err: any) {
-          console.warn(`[TGM on-demand] AV intraday fetch failed for ${symbol}:`, err?.message);
         }
+      } catch (err: any) {
+        console.warn(`[TGM on-demand] AV intraday fetch failed for ${symbol}:`, err?.message);
       }
 
       console.log(`[TGM on-demand] Generated ${totalStored} midpoints for equity ${symbol} (${timeframesGenerated.join(', ') || 'none'})`);
@@ -301,6 +288,7 @@ export async function GET(request: NextRequest) {
     const midpointsStr = searchParams.get('midpoints');
     const maxDistance = parseFloat(searchParams.get('maxDistance') || '10');
     const forceGenerate = searchParams.get('forceGenerate') === '1';
+    const assetTypeHint = searchParams.get('assetType'); // Widget passes 'stock' or 'crypto'
     
     if (!symbol) {
       return NextResponse.json(
@@ -311,25 +299,19 @@ export async function GET(request: NextRequest) {
     
     let currentPrice = priceStr ? parseFloat(priceStr) : 0;
     
-    // Auto-resolve price from quotes_latest when not provided
+    // Auto-resolve price using the full getQuote cascade (cache → DB → live AV)
     if (!currentPrice || isNaN(currentPrice) || currentPrice <= 0) {
       try {
-        const rows = await q(
-          'SELECT price FROM quotes_latest WHERE symbol = $1 LIMIT 1',
-          [symbol.toUpperCase()]
-        );
-        if (rows.length > 0 && rows[0].price) {
-          currentPrice = parseFloat(rows[0].price);
+        const quoteData = await getQuote(symbol);
+        if (quoteData && quoteData.price > 0) {
+          currentPrice = quoteData.price;
+          console.log(`[TGM API] Auto-resolved price for ${symbol}: ${currentPrice} (source: ${quoteData.source})`);
         }
-      } catch { /* ignore — will fall through to error */ }
+      } catch { /* ignore — will try on-demand generation which also resolves price */ }
     }
     
-    if (!currentPrice || isNaN(currentPrice) || currentPrice <= 0) {
-      return NextResponse.json(
-        { error: 'Missing price — provide ?price= or ensure quotes_latest has data for this symbol' },
-        { status: 400 }
-      );
-    }
+    // Don't fail immediately — on-demand generation can provide the price
+    const priceMissing = !currentPrice || isNaN(currentPrice) || currentPrice <= 0;
     
     let midpoints: MidpointRecord[] = [];
     let generationAttempted = false;
@@ -351,42 +333,60 @@ export async function GET(request: NextRequest) {
       try {
         const service = getMidpointService();
 
-        // ── PRE-TAG: mark midpoints the current price has touched ──────
-        // Use a 0.1% buffer around current price for the "current bar" range
-        const tagBuffer = currentPrice * 0.001;
-        const touchTagged = await service.checkAndTagMidpoints(
-          symbol,
-          currentPrice + tagBuffer,
-          currentPrice - tagBuffer
-        );
-
-        // ── OVERSHOOT TAG: mark midpoints price has clearly blown past ──
-        // 5% threshold — only tags midpoints that are way behind price
-        const overshootTagged = await service.tagOvershootMidpoints(
-          symbol,
-          currentPrice,
-          0.05  // 5% overshoot threshold
-        );
-
-        if (touchTagged > 0 || overshootTagged > 0) {
-          console.log(
-            `[TGM API] Pre-tagged ${touchTagged} touch + ${overshootTagged} overshoot midpoints for ${symbol}`
+        // Only run tagging + midpoint fetch when we have a valid price
+        if (!priceMissing) {
+          // ── PRE-TAG: mark midpoints the current price has touched ──────
+          // Use a 0.1% buffer around current price for the "current bar" range
+          const tagBuffer = currentPrice * 0.001;
+          const touchTagged = await service.checkAndTagMidpoints(
+            symbol,
+            currentPrice + tagBuffer,
+            currentPrice - tagBuffer
           );
+
+          // ── OVERSHOOT TAG: mark midpoints price has clearly blown past ──
+          // 5% threshold — only tags midpoints that are way behind price
+          const overshootTagged = await service.tagOvershootMidpoints(
+            symbol,
+            currentPrice,
+            0.05  // 5% overshoot threshold
+          );
+
+          if (touchTagged > 0 || overshootTagged > 0) {
+            console.log(
+              `[TGM API] Pre-tagged ${touchTagged} touch + ${overshootTagged} overshoot midpoints for ${symbol}`
+            );
+          }
+
+          // ── NOW fetch only the remaining untagged midpoints ────────────
+          midpoints = await service.getUntaggedMidpoints(symbol, currentPrice, {
+            maxDistancePercent: maxDistance,
+            limit: 100,
+          });
         }
 
-        // ── NOW fetch only the remaining untagged midpoints ────────────
-        midpoints = await service.getUntaggedMidpoints(symbol, currentPrice, {
-          maxDistancePercent: maxDistance,
-          limit: 100,
-        });
-
         // ── ON-DEMAND: No midpoints in DB or user forced regeneration ──
-        if (midpoints.length === 0 || forceGenerate) {
-          const assetType = isCryptoSymbol(symbol) ? 'crypto' : 'equity';
+        if (midpoints.length === 0 || forceGenerate || priceMissing) {
+          const assetType: 'crypto' | 'equity' = (assetTypeHint === 'stock' || assetTypeHint === 'equity')
+            ? 'equity'
+            : (assetTypeHint === 'crypto' ? 'crypto' : (isCryptoSymbol(symbol) ? 'crypto' : 'equity'));
           console.log(`[TGM API] ${forceGenerate ? 'Force generating' : 'No midpoints for'} ${symbol}, on-demand (${assetType})...`);
           generationResult = await generateMidpointsOnDemand(symbol, assetType);
           generationAttempted = true;
-          if (generationResult.totalStored > 0) {
+          
+          // If price was missing before, try to resolve it now using getQuote
+          // (on-demand generation via AV will have populated quotes_latest)
+          if (priceMissing) {
+            try {
+              const quoteData = await getQuote(symbol);
+              if (quoteData && quoteData.price > 0) {
+                currentPrice = quoteData.price;
+                console.log(`[TGM API] Post-generation price resolved for ${symbol}: ${currentPrice}`);
+              }
+            } catch { /* non-fatal */ }
+          }
+          
+          if (generationResult.totalStored > 0 && currentPrice > 0) {
             // Re-fetch the freshly stored midpoints
             midpoints = await service.getUntaggedMidpoints(symbol, currentPrice, {
               maxDistancePercent: maxDistance,
@@ -406,6 +406,14 @@ export async function GET(request: NextRequest) {
           { status: 503 }
         );
       }
+    }
+
+    // Final price check — if still missing after all resolution attempts, fail
+    if (!currentPrice || isNaN(currentPrice) || currentPrice <= 0) {
+      return NextResponse.json(
+        { error: 'Could not resolve price for this symbol. Try running a scan first.' },
+        { status: 400 }
+      );
     }
 
     // No midpoints found — could mean all were tagged (target hit!)
