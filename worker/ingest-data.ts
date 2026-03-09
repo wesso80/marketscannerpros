@@ -387,6 +387,53 @@ interface AVBar {
   volume: number;
 }
 
+// ── TGM aggregation helpers (daily → weekly, 1H → 4H) ──────────────────
+interface TGMBar { time: Date; open: number; high: number; low: number; close: number; volume: number }
+
+function aggregateDailyToWeekly(bars: TGMBar[]): TGMBar[] {
+  const result: TGMBar[] = [];
+  let weekBars: TGMBar[] = [];
+  let currentWeek = -1;
+  for (const bar of bars) {
+    const d = bar.time;
+    const jan4 = new Date(d.getFullYear(), 0, 4);
+    const weekNum = Math.ceil(((d.getTime() - jan4.getTime()) / 86400000 + jan4.getDay() + 1) / 7);
+    const weekKey = d.getFullYear() * 100 + weekNum;
+    if (weekKey !== currentWeek && weekBars.length > 0) {
+      result.push({
+        time: weekBars[weekBars.length - 1].time, open: weekBars[0].open,
+        high: Math.max(...weekBars.map(b => b.high)), low: Math.min(...weekBars.map(b => b.low)),
+        close: weekBars[weekBars.length - 1].close, volume: weekBars.reduce((s, b) => s + b.volume, 0),
+      });
+      weekBars = [];
+    }
+    currentWeek = weekKey;
+    weekBars.push(bar);
+  }
+  if (weekBars.length > 0) {
+    result.push({
+      time: weekBars[weekBars.length - 1].time, open: weekBars[0].open,
+      high: Math.max(...weekBars.map(b => b.high)), low: Math.min(...weekBars.map(b => b.low)),
+      close: weekBars[weekBars.length - 1].close, volume: weekBars.reduce((s, b) => s + b.volume, 0),
+    });
+  }
+  return result;
+}
+
+function aggregate1HTo4H(bars: TGMBar[]): TGMBar[] {
+  const result: TGMBar[] = [];
+  for (let i = 0; i < bars.length; i += 4) {
+    const chunk = bars.slice(i, i + 4);
+    if (chunk.length === 0) continue;
+    result.push({
+      time: chunk[chunk.length - 1].time, open: chunk[0].open,
+      high: Math.max(...chunk.map(b => b.high)), low: Math.min(...chunk.map(b => b.low)),
+      close: chunk[chunk.length - 1].close, volume: chunk.reduce((s, b) => s + (b.volume || 0), 0),
+    });
+  }
+  return result;
+}
+
 async function fetchAVTimeSeries(
   symbol: string,
   interval: string = 'daily',
@@ -1207,33 +1254,63 @@ async function processEquitySymbol(symbol: string): Promise<{ apiCalls: number; 
     if (bars.length > 0) {
       await upsertBars(symbol, 'daily', bars);
 
-      // ── Store midpoints for Time Gravity Map ──
+      // ── Store midpoints for Time Gravity Map (multi-TF) ──
       try {
         const processor = getCandleProcessor();
-        const recentBars = bars.slice(-30); // Last 30 daily candles
-        const midpointCount = await processor.processCandleBatch(
-          symbol,
-          'daily',
-          recentBars.map(b => ({
-            time: new Date(b.timestamp),
-            open: b.open,
-            high: b.high,
-            low: b.low,
-            close: b.close,
-            volume: b.volume,
-          })),
-          'equity'
-        );
-        // Also tag midpoints that current price has hit
+        const tgmBars: TGMBar[] = bars.map(b => ({
+          time: new Date(b.timestamp), open: b.open, high: b.high,
+          low: b.low, close: b.close, volume: b.volume,
+        }));
+        const recentBars = tgmBars.slice(-30);
+
+        // Daily midpoints
+        const dailyMPCount = await processor.processCandleBatch(symbol, 'daily', recentBars, 'equity');
+
+        // Weekly midpoints (aggregated from daily — no extra API call)
+        let weeklyMPCount = 0;
+        const weeklyBars = aggregateDailyToWeekly(tgmBars);
+        if (weeklyBars.length > 0) {
+          weeklyMPCount = await processor.processCandleBatch(symbol, '1w', weeklyBars, 'equity');
+        }
+
+        // Tag midpoints that current price has hit
         const latestBar = bars[bars.length - 1];
         if (latestBar) {
           await processor.updateTaggingStatus(symbol, latestBar.high, latestBar.low);
         }
-        if (midpointCount > 0) {
-          console.log(`[worker] ${symbol}: Stored ${midpointCount} midpoints for TGM`);
+
+        const totalMP = dailyMPCount + weeklyMPCount;
+        if (totalMP > 0) {
+          console.log(`[worker] ${symbol}: Stored ${totalMP} TGM midpoints (${dailyMPCount} daily, ${weeklyMPCount} weekly)`);
         }
       } catch (mpErr: any) {
         console.warn(`[worker] ${symbol}: Midpoint storage failed (non-fatal):`, mpErr?.message);
+      }
+
+      // ── Store intraday midpoints for TGM (1H + 4H, 1 extra API call) ──
+      try {
+        const intradayBars = await fetchAVTimeSeries(symbol, '60min', 'compact');
+        apiCalls++;
+        if (intradayBars.length > 0) {
+          const processor = getCandleProcessor();
+          const hourlyTGM: TGMBar[] = intradayBars.map(b => ({
+            time: new Date(b.timestamp), open: b.open, high: b.high,
+            low: b.low, close: b.close, volume: b.volume,
+          }));
+
+          const h1Count = await processor.processCandleBatch(symbol, '1H', hourlyTGM, 'equity');
+          const fourHourBars = aggregate1HTo4H(hourlyTGM);
+          const h4Count = fourHourBars.length > 0
+            ? await processor.processCandleBatch(symbol, '4H', fourHourBars, 'equity')
+            : 0;
+
+          if (h1Count + h4Count > 0) {
+            console.log(`[worker] ${symbol}: Stored ${h1Count + h4Count} intraday TGM midpoints (${h1Count} 1H, ${h4Count} 4H)`);
+          }
+        }
+      } catch (intradayErr: any) {
+        // Non-fatal — daily/weekly midpoints still work
+        console.warn(`[worker] ${symbol}: Intraday midpoint fetch failed (non-fatal):`, intradayErr?.message);
       }
 
       // 3. Compute indicators locally (no API call!)

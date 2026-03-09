@@ -141,7 +141,7 @@ function TargetStatusBanner({ tgm }: { tgm: TimeGravityMap }) {
         </div>
         {tgm.targetPrice && status === 'ACTIVE' && (
           <span className="text-xs text-gray-400">
-            Confidence: {tgm.confidence}%
+            Alignment: {tgm.confidence}%
           </span>
         )}
       </div>

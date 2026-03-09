@@ -198,6 +198,8 @@ Volatility expansion timing via multi-timeframe candle close confluence detectio
 - Decompression windows: 1H (7–9 min into candle, 5x gravity), 4H (9–12 min), 1D (~1hr before close), 1W (2hr before close)
 - Midpoint debt tracking: Untagged midpoints = "debt" seeking repayment (2x gravity multiplier)
 - Midpoint clusters within 0.5% = high-priority Area of Interest
+- **Crypto:** Worker populates daily midpoints on schedule; on-demand API generates 30m/1D/1W from CoinGecko
+- **Equity:** Worker populates daily midpoints only. On-demand API generates 1H/4H/1D/1W from Alpha Vantage (2 API calls, subject to rate limits). **Equity TGM is functional but has thinner multi-TF coverage than crypto until the worker adds intraday equity midpoint ingestion.**
 
 **Decomposition Stack:**
 - Cross-timeframe aggregation: active decompress windows, next TF closes, 50% midpoint levels, pull direction bias
@@ -226,6 +228,7 @@ Volatility expansion timing via multi-timeframe candle close confluence detectio
 - ❌ No market session liquidity overlays (London/NY/Asian session volume patterns)
 
 ### WHAT IS CURRENTLY MISSING
+- **Equity intraday midpoint worker support** — worker only stores daily-TF midpoints for equities; 1H/4H midpoints rely on on-demand Alpha Vantage fetches (rate-limited). Adding 60min ingestion to `processEquitySymbol()` would give equities the same multi-TF gravity map depth as crypto.
 - Session-based liquidity analysis (London open, NY open, Asian close)
 - Historical confluence vs. actual price move correlation reporting
 - Custom cycle period configuration
@@ -251,12 +254,9 @@ The Time Confluence system is itself a confluence tool — it stacks multiple ti
 | **Edge Potential** | **9/10** | If the time confluence thesis holds (that multi-TF close clustering precedes volatility expansion), this is a genuine predictive edge. The decompression window timing adds precision that transforms a directional thesis into a timed entry. |
 | **Overall** | **8.5/10** | |
 
-**Key weakness:** The confidence scoring language needs recalibration. Any system displaying "100% confluence" or similar language creates false certainty. Professional systems express this as:
-- **Probability Score:** P(volatility expansion | confluence ≥ 6) = 72%
-- **Alignment Strength:** 8/10 timeframes aligned (not "100% confident")
-- **Confluence Grade:** EXTREME (score 7+) / HIGH (5-6) / MODERATE (3-4) / LOW (1-2)
+**Key weakness (RESOLVED):** ~~The confidence scoring language needs recalibration.~~ User-facing labels have been updated: "Confidence" → "Alignment" across TimeScannerPage, TimeGravityMapWidget, and TimeGravityMapSection. Engine banners now use "HIGH ALIGNMENT" instead of "HIGH CONFIDENCE". AI prompt text uses "alignment" language. The underlying mathematics are sound and the presentation now matches the probabilistic reality.
 
-The underlying mathematics are sound — the presentation should match the probabilistic reality.
+**Remaining gap:** Equity Time Gravity Map has limited multi-TF depth — the worker only stores daily midpoints for equities. On-demand generation via Alpha Vantage fills the gap but is rate-limited. Adding 1H intraday ingestion to the equity worker path would close this.
 
 ---
 
