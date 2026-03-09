@@ -29,8 +29,7 @@ export default function CryptoTimeConfluenceWidget({
         const result = computeCryptoTimeConfluence();
         setConfluence(result);
         setIsLoading(false);
-      } catch (error) {
-        console.error('Error calculating crypto time confluence:', error);
+      } catch {
         setIsLoading(false);
       }
     };

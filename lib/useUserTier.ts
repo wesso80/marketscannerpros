@@ -77,9 +77,10 @@ export function useUserTier(): TierInfo {
 // Feature access helpers
 export const canAccessBacktest = (tier: UserTier) => tier === "pro_trader";
 export const canAccessBrain = (tier: UserTier) => tier === "pro_trader";
-export const canAccessScanner = (tier: UserTier) => tier === "free" || tier === "pro" || tier === "pro_trader";
+export const canAccessScanner = (tier: UserTier) => tier === "anonymous" || tier === "free" || tier === "pro" || tier === "pro_trader";
 export const canAccessUnlimitedScanning = (tier: UserTier) => tier === "pro" || tier === "pro_trader";
 export const FREE_DAILY_SCAN_LIMIT = 5;
+export const ANONYMOUS_DAILY_SCAN_LIMIT = 3;
 export const canExportCSV = (tier: UserTier) => tier === "pro" || tier === "pro_trader";
 export const canAccessAdvancedJournal = (tier: UserTier) => tier === "pro" || tier === "pro_trader";
 export const canAccessJournal = (tier: UserTier) => tier === "pro" || tier === "pro_trader";

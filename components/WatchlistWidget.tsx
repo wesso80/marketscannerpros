@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useUserTier } from '@/lib/useUserTier';
+import { useRouter } from 'next/navigation';
+import { useUserTier, canExportCSV } from '@/lib/useUserTier';
 import { useRiskPermission } from '@/components/risk/RiskPermissionContext';
 import ConfirmDialog from '@/components/ConfirmDialog';
 
@@ -55,6 +56,7 @@ const ICONS: Record<string, string> = {
 
 export default function WatchlistWidget() {
   const { tier } = useUserTier();
+  const router = useRouter();
   const { isLocked: riskLocked } = useRiskPermission();
   const [watchlists, setWatchlists] = useState<Watchlist[]>([]);
   const [selectedWatchlist, setSelectedWatchlist] = useState<Watchlist | null>(null);
@@ -85,19 +87,6 @@ export default function WatchlistWidget() {
   const [sortMode, setSortMode] = useState<SortMode>('confidence');
   const [compactView, setCompactView] = useState(false);
 
-  const getHeatState = (quote?: QuoteData) => {
-    if (!quote) {
-      return { icon: '🟡', label: 'WAIT', className: 'text-amber-400 border-amber-500/30 bg-amber-500/10' };
-    }
-    if (quote.changePercent >= 1.25) {
-      return { icon: '🟢', label: 'EDGE BUILDING', className: 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' };
-    }
-    if (quote.changePercent <= -1.25) {
-      return { icon: '🔴', label: 'NO TRADE', className: 'text-red-400 border-red-500/30 bg-red-500/10' };
-    }
-    return { icon: '🟡', label: 'WAIT', className: 'text-amber-400 border-amber-500/30 bg-amber-500/10' };
-  };
-
   const launchTool = (tool: 'scan' | 'deep' | 'flow' | 'alert', symbol: string) => {
     const encodedSymbol = encodeURIComponent(symbol);
     const routes = {
@@ -106,7 +95,7 @@ export default function WatchlistWidget() {
       flow: `/tools/options-confluence?symbol=${encodedSymbol}`,
       alert: `/tools/alerts?symbol=${encodedSymbol}`,
     };
-    window.location.href = routes[tool];
+    router.push(routes[tool]);
   };
 
   // Fetch watchlists
@@ -384,7 +373,6 @@ export default function WatchlistWidget() {
   const triggerWatch = ideaRows.filter((row) => row.stage === 'Trigger Watch').length;
   const conflictCount = ideaRows.filter((row) => row.stage === 'Conflict').length;
   const invalidatedCount = ideaRows.filter((row) => row.stage === 'Invalidated').length;
-  const coolingCount = ideaRows.filter((row) => row.momentumState === 'Fading').length;
   const hotSignals = ideaRows.filter((row) => row.edgeTemperature >= 75).length;
 
   const avgChangePercent = items.length > 0
@@ -438,7 +426,7 @@ export default function WatchlistWidget() {
   const runScanAll = () => {
     const first = filteredIdeas[0]?.item?.symbol || items[0]?.symbol;
     if (!first) return;
-    window.location.href = `/tools/scanner?symbol=${encodeURIComponent(first)}`;
+    router.push(`/tools/scanner?symbol=${encodeURIComponent(first)}`);
   };
 
   const runConfluenceCheck = () => {
@@ -738,7 +726,7 @@ export default function WatchlistWidget() {
                         <button onClick={() => launchTool('alert', item.symbol)} className="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-1 text-[10px] font-semibold uppercase text-amber-300">Alert</button>
                       </div>
                       <div className="mt-2 flex items-center gap-2">
-                        <button onClick={() => window.location.href = `/tools/scanner?symbol=${encodeURIComponent(item.symbol)}`} className="flex-1 rounded border border-blue-500/40 bg-blue-500/10 px-2 py-1 text-[10px] font-semibold uppercase text-blue-300">Open Cockpit</button>
+                        <button onClick={() => router.push(`/tools/scanner?symbol=${encodeURIComponent(item.symbol)}`)} className="flex-1 rounded border border-blue-500/40 bg-blue-500/10 px-2 py-1 text-[10px] font-semibold uppercase text-blue-300">Open Cockpit</button>
                         <button onClick={() => removeSymbol(item.id)} className="rounded border border-red-500/40 bg-red-500/10 px-2 py-1 text-[10px] font-semibold uppercase text-red-300">Remove</button>
                       </div>
                     </div>
@@ -750,10 +738,10 @@ export default function WatchlistWidget() {
             <div className="rounded-xl border border-slate-700 bg-slate-900/50 p-3">
               <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-slate-400">Bulk Actions</div>
               <div className="flex flex-wrap gap-2">
-                <button onClick={runScanAll} className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-emerald-300">Scan All Symbols</button>
-                <button onClick={runConfluenceCheck} className="rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-cyan-300">Run Confluence Check</button>
+                <button onClick={runScanAll} className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-emerald-300">Open Scanner</button>
+                <button onClick={runConfluenceCheck} className="rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-cyan-300">Refresh Prices</button>
                 <button onClick={() => setReadyOnly(true)} className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-amber-300">Filter Ready Only</button>
-                <button onClick={exportWatchlist} className="rounded-md border border-purple-500/40 bg-purple-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-purple-300">Export Watchlist</button>
+                <button onClick={exportWatchlist} disabled={!canExportCSV(tier)} title={canExportCSV(tier) ? undefined : 'Pro plan required for CSV export'} className="rounded-md border border-purple-500/40 bg-purple-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-purple-300 disabled:cursor-not-allowed disabled:opacity-50">Export Watchlist</button>
                 <button onClick={() => launchTool('alert', filteredIdeas[0]?.item.symbol || '')} disabled={filteredIdeas.length === 0 || riskLocked} className="rounded-md border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs font-semibold uppercase text-slate-200 disabled:opacity-50">Send Alerts for Ready</button>
               </div>
               {riskLocked && <div className="mt-2 text-[11px] text-rose-300">Send Alerts for Ready is disabled while Tracking Lock is active.</div>}

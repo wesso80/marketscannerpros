@@ -434,7 +434,7 @@ function CryptoCommandCenterContent() {
       {fetchError && (
         <div className="mx-2 mt-2 flex items-center justify-between rounded-md border border-red-500/40 bg-red-900/20 px-4 py-2 text-[13px] text-red-300">
           <span>⚠️ {fetchError}</span>
-          <button onClick={() => setFetchError(null)} className="ml-4 text-red-400 hover:text-white">✕</button>
+          <button type="button" onClick={() => setFetchError(null)} className="ml-4 text-red-400 hover:text-white">✕</button>
         </div>
       )}
       <main className="mx-auto w-full max-w-none space-y-2 px-2 pb-6 pt-3 md:px-3">
@@ -532,6 +532,7 @@ function CryptoCommandCenterContent() {
               <div className="mb-2 grid grid-cols-2 gap-1.5 md:grid-cols-5">
                 {sectionItems.map((item) => (
                   <button
+                    type="button"
                     key={item.id}
                     onClick={() => setActiveSection(item.id)}
                     className={`rounded-md border px-1.5 py-1 text-left ${
@@ -639,6 +640,7 @@ function CryptoCommandCenterContent() {
                 ['data', 'Data Gaps'],
               ] as Array<[LogTab, string]>).map(([id, label]) => (
                 <button
+                  type="button"
                   key={id}
                   onClick={() => setLogTab(id)}
                   className={`rounded-full border px-2 py-0.5 text-[10px] ${

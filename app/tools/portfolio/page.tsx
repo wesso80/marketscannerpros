@@ -547,7 +547,6 @@ function PortfolioContent() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [showAiAnalysis, setShowAiAnalysis] = useState(true);
-  const [showAnalyticsLayer, setShowAnalyticsLayer] = useState(false);
   const [aiAutoRequested, setAiAutoRequested] = useState(false);
 
   // Price update helpers
@@ -1660,10 +1659,33 @@ function PortfolioContent() {
     ? [...positions].sort((a, b) => a.plPercent - b.plPercent)[0]
     : null;
 
+  if (tier === 'anonymous') {
+    return (
+      <div className="min-h-screen bg-[var(--msp-bg)]">
+        <main className="pt-6 pb-16">
+          <div className="mx-auto max-w-none px-4 sm:px-6 lg:px-8">
+            <div className="mb-8">
+              <h1 className="mb-2 text-3xl font-bold text-white">Portfolio Tracking</h1>
+              <p className="text-slate-400">Track live prices, modeled allocation, and performance in real-time (educational mode).</p>
+            </div>
+            <div className="mx-auto max-w-md rounded-xl border border-slate-700 bg-slate-900/80 p-8 text-center">
+              <div className="mb-4 text-4xl">🔒</div>
+              <h2 className="mb-2 text-xl font-bold text-white">Sign in to access Portfolio</h2>
+              <p className="mb-6 text-sm text-slate-400">Track positions, performance, and risk by signing in with your MarketScanner Pros account.</p>
+              <Link href="/login" className="inline-block rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500 transition-colors">
+                Sign In
+              </Link>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   if (!mounted) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--msp-bg)]">
-        <div className="text-base text-slate-400">Loading portfolio...</div>
+        <div className="h-12 w-12 animate-spin rounded-full border-t-2 border-b-2 border-emerald-500" />
       </div>
     );
   }
@@ -2523,15 +2545,8 @@ function PortfolioContent() {
 export default function PortfolioPage() {
   return (
     <Suspense fallback={
-      <div style={{ 
-        minHeight: '100vh', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        background: '#1e293b',
-        color: '#f1f5f9'
-      }}>
-        Loading portfolio...
+      <div className="flex min-h-screen items-center justify-center bg-[var(--msp-bg)]">
+        <div className="h-12 w-12 animate-spin rounded-full border-t-2 border-b-2 border-emerald-500" />
       </div>
     }>
       <PortfolioContent />

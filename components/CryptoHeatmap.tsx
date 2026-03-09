@@ -140,7 +140,7 @@ export default function CryptoHeatmap() {
     return (
       <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-6">
         <p className="text-red-400">{error}</p>
-        <button onClick={fetchCryptoData} className="mt-2 text-emerald-400 hover:text-emerald-300 text-sm">
+        <button type="button" onClick={fetchCryptoData} className="mt-2 text-emerald-400 hover:text-emerald-300 text-sm">
           Try again
         </button>
       </div>
@@ -172,6 +172,7 @@ export default function CryptoHeatmap() {
             <span className="text-xs text-slate-400">Sort:</span>
             <div className="flex bg-slate-900/50 rounded-lg p-1">
               <button
+                type="button"
                 onClick={() => setSortBy('weight')}
                 className={`px-3 py-1 text-xs rounded transition-all ${
                   sortBy === 'weight'
@@ -182,6 +183,7 @@ export default function CryptoHeatmap() {
                 Market Cap
               </button>
               <button
+                type="button"
                 onClick={() => setSortBy('change')}
                 className={`px-3 py-1 text-xs rounded transition-all ${
                   sortBy === 'change'

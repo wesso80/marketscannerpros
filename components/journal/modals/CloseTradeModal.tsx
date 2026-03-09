@@ -109,50 +109,72 @@ export default function CloseTradeModal({ open, trade, onClose, onSubmit }: Clos
         )}
 
         <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-          <input id="close-exit-price" name="exitPrice" value={exitPrice} onChange={(event) => setExitPrice(event.target.value)} placeholder="Exit price" className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100" />
-          <input id="close-exit-ts" name="exitTs" type="datetime-local" value={exitTs} onChange={(event) => setExitTs(event.target.value)} className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100" />
+          <div>
+            <label htmlFor="close-exit-price" className="block text-xs font-medium text-slate-400 mb-1">Exit Price *</label>
+            <input id="close-exit-price" name="exitPrice" value={exitPrice} onChange={(event) => setExitPrice(event.target.value)} placeholder="Exit price" aria-required="true" className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100" />
+          </div>
+          <div>
+            <label htmlFor="close-exit-ts" className="block text-xs font-medium text-slate-400 mb-1">Exit Date/Time *</label>
+            <input id="close-exit-ts" name="exitTs" type="datetime-local" value={exitTs} onChange={(event) => setExitTs(event.target.value)} aria-required="true" className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100" />
+          </div>
 
-          <select value={closeReason} onChange={(event) => setCloseReason(event.target.value as typeof closeReason)} className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100">
-            <option value="tp">tp</option>
-            <option value="sl">sl</option>
-            <option value="time">time</option>
-            <option value="manual">manual</option>
-            <option value="invalid">invalid</option>
-            <option value="signal_flip">signal_flip</option>
-            <option value="risk_off">risk_off</option>
-          </select>
+          <div>
+            <label htmlFor="close-reason" className="block text-xs font-medium text-slate-400 mb-1">Close Reason *</label>
+            <select id="close-reason" value={closeReason} onChange={(event) => setCloseReason(event.target.value as typeof closeReason)} aria-required="true" className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100">
+              <option value="tp">tp</option>
+              <option value="sl">sl</option>
+              <option value="time">time</option>
+              <option value="manual">manual</option>
+              <option value="invalid">invalid</option>
+              <option value="signal_flip">signal_flip</option>
+              <option value="risk_off">risk_off</option>
+            </select>
+          </div>
 
-          <select value={outcome} onChange={(event) => setOutcome(event.target.value as typeof outcome)} className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100">
-            <option value="win">win</option>
-            <option value="loss">loss</option>
-            <option value="scratch">scratch</option>
-            <option value="breakeven">breakeven</option>
-          </select>
+          <div>
+            <label htmlFor="close-outcome" className="block text-xs font-medium text-slate-400 mb-1">Outcome *</label>
+            <select id="close-outcome" value={outcome} onChange={(event) => setOutcome(event.target.value as typeof outcome)} aria-required="true" className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100">
+              <option value="win">win</option>
+              <option value="loss">loss</option>
+              <option value="scratch">scratch</option>
+              <option value="breakeven">breakeven</option>
+            </select>
+          </div>
 
-          <select value={setupQuality} onChange={(event) => setSetupQuality(event.target.value as typeof setupQuality)} className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100">
-            <option value="A">A</option>
-            <option value="B">B</option>
-            <option value="C">C</option>
-            <option value="D">D</option>
-          </select>
+          <div>
+            <label htmlFor="close-setup-quality" className="block text-xs font-medium text-slate-400 mb-1">Setup Quality *</label>
+            <select id="close-setup-quality" value={setupQuality} onChange={(event) => setSetupQuality(event.target.value as typeof setupQuality)} aria-required="true" className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100">
+              <option value="A">A</option>
+              <option value="B">B</option>
+              <option value="C">C</option>
+              <option value="D">D</option>
+            </select>
+          </div>
 
-          <select value={errorType} onChange={(event) => setErrorType(event.target.value as typeof errorType)} className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100">
-            {['none', 'entry_early', 'entry_late', 'no_stop', 'oversize', 'ignored_signal', 'bad_liquidity', 'chop', 'news_spike', 'emotion', 'unknown'].map((value) => (
-              <option key={value} value={value}>{value}</option>
-            ))}
-          </select>
+          <div>
+            <label htmlFor="close-error-type" className="block text-xs font-medium text-slate-400 mb-1">Error Type</label>
+            <select id="close-error-type" value={errorType} onChange={(event) => setErrorType(event.target.value as typeof errorType)} className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100">
+              {['none', 'entry_early', 'entry_late', 'no_stop', 'oversize', 'ignored_signal', 'bad_liquidity', 'chop', 'news_spike', 'emotion', 'unknown'].map((value) => (
+                <option key={value} value={value}>{value}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        <label className="mt-3 flex items-center gap-2 text-sm text-slate-200">
+        <label htmlFor="close-followed-plan" className="mt-3 flex items-center gap-2 text-sm text-slate-200">
           <input id="close-followed-plan" name="followedPlan" type="checkbox" checked={followedPlan} onChange={(event) => setFollowedPlan(event.target.checked)} />
           Followed plan
         </label>
 
-        <textarea value={reviewText} onChange={(event) => setReviewText(event.target.value)} placeholder="Review text (optional)" className="mt-3 min-h-20 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100" />
+        <div className="mt-3">
+          <label htmlFor="close-review-text" className="block text-xs font-medium text-slate-400 mb-1">Review Notes</label>
+          <textarea id="close-review-text" value={reviewText} onChange={(event) => setReviewText(event.target.value)} placeholder="Review text (optional)" className="min-h-20 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100" />
+        </div>
 
         <div className="mt-4 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded bg-white/10 px-3 py-2 text-sm text-slate-100">Cancel</button>
+          <button type="button" onClick={onClose} className="rounded bg-white/10 px-3 py-2 text-sm text-slate-100">Cancel</button>
           <button
+            type="button"
             disabled={!canSubmit}
             onClick={() => onSubmit({
               exitPrice: Number(exitPrice),

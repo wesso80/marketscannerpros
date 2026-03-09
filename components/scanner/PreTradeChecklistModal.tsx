@@ -61,12 +61,14 @@ export function PreTradeChecklistModal({ visible, symbol, checklist, onChange, o
         </div>
         <div className="mt-3 flex gap-2">
           <button
+            type="button"
             onClick={onCancel}
             className="h-9 flex-1 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 text-[0.7rem] font-extrabold uppercase text-[var(--msp-text-muted)]"
           >
             Cancel
           </button>
           <button
+            type="button"
             onClick={onConfirm}
             disabled={!allChecked}
             className="msp-btn-elite-primary h-9 flex-1 px-3 text-[0.7rem] font-extrabold uppercase disabled:opacity-50"

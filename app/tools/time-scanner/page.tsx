@@ -27,8 +27,7 @@ export default function TimeScannerPage() {
         const demoMidpoints = generateDemoMidpoints(currentPrice);
         setMidpoints(demoMidpoints);
       }
-    } catch (error) {
-      console.error('Failed to load demo data:', error);
+    } catch {
       // Fallback to local demo data
       setMidpoints(generateDemoMidpoints(currentPrice));
     } finally {
@@ -56,8 +55,9 @@ export default function TimeScannerPage() {
           <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Symbol</label>
+                <label htmlFor="ts-symbol" className="block text-sm text-gray-400 mb-2">Symbol</label>
                 <input
+                  id="ts-symbol"
                   type="text"
                   value={symbol}
                   onChange={(e) => setSymbol(e.target.value.toUpperCase())}
@@ -67,8 +67,9 @@ export default function TimeScannerPage() {
               </div>
               
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Current Price</label>
+                <label htmlFor="ts-price" className="block text-sm text-gray-400 mb-2">Current Price</label>
                 <input
+                  id="ts-price"
                   type="number"
                   value={currentPrice}
                   onChange={(e) => setCurrentPrice(parseFloat(e.target.value))}
@@ -79,6 +80,7 @@ export default function TimeScannerPage() {
               
               <div className="flex items-end">
                 <button
+                  type="button"
                   onClick={loadDemoData}
                   disabled={loading}
                   className="w-full bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-700 text-white font-semibold py-2 px-4 rounded transition-colors"

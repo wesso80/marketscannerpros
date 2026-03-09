@@ -223,11 +223,8 @@ function AlertsContent() {
 
   if (isLoading || loadingData) {
     return (
-      <div className="max-w-none mx-auto px-4 py-8">
-        <div className="animate-pulse">
-          <div className="h-8 bg-slate-700 rounded w-1/3 mb-4"></div>
-          <div className="h-64 bg-slate-800 rounded"></div>
-        </div>
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
       </div>
     );
   }
@@ -248,21 +245,21 @@ function AlertsContent() {
           </div>
 
           <div className="flex flex-wrap justify-start gap-2 lg:justify-end">
-            <div className="inline-flex rounded-lg border border-slate-700 bg-slate-950/30 p-1">
-              <button onClick={() => { setActiveZone4Tab('basic'); setZone4Open(true); }} className={`h-7 rounded-md px-2 text-[11px] font-semibold ${activeZone4Tab === 'basic' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>
+            <div className="inline-flex rounded-lg border border-slate-700 bg-slate-950/30 p-1" role="tablist" aria-label="Alert type">
+              <button type="button" role="tab" aria-selected={activeZone4Tab === 'basic'} onClick={() => { setActiveZone4Tab('basic'); setZone4Open(true); }} className={`h-7 rounded-md px-2 text-[11px] font-semibold ${activeZone4Tab === 'basic' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>
                 Basic
               </button>
-              <button onClick={() => { setActiveZone4Tab('strategy'); setZone4Open(true); }} className={`h-7 rounded-md px-2 text-[11px] font-semibold ${activeZone4Tab === 'strategy' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>
+              <button type="button" role="tab" aria-selected={activeZone4Tab === 'strategy'} onClick={() => { setActiveZone4Tab('strategy'); setZone4Open(true); }} className={`h-7 rounded-md px-2 text-[11px] font-semibold ${activeZone4Tab === 'strategy' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>
                 Strategy
               </button>
-              <button onClick={() => { setActiveZone4Tab('multi'); setZone4Open(true); }} className={`h-7 rounded-md px-2 text-[11px] font-semibold ${activeZone4Tab === 'multi' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>
+              <button type="button" role="tab" aria-selected={activeZone4Tab === 'multi'} onClick={() => { setActiveZone4Tab('multi'); setZone4Open(true); }} className={`h-7 rounded-md px-2 text-[11px] font-semibold ${activeZone4Tab === 'multi' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>
                 Multi
               </button>
             </div>
-            <button onClick={() => { setActiveZone4Tab('basic'); setZone4Open(true); }} disabled={riskLocked} className="rounded-xl border border-slate-700 bg-slate-950/40 px-3 py-2 text-xs font-semibold text-slate-100 disabled:opacity-50">
+            <button type="button" onClick={() => { setActiveZone4Tab('basic'); setZone4Open(true); }} disabled={riskLocked} className="rounded-xl border border-slate-700 bg-slate-950/40 px-3 py-2 text-xs font-semibold text-slate-100 disabled:opacity-50">
               Quick Alert
             </button>
-            <button onClick={() => { setActiveZone4Tab('multi'); setZone4Open(true); }} disabled={riskLocked} className="rounded-xl border border-emerald-500/30 bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-200 disabled:opacity-50">
+            <button type="button" onClick={() => { setActiveZone4Tab('multi'); setZone4Open(true); }} disabled={riskLocked} className="rounded-xl border border-emerald-500/30 bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-200 disabled:opacity-50">
               + New Alert
             </button>
           </div>
@@ -276,11 +273,11 @@ function AlertsContent() {
 
       <section className="rounded-xl border border-slate-800 bg-slate-900/30 p-3 md:p-4">
         <div className="mb-3 flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="inline-flex h-9 rounded-lg border border-slate-700 bg-slate-950/30 p-1">
-            <button onClick={() => setConsoleTab('basic')} className={`h-7 rounded-md px-3 text-xs font-semibold ${consoleTab === 'basic' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>Basic</button>
-            <button onClick={() => setConsoleTab('strategy')} className={`h-7 rounded-md px-3 text-xs font-semibold ${consoleTab === 'strategy' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>Strategy</button>
-            <button onClick={() => setConsoleTab('smart')} className={`h-7 rounded-md px-3 text-xs font-semibold ${consoleTab === 'smart' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>Smart</button>
-            <button onClick={() => setConsoleTab('triggered')} className={`h-7 rounded-md px-3 text-xs font-semibold ${consoleTab === 'triggered' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>Triggered</button>
+          <div className="inline-flex h-9 rounded-lg border border-slate-700 bg-slate-950/30 p-1" role="tablist" aria-label="Alert filter">
+            <button type="button" role="tab" aria-selected={consoleTab === 'basic'} onClick={() => setConsoleTab('basic')} className={`h-7 rounded-md px-3 text-xs font-semibold ${consoleTab === 'basic' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>Basic</button>
+            <button type="button" role="tab" aria-selected={consoleTab === 'strategy'} onClick={() => setConsoleTab('strategy')} className={`h-7 rounded-md px-3 text-xs font-semibold ${consoleTab === 'strategy' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>Strategy</button>
+            <button type="button" role="tab" aria-selected={consoleTab === 'smart'} onClick={() => setConsoleTab('smart')} className={`h-7 rounded-md px-3 text-xs font-semibold ${consoleTab === 'smart' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>Smart</button>
+            <button type="button" role="tab" aria-selected={consoleTab === 'triggered'} onClick={() => setConsoleTab('triggered')} className={`h-7 rounded-md px-3 text-xs font-semibold ${consoleTab === 'triggered' ? 'bg-white/10 text-white' : 'text-slate-300 hover:text-white'}`}>Triggered</button>
           </div>
           <div className="text-xs text-slate-400">{alertRows.length} shown</div>
         </div>
@@ -308,9 +305,9 @@ function AlertsContent() {
                           <span className={`rounded-full px-2 py-0.5 text-[11px] ${status === 'Armed' ? 'bg-emerald-500/15 text-emerald-200' : status === 'Cooldown' ? 'bg-amber-500/15 text-amber-200' : 'bg-slate-700 text-slate-300'}`}>
                             {status}
                           </span>
-                          <button onClick={() => editAlert(alert)} className="rounded bg-indigo-500/15 px-2 py-1 text-[11px] text-indigo-200">Edit</button>
-                          <button onClick={() => void toggleAlert(alert)} className="rounded bg-white/10 px-2 py-1 text-[11px] text-slate-100">{alert.is_active ? 'Pause' : 'Arm'}</button>
-                          <button onClick={() => void deleteAlert(alert.id)} className="rounded bg-rose-500/15 px-2 py-1 text-[11px] text-rose-200">Delete</button>
+                          <button type="button" onClick={() => editAlert(alert)} className="rounded bg-indigo-500/15 px-2 py-1 text-[11px] text-indigo-200">Edit</button>
+                          <button type="button" onClick={() => void toggleAlert(alert)} className="rounded bg-white/10 px-2 py-1 text-[11px] text-slate-100">{alert.is_active ? 'Pause' : 'Arm'}</button>
+                          <button type="button" onClick={() => void deleteAlert(alert.id)} className="rounded bg-rose-500/15 px-2 py-1 text-[11px] text-rose-200">Delete</button>
                         </div>
                       </div>
                     </div>
@@ -338,23 +335,23 @@ function AlertsContent() {
 
       <section className="space-y-3">
         <details className="rounded-xl border border-slate-800 bg-slate-900/25" open={zone3Open}>
-          <summary onClick={(e) => { e.preventDefault(); setZone3Open((v) => !v); }} className="flex cursor-pointer list-none items-center justify-between px-4 py-3">
+          <summary onClick={(e) => { e.preventDefault(); setZone3Open((v) => !v); }} className="flex cursor-pointer list-none items-center justify-between px-4 py-3" aria-expanded={zone3Open}>
             <div>
               <div className="text-sm font-semibold text-slate-100">Trigger Log + Intelligence</div>
               <div className="text-xs text-slate-400">Live educational tracking outcomes and response behavior</div>
             </div>
-            <button className="h-7 rounded-lg border border-slate-700 bg-slate-950/30 px-2 text-xs text-slate-300">{zone3Open ? 'Collapse' : 'Expand'}</button>
+            <span className="h-7 rounded-lg border border-slate-700 bg-slate-950/30 px-2 text-xs leading-7 text-slate-300">{zone3Open ? 'Collapse' : 'Expand'}</span>
           </summary>
           <div className="border-t border-slate-800 px-4 py-3">
             <div className="max-h-[420px] overflow-auto rounded-lg border border-slate-800">
               <table className="min-w-[540px] w-full text-sm">
                 <thead className="sticky top-0 z-10 bg-[#0b1220]/95 text-slate-300 backdrop-blur">
                   <tr>
-                    <th className="px-3 py-2 text-left">Time</th>
-                    <th className="px-3 py-2 text-left">Symbol</th>
-                    <th className="px-3 py-2 text-left">Condition</th>
-                    <th className="px-3 py-2 text-left">Action Taken</th>
-                    <th className="px-3 py-2 text-left">Result</th>
+                    <th scope="col" className="px-3 py-2 text-left">Time</th>
+                    <th scope="col" className="px-3 py-2 text-left">Symbol</th>
+                    <th scope="col" className="px-3 py-2 text-left">Condition</th>
+                    <th scope="col" className="px-3 py-2 text-left">Action Taken</th>
+                    <th scope="col" className="px-3 py-2 text-left">Result</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -379,12 +376,12 @@ function AlertsContent() {
         </details>
 
         <details className="rounded-xl border border-slate-800 bg-slate-900/25" open={zone4Open}>
-          <summary onClick={(e) => { e.preventDefault(); setZone4Open((v) => !v); }} className="flex cursor-pointer list-none items-center justify-between px-4 py-3">
+          <summary onClick={(e) => { e.preventDefault(); setZone4Open((v) => !v); }} className="flex cursor-pointer list-none items-center justify-between px-4 py-3" aria-expanded={zone4Open}>
             <div>
               <div className="text-sm font-semibold text-slate-100">Alert Capabilities</div>
               <div className="text-xs text-slate-400">Feature set and plan limits (collapsed by default)</div>
             </div>
-            <button className="h-7 rounded-lg border border-slate-700 bg-slate-950/30 px-2 text-xs text-slate-300">{zone4Open ? 'Collapse' : 'Expand'}</button>
+            <span className="h-7 rounded-lg border border-slate-700 bg-slate-950/30 px-2 text-xs leading-7 text-slate-300">{zone4Open ? 'Collapse' : 'Expand'}</span>
           </summary>
           <div className="space-y-4 border-t border-slate-800 px-4 py-3">
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -422,9 +419,9 @@ function AlertsContent() {
 
             <div className="rounded-xl border border-slate-800 bg-slate-950/30 p-3">
               <div className="mb-2 flex flex-wrap gap-2">
-                <button onClick={() => setActiveZone4Tab('basic')} className={`rounded-lg px-3 py-1.5 text-xs ${activeZone4Tab === 'basic' ? 'bg-emerald-500/15 text-emerald-200' : 'bg-white/10 text-slate-200'}`}>Basic</button>
-                <button onClick={() => setActiveZone4Tab('strategy')} className={`rounded-lg px-3 py-1.5 text-xs ${activeZone4Tab === 'strategy' ? 'bg-indigo-500/15 text-indigo-200' : 'bg-white/10 text-slate-200'}`}>Strategy</button>
-                <button onClick={() => setActiveZone4Tab('multi')} className={`rounded-lg px-3 py-1.5 text-xs ${activeZone4Tab === 'multi' ? 'bg-purple-500/15 text-purple-200' : 'bg-white/10 text-slate-200'}`}>Multi</button>
+                <button type="button" onClick={() => setActiveZone4Tab('basic')} className={`rounded-lg px-3 py-1.5 text-xs ${activeZone4Tab === 'basic' ? 'bg-emerald-500/15 text-emerald-200' : 'bg-white/10 text-slate-200'}`}>Basic</button>
+                <button type="button" onClick={() => setActiveZone4Tab('strategy')} className={`rounded-lg px-3 py-1.5 text-xs ${activeZone4Tab === 'strategy' ? 'bg-indigo-500/15 text-indigo-200' : 'bg-white/10 text-slate-200'}`}>Strategy</button>
+                <button type="button" onClick={() => setActiveZone4Tab('multi')} className={`rounded-lg px-3 py-1.5 text-xs ${activeZone4Tab === 'multi' ? 'bg-purple-500/15 text-purple-200' : 'bg-white/10 text-slate-200'}`}>Multi</button>
               </div>
               <AlertsWidget compact={false} className="!border-slate-800 !bg-transparent" />
             </div>
@@ -451,11 +448,8 @@ export default function AlertsPage() {
         <RegimeBanner />
       </div>
       <Suspense fallback={
-        <div className="max-w-none mx-auto px-4 py-8">
-          <div className="animate-pulse">
-            <div className="h-8 bg-slate-700 rounded w-1/3 mb-4"></div>
-            <div className="h-64 bg-slate-800 rounded"></div>
-          </div>
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
         </div>
       }>
         <AlertsContent />

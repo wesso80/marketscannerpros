@@ -596,6 +596,7 @@ export default function MarketMoversPage() {
                       ['active', 'Most Active'],
                     ] as Array<[MoverTab, string]>).map(([id, label]) => (
                       <button
+                        type="button"
                         key={id}
                         onClick={() => setActiveTab(id)}
                         className={`rounded-full border px-2 py-0.5 text-[10px] ${
@@ -617,6 +618,7 @@ export default function MarketMoversPage() {
                     ['momentum', 'Early Momentum Expansion'],
                   ] as Array<[SetupMode, string]>).map(([id, label]) => (
                     <button
+                      type="button"
                       key={id}
                       onClick={() => setSetupMode(id)}
                       className={`rounded-full border px-2 py-0.5 text-[10px] ${
@@ -838,6 +840,7 @@ export default function MarketMoversPage() {
                     ['data', 'Data Gaps'],
                   ] as Array<[LogTab, string]>).map(([id, label]) => (
                     <button
+                      type="button"
                       key={id}
                       onClick={() => setLogTab(id)}
                       className={`rounded-full border px-2 py-0.5 text-[10px] ${

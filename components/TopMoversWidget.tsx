@@ -136,6 +136,7 @@ export default function TopMoversWidget() {
         <div style={{ display: 'flex', gap: '4px' }}>
           {(['1h', '24h', '7d'] as const).map((d) => (
             <button
+              type="button"
               key={d}
               onClick={() => setDuration(d)}
               style={{
@@ -166,6 +167,7 @@ export default function TopMoversWidget() {
         borderRadius: '8px'
       }}>
         <button
+          type="button"
           onClick={() => setView('gainers')}
           style={{
             flex: 1,
@@ -183,6 +185,7 @@ export default function TopMoversWidget() {
           🟢 Gainers
         </button>
         <button
+          type="button"
           onClick={() => setView('losers')}
           style={{
             flex: 1,

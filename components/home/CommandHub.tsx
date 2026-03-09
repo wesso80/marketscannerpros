@@ -1,6 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
+import Hero from './Hero';
+import SocialProof from './SocialProof';
+import WhyMSP from './WhyMSP';
 
 // Safe import — avoid throwing during static prerender when provider is absent
 function useSafeRiskLocked(): boolean {
@@ -189,6 +193,7 @@ function SmallTile({
 /* ─── Main Component ─── */
 export default function CommandHub() {
   const riskLocked = useSafeRiskLocked();
+  const [showAllTools, setShowAllTools] = useState(false);
   const lockSensitiveTools = new Set([
     '/operator',
     '/tools/scanner',
@@ -199,91 +204,82 @@ export default function CommandHub() {
     '/tools/alerts',
   ]);
 
+  const visibleTools = showAllTools ? secondaryTools : secondaryTools.slice(0, 8);
+
   return (
     <main className="min-h-screen bg-[var(--msp-bg)] text-white">
-      {/* ─── Full-Width Hero Image ─── */}
-      <section className="relative w-full border-b border-white/5">
-        <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent" />
-        <img
-          src="/logos/landing-hero.png"
-          alt="MarketScannerPros — See The Market Before It Moves"
-          className="mx-auto block w-[85%] rounded-lg"
-        />
-      </section>
+      {/* ─── Coded Hero ─── */}
+      <Hero />
 
-      {/* ─── ARCxA Intelligence Engine ─── */}
-      <section className="relative overflow-hidden border-b border-white/5">
-        {/* Red radial glow behind chip */}
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-red-500/[0.07] blur-3xl" />
-        </div>
+      {/* ─── Stats Bar ─── */}
+      <SocialProof />
 
-        <div className="relative mx-auto flex max-w-4xl flex-col items-center px-4 py-6 text-center md:py-8">
-          {/* Chip icon */}
-          <div className="relative mb-3">
-            <div className="absolute -inset-3 animate-pulse rounded-full bg-red-500/10 blur-xl" />
-            <img
-              src="/logos/arcxa-chip.png"
-              alt="ARCxA Intelligence Engine"
-              className="relative h-16 w-auto rounded-lg drop-shadow-[0_0_30px_rgba(239,68,68,0.5)] md:h-20"
-            />
-          </div>
-
-          {/* Title */}
-          <h2 className="text-xl font-bold tracking-tight text-white md:text-2xl">
-            <span className="text-red-400">ARCxA</span> Intelligence Engine
-          </h2>
-
-          <p className="mx-auto mt-2 max-w-lg text-xs leading-relaxed text-slate-400 md:text-sm">
-            The AI processing core behind MarketScannerPros.<br />
-            Multi-asset analysis · Multi-timeframe confluence · Institutional signal detection.
-          </p>
-
-          {/* Architecture diagram */}
-          <div className="mt-5 w-full max-w-lg">
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <span className="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-[11px] font-semibold text-slate-300">Time Engine</span>
-              <span className="hidden text-slate-600 sm:inline">│</span>
-              <span className="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-[11px] font-semibold text-slate-300">Options Flow</span>
-              <span className="hidden text-slate-600 sm:inline">│</span>
-              <span className="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-[11px] font-semibold text-slate-300">Market Scanner</span>
-              <span className="hidden text-slate-600 sm:inline">│</span>
-              <span className="rounded-md border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-[11px] font-semibold text-slate-300">AI Analyst</span>
-            </div>
-            <div className="mx-auto mt-2 h-4 w-px bg-gradient-to-b from-slate-600 to-transparent" />
-            <div className="mx-auto mt-0 flex items-center justify-center">
-              <span className="rounded-md border border-red-500/30 bg-red-500/10 px-4 py-1.5 text-[11px] font-bold tracking-wide text-red-400">
-                Institutional Decision Engine
-              </span>
-            </div>
-          </div>
-
-          <Link
-            href="/tools/options-confluence"
-            className="mt-4 inline-flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-xs font-semibold text-red-400 transition hover:bg-red-500/20 hover:text-red-300"
-          >
-            Explore the AI Engine <span>→</span>
-          </Link>
-        </div>
-      </section>
-
-      {/* ─── Content ─── */}
-      <div className="mx-auto w-full max-w-7xl space-y-8 px-4 pb-16 pt-8 md:px-6">
-        {/* Featured Scanners — 4 big tiles */}
+      {/* ─── Core Scanners ─── */}
+      <div className="mx-auto w-full max-w-7xl px-4 pb-4 pt-12 md:px-6">
         <section>
-          <h2 className="mb-4 text-lg font-semibold text-slate-100">Core Scanners</h2>
+          <h2 className="mb-6 text-2xl font-bold text-white">Core Scanners</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {featuredTools.map((tool) => (
               <FeaturedTile key={tool.href} {...tool} />
             ))}
           </div>
         </section>
+      </div>
 
-        {/* All other tools — smaller tiles */}
+      {/* ─── Why MSP ─── */}
+      <WhyMSP />
+
+      {/* ─── ARCxA Intelligence Engine (rewritten) ─── */}
+      <section className="relative overflow-hidden border-b border-white/5">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/[0.05] blur-3xl" />
+        </div>
+
+        <div className="relative mx-auto flex max-w-4xl flex-col items-center px-4 py-10 text-center md:py-14">
+          <div className="relative mb-4">
+            <div className="absolute -inset-3 animate-pulse rounded-full bg-emerald-500/10 blur-xl" />
+            <img
+              src="/logos/arcxa-chip.png"
+              alt="ARCxA Intelligence Engine"
+              className="relative h-16 w-auto rounded-lg drop-shadow-[0_0_30px_rgba(16,185,129,0.4)] md:h-20"
+              loading="lazy"
+            />
+          </div>
+
+          <h2 className="text-2xl font-bold tracking-tight text-white md:text-3xl">
+            Powered by <span className="text-emerald-400">ARCxA</span>
+          </h2>
+
+          <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-slate-400 md:text-base">
+            Our AI engine analyzes 10,000+ assets across multiple timeframes to surface
+            high-probability setups — combining institutional signals, options flow,
+            and market structure so you don&apos;t have to.
+          </p>
+
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-xs text-slate-500">
+            <span>Works across</span>
+            <span className="rounded-md border border-slate-700/60 bg-slate-900/40 px-2.5 py-1 font-medium text-slate-300">Equities</span>
+            <span className="rounded-md border border-slate-700/60 bg-slate-900/40 px-2.5 py-1 font-medium text-slate-300">Crypto</span>
+            <span className="rounded-md border border-slate-700/60 bg-slate-900/40 px-2.5 py-1 font-medium text-slate-300">Options</span>
+            <span className="rounded-md border border-slate-700/60 bg-slate-900/40 px-2.5 py-1 font-medium text-slate-300">Forex</span>
+            <span className="rounded-md border border-slate-700/60 bg-slate-900/40 px-2.5 py-1 font-medium text-slate-300">Commodities</span>
+          </div>
+
+          <Link
+            href="/tools/options-confluence"
+            className="mt-6 inline-flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-5 py-2.5 text-sm font-semibold text-emerald-400 transition hover:bg-emerald-500/20 hover:text-emerald-300"
+          >
+            Explore the AI Engine <span>→</span>
+          </Link>
+        </div>
+      </section>
+
+      {/* ─── Platform Tools (collapsible) ─── */}
+      <div className="mx-auto w-full max-w-7xl space-y-4 px-4 pb-8 pt-10 md:px-6">
         <section>
-          <h2 className="mb-4 text-lg font-semibold text-slate-100">Platform Tools</h2>
+          <h2 className="mb-6 text-2xl font-bold text-white">Platform Tools</h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {secondaryTools.map((tool) => (
+            {visibleTools.map((tool) => (
               <SmallTile
                 key={tool.href}
                 {...tool}
@@ -291,8 +287,43 @@ export default function CommandHub() {
               />
             ))}
           </div>
+          {!showAllTools && secondaryTools.length > 8 && (
+            <div className="mt-6 flex justify-center">
+              <button
+                onClick={() => setShowAllTools(true)}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800/50 px-6 py-2.5 text-sm font-semibold text-slate-300 transition hover:border-slate-600 hover:bg-slate-800 hover:text-white"
+              >
+                View All {secondaryTools.length} Tools
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            </div>
+          )}
         </section>
       </div>
+
+      {/* ─── Bottom CTA ─── */}
+      <section className="border-t border-white/5 bg-gradient-to-b from-slate-950 to-[var(--msp-bg)]">
+        <div className="mx-auto flex max-w-2xl flex-col items-center px-4 py-14 text-center md:py-20">
+          <h2 className="text-2xl font-bold text-white md:text-3xl">
+            Ready to find your edge?
+          </h2>
+          <p className="mt-3 text-sm text-slate-400 md:text-base">
+            Join traders using institutional-grade scanning to find high-probability setups faster.
+          </p>
+          <Link
+            href="/pricing"
+            className="mt-8 inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-8 py-3.5 text-base font-bold text-white shadow-lg shadow-emerald-500/25 transition-all hover:bg-emerald-400 hover:shadow-emerald-500/40 hover:scale-[1.02] active:scale-[0.98]"
+          >
+            Get Started Free
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </Link>
+          <p className="mt-3 text-xs text-slate-500">No credit card required · Free tier available</p>
+        </div>
+      </section>
     </main>
   );
 }

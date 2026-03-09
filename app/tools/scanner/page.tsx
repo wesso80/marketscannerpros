@@ -278,6 +278,8 @@ function ScannerContent() {
   // Risk block modal (shown when governor returns BLOCK on deploy)
   const [showRiskBlockModal, setShowRiskBlockModal] = useState(false);
   const [riskBlockReason, setRiskBlockReason] = useState<string>('');
+  // Flash message (replaces native alert())
+  const [flashMsg, setFlashMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   // Behavioral overtrading screen
   const [showBehavioralScreen, setShowBehavioralScreen] = useState(false);
   const [behavioralScreenData, setBehavioralScreenData] = useState<{ tradesToday: number; avgTradesPerSession: number } | null>(null);
@@ -995,9 +997,6 @@ function ScannerContent() {
 
       if (data.success && data.results?.length > 0) {
         incrementDailyScan();
-        console.log('Scanner API Response:', data.results[0]);
-        console.log('ATR value:', data.results[0].atr, 'isFinite:', Number.isFinite(data.results[0].atr));
-        console.log('Candle time:', data.results[0].lastCandleTime);
         const scanResult = data.results[0] as ScanResult;
         // If navigated from bulk scan row, use the bulk scan's direction for consistency
         if (bulkPickDirectionRef.current) {
@@ -1191,7 +1190,6 @@ function ScannerContent() {
 
   const executeRankCandidateDeploy = async (pick: any) => {
     if (guardEnabled && riskLocked) {
-      console.warn('[Scanner] Rule Guard: risk governor LOCKED — blocking trade deployment.');
       return; // Hard block — do not proceed when risk governor is locked
     }
 
@@ -1227,7 +1225,6 @@ function ScannerContent() {
       const evaluation = await evaluateRiskIntent(intent);
       if (evaluation?.permission === 'BLOCK') {
         const reason = evaluation.reason_codes?.join(', ') || 'Rule compliance failed';
-        console.warn(`[Scanner] Rule Guard BLOCK: ${reason} for ${intent.symbol}`);
         setRiskBlockReason(reason);
         setShowRiskBlockModal(true);
         return; // Hard block — do not proceed
@@ -1282,7 +1279,6 @@ function ScannerContent() {
   const deployRankCandidate = (pick: any) => {
     // Pre-trade validation: evaluate risk state before executing
     if (guardEnabled && riskLocked) {
-      console.warn('[Scanner] Rule Guard: risk governor LOCKED — deploy blocked.');
       return;
     }
 
@@ -1310,7 +1306,7 @@ function ScannerContent() {
     if (!pendingDeployPick) return;
     const allChecked = preTradeChecklist.thesis && preTradeChecklist.risk && preTradeChecklist.eventWindow;
     if (!allChecked) {
-      alert('Complete all pre-trade checklist items before proceeding.');
+      setFlashMsg({ text: 'Complete all pre-trade checklist items before proceeding.', type: 'error' });
       return;
     }
 
@@ -1365,9 +1361,9 @@ function ScannerContent() {
         throw new Error(addItemData?.error || 'Failed to add symbol to watchlist');
       }
 
-      alert(`✅ ${pick.symbol} added to ${targetWatchlist.name}`);
+      setFlashMsg({ text: `${pick.symbol} added to ${targetWatchlist.name}`, type: 'success' });
     } catch (error: any) {
-      alert(error?.message || 'Failed to add to watchlist');
+      setFlashMsg({ text: error?.message || 'Failed to add to watchlist', type: 'error' });
     }
   };
 
@@ -1492,6 +1488,13 @@ function ScannerContent() {
 
   return (
     <div className="min-h-screen bg-[var(--msp-bg)]">
+      {/* Flash message toast */}
+      {flashMsg && (
+        <div className={`fixed left-1/2 top-4 z-[100] -translate-x-1/2 rounded-lg border px-4 py-2.5 text-sm font-semibold shadow-lg ${flashMsg.type === 'success' ? 'border-emerald-500/40 bg-emerald-950/90 text-emerald-300' : 'border-rose-500/40 bg-rose-950/90 text-rose-300'}`} role="status">
+          {flashMsg.text}
+          <button type="button" onClick={() => setFlashMsg(null)} className="ml-3 text-xs opacity-70 hover:opacity-100" aria-label="Dismiss">&times;</button>
+        </div>
+      )}
       {isFree && (
         <div style={{
           background: 'linear-gradient(90deg, rgba(16,185,129,0.12) 0%, rgba(16,185,129,0.04) 100%)',
@@ -1629,7 +1632,7 @@ function ScannerContent() {
                             <div className="mb-1 text-[0.64rem] uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Asset Class</div>
                             <div className="flex flex-wrap gap-1.5">
                               {(['crypto', 'equity', 'forex'] as AssetType[]).map((type) => (
-                                <button
+                                <button type="button"
                                   key={type}
                                   onClick={() => {
                                     setAssetType(type);
@@ -1716,7 +1719,7 @@ function ScannerContent() {
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex gap-1.5">
                           {(['light', 'deep'] as const).map((mode) => (
-                            <button
+                            <button type="button"
                               key={mode}
                               onClick={() => setBulkCryptoScanMode(mode)}
                               className={`rounded-md border px-2 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.05em] ${bulkCryptoScanMode === mode ? 'border-[var(--msp-border-strong)] bg-[var(--msp-panel-2)] text-[var(--msp-text)]' : 'border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text-muted)]'}`}
@@ -1727,7 +1730,7 @@ function ScannerContent() {
                         </div>
                         <div className="flex gap-1.5">
                           {(['observe', 'decide'] as const).map((mode) => (
-                            <button
+                            <button type="button"
                               key={mode}
                               onClick={() => setScanIntentMode(mode)}
                               className={`rounded-md border px-2 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.05em] ${scanIntentMode === mode ? 'border-[var(--msp-border-strong)] bg-[var(--msp-panel-2)] text-[var(--msp-text)]' : 'border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text-muted)]'}`}
@@ -1741,7 +1744,7 @@ function ScannerContent() {
                   </div>
 
                   <div className="mb-3 flex justify-center">
-                    <button
+                    <button type="button"
                       onClick={() => runBulkScan(assetType === 'crypto' ? 'crypto' : assetType === 'forex' ? 'forex' : 'equity')}
                       disabled={bulkScanLoading}
                       className="w-full max-w-md px-8 py-3.5 rounded-lg text-[0.85rem] font-bold uppercase tracking-[0.1em] transition-all duration-150"
@@ -1758,7 +1761,7 @@ function ScannerContent() {
                   </div>
 
                   <div className="msp-card px-4 py-3">
-                    <button onClick={() => setAdvancedDiscoverOpen((prev) => !prev)} className="flex w-full items-center justify-between">
+                    <button type="button" onClick={() => setAdvancedDiscoverOpen((prev) => !prev)} className="flex w-full items-center justify-between">
                       <span className="text-[0.74rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text)]">Advanced Settings</span>
                       <span className="text-[0.7rem] font-extrabold uppercase text-[var(--msp-text-faint)]">{advancedDiscoverOpen ? 'Collapse' : 'Expand'}</span>
                     </button>
@@ -1786,9 +1789,9 @@ function ScannerContent() {
                     <table className="w-full text-left text-[0.7rem]">
                       <thead className="text-[var(--msp-text-faint)]">
                         <tr>
-                          <th className="px-1.5 py-1">Strategy</th>
-                          <th className="px-1.5 py-1">Long</th>
-                          <th className="px-1.5 py-1">Short</th>
+                          <th scope="col" className="px-1.5 py-1">Strategy</th>
+                          <th scope="col" className="px-1.5 py-1">Long</th>
+                          <th scope="col" className="px-1.5 py-1">Short</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1830,17 +1833,17 @@ function ScannerContent() {
 
                 <div className="msp-card mb-3 px-4 py-3">
                   <div className="grid gap-2 md:grid-cols-4">
-                    <select value={rankDirection} onChange={(e) => { setRankDirection(e.target.value as 'all' | 'long' | 'short'); setActiveTemplateId(undefined); }} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-bold text-[var(--msp-text)]"><option value="all">Direction: All</option><option value="long">Direction: Long</option><option value="short">Direction: Short</option></select>
-                    <select value={rankQuality} onChange={(e) => { setRankQuality(e.target.value as 'all' | 'high' | 'medium'); setActiveTemplateId(undefined); }} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-bold text-[var(--msp-text)]"><option value="all">Quality: All</option><option value="high">Quality: High</option><option value="medium">Quality: Medium</option></select>
-                    <select value={rankSort} onChange={(e) => setRankSort(e.target.value as 'rank' | 'confidence' | 'volatility' | 'trend')} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-bold text-[var(--msp-text)]"><option value="rank">Sort: Rank</option><option value="confidence">Sort: Confidence</option><option value="volatility">Sort: Volatility</option><option value="trend">Sort: Trend Quality</option></select>
+                    <select aria-label="Direction filter" value={rankDirection} onChange={(e) => { setRankDirection(e.target.value as 'all' | 'long' | 'short'); setActiveTemplateId(undefined); }} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-bold text-[var(--msp-text)]"><option value="all">Direction: All</option><option value="long">Direction: Long</option><option value="short">Direction: Short</option></select>
+                    <select aria-label="Quality filter" value={rankQuality} onChange={(e) => { setRankQuality(e.target.value as 'all' | 'high' | 'medium'); setActiveTemplateId(undefined); }} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-bold text-[var(--msp-text)]"><option value="all">Quality: All</option><option value="high">Quality: High</option><option value="medium">Quality: Medium</option></select>
+                    <select aria-label="Sort order" value={rankSort} onChange={(e) => setRankSort(e.target.value as 'rank' | 'confidence' | 'volatility' | 'trend')} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-bold text-[var(--msp-text)]"><option value="rank">Sort: Rank</option><option value="confidence">Sort: Confidence</option><option value="volatility">Sort: Volatility</option><option value="trend">Sort: Trend Quality</option></select>
                     <div className="flex items-center gap-2">
-                      <button
+                      <button type="button"
                         onClick={() => setBulkViewMode('table')}
                         className={`rounded-md px-3 py-1.5 text-[0.72rem] font-bold transition-colors ${bulkViewMode === 'table' ? 'bg-[var(--msp-accent)] text-white' : 'border border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text)]'}`}
                       >
                         Table
                       </button>
-                      <button
+                      <button type="button"
                         onClick={() => setBulkViewMode('cards')}
                         className={`rounded-md px-3 py-1.5 text-[0.72rem] font-bold transition-colors ${bulkViewMode === 'cards' ? 'bg-[var(--msp-accent)] text-white' : 'border border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text)]'}`}
                       >
@@ -1957,15 +1960,15 @@ function ScannerContent() {
                         </div>
                         <div className="mb-2 border-t border-[var(--msp-divider)]" />
                         <div className="mt-auto flex gap-2" onClick={(e) => e.stopPropagation()}>
-                          <button
+                          <button type="button"
                             onClick={() => { void deployRankCandidate(pick); }}
                             disabled={blocked}
                             className="msp-btn-elite-primary h-8 flex-1 px-2 py-1 text-[0.68rem] font-extrabold uppercase"
                           >
                             {permission === 'ALLOW' ? 'Create Plan' : permission === 'ALLOW_REDUCED' ? 'Create Plan (Reduced)' : permission === 'ALLOW_TIGHTENED' ? 'Trigger Only' : 'View Analysis'}
                           </button>
-                          <button onClick={() => { window.location.href = `/tools/alerts?symbol=${encodeURIComponent(pick.symbol)}&price=${pick.indicators?.price || ''}&direction=${pick.direction || ''}`; }} className="h-8 flex-1 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1 text-[0.68rem] font-extrabold uppercase text-[var(--msp-text-muted)]">Set Alert</button>
-                          <button onClick={() => { void addScannerCandidateToWatchlist(pick); }} className="h-8 flex-1 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1 text-[0.68rem] font-extrabold uppercase text-[var(--msp-text-muted)]">Watchlist</button>
+                          <button type="button" onClick={() => { window.location.href = `/tools/alerts?symbol=${encodeURIComponent(pick.symbol)}&price=${pick.indicators?.price || ''}&direction=${pick.direction || ''}`; }} className="h-8 flex-1 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1 text-[0.68rem] font-extrabold uppercase text-[var(--msp-text-muted)]">Set Alert</button>
+                          <button type="button" onClick={() => { void addScannerCandidateToWatchlist(pick); }} className="h-8 flex-1 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1 text-[0.68rem] font-extrabold uppercase text-[var(--msp-text-muted)]">Watchlist</button>
                         </div>
                       </div>
                     );
@@ -2067,7 +2070,7 @@ function ScannerContent() {
             <div className="text-[0.8rem] font-extrabold uppercase tracking-[0.05em] text-[var(--msp-text)]">
               Mini Scanner Bar • {assetType.toUpperCase()} • {ticker.toUpperCase()} • {timeframe.toUpperCase()}
             </div>
-            <button
+            <button type="button"
               onClick={() => setScannerCollapsed(false)}
               className="cursor-pointer rounded-full border border-[color:var(--msp-bull)] bg-[var(--msp-bull-tint)] px-3 py-1 text-[0.74rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-bull)]"
             >
@@ -2114,7 +2117,7 @@ function ScannerContent() {
             <span className="text-sm font-semibold text-[var(--msp-text-muted)]">Timeframe:</span>
             <div className="flex gap-1.5 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel)] p-1">
               {(['15m', '30m', '1h', '1d'] as const).map((tf) => (
-                <button
+                <button type="button"
                   key={tf}
                   onClick={() => setBulkScanTimeframe(tf)}
                   disabled={bulkScanLoading}
@@ -2147,7 +2150,7 @@ function ScannerContent() {
               <span style={{ color: "var(--msp-text-muted)", fontSize: "13px", fontWeight: 600 }}>Crypto scan depth:</span>
               <div style={{ display: "flex", gap: "6px", background: "var(--msp-panel)", padding: "4px", borderRadius: "8px" }}>
                 {(['light', 'deep'] as const).map((mode) => (
-                  <button
+                  <button type="button"
                     key={mode}
                     onClick={() => {
                       setBulkCryptoScanMode(mode);
@@ -2206,7 +2209,7 @@ function ScannerContent() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 mb-5 flex-wrap">
-            <button
+            <button type="button"
               onClick={() => runBulkScan('crypto')}
               disabled={bulkScanLoading}
               style={{
@@ -2243,7 +2246,7 @@ function ScannerContent() {
               )}
             </button>
             
-            <button
+            <button type="button"
               onClick={() => runBulkScan('equity')}
               disabled={bulkScanLoading}
               style={{
@@ -2384,7 +2387,7 @@ function ScannerContent() {
                 {!bulkScanExpanded && bulkScanResults.topPicks.length > 5 && (
                   <span style={{ marginLeft: "8px", color: "var(--msp-text-faint)", fontSize: "11px" }}>
                     Showing top 5 of {bulkScanResults.topPicks.length} — 
-                    <button
+                    <button type="button"
                       onClick={(e) => { e.stopPropagation(); setBulkScanExpanded(true); }}
                       style={{ background: "none", border: "none", color: "var(--msp-accent)", cursor: "pointer", textDecoration: "underline", fontSize: "11px", padding: 0, marginLeft: "4px" }}
                     >
@@ -2395,7 +2398,7 @@ function ScannerContent() {
                 {bulkScanExpanded && bulkScanResults.topPicks.length > 5 && (
                   <span style={{ marginLeft: "8px", color: "var(--msp-text-faint)", fontSize: "11px" }}>
                     Showing all {bulkScanResults.topPicks.length} — 
-                    <button
+                    <button type="button"
                       onClick={(e) => { e.stopPropagation(); setBulkScanExpanded(false); }}
                       style={{ background: "none", border: "none", color: "var(--msp-accent)", cursor: "pointer", textDecoration: "underline", fontSize: "11px", padding: 0, marginLeft: "4px" }}
                     >
@@ -2614,7 +2617,7 @@ function ScannerContent() {
                       paddingTop: "8px",
                       borderTop: "1px solid var(--msp-border)"
                     }}>
-                      <button
+                      <button type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           window.location.href = `/tools/alerts?symbol=${encodeURIComponent(pick.symbol)}&price=${pick.indicators?.price || ''}&direction=${pick.direction || ''}`;
@@ -2644,7 +2647,7 @@ function ScannerContent() {
                       >
                         🔔 Set Alert
                       </button>
-                      <button
+                      <button type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           void addScannerCandidateToWatchlist(pick);
@@ -2726,7 +2729,7 @@ function ScannerContent() {
                 // Crypto uses CoinGecko (licensed)
                 const isDisabled = (type === "equity" || type === "forex") && !isAdmin;
                 return (
-                  <button
+                  <button type="button"
                     key={type}
                     onClick={() => {
                       if (isDisabled) return;
@@ -2834,7 +2837,7 @@ function ScannerContent() {
             </div>
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
               {QUICK_PICKS[assetType].map((sym) => (
-                <button
+                <button type="button"
                   key={sym}
                   onClick={() => {
                     setTicker(sym);
@@ -2886,7 +2889,7 @@ function ScannerContent() {
               </select>
             </div>
 
-            <button
+            <button type="button"
               onClick={() => { void runScan(); }}
               disabled={loading}
               style={{
@@ -2907,7 +2910,7 @@ function ScannerContent() {
               {loading ? "⏳ Finding Best Setup..." : "🔎 Find Best Setup"}
             </button>
             {result && (
-              <button
+              <button type="button"
                 onClick={() => setScannerCollapsed(true)}
                 style={{
                   padding: "0.5rem 0.9rem",
@@ -3112,7 +3115,7 @@ function ScannerContent() {
                   Quick recover:
                 </div>
                 <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", flexWrap: "wrap" }}>
-                  <button
+                  <button type="button"
                     onClick={() => { void runScan(); }}
                     style={{
                       padding: "0.4rem 0.7rem",
@@ -3128,7 +3131,7 @@ function ScannerContent() {
                     Retry scan
                   </button>
                   {quickRecoverySymbols.map((sym) => (
-                    <button
+                    <button type="button"
                       key={sym}
                       onClick={() => {
                         setTicker(sym);
@@ -3187,14 +3190,14 @@ function ScannerContent() {
               </div>
             </div>
             <div className="flex items-center justify-center gap-2">
-              <button
+              <button type="button"
                 onClick={() => { void runScan(); }}
                 disabled={loading}
                 className="rounded-md border border-[var(--msp-border-strong)] bg-[var(--msp-bull)] px-4 py-2 text-[0.76rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-bg)] disabled:opacity-60"
               >
                 {loading ? 'Loading Cockpit…' : 'Load Decision Cockpit'}
               </button>
-              <button
+              <button type="button"
                 onClick={() => setOperatorTransition(null)}
                 className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel)] px-3 py-2 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-muted)]"
               >
@@ -3270,7 +3273,7 @@ function ScannerContent() {
                       >
                         📊 Backtest This Symbol
                       </Link>
-                      <button
+                      <button type="button"
                         onClick={() => {
                           setResult(null);
                           setOperatorTransition(null);
@@ -3400,7 +3403,7 @@ function ScannerContent() {
                         <div className="flex flex-wrap gap-2">
                           {executionAllowed ? (
                             <>
-                              <button
+                              <button type="button"
                                 onClick={() => {
                                   if (result) {
                                     deployRankCandidate({
@@ -3413,7 +3416,7 @@ function ScannerContent() {
                                 }}
                                 className="rounded-md border border-[var(--msp-bull)] bg-[var(--msp-bull-tint)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-bull)]"
                               >Log Trade Plan</button>
-                              <button
+                              <button type="button"
                                 onClick={() => {
                                   if (result) {
                                     window.location.href = `/tools/alerts?symbol=${encodeURIComponent(result.symbol)}&price=${result.price || ''}&direction=${result.direction || ''}`;
@@ -3421,7 +3424,7 @@ function ScannerContent() {
                                 }}
                                 className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-muted)]"
                               >Set Alert</button>
-                              <button
+                              <button type="button"
                                 onClick={() => {
                                   if (result) {
                                     void addScannerCandidateToWatchlist({
@@ -3435,7 +3438,7 @@ function ScannerContent() {
                             </>
                           ) : (
                             <>
-                              <button
+                              <button type="button"
                                 onClick={() => {
                                   if (result) {
                                     window.location.href = `/tools/alerts?symbol=${encodeURIComponent(result.symbol)}&price=${result.price || ''}&direction=${result.direction || ''}`;
@@ -3443,7 +3446,7 @@ function ScannerContent() {
                                 }}
                                 className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-muted)]"
                               >Set Alert</button>
-                              <button
+                              <button type="button"
                                 onClick={() => {
                                   if (result) {
                                     void addScannerCandidateToWatchlist({
@@ -3462,7 +3465,7 @@ function ScannerContent() {
                   </div>
 
                   <div className="rounded-xl border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] px-3 py-3 md:px-4">
-                    <button
+                    <button type="button"
                       onClick={() => setAdvancedIntelligenceOpen((prev) => !prev)}
                       className="flex w-full items-center justify-between text-left"
                     >
@@ -3550,7 +3553,7 @@ function ScannerContent() {
               <div className="text-msp-muted text-xs font-semibold">
                 All panels below are for {result.symbol} only
               </div>
-              <button
+              <button type="button"
                 onClick={() => {
                   setFocusMode((prev) => !prev);
                   setPersonalitySignals((prev) => ({ ...prev, focusToggles: prev.focusToggles + 1 }));
@@ -3568,7 +3571,7 @@ function ScannerContent() {
                 {[{ label: 'Adaptive', value: 'adaptive' as const }, { label: 'Momentum', value: 'momentum' as const }, { label: 'Structure', value: 'structure' as const }, { label: 'Risk', value: 'risk' as const }, { label: 'Flow', value: 'flow' as const }].map((option) => {
                   const active = personalityMode === option.value;
                   return (
-                    <button
+                    <button type="button"
                       key={option.value}
                       onClick={() => setPersonalityMode(option.value)}
                       className={`rounded-full border px-2 py-1 text-[11px] font-extrabold uppercase tracking-wide ${
@@ -4528,7 +4531,7 @@ function ScannerContent() {
                                   </div>
 
                                   <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
-                                    <button
+                                    <button type="button"
                                       onClick={() => {
                                         if (result) {
                                           deployRankCandidate({
@@ -4554,7 +4557,7 @@ function ScannerContent() {
                                     >
                                       {executionEnabled ? 'Log Trade Plan' : 'Log Trade Plan (Review)'}
                                     </button>
-                                    <button
+                                    <button type="button"
                                       onClick={() => {
                                         // Dismiss — user chooses to wait for stronger signal
                                         setResult(null);
@@ -5777,7 +5780,7 @@ function ScannerContent() {
                 </label>
               </div>
               <div className="mt-3 flex gap-2">
-                <button
+                <button type="button"
                   onClick={() => {
                     setShowPreTradeChecklist(false);
                     setPendingDeployPick(null);
@@ -5786,7 +5789,7 @@ function ScannerContent() {
                 >
                   Cancel
                 </button>
-                <button
+                <button type="button"
                   onClick={() => { void confirmDeployRankCandidate(); }}
                   className="msp-btn-elite-primary h-9 flex-1 px-3 text-[0.7rem] font-extrabold uppercase"
                 >
@@ -5827,7 +5830,7 @@ function ScannerContent() {
                 The risk governor has blocked this trade. This is not a suggestion — the action has been prevented to protect capital.
                 Review the reason above, adjust your approach, or wait for conditions to improve.
               </div>
-              <button
+              <button type="button"
                 onClick={() => setShowRiskBlockModal(false)}
                 className="h-9 w-full rounded-md border border-red-500/30 bg-red-500/10 px-3 text-[0.7rem] font-extrabold uppercase text-red-300 hover:bg-red-500/20"
               >
@@ -5854,7 +5857,7 @@ function ScannerContent() {
                 or if you&apos;re reacting to the desire to &quot;get it back.&quot;
               </div>
               <div className="flex gap-2">
-                <button
+                <button type="button"
                   onClick={() => {
                     setShowBehavioralScreen(false);
                     setBehavioralScreenData(null);
@@ -5863,7 +5866,7 @@ function ScannerContent() {
                 >
                   Step Back — Cancel
                 </button>
-                <button
+                <button type="button"
                   onClick={() => {
                     setShowBehavioralScreen(false);
                     setBehavioralScreenData(null);

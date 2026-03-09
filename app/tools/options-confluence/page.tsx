@@ -1128,7 +1128,7 @@ export default function OptionsConfluenceScanner() {
         setExpirationsError(data?.error || 'No expiration data available for this symbol');
       }
     } catch (err) {
-      console.warn('Failed to fetch expirations:', err);
+      // Error already surfaced via setExpirationsError below
       setExpirationsError('Failed to fetch expiration dates. Check API availability and try again.');
     } finally {
       setLoadingExpirations(false);
@@ -2235,7 +2235,7 @@ export default function OptionsConfluenceScanner() {
       <div className="min-h-screen bg-[var(--msp-bg)]">
         <main className="max-w-none px-4 py-8 text-slate-200">
           <h1 className="mb-2 text-[clamp(1.25rem,3vw,1.75rem)] font-bold">
-            <span className="inline-flex items-center gap-2"><img src="/assets/scanners/options-confluence.png" alt="" className="inline h-7 w-7 rounded-lg object-contain" /> Loading Options Confluence Scanner...</span>
+            <span className="inline-flex items-center gap-2"><img src="/assets/scanners/options-confluence.png" alt="Options Confluence Scanner icon" className="inline h-7 w-7 rounded-lg object-contain" /> Loading Options Confluence Scanner...</span>
           </h1>
           <p className="text-sm text-slate-400">
             Checking account access and initializing scanner state.
@@ -2252,7 +2252,7 @@ export default function OptionsConfluenceScanner() {
         <header className="max-w-none px-4 py-8 text-center">
           <span className="inline-flex rounded-full border border-[var(--msp-border)] bg-[var(--msp-panel)] px-3 py-1 text-[11px] font-semibold text-[var(--msp-accent)]">PRO TRADER</span>
           <h1 className="my-3 text-[clamp(1.5rem,4vw,2rem)] font-bold text-slate-100">
-            <span className="inline-flex items-center gap-2"><img src="/assets/scanners/options-confluence.png" alt="" className="inline h-8 w-8 rounded-lg object-contain" /> Options Confluence Scanner</span>
+            <span className="inline-flex items-center gap-2"><img src="/assets/scanners/options-confluence.png" alt="Options Confluence Scanner icon" className="inline h-8 w-8 rounded-lg object-contain" /> Options Confluence Scanner</span>
           </h1>
           <p className="text-sm text-slate-400">Strike & Expiration Recommendations Based on Time Confluence</p>
         </header>
@@ -2448,6 +2448,7 @@ export default function OptionsConfluenceScanner() {
             onChange={(e) => setSymbol(e.target.value.toUpperCase())}
             onBlur={() => fetchExpirations(symbol)}
             placeholder="SPY, AAPL, QQQ, TSLA..."
+            aria-label="Stock symbol"
             className="max-w-[250px] flex-[1_1_150px] rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel)] px-5 py-3 text-base text-[var(--msp-text)] outline-none"
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
@@ -2460,6 +2461,7 @@ export default function OptionsConfluenceScanner() {
           <select
             value={selectedTF}
             onChange={(e) => setSelectedTF(e.target.value as ScanModeType)}
+            aria-label="Scan timeframe"
             className="cursor-pointer rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel)] px-4 py-3 text-base font-semibold text-[var(--msp-text)]"
           >
             {TIMEFRAME_OPTIONS.map(opt => (
@@ -2474,6 +2476,7 @@ export default function OptionsConfluenceScanner() {
             value={selectedExpiry}
             onChange={(e) => setSelectedExpiry(e.target.value)}
             disabled={loadingExpirations || expirations.length === 0}
+            aria-label="Expiration date"
             className={`rounded-xl border bg-[var(--msp-panel)] px-4 py-3 text-[0.9rem] font-semibold ${expirations.length > 0 ? 'cursor-pointer border-[var(--msp-border-strong)] text-[var(--msp-text)]' : 'cursor-not-allowed border-[var(--msp-border)] text-[var(--msp-text-faint)]'}`}
           >
             <option value="">
@@ -2495,6 +2498,7 @@ export default function OptionsConfluenceScanner() {
           )}
 
           <button
+            type="button"
             onClick={() => handleScan()}
             disabled={loading}
             className={`rounded-xl px-8 py-3 text-base font-bold text-[var(--msp-bg)] transition ${loading ? 'cursor-not-allowed bg-[var(--msp-panel)]' : 'cursor-pointer bg-[var(--msp-accent)]'}`}
@@ -2504,6 +2508,7 @@ export default function OptionsConfluenceScanner() {
 
           {result && (
             <button
+              type="button"
               onClick={() => handleScan()}
               disabled={loading}
               className="cursor-pointer rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-4 py-3 text-[0.85rem] text-[var(--msp-text-muted)]"
@@ -2725,6 +2730,7 @@ export default function OptionsConfluenceScanner() {
                 .filter((section) => !isGuidedMode || (section.key !== 'narrative' && section.key !== 'logs'))
                 .map((section) => (
                 <button
+                  type="button"
                   key={section.key}
                   onClick={() => activateSection(section.key)}
                   className={`inline-flex cursor-pointer items-center gap-[0.35rem] rounded-full border border-[var(--msp-border)] px-[0.6rem] py-[0.3rem] text-[0.68rem] font-extrabold uppercase tracking-[0.04em] ${trapDoors[section.key] ? 'bg-[var(--msp-panel)] text-[var(--msp-text)]' : 'bg-[var(--msp-panel-2)] text-[var(--msp-text-muted)]'}`}
@@ -2746,6 +2752,7 @@ export default function OptionsConfluenceScanner() {
                 .filter((door) => !trapDoors[door.key])
                 .map((door) => (
                   <button
+                    type="button"
                     key={`collapsed-${door.key}`}
                     onClick={() => activateSection(door.key)}
                     className="grid w-full cursor-pointer gap-[0.18rem] rounded-[10px] border border-dashed border-[var(--msp-border)] bg-[var(--msp-panel)] p-[0.58rem_0.7rem] text-left"
@@ -4648,13 +4655,13 @@ export default function OptionsConfluenceScanner() {
                         <table className="greeks-table w-full min-w-[480px] border-collapse text-[0.8rem]">
                           <thead>
                             <tr className="border-b border-[var(--msp-border-strong)]">
-                              <th className="p-2 text-left font-medium text-slate-400">Strike</th>
-                              <th className="p-2 text-right font-medium text-slate-400">OI</th>
-                              <th className="p-2 text-right font-medium text-slate-400">IV</th>
-                              <th className="p-2 text-right font-medium text-emerald-500">Δ</th>
-                              <th className="p-2 text-right font-medium text-violet-500">Γ</th>
-                              <th className="p-2 text-right font-medium text-red-500">Θ</th>
-                              <th className="p-2 text-right font-medium text-[var(--msp-muted)]">ν</th>
+                              <th scope="col" className="p-2 text-left font-medium text-slate-400">Strike</th>
+                              <th scope="col" className="p-2 text-right font-medium text-slate-400">OI</th>
+                              <th scope="col" className="p-2 text-right font-medium text-slate-400">IV</th>
+                              <th scope="col" className="p-2 text-right font-medium text-emerald-500">Δ</th>
+                              <th scope="col" className="p-2 text-right font-medium text-violet-500">Γ</th>
+                              <th scope="col" className="p-2 text-right font-medium text-red-500">Θ</th>
+                              <th scope="col" className="p-2 text-right font-medium text-[var(--msp-muted)]">ν</th>
                             </tr>
                           </thead>
                           <tbody>

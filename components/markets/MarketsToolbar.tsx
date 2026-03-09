@@ -59,6 +59,7 @@ export default function MarketsToolbar({
         <div className="flex items-center gap-1">
           {ASSET_CLASSES.map(({ key, label }) => (
             <button
+              type="button"
               key={key}
               onClick={() => onAssetClassChange(key)}
               className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
@@ -84,9 +85,11 @@ export default function MarketsToolbar({
             onChange={e => setSearchInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ticker symbol (e.g. AAPL, BTC, SPY)"
+            aria-label="Ticker symbol"
             className="flex-1 border-none bg-transparent text-[11px] text-[var(--msp-text)] placeholder-[var(--msp-text-faint)] outline-none"
           />
           <button
+            type="button"
             onClick={handleSearch}
             className="rounded-md bg-[var(--msp-accent)] px-2 py-0.5 text-[10px] font-bold text-black hover:bg-[var(--msp-accent-hover)] transition-colors"
           >
@@ -100,6 +103,7 @@ export default function MarketsToolbar({
         <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--msp-text-faint)] mr-1">Quick:</span>
         {QUICK_TICKERS[assetClass].map(ticker => (
           <button
+            type="button"
             key={ticker}
             onClick={() => onSymbolChange(ticker)}
             className={`rounded-md border px-1.5 py-0.5 text-[10px] font-medium transition-colors ${

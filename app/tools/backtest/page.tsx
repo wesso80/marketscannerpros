@@ -6,6 +6,8 @@ import Link from 'next/link';
 import ToolsPageHeader from '@/components/ToolsPageHeader';
 import UpgradeGate from '@/components/UpgradeGate';
 import { useUserTier, canAccessBacktest } from '@/lib/useUserTier';
+import PerformanceMetrics from '@/components/backtest/PerformanceMetrics';
+import TradeHistoryTable from '@/components/backtest/TradeHistoryTable';
 import { useAIPageContext } from '@/lib/ai/pageContext';
 import { writeOperatorState } from '@/lib/operatorState';
 import CommandCenterStateBar from '@/components/CommandCenterStateBar';
@@ -652,7 +654,19 @@ function BacktestContent() {
   if (tierLoading) {
     return (
       <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: '#94a3b8' }}>Loading...</div>
+        <div role="status" aria-label="Loading backtest">
+          <div style={{
+            width: '36px',
+            height: '36px',
+            border: '3px solid rgba(148,163,184,0.2)',
+            borderTopColor: '#10b981',
+            borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite',
+            margin: '0 auto 12px',
+          }} />
+          <div style={{ color: '#94a3b8', fontSize: '14px' }}>Loading...</div>
+          <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+        </div>
       </div>
     );
   }
@@ -1300,6 +1314,7 @@ function BacktestContent() {
               </Link>
               <button
                 onClick={() => setShowOptionsBanner(false)}
+                aria-label="Dismiss options scanner banner"
                 style={{
                   padding: '8px 14px',
                   background: 'transparent',
@@ -1317,8 +1332,9 @@ function BacktestContent() {
         )}
 
         {/* Navigation Tabs */}
-        <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid #1f2937', paddingBottom: '2px', marginBottom: '30px' }}>
-          <Link href="/tools/portfolio" style={{
+        <nav aria-label="Trading tools">
+        <div role="tablist" style={{ display: 'flex', gap: '8px', borderBottom: '1px solid #1f2937', paddingBottom: '2px', marginBottom: '30px' }}>
+          <Link href="/tools/portfolio" role="tab" aria-selected={false} style={{
             padding: '10px 20px',
             color: '#9ca3af',
             textDecoration: 'none',
@@ -1328,7 +1344,7 @@ function BacktestContent() {
             Portfolio
           </Link>
 
-          <Link href="/tools/backtest" style={{
+          <Link href="/tools/backtest" role="tab" aria-selected={true} aria-current="page" style={{
             padding: '10px 20px',
             color: '#10b981',
             textDecoration: 'none',
@@ -1338,7 +1354,7 @@ function BacktestContent() {
           }}>
             Backtest
           </Link>
-          <Link href="/tools/journal" style={{
+          <Link href="/tools/journal" role="tab" aria-selected={false} style={{
             padding: '10px 20px',
             color: '#9ca3af',
             textDecoration: 'none',
@@ -1348,16 +1364,20 @@ function BacktestContent() {
             Trade Journal
           </Link>
         </div>
+        </nav>
 
         {/* Backtest Configuration */}
-        <div style={{
-          background: 'var(--msp-card)',
-          border: '1px solid rgba(51,65,85,0.8)',
-          borderRadius: '16px',
-          padding: '24px',
-          marginBottom: '24px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
-        }}>
+        <form
+          aria-label="Backtest configuration"
+          onSubmit={(e) => { e.preventDefault(); runBacktest(); }}
+          style={{
+            background: 'var(--msp-card)',
+            border: '1px solid rgba(51,65,85,0.8)',
+            borderRadius: '16px',
+            padding: '24px',
+            marginBottom: '24px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+          }}>
           <h2 style={{ 
             color: '#f1f5f9', 
             fontSize: '15px', 
@@ -1704,7 +1724,8 @@ function BacktestContent() {
           </div>
 
           <button
-            onClick={() => runBacktest()}
+            type="submit"
+            aria-label={isLoading ? 'Validating strategy' : 'Validate strategy'}
             disabled={isLoading || isScanningTimeframes || isScanningUniverse}
             style={{
               width: '100%',
@@ -1725,6 +1746,7 @@ function BacktestContent() {
           <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <button
               type="button"
+              aria-label="Scan all timeframes to find best performing"
               onClick={scanBestTimeframe}
               disabled={isLoading || isScanningTimeframes || isScanningUniverse}
               style={{
@@ -1745,6 +1767,7 @@ function BacktestContent() {
 
             <button
               type="button"
+              aria-label="Apply best timeframe and rerun backtest"
               onClick={applyBestTimeframeAndRerun}
               disabled={isLoading || isScanningTimeframes || isScanningUniverse || timeframeScanResults.length === 0}
               style={{
@@ -1765,6 +1788,7 @@ function BacktestContent() {
 
             <button
               type="button"
+              aria-label="Scan multiple symbols to find best universe pair"
               onClick={() => {
                 void scanBestUniversePair();
               }}
@@ -1787,6 +1811,7 @@ function BacktestContent() {
 
             <button
               type="button"
+              aria-label="Scan top 10 stocks by market cap"
               onClick={scanTopMarketCapStocks}
               disabled={isLoading || isScanningTimeframes || isScanningUniverse}
               style={{
@@ -1827,6 +1852,7 @@ function BacktestContent() {
 
             <button
               type="button"
+              aria-label="Apply best symbol and timeframe pair and rerun backtest"
               onClick={applyBestUniversePairAndRerun}
               disabled={isLoading || isScanningTimeframes || isScanningUniverse || universeScanResults.length === 0}
               style={{
@@ -1961,6 +1987,7 @@ function BacktestContent() {
               {(backtestError.toLowerCase().includes('insufficient data') || backtestError.toLowerCase().includes('too short')) && (
                 <button
                   onClick={applySuggestedDateRange}
+                  aria-label="Auto-fix date range for insufficient data"
                   style={{
                     padding: '6px 10px',
                     borderRadius: '8px',
@@ -1977,7 +2004,7 @@ function BacktestContent() {
               )}
             </div>
           )}
-        </div>
+        </form>
 
         {/* Results */}
         {results && (
@@ -1996,6 +2023,7 @@ function BacktestContent() {
                 </div>
                 <button
                   onClick={() => setShowInverseComparison((previous) => !previous)}
+                  aria-label={showInverseComparison ? 'Hide inverse comparison' : 'Show inverse short comparison'}
                   style={{
                     padding: '6px 10px',
                     borderRadius: '999px',
@@ -2569,6 +2597,7 @@ function BacktestContent() {
                     )}
                     <button
                       onClick={() => setShowReplayDetails((prev) => !prev)}
+                      aria-label={showReplayDetails ? 'Hide signal replay details' : 'Show signal replay details'}
                       style={{
                         padding: '6px 10px',
                         borderRadius: '999px',
@@ -2676,6 +2705,7 @@ function BacktestContent() {
                   <button
                     onClick={summarizeBacktest}
                     disabled={aiLoading}
+                    aria-label={aiLoading ? 'Building AI analysis brief' : 'Generate AI analysis brief'}
                     style={{
                       padding: '9px 12px',
                       background: aiLoading ? '#1f2937' : 'var(--msp-accent)',
@@ -2763,6 +2793,7 @@ function BacktestContent() {
                 </div>
                 <button
                   onClick={() => setShowEvidenceLayer((prev) => !prev)}
+                  aria-label={showEvidenceLayer ? 'Hide evidence layer' : 'Show evidence layer'}
                   style={{
                     padding: '8px 12px',
                     borderRadius: '8px',
@@ -3003,293 +3034,25 @@ function BacktestContent() {
               </div>
             </div>
 
-            {/* Performance Metrics */}
-            <div style={{
-              background: 'var(--msp-card)',
-              border: '1px solid rgba(51,65,85,0.8)',
-              borderRadius: '16px',
-              padding: '24px',
-              marginBottom: '24px',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
-            }}>
-              <h2 style={{ 
-                color: '#f1f5f9', 
-                fontSize: '15px', 
-                fontWeight: '600', 
-                marginBottom: '24px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em'
-              }}>
-                <span style={{ 
-                  background: 'var(--msp-muted)',
-                  borderRadius: '8px',
-                  padding: '6px 8px',
-                  fontSize: '14px'
-                }}>📊</span>
-                Performance Metrics
-              </h2>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: '12px' }}>
-                <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Return</div>
-                  <div style={{ 
-                    color: results.totalReturn >= 0 ? '#10b981' : '#ef4444', 
-                    fontSize: '22px', 
-                    fontWeight: '700' 
-                  }}>
-                    {results.totalReturn >= 0 ? '+' : ''}{Number.isFinite(results.totalReturn) ? results.totalReturn.toFixed(2) : '—'}%
-                  </div>
-                </div>
+            <PerformanceMetrics
+              totalReturn={results.totalReturn}
+              winRate={results.winRate}
+              totalTrades={results.totalTrades}
+              profitFactor={results.profitFactor}
+              sharpeRatio={results.sharpeRatio}
+              maxDrawdown={results.maxDrawdown}
+              avgWin={results.avgWin}
+              avgLoss={results.avgLoss}
+              cagr={results.cagr}
+              volatility={results.volatility}
+              sortinoRatio={results.sortinoRatio}
+              calmarRatio={results.calmarRatio}
+              timeInMarket={results.timeInMarket}
+              bestTrade={results.bestTrade}
+              worstTrade={results.worstTrade}
+            />
 
-                <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Win Rate</div>
-                  <div style={{ color: '#94a3b8', fontSize: '20px', fontWeight: '600' }}>
-                    {Number.isFinite(results.winRate) ? results.winRate.toFixed(1) : '—'}%
-                  </div>
-                  <div style={{ color: '#64748b', fontSize: '10px', marginTop: '2px' }}>
-                    (context matters more than %)
-                  </div>
-                </div>
-
-                <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Trades</div>
-                  <div style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700' }}>
-                    {results.totalTrades}
-                  </div>
-                </div>
-
-                {/* Profit Factor - EMPHASIZED */}
-                <div style={{ 
-                  background: results.profitFactor >= 1.5 ? 'rgba(16,185,129,0.15)' : results.profitFactor >= 1 ? 'rgba(251,191,36,0.1)' : 'rgba(239,68,68,0.1)', 
-                  padding: '16px', 
-                  borderRadius: '12px', 
-                  border: '1px solid var(--msp-border-strong)',
-                  borderLeft: `3px solid ${results.profitFactor >= 1.5 ? 'rgba(16,185,129,0.65)' : results.profitFactor >= 1 ? 'rgba(251,191,36,0.55)' : 'rgba(239,68,68,0.65)'}` 
-                }}>
-                  <div style={{ color: '#e2e8f0', fontSize: '11px', marginBottom: '6px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>⚡ Profit Factor</div>
-                  <div style={{ 
-                    color: results.profitFactor >= 1.5 ? '#10b981' : results.profitFactor >= 1 ? '#fbbf24' : '#ef4444', 
-                    fontSize: '24px', 
-                    fontWeight: '800' 
-                  }}>
-                    {Number.isFinite(results.profitFactor) ? results.profitFactor.toFixed(2) : '—'}
-                  </div>
-                  <div style={{ color: '#64748b', fontSize: '10px', marginTop: '2px' }}>
-                    {results.profitFactor >= 1.5 ? 'Strong edge' : results.profitFactor >= 1 ? 'Break-even' : 'Losing money'}
-                  </div>
-                </div>
-
-                <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sharpe Ratio</div>
-                  <div style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700' }}>
-                    {Number.isFinite(results.sharpeRatio) ? results.sharpeRatio.toFixed(2) : '—'}
-                  </div>
-                </div>
-
-                {/* Max Drawdown - EMPHASIZED */}
-                <div style={{ 
-                  background: results.maxDrawdown <= 10 ? 'rgba(16,185,129,0.1)' : results.maxDrawdown <= 20 ? 'rgba(251,191,36,0.1)' : 'rgba(239,68,68,0.15)', 
-                  padding: '16px', 
-                  borderRadius: '12px', 
-                  border: '1px solid var(--msp-border-strong)',
-                  borderLeft: `3px solid ${results.maxDrawdown <= 10 ? 'rgba(16,185,129,0.55)' : results.maxDrawdown <= 20 ? 'rgba(251,191,36,0.55)' : 'rgba(239,68,68,0.65)'}` 
-                }}>
-                  <div style={{ color: '#e2e8f0', fontSize: '11px', marginBottom: '6px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📉 Max Drawdown</div>
-                  <div style={{ 
-                    color: results.maxDrawdown <= 10 ? '#10b981' : results.maxDrawdown <= 20 ? '#fbbf24' : '#ef4444', 
-                    fontSize: '24px', 
-                    fontWeight: '800' 
-                  }}>
-                    {Number.isFinite(results.maxDrawdown) ? results.maxDrawdown.toFixed(2) : '—'}%
-                  </div>
-                  <div style={{ color: '#64748b', fontSize: '10px', marginTop: '2px' }}>
-                    {results.maxDrawdown <= 10 ? 'Controlled risk' : results.maxDrawdown <= 20 ? 'Moderate risk' : 'High risk'}
-                  </div>
-                </div>
-
-                <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Avg Win</div>
-                  <div style={{ color: '#10b981', fontSize: '22px', fontWeight: '700' }}>
-                    ${Number.isFinite(results.avgWin) ? results.avgWin.toFixed(2) : '—'}
-                  </div>
-                </div>
-
-                <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Avg Loss</div>
-                  <div style={{ color: '#ef4444', fontSize: '22px', fontWeight: '700' }}>
-                    ${Number.isFinite(results.avgLoss) ? results.avgLoss.toFixed(2) : '—'}
-                  </div>
-                </div>
-
-                <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>CAGR</div>
-                  <div style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700' }}>
-                    {results.cagr >= 0 ? '+' : ''}{Number.isFinite(results.cagr) ? results.cagr.toFixed(2) : '—'}%
-                  </div>
-                </div>
-
-                <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Volatility (Ann.)</div>
-                  <div style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700' }}>
-                    {Number.isFinite(results.volatility) ? results.volatility.toFixed(2) : '—'}%
-                  </div>
-                </div>
-
-                <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sortino Ratio</div>
-                  <div style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700' }}>
-                    {Number.isFinite(results.sortinoRatio) ? results.sortinoRatio.toFixed(2) : '—'}
-                  </div>
-                </div>
-
-                <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Calmar Ratio</div>
-                  <div style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700' }}>
-                    {Number.isFinite(results.calmarRatio) ? results.calmarRatio.toFixed(2) : '—'}
-                  </div>
-                </div>
-
-                <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(51,65,85,0.4)' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Time in Market</div>
-                  <div style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700' }}>
-                    {Number.isFinite(results.timeInMarket) ? results.timeInMarket.toFixed(1) : '—'}%
-                  </div>
-                </div>
-
-                {results.bestTrade && (
-                  <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(16,185,129,0.3)' }}>
-                    <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Best Trade</div>
-                    <div style={{ color: '#10b981', fontSize: '18px', fontWeight: '700' }}>
-                      +{results.bestTrade.returnPercent.toFixed(2)}% ({results.bestTrade.symbol})
-                    </div>
-                    <div style={{ color: '#64748b', fontSize: '11px', marginTop: '4px' }}>
-                      {new Date(results.bestTrade.entryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      {` x${results.bestTrade.holdingPeriodDays}d`}
-                    </div>
-                  </div>
-                )}
-
-                {results.worstTrade && (
-                  <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(239,68,68,0.3)' }}>
-                    <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '6px', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Worst Trade</div>
-                    <div style={{ color: '#ef4444', fontSize: '18px', fontWeight: '700' }}>
-                      {results.worstTrade.returnPercent.toFixed(2)}% ({results.worstTrade.symbol})
-                    </div>
-                    <div style={{ color: '#64748b', fontSize: '11px', marginTop: '4px' }}>
-                      {new Date(results.worstTrade.entryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      {` x${results.worstTrade.holdingPeriodDays}d`}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Trade History */}
-            <div style={{
-              background: 'var(--msp-card)',
-              border: '1px solid rgba(51,65,85,0.8)',
-              borderRadius: '16px',
-              overflow: 'hidden',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
-            }}>
-              <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(51,65,85,0.5)' }}>
-                <h2 style={{ 
-                  color: '#f1f5f9', 
-                  fontSize: '15px', 
-                  fontWeight: '600', 
-                  margin: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em'
-                }}>
-                  <span style={{ 
-                    background: '#f59e0b',
-                    borderRadius: '8px',
-                    padding: '6px 8px',
-                    fontSize: '14px'
-                  }}>📋</span>
-                  Trade History
-                </h2>
-              </div>
-              
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ background: '#1e293b', borderBottom: '1px solid #334155' }}>
-                      <th style={{ padding: '14px 20px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Entry</th>
-                      <th style={{ padding: '14px 20px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Exit</th>
-                      <th style={{ padding: '14px 20px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Symbol</th>
-                      <th style={{ padding: '14px 20px', textAlign: 'left', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Side</th>
-                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Entry</th>
-                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Exit</th>
-                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Hold (d)</th>
-                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>P&L</th>
-                      <th style={{ padding: '14px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '12px', fontWeight: '500', textTransform: 'uppercase' }}>Return %</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(results.trades || []).map((trade, idx) => (
-                      <tr key={idx} style={{ borderBottom: '1px solid #334155' }}>
-                        <td style={{ padding: '16px 20px', color: '#94a3b8', fontSize: '14px' }}>
-                          {new Date(trade.entryDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </td>
-                        <td style={{ padding: '16px 20px', color: '#94a3b8', fontSize: '14px' }}>
-                          {new Date(trade.exitDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </td>
-                        <td style={{ padding: '16px 20px', color: '#f1f5f9', fontSize: '14px', fontWeight: '600' }}>
-                          {trade.symbol}
-                        </td>
-                        <td style={{ padding: '16px 20px' }}>
-                          <span style={{
-                            padding: '4px 10px',
-                            borderRadius: '4px',
-                            fontSize: '11px',
-                            fontWeight: '600',
-                            background: trade.side === 'SHORT' ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)',
-                            color: trade.side === 'SHORT' ? '#ef4444' : '#10b981',
-                            border: trade.side === 'SHORT' ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(16,185,129,0.3)'
-                          }}>
-                            {trade.side}
-                          </span>
-                        </td>
-                        <td style={{ padding: '16px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '14px' }}>
-                          ${trade.entry.toFixed(2)}
-                        </td>
-                        <td style={{ padding: '16px 20px', textAlign: 'right', color: '#f1f5f9', fontSize: '14px' }}>
-                          ${trade.exit.toFixed(2)}
-                        </td>
-                        <td style={{ padding: '16px 20px', textAlign: 'right', color: '#94a3b8', fontSize: '14px' }}>
-                          {trade.holdingPeriodDays}
-                        </td>
-                        <td style={{ 
-                          padding: '16px 20px', 
-                          textAlign: 'right', 
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          color: trade.return >= 0 ? '#10b981' : '#ef4444'
-                        }}>
-                          {trade.return >= 0 ? '+' : ''}${trade.return.toFixed(2)}
-                        </td>
-                        <td style={{ 
-                          padding: '16px 20px', 
-                          textAlign: 'right', 
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          color: trade.returnPercent >= 0 ? '#10b981' : '#ef4444'
-                        }}>
-                          {trade.returnPercent >= 0 ? '+' : ''}{trade.returnPercent.toFixed(2)}%
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <TradeHistoryTable trades={results.trades || []} tier={tier} />
               </>
             )}
           </>
@@ -3343,7 +3106,19 @@ export default function BacktestPage() {
         justifyContent: 'center',
         background: '#0f172a'
       }}>
-        <div style={{ color: '#9ca3b8' }}>Loading backtest...</div>
+        <div role="status" aria-label="Loading backtest">
+          <div style={{
+            width: '36px',
+            height: '36px',
+            border: '3px solid rgba(148,163,184,0.2)',
+            borderTopColor: '#10b981',
+            borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite',
+            margin: '0 auto 12px',
+          }} />
+          <div style={{ color: '#9ca3b8', fontSize: '14px' }}>Loading backtest...</div>
+          <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+        </div>
       </div>
     }>
       <BacktestContent />

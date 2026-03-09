@@ -137,6 +137,7 @@ export default function CryptoSearchWidget() {
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => results.length > 0 && setShowResults(true)}
           placeholder="Search any coin (BTC, Ethereum, etc.)"
+          aria-label="Search cryptocurrency"
           style={{
             width: '100%',
             padding: '12px 16px',
@@ -177,6 +178,7 @@ export default function CryptoSearchWidget() {
           }}>
             {results.map((coin) => (
               <button
+                type="button"
                 key={coin.id}
                 onClick={() => handleSelect(coin)}
                 style={{
@@ -254,6 +256,7 @@ export default function CryptoSearchWidget() {
                   </div>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setSelectedCoin(null)}
                   style={{
                     marginLeft: 'auto',
@@ -387,6 +390,7 @@ export default function CryptoSearchWidget() {
               <div style={{ marginBottom: '12px' }}>Failed to load coin data</div>
               <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                 <button
+                  type="button"
                   onClick={() => {
                     // Trigger re-fetch by resetting selectedCoin then setting it again
                     const coin = selectedCoin;
@@ -406,6 +410,7 @@ export default function CryptoSearchWidget() {
                   Retry
                 </button>
                 <button
+                  type="button"
                   onClick={() => setSelectedCoin(null)}
                   style={{
                     padding: '8px 16px',
@@ -434,6 +439,7 @@ export default function CryptoSearchWidget() {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
             {['Bitcoin', 'Ethereum', 'Solana', 'XRP', 'Dogecoin'].map((name) => (
               <button
+                type="button"
                 key={name}
                 onClick={() => setQuery(name)}
                 style={{

@@ -138,7 +138,7 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
         {/* Row 1: Symbol + Side */}
         <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label className={LABEL}>Symbol *</label>
+            <label htmlFor="trade-symbol" className={LABEL}>Symbol *</label>
             <input
               id="trade-symbol"
               name="symbol"
@@ -147,12 +147,13 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
               placeholder="AAPL, BTC-USD…"
               value={symbol}
               onChange={(e) => setSymbol(e.target.value)}
+              aria-required="true"
               autoFocus
             />
           </div>
           <div>
-            <label className={LABEL}>Side *</label>
-            <div className="flex gap-2">
+            <label id="trade-side-label" className={LABEL}>Side *</label>
+            <div className="flex gap-2" role="group" aria-labelledby="trade-side-label">
               <button
                 type="button"
                 onClick={() => setSide('LONG')}
@@ -182,8 +183,8 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
         {/* Row 2: Asset Class + Trade Type */}
         <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label className={LABEL}>Asset Class</label>
-            <select className={SELECT} value={assetClass} onChange={(e) => setAssetClass(e.target.value as any)}>
+            <label htmlFor="trade-asset-class" className={LABEL}>Asset Class</label>
+            <select id="trade-asset-class" className={SELECT} value={assetClass} onChange={(e) => setAssetClass(e.target.value as any)}>
               <option value="equity">Equity</option>
               <option value="crypto">Crypto</option>
               <option value="forex">Forex</option>
@@ -191,8 +192,8 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
             </select>
           </div>
           <div>
-            <label className={LABEL}>Trade Type</label>
-            <select className={SELECT} value={tradeType} onChange={(e) => setTradeType(e.target.value as any)}>
+            <label htmlFor="trade-type" className={LABEL}>Trade Type</label>
+            <select id="trade-type" className={SELECT} value={tradeType} onChange={(e) => setTradeType(e.target.value as any)}>
               <option value="Spot">Spot</option>
               <option value="Options">Options</option>
               <option value="Futures">Futures</option>
@@ -207,8 +208,8 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
             <div className="mb-2 text-xs font-semibold text-purple-300">Options Details</div>
             <div className="mb-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <label className={LABEL}>Option Type *</label>
-                <div className="flex gap-2">
+                <label id="trade-option-type-label" className={LABEL}>Option Type *</label>
+                <div className="flex gap-2" role="group" aria-labelledby="trade-option-type-label">
                   <button
                     type="button"
                     onClick={() => setOptionType('CALL')}
@@ -234,7 +235,7 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
                 </div>
               </div>
               <div>
-                <label className={LABEL}>Strike Price</label>
+                <label htmlFor="trade-strike-price" className={LABEL}>Strike Price</label>
                 <input
                   id="trade-strike-price"
                   name="strikePrice"
@@ -250,7 +251,7 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <label className={LABEL}>Expiration Date</label>
+                <label htmlFor="trade-expiration" className={LABEL}>Expiration Date</label>
                 <input
                   id="trade-expiration"
                   name="expirationDate"
@@ -261,7 +262,7 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
                 />
               </div>
               <div>
-                <label className={LABEL}>Premium (per contract)</label>
+                <label htmlFor="trade-premium" className={LABEL}>Premium (per contract)</label>
                 <input
                   id="trade-premium"
                   name="premium"
@@ -286,7 +287,7 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <label className={LABEL}>Leverage</label>
+                <label htmlFor="trade-leverage" className={LABEL}>Leverage</label>
                 <div className="relative">
                   <input
                     id="trade-leverage"
@@ -316,7 +317,7 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
         {/* Row 3: Entry Price + Quantity */}
         <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label className={LABEL}>Entry Price *</label>
+            <label htmlFor="trade-entry-price" className={LABEL}>Entry Price *</label>
             <input
               id="trade-entry-price"
               name="entryPrice"
@@ -327,10 +328,11 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
               placeholder="0.00"
               value={entryPrice}
               onChange={(e) => setEntryPrice(e.target.value)}
+              aria-required="true"
             />
           </div>
           <div>
-            <label className={LABEL}>Quantity *</label>
+            <label htmlFor="trade-quantity" className={LABEL}>Quantity *</label>
             <input
               id="trade-quantity"
               name="quantity"
@@ -341,6 +343,7 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
               placeholder="0"
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
+              aria-required="true"
             />
           </div>
         </div>
@@ -348,7 +351,7 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
         {/* Row 4: Stop Loss + Target */}
         <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label className={LABEL}>Stop Loss</label>
+            <label htmlFor="trade-stop-loss" className={LABEL}>Stop Loss</label>
             <input
               id="trade-stop-loss"
               name="stopLoss"
@@ -362,7 +365,7 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
             />
           </div>
           <div>
-            <label className={LABEL}>Target</label>
+            <label htmlFor="trade-target" className={LABEL}>Target</label>
             <input
               id="trade-target"
               name="target"
@@ -395,7 +398,7 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
 
         {/* Row 5: Date */}
         <div className="mb-3">
-          <label className={LABEL}>Trade Date</label>
+          <label htmlFor="trade-date" className={LABEL}>Trade Date</label>
           <input
             id="trade-date"
             name="tradeDate"
@@ -409,7 +412,7 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
         {/* Row 6: Strategy + Setup */}
         <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label className={LABEL}>Strategy</label>
+            <label htmlFor="trade-strategy" className={LABEL}>Strategy</label>
             <input
               id="trade-strategy"
               name="strategy"
@@ -421,7 +424,7 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
             />
           </div>
           <div>
-            <label className={LABEL}>Setup</label>
+            <label htmlFor="trade-setup" className={LABEL}>Setup</label>
             <input
               id="trade-setup"
               name="setup"
@@ -436,8 +439,9 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
 
         {/* Row 7: Notes */}
         <div className="mb-3">
-          <label className={LABEL}>Notes</label>
+          <label htmlFor="trade-notes" className={LABEL}>Notes</label>
           <textarea
+            id="trade-notes"
             className={`${INPUT} min-h-[60px] resize-y`}
             placeholder="Entry thesis, observations…"
             rows={2}

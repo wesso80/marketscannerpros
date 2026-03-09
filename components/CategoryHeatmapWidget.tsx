@@ -179,6 +179,7 @@ export default function CategoryHeatmapWidget() {
         marginBottom: '12px'
       }}>
         <button
+          type="button"
           onClick={() => setSortBy('marketCap')}
           style={{
             padding: '4px 12px',
@@ -194,6 +195,7 @@ export default function CategoryHeatmapWidget() {
           By Market Cap
         </button>
         <button
+          type="button"
           onClick={() => setSortBy('change24h')}
           style={{
             padding: '4px 12px',

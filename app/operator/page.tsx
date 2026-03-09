@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import ToolsNavBar from '@/components/ToolsNavBar';
 import AdaptivePersonalityCard from '@/components/AdaptivePersonalityCard';
+import UpgradeGate from '@/components/UpgradeGate';
 import { writeOperatorState } from '@/lib/operatorState';
 import { createWorkflowEvent, emitWorkflowEvents } from '@/lib/workflow/client';
-import { useUserTier, canAccessBrain } from '@/lib/useUserTier';
+import { useUserTier, canAccessBrain, canAccessBacktest } from '@/lib/useUserTier';
 import type { CandidateEvaluation, OperatorContext, UnifiedSignal } from '@/lib/workflow/types';
 import CapitalControlStrip from '@/components/risk/CapitalControlStrip';
 import { RiskPermissionProvider } from '@/components/risk/RiskPermissionContext';
@@ -349,33 +351,6 @@ interface OperatorPresenceSummary {
   pendingTaskCount: number;
 }
 
-interface DecisionPacketTraceItem {
-  source: 'ai_event' | 'alert' | 'journal';
-  createdAt: string;
-  type: string;
-  id: string;
-  symbol: string | null;
-  workflowId: string | null;
-  payload: Record<string, unknown>;
-}
-
-interface DecisionPacketTraceSummary {
-  events: number;
-  alerts: number;
-  journalEntries: number;
-  totalItems: number;
-  latestAt: string | null;
-  earliestAt: string | null;
-  symbols: string[];
-  workflowIds: string[];
-}
-
-interface DecisionPacketTraceResponse {
-  decisionPacketId: string;
-  summary: DecisionPacketTraceSummary;
-  timeline: DecisionPacketTraceItem[];
-}
-
 interface RiskGovernorDecision {
   allowed: boolean;
   reasonCode: string | null;
@@ -497,11 +472,6 @@ function classifyPhase(score: number, isActive: boolean): PipelineStage {
   return 'Detected';
 }
 
-function stageIndex(stage: PipelineStage): number {
-  const order: PipelineStage[] = ['Detected', 'Qualified', 'Validated', 'Ready', 'Active', 'Closed'];
-  return order.indexOf(stage);
-}
-
 function toneBadge(tone: Tone) {
   if (tone === 'aligned') return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300';
   if (tone === 'building') return 'border-amber-500/30 bg-amber-500/10 text-amber-300';
@@ -515,7 +485,8 @@ function layerToneLabel(score: number, yellowFloor = 60): { tone: Tone; label: s
 }
 
 export default function OperatorDashboardPage() {
-  const { tier } = useUserTier();
+  const { tier, isLoading: tierLoading } = useUserTier();
+  const router = useRouter();
   const canUseBrain = canAccessBrain(tier);
   const lastSignalEventKeyRef = useRef('');
   const [loading, setLoading] = useState(true);
@@ -532,8 +503,7 @@ export default function OperatorDashboardPage() {
   const [coachTasksQueue, setCoachTasksQueue] = useState<CoachTaskItem[]>([]);
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
   const [loopFeedbackSaving, setLoopFeedbackSaving] = useState<null | 'validated' | 'ignored' | 'wrong_context' | 'timing_issue'>(null);
-  const [decisionPacketTrace, setDecisionPacketTrace] = useState<DecisionPacketTraceResponse | null>(null);
-  const [decisionPacketTraceLoading, setDecisionPacketTraceLoading] = useState(false);
+
   const [riskGovernorDebug, setRiskGovernorDebug] = useState<RiskGovernorDebugResponse | null>(null);
   const [permissionSnapshot, setPermissionSnapshot] = useState<PermissionMatrixSnapshot | null>(null);
   const [riskGovernorRefreshing, setRiskGovernorRefreshing] = useState(false);
@@ -867,7 +837,7 @@ export default function OperatorDashboardPage() {
           }),
         ]);
         setHeartbeatDrift(createData?.alertId ? `Alert created for ${primary} (${createData.alertId})` : `Alert action triggered for ${primary}`);
-        window.location.href = `/tools/alerts?symbol=${encodeURIComponent(primary)}&from=operator&source=focus_strip${createData?.alertId ? `&alertId=${encodeURIComponent(createData.alertId)}` : ''}`;
+        router.push(`/tools/alerts?symbol=${encodeURIComponent(primary)}&from=operator&source=focus_strip${createData?.alertId ? `&alertId=${encodeURIComponent(createData.alertId)}` : ''}`);
         return;
       }
 
@@ -895,7 +865,7 @@ export default function OperatorDashboardPage() {
           }),
         ]);
         setHeartbeatDrift(draftData?.planId ? `Draft plan created for ${primary} (${draftData.planId})` : `Draft plan action triggered for ${primary}`);
-        window.location.href = `/tools/backtest?symbol=${encodeURIComponent(primary)}&from=operator&source=focus_strip${draftData?.planId ? `&planId=${encodeURIComponent(draftData.planId)}` : ''}`;
+        router.push(`/tools/backtest?symbol=${encodeURIComponent(primary)}&from=operator&source=focus_strip${draftData?.planId ? `&planId=${encodeURIComponent(draftData.planId)}` : ''}`);
         return;
       }
 
@@ -931,38 +901,7 @@ export default function OperatorDashboardPage() {
     void refreshProposals();
   }, []);
 
-  useEffect(() => {
-    if (!loopDecisionPacketId) {
-      setDecisionPacketTrace(null);
-      setDecisionPacketTraceLoading(false);
-      return;
-    }
 
-    let mounted = true;
-    const loadTrace = async () => {
-      setDecisionPacketTraceLoading(true);
-      try {
-        const res = await fetch(`/api/workflow/decision-packet?id=${encodeURIComponent(loopDecisionPacketId)}`, { cache: 'no-store' });
-        if (!res.ok) {
-          if (mounted) setDecisionPacketTrace(null);
-          return;
-        }
-
-        const data = (await res.json()) as DecisionPacketTraceResponse;
-        if (mounted) setDecisionPacketTrace(data);
-      } catch {
-        if (mounted) setDecisionPacketTrace(null);
-      } finally {
-        if (mounted) setDecisionPacketTraceLoading(false);
-      }
-    };
-
-    void loadTrace();
-
-    return () => {
-      mounted = false;
-    };
-  }, [loopDecisionPacketId]);
 
   useEffect(() => {
     void refreshRiskGovernor(
@@ -1083,7 +1022,6 @@ export default function OperatorDashboardPage() {
   const riskDNA = adaptive?.profile?.riskDNA || 'awaiting';
   const timingDNA = adaptive?.profile?.decisionTiming?.replace('_', ' ') || 'awaiting';
 
-  const pipeline: PipelineStage[] = ['Detected', 'Qualified', 'Validated', 'Ready', 'Active', 'Closed'];
   const workflowId = useMemo(() => {
     const dateKey = new Date().toISOString().slice(0, 10).replaceAll('-', '');
     return `wf_operator_${dateKey}`;
@@ -1790,6 +1728,57 @@ export default function OperatorDashboardPage() {
     };
   });
 
+  if (tierLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[var(--msp-bg)]">
+        <div className="text-[var(--msp-text-muted)]">Loading…</div>
+      </div>
+    );
+  }
+
+  if (!canAccessBacktest(tier)) {
+    return (
+      <div className="min-h-screen bg-[var(--msp-bg)] text-[var(--msp-text)]">
+        <ToolsNavBar />
+        <UpgradeGate requiredTier="pro_trader" feature="Operator Dashboard">
+          <ul style={{ textAlign: 'left', color: 'var(--msp-text-muted)', fontSize: '14px', marginBottom: '24px', paddingLeft: '20px' }}>
+            <li>📊 Real-time risk governance & permission matrix</li>
+            <li>🧠 AI-powered consciousness loop & operator coaching</li>
+            <li>⚡ Neural attention system with adaptive heartbeat</li>
+            <li>📈 Position tracking with R-multiple analysis</li>
+            <li>🎯 Workflow pipeline with coach task queue</li>
+            <li>🔒 Capital control strip & exposure management</li>
+          </ul>
+        </UpgradeGate>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[var(--msp-bg)] text-[var(--msp-text)]">
+        <ToolsNavBar />
+        <div className="mx-auto max-w-7xl px-4 py-8">
+          <div className="mb-6 h-8 w-64 animate-pulse rounded-lg bg-[var(--msp-panel-2)]" />
+          <div className="grid gap-4 lg:grid-cols-12">
+            <div className="lg:col-span-3 space-y-4">
+              <div className="h-48 animate-pulse rounded-xl bg-[var(--msp-panel-2)]" />
+              <div className="h-32 animate-pulse rounded-xl bg-[var(--msp-panel-2)]" />
+            </div>
+            <div className="lg:col-span-6 space-y-4">
+              <div className="h-40 animate-pulse rounded-xl bg-[var(--msp-panel-2)]" />
+              <div className="h-56 animate-pulse rounded-xl bg-[var(--msp-panel-2)]" />
+            </div>
+            <div className="lg:col-span-3 space-y-4">
+              <div className="h-36 animate-pulse rounded-xl bg-[var(--msp-panel-2)]" />
+              <div className="h-36 animate-pulse rounded-xl bg-[var(--msp-panel-2)]" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <RegimeProvider>
     <RiskPermissionProvider>
@@ -1846,7 +1835,7 @@ export default function OperatorDashboardPage() {
             <div className="grid gap-4 lg:grid-cols-12">
               <div className="lg:col-span-6">
                 <div className="text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Command State</div>
-                <div className="mt-1 text-[1.05rem] font-bold uppercase tracking-[0.03em] text-[var(--msp-text)]">Operator Dashboard</div>
+                <h1 className="mt-1 text-[1.05rem] font-bold uppercase tracking-[0.03em] text-[var(--msp-text)]">Operator Dashboard</h1>
                 <div className="mt-3 grid gap-2 text-[0.76rem]">
                   <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">MARKET REGIME</span><span className="font-semibold truncate text-right">{!focusSignal && !presence ? 'AWAITING DATA' : regimeADX >= 25 ? 'TRENDING' : 'TRANSITIONAL'}</span></div>
                   <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">EXECUTION BIAS</span><span className="font-semibold truncate text-right">{bias === 'neutral' && !focusSignal ? 'AWAITING SIGNAL' : `${bias.toUpperCase()} CONTINUATION`}</span></div>
@@ -1992,35 +1981,7 @@ export default function OperatorDashboardPage() {
                   <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">Expectancy</span><span className="font-semibold text-[var(--msp-text)] truncate">{closedTrades.length > 0 ? formatRiskPairFromAmount(avgWin - avgLoss) : '—'}</span></div>
                 </div>
               </div>
-              <div className="msp-elite-panel">
-                <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Strategy Performance By Regime <span className="normal-case tracking-normal font-normal text-[var(--msp-warn)]">(static reference — connect to journal for live data)</span></div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-[0.72rem]">
-                    <thead className="text-[var(--msp-text-faint)]">
-                      <tr>
-                        <th className="px-2 py-1">Strategy</th>
-                        <th className="px-2 py-1">Trend</th>
-                        <th className="px-2 py-1">Range</th>
-                        <th className="px-2 py-1">Risk-Off</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[
-                        ['Breakout', 'Strong', 'Weak', 'Blocked'],
-                        ['Pullback', 'Good', 'Neutral', 'Reduced'],
-                        ['Mean Rev', 'Tight', 'Strong', 'Reduced'],
-                      ].map((row) => (
-                        <tr key={row[0]} className="border-t border-[var(--msp-divider)]">
-                          <td className="px-2 py-1.5 text-[var(--msp-text)]">{row[0]}</td>
-                          <td className="px-2 py-1.5 text-[var(--msp-text-muted)]">{row[1]}</td>
-                          <td className="px-2 py-1.5 text-[var(--msp-text-muted)]">{row[2]}</td>
-                          <td className="px-2 py-1.5 text-[var(--msp-text-muted)]">{row[3]}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+
               <div className="msp-elite-panel">
                 <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">System Diagnostics</div>
                 <div className="grid gap-1 text-[0.74rem] text-[var(--msp-text-muted)]">

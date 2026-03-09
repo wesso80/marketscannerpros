@@ -148,13 +148,16 @@ export default function MultiConditionAlertBuilder({
     }));
   };
 
+  const [validationError, setValidationError] = useState<string | null>(null);
+
   const handleSave = () => {
     // Validate all conditions have values
     const validConditions = conditions.filter(c => c.conditionValue);
     if (validConditions.length < 2) {
-      alert('Please add at least 2 conditions with values');
+      setValidationError('Please add at least 2 conditions with values');
       return;
     }
+    setValidationError(null);
 
     onSave({
       symbol,
@@ -391,6 +394,10 @@ export default function MultiConditionAlertBuilder({
           {creating ? 'Creating...' : 'Create Alert'}
         </button>
       </div>
+
+      {validationError && (
+        <p className="text-xs text-rose-400 px-1">{validationError}</p>
+      )}
     </div>
   );
 }

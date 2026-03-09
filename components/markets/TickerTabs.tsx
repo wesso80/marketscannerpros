@@ -41,6 +41,7 @@ export default function TickerTabs({ ctx }: TickerTabsProps) {
       <div className="flex items-center gap-0.5 overflow-x-auto border-b border-[var(--msp-border)] px-2 py-1">
         {TABS.map(({ key, label, cryptoLabel }) => (
           <button
+            type="button"
             key={key}
             onClick={() => setActiveTab(key)}
             className={`whitespace-nowrap rounded-t-md px-3 py-1.5 text-[11px] font-semibold transition-colors ${

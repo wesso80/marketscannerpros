@@ -1,13 +1,48 @@
 'use client';
 
+import { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import type { TickerContext } from '../types';
 import { SentimentBadge } from '@/components/NewsSentiment';
+import type { InteractiveChartCandle } from '@/components/scanner/InteractiveChart';
 
-const PriceChart = dynamic(
-  () => import('@/components/scanner/PriceChart').then(m => ({ default: m.PriceChart })),
-  { ssr: false, loading: () => <div className="h-[300px] animate-pulse rounded-md bg-[var(--msp-panel-2)]" /> }
+const InteractiveChart = dynamic(
+  () => import('@/components/scanner/InteractiveChart'),
+  { ssr: false, loading: () => <div className="h-[420px] animate-pulse rounded-md bg-[var(--msp-panel-2)]" /> }
 );
+
+/** Fetch bars from /api/bars when scanner doesn't include chartData */
+function useBarsFallback(
+  symbol: string,
+  scannerChartData: { candles: InteractiveChartCandle[]; ema200?: number[] } | undefined | null,
+) {
+  const [bars, setBars] = useState<{ candles: InteractiveChartCandle[]; ema200: number[] } | null>(null);
+  const prevSymRef = useRef(symbol);
+
+  useEffect(() => {
+    if (prevSymRef.current !== symbol) {
+      setBars(null);
+      prevSymRef.current = symbol;
+    }
+  }, [symbol]);
+
+  useEffect(() => {
+    if (scannerChartData && scannerChartData.candles.length > 0) return;
+    if (!symbol) return;
+    let cancelled = false;
+    fetch(`/api/bars?symbol=${encodeURIComponent(symbol)}&timeframe=daily&limit=50`)
+      .then(r => r.ok ? r.json() : null)
+      .then(json => {
+        if (cancelled || !json?.ok) return;
+        setBars({ candles: json.candles, ema200: json.ema200 ?? [] });
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [symbol, scannerChartData]);
+
+  if (scannerChartData && scannerChartData.candles.length > 0) return scannerChartData;
+  return bars;
+}
 
 /**
  * Overview Tab — Chart + quote card + key levels + quick sentiment.
@@ -16,6 +51,7 @@ const PriceChart = dynamic(
 export default function OverviewTab({ ctx }: { ctx: TickerContext }) {
   const { symbol, assetClass, quote, scanner, loading } = ctx;
   const isCrypto = assetClass === 'crypto';
+  const chartSource = useBarsFallback(symbol, scanner?.indicators?.chartData);
 
   if (loading) {
     return <div className="h-[400px] animate-pulse rounded-md bg-[var(--msp-panel-2)]" />;
@@ -56,11 +92,12 @@ export default function OverviewTab({ ctx }: { ctx: TickerContext }) {
 
       {/* Chart */}
       <div className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2">
-        <PriceChart
+        <InteractiveChart
+          candles={chartSource?.candles ?? []}
+          ema200={chartSource?.ema200}
           symbol={symbol}
           interval="daily"
-          price={quote?.price}
-          chartData={scanner?.indicators?.chartData}
+          height={420}
         />
       </div>
 
