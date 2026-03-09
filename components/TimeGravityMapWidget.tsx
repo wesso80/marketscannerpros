@@ -541,7 +541,7 @@ export default function TimeGravityMapWidget({
   symbol,
   currentPrice,
   midpoints: externalMidpoints,
-  assetType = 'crypto',
+  assetType,
   autoRefresh = true,
   refreshInterval = 120_000,
   variant = 'full',

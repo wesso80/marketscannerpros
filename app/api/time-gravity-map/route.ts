@@ -32,11 +32,20 @@ import { getQuote } from '@/lib/onDemandFetch';
 
 // ── Detect whether a symbol is crypto ──────────────────────────────────────
 const CRYPTO_SUFFIXES = ['USD', 'USDT', 'USDC', 'BTC', 'ETH', 'BUSD'];
+const KNOWN_CRYPTO = new Set([
+  'BTC','ETH','SOL','XRP','ADA','DOGE','DOT','AVAX','MATIC','LINK','UNI','ATOM',
+  'TRX','NEAR','SHIB','LTC','BCH','HBAR','FIL','VET','IMX','APT','GRT','INJ',
+  'OP','THETA','FTM','RUNE','LDO','ALGO','XMR','AAVE','MKR','STX','EGLD','FLOW',
+  'AXS','SAND','EOS','XTZ','NEO','KAVA','CFX','MINA','SNX','CRV','DYDX','BLUR',
+  'AR','SUI','SEI','TIA','JUP','WIF','PEPE','BONK','FLOKI','PYTH','STRK','WLD',
+  'FET','RNDR','AGIX','OCEAN','TAO','ROSE','ZIL','IOTA','ZEC','DASH','BAT','ZRX',
+  'ENJ','MANA','GALA','APE','GMT','ARB','MAGIC','GMX','COMP','YFI','SUSHI',
+  '1INCH','BNB','TON','NOT','PENDLE','JTO','ENA','ETHFI','W','DYM','PIXEL',
+]);
 function isCryptoSymbol(symbol: string): boolean {
   const upper = symbol.toUpperCase();
   if (CRYPTO_SUFFIXES.some(s => upper.endsWith(s) && upper.length > s.length)) return true;
-  // Known crypto tickers
-  if (['BTC', 'ETH', 'SOL', 'XRP', 'ADA', 'DOGE', 'DOT', 'AVAX', 'MATIC', 'LINK', 'UNI', 'ATOM'].includes(upper)) return true;
+  if (KNOWN_CRYPTO.has(upper)) return true;
   return false;
 }
 
@@ -188,37 +197,47 @@ async function generateMidpointsOnDemand(symbol: string, assetType: 'crypto' | '
         return { totalStored: 0, timeframesGenerated: [], rateLimited: false, error: 'No API key configured' };
       }
 
+      // Clean up any crypto-typed midpoints that may have been incorrectly stored
+      // for this equity symbol (e.g. widget defaulted to crypto previously)
+      try {
+        const cleaned = await q(
+          `DELETE FROM timeframe_midpoints WHERE symbol = $1 AND asset_type = 'crypto' RETURNING id`,
+          [symbol]
+        );
+        if (cleaned.length > 0) {
+          console.log(`[TGM on-demand] Cleaned ${cleaned.length} stale crypto midpoints for equity ${symbol}`);
+        }
+      } catch { /* non-fatal */ }
+
       // 1. Fetch daily bars (compact = ~100 trading days) — avFetch blocks until token available
       try {
         const dailyUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${encodeURIComponent(symbol)}&outputsize=compact&entitlement=realtime&apikey=${apiKey}`;
         const dailyJson = await avFetch<Record<string, any>>(dailyUrl, `TGM_DAILY ${symbol}`);
         if (dailyJson) {
-          if (dailyJson['Error Message']) {
-            console.warn(`[TGM on-demand] AV error for ${symbol} daily:`, dailyJson['Error Message']);
-          } else if (dailyJson['Note'] || dailyJson['Information']) {
-            console.warn(`[TGM on-demand] AV limit note for ${symbol}:`, dailyJson['Note'] || dailyJson['Information']);
-            rateLimited = true;
-          } else {
-            const tsKey = Object.keys(dailyJson).find(k => k.startsWith('Time Series'));
-            if (tsKey && dailyJson[tsKey]) {
-              const dailyBars = parseAVTimeSeries(dailyJson[tsKey]);
+          const tsKey = Object.keys(dailyJson).find(k => k.startsWith('Time Series'));
+          if (tsKey && dailyJson[tsKey]) {
+            const dailyBars = parseAVTimeSeries(dailyJson[tsKey]);
+            console.log(`[TGM on-demand] AV daily for ${symbol}: ${dailyBars.length} bars parsed`);
 
-              // Store daily midpoints (last 100 bars)
-              if (dailyBars.length > 0) {
-                const dStored = await processor.processCandleBatch(symbol, 'daily', dailyBars.slice(-100), 'equity');
-                totalStored += dStored;
-                if (dStored > 0) timeframesGenerated.push('1D');
+            // Store daily midpoints (last 100 bars)
+            if (dailyBars.length > 0) {
+              const dStored = await processor.processCandleBatch(symbol, 'daily', dailyBars.slice(-100), 'equity');
+              totalStored += dStored;
+              if (dStored > 0) timeframesGenerated.push('1D');
 
-                // Aggregate daily → weekly (no extra API call)
-                const weeklyBars = aggregateDailyToWeekly(dailyBars);
-                if (weeklyBars.length > 0) {
-                  const wStored = await processor.processCandleBatch(symbol, '1w', weeklyBars, 'equity');
-                  totalStored += wStored;
-                  if (wStored > 0) timeframesGenerated.push('1W');
-                }
+              // Aggregate daily → weekly (no extra API call)
+              const weeklyBars = aggregateDailyToWeekly(dailyBars);
+              if (weeklyBars.length > 0) {
+                const wStored = await processor.processCandleBatch(symbol, '1w', weeklyBars, 'equity');
+                totalStored += wStored;
+                if (wStored > 0) timeframesGenerated.push('1W');
               }
             }
+          } else {
+            console.warn(`[TGM on-demand] AV daily response for ${symbol} missing Time Series key. Keys: ${Object.keys(dailyJson).join(', ')}`);
           }
+        } else {
+          console.warn(`[TGM on-demand] AV daily returned null for ${symbol} (rate limit or error)`);
         }
       } catch (err: any) {
         console.warn(`[TGM on-demand] AV daily fetch failed for ${symbol}:`, err?.message);
@@ -229,27 +248,30 @@ async function generateMidpointsOnDemand(symbol: string, assetType: 'crypto' | '
         const intradayUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(symbol)}&interval=60min&outputsize=compact&entitlement=realtime&apikey=${apiKey}`;
         const intradayJson = await avFetch<Record<string, any>>(intradayUrl, `TGM_INTRADAY ${symbol}`);
         if (intradayJson) {
-          if (!intradayJson['Error Message'] && !intradayJson['Note'] && !intradayJson['Information']) {
-            const tsKey = Object.keys(intradayJson).find(k => k.startsWith('Time Series'));
-            if (tsKey && intradayJson[tsKey]) {
-              const hourlyBars = parseAVTimeSeries(intradayJson[tsKey]);
+          const tsKey = Object.keys(intradayJson).find(k => k.startsWith('Time Series'));
+          if (tsKey && intradayJson[tsKey]) {
+            const hourlyBars = parseAVTimeSeries(intradayJson[tsKey]);
+            console.log(`[TGM on-demand] AV intraday for ${symbol}: ${hourlyBars.length} bars parsed`);
 
-              // Store 1H midpoints
-              if (hourlyBars.length > 0) {
-                const hStored = await processor.processCandleBatch(symbol, '1H', hourlyBars, 'equity');
-                totalStored += hStored;
-                if (hStored > 0) timeframesGenerated.push('1H');
+            // Store 1H midpoints
+            if (hourlyBars.length > 0) {
+              const hStored = await processor.processCandleBatch(symbol, '1H', hourlyBars, 'equity');
+              totalStored += hStored;
+              if (hStored > 0) timeframesGenerated.push('1H');
 
-                // Aggregate 1H → 4H (no extra API call)
-                const fourHourBars = aggregate1HTo4H(hourlyBars);
-                if (fourHourBars.length > 0) {
-                  const fhStored = await processor.processCandleBatch(symbol, '4H', fourHourBars, 'equity');
-                  totalStored += fhStored;
-                  if (fhStored > 0) timeframesGenerated.push('4H');
-                }
+              // Aggregate 1H → 4H (no extra API call)
+              const fourHourBars = aggregate1HTo4H(hourlyBars);
+              if (fourHourBars.length > 0) {
+                const fhStored = await processor.processCandleBatch(symbol, '4H', fourHourBars, 'equity');
+                totalStored += fhStored;
+                if (fhStored > 0) timeframesGenerated.push('4H');
               }
             }
+          } else {
+            console.warn(`[TGM on-demand] AV intraday response for ${symbol} missing Time Series key. Keys: ${Object.keys(intradayJson).join(', ')}`);
           }
+        } else {
+          console.warn(`[TGM on-demand] AV intraday returned null for ${symbol} (rate limit or error)`);
         }
       } catch (err: any) {
         console.warn(`[TGM on-demand] AV intraday fetch failed for ${symbol}:`, err?.message);
