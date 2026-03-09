@@ -46,6 +46,7 @@ import { mapToScoringRegime, computeRegimeScore, estimateComponentsFromContext, 
 import { computeACLFromScoring } from '@/lib/ai/adaptiveConfidenceLens';
 import { computePerformanceThrottle, applyPerformanceDampener } from '@/lib/ai/performanceThrottle';
 import { computeSessionPhaseOverlay } from '@/lib/ai/sessionPhase';
+import { buildV3EnginePrompt } from '@/lib/prompts/arcaV3Engine';
 import type { PromptMode } from "@/lib/ai/types";
 
 export const runtime = "nodejs";
@@ -319,6 +320,34 @@ export async function POST(req: NextRequest) {
     const promptMode: PromptMode = isPineScriptRequest(query) ? 'pine_script' : 'analyst';
     const basePrompt = promptMode === 'pine_script' ? PINE_SCRIPT_V2_PROMPT : MSP_ANALYST_V2_PROMPT;
 
+    // ===== V3 ENGINE: Fetch signal memory for edge learning =====
+    let signalMemory: { totalSignals: number; regimeStats: Array<{ regime: string; count: number; winRate: number }>; recentSignals: Array<{ symbol: string; verdict: string; confidence: number; outcome?: string }> } | null = null;
+    try {
+      const regimeStats = await q(
+        `SELECT regime, COUNT(*) as count,
+                ROUND(100.0 * COUNT(*) FILTER (WHERE outcome = 'correct') / NULLIF(COUNT(*) FILTER (WHERE outcome != 'pending'), 0), 1) as win_rate
+         FROM ai_signal_log WHERE workspace_id = $1 AND signal_at > NOW() - INTERVAL '90 days'
+         GROUP BY regime ORDER BY count DESC`,
+        [workspaceId]
+      );
+      const recentSignals = await q(
+        `SELECT symbol, verdict, confidence, outcome FROM ai_signal_log
+         WHERE workspace_id = $1 ORDER BY signal_at DESC LIMIT 5`,
+        [workspaceId]
+      );
+      const totalResult = await q(
+        `SELECT COUNT(*) as total FROM ai_signal_log WHERE workspace_id = $1`,
+        [workspaceId]
+      );
+      signalMemory = {
+        totalSignals: parseInt(totalResult[0]?.total || '0'),
+        regimeStats: (regimeStats || []).map((r: any) => ({ regime: r.regime, count: parseInt(r.count), winRate: parseFloat(r.win_rate || '0') })),
+        recentSignals: (recentSignals || []).map((s: any) => ({ symbol: s.symbol, verdict: s.verdict, confidence: parseInt(s.confidence), outcome: s.outcome })),
+      };
+    } catch {
+      // ai_signal_log table may not exist yet — use null (prompt will say "no history")
+    }
+
     const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
       {
         role: "system",
@@ -329,6 +358,14 @@ export async function POST(req: NextRequest) {
         content: PLATFORM_KNOWLEDGE_PROMPT,
       },
     ];
+
+    // ===== V3 ENGINE: Decision Trace, Narrative, Liquidity, Trade Construction, etc. =====
+    if (promptMode === 'analyst') {
+      messages.push({
+        role: "system",
+        content: buildV3EnginePrompt(signalMemory),
+      });
+    }
 
     if (mode) {
       messages.push({
@@ -790,6 +827,46 @@ Always mention which derivatives signals support or contradict your analysis.
     } catch (dbErr) {
       logger.error('Error tracking AI usage', { error: dbErr, workspaceId });
       // Don't fail the request if tracking fails
+    }
+
+    // ===== V3 ENGINE: Log signal for edge learning =====
+    if (promptMode === 'analyst' && context?.symbol && regimeScoring.weightedScore > 0) {
+      try {
+        const verdict = aclResult.authorization === 'BLOCKED' ? 'NO_TRADE' :
+                         aclResult.authorization === 'CONDITIONAL' ? 'CONDITIONAL' :
+                         regimeScoring.tradeBias === 'HIGH_CONFLUENCE' ? 'TRADE_READY' : 'WATCH';
+        // Dedup check: skip if same symbol logged within 1 hour
+        const recent = await q(
+          `SELECT id FROM ai_signal_log WHERE workspace_id = $1 AND symbol = $2 AND signal_at > NOW() - INTERVAL '1 hour' LIMIT 1`,
+          [workspaceId, context.symbol]
+        );
+        if (!recent || recent.length === 0) {
+          await q(
+            `INSERT INTO ai_signal_log (workspace_id, symbol, asset_type, timeframe, regime, confluence_score, confidence, verdict, trade_bias, price_at_signal, decision_trace)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+            [
+              workspaceId, context.symbol, isCryptoQuery ? 'crypto' : 'equity',
+              context.timeframe || 'daily', scoringRegime,
+              Math.round(regimeScoring.weightedScore), Math.round(aclResult.confidence),
+              verdict, regimeScoring.tradeBias || null,
+              context.currentPrice || null,
+              JSON.stringify({
+                market_state: scoringRegime,
+                regime: regimeInferred,
+                volatility_state: institutionalFilter.filters.find(f => f.key === 'volatility')?.status || 'unknown',
+                confluence_score: Math.round(regimeScoring.weightedScore),
+                risk_validation: institutionalFilter.noTrade ? 'BLOCKED' : 'PASSED',
+                institutional_filter: institutionalFilter.finalGrade,
+                session_phase: sessionPhase.phase,
+                performance_gate: perfThrottle.level,
+                acl_authorization: aclResult.authorization,
+              }),
+            ]
+          );
+        }
+      } catch {
+        // Non-critical: don't fail the response if signal logging fails
+      }
     }
 
     logger.info('AI analyst request completed', {
