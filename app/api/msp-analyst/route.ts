@@ -31,6 +31,7 @@ import OpenAI from "openai";
 import { MSP_ANALYST_V2_PROMPT, buildAnalystV2SystemMessages } from "@/lib/prompts/mspAnalystV2";
 import { PINE_SCRIPT_V2_PROMPT, isPineScriptRequest } from "@/lib/prompts/pineScriptEngineerV2";
 import { SCANNER_EXPLAINER_RULES, getScannerExplainerContext } from "@/lib/prompts/scannerExplainerRules";
+import { PLATFORM_KNOWLEDGE_PROMPT } from "@/lib/prompts/platformKnowledge";
 import { getSessionFromCookie } from "@/lib/auth";
 import { q } from "@/lib/db";
 import { logger } from "@/lib/logger";
@@ -322,6 +323,10 @@ export async function POST(req: NextRequest) {
       {
         role: "system",
         content: basePrompt,
+      },
+      {
+        role: "system",
+        content: PLATFORM_KNOWLEDGE_PROMPT,
       },
     ];
 
