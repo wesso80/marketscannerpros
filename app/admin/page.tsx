@@ -5,9 +5,19 @@ import { useState, useEffect } from "react";
 interface Stats {
   overview: {
     totalWorkspaces: number;
-    subscriptionsByTier: { tier: string; count: number }[];
+    subscriptionsByTier: { tier: string; status: string; count: number }[];
+    paidSubscriptions: number;
+    trialSubscriptions: number;
     activeTrials: number;
     pendingDeleteRequests: number;
+    financials: {
+      monthlyRevenue: number;
+      yearlyRevenue: number;
+      monthlyCosts: number;
+      yearlyCosts: number;
+      monthlyProfit: number;
+      yearlyProfit: number;
+    };
   };
   aiUsage: {
     today: { totalQuestions: number; uniqueUsers: number };
@@ -165,9 +175,14 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
 
   return (
     <div>
-      <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "#E5E7EB", marginBottom: "1.5rem" }}>
-        📊 Dashboard Overview
-      </h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "#E5E7EB" }}>
+          📊 Dashboard Overview
+        </h1>
+        <span style={{ color: "#9CA3AF", fontSize: "0.9rem" }}>
+          {new Date().toLocaleDateString('en-AU', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+        </span>
+      </div>
 
       {/* Learning Machine Migration */}
       <div style={{
@@ -230,15 +245,21 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
         </div>
         <div style={statBoxStyle}>
           <div style={{ fontSize: "2rem", fontWeight: 700, color: "var(--msp-accent)" }}>
-            {stats?.aiUsage.today.totalQuestions || 0}
+            {stats?.overview.paidSubscriptions || 0}
           </div>
-          <div style={{ color: "#9CA3AF", fontSize: "0.875rem" }}>AI Questions Today</div>
+          <div style={{ color: "#9CA3AF", fontSize: "0.875rem" }}>Paid Subscribers</div>
         </div>
         <div style={statBoxStyle}>
           <div style={{ fontSize: "2rem", fontWeight: 700, color: "#F59E0B" }}>
-            {stats?.overview.activeTrials || 0}
+            {stats?.overview.trialSubscriptions || 0}
           </div>
           <div style={{ color: "#9CA3AF", fontSize: "0.875rem" }}>Active Trials</div>
+        </div>
+        <div style={statBoxStyle}>
+          <div style={{ fontSize: "2rem", fontWeight: 700, color: "var(--msp-accent)" }}>
+            {stats?.aiUsage.today.totalQuestions || 0}
+          </div>
+          <div style={{ color: "#9CA3AF", fontSize: "0.875rem" }}>AI Questions Today</div>
         </div>
         <div style={statBoxStyle}>
           <div style={{ fontSize: "2rem", fontWeight: 700, color: "#EF4444" }}>
@@ -248,6 +269,61 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
         </div>
       </div>
 
+      {/* Financial Summary */}
+      {stats?.overview.financials && (
+        <div style={{
+          ...cardStyle,
+          marginBottom: "2rem",
+          border: "1px solid rgba(16, 185, 129, 0.3)",
+        }}>
+          <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>
+            💰 Financial Summary
+          </h2>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+            {/* Monthly */}
+            <div>
+              <h3 style={{ color: "#9CA3AF", fontSize: "0.8rem", textTransform: "uppercase", marginBottom: "0.75rem" }}>Monthly</h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "#9CA3AF" }}>Revenue (Paid Only)</span>
+                  <span style={{ color: "#10B981", fontWeight: 600 }}>${stats.overview.financials.monthlyRevenue.toFixed(2)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "#9CA3AF" }}>Fixed Costs</span>
+                  <span style={{ color: "#EF4444", fontWeight: 600 }}>-${stats.overview.financials.monthlyCosts.toFixed(2)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "0.5rem" }}>
+                  <span style={{ color: "#E5E7EB", fontWeight: 600 }}>Profit/Loss</span>
+                  <span style={{ color: stats.overview.financials.monthlyProfit >= 0 ? "#10B981" : "#EF4444", fontWeight: 700 }}>
+                    {stats.overview.financials.monthlyProfit >= 0 ? '+' : ''}${stats.overview.financials.monthlyProfit.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
+            {/* Yearly */}
+            <div>
+              <h3 style={{ color: "#9CA3AF", fontSize: "0.8rem", textTransform: "uppercase", marginBottom: "0.75rem" }}>Yearly (Projected)</h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "#9CA3AF" }}>Revenue</span>
+                  <span style={{ color: "#10B981", fontWeight: 600 }}>${stats.overview.financials.yearlyRevenue.toFixed(2)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span style={{ color: "#9CA3AF" }}>Fixed Costs</span>
+                  <span style={{ color: "#EF4444", fontWeight: 600 }}>-${stats.overview.financials.yearlyCosts.toFixed(2)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "0.5rem" }}>
+                  <span style={{ color: "#E5E7EB", fontWeight: 600 }}>Profit/Loss</span>
+                  <span style={{ color: stats.overview.financials.yearlyProfit >= 0 ? "#10B981" : "#EF4444", fontWeight: 700 }}>
+                    {stats.overview.financials.yearlyProfit >= 0 ? '+' : ''}${stats.overview.financials.yearlyProfit.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid-equal-2-col-responsive" style={{ gap: "1.5rem" }}>
         {/* Subscriptions by tier */}
         <div style={cardStyle}>
@@ -256,8 +332,8 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
           </h2>
           {stats?.overview.subscriptionsByTier.length ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-              {stats.overview.subscriptionsByTier.map((sub) => (
-                <div key={sub.tier} style={{
+              {stats.overview.subscriptionsByTier.map((sub, i) => (
+                <div key={`${sub.tier}-${sub.status}`} style={{
                   display: "flex",
                   justifyContent: "space-between",
                   padding: "0.5rem 0",
@@ -265,8 +341,18 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
                 }}>
                   <span style={{ color: "#9CA3AF", textTransform: "capitalize" }}>
                     {sub.tier.replace("_", " ")}
+                    <span style={{
+                      marginLeft: "0.5rem",
+                      padding: "0.125rem 0.375rem",
+                      borderRadius: "0.25rem",
+                      fontSize: "0.7rem",
+                      background: sub.status === 'trialing' ? "rgba(245,158,11,0.2)" : "rgba(16,185,129,0.2)",
+                      color: sub.status === 'trialing' ? "#F59E0B" : "#10B981",
+                    }}>
+                      {sub.status === 'trialing' ? 'trial' : 'paid'}
+                    </span>
                   </span>
-                  <span style={{ color: "#10B981", fontWeight: 600 }}>{sub.count}</span>
+                  <span style={{ color: sub.status === 'trialing' ? "#F59E0B" : "#10B981", fontWeight: 600 }}>{sub.count}</span>
                 </div>
               ))}
             </div>

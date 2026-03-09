@@ -45,9 +45,9 @@ export async function GET(req: NextRequest) {
       // Total users (from user_subscriptions)
       safeQuery(() => q(`SELECT COUNT(*) as count FROM user_subscriptions`)),
       
-      // Active subscriptions by tier
-      safeQuery(() => q(`SELECT tier, COUNT(*) as count FROM user_subscriptions 
-          WHERE status IN ('active', 'trialing') GROUP BY tier`)),
+      // Active subscriptions by tier (paid only — excludes trialing)
+      safeQuery(() => q(`SELECT tier, status, COUNT(*) as count FROM user_subscriptions 
+          WHERE status IN ('active', 'trialing') GROUP BY tier, status`)),
       
       // AI usage today (Australia/Sydney timezone)
       safeQuery(() => q(`SELECT COUNT(*) as count, COUNT(DISTINCT workspace_id) as unique_users 
@@ -98,12 +98,36 @@ export async function GET(req: NextRequest) {
           (SELECT COUNT(*) FROM learning_outcomes WHERE hit_stop = true) as stops`)),
     ]);
 
+    // Separate paid from trialing
+    const paidSubs = (activeSubscriptions || []).filter((r: any) => r.status === 'active' && r.tier !== 'free');
+    const trialSubs = (activeSubscriptions || []).filter((r: any) => r.status === 'trialing');
+    const allByTier = (activeSubscriptions || []).map((r: any) => ({ tier: r.tier, status: r.status, count: parseInt(r.count) }));
+
+    // Revenue calculation (paid only)
+    const PRICES: Record<string, number> = { pro: 39.99, pro_trader: 89.99 };
+    const monthlyRevenue = paidSubs.reduce((sum: number, r: any) => sum + (parseInt(r.count) * (PRICES[r.tier] || 0)), 0);
+    const yearlyRevenue = monthlyRevenue * 12;
+    const MONTHLY_COSTS = 677.50;
+    const yearlyCosts = MONTHLY_COSTS * 12;
+    const monthlyProfit = monthlyRevenue - MONTHLY_COSTS;
+    const yearlyProfit = yearlyRevenue - yearlyCosts;
+
     return NextResponse.json({
       overview: {
         totalWorkspaces: totalWorkspaces[0]?.count || 0,
-        subscriptionsByTier: activeSubscriptions || [],
+        subscriptionsByTier: allByTier,
+        paidSubscriptions: paidSubs.reduce((sum: number, r: any) => sum + parseInt(r.count), 0),
+        trialSubscriptions: trialSubs.reduce((sum: number, r: any) => sum + parseInt(r.count), 0),
         activeTrials: activeTrials[0]?.count || 0,
         pendingDeleteRequests: deleteRequests[0]?.count || 0,
+        financials: {
+          monthlyRevenue,
+          yearlyRevenue,
+          monthlyCosts: MONTHLY_COSTS,
+          yearlyCosts,
+          monthlyProfit,
+          yearlyProfit,
+        },
       },
       aiUsage: {
         today: {
