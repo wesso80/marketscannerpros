@@ -137,7 +137,7 @@ export default function PricingPage() {
       badge: "Best Value",
       includes: [
         "Everything in Pro",
-        "MSP AI Analyst (200 questions/day)",
+        "ARCA AI Analyst — GPT-4.1 (50 questions/day)",
         "Strategy backtesting engine",
         "Options scanner + derivatives intelligence",
         "Options terminal + confluence scanner",
@@ -155,11 +155,11 @@ export default function PricingPage() {
   const faqs: FAQ[] = [
     {
       q: "What is MSP AI Analyst?",
-      a: "MSP AI Analyst is your decision-layer copilot. It turns scans + context into structured bias, rotation, volatility warnings, and trade plans. Pro gets 50 questions/day, Pro Trader gets 200.",
+      a: "ARCA AI Analyst is your decision-layer copilot. It turns scans + context into structured bias, rotation, volatility warnings, and trade plans. Free gets 10/day, Pro gets 50/day (GPT-4o-mini), Pro Trader gets 50/day powered by GPT-4.1 for institutional-grade analysis.",
     },
     {
       q: "What's the difference between Pro and Pro Trader?",
-      a: "Pro gives you full market scanning, explorers, news intelligence, trade journal analytics, and portfolio insights. Pro Trader adds the backtesting engine, options scanner, options terminal, AI confluence scanner, Golden Egg deep analysis, time confluence, catalyst studies, and 4x the AI Analyst quota.",
+      a: "Pro gives you full market scanning, explorers, news intelligence, trade journal analytics, and portfolio insights. Pro Trader adds the backtesting engine, options scanner, options terminal, AI confluence scanner, Golden Egg deep analysis, time confluence, catalyst studies, and upgrades ARCA AI to GPT-4.1 for institutional-grade decision intelligence.",
     },
     {
       q: "How does the free tier work?",

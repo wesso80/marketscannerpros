@@ -178,7 +178,7 @@ export default function AccountPage() {
   const normalizedTier: TierKey = (tier as TierKey) || "anonymous";
   const currentTier = tierDisplay[normalizedTier] ?? tierDisplay.anonymous;
 
-  const aiLimit = normalizedTier === "pro_trader" ? 200 : normalizedTier === "pro" ? 50 : 10;
+  const aiLimit = normalizedTier === "pro_trader" ? 50 : normalizedTier === "pro" ? 50 : 10;
   const aiUsed = realUsage?.aiUsed ?? 0;
 
   const usage: UsageMetric[] = [
@@ -191,7 +191,7 @@ export default function AccountPage() {
     if (normalizedTier === "pro_trader") {
       return [
         "Everything in Pro",
-        "MSP AI Analyst (200/day)",
+        "ARCA AI Analyst — GPT-4.1 (50/day)",
         "Brain / Permission Engine",
         "AI + Derivatives Intelligence",
         "Golden Egg Deep Analysis",

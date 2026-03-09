@@ -16,6 +16,7 @@ import { MSP_ANALYST_V2_PROMPT, buildAnalystV2SystemMessages } from '@/lib/promp
 import { PINE_SCRIPT_V2_PROMPT, isPineScriptRequest } from '@/lib/prompts/pineScriptEngineerV2';
 import { mapToScoringRegime, computeRegimeScore, estimateComponentsFromContext } from '@/lib/ai/regimeScoring';
 import { computeACLFromScoring } from '@/lib/ai/adaptiveConfidenceLens';
+import { AI_MODEL_BY_TIER, normalizeTier } from '@/lib/entitlements';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -25,7 +26,7 @@ const openai = new OpenAI({
 const TIER_LIMITS: Record<string, number> = {
   free: 5,       // Free users: 5/day
   pro: 50,       // Pro subscribers: 50/day
-  pro_trader: 200, // Pro Trader: 200/day
+  pro_trader: 50, // Pro Trader: 50/day (GPT-4.1 model)
 };
 
 // Check daily usage against tier limit (database-backed)
@@ -73,7 +74,7 @@ async function logAIUsage(
     await q(
       `INSERT INTO ai_usage (workspace_id, question, response_length, tier, prompt_tokens, completion_tokens, total_tokens, model, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`,
-      [workspaceId, question.slice(0, 500), responseLength, tier, promptTokens, completionTokens, totalTokens, 'gpt-4o-mini']
+      [workspaceId, question.slice(0, 500), responseLength, tier, promptTokens, completionTokens, totalTokens, AI_MODEL_BY_TIER[normalizeTier(tier)] || 'gpt-4o-mini']
     );
   } catch (error) {
     console.error('Error logging AI usage:', error);
@@ -95,9 +96,9 @@ export async function POST(req: NextRequest) {
     const quota = await checkTierQuota(session.workspaceId, tier);
     if (!quota.allowed) {
       const upgradeMsg = tier === 'free' 
-        ? 'Upgrade to Pro for 50/day or Pro Trader for 200/day.' 
+        ? 'Upgrade to Pro for 50/day or Pro Trader for 50/day with GPT-4.1.' 
         : tier === 'pro'
-        ? 'Upgrade to Pro Trader for 200/day.'
+        ? 'Upgrade to Pro Trader for GPT-4.1 powered analysis.'
         : 'Limit resets at midnight UTC.';
       
       return NextResponse.json({ 
@@ -234,9 +235,12 @@ export async function POST(req: NextRequest) {
     // Get tools for this skill
     const tools = getOpenAITools(skill);
 
+    // Tier-based model selection: Pro Trader gets GPT-4.1
+    const aiModel = AI_MODEL_BY_TIER[normalizeTier(tier)] || 'gpt-4o-mini';
+
     // Call OpenAI
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: aiModel,
       messages,
       tools: tools.length > 0 ? tools : undefined,
       max_tokens: skillConfig.maxTokens,
@@ -309,7 +313,7 @@ export async function POST(req: NextRequest) {
         message,
         JSON.stringify(context),
         responseContent,
-        'gpt-4o-mini',
+        aiModel,
         completion.usage?.total_tokens || 0,
         completion.usage?.prompt_tokens || 0,
         completion.usage?.completion_tokens || 0,
@@ -352,7 +356,7 @@ export async function POST(req: NextRequest) {
       toolCalls,
       suggestedActions,
       sources: [], // Would come from RAG retrieval
-      model: 'gpt-4o-mini',
+      model: aiModel,
       tokensUsed: completion.usage?.total_tokens || 0,
       tokenPrompt: completion.usage?.prompt_tokens || 0,
       tokenCompletion: completion.usage?.completion_tokens || 0,

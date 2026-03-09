@@ -103,7 +103,7 @@ This document provides a comprehensive financial analysis of MarketScanner Pros 
 |------|--------------|------------|--------|----------|
 | **Free** | $0 | $0 | $0 | Top 10 stocks/crypto, 10 AI/day, basic tools |
 | **Pro** | $9.99/mo | $7.49/mo | $74.99/yr | Unlimited scanning, 50 AI/day, exports |
-| **Pro Trader** | $19.99/mo | $14.99/mo | $149.99/yr | Backtesting, 200 AI/day, TV scripts |
+| **Pro Trader** | $19.99/mo | $14.99/mo | $149.99/yr | Backtesting, 50 AI/day (GPT-4.1), TV scripts |
 
 ### Post-Sale Pricing (January 2025+)
 

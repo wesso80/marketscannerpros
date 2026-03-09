@@ -45,9 +45,9 @@ await q('SELECT * FROM portfolio_positions');  // ❌ Cross-tenant leak
 ### Subscription Tiers
 ```typescript
 // Tier hierarchy (enforced in useUserTier.ts)
-'free'        // Limited scans, basic features, 5 AI questions/day
-'pro'         // Unlimited scanning, 50 AI questions/day, CSV exports
-'pro_trader'  // Backtesting, trade journal, TradingView scripts, unlimited AI
+'free'        // Limited scans, basic features, 10 AI questions/day
+'pro'         // Unlimited scanning, 50 AI questions/day (GPT-4o-mini), CSV exports
+'pro_trader'  // Backtesting, trade journal, TradingView scripts, 50 AI questions/day (GPT-4.1)
 ```
 
 Feature gates use `useUserTier()` hook - check before rendering Pro/Pro Trader UI.

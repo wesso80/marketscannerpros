@@ -6,7 +6,8 @@ This file documents where entitlement and free-mode logic is enforced in API rou
 
 - Helper module: `lib/entitlements.ts`
 - Canonical tier type: `AppTier` (`free`, `pro`, `pro_trader`)
-- Canonical AI limits: `AI_DAILY_LIMITS` (10 / 50 / 200)
+- Canonical AI limits: `AI_DAILY_LIMITS` (10 / 50 / 50)
+- Canonical AI models: `AI_MODEL_BY_TIER` (gpt-4o-mini / gpt-4o-mini / gpt-4.1)
 - Canonical free-mode flag: `isFreeForAllMode()` (`FREE_FOR_ALL_MODE === "true"`)
 - Canonical pro gate: `hasProAccess()`
 - Canonical tier coercion: `normalizeTier()`
@@ -18,9 +19,9 @@ This file documents where entitlement and free-mode logic is enforced in API rou
 |---|---|---|---|---|
 | `app/api/me/route.ts` | GET | none (session-only) | Returns `free` when no session; returns cookie tier when session exists | none |
 | `app/api/entitlements/route.ts` | GET | `isFreeForAllMode()` | If free mode ON, returns `pro_trader` active. Otherwise checks bearer claims + RevenueCat (`pro_trader` first, then `pro`) and falls back to `free`. | none |
-| `app/api/msp-analyst/route.ts` | POST | `isFreeForAllMode()`, `normalizeTier()`, `AI_DAILY_LIMITS` | If no session and free mode ON, creates temporary `free-mode` pro_trader-style session. If still no session, creates anonymous free fingerprint workspace. | Enforces canonical 10/50/200 daily limits by normalized tier. |
-| `app/api/journal/analyze/route.ts` | POST | `isFreeForAllMode()`, `normalizeTier()`, `getDailyAiLimit()` | Requires session workspace unless free mode ON; uses `free-mode` workspace fallback when free mode is enabled. | Enforces canonical 10/50/200 limit for real workspace IDs; skips usage logging for `free-mode`. |
-| `app/api/portfolio/analyze/route.ts` | POST | `isFreeForAllMode()`, `normalizeTier()`, `getDailyAiLimit()` | Requires session workspace unless free mode ON; uses `free-mode` workspace fallback when free mode is enabled. | Enforces canonical 10/50/200 limit for real workspace IDs; skips usage logging for `free-mode`. |
+| `app/api/msp-analyst/route.ts` | POST | `isFreeForAllMode()`, `normalizeTier()`, `AI_DAILY_LIMITS`, `AI_MODEL_BY_TIER` | If no session and free mode ON, creates temporary `free-mode` pro_trader-style session. If still no session, creates anonymous free fingerprint workspace. | Enforces canonical 10/50/50 daily limits by normalized tier. Pro Trader uses GPT-4.1 model. |
+| `app/api/journal/analyze/route.ts` | POST | `isFreeForAllMode()`, `normalizeTier()`, `getDailyAiLimit()` | Requires session workspace unless free mode ON; uses `free-mode` workspace fallback when free mode is enabled. | Enforces canonical 10/50/50 limit for real workspace IDs; skips usage logging for `free-mode`. |
+| `app/api/portfolio/analyze/route.ts` | POST | `isFreeForAllMode()`, `normalizeTier()`, `getDailyAiLimit()` | Requires session workspace unless free mode ON; uses `free-mode` workspace fallback when free mode is enabled. | Enforces canonical 10/50/50 limit for real workspace IDs; skips usage logging for `free-mode`. |
 | `app/api/ai-market-focus/route.ts` | GET | `isFreeForAllMode()`, `hasProAccess()` | If free mode ON, returns full explanations for everyone. Otherwise requires session; non-pro tiers receive blurred explanation text. | none |
 | `app/api/market-focus/generate/route.ts` | POST | `isFreeForAllMode()`, `hasProAccess()` | Authorized when free mode ON, or admin API key, or pro/pro_trader session. | none |
 | `app/api/migrations/market-focus/route.ts` | POST | `isFreeForAllMode()` | Authorized when free mode ON, or setup key, or bearer secret. | none |

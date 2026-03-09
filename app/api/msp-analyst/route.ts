@@ -41,7 +41,7 @@ import { runMigrations } from "@/lib/migrations";
 import { aiLimiter, getClientIP } from "@/lib/rateLimit";
 import { getAdaptiveLayer } from "@/lib/adaptiveTrader";
 import { computeInstitutionalFilter, inferStrategyFromText } from "@/lib/institutionalFilter";
-import { AI_DAILY_LIMITS, isFreeForAllMode, normalizeTier } from "@/lib/entitlements";
+import { AI_DAILY_LIMITS, AI_MODEL_BY_TIER, isFreeForAllMode, normalizeTier } from '@/lib/entitlements';
 import { mapToScoringRegime, computeRegimeScore, estimateComponentsFromContext, deriveRegimeConfidence } from '@/lib/ai/regimeScoring';
 import { computeACLFromScoring } from '@/lib/ai/adaptiveConfidenceLens';
 import { computePerformanceThrottle, applyPerformanceDampener } from '@/lib/ai/performanceThrottle';
@@ -285,7 +285,7 @@ export async function POST(req: NextRequest) {
           });
           
           const upgradeMsg = tier === 'free' 
-            ? 'Upgrade to Pro for 50/day or Pro Trader for 200/day.' 
+            ? 'Upgrade to Pro for 50/day or Pro Trader for 50/day with GPT-4.1.' 
             : 'Limit resets at midnight UTC.';
           
           return new Response(
@@ -796,9 +796,10 @@ Always mention which derivatives signals support or contradict your analysis.
     const client = getOpenAIClient();
     
     let response;
+    const aiModel = AI_MODEL_BY_TIER[tier] || 'gpt-4o-mini';
     try {
       response = await client.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: aiModel,
         messages,
       });
     } catch (openaiErr: any) {
@@ -833,7 +834,7 @@ Always mention which derivatives signals support or contradict your analysis.
           usage?.prompt_tokens || 0,
           usage?.completion_tokens || 0,
           usage?.total_tokens || 0,
-          'gpt-4o-mini'
+          aiModel
         ]
       );
     } catch (dbErr) {

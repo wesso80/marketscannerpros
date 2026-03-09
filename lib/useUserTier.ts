@@ -97,7 +97,7 @@ export const canAccessConfluenceScanner = (tier: UserTier) => tier === "pro_trad
 export const getPortfolioLimit = (tier: UserTier) => tier === "anonymous" || tier === "free" ? 3 : Infinity;
 export const getAILimit = (tier: UserTier) => {
   switch (tier) {
-    case "pro_trader": return 200;
+    case "pro_trader": return 50;
     case "pro": return 50;
     default: return 10;
   }
