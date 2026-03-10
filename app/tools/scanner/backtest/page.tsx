@@ -304,11 +304,83 @@ function ScannerBacktestContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Alert creation state
+  const [alertStatus, setAlertStatus] = useState<'idle' | 'creating' | 'created' | 'error'>('idle');
+  const [alertError, setAlertError] = useState<string | null>(null);
+
+  const createTradeAlerts = async () => {
+    if (!symbol.trim()) return;
+    setAlertStatus('creating');
+    setAlertError(null);
+    try {
+      const isCrypto = ['BTC','ETH','SOL','XRP','DOGE','ADA','AVAX','MATIC','LINK','DOT','BNB','LTC'].includes(symbol.trim().toUpperCase());
+      const context = {
+        strategy: 'scanner_backtest',
+        timeframe,
+        minScore,
+        stopMultiplier,
+        targetMultiplier,
+        maxHoldBars,
+        allowShorts,
+      };
+      // Create entry alert
+      const entryRes = await fetch('/api/alerts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol: symbol.trim().toUpperCase(),
+          assetType: isCrypto ? 'crypto' : 'equity',
+          conditionType: 'strategy_entry',
+          conditionValue: 0,
+          name: `${symbol} Scanner Entry Alert`,
+          isRecurring: true,
+          notifyEmail: true,
+          notifyPush: true,
+          isSmartAlert: true,
+          cooldownMinutes: 60,
+          smartAlertContext: context,
+        }),
+      });
+      if (!entryRes.ok) {
+        const data = await entryRes.json();
+        throw new Error(data.error || data.message || 'Failed to create entry alert');
+      }
+      // Create exit alert
+      const exitRes = await fetch('/api/alerts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol: symbol.trim().toUpperCase(),
+          assetType: isCrypto ? 'crypto' : 'equity',
+          conditionType: 'strategy_exit',
+          conditionValue: 0,
+          name: `${symbol} Scanner Exit Alert`,
+          isRecurring: true,
+          notifyEmail: true,
+          notifyPush: true,
+          isSmartAlert: true,
+          cooldownMinutes: 60,
+          smartAlertContext: context,
+        }),
+      });
+      if (!exitRes.ok) {
+        const data = await exitRes.json();
+        throw new Error(data.error || data.message || 'Failed to create exit alert');
+      }
+      setAlertStatus('created');
+    } catch (err) {
+      setAlertError(err instanceof Error ? err.message : 'Failed to create alerts');
+      setAlertStatus('error');
+    }
+  };
+
   const runBacktest = async () => {
     if (!symbol.trim()) return;
     setLoading(true);
     setError(null);
     setResult(null);
+    setAlertStatus('idle');
+    setAlertError(null);
     try {
       const res = await fetch('/api/backtest/scanner', {
         method: 'POST',
@@ -484,13 +556,39 @@ function ScannerBacktestContent() {
             <>
               {/* Key stats */}
               <section className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
-                <div className="mb-3 flex items-center justify-between">
+                <div className="mb-3 flex items-center justify-between flex-wrap gap-2">
                   <div className="text-sm font-semibold text-slate-100">Results — {result.params.symbol}</div>
-                  <div className="text-[10px] text-slate-500">
-                    {result.dataCoverage?.applied.startDate} → {result.dataCoverage?.applied.endDate} ·
-                    {' '}{result.params.bars} bars · {result.dataCoverage?.provider}
+                  <div className="flex items-center gap-3">
+                    <div className="text-[10px] text-slate-500">
+                      {result.dataCoverage?.applied.startDate} → {result.dataCoverage?.applied.endDate} ·
+                      {' '}{result.params.bars} bars · {result.dataCoverage?.provider}
+                    </div>
+                    <button
+                      onClick={createTradeAlerts}
+                      disabled={alertStatus === 'creating' || alertStatus === 'created'}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                        alertStatus === 'created'
+                          ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 cursor-default'
+                          : alertStatus === 'creating'
+                          ? 'bg-slate-700 text-slate-400 opacity-60'
+                          : 'bg-amber-500/15 text-amber-300 border border-amber-500/30 hover:bg-amber-500/25'
+                      }`}
+                      title="Create alerts that notify you when this strategy opens or closes a trade"
+                    >
+                      {alertStatus === 'created' ? '✓ Alerts Created' : alertStatus === 'creating' ? 'Creating…' : '🔔 Alert Me on Trades'}
+                    </button>
                   </div>
                 </div>
+                {alertStatus === 'created' && (
+                  <div className="mb-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-300">
+                    ✓ Entry &amp; exit alerts created for <strong>{symbol}</strong> using this strategy config. You&apos;ll get email + push notifications every 15 min when trades open/close.
+                  </div>
+                )}
+                {alertStatus === 'error' && alertError && (
+                  <div className="mb-3 rounded-lg border border-rose-500/20 bg-rose-500/5 px-3 py-2 text-xs text-rose-300">
+                    {alertError}
+                  </div>
+                )}
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-7">
                   <StatCard label="Total Trades" value={String(n(result.totalTrades))} />
                   <StatCard label="Win Rate" value={`${n(result.winRate).toFixed(1)}%`}

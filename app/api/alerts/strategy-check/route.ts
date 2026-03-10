@@ -46,6 +46,11 @@ interface StrategyAlert {
   smart_alert_context: {
     strategy?: string;
     timeframe?: string;
+    minScore?: number;
+    stopMultiplier?: number;
+    targetMultiplier?: number;
+    maxHoldBars?: number;
+    allowShorts?: boolean;
   } | null;
 }
 
@@ -107,9 +112,9 @@ async function checkStrategyAlerts(req: NextRequest) {
     const alertGroups = new Map<string, StrategyAlert[]>();
     for (const alert of alerts) {
       const rawStrategy = alert.smart_alert_context?.strategy;
-      const strategy = rawStrategy && isBacktestStrategy(rawStrategy)
-        ? rawStrategy
-        : DEFAULT_BACKTEST_STRATEGY;
+      const strategy = rawStrategy === 'scanner_backtest'
+        ? 'scanner_backtest'
+        : (rawStrategy && isBacktestStrategy(rawStrategy) ? rawStrategy : DEFAULT_BACKTEST_STRATEGY);
       const timeframe = alert.smart_alert_context?.timeframe || 'daily';
       const key = `${alert.symbol}|${strategy}|${timeframe}`;
       if (!alertGroups.has(key)) {
@@ -143,17 +148,31 @@ async function checkStrategyAlerts(req: NextRequest) {
         const btHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
         if (process.env.CRON_SECRET) btHeaders['x-cron-secret'] = process.env.CRON_SECRET;
 
-        const backtestRes = await fetch(`${baseUrl}/api/backtest`, {
+        // Use scanner backtest endpoint for scanner_backtest strategy
+        const isScannerBacktest = strategy === 'scanner_backtest';
+        const ctx = alertsForGroup[0]?.smart_alert_context;
+        const backtestUrl = isScannerBacktest
+          ? `${baseUrl}/api/backtest/scanner`
+          : `${baseUrl}/api/backtest`;
+        const backtestBody = isScannerBacktest
+          ? {
+              symbol,
+              startDate,
+              endDate,
+              initialCapital: 10000,
+              timeframe,
+              minScore: ctx?.minScore ?? 55,
+              stopMultiplier: ctx?.stopMultiplier ?? 1.5,
+              targetMultiplier: ctx?.targetMultiplier ?? 3.0,
+              maxHoldBars: ctx?.maxHoldBars ?? 20,
+              allowShorts: ctx?.allowShorts ?? true,
+            }
+          : { symbol, strategy, startDate, endDate, initialCapital: 10000, timeframe };
+
+        const backtestRes = await fetch(backtestUrl, {
           method: 'POST',
           headers: btHeaders,
-          body: JSON.stringify({
-            symbol,
-            strategy,
-            startDate,
-            endDate,
-            initialCapital: 10000,
-            timeframe
-          }),
+          body: JSON.stringify(backtestBody),
           cache: 'no-store',
           signal: AbortSignal.timeout(BACKTEST_FETCH_TIMEOUT_MS),
         });
