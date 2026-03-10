@@ -26,6 +26,7 @@ export default function PricingPage() {
   const [loadingPlan, setLoadingPlan] = React.useState<Plan["id"] | null>(null);
   const [checkoutError, setCheckoutError] = React.useState<string | null>(null);
   const [referralCode, setReferralCode] = React.useState<string | null>(null);
+  const [userEmail, setUserEmail] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     const refFromQuery = new URLSearchParams(window.location.search).get("ref");
@@ -37,6 +38,13 @@ export default function PricingPage() {
     }
     const saved = sessionStorage.getItem("referralCode");
     if (saved) setReferralCode(saved);
+  }, []);
+
+  // Pre-fetch logged-in user's email for Stripe checkout pre-fill
+  React.useEffect(() => {
+    fetch("/api/me").then(r => r.json()).then(d => {
+      if (d?.email) setUserEmail(d.email);
+    }).catch(() => {});
   }, []);
 
   const handleCheckout = async (planId: Plan["id"]) => {
@@ -56,6 +64,7 @@ export default function PricingPage() {
           plan: planId,
           billing: cycle,
           referralCode,
+          email: userEmail,
         }),
       });
 
