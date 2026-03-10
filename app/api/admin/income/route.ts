@@ -76,11 +76,11 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Get active subscriptions by tier
+    // Get active Stripe-paid subscriptions by tier (exclude trials/manual grants)
     const subscriptionRows = await q(`
       SELECT tier, COUNT(*) as count 
       FROM user_subscriptions 
-      WHERE status = 'active' AND tier != 'free'
+      WHERE status = 'active' AND tier != 'free' AND stripe_subscription_id IS NOT NULL
       GROUP BY tier
     `);
 
@@ -89,13 +89,14 @@ export async function GET(req: NextRequest) {
       SELECT COUNT(*) as total FROM user_subscriptions WHERE status = 'active'
     `);
 
-    // Get new subscriptions this month
+    // Get new Stripe subscriptions this month
     const newThisMonthRows = await q(`
       SELECT tier, COUNT(*) as count 
       FROM user_subscriptions 
       WHERE created_at >= date_trunc('month', CURRENT_DATE)
         AND status = 'active'
         AND tier != 'free'
+        AND stripe_subscription_id IS NOT NULL
       GROUP BY tier
     `);
 
@@ -160,15 +161,16 @@ export async function GET(req: NextRequest) {
     // Profit
     const profit = grossRevenue - totalCosts;
 
-    // Get historical data (last 6 months)
+    // Get historical data — only Stripe-paid, starting from March 2026 (fresh start)
     const historicalRows = await q(`
       SELECT 
         date_trunc('month', created_at) as month,
         tier,
         COUNT(*) as count
       FROM user_subscriptions
-      WHERE created_at >= date_trunc('month', CURRENT_DATE) - INTERVAL '5 months'
+      WHERE created_at >= '2026-03-10'::date
         AND tier != 'free'
+        AND stripe_subscription_id IS NOT NULL
       GROUP BY date_trunc('month', created_at), tier
       ORDER BY month
     `);
