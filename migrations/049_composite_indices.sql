@@ -12,7 +12,7 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_portfolio_closed_ws_closed
 
 -- Journal entries: workspace + date (chronological listing)
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_journal_entries_ws_date
-  ON journal_entries (workspace_id, entry_date DESC);
+  ON journal_entries (workspace_id, trade_date DESC);
 
 -- AI usage: workspace + created_at (daily quota checks and history)
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_ai_usage_ws_created
