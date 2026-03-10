@@ -226,14 +226,42 @@ export async function POST(req: NextRequest) {
       limit: 1,
     });
     if (!customers.data?.length) {
-      return NextResponse.json({ error: "No subscription or trial found for this email" }, { status: 404 });
+      // No Stripe customer — grant free tier access so user can explore and upgrade
+      const workspaceId = hashWorkspaceId(`free_${normalizedEmail}`);
+      const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7;
+      const token = signToken({ cid: `free_${normalizedEmail}`, tier: 'free', workspaceId, exp });
+      
+      await trackSubscription(workspaceId, normalizedEmail, 'free', 'active', null, null, null, false);
+      
+      loginLimiter.reset(ip);
+      const body = { ok: true, tier: 'free', workspaceId, message: 'Welcome! Explore free tools or upgrade for full access.' };
+      const res = NextResponse.json(body);
+      res.cookies.set("ms_auth", token, getAuthCookieOptions(req));
+      const originHeader = req.headers.get("origin");
+      const headers = corsHeaders(originHeader);
+      for (const [k, v] of Object.entries(headers)) res.headers.set(k, v);
+      return res;
     }
     const customer = customers.data[0];
     const customerId = customer.id;
     const subs = await stripe.subscriptions.list({ customer: customerId, limit: 10 });
     const valid = subs.data.filter(s => s.status === "active" || s.status === "trialing");
     if (!valid.length) {
-      return NextResponse.json({ error: "No active subscription found" }, { status: 404 });
+      // Stripe customer exists but no active subscription — grant free tier
+      const workspaceId = hashWorkspaceId(customerId);
+      const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7;
+      const token = signToken({ cid: customerId, tier: 'free', workspaceId, exp });
+      
+      await trackSubscription(workspaceId, normalizedEmail, 'free', 'inactive', customerId, null, null, false);
+      
+      loginLimiter.reset(ip);
+      const body = { ok: true, tier: 'free', workspaceId, message: 'Welcome back! Your subscription is inactive. Upgrade to restore full access.' };
+      const res = NextResponse.json(body);
+      res.cookies.set("ms_auth", token, getAuthCookieOptions(req));
+      const originHeader = req.headers.get("origin");
+      const headers = corsHeaders(originHeader);
+      for (const [k, v] of Object.entries(headers)) res.headers.set(k, v);
+      return res;
     }
     const priceIds = valid.flatMap(s => s.items.data.map(it => it.price.id));
     const tier = detectTierFromPrices(priceIds);
