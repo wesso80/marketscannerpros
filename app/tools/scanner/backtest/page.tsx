@@ -228,8 +228,8 @@ function TradeTable({ trades }: { trades: Trade[] }) {
           </div>
         )}
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-[11px]">
+      <div className="overflow-x-auto -mx-3">
+        <table className="w-full text-left text-[11px]" style={{ minWidth: '700px' }}>
           <thead>
             <tr className="border-t border-slate-800 text-[9px] uppercase tracking-wider text-slate-500">
               <th className="px-3 py-1.5 font-medium">#</th>

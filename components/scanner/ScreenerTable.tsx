@@ -203,7 +203,7 @@ export default function ScreenerTable({ rows, onRowClick, selectedSymbol }: Scre
       background: 'rgba(15, 23, 42, 0.3)',
       minHeight: 60,
     }}>
-      <table style={{ display: 'table', visibility: 'visible', width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+      <table style={{ display: 'table', visibility: 'visible', width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 700 }}>
         <thead>
           <tr>
             {COLUMNS.map((col) => (

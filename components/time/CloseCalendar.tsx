@@ -459,7 +459,7 @@ function FullScheduleTable({ rows, assetClass }: { rows: ForwardCloseScheduleRow
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-left text-xs">
+      <table className="w-full text-left text-xs" style={{ minWidth: '600px' }}>
         <thead>
           <tr className="border-b border-slate-800 text-[10px] uppercase tracking-wider text-slate-500">
             <th className="pb-1.5 pr-3 font-medium">TF</th>

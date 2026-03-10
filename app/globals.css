@@ -982,7 +982,6 @@ button.truncate {
   .msp-container,
   .msp-main-shell,
   main,
-  section,
   article,
   aside,
   .msp-layout-command,
@@ -990,6 +989,14 @@ button.truncate {
     max-width: 100vw !important;
     min-width: 0 !important;
     overflow-x: hidden;
+    word-break: break-word;
+  }
+
+  /* Sections need clip instead of hidden so child scroll containers work */
+  section {
+    max-width: 100vw !important;
+    min-width: 0 !important;
+    overflow-x: clip;
     word-break: break-word;
   }
 

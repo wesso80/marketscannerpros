@@ -75,7 +75,7 @@ export default function TradeHistoryTable({ trades, tier }: TradeHistoryTablePro
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse" role="table">
+        <table className="w-full border-collapse" role="table" style={{ minWidth: '700px' }}>
           <thead>
             <tr className="border-b border-slate-700 bg-slate-800">
               <th className={thClass}>Entry</th>

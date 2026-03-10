@@ -2347,7 +2347,7 @@ function PortfolioContent() {
                 </button>
               </div>
               <div className="overflow-x-auto rounded-lg border border-slate-700 bg-slate-900/40">
-                <table className="w-full text-xs">
+                <table className="w-full text-xs" style={{ minWidth: '640px' }}>
                   <thead>
                     <tr className="border-b border-slate-700 text-slate-500">
                       <th className="px-2 py-2 text-left">Symbol</th>
@@ -2495,7 +2495,7 @@ function PortfolioContent() {
               </div>
 
               <div className="overflow-x-auto rounded-lg border border-slate-700 bg-slate-900/40">
-                <table className="w-full text-xs">
+                <table className="w-full text-xs" style={{ minWidth: '600px' }}>
                   <thead>
                     <tr className="border-b border-slate-700 text-slate-500">
                       <th className="px-2 py-2 text-left">Entry</th>
