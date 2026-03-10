@@ -102,6 +102,23 @@ function checkHitSLTP(
   return { hitSL, hitTP };
 }
 
+// ─── Slippage Model ───────────────────────────────────────────────────────
+// Applies realistic execution slippage (configurable basis points).
+// Entry: long fills higher, short fills lower (adverse).
+// Exit: SL/TP price already set, but signal-flip exits get adverse slippage.
+const SLIPPAGE_BPS = 5; // 5 basis points = 0.05% per fill
+
+function applyEntrySlippage(price: number, side: 'LONG' | 'SHORT'): number {
+  const slip = price * (SLIPPAGE_BPS / 10_000);
+  return side === 'LONG' ? price + slip : price - slip;
+}
+
+function applyExitSlippage(price: number, side: 'LONG' | 'SHORT'): number {
+  const slip = price * (SLIPPAGE_BPS / 10_000);
+  // Exit slippage is adverse: longs exit lower, shorts exit higher
+  return side === 'LONG' ? price - slip : price + slip;
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────
 
 export function runStrategy(
@@ -226,7 +243,11 @@ export function runStrategy(
 
   let obv: number[] = [];
   if (strategy.includes('obv')) {
-    obv = calculateOBV(closes, volumes);
+    // Guard: skip OBV when volume data is unavailable (e.g. CoinGecko OHLC returns 0)
+    const hasVolume = volumes.some(v => v > 0);
+    if (hasVolume) {
+      obv = calculateOBV(closes, volumes);
+    }
   }
 
   if (strategy === 'adx_trend' && !adxData) {
@@ -1094,6 +1115,17 @@ export function runStrategy(
       exitReason: 'end_of_data', holdingPeriodDays: barsHeld + 1,
     });
     position = null;
+  }
+
+  // ── Apply slippage model to all trades ───────────────────────────────
+  for (const t of trades) {
+    const slippedEntry = applyEntrySlippage(t.entry, t.side);
+    const slippedExit = applyExitSlippage(t.exit, t.side);
+    const shares = (initialCapital * 0.95) / slippedEntry;
+    t.entry = slippedEntry;
+    t.exit = slippedExit;
+    t.return = calcReturnDollars(t.side, slippedEntry, slippedExit, shares);
+    t.returnPercent = calcReturnPercent(t.side, slippedEntry, slippedExit);
   }
 
   const enrichedTrades = enrichTradesWithMetadata(trades, dates, highs, lows);

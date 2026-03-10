@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { q } from '@/lib/db';
 import { sendAlertEmail } from '@/lib/email';
 import { sendPushToUser } from '@/lib/pushServer';
@@ -72,9 +73,13 @@ export async function POST(req: NextRequest) {
 }
 
 async function checkSmartAlerts(req: NextRequest) {
-  const secret = req.headers.get('x-cron-secret');
-  if (CRON_SECRET && secret !== CRON_SECRET) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const secret = req.headers.get('x-cron-secret') || '';
+  if (CRON_SECRET) {
+    const a = Buffer.from(secret);
+    const b = Buffer.from(CRON_SECRET);
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
   }
 
   try {

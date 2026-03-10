@@ -17,6 +17,7 @@ import { PINE_SCRIPT_V2_PROMPT, isPineScriptRequest } from '@/lib/prompts/pineSc
 import { mapToScoringRegime, computeRegimeScore, estimateComponentsFromContext } from '@/lib/ai/regimeScoring';
 import { computeACLFromScoring } from '@/lib/ai/adaptiveConfidenceLens';
 import { AI_MODEL_BY_TIER, normalizeTier } from '@/lib/entitlements';
+import { getVerifiedTier } from '@/lib/apiMiddleware';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -90,7 +91,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const tier = (session.tier || 'free') as 'free' | 'pro' | 'pro_trader';
+    // Verify tier from DB (cached 5min) instead of trusting cookie alone
+    const tier = normalizeTier(await getVerifiedTier(session)) as 'free' | 'pro' | 'pro_trader';
 
     // Check daily quota against tier limit (database-backed)
     const quota = await checkTierQuota(session.workspaceId, tier);

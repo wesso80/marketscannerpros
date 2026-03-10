@@ -22,7 +22,7 @@ export type RateLimitPreset = 'api' | 'scanner' | 'ai' | 'login';
 const tierCache = new Map<string, { tier: string; status: string; ts: number }>();
 const TIER_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-async function getVerifiedTier(session: SessionPayload): Promise<string> {
+export async function getVerifiedTier(session: SessionPayload): Promise<string> {
   const wid = session.workspaceId;
   const now = Date.now();
   const cached = tierCache.get(wid);

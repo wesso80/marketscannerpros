@@ -42,11 +42,13 @@ import { aiLimiter, getClientIP } from "@/lib/rateLimit";
 import { getAdaptiveLayer } from "@/lib/adaptiveTrader";
 import { computeInstitutionalFilter, inferStrategyFromText } from "@/lib/institutionalFilter";
 import { AI_DAILY_LIMITS, AI_MODEL_BY_TIER, isFreeForAllMode, normalizeTier } from '@/lib/entitlements';
+import { getVerifiedTier } from '@/lib/apiMiddleware';
 import { mapToScoringRegime, computeRegimeScore, estimateComponentsFromContext, deriveRegimeConfidence } from '@/lib/ai/regimeScoring';
 import { computeACLFromScoring } from '@/lib/ai/adaptiveConfidenceLens';
 import { computePerformanceThrottle, applyPerformanceDampener } from '@/lib/ai/performanceThrottle';
 import { computeSessionPhaseOverlay } from '@/lib/ai/sessionPhase';
 import { buildV3EnginePrompt } from '@/lib/prompts/arcaV3Engine';
+import { openAICircuit, CircuitBreakerOpenError } from '@/lib/circuitBreaker';
 import type { PromptMode } from "@/lib/ai/types";
 
 export const runtime = "nodejs";
@@ -213,7 +215,8 @@ export async function POST(req: NextRequest) {
     }
 
     const workspaceId = session!.workspaceId;
-    const tier = normalizeTier(session!.tier);
+    // Verify tier from DB (cached 5min) instead of trusting cookie alone
+    const tier = normalizeTier(await getVerifiedTier(session!));
 
     const directionValue = String(scanner?.direction || '').toLowerCase();
     const adaptiveDirection: 'bullish' | 'bearish' | 'neutral' | undefined =
@@ -798,11 +801,23 @@ Always mention which derivatives signals support or contradict your analysis.
     let response;
     const aiModel = AI_MODEL_BY_TIER[tier] || 'gpt-4o-mini';
     try {
-      response = await client.chat.completions.create({
+      response = await openAICircuit.call(() => client.chat.completions.create({
         model: aiModel,
         messages,
-      });
+      }));
     } catch (openaiErr: any) {
+      // Handle circuit breaker open state
+      if (openaiErr instanceof CircuitBreakerOpenError) {
+        logger.warn('OpenAI circuit breaker open', { retryAfterMs: openaiErr.retryAfterMs });
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            error: "AI service is temporarily recovering from errors. Please try again in a minute.",
+            circuitOpen: true
+          }),
+          { status: 503, headers: { "Content-Type": "application/json" } }
+        );
+      }
       // Handle OpenAI-specific errors
       if (openaiErr?.code === 'rate_limit_exceeded' || openaiErr?.status === 429) {
         logger.warn('OpenAI rate limit exceeded', { error: openaiErr.message });
@@ -889,10 +904,31 @@ Always mention which derivatives signals support or contradict your analysis.
       responseLength: text.length
     });
 
+    // ===== POST-GENERATION CONFLUENCE GATE ENFORCEMENT =====
+    // Server-side override: if the LLM text claims Trade-Ready but the
+    // quantitative pipeline disagrees, append a correction banner.
+    let validatedText = text;
+    if (promptMode === 'analyst') {
+      const serverVerdict = aclResult.authorization === 'BLOCKED' ? 'NO_TRADE' :
+                            aclResult.authorization === 'CONDITIONAL' ? 'CONDITIONAL' :
+                            regimeScoring.tradeBias === 'HIGH_CONFLUENCE' ? 'TRADE_READY' : 'WATCH';
+      const score = Math.round(regimeScoring.weightedScore);
+      const textLower = text.toLowerCase();
+      const claimsTrade = textLower.includes('trade-ready') || textLower.includes('trade ready');
+
+      if (claimsTrade && score < 55) {
+        validatedText += `\n\n---\n⚠️ **Confluence Gate Override** — The quantitative pipeline scored this setup at ${score}/100 (below the 55-point Trade-Ready threshold). Server verdict: **${serverVerdict}**. Do not treat this as a confirmed trade signal.`;
+        logger.warn('Confluence gate override triggered', { score, serverVerdict, symbol: context?.symbol });
+      } else if (serverVerdict === 'NO_TRADE' && claimsTrade) {
+        validatedText += `\n\n---\n⚠️ **Risk Gate Override** — The institutional risk pipeline has **blocked** this setup (ACL: ${aclResult.authorization}). Server verdict: **NO_TRADE**. Stand aside.`;
+        logger.warn('Risk gate override triggered', { authorization: aclResult.authorization, symbol: context?.symbol });
+      }
+    }
+
     return new Response(
       JSON.stringify({
         ok: true,
-        text,
+        text: validatedText,
         // V2 structured metadata
         promptMode,
         decision: {

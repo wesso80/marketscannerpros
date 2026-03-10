@@ -15,8 +15,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Get local daily stats (in-memory counter)
-  const dailyStats = getCGDailyStats();
+  // Get daily stats (Redis-backed, with in-memory fallback)
+  const dailyStats = await getCGDailyStats();
 
   // Get CoinGecko account stats (/key endpoint, Analyst Plan)
   const accountUsage = await getApiUsage();

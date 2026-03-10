@@ -40,28 +40,70 @@ const SYMBOL_RESOLUTION_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 // ── Global CoinGecko Daily Budget Counter ────────────────────────────
 // Analyst plan: 500,000 calls/month = ~16,129/day
 // Hard cap prevents runaway usage from burning through the entire monthly quota
+// Uses Redis for persistence across deploys/instances; falls back to in-memory.
+import { getRedis } from '@/lib/redis';
+
 const CG_DAILY_BUDGET = parseInt(process.env.CG_DAILY_BUDGET || '14000', 10); // ~10% safety margin
+const CG_REDIS_KEY = 'cg_daily_budget';
+
+// In-memory fallback (used when Redis is unavailable)
 let cgDailyCallCount = 0;
 let cgDailyResetAt = 0;
 
-function checkAndIncrementCGBudget(): boolean {
+async function checkAndIncrementCGBudgetRedis(): Promise<boolean | null> {
+  const redis = getRedis();
+  if (!redis) return null;
+  try {
+    const count = await redis.incr(CG_REDIS_KEY);
+    if (count === 1) {
+      // First call of the day — set TTL to expire at next UTC midnight
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setUTCHours(24, 0, 0, 0);
+      const ttlSeconds = Math.ceil((tomorrow.getTime() - now.getTime()) / 1000);
+      await redis.expire(CG_REDIS_KEY, ttlSeconds);
+    }
+    if (count > CG_DAILY_BUDGET) return false;
+    return true;
+  } catch {
+    return null; // Redis error → fall back to in-memory
+  }
+}
+
+function checkAndIncrementCGBudgetMemory(): boolean {
   const now = Date.now();
   if (now > cgDailyResetAt) {
     cgDailyCallCount = 0;
-    // Reset at next midnight UTC
     const tomorrow = new Date(now);
     tomorrow.setUTCHours(24, 0, 0, 0);
     cgDailyResetAt = tomorrow.getTime();
   }
-  if (cgDailyCallCount >= CG_DAILY_BUDGET) {
-    return false; // Budget exhausted
-  }
+  if (cgDailyCallCount >= CG_DAILY_BUDGET) return false;
   cgDailyCallCount++;
   return true;
 }
 
+async function checkAndIncrementCGBudget(): Promise<boolean> {
+  const redisResult = await checkAndIncrementCGBudgetRedis();
+  if (redisResult !== null) return redisResult;
+  return checkAndIncrementCGBudgetMemory();
+}
+
 /** Get current daily CoinGecko API call stats (for monitoring) */
-export function getCGDailyStats(): { used: number; budget: number; remaining: number; resetsAt: string } {
+export async function getCGDailyStats(): Promise<{ used: number; budget: number; remaining: number; resetsAt: string }> {
+  const redis = getRedis();
+  if (redis) {
+    try {
+      const count = (await redis.get<number>(CG_REDIS_KEY)) || 0;
+      const ttl = await redis.ttl(CG_REDIS_KEY);
+      return {
+        used: count,
+        budget: CG_DAILY_BUDGET,
+        remaining: Math.max(0, CG_DAILY_BUDGET - count),
+        resetsAt: new Date(Date.now() + ttl * 1000).toISOString(),
+      };
+    } catch { /* fall through */ }
+  }
   return {
     used: cgDailyCallCount,
     budget: CG_DAILY_BUDGET,
@@ -109,10 +151,10 @@ async function cgFetch<T>(
 
   const execute = async (remainingRetries: number): Promise<T> => {
     // Enforce daily budget cap to prevent runaway quota exhaustion
-    if (!checkAndIncrementCGBudget()) {
+    if (!(await checkAndIncrementCGBudget())) {
       throw new Error(
-        `[CoinGecko] Daily budget exhausted (${cgDailyCallCount}/${CG_DAILY_BUDGET}). ` +
-        `Resets at ${new Date(cgDailyResetAt).toISOString()}`
+        `[CoinGecko] Daily budget exhausted (${CG_DAILY_BUDGET}/${CG_DAILY_BUDGET}). ` +
+        `Budget limit reached.`
       );
     }
 

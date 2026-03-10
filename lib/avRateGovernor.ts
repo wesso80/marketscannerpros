@@ -20,6 +20,7 @@
 
 import { TokenBucket } from './rateLimiter';
 import { getRedis } from './redis';
+import { avCircuit, CircuitBreakerOpenError } from './circuitBreaker';
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -158,13 +159,20 @@ export async function avFetch<T = any>(
   const tag = label || url.match(/function=([A-Z_]+)/)?.[1] || 'AV';
 
   try {
-    const res = await fetch(url, {
+    // Wrap in circuit breaker — hard failures (HTTP 5xx, timeouts, network)
+    // will count toward tripping the breaker.
+    const res = await avCircuit.call(() => fetch(url, {
       signal: AbortSignal.timeout(20_000),
       ...options,
-    });
+    }));
 
     if (!res.ok) {
       console.warn(`[avRateGovernor] ${tag} HTTP ${res.status}`);
+      // 5xx errors already counted by circuit breaker (fetch succeeded but HTTP error)
+      // Re-throw for server errors so circuit breaker sees it
+      if (res.status >= 500) {
+        throw new Error(`AV server error: ${res.status}`);
+      }
       return null;
     }
 
@@ -174,7 +182,7 @@ export async function avFetch<T = any>(
       Information?: string;
     };
 
-    // AV returns 200 even on quota/error — detect these
+    // AV returns 200 even on quota/error — detect these (soft errors, don't trip breaker)
     if (json.Note) {
       console.warn(`[avRateGovernor] ${tag} QUOTA NOTE: ${json.Note}`);
       return null;
@@ -190,6 +198,10 @@ export async function avFetch<T = any>(
 
     return json;
   } catch (err: unknown) {
+    if (err instanceof CircuitBreakerOpenError) {
+      console.warn(`[avRateGovernor] ${tag} circuit breaker OPEN — skipping request (retry in ${Math.round(err.retryAfterMs / 1000)}s)`);
+      return null;
+    }
     const e = err as { name?: string; message?: string };
     if (e?.name === 'TimeoutError' || e?.name === 'AbortError') {
       console.warn(`[avRateGovernor] ${tag} timed out`);
