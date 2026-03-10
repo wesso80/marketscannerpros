@@ -547,6 +547,9 @@ async function autoCreatePlanAlertForEvent(workspaceId: string, event: MSPEvent,
   }
 
   const alertPrice = extractPlanAlertPrice(event);
+  if (alertPrice === 0) {
+    return { created: false, hasAlert: false, decisionPacketId, blockedEvent: null as MSPEvent | null };
+  }
   const timeframe = typeof planPayload?.timeframe === 'string' ? planPayload.timeframe : null;
   const alertContext = {
     source: 'workflow.auto',

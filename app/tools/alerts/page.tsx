@@ -108,6 +108,8 @@ function AlertsContent() {
   const [zone3Open, setZone3Open] = useState(true);
   const [zone4Open, setZone4Open] = useState(false);
   const [activeZone4Tab, setActiveZone4Tab] = useState<'basic' | 'strategy' | 'multi'>('basic');
+  const [cleanupStatus, setCleanupStatus] = useState<'idle' | 'cleaning' | 'done'>('idle');
+  const [cleanupCount, setCleanupCount] = useState(0);
 
   // AI Page Context - share alerts page state with copilot
   const { setPageData } = useAIPageContext();
@@ -207,6 +209,21 @@ function AlertsContent() {
     setZone4Open(true);
   };
 
+  const orphanedCount = useMemo(() => alerts.filter((a) => a.is_smart_alert && a.condition_value === 0).length, [alerts]);
+
+  const cleanupOrphaned = async () => {
+    setCleanupStatus('cleaning');
+    try {
+      const res = await fetch('/api/alerts?bulk=auto-orphaned', { method: 'DELETE' });
+      const data = await res.json();
+      setCleanupCount(data.deletedCount ?? 0);
+      setCleanupStatus('done');
+      await fetchAll();
+    } catch {
+      setCleanupStatus('idle');
+    }
+  };
+
   useEffect(() => {
     setPageData({
       skill: 'watchlist',
@@ -267,6 +284,19 @@ function AlertsContent() {
         {riskLocked && (
           <div className="mt-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
             Tracking Lock active: alert automation remains notification-only until rule guard unlocks.
+          </div>
+        )}
+        {orphanedCount > 0 && cleanupStatus !== 'done' && (
+          <div className="mt-2 flex items-center justify-between rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+            <span>{orphanedCount} auto-generated plan alerts with no entry price detected (will never trigger).</span>
+            <button type="button" onClick={cleanupOrphaned} disabled={cleanupStatus === 'cleaning'} className="ml-3 shrink-0 rounded-lg bg-amber-500/20 px-3 py-1 text-xs font-semibold text-amber-100 hover:bg-amber-500/30 disabled:opacity-50">
+              {cleanupStatus === 'cleaning' ? 'Cleaning…' : 'Clean Up'}
+            </button>
+          </div>
+        )}
+        {cleanupStatus === 'done' && (
+          <div className="mt-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
+            Cleaned up {cleanupCount} orphaned alerts.
           </div>
         )}
       </section>

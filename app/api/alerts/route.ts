@@ -447,6 +447,28 @@ export async function DELETE(req: NextRequest) {
 
     const url = new URL(req.url);
     const id = url.searchParams.get('id');
+    const bulk = url.searchParams.get('bulk');
+
+    // Bulk cleanup: remove auto-generated orphaned alerts (condition_value = 0, workflow.auto source)
+    if (bulk === 'auto-orphaned') {
+      const deleted = await q(
+        `DELETE FROM alerts
+         WHERE workspace_id = $1
+           AND is_smart_alert = true
+           AND condition_value = 0
+           AND smart_alert_context->>'source' = 'workflow.auto'
+         RETURNING id`,
+        [session.workspaceId]
+      );
+      const count = deleted.length;
+      if (count > 0) {
+        await q(
+          `UPDATE alert_quotas SET active_alerts = GREATEST(0, active_alerts - $2) WHERE workspace_id = $1`,
+          [session.workspaceId, count]
+        );
+      }
+      return NextResponse.json({ success: true, deletedCount: count });
+    }
 
     if (!id) {
       return NextResponse.json({ error: 'Alert ID required' }, { status: 400 });
