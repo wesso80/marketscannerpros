@@ -121,7 +121,7 @@ function getAuthCookieOptions(req: NextRequest) {
       secure: false,
       sameSite: "lax" as const,
       path: "/",
-      maxAge: 60 * 60 * 24 * 7,
+      maxAge: 60 * 60 * 24 * 30,
     };
   }
 
@@ -131,7 +131,7 @@ function getAuthCookieOptions(req: NextRequest) {
     sameSite: "none" as const,
     domain: ".marketscannerpros.app",
     path: "/",
-    maxAge: 60 * 60 * 24 * 7,
+    maxAge: 60 * 60 * 24 * 30,
   };
 }
 
@@ -183,7 +183,7 @@ export async function POST(req: NextRequest) {
     if (trial) {
       // User has an active trial - grant access without Stripe
       const workspaceId = hashWorkspaceId(`trial_${normalizedEmail}`);
-      const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7;
+      const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30;
       const token = signToken({ cid: `trial_${normalizedEmail}`, tier: trial.tier, workspaceId, exp });
       
       const daysLeft = Math.ceil((trial.expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
@@ -228,7 +228,7 @@ export async function POST(req: NextRequest) {
     if (!customers.data?.length) {
       // No Stripe customer — grant free tier access so user can explore and upgrade
       const workspaceId = hashWorkspaceId(`free_${normalizedEmail}`);
-      const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7;
+      const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30;
       const token = signToken({ cid: `free_${normalizedEmail}`, tier: 'free', workspaceId, exp });
       
       await trackSubscription(workspaceId, normalizedEmail, 'free', 'active', null, null, null, false);
@@ -249,7 +249,7 @@ export async function POST(req: NextRequest) {
     if (!valid.length) {
       // Stripe customer exists but no active subscription — grant free tier
       const workspaceId = hashWorkspaceId(customerId);
-      const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7;
+      const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30;
       const token = signToken({ cid: customerId, tier: 'free', workspaceId, exp });
       
       await trackSubscription(workspaceId, normalizedEmail, 'free', 'inactive', customerId, null, null, false);
@@ -287,7 +287,7 @@ export async function POST(req: NextRequest) {
     await stripe.customers.update(customerId, {
       metadata: { marketscanner_tier: tier, workspace_id: workspaceId },
     });
-    const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7;
+    const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30;
     const token = signToken({ cid: customerId, tier, workspaceId, exp });
     const url = new URL(req.url);
     const debug = url.searchParams.get("debug") === "1";

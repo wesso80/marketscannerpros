@@ -101,8 +101,8 @@ export async function middleware(req: NextRequest) {
       const secondsLeft = session.exp - Math.floor(Date.now() / 1000);
       const daysLeft = secondsLeft / ONE_DAY;
 
-      if (daysLeft < 3) {
-        const newExp = Math.floor(Date.now() / 1000) + 7 * ONE_DAY;
+      if (daysLeft < 7) {
+        const newExp = Math.floor(Date.now() / 1000) + 30 * ONE_DAY;
         const newToken = await signToken({
           cid: session.cid,
           tier: session.tier,
@@ -116,7 +116,7 @@ export async function middleware(req: NextRequest) {
           sameSite: 'lax',
           secure: process.env.NODE_ENV === 'production',
           path: '/',
-          maxAge: 7 * ONE_DAY,
+          maxAge: 30 * ONE_DAY,
         });
         return res;
       }
