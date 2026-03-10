@@ -29,7 +29,11 @@ export async function GET(req: NextRequest) {
       expand: ["subscription"],
     });
 
-    if (checkoutSession.payment_status !== "paid" && checkoutSession.status !== "complete") {
+    const validPayment = 
+      checkoutSession.status === "complete" ||
+      checkoutSession.payment_status === "paid" ||
+      checkoutSession.payment_status === "no_payment_required"; // $0 coupon/promo
+    if (!validPayment) {
       return NextResponse.json({ error: "Payment not completed" }, { status: 400 });
     }
 
