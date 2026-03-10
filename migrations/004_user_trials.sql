@@ -22,9 +22,10 @@ CREATE INDEX IF NOT EXISTS idx_user_trials_expires ON user_trials(expires_at);
 
 -- Unique constraint to prevent duplicate active trials for same email
 -- (allows multiple historical records, but query should check expires_at > NOW())
-CREATE UNIQUE INDEX IF NOT EXISTS idx_user_trials_active 
-  ON user_trials(email) 
-  WHERE expires_at > NOW();
+-- Note: Cannot use NOW() in partial index predicate (not IMMUTABLE)
+-- Application logic enforces one active trial per email
+CREATE INDEX IF NOT EXISTS idx_user_trials_active 
+  ON user_trials(email, expires_at DESC);
 
 -- Example: Grant a 30-day Pro Trader trial
 -- INSERT INTO user_trials (email, tier, expires_at, granted_by, notes)

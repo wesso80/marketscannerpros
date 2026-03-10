@@ -456,7 +456,7 @@ CREATE TABLE IF NOT EXISTS earnings_calendar (
 
 CREATE INDEX IF NOT EXISTS idx_earnings_date ON earnings_calendar(report_date);
 CREATE INDEX IF NOT EXISTS idx_earnings_symbol ON earnings_calendar(symbol);
-CREATE INDEX IF NOT EXISTS idx_earnings_upcoming ON earnings_calendar(report_date) WHERE report_date >= CURRENT_DATE;
+CREATE INDEX IF NOT EXISTS idx_earnings_upcoming ON earnings_calendar(report_date DESC);
 CREATE INDEX IF NOT EXISTS idx_earnings_market_cap ON earnings_calendar(market_cap_rank, report_date) WHERE market_cap_rank IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_earnings_beat ON earnings_calendar(beat_eps, report_date DESC);
 

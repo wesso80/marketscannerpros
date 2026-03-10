@@ -19,10 +19,10 @@ CREATE TABLE IF NOT EXISTS ai_events (
     CONSTRAINT fk_workspace FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_ai_events_workspace ON ai_events(workspace_id);
-CREATE INDEX idx_ai_events_type ON ai_events(event_type);
-CREATE INDEX idx_ai_events_created ON ai_events(created_at DESC);
-CREATE INDEX idx_ai_events_session ON ai_events(session_id);
+CREATE INDEX IF NOT EXISTS idx_ai_events_workspace ON ai_events(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_ai_events_type ON ai_events(event_type);
+CREATE INDEX IF NOT EXISTS idx_ai_events_created ON ai_events(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_events_session ON ai_events(session_id);
 
 -- Event types enum reference (not enforced, for documentation):
 -- page_view, widget_interaction, signal_clicked, ai_opened, ai_question_asked,
@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS user_memory (
     CONSTRAINT fk_workspace FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_user_memory_workspace ON user_memory(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_user_memory_workspace ON user_memory(workspace_id);
 
 -- 3. AI RESPONSES TABLE (Training records for improvement)
 -- Stores every AI response with context for evaluation and fine-tuning
@@ -99,10 +99,10 @@ CREATE TABLE IF NOT EXISTS ai_responses (
     CONSTRAINT fk_workspace FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_ai_responses_workspace ON ai_responses(workspace_id);
-CREATE INDEX idx_ai_responses_skill ON ai_responses(page_skill);
-CREATE INDEX idx_ai_responses_rating ON ai_responses(user_rating);
-CREATE INDEX idx_ai_responses_created ON ai_responses(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_responses_workspace ON ai_responses(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_ai_responses_skill ON ai_responses(page_skill);
+CREATE INDEX IF NOT EXISTS idx_ai_responses_rating ON ai_responses(user_rating);
+CREATE INDEX IF NOT EXISTS idx_ai_responses_created ON ai_responses(created_at DESC);
 
 -- 4. AI FEEDBACK TABLE (Explicit user feedback)
 -- Granular feedback on AI responses
@@ -123,9 +123,9 @@ CREATE TABLE IF NOT EXISTS ai_feedback (
     CONSTRAINT fk_workspace FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_ai_feedback_workspace ON ai_feedback(workspace_id);
-CREATE INDEX idx_ai_feedback_response ON ai_feedback(response_id);
-CREATE INDEX idx_ai_feedback_type ON ai_feedback(feedback_type);
+CREATE INDEX IF NOT EXISTS idx_ai_feedback_workspace ON ai_feedback(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_ai_feedback_response ON ai_feedback(response_id);
+CREATE INDEX IF NOT EXISTS idx_ai_feedback_type ON ai_feedback(feedback_type);
 
 -- 5. AI OUTCOMES TABLE (Trade results for calibration)
 -- Links AI recommendations to actual trade outcomes
@@ -167,10 +167,10 @@ CREATE TABLE IF NOT EXISTS ai_outcomes (
     CONSTRAINT fk_workspace FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_ai_outcomes_workspace ON ai_outcomes(workspace_id);
-CREATE INDEX idx_ai_outcomes_symbol ON ai_outcomes(symbol);
-CREATE INDEX idx_ai_outcomes_confidence ON ai_outcomes(ai_confidence);
-CREATE INDEX idx_ai_outcomes_correct ON ai_outcomes(ai_direction_correct);
+CREATE INDEX IF NOT EXISTS idx_ai_outcomes_workspace ON ai_outcomes(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_ai_outcomes_symbol ON ai_outcomes(symbol);
+CREATE INDEX IF NOT EXISTS idx_ai_outcomes_confidence ON ai_outcomes(ai_confidence);
+CREATE INDEX IF NOT EXISTS idx_ai_outcomes_correct ON ai_outcomes(ai_direction_correct);
 
 -- 6. MSP KNOWLEDGE TABLE (RAG chunks for retrieval)
 -- Your house methodology, metric definitions, playbooks
@@ -199,9 +199,9 @@ CREATE TABLE IF NOT EXISTS msp_knowledge (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_msp_knowledge_type ON msp_knowledge(content_type);
-CREATE INDEX idx_msp_knowledge_category ON msp_knowledge(category);
-CREATE INDEX idx_msp_knowledge_active ON msp_knowledge(is_active);
+CREATE INDEX IF NOT EXISTS idx_msp_knowledge_type ON msp_knowledge(content_type);
+CREATE INDEX IF NOT EXISTS idx_msp_knowledge_category ON msp_knowledge(category);
+CREATE INDEX IF NOT EXISTS idx_msp_knowledge_active ON msp_knowledge(is_active);
 -- Vector similarity index (requires pgvector extension)
 -- CREATE INDEX idx_msp_knowledge_embedding ON msp_knowledge USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
 
@@ -231,9 +231,9 @@ CREATE TABLE IF NOT EXISTS ai_actions (
     CONSTRAINT fk_workspace FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_ai_actions_workspace ON ai_actions(workspace_id);
-CREATE INDEX idx_ai_actions_type ON ai_actions(action_type);
-CREATE INDEX idx_ai_actions_success ON ai_actions(success);
+CREATE INDEX IF NOT EXISTS idx_ai_actions_workspace ON ai_actions(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_ai_actions_type ON ai_actions(action_type);
+CREATE INDEX IF NOT EXISTS idx_ai_actions_success ON ai_actions(success);
 
 -- 8. AI EVALUATION RESULTS (Weekly eval tracking)
 -- Stores results of automated evaluation runs
@@ -257,8 +257,8 @@ CREATE TABLE IF NOT EXISTS ai_evaluations (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_ai_evaluations_date ON ai_evaluations(eval_date DESC);
-CREATE INDEX idx_ai_evaluations_type ON ai_evaluations(eval_type);
+CREATE INDEX IF NOT EXISTS idx_ai_evaluations_date ON ai_evaluations(eval_date DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_evaluations_type ON ai_evaluations(eval_type);
 
 -- =====================================================
 -- HELPER FUNCTIONS
@@ -273,6 +273,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_user_memory_updated ON user_memory;
 CREATE TRIGGER trigger_user_memory_updated
     BEFORE UPDATE ON user_memory
     FOR EACH ROW

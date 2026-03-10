@@ -68,6 +68,9 @@ CREATE INDEX IF NOT EXISTS idx_ai_actions_workspace_status_created
 CREATE INDEX IF NOT EXISTS idx_ai_actions_workspace_type_created
   ON ai_actions(workspace_id, action_type, created_at DESC);
 
+-- Ensure response_id column exists (may be missing if table was created outside AI_PLATFORM_SCHEMA)
+ALTER TABLE ai_actions ADD COLUMN IF NOT EXISTS response_id UUID;
+
 CREATE INDEX IF NOT EXISTS idx_ai_actions_response_id
   ON ai_actions(response_id)
   WHERE response_id IS NOT NULL;

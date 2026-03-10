@@ -9,26 +9,26 @@ DROP CONSTRAINT IF EXISTS valid_condition_type;
 ALTER TABLE alerts 
 ADD CONSTRAINT valid_condition_type CHECK (
     condition_type IN (
-        -- Price-based (existing)
-        'price_above', 
-        'price_below', 
-        'percent_change_up', 
-        'percent_change_down', 
-        'volume_spike',
-        -- Smart/Derivatives alerts (new)
-        'oi_surge',           -- Open Interest spike >X%
-        'oi_drop',            -- Open Interest drop >X%
-        'funding_extreme_pos', -- Funding rate above threshold (overleveraged longs)
-        'funding_extreme_neg', -- Funding rate below threshold (overleveraged shorts)
-        'ls_ratio_high',       -- Long/Short ratio above threshold (crowded longs)
-        'ls_ratio_low',        -- Long/Short ratio below threshold (crowded shorts)
-        'fear_extreme',        -- Fear & Greed Index < 25
-        'greed_extreme',       -- Fear & Greed Index > 75
-        'liquidation_cascade', -- Large liquidations detected
-        'oi_divergence_bull',  -- OI up + Price down (smart money accumulating)
-        'oi_divergence_bear'   -- OI down + Price up (distribution)
+        -- Price-based
+        'price_above', 'price_below', 
+        'percent_change_up', 'percent_change_down', 
+        'volume_spike', 'volume_above', 'volume_below',
+        -- Technical indicator alerts
+        'rsi_above', 'rsi_below',
+        'macd_cross_up', 'macd_cross_down',
+        'sma_cross_above', 'sma_cross_below',
+        'ema_cross_above', 'ema_cross_below',
+        -- Smart/Derivatives alerts
+        'oi_surge', 'oi_drop',
+        'oi_above', 'oi_below', 'oi_change_up', 'oi_change_down',
+        'funding_extreme_pos', 'funding_extreme_neg',
+        'funding_above', 'funding_below',
+        'ls_ratio_high', 'ls_ratio_low',
+        'fear_extreme', 'greed_extreme',
+        'liquidation_cascade',
+        'oi_divergence_bull', 'oi_divergence_bear'
     )
-);
+) NOT VALID;
 
 -- Add smart alert specific columns
 ALTER TABLE alerts 
