@@ -186,8 +186,8 @@ CREATE TABLE IF NOT EXISTS msp_knowledge (
     category VARCHAR(50), -- time_confluence, signals, derivatives, portfolio, journal
     tags JSONB DEFAULT '[]',
     
-    -- For retrieval
-    embedding VECTOR(1536), -- OpenAI ada-002 dimensions
+    -- For retrieval (pgvector required - enable with: CREATE EXTENSION IF NOT EXISTS vector)
+    -- embedding VECTOR(1536), -- OpenAI ada-002 dimensions
     chunk_index INTEGER DEFAULT 0, -- for multi-chunk documents
     source_doc VARCHAR(200), -- original document name
     
