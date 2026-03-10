@@ -81,7 +81,7 @@ setInterval(() => {
   }
 }, 300_000);
 
-export async function proxy(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   // ── Global rate limit on API routes ──
   const { pathname } = req.nextUrl;
   if (pathname.startsWith('/api/') && !pathname.startsWith('/api/webhooks')) {
