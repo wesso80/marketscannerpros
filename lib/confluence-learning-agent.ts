@@ -3078,6 +3078,7 @@ export class ConfluenceLearningAgent {
     };
 
     // Now compute targetLevel (deferred here because it needs mid50Above/mid50Below/weightMid50)
+    // Uses takeProfit as ultimate fallback — it already has ATR-based logic for all directions
     if (direction === 'bullish' && mid50Above.length > 0) {
       targetLevel = weightMid50(mid50Above);
     } else if (direction === 'bearish' && mid50Below.length > 0) {
@@ -3088,6 +3089,10 @@ export class ConfluenceLearningAgent {
     } else if (activeDecomps.length > 0) {
       const strongest = activeDecomps.sort((a, b) => b.pullStrength - a.pullStrength)[0];
       targetLevel = strongest.mid50Level;
+    }
+    // Fallback: if targetLevel is still currentPrice, use the trade setup's takeProfit
+    if (targetLevel === currentPrice && takeProfit !== currentPrice) {
+      targetLevel = takeProfit;
     }
     
     // Calculate Candle Close Confluence - when multiple TFs close together
@@ -3198,6 +3203,14 @@ export class ConfluenceLearningAgent {
           tradeSetup.riskRewardRatio = tradeSetup.riskPercent > 0
             ? Math.round((tradeSetup.rewardPercent / tradeSetup.riskPercent) * 100) / 100
             : 0;
+          // Re-derive targetLevel for the new direction
+          if (direction === 'bullish' && mid50Above.length > 0) {
+            targetLevel = weightMid50(mid50Above);
+          } else if (direction === 'bearish' && mid50Below.length > 0) {
+            targetLevel = weightMid50(mid50Below);
+          } else {
+            targetLevel = takeProfit;
+          }
         }
         // If decomp direction agrees, boost confidence
         else if (direction !== 'neutral' && direction === calDir) {

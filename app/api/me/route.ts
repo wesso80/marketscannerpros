@@ -19,10 +19,13 @@ async function getEmailFromWorkspace(workspaceId: string): Promise<string | null
   }
 }
 
-// Extract email from cid if it's a trial user (format: "trial_email@example.com")
+// Extract email from cid (formats: "trial_email@example.com", "free_email@example.com", or "email@example.com")
 function extractEmailFromCid(cid: string): string | null {
   if (cid.startsWith('trial_')) {
     return cid.substring(6); // Remove "trial_" prefix
+  }
+  if (cid.startsWith('free_')) {
+    return cid.substring(5); // Remove "free_" prefix
   }
   // Check if cid itself looks like an email
   if (cid.includes('@')) {

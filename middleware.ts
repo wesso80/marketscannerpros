@@ -110,14 +110,14 @@ export async function middleware(req: NextRequest) {
           exp: newExp,
         });
 
+        const host = req.headers.get('host') || '';
+        const isLocalhost = host.includes('localhost') || host.includes('127.0.0.1');
+
         const res = NextResponse.next();
-        res.cookies.set('ms_auth', newToken, {
-          httpOnly: true,
-          sameSite: 'lax',
-          secure: process.env.NODE_ENV === 'production',
-          path: '/',
-          maxAge: 30 * ONE_DAY,
-        });
+        res.cookies.set('ms_auth', newToken, isLocalhost
+          ? { httpOnly: true, secure: false, sameSite: 'lax' as const, path: '/', maxAge: 30 * ONE_DAY }
+          : { httpOnly: true, secure: true, sameSite: 'none' as const, domain: '.marketscannerpros.app', path: '/', maxAge: 30 * ONE_DAY }
+        );
         return res;
       }
     }
