@@ -75,6 +75,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_update_midpoints_timestamp ON timeframe_midpoints;
 CREATE TRIGGER trigger_update_midpoints_timestamp
   BEFORE UPDATE ON timeframe_midpoints
   FOR EACH ROW
