@@ -209,7 +209,7 @@ function AlertsContent() {
     setZone4Open(true);
   };
 
-  const orphanedCount = useMemo(() => alerts.filter((a) => a.is_smart_alert && a.condition_value === 0).length, [alerts]);
+  const orphanedCount = useMemo(() => alerts.filter((a) => a.is_smart_alert && Number(a.condition_value) === 0).length, [alerts]);
 
   const cleanupOrphaned = async () => {
     setCleanupStatus('cleaning');
