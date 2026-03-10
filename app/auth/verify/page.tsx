@@ -49,10 +49,14 @@ function VerifyMagicLinkContent() {
           return;
         }
 
+        const userTier = loginData?.tier || "free";
+        const isFree = userTier === "free";
         setState("success");
-        setMessage("Signed in successfully. Redirecting to command center...");
+        setMessage(isFree
+          ? "Signed in! Redirecting to scanner..."
+          : "Signed in successfully. Redirecting to command center...");
         setTimeout(() => {
-          router.push("/tools/markets");
+          router.push(isFree ? "/tools/scanner" : "/tools/markets");
         }, 900);
       } catch {
         setState("error");
