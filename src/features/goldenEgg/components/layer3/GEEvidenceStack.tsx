@@ -12,7 +12,7 @@ type GEEvidenceStackProps = {
 
 export default function GEEvidenceStack({ layer3 }: GEEvidenceStackProps) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <GEEvidenceStructure structure={layer3.structure} />
       <GEEvidenceFlowOptions options={layer3.options} />
       <GEEvidenceMomentum momentum={layer3.momentum} />

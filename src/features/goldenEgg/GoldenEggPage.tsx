@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import GECommandStrip from '@/src/features/goldenEgg/components/GECommandStrip';
 import GEHeaderBar from '@/src/features/goldenEgg/components/GEHeaderBar';
 import GEDecisionStrip from '@/src/features/goldenEgg/components/layer1/GEDecisionStrip';
 import GEPlanGrid from '@/src/features/goldenEgg/components/layer2/GEPlanGrid';
@@ -10,9 +9,19 @@ import GESetupCard from '@/src/features/goldenEgg/components/layer2/GESetupCard'
 import GEEvidenceStack from '@/src/features/goldenEgg/components/layer3/GEEvidenceStack';
 import GECard from '@/src/features/goldenEgg/components/shared/GECard';
 import GEEmptyState from '@/src/features/goldenEgg/components/shared/GEEmptyState';
-import GESectionHeader from '@/src/features/goldenEgg/components/shared/GESectionHeader';
 import { isNoTrade } from '@/src/features/goldenEgg/selectors';
 import type { GoldenEggPayload } from '@/src/features/goldenEgg/types';
+
+const QUICK_SYMBOLS = ['AAPL', 'BTC', 'TSLA', 'ETH', 'NVDA', 'EURUSD', 'GOLD'];
+
+function SectionTitle({ icon, title }: { icon: string; title: string }) {
+  return (
+    <div className="mb-4 flex items-center gap-2">
+      <span className="text-base">{icon}</span>
+      <h2 className="text-xs font-semibold uppercase tracking-widest text-amber-400">{title}</h2>
+    </div>
+  );
+}
 
 export default function GoldenEggPage() {
   const [symbol, setSymbol] = useState('');
@@ -20,14 +29,15 @@ export default function GoldenEggPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const analyze = useCallback(async () => {
-    const sym = symbol.trim().toUpperCase();
-    if (!sym) { setError('Enter a symbol'); return; }
+  const analyze = useCallback(async (sym?: string) => {
+    const s = (sym || symbol).trim().toUpperCase();
+    if (!s) { setError('Enter a symbol'); return; }
+    if (sym) setSymbol(s);
     setLoading(true);
     setError('');
     setPayload(null);
     try {
-      const res = await fetch(`/api/golden-egg?symbol=${encodeURIComponent(sym)}`);
+      const res = await fetch(`/api/golden-egg?symbol=${encodeURIComponent(s)}`);
       const json = await res.json();
       if (!json.success) { setError(json.error || 'Analysis failed'); return; }
       setPayload(json.data);
@@ -49,73 +59,102 @@ export default function GoldenEggPage() {
       <GEHeaderBar />
 
       <main className="mx-auto w-full max-w-[1280px] px-4 pb-24">
-        {/* ── Symbol Search ───────────────────────────────────── */}
-        <div className="mx-auto mt-6 flex max-w-md items-center gap-2">
-          <input
-            type="text"
-            value={symbol}
-            onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-            onKeyDown={handleKeyDown}
-            placeholder="Enter symbol (e.g. AAPL, BTC, NVDA)"
-            className="flex-1 rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-white/40 outline-none focus:border-[var(--msp-accent)] focus:ring-1 focus:ring-[var(--msp-accent)]"
-            disabled={loading}
-          />
-          <button
-            onClick={analyze}
-            disabled={loading || !symbol.trim()}
-            className="rounded-lg bg-[var(--msp-accent)] px-5 py-3 text-sm font-semibold text-black transition hover:brightness-110 disabled:opacity-50"
-          >
-            {loading ? 'Analyzing…' : 'Analyze'}
-          </button>
+        {/* ── Search ──────────────────────────────────────────── */}
+        <div className="mx-auto mt-8 max-w-lg">
+          <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-1.5">
+            <input
+              type="text"
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+              onKeyDown={handleKeyDown}
+              placeholder="Enter symbol (e.g. AAPL, BTC, NVDA)"
+              className="flex-1 bg-transparent px-3 py-2.5 text-sm text-white placeholder-white/40 outline-none"
+              disabled={loading}
+            />
+            <button
+              onClick={() => analyze()}
+              disabled={loading || !symbol.trim()}
+              className="rounded-lg bg-emerald-500 px-6 py-2.5 text-sm font-bold text-black transition hover:bg-emerald-400 disabled:opacity-50"
+            >
+              {loading ? 'Analyzing…' : 'Analyze'}
+            </button>
+          </div>
+          <div className="mt-3 flex flex-wrap justify-center gap-2">
+            {QUICK_SYMBOLS.map((s) => (
+              <button
+                key={s}
+                onClick={() => analyze(s)}
+                disabled={loading}
+                className={`rounded-full border px-3 py-1 text-xs transition ${
+                  symbol === s
+                    ? 'border-emerald-500/50 bg-emerald-500/20 text-emerald-300'
+                    : 'border-white/10 bg-white/5 text-white/60 hover:border-amber-500/40 hover:text-white'
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
         </div>
 
         {error && (
-          <div className="mx-auto mt-3 max-w-md rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-center text-sm text-red-300">
+          <div className="mx-auto mt-4 max-w-lg rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-center text-sm text-red-300">
             {error}
           </div>
         )}
 
         {loading && (
-          <div className="mt-12 flex flex-col items-center gap-3">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-[var(--msp-accent)]" />
+          <div className="mt-16 flex flex-col items-center gap-4">
+            <div className="h-10 w-10 animate-spin rounded-full border-2 border-white/20 border-t-amber-400" />
             <p className="text-sm text-white/50">Fetching live data and computing analysis…</p>
           </div>
         )}
 
         {/* ── Empty State ─────────────────────────────────────── */}
         {!payload && !loading && !error && (
-          <div className="mt-16 text-center">
-            <div className="mb-3 text-5xl">🥚</div>
-            <h2 className="text-xl font-bold text-white/80">Golden Egg Decision Engine</h2>
-            <p className="mt-2 text-sm text-white/40">Enter a symbol to generate a live multi-factor trade analysis</p>
-            <div className="mx-auto mt-4 flex flex-wrap justify-center gap-2">
-              {['AAPL', 'NVDA', 'BTC', 'TSLA', 'SPY', 'ETH'].map((s) => (
-                <button
-                  key={s}
-                  onClick={() => { setSymbol(s); }}
-                  className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/60 transition hover:border-[var(--msp-accent)]/50 hover:text-white"
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
+          <div className="mt-20 text-center">
+            <p className="text-sm text-white/40">Enter a symbol above to generate a live multi-factor trade analysis</p>
           </div>
         )}
 
-        {/* ── Live Results ────────────────────────────────────── */}
+        {/* ── Results ─────────────────────────────────────────── */}
         {payload && (
-          <>
-            <GECommandStrip meta={payload.meta} layer1={payload.layer1} />
+          <div className="mt-8 space-y-8">
+            {/* Symbol Hero */}
+            <div className="rounded-2xl border border-white/5 bg-gradient-to-b from-slate-800/60 to-slate-900/60 px-6 py-8 text-center">
+              <div className="text-[11px] font-medium uppercase tracking-widest text-slate-500">
+                {payload.meta.assetClass} &bull; {payload.meta.timeframe}
+              </div>
+              <h2 className="mt-2 text-4xl font-bold text-white">{payload.meta.symbol}</h2>
+              <div className={`mt-3 text-3xl font-bold ${payload.layer1.direction === 'SHORT' ? 'text-rose-400' : 'text-emerald-400'}`}>
+                ${(payload.meta.price ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <div className="mt-4">
+                <span className={`inline-block rounded-lg px-5 py-2 text-sm font-bold ${
+                  payload.layer1.direction === 'LONG' ? 'bg-emerald-500 text-black' :
+                  payload.layer1.direction === 'SHORT' ? 'bg-rose-500 text-white' :
+                  'bg-slate-600 text-white'
+                }`}>
+                  {payload.layer1.direction === 'LONG' ? 'BUY' : payload.layer1.direction === 'SHORT' ? 'SELL' : 'NEUTRAL'}
+                </span>
+              </div>
+              <p className="mt-3 text-sm text-slate-400">
+                Score: {payload.layer1.confidence}/100 &bull; Grade {payload.layer1.grade}
+              </p>
+            </div>
 
-            <section id="layer-1" className="mt-4">
-              <GEDecisionStrip layer1={payload.layer1} meta={payload.meta} />
+            {/* Decision Analysis */}
+            <section>
+              <SectionTitle icon="📊" title="Quick Summary &amp; Signal Breakdown" />
+              <GEDecisionStrip layer1={payload.layer1} />
             </section>
 
-            <section id="layer-2" className="mt-4">
+            {/* Trade Plan */}
+            <section>
+              <SectionTitle icon="🎯" title="Trade Plan" />
               {noTrade ? (
-                <GECard title="Plan" variant="warning">
-                  <GESectionHeader title="Waiting For" />
-                  <ul className="mt-2 space-y-2 text-sm text-slate-200">
+                <GECard title="Waiting For" variant="warning">
+                  <ul className="space-y-2 text-sm text-slate-200">
                     {payload.layer1.flipConditions.map((condition) => (
                       <li key={condition.id} className="rounded-xl border border-white/5 bg-white/5 px-3 py-2">
                         {condition.text}
@@ -137,10 +176,12 @@ export default function GoldenEggPage() {
               )}
             </section>
 
-            <section id="layer-3" className="mt-4">
+            {/* Evidence Stack */}
+            <section>
+              <SectionTitle icon="🔍" title="Evidence Stack" />
               <GEEvidenceStack layer3={payload.layer3} />
             </section>
-          </>
+          </div>
         )}
       </main>
     </div>

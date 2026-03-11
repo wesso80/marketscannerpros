@@ -20,8 +20,11 @@ export default function GECard({ title, rightSlot, children, variant = 'default'
   return (
     <section className={`rounded-2xl border bg-slate-900/40 p-4 ${tone}`}>
       {(title || rightSlot) && (
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="min-w-0 text-sm font-semibold text-slate-100">{title}</h2>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-white/5 pb-3">
+          <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-amber-400">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+            {title}
+          </h2>
           <div className="shrink-0">{rightSlot}</div>
         </div>
       )}
