@@ -621,7 +621,6 @@ export default function OptionsConfluenceScanner() {
   const [personalityLoaded, setPersonalityLoaded] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [density, setDensity] = useState<TerminalDensity>('normal');
-  const [deskFeedIndex, setDeskFeedIndex] = useState(0);
   const [operatorViewMode, setOperatorViewMode] = useState<OperatorViewMode>('advanced');
   const [showDealerHistogram, setShowDealerHistogram] = useState(false);
   const [cursorLightEnabled, setCursorLightEnabled] = useState(false);
@@ -1026,14 +1025,6 @@ export default function OptionsConfluenceScanner() {
     loadJournalForPersonality();
     return () => { mounted = false; };
   }, []);
-
-  useEffect(() => {
-    if (!result) return;
-    const timer = setInterval(() => {
-      setDeskFeedIndex((prev) => prev + 1);
-    }, 180000);
-    return () => clearInterval(timer);
-  }, [result?.symbol]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // PROBABILITY ENGINE - Institutional-Grade Win Probability Calculation
@@ -2330,41 +2321,7 @@ export default function OptionsConfluenceScanner() {
           />
         )}
 
-        {result && (() => {
-          const riskState = (result.expectedMove?.selectedExpiryPercent ?? 0) >= 4
-            ? 'HIGH'
-            : (result.expectedMove?.selectedExpiryPercent ?? 0) >= 2
-            ? 'MODERATE'
-            : 'LOW';
-          const breadth = result.direction === 'bullish' ? 'RISK ON' : result.direction === 'bearish' ? 'RISK OFF' : 'MIXED';
-          const regimeLabel = institutionalMarketRegime || 'UNKNOWN';
 
-          const stripTag = (label: string, value: string, type: 'bull' | 'bear' | 'warn' | 'accent' | 'neutral' = 'neutral') => {
-            const colorMap: Record<'bull' | 'bear' | 'warn' | 'accent' | 'neutral', string> = {
-              bull: 'text-msp-bull bg-msp-panel border-msp-borderStrong',
-              bear: 'text-msp-bear bg-msp-panel border-msp-borderStrong',
-              warn: 'text-msp-warn bg-msp-panel border-msp-borderStrong',
-              accent: 'text-msp-accent bg-msp-panel border-msp-borderStrong',
-              neutral: 'text-msp-neutral bg-msp-panel border-msp-border',
-            };
-            return (
-            <div className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold ${colorMap[type]}`}>
-              <span className="text-msp-faint uppercase">{label}</span>
-              <span>{value}</span>
-            </div>
-            );
-          };
-
-          return (
-            <div className="msp-panel mb-3 flex flex-wrap items-center gap-2 px-2.5 py-2">
-              {stripTag('Regime', regimeLabel, regimeLabel.includes('TREND') ? 'bull' : 'warn')}
-              {stripTag('Global Risk', riskState, riskState === 'HIGH' ? 'bear' : riskState === 'MODERATE' ? 'warn' : 'bull')}
-              {stripTag('Breadth', breadth, breadth === 'RISK ON' ? 'bull' : breadth === 'RISK OFF' ? 'bear' : 'warn')}
-              {stripTag('Event Risk', 'NONE', 'accent')}
-              {stripTag('Session', (result.entryTiming.marketSession || 'n/a').toUpperCase(), 'neutral')}
-            </div>
-          );
-        })()}
 
         {result && copilotPresence && (
           <div className="msp-panel -mt-1 mb-3 rounded-lg border border-[var(--msp-border)] px-3 py-2">
@@ -2385,24 +2342,6 @@ export default function OptionsConfluenceScanner() {
             )}
           </div>
         )}
-
-        {result && (() => {
-          const messages = [
-            `${result.direction === 'bullish' ? 'Buying' : result.direction === 'bearish' ? 'Selling' : 'Two-way'} pressure near key structure — watch confirmation trigger.`,
-            `${result.candleCloseConfluence?.bestEntryWindow?.startMins === 0 ? 'Time cluster active now' : `Time cluster in ${result.candleCloseConfluence?.bestEntryWindow?.startMins ?? 'n/a'}m`} — prepare execution plan.`,
-            `${result.unusualActivity?.hasUnusualActivity ? 'Unusual options flow detected' : 'Flow remains moderate'} — keep invalidation discipline.`
-          ];
-          const msg = messages[deskFeedIndex % messages.length];
-
-          return (
-            <div className="msp-panel -mt-2 mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-[var(--msp-border)] px-3 py-2">
-              <div className="text-[11px] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">
-                🧠 AI Desk Feed
-              </div>
-              <div className="msp-muted flex-1 text-xs">{msg}</div>
-            </div>
-          );
-        })()}
 
         {/* Operator Panel */}
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-3 py-2">
@@ -2611,32 +2550,6 @@ export default function OptionsConfluenceScanner() {
               <div className="flex flex-wrap items-center justify-between gap-2 text-[0.75rem]">
                 <span className="font-extrabold uppercase tracking-[0.05em]">Tradeability State</span>
                 <span className="font-black">{tradeabilityState === 'EXECUTABLE' ? '🟢 EXECUTABLE' : tradeabilityState === 'CONDITIONAL' ? '🟡 CONDITIONAL' : '🔴 AVOID'}</span>
-              </div>
-            </div>
-
-            {/* Compact KPI Strip — consolidated from removed Decision Engine card */}
-            <div className="-mt-[0.35rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] p-[0.5rem_0.65rem]">
-              <div className="flex flex-wrap gap-[0.45rem]">
-                <div className="rounded-[8px] border border-slate-400/20 bg-slate-900/40 px-[0.5rem] py-[0.25rem]">
-                  <span className="text-[0.6rem] font-bold uppercase text-slate-500">Edge </span>
-                  <span className="text-[0.74rem] font-extrabold text-slate-200">{probabilityResult?.winProbability ? `${probabilityResult.winProbability.toFixed(0)}%` : '—'}</span>
-                </div>
-                <div className="rounded-[8px] border border-slate-400/20 bg-slate-900/40 px-[0.5rem] py-[0.25rem]">
-                  <span className="text-[0.6rem] font-bold uppercase text-slate-500">R:R </span>
-                  <span className="text-[0.74rem] font-extrabold text-slate-200">{result.tradeLevels ? `1:${result.tradeLevels.riskRewardRatio.toFixed(1)}` : '—'}</span>
-                </div>
-                <div className="rounded-[8px] border border-slate-400/20 bg-slate-900/40 px-[0.5rem] py-[0.25rem]">
-                  <span className="text-[0.6rem] font-bold uppercase text-slate-500">Flow </span>
-                  <span className="text-[0.74rem] font-extrabold text-slate-200">{result.openInterestAnalysis?.sentiment?.toUpperCase() || 'NEUTRAL'}</span>
-                </div>
-                <div className="rounded-[8px] border border-slate-400/20 bg-slate-900/40 px-[0.5rem] py-[0.25rem]">
-                  <span className="text-[0.6rem] font-bold uppercase text-slate-500">Window </span>
-                  <span className="text-[0.74rem] font-extrabold text-slate-200">{result.entryTiming.idealEntryWindow}</span>
-                </div>
-                <div className="rounded-[8px] border border-slate-400/20 bg-slate-900/40 px-[0.5rem] py-[0.25rem]">
-                  <span className="text-[0.6rem] font-bold uppercase text-slate-500">Session </span>
-                  <span className="text-[0.74rem] font-extrabold text-slate-200">{result.entryTiming.marketSession === 'regular' ? '🟢 Open' : result.entryTiming.marketSession === 'premarket' ? '🌅 Pre' : result.entryTiming.marketSession === 'afterhours' ? '🌙 After' : '🔒 Closed'}</span>
-                </div>
               </div>
             </div>
 
@@ -3594,52 +3507,6 @@ export default function OptionsConfluenceScanner() {
             {(
               <>
 
-            {/* Context Layer — evidence-gated (full detail in Dealer Positioning Engine + Institutional panels) */}
-            {trapDoors.evidence && (
-            <div className="rounded-2xl border border-[var(--msp-border-strong)] border-l-[3px] border-l-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[0.9rem_1rem] shadow-[var(--msp-shadow)]">
-              <div className="mb-[0.6rem] flex flex-wrap items-center justify-between gap-2 text-[0.72rem] font-extrabold uppercase tracking-[0.45px] text-[var(--msp-muted)]">
-                <span>Context Layer</span>
-                <span className="rounded-full border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-[2px] text-[0.67rem] text-slate-300">Context Score {contextScore}</span>
-              </div>
-              {hasContextMetrics && (
-              <div className="mb-[0.55rem] grid gap-[0.45rem] [grid-template-columns:repeat(auto-fit,minmax(min(170px,100%),1fr))]">
-                <div className="rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.45rem_0.55rem]">
-                  <div className="text-[0.6rem] font-bold uppercase text-slate-500">Vol Fit</div>
-                  <div className="text-[0.82rem] font-extrabold text-slate-100">{typeof layerMetricVolFit === 'number' ? layerMetricVolFit.toFixed(2) : '—'}</div>
-                </div>
-                <div className="rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.45rem_0.55rem]">
-                  <div className="text-[0.6rem] font-bold uppercase text-slate-500">Regime Align</div>
-                  <div className="text-[0.82rem] font-extrabold text-slate-100">{typeof layerMetricRegime === 'number' ? layerMetricRegime.toFixed(2) : '—'}</div>
-                </div>
-                <div className="rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.45rem_0.55rem]">
-                  <div className="text-[0.6rem] font-bold uppercase text-slate-500">Liquidity Health</div>
-                  <div className="text-[0.82rem] font-extrabold text-slate-100">{typeof layerMetricLiquidity === 'number' ? layerMetricLiquidity.toFixed(2) : '—'}</div>
-                </div>
-              </div>
-              )}
-              <div className="grid gap-[0.45rem] [grid-template-columns:repeat(auto-fit,minmax(min(210px,100%),1fr))]">
-                <div className="rounded-[10px] border border-slate-500/20 bg-slate-900/35 p-[0.5rem_0.6rem] opacity-[0.88]">
-                  <div className="text-[0.66rem] font-bold uppercase text-slate-500">Flow State</div>
-                  <div className="text-[0.85rem] font-extrabold text-slate-200">{institutionalFlowState}</div>
-                </div>
-                <div className="rounded-[10px] border border-slate-500/20 bg-slate-900/35 p-[0.5rem_0.6rem] opacity-[0.88]">
-                  <div className="text-[0.66rem] font-bold uppercase text-slate-500">Market Regime</div>
-                  <div className="text-[0.85rem] font-extrabold text-slate-200">{institutionalMarketRegime}</div>
-                </div>
-                <div className="rounded-[10px] border border-[var(--msp-border-strong)] border-l-[3px] border-l-[var(--msp-accent)] bg-[var(--msp-panel)] p-[0.5rem_0.6rem] shadow-[var(--msp-shadow)]">
-                  <div className="text-[0.66rem] font-bold uppercase text-slate-500">Trade Permission</div>
-                  <div className={`font-black ${unifiedPermission === 'ALLOW' ? 'text-emerald-500' : unifiedPermission === 'BLOCK' ? 'text-red-500' : 'text-amber-500'}`}>
-                    {unifiedPermission}
-                  </div>
-                </div>
-                <div className="rounded-[10px] border border-slate-500/20 bg-slate-900/35 p-[0.5rem_0.6rem] opacity-[0.88]">
-                  <div className="text-[0.66rem] font-bold uppercase text-slate-500">Confidence</div>
-                  <div className="text-[0.85rem] font-extrabold text-slate-200">{unifiedConfidence.toFixed(0)}%</div>
-                </div>
-              </div>
-            </div>
-            )}
-
             {/* MSP AI SIGNAL — evidence-gated */}
             {trapDoors.evidence && (
             <div className="grid min-h-[clamp(220px,32vh,380px)] gap-[0.8rem] rounded-[18px] border border-[var(--msp-border-strong)] border-l-[3px] border-l-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[1.1rem_1.2rem] shadow-[var(--msp-shadow)]">
@@ -3673,21 +3540,6 @@ export default function OptionsConfluenceScanner() {
                 </div>
               </div>
               )}
-
-              <div className={`rounded-xl border p-[0.7rem_0.75rem] ${unifiedPermission === 'ALLOW' ? 'border-emerald-500/40 bg-emerald-500/10' : unifiedPermission === 'BLOCK' ? 'border-red-500/40 bg-red-500/10' : 'border-amber-500/40 bg-amber-500/10'}`}>
-                <div className="mb-[0.35rem] text-[0.72rem] font-extrabold uppercase text-[var(--msp-muted)]">MSP Deployment Status</div>
-                <div className="grid gap-[0.35rem] [grid-template-columns:repeat(auto-fit,minmax(min(180px,100%),1fr))]">
-                  <div className="text-[0.8rem] text-slate-100">Permission: <span className="font-black">{unifiedPermission}</span></div>
-                  <div className="text-[0.8rem] text-slate-100">Confidence: <span className="font-black">{unifiedConfidence}%</span></div>
-                  <div className="text-[0.8rem] text-slate-100">Quality: <span className="font-black">{unifiedQuality}</span></div>
-                  <div className="text-[0.8rem] text-slate-100">Context/Setup/Execution: <span className="font-black">{contextScore}/{setupScore}/{executionScore}</span></div>
-                </div>
-                <div className="mt-[0.45rem] grid gap-1 text-[0.74rem] text-slate-300">
-                  {deploymentReasons.length > 0
-                    ? deploymentReasons.map((reason, idx) => (<div key={idx}>• {reason}</div>))
-                    : <div>• No blockers. Execution profile is clean.</div>}
-                </div>
-              </div>
 
               <div className="grid gap-[0.45rem] rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.72rem]">
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -3757,17 +3609,6 @@ export default function OptionsConfluenceScanner() {
                 compact
               />
               <EvolutionStatusCard compact />
-
-              <div className="rounded-xl border border-slate-400/20 bg-black/20 p-3">
-                <div className="mb-[0.45rem] text-[0.75rem] font-extrabold uppercase text-emerald-200">
-                  Why This Exists
-                </div>
-                <div className="grid gap-[0.32rem]">
-                  {primaryWhyItems.slice(0, 3).map((reason, idx) => (
-                    <div key={idx} className="text-[0.8rem] text-slate-200">✔ {reason}</div>
-                  ))}
-                </div>
-              </div>
 
               <div className="grid items-center gap-2 [grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr))]">
                 <div className="text-[0.8rem] text-slate-300">
@@ -4206,58 +4047,6 @@ export default function OptionsConfluenceScanner() {
                         No unusual options activity detected
                       </div>
                     )}
-                  </div>
-                )}
-
-                {/* Trade Levels Card */}
-                {result.tradeLevels && (
-                  <div className="col-span-1 rounded-xl border border-emerald-500/30 bg-slate-800/80 p-4">
-                    <h4 className="mb-3 mt-0 text-[0.9rem] text-emerald-500">
-                      📍 Entry/Exit Levels
-                      <span className={`ml-2 rounded-full px-2 py-[2px] text-[0.65rem] ${result.tradeLevels.riskRewardRatio >= 1.5 ? 'bg-emerald-500/30 text-emerald-300' : result.tradeLevels.riskRewardRatio >= 1.0 ? 'bg-amber-500/30 text-amber-300' : result.tradeLevels.riskRewardRatio >= 0.75 ? 'bg-orange-400/30 text-orange-300' : 'bg-red-500/30 text-red-300'}`}>
-                        {result.tradeLevels.riskRewardRatio.toFixed(1)}:1 R:R
-                      </span>
-                    </h4>
-                    
-                    <div className="flex flex-col gap-[0.4rem] text-[0.8rem]">
-                      <div className="flex justify-between">
-                        <span className="text-[var(--msp-muted)]">📥 Entry Zone:</span>
-                        <span className="font-bold text-[var(--msp-text)]">
-                          ${result.tradeLevels.entryZone.low.toFixed(2)} - ${result.tradeLevels.entryZone.high.toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-red-500">🛑 Stop Loss:</span>
-                        <span className="font-bold text-red-300">
-                          ${result.tradeLevels.stopLoss.toFixed(2)} ({result.tradeLevels.stopLossPercent.toFixed(1)}%)
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-emerald-500">🎯 Target 1 (50%):</span>
-                        <span className="font-bold text-emerald-300">
-                          ${result.tradeLevels.target1.price.toFixed(2)}
-                        </span>
-                      </div>
-                      {result.tradeLevels.target2 && (
-                        <div className="flex justify-between">
-                          <span className="text-emerald-500">🎯 Target 2 (30%):</span>
-                          <span className="text-emerald-300">
-                            ${result.tradeLevels.target2.price.toFixed(2)}
-                          </span>
-                        </div>
-                      )}
-                      {result.tradeLevels.target3 && (
-                        <div className="flex justify-between">
-                          <span className="text-emerald-500">🎯 Target 3 (20%):</span>
-                          <span className="text-emerald-300">
-                            ${result.tradeLevels.target3.price.toFixed(2)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="mt-2 text-[0.65rem] leading-[1.4] text-slate-500">
-                      {result.tradeLevels.reasoning}
-                    </div>
                   </div>
                 )}
 
