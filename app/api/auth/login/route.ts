@@ -128,7 +128,7 @@ function getAuthCookieOptions(req: NextRequest) {
   return {
     httpOnly: true,
     secure: true,
-    sameSite: "none" as const,
+    sameSite: "lax" as const,
     domain: ".marketscannerpros.app",
     path: "/",
     maxAge: 60 * 60 * 24 * 30,

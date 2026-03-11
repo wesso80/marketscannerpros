@@ -116,7 +116,7 @@ export async function middleware(req: NextRequest) {
         const res = NextResponse.next();
         res.cookies.set('ms_auth', newToken, isLocalhost
           ? { httpOnly: true, secure: false, sameSite: 'lax' as const, path: '/', maxAge: 30 * ONE_DAY }
-          : { httpOnly: true, secure: true, sameSite: 'none' as const, domain: '.marketscannerpros.app', path: '/', maxAge: 30 * ONE_DAY }
+          : { httpOnly: true, secure: true, sameSite: 'lax' as const, domain: '.marketscannerpros.app', path: '/', maxAge: 30 * ONE_DAY }
         );
         return res;
       }

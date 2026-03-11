@@ -50,13 +50,21 @@ export function UserTierProvider({ children }: { children: ReactNode }) {
       })
       .then((data) => {
         if (controller.signal.aborted) return;
-        if (data) {
+        if (data && data.authenticated) {
           setInfo({
             tier: data.tier || "free",
             isLoading: false,
             isLoggedIn: true,
             isAdmin: data.isAdmin || false,
             email: data.email || null,
+          });
+        } else {
+          setInfo({
+            tier: "anonymous",
+            isLoading: false,
+            isLoggedIn: false,
+            isAdmin: false,
+            email: null,
           });
         }
       })
