@@ -79,7 +79,7 @@ export interface DeepAnalysisData {
     avgIV: number;
     ivRank: number;
     sentiment: string;
-    unusualActivity: string[];
+    unusualActivity: string | string[];
   } | null;
   signals: {
     signal: string;

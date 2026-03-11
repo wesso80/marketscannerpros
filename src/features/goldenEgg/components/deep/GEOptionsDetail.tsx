@@ -12,7 +12,7 @@ export default function GEOptionsDetail({ options }: Props) {
   const stats = [
     { label: 'Put/Call Ratio', value: options.putCallRatio.toFixed(2) },
     { label: 'Max Pain', value: `$${options.maxPain.toFixed(2)}` },
-    { label: 'Avg IV', value: `${(options.avgIV * 100).toFixed(1)}%` },
+    { label: 'Avg IV', value: `${options.avgIV.toFixed(1)}%` },
     { label: 'IV Rank', value: `${options.ivRank.toFixed(0)}%` },
     { label: 'Total Call OI', value: options.totalCallOI.toLocaleString() },
     { label: 'Total Put OI', value: options.totalPutOI.toLocaleString() },
@@ -88,14 +88,21 @@ export default function GEOptionsDetail({ options }: Props) {
       </div>
 
       {/* Unusual activity */}
-      {options.unusualActivity && options.unusualActivity.length > 0 && (
+      {options.unusualActivity && (
         <div className="mt-3">
           <div className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">Unusual Activity</div>
-          <ul className="space-y-1 text-sm text-amber-300">
-            {options.unusualActivity.map((item, i) => (
-              <li key={i}>⚡ {item}</li>
-            ))}
-          </ul>
+          {Array.isArray(options.unusualActivity) ? (
+            <ul className="space-y-1 text-sm text-amber-300">
+              {options.unusualActivity.map((item, i) => (
+                <li key={i}>⚡ {item}</li>
+              ))}
+            </ul>
+          ) : (
+            <div className={`text-sm font-medium ${
+              options.unusualActivity === 'Very High' ? 'text-rose-400' :
+              options.unusualActivity === 'Elevated' ? 'text-amber-300' : 'text-slate-400'
+            }`}>⚡ {options.unusualActivity}</div>
+          )}
         </div>
       )}
     </div>
