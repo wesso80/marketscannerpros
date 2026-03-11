@@ -1711,10 +1711,11 @@ export class ConfluenceLearningAgent {
           break;
         }
         case 'TODAY': {
-          // Scan from NOW (skip already-elapsed closes) but anchor-day = full NY trading day
+          // Scan from start of the NY trading day so that already-elapsed
+          // closes still appear in "Closes on Anchor Day" until midnight.
           const ny = this.getNYDateTimeParts(now);
           anchorDayDate = new Date(this.getNYMarketCloseUtcMs(ny.year, ny.month, ny.day) - 16 * 3600_000);
-          anchorDate = now.getTime() > anchorDayDate.getTime() ? now : anchorDayDate;
+          anchorDate = anchorDayDate;
           break;
         }
         case 'EOW': {

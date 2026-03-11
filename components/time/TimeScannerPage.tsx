@@ -846,97 +846,156 @@ export default function TimeScannerPage() {
                   </tr>
                 </thead>
                 <tbody className="text-slate-300">
-                  {sessionMode !== 'regular' && (
+                  {sessionMode === 'regular' ? (
                     <>
+                      {/* ── Regular (RTH): anchor 9:30 ET, closes on the :30 ── */}
+                      <tr className="border-b border-slate-800/40 bg-emerald-500/5">
+                        <td className="py-1.5 pr-4 font-mono font-semibold text-emerald-400">09:30</td>
+                        <td className="py-1.5 pr-4 font-semibold text-emerald-300">NYSE Open</td>
+                        <td className="py-1.5 text-slate-400">Session anchor — all intraday bars begin here</td>
+                      </tr>
                       <tr className="border-b border-slate-800/40">
-                        <td className="py-1.5 pr-4 font-mono text-slate-400">{sessionMode === 'full' ? '00:00' : '04:00'}</td>
+                        <td className="py-1.5 pr-4 font-mono text-slate-200">10:00</td>
+                        <td className="py-1.5 pr-4">Opening Range</td>
+                        <td className="py-1.5 text-slate-400">30M (9:30–10:00)</td>
+                      </tr>
+                      <tr className="border-b border-slate-800/40">
+                        <td className="py-1.5 pr-4 font-mono text-slate-200">10:30</td>
+                        <td className="py-1.5 pr-4">First Hourly Close</td>
+                        <td className="py-1.5 text-slate-400">30M · <span className="text-emerald-400/80">1H (9:30–10:30)</span></td>
+                      </tr>
+                      <tr className="border-b border-slate-800/40">
+                        <td className="py-1.5 pr-4 font-mono text-slate-200">11:30</td>
+                        <td className="py-1.5 pr-4">European Close</td>
+                        <td className="py-1.5 text-slate-400">30M · <span className="text-emerald-400/80">1H (10:30–11:30) · 2H (9:30–11:30)</span></td>
+                      </tr>
+                      <tr className="border-b border-slate-800/40">
+                        <td className="py-1.5 pr-4 font-mono text-slate-200">12:30</td>
+                        <td className="py-1.5 pr-4">Midday</td>
+                        <td className="py-1.5 text-slate-400">30M · <span className="text-emerald-400/80">1H (11:30–12:30)</span></td>
+                      </tr>
+                      <tr className="border-b border-slate-800/40 bg-amber-500/5">
+                        <td className="py-1.5 pr-4 font-mono font-semibold text-amber-400">13:30</td>
+                        <td className="py-1.5 pr-4 font-semibold text-amber-300">Key Confluence</td>
+                        <td className="py-1.5 text-slate-400">30M · <span className="text-emerald-400/80">1H · 2H (11:30–13:30) · 4H (9:30–13:30)</span></td>
+                      </tr>
+                      <tr className="border-b border-slate-800/40">
+                        <td className="py-1.5 pr-4 font-mono text-slate-200">14:30</td>
+                        <td className="py-1.5 pr-4">Afternoon</td>
+                        <td className="py-1.5 text-slate-400">30M · <span className="text-emerald-400/80">1H (13:30–14:30)</span></td>
+                      </tr>
+                      <tr className="border-b border-slate-800/40">
+                        <td className="py-1.5 pr-4 font-mono text-slate-200">15:30</td>
+                        <td className="py-1.5 pr-4">Final Half-Hour</td>
+                        <td className="py-1.5 text-slate-400">30M · <span className="text-emerald-400/80">1H (14:30–15:30) · 2H (13:30–15:30)</span></td>
+                      </tr>
+                      <tr className="border-b border-slate-800/40 bg-emerald-500/5">
+                        <td className="py-1.5 pr-4 font-mono font-semibold text-emerald-400">16:00</td>
+                        <td className="py-1.5 pr-4 font-semibold text-emerald-300">NYSE Close</td>
+                        <td className="py-1.5 text-slate-400">30M · <span className="text-amber-400/80">1H (30m†) · 2H (30m†) · 4H (150m†)</span> · Daily</td>
+                      </tr>
+                    </>
+                  ) : sessionMode === 'extended' ? (
+                    <>
+                      {/* ── Extended: anchor 4:00 ET, closes on the hour ── */}
+                      <tr className="border-b border-slate-800/40">
+                        <td className="py-1.5 pr-4 font-mono text-slate-400">04:00</td>
                         <td className="py-1.5 pr-4 text-slate-500">Session Open</td>
                         <td className="py-1.5 text-slate-500">New bars begin anchoring</td>
                       </tr>
                       <tr className="border-b border-slate-800/40">
                         <td className="py-1.5 pr-4 font-mono text-amber-400/80">08:00</td>
                         <td className="py-1.5 pr-4">Early Pre-Market</td>
-                        <td className="py-1.5 text-slate-400">
-                          {sessionMode === 'extended' ? '4H (4:00–8:00) · 2H (6:00–8:00) · 1H (7:00–8:00)' : '8H (0:00–8:00) · 4H (4:00–8:00) · 2H (6:00–8:00) · 1H (7:00–8:00)'}
-                        </td>
+                        <td className="py-1.5 text-slate-400">1H (7:00–8:00) · 2H (6:00–8:00) · 4H (4:00–8:00)</td>
+                      </tr>
+                      <tr className="border-b border-slate-800/40 bg-emerald-500/5">
+                        <td className="py-1.5 pr-4 font-mono font-semibold text-emerald-400">09:30</td>
+                        <td className="py-1.5 pr-4 font-semibold text-emerald-300">NYSE Open</td>
+                        <td className="py-1.5 text-slate-400">30M (9:00–9:30) — RTH volume surge</td>
                       </tr>
                       <tr className="border-b border-slate-800/40">
-                        <td className="py-1.5 pr-4 font-mono text-amber-400/80">09:00</td>
-                        <td className="py-1.5 pr-4">Late Pre-Market</td>
-                        <td className="py-1.5 text-slate-400">1H (8:00–9:00) · 30M (8:30–9:00)</td>
+                        <td className="py-1.5 pr-4 font-mono text-slate-200">10:00</td>
+                        <td className="py-1.5 pr-4">Opening Range Close</td>
+                        <td className="py-1.5 text-slate-400">30M · 1H (9:00–10:00) · 2H (8:00–10:00) · 3H (7:00–10:00) · 6H (4:00–10:00)</td>
+                      </tr>
+                      <tr className="border-b border-slate-800/40 bg-amber-500/5">
+                        <td className="py-1.5 pr-4 font-mono font-semibold text-amber-400">12:00</td>
+                        <td className="py-1.5 pr-4 font-semibold text-amber-300">Midday</td>
+                        <td className="py-1.5 text-slate-400">1H (11:00–12:00) · 2H (10:00–12:00) · 4H (8:00–12:00) · 8H (4:00–12:00)</td>
+                      </tr>
+                      <tr className="border-b border-slate-800/40">
+                        <td className="py-1.5 pr-4 font-mono text-slate-200">14:00</td>
+                        <td className="py-1.5 pr-4">Mid-Afternoon</td>
+                        <td className="py-1.5 text-slate-400">30M (13:30–14:00) · 1H (13:00–14:00) · 2H (12:00–14:00)</td>
+                      </tr>
+                      <tr className="border-b border-slate-800/40 bg-emerald-500/5">
+                        <td className="py-1.5 pr-4 font-mono font-semibold text-emerald-400">16:00</td>
+                        <td className="py-1.5 pr-4 font-semibold text-emerald-300">NYSE Close</td>
+                        <td className="py-1.5 text-slate-400">30M (15:30–16:00) · 1H (15:00–16:00) · 2H (14:00–16:00) · 4H (12:00–16:00) · Daily (9:30–16:00)</td>
+                      </tr>
+                      <tr className="border-b border-slate-800/40 bg-slate-800/20">
+                        <td className="py-1.5 pr-4 font-mono font-semibold text-amber-400/80">20:00</td>
+                        <td className="py-1.5 pr-4 font-semibold text-amber-300/80">After-Hours Close</td>
+                        <td className="py-1.5 text-slate-400">1H (19:00–20:00) · 2H (18:00–20:00) · 4H (16:00–20:00)</td>
                       </tr>
                     </>
-                  )}
-                  <tr className="border-b border-slate-800/40 bg-emerald-500/5">
-                    <td className="py-1.5 pr-4 font-mono font-semibold text-emerald-400">09:30</td>
-                    <td className="py-1.5 pr-4 font-semibold text-emerald-300">NYSE Open</td>
-                    <td className="py-1.5 text-slate-400">New 30M, 1H, 2H, 4H bars begin — surge in volume</td>
-                  </tr>
-                  <tr className="border-b border-slate-800/40">
-                    <td className="py-1.5 pr-4 font-mono text-slate-200">10:00</td>
-                    <td className="py-1.5 pr-4">Opening Range Close</td>
-                    <td className="py-1.5 text-slate-400">
-                      {sessionMode === 'regular'
-                        ? '30M (9:30–10:00) · 1H (9:00–10:00)'
-                        : '30M (9:30–10:00) · 1H (9:00–10:00) · 2H (8:00–10:00) · 3H (7:00–10:00) · 6H (4:00–10:00)'}
-                    </td>
-                  </tr>
-                  <tr className="border-b border-slate-800/40">
-                    <td className="py-1.5 pr-4 font-mono text-slate-200">11:30</td>
-                    <td className="py-1.5 pr-4">European Close</td>
-                    <td className="py-1.5 text-slate-400">30M (11:00–11:30) · 1H (10:30–11:30) · 2H (9:30–11:30)</td>
-                  </tr>
-                  <tr className="border-b border-slate-800/40">
-                    <td className="py-1.5 pr-4 font-mono text-slate-200">12:00</td>
-                    <td className="py-1.5 pr-4">Midday</td>
-                    <td className="py-1.5 text-slate-400">
-                      {sessionMode === 'regular'
-                        ? '1H (11:00–12:00) · 2H (10:00–12:00)'
-                        : '1H (11:00–12:00) · 2H (10:00–12:00) · 4H (8:00–12:00) · 8H (4:00–12:00)'}
-                    </td>
-                  </tr>
-                  <tr className="border-b border-slate-800/40">
-                    <td className="py-1.5 pr-4 font-mono text-slate-200">14:00</td>
-                    <td className="py-1.5 pr-4">Mid-Afternoon</td>
-                    <td className="py-1.5 text-slate-400">30M (1:30–2:00) · 1H (1:00–2:00) · 2H (12:00–2:00) · 4H (10:00–2:00)</td>
-                  </tr>
-                  <tr className="border-b border-slate-800/40">
-                    <td className="py-1.5 pr-4 font-mono text-slate-200">15:30</td>
-                    <td className="py-1.5 pr-4">Final Half-Hour</td>
-                    <td className="py-1.5 text-slate-400">30M (3:00–3:30) · 1H (2:30–3:30)</td>
-                  </tr>
-                  <tr className="border-b border-slate-800/40 bg-emerald-500/5">
-                    <td className="py-1.5 pr-4 font-mono font-semibold text-emerald-400">16:00</td>
-                    <td className="py-1.5 pr-4 font-semibold text-emerald-300">NYSE Close</td>
-                    <td className="py-1.5 text-slate-400">
-                      {sessionMode === 'regular'
-                        ? '30M · 1H · 2H · 4H · Daily — end of day candle sets final price'
-                        : '30M (3:30–4:00) · 1H (3:00–4:00) · 2H (2:00–4:00) · 4H (12:00–4:00)'}
-                    </td>
-                  </tr>
-                  {sessionMode !== 'regular' && (
-                    <tr className="border-b border-slate-800/40 bg-slate-800/20">
-                      <td className="py-1.5 pr-4 font-mono font-semibold text-amber-400/80">20:00</td>
-                      <td className="py-1.5 pr-4 font-semibold text-amber-300/80">After-Hours Close</td>
-                      <td className="py-1.5 text-slate-400">
-                        {sessionMode === 'extended'
-                          ? '4H (16:00–20:00) · 8H (12:00–20:00) · Daily — end of extended session'
-                          : '4H (16:00–20:00) · 2H (18:00–20:00) · 1H (19:00–20:00)'}
-                      </td>
-                    </tr>
-                  )}
-                  {sessionMode === 'full' && (
-                    <tr className="border-b border-slate-800/40 bg-slate-800/20">
-                      <td className="py-1.5 pr-4 font-mono font-semibold text-slate-400">00:00</td>
-                      <td className="py-1.5 pr-4 font-semibold text-slate-400">Full Session Close</td>
-                      <td className="py-1.5 text-slate-400">8H (16:00–00:00) · 12H (12:00–00:00) · Daily — full 24h candle</td>
-                    </tr>
+                  ) : (
+                    <>
+                      {/* ── Full: anchor 0:00 ET, closes on the hour ── */}
+                      <tr className="border-b border-slate-800/40">
+                        <td className="py-1.5 pr-4 font-mono text-slate-400">00:00</td>
+                        <td className="py-1.5 pr-4 text-slate-500">Session Open</td>
+                        <td className="py-1.5 text-slate-500">New bars begin anchoring</td>
+                      </tr>
+                      <tr className="border-b border-slate-800/40">
+                        <td className="py-1.5 pr-4 font-mono text-amber-400/80">08:00</td>
+                        <td className="py-1.5 pr-4">Early Pre-Market</td>
+                        <td className="py-1.5 text-slate-400">8H (0:00–8:00) · 4H (4:00–8:00) · 2H (6:00–8:00) · 1H (7:00–8:00)</td>
+                      </tr>
+                      <tr className="border-b border-slate-800/40 bg-emerald-500/5">
+                        <td className="py-1.5 pr-4 font-mono font-semibold text-emerald-400">09:30</td>
+                        <td className="py-1.5 pr-4 font-semibold text-emerald-300">NYSE Open</td>
+                        <td className="py-1.5 text-slate-400">30M (9:00–9:30) — RTH volume surge</td>
+                      </tr>
+                      <tr className="border-b border-slate-800/40">
+                        <td className="py-1.5 pr-4 font-mono text-slate-200">10:00</td>
+                        <td className="py-1.5 pr-4">Opening Range Close</td>
+                        <td className="py-1.5 text-slate-400">30M · 1H (9:00–10:00) · 2H (8:00–10:00) · 3H (7:00–10:00)</td>
+                      </tr>
+                      <tr className="border-b border-slate-800/40 bg-amber-500/5">
+                        <td className="py-1.5 pr-4 font-mono font-semibold text-amber-400">12:00</td>
+                        <td className="py-1.5 pr-4 font-semibold text-amber-300">Midday</td>
+                        <td className="py-1.5 text-slate-400">1H · 2H · 4H (8:00–12:00) · 6H (6:00–12:00) · 12H (0:00–12:00)</td>
+                      </tr>
+                      <tr className="border-b border-slate-800/40">
+                        <td className="py-1.5 pr-4 font-mono text-slate-200">14:00</td>
+                        <td className="py-1.5 pr-4">Mid-Afternoon</td>
+                        <td className="py-1.5 text-slate-400">1H (13:00–14:00) · 2H (12:00–14:00)</td>
+                      </tr>
+                      <tr className="border-b border-slate-800/40 bg-emerald-500/5">
+                        <td className="py-1.5 pr-4 font-mono font-semibold text-emerald-400">16:00</td>
+                        <td className="py-1.5 pr-4 font-semibold text-emerald-300">NYSE Close</td>
+                        <td className="py-1.5 text-slate-400">1H · 2H · 4H (12:00–16:00) · 8H (8:00–16:00)</td>
+                      </tr>
+                      <tr className="border-b border-slate-800/40 bg-slate-800/20">
+                        <td className="py-1.5 pr-4 font-mono font-semibold text-amber-400/80">20:00</td>
+                        <td className="py-1.5 pr-4 font-semibold text-amber-300/80">After-Hours End</td>
+                        <td className="py-1.5 text-slate-400">4H (16:00–20:00) · 2H (18:00–20:00) · 1H (19:00–20:00)</td>
+                      </tr>
+                      <tr className="border-b border-slate-800/40 bg-slate-800/20">
+                        <td className="py-1.5 pr-4 font-mono font-semibold text-slate-400">00:00</td>
+                        <td className="py-1.5 pr-4 font-semibold text-slate-400">Full Session Close</td>
+                        <td className="py-1.5 text-slate-400">8H (16:00–00:00) · 12H (12:00–00:00) · Daily — full 24h candle</td>
+                      </tr>
+                    </>
                   )}
                 </tbody>
               </table>
             </div>
             <div className="mt-2 text-[10px] text-slate-600">
-              Repeats identically every trading day (Mon–Fri, excluding NYSE holidays). Only daily+ timeframes have variable close dates.
+              {sessionMode === 'regular'
+                ? '† Partial bar — session is 6.5 hours (390 min), so the final 1H is only 30 min (15:30→16:00). Repeats Mon–Fri, excluding NYSE holidays.'
+                : 'Repeats identically every trading day (Mon–Fri, excluding NYSE holidays). Only daily+ timeframes have variable close dates.'}
             </div>
           </section>
         )}
