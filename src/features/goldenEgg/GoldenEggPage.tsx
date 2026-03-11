@@ -1,16 +1,17 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import GEHeaderBar from '@/src/features/goldenEgg/components/GEHeaderBar';
 import GEDecisionStrip from '@/src/features/goldenEgg/components/layer1/GEDecisionStrip';
 import GEPlanGrid from '@/src/features/goldenEgg/components/layer2/GEPlanGrid';
 import GEExecutionCard from '@/src/features/goldenEgg/components/layer2/GEExecutionCard';
 import GESetupCard from '@/src/features/goldenEgg/components/layer2/GESetupCard';
 import GEEvidenceStack from '@/src/features/goldenEgg/components/layer3/GEEvidenceStack';
+import GEDeepSection from '@/src/features/goldenEgg/components/deep/GEDeepSection';
 import GECard from '@/src/features/goldenEgg/components/shared/GECard';
 import GEEmptyState from '@/src/features/goldenEgg/components/shared/GEEmptyState';
 import { isNoTrade } from '@/src/features/goldenEgg/selectors';
-import type { GoldenEggPayload } from '@/src/features/goldenEgg/types';
+import type { GoldenEggPayload, DeepAnalysisData } from '@/src/features/goldenEgg/types';
 
 const QUICK_SYMBOLS = ['AAPL', 'BTC', 'TSLA', 'ETH', 'NVDA', 'EURUSD', 'GOLD'];
 
@@ -29,6 +30,11 @@ export default function GoldenEggPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Deep analysis (progressive second fetch)
+  const [deep, setDeep] = useState<DeepAnalysisData | null>(null);
+  const [deepLoading, setDeepLoading] = useState(false);
+  const [deepError, setDeepError] = useState('');
+
   const analyze = useCallback(async (sym?: string) => {
     const s = (sym || symbol).trim().toUpperCase();
     if (!s) { setError('Enter a symbol'); return; }
@@ -36,6 +42,8 @@ export default function GoldenEggPage() {
     setLoading(true);
     setError('');
     setPayload(null);
+    setDeep(null);
+    setDeepError('');
     try {
       const res = await fetch(`/api/golden-egg?symbol=${encodeURIComponent(s)}`);
       const json = await res.json();
@@ -47,6 +55,32 @@ export default function GoldenEggPage() {
       setLoading(false);
     }
   }, [symbol]);
+
+  // Fetch deep analysis after main payload loads
+  useEffect(() => {
+    if (!payload) return;
+    const sym = payload.meta.symbol;
+    let cancelled = false;
+
+    async function fetchDeep() {
+      setDeepLoading(true);
+      setDeepError('');
+      try {
+        const res = await fetch(`/api/deep-analysis?symbol=${encodeURIComponent(sym)}`);
+        const json = await res.json();
+        if (cancelled) return;
+        if (!json.success) { setDeepError(json.error || 'Deep analysis unavailable'); return; }
+        setDeep(json as DeepAnalysisData);
+      } catch {
+        if (!cancelled) setDeepError('Unable to load deep analysis');
+      } finally {
+        if (!cancelled) setDeepLoading(false);
+      }
+    }
+
+    fetchDeep();
+    return () => { cancelled = true; };
+  }, [payload]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') analyze();
@@ -180,6 +214,12 @@ export default function GoldenEggPage() {
             <section>
               <SectionTitle icon="🔍" title="Evidence Stack" />
               <GEEvidenceStack layer3={payload.layer3} />
+            </section>
+
+            {/* Deep Analysis (progressive load) */}
+            <section>
+              <SectionTitle icon="🧠" title="Deep Analysis" />
+              <GEDeepSection deep={deep} loading={deepLoading} error={deepError} />
             </section>
           </div>
         )}
