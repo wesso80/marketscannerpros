@@ -1818,9 +1818,9 @@ export class ConfluenceLearningAgent {
         closeTimes.push(nextCloseMs);
         allCloseEvents.push({ tf: tfLabel, closeAtMs: nextCloseMs, weight });
 
-        // Step forward by TF period + 1 minute, recompute
-        const stepMs = Math.max(tfConfig.minutes * 60_000, 60_000);
-        const nextCursor = new Date(nextCloseMs + stepMs);
+        // Step 1 minute past last close so getMinutesToTimeframeClose
+        // finds the NEXT close (not the one we just recorded)
+        const nextCursor = new Date(nextCloseMs + 60_000);
         const minsToNext = this.getMinutesToTimeframeClose(nextCursor, tfConfig, assetClass, sessionMode);
         if (minsToNext === null) break;
         let rawNextMs = nextCursor.getTime() + minsToNext * 60_000;
