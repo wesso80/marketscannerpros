@@ -94,18 +94,29 @@ export async function middleware(req: NextRequest) {
     }
   }
 
+  // Admin emails that get permanent (365-day) auto-refreshing sessions
+  const ADMIN_CIDS = ['admin_xxneutronxx@yahoo.com', 'admin_bradleywessling@yahoo.com.au',
+    'free_xxneutronxx@yahoo.com', 'free_bradleywessling@yahoo.com.au',
+    'trial_xxneutronxx@yahoo.com', 'trial_bradleywessling@yahoo.com.au'];
+  const ADMIN_EMAILS_MW = ['xxneutronxx@yahoo.com', 'bradleywessling@yahoo.com.au'];
+
   const cookie = req.cookies.get('ms_auth')?.value;
   if (cookie) {
     const session = await verify(cookie);
     if (session) {
+      const cid = session.cid || '';
+      const isAdmin = ADMIN_CIDS.includes(cid) || ADMIN_EMAILS_MW.some(e => cid.endsWith(e) || cid === e);
       const secondsLeft = session.exp - Math.floor(Date.now() / 1000);
       const daysLeft = secondsLeft / ONE_DAY;
+      const refreshThreshold = isAdmin ? 30 : 7;
+      const refreshDays = isAdmin ? 365 : 30;
+      const refreshTier = isAdmin ? 'pro_trader' : session.tier;
 
-      if (daysLeft < 7) {
-        const newExp = Math.floor(Date.now() / 1000) + 30 * ONE_DAY;
+      if (daysLeft < refreshThreshold) {
+        const newExp = Math.floor(Date.now() / 1000) + refreshDays * ONE_DAY;
         const newToken = await signToken({
           cid: session.cid,
-          tier: session.tier,
+          tier: refreshTier,
           workspaceId: session.workspaceId,
           exp: newExp,
         });
@@ -115,8 +126,8 @@ export async function middleware(req: NextRequest) {
 
         const res = NextResponse.next();
         res.cookies.set('ms_auth', newToken, isLocalhost
-          ? { httpOnly: true, secure: false, sameSite: 'lax' as const, path: '/', maxAge: 30 * ONE_DAY }
-          : { httpOnly: true, secure: true, sameSite: 'lax' as const, domain: '.marketscannerpros.app', path: '/', maxAge: 30 * ONE_DAY }
+          ? { httpOnly: true, secure: false, sameSite: 'lax' as const, path: '/', maxAge: refreshDays * ONE_DAY }
+          : { httpOnly: true, secure: true, sameSite: 'lax' as const, domain: '.marketscannerpros.app', path: '/', maxAge: refreshDays * ONE_DAY }
         );
         return res;
       }

@@ -6,6 +6,15 @@ import { q } from "@/lib/db";
 import { loginLimiter, getClientIP } from "@/lib/rateLimit";
 import { isValidAdminSecret } from "@/lib/adminAuth";
 
+// Admin emails that get permanent sessions (365 days)
+const ADMIN_EMAILS = [
+  'xxneutronxx@yahoo.com',
+  'bradleywessling@yahoo.com.au',
+];
+function isAdminEmail(email: string): boolean {
+  return ADMIN_EMAILS.includes(email.toLowerCase().trim());
+}
+
 // server-side envs
 const PRICE_PRO = process.env.NEXT_PUBLIC_PRICE_PRO ?? "";
 const PRICE_PRO_TRADER = process.env.NEXT_PUBLIC_PRICE_PRO_TRADER ?? "";
@@ -111,9 +120,10 @@ function corsHeaders(origin: string | null) {
   return headers;
 }
 
-function getAuthCookieOptions(req: NextRequest) {
+function getAuthCookieOptions(req: NextRequest, admin = false) {
   const host = req.headers.get("host") || "";
   const isLocalhost = host.includes("localhost") || host.includes("127.0.0.1");
+  const maxAge = admin ? 60 * 60 * 24 * 365 : 60 * 60 * 24 * 30;
 
   if (isLocalhost) {
     return {
@@ -121,7 +131,7 @@ function getAuthCookieOptions(req: NextRequest) {
       secure: false,
       sameSite: "lax" as const,
       path: "/",
-      maxAge: 60 * 60 * 24 * 30,
+      maxAge,
     };
   }
 
@@ -131,7 +141,7 @@ function getAuthCookieOptions(req: NextRequest) {
     sameSite: "lax" as const,
     domain: ".marketscannerpros.app",
     path: "/",
-    maxAge: 60 * 60 * 24 * 30,
+    maxAge,
   };
 }
 
@@ -177,13 +187,19 @@ export async function POST(req: NextRequest) {
     const normalizedEmail = emailFromNonce.toLowerCase().trim();
 
     // ========================================
+    // ADMIN CHECK: permanent session for admin emails
+    // ========================================
+    const admin = isAdminEmail(normalizedEmail);
+    const sessionDays = admin ? 365 : 30;
+
+    // ========================================
     // STEP 1: Check for active trial FIRST
     // ========================================
     const trial = await checkTrialAccess(normalizedEmail);
     if (trial) {
       // User has an active trial - grant access without Stripe
       const workspaceId = hashWorkspaceId(`trial_${normalizedEmail}`);
-      const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30;
+      const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * sessionDays;
       const token = signToken({ cid: `trial_${normalizedEmail}`, tier: trial.tier, workspaceId, exp });
       
       const daysLeft = Math.ceil((trial.expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
@@ -210,7 +226,7 @@ export async function POST(req: NextRequest) {
       };
       
       const res = NextResponse.json(body);
-      res.cookies.set("ms_auth", token, getAuthCookieOptions(req));
+      res.cookies.set("ms_auth", token, getAuthCookieOptions(req, admin));
     
       const originHeader = req.headers.get("origin");
       const headers = corsHeaders(originHeader);
@@ -228,7 +244,7 @@ export async function POST(req: NextRequest) {
     if (!customers.data?.length) {
       // No Stripe customer — grant free tier access so user can explore and upgrade
       const workspaceId = hashWorkspaceId(`free_${normalizedEmail}`);
-      const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30;
+      const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * sessionDays;
       const token = signToken({ cid: `free_${normalizedEmail}`, tier: 'free', workspaceId, exp });
       
       await trackSubscription(workspaceId, normalizedEmail, 'free', 'active', null, null, null, false);
@@ -236,7 +252,7 @@ export async function POST(req: NextRequest) {
       loginLimiter.reset(ip);
       const body = { ok: true, tier: 'free', workspaceId, message: 'Welcome! Explore free tools or upgrade for full access.' };
       const res = NextResponse.json(body);
-      res.cookies.set("ms_auth", token, getAuthCookieOptions(req));
+      res.cookies.set("ms_auth", token, getAuthCookieOptions(req, admin));
       const originHeader = req.headers.get("origin");
       const headers = corsHeaders(originHeader);
       for (const [k, v] of Object.entries(headers)) res.headers.set(k, v);
@@ -249,7 +265,7 @@ export async function POST(req: NextRequest) {
     if (!valid.length) {
       // Stripe customer exists but no active subscription — grant free tier
       const workspaceId = hashWorkspaceId(customerId);
-      const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30;
+      const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * sessionDays;
       const token = signToken({ cid: customerId, tier: 'free', workspaceId, exp });
       
       await trackSubscription(workspaceId, normalizedEmail, 'free', 'inactive', customerId, null, null, false);
@@ -257,7 +273,7 @@ export async function POST(req: NextRequest) {
       loginLimiter.reset(ip);
       const body = { ok: true, tier: 'free', workspaceId, message: 'Welcome back! Your subscription is inactive. Upgrade to restore full access.' };
       const res = NextResponse.json(body);
-      res.cookies.set("ms_auth", token, getAuthCookieOptions(req));
+      res.cookies.set("ms_auth", token, getAuthCookieOptions(req, admin));
       const originHeader = req.headers.get("origin");
       const headers = corsHeaders(originHeader);
       for (const [k, v] of Object.entries(headers)) res.headers.set(k, v);
@@ -287,7 +303,7 @@ export async function POST(req: NextRequest) {
     await stripe.customers.update(customerId, {
       metadata: { marketscanner_tier: tier, workspace_id: workspaceId },
     });
-    const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30;
+    const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * sessionDays;
     const token = signToken({ cid: customerId, tier, workspaceId, exp });
     const url = new URL(req.url);
     const debug = url.searchParams.get("debug") === "1";
@@ -305,7 +321,7 @@ export async function POST(req: NextRequest) {
     // Reset rate limit on successful login
     loginLimiter.reset(ip);
     const res = NextResponse.json(body);
-    res.cookies.set("ms_auth", token, getAuthCookieOptions(req));
+    res.cookies.set("ms_auth", token, getAuthCookieOptions(req, admin));
     const originHeader = req.headers.get("origin");
     const headers = corsHeaders(originHeader);
     for (const [k, v] of Object.entries(headers)) res.headers.set(k, v);

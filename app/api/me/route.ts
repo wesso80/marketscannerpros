@@ -4,8 +4,10 @@ import { getSessionFromCookie } from "@/lib/auth";
 import { q } from "@/lib/db";
 import { isFreeForAllMode } from "@/lib/entitlements";
 
-// Admin emails that can access all features for testing — MUST be set via ADMIN_EMAILS env var
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "").split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
+// Admin emails — hardcoded + env var for guaranteed access
+const HARDCODED_ADMINS = ['xxneutronxx@yahoo.com', 'bradleywessling@yahoo.com.au'];
+const ENV_ADMINS = (process.env.ADMIN_EMAILS || "").split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
+const ADMIN_EMAILS = [...new Set([...HARDCODED_ADMINS, ...ENV_ADMINS])];
 
 async function getEmailFromWorkspace(workspaceId: string): Promise<string | null> {
   try {
