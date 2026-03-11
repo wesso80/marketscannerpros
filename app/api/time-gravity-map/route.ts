@@ -210,9 +210,19 @@ async function generateMidpointsOnDemand(symbol: string, assetType: 'crypto' | '
       } catch { /* non-fatal */ }
 
       // 1. Fetch daily bars (compact = ~100 trading days) — avFetch blocks until token available
+      //    Try DAILY_ADJUSTED first; fall back to DAILY if it returns null (premium endpoint).
       try {
-        const dailyUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${encodeURIComponent(symbol)}&outputsize=compact&entitlement=realtime&apikey=${apiKey}`;
-        const dailyJson = await avFetch<Record<string, any>>(dailyUrl, `TGM_DAILY ${symbol}`);
+        let dailyJson = await avFetch<Record<string, any>>(
+          `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${encodeURIComponent(symbol)}&outputsize=compact&entitlement=realtime&apikey=${apiKey}`,
+          `TGM_DAILY_ADJ ${symbol}`,
+        );
+        if (!dailyJson) {
+          console.warn(`[TGM on-demand] DAILY_ADJUSTED returned null for ${symbol}, trying DAILY...`);
+          dailyJson = await avFetch<Record<string, any>>(
+            `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${encodeURIComponent(symbol)}&outputsize=compact&entitlement=realtime&apikey=${apiKey}`,
+            `TGM_DAILY ${symbol}`,
+          );
+        }
         if (dailyJson) {
           const tsKey = Object.keys(dailyJson).find(k => k.startsWith('Time Series'));
           if (tsKey && dailyJson[tsKey]) {
@@ -408,8 +418,10 @@ export async function GET(request: NextRequest) {
             } catch { /* non-fatal */ }
           }
           
-          if (generationResult.totalStored > 0 && currentPrice > 0) {
-            // Re-fetch the freshly stored midpoints
+          if (currentPrice > 0) {
+            // Always re-fetch after generation — upserts may have refreshed
+            // existing rows (rowCount reflects updates too), and even when
+            // totalStored reports 0 the DB may contain usable midpoints.
             midpoints = await service.getUntaggedMidpoints(symbol, currentPrice, {
               maxDistancePercent: maxDistance,
               limit: 100,

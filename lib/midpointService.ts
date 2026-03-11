@@ -11,7 +11,7 @@
  */
 
 import { Pool, PoolClient } from 'pg';
-import { q, tx } from '@/lib/db';
+import { q, tx, getPool } from '@/lib/db';
 import type { MidpointRecord } from './time/midpointDebt';
 import { TF_WEIGHTS } from './time/midpointDebt';
 
@@ -67,11 +67,9 @@ export class MidpointService {
     if (config.pool) {
       this.pool = config.pool;
     } else {
-      const connectionString = config.databaseUrl || process.env.DATABASE_URL;
-      if (!connectionString) {
-        throw new Error('Database URL required for MidpointService');
-      }
-      this.pool = new Pool({ connectionString });
+      // Use the shared pool from lib/db.ts which has proper SSL,
+      // timeout config, and connection limits for production.
+      this.pool = getPool();
     }
   }
   
@@ -178,7 +176,15 @@ export class MidpointService {
           symbol, asset_type, timeframe, candle_open_time, candle_close_time,
           high, low, midpoint, open_price, close_price, volume
         ) VALUES ${placeholders.join(', ')}
-        ON CONFLICT (symbol, timeframe, candle_close_time) DO NOTHING
+        ON CONFLICT (symbol, timeframe, candle_close_time) DO UPDATE SET
+          high = EXCLUDED.high,
+          low = EXCLUDED.low,
+          midpoint = EXCLUDED.midpoint,
+          open_price = EXCLUDED.open_price,
+          close_price = EXCLUDED.close_price,
+          volume = EXCLUDED.volume,
+          tagged = FALSE,
+          updated_at = NOW()
       `;
       
       const result = await client.query(query, values);

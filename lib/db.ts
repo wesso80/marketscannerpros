@@ -6,7 +6,7 @@ declare global {
 }
 
 // Lazy pool initialization to support worker context where dotenv runs after imports
-function getPool(): Pool {
+export function getPool(): Pool {
   if (!global.__pgPool) {
     // Neon requires SSL - enable if DATABASE_URL contains "neon" or in production
     const requiresSSL = process.env.DATABASE_URL?.includes('neon') || process.env.NODE_ENV === "production";
