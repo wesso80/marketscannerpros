@@ -3134,13 +3134,18 @@ export class ConfluenceLearningAgent {
           // Skip if another TF with the same period already has mid50 (e.g. 7D=1W)
           if (seenTfMinutes.has(tfConfig.minutes)) continue;
 
-          // Skip if data span is too short for this TF to produce reliable bars
-          // Need at least 2 TF periods of data (prior candle + forming candle)
-          if (dataSpanMins < tfConfig.minutes * 2) continue;
+          // For daily+ TFs (weight ≥ 10, critical for calendar direction override),
+          // relax data span requirement: 1 completed candle is enough for direction.
+          // Sub-daily TFs still need 2× for reliable mid50 accuracy.
+          const isDaily = tfConfig.minutes >= 1440;
+          const enrichMinSpan = isDaily ? 1 : 2;
+          if (dataSpanMins < tfConfig.minutes * enrichMinSpan) continue;
 
           const tfId = this.getCanonicalTimeframeId(tfConfig);
           const tfBars = resampledBarsByTf[tfId] || this.resampleBars(baseBars, tfConfig.minutes);
-          if (tfBars.length >= 3) {
+          // Daily+ TFs: 2 bars (1 completed + 1 forming) is sufficient for mid50
+          const enrichMinBars = isDaily ? 2 : 3;
+          if (tfBars.length >= enrichMinBars) {
             const mid50 = this.hl2(tfBars[tfBars.length - 2]);
             if (mid50 > 0) {
               row.mid50Level = mid50;
@@ -3164,9 +3169,17 @@ export class ConfluenceLearningAgent {
     // ═══════════════════════════════════════════════════════════════════════════
     {
       // Only daily+ TFs (weight ≥ 10) contribute — intraday is noisy
-      const calRows = candleCloseConfluence.closes.filter(
+      let calRows = candleCloseConfluence.closes.filter(
         (r) => r.mid50Level && r.mid50Level > 0 && r.pullDirection && r.pullDirection !== 'none' && r.weight >= 10,
       );
+      // Fallback: if limited data prevented daily+ enrichment (e.g. CoinGecko
+      // rate-limited 30d/90d requests), broaden to 4h+ TFs (weight ≥ 4) so the
+      // override can still detect direction from multi-hour pull consensus
+      if (calRows.length < 2) {
+        calRows = candleCloseConfluence.closes.filter(
+          (r) => r.mid50Level && r.mid50Level > 0 && r.pullDirection && r.pullDirection !== 'none' && r.weight >= 4,
+        );
+      }
 
       if (calRows.length >= 2) {
         let calBullW = 0;
