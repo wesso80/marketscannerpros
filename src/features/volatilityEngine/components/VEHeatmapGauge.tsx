@@ -2,47 +2,39 @@
 
 import type { VolatilityState } from '@/src/features/volatilityEngine/types';
 
-const ZONES: { min: number; max: number; color: string; label: string }[] = [
-  { min: 0, max: 15, color: '#1E3A5F', label: 'Compression' },
-  { min: 15, max: 70, color: '#475569', label: 'Neutral' },
-  { min: 70, max: 90, color: '#D97706', label: 'Expansion' },
-  { min: 90, max: 100, color: '#DC2626', label: 'Climax' },
-];
+const ZONES = [
+  { max: 15, label: 'COMPRESSION', color: '#1E3A5F', text: '#60A5FA' },
+  { max: 70, label: 'NEUTRAL',     color: '#475569', text: '#94A3B8' },
+  { max: 90, label: 'EXPANSION',   color: '#D97706', text: '#FBBF24' },
+  { max: 100, label: 'CLIMAX',     color: '#DC2626', text: '#F87171' },
+] as const;
+
+function getZone(bbwp: number) {
+  return ZONES.find(z => bbwp <= z.max) ?? ZONES[ZONES.length - 1];
+}
 
 function regimeColor(regime: string): string {
   switch (regime) {
-    case 'compression': return '#3B82F6';
-    case 'expansion': return '#D97706';
-    case 'climax': return '#DC2626';
-    case 'transition': return '#8B5CF6';
-    default: return '#64748B';
+    case 'compression': return '#60A5FA';
+    case 'expansion': return '#FBBF24';
+    case 'climax': return '#F87171';
+    case 'transition': return '#A78BFA';
+    default: return '#94A3B8';
   }
 }
 
 export default function VEHeatmapGauge({ vol }: { vol: VolatilityState }) {
   const bbwp = vol.bbwp;
-  const angle = -90 + (bbwp / 100) * 180;
-  const R = 80;
-  const CX = 90;
-  const CY = 90;
+  const zone = getZone(bbwp);
 
-  function arc(startPct: number, endPct: number) {
-    const s = (-90 + (startPct / 100) * 180) * (Math.PI / 180);
-    const e = (-90 + (endPct / 100) * 180) * (Math.PI / 180);
-    const x1 = CX + R * Math.cos(s);
-    const y1 = CY + R * Math.sin(s);
-    const x2 = CX + R * Math.cos(e);
-    const y2 = CY + R * Math.sin(e);
-    const large = endPct - startPct > 50 ? 1 : 0;
-    return `M ${x1} ${y1} A ${R} ${R} 0 ${large} 1 ${x2} ${y2}`;
-  }
-
-  const needleRad = angle * (Math.PI / 180);
-  const nx = CX + (R - 12) * Math.cos(needleRad);
-  const ny = CY + (R - 12) * Math.sin(needleRad);
+  // SVG semicircle gauge — identical geometry to GE gauge
+  const radius = 72;
+  const stroke = 10;
+  const cx = 90;
+  const cy = 85;
 
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-5">
+    <div className="rounded-xl border border-white/10 bg-white/5 p-4 sm:p-5">
       <div className="mb-3 flex items-center gap-2">
         <span className="text-base">🌡️</span>
         <h3 className="text-xs font-semibold uppercase tracking-widest text-amber-400">
@@ -53,25 +45,59 @@ export default function VEHeatmapGauge({ vol }: { vol: VolatilityState }) {
       <div className="flex flex-col items-center">
         {/* Semicircle gauge */}
         <svg viewBox="0 0 180 100" className="h-auto w-full max-w-[220px]">
-          {ZONES.map((z) => (
-            <path
-              key={z.label}
-              d={arc(z.min, z.max)}
-              fill="none"
-              stroke={z.color}
-              strokeWidth={10}
-              strokeLinecap="butt"
-              opacity={0.6}
-            />
-          ))}
-          <line x1={CX} y1={CY} x2={nx} y2={ny} stroke="#FFF" strokeWidth={2} strokeLinecap="round" />
-          <circle cx={CX} cy={CY} r={3} fill="#FFF" />
+          {/* Background arc */}
+          <path
+            d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
+            fill="none"
+            stroke="rgba(255,255,255,0.1)"
+            strokeWidth={stroke}
+            strokeLinecap="round"
+          />
+          {/* Zone color segments */}
+          {ZONES.map((z, i) => {
+            const start = i === 0 ? 0 : ZONES[i - 1].max;
+            const x1 = cx - radius * Math.cos(Math.PI - (start / 100) * Math.PI);
+            const y1 = cy - radius * Math.sin(Math.PI - (start / 100) * Math.PI);
+            const x2 = cx - radius * Math.cos(Math.PI - (z.max / 100) * Math.PI);
+            const y2 = cy - radius * Math.sin(Math.PI - (z.max / 100) * Math.PI);
+            const largeArc = (z.max - start) > 50 ? 1 : 0;
+            return (
+              <path
+                key={z.label}
+                d={`M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}`}
+                fill="none"
+                stroke={z.color}
+                strokeWidth={stroke}
+                strokeLinecap="butt"
+                opacity={0.5}
+              />
+            );
+          })}
+          {/* Needle */}
+          {(() => {
+            const angle = Math.PI * (1 - bbwp / 100);
+            const needleLen = radius - stroke;
+            const nx = cx - needleLen * Math.cos(angle);
+            const ny = cy - needleLen * Math.sin(angle);
+            return (
+              <line
+                x1={cx} y1={cy} x2={nx} y2={ny}
+                stroke={zone.text}
+                strokeWidth={2.5}
+                strokeLinecap="round"
+              />
+            );
+          })()}
+          {/* Center dot */}
+          <circle cx={cx} cy={cy} r={4} fill={zone.text} />
         </svg>
 
         {/* BBWP value */}
         <div className="-mt-2 text-center">
-          <span className="text-3xl font-black text-white">{bbwp.toFixed(1)}</span>
-          <span className="ml-1 text-xs text-white/40">BBWP</span>
+          <span className="text-2xl font-black sm:text-3xl" style={{ color: zone.text }}>
+            {bbwp.toFixed(1)}
+          </span>
+          <span className="ml-1 text-[0.65rem] text-white/40">BBWP</span>
         </div>
 
         {/* Regime label */}
@@ -83,27 +109,23 @@ export default function VEHeatmapGauge({ vol }: { vol: VolatilityState }) {
         </div>
 
         {/* Stats */}
-        <div className="mt-3 space-y-1 text-center text-[0.72rem]">
-          <div className="text-white/50">
-            SMA5: <span className="font-bold text-white/80">{vol.bbwpSma5.toFixed(1)}</span>
-          </div>
-          <div className="text-white/50">
-            Rate: <span className="font-bold text-white/80">{vol.rateSmoothed > 0 ? '+' : ''}{vol.rateSmoothed.toFixed(1)}</span>{' '}
+        <div className="mt-2 space-y-0.5 text-center text-[0.7rem] text-white/50">
+          <div>SMA5: <span className="font-semibold text-white/70">{vol.bbwpSma5.toFixed(1)}</span></div>
+          <div>
+            Rate: <span className="font-semibold text-white/70">{vol.rateSmoothed > 0 ? '+' : ''}{vol.rateSmoothed.toFixed(1)}</span>{' '}
             <span className="text-white/40">({vol.rateDirection})</span>
           </div>
-          <div className="text-white/50">
-            Squeeze: <span className={`font-bold ${vol.inSqueeze ? 'text-amber-400' : 'text-white/60'}`}>
+          <div>
+            Squeeze: <span className={`font-semibold ${vol.inSqueeze ? 'text-amber-400' : 'text-white/60'}`}>
               {vol.inSqueeze ? `Active (${vol.squeezeStrength.toFixed(2)})` : 'None'}
             </span>
           </div>
           {vol.extremeAlert && (
-            <div className={`font-bold ${vol.extremeAlert === 'low' ? 'text-blue-400' : 'text-red-400'}`}>
+            <div className={`font-semibold ${vol.extremeAlert === 'low' ? 'text-blue-400' : 'text-red-400'}`}>
               {vol.extremeAlert === 'low' ? '❄️ Extreme Low' : '🔥 Extreme High'}
             </div>
           )}
-          <div className="text-white/50">
-            Confidence: <span className="font-bold text-white/80">{vol.regimeConfidence.toFixed(0)}%</span>
-          </div>
+          <div>Confidence: <span className="font-semibold text-white/70">{vol.regimeConfidence.toFixed(0)}%</span></div>
         </div>
       </div>
     </div>

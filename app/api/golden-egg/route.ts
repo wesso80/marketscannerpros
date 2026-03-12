@@ -42,7 +42,7 @@ function scoreToGrade(score: number): 'A' | 'B' | 'C' | 'D' {
 function buildPayload(
   symbol: string,
   assetClass: 'equity' | 'crypto' | 'forex',
-  price: { price: number; change: number; changePct: number; high: number; low: number; volume: number; historicalCloses: number[] },
+  price: { price: number; change: number; changePct: number; high: number; low: number; volume: number; historicalCloses: number[]; historicalHighs?: number[]; historicalLows?: number[] },
   ind: Indicators | null,
   opts: OptionsSnapshot | null,
   mpe: { composite: number; time: number; volatility: number; liquidity: number; options: number } | null,
@@ -152,6 +152,8 @@ function buildPayload(
     const dveInput: DVEInput = {
       price: {
         closes: price.historicalCloses,
+        highs: price.historicalHighs,
+        lows: price.historicalLows,
         currentPrice: p,
         changePct: price.changePct,
         volume: price.volume,
@@ -484,7 +486,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch core data in parallel
     const [priceData, mpeData] = await Promise.all([
-      fetchPrice(symbol, assetClass),
+      fetchPrice(symbol, assetClass, { requireHistoricals: true }),
       fetchMPE(symbol, assetClass),
     ]);
 
@@ -493,7 +495,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch indicators (may use AV — do after price to avoid burst)
-    const indData = await fetchIndicators(symbol, assetClass, priceData.historicalCloses);
+    const indData = await fetchIndicators(symbol, assetClass, priceData.historicalCloses, priceData.historicalHighs, priceData.historicalLows);
 
     // Fetch options (equities only, after indicators to space out AV calls)
     let optsData: OptionsSnapshot | null = null;
