@@ -25,6 +25,11 @@ export default function VEBreakoutPanel({ breakout, missingInputs = [] }: { brea
   const total = breakout.score;
   const color = scoreColor(total);
 
+  // Breakout probability: sigmoid-based mapping from score
+  // Score 0 → ~10%, Score 50 → ~50%, Score 100 → ~90%
+  const probability = Math.min(95, Math.max(5, 10 + (total * 0.85)));
+  const probColor = probability >= 60 ? '#10B981' : probability >= 35 ? '#D97706' : '#EF4444';
+
   // Build set of component keys that are N/A due to missing inputs
   const naKeys = new Set<string>();
   for (const m of missingInputs) {
@@ -40,11 +45,19 @@ export default function VEBreakoutPanel({ breakout, missingInputs = [] }: { brea
             Breakout Readiness
           </h3>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xl font-black" style={{ color }}>{total.toFixed(0)}</span>
-          <span className="rounded-full px-2 py-0.5 text-[0.6rem] font-bold uppercase" style={{ background: color + '22', color }}>
-            {breakout.label}
-          </span>
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <span className="text-xl font-black" style={{ color }}>{total.toFixed(0)}</span>
+            <span className="text-[0.6rem] text-white/30">/100</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="rounded-full px-2 py-0.5 text-[0.6rem] font-bold uppercase" style={{ background: color + '22', color }}>
+              {breakout.label}
+            </span>
+            <span className="mt-0.5 text-[0.6rem] font-semibold" style={{ color: probColor }}>
+              {probability.toFixed(0)}% prob
+            </span>
+          </div>
         </div>
       </div>
 

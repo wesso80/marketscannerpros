@@ -43,6 +43,7 @@ function DataQualityBadge({ score, missing }: { score: number; missing: string[]
 export default function VolatilityEnginePage() {
   const [symbol, setSymbol] = useState('');
   const [reading, setReading] = useState<DVEReading | null>(null);
+  const [currentPrice, setCurrentPrice] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [cached, setCached] = useState(false);
@@ -54,6 +55,7 @@ export default function VolatilityEnginePage() {
     setLoading(true);
     setError('');
     setReading(null);
+    setCurrentPrice(0);
     setCached(false);
     try {
       const res = await fetch(`/api/dve?symbol=${encodeURIComponent(s)}`);
@@ -63,6 +65,7 @@ export default function VolatilityEnginePage() {
         return;
       }
       setReading(json.data);
+      setCurrentPrice(json.price ?? 0);
       setCached(!!json.cached);
     } catch {
       setError('Network error — please try again');
@@ -191,7 +194,12 @@ export default function VolatilityEnginePage() {
             <section>
               <SectionTitle icon="📡" title="Layer 4 — Signal &amp; Invalidation" />
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <VESignalCard signal={reading.signal} />
+                <VESignalCard
+                signal={reading.signal}
+                volatility={reading.volatility}
+                direction={reading.direction}
+                exhaustion={reading.exhaustion}
+              />
                 <VEInvalidationCard inv={reading.invalidation} />
               </div>
             </section>
@@ -199,7 +207,12 @@ export default function VolatilityEnginePage() {
             {/* LAYER 5: Outcome Projection */}
             <section>
               <SectionTitle icon="📊" title="Layer 5 — Outcome Projection" />
-              <VEProjectionCard proj={reading.projection} />
+              <VEProjectionCard
+                proj={reading.projection}
+                volatility={reading.volatility}
+                phase={reading.phasePersistence}
+                currentPrice={currentPrice}
+              />
             </section>
 
             {/* Supporting: Regime Outlook */}
@@ -210,6 +223,8 @@ export default function VolatilityEnginePage() {
                 exhaustion={reading.exhaustion}
                 flags={reading.flags}
                 summary={reading.summary}
+                volatility={reading.volatility}
+                phase={reading.phasePersistence}
               />
             </section>
           </div>

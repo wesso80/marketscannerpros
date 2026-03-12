@@ -1,6 +1,6 @@
 'use client';
 
-import type { DVESignal } from '@/src/features/volatilityEngine/types';
+import type { DVESignal, VolatilityState, DirectionalPressure, ExhaustionRisk } from '@/src/features/volatilityEngine/types';
 
 function stateIcon(state: string): string {
   switch (state) {
@@ -15,9 +15,82 @@ function typeLabel(type: string): string {
   return type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
-export default function VESignalCard({ signal }: { signal: DVESignal }) {
+interface ConditionCheck {
+  label: string;
+  met: boolean;
+}
+
+function getIdleConditions(vol: VolatilityState, dir: DirectionalPressure, exhaustion?: ExhaustionRisk): { signalName: string; conditions: ConditionCheck[] }[] {
+  const groups: { signalName: string; conditions: ConditionCheck[] }[] = [];
+
+  // Compression release conditions
+  const wasCompressed = vol.bbwp <= 15;
+  const bbwpAbove15 = vol.bbwp > 15;
+  const bbwpAccel = vol.rateDirection === 'accelerating';
+  const bbwpAboveSma = vol.bbwp > vol.bbwpSma5;
+  const lowExhaustion = !exhaustion || (exhaustion.label !== 'HIGH' && exhaustion.label !== 'EXTREME');
+
+  groups.push({
+    signalName: 'Compression Release ↑',
+    conditions: [
+      { label: 'Recent compression (BBWP ≤ 15)', met: wasCompressed },
+      { label: `BBWP breaks above 15 (now ${vol.bbwp.toFixed(1)})`, met: bbwpAbove15 },
+      { label: `BBWP > SMA5 or accelerating`, met: bbwpAboveSma || bbwpAccel },
+      { label: `Stoch momentum bullish`, met: dir.components.stochasticMomentum > 0 },
+      { label: `Directional bias bullish`, met: dir.bias === 'bullish' },
+    ],
+  });
+
+  groups.push({
+    signalName: 'Compression Release ↓',
+    conditions: [
+      { label: 'Recent compression (BBWP ≤ 15)', met: wasCompressed },
+      { label: `BBWP breaks above 15 (now ${vol.bbwp.toFixed(1)})`, met: bbwpAbove15 },
+      { label: `BBWP > SMA5 or accelerating`, met: bbwpAboveSma || bbwpAccel },
+      { label: `Stoch momentum bearish`, met: dir.components.stochasticMomentum < 0 },
+      { label: `Directional bias bearish`, met: dir.bias === 'bearish' },
+    ],
+  });
+
+  groups.push({
+    signalName: 'Expansion Continuation ↑',
+    conditions: [
+      { label: `BBWP ≥ 85 climax zone (now ${vol.bbwp.toFixed(1)})`, met: vol.bbwp >= 85 },
+      { label: `SMA5 ≥ 85 confirms (now ${vol.bbwpSma5.toFixed(1)})`, met: vol.bbwpSma5 >= 85 },
+      { label: `Stoch momentum bullish`, met: dir.components.stochasticMomentum > 0 },
+      { label: `Directional bias bullish`, met: dir.bias === 'bullish' },
+      { label: `Low exhaustion risk`, met: lowExhaustion },
+    ],
+  });
+
+  groups.push({
+    signalName: 'Expansion Continuation ↓',
+    conditions: [
+      { label: `BBWP ≥ 85 climax zone (now ${vol.bbwp.toFixed(1)})`, met: vol.bbwp >= 85 },
+      { label: `SMA5 ≥ 85 confirms (now ${vol.bbwpSma5.toFixed(1)})`, met: vol.bbwpSma5 >= 85 },
+      { label: `Stoch momentum bearish`, met: dir.components.stochasticMomentum < 0 },
+      { label: `Directional bias bearish`, met: dir.bias === 'bearish' },
+      { label: `Low exhaustion risk`, met: lowExhaustion },
+    ],
+  });
+
+  return groups;
+}
+
+interface SignalCardProps {
+  signal: DVESignal;
+  volatility?: VolatilityState;
+  direction?: DirectionalPressure;
+  exhaustion?: ExhaustionRisk;
+}
+
+export default function VESignalCard({ signal, volatility, direction, exhaustion }: SignalCardProps) {
   const isActive = signal.type !== 'none' && signal.active;
   const color = signal.type.includes('up') ? '#10B981' : signal.type.includes('down') ? '#EF4444' : '#64748B';
+
+  const conditionGroups = (!isActive && signal.state !== 'armed' && volatility && direction)
+    ? getIdleConditions(volatility, direction, exhaustion)
+    : null;
 
   return (
     <div className={`rounded-xl border p-5 ${isActive ? 'border-amber-500/30 bg-amber-500/5' : 'border-white/10 bg-white/5'}`}>
@@ -34,8 +107,35 @@ export default function VESignalCard({ signal }: { signal: DVESignal }) {
         </div>
       </div>
 
-      {signal.type === 'none' ? (
+      {signal.type === 'none' && !conditionGroups ? (
         <p className="text-[0.75rem] text-white/40">No active signal. Waiting for trigger conditions.</p>
+      ) : signal.type === 'none' && conditionGroups ? (
+        <div className="space-y-3">
+          <p className="text-[0.7rem] text-white/50 mb-2">Conditions needed to trigger a signal:</p>
+          {conditionGroups.map((g) => {
+            const metCount = g.conditions.filter(c => c.met).length;
+            const total = g.conditions.length;
+            const pctMet = (metCount / total) * 100;
+            return (
+              <div key={g.signalName} className="rounded-lg border border-white/5 bg-white/[0.03] p-2.5">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[0.7rem] font-bold text-white/70">{g.signalName}</span>
+                  <span className="text-[0.6rem] font-semibold" style={{ color: pctMet >= 80 ? '#10B981' : pctMet >= 50 ? '#D97706' : '#64748B' }}>
+                    {metCount}/{total}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  {g.conditions.map((c, i) => (
+                    <div key={i} className="flex items-start gap-1.5 text-[0.63rem]">
+                      <span className={c.met ? 'text-emerald-400' : 'text-white/20'}>{c.met ? '✓' : '○'}</span>
+                      <span className={c.met ? 'text-white/60' : 'text-white/30'}>{c.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       ) : (
         <div className="space-y-3">
           <div className="flex items-center justify-between">

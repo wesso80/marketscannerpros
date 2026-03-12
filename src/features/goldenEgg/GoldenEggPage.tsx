@@ -10,6 +10,7 @@ import GEDecisionStrip from '@/src/features/goldenEgg/components/layer1/GEDecisi
 import GEPlanGrid from '@/src/features/goldenEgg/components/layer2/GEPlanGrid';
 import GEExecutionCard from '@/src/features/goldenEgg/components/layer2/GEExecutionCard';
 import GESetupCard from '@/src/features/goldenEgg/components/layer2/GESetupCard';
+import GEDVEConditions from '@/src/features/goldenEgg/components/layer2/GEDVEConditions';
 import GEEvidenceStack from '@/src/features/goldenEgg/components/layer3/GEEvidenceStack';
 import GEDeepSection from '@/src/features/goldenEgg/components/deep/GEDeepSection';
 import GEVolatilityGauge from '@/src/features/goldenEgg/components/GEVolatilityGauge';
@@ -166,6 +167,7 @@ export default function GoldenEggPage() {
               meta={payload.meta}
               layer1={payload.layer1}
               setupType={payload.layer2.setup.setupType}
+              volatility={payload.layer3.structure.volatility}
             />
 
             {/* Regime + Timeframe + Confluence row */}
@@ -226,6 +228,7 @@ export default function GoldenEggPage() {
                 <GEPlanGrid>
                   <GESetupCard setup={payload.layer2.setup} />
                   <GEExecutionCard execution={payload.layer2.execution} permission={payload.layer1.permission} />
+                  <GEDVEConditions volatility={payload.layer3.structure.volatility} />
                 </GEPlanGrid>
               )}
             </section>

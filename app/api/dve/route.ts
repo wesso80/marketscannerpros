@@ -31,7 +31,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 // ── In-memory cache (3 min) ─────────────────────────────────────────────
-const dveCache = new Map<string, { data: DVEReading; ts: number }>();
+const dveCache = new Map<string, { data: DVEReading; price: number; ts: number }>();
 const DVE_CACHE_TTL = 3 * 60 * 1000;
 
 export async function GET(request: NextRequest) {
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     // 3. Check cache
     const cached = dveCache.get(symbol);
     if (cached && Date.now() - cached.ts < DVE_CACHE_TTL) {
-      return NextResponse.json({ success: true, data: cached.data, cached: true });
+      return NextResponse.json({ success: true, data: cached.data, price: cached.price, cached: true });
     }
 
     // 4. Detect asset class
@@ -172,8 +172,8 @@ export async function GET(request: NextRequest) {
     const reading = computeDVE(dveInput, symbol);
 
     // 12. Cache + return
-    dveCache.set(symbol, { data: reading, ts: Date.now() });
-    return NextResponse.json({ success: true, data: reading });
+    dveCache.set(symbol, { data: reading, price: priceData.price, ts: Date.now() });
+    return NextResponse.json({ success: true, data: reading, price: priceData.price });
   } catch (error) {
     console.error('[DVE API] Error:', error);
     return NextResponse.json(

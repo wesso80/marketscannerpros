@@ -6,6 +6,7 @@ type Props = {
   meta: GoldenEggPayload['meta'];
   layer1: GoldenEggPayload['layer1'];
   setupType: string;
+  volatility?: GoldenEggPayload['layer3']['structure']['volatility'];
 };
 
 function signalLabel(confidence: number): string {
@@ -58,7 +59,7 @@ function setupLabel(type: string): string {
   return map[type] || type;
 }
 
-export default function GESignalHero({ meta, layer1, setupType }: Props) {
+export default function GESignalHero({ meta, layer1, setupType, volatility }: Props) {
   const { confidence, direction, permission, grade } = layer1;
   const circumference = 2 * Math.PI * 54;
   const progress = (confidence / 100) * circumference;
@@ -68,6 +69,24 @@ export default function GESignalHero({ meta, layer1, setupType }: Props) {
     { label: 'Risk', value: riskLabel(confidence), color: confidence >= 70 ? 'text-emerald-400' : confidence >= 50 ? 'text-amber-300' : 'text-rose-400' },
     { label: 'Setup', value: setupLabel(setupType), color: 'text-sky-400' },
   ];
+
+  // DVE volatility pills (if available)
+  const volPills: typeof pillData = [];
+  if (volatility?.bbwp != null) {
+    const regime = volatility.regime;
+    const regimeColor = regime === 'compression' ? 'text-blue-400' : regime === 'expansion' ? 'text-amber-400' : 'text-slate-300';
+    volPills.push({ label: 'Vol State', value: regime.charAt(0).toUpperCase() + regime.slice(1), color: regimeColor });
+
+    const volRisk = (volatility.exhaustionRisk ?? 0) >= 60 ? 'High' : (volatility.exhaustionRisk ?? 0) >= 30 ? 'Moderate' : 'Low';
+    const volRiskColor = volRisk === 'High' ? 'text-rose-400' : volRisk === 'Moderate' ? 'text-amber-300' : 'text-emerald-400';
+    volPills.push({ label: 'Vol Risk', value: volRisk, color: volRiskColor });
+
+    if (volatility.breakoutScore != null) {
+      const breakoutLabel = volatility.breakoutScore >= 60 ? 'High' : volatility.breakoutScore >= 40 ? 'Moderate' : 'Low';
+      const breakoutColor = volatility.breakoutScore >= 60 ? 'text-emerald-400' : volatility.breakoutScore >= 40 ? 'text-amber-300' : 'text-slate-300';
+      volPills.push({ label: 'Breakout', value: `${breakoutLabel} (${volatility.breakoutScore})`, color: breakoutColor });
+    }
+  }
 
   return (
     <div className={`relative overflow-hidden rounded-2xl border border-white/5 bg-gradient-to-b from-slate-800/80 to-slate-900/80 shadow-2xl ${signalGlow(confidence)}`}>
@@ -132,6 +151,18 @@ export default function GESignalHero({ meta, layer1, setupType }: Props) {
             </div>
           ))}
         </div>
+
+        {/* DVE Volatility State pills */}
+        {volPills.length > 0 && (
+          <div className="mx-auto mt-3 flex max-w-md flex-wrap justify-center gap-3">
+            {volPills.map((p) => (
+              <div key={p.label} className="rounded-lg border border-white/5 bg-white/5 px-4 py-2 text-center">
+                <div className="text-[10px] uppercase tracking-wider text-slate-500">{p.label}</div>
+                <div className={`text-sm font-semibold ${p.color}`}>{p.value}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

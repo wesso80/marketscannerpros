@@ -26,6 +26,7 @@ export type {
 export interface DVEApiResponse {
   success: boolean;
   data?: import('@/lib/directionalVolatilityEngine.types').DVEReading;
+  price?: number;
   cached?: boolean;
   error?: string;
 }
