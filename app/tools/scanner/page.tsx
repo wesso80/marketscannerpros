@@ -1970,6 +1970,32 @@ function ScannerContent() {
                           <div>Volatility: <span className="font-bold text-[var(--msp-text)]">{pick._volatility.toUpperCase()}</span></div>
                           <div>Liquidity: <span className="font-bold text-[var(--msp-text)]">{pick.indicators?.volume ? 'ACTIVE' : 'NORMAL'}</span></div>
                         </div>
+                        {pick.dveFlags && pick.dveFlags.length > 0 && (
+                          <div className="mb-2 flex flex-wrap gap-1">
+                            {(pick.dveFlags as string[]).map((flag: string) => {
+                              const cfg: Record<string, { emoji: string; bg: string; text: string }> = {
+                                COMPRESSED: { emoji: '🔋', bg: 'bg-blue-500/15', text: 'text-blue-400' },
+                                EXPANDING: { emoji: '💥', bg: 'bg-amber-500/15', text: 'text-amber-400' },
+                                CLIMAX: { emoji: '🔥', bg: 'bg-red-500/15', text: 'text-red-400' },
+                                BREAKOUT: { emoji: '🚀', bg: 'bg-emerald-500/15', text: 'text-emerald-400' },
+                                FADE: { emoji: '↩️', bg: 'bg-purple-500/15', text: 'text-purple-400' },
+                                SQUEEZE_FIRE: { emoji: '⚡', bg: 'bg-yellow-500/15', text: 'text-yellow-400' },
+                                VOL_TRAP: { emoji: '⚠️', bg: 'bg-red-500/20', text: 'text-red-300' },
+                                EXHAUSTION_RISK: { emoji: '🛑', bg: 'bg-orange-500/15', text: 'text-orange-400' },
+                                DIR_BULL: { emoji: '🐂', bg: 'bg-emerald-500/15', text: 'text-emerald-400' },
+                                DIR_BEAR: { emoji: '🐻', bg: 'bg-red-500/15', text: 'text-red-400' },
+                                EXTENDED_PHASE: { emoji: '⏳', bg: 'bg-slate-500/15', text: 'text-slate-400' },
+                                HIGH_BREAKOUT: { emoji: '🎯', bg: 'bg-emerald-500/20', text: 'text-emerald-300' },
+                              };
+                              const c = cfg[flag] || { emoji: '📊', bg: 'bg-white/10', text: 'text-white/60' };
+                              return (
+                                <span key={flag} className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[0.55rem] font-bold uppercase ${c.bg} ${c.text}`}>
+                                  {c.emoji} {flag.replace('_', ' ')}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
                         <div className="mb-2 border-t border-[var(--msp-divider)]" />
                         <div className="mt-auto flex gap-2" onClick={(e) => e.stopPropagation()}>
                           <button type="button"

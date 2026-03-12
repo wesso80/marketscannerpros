@@ -135,7 +135,30 @@ export interface GoldenEggPayload {
     structure: {
       verdict: Verdict;
       trend: { htf: string; mtf: string; ltf: string };
-      volatility: { regime: 'compression' | 'expansion' | 'neutral'; atr?: number };
+      volatility: {
+        regime: 'compression' | 'expansion' | 'neutral';
+        atr?: number;
+        // DVE Layer 1: Volatility State
+        bbwp?: number;
+        bbwpSma5?: number;
+        rateOfChange?: number;
+        // DVE Layer 2: Directional Bias
+        directionalBias?: 'bullish' | 'bearish' | 'neutral';
+        directionalConfidence?: number;
+        // DVE Layer 3: Phase Persistence
+        contractionContinuation?: number;
+        expansionContinuation?: number;
+        phaseAge?: number;
+        phaseAgePercentile?: number;
+        // DVE Layer 4: Signal
+        signalType?: string;
+        signalStrength?: number;
+        // DVE Supporting
+        breakoutScore?: number;
+        trapDetected?: boolean;
+        trapScore?: number;
+        exhaustionRisk?: number;
+      };
       liquidity: { overhead?: string; below?: string; note?: string };
     };
     options?: {

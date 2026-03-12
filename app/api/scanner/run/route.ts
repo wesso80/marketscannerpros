@@ -17,6 +17,8 @@ import { classifyRegime } from "@/lib/regime-classifier";
 import { estimateComponentsFromContext, computeRegimeScore, deriveRegimeConfidence } from "@/lib/ai/regimeScoring";
 import { computeACLFromScoring } from "@/lib/ai/adaptiveConfidenceLens";
 import { computeScanEnhancements, type ScanEnhancements } from "@/lib/scannerEnhancements";
+import { computeDVE } from "@/lib/directionalVolatilityEngine";
+import type { DVEInput, DVEReading, DVESignalType, VolRegime } from "@/lib/directionalVolatilityEngine.types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic"; // Disable static optimization
@@ -169,6 +171,14 @@ interface ScanResult {
   capitalFlow?: any;
   // Phase 6+ enhancements
   enhancements?: ScanEnhancements;
+  // DVE (Directional Volatility Engine) flags
+  dveFlags?: string[];
+  dveBreakoutScore?: number;
+  dveBbwp?: number;
+  dveDirectionalBias?: string;
+  dveSignalType?: DVESignalType | null;
+  dveContractionContinuation?: number;
+  dveExpansionContinuation?: number;
 }
 
 // Fetch derivatives data from CoinGecko commercial derivatives endpoint
@@ -200,6 +210,64 @@ async function fetchCryptoDerivatives(symbol: string): Promise<DerivativesData |
   } catch (err) {
     console.warn('[scanner] Failed to fetch derivatives for', symbol, err);
     return null;
+  }
+}
+
+/** Compute DVE flags for a scanner item. Non-fatal — returns undefined on error. */
+function computeScannerDVE(
+  closes: number[],
+  highs: number[],
+  lows: number[],
+  price: number,
+  symbol: string,
+  opts?: { adx?: number; atr?: number; stochK?: number; stochD?: number; fundingRate?: number; oiUsd?: number }
+): { dveFlags: string[]; dveBreakoutScore: number; dveBbwp: number; dveDirectionalBias: string; dveSignalType: DVESignalType | null; dveContractionContinuation: number; dveExpansionContinuation: number } | undefined {
+  try {
+    if (closes.length < 30) return undefined;
+    const changePct = closes.length >= 2
+      ? ((closes[closes.length - 1] - closes[0]) / closes[0]) * 100
+      : 0;
+    const dveInput: DVEInput = {
+      price: { closes, highs, lows, currentPrice: price, changePct },
+      indicators: {
+        adx: opts?.adx ?? null,
+        atr: opts?.atr ?? null,
+        stochK: opts?.stochK ?? null,
+        stochD: opts?.stochD ?? null,
+      },
+      liquidity: opts?.fundingRate != null || opts?.oiUsd != null ? {
+        fundingRatePercent: opts.fundingRate,
+        oiTotalUsd: opts.oiUsd,
+      } : undefined,
+    };
+    const reading = computeDVE(dveInput, symbol);
+
+    const flags: string[] = [];
+    if (reading.volatility.regime === 'compression') flags.push('COMPRESSED');
+    if (reading.volatility.regime === 'expansion') flags.push('EXPANDING');
+    if (reading.volatility.regime === 'climax') flags.push('CLIMAX');
+    if (reading.signal.type === 'compression_release_up' || reading.signal.type === 'compression_release_down') flags.push('BREAKOUT');
+    if (reading.signal.type === 'expansion_continuation_up' || reading.signal.type === 'expansion_continuation_down') flags.push('CONTINUATION');
+    if (reading.volatility.inSqueeze) flags.push('SQUEEZE_FIRE');
+    if (reading.trap.detected) flags.push('VOL_TRAP');
+    if (reading.exhaustion.level > 70) flags.push('EXHAUSTION_RISK');
+    if (reading.direction.bias !== 'neutral') flags.push(reading.direction.bias === 'bullish' ? 'DIR_BULL' : 'DIR_BEAR');
+    if (reading.phasePersistence.contraction.active && reading.phasePersistence.contraction.stats.agePercentile > 80) flags.push('EXTENDED_PHASE');
+    if (reading.phasePersistence.expansion.active && reading.phasePersistence.expansion.stats.agePercentile > 80) flags.push('EXTENDED_PHASE');
+    if (reading.breakout.score >= 60) flags.push('HIGH_BREAKOUT');
+
+    return {
+      dveFlags: flags,
+      dveBreakoutScore: reading.breakout.score,
+      dveBbwp: reading.volatility.bbwp,
+      dveDirectionalBias: reading.direction.bias,
+      dveSignalType: reading.signal.type !== 'none' ? reading.signal.type : null,
+      dveContractionContinuation: reading.phasePersistence.contraction.continuationProbability,
+      dveExpansionContinuation: reading.phasePersistence.expansion.continuationProbability,
+    };
+  } catch (err) {
+    console.warn('[scanner] DVE computation failed for', symbol, err);
+    return undefined;
   }
 }
 
@@ -1257,6 +1325,13 @@ export async function POST(req: NextRequest) {
             console.warn('[scanner] Enhancement computation failed for', baseSym, enhErr);
           }
           
+          // DVE flags for crypto
+          const dveCrypto = computeScannerDVE(closes, highs, lows, price, baseSym, {
+            adx: adxObj.adx, atr: atrVal, stochK: stochObj.k, stochD: stochObj.d,
+            fundingRate: item.derivatives?.fundingRate, oiUsd: item.derivatives?.openInterest,
+          });
+          if (dveCrypto) Object.assign(item, dveCrypto);
+
           if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
         } else if (type === "forex") {
           // FOREX: Use FX_INTRADAY or FX_DAILY endpoints
@@ -1406,6 +1481,13 @@ export async function POST(req: NextRequest) {
           } catch (enhErr) {
             console.warn('[scanner] Enhancement computation failed for', sym, enhErr);
           }
+
+          // DVE flags for forex
+          const dveForex = computeScannerDVE(closes, highs, lows, price, sym, {
+            adx: adxObj.adx, atr: atrVal, stochK: stochObj.k, stochD: stochObj.d,
+          });
+          if (dveForex) Object.assign(item, dveForex);
+
           if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
         } else {
           // EQUITIES: Try cached data first, fall back to Alpha Vantage
@@ -1502,6 +1584,12 @@ export async function POST(req: NextRequest) {
                   rsi: rsiArr,
                   macd: macObj.macdLine.map((m, i) => ({ macd: m, signal: macObj.signalLine[i], hist: macObj.hist[i] })),
                 };
+
+                // DVE flags for equity (cached path — uses bar data)
+                const dveCached = computeScannerDVE(bCloses, bHighs, bLows, price, sym, {
+                  adx: adxVal, atr: atrVal, stochK, stochD,
+                });
+                if (dveCached) Object.assign(item, dveCached);
               }
             } catch (chartErr) {
               // Non-fatal — chart will fall back to /api/bars on client
@@ -1664,6 +1752,12 @@ export async function POST(req: NextRequest) {
             } catch (enhErr) {
               console.warn('[scanner] Enhancement computation failed for', sym, enhErr);
             }
+
+            // DVE flags for equity (AV path)
+            const dveAV = computeScannerDVE(closes, highs, lows, price, sym, {
+              adx: adxObj.adx, atr: atrVal, stochK: stochObj.k, stochD: stochObj.d,
+            });
+            if (dveAV) Object.assign(item, dveAV);
 
             if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
           } else {

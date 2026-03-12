@@ -12,6 +12,9 @@ import GEExecutionCard from '@/src/features/goldenEgg/components/layer2/GEExecut
 import GESetupCard from '@/src/features/goldenEgg/components/layer2/GESetupCard';
 import GEEvidenceStack from '@/src/features/goldenEgg/components/layer3/GEEvidenceStack';
 import GEDeepSection from '@/src/features/goldenEgg/components/deep/GEDeepSection';
+import GEVolatilityGauge from '@/src/features/goldenEgg/components/GEVolatilityGauge';
+import GEBreakoutReadiness from '@/src/features/goldenEgg/components/GEBreakoutReadiness';
+import GEVolTrapAlert from '@/src/features/goldenEgg/components/GEVolTrapAlert';
 import GECard from '@/src/features/goldenEgg/components/shared/GECard';
 import GEEmptyState from '@/src/features/goldenEgg/components/shared/GEEmptyState';
 import { isNoTrade } from '@/src/features/goldenEgg/selectors';
@@ -173,6 +176,17 @@ export default function GoldenEggPage() {
                 timeframe={payload.meta.timeframe}
               />
             </div>
+
+            {/* Volatility Trap Alert (conditional) */}
+            <GEVolTrapAlert volatility={payload.layer3.structure.volatility} />
+
+            {/* DVE Volatility Gauge + Breakout Readiness (conditional on DVE data) */}
+            {payload.layer3.structure.volatility.bbwp != null && (
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <GEVolatilityGauge volatility={payload.layer3.structure.volatility} />
+                <GEBreakoutReadiness volatility={payload.layer3.structure.volatility} />
+              </div>
+            )}
 
             {/* Confluence Heatmap */}
             <section>

@@ -128,6 +128,7 @@ export default function Header() {
     '/tools/backtest',
     '/tools/confluence-scanner',
     '/tools/crypto-terminal',
+    '/tools/volatility-engine',
   ];
   const isTerminalMode = terminalPrefixes.some((prefix) => pathname.startsWith(prefix));
 
@@ -156,6 +157,7 @@ export default function Header() {
     { href: '/tools/golden-egg', label: 'Golden Egg', icon: '🥚' },
     { href: '/tools/liquidity-sweep', label: 'Liquidity Sweep', icon: '🌊' },
     { href: '/tools/options-flow', label: 'Options Flow', icon: '💸' },
+    { href: '/tools/volatility-engine', label: 'Volatility Engine', icon: '🌋' },
   ];
 
   const marketItems: DropdownItem[] = [

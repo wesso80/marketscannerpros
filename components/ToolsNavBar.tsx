@@ -12,6 +12,7 @@ const NAV_LINKS: [string, string][] = [
   ["Crypto", "/tools/crypto"],
   ["Portfolio", "/tools/portfolio"],
   ["Journal", "/tools/journal"],
+  ["Volatility", "/tools/volatility-engine"],
   ["Operator", "/operator"],
 ];
 
