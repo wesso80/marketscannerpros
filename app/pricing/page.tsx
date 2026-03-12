@@ -40,6 +40,17 @@ export default function PricingPage() {
     if (saved) setReferralCode(saved);
   }, []);
 
+  // Track referral click for analytics
+  React.useEffect(() => {
+    if (referralCode) {
+      fetch('/api/referral/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ referralCode }),
+      }).catch(() => {});
+    }
+  }, [referralCode]);
+
   // Pre-fetch logged-in user's email for Stripe checkout pre-fill
   React.useEffect(() => {
     fetch("/api/me").then(r => r.json()).then(d => {
@@ -199,6 +210,14 @@ export default function PricingPage() {
   return (
     <main className="min-h-screen bg-[var(--msp-bg)] text-white">
       <div className="mx-auto max-w-6xl px-4 pb-16">
+
+        {/* Referral banner */}
+        {referralCode && (
+          <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-center text-sm text-emerald-300">
+            🎁 You were referred! Both you and your friend get <strong>$20 credit</strong> when you subscribe.
+          </div>
+        )}
+
         <header className="pt-10 text-center">
           <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
             <span className="h-1.5 w-1.5 rounded-full bg-white/40" />

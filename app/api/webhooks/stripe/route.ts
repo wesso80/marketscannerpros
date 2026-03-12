@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { q } from '@/lib/db';
 import { hashWorkspaceId } from '@/lib/auth';
 import { sendWelcomeEmail } from '@/lib/email';
+import { checkContestEntry } from '@/lib/referralContest';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-09-30.clover',
@@ -26,8 +27,11 @@ function getTierFromPriceId(priceId: string): 'pro' | 'pro_trader' | 'free' {
   return 'free';
 }
 
-// Process referral reward when someone subscribes
-async function processReferralReward(workspaceId: string, email: string) {
+// Process referral reward when someone subscribes — $20 Stripe balance credit model
+const REFERRAL_CREDIT_CENTS = parseInt(process.env.REFERRAL_CREDIT_CENTS || '2000', 10);
+const REFERRAL_MONTHLY_CAP = 20;
+
+async function processReferralReward(workspaceId: string, email: string, stripeCustomerId: string) {
   try {
     // Check if this user signed up via referral and hasn't been rewarded yet
     const referralResult = await q(
@@ -43,44 +47,62 @@ async function processReferralReward(workspaceId: string, email: string) {
     }
 
     const referral = referralResult[0];
-    console.log(`[Referral] Found pending referral for ${email}, processing reward...`);
+    console.log(`[Referral] Found pending referral for ${email}, processing $${REFERRAL_CREDIT_CENTS / 100} credit reward...`);
 
-    // Grant 1 month Pro Trader to BOTH users
-    const expiresAt = new Date();
-    expiresAt.setMonth(expiresAt.getMonth() + 1);
+    // Anti-abuse: monthly cap per referrer
+    const monthlyRewards = await q(
+      `SELECT COUNT(*)::int AS cnt FROM referral_rewards
+       WHERE workspace_id = $1 AND applied_at >= date_trunc('month', NOW())`,
+      [referral.referrer_workspace_id]
+    );
+    if ((monthlyRewards[0]?.cnt || 0) >= REFERRAL_MONTHLY_CAP) {
+      console.warn(`[Referral] Monthly cap (${REFERRAL_MONTHLY_CAP}) reached for referrer ${referral.referrer_workspace_id.slice(0, 8)}`);
+      return;
+    }
 
-    // Record reward for referee (the new subscriber)
+    // Credit the REFEREE ($20 Stripe customer balance)
+    const refereeTxn = await stripe.customers.createBalanceTransaction(stripeCustomerId, {
+      amount: -REFERRAL_CREDIT_CENTS, // negative = credit
+      currency: 'usd',
+      description: 'Referral welcome credit',
+    });
     await q(
-      `INSERT INTO referral_rewards (workspace_id, referral_signup_id, reward_type, applied_at, expires_at)
-       VALUES ($1, $2, 'pro_trader_month', NOW(), $3)`,
-      [workspaceId, referral.id, expiresAt]
+      `INSERT INTO referral_rewards (workspace_id, referral_signup_id, reward_type, credit_amount_cents, stripe_balance_txn_id, applied_at)
+       VALUES ($1, $2, 'credit_20', $3, $4, NOW())`,
+      [workspaceId, referral.id, REFERRAL_CREDIT_CENTS, refereeTxn.id]
     );
 
-    // Record reward for referrer
-    await q(
-      `INSERT INTO referral_rewards (workspace_id, referral_signup_id, reward_type, applied_at, expires_at)
-       VALUES ($1, $2, 'pro_trader_month', NOW(), $3)`,
-      [referral.referrer_workspace_id, referral.id, expiresAt]
+    // Credit the REFERRER — look up their Stripe customer ID
+    const referrerSub = await q(
+      `SELECT stripe_customer_id FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1`,
+      [referral.referrer_workspace_id]
     );
+    if (referrerSub.length > 0 && referrerSub[0].stripe_customer_id) {
+      const referrerTxn = await stripe.customers.createBalanceTransaction(
+        referrerSub[0].stripe_customer_id,
+        {
+          amount: -REFERRAL_CREDIT_CENTS,
+          currency: 'usd',
+          description: `Referral reward: you invited ${email}`,
+        }
+      );
+      await q(
+        `INSERT INTO referral_rewards (workspace_id, referral_signup_id, reward_type, credit_amount_cents, stripe_balance_txn_id, applied_at)
+         VALUES ($1, $2, 'credit_20', $3, $4, NOW())`,
+        [referral.referrer_workspace_id, referral.id, REFERRAL_CREDIT_CENTS, referrerTxn.id]
+      );
+    }
 
     // Update referral status to rewarded
     await q(
-      `UPDATE referral_signups SET status = 'rewarded', reward_applied_at = NOW() WHERE id = $1`,
+      `UPDATE referral_signups SET status = 'rewarded', reward_applied_at = NOW(), converted_at = NOW() WHERE id = $1`,
       [referral.id]
     );
 
-    // Temporarily upgrade both users to Pro Trader
-    // The referrer gets Pro Trader for 1 month (or extends if already Pro Trader)
-    await q(
-      `UPDATE user_subscriptions 
-       SET tier = 'pro_trader', 
-           referral_bonus_expires = $2,
-           updated_at = NOW()
-       WHERE workspace_id = $1 AND (tier != 'pro_trader' OR referral_bonus_expires IS NULL)`,
-      [referral.referrer_workspace_id, expiresAt]
-    );
+    // Check if referrer earned a contest entry (every 5 referrals)
+    await checkContestEntry(referral.referrer_workspace_id);
 
-    console.log(`[Referral] ✅ Reward applied! Both ${email} and referrer get Pro Trader until ${expiresAt.toISOString()}`);
+    console.log(`[Referral] ✅ $${REFERRAL_CREDIT_CENTS / 100} credit applied to both ${email} and referrer`);
 
   } catch (error) {
     console.error('[Referral] Error processing reward:', error);
@@ -191,7 +213,7 @@ export async function POST(req: NextRequest) {
 
           // Process referral reward if subscription is active
           if (subscription.status === 'active') {
-            await processReferralReward(workspaceId, customer.email || '');
+            await processReferralReward(workspaceId, customer.email || '', customer.id);
           }
 
           // Send welcome email to new paid subscribers
@@ -227,7 +249,7 @@ export async function POST(req: NextRequest) {
 
         // Process referral reward on new paid subscription
         if (event.type === 'customer.subscription.created' && subscription.status === 'active') {
-          await processReferralReward(workspaceId, customer.email || '');
+          await processReferralReward(workspaceId, customer.email || '', customer.id);
         }
         break;
       }
