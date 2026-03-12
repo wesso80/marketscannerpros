@@ -310,6 +310,8 @@ function buildPayload(
             signalType: dveReading.signal.type !== 'none' ? dveReading.signal.type : undefined,
             signalStrength: dveReading.signal.type !== 'none' ? dveReading.signal.strength : undefined,
             breakoutScore: dveReading.breakout.score,
+            breakoutComponents: dveReading.breakout.components,
+            breakoutComponentDetails: dveReading.breakout.componentDetails,
             trapDetected: dveReading.trap.detected,
             trapScore: dveReading.trap.score,
             exhaustionRisk: dveReading.exhaustion.level,

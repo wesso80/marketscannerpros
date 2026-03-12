@@ -41,13 +41,12 @@ export default function GEBreakoutReadiness({ volatility }: { volatility: Volati
   const total = volatility.breakoutScore;
   const { text, color } = scoreLabel(total);
 
-  // Decompose breakout score into estimated component contributions
-  // The engine weights: vol_compression=40, time=30, gamma=20, adx=10
-  // We estimate proportional contributions from the total
-  const volComp = Math.min(40, total * 0.4);
-  const timeAlign = Math.min(30, total * 0.3);
-  const gammaWall = Math.min(20, total * 0.2);
-  const adxRising = Math.min(10, total * 0.1);
+  // Use real component breakdown from DVE engine if available, otherwise estimate
+  const comps = volatility.breakoutComponents;
+  const volComp = comps?.volCompression ?? Math.min(40, total * 0.4);
+  const timeAlign = comps?.timeAlignment ?? Math.min(30, total * 0.3);
+  const gammaWall = comps?.gammaWall ?? Math.min(20, total * 0.2);
+  const adxRising = comps?.adxRising ?? Math.min(10, total * 0.1);
 
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-5">
@@ -77,6 +76,14 @@ export default function GEBreakoutReadiness({ volatility }: { volatility: Volati
         <ReadinessBar label="Gamma Wall" value={gammaWall} max={20} color="#F59E0B" />
         <ReadinessBar label="ADX Rising" value={adxRising} max={10} color="#10B981" />
       </div>
+
+      {volatility.breakoutComponentDetails && volatility.breakoutComponentDetails.length > 0 && (
+        <div className="mt-3 space-y-0.5 border-t border-white/10 pt-2">
+          {volatility.breakoutComponentDetails.slice(0, 3).map((d, i) => (
+            <p key={i} className="text-[0.6rem] text-white/40">{d}</p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

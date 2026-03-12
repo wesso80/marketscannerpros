@@ -155,6 +155,8 @@ export interface GoldenEggPayload {
         signalStrength?: number;
         // DVE Supporting
         breakoutScore?: number;
+        breakoutComponents?: { volCompression: number; timeAlignment: number; gammaWall: number; adxRising: number };
+        breakoutComponentDetails?: string[];
         trapDetected?: boolean;
         trapScore?: number;
         exhaustionRisk?: number;
