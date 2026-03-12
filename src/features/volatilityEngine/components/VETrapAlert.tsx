@@ -25,12 +25,12 @@ export default function VETrapAlert({ trap }: { trap: VolatilityTrap }) {
           </p>
           <div className="mt-1 flex flex-wrap gap-1.5">
             {trap.components.map((c, i) => (
-              <span key={i} className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[0.6rem] text-white/50">
+              <span key={i} className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[0.7rem] text-white/50">
                 {c}
               </span>
             ))}
           </div>
-          <div className="mt-1 flex items-center gap-3 text-[0.62rem] text-white/40">
+          <div className="mt-1 flex flex-wrap items-center gap-3 text-[0.7rem] text-white/40">
             <span>Compression: {trap.compressionLevel.toFixed(0)}%</span>
             <span>Gamma Lock: {trap.gammaLockDetected ? 'Yes' : 'No'}</span>
             <span>Time Cluster: {trap.timeClusterApproaching ? 'Yes' : 'No'}</span>

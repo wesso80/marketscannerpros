@@ -48,17 +48,17 @@ export default function VERegimeTimeline({
 
       {/* Transition */}
       <div className="mb-4 flex items-center gap-3">
-        <span className="rounded-full px-3 py-1 text-[0.68rem] font-bold uppercase" style={{ background: regimeColor(transition.from) + '30', color: regimeColor(transition.from) }}>
+        <span className="rounded-full px-3 py-1 text-[0.75rem] font-bold uppercase" style={{ background: regimeColor(transition.from) + '30', color: regimeColor(transition.from) }}>
           {transition.from}
         </span>
         <span className="text-white/30">→</span>
-        <span className="rounded-full px-3 py-1 text-[0.68rem] font-bold uppercase" style={{ background: regimeColor(transition.to) + '30', color: regimeColor(transition.to) }}>
+        <span className="rounded-full px-3 py-1 text-[0.75rem] font-bold uppercase" style={{ background: regimeColor(transition.to) + '30', color: regimeColor(transition.to) }}>
           {transition.to}
         </span>
-        <span className="text-[0.62rem] text-white/40">{transition.probability.toFixed(0)}% prob</span>
+        <span className="text-[0.7rem] text-white/40">{transition.probability.toFixed(0)}% prob</span>
       </div>
       {transition.trigger && (
-        <p className="mb-3 text-[0.62rem] text-white/40">Trigger: {transition.trigger}</p>
+        <p className="mb-3 text-[0.7rem] text-white/40">Trigger: {transition.trigger}</p>
       )}
 
       {/* Exhaustion */}
@@ -71,7 +71,7 @@ export default function VERegimeTimeline({
       {exhaustion.signals.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-1">
           {exhaustion.signals.map((s, i) => (
-            <span key={i} className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[0.58rem] text-white/40">{s}</span>
+            <span key={i} className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[0.7rem] text-white/40">{s}</span>
           ))}
         </div>
       )}
@@ -79,12 +79,12 @@ export default function VERegimeTimeline({
       {/* Flags */}
       {flags.length > 0 && (
         <div className="mb-4">
-          <div className="mb-1.5 text-[0.62rem] uppercase text-white/40">Active Flags</div>
+          <div className="mb-1.5 text-[0.7rem] uppercase text-white/40">Active Flags</div>
           <div className="flex flex-wrap gap-1.5">
             {flags.map((f) => {
               const c = FLAG_CFG[f] || { emoji: '📊', bg: 'bg-white/10', text: 'text-white/60' };
               return (
-                <span key={f} className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[0.58rem] font-bold uppercase ${c.bg} ${c.text}`}>
+                <span key={f} className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[0.7rem] font-bold uppercase ${c.bg} ${c.text}`}>
                   {c.emoji} {f.replace(/_/g, ' ')}
                 </span>
               );
@@ -95,7 +95,7 @@ export default function VERegimeTimeline({
 
       {/* Summary */}
       <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-        <div className="mb-1 text-[0.62rem] uppercase text-white/40">Summary</div>
+        <div className="mb-1 text-[0.7rem] uppercase text-white/40">Summary</div>
         <p className="text-[0.72rem] leading-relaxed text-white/70">{summary}</p>
       </div>
     </div>

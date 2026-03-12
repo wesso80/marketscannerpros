@@ -23,13 +23,13 @@ function PhaseBlock({ label, active, prob, exitProb, stats }: {
           {label} {active ? '(Active)' : '(Inactive)'}
         </span>
         {active && (
-          <span className="rounded-full px-2 py-0.5 text-[0.55rem] font-bold uppercase" style={{ background: age.color + '22', color: age.color }}>
+          <span className="rounded-full px-2 py-0.5 text-[0.65rem] font-bold uppercase" style={{ background: age.color + '22', color: age.color }}>
             {age.text}
           </span>
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[0.68rem]">
+      <div className="grid grid-cols-1 gap-y-1 text-[0.75rem] sm:grid-cols-2 sm:gap-x-4">
         <div className="text-white/50">Current: <span className="font-bold text-white/80">{stats.currentBars} bars</span></div>
         <div className="text-white/50">Median: <span className="font-bold text-white/80">{stats.medianBars.toFixed(1)} bars</span></div>
         <div className="text-white/50">Average: <span className="font-bold text-white/80">{stats.averageBars.toFixed(1)} bars</span></div>
@@ -41,7 +41,7 @@ function PhaseBlock({ label, active, prob, exitProb, stats }: {
       {active && (
         <div className="mt-3 space-y-1.5">
           <div className="space-y-0.5">
-            <div className="flex items-center justify-between text-[0.62rem]">
+            <div className="flex items-center justify-between text-[0.7rem]">
               <span className="text-white/50">Continuation</span>
               <span className="font-semibold text-white/80">{prob.toFixed(0)}%</span>
             </div>
@@ -50,7 +50,7 @@ function PhaseBlock({ label, active, prob, exitProb, stats }: {
             </div>
           </div>
           <div className="space-y-0.5">
-            <div className="flex items-center justify-between text-[0.62rem]">
+            <div className="flex items-center justify-between text-[0.7rem]">
               <span className="text-white/50">Exit Probability</span>
               <span className="font-semibold text-white/80">{exitProb.toFixed(0)}%</span>
             </div>

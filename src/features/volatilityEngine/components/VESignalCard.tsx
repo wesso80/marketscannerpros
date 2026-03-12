@@ -48,7 +48,7 @@ export default function VESignalCard({ signal }: { signal: DVESignal }) {
           </div>
 
           {signal.triggerBarPrice != null && (
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[0.68rem]">
+            <div className="grid grid-cols-1 gap-y-1 text-[0.75rem] sm:grid-cols-2 sm:gap-x-4">
               <div className="text-white/50">Trigger Price: <span className="font-bold text-white/80">${signal.triggerBarPrice.toFixed(2)}</span></div>
               {signal.triggerBarOpen != null && (
                 <div className="text-white/50">Open: <span className="font-bold text-white/80">${signal.triggerBarOpen.toFixed(2)}</span></div>
@@ -65,7 +65,7 @@ export default function VESignalCard({ signal }: { signal: DVESignal }) {
           {signal.triggerReason.length > 0 && (
             <div className="space-y-0.5 border-t border-white/10 pt-2">
               {signal.triggerReason.map((r, i) => (
-                <p key={i} className="text-[0.6rem] text-white/40">• {r}</p>
+                <p key={i} className="text-[0.7rem] text-white/40">• {r}</p>
               ))}
             </div>
           )}

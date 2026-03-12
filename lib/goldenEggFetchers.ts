@@ -15,7 +15,7 @@ import {
   type OptionsPressureInput,
 } from '@/lib/marketPressureEngine';
 import { confluenceLearningAgent, type ScanMode, type SessionMode } from '@/lib/confluence-learning-agent';
-import { getAggregatedFundingRates, getAggregatedOpenInterest } from '@/lib/coingecko';
+import { getAggregatedFundingRates, getAggregatedOpenInterest, resolveSymbolToId, getCoinDetail, getOHLC } from '@/lib/coingecko';
 
 const AV_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -85,25 +85,37 @@ export async function fetchPrice(
 ): Promise<PriceData | null> {
   try {
     if (assetClass === 'crypto') {
-      const pair = symbol.toUpperCase().replace(/[-\/]/g, '');
-      const binanceSymbol = pair.endsWith('USDT') ? pair : `${pair}USDT`;
-      const [tickerRes, klineRes] = await Promise.all([
-        fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${encodeURIComponent(binanceSymbol)}`),
-        fetch(`https://api.binance.com/api/v3/klines?symbol=${encodeURIComponent(binanceSymbol)}&interval=1d&limit=50`),
+      // Use CoinGecko for crypto prices + OHLC history
+      const coinId = await resolveSymbolToId(symbol);
+      if (!coinId) return null;
+
+      const [detail, ohlc] = await Promise.all([
+        getCoinDetail(coinId),
+        getOHLC(coinId, 90),   // 90 days of daily OHLC candles
       ]);
-      if (!tickerRes.ok) return null;
-      const ticker = await tickerRes.json();
-      const klines = klineRes.ok ? await klineRes.json() : [];
+
+      const md = detail?.market_data;
+      if (!md?.current_price?.usd) return null;
+
+      const price = md.current_price.usd;
+      const change = md.price_change_24h ?? 0;
+      const changePct = md.price_change_percentage_24h ?? 0;
+      const high = md.high_24h?.usd ?? price;
+      const low = md.low_24h?.usd ?? price;
+      const volume = md.total_volume?.usd ?? 0;
+
+      // OHLC format: [timestamp, open, high, low, close]
+      const candles = ohlc ?? [];
       return {
-        price: parseFloat(ticker.lastPrice),
-        change: parseFloat(ticker.priceChange),
-        changePct: parseFloat(ticker.priceChangePercent),
-        high: parseFloat(ticker.highPrice),
-        low: parseFloat(ticker.lowPrice),
-        volume: parseFloat(ticker.quoteVolume),
-        historicalCloses: klines.map((k: any) => parseFloat(k[4])),
-        historicalHighs: klines.map((k: any) => parseFloat(k[2])),
-        historicalLows: klines.map((k: any) => parseFloat(k[3])),
+        price,
+        change,
+        changePct,
+        high,
+        low,
+        volume,
+        historicalCloses: candles.map((c: number[]) => c[4]),
+        historicalHighs: candles.map((c: number[]) => c[2]),
+        historicalLows: candles.map((c: number[]) => c[3]),
       };
     }
 

@@ -50,9 +50,9 @@ export default function VEHeatmapGauge({ vol }: { vol: VolatilityState }) {
         </h3>
       </div>
 
-      <div className="flex items-center gap-6">
+      <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:gap-6">
         {/* Gauge */}
-        <svg viewBox="0 0 180 100" className="h-[100px] w-[180px] flex-shrink-0">
+        <svg viewBox="0 0 180 100" className="h-auto w-full max-w-[220px] flex-shrink-0">
           {ZONES.map((z) => (
             <path
               key={z.label}

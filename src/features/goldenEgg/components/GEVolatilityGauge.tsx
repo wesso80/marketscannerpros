@@ -47,7 +47,7 @@ export default function GEVolatilityGauge({ volatility }: { volatility: Volatili
 
       <div className="flex flex-col items-center">
         {/* Semicircle gauge */}
-        <svg width="180" height="100" viewBox="0 0 180 100">
+        <svg viewBox="0 0 180 100" className="h-auto w-full max-w-[220px]">
           {/* Background arc (full semicircle) */}
           <path
             d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}

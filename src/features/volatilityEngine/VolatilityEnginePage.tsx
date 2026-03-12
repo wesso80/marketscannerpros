@@ -27,8 +27,8 @@ function DataQualityBadge({ score, missing }: { score: number; missing: string[]
   const color = score >= 80 ? '#10B981' : score >= 50 ? '#D97706' : '#EF4444';
   return (
     <div className="flex items-center gap-2">
-      <span className="text-[0.62rem] text-white/40">Data Quality:</span>
-      <span className="rounded-full px-2 py-0.5 text-[0.58rem] font-bold" style={{ background: color + '22', color }}>
+      <span className="text-[0.7rem] text-white/40">Data Quality:</span>
+      <span className="rounded-full px-2 py-0.5 text-[0.65rem] font-bold" style={{ background: color + '22', color }}>
         {score.toFixed(0)}%
       </span>
       {missing.length > 0 && (
