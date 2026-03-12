@@ -42,7 +42,7 @@ function scoreToGrade(score: number): 'A' | 'B' | 'C' | 'D' {
 function buildPayload(
   symbol: string,
   assetClass: 'equity' | 'crypto' | 'forex',
-  price: { price: number; change: number; changePct: number; high: number; low: number; volume: number; historicalCloses: number[]; historicalHighs?: number[]; historicalLows?: number[] },
+  price: { price: number; change: number; changePct: number; high: number; low: number; volume: number; avgVolume?: number; historicalCloses: number[]; historicalHighs?: number[]; historicalLows?: number[] },
   ind: Indicators | null,
   opts: OptionsSnapshot | null,
   mpe: { composite: number; time: number; volatility: number; liquidity: number; options: number } | null,
@@ -157,6 +157,7 @@ function buildPayload(
         currentPrice: p,
         changePct: price.changePct,
         volume: price.volume,
+        avgVolume: price.avgVolume,
       },
       indicators: ind ? {
         macd: ind.macd,
@@ -172,6 +173,8 @@ function buildPayload(
         stochK,
         stochD,
         stochMomentum: (stochK != null && stochD != null) ? stochK - stochD : null,
+        inSqueeze: ind.inSqueeze,
+        squeezeStrength: ind.squeezeStrength,
       } : undefined,
       options: opts ? {
         putCallRatio: opts.putCallRatio,

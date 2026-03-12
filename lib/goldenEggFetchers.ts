@@ -49,6 +49,7 @@ export interface PriceData {
   high: number;
   low: number;
   volume: number;
+  avgVolume?: number;
   historicalCloses: number[];
   historicalHighs?: number[];
   historicalLows?: number[];
@@ -59,6 +60,7 @@ export interface Indicators {
   sma20: number | null; sma50: number | null; adx: number | null; atr: number | null;
   bbUpper: number | null; bbMiddle: number | null; bbLower: number | null;
   stochK: number | null; stochD: number | null;
+  inSqueeze?: boolean; squeezeStrength?: number;
 }
 
 export interface OptionsSnapshot {
@@ -155,13 +157,18 @@ export async function fetchPrice(
     const prev = ts[dates[1]];
     const price = parseFloat(latest['4. close']);
     const prevClose = parseFloat(prev['4. close']);
+    // AV DAILY_ADJUSTED uses '6. volume', plain DAILY uses '5. volume'
+    const latestVol = parseFloat(latest['6. volume'] || latest['5. volume'] || '0');
+    const dailyVols = dates.slice(0, 20).map(d => parseFloat(ts[d]['6. volume'] || ts[d]['5. volume'] || '0'));
+    const avgVol = dailyVols.length > 0 ? dailyVols.reduce((a, b) => a + b, 0) / dailyVols.length : undefined;
     return {
       price,
       change: price - prevClose,
       changePct: ((price - prevClose) / prevClose) * 100,
       high: parseFloat(latest['2. high']),
       low: parseFloat(latest['3. low']),
-      volume: parseFloat(latest['5. volume'] || '0'),
+      volume: latestVol,
+      avgVolume: avgVol,
       historicalCloses: dates.slice(0, 50).map(d => parseFloat(ts[d]['4. close'])),
       historicalHighs: dates.slice(0, 50).map(d => parseFloat(ts[d]['2. high'])),
       historicalLows: dates.slice(0, 50).map(d => parseFloat(ts[d]['3. low'])),
@@ -187,7 +194,14 @@ export async function fetchIndicators(
       const rsi = calculateRSI(closes, 14);
       const stoch = calculateStochastic(highs || closes, lows || closes, closes, 14, 3);
       const atr = calculateATR(highs || closes, lows || closes, closes, 14);
-      return { rsi, macd: ema12 - ema26, macdHist: null, macdSignal: null, sma20, sma50, adx: null, atr, bbUpper: null, bbMiddle: null, bbLower: null, stochK: stoch.k, stochD: stoch.d };
+      // Compute Bollinger Bands for squeeze detection
+      const bbStd = Math.sqrt(closes.slice(-20).reduce((s, c) => s + (c - sma20) ** 2, 0) / 20);
+      const bbUpper = sma20 + 2 * bbStd;
+      const bbLower = sma20 - 2 * bbStd;
+      const bbWidth = sma20 > 0 ? ((bbUpper - bbLower) / sma20) * 100 : 0;
+      const inSqueeze = bbWidth < 6;
+      const squeezeStrength = inSqueeze ? Math.max(0, (6 - bbWidth) / 6) : 0;
+      return { rsi, macd: ema12 - ema26, macdHist: null, macdSignal: null, sma20, sma50, adx: null, atr, bbUpper, bbMiddle: sma20, bbLower, stochK: stoch.k, stochD: stoch.d, inSqueeze, squeezeStrength };
     }
 
     // Equity: use cached indicators
@@ -207,6 +221,8 @@ export async function fetchIndicators(
         bbLower: ind.bbLower ?? null,
         stochK: ind.stochK ?? null,
         stochD: ind.stochD ?? null,
+        inSqueeze: ind.inSqueeze ?? false,
+        squeezeStrength: ind.squeezeStrength ?? 0,
       };
     }
 
@@ -228,19 +244,40 @@ export async function fetchIndicators(
     const latestBb = bbVal ? Object.values(bbVal)[0] as any : null;
     const latestStoch = stochVal ? Object.values(stochVal)[0] as any : null;
 
+    // Compute SMA20/SMA50 from historical closes (AV doesn't return these directly)
+    const compSma20 = closes.length >= 20 ? closes.slice(-20).reduce((a, b) => a + b, 0) / 20 : null;
+    const compSma50 = closes.length >= 50 ? closes.slice(-50).reduce((a, b) => a + b, 0) / 50 : null;
+
+    // Compute ATR from highs/lows/closes if available
+    let compAtr: number | null = null;
+    if (highs && lows && highs.length >= 15) {
+      let atrSum = 0;
+      for (let i = 1; i < Math.min(15, highs.length); i++) {
+        atrSum += Math.max(highs[i] - lows[i], Math.abs(highs[i] - closes[i - 1]), Math.abs(lows[i] - closes[i - 1]));
+      }
+      compAtr = atrSum / Math.min(14, highs.length - 1);
+    }
+
+    const bbUp = latestBb?.['Real Upper Band'] ? parseFloat(latestBb['Real Upper Band']) : null;
+    const bbMid = latestBb?.['Real Middle Band'] ? parseFloat(latestBb['Real Middle Band']) : null;
+    const bbLo = latestBb?.['Real Lower Band'] ? parseFloat(latestBb['Real Lower Band']) : null;
+    const bbW = (bbUp && bbLo && bbMid && bbMid > 0) ? ((bbUp - bbLo) / bbMid) * 100 : 0;
+
     return {
       rsi: rsiVal ? parseFloat((Object.values(rsiVal)[0] as any)?.RSI) || null : null,
       macd: latestMacd?.MACD ? parseFloat(latestMacd.MACD) : null,
       macdHist: latestMacd?.MACD_Hist ? parseFloat(latestMacd.MACD_Hist) : null,
       macdSignal: latestMacd?.MACD_Signal ? parseFloat(latestMacd.MACD_Signal) : null,
-      sma20: null, sma50: null,
+      sma20: compSma20, sma50: compSma50,
       adx: adxVal ? parseFloat((Object.values(adxVal)[0] as any)?.ADX) || null : null,
-      atr: null,
-      bbUpper: latestBb?.['Real Upper Band'] ? parseFloat(latestBb['Real Upper Band']) : null,
-      bbMiddle: latestBb?.['Real Middle Band'] ? parseFloat(latestBb['Real Middle Band']) : null,
-      bbLower: latestBb?.['Real Lower Band'] ? parseFloat(latestBb['Real Lower Band']) : null,
+      atr: compAtr,
+      bbUpper: bbUp,
+      bbMiddle: bbMid,
+      bbLower: bbLo,
       stochK: latestStoch?.SlowK ? parseFloat(latestStoch.SlowK) : null,
       stochD: latestStoch?.SlowD ? parseFloat(latestStoch.SlowD) : null,
+      inSqueeze: bbW > 0 && bbW < 6,
+      squeezeStrength: bbW > 0 && bbW < 6 ? Math.max(0, (6 - bbW) / 6) : 0,
     };
   } catch { return null; }
 }

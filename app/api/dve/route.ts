@@ -134,6 +134,7 @@ export async function GET(request: NextRequest) {
         currentPrice: priceData.price,
         changePct: priceData.changePct,
         volume: priceData.volume,
+        avgVolume: priceData.avgVolume,
       },
       indicators: indData ? {
         macd: indData.macd,
@@ -149,6 +150,8 @@ export async function GET(request: NextRequest) {
         stochK,
         stochD,
         stochMomentum: (stochK != null && stochD != null) ? stochK - stochD : null,
+        inSqueeze: indData.inSqueeze,
+        squeezeStrength: indData.squeezeStrength,
       } : undefined,
       options: optsData ? {
         putCallRatio: optsData.putCallRatio,
