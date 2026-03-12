@@ -15,9 +15,21 @@ const BARS: { key: keyof BreakoutReadiness['components']; label: string; max: nu
   { key: 'adxRising', label: 'ADX Rising', max: 10, color: '#10B981' },
 ];
 
-export default function VEBreakoutPanel({ breakout }: { breakout: BreakoutReadiness }) {
+// Map missing data sources to which breakout component keys become N/A
+const MISSING_MAP: Record<string, string[]> = {
+  options: ['gammaWall'],
+  time: ['timeAlignment'],
+};
+
+export default function VEBreakoutPanel({ breakout, missingInputs = [] }: { breakout: BreakoutReadiness; missingInputs?: string[] }) {
   const total = breakout.score;
   const color = scoreColor(total);
+
+  // Build set of component keys that are N/A due to missing inputs
+  const naKeys = new Set<string>();
+  for (const m of missingInputs) {
+    for (const key of (MISSING_MAP[m] ?? [])) naKeys.add(key);
+  }
 
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-5">
@@ -39,15 +51,22 @@ export default function VEBreakoutPanel({ breakout }: { breakout: BreakoutReadin
       <div className="space-y-2.5">
         {BARS.map(({ key, label, max, color: barColor }) => {
           const value = breakout.components[key];
-          const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
+          const isNA = naKeys.has(key) && value === 0;
+          const pct = isNA ? 0 : max > 0 ? Math.min(100, (value / max) * 100) : 0;
           return (
             <div key={key} className="space-y-0.5">
               <div className="flex items-center justify-between text-[0.65rem]">
-                <span className="text-white/60">{label}</span>
-                <span className="font-semibold text-white/80">{value.toFixed(0)}/{max}</span>
+                <span className={isNA ? 'text-white/25' : 'text-white/60'}>{label}</span>
+                {isNA ? (
+                  <span className="text-[0.6rem] text-white/20">N/A</span>
+                ) : (
+                  <span className="font-semibold text-white/80">{value.toFixed(0)}/{max}</span>
+                )}
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-white/10">
-                <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: barColor }} />
+                {!isNA && (
+                  <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: barColor }} />
+                )}
               </div>
             </div>
           );

@@ -28,8 +28,20 @@ function biasColor(bias: string): string {
   return '#64748B';
 }
 
-export default function VEDirectionalCompass({ dir }: { dir: DirectionalPressure }) {
+// Map missing data sources to which component keys become N/A
+const MISSING_MAP: Record<string, string[]> = {
+  options: ['optionsFlow', 'dealerGamma'],
+  liquidity: ['fundingRate'],
+};
+
+export default function VEDirectionalCompass({ dir, missingInputs = [] }: { dir: DirectionalPressure; missingInputs?: string[] }) {
   const arrow = dir.bias === 'bullish' ? '↑' : dir.bias === 'bearish' ? '↓' : '↔';
+
+  // Build set of component keys that are N/A due to missing inputs
+  const naKeys = new Set<string>();
+  for (const m of missingInputs) {
+    for (const key of (MISSING_MAP[m] ?? [])) naKeys.add(key);
+  }
 
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-5">
@@ -58,23 +70,30 @@ export default function VEDirectionalCompass({ dir }: { dir: DirectionalPressure
 
       <div className="space-y-2">
         {Object.entries(dir.components).map(([key, value]) => {
+          const isNA = naKeys.has(key) && value === 0;
           const max = COMPONENT_MAX[key] || 20;
           const absVal = Math.abs(value);
-          const pct = Math.min(100, (absVal / max) * 100);
-          const color = value > 0 ? '#10B981' : value < 0 ? '#EF4444' : '#475569';
+          const pct = isNA ? 0 : Math.min(100, (absVal / max) * 100);
+          const color = isNA ? '#334155' : value > 0 ? '#10B981' : value < 0 ? '#EF4444' : '#475569';
           return (
             <div key={key} className="space-y-0.5">
               <div className="flex items-center justify-between text-[0.65rem]">
-                <span className="text-white/60">{LABELS[key] || key}</span>
-                <span className="font-semibold" style={{ color }}>
-                  {value > 0 ? '+' : ''}{value.toFixed(0)}/{max}
-                </span>
+                <span className={isNA ? 'text-white/25' : 'text-white/60'}>{LABELS[key] || key}</span>
+                {isNA ? (
+                  <span className="text-[0.6rem] text-white/20">N/A</span>
+                ) : (
+                  <span className="font-semibold" style={{ color }}>
+                    {value > 0 ? '+' : ''}{value.toFixed(0)}/{max}
+                  </span>
+                )}
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
-                <div
-                  className="h-full rounded-full transition-all"
-                  style={{ width: `${pct}%`, background: color }}
-                />
+                {!isNA && (
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{ width: `${pct}%`, background: color }}
+                  />
+                )}
               </div>
             </div>
           );

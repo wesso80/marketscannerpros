@@ -44,7 +44,7 @@ export default function VEHeatmapGauge({ vol }: { vol: VolatilityState }) {
 
       <div className="flex flex-col items-center">
         {/* Semicircle gauge */}
-        <svg viewBox="0 0 180 100" className="h-auto w-full max-w-[220px]">
+        <svg viewBox="0 0 180 100" className="h-auto w-full max-w-[160px]">
           {/* Background arc */}
           <path
             d={`M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`}
@@ -93,11 +93,11 @@ export default function VEHeatmapGauge({ vol }: { vol: VolatilityState }) {
         </svg>
 
         {/* BBWP value */}
-        <div className="-mt-2 text-center">
-          <span className="text-2xl font-black sm:text-3xl" style={{ color: zone.text }}>
+        <div className="-mt-1 text-center">
+          <span className="text-lg font-black sm:text-xl" style={{ color: zone.text }}>
             {bbwp.toFixed(1)}
           </span>
-          <span className="ml-1 text-[0.65rem] text-white/40">BBWP</span>
+          <span className="ml-1 text-[0.6rem] text-white/40">BBWP</span>
         </div>
 
         {/* Regime label */}

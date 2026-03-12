@@ -171,14 +171,14 @@ export default function VolatilityEnginePage() {
               <SectionTitle icon="🌡️" title="Layer 1 — Volatility State" />
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <VEHeatmapGauge vol={reading.volatility} />
-                <VEBreakoutPanel breakout={reading.breakout} />
+                <VEBreakoutPanel breakout={reading.breakout} missingInputs={reading.dataQuality.missing} />
               </div>
             </section>
 
             {/* LAYER 2: Directional Bias */}
             <section>
               <SectionTitle icon="🧭" title="Layer 2 — Directional Bias" />
-              <VEDirectionalCompass dir={reading.direction} />
+              <VEDirectionalCompass dir={reading.direction} missingInputs={reading.dataQuality.missing} />
             </section>
 
             {/* LAYER 3: Phase Persistence */}
