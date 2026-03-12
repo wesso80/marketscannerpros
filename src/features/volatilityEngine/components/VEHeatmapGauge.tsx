@@ -50,9 +50,9 @@ export default function VEHeatmapGauge({ vol }: { vol: VolatilityState }) {
         </h3>
       </div>
 
-      <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:gap-6">
-        {/* Gauge */}
-        <svg viewBox="0 0 180 100" className="h-auto w-full max-w-[220px] flex-shrink-0">
+      <div className="flex flex-col items-center">
+        {/* Semicircle gauge */}
+        <svg viewBox="0 0 180 100" className="h-auto w-full max-w-[220px]">
           {ZONES.map((z) => (
             <path
               key={z.label}
@@ -66,16 +66,24 @@ export default function VEHeatmapGauge({ vol }: { vol: VolatilityState }) {
           ))}
           <line x1={CX} y1={CY} x2={nx} y2={ny} stroke="#FFF" strokeWidth={2} strokeLinecap="round" />
           <circle cx={CX} cy={CY} r={3} fill="#FFF" />
-          <text x={CX} y={CY - 18} textAnchor="middle" fill="#FFF" fontSize="22" fontWeight="800">
-            {bbwp.toFixed(1)}
-          </text>
-          <text x={CX} y={CY - 4} textAnchor="middle" fill={regimeColor(vol.regime)} fontSize="8" fontWeight="700">
-            {vol.regime.toUpperCase()}
-          </text>
         </svg>
 
+        {/* BBWP value */}
+        <div className="-mt-2 text-center">
+          <span className="text-3xl font-black text-white">{bbwp.toFixed(1)}</span>
+          <span className="ml-1 text-xs text-white/40">BBWP</span>
+        </div>
+
+        {/* Regime label */}
+        <div
+          className="mt-1 rounded-full px-3 py-0.5 text-[0.65rem] font-bold uppercase tracking-widest"
+          style={{ background: regimeColor(vol.regime) + '33', color: regimeColor(vol.regime) }}
+        >
+          {vol.regime.toUpperCase()}
+        </div>
+
         {/* Stats */}
-        <div className="flex-1 space-y-1.5 text-[0.72rem]">
+        <div className="mt-3 space-y-1 text-center text-[0.72rem]">
           <div className="text-white/50">
             SMA5: <span className="font-bold text-white/80">{vol.bbwpSma5.toFixed(1)}</span>
           </div>

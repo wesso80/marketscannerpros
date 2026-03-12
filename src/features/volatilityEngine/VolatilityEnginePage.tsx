@@ -169,7 +169,10 @@ export default function VolatilityEnginePage() {
             {/* LAYER 1: Volatility State */}
             <section>
               <SectionTitle icon="🌡️" title="Layer 1 — Volatility State" />
-              <VEHeatmapGauge vol={reading.volatility} />
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <VEHeatmapGauge vol={reading.volatility} />
+                <VEBreakoutPanel breakout={reading.breakout} />
+              </div>
             </section>
 
             {/* LAYER 2: Directional Bias */}
@@ -199,18 +202,15 @@ export default function VolatilityEnginePage() {
               <VEProjectionCard proj={reading.projection} />
             </section>
 
-            {/* Supporting: Breakout + Regime Outlook */}
+            {/* Supporting: Regime Outlook */}
             <section>
               <SectionTitle icon="🎯" title="Supporting Analysis" />
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <VEBreakoutPanel breakout={reading.breakout} />
-                <VERegimeTimeline
-                  transition={reading.transition}
-                  exhaustion={reading.exhaustion}
-                  flags={reading.flags}
-                  summary={reading.summary}
-                />
-              </div>
+              <VERegimeTimeline
+                transition={reading.transition}
+                exhaustion={reading.exhaustion}
+                flags={reading.flags}
+                summary={reading.summary}
+              />
             </section>
           </div>
         )}
