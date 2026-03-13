@@ -104,11 +104,11 @@ export default function GEDVEConditions({ volatility }: Props) {
   return (
     <div className="lg:col-span-12">
       <GECard title="DVE Volatility Conditions">
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {conditions.map((c) => (
-            <div key={c.label} className="flex items-start gap-2 rounded-lg border border-white/5 bg-white/[0.03] px-3 py-2">
-              <span className="shrink-0 text-[0.65rem] font-bold uppercase text-slate-500 w-24">{c.label}</span>
-              <span className="text-[0.72rem] font-semibold" style={{ color: c.color }}>{c.value}</span>
+            <div key={c.label} className="flex flex-col gap-1 rounded-lg border border-white/5 bg-white/[0.03] px-3 py-2">
+              <span className="text-[0.65rem] font-bold uppercase tracking-wider text-slate-500">{c.label}</span>
+              <span className="text-[0.75rem] font-semibold leading-snug break-words" style={{ color: c.color }}>{c.value}</span>
             </div>
           ))}
         </div>
