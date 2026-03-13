@@ -84,7 +84,7 @@ setInterval(() => {
 export async function middleware(req: NextRequest) {
   // ── Global rate limit on API routes ──
   const { pathname } = req.nextUrl;
-  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/webhooks')) {
+  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/webhooks') && !pathname.startsWith('/api/auth/')) {
     const ip = getClientIP(req);
     if (isApiRateLimited(ip)) {
       return NextResponse.json(

@@ -91,7 +91,23 @@ function AuthContent() {
   const [status, setStatus] = useState<StatusState>({ tone: "idle", text: "" });
   const [success] = useState(false);
   const searchParams = useSearchParams();
+  const router = useRouter();
   void searchParams; // keep for Suspense boundary
+
+  // If already logged in, redirect to tools
+  const [checkingSession, setCheckingSession] = useState(true);
+  useState(() => {
+    fetch('/api/auth/session', { credentials: 'include' })
+      .then(r => r.json())
+      .then(d => {
+        if (d?.authenticated) {
+          router.replace('/tools');
+        } else {
+          setCheckingSession(false);
+        }
+      })
+      .catch(() => setCheckingSession(false));
+  });
 
   const clearStatus = () => setStatus({ tone: "idle", text: "" });
 
@@ -140,6 +156,12 @@ function AuthContent() {
 
   return (
     <main className="min-h-screen bg-[var(--msp-bg)] text-white">
+      {checkingSession ? (
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+        </div>
+      ) : (
+      <>
       <div className="pointer-events-none fixed inset-0">
         <div className="absolute left-1/2 top-24 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-emerald-500/10 blur-3xl" />
         <div className="absolute left-1/2 top-48 h-[760px] w-[760px] -translate-x-1/2 rounded-full bg-cyan-500/5 blur-3xl" />
@@ -236,6 +258,8 @@ function AuthContent() {
           <div className="mt-6 text-center text-[11px] text-white/35">Educational tool only · Not financial advice</div>
         </div>
       </div>
+      </>
+      )}
     </main>
   );
 }
