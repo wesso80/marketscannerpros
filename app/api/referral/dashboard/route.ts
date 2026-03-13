@@ -28,6 +28,63 @@ export async function GET(req: NextRequest) {
     const workspaceId = session.workspaceId;
     const referralCode = generateReferralCode(workspaceId);
 
+    // ── Bootstrap: ensure all referral tables exist ──
+    await q(`
+      CREATE TABLE IF NOT EXISTS referrals (
+        id SERIAL PRIMARY KEY,
+        workspace_id UUID NOT NULL UNIQUE,
+        referral_code VARCHAR(16) NOT NULL UNIQUE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        CONSTRAINT fk_workspace FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+      );
+      CREATE TABLE IF NOT EXISTS referral_signups (
+        id SERIAL PRIMARY KEY,
+        referrer_workspace_id UUID NOT NULL,
+        referee_workspace_id UUID NOT NULL,
+        referee_email VARCHAR(255),
+        referral_code VARCHAR(16) NOT NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'pending',
+        reward_applied_at TIMESTAMP WITH TIME ZONE,
+        converted_at TIMESTAMP WITH TIME ZONE,
+        referee_plan VARCHAR(20),
+        ip_hash VARCHAR(64),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        CONSTRAINT fk_referrer FOREIGN KEY (referrer_workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE,
+        CONSTRAINT fk_referee FOREIGN KEY (referee_workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE,
+        CONSTRAINT unique_referee UNIQUE (referee_workspace_id)
+      );
+      CREATE TABLE IF NOT EXISTS referral_rewards (
+        id SERIAL PRIMARY KEY,
+        workspace_id UUID NOT NULL,
+        referral_signup_id INTEGER NOT NULL,
+        reward_type VARCHAR(50) NOT NULL,
+        stripe_coupon_id VARCHAR(255),
+        credit_amount_cents INTEGER DEFAULT 0,
+        stripe_balance_txn_id VARCHAR(255),
+        applied_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        expires_at TIMESTAMP WITH TIME ZONE,
+        CONSTRAINT fk_workspace_reward FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+      );
+      CREATE TABLE IF NOT EXISTS referral_clicks (
+        id SERIAL PRIMARY KEY,
+        referral_code VARCHAR(16) NOT NULL,
+        ip_hash VARCHAR(64),
+        user_agent_hash VARCHAR(64),
+        landing_page VARCHAR(255) DEFAULT '/pricing',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS contest_entries (
+        id SERIAL PRIMARY KEY,
+        workspace_id UUID NOT NULL,
+        contest_period VARCHAR(20) NOT NULL,
+        entry_number INTEGER NOT NULL DEFAULT 1,
+        qualifying_referral_ids INTEGER[] NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        CONSTRAINT fk_contest_workspace FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE,
+        CONSTRAINT unique_contest_entry UNIQUE (workspace_id, contest_period, entry_number)
+      );
+    `);
+
     // Ensure referral code row exists
     await q(
       `INSERT INTO referrals (workspace_id, referral_code, created_at)

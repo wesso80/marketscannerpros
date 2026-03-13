@@ -8,7 +8,7 @@ import CookieBanner from '@/components/CookieBanner';
 import AlertToast from '@/components/AlertToast';
 import BackToTop from '@/components/BackToTop';
 
-const TERMINAL_ROUTE_PREFIXES = ['/tools'];
+const TERMINAL_ROUTE_PREFIXES = ['/tools', '/operator'];
 
 type RouteChromeProps = {
   children: ReactNode;
