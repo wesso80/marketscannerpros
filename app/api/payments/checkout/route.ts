@@ -77,15 +77,23 @@ export async function POST(req: NextRequest) {
     // Base URL for redirects - always use Next.js site (not Streamlit)
     const baseUrl = "https://marketscannerpros.app";
 
-    // If referral code provided, validate it and get coupon
+    // If referral code provided, validate it and check for trial
     let validReferral = false;
     let couponId: string | undefined;
     if (referralCode && typeof referralCode === 'string') {
       try {
         validReferral = await validateReferralCode(referralCode);
         if (validReferral) {
-          couponId = await getOrCreateReferralCoupon();
-          console.log(`[Checkout] Valid referral ${referralCode} — applying $${REFERRAL_CREDIT_CENTS / 100} coupon`);
+          // Check if this price has a free trial — don't apply coupon during trials
+          const price = await stripe.prices.retrieve(priceId);
+          const hasTrial = (price.recurring?.trial_period_days ?? 0) > 0;
+
+          if (hasTrial) {
+            console.log(`[Checkout] Valid referral ${referralCode} — price has trial, coupon deferred until trial converts`);
+          } else {
+            couponId = await getOrCreateReferralCoupon();
+            console.log(`[Checkout] Valid referral ${referralCode} — applying $${REFERRAL_CREDIT_CENTS / 100} coupon (no trial)`);
+          }
         }
       } catch (refErr) {
         console.error('[Checkout] Referral validation error (continuing without discount):', refErr);
@@ -103,7 +111,6 @@ export async function POST(req: NextRequest) {
         },
       ],
       customer_email: email || undefined,
-      allow_promotion_codes: !couponId, // Disable promo codes when referral coupon is applied (can't stack)
       success_url: `${baseUrl}/after-checkout?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/pricing`,
       metadata: {
@@ -113,9 +120,11 @@ export async function POST(req: NextRequest) {
       },
     };
 
-    // Apply referral coupon as a discount visible on checkout page
+    // Stripe doesn't allow allow_promotion_codes + discounts together
     if (couponId) {
       sessionParams.discounts = [{ coupon: couponId }];
+    } else {
+      sessionParams.allow_promotion_codes = true;
     }
 
     const session = await stripe.checkout.sessions.create(sessionParams);

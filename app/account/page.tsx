@@ -393,6 +393,22 @@ export default function AccountPage() {
               )}
             </section>
 
+            <section className="rounded-2xl border border-emerald-500/20 bg-gradient-to-b from-emerald-500/10 to-emerald-500/5 p-6">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xl">🎁</span>
+                <h3 className="text-sm font-semibold text-emerald-400">Refer &amp; Earn</h3>
+              </div>
+              <p className="text-xs text-white/70">
+                Share your referral link — your friend gets <strong className="text-emerald-300">$20 off</strong> their first month and you earn <strong className="text-emerald-300">$20 credit</strong>.
+              </p>
+              <Link
+                href="/tools/referrals"
+                className="mt-4 block w-full px-4 py-3 rounded-xl bg-emerald-500/20 border border-emerald-400/30 text-sm font-semibold text-emerald-300 hover:bg-emerald-500/30 text-center"
+              >
+                Get Your Referral Link
+              </Link>
+            </section>
+
             <section className="rounded-2xl border border-red-500/20 bg-red-500/5 p-6">
               <h3 className="text-sm font-semibold text-red-300">Data Management</h3>
               <p className="mt-2 text-xs text-white/60">Request deletion of your account and associated data.</p>

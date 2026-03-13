@@ -28,12 +28,17 @@ function getTierFromPriceId(priceId: string): 'pro' | 'pro_trader' | 'free' {
 }
 
 // Process referral reward when someone subscribes
-// Referee gets $20 off via Stripe coupon at checkout (already applied).
-// Referrer gets $20 Stripe balance credit here.
+// Non-trial: referee gets $20 off via Stripe coupon at checkout (already applied), referrer gets $20 balance credit.
+// Trial conversion: both referee and referrer get $20 balance credit (coupon was not applied during trial).
 const REFERRAL_CREDIT_CENTS = parseInt(process.env.REFERRAL_CREDIT_CENTS || '2000', 10);
 const REFERRAL_MONTHLY_CAP = 20;
 
-async function processReferralReward(workspaceId: string, email: string, stripeCustomerId: string) {
+async function processReferralReward(
+  workspaceId: string,
+  email: string,
+  stripeCustomerId: string,
+  refereeCouponApplied: boolean = false // true if referee already got $20 off via checkout coupon
+) {
   try {
     // Check if this user signed up via referral and hasn't been rewarded yet
     const referralResult = await q(
@@ -49,7 +54,7 @@ async function processReferralReward(workspaceId: string, email: string, stripeC
     }
 
     const referral = referralResult[0];
-    console.log(`[Referral] Found pending referral for ${email}, processing referrer reward...`);
+    console.log(`[Referral] Found pending referral for ${email}, couponApplied=${refereeCouponApplied}`);
 
     // Anti-abuse: monthly cap per referrer
     const monthlyRewards = await q(
@@ -62,13 +67,27 @@ async function processReferralReward(workspaceId: string, email: string, stripeC
       return;
     }
 
-    // Referee already received $20 off via checkout coupon — record it as a reward
-    await q(
-      `INSERT INTO referral_rewards (workspace_id, referral_signup_id, reward_type, credit_amount_cents, stripe_balance_txn_id, applied_at)
-       VALUES ($1, $2, 'coupon_20', $3, 'checkout_coupon', NOW())
-       ON CONFLICT DO NOTHING`,
-      [workspaceId, referral.id, REFERRAL_CREDIT_CENTS]
-    );
+    if (refereeCouponApplied) {
+      // Referee already received $20 off via checkout coupon — just record it
+      await q(
+        `INSERT INTO referral_rewards (workspace_id, referral_signup_id, reward_type, credit_amount_cents, stripe_balance_txn_id, applied_at)
+         VALUES ($1, $2, 'coupon_20', $3, 'checkout_coupon', NOW())
+         ON CONFLICT DO NOTHING`,
+        [workspaceId, referral.id, REFERRAL_CREDIT_CENTS]
+      );
+    } else {
+      // Trial conversion — referee needs balance credit (no coupon was applied)
+      const refereeTxn = await stripe.customers.createBalanceTransaction(stripeCustomerId, {
+        amount: -REFERRAL_CREDIT_CENTS,
+        currency: 'usd',
+        description: 'Referral welcome credit — $20 off your next invoice',
+      });
+      await q(
+        `INSERT INTO referral_rewards (workspace_id, referral_signup_id, reward_type, credit_amount_cents, stripe_balance_txn_id, applied_at)
+         VALUES ($1, $2, 'credit_20', $3, $4, NOW())`,
+        [workspaceId, referral.id, REFERRAL_CREDIT_CENTS, refereeTxn.id]
+      );
+    }
 
     // Credit the REFERRER — look up their Stripe customer ID
     const referrerSub = await q(
@@ -209,9 +228,10 @@ export async function POST(req: NextRequest) {
             }
           }
 
-          // Process referral reward if subscription is active
+          // Process referral reward if subscription is active (not trialing)
+          // Coupon was applied at checkout, so refereeCouponApplied = true
           if (subscription.status === 'active') {
-            await processReferralReward(workspaceId, customer.email || '', customer.id);
+            await processReferralReward(workspaceId, customer.email || '', customer.id, true);
           }
 
           // Send welcome email to new paid subscribers
@@ -245,9 +265,12 @@ export async function POST(req: NextRequest) {
           subscription.status === 'trialing'
         );
 
-        // Process referral reward on new paid subscription
-        if (event.type === 'customer.subscription.created' && subscription.status === 'active') {
-          await processReferralReward(workspaceId, customer.email || '', customer.id);
+        // Process referral reward on new paid subscription or trial→active conversion
+        if (subscription.status === 'active') {
+          // On subscription.updated (trial→active), referee didn't get coupon — give balance credit
+          // On subscription.created with active status, coupon was applied at checkout
+          const couponApplied = event.type === 'customer.subscription.created';
+          await processReferralReward(workspaceId, customer.email || '', customer.id, couponApplied);
         }
         break;
       }
