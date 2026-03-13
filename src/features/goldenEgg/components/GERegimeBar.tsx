@@ -50,10 +50,20 @@ export default function GERegimeBar({ structure }: Props) {
         : 'No squeeze detected',
     },
     {
+      label: 'Transition',
+      active: volatility.regime === 'transition',
+      icon: '⚡',
+      description: volatility.regime === 'transition'
+        ? 'Volatility accelerating — breakout building'
+        : 'No transition detected',
+    },
+    {
       label: 'Vol Expansion',
-      active: volatility.regime === 'expansion',
+      active: volatility.regime === 'expansion' || volatility.regime === 'climax',
       icon: '💥',
-      description: volatility.regime === 'expansion'
+      description: volatility.regime === 'climax'
+        ? `Extreme volatility expansion${volatility.atr ? ` (ATR: ${volatility.atr.toFixed(2)})` : ''}`
+        : volatility.regime === 'expansion'
         ? `Volatility expanding${volatility.atr ? ` (ATR: ${volatility.atr.toFixed(2)})` : ''}`
         : 'Volatility normal',
     },
@@ -68,7 +78,7 @@ export default function GERegimeBar({ structure }: Props) {
         <h2 className="text-sm font-semibold uppercase tracking-wider text-violet-400">Market Regime</h2>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
         {regimes.map((r) => (
           <div
             key={r.label}

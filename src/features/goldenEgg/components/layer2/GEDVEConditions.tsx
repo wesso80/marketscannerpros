@@ -10,7 +10,9 @@ type Props = {
 function regimeColor(regime: string): string {
   switch (regime) {
     case 'compression': return '#3B82F6';
+    case 'transition': return '#A78BFA';
     case 'expansion': return '#D97706';
+    case 'climax': return '#EF4444';
     default: return '#64748B';
   }
 }
@@ -91,11 +93,23 @@ export default function GEDVEConditions({ volatility }: Props) {
       value: 'BBWP returning below 15 after breakout invalidates move',
       color: '#94A3B8',
     });
+  } else if (regime === 'transition') {
+    conditions.push({
+      label: 'Watch',
+      value: 'Volatility accelerating — breakout imminent, prepare for directional move',
+      color: '#A78BFA',
+    });
   } else if (regime === 'expansion') {
     conditions.push({
       label: 'Watch',
       value: 'BBWP deceleration → tighten stops for regime shift',
       color: '#94A3B8',
+    });
+  } else if (regime === 'climax') {
+    conditions.push({
+      label: 'Caution',
+      value: 'Extreme vol expansion — exhaustion likely, tighten stops aggressively',
+      color: '#EF4444',
     });
   }
 

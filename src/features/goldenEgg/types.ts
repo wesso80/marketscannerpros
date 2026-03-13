@@ -136,7 +136,7 @@ export interface GoldenEggPayload {
       verdict: Verdict;
       trend: { htf: string; mtf: string; ltf: string };
       volatility: {
-        regime: 'compression' | 'expansion' | 'neutral';
+        regime: 'compression' | 'neutral' | 'transition' | 'expansion' | 'climax';
         atr?: number;
         // DVE Layer 1: Volatility State
         bbwp?: number;

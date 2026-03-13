@@ -139,7 +139,7 @@ function buildPayload(
   const trendMTF = ind?.sma20 != null ? (p > ind.sma20 ? 'Bullish' : 'Bearish') : 'Unknown';
   const trendLTF = price.changePct > 0.5 ? 'Bullish' : price.changePct < -0.5 ? 'Bearish' : 'Consolidating';
 
-  const volRegime: 'compression' | 'expansion' | 'neutral' =
+  let volRegime: 'compression' | 'neutral' | 'transition' | 'expansion' | 'climax' =
     ind?.bbUpper && ind?.bbLower && ind?.bbMiddle
       ? ((ind.bbUpper - ind.bbLower) / ind.bbMiddle * 100 < 8 ? 'compression' : 'expansion')
       : atrPct < 2 ? 'compression' : atrPct > 5 ? 'expansion' : 'neutral';
@@ -187,6 +187,8 @@ function buildPayload(
       mpeComposite: mpe?.composite,
     };
     dveReading = computeDVE(dveInput, symbol);
+    // Use DVE engine's BBWP-based regime instead of crude BB width heuristic
+    volRegime = dveReading.volatility.regime;
   } catch { /* DVE is additive — failure is non-fatal */ }
 
   // Options evidence

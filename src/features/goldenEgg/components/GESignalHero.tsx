@@ -74,7 +74,7 @@ export default function GESignalHero({ meta, layer1, setupType, volatility }: Pr
   const volPills: typeof pillData = [];
   if (volatility?.bbwp != null) {
     const regime = volatility.regime;
-    const regimeColor = regime === 'compression' ? 'text-blue-400' : regime === 'expansion' ? 'text-amber-400' : 'text-slate-300';
+    const regimeColor = regime === 'compression' ? 'text-blue-400' : regime === 'climax' ? 'text-rose-400' : regime === 'expansion' ? 'text-amber-400' : regime === 'transition' ? 'text-violet-400' : 'text-slate-300';
     volPills.push({ label: 'Vol State', value: regime.charAt(0).toUpperCase() + regime.slice(1), color: regimeColor });
 
     const volRisk = (volatility.exhaustionRisk ?? 0) >= 60 ? 'High' : (volatility.exhaustionRisk ?? 0) >= 30 ? 'Moderate' : 'Low';
