@@ -93,7 +93,6 @@ const toolSections = [
       { href: '/tools/crypto-explorer', icon: '🔍', image: '/assets/platform-tools/crypto-explorer.png', title: 'Crypto Explorer', description: 'Deep-dive into any crypto asset with technicals and on-chain metrics.' },
       { href: '/tools/crypto-heatmap', icon: '🪙', image: '/assets/platform-tools/crypto-heatmap.png', title: 'Crypto Heatmap', description: 'Visual leadership map for major crypto assets.' },
       { href: '/tools/crypto-dashboard', icon: '₿', image: '/assets/platform-tools/crypto-derivatives.png', title: 'Crypto Derivatives', description: 'Funding, OI, and derivatives pressure diagnostics.' },
-      { href: '/tools/crypto-time-confluence', icon: '🔮', image: '/assets/scanners/time-confluence.png', title: 'Crypto Time Confluence', description: 'Track crypto market cycles and detect volatility expansion windows.' },
       { href: '/tools/crypto-terminal', icon: '💹', image: '/assets/platform-tools/crypto-command.png', title: 'Crypto Terminal', description: 'Advanced crypto charting with session-level analysis.' },
     ],
   },
