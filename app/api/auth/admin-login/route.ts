@@ -75,6 +75,20 @@ export async function POST(req: NextRequest) {
 
     await trackSubscription(workspaceId, email, "pro_trader", "active");
 
+    // Ensure workspace row exists (needed for FK references in referrals, etc.)
+    try {
+      await q(`
+        INSERT INTO workspaces (id, stripe_customer_id, email, created_at)
+        VALUES ($1, $2, $3, NOW())
+        ON CONFLICT (id) DO NOTHING
+      `, [workspaceId, `admin_${email}`, email]);
+    } catch (e: any) {
+      // Non-fatal — table may not exist yet
+      if (!e?.message?.includes('does not exist')) {
+        console.error('Workspace upsert error:', e);
+      }
+    }
+
     const host = req.headers.get("host") || "";
     const isLocalhost = host.includes("localhost") || host.includes("127.0.0.1");
 
