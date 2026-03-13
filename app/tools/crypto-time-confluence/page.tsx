@@ -26,24 +26,19 @@ export default function CryptoTimeConfluencePage() {
           <CryptoTimeConfluenceWidget />
         </div>
 
-        {/* Info Sections */}
+        {/* Cycle Reference — all tracked cycles from the engine */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           {/* 1-7 Day Micro */}
           <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
             <h3 className="text-lg font-semibold text-white mb-3">1-7 Day Micro Cycle</h3>
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between text-gray-400">
-                <span>3D</span>
-                <span className="text-yellow-400">Short-term reversals</span>
-              </div>
-              <div className="flex justify-between text-gray-400">
-                <span>5D</span>
-                <span className="text-yellow-400">Breakout continuation</span>
-              </div>
-              <div className="flex justify-between text-gray-400">
-                <span>7D</span>
-                <span className="text-orange-400">Weekly structural reset</span>
-              </div>
+              <div className="flex justify-between text-gray-400"><span>1D</span><span className="text-gray-600">+0</span></div>
+              <div className="flex justify-between text-gray-400"><span>2D</span><span className="text-gray-600">+0</span></div>
+              <div className="flex justify-between text-gray-400"><span>3D</span><span className="text-yellow-400">+1</span></div>
+              <div className="flex justify-between text-gray-400"><span>4D</span><span className="text-gray-600">+0</span></div>
+              <div className="flex justify-between text-gray-400"><span>5D</span><span className="text-yellow-400">+1</span></div>
+              <div className="flex justify-between text-gray-400"><span>6D</span><span className="text-gray-600">+0</span></div>
+              <div className="flex justify-between text-gray-400"><span>7D</span><span className="text-orange-400">+2</span></div>
             </div>
           </div>
 
@@ -51,18 +46,13 @@ export default function CryptoTimeConfluencePage() {
           <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
             <h3 className="text-lg font-semibold text-white mb-3">8-30 Day Monthly Cycle</h3>
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between text-gray-400">
-                <span>14D</span>
-                <span className="text-yellow-400">Mid-cycle reset</span>
-              </div>
-              <div className="flex justify-between text-gray-400">
-                <span>21D</span>
-                <span className="text-orange-400">3-week cycle</span>
-              </div>
-              <div className="flex justify-between text-gray-400">
-                <span>30D</span>
-                <span className="text-red-400">Monthly close</span>
-              </div>
+              <div className="flex justify-between text-gray-400"><span>9D</span><span className="text-yellow-400">+1</span></div>
+              <div className="flex justify-between text-gray-400"><span>10D</span><span className="text-yellow-400">+1</span></div>
+              <div className="flex justify-between text-gray-400"><span>14D</span><span className="text-yellow-400">+1</span></div>
+              <div className="flex justify-between text-gray-400"><span>15D</span><span className="text-yellow-400">+1</span></div>
+              <div className="flex justify-between text-gray-400"><span>20D</span><span className="text-yellow-400">+1</span></div>
+              <div className="flex justify-between text-gray-400"><span>21D</span><span className="text-orange-400">+2</span></div>
+              <div className="flex justify-between text-gray-400"><span>30D</span><span className="text-red-400">+3</span></div>
             </div>
           </div>
 
@@ -70,18 +60,10 @@ export default function CryptoTimeConfluencePage() {
           <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
             <h3 className="text-lg font-semibold text-white mb-3">31-90 Day Macro Rotation</h3>
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between text-gray-400">
-                <span>45D</span>
-                <span className="text-orange-400">Momentum expansion</span>
-              </div>
-              <div className="flex justify-between text-gray-400">
-                <span>60D</span>
-                <span className="text-orange-400">2-month reset</span>
-              </div>
-              <div className="flex justify-between text-gray-400">
-                <span>90D</span>
-                <span className="text-red-400">Quarterly close</span>
-              </div>
+              <div className="flex justify-between text-gray-400"><span>45D</span><span className="text-orange-400">+2</span></div>
+              <div className="flex justify-between text-gray-400"><span>60D</span><span className="text-orange-400">+2</span></div>
+              <div className="flex justify-between text-gray-400"><span>72D</span><span className="text-yellow-400">+1</span></div>
+              <div className="flex justify-between text-gray-400"><span>90D</span><span className="text-red-400">+4</span></div>
             </div>
           </div>
 
@@ -89,18 +71,12 @@ export default function CryptoTimeConfluencePage() {
           <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
             <h3 className="text-lg font-semibold text-white mb-3">91-365 Day Institutional</h3>
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between text-gray-400">
-                <span>180D</span>
-                <span className="text-red-400">Half-year pivot</span>
-              </div>
-              <div className="flex justify-between text-gray-400">
-                <span>270D</span>
-                <span className="text-orange-400">Expansion window</span>
-              </div>
-              <div className="flex justify-between text-gray-400">
-                <span>365D</span>
-                <span className="text-red-400">Yearly close</span>
-              </div>
+              <div className="flex justify-between text-gray-400"><span>120D</span><span className="text-orange-400">+2</span></div>
+              <div className="flex justify-between text-gray-400"><span>180D</span><span className="text-red-400">+4</span></div>
+              <div className="flex justify-between text-gray-400"><span>240D</span><span className="text-orange-400">+2</span></div>
+              <div className="flex justify-between text-gray-400"><span>270D</span><span className="text-orange-400">+2</span></div>
+              <div className="flex justify-between text-gray-400"><span>300D</span><span className="text-orange-400">+2</span></div>
+              <div className="flex justify-between text-gray-400"><span>365D</span><span className="text-red-400">+5</span></div>
             </div>
           </div>
         </div>
@@ -128,10 +104,22 @@ export default function CryptoTimeConfluencePage() {
                 <div className="text-gray-400">3D close = <span className="text-yellow-400">+1</span></div>
                 <div className="text-gray-400">5D close = <span className="text-yellow-400">+1</span></div>
                 <div className="text-gray-400">7D close = <span className="text-orange-400">+2</span></div>
+                <div className="text-gray-400">9D close = <span className="text-yellow-400">+1</span></div>
+                <div className="text-gray-400">10D close = <span className="text-yellow-400">+1</span></div>
+                <div className="text-gray-400">14D close = <span className="text-yellow-400">+1</span></div>
+                <div className="text-gray-400">15D close = <span className="text-yellow-400">+1</span></div>
+                <div className="text-gray-400">20D close = <span className="text-yellow-400">+1</span></div>
                 <div className="text-gray-400">21D close = <span className="text-orange-400">+2</span></div>
                 <div className="text-gray-400">30D close = <span className="text-red-400">+3</span></div>
+                <div className="text-gray-400">45D close = <span className="text-orange-400">+2</span></div>
+                <div className="text-gray-400">60D close = <span className="text-orange-400">+2</span></div>
+                <div className="text-gray-400">72D close = <span className="text-yellow-400">+1</span></div>
                 <div className="text-gray-400">90D close = <span className="text-red-400">+4</span></div>
+                <div className="text-gray-400">120D close = <span className="text-orange-400">+2</span></div>
                 <div className="text-gray-400">180D close = <span className="text-red-400">+4</span></div>
+                <div className="text-gray-400">240D close = <span className="text-orange-400">+2</span></div>
+                <div className="text-gray-400">270D close = <span className="text-orange-400">+2</span></div>
+                <div className="text-gray-400">300D close = <span className="text-orange-400">+2</span></div>
                 <div className="text-gray-400">365D close = <span className="text-red-400">+5</span></div>
               </div>
             </div>
