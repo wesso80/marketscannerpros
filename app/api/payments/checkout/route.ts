@@ -1,6 +1,7 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { apiLimiter, getClientIP } from '@/lib/rateLimit';
+import { q } from '@/lib/db';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-09-30.clover",
@@ -13,6 +14,35 @@ const PRICE_IDS = {
   pro_trader_monthly: process.env.STRIPE_PRICE_PRO_TRADER_MONTHLY || "",
   pro_trader_yearly: process.env.STRIPE_PRICE_PRO_TRADER_YEARLY || "",
 };
+
+const REFERRAL_CREDIT_CENTS = parseInt(process.env.REFERRAL_CREDIT_CENTS || '2000', 10);
+const REFERRAL_COUPON_ID = 'referral_20_off';
+
+/** Get or create a reusable $20-off coupon for referral discounts */
+async function getOrCreateReferralCoupon(): Promise<string> {
+  try {
+    const existing = await stripe.coupons.retrieve(REFERRAL_COUPON_ID);
+    return existing.id;
+  } catch {
+    const coupon = await stripe.coupons.create({
+      id: REFERRAL_COUPON_ID,
+      amount_off: REFERRAL_CREDIT_CENTS,
+      currency: 'usd',
+      duration: 'once',
+      name: 'Referral $20 Off',
+    });
+    return coupon.id;
+  }
+}
+
+/** Validate that a referral code exists in the database */
+async function validateReferralCode(code: string): Promise<boolean> {
+  const rows = await q(
+    `SELECT 1 FROM referrals WHERE referral_code = $1 LIMIT 1`,
+    [code.toUpperCase()]
+  );
+  return rows.length > 0;
+}
 
 export async function POST(req: NextRequest) {
   // Rate limit: prevent checkout session spam
@@ -47,8 +77,23 @@ export async function POST(req: NextRequest) {
     // Base URL for redirects - always use Next.js site (not Streamlit)
     const baseUrl = "https://marketscannerpros.app";
 
-    // Create Stripe Checkout Session
-    const session = await stripe.checkout.sessions.create({
+    // If referral code provided, validate it and get coupon
+    let validReferral = false;
+    let couponId: string | undefined;
+    if (referralCode && typeof referralCode === 'string') {
+      try {
+        validReferral = await validateReferralCode(referralCode);
+        if (validReferral) {
+          couponId = await getOrCreateReferralCoupon();
+          console.log(`[Checkout] Valid referral ${referralCode} — applying $${REFERRAL_CREDIT_CENTS / 100} coupon`);
+        }
+      } catch (refErr) {
+        console.error('[Checkout] Referral validation error (continuing without discount):', refErr);
+      }
+    }
+
+    // Build checkout session params
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: "subscription",
       payment_method_types: ["card"],
       line_items: [
@@ -58,27 +103,22 @@ export async function POST(req: NextRequest) {
         },
       ],
       customer_email: email || undefined,
-      allow_promotion_codes: true, // Allows promo codes
+      allow_promotion_codes: !couponId, // Disable promo codes when referral coupon is applied (can't stack)
       success_url: `${baseUrl}/after-checkout?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/pricing`,
       metadata: {
         plan,
         billing: billingPeriod,
-        referralCode: referralCode || undefined, // Track referral for reward
+        referralCode: validReferral ? referralCode : undefined,
       },
-    });
+    };
 
-    // If user has a referral code, record the pending referral
-    if (referralCode && email) {
-      try {
-        // We'll get the actual workspace ID after checkout completes
-        // For now, store the referral code in checkout metadata
-        console.log(`[Checkout] Referral code ${referralCode} attached to checkout for ${email}`);
-      } catch (refError) {
-        console.error('[Checkout] Error recording referral:', refError);
-        // Don't fail checkout if referral tracking fails
-      }
+    // Apply referral coupon as a discount visible on checkout page
+    if (couponId) {
+      sessionParams.discounts = [{ coupon: couponId }];
     }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
     return NextResponse.json({ url: session.url });
   } catch (error) {

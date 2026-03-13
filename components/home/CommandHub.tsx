@@ -256,6 +256,30 @@ export default function CommandHub() {
       {/* ─── Coded Hero ─── */}
       <Hero />
 
+      {/* ─── Referral Promo ─── */}
+      <section className="border-b border-white/5 bg-gradient-to-r from-emerald-950/30 via-slate-950/60 to-emerald-950/30">
+        <div className="mx-auto flex max-w-5xl flex-col items-center gap-2 px-4 py-5 text-center sm:flex-row sm:justify-center sm:gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">🎁</span>
+            <span className="text-sm font-semibold text-emerald-400 sm:text-base">
+              Refer a Friend, Get $20 Off
+            </span>
+          </div>
+          <span className="text-xs text-slate-400 sm:text-sm">
+            Share your link — you both save $20 on your next month.
+          </span>
+          <Link
+            href="/tools/referrals"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-1.5 text-xs font-semibold text-emerald-400 transition-all hover:bg-emerald-500/20 hover:border-emerald-500/50 sm:text-sm"
+          >
+            Learn More
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </Link>
+        </div>
+      </section>
+
       {/* ─── Stats Bar ─── */}
       <SocialProof />
 

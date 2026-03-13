@@ -26,6 +26,7 @@ export async function GET(req: NextRequest) {
     }
 
     const workspaceId = session.workspaceId;
+    const cid = session.cid;
     const referralCode = generateReferralCode(workspaceId);
 
     // ── Bootstrap: ensure all referral tables exist ──
@@ -84,6 +85,14 @@ export async function GET(req: NextRequest) {
         CONSTRAINT unique_contest_entry UNIQUE (workspace_id, contest_period, entry_number)
       );
     `);
+
+    // Ensure workspace row exists (admin logins may not have one)
+    await q(
+      `INSERT INTO workspaces (id, stripe_customer_id, created_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (id) DO NOTHING`,
+      [workspaceId, cid]
+    );
 
     // Ensure referral code row exists
     await q(

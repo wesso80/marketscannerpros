@@ -214,7 +214,7 @@ export default function PricingPage() {
         {/* Referral banner */}
         {referralCode && (
           <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-center text-sm text-emerald-300">
-            🎁 You were referred! Both you and your friend get <strong>$20 credit</strong> when you subscribe.
+            🎁 You were referred! <strong>$20 off</strong> your first month — discount applied automatically at checkout.
           </div>
         )}
 

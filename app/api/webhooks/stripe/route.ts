@@ -27,7 +27,9 @@ function getTierFromPriceId(priceId: string): 'pro' | 'pro_trader' | 'free' {
   return 'free';
 }
 
-// Process referral reward when someone subscribes — $20 Stripe balance credit model
+// Process referral reward when someone subscribes
+// Referee gets $20 off via Stripe coupon at checkout (already applied).
+// Referrer gets $20 Stripe balance credit here.
 const REFERRAL_CREDIT_CENTS = parseInt(process.env.REFERRAL_CREDIT_CENTS || '2000', 10);
 const REFERRAL_MONTHLY_CAP = 20;
 
@@ -47,7 +49,7 @@ async function processReferralReward(workspaceId: string, email: string, stripeC
     }
 
     const referral = referralResult[0];
-    console.log(`[Referral] Found pending referral for ${email}, processing $${REFERRAL_CREDIT_CENTS / 100} credit reward...`);
+    console.log(`[Referral] Found pending referral for ${email}, processing referrer reward...`);
 
     // Anti-abuse: monthly cap per referrer
     const monthlyRewards = await q(
@@ -60,16 +62,12 @@ async function processReferralReward(workspaceId: string, email: string, stripeC
       return;
     }
 
-    // Credit the REFEREE ($20 Stripe customer balance)
-    const refereeTxn = await stripe.customers.createBalanceTransaction(stripeCustomerId, {
-      amount: -REFERRAL_CREDIT_CENTS, // negative = credit
-      currency: 'usd',
-      description: 'Referral welcome credit',
-    });
+    // Referee already received $20 off via checkout coupon — record it as a reward
     await q(
       `INSERT INTO referral_rewards (workspace_id, referral_signup_id, reward_type, credit_amount_cents, stripe_balance_txn_id, applied_at)
-       VALUES ($1, $2, 'credit_20', $3, $4, NOW())`,
-      [workspaceId, referral.id, REFERRAL_CREDIT_CENTS, refereeTxn.id]
+       VALUES ($1, $2, 'coupon_20', $3, 'checkout_coupon', NOW())
+       ON CONFLICT DO NOTHING`,
+      [workspaceId, referral.id, REFERRAL_CREDIT_CENTS]
     );
 
     // Credit the REFERRER — look up their Stripe customer ID
@@ -102,7 +100,7 @@ async function processReferralReward(workspaceId: string, email: string, stripeC
     // Check if referrer earned a contest entry (every 5 referrals)
     await checkContestEntry(referral.referrer_workspace_id);
 
-    console.log(`[Referral] ✅ $${REFERRAL_CREDIT_CENTS / 100} credit applied to both ${email} and referrer`);
+    console.log(`[Referral] ✅ Referee ${email} got coupon at checkout, referrer credited $${REFERRAL_CREDIT_CENTS / 100}`);
 
   } catch (error) {
     console.error('[Referral] Error processing reward:', error);
