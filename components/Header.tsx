@@ -211,6 +211,7 @@ export default function Header() {
           <Dropdown label="Resources" items={resourceItems} align="right" compact={isTerminalMode} />
           <NotificationBell compact={isTerminalMode} />
           <Link href="/pricing" className="hover:text-teal-300 whitespace-nowrap">Pricing</Link>
+          <Link href="/tools/referrals" className="hover:text-teal-300 whitespace-nowrap">Referrals</Link>
           <Link href="/account" className="hover:text-teal-300 whitespace-nowrap">Account</Link>
           {tierLoading ? null : isLoggedIn ? (
             <>
@@ -267,6 +268,7 @@ export default function Header() {
 
               <div className="mt-3 pt-3 border-t border-slate-700">
                 <Link href="/pricing" className="flex items-center gap-3 px-4 py-3 text-white hover:bg-teal-500/10 hover:text-teal-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>💰 Pricing</Link>
+                <Link href="/tools/referrals" className="flex items-center gap-3 px-4 py-3 text-white hover:bg-teal-500/10 hover:text-teal-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>🎁 Referrals</Link>
                 <Link href="/account" className="flex items-center gap-3 px-4 py-3 text-white hover:bg-teal-500/10 hover:text-teal-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>👤 Account</Link>
               </div>
               

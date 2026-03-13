@@ -49,7 +49,12 @@ export default function ReferralsPage() {
   const fetchDashboard = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       const res = await fetch('/api/referral/dashboard');
+      if (res.status === 401) {
+        setError('sign-in');
+        return;
+      }
       if (!res.ok) throw new Error('Failed to load');
       const json = await res.json();
       setData(json);
@@ -61,8 +66,8 @@ export default function ReferralsPage() {
   }, []);
 
   useEffect(() => {
-    if (isLoggedIn) fetchDashboard();
-  }, [isLoggedIn, fetchDashboard]);
+    if (!tierLoading) fetchDashboard();
+  }, [tierLoading, fetchDashboard]);
 
   const copyLink = () => {
     if (!data) return;
@@ -75,22 +80,6 @@ export default function ReferralsPage() {
     return (
       <div className="min-h-screen bg-[var(--msp-bg)] flex items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
-      </div>
-    );
-  }
-
-  if (!isLoggedIn) {
-    return (
-      <div className="min-h-screen bg-[var(--msp-bg)] text-white flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-lg mb-4">Sign in to access your referral dashboard</p>
-          <Link
-            href="/auth"
-            className="rounded-xl border border-emerald-400/30 bg-emerald-500/20 px-5 py-3 text-sm font-semibold hover:bg-emerald-500/30"
-          >
-            Sign In
-          </Link>
-        </div>
       </div>
     );
   }
@@ -109,6 +98,16 @@ export default function ReferralsPage() {
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+          </div>
+        ) : error === 'sign-in' ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <p className="text-lg text-white mb-4">Sign in to access your referral dashboard</p>
+            <Link
+              href="/auth"
+              className="rounded-xl border border-emerald-400/30 bg-emerald-500/20 px-5 py-3 text-sm font-semibold text-emerald-400 hover:bg-emerald-500/30"
+            >
+              Sign In
+            </Link>
           </div>
         ) : error ? (
           <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-6 text-center text-red-400">
