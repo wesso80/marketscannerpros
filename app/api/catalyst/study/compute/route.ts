@@ -13,7 +13,7 @@
  *  - Overnight (limit=50): After market close, bulk backfill
  *
  * Rate-limit aware: 850ms delay between studies keeps us well
- * within Alpha Vantage Premium 75 calls/min limit. Each TICKER
+ * within Alpha Vantage 600 calls/min contract limit. Each TICKER
  * cohort study uses ~2 AV calls (daily cached per ticker +
  * intraday per event). MARKET cohort studies are skipped during
  * regular runs (deferred to overnight).

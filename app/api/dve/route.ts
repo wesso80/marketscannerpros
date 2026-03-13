@@ -86,6 +86,9 @@ export async function GET(request: NextRequest) {
     let optsData = null;
     if (assetClass === 'equity') {
       optsData = await fetchOptionsSnapshot(symbol, priceData.price);
+      if (!optsData) {
+        console.warn(`[DVE] ${symbol} — options data unavailable (REALTIME_OPTIONS_FMV returned null)`);
+      }
     }
 
     // 8. Fetch time data
@@ -125,6 +128,8 @@ export async function GET(request: NextRequest) {
     // 10. Assemble DVEInput
     const stochK = indData?.stochK ?? null;
     const stochD = indData?.stochD ?? null;
+
+    console.log(`[DVE] ${symbol} — closes: ${priceData.historicalCloses.length}, vol: ${priceData.volume}, avgVol: ${priceData.avgVolume}, options: ${optsData ? 'YES' : 'NO'}, gamma: ${optsData?.dealerGamma ?? 'N/A'}`);
 
     const dveInput: DVEInput = {
       price: {

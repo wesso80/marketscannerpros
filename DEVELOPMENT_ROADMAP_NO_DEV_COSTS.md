@@ -193,7 +193,7 @@ As features are added, prices increase to reflect value. Existing subscribers lo
 | Service | Monthly Cost | Notes |
 |---------|-------------|-------|
 | Vercel Pro | $20 | Hosting, serverless |
-| Alpha Vantage Premium | $49.99 | 75 RPM market data |
+| Alpha Vantage Premium | $375/mo | 600 RPM market data (contract) |
 | OpenAI API | ~$100 | gpt-4o-mini, scales with users |
 | **Total** | **~$170** | At current user base |
 

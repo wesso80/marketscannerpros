@@ -51,7 +51,7 @@ This document provides a comprehensive financial analysis of MarketScanner Pros 
 | Service | Plan | Monthly Cost | Annual Cost | Notes |
 |---------|------|-------------|-------------|-------|
 | **Vercel Hosting** | Pro | $20 | $240 | Includes serverless functions, edge |
-| **Alpha Vantage** | Premium (75 RPM) | $49.99 | $599.88 | Real-time market data |
+| **Alpha Vantage** | Premium (600 RPM contract) | $375/mo | $4,500 | Real-time market data |
 | **OpenAI API** | Pay-as-you-go | ~$50-150 | ~$600-1,800 | Variable based on usage |
 | **Vercel Postgres** | Included | $0 | $0 | With Pro plan |
 | **Domain** | marketscannerpros.app | ~$15/yr | $15 | Google Domains |

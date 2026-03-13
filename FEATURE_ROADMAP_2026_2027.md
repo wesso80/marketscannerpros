@@ -57,7 +57,7 @@
 |---------|-------------|---------|
 | Render | $7-25 | Hosting (web service) |
 | Neon Postgres | $0-19 | Database (free tier → Scale) |
-| Alpha Vantage Premium | $49.99 | Market data (75 RPM) |
+| Alpha Vantage Premium | $375/mo | Market data (600 RPM contract) |
 | OpenAI API (gpt-4o-mini) | ~$18-100 | AI features (scales with users) |
 | **Current Total** | **~$75-195** | At 50-270 users |
 

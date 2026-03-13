@@ -346,14 +346,17 @@ export function computeDirectionalPressure(input: DVEInput): DirectionalPressure
   }
   optScore = clamp(optScore, -DIRECTION_WEIGHTS.optionsFlow.max, DIRECTION_WEIGHTS.optionsFlow.max);
 
-  // Volume Expansion (-10 to +10)
+  // Volume Expansion (-10 to +10) — continuous scale
   let volScore = 0;
   if (input.price.volume != null && input.price.avgVolume != null && input.price.avgVolume > 0) {
     const volRatio = input.price.volume / input.price.avgVolume;
-    if (volRatio > 1.5) {
-      volScore = input.price.changePct > 0 ? 10 : input.price.changePct < 0 ? -10 : 0;
-      if (volScore !== 0) details.push(`Volume ${volRatio.toFixed(1)}x avg (${volScore > 0 ? '+' : ''}${volScore})`);
+    // Continuous scoring: 0.5x→0, 1x→3, 1.5x→6, 2x→10 (clamped)
+    const rawMag = Math.min(10, Math.round(Math.max(0, (volRatio - 0.5)) * 10 / 1.5));
+    if (rawMag > 0) {
+      volScore = input.price.changePct > 0 ? rawMag : input.price.changePct < 0 ? -rawMag : 0;
     }
+    if (volScore !== 0) details.push(`Volume ${volRatio.toFixed(1)}x avg (${volScore > 0 ? '+' : ''}${volScore})`);
+    if (volScore === 0 && volRatio < 0.5) details.push(`Volume thin ${volRatio.toFixed(1)}x avg`);
   }
   volScore = clamp(volScore, -DIRECTION_WEIGHTS.volumeExpansion.max, DIRECTION_WEIGHTS.volumeExpansion.max);
 

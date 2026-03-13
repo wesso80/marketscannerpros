@@ -91,9 +91,10 @@ export async function fetchPrice(
       const coinId = await resolveSymbolToId(symbol);
       if (!coinId) return null;
 
+      const ohlcDays = opts?.requireHistoricals ? 365 : 90;
       const [detail, ohlc] = await Promise.all([
         getCoinDetail(coinId),
-        getOHLC(coinId, 90),   // 90 days of daily OHLC candles
+        getOHLC(coinId, ohlcDays as 90 | 365),
       ]);
 
       const md = detail?.market_data;
@@ -133,7 +134,7 @@ export async function fetchPrice(
       };
     }
 
-    const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${encodeURIComponent(symbol)}&apikey=${AV_KEY}`;
+    const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${encodeURIComponent(symbol)}&outputsize=${opts?.requireHistoricals ? 'full' : 'compact'}&apikey=${AV_KEY}`;
     const data = await avFetch<Record<string, any>>(url, `DAILY ${symbol}`);
     if (!data) {
       // Fallback to cached price when AV unavailable
@@ -152,7 +153,7 @@ export async function fetchPrice(
     const tsKey = Object.keys(data).find(k => k.includes('Time Series'));
     if (!tsKey) return null;
     const ts = data[tsKey];
-    const dates = Object.keys(ts).sort().reverse();
+    const dates = Object.keys(ts).sort().reverse(); // newest first
     const latest = ts[dates[0]];
     const prev = ts[dates[1]];
     const price = parseFloat(latest['4. close']);
@@ -161,6 +162,9 @@ export async function fetchPrice(
     const latestVol = parseFloat(latest['6. volume'] || latest['5. volume'] || '0');
     const dailyVols = dates.slice(0, 20).map(d => parseFloat(ts[d]['6. volume'] || ts[d]['5. volume'] || '0'));
     const avgVol = dailyVols.length > 0 ? dailyVols.reduce((a, b) => a + b, 0) / dailyVols.length : undefined;
+    // DVE needs 252+ bars oldest-first for BBWP; take up to 300 when historicals required
+    const histLen = opts?.requireHistoricals ? 300 : 50;
+    const histDates = dates.slice(0, histLen).reverse(); // oldest-first
     return {
       price,
       change: price - prevClose,
@@ -169,9 +173,9 @@ export async function fetchPrice(
       low: parseFloat(latest['3. low']),
       volume: latestVol,
       avgVolume: avgVol,
-      historicalCloses: dates.slice(0, 50).map(d => parseFloat(ts[d]['4. close'])),
-      historicalHighs: dates.slice(0, 50).map(d => parseFloat(ts[d]['2. high'])),
-      historicalLows: dates.slice(0, 50).map(d => parseFloat(ts[d]['3. low'])),
+      historicalCloses: histDates.map(d => parseFloat(ts[d]['4. close'])),
+      historicalHighs: histDates.map(d => parseFloat(ts[d]['2. high'])),
+      historicalLows: histDates.map(d => parseFloat(ts[d]['3. low'])),
     };
   } catch { return null; }
 }
@@ -286,10 +290,10 @@ export async function fetchIndicators(
 export async function fetchOptionsSnapshot(symbol: string, price: number): Promise<OptionsSnapshot | null> {
   if (!AV_KEY) return null;
   try {
-    const realtimeUrl = `https://www.alphavantage.co/query?function=REALTIME_OPTIONS_FMV&symbol=${encodeURIComponent(symbol)}&apikey=${AV_KEY}`;
+    const realtimeUrl = `https://www.alphavantage.co/query?function=REALTIME_OPTIONS_FMV&symbol=${encodeURIComponent(symbol)}&require_greeks=true&apikey=${AV_KEY}`;
     let optData = await avFetch<any>(realtimeUrl, `OPTIONS_FMV ${symbol}`);
     if (!optData?.data?.length) {
-      const histUrl = `https://www.alphavantage.co/query?function=HISTORICAL_OPTIONS&symbol=${encodeURIComponent(symbol)}&apikey=${AV_KEY}`;
+      const histUrl = `https://www.alphavantage.co/query?function=HISTORICAL_OPTIONS&symbol=${encodeURIComponent(symbol)}&require_greeks=true&apikey=${AV_KEY}`;
       optData = await avFetch<any>(histUrl, `HISTORICAL_OPTIONS ${symbol}`);
     }
     const rawData = optData?.data;

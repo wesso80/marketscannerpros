@@ -1,7 +1,7 @@
 # Alpha Vantage API Audit - Premium Plan Verification
 
 **Date:** December 17, 2025  
-**Plan Status:** Premium (75 calls/minute)  
+**Plan Status:** Premium (600 calls/minute — contract, no monthly limits)  
 **Audit Result:** ✅ MOSTLY COMPLIANT with minor optimizations available
 
 ---
@@ -19,7 +19,7 @@ Your Alpha Vantage API implementation is **correctly configured for premium** us
 - **Function:** `get_ohlcv_alpha_vantage()` when timeframe = "1D"
 - **Premium Benefit:** `outputsize=full` parameter enabled (20+ years historical data)
 - **Status:** ✅ Properly configured
-- **Rate Limit:** 75 calls/min shared pool
+- **Rate Limit:** 600 calls/min shared pool
 
 ```python
 function_map = {
@@ -37,7 +37,7 @@ params = {
 - **Supported Intervals:** 1min, 5min, 15min, 30min, 60min ✅
 - **Premium Benefit:** Real-time/15-min delayed data for US market
 - **Status:** ✅ Properly configured
-- **Rate Limit:** 75 calls/min
+- **Rate Limit:** 600 calls/min
 
 ```python
 interval_map = {
@@ -54,7 +54,7 @@ interval_map = {
 - **Function:** `get_current_price()` - real-time stock quotes
 - **Premium Benefit:** Real-time prices (not end-of-day)
 - **Status:** ✅ Properly configured
-- **Rate Limit:** 75 calls/min
+- **Rate Limit:** 600 calls/min
 
 **Current Implementation:**
 ```python
@@ -68,9 +68,8 @@ params = {
 ### 4. **REALTIME_OPTIONS** ⚠️ MISSING CRITICAL PARAMS
 - **Location:** [app.py line 7165](app.py#L7165)
 - **Function:** Options chain data
-- **Premium Tier Required:** 600 RPM or 1200 RPM plan
-- **Status:** ⚠️ Missing `require_greeks` parameter
-- **Rate Limit:** Separate premium tier
+- **Status:** ✅ Available on 600 RPM plan (REALTIME_OPTIONS_FMV)
+- **Rate Limit:** 600 calls/min
 
 **Current Implementation (Line 7165):**
 ```python
@@ -100,7 +99,7 @@ params = {
 
 | Feature | Used? | Status | Notes |
 |---------|-------|--------|-------|
-| **75 calls/min** | ✅ Yes | ✅ Enabled | Shared across all endpoints |
+| **600 calls/min** | ✅ Yes | ✅ Enabled | Shared across all endpoints, no monthly cap |
 | **TIME_SERIES_DAILY outputsize=full** | ✅ Yes | ✅ Enabled | 20+ years data access |
 | **TIME_SERIES_INTRADAY** | ✅ Yes | ✅ Enabled | 1-60min intervals |
 | **REALTIME_INTRADAY DATA** | ✅ Yes | ✅ Enabled | Real-time US market bars (Premium) |
@@ -181,15 +180,15 @@ params["adjusted"] = "true"  # or "false" for raw (as-traded) data
 
 ## Premium Plan Rate Limits Verification
 
-### Current Rate Limit: 75 calls/minute
+### Current Rate Limit: 600 calls/minute (contract — no monthly limits)
 All your API calls share this single rate limit pool:
 
 ```
-TIME_SERIES_DAILY        ✅ Counts against 75/min
-TIME_SERIES_INTRADAY     ✅ Counts against 75/min  
-GLOBAL_QUOTE             ✅ Counts against 75/min
-CURRENCY_EXCHANGE_RATE   ✅ Counts against 75/min
-REALTIME_OPTIONS         ✅ Counts against 75/min
+TIME_SERIES_DAILY        ✅ Counts against 600/min
+TIME_SERIES_INTRADAY     ✅ Counts against 600/min  
+GLOBAL_QUOTE             ✅ Counts against 600/min
+CURRENCY_EXCHANGE_RATE   ✅ Counts against 600/min
+REALTIME_OPTIONS_FMV     ✅ Counts against 600/min
 ```
 
 **Cache Recommendation:** You have `@st.cache_data(ttl=300)` on `scan_universe()` - Good practice to avoid hitting rate limits during rapid rescans.
@@ -289,7 +288,7 @@ if function == "TIME_SERIES_INTRADAY":
 - Historical data access (20+ years with `outputsize=full`)
 - Real-time intraday bars (1-60 minute intervals)
 - Real-time stock quotes (GLOBAL_QUOTE)
-- 75 calls/minute rate limit
+- 600 calls/minute rate limit (no monthly cap)
 
 ⚠️ **One minor improvement needed:** Add `require_greeks=true` parameter to REALTIME_OPTIONS calls
 
