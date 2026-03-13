@@ -172,7 +172,6 @@ export default function Header() {
     { href: '/tools/crypto-explorer', label: 'Crypto Explorer', icon: '🔍' },
     { href: '/tools/crypto-heatmap', label: 'Crypto Heatmap', icon: '🪙' },
     { href: '/tools/crypto-dashboard', label: 'Crypto Derivatives', icon: '📊' },
-    { href: '/tools/crypto-time-confluence', label: 'Crypto Time Confluence', icon: '🔮' },
     { href: '/tools/crypto-terminal', label: 'Crypto Terminal', icon: '💹' },
     { href: '/tools/options-terminal', label: 'Options Terminal', icon: '📋', section: 'Macro & Options' },
     { href: '/tools/macro', label: 'Macro Dashboard', icon: '🏛️' },
