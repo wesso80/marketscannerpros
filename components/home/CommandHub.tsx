@@ -201,23 +201,30 @@ function SmallTile({
     >
       {/* Image thumbnail */}
       <div className="relative h-36 w-full overflow-hidden bg-slate-950/50">
-        <img
-          src={image || ''}
-          alt={title}
-          className="h-full w-full object-contain object-center p-1 transition-transform duration-300 group-hover:scale-105"
-          onError={(e) => {
-            // Hide broken image and show emoji fallback
-            (e.target as HTMLImageElement).style.display = 'none';
-            const fallback = (e.target as HTMLImageElement).nextElementSibling;
-            if (fallback) (fallback as HTMLElement).style.display = 'flex';
-          }}
-        />
-        <div
-          className="absolute inset-0 items-center justify-center text-3xl"
-          style={{ display: 'none' }}
-        >
-          {icon}
-        </div>
+        {image ? (
+          <>
+            <img
+              src={image}
+              alt={title}
+              className="h-full w-full object-contain object-center p-1 transition-transform duration-300 group-hover:scale-105"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+                const fallback = (e.target as HTMLImageElement).nextElementSibling;
+                if (fallback) (fallback as HTMLElement).style.display = 'flex';
+              }}
+            />
+            <div
+              className="absolute inset-0 items-center justify-center text-3xl"
+              style={{ display: 'none' }}
+            >
+              {icon}
+            </div>
+          </>
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center text-4xl">
+            {icon}
+          </div>
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent" />
       </div>
       {/* Content */}
