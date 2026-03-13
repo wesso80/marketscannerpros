@@ -115,6 +115,7 @@ const toolSections = [
       { href: '/tools/journal', icon: '📓', image: '/assets/platform-tools/trade-journal.png', title: 'Trade Journal', description: 'Log, review, and learn from every trade.' },
       { href: '/tools/alerts', icon: '🔔', image: '/assets/platform-tools/alerts.png', title: 'Alerts', description: 'Custom triggers and notification management.' },
       { href: '/tools/watchlists', icon: '👁️', image: '/assets/platform-tools/watchlists.png', title: 'Watchlists', description: 'Track symbols across your workspace.' },
+      { href: '/tools/referrals', icon: '🎁', title: 'Refer & Earn', description: 'Share your link, earn $20 credit per referral, enter the $500 monthly draw.' },
     ],
   },
   {
