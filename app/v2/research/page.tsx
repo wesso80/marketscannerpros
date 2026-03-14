@@ -1,97 +1,194 @@
-'use client';
+﻿'use client';
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   SURFACE 6: RESEARCH — Actionable Information Layer
-   News, Economic Calendar, Earnings, Themes.
-   Replaces: v1 News + Economic Calendar pages
+   SURFACE 6: RESEARCH — Information Layer
+   Real API data: /api/news-sentiment + /api/economic-calendar + /api/earnings
    ═══════════════════════════════════════════════════════════════════════════ */
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useV2 } from '../_lib/V2Context';
-import { Card, SectionHeader, TabBar, ImpactDot, EmptyState } from '../_components/ui';
+import { useNews, useEconomicCalendar, useEarningsCalendar, type NewsArticle, type EconomicEvent, type EarningsEntry } from '../_lib/api';
+import { Card, SectionHeader, Badge, ImpactDot } from '../_components/ui';
+
+function Skel({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
+  return <div className={`${h} ${w} bg-slate-700/50 rounded animate-pulse`} />;
+}
+function SkeletonRows({ n = 6 }: { n?: number }) {
+  return <div className="space-y-3">{Array.from({ length: n }).map((_, i) => <Skel key={i} h="h-6" />)}</div>;
+}
+
+const TABS = ['News', 'Economic Calendar', 'Earnings'] as const;
 
 export default function ResearchPage() {
-  const { news, calendar, navigateTo, selectSymbol } = useV2();
-  const [tab, setTab] = useState('News');
-  const tabs = ['News', 'Economic Calendar', 'Earnings', 'Themes'];
+  const { navigateTo, selectSymbol } = useV2();
+  const [tab, setTab] = useState<typeof TABS[number]>('News');
+  const [calFilter, setCalFilter] = useState<string>('all');
+
+  const news = useNews();
+  const calendar = useEconomicCalendar();
+  const earnings = useEarningsCalendar();
+
+  const articles = news.data?.articles || [];
+  const events = useMemo(() => {
+    const all = calendar.data?.events || [];
+    if (calFilter === 'all') return all;
+    return all.filter(e => e.impact === calFilter);
+  }, [calendar.data, calFilter]);
+
+  const thisWeek = earnings.data?.thisWeek || [];
+  const nextWeek = earnings.data?.nextWeek || [];
+  const majorEarnings = earnings.data?.majorEarnings || [];
 
   return (
     <div className="space-y-4">
-      <SectionHeader title="Research" subtitle="Actionable information layer" />
-      <TabBar tabs={tabs} active={tab} onChange={setTab} />
+      <SectionHeader title="Research" subtitle="News, events & catalysts — live data" />
 
+      {/* Tabs */}
+      <div className="flex items-center gap-1">
+        {TABS.map(t => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-3 py-1.5 text-xs rounded-lg whitespace-nowrap transition-colors ${tab === t ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-transparent'}`}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {/* ── NEWS ───────────────────────────────────────────────────── */}
       {tab === 'News' && (
-        <div className="space-y-2">
-          {news.map(n => (
-            <Card key={n.id} className="!p-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <ImpactDot impact={n.impact} />
-                    <span className="text-[10px] text-slate-500 uppercase">{n.category}</span>
-                    <span className="text-[10px] text-slate-600">{n.source}</span>
-                  </div>
-                  <div className="text-sm text-white font-medium">{n.title}</div>
-                  <div className="flex gap-2 mt-2">
-                    {n.symbols.map(sym => (
-                      <button
-                        key={sym}
-                        onClick={() => { selectSymbol(sym); navigateTo('golden-egg', sym); }}
-                        className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
-                      >
-                        {sym}
-                      </button>
-                    ))}
+        <Card>
+          {news.loading ? <SkeletonRows n={8} /> : articles.length === 0 ? (
+            <div className="text-xs text-slate-500 py-8 text-center">No news available</div>
+          ) : (
+            <div className="space-y-3">
+              {articles.map((n: NewsArticle, i: number) => (
+                <div key={i} className="py-2 border-b border-slate-800/30 last:border-0">
+                  <div className="flex items-start gap-2">
+                    <ImpactDot impact={n.sentiment.score > 0.2 ? 'high' : n.sentiment.score > 0 ? 'medium' : 'low'} />
+                    <div className="flex-1 min-w-0">
+                      <a href={n.url} target="_blank" rel="noopener noreferrer" className="text-sm text-white hover:text-emerald-400 transition-colors leading-snug">
+                        {n.title}
+                      </a>
+                      <div className="text-[10px] text-slate-500 mt-1 line-clamp-2">{n.summary}</div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[10px] text-slate-600">{n.source}</span>
+                        <span className={`text-[10px] ${n.sentiment.score > 0 ? 'text-emerald-400' : n.sentiment.score < 0 ? 'text-red-400' : 'text-slate-500'}`}>
+                          {n.sentiment.label}
+                        </span>
+                        {n.tickerSentiments?.slice(0, 4).map(ts => (
+                          <span key={ts.ticker} className="text-[10px] text-emerald-400 cursor-pointer hover:underline" onClick={() => { selectSymbol(ts.ticker); navigateTo('golden-egg', ts.ticker); }}>
+                            {ts.ticker}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <span className="text-[10px] text-slate-600 whitespace-nowrap flex-shrink-0">{n.time}</span>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {tab === 'Economic Calendar' && (
-        <Card className="!p-0">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b border-slate-700/50">
-                <th className="text-left px-4 py-3 text-[10px] uppercase text-slate-500">Event</th>
-                <th className="text-center px-2 py-3 text-[10px] uppercase text-slate-500">Date</th>
-                <th className="text-center px-2 py-3 text-[10px] uppercase text-slate-500">Time</th>
-                <th className="text-center px-2 py-3 text-[10px] uppercase text-slate-500">Impact</th>
-                <th className="text-center px-2 py-3 text-[10px] uppercase text-slate-500">Forecast</th>
-                <th className="text-center px-2 py-3 text-[10px] uppercase text-slate-500">Previous</th>
-              </tr>
-            </thead>
-            <tbody>
-              {calendar.map(e => (
-                <tr key={e.id} className="border-b border-slate-800/30">
-                  <td className="px-4 py-3">
-                    <div className="text-white">{e.title}</div>
-                    <div className="text-[10px] text-slate-500">{e.category}</div>
-                  </td>
-                  <td className="text-center px-2 text-slate-400">{e.date}</td>
-                  <td className="text-center px-2 text-slate-400">{e.time}</td>
-                  <td className="text-center px-2"><ImpactDot impact={e.impact} /><span className="text-slate-400 capitalize">{e.impact}</span></td>
-                  <td className="text-center px-2 text-white font-medium">{e.forecast}</td>
-                  <td className="text-center px-2 text-slate-500">{e.previous}</td>
-                </tr>
               ))}
-            </tbody>
-          </table>
+            </div>
+          )}
+          {news.error && <div className="text-[10px] text-red-400/60 mt-2">Error: {news.error}</div>}
         </Card>
       )}
 
+      {/* ── ECONOMIC CALENDAR ──────────────────────────────────────── */}
+      {tab === 'Economic Calendar' && (
+        <Card>
+          <div className="flex items-center gap-2 mb-3">
+            {['all', 'high', 'medium', 'low'].map(f => (
+              <button key={f} onClick={() => setCalFilter(f)} className={`px-2 py-1 text-[10px] rounded ${calFilter === f ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-500 hover:text-slate-300'}`}>
+                {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)} Impact
+                {f === 'all' ? ` (${(calendar.data?.events || []).length})` : ` (${(calendar.data?.events || []).filter(e => e.impact === f).length})`}
+              </button>
+            ))}
+          </div>
+
+          {calendar.loading ? <SkeletonRows n={8} /> : events.length === 0 ? (
+            <div className="text-xs text-slate-500 py-8 text-center">No events found</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-slate-700/50">
+                    <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Date</th>
+                    <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Time</th>
+                    <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Impact</th>
+                    <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Event</th>
+                    <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Forecast</th>
+                    <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Previous</th>
+                    <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Actual</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {events.map((e: EconomicEvent, i: number) => (
+                    <tr key={i} className="border-b border-slate-800/30 hover:bg-slate-800/20">
+                      <td className="py-2 px-2 text-slate-300">{e.date}</td>
+                      <td className="py-2 px-2 text-slate-400">{e.time || '—'}</td>
+                      <td className="py-2 px-2"><ImpactDot impact={e.impact as 'high' | 'medium' | 'low'} />{e.impact}</td>
+                      <td className="py-2 px-2 text-white font-medium">{e.event}</td>
+                      <td className="py-2 px-2 text-slate-400">{e.forecast || '—'}</td>
+                      <td className="py-2 px-2 text-slate-400">{e.previous || '—'}</td>
+                      <td className="py-2 px-2 text-white font-semibold">{e.actual || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {calendar.data?.nextMajorEvent && (
+            <div className="mt-3 pt-2 border-t border-slate-800/40 text-xs text-slate-500">
+              Next major event: <span className="text-white">{calendar.data.nextMajorEvent.event}</span> in {calendar.data.daysUntilMajor} day(s)
+            </div>
+          )}
+          {calendar.error && <div className="text-[10px] text-red-400/60 mt-2">Error: {calendar.error}</div>}
+        </Card>
+      )}
+
+      {/* ── EARNINGS ───────────────────────────────────────────────── */}
       {tab === 'Earnings' && (
         <Card>
-          <EmptyState message="Earnings calendar — coming in v3" icon="📅" />
-        </Card>
-      )}
-
-      {tab === 'Themes' && (
-        <Card>
-          <EmptyState message="Market themes & AI summaries — coming in v3" icon="🎯" />
+          {earnings.loading ? <SkeletonRows n={8} /> : (
+            <div className="space-y-4">
+              {[
+                { label: 'This Week', items: thisWeek },
+                { label: 'Next Week', items: nextWeek },
+                { label: 'Major Earnings', items: majorEarnings },
+              ].map(group => (
+                <div key={group.label}>
+                  <div className="text-[10px] text-slate-500 uppercase mb-2">{group.label} ({group.items.length})</div>
+                  {group.items.length === 0 ? (
+                    <div className="text-[10px] text-slate-600 py-2">None</div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b border-slate-700/50">
+                            <th className="text-left py-1.5 px-2 text-[10px] uppercase text-slate-500">Symbol</th>
+                            <th className="text-left py-1.5 px-2 text-[10px] uppercase text-slate-500">Company</th>
+                            <th className="text-left py-1.5 px-2 text-[10px] uppercase text-slate-500">Report Date</th>
+                            <th className="text-left py-1.5 px-2 text-[10px] uppercase text-slate-500">Estimate</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {group.items.map((e: EarningsEntry, i: number) => (
+                            <tr key={i} className="border-b border-slate-800/30 hover:bg-slate-800/20 cursor-pointer" onClick={() => { selectSymbol(e.symbol); navigateTo('golden-egg', e.symbol); }}>
+                              <td className="py-1.5 px-2 text-emerald-400 font-semibold">{e.symbol}</td>
+                              <td className="py-1.5 px-2 text-white">{e.name}</td>
+                              <td className="py-1.5 px-2 text-slate-400">{e.reportDate}</td>
+                              <td className="py-1.5 px-2 text-slate-300">{e.estimate != null ? `$${e.estimate.toFixed(2)}` : '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {earnings.error && <div className="text-[10px] text-red-400/60 mt-2">Error: {earnings.error}</div>}
         </Card>
       )}
     </div>

@@ -1,134 +1,211 @@
-'use client';
+﻿'use client';
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   SURFACE 2: SCANNER — Regime-Aware Ranked Opportunity Engine
-   Replaces: v1 Scanner + Confluence Scanner + Time Scanner + Market Movers
+   SURFACE 2: SCANNER — Ranked Opportunity Engine
+   Real API data: /api/scanner/run for equities + crypto
    ═══════════════════════════════════════════════════════════════════════════ */
 
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useV2 } from '../_lib/V2Context';
-import { REGIME_COLORS, VERDICT_COLORS, LIFECYCLE_COLORS, VOL_COLORS, REGIME_WEIGHTS } from '../_lib/constants';
-import { Card, SectionHeader, Badge, TabBar, EmptyState } from '../_components/ui';
+import { useScannerResults, type ScanResult } from '../_lib/api';
+import { Card, SectionHeader, Badge } from '../_components/ui';
+
+const TABS = ['All', 'Equities', 'Crypto', 'Bullish', 'Bearish', 'High Score', 'DVE Signals'] as const;
+
+function dirColor(d?: string) {
+  if (d === 'bullish') return '#10B981';
+  if (d === 'bearish') return '#EF4444';
+  return '#94A3B8';
+}
+
+type SortKey = 'symbol' | 'score' | 'direction' | 'confidence' | 'rsi' | 'price' | 'dveBbwp';
+type SortDir = 'asc' | 'desc';
 
 export default function ScannerPage() {
-  const { data, navigateTo, selectSymbol } = useV2();
-  const [tab, setTab] = useState('All Markets');
-  const [sortField, setSortField] = useState<'mspScore' | 'confluenceScore' | 'confidence' | 'timeAlignment'>('mspScore');
-  const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
+  const { navigateTo, selectSymbol } = useV2();
+  const equity = useScannerResults('equity');
+  const crypto = useScannerResults('crypto');
 
-  const tabs = ['All Markets', 'Equities', 'Crypto', 'Commodities', 'Indices', 'Highest Confluence', 'Vol Expansions', 'Trade Ready'];
+  const [activeTab, setActiveTab] = useState<typeof TABS[number]>('All');
+  const [sortKey, setSortKey] = useState<SortKey>('score');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
+
+  const allResults: ScanResult[] = useMemo(() => {
+    const eq = (equity.data?.results || []).map(r => ({ ...r, _assetClass: 'equity' as const }));
+    const cr = (crypto.data?.results || []).map(r => ({ ...r, _assetClass: 'crypto' as const }));
+    return [...eq, ...cr];
+  }, [equity.data, crypto.data]);
 
   const filtered = useMemo(() => {
-    let items = [...data];
-    switch (tab) {
-      case 'Equities': items = items.filter(i => i.assetClass === 'equity'); break;
-      case 'Crypto': items = items.filter(i => i.assetClass === 'crypto'); break;
-      case 'Commodities': items = items.filter(i => i.assetClass === 'commodity'); break;
-      case 'Indices': items = items.filter(i => i.assetClass === 'index'); break;
-      case 'Highest Confluence': items = items.filter(i => i.confluenceScore > 75); break;
-      case 'Vol Expansions': items = items.filter(i => i.volatilityState.regime === 'expansion' || i.volatilityState.regime === 'climax'); break;
-      case 'Trade Ready': items = items.filter(i => i.verdict === 'TRADE'); break;
+    let items = allResults;
+    switch (activeTab) {
+      case 'Equities': items = items.filter(r => (r as any)._assetClass === 'equity'); break;
+      case 'Crypto': items = items.filter(r => (r as any)._assetClass === 'crypto'); break;
+      case 'Bullish': items = items.filter(r => r.direction === 'bullish'); break;
+      case 'Bearish': items = items.filter(r => r.direction === 'bearish'); break;
+      case 'High Score': items = items.filter(r => Math.abs(r.score) >= 5); break;
+      case 'DVE Signals': items = items.filter(r => r.dveSignalType && r.dveSignalType !== 'none'); break;
     }
-    items.sort((a, b) => sortDir === 'desc' ? b[sortField] - a[sortField] : a[sortField] - b[sortField]);
+    items.sort((a, b) => {
+      let av: any, bv: any;
+      switch (sortKey) {
+        case 'symbol': av = a.symbol; bv = b.symbol; break;
+        case 'score': av = a.score ?? 0; bv = b.score ?? 0; break;
+        case 'direction': av = a.direction ?? ''; bv = b.direction ?? ''; break;
+        case 'confidence': av = a.confidence ?? 0; bv = b.confidence ?? 0; break;
+        case 'rsi': av = a.rsi ?? 0; bv = b.rsi ?? 0; break;
+        case 'price': av = a.price ?? 0; bv = b.price ?? 0; break;
+        case 'dveBbwp': av = a.dveBbwp ?? 0; bv = b.dveBbwp ?? 0; break;
+        default: av = 0; bv = 0;
+      }
+      if (typeof av === 'string') return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+      return sortDir === 'asc' ? av - bv : bv - av;
+    });
     return items;
-  }, [data, tab, sortField, sortDir]);
+  }, [allResults, activeTab, sortKey, sortDir]);
 
-  const toggleSort = (field: typeof sortField) => {
-    if (sortField === field) setSortDir(d => d === 'desc' ? 'asc' : 'desc');
-    else { setSortField(field); setSortDir('desc'); }
-  };
+  const loading = equity.loading || crypto.loading;
 
-  const SortHeader = ({ field, label }: { field: typeof sortField; label: string }) => (
-    <button
-      onClick={() => toggleSort(field)}
-      className={`text-[10px] uppercase tracking-wider ${sortField === field ? 'text-emerald-400' : 'text-slate-500'} hover:text-slate-300 transition-colors`}
-    >
-      {label} {sortField === field && (sortDir === 'desc' ? '↓' : '↑')}
-    </button>
-  );
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortKey(key); setSortDir('desc'); }
+  }
+
+  function SortHeader({ k, label, w }: { k: SortKey; label: string; w: string }) {
+    return (
+      <th
+        className={`${w} text-left text-[10px] uppercase tracking-wider text-slate-500 cursor-pointer hover:text-slate-300 py-2 px-2 select-none`}
+        onClick={() => toggleSort(k)}
+      >
+        {label} {sortKey === k ? (sortDir === 'desc' ? '↓' : '↑') : ''}
+      </th>
+    );
+  }
 
   return (
-    <div className="space-y-3">
-      <SectionHeader
-        title="Scanner"
-        subtitle="Regime-aware ranked opportunity engine"
-        action={<Badge label={`${filtered.length} results`} color="#64748B" small />}
-      />
+    <div className="space-y-4">
+      <SectionHeader title="Scanner" subtitle="Ranked opportunity engine — live scan results" />
 
-      <TabBar tabs={tabs} active={tab} onChange={setTab} />
+      {/* Tabs */}
+      <div className="flex items-center gap-1 overflow-x-auto pb-1">
+        {TABS.map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-3 py-1.5 text-xs rounded-lg whitespace-nowrap transition-colors ${activeTab === tab ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-transparent'}`}
+          >
+            {tab}
+            <span className="ml-1 text-[10px] text-slate-600">
+              {tab === 'All' ? allResults.length
+                : tab === 'Equities' ? allResults.filter(r => (r as any)._assetClass === 'equity').length
+                : tab === 'Crypto' ? allResults.filter(r => (r as any)._assetClass === 'crypto').length
+                : tab === 'Bullish' ? allResults.filter(r => r.direction === 'bullish').length
+                : tab === 'Bearish' ? allResults.filter(r => r.direction === 'bearish').length
+                : tab === 'High Score' ? allResults.filter(r => Math.abs(r.score) >= 5).length
+                : allResults.filter(r => r.dveSignalType && r.dveSignalType !== 'none').length}
+            </span>
+          </button>
+        ))}
+      </div>
 
-      {/* Regime Weight Indicator */}
-      <Card className="!p-3">
-        <div className="flex items-center gap-4 text-[10px] overflow-x-auto">
-          <span className="text-slate-500 uppercase tracking-wider whitespace-nowrap">Regime Weights →</span>
-          {Object.entries(REGIME_WEIGHTS.trend).map(([k]) => (
-            <span key={k} className="text-slate-400 capitalize whitespace-nowrap">{k}</span>
-          ))}
+      {/* Table */}
+      <Card>
+        {loading ? (
+          <div className="space-y-3 py-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="h-8 bg-slate-700/30 rounded animate-pulse" />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-xs text-slate-500 py-12 text-center">No results match this filter. Try scanning more symbols or changing the tab.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-slate-700/50">
+                  <SortHeader k="symbol" label="Symbol" w="w-20" />
+                  <SortHeader k="price" label="Price" w="w-20" />
+                  <SortHeader k="direction" label="Direction" w="w-20" />
+                  <SortHeader k="score" label="Score" w="w-16" />
+                  <SortHeader k="confidence" label="Conf %" w="w-16" />
+                  <SortHeader k="rsi" label="RSI" w="w-14" />
+                  <SortHeader k="dveBbwp" label="BBWP" w="w-14" />
+                  <th className="w-24 text-left text-[10px] uppercase tracking-wider text-slate-500 py-2 px-2">DVE</th>
+                  <th className="w-20 text-left text-[10px] uppercase tracking-wider text-slate-500 py-2 px-2">Setup</th>
+                  <th className="w-16 text-[10px] uppercase tracking-wider text-slate-500 py-2 px-2">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((r) => {
+                  const regimeLabel = r.scoreV2?.regime?.label || r.type || '';
+                  return (
+                    <tr
+                      key={r.symbol}
+                      className="border-b border-slate-800/40 hover:bg-slate-800/30 cursor-pointer transition-colors"
+                      onClick={() => { selectSymbol(r.symbol); navigateTo('golden-egg', r.symbol); }}
+                    >
+                      <td className="py-2.5 px-2">
+                        <div className="font-bold text-white">{r.symbol}</div>
+                        <div className="text-[9px] text-slate-600">{regimeLabel}</div>
+                      </td>
+                      <td className="py-2.5 px-2 text-slate-300 font-mono">
+                        {r.price != null ? `$${r.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                      </td>
+                      <td className="py-2.5 px-2">
+                        <Badge label={r.direction || 'neutral'} color={dirColor(r.direction)} small />
+                      </td>
+                      <td className="py-2.5 px-2">
+                        <span className="font-bold" style={{ color: dirColor(r.direction) }}>{r.score}</span>
+                      </td>
+                      <td className="py-2.5 px-2 text-slate-300">
+                        {r.confidence != null ? `${r.confidence}%` : '—'}
+                      </td>
+                      <td className="py-2.5 px-2">
+                        <span className={r.rsi != null ? (r.rsi > 70 ? 'text-red-400' : r.rsi < 30 ? 'text-emerald-400' : 'text-slate-300') : 'text-slate-600'}>
+                          {r.rsi != null ? r.rsi.toFixed(0) : '—'}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-2">
+                        <span className={r.dveBbwp != null ? (r.dveBbwp < 20 ? 'text-cyan-400' : r.dveBbwp > 80 ? 'text-orange-400' : 'text-slate-300') : 'text-slate-600'}>
+                          {r.dveBbwp != null ? r.dveBbwp.toFixed(0) : '—'}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-2 text-[10px] text-slate-400 truncate max-w-[100px]">
+                        {r.dveSignalType && r.dveSignalType !== 'none' ? r.dveSignalType.replace(/_/g, ' ') : '—'}
+                      </td>
+                      <td className="py-2.5 px-2 text-[10px] text-slate-400 truncate max-w-[80px]">
+                        {r.setup || '—'}
+                      </td>
+                      <td className="py-2.5 px-2 text-center">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); selectSymbol(r.symbol); navigateTo('golden-egg', r.symbol); }}
+                          className="px-2 py-1 bg-emerald-500/10 text-emerald-400 rounded text-[10px] hover:bg-emerald-500/20 transition-colors"
+                        >
+                          Analyze
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-800/40">
+          <span className="text-[10px] text-slate-600">{filtered.length} symbols</span>
+          <div className="flex items-center gap-2">
+            <button onClick={() => { equity.refetch(); crypto.refetch(); }} className="text-[10px] text-emerald-400 hover:underline">↻ Rescan</button>
+          </div>
         </div>
       </Card>
 
-      {/* Scanner Table */}
-      <Card className="!p-0 overflow-x-auto">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="border-b border-slate-700/50">
-              <th className="text-left px-4 py-3 text-[10px] uppercase tracking-wider text-slate-500">Symbol</th>
-              <th className="text-center px-2 py-3 text-[10px] uppercase tracking-wider text-slate-500">Regime</th>
-              <th className="text-center px-2 py-3 text-[10px] uppercase tracking-wider text-slate-500">Bias</th>
-              <th className="text-center px-2 py-3"><SortHeader field="mspScore" label="MSP Score" /></th>
-              <th className="text-center px-2 py-3"><SortHeader field="confluenceScore" label="Confluence" /></th>
-              <th className="text-center px-2 py-3"><SortHeader field="confidence" label="Confidence" /></th>
-              <th className="text-center px-2 py-3"><SortHeader field="timeAlignment" label="Time" /></th>
-              <th className="text-center px-2 py-3 text-[10px] uppercase tracking-wider text-slate-500">DVE</th>
-              <th className="text-center px-2 py-3 text-[10px] uppercase tracking-wider text-slate-500">Options</th>
-              <th className="text-center px-2 py-3 text-[10px] uppercase tracking-wider text-slate-500">Lifecycle</th>
-              <th className="text-center px-2 py-3 text-[10px] uppercase tracking-wider text-slate-500">Verdict</th>
-              <th className="text-center px-2 py-3 text-[10px] uppercase tracking-wider text-slate-500">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map(s => (
-              <tr key={s.symbol} className="border-b border-slate-800/30 hover:bg-slate-800/30 transition-colors">
-                <td className="px-4 py-3">
-                  <div className="font-semibold text-white">{s.symbol}</div>
-                  <div className="text-[10px] text-slate-500">{s.name}</div>
-                </td>
-                <td className="text-center px-2"><Badge label={s.regimePriority} color={REGIME_COLORS[s.regimePriority]} small /></td>
-                <td className="text-center px-2">
-                  <span style={{ color: s.directionalBias === 'bullish' ? '#2FB36E' : s.directionalBias === 'bearish' ? '#E46767' : '#64748B' }}>
-                    {s.directionalBias === 'bullish' ? '▲' : s.directionalBias === 'bearish' ? '▼' : '—'} {s.directionalBias}
-                  </span>
-                </td>
-                <td className="text-center px-2">
-                  <span className="font-bold" style={{ color: s.mspScore > 75 ? '#10B981' : s.mspScore > 55 ? '#F59E0B' : '#EF4444' }}>
-                    {s.mspScore}
-                  </span>
-                </td>
-                <td className="text-center px-2 text-slate-300">{s.confluenceScore}</td>
-                <td className="text-center px-2 text-slate-300">{s.confidence}%</td>
-                <td className="text-center px-2 text-slate-300">{s.timeAlignment}</td>
-                <td className="text-center px-2"><Badge label={s.volatilityState.regime} color={VOL_COLORS[s.volatilityState.regime]} small /></td>
-                <td className="text-center px-2">
-                  <span style={{ color: s.optionsInfluence.flowBias === 'bullish' ? '#2FB36E' : s.optionsInfluence.flowBias === 'bearish' ? '#E46767' : '#64748B' }}>
-                    {s.optionsInfluence.flowBias}
-                  </span>
-                </td>
-                <td className="text-center px-2"><Badge label={s.lifecycleState} color={LIFECYCLE_COLORS[s.lifecycleState]} small /></td>
-                <td className="text-center px-2"><Badge label={s.verdict} color={VERDICT_COLORS[s.verdict]} small /></td>
-                <td className="text-center px-2">
-                  <button
-                    onClick={() => { selectSymbol(s.symbol); navigateTo('golden-egg', s.symbol); }}
-                    className="px-2 py-1 rounded text-[10px] bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition-colors"
-                  >
-                    Analyze
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {filtered.length === 0 && <EmptyState message="No symbols match current filter" icon="⊘" />}
-      </Card>
+      {/* Errors */}
+      {(equity.error || crypto.error) && (
+        <div className="text-[10px] text-red-400/60 border border-red-900/30 rounded-lg p-3">
+          {equity.error && <div>Equity scan: {equity.error}</div>}
+          {crypto.error && <div>Crypto scan: {crypto.error}</div>}
+        </div>
+      )}
     </div>
   );
 }

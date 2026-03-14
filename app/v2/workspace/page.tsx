@@ -1,188 +1,401 @@
-'use client';
+﻿'use client';
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   SURFACE 7: WORKSPACE — Personal Management & Learning
-   Watchlist, Journal, Portfolio, Alerts, Backtest, Learning, Settings.
-   Replaces: v1 Watchlists + Alerts + Portfolio + Journal + Backtest + Settings
+   SURFACE 6: WORKSPACE — Watchlists, Journal, Portfolio, Settings
+   Real APIs: /api/watchlists, /api/journal, links to v1 portfolio & settings
    ═══════════════════════════════════════════════════════════════════════════ */
 
-import { useState, useMemo } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useV2 } from '../_lib/V2Context';
-import { REGIME_COLORS, LIFECYCLE_COLORS } from '../_lib/constants';
-import { Card, SectionHeader, Badge, TabBar, StatBox, EmptyState } from '../_components/ui';
-import type { LifecycleState } from '../_lib/types';
+import { useWatchlists, useJournal, fetchWatchlistItems, type JournalEntry } from '../_lib/api';
+import { Card, SectionHeader, Badge } from '../_components/ui';
+
+function Skel({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
+  return <div className={`${h} ${w} bg-slate-700/50 rounded animate-pulse`} />;
+}
+
+const TABS = ['Watchlists', 'Journal', 'Portfolio', 'Settings'] as const;
+
+/* ─── Watchlist CRUD helpers ─────────────────────────────────────── */
+async function addToWatchlist(listId: string, symbol: string): Promise<boolean> {
+  try {
+    const r = await fetch(`/api/watchlists/${listId}/items`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ symbol }),
+    });
+    return r.ok;
+  } catch { return false; }
+}
+
+async function removeFromWatchlist(listId: string, itemId: string): Promise<boolean> {
+  try {
+    const r = await fetch(`/api/watchlists/${listId}/items/${itemId}`, { method: 'DELETE' });
+    return r.ok;
+  } catch { return false; }
+}
+
+async function createWatchlist(name: string): Promise<boolean> {
+  try {
+    const r = await fetch('/api/watchlists', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    return r.ok;
+  } catch { return false; }
+}
+
+async function deleteWatchlist(listId: string): Promise<boolean> {
+  try {
+    const r = await fetch(`/api/watchlists/${listId}`, { method: 'DELETE' });
+    return r.ok;
+  } catch { return false; }
+}
+
+/* ─── Journal CRUD helpers ───────────────────────────────────────── */
+async function createJournalEntry(entry: Partial<JournalEntry>): Promise<boolean> {
+  try {
+    const r = await fetch('/api/journal', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry),
+    });
+    return r.ok;
+  } catch { return false; }
+}
+
+async function deleteJournalEntry(entryId: string): Promise<boolean> {
+  try {
+    const r = await fetch(`/api/journal/${entryId}`, { method: 'DELETE' });
+    return r.ok;
+  } catch { return false; }
+}
 
 export default function WorkspacePage() {
-  const { data, journal, watchlist, navigateTo, selectSymbol } = useV2();
-  const [tab, setTab] = useState('Watchlist');
-  const tabs = ['Watchlist', 'Journal', 'Portfolio', 'Backtest', 'Learning', 'Settings'];
+  const { navigateTo, selectSymbol } = useV2();
+  const [tab, setTab] = useState<typeof TABS[number]>('Watchlists');
 
-  // Journal stats
-  const journalStats = useMemo(() => {
-    const closed = journal.filter(j => j.outcome !== 'open');
-    const wins = closed.filter(j => j.outcome === 'win').length;
-    const total = closed.length;
-    const avgRR = closed.filter(j => j.rr !== null).reduce((sum, j) => sum + (j.rr || 0), 0) / (total || 1);
-    return { wins, total, winRate: total > 0 ? Math.round((wins / total) * 100) : 0, avgRR: avgRR.toFixed(1) };
+  const watchlists = useWatchlists();
+  const journal = useJournal();
+
+  /* ─── Watchlist state ───────────────────────────── */
+  const [selectedList, setSelectedList] = useState<string | null>(null);
+  const [newListName, setNewListName] = useState('');
+  const [addSymbol, setAddSymbol] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const lists = watchlists.data?.watchlists || [];
+  const currentList = lists.find((l: any) => l.id === selectedList) || lists[0];
+
+  /* Fetch items for the current list */
+  const [listItems, setListItems] = useState<any[]>([]);
+  const [itemsLoading, setItemsLoading] = useState(false);
+  const refreshItems = useCallback(async () => {
+    if (!currentList?.id) { setListItems([]); return; }
+    setItemsLoading(true);
+    try {
+      const res = await fetchWatchlistItems(currentList.id);
+      setListItems(res?.items || []);
+    } catch { setListItems([]); }
+    setItemsLoading(false);
+  }, [currentList?.id]);
+
+  useEffect(() => { refreshItems(); }, [refreshItems]);
+
+  const handleCreateList = useCallback(async () => {
+    if (!newListName.trim()) return;
+    setBusy(true);
+    const ok = await createWatchlist(newListName.trim());
+    setBusy(false);
+    if (ok) { setNewListName(''); watchlists.refetch(); }
+  }, [newListName, watchlists]);
+
+  const handleAddSymbol = useCallback(async () => {
+    if (!currentList || !addSymbol.trim()) return;
+    setBusy(true);
+    const ok = await addToWatchlist(currentList.id, addSymbol.trim().toUpperCase());
+    setBusy(false);
+    if (ok) { setAddSymbol(''); watchlists.refetch(); refreshItems(); }
+  }, [addSymbol, currentList, watchlists, refreshItems]);
+
+  const handleRemoveItem = useCallback(async (itemId: string) => {
+    if (!currentList) return;
+    setBusy(true);
+    await removeFromWatchlist(currentList.id, itemId);
+    setBusy(false);
+    watchlists.refetch();
+    refreshItems();
+  }, [currentList, watchlists, refreshItems]);
+
+  const handleDeleteList = useCallback(async (listId: string) => {
+    setBusy(true);
+    await deleteWatchlist(listId);
+    setBusy(false);
+    setSelectedList(null);
+    watchlists.refetch();
+  }, [watchlists]);
+
+  /* ─── Journal state ─────────────────────────────── */
+  const [showJournalForm, setShowJournalForm] = useState(false);
+  const [jSymbol, setJSymbol] = useState('');
+  const [jDirection, setJDirection] = useState<'LONG' | 'SHORT'>('LONG');
+  const [jEntry, setJEntry] = useState('');
+  const [jStop, setJStop] = useState('');
+  const [jTarget, setJTarget] = useState('');
+  const [jNotes, setJNotes] = useState('');
+
+  const journalEntries = journal.data?.entries || [];
+
+  const handleCreateJournalEntry = useCallback(async () => {
+    if (!jSymbol.trim()) return;
+    setBusy(true);
+    const ok = await createJournalEntry({
+      symbol: jSymbol.trim().toUpperCase(),
+      side: jDirection,
+      entryPrice: jEntry ? parseFloat(jEntry) : 0,
+      exitPrice: 0,
+      quantity: 0,
+      pl: 0,
+      plPercent: 0,
+      strategy: '',
+      setup: '',
+      notes: jNotes,
+      outcome: 'open',
+      isOpen: true,
+      tags: [],
+      date: new Date().toISOString(),
+    } as any);
+    setBusy(false);
+    if (ok) {
+      setJSymbol(''); setJEntry(''); setJStop(''); setJTarget(''); setJNotes('');
+      setShowJournalForm(false);
+      journal.refetch();
+    }
+  }, [jSymbol, jDirection, jEntry, jStop, jTarget, jNotes, journal]);
+
+  const handleDeleteJournal = useCallback(async (entryId: string) => {
+    setBusy(true);
+    await deleteJournalEntry(entryId);
+    setBusy(false);
+    journal.refetch();
   }, [journal]);
 
   return (
     <div className="space-y-4">
-      <SectionHeader title="Workspace" subtitle="Personal management & learning" />
-      <TabBar tabs={tabs} active={tab} onChange={setTab} />
+      <SectionHeader title="Workspace" subtitle="Your personal trading workspace" />
 
-      {tab === 'Watchlist' && (
-        <>
-          {/* Lifecycle Pipeline */}
-          <Card>
-            <h3 className="text-sm font-semibold text-white mb-3">Trade Pipeline</h3>
-            <div className="flex gap-2 overflow-x-auto pb-2">
-              {(['DISCOVERED', 'WATCHING', 'SETTING_UP', 'READY', 'TRIGGERED', 'ACTIVE'] as LifecycleState[]).map(state => {
-                const count = watchlist.filter(w => w.lifecycleState === state).length;
-                return (
-                  <div key={state} className="flex-shrink-0 text-center px-4 py-2 rounded-lg bg-[#0A101C]/50 min-w-[100px]">
-                    <div className="text-lg font-bold" style={{ color: LIFECYCLE_COLORS[state] }}>{count}</div>
-                    <div className="text-[10px] text-slate-500 uppercase">{state.replace('_', ' ')}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
+      {/* Tabs */}
+      <div className="flex items-center gap-1 overflow-x-auto pb-1">
+        {TABS.map(t => (
+          <button key={t} onClick={() => setTab(t)} className={`px-3 py-1.5 text-xs rounded-lg whitespace-nowrap transition-colors ${tab === t ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-transparent'}`}>
+            {t}
+          </button>
+        ))}
+      </div>
 
-          {/* Watchlist */}
-          <Card>
-            <h3 className="text-sm font-semibold text-white mb-3">Active Watchlist</h3>
-            <div className="space-y-2">
-              {watchlist.map(w => (
-                <div key={w.symbol} className="flex items-center justify-between py-2 px-3 rounded-lg bg-[#0A101C]/50 hover:bg-slate-800/30 cursor-pointer"
-                     onClick={() => { selectSymbol(w.symbol); navigateTo('golden-egg', w.symbol); }}>
-                  <div className="flex items-center gap-3">
-                    <span className="font-semibold text-white text-sm">{w.symbol}</span>
-                    <Badge label={w.lifecycleState} color={LIFECYCLE_COLORS[w.lifecycleState]} small />
-                  </div>
-                  <div className="text-xs text-slate-400">{w.alertCondition}</div>
+      {/* ── WATCHLISTS ─────────────────────────────────────────────── */}
+      {tab === 'Watchlists' && (
+        <div className="space-y-4">
+          {watchlists.loading ? (
+            <Card><div className="space-y-3">{[1,2,3].map(i => <Skel key={i} h="h-8" />)}</div></Card>
+          ) : (
+            <>
+              {/* List selector + create */}
+              <Card>
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  {lists.map((l: any) => (
+                    <button
+                      key={l.id}
+                      onClick={() => setSelectedList(l.id)}
+                      className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${(currentList?.id === l.id) ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-slate-700/30'}`}
+                    >
+                      {l.name} ({l.item_count || 0})
+                    </button>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </Card>
-        </>
+                <div className="flex items-center gap-2">
+                  <input
+                    value={newListName}
+                    onChange={e => setNewListName(e.target.value)}
+                    placeholder="New watchlist name..."
+                    className="flex-1 bg-[#0A101C] border border-slate-700/40 rounded-lg text-xs px-3 py-2 text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-600/40"
+                    onKeyDown={e => e.key === 'Enter' && handleCreateList()}
+                  />
+                  <button onClick={handleCreateList} disabled={busy || !newListName.trim()} className="px-3 py-2 text-xs rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600/30 disabled:opacity-40 transition-colors">
+                    + Create
+                  </button>
+                </div>
+              </Card>
+
+              {/* Current watchlist items */}
+              {currentList && (
+                <Card>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-white">{currentList.name}</h3>
+                    <button onClick={() => handleDeleteList(currentList.id)} className="text-[10px] text-red-400/60 hover:text-red-400 transition-colors">
+                      Delete List
+                    </button>
+                  </div>
+
+                  {/* Add symbol */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <input
+                      value={addSymbol}
+                      onChange={e => setAddSymbol(e.target.value)}
+                      placeholder="Add symbol (e.g. AAPL, BTC)..."
+                      className="flex-1 bg-[#0A101C] border border-slate-700/40 rounded-lg text-xs px-3 py-2 text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-600/40"
+                      onKeyDown={e => e.key === 'Enter' && handleAddSymbol()}
+                    />
+                    <button onClick={handleAddSymbol} disabled={busy || !addSymbol.trim()} className="px-3 py-2 text-xs rounded-lg bg-slate-800/60 text-slate-300 border border-slate-700/30 hover:bg-slate-700/40 disabled:opacity-40 transition-colors">
+                      + Add
+                    </button>
+                  </div>
+
+                  {/* Items */}
+                  {listItems.length > 0 ? (
+                    <div className="space-y-1">
+                      {listItems.map((item: any) => (
+                        <div key={item.id || item.symbol} className="flex items-center justify-between text-xs py-2 px-2 rounded-lg hover:bg-slate-800/40 group">
+                          <button onClick={() => { selectSymbol(item.symbol); navigateTo('golden-egg', item.symbol); }} className="text-left flex-1">
+                            <span className="font-semibold text-white">{item.symbol}</span>
+                            {item.price && <span className="text-slate-400 ml-3 font-mono">${item.price}</span>}
+                            {item.change_percent != null && <span className={`ml-2 ${item.change_percent > 0 ? 'text-emerald-400' : 'text-red-400'}`}>{item.change_percent > 0 ? '+' : ''}{item.change_percent.toFixed(2)}%</span>}
+                          </button>
+                          <button onClick={() => handleRemoveItem(item.id)} className="text-red-400/40 hover:text-red-400 text-[10px] opacity-0 group-hover:opacity-100 transition-all ml-2">
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-slate-500 py-4 text-center">No symbols in this watchlist</div>
+                  )}
+                </Card>
+              )}
+
+              {lists.length === 0 && (
+                <Card>
+                  <div className="text-xs text-slate-500 py-8 text-center">
+                    No watchlists yet. Create one above to get started.
+                  </div>
+                </Card>
+              )}
+            </>
+          )}
+          {watchlists.error && <div className="text-[10px] text-red-400/60">Error: {watchlists.error}</div>}
+        </div>
       )}
 
+      {/* ── JOURNAL ────────────────────────────────────────────────── */}
       {tab === 'Journal' && (
-        <>
-          {/* Stats Bar */}
-          <Card className="!p-3">
-            <div className="flex items-center justify-around">
-              <StatBox label="Win Rate" value={`${journalStats.winRate}%`} color={journalStats.winRate > 50 ? '#10B981' : '#EF4444'} />
-              <StatBox label="Wins/Total" value={`${journalStats.wins}/${journalStats.total}`} />
-              <StatBox label="Avg RR" value={`${journalStats.avgRR}x`} color="#F59E0B" />
-              <StatBox label="Open" value={journal.filter(j => j.outcome === 'open').length} color="#6366F1" />
+        <div className="space-y-4">
+          <Card>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-white">Trade Journal</h3>
+              <button onClick={() => setShowJournalForm(!showJournalForm)} className="px-3 py-1.5 text-xs rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600/30 transition-colors">
+                {showJournalForm ? 'Cancel' : '+ New Entry'}
+              </button>
             </div>
+
+            {showJournalForm && (
+              <div className="bg-[#0A101C]/50 rounded-lg p-3 mb-3 space-y-2 border border-slate-700/30">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <input value={jSymbol} onChange={e => setJSymbol(e.target.value)} placeholder="Symbol*" className="bg-[#0A101C] border border-slate-700/40 rounded text-xs px-2 py-1.5 text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-600/40" />
+                  <select value={jDirection} onChange={e => setJDirection(e.target.value as any)} className="bg-[#0A101C] border border-slate-700/40 rounded text-xs px-2 py-1.5 text-white focus:outline-none focus:border-emerald-600/40">
+                    <option value="LONG">LONG</option>
+                    <option value="SHORT">SHORT</option>
+                  </select>
+                  <input value={jEntry} onChange={e => setJEntry(e.target.value)} placeholder="Entry price" type="number" className="bg-[#0A101C] border border-slate-700/40 rounded text-xs px-2 py-1.5 text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-600/40" />
+                  <input value={jStop} onChange={e => setJStop(e.target.value)} placeholder="Stop loss" type="number" className="bg-[#0A101C] border border-slate-700/40 rounded text-xs px-2 py-1.5 text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-600/40" />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input value={jTarget} onChange={e => setJTarget(e.target.value)} placeholder="Target price" type="number" className="bg-[#0A101C] border border-slate-700/40 rounded text-xs px-2 py-1.5 text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-600/40" />
+                  <input value={jNotes} onChange={e => setJNotes(e.target.value)} placeholder="Notes..." className="bg-[#0A101C] border border-slate-700/40 rounded text-xs px-2 py-1.5 text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-600/40" />
+                </div>
+                <button onClick={handleCreateJournalEntry} disabled={busy || !jSymbol.trim()} className="w-full py-2 text-xs rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600/30 disabled:opacity-40 transition-colors">
+                  Save Entry
+                </button>
+              </div>
+            )}
           </Card>
 
-          {/* Journal Entries */}
-          <Card className="!p-0">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-slate-700/50">
-                  <th className="text-left px-4 py-3 text-[10px] uppercase text-slate-500">Symbol</th>
-                  <th className="text-left px-2 py-3 text-[10px] uppercase text-slate-500">Date</th>
-                  <th className="text-left px-2 py-3 text-[10px] uppercase text-slate-500">Setup</th>
-                  <th className="text-center px-2 py-3 text-[10px] uppercase text-slate-500">Regime</th>
-                  <th className="text-center px-2 py-3 text-[10px] uppercase text-slate-500">Entry</th>
-                  <th className="text-center px-2 py-3 text-[10px] uppercase text-slate-500">Exit</th>
-                  <th className="text-center px-2 py-3 text-[10px] uppercase text-slate-500">RR</th>
-                  <th className="text-center px-2 py-3 text-[10px] uppercase text-slate-500">Outcome</th>
-                </tr>
-              </thead>
-              <tbody>
-                {journal.map(j => (
-                  <tr key={j.id} className="border-b border-slate-800/30">
-                    <td className="px-4 py-3 font-semibold text-white">{j.symbol}</td>
-                    <td className="px-2 py-3 text-slate-400">{j.date}</td>
-                    <td className="px-2 py-3 text-slate-300">{j.setupType}</td>
-                    <td className="text-center px-2"><Badge label={j.regime} color={REGIME_COLORS[j.regime]} small /></td>
-                    <td className="text-center px-2 text-white">${j.entry.toLocaleString()}</td>
-                    <td className="text-center px-2 text-slate-400">{j.exit ? `$${j.exit.toLocaleString()}` : '—'}</td>
-                    <td className="text-center px-2" style={{ color: j.rr && j.rr > 0 ? '#10B981' : j.rr && j.rr < 0 ? '#EF4444' : '#64748B' }}>
-                      {j.rr ? `${j.rr > 0 ? '+' : ''}${j.rr}x` : '—'}
-                    </td>
-                    <td className="text-center px-2">
-                      <Badge
-                        label={j.outcome}
-                        color={j.outcome === 'win' ? '#10B981' : j.outcome === 'loss' ? '#EF4444' : j.outcome === 'open' ? '#6366F1' : '#64748B'}
-                        small
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Card>
-        </>
+          {journal.loading ? (
+            <Card><div className="space-y-3">{[1,2,3].map(i => <Skel key={i} h="h-10" />)}</div></Card>
+          ) : journalEntries.length === 0 ? (
+            <Card><div className="text-xs text-slate-500 py-8 text-center">No journal entries yet. Start logging your trades!</div></Card>
+          ) : (
+            <Card>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-700/50">
+                      <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Date</th>
+                      <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Symbol</th>
+                      <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Side</th>
+                      <th className="text-right py-2 px-2 text-[10px] uppercase text-slate-500">Entry</th>
+                      <th className="text-right py-2 px-2 text-[10px] uppercase text-slate-500">Exit</th>
+                      <th className="text-right py-2 px-2 text-[10px] uppercase text-slate-500">P/L</th>
+                      <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Notes</th>
+                      <th className="text-right py-2 px-2 text-[10px] uppercase text-slate-500"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {journalEntries.map((e: JournalEntry) => (
+                      <tr key={e.id} className="border-b border-slate-800/30 hover:bg-slate-800/20 group">
+                        <td className="py-2 px-2 text-slate-400">{e.date ? new Date(e.date).toLocaleDateString() : '—'}</td>
+                        <td className="py-2 px-2 text-white font-semibold cursor-pointer hover:text-emerald-400" onClick={() => { selectSymbol(e.symbol); navigateTo('golden-egg', e.symbol); }}>{e.symbol}</td>
+                        <td className="py-2 px-2"><Badge label={e.side} color={e.side === 'LONG' || e.side === 'long' ? '#10B981' : '#EF4444'} small /></td>
+                        <td className="py-2 px-2 text-right font-mono text-slate-300">{e.entryPrice ? `$${e.entryPrice}` : '—'}</td>
+                        <td className="py-2 px-2 text-right font-mono text-slate-400">{e.exitPrice ? `$${e.exitPrice}` : '—'}</td>
+                        <td className={`py-2 px-2 text-right font-mono ${e.pl >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{e.pl != null ? `$${e.pl.toFixed(2)}` : '—'}</td>
+                        <td className="py-2 px-2 text-slate-400 max-w-[120px] truncate">{e.notes || '—'}</td>
+                        <td className="py-2 px-2 text-right">
+                          <button onClick={() => handleDeleteJournal(String(e.id))} className="text-red-400/30 hover:text-red-400 text-[10px] opacity-0 group-hover:opacity-100 transition-all">Delete</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
+          {journal.error && <div className="text-[10px] text-red-400/60">Error: {journal.error}</div>}
+        </div>
       )}
 
+      {/* ── PORTFOLIO ──────────────────────────────────────────────── */}
       {tab === 'Portfolio' && (
         <Card>
-          <h3 className="text-sm font-semibold text-white mb-3">Portfolio</h3>
-          <div className="text-xs text-slate-500 text-center py-4">
-            Connects to existing portfolio tracker at <span className="text-emerald-400">/tools/portfolio</span>
-          </div>
-          <div className="space-y-2">
-            {data.filter(d => d.lifecycleState === 'ACTIVE').map(d => (
-              <div key={d.symbol} className="flex items-center justify-between py-2 px-3 rounded-lg bg-[#0A101C]/50">
-                <div className="flex items-center gap-3">
-                  <span className="font-semibold text-white">{d.symbol}</span>
-                  <Badge label="ACTIVE" color="#22C55E" small />
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-slate-300">${d.price.toLocaleString()}</span>
-                  <span className={d.change >= 0 ? 'text-green-400' : 'text-red-400'}>
-                    {d.change >= 0 ? '+' : ''}{d.change}%
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
-
-      {tab === 'Backtest' && (
-        <Card>
-          <EmptyState message="Backtesting engine — connects to existing /tools/backtest" icon="⟳" />
-        </Card>
-      )}
-
-      {tab === 'Learning' && (
-        <Card>
-          <h3 className="text-sm font-semibold text-white mb-3">Learning Engine (v3 Preview)</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 rounded-lg bg-[#0A101C]/50 border border-slate-800/30">
-              <div className="text-xs font-semibold text-white mb-2">Best Setup Types</div>
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs"><span className="text-slate-300">Compression Breakout</span><span className="text-emerald-400">68% win rate</span></div>
-                <div className="flex justify-between text-xs"><span className="text-slate-300">Trend Continuation</span><span className="text-emerald-400">63% win rate</span></div>
-                <div className="flex justify-between text-xs"><span className="text-slate-300">Volatility Expansion</span><span className="text-amber-400">55% win rate</span></div>
-              </div>
+          <h3 className="text-sm font-semibold text-white mb-3">Portfolio Tracker</h3>
+          <div className="text-center py-12">
+            <div className="text-slate-500 text-xs mb-4">
+              Portfolio management is available in the full platform.
             </div>
-            <div className="p-4 rounded-lg bg-[#0A101C]/50 border border-slate-800/30">
-              <div className="text-xs font-semibold text-white mb-2">Regime Performance</div>
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs"><span className="text-slate-300">Trend</span><span className="text-emerald-400">71% win rate</span></div>
-                <div className="flex justify-between text-xs"><span className="text-slate-300">Compression</span><span className="text-emerald-400">65% win rate</span></div>
-                <div className="flex justify-between text-xs"><span className="text-slate-300">Range</span><span className="text-red-400">38% win rate</span></div>
-              </div>
-            </div>
-          </div>
-          <div className="mt-3 text-xs text-slate-500 text-center">
-            Full personal learning engine with doctrine scoring coming in v3
+            <a
+              href="/tools/portfolio"
+              target="_blank"
+              className="px-4 py-2 text-xs rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600/30 transition-colors inline-block"
+            >
+              Open Portfolio Tracker →
+            </a>
           </div>
         </Card>
       )}
 
+      {/* ── SETTINGS ───────────────────────────────────────────────── */}
       {tab === 'Settings' && (
         <Card>
-          <EmptyState message="Settings — connects to existing /tools/settings" icon="⚙" />
+          <h3 className="text-sm font-semibold text-white mb-3">Workspace Settings</h3>
+          <div className="text-center py-12">
+            <div className="text-slate-500 text-xs mb-4">
+              Account settings and preferences are managed in the main dashboard.
+            </div>
+            <a
+              href="/account"
+              target="_blank"
+              className="px-4 py-2 text-xs rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600/30 transition-colors inline-block"
+            >
+              Open Account Settings →
+            </a>
+          </div>
         </Card>
       )}
     </div>

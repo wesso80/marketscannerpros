@@ -1,136 +1,255 @@
-'use client';
+﻿'use client';
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SURFACE 1: DASHBOARD — Command Center
-   "What matters today" in 10 seconds.
+   Real API data from v1 endpoints.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 import { useMemo } from 'react';
 import { useV2 } from '../_lib/V2Context';
-import { REGIME_COLORS, VERDICT_COLORS, LIFECYCLE_COLORS, CROSS_MARKET } from '../_lib/constants';
+import { useRegime, useScannerResults, useMarketMovers, useNews, useEconomicCalendar, type ScanResult, type Mover, type NewsArticle, type EconomicEvent } from '../_lib/api';
+import { REGIME_COLORS, CROSS_MARKET } from '../_lib/constants';
 import { Card, SectionHeader, ScoreBar, Badge, ImpactDot } from '../_components/ui';
 
-export default function DashboardPage() {
-  const { data, news, calendar, navigateTo, selectSymbol } = useV2();
+/* ── helpers ────────────────────────────────────────────────────────────── */
+function directionColor(d?: string) {
+  if (d === 'bullish') return '#10B981';
+  if (d === 'bearish') return '#EF4444';
+  return '#F59E0B';
+}
+function pctColor(v: number) {
+  if (v > 0) return 'text-emerald-400';
+  if (v < 0) return 'text-red-400';
+  return 'text-slate-400';
+}
+function parseChangePct(raw: string) {
+  return parseFloat((raw || '0').replace('%', ''));
+}
 
-  const topSetups = useMemo(() => [...data].sort((a, b) => b.mspScore - a.mspScore).slice(0, 5), [data]);
-  const alerts = useMemo(() => data.filter(d => d.lifecycleState === 'READY' || d.lifecycleState === 'TRIGGERED'), [data]);
-  const highImpactEvents = calendar.filter(e => e.impact === 'high');
+/* ── Loading skeleton ───────────────────────────────────────────────────── */
+function Skeleton({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
+  return <div className={`${h} ${w} bg-slate-700/50 rounded animate-pulse`} />;
+}
+function CardSkeleton({ rows = 4 }: { rows?: number }) {
+  return (
+    <Card>
+      <Skeleton h="h-4" w="w-32" />
+      <div className="mt-3 space-y-3">
+        {Array.from({ length: rows }).map((_, i) => (
+          <Skeleton key={i} h="h-6" />
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+export default function DashboardPage() {
+  const { navigateTo, selectSymbol } = useV2();
+
+  /* ── Real API calls ─────────────────────────────────────────────────── */
+  const regime = useRegime();
+  const equityScan = useScannerResults('equity');
+  const cryptoScan = useScannerResults('crypto');
+  const movers = useMarketMovers();
+  const news = useNews();
+  const calendar = useEconomicCalendar();
+
+  /* ── Derived data ───────────────────────────────────────────────────── */
+  const allResults = useMemo(() => {
+    const eq = equityScan.data?.results || [];
+    const cr = cryptoScan.data?.results || [];
+    return [...eq, ...cr].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  }, [equityScan.data, cryptoScan.data]);
+
+  const topSetups = allResults.slice(0, 6);
+  const highImpactEvents = useMemo(
+    () => (calendar.data?.events || []).filter((e: EconomicEvent) => e.impact === 'high').slice(0, 5),
+    [calendar.data]
+  );
+  const topGainers = (movers.data?.topGainers || []).slice(0, 5);
+  const topLosers = (movers.data?.topLosers || []).slice(0, 5);
+  const articles = (news.data?.articles || []).slice(0, 6);
+
+  const scanLoading = equityScan.loading || cryptoScan.loading;
 
   return (
     <div className="space-y-4">
-      <SectionHeader title="Command Center" subtitle="What matters today" />
-
-      {/* Best Setups Now */}
-      <Card>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-white">Best Setups Now</h3>
-          <button onClick={() => navigateTo('scanner')} className="text-[10px] text-emerald-400 hover:underline">View Scanner →</button>
+      {/* ── Regime Banner ────────────────────────────────────────────── */}
+      {regime.data && (
+        <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-[#0D1520] border border-slate-700/60">
+          <span className="text-[10px] uppercase tracking-wider text-slate-500">Market Regime</span>
+          <Badge
+            label={regime.data.regime.replace(/_/g, ' ')}
+            color={
+              regime.data.regime.includes('UP') ? '#10B981'
+              : regime.data.regime.includes('DOWN') || regime.data.regime.includes('STRESS') ? '#EF4444'
+              : regime.data.regime.includes('EXPANSION') ? '#F59E0B'
+              : '#6366F1'
+            }
+          />
+          <Badge label={`Risk: ${regime.data.riskLevel}`} color={regime.data.riskLevel === 'low' ? '#10B981' : regime.data.riskLevel === 'moderate' ? '#F59E0B' : '#EF4444'} small />
+          <Badge label={`Sizing: ${regime.data.sizing}`} color="#94A3B8" small />
         </div>
-        <div className="space-y-2">
-          {topSetups.map(s => (
-            <div
-              key={s.symbol}
-              className="flex items-center justify-between py-2 px-3 rounded-lg bg-[#0A101C]/50 hover:bg-slate-800/50 cursor-pointer transition-colors"
-              onClick={() => { selectSymbol(s.symbol); navigateTo('golden-egg', s.symbol); }}
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="text-sm font-bold text-white w-14">{s.symbol}</div>
-                <Badge label={s.regimePriority} color={REGIME_COLORS[s.regimePriority]} small />
-                <Badge label={s.verdict} color={VERDICT_COLORS[s.verdict]} small />
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <div className="text-xs text-slate-400">MSP Score</div>
-                  <div className="text-sm font-bold" style={{ color: s.mspScore > 75 ? '#10B981' : s.mspScore > 55 ? '#F59E0B' : '#EF4444' }}>
-                    {s.mspScore}
-                  </div>
-                </div>
-                <div className="w-16">
-                  <ScoreBar value={s.mspScore} color={s.mspScore > 75 ? '#10B981' : s.mspScore > 55 ? '#F59E0B' : '#EF4444'} />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
+      )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Watchlist Alerts */}
+      <SectionHeader title="Command Center" subtitle="What matters today — live data" />
+
+      {/* ── Best Setups (from Scanner) ───────────────────────────────── */}
+      {scanLoading ? <CardSkeleton rows={5} /> : (
         <Card>
-          <h3 className="text-sm font-semibold text-white mb-3">Active Alerts</h3>
-          {alerts.length === 0 ? (
-            <div className="text-xs text-slate-500 py-4 text-center">No active alerts</div>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-white">Best Setups Now</h3>
+            <button onClick={() => navigateTo('scanner')} className="text-[10px] text-emerald-400 hover:underline">View Scanner →</button>
+          </div>
+          {topSetups.length === 0 ? (
+            <div className="text-xs text-slate-500 py-6 text-center">No scan results available — scanner may not have run yet today.</div>
           ) : (
-            <div className="space-y-2">
-              {alerts.map(a => (
-                <div key={a.symbol} className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-white">{a.symbol}</span>
-                    <Badge label={a.lifecycleState} color={LIFECYCLE_COLORS[a.lifecycleState]} small />
+            <div className="space-y-1">
+              {topSetups.map((s: ScanResult) => (
+                <div
+                  key={s.symbol}
+                  className="flex items-center justify-between py-2 px-3 rounded-lg bg-[#0A101C]/50 hover:bg-slate-800/50 cursor-pointer transition-colors"
+                  onClick={() => { selectSymbol(s.symbol); navigateTo('golden-egg', s.symbol); }}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="text-sm font-bold text-white w-16">{s.symbol}</div>
+                    <Badge label={s.direction || 'neutral'} color={directionColor(s.direction)} small />
+                    {s.setup && <span className="text-[10px] text-slate-400 truncate">{s.setup}</span>}
                   </div>
-                  <span className="text-slate-400">{a.triggerCondition}</span>
+                  <div className="flex items-center gap-4">
+                    {s.price != null && (
+                      <span className="text-xs text-slate-300">${s.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    )}
+                    <div className="text-right w-14">
+                      <div className="text-[9px] text-slate-500">Score</div>
+                      <div className="text-sm font-bold" style={{ color: directionColor(s.direction) }}>
+                        {s.score}
+                      </div>
+                    </div>
+                    <div className="w-14">
+                      <ScoreBar value={Math.min(Math.abs(s.score) * 10, 100)} color={directionColor(s.direction)} />
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
           )}
         </Card>
+      )}
 
-        {/* Macro Events Today */}
-        <Card>
-          <h3 className="text-sm font-semibold text-white mb-3">Upcoming Events</h3>
-          <div className="space-y-2">
-            {highImpactEvents.slice(0, 4).map(e => (
-              <div key={e.id} className="flex items-center justify-between text-xs">
-                <div className="flex items-center">
-                  <ImpactDot impact={e.impact} />
-                  <span className="text-white">{e.title}</span>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* ── Market Movers ──────────────────────────────────────────── */}
+        {movers.loading ? <CardSkeleton rows={5} /> : (
+          <Card>
+            <h3 className="text-sm font-semibold text-white mb-3">Top Movers (24h)</h3>
+            <div className="space-y-1">
+              <div className="text-[9px] uppercase text-emerald-500 tracking-wider mb-1">Gainers</div>
+              {topGainers.map((m: Mover) => (
+                <div key={m.ticker} className="flex items-center justify-between text-xs py-0.5 cursor-pointer hover:bg-slate-800/40 px-1 rounded" onClick={() => { selectSymbol(m.ticker); navigateTo('golden-egg', m.ticker); }}>
+                  <span className="font-semibold text-white w-16">{m.ticker}</span>
+                  <span className="text-slate-300">${parseFloat(m.price).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                  <span className="text-emerald-400 font-mono">+{m.change_percentage}</span>
                 </div>
-                <span className="text-slate-500">{e.time}</span>
-              </div>
-            ))}
-            <button onClick={() => navigateTo('research')} className="text-[10px] text-emerald-400 hover:underline mt-1">Full Calendar →</button>
-          </div>
-        </Card>
+              ))}
+              <div className="text-[9px] uppercase text-red-500 tracking-wider mb-1 mt-2">Losers</div>
+              {topLosers.map((m: Mover) => (
+                <div key={m.ticker} className="flex items-center justify-between text-xs py-0.5 cursor-pointer hover:bg-slate-800/40 px-1 rounded" onClick={() => { selectSymbol(m.ticker); navigateTo('golden-egg', m.ticker); }}>
+                  <span className="font-semibold text-white w-16">{m.ticker}</span>
+                  <span className="text-slate-300">${parseFloat(m.price).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                  <span className="text-red-400 font-mono">{m.change_percentage}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
 
-        {/* Cross-Market */}
+        {/* ── Economic Calendar ──────────────────────────────────────── */}
+        {calendar.loading ? <CardSkeleton rows={4} /> : (
+          <Card>
+            <h3 className="text-sm font-semibold text-white mb-3">Upcoming Events</h3>
+            {highImpactEvents.length === 0 ? (
+              <div className="text-xs text-slate-500 py-4 text-center">No high-impact events this period</div>
+            ) : (
+              <div className="space-y-2">
+                {highImpactEvents.map((e: EconomicEvent, i: number) => (
+                  <div key={i} className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-1 min-w-0">
+                      <ImpactDot impact={e.impact as 'high' | 'medium' | 'low'} />
+                      <span className="text-white truncate">{e.event}</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0 text-slate-500">
+                      <span>{e.date}</span>
+                      <span>{e.time || '—'}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button onClick={() => navigateTo('research')} className="text-[10px] text-emerald-400 hover:underline mt-2 block">Full Calendar →</button>
+          </Card>
+        )}
+
+        {/* ── Cross-Market ───────────────────────────────────────────── */}
         <Card>
           <h3 className="text-sm font-semibold text-white mb-3">Cross-Market Influence</h3>
           <div className="space-y-2">
-            {CROSS_MARKET.slice(0, 4).map(cm => (
+            {CROSS_MARKET.slice(0, 5).map(cm => (
               <div key={cm.from} className="flex items-center justify-between text-xs">
                 <span className="text-slate-300">{cm.from} {cm.condition}</span>
-                <span className="text-slate-500">{cm.effect}</span>
+                <span className="text-slate-500 text-right">{cm.effect}</span>
               </div>
             ))}
-            <button onClick={() => navigateTo('explorer')} className="text-[10px] text-emerald-400 hover:underline mt-1">Market Explorer →</button>
+            <button onClick={() => navigateTo('explorer')} className="text-[10px] text-emerald-400 hover:underline mt-1 block">Market Explorer →</button>
           </div>
         </Card>
       </div>
 
-      {/* Latest News */}
-      <Card>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-white">Latest Headlines</h3>
-          <button onClick={() => navigateTo('research')} className="text-[10px] text-emerald-400 hover:underline">All News →</button>
-        </div>
-        <div className="space-y-2">
-          {news.slice(0, 4).map(n => (
-            <div key={n.id} className="flex items-center justify-between text-xs py-1">
-              <div className="flex items-center gap-2 min-w-0">
-                <ImpactDot impact={n.impact} />
-                <span className="text-white truncate">{n.title}</span>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {n.symbols.slice(0, 2).map(sym => (
-                  <span key={sym} className="text-emerald-400 cursor-pointer hover:underline" onClick={() => { selectSymbol(sym); navigateTo('golden-egg', sym); }}>{sym}</span>
-                ))}
-                <span className="text-slate-600">{n.time}</span>
-              </div>
+      {/* ── Latest News ──────────────────────────────────────────────── */}
+      {news.loading ? <CardSkeleton rows={4} /> : (
+        <Card>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-white">Latest Headlines</h3>
+            <button onClick={() => navigateTo('research')} className="text-[10px] text-emerald-400 hover:underline">All News →</button>
+          </div>
+          {articles.length === 0 ? (
+            <div className="text-xs text-slate-500 py-4 text-center">No recent news</div>
+          ) : (
+            <div className="space-y-2">
+              {articles.map((n: NewsArticle, i: number) => (
+                <div key={i} className="flex items-start gap-2 text-xs py-1">
+                  <ImpactDot impact={n.sentiment.score > 0.2 ? 'high' : n.sentiment.score > 0 ? 'medium' : 'low'} />
+                  <div className="flex-1 min-w-0">
+                    <a href={n.url} target="_blank" rel="noopener noreferrer" className="text-white hover:text-emerald-400 transition-colors line-clamp-1">
+                      {n.title}
+                    </a>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-slate-600">{n.source}</span>
+                      {n.tickerSentiments?.slice(0, 3).map(ts => (
+                        <span key={ts.ticker} className="text-emerald-400 cursor-pointer hover:underline" onClick={() => { selectSymbol(ts.ticker); navigateTo('golden-egg', ts.ticker); }}>{ts.ticker}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <span className={`flex-shrink-0 ${n.sentiment.score > 0 ? 'text-emerald-400' : n.sentiment.score < 0 ? 'text-red-400' : 'text-slate-500'}`}>
+                    {n.sentiment.label}
+                  </span>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
+        </Card>
+      )}
+
+      {/* ── Error / debug ────────────────────────────────────────────── */}
+      {(equityScan.error || cryptoScan.error || movers.error || news.error || calendar.error) && (
+        <div className="text-[10px] text-red-400/60 border border-red-900/30 rounded-lg p-3 space-y-1">
+          <div className="font-semibold">API Issues (debug):</div>
+          {equityScan.error && <div>Scanner (equity): {equityScan.error}</div>}
+          {cryptoScan.error && <div>Scanner (crypto): {cryptoScan.error}</div>}
+          {movers.error && <div>Movers: {movers.error}</div>}
+          {news.error && <div>News: {news.error}</div>}
+          {calendar.error && <div>Calendar: {calendar.error}</div>}
         </div>
-      </Card>
+      )}
     </div>
   );
 }
