@@ -3,7 +3,22 @@
  * 
  * Strategy: Call existing /api/* routes (same origin), transform responses
  * into v2 types. No new backend code needed.
+ * 
+ * Auth: v1 routes read the `ms_auth` cookie. If the user isn't logged in,
+ * most endpoints return 401. We detect that and expose `isAuthError` so the
+ * UI can show a friendly "Sign in" prompt instead of raw error text.
  */
+
+/* ------------------------------------------------------------------ */
+/*  Auth error class                                                   */
+/* ------------------------------------------------------------------ */
+
+export class AuthError extends Error {
+  constructor(url: string) {
+    super('Sign in required');
+    this.name = 'AuthError';
+  }
+}
 
 /* ------------------------------------------------------------------ */
 /*  Generic fetcher                                                    */
@@ -11,9 +26,11 @@
 
 async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, {
+    credentials: 'same-origin',          // ensure cookies are sent
     ...options,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
   });
+  if (res.status === 401 || res.status === 403) throw new AuthError(url);
   if (!res.ok) throw new Error(`API ${res.status}: ${url}`);
   return res.json();
 }
@@ -552,16 +569,18 @@ export function fetchCloseCalendar(
 
 import { useState, useEffect, useCallback } from 'react';
 
-interface UseApiResult<T> {
+export interface UseApiResult<T> {
   data: T | null;
   error: string | null;
   loading: boolean;
+  isAuthError: boolean;
   refetch: () => void;
 }
 
 function useApi<T>(fetcher: () => Promise<T>, deps: any[] = []): UseApiResult<T> {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isAuthError, setIsAuthError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [trigger, setTrigger] = useState(0);
 
@@ -571,14 +590,21 @@ function useApi<T>(fetcher: () => Promise<T>, deps: any[] = []): UseApiResult<T>
     let cancelled = false;
     setLoading(true);
     setError(null);
+    setIsAuthError(false);
     fetcher()
       .then(res => { if (!cancelled) { setData(res); setLoading(false); } })
-      .catch(err => { if (!cancelled) { setError(err.message); setLoading(false); } });
+      .catch(err => {
+        if (cancelled) return;
+        const isAuth = err instanceof AuthError;
+        setIsAuthError(isAuth);
+        setError(isAuth ? null : err.message);   // don't show auth as "error"
+        setLoading(false);
+      });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trigger, ...deps]);
 
-  return { data, error, loading, refetch };
+  return { data, error, loading, isAuthError, refetch };
 }
 
 // --- Typed hooks ---
