@@ -1,0 +1,111 @@
+'use client';
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MSP v2 — Shared UI Components
+   Badge, Card, SectionHeader, ScoreBar, StatBox, EmptyState, TabBar, ImpactDot
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+import React from 'react';
+
+// ─── Badge ────────────────────────────────────────────────────────────────────
+
+export function Badge({ label, color, small }: { label: string; color: string; small?: boolean }) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full font-semibold uppercase tracking-wide ${small ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-1 text-xs'}`}
+      style={{ backgroundColor: color + '22', color, border: `1px solid ${color}44` }}
+    >
+      {label}
+    </span>
+  );
+}
+
+// ─── Card ─────────────────────────────────────────────────────────────────────
+
+export function Card({ children, className = '', onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) {
+  return (
+    <div
+      className={`rounded-xl border border-slate-700/50 bg-[#101A2A] p-4 ${onClick ? 'cursor-pointer hover:border-slate-600 transition-colors' : ''} ${className}`}
+      onClick={onClick}
+    >
+      {children}
+    </div>
+  );
+}
+
+// ─── Section Header ───────────────────────────────────────────────────────────
+
+export function SectionHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between mb-4">
+      <div>
+        <h2 className="text-lg font-bold text-white">{title}</h2>
+        {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
+      </div>
+      {action}
+    </div>
+  );
+}
+
+// ─── Score Bar ────────────────────────────────────────────────────────────────
+
+export function ScoreBar({ value, max = 100, color = '#10B981' }: { value: number; max?: number; color?: string }) {
+  const pct = Math.min(100, Math.max(0, (value / max) * 100));
+  return (
+    <div className="h-1.5 w-full rounded-full bg-slate-700/50 overflow-hidden">
+      <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
+    </div>
+  );
+}
+
+// ─── Stat Box ─────────────────────────────────────────────────────────────────
+
+export function StatBox({ label, value, color, sub }: { label: string; value: string | number; color?: string; sub?: string }) {
+  return (
+    <div className="text-center">
+      <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">{label}</div>
+      <div className="text-lg font-bold" style={{ color: color || '#fff' }}>{value}</div>
+      {sub && <div className="text-[10px] text-slate-500 mt-0.5">{sub}</div>}
+    </div>
+  );
+}
+
+// ─── Empty State ──────────────────────────────────────────────────────────────
+
+export function EmptyState({ message, icon }: { message: string; icon: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 text-slate-500">
+      <div className="text-4xl mb-3">{icon}</div>
+      <div className="text-sm">{message}</div>
+    </div>
+  );
+}
+
+// ─── Tab Bar ──────────────────────────────────────────────────────────────────
+
+export function TabBar({ tabs, active, onChange }: { tabs: string[]; active: string; onChange: (t: string) => void }) {
+  return (
+    <div className="flex gap-1 overflow-x-auto pb-1 mb-4 scrollbar-thin">
+      {tabs.map(t => (
+        <button
+          key={t}
+          onClick={() => onChange(t)}
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+            active === t
+              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+          }`}
+        >
+          {t}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ─── Impact Dot ───────────────────────────────────────────────────────────────
+
+export function ImpactDot({ impact }: { impact: 'high' | 'medium' | 'low' }) {
+  const c = impact === 'high' ? '#EF4444' : impact === 'medium' ? '#F59E0B' : '#64748B';
+  return <span className="inline-block w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: c }} />;
+}
