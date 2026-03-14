@@ -1,0 +1,1270 @@
+# MSP v2 — Full Site Map & Page-by-Page Visual Guide
+
+**Every page, every section, what every screen looks like under v2.**
+
+---
+
+## Site Structure Overview
+
+### v1 (Current) → v2 (New)
+
+```
+v1: 40+ tool pages, fragmented navigation, 5 dropdown menus
+v2: 7 core surfaces + supporting pages, single clean nav bar
+
+v1 page count:  ~48 tool pages + 15 marketing/legal + 8 admin = ~71 pages
+v2 page count:  7 surfaces + 10 marketing/legal + 8 admin = ~25 pages
+```
+
+### v2 Complete Route Map
+
+```
+PUBLIC PAGES (no login required)
+├── /                         Homepage (marketing + feature showcase)
+├── /pricing                  Plans & subscription
+├── /auth                     Login (email magic link)
+├── /auth/verify              Magic link verification
+├── /after-checkout           Stripe post-checkout confirmation
+├── /contact                  Contact form
+├── /partners                 Partnership info
+├── /reviews                  Testimonials
+├── /blog                     Blog listing
+├── /blog/[slug]              Blog post
+├── /guide                    User guide hub
+├── /guide/open-interest      Topic guide
+├── /resources                Resource hub
+├── /resources/platform-guide Platform walkthrough
+├── /resources/trading-guides Trading education
+├── /disclaimer               Financial disclaimer
+├── /legal/privacy            Privacy policy
+├── /legal/terms              Terms of service
+├── /legal/cookie-policy      Cookie policy
+├── /legal/refund-policy      Refund policy
+
+AUTHENTICATED PAGES (7 core surfaces)
+├── /dashboard                Surface 1 — Command Center
+├── /scanner                  Surface 2 — Ranked Opportunity Engine
+├── /golden-egg               Surface 3 — Flagship Decision Page
+├── /terminal                 Surface 4 — Execution Cockpit
+├── /explorer                 Surface 5 — Cross-Market Intelligence
+├── /research                 Surface 6 — Information Layer
+├── /workspace                Surface 7 — Personal Management
+│   ├── (tab) Watchlist
+│   ├── (tab) Journal
+│   ├── (tab) Portfolio
+│   ├── (tab) Backtest
+│   ├── (tab) Alerts
+│   ├── (tab) Learning
+│   └── (tab) Settings
+├── /account                  Account & billing
+├── /referrals                Refer & Earn
+
+ADMIN (password protected)
+├── /admin                    Overview
+├── /admin/subscriptions      Subscription management
+├── /admin/trials             Trial tracking
+├── /admin/ai-usage           AI quota tracking
+├── /admin/costs              API cost breakdown
+├── /admin/income             Revenue
+├── /admin/reporting          Analytics
+└── /admin/delete-requests    Account deletions
+```
+
+---
+
+## Global Shell (Every Page)
+
+### Header / Navigation Bar
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│  [MSP Logo]  MarketScannerPros                                      │
+│                                                                      │
+│  Dashboard  Scanner  Golden Egg  Terminal  Explorer  Research  Workspace │
+│                                                                      │
+│                                    Pricing  Referrals  [🔔]  Account │
+│                                                              [Pro ⭐] │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+**Key changes from v1:**
+- v1 had 5 dropdown menus (Tools, Scanners, Markets, Calendar, Resources) with 40+ items
+- v2 has **7 flat buttons** — one per surface, no dropdowns needed
+- Tier badge stays (Free / ✨ Pro / ⭐ Pro Trader)
+- Notification bell stays
+- Mobile: hamburger → drawer with 7 surface links (not accordion menus)
+
+### Regime Bar (Sticky, below nav on all authenticated pages)
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│  REGIME: Expansion ●                                                 │
+│  Trend: 4  Range: 3  Compression: 2  Transition: 2  Expansion: 5   │
+│  Risk Off: 1  Risk On: 1                                            │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+Shows the dominant market regime across all scanned symbols. Always visible so the trader knows the environment before doing anything.
+
+### Footer
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│  © 2026 MarketScannerPros  |  Terms  Privacy  Disclaimer  Contact   │
+│  Not financial advice. For educational purposes only.                │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## PAGE 1: Homepage — `/`
+
+**Who sees it:** Everyone (public)  
+**Purpose:** Marketing landing page + feature showcase
+
+### Layout
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                         HEADER / NAV                                 │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│                    ★ HERO SECTION ★                                  │
+│                                                                      │
+│    "The Trading Intelligence Platform"                               │
+│    "Stop jumping between 10 tabs. Scanner → Golden Egg → Terminal.  │
+│     3 pages. One decision."                                          │
+│                                                                      │
+│    [Start Free]            [See Plans →]                             │
+│                                                                      │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│    ★ 7 SURFACE SHOWCASE (visual cards)                              │
+│                                                                      │
+│    ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐             │
+│    │Dashboard │ │Scanner   │ │Golden Egg│ │Terminal  │             │
+│    │Command   │ │Ranked    │ │Deep      │ │Execute   │             │
+│    │Center    │ │Engine    │ │Analysis  │ │& Manage  │             │
+│    └──────────┘ └──────────┘ └──────────┘ └──────────┘             │
+│    ┌──────────┐ ┌──────────┐ ┌──────────┐                          │
+│    │Explorer  │ │Research  │ │Workspace │                          │
+│    │Markets   │ │News &    │ │Journal   │                          │
+│    │Overview  │ │Calendar  │ │& Portfolio│                          │
+│    └──────────┘ └──────────┘ └──────────┘                          │
+│                                                                      │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│    ★ KEY ENGINES (what powers the platform)                         │
+│                                                                      │
+│    ┌────────────────┐  ┌────────────────┐  ┌────────────────┐       │
+│    │ Confluence      │  │ DVE Volatility │  │ Time Confluence│       │
+│    │ Engine          │  │ Engine         │  │ Engine         │       │
+│    │ Multi-factor    │  │ 5-regime vol   │  │ Candle cluster │       │
+│    │ scoring         │  │ classification │  │ timing         │       │
+│    └────────────────┘  └────────────────┘  └────────────────┘       │
+│    ┌────────────────┐  ┌────────────────┐  ┌────────────────┐       │
+│    │ Options Flow   │  │ Cross-Market   │  │ Regime Engine  │       │
+│    │ Engine         │  │ Influence      │  │                │       │
+│    │ IV, Greeks,    │  │ DXY, VIX, oil  │  │ Trend/range/   │       │
+│    │ smart money    │  │ bonds, BTC.D   │  │ compression    │       │
+│    └────────────────┘  └────────────────┘  └────────────────┘       │
+│                                                                      │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│    ★ WORKFLOW DEMO                                                   │
+│                                                                      │
+│    Step 1: Dashboard tells you what matters today                    │
+│    Step 2: Scanner ranks the best setups by regime                  │
+│    Step 3: Golden Egg gives you the verdict on any symbol           │
+│    Step 4: Terminal is where you size, plan, and execute            │
+│                                                                      │
+│    "Before: 6 pages per trade. After: 3."                           │
+│                                                                      │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│    ★ SOCIAL PROOF                                                    │
+│    "Join 2,400+ traders using MSP"                                  │
+│    Stats: Symbols scanned | AI questions answered | Setups found    │
+│                                                                      │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│    ★ PRICING PREVIEW                                                 │
+│    Free / Pro ($29/mo) / Pro Trader ($69/mo)                        │
+│    [See Full Plans →]                                                │
+│                                                                      │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│    ★ REFERRAL BANNER                                                 │
+│    "Refer a friend → $20 credit. Monthly $500 draw."               │
+│    [Learn More →]                                                    │
+│                                                                      │
+├──────────────────────────────────────────────────────────────────────┤
+│                         FOOTER                                       │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## PAGE 2: Pricing — `/pricing`
+
+**Who sees it:** Everyone (public)  
+**Purpose:** Subscription tiers, feature comparison, FAQ
+
+### Layout
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                         HEADER / NAV                                 │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│    "Choose Your Trading Intelligence Plan"                           │
+│                                                                      │
+│    [Monthly]  [Yearly — Save 20%]                                   │
+│                                                                      │
+│    ┌──────────────┐  ┌──────────────┐  ┌──────────────┐             │
+│    │     FREE     │  │   ★ PRO ★    │  │ ⭐ PRO TRADER │             │
+│    │   $0/mo      │  │  $29/mo      │  │   $69/mo      │             │
+│    │              │  │  $278/yr     │  │   $662/yr     │             │
+│    │              │  │              │  │               │             │
+│    │ ✓ Scanner    │  │ Everything   │  │ Everything    │             │
+│    │   (limited)  │  │ in Free +    │  │ in Pro +      │             │
+│    │ ✓ Markets    │  │              │  │               │             │
+│    │ ✓ Golden Egg │  │ ✓ Unlimited  │  │ ✓ Backtest    │             │
+│    │   (3/day)    │  │   scans      │  │ ✓ TradingView │             │
+│    │ ✓ 10 AI      │  │ ✓ 50 AI/day  │  │   scripts     │             │
+│    │   questions  │  │   (GPT-4o)   │  │ ✓ 50 AI/day   │             │
+│    │ ✓ Crypto     │  │ ✓ CSV export │  │   (GPT-4.1)   │             │
+│    │              │  │ ✓ Watchlists │  │ ✓ Trade        │             │
+│    │              │  │ ✓ Alerts     │  │   journal     │             │
+│    │              │  │ ✓ Portfolio  │  │ ✓ Operator    │             │
+│    │              │  │              │  │   dashboard   │             │
+│    │              │  │              │  │ ✓ Learning    │             │
+│    │              │  │              │  │   engine (v3) │             │
+│    │              │  │              │  │               │             │
+│    │ [Start Free] │  │ [Subscribe]  │  │ [Subscribe]   │             │
+│    └──────────────┘  └──────────────┘  └──────────────┘             │
+│                                                                      │
+│    ★ FEATURE COMPARISON TABLE                                        │
+│    Detailed row-by-row comparison of all features                   │
+│                                                                      │
+│    ★ FAQ SECTION                                                     │
+│    Common questions about billing, trials, refunds                  │
+│                                                                      │
+│    ★ 7-DAY MONEY-BACK GUARANTEE                                     │
+│                                                                      │
+├──────────────────────────────────────────────────────────────────────┤
+│                         FOOTER                                       │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## PAGE 3: Auth / Login — `/auth`
+
+**Who sees it:** Logged-out users  
+**Purpose:** Email magic link login
+
+### Layout
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                         HEADER / NAV                                 │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│              ┌────────────────────────────────┐                      │
+│              │                                │                      │
+│              │   Sign in to MarketScannerPros │                      │
+│              │                                │                      │
+│              │   Enter your Stripe email:     │                      │
+│              │   ┌────────────────────────┐   │                      │
+│              │   │ email@example.com      │   │                      │
+│              │   └────────────────────────┘   │                      │
+│              │                                │                      │
+│              │   [Send Magic Link]            │                      │
+│              │                                │                      │
+│              │   ─── or ───                   │                      │
+│              │                                │                      │
+│              │   No account?                  │                      │
+│              │   [Start with Free Plan →]     │                      │
+│              │                                │                      │
+│              └────────────────────────────────┘                      │
+│                                                                      │
+├──────────────────────────────────────────────────────────────────────┤
+│                         FOOTER                                       │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## SURFACE 1: Dashboard — `/dashboard`
+
+**Who sees it:** All logged-in users  
+**Purpose:** Command center — "What matters today" in 10 seconds  
+**Tier gates:** Free sees limited data, Pro/Pro Trader sees full data
+
+### Layout
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│  [MSP Logo]  Dashboard  Scanner  Golden Egg  Terminal  Explorer      │
+│              Research  Workspace          Pricing  [🔔]  [Pro ⭐]    │
+├──────────────────────────────────────────────────────────────────────┤
+│  REGIME: Expansion ●  Trend:4 Range:3 Comp:2 Trans:2 Exp:5 RO:1 RN:1│
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│    ★ BEST SETUPS NOW                                                 │
+│    ┌──────────────────────────────────────────────────────────┐      │
+│    │ Rank  Symbol    Regime      Score  Verdict   Action      │      │
+│    │ 1     NVDA      Expansion   84     TRADE     [Analyze →] │      │
+│    │ 2     ETH       Compression 79     WATCH     [Analyze →] │      │
+│    │ 3     AAPL      Trend       77     TRADE     [Analyze →] │      │
+│    │ 4     BTC       Transition  74     WATCH     [Analyze →] │      │
+│    │ 5     TSLA      Expansion   71     TRADE     [Analyze →] │      │
+│    └──────────────────────────────────────────────────────────┘      │
+│                                                                      │
+│    ┌─────────────────────┐  ┌─────────────────────┐                  │
+│    │ ★ ACTIVE ALERTS     │  │ ★ UPCOMING EVENTS   │                  │
+│    │                     │  │                     │                  │
+│    │ NVDA — READY        │  │ CPI Release — HIGH  │                  │
+│    │ Break above 142.50  │  │ Tomorrow 8:30 EST   │                  │
+│    │                     │  │                     │                  │
+│    │ SOL — TRIGGERED     │  │ FOMC Minutes — HIGH │                  │
+│    │ Entry at 185.20     │  │ Wednesday 2:00 PM   │                  │
+│    │                     │  │                     │                  │
+│    │ AAPL — SETTING UP   │  │ OPEX — MEDIUM       │                  │
+│    │ Watching 178 level  │  │ Friday              │                  │
+│    │                     │  │                     │                  │
+│    │ [View All Alerts →] │  │ [Full Calendar →]   │                  │
+│    └─────────────────────┘  └─────────────────────┘                  │
+│                                                                      │
+│    ★ CROSS-MARKET INFLUENCE                                          │
+│    ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐│
+│    │ DXY    │ │ Oil    │ │ Yields │ │ BTC.D  │ │ VIX    │ │ Gold   ││
+│    │ Rising │ │ Stable │ │ Falling│ │ Rising │ │ Low    │ │ Stable ││
+│    │ ▲ 0.3% │ │ — 0.1% │ │ ▼ 0.5% │ │ ▲ 0.8% │ │ 14.2  │ │ — 0.2% ││
+│    │Headwind│ │Neutral │ │Support │ │Headwind│ │ Risk On│ │Neutral ││
+│    └────────┘ └────────┘ └────────┘ └────────┘ └────────┘ └────────┘│
+│                                                                      │
+│    ★ LATEST HEADLINES                                                │
+│    ● Fed signals potential rate cut — HIGH — [FED] [SPY] [QQQ]     │
+│    ● NVDA earnings beat estimates — HIGH — [NVDA]                   │
+│    ● Bitcoin ETF inflows surge — MEDIUM — [BTC] [ETH]              │
+│    ● Oil inventories draw — LOW — [CL] [XLE]                       │
+│    [View All News →]                                                 │
+│                                                                      │
+├──────────────────────────────────────────────────────────────────────┤
+│                         FOOTER                                       │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+### Interactions
+- Click any symbol → opens Golden Egg for that symbol
+- Click "Analyze →" → opens Golden Egg
+- Click "View All Alerts" → opens Workspace (Watchlist tab)
+- Click "Full Calendar" → opens Research (Calendar tab)
+- Click "View All News" → opens Research (News tab)
+- Click symbol tag on headline → opens Golden Egg for that symbol
+
+---
+
+## SURFACE 2: Scanner — `/scanner`
+
+**Who sees it:** All users (Free = limited results, Pro/Pro Trader = unlimited)  
+**Purpose:** Regime-aware ranked opportunity engine  
+**What it replaces:** v1 Scanner + Confluence Scanner + Time Scanner + Market Movers + Gainers/Losers + Top Movers
+
+### Layout
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                         NAV + REGIME BAR                             │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ★ REGIME WEIGHT INDICATOR                                           │
+│  Current regime: Expansion                                           │
+│  Structure: 20%  Momentum: 15%  Volatility: 30%  Options: 25%      │
+│  Time: 10%                                                           │
+│  "Scanner weights adapt to the dominant market regime"              │
+│                                                                      │
+│  ★ FILTER TABS                                                       │
+│  [All Markets] [Equities] [Crypto] [Commodities] [Indices]         │
+│  [Highest Confluence] [Vol Expansions] [Trade Ready]                │
+│                                                                      │
+│  ★ SCANNER TABLE (sortable columns)                                  │
+│  ┌────────────────────────────────────────────────────────────────┐  │
+│  │ Symbol  Regime     Bias   MSP▼  Conf  Confid  Time  DVE       │  │
+│  │         (badge)    ▲/▼   Score Score  ence%  Align  Regime    │  │
+│  │                                                                │  │
+│  │ NVDA   [Expansion] ▲ 84   82    74%   80    [Expansion]       │  │
+│  │        Options: Bullish  Lifecycle: [READY]  Verdict: [TRADE]  │  │
+│  │                                                    [Analyze →] │  │
+│  │─────────────────────────────────────────────────────────────── │  │
+│  │ ETH   [Compression] ▲ 79  76    68%   85    [Compression]     │  │
+│  │        Options: Bullish  Lifecycle: [SETTING UP]  Verdict: [WATCH]│
+│  │                                                    [Analyze →] │  │
+│  │─────────────────────────────────────────────────────────────── │  │
+│  │ AAPL  [Trend]     ▲ 77   75    71%   72    [Neutral]          │  │
+│  │        Options: Neutral  Lifecycle: [WATCHING]  Verdict: [TRADE]│  │
+│  │                                                    [Analyze →] │  │
+│  │─────────────────────────────────────────────────────────────── │  │
+│  │ BTC   [Transition] ▲ 74  80    65%   78    [Transition]       │  │
+│  │        Options: Bullish  Lifecycle: [DISCOVERED]  Verdict: [WATCH]│
+│  │                                                    [Analyze →] │  │
+│  │─────────────────────────────────────────────────────────────── │  │
+│  │ ... (18+ symbols ranked by MSP Score)                          │  │
+│  └────────────────────────────────────────────────────────────────┘  │
+│                                                                      │
+│  Each row shows:                                                     │
+│  • Symbol + name                                                     │
+│  • Regime badge (color-coded)                                        │
+│  • Directional bias arrow                                            │
+│  • MSP Score (0-100, color gradient)                                │
+│  • Confluence score                                                  │
+│  • Confidence percentage                                             │
+│  • Time alignment score                                              │
+│  • DVE volatility regime badge                                       │
+│  • Options flow bias                                                 │
+│  • Trade lifecycle state badge                                       │
+│  • Verdict badge (TRADE / WATCH / NO_TRADE)                         │
+│  • "Analyze" button → opens Golden Egg                              │
+│                                                                      │
+├──────────────────────────────────────────────────────────────────────┤
+│                         FOOTER                                       │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+### Interactions
+- Click column header → sort ascending/descending
+- Click filter tab → filter by asset class or condition
+- Click "Analyze →" → opens Golden Egg for that symbol
+- Click symbol name → opens Golden Egg for that symbol
+
+---
+
+## SURFACE 3: Golden Egg — `/golden-egg`
+
+**Who sees it:** All users (Free = 3/day, Pro/PT = unlimited)  
+**Purpose:** Flagship decision page — one symbol, full institutional analysis  
+**What it replaces:** v1 Golden Egg + Deep Analysis + AI Analyst symbol breakdown + Options Confluence narrative + DVE interpretation
+
+### Layout
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                         NAV + REGIME BAR                             │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ★ SYMBOL SELECTOR BAR                                               │
+│  [NVDA] [ETH] [AAPL] [BTC] [TSLA] [SOL] [AMZN] [XRP] [MSFT] ...  │
+│                                                                      │
+│  ═══════════════════════════════════════════════════════════════════  │
+│                                                                      │
+│  ★ VERDICT HEADER (Critical Upgrade #2)                              │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │                                                              │    │
+│  │  NVIDIA CORP (NVDA)                          $142.50 +2.3%  │    │
+│  │                                                              │    │
+│  │  [Expansion]  [▲ Bullish]  [DVE: Expansion]  [READY]        │    │
+│  │                                                              │    │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌────────────┐  │    │
+│  │  │ MSP Score│  │Confluence│  │Confidence│  │  VERDICT   │  │    │
+│  │  │    84    │  │    82    │  │   74%    │  │   TRADE    │  │    │
+│  │  └──────────┘  └──────────┘  └──────────┘  └────────────┘  │    │
+│  │                                                              │    │
+│  │  Trigger:       Break above $145.00                          │    │
+│  │  Invalidation:  Close below $138.50                          │    │
+│  │  Targets:       $152.00 → $158.00 → $165.00                │    │
+│  │                                                              │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ═══════════════════════════════════════════════════════════════════  │
+│                                                                      │
+│  ★ SECTION A — MARKET CONTEXT                                        │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  Regime:          Expansion (orange badge)                   │    │
+│  │  HTF Bias:        Bullish (higher timeframe trend up)        │    │
+│  │  Cross-Market:    Supportive (green badge)                   │    │
+│  │    • DXY weakening → equity tailwind                         │    │
+│  │    • VIX low → risk-on environment                           │    │
+│  │    • Bond yields stable → no headwind                        │    │
+│  │  Macro Note:      "CPI release tomorrow — position sizing"  │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ★ SECTION B — STRUCTURE                                             │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  Structure Quality:  ████████████████░░░░  82/100            │    │
+│  │  Compatible Setups:  [Breakout] [Trend Continuation]         │    │
+│  │  Key Levels:                                                  │    │
+│  │    Support:  $138.50 (strong), $135.00 (major)               │    │
+│  │    Resistance: $145.00 (trigger), $152.00 (target 1)         │    │
+│  │  Current Price:  $142.50 (+2.3%)                             │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ★ SECTION C — TIMING                                                │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  Time Alignment:  ████████████████░░░░  80/100               │    │
+│  │  Session:         US Regular — Peak liquidity                │    │
+│  │  Time Cluster:    4H + Daily alignment in next 2 candles     │    │
+│  │  Event Risk:      ⚠ CPI Tomorrow — adjust size               │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ★ SECTION D — VOLATILITY (DVE)                                      │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  DVE Regime:      [Expansion] (amber badge)                  │    │
+│  │  BBWP:            ██████████████████░░  88/100               │    │
+│  │  Persistence:     72% probability of continuation            │    │
+│  │  Expected Move:   4.8% in next 5 sessions                    │    │
+│  │  Note:            Vol expanding — breakout conditions met    │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ★ SECTION E — OPTIONS / DERIVATIVES                                 │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  Flow Bias:       Bullish (calls dominating)                 │    │
+│  │  IV Regime:       Moderate                                    │    │
+│  │  Gamma Context:   Positive gamma > 145 (dealers hedge up)    │    │
+│  │  Expected Move:   ±$6.80 (±4.8%)                            │    │
+│  │  OI Concentration: 145 calls, 135 puts                       │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ★ SECTION F — TRADE PLAN                                            │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  ┌─── green border ───────────────────────────────────────┐  │    │
+│  │  │                                                         │  │    │
+│  │  │  Entry Trigger:   Break above $145.00 with volume       │  │    │
+│  │  │  Stop/Invalid:    Close below $138.50                   │  │    │
+│  │  │  Targets:         $152.00 → $158.00 → $165.00          │  │    │
+│  │  │                                                         │  │    │
+│  │  │  ┌──────────┐  ┌──────────┐  ┌──────────┐             │  │    │
+│  │  │  │ R:R 2.4  │  │ Conf 74% │  │ Score 84 │             │  │    │
+│  │  │  └──────────┘  └──────────┘  └──────────┘             │  │    │
+│  │  │                                                         │  │    │
+│  │  │  [Open in Trade Terminal]    [Add to Watchlist]         │  │    │
+│  │  │                                                         │  │    │
+│  │  └─────────────────────────────────────────────────────────┘  │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+├──────────────────────────────────────────────────────────────────────┤
+│                         FOOTER                                       │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+### Interactions
+- Click symbol in selector → loads that symbol's intelligence
+- "Open in Trade Terminal" → navigates to Terminal with symbol pre-loaded
+- "Add to Watchlist" → adds to Workspace watchlist
+- Clicking regime/bias badges → no action (informational)
+
+---
+
+## SURFACE 4: Trade Terminal — `/terminal`
+
+**Who sees it:** Pro / Pro Trader  
+**Purpose:** Execution cockpit — chart, options, volatility, risk, notes  
+**What it replaces:** v1 Intraday Charts + Options Terminal + Options pages + Derivatives + Crypto Terminal
+
+### Layout
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                         NAV + REGIME BAR                             │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ★ SYMBOL BAR                                                        │
+│  NVDA — NVIDIA CORP    $142.50 (+2.3%)                              │
+│  [Expansion]  [▲ Bullish]  [TRADE]  [READY]                        │
+│                                                                      │
+│  ★ TAB BAR                                                           │
+│  [Chart]  [Options]  [Volatility]  [Risk]  [Execution Notes]       │
+│                                                                      │
+│  ═══════════════════════════════════════════════════════════════════  │
+│                                                                      │
+│  ── TAB: CHART ──                                                    │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │                                                              │    │
+│  │              ┌─────────────────────────────────┐             │    │
+│  │              │                                 │             │    │
+│  │              │     TRADINGVIEW CHART            │             │    │
+│  │              │     (embedded widget)            │             │    │
+│  │              │                                 │             │    │
+│  │              │     - Candlestick               │             │    │
+│  │              │     - Volume bars               │             │    │
+│  │              │     - Key levels overlay         │             │    │
+│  │              │     - Drawing tools             │             │    │
+│  │              │                                 │             │    │
+│  │              └─────────────────────────────────┘             │    │
+│  │                                                              │    │
+│  │  Timeframes: [15m] [1H] [4H] [D] [W]                       │    │
+│  │                                                              │    │
+│  │  KEY LEVELS                                                   │    │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐                   │    │
+│  │  │ Entry    │  │ Stop     │  │ Targets  │                   │    │
+│  │  │ $145.00  │  │ $138.50  │  │ $152.00  │                   │    │
+│  │  │ (green)  │  │ (red)    │  │ $158.00  │                   │    │
+│  │  │          │  │          │  │ $165.00  │                   │    │
+│  │  │          │  │          │  │ (blue)   │                   │    │
+│  │  └──────────┘  └──────────┘  └──────────┘                   │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ── TAB: OPTIONS ──                                                  │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  Flow Bias: Bullish    IV Regime: Moderate                   │    │
+│  │  Gamma Context: Positive > 145    Expected Move: ±$6.80     │    │
+│  │                                                              │    │
+│  │  ┌─────────────────────────────────────────────────────────┐ │    │
+│  │  │ OPTIONS CHAIN                                           │ │    │
+│  │  │ Strike  Calls Bid/Ask  IV    Delta  OI   Puts Bid/Ask  │ │    │
+│  │  │ 130     8.50/8.80     32%   0.85   12K  0.45/0.55     │ │    │
+│  │  │ 135     5.20/5.50     30%   0.72   18K  0.95/1.10     │ │    │
+│  │  │ 140     3.10/3.30     28%   0.58   25K  1.80/2.00     │ │    │
+│  │  │ 145     1.50/1.70     27%   0.42   30K  3.20/3.50     │ │    │
+│  │  │ 150     0.70/0.85     29%   0.28   15K  5.50/5.80     │ │    │
+│  │  └─────────────────────────────────────────────────────────┘ │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ── TAB: VOLATILITY ──                                               │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  DVE Regime: [Expansion]    BBWP: 88                        │    │
+│  │  Persistence: 72%           Expected Move: 4.8%             │    │
+│  │                                                              │    │
+│  │  ┌─────────────────────────────────────────────────────────┐ │    │
+│  │  │ GEX / OI / DEALER POSITIONING CHART                     │ │    │
+│  │  │ (visual representation of gamma exposure levels          │ │    │
+│  │  │  and dealer hedging pressure by strike)                  │ │    │
+│  │  └─────────────────────────────────────────────────────────┘ │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ── TAB: RISK ──                                                     │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  POSITION SIZE CALCULATOR                                    │    │
+│  │                                                              │    │
+│  │  Account Size:     [$______50,000__]                         │    │
+│  │  Risk Per Trade:   [______1.0_____%]                         │    │
+│  │                                                              │    │
+│  │  ┌──────────────┐  ┌──────────────┐                         │    │
+│  │  │ Risk Amount  │  │ Position Size│                         │    │
+│  │  │ $500         │  │ 77 shares    │                         │    │
+│  │  └──────────────┘  └──────────────┘                         │    │
+│  │  ┌──────────────┐  ┌──────────────┐                         │    │
+│  │  │ R:R Ratio    │  │ Max Gain     │                         │    │
+│  │  │ 2.4          │  │ $1,200       │                         │    │
+│  │  └──────────────┘  └──────────────┘                         │    │
+│  │                                                              │    │
+│  │  Entry: $145.00   Stop: $138.50   Target: $152.00           │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ── TAB: EXECUTION NOTES ──                                          │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  SETUP CHECKLIST                                             │    │
+│  │                                                              │    │
+│  │  ☑ Regime compatible with setup type                         │    │
+│  │  ☑ Structure quality > 60                                    │    │
+│  │  ☑ Confluence score > 70                                     │    │
+│  │  ☑ Time alignment > 50                                       │    │
+│  │  ☑ Cross-market alignment supportive                         │    │
+│  │  ☑ Options flow supportive                                   │    │
+│  │                                                              │    │
+│  │  6/6 checks passed — CLEAR TO TRADE                          │    │
+│  │                                                              │    │
+│  │  Notes:                                                       │    │
+│  │  ┌─────────────────────────────────────────────────────────┐ │    │
+│  │  │ CPI tomorrow — will use half size. Looking for break   │ │    │
+│  │  │ above 145 with volume confirmation on the 4H close.    │ │    │
+│  │  └─────────────────────────────────────────────────────────┘ │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+├──────────────────────────────────────────────────────────────────────┤
+│                         FOOTER                                       │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## SURFACE 5: Market Explorer — `/explorer`
+
+**Who sees it:** All users  
+**Purpose:** Cross-market intelligence, bird's eye view  
+**What it replaces:** v1 Markets + Equities Explorer + Crypto Command Center + Crypto Explorer + Crypto Heatmap + Crypto Dashboard + Commodities + Macro + Market Movers + Gainers/Losers + Heatmaps
+
+### Layout
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                         NAV + REGIME BAR                             │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ★ TAB BAR                                                           │
+│  [Overview] [Equities] [Crypto] [Commodities] [Indices] [Sectors]  │
+│  [Volatility]                                                        │
+│                                                                      │
+│  ═══════════════════════════════════════════════════════════════════  │
+│                                                                      │
+│  ── TAB: OVERVIEW ──                                                 │
+│                                                                      │
+│  ★ MARKET HEATMAP                                                    │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  ┌──────┐┌──────┐┌──────┐┌──────┐┌──────┐┌──────┐┌──────┐ │    │
+│  │  │ NVDA ││ AAPL ││ MSFT ││ BTC  ││ ETH  ││ TSLA ││ AMZN │ │    │
+│  │  │+2.3% ││+1.1% ││+0.8% ││-1.2% ││+3.1% ││+1.8% ││+0.5% │ │    │
+│  │  │ ██████││ █████││ ████ ││ ████ ││██████ ││ █████││ ████ │ │    │
+│  │  │(green)││(green)││(green)││(red) ││(green)││(green)││(green)│    │
+│  │  └──────┘└──────┘└──────┘└──────┘└──────┘└──────┘└──────┘ │    │
+│  │  ┌──────┐┌──────┐┌──────┐┌──────┐┌──────┐┌──────┐┌──────┐ │    │
+│  │  │ SOL  ││ XRP  ││ GC   ││ CL   ││ DXY  ││ SPY  ││ QQQ  │ │    │
+│  │  │+4.5% ││-0.3% ││+0.2% ││-0.8% ││+0.3% ││+1.0% ││+1.4% │ │    │
+│  │  └──────┘└──────┘└──────┘└──────┘└──────┘└──────┘└──────┘ │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│  Click any symbol → opens Golden Egg                                 │
+│                                                                      │
+│  ┌─────────────────────┐  ┌─────────────────────┐                    │
+│  │ ★ TOP MOVERS        │  │ ★ VOL EXPANSIONS    │                    │
+│  │                     │  │                     │                    │
+│  │ SOL    +4.5%  ▲     │  │ NVDA  [Expansion]   │                    │
+│  │ ETH    +3.1%  ▲     │  │ BBWP: 88            │                    │
+│  │ NVDA   +2.3%  ▲     │  │                     │                    │
+│  │ TSLA   +1.8%  ▲     │  │ TSLA  [Expansion]   │                    │
+│  │ BTC    -1.2%  ▼     │  │ BBWP: 82            │                    │
+│  │ CL     -0.8%  ▼     │  │                     │                    │
+│  └─────────────────────┘  └─────────────────────┘                    │
+│                                                                      │
+│  ★ CROSS-MARKET INFLUENCE MAP                                        │
+│  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ │
+│  │ DXY    │ │ Oil    │ │ Yields │ │ BTC.D  │ │ VIX    │ │ Gold   │ │
+│  │ Rising │ │ Stable │ │ Falling│ │ Rising │ │ Low    │ │ Stable │ │
+│  │▲ 0.3%  │ │— 0.1%  │ │▼ 0.5%  │ │▲ 0.8%  │ │ 14.2  │ │— 0.2%  │ │
+│  │Headwind│ │Neutral │ │Support │ │Headwind│ │Risk On │ │Neutral │ │
+│  └────────┘ └────────┘ └────────┘ └────────┘ └────────┘ └────────┘ │
+│                                                                      │
+│  ── TAB: EQUITIES ──                                                 │
+│  Same heatmap + movers + vol, filtered to equities only              │
+│  + Sector rotation view                                              │
+│  + Index breadth (advance/decline)                                   │
+│                                                                      │
+│  ── TAB: CRYPTO ──                                                   │
+│  Same heatmap + movers + vol, filtered to crypto only                │
+│  + BTC dominance chart                                               │
+│  + Funding rates                                                     │
+│  + Crypto market cap                                                 │
+│                                                                      │
+│  ── TAB: COMMODITIES ──                                              │
+│  Energy, metals, agriculture                                         │
+│  + Oil/Gold/Silver trends                                            │
+│  + Commodity correlation to DXY                                      │
+│                                                                      │
+│  ── TAB: SECTORS ──                                                  │
+│  Sector rotation heatmap                                             │
+│  + Relative strength by sector                                       │
+│  + Money flow into/out of sectors                                    │
+│                                                                      │
+│  ── TAB: VOLATILITY ──                                               │
+│  Volatility regime distribution across all symbols                   │
+│  Compression: X   Neutral: X   Transition: X   Expansion: X        │
+│  + VIX term structure                                                │
+│  + Correlation matrix                                                │
+│                                                                      │
+├──────────────────────────────────────────────────────────────────────┤
+│                         FOOTER                                       │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## SURFACE 6: Research — `/research`
+
+**Who sees it:** All users  
+**Purpose:** Actionable information — news, events, earnings, themes  
+**What it replaces:** v1 News + Economic Calendar
+
+### Layout
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                         NAV + REGIME BAR                             │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ★ TAB BAR                                                           │
+│  [News]  [Economic Calendar]  [Earnings]  [Themes]                  │
+│                                                                      │
+│  ═══════════════════════════════════════════════════════════════════  │
+│                                                                      │
+│  ── TAB: NEWS ──                                                     │
+│                                                                      │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  🔴 HIGH  |  Macro  |  Reuters                               │    │
+│  │  Fed Signals Potential Rate Cut in June Meeting               │    │
+│  │  Symbols: [FED] [SPY] [QQQ] [TLT]                           │    │
+│  │  5 minutes ago                                                │    │
+│  ├──────────────────────────────────────────────────────────────┤    │
+│  │  🔴 HIGH  |  Earnings  |  Bloomberg                          │    │
+│  │  NVIDIA Beats Q4 Estimates, Raises Guidance                   │    │
+│  │  Symbols: [NVDA] [AMD] [AVGO]                                │    │
+│  │  12 minutes ago                                               │    │
+│  ├──────────────────────────────────────────────────────────────┤    │
+│  │  🟡 MEDIUM  |  Crypto  |  CoinDesk                           │    │
+│  │  Bitcoin ETF Inflows Hit $1.2B Weekly Record                  │    │
+│  │  Symbols: [BTC] [ETH] [IBIT]                                 │    │
+│  │  28 minutes ago                                               │    │
+│  ├──────────────────────────────────────────────────────────────┤    │
+│  │  🟢 LOW  |  Commodities  |  Reuters                          │    │
+│  │  Oil Inventories Show Unexpected Draw                         │    │
+│  │  Symbols: [CL] [XLE]                                         │    │
+│  │  45 minutes ago                                               │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│  Click any [SYMBOL] tag → opens Golden Egg for that symbol          │
+│                                                                      │
+│  ── TAB: ECONOMIC CALENDAR ──                                        │
+│                                                                      │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  Event              Date       Time      Impact  Forecast   │    │
+│  │  ─────────────────────────────────────────────────────────── │    │
+│  │  CPI (YoY)          Mar 15     8:30 AM   🔴 HIGH  2.8%     │    │
+│  │  FOMC Minutes       Mar 16     2:00 PM   🔴 HIGH  —        │    │
+│  │  Retail Sales       Mar 17     8:30 AM   🟡 MED   0.4%     │    │
+│  │  Initial Claims     Mar 18     8:30 AM   🟡 MED   215K     │    │
+│  │  OPEX               Mar 19     Close     🔴 HIGH  —        │    │
+│  │  Consumer Sent.     Mar 19     10:00 AM  🟢 LOW   67.8     │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ── TAB: EARNINGS ──                                                 │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  Upcoming Earnings This Week                                  │    │
+│  │                                                              │    │
+│  │  Symbol  Date      Time       Est EPS  Est Rev   Impact     │    │
+│  │  ADBE    Mar 15    After      $4.65    $5.6B     HIGH       │    │
+│  │  FDX     Mar 16    After      $3.85    $22.1B    MEDIUM     │    │
+│  │  NKE     Mar 17    After      $0.75    $11.2B    MEDIUM     │    │
+│  │                                                              │    │
+│  │  Key: Earnings impact linked symbols in Scanner              │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ── TAB: THEMES ──                                                   │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  Active Market Themes                                         │    │
+│  │                                                              │    │
+│  │  🔥 AI / Semiconductor Boom                                   │    │
+│  │     NVDA, AMD, AVGO, MRVL, TSM                               │    │
+│  │     Regime: Expansion    Confidence: High                    │    │
+│  │                                                              │    │
+│  │  📊 Rate Cut Expectations                                     │    │
+│  │     TLT, IEF, XLF, JPM, GS                                   │    │
+│  │     Regime: Transition   Confidence: Medium                  │    │
+│  │                                                              │    │
+│  │  ₿ Bitcoin Institutional Adoption                             │    │
+│  │     BTC, ETH, IBIT, COIN                                     │    │
+│  │     Regime: Trend        Confidence: High                    │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+├──────────────────────────────────────────────────────────────────────┤
+│                         FOOTER                                       │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## SURFACE 7: Workspace — `/workspace`
+
+**Who sees it:** Logged-in users (some tabs Pro/Pro Trader only)  
+**Purpose:** Personal management — everything about YOUR trading  
+**What it replaces:** v1 Watchlists + Alerts + Portfolio + Journal + Backtest + Settings
+
+### Layout
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                         NAV + REGIME BAR                             │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ★ TAB BAR                                                           │
+│  [Watchlist] [Journal] [Portfolio] [Alerts] [Backtest] [Learning]   │
+│  [Settings]                                                          │
+│                                                                      │
+│  ═══════════════════════════════════════════════════════════════════  │
+│                                                                      │
+│  ── TAB: WATCHLIST ──                                                │
+│                                                                      │
+│  ★ TRADE PIPELINE (lifecycle state counts)                           │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │ DISCOVERED  WATCHING  SETTING UP  READY  TRIGGERED  ACTIVE  │    │
+│  │     3          5         2          1        1         2     │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ★ ACTIVE WATCHLIST                                                  │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  Symbol  Name            State        Alert              Act │    │
+│  │  NVDA    NVIDIA Corp     [READY]      Break > $145       [→] │    │
+│  │  ETH     Ethereum        [SETTING UP] BBWP < 15          [→] │    │
+│  │  SOL     Solana          [TRIGGERED]  Entry at $185      [→] │    │
+│  │  AAPL    Apple Inc       [WATCHING]   Structure forming  [→] │    │
+│  │  BTC     Bitcoin         [DISCOVERED] New scanner hit    [→] │    │
+│  │  TSLA    Tesla Inc       [ACTIVE]     Position open      [→] │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│  [→] = opens Golden Egg for that symbol                              │
+│                                                                      │
+│  ── TAB: JOURNAL ──                                                  │
+│                                                                      │
+│  ★ JOURNAL STATS                                                     │
+│  ┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐        │
+│  │ Win Rate  │  │ Total     │  │ Avg R:R   │  │ Open      │        │
+│  │ 62%       │  │ 23W / 37  │  │ 2.1       │  │ 4         │        │
+│  └───────────┘  └───────────┘  └───────────┘  └───────────┘        │
+│                                                                      │
+│  ★ JOURNAL TABLE                                                     │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  Symbol  Date       Setup            Regime      Entry  Exit│    │
+│  │         Opened     Type             At Entry    Price  Price│    │
+│  │  R:R    Outcome                                              │    │
+│  │  ─────────────────────────────────────────────────────────── │    │
+│  │  NVDA   Mar 10     Breakout         Expansion   $138   $148 │    │
+│  │  2.5    ✅ WIN                                                │    │
+│  │  ─────────────────────────────────────────────────────────── │    │
+│  │  ETH    Mar 8      Compression      Compression $3200  $3050│    │
+│  │  -1.0   ❌ LOSS                                               │    │
+│  │  ─────────────────────────────────────────────────────────── │    │
+│  │  SOL    Mar 6      Trend Cont.      Trend       $175   $192 │    │
+│  │  3.4    ✅ WIN                                                │    │
+│  │  ─────────────────────────────────────────────────────────── │    │
+│  │  BTC    Mar 4      Liquidity Sweep  Range       $82K   $79K │    │
+│  │  -0.8   ❌ LOSS                                               │    │
+│  │  ─────────────────────────────────────────────────────────── │    │
+│  │  AAPL   Mar 2      Range Fade       Range       $180   $186 │    │
+│  │  1.8    ✅ WIN                                                │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  [+ New Entry]                                                       │
+│                                                                      │
+│  ── TAB: PORTFOLIO ──                                                │
+│                                                                      │
+│  ★ OPEN POSITIONS                                                    │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  Symbol  Side   Entry    Current   P&L      P&L%   Status   │    │
+│  │  NVDA    Long   $138.00  $142.50   +$450    +3.3%  Active   │    │
+│  │  SOL     Long   $185.20  $188.50   +$165    +1.8%  Active   │    │
+│  │  TSLA    Long   $248.00  $252.30   +$215    +1.7%  Active   │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ★ CLOSED TRADES (RECENT)                                            │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  Symbol  Side   Entry    Exit      P&L      R:R    Outcome  │    │
+│  │  AAPL    Long   $176.50  $183.20   +$670    1.8    ✅ WIN   │    │
+│  │  BTC     Long   $82,000  $79,500   -$375    -0.8   ❌ LOSS  │    │
+│  │  ETH     Long   $3,200   $3,050    -$450    -1.0   ❌ LOSS  │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ★ PERFORMANCE SUMMARY                                               │
+│  Total P&L: +$1,875   Win Rate: 62%   Avg R:R: 2.1                 │
+│  Synced across all devices via database                              │
+│                                                                      │
+│  ── TAB: ALERTS ──                                                   │
+│                                                                      │
+│  ★ ACTIVE ALERTS                                                     │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  Symbol  Condition                    Status    Created      │    │
+│  │  NVDA    Price > $145.00              ⏳ Pending  Mar 12      │    │
+│  │  ETH     DVE Expansion begins         ⏳ Pending  Mar 11      │    │
+│  │  BTC     Confluence > 80              ⏳ Pending  Mar 10      │    │
+│  │  SOL     Regime → Expansion           🔔 Fired   Mar 13      │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ★ ALERT TYPES (v2 context-aware alerts)                             │
+│  • Price crosses level                                               │
+│  • Confluence score exceeds threshold                                │
+│  • DVE regime changes                                                │
+│  • Options flow bias flips                                           │
+│  • Regime shifts                                                     │
+│  • Cross-market alignment changes                                    │
+│                                                                      │
+│  [+ Create Alert]                                                    │
+│                                                                      │
+│  ── TAB: BACKTEST ── (Pro Trader only)                               │
+│                                                                      │
+│  ★ STRATEGY BACKTESTER                                               │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  Symbol:     [NVDA ▼]                                        │    │
+│  │  Strategy:   [Compression Breakout ▼]                        │    │
+│  │  Period:     [1Y ▼]  [2Y]  [5Y]                              │    │
+│  │  Timeframe:  [Daily ▼]                                       │    │
+│  │                                                              │    │
+│  │  [Run Backtest]                                               │    │
+│  │                                                              │    │
+│  │  ── Results ──                                                │    │
+│  │  Win Rate: 63%    Total Trades: 47    Avg R:R: 2.4           │    │
+│  │  Profit Factor: 1.8    Max Drawdown: -12%                    │    │
+│  │  Sharpe Ratio: 1.45                                           │    │
+│  │                                                              │    │
+│  │  Equity Curve: [chart placeholder]                           │    │
+│  │  Trade Distribution: [chart placeholder]                     │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ── TAB: LEARNING ── (Pro Trader only, v3 preview)                   │
+│                                                                      │
+│  ★ PERSONAL LEARNING ENGINE                                          │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  YOUR BEST SETUP TYPES                                        │    │
+│  │  Compression Breakout    68% win rate   Avg R:R 2.4          │    │
+│  │  Trend Continuation      71% win rate   Avg R:R 1.9          │    │
+│  │  Range Fade              52% win rate   Avg R:R 1.5          │    │
+│  │                                                              │    │
+│  │  YOUR REGIME PERFORMANCE                                      │    │
+│  │  Trend:       71% win rate  ← Your best regime               │    │
+│  │  Expansion:   65% win rate                                    │    │
+│  │  Compression: 58% win rate                                    │    │
+│  │  Range:       38% win rate  ← Avoid or reduce size           │    │
+│  │                                                              │    │
+│  │  YOUR EDGE:                                                   │    │
+│  │  "You perform best in trend regimes with breakout setups.    │    │
+│  │   Range regimes are your weakness — consider sitting out     │    │
+│  │   or reducing position size."                                │    │
+│  │                                                              │    │
+│  │  MISSED TRADE LOG                                             │    │
+│  │  3 setups you didn't take that would have won (this month)   │    │
+│  │  ─ Shows what you're leaving on the table                    │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ── TAB: SETTINGS ──                                                 │
+│                                                                      │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  Default Asset Classes:  ☑ Equities  ☑ Crypto  ☐ Commodities│    │
+│  │  Default Timeframe:      [Daily ▼]                           │    │
+│  │  Scanner Filters:        Min MSP Score [60]  Min Conf [50]  │    │
+│  │  Risk Defaults:          Account Size [$50,000]  Risk [1%]  │    │
+│  │  Notifications:          ☑ Email  ☑ Push  ☐ SMS              │    │
+│  │  Theme:                  [Dark ▼] (default)                  │    │
+│  │  Data Refresh:           [Auto ▼] [30s] [1m] [5m]           │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+├──────────────────────────────────────────────────────────────────────┤
+│                         FOOTER                                       │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## SUPPORTING PAGES
+
+### Account — `/account`
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                         NAV                                          │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ★ ACCOUNT OVERVIEW                                                  │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  Email:    brad@example.com                                  │    │
+│  │  Plan:     ⭐ Pro Trader ($69/mo)                             │    │
+│  │  Since:    January 2026                                       │    │
+│  │  Renewal:  April 1, 2026                                      │    │
+│  │                                                              │    │
+│  │  [Manage Billing (Stripe Portal) →]                          │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ★ USAGE THIS PERIOD                                                 │
+│  ┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐        │
+│  │ AI Qs     │  │ Scans     │  │ Alerts    │  │ Watchlist │        │
+│  │ 23/50     │  │ Unlimited │  │ 8 active  │  │ 12 items  │        │
+│  │ today     │  │           │  │           │  │           │        │
+│  └───────────┘  └───────────┘  └───────────┘  └───────────┘        │
+│                                                                      │
+│  ★ NOTIFICATION PREFERENCES                                          │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  Email alerts:     [On ▼]                                    │    │
+│  │  Price alerts:     [On ▼]                                    │    │
+│  │  Weekly digest:    [On ▼]                                    │    │
+│  │  Marketing:        [Off ▼]                                   │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+│  ★ DATA & PRIVACY                                                    │
+│  [Export My Data]    [Delete Account]    [Privacy Policy]            │
+│                                                                      │
+├──────────────────────────────────────────────────────────────────────┤
+│                         FOOTER                                       │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+### Referrals — `/referrals`
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                         NAV                                          │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ★ REFER & EARN                                                      │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │  Your referral link:                                          │    │
+│  │  https://marketscannerpros.app/pricing?ref=abc123             │    │
+│  │  [Copy Link]                                                  │    │
+│  │                                                              │    │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐                   │    │
+│  │  │ Referred │  │ Credits  │  │ Monthly  │                   │    │
+│  │  │ 5 users  │  │ $100     │  │ Draw     │                   │    │
+│  │  │          │  │ earned   │  │ Entered  │                   │    │
+│  │  └──────────┘  └──────────┘  └──────────┘                   │    │
+│  │                                                              │    │
+│  │  How it works:                                                │    │
+│  │  1. Share your link                                          │    │
+│  │  2. Friend signs up for Pro or Pro Trader                    │    │
+│  │  3. You get $20 credit                                       │    │
+│  │  4. Monthly $500 draw for active referrers                   │    │
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
+├──────────────────────────────────────────────────────────────────────┤
+│                         FOOTER                                       │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## COMPLETE NAVIGATION COMPARISON
+
+### v1 Navigation (Current — 40+ items across 5 dropdowns)
+
+```
+Tools ▼           Scanners ▼           Markets ▼              Calendar ▼    Resources ▼
+├ Operator        ├ Market Scanner      ├ Markets Dashboard    ├ Earnings    ├ Resource Hub
+├ Watchlists      ├ Options Confluence  ├ Equity Explorer      ├ Economic    ├ Platform Guide
+├ Portfolio       ├ Time Confluence     ├ Company Overview     └ News        └ Trading Guides
+├ Backtest        ├ Golden Egg          ├ Market Movers
+├ Journal         ├ Liquidity Sweep     ├ Gainers/Losers
+└ Alerts          ├ Options Flow        ├ Sector Heatmap
+                  └ Volatility Engine   ├ Intraday Charts
+                                        ├ Crypto CC
+                                        ├ Crypto Explorer
+                                        ├ Crypto Heatmap
+                                        ├ Crypto Derivatives
+                                        ├ Crypto Terminal
+                                        ├ Options Terminal
+                                        ├ Macro
+                                        ├ Commodities
+                                        └ Correlation
+```
+
+### v2 Navigation (New — 7 flat buttons)
+
+```
+Dashboard    Scanner    Golden Egg    Terminal    Explorer    Research    Workspace
+```
+
+**That's it.** Every feature from the 40+ items lives inside one of these 7 surfaces as a tab or section.
+
+---
+
+## WHERE EVERYTHING WENT
+
+| v1 Page | v2 Home | v2 Tab/Section |
+|---|---|---|
+| Scanner | Scanner | Main table |
+| Confluence Scanner | Scanner | Highest Confluence tab |
+| Time Scanner | Scanner | Time data in scores |
+| Options Confluence | Golden Egg | Section E (Options) |
+| Liquidity Sweep | Scanner | Setup type in results |
+| Options Flow | Terminal | Options tab |
+| Volatility Engine | Golden Egg | Section D (DVE) |
+| Golden Egg | Golden Egg | Core page (enhanced) |
+| Markets Dashboard | Explorer | Overview tab |
+| Equity Explorer | Explorer | Equities tab |
+| Company Overview | Golden Egg | Section A (Context) |
+| Market Movers | Explorer | Top Movers section |
+| Gainers/Losers | Explorer | Top Movers section |
+| Sector Heatmap | Explorer | Sectors tab |
+| Intraday Charts | Terminal | Chart tab |
+| Crypto CC | Explorer | Crypto tab |
+| Crypto Explorer | Explorer | Crypto tab |
+| Crypto Heatmap | Explorer | Crypto tab |
+| Crypto Derivatives | Terminal | Options/Vol tabs |
+| Crypto Terminal | Terminal | Chart tab (crypto mode) |
+| Options Terminal | Terminal | Options tab |
+| Macro Dashboard | Explorer | Overview (influence map) |
+| Commodities | Explorer | Commodities tab |
+| Correlation | Explorer | Volatility tab |
+| News | Research | News tab |
+| Earnings Calendar | Research | Earnings tab |
+| Economic Calendar | Research | Calendar tab |
+| Operator | Dashboard | Replaced by Dashboard |
+| Watchlists | Workspace | Watchlist tab |
+| Portfolio | Workspace | Portfolio tab |
+| Journal | Workspace | Journal tab |
+| Backtest | Workspace | Backtest tab |
+| Alerts | Workspace | Alerts tab |
+| Settings | Workspace | Settings tab |
+| AI Analyst | Golden Egg | AI copilot (v3) |
+| Account | Account | Stays as-is |
+| Referrals | Referrals | Stays as-is |
+
+---
+
+## MOBILE EXPERIENCE
+
+### v1 Mobile
+- Hamburger → accordion menus → 5 sections → 40+ links → confusing
+
+### v2 Mobile
+```
+┌────────────────────┐
+│ [☰] MSP     [🔔]  │
+├────────────────────┤
+│ ● Dashboard        │
+│   Scanner           │
+│   Golden Egg        │
+│   Terminal          │
+│   Explorer          │
+│   Research          │
+│   Workspace         │
+│ ──────────────────  │
+│   Pricing           │
+│   Referrals         │
+│   Account           │
+│   Sign Out          │
+└────────────────────┘
+```
+
+7 links. Clean. Fast. No accordion menus.
+
+Inside each surface, tabs scroll horizontally on mobile:
+```
+[Watchlist] [Journal] [Portfolio] [Alerts] → swipe →
+```
+
+---
+
+## VISUAL DESIGN (Consistent Across All Pages)
+
+```
+Background:     #0A101C (deep navy)
+Cards:          #101A2A (slightly lighter)
+Panels:         #122033 (lighter still)
+Accent:         #10B981 (emerald green — all CTAs, active states)
+Bull:           #2FB36E (green for gains)
+Bear:           #E46767 (red for losses)
+Text:           rgba(255,255,255,0.92) (primary)
+Text Muted:     rgba(255,255,255,0.62) (secondary)
+Borders:        rgba(255,255,255,0.08) (subtle lines)
+
+Fonts:          System stack (Inter-like)
+Badges:         Colored background + matching text (rounded-full)
+Cards:          Rounded-xl, subtle border, dark bg
+Hover:          Slight border-color lighten
+Active nav:     Emerald background/text
+```
+
+---
+
+## SUMMARY
+
+**v1:** 40+ pages, 5 dropdown menus, 6+ pages per trade decision  
+**v2:** 7 surfaces, flat nav, 3 pages per trade decision
+
+**The complete v2 site is:**
+1. **Homepage** — marketing + 7-surface showcase
+2. **Pricing** — plans
+3. **Auth** — login
+4. **Dashboard** — what matters today
+5. **Scanner** — find the best setups
+6. **Golden Egg** — decide if it's a trade
+7. **Terminal** — execute the trade
+8. **Explorer** — big picture context
+9. **Research** — news and events
+10. **Workspace** — manage everything personal
+11. **Account** — billing and settings
+12. **Referrals** — refer and earn
+13. **Legal/Guide/Blog** — supporting content
+
+**13 meaningful pages instead of 50+.** Every feature preserved, nothing lost — just organized properly.
