@@ -37,7 +37,18 @@ export interface SessionPayload {
 export async function getSessionFromCookie(): Promise<SessionPayload | null> {
   const cookieStore = await cookies();
   const c = cookieStore.get("ms_auth")?.value;
-  if (!c) return null;
+  if (!c) {
+    // DEV BYPASS: auto-authenticate as pro_trader for local testing
+    if (process.env.NODE_ENV === 'development' && process.env.DEV_AUTH_BYPASS === 'true') {
+      return {
+        cid: 'dev-local-testing',
+        tier: 'pro_trader',
+        workspaceId: 'dev-workspace-00000000',
+        exp: Math.floor(Date.now() / 1000) + 86400 * 365,
+      };
+    }
+    return null;
+  }
   return verify(c);
 }
 

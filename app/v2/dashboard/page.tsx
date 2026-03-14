@@ -239,17 +239,23 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      {/* ── Error / debug ────────────────────────────────────────────── */}
-      {(equityScan.error || cryptoScan.error || movers.error || news.error || calendar.error) && (
-        <div className="text-[10px] text-red-400/60 border border-red-900/30 rounded-lg p-3 space-y-1">
-          <div className="font-semibold">API Issues (debug):</div>
-          {equityScan.error && <div>Scanner (equity): {equityScan.error}</div>}
-          {cryptoScan.error && <div>Scanner (crypto): {cryptoScan.error}</div>}
-          {movers.error && <div>Movers: {movers.error}</div>}
-          {news.error && <div>News: {news.error}</div>}
-          {calendar.error && <div>Calendar: {calendar.error}</div>}
-        </div>
-      )}
+      {/* ── Error / debug (collapsed) ──────────────────────────────── */}
+      {(() => {
+        const errs = [
+          equityScan.error && `Scanner (equity): ${equityScan.error}`,
+          cryptoScan.error && `Scanner (crypto): ${cryptoScan.error}`,
+          movers.error && `Movers: ${movers.error}`,
+          news.error && `News: ${news.error}`,
+          calendar.error && `Calendar: ${calendar.error}`,
+        ].filter(Boolean) as string[];
+        if (!errs.length) return null;
+        return (
+          <details className="text-[10px] text-red-400/40 border border-red-900/20 rounded-lg p-2">
+            <summary className="cursor-pointer hover:text-red-400/60">{errs.length} API issue{errs.length > 1 ? 's' : ''} — click to expand</summary>
+            <div className="mt-1 space-y-0.5 pl-3">{errs.map((e, i) => <div key={i}>{e}</div>)}</div>
+          </details>
+        );
+      })()}
     </div>
   );
 }

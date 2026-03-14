@@ -23,6 +23,11 @@ const tierCache = new Map<string, { tier: string; status: string; ts: number }>(
 const TIER_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 export async function getVerifiedTier(session: SessionPayload): Promise<string> {
+  // DEV BYPASS: skip DB lookup for dev session
+  if (process.env.NODE_ENV === 'development' && session.cid === 'dev-local-testing') {
+    return 'pro_trader';
+  }
+
   const wid = session.workspaceId;
   const now = Date.now();
   const cached = tierCache.get(wid);
