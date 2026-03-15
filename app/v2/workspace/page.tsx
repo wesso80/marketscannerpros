@@ -5,10 +5,14 @@
    Real APIs: /api/watchlists, /api/journal, links to v1 portfolio & settings
    ═══════════════════════════════════════════════════════════════════════════ */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { useV2 } from '../_lib/V2Context';
-import { useWatchlists, useJournal, fetchWatchlistItems, type JournalEntry } from '../_lib/api';
+import { useJournal, type JournalEntry } from '../_lib/api';
 import { Card, SectionHeader, Badge } from '../_components/ui';
+import { RiskPermissionProvider } from '@/components/risk/RiskPermissionContext';
+
+const WatchlistWidget = dynamic(() => import('@/components/WatchlistWidget'), { ssr: false, loading: () => <div className="animate-pulse bg-slate-800/50 rounded-xl h-64" /> });
 
 function Skel({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
   return <div className={`${h} ${w} bg-slate-700/50 rounded animate-pulse`} />;
@@ -16,40 +20,7 @@ function Skel({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
 
 const TABS = ['Watchlists', 'Journal', 'Portfolio', 'Settings'] as const;
 
-/* ─── Watchlist CRUD helpers ─────────────────────────────────────── */
-async function addToWatchlist(listId: string, symbol: string): Promise<boolean> {
-  try {
-    const r = await fetch(`/api/watchlists/${listId}/items`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ symbol }),
-    });
-    return r.ok;
-  } catch { return false; }
-}
 
-async function removeFromWatchlist(listId: string, itemId: string): Promise<boolean> {
-  try {
-    const r = await fetch(`/api/watchlists/${listId}/items/${itemId}`, { method: 'DELETE' });
-    return r.ok;
-  } catch { return false; }
-}
-
-async function createWatchlist(name: string): Promise<boolean> {
-  try {
-    const r = await fetch('/api/watchlists', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name }),
-    });
-    return r.ok;
-  } catch { return false; }
-}
-
-async function deleteWatchlist(listId: string): Promise<boolean> {
-  try {
-    const r = await fetch(`/api/watchlists/${listId}`, { method: 'DELETE' });
-    return r.ok;
-  } catch { return false; }
-}
 
 /* ─── Journal CRUD helpers ───────────────────────────────────────── */
 async function createJournalEntry(entry: Partial<JournalEntry>): Promise<boolean> {
@@ -73,65 +44,9 @@ export default function WorkspacePage() {
   const { navigateTo, selectSymbol } = useV2();
   const [tab, setTab] = useState<typeof TABS[number]>('Watchlists');
 
-  const watchlists = useWatchlists();
   const journal = useJournal();
 
-  /* ─── Watchlist state ───────────────────────────── */
-  const [selectedList, setSelectedList] = useState<string | null>(null);
-  const [newListName, setNewListName] = useState('');
-  const [addSymbol, setAddSymbol] = useState('');
   const [busy, setBusy] = useState(false);
-
-  const lists = watchlists.data?.watchlists || [];
-  const currentList = lists.find((l: any) => l.id === selectedList) || lists[0];
-
-  /* Fetch items for the current list */
-  const [listItems, setListItems] = useState<any[]>([]);
-  const [itemsLoading, setItemsLoading] = useState(false);
-  const refreshItems = useCallback(async () => {
-    if (!currentList?.id) { setListItems([]); return; }
-    setItemsLoading(true);
-    try {
-      const res = await fetchWatchlistItems(currentList.id);
-      setListItems(res?.items || []);
-    } catch { setListItems([]); }
-    setItemsLoading(false);
-  }, [currentList?.id]);
-
-  useEffect(() => { refreshItems(); }, [refreshItems]);
-
-  const handleCreateList = useCallback(async () => {
-    if (!newListName.trim()) return;
-    setBusy(true);
-    const ok = await createWatchlist(newListName.trim());
-    setBusy(false);
-    if (ok) { setNewListName(''); watchlists.refetch(); }
-  }, [newListName, watchlists]);
-
-  const handleAddSymbol = useCallback(async () => {
-    if (!currentList || !addSymbol.trim()) return;
-    setBusy(true);
-    const ok = await addToWatchlist(currentList.id, addSymbol.trim().toUpperCase());
-    setBusy(false);
-    if (ok) { setAddSymbol(''); watchlists.refetch(); refreshItems(); }
-  }, [addSymbol, currentList, watchlists, refreshItems]);
-
-  const handleRemoveItem = useCallback(async (itemId: string) => {
-    if (!currentList) return;
-    setBusy(true);
-    await removeFromWatchlist(currentList.id, itemId);
-    setBusy(false);
-    watchlists.refetch();
-    refreshItems();
-  }, [currentList, watchlists, refreshItems]);
-
-  const handleDeleteList = useCallback(async (listId: string) => {
-    setBusy(true);
-    await deleteWatchlist(listId);
-    setBusy(false);
-    setSelectedList(null);
-    watchlists.refetch();
-  }, [watchlists]);
 
   /* ─── Journal state ─────────────────────────────── */
   const [showJournalForm, setShowJournalForm] = useState(false);
@@ -192,97 +107,7 @@ export default function WorkspacePage() {
       </div>
 
       {/* ── WATCHLISTS ─────────────────────────────────────────────── */}
-      {tab === 'Watchlists' && (
-        <div className="space-y-4">
-          {watchlists.loading ? (
-            <Card><div className="space-y-3">{[1,2,3].map(i => <Skel key={i} h="h-8" />)}</div></Card>
-          ) : (
-            <>
-              {/* List selector + create */}
-              <Card>
-                <div className="flex items-center gap-2 mb-3 flex-wrap">
-                  {lists.map((l: any) => (
-                    <button
-                      key={l.id}
-                      onClick={() => setSelectedList(l.id)}
-                      className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${(currentList?.id === l.id) ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-slate-700/30'}`}
-                    >
-                      {l.name} ({l.item_count || 0})
-                    </button>
-                  ))}
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    value={newListName}
-                    onChange={e => setNewListName(e.target.value)}
-                    placeholder="New watchlist name..."
-                    className="flex-1 bg-[#0A101C] border border-slate-700/40 rounded-lg text-xs px-3 py-2 text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-600/40"
-                    onKeyDown={e => e.key === 'Enter' && handleCreateList()}
-                  />
-                  <button onClick={handleCreateList} disabled={busy || !newListName.trim()} className="px-3 py-2 text-xs rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600/30 disabled:opacity-40 transition-colors">
-                    + Create
-                  </button>
-                </div>
-              </Card>
-
-              {/* Current watchlist items */}
-              {currentList && (
-                <Card>
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-semibold text-white">{currentList.name}</h3>
-                    <button onClick={() => handleDeleteList(currentList.id)} className="text-[10px] text-red-400/60 hover:text-red-400 transition-colors">
-                      Delete List
-                    </button>
-                  </div>
-
-                  {/* Add symbol */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <input
-                      value={addSymbol}
-                      onChange={e => setAddSymbol(e.target.value)}
-                      placeholder="Add symbol (e.g. AAPL, BTC)..."
-                      className="flex-1 bg-[#0A101C] border border-slate-700/40 rounded-lg text-xs px-3 py-2 text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-600/40"
-                      onKeyDown={e => e.key === 'Enter' && handleAddSymbol()}
-                    />
-                    <button onClick={handleAddSymbol} disabled={busy || !addSymbol.trim()} className="px-3 py-2 text-xs rounded-lg bg-slate-800/60 text-slate-300 border border-slate-700/30 hover:bg-slate-700/40 disabled:opacity-40 transition-colors">
-                      + Add
-                    </button>
-                  </div>
-
-                  {/* Items */}
-                  {listItems.length > 0 ? (
-                    <div className="space-y-1">
-                      {listItems.map((item: any) => (
-                        <div key={item.id || item.symbol} className="flex items-center justify-between text-xs py-2 px-2 rounded-lg hover:bg-slate-800/40 group">
-                          <button onClick={() => { selectSymbol(item.symbol); navigateTo('golden-egg', item.symbol); }} className="text-left flex-1">
-                            <span className="font-semibold text-white">{item.symbol}</span>
-                            {item.price && <span className="text-slate-400 ml-3 font-mono">${item.price}</span>}
-                            {item.change_percent != null && <span className={`ml-2 ${item.change_percent > 0 ? 'text-emerald-400' : 'text-red-400'}`}>{item.change_percent > 0 ? '+' : ''}{item.change_percent.toFixed(2)}%</span>}
-                          </button>
-                          <button onClick={() => handleRemoveItem(item.id)} className="text-red-400/40 hover:text-red-400 text-[10px] opacity-0 group-hover:opacity-100 transition-all ml-2">
-                            Remove
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-xs text-slate-500 py-4 text-center">No symbols in this watchlist</div>
-                  )}
-                </Card>
-              )}
-
-              {lists.length === 0 && (
-                <Card>
-                  <div className="text-xs text-slate-500 py-8 text-center">
-                    No watchlists yet. Create one above to get started.
-                  </div>
-                </Card>
-              )}
-            </>
-          )}
-          {watchlists.error && <div className="text-[10px] text-red-400/60">Error: {watchlists.error}</div>}
-        </div>
-      )}
+      {tab === 'Watchlists' && <RiskPermissionProvider><WatchlistWidget /></RiskPermissionProvider>}
 
       {/* ── JOURNAL ────────────────────────────────────────────────── */}
       {tab === 'Journal' && (
