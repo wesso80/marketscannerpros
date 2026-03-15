@@ -5,53 +5,21 @@ import Hero from './Hero';
 import SocialProof from './SocialProof';
 import WhyMSP from './WhyMSP';
 
-// Safe import — avoid throwing during static prerender when provider is absent
-function useSafeRiskLocked(): boolean {
-  try {
-    // Dynamic require to avoid hard import crash during SSR
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { useRiskPermission } = require('@/components/risk/RiskPermissionContext');
-    const ctx = useRiskPermission();
-    return ctx?.isLocked ?? false;
-  } catch {
-    return false;
-  }
-}
 
 /* ─── Featured scanners (big tiles) ─── */
 const featuredTools = [
   {
-    href: '/tools/scanner',
+    href: '/v2/scanner',
     icon: '📊',
     image: '/assets/scanners/multi-market-scanner.png',
-    title: 'Multi-Market Scanner',
+    title: 'Market Scanner',
     description: 'Scan equities, crypto, and forex with structured filters across all markets.',
     gradient: 'from-emerald-500/20 to-emerald-900/10',
     border: 'border-emerald-500/30',
     glow: 'hover:shadow-[0_0_20px_rgba(16,185,129,.35)]',
   },
   {
-    href: '/tools/options-confluence',
-    icon: '🎯',
-    image: '/assets/scanners/options-confluence.png',
-    title: 'Options Confluence Scanner',
-    description: 'Strike and expiry recommendations with flow, structure, and Greeks context.',
-    gradient: 'from-violet-500/20 to-violet-900/10',
-    border: 'border-violet-500/30',
-    glow: 'hover:shadow-[0_0_20px_rgba(139,92,246,.35)]',
-  },
-  {
-    href: '/tools/confluence-scanner',
-    icon: '🔮',
-    image: '/assets/scanners/time-confluence.png',
-    title: 'Time Confluence Scanner',
-    description: 'Detect multi-timeframe decompression events and 50% magnet windows.',
-    gradient: 'from-cyan-500/20 to-cyan-900/10',
-    border: 'border-cyan-500/30',
-    glow: 'hover:shadow-[0_0_20px_rgba(6,182,212,.35)]',
-  },
-  {
-    href: '/tools/golden-egg',
+    href: '/v2/golden-egg',
     icon: '🥚',
     image: '/assets/scanners/golden-egg.png',
     title: 'Golden Egg',
@@ -62,70 +30,57 @@ const featuredTools = [
   },
 ];
 
-/* ─── Tool sections (categorized) ─── */
-const toolSections = [
+/* ─── v2 Platform surfaces ─── */
+const v2Surfaces = [
   {
-    title: 'Scanners',
-    icon: '🔎',
-    items: [
-      { href: '/tools/liquidity-sweep', icon: '🌊', image: '/assets/platform-tools/liquidity-sweep.png', title: 'Liquidity Sweep Scanner', description: 'Detect stop hunts and sweep/rejection patterns at key liquidity levels.' },
-      { href: '/tools/options-flow', icon: '💸', image: '/assets/platform-tools/options-flow.png', title: 'Options Flow Intelligence', description: 'Trade direction classification, block/sweep detection, and smart money scoring.' },
-    ],
+    href: '/v2/dashboard',
+    icon: '🧭',
+    image: '/assets/platform-tools/operator-dashboard.png',
+    title: 'Command Center',
+    description: 'Unified dashboard with market overview, regime context, and real-time signal flow.',
+    gradient: 'from-emerald-500/20 to-emerald-900/10',
+    border: 'border-emerald-500/30',
+    glow: 'hover:shadow-[0_0_20px_rgba(16,185,129,.35)]',
   },
   {
-    title: 'Equities',
-    icon: '📈',
-    items: [
-      { href: '/tools/markets', icon: '🗺️', image: '/assets/platform-tools/markets-dashboard.png', title: 'Markets Dashboard', description: 'Central hub for all market data, indices, and sector overview.' },
-      { href: '/tools/equity-explorer', icon: '📊', image: '/assets/platform-tools/equity-explorer.png', title: 'Equity Explorer', description: 'Full equity analysis with fundamentals, technicals, and ownership data.' },
-      { href: '/tools/company-overview', icon: '🏢', image: '/assets/platform-tools/company-overview.png', title: 'Company Overview', description: 'Fundamentals, valuation, growth, and analyst context.' },
-      { href: '/tools/market-movers', icon: '📈', image: '/assets/platform-tools/market-movers.png', title: 'Market Movers', description: 'Institutional watchlist of high-impact daily movers.' },
-      { href: '/tools/gainers-losers', icon: '🚀', image: '/assets/platform-tools/top-gainers.png', title: 'Top Gainers & Losers', description: 'Track strongest movers, laggards, and active symbols.' },
-      { href: '/tools/heatmap', icon: '🗺️', image: '/assets/platform-tools/sector-heatmap.png', title: 'Sector Heatmap', description: 'S&P sector rotation view across key time horizons.' },
-      { href: '/tools/intraday-charts', icon: '⏱️', image: '/assets/platform-tools/intraday-charts.png', title: 'Intraday Charts', description: 'Fast intraday charting and session-level views.' },
-    ],
+    href: '/v2/terminal',
+    icon: '💹',
+    image: '/assets/platform-tools/crypto-command.png',
+    title: 'Terminal',
+    description: 'Advanced charting, session analysis, and multi-asset execution surface.',
+    gradient: 'from-cyan-500/20 to-cyan-900/10',
+    border: 'border-cyan-500/30',
+    glow: 'hover:shadow-[0_0_20px_rgba(6,182,212,.35)]',
   },
   {
-    title: 'Crypto',
-    icon: '₿',
-    items: [
-      { href: '/tools/crypto', icon: '₿', image: '/assets/platform-tools/crypto-command.png', title: 'Crypto Command Center', description: 'Full crypto dashboard with prices, dominance, and market structure.' },
-      { href: '/tools/crypto-explorer', icon: '🔍', image: '/assets/platform-tools/crypto-explorer.png', title: 'Crypto Explorer', description: 'Deep-dive into any crypto asset with technicals and on-chain metrics.' },
-      { href: '/tools/crypto-heatmap', icon: '🪙', image: '/assets/platform-tools/crypto-heatmap.png', title: 'Crypto Heatmap', description: 'Visual leadership map for major crypto assets.' },
-      { href: '/tools/crypto-dashboard', icon: '₿', image: '/assets/platform-tools/crypto-derivatives.png', title: 'Crypto Derivatives', description: 'Funding, OI, and derivatives pressure diagnostics.' },
-      { href: '/tools/crypto-terminal', icon: '💹', image: '/assets/platform-tools/crypto-command.png', title: 'Crypto Terminal', description: 'Advanced crypto charting with session-level analysis.' },
-    ],
+    href: '/v2/explorer',
+    icon: '🔍',
+    image: '/assets/platform-tools/equity-explorer.png',
+    title: 'Market Explorer',
+    description: 'Deep-dive into any asset with fundamentals, technicals, and on-chain data.',
+    gradient: 'from-violet-500/20 to-violet-900/10',
+    border: 'border-violet-500/30',
+    glow: 'hover:shadow-[0_0_20px_rgba(139,92,246,.35)]',
   },
   {
-    title: 'Options & Derivatives',
-    icon: '📋',
-    items: [
-      { href: '/tools/options-terminal', icon: '📋', image: '/assets/platform-tools/options-terminal.png', title: 'Options Terminal', description: 'Options chain viewer with Greeks, IV skew, and flow analysis.' },
-      { href: '/tools/markets?tab=correlation', icon: '🔗', image: '/assets/platform-tools/cross-asset-correlation.png', title: 'Cross-Asset Correlation', description: 'Rolling correlation matrix across equities, crypto, and macro assets.' },
-    ],
-  },
-  {
-    title: 'Trading Tools',
-    icon: '🛠️',
-    items: [
-      { href: '/operator', icon: '🧭', image: '/assets/platform-tools/operator-dashboard.png', title: 'Operator Dashboard', description: 'Unified execution surface for signal flow and risk command.' },
-      { href: '/tools/backtest', icon: '📈', image: '/assets/platform-tools/backtest.png', title: 'Backtest', description: 'Validate strategy logic against historical data.' },
-      { href: '/tools/portfolio', icon: '💼', image: '/assets/platform-tools/portfolio.png', title: 'Portfolio', description: 'Position tracking with P&L and performance snapshots.' },
-      { href: '/tools/journal', icon: '📓', image: '/assets/platform-tools/trade-journal.png', title: 'Trade Journal', description: 'Log, review, and learn from every trade.' },
-      { href: '/tools/alerts', icon: '🔔', image: '/assets/platform-tools/alerts.png', title: 'Alerts', description: 'Custom triggers and notification management.' },
-      { href: '/tools/watchlists', icon: '👁️', image: '/assets/platform-tools/watchlists.png', title: 'Watchlists', description: 'Track symbols across your workspace.' },
-      { href: '/tools/referrals', icon: '🎁', title: 'Refer & Earn', description: 'Share your link, earn $20 credit per referral, enter the $500 monthly draw.' },
-    ],
-  },
-  {
-    title: 'Research & Macro',
+    href: '/v2/research',
     icon: '📰',
-    items: [
-      { href: '/tools/news', icon: '📰', image: '/assets/platform-tools/news-sentiment.png', title: 'News & Sentiment', description: 'Headline flow and sentiment intelligence by symbol.' },
-      { href: '/tools/news?tab=earnings', icon: '📅', image: '/assets/platform-tools/earnings-calendar.png', title: 'Earnings Calendar', description: 'Event-risk map for upcoming earnings windows.' },
-      { href: '/tools/macro', icon: '🏛️', image: '/assets/platform-tools/macro-dashboard.png', title: 'Macro Dashboard', description: 'Rates, inflation, employment, and macro regime data.' },
-      { href: '/tools/commodities', icon: '🛢️', image: '/assets/platform-tools/commodities.png', title: 'Commodities', description: 'Energy, metals, and agriculture price dashboard.' },
-    ],
+    image: '/assets/platform-tools/news-sentiment.png',
+    title: 'Research',
+    description: 'News, sentiment, macro data, earnings, and commodities in one research hub.',
+    gradient: 'from-blue-500/20 to-blue-900/10',
+    border: 'border-blue-500/30',
+    glow: 'hover:shadow-[0_0_20px_rgba(59,130,246,.35)]',
+  },
+  {
+    href: '/v2/workspace',
+    icon: '📋',
+    image: '/assets/platform-tools/portfolio.png',
+    title: 'Workspace',
+    description: 'Watchlists, journal, portfolio, alerts, and settings — all in one place.',
+    gradient: 'from-rose-500/20 to-rose-900/10',
+    border: 'border-rose-500/30',
+    glow: 'hover:shadow-[0_0_20px_rgba(244,63,94,.35)]',
   },
 ];
 
@@ -170,68 +125,8 @@ function FeaturedTile({
           <p className="mt-1.5 text-sm leading-relaxed text-slate-300">{description}</p>
         </div>
         <div className="mt-4 flex items-center gap-1 text-sm font-semibold text-white/70 transition group-hover:text-white">
-          Open Scanner <span className="transition-transform group-hover:translate-x-1">→</span>
+          Explore <span className="transition-transform group-hover:translate-x-1">→</span>
         </div>
-      </div>
-    </Link>
-  );
-}
-
-/* ─── Small tile component ─── */
-function SmallTile({
-  href,
-  icon,
-  image,
-  title,
-  description,
-  locked,
-}: {
-  href: string;
-  icon: string;
-  image?: string;
-  title: string;
-  description: string;
-  locked?: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group flex flex-col overflow-hidden rounded-xl border border-slate-700/60 bg-slate-900/40 transition-all duration-150 hover:border-slate-600 hover:bg-slate-900/70 hover:shadow-[0_0_15px_rgba(16,185,129,.15)]"
-    >
-      {/* Image thumbnail */}
-      <div className="relative h-36 w-full overflow-hidden bg-slate-950/50">
-        {image ? (
-          <>
-            <img
-              src={image}
-              alt={title}
-              className="h-full w-full object-contain object-center p-1 transition-transform duration-300 group-hover:scale-105"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-                const fallback = (e.target as HTMLImageElement).nextElementSibling;
-                if (fallback) (fallback as HTMLElement).style.display = 'flex';
-              }}
-            />
-            <div
-              className="absolute inset-0 items-center justify-center text-3xl"
-              style={{ display: 'none' }}
-            >
-              {icon}
-            </div>
-          </>
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-4xl">
-            {icon}
-          </div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent" />
-      </div>
-      {/* Content */}
-      <div className="p-3">
-        <div className="text-sm font-semibold text-slate-100">
-          {locked ? '🔒 ' : ''}{title}
-        </div>
-        <div className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-slate-400">{description}</div>
       </div>
     </Link>
   );
@@ -239,17 +134,6 @@ function SmallTile({
 
 /* ─── Main Component ─── */
 export default function CommandHub() {
-  const riskLocked = useSafeRiskLocked();
-  const lockSensitiveTools = new Set([
-    '/operator',
-    '/tools/scanner',
-    '/tools/watchlists',
-    '/tools/portfolio',
-    '/tools/backtest',
-    '/tools/journal',
-    '/tools/alerts',
-  ]);
-
   return (
     <main className="min-h-screen bg-[var(--msp-bg)] text-white">
       {/* ─── Coded Hero ─── */}
@@ -286,7 +170,7 @@ export default function CommandHub() {
       <div className="mx-auto w-full max-w-7xl px-4 pb-4 pt-12 md:px-6">
         <section>
           <h2 className="mb-6 text-2xl font-bold text-white">Core Scanners</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {featuredTools.map((tool) => (
               <FeaturedTile key={tool.href} {...tool} />
             ))}
@@ -334,7 +218,7 @@ export default function CommandHub() {
           </div>
 
           <Link
-            href="/tools/options-confluence"
+            href="/v2/scanner"
             className="mt-6 inline-flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-5 py-2.5 text-sm font-semibold text-emerald-400 transition hover:bg-emerald-500/20 hover:text-emerald-300"
           >
             Explore the AI Engine <span>→</span>
@@ -342,24 +226,16 @@ export default function CommandHub() {
         </div>
       </section>
 
-      {/* ─── Platform Tools (categorized) ─── */}
-      <div className="mx-auto w-full max-w-7xl space-y-10 px-4 pb-8 pt-10 md:px-6">
-        {toolSections.map((section) => (
-          <section key={section.title}>
-            <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-white">
-              <span>{section.icon}</span>{section.title}
-            </h2>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-              {section.items.map((tool) => (
-                <SmallTile
-                  key={tool.href}
-                  {...tool}
-                  locked={riskLocked && lockSensitiveTools.has(tool.href)}
-                />
-              ))}
-            </div>
-          </section>
-        ))}
+      {/* ─── v2 Platform Surfaces ─── */}
+      <div className="mx-auto w-full max-w-7xl px-4 pb-8 pt-10 md:px-6">
+        <section>
+          <h2 className="mb-6 text-2xl font-bold text-white">Platform</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {v2Surfaces.map((surface) => (
+              <FeaturedTile key={surface.href} {...surface} />
+            ))}
+          </div>
+        </section>
       </div>
 
       {/* ─── Bottom CTA ─── */}
