@@ -62,7 +62,11 @@ export function V2Provider({ children }: { children: ReactNode }) {
 
   const selectSymbol = useCallback((sym: string) => {
     setInternalSymbol(sym);
-  }, []);
+    // Clear URL ?symbol= param so internalSymbol takes priority
+    if (searchParams.get('symbol')) {
+      router.replace(pathname, { scroll: false });
+    }
+  }, [searchParams, router, pathname]);
 
   const navigateTo = useCallback((surface: Surface, symbol?: string) => {
     const surfaceRoutes: Record<Surface, string> = {
