@@ -851,10 +851,8 @@ export function estimateGreeks(
   impliedVolatility: number = 0.25,
   isCall: boolean = true
 ): OptionsGreeks {
-  const T = daysToExpiry / 365;
-  if (T <= 0) {
-    return { delta: 0, gamma: 0, theta: 0, vega: 0, rho: 0 };
-  }
+  // Clamp to 1/365 minimum so 0DTE options still get Greeks (B17 fix)
+  const T = Math.max(1 / 365, daysToExpiry / 365);
   
   const S = spotPrice;
   const K = strikePrice;
