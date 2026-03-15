@@ -433,15 +433,13 @@ export const SCAN_TIMEFRAMES: { value: ScanTimeframe; label: string }[] = [
 ];
 
 export function fetchScannerResults(type: 'crypto' | 'equity' = 'equity', timeframe: ScanTimeframe = 'daily', symbols?: string[]): Promise<ScannerResponse> {
+  // When no symbols provided, let the backend pull from symbol_universe DB table
+  // for full bi-directional coverage instead of hardcoded 10 symbols
+  const body: Record<string, unknown> = { timeframe, type };
+  if (symbols?.length) body.symbols = symbols;
   return apiFetch('/api/scanner/run', {
     method: 'POST',
-    body: JSON.stringify({
-      symbols: symbols || (type === 'crypto'
-        ? ['BTC', 'ETH', 'SOL', 'AVAX', 'LINK', 'DOT', 'MATIC', 'ADA', 'XRP', 'DOGE']
-        : ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'AMZN', 'GOOGL', 'META', 'AMD', 'JPM', 'V']),
-      timeframe,
-      type,
-    }),
+    body: JSON.stringify(body),
   });
 }
 

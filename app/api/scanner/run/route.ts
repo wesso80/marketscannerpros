@@ -415,25 +415,46 @@ export async function POST(req: NextRequest) {
       ? symbols.map(s => String(s).trim().toUpperCase()).filter(Boolean)
       : [];
 
-    // If client didn't provide symbols, use a small preset to ensure the page works
-    // Top 10 by market cap (approx; stable choices for Alpha Vantage)
-    const DEFAULT_EQUITIES = [
+    // If client didn't provide symbols, pull from symbol_universe DB table
+    // (populated by the background worker) → full bi-directional coverage
+    const FALLBACK_EQUITIES = [
       "AAPL", "MSFT", "NVDA", "GOOGL", "AMZN",
       "META", "AVGO", "LLY", "TSLA", "JPM"
     ];
-    const DEFAULT_CRYPTO = [
+    const FALLBACK_CRYPTO = [
       "BTC-USD", "ETH-USD", "BNB-USD", "SOL-USD", "XRP-USD",
       "ADA-USD", "DOGE-USD", "TRX-USD", "AVAX-USD", "DOT-USD"
     ];
-    const DEFAULT_FOREX = [
+    const FALLBACK_FOREX = [
       "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "NZDUSD",
       "USDCAD", "USDCHF", "EURGBP", "EURJPY", "GBPJPY"
     ];
-    let symbolsToScan = inputSymbols.length
-      ? inputSymbols
-      : type === "crypto" ? DEFAULT_CRYPTO
-      : type === "forex"  ? DEFAULT_FOREX
-      : DEFAULT_EQUITIES;
+
+    let symbolsToScan: string[];
+    if (inputSymbols.length) {
+      symbolsToScan = inputSymbols;
+    } else {
+      // Query symbol_universe for all enabled symbols of the requested asset type
+      try {
+        const assetFilter = type === 'crypto' ? 'crypto' : type === 'forex' ? 'forex' : 'equity';
+        const rows = await dbQuery<{ symbol: string }>(
+          `SELECT symbol FROM symbol_universe WHERE enabled = TRUE AND COALESCE(asset_type, 'equity') = $1 ORDER BY tier ASC, symbol ASC`,
+          [assetFilter]
+        );
+        if (rows.length > 0) {
+          symbolsToScan = rows.map(r => r.symbol.toUpperCase());
+          console.info(`[scanner] Loaded ${symbolsToScan.length} ${assetFilter} symbols from symbol_universe`);
+        } else {
+          // DB empty or unavailable — fall back to hardcoded
+          symbolsToScan = type === 'crypto' ? FALLBACK_CRYPTO : type === 'forex' ? FALLBACK_FOREX : FALLBACK_EQUITIES;
+          console.warn(`[scanner] symbol_universe empty for ${assetFilter}, using ${symbolsToScan.length} fallback symbols`);
+        }
+      } catch (dbErr) {
+        // DB query failed — fall back to hardcoded
+        console.warn(`[scanner] symbol_universe query failed, using fallbacks:`, (dbErr as any)?.message);
+        symbolsToScan = type === 'crypto' ? FALLBACK_CRYPTO : type === 'forex' ? FALLBACK_FOREX : FALLBACK_EQUITIES;
+      }
+    }
 
     // Normalize crypto symbols and exclude stablecoins from scan universe.
     if (type === "crypto") {
@@ -1430,9 +1451,13 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    // Keep equities lower due to Alpha Vantage rate limits on TA endpoints
-    const MAX_PER_SCAN = type === "equity" ? 5 : 10;
+    // With prefer_cache mode, most equity data comes from DB cache — safe to scan many.
+    // Cache mode = zero AV calls; AV fallback mode = cap lower to avoid rate limits.
+    const MAX_PER_SCAN = shouldUseCache() ? 50 : 15;
     const limited = symbolsToScan.slice(0, MAX_PER_SCAN);
+    if (symbolsToScan.length > MAX_PER_SCAN) {
+      console.info(`[scanner] Capped ${symbolsToScan.length} symbols to ${MAX_PER_SCAN} (cache=${shouldUseCache()})`);
+    }
     const results: ScanResult[] = [];
     const errors: string[] = [];
 
@@ -1644,7 +1669,7 @@ export async function POST(req: NextRequest) {
             console.warn('[scanner] Enhancement computation failed for', baseSym, enhErr);
           }
 
-          if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
+          results.push(item);
         } else if (type === "forex") {
           // FOREX: Use FX_INTRADAY or FX_DAILY endpoints
           const cacheBuster = Date.now();
@@ -1807,7 +1832,7 @@ export async function POST(req: NextRequest) {
           // DVE flags for forex (already computed before scoring)
           if (dveForex) Object.assign(item, dveForex);
 
-          if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
+          results.push(item);
         } else {
           // EQUITIES: Try cached data first, fall back to Alpha Vantage
           // v3.0: Cache mode support - reduces AV calls by ~90%
@@ -1918,7 +1943,7 @@ export async function POST(req: NextRequest) {
               console.warn(`[scanner] chartData fetch failed for ${sym}:`, (chartErr as any)?.message);
             }
 
-            if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
+            results.push(item);
             
           } else if (canFallbackToAV()) {
             // Fallback to Alpha Vantage with ONE candle-series call, then compute indicators locally.
@@ -2091,7 +2116,7 @@ export async function POST(req: NextRequest) {
             // DVE flags for equity (AV path — already computed before scoring)
             if (dveAV) Object.assign(item, dveAV);
 
-            if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
+            results.push(item);
           } else {
             // cache_only mode but no cached data
             console.warn(`[scanner] ${sym} not in cache (cache_only mode)`);

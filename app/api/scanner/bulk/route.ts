@@ -31,48 +31,53 @@ export const maxDuration = 60; // 60 seconds max for client requests
 const ALPHA_KEY = process.env.ALPHA_VANTAGE_API_KEY || process.env.ALPHAVANTAGE_API_KEY;
 
 // =============================================================================
-// UNIVERSES TO SCAN
+// UNIVERSES TO SCAN — DB-backed with hardcoded fallbacks
 // =============================================================================
 
-const EQUITY_UNIVERSE = [
-  // Mega-cap tech (most liquid, best signals)
+const FALLBACK_EQUITY_UNIVERSE = [
   "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "AVGO", "ORCL", "CRM",
-  // Finance
   "JPM", "V", "MA", "BAC", "WFC", "GS", "MS", "BLK",
-  // Healthcare
   "UNH", "JNJ", "LLY", "PFE", "ABBV", "MRK",
-  // Consumer
   "WMT", "PG", "KO", "PEP", "COST", "MCD", "NKE", "HD",
-  // Industrial
   "CAT", "DE", "UPS", "BA", "HON", "GE",
-  // Energy
   "XOM", "CVX", "COP", "SLB",
-  // Semiconductors
   "AMD", "INTC", "QCOM", "MU", "AMAT",
-  // Growth/Tech
   "NFLX", "UBER", "ABNB", "SQ", "SHOP", "SNOW", "PLTR", "CRWD",
-  // Other notable
   "DIS", "PYPL", "ADBE", "NOW", "INTU"
 ];
 
-// Crypto symbols - Top 100 by market cap/volume
-const CRYPTO_UNIVERSE = [
-  // Top 20 by market cap
+const FALLBACK_CRYPTO_UNIVERSE = [
   "BTC", "ETH", "BNB", "SOL", "XRP", "ADA", "DOGE", "AVAX", "LINK", "DOT",
   "MATIC", "SHIB", "LTC", "BCH", "UNI", "XLM", "NEAR", "ATOM", "ETC", "APT",
-  // 21-40
   "ARB", "OP", "FIL", "VET", "HBAR", "INJ", "AAVE", "GRT", "ALGO", "FTM",
   "SAND", "MANA", "AXS", "MKR", "RNDR", "FET", "SUI", "SEI", "TIA", "IMX",
-  // 41-60
   "RUNE", "THETA", "STX", "EGLD", "FLOW", "KAVA", "NEO", "XTZ", "EOS", "CFX",
   "GALA", "ROSE", "ZIL", "1INCH", "COMP", "SNX", "ENJ", "CRV", "LDO", "RPL",
-  // 61-80
   "BLUR", "PENDLE", "JUP", "WLD", "STRK", "ONDO", "PYTH", "JTO", "BONK", "WIF",
   "PEPE", "FLOKI", "ORDI", "SATS", "TRX", "TON", "KAS", "KLAY", "MINA", "ZEC",
-  // 81-100
   "DASH", "XMR", "BAT", "ZRX", "ANKR", "STORJ", "CELO", "ONE", "ICX", "QTUM",
   "ONT", "WAVES", "IOTA", "SC", "RVN", "BTT", "HOT", "CELR", "DENT", "CHZ"
 ];
+
+/** Query symbol_universe DB table for enabled symbols, fall back to hardcoded */
+async function getUniverseFromDB(assetType: 'equity' | 'crypto'): Promise<string[]> {
+  try {
+    const rows = await dbQuery<{ symbol: string }>(
+      `SELECT symbol FROM symbol_universe WHERE enabled = TRUE AND COALESCE(asset_type, 'equity') = $1 ORDER BY tier ASC, symbol ASC`,
+      [assetType]
+    );
+    if (rows && rows.length > 0) {
+      const symbols = rows.map(r => r.symbol.toUpperCase());
+      console.log(`[bulk-scan] Loaded ${symbols.length} ${assetType} symbols from symbol_universe`);
+      return symbols;
+    }
+  } catch (err: any) {
+    console.warn(`[bulk-scan] Failed to query symbol_universe for ${assetType}, using fallback:`, err.message);
+  }
+  const fallback = assetType === 'equity' ? FALLBACK_EQUITY_UNIVERSE : FALLBACK_CRYPTO_UNIVERSE;
+  console.log(`[bulk-scan] Using fallback ${assetType} universe (${fallback.length} symbols)`);
+  return fallback;
+}
 
 // Symbol to CoinGecko ID mapping (extend from lib + add missing)
 const SYMBOL_TO_COINGECKO: Record<string, string> = {
@@ -1591,8 +1596,9 @@ function computeFullScore(data: CachedScanData): {
 async function runCachedEquityScan(startTime: number, timeframe: string, universeSize: number) {
   console.log(`[bulk-scan/cached] Scanning equities from worker cache (0 AV calls)...`);
 
-  // Read pre-cached indicators for the full equity universe
-  const symbolsToScan = EQUITY_UNIVERSE.slice(0, Math.max(30, universeSize));
+  // Read pre-cached indicators for the full equity universe (DB-backed)
+  const equityUniverse = await getUniverseFromDB('equity');
+  const symbolsToScan = equityUniverse.slice(0, Math.max(30, universeSize));
   const cacheMap = await getBulkCachedScanData(symbolsToScan);
 
   // Also grab AV top movers to enrich bias (1 API call — worth it for fresh context)
@@ -1611,7 +1617,7 @@ async function runCachedEquityScan(startTime: number, timeframe: string, univers
     if (ticker && !moverBiasMap.has(ticker)) moverBiasMap.set(ticker, 0.4);
   }
 
-  // Any top-mover symbols not in EQUITY_UNIVERSE get added
+  // Any top-mover symbols not already in the universe get added
   for (const ticker of moverBiasMap.keys()) {
     if (!symbolsToScan.includes(ticker)) symbolsToScan.push(ticker);
   }
@@ -1754,12 +1760,13 @@ async function runLightEquityScan(startTime: number, timeframe: string, universe
     if (ticker && !moverBiasMap.has(ticker)) moverBiasMap.set(ticker, 0.4);
   }
 
-  const candidateSymbols = new Set<string>(EQUITY_UNIVERSE);
+  const equityUniverse = await getUniverseFromDB('equity');
+  const candidateSymbols = new Set<string>(equityUniverse);
   for (const ticker of moverBiasMap.keys()) candidateSymbols.add(ticker);
   const maxCandidates = Math.max(30, Math.floor(universeSize || 200));
   const prioritized = [
     ...Array.from(moverBiasMap.keys()),
-    ...EQUITY_UNIVERSE.filter((symbol) => !moverBiasMap.has(symbol)),
+    ...equityUniverse.filter((symbol) => !moverBiasMap.has(symbol)),
   ];
   const candidates = Array.from(new Set(prioritized)).slice(0, maxCandidates);
 
@@ -2112,7 +2119,7 @@ export async function POST(req: NextRequest) {
       });
     }
     
-    const universe = type === 'equity' ? EQUITY_UNIVERSE : CRYPTO_UNIVERSE;
+    const universe = await getUniverseFromDB(type as 'equity' | 'crypto');
     const results: any[] = [];
     const errors: string[] = [];
     
@@ -2124,7 +2131,7 @@ export async function POST(req: NextRequest) {
     if (type === 'crypto') {
       const [, marketDataPage] = await Promise.all([
         (async () => {
-          const derivPromises = CRYPTO_UNIVERSE.map(async (symbol) => {
+          const derivPromises = universe.map(async (symbol) => {
             const data = await fetchCryptoDerivatives(symbol);
             if (data) derivativesMap.set(symbol, data);
           });
