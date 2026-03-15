@@ -472,8 +472,8 @@ export async function POST(req: NextRequest) {
     }
 
     const intervalMap: Record<string, string> = {
+      "15m": "15min",
       "1h": "60min",
-      "4h": "60min",
       "30m": "30min",
       "1d": "daily",
       "daily": "daily",
@@ -690,8 +690,8 @@ export async function POST(req: NextRequest) {
       
       const days = timeframe === '1d' || timeframe === 'daily'
         ? 30
-        : timeframe === '4h' || timeframe === '4hour'
-          ? 7
+        : timeframe === 'weekly'
+          ? 90
           : 1;
       
       // Skip other stablecoins - they don't have trading pairs
@@ -1473,7 +1473,7 @@ export async function POST(req: NextRequest) {
           const baseSym = sym;
           
           // Use AV for intraday / weekly crypto; CoinGecko for daily
-          const isIntraday = timeframe === '1h' || timeframe === '4h' || timeframe === '30m';
+          const isIntraday = timeframe === '15m' || timeframe === '1h' || timeframe === '30m';
           const isWeekly = timeframe === 'weekly';
           let candles: Candle[];
           try {

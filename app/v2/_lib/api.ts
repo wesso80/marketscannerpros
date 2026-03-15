@@ -424,10 +424,10 @@ export function fetchRegime(): Promise<RegimeResponse> {
 }
 
 // --- Scanner ---
-export type ScanTimeframe = '1h' | '4h' | 'daily' | 'weekly';
+export type ScanTimeframe = '15m' | '1h' | 'daily' | 'weekly';
 export const SCAN_TIMEFRAMES: { value: ScanTimeframe; label: string }[] = [
+  { value: '15m', label: '15m' },
   { value: '1h', label: '1H' },
-  { value: '4h', label: '4H' },
   { value: 'daily', label: 'Daily' },
   { value: 'weekly', label: 'Weekly' },
 ];

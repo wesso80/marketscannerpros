@@ -481,9 +481,9 @@ export async function GET(request: NextRequest) {
     }
 
     const timeframe = (searchParams.get('timeframe') || 'daily').toLowerCase();
-    const avIntervalMap: Record<string, string> = { '1h': '60min', '4h': '60min', 'daily': 'daily', 'weekly': 'weekly' };
+    const avIntervalMap: Record<string, string> = { '15m': '15min', '1h': '60min', 'daily': 'daily', 'weekly': 'weekly' };
     const avInterval = avIntervalMap[timeframe] || 'daily';
-    const tfLabel = timeframe === '1h' ? '1H' : timeframe === '4h' ? '4H' : timeframe === 'weekly' ? '1W' : '1D';
+    const tfLabel = timeframe === '15m' ? '15m' : timeframe === '1h' ? '1H' : timeframe === 'weekly' ? '1W' : '1D';
 
     // Check cache (include timeframe in key)
     const cacheKey = `${symbol}_${timeframe}`;
