@@ -157,7 +157,7 @@ function buildCandidates(rows: AVOptionRow[], symbol: string, spot: number, expe
 
   for (const [expiry, group] of byExpiry.entries()) {
     const dte = dteFromExpiry(expiry);
-    if (!((dte >= 7 && dte <= 14) || (dte >= 21 && dte <= 45) || (dte >= 60 && dte <= 90))) continue;
+    if (dte < 0 || dte > 90) continue;
 
     const withDistance = (arr: AVOptionRow[]) => arr
       .map((row) => ({ row, strike: toNum(row.strike, 0), distPct: Math.abs((toNum(row.strike, 0) - spot) / spot) * 100 }))
