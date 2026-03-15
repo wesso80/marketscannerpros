@@ -7,7 +7,7 @@ dotenv.config({ path: path.join(process.cwd(), '.env.local') });
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes('neon') ? { rejectUnauthorized: false } : undefined,
+  ssl: process.env.DATABASE_URL?.includes('neon') ? { rejectUnauthorized: true } : undefined,
 });
 
 const EFTS_BASE = 'https://efts.sec.gov/LATEST/search-index';

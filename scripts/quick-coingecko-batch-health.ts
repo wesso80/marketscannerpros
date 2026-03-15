@@ -17,7 +17,7 @@ function coinIdForSymbol(symbol: string): string | null {
 async function getCryptoSymbols(): Promise<string[]> {
   const dbUrl = process.env.DATABASE_URL;
   if (!dbUrl) throw new Error('DATABASE_URL not set');
-  const pool = new Pool({ connectionString: dbUrl, ssl: { rejectUnauthorized: false }, max: 4 });
+  const pool = new Pool({ connectionString: dbUrl, ssl: { rejectUnauthorized: true }, max: 4 });
   try {
     const { rows } = await pool.query(`
       SELECT symbol

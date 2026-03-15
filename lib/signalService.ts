@@ -29,7 +29,7 @@ function getPool(): Pool {
     _pool = new Pool({
       connectionString: process.env.DATABASE_URL,
       max: 5,
-      ssl: { rejectUnauthorized: false }
+      ssl: { rejectUnauthorized: true }
     });
   }
   return _pool;

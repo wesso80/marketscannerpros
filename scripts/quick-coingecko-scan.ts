@@ -25,7 +25,7 @@ async function getCryptoSymbols(): Promise<string[]> {
 
   const pool = new Pool({
     connectionString: dbUrl,
-    ssl: { rejectUnauthorized: false },
+    ssl: { rejectUnauthorized: true },
     max: 4,
   });
 

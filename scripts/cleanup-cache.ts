@@ -37,7 +37,7 @@ async function cleanup() {
     process.exit(1);
   }
 
-  const pool = new Pool({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
+  const pool = new Pool({ connectionString: dbUrl, ssl: { rejectUnauthorized: true } });
   
   try {
     // Truncate all cached data tables (keeps schema intact)

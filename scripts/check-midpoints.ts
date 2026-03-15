@@ -6,7 +6,7 @@ dotenv.config({ path: path.join(process.cwd(), '.env.local') });
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
+  ssl: { rejectUnauthorized: true },
 });
 
 async function main() {

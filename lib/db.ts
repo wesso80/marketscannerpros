@@ -17,7 +17,7 @@ export function getPool(): Pool {
       connectionTimeoutMillis: 5_000,   // 5s to acquire connection
       idleTimeoutMillis: 10_000,        // release idle clients after 10s
       statement_timeout: 30_000,        // 30s query timeout (pool-level)
-      ssl: requiresSSL ? { rejectUnauthorized: false } : undefined,
+      ssl: requiresSSL ? { rejectUnauthorized: true } : undefined,
     });
 
     global.__pgPool.on('error', (err) => {

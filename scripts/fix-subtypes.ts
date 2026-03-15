@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as dotenv from 'dotenv';
 
 dotenv.config({ path: path.join(process.cwd(), '.env.local') });
-const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: true } });
 
 async function run() {
   // Check current subtypes

@@ -26,7 +26,7 @@ let pool: Pool | null = null;
 
 function getPool(): Pool {
   if (!pool) {
-    pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+    pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: true } });
   }
   return pool;
 }
