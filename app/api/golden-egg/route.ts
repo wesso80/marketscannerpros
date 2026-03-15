@@ -116,7 +116,11 @@ function buildPayload(
 
   // Entry / stop / targets
   const isLong = direction === 'LONG' || (direction === 'NEUTRAL' && bullish >= bearish);
-  const stopDistance = atr * 1.5;
+
+  // Cap ATR-based distances to prevent absurd targets on volatile / low-priced assets
+  const maxStopPct = 0.15; // max 15% stop distance
+  const rawStopDist = atr * 1.5;
+  const stopDistance = Math.min(rawStopDist, p * maxStopPct);
   const stopPrice = isLong ? p - stopDistance : p + stopDistance;
 
   // Use decompression target from time confluence if available and directionally aligned
@@ -125,10 +129,18 @@ function buildPayload(
     ((isLong && decompTarget.direction === 'up' && decompTarget.price > p) ||
      (!isLong && decompTarget.direction === 'down' && decompTarget.price < p));
 
-  // Build targets: use decompression target as T2 (primary) when aligned
-  const t1 = isLong ? p + atr : p - atr;
-  const t2 = decompAligned ? decompTarget!.price : (isLong ? p + atr * 2 : p - atr * 2);
-  const t3 = isLong ? p + atr * 3 : p - atr * 3;
+  // Build targets: cap each at reasonable % from current price
+  const maxTargetPct = 0.30; // max 30% from current price per target
+  const capTarget = (raw: number) => {
+    if (isLong) return Math.min(raw, p * (1 + maxTargetPct));
+    return Math.max(raw, p * (1 - maxTargetPct));
+  };
+  const t1Raw = isLong ? p + stopDistance * (2 / 3) : p - stopDistance * (2 / 3);
+  const t2Raw = decompAligned ? decompTarget!.price : (isLong ? p + stopDistance * (4 / 3) : p - stopDistance * (4 / 3));
+  const t3Raw = isLong ? p + stopDistance * 2 : p - stopDistance * 2;
+  const t1 = capTarget(t1Raw);
+  const t2 = capTarget(t2Raw);
+  const t3 = capTarget(t3Raw);
   const rr = stopDistance > 0 ? (Math.abs(t2 - p)) / stopDistance : 0;
 
   // Timeframe alignment from MPE time pressure
