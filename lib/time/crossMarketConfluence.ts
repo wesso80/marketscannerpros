@@ -134,17 +134,96 @@ export const ECONOMIC_EVENTS = {
 } as const;
 
 /**
- * Placeholder for economic calendar integration
- * In production, this would query a real economic calendar API
+ * Map economic calendar categories to our event type keys.
+ */
+const CATEGORY_TO_EVENT_TYPE: Record<string, keyof typeof ECONOMIC_EVENTS> = {
+  central_bank: 'FOMC',
+  employment: 'NFP',
+  inflation: 'CPI',
+  consumer: 'RETAIL_SALES',
+  gdp: 'GDP',
+  manufacturing: 'PPI', // closest match
+};
+
+/**
+ * Curated economic events for confluence scoring.
+ * Same dataset used by /api/economic-calendar — kept inline to avoid
+ * runtime fetch from a server component in a library module.
+ */
+const ECON_CALENDAR: Array<{ date: string; time: string; category: string; impact: string }> = [
+  // 2026 high-impact events (FOMC, NFP, CPI, GDP)
+  { date: '2026-01-10', time: '08:30', category: 'employment', impact: 'high' },
+  { date: '2026-01-14', time: '08:30', category: 'inflation', impact: 'high' },
+  { date: '2026-01-28', time: '14:00', category: 'central_bank', impact: 'high' },
+  { date: '2026-01-29', time: '08:30', category: 'gdp', impact: 'high' },
+  { date: '2026-02-06', time: '08:30', category: 'employment', impact: 'high' },
+  { date: '2026-02-11', time: '08:30', category: 'inflation', impact: 'high' },
+  { date: '2026-03-06', time: '08:30', category: 'employment', impact: 'high' },
+  { date: '2026-03-11', time: '08:30', category: 'inflation', impact: 'high' },
+  { date: '2026-03-18', time: '14:00', category: 'central_bank', impact: 'high' },
+  { date: '2026-03-26', time: '08:30', category: 'gdp', impact: 'high' },
+  { date: '2026-04-03', time: '08:30', category: 'employment', impact: 'high' },
+  { date: '2026-04-10', time: '08:30', category: 'inflation', impact: 'high' },
+  { date: '2026-04-29', time: '08:30', category: 'gdp', impact: 'high' },
+  { date: '2026-05-01', time: '08:30', category: 'employment', impact: 'high' },
+  { date: '2026-05-06', time: '14:00', category: 'central_bank', impact: 'high' },
+  { date: '2026-05-12', time: '08:30', category: 'inflation', impact: 'high' },
+  { date: '2026-06-05', time: '08:30', category: 'employment', impact: 'high' },
+  { date: '2026-06-10', time: '08:30', category: 'inflation', impact: 'high' },
+  { date: '2026-06-17', time: '14:00', category: 'central_bank', impact: 'high' },
+  { date: '2026-06-25', time: '08:30', category: 'gdp', impact: 'high' },
+  { date: '2026-07-02', time: '08:30', category: 'employment', impact: 'high' },
+  { date: '2026-07-14', time: '08:30', category: 'inflation', impact: 'high' },
+  { date: '2026-07-29', time: '14:00', category: 'central_bank', impact: 'high' },
+  { date: '2026-07-30', time: '08:30', category: 'gdp', impact: 'high' },
+  { date: '2026-08-07', time: '08:30', category: 'employment', impact: 'high' },
+  { date: '2026-08-12', time: '08:30', category: 'inflation', impact: 'high' },
+  { date: '2026-09-04', time: '08:30', category: 'employment', impact: 'high' },
+  { date: '2026-09-11', time: '08:30', category: 'inflation', impact: 'high' },
+  { date: '2026-09-16', time: '14:00', category: 'central_bank', impact: 'high' },
+  { date: '2026-09-24', time: '08:30', category: 'gdp', impact: 'high' },
+  { date: '2026-10-02', time: '08:30', category: 'employment', impact: 'high' },
+  { date: '2026-10-13', time: '08:30', category: 'inflation', impact: 'high' },
+  { date: '2026-10-29', time: '08:30', category: 'gdp', impact: 'high' },
+  { date: '2026-11-04', time: '14:00', category: 'central_bank', impact: 'high' },
+  { date: '2026-11-06', time: '08:30', category: 'employment', impact: 'high' },
+  { date: '2026-11-12', time: '08:30', category: 'inflation', impact: 'high' },
+  { date: '2026-12-04', time: '08:30', category: 'employment', impact: 'high' },
+  { date: '2026-12-10', time: '08:30', category: 'inflation', impact: 'high' },
+  { date: '2026-12-16', time: '14:00', category: 'central_bank', impact: 'high' },
+  { date: '2026-12-23', time: '08:30', category: 'gdp', impact: 'high' },
+];
+
+/**
+ * Get upcoming economic events within the lookahead window.
+ * Matches events from the curated calendar to our ECONOMIC_EVENTS scoring keys.
  */
 function getUpcomingEconomicEvents(now: Date, daysAhead: number = 7): Array<{
   date: Date;
   type: keyof typeof ECONOMIC_EVENTS;
   hoursAway: number;
 }> {
-  // TODO: Integrate with actual economic calendar API
-  // For now, return empty array
-  return [];
+  const cutoff = now.getTime() + daysAhead * 24 * 60 * 60 * 1000;
+  const results: Array<{ date: Date; type: keyof typeof ECONOMIC_EVENTS; hoursAway: number }> = [];
+
+  for (const ev of ECON_CALENDAR) {
+    const [h, m] = ev.time.split(':').map(Number);
+    const eventDate = new Date(`${ev.date}T00:00:00Z`);
+    eventDate.setUTCHours(h, m, 0, 0);
+
+    if (eventDate.getTime() < now.getTime() || eventDate.getTime() > cutoff) continue;
+
+    const type = CATEGORY_TO_EVENT_TYPE[ev.category];
+    if (!type) continue;
+
+    results.push({
+      date: eventDate,
+      type,
+      hoursAway: (eventDate.getTime() - now.getTime()) / (1000 * 60 * 60),
+    });
+  }
+
+  return results;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
