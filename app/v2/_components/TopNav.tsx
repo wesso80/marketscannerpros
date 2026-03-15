@@ -52,6 +52,14 @@ export default function TopNav() {
           >
             Pricing
           </Link>
+          {isLoggedIn && (
+            <Link
+              href="/v2/referrals"
+              className="text-xs text-slate-400 hover:text-white px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap"
+            >
+              Referrals
+            </Link>
+          )}
           {isLoggedIn ? (
             <button
               onClick={() => navigateTo('workspace')}
