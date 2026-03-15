@@ -14,7 +14,7 @@ import {
   buildOrder,
 } from '@/lib/execution';
 import { evaluateGovernor } from '@/lib/execution/riskGovernor';
-import { getLatestPortfolioEquity } from '@/lib/journal/riskAtEntry';
+import { getUserAccountEquity } from '@/lib/journal/riskAtEntry';
 import { q } from '@/lib/db';
 
 /**
@@ -68,8 +68,7 @@ export async function POST(req: NextRequest) {
 
     // ── 2. Resolve account equity if not provided ────────────────────
     if (!intent.account_equity) {
-      const equity = await getLatestPortfolioEquity(session.workspaceId);
-      intent.account_equity = equity ?? 10_000;
+      intent.account_equity = await getUserAccountEquity(session.workspaceId);
     }
 
     // ── 3. Resolve open positions for correlation check ──────────────

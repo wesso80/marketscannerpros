@@ -1,10 +1,16 @@
 import { NextResponse } from 'next/server';
 import { getNewListings, getSimplePrices, symbolToId } from '@/lib/coingecko';
+import { getSessionFromCookie } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 600; // 10 minutes
 
 export async function GET() {
+  const session = await getSessionFromCookie();
+  if (!session?.workspaceId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const listings = await getNewListings();
     

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getMarketData, CoinGeckoMarketData } from '@/lib/coingecko';
+import { getSessionFromCookie } from '@/lib/auth';
 
 // Top cryptocurrencies with display config
 const CRYPTO_CONFIG: Record<string, { weight: number; color: string }> = {
@@ -37,6 +38,11 @@ interface CryptoData {
 
 // GET /api/crypto/heatmap - Get crypto performance data via CoinGecko
 export async function GET(req: NextRequest) {
+  const session = await getSessionFromCookie();
+  if (!session?.workspaceId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     // Fetch market data from CoinGecko (single batched API call)
     const marketData = await getMarketData({ ids: CRYPTO_IDS, per_page: 20 });

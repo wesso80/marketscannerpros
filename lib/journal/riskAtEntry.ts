@@ -42,6 +42,35 @@ export async function getLatestPortfolioEquity(workspaceId: string): Promise<num
   return equity != null && equity > 0 ? equity : null;
 }
 
+const DEFAULT_EQUITY_FALLBACK = 10_000;
+
+/**
+ * Resolve account equity for a workspace.
+ * Priority: 1) user-set account_equity in user_subscriptions
+ *           2) latest portfolio_performance snapshot
+ *           3) $10,000 fallback
+ */
+export async function getUserAccountEquity(workspaceId: string): Promise<number> {
+  // 1. Check user-set account equity
+  try {
+    const rows = await q<{ account_equity: string | number | null }>(
+      `SELECT account_equity FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1`,
+      [workspaceId]
+    );
+    const userSet = toFiniteNumber(rows[0]?.account_equity);
+    if (userSet != null && userSet > 0) return userSet;
+  } catch {
+    // Column may not exist yet — fall through
+  }
+
+  // 2. Check latest portfolio snapshot
+  const portfolioEquity = await getLatestPortfolioEquity(workspaceId);
+  if (portfolioEquity != null) return portfolioEquity;
+
+  // 3. Fallback
+  return DEFAULT_EQUITY_FALLBACK;
+}
+
 export function computeEntryRiskMetrics(input: {
   pl?: unknown;
   equityAtEntry?: unknown;

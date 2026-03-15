@@ -9,13 +9,13 @@ const HARDCODED_ADMINS = ['xxneutronxx@yahoo.com', 'bradleywessling@yahoo.com.au
 const ENV_ADMINS = (process.env.ADMIN_EMAILS || "").split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
 const ADMIN_EMAILS = [...new Set([...HARDCODED_ADMINS, ...ENV_ADMINS])];
 
-async function getEmailFromWorkspace(workspaceId: string): Promise<string | null> {
+async function getSubscriptionFromDB(workspaceId: string): Promise<{ email: string; tier: string; status: string } | null> {
   try {
-    const rows = await q<{ email: string }>(
-      'SELECT email FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1',
+    const rows = await q<{ email: string; tier: string; status: string }>(
+      'SELECT email, tier, status FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1',
       [workspaceId]
     );
-    return rows.length > 0 ? rows[0].email : null;
+    return rows.length > 0 ? rows[0] : null;
   } catch {
     return null;
   }
@@ -49,10 +49,12 @@ export async function GET() {
     });
   }
 
-  // Try to get email from multiple sources
-  let email = await getEmailFromWorkspace(session.workspaceId);
+  // Check DB for current subscription (source of truth for tier)
+  const dbSub = await getSubscriptionFromDB(session.workspaceId);
   
-  // Fallback: extract email from cid (for trial users)
+  let email = dbSub?.email ?? null;
+  
+  // Fallback: extract email from cid (for trial users without DB row yet)
   if (!email && session.cid) {
     email = extractEmailFromCid(session.cid);
   }
@@ -63,8 +65,15 @@ export async function GET() {
   // Determine effective tier:
   // 1) FREE_FOR_ALL_MODE → everyone gets pro_trader
   // 2) Admin users always get pro_trader
-  // 3) Otherwise use session tier from cookie
-  let effectiveTier = session.tier;
+  // 3) DB tier is source of truth (reflects Stripe webhook updates / cancellations)
+  // 4) Fall back to cookie tier only if no DB record exists
+  let effectiveTier = dbSub?.tier ?? session.tier;
+  
+  // If subscription is cancelled/inactive in DB, downgrade to free
+  if (dbSub && dbSub.status !== 'active' && dbSub.status !== 'trialing') {
+    effectiveTier = 'free';
+  }
+  
   if (isFreeForAllMode()) {
     effectiveTier = "pro_trader";
   } else if (isAdmin) {

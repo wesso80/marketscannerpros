@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSessionFromCookie } from '@/lib/auth';
 
 const CACHE_DURATION = 60; // 1 minute cache for real-time data
 let cache: { data: any; timestamp: number } | null = null;
@@ -38,6 +39,11 @@ interface CoinLiquidation {
 }
 
 export async function GET(req: NextRequest) {
+  const session = await getSessionFromCookie();
+  if (!session?.workspaceId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   console.log('[Liquidations API] Request received - using OKX real data');
   
   if (cache && Date.now() - cache.timestamp < CACHE_DURATION * 1000) {

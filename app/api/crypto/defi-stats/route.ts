@@ -1,10 +1,16 @@
 import { NextResponse } from 'next/server';
 import { getDefiData } from '@/lib/coingecko';
+import { getSessionFromCookie } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 300; // 5 minutes
 
 export async function GET() {
+  const session = await getSessionFromCookie();
+  if (!session?.workspaceId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const defi = await getDefiData();
     

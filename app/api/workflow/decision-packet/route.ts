@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { hasProTraderAccess } from '@/lib/proTraderAccess';
 import { q } from '@/lib/db';
 
 type TimelineItem = {
@@ -38,6 +39,9 @@ export async function GET(req: NextRequest) {
     const session = await getSessionFromCookie();
     if (!session?.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (!hasProTraderAccess(session.tier)) {
+      return NextResponse.json({ error: 'Pro Trader access required' }, { status: 403 });
     }
 
     const id = String(new URL(req.url).searchParams.get('id') || '').trim();

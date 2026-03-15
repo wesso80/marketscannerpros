@@ -8,6 +8,7 @@ import {
   type StrategyTag,
 } from '@/lib/risk-governor-hard';
 import { getRuntimeRiskSnapshotInput } from '@/lib/risk/runtimeSnapshot';
+import { getUserAccountEquity } from '@/lib/journal/riskAtEntry';
 
 function isDirection(value: string): value is Direction {
   return value === 'LONG' || value === 'SHORT';
@@ -44,6 +45,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid strategy_tag or direction' }, { status: 400 });
     }
 
+    // Resolve account equity from DB if not provided
+    const providedEquity = Number(input?.account_equity || 0);
+    const accountEquity = providedEquity > 0
+      ? providedEquity
+      : await getUserAccountEquity(session.workspaceId);
+
     const candidate: CandidateIntent = {
       symbol: String(input?.symbol || '').toUpperCase(),
       asset_class: String(input?.asset_class || '').toLowerCase() === 'crypto' ? 'crypto' : 'equities',
@@ -56,6 +63,7 @@ export async function POST(req: NextRequest) {
       event_severity: ['none', 'medium', 'high'].includes(String(input?.event_severity || '').toLowerCase())
         ? String(input?.event_severity || '').toLowerCase() as 'none' | 'medium' | 'high'
         : 'none',
+      account_equity: accountEquity,
     };
 
     if (!candidate.symbol || !Number.isFinite(candidate.entry_price) || !Number.isFinite(candidate.stop_price) || !Number.isFinite(candidate.atr)) {

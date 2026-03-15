@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTrendingPools, getNewPools } from '@/lib/coingecko';
+import { getSessionFromCookie } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 300; // 5 minutes
 
 export async function GET(request: NextRequest) {
+  const session = await getSessionFromCookie();
+  if (!session?.workspaceId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type') || 'trending';

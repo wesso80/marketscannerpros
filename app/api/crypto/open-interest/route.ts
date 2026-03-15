@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAggregatedOpenInterest, getDerivativesForSymbols } from '@/lib/coingecko';
 import { getCached, setCached } from '@/lib/redis';
+import { getSessionFromCookie } from '@/lib/auth';
 
 const CACHE_DURATION = 600; // 10 minute cache (OI doesn't change fast)
 let cache: { data: any; timestamp: number } | null = null;
@@ -26,6 +27,11 @@ interface OpenInterestData {
 }
 
 export async function GET(req: NextRequest) {
+  const session = await getSessionFromCookie();
+  if (!session?.workspaceId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   console.log('[Open Interest API] Request received');
   
   if (cache && Date.now() - cache.timestamp < CACHE_DURATION * 1000) {
