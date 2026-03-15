@@ -39,7 +39,10 @@ export async function getSessionFromCookie(): Promise<SessionPayload | null> {
   const c = cookieStore.get("ms_auth")?.value;
   if (!c) {
     // DEV BYPASS: auto-authenticate as pro_trader for local testing
-    if (process.env.NODE_ENV === 'development' && process.env.DEV_AUTH_BYPASS === 'true') {
+    if (
+      (process.env.NODE_ENV === 'development' && process.env.DEV_AUTH_BYPASS === 'true') ||
+      process.env.FREE_FOR_ALL_MODE === 'true'
+    ) {
       return {
         cid: 'dev-local-testing',
         tier: 'pro_trader',
