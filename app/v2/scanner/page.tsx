@@ -44,7 +44,7 @@ export default function ScannerPage() {
       case 'Bullish': items = items.filter(r => r.direction === 'bullish'); break;
       case 'Bearish': items = items.filter(r => r.direction === 'bearish'); break;
       case 'High Score': items = items.filter(r => Math.abs(r.score) >= 5); break;
-      case 'DVE Signals': items = items.filter(r => r.dveSignalType && r.dveSignalType !== 'none'); break;
+      case 'DVE Signals': items = items.filter(r => (r.dveSignalType && r.dveSignalType !== 'none') || (r.dveFlags && r.dveFlags.length > 0)); break;
     }
     items.sort((a, b) => {
       let av: any, bv: any;
@@ -102,7 +102,7 @@ export default function ScannerPage() {
                 : tab === 'Bullish' ? allResults.filter(r => r.direction === 'bullish').length
                 : tab === 'Bearish' ? allResults.filter(r => r.direction === 'bearish').length
                 : tab === 'High Score' ? allResults.filter(r => Math.abs(r.score) >= 5).length
-                : allResults.filter(r => r.dveSignalType && r.dveSignalType !== 'none').length}
+                : allResults.filter(r => (r.dveSignalType && r.dveSignalType !== 'none') || (r.dveFlags && r.dveFlags.length > 0)).length}
             </span>
           </button>
         ))}
@@ -170,8 +170,16 @@ export default function ScannerPage() {
                           {r.dveBbwp != null ? r.dveBbwp.toFixed(0) : '—'}
                         </span>
                       </td>
-                      <td className="py-2.5 px-2 text-[10px] text-slate-400 truncate max-w-[100px]">
-                        {r.dveSignalType && r.dveSignalType !== 'none' ? r.dveSignalType.replace(/_/g, ' ') : '—'}
+                      <td className="py-2.5 px-2 text-[10px] truncate max-w-[100px]">
+                        {(() => {
+                          if (r.dveSignalType && r.dveSignalType !== 'none') return <span className="text-yellow-400 font-semibold">{r.dveSignalType.replace(/_/g, ' ')}</span>;
+                          if (r.dveFlags && r.dveFlags.length > 0) {
+                            const fc: Record<string, string> = { SQUEEZE_FIRE: 'text-yellow-400', COMPRESSED: 'text-cyan-400', EXPANDING: 'text-amber-400', CLIMAX: 'text-red-400', BREAKOUT: 'text-emerald-400', HIGH_BREAKOUT: 'text-emerald-300', VOL_TRAP: 'text-red-300', EXHAUSTION_RISK: 'text-orange-400', DIR_BULL: 'text-emerald-400', DIR_BEAR: 'text-red-400', EXTENDED_PHASE: 'text-slate-400', CONTINUATION: 'text-amber-300' };
+                            const top = r.dveFlags[0];
+                            return <span className={fc[top] || 'text-slate-400'}>{top.replace(/_/g, ' ')}{r.dveFlags.length > 1 ? ` +${r.dveFlags.length - 1}` : ''}</span>;
+                          }
+                          return <span className="text-slate-600">—</span>;
+                        })()}
                       </td>
                       <td className="py-2.5 px-2 text-[10px] text-slate-400 truncate max-w-[80px]">
                         {r.setup || '—'}
