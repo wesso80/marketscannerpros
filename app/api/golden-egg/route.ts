@@ -14,9 +14,11 @@ import {
   fetchPrice,
   fetchIndicators,
   fetchOptionsSnapshot,
+  fetchCryptoDerivatives,
   fetchMPE,
   type Indicators,
   type OptionsSnapshot,
+  type CryptoDerivatives,
 } from '@/lib/goldenEggFetchers';
 import { computeDVE } from '@/lib/directionalVolatilityEngine';
 import type { DVEInput, DVEReading } from '@/lib/directionalVolatilityEngine.types';
@@ -46,6 +48,7 @@ function buildPayload(
   opts: OptionsSnapshot | null,
   mpe: { composite: number; time: number; volatility: number; liquidity: number; options: number } | null,
   tfLabel: string = '1D',
+  cryptoDerivs: CryptoDerivatives | null = null,
 ): GoldenEggPayload {
   const p = price.price;
   const atr = ind?.atr ?? (price.high - price.low);
@@ -191,21 +194,54 @@ function buildPayload(
     volRegime = dveReading.volatility.regime;
   } catch { /* DVE is additive — failure is non-fatal */ }
 
-  // Options evidence
-  const optionsEvidence: GoldenEggPayload['layer3']['options'] = opts ? {
-    enabled: true,
-    verdict: opts.sentiment === 'Bullish' && isLong ? 'agree' : opts.sentiment === 'Bearish' && !isLong ? 'agree' : opts.sentiment === 'Neutral' ? 'neutral' : 'disagree',
-    highlights: [
-      { label: 'Put/Call OI', value: opts.putCallRatio.toFixed(2) },
-      { label: 'IV Rank', value: `${opts.ivRank.toFixed(0)}%` },
-      { label: 'Dealer Gamma', value: opts.dealerGamma },
-      { label: 'Unusual Activity', value: opts.unusualActivity },
-      { label: 'Max Pain', value: `$${opts.maxPain.toFixed(2)}` },
-    ],
-    notes: [
-      opts.unusualActivity !== 'Normal' ? `Unusual options activity detected (${opts.unusualActivity})` : 'Options flow appears normal',
-    ],
-  } : undefined;
+  // Options / Derivatives evidence
+  let optionsEvidence: GoldenEggPayload['layer3']['options'];
+  if (opts) {
+    optionsEvidence = {
+      enabled: true,
+      verdict: opts.sentiment === 'Bullish' && isLong ? 'agree' : opts.sentiment === 'Bearish' && !isLong ? 'agree' : opts.sentiment === 'Neutral' ? 'neutral' : 'disagree',
+      highlights: [
+        { label: 'Put/Call OI', value: opts.putCallRatio.toFixed(2) },
+        { label: 'IV Rank', value: `${opts.ivRank.toFixed(0)}%` },
+        { label: 'Dealer Gamma', value: opts.dealerGamma },
+        { label: 'Unusual Activity', value: opts.unusualActivity },
+        { label: 'Max Pain', value: `$${opts.maxPain.toFixed(2)}` },
+      ],
+      notes: [
+        opts.unusualActivity !== 'Normal' ? `Unusual options activity detected (${opts.unusualActivity})` : 'Options flow appears normal',
+      ],
+    };
+  } else if (cryptoDerivs) {
+    const fmtOI = cryptoDerivs.totalOpenInterest >= 1e9
+      ? `$${(cryptoDerivs.totalOpenInterest / 1e9).toFixed(2)}B`
+      : cryptoDerivs.totalOpenInterest >= 1e6
+        ? `$${(cryptoDerivs.totalOpenInterest / 1e6).toFixed(1)}M`
+        : `$${cryptoDerivs.totalOpenInterest.toLocaleString()}`;
+    const fmtVol = cryptoDerivs.volume24h >= 1e9
+      ? `$${(cryptoDerivs.volume24h / 1e9).toFixed(2)}B`
+      : cryptoDerivs.volume24h >= 1e6
+        ? `$${(cryptoDerivs.volume24h / 1e6).toFixed(1)}M`
+        : `$${cryptoDerivs.volume24h.toLocaleString()}`;
+    const derivVerdict: Verdict = cryptoDerivs.sentiment === 'Bullish' && isLong ? 'agree'
+      : cryptoDerivs.sentiment === 'Bearish' && !isLong ? 'agree'
+      : cryptoDerivs.sentiment === 'Neutral' ? 'neutral' : 'disagree';
+    optionsEvidence = {
+      enabled: true,
+      verdict: derivVerdict,
+      highlights: [
+        { label: 'Funding Rate', value: `${cryptoDerivs.fundingRatePercent >= 0 ? '+' : ''}${cryptoDerivs.fundingRatePercent.toFixed(4)}%` },
+        { label: 'Annualized', value: `${cryptoDerivs.annualizedFunding >= 0 ? '+' : ''}${cryptoDerivs.annualizedFunding.toFixed(1)}%` },
+        { label: 'Open Interest', value: fmtOI },
+        { label: 'Perp Volume 24h', value: fmtVol },
+        { label: 'Exchanges', value: `${cryptoDerivs.exchanges}` },
+      ],
+      notes: [
+        cryptoDerivs.fundingRatePercent > 0.03 ? 'Positive funding — longs paying shorts (bullish crowding)' :
+        cryptoDerivs.fundingRatePercent < -0.01 ? 'Negative funding — shorts paying longs (bearish crowding)' :
+        'Funding rate neutral — no significant positioning bias',
+      ],
+    };
+  }
 
   // Momentum evidence
   const momentumVerdict: Verdict = momentumScore >= 65 ? 'agree' : momentumScore >= 45 ? 'neutral' : 'disagree';
@@ -507,13 +543,16 @@ export async function GET(request: NextRequest) {
     // Fetch indicators (may use AV — do after price to avoid burst)
     const indData = await fetchIndicators(symbol, assetClass, priceData.historicalCloses, priceData.historicalHighs, priceData.historicalLows, avInterval);
 
-    // Fetch options (equities only, after indicators to space out AV calls)
+    // Fetch options (equities) or derivatives (crypto)
     let optsData: OptionsSnapshot | null = null;
+    let cryptoDerivsData: CryptoDerivatives | null = null;
     if (assetClass === 'equity') {
       optsData = await fetchOptionsSnapshot(symbol, priceData.price);
+    } else if (assetClass === 'crypto') {
+      cryptoDerivsData = await fetchCryptoDerivatives(symbol);
     }
 
-    const payload = buildPayload(symbol, assetClass, priceData, indData, optsData, mpeData, tfLabel);
+    const payload = buildPayload(symbol, assetClass, priceData, indData, optsData, mpeData, tfLabel, cryptoDerivsData);
 
     // Cache result
     cache.set(cacheKey, { data: payload, ts: Date.now() });

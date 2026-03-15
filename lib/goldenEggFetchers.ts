@@ -420,6 +420,41 @@ export async function fetchOptionsSnapshot(symbol: string, price: number): Promi
   } catch { return null; }
 }
 
+// ── Helper: fetch crypto derivatives (funding rates + OI via CoinGecko) ─
+export interface CryptoDerivatives {
+  fundingRate: number;
+  fundingRatePercent: number;
+  annualizedFunding: number;
+  totalOpenInterest: number;
+  volume24h: number;
+  exchanges: number;
+  sentiment: 'Bullish' | 'Bearish' | 'Neutral';
+}
+
+export async function fetchCryptoDerivatives(symbol: string): Promise<CryptoDerivatives | null> {
+  try {
+    // Extract base symbol: BTC-USD → BTC, ETHUSDT → ETH
+    const base = symbol.toUpperCase().replace(/-?USD[T]?$/, '');
+    const [fundingArr, oiArr] = await Promise.all([
+      getAggregatedFundingRates([base]),
+      getAggregatedOpenInterest([base]),
+    ]);
+    const funding = fundingArr?.[0];
+    const oi = oiArr?.[0];
+    if (!funding && !oi) return null;
+
+    return {
+      fundingRate: funding?.avgFundingRate ?? 0,
+      fundingRatePercent: funding?.fundingRatePercent ?? 0,
+      annualizedFunding: funding?.annualized ?? 0,
+      totalOpenInterest: oi?.totalOpenInterest ?? 0,
+      volume24h: oi?.avgVolume24h ?? 0,
+      exchanges: Math.max(funding?.exchanges ?? 0, oi?.exchanges ?? 0),
+      sentiment: funding?.sentiment ?? 'Neutral',
+    };
+  } catch { return null; }
+}
+
 // ── Helper: fetch MPE pressures ─────────────────────────────────────────
 export async function fetchMPE(symbol: string, assetClass: string): Promise<MPEData | null> {
   try {

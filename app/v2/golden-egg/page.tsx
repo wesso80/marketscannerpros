@@ -332,9 +332,11 @@ export default function GoldenEggPage() {
               ) : <div className="text-xs text-slate-500">No volatility data available</div>}
             </Card>
 
-            {/* ── D: OPTIONS ──────────────────────────────────────────── */}
+            {/* ── D: OPTIONS / DERIVATIVES ─────────────────────────── */}
             <Card>
-              <h3 className="text-xs font-semibold text-emerald-400 mb-3">D — Options / Derivatives</h3>
+              <h3 className="text-xs font-semibold text-emerald-400 mb-3">
+                {ge.meta.assetClass === 'crypto' ? 'D — Derivatives' : 'D — Options / Derivatives'}
+              </h3>
               {ge.layer3.options?.enabled ? (
                 <div className="space-y-2">
                   <Badge label={ge.layer3.options.verdict} color={ge.layer3.options.verdict === 'agree' ? '#10B981' : ge.layer3.options.verdict === 'disagree' ? '#EF4444' : '#F59E0B'} />
@@ -349,15 +351,19 @@ export default function GoldenEggPage() {
                   {ge.layer3.options.notes?.map((n: any, i: number) => (
                     <div key={i} className="text-[10px] text-slate-500">• {n}</div>
                   ))}
-                  <button
-                    onClick={() => navigateTo('terminal', sym)}
-                    className="mt-2 text-[10px] text-emerald-400 hover:underline"
-                  >
-                    Open Options Terminal →
-                  </button>
+                  {ge.meta.assetClass !== 'crypto' && (
+                    <button
+                      onClick={() => navigateTo('terminal', sym)}
+                      className="mt-2 text-[10px] text-emerald-400 hover:underline"
+                    >
+                      Open Options Terminal →
+                    </button>
+                  )}
                 </div>
               ) : (
-                <div className="text-xs text-slate-500 py-4 text-center">Options data not available for {sym}</div>
+                <div className="text-xs text-slate-500 py-4 text-center">
+                  {ge.meta.assetClass === 'crypto' ? 'Derivatives data not available' : `Options data not available for ${sym}`}
+                </div>
               )}
             </Card>
           </div>
