@@ -179,14 +179,19 @@ export function buildExitPlan(input: {
   const trail = pickTrailRule(regime, asset_class, strategy_tag);
   const timeStop = timeStopMinutes(asset_class, strategy_tag);
 
+  // Compute actual R:R from final prices (respects overrides)
+  const finalStopDist = Math.abs(entry_price - stopPrice);
+  const actualRR1 = finalStopDist > 0 ? Math.abs(tp1 - entry_price) / finalStopDist : tp1RR;
+  const actualRR2 = finalStopDist > 0 ? Math.abs(tp2 - entry_price) / finalStopDist : tp2RR;
+
   return {
     stop_price: round(stopPrice),
     take_profit_1: round(tp1),
     take_profit_2: round(tp2),
     trail_rule: trail,
     time_stop_minutes: timeStop,
-    rr_at_tp1: round(tp1RR, 2),
-    rr_at_tp2: round(tp2RR, 2),
+    rr_at_tp1: round(actualRR1, 2),
+    rr_at_tp2: round(actualRR2, 2),
   };
 }
 
