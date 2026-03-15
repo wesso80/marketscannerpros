@@ -6,8 +6,8 @@ import { formatPrice, formatPriceRaw } from '@/lib/formatPrice';
 
 /* ═══════════════════════════════════════════════════════════════
    PORTFOLIO V2 — v1-style portfolio with:
-   - Cash level, KPI header, Overview (allocation + perf + AI + metrics)
-   - Add Position with symbol tips & strategy dropdown
+   - Cash level (editable), KPI header, Overview (allocation + perf + metrics)
+   - Add Position with symbol tips, strategy dropdown & options fields
    - Holdings with Size%, P&L%, Risk Remaining, Stop Dist%, 
      Close / Reduce 50% / Move Stop / Delete actions
    - Auto-refresh prices every 2 min + Refresh Prices button
@@ -25,6 +25,9 @@ interface Position {
   plPercent: number;
   entryDate: string;
   strategy?: string;
+  optionType?: 'call' | 'put';
+  strikePrice?: number;
+  expirationDate?: string;
 }
 
 interface ClosedPosition extends Position {
@@ -72,7 +75,9 @@ export default function PortfolioV2() {
   const [subTab, setSubTab] = useState<SubTab>('overview');
 
   /* ─── Cash ─── */
-  const [startingCapital, setStartingCapital] = useState(10000);
+  const [startingCapital, setStartingCapital] = useState(0);
+  const [editingCapital, setEditingCapital] = useState(false);
+  const [capitalInput, setCapitalInput] = useState('');
   const [cashLedger, setCashLedger] = useState<CashLedgerEntry[]>([]);
 
   /* ─── Stop tracking per position ─── */
@@ -85,14 +90,15 @@ export default function PortfolioV2() {
   const [entryPrice, setEntryPrice] = useState('');
   const [currentPrice, setCurrentPrice] = useState('');
   const [strategy, setStrategy] = useState('');
+  const [optionType, setOptionType] = useState<'call' | 'put'>('call');
+  const [strikePrice, setStrikePrice] = useState('');
+  const [expirationDate, setExpirationDate] = useState('');
 
   /* ─── Close Position modal ─── */
   const [closingId, setClosingId] = useState<number | null>(null);
   const [closePrice, setClosePrice] = useState('');
 
-  /* ─── AI Review ─── */
-  const [aiReview, setAiReview] = useState<string | null>(null);
-  const [aiLoading, setAiLoading] = useState(false);
+
 
   /* ─── Price refresh ─── */
   const [refreshingAll, setRefreshingAll] = useState(false);
@@ -255,14 +261,20 @@ export default function PortfolioV2() {
       pl, plPercent: plPct,
       entryDate: new Date().toISOString(),
       strategy: strategy || undefined,
+      ...(strategy === 'options' ? {
+        optionType,
+        strikePrice: strikePrice ? parseFloat(strikePrice) : undefined,
+        expirationDate: expirationDate || undefined,
+      } : {}),
     };
 
     const updated = [newPos, ...positions];
     setPositions(updated);
     setSymbol(''); setQuantity(''); setEntryPrice(''); setCurrentPrice(''); setStrategy('');
+    setOptionType('call'); setStrikePrice(''); setExpirationDate('');
     setSubTab('holdings');
     await syncPortfolio(updated, closedPositions);
-  }, [symbol, side, quantity, entryPrice, currentPrice, strategy, positions, closedPositions, syncPortfolio, fetchAutoPrice]);
+  }, [symbol, side, quantity, entryPrice, currentPrice, strategy, optionType, strikePrice, expirationDate, positions, closedPositions, syncPortfolio, fetchAutoPrice]);
 
   /* ─── Close Position ─── */
   const handleClose = useCallback(async () => {
@@ -316,25 +328,7 @@ export default function PortfolioV2() {
     setPositionStopMap(prev => ({ ...prev, [id]: pos.entryPrice }));
   }, [positions]);
 
-  /* ─── AI Portfolio Review ─── */
-  const runAiReview = useCallback(async () => {
-    if (positions.length === 0 && closedPositions.length === 0) return;
-    setAiLoading(true);
-    try {
-      const r = await fetch('/api/portfolio/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ positions, closedPositions, performanceHistory: perfHistory }),
-      });
-      if (!r.ok) throw new Error('Analysis failed');
-      const data = await r.json();
-      setAiReview(data.analysis || 'No analysis returned.');
-    } catch {
-      setAiReview('Unable to generate analysis. Please try again.');
-    } finally {
-      setAiLoading(false);
-    }
-  }, [positions, closedPositions, perfHistory]);
+
 
   /* ──────────────────────────────────────────────────────────── */
   /* KPIs & calculations                                         */
@@ -396,7 +390,41 @@ export default function PortfolioV2() {
 
       {/* ═══ KPI ROW ═══ */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <KPICard label="Cash Level" value={`$${fmt(currentCash)}`} color={currentCash >= 0 ? 'text-emerald-400' : 'text-red-400'} />
+        <div className="rounded-xl border border-white/5 bg-[#0D1321]/80 px-4 py-3.5">
+          <div className="text-[10px] uppercase text-slate-500 font-medium tracking-wider mb-1.5">Cash Level</div>
+          {editingCapital ? (
+            <div className="flex items-center gap-1.5">
+              <span className="text-base font-bold font-mono text-white">$</span>
+              <input
+                autoFocus
+                value={capitalInput}
+                onChange={e => setCapitalInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    const v = parseFloat(capitalInput);
+                    if (!isNaN(v) && v >= 0) setStartingCapital(v);
+                    setEditingCapital(false);
+                  } else if (e.key === 'Escape') {
+                    setEditingCapital(false);
+                  }
+                }}
+                onBlur={() => {
+                  const v = parseFloat(capitalInput);
+                  if (!isNaN(v) && v >= 0) setStartingCapital(v);
+                  setEditingCapital(false);
+                }}
+                type="number"
+                step="any"
+                className="w-full bg-transparent text-base font-bold font-mono text-emerald-400 outline-none border-b border-emerald-500/40"
+              />
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 cursor-pointer group" onClick={() => { setCapitalInput(String(startingCapital)); setEditingCapital(true); }}>
+              <span className={`text-base font-bold font-mono ${currentCash >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>${fmt(currentCash)}</span>
+              <span className="text-[10px] text-slate-600 group-hover:text-slate-400 transition-colors">✏️</span>
+            </div>
+          )}
+        </div>
         <KPICard label="Market Value" value={`$${fmt(totalValue)}`} />
         <KPICard label="Total Return" value={`${totalReturn >= 0 ? '+' : ''}${totalReturn.toFixed(2)}%`} color={plColor(totalReturn)} />
         <KPICard label="Unrealized P&L" value={`${unrealizedPL >= 0 ? '+' : ''}$${fmt(unrealizedPL)}`} color={plColor(unrealizedPL)} />
@@ -439,33 +467,7 @@ export default function PortfolioV2() {
             </div>
           )}
 
-          {/* AI PORTFOLIO REVIEW */}
-          <div className="rounded-xl border border-white/5 bg-[#0D1321]/80 p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center text-sm">🤖</div>
-                <div>
-                  <h3 className="text-sm font-semibold text-white">AI Portfolio Review</h3>
-                  <p className="text-[10px] text-slate-500">Get personalized insights on your positions &amp; strategy</p>
-                </div>
-              </div>
-              <button
-                onClick={runAiReview}
-                disabled={aiLoading || (positions.length === 0 && closedPositions.length === 0)}
-                className="px-4 py-2 text-xs rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600/30 disabled:opacity-30 transition-colors font-medium"
-              >
-                {aiLoading ? 'Analyzing...' : 'Analyze My Portfolio'}
-              </button>
-            </div>
-            {aiReview && (
-              <div className="mt-3 pt-3 border-t border-slate-700/30">
-                <div className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap">{aiReview}</div>
-                <div className="mt-3 rounded-lg bg-amber-500/5 border border-amber-500/15 px-3 py-2">
-                  <p className="text-[10px] text-amber-400/80"><strong>Disclaimer:</strong> This AI analysis is for educational and informational purposes only. It does not constitute financial advice.</p>
-                </div>
-              </div>
-            )}
-          </div>
+
 
           {/* ALLOCATION + PERFORMANCE GRID */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -636,6 +638,30 @@ export default function PortfolioV2() {
               {STRATEGIES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
           </div>
+
+          {/* Options-specific fields */}
+          {strategy === 'options' && (
+            <div className="space-y-3 rounded-lg border border-violet-500/20 bg-violet-500/5 p-3">
+              <div className="text-[10px] uppercase tracking-wider text-violet-400 font-semibold">Options Details</div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[10px] uppercase text-slate-500 mb-1.5 font-medium tracking-wider">Type</label>
+                  <div className="flex gap-1">
+                    <button onClick={() => setOptionType('call')} className={`flex-1 py-2 text-xs rounded-lg font-semibold border transition-colors ${optionType === 'call' ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-[#0A101C] border-slate-700/40 text-slate-500'}`}>Call</button>
+                    <button onClick={() => setOptionType('put')} className={`flex-1 py-2 text-xs rounded-lg font-semibold border transition-colors ${optionType === 'put' ? 'bg-red-500/15 border-red-500/30 text-red-400' : 'bg-[#0A101C] border-slate-700/40 text-slate-500'}`}>Put</button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase text-slate-500 mb-1.5 font-medium tracking-wider">Strike Price</label>
+                  <input value={strikePrice} onChange={e => setStrikePrice(e.target.value)} placeholder="0.00" type="number" step="any" className="w-full bg-[#0A101C] border border-slate-700/40 rounded-lg text-xs px-3 py-2.5 text-white placeholder:text-slate-600 focus:outline-none focus:border-violet-600/40 transition-colors" />
+                </div>
+                <div>
+                  <label className="block text-[10px] uppercase text-slate-500 mb-1.5 font-medium tracking-wider">Expiration</label>
+                  <input value={expirationDate} onChange={e => setExpirationDate(e.target.value)} type="date" className="w-full bg-[#0A101C] border border-slate-700/40 rounded-lg text-xs px-3 py-2.5 text-white focus:outline-none focus:border-violet-600/40 transition-colors" />
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Quantity / Entry / Current row */}
           <div className="grid grid-cols-3 gap-3">
