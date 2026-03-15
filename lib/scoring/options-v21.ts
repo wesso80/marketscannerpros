@@ -185,6 +185,11 @@ function buildCandidates(rows: AVOptionRow[], symbol: string, spot: number, expe
     if (atmCall) {
       const callLeg = contractToLeg(atmCall, 'long');
       const debit = toNum(callLeg.mid, 0);
+      // B18 fix: estimate maxGain from delta × expected move instead of flat 2×
+      const rawCallDelta = callLeg.delta;
+      const callDelta = Math.abs(rawCallDelta != null && Number.isFinite(rawCallDelta) ? rawCallDelta : 0.5);
+      const targetMove = spot * (expectedMovePct / 100);
+      const estimatedGain = callDelta * targetMove;
       candidates.push({
         strategyType: 'CALL',
         underlying: symbol,
@@ -192,7 +197,7 @@ function buildCandidates(rows: AVOptionRow[], symbol: string, spot: number, expe
         dte,
         legs: [callLeg],
         debit,
-        maxGain: debit > 0 ? debit * 2.0 : undefined,
+        maxGain: debit > 0 ? Math.max(debit * 0.5, estimatedGain) : undefined,
         maxLoss: debit,
         breakeven: callLeg.strike + debit,
         expectedMovePct,
@@ -202,6 +207,11 @@ function buildCandidates(rows: AVOptionRow[], symbol: string, spot: number, expe
     if (atmPut) {
       const putLeg = contractToLeg(atmPut, 'long');
       const debit = toNum(putLeg.mid, 0);
+      // B18 fix: estimate maxGain from delta × expected move instead of flat 2×
+      const rawPutDelta = putLeg.delta;
+      const putDelta = Math.abs(rawPutDelta != null && Number.isFinite(rawPutDelta) ? rawPutDelta : 0.5);
+      const targetMove = spot * (expectedMovePct / 100);
+      const estimatedGain = putDelta * targetMove;
       candidates.push({
         strategyType: 'PUT',
         underlying: symbol,
@@ -209,7 +219,7 @@ function buildCandidates(rows: AVOptionRow[], symbol: string, spot: number, expe
         dte,
         legs: [putLeg],
         debit,
-        maxGain: debit > 0 ? debit * 2.0 : undefined,
+        maxGain: debit > 0 ? Math.max(debit * 0.5, estimatedGain) : undefined,
         maxLoss: debit,
         breakeven: putLeg.strike - debit,
         expectedMovePct,
