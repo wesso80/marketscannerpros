@@ -6,7 +6,6 @@ import { getAdaptiveLayer } from '@/lib/adaptiveTrader';
 import { computeInstitutionalFilter, inferStrategyFromText } from '@/lib/institutionalFilter';
 import { computeCapitalFlowEngine } from '@/lib/capitalFlowEngine';
 import { getLatestStateMachine, upsertStateMachine } from '@/lib/state-machine-store';
-import { hasProTraderAccess } from '@/lib/proTraderAccess';
 import { buildDealerIntelligence, calculateDealerGammaSnapshot } from '@/lib/options-gex';
 import { AVOptionRow, scoreOptionCandidatesV21 } from '@/lib/scoring/options-v21';
 import { avFetch } from '@/lib/avRateGovernor';
@@ -90,10 +89,6 @@ export async function POST(request: NextRequest) {
     if (!session?.workspaceId) {
       return NextResponse.json({ success: false, error: 'Please log in to use the Options Scanner' }, { status: 401 });
     }
-    if (!hasProTraderAccess(session.tier)) {
-      return NextResponse.json({ success: false, error: 'Pro Trader subscription required for Options Scanner' }, { status: 403 });
-    }
-
     const workspaceId = session.workspaceId;
 
     const body = await request.json();

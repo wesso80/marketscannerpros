@@ -111,6 +111,17 @@ export default function GoldenEggPage() {
         </Card>
       )}
 
+      {/* Auth error state */}
+      {goldenEgg.isAuthError && !loading && (
+        <Card>
+          <div className="py-8 text-center">
+            <div className="text-amber-400 text-sm mb-2">Sign in required</div>
+            <div className="text-[10px] text-slate-500 mb-4">Please sign in to access Golden Egg analysis</div>
+            <a href="/auth/login" className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-xs hover:bg-emerald-500/30 inline-block">Sign In</a>
+          </div>
+        </Card>
+      )}
+
       {/* Error state */}
       {goldenEgg.error && !loading && (
         <Card>
