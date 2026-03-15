@@ -97,7 +97,7 @@ function avgTriggerInterval(history: AlertHistoryItem[]) {
   return `${hours}h`;
 }
 
-function AlertsContent() {
+export function AlertsContent() {
   const { tier, isLoading } = useUserTier();
   const { isLocked: riskLocked } = useRiskPermission();
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
