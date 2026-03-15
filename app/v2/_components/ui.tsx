@@ -103,6 +103,21 @@ export function TabBar({ tabs, active, onChange }: { tabs: string[]; active: str
   );
 }
 
+// ─── Auth Prompt ──────────────────────────────────────────────────────────
+
+export function AuthPrompt() {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+      <div className="text-2xl mb-3">🔒</div>
+      <div className="text-sm text-white font-semibold mb-1">Sign in required</div>
+      <div className="text-xs text-slate-500 mb-4">Log in to access live market data and your workspace.</div>
+      <a href="/login" className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-xs border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors">
+        Sign In →
+      </a>
+    </div>
+  );
+}
+
 // ─── Impact Dot ───────────────────────────────────────────────────────────────
 
 export function ImpactDot({ impact }: { impact: 'high' | 'medium' | 'low' }) {

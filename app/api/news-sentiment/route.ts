@@ -143,11 +143,8 @@ Be concise and actionable. Max 300 words.`;
 }
 
 export async function GET(request: NextRequest) {
-  // Auth guard: AV license requires authenticated users only
+  // Allow anonymous access for dashboard headlines (default tickers)
   const session = await getSessionFromCookie();
-  if (!session?.workspaceId) {
-    return NextResponse.json({ error: 'Please log in to access market data' }, { status: 401 });
-  }
 
   // Rate limit: expensive endpoint (AV + OpenAI)
   const ip = getClientIP(request);

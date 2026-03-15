@@ -372,34 +372,31 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Auth check - require valid session to use scanner
-    // Allow internal cron jobs to bypass auth via x-cron-secret header
+    // Auth check - allow internal cron jobs to bypass via x-cron-secret header
+    // Anonymous users get default scans with limited scope
     const cronSecret = process.env.CRON_SECRET;
     const headerCronSecret = req.headers.get('x-cron-secret');
     const isCronBypass = cronSecret && headerCronSecret === cronSecret;
 
     const session = isCronBypass
       ? { workspaceId: 'system-cron', tier: 'pro_trader' as const, cid: 'system' }
-      : await getSessionFromCookie();
-    if (!session?.workspaceId) {
-      return NextResponse.json(
-        { error: "Please log in to use the scanner" },
-        { status: 401 }
-      );
-    }
+      : (await getSessionFromCookie()) ?? { workspaceId: 'anonymous', tier: 'free' as const, cid: 'anonymous' };
 
     // ─── Risk Governor awareness ───
     // Fetch current risk state so we can tag results with regime context
+    // Skip for anonymous users (no real workspace)
     let riskSnapshot: ReturnType<typeof buildPermissionSnapshot> | null = null;
-    try {
-      const riskInput = await getRuntimeRiskSnapshotInput(session.workspaceId);
-      const guardCookie = req.cookies.get('msp_risk_guard')?.value;
-      riskSnapshot = buildPermissionSnapshot({
-        enabled: guardCookie !== 'off',
-        ...riskInput,
-      });
-    } catch (riskErr) {
-      console.warn('[scanner] Risk governor lookup failed, continuing without regime:', riskErr);
+    if (session.workspaceId !== 'anonymous') {
+      try {
+        const riskInput = await getRuntimeRiskSnapshotInput(session.workspaceId);
+        const guardCookie = req.cookies.get('msp_risk_guard')?.value;
+        riskSnapshot = buildPermissionSnapshot({
+          enabled: guardCookie !== 'off',
+          ...riskInput,
+        });
+      } catch (riskErr) {
+        console.warn('[scanner] Risk governor lookup failed, continuing without regime:', riskErr);
+      }
     }
     
     const body = (await req.json()) as ScanRequest;

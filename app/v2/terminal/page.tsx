@@ -285,70 +285,75 @@ export default function TerminalPage() {
       )}
 
       {/* ── OPTIONS ────────────────────────────────────────────────── */}
-      {tab === 'Options' && (
+      {tab === 'Options' && (() => {
+        const opts = optionsScan.data?.data;
+        const pcRatio = opts?.openInterestAnalysis?.pcRatio;
+        const ivRank = opts?.ivAnalysis?.ivRank ?? opts?.ivAnalysis?.ivRankHeuristic;
+        const spotPrice = opts?.currentPrice;
+        const keyZones = opts?.locationContext?.keyZones;
+        const highOI = opts?.openInterestAnalysis?.highOIStrikes;
+        const tradeSnap = opts?.tradeSnapshot?.oneLine;
+        const strategy = opts?.strategyRecommendation?.strategy;
+
+        return (
         <div className="space-y-4">
           {optionsScan.loading ? (
             <Card><div className="space-y-3">{[1,2,3,4].map(i => <Skel key={i} h="h-10" />)}</div></Card>
           ) : optionsScan.error ? (
             <Card><div className="text-xs text-red-400/60 py-4 text-center">Options data unavailable: {optionsScan.error}</div></Card>
-          ) : optionsScan.data ? (
+          ) : opts ? (
             <>
               {/* Summary */}
               <Card>
                 <h3 className="text-sm font-semibold text-white mb-3">Options Confluence — {sym}</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {optionsScan.data.pcRatio != null && (
+                  {pcRatio != null && (
                     <div className="bg-[#0A101C]/50 rounded-lg p-3">
                       <div className="text-[9px] text-slate-500 uppercase">P/C Ratio</div>
-                      <div className="text-lg font-bold text-white">{optionsScan.data.pcRatio.toFixed(2)}</div>
-                      <div className={`text-[10px] ${optionsScan.data.pcRatio > 1 ? 'text-red-400' : 'text-emerald-400'}`}>{optionsScan.data.pcRatio > 1 ? 'Bearish Bias' : 'Bullish Bias'}</div>
+                      <div className="text-lg font-bold text-white">{pcRatio.toFixed(2)}</div>
+                      <div className={`text-[10px] ${pcRatio > 1 ? 'text-red-400' : 'text-emerald-400'}`}>{pcRatio > 1 ? 'Bearish Bias' : 'Bullish Bias'}</div>
                     </div>
                   )}
-                  {optionsScan.data.ivRank != null && (
+                  {ivRank != null && (
                     <div className="bg-[#0A101C]/50 rounded-lg p-3">
                       <div className="text-[9px] text-slate-500 uppercase">IV Rank</div>
-                      <div className="text-lg font-bold text-white">{optionsScan.data.ivRank.toFixed(1)}%</div>
+                      <div className="text-lg font-bold text-white">{ivRank.toFixed(1)}%</div>
                     </div>
                   )}
-                  {optionsScan.data.maxPain != null && (
-                    <div className="bg-[#0A101C]/50 rounded-lg p-3">
-                      <div className="text-[9px] text-slate-500 uppercase">Max Pain</div>
-                      <div className="text-lg font-bold text-white">${optionsScan.data.maxPain}</div>
-                    </div>
-                  )}
-                  {optionsScan.data.spotPrice != null && (
+                  {spotPrice != null && (
                     <div className="bg-[#0A101C]/50 rounded-lg p-3">
                       <div className="text-[9px] text-slate-500 uppercase">Spot Price</div>
-                      <div className="text-lg font-bold text-white">${optionsScan.data.spotPrice}</div>
+                      <div className="text-lg font-bold text-white">${spotPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                    </div>
+                  )}
+                  {opts.direction && (
+                    <div className="bg-[#0A101C]/50 rounded-lg p-3">
+                      <div className="text-[9px] text-slate-500 uppercase">Direction</div>
+                      <div className={`text-lg font-bold ${opts.direction.toLowerCase().includes('bull') ? 'text-emerald-400' : opts.direction.toLowerCase().includes('bear') ? 'text-red-400' : 'text-white'}`}>{opts.direction}</div>
+                      <div className="text-[10px] text-slate-500">{opts.tradeQuality}</div>
                     </div>
                   )}
                 </div>
+                {tradeSnap && <div className="mt-3 text-xs text-slate-400 bg-[#0A101C]/30 rounded-lg px-3 py-2">{tradeSnap}</div>}
+                {strategy && <div className="mt-2 text-[10px] text-emerald-400">Strategy: {strategy}</div>}
               </Card>
 
-              {/* GEX / Key Levels */}
-              {optionsScan.data.keyLevels && optionsScan.data.keyLevels.length > 0 && (
+              {/* Key Zones */}
+              {keyZones && keyZones.length > 0 && (
                 <Card>
                   <h3 className="text-sm font-semibold text-white mb-3">Key Option Levels</h3>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="border-b border-slate-700/50">
-                          <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Strike</th>
-                          <th className="text-right py-2 px-2 text-[10px] uppercase text-slate-500">Call OI</th>
-                          <th className="text-right py-2 px-2 text-[10px] uppercase text-slate-500">Put OI</th>
-                          <th className="text-right py-2 px-2 text-[10px] uppercase text-slate-500">Total OI</th>
-                          <th className="text-right py-2 px-2 text-[10px] uppercase text-slate-500">GEX</th>
+                          <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Level</th>
                           <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Type</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {optionsScan.data.keyLevels.map((lv: any, i: number) => (
+                        {keyZones.map((lv: any, i: number) => (
                           <tr key={i} className="border-b border-slate-800/30 hover:bg-slate-800/20">
-                            <td className="py-2 px-2 font-mono text-white">${lv.strike}</td>
-                            <td className="py-2 px-2 text-right font-mono text-emerald-400">{(lv.callOI || 0).toLocaleString()}</td>
-                            <td className="py-2 px-2 text-right font-mono text-red-400">{(lv.putOI || 0).toLocaleString()}</td>
-                            <td className="py-2 px-2 text-right font-mono text-slate-300">{(lv.totalOI || 0).toLocaleString()}</td>
-                            <td className={`py-2 px-2 text-right font-mono ${(lv.gex || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{(lv.gex || 0).toLocaleString()}</td>
+                            <td className="py-2 px-2 font-mono text-white">${lv.level?.toLocaleString()}</td>
                             <td className="py-2 px-2">{lv.type && <Badge label={lv.type} color={lv.type === 'support' ? '#10B981' : lv.type === 'resistance' ? '#EF4444' : '#94A3B8'} small />}</td>
                           </tr>
                         ))}
@@ -358,15 +363,32 @@ export default function TerminalPage() {
                 </Card>
               )}
 
-              {/* Highlights / Notes */}
-              {optionsScan.data.highlights && optionsScan.data.highlights.length > 0 && (
+              {/* High OI Strikes */}
+              {highOI && highOI.length > 0 && (
                 <Card>
-                  <h3 className="text-sm font-semibold text-white mb-2">Analysis Highlights</h3>
-                  <ul className="space-y-1">
-                    {optionsScan.data.highlights.map((h: string, i: number) => (
-                      <li key={i} className="text-xs text-slate-300 pl-3 relative before:content-['•'] before:absolute before:left-0 before:text-emerald-500">{h}</li>
-                    ))}
-                  </ul>
+                  <h3 className="text-sm font-semibold text-white mb-3">High Open Interest Strikes</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-700/50">
+                          <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Strike</th>
+                          <th className="text-right py-2 px-2 text-[10px] uppercase text-slate-500">Call OI</th>
+                          <th className="text-right py-2 px-2 text-[10px] uppercase text-slate-500">Put OI</th>
+                          <th className="text-right py-2 px-2 text-[10px] uppercase text-slate-500">Total OI</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {highOI.map((s: any, i: number) => (
+                          <tr key={i} className="border-b border-slate-800/30 hover:bg-slate-800/20">
+                            <td className="py-2 px-2 font-mono text-white">${s.strike}</td>
+                            <td className="py-2 px-2 text-right font-mono text-emerald-400">{(s.callOI || 0).toLocaleString()}</td>
+                            <td className="py-2 px-2 text-right font-mono text-red-400">{(s.putOI || 0).toLocaleString()}</td>
+                            <td className="py-2 px-2 text-right font-mono text-slate-300">{((s.callOI || 0) + (s.putOI || 0)).toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </Card>
               )}
             </>
@@ -375,27 +397,28 @@ export default function TerminalPage() {
           )}
 
           {/* DVE context below options */}
-          {dve.data && (
+          {dve.data?.data && (
             <Card>
               <h3 className="text-sm font-semibold text-white mb-2">DVE Context</h3>
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-[#0A101C]/50 rounded-lg p-3 text-center">
                   <div className="text-[9px] text-slate-500 uppercase">Regime</div>
-                  <div className="text-sm font-bold text-white">{dve.data.regime}</div>
+                  <div className="text-sm font-bold text-white">{dve.data.data.volatility.regime}</div>
                 </div>
                 <div className="bg-[#0A101C]/50 rounded-lg p-3 text-center">
                   <div className="text-[9px] text-slate-500 uppercase">BBWP</div>
-                  <div className="text-sm font-bold text-white">{dve.data.bbwp?.toFixed(1)}</div>
+                  <div className="text-sm font-bold text-white">{dve.data.data.volatility.bbwp?.toFixed(1)}</div>
                 </div>
                 <div className="bg-[#0A101C]/50 rounded-lg p-3 text-center">
                   <div className="text-[9px] text-slate-500 uppercase">Direction</div>
-                  <div className={`text-sm font-bold ${dve.data.direction === 'EXPANDING' ? 'text-red-400' : 'text-emerald-400'}`}>{dve.data.direction}</div>
+                  <div className={`text-sm font-bold ${dve.data.data.direction.bias === 'bearish' ? 'text-red-400' : 'text-emerald-400'}`}>{dve.data.data.direction.bias}</div>
                 </div>
               </div>
             </Card>
           )}
         </div>
-      )}
+        );
+      })()}
 
       {/* ── FLOW ───────────────────────────────────────────────────── */}
       {tab === 'Flow' && (

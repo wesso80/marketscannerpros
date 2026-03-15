@@ -9,7 +9,7 @@ import { useMemo } from 'react';
 import { useV2 } from '../_lib/V2Context';
 import { useRegime, useScannerResults, useMarketMovers, useNews, useEconomicCalendar, type ScanResult, type Mover, type NewsArticle, type EconomicEvent } from '../_lib/api';
 import { REGIME_COLORS, CROSS_MARKET } from '../_lib/constants';
-import { Card, SectionHeader, ScoreBar, Badge, ImpactDot } from '../_components/ui';
+import { Card, SectionHeader, ScoreBar, Badge, ImpactDot, AuthPrompt } from '../_components/ui';
 
 /* ── helpers ────────────────────────────────────────────────────────────── */
 function directionColor(d?: string) {
@@ -66,11 +66,21 @@ export default function DashboardPage() {
     () => (calendar.data?.events || []).filter((e: EconomicEvent) => e.impact === 'high').slice(0, 5),
     [calendar.data]
   );
-  const topGainers = (movers.data?.topGainers || []).slice(0, 5);
-  const topLosers = (movers.data?.topLosers || []).slice(0, 5);
+  const allGainers = movers.data?.topGainers || [];
+  const allLosers = movers.data?.topLosers || [];
+  const eqGainers = allGainers.filter((m: Mover) => m.asset_class === 'equity').slice(0, 5);
+  const eqLosers = allLosers.filter((m: Mover) => m.asset_class === 'equity').slice(0, 5);
+  const crGainers = allGainers.filter((m: Mover) => m.asset_class === 'crypto').slice(0, 5);
+  const crLosers = allLosers.filter((m: Mover) => m.asset_class === 'crypto').slice(0, 5);
   const articles = (news.data?.articles || []).slice(0, 6);
 
   const scanLoading = equityScan.loading || cryptoScan.loading;
+
+  // Show sign-in prompt if all data hooks report auth errors
+  const allAuthError = equityScan.isAuthError && movers.isAuthError && news.isAuthError;
+  if (allAuthError) {
+    return <Card><AuthPrompt /></Card>;
+  }
 
   return (
     <div className="space-y-4">
@@ -137,26 +147,59 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* ── Market Movers ──────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* ── Equity Movers ──────────────────────────────────────────── */}
         {movers.loading ? <CardSkeleton rows={5} /> : (
           <Card>
-            <h3 className="text-sm font-semibold text-white mb-3">Top Movers (24h)</h3>
+            <h3 className="text-sm font-semibold text-white mb-3">Equity Movers</h3>
             <div className="space-y-1">
               <div className="text-[9px] uppercase text-emerald-500 tracking-wider mb-1">Gainers</div>
-              {topGainers.map((m: Mover) => (
-                <div key={m.ticker} className="flex items-center justify-between text-xs py-0.5 cursor-pointer hover:bg-slate-800/40 px-1 rounded" onClick={() => { selectSymbol(m.ticker); navigateTo('golden-egg', m.ticker); }}>
-                  <span className="font-semibold text-white w-16">{m.ticker}</span>
-                  <span className="text-slate-300">${parseFloat(m.price).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-                  <span className="text-emerald-400 font-mono">+{m.change_percentage}</span>
+              {eqGainers.length === 0 ? (
+                <div className="text-xs text-slate-500 py-1">No equity data</div>
+              ) : eqGainers.map((m: Mover) => (
+                <div key={`eg-${m.ticker}`} className="grid grid-cols-[5rem_1fr_6rem] items-center text-xs py-0.5 cursor-pointer hover:bg-slate-800/40 px-1 rounded" onClick={() => { selectSymbol(m.ticker); navigateTo('golden-egg', m.ticker); }}>
+                  <span className="font-semibold text-white">{m.ticker}</span>
+                  <span className="text-slate-300 text-right font-mono tabular-nums">${parseFloat(m.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className="text-emerald-400 font-mono text-right tabular-nums">+{m.change_percentage}</span>
                 </div>
               ))}
               <div className="text-[9px] uppercase text-red-500 tracking-wider mb-1 mt-2">Losers</div>
-              {topLosers.map((m: Mover) => (
-                <div key={m.ticker} className="flex items-center justify-between text-xs py-0.5 cursor-pointer hover:bg-slate-800/40 px-1 rounded" onClick={() => { selectSymbol(m.ticker); navigateTo('golden-egg', m.ticker); }}>
-                  <span className="font-semibold text-white w-16">{m.ticker}</span>
-                  <span className="text-slate-300">${parseFloat(m.price).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-                  <span className="text-red-400 font-mono">{m.change_percentage}</span>
+              {eqLosers.length === 0 ? (
+                <div className="text-xs text-slate-500 py-1">No equity data</div>
+              ) : eqLosers.map((m: Mover) => (
+                <div key={`el-${m.ticker}`} className="grid grid-cols-[5rem_1fr_6rem] items-center text-xs py-0.5 cursor-pointer hover:bg-slate-800/40 px-1 rounded" onClick={() => { selectSymbol(m.ticker); navigateTo('golden-egg', m.ticker); }}>
+                  <span className="font-semibold text-white">{m.ticker}</span>
+                  <span className="text-slate-300 text-right font-mono tabular-nums">${parseFloat(m.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className="text-red-400 font-mono text-right tabular-nums">{m.change_percentage}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* ── Crypto Movers ──────────────────────────────────────────── */}
+        {movers.loading ? <CardSkeleton rows={5} /> : (
+          <Card>
+            <h3 className="text-sm font-semibold text-white mb-3">Crypto Movers</h3>
+            <div className="space-y-1">
+              <div className="text-[9px] uppercase text-emerald-500 tracking-wider mb-1">Gainers</div>
+              {crGainers.length === 0 ? (
+                <div className="text-xs text-slate-500 py-1">No crypto data</div>
+              ) : crGainers.map((m: Mover) => (
+                <div key={`cg-${m.ticker}`} className="grid grid-cols-[5rem_1fr_6rem] items-center text-xs py-0.5 cursor-pointer hover:bg-slate-800/40 px-1 rounded" onClick={() => { selectSymbol(m.ticker); navigateTo('golden-egg', m.ticker); }}>
+                  <span className="font-semibold text-white">{m.ticker}</span>
+                  <span className="text-slate-300 text-right">${parseFloat(m.price).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                  <span className="text-emerald-400 font-mono text-right">+{m.change_percentage}</span>
+                </div>
+              ))}
+              <div className="text-[9px] uppercase text-red-500 tracking-wider mb-1 mt-2">Losers</div>
+              {crLosers.length === 0 ? (
+                <div className="text-xs text-slate-500 py-1">No crypto data</div>
+              ) : crLosers.map((m: Mover) => (
+                <div key={`cl-${m.ticker}`} className="grid grid-cols-[5rem_1fr_6rem] items-center text-xs py-0.5 cursor-pointer hover:bg-slate-800/40 px-1 rounded" onClick={() => { selectSymbol(m.ticker); navigateTo('golden-egg', m.ticker); }}>
+                  <span className="font-semibold text-white">{m.ticker}</span>
+                  <span className="text-slate-300 text-right">${parseFloat(m.price).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                  <span className="text-red-400 font-mono text-right">{m.change_percentage}</span>
                 </div>
               ))}
             </div>

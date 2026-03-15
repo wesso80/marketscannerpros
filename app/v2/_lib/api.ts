@@ -230,6 +230,7 @@ export interface Mover {
   volume: string;
   market_cap: string;
   market_cap_rank: string;
+  asset_class?: 'equity' | 'crypto';
 }
 
 export interface MarketMoversResponse {
