@@ -190,7 +190,7 @@ export function useTickerData(symbol: string | null, assetClass: AssetClass): Ti
           score: match.score ?? 0,
           direction: dir,
           confidence,
-          setup: match.setup ?? (match.signals ? `${match.signals.bullish}B/${match.signals.bearish}Be signals` : ''),
+          setup: match.setup || '',
           entry,
           stop: Math.max(0, stop),
           target: Math.max(0, target),

@@ -973,6 +973,73 @@ export async function POST(req: NextRequest) {
       return result;
     }
 
+    // ── Smart setup label based on technical context ──────────────────
+    function deriveSetupLabel(opts: {
+      direction: 'bullish' | 'bearish' | 'neutral';
+      rsi?: number;
+      adx?: number;
+      stochK?: number;
+      macdHist?: number;
+      close?: number;
+      ema200?: number;
+      bbwp?: number;
+      dveFlags?: string[];
+    }): string {
+      const { direction, rsi: rsiV, adx: adxV, stochK: skV, macdHist, close, ema200, bbwp, dveFlags } = opts;
+      const flags = dveFlags ?? [];
+
+      // DVE-based labels (highest priority — unique MSP edge)
+      if (flags.includes('COMPRESSED') || (Number.isFinite(bbwp) && bbwp! < 15)) {
+        return 'Volatility Compression';
+      }
+      if (flags.includes('EXPANSION') || flags.includes('EXPANDING')) {
+        return 'Volatility Expansion';
+      }
+
+      // Momentum extremes
+      if (Number.isFinite(rsiV)) {
+        if (rsiV! < 30 && direction === 'bullish') return 'Oversold Bounce';
+        if (rsiV! > 70 && direction === 'bearish') return 'Overbought Rejection';
+      }
+
+      // Stochastic extremes
+      if (Number.isFinite(skV)) {
+        if (skV! < 20 && direction === 'bullish') return 'Oversold Reversal';
+        if (skV! > 80 && direction === 'bearish') return 'Overbought Reversal';
+      }
+
+      // Trend vs EMA200
+      const aboveEma = Number.isFinite(close) && Number.isFinite(ema200) && close! > ema200!;
+      const belowEma = Number.isFinite(close) && Number.isFinite(ema200) && close! < ema200!;
+      const strongTrend = Number.isFinite(adxV) && adxV! >= 25;
+
+      if (strongTrend && direction === 'bullish' && aboveEma) return 'Trend Continuation';
+      if (strongTrend && direction === 'bearish' && belowEma) return 'Trend Continuation';
+
+      // Pullback detection (price near EMA200 in trend)
+      if (Number.isFinite(close) && Number.isFinite(ema200) && ema200! > 0) {
+        const dist = Math.abs(close! - ema200!) / ema200! * 100;
+        if (dist < 2 && strongTrend) return 'Pullback to Structure';
+      }
+
+      // Weak trend / range
+      if (Number.isFinite(adxV) && adxV! < 20) {
+        if (Number.isFinite(rsiV) && rsiV! > 40 && rsiV! < 60) return 'Range Consolidation';
+        return 'Mean Reversion Setup';
+      }
+
+      // MACD momentum
+      if (Number.isFinite(macdHist)) {
+        if (macdHist! > 0 && direction === 'bullish') return 'Bullish Momentum';
+        if (macdHist! < 0 && direction === 'bearish') return 'Bearish Momentum';
+      }
+
+      // Fallback
+      if (direction === 'bullish') return 'Bullish Setup';
+      if (direction === 'bearish') return 'Bearish Setup';
+      return 'Neutral / Watching';
+    }
+
     function computeScore(
       close: number | undefined, 
       ema200: number, 
@@ -1247,7 +1314,7 @@ export async function POST(req: NextRequest) {
           const riskPerUnitCrypto = Math.abs(entryPriceCrypto - stopPriceCrypto);
           const rMultipleCalcCrypto = riskPerUnitCrypto > 0 ? Math.abs(targetPriceCrypto - entryPriceCrypto) / riskPerUnitCrypto : 0;
           const confidenceCalcCrypto = Math.min(99, Math.abs(scoreResult.score));
-          const setupLabelCrypto = `${scoreResult.signals.bullish}B/${scoreResult.signals.bearish}Be signals`;
+          const setupLabelCrypto = deriveSetupLabel({ direction: scoreResult.direction, rsi: rsiVal, adx: adxObj.adx, stochK: stochObj.k, macdHist: macHist, close: price, ema200: ema200Val });
 
           const item: ScanResult & { direction?: string; signals?: any } = {
             symbol: `${baseSym}-USD`,
@@ -1433,7 +1500,7 @@ export async function POST(req: NextRequest) {
           const riskPerUnitFx = Math.abs(entryPriceFx - stopPriceFx);
           const rMultipleCalcFx = riskPerUnitFx > 0 ? Math.abs(targetPriceFx - entryPriceFx) / riskPerUnitFx : 0;
           const confidenceCalcFx = Math.min(99, Math.abs(scoreResult.score));
-          const setupLabelFx = `${scoreResult.signals.bullish}B/${scoreResult.signals.bearish}Be signals`;
+          const setupLabelFx = deriveSetupLabel({ direction: scoreResult.direction, rsi: rsiVal, adx: adxObj.adx, stochK: stochObj.k, macdHist: macHist, close: price, ema200: ema200Val });
 
           const item: ScanResult & { direction?: string; signals?: any } = {
             symbol: sym,
@@ -1528,7 +1595,7 @@ export async function POST(req: NextRequest) {
             const riskPerUnit = Math.abs(entryPrice - stopPrice);
             const rMultipleCalc = riskPerUnit > 0 ? Math.abs(targetPrice - entryPrice) / riskPerUnit : 0;
             const confidenceCalc = Math.min(99, Math.abs(scoreResult.score));
-            const setupLabel = `${scoreResult.signals.bullish}B/${scoreResult.signals.bearish}Be signals`;
+            const setupLabel = deriveSetupLabel({ direction: scoreResult.direction, rsi: rsiVal, adx: adxVal, stochK, macdHist: macHist, close: price, ema200: ema200Val });
 
             const item: ScanResult & { direction?: string; signals?: any } = {
               symbol: sym,
@@ -1688,7 +1755,7 @@ export async function POST(req: NextRequest) {
             const riskPerUnitAV = Math.abs(entryPriceAV - stopPriceAV);
             const rMultipleCalcAV = riskPerUnitAV > 0 ? Math.abs(targetPriceAV - entryPriceAV) / riskPerUnitAV : 0;
             const confidenceCalcAV = Math.min(99, Math.abs(scoreResult.score));
-            const setupLabelAV = `${scoreResult.signals.bullish}B/${scoreResult.signals.bearish}Be signals`;
+            const setupLabelAV = deriveSetupLabel({ direction: scoreResult.direction, rsi: rsiVal, adx: adxObj.adx, stochK: stochObj.k, macdHist: macHist, close: price, ema200: ema200Val });
 
             const item: ScanResult & { direction?: string; signals?: any } = {
               symbol: sym,
