@@ -56,9 +56,15 @@ export async function GET(req: NextRequest) {
 
     const workspaceId = session.workspaceId;
 
+    // Ensure journal_entry_id column exists
+    try {
+      await q(`ALTER TABLE portfolio_positions ADD COLUMN IF NOT EXISTS journal_entry_id INTEGER`);
+      await q(`ALTER TABLE portfolio_closed ADD COLUMN IF NOT EXISTS journal_entry_id INTEGER`);
+    } catch { /* columns may already exist */ }
+
     // Fetch open positions
     const positionsRaw = await q(
-      `SELECT id, symbol, side, quantity, entry_price, current_price, entry_date 
+      `SELECT id, symbol, side, quantity, entry_price, current_price, entry_date, journal_entry_id
        FROM portfolio_positions 
        WHERE workspace_id = $1 
        ORDER BY created_at DESC`,
@@ -67,7 +73,7 @@ export async function GET(req: NextRequest) {
 
     // Fetch closed positions
     const closedRaw = await q(
-      `SELECT id, symbol, side, quantity, entry_price, close_price, entry_date, close_date, realized_pl
+      `SELECT id, symbol, side, quantity, entry_price, close_price, entry_date, close_date, realized_pl, journal_entry_id
        FROM portfolio_closed 
        WHERE workspace_id = $1 
        ORDER BY close_date DESC`,
@@ -102,7 +108,8 @@ export async function GET(req: NextRequest) {
         currentPrice: current,
         pl,
         plPercent,
-        entryDate: p.entry_date
+        entryDate: p.entry_date,
+        journalEntryId: p.journal_entry_id || undefined,
       };
     });
 
@@ -125,7 +132,8 @@ export async function GET(req: NextRequest) {
         plPercent,
         realizedPL,
         entryDate: p.entry_date,
-        closeDate: p.close_date
+        closeDate: p.close_date,
+        journalEntryId: p.journal_entry_id || undefined,
       };
     });
 
@@ -209,13 +217,14 @@ export async function POST(req: NextRequest) {
       }
     } catch { /* risk check fallback: allow sync for data integrity */ }
 
-    // Clear existing and insert new (simple sync approach)
-    await q(`DELETE FROM portfolio_positions WHERE workspace_id = $1`, [workspaceId]);
-    await q(`DELETE FROM portfolio_closed WHERE workspace_id = $1`, [workspaceId]);
+    // Clear existing manual entries (preserve journal-linked rows)
+    await q(`DELETE FROM portfolio_positions WHERE workspace_id = $1 AND (journal_entry_id IS NULL)`, [workspaceId]);
+    await q(`DELETE FROM portfolio_closed WHERE workspace_id = $1 AND (journal_entry_id IS NULL)`, [workspaceId]);
     await q(`DELETE FROM portfolio_performance WHERE workspace_id = $1`, [workspaceId]);
 
-    // Insert positions
+    // Insert manual positions (skip journal-linked ones — they're preserved)
     for (const p of positions || []) {
+      if (p.journalEntryId) continue;
       await q(
         `INSERT INTO portfolio_positions (workspace_id, symbol, side, quantity, entry_price, current_price, entry_date)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
@@ -223,8 +232,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Insert closed positions
+    // Insert manual closed positions (skip journal-linked ones)
     for (const p of closedPositions || []) {
+      if (p.journalEntryId) continue;
       await q(
         `INSERT INTO portfolio_closed (workspace_id, symbol, side, quantity, entry_price, close_price, entry_date, close_date, realized_pl)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,

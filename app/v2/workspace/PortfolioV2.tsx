@@ -28,6 +28,7 @@ interface Position {
   optionType?: 'call' | 'put';
   strikePrice?: number;
   expirationDate?: string;
+  journalEntryId?: number;
 }
 
 interface ClosedPosition extends Position {
@@ -222,7 +223,9 @@ export default function PortfolioV2() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          positions: pos, closedPositions: closed, performanceHistory: perfHistory,
+          positions: pos.filter(p => !p.journalEntryId),
+          closedPositions: closed.filter(p => !p.journalEntryId),
+          performanceHistory: perfHistory,
           cashState: { startingCapital, cashLedger },
         }),
       });
@@ -738,7 +741,10 @@ export default function PortfolioV2() {
 
                       return (
                         <tr key={p.id} className="border-b border-slate-800/30 hover:bg-slate-800/20 group">
-                          <td className="py-3 px-3 text-white font-semibold">{p.symbol}</td>
+                          <td className="py-3 px-3 text-white font-semibold">
+                            {p.symbol}
+                            {p.journalEntryId && <span className="ml-1.5 text-[9px] px-1 py-0.5 rounded bg-cyan-500/15 text-cyan-400 font-medium align-middle">Journal</span>}
+                          </td>
                           <td className="py-3 px-3">
                             <span className={`${p.side === 'LONG' ? 'text-emerald-400' : 'text-red-400'} font-semibold`}>{p.side}</span>
                           </td>
@@ -800,7 +806,10 @@ export default function PortfolioV2() {
                 <tbody>
                   {closedPositions.map(p => (
                     <tr key={p.id} className="border-b border-slate-800/30 hover:bg-slate-800/20">
-                      <td className="py-3 px-3 text-white font-semibold">{p.symbol}</td>
+                      <td className="py-3 px-3 text-white font-semibold">
+                        {p.symbol}
+                        {p.journalEntryId && <span className="ml-1.5 text-[9px] px-1 py-0.5 rounded bg-cyan-500/15 text-cyan-400 font-medium align-middle">Journal</span>}
+                      </td>
                       <td className="py-3 px-3">
                         <span className={`${p.side === 'LONG' ? 'text-emerald-400' : 'text-red-400'} font-semibold`}>{p.side}</span>
                       </td>

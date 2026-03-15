@@ -265,6 +265,39 @@ export async function POST(req: NextRequest) {
       );
 
       const updated = updateRes.rows[0];
+
+      // ── Auto-sync to portfolio: move open → closed ──
+      try {
+        await client.query(`ALTER TABLE portfolio_positions ADD COLUMN IF NOT EXISTS journal_entry_id INTEGER`);
+        await client.query(`ALTER TABLE portfolio_closed ADD COLUMN IF NOT EXISTS journal_entry_id INTEGER`);
+
+        // Delete from open positions
+        await client.query(
+          `DELETE FROM portfolio_positions WHERE workspace_id = $1 AND journal_entry_id = $2`,
+          [session.workspaceId, journalEntryId]
+        );
+
+        // Insert into closed positions
+        await client.query(
+          `INSERT INTO portfolio_closed (workspace_id, symbol, side, quantity, entry_price, close_price, entry_date, close_date, realized_pl, journal_entry_id)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+          [
+            session.workspaceId,
+            entry.symbol,
+            entry.side,
+            parseNumber(entry.quantity) ?? 0,
+            parseNumber(entry.entry_price) ?? 0,
+            exitPrice,
+            entry.trade_date,
+            exitTsIso,
+            pl,
+            journalEntryId,
+          ]
+        );
+      } catch (portfolioErr) {
+        console.warn('[journal→portfolio] Non-fatal close sync:', portfolioErr instanceof Error ? portfolioErr.message : portfolioErr);
+      }
+
       const tags = Array.isArray(updated.tags) ? updated.tags : [];
       const packetId = parseDecisionPacketId(tags);
 

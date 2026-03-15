@@ -120,6 +120,21 @@ export async function POST(req: NextRequest) {
 
     const newId = result?.[0]?.id;
 
+    // ── Auto-sync to portfolio: create open position ──
+    if (newId) {
+      try {
+        await q(`ALTER TABLE portfolio_positions ADD COLUMN IF NOT EXISTS journal_entry_id INTEGER`);
+        const strategyMap: Record<string, string> = { Spot: '', Options: 'options', Futures: 'daytrade', Margin: 'daytrade' };
+        await q(
+          `INSERT INTO portfolio_positions (workspace_id, symbol, side, quantity, entry_price, current_price, entry_date, journal_entry_id)
+           VALUES ($1, $2, $3, $4, $5, $5, $6, $7)`,
+          [workspaceId, symbol, side, quantity, entryPrice, tradeDate, newId]
+        );
+      } catch (portfolioErr) {
+        console.warn('[journal→portfolio] Non-fatal portfolio sync error:', portfolioErr instanceof Error ? portfolioErr.message : portfolioErr);
+      }
+    }
+
     return NextResponse.json({ success: true, id: newId }, { status: 201 });
   } catch (error) {
     console.error('Journal add-trade error:', error);
