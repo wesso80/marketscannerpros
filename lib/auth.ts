@@ -46,7 +46,7 @@ export async function getSessionFromCookie(): Promise<SessionPayload | null> {
       return {
         cid: 'dev-local-testing',
         tier: 'pro_trader',
-        workspaceId: 'dev-workspace-00000000',
+        workspaceId: '00000000-0000-0000-0000-000000000000',
         exp: Math.floor(Date.now() / 1000) + 86400 * 365,
       };
     }
