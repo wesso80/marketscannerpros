@@ -710,3 +710,115 @@ export function useCloseCalendar(symbol: string | null, anchor: CloseCalendarAnc
     [symbol, anchor, horizonDays],
   );
 }
+
+// --- Backtest ---
+
+export interface BacktestRequest {
+  symbol: string;
+  strategy: string;
+  startDate: string;
+  endDate: string;
+  initialCapital?: number;
+  timeframe?: string;
+  minSignalScore?: number;
+}
+
+export interface ScannerBacktestRequest {
+  symbol: string;
+  startDate: string;
+  endDate: string;
+  initialCapital?: number;
+  timeframe?: string;
+  minScore?: number;
+  stopMultiplier?: number;
+  targetMultiplier?: number;
+  maxHoldBars?: number;
+  allowShorts?: boolean;
+}
+
+export interface BacktestTrade {
+  entryDate: string;
+  exitDate: string;
+  symbol: string;
+  side: 'LONG' | 'SHORT';
+  entry: number;
+  exit: number;
+  return: number;
+  returnPercent: number;
+  exitReason?: string;
+  holdingPeriodDays: number;
+}
+
+export interface EquityPoint {
+  date: string;
+  equity: number;
+  drawdown: number;
+}
+
+export interface BacktestResult {
+  totalTrades: number;
+  winningTrades: number;
+  losingTrades: number;
+  winRate: number;
+  totalReturn: number;
+  maxDrawdown: number;
+  sharpeRatio: number;
+  profitFactor: number;
+  avgWin: number;
+  avgLoss: number;
+  cagr: number;
+  volatility: number;
+  sortinoRatio: number;
+  calmarRatio: number;
+  timeInMarket: number;
+  bestTrade: BacktestTrade | null;
+  worstTrade: BacktestTrade | null;
+  equityCurve: EquityPoint[];
+  trades: BacktestTrade[];
+  dataCoverage?: {
+    requested: { startDate: string; endDate: string };
+    applied: { startDate: string; endDate: string };
+    bars: number;
+    provider?: string;
+  };
+  diagnostics?: {
+    score: number;
+    verdict: string;
+    failureTags: string[];
+    summary: string;
+  };
+  validation?: {
+    status: string;
+    direction: string;
+    reason: string;
+  };
+}
+
+export interface SymbolRangeResult {
+  resolvedSymbol: string;
+  assetType: string;
+  coverage: { startDate: string; endDate: string; bars: number };
+}
+
+export async function fetchBacktest(req: BacktestRequest): Promise<BacktestResult> {
+  const endpoint = req.strategy === 'brain_signal_replay' ? '/api/backtest/brain'
+    : req.strategy === 'time_scanner_signal_replay' ? '/api/backtest/time-scanner'
+    : '/api/backtest';
+  return apiFetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  });
+}
+
+export async function fetchScannerBacktest(req: ScannerBacktestRequest): Promise<BacktestResult & { scoreSeries?: { date: string; score: number; direction: string }[] }> {
+  return apiFetch('/api/backtest/scanner', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  });
+}
+
+export async function fetchSymbolRange(symbol: string): Promise<SymbolRangeResult> {
+  return apiFetch(`/api/backtest/symbol-range?symbol=${encodeURIComponent(symbol)}`);
+}

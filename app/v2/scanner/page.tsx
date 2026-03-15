@@ -7,10 +7,13 @@
 
 import { useMemo, useState } from 'react';
 import { useV2 } from '../_lib/V2Context';
-import { useScannerResults, type ScanResult, type ScanTimeframe, SCAN_TIMEFRAMES } from '../_lib/api';
+import { useScannerResults, useRegime, type ScanResult, type ScanTimeframe, SCAN_TIMEFRAMES } from '../_lib/api';
 import { Card, SectionHeader, Badge } from '../_components/ui';
+import { REGIME_COLORS, REGIME_WEIGHTS } from '../_lib/constants';
+import type { RegimePriority } from '../_lib/types';
+import { useUserTier, FREE_DAILY_SCAN_LIMIT, canAccessUnlimitedScanning } from '@/lib/useUserTier';
 
-const TABS = ['All', 'Equities', 'Crypto', 'Bullish', 'Bearish', 'High Score', 'DVE Signals'] as const;
+const TABS = ['All', 'Equities', 'Crypto', 'Bullish', 'Bearish', 'High Score', 'DVE Signals', 'Regime Match'] as const;
 
 function dirColor(d?: string) {
   if (d === 'bullish') return '#10B981';
@@ -23,13 +26,40 @@ type SortDir = 'asc' | 'desc';
 
 export default function ScannerPage() {
   const { navigateTo, selectSymbol } = useV2();
+  const { tier } = useUserTier();
   const [timeframe, setTimeframe] = useState<ScanTimeframe>('daily');
   const equity = useScannerResults('equity', timeframe);
   const crypto = useScannerResults('crypto', timeframe);
+  const regime = useRegime();
 
   const [activeTab, setActiveTab] = useState<typeof TABS[number]>('All');
   const [sortKey, setSortKey] = useState<SortKey>('score');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
+
+  const currentRegime = regime.data?.regime?.toLowerCase() || 'trend';
+
+  // Regime-compatible setup types (Critical Upgrade #1)
+  const regimeSetupMap: Record<string, string[]> = {
+    trend: ['breakout', 'trend_continuation', 'pullback'],
+    range: ['mean_reversion', 'range_fade', 'liquidity_sweep'],
+    compression: ['volatility_expansion', 'squeeze', 'gamma_trap'],
+    transition: ['breakout', 'gamma_squeeze', 'volatility_expansion'],
+    expansion: ['breakout', 'trend_continuation', 'gamma_squeeze'],
+    risk_off: ['mean_reversion', 'hedge', 'range_fade'],
+    risk_on: ['breakout', 'trend_continuation', 'pullback'],
+  };
+
+  function isRegimeCompatible(r: ScanResult): boolean {
+    const setupType = (r.setup || r.dveSignalType || '').toLowerCase().replace(/\s+/g, '_');
+    const compatible = regimeSetupMap[currentRegime] || [];
+    // If no setup type, check if direction aligns with regime
+    if (!setupType || setupType === 'none') {
+      if (currentRegime === 'risk_off') return r.direction === 'bearish';
+      if (currentRegime === 'risk_on' || currentRegime === 'trend' || currentRegime === 'expansion') return r.direction === 'bullish';
+      return true;
+    }
+    return compatible.some(c => setupType.includes(c));
+  }
 
   const allResults: ScanResult[] = useMemo(() => {
     const eq = (equity.data?.results || []).map(r => ({ ...r, _assetClass: 'equity' as const }));
@@ -46,6 +76,7 @@ export default function ScannerPage() {
       case 'Bearish': items = items.filter(r => r.direction === 'bearish'); break;
       case 'High Score': items = items.filter(r => Math.abs(r.score) >= 5); break;
       case 'DVE Signals': items = items.filter(r => (r.dveSignalType && r.dveSignalType !== 'none') || (r.dveFlags && r.dveFlags.length > 0)); break;
+      case 'Regime Match': items = items.filter(r => isRegimeCompatible(r)); break;
     }
     items.sort((a, b) => {
       let av: any, bv: any;
@@ -87,6 +118,18 @@ export default function ScannerPage() {
     <div className="space-y-4">
       <SectionHeader title="Scanner" subtitle="Ranked opportunity engine — live scan results" />
 
+      {/* Active Regime Context */}
+      {regime.data && (
+        <div className="flex items-center gap-3 px-3 py-2 rounded-lg border border-slate-700/50 bg-[#0D1422]">
+          <span className="text-[10px] uppercase tracking-wider text-slate-500">Active Regime</span>
+          <Badge label={regime.data.regime} color={REGIME_COLORS[currentRegime as RegimePriority] || '#64748B'} small />
+          <span className="text-[10px] text-slate-500">Risk: <span className="text-white">{regime.data.riskLevel}</span></span>
+          <span className="text-[10px] text-slate-500">Permission: <span className={regime.data.permission === 'full' ? 'text-emerald-400' : regime.data.permission === 'reduced' ? 'text-yellow-400' : 'text-red-400'}>{regime.data.permission}</span></span>
+          <div className="h-3 w-px bg-slate-700 mx-1" />
+          <span className="text-[9px] text-slate-600">Weights: {Object.entries(REGIME_WEIGHTS[currentRegime] || {}).map(([k, v]) => `${k}:${v}`).join(' · ')}</span>
+        </div>
+      )}
+
       {/* Timeframe selector */}
       <div className="flex items-center gap-1">
         <span className="text-[10px] text-slate-500 mr-1 uppercase">Timeframe</span>
@@ -117,7 +160,9 @@ export default function ScannerPage() {
                 : tab === 'Bullish' ? allResults.filter(r => r.direction === 'bullish').length
                 : tab === 'Bearish' ? allResults.filter(r => r.direction === 'bearish').length
                 : tab === 'High Score' ? allResults.filter(r => Math.abs(r.score) >= 5).length
-                : allResults.filter(r => (r.dveSignalType && r.dveSignalType !== 'none') || (r.dveFlags && r.dveFlags.length > 0)).length}
+                : tab === 'DVE Signals' ? allResults.filter(r => (r.dveSignalType && r.dveSignalType !== 'none') || (r.dveFlags && r.dveFlags.length > 0)).length
+                : tab === 'Regime Match' ? allResults.filter(r => isRegimeCompatible(r)).length
+                : 0}
             </span>
           </button>
         ))}
@@ -125,6 +170,13 @@ export default function ScannerPage() {
 
       {/* Table */}
       <Card>
+        {/* Free tier limit notice */}
+        {!canAccessUnlimitedScanning(tier) && (
+          <div className="mb-3 px-3 py-2 rounded-lg border border-amber-500/30 bg-amber-500/10 flex items-center justify-between">
+            <span className="text-xs text-amber-300">Free tier: {FREE_DAILY_SCAN_LIMIT} scans/day. Upgrade for unlimited scanning.</span>
+            <a href="/v2/pricing" className="text-[10px] px-2 py-1 bg-amber-500/20 text-amber-400 rounded border border-amber-500/30 hover:bg-amber-500/30 transition-colors">Upgrade</a>
+          </div>
+        )}
         {loading ? (
           <div className="space-y-3 py-4">
             {Array.from({ length: 8 }).map((_, i) => (
@@ -146,6 +198,7 @@ export default function ScannerPage() {
                   <SortHeader k="rsi" label="RSI" w="w-14" />
                   <SortHeader k="dveBbwp" label="BBWP" w="w-14" />
                   <th className="w-24 text-left text-[10px] uppercase tracking-wider text-slate-500 py-2 px-2">DVE</th>
+                  <th className="w-16 text-left text-[10px] uppercase tracking-wider text-slate-500 py-2 px-2">Regime</th>
                   <th className="w-20 text-left text-[10px] uppercase tracking-wider text-slate-500 py-2 px-2">Setup</th>
                   <th className="w-16 text-[10px] uppercase tracking-wider text-slate-500 py-2 px-2">Action</th>
                 </tr>
@@ -195,6 +248,14 @@ export default function ScannerPage() {
                           }
                           return <span className="text-slate-600">—</span>;
                         })()}
+                      </td>
+                      <td className="py-2.5 px-2">
+                        {isRegimeCompatible(r)
+                          ? <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">✓ Match</span>
+                          : r.scoreV2?.regimeScore?.gated
+                            ? <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 border border-red-500/20">Gated</span>
+                            : <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-500/15 text-slate-500 border border-slate-500/20">Neutral</span>
+                        }
                       </td>
                       <td className="py-2.5 px-2 text-[10px] text-slate-400 truncate max-w-[80px]">
                         {r.setup || '—'}

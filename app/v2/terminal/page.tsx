@@ -2,20 +2,18 @@
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SURFACE 7: TERMINAL — Charts + Close Calendar + Options Chain + Flow
-   Real APIs: /api/confluence-scan (POST), /api/options-scan (POST),
-              /api/flow, TradingView embed
+   Real APIs: /api/confluence-scan (POST), /api/flow, TradingView embed
    ═══════════════════════════════════════════════════════════════════════════ */
 
 import { useState, useMemo, useEffect, useCallback, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useV2 } from '../_lib/V2Context';
+import { useUserTier } from '@/lib/useUserTier';
 
 const OptionsTerminalView = dynamic(() => import('@/components/options-terminal/OptionsTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Options Terminal…</div> });
 const CryptoTerminalView = dynamic(() => import('@/components/crypto-terminal/CryptoTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminal…</div> });
 import {
   useCloseCalendar,
-  useOptionsScan,
-  useDVE,
   useFlow,
   useScannerResults,
   type CloseCalendarAnchor,
@@ -23,13 +21,13 @@ import {
   type ForwardCloseCluster,
   type ForwardCloseCalendar,
 } from '../_lib/api';
-import { Card, SectionHeader, Badge } from '../_components/ui';
+import { Card, SectionHeader, Badge, UpgradeGate } from '../_components/ui';
 
 function Skel({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
   return <div className={`${h} ${w} bg-slate-700/50 rounded animate-pulse`} />;
 }
 
-const TABS = ['Close Calendar', 'Options', 'Options Terminal', 'Crypto', 'Flow'] as const;
+const TABS = ['Close Calendar', 'Options Terminal', 'Crypto', 'Flow'] as const;
 const ANCHOR_OPTIONS: { value: CloseCalendarAnchor; label: string }[] = [
   { value: 'NOW', label: 'Now' },
   { value: 'TODAY', label: 'Today' },
@@ -83,6 +81,7 @@ function clusterColors(s: number) {
 }
 
 export default function TerminalPage() {
+  const { tier } = useUserTier();
   const { selectedSymbol, selectSymbol, navigateTo } = useV2();
   const [tab, setTab] = useState<typeof TABS[number]>('Close Calendar');
   const [symInput, setSymInput] = useState(selectedSymbol || 'BTCUSD');
@@ -122,16 +121,12 @@ export default function TerminalPage() {
 
   useEffect(() => { if (anchor === 'PRIOR_DAY') setShowAnchorDay(true); }, [anchor]);
 
-  /* Options */
-  const optionsScan = useOptionsScan(sym);
-  const dve = useDVE(sym);
-
   /* Flow */
   const flow = useFlow(sym, asset);
 
   return (
     <div className="space-y-4">
-      <SectionHeader title="Terminal" subtitle="Close Calendar · Options · Options Terminal · Crypto · Flow" />
+      <SectionHeader title="Terminal" subtitle="Close Calendar · Options Terminal · Crypto · Flow" />
 
       {/* Symbol Bar */}
       <Card>
@@ -285,160 +280,13 @@ export default function TerminalPage() {
         </div>
       )}
 
-      {/* ── OPTIONS ────────────────────────────────────────────────── */}
-      {tab === 'Options' && (() => {
-        const opts = optionsScan.data?.data;
-        const pcRatio = opts?.openInterestAnalysis?.pcRatio;
-        const ivRank = opts?.ivAnalysis?.ivRank ?? opts?.ivAnalysis?.ivRankHeuristic;
-        const spotPrice = opts?.currentPrice;
-        const keyZones = opts?.locationContext?.keyZones;
-        const highOI = opts?.openInterestAnalysis?.highOIStrikes;
-        const tradeSnap = opts?.tradeSnapshot?.oneLine;
-        const strategy = opts?.strategyRecommendation?.strategy;
-
-        return (
-        <div className="space-y-4">
-          {optionsScan.loading ? (
-            <Card><div className="space-y-3">{[1,2,3,4].map(i => <Skel key={i} h="h-10" />)}</div></Card>
-          ) : optionsScan.error ? (
-            <Card><div className="text-xs text-red-400/60 py-4 text-center">Options data unavailable: {optionsScan.error}</div></Card>
-          ) : opts ? (
-            <>
-              {/* Summary */}
-              <Card>
-                <h3 className="text-sm font-semibold text-white mb-3">Options Confluence — {sym}</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {pcRatio != null && (
-                    <div className="bg-[#0A101C]/50 rounded-lg p-3">
-                      <div className="text-[9px] text-slate-500 uppercase">P/C Ratio</div>
-                      <div className="text-lg font-bold text-white">{pcRatio.toFixed(2)}</div>
-                      <div className={`text-[10px] ${pcRatio > 1 ? 'text-red-400' : 'text-emerald-400'}`}>{pcRatio > 1 ? 'Bearish Bias' : 'Bullish Bias'}</div>
-                    </div>
-                  )}
-                  {ivRank != null && (
-                    <div className="bg-[#0A101C]/50 rounded-lg p-3">
-                      <div className="text-[9px] text-slate-500 uppercase">IV Rank</div>
-                      <div className="text-lg font-bold text-white">{ivRank.toFixed(1)}%</div>
-                    </div>
-                  )}
-                  {spotPrice != null && (
-                    <div className="bg-[#0A101C]/50 rounded-lg p-3">
-                      <div className="text-[9px] text-slate-500 uppercase">Spot Price</div>
-                      <div className="text-lg font-bold text-white">${spotPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                    </div>
-                  )}
-                  {opts.direction && (
-                    <div className="bg-[#0A101C]/50 rounded-lg p-3">
-                      <div className="text-[9px] text-slate-500 uppercase">Direction</div>
-                      <div className={`text-lg font-bold ${opts.direction.toLowerCase().includes('bull') ? 'text-emerald-400' : opts.direction.toLowerCase().includes('bear') ? 'text-red-400' : 'text-white'}`}>{opts.direction}</div>
-                      <div className="text-[10px] text-slate-500">{opts.tradeQuality}</div>
-                    </div>
-                  )}
-                </div>
-                {tradeSnap && <div className="mt-3 text-xs text-slate-400 bg-[#0A101C]/30 rounded-lg px-3 py-2">{tradeSnap}</div>}
-                {strategy && <div className="mt-2 text-[10px] text-emerald-400">Strategy: {strategy}</div>}
-              </Card>
-
-              {/* Key Zones */}
-              {keyZones && keyZones.filter((z: any) => z.level > 0).length > 0 && (
-                <Card>
-                  <h3 className="text-sm font-semibold text-white mb-3">Key Option Levels</h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="border-b border-slate-700/50">
-                          <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Level</th>
-                          <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Type</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {keyZones.filter((z: any) => z.level > 0).map((lv: any, i: number) => (
-                          <tr key={i} className="border-b border-slate-800/30 hover:bg-slate-800/20">
-                            <td className="py-2 px-2 font-mono text-white">${lv.level?.toLocaleString()}</td>
-                            <td className="py-2 px-2">{lv.type && <Badge label={lv.type} color={lv.type === 'support' ? '#10B981' : lv.type === 'resistance' ? '#EF4444' : '#94A3B8'} small />}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </Card>
-              )}
-
-              {/* High OI Strikes */}
-              {highOI && highOI.length > 0 && (() => {
-                // Group individual contracts by strike into {callOI, putOI}
-                const grouped = new Map<number, { callOI: number; putOI: number }>();
-                for (const c of highOI as any[]) {
-                  const st = c.strike ?? 0;
-                  if (!grouped.has(st)) grouped.set(st, { callOI: 0, putOI: 0 });
-                  const g = grouped.get(st)!;
-                  if (c.type === 'call') g.callOI += (c.openInterest ?? c.callOI ?? 0);
-                  else g.putOI += (c.openInterest ?? c.putOI ?? 0);
-                }
-                const rows = [...grouped.entries()]
-                  .map(([strike, oi]) => ({ strike, ...oi, total: oi.callOI + oi.putOI }))
-                  .sort((a, b) => b.total - a.total || a.strike - b.strike);
-                return (
-                <Card>
-                  <h3 className="text-sm font-semibold text-white mb-3">High Open Interest Strikes</h3>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="border-b border-slate-700/50">
-                          <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Strike</th>
-                          <th className="text-right py-2 px-2 text-[10px] uppercase text-slate-500">Call OI</th>
-                          <th className="text-right py-2 px-2 text-[10px] uppercase text-slate-500">Put OI</th>
-                          <th className="text-right py-2 px-2 text-[10px] uppercase text-slate-500">Total OI</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {rows.map((s, i) => (
-                          <tr key={i} className="border-b border-slate-800/30 hover:bg-slate-800/20">
-                            <td className="py-2 px-2 font-mono text-white">${s.strike}</td>
-                            <td className="py-2 px-2 text-right font-mono text-emerald-400">{s.callOI.toLocaleString()}</td>
-                            <td className="py-2 px-2 text-right font-mono text-red-400">{s.putOI.toLocaleString()}</td>
-                            <td className="py-2 px-2 text-right font-mono text-slate-300">{s.total.toLocaleString()}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </Card>
-                );
-              })()}
-            </>
-          ) : (
-            <Card><div className="text-xs text-slate-500 py-8 text-center">Enter a symbol above and load to see options data</div></Card>
-          )}
-
-          {/* DVE context below options */}
-          {dve.data?.data && (
-            <Card>
-              <h3 className="text-sm font-semibold text-white mb-2">DVE Context</h3>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="bg-[#0A101C]/50 rounded-lg p-3 text-center">
-                  <div className="text-[9px] text-slate-500 uppercase">Regime</div>
-                  <div className="text-sm font-bold text-white">{dve.data.data.volatility.regime}</div>
-                </div>
-                <div className="bg-[#0A101C]/50 rounded-lg p-3 text-center">
-                  <div className="text-[9px] text-slate-500 uppercase">BBWP</div>
-                  <div className="text-sm font-bold text-white">{dve.data.data.volatility.bbwp?.toFixed(1)}</div>
-                </div>
-                <div className="bg-[#0A101C]/50 rounded-lg p-3 text-center">
-                  <div className="text-[9px] text-slate-500 uppercase">Direction</div>
-                  <div className={`text-sm font-bold ${dve.data.data.direction.bias === 'bearish' ? 'text-red-400' : 'text-emerald-400'}`}>{dve.data.data.direction.bias}</div>
-                </div>
-              </div>
-            </Card>
-          )}
-        </div>
-        );
-      })()}
       {/* ── OPTIONS TERMINAL ─────────────────────────────────────────────── */}
       {tab === 'Options Terminal' && (
-        <Suspense fallback={<div className="py-12 text-center text-xs text-slate-500">Loading Options Terminal…</div>}>
-          <OptionsTerminalView />
-        </Suspense>
+        <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Options Terminal">
+          <Suspense fallback={<div className="py-12 text-center text-xs text-slate-500">Loading Options Terminal…</div>}>
+            <OptionsTerminalView />
+          </Suspense>
+        </UpgradeGate>
       )}
 
       {/* ── CRYPTO TERMINAL ──────────────────────────────────────────────── */}

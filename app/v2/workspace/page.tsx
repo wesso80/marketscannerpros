@@ -7,17 +7,20 @@
 
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Card, SectionHeader } from '../_components/ui';
+import { Card, SectionHeader, UpgradeGate } from '../_components/ui';
+import { useUserTier } from '@/lib/useUserTier';
 import { RiskPermissionProvider } from '@/components/risk/RiskPermissionContext';
 
 const WatchlistWidget = dynamic(() => import('@/components/WatchlistWidget'), { ssr: false, loading: () => <div className="animate-pulse bg-slate-800/50 rounded-xl h-64" /> });
 const JournalPageV1 = dynamic(() => import('@/components/journal/JournalPage'), { ssr: false, loading: () => <div className="animate-pulse bg-slate-800/50 rounded-xl h-64" /> });
 const PortfolioV2 = dynamic(() => import('./PortfolioV2'), { ssr: false, loading: () => <div className="animate-pulse bg-slate-800/50 rounded-xl h-64" /> });
 const AlertsContentV1 = dynamic(() => import('@/app/tools/alerts/page').then(m => ({ default: m.AlertsContent })), { ssr: false, loading: () => <div className="animate-pulse bg-slate-800/50 rounded-xl h-64" /> });
+const AccountSection = dynamic(() => import('./AccountSection'), { ssr: false, loading: () => <div className="animate-pulse bg-slate-800/50 rounded-xl h-64" /> });
 
 const TABS = ['Watchlists', 'Journal', 'Portfolio', 'Alerts', 'Settings'] as const;
 
 export default function WorkspacePage() {
+  const { tier } = useUserTier();
   const [tab, setTab] = useState<typeof TABS[number]>('Watchlists');
 
   return (
@@ -37,7 +40,11 @@ export default function WorkspacePage() {
       {tab === 'Watchlists' && <RiskPermissionProvider><WatchlistWidget /></RiskPermissionProvider>}
 
       {/* ── JOURNAL ────────────────────────────────────────────────── */}
-      {tab === 'Journal' && <JournalPageV1 tier="pro_trader" />}
+      {tab === 'Journal' && (
+        <UpgradeGate requiredTier="pro" currentTier={tier} feature="Trade Journal">
+          <JournalPageV1 tier={tier} />
+        </UpgradeGate>
+      )}
 
       {/* ── PORTFOLIO ──────────────────────────────────────────────── */}
       {tab === 'Portfolio' && <PortfolioV2 />}
@@ -45,24 +52,8 @@ export default function WorkspacePage() {
       {/* ── ALERTS ─────────────────────────────────────────────────── */}
       {tab === 'Alerts' && <RiskPermissionProvider><AlertsContentV1 /></RiskPermissionProvider>}
 
-      {/* ── SETTINGS ───────────────────────────────────────────────── */}
-      {tab === 'Settings' && (
-        <Card>
-          <h3 className="text-sm font-semibold text-white mb-3">Workspace Settings</h3>
-          <div className="text-center py-12">
-            <div className="text-slate-500 text-xs mb-4">
-              Account settings and preferences are managed in the main dashboard.
-            </div>
-            <a
-              href="/account"
-              target="_blank"
-              className="px-4 py-2 text-xs rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600/30 transition-colors inline-block"
-            >
-              Open Account Settings →
-            </a>
-          </div>
-        </Card>
-      )}
+      {/* ── SETTINGS / ACCOUNT ────────────────────────────────────── */}
+      {tab === 'Settings' && <AccountSection />}
     </div>
   );
 }

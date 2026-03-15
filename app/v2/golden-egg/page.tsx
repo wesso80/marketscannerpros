@@ -7,8 +7,11 @@
 
 import { useState, useMemo } from 'react';
 import { useV2 } from '../_lib/V2Context';
-import { useGoldenEgg, useDVE, useQuote, useScannerResults, type ScanResult, type ScanTimeframe, SCAN_TIMEFRAMES } from '../_lib/api';
-import { Card, SectionHeader, Badge, ScoreBar } from '../_components/ui';
+import { useGoldenEgg, useDVE, useQuote, useRegime, useScannerResults, type ScanResult, type ScanTimeframe, SCAN_TIMEFRAMES } from '../_lib/api';
+import { Card, SectionHeader, Badge, ScoreBar, UpgradeGate } from '../_components/ui';
+import { REGIME_COLORS, VERDICT_COLORS, CROSS_MARKET } from '../_lib/constants';
+import type { RegimePriority, Verdict } from '../_lib/types';
+import { useUserTier } from '@/lib/useUserTier';
 
 function Skel({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
   return <div className={`${h} ${w} bg-slate-700/50 rounded animate-pulse`} />;
@@ -37,6 +40,7 @@ function gradeColor(g: string) {
 
 export default function GoldenEggPage() {
   const { selectedSymbol, selectSymbol, navigateTo } = useV2();
+  const { tier } = useUserTier();
   const [symbolInput, setSymbolInput] = useState('');
   const [timeframe, setTimeframe] = useState<ScanTimeframe>('daily');
 
@@ -55,6 +59,7 @@ export default function GoldenEggPage() {
   const goldenEgg = useGoldenEgg(sym, timeframe);
   const dve = useDVE(sym);
   const quote = useQuote(sym);
+  const regime = useRegime();
 
   const ge = goldenEgg.data?.data;
   const d = dve.data?.data;
@@ -150,40 +155,81 @@ export default function GoldenEggPage() {
 
       {/* Main content */}
       {ge && !loading && (
+        <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Golden Egg Deep Analysis">
         <>
-          {/* ── VERDICT HEADER ───────────────────────────────────────── */}
-          <Card>
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <h2 className="text-2xl font-black text-white">{ge.meta.symbol}</h2>
-                  <Badge label={ge.layer1.permission} color={verdictColor(ge.layer1.permission)} />
-                  <Badge label={ge.layer1.direction} color={dirColor(ge.layer1.direction)} />
-                  <Badge label={`Grade ${ge.layer1.grade}`} color={gradeColor(ge.layer1.grade)} small />
+          {/* ── VERDICT HEADER (Section 0 — Answer First) ──────────── */}
+          <Card className="border-l-4" style={{ borderLeftColor: VERDICT_COLORS[(ge.layer1.permission === 'YES' ? 'TRADE' : ge.layer1.permission === 'NO' ? 'NO_TRADE' : 'WATCH') as Verdict] || '#F59E0B' }}>
+            <div className="flex flex-col gap-4">
+              {/* Top row: Symbol + Regime + Bias + Verdict */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-3 mb-1">
+                    <h2 className="text-2xl font-black text-white">{ge.meta.symbol}</h2>
+                    {regime.data && <Badge label={`Regime: ${regime.data.regime}`} color={REGIME_COLORS[regime.data.regime?.toLowerCase() as RegimePriority] || '#64748B'} small />}
+                    <Badge label={ge.layer1.direction} color={dirColor(ge.layer1.direction)} />
+                    <Badge label={`Grade ${ge.layer1.grade}`} color={gradeColor(ge.layer1.grade)} small />
+                  </div>
+                  <div className="text-lg font-bold text-white">
+                    ${ge.meta.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {quote.data?.changePercent != null && (
+                      <span className={`ml-2 text-sm ${quote.data.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {quote.data.changePercent >= 0 ? '+' : ''}{quote.data.changePercent.toFixed(2)}%
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-slate-500 mt-1">{ge.meta.assetClass} · {ge.meta.timeframe} · {new Date(ge.meta.asOfTs).toLocaleString()}</div>
                 </div>
-                <div className="text-lg font-bold text-white">
-                  ${ge.meta.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  {quote.data?.changePercent != null && (
-                    <span className={`ml-2 text-sm ${quote.data.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {quote.data.changePercent >= 0 ? '+' : ''}{quote.data.changePercent.toFixed(2)}%
-                    </span>
+
+                {/* Verdict + Confidence */}
+                <div className="flex items-center gap-6">
+                  <div className="text-center">
+                    <div className="text-3xl font-black uppercase tracking-wider" style={{ color: verdictColor(ge.layer1.permission) }}>
+                      {ge.layer1.permission === 'YES' ? 'TRADE' : ge.layer1.permission === 'NO' ? 'NO TRADE' : 'WATCH'}
+                    </div>
+                    <div className="text-[9px] text-slate-500 uppercase">Verdict</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-black" style={{ color: verdictColor(ge.layer1.permission) }}>{ge.layer1.confidence}%</div>
+                    <div className="text-[9px] text-slate-500 uppercase">Confidence</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Trigger / Invalidation / Targets row */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 border-t border-slate-800/50">
+                <div className="bg-[#0A101C]/50 rounded-lg p-3">
+                  <div className="text-[10px] text-slate-500 uppercase">Trigger</div>
+                  <div className="text-sm text-emerald-400 font-semibold">{ge.layer2.execution.entryTrigger}</div>
+                  {ge.layer2.execution.entry.price && (
+                    <div className="text-xs font-mono text-white mt-0.5">${ge.layer2.execution.entry.price.toFixed(2)} ({ge.layer2.execution.entry.type})</div>
                   )}
                 </div>
-                <div className="text-xs text-slate-500 mt-1">{ge.meta.assetClass} · {ge.meta.timeframe} · {new Date(ge.meta.asOfTs).toLocaleString()}</div>
-              </div>
-              <div className="flex items-center gap-6">
-                <div className="text-center">
-                  <div className="text-3xl font-black" style={{ color: verdictColor(ge.layer1.permission) }}>{ge.layer1.confidence}%</div>
-                  <div className="text-[9px] text-slate-500 uppercase">Confidence</div>
+                <div className="bg-[#0A101C]/50 rounded-lg p-3">
+                  <div className="text-[10px] text-slate-500 uppercase">Invalidation</div>
+                  <div className="text-sm text-red-400 font-semibold">${ge.layer2.execution.stop.price.toFixed(2)}</div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">{ge.layer2.execution.stop.logic}</div>
                 </div>
-                <div className="text-center">
-                  <div className="text-sm text-slate-300">{ge.layer1.primaryDriver}</div>
-                  <div className="text-[9px] text-slate-500 uppercase">Primary Driver</div>
+                <div className="bg-[#0A101C]/50 rounded-lg p-3">
+                  <div className="text-[10px] text-slate-500 uppercase">Targets</div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {ge.layer2.execution.targets.map((t: any, i: number) => (
+                      <span key={i} className="text-sm font-mono text-emerald-400">
+                        ${t.price.toFixed(2)}{i < ge.layer2.execution.targets.length - 1 && <span className="text-slate-600 mx-1">→</span>}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">R:R {ge.layer2.execution.rr.expectedR.toFixed(1)}</div>
+                </div>
+              </div>
+
+              {/* Driver / Blocker */}
+              <div className="flex items-center gap-4 flex-wrap">
+                <div className="text-[10px] text-slate-500">
+                  Driver: <span className="text-white font-semibold">{ge.layer1.primaryDriver}</span>
                 </div>
                 {ge.layer1.primaryBlocker && (
-                  <div className="text-center">
-                    <div className="text-sm text-red-400">{ge.layer1.primaryBlocker}</div>
-                    <div className="text-[9px] text-slate-500 uppercase">Blocker</div>
+                  <div className="text-[10px] text-slate-500">
+                    Blocker: <span className="text-red-400 font-semibold">{ge.layer1.primaryBlocker}</span>
                   </div>
                 )}
               </div>
@@ -207,6 +253,23 @@ export default function GoldenEggPage() {
                 </div>
               </div>
             )}
+          </Card>
+
+          {/* ── CROSS-MARKET INFLUENCE (Critical Upgrade #4) ─────── */}
+          <Card>
+            <h3 className="text-xs font-semibold text-emerald-400 mb-3">Cross-Market Influence</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+              {CROSS_MARKET.map(cm => (
+                <div key={cm.from} className="bg-[#0A101C]/50 rounded-lg p-2.5 text-center">
+                  <div className="text-[10px] text-slate-500">{cm.from}</div>
+                  <div className="text-xs text-white font-semibold mt-0.5">{cm.condition}</div>
+                  <div className="text-[9px] text-slate-400 mt-0.5">{cm.effect}</div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 pt-2 border-t border-slate-800/50 text-[10px] text-slate-500">
+              Cross-market factors adjust confidence scores. Headwinds reduce conviction; tailwinds support it.
+            </div>
           </Card>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -596,6 +659,7 @@ export default function GoldenEggPage() {
             </Card>
           )}
         </>
+        </UpgradeGate>
       )}
     </div>
   );

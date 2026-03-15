@@ -39,6 +39,8 @@ const SURFACE_MAP: Record<string, Surface> = {
   '/v2/explorer': 'explorer',
   '/v2/research': 'research',
   '/v2/workspace': 'workspace',
+  '/v2/backtest': 'backtest',
+  '/v2/pricing': 'dashboard',
 };
 
 export function V2Provider({ children }: { children: ReactNode }) {
@@ -77,6 +79,7 @@ export function V2Provider({ children }: { children: ReactNode }) {
       explorer: '/v2/explorer',
       research: '/v2/research',
       workspace: '/v2/workspace',
+      backtest: '/v2/backtest',
     };
 
     const route = surfaceRoutes[surface];

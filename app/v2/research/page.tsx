@@ -8,7 +8,8 @@
 import { useState, useMemo } from 'react';
 import { useV2 } from '../_lib/V2Context';
 import { useNews, useEconomicCalendar, useEarningsCalendar, type NewsArticle, type EconomicEvent, type EarningsEntry } from '../_lib/api';
-import { Card, SectionHeader, Badge, ImpactDot } from '../_components/ui';
+import { Card, SectionHeader, Badge, ImpactDot, UpgradeGate } from '../_components/ui';
+import { useUserTier } from '@/lib/useUserTier';
 
 function Skel({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
   return <div className={`${h} ${w} bg-slate-700/50 rounded animate-pulse`} />;
@@ -20,6 +21,7 @@ function SkeletonRows({ n = 6 }: { n?: number }) {
 const TABS = ['News', 'Economic Calendar', 'Earnings'] as const;
 
 export default function ResearchPage() {
+  const { tier } = useUserTier();
   const { navigateTo, selectSymbol } = useV2();
   const [tab, setTab] = useState<typeof TABS[number]>('News');
   const [calFilter, setCalFilter] = useState<string>('all');
@@ -43,6 +45,7 @@ export default function ResearchPage() {
     <div className="space-y-4">
       <SectionHeader title="Research" subtitle="News, events & catalysts — live data" />
 
+      <UpgradeGate requiredTier="pro" currentTier={tier} feature="Market Research">
       {/* Tabs */}
       <div className="flex items-center gap-1">
         {TABS.map(t => (
@@ -191,6 +194,7 @@ export default function ResearchPage() {
           {earnings.error && <div className="text-[10px] text-red-400/60 mt-2">Error: {earnings.error}</div>}
         </Card>
       )}
+      </UpgradeGate>
     </div>
   );
 }

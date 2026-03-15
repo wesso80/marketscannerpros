@@ -73,5 +73,6 @@ export const NAV_ITEMS: Array<{ id: Surface; label: string; icon: string; shortL
   { id: 'terminal', label: 'Trade Terminal', icon: '📈', shortLabel: 'Term', href: '/v2/terminal' },
   { id: 'explorer', label: 'Market Explorer', icon: '🔍', shortLabel: 'Expl', href: '/v2/explorer' },
   { id: 'research', label: 'Research', icon: '📰', shortLabel: 'Res', href: '/v2/research' },
+  { id: 'backtest', label: 'Backtest', icon: '🧪', shortLabel: 'BT', href: '/v2/backtest' },
   { id: 'workspace', label: 'Workspace', icon: '💼', shortLabel: 'Work', href: '/v2/workspace' },
 ];

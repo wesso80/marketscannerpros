@@ -8,7 +8,7 @@ export type Bias = 'bullish' | 'bearish' | 'neutral';
 export type Verdict = 'TRADE' | 'WATCH' | 'NO_TRADE';
 export type LifecycleState = 'DISCOVERED' | 'WATCHING' | 'SETTING_UP' | 'READY' | 'TRIGGERED' | 'ACTIVE' | 'COMPLETED' | 'INVALIDATED';
 export type AssetClass = 'equity' | 'crypto' | 'commodity' | 'fx' | 'index';
-export type Surface = 'dashboard' | 'scanner' | 'golden-egg' | 'terminal' | 'explorer' | 'research' | 'workspace';
+export type Surface = 'dashboard' | 'scanner' | 'golden-egg' | 'terminal' | 'explorer' | 'research' | 'workspace' | 'backtest';
 
 export interface SymbolIntelligence {
   symbol: string;

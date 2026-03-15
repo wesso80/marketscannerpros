@@ -22,11 +22,12 @@ export function Badge({ label, color, small }: { label: string; color: string; s
 
 // ─── Card ─────────────────────────────────────────────────────────────────────
 
-export function Card({ children, className = '', onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) {
+export function Card({ children, className = '', onClick, style }: { children: React.ReactNode; className?: string; onClick?: () => void; style?: React.CSSProperties }) {
   return (
     <div
       className={`rounded-xl border border-slate-700/50 bg-[#101A2A] p-4 ${onClick ? 'cursor-pointer hover:border-slate-600 transition-colors' : ''} ${className}`}
       onClick={onClick}
+      style={style}
     >
       {children}
     </div>
@@ -111,9 +112,55 @@ export function AuthPrompt() {
       <div className="text-2xl mb-3">🔒</div>
       <div className="text-sm text-white font-semibold mb-1">Sign in required</div>
       <div className="text-xs text-slate-500 mb-4">Log in to access live market data and your workspace.</div>
-      <a href="/login" className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-xs border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors">
+      <a href="/auth" className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-xs border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors">
         Sign In →
       </a>
+    </div>
+  );
+}
+
+// ─── Upgrade Gate ─────────────────────────────────────────────────────────────
+
+export function UpgradeGate({
+  requiredTier,
+  currentTier,
+  feature,
+  children,
+}: {
+  requiredTier: 'pro' | 'pro_trader';
+  currentTier: string;
+  feature: string;
+  children: React.ReactNode;
+}) {
+  const tierRank: Record<string, number> = { anonymous: 0, free: 1, pro: 2, pro_trader: 3 };
+  const hasAccess = (tierRank[currentTier] || 0) >= (tierRank[requiredTier] || 0);
+
+  if (hasAccess) return <>{children}</>;
+
+  const tierLabel = requiredTier === 'pro_trader' ? 'Pro Trader' : 'Pro';
+  const tierColor = requiredTier === 'pro_trader' ? '#F59E0B' : '#3B82F6';
+
+  return (
+    <div className="relative">
+      <div className="pointer-events-none select-none opacity-20 blur-[2px]">
+        {children}
+      </div>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="text-center bg-[#101A2A]/95 border border-slate-700/50 rounded-xl px-6 py-5 max-w-sm">
+          <div className="text-2xl mb-2">🔒</div>
+          <div className="text-sm font-bold text-white mb-1">{feature}</div>
+          <div className="text-xs text-slate-400 mb-3">
+            This feature requires the <strong style={{ color: tierColor }}>{tierLabel}</strong> plan.
+          </div>
+          <a
+            href="/v2/pricing"
+            className="inline-block px-4 py-2 rounded-lg text-xs font-semibold transition-colors"
+            style={{ backgroundColor: tierColor + '22', color: tierColor, border: `1px solid ${tierColor}44` }}
+          >
+            Upgrade to {tierLabel} →
+          </a>
+        </div>
+      </div>
     </div>
   );
 }

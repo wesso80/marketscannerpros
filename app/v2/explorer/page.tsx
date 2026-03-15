@@ -10,7 +10,8 @@ import { useState, useMemo } from 'react';
 import { useV2 } from '../_lib/V2Context';
 import { useSectorsHeatmap, useCryptoOverview, useCryptoCategories, useMarketMovers, useCommodities, type SectorData, type Mover, type CommodityData, type CryptoCategory } from '../_lib/api';
 import { CROSS_MARKET } from '../_lib/constants';
-import { Card, SectionHeader, Badge } from '../_components/ui';
+import { Card, SectionHeader, Badge, UpgradeGate } from '../_components/ui';
+import { useUserTier } from '@/lib/useUserTier';
 
 function Skel({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
   return <div className={`${h} ${w} bg-slate-700/50 rounded animate-pulse`} />;
@@ -25,6 +26,7 @@ function pctColor(v: number) {
 }
 
 export default function ExplorerPage() {
+  const { tier } = useUserTier();
   const { navigateTo, selectSymbol } = useV2();
   const [tab, setTab] = useState<typeof TABS[number]>('Overview');
 
@@ -49,6 +51,7 @@ export default function ExplorerPage() {
     <div className="space-y-4">
       <SectionHeader title="Market Explorer" subtitle="Cross-market intelligence — live data" />
 
+      <UpgradeGate requiredTier="pro" currentTier={tier} feature="Market Explorer">
       {/* Tabs */}
       <div className="flex items-center gap-1 overflow-x-auto pb-1">
         {TABS.map(t => (
@@ -324,6 +327,7 @@ export default function ExplorerPage() {
           {commodities.error && <div>Commodities: {commodities.error}</div>}
         </div>
       )}
+      </UpgradeGate>
     </div>
   );
 }
