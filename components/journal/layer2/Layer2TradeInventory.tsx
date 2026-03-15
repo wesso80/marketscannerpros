@@ -113,26 +113,7 @@ export default function Layer2TradeInventory(props: Layer2TradeInventoryProps) {
           />
         )}
 
-        {/* ── Auto-Trader Section ── */}
-        <SectionHeader
-          label="Auto-Trader"
-          count={autoRows.length}
-          open={autoOpen}
-          onToggle={() => setAutoOpen((v) => !v)}
-          accent="text-sky-400"
-        />
-        {autoOpen && (
-          <TradeTable
-            rows={autoRows}
-            sort={props.sort}
-            onSort={props.onSort}
-            onSelectTrade={props.onSelectTrade}
-            onQuickClose={props.onQuickClose}
-            onSnapshot={props.onSnapshot}
-            loading={props.loading}
-            error={null}
-          />
-        )}
+        {/* ── Auto-Trader Section (hidden) ── */}
 
         <PaginationBar
           page={props.query.page}
