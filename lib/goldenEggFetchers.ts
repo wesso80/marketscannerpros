@@ -456,19 +456,28 @@ export async function fetchCryptoDerivatives(symbol: string): Promise<CryptoDeri
 }
 
 // ── Helper: fetch MPE pressures ─────────────────────────────────────────
-export async function fetchMPE(symbol: string, assetClass: string): Promise<MPEData | null> {
+export async function fetchMPE(symbol: string, assetClass: string, tcData?: TimeConfluenceData | null): Promise<MPEData | null> {
   try {
     const timePressure: Partial<TimePressureInput> = {};
-    try {
-      const scan = await confluenceLearningAgent.scanHierarchical(symbol, 'intraday_1h' as ScanMode, 'extended' as SessionMode);
-      if (scan) {
-        timePressure.confluenceScore = scan.prediction?.confidence ?? 0;
-        timePressure.activeTFCount = scan.scoreBreakdown?.activeTFs ?? 0;
-        timePressure.decompressionActiveCount = scan.decompression?.activeCount ?? 0;
-        timePressure.midpointDebtCount = Array.isArray(scan.mid50Levels) ? scan.mid50Levels.length : 0;
-        timePressure.hotZoneActive = (timePressure.activeTFCount ?? 0) >= 3;
-      }
-    } catch {}
+    // Use pre-fetched time confluence data if available (avoids duplicate scanHierarchical call)
+    if (tcData) {
+      timePressure.confluenceScore = tcData.confidence ?? 0;
+      timePressure.activeTFCount = tcData.scoreBreakdown?.activeTFs ?? 0;
+      timePressure.decompressionActiveCount = tcData.decompression?.activeCount ?? 0;
+      timePressure.midpointDebtCount = tcData.mid50Levels?.length ?? 0;
+      timePressure.hotZoneActive = (timePressure.activeTFCount ?? 0) >= 3;
+    } else {
+      try {
+        const scan = await confluenceLearningAgent.scanHierarchical(symbol, 'intraday_1h' as ScanMode, 'extended' as SessionMode);
+        if (scan) {
+          timePressure.confluenceScore = scan.prediction?.confidence ?? 0;
+          timePressure.activeTFCount = scan.scoreBreakdown?.activeTFs ?? 0;
+          timePressure.decompressionActiveCount = scan.decompression?.activeCount ?? 0;
+          timePressure.midpointDebtCount = Array.isArray(scan.mid50Levels) ? scan.mid50Levels.length : 0;
+          timePressure.hotZoneActive = (timePressure.activeTFCount ?? 0) >= 3;
+        }
+      } catch {}
+    }
 
     const volPressure: Partial<VolatilityPressureInput> = {};
     try {
@@ -531,6 +540,169 @@ export async function fetchMPE(symbol: string, assetClass: string): Promise<MPED
       volatility: result.pressures.volatility.score,
       liquidity: result.pressures.liquidity.score,
       options: result.pressures.options.score,
+    };
+  } catch { return null; }
+}
+
+// ── Helper: fetch full Time Confluence scan ─────────────────────────────
+export interface TimeConfluenceData {
+  confidence: number;
+  direction: 'bullish' | 'bearish' | 'neutral';
+  signalStrength: 'strong' | 'moderate' | 'weak' | 'no_signal';
+  banners: string[];
+  scoreBreakdown: {
+    directionScore: number;
+    clusterScore: number;
+    decompressionScore: number;
+    activeTFs: number;
+    hasHigherTF: boolean;
+  };
+  decompression: {
+    activeCount: number;
+    clusteredCount: number;
+    clusteringRatio: number;
+    netPullDirection: 'bullish' | 'bearish' | 'neutral';
+    reasoning: string;
+    pulls: Array<{ tf: string; minsToClose: number; mid50Level: number; pullDirection: 'up' | 'down' | 'none'; pullStrength: number; distanceToMid50: number }>;
+  };
+  candleCloseConfluence: {
+    confluenceScore: number;
+    confluenceRating: string;
+    closingNowCount: number;
+    closingNowTFs: string[];
+    closingSoonCount: number;
+    peakConfluenceIn: number;
+    bestEntryWindow: { startMins: number; endMins: number; reason: string };
+    isMonthEnd: boolean;
+    isWeekEnd: boolean;
+  };
+  mid50Levels: Array<{ tf: string; level: number; distance: number; isDecompressing: boolean }>;
+  prediction: {
+    direction: 'bullish' | 'bearish' | 'neutral';
+    confidence: number;
+    reasoning: string;
+    targetLevel: number;
+    expectedMoveTime: string;
+  };
+  closeSchedule: Array<{
+    tf: string;
+    tfMinutes: number;
+    nextCloseAt: string;
+    minsToClose: number;
+    weight: number;
+    mid50Level: number | null;
+    distanceToMid50: number | null;
+    pullDirection: 'up' | 'down' | 'none' | null;
+    category: 'intraday' | 'daily' | 'weekly' | 'monthly';
+  }>;
+  decompressionTarget: {
+    price: number;
+    direction: 'up' | 'down' | 'flat';
+    totalWeight: number;
+    contributingTFs: string[];
+  } | null;
+}
+
+export async function fetchTimeConfluence(symbol: string): Promise<TimeConfluenceData | null> {
+  try {
+    const scan = await confluenceLearningAgent.scanHierarchical(symbol, 'intraday_1h' as ScanMode, 'extended' as SessionMode);
+    if (!scan) return null;
+
+    const activePulls = scan.decompression.decompressions
+      .filter(d => d.isDecompressing)
+      .map(d => ({
+        tf: d.tf,
+        minsToClose: d.minsToClose,
+        mid50Level: d.mid50Level,
+        pullDirection: d.pullDirection,
+        pullStrength: d.pullStrength,
+        distanceToMid50: d.distanceToMid50,
+      }));
+
+    // ── Build close schedule from ALL TFs (not limited by scan mode) ──
+    const categorizeTF = (tfMins: number): 'intraday' | 'daily' | 'weekly' | 'monthly' => {
+      if (tfMins < 1440) return 'intraday';
+      if (tfMins < 10080) return 'daily';
+      if (tfMins < 43200) return 'weekly';
+      return 'monthly';
+    };
+
+    // Include ALL TFs from the close schedule — filter to those closing within 24h
+    const MAX_MINS = 1440; // 24 hours
+    const closeSchedule = scan.candleCloseConfluence.closes
+      .filter(row => row.minsToClose <= MAX_MINS && row.minsToClose >= 0)
+      .map(row => ({
+        tf: row.tf,
+        tfMinutes: row.tfMinutes,
+        nextCloseAt: row.nextCloseAt,
+        minsToClose: row.minsToClose,
+        weight: row.weight,
+        mid50Level: row.mid50Level ?? null,
+        distanceToMid50: row.distanceToMid50 ?? null,
+        pullDirection: row.pullDirection ?? null,
+        category: categorizeTF(row.tfMinutes),
+      }));
+
+    // ── Compute weighted decompression target from ALL mid-50 levels ──
+    const withMid50 = closeSchedule.filter(r => r.mid50Level && r.mid50Level > 0);
+    let decompressionTarget: TimeConfluenceData['decompressionTarget'] = null;
+    if (withMid50.length >= 1) {
+      let weightedSum = 0;
+      let totalWeight = 0;
+      let bullWeight = 0;
+      let bearWeight = 0;
+      const contributingTFs: string[] = [];
+      for (const row of withMid50) {
+        weightedSum += row.mid50Level! * row.weight;
+        totalWeight += row.weight;
+        contributingTFs.push(row.tf);
+        if (row.pullDirection === 'up') bullWeight += row.weight;
+        else if (row.pullDirection === 'down') bearWeight += row.weight;
+      }
+      const targetPrice = totalWeight > 0 ? weightedSum / totalWeight : 0;
+      decompressionTarget = {
+        price: targetPrice,
+        direction: bullWeight > bearWeight * 1.2 ? 'up' : bearWeight > bullWeight * 1.2 ? 'down' : 'flat',
+        totalWeight,
+        contributingTFs,
+      };
+    }
+
+    return {
+      confidence: scan.prediction.confidence,
+      direction: scan.prediction.direction,
+      signalStrength: scan.signalStrength,
+      banners: scan.scoreBreakdown.banners,
+      scoreBreakdown: {
+        directionScore: scan.scoreBreakdown.directionScore,
+        clusterScore: scan.scoreBreakdown.clusterScore,
+        decompressionScore: scan.scoreBreakdown.decompressionScore,
+        activeTFs: scan.scoreBreakdown.activeTFs,
+        hasHigherTF: scan.scoreBreakdown.hasHigherTF,
+      },
+      decompression: {
+        activeCount: scan.decompression.activeCount,
+        clusteredCount: scan.decompression.clusteredCount,
+        clusteringRatio: scan.decompression.clusteringRatio,
+        netPullDirection: scan.decompression.netPullDirection,
+        reasoning: scan.decompression.reasoning,
+        pulls: activePulls,
+      },
+      candleCloseConfluence: {
+        confluenceScore: scan.candleCloseConfluence.confluenceScore,
+        confluenceRating: scan.candleCloseConfluence.confluenceRating,
+        closingNowCount: scan.candleCloseConfluence.closingNow.count,
+        closingNowTFs: scan.candleCloseConfluence.closingNow.timeframes,
+        closingSoonCount: scan.candleCloseConfluence.closingSoon.count,
+        peakConfluenceIn: scan.candleCloseConfluence.closingSoon.peakConfluenceIn,
+        bestEntryWindow: scan.candleCloseConfluence.bestEntryWindow,
+        isMonthEnd: scan.candleCloseConfluence.specialEvents.isMonthEnd,
+        isWeekEnd: scan.candleCloseConfluence.specialEvents.isWeekEnd,
+      },
+      mid50Levels: scan.mid50Levels.slice(0, 8),
+      prediction: scan.prediction,
+      closeSchedule,
+      decompressionTarget,
     };
   } catch { return null; }
 }

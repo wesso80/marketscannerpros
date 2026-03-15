@@ -280,9 +280,178 @@ export default function GoldenEggPage() {
               </div>
             </Card>
 
-            {/* ── C: VOLATILITY (DVE) ────────────────────────────────── */}
+            {/* ── C: TIME CONFLUENCE ──────────────────────────────── */}
             <Card>
-              <h3 className="text-xs font-semibold text-emerald-400 mb-3">C — Volatility (DVE)</h3>
+              <h3 className="text-xs font-semibold text-emerald-400 mb-3">C — Timing (Time Confluence)</h3>
+              {ge.layer3.timeConfluence?.enabled ? (() => {
+                const tc = ge.layer3.timeConfluence;
+                const fmtPrice = (v: number) => v >= 1 ? `$${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `$${v.toPrecision(4)}`;
+                const fmtTime = (iso: string) => {
+                  const d = new Date(iso);
+                  const h = d.getUTCHours().toString().padStart(2,'0');
+                  const m = d.getUTCMinutes().toString().padStart(2,'0');
+                  return `${h}:${m} UTC`;
+                };
+                const fmtCountdown = (mins: number) => {
+                  if (mins < 1) return 'NOW';
+                  if (mins < 60) return `${Math.round(mins)}m`;
+                  const h = Math.floor(mins / 60);
+                  const rm = Math.round(mins % 60);
+                  return rm > 0 ? `${h}h ${rm}m` : `${h}h`;
+                };
+                // Group close schedule by category
+                const groups: Record<string, typeof tc.closeSchedule> = { intraday: [], daily: [], weekly: [], monthly: [] };
+                for (const row of tc.closeSchedule || []) groups[row.category]?.push(row);
+                const catLabel: Record<string, string> = { intraday: 'Intraday', daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' };
+                const catColor: Record<string, string> = { intraday: '#94A3B8', daily: '#3B82F6', weekly: '#F59E0B', monthly: '#EF4444' };
+                return (
+                  <div className="space-y-3">
+                    {/* Signal Strength + Direction + Banners */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge label={tc.verdict} color={tc.verdict === 'agree' ? '#10B981' : tc.verdict === 'disagree' ? '#EF4444' : '#F59E0B'} />
+                      <Badge label={tc.signalStrength.replace('_', ' ')} color={
+                        tc.signalStrength === 'strong' ? '#10B981' : tc.signalStrength === 'moderate' ? '#F59E0B' : '#94A3B8'
+                      } small />
+                      <Badge label={tc.direction} color={
+                        tc.direction === 'bullish' ? '#10B981' : tc.direction === 'bearish' ? '#EF4444' : '#94A3B8'
+                      } small />
+                      {tc.banners.map((b: string, i: number) => (
+                        <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400 font-semibold">{b}</span>
+                      ))}
+                    </div>
+
+                    {/* Weighted Decompression Target — PROMINENT */}
+                    {tc.decompressionTarget && tc.decompressionTarget.price > 0 && (
+                      <div className="rounded-lg p-3 border" style={{
+                        background: tc.decompressionTarget.direction === 'up' ? 'rgba(16,185,129,0.08)' : tc.decompressionTarget.direction === 'down' ? 'rgba(239,68,68,0.08)' : 'rgba(148,163,184,0.08)',
+                        borderColor: tc.decompressionTarget.direction === 'up' ? 'rgba(16,185,129,0.25)' : tc.decompressionTarget.direction === 'down' ? 'rgba(239,68,68,0.25)' : 'rgba(148,163,184,0.15)',
+                      }}>
+                        <div className="text-[10px] text-slate-500 uppercase mb-1">Likely Decompression Target</div>
+                        <div className="flex items-baseline gap-3">
+                          <span className="text-lg font-bold font-mono" style={{
+                            color: tc.decompressionTarget.direction === 'up' ? '#10B981' : tc.decompressionTarget.direction === 'down' ? '#EF4444' : '#E2E8F0',
+                          }}>
+                            {tc.decompressionTarget.direction === 'up' ? '↑ ' : tc.decompressionTarget.direction === 'down' ? '↓ ' : ''}{fmtPrice(tc.decompressionTarget.price)}
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            weighted from {tc.decompressionTarget.contributingTFs.length} TFs ({tc.decompressionTarget.contributingTFs.join(', ')})
+                          </span>
+                        </div>
+                        <div className="text-[9px] text-slate-500 mt-0.5">
+                          Total weight: {tc.decompressionTarget.totalWeight.toFixed(1)} — Price is pulled {tc.decompressionTarget.direction === 'up' ? 'ABOVE' : tc.decompressionTarget.direction === 'down' ? 'BELOW' : 'near'} current level
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Confidence + Score Breakdown */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <div className="bg-[#0A101C]/50 rounded p-2">
+                        <div className="text-[9px] text-slate-500">Confidence</div>
+                        <div className="text-sm font-bold text-white">{tc.confidence}%</div>
+                        <ScoreBar value={tc.confidence} color="#10B981" />
+                      </div>
+                      <div className="bg-[#0A101C]/50 rounded p-2">
+                        <div className="text-[9px] text-slate-500">Direction</div>
+                        <div className="text-sm font-bold" style={{ color: tc.scoreBreakdown.directionScore > 15 ? '#10B981' : tc.scoreBreakdown.directionScore < -15 ? '#EF4444' : '#94A3B8' }}>
+                          {tc.scoreBreakdown.directionScore > 0 ? '+' : ''}{tc.scoreBreakdown.directionScore}
+                        </div>
+                      </div>
+                      <div className="bg-[#0A101C]/50 rounded p-2">
+                        <div className="text-[9px] text-slate-500">Cluster Score</div>
+                        <div className="text-sm font-bold text-white">{tc.scoreBreakdown.clusterScore}</div>
+                        <ScoreBar value={tc.scoreBreakdown.clusterScore} color="#06B6D4" />
+                      </div>
+                      <div className="bg-[#0A101C]/50 rounded p-2">
+                        <div className="text-[9px] text-slate-500">Decompression</div>
+                        <div className="text-sm font-bold text-white">{tc.scoreBreakdown.decompressionScore}</div>
+                        <ScoreBar value={tc.scoreBreakdown.decompressionScore} color="#8B5CF6" />
+                      </div>
+                    </div>
+
+                    {/* Close Schedule Timeline — grouped by category */}
+                    {tc.closeSchedule && tc.closeSchedule.length > 0 && (
+                      <div>
+                        <div className="text-[10px] text-slate-500 uppercase mb-1.5">Close Cluster Timeline — Next 24h</div>
+                        <div className="space-y-2">
+                          {(['monthly', 'weekly', 'daily', 'intraday'] as const).map(cat => {
+                            const rows = groups[cat];
+                            if (!rows || rows.length === 0) return null;
+                            return (
+                              <div key={cat}>
+                                <div className="text-[9px] font-semibold uppercase mb-0.5" style={{ color: catColor[cat] }}>{catLabel[cat]}</div>
+                                <div className="space-y-0.5">
+                                  {rows.map((row: any, i: number) => (
+                                    <div key={i} className="flex items-center gap-2 text-[10px] py-0.5 px-1.5 rounded bg-[#0A101C]/40">
+                                      <span className="text-slate-300 font-semibold w-10">{row.tf}</span>
+                                      <span className="text-slate-500 w-16">{fmtTime(row.nextCloseAt)}</span>
+                                      <span className={`w-12 font-mono ${row.minsToClose <= 5 ? 'text-yellow-400 font-bold' : row.minsToClose <= 60 ? 'text-orange-400' : 'text-slate-400'}`}>
+                                        {fmtCountdown(row.minsToClose)}
+                                      </span>
+                                      <span className="text-slate-600 w-8">w:{row.weight}</span>
+                                      {row.mid50Level ? (
+                                        <>
+                                          <span className="font-mono text-white w-24 text-right">{fmtPrice(row.mid50Level)}</span>
+                                          <span className={`w-14 text-right ${row.pullDirection === 'up' ? 'text-emerald-400' : row.pullDirection === 'down' ? 'text-red-400' : 'text-slate-500'}`}>
+                                            {row.pullDirection === 'up' ? '↑' : row.pullDirection === 'down' ? '↓' : '—'} {row.distanceToMid50 != null ? `${row.distanceToMid50 > 0 ? '+' : ''}${row.distanceToMid50.toFixed(2)}%` : ''}
+                                          </span>
+                                        </>
+                                      ) : (
+                                        <span className="text-slate-600 text-[9px]">— no mid-50</span>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Candle Close Confluence */}
+                    <div>
+                      <div className="text-[10px] text-slate-500 uppercase mb-1">Candle Close Confluence</div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-white">{tc.candleCloseConfluence.confluenceScore}/100</span>
+                        <Badge label={tc.candleCloseConfluence.confluenceRating} color={
+                          tc.candleCloseConfluence.confluenceRating === 'extreme' ? '#EF4444' :
+                          tc.candleCloseConfluence.confluenceRating === 'high' ? '#F59E0B' :
+                          tc.candleCloseConfluence.confluenceRating === 'moderate' ? '#3B82F6' : '#94A3B8'
+                        } small />
+                        {tc.candleCloseConfluence.closingNowCount > 0 && (
+                          <span className="text-[9px] text-yellow-400">{'\u25CF'} {tc.candleCloseConfluence.closingNowCount} TFs closing NOW</span>
+                        )}
+                      </div>
+                      {tc.candleCloseConfluence.isMonthEnd && <div className="text-[9px] text-yellow-400 mt-0.5">{'\uD83D\uDCC5'} Month-end confluence</div>}
+                      {tc.candleCloseConfluence.isWeekEnd && <div className="text-[9px] text-blue-400 mt-0.5">{'\uD83D\uDCC5'} Week-end confluence</div>}
+                    </div>
+
+                    {/* Prediction */}
+                    <div className="bg-[#0A101C]/50 rounded-lg p-2">
+                      <div className="text-[10px] text-slate-500 uppercase mb-1">Prediction</div>
+                      <div className="text-xs text-slate-300">{tc.prediction.reasoning}</div>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="text-[9px] text-slate-500">Target: <span className="text-white font-mono">{fmtPrice(tc.prediction.targetLevel)}</span></span>
+                        <span className="text-[9px] text-slate-500">Move in: <span className="text-white">{tc.prediction.expectedMoveTime}</span></span>
+                      </div>
+                    </div>
+
+                    {/* Best Entry Window */}
+                    {tc.candleCloseConfluence.bestEntryWindow.reason && (
+                      <div className="text-[10px] text-emerald-400">
+                        {'\u23F1'} Best entry: {tc.candleCloseConfluence.bestEntryWindow.reason}
+                      </div>
+                    )}
+                  </div>
+                );
+              })() : (
+                <div className="text-xs text-slate-500 py-4 text-center">Time confluence data not available</div>
+              )}
+            </Card>
+
+            {/* ── D: VOLATILITY (DVE) ────────────────────────────────── */}
+            <Card>
+              <h3 className="text-xs font-semibold text-emerald-400 mb-3">D — Volatility (DVE)</h3>
               {dve.loading ? (
                 <div className="space-y-3"><Skel /><Skel /><Skel /></div>
               ) : d ? (
@@ -332,10 +501,10 @@ export default function GoldenEggPage() {
               ) : <div className="text-xs text-slate-500">No volatility data available</div>}
             </Card>
 
-            {/* ── D: OPTIONS / DERIVATIVES ─────────────────────────── */}
+            {/* ── E: OPTIONS / DERIVATIVES ─────────────────────────── */}
             <Card>
               <h3 className="text-xs font-semibold text-emerald-400 mb-3">
-                {ge.meta.assetClass === 'crypto' ? 'D — Derivatives' : 'D — Options / Derivatives'}
+                {ge.meta.assetClass === 'crypto' ? 'E — Derivatives' : 'E — Options / Derivatives'}
               </h3>
               {ge.layer3.options?.enabled ? (
                 <div className="space-y-2">
@@ -368,9 +537,9 @@ export default function GoldenEggPage() {
             </Card>
           </div>
 
-          {/* ── E: TRADE PLAN ─────────────────────────────────────────── */}
+          {/* ── F: TRADE PLAN ─────────────────────────────────────────── */}
           <Card>
-            <h3 className="text-xs font-semibold text-emerald-400 mb-3">E — Trade Plan</h3>
+            <h3 className="text-xs font-semibold text-emerald-400 mb-3">F — Trade Plan</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <div className="text-[10px] text-slate-500 uppercase">Entry</div>
@@ -406,10 +575,10 @@ export default function GoldenEggPage() {
             </div>
           </Card>
 
-          {/* ── F: NARRATIVE ──────────────────────────────────────────── */}
+          {/* ── G: NARRATIVE ──────────────────────────────────────────── */}
           {ge.layer3.narrative?.enabled && (
             <Card>
-              <h3 className="text-xs font-semibold text-emerald-400 mb-3">F — AI Narrative</h3>
+              <h3 className="text-xs font-semibold text-emerald-400 mb-3">G — AI Narrative</h3>
               <div className="text-sm text-slate-300 mb-3">{ge.layer3.narrative.summary}</div>
               <ul className="space-y-1">
                 {ge.layer3.narrative.bullets.map((b: any, i: number) => (

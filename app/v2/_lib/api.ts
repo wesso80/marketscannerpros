@@ -487,6 +487,24 @@ export function fetchCryptoOverview(): Promise<CryptoOverviewResponse> {
   return apiFetch('/api/crypto/market-overview');
 }
 
+// --- Crypto Categories ---
+export interface CryptoCategory {
+  id: string;
+  name: string;
+  marketCap: number;
+  change24h: number;
+  volume24h: number;
+  topCoins: string[];
+}
+export interface CryptoCategoriesResponse {
+  success: boolean;
+  highlighted: CryptoCategory[];
+  categories: CryptoCategory[];
+}
+export function fetchCryptoCategories(): Promise<CryptoCategoriesResponse> {
+  return apiFetch('/api/crypto/categories');
+}
+
 // --- Commodities ---
 export function fetchCommodities(): Promise<CommoditiesResponse> {
   return apiFetch('/api/commodities');
@@ -658,6 +676,10 @@ export function useCryptoOverview() {
   return useApi(fetchCryptoOverview);
 }
 
+export function useCryptoCategories() {
+  return useApi(fetchCryptoCategories);
+}
+
 export function useCommodities() {
   return useApi(fetchCommodities);
 }
@@ -676,6 +698,10 @@ export function useEarningsCalendar() {
 
 export function useOptionsScan(symbol: string | null) {
   return useApi(() => symbol ? fetchOptionsScan(symbol) : Promise.resolve(null as any), [symbol]);
+}
+
+export function useFlow(symbol: string | null, marketType = 'equity') {
+  return useApi(() => symbol ? fetchFlow(symbol, marketType) : Promise.resolve(null as any), [symbol, marketType]);
 }
 
 export function useCloseCalendar(symbol: string | null, anchor: CloseCalendarAnchor = 'TODAY', horizonDays = 1) {

@@ -30,7 +30,47 @@ export async function GET(req: NextRequest) {
     `, [session.workspaceId]);
 
     return NextResponse.json({ watchlists });
-  } catch (error) {
+  } catch (error: any) {
+    // If table doesn't exist yet, auto-create and return empty
+    if (error?.message?.includes('does not exist') || error?.code === '42P01') {
+      console.log('[Watchlists] Tables missing, auto-creating...');
+      try {
+        await q(`
+          CREATE TABLE IF NOT EXISTS watchlists (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            workspace_id UUID NOT NULL,
+            name VARCHAR(50) NOT NULL,
+            description VARCHAR(200),
+            color VARCHAR(20) DEFAULT 'emerald',
+            icon VARCHAR(20) DEFAULT 'star',
+            is_default BOOLEAN NOT NULL DEFAULT false,
+            sort_order INT NOT NULL DEFAULT 0,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          )
+        `);
+        await q(`
+          CREATE TABLE IF NOT EXISTS watchlist_items (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            watchlist_id UUID NOT NULL REFERENCES watchlists(id) ON DELETE CASCADE,
+            workspace_id UUID NOT NULL,
+            symbol VARCHAR(20) NOT NULL,
+            asset_type VARCHAR(20) NOT NULL DEFAULT 'equity',
+            notes VARCHAR(200),
+            added_price DECIMAL(20, 8),
+            sort_order INT NOT NULL DEFAULT 0,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            UNIQUE(watchlist_id, symbol)
+          )
+        `);
+        await q('CREATE INDEX IF NOT EXISTS idx_watchlists_workspace ON watchlists(workspace_id)');
+        await q('CREATE INDEX IF NOT EXISTS idx_watchlist_items_watchlist ON watchlist_items(watchlist_id)');
+        await q('CREATE INDEX IF NOT EXISTS idx_watchlist_items_workspace ON watchlist_items(workspace_id)');
+        return NextResponse.json({ watchlists: [] });
+      } catch (createErr) {
+        console.error('Error auto-creating watchlist tables:', createErr);
+      }
+    }
     console.error('Error fetching watchlists:', error);
     return NextResponse.json({ error: 'Failed to fetch watchlists' }, { status: 500 });
   }

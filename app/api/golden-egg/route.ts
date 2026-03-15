@@ -16,9 +16,11 @@ import {
   fetchOptionsSnapshot,
   fetchCryptoDerivatives,
   fetchMPE,
+  fetchTimeConfluence,
   type Indicators,
   type OptionsSnapshot,
   type CryptoDerivatives,
+  type TimeConfluenceData,
 } from '@/lib/goldenEggFetchers';
 import { computeDVE } from '@/lib/directionalVolatilityEngine';
 import type { DVEInput, DVEReading } from '@/lib/directionalVolatilityEngine.types';
@@ -49,6 +51,7 @@ function buildPayload(
   mpe: { composite: number; time: number; volatility: number; liquidity: number; options: number } | null,
   tfLabel: string = '1D',
   cryptoDerivs: CryptoDerivatives | null = null,
+  tcData: TimeConfluenceData | null = null,
 ): GoldenEggPayload {
   const p = price.price;
   const atr = ind?.atr ?? (price.high - price.low);
@@ -109,16 +112,24 @@ function buildPayload(
 
   // ── Layer 2: Setup & Execution ────────────────────────────────────
   const setupType = determineSetupType(ind, price, atrPct);
-  const keyLevels = buildKeyLevels(p, ind, opts, atr);
+  const keyLevels = buildKeyLevels(p, ind, opts, atr, tcData);
 
   // Entry / stop / targets
   const isLong = direction === 'LONG' || (direction === 'NEUTRAL' && bullish >= bearish);
   const stopDistance = atr * 1.5;
   const stopPrice = isLong ? p - stopDistance : p + stopDistance;
+
+  // Use decompression target from time confluence if available and directionally aligned
+  const decompTarget = tcData?.decompressionTarget;
+  const decompAligned = decompTarget && decompTarget.price > 0 &&
+    ((isLong && decompTarget.direction === 'up' && decompTarget.price > p) ||
+     (!isLong && decompTarget.direction === 'down' && decompTarget.price < p));
+
+  // Build targets: use decompression target as T2 (primary) when aligned
   const t1 = isLong ? p + atr : p - atr;
-  const t2 = isLong ? p + atr * 2 : p - atr * 2;
+  const t2 = decompAligned ? decompTarget!.price : (isLong ? p + atr * 2 : p - atr * 2);
   const t3 = isLong ? p + atr * 3 : p - atr * 3;
-  const rr = stopDistance > 0 ? (atr * 2) / stopDistance : 0;
+  const rr = stopDistance > 0 ? (Math.abs(t2 - p)) / stopDistance : 0;
 
   // Timeframe alignment from MPE time pressure
   const tfScore = mpe ? Math.min(4, Math.round(mpe.time / 25)) : 2;
@@ -263,12 +274,42 @@ function buildPayload(
     ],
   } : undefined;
 
-  // Narrative
+  // Narrative — incorporate ALL engines: structure, options, MPE, time confluence, DVE, derivatives
   const narrativeBullets: string[] = [];
   if (permission === 'TRADE') narrativeBullets.push('Multiple factors aligned — conditions support trade entry.');
   if (structureScore >= 70) narrativeBullets.push('Price structure supports the directional thesis.');
   if (opts?.unusualActivity !== 'Normal' && opts) narrativeBullets.push('Options flow showing unusual activity — watch for institutional moves.');
   if (mpe && mpe.composite >= 60) narrativeBullets.push('Market pressure engine confirms building pressure.');
+  // Time Confluence context
+  if (tcData && tcData.signalStrength !== 'no_signal') {
+    const tcDirLabel = tcData.direction === 'bullish' ? 'bullish' : tcData.direction === 'bearish' ? 'bearish' : 'neutral';
+    narrativeBullets.push(`Time confluence ${tcData.signalStrength} ${tcDirLabel} — ${tcData.scoreBreakdown.activeTFs} TFs active${tcData.scoreBreakdown.hasHigherTF ? ' (higher TF confirmed)' : ''}.`);
+  }
+  if (tcData?.decompressionTarget && tcData.decompressionTarget.price > 0) {
+    const dtDir = tcData.decompressionTarget.direction === 'up' ? 'upward' : tcData.decompressionTarget.direction === 'down' ? 'downward' : 'neutral';
+    narrativeBullets.push(`Decompression target $${tcData.decompressionTarget.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${dtDir}) from ${tcData.decompressionTarget.contributingTFs.length} TF mid-50 levels.`);
+  }
+  if (tcData?.closeSchedule && tcData.closeSchedule.length > 0) {
+    const dailyPlus = tcData.closeSchedule.filter(r => r.weight >= 10);
+    if (dailyPlus.length > 0) {
+      narrativeBullets.push(`${dailyPlus.length} daily+ TFs closing today (${dailyPlus.map(r => r.tf).join(', ')}) — high-weight candle closes drive price action.`);
+    }
+  }
+  // DVE context
+  if (dveReading) {
+    if (dveReading.signal.type !== 'none') {
+      narrativeBullets.push(`DVE ${dveReading.signal.type.replace(/_/g, ' ')} signal active at ${(dveReading.signal.strength * 100).toFixed(0)}% strength.`);
+    }
+    if (dveReading.volatility.regime === 'compression' && dveReading.volatility.bbwp < 20) {
+      narrativeBullets.push(`Volatility compressed (BBWP ${dveReading.volatility.bbwp.toFixed(1)}) — expansion imminent.`);
+    }
+  }
+  // Crypto derivatives context
+  if (cryptoDerivs) {
+    if (Math.abs(cryptoDerivs.fundingRatePercent) > 0.03) {
+      narrativeBullets.push(`Funding rate ${cryptoDerivs.fundingRatePercent > 0 ? 'positive' : 'negative'} at ${cryptoDerivs.fundingRatePercent.toFixed(4)}% — ${cryptoDerivs.fundingRatePercent > 0 ? 'longs crowding' : 'shorts crowding'}.`);
+    }
+  }
   if (narrativeBullets.length === 0) narrativeBullets.push('Confluence is building but not yet at actionable thresholds.');
 
   const narrativeRisks: string[] = [];
@@ -276,6 +317,18 @@ function buildPayload(
   if (opts && opts.ivRank > 70) narrativeRisks.push('IV Rank is elevated — options premium is expensive.');
   if (mpe && mpe.composite < 40) narrativeRisks.push('Low market pressure — range-bound conditions likely.');
   if (weakest.val < 40) narrativeRisks.push(`${weakest.key} score is weak — significant blocker to thesis.`);
+  // TC / DVE risks
+  if (tcData && tcData.direction !== 'neutral' && direction !== 'NEUTRAL') {
+    const tcIsLong = tcData.direction === 'bullish';
+    if ((isLong && !tcIsLong) || (!isLong && tcIsLong)) {
+      narrativeRisks.push(`Time confluence ${tcData.direction} opposes the ${direction.toLowerCase()} thesis — directional conflict.`);
+    }
+  }
+  if (dveReading?.trap.detected) narrativeRisks.push('DVE trap detected — false breakout risk elevated.');
+  if (dveReading && dveReading.exhaustion.level > 0.6) narrativeRisks.push(`Exhaustion risk ${(dveReading.exhaustion.level * 100).toFixed(0)}% — momentum may be fading.`);
+  if (tcData?.candleCloseConfluence.isMonthEnd) narrativeRisks.push('Month-end rebalancing — expect irregular flows and positioning.');
+  if (cryptoDerivs && cryptoDerivs.fundingRatePercent > 0.05) narrativeRisks.push('Extreme positive funding — long squeeze risk if price drops.');
+  if (cryptoDerivs && cryptoDerivs.fundingRatePercent < -0.03) narrativeRisks.push('Negative funding — short squeeze risk if price rises.');
   if (narrativeRisks.length === 0) narrativeRisks.push('No major risk flags at current levels.');
 
   return {
@@ -305,7 +358,7 @@ function buildPayload(
     layer2: {
       setup: {
         setupType,
-        thesis: buildThesis(direction, setupType, ind, opts, mpe, symbol),
+        thesis: buildThesis(direction, setupType, ind, opts, mpe, symbol, tcData, dveReading),
         timeframeAlignment: { score: tfScore, max: 4, details: tfDetails },
         keyLevels,
         invalidation: `Thesis invalid if price ${isLong ? 'closes below' : 'closes above'} $${stopPrice.toFixed(2)} with volume confirmation.`,
@@ -317,9 +370,9 @@ function buildPayload(
         entry: { type: permission === 'TRADE' ? 'limit' : 'stop', price: permission === 'TRADE' ? p : undefined },
         stop: { price: Math.round(stopPrice * 100) / 100, logic: `${(1.5).toFixed(1)}x ATR from entry — beyond recent structure` },
         targets: [
-          { price: Math.round(t1 * 100) / 100, rMultiple: 1, note: 'First scale' },
-          { price: Math.round(t2 * 100) / 100, rMultiple: 2, note: 'Primary target' },
-          { price: Math.round(t3 * 100) / 100, rMultiple: 3, note: 'Extension' },
+          { price: Math.round(t1 * 100) / 100, rMultiple: stopDistance > 0 ? Math.round(Math.abs(t1 - p) / stopDistance * 10) / 10 : 1, note: 'First scale' },
+          { price: Math.round(t2 * 100) / 100, rMultiple: stopDistance > 0 ? Math.round(Math.abs(t2 - p) / stopDistance * 10) / 10 : 2, note: decompAligned ? `Primary target — Decomp target (${decompTarget!.contributingTFs.length} TFs)` : 'Primary target' },
+          { price: Math.round(t3 * 100) / 100, rMultiple: stopDistance > 0 ? Math.round(Math.abs(t3 - p) / stopDistance * 10) / 10 : 3, note: 'Extension' },
         ],
         rr: { expectedR: Math.round(rr * 10) / 10, minR: 1.5 },
         sizingHint: { riskPct: confidence >= 70 ? 1.0 : confidence >= 55 ? 0.75 : 0.5 },
@@ -370,11 +423,26 @@ function buildPayload(
       narrative: {
         enabled: true,
         summary: permission === 'TRADE'
-          ? `${symbol} shows ${direction.toLowerCase()} alignment with ${confidence}/100 confidence. Multiple factors support a ${setupType} entry.`
-          : `${symbol} is in ${permission === 'NO_TRADE' ? 'no-trade' : 'watch'} mode. Confluence is insufficient — monitor flip conditions.`,
+          ? `${symbol} shows ${direction.toLowerCase()} alignment with ${confidence}/100 confidence. Multiple factors support a ${setupType} entry.${tcData?.signalStrength === 'strong' ? ` Time confluence confirms with ${tcData.direction} bias.` : ''}${dveReading?.signal.type !== 'none' && dveReading ? ` DVE ${dveReading.signal.type.replace(/_/g, ' ')} signal active.` : ''}`
+          : `${symbol} is in ${permission === 'NO_TRADE' ? 'no-trade' : 'watch'} mode. Confluence is insufficient \u2014 monitor flip conditions.${tcData && tcData.direction !== 'neutral' ? ` Time confluence leans ${tcData.direction}.` : ''}`,
         bullets: narrativeBullets,
         risks: narrativeRisks,
       },
+      timeConfluence: tcData ? {
+        enabled: true,
+        verdict: tcData.confidence >= 65 ? 'agree' : tcData.confidence >= 40 ? 'neutral' : 'disagree',
+        confidence: tcData.confidence,
+        direction: tcData.direction,
+        signalStrength: tcData.signalStrength,
+        banners: tcData.banners,
+        scoreBreakdown: tcData.scoreBreakdown,
+        decompression: tcData.decompression,
+        candleCloseConfluence: tcData.candleCloseConfluence,
+        mid50Levels: tcData.mid50Levels,
+        prediction: tcData.prediction,
+        closeSchedule: tcData.closeSchedule,
+        decompressionTarget: tcData.decompressionTarget,
+      } : undefined,
     },
   };
 }
@@ -478,7 +546,7 @@ function determineSetupType(ind: Indicators | null, price: { changePct: number }
   return 'trend';
 }
 
-function buildKeyLevels(p: number, ind: Indicators | null, opts: OptionsSnapshot | null, atr: number): GoldenEggPayload['layer2']['setup']['keyLevels'] {
+function buildKeyLevels(p: number, ind: Indicators | null, opts: OptionsSnapshot | null, atr: number, tcData?: TimeConfluenceData | null): GoldenEggPayload['layer2']['setup']['keyLevels'] {
   const levels: GoldenEggPayload['layer2']['setup']['keyLevels'] = [];
   if (ind?.sma20 != null) levels.push({ label: 'SMA 20', price: Math.round(ind.sma20 * 100) / 100, kind: 'pivot' });
   if (ind?.sma50 != null) levels.push({ label: 'SMA 50', price: Math.round(ind.sma50 * 100) / 100, kind: 'support' });
@@ -487,18 +555,40 @@ function buildKeyLevels(p: number, ind: Indicators | null, opts: OptionsSnapshot
   if (opts?.maxPain) levels.push({ label: 'Max Pain', price: Math.round(opts.maxPain * 100) / 100, kind: 'value' });
   if (opts?.highestOICallStrike) levels.push({ label: 'Call Wall', price: opts.highestOICallStrike, kind: 'resistance' });
   if (opts?.highestOIPutStrike) levels.push({ label: 'Put Wall', price: opts.highestOIPutStrike, kind: 'support' });
+  // Add decompression target as a value level
+  if (tcData?.decompressionTarget && tcData.decompressionTarget.price > 0) {
+    levels.push({ label: `Decomp Target (${tcData.decompressionTarget.contributingTFs.length} TFs)`, price: Math.round(tcData.decompressionTarget.price * 100) / 100, kind: 'value' });
+  }
+  // Add highest-weight close schedule mid-50 levels (daily+ only)
+  if (tcData?.closeSchedule) {
+    const dailyPlus = tcData.closeSchedule
+      .filter(r => r.mid50Level && r.mid50Level > 0 && r.weight >= 10)
+      .sort((a, b) => b.weight - a.weight)
+      .slice(0, 3);
+    for (const r of dailyPlus) {
+      const kind = r.mid50Level! > p ? 'resistance' : 'support';
+      levels.push({ label: `${r.tf} Mid-50`, price: Math.round(r.mid50Level! * 100) / 100, kind });
+    }
+  }
   // Sort by distance from current price
   levels.sort((a, b) => Math.abs(a.price - p) - Math.abs(b.price - p));
-  return levels.slice(0, 5);
+  return levels.slice(0, 7);
 }
 
-function buildThesis(dir: Direction, setup: string, ind: Indicators | null, opts: OptionsSnapshot | null, mpe: { composite: number } | null, symbol: string): string {
+function buildThesis(dir: Direction, setup: string, ind: Indicators | null, opts: OptionsSnapshot | null, mpe: { composite: number } | null, symbol: string, tcData?: TimeConfluenceData | null, dve?: DVEReading | null): string {
   const dirWord = dir === 'LONG' ? 'bullish' : dir === 'SHORT' ? 'bearish' : 'neutral';
   const setupWord = setup === 'squeeze' ? 'volatility squeeze' : setup === 'mean_reversion' ? 'mean reversion' : setup === 'breakout' ? 'breakout' : setup === 'range' ? 'range-bound' : 'trend continuation';
   let thesis = `${symbol} shows a ${dirWord} ${setupWord} setup.`;
   if (ind?.adx != null && ind.adx > 25) thesis += ` ADX at ${ind.adx.toFixed(0)} confirms trending conditions.`;
   if (opts && opts.sentiment !== 'Neutral') thesis += ` Options flow is ${opts.sentiment.toLowerCase()} (P/C ${opts.putCallRatio.toFixed(2)}).`;
   if (mpe && mpe.composite >= 60) thesis += ` Market pressure at ${mpe.composite.toFixed(0)}/100 supports the thesis.`;
+  if (tcData && tcData.signalStrength !== 'no_signal') {
+    const tcDir = tcData.direction;
+    thesis += ` Time confluence is ${tcDir} with ${tcData.signalStrength} signal strength.`;
+  }
+  if (dve && dve.signal.type !== 'none') {
+    thesis += ` DVE shows ${dve.signal.type.replace(/_/g, ' ')} signal (${(dve.signal.strength * 100).toFixed(0)}% strength).`;
+  }
   return thesis;
 }
 
@@ -530,11 +620,14 @@ export async function GET(request: NextRequest) {
 
     const assetClass = detectAssetClass(symbol);
 
-    // Fetch core data in parallel
-    const [priceData, mpeData] = await Promise.all([
+    // Fetch core data in parallel — time confluence first, then MPE uses its data
+    const [priceData, tcData] = await Promise.all([
       fetchPrice(symbol, assetClass, { requireHistoricals: true, avInterval }),
-      fetchMPE(symbol, assetClass),
+      fetchTimeConfluence(symbol),
     ]);
+
+    // MPE uses tcData to avoid duplicate scanHierarchical call
+    const mpeData = await fetchMPE(symbol, assetClass, tcData);
 
     if (!priceData) {
       return NextResponse.json({ success: false, error: `Unable to fetch price data for ${symbol}` }, { status: 404 });
@@ -552,7 +645,7 @@ export async function GET(request: NextRequest) {
       cryptoDerivsData = await fetchCryptoDerivatives(symbol);
     }
 
-    const payload = buildPayload(symbol, assetClass, priceData, indData, optsData, mpeData, tfLabel, cryptoDerivsData);
+    const payload = buildPayload(symbol, assetClass, priceData, indData, optsData, mpeData, tfLabel, cryptoDerivsData, tcData);
 
     // Cache result
     cache.set(cacheKey, { data: payload, ts: Date.now() });

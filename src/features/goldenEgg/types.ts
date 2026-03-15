@@ -184,5 +184,64 @@ export interface GoldenEggPayload {
       bullets: string[];
       risks: string[];
     };
+    timeConfluence?: {
+      enabled: boolean;
+      verdict: Verdict;
+      confidence: number;
+      direction: 'bullish' | 'bearish' | 'neutral';
+      signalStrength: 'strong' | 'moderate' | 'weak' | 'no_signal';
+      banners: string[];
+      scoreBreakdown: {
+        directionScore: number;
+        clusterScore: number;
+        decompressionScore: number;
+        activeTFs: number;
+        hasHigherTF: boolean;
+      };
+      decompression: {
+        activeCount: number;
+        clusteredCount: number;
+        clusteringRatio: number;
+        netPullDirection: 'bullish' | 'bearish' | 'neutral';
+        reasoning: string;
+        pulls: Array<{ tf: string; minsToClose: number; mid50Level: number; pullDirection: 'up' | 'down' | 'none'; pullStrength: number; distanceToMid50: number }>;
+      };
+      candleCloseConfluence: {
+        confluenceScore: number;
+        confluenceRating: string;
+        closingNowCount: number;
+        closingNowTFs: string[];
+        closingSoonCount: number;
+        peakConfluenceIn: number;
+        bestEntryWindow: { startMins: number; endMins: number; reason: string };
+        isMonthEnd: boolean;
+        isWeekEnd: boolean;
+      };
+      mid50Levels: Array<{ tf: string; level: number; distance: number; isDecompressing: boolean }>;
+      prediction: {
+        direction: 'bullish' | 'bearish' | 'neutral';
+        confidence: number;
+        reasoning: string;
+        targetLevel: number;
+        expectedMoveTime: string;
+      };
+      closeSchedule: Array<{
+        tf: string;
+        tfMinutes: number;
+        nextCloseAt: string;
+        minsToClose: number;
+        weight: number;
+        mid50Level: number | null;
+        distanceToMid50: number | null;
+        pullDirection: 'up' | 'down' | 'none' | null;
+        category: 'intraday' | 'daily' | 'weekly' | 'monthly';
+      }>;
+      decompressionTarget: {
+        price: number;
+        direction: 'up' | 'down' | 'flat';
+        totalWeight: number;
+        contributingTFs: string[];
+      } | null;
+    };
   };
 }

@@ -6,12 +6,17 @@
               /api/flow, TradingView embed
    ═══════════════════════════════════════════════════════════════════════════ */
 
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { useV2 } from '../_lib/V2Context';
+
+const OptionsTerminalView = dynamic(() => import('@/components/options-terminal/OptionsTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Options Terminal…</div> });
+const CryptoTerminalView = dynamic(() => import('@/components/crypto-terminal/CryptoTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminal…</div> });
 import {
   useCloseCalendar,
   useOptionsScan,
   useDVE,
+  useFlow,
   useScannerResults,
   type CloseCalendarAnchor,
   type ForwardCloseScheduleRow,
@@ -24,7 +29,7 @@ function Skel({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
   return <div className={`${h} ${w} bg-slate-700/50 rounded animate-pulse`} />;
 }
 
-const TABS = ['Chart', 'Close Calendar', 'Options', 'Flow'] as const;
+const TABS = ['Close Calendar', 'Options', 'Options Terminal', 'Crypto', 'Flow'] as const;
 const ANCHOR_OPTIONS: { value: CloseCalendarAnchor; label: string }[] = [
   { value: 'NOW', label: 'Now' },
   { value: 'TODAY', label: 'Today' },
@@ -121,9 +126,12 @@ export default function TerminalPage() {
   const optionsScan = useOptionsScan(sym);
   const dve = useDVE(sym);
 
+  /* Flow */
+  const flow = useFlow(sym, asset);
+
   return (
     <div className="space-y-4">
-      <SectionHeader title="Terminal" subtitle="Chart · Close Calendar · Options · Flow" />
+      <SectionHeader title="Terminal" subtitle="Close Calendar · Options · Options Terminal · Crypto · Flow" />
 
       {/* Symbol Bar */}
       <Card>
@@ -159,13 +167,6 @@ export default function TerminalPage() {
           </button>
         ))}
       </div>
-
-      {/* ── CHART (TradingView embed) ──────────────────────────────── */}
-      {tab === 'Chart' && (
-        <Card>
-          <TVChart symbol={sym} asset={asset} />
-        </Card>
-      )}
 
       {/* ── CLOSE CALENDAR ─────────────────────────────────────────── */}
       {tab === 'Close Calendar' && (
@@ -339,7 +340,7 @@ export default function TerminalPage() {
               </Card>
 
               {/* Key Zones */}
-              {keyZones && keyZones.length > 0 && (
+              {keyZones && keyZones.filter((z: any) => z.level > 0).length > 0 && (
                 <Card>
                   <h3 className="text-sm font-semibold text-white mb-3">Key Option Levels</h3>
                   <div className="overflow-x-auto">
@@ -351,7 +352,7 @@ export default function TerminalPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {keyZones.map((lv: any, i: number) => (
+                        {keyZones.filter((z: any) => z.level > 0).map((lv: any, i: number) => (
                           <tr key={i} className="border-b border-slate-800/30 hover:bg-slate-800/20">
                             <td className="py-2 px-2 font-mono text-white">${lv.level?.toLocaleString()}</td>
                             <td className="py-2 px-2">{lv.type && <Badge label={lv.type} color={lv.type === 'support' ? '#10B981' : lv.type === 'resistance' ? '#EF4444' : '#94A3B8'} small />}</td>
@@ -364,7 +365,20 @@ export default function TerminalPage() {
               )}
 
               {/* High OI Strikes */}
-              {highOI && highOI.length > 0 && (
+              {highOI && highOI.length > 0 && (() => {
+                // Group individual contracts by strike into {callOI, putOI}
+                const grouped = new Map<number, { callOI: number; putOI: number }>();
+                for (const c of highOI as any[]) {
+                  const st = c.strike ?? 0;
+                  if (!grouped.has(st)) grouped.set(st, { callOI: 0, putOI: 0 });
+                  const g = grouped.get(st)!;
+                  if (c.type === 'call') g.callOI += (c.openInterest ?? c.callOI ?? 0);
+                  else g.putOI += (c.openInterest ?? c.putOI ?? 0);
+                }
+                const rows = [...grouped.entries()]
+                  .map(([strike, oi]) => ({ strike, ...oi, total: oi.callOI + oi.putOI }))
+                  .sort((a, b) => b.total - a.total || a.strike - b.strike);
+                return (
                 <Card>
                   <h3 className="text-sm font-semibold text-white mb-3">High Open Interest Strikes</h3>
                   <div className="overflow-x-auto">
@@ -378,19 +392,20 @@ export default function TerminalPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {highOI.map((s: any, i: number) => (
+                        {rows.map((s, i) => (
                           <tr key={i} className="border-b border-slate-800/30 hover:bg-slate-800/20">
                             <td className="py-2 px-2 font-mono text-white">${s.strike}</td>
-                            <td className="py-2 px-2 text-right font-mono text-emerald-400">{(s.callOI || 0).toLocaleString()}</td>
-                            <td className="py-2 px-2 text-right font-mono text-red-400">{(s.putOI || 0).toLocaleString()}</td>
-                            <td className="py-2 px-2 text-right font-mono text-slate-300">{((s.callOI || 0) + (s.putOI || 0)).toLocaleString()}</td>
+                            <td className="py-2 px-2 text-right font-mono text-emerald-400">{s.callOI.toLocaleString()}</td>
+                            <td className="py-2 px-2 text-right font-mono text-red-400">{s.putOI.toLocaleString()}</td>
+                            <td className="py-2 px-2 text-right font-mono text-slate-300">{s.total.toLocaleString()}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
                 </Card>
-              )}
+                );
+              })()}
             </>
           ) : (
             <Card><div className="text-xs text-slate-500 py-8 text-center">Enter a symbol above and load to see options data</div></Card>
@@ -419,25 +434,339 @@ export default function TerminalPage() {
         </div>
         );
       })()}
-
-      {/* ── FLOW ───────────────────────────────────────────────────── */}
-      {tab === 'Flow' && (
-        <Card>
-          <h3 className="text-sm font-semibold text-white mb-3">Capital Flow — {sym}</h3>
-          <div className="text-center py-12">
-            <div className="text-slate-500 text-xs mb-4">
-              Real-time flow analysis requires the Capital Flow Engine.
-            </div>
-            <a
-              href={`/tools/flow?symbol=${sym}`}
-              target="_blank"
-              className="px-4 py-2 text-xs rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600/30 transition-colors inline-block"
-            >
-              Open Flow Analysis →
-            </a>
-          </div>
-        </Card>
+      {/* ── OPTIONS TERMINAL ─────────────────────────────────────────────── */}
+      {tab === 'Options Terminal' && (
+        <Suspense fallback={<div className="py-12 text-center text-xs text-slate-500">Loading Options Terminal…</div>}>
+          <OptionsTerminalView />
+        </Suspense>
       )}
+
+      {/* ── CRYPTO TERMINAL ──────────────────────────────────────────────── */}
+      {tab === 'Crypto' && (
+        <Suspense fallback={<div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminal…</div>}>
+          <CryptoTerminalView />
+        </Suspense>
+      )}
+      {/* ── FLOW ───────────────────────────────────────────────────── */}
+      {tab === 'Flow' && (() => {
+        const fd = flow.data?.data;
+        const brain = fd?.brain_decision_v1;
+        const rg = fd?.institutional_risk_governor;
+        const pm = fd?.probability_matrix;
+        const perm = fd?.flow_trade_permission;
+        const fs = fd?.flow_state;
+        const session = fd?.session_overlay;
+        const biasColor = fd?.bias === 'bullish' ? 'text-emerald-400' : fd?.bias === 'bearish' ? 'text-red-400' : 'text-slate-300';
+        const modeColor = fd?.market_mode === 'launch' ? 'text-emerald-400' : fd?.market_mode === 'pin' ? 'text-amber-400' : 'text-slate-400';
+        const gammaColor = fd?.gamma_state === 'Positive' ? 'text-emerald-400' : fd?.gamma_state === 'Negative' ? 'text-red-400' : 'text-amber-400';
+
+        return (
+        <div className="space-y-4">
+          {flow.loading ? (
+            <Card><div className="space-y-3 py-8">{[1,2,3].map(i => <Skel key={i} h="h-10" />)}</div></Card>
+          ) : flow.error ? (
+            <Card><div className="text-xs text-red-400/60 py-4 text-center">Flow data unavailable: {flow.error}</div></Card>
+          ) : fd ? (
+            <>
+              {/* Header Strip */}
+              <Card>
+                <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+                  <h3 className="text-sm font-semibold text-white">Capital Flow — {sym}</h3>
+                  <div className="flex items-center gap-2">
+                    {fd.asof && <span className="text-[10px] text-slate-500">as of {new Date(fd.asof).toLocaleTimeString()}</span>}
+                    <button onClick={() => flow.refetch()} className="px-2 py-1 text-[10px] rounded border border-slate-700 text-slate-300 hover:bg-slate-800">
+                      ↻
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  <div className="bg-[#0A101C]/50 rounded-lg p-3">
+                    <div className="text-[9px] text-slate-500 uppercase">Bias</div>
+                    <div className={`text-lg font-bold capitalize ${biasColor}`}>{fd.bias || '—'}</div>
+                  </div>
+                  <div className="bg-[#0A101C]/50 rounded-lg p-3">
+                    <div className="text-[9px] text-slate-500 uppercase">Mode</div>
+                    <div className={`text-lg font-bold capitalize ${modeColor}`}>{fd.market_mode || '—'}</div>
+                  </div>
+                  <div className="bg-[#0A101C]/50 rounded-lg p-3">
+                    <div className="text-[9px] text-slate-500 uppercase">Gamma</div>
+                    <div className={`text-lg font-bold ${gammaColor}`}>{fd.gamma_state || '—'}</div>
+                  </div>
+                  <div className="bg-[#0A101C]/50 rounded-lg p-3">
+                    <div className="text-[9px] text-slate-500 uppercase">Conviction</div>
+                    <div className="text-lg font-bold text-white">{fd.conviction?.toFixed(0) ?? '—'}%</div>
+                  </div>
+                  <div className="bg-[#0A101C]/50 rounded-lg p-3">
+                    <div className="text-[9px] text-slate-500 uppercase">Spot</div>
+                    <div className="text-lg font-bold text-white">${fd.spot?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? '—'}</div>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Probability Matrix */}
+              {pm && (
+                <Card>
+                  <h3 className="text-sm font-semibold text-white mb-3">Probability Matrix</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                    <div className="bg-[#0A101C]/50 rounded-lg p-3 text-center">
+                      <div className="text-[9px] text-slate-500 uppercase">Continuation</div>
+                      <div className="text-base font-bold text-white">{(pm.continuation * 100).toFixed(0)}%</div>
+                    </div>
+                    <div className="bg-[#0A101C]/50 rounded-lg p-3 text-center">
+                      <div className="text-[9px] text-slate-500 uppercase">Pin / Reversion</div>
+                      <div className="text-base font-bold text-white">{(pm.pinReversion * 100).toFixed(0)}%</div>
+                    </div>
+                    <div className="bg-[#0A101C]/50 rounded-lg p-3 text-center">
+                      <div className="text-[9px] text-slate-500 uppercase">Expansion</div>
+                      <div className="text-base font-bold text-white">{(pm.expansion * 100).toFixed(0)}%</div>
+                    </div>
+                    <div className="bg-[#0A101C]/50 rounded-lg p-3 text-center">
+                      <div className="text-[9px] text-slate-500 uppercase">Regime</div>
+                      <div className="text-base font-bold text-emerald-400">{pm.regime}</div>
+                    </div>
+                  </div>
+                  {pm.decision && <div className="text-xs text-slate-400 bg-[#0A101C]/30 rounded-lg px-3 py-2">{pm.decision.replace(/_/g, ' ')}</div>}
+                </Card>
+              )}
+
+              {/* Brain Decision */}
+              {brain && (
+                <Card>
+                  <h3 className="text-sm font-semibold text-white mb-3">Brain Decision</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                    <div className="bg-[#0A101C]/50 rounded-lg p-3 text-center">
+                      <div className="text-[9px] text-slate-500 uppercase">Brain Score</div>
+                      <div className="text-base font-bold text-white">{brain.brain_score?.score?.toFixed(0) ?? fd.brain_decision?.score?.toFixed(0) ?? '—'}</div>
+                    </div>
+                    <div className="bg-[#0A101C]/50 rounded-lg p-3 text-center">
+                      <div className="text-[9px] text-slate-500 uppercase">Permission</div>
+                      <div className={`text-base font-bold ${brain.brain_score?.permission === 'ALLOW' || fd.brain_decision?.permission === 'ALLOW' ? 'text-emerald-400' : brain.brain_score?.permission === 'BLOCK' || fd.brain_decision?.permission === 'BLOCK' ? 'text-red-400' : 'text-amber-400'}`}>
+                        {brain.brain_score?.permission ?? fd.brain_decision?.permission ?? '—'}
+                      </div>
+                    </div>
+                    <div className="bg-[#0A101C]/50 rounded-lg p-3 text-center">
+                      <div className="text-[9px] text-slate-500 uppercase">Risk Mode</div>
+                      <div className="text-base font-bold text-white">{brain.brain_score?.mode ?? fd.brain_decision?.mode ?? '—'}</div>
+                    </div>
+                    <div className="bg-[#0A101C]/50 rounded-lg p-3 text-center">
+                      <div className="text-[9px] text-slate-500 uppercase">Regime</div>
+                      <div className="text-base font-bold text-white">{brain.market_regime?.regime?.replace(/_/g, ' ') ?? '—'}</div>
+                    </div>
+                  </div>
+                  {(brain.brain_score?.state_summary ?? fd.brain_decision?.stateSummary) && (
+                    <div className="text-xs text-slate-400 bg-[#0A101C]/30 rounded-lg px-3 py-2">
+                      {brain.brain_score?.state_summary ?? fd.brain_decision?.stateSummary}
+                    </div>
+                  )}
+                </Card>
+              )}
+
+              {/* Execution Plan */}
+              {(brain?.execution_plan || fd.brain_decision?.plan) && (() => {
+                const plan = brain?.execution_plan || fd.brain_decision?.plan;
+                return (
+                <Card>
+                  <h3 className="text-sm font-semibold text-white mb-3">Execution Plan</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-3">
+                    <div className="bg-[#0A101C]/50 rounded-lg p-3">
+                      <div className="text-[9px] text-slate-500 uppercase">Entry Type</div>
+                      <div className="text-sm font-bold text-white capitalize">{plan.entry_type ?? plan.entryType ?? '—'}</div>
+                    </div>
+                    <div className="bg-[#0A101C]/50 rounded-lg p-3">
+                      <div className="text-[9px] text-slate-500 uppercase">Size</div>
+                      <div className="text-sm font-bold text-white">{typeof plan.size === 'number' ? `${(plan.size * 100).toFixed(0)}%` : '—'}</div>
+                    </div>
+                    <div className="bg-[#0A101C]/50 rounded-lg p-3">
+                      <div className="text-[9px] text-slate-500 uppercase">Stop Rule</div>
+                      <div className="text-xs text-slate-300">{plan.stop_rule ?? plan.stopRule ?? '—'}</div>
+                    </div>
+                  </div>
+                  {(plan.triggers || plan.targets) && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {plan.triggers?.length > 0 && (
+                        <div className="bg-[#0A101C]/30 rounded-lg px-3 py-2">
+                          <div className="text-[9px] text-slate-500 uppercase mb-1">Triggers</div>
+                          {plan.triggers.map((t: string, i: number) => <div key={i} className="text-xs text-slate-300">• {t}</div>)}
+                        </div>
+                      )}
+                      {plan.targets?.length > 0 && (
+                        <div className="bg-[#0A101C]/30 rounded-lg px-3 py-2">
+                          <div className="text-[9px] text-slate-500 uppercase mb-1">Targets</div>
+                          {plan.targets.map((t: string, i: number) => <div key={i} className="text-xs text-slate-300">• {t}</div>)}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </Card>
+                );
+              })()}
+
+              {/* Trade Permission & Risk Governor */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {perm && (
+                  <Card>
+                    <h3 className="text-sm font-semibold text-white mb-3">Trade Permission</h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-400">TPS</span>
+                        <span className="text-white font-mono">{perm.tps?.toFixed(0) ?? '—'}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-400">Risk Mode</span>
+                        <span className="text-white">{perm.riskMode ?? '—'}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-400">Size Multiplier</span>
+                        <span className="text-white font-mono">{perm.sizeMultiplier?.toFixed(2) ?? '—'}x</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-400">Stop Style</span>
+                        <span className="text-white">{perm.stopStyle?.replace(/_/g, ' ') ?? '—'}</span>
+                      </div>
+                      {perm.blocked && <div className="mt-2 text-[10px] text-red-400 bg-red-500/10 rounded px-2 py-1">⚠ Trading blocked: {perm.noTradeMode?.reason || 'risk limit'}</div>}
+                      {perm.allowed?.length > 0 && (
+                        <div className="mt-2">
+                          <div className="text-[9px] text-slate-500 uppercase mb-1">Allowed</div>
+                          <div className="flex flex-wrap gap-1">
+                            {perm.allowed.map((a: string, i: number) => <span key={i} className="text-[10px] bg-emerald-500/10 text-emerald-400 rounded px-1.5 py-0.5">{a}</span>)}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                )}
+
+                {rg && (
+                  <Card>
+                    <h3 className="text-sm font-semibold text-white mb-3">Risk Governor</h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-400">IRS Score</span>
+                        <span className="text-white font-mono">{rg.irs?.toFixed(0) ?? '—'}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-400">Risk Mode</span>
+                        <span className={`font-semibold ${rg.riskMode === 'FULL_OFFENSE' ? 'text-emerald-400' : rg.riskMode === 'LOCKDOWN' ? 'text-red-400' : rg.riskMode === 'DEFENSIVE' ? 'text-amber-400' : 'text-white'}`}>{rg.riskMode ?? '—'}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-400">Execution</span>
+                        <span className={rg.executionAllowed ? 'text-emerald-400' : 'text-red-400'}>{rg.executionAllowed ? 'Allowed' : 'Blocked'}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-400">Vol Regime</span>
+                        <span className="text-white">{rg.volatility?.regime ?? '—'}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-400">Final Size</span>
+                        <span className="text-white font-mono">{typeof rg.sizing?.finalSize === 'number' ? `${(rg.sizing.finalSize * 100).toFixed(0)}%` : '—'}</span>
+                      </div>
+                      {rg.hardBlocked && rg.hardBlockReasons?.length > 0 && (
+                        <div className="mt-2 text-[10px] text-red-400 bg-red-500/10 rounded px-2 py-1">
+                          ⚠ {rg.hardBlockReasons.join('; ')}
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                )}
+              </div>
+
+              {/* Liquidity Levels */}
+              {fd.liquidity_levels?.length > 0 && (
+                <Card>
+                  <h3 className="text-sm font-semibold text-white mb-3">Liquidity Levels</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-700/50">
+                          <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Level</th>
+                          <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Label</th>
+                          <th className="text-right py-2 px-2 text-[10px] uppercase text-slate-500">Probability</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {fd.liquidity_levels.map((lv: any, i: number) => (
+                          <tr key={i} className="border-b border-slate-800/30 hover:bg-slate-800/20">
+                            <td className="py-2 px-2 font-mono text-white">${lv.level?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            <td className="py-2 px-2">
+                              <Badge label={lv.label?.replace(/_/g, ' ')} color={
+                                lv.label?.includes('HIGH') || lv.label === 'ONH' || lv.label === 'PDH' || lv.label === 'EQH' ? '#EF4444'
+                                : lv.label?.includes('LOW') || lv.label === 'ONL' || lv.label === 'PDL' || lv.label === 'EQL' ? '#10B981'
+                                : '#94A3B8'
+                              } small />
+                            </td>
+                            <td className="py-2 px-2 text-right font-mono text-slate-300">{typeof lv.prob === 'number' ? `${(lv.prob * 100).toFixed(0)}%` : '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
+              )}
+
+              {/* Key Strikes & Flip Zones */}
+              {(fd.key_strikes?.length > 0 || fd.flip_zones?.length > 0) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {fd.key_strikes?.length > 0 && (
+                    <Card>
+                      <h3 className="text-sm font-semibold text-white mb-3">Key Strikes</h3>
+                      <div className="space-y-1">
+                        {fd.key_strikes.map((ks: any, i: number) => (
+                          <div key={i} className="flex justify-between text-xs py-1 border-b border-slate-800/30">
+                            <span className="font-mono text-white">${ks.strike?.toLocaleString()}</span>
+                            <span className="text-slate-400">Gravity: {ks.gravity?.toFixed(1)}</span>
+                            <Badge label={ks.type?.replace(/-/g, ' ')} color={ks.type === 'call-heavy' ? '#10B981' : ks.type === 'put-heavy' ? '#EF4444' : '#94A3B8'} small />
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  )}
+                  {fd.flip_zones?.length > 0 && (
+                    <Card>
+                      <h3 className="text-sm font-semibold text-white mb-3">Flip Zones</h3>
+                      <div className="space-y-1">
+                        {fd.flip_zones.map((fz: any, i: number) => (
+                          <div key={i} className="flex justify-between text-xs py-1 border-b border-slate-800/30">
+                            <span className="font-mono text-white">${fz.level?.toLocaleString()}</span>
+                            <Badge label={fz.direction?.replace(/_/g, ' ')} color={fz.direction?.includes('bullish') ? '#10B981' : '#EF4444'} small />
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  )}
+                </div>
+              )}
+
+              {/* Session Overlay */}
+              {session && (
+                <Card>
+                  <h3 className="text-sm font-semibold text-white mb-3">Session Context</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="bg-[#0A101C]/50 rounded-lg p-3 text-center">
+                      <div className="text-[9px] text-slate-500 uppercase">Phase</div>
+                      <div className="text-sm font-bold text-white capitalize">{session.phase?.replace(/_/g, ' ') ?? '—'}</div>
+                    </div>
+                    <div className="bg-[#0A101C]/50 rounded-lg p-3 text-center">
+                      <div className="text-[9px] text-slate-500 uppercase">Size Cap</div>
+                      <div className="text-sm font-bold text-white">{typeof session.size_cap_multiplier === 'number' ? `${(session.size_cap_multiplier * 100).toFixed(0)}%` : '—'}</div>
+                    </div>
+                    <div className="bg-[#0A101C]/50 rounded-lg p-3 text-center">
+                      <div className="text-[9px] text-slate-500 uppercase">Tradable</div>
+                      <div className={`text-sm font-bold ${session.tradable ? 'text-emerald-400' : 'text-red-400'}`}>{session.tradable ? 'Yes' : 'No'}</div>
+                    </div>
+                    <div className="bg-[#0A101C]/50 rounded-lg p-3 text-center">
+                      <div className="text-[9px] text-slate-500 uppercase">Scalp OK</div>
+                      <div className={`text-sm font-bold ${session.scalp_ok ? 'text-emerald-400' : 'text-slate-500'}`}>{session.scalp_ok ? 'Yes' : 'No'}</div>
+                    </div>
+                  </div>
+                </Card>
+              )}
+            </>
+          ) : (
+            <Card><div className="text-xs text-slate-500 py-8 text-center">Enter a symbol above and load to see capital flow data</div></Card>
+          )}
+        </div>
+        );
+      })()}
     </div>
   );
 }
@@ -445,45 +774,6 @@ export default function TerminalPage() {
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
 /*  Sub-components                                                      */
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-
-function TVChart({ symbol, asset }: { symbol: string; asset: 'crypto' | 'equity' }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const tvSymbol = asset === 'crypto' ? `BINANCE:${symbol.replace('USD', 'USDT')}` : symbol;
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    containerRef.current.innerHTML = '';
-    const script = document.createElement('script');
-    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
-    script.type = 'text/javascript';
-    script.async = true;
-    script.innerHTML = JSON.stringify({
-      autosize: true,
-      symbol: tvSymbol,
-      interval: '60',
-      timezone: asset === 'crypto' ? 'Etc/UTC' : 'America/New_York',
-      theme: 'dark',
-      style: '1',
-      locale: 'en',
-      backgroundColor: 'rgba(10, 16, 28, 1)',
-      gridColor: 'rgba(30, 41, 59, 0.3)',
-      hide_top_toolbar: false,
-      hide_side_toolbar: false,
-      allow_symbol_change: true,
-      save_image: false,
-      calendar: false,
-      studies: ['MASimple@tv-basicstudies', 'RSI@tv-basicstudies', 'BB@tv-basicstudies'],
-      support_host: 'https://www.tradingview.com',
-    });
-    containerRef.current.appendChild(script);
-  }, [tvSymbol, asset]);
-
-  return (
-    <div className="tradingview-widget-container" ref={containerRef} style={{ height: 500, width: '100%' }}>
-      <div className="tradingview-widget-container__widget" style={{ height: '100%', width: '100%' }} />
-    </div>
-  );
-}
 
 function AnchorDayTable({ rows, asset }: { rows: ForwardCloseScheduleRow[]; asset: 'crypto' | 'equity' }) {
   if (rows.length === 0) return <div className="py-6 text-center text-xs text-slate-500">No daily+ timeframes close on the anchor day.</div>;
