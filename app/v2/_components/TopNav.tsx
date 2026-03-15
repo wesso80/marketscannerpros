@@ -30,7 +30,6 @@ export default function TopNav() {
           >
             <span className="text-sm">{item.icon}</span>
             <span className="hidden sm:inline">{item.label}</span>
-            <span className="sm:hidden">{item.shortLabel}</span>
           </button>
         ))}
       </div>
