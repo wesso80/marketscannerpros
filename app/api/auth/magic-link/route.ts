@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { signToken } from "@/lib/auth";
+import { signSessionToken } from "@/lib/auth";
 import { sendAlertEmail } from "@/lib/email";
 import { createRateLimiter, getClientIP } from "@/lib/rateLimit";
 import { APP_URL } from "@/lib/appUrl";
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     }
 
     const exp = Math.floor(Date.now() / 1000) + 60 * 15;
-    const token = signToken({
+    const token = signSessionToken({
       purpose: "magic_login",
       email,
       exp,

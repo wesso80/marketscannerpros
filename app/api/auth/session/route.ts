@@ -1,7 +1,7 @@
 // app/api/auth/session/route.ts
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { verifyToken } from "@/lib/auth";
+import { verifySessionToken } from "@/lib/auth";
 
 const ALLOWED = new Set([
   "https://app.marketscannerpros.app",
@@ -36,7 +36,7 @@ export async function GET(req: Request) {
       return res;
     }
 
-    const payload = verifyToken(token) as { tier: string; workspaceId: string } | null;
+    const payload = verifySessionToken(token) as { tier: string; workspaceId: string } | null;
     if (!payload) {
       const res = NextResponse.json({ authenticated: false, tier: "free" }, { status: 200 });
       Object.entries(cors(origin)).forEach(([k, v]) => res.headers.set(k, v));

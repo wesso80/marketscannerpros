@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
-import { hashWorkspaceId, signToken } from "@/lib/auth";
+import { hashWorkspaceId, signSessionToken } from "@/lib/auth";
 import { q } from "@/lib/db";
 
 const PRO_PRICE_IDS = [
@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
 
     // Issue new session cookie with the paid tier
     const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30;
-    const token = signToken({ cid: customerId, tier, workspaceId, exp });
+    const token = signSessionToken({ cid: customerId, tier, workspaceId, exp });
 
     const host = req.headers.get("host") || "";
     const isLocalhost = host.includes("localhost") || host.includes("127.0.0.1");

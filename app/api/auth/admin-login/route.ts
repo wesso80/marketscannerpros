@@ -2,7 +2,7 @@
 // Direct login for admin emails only — no magic link required.
 // Requires ADMIN_LOGIN_SECRET env var as passphrase.
 import { NextRequest, NextResponse } from "next/server";
-import { hashWorkspaceId, signToken } from "@/lib/auth";
+import { hashWorkspaceId, signSessionToken } from "@/lib/auth";
 import { q } from "@/lib/db";
 import crypto from "crypto";
 
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
     // Issue 365-day pro_trader session
     const workspaceId = hashWorkspaceId(`admin_${email}`);
     const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 365;
-    const token = signToken({ cid: `admin_${email}`, tier: "pro_trader", workspaceId, exp });
+    const token = signSessionToken({ cid: `admin_${email}`, tier: "pro_trader", workspaceId, exp });
 
     await trackSubscription(workspaceId, email, "pro_trader", "active");
 

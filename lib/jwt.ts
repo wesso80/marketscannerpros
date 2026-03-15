@@ -14,7 +14,7 @@ function getSecret(): Uint8Array {
   return new TextEncoder().encode(raw);
 }
 
-export async function signToken(payload: TokenPayload, expiresIn: string = '30m'): Promise<string> {
+export async function signJwt(payload: TokenPayload, expiresIn: string = '30m'): Promise<string> {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
@@ -22,7 +22,7 @@ export async function signToken(payload: TokenPayload, expiresIn: string = '30m'
     .sign(getSecret());
 }
 
-export async function verifyToken(token: string): Promise<TokenPayload | null> {
+export async function verifyJwt(token: string): Promise<TokenPayload | null> {
   try {
     const { payload } = await jwtVerify(token, getSecret());
     return payload as TokenPayload;
@@ -34,5 +34,5 @@ export async function verifyToken(token: string): Promise<TokenPayload | null> {
 export async function verifyBearer(authHeader: string): Promise<TokenPayload | null> {
   const token = authHeader?.replace('Bearer ', '').trim();
   if (!token) return null;
-  return verifyToken(token);
+  return verifyJwt(token);
 }

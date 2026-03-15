@@ -62,21 +62,21 @@ export function hashWorkspaceId(customerId: string): string {
   return `${hashBytes.subarray(0, 4).toString('hex')}-${hashBytes.subarray(4, 6).toString('hex')}-${hashBytes.subarray(6, 8).toString('hex')}-${hashBytes.subarray(8, 10).toString('hex')}-${hashBytes.subarray(10, 16).toString('hex')}`;
 }
 
-export function signToken(payload: object): string {
+export function signSessionToken(payload: object): string {
   const iat = Math.floor(Date.now() / 1000);
   const body = Buffer.from(JSON.stringify({ ...payload, iat })).toString("base64url");
   const sig = crypto.createHmac("sha256", APP_SIGNING_SECRET).update(body).digest("base64url");
   return `${body}.${sig}`;
 }
-// verifyToken uses same APP_SIGNING_SECRET as signToken for consistency
-export function verifyToken(t: string): Record<string, unknown> {
+// verifySessionToken uses same APP_SIGNING_SECRET as signSessionToken for consistency
+export function verifySessionToken(t: string): Record<string, unknown> {
   if (!t || typeof t !== "string") throw new Error("No token");
   const [p, sig] = t.split("."); if (!p || !sig) throw new Error("Malformed");
   const expSig = crypto.createHmac("sha256", APP_SIGNING_SECRET).update(p).digest("base64url");
   try {
     if (!crypto.timingSafeEqual(Buffer.from(sig, 'base64url'), Buffer.from(expSig, 'base64url'))) throw new Error("Bad signature");
   } catch (err) {
-    console.error('[auth] verifyToken signature check failed:', err instanceof Error ? err.message : err);
+    console.error('[auth] verifySessionToken signature check failed:', err instanceof Error ? err.message : err);
     throw new Error("Bad signature");
   }
   const payload = JSON.parse(Buffer.from(p, "base64url").toString("utf8"));
