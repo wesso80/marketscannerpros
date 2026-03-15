@@ -494,7 +494,7 @@ function PositionSizerCalculator() {
   );
 }
 
-function PortfolioContent() {
+export function PortfolioContent() {
   const { isLocked: riskLocked } = useRiskPermission();
   const tradeExecutionEventMapRef = useRef<Record<number, string>>({});
 

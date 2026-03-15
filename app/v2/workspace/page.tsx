@@ -13,7 +13,7 @@ import { RiskPermissionProvider } from '@/components/risk/RiskPermissionContext'
 
 const WatchlistWidget = dynamic(() => import('@/components/WatchlistWidget'), { ssr: false, loading: () => <div className="animate-pulse bg-slate-800/50 rounded-xl h-64" /> });
 const JournalPageV1 = dynamic(() => import('@/components/journal/JournalPage'), { ssr: false, loading: () => <div className="animate-pulse bg-slate-800/50 rounded-xl h-64" /> });
-const PortfolioV2 = dynamic(() => import('./PortfolioV2'), { ssr: false, loading: () => <div className="animate-pulse bg-slate-800/50 rounded-xl h-64" /> });
+const PortfolioV1 = dynamic(() => import('@/app/tools/portfolio/page').then(m => ({ default: m.PortfolioContent })), { ssr: false, loading: () => <div className="animate-pulse bg-slate-800/50 rounded-xl h-64" /> });
 const AlertsContentV1 = dynamic(() => import('@/app/tools/alerts/page').then(m => ({ default: m.AlertsContent })), { ssr: false, loading: () => <div className="animate-pulse bg-slate-800/50 rounded-xl h-64" /> });
 const AccountSection = dynamic(() => import('./AccountSection'), { ssr: false, loading: () => <div className="animate-pulse bg-slate-800/50 rounded-xl h-64" /> });
 
@@ -47,7 +47,7 @@ export default function WorkspacePage() {
       )}
 
       {/* ── PORTFOLIO ──────────────────────────────────────────────── */}
-      {tab === 'Portfolio' && <PortfolioV2 />}
+      {tab === 'Portfolio' && <RiskPermissionProvider><PortfolioV1 /></RiskPermissionProvider>}
 
       {/* ── ALERTS ─────────────────────────────────────────────────── */}
       {tab === 'Alerts' && <RiskPermissionProvider><AlertsContentV1 /></RiskPermissionProvider>}
