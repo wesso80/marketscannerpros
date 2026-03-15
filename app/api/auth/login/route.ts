@@ -198,7 +198,7 @@ export async function POST(req: NextRequest) {
     const trial = await checkTrialAccess(normalizedEmail);
     if (trial) {
       // User has an active trial - grant access without Stripe
-      const workspaceId = hashWorkspaceId(`trial_${normalizedEmail}`);
+      const workspaceId = hashWorkspaceId(normalizedEmail);
       const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * sessionDays;
       const token = signToken({ cid: `trial_${normalizedEmail}`, tier: trial.tier, workspaceId, exp });
       
@@ -243,7 +243,7 @@ export async function POST(req: NextRequest) {
     });
     if (!customers.data?.length) {
       // No Stripe customer — grant free tier access so user can explore and upgrade
-      const workspaceId = hashWorkspaceId(`free_${normalizedEmail}`);
+      const workspaceId = hashWorkspaceId(normalizedEmail);
       const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * sessionDays;
       const token = signToken({ cid: `free_${normalizedEmail}`, tier: 'free', workspaceId, exp });
       
@@ -264,7 +264,7 @@ export async function POST(req: NextRequest) {
     const valid = subs.data.filter(s => s.status === "active" || s.status === "trialing");
     if (!valid.length) {
       // Stripe customer exists but no active subscription — grant free tier
-      const workspaceId = hashWorkspaceId(customerId);
+      const workspaceId = hashWorkspaceId(normalizedEmail);
       const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * sessionDays;
       const token = signToken({ cid: customerId, tier: 'free', workspaceId, exp });
       
@@ -281,7 +281,7 @@ export async function POST(req: NextRequest) {
     }
     const priceIds = valid.flatMap(s => s.items.data.map(it => it.price.id));
     const tier = detectTierFromPrices(priceIds);
-    const workspaceId = hashWorkspaceId(customerId);
+    const workspaceId = hashWorkspaceId(normalizedEmail);
     
     // Get subscription details for tracking
     const primarySub = valid[0];

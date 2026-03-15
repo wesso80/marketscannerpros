@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       if (!customerId) {
         return NextResponse.json({ error: 'No Stripe customer for email' }, { status: 404 });
       }
-      const workspaceId = hashWorkspaceId(customerId);
+      const workspaceId = hashWorkspaceId(customerEmail.toLowerCase().trim());
       
       // First, get or create plan ID
       let planId = 1; // Default to Pro

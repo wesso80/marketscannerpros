@@ -146,7 +146,7 @@ async function upsertSubscription(
   periodEnd: Date | null,
   isTrial: boolean = false
 ) {
-  const workspaceId = hashWorkspaceId(customerId);
+  const workspaceId = hashWorkspaceId(email.toLowerCase().trim());
   
   try {
     await q(`
@@ -206,7 +206,7 @@ export async function POST(req: NextRequest) {
           const customer = await stripe.customers.retrieve(session.customer as string) as Stripe.Customer;
           const priceId = subscription.items.data[0]?.price.id || '';
           const tier = getTierFromPriceId(priceId);
-          const workspaceId = hashWorkspaceId(customer.id);
+          const workspaceId = hashWorkspaceId((customer.email || '').toLowerCase().trim());
           
           await upsertSubscription(
             customer.id,
@@ -269,7 +269,7 @@ export async function POST(req: NextRequest) {
         const customer = await stripe.customers.retrieve(subscription.customer as string) as Stripe.Customer;
         const priceId = subscription.items.data[0]?.price.id || '';
         const tier = getTierFromPriceId(priceId);
-        const workspaceId = hashWorkspaceId(customer.id);
+        const workspaceId = hashWorkspaceId((customer.email || '').toLowerCase().trim());
         
         await upsertSubscription(
           customer.id,
@@ -313,7 +313,7 @@ export async function POST(req: NextRequest) {
         if (subscriptionId) {
           const subscription = await stripe.subscriptions.retrieve(subscriptionId as string);
           const customer = await stripe.customers.retrieve((invoice as any).customer as string) as Stripe.Customer;
-          const workspaceId = hashWorkspaceId(customer.id);
+          const workspaceId = hashWorkspaceId((customer.email || '').toLowerCase().trim());
           
           await q(`
             UPDATE user_subscriptions 

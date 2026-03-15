@@ -45,8 +45,8 @@ export async function GET(req: NextRequest) {
     const sub = checkoutSession.subscription as import("stripe").Stripe.Subscription | null;
     const priceIds = sub?.items?.data?.map(it => it.price.id) ?? [];
     const tier = detectTier(priceIds);
-    const workspaceId = hashWorkspaceId(customerId);
-    const email = checkoutSession.customer_details?.email || checkoutSession.customer_email || "";
+    const email = (checkoutSession.customer_details?.email || checkoutSession.customer_email || "").toLowerCase().trim();
+    const workspaceId = email ? hashWorkspaceId(email) : hashWorkspaceId(customerId);
 
     // Update subscription in database
     if (email) {
