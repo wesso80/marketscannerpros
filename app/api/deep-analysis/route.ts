@@ -499,18 +499,20 @@ async function fetchTechnicalIndicators(symbol: string, assetType: string) {
       // Cache miss — rate-governed AV fallback (6 calls)
       console.log(`[deep-analysis] ${symbol} indicators not cached, falling back to AV`);
       // Batch 1: Core indicators (4 calls, rate governed)
-      const [rsiData, macdData, smaData, sma50Data] = await Promise.all([
+      const settled1 = await Promise.allSettled([
         avFetch(`https://www.alphavantage.co/query?function=RSI&symbol=${symbol}&interval=daily&time_period=14&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`, `RSI ${symbol}`),
         avFetch(`https://www.alphavantage.co/query?function=MACD&symbol=${symbol}&interval=daily&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`, `MACD ${symbol}`),
         avFetch(`https://www.alphavantage.co/query?function=SMA&symbol=${symbol}&interval=daily&time_period=20&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`, `SMA20 ${symbol}`),
         avFetch(`https://www.alphavantage.co/query?function=SMA&symbol=${symbol}&interval=daily&time_period=50&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`, `SMA50 ${symbol}`),
       ]);
+      const [rsiData, macdData, smaData, sma50Data] = settled1.map(r => r.status === 'fulfilled' ? r.value : null);
       
       // Batch 2: Additional indicators (2 calls, rate governed)
-      const [bbandsData, adxData] = await Promise.all([
+      const settled2 = await Promise.allSettled([
         avFetch(`https://www.alphavantage.co/query?function=BBANDS&symbol=${symbol}&interval=daily&time_period=20&series_type=close&apikey=${ALPHA_VANTAGE_API_KEY}`, `BBANDS ${symbol}`),
         avFetch(`https://www.alphavantage.co/query?function=ADX&symbol=${symbol}&interval=daily&time_period=14&apikey=${ALPHA_VANTAGE_API_KEY}`, `ADX ${symbol}`),
       ]);
+      const [bbandsData, adxData] = settled2.map(r => r.status === 'fulfilled' ? r.value : null);
       
       const rsiValues = rsiData?.['Technical Analysis: RSI'];
       const macdValues = macdData?.['Technical Analysis: MACD'];

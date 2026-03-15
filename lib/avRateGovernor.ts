@@ -168,12 +168,10 @@ export async function avFetch<T = any>(
 
     if (!res.ok) {
       console.warn(`[avRateGovernor] ${tag} HTTP ${res.status}`);
-      // 5xx errors already counted by circuit breaker (fetch succeeded but HTTP error)
-      // Re-throw for server errors so circuit breaker sees it
-      if (res.status >= 500) {
-        throw new Error(`AV server error: ${res.status}`);
-      }
-      return null;
+      // 404 = no data for symbol — return null (not an error)
+      if (res.status === 404) return null;
+      // All other HTTP errors: throw so callers & circuit breaker can react
+      throw new Error(`AV HTTP ${res.status} for ${tag}`);
     }
 
     const json = (await res.json()) as T & {
@@ -182,33 +180,36 @@ export async function avFetch<T = any>(
       Information?: string;
     };
 
-    // AV returns 200 even on quota/error — detect these (soft errors, don't trip breaker)
+    // AV returns 200 even on quota/error — detect these
     if (json.Note) {
+      // Quota exhaustion — throw so callers know the API is unavailable
       console.warn(`[avRateGovernor] ${tag} QUOTA NOTE: ${json.Note}`);
-      return null;
+      throw new Error(`AV quota exceeded: ${json.Note}`);
     }
     if (json['Error Message']) {
+      // Invalid symbol / bad params — genuine "no data", return null
       console.warn(`[avRateGovernor] ${tag} ERROR: ${json['Error Message']}`);
       return null;
     }
     if (json.Information) {
+      // Informational (often quota-related) — throw
       console.warn(`[avRateGovernor] ${tag} INFO: ${json.Information}`);
-      return null;
+      throw new Error(`AV info error: ${json.Information}`);
     }
 
     return json;
   } catch (err: unknown) {
     if (err instanceof CircuitBreakerOpenError) {
       console.warn(`[avRateGovernor] ${tag} circuit breaker OPEN — skipping request (retry in ${Math.round(err.retryAfterMs / 1000)}s)`);
-      return null;
+      throw new Error(`AV circuit breaker open for ${tag} (retry in ${Math.round(err.retryAfterMs / 1000)}s)`);
     }
     const e = err as { name?: string; message?: string };
     if (e?.name === 'TimeoutError' || e?.name === 'AbortError') {
       console.warn(`[avRateGovernor] ${tag} timed out`);
-    } else {
-      console.error(`[avRateGovernor] ${tag} fetch error:`, e?.message || err);
+      throw new Error(`AV request timed out for ${tag}`);
     }
-    return null;
+    // Re-throw all other errors (including the ones we threw above)
+    throw err;
   }
 }
 

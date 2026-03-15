@@ -45,10 +45,16 @@ async function fetchRawOptionsRows(symbol: string, expirationDate?: string): Pro
   const warnings: string[] = [];
   for (const fn of providers) {
     const url = `https://www.alphavantage.co/query?function=${fn}&symbol=${encodeURIComponent(symbol)}&apikey=${ALPHA_VANTAGE_KEY}`;
-    const payload = await avFetch(url, `${fn} ${symbol}`);
+    let payload: any;
+    try {
+      payload = await avFetch(url, `${fn} ${symbol}`);
+    } catch {
+      warnings.push(`${fn}:fetch_failed`);
+      continue;
+    }
 
     if (!payload) {
-      warnings.push(`${fn}:fetch_failed`);
+      warnings.push(`${fn}:no_data`);
       continue;
     }
 

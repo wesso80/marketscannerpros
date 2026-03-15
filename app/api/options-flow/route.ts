@@ -71,7 +71,12 @@ export async function GET(req: NextRequest) {
   try {
     // Fetch options chain
     const url = `https://www.alphavantage.co/query?function=REALTIME_OPTIONS_FMV&symbol=${symbol}&require_greeks=true&apikey=${AV_KEY}`;
-    const payload = await avFetch<{ data?: AVContract[] }>(url, `OPTIONS_FLOW_${symbol}`);
+    let payload: { data?: AVContract[] } | null;
+    try {
+      payload = await avFetch<{ data?: AVContract[] }>(url, `OPTIONS_FLOW_${symbol}`);
+    } catch {
+      return NextResponse.json({ error: `Options data unavailable for ${symbol}` }, { status: 502 });
+    }
 
     if (!payload?.data?.length) {
       return NextResponse.json({ error: `No options data for ${symbol}` }, { status: 404 });
@@ -81,7 +86,12 @@ export async function GET(req: NextRequest) {
 
     // Get current price
     const quoteUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${AV_KEY}`;
-    const quoteData = await avFetch<AVQuoteResult>(quoteUrl, `QUOTE_${symbol}`);
+    let quoteData: AVQuoteResult | null;
+    try {
+      quoteData = await avFetch<AVQuoteResult>(quoteUrl, `QUOTE_${symbol}`);
+    } catch {
+      return NextResponse.json({ error: `Price data unavailable for ${symbol}` }, { status: 502 });
+    }
     const currentPrice = parseFloat(quoteData?.['Global Quote']?.['05. price'] || '0');
 
     if (currentPrice <= 0) {

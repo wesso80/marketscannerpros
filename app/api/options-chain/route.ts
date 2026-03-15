@@ -241,7 +241,12 @@ export async function GET(request: NextRequest) {
 
     for (const fn of providers) {
       const url = `https://www.alphavantage.co/query?function=${fn}&symbol=${encodeURIComponent(symbol)}&require_greeks=true&apikey=${AV_KEY}`;
-      const payload = await avFetch<{ data?: AVRaw[] }>(url, `${fn} ${symbol}`);
+      let payload: { data?: AVRaw[] } | null;
+      try {
+        payload = await avFetch<{ data?: AVRaw[] }>(url, `${fn} ${symbol}`);
+      } catch {
+        continue;
+      }
 
       if (!payload?.data?.length) continue;
 
