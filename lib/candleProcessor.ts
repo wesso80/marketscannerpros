@@ -25,6 +25,7 @@ export interface OHLCVBar {
   low: number;
   close: number;
   volume?: number;
+  closeTime?: Date;
 }
 
 /**
@@ -81,6 +82,44 @@ export function getTimeframeDuration(timeframe: string): number {
   return durations[tf] || 60 * 60 * 1000; // Default to 1H
 }
 
+/**
+ * Infer a candle's close time when the data source doesn't provide one.
+ * - Daily equity bars: same day at 20:00 UTC (16:00 ET, market close)
+ * - Daily crypto bars: same day at 23:59:59 UTC
+ * - Weekly: Friday 20:00 UTC (equities) or Sunday 23:59:59 UTC (crypto)
+ * - Intraday: open + duration (safe for sub-day intervals)
+ */
+function inferCloseTime(openTime: Date, timeframe: string, assetType: string): Date {
+  const tf = normalizeTimeframe(timeframe);
+
+  if (tf === '1D') {
+    const d = new Date(openTime);
+    if (assetType === 'crypto') {
+      d.setUTCHours(23, 59, 59, 999);
+    } else {
+      d.setUTCHours(20, 0, 0, 0); // 16:00 ET = 20:00 UTC (standard time)
+    }
+    return d;
+  }
+
+  if (tf === '1W') {
+    const d = new Date(openTime);
+    // Advance to Friday (day 5) for equities, Sunday (day 0) for crypto
+    const targetDay = assetType === 'crypto' ? 0 : 5;
+    const diff = (targetDay - d.getUTCDay() + 7) % 7;
+    d.setUTCDate(d.getUTCDate() + (diff === 0 ? 0 : diff));
+    if (assetType === 'crypto') {
+      d.setUTCHours(23, 59, 59, 999);
+    } else {
+      d.setUTCHours(20, 0, 0, 0);
+    }
+    return d;
+  }
+
+  // Intraday: duration-based offset is fine
+  return new Date(openTime.getTime() + getTimeframeDuration(tf));
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // CANDLE PROCESSOR
 // ═══════════════════════════════════════════════════════════════════════════
@@ -98,13 +137,14 @@ export class CandleProcessor {
     assetType: string = 'crypto'
   ): Promise<boolean> {
     const normalizedTF = normalizeTimeframe(timeframe);
-    const duration = getTimeframeDuration(normalizedTF);
     
     const candle: CandleData = {
       symbol,
       timeframe: normalizedTF,
       openTime: new Date(bar.time.getTime()),
-      closeTime: new Date(bar.time.getTime() + duration),
+      closeTime: bar.closeTime
+        ? new Date(bar.closeTime.getTime())
+        : inferCloseTime(bar.time, normalizedTF, assetType),
       open: bar.open,
       high: bar.high,
       low: bar.low,
