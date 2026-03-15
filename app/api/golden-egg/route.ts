@@ -45,6 +45,7 @@ function buildPayload(
   ind: Indicators | null,
   opts: OptionsSnapshot | null,
   mpe: { composite: number; time: number; volatility: number; liquidity: number; options: number } | null,
+  tfLabel: string = '1D',
 ): GoldenEggPayload {
   const p = price.price;
   const atr = ind?.atr ?? (price.high - price.low);
@@ -247,7 +248,7 @@ function buildPayload(
       assetClass,
       price: p,
       asOfTs: new Date().toISOString(),
-      timeframe: '1D',
+      timeframe: tfLabel,
     },
     layer1: {
       permission,
@@ -479,8 +480,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Missing symbol parameter' }, { status: 400 });
     }
 
-    // Check cache
-    const cached = cache.get(symbol);
+    const timeframe = (searchParams.get('timeframe') || 'daily').toLowerCase();
+    const avIntervalMap: Record<string, string> = { '1h': '60min', '4h': '60min', 'daily': 'daily', 'weekly': 'weekly' };
+    const avInterval = avIntervalMap[timeframe] || 'daily';
+    const tfLabel = timeframe === '1h' ? '1H' : timeframe === '4h' ? '4H' : timeframe === 'weekly' ? '1W' : '1D';
+
+    // Check cache (include timeframe in key)
+    const cacheKey = `${symbol}_${timeframe}`;
+    const cached = cache.get(cacheKey);
     if (cached && Date.now() - cached.ts < CACHE_TTL) {
       return NextResponse.json({ success: true, data: cached.data, cached: true });
     }
@@ -489,7 +496,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch core data in parallel
     const [priceData, mpeData] = await Promise.all([
-      fetchPrice(symbol, assetClass, { requireHistoricals: true }),
+      fetchPrice(symbol, assetClass, { requireHistoricals: true, avInterval }),
       fetchMPE(symbol, assetClass),
     ]);
 
@@ -498,7 +505,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch indicators (may use AV — do after price to avoid burst)
-    const indData = await fetchIndicators(symbol, assetClass, priceData.historicalCloses, priceData.historicalHighs, priceData.historicalLows);
+    const indData = await fetchIndicators(symbol, assetClass, priceData.historicalCloses, priceData.historicalHighs, priceData.historicalLows, avInterval);
 
     // Fetch options (equities only, after indicators to space out AV calls)
     let optsData: OptionsSnapshot | null = null;
@@ -506,10 +513,10 @@ export async function GET(request: NextRequest) {
       optsData = await fetchOptionsSnapshot(symbol, priceData.price);
     }
 
-    const payload = buildPayload(symbol, assetClass, priceData, indData, optsData, mpeData);
+    const payload = buildPayload(symbol, assetClass, priceData, indData, optsData, mpeData, tfLabel);
 
     // Cache result
-    cache.set(symbol, { data: payload, ts: Date.now() });
+    cache.set(cacheKey, { data: payload, ts: Date.now() });
 
     return NextResponse.json({ success: true, data: payload });
   } catch (error) {

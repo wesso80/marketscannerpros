@@ -7,7 +7,7 @@
 
 import { useMemo, useState } from 'react';
 import { useV2 } from '../_lib/V2Context';
-import { useScannerResults, type ScanResult } from '../_lib/api';
+import { useScannerResults, type ScanResult, type ScanTimeframe, SCAN_TIMEFRAMES } from '../_lib/api';
 import { Card, SectionHeader, Badge } from '../_components/ui';
 
 const TABS = ['All', 'Equities', 'Crypto', 'Bullish', 'Bearish', 'High Score', 'DVE Signals'] as const;
@@ -23,8 +23,9 @@ type SortDir = 'asc' | 'desc';
 
 export default function ScannerPage() {
   const { navigateTo, selectSymbol } = useV2();
-  const equity = useScannerResults('equity');
-  const crypto = useScannerResults('crypto');
+  const [timeframe, setTimeframe] = useState<ScanTimeframe>('daily');
+  const equity = useScannerResults('equity', timeframe);
+  const crypto = useScannerResults('crypto', timeframe);
 
   const [activeTab, setActiveTab] = useState<typeof TABS[number]>('All');
   const [sortKey, setSortKey] = useState<SortKey>('score');
@@ -85,6 +86,20 @@ export default function ScannerPage() {
   return (
     <div className="space-y-4">
       <SectionHeader title="Scanner" subtitle="Ranked opportunity engine — live scan results" />
+
+      {/* Timeframe selector */}
+      <div className="flex items-center gap-1">
+        <span className="text-[10px] text-slate-500 mr-1 uppercase">Timeframe</span>
+        {SCAN_TIMEFRAMES.map(tf => (
+          <button
+            key={tf.value}
+            onClick={() => setTimeframe(tf.value)}
+            className={`px-2.5 py-1 text-[11px] rounded-md transition-colors ${timeframe === tf.value ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-slate-700/50'}`}
+          >
+            {tf.label}
+          </button>
+        ))}
+      </div>
 
       {/* Tabs */}
       <div className="flex items-center gap-1 overflow-x-auto pb-1">

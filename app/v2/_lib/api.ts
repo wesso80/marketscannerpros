@@ -424,22 +424,30 @@ export function fetchRegime(): Promise<RegimeResponse> {
 }
 
 // --- Scanner ---
-export function fetchScannerResults(type: 'crypto' | 'equity' = 'equity', symbols?: string[]): Promise<ScannerResponse> {
+export type ScanTimeframe = '1h' | '4h' | 'daily' | 'weekly';
+export const SCAN_TIMEFRAMES: { value: ScanTimeframe; label: string }[] = [
+  { value: '1h', label: '1H' },
+  { value: '4h', label: '4H' },
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+];
+
+export function fetchScannerResults(type: 'crypto' | 'equity' = 'equity', timeframe: ScanTimeframe = 'daily', symbols?: string[]): Promise<ScannerResponse> {
   return apiFetch('/api/scanner/run', {
     method: 'POST',
     body: JSON.stringify({
       symbols: symbols || (type === 'crypto'
         ? ['BTC', 'ETH', 'SOL', 'AVAX', 'LINK', 'DOT', 'MATIC', 'ADA', 'XRP', 'DOGE']
         : ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'AMZN', 'GOOGL', 'META', 'AMD', 'JPM', 'V']),
-      timeframe: 'daily',
+      timeframe,
       type,
     }),
   });
 }
 
 // --- Golden Egg ---
-export function fetchGoldenEgg(symbol: string): Promise<GoldenEggResponse> {
-  return apiFetch(`/api/golden-egg?symbol=${encodeURIComponent(symbol)}`);
+export function fetchGoldenEgg(symbol: string, timeframe: ScanTimeframe = 'daily'): Promise<GoldenEggResponse> {
+  return apiFetch(`/api/golden-egg?symbol=${encodeURIComponent(symbol)}&timeframe=${timeframe}`);
 }
 
 // --- DVE ---
@@ -614,12 +622,12 @@ export function useRegime() {
   return useApi(fetchRegime);
 }
 
-export function useScannerResults(type: 'crypto' | 'equity' = 'equity') {
-  return useApi(() => fetchScannerResults(type), [type]);
+export function useScannerResults(type: 'crypto' | 'equity' = 'equity', timeframe: ScanTimeframe = 'daily') {
+  return useApi(() => fetchScannerResults(type, timeframe), [type, timeframe]);
 }
 
-export function useGoldenEgg(symbol: string | null) {
-  return useApi(() => symbol ? fetchGoldenEgg(symbol) : Promise.resolve(null as any), [symbol]);
+export function useGoldenEgg(symbol: string | null, timeframe: ScanTimeframe = 'daily') {
+  return useApi(() => symbol ? fetchGoldenEgg(symbol, timeframe) : Promise.resolve(null as any), [symbol, timeframe]);
 }
 
 export function useDVE(symbol: string | null) {

@@ -83,11 +83,48 @@ export interface MPEData {
 export async function fetchPrice(
   symbol: string,
   assetClass: string,
-  opts?: { requireHistoricals?: boolean },
+  opts?: { requireHistoricals?: boolean; avInterval?: string },
 ): Promise<PriceData | null> {
   try {
+    const interval = opts?.avInterval || 'daily';
+    const isIntraday = interval !== 'daily' && interval !== 'weekly';
+
     if (assetClass === 'crypto') {
-      // Use CoinGecko for crypto prices + OHLC history
+      if (isIntraday) {
+        // Use Alpha Vantage CRYPTO_INTRADAY for non-daily timeframes
+        const avSym = symbol.replace(/-?USD$/, '');
+        const url = `https://www.alphavantage.co/query?function=CRYPTO_INTRADAY&symbol=${encodeURIComponent(avSym)}&market=USD&interval=${interval}&outputsize=full&apikey=${AV_KEY}`;
+        const data = await avFetch<Record<string, any>>(url, `CRYPTO_INTRADAY ${avSym} ${interval}`);
+        if (data) {
+          const tsKey = Object.keys(data).find(k => k.includes('Time Series'));
+          if (tsKey) {
+            const ts = data[tsKey];
+            const dates = Object.keys(ts).sort().reverse();
+            if (dates.length >= 2) {
+              const latest = ts[dates[0]];
+              const prev = ts[dates[1]];
+              const price = parseFloat(latest['4. close']);
+              const prevClose = parseFloat(prev['4. close']);
+              const histLen = opts?.requireHistoricals ? 300 : 50;
+              const histDates = dates.slice(0, histLen).reverse();
+              return {
+                price,
+                change: price - prevClose,
+                changePct: ((price - prevClose) / prevClose) * 100,
+                high: parseFloat(latest['2. high']),
+                low: parseFloat(latest['3. low']),
+                volume: parseFloat(latest['5. volume'] || '0'),
+                historicalCloses: histDates.map(d => parseFloat(ts[d]['4. close'])),
+                historicalHighs: histDates.map(d => parseFloat(ts[d]['2. high'])),
+                historicalLows: histDates.map(d => parseFloat(ts[d]['3. low'])),
+              };
+            }
+          }
+        }
+        // Fall through to CoinGecko daily if AV intraday fails
+      }
+
+      // CoinGecko for crypto daily/weekly
       const coinId = await resolveSymbolToId(symbol);
       if (!coinId) return null;
 
@@ -124,7 +161,7 @@ export async function fetchPrice(
 
     // Equity: try getQuote cache cascade first (skip if historicals required)
     const cached = await getQuote(symbol);
-    if (cached?.price && !opts?.requireHistoricals) {
+    if (cached?.price && !opts?.requireHistoricals && !isIntraday) {
       return {
         price: cached.price,
         change: cached.changeAmt ?? 0,
@@ -134,8 +171,16 @@ export async function fetchPrice(
       };
     }
 
-    const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${encodeURIComponent(symbol)}&outputsize=${opts?.requireHistoricals ? 'full' : 'compact'}&apikey=${AV_KEY}`;
-    const data = await avFetch<Record<string, any>>(url, `DAILY ${symbol}`);
+    // Choose AV function based on interval
+    let url: string;
+    if (isIntraday) {
+      url = `https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=${encodeURIComponent(symbol)}&interval=${interval}&outputsize=${opts?.requireHistoricals ? 'full' : 'compact'}&entitlement=realtime&apikey=${AV_KEY}`;
+    } else if (interval === 'weekly') {
+      url = `https://www.alphavantage.co/query?function=TIME_SERIES_WEEKLY_ADJUSTED&symbol=${encodeURIComponent(symbol)}&apikey=${AV_KEY}`;
+    } else {
+      url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${encodeURIComponent(symbol)}&outputsize=${opts?.requireHistoricals ? 'full' : 'compact'}&apikey=${AV_KEY}`;
+    }
+    const data = await avFetch<Record<string, any>>(url, `${interval.toUpperCase()} ${symbol}`);
     if (!data) {
       // Fallback to cached price when AV unavailable
       if (cached?.price) {
@@ -187,9 +232,13 @@ export async function fetchIndicators(
   closes: number[],
   highs?: number[],
   lows?: number[],
+  avInterval: string = 'daily',
 ): Promise<Indicators | null> {
   try {
-    if (assetClass === 'crypto' && closes.length >= 20) {
+    const isIntraday = avInterval !== 'daily' && avInterval !== 'weekly';
+
+    // Crypto with enough bars and daily: compute locally from OHLC
+    if (assetClass === 'crypto' && closes.length >= 20 && !isIntraday && avInterval !== 'weekly') {
       const { calculateEMA, calculateRSI, calculateStochastic, calculateATR } = await import('@/lib/yahoo-finance');
       const sma20 = closes.slice(-20).reduce((a, b) => a + b, 0) / 20;
       const sma50 = closes.length >= 50 ? closes.slice(-50).reduce((a, b) => a + b, 0) / 50 : null;
@@ -208,35 +257,57 @@ export async function fetchIndicators(
       return { rsi, macd: ema12 - ema26, macdHist: null, macdSignal: null, sma20, sma50, adx: null, atr, bbUpper, bbMiddle: sma20, bbLower, stochK: stoch.k, stochD: stoch.d, inSqueeze, squeezeStrength };
     }
 
-    // Equity: use cached indicators
-    const ind = await getIndicators(symbol, 'daily');
-    if (ind) {
-      return {
-        rsi: ind.rsi14 ?? null,
-        macd: ind.macdLine ?? null,
-        macdHist: ind.macdHist ?? null,
-        macdSignal: ind.macdSignal ?? null,
-        sma20: ind.sma20 ?? null,
-        sma50: ind.sma50 ?? null,
-        adx: ind.adx14 ?? null,
-        atr: ind.atr14 ?? null,
-        bbUpper: ind.bbUpper ?? null,
-        bbMiddle: ind.bbMiddle ?? null,
-        bbLower: ind.bbLower ?? null,
-        stochK: ind.stochK ?? null,
-        stochD: ind.stochD ?? null,
-        inSqueeze: ind.inSqueeze ?? false,
-        squeezeStrength: ind.squeezeStrength ?? 0,
-      };
+    // Equity daily: use cached indicators
+    if (!isIntraday && avInterval !== 'weekly') {
+      const ind = await getIndicators(symbol, 'daily');
+      if (ind) {
+        return {
+          rsi: ind.rsi14 ?? null,
+          macd: ind.macdLine ?? null,
+          macdHist: ind.macdHist ?? null,
+          macdSignal: ind.macdSignal ?? null,
+          sma20: ind.sma20 ?? null,
+          sma50: ind.sma50 ?? null,
+          adx: ind.adx14 ?? null,
+          atr: ind.atr14 ?? null,
+          bbUpper: ind.bbUpper ?? null,
+          bbMiddle: ind.bbMiddle ?? null,
+          bbLower: ind.bbLower ?? null,
+          stochK: ind.stochK ?? null,
+          stochD: ind.stochD ?? null,
+          inSqueeze: ind.inSqueeze ?? false,
+          squeezeStrength: ind.squeezeStrength ?? 0,
+        };
+      }
     }
 
-    // AV fallback for key indicators (includes STOCH)
+    // If we have enough bars from price fetch, compute locally
+    if (closes.length >= 20) {
+      const { calculateEMA, calculateRSI, calculateStochastic, calculateATR } = await import('@/lib/yahoo-finance');
+      const sma20 = closes.slice(-20).reduce((a, b) => a + b, 0) / 20;
+      const sma50 = closes.length >= 50 ? closes.slice(-50).reduce((a, b) => a + b, 0) / 50 : null;
+      const ema12 = calculateEMA(closes, 12);
+      const ema26 = calculateEMA(closes, 26);
+      const rsi = calculateRSI(closes, 14);
+      const stoch = calculateStochastic(highs || closes, lows || closes, closes, 14, 3);
+      const atr = calculateATR(highs || closes, lows || closes, closes, 14);
+      const bbStd = Math.sqrt(closes.slice(-20).reduce((s, c) => s + (c - sma20) ** 2, 0) / 20);
+      const bbUpper = sma20 + 2 * bbStd;
+      const bbLower = sma20 - 2 * bbStd;
+      const bbWidth = sma20 > 0 ? ((bbUpper - bbLower) / sma20) * 100 : 0;
+      const inSqueeze = bbWidth < 6;
+      const squeezeStrength = inSqueeze ? Math.max(0, (6 - bbWidth) / 6) : 0;
+      return { rsi, macd: ema12 - ema26, macdHist: null, macdSignal: null, sma20, sma50, adx: null, atr, bbUpper, bbMiddle: sma20, bbLower, stochK: stoch.k, stochD: stoch.d, inSqueeze, squeezeStrength };
+    }
+
+    // AV fallback for key indicators — uses the requested interval
+    const avSym = assetClass === 'crypto' ? symbol.replace(/-?USD$/, '') : symbol;
     const [rsiData, macdData, adxData, bbandsData, stochData] = await Promise.all([
-      avFetch<any>(`https://www.alphavantage.co/query?function=RSI&symbol=${encodeURIComponent(symbol)}&interval=daily&time_period=14&series_type=close&apikey=${AV_KEY}`, `RSI ${symbol}`),
-      avFetch<any>(`https://www.alphavantage.co/query?function=MACD&symbol=${encodeURIComponent(symbol)}&interval=daily&series_type=close&apikey=${AV_KEY}`, `MACD ${symbol}`),
-      avFetch<any>(`https://www.alphavantage.co/query?function=ADX&symbol=${encodeURIComponent(symbol)}&interval=daily&time_period=14&apikey=${AV_KEY}`, `ADX ${symbol}`),
-      avFetch<any>(`https://www.alphavantage.co/query?function=BBANDS&symbol=${encodeURIComponent(symbol)}&interval=daily&time_period=20&series_type=close&apikey=${AV_KEY}`, `BBANDS ${symbol}`),
-      avFetch<any>(`https://www.alphavantage.co/query?function=STOCH&symbol=${encodeURIComponent(symbol)}&interval=daily&fastkperiod=14&slowkperiod=3&slowdperiod=3&apikey=${AV_KEY}`, `STOCH ${symbol}`),
+      avFetch<any>(`https://www.alphavantage.co/query?function=RSI&symbol=${encodeURIComponent(avSym)}&interval=${avInterval}&time_period=14&series_type=close&apikey=${AV_KEY}`, `RSI ${avSym}`),
+      avFetch<any>(`https://www.alphavantage.co/query?function=MACD&symbol=${encodeURIComponent(avSym)}&interval=${avInterval}&series_type=close&apikey=${AV_KEY}`, `MACD ${avSym}`),
+      avFetch<any>(`https://www.alphavantage.co/query?function=ADX&symbol=${encodeURIComponent(avSym)}&interval=${avInterval}&time_period=14&apikey=${AV_KEY}`, `ADX ${avSym}`),
+      avFetch<any>(`https://www.alphavantage.co/query?function=BBANDS&symbol=${encodeURIComponent(avSym)}&interval=${avInterval}&time_period=20&series_type=close&apikey=${AV_KEY}`, `BBANDS ${avSym}`),
+      avFetch<any>(`https://www.alphavantage.co/query?function=STOCH&symbol=${encodeURIComponent(avSym)}&interval=${avInterval}&fastkperiod=14&slowkperiod=3&slowdperiod=3&apikey=${AV_KEY}`, `STOCH ${avSym}`),
     ]);
 
     const rsiVal = rsiData?.['Technical Analysis: RSI'];

@@ -473,9 +473,11 @@ export async function POST(req: NextRequest) {
 
     const intervalMap: Record<string, string> = {
       "1h": "60min",
+      "4h": "60min",
       "30m": "30min",
       "1d": "daily",
-      "daily": "daily"
+      "daily": "daily",
+      "weekly": "weekly"
     };
     const avInterval = intervalMap[timeframe] || "daily";
     console.info("[scanner] Using interval:", avInterval, "for timeframe:", timeframe);
@@ -739,6 +741,50 @@ export async function POST(req: NextRequest) {
         .sort((a, b) => a.t.localeCompare(b.t));
 
       console.info(`[scanner] CoinGecko ${baseSymbol}: ${candles.length} candles`);
+      return candles;
+    }
+
+    // Alpha Vantage CRYPTO_INTRADAY / DIGITAL_CURRENCY_WEEKLY for non-daily timeframes
+    async function fetchCryptoAV(symbol: string, timeframe: string): Promise<Candle[]> {
+      const baseSymbol = symbol.replace(/-USD$/, '').toUpperCase();
+      const isWeekly = timeframe === 'weekly';
+      const interval = avInterval; // already mapped (e.g. '60min')
+
+      let url: string;
+      let tsKey: string;
+      if (isWeekly) {
+        url = `https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_WEEKLY&symbol=${baseSymbol}&market=USD&apikey=${ALPHA_KEY}`;
+        tsKey = 'Time Series (Digital Currency Weekly)';
+      } else {
+        url = `https://www.alphavantage.co/query?function=CRYPTO_INTRADAY&symbol=${baseSymbol}&market=USD&interval=${interval}&outputsize=full&apikey=${ALPHA_KEY}`;
+        tsKey = `Time Series Crypto (${interval})`;
+      }
+
+      console.info(`[scanner] fetchCryptoAV ${baseSymbol} tf=${timeframe} interval=${interval}`);
+      const j = await fetchAlphaJson(url, `CryptoAV ${baseSymbol}`);
+      const ts = j[tsKey] || {};
+      const entries = Object.entries(ts);
+      if (!entries.length) throw new Error(`No AV crypto data for ${baseSymbol} (${timeframe})`);
+
+      const oKey = isWeekly ? '1a. open (USD)' : '1. open';
+      const hKey = isWeekly ? '2a. high (USD)' : '2. high';
+      const lKey = isWeekly ? '3a. low (USD)' : '3. low';
+      const cKey = isWeekly ? '4a. close (USD)' : '4. close';
+      const vKey = isWeekly ? '5. volume' : '5. volume';
+
+      const candles: Candle[] = entries
+        .map(([dt, bar]: [string, any]) => ({
+          t: new Date(dt).toISOString(),
+          open: Number(bar[oKey]),
+          high: Number(bar[hKey]),
+          low: Number(bar[lKey]),
+          close: Number(bar[cKey]),
+          volume: Number(bar[vKey] || 0),
+        }))
+        .filter(c => Number.isFinite(c.close))
+        .sort((a, b) => a.t.localeCompare(b.t));
+
+      console.info(`[scanner] AV Crypto ${baseSymbol}: ${candles.length} candles (${timeframe})`);
       return candles;
     }
 
@@ -1426,10 +1472,16 @@ export async function POST(req: NextRequest) {
         if (type === "crypto") {
           const baseSym = sym;
           
-          // CoinGecko-only crypto candles (commercial license)
+          // Use AV for intraday / weekly crypto; CoinGecko for daily
+          const isIntraday = timeframe === '1h' || timeframe === '4h' || timeframe === '30m';
+          const isWeekly = timeframe === 'weekly';
           let candles: Candle[];
           try {
-            candles = await fetchCryptoCoinGecko(baseSym, timeframe);
+            if ((isIntraday || isWeekly) && ALPHA_KEY) {
+              candles = await fetchCryptoAV(baseSym, timeframe);
+            } else {
+              candles = await fetchCryptoCoinGecko(baseSym, timeframe);
+            }
           } catch (cgErr: any) {
             errors.push(`${baseSym}: ${cgErr.message}`);
             continue;

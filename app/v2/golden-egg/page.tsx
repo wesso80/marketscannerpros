@@ -7,7 +7,7 @@
 
 import { useState, useMemo } from 'react';
 import { useV2 } from '../_lib/V2Context';
-import { useGoldenEgg, useDVE, useQuote, useScannerResults, type ScanResult } from '../_lib/api';
+import { useGoldenEgg, useDVE, useQuote, useScannerResults, type ScanResult, type ScanTimeframe, SCAN_TIMEFRAMES } from '../_lib/api';
 import { Card, SectionHeader, Badge, ScoreBar } from '../_components/ui';
 
 function Skel({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
@@ -38,6 +38,7 @@ function gradeColor(g: string) {
 export default function GoldenEggPage() {
   const { selectedSymbol, selectSymbol, navigateTo } = useV2();
   const [symbolInput, setSymbolInput] = useState('');
+  const [timeframe, setTimeframe] = useState<ScanTimeframe>('daily');
 
   // Get scanner results for symbol picker
   const equity = useScannerResults('equity');
@@ -51,7 +52,7 @@ export default function GoldenEggPage() {
   const sym = selectedSymbol || 'AAPL';
 
   // Core data
-  const goldenEgg = useGoldenEgg(sym);
+  const goldenEgg = useGoldenEgg(sym, timeframe);
   const dve = useDVE(sym);
   const quote = useQuote(sym);
 
@@ -96,6 +97,20 @@ export default function GoldenEggPage() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Timeframe selector */}
+      <div className="flex items-center gap-1">
+        <span className="text-[10px] text-slate-500 mr-1 uppercase">Timeframe</span>
+        {SCAN_TIMEFRAMES.map(tf => (
+          <button
+            key={tf.value}
+            onClick={() => setTimeframe(tf.value)}
+            className={`px-2.5 py-1 text-[11px] rounded-md transition-colors ${timeframe === tf.value ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-slate-700/50'}`}
+          >
+            {tf.label}
+          </button>
+        ))}
       </div>
 
       {/* Loading state */}
