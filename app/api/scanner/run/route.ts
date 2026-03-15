@@ -979,33 +979,65 @@ export async function POST(req: NextRequest) {
       rsi?: number;
       adx?: number;
       stochK?: number;
+      stochD?: number;
       macdHist?: number;
       close?: number;
       ema200?: number;
       bbwp?: number;
       dveFlags?: string[];
+      mfi?: number;
+      aroonUp?: number;
+      aroonDown?: number;
+      fundingRate?: number;
     }): string {
-      const { direction, rsi: rsiV, adx: adxV, stochK: skV, macdHist, close, ema200, bbwp, dveFlags } = opts;
+      const { direction, rsi: rsiV, adx: adxV, stochK: skV, stochD: sdV, macdHist, close, ema200, bbwp, dveFlags, mfi: mfiV, aroonUp, aroonDown, fundingRate } = opts;
       const flags = dveFlags ?? [];
+      const isBull = direction === 'bullish';
+      const isBear = direction === 'bearish';
 
-      // DVE-based labels (highest priority — unique MSP edge)
+      // DVE squeeze fire — highest conviction volatility signal
+      if (flags.includes('SQUEEZE_FIRE')) {
+        return isBull ? 'Squeeze Breakout Long' : isBear ? 'Squeeze Breakdown Short' : 'Squeeze Fired';
+      }
+
+      // DVE compression with high breakout likelihood
+      if ((flags.includes('COMPRESSED') || (Number.isFinite(bbwp) && bbwp! < 15)) && flags.includes('HIGH_BREAKOUT')) {
+        return 'Compression Breakout Imminent';
+      }
+
+      // DVE compression
       if (flags.includes('COMPRESSED') || (Number.isFinite(bbwp) && bbwp! < 15)) {
         return 'Volatility Compression';
       }
+
+      // DVE expansion continuation
+      if ((flags.includes('EXPANSION') || flags.includes('EXPANDING')) && flags.includes('CONTINUATION')) {
+        return isBull ? 'Expansion Continuation Long' : 'Expansion Continuation Short';
+      }
+
+      // DVE expansion
       if (flags.includes('EXPANSION') || flags.includes('EXPANDING')) {
-        return 'Volatility Expansion';
+        return isBull ? 'Volatility Expansion Long' : isBear ? 'Volatility Expansion Short' : 'Volatility Expansion';
       }
 
-      // Momentum extremes
+      // DVE exhaustion
+      if (flags.includes('EXHAUSTION_RISK')) {
+        return isBull ? 'Exhaustion Reversal Short' : isBear ? 'Exhaustion Reversal Long' : 'Exhaustion Risk';
+      }
+
+      // Momentum extremes with volume confirmation (MFI)
+      const mfiExtreme = Number.isFinite(mfiV) && (mfiV! < 20 || mfiV! > 80);
       if (Number.isFinite(rsiV)) {
-        if (rsiV! < 30 && direction === 'bullish') return 'Oversold Bounce';
-        if (rsiV! > 70 && direction === 'bearish') return 'Overbought Rejection';
+        if (rsiV! < 30 && isBull) return mfiExtreme ? 'Oversold Bounce (Volume Confirmed)' : 'Oversold Bounce';
+        if (rsiV! > 70 && isBear) return mfiExtreme ? 'Overbought Rejection (Volume Confirmed)' : 'Overbought Rejection';
+        if (rsiV! < 30 && isBear) return 'Oversold Breakdown';
+        if (rsiV! > 70 && isBull) return 'Overbought Breakout';
       }
 
-      // Stochastic extremes
-      if (Number.isFinite(skV)) {
-        if (skV! < 20 && direction === 'bullish') return 'Oversold Reversal';
-        if (skV! > 80 && direction === 'bearish') return 'Overbought Reversal';
+      // Stochastic crossover extremes
+      if (Number.isFinite(skV) && Number.isFinite(sdV)) {
+        if (skV! < 20 && skV! > sdV! && isBull) return 'Stochastic Oversold Cross Long';
+        if (skV! > 80 && skV! < sdV! && isBear) return 'Stochastic Overbought Cross Short';
       }
 
       // Trend vs EMA200
@@ -1013,33 +1045,48 @@ export async function POST(req: NextRequest) {
       const belowEma = Number.isFinite(close) && Number.isFinite(ema200) && close! < ema200!;
       const strongTrend = Number.isFinite(adxV) && adxV! >= 25;
 
-      if (strongTrend && direction === 'bullish' && aboveEma) return 'Trend Continuation';
-      if (strongTrend && direction === 'bearish' && belowEma) return 'Trend Continuation';
+      // Strong trend continuation with Aroon confirmation
+      const aroonAligned = Number.isFinite(aroonUp) && Number.isFinite(aroonDown) &&
+        ((isBull && aroonUp! > 70 && aroonUp! > aroonDown!) || (isBear && aroonDown! > 70 && aroonDown! > aroonUp!));
+
+      if (strongTrend && isBull && aboveEma) return aroonAligned ? 'Strong Trend Continuation Long' : 'Trend Continuation Long';
+      if (strongTrend && isBear && belowEma) return aroonAligned ? 'Strong Trend Continuation Short' : 'Trend Continuation Short';
 
       // Pullback detection (price near EMA200 in trend)
       if (Number.isFinite(close) && Number.isFinite(ema200) && ema200! > 0) {
         const dist = Math.abs(close! - ema200!) / ema200! * 100;
-        if (dist < 2 && strongTrend) return 'Pullback to Structure';
+        if (dist < 2 && strongTrend && isBull) return 'Pullback to Structure Long';
+        if (dist < 2 && strongTrend && isBear) return 'Pullback to Structure Short';
+      }
+
+      // Crypto funding rate extremes
+      if (Number.isFinite(fundingRate)) {
+        if (fundingRate! > 0.05 && isBear) return 'Crowded Long — Fade Short';
+        if (fundingRate! < -0.05 && isBull) return 'Crowded Short — Fade Long';
       }
 
       // Weak trend / range
       if (Number.isFinite(adxV) && adxV! < 20) {
         if (Number.isFinite(rsiV) && rsiV! > 40 && rsiV! < 60) return 'Range Consolidation';
-        return 'Mean Reversion Setup';
+        return isBull ? 'Mean Reversion Long' : isBear ? 'Mean Reversion Short' : 'Mean Reversion Setup';
       }
 
       // MACD momentum
       if (Number.isFinite(macdHist)) {
-        if (macdHist! > 0 && direction === 'bullish') return 'Bullish Momentum';
-        if (macdHist! < 0 && direction === 'bearish') return 'Bearish Momentum';
+        if (macdHist! > 0 && isBull) return 'Bullish Momentum';
+        if (macdHist! < 0 && isBear) return 'Bearish Momentum';
       }
 
       // Fallback
-      if (direction === 'bullish') return 'Bullish Setup';
-      if (direction === 'bearish') return 'Bearish Setup';
+      if (isBull) return 'Bullish Setup';
+      if (isBear) return 'Bearish Setup';
       return 'Neutral / Watching';
     }
 
+    // ── Institutional-Grade Scanner Scoring Engine ────────────────────
+    // Uses ALL available indicators + DVE + derivatives for scoring.
+    // Score = conviction strength (0-100) regardless of direction.
+    // Direction is a separate field: bullish, bearish, or neutral.
     function computeScore(
       close: number | undefined, 
       ema200: number, 
@@ -1054,116 +1101,229 @@ export async function POST(req: NextRequest) {
       aroonDown?: number,
       cciVal?: number,
       obvCurrent?: number,
-      obvPrev?: number
+      obvPrev?: number,
+      // ── New parameters for expanded scoring ──
+      mfiVal?: number,
+      vwapVal?: number,
+      stochD?: number,
+      plusDI?: number,
+      minusDI?: number,
+      dveBbwp?: number,
+      dveBreakoutScore?: number,
+      dveFlags?: string[],
+      fundingRate?: number,
+      oiChangePercent?: number,
     ): { score: number; direction: 'bullish' | 'bearish' | 'neutral'; signals: { bullish: number; bearish: number; neutral: number } } {
-      // Count individual signals for more accurate direction
       let bullishSignals = 0;
       let bearishSignals = 0;
       let neutralSignals = 0;
-      
+      const flags = dveFlags ?? [];
+
       // =================================================================
-      // ADX-BASED TREND MULTIPLIER (not a directional vote!)
-      // ADX measures trend STRENGTH, not direction
-      // High ADX = trust trend signals more, Low ADX = choppy, reduce trust
+      // LAYER 1: TREND STRUCTURE (45% of max weight)
+      // These signals tell us the primary directional bias.
+      // ADX multiplier scales their influence based on trend strength.
       // =================================================================
       let trendMultiplier = 1.0;
       if (Number.isFinite(adxVal)) {
-        if (adxVal! >= 40) {
-          trendMultiplier = 1.4; // Very strong trend - heavily trust trend signals
-        } else if (adxVal! >= 25) {
-          trendMultiplier = 1.25; // Strong trend - trust trend signals more
-        } else if (adxVal! >= 20) {
-          trendMultiplier = 1.0; // Moderate - normal weighting
-        } else {
-          trendMultiplier = 0.7; // Choppy market - reduce trend signal trust
-        }
+        if (adxVal! >= 40) trendMultiplier = 1.4;
+        else if (adxVal! >= 25) trendMultiplier = 1.2;
+        else if (adxVal! >= 20) trendMultiplier = 1.0;
+        else trendMultiplier = 0.6; // Choppy — distrust trend signals
       }
-      
-      // =================================================================
-      // TREND-BASED SIGNALS (affected by ADX multiplier)
-      // =================================================================
-      
-      // 1. Trend vs EMA200 (base weight: 2, affected by ADX)
+
+      // 1a. Price vs EMA200 — primary trend filter (weight: 2x)
       if (Number.isFinite(ema200) && Number.isFinite(close)) {
-        const ema200Weight = 2 * trendMultiplier;
-        if (close! > ema200 * 1.01) { bullishSignals += ema200Weight; } // Above EMA200 by 1%+
-        else if (close! < ema200 * 0.99) { bearishSignals += ema200Weight; } // Below EMA200 by 1%+
-        else { neutralSignals += 1; }
+        const emaWeight = 2 * trendMultiplier;
+        const pctFromEma = ((close! - ema200) / ema200) * 100;
+        if (pctFromEma > 3) { bullishSignals += emaWeight; }       // Solidly above
+        else if (pctFromEma > 1) { bullishSignals += emaWeight * 0.7; } // Slightly above
+        else if (pctFromEma < -3) { bearishSignals += emaWeight; }  // Solidly below
+        else if (pctFromEma < -1) { bearishSignals += emaWeight * 0.7; }
+        else { neutralSignals += 1; } // Near EMA = no edge
       }
-      
-      // 2. MACD Histogram (base weight: 1, affected by ADX)
+
+      // 1b. DI+ vs DI- — directional movement (weight: 1.5x)
+      // This tells us WHO is winning: buyers or sellers.
+      if (Number.isFinite(plusDI) && Number.isFinite(minusDI)) {
+        const diWeight = 1.5 * trendMultiplier;
+        const diDiff = plusDI! - minusDI!;
+        if (diDiff > 10) { bullishSignals += diWeight; }      // Strong buyer dominance
+        else if (diDiff > 3) { bullishSignals += diWeight * 0.6; }
+        else if (diDiff < -10) { bearishSignals += diWeight; } // Strong seller dominance
+        else if (diDiff < -3) { bearishSignals += diWeight * 0.6; }
+        else { neutralSignals += 0.5; }
+      }
+
+      // 1c. MACD Histogram — momentum direction (weight: 1x)
       if (Number.isFinite(hist)) {
-        const macdHistWeight = 1 * trendMultiplier;
+        const macdHistWeight = 1.0 * trendMultiplier;
         if (hist > 0) { bullishSignals += macdHistWeight; }
         else { bearishSignals += macdHistWeight; }
       }
-      
-      // 3. MACD vs Signal (base weight: 1, affected by ADX)
+
+      // 1d. MACD vs Signal — crossover state (weight: 1x)
       if (Number.isFinite(macd) && Number.isFinite(sig)) {
-        const macdSigWeight = 1 * trendMultiplier;
+        const macdSigWeight = 1.0 * trendMultiplier;
         if (macd > sig) { bullishSignals += macdSigWeight; }
         else { bearishSignals += macdSigWeight; }
       }
-      
-      // 4. Aroon (base weight: 1, affected by ADX - it's a trend indicator)
+
+      // 1e. Aroon Oscillator — trend structure quality (weight: 1x)
+      // Uses both up/down for nuanced reading, not just >70 threshold
       if (Number.isFinite(aroonUp) && Number.isFinite(aroonDown)) {
-        const aroonWeight = 1 * trendMultiplier;
-        if (aroonUp! > aroonDown! && aroonUp! > 70) { bullishSignals += aroonWeight; }
-        else if (aroonDown! > aroonUp! && aroonDown! > 70) { bearishSignals += aroonWeight; }
+        const aroonWeight = 1.0 * trendMultiplier;
+        const aroonOsc = aroonUp! - aroonDown!; // -100 to +100
+        if (aroonOsc > 50) { bullishSignals += aroonWeight; }       // Strong uptrend structure
+        else if (aroonOsc > 20) { bullishSignals += aroonWeight * 0.6; }
+        else if (aroonOsc < -50) { bearishSignals += aroonWeight; }  // Strong downtrend structure
+        else if (aroonOsc < -20) { bearishSignals += aroonWeight * 0.6; }
+        else { neutralSignals += 0.5; } // No clear structure
+      }
+
+      // =================================================================
+      // LAYER 2: VOLUME & PARTICIPATION (20% of max weight)
+      // Volume confirms conviction. Smart money shows in volume signals.
+      // =================================================================
+
+      // 2a. OBV trend — volume participation direction (weight: 1x)
+      if (Number.isFinite(obvCurrent) && Number.isFinite(obvPrev) && obvPrev !== 0) {
+        const obvWeight = 1.0 * trendMultiplier;
+        const obvChange = ((obvCurrent! - obvPrev!) / Math.abs(obvPrev!)) * 100;
+        if (obvChange > 2) { bullishSignals += obvWeight; }       // Volume flowing in
+        else if (obvChange > 0.5) { bullishSignals += obvWeight * 0.5; }
+        else if (obvChange < -2) { bearishSignals += obvWeight; }  // Volume flowing out
+        else if (obvChange < -0.5) { bearishSignals += obvWeight * 0.5; }
         else { neutralSignals += 0.5; }
       }
-      
-      // 5. OBV (On Balance Volume) - trend confirmation (affected by ADX)
-      if (Number.isFinite(obvCurrent) && Number.isFinite(obvPrev)) {
-        const obvWeight = 1 * trendMultiplier;
-        if (obvCurrent! > obvPrev!) { bullishSignals += obvWeight; } // Volume confirming up move
-        else if (obvCurrent! < obvPrev!) { bearishSignals += obvWeight; } // Volume confirming down move
+
+      // 2b. MFI — Money Flow Index (volume-weighted RSI) (weight: 1x)
+      // THIS WAS UNUSED BEFORE. MFI confirms if money is flowing into/out.
+      if (Number.isFinite(mfiVal)) {
+        if (mfiVal! >= 80) { bearishSignals += 1.0; }      // Overbought with volume = distribution
+        else if (mfiVal! >= 60) { bullishSignals += 0.8; }  // Healthy inflow
+        else if (mfiVal! <= 20) { bullishSignals += 1.0; }  // Oversold with volume = accumulation
+        else if (mfiVal! <= 40) { bearishSignals += 0.8; }  // Weak flow
         else { neutralSignals += 0.5; }
       }
-      
+
+      // 2c. Price vs VWAP — institutional execution reference (weight: 0.8x)
+      // THIS WAS UNUSED BEFORE. Institutions buy below VWAP, sell above.
+      if (Number.isFinite(vwapVal) && Number.isFinite(close) && vwapVal! > 0) {
+        const vwapPct = ((close! - vwapVal!) / vwapVal!) * 100;
+        if (vwapPct > 1) { bullishSignals += 0.8; }       // Trading above VWAP = bullish
+        else if (vwapPct > 0.2) { bullishSignals += 0.4; }
+        else if (vwapPct < -1) { bearishSignals += 0.8; }  // Below VWAP = bearish
+        else if (vwapPct < -0.2) { bearishSignals += 0.4; }
+        else { neutralSignals += 0.3; }
+      }
+
       // =================================================================
-      // MOMENTUM/OSCILLATOR SIGNALS (NOT affected by ADX)
-      // These work differently - they catch reversals in ranges
+      // LAYER 3: OSCILLATORS (25% of max weight)
+      // These catch extremes + reversals. NOT affected by ADX.
       // =================================================================
-      
-      // 6. RSI (not affected by ADX - works well in ranges for reversals)
+
+      // 3a. RSI — momentum health (weight: 1x)
       if (Number.isFinite(rsi)) {
-        if (rsi >= 55 && rsi <= 70) { bullishSignals += 1; } // Bullish momentum
-        else if (rsi > 70) { bearishSignals += 1; } // Overbought = caution
-        else if (rsi <= 45 && rsi >= 30) { bearishSignals += 1; } // Bearish momentum
-        else if (rsi < 30) { bullishSignals += 1; } // Oversold = potential bounce
-        else { neutralSignals += 1; }
-      }
-      
-      // 7. Stochastic (not affected by ADX - oscillator works in ranges)
-      if (Number.isFinite(stochK)) {
-        if (stochK! > 80) { bearishSignals += 1; } // Overbought
-        else if (stochK! < 20) { bullishSignals += 1; } // Oversold
-        else if (stochK! >= 50) { bullishSignals += 0.5; }
-        else { bearishSignals += 0.5; }
-      }
-      
-      // 8. CCI (Commodity Channel Index - not affected by ADX)
-      if (Number.isFinite(cciVal)) {
-        if (cciVal! > 100) { bullishSignals += 1; } // Strong bullish
-        else if (cciVal! > 0) { bullishSignals += 0.5; } // Mild bullish
-        else if (cciVal! < -100) { bearishSignals += 1; } // Strong bearish
-        else { bearishSignals += 0.5; } // Mild bearish
-      }
-      
-      // 9. ATR-based volatility adjustment (risk factor)
-      // High ATR adds caution regardless of direction
-      if (Number.isFinite(atr) && Number.isFinite(close)) {
-        const atrPercent = (atr / close!) * 100;
-        if (atrPercent > 5) { // Very high volatility (>5% daily range)
-          neutralSignals += 1; // Add caution weight
+        if (rsi > 70) {
+          // Overbought: bearish in range, but can persist in trends
+          bearishSignals += trendMultiplier >= 1.2 ? 0.5 : 1.0; // Respect trends
+        } else if (rsi >= 55) {
+          bullishSignals += 1.0; // Healthy bull momentum
+        } else if (rsi < 30) {
+          // Oversold: bullish bounce likely, but can persist in downtrends
+          bullishSignals += trendMultiplier >= 1.2 ? 0.5 : 1.0;
+        } else if (rsi <= 45) {
+          bearishSignals += 1.0; // Weakening momentum
+        } else {
+          neutralSignals += 0.7; // Dead zone
         }
       }
-      
-      // Calculate total signals
-      const totalSignals = bullishSignals + bearishSignals + neutralSignals;
-      
-      // Determine direction based on signal counts (1.15x threshold for sensitive detection)
+
+      // 3b. Stochastic %K + %D crossover — signal timing (weight: 1x)
+      // NOW USES BOTH K AND D instead of just K
+      if (Number.isFinite(stochK) && Number.isFinite(stochD)) {
+        const kAboveD = stochK! > stochD!;
+        if (stochK! > 80 && !kAboveD) { bearishSignals += 1.2; }       // Overbought + bearish cross
+        else if (stochK! > 80 && kAboveD) { bearishSignals += 0.5; }    // Overbought but bullish cross
+        else if (stochK! < 20 && kAboveD) { bullishSignals += 1.2; }    // Oversold + bullish cross
+        else if (stochK! < 20 && !kAboveD) { bullishSignals += 0.5; }   // Oversold but bearish cross
+        else if (kAboveD) { bullishSignals += 0.5; }
+        else { bearishSignals += 0.5; }
+      } else if (Number.isFinite(stochK)) {
+        // Fallback: only K available
+        if (stochK! > 80) { bearishSignals += 0.8; }
+        else if (stochK! < 20) { bullishSignals += 0.8; }
+        else if (stochK! >= 50) { bullishSignals += 0.4; }
+        else { bearishSignals += 0.4; }
+      }
+
+      // 3c. CCI — mean reversion momentum (weight: 0.8x)
+      if (Number.isFinite(cciVal)) {
+        if (cciVal! > 200) { bearishSignals += 0.8; }       // Extreme overbought = reversal
+        else if (cciVal! > 100) { bullishSignals += 0.8; }  // Strong momentum
+        else if (cciVal! > 0) { bullishSignals += 0.3; }
+        else if (cciVal! < -200) { bullishSignals += 0.8; }  // Extreme oversold = reversal
+        else if (cciVal! < -100) { bearishSignals += 0.8; }  // Strong downward
+        else { bearishSignals += 0.3; }
+      }
+
+      // =================================================================
+      // LAYER 4: VOLATILITY REGIME (10% boost/penalty)
+      // DVE data modifies conviction — not direction.
+      // =================================================================
+      let volatilityBoost = 0; // positive = conviction bonus, negative = penalty
+
+      // 4a. BBWP — volatility percentile
+      if (Number.isFinite(dveBbwp)) {
+        if (dveBbwp! < 10) { volatilityBoost += 5; }        // Extreme compression = breakout imminent, high conviction
+        else if (dveBbwp! < 20) { volatilityBoost += 3; }
+        else if (dveBbwp! > 90) { volatilityBoost -= 3; }    // Climax volatility = exhaustion risk
+        else if (dveBbwp! > 80) { volatilityBoost += 2; }    // High vol but not exhaustion = trend persists
+      }
+
+      // 4b. DVE breakout score — probability of breakout
+      if (Number.isFinite(dveBreakoutScore)) {
+        if (dveBreakoutScore! >= 70) { volatilityBoost += 5; }   // High breakout probability
+        else if (dveBreakoutScore! >= 50) { volatilityBoost += 2; }
+      }
+
+      // 4c. DVE flags bonus
+      if (flags.includes('SQUEEZE_FIRE')) { volatilityBoost += 8; }
+      else if (flags.includes('HIGH_BREAKOUT')) { volatilityBoost += 4; }
+      if (flags.includes('VOL_TRAP')) { volatilityBoost -= 3; } // Trap = avoid
+      if (flags.includes('EXHAUSTION_RISK')) { volatilityBoost -= 5; }
+
+      // 4d. ATR-based risk dampening
+      if (Number.isFinite(atr) && Number.isFinite(close) && close! > 0) {
+        const atrPercent = (atr / close!) * 100;
+        if (atrPercent > 8) { volatilityBoost -= 5; }   // Extreme daily range = lower conviction
+        else if (atrPercent > 5) { volatilityBoost -= 2; }
+      }
+
+      // =================================================================
+      // LAYER 5: DERIVATIVES (crypto only, up to 8% boost)
+      // Funding rate, OI changes = smart money positioning.
+      // =================================================================
+      let derivativesBoost = 0;
+
+      if (Number.isFinite(fundingRate)) {
+        // Extreme funding = crowded trade, fade potential
+        if (fundingRate! > 0.05) { bearishSignals += 0.8; derivativesBoost += 2; }     // Crowded long
+        else if (fundingRate! < -0.05) { bullishSignals += 0.8; derivativesBoost += 2; } // Crowded short
+        else if (fundingRate! > 0.01) { bullishSignals += 0.3; } // Mild long bias
+        else if (fundingRate! < -0.01) { bearishSignals += 0.3; }
+      }
+
+      if (Number.isFinite(oiChangePercent)) {
+        // Rising OI + direction = confirms the move, more conviction
+        if (Math.abs(oiChangePercent!) > 5) { derivativesBoost += 3; } // Big OI change = active positioning
+        else if (Math.abs(oiChangePercent!) > 2) { derivativesBoost += 1; }
+      }
+
+      // =================================================================
+      // DIRECTION DETERMINATION — 15% threshold for hysteresis
+      // =================================================================
       let direction: 'bullish' | 'bearish' | 'neutral';
       if (bullishSignals > bearishSignals * 1.15) {
         direction = 'bullish';
@@ -1172,20 +1332,47 @@ export async function POST(req: NextRequest) {
       } else {
         direction = 'neutral';
       }
-      
-      // Calculate score (0-100 scale)
-      // Base score starts at 50 (neutral)
-      // Max signals now depends on ADX multiplier (approx 10-14 range)
-      let score = 50;
-      const signalDiff = bullishSignals - bearishSignals;
-      const maxSignals = 10 * trendMultiplier; // Dynamic based on trend strength
-      
-      // Adjust score based on signal difference
-      score += (signalDiff / maxSignals) * 50;
-      
+
+      // =================================================================
+      // SCORE CALCULATION — Conviction strength (0-100)
+      // Measures how strongly indicators agree, regardless of direction.
+      // A strong bearish setup scores 90 just like a strong bullish setup.
+      // =================================================================
+      const dominantSignals = Math.max(bullishSignals, bearishSignals);
+      const opposingSignals = Math.min(bullishSignals, bearishSignals);
+      const totalDirectional = dominantSignals + opposingSignals;
+      // maxSignals is the theoretical max one side could achieve
+      // ~13 base weight + up to 40% ADX boost ≈ 18 at max
+      const maxSignals = 14 * trendMultiplier;
+
+      // Net conviction: how much one side wins over the other (0 to 1)
+      const netConviction = totalDirectional > 0
+        ? (dominantSignals - opposingSignals) / totalDirectional
+        : 0;
+
+      // Agreement ratio: how much of the theoretical max is achieved (0 to 1)
+      const agreementRatio = dominantSignals / maxSignals;
+
+      // Confluence bonus: when many independent signals agree, boost confidence
+      // Count signal layers that contributed (rough proxy)
+      const layersContributing = [
+        Number.isFinite(ema200), Number.isFinite(hist), Number.isFinite(rsi),
+        Number.isFinite(stochK), Number.isFinite(cciVal), Number.isFinite(obvCurrent),
+        Number.isFinite(mfiVal), Number.isFinite(adxVal), Number.isFinite(aroonUp),
+      ].filter(Boolean).length;
+      const confluenceBonus = layersContributing >= 7 ? 8 : layersContributing >= 5 ? 4 : 0;
+
+      // Base score: blend of net conviction (50%) and agreement strength (50%)
+      let score = Math.round((netConviction * 0.5 + agreementRatio * 0.5) * 85);
+
+      // Add bonuses
+      score += confluenceBonus;
+      score += Math.max(-10, Math.min(15, volatilityBoost));
+      score += Math.max(0, Math.min(8, derivativesBoost));
+
       // Clamp to 0-100
-      score = Math.max(0, Math.min(100, Math.round(score)));
-      
+      score = Math.max(0, Math.min(100, score));
+
       return {
         score,
         direction,
@@ -1302,8 +1489,42 @@ export async function POST(req: NextRequest) {
             signal: macObj.signalLine[chartStart + i],
             hist: macObj.hist[chartStart + i]
           }));
-          
-          const scoreResult = computeScore(close, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxObj.adx, stochObj.k, aroonObj.up, aroonObj.down, cciVal, obvCurrent, obvPrev);
+
+          // ── Fetch derivatives BEFORE scoring so we can use funding rate + OI ──
+          let cryptoDerivatives: ScanResult['derivatives'] | undefined;
+          if (type === 'crypto') {
+            try {
+              const derivData = await fetchCryptoDerivatives(baseSym);
+              if (derivData) {
+                cryptoDerivatives = {
+                  openInterest: Number.isFinite(derivData.openInterest) && derivData.openInterest > 0
+                    ? derivData.openInterest
+                    : derivData.openInterestCoin * price,
+                  openInterestCoin: derivData.openInterestCoin,
+                  fundingRate: derivData.fundingRate,
+                  longShortRatio: derivData.longShortRatio,
+                  oiChangePercent: derivData.oiChangePercent,
+                  basisPercent: derivData.basisPercent,
+                };
+              }
+            } catch (derivErr) {
+              console.warn('[scanner] Derivatives fetch failed for', baseSym, derivErr);
+            }
+          }
+
+          // ── Compute DVE BEFORE scoring so BBWP + breakout score feed into score ──
+          const dveCrypto = computeScannerDVE(closes, highs, lows, price, baseSym, {
+            adx: adxObj.adx, atr: atrVal, stochK: stochObj.k, stochD: stochObj.d,
+            fundingRate: cryptoDerivatives?.fundingRate, oiUsd: cryptoDerivatives?.openInterest,
+          });
+
+          const scoreResult = computeScore(
+            close, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal,
+            adxObj.adx, stochObj.k, aroonObj.up, aroonObj.down, cciVal, obvCurrent, obvPrev,
+            mfiVal, vwapVal, stochObj.d, adxObj.plus_di, adxObj.minus_di,
+            dveCrypto?.dveBbwp, dveCrypto?.dveBreakoutScore, dveCrypto?.dveFlags,
+            cryptoDerivatives?.fundingRate, cryptoDerivatives?.oiChangePercent,
+          );
 
           // Compute trade setup fields (same logic as equity cached/AV paths)
           const dirLabelCrypto = scoreResult.direction === 'bearish' ? 'SHORT' : 'LONG';
@@ -1314,7 +1535,7 @@ export async function POST(req: NextRequest) {
           const riskPerUnitCrypto = Math.abs(entryPriceCrypto - stopPriceCrypto);
           const rMultipleCalcCrypto = riskPerUnitCrypto > 0 ? Math.abs(targetPriceCrypto - entryPriceCrypto) / riskPerUnitCrypto : 0;
           const confidenceCalcCrypto = Math.min(99, Math.abs(scoreResult.score));
-          const setupLabelCrypto = deriveSetupLabel({ direction: scoreResult.direction, rsi: rsiVal, adx: adxObj.adx, stochK: stochObj.k, macdHist: macHist, close: price, ema200: ema200Val });
+          const setupLabelCrypto = deriveSetupLabel({ direction: scoreResult.direction, rsi: rsiVal, adx: adxObj.adx, stochK: stochObj.k, stochD: stochObj.d, macdHist: macHist, close: price, ema200: ema200Val, bbwp: dveCrypto?.dveBbwp, dveFlags: dveCrypto?.dveFlags, mfi: mfiVal, aroonUp: aroonObj.up, aroonDown: aroonObj.down, fundingRate: cryptoDerivatives?.fundingRate });
 
           const item: ScanResult & { direction?: string; signals?: any } = {
             symbol: `${baseSym}-USD`,
@@ -1351,28 +1572,10 @@ export async function POST(req: NextRequest) {
               macd: chartMacd
             }
           };
-          
-          // Fetch derivatives data for crypto (OI, Funding Rate, L/S ratio)
-          if (type === 'crypto') {
-            try {
-              const derivData = await fetchCryptoDerivatives(baseSym);
-              if (derivData) {
-                // Calculate OI in USD using current price
-                item.derivatives = {
-                  openInterest: Number.isFinite(derivData.openInterest) && derivData.openInterest > 0
-                    ? derivData.openInterest
-                    : derivData.openInterestCoin * price,
-                  openInterestCoin: derivData.openInterestCoin,
-                  fundingRate: derivData.fundingRate,
-                  longShortRatio: derivData.longShortRatio,
-                  oiChangePercent: derivData.oiChangePercent,
-                  basisPercent: derivData.basisPercent,
-                };
-              }
-            } catch (derivErr) {
-              console.warn('[scanner] Derivatives fetch failed for', baseSym, derivErr);
-            }
-          }
+
+          // Assign pre-computed derivatives and DVE data
+          if (cryptoDerivatives) item.derivatives = cryptoDerivatives;
+          if (dveCrypto) Object.assign(item, dveCrypto);
           
           // Compute enhancements: EMA stack, squeeze, relative strength
           try {
@@ -1388,13 +1591,6 @@ export async function POST(req: NextRequest) {
           } catch (enhErr) {
             console.warn('[scanner] Enhancement computation failed for', baseSym, enhErr);
           }
-          
-          // DVE flags for crypto
-          const dveCrypto = computeScannerDVE(closes, highs, lows, price, baseSym, {
-            adx: adxObj.adx, atr: atrVal, stochK: stochObj.k, stochD: stochObj.d,
-            fundingRate: item.derivatives?.fundingRate, oiUsd: item.derivatives?.openInterest,
-          });
-          if (dveCrypto) Object.assign(item, dveCrypto);
 
           if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
         } else if (type === "forex") {
@@ -1488,8 +1684,18 @@ export async function POST(req: NextRequest) {
           const obvPrev = obvArr[last - 1];
           const mfiValForex = mfiArr[last];
           const vwapValForex = vwapArr[last];
+
+          // Compute DVE BEFORE scoring
+          const dveForex = computeScannerDVE(closes, highs, lows, price, sym, {
+            adx: adxObj.adx, atr: atrVal, stochK: stochObj.k, stochD: stochObj.d,
+          });
           
-          const scoreResult = computeScore(close, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxObj.adx, stochObj.k, aroonObj.up, aroonObj.down, cciVal, obvCurrent, obvPrev);
+          const scoreResult = computeScore(
+            close, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal,
+            adxObj.adx, stochObj.k, aroonObj.up, aroonObj.down, cciVal, obvCurrent, obvPrev,
+            mfiValForex, vwapValForex, stochObj.d, adxObj.plus_di, adxObj.minus_di,
+            dveForex?.dveBbwp, dveForex?.dveBreakoutScore, dveForex?.dveFlags,
+          );
 
           // Compute trade setup fields for forex (same ATR-based logic as equity/crypto)
           const dirLabelFx = scoreResult.direction === 'bearish' ? 'SHORT' : 'LONG';
@@ -1500,7 +1706,7 @@ export async function POST(req: NextRequest) {
           const riskPerUnitFx = Math.abs(entryPriceFx - stopPriceFx);
           const rMultipleCalcFx = riskPerUnitFx > 0 ? Math.abs(targetPriceFx - entryPriceFx) / riskPerUnitFx : 0;
           const confidenceCalcFx = Math.min(99, Math.abs(scoreResult.score));
-          const setupLabelFx = deriveSetupLabel({ direction: scoreResult.direction, rsi: rsiVal, adx: adxObj.adx, stochK: stochObj.k, macdHist: macHist, close: price, ema200: ema200Val });
+          const setupLabelFx = deriveSetupLabel({ direction: scoreResult.direction, rsi: rsiVal, adx: adxObj.adx, stochK: stochObj.k, stochD: stochObj.d, macdHist: macHist, close: price, ema200: ema200Val, bbwp: dveForex?.dveBbwp, dveFlags: dveForex?.dveFlags, mfi: mfiValForex, aroonUp: aroonObj.up, aroonDown: aroonObj.down });
 
           const item: ScanResult & { direction?: string; signals?: any } = {
             symbol: sym,
@@ -1546,10 +1752,7 @@ export async function POST(req: NextRequest) {
             console.warn('[scanner] Enhancement computation failed for', sym, enhErr);
           }
 
-          // DVE flags for forex
-          const dveForex = computeScannerDVE(closes, highs, lows, price, sym, {
-            adx: adxObj.adx, atr: atrVal, stochK: stochObj.k, stochD: stochObj.d,
-          });
+          // DVE flags for forex (already computed before scoring)
           if (dveForex) Object.assign(item, dveForex);
 
           if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);
@@ -1584,7 +1787,10 @@ export async function POST(req: NextRequest) {
             const aroonUp = cachedData.aroonUp ?? NaN;
             const aroonDown = cachedData.aroonDown ?? NaN;
             
-            const scoreResult = computeScore(price, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxVal, stochK, aroonUp, aroonDown, cciVal, 0, 0);
+            const scoreResult = computeScore(price, ema200Val, rsiVal, macLine, sigLine, macHist, atrVal, adxVal, stochK, aroonUp, aroonDown, cciVal, 0, 0,
+              undefined, undefined, stochD, undefined, undefined,
+              undefined, undefined, undefined,
+            );
 
             // Compute trade setup fields from cached data (same logic as useTickerData fallbacks, but server-side)
             const dirLabel = scoreResult.direction === 'bearish' ? 'SHORT' : 'LONG';
@@ -1595,7 +1801,7 @@ export async function POST(req: NextRequest) {
             const riskPerUnit = Math.abs(entryPrice - stopPrice);
             const rMultipleCalc = riskPerUnit > 0 ? Math.abs(targetPrice - entryPrice) / riskPerUnit : 0;
             const confidenceCalc = Math.min(99, Math.abs(scoreResult.score));
-            const setupLabel = deriveSetupLabel({ direction: scoreResult.direction, rsi: rsiVal, adx: adxVal, stochK, macdHist: macHist, close: price, ema200: ema200Val });
+            const setupLabel = deriveSetupLabel({ direction: scoreResult.direction, rsi: rsiVal, adx: adxVal, stochK, stochD, macdHist: macHist, close: price, ema200: ema200Val });
 
             const item: ScanResult & { direction?: string; signals?: any } = {
               symbol: sym,
@@ -1729,6 +1935,11 @@ export async function POST(req: NextRequest) {
             const vwapValEq = vwapArr.length ? vwapArr[vwapArr.length - 1] : undefined;
             const lastCandleTime = candles[last]?.t;
 
+            // Compute DVE BEFORE scoring for equity AV path
+            const dveAV = computeScannerDVE(closes, highs, lows, price, sym, {
+              adx: adxObj.adx, atr: atrVal, stochK: stochObj.k, stochD: stochObj.d,
+            });
+
             const scoreResult = computeScore(
               price,
               ema200Val,
@@ -1743,7 +1954,15 @@ export async function POST(req: NextRequest) {
               aroonObj.down,
               cciVal,
               obvCurrent,
-              obvPrev
+              obvPrev,
+              mfiValEq,
+              vwapValEq,
+              stochObj.d,
+              adxObj.plus_di,
+              adxObj.minus_di,
+              dveAV?.dveBbwp,
+              dveAV?.dveBreakoutScore,
+              dveAV?.dveFlags,
             );
 
             // Compute trade setup fields (AV path — same logic as cached path)
@@ -1755,7 +1974,7 @@ export async function POST(req: NextRequest) {
             const riskPerUnitAV = Math.abs(entryPriceAV - stopPriceAV);
             const rMultipleCalcAV = riskPerUnitAV > 0 ? Math.abs(targetPriceAV - entryPriceAV) / riskPerUnitAV : 0;
             const confidenceCalcAV = Math.min(99, Math.abs(scoreResult.score));
-            const setupLabelAV = deriveSetupLabel({ direction: scoreResult.direction, rsi: rsiVal, adx: adxObj.adx, stochK: stochObj.k, macdHist: macHist, close: price, ema200: ema200Val });
+            const setupLabelAV = deriveSetupLabel({ direction: scoreResult.direction, rsi: rsiVal, adx: adxObj.adx, stochK: stochObj.k, stochD: stochObj.d, macdHist: macHist, close: price, ema200: ema200Val, bbwp: dveAV?.dveBbwp, dveFlags: dveAV?.dveFlags, mfi: mfiValEq, aroonUp: aroonObj.up, aroonDown: aroonObj.down });
 
             const item: ScanResult & { direction?: string; signals?: any } = {
               symbol: sym,
@@ -1817,10 +2036,7 @@ export async function POST(req: NextRequest) {
               console.warn('[scanner] Enhancement computation failed for', sym, enhErr);
             }
 
-            // DVE flags for equity (AV path)
-            const dveAV = computeScannerDVE(closes, highs, lows, price, sym, {
-              adx: adxObj.adx, atr: atrVal, stochK: stochObj.k, stochD: stochObj.d,
-            });
+            // DVE flags for equity (AV path — already computed before scoring)
             if (dveAV) Object.assign(item, dveAV);
 
             if (scoreResult.score >= (Number.isFinite(minScore) ? minScore : 0)) results.push(item); else if (!results.length) results.push(item);

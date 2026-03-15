@@ -214,7 +214,7 @@ export function computeInstitutionalFilter(input: InstitutionalFilterInput): Ins
   const hardBlock = checks.some((check) =>
     check.status === 'block' && (check.key === 'regime' || check.key === 'liquidity' || check.key === 'data_reliability')
   );
-  const noTrade = hardBlock || finalScore < 55;
+  const noTrade = hardBlock || finalScore < 40;
 
   const recommendation: InstitutionalFilterResult['recommendation'] = noTrade
     ? 'NO_TRADE'
