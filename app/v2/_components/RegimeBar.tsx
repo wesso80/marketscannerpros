@@ -23,7 +23,7 @@ export default function RegimeBar() {
   const dominant = Object.entries(regimeCounts).sort((a, b) => b[1] - a[1])[0];
 
   return (
-    <div className="flex items-center gap-3 px-4 py-2 bg-[#0D1422] border-b border-slate-800/50 overflow-x-auto">
+    <div className="flex items-center gap-3 px-4 py-2 bg-[var(--msp-panel-2)] border-b border-[var(--msp-border)] overflow-x-auto">
       <span className="text-[10px] uppercase tracking-wider text-slate-500 whitespace-nowrap">Market Regime</span>
       <Badge label={dominant?.[0] || 'neutral'} color={REGIME_COLORS[dominant?.[0] as RegimePriority] || '#64748B'} small />
       <div className="h-3 w-px bg-slate-700" />

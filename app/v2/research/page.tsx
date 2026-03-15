@@ -1,9 +1,9 @@
-﻿'use client';
+'use client';
 
-/* ═══════════════════════════════════════════════════════════════════════════
+/* ---------------------------------------------------------------------------
    SURFACE 6: RESEARCH — Information Layer
    Real API data: /api/news-sentiment + /api/economic-calendar + /api/earnings
-   ═══════════════════════════════════════════════════════════════════════════ */
+   --------------------------------------------------------------------------- */
 
 import { useState, useMemo } from 'react';
 import { useV2 } from '../_lib/V2Context';
@@ -42,7 +42,7 @@ export default function ResearchPage() {
   const majorEarnings = earnings.data?.majorEarnings || [];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <SectionHeader title="Research" subtitle="News, events & catalysts — live data" />
 
       <UpgradeGate requiredTier="pro" currentTier={tier} feature="Market Research">
@@ -52,14 +52,14 @@ export default function ResearchPage() {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-3 py-1.5 text-xs rounded-lg whitespace-nowrap transition-colors ${tab === t ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-transparent'}`}
+            className={`px-2.5 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap transition-colors ${tab === t ? 'bg-[rgba(16,185,129,0.1)] text-[var(--msp-accent)] border border-[rgba(16,185,129,0.4)]' : 'text-[var(--msp-text-muted)] hover:bg-slate-800/60 border border-transparent'}`}
           >
             {t}
           </button>
         ))}
       </div>
 
-      {/* ── NEWS ───────────────────────────────────────────────────── */}
+      {/* -- NEWS ----------------------------------------------------- */}
       {tab === 'News' && (
         <Card>
           {news.loading ? <SkeletonRows n={8} /> : articles.length === 0 ? (
@@ -96,7 +96,7 @@ export default function ResearchPage() {
         </Card>
       )}
 
-      {/* ── ECONOMIC CALENDAR ──────────────────────────────────────── */}
+      {/* -- ECONOMIC CALENDAR ---------------------------------------- */}
       {tab === 'Economic Calendar' && (
         <Card>
           <div className="flex items-center gap-2 mb-3">
@@ -114,7 +114,7 @@ export default function ResearchPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b border-slate-700/50">
+                  <tr className="border-b border-[var(--msp-border)]">
                     <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Date</th>
                     <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Time</th>
                     <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Impact</th>
@@ -149,7 +149,7 @@ export default function ResearchPage() {
         </Card>
       )}
 
-      {/* ── EARNINGS ───────────────────────────────────────────────── */}
+      {/* -- EARNINGS ------------------------------------------------- */}
       {tab === 'Earnings' && (
         <Card>
           {earnings.loading ? <SkeletonRows n={8} /> : (
@@ -167,7 +167,7 @@ export default function ResearchPage() {
                     <div className="overflow-x-auto">
                       <table className="w-full text-xs">
                         <thead>
-                          <tr className="border-b border-slate-700/50">
+                          <tr className="border-b border-[var(--msp-border)]">
                             <th className="text-left py-1.5 px-2 text-[10px] uppercase text-slate-500">Symbol</th>
                             <th className="text-left py-1.5 px-2 text-[10px] uppercase text-slate-500">Company</th>
                             <th className="text-left py-1.5 px-2 text-[10px] uppercase text-slate-500">Report Date</th>

@@ -502,7 +502,7 @@ export default function AccountSection() {
                   </div>
                   <div className="text-right">
                     <div className="text-xl font-bold text-amber-400">{referralData.contest.yourEntries}</div>
-                    <div className="text-[9px] text-slate-500 uppercase tracking-wider">Your Entries</div>
+                    <div className="text-[10px] text-slate-500 uppercase tracking-wider">Your Entries</div>
                   </div>
                 </div>
                 <div>

@@ -170,7 +170,7 @@ export default function BacktestPage() {
   // ─── Render ──────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <SectionHeader title="Backtest Lab" subtitle="Strategy & scanner backtesting engine" />
 
       <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Strategy Backtesting Engine">
@@ -195,7 +195,7 @@ export default function BacktestPage() {
         <Card>
           <div className="space-y-4">
             {/* Top row: Symbol + Timeframe */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <div>
                 <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Symbol</label>
                 <input
@@ -262,7 +262,7 @@ export default function BacktestPage() {
 
             {/* Scanner-specific controls */}
             {mode === 'scanner' && (
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                 <div>
                   <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Min Score</label>
                   <input
@@ -392,7 +392,7 @@ export default function BacktestPage() {
             {resultTab === 'Summary' && (
               <div className="space-y-4">
                 {/* Key metrics grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-3">
                   <MetricCard label="Total Return" value={fmtPct(n(result.totalReturn))} color={pctColor(n(result.totalReturn))} />
                   <MetricCard label="Win Rate" value={`${n(result.winRate).toFixed(1)}%`} color={n(result.winRate) >= 50 ? 'text-emerald-400' : 'text-red-400'} />
                   <MetricCard label="Profit Factor" value={n(result.profitFactor).toFixed(2)} color={n(result.profitFactor) >= 1 ? 'text-emerald-400' : 'text-red-400'} />
@@ -404,7 +404,7 @@ export default function BacktestPage() {
                 {/* Extended metrics */}
                 <Card>
                   <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Performance Detail</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-y-3 gap-x-4 text-xs">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-y-3 gap-x-4 text-xs">
                     <MetricRow label="Total Trades" value={n(result.totalTrades).toString()} />
                     <MetricRow label="Winners" value={n(result.winningTrades).toString()} color="text-emerald-400" />
                     <MetricRow label="Losers" value={n(result.losingTrades).toString()} color="text-red-400" />
@@ -437,7 +437,7 @@ export default function BacktestPage() {
                 {result.dataCoverage && (
                   <Card>
                     <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Data Coverage</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs text-slate-400">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs text-slate-400">
                       <div>Applied: <span className="text-white">{result.dataCoverage.applied.startDate} → {result.dataCoverage.applied.endDate}</span></div>
                       <div>Bars: <span className="text-white">{result.dataCoverage.bars}</span></div>
                       {result.dataCoverage.provider && <div>Provider: <span className="text-white">{result.dataCoverage.provider}</span></div>}

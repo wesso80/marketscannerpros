@@ -25,7 +25,7 @@ export function Badge({ label, color, small }: { label: string; color: string; s
 export function Card({ children, className = '', onClick, style }: { children: React.ReactNode; className?: string; onClick?: () => void; style?: React.CSSProperties }) {
   return (
     <div
-      className={`rounded-xl border border-slate-700/50 bg-[#101A2A] p-4 ${onClick ? 'cursor-pointer hover:border-slate-600 transition-colors' : ''} ${className}`}
+      className={`rounded-xl border border-[var(--msp-border)] bg-[var(--msp-card)] p-4 ${onClick ? 'cursor-pointer hover:border-slate-600 transition-colors' : ''} ${className}`}
       onClick={onClick}
       style={style}
     >
@@ -40,8 +40,8 @@ export function SectionHeader({ title, subtitle, action }: { title: string; subt
   return (
     <div className="flex items-center justify-between mb-4">
       <div>
-        <h2 className="text-lg font-bold text-white">{title}</h2>
-        {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
+        <h2 className="text-[1.25rem] font-semibold text-white uppercase tracking-[0.03em]">{title}</h2>
+        {subtitle && <p className="text-[0.82rem] text-[var(--msp-text-muted)] mt-0.5">{subtitle}</p>}
       </div>
       {action}
     </div>
@@ -64,8 +64,8 @@ export function ScoreBar({ value, max = 100, color = '#10B981' }: { value: numbe
 export function StatBox({ label, value, color, sub }: { label: string; value: string | number; color?: string; sub?: string }) {
   return (
     <div className="text-center">
-      <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">{label}</div>
-      <div className="text-lg font-bold" style={{ color: color || '#fff' }}>{value}</div>
+      <div className="text-[10px] uppercase tracking-wider text-[var(--msp-text-faint)] mb-1">{label}</div>
+      <div className="text-[1rem] font-semibold" style={{ color: color || '#fff' }}>{value}</div>
       {sub && <div className="text-[10px] text-slate-500 mt-0.5">{sub}</div>}
     </div>
   );
@@ -91,10 +91,10 @@ export function TabBar({ tabs, active, onChange }: { tabs: string[]; active: str
         <button
           key={t}
           onClick={() => onChange(t)}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+          className={`px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition-colors ${
             active === t
-              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+              ? 'bg-[rgba(16,185,129,0.1)] text-[var(--msp-accent)] border border-[rgba(16,185,129,0.4)]'
+              : 'text-[var(--msp-text-muted)] hover:text-slate-200 hover:bg-slate-800'
           }`}
         >
           {t}

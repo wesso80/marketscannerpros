@@ -549,7 +549,7 @@ export default function PortfolioV2() {
                   </svg>
                   <div className="flex justify-between mt-1">
                     {chartData.points.filter((_, i) => i === 0 || i === chartData.points.length - 1 || i === Math.floor(chartData.points.length / 2)).map((p, idx) => (
-                      <span key={idx} className="text-[9px] text-slate-600">{new Date(p.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                      <span key={idx} className="text-[10px] text-slate-600">{new Date(p.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                     ))}
                   </div>
                 </div>
@@ -574,19 +574,19 @@ export default function PortfolioV2() {
           {closedPositions.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="rounded-xl border border-white/5 bg-[#0D1321]/80 px-4 py-3 text-center">
-                <div className="text-[9px] uppercase text-slate-500 tracking-wider mb-1">Win Rate</div>
+                <div className="text-[10px] uppercase text-slate-500 tracking-wider mb-1">Win Rate</div>
                 <div className={`text-sm font-bold font-mono ${winRate >= 50 ? 'text-emerald-400' : 'text-red-400'}`}>{winRate.toFixed(0)}%</div>
               </div>
               <div className="rounded-xl border border-white/5 bg-[#0D1321]/80 px-4 py-3 text-center">
-                <div className="text-[9px] uppercase text-slate-500 tracking-wider mb-1">Total Trades</div>
+                <div className="text-[10px] uppercase text-slate-500 tracking-wider mb-1">Total Trades</div>
                 <div className="text-sm font-bold font-mono text-white">{closedPositions.length}</div>
               </div>
               <div className="rounded-xl border border-white/5 bg-[#0D1321]/80 px-4 py-3 text-center">
-                <div className="text-[9px] uppercase text-slate-500 tracking-wider mb-1">Winners</div>
+                <div className="text-[10px] uppercase text-slate-500 tracking-wider mb-1">Winners</div>
                 <div className="text-sm font-bold font-mono text-emerald-400">{winners}</div>
               </div>
               <div className="rounded-xl border border-white/5 bg-[#0D1321]/80 px-4 py-3 text-center">
-                <div className="text-[9px] uppercase text-slate-500 tracking-wider mb-1">Losers</div>
+                <div className="text-[10px] uppercase text-slate-500 tracking-wider mb-1">Losers</div>
                 <div className="text-sm font-bold font-mono text-red-400">{closedPositions.length - winners}</div>
               </div>
             </div>
@@ -743,7 +743,7 @@ export default function PortfolioV2() {
                         <tr key={p.id} className="border-b border-slate-800/30 hover:bg-slate-800/20 group">
                           <td className="py-3 px-3 text-white font-semibold">
                             {p.symbol}
-                            {p.journalEntryId && <span className="ml-1.5 text-[9px] px-1 py-0.5 rounded bg-cyan-500/15 text-cyan-400 font-medium align-middle">Journal</span>}
+                            {p.journalEntryId && <span className="ml-1.5 text-[10px] px-1 py-0.5 rounded bg-cyan-500/15 text-cyan-400 font-medium align-middle">Journal</span>}
                           </td>
                           <td className="py-3 px-3">
                             <span className={`${p.side === 'LONG' ? 'text-emerald-400' : 'text-red-400'} font-semibold`}>{p.side}</span>
@@ -808,7 +808,7 @@ export default function PortfolioV2() {
                     <tr key={p.id} className="border-b border-slate-800/30 hover:bg-slate-800/20">
                       <td className="py-3 px-3 text-white font-semibold">
                         {p.symbol}
-                        {p.journalEntryId && <span className="ml-1.5 text-[9px] px-1 py-0.5 rounded bg-cyan-500/15 text-cyan-400 font-medium align-middle">Journal</span>}
+                        {p.journalEntryId && <span className="ml-1.5 text-[10px] px-1 py-0.5 rounded bg-cyan-500/15 text-cyan-400 font-medium align-middle">Journal</span>}
                       </td>
                       <td className="py-3 px-3">
                         <span className={`${p.side === 'LONG' ? 'text-emerald-400' : 'text-red-400'} font-semibold`}>{p.side}</span>
@@ -872,7 +872,7 @@ function KPICard({ label, value, color = 'text-white' }: { label: string; value:
 function MetricCell({ label, value, color = 'text-white' }: { label: string; value: string; color?: string }) {
   return (
     <div className="text-center py-2">
-      <div className="text-[9px] uppercase text-slate-500 font-medium tracking-wider mb-1">{label}</div>
+      <div className="text-[10px] uppercase text-slate-500 font-medium tracking-wider mb-1">{label}</div>
       <div className={`text-sm font-bold font-mono ${color}`}>{value}</div>
     </div>
   );

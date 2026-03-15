@@ -175,7 +175,7 @@ export default function PricingPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6">
       <SectionHeader title="Plans & Pricing" subtitle="Simple pricing. Upgrade when you're ready." />
 
       {/* Referral banner */}
@@ -213,7 +213,7 @@ export default function PricingPage() {
           return (
             <Card
               key={plan.id}
-              className={`relative flex flex-col ${plan.id === 'pro' ? 'border-blue-500/40 ring-1 ring-blue-500/20' : plan.id === 'pro_trader' ? 'border-amber-500/40 ring-1 ring-amber-500/20' : ''}`}
+              className={`relative flex flex-col ${plan.id === 'pro' ? 'border-[var(--msp-accent)]/40 ring-1 ring-[var(--msp-accent)]/20' : plan.id === 'pro_trader' ? 'border-[var(--msp-accent)]/40 ring-1 ring-[var(--msp-accent)]/20' : ''}`}
             >
               {plan.badge && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">

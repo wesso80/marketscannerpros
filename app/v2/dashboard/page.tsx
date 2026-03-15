@@ -1,9 +1,9 @@
-﻿'use client';
+'use client';
 
-/* ═══════════════════════════════════════════════════════════════════════════
+/* ---------------------------------------------------------------------------
    SURFACE 1: DASHBOARD — Command Center
    Real API data from v1 endpoints.
-   ═══════════════════════════════════════════════════════════════════════════ */
+   --------------------------------------------------------------------------- */
 
 import { useMemo } from 'react';
 import { useV2 } from '../_lib/V2Context';
@@ -11,7 +11,7 @@ import { useRegime, useScannerResults, useMarketMovers, useNews, useEconomicCale
 import { REGIME_COLORS, CROSS_MARKET } from '../_lib/constants';
 import { Card, SectionHeader, ScoreBar, Badge, ImpactDot, AuthPrompt } from '../_components/ui';
 
-/* ── helpers ────────────────────────────────────────────────────────────── */
+/* -- helpers -------------------------------------------------------------- */
 function directionColor(d?: string) {
   if (d === 'bullish') return '#10B981';
   if (d === 'bearish') return '#EF4444';
@@ -26,7 +26,7 @@ function parseChangePct(raw: string) {
   return parseFloat((raw || '0').replace('%', ''));
 }
 
-/* ── Loading skeleton ───────────────────────────────────────────────────── */
+/* -- Loading skeleton ----------------------------------------------------- */
 function Skeleton({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
   return <div className={`${h} ${w} bg-slate-700/50 rounded animate-pulse`} />;
 }
@@ -46,7 +46,7 @@ function CardSkeleton({ rows = 4 }: { rows?: number }) {
 export default function DashboardPage() {
   const { navigateTo, selectSymbol } = useV2();
 
-  /* ── Real API calls ─────────────────────────────────────────────────── */
+  /* -- Real API calls --------------------------------------------------- */
   const regime = useRegime();
   const equityScan = useScannerResults('equity');
   const cryptoScan = useScannerResults('crypto');
@@ -54,7 +54,7 @@ export default function DashboardPage() {
   const news = useNews();
   const calendar = useEconomicCalendar();
 
-  /* ── Derived data ───────────────────────────────────────────────────── */
+  /* -- Derived data ----------------------------------------------------- */
   const allResults = useMemo(() => {
     const eq = equityScan.data?.results || [];
     const cr = cryptoScan.data?.results || [];
@@ -83,10 +83,10 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-4">
-      {/* ── Regime Banner ────────────────────────────────────────────── */}
+    <div className="space-y-6">
+      {/* -- Regime Banner ---------------------------------------------- */}
       {regime.data && (
-        <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-[#0D1520] border border-slate-700/60">
+        <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-[var(--msp-panel-2)] border border-[var(--msp-border)]">
           <span className="text-[10px] uppercase tracking-wider text-slate-500">Market Regime</span>
           <Badge
             label={regime.data.regime.replace(/_/g, ' ')}
@@ -104,12 +104,12 @@ export default function DashboardPage() {
 
       <SectionHeader title="Command Center" subtitle="What matters today — live data" />
 
-      {/* ── Best Setups (from Scanner) ───────────────────────────────── */}
+      {/* -- Best Setups (from Scanner) --------------------------------- */}
       {scanLoading ? <CardSkeleton rows={5} /> : (
         <Card>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-white">Best Setups Now</h3>
-            <button onClick={() => navigateTo('scanner')} className="text-[10px] text-emerald-400 hover:underline">View Scanner →</button>
+            <button onClick={() => navigateTo('scanner')} className="text-[10px] text-emerald-400 hover:underline">View Scanner ?</button>
           </div>
           {topSetups.length === 0 ? (
             <div className="text-xs text-slate-500 py-6 text-center">No scan results available — scanner may not have run yet today.</div>
@@ -118,7 +118,7 @@ export default function DashboardPage() {
               {topSetups.map((s: ScanResult) => (
                 <div
                   key={s.symbol}
-                  className="flex items-center justify-between py-2 px-3 rounded-lg bg-[#0A101C]/50 hover:bg-slate-800/50 cursor-pointer transition-colors"
+                  className="flex items-center justify-between py-2 px-3 rounded-lg bg-[var(--msp-panel-2)] hover:bg-slate-800/50 cursor-pointer transition-colors"
                   onClick={() => { selectSymbol(s.symbol); navigateTo('golden-egg', s.symbol); }}
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -131,7 +131,7 @@ export default function DashboardPage() {
                       <span className="text-xs text-slate-300">${s.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     )}
                     <div className="text-right w-14">
-                      <div className="text-[9px] text-slate-500">Score</div>
+                      <div className="text-[10px] text-slate-500">Score</div>
                       <div className="text-sm font-bold" style={{ color: directionColor(s.direction) }}>
                         {s.score}
                       </div>
@@ -148,12 +148,12 @@ export default function DashboardPage() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* ── Equity Movers ──────────────────────────────────────────── */}
+        {/* -- Equity Movers -------------------------------------------- */}
         {movers.loading ? <CardSkeleton rows={5} /> : (
           <Card>
             <h3 className="text-sm font-semibold text-white mb-3">Equity Movers</h3>
             <div className="space-y-1">
-              <div className="text-[9px] uppercase text-emerald-500 tracking-wider mb-1">Gainers</div>
+              <div className="text-[10px] uppercase text-emerald-500 tracking-wider mb-1">Gainers</div>
               {eqGainers.length === 0 ? (
                 <div className="text-xs text-slate-500 py-1">No equity data</div>
               ) : eqGainers.map((m: Mover) => (
@@ -163,7 +163,7 @@ export default function DashboardPage() {
                   <span className="text-emerald-400 font-mono text-right tabular-nums">+{m.change_percentage}</span>
                 </div>
               ))}
-              <div className="text-[9px] uppercase text-red-500 tracking-wider mb-1 mt-2">Losers</div>
+              <div className="text-[10px] uppercase text-red-500 tracking-wider mb-1 mt-2">Losers</div>
               {eqLosers.length === 0 ? (
                 <div className="text-xs text-slate-500 py-1">No equity data</div>
               ) : eqLosers.map((m: Mover) => (
@@ -177,12 +177,12 @@ export default function DashboardPage() {
           </Card>
         )}
 
-        {/* ── Crypto Movers ──────────────────────────────────────────── */}
+        {/* -- Crypto Movers -------------------------------------------- */}
         {movers.loading ? <CardSkeleton rows={5} /> : (
           <Card>
             <h3 className="text-sm font-semibold text-white mb-3">Crypto Movers</h3>
             <div className="space-y-1">
-              <div className="text-[9px] uppercase text-emerald-500 tracking-wider mb-1">Gainers</div>
+              <div className="text-[10px] uppercase text-emerald-500 tracking-wider mb-1">Gainers</div>
               {crGainers.length === 0 ? (
                 <div className="text-xs text-slate-500 py-1">No crypto data</div>
               ) : crGainers.map((m: Mover) => (
@@ -192,7 +192,7 @@ export default function DashboardPage() {
                   <span className="text-emerald-400 font-mono text-right">+{m.change_percentage}</span>
                 </div>
               ))}
-              <div className="text-[9px] uppercase text-red-500 tracking-wider mb-1 mt-2">Losers</div>
+              <div className="text-[10px] uppercase text-red-500 tracking-wider mb-1 mt-2">Losers</div>
               {crLosers.length === 0 ? (
                 <div className="text-xs text-slate-500 py-1">No crypto data</div>
               ) : crLosers.map((m: Mover) => (
@@ -206,7 +206,7 @@ export default function DashboardPage() {
           </Card>
         )}
 
-        {/* ── Economic Calendar ──────────────────────────────────────── */}
+        {/* -- Economic Calendar ---------------------------------------- */}
         {calendar.loading ? <CardSkeleton rows={4} /> : (
           <Card>
             <h3 className="text-sm font-semibold text-white mb-3">Upcoming Events</h3>
@@ -228,11 +228,11 @@ export default function DashboardPage() {
                 ))}
               </div>
             )}
-            <button onClick={() => navigateTo('research')} className="text-[10px] text-emerald-400 hover:underline mt-2 block">Full Calendar →</button>
+            <button onClick={() => navigateTo('research')} className="text-[10px] text-emerald-400 hover:underline mt-2 block">Full Calendar ?</button>
           </Card>
         )}
 
-        {/* ── Cross-Market ───────────────────────────────────────────── */}
+        {/* -- Cross-Market --------------------------------------------- */}
         <Card>
           <h3 className="text-sm font-semibold text-white mb-3">Cross-Market Influence</h3>
           <div className="space-y-2">
@@ -242,17 +242,17 @@ export default function DashboardPage() {
                 <span className="text-slate-500 text-right">{cm.effect}</span>
               </div>
             ))}
-            <button onClick={() => navigateTo('explorer')} className="text-[10px] text-emerald-400 hover:underline mt-1 block">Market Explorer →</button>
+            <button onClick={() => navigateTo('explorer')} className="text-[10px] text-emerald-400 hover:underline mt-1 block">Market Explorer ?</button>
           </div>
         </Card>
       </div>
 
-      {/* ── Latest News ──────────────────────────────────────────────── */}
+      {/* -- Latest News ------------------------------------------------ */}
       {news.loading ? <CardSkeleton rows={4} /> : (
         <Card>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-white">Latest Headlines</h3>
-            <button onClick={() => navigateTo('research')} className="text-[10px] text-emerald-400 hover:underline">All News →</button>
+            <button onClick={() => navigateTo('research')} className="text-[10px] text-emerald-400 hover:underline">All News ?</button>
           </div>
           {articles.length === 0 ? (
             <div className="text-xs text-slate-500 py-4 text-center">No recent news</div>
@@ -282,7 +282,7 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      {/* ── Error / debug (collapsed) ──────────────────────────────── */}
+      {/* -- Error / debug (collapsed) -------------------------------- */}
       {(() => {
         const errs = [
           equityScan.error && `Scanner (equity): ${equityScan.error}`,

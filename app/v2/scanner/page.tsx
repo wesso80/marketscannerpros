@@ -1,9 +1,9 @@
-﻿'use client';
+'use client';
 
-/* ═══════════════════════════════════════════════════════════════════════════
+/* ---------------------------------------------------------------------------
    SURFACE 2: SCANNER — Ranked Opportunity Engine
    Real API data: /api/scanner/run for equities + crypto
-   ═══════════════════════════════════════════════════════════════════════════ */
+   --------------------------------------------------------------------------- */
 
 import { useMemo, useState } from 'react';
 import { useV2 } from '../_lib/V2Context';
@@ -109,24 +109,24 @@ export default function ScannerPage() {
         className={`${w} text-left text-[10px] uppercase tracking-wider text-slate-500 cursor-pointer hover:text-slate-300 py-2 px-2 select-none`}
         onClick={() => toggleSort(k)}
       >
-        {label} {sortKey === k ? (sortDir === 'desc' ? '↓' : '↑') : ''}
+        {label} {sortKey === k ? (sortDir === 'desc' ? '?' : '?') : ''}
       </th>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <SectionHeader title="Scanner" subtitle="Ranked opportunity engine — live scan results" />
 
       {/* Active Regime Context */}
       {regime.data && (
-        <div className="flex items-center gap-3 px-3 py-2 rounded-lg border border-slate-700/50 bg-[#0D1422]">
+        <div className="flex items-center gap-3 px-3 py-2 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel-2)]">
           <span className="text-[10px] uppercase tracking-wider text-slate-500">Active Regime</span>
           <Badge label={regime.data.regime} color={REGIME_COLORS[currentRegime as RegimePriority] || '#64748B'} small />
           <span className="text-[10px] text-slate-500">Risk: <span className="text-white">{regime.data.riskLevel}</span></span>
           <span className="text-[10px] text-slate-500">Permission: <span className={regime.data.permission === 'full' ? 'text-emerald-400' : regime.data.permission === 'reduced' ? 'text-yellow-400' : 'text-red-400'}>{regime.data.permission}</span></span>
           <div className="h-3 w-px bg-slate-700 mx-1" />
-          <span className="text-[9px] text-slate-600">Weights: {Object.entries(REGIME_WEIGHTS[currentRegime] || {}).map(([k, v]) => `${k}:${v}`).join(' · ')}</span>
+          <span className="text-[10px] text-slate-600">Weights: {Object.entries(REGIME_WEIGHTS[currentRegime] || {}).map(([k, v]) => `${k}:${v}`).join(' · ')}</span>
         </div>
       )}
 
@@ -137,7 +137,7 @@ export default function ScannerPage() {
           <button
             key={tf.value}
             onClick={() => setTimeframe(tf.value)}
-            className={`px-2.5 py-1 text-[11px] rounded-md transition-colors ${timeframe === tf.value ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-slate-700/50'}`}
+            className={`px-2.5 py-1 text-[11px] rounded-md transition-colors ${timeframe === tf.value ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-[var(--msp-border)]'}`}
           >
             {tf.label}
           </button>
@@ -150,7 +150,7 @@ export default function ScannerPage() {
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-3 py-1.5 text-xs rounded-lg whitespace-nowrap transition-colors ${activeTab === tab ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-transparent'}`}
+            className={`px-2.5 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap transition-colors ${activeTab === tab ? 'bg-[rgba(16,185,129,0.1)] text-[var(--msp-accent)] border border-[rgba(16,185,129,0.4)]' : 'text-[var(--msp-text-muted)] hover:bg-slate-800/60 border border-transparent'}`}
           >
             {tab}
             <span className="ml-1 text-[10px] text-slate-600">
@@ -189,7 +189,7 @@ export default function ScannerPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-slate-700/50">
+                <tr className="border-b border-[var(--msp-border)]">
                   <SortHeader k="symbol" label="Symbol" w="w-20" />
                   <SortHeader k="price" label="Price" w="w-20" />
                   <SortHeader k="direction" label="Direction" w="w-20" />
@@ -214,7 +214,7 @@ export default function ScannerPage() {
                     >
                       <td className="py-2.5 px-2">
                         <div className="font-bold text-white">{r.symbol}</div>
-                        <div className="text-[9px] text-slate-600">{regimeLabel}</div>
+                        <div className="text-[10px] text-slate-600">{regimeLabel}</div>
                       </td>
                       <td className="py-2.5 px-2 text-slate-300 font-mono">
                         {r.price != null ? `$${r.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
@@ -251,10 +251,10 @@ export default function ScannerPage() {
                       </td>
                       <td className="py-2.5 px-2">
                         {isRegimeCompatible(r)
-                          ? <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">✓ Match</span>
+                          ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">? Match</span>
                           : r.scoreV2?.regimeScore?.gated
-                            ? <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 border border-red-500/20">Gated</span>
-                            : <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-500/15 text-slate-500 border border-slate-500/20">Neutral</span>
+                            ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 border border-red-500/20">Gated</span>
+                            : <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-500/15 text-slate-500 border border-slate-500/20">Neutral</span>
                         }
                       </td>
                       <td className="py-2.5 px-2 text-[10px] text-slate-400 truncate max-w-[80px]">
@@ -278,7 +278,7 @@ export default function ScannerPage() {
         <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-800/40">
           <span className="text-[10px] text-slate-600">{filtered.length} symbols</span>
           <div className="flex items-center gap-2">
-            <button onClick={() => { equity.refetch(); crypto.refetch(); }} className="text-[10px] text-emerald-400 hover:underline">↻ Rescan</button>
+            <button onClick={() => { equity.refetch(); crypto.refetch(); }} className="text-[10px] text-emerald-400 hover:underline">? Rescan</button>
           </div>
         </div>
       </Card>

@@ -24,13 +24,13 @@ export default function WorkspacePage() {
   const [tab, setTab] = useState<typeof TABS[number]>('Watchlists');
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <SectionHeader title="Workspace" subtitle="Your personal trading workspace" />
 
       {/* Tabs */}
       <div className="flex items-center gap-1 overflow-x-auto pb-1">
         {TABS.map(t => (
-          <button key={t} onClick={() => setTab(t)} className={`px-3 py-1.5 text-xs rounded-lg whitespace-nowrap transition-colors ${tab === t ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-transparent'}`}>
+          <button key={t} onClick={() => setTab(t)} className={`px-2.5 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap transition-colors ${tab === t ? 'bg-[rgba(16,185,129,0.1)] text-[var(--msp-accent)] border border-[rgba(16,185,129,0.4)]' : 'text-[var(--msp-text-muted)] hover:bg-slate-800/60 border border-transparent'}`}>
             {t}
           </button>
         ))}

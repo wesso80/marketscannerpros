@@ -24,8 +24,8 @@ export default function TopNav() {
   const badge = TIER_BADGE[tier];
 
   return (
-    <nav className="sticky top-0 z-50 bg-[#0A101C]/95 backdrop-blur-sm border-b border-slate-700/50">
-      <div className="max-w-[1800px] mx-auto px-3 flex items-center gap-1 h-12 overflow-x-auto scrollbar-thin">
+    <nav className="sticky top-0 z-[100] bg-[var(--msp-bg)]/95 backdrop-blur-sm border-b border-[var(--msp-border)]">
+      <div className="px-3 flex items-center gap-1.5 h-11 overflow-x-auto scrollbar-thin">
         <Link href="/" className="text-emerald-400 font-bold text-sm mr-3 whitespace-nowrap flex-shrink-0">
           MSP<span className="text-slate-500 font-normal ml-1">v2</span>
         </Link>
@@ -33,10 +33,10 @@ export default function TopNav() {
           <button
             key={item.id}
             onClick={() => navigateTo(item.id)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 ${
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all flex-shrink-0 ${
               activeSurface === item.id
-                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                ? 'bg-[rgba(16,185,129,0.1)] text-[var(--msp-accent)] border border-[rgba(16,185,129,0.4)]'
+                : 'text-[var(--msp-text-muted)] hover:text-white hover:bg-slate-800/60'
             }`}
           >
             <span className="text-sm">{item.icon}</span>

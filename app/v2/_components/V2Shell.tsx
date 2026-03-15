@@ -16,7 +16,7 @@ export default function V2Shell({ children }: { children: React.ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0A101C] flex items-center justify-center">
+      <div className="min-h-screen bg-[var(--msp-bg)] flex items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
       </div>
     );
@@ -24,14 +24,14 @@ export default function V2Shell({ children }: { children: React.ReactNode }) {
 
   return (
     <V2Provider>
-      <div className="min-h-screen bg-[#0A101C] text-white">
+      <div className="min-h-screen bg-[var(--msp-bg)] text-[var(--msp-text)] overflow-x-hidden">
         <TopNav />
         <RegimeBar />
-        <main className="max-w-[1800px] mx-auto px-3 md:px-6 py-4">
+        <main className="px-3 md:px-4 py-4 max-w-none">
           {children}
         </main>
-        <footer className="border-t border-slate-800/50 mt-8 py-4 px-6 text-center">
-          <div className="text-[10px] text-slate-600">
+        <footer className="border-t border-[var(--msp-border)] mt-8 py-4 px-6 text-center">
+          <div className="text-[10px] text-[var(--msp-text-faint)]">
             MSP v2 Preview — Decision Intelligence Platform
             <span className="mx-2">|</span>
             <Link href="/tools/scanner" className="text-slate-500 hover:text-emerald-400 transition-colors">Back to v1</Link>

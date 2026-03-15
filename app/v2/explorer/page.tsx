@@ -1,10 +1,10 @@
-﻿'use client';
+'use client';
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   SURFACE 5: EXPLORER — Cross-Market Intelligence
+/* ---------------------------------------------------------------------------
+   SURFACE 5: EXPLORER ï¿½ Cross-Market Intelligence
    Real APIs: /api/sectors/heatmap + /api/crypto/market-overview +
               /api/market-movers + /api/commodities + /api/economic-indicators
-   ═══════════════════════════════════════════════════════════════════════════ */
+   --------------------------------------------------------------------------- */
 
 import { useState, useMemo } from 'react';
 import { useV2 } from '../_lib/V2Context';
@@ -48,30 +48,30 @@ export default function ExplorerPage() {
   const cryptoSectors = cryptoCats.data?.highlighted || [];
 
   return (
-    <div className="space-y-4">
-      <SectionHeader title="Market Explorer" subtitle="Cross-market intelligence — live data" />
+    <div className="space-y-6">
+      <SectionHeader title="Market Explorer" subtitle="Cross-market intelligence ï¿½ live data" />
 
       <UpgradeGate requiredTier="pro" currentTier={tier} feature="Market Explorer">
       {/* Tabs */}
       <div className="flex items-center gap-1 overflow-x-auto pb-1">
         {TABS.map(t => (
-          <button key={t} onClick={() => setTab(t)} className={`px-3 py-1.5 text-xs rounded-lg whitespace-nowrap transition-colors ${tab === t ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-transparent'}`}>
+          <button key={t} onClick={() => setTab(t)} className={`px-2.5 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap transition-colors ${tab === t ? 'bg-[rgba(16,185,129,0.1)] text-[var(--msp-accent)] border border-[rgba(16,185,129,0.4)]' : 'text-[var(--msp-text-muted)] hover:bg-slate-800/60 border border-transparent'}`}>
             {t}
           </button>
         ))}
       </div>
 
-      {/* ── OVERVIEW ───────────────────────────────────────────────── */}
+      {/* -- OVERVIEW ------------------------------------------------- */}
       {tab === 'Overview' && (
         <div className="space-y-4">
-          {/* ─── Equities Section ─────────────── */}
+          {/* --- Equities Section --------------- */}
           <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Equities</div>
 
           {/* Sector Heatmap */}
           {sectorData.length > 0 && (
             <Card>
               <h3 className="text-sm font-semibold text-white mb-3">Sector Heatmap</h3>
-              <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-1.5">
+              <div className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-6 gap-1.5">
                 {sectorData.map((s: SectorData) => {
                   const pct = s.changePercent ?? s.daily ?? 0;
                   return (
@@ -84,7 +84,7 @@ export default function ExplorerPage() {
                       onClick={() => { selectSymbol(s.symbol); navigateTo('golden-egg', s.symbol); }}
                     >
                       <div className="text-[10px] text-white font-semibold">{s.symbol}</div>
-                      <div className="text-[9px] text-slate-300 truncate">{s.name}</div>
+                      <div className="text-[10px] text-slate-300 truncate">{s.name}</div>
                       <div className={`text-xs font-bold ${pctColor(pct)}`}>
                         {pct > 0 ? '+' : ''}{pct.toFixed(2)}%
                       </div>
@@ -132,14 +132,14 @@ export default function ExplorerPage() {
             </Card>
           </div>
 
-          {/* ─── Crypto Section ─────────────── */}
+          {/* --- Crypto Section --------------- */}
           <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mt-2">Crypto</div>
 
           {/* Crypto Sector Performance */}
           {cryptoSectors.length > 0 && (
             <Card>
               <h3 className="text-sm font-semibold text-white mb-3">Sector Performance</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-2">
                 {cryptoSectors.map((cat: CryptoCategory) => {
                   const pct = cat.change24h ?? 0;
                   return (
@@ -167,22 +167,22 @@ export default function ExplorerPage() {
           {cryptoData && (
             <Card>
               <h3 className="text-sm font-semibold text-white mb-3">Crypto Market</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="bg-[#0A101C]/50 rounded-lg p-3">
-                  <div className="text-[9px] text-slate-500 uppercase">Total Market Cap</div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
+                  <div className="text-[10px] text-slate-500 uppercase">Total Market Cap</div>
                   <div className="text-sm font-bold text-white">{cryptoData.totalMarketCapFormatted}</div>
                   <div className={`text-[10px] ${pctColor(cryptoData.marketCapChange24h)}`}>{cryptoData.marketCapChange24h > 0 ? '+' : ''}{cryptoData.marketCapChange24h.toFixed(2)}%</div>
                 </div>
-                <div className="bg-[#0A101C]/50 rounded-lg p-3">
-                  <div className="text-[9px] text-slate-500 uppercase">24h Volume</div>
+                <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
+                  <div className="text-[10px] text-slate-500 uppercase">24h Volume</div>
                   <div className="text-sm font-bold text-white">{cryptoData.totalVolumeFormatted}</div>
                 </div>
-                <div className="bg-[#0A101C]/50 rounded-lg p-3">
-                  <div className="text-[9px] text-slate-500 uppercase">BTC Dominance</div>
+                <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
+                  <div className="text-[10px] text-slate-500 uppercase">BTC Dominance</div>
                   <div className="text-sm font-bold text-white">{cryptoData.btcDominance.toFixed(1)}%</div>
                 </div>
-                <div className="bg-[#0A101C]/50 rounded-lg p-3">
-                  <div className="text-[9px] text-slate-500 uppercase">ETH Dominance</div>
+                <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
+                  <div className="text-[10px] text-slate-500 uppercase">ETH Dominance</div>
                   <div className="text-sm font-bold text-white">{cryptoData.ethDominance.toFixed(1)}%</div>
                 </div>
               </div>
@@ -228,7 +228,7 @@ export default function ExplorerPage() {
         </div>
       )}
 
-      {/* ── SECTORS ────────────────────────────────────────────────── */}
+      {/* -- SECTORS -------------------------------------------------- */}
       {tab === 'Sectors' && (
         <Card>
           {sectors.loading ? <div className="space-y-3">{[1,2,3,4].map(i => <Skel key={i} h="h-8" />)}</div> : sectorData.length === 0 ? (
@@ -237,7 +237,7 @@ export default function ExplorerPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b border-slate-700/50">
+                  <tr className="border-b border-[var(--msp-border)]">
                     <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Sector</th>
                     <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">ETF</th>
                     <th className="text-right py-2 px-2 text-[10px] uppercase text-slate-500">Change %</th>
@@ -253,9 +253,9 @@ export default function ExplorerPage() {
                       <td className="py-2.5 px-2 text-white">{s.name}</td>
                       <td className="py-2.5 px-2 text-emerald-400">{s.symbol}</td>
                       <td className={`py-2.5 px-2 text-right font-mono ${pctColor(s.changePercent)}`}>{s.changePercent > 0 ? '+' : ''}{s.changePercent.toFixed(2)}%</td>
-                      <td className={`py-2.5 px-2 text-right font-mono ${pctColor(s.weekly || 0)}`}>{s.weekly != null ? `${s.weekly > 0 ? '+' : ''}${s.weekly.toFixed(2)}%` : '—'}</td>
-                      <td className={`py-2.5 px-2 text-right font-mono ${pctColor(s.monthly || 0)}`}>{s.monthly != null ? `${s.monthly > 0 ? '+' : ''}${s.monthly.toFixed(2)}%` : '—'}</td>
-                      <td className={`py-2.5 px-2 text-right font-mono text-slate-400`}>{(s as any).ytd != null ? `${(s as any).ytd > 0 ? '+' : ''}${(s as any).ytd.toFixed(2)}%` : '—'}</td>
+                      <td className={`py-2.5 px-2 text-right font-mono ${pctColor(s.weekly || 0)}`}>{s.weekly != null ? `${s.weekly > 0 ? '+' : ''}${s.weekly.toFixed(2)}%` : 'ï¿½'}</td>
+                      <td className={`py-2.5 px-2 text-right font-mono ${pctColor(s.monthly || 0)}`}>{s.monthly != null ? `${s.monthly > 0 ? '+' : ''}${s.monthly.toFixed(2)}%` : 'ï¿½'}</td>
+                      <td className={`py-2.5 px-2 text-right font-mono text-slate-400`}>{(s as any).ytd != null ? `${(s as any).ytd > 0 ? '+' : ''}${(s as any).ytd.toFixed(2)}%` : 'ï¿½'}</td>
                       <td className="py-2.5 px-2 text-right text-slate-400">{(s.weight * 100).toFixed(1)}%</td>
                     </tr>
                   ))}
@@ -266,8 +266,8 @@ export default function ExplorerPage() {
         </Card>
       )}
 
-      {/* ── CRYPTO ─────────────────────────────────────────────────── */}
-      {/* ── COMMODITIES ────────────────────────────────────────────── */}
+      {/* -- CRYPTO --------------------------------------------------- */}
+      {/* -- COMMODITIES ---------------------------------------------- */}
       {tab === 'Commodities' && (
         <Card>
           {commodities.loading ? <div className="space-y-3">{[1,2,3].map(i => <Skel key={i} h="h-12" />)}</div> : commodList.length === 0 ? (
@@ -275,11 +275,11 @@ export default function ExplorerPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {commodList.map((c: CommodityData) => (
-                <div key={c.symbol} className="bg-[#0A101C]/50 rounded-lg p-3">
+                <div key={c.symbol} className="bg-[var(--msp-panel-2)] rounded-lg p-3">
                   <div className="flex items-center justify-between mb-1">
                     <div>
                       <div className="text-sm font-bold text-white">{c.name}</div>
-                      <div className="text-[9px] text-slate-500">{c.category} · {c.unit}</div>
+                      <div className="text-[10px] text-slate-500">{c.category} ï¿½ {c.unit}</div>
                     </div>
                     <Badge label={c.changePercent > 0 ? 'UP' : c.changePercent < 0 ? 'DOWN' : 'FLAT'} color={c.changePercent > 0 ? '#10B981' : c.changePercent < 0 ? '#EF4444' : '#94A3B8'} small />
                   </div>
@@ -295,13 +295,13 @@ export default function ExplorerPage() {
         </Card>
       )}
 
-      {/* ── CROSS-MARKET ───────────────────────────────────────────── */}
+      {/* -- CROSS-MARKET --------------------------------------------- */}
       {tab === 'Cross-Market' && (
         <Card>
           <h3 className="text-sm font-semibold text-white mb-3">Cross-Market Influence Map</h3>
           <div className="space-y-3">
             {CROSS_MARKET.map(cm => (
-              <div key={cm.from} className="bg-[#0A101C]/50 rounded-lg p-3">
+              <div key={cm.from} className="bg-[var(--msp-panel-2)] rounded-lg p-3">
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="text-sm font-semibold text-white">{cm.from}</span>
