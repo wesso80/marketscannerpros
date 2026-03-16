@@ -13,12 +13,7 @@ const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
 
 // Health check — verify endpoint is reachable
 export async function GET() {
-  return NextResponse.json({
-    status: 'ok',
-    hasSecret: !!process.env.STRIPE_WEBHOOK_SECRET,
-    hasStripeKey: !!process.env.STRIPE_SECRET_KEY,
-    hasDb: !!process.env.DATABASE_URL,
-  });
+  return NextResponse.json({ status: 'ok' });
 }
 
 // Price ID mappings - read from environment variables
