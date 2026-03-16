@@ -8,8 +8,9 @@
 
 import { useState, useMemo } from 'react';
 import { useV2 } from '../_lib/V2Context';
-import { useSectorsHeatmap, useCryptoOverview, useCryptoCategories, useMarketMovers, useCommodities, type SectorData, type Mover, type CommodityData, type CryptoCategory } from '../_lib/api';
-import { CROSS_MARKET } from '../_lib/constants';
+import { useSectorsHeatmap, useCryptoOverview, useCryptoCategories, useMarketMovers, useCommodities, useRegime, type SectorData, type Mover, type CommodityData, type CryptoCategory } from '../_lib/api';
+import { CROSS_MARKET, REGIME_COLORS } from '../_lib/constants';
+import type { RegimePriority } from '../_lib/types';
 import { Card, SectionHeader, Badge, UpgradeGate } from '../_components/ui';
 import { useUserTier } from '@/lib/useUserTier';
 
@@ -35,6 +36,7 @@ export default function ExplorerPage() {
   const cryptoCats = useCryptoCategories();
   const movers = useMarketMovers();
   const commodities = useCommodities();
+  const regime = useRegime();
 
   const sectorData = sectors.data?.sectors || [];
   const cryptoData = cryptoOverview.data?.data;
@@ -295,10 +297,45 @@ export default function ExplorerPage() {
         </Card>
       )}
 
-      {/* -- CROSS-MARKET --------------------------------------------- */}
+      {/* -- CROSS-MARKET (Phase 5 — Dynamic + Static) -------------- */}
       {tab === 'Cross-Market' && (
         <Card>
           <h3 className="text-sm font-semibold text-white mb-3">Cross-Market Influence Map</h3>
+
+          {/* Dynamic regime signals */}
+          {regime.data?.signals && regime.data.signals.length > 0 && (
+            <div className="mb-4">
+              <div className="text-[10px] text-slate-500 uppercase mb-2">Live Market Regime Signals</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                {regime.data.signals.map((sig: any, i: number) => {
+                  const r = sig.regime?.toLowerCase() || '';
+                  const isHeadwind = r === 'risk_off' || r === 'compression';
+                  const isTailwind = r === 'trend' || r === 'expansion' || r === 'risk_on';
+                  const color = isHeadwind ? '#EF4444' : isTailwind ? '#10B981' : '#94A3B8';
+                  return (
+                    <div key={i} className="bg-[var(--msp-panel-2)] rounded-lg p-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-white">{sig.source}</span>
+                        <div className="flex items-center gap-1">
+                          <Badge label={sig.regime} color={REGIME_COLORS[r as RegimePriority] || '#64748B'} small />
+                          {sig.stale && <span className="text-[9px] text-yellow-500 border border-yellow-500/30 px-1 rounded">stale</span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <div className="h-1.5 flex-1 bg-slate-800 rounded-full overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: `${Math.min(sig.weight * 100, 100)}%`, backgroundColor: color }} />
+                        </div>
+                        <span className="text-[10px] font-semibold" style={{ color }}>{isHeadwind ? 'Headwind' : isTailwind ? 'Tailwind' : 'Neutral'}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Static known relationships */}
+          <div className="text-[10px] text-slate-500 uppercase mb-2">Known Relationships</div>
           <div className="space-y-3">
             {CROSS_MARKET.map(cm => (
               <div key={cm.from} className="bg-[var(--msp-panel-2)] rounded-lg p-3">
@@ -311,9 +348,6 @@ export default function ExplorerPage() {
                 </div>
               </div>
             ))}
-          </div>
-          <div className="mt-3 pt-2 border-t border-slate-800/40 text-[10px] text-slate-600">
-            Note: Cross-market influence data will be real-time in a future update. Currently showing known relationships.
           </div>
         </Card>
       )}

@@ -9,8 +9,40 @@ import { useState, useMemo } from 'react';
 import { useV2 } from '../_lib/V2Context';
 import { useGoldenEgg, useDVE, useQuote, useRegime, useScannerResults, type ScanResult, type ScanTimeframe, SCAN_TIMEFRAMES } from '../_lib/api';
 import { Card, SectionHeader, Badge, ScoreBar, UpgradeGate } from '../_components/ui';
-import { REGIME_COLORS, VERDICT_COLORS, CROSS_MARKET } from '../_lib/constants';
-import type { RegimePriority, Verdict } from '../_lib/types';
+import { REGIME_COLORS, VERDICT_COLORS, CROSS_MARKET, LIFECYCLE_COLORS, REGIME_WEIGHTS } from '../_lib/constants';
+import type { RegimePriority, Verdict, LifecycleState } from '../_lib/types';
+
+/* ─── Phase 5: Cross-Market Alignment ─── */
+function deriveCrossMarketAlignment(signals?: Array<{ source: string; regime: string; weight: number; stale: boolean }>): { alignment: 'supportive' | 'neutral' | 'headwind'; factors: string[] } {
+  if (!signals || signals.length === 0) return { alignment: 'neutral', factors: ['No cross-market data'] };
+  const factors: string[] = [];
+  let headwinds = 0;
+  let tailwinds = 0;
+  for (const s of signals) {
+    if (s.stale) continue;
+    const r = s.regime?.toLowerCase() || '';
+    if (r === 'risk_off' || r === 'compression') { headwinds += s.weight; factors.push(`${s.source}: ${s.regime} (headwind)`); }
+    else if (r === 'trend' || r === 'expansion' || r === 'risk_on') { tailwinds += s.weight; factors.push(`${s.source}: ${s.regime} (supportive)`); }
+    else { factors.push(`${s.source}: ${s.regime} (neutral)`); }
+  }
+  if (headwinds > tailwinds + 0.2) return { alignment: 'headwind', factors };
+  if (tailwinds > headwinds + 0.2) return { alignment: 'supportive', factors };
+  return { alignment: 'neutral', factors };
+}
+
+const ALIGNMENT_COLOR: Record<string, string> = { supportive: '#10B981', neutral: '#F59E0B', headwind: '#EF4444' };
+
+/* ─── Phase 6: Lifecycle State from GE data ─── */
+function deriveGELifecycle(permission?: string, confidence?: number, gated?: boolean): LifecycleState {
+  if (gated) return 'INVALIDATED';
+  const conf = confidence ?? 0;
+  const perm = (permission || '').toUpperCase();
+  if (perm === 'YES' && conf >= 65) return 'READY';
+  if (perm === 'YES' && conf >= 40) return 'SETTING_UP';
+  if (perm === 'WAIT' || perm === 'WATCH') return 'WATCHING';
+  if (perm === 'NO') return 'INVALIDATED';
+  return 'DISCOVERED';
+}
 import { useUserTier } from '@/lib/useUserTier';
 
 function Skel({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
@@ -168,6 +200,8 @@ export default function GoldenEggPage() {
                     {regime.data && <Badge label={`Regime: ${regime.data.regime}`} color={REGIME_COLORS[regime.data.regime?.toLowerCase() as RegimePriority] || '#64748B'} small />}
                     <Badge label={ge.layer1.direction} color={dirColor(ge.layer1.direction)} />
                     <Badge label={`Grade ${ge.layer1.grade}`} color={gradeColor(ge.layer1.grade)} small />
+                    {(() => { const lc = deriveGELifecycle(ge.layer1.permission, ge.layer1.confidence); return <span className="text-[10px] px-1.5 py-0.5 rounded border font-semibold" style={{ color: LIFECYCLE_COLORS[lc], borderColor: LIFECYCLE_COLORS[lc] + '40', backgroundColor: LIFECYCLE_COLORS[lc] + '15' }}>{lc.replace('_', ' ')}</span>; })()}
+                    {(() => { const cm = deriveCrossMarketAlignment(regime.data?.signals); return <span className="text-[10px] px-1.5 py-0.5 rounded border font-semibold" style={{ color: ALIGNMENT_COLOR[cm.alignment], borderColor: ALIGNMENT_COLOR[cm.alignment] + '40', backgroundColor: ALIGNMENT_COLOR[cm.alignment] + '15' }}>{cm.alignment === 'headwind' ? '⚠ Headwind' : cm.alignment === 'supportive' ? '✓ Tailwind' : '— Neutral'}</span>; })()}
                   </div>
                   <div className="text-lg font-bold text-white">
                     ${ge.meta.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -255,9 +289,50 @@ export default function GoldenEggPage() {
             )}
           </Card>
 
-          {/* -- CROSS-MARKET INFLUENCE (Critical Upgrade #4) ------- */}
+          {/* -- CROSS-MARKET INFLUENCE (Phase 5 — Dynamic + Static) ------- */}
           <Card>
             <h3 className="text-xs font-semibold text-emerald-400 mb-3">Cross-Market Influence</h3>
+
+            {/* Dynamic signals from regime API */}
+            {regime.data?.signals && regime.data.signals.length > 0 && (
+              <div className="mb-4">
+                <div className="text-[10px] text-slate-500 uppercase mb-2">Live Market Signals</div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {regime.data.signals.map((sig: any, i: number) => {
+                    const r = sig.regime?.toLowerCase() || '';
+                    const isHeadwind = r === 'risk_off' || r === 'compression';
+                    const isTailwind = r === 'trend' || r === 'expansion' || r === 'risk_on';
+                    const color = isHeadwind ? '#EF4444' : isTailwind ? '#10B981' : '#94A3B8';
+                    return (
+                      <div key={i} className="bg-[var(--msp-panel-2)] rounded-lg p-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-white">{sig.source}</span>
+                          {sig.stale && <span className="text-[9px] text-yellow-500">stale</span>}
+                        </div>
+                        <div className="flex items-center gap-1 mt-1">
+                          <span className="text-[10px] font-semibold" style={{ color }}>{sig.regime}</span>
+                          <span className="text-[9px] text-slate-600">w:{sig.weight}</span>
+                        </div>
+                        <div className="text-[9px] mt-0.5" style={{ color }}>{isHeadwind ? 'Headwind' : isTailwind ? 'Supportive' : 'Neutral'}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {(() => {
+                  const cm = deriveCrossMarketAlignment(regime.data.signals);
+                  return (
+                    <div className="mt-2 p-2 rounded-lg border" style={{ borderColor: ALIGNMENT_COLOR[cm.alignment] + '40', backgroundColor: ALIGNMENT_COLOR[cm.alignment] + '10' }}>
+                      <span className="text-xs font-bold" style={{ color: ALIGNMENT_COLOR[cm.alignment] }}>
+                        Overall: {cm.alignment.charAt(0).toUpperCase() + cm.alignment.slice(1)}
+                      </span>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* Static known relationships */}
+            <div className="text-[10px] text-slate-500 uppercase mb-2">Known Relationships</div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
               {CROSS_MARKET.map(cm => (
                 <div key={cm.from} className="bg-[var(--msp-panel-2)] rounded-lg p-2.5 text-center">

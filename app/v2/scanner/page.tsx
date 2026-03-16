@@ -11,8 +11,8 @@ import Link from 'next/link';
 import { useV2 } from '../_lib/V2Context';
 import { useScannerResults, useRegime, type ScanResult, type ScanTimeframe, SCAN_TIMEFRAMES } from '../_lib/api';
 import { Card, SectionHeader, Badge } from '../_components/ui';
-import { REGIME_COLORS, REGIME_WEIGHTS } from '../_lib/constants';
-import type { RegimePriority } from '../_lib/types';
+import { REGIME_COLORS, REGIME_WEIGHTS, LIFECYCLE_COLORS } from '../_lib/constants';
+import type { RegimePriority, LifecycleState } from '../_lib/types';
 import { useUserTier, FREE_DAILY_SCAN_LIMIT, canAccessUnlimitedScanning } from '@/lib/useUserTier';
 import ScreenerTable, { type ScreenerRow } from '@/components/scanner/ScreenerTable';
 import ScanTemplatesBar, { type ScanTemplate, SCAN_TEMPLATES } from '@/components/scanner/ScanTemplatesBar';
@@ -29,8 +29,37 @@ function formatPrice(p: number | undefined | null) {
 }
 
 const TABS = ['All', 'Equities', 'Crypto', 'Bullish', 'Bearish', 'High Score', 'DVE Signals', 'Regime Match'] as const;
-type SortKey = 'symbol' | 'score' | 'direction' | 'confidence' | 'rsi' | 'price' | 'dveBbwp';
+type SortKey = 'symbol' | 'score' | 'direction' | 'confidence' | 'rsi' | 'price' | 'dveBbwp' | 'mspScore';
 type SortDir = 'asc' | 'desc';
+
+/* ─── Phase 2: Regime-Weighted MSP Score ─── */
+function computeMspScore(r: ScanResult, regime: string): number {
+  const w = REGIME_WEIGHTS[regime] || REGIME_WEIGHTS.trend;
+  // Normalize each component to 0-100 scale
+  const structure = Math.min(100, Math.max(0, Math.abs(r.score ?? 0) * 10));
+  const momentum = Math.min(100, Math.max(0, r.confidence ?? (Math.abs(r.score ?? 0) * 8)));
+  const volatility = r.dveBbwp != null
+    ? (r.dveBbwp < 20 ? 80 + (20 - r.dveBbwp) : r.dveBbwp > 80 ? 70 + (r.dveBbwp - 80) : 30 + r.dveBbwp * 0.3)
+    : 40;
+  const options = r.derivatives ? Math.min(100, 50 + Math.abs(r.derivatives.fundingRate ?? 0) * 500) : 30;
+  const time = r.scoreV2?.acl?.confidence ?? 50;
+  const raw = (structure * w.structure + momentum * w.momentum + volatility * w.volatility + options * w.options + time * w.time) / 100;
+  // Apply regime gating penalty
+  if (r.scoreV2?.regimeScore?.gated) return Math.max(0, raw * 0.4);
+  return Math.round(Math.min(100, Math.max(0, raw)));
+}
+
+/* ─── Phase 6: Trade Lifecycle State ─── */
+function deriveLifecycleState(r: ScanResult, regime: string): LifecycleState {
+  const msp = computeMspScore(r, regime);
+  const conf = r.confidence ?? 0;
+  const gated = r.scoreV2?.regimeScore?.gated;
+  if (gated) return 'INVALIDATED';
+  if (msp >= 75 && conf >= 65) return 'READY';
+  if (msp >= 55 && conf >= 45) return 'SETTING_UP';
+  if (msp >= 35) return 'WATCHING';
+  return 'DISCOVERED';
+}
 type ScannerMode = 'ranked' | 'pro';
 type AssetClass = 'crypto' | 'equity' | 'forex';
 type ScanDepth = 'light' | 'deep';
@@ -304,7 +333,7 @@ export default function ScannerPage() {
   const equity = useScannerResults('equity', v2Timeframe);
   const crypto = useScannerResults('crypto', v2Timeframe);
   const [activeTab, setActiveTab] = useState<typeof TABS[number]>('All');
-  const [sortKey, setSortKey] = useState<SortKey>('score');
+  const [sortKey, setSortKey] = useState<SortKey>('mspScore');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
 
   /* ─── Pro Scan state ─── */
@@ -378,6 +407,7 @@ export default function ScannerPage() {
       switch (sortKey) {
         case 'symbol': av = a.symbol; bv = b.symbol; break;
         case 'score': av = a.score ?? 0; bv = b.score ?? 0; break;
+        case 'mspScore': av = computeMspScore(a, currentRegime); bv = computeMspScore(b, currentRegime); break;
         case 'direction': av = a.direction ?? ''; bv = b.direction ?? ''; break;
         case 'confidence': av = a.confidence ?? 0; bv = b.confidence ?? 0; break;
         case 'rsi': av = a.rsi ?? 0; bv = b.rsi ?? 0; break;
@@ -615,39 +645,38 @@ export default function ScannerPage() {
                   <thead>
                     <tr className="border-b border-[var(--msp-border)]">
                       <SortHeader k="symbol" label="Symbol" w="w-20" />
+                      <SortHeader k="mspScore" label="MSP" w="w-14" />
                       <SortHeader k="price" label="Price" w="w-20" />
-                      <SortHeader k="direction" label="Direction" w="w-20" />
-                      <SortHeader k="score" label="Score" w="w-16" />
-                      <SortHeader k="confidence" label="Conf %" w="w-16" />
-                      <SortHeader k="rsi" label="RSI" w="w-14" />
-                      <SortHeader k="dveBbwp" label="BBWP" w="w-14" />
-                      <th className="w-24 text-left text-[10px] uppercase tracking-wider text-slate-500 py-2 px-2">DVE</th>
+                      <SortHeader k="direction" label="Direction" w="w-16" />
+                      <SortHeader k="score" label="Raw" w="w-12" />
+                      <SortHeader k="confidence" label="Conf" w="w-12" />
+                      <SortHeader k="dveBbwp" label="BBWP" w="w-12" />
+                      <th className="w-20 text-left text-[10px] uppercase tracking-wider text-slate-500 py-2 px-2">DVE</th>
                       <th className="w-16 text-left text-[10px] uppercase tracking-wider text-slate-500 py-2 px-2">Regime</th>
-                      <th className="w-20 text-left text-[10px] uppercase tracking-wider text-slate-500 py-2 px-2">Setup</th>
+                      <th className="w-16 text-left text-[10px] uppercase tracking-wider text-slate-500 py-2 px-2">Lifecycle</th>
                       <th className="w-16 text-[10px] uppercase tracking-wider text-slate-500 py-2 px-2">Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filtered.map((r) => {
                       const regimeLabel = r.scoreV2?.regime?.label || r.type || '';
+                      const msp = computeMspScore(r, currentRegime);
+                      const lifecycle = deriveLifecycleState(r, currentRegime);
+                      const mspColor = msp >= 70 ? '#10B981' : msp >= 50 ? '#F59E0B' : msp >= 30 ? '#94A3B8' : '#EF4444';
                       return (
                         <tr key={r.symbol} className="border-b border-slate-800/40 hover:bg-slate-800/30 cursor-pointer transition-colors" onClick={() => handleV2RowClick(r)}>
                           <td className="py-2.5 px-2"><div className="font-bold text-white">{r.symbol}</div><div className="text-[10px] text-slate-600">{regimeLabel}</div></td>
+                          <td className="py-2.5 px-2 text-center"><span className="text-sm font-black" style={{ color: mspColor }}>{msp}</span></td>
                           <td className="py-2.5 px-2 text-slate-300 font-mono">{formatPrice(r.price)}</td>
                           <td className="py-2.5 px-2"><Badge label={r.direction || 'neutral'} color={dirColor(r.direction)} small /></td>
-                          <td className="py-2.5 px-2"><span className="font-bold" style={{ color: dirColor(r.direction) }}>{r.score}</span></td>
-                          <td className="py-2.5 px-2 text-slate-300">{r.confidence != null ? `${r.confidence}%` : '—'}</td>
-                          <td className="py-2.5 px-2">
-                            <span className={r.rsi != null ? (r.rsi > 70 ? 'text-red-400' : r.rsi < 30 ? 'text-emerald-400' : 'text-slate-300') : 'text-slate-600'}>
-                              {r.rsi != null ? r.rsi.toFixed(0) : '—'}
-                            </span>
-                          </td>
+                          <td className="py-2.5 px-2 text-slate-400 text-[10px]">{r.score}</td>
+                          <td className="py-2.5 px-2 text-slate-400 text-[10px]">{r.confidence != null ? `${r.confidence}%` : '—'}</td>
                           <td className="py-2.5 px-2">
                             <span className={r.dveBbwp != null ? (r.dveBbwp < 20 ? 'text-cyan-400' : r.dveBbwp > 80 ? 'text-orange-400' : 'text-slate-300') : 'text-slate-600'}>
                               {r.dveBbwp != null ? r.dveBbwp.toFixed(0) : '—'}
                             </span>
                           </td>
-                          <td className="py-2.5 px-2 text-[10px] truncate max-w-[100px]">
+                          <td className="py-2.5 px-2 text-[10px] truncate max-w-[80px]">
                             {(() => {
                               if (r.dveSignalType && r.dveSignalType !== 'none') return <span className="text-yellow-400 font-semibold">{r.dveSignalType.replace(/_/g, ' ')}</span>;
                               if (r.dveFlags && r.dveFlags.length > 0) {
@@ -665,7 +694,11 @@ export default function ScannerPage() {
                                 ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 border border-red-500/20">Gated</span>
                                 : <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-500/15 text-slate-500 border border-slate-500/20">Neutral</span>}
                           </td>
-                          <td className="py-2.5 px-2 text-[10px] text-slate-400 truncate max-w-[80px]">{r.setup || '—'}</td>
+                          <td className="py-2.5 px-2">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded border" style={{ color: LIFECYCLE_COLORS[lifecycle], borderColor: LIFECYCLE_COLORS[lifecycle] + '40', backgroundColor: LIFECYCLE_COLORS[lifecycle] + '15' }}>
+                              {lifecycle.replace('_', ' ')}
+                            </span>
+                          </td>
                           <td className="py-2.5 px-2 text-center">
                             <button onClick={(e) => { e.stopPropagation(); handleV2RowClick(r); }} className="px-2 py-1 bg-emerald-500/10 text-emerald-400 rounded text-[10px] hover:bg-emerald-500/20 transition-colors">Analyze</button>
                           </td>
