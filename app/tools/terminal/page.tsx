@@ -626,21 +626,23 @@ export default function TerminalPage() {
 
       {/* ─── Options Confluence (v1 flagship decision engine) ─── */}
       {tab === 'Options Confluence' && (
-        <UpgradeGate requiredTier="pro" currentTier={tier} feature="Options Confluence Engine">
+        <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Options Confluence Engine">
           <OptionsConfluence />
         </UpgradeGate>
       )}
 
       {/* ─── Options Flow (v1 flow intelligence) ─── */}
       {tab === 'Options Flow' && (
-        <UpgradeGate requiredTier="pro" currentTier={tier} feature="Options Flow Intelligence">
+        <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Options Flow Intelligence">
           <OptionsFlow />
         </UpgradeGate>
       )}
 
       {/* ─── Time Gravity Map (v1 time scanner) ─── */}
       {tab === 'Time Gravity' && (
-        <TimeScanner />
+        <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Time Gravity Map">
+          <TimeScanner />
+        </UpgradeGate>
       )}
     </div>
   );

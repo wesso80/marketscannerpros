@@ -22,7 +22,7 @@ export default function RouteChrome({ children }: RouteChromeProps) {
       {!isOperatorRoute && <Header />}
       <main className="msp-main-shell">{children}</main>
       {!isAppRoute ? <Footer /> : null}
-      {!isAppRoute ? <CookieBanner /> : null}
+      <CookieBanner />
       <AlertToast />
       {!isAppRoute ? <BackToTop /> : null}
     </>

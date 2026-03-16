@@ -63,7 +63,12 @@ export default function ResearchPage() {
         ))}
       </div>
 
-      <UpgradeGate requiredTier="pro" currentTier={tier} feature="Market Research">
+      {(tier === 'free' || tier === 'anonymous') && (
+        <div className="text-xs text-center text-slate-400 bg-slate-800/50 border border-slate-700/30 rounded-lg px-3 py-2">
+          \uD83D\uDD12 <span className="text-emerald-400 font-semibold">Upgrade to Pro</span> to interact with Market Research
+        </div>
+      )}
+      <div className={(tier === 'free' || tier === 'anonymous') ? 'pointer-events-none select-none' : undefined}>
 
       {/* -- NEWS ----------------------------------------------------- */}
       {tab === 'News' && (
@@ -209,7 +214,7 @@ export default function ResearchPage() {
         <EconCalendarV1 />
       )}
 
-      </UpgradeGate>
+      </div>
     </div>
   );
 }

@@ -84,7 +84,7 @@ setInterval(() => {
 export async function middleware(req: NextRequest) {
   // ── Global rate limit on API routes ──
   const { pathname } = req.nextUrl;
-  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/webhooks') && !pathname.startsWith('/api/auth/')) {
+  if (pathname.startsWith('/api/') && !pathname.startsWith('/api/webhooks') && !pathname.startsWith('/api/auth/') && !pathname.startsWith('/api/internal/')) {
     const ip = getClientIP(req);
     if (isApiRateLimited(ip)) {
       return NextResponse.json(
@@ -110,9 +110,28 @@ export async function middleware(req: NextRequest) {
       const daysLeft = secondsLeft / ONE_DAY;
       const refreshThreshold = isAdmin ? 30 : 7;
       const refreshDays = isAdmin ? 365 : 30;
-      const refreshTier = isAdmin ? 'pro_trader' : session.tier;
+      let refreshTier = isAdmin ? 'pro_trader' : session.tier;
 
       if (daysLeft < refreshThreshold) {
+        // Verify current tier from database before refreshing (skip for admin/anon)
+        if (!isAdmin && !session.cid.startsWith('anon-')) {
+          try {
+            const origin = req.nextUrl.origin;
+            const verifyUrl = `${origin}/api/internal/verify-tier?wid=${encodeURIComponent(session.workspaceId)}`;
+            const resp = await fetch(verifyUrl, {
+              headers: { 'Authorization': `Bearer ${APP_SIGNING_SECRET}` },
+            });
+            if (resp.ok) {
+              const data = await resp.json() as { tier: string; status: string };
+              if (data.tier !== 'unknown') {
+                refreshTier = data.tier;
+              }
+            }
+          } catch {
+            // DB check failed — fall back to cookie tier (graceful degradation)
+          }
+        }
+
         const newExp = Math.floor(Date.now() / 1000) + refreshDays * ONE_DAY;
         const newToken = await signToken({
           cid: session.cid,
@@ -131,6 +150,24 @@ export async function middleware(req: NextRequest) {
         );
         return res;
       }
+    }
+  }
+
+  // ── FFA anonymous workspace isolation ──
+  // When FREE_FOR_ALL_MODE is on and user has no session, assign a persistent
+  // anonymous ID so each browser gets its own workspace (no shared data).
+  if (process.env.FREE_FOR_ALL_MODE === 'true' && !cookie) {
+    const existing = req.cookies.get('ms_anon')?.value;
+    if (!existing) {
+      const anonId = crypto.randomUUID();
+      const host = req.headers.get('host') || '';
+      const isLocalhost = host.includes('localhost') || host.includes('127.0.0.1');
+      const res = NextResponse.next();
+      res.cookies.set('ms_anon', anonId, isLocalhost
+        ? { httpOnly: true, secure: false, sameSite: 'lax' as const, path: '/', maxAge: 30 * ONE_DAY }
+        : { httpOnly: true, secure: true, sameSite: 'lax' as const, domain: '.marketscannerpros.app', path: '/', maxAge: 30 * ONE_DAY }
+      );
+      return res;
     }
   }
 

@@ -43,10 +43,12 @@ export async function getSessionFromCookie(): Promise<SessionPayload | null> {
       (process.env.NODE_ENV === 'development' && process.env.DEV_AUTH_BYPASS === 'true') ||
       process.env.FREE_FOR_ALL_MODE === 'true'
     ) {
+      // Use ms_anon cookie (set by middleware) so each browser gets its own workspace
+      const anonId = cookieStore.get('ms_anon')?.value || 'anonymous';
       return {
-        cid: 'dev-local-testing',
+        cid: `anon-${anonId}`,
         tier: 'pro_trader',
-        workspaceId: '00000000-0000-0000-0000-000000000000',
+        workspaceId: hashWorkspaceId(`anon-${anonId}`),
         exp: Math.floor(Date.now() / 1000) + 86400 * 365,
       };
     }

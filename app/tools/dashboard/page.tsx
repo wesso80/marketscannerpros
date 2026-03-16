@@ -10,7 +10,8 @@ import dynamic from 'next/dynamic';
 import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useRegime, useScannerResults, useMarketMovers, useNews, useEconomicCalendar, type ScanResult, type Mover, type NewsArticle, type EconomicEvent } from '@/app/v2/_lib/api';
 import { REGIME_COLORS, CROSS_MARKET } from '@/app/v2/_lib/constants';
-import { Card, SectionHeader, ScoreBar, Badge, ImpactDot, AuthPrompt } from '@/app/v2/_components/ui';
+import { Card, SectionHeader, ScoreBar, Badge, ImpactDot, AuthPrompt, UpgradeGate } from '@/app/v2/_components/ui';
+import { useUserTier } from '@/lib/useUserTier';
 
 /* ─── Dynamic imports: v1 deep-dive components ─── */
 const CryptoDashboard = dynamic(() => import('@/app/tools/crypto-dashboard/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Crypto Derivatives…</div> });
@@ -54,6 +55,8 @@ function CardSkeleton({ rows = 4 }: { rows?: number }) {
 export default function DashboardPage() {
   const { navigateTo, selectSymbol } = useV2();
   const [dashTab, setDashTab] = useState<DashTab>('Command Center');
+  const { tier } = useUserTier();
+  const isPro = tier === 'pro' || tier === 'pro_trader';
 
   /* -- Real API calls --------------------------------------------------- */
   const regime = useRegime();
@@ -131,13 +134,26 @@ export default function DashboardPage() {
       </div>
 
       {/* ─── Crypto Derivatives Tab ─── */}
-      {dashTab === 'Crypto Derivatives' && <CryptoDashboard />}
+      {dashTab === 'Crypto Derivatives' && <UpgradeGate requiredTier="pro" currentTier={tier} feature="Crypto Derivatives"><CryptoDashboard /></UpgradeGate>}
 
       {/* ─── Macro Tab ─── */}
-      {dashTab === 'Macro' && <MacroDashboard />}
+      {dashTab === 'Macro' && (!isPro ? (
+        <div>
+          <div className="text-xs text-center text-slate-400 bg-slate-800/50 border border-slate-700/30 rounded-lg px-3 py-2 mb-3">
+            🔒 <span className="text-emerald-400 font-semibold">Upgrade to Pro</span> to interact with the Macro Dashboard
+          </div>
+          <div className="pointer-events-none select-none"><MacroDashboard /></div>
+        </div>
+      ) : <MacroDashboard />)}
 
       {/* ─── Command Center Tab (default) ─── */}
       {dashTab === 'Command Center' && <>
+      {!isPro && (
+        <div className="text-xs text-center text-slate-400 bg-slate-800/50 border border-slate-700/30 rounded-lg px-3 py-2">
+          🔒 <span className="text-emerald-400 font-semibold">Upgrade to Pro</span> to interact with the Command Center
+        </div>
+      )}
+      <div className={!isPro ? 'pointer-events-none select-none' : undefined}>
 
       {/* -- Best Setups (from Scanner) --------------------------------- */}
       {scanLoading ? <CardSkeleton rows={5} /> : (
@@ -333,6 +349,7 @@ export default function DashboardPage() {
           </details>
         );
       })()}
+      </div>
       </>}
     </div>
   );

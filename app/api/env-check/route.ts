@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export function GET(req: NextRequest) {
-  // Only allow in development or with admin secret
-  const isDevMode = process.env.NODE_ENV === 'development';
+  // Always require ADMIN_SECRET — never expose env info publicly
   const authHeader = req.headers.get('authorization');
   const adminSecret = process.env.ADMIN_SECRET;
   let isAdmin = false;
@@ -14,7 +13,7 @@ export function GET(req: NextRequest) {
     } catch { isAdmin = false; }
   }
 
-  if (!isDevMode && !isAdmin) {
+  if (!isAdmin) {
     return NextResponse.json({ error: "Not available" }, { status: 403 });
   }
 
@@ -26,6 +25,5 @@ export function GET(req: NextRequest) {
     OPENAI_API_KEY: has("OPENAI_API_KEY"),
     DATABASE_URL: has("DATABASE_URL"),
     POSTGRES_URL: has("POSTGRES_URL"),
-    FREE_FOR_ALL_MODE: has("FREE_FOR_ALL_MODE"),
   });
 }

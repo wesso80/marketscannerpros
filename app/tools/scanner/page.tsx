@@ -10,7 +10,7 @@ import { useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useScannerResults, useRegime, type ScanResult, type ScanTimeframe, SCAN_TIMEFRAMES } from '@/app/v2/_lib/api';
-import { Card, SectionHeader, Badge } from '@/app/v2/_components/ui';
+import { Card, SectionHeader, Badge, UpgradeGate } from '@/app/v2/_components/ui';
 import { REGIME_COLORS, REGIME_WEIGHTS, LIFECYCLE_COLORS } from '@/app/v2/_lib/constants';
 import type { RegimePriority, LifecycleState } from '@/app/v2/_lib/types';
 import { useUserTier, FREE_DAILY_SCAN_LIMIT, canAccessUnlimitedScanning } from '@/lib/useUserTier';
@@ -739,6 +739,7 @@ export default function ScannerPage() {
 
       {/* ═══════════════════════════════ PRO SCANNER ═══════════════════════════════ */}
       {mode === 'pro' && !selectedSymbol && (
+        <UpgradeGate requiredTier="pro" currentTier={tier} feature="Pro Scanner">
         <>
           {/* Scan Configuration Form */}
           <div className="rounded-xl border border-[var(--msp-border)] bg-[var(--msp-card)] p-4">
@@ -917,6 +918,7 @@ export default function ScannerPage() {
             <div className="space-y-3 py-4">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-10 bg-slate-700/30 rounded animate-pulse" />)}</div>
           )}
         </>
+        </UpgradeGate>
       )}
 
       {/* ═══════════════════════════════ INLINE DETAIL PANEL ═══════════════════════════════ */}
