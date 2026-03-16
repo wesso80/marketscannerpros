@@ -15,52 +15,6 @@
 			]
 		},
 		{
-			"label": "fix-encoding",
-			"type": "shell",
-			"command": "node",
-			"args": [
-				"fix_encoding2.js"
-			],
-			"isBackground": false
-		},
-		{
-			"label": "fix-emdash",
-			"type": "shell",
-			"command": "node",
-			"args": [
-				"-e",
-				"const fs=require('fs');const f='app/tools/portfolio/page.tsx';let t=fs.readFileSync(f,'utf8');t=t.replace('Portfolio sync failed  changes saved locally only','Portfolio sync failed \\u2014 changes saved locally only');fs.writeFileSync(f,t,'utf8');console.log('Fixed line 950 em dash')"
-			],
-			"isBackground": false
-		},
-		{
-			"label": "fix-emdash2",
-			"type": "shell",
-			"command": "node",
-			"args": [
-				"fix_emdash.js"
-			],
-			"isBackground": false
-		},
-		{
-			"label": "debug-hex",
-			"type": "shell",
-			"command": "node",
-			"args": [
-				"fix_debug.js"
-			],
-			"isBackground": false
-		},
-		{
-			"label": "fix-emdash-final",
-			"type": "shell",
-			"command": "node",
-			"args": [
-				"fix_emdash2.js"
-			],
-			"isBackground": false
-		},
-		{
 			"label": "build-check",
 			"type": "shell",
 			"command": "npx next build 2>&1 | Select-String -Pattern 'error TS|Type error|Failed to compile|Build error|Module not found|Error occurred|exiting the build'",
@@ -69,39 +23,6 @@
 				"build"
 			],
 			"isBackground": false
-		},
-		{
-			"label": "cleanup-temp-files",
-			"type": "shell",
-			"command": "node",
-			"args": [
-				"-e",
-				"const fs=require('fs');['fix_encoding2.js','fix_encoding.js','fix_emdash2.js','fix_emdash.js','fix_debug.js','fix_encoding.py','fix_output.txt','fix_report.txt'].forEach(f=>{try{fs.unlinkSync(f);console.log('deleted '+f)}catch(e){console.log('skip '+f)}})"
-			]
-		},
-		{
-			"label": "cleanup",
-			"type": "shell",
-			"command": "node",
-			"args": [
-				"cleanup.js"
-			]
-		},
-		{
-			"label": "git-status",
-			"type": "shell",
-			"command": "node",
-			"args": [
-				"_git_status.js"
-			]
-		},
-		{
-			"label": "git-commit-push",
-			"type": "shell",
-			"command": "node",
-			"args": [
-				"_git_commit.js"
-			]
 		}
 	]
 }
