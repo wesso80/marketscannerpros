@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { hashWorkspaceId } from '@/lib/auth';
+import { isValidAdminSecret } from '@/lib/adminAuth';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-06-20' as any });
@@ -13,7 +14,7 @@ export async function POST(request: NextRequest) {
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
     const stripeSignature = request.headers.get('stripe-signature');
 
-    const isCronAuth = cronSecret && headerSecret === cronSecret;
+    const isCronAuth = isValidAdminSecret(headerSecret, cronSecret);
     let isStripeWebhook = false;
 
     // Read body once so it can be reused for both verification and parsing

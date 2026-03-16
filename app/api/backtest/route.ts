@@ -33,6 +33,7 @@ import { createRateLimiter, getClientIP } from '@/lib/rateLimit';
 import { buildBacktestEngineResult } from '@/lib/backtest/engine';
 import { getBacktestStrategy } from '@/lib/strategies/registry';
 import { hasProTraderAccess } from '@/lib/proTraderAccess';
+import { verifyCronAuth } from '@/lib/adminAuth';
 import {
   parseBacktestTimeframe,
   isStrategyTimeframeCompatible,
@@ -68,9 +69,7 @@ export async function POST(req: NextRequest) {
 
     // Pro Trader tier required
     // Allow internal cron jobs to bypass auth via x-cron-secret header
-    const cronSecret = process.env.CRON_SECRET;
-    const headerCronSecret = req.headers.get('x-cron-secret');
-    const isCronBypass = cronSecret && headerCronSecret === cronSecret;
+    const isCronBypass = verifyCronAuth(req);
 
     if (!isCronBypass) {
       const session = await getSessionFromCookie();

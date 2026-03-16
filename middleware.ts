@@ -94,18 +94,18 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // Admin emails that get permanent (365-day) auto-refreshing sessions
-  const ADMIN_CIDS = ['admin_xxneutronxx@yahoo.com', 'admin_bradleywessling@yahoo.com.au',
-    'free_xxneutronxx@yahoo.com', 'free_bradleywessling@yahoo.com.au',
-    'trial_xxneutronxx@yahoo.com', 'trial_bradleywessling@yahoo.com.au'];
-  const ADMIN_EMAILS_MW = ['xxneutronxx@yahoo.com', 'bradleywessling@yahoo.com.au'];
+  // Admin emails from ADMIN_EMAILS env var (comma-separated)
+  const adminEmailsRaw = process.env.ADMIN_EMAILS || '';
+  const ADMIN_EMAILS_MW = adminEmailsRaw.split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+  const ADMIN_PREFIXES = ['admin_', 'free_', 'trial_'];
+  const ADMIN_CIDS = ADMIN_EMAILS_MW.flatMap(email => ADMIN_PREFIXES.map(p => `${p}${email}`));
 
   const cookie = req.cookies.get('ms_auth')?.value;
   if (cookie) {
     const session = await verify(cookie);
     if (session) {
       const cid = session.cid || '';
-      const isAdmin = ADMIN_CIDS.includes(cid) || ADMIN_EMAILS_MW.some(e => cid.endsWith(e) || cid === e);
+      const isAdmin = ADMIN_CIDS.includes(cid) || ADMIN_EMAILS_MW.includes(cid.toLowerCase());
       const secondsLeft = session.exp - Math.floor(Date.now() / 1000);
       const daysLeft = secondsLeft / ONE_DAY;
       const refreshThreshold = isAdmin ? 30 : 7;
@@ -119,7 +119,7 @@ export async function middleware(req: NextRequest) {
             const origin = req.nextUrl.origin;
             const verifyUrl = `${origin}/api/internal/verify-tier?wid=${encodeURIComponent(session.workspaceId)}`;
             const resp = await fetch(verifyUrl, {
-              headers: { 'Authorization': `Bearer ${APP_SIGNING_SECRET}` },
+              headers: { 'x-cron-secret': process.env.CRON_SECRET || '' },
             });
             if (resp.ok) {
               const data = await resp.json() as { tier: string; status: string };

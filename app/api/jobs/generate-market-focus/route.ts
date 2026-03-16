@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { q } from "@/lib/db";
+import { verifyCronAuth } from "@/lib/adminAuth";
 
 export const runtime = "nodejs";
 
@@ -119,9 +120,7 @@ export async function POST(req: Request) {
 
 async function runMarketFocusJob(req: Request) {
   // Strict secret check - reject if CRON_SECRET not configured or mismatched
-  const secret = req.headers.get("x-cron-secret") || req.headers.get("authorization")?.replace('Bearer ', '');
-  const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret || secret !== cronSecret) {
+  if (!verifyCronAuth(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

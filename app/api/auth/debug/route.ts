@@ -2,13 +2,12 @@
 // SECURITY: This endpoint is restricted to admin use only.
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
+import { verifyAdminAuth, verifyCronAuth } from '@/lib/adminAuth';
 
 export async function POST(req: NextRequest) {
   try {
-    // Admin auth: require CRON_SECRET or ADMIN_SECRET header
-    const adminSecret = process.env.ADMIN_SECRET || process.env.CRON_SECRET;
-    const headerSecret = req.headers.get('x-admin-secret') || req.headers.get('x-cron-secret');
-    if (!adminSecret || headerSecret !== adminSecret) {
+    // Admin auth: require CRON_SECRET or ADMIN_SECRET header (timing-safe)
+    if (!verifyAdminAuth(req) && !verifyCronAuth(req)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

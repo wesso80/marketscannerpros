@@ -6,6 +6,7 @@ import { avCircuit } from "@/lib/circuitBreaker";
 import { avTakeToken } from "@/lib/avRateGovernor";
 import { shouldUseCache, canFallbackToAV, getCacheMode } from "@/lib/cacheMode";
 import { getCachedScanData, getBulkCachedScanData, CachedScanData } from "@/lib/scannerCache";
+import { verifyCronAuth } from "@/lib/adminAuth";
 import { recordSignalsBatch, RecordSignalParams } from "@/lib/signalRecorder";
 import { getRuntimeRiskSnapshotInput } from "@/lib/risk/runtimeSnapshot";
 import { buildPermissionSnapshot } from "@/lib/risk-governor-hard";
@@ -374,9 +375,7 @@ export async function POST(req: NextRequest) {
 
     // Auth check - allow internal cron jobs to bypass via x-cron-secret header
     // Anonymous users get default scans with limited scope
-    const cronSecret = process.env.CRON_SECRET;
-    const headerCronSecret = req.headers.get('x-cron-secret');
-    const isCronBypass = cronSecret && headerCronSecret === cronSecret;
+    const isCronBypass = verifyCronAuth(req);
 
     const session = isCronBypass
       ? { workspaceId: 'system-cron', tier: 'pro_trader' as const, cid: 'system' }

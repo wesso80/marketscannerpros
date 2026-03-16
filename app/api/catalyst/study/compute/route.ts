@@ -23,6 +23,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { getOrComputeStudy } from '@/lib/catalyst/eventStudy';
 import { CatalystSubtype, type StudyCohort } from '@/lib/catalyst/types';
+import { verifyCronAuth } from '@/lib/adminAuth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300; // 5 minutes
@@ -49,19 +50,8 @@ export async function POST(req: NextRequest) {
 
   try {
     // ── Auth ───────────────────────────────────────────────────────
-    const cronSecret = process.env.CRON_SECRET;
-    const headerSecret = req.headers.get('x-cron-secret');
-    const authHeader = req.headers.get('authorization');
-
-    if (!cronSecret) {
-      return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 });
-    }
-    {
-      const validHeader = headerSecret === cronSecret;
-      const validBearer = authHeader === `Bearer ${cronSecret}`;
-      if (!validHeader && !validBearer) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
+    if (!verifyCronAuth(req)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // ── Parse params ──────────────────────────────────────────────

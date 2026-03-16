@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
+import { verifyCronAuth } from '@/lib/adminAuth';
 
 /**
  * Internal endpoint called by middleware during session refresh.
  * Returns the current subscription tier from the database.
- * Protected by APP_SIGNING_SECRET to prevent external abuse.
+ * Protected by CRON_SECRET to prevent external abuse.
  */
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get('authorization') || '';
-  const secret = process.env.APP_SIGNING_SECRET;
-  if (!secret || authHeader !== `Bearer ${secret}`) {
+  if (!verifyCronAuth(req)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

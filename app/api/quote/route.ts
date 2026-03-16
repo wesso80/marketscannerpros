@@ -5,6 +5,7 @@ import { getQuote } from "@/lib/onDemandFetch";
 import { apiLimiter, getClientIP } from "@/lib/rateLimit";
 import { avFetch } from "@/lib/avRateGovernor";
 import { getSessionFromCookie } from "@/lib/auth";
+import { verifyCronAuth } from "@/lib/adminAuth";
 
 /**
  * /api/quote?symbol=XRPUSD&type=crypto&market=USD
@@ -29,9 +30,7 @@ type AssetType = "crypto" | "stock" | "fx";
 export async function GET(req: NextRequest) {
   // Auth guard: AV license requires authenticated users only
   // Allow internal cron jobs to bypass auth via x-cron-secret header
-  const cronSecret = process.env.CRON_SECRET;
-  const headerSecret = req.headers.get('x-cron-secret');
-  const isCronBypass = cronSecret && headerSecret === cronSecret;
+  const isCronBypass = verifyCronAuth(req);
 
   if (!isCronBypass) {
     const session = await getSessionFromCookie();

@@ -27,6 +27,7 @@ import { createRateLimiter, getClientIP } from '@/lib/rateLimit';
 import { fetchPriceData, isCryptoSymbol, normalizeSymbol } from '@/lib/backtest/providers';
 import { computeCoverage } from '@/lib/backtest/timeframe';
 import { runScannerBacktest } from '@/lib/backtest/scannerBacktest';
+import { verifyCronAuth } from '@/lib/adminAuth';
 
 const limiter = createRateLimiter('backtest_scanner', { windowMs: 60_000, max: 8 });
 
@@ -42,8 +43,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Auth + tier gate
-    const cronSecret = process.env.CRON_SECRET;
-    const isCron = cronSecret && req.headers.get('x-cron-secret') === cronSecret;
+    const isCron = verifyCronAuth(req);
     if (!isCron) {
       const session = await getSessionFromCookie();
       if (!session?.workspaceId) {
