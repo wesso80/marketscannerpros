@@ -10,178 +10,105 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <main style={{
-      minHeight: '100vh',
-      background: 'var(--msp-bg)',
-      color: '#E5E7EB',
-      padding: '4rem 1rem',
-    }}>
-      <div style={{
-        maxWidth: '800px',
-        margin: '0 auto',
-      }}>
-        <div style={{
-          background: 'var(--msp-card)',
-          border: '1px solid rgba(16, 185, 129, 0.2)',
-          borderRadius: '1.5rem',
-          padding: '3rem',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-        }}>
-          <h1 style={{
-            fontSize: '2.5rem',
-            fontWeight: 700,
-            marginBottom: '0.5rem',
-            background: 'var(--msp-accent)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-          }}>Privacy Policy</h1>
-          <p style={{ color: '#9CA3AF', marginBottom: '2rem' }}><strong style={{ color: '#E5E7EB' }}>Effective date:</strong> 13 December 2025</p>
+    <main className="min-h-screen bg-[var(--msp-bg)] px-4 py-16 text-slate-200">
+      <div className="mx-auto max-w-[800px]">
+        <div className="rounded-3xl border border-emerald-500/20 bg-[var(--msp-card)] p-8 shadow-2xl md:p-12">
+          <div className="prose prose-invert prose-emerald max-w-none prose-headings:text-slate-100 prose-a:text-emerald-400 prose-strong:text-slate-200">
+      <h1 className="text-emerald-400">Privacy Policy</h1>
+      <p><strong>Effective date:</strong> 13 December 2025</p>
 
-          <Section title="Overview">
-            <p style={pStyle}>
-              MarketScanner Pros ("we", "us") provides a trading dashboard and related services.
-              This policy explains what we collect, why, and your choices.
-            </p>
-          </Section>
+      <h2>Overview</h2>
+      <p>
+        MarketScanner Pros (&ldquo;we&rdquo;, &ldquo;us&rdquo;) provides a trading dashboard and related services.
+        This policy explains what we collect, why, and your choices.
+      </p>
 
-          <Section title="Information we collect">
-            <ul style={ulStyle}>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Email Address:</strong> Collected during checkout to verify trial eligibility and send receipts. Required for all paid subscriptions.</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Account:</strong> Workspace ID (device identifier) for authentication and subscription tracking.</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Billing:</strong> Processed by Stripe (web/Android) or Apple (iOS); we store minimal subscription status and payment metadata.</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Trial Usage Tracking:</strong> Email address, plan type, workspace ID, and Stripe customer ID stored to prevent trial abuse (one trial per email per plan).</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Usage & Logs:</strong> Diagnostics, error tracking (via Sentry), and server logs for reliability and abuse prevention.</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>AI Interactions:</strong> Questions asked to ARCA AI (AI chatbot) are tracked by workspace ID for tier limit enforcement. We store question count, tier level, and timestamps. Question content may be logged for debugging but is not used for training.</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Cookies/Storage:</strong> Session cookies for authentication, workspace ID tracking, and user preferences.</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Device Information:</strong> Browser type, IP address, and device fingerprints for fraud prevention and rate limiting.</li>
-            </ul>
-          </Section>
+      <h2>Information we collect</h2>
+      <ul>
+        <li><strong>Email Address:</strong> Collected during checkout to verify trial eligibility and send receipts. Required for all paid subscriptions.</li>
+        <li><strong>Account:</strong> Workspace ID (device identifier) for authentication and subscription tracking.</li>
+        <li><strong>Billing:</strong> Processed by Stripe (web/Android) or Apple (iOS); we store minimal subscription status and payment metadata.</li>
+        <li><strong>Trial Usage Tracking:</strong> Email address, plan type, workspace ID, and Stripe customer ID stored to prevent trial abuse (one trial per email per plan).</li>
+        <li><strong>Usage &amp; Logs:</strong> Diagnostics, error tracking (via Sentry), and server logs for reliability and abuse prevention.</li>
+        <li><strong>AI Interactions:</strong> Questions asked to ARCA AI (AI chatbot) are tracked by workspace ID for tier limit enforcement. We store question count, tier level, and timestamps. Question content may be logged for debugging but is not used for training.</li>
+        <li><strong>Cookies/Storage:</strong> Session cookies for authentication, workspace ID tracking, and user preferences.</li>
+        <li><strong>Device Information:</strong> Browser type, IP address, and device fingerprints for fraud prevention and rate limiting.</li>
+      </ul>
 
-          <Section title="How we use information">
-            <ul style={ulStyle}>
-              <li style={liStyle}>Authenticate accounts and secure access to the dashboard via workspace IDs.</li>
-              <li style={liStyle}>Verify trial eligibility and prevent trial abuse (one trial per email address).</li>
-              <li style={liStyle}>Process subscriptions and let you manage billing in Stripe's Customer Portal or Apple's App Store.</li>
-              <li style={liStyle}>Send transactional emails (receipts, subscription confirmations, trial reminders).</li>
-              <li style={liStyle}>Detect and prevent fraud, abuse, and unauthorized access.</li>
-              <li style={liStyle}>Monitor performance, track errors, and improve service reliability.</li>
-              <li style={liStyle}>Operate, maintain, and improve the service; comply with legal obligations.</li>
-            </ul>
-          </Section>
+      <h2>How we use information</h2>
+      <ul>
+        <li>Authenticate accounts and secure access to the dashboard via workspace IDs.</li>
+        <li>Verify trial eligibility and prevent trial abuse (one trial per email address).</li>
+        <li>Process subscriptions and let you manage billing in Stripe&rsquo;s Customer Portal or Apple&rsquo;s App Store.</li>
+        <li>Send transactional emails (receipts, subscription confirmations, trial reminders).</li>
+        <li>Detect and prevent fraud, abuse, and unauthorized access.</li>
+        <li>Monitor performance, track errors, and improve service reliability.</li>
+        <li>Operate, maintain, and improve the service; comply with legal obligations.</li>
+      </ul>
 
-          <Section title="Sharing & processors">
-            <ul style={ulStyle}>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Stripe</strong> (payments & portal).</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>OpenAI</strong> (ARCA AI chatbot powered by GPT-4 - does not train on your data).</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Alpha Vantage</strong> (real-time and historical market data provider).</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Render</strong> (application hosting and web services).</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Neon</strong> (PostgreSQL database hosting).</li>
-            </ul>
-          </Section>
+      <h2>Sharing &amp; processors</h2>
+      <ul>
+        <li><strong>Stripe</strong> (payments &amp; portal).</li>
+        <li><strong>OpenAI</strong> (ARCA AI chatbot powered by GPT-4 - does not train on your data).</li>
+        <li><strong>Alpha Vantage</strong> (real-time and historical market data provider).</li>
+        <li><strong>Render</strong> (application hosting and web services).</li>
+        <li><strong>Neon</strong> (PostgreSQL database hosting).</li>
+      </ul>
 
-          <Section title="International transfers">
-            <p style={pStyle}>Data may be processed outside your country; we use appropriate safeguards where required.</p>
-          </Section>
+      <h2>International transfers</h2>
+      <p>Data may be processed outside your country; we use appropriate safeguards where required.</p>
 
-          <Section title="Retention">
-            <ul style={ulStyle}>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Email & Trial Records:</strong> Retained indefinitely to prevent trial abuse. Required for fraud prevention.</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Subscription Data:</strong> Retained while subscription is active, plus 7 years for tax/legal compliance.</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Workspace IDs:</strong> Retained for account continuity; deleted upon account deletion request.</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Logs & Analytics:</strong> Retained for 90 days, then automatically deleted.</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Other Personal Data:</strong> Kept only as long as necessary for stated purposes or as required by law.</li>
-            </ul>
-          </Section>
+      <h2>Retention</h2>
+      <ul>
+        <li><strong>Email &amp; Trial Records:</strong> Retained indefinitely to prevent trial abuse. Required for fraud prevention.</li>
+        <li><strong>Subscription Data:</strong> Retained while subscription is active, plus 7 years for tax/legal compliance.</li>
+        <li><strong>Workspace IDs:</strong> Retained for account continuity; deleted upon account deletion request.</li>
+        <li><strong>Logs &amp; Analytics:</strong> Retained for 90 days, then automatically deleted.</li>
+        <li><strong>Other Personal Data:</strong> Kept only as long as necessary for stated purposes or as required by law.</li>
+      </ul>
 
-          <Section title="Your rights">
-            <p style={pStyle}>You may request access, correction, deletion, or object to processing. Contact us to exercise rights.</p>
-          </Section>
+      <h2>Your rights</h2>
+      <p>You may request access, correction, deletion, or object to processing. Contact us to exercise rights.</p>
 
-          <Section title="Your rights (GDPR)" id="gdpr">
-            <p style={pStyle}>If you are in the European Economic Area (EEA), United Kingdom, or Switzerland, you have the following rights under the GDPR:</p>
-            <ul style={ulStyle}>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Access:</strong> Request a copy of the personal data we hold about you.</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Rectification:</strong> Request correction of inaccurate or incomplete data.</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Erasure:</strong> Request deletion of your personal data ("right to be forgotten").</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Restriction:</strong> Request that we limit processing of your data.</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Portability:</strong> Request your data in a machine-readable format.</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Object:</strong> Object to processing based on legitimate interests or for direct marketing.</li>
-            </ul>
-            <p style={pStyle}>To exercise these rights, email <a href="mailto:support@marketscannerpros.app" style={linkStyle}>support@marketscannerpros.app</a> or use the "Delete My Data" button in your Account settings.</p>
-          </Section>
+      <h2 id="gdpr">Your rights (GDPR)</h2>
+      <p>If you are in the European Economic Area (EEA), United Kingdom, or Switzerland, you have the following rights under the GDPR:</p>
+      <ul>
+        <li><strong>Access:</strong> Request a copy of the personal data we hold about you.</li>
+        <li><strong>Rectification:</strong> Request correction of inaccurate or incomplete data.</li>
+        <li><strong>Erasure:</strong> Request deletion of your personal data (&ldquo;right to be forgotten&rdquo;).</li>
+        <li><strong>Restriction:</strong> Request that we limit processing of your data.</li>
+        <li><strong>Portability:</strong> Request your data in a machine-readable format.</li>
+        <li><strong>Object:</strong> Object to processing based on legitimate interests or for direct marketing.</li>
+      </ul>
+      <p>To exercise these rights, email <a href="mailto:support@marketscannerpros.app">support@marketscannerpros.app</a> or use the &ldquo;Delete My Data&rdquo; button in your Account settings.</p>
 
-          <Section title="California Privacy Rights (CCPA/CPRA)" id="ccpa">
-            <p style={pStyle}>If you are a California resident, you have additional rights under the California Consumer Privacy Act (CCPA) and California Privacy Rights Act (CPRA):</p>
-            <ul style={ulStyle}>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Right to Know:</strong> Request disclosure of the categories and specific pieces of personal information we have collected about you.</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Right to Delete:</strong> Request deletion of personal information we have collected from you.</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Right to Correct:</strong> Request correction of inaccurate personal information.</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Right to Opt-Out:</strong> Opt out of the "sale" or "sharing" of your personal information.</li>
-              <li style={liStyle}><strong style={{ color: '#10B981' }}>Non-Discrimination:</strong> We will not discriminate against you for exercising your privacy rights.</li>
-            </ul>
-            <p style={pStyle}><strong style={{ color: '#E5E7EB' }}>Do Not Sell or Share My Personal Information:</strong> We do not sell your personal information to third parties. We do not share your personal information for cross-context behavioral advertising. Our third-party data processors (Stripe, OpenAI, Alpha Vantage) only process data on our behalf and are contractually prohibited from using it for their own purposes.</p>
-            <p style={pStyle}>To exercise your CCPA rights, email <a href="mailto:support@marketscannerpros.app" style={linkStyle}>support@marketscannerpros.app</a> with the subject line "CCPA Request".</p>
-          </Section>
+      <h2 id="ccpa">California Privacy Rights (CCPA/CPRA)</h2>
+      <p>If you are a California resident, you have additional rights under the California Consumer Privacy Act (CCPA) and California Privacy Rights Act (CPRA):</p>
+      <ul>
+        <li><strong>Right to Know:</strong> Request disclosure of the categories and specific pieces of personal information we have collected about you.</li>
+        <li><strong>Right to Delete:</strong> Request deletion of personal information we have collected from you.</li>
+        <li><strong>Right to Correct:</strong> Request correction of inaccurate personal information.</li>
+        <li><strong>Right to Opt-Out:</strong> Opt out of the &ldquo;sale&rdquo; or &ldquo;sharing&rdquo; of your personal information.</li>
+        <li><strong>Non-Discrimination:</strong> We will not discriminate against you for exercising your privacy rights.</li>
+      </ul>
+      <p><strong>Do Not Sell or Share My Personal Information:</strong> We do not sell your personal information to third parties. We do not share your personal information for cross-context behavioral advertising. Our third-party data processors (Stripe, OpenAI, Alpha Vantage) only process data on our behalf and are contractually prohibited from using it for their own purposes.</p>
+      <p>To exercise your CCPA rights, email <a href="mailto:support@marketscannerpros.app">support@marketscannerpros.app</a> with the subject line &ldquo;CCPA Request&rdquo;.</p>
 
-          <Section title="Children">
-            <p style={pStyle}>Not directed to individuals under 16. We do not knowingly collect children's data.</p>
-          </Section>
+      <h2>Children</h2>
+      <p>Not directed to individuals under 16. We do not knowingly collect children&rsquo;s data.</p>
 
-          <Section title="Security">
-            <p style={pStyle}>We use reasonable technical and organizational measures; no method is 100% secure.</p>
-          </Section>
+      <h2>Security</h2>
+      <p>We use reasonable technical and organizational measures; no method is 100% secure.</p>
 
-          <Section title="Changes">
-            <p style={pStyle}>We may update this policy and change the effective date. Material changes may include additional notice.</p>
-          </Section>
+      <h2>Changes</h2>
+      <p>We may update this policy and change the effective date. Material changes may include additional notice.</p>
 
-          <Section title="Contact">
-            <p style={pStyle}>Email: <a href="mailto:support@marketscannerpros.app" style={linkStyle}>support@marketscannerpros.app</a></p>
-          </Section>
+      <h2>Contact</h2>
+      <p>Email: <a href="mailto:support@marketscannerpros.app">support@marketscannerpros.app</a></p>
+
+          </div>
         </div>
       </div>
     </main>
   );
 }
-
-function Section({ title, children, id }: { title: string; children: React.ReactNode; id?: string }) {
-  return (
-    <div style={{ marginBottom: '2rem' }} id={id}>
-      <h2 style={{
-        fontSize: '1.5rem',
-        fontWeight: 600,
-        color: '#E5E7EB',
-        marginBottom: '1rem',
-        paddingBottom: '0.5rem',
-        borderBottom: '1px solid rgba(16, 185, 129, 0.3)',
-      }}>{title}</h2>
-      {children}
-    </div>
-  );
-}
-
-const pStyle: React.CSSProperties = {
-  color: '#9CA3AF',
-  lineHeight: 1.7,
-  marginBottom: '1rem',
-};
-
-const ulStyle: React.CSSProperties = {
-  listStyle: 'none',
-  padding: 0,
-  margin: 0,
-};
-
-const liStyle: React.CSSProperties = {
-  color: '#9CA3AF',
-  lineHeight: 1.7,
-  marginBottom: '0.75rem',
-  paddingLeft: '1.5rem',
-  position: 'relative',
-};
-
-const linkStyle: React.CSSProperties = {
-  color: '#10B981',
-  textDecoration: 'none',
-};

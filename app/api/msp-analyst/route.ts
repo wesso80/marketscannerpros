@@ -19,7 +19,7 @@
  * @rateLimit
  * - Free: 10 requests/day
  * - Pro: 50 requests/day
- * - Pro Trader: 200 requests/day
+ * - Pro Trader: 50 requests/day
  * 
  * @example
  * POST /api/msp-analyst

@@ -15,16 +15,17 @@ type RouteChromeProps = {
 export default function RouteChrome({ children }: RouteChromeProps) {
   const pathname = usePathname() || '';
   const isOperatorRoute = pathname.startsWith('/operator');
+  const isV2Route = pathname.startsWith('/v2');
   const isAppRoute = pathname.startsWith('/tools') || isOperatorRoute;
 
   return (
     <>
-      {!isOperatorRoute && <Header />}
+      {!isOperatorRoute && !isV2Route && <Header />}
       <main className="msp-main-shell">{children}</main>
-      {!isAppRoute ? <Footer /> : null}
+      {!isAppRoute && !isV2Route ? <Footer /> : null}
       <CookieBanner />
       <AlertToast />
-      {!isAppRoute ? <BackToTop /> : null}
+      {!isAppRoute && !isV2Route ? <BackToTop /> : null}
     </>
   );
 }
