@@ -9,7 +9,7 @@ import WhyMSP from './WhyMSP';
 /* ─── Featured scanners (big tiles) ─── */
 const featuredTools = [
   {
-    href: '/v2/scanner',
+    href: '/tools/scanner',
     icon: '📊',
     image: '/assets/scanners/multi-market-scanner.png',
     title: 'Market Scanner',
@@ -19,7 +19,7 @@ const featuredTools = [
     glow: 'hover:shadow-[0_0_20px_rgba(16,185,129,.35)]',
   },
   {
-    href: '/v2/golden-egg',
+    href: '/tools/golden-egg',
     icon: '🥚',
     image: '/assets/scanners/golden-egg.png',
     title: 'Golden Egg',
@@ -33,7 +33,7 @@ const featuredTools = [
 /* ─── v2 Platform surfaces ─── */
 const v2Surfaces = [
   {
-    href: '/v2/dashboard',
+    href: '/tools/dashboard',
     icon: '🧭',
     image: '/assets/platform-tools/operator-dashboard.png',
     title: 'Command Center',
@@ -43,7 +43,7 @@ const v2Surfaces = [
     glow: 'hover:shadow-[0_0_20px_rgba(16,185,129,.35)]',
   },
   {
-    href: '/v2/terminal',
+    href: '/tools/terminal',
     icon: '💹',
     image: '/assets/platform-tools/crypto-command.png',
     title: 'Terminal',
@@ -53,7 +53,7 @@ const v2Surfaces = [
     glow: 'hover:shadow-[0_0_20px_rgba(6,182,212,.35)]',
   },
   {
-    href: '/v2/explorer',
+    href: '/tools/explorer',
     icon: '🔍',
     image: '/assets/platform-tools/equity-explorer.png',
     title: 'Market Explorer',
@@ -63,7 +63,7 @@ const v2Surfaces = [
     glow: 'hover:shadow-[0_0_20px_rgba(139,92,246,.35)]',
   },
   {
-    href: '/v2/research',
+    href: '/tools/research',
     icon: '📰',
     image: '/assets/platform-tools/news-sentiment.png',
     title: 'Research',
@@ -73,7 +73,7 @@ const v2Surfaces = [
     glow: 'hover:shadow-[0_0_20px_rgba(59,130,246,.35)]',
   },
   {
-    href: '/v2/workspace',
+    href: '/tools/workspace',
     icon: '📋',
     image: '/assets/platform-tools/portfolio.png',
     title: 'Workspace',
@@ -218,7 +218,7 @@ export default function CommandHub() {
           </div>
 
           <Link
-            href="/v2/scanner"
+            href="/tools/scanner"
             className="mt-6 inline-flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-5 py-2.5 text-sm font-semibold text-emerald-400 transition hover:bg-emerald-500/20 hover:text-emerald-300"
           >
             Explore the AI Engine <span>→</span>
