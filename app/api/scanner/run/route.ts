@@ -2317,6 +2317,12 @@ export async function POST(req: NextRequest) {
       results.push(...filtered);
     }
 
+    // Cap output to top 20 results by score
+    if (results.length > 20) {
+      results.sort((a, b) => b.score - a.score);
+      results.length = 20;
+    }
+
     // Record signals for AI learning (async, non-blocking)
     if (results.length > 0) {
       const signalsToRecord: RecordSignalParams[] = results
