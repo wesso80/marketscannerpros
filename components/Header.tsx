@@ -43,12 +43,12 @@ export default function Header() {
         {/* Logo */}
         <Link href={isLoggedIn ? '/tools/dashboard' : '/'} className="flex items-center gap-2 text-xl font-semibold tracking-tight text-teal-300 flex-shrink-0 mr-4">
           <img src="/logos/msp-logo.png" alt="MarketScannerPros" className="h-8 w-8 object-contain" />
-          <span className="hidden min-[480px]:inline">MarketScannerPros</span>
-          <span className="min-[480px]:hidden">MSP</span>
+          <span className="msp-full-name">MarketScannerPros</span>
+          <span className="msp-short-name">MSP</span>
         </Link>
 
         {/* ── Desktop Nav (md+) ── */}
-        <nav className="hidden md:flex items-center gap-1 flex-1 text-sm">
+        <nav className="msp-desktop-nav items-center gap-1 flex-1 text-sm">
           {/* 7 Surface buttons — always visible */}
           {SURFACES.map(s => (
             <Link
@@ -96,7 +96,7 @@ export default function Header() {
         </nav>
 
         {/* ── Mobile Hamburger (below md) ── */}
-        <div className="md:hidden flex items-center gap-2 ml-auto">
+        <div className="msp-mobile-nav items-center gap-2 ml-auto">
           {isLoggedIn && !tierLoading && (
             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap bg-teal-500/10 border border-slate-700 text-teal-300">
               {tier === 'pro_trader' ? 'Pro Trader' : tier === 'pro' ? 'Pro' : 'Free'}

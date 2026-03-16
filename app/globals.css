@@ -207,6 +207,40 @@ a:hover {
   width: 100%;
 }
 
+/* Explicit responsive nav — immune to Tailwind layer ordering issues */
+.msp-desktop-nav {
+  display: none !important;
+}
+@media (min-width: 768px) {
+  .msp-desktop-nav {
+    display: flex !important;
+  }
+}
+.msp-mobile-nav {
+  display: flex !important;
+}
+@media (min-width: 768px) {
+  .msp-mobile-nav {
+    display: none !important;
+  }
+}
+.msp-full-name {
+  display: none !important;
+}
+@media (min-width: 480px) {
+  .msp-full-name {
+    display: inline !important;
+  }
+}
+.msp-short-name {
+  display: inline !important;
+}
+@media (min-width: 480px) {
+  .msp-short-name {
+    display: none !important;
+  }
+}
+
 /* Buttons */
 .btn {
   display: inline-block;
