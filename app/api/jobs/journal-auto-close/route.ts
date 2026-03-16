@@ -3,6 +3,7 @@ import { q, tx } from '@/lib/db';
 import { enqueueEngineJob } from '@/lib/engine/jobQueue';
 import { emitTradeLifecycleEvent, hashDedupeKey } from '@/lib/notifications/tradeEvents';
 import { verifyCronAuth, verifyAdminAuth } from '@/lib/adminAuth';
+import { ingestTradeOutcome } from '@/lib/intelligence/ingestOutcome';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -406,6 +407,9 @@ export async function POST(req: NextRequest) {
           source: 'jobs.journal-auto-close',
         },
       }).catch(() => undefined);
+
+      // v3.1: Ingest trade outcome for edge-profile intelligence
+      await ingestTradeOutcome(entry.workspace_id, closeResult.entry.id).catch(() => undefined);
     }
 
     return NextResponse.json({

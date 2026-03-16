@@ -7,6 +7,7 @@ import { buildPermissionSnapshot, evaluateCandidate, type StrategyTag } from "@/
 import { computeEntryRiskMetrics, getLatestPortfolioEquity } from "@/lib/journal/riskAtEntry";
 import { getRuntimeRiskSnapshotInput } from "@/lib/risk/runtimeSnapshot";
 import { runExecutionPipeline } from "@/lib/execution/runPipeline";
+import { backfillTradeOutcomes } from "@/lib/intelligence/ingestOutcome";
 
 interface JournalEntry {
   id: number;
@@ -870,6 +871,11 @@ export async function POST(req: NextRequest) {
         console.warn('[journal] failed to emit TRADE_ENTERED event:', error);
       });
     }
+
+    // v3.1: Backfill trade outcomes for edge-profile after full journal sync
+    backfillTradeOutcomes(workspaceId).catch((err) => {
+      console.warn('[journal] edge-profile backfill failed (non-blocking):', err);
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {
