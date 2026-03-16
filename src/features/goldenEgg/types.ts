@@ -244,4 +244,19 @@ export interface GoldenEggPayload {
       } | null;
     };
   };
+  doctrine?: {
+    id: string;
+    label: string;
+    confidence: number;
+    regime: string;
+    reasons: string[];
+    playbook: {
+      description: string;
+      direction: string;
+      category: string;
+      entryCriteria: string[];
+      riskModel: { stopDescription: string; targetDescription: string; defaultRR: number };
+      failureSignals: string[];
+    };
+  } | null;
 }

@@ -17,8 +17,9 @@ const PortfolioV1 = dynamic(() => import('@/app/tools/portfolio/page').then(m =>
 const AlertsContentV1 = dynamic(() => import('@/app/tools/alerts/page').then(m => ({ default: m.AlertsContent })), { ssr: false, loading: () => <div className="animate-pulse bg-slate-800/50 rounded-xl h-64" /> });
 const BacktestPage = dynamic(() => import('@/app/v2/backtest/page'), { ssr: false, loading: () => <div className="animate-pulse bg-slate-800/50 rounded-xl h-64" /> });
 const AccountSection = dynamic(() => import('./AccountSection'), { ssr: false, loading: () => <div className="animate-pulse bg-slate-800/50 rounded-xl h-64" /> });
+const LearningTab = dynamic(() => import('./LearningTab'), { ssr: false, loading: () => <div className="animate-pulse bg-slate-800/50 rounded-xl h-64" /> });
 
-const TABS = ['Watchlists', 'Journal', 'Portfolio', 'Backtest', 'Alerts', 'Settings'] as const;
+const TABS = ['Watchlists', 'Journal', 'Portfolio', 'Learning', 'Backtest', 'Alerts', 'Settings'] as const;
 
 export default function WorkspacePage() {
   const { tier } = useUserTier();
@@ -49,6 +50,13 @@ export default function WorkspacePage() {
 
       {/* ── PORTFOLIO ──────────────────────────────────────────────── */}
       {tab === 'Portfolio' && <RiskPermissionProvider><PortfolioV1 /></RiskPermissionProvider>}
+
+      {/* ── LEARNING ───────────────────────────────────────────────── */}
+      {tab === 'Learning' && (
+        <UpgradeGate requiredTier="pro" currentTier={tier} feature="Doctrine Learning">
+          <LearningTab />
+        </UpgradeGate>
+      )}
 
       {/* ── BACKTEST ───────────────────────────────────────────────── */}
       {tab === 'Backtest' && (

@@ -24,6 +24,7 @@ import {
 } from '@/lib/goldenEggFetchers';
 import { computeDVE } from '@/lib/directionalVolatilityEngine';
 import type { DVEInput, DVEReading } from '@/lib/directionalVolatilityEngine.types';
+import { classifyBestDoctrine, type ClassifierInput } from '@/lib/doctrine/classifier';
 import type { GoldenEggPayload, Permission, Direction, Verdict } from '@/src/features/goldenEgg/types';
 
 export const runtime = 'nodejs';
@@ -343,6 +344,53 @@ function buildPayload(
   if (cryptoDerivs && cryptoDerivs.fundingRatePercent < -0.03) narrativeRisks.push('Negative funding — short squeeze risk if price rises.');
   if (narrativeRisks.length === 0) narrativeRisks.push('No major risk flags at current levels.');
 
+  // ── Doctrine Classification ───────────────────────────────────────
+  let doctrineResult: GoldenEggPayload['doctrine'] = null;
+  try {
+    const classifierInput: ClassifierInput = {
+      dveRegime: volRegime,
+      bbwp: dveReading?.volatility.bbwp ?? null,
+      dveSignalType: dveReading?.signal.type !== 'none' ? dveReading?.signal.type : undefined,
+      breakoutScore: dveReading?.breakout.score,
+      rsi: ind?.rsi ?? null,
+      macdHist: ind?.macdHist ?? null,
+      adx: ind?.adx ?? null,
+      stochK: ind?.stochK ?? null,
+      priceVsSma20Pct: ind?.sma20 != null && p > 0 ? ((p - ind.sma20) / ind.sma20) * 100 : null,
+      priceVsSma50Pct: ind?.sma50 != null && p > 0 ? ((p - ind.sma50) / ind.sma50) * 100 : null,
+      volumeRatio: price.avgVolume && price.avgVolume > 0 ? price.volume / price.avgVolume : null,
+      permission,
+      direction,
+      confidence,
+      setupType,
+      optionsVerdict: optionsEvidence?.verdict,
+      inSqueeze: ind?.inSqueeze ?? undefined,
+      structureVerdict,
+      directionalBias: dveReading?.direction.bias,
+      trapDetected: dveReading?.trap.detected,
+      exhaustionRisk: dveReading?.exhaustion.level,
+    };
+    const match = classifyBestDoctrine(classifierInput);
+    if (match) {
+      const pb = match.playbook;
+      doctrineResult = {
+        id: match.doctrineId,
+        label: pb.label,
+        confidence: match.matchConfidence,
+        regime: classifierInput.dveRegime,
+        reasons: match.reasons,
+        playbook: {
+          description: pb.description,
+          direction: pb.direction,
+          category: pb.category,
+          entryCriteria: pb.entryCriteria,
+          riskModel: pb.riskModel,
+          failureSignals: pb.failureSignals,
+        },
+      };
+    }
+  } catch { /* doctrine is additive — failure is non-fatal */ }
+
   return {
     meta: {
       symbol,
@@ -456,6 +504,7 @@ function buildPayload(
         decompressionTarget: tcData.decompressionTarget,
       } : undefined,
     },
+    doctrine: doctrineResult,
   };
 }
 
