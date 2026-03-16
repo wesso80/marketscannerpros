@@ -1,296 +1,174 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState, useRef, Fragment } from 'react';
+import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import NotificationBell from './NotificationBell';
 import { useUserTier } from '@/lib/useUserTier';
-import { getToolImage } from '@/lib/toolImages';
 
-interface DropdownItem {
-  href: string;
-  label: string;
-  icon?: string;
-  section?: string;
-}
+/* ═══════════════════════════════════════════════════════════════════════════
+   MSP v2 Header — Matches Full Site Map
+   Always shows: 7 surface buttons + Pricing / Referrals / Account
+   Right side changes: Sign In (logged out) vs Tier badge + Sign Out (logged in)
+   Mobile: Hamburger → flat drawer with same links
+   ═══════════════════════════════════════════════════════════════════════════ */
 
-interface DropdownProps {
-  label: string;
-  items: DropdownItem[];
-  align?: 'left' | 'right';
-  compact?: boolean;
-}
-
-function Dropdown({ label, items, align = 'left', compact = false }: DropdownProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-1 hover:text-teal-300 whitespace-nowrap transition-colors ${compact ? 'py-0.5 text-[12px]' : ''}`}
-      >
-        {label}
-        <svg className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      {isOpen && (
-        <div className={`absolute top-full mt-2 py-2 bg-slate-900 border border-slate-700 rounded-lg shadow-xl min-w-48 z-[110] max-h-[80vh] overflow-y-auto ${align === 'right' ? 'right-0' : 'left-0'}`}>
-          {items.map((item, idx) => {
-            const img = getToolImage(item.href);
-            return (
-              <Fragment key={item.href}>
-                {item.section && (
-                  <div className={`px-4 pb-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 ${idx > 0 ? 'mt-1.5 border-t border-slate-700/60 pt-2' : 'pt-1'}`}>
-                    {item.section}
-                  </div>
-                )}
-                <Link href={item.href} className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-300 hover:bg-teal-500/10 hover:text-teal-300 transition-colors" onClick={() => setIsOpen(false)}>
-                  {img ? (
-                    <img src={img} alt="" className="h-5 w-5 rounded object-contain" />
-                  ) : item.icon ? (
-                    <span>{item.icon}</span>
-                  ) : null}
-                  {item.label}
-                </Link>
-              </Fragment>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-interface MobileAccordionProps {
-  label: string;
-  items: DropdownItem[];
-  isOpen: boolean;
-  onToggle: () => void;
-  onLinkClick: () => void;
-}
-
-function MobileAccordion({ label, items, isOpen, onToggle, onLinkClick }: MobileAccordionProps) {
-  return (
-    <div className="border-b border-slate-800">
-      <button onClick={onToggle} className="flex items-center justify-between w-full px-4 py-3 text-white hover:bg-teal-500/10 rounded-lg transition-all">
-        <span>{label}</span>
-        <svg className={`w-4 h-4 text-teal-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      {isOpen && (
-        <div className="pl-4 pb-2">
-          {items.map((item, idx) => (
-            <Fragment key={item.href}>
-              {item.section && (
-                <div className={`px-4 pb-1 text-[9px] font-bold uppercase tracking-wider text-slate-500 ${idx > 0 ? 'mt-1.5 border-t border-slate-700/60 pt-2' : 'pt-1'}`}>
-                  {item.section}
-                </div>
-              )}
-              <Link href={item.href} className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-400 hover:bg-teal-500/10 hover:text-teal-300 rounded-lg transition-all" onClick={onLinkClick}>
-                {(() => { const img = getToolImage(item.href); return img ? <img src={img} alt="" className="h-5 w-5 rounded object-contain" /> : item.icon ? <span>{item.icon}</span> : null; })()}
-                {item.label}
-              </Link>
-            </Fragment>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+const SURFACES = [
+  { href: '/tools/dashboard',   label: 'Dashboard' },
+  { href: '/tools/scanner',     label: 'Scanner' },
+  { href: '/tools/golden-egg',  label: 'Golden Egg' },
+  { href: '/tools/terminal',    label: 'Terminal' },
+  { href: '/tools/explorer',    label: 'Explorer' },
+  { href: '/tools/research',    label: 'Research' },
+  { href: '/tools/workspace',   label: 'Workspace' },
+];
 
 export default function Header() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [mobileDropdown, setMobileDropdown] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const pathname = usePathname();
   const { isLoggedIn, isLoading: tierLoading, tier } = useUserTier();
-  const terminalPrefixes = [
-    '/operator',
-    '/tools/options-confluence',
-    '/tools/options-terminal',
-    '/tools/scanner',
-    '/tools/deep-analysis',
-    '/tools/portfolio',
-    '/tools/journal',
-    '/tools/backtest',
-    '/tools/confluence-scanner',
-    '/tools/crypto-terminal',
-    '/tools/volatility-engine',
-  ];
-  const isTerminalMode = terminalPrefixes.some((prefix) => pathname.startsWith(prefix));
+  const isAppRoute = pathname.startsWith('/tools') || pathname.startsWith('/operator');
 
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
+    document.body.style.overflow = drawerOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
-  }, [isOpen]);
+  }, [drawerOpen]);
 
-  const toolsItems: DropdownItem[] = [
-    { href: '/operator', label: 'Operator Dashboard' },
-    { href: '/tools/watchlists', label: 'Watchlists' },
-    { href: '/tools/portfolio', label: 'Portfolio Tracker' },
-    { href: '/tools/backtest', label: 'Backtester' },
-    { href: '/tools/journal', label: 'Trade Journal' },
-    { href: '/tools/alerts', label: 'Price Alerts' },
-  ];
-
-  const scannerItems: DropdownItem[] = [
-    { href: '/tools/scanner', label: 'Market Scanner' },
-    { href: '/tools/options-confluence', label: 'Options Confluence' },
-    { href: '/tools/confluence-scanner', label: 'Time Confluence' },
-    { href: '/tools/golden-egg', label: 'Golden Egg' },
-    { href: '/tools/liquidity-sweep', label: 'Liquidity Sweep' },
-    { href: '/tools/options-flow', label: 'Options Flow' },
-    { href: '/tools/volatility-engine', label: 'Volatility Engine' },
-  ];
-
-  const marketItems: DropdownItem[] = [
-    { href: '/tools/markets', label: 'Markets Dashboard', section: 'Equities' },
-    { href: '/tools/equity-explorer', label: 'Equity Explorer' },
-    { href: '/tools/company-overview', label: 'Company Overview' },
-    { href: '/tools/market-movers', label: 'Market Movers' },
-    { href: '/tools/gainers-losers', label: 'Gainers & Losers' },
-    { href: '/tools/heatmap', label: 'Sector Heatmap' },
-    { href: '/tools/intraday-charts', label: 'Intraday Charts' },
-    { href: '/tools/crypto', label: 'Crypto Command Center', section: 'Crypto' },
-    { href: '/tools/crypto-explorer', label: 'Crypto Explorer' },
-    { href: '/tools/crypto-heatmap', label: 'Crypto Heatmap' },
-    { href: '/tools/crypto-dashboard', label: 'Crypto Derivatives' },
-    { href: '/tools/crypto-terminal', label: 'Crypto Terminal' },
-    { href: '/tools/options-terminal', label: 'Options Terminal', section: 'Macro & Options' },
-    { href: '/tools/macro', label: 'Macro Dashboard' },
-    { href: '/tools/commodities', label: 'Commodities' },
-    { href: '/tools/markets?tab=correlation', label: 'Cross-Asset Correlation' },
-  ];
-
-  const calendarItems: DropdownItem[] = [
-    { href: '/tools/news?tab=earnings', label: 'Earnings Calendar' },
-    { href: '/tools/economic-calendar', label: 'Economic Calendar' },
-    { href: '/tools/news', label: 'Market News' },
-  ];
-
-  const resourceItems: DropdownItem[] = [
-    { href: '/resources', label: 'Resources Hub' },
-    { href: '/resources/platform-guide', label: 'Platform Guide' },
-    { href: '/resources/trading-guides', label: 'Trading Guides' },
-    { href: '/partners', label: 'Partners' },
-  ];
+  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
 
   return (
-    <header className="sticky top-0 z-[100] w-full border-b border-slate-700/80 bg-slate-950/85 backdrop-blur overflow-visible">
-        <div className={`mx-auto flex max-w-none items-center justify-between ${isTerminalMode ? 'h-12 px-3' : 'h-14 px-4'}`}>
-        <Link href="/" className="flex items-center gap-2 text-xl font-semibold tracking-tight text-teal-300 flex-shrink-0 mr-6">
+    <header className="sticky top-0 z-[100] w-full border-b border-slate-700/80 bg-slate-950/85 backdrop-blur">
+      <div className={`mx-auto flex max-w-none items-center justify-between ${isAppRoute ? 'h-12 px-3' : 'h-14 px-4'}`}>
+
+        {/* Logo */}
+        <Link href={isLoggedIn ? '/tools/dashboard' : '/'} className="flex items-center gap-2 text-xl font-semibold tracking-tight text-teal-300 flex-shrink-0 mr-4">
           <img src="/logos/msp-logo.png" alt="MarketScannerPros" className="h-8 w-8 object-contain" />
-          <span className="hidden min-[400px]:inline">MarketScannerPros</span>
-          <span className="min-[400px]:hidden">MSP</span>
+          <span className="hidden min-[480px]:inline">MarketScannerPros</span>
+          <span className="min-[480px]:hidden">MSP</span>
         </Link>
 
-        {/* Desktop Navigation with Dropdowns */}
-        <nav className={`flex items-center max-md:hidden overflow-visible text-teal-300/90 ${isTerminalMode ? 'gap-3 text-xs' : 'gap-5 text-sm'}`}>
-          <Dropdown label="Tools" items={toolsItems} compact={isTerminalMode} />
-          <Dropdown label="Scanners" items={scannerItems} compact={isTerminalMode} />
-          <Dropdown label="Markets" items={marketItems} compact={isTerminalMode} />
-          <Dropdown label="Calendar" items={calendarItems} align="right" compact={isTerminalMode} />
-          <Dropdown label="Resources" items={resourceItems} align="right" compact={isTerminalMode} />
-          <NotificationBell compact={isTerminalMode} />
-          <Link href="/pricing" className="hover:text-teal-300 whitespace-nowrap">Pricing</Link>
-          <Link href="/tools/referrals" className="hover:text-teal-300 whitespace-nowrap">Referrals</Link>
-          <Link href="/account" className="hover:text-teal-300 whitespace-nowrap">Account</Link>
-          {tierLoading ? null : isLoggedIn ? (
-            <>
-              <span className={`ml-2 flex items-center gap-2 bg-teal-500/10 border border-slate-700 rounded-lg text-teal-300 text-xs ${isTerminalMode ? 'px-2 py-1' : 'px-3 py-1.5'}`}>
+        {/* ── Desktop Nav (md+) ── */}
+        <nav className="hidden md:flex items-center gap-1 flex-1 text-sm">
+          {/* 7 Surface buttons — always visible */}
+          {SURFACES.map(s => (
+            <Link
+              key={s.href}
+              href={s.href}
+              className={`px-2.5 py-1.5 rounded-lg text-[13px] font-medium whitespace-nowrap transition-all ${
+                isActive(s.href)
+                  ? 'bg-teal-500/15 text-teal-300 border border-teal-500/30'
+                  : 'text-slate-400 hover:text-teal-300 hover:bg-slate-800/60'
+              }`}
+            >
+              {s.label}
+            </Link>
+          ))}
+
+          {/* Right side */}
+          <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+            <Link href="/pricing" className="text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">Pricing</Link>
+            {isLoggedIn && (
+              <Link href="/tools/referrals" className="text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">Referrals</Link>
+            )}
+            <NotificationBell compact={isAppRoute} />
+            {isLoggedIn && (
+              <Link href="/account" className="text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">Account</Link>
+            )}
+            {!tierLoading && isLoggedIn && (
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap bg-teal-500/10 border border-slate-700 text-teal-300">
                 {tier === 'pro_trader' ? 'Pro Trader' : tier === 'pro' ? 'Pro' : 'Free'}
               </span>
+            )}
+            {isLoggedIn ? (
               <button
                 onClick={async () => {
                   await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
                   window.location.replace('/');
                 }}
-                className={`ml-1 border border-slate-700 rounded-lg text-red-300/80 hover:text-red-300 hover:bg-red-500/10 whitespace-nowrap transition-all ${isTerminalMode ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-xs'}`}
+                className="ml-1 px-2 py-1 text-xs border border-slate-700 rounded-lg text-red-300/80 hover:text-red-300 hover:bg-red-500/10 whitespace-nowrap transition-all"
               >
                 Sign Out
               </button>
-            </>
-          ) : (
-            <Link href="/auth" className={`ml-2 bg-teal-500/20 hover:bg-teal-500/30 border border-slate-700 rounded-lg text-teal-300 font-medium whitespace-nowrap transition-all ${isTerminalMode ? 'px-3 py-1' : 'px-4 py-1.5'}`}>Sign In</Link>
-          )}
+            ) : (
+              <Link href="/auth" className="ml-1 bg-teal-500/20 hover:bg-teal-500/30 border border-slate-700 rounded-lg text-teal-300 font-medium px-4 py-1.5 text-xs whitespace-nowrap transition-all">Sign In</Link>
+            )}
+          </div>
         </nav>
 
-        {/* Mobile Hamburger Button */}
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="flex flex-col gap-1.5 p-2 flex-shrink-0 md:hidden"
-          aria-label="Toggle menu"
-        >
-          <span className={`block h-0.5 w-6 bg-teal-300 transition-all duration-300 ${isOpen ? 'rotate-45 translate-y-2' : ''}`} />
-          <span className={`block h-0.5 w-6 bg-teal-300 transition-all duration-300 ${isOpen ? 'opacity-0' : ''}`} />
-          <span className={`block h-0.5 w-6 bg-teal-300 transition-all duration-300 ${isOpen ? '-rotate-45 -translate-y-2' : ''}`} />
-        </button>
+        {/* ── Mobile Hamburger (below md) ── */}
+        <div className="md:hidden flex items-center gap-2 ml-auto">
+          {isLoggedIn && !tierLoading && (
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap bg-teal-500/10 border border-slate-700 text-teal-300">
+              {tier === 'pro_trader' ? 'Pro Trader' : tier === 'pro' ? 'Pro' : 'Free'}
+            </span>
+          )}
+          <button onClick={() => setDrawerOpen(true)} className="flex flex-col gap-1.5 p-2" aria-label="Open menu">
+            <span className="block h-0.5 w-6 bg-teal-300 rounded" />
+            <span className="block h-0.5 w-6 bg-teal-300 rounded" />
+            <span className="block h-0.5 w-6 bg-teal-300 rounded" />
+          </button>
+        </div>
       </div>
 
-      {/* Mobile Menu Overlay */}
-      {isOpen && (
-        <div className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm" onClick={() => setIsOpen(false)} />
+      {/* ── Mobile Overlay ── */}
+      {drawerOpen && (
+        <div className="fixed inset-0 bg-black/60 z-[200] md:hidden backdrop-blur-sm" onClick={() => setDrawerOpen(false)} />
       )}
 
-      {/* Mobile Menu Drawer */}
-      <div className={`fixed top-0 right-0 h-[100dvh] w-[min(320px,85vw)] bg-[#111C2D] z-50 transform transition-transform duration-300 ease-in-out md:hidden border-l border-slate-700/90 shadow-2xl ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-        <div className="flex flex-col h-full min-h-0 overscroll-contain">
-          <div className="flex items-center justify-between p-5 border-b border-slate-700/90 flex-shrink-0">
+      {/* ── Mobile Drawer ── */}
+      <div className={`fixed top-0 right-0 h-[100dvh] w-[min(300px,85vw)] bg-[#111C2D] z-[201] transform transition-transform duration-300 ease-in-out md:hidden border-l border-slate-700/90 shadow-2xl ${drawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className="flex flex-col h-full">
+          {/* Drawer header */}
+          <div className="flex items-center justify-between p-4 border-b border-slate-700/90">
             <span className="text-lg font-semibold text-teal-300">Menu</span>
-            <button onClick={() => setIsOpen(false)} className="text-2xl text-teal-300 hover:text-teal-400 transition-colors p-1">✕</button>
+            <button onClick={() => setDrawerOpen(false)} className="text-2xl text-teal-300 hover:text-teal-400 transition-colors p-1">&times;</button>
           </div>
-          
-          <div className="flex-1 overflow-y-auto p-4 min-h-0">
-            <div className="flex flex-col gap-1">
-              <MobileAccordion label="Tools" items={toolsItems} isOpen={mobileDropdown === 'tools'} onToggle={() => setMobileDropdown(mobileDropdown === 'tools' ? null : 'tools')} onLinkClick={() => setIsOpen(false)} />
-              <MobileAccordion label="Scanners" items={scannerItems} isOpen={mobileDropdown === 'scanners'} onToggle={() => setMobileDropdown(mobileDropdown === 'scanners' ? null : 'scanners')} onLinkClick={() => setIsOpen(false)} />
-              <MobileAccordion label="Markets" items={marketItems} isOpen={mobileDropdown === 'markets'} onToggle={() => setMobileDropdown(mobileDropdown === 'markets' ? null : 'markets')} onLinkClick={() => setIsOpen(false)} />
-              <MobileAccordion label="Calendar & News" items={calendarItems} isOpen={mobileDropdown === 'calendar'} onToggle={() => setMobileDropdown(mobileDropdown === 'calendar' ? null : 'calendar')} onLinkClick={() => setIsOpen(false)} />
-              <MobileAccordion label="Resources" items={resourceItems} isOpen={mobileDropdown === 'resources'} onToggle={() => setMobileDropdown(mobileDropdown === 'resources' ? null : 'resources')} onLinkClick={() => setIsOpen(false)} />
 
-              <div className="mt-3 pt-3 border-t border-slate-700">
-                <Link href="/pricing" className="flex items-center gap-3 px-4 py-3 text-white hover:bg-teal-500/10 hover:text-teal-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>Pricing</Link>
-                <Link href="/tools/referrals" className="flex items-center gap-3 px-4 py-3 text-white hover:bg-teal-500/10 hover:text-teal-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>Referrals</Link>
-                <Link href="/account" className="flex items-center gap-3 px-4 py-3 text-white hover:bg-teal-500/10 hover:text-teal-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>Account</Link>
-              </div>
-              
-              <div className="mt-4 pt-4 border-t border-slate-700/90 space-y-2">
-                {isLoggedIn ? (
-                  <>
-                    <Link href="/account" className="flex items-center justify-center gap-2 px-4 py-3 bg-teal-500/10 border border-slate-700 rounded-lg text-teal-300 font-medium transition-all" onClick={() => setIsOpen(false)}>
-                      {tier === 'pro_trader' ? 'Pro Trader' : tier === 'pro' ? 'Pro' : 'Account'}
-                    </Link>
-                    <button
-                      onClick={async () => {
-                        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-                        window.location.replace('/');
-                      }}
-                      className="flex items-center justify-center gap-2 w-full px-4 py-3 border border-red-400/30 rounded-lg text-red-300 font-medium hover:bg-red-500/10 transition-all"
-                    >
-                      Sign Out
-                    </button>
-                  </>
-                ) : (
-                  <Link href="/auth" className="flex items-center justify-center gap-2 px-4 py-3 bg-teal-500/20 hover:bg-teal-500/30 border border-slate-700 rounded-lg text-teal-300 font-medium transition-all" onClick={() => setIsOpen(false)}>Sign In</Link>
-                )}
-              </div>
+          {/* Drawer body — same 7 surfaces always shown */}
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex flex-col gap-0.5">
+              {SURFACES.map(s => (
+                <Link
+                  key={s.href}
+                  href={s.href}
+                  onClick={() => setDrawerOpen(false)}
+                  className={`flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-all ${
+                    isActive(s.href)
+                      ? 'bg-teal-500/15 text-teal-300'
+                      : 'text-white hover:bg-teal-500/10 hover:text-teal-300'
+                  }`}
+                >
+                  {s.label}
+                </Link>
+              ))}
+            </div>
+
+            {/* Supporting links */}
+            <div className="mt-4 pt-4 border-t border-slate-700 flex flex-col gap-0.5">
+              <Link href="/pricing" onClick={() => setDrawerOpen(false)} className="flex items-center px-4 py-3 text-sm text-white hover:bg-teal-500/10 hover:text-teal-300 rounded-lg transition-all">Pricing</Link>
+              {isLoggedIn && (
+                <>
+                  <Link href="/tools/referrals" onClick={() => setDrawerOpen(false)} className="flex items-center px-4 py-3 text-sm text-white hover:bg-teal-500/10 hover:text-teal-300 rounded-lg transition-all">Referrals</Link>
+                  <Link href="/account" onClick={() => setDrawerOpen(false)} className="flex items-center px-4 py-3 text-sm text-white hover:bg-teal-500/10 hover:text-teal-300 rounded-lg transition-all">Account</Link>
+                </>
+              )}
+            </div>
+
+            {/* Sign In / Sign Out */}
+            <div className="mt-4 pt-4 border-t border-slate-700/90">
+              {isLoggedIn ? (
+                <button
+                  onClick={async () => {
+                    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+                    window.location.replace('/');
+                  }}
+                  className="flex items-center justify-center w-full px-4 py-3 border border-red-400/30 rounded-lg text-red-300 font-medium hover:bg-red-500/10 transition-all"
+                >
+                  Sign Out
+                </button>
+              ) : (
+                <Link href="/auth" onClick={() => setDrawerOpen(false)} className="flex items-center justify-center px-4 py-3 bg-teal-500/20 hover:bg-teal-500/30 border border-slate-700 rounded-lg text-teal-300 font-medium transition-all">Sign In</Link>
+              )}
             </div>
           </div>
         </div>

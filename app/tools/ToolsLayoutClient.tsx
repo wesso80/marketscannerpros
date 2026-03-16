@@ -4,7 +4,6 @@ import { Suspense } from 'react';
 import MSPCopilot from '@/components/MSPCopilot';
 import AdaptiveTraderPersonalityBar from '@/components/AdaptiveTraderPersonalityBar';
 import OperatorCommandStrip from '@/components/OperatorCommandStrip';
-import TopNav from '@/app/v2/_components/TopNav';
 import RegimeBar from '@/app/v2/_components/RegimeBar';
 import { V2Provider } from '@/app/v2/_lib/V2Context';
 import { usePathname } from 'next/navigation';
@@ -66,9 +65,6 @@ export default function ToolsLayoutClient({
     <RiskPermissionProvider>
     <V2Provider>
       <AIPageProvider>
-        <ErrorBoundary fallback={null}>
-          <TopNav />
-        </ErrorBoundary>
         <ErrorBoundary fallback={null}>
           <RegimeBar />
         </ErrorBoundary>

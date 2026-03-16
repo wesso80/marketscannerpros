@@ -8,24 +8,23 @@ import CookieBanner from '@/components/CookieBanner';
 import AlertToast from '@/components/AlertToast';
 import BackToTop from '@/components/BackToTop';
 
-const TERMINAL_ROUTE_PREFIXES = ['/tools', '/operator'];
-
 type RouteChromeProps = {
   children: ReactNode;
 };
 
 export default function RouteChrome({ children }: RouteChromeProps) {
   const pathname = usePathname() || '';
-  const isTerminalRoute = TERMINAL_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  const isOperatorRoute = pathname.startsWith('/operator');
+  const isAppRoute = pathname.startsWith('/tools') || isOperatorRoute;
 
   return (
     <>
-      {!isTerminalRoute && <Header />}
+      {!isOperatorRoute && <Header />}
       <main className="msp-main-shell">{children}</main>
-      {!isTerminalRoute ? <Footer /> : null}
-      {!isTerminalRoute ? <CookieBanner /> : null}
+      {!isAppRoute ? <Footer /> : null}
+      {!isAppRoute ? <CookieBanner /> : null}
       <AlertToast />
-      {!isTerminalRoute ? <BackToTop /> : null}
+      {!isAppRoute ? <BackToTop /> : null}
     </>
   );
 }
