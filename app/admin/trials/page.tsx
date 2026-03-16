@@ -136,7 +136,7 @@ export default function AdminTrialsPage() {
   }
 
   return (
-    <div>
+    <div className="mx-auto max-w-7xl px-4 py-6">
       <div style={{ marginBottom: "32px" }}>
         <h1 style={{ color: "#E5E7EB", fontSize: "1.75rem", fontWeight: 700, marginBottom: "4px" }}>
           🎁 Trial Management

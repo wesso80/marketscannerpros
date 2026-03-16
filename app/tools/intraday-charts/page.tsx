@@ -5,6 +5,7 @@ import Link from 'next/link';
 import ExplorerActionGrid from '@/components/explorer/ExplorerActionGrid';
 import { useUserTier, canAccessPortfolioInsights } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
+import { useV2 } from '@/app/v2/_lib/V2Context';
 
 interface IntradayBar {
   timestamp: string;
@@ -603,7 +604,7 @@ function VolumeChart({ data, width = 800, height = 80 }: { data: IntradayBar[]; 
   );
 }
 
-export default function IntradayChartsPage() {
+export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: string } = {}) {
   const { tier, isLoading: tierLoading } = useUserTier();
   const [symbol, setSymbol] = useState('');
   const [searchInput, setSearchInput] = useState('');
@@ -694,10 +695,17 @@ export default function IntradayChartsPage() {
     }
   }, [fetchDealerOverlay]);
 
-  // Initial load with a popular stock
+  // Sync symbol from prop (Golden Egg), V2Context, or fallback
+  const { selectedSymbol: v2Symbol } = useV2();
   useEffect(() => {
-    fetchData('AAPL', '5min');
-  }, [fetchData]);
+    const target = propSymbol?.trim().toUpperCase() || v2Symbol;
+    if (target) {
+      setSearchInput(target);
+      fetchData(target, interval);
+    } else {
+      fetchData('AAPL', '5min');
+    }
+  }, [propSymbol, v2Symbol]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-refresh every 60 seconds if enabled
   useEffect(() => {

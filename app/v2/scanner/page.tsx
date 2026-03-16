@@ -188,7 +188,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
       <div className="flex items-center justify-end gap-2">
         <Link href={`/tools/scanner/backtest?symbol=${encodeURIComponent(detail.symbol)}`}
           className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-emerald-400 no-underline hover:bg-emerald-500/20 transition-colors">
-          📊 Backtest This Symbol
+          Backtest This Symbol
         </Link>
         <button type="button" onClick={onClose}
           className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-muted)]">
@@ -556,7 +556,7 @@ export default function ScannerPage() {
 
   function SortHeader({ k, label, w }: { k: SortKey; label: string; w: string }) {
     return (
-      <th className={`${w} text-left text-[10px] uppercase tracking-wider text-slate-500 cursor-pointer hover:text-slate-300 py-2 px-2 select-none`} onClick={() => toggleSort(k)}>
+      <th className={`${w} text-left text-[10px] uppercase tracking-wider text-slate-500 cursor-pointer hover:text-slate-300 py-2 px-2 select-none whitespace-nowrap`} onClick={() => toggleSort(k)}>
         {label} {sortKey === k ? (sortDir === 'desc' ? '▼' : '▲') : ''}
       </th>
     );
@@ -606,8 +606,28 @@ export default function ScannerPage() {
             ))}
           </div>
 
-          {/* Tabs */}
-          <div className="flex items-center gap-1 overflow-x-auto pb-1">
+          {/* Tabs — dropdown on mobile, pills on desktop */}
+          <div className="md:hidden">
+            <select
+              value={activeTab}
+              onChange={(e) => setActiveTab(e.target.value as typeof activeTab)}
+              className="w-full rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
+            >
+              {TABS.map(tab => {
+                const count = tab === 'All' ? allResults.length
+                  : tab === 'Equities' ? allResults.filter(r => (r as any)._assetClass === 'equity').length
+                  : tab === 'Crypto' ? allResults.filter(r => (r as any)._assetClass === 'crypto').length
+                  : tab === 'Bullish' ? allResults.filter(r => r.direction === 'bullish').length
+                  : tab === 'Bearish' ? allResults.filter(r => r.direction === 'bearish').length
+                  : tab === 'High Score' ? allResults.filter(r => Math.abs(r.score) >= 5).length
+                  : tab === 'DVE Signals' ? allResults.filter(r => (r.dveSignalType && r.dveSignalType !== 'none') || (r.dveFlags && r.dveFlags.length > 0)).length
+                  : tab === 'Regime Match' ? allResults.filter(r => isRegimeCompatible(r)).length
+                  : 0;
+                return <option key={tab} value={tab}>{tab} ({count})</option>;
+              })}
+            </select>
+          </div>
+          <div className="hidden md:flex items-center gap-1 overflow-x-auto pb-1">
             {TABS.map(tab => (
               <button key={tab} onClick={() => setActiveTab(tab)}
                 className={`px-2.5 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap transition-colors ${activeTab === tab ? 'bg-[rgba(16,185,129,0.1)] text-[var(--msp-accent)] border border-[rgba(16,185,129,0.4)]' : 'text-[var(--msp-text-muted)] hover:bg-slate-800/60 border border-transparent'}`}>
@@ -640,8 +660,8 @@ export default function ScannerPage() {
             ) : filtered.length === 0 ? (
               <div className="text-xs text-slate-500 py-12 text-center">No results match this filter.</div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
+              <div className="overflow-x-auto -mx-1">
+                <table className="w-full text-xs" style={{ minWidth: 900 }}>
                   <thead>
                     <tr className="border-b border-[var(--msp-border)]">
                       <SortHeader k="symbol" label="Symbol" w="w-20" />
@@ -651,10 +671,10 @@ export default function ScannerPage() {
                       <SortHeader k="score" label="Raw" w="w-12" />
                       <SortHeader k="confidence" label="Conf" w="w-12" />
                       <SortHeader k="dveBbwp" label="BBWP" w="w-12" />
-                      <th className="w-20 text-left text-[10px] uppercase tracking-wider text-slate-500 py-2 px-2">DVE</th>
-                      <th className="w-16 text-left text-[10px] uppercase tracking-wider text-slate-500 py-2 px-2">Regime</th>
-                      <th className="w-16 text-left text-[10px] uppercase tracking-wider text-slate-500 py-2 px-2">Lifecycle</th>
-                      <th className="w-16 text-[10px] uppercase tracking-wider text-slate-500 py-2 px-2">Action</th>
+                      <th className="w-20 text-left text-[10px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">DVE</th>
+                      <th className="w-16 text-left text-[10px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Regime</th>
+                      <th className="w-16 text-left text-[10px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Lifecycle</th>
+                      <th className="w-16 text-[10px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -665,18 +685,18 @@ export default function ScannerPage() {
                       const mspColor = msp >= 70 ? '#10B981' : msp >= 50 ? '#F59E0B' : msp >= 30 ? '#94A3B8' : '#EF4444';
                       return (
                         <tr key={r.symbol} className="border-b border-slate-800/40 hover:bg-slate-800/30 cursor-pointer transition-colors" onClick={() => handleV2RowClick(r)}>
-                          <td className="py-2.5 px-2"><div className="font-bold text-white">{r.symbol}</div><div className="text-[10px] text-slate-600">{regimeLabel}</div></td>
-                          <td className="py-2.5 px-2 text-center"><span className="text-sm font-black" style={{ color: mspColor }}>{msp}</span></td>
-                          <td className="py-2.5 px-2 text-slate-300 font-mono">{formatPrice(r.price)}</td>
-                          <td className="py-2.5 px-2"><Badge label={r.direction || 'neutral'} color={dirColor(r.direction)} small /></td>
-                          <td className="py-2.5 px-2 text-slate-400 text-[10px]">{r.score}</td>
-                          <td className="py-2.5 px-2 text-slate-400 text-[10px]">{r.confidence != null ? `${r.confidence}%` : '—'}</td>
-                          <td className="py-2.5 px-2">
+                          <td className="py-2.5 px-2 whitespace-nowrap"><div className="font-bold text-white">{r.symbol}</div><div className="text-[10px] text-slate-600">{regimeLabel}</div></td>
+                          <td className="py-2.5 px-2 text-center whitespace-nowrap"><span className="text-sm font-black" style={{ color: mspColor }}>{msp}</span></td>
+                          <td className="py-2.5 px-2 text-slate-300 font-mono whitespace-nowrap">{formatPrice(r.price)}</td>
+                          <td className="py-2.5 px-2 whitespace-nowrap"><Badge label={r.direction || 'neutral'} color={dirColor(r.direction)} small /></td>
+                          <td className="py-2.5 px-2 text-slate-400 text-[10px] whitespace-nowrap">{r.score}</td>
+                          <td className="py-2.5 px-2 text-slate-400 text-[10px] whitespace-nowrap">{r.confidence != null ? `${r.confidence}%` : '—'}</td>
+                          <td className="py-2.5 px-2 whitespace-nowrap">
                             <span className={r.dveBbwp != null ? (r.dveBbwp < 20 ? 'text-cyan-400' : r.dveBbwp > 80 ? 'text-orange-400' : 'text-slate-300') : 'text-slate-600'}>
                               {r.dveBbwp != null ? r.dveBbwp.toFixed(0) : '—'}
                             </span>
                           </td>
-                          <td className="py-2.5 px-2 text-[10px] truncate max-w-[80px]">
+                          <td className="py-2.5 px-2 text-[10px] whitespace-nowrap max-w-[80px] truncate">
                             {(() => {
                               if (r.dveSignalType && r.dveSignalType !== 'none') return <span className="text-yellow-400 font-semibold">{r.dveSignalType.replace(/_/g, ' ')}</span>;
                               if (r.dveFlags && r.dveFlags.length > 0) {
@@ -687,19 +707,19 @@ export default function ScannerPage() {
                               return <span className="text-slate-600">—</span>;
                             })()}
                           </td>
-                          <td className="py-2.5 px-2">
+                          <td className="py-2.5 px-2 whitespace-nowrap">
                             {isRegimeCompatible(r)
                               ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">✓ Match</span>
                               : r.scoreV2?.regimeScore?.gated
                                 ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 border border-red-500/20">Gated</span>
                                 : <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-500/15 text-slate-500 border border-slate-500/20">Neutral</span>}
                           </td>
-                          <td className="py-2.5 px-2">
+                          <td className="py-2.5 px-2 whitespace-nowrap">
                             <span className="text-[10px] px-1.5 py-0.5 rounded border" style={{ color: LIFECYCLE_COLORS[lifecycle], borderColor: LIFECYCLE_COLORS[lifecycle] + '40', backgroundColor: LIFECYCLE_COLORS[lifecycle] + '15' }}>
                               {lifecycle.replace('_', ' ')}
                             </span>
                           </td>
-                          <td className="py-2.5 px-2 text-center">
+                          <td className="py-2.5 px-2 text-center whitespace-nowrap">
                             <button onClick={(e) => { e.stopPropagation(); handleV2RowClick(r); }} className="px-2 py-1 bg-emerald-500/10 text-emerald-400 rounded text-[10px] hover:bg-emerald-500/20 transition-colors">Analyze</button>
                           </td>
                         </tr>

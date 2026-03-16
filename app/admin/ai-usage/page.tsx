@@ -107,7 +107,7 @@ export default function AdminAIUsagePage() {
   const totalQuestions30d = dailyStats.reduce((sum, d) => sum + Number(d.questions), 0);
 
   return (
-    <div>
+    <div className="mx-auto max-w-7xl px-4 py-6">
       <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "#E5E7EB", marginBottom: "1.5rem" }}>
         🤖 AI Usage Analytics
       </h1>

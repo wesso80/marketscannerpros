@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
 import { useUserTier, canAccessDeepAnalysis } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
 import { useAIPageContext } from "@/lib/ai/pageContext";
+import { useV2 } from '@/app/v2/_lib/V2Context';
 import { writeOperatorState } from "@/lib/operatorState";
 import { fireAutoLog } from "@/lib/autoLog";
 import CommandStrip, { type TerminalDensity } from "@/components/terminal/CommandStrip";
@@ -543,7 +544,7 @@ function getNewsImpact(title: string, summary: string): { tag: string; color: st
   return { tag: 'News', color: '#64748B', emoji: '⚪' };
 }
 
-export default function DeepAnalysisPage() {
+export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: string } = {}) {
   const { tier } = useUserTier();
   const [symbol, setSymbol] = useState("");
   const [loading, setLoading] = useState(false);
@@ -578,14 +579,27 @@ export default function DeepAnalysisPage() {
     }
   }, [result, setPageData]);
 
+  // Sync symbol from prop (Golden Egg), V2Context, or URL — auto-fetch
+  const v2SymRef = useRef<string | null>(null);
+  const { selectedSymbol: v2Symbol } = useV2();
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const urlSymbol = new URLSearchParams(window.location.search).get('symbol');
-    if (!urlSymbol) return;
-    const normalized = urlSymbol.trim().toUpperCase();
-    if (!normalized) return;
-    setSymbol(normalized);
-  }, []);
+    const target = propSymbol?.trim().toUpperCase()
+      || v2Symbol
+      || (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('symbol')?.trim().toUpperCase() : null);
+    if (target && target !== v2SymRef.current) {
+      v2SymRef.current = target;
+      setSymbol(target);
+      // Auto-trigger analysis
+      setLoading(true);
+      setError('');
+      setResult(null);
+      fetch(`/api/deep-analysis?symbol=${encodeURIComponent(target)}`)
+        .then(r => r.json())
+        .then(d => { if (d.success) setResult(d); else setError(d.error || 'Analysis failed'); })
+        .catch(() => setError('Network error'))
+        .finally(() => setLoading(false));
+    }
+  }, [propSymbol, v2Symbol]);
 
   useEffect(() => {
     if (!result) return;

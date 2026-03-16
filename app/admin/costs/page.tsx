@@ -116,7 +116,7 @@ export default function AdminCostsPage() {
     : 0;
 
   return (
-    <div>
+    <div className="mx-auto max-w-7xl px-4 py-6">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
         <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "#E5E7EB" }}>
           💰 AI Cost Tracker

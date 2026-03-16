@@ -55,23 +55,14 @@ function AfterCheckoutContent() {
 
   if (status === "error") {
     return (
-      <main className="mx-auto max-w-xl p-8 min-h-screen flex flex-col items-center justify-center" style={{ background: "var(--msp-bg)", color: "#E5E7EB" }}>
+      <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center bg-[var(--msp-bg)] p-8 text-slate-200">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4" style={{ color: "#F59E0B" }}>Payment received!</h1>
-          <p className="mb-2" style={{ color: "#9CA3AF" }}>Your subscription is active but we had trouble updating your session.</p>
-          <p className="mb-6" style={{ color: "#9CA3AF" }}>Please sign in to activate your Pro features:</p>
+          <h1 className="mb-4 text-2xl font-bold text-amber-400">Payment received!</h1>
+          <p className="mb-2 text-slate-400">Your subscription is active but we had trouble updating your session.</p>
+          <p className="mb-6 text-slate-400">Please sign in to activate your Pro features:</p>
           <Link
             href="/auth"
-            style={{
-              display: "inline-block",
-              padding: "0.75rem 1.5rem",
-              background: "rgba(16,185,129,0.2)",
-              color: "#10B981",
-              border: "1px solid rgba(16,185,129,0.4)",
-              borderRadius: "0.75rem",
-              fontWeight: 600,
-              textDecoration: "none",
-            }}
+            className="inline-block rounded-xl border border-emerald-500/40 bg-emerald-500/20 px-6 py-3 font-semibold text-emerald-400 transition hover:bg-emerald-500/30"
           >
             Sign In
           </Link>
@@ -81,11 +72,11 @@ function AfterCheckoutContent() {
   }
 
   return (
-    <main className="mx-auto max-w-xl p-8 min-h-screen flex flex-col items-center justify-center" style={{ background: "var(--msp-bg)", color: "#E5E7EB" }}>
+    <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center bg-[var(--msp-bg)] p-8 text-slate-200">
       <div className="text-center">
-        <h1 className="text-3xl font-bold mb-4">Finishing up…</h1>
-        <p className="mb-8" style={{ color: "#9CA3AF" }}>We&apos;re applying your Pro features. One moment.</p>
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto" style={{ borderColor: "#10B981" }}></div>
+        <h1 className="mb-4 text-3xl font-bold">Finishing up…</h1>
+        <p className="mb-8 text-slate-400">We&apos;re applying your Pro features. One moment.</p>
+        <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-emerald-500"></div>
       </div>
     </main>
   );
@@ -94,9 +85,9 @@ function AfterCheckoutContent() {
 export default function AfterCheckout() {
   return (
     <Suspense fallback={
-      <main className="mx-auto max-w-xl p-8 min-h-screen flex flex-col items-center justify-center" style={{ background: "var(--msp-bg)", color: "#E5E7EB" }}>
+      <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center bg-[var(--msp-bg)] p-8 text-slate-200">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto" style={{ borderColor: "#10B981" }}></div>
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-emerald-500"></div>
         </div>
       </main>
     }>

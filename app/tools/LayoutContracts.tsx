@@ -16,6 +16,11 @@ export function isTerminalModePath(pathname: string): boolean {
     '/tools/confluence-scanner',
     '/tools/markets',
     '/tools/crypto-terminal',
+    '/tools/dashboard',
+    '/tools/terminal',
+    '/tools/explorer',
+    '/tools/research',
+    '/tools/workspace',
   ];
 
   return terminalPrefixes.some((prefix) => pathname.startsWith(prefix));
@@ -35,6 +40,11 @@ export function getToolsContainerVariant(pathname: string): ToolsContainerVarian
     '/tools/markets',
     '/tools/options-terminal',
     '/tools/crypto-terminal',
+    '/tools/dashboard',
+    '/tools/terminal',
+    '/tools/explorer',
+    '/tools/research',
+    '/tools/workspace',
   ];
   if (fullWidthPaths.some((p) => pathname.startsWith(p))) {
     return 'full';

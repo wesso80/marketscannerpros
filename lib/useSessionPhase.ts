@@ -173,15 +173,29 @@ export function detectSession(now?: Date): SessionSnapshot {
    React Hook
    ═══════════════════════════════════════════════════════ */
 
+/** SSR-safe placeholder — identical on server and first client render. */
+const SSR_SNAPSHOT: SessionSnapshot = {
+  equity: EQUITY_PHASES.PRE_MARKET,
+  crypto: CRYPTO_PHASES.OVERNIGHT,
+  marketStatus: 'closed',
+  etTimeStr: '--:--',
+  utcTimeStr: '--:--',
+  isWeekend: false,
+};
+
 /**
  * Live-updating session state for React components.
  * Default update interval: 15 s (tight enough for a clock display).
+ *
+ * Uses a static placeholder for the very first render so that server-
+ * rendered HTML matches the initial client render (avoids hydration
+ * mismatch from `new Date()` differing between SSR & browser).
  */
 export function useSessionPhase(intervalMs = 15_000): SessionSnapshot {
-  const [state, setState] = useState<SessionSnapshot>(() => detectSession());
+  const [state, setState] = useState<SessionSnapshot>(SSR_SNAPSHOT);
 
   useEffect(() => {
-    // Re-sync immediately on mount (handles SSR → client hydration drift)
+    // First real tick fires immediately after hydration
     setState(detectSession());
 
     const id = window.setInterval(() => setState(detectSession()), intervalMs);

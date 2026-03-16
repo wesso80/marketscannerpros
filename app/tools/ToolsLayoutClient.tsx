@@ -4,7 +4,9 @@ import { Suspense } from 'react';
 import MSPCopilot from '@/components/MSPCopilot';
 import AdaptiveTraderPersonalityBar from '@/components/AdaptiveTraderPersonalityBar';
 import OperatorCommandStrip from '@/components/OperatorCommandStrip';
-import ToolsNavBar from '@/components/ToolsNavBar';
+import TopNav from '@/app/v2/_components/TopNav';
+import RegimeBar from '@/app/v2/_components/RegimeBar';
+import { V2Provider } from '@/app/v2/_lib/V2Context';
 import { usePathname } from 'next/navigation';
 import { AIPageProvider, useAIPageContext } from '@/lib/ai/pageContext';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -62,9 +64,13 @@ export default function ToolsLayoutClient({
   return (
     <RegimeProvider>
     <RiskPermissionProvider>
+    <V2Provider>
       <AIPageProvider>
         <ErrorBoundary fallback={null}>
-          <ToolsNavBar />
+          <TopNav />
+        </ErrorBoundary>
+        <ErrorBoundary fallback={null}>
+          <RegimeBar />
         </ErrorBoundary>
 
         {/* ── Operator HUD: collapsed by default to reduce visual overload ── */}
@@ -109,6 +115,7 @@ export default function ToolsLayoutClient({
           <CopilotWithContext fallbackSkill={skill} />
         </ErrorBoundary>
       </AIPageProvider>
+    </V2Provider>
     </RiskPermissionProvider>
     </RegimeProvider>
   );

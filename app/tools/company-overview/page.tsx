@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
 import { useUserTier, canAccessPortfolioInsights } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
+import { useV2 } from '@/app/v2/_lib/V2Context';
 import RegimeBanner from '@/components/RegimeBanner';
 import AdaptivePersonalityCard from '@/components/AdaptivePersonalityCard';
 
@@ -38,7 +39,7 @@ interface CompanyData {
   changePercent: string | null;
 }
 
-function CompanyOverviewContent() {
+function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
   const { tier } = useUserTier();
   const searchParams = useSearchParams();
   const [symbol, setSymbol] = useState("");
@@ -46,15 +47,16 @@ function CompanyOverviewContent() {
   const [data, setData] = useState<CompanyData | null>(null);
   const [error, setError] = useState("");
 
-  // Auto-load symbol from URL parameter
+  // Sync symbol from prop (Golden Egg), V2Context, or URL
+  const { selectedSymbol: v2Symbol } = useV2();
   useEffect(() => {
-    const urlSymbol = searchParams.get('symbol');
-    if (urlSymbol) {
-      setSymbol(urlSymbol.toUpperCase());
-      // Auto-fetch the data
-      fetchCompanyData(urlSymbol.toUpperCase());
+    const sym = propSymbol?.trim().toUpperCase() || v2Symbol || searchParams.get('symbol');
+    if (sym) {
+      const normalized = sym.toUpperCase();
+      setSymbol(normalized);
+      fetchCompanyData(normalized);
     }
-  }, [searchParams]);
+  }, [propSymbol, v2Symbol, searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchCompanyData = async (sym: string) => {
     if (!sym.trim()) {
@@ -616,14 +618,14 @@ function CompanyOverviewContent() {
 }
 
 // Wrapper component with Suspense for useSearchParams
-export default function CompanyOverviewPage() {
+export default function CompanyOverviewPage({ symbol: propSymbol }: { symbol?: string } = {}) {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center bg-[var(--msp-bg)]">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
       </div>
     }>
-      <CompanyOverviewContent />
+      <CompanyOverviewContent propSymbol={propSymbol} />
     </Suspense>
   );
 }

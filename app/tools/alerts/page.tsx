@@ -330,7 +330,7 @@ export function AlertsContent() {
                           <span className="hidden rounded bg-white/5 px-2 py-0.5 text-xs text-slate-400 sm:inline">{type}</span>
                         </div>
 
-                        <div className="flex items-center gap-2 sm:ml-auto sm:opacity-0 sm:transition sm:group-hover:opacity-100">
+                        <div className="flex items-center gap-2 sm:ml-auto md:opacity-0 md:transition md:group-hover:opacity-100">
                           <span className="hidden text-xs text-slate-400 sm:inline">Triggered {alert.trigger_count}x</span>
                           <span className={`rounded-full px-2 py-0.5 text-[11px] ${status === 'Armed' ? 'bg-emerald-500/15 text-emerald-200' : status === 'Cooldown' ? 'bg-amber-500/15 text-amber-200' : 'bg-slate-700 text-slate-300'}`}>
                             {status}

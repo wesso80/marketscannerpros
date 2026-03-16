@@ -1,72 +1,42 @@
-'use client';
-
 import Link from "next/link";
 import { blogPosts } from "./posts-data";
 
+export const metadata = {
+  title: "Trading Insights — MarketScanner Pros",
+  alternates: { canonical: "/blog" },
+};
+
 export default function BlogPage() {
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'radial-gradient(circle at top, #111827 0, #020617 55%, #000 100%)',
-      color: '#f9fafb',
-      fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif'
-    }}>
-      <div style={{ maxWidth: 900, padding: '48px 20px 60px', margin: '0 auto' }}>
+    <div className="min-h-screen bg-[var(--msp-bg)] text-slate-50">
+      <div className="mx-auto max-w-[900px] px-5 py-12 pb-16">
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: 48 }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            fontSize: 11,
-            color: '#9ca3af',
-            padding: '4px 10px',
-            borderRadius: 999,
-            background: 'rgba(15,23,42,0.9)',
-            border: '1px solid rgba(148,163,184,0.25)',
-            marginBottom: 16
-          }}>
-            <span style={{ color: '#bbf7d0' }}>Free content</span>
+        <div className="mb-12 text-center">
+          <div className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-slate-700/40 bg-slate-950/90 px-2.5 py-1 text-[11px] text-slate-400">
+            <span className="text-emerald-300">Free content</span>
             <span>Learn to trade smarter</span>
           </div>
-          <h1 style={{ fontSize: 36, fontWeight: 700, marginBottom: 12 }}>Trading Insights</h1>
-          <p style={{ fontSize: 16, color: '#9ca3af', maxWidth: 500, margin: '0 auto' }}>
+          <h1 className="mb-3 text-4xl font-bold text-white">Trading Insights</h1>
+          <p className="mx-auto max-w-[500px] text-base text-slate-400">
             Free educational content to help you understand market scanning, technical analysis, and trading strategies.
           </p>
         </div>
 
         {/* Blog Posts */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div className="flex flex-col gap-5">
           {blogPosts.map((post) => (
             <Link
               key={post.slug}
               href={`/blog/${post.slug}`}
-              style={{
-                display: 'block',
-                background: 'radial-gradient(circle at top left, #111827, #020617 60%)',
-                borderRadius: 16,
-                border: '1px solid #1f2933',
-                boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
-                padding: '24px 28px',
-                textDecoration: 'none',
-                color: 'inherit',
-                transition: 'border-color 0.2s, transform 0.2s'
-              }}
+              className="block rounded-2xl border border-[var(--msp-border)] bg-[var(--msp-card)] p-6 shadow-lg transition hover:border-emerald-500/30"
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                <span style={{
-                  fontSize: 11,
-                  padding: '3px 10px',
-                  borderRadius: 999,
-                  background: 'rgba(34,197,94,0.12)',
-                  color: '#bbf7d0',
-                  border: '1px solid rgba(34,197,94,0.3)'
-                }}>{post.category}</span>
-                <span style={{ fontSize: 12, color: '#6b7280' }}>{post.readTime}</span>
+              <div className="mb-2.5 flex items-center gap-2.5">
+                <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] text-emerald-300">{post.category}</span>
+                <span className="text-xs text-slate-500">{post.readTime}</span>
               </div>
-              <h2 style={{ fontSize: 22, fontWeight: 650, marginBottom: 8, color: '#f9fafb' }}>{post.title}</h2>
-              <p style={{ fontSize: 15, color: '#9ca3af', lineHeight: 1.6, margin: 0 }}>{post.excerpt}</p>
-              <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--msp-accent)' }}>
+              <h2 className="mb-2 text-[22px] font-semibold text-slate-50">{post.title}</h2>
+              <p className="text-[15px] leading-relaxed text-slate-400">{post.excerpt}</p>
+              <div className="mt-4 flex items-center gap-1.5 text-[13px] text-emerald-400">
                 <span>Read article</span>
                 <span>→</span>
               </div>

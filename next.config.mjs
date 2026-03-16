@@ -44,7 +44,9 @@ const nextConfig = {
       {
         source: '/_next/static/:path*',
         headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'Cache-Control', value: process.env.NODE_ENV === 'production'
+            ? 'public, max-age=31536000, immutable'
+            : 'no-store, no-cache, must-revalidate' },
         ],
       },
       // Prevent stale API data — always fetch fresh
@@ -63,7 +65,7 @@ const nextConfig = {
       // Fix old URLs that were in previous sitemaps
       {
         source: '/ai-analyst',
-        destination: '/tools/ai-analyst',
+        destination: '/tools/scanner',
         permanent: true,
       },
       {
@@ -73,19 +75,79 @@ const nextConfig = {
       },
       {
         source: '/portfolio',
-        destination: '/tools/portfolio',
+        destination: '/tools/workspace',
         permanent: true,
       },
       {
         source: '/backtest',
-        destination: '/tools/backtest',
+        destination: '/tools/workspace',
         permanent: true,
       },
       {
         source: '/journal',
-        destination: '/tools/journal',
+        destination: '/tools/workspace',
         permanent: true,
       },
+
+      // ── V2 routes → consolidated /tools/* surfaces ──
+      { source: '/v2/dashboard', destination: '/tools/dashboard', permanent: true },
+      { source: '/v2/scanner', destination: '/tools/scanner', permanent: true },
+      { source: '/v2/golden-egg', destination: '/tools/golden-egg', permanent: true },
+      { source: '/v2/terminal', destination: '/tools/terminal', permanent: true },
+      { source: '/v2/explorer', destination: '/tools/explorer', permanent: true },
+      { source: '/v2/research', destination: '/tools/research', permanent: true },
+      { source: '/v2/workspace', destination: '/tools/workspace', permanent: true },
+      { source: '/pricing', destination: '/v2/pricing', permanent: true },
+      { source: '/v2/referrals', destination: '/tools/referrals', permanent: true },
+      { source: '/v2', destination: '/tools/dashboard', permanent: true },
+
+      // ── Old v1 standalone routes → unified surfaces ──
+      // Terminal surface
+      { source: '/tools/options-terminal', destination: '/tools/terminal', permanent: true },
+      { source: '/tools/crypto-terminal', destination: '/tools/terminal', permanent: true },
+      { source: '/tools/options-flow', destination: '/tools/terminal', permanent: true },
+      { source: '/tools/options', destination: '/tools/terminal', permanent: true },
+
+      // Explorer surface
+      { source: '/tools/equity-explorer', destination: '/tools/explorer', permanent: true },
+      { source: '/tools/crypto-explorer', destination: '/tools/explorer', permanent: true },
+      { source: '/tools/commodities', destination: '/tools/explorer', permanent: true },
+      { source: '/tools/market-movers', destination: '/tools/explorer', permanent: true },
+      { source: '/tools/gainers-losers', destination: '/tools/explorer', permanent: true },
+      { source: '/tools/heatmap', destination: '/tools/explorer', permanent: true },
+      { source: '/tools/markets', destination: '/tools/explorer', permanent: true },
+
+      // Research surface
+      { source: '/tools/news', destination: '/tools/research', permanent: true },
+      { source: '/tools/economic-calendar', destination: '/tools/research', permanent: true },
+      { source: '/tools/earnings', destination: '/tools/research', permanent: true },
+      { source: '/tools/earnings-calendar', destination: '/tools/research', permanent: true },
+
+      // Dashboard surface
+      { source: '/tools/crypto-dashboard', destination: '/tools/dashboard', permanent: true },
+      { source: '/tools/crypto', destination: '/tools/explorer', permanent: true },
+      { source: '/tools/macro', destination: '/tools/explorer', permanent: true },
+      { source: '/tools/volatility-engine', destination: '/tools/golden-egg', permanent: true },
+
+      // Scanner surface
+      { source: '/tools/ai-analyst', destination: '/tools/scanner', permanent: true },
+      { source: '/tools/confluence-scanner', destination: '/tools/terminal', permanent: true },
+      { source: '/tools/options-confluence', destination: '/tools/terminal', permanent: true },
+      { source: '/tools/crypto-time-confluence', destination: '/tools/terminal', permanent: true },
+      { source: '/tools/time-scanner', destination: '/tools/terminal', permanent: true },
+      { source: '/tools/deep-analysis', destination: '/tools/golden-egg', permanent: true },
+      { source: '/tools/intraday-charts', destination: '/tools/golden-egg', permanent: true },
+
+      // Workspace surface
+      { source: '/tools/watchlists', destination: '/tools/workspace', permanent: true },
+      { source: '/tools/journal', destination: '/tools/workspace', permanent: true },
+      { source: '/tools/backtest', destination: '/tools/workspace', permanent: true },
+      { source: '/tools/settings', destination: '/tools/workspace', permanent: true },
+
+      // Orphan pages → correct surfaces
+      { source: '/tools/company-overview', destination: '/tools/golden-egg', permanent: true },
+      { source: '/tools/liquidity-sweep', destination: '/tools/golden-egg', permanent: true },
+      { source: '/tools/scanner/backtest', destination: '/tools/workspace', permanent: true },
     ];
   },
 };

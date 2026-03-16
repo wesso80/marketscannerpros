@@ -5,11 +5,19 @@
    Real API data from v1 endpoints.
    --------------------------------------------------------------------------- */
 
-import { useMemo } from 'react';
-import { useV2 } from '../_lib/V2Context';
-import { useRegime, useScannerResults, useMarketMovers, useNews, useEconomicCalendar, type ScanResult, type Mover, type NewsArticle, type EconomicEvent } from '../_lib/api';
-import { REGIME_COLORS, CROSS_MARKET } from '../_lib/constants';
-import { Card, SectionHeader, ScoreBar, Badge, ImpactDot, AuthPrompt } from '../_components/ui';
+import { useState, useMemo } from 'react';
+import dynamic from 'next/dynamic';
+import { useV2 } from '@/app/v2/_lib/V2Context';
+import { useRegime, useScannerResults, useMarketMovers, useNews, useEconomicCalendar, type ScanResult, type Mover, type NewsArticle, type EconomicEvent } from '@/app/v2/_lib/api';
+import { REGIME_COLORS, CROSS_MARKET } from '@/app/v2/_lib/constants';
+import { Card, SectionHeader, ScoreBar, Badge, ImpactDot, AuthPrompt } from '@/app/v2/_components/ui';
+
+/* ─── Dynamic imports: v1 deep-dive components ─── */
+const CryptoDashboard = dynamic(() => import('@/app/tools/crypto-dashboard/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Crypto Derivatives…</div> });
+const MacroDashboard = dynamic(() => import('@/app/tools/macro/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Macro Dashboard…</div> });
+
+const DASH_TABS = ['Command Center', 'Crypto Derivatives', 'Macro'] as const;
+type DashTab = typeof DASH_TABS[number];
 
 /* -- helpers -------------------------------------------------------------- */
 function directionColor(d?: string) {
@@ -45,6 +53,7 @@ function CardSkeleton({ rows = 4 }: { rows?: number }) {
 
 export default function DashboardPage() {
   const { navigateTo, selectSymbol } = useV2();
+  const [dashTab, setDashTab] = useState<DashTab>('Command Center');
 
   /* -- Real API calls --------------------------------------------------- */
   const regime = useRegime();
@@ -103,6 +112,32 @@ export default function DashboardPage() {
       )}
 
       <SectionHeader title="Command Center" subtitle="What matters today — live data" />
+
+      {/* ─── Tab Bar ─── */}
+      <div className="flex items-center gap-1 flex-wrap border-b border-slate-800/50 pb-1">
+        {DASH_TABS.map(t => (
+          <button
+            key={t}
+            onClick={() => setDashTab(t)}
+            className={`px-3 py-1.5 text-[11px] rounded-t-md whitespace-nowrap transition-colors ${
+              dashTab === t
+                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 border-b-0'
+                : 'text-slate-400 hover:bg-slate-800/60 border border-transparent'
+            }`}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {/* ─── Crypto Derivatives Tab ─── */}
+      {dashTab === 'Crypto Derivatives' && <CryptoDashboard />}
+
+      {/* ─── Macro Tab ─── */}
+      {dashTab === 'Macro' && <MacroDashboard />}
+
+      {/* ─── Command Center Tab (default) ─── */}
+      {dashTab === 'Command Center' && <>
 
       {/* -- Best Setups (from Scanner) --------------------------------- */}
       {scanLoading ? <CardSkeleton rows={5} /> : (
@@ -298,6 +333,7 @@ export default function DashboardPage() {
           </details>
         );
       })()}
+      </>}
     </div>
   );
 }

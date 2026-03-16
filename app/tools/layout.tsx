@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import ToolsLayoutClient from './ToolsLayoutClient';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: {
     default: 'Trading Tools',

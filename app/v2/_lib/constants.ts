@@ -67,12 +67,11 @@ export const CROSS_MARKET: Array<{ from: string; condition: string; effect: stri
 // ─── Navigation Items ─────────────────────────────────────────────────────────
 
 export const NAV_ITEMS: Array<{ id: Surface; label: string; icon: string; shortLabel: string; href: string }> = [
-  { id: 'dashboard', label: 'Dashboard', icon: '🎯', shortLabel: 'Dash', href: '/v2/dashboard' },
-  { id: 'scanner', label: 'Scanner', icon: '📡', shortLabel: 'Scan', href: '/v2/scanner' },
-  { id: 'golden-egg', label: 'Golden Egg', icon: '🥚', shortLabel: 'GE', href: '/v2/golden-egg' },
-  { id: 'terminal', label: 'Trade Terminal', icon: '📈', shortLabel: 'Term', href: '/v2/terminal' },
-  { id: 'explorer', label: 'Market Explorer', icon: '🔍', shortLabel: 'Expl', href: '/v2/explorer' },
-  { id: 'research', label: 'Research', icon: '📰', shortLabel: 'Res', href: '/v2/research' },
-  { id: 'backtest', label: 'Backtest', icon: '🧪', shortLabel: 'BT', href: '/v2/backtest' },
-  { id: 'workspace', label: 'Workspace', icon: '💼', shortLabel: 'Work', href: '/v2/workspace' },
+  { id: 'dashboard', label: 'Dashboard', icon: 'Dash', shortLabel: 'Dash', href: '/tools/dashboard' },
+  { id: 'scanner', label: 'Scanner', icon: 'Scan', shortLabel: 'Scan', href: '/tools/scanner' },
+  { id: 'golden-egg', label: 'Golden Egg', icon: 'GE', shortLabel: 'GE', href: '/tools/golden-egg' },
+  { id: 'terminal', label: 'Trade Terminal', icon: 'Term', shortLabel: 'Term', href: '/tools/terminal' },
+  { id: 'explorer', label: 'Market Explorer', icon: 'Expl', shortLabel: 'Expl', href: '/tools/explorer' },
+  { id: 'research', label: 'Research', icon: 'Res', shortLabel: 'Res', href: '/tools/research' },
+  { id: 'workspace', label: 'Workspace', icon: 'Work', shortLabel: 'Work', href: '/tools/workspace' },
 ];

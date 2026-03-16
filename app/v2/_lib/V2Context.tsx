@@ -2,20 +2,15 @@
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MSP v2 — Shared State Context
-   Provides mock data, selected symbol, and navigation across all surfaces.
+   Provides selected symbol and navigation across all surfaces.
+   Surfaces own their data via api.ts hooks — no mock data here.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import type { SymbolIntelligence, NewsItem, CalendarEvent, JournalEntry, WatchlistItem, Surface } from './types';
-import { generateMockIntelligence, generateMockNews, generateMockCalendar, generateMockJournal, generateMockWatchlist } from './mock-data';
+import type { Surface } from './types';
 
 interface V2ContextValue {
-  data: SymbolIntelligence[];
-  news: NewsItem[];
-  calendar: CalendarEvent[];
-  journal: JournalEntry[];
-  watchlist: WatchlistItem[];
   selectedSymbol: string | null;
   selectSymbol: (sym: string) => void;
   navigateTo: (surface: Surface, symbol?: string) => void;
@@ -31,6 +26,14 @@ export function useV2() {
 }
 
 const SURFACE_MAP: Record<string, Surface> = {
+  '/tools': 'dashboard',
+  '/tools/dashboard': 'dashboard',
+  '/tools/scanner': 'scanner',
+  '/tools/golden-egg': 'golden-egg',
+  '/tools/terminal': 'terminal',
+  '/tools/explorer': 'explorer',
+  '/tools/research': 'research',
+  '/tools/workspace': 'workspace',
   '/v2': 'dashboard',
   '/v2/dashboard': 'dashboard',
   '/v2/scanner': 'scanner',
@@ -47,13 +50,6 @@ export function V2Provider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-
-  // Generate mock data once on mount
-  const [data] = useState(() => generateMockIntelligence());
-  const [news] = useState(() => generateMockNews());
-  const [calendar] = useState(() => generateMockCalendar());
-  const [journal] = useState(() => generateMockJournal());
-  const [watchlist] = useState(() => generateMockWatchlist());
 
   // Selected symbol from URL search params or internal state
   const urlSymbol = searchParams.get('symbol');
@@ -72,14 +68,14 @@ export function V2Provider({ children }: { children: ReactNode }) {
 
   const navigateTo = useCallback((surface: Surface, symbol?: string) => {
     const surfaceRoutes: Record<Surface, string> = {
-      dashboard: '/v2/dashboard',
-      scanner: '/v2/scanner',
-      'golden-egg': '/v2/golden-egg',
-      terminal: '/v2/terminal',
-      explorer: '/v2/explorer',
-      research: '/v2/research',
-      workspace: '/v2/workspace',
-      backtest: '/v2/backtest',
+      dashboard: '/tools/dashboard',
+      scanner: '/tools/scanner',
+      'golden-egg': '/tools/golden-egg',
+      terminal: '/tools/terminal',
+      explorer: '/tools/explorer',
+      research: '/tools/research',
+      workspace: '/tools/workspace',
+      backtest: '/tools/workspace',
     };
 
     const route = surfaceRoutes[surface];
@@ -96,11 +92,6 @@ export function V2Provider({ children }: { children: ReactNode }) {
 
   return (
     <V2Context.Provider value={{
-      data,
-      news,
-      calendar,
-      journal,
-      watchlist,
       selectedSymbol,
       selectSymbol,
       navigateTo,

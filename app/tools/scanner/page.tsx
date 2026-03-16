@@ -1,5983 +1,952 @@
-"use client";
+'use client';
 
-// MarketScanner Pro - Uses Chart.js (MIT License - Free for commercial use)
-// Charts powered by Chart.js with Financial plugin (MIT License - Open Source)
+/* ---------------------------------------------------------------------------
+   UNIFIED SCANNER HUB — V2 Ranked + V1 Pro Scanner on one page
+   Toggle between auto-loading regime-aware ranking and manual pro scan.
+   Click any symbol for inline analysis with Backtest / Alert / Watchlist.
+   --------------------------------------------------------------------------- */
 
-import React, { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-import dynamic from "next/dynamic";
-import Link from "next/link";
-import CapitalFlowCard from "@/components/CapitalFlowCard";
-import ToolPageLayout from "@/components/tools/ToolPageLayout";
-import ToolIdentityHeader from "@/components/tools/ToolIdentityHeader";
-import CommandContextPanel from "@/components/tools/CommandContextPanel";
-import { SetupConfidenceCard, DataHealthBadges } from "@/components/TradeDecisionCards";
-import CommandStrip, { type TerminalDensity } from "@/components/terminal/CommandStrip";
-import DecisionCockpit from "@/components/terminal/DecisionCockpit";
-import SignalRail from "@/components/terminal/SignalRail";
-import OperatorProposalRail from "@/components/operator/OperatorProposalRail";
-import { PriceChart, type ChartData } from "@/components/scanner/PriceChart";
-// InteractiveChart uses lightweight-charts (browser-only) — must skip SSR
-const InteractiveChart = dynamic(() => import("@/components/scanner/InteractiveChart"), { ssr: false });
-import ScreenerTable, { type ScreenerRow } from "@/components/scanner/ScreenerTable";
-import ScanTemplatesBar, { type ScanTemplate } from "@/components/scanner/ScanTemplatesBar";
-import { PreTradeChecklistModal, type PreTradeChecklistState } from "@/components/scanner/PreTradeChecklistModal";
-import ResearchCaseModal, { type ScanPick } from "@/components/scanner/ResearchCaseModal";
-import { useUserTier, canAccessScanner, canAccessUnlimitedScanning, FREE_DAILY_SCAN_LIMIT } from "@/lib/useUserTier";
-import UpgradeGate from "@/components/UpgradeGate";
-import { useAIPageContext } from "@/lib/ai/pageContext";
-import { readOperatorState, writeOperatorState } from "@/lib/operatorState";
-import { fireAutoLog } from "@/lib/autoLog";
-import { useRiskPermission } from "@/components/risk/RiskPermissionContext";
-import PermissionChip from "@/components/risk/PermissionChip";
-import { createWorkflowEvent, emitWorkflowEvents } from "@/lib/workflow/client";
-import { createDecisionPacketFromScan } from "@/lib/workflow/decisionPacket";
-import { candidateOutcomeFromConfidence, clampConfidence } from "@/lib/workflow/scoring";
-import type { AssetClass, CandidateEvaluation, DecisionPacket, TradePlan, UnifiedSignal } from "@/lib/workflow/types";
-import type { CandidateIntent, Permission, StrategyTag } from "@/lib/risk-governor-hard";
-import SessionPhaseStrip from "@/components/operator/SessionPhaseStrip";
+import { useMemo, useState, useCallback } from 'react';
+import Link from 'next/link';
+import { useV2 } from '@/app/v2/_lib/V2Context';
+import { useScannerResults, useRegime, type ScanResult, type ScanTimeframe, SCAN_TIMEFRAMES } from '@/app/v2/_lib/api';
+import { Card, SectionHeader, Badge } from '@/app/v2/_components/ui';
+import { REGIME_COLORS, REGIME_WEIGHTS, LIFECYCLE_COLORS } from '@/app/v2/_lib/constants';
+import type { RegimePriority, LifecycleState } from '@/app/v2/_lib/types';
+import { useUserTier, FREE_DAILY_SCAN_LIMIT, canAccessUnlimitedScanning } from '@/lib/useUserTier';
+import ScreenerTable, { type ScreenerRow } from '@/components/scanner/ScreenerTable';
+import ScanTemplatesBar, { type ScanTemplate, SCAN_TEMPLATES } from '@/components/scanner/ScanTemplatesBar';
 
-type TimeframeOption = "1h" | "30m" | "1d";
-type AssetType = "equity" | "crypto" | "forex";
-type TraderPersonality = 'momentum' | 'structure' | 'risk' | 'flow';
-
-interface PersonalitySignals {
-  totalScans: number;
-  aiRequests: number;
-  aiExpands: number;
-  focusToggles: number;
-  highConfidenceScans: number;
-  lowConfidenceScans: number;
-  riskHeavyScans: number;
-  flowHeavyScans: number;
+/* ─── Helpers ─── */
+function dirColor(d?: string) {
+  if (d === 'bullish') return '#10B981';
+  if (d === 'bearish') return '#EF4444';
+  return '#94A3B8';
+}
+function formatPrice(p: number | undefined | null) {
+  if (p == null) return '—';
+  return p < 1 ? `$${p.toFixed(4)}` : `$${p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-const DEFAULT_PERSONALITY_SIGNALS: PersonalitySignals = {
-  totalScans: 0,
-  aiRequests: 0,
-  aiExpands: 0,
-  focusToggles: 0,
-  highConfidenceScans: 0,
-  lowConfidenceScans: 0,
-  riskHeavyScans: 0,
-  flowHeavyScans: 0,
-};
+const TABS = ['All', 'Equities', 'Crypto', 'Bullish', 'Bearish', 'High Score', 'DVE Signals', 'Regime Match'] as const;
+type SortKey = 'symbol' | 'score' | 'direction' | 'confidence' | 'rsi' | 'price' | 'dveBbwp' | 'mspScore';
+type SortDir = 'asc' | 'desc';
 
-interface ScanResult {
+/* ─── Phase 2: Regime-Weighted MSP Score ─── */
+function computeMspScore(r: ScanResult, regime: string): number {
+  const w = REGIME_WEIGHTS[regime] || REGIME_WEIGHTS.trend;
+  // Normalize each component to 0-100 scale
+  const structure = Math.min(100, Math.max(0, Math.abs(r.score ?? 0) * 10));
+  const momentum = Math.min(100, Math.max(0, r.confidence ?? (Math.abs(r.score ?? 0) * 8)));
+  const volatility = r.dveBbwp != null
+    ? (r.dveBbwp < 20 ? 80 + (20 - r.dveBbwp) : r.dveBbwp > 80 ? 70 + (r.dveBbwp - 80) : 30 + r.dveBbwp * 0.3)
+    : 40;
+  const options = r.derivatives ? Math.min(100, 50 + Math.abs(r.derivatives.fundingRate ?? 0) * 500) : 30;
+  const time = r.scoreV2?.acl?.confidence ?? 50;
+  const raw = (structure * w.structure + momentum * w.momentum + volatility * w.volatility + options * w.options + time * w.time) / 100;
+  // Apply regime gating penalty
+  if (r.scoreV2?.regimeScore?.gated) return Math.max(0, raw * 0.4);
+  return Math.round(Math.min(100, Math.max(0, raw)));
+}
+
+/* ─── Phase 6: Trade Lifecycle State ─── */
+function deriveLifecycleState(r: ScanResult, regime: string): LifecycleState {
+  const msp = computeMspScore(r, regime);
+  const conf = r.confidence ?? 0;
+  const gated = r.scoreV2?.regimeScore?.gated;
+  if (gated) return 'INVALIDATED';
+  if (msp >= 75 && conf >= 65) return 'READY';
+  if (msp >= 55 && conf >= 45) return 'SETTING_UP';
+  if (msp >= 35) return 'WATCHING';
+  return 'DISCOVERED';
+}
+type ScannerMode = 'ranked' | 'pro';
+type AssetClass = 'crypto' | 'equity' | 'forex';
+type ScanDepth = 'light' | 'deep';
+
+/* ─── Detail data from /api/scanner/run ─── */
+interface SymbolDetail {
   symbol: string;
   score: number;
-  direction?: 'bullish' | 'bearish' | 'neutral';
-  signals?: {
-    bullish: number;
-    bearish: number;
-    neutral: number;
-  };
+  direction?: string;
   price?: number;
   rsi?: number;
-  macd_hist?: number;
-  ema200?: number;
-  atr?: number;
   adx?: number;
+  atr?: number;
+  ema200?: number;
   stoch_k?: number;
   stoch_d?: number;
   cci?: number;
-  aroon_up?: number;
-  aroon_down?: number;
-  obv?: number;
+  macd_hist?: number;
   volume?: number;
-  lastCandleTime?: string;
-  chartData?: {
-    candles: { t: string; o: number; h: number; l: number; c: number }[];
-    ema200: number[];
-    rsi: number[];
-    macd: { macd: number; signal: number; hist: number }[];
-  };
-  fetchedAt?: string;
-  // Derivatives data for crypto (OI, Funding Rate, L/S)
-  derivatives?: {
-    openInterest: number;
-    openInterestCoin: number;
-    fundingRate?: number;
-    longShortRatio?: number;
-  };
+  confidence?: number;
+  setup?: string;
+  signals?: { bullish: number; bearish: number; neutral: number };
   institutionalFilter?: {
-    finalScore: number;
-    finalGrade: string;
-    recommendation: 'TRADE_READY' | 'CAUTION' | 'NO_TRADE';
-    noTrade: boolean;
-    filters: Array<{
-      label: string;
-      status: 'pass' | 'warn' | 'block';
-      reason: string;
-    }>;
+    recommendation?: string;
+    noTrade?: boolean;
+    finalGrade?: string;
+    finalScore?: number;
+    filters?: { label: string; status: string }[];
   };
-  capitalFlow?: {
-    market_mode: 'pin' | 'launch' | 'chop';
-    gamma_state: 'Positive' | 'Negative' | 'Mixed';
-    bias: 'bullish' | 'bearish' | 'neutral';
-    conviction: number;
-    dominant_expiry: '0DTE' | 'weekly' | 'monthly' | 'long_dated' | 'unknown';
-    pin_strike: number | null;
-    key_strikes: Array<{ strike: number; gravity: number; type: 'call-heavy' | 'put-heavy' | 'mixed' }>;
-    flip_zones: Array<{ level: number; direction: 'bullish_above' | 'bearish_below' }>;
-    liquidity_levels: Array<{ level: number; label: string; prob: number }>;
-    most_likely_path: string[];
-    risk: string[];
-  };
+  capitalFlow?: any;
 }
 
-interface OperatorTransitionSummary {
-  symbol: string;
-  timeframe: TimeframeOption;
-  edgeScore: number;
-  bias: 'bullish' | 'bearish' | 'neutral';
-  quality: 'HIGH' | 'MEDIUM' | 'LOW';
-  executionState: 'WAIT' | 'PREP' | 'EXECUTE';
-  nextTrigger: string;
-  risk: 'LOW' | 'MODERATE' | 'HIGH';
-}
-
-function toWorkflowAssetClass(assetType: AssetType): AssetClass {
-  if (assetType === 'crypto') return 'crypto';
-  if (assetType === 'forex') return 'forex';
-  return 'equity';
-}
-
-function toDecisionPacketMarket(assetType: AssetType): DecisionPacket['market'] {
-  if (assetType === 'crypto') return 'crypto';
-  if (assetType === 'forex') return 'forex';
-  return 'stocks';
-}
-
-// Curated crypto list — nonsense tokens removed, TRUSTED_CRYPTO_LIST is the canonical source
-// (Legacy CRYPTO_LIST with 400+ garbage symbols was deleted in audit cleanup)
-
-const QUICK_PICKS: Record<AssetType, string[]> = {
-  equity: ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA", "META", "NFLX", "JPM", "BAC"],
-  crypto: ["BTC", "ETH", "BNB", "SOL", "XRP", "ADA", "DOGE", "AVAX", "DOT", "LINK"],
-  forex: ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "NZDUSD", "USDCAD", "USDCHF", "EURGBP", "EURJPY", "GBPJPY"],
-};
-
-/* Sector mapping for equity tickers – used by the Sector Filter dropdown in V2 Discover.
-   Tickers not in this map are excluded when a specific sector is selected. */
-const TICKER_SECTOR: Record<string, 'tech' | 'finance' | 'energy'> = {
-  // Mega-cap tech + semiconductors + growth tech
-  AAPL: 'tech', MSFT: 'tech', GOOGL: 'tech', AMZN: 'tech', NVDA: 'tech', META: 'tech',
-  TSLA: 'tech', AVGO: 'tech', ORCL: 'tech', CRM: 'tech', AMD: 'tech', INTC: 'tech',
-  QCOM: 'tech', MU: 'tech', AMAT: 'tech', NFLX: 'tech', UBER: 'tech', ABNB: 'tech',
-  SQ: 'tech', SHOP: 'tech', SNOW: 'tech', PLTR: 'tech', CRWD: 'tech',
-  ADBE: 'tech', NOW: 'tech', INTU: 'tech', PYPL: 'tech', DIS: 'tech',
-  // Finance
-  JPM: 'finance', V: 'finance', MA: 'finance', BAC: 'finance', WFC: 'finance',
-  GS: 'finance', MS: 'finance', BLK: 'finance',
-  // Energy
-  XOM: 'energy', CVX: 'energy', COP: 'energy', SLB: 'energy',
-};
-
-const TRUSTED_CRYPTO_LIST = [
-  "BTC", "ETH", "BNB", "SOL", "XRP", "ADA", "DOGE", "AVAX", "DOT", "LINK",
-  "TRX", "LTC", "BCH", "ATOM", "MATIC", "NEAR", "HBAR", "ARB", "OP", "INJ",
-  "SUI", "TIA", "SEI", "AAVE", "UNI", "MKR", "CRV", "JUP", "ONDO", "WLD"
-];
-
-function ScannerContent() {
-  const searchParams = useSearchParams();
-  const { isAdmin, tier, isLoading: tierLoading } = useUserTier();
-  const { snapshot: riskSnapshot, isLocked: riskLocked, guardEnabled, evaluate: evaluateRiskIntent } = useRiskPermission();
-  const [assetType, setAssetType] = useState<AssetType>("crypto");
-  const [ticker, setTicker] = useState<string>("");
-  const [timeframe, setTimeframe] = useState<TimeframeOption>("1h");
-  const [loading, setLoading] = useState<boolean>(false);
-  const [result, setResult] = useState<ScanResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiText, setAiText] = useState<string | null>(null);
-  const [aiError, setAiError] = useState<string | null>(null);
-  const [aiExpanded, setAiExpanded] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
-  const [scanKey, setScanKey] = useState<number>(0); // Force re-render on each scan
-  const [capitalFlow, setCapitalFlow] = useState<ScanResult['capitalFlow'] | null>(null);
-
-  // Free-tier daily scan limit
-  const isFree = tier === 'free';
-  const [dailyScansUsed, setDailyScansUsed] = useState<number>(() => {
-    if (typeof window === 'undefined') return 0;
-    try {
-      const stored = JSON.parse(localStorage.getItem('msp_free_scans') || '{}');
-      const today = new Date().toISOString().slice(0, 10);
-      return stored.date === today ? stored.count : 0;
-    } catch { return 0; }
+/* ─── Watchlist add helper ─── */
+async function addToWatchlist(symbol: string, assetType: string, price?: number): Promise<string> {
+  const wlRes = await fetch('/api/watchlists');
+  const wlData = await wlRes.json();
+  if (!wlRes.ok) throw new Error(wlData?.error || 'Failed to load watchlists');
+  let target = wlData?.watchlists?.find((l: any) => l.is_default) || wlData?.watchlists?.[0];
+  if (!target) {
+    const createRes = await fetch('/api/watchlists', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'My Watchlist', description: 'Auto-created from scanner', color: 'emerald', icon: 'star' }),
+    });
+    const createData = await createRes.json();
+    if (!createRes.ok) throw new Error(createData?.error || 'Failed to create watchlist');
+    target = createData?.watchlist;
+  }
+  const addRes = await fetch('/api/watchlists/items', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ watchlistId: target.id, symbol, assetType, addedPrice: price }),
   });
-  const freeScanLimitReached = isFree && dailyScansUsed >= FREE_DAILY_SCAN_LIMIT;
+  const addData = await addRes.json();
+  if (!addRes.ok) throw new Error(addData?.error || 'Failed to add to watchlist');
+  return target.name;
+}
 
-  const incrementDailyScan = () => {
-    if (!isFree) return;
-    const today = new Date().toISOString().slice(0, 10);
-    const next = dailyScansUsed + 1;
-    setDailyScansUsed(next);
-    try { localStorage.setItem('msp_free_scans', JSON.stringify({ date: today, count: next })); } catch {}
-  };
-  
-  // Bulk scan state
-  const [bulkScanType, setBulkScanType] = useState<'equity' | 'crypto' | null>(null);
-  const [bulkScanLoading, setBulkScanLoading] = useState(false);
-  const [bulkScanTimeframe, setBulkScanTimeframe] = useState<'15m' | '30m' | '1h' | '1d'>('1d');
-  const [bulkCryptoScanMode, setBulkCryptoScanMode] = useState<'deep' | 'light'>('light');
-  const [bulkEquityScanMode] = useState<'deep' | 'light'>('deep');
-  const [bulkCryptoUniverseSize, setBulkCryptoUniverseSize] = useState<number>(500);
-  const [bulkScanResults, setBulkScanResults] = useState<{
-    type: string;
-    timeframe: string;
-    mode?: 'deep' | 'light' | 'hybrid' | 'cached';
-    sourceCoinsFetched?: number;
-    sourceSymbols?: number;
-    apiCallsUsed?: number;
-    apiCallsCap?: number;
-    effectiveUniverseSize?: number;
-    topPicks: any[];
-    scanned: number;
-    duration: string;
-  } | null>(null);
-  const [bulkScanError, setBulkScanError] = useState<string | null>(null);
-  const showDeskPreludePanels = false;
-  const showAdvancedEngineeringPanels = true;
-  const showLegacyTopAnalysis = false;
-  const useScannerFlowV2 = true;
-  const useInstitutionalDecisionCockpitV2 = true;
-  const [advancedIntelligenceOpen, setAdvancedIntelligenceOpen] = useState(false);
-  const [activeTemplateId, setActiveTemplateId] = useState<string | undefined>(undefined);
-  const [bulkViewMode, setBulkViewMode] = useState<'table' | 'cards'>('table');
-  const [advancedDiscoverOpen, setAdvancedDiscoverOpen] = useState(false);
-  const [focusMode, setFocusMode] = useState(false);
-  const [decisionTimerStart, setDecisionTimerStart] = useState<number | null>(null);
-  const [decisionElapsed, setDecisionElapsed] = useState(0);
-  const [scannerCollapsed, setScannerCollapsed] = useState(false);
-  const [orientationCollapsed, setOrientationCollapsed] = useState(true);
-  const [operatorTransition, setOperatorTransition] = useState<OperatorTransitionSummary | null>(null);
-  const [density, setDensity] = useState<TerminalDensity>('normal');
-  const [deskFeedIndex, setDeskFeedIndex] = useState(0);
-  const [personalityMode, setPersonalityMode] = useState<'adaptive' | TraderPersonality>('adaptive');
-  const [personalitySignals, setPersonalitySignals] = useState<PersonalitySignals>(DEFAULT_PERSONALITY_SIGNALS);
-  const [presenceState, setPresenceState] = useState<'WATCHING' | 'PREPARING' | 'READY' | 'INVALIDATED'>('WATCHING');
-  const [presenceMode, setPresenceMode] = useState<'TREND MODE' | 'RANGE MODE' | 'CHAOS MODE'>('RANGE MODE');
-  const [presenceUpdates, setPresenceUpdates] = useState<string[]>([]);
-  const [journalMonitorEnabled, setJournalMonitorEnabled] = useState(false);
-  const [journalMonitorThreshold, setJournalMonitorThreshold] = useState<number>(72);
-  const [journalMonitorCooldownMinutes, setJournalMonitorCooldownMinutes] = useState<number>(120);
-  const [journalMonitorAutoScanEnabled, setJournalMonitorAutoScanEnabled] = useState(false);
-  const [journalMonitorAutoScanSeconds, setJournalMonitorAutoScanSeconds] = useState<number>(180);
-  const [journalMonitorStatus, setJournalMonitorStatus] = useState<string | null>(null);
-  const [journalMonitorError, setJournalMonitorError] = useState<string | null>(null);
-  const [showPreTradeChecklist, setShowPreTradeChecklist] = useState(false);
-  const [pendingDeployPick, setPendingDeployPick] = useState<any | null>(null);
-  const [preTradeChecklist, setPreTradeChecklist] = useState({
-    thesis: false,
-    risk: false,
-    eventWindow: false,
-  });
-  // Risk block modal (shown when governor returns BLOCK on deploy)
-  const [showRiskBlockModal, setShowRiskBlockModal] = useState(false);
-  const [riskBlockReason, setRiskBlockReason] = useState<string>('');
-  // Research case modal
-  const [researchCasePick, setResearchCasePick] = useState<ScanPick | null>(null);
-  // Flash message (replaces native alert())
+/* ─── Inline Detail Panel ─── */
+function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
+  detail: SymbolDetail;
+  timeframeLabel: string;
+  onClose: () => void;
+  assetType: string;
+}) {
   const [flashMsg, setFlashMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
-  // Behavioral overtrading screen
-  const [showBehavioralScreen, setShowBehavioralScreen] = useState(false);
-  const [behavioralScreenData, setBehavioralScreenData] = useState<{ tradesToday: number; avgTradesPerSession: number } | null>(null);
-  // Bulk scan expand/collapse
-  const [bulkScanExpanded, setBulkScanExpanded] = useState(false);
-  const [rankDirection, setRankDirection] = useState<'all' | 'long' | 'short'>('all');
-  const [sectorFilter, setSectorFilter] = useState<'all' | 'tech' | 'finance' | 'energy'>('all');
-  const [scanIntentMode, setScanIntentMode] = useState<'observe' | 'decide'>('observe');
-  const [rankMinConfidence, setRankMinConfidence] = useState<50 | 60 | 70 | 80>(50);
-  const [rankQuality, setRankQuality] = useState<'all' | 'high' | 'medium'>('all');
-  const [rankTfAlignment, setRankTfAlignment] = useState<2 | 3>(2);
-  const [rankVolatility, setRankVolatility] = useState<'all' | 'low' | 'moderate' | 'high'>('all');
-  const [rankSqueeze, setRankSqueeze] = useState<'all' | 'squeeze'>('all');
-  const [rankSort, setRankSort] = useState<'rank' | 'confidence' | 'volatility' | 'trend'>('rank');
-  const flowFetchAbortRef = React.useRef<AbortController | null>(null);
-  const lastFlowSymbolRef = React.useRef<string | null>(null);
-  const journalMonitorLastLoggedRef = React.useRef<Record<string, number>>({});
-  const monitorAutoScanBusyRef = React.useRef(false);
-  // When clicking a bulk scan row, carry the bulk direction to the detail view so
-  // the user doesn't see SHORT in the table but BULLISH in the detail panel.
-  const bulkPickDirectionRef = React.useRef<'bullish' | 'bearish' | 'neutral' | null>(null);
-  const previousPresenceRef = React.useRef<{
-    state: 'WATCHING' | 'PREPARING' | 'READY' | 'INVALIDATED';
-    mode: 'TREND MODE' | 'RANGE MODE' | 'CHAOS MODE';
-    regime: 'TREND' | 'RANGE' | 'TRANSITION';
-    flowAligned: boolean;
-  } | null>(null);
 
-  useEffect(() => {
-    try {
-      const rawSignals = window.localStorage.getItem('msp_scanner_personality_signals_v1');
-      if (rawSignals) {
-        const parsed = JSON.parse(rawSignals) as Partial<PersonalitySignals>;
-        setPersonalitySignals({ ...DEFAULT_PERSONALITY_SIGNALS, ...parsed });
-      }
-      const rawMode = window.localStorage.getItem('msp_scanner_personality_mode_v1');
-      if (rawMode === 'adaptive' || rawMode === 'momentum' || rawMode === 'structure' || rawMode === 'risk' || rawMode === 'flow') {
-        setPersonalityMode(rawMode);
-      }
+  const direction = detail.direction || 'neutral';
+  const confidence = detail.confidence ?? Math.min(99, Math.max(10, Math.round(detail.score)));
+  const quality = confidence >= 70 ? 'HIGH' : confidence >= 50 ? 'MEDIUM' : 'LOW';
+  const adx = detail.adx ?? 0;
+  const atrPercent = detail.atr && detail.price ? (detail.atr / detail.price) * 100 : 0;
+  const regime = adx >= 30 ? 'Trending' : adx < 20 ? 'Range' : 'Transitional';
 
-      const rawMonitorEnabled = window.localStorage.getItem('msp_scanner_journal_monitor_enabled_v1');
-      if (rawMonitorEnabled === 'true' || rawMonitorEnabled === 'false') {
-        setJournalMonitorEnabled(rawMonitorEnabled === 'true');
-      }
-
-      const rawMonitorThreshold = Number(window.localStorage.getItem('msp_scanner_journal_monitor_threshold_v1'));
-      if (Number.isFinite(rawMonitorThreshold)) {
-        setJournalMonitorThreshold(Math.max(50, Math.min(98, Math.round(rawMonitorThreshold))));
-      }
-
-      const rawMonitorCooldown = Number(window.localStorage.getItem('msp_scanner_journal_monitor_cooldown_v1'));
-      if (Number.isFinite(rawMonitorCooldown)) {
-        setJournalMonitorCooldownMinutes(Math.max(5, Math.min(24 * 60, Math.round(rawMonitorCooldown))));
-      }
-
-      const rawAutoScanEnabled = window.localStorage.getItem('msp_scanner_journal_monitor_autoscan_enabled_v1');
-      if (rawAutoScanEnabled === 'true' || rawAutoScanEnabled === 'false') {
-        setJournalMonitorAutoScanEnabled(rawAutoScanEnabled === 'true');
-      }
-
-      const rawAutoScanSeconds = Number(window.localStorage.getItem('msp_scanner_journal_monitor_autoscan_seconds_v1'));
-      if (Number.isFinite(rawAutoScanSeconds)) {
-        setJournalMonitorAutoScanSeconds(Math.max(30, Math.min(3600, Math.round(rawAutoScanSeconds))));
-      }
-    } catch {
-      setPersonalitySignals(DEFAULT_PERSONALITY_SIGNALS);
-    }
-  }, []);
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem('msp_scanner_personality_signals_v1', JSON.stringify(personalitySignals));
-      window.localStorage.setItem('msp_scanner_personality_mode_v1', personalityMode);
-      window.localStorage.setItem('msp_scanner_journal_monitor_enabled_v1', String(journalMonitorEnabled));
-      window.localStorage.setItem('msp_scanner_journal_monitor_threshold_v1', String(journalMonitorThreshold));
-      window.localStorage.setItem('msp_scanner_journal_monitor_cooldown_v1', String(journalMonitorCooldownMinutes));
-      window.localStorage.setItem('msp_scanner_journal_monitor_autoscan_enabled_v1', String(journalMonitorAutoScanEnabled));
-      window.localStorage.setItem('msp_scanner_journal_monitor_autoscan_seconds_v1', String(journalMonitorAutoScanSeconds));
-    } catch {
-    }
-  }, [
-    personalitySignals,
-    personalityMode,
-    journalMonitorEnabled,
-    journalMonitorThreshold,
-    journalMonitorCooldownMinutes,
-    journalMonitorAutoScanEnabled,
-    journalMonitorAutoScanSeconds,
-  ]);
-
-  useEffect(() => {
-    const urlSymbol = searchParams.get('symbol');
-    if (!urlSymbol) return;
-    const normalized = urlSymbol.trim().toUpperCase();
-    if (!normalized) return;
-    setTicker(normalized);
-  }, [searchParams]);
-
-  useEffect(() => {
-    if (!result) return;
-    const timer = setInterval(() => {
-      setDeskFeedIndex((prev) => prev + 1);
-    }, 30000);
-    return () => clearInterval(timer);
-  }, [result?.symbol]);
-
-  // Decision timer — starts when result is set (Step 3), resets when cleared
-  useEffect(() => {
-    if (result) {
-      setDecisionTimerStart(Date.now());
-      setDecisionElapsed(0);
-    } else {
-      setDecisionTimerStart(null);
-      setDecisionElapsed(0);
-    }
-  }, [result?.symbol]);
-
-  useEffect(() => {
-    if (!decisionTimerStart) return;
-    const iv = setInterval(() => setDecisionElapsed(Math.floor((Date.now() - decisionTimerStart) / 1000)), 1000);
-    return () => clearInterval(iv);
-  }, [decisionTimerStart]);
-
-  useEffect(() => {
-    if (!result) return;
-
-    const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
-    const confidence = Math.max(1, Math.min(99, Math.round(result.score ?? 50)));
-    const adx = result.adx ?? 0;
-    const atrPercent = result.atr && result.price ? (result.atr / result.price) * 100 : 0;
-    const trendAligned = result.price != null && result.ema200 != null
-      ? (direction === 'bullish' ? result.price > result.ema200 : direction === 'bearish' ? result.price < result.ema200 : false)
+  const trendAligned = (detail.signals?.bullish ?? 0) > (detail.signals?.bearish ?? 0) && direction === 'bullish'
+    || (detail.signals?.bearish ?? 0) > (detail.signals?.bullish ?? 0) && direction === 'bearish';
+  const momentumAligned = detail.rsi != null && ((direction === 'bullish' && detail.rsi > 45) || (direction === 'bearish' && detail.rsi < 55));
+  const flowAligned = direction === 'bullish'
+    ? (detail.signals?.bullish ?? 0) >= (detail.signals?.neutral ?? 0)
+    : direction === 'bearish'
+      ? (detail.signals?.bearish ?? 0) >= (detail.signals?.neutral ?? 0)
       : false;
-    const momentumActive = result.rsi != null && result.macd_hist != null
-      ? (direction === 'bullish' ? result.rsi >= 50 && result.macd_hist >= 0 : direction === 'bearish' ? result.rsi <= 50 && result.macd_hist <= 0 : false)
-      : false;
-    const flowAligned = direction === 'bullish'
-      ? (result.signals?.bullish ?? 0) > (result.signals?.bearish ?? 0)
-      : direction === 'bearish'
-      ? (result.signals?.bearish ?? 0) > (result.signals?.bullish ?? 0)
-      : false;
-    const regime: 'TREND' | 'RANGE' | 'TRANSITION' = adx >= 30 ? 'TREND' : adx < 20 ? 'RANGE' : 'TRANSITION';
+  const tfAlignment = [trendAligned, momentumAligned, flowAligned, direction !== 'neutral'].filter(Boolean).length;
 
-    const nextState: 'WATCHING' | 'PREPARING' | 'READY' | 'INVALIDATED' =
-      confidence < 52 || direction === 'neutral'
-        ? 'INVALIDATED'
-        : trendAligned && momentumActive && confidence >= 70 && flowAligned
-        ? 'READY'
-        : confidence >= 55
-        ? 'PREPARING'
-        : 'WATCHING';
+  const entry = detail.price != null
+    ? (direction === 'bullish' ? detail.price + (detail.atr ?? 0) * 0.2 : direction === 'bearish' ? detail.price - (detail.atr ?? 0) * 0.2 : detail.price) : null;
+  const stop = detail.price != null
+    ? (direction === 'bullish' ? detail.price - (detail.atr ?? 0) * 0.8 : direction === 'bearish' ? detail.price + (detail.atr ?? 0) * 0.8 : detail.price) : null;
+  const target1 = detail.price != null
+    ? (direction === 'bullish' ? detail.price + (detail.atr ?? 0) * 1.2 : direction === 'bearish' ? detail.price - (detail.atr ?? 0) * 1.2 : detail.price) : null;
+  const target2 = detail.price != null
+    ? (direction === 'bullish' ? detail.price + (detail.atr ?? 0) * 2.0 : direction === 'bearish' ? detail.price - (detail.atr ?? 0) * 2.0 : detail.price) : null;
+  const rr = entry != null && stop != null && target1 != null
+    ? Math.max(0, Math.abs(target1 - entry) / Math.max(0.0001, Math.abs(entry - stop))) : null;
 
-    const nextMode: 'TREND MODE' | 'RANGE MODE' | 'CHAOS MODE' =
-      atrPercent >= 3
-        ? 'CHAOS MODE'
-        : regime === 'TREND'
-        ? 'TREND MODE'
-        : 'RANGE MODE';
+  const recommendation = detail.institutionalFilter?.recommendation;
+  const tradeReady = recommendation === 'TRADE_READY' && quality !== 'LOW' && direction !== 'neutral';
+  const executionStatus = tradeReady ? 'HIGH CONVICTION' : quality === 'MEDIUM' && direction !== 'neutral' ? 'MODERATE SETUP' : 'LOW SETUP — REVIEW';
+  const statusColor = tradeReady ? '#10B981' : quality === 'MEDIUM' && direction !== 'neutral' ? '#F59E0B' : '#EF4444';
+  const confBarColor = confidence >= 70 ? '#10B981' : confidence >= 55 ? '#F59E0B' : '#EF4444';
 
-    const previous = previousPresenceRef.current;
-    const updates: string[] = [];
+  const blockReasons = tradeReady
+    ? ['Structure aligned', direction === 'bullish' ? 'Bias: Long' : direction === 'bearish' ? 'Bias: Short' : 'Bias: Neutral']
+    : [quality === 'LOW' ? 'Quality below threshold' : null, !trendAligned ? 'Structure incomplete' : null, atrPercent >= 3 ? 'Volatility mismatch' : null].filter(Boolean) as string[];
 
-    if (previous) {
-      if (previous.state !== nextState) {
-        updates.push(`↳ ${previous.state} → ${nextState}`);
-      }
-      if (!previous.flowAligned && flowAligned) {
-        updates.push('↳ Flow alignment increased confidence');
-      }
-      if (previous.regime !== regime) {
-        updates.push(`↳ Structure upgraded: ${previous.regime} → ${regime}`);
-      }
-      if (previous.mode !== nextMode) {
-        updates.push(`↳ Adaptive profile switched: ${nextMode}`);
-      }
-    }
-
-    setPresenceState(nextState);
-    setPresenceMode(nextMode);
-    if (updates.length > 0) {
-      setPresenceUpdates((prev) => [...updates, ...prev].slice(0, 8));
-    }
-
-    previousPresenceRef.current = {
-      state: nextState,
-      mode: nextMode,
-      regime,
-      flowAligned,
-    };
-
-    const action: 'WAIT' | 'PREP' | 'EXECUTE' = direction === 'neutral'
-      ? 'WAIT'
-      : trendAligned && momentumActive && confidence >= 70
-      ? 'EXECUTE'
-      : 'PREP';
-    const risk: 'LOW' | 'MODERATE' | 'HIGH' = atrPercent >= 3 ? 'HIGH' : atrPercent >= 1.5 ? 'MODERATE' : 'LOW';
-    const next = action === 'EXECUTE'
-      ? 'Cluster active now'
-      : action === 'PREP'
-      ? 'Await confluence trigger'
-      : 'Wait for cleaner setup';
-
-    writeOperatorState({
-      symbol: result.symbol,
-      edge: confidence,
-      bias: direction === 'bullish' ? 'BULLISH' : direction === 'bearish' ? 'BEARISH' : 'NEUTRAL',
-      action,
-      risk,
-      next,
-      mode: 'ORIENT',
-    });
-  }, [result]);
-
-  // Run bulk scan
-  const runBulkScan = async (
-    type: 'equity' | 'crypto' | 'forex',
-    overrides?: { mode?: 'deep' | 'light' }
-  ) => {
-    const requestedTimeframe = bulkScanTimeframe;
-    setBulkScanType(type as any);
-    setBulkScanLoading(true);
-    setBulkScanError(null);
-    setBulkScanResults(null);
-    
+  const handleAddToWatchlist = async () => {
     try {
-      // Forex: scan pairs via /api/scanner/run in parallel (small universe)
-      if (type === 'forex') {
-        const forexPairs = QUICK_PICKS.forex.length > 0
-          ? QUICK_PICKS.forex
-          : ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'NZDUSD', 'USDCAD', 'USDCHF', 'EURGBP', 'EURJPY', 'GBPJPY'];
-        const results = await Promise.allSettled(
-          forexPairs.map(async (pair) => {
-            const r = await fetch(`/api/scanner/run?_t=${Date.now()}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ type: 'forex', timeframe: requestedTimeframe, minScore: 0, symbols: [pair] }),
-            });
-            const d = await r.json();
-            if (d.success && d.results?.length > 0) return d.results[0];
-            return null;
-          })
-        );
-        const topPicks = results
-          .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled' && r.value !== null)
-          .map((r) => r.value)
-          .sort((a: any, b: any) => (b.score || 0) - (a.score || 0));
-        setBulkScanResults({
-          topPicks,
-          type: 'forex',
-          timeframe: requestedTimeframe,
-          scanned: forexPairs.length,
-          duration: '—',
-          effectiveUniverseSize: forexPairs.length,
-        });
-        return;
-      }
-
-      const payload: any = { type, timeframe: requestedTimeframe };
-      if (type === 'crypto') {
-        const resolvedMode = overrides?.mode ?? bulkCryptoScanMode;
-        payload.mode = resolvedMode;
-        if (resolvedMode === 'light') {
-          payload.universeSize = bulkCryptoUniverseSize;
-        }
-      } else {
-        // Use hybrid mode for equities — uses AV movers + bulk quotes (2-3 API calls)
-        // instead of deep mode which makes 67+ individual calls and times out
-        const resolvedMode: 'hybrid' = 'hybrid';
-        payload.mode = resolvedMode;
-      }
-
-      const res = await fetch('/api/scanner/bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      
-      const data = await res.json();
-      
-      if (!res.ok) {
-        if (res.status === 401) {
-          setBulkScanError('🔒 Please log in to use the scanner');
-          return;
-        }
-      }
-      
-      if (data.success) {
-        setBulkScanResults({
-          type: data.type,
-          timeframe: data.timeframe,
-          mode: data.mode,
-          sourceCoinsFetched: data.sourceCoinsFetched,
-          sourceSymbols: data.sourceSymbols,
-          apiCallsUsed: data.apiCallsUsed,
-          apiCallsCap: data.apiCallsCap,
-          effectiveUniverseSize: data.effectiveUniverseSize,
-          topPicks: data.topPicks,
-          scanned: data.scanned,
-          duration: data.duration
-        });
-
-        const topPick = data.topPicks?.[0];
-        if (topPick?.symbol) {
-          emitScannerLifecycle(
-            {
-              symbol: topPick.symbol,
-              score: topPick.score,
-              direction: topPick.direction,
-              price: topPick.indicators?.price,
-              atr: topPick.indicators?.atr,
-              adx: topPick.indicators?.adx,
-              rsi: topPick.indicators?.rsi,
-              macd_hist: topPick.indicators?.macd_hist,
-            },
-            'scanner.bulk',
-            { assetType: type, timeframe: requestedTimeframe }
-          );
-        }
-
-        // ── Auto-log ALL qualifying topPicks to execution engine (paper trade) ──
-        if (journalMonitorEnabled && Array.isArray(data.topPicks)) {
-          const ac = type === 'crypto' ? 'crypto' as const : 'equity' as const;
-          for (const pick of data.topPicks) {
-            const pickScore = pick.score ?? 0;
-            const pickDir = String(pick.direction || '').toLowerCase();
-            if (!pick.symbol || pickDir === 'neutral' || pickScore < journalMonitorThreshold) continue;
-            const dedupeKey = `bulk:${type}:${pick.symbol}:${requestedTimeframe}`;
-            const now = Date.now();
-            const lastAt = journalMonitorLastLoggedRef.current[dedupeKey] || 0;
-            const cooldownMs = Math.max(5, journalMonitorCooldownMinutes) * 60 * 1000;
-            if (now - lastAt < cooldownMs) continue;
-            journalMonitorLastLoggedRef.current[dedupeKey] = now;
-            fireAutoLog({
-              symbol: String(pick.symbol).toUpperCase(),
-              conditionType: `bulk_scan_${type}`,
-              conditionMet: `${pickDir.toUpperCase()}_SCORE_${pickScore}`,
-              triggerPrice: pick.indicators?.price ?? pick.price ?? 0,
-              source: 'scanner_bulk',
-              assetClass: ac,
-              atr: pick.indicators?.atr ?? null,
-            }).catch(() => {});
-          }
-        }
-      } else {
-        setBulkScanError(data.error || 'Scan failed');
-      }
+      const name = await addToWatchlist(detail.symbol, assetType, detail.price);
+      setFlashMsg({ text: `${detail.symbol} added to ${name}`, type: 'success' });
     } catch (e: any) {
-      setBulkScanError(e.message || 'Network error');
-    } finally {
-      setBulkScanLoading(false);
+      setFlashMsg({ text: e?.message || 'Failed', type: 'error' });
     }
+    setTimeout(() => setFlashMsg(null), 3000);
   };
-
-  // Legacy daily picks (keep for backward compat)
-  const [dailyPicks, setDailyPicks] = useState<{
-    scanDate: string | null;
-    topPicks: {
-      equity: any | null;
-      crypto: any | null;
-      forex: any | null;
-    };
-  } | null>(null);
-  const [dailyPicksLoading, setDailyPicksLoading] = useState(false); // Disabled by default
-
-  // AI Page Context - share scan results with copilot
-  const { setPageData } = useAIPageContext();
-
-  const emitScannerLifecycle = (
-    scanResult: ScanResult,
-    sourceModule: 'scanner.run' | 'scanner.bulk',
-    context: { assetType: AssetType; timeframe: string }
-  ) => {
-    const contextAssetType = context.assetType;
-    const contextTimeframe = context.timeframe;
-    const assetClass = toWorkflowAssetClass(contextAssetType);
-    const market = toDecisionPacketMarket(contextAssetType);
-    const score = clampConfidence(scanResult.score ?? 50);
-    const symbolKey = scanResult.symbol.toUpperCase();
-    const dateKey = new Date().toISOString().slice(0, 10).replaceAll('-', '');
-    const workflowId = `wf_scanner_${symbolKey}_${dateKey}`;
-    const signalId = `sig_${symbolKey}_${Date.now()}`;
-    const candidateId = `cand_${symbolKey}_${Date.now()}`;
-    const planId = `plan_${symbolKey}_${Date.now()}`;
-    const bias: 'bullish' | 'bearish' | 'neutral' = scanResult.direction === 'bullish'
-      ? 'bullish'
-      : scanResult.direction === 'bearish'
-      ? 'bearish'
-      : 'neutral';
-    const riskScore = scanResult.atr && scanResult.price
-      ? Math.max(1, Math.min(99, Math.round((scanResult.atr / scanResult.price) * 100 * 20)))
-      : 35;
-    const volatilityRegime = riskScore >= 70 ? 'high' : riskScore >= 45 ? 'moderate' : 'low';
-    const timeframeBias = [contextTimeframe];
-
-    const decisionPacket = createDecisionPacketFromScan({
-      symbol: symbolKey,
-      market,
-      signalSource: sourceModule,
-      signalScore: score,
-      bias,
-      timeframeBias,
-      entryZone: scanResult.price,
-      invalidation: scanResult.price && scanResult.atr ? scanResult.price - scanResult.atr : undefined,
-      targets: scanResult.price && scanResult.atr ? [scanResult.price + scanResult.atr, scanResult.price + (scanResult.atr * 2)] : undefined,
-      riskScore,
-      volatilityRegime,
-      status: 'candidate',
-    });
-
-    const signalEvent = createWorkflowEvent<UnifiedSignal>({
-      eventType: 'signal.created',
-      workflowId,
-      route: '/tools/scanner',
-      module: 'scanner',
-      entity: {
-        entity_type: 'signal',
-        entity_id: signalId,
-        symbol: symbolKey,
-        asset_class: assetClass,
-      },
-      payload: {
-        signal_id: signalId,
-        created_at: new Date().toISOString(),
-        symbol: symbolKey,
-        asset_class: assetClass,
-        timeframe: contextTimeframe,
-        signal_type: 'confluence_scan',
-        direction: bias === 'bullish' ? 'long' : bias === 'bearish' ? 'short' : 'neutral',
-        confidence: score,
-        source: {
-          module: sourceModule,
-          submodule: contextAssetType,
-        },
-        evidence: {
-          score,
-          rsi: scanResult.rsi,
-          adx: scanResult.adx,
-          macd_hist: scanResult.macd_hist,
-        },
-      },
-    });
-
-    const candidateOutcome: CandidateEvaluation['result'] = candidateOutcomeFromConfidence(score);
-    const candidateEvent = createWorkflowEvent<CandidateEvaluation & { decision_packet: DecisionPacket }>({
-      eventType: 'candidate.created',
-      workflowId,
-      parentEventId: signalEvent.event_id,
-      route: '/tools/scanner',
-      module: 'scanner',
-      entity: {
-        entity_type: 'candidate',
-        entity_id: candidateId,
-        symbol: symbolKey,
-        asset_class: assetClass,
-      },
-      payload: {
-        candidate_id: candidateId,
-        signal_id: signalId,
-        evaluated_at: new Date().toISOString(),
-        result: candidateOutcome,
-        confidence_delta: 0,
-        final_confidence: score,
-        checks: [
-          { name: 'score_threshold', status: score >= 70 ? 'pass' : score >= 55 ? 'warn' : 'fail', detail: `Score ${score}` },
-          { name: 'direction_present', status: bias === 'neutral' ? 'warn' : 'pass', detail: `Bias ${bias}` },
-        ],
-        notes: candidateOutcome === 'pass' ? 'Candidate promoted for plan preparation' : 'Candidate logged for watchlist progression',
-        decision_packet: decisionPacket,
-      },
-    });
-
-    if (candidateOutcome === 'pass') {
-      const tradePlanEvent = createWorkflowEvent<TradePlan>({
-        eventType: 'trade.plan.created',
-        workflowId,
-        parentEventId: candidateEvent.event_id,
-        route: '/tools/scanner',
-        module: 'scanner',
-        entity: {
-          entity_type: 'trade_plan',
-          entity_id: planId,
-          symbol: symbolKey,
-          asset_class: assetClass,
-        },
-        payload: {
-          plan_id: planId,
-          created_at: new Date().toISOString(),
-          symbol: symbolKey,
-          asset_class: assetClass,
-          direction: bias === 'bullish' ? 'long' : bias === 'bearish' ? 'short' : 'neutral',
-          timeframe: contextTimeframe,
-          setup: {
-            source: sourceModule,
-            signal_type: 'confluence_scan',
-            confidence: score,
-            decision_packet_id: decisionPacket.id,
-          },
-          entry: {
-            zone: decisionPacket.entryZone,
-            current_price: scanResult.price,
-          },
-          risk: {
-            invalidation: decisionPacket.invalidation,
-            targets: decisionPacket.targets,
-            risk_score: decisionPacket.riskScore,
-            volatility_regime: decisionPacket.volatilityRegime,
-          },
-          links: {
-            candidate_id: candidateId,
-            signal_id: signalId,
-            decision_packet_id: decisionPacket.id,
-          },
-        },
-      });
-
-      void emitWorkflowEvents([signalEvent, candidateEvent, tradePlanEvent]);
-      return;
-    }
-
-    void emitWorkflowEvents([signalEvent, candidateEvent]);
-  };
-
-  useEffect(() => {
-    if (result) {
-      setPageData({
-        skill: 'scanner',
-        symbols: [result.symbol],
-        data: {
-          symbol: result.symbol,
-          price: result.price,
-          score: result.score,
-          direction: result.direction,
-          signals: result.signals,
-          rsi: result.rsi,
-          macd_hist: result.macd_hist,
-          atr: result.atr,
-          adx: result.adx,
-          derivatives: result.derivatives,
-          timeframe,
-          assetType,
-        },
-        summary: `Scanned ${result.symbol}: Score ${result.score}/100, ${result.direction || 'neutral'} bias, RSI ${result.rsi?.toFixed(1) || 'N/A'}`,
-      });
-    }
-  }, [result, timeframe, assetType, setPageData]);
-
-  // AI Page Context — share BULK scan results when on Step 2 (table view)
-  useEffect(() => {
-    if (result) return; // Step 3 single-symbol handled above
-    if (!bulkScanResults?.topPicks?.length) return;
-
-    // Build lightweight picks directly from bulkScanResults (rankedCandidates declared later)
-    const rawPicks = bulkScanResults.topPicks.slice(0, 15).map((pick: any) => {
-      const rawScore = pick?.scoreV2?.final?.confidence ?? pick.score ?? 50;
-      const dir = pick.direction === 'bullish' ? 'long' : pick.direction === 'bearish' ? 'short' : 'neutral';
-      const conf = Math.max(1, Math.min(99, Math.round(rawScore)));
-      return { ...pick, _direction: dir, _confidence: conf, _quality: conf >= 70 ? 'high' : conf >= 55 ? 'medium' : 'low' };
-    });
-    const bullish = rawPicks.filter((p: any) => p._direction === 'long').length;
-    const bearish = rawPicks.filter((p: any) => p._direction === 'short').length;
-    const avgConf = rawPicks.length
-      ? Math.round(rawPicks.reduce((s: number, p: any) => s + (p._confidence || 0), 0) / rawPicks.length)
-      : 0;
-
-    setPageData({
-      skill: 'scanner',
-      symbols: rawPicks.map((p: any) => p.symbol),
-      data: {
-        scanType: bulkScanResults.type,
-        timeframe: bulkScanResults.timeframe || timeframe,
-        mode: bulkScanResults.mode,
-        totalScanned: bulkScanResults.scanned,
-        totalResults: bulkScanResults.topPicks.length,
-        displayedResults: rawPicks.length,
-        averageConfidence: avgConf,
-        bullishCount: bullish,
-        bearishCount: bearish,
-        topPicks: rawPicks.map((p: any) => ({
-          symbol: p.symbol,
-          direction: p._direction,
-          confidence: p._confidence,
-          quality: p._quality,
-          strategy: p.setup || p.setupClass || p.pattern || 'MOMENTUM_REVERSAL',
-          rsi: p.indicators?.rsi,
-          adx: p.indicators?.adx,
-          atrPercent: p.indicators?.atr_percent,
-          price: p.indicators?.price || p.price,
-          volume: p.indicators?.volume,
-        })),
-      },
-      summary: `Bulk scan (${bulkScanResults.type}): ${bulkScanResults.topPicks.length} setups from ${bulkScanResults.scanned} scanned. ${bullish} bullish, ${bearish} bearish. Avg confidence ${avgConf}%. Top pick: ${rawPicks[0]?.symbol} (${rawPicks[0]?._direction}, ${rawPicks[0]?._confidence}% conf).`,
-    });
-  }, [result, bulkScanResults, timeframe, setPageData]);
-
-  // Daily picks call intentionally disabled to avoid background API load
-  useEffect(() => {
-    setDailyPicksLoading(false);
-  }, []);
-
-  useEffect(() => {
-    const fetchFlow = async () => {
-      if (!result?.symbol || assetType !== 'equity') {
-        setCapitalFlow(null);
-        lastFlowSymbolRef.current = null;
-        if (flowFetchAbortRef.current) {
-          flowFetchAbortRef.current.abort();
-          flowFetchAbortRef.current = null;
-        }
-        return;
-      }
-
-      if (lastFlowSymbolRef.current === result.symbol) {
-        return;
-      }
-      lastFlowSymbolRef.current = result.symbol;
-
-      if (flowFetchAbortRef.current) {
-        flowFetchAbortRef.current.abort();
-      }
-      const controller = new AbortController();
-      flowFetchAbortRef.current = controller;
-
-      try {
-        const response = await fetch(`/api/flow?symbol=${encodeURIComponent(result.symbol)}&scanMode=intraday_1h`, {
-          cache: 'no-store',
-          signal: controller.signal,
-        });
-        const data = await response.json();
-        if (response.ok && data?.success && data?.data) {
-          setCapitalFlow(data.data);
-        } else {
-          setCapitalFlow(result.capitalFlow ?? null);
-        }
-      } catch (error: any) {
-        if (error?.name === 'AbortError') return;
-        setCapitalFlow(result.capitalFlow ?? null);
-      } finally {
-        flowFetchAbortRef.current = null;
-      }
-    };
-
-    fetchFlow();
-    return () => {
-      if (flowFetchAbortRef.current) {
-        flowFetchAbortRef.current.abort();
-      }
-    };
-  }, [result?.symbol, assetType]);
-
-  // Get filtered suggestions based on input
-  const getSuggestions = () => {
-    if (assetType === "crypto") {
-      return TRUSTED_CRYPTO_LIST.filter(c => c.startsWith(ticker.toUpperCase())).slice(0, 8);
-    }
-    return [];
-  };
-
-  const runScan = async (symbolOverride?: string) => {
-    const effectiveTicker = symbolOverride?.trim() || ticker.trim();
-    if (loading) return;
-    // Clear bulk direction override for manual scans (no symbolOverride = typed ticker)
-    if (!symbolOverride) bulkPickDirectionRef.current = null;
-
-    if (freeScanLimitReached) {
-      setError(`Free plan limit reached (${FREE_DAILY_SCAN_LIMIT} scans/day). Upgrade to Pro for unlimited scanning.`);
-      return;
-    }
-
-    if (!effectiveTicker) {
-      setError("Please enter or select a ticker");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    setResult(null);
-    setCapitalFlow(null);
-    setAiText(null);
-    setAiError(null);
-    setAiLoading(false);
-    setLastUpdated(null);
-    setOperatorTransition(null);
-    setScanKey(prev => prev + 1); // Force new render
-
-    const requestedAssetType = assetType;
-    const requestedTimeframe = timeframe;
-
-    try {
-      // Add cache-busting timestamp to ensure fresh data
-      const cacheBuster = Date.now();
-      const response = await fetch(`/api/scanner/run?_t=${cacheBuster}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-          "Pragma": "no-cache",
-        },
-        cache: "no-store",
-        body: JSON.stringify({
-          type: requestedAssetType === "forex" ? "forex" : requestedAssetType,
-          timeframe: requestedTimeframe,
-          minScore: 0,
-          symbols: [effectiveTicker.toUpperCase()],
-        }),
-      });
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          setError('🔒 Please log in to use the scanner');
-          return;
-        }
-        throw new Error(data.error || `Scanner API returned ${response.status}`);
-      }
-
-      if (data.success && data.results?.length > 0) {
-        incrementDailyScan();
-        const scanResult = data.results[0] as ScanResult;
-        // If navigated from bulk scan row, use the bulk scan's direction for consistency
-        if (bulkPickDirectionRef.current) {
-          scanResult.direction = bulkPickDirectionRef.current;
-          bulkPickDirectionRef.current = null;
-        }
-        const scanScore = Math.max(1, Math.min(99, Math.round(scanResult.score ?? 50)));
-        const scanAtrPercent = scanResult.atr && scanResult.price ? (scanResult.atr / scanResult.price) * 100 : 0;
-        const signalIntensity = scanResult.signals ? (scanResult.signals.bullish + scanResult.signals.bearish) : 0;
-
-        setPersonalitySignals((prev) => ({
-          ...prev,
-          totalScans: prev.totalScans + 1,
-          highConfidenceScans: prev.highConfidenceScans + (scanScore >= 70 ? 1 : 0),
-          lowConfidenceScans: prev.lowConfidenceScans + (scanScore <= 54 ? 1 : 0),
-          riskHeavyScans: prev.riskHeavyScans + (scanAtrPercent >= 2 ? 1 : 0),
-          flowHeavyScans: prev.flowHeavyScans + (signalIntensity >= 8 ? 1 : 0),
-        }));
-        // Create new object reference to force React re-render
-        setResult({ ...scanResult });
-        emitScannerLifecycle(scanResult, 'scanner.run', {
-          assetType: requestedAssetType,
-          timeframe: requestedTimeframe,
-        });
-
-        if (journalMonitorEnabled) {
-          const score = clampConfidence(scanResult.score ?? 50);
-          const direction = scanResult.direction || (score >= 60 ? 'bullish' : score <= 40 ? 'bearish' : 'neutral');
-          const symbol = String(scanResult.symbol || '').toUpperCase();
-          const dedupeKey = `${requestedAssetType}:${symbol}:${requestedTimeframe}`;
-          const now = Date.now();
-          const lastLoggedAt = journalMonitorLastLoggedRef.current[dedupeKey] || 0;
-          const cooldownMs = Math.max(5, journalMonitorCooldownMinutes) * 60 * 1000;
-
-          if (symbol && direction !== 'neutral' && score >= journalMonitorThreshold && now - lastLoggedAt >= cooldownMs) {
-            const operatorState = readOperatorState();
-            const monitorConditionType = `scanner_monitor_${requestedAssetType}`;
-            const monitorConditionMet = `${direction.toUpperCase()}_EDGE_${score}`;
-
-            fetch('/api/journal/auto-log', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                symbol,
-                conditionType: monitorConditionType,
-                conditionMet: monitorConditionMet,
-                triggerPrice: scanResult.price,
-                triggeredAt: new Date().toISOString(),
-                source: 'scanner_background_monitor',
-                assetClass: toWorkflowAssetClass(requestedAssetType),
-                atr: scanResult.atr || null,
-                operatorMode: operatorState.mode,
-                operatorBias: operatorState.bias,
-                operatorRisk: operatorState.risk,
-                operatorEdge: operatorState.edge,
-                marketRegime: 'Trend',
-                marketMood: operatorState.action === 'EXECUTE' ? 'Action Ready' : operatorState.action === 'PREP' ? 'Building' : 'Defensive',
-                derivativesBias: operatorState.bias,
-                sectorStrength: operatorState.next,
-              }),
-            })
-              .then(async (res) => {
-                const data = await res.json().catch(() => ({}));
-                if (!res.ok || data?.error) {
-                  throw new Error(data?.error || 'Auto-log request failed');
-                }
-                journalMonitorLastLoggedRef.current[dedupeKey] = now;
-                setJournalMonitorError(null);
-                setJournalMonitorStatus(`Auto-logged ${symbol} at score ${score}`);
-              })
-              .catch((error: any) => {
-                setJournalMonitorError(error?.message || 'Auto-log failed');
-              });
-          }
-        }
-
-        setScannerCollapsed(true);
-        setOrientationCollapsed(true);
-        setLastUpdated(data.metadata?.timestamp || new Date().toISOString());
-      } else if (data.errors?.length > 0) {
-        // Surface Alpha Vantage errors
-        setError(data.errors.join(' | '));
-      } else {
-        setError(data.error || "No data returned for this ticker");
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to scan ticker");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!journalMonitorEnabled || !journalMonitorAutoScanEnabled) return;
-    const intervalMs = Math.max(30, Math.min(3600, journalMonitorAutoScanSeconds)) * 1000;
-
-    const timer = setInterval(() => {
-      if (document.visibilityState !== 'visible') return;
-      if (loading) return;
-      if (monitorAutoScanBusyRef.current) return;
-      monitorAutoScanBusyRef.current = true;
-      void runScan().finally(() => {
-        monitorAutoScanBusyRef.current = false;
-      });
-    }, intervalMs);
-
-    return () => clearInterval(timer);
-  }, [journalMonitorEnabled, journalMonitorAutoScanEnabled, journalMonitorAutoScanSeconds, ticker, timeframe, assetType, loading]);
-
-  const quickRecoverySymbols = QUICK_PICKS[assetType].slice(0, 4);
-  const scannerStep: 1 | 2 | 3 = result ? 3 : bulkScanResults?.topPicks?.length ? 2 : 1;
-
-  const rankedCandidates = React.useMemo(() => {
-    if (!bulkScanResults?.topPicks?.length) return [] as Array<any>;
-
-    const isFastModeResults = bulkScanResults.mode === 'light' || bulkScanResults.mode === 'hybrid' || bulkScanResults.mode === 'cached';
-    const effectiveMinConfidence = isFastModeResults ? Math.min(rankMinConfidence, 45) : rankMinConfidence;
-
-    const withMeta = bulkScanResults.topPicks.map((pick: any, idx: number) => {
-      const rawScore = pick?.scoreV2?.final?.confidence ?? pick.score ?? 50;
-      const direction = pick.direction === 'bullish' ? 'long' : pick.direction === 'bearish' ? 'short' : 'all';
-      // Score already represents signal strength — higher = stronger signal regardless of direction
-      // e.g. score 89 bearish = 89% confidence short, score 74 bullish = 74% confidence long
-      const confidence = Math.max(1, Math.min(99, Math.round(rawScore)));
-      const quality = (pick?.scoreV2?.final?.qualityTier as 'high' | 'medium' | 'low' | undefined) ?? (confidence >= 70 ? 'high' : confidence >= 55 ? 'medium' : 'low');
-      const atrPercent = Number(pick.indicators?.atr_percent ?? 0);
-      const volatility = atrPercent >= 3 ? 'high' : atrPercent >= 1.5 ? 'moderate' : 'low';
-      const tfAlignment = Number.isFinite(Number(pick?.scoreV2?.setup?.tfAlignment))
-        ? Number(pick?.scoreV2?.setup?.tfAlignment)
-        : (confidence >= 75 ? 4 : confidence >= 65 ? 3 : confidence >= 55 ? 2 : 1);
-      const trendQuality = Number(pick.indicators?.adx ?? 0);
-      return {
-        ...pick,
-        _rank: idx + 1,
-        _confidence: confidence,
-        _direction: direction,
-        _quality: quality,
-        _volatility: volatility,
-        _tfAlignment: tfAlignment,
-        _trendQuality: trendQuality,
-      };
-    });
-
-    const filtered = withMeta.filter((pick: any) => {
-      if (rankDirection !== 'all' && pick._direction !== rankDirection) return false;
-      if (pick._confidence < effectiveMinConfidence) return false;
-      if (rankQuality !== 'all' && pick._quality !== rankQuality) return false;
-      if (pick._tfAlignment < rankTfAlignment) return false;
-      if (rankVolatility !== 'all' && pick._volatility !== rankVolatility) return false;
-      if (rankSqueeze === 'squeeze' && !pick.indicators?.squeeze) return false;
-      // Sector filter (equity only – crypto/forex pass through)
-      if (sectorFilter !== 'all') {
-        const sym = (pick.symbol ?? '').toUpperCase();
-        const sector = TICKER_SECTOR[sym];
-        if (!sector || sector !== sectorFilter) return false;
-      }
-      return true;
-    });
-
-    filtered.sort((a: any, b: any) => {
-      if (rankSort === 'confidence') return b._confidence - a._confidence;
-      if (rankSort === 'volatility') return b._volatility.localeCompare(a._volatility);
-      if (rankSort === 'trend') return b._trendQuality - a._trendQuality;
-      return a._rank - b._rank;
-    });
-
-    return filtered.slice(0, 10);
-  }, [bulkScanResults, rankDirection, rankMinConfidence, rankQuality, rankTfAlignment, rankVolatility, rankSqueeze, rankSort, sectorFilter]);
-
-  const mapPickToStrategyTag = (pick: any): StrategyTag => {
-    const setup = String(pick?.setup || pick?.setupClass || pick?.pattern || '').toLowerCase();
-    if (setup.includes('breakout')) return 'BREAKOUT_CONTINUATION';
-    if (setup.includes('pullback') || setup.includes('trend')) return 'TREND_PULLBACK';
-    if (setup.includes('range') || setup.includes('fade')) return 'RANGE_FADE';
-    if (setup.includes('mean') || setup.includes('reversion') || setup.includes('reclaim')) return 'MEAN_REVERSION';
-    return 'MOMENTUM_REVERSAL';
-  };
-
-  const getPickPermission = (pick: any): Permission => {
-    if (!riskSnapshot) return 'ALLOW';
-    const strategy = mapPickToStrategyTag(pick);
-    const direction = pick.direction === 'bullish' ? 'LONG' : pick.direction === 'bearish' ? 'SHORT' : 'LONG';
-    return riskSnapshot.matrix[strategy][direction];
-  };
-
-  const toComplianceLabel = (permission: Permission) => {
-    if (permission === 'ALLOW') return 'COMPLIANT';
-    if (permission === 'ALLOW_REDUCED') return 'REDUCED';
-    if (permission === 'ALLOW_TIGHTENED') return 'TIGHT';
-    return 'NOT COMPLIANT';
-  };
-
-  const executeRankCandidateDeploy = async (pick: any) => {
-    if (guardEnabled && riskLocked) {
-      return; // Hard block — do not proceed when risk governor is locked
-    }
-
-    const entry = Number(pick?.indicators?.price ?? 0);
-    const atr = Number(pick?.indicators?.atr ?? 0) || Math.max(0.01, entry * 0.02);
-    const direction = pick.direction === 'bearish' ? 'SHORT' : 'LONG';
-    const isCrypto = assetType === 'crypto';
-    const strategyTag = mapPickToStrategyTag(pick);
-
-    // Use ATR multiplier that matches the risk governor's minimum so we never
-    // self-trigger STOP_TOO_TIGHT.  Crypto strategies require wider stops.
-    const stopMultiplierMap: Record<string, Record<string, number>> = {
-      equities: { BREAKOUT_CONTINUATION: 0.8, TREND_PULLBACK: 0.6, RANGE_FADE: 0.5, MEAN_REVERSION: 0.6, MOMENTUM_REVERSAL: 0.8, EVENT_STRATEGY: 0.8 },
-      crypto:   { BREAKOUT_CONTINUATION: 1.0, TREND_PULLBACK: 0.8, RANGE_FADE: 0.7, MEAN_REVERSION: 0.8, MOMENTUM_REVERSAL: 1.0, EVENT_STRATEGY: 0.9 },
-    };
-    const multiplier = (isCrypto ? stopMultiplierMap.crypto : stopMultiplierMap.equities)[strategyTag] ?? 1.0;
-    const stop = direction === 'LONG' ? entry - (multiplier * atr) : entry + (multiplier * atr);
-
-    const intent: CandidateIntent = {
-      symbol: String(pick.symbol || '').toUpperCase(),
-      asset_class: isCrypto ? 'crypto' : 'equities',
-      strategy_tag: strategyTag,
-      direction,
-      confidence: Math.max(1, Math.min(99, Math.round(pick?.scoreV2?.final?.confidence ?? pick.score ?? 50))),
-      entry_price: entry,
-      stop_price: stop,
-      atr,
-      event_severity: 'none',
-    };
-
-    // Rule Guard evaluation — BLOCK permission is enforced only when guard is enabled
-    if (guardEnabled) {
-      const evaluation = await evaluateRiskIntent(intent);
-      if (evaluation?.permission === 'BLOCK') {
-        const reason = evaluation.reason_codes?.join(', ') || 'Rule compliance failed';
-        setRiskBlockReason(reason);
-        setShowRiskBlockModal(true);
-        return; // Hard block — do not proceed
-      }
-    }
-
-    const edgeScore = Math.max(1, Math.min(99, Math.round(pick?.scoreV2?.final?.confidence ?? pick.score ?? 50)));
-    const bias: 'bullish' | 'bearish' | 'neutral' = pick.direction === 'bullish'
-      ? 'bullish'
-      : pick.direction === 'bearish'
-      ? 'bearish'
-      : 'neutral';
-    const quality: 'HIGH' | 'MEDIUM' | 'LOW' = edgeScore >= 70 ? 'HIGH' : edgeScore >= 55 ? 'MEDIUM' : 'LOW';
-    const risk: 'LOW' | 'MODERATE' | 'HIGH' = pick.indicators?.atr_percent >= 3
-      ? 'HIGH'
-      : pick.indicators?.atr_percent >= 1.5
-      ? 'MODERATE'
-      : 'LOW';
-    const nextTrigger = edgeScore >= 75
-      ? 'Time Cluster active now'
-      : edgeScore >= 55
-      ? 'Time Cluster in ~12m'
-      : 'Await stronger confluence cluster';
-    const executionState: 'WAIT' | 'PREP' | 'EXECUTE' = edgeScore >= 75
-      ? 'EXECUTE'
-      : edgeScore >= 55
-      ? 'PREP'
-      : 'WAIT';
-
-    setAssetType(bulkScanResults?.type as AssetType);
-    setTicker(pick.symbol);
-    setResult(null);
-    setCapitalFlow(null);
-    setAiText(null);
-    setAiError(null);
-    setError(null);
-    setScannerCollapsed(false);
-    setOperatorTransition({
-      symbol: pick.symbol,
-      timeframe,
-      edgeScore,
-      bias,
-      quality,
-      executionState,
-      nextTrigger,
-      risk,
-    });
-    // Pass symbol directly to avoid stale React state (setTicker is async)
-    void runScan(String(pick.symbol || '').trim());
-  };
-
-  const deployRankCandidate = (pick: any) => {
-    // Pre-trade validation: evaluate risk state before executing
-    if (guardEnabled && riskLocked) {
-      return;
-    }
-
-    // Trade count hard block (only when guard is enabled)
-    if (guardEnabled && riskSnapshot?.session?.trade_count_blocked) {
-      setRiskBlockReason(`Daily trade count limit reached (${riskSnapshot.session.trades_today}/${riskSnapshot.session.max_trades_per_day}). No new trades allowed today.`);
-      setShowRiskBlockModal(true);
-      return;
-    }
-
-    // Behavioral overtrading screen: warn if trade count exceeds 30-day average
-    const tradesToday = riskSnapshot?.session?.trades_today ?? 0;
-    const avgTradesPerSession = 4.5; // TODO: fetch from journal KPI endpoint
-    if (tradesToday > 0 && tradesToday >= avgTradesPerSession * 1.5) {
-      setPendingDeployPick(pick);
-      setBehavioralScreenData({ tradesToday, avgTradesPerSession });
-      setShowBehavioralScreen(true);
-      return;
-    }
-
-    void executeRankCandidateDeploy(pick);
-  };
-
-  const confirmDeployRankCandidate = async () => {
-    if (!pendingDeployPick) return;
-    const allChecked = preTradeChecklist.thesis && preTradeChecklist.risk && preTradeChecklist.eventWindow;
-    if (!allChecked) {
-      setFlashMsg({ text: 'Complete all pre-trade checklist items before proceeding.', type: 'error' });
-      return;
-    }
-
-    setShowPreTradeChecklist(false);
-    const targetPick = pendingDeployPick;
-    setPendingDeployPick(null);
-    await executeRankCandidateDeploy(targetPick);
-  };
-
-  const addScannerCandidateToWatchlist = async (pick: any) => {
-    try {
-      const watchlistsResponse = await fetch('/api/watchlists');
-      const watchlistsData = await watchlistsResponse.json();
-
-      if (!watchlistsResponse.ok) {
-        throw new Error(watchlistsData?.error || 'Failed to load watchlists');
-      }
-
-      let targetWatchlist = watchlistsData?.watchlists?.find((list: any) => list.is_default) || watchlistsData?.watchlists?.[0];
-
-      if (!targetWatchlist) {
-        const createResponse = await fetch('/api/watchlists', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: 'My Watchlist',
-            description: 'Auto-created from scanner results',
-            color: 'emerald',
-            icon: 'star',
-          }),
-        });
-        const createData = await createResponse.json();
-        if (!createResponse.ok) {
-          throw new Error(createData?.error || 'Failed to create watchlist');
-        }
-        targetWatchlist = createData?.watchlist;
-      }
-
-      const addItemResponse = await fetch('/api/watchlists/items', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          watchlistId: targetWatchlist.id,
-          symbol: pick.symbol,
-          assetType: bulkScanResults?.type === 'crypto' ? 'crypto' : 'equity',
-          addedPrice: pick.indicators?.price,
-        }),
-      });
-      const addItemData = await addItemResponse.json();
-
-      if (!addItemResponse.ok) {
-        throw new Error(addItemData?.error || 'Failed to add symbol to watchlist');
-      }
-
-      setFlashMsg({ text: `${pick.symbol} added to ${targetWatchlist.name}`, type: 'success' });
-    } catch (error: any) {
-      setFlashMsg({ text: error?.message || 'Failed to add to watchlist', type: 'error' });
-    }
-  };
-
-  const getFreshnessMeta = (timestamp?: string | null) => {
-    if (!timestamp) {
-      return { label: 'Unknown', status: 'neutral' as const };
-    }
-    const ageMs = Date.now() - new Date(timestamp).getTime();
-    if (!Number.isFinite(ageMs) || ageMs < 0) {
-      return { label: 'Unknown', status: 'neutral' as const };
-    }
-    const ageMinutes = ageMs / 60000;
-    if (ageMinutes <= 2) return { label: 'Fresh', status: 'good' as const };
-    if (ageMinutes <= 15) return { label: `${Math.round(ageMinutes)}m old`, status: 'warn' as const };
-    return { label: 'Stale', status: 'bad' as const };
-  };
-
-  const explainScan = async () => {
-    if (!result) return;
-    setAiLoading(true);
-    setAiError(null);
-    try {
-      const response = await fetch("/api/msp-analyst", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: `Analyze this scan and provide a structured explanation following the Scanner Explainer Rules. Include Phase Assessment, Trend & Momentum Alignment, Trade Guidance, Risk Considerations, and Final Verdict.`,
-          context: {
-            symbol: result.symbol,
-            timeframe,
-            currentPrice: result.price ?? undefined,
-          },
-          scanner: {
-            source: "msp-web-scanner",
-            score: result.score,
-            signal: "confluence-scan",
-            scanData: {
-              symbol: result.symbol,
-              price: result.price,
-              score: result.score,
-              rsi: result.rsi,
-              cci: result.cci,
-              macd_hist: result.macd_hist,
-              ema200: result.ema200,
-              atr: result.atr,
-              adx: result.adx,
-              stoch_k: result.stoch_k,
-              stoch_d: result.stoch_d,
-              aroon_up: result.aroon_up,
-              aroon_down: result.aroon_down,
-              obv: result.obv,
-            },
-          },
-        })
-      });
-
-      if (response.status === 401) {
-        setAiError("Unable to use AI. Please try again later.");
-        return;
-      }
-      if (response.status === 429) {
-        const data = await response.json();
-        setAiError(data.error || "Daily limit reached. Upgrade for more AI questions.");
-        return;
-      }
-      if (!response.ok) throw new Error(`AI request failed (${response.status})`);
-      const data = await response.json();
-      const text = data?.text || data?.message || data?.response || JSON.stringify(data);
-      setAiText(text);
-    } catch (err) {
-      setAiError(err instanceof Error ? err.message : "Failed to get AI summary");
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
-  const contextChips = [
-    { label: 'Regime', value: presenceMode.replace(' MODE', '') },
-    { label: 'Bias', value: (result?.direction || 'neutral').toUpperCase() },
-    {
-      label: 'Volatility',
-      value: result?.atr && result?.price && result.atr / result.price >= 0.03 ? 'HIGH' : 'CONTROLLED',
-    },
-    { label: 'Breadth', value: `${(result?.signals?.bullish ?? 0) + (result?.signals?.bearish ?? 0)}` },
-    { label: 'Liquidity', value: result?.volume ? 'ACTIVE' : 'NORMAL' },
-    { label: 'Gamma', value: result?.capitalFlow?.gamma_state ?? 'UNKNOWN' },
-    {
-      label: 'Risk Env',
-      value: riskLocked ? 'RESTRICTED' : (riskSnapshot?.risk_mode ?? 'NORMAL'),
-    },
-  ];
-
-  const complianceMatrix: Array<{ strategy: string; long: Permission; short: Permission }> = [
-    {
-      strategy: 'Breakout',
-      long: riskSnapshot?.matrix?.BREAKOUT_CONTINUATION?.LONG ?? 'BLOCK',
-      short: riskSnapshot?.matrix?.BREAKOUT_CONTINUATION?.SHORT ?? 'BLOCK',
-    },
-    {
-      strategy: 'Pullback',
-      long: riskSnapshot?.matrix?.TREND_PULLBACK?.LONG ?? 'BLOCK',
-      short: riskSnapshot?.matrix?.TREND_PULLBACK?.SHORT ?? 'BLOCK',
-    },
-    {
-      strategy: 'Mean Rev',
-      long: riskSnapshot?.matrix?.MEAN_REVERSION?.LONG ?? 'BLOCK',
-      short: riskSnapshot?.matrix?.MEAN_REVERSION?.SHORT ?? 'BLOCK',
-    },
-    {
-      strategy: 'Range Fade',
-      long: riskSnapshot?.matrix?.RANGE_FADE?.LONG ?? 'BLOCK',
-      short: riskSnapshot?.matrix?.RANGE_FADE?.SHORT ?? 'BLOCK',
-    },
-  ];
-
-  const riskPerTradePct = ((riskSnapshot?.caps?.risk_per_trade ?? 0) * 100).toFixed(2);
-  const throttleMultiplier = Math.max(0.35, Math.min(1, (riskSnapshot?.caps?.risk_per_trade ?? 0.0075) / 0.0075)).toFixed(2);
-  const eventMultiplier = riskSnapshot?.risk_mode === 'LOCKED' ? '0.00' : riskSnapshot?.risk_mode === 'THROTTLED' ? '0.50' : riskSnapshot?.risk_mode === 'DEFENSIVE' ? '0.35' : '1.00';
-
-  if (tierLoading) return <div style={{ minHeight: "100vh", background: "var(--msp-bg, #0A101C)" }} />;
-  if (!canAccessScanner(tier)) return <UpgradeGate requiredTier="pro" feature="Market Scanner" />;
 
   return (
-    <div className="min-h-screen bg-[var(--msp-bg)]">
-      {/* Flash message toast */}
+    <div className="space-y-4 mt-4">
       {flashMsg && (
-        <div className={`fixed left-1/2 top-4 z-[100] -translate-x-1/2 rounded-lg border px-4 py-2.5 text-sm font-semibold shadow-lg ${flashMsg.type === 'success' ? 'border-emerald-500/40 bg-emerald-950/90 text-emerald-300' : 'border-rose-500/40 bg-rose-950/90 text-rose-300'}`} role="status">
+        <div className={`rounded-lg px-4 py-2.5 text-sm font-semibold ${flashMsg.type === 'success' ? 'border-emerald-500/40 bg-emerald-950/90 text-emerald-300 border' : 'border-rose-500/40 bg-rose-950/90 text-rose-300 border'}`}>
           {flashMsg.text}
-          <button type="button" onClick={() => setFlashMsg(null)} className="ml-3 text-xs opacity-70 hover:opacity-100" aria-label="Dismiss">&times;</button>
+          <button type="button" onClick={() => setFlashMsg(null)} className="ml-3 text-xs opacity-70 hover:opacity-100">&times;</button>
         </div>
       )}
-      {isFree && (
-        <div style={{
-          background: 'linear-gradient(90deg, rgba(16,185,129,0.12) 0%, rgba(16,185,129,0.04) 100%)',
-          border: '1px solid rgba(16,185,129,0.25)',
-          borderRadius: '10px',
-          padding: '10px 16px',
-          margin: '8px 12px 0',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          fontSize: '13px',
-          color: 'var(--msp-text-muted)',
-        }}>
-          <span>
-            <strong style={{ color: 'var(--msp-accent)' }}>Free Plan</strong>
-            {' · '}{FREE_DAILY_SCAN_LIMIT - dailyScansUsed} of {FREE_DAILY_SCAN_LIMIT} scans remaining today
-          </span>
-          <a href="/pricing" style={{ color: 'var(--msp-accent)', fontWeight: 600, textDecoration: 'none', fontSize: '13px' }}>
-            Upgrade for unlimited →
-          </a>
-        </div>
-      )}
-      <ToolPageLayout
-        identity={
-          <ToolIdentityHeader
-            toolName="Market Scanner"
-            description="Multi-factor opportunity discovery engine"
-            modeLabel={presenceMode}
-            confidenceLabel={result ? `${Math.round(result.score ?? 50)}%` : 'N/A'}
-            lastUpdatedLabel={lastUpdated ? new Date(lastUpdated).toLocaleTimeString() : 'Not scanned'}
-          />
-        }
-        context={
-          <CommandContextPanel
-            chips={contextChips}
-            strategyModeLabel={useScannerFlowV2 ? 'Breakout / Trend Pullback' : 'Classic Scanner'}
-          />
-        }
-        primary={<div className="w-full max-w-none">
 
-        {/* ─── Session Phase Strip ─── */}
-        <SessionPhaseStrip />
+      {/* Action buttons */}
+      <div className="flex items-center justify-end gap-2">
+        <Link href={`/tools/scanner/backtest?symbol=${encodeURIComponent(detail.symbol)}`}
+          className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-emerald-400 no-underline hover:bg-emerald-500/20 transition-colors">
+          Backtest This Symbol
+        </Link>
+        <button type="button" onClick={onClose}
+          className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-muted)]">
+          Back to Rank
+        </button>
+      </div>
 
-        {/* ─── Session P&L Strip (always visible on scanner) ─── */}
-        {riskSnapshot && (
-          <div className={`mb-3 rounded-lg border px-3 py-2 text-xs flex flex-wrap items-center gap-3 ${
-            riskSnapshot.session.remaining_daily_R <= 0
-              ? 'border-red-500/40 bg-red-500/10'
-              : riskSnapshot.risk_mode === 'DEFENSIVE' || riskSnapshot.risk_mode === 'THROTTLED'
-              ? 'border-amber-500/40 bg-amber-500/10'
-              : 'border-[var(--msp-border)] bg-[var(--msp-panel-2)]'
-          }`}>
-            <div className="flex items-center gap-1.5">
-              <span className={`h-2 w-2 rounded-full ${
-                riskSnapshot.risk_mode === 'LOCKED' ? 'bg-red-500 animate-pulse'
-                : riskSnapshot.risk_mode === 'DEFENSIVE' ? 'bg-red-400'
-                : riskSnapshot.risk_mode === 'THROTTLED' ? 'bg-amber-400'
-                : 'bg-emerald-400'
-              }`} />
-              <span className="font-extrabold uppercase tracking-wider text-[var(--msp-text-faint)]">Session</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-[var(--msp-text-faint)]">R Budget:</span>
-              <span className={`font-bold ${riskSnapshot.session.remaining_daily_R <= 0.5 ? 'text-red-400' : 'text-[var(--msp-text)]'}`}>
-                {riskSnapshot.session.remaining_daily_R.toFixed(1)}R / {riskSnapshot.session.max_daily_R}R
-              </span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-[var(--msp-text-faint)]">Open Risk:</span>
-              <span className="font-bold text-[var(--msp-text)]">{riskSnapshot.session.open_risk_R.toFixed(1)}R</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-[var(--msp-text-faint)]">Losses:</span>
-              <span className={`font-bold ${riskSnapshot.session.consecutive_losses >= 3 ? 'text-red-400' : 'text-[var(--msp-text)]'}`}>
-                {riskSnapshot.session.consecutive_losses}
-              </span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-[var(--msp-text-faint)]">Trades:</span>
-              <span className={`font-bold ${riskSnapshot.session.trade_count_blocked ? 'text-red-400' : 'text-[var(--msp-text)]'}`}>
-                {riskSnapshot.session.trades_today}/{riskSnapshot.session.max_trades_per_day}
-              </span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-[var(--msp-text-faint)]">Mode:</span>
-              <span className={`font-bold uppercase ${
-                riskSnapshot.risk_mode === 'LOCKED' ? 'text-red-400'
-                : riskSnapshot.risk_mode === 'DEFENSIVE' ? 'text-red-300'
-                : riskSnapshot.risk_mode === 'THROTTLED' ? 'text-amber-400'
-                : 'text-emerald-400'
-              }`}>{riskSnapshot.risk_mode}</span>
-            </div>
-            {riskSnapshot.session.trade_count_blocked && (
-              <span className="rounded border border-red-500/40 bg-red-500/20 px-2 py-0.5 text-[10px] font-bold uppercase text-red-300">
-                TRADE LIMIT REACHED
-              </span>
-            )}
+      {/* Header row */}
+      <div className="grid gap-3 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel)] p-3 md:grid-cols-12 md:p-4">
+        <div className="md:col-span-6">
+          <div className="text-[1.05rem] font-black tracking-tight text-white md:text-[1.25rem]">{detail.symbol} — {timeframeLabel}</div>
+          <div className={`mt-1 text-[0.82rem] font-extrabold uppercase ${direction === 'bullish' ? 'text-emerald-400' : direction === 'bearish' ? 'text-red-400' : 'text-amber-400'}`}>
+            Edge: {direction.toUpperCase()}
           </div>
-        )}
-        {useScannerFlowV2 && (
-          <>
-            <div className="sticky top-[68px] z-30 mb-3 rounded-xl border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] px-4 py-3">
-              <div className="mb-2 text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">
-                Primary Action Zone • Discover → Rank → Decide
-              </div>
-              <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-1.5 sm:gap-2">
-                {[
-                  { step: 1, label: 'Discover' },
-                  { step: 2, label: 'Rank' },
-                  { step: 3, label: 'Decide' },
-                ].map((item) => (
-                  <div
-                    key={item.step}
-                    className={`rounded-lg border px-3 py-2 text-center text-[0.72rem] font-extrabold uppercase tracking-[0.08em] transition-all duration-300 ${
-                      scannerStep === item.step
-                        ? 'scale-[1.01] border-[var(--msp-border-strong)] bg-[var(--msp-panel-2)] text-[var(--msp-text)]'
-                        : 'border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text-faint)]'
-                    }`}
-                  >
-                    Step {item.step} • {item.label}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className={`mb-4 transition-all duration-300 ease-out ${scannerStep === 1 ? 'translate-x-0 opacity-100' : '-translate-x-1 opacity-95'}`}>
-              <div className="grid gap-3 lg:grid-cols-12">
-                <div className="lg:col-span-8">
-                  <div className="msp-elite-panel mb-3">
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <div className="msp-elite-row">
-                        <div className="mb-2 text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Universe</div>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          <div>
-                            <div className="mb-1 text-[0.64rem] uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Asset Class</div>
-                            <div className="flex flex-wrap gap-1.5">
-                              {(['crypto', 'equity', 'forex'] as AssetType[]).map((type) => (
-                                <button type="button"
-                                  key={type}
-                                  onClick={() => {
-                                    setAssetType(type);
-                                    setTicker(QUICK_PICKS[type][0]);
-                                  }}
-                                  className={`rounded-md border px-2 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.05em] ${assetType === type ? 'border-[var(--msp-border-strong)] bg-[var(--msp-panel-2)] text-[var(--msp-text)]' : 'border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text-muted)]'}`}
-                                >
-                                  {type}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                          <label className="grid gap-1 text-[0.68rem] text-[var(--msp-text-muted)]">
-                            <span>Universe</span>
-                            <select
-                              value={bulkCryptoUniverseSize}
-                              onChange={(e) => setBulkCryptoUniverseSize(Math.max(100, Math.min(15000, Number(e.target.value || 500))))}
-                              className="w-full rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-semibold text-[var(--msp-text)]"
-                            >
-                              {[250, 500, 1000, 2500, 5000].map((size) => (
-                                <option key={size} value={size}>{size}</option>
-                              ))}
-                            </select>
-                          </label>
-                          <label className="grid gap-1 text-[0.68rem] text-[var(--msp-text-muted)] sm:col-span-2">
-                            <span>Sector Filter</span>
-                            <select
-                              value={sectorFilter}
-                              onChange={(e) => setSectorFilter(e.target.value as 'all' | 'tech' | 'finance' | 'energy')}
-                              className="w-full rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-semibold text-[var(--msp-text)]"
-                            >
-                              <option value="all">All</option>
-                              <option value="tech">Technology</option>
-                              <option value="finance">Financials</option>
-                              <option value="energy">Energy</option>
-                            </select>
-                          </label>
-                        </div>
-                      </div>
-
-                      <div className="msp-elite-row">
-                        <div className="mb-2 text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Structure</div>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          <label className="grid gap-1 text-[0.68rem] text-[var(--msp-text-muted)]">
-                            <span>Timeframe</span>
-                            <select value={bulkScanTimeframe} onChange={(e) => setBulkScanTimeframe(e.target.value as '15m' | '30m' | '1h' | '1d')} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-semibold text-[var(--msp-text)]">
-                              <option value="15m">15m</option>
-                              <option value="30m">30m</option>
-                              <option value="1h">1h</option>
-                              <option value="1d">1d</option>
-                            </select>
-                          </label>
-                          <label className="grid gap-1 text-[0.68rem] text-[var(--msp-text-muted)]">
-                            <span>MTF Alignment</span>
-                            <select value={rankTfAlignment} onChange={(e) => setRankTfAlignment(Number(e.target.value) as 2 | 3)} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-semibold text-[var(--msp-text)]">
-                              <option value={2}>2/4+</option>
-                              <option value={3}>3/4+</option>
-                            </select>
-                          </label>
-                          <label className="grid gap-1 text-[0.68rem] text-[var(--msp-text-muted)]">
-                            <span>Min Confidence</span>
-                            <select value={rankMinConfidence} onChange={(e) => setRankMinConfidence(Number(e.target.value) as 50 | 60 | 70 | 80)} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-semibold text-[var(--msp-text)]">
-                              <option value={50}>50</option>
-                              <option value={60}>60</option>
-                              <option value={70}>70</option>
-                              <option value={80}>80</option>
-                            </select>
-                          </label>
-                          <label className="grid gap-1 text-[0.68rem] text-[var(--msp-text-muted)]">
-                            <span>Vol State</span>
-                            <select value={rankVolatility} onChange={(e) => setRankVolatility(e.target.value as 'all' | 'low' | 'moderate' | 'high')} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-semibold text-[var(--msp-text)]">
-                              <option value="all">All</option>
-                              <option value="low">Low</option>
-                              <option value="moderate">Moderate</option>
-                              <option value="high">High</option>
-                            </select>
-                          </label>
-                          <label className="grid gap-1 text-[0.68rem] text-[var(--msp-text-muted)]">
-                            <span>Squeeze</span>
-                            <select value={rankSqueeze} onChange={(e) => setRankSqueeze(e.target.value as 'all' | 'squeeze')} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-semibold text-[var(--msp-text)]">
-                              <option value="all">All</option>
-                              <option value="squeeze">In Squeeze</option>
-                            </select>
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 msp-elite-row">
-                      <div className="mb-1 text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Mode</div>
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex gap-1.5">
-                          {(['light', 'deep'] as const).map((mode) => (
-                            <button type="button"
-                              key={mode}
-                              onClick={() => setBulkCryptoScanMode(mode)}
-                              className={`rounded-md border px-2 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.05em] ${bulkCryptoScanMode === mode ? 'border-[var(--msp-border-strong)] bg-[var(--msp-panel-2)] text-[var(--msp-text)]' : 'border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text-muted)]'}`}
-                            >
-                              {mode === 'light' ? 'Fast' : 'Deep'}
-                            </button>
-                          ))}
-                        </div>
-                        <div className="flex gap-1.5">
-                          {(['observe', 'decide'] as const).map((mode) => (
-                            <button type="button"
-                              key={mode}
-                              onClick={() => setScanIntentMode(mode)}
-                              className={`rounded-md border px-2 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.05em] ${scanIntentMode === mode ? 'border-[var(--msp-border-strong)] bg-[var(--msp-panel-2)] text-[var(--msp-text)]' : 'border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text-muted)]'}`}
-                            >
-                              {mode}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mb-3 flex justify-center">
-                    <button type="button"
-                      onClick={() => runBulkScan(assetType === 'crypto' ? 'crypto' : assetType === 'forex' ? 'forex' : 'equity')}
-                      disabled={bulkScanLoading}
-                      className="w-full max-w-md px-8 py-3.5 rounded-lg text-[0.85rem] font-bold uppercase tracking-[0.1em] transition-all duration-150"
-                      style={{
-                        background: bulkScanLoading ? 'rgba(16, 185, 129, 0.25)' : 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                        color: bulkScanLoading ? 'rgba(255,255,255,0.6)' : '#0F172A',
-                        border: '1px solid rgba(16, 185, 129, 0.4)',
-                        boxShadow: bulkScanLoading ? 'none' : '0 0 20px rgba(16, 185, 129, 0.25), 0 4px 12px rgba(0, 0, 0, 0.3)',
-                        cursor: bulkScanLoading ? 'not-allowed' : 'pointer',
-                      }}
-                    >
-                      {bulkScanLoading ? '⏳ Scanning...' : '🔎 Scan For Setups'}
-                    </button>
-                  </div>
-
-                  <div className="msp-card px-4 py-3">
-                    <button type="button" onClick={() => setAdvancedDiscoverOpen((prev) => !prev)} className="flex w-full items-center justify-between">
-                      <span className="text-[0.74rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text)]">Advanced Settings</span>
-                      <span className="text-[0.7rem] font-extrabold uppercase text-[var(--msp-text-faint)]">{advancedDiscoverOpen ? 'Collapse' : 'Expand'}</span>
-                    </button>
-                    {advancedDiscoverOpen && (
-                      <div className="mt-3 grid gap-3 md:grid-cols-3">
-                        <label className="grid gap-1 text-[0.72rem] text-[var(--msp-text-muted)]">
-                          <span>Journal Monitor</span>
-                          <input id="scanner-adv-jm" name="journalMonitorEnabled" type="checkbox" checked={journalMonitorEnabled} onChange={(e) => setJournalMonitorEnabled(e.target.checked)} />
-                        </label>
-                        <label className="grid gap-1 text-[0.72rem] text-[var(--msp-text-muted)]">
-                          <span>Cooldown (minutes)</span>
-                          <input id="scanner-adv-cooldown" name="cooldownMinutes" type="number" min={5} max={1440} value={journalMonitorCooldownMinutes} onChange={(e) => setJournalMonitorCooldownMinutes(Math.max(5, Math.min(1440, Number(e.target.value || 120))))} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1 text-[var(--msp-text)]" />
-                        </label>
-                        <label className="grid gap-1 text-[0.72rem] text-[var(--msp-text-muted)]">
-                          <span>Auto-rescan (sec)</span>
-                          <input id="scanner-adv-autoscan" name="autoScanSeconds" type="number" min={30} max={3600} value={journalMonitorAutoScanSeconds} onChange={(e) => setJournalMonitorAutoScanSeconds(Math.max(30, Math.min(3600, Number(e.target.value || 180))))} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1 text-[var(--msp-text)]" />
-                        </label>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="msp-elite-panel h-fit lg:col-span-4">
-                  <div className="mb-3 text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Rule Compliance</div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-[0.7rem]">
-                      <thead className="text-[var(--msp-text-faint)]">
-                        <tr>
-                          <th scope="col" className="px-1.5 py-1">Strategy</th>
-                          <th scope="col" className="px-1.5 py-1">Long</th>
-                          <th scope="col" className="px-1.5 py-1">Short</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {complianceMatrix.map((row) => (
-                          <tr key={row.strategy} className="border-t border-[var(--msp-divider)]">
-                            <td className="px-1.5 py-1.5 text-[var(--msp-text-muted)]">{row.strategy}</td>
-                            <td className="px-1.5 py-1.5"><PermissionChip state={row.long} /></td>
-                            <td className="px-1.5 py-1.5"><PermissionChip state={row.short} /></td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="mt-3 grid gap-1 text-[0.7rem] text-[var(--msp-text-muted)]">
-                    <div className="msp-elite-row flex justify-between"><span>Effective Risk/Trade</span><span className="font-semibold text-[var(--msp-text)]">{riskPerTradePct}%</span></div>
-                    <div className="msp-elite-row flex justify-between"><span>Throttle Multiplier</span><span className="font-semibold text-[var(--msp-text)]">{throttleMultiplier}x</span></div>
-                    <div className="msp-elite-row flex justify-between"><span>Event Multiplier</span><span className="font-semibold text-[var(--msp-text)]">{eventMultiplier}x</span></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {bulkScanResults && (
-              <div className={`mb-4 transition-all duration-300 ease-out ${scannerStep === 2 ? 'translate-x-0 opacity-100' : 'translate-x-1 opacity-95'}`}>
-                {/* Scan Templates Bar */}
-                <ScanTemplatesBar
-                  activeId={activeTemplateId}
-                  onSelect={(tpl: ScanTemplate) => {
-                    setActiveTemplateId(tpl.id);
-                    const confMap: Record<number, 50 | 60 | 70 | 80> = { 55: 50, 60: 60, 65: 70, 70: 70, 75: 80, 80: 80 };
-                    setRankMinConfidence(confMap[tpl.config.minConfidence] ?? 60);
-                    setRankTfAlignment((tpl.config.mtfAlignment >= 3 ? 3 : 2) as 2 | 3);
-                    if (tpl.config.direction) setRankDirection(tpl.config.direction as any);
-                    if (tpl.config.quality) setRankQuality(tpl.config.quality as any);
-                    if (tpl.config.volatilityState && tpl.config.volatilityState !== 'all') setRankVolatility(tpl.config.volatilityState as any);
-                    else setRankVolatility('all');
-                  }}
-                />
-
-                <div className="msp-card mb-3 px-4 py-3">
-                  <div className="grid gap-2 md:grid-cols-4">
-                    <select aria-label="Direction filter" value={rankDirection} onChange={(e) => { setRankDirection(e.target.value as 'all' | 'long' | 'short'); setActiveTemplateId(undefined); }} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-bold text-[var(--msp-text)]"><option value="all">Direction: All</option><option value="long">Direction: Long</option><option value="short">Direction: Short</option></select>
-                    <select aria-label="Quality filter" value={rankQuality} onChange={(e) => { setRankQuality(e.target.value as 'all' | 'high' | 'medium'); setActiveTemplateId(undefined); }} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-bold text-[var(--msp-text)]"><option value="all">Quality: All</option><option value="high">Quality: High</option><option value="medium">Quality: Medium</option></select>
-                    <select aria-label="Sort order" value={rankSort} onChange={(e) => setRankSort(e.target.value as 'rank' | 'confidence' | 'volatility' | 'trend')} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1.5 text-[0.72rem] font-bold text-[var(--msp-text)]"><option value="rank">Sort: Rank</option><option value="confidence">Sort: Confidence</option><option value="volatility">Sort: Volatility</option><option value="trend">Sort: Trend Quality</option></select>
-                    <div className="flex items-center gap-2">
-                      <button type="button"
-                        onClick={() => setBulkViewMode('table')}
-                        className={`rounded-md px-3 py-1.5 text-[0.72rem] font-bold transition-colors ${bulkViewMode === 'table' ? 'bg-[var(--msp-accent)] text-white' : 'border border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text)]'}`}
-                      >
-                        Table
-                      </button>
-                      <button type="button"
-                        onClick={() => setBulkViewMode('cards')}
-                        className={`rounded-md px-3 py-1.5 text-[0.72rem] font-bold transition-colors ${bulkViewMode === 'cards' ? 'bg-[var(--msp-accent)] text-white' : 'border border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text)]'}`}
-                      >
-                        Cards
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Screener Table View */}
-                {bulkViewMode === 'table' && rankedCandidates.length > 0 && (
-                  <div style={{ display: 'block', visibility: 'visible', minHeight: 100 }}>
-                    <div style={{ overflowX: 'auto', width: '100%', WebkitOverflowScrolling: 'touch' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '35px 90px 52px 50px 60px 105px 48px 48px 60px 48px 52px 58px 52px 85px 75px', gap: 0, borderRadius: 12, border: '1px solid rgba(51, 65, 85, 0.4)', background: 'rgba(15, 23, 42, 0.3)', fontSize: 12, minWidth: 980 }}>
-                      {/* Header */}
-                      {['#', 'Symbol', 'Dir', 'Conf', 'Quality', 'Strategy', 'RSI', 'ADX', 'MACD', 'Stoch', 'CCI', 'Aroon', 'ATR%', 'Volume', 'Rule'].map((h) => (
-                        <div key={h} style={{ padding: '8px', color: '#64748b', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid rgba(51, 65, 85, 0.5)', background: 'rgba(15, 23, 42, 0.95)', whiteSpace: 'nowrap' }}>{h}</div>
-                      ))}
-                      {/* Rows */}
-                      {rankedCandidates.map((pick: any, idx: number) => {
-                        const dir = pick._direction === 'long' ? 'LONG' : pick._direction === 'short' ? 'SHORT' : 'NEUTRAL';
-                        const conf = pick._confidence ?? 0;
-                        const quality = pick._quality ?? 'low';
-                        const strategyRaw = mapPickToStrategyTag(pick).replaceAll('_', ' ');
-                        const strategyAbbrev: Record<string, string> = {
-                          'MOMENTUM REVERSAL': 'MOM REV',
-                          'TREND PULLBACK': 'TREND PB',
-                          'BREAKOUT CONTINUATION': 'BRKOUT',
-                          'RANGE FADE': 'RANGE',
-                          'MEAN REVERSION': 'MEAN REV',
-                        };
-                        const strategy = strategyAbbrev[strategyRaw] ?? strategyRaw;
-                        const dirCol = dir === 'LONG' ? '#10B981' : dir === 'SHORT' ? '#EF4444' : '#94a3b8';
-                        const confCol = conf >= 75 ? '#10B981' : conf >= 60 ? '#FBBF24' : '#94a3b8';
-                        const qualCol = quality === 'high' ? '#10B981' : quality === 'medium' ? '#FBBF24' : '#94a3b8';
-                        const perm = toComplianceLabel(getPickPermission(pick));
-                        const vol = pick.indicators?.volume;
-                        const volStr = vol == null || !Number.isFinite(vol) ? '—' : vol >= 1e9 ? `$${(vol/1e9).toFixed(1)}B` : vol >= 1e6 ? `$${(vol/1e6).toFixed(1)}M` : vol >= 1e3 ? `$${(vol/1e3).toFixed(0)}K` : `$${vol.toFixed(0)}`;
-                        const rsi = pick.indicators?.rsi;
-                        const adx = pick.indicators?.adx;
-                        const macdVal = pick.indicators?.macd;
-                        const stochKVal = pick.indicators?.stochK;
-                        const cciVal = pick.indicators?.cci;
-                        const aroonUpVal = pick.indicators?.aroonUp;
-                        const aroonDnVal = pick.indicators?.aroonDown;
-                        const atrPct = pick.indicators?.atr_percent;
-                        const cellStyle = { padding: '7px 8px', color: '#cbd5e1', whiteSpace: 'nowrap' as const, borderBottom: '1px solid rgba(51, 65, 85, 0.2)', cursor: 'pointer' };
-                        const handleClick = () => {
-                          const sym = (pick.symbol ?? '').replace(/-USD$/, '');
-                          bulkPickDirectionRef.current = pick.direction ?? null;
-                          setTicker(sym);
-                          setAssetType(bulkScanResults!.type === 'crypto' ? 'crypto' : 'equity');
-                          void runScan(sym);
-                        };
-                        return (
-                          <React.Fragment key={pick.symbol}>
-                            <div style={cellStyle} onClick={handleClick}>{idx + 1}</div>
-                            <div style={{ ...cellStyle, fontWeight: 700, color: '#e2e8f0' }} onClick={handleClick}>{pick.symbol ?? ''}</div>
-                            <div style={cellStyle} onClick={handleClick}><span style={{ fontSize: 11, fontWeight: 700, color: dirCol, background: `${dirCol}18`, borderRadius: 4, padding: '2px 6px' }}>{dir}</span></div>
-                            <div style={cellStyle} onClick={handleClick}><span style={{ fontWeight: 700, color: confCol }}>{conf}%</span></div>
-                            <div style={cellStyle} onClick={handleClick}><span style={{ fontSize: 11, fontWeight: 600, color: qualCol, textTransform: 'uppercase' }}>{quality}</span></div>
-                            <div style={{ ...cellStyle, overflow: 'hidden', textOverflow: 'ellipsis' }} onClick={handleClick}><span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.02em' }} title={strategyRaw}>{strategy}</span></div>
-                            <div style={{ ...cellStyle, textAlign: 'right' }} onClick={handleClick}>{rsi != null && Number.isFinite(rsi) ? rsi.toFixed(0) : '—'}</div>
-                            <div style={{ ...cellStyle, textAlign: 'right' }} onClick={handleClick}>{adx != null && Number.isFinite(adx) ? adx.toFixed(0) : '—'}</div>
-                            <div style={{ ...cellStyle, textAlign: 'right', fontSize: 11 }} onClick={handleClick}>{macdVal != null && Number.isFinite(macdVal) ? (macdVal >= 0 ? '+' : '') + macdVal.toFixed(2) : '—'}</div>
-                            <div style={{ ...cellStyle, textAlign: 'right' }} onClick={handleClick}>{stochKVal != null && Number.isFinite(stochKVal) ? stochKVal.toFixed(0) : '—'}</div>
-                            <div style={{ ...cellStyle, textAlign: 'right', fontSize: 11 }} onClick={handleClick}>{cciVal != null && Number.isFinite(cciVal) ? cciVal.toFixed(0) : '—'}</div>
-                            <div style={{ ...cellStyle, textAlign: 'right', fontSize: 11 }} onClick={handleClick}>{aroonUpVal != null && Number.isFinite(aroonUpVal) ? `${aroonUpVal.toFixed(0)}/${(aroonDnVal ?? 0).toFixed(0)}` : '—'}</div>
-                            <div style={{ ...cellStyle, textAlign: 'right' }} onClick={handleClick}>{atrPct != null && Number.isFinite(atrPct) ? `${atrPct.toFixed(1)}%` : '—'}</div>
-                            <div style={{ ...cellStyle, textAlign: 'right' }} onClick={handleClick}>{volStr}</div>
-                            <div style={cellStyle} onClick={handleClick}><span style={{ fontSize: 10, fontWeight: 700, color: perm === 'COMPLIANT' ? '#10B981' : perm === 'TIGHT' ? '#FBBF24' : '#EF4444', background: `${perm === 'COMPLIANT' ? '#10B981' : perm === 'TIGHT' ? '#FBBF24' : '#EF4444'}15`, borderRadius: 4, padding: '1px 5px' }}>{perm ?? '—'}</span></div>
-                          </React.Fragment>
-                        );
-                      })}
-                    </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Card Grid View (original) */}
-                {bulkViewMode === 'cards' && (
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  {rankedCandidates.map((pick: any) => {
-                    const permission = getPickPermission(pick);
-                    const blocked = riskLocked || permission === 'BLOCK';
-                    const complianceText = toComplianceLabel(permission);
-                    const strategyTag = mapPickToStrategyTag(pick).replaceAll('_', ' ');
-                    const borderColor = pick._direction === 'long' && pick._confidence >= 70
-                      ? 'var(--msp-bull)'
-                      : pick._direction === 'short' && pick._confidence >= 70
-                      ? 'var(--msp-bear)'
-                      : 'var(--msp-warn)';
-                    return (
-                      <div key={pick.symbol} className="flex min-h-[220px] h-full flex-col rounded-xl border bg-[var(--msp-panel)] p-3 transition-all duration-200 hover:border-[var(--msp-border-strong)] cursor-pointer" style={{ borderColor }} onClick={() => { const sym = (pick.symbol ?? '').replace(/-USD$/, ''); bulkPickDirectionRef.current = pick.direction ?? null; setTicker(sym); setAssetType(bulkScanResults!.type === 'crypto' ? 'crypto' : 'equity'); void runScan(sym); }}>
-                        <div className="mb-2 flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[0.95rem] font-semibold text-[var(--msp-text)]">{pick.symbol}</span>
-                            <span className={`rounded px-1.5 py-0.5 text-[0.58rem] font-extrabold uppercase tracking-[0.08em] ${pick._direction === 'long' ? 'bg-emerald-500/15 text-emerald-400' : pick._direction === 'short' ? 'bg-red-500/15 text-red-400' : 'bg-amber-500/15 text-amber-400'}`}>
-                              {pick._direction === 'long' ? 'LONG' : pick._direction === 'short' ? 'SHORT' : 'NEUTRAL'}
-                            </span>
-                          </div>
-                          <PermissionChip state={permission} />
-                        </div>
-                        <div className="mb-2 flex items-center justify-between gap-2 text-[0.68rem] uppercase tracking-[0.05em] text-[var(--msp-text-muted)]">
-                          <span>{strategyTag}</span>
-                          <span className="font-semibold text-[var(--msp-text)]">{pick._confidence}%</span>
-                        </div>
-                        <div className="mb-2 border-t border-[var(--msp-divider)]" />
-                        <div className="mb-2.5 grid flex-1 gap-1.5 text-[0.72rem] text-[var(--msp-text-muted)]">
-                          <div>Structure: <span className="font-bold text-[var(--msp-text)]">{pick._quality.toUpperCase()}</span></div>
-                          <div>TF Alignment: <span className="font-bold text-[var(--msp-text)]">{pick._tfAlignment}/4</span></div>
-                          <div>Volatility: <span className="font-bold text-[var(--msp-text)]">{pick._volatility.toUpperCase()}</span></div>
-                          <div>Liquidity: <span className="font-bold text-[var(--msp-text)]">{pick.indicators?.volume ? 'ACTIVE' : 'NORMAL'}</span></div>
-                        </div>
-                        {pick.dveFlags && pick.dveFlags.length > 0 && (
-                          <div className="mb-2 flex flex-wrap gap-1">
-                            {(pick.dveFlags as string[]).map((flag: string) => {
-                              const cfg: Record<string, { emoji: string; bg: string; text: string }> = {
-                                COMPRESSED: { emoji: '🔋', bg: 'bg-blue-500/15', text: 'text-blue-400' },
-                                EXPANDING: { emoji: '💥', bg: 'bg-amber-500/15', text: 'text-amber-400' },
-                                CLIMAX: { emoji: '🔥', bg: 'bg-red-500/15', text: 'text-red-400' },
-                                BREAKOUT: { emoji: '🚀', bg: 'bg-emerald-500/15', text: 'text-emerald-400' },
-                                FADE: { emoji: '↩️', bg: 'bg-purple-500/15', text: 'text-purple-400' },
-                                SQUEEZE_FIRE: { emoji: '⚡', bg: 'bg-yellow-500/15', text: 'text-yellow-400' },
-                                VOL_TRAP: { emoji: '⚠️', bg: 'bg-red-500/20', text: 'text-red-300' },
-                                EXHAUSTION_RISK: { emoji: '🛑', bg: 'bg-orange-500/15', text: 'text-orange-400' },
-                                DIR_BULL: { emoji: '🐂', bg: 'bg-emerald-500/15', text: 'text-emerald-400' },
-                                DIR_BEAR: { emoji: '🐻', bg: 'bg-red-500/15', text: 'text-red-400' },
-                                EXTENDED_PHASE: { emoji: '⏳', bg: 'bg-slate-500/15', text: 'text-slate-400' },
-                                HIGH_BREAKOUT: { emoji: '🎯', bg: 'bg-emerald-500/20', text: 'text-emerald-300' },
-                              };
-                              const c = cfg[flag] || { emoji: '📊', bg: 'bg-white/10', text: 'text-white/60' };
-                              return (
-                                <span key={flag} className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[0.55rem] font-bold uppercase ${c.bg} ${c.text}`}>
-                                  {c.emoji} {flag.replace('_', ' ')}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        )}
-                        <div className="mb-2 border-t border-[var(--msp-divider)]" />
-                        <div className="mt-auto flex gap-2" onClick={(e) => e.stopPropagation()}>
-                          <button type="button"
-                            onClick={() => { void deployRankCandidate(pick); }}
-                            disabled={blocked}
-                            className="msp-btn-elite-primary h-8 flex-1 px-2 py-1 text-[0.68rem] font-extrabold uppercase"
-                          >
-                            {permission === 'ALLOW' ? 'Create Plan' : permission === 'ALLOW_REDUCED' ? 'Create Plan (Reduced)' : permission === 'ALLOW_TIGHTENED' ? 'Trigger Only' : 'View Analysis'}
-                          </button>
-                          <button type="button" onClick={() => { window.location.href = `/tools/alerts?symbol=${encodeURIComponent(pick.symbol)}&price=${pick.indicators?.price || ''}&direction=${pick.direction || ''}`; }} className="h-8 flex-1 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1 text-[0.68rem] font-extrabold uppercase text-[var(--msp-text-muted)]">Set Alert</button>
-                          <button type="button" onClick={() => { void addScannerCandidateToWatchlist(pick); }} className="h-8 flex-1 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-1 text-[0.68rem] font-extrabold uppercase text-[var(--msp-text-muted)]">Watchlist</button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                )}
-                <div className="mt-3 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel)] px-3 py-2 text-[0.72rem] font-bold text-[var(--msp-text-muted)]">
-                  Market Bias Context • Regime: {presenceMode.replace(' MODE', '')} • Most setups: {rankedCandidates.filter((p: any) => p._direction === 'long').length >= rankedCandidates.filter((p: any) => p._direction === 'short').length ? 'Long' : 'Short'}
-                </div>
-              </div>
-            )}
-          </>
-        )}
-
-        {result && !useScannerFlowV2 && (
-          <CommandStrip
-            symbol={result.symbol}
-            status={presenceState}
-            confidence={Math.max(0, Math.min(100, result.score))}
-            dataHealth={lastUpdated ? `Updated ${new Date(lastUpdated).toLocaleTimeString()}` : 'No update'}
-            mode={presenceMode}
-            density={density}
-            onDensityChange={setDensity}
-          />
-        )}
-
-        {result && !useScannerFlowV2 && (
-          <DecisionCockpit
-            left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">{result.symbol} • {assetType.toUpperCase()}</div><div className="msp-muted">Timeframe: {timeframe.toUpperCase()}</div><div className="msp-muted">Direction: {(result.direction || 'neutral').toUpperCase()}</div></div>}
-            center={<div className="grid gap-1 text-sm"><div className="font-extrabold text-[var(--msp-accent)]">Score {result.score.toFixed(0)}</div><div className="msp-muted">State: {presenceState}</div><div className="msp-muted">Mode: {presenceMode}</div></div>}
-            right={<div className="grid gap-1 text-sm"><div className="msp-muted">RSI: {result.rsi?.toFixed(1) ?? 'n/a'}</div><div className="msp-muted">ADX: {result.adx?.toFixed(1) ?? 'n/a'}</div><div className="msp-muted">Price: {typeof result.price === 'number' ? `$${result.price.toFixed(2)}` : 'n/a'}</div></div>}
-          />
-        )}
-
-        {result && !useScannerFlowV2 && (
-          <SignalRail
-            items={[
-              { label: 'Bullish', value: `${result.signals?.bullish ?? 0}`, tone: 'bull' },
-              { label: 'Bearish', value: `${result.signals?.bearish ?? 0}`, tone: 'bear' },
-              { label: 'Neutral', value: `${result.signals?.neutral ?? 0}`, tone: 'neutral' },
-              { label: 'Flow', value: result.capitalFlow?.bias?.toUpperCase() || 'NEUTRAL', tone: result.capitalFlow?.bias === 'bullish' ? 'bull' : result.capitalFlow?.bias === 'bearish' ? 'bear' : 'warn' },
-              { label: 'Filter', value: result.institutionalFilter?.recommendation?.replace('_', ' ') || 'N/A', tone: result.institutionalFilter?.noTrade ? 'bear' : 'bull' },
-              { label: 'Focus', value: focusMode ? 'ON' : 'OFF', tone: focusMode ? 'accent' : 'neutral' },
-            ]}
-          />
-        )}
-        {!useScannerFlowV2 && showDeskPreludePanels && (
-          <>
-            <CapitalFlowCard flow={capitalFlow ?? result?.capitalFlow ?? null} compact />
-          </>
-        )}
-
-        {!useScannerFlowV2 && <div className="msp-panel mb-3 px-3.5 py-2.5 text-[0.78rem] font-extrabold uppercase tracking-[0.05em] text-msp-faint">
-          Decision Cockpit Mode • You’ve crossed from feature dashboard → decision cockpit
-        </div>}
-
-        {/* Orientation */}
-        {!useScannerFlowV2 && !orientationCollapsed && (
-        <div className="msp-card mb-6 px-5 py-[18px] text-sm leading-[1.5] text-msp-text">
-          <div className="mb-2 flex items-center gap-2.5 font-semibold text-[var(--msp-accent)]">
-            <span className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel)] px-1.5 py-1 text-xs">🎯</span>
-            AI TRADE BRIEF
+          <div className="mt-1 text-[0.76rem] font-bold uppercase tracking-[0.06em] text-slate-400">
+            Mode: {direction === 'bullish' ? 'Trend Continuation' : direction === 'bearish' ? 'Trend Reversal Watch' : 'Wait for Structure'}
           </div>
-          <div className="mb-2.5">
-            Find high-probability phases with multi-timeframe alignment. Start with the phase, confirm alignment, then look for a clean entry trigger.
-          </div>
-          <div className="text-[13px] text-[var(--msp-text-muted)]">
-            <strong className="text-[var(--msp-text)]">How to read results:</strong>
-            <ul className="ml-[18px] mt-1.5 list-disc p-0">
-              <li>Phase = market regime. Avoid trading against it.</li>
-              <li>Multi-TF alignment = confirmation strength; the more agreement, the better.</li>
-              <li>Liquidity sweep / catalysts = entry timing. Wait for the catalyst, then execute.</li>
-              <li>AI explanation = context, risk, invalidation. Use it before committing risk.</li>
-            </ul>
+          <div className="mt-2 text-[0.74rem] text-slate-400">
+            Regime: <span className="font-bold text-white">{regime}</span> · Timeframe Alignment: <span className="font-bold text-white">{tfAlignment} / 4</span>
           </div>
         </div>
-        )}
-
-        {!useScannerFlowV2 && result?.institutionalFilter && (
-          <div className={`msp-panel mb-4 border px-3.5 py-3 ${result.institutionalFilter.noTrade ? 'border-[color:var(--msp-bear)]' : 'border-[var(--msp-border-strong)]'}`}>
-            <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
-              <div className="text-[0.72rem] font-extrabold uppercase text-[var(--msp-text-faint)]">Setup Quality Check</div>
-              <div className={`text-[0.76rem] font-extrabold ${result.institutionalFilter.noTrade ? 'text-[var(--msp-bear)]' : 'text-[var(--msp-bull)]'}`}>
-                {result.institutionalFilter.finalGrade} • {(result.institutionalFilter.finalScore ?? 0).toFixed(0)} • {(result.institutionalFilter.recommendation ?? '').replace('_', ' ')}
-              </div>
-            </div>
-            <div className="grid gap-0.5">
-              {result.institutionalFilter.filters.slice(0, 4).map((filter, idx) => (
-                <div key={idx} className="text-[0.74rem] text-[var(--msp-text)]">
-                  {filter.status === 'pass' ? '✔' : filter.status === 'warn' ? '⚠' : '✖'} {filter.label}
-                </div>
-              ))}
-            </div>
+        <div className="md:col-span-3">
+          <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-slate-500">Setup Quality</div>
+          <div className="mt-1 text-[1.25rem] font-black text-white md:text-[1.45rem]">{confidence >= 75 ? 'A' : confidence >= 60 ? 'B' : confidence >= 45 ? 'C' : 'D'} Setup</div>
+          <div className="text-[0.72rem] font-semibold text-slate-400">{confidence}% · {quality}</div>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-800">
+            <div style={{ width: `${confidence}%`, background: confBarColor, height: '100%' }} />
           </div>
-        )}
-
-        {!useScannerFlowV2 && result && scannerCollapsed && (
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel)] px-3.5 py-2.5">
-            <div className="text-[0.8rem] font-extrabold uppercase tracking-[0.05em] text-[var(--msp-text)]">
-              Mini Scanner Bar • {assetType.toUpperCase()} • {ticker.toUpperCase()} • {timeframe.toUpperCase()}
+        </div>
+        <div className="md:col-span-3">
+          <div className="rounded-lg border p-3" style={{ borderColor: statusColor + '66', background: 'var(--msp-panel-2)' }}>
+            <div className="text-[0.66rem] font-extrabold uppercase tracking-[0.08em] text-slate-500">Trade Readiness</div>
+            <div className="mt-1 text-[0.88rem] font-black uppercase" style={{ color: statusColor }}>{executionStatus}</div>
+            <div className="mt-2 grid gap-1 text-[0.72rem] text-slate-400">
+              {blockReasons.map(r => <div key={r}>• {r}</div>)}
             </div>
-            <button type="button"
-              onClick={() => setScannerCollapsed(false)}
-              className="cursor-pointer rounded-full border border-[color:var(--msp-bull)] bg-[var(--msp-bull-tint)] px-3 py-1 text-[0.74rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-bull)]"
-            >
-              Expand Scanner
-            </button>
-          </div>
-        )}
-
-        {/* 🚀 DISCOVER TOP OPPORTUNITIES - Bulk Scan Section */}
-        {!useScannerFlowV2 && <div className={`${result && scannerCollapsed ? 'hidden' : 'block'} relative mb-6 overflow-hidden rounded-[14px] border border-[var(--msp-border)] bg-[var(--msp-card)] p-5 shadow-[var(--msp-shadow)]`}>
-          {/* Gold accent line */}
-          <div className="absolute left-0 right-0 top-0 h-[3px] bg-[var(--msp-accent)]" />
-          
-          <div className="mb-5 flex items-center gap-3">
-            <img src="/assets/scanners/multi-market-scanner.png" alt="Scanner" className="h-7 w-7 rounded-lg object-contain" />
-            <div>
-              <h3 className="m-0 text-lg font-bold uppercase tracking-[0.05em] text-[var(--msp-text)]">
-                Live Edge Scanner (Market-Wide)
-              </h3>
-              <p className="m-0 mt-1 text-[13px] text-[var(--msp-text-muted)]">
-                Scan broad market leaders first, then click one symbol to load your active-symbol cockpit below
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2.5">
-              <span className="text-[13px] font-semibold text-[var(--msp-text-muted)]">Equity scan depth:</span>
-              <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel)] px-3 py-[7px] text-xs font-bold text-[var(--msp-text)]">
-                Deep Indicators
-              </div>
-            </div>
-          </div>
-          
-          {/* How It Works Explainer */}
-          <div className="mb-5 flex items-center gap-3 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel)] px-4 py-3">
-            <span className="text-[20px]">💡</span>
-            <p className="m-0 text-[13px] text-[var(--msp-text)]">
-              <strong>Step 1:</strong> Run a Top 10 scan to shortlist high-confluence charts → 
-              <strong>Step 2:</strong> Click a winner to load full breakdown below
-            </p>
-          </div>
-
-          {/* Timeframe Toggle */}
-          <div className="mb-4 flex flex-wrap items-center gap-3">
-            <span className="text-sm font-semibold text-[var(--msp-text-muted)]">Timeframe:</span>
-            <div className="flex gap-1.5 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel)] p-1">
-              {(['15m', '30m', '1h', '1d'] as const).map((tf) => (
-                <button type="button"
-                  key={tf}
-                  onClick={() => setBulkScanTimeframe(tf)}
-                  disabled={bulkScanLoading}
-                  className={`rounded-md border px-4 py-2 text-sm transition ${bulkScanTimeframe === tf ? 'border-[var(--msp-border-strong)] bg-[var(--msp-accent)] text-[var(--msp-bg)] font-bold' : 'border-transparent bg-transparent text-[var(--msp-text-muted)] font-medium'} ${bulkScanLoading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer opacity-100'}`}
-                >
-                  {tf === '1d' ? 'Daily' : tf}
-                </button>
-              ))}
-            </div>
-            <span className="text-xs text-[var(--msp-text-faint)]">
-              {bulkScanTimeframe === '15m' && '~7 days of data'}
-              {bulkScanTimeframe === '30m' && '~14 days of data'}
-              {bulkScanTimeframe === '1h' && '~30 days of data'}
-              {bulkScanTimeframe === '1d' && '~6 months of data'}
-            </span>
-          </div>
-
-          {/* Scan Buttons */}
-          <div style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "10px",
-            marginBottom: "14px",
-            padding: "12px",
-            borderRadius: "10px",
-            border: "1px solid var(--msp-border)",
-            background: "var(--msp-panel-2)"
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-              <span style={{ color: "var(--msp-text-muted)", fontSize: "13px", fontWeight: 600 }}>Crypto scan depth:</span>
-              <div style={{ display: "flex", gap: "6px", background: "var(--msp-panel)", padding: "4px", borderRadius: "8px" }}>
-                {(['light', 'deep'] as const).map((mode) => (
-                  <button type="button"
-                    key={mode}
-                    onClick={() => {
-                      setBulkCryptoScanMode(mode);
-                      void runBulkScan('crypto', { mode });
-                    }}
-                    disabled={bulkScanLoading}
-                    style={{
-                      padding: "7px 12px",
-                      background: bulkCryptoScanMode === mode ? "var(--msp-bull)" : "transparent",
-                      border: "none",
-                      borderRadius: "6px",
-                      color: bulkCryptoScanMode === mode ? "var(--msp-bg)" : "var(--msp-text-muted)",
-                      fontSize: "12px",
-                      fontWeight: 700,
-                      cursor: bulkScanLoading ? "not-allowed" : "pointer",
-                      opacity: bulkScanLoading ? 0.5 : 1
-                    }}
-                  >
-                    {mode === 'light' ? 'Fast Wide Rank' : 'Deep Indicators'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {bulkCryptoScanMode === 'light' && (
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-                <span style={{ color: "var(--msp-text-muted)", fontSize: "13px", fontWeight: 600 }}>Universe size:</span>
-                <input
-                  id="scanner-universe-size"
-                  name="universeSize"
-                  type="number"
-                  min={100}
-                  max={15000}
-                  step={50}
-                  value={bulkCryptoUniverseSize}
-                  onChange={(e) => {
-                    const value = Number(e.target.value || 0);
-                    setBulkCryptoUniverseSize(Math.max(100, Math.min(15000, Number.isFinite(value) ? value : 500)));
-                  }}
-                  disabled={bulkScanLoading}
-                  style={{
-                    width: "120px",
-                    background: "var(--msp-panel)",
-                    border: "1px solid var(--msp-border)",
-                    borderRadius: "8px",
-                    padding: "8px 10px",
-                    color: "var(--msp-text)",
-                    fontSize: "13px"
-                  }}
-                />
-                <span style={{ color: "var(--msp-text-faint)", fontSize: "12px" }}>
-                  Quick ranking with market data (no full indicator stack)
-                </span>
+            {!tradeReady && (
+              <div className="mt-2 text-[0.72rem] font-extrabold uppercase" style={{ color: statusColor }}>
+                ADVISORY: QUALITY {quality} — REVIEW STRUCTURE
               </div>
             )}
           </div>
+        </div>
+      </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 mb-5 flex-wrap">
-            <button type="button"
-              onClick={() => runBulkScan('crypto')}
-              disabled={bulkScanLoading}
-              style={{
-                flex: "1",
-                minWidth: "0",
-                padding: "16px 24px",
-                background: bulkScanLoading && bulkScanType === 'crypto' 
-                  ? "var(--msp-warn-tint)" 
-                  : "var(--msp-warn-tint)",
-                border: "2px solid var(--msp-warn)",
-                borderRadius: "12px",
-                color: "var(--msp-warn)",
-                fontSize: "16px",
-                fontWeight: "700",
-                cursor: bulkScanLoading ? "not-allowed" : "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "10px",
-                transition: "all 0.2s ease",
-                opacity: bulkScanLoading && bulkScanType !== 'crypto' ? 0.5 : 1
-              }}
-            >
-              {bulkScanLoading && bulkScanType === 'crypto' ? (
-                <>
-                  <span style={{ animation: "spin 1s linear infinite", display: "inline-block" }}>⏳</span>
-                  {bulkCryptoScanMode === 'light' ? 'Ranking Crypto Universe...' : 'Finding Crypto Setups...'}
-                </>
-              ) : (
-                <>
-                  <span style={{ fontSize: "20px" }}>🪙</span>
-                  {bulkCryptoScanMode === 'light' ? 'Find Fast Top 10 Crypto' : 'Find Top 10 Crypto Setups'}
-                </>
-              )}
-            </button>
-            
-            <button type="button"
-              onClick={() => runBulkScan('equity')}
-              disabled={bulkScanLoading}
-              style={{
-                flex: "1",
-                minWidth: "0",
-                padding: "16px 24px",
-                background: bulkScanLoading && bulkScanType === 'equity' 
-                  ? "var(--msp-bull-tint)" 
-                  : "var(--msp-bull-tint)",
-                border: "2px solid var(--msp-bull)",
-                borderRadius: "12px",
-                color: "var(--msp-bull)",
-                fontSize: "16px",
-                fontWeight: "700",
-                cursor: bulkScanLoading ? "not-allowed" : "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "10px",
-                transition: "all 0.2s ease",
-                opacity: bulkScanLoading && bulkScanType !== 'equity' ? 0.5 : 1
-              }}
-            >
-              {bulkScanLoading && bulkScanType === 'equity' ? (
-                <>
-                  <span style={{ animation: "spin 1s linear infinite", display: "inline-block" }}>⏳</span>
-                  Finding Stock Setups...
-                </>
-              ) : (
-                <>
-                  <span style={{ fontSize: "20px" }}>📈</span>
-                  Find Top 10 Stock Setups
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* Scanner Backtest Link */}
-          <div className="mb-5 flex justify-center">
-            <Link
-              href="/tools/scanner/backtest"
-              className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/8 px-5 py-2.5 text-sm font-bold text-emerald-400 no-underline transition-all hover:bg-emerald-500/15 hover:border-emerald-500/50"
-            >
-              <span style={{ fontSize: '16px' }}>📊</span>
-              Scanner Backtest — Validate Signals Against History
-            </Link>
-          </div>
-
-          {/* Error Display */}
-          {bulkScanError && (
-            <div style={{
-              background: bulkScanError.toLowerCase().includes("log in") 
-                ? "var(--msp-panel-2)" 
-                : "var(--msp-bear-tint)",
-              border: bulkScanError.toLowerCase().includes("log in")
-                ? "1px solid var(--msp-border)"
-                : "1px solid var(--msp-bear)",
-              borderRadius: "12px",
-              padding: "1.5rem",
-              color: bulkScanError.toLowerCase().includes("log in") ? "var(--msp-muted)" : "var(--msp-bear)",
-              fontSize: "14px",
-              marginBottom: "16px",
-              textAlign: "center",
-            }}>
-              {bulkScanError.toLowerCase().includes("log in") ? "🔒" : "⚠️"} {bulkScanError}
-              {bulkScanError.toLowerCase().includes("log in") && (
-                <div style={{ marginTop: "1rem" }}>
-                  <a
-                    href="/auth"
-                    style={{
-                      display: "inline-block",
-                      padding: "0.75rem 2rem",
-                      background: "var(--msp-bull)",
-                      color: "var(--msp-bg)",
-                      borderRadius: "8px",
-                      fontWeight: 600,
-                      textDecoration: "none",
-                      transition: "transform 0.2s, box-shadow 0.2s",
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.transform = "translateY(-2px)";
-                      e.currentTarget.style.boxShadow = "var(--msp-shadow)";
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.transform = "translateY(0)";
-                      e.currentTarget.style.boxShadow = "none";
-                    }}
-                  >
-                    Log In to Continue →
-                  </a>
-                  <p style={{ marginTop: "0.75rem", fontSize: "0.875rem", color: "var(--msp-text-muted)" }}>
-                    Free accounts get full scanner access!
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Results Display */}
-          {bulkScanResults && bulkScanResults.topPicks.length > 0 && (
-            <div>
-              <div style={{ 
-                display: "flex", 
-                justifyContent: "space-between", 
-                alignItems: "center",
-                marginBottom: "16px",
-                paddingBottom: "12px",
-                borderBottom: "1px solid var(--msp-border)"
-              }}>
-                <h4 style={{ color: "var(--msp-text)", fontSize: "16px", fontWeight: "600", margin: 0 }}>
-                  🏆 Market-Wide Top {bulkScanExpanded ? bulkScanResults.topPicks.length : Math.min(5, bulkScanResults.topPicks.length)} {bulkScanResults.type === 'crypto' ? 'Crypto' : 'Stocks'} ({bulkScanResults.timeframe === '1d' ? 'Daily' : bulkScanResults.timeframe})
-                </h4>
-                <span style={{ color: "var(--msp-text-faint)", fontSize: "12px" }}>
-                  {bulkScanResults.scanned} ranked • {bulkScanResults.duration}
-                  {bulkScanResults.type === 'crypto' && (bulkScanResults.mode === 'light' || bulkScanResults.mode === 'hybrid') && bulkScanResults.sourceCoinsFetched
-                    ? ` • source ${bulkScanResults.sourceCoinsFetched}`
-                    : ''}
-                  {bulkScanResults.type === 'equity' && (bulkScanResults.mode === 'light' || bulkScanResults.mode === 'hybrid') && bulkScanResults.sourceSymbols
-                    ? ` • source ${bulkScanResults.sourceSymbols}`
-                    : ''}
-                  {(bulkScanResults.mode === 'light' || bulkScanResults.mode === 'hybrid') && Number.isFinite(bulkScanResults.apiCallsUsed) && Number.isFinite(bulkScanResults.apiCallsCap)
-                    ? ` • API ${bulkScanResults.apiCallsUsed}/${bulkScanResults.apiCallsCap}`
-                    : ''}
-                </span>
-              </div>
-
-              <div style={{
-                marginBottom: "12px",
-                background: "var(--msp-panel-2)",
-                border: "1px solid var(--msp-border)",
-                borderRadius: "10px",
-                padding: "8px 12px",
-                color: "var(--msp-muted)",
-                fontSize: "12px",
-                fontWeight: 600,
-              }}>
-                Scope: this list is market-wide. Click a card to load that symbol as your active analysis below.
-                {!bulkScanExpanded && bulkScanResults.topPicks.length > 5 && (
-                  <span style={{ marginLeft: "8px", color: "var(--msp-text-faint)", fontSize: "11px" }}>
-                    Showing top 5 of {bulkScanResults.topPicks.length} — 
-                    <button type="button"
-                      onClick={(e) => { e.stopPropagation(); setBulkScanExpanded(true); }}
-                      style={{ background: "none", border: "none", color: "var(--msp-accent)", cursor: "pointer", textDecoration: "underline", fontSize: "11px", padding: 0, marginLeft: "4px" }}
-                    >
-                      Show All
-                    </button>
-                  </span>
-                )}
-                {bulkScanExpanded && bulkScanResults.topPicks.length > 5 && (
-                  <span style={{ marginLeft: "8px", color: "var(--msp-text-faint)", fontSize: "11px" }}>
-                    Showing all {bulkScanResults.topPicks.length} — 
-                    <button type="button"
-                      onClick={(e) => { e.stopPropagation(); setBulkScanExpanded(false); }}
-                      style={{ background: "none", border: "none", color: "var(--msp-accent)", cursor: "pointer", textDecoration: "underline", fontSize: "11px", padding: 0, marginLeft: "4px" }}
-                    >
-                      Show Top 5 Only
-                    </button>
-                  </span>
-                )}
-              </div>
-              
-              <div style={{ 
-                display: "grid", 
-                gridTemplateColumns: "repeat(auto-fill, minmax(min(280px, 100%), 1fr))", 
-                gap: "12px" 
-              }}>
-                {(bulkScanExpanded ? bulkScanResults.topPicks : bulkScanResults.topPicks.slice(0, 5)).map((pick, idx) => (
-                  <div
-                    key={pick.symbol}
-                    onClick={() => {
-                      const edgeScore = Math.max(1, Math.min(99, Math.round(pick.score ?? 50)));
-                      const bias: 'bullish' | 'bearish' | 'neutral' = pick.direction === 'bullish'
-                        ? 'bullish'
-                        : pick.direction === 'bearish'
-                        ? 'bearish'
-                        : 'neutral';
-                      const quality: 'HIGH' | 'MEDIUM' | 'LOW' = edgeScore >= 70 ? 'HIGH' : edgeScore >= 55 ? 'MEDIUM' : 'LOW';
-                      const risk: 'LOW' | 'MODERATE' | 'HIGH' = pick.indicators?.atr_percent >= 3
-                        ? 'HIGH'
-                        : pick.indicators?.atr_percent >= 1.5
-                        ? 'MODERATE'
-                        : 'LOW';
-                      const nextTrigger = edgeScore >= 75
-                        ? 'Time Cluster active now'
-                        : edgeScore >= 55
-                        ? 'Time Cluster in ~12m'
-                        : 'Await stronger confluence cluster';
-                      const executionState: 'WAIT' | 'PREP' | 'EXECUTE' = edgeScore >= 75
-                        ? 'EXECUTE'
-                        : edgeScore >= 55
-                        ? 'PREP'
-                        : 'WAIT';
-
-                      setAssetType(bulkScanResults.type as AssetType);
-                      setTicker(pick.symbol);
-                      setResult(null);
-                      setCapitalFlow(null);
-                      setAiText(null);
-                      setAiError(null);
-                      setError(null);
-                      setScannerCollapsed(false);
-                      setOperatorTransition({
-                        symbol: pick.symbol,
-                        timeframe,
-                        edgeScore,
-                        bias,
-                        quality,
-                        executionState,
-                        nextTrigger,
-                        risk,
-                      });
-                    }}
-                    style={{
-                      background: "var(--msp-panel)",
-                      border: `1px solid ${pick.direction === 'bullish' ? 'var(--msp-bull)' : pick.direction === 'bearish' ? 'var(--msp-bear)' : 'var(--msp-border)'}`,
-                      borderRadius: "12px",
-                      padding: "16px",
-                      cursor: "pointer",
-                      transition: "all 0.2s ease",
-                      position: "relative"
-                    }}
-                  >
-                    {/* Rank Badge */}
-                    <div style={{
-                      position: "absolute",
-                      top: "-8px",
-                      left: "12px",
-                      background: idx < 3 ? "var(--msp-warn)" : "var(--msp-text-faint)",
-                      color: idx < 3 ? "var(--msp-bg)" : "var(--msp-text)",
-                      padding: "2px 8px",
-                      borderRadius: "10px",
-                      fontSize: "11px",
-                      fontWeight: "700"
-                    }}>
-                      #{idx + 1}
-                    </div>
-                    
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: "4px" }}>
-                      <div>
-                        <div style={{ color: "var(--msp-text)", fontSize: "18px", fontWeight: "700" }}>
-                          {pick.symbol}
-                        </div>
-                        {pick.indicators?.price && (
-                          <div style={{ 
-                            color: "var(--msp-text-muted)",
-                            fontSize: "14px",
-                            fontWeight: "500",
-                            marginTop: "2px"
-                          }}>
-                            ${pick.indicators.price < 1 
-                              ? pick.indicators.price.toFixed(6) 
-                              : pick.indicators.price < 100 
-                                ? pick.indicators.price.toFixed(2) 
-                                : pick.indicators.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                          </div>
-                        )}
-                        <div style={{ 
-                          color: pick.direction === 'bullish' ? 'var(--msp-bull)' : pick.direction === 'bearish' ? 'var(--msp-bear)' : 'var(--msp-text-muted)',
-                          fontSize: "12px",
-                          fontWeight: "600",
-                          marginTop: "4px"
-                        }}>
-                          {pick.direction === 'bullish' ? '🟢' : pick.direction === 'bearish' ? '🔴' : '⚪'} {(pick.direction || 'neutral').toUpperCase()}
-                        </div>
-                      </div>
-                      
-                      <div style={{ textAlign: "right" }}>
-                        <div style={{
-                          background: pick.score >= 70 ? "var(--msp-bull-tint)" : pick.score <= 30 ? "var(--msp-bear-tint)" : "var(--msp-panel-2)",
-                          color: pick.score >= 70 ? "var(--msp-bull)" : pick.score <= 30 ? "var(--msp-bear)" : "var(--msp-text-muted)",
-                          padding: "4px 10px",
-                          borderRadius: "8px",
-                          fontSize: "16px",
-                          fontWeight: "700"
-                        }}>
-                          {pick.score}
-                        </div>
-                        {pick.change24h != null && Number.isFinite(pick.change24h) && (
-                          <div style={{
-                            color: pick.change24h >= 0 ? "var(--msp-bull)" : "var(--msp-bear)",
-                            fontSize: "12px",
-                            marginTop: "4px"
-                          }}>
-                            {pick.change24h >= 0 ? '+' : ''}{pick.change24h.toFixed(2)}%
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* Mini indicator bar */}
-                    <div style={{ 
-                      display: "flex", 
-                      gap: "8px", 
-                      marginTop: "12px",
-                      paddingTop: "8px",
-                      borderTop: "1px solid var(--msp-border)",
-                      fontSize: "11px",
-                      color: "var(--msp-text-faint)"
-                    }}>
-                      {pick.indicators?.rsi && (
-                        <span>RSI: <span style={{ color: pick.indicators.rsi > 70 ? 'var(--msp-bear)' : pick.indicators.rsi < 30 ? 'var(--msp-bull)' : 'var(--msp-text-muted)' }}>{pick.indicators.rsi.toFixed(0)}</span></span>
-                      )}
-                      {pick.indicators?.adx && (
-                        <span>ADX: <span style={{ color: pick.indicators.adx > 25 ? 'var(--msp-warn)' : 'var(--msp-text-muted)' }}>{pick.indicators.adx.toFixed(0)}</span></span>
-                      )}
-                      {pick.indicators?.squeeze && (
-                        <span style={{
-                          background: 'rgba(168,85,247,0.15)',
-                          color: '#a855f7',
-                          padding: '1px 6px',
-                          borderRadius: '4px',
-                          fontWeight: 700,
-                          fontSize: '10px',
-                          letterSpacing: '0.04em',
-                        }} title={`Squeeze strength: ${pick.indicators.squeezeStrength ?? 0}%`}>
-                          🔒 SQUEEZE{pick.indicators.squeezeStrength > 50 ? ' ⬆' : ''}
-                        </span>
-                      )}
-                      {pick.signals && (
-                        <span style={{ marginLeft: "auto" }}>
-                          <span style={{ color: "var(--msp-bull)" }}>↑{pick.signals.bullish}</span>
-                          {' / '}
-                          <span style={{ color: "var(--msp-bear)" }}>↓{pick.signals.bearish}</span>
-                        </span>
-                      )}
-                    </div>
-                    
-                    {/* Derivatives data for crypto */}
-                    {bulkScanResults.type === 'crypto' && pick.derivatives && (
-                      <div style={{ 
-                        display: "flex", 
-                        gap: "10px", 
-                        marginTop: "8px",
-                        paddingTop: "8px",
-                        borderTop: "1px solid var(--msp-border)",
-                        fontSize: "10px",
-                        color: "var(--msp-text-faint)",
-                        flexWrap: "wrap"
-                      }}>
-                        {pick.derivatives.openInterest > 0 && (
-                          <span title="Open Interest">
-                            📊 OI: <span style={{ color: "var(--msp-muted)" }}>
-                              ${pick.derivatives.openInterest >= 1e9 
-                                ? (pick.derivatives.openInterest / 1e9).toFixed(2) + 'B'
-                                : pick.derivatives.openInterest >= 1e6 
-                                  ? (pick.derivatives.openInterest / 1e6).toFixed(1) + 'M'
-                                  : pick.derivatives.openInterest.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                            </span>
-                          </span>
-                        )}
-                        {pick.derivatives.fundingRate !== undefined && (
-                          <span title="Funding Rate (8h)">
-                            💰 FR: <span style={{ 
-                              color: pick.derivatives.fundingRate > 0.05 ? 'var(--msp-bear)' 
-                                : pick.derivatives.fundingRate < -0.05 ? 'var(--msp-bull)' 
-                                : 'var(--msp-text-muted)' 
-                            }}>
-                              {pick.derivatives.fundingRate >= 0 ? '+' : ''}{pick.derivatives.fundingRate.toFixed(4)}%
-                            </span>
-                          </span>
-                        )}
-                        {pick.derivatives.longShortRatio && (
-                          <span title="Long/Short Ratio">
-                            ⚖️ L/S: <span style={{ 
-                              color: pick.derivatives.longShortRatio > 1.5 ? 'var(--msp-bull)' 
-                                : pick.derivatives.longShortRatio < 0.67 ? 'var(--msp-bear)' 
-                                : 'var(--msp-text-muted)' 
-                            }}>
-                              {pick.derivatives.longShortRatio.toFixed(2)}
-                            </span>
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    
-                    {/* Action Buttons */}
-                    <div style={{ 
-                      display: "flex", 
-                      gap: "8px", 
-                      marginTop: "12px",
-                      paddingTop: "8px",
-                      borderTop: "1px solid var(--msp-border)"
-                    }}>
-                      <button type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          window.location.href = `/tools/alerts?symbol=${encodeURIComponent(pick.symbol)}&price=${pick.indicators?.price || ''}&direction=${pick.direction || ''}`;
-                        }}
-                        style={{
-                          flex: 1,
-                          padding: "6px 10px",
-                          fontSize: "11px",
-                          fontWeight: "600",
-                          background: "var(--msp-warn-tint)",
-                          color: "var(--msp-warn)",
-                          border: "1px solid var(--msp-warn)",
-                          borderRadius: "6px",
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: "4px",
-                          transition: "all 0.2s ease"
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = "var(--msp-warn-tint)";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = "var(--msp-warn-tint)";
-                        }}
-                      >
-                        🔔 Set Alert
-                      </button>
-                      <button type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          void addScannerCandidateToWatchlist(pick);
-                        }}
-                        style={{
-                          flex: 1,
-                          padding: "6px 10px",
-                          fontSize: "11px",
-                          fontWeight: "600",
-                          background: "var(--msp-bull-tint)",
-                          color: "var(--msp-bull)",
-                          border: "1px solid var(--msp-bull)",
-                          borderRadius: "6px",
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: "4px",
-                          transition: "all 0.2s ease"
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = "var(--msp-bull-tint)";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = "var(--msp-bull-tint)";
-                        }}
-                      >
-                        ⭐ Add to Watchlist
-                      </button>
-                      <button type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setResearchCasePick(pick as ScanPick);
-                        }}
-                        style={{
-                          flex: 1,
-                          padding: "6px 10px",
-                          fontSize: "11px",
-                          fontWeight: "600",
-                          background: "var(--msp-accent-tint)",
-                          color: "var(--msp-accent)",
-                          border: "1px solid var(--msp-accent)",
-                          borderRadius: "6px",
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: "4px",
-                          transition: "all 0.2s ease"
-                        }}
-                      >
-                        📋 Research Case
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              <p style={{ color: "var(--msp-text-faint)", fontSize: "11px", marginTop: "16px", textAlign: "center" }}>
-                Click any result to deep dive with full analysis below • Data: {bulkScanType === 'crypto' ? 'CoinGecko' : 'Alpha Vantage'}
-              </p>
-            </div>
-          )}
-
-          {/* Empty State */}
-          {!bulkScanResults && !bulkScanLoading && (
-            <div style={{ 
-              background: "var(--msp-panel)", 
-              borderRadius: "12px", 
-              padding: "32px 24px", 
-              textAlign: "center",
-              color: "var(--msp-text-muted)"
-            }}>
-              <span style={{ fontSize: "40px", display: "block", marginBottom: "12px" }}><img src="/assets/scanners/multi-market-scanner.png" alt="Scanner" style={{ width: 40, height: 40, borderRadius: 10, objectFit: 'contain' }} /></span>
-              <p style={{ fontSize: "15px", margin: "0 0 8px 0", color: "var(--msp-text)" }}>
-                Click a button above to discover today's best opportunities
-              </p>
-              <p style={{ fontSize: "12px", margin: 0, color: "var(--msp-text-faint)" }}>
-                Our algorithm analyzes RSI, MACD, EMA200, ADX, Stochastic, Aroon & CCI
-              </p>
-            </div>
-          )}
-        </div>}
-
-        {/* Scanner Panel */}
-        {!useScannerFlowV2 && <div style={{
-          display: result && scannerCollapsed ? "none" : "block",
-          background: "var(--msp-panel)",
-          borderRadius: "14px",
-          border: "1px solid var(--msp-border)",
-          padding: "2rem",
-          marginBottom: "2rem",
-          boxShadow: "var(--msp-shadow)"
-        }}>
-          {/* Asset Type Selector */}
-          <div style={{ marginBottom: "1.5rem" }}>
-            <label style={{ display: "block", color: "var(--msp-bull)", fontWeight: "600", marginBottom: "0.75rem" }}>
-              Asset Class
-            </label>
-            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              {(["crypto", "equity", "forex"] as AssetType[]).map((type) => {
-                // Equity & Forex require commercial data licenses - admin-only for testing
-                // Crypto uses CoinGecko (licensed)
-                const isDisabled = (type === "equity" || type === "forex") && !isAdmin;
-                return (
-                  <button type="button"
-                    key={type}
-                    onClick={() => {
-                      if (isDisabled) return;
-                      setAssetType(type);
-                      setTicker(QUICK_PICKS[type][0]);
-                    }}
-                    disabled={isDisabled}
-                    title={isDisabled ? "Stocks/Forex are in licensed beta access" : undefined}
-                    style={{
-                      padding: "0.5rem 1rem",
-                      borderRadius: "8px",
-                      border: assetType === type ? "2px solid var(--msp-bull)" : "1px solid var(--msp-bull)",
-                      background: isDisabled ? "var(--msp-panel-2)" : (assetType === type ? "var(--msp-bull-tint)" : "transparent"),
-                      color: isDisabled ? "var(--msp-text-faint)" : (assetType === type ? "var(--msp-bull)" : "var(--msp-text-muted)"),
-                      fontWeight: assetType === type ? "600" : "500",
-                      cursor: isDisabled ? "not-allowed" : "pointer",
-                      textTransform: "capitalize",
-                      opacity: isDisabled ? 0.6 : 1,
-                    }}
-                  >
-                    {type === "crypto" ? "₿ Crypto" : type === "equity" ? "📈 Stocks" : "🌍 Forex"}
-                    {isDisabled && " 🔒"}
-                  </button>
-                );
-              })}
-            </div>
-            {!isAdmin && (
-              <p style={{ marginTop: "0.5rem", fontSize: "0.8rem", color: "var(--msp-text-faint)" }}>
-                📊 Crypto is fully available. Stocks/Forex are currently limited-beta due to licensing.
-              </p>
-            )}
-          </div>
-
-          {/* Ticker Input */}
-          <div style={{ marginBottom: "1.5rem" }}>
-            <label style={{ display: "block", color: "var(--msp-bull)", fontWeight: "600", marginBottom: "0.75rem" }}>
-              Ticker Symbol {assetType === "crypto" && TRUSTED_CRYPTO_LIST.includes(ticker.toUpperCase()) && <span style={{ fontSize: "0.8rem", color: "var(--msp-bull)" }}>✓</span>}
-            </label>
-            <div style={{ position: "relative", marginBottom: "0.5rem" }}>
-              <input
-                id="scanner-ticker"
-                name="ticker"
-                type="text"
-                value={ticker}
-                onChange={(e) => {
-                  setTicker(e.target.value.toUpperCase());
-                  setShowSuggestions(true);
-                }}
-                onFocus={() => setShowSuggestions(true)}
-                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                placeholder={assetType === "crypto" ? "e.g., BTC, ETH, SOL..." : "e.g., AAPL, MSFT..."}
-                style={{
-                  width: "100%",
-                  padding: "0.75rem",
-                  background: "var(--msp-panel)",
-                  border: "1px solid var(--msp-bull)",
-                  borderRadius: "8px",
-                  color: "var(--msp-text)",
-                  fontSize: "1rem",
-                }}
-              />
-              {/* Autocomplete Dropdown */}
-              {showSuggestions && assetType === "crypto" && getSuggestions().length > 0 && (
-                <div style={{
-                  position: "absolute",
-                  top: "100%",
-                  left: 0,
-                  right: 0,
-                  background: "var(--msp-panel-2)",
-                  border: "1px solid var(--msp-bull)",
-                  borderTop: "none",
-                  borderRadius: "0 0 8px 8px",
-                  maxHeight: "200px",
-                  overflowY: "auto",
-                  zIndex: 10,
-                }}>
-                  {getSuggestions().map((sym) => (
-                    <div
-                      key={sym}
-                      onClick={() => {
-                        setTicker(sym);
-                        setShowSuggestions(false);
-                      }}
-                      style={{
-                        padding: "0.75rem 1rem",
-                        borderBottom: "1px solid var(--msp-border)",
-                        cursor: "pointer",
-                        color: "var(--msp-text-muted)",
-                        fontSize: "0.95rem",
-                        transition: "all 0.2s",
-                        background: ticker === sym ? "var(--msp-bull-tint)" : "transparent",
-                      }}
-                      onMouseEnter={(e) => {
-                        (e.currentTarget as HTMLDivElement).style.background = "var(--msp-bull-tint)";
-                      }}
-                      onMouseLeave={(e) => {
-                        (e.currentTarget as HTMLDivElement).style.background = ticker === sym ? "var(--msp-bull-tint)" : "transparent";
-                      }}
-                    >
-                      {sym}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              {QUICK_PICKS[assetType].map((sym) => (
-                <button type="button"
-                  key={sym}
-                  onClick={() => {
-                    setTicker(sym);
-                    setShowSuggestions(false);
-                  }}
-                  style={{
-                    padding: "0.4rem 0.75rem",
-                    background: ticker === sym ? "var(--msp-bull-tint)" : "var(--msp-panel)",
-                    border: ticker === sym ? "1px solid var(--msp-bull)" : "1px solid var(--msp-border)",
-                    borderRadius: "6px",
-                    color: ticker === sym ? "var(--msp-bull)" : "var(--msp-text-muted)",
-                    fontSize: "0.875rem",
-                    fontWeight: ticker === sym ? "600" : "500",
-                    cursor: "pointer",
-                  }}
-                >
-                  {sym}
-                </button>
-              ))}
-            </div>
-            <p style={{ fontSize: "0.85rem", color: "var(--msp-text-faint)", marginTop: "0.5rem" }}>
-              {assetType === "crypto" ? "15,000+ cryptocurrencies supported via CoinGecko" : "Any stock ticker supported"}
-            </p>
-          </div>
-
-          {/* Timeframe & Run */}
-          <div className="grid-equal-2-col-responsive">
-            <div>
-              <label style={{ display: "block", color: "var(--msp-bull)", fontWeight: "600", marginBottom: "0.75rem" }}>
-                Timeframe
-              </label>
-              <select
-                value={timeframe}
-                onChange={(e) => setTimeframe(e.target.value as TimeframeOption)}
-                style={{
-                  width: "100%",
-                  padding: "0.75rem",
-                  background: "var(--msp-panel)",
-                  border: "1px solid var(--msp-bull)",
-                  borderRadius: "8px",
-                  color: "var(--msp-text)",
-                  fontWeight: "500",
-                  cursor: "pointer",
-                }}
-              >
-                <option value="1h">⚡ 1 Hour</option>
-                <option value="30m">🕐 30 Minutes</option>
-                <option value="1d">📅 1 Day</option>
-              </select>
-            </div>
-
-            <button type="button"
-              onClick={() => { void runScan(); }}
-              disabled={loading}
-              style={{
-                padding: "0.75rem 2rem",
-                background: loading
-                  ? "var(--msp-bull-tint)"
-                  : "var(--msp-bull)",
-                border: "none",
-                borderRadius: "8px",
-                color: "var(--msp-bg)",
-                fontWeight: "600",
-                fontSize: "1rem",
-                cursor: loading ? "not-allowed" : "pointer",
-                alignSelf: "end",
-                marginTop: "1.75rem",
-              }}
-            >
-              {loading ? "⏳ Finding Best Setup..." : "🔎 Find Best Setup"}
-            </button>
-            {result && (
-              <button type="button"
-                onClick={() => setScannerCollapsed(true)}
-                style={{
-                  padding: "0.5rem 0.9rem",
-                  background: "var(--msp-panel)",
-                  border: "1px solid var(--msp-border)",
-                  borderRadius: "8px",
-                  color: "var(--msp-text)",
-                  fontWeight: 700,
-                  fontSize: "0.82rem",
-                  cursor: "pointer",
-                  alignSelf: "end",
-                  marginTop: "1.75rem",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.04em",
-                }}
-              >
-                Minimize Scanner
-              </button>
-            )}
-          </div>
-
-          <div style={{
-            marginTop: '1rem',
-            padding: '0.9rem',
-            background: 'var(--msp-panel-2)',
-            border: '1px solid var(--msp-border)',
-            borderRadius: '10px',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap', marginBottom: '0.6rem' }}>
-              <div style={{ color: 'var(--msp-text)', fontWeight: 700, fontSize: '0.88rem' }}>Journal Monitor (Auto-draft on threshold)</div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--msp-text-muted)', fontSize: '0.82rem' }}>
-                <input
-                  id="scanner-jm-enabled"
-                  name="jmEnabled"
-                  type="checkbox"
-                  checked={journalMonitorEnabled}
-                  onChange={(e) => setJournalMonitorEnabled(e.target.checked)}
-                />
-                Enabled
-              </label>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: '10px', marginBottom: '0.6rem' }}>
-              <label style={{ display: 'grid', gap: '5px', color: 'var(--msp-text-muted)', fontSize: '0.78rem' }}>
-                <span>Score Threshold</span>
-                <input
-                  id="scanner-jm-threshold"
-                  name="jmThreshold"
-                  type="number"
-                  min={50}
-                  max={98}
-                  value={journalMonitorThreshold}
-                  onChange={(e) => {
-                    const value = Number(e.target.value || 0);
-                    setJournalMonitorThreshold(Math.max(50, Math.min(98, Number.isFinite(value) ? Math.round(value) : 72)));
-                  }}
-                  style={{
-                    background: 'var(--msp-panel)',
-                    border: '1px solid var(--msp-border)',
-                    borderRadius: '8px',
-                    padding: '8px',
-                    color: 'var(--msp-text)',
-                  }}
-                />
-              </label>
-
-              <label style={{ display: 'grid', gap: '5px', color: 'var(--msp-text-muted)', fontSize: '0.78rem' }}>
-                <span>Cooldown (minutes)</span>
-                <input
-                  id="scanner-jm-cooldown"
-                  name="jmCooldown"
-                  type="number"
-                  min={5}
-                  max={1440}
-                  value={journalMonitorCooldownMinutes}
-                  onChange={(e) => {
-                    const value = Number(e.target.value || 0);
-                    setJournalMonitorCooldownMinutes(Math.max(5, Math.min(1440, Number.isFinite(value) ? Math.round(value) : 120)));
-                  }}
-                  style={{
-                    background: 'var(--msp-panel)',
-                    border: '1px solid var(--msp-border)',
-                    borderRadius: '8px',
-                    padding: '8px',
-                    color: 'var(--msp-text)',
-                  }}
-                />
-              </label>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--msp-text-muted)', fontSize: '0.8rem' }}>
-                <input
-                  id="scanner-jm-autoscan-enabled"
-                  name="jmAutoScanEnabled"
-                  type="checkbox"
-                  checked={journalMonitorAutoScanEnabled}
-                  onChange={(e) => setJournalMonitorAutoScanEnabled(e.target.checked)}
-                />
-                Auto-rescan while page open
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--msp-text-muted)', fontSize: '0.8rem' }}>
-                Every
-                <input
-                  id="scanner-jm-autoscan-sec"
-                  name="jmAutoScanSeconds"
-                  type="number"
-                  min={30}
-                  max={3600}
-                  value={journalMonitorAutoScanSeconds}
-                  onChange={(e) => {
-                    const value = Number(e.target.value || 0);
-                    setJournalMonitorAutoScanSeconds(Math.max(30, Math.min(3600, Number.isFinite(value) ? Math.round(value) : 180)));
-                  }}
-                  style={{
-                    width: '88px',
-                    background: 'var(--msp-panel)',
-                    border: '1px solid var(--msp-border)',
-                    borderRadius: '8px',
-                    padding: '6px 8px',
-                    color: 'var(--msp-text)',
-                  }}
-                />
-                sec
-              </label>
-            </div>
-
-            <div style={{ fontSize: '0.75rem', color: 'var(--msp-text-faint)' }}>
-              Creates journal drafts only when score ≥ threshold, direction is not neutral, and cooldown has passed for this symbol/timeframe.
-            </div>
-            {journalMonitorStatus && (
-              <div style={{ marginTop: '6px', color: 'var(--msp-bull)', fontSize: '0.75rem' }}>{journalMonitorStatus}</div>
-            )}
-            {journalMonitorError && (
-              <div style={{ marginTop: '6px', color: 'var(--msp-bear)', fontSize: '0.75rem' }}>{journalMonitorError}</div>
-            )}
-          </div>
-
-          <div style={{ marginTop: '1rem' }}>
-            <OperatorProposalRail
-              source="scanner_page"
-              symbolFallback={ticker}
-              timeframe={timeframe}
-              assetClass={assetType}
-              workflowPrefix="wf_scanner"
-              limit={6}
-              maxVisible={3}
-              compact
-            />
-          </div>
-        </div>}
-
-        {/* Error Message */}
-        {error && (
-          <div style={{
-            padding: "1.5rem",
-            background: error.toLowerCase().includes("log in") 
-              ? "var(--msp-panel-2)" 
-              : "var(--msp-bear-tint)",
-            border: error.toLowerCase().includes("log in")
-              ? "1px solid var(--msp-border)"
-              : "1px solid var(--msp-bear)",
-            borderRadius: "12px",
-            color: error.toLowerCase().includes("log in") ? "var(--msp-muted)" : "var(--msp-bear)",
-            marginBottom: "1rem",
-            textAlign: "center",
-          }}>
-            {error.toLowerCase().includes("log in") ? "🔒" : "⚠️"} {error}
-            {error.toLowerCase().includes("log in") && (
-              <div style={{ marginTop: "1rem" }}>
-                <a
-                  href="/auth"
-                  style={{
-                    display: "inline-block",
-                    padding: "0.75rem 2rem",
-                    background: "var(--msp-bull)",
-                    color: "var(--msp-bg)",
-                    borderRadius: "8px",
-                    fontWeight: 600,
-                    textDecoration: "none",
-                    transition: "transform 0.2s, box-shadow 0.2s",
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.transform = "translateY(-2px)";
-                    e.currentTarget.style.boxShadow = "var(--msp-shadow)";
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = "none";
-                  }}
-                >
-                  Log In to Continue →
-                </a>
-                <p style={{ marginTop: "0.75rem", fontSize: "0.875rem", color: "var(--msp-text-muted)" }}>
-                  Free accounts get full scanner access!
-                </p>
-              </div>
-            )}
-            {!error.toLowerCase().includes("log in") && (
-              <div style={{ marginTop: "0.9rem" }}>
-                <div style={{ color: "var(--msp-text-muted)", fontSize: "0.82rem", marginBottom: "0.5rem" }}>
-                  Quick recover:
-                </div>
-                <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", flexWrap: "wrap" }}>
-                  <button type="button"
-                    onClick={() => { void runScan(); }}
-                    style={{
-                      padding: "0.4rem 0.7rem",
-                      borderRadius: "999px",
-                      border: "1px solid var(--msp-bull)",
-                      background: "var(--msp-bull-tint)",
-                      color: "var(--msp-bull)",
-                      fontSize: "0.78rem",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Retry scan
-                  </button>
-                  {quickRecoverySymbols.map((sym) => (
-                    <button type="button"
-                      key={sym}
-                      onClick={() => {
-                        setTicker(sym);
-                        setError(null);
-                      }}
-                      style={{
-                        padding: "0.4rem 0.7rem",
-                        borderRadius: "999px",
-                        border: "1px solid var(--msp-border)",
-                        background: "var(--msp-panel)",
-                        color: "var(--msp-text)",
-                        fontSize: "0.78rem",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                      }}
-                    >
-                      Try {sym}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {!useScannerFlowV2 && operatorTransition && (
-          <div className="msp-card mb-4 px-4 py-4 text-center">
-            <div className="mb-2 text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">
-              Stage 2 • Qualify (Operator Transition)
-            </div>
-            <div className="mx-auto mb-3 max-w-[960px] rounded-xl border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] px-3 py-3">
-              <div className="mb-2 text-base font-extrabold text-[var(--msp-text)]">
-                {operatorTransition.symbol} — {operatorTransition.timeframe.toUpperCase()}
-              </div>
-              <div className="grid gap-2 text-left [grid-template-columns:repeat(auto-fit,minmax(min(145px,100%),1fr))]">
-                <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2.5 py-2">
-                  <div className="text-[0.62rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Edge Score</div>
-                  <div className="text-[0.84rem] font-extrabold text-[var(--msp-text)]">{operatorTransition.edgeScore} ({operatorTransition.quality})</div>
-                </div>
-                <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2.5 py-2">
-                  <div className="text-[0.62rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Bias</div>
-                  <div className={`text-[0.84rem] font-extrabold ${operatorTransition.bias === 'bullish' ? 'text-[var(--msp-bull)]' : operatorTransition.bias === 'bearish' ? 'text-[var(--msp-bear)]' : 'text-[var(--msp-warn)]'}`}>{operatorTransition.bias.toUpperCase()}</div>
-                </div>
-                <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2.5 py-2">
-                  <div className="text-[0.62rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Execution State</div>
-                  <div className={`text-[0.84rem] font-extrabold ${operatorTransition.executionState === 'EXECUTE' ? 'text-[var(--msp-bull)]' : operatorTransition.executionState === 'PREP' ? 'text-[var(--msp-warn)]' : 'text-[var(--msp-neutral)]'}`}>{operatorTransition.executionState}</div>
-                </div>
-                <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2.5 py-2">
-                  <div className="text-[0.62rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Next Trigger</div>
-                  <div className="text-[0.8rem] font-bold text-[var(--msp-text)]">{operatorTransition.nextTrigger}</div>
-                </div>
-                <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2.5 py-2">
-                  <div className="text-[0.62rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Risk</div>
-                  <div className={`text-[0.84rem] font-extrabold ${operatorTransition.risk === 'LOW' ? 'text-[var(--msp-bull)]' : operatorTransition.risk === 'MODERATE' ? 'text-[var(--msp-warn)]' : 'text-[var(--msp-bear)]'}`}>{operatorTransition.risk}</div>
-                </div>
+      {/* Analysis grid */}
+      <div className="grid gap-3 md:grid-cols-12">
+        {/* Structure Analysis */}
+        <div className="md:col-span-7 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel)] p-3 md:p-4">
+          <div className="mb-3 text-[0.72rem] font-extrabold uppercase tracking-[0.08em] text-slate-500">Structure Analysis</div>
+          <div className="grid gap-3">
+            <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5">
+              <div className="mb-1 text-[0.68rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Trend Alignment</div>
+              <div className="grid gap-1 text-[0.74rem] text-slate-400">
+                <div>Higher TF: <span className={`font-bold ${trendAligned ? 'text-emerald-400' : 'text-amber-400'}`}>{trendAligned ? direction.toUpperCase() : 'NEUTRAL'}</span></div>
+                <div>Mid TF: <span className={`font-bold ${momentumAligned ? 'text-emerald-400' : 'text-amber-400'}`}>{momentumAligned ? direction.toUpperCase() : 'NEUTRAL'}</span></div>
+                <div>Lower TF: <span className={`font-bold ${flowAligned ? 'text-emerald-400' : 'text-amber-400'}`}>{flowAligned ? direction.toUpperCase() : 'MIXED'}</span></div>
               </div>
             </div>
-            <div className="flex items-center justify-center gap-2">
-              <button type="button"
-                onClick={() => { void runScan(); }}
-                disabled={loading}
-                className="rounded-md border border-[var(--msp-border-strong)] bg-[var(--msp-bull)] px-4 py-2 text-[0.76rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-bg)] disabled:opacity-60"
-              >
-                {loading ? 'Loading Cockpit…' : 'Load Decision Cockpit'}
-              </button>
-              <button type="button"
-                onClick={() => setOperatorTransition(null)}
-                className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel)] px-3 py-2 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-muted)]"
-              >
-                Clear
-              </button>
-            </div>
-          </div>
-        )}
-
-        {result && useInstitutionalDecisionCockpitV2 && (
-          <div className={`msp-card mb-4 px-4 py-4 transition-all duration-300 ease-out md:px-5 md:py-5 ${scannerStep === 3 ? 'translate-x-0 opacity-100' : 'translate-x-1 opacity-95'}`}>
-            {(() => {
-              const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
-              const confidence = Math.max(1, Math.min(99, Math.round(result.score ?? 50)));
-              const quality = confidence >= 70 ? 'HIGH' : confidence >= 55 ? 'MEDIUM' : 'LOW';
-              const trendAligned = result.price != null && result.ema200 != null
-                ? (direction === 'bullish' ? result.price > result.ema200 : direction === 'bearish' ? result.price < result.ema200 : false)
-                : false;
-              const momentumAligned = result.rsi != null && result.macd_hist != null
-                ? (direction === 'bullish' ? result.rsi >= 50 && result.macd_hist >= 0 : direction === 'bearish' ? result.rsi <= 50 && result.macd_hist <= 0 : false)
-                : false;
-              const flowAligned = direction === 'bullish'
-                ? (result.signals?.bullish ?? 0) > (result.signals?.bearish ?? 0)
-                : direction === 'bearish'
-                ? (result.signals?.bearish ?? 0) > (result.signals?.bullish ?? 0)
-                : false;
-              const adx = result.adx ?? 0;
-              const atrPercent = result.atr && result.price ? (result.atr / result.price) * 100 : 0;
-              const regime = adx >= 30 ? 'Trending' : adx < 20 ? 'Range' : 'Transitional';
-              const timeframeAlignment = [trendAligned, momentumAligned, flowAligned, direction !== 'neutral'].filter(Boolean).length;
-
-              const entry = result.price != null
-                ? (direction === 'bullish' ? result.price + (result.atr ?? 0) * 0.2 : direction === 'bearish' ? result.price - (result.atr ?? 0) * 0.2 : result.price)
-                : null;
-              const stop = result.price != null
-                ? (direction === 'bullish' ? result.price - (result.atr ?? 0) * 0.8 : direction === 'bearish' ? result.price + (result.atr ?? 0) * 0.8 : result.price)
-                : null;
-              const target1 = result.price != null
-                ? (direction === 'bullish' ? result.price + (result.atr ?? 0) * 1.2 : direction === 'bearish' ? result.price - (result.atr ?? 0) * 1.2 : result.price)
-                : null;
-              const target2 = result.price != null
-                ? (direction === 'bullish' ? result.price + (result.atr ?? 0) * 2.0 : direction === 'bearish' ? result.price - (result.atr ?? 0) * 2.0 : result.price)
-                : null;
-              const rr = entry != null && stop != null && target1 != null
-                ? Math.max(0, Math.abs(target1 - entry) / Math.max(0.0001, Math.abs(entry - stop)))
-                : null;
-
-              const recommendation = result.institutionalFilter?.recommendation;
-              // Risk enforcement: evaluate institutional filter + risk governor state
-              const tradeReady = recommendation === 'TRADE_READY' && quality !== 'LOW' && direction !== 'neutral' && !riskLocked;
-              const executionAllowed = !riskLocked && recommendation !== 'NO_TRADE';
-              const tactical = !tradeReady && quality === 'MEDIUM' && direction !== 'neutral' && !riskLocked;
-              const executionStatus = tradeReady ? 'HIGH CONVICTION' : tactical ? 'MODERATE SETUP' : 'LOW SETUP — REVIEW';
-              const statusColor = tradeReady ? 'var(--msp-bull)' : tactical ? 'var(--msp-warn)' : 'var(--msp-bear)';
-              const statusBorder = tradeReady ? 'var(--msp-bull)' : tactical ? 'var(--msp-warn)' : 'var(--msp-border-strong)';
-              const confidenceBarColor = confidence >= 70 ? 'var(--msp-bull)' : confidence >= 55 ? 'var(--msp-warn)' : 'var(--msp-bear)';
-
-              const blockReasons = tradeReady
-                ? ['Structure aligned', direction === 'bullish' ? 'Bias: Long' : direction === 'bearish' ? 'Bias: Short' : 'Bias: Neutral']
-                : [
-                    quality === 'LOW' ? 'Quality below threshold' : null,
-                    !trendAligned ? 'Structure incomplete' : null,
-                    atrPercent >= 3 ? 'Volatility mismatch' : null,
-                  ].filter(Boolean) as string[];
-
-              return (
-                <>
-                  {useScannerFlowV2 && (
-                    <div className="mb-2 flex items-center justify-end gap-2">
-                      <Link
-                        href={`/tools/scanner/backtest?symbol=${encodeURIComponent(ticker)}`}
-                        className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-emerald-400 no-underline hover:bg-emerald-500/20 transition-colors"
-                      >
-                        📊 Backtest This Symbol
-                      </Link>
-                      <button type="button"
-                        onClick={() => {
-                          setResult(null);
-                          setOperatorTransition(null);
-                        }}
-                        className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-muted)]"
-                      >
-                        Back to Rank
-                      </button>
-                    </div>
-                  )}
-                  <div className="mb-4 grid gap-3 rounded-xl border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-3 md:grid-cols-12 md:p-4">
-                    <div className="md:col-span-6">
-                      <div className="text-[1.05rem] font-black tracking-tight text-[var(--msp-text)] md:text-[1.25rem]">
-                        {result.symbol} — {timeframe.toUpperCase()}
-                      </div>
-                      <div className={`mt-1 text-[0.82rem] font-extrabold uppercase ${direction === 'bullish' ? 'text-[var(--msp-bull)]' : direction === 'bearish' ? 'text-[var(--msp-bear)]' : 'text-[var(--msp-warn)]'}`}>
-                        Edge: {direction.toUpperCase()}
-                      </div>
-                      <div className="mt-1 text-[0.76rem] font-bold uppercase tracking-[0.06em] text-[var(--msp-text-muted)]">
-                        Mode: {direction === 'bullish' ? 'Trend Continuation' : direction === 'bearish' ? 'Trend Reversal Watch' : 'Wait for Structure'}
-                      </div>
-                      <div className="mt-2 text-[0.74rem] text-[var(--msp-text-muted)]">
-                        Regime: <span className="font-bold text-[var(--msp-text)]">{regime}</span> • Timeframe Alignment: <span className="font-bold text-[var(--msp-text)]">{timeframeAlignment} / 4</span>
-                      </div>
-                    </div>
-
-                    <div className="md:col-span-3">
-                      <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Setup Quality</div>
-                      <div className="mt-1 text-[1.25rem] font-black text-[var(--msp-text)] md:text-[1.45rem]">{confidence >= 75 ? 'A' : confidence >= 60 ? 'B' : confidence >= 45 ? 'C' : 'D'} Setup</div>
-                      <div className="text-[0.72rem] font-semibold text-[var(--msp-text-muted)]">{confidence}% · {quality}</div>
-                      {decisionElapsed > 0 && (
-                        <div className={`mt-1.5 text-[0.68rem] font-bold tabular-nums ${decisionElapsed >= 120 ? 'text-[var(--msp-bear)]' : decisionElapsed >= 60 ? 'text-[var(--msp-warn)]' : 'text-[var(--msp-text-muted)]'}`}>
-                          ⏱ {Math.floor(decisionElapsed / 60)}:{String(decisionElapsed % 60).padStart(2, '0')} decision time
-                        </div>
-                      )}
-                      <div className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--msp-panel-2)]">
-                        <div style={{ width: `${confidence}%`, background: confidenceBarColor, height: '100%' }} />
-                      </div>
-                    </div>
-
-                    <div className="md:col-span-3">
-                      <div className="rounded-lg border p-3" style={{ borderColor: statusBorder, background: 'var(--msp-panel-2)' }}>
-                        <div className="text-[0.66rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Trade Readiness</div>
-                        <div className="mt-1 text-[0.88rem] font-black uppercase" style={{ color: statusColor }}>
-                          {executionStatus}
-                        </div>
-                        <div className="mt-2 grid gap-1 text-[0.72rem] text-[var(--msp-text-muted)]">
-                          {blockReasons.map((reason) => (
-                            <div key={reason}>• {reason}</div>
-                          ))}
-                        </div>
-                        {!tradeReady && (
-                          <div className="mt-2 text-[0.72rem] font-extrabold uppercase" style={{ color: statusColor }}>
-                            ADVISORY: QUALITY {quality} — REVIEW STRUCTURE
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mb-4 grid gap-3 md:grid-cols-12">
-                    <div className="md:col-span-7 rounded-xl border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-3 md:p-4">
-                      <div className="mb-3 text-[0.72rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Structure Analysis</div>
-                      <div className="grid gap-3">
-                        <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2.5">
-                          <div className="mb-1 text-[0.68rem] font-extrabold uppercase tracking-[0.07em] text-[var(--msp-text-faint)]">Trend Alignment</div>
-                          <div className="grid gap-1 text-[0.74rem] text-[var(--msp-text-muted)]">
-                            <div>Higher TF: <span className={`font-bold ${trendAligned ? 'text-[var(--msp-bull)]' : 'text-[var(--msp-warn)]'}`}>{trendAligned ? direction.toUpperCase() : 'NEUTRAL'}</span></div>
-                            <div>Mid TF: <span className={`font-bold ${momentumAligned ? 'text-[var(--msp-bull)]' : 'text-[var(--msp-warn)]'}`}>{momentumAligned ? direction.toUpperCase() : 'NEUTRAL'}</span></div>
-                            <div>Lower TF: <span className={`font-bold ${flowAligned ? 'text-[var(--msp-bull)]' : 'text-[var(--msp-warn)]'}`}>{flowAligned ? direction.toUpperCase() : 'MIXED'}</span></div>
-                          </div>
-                        </div>
-
-                        <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2.5">
-                          <div className="mb-1 text-[0.68rem] font-extrabold uppercase tracking-[0.07em] text-[var(--msp-text-faint)]">Momentum State</div>
-                          <div className="grid gap-1 text-[0.74rem] text-[var(--msp-text-muted)]">
-                            <div>RSI: <span className="font-bold text-[var(--msp-text)]">{result.rsi != null ? result.rsi.toFixed(1) : 'N/A'}</span></div>
-                            <div>ADX: <span className={`font-bold ${adx >= 25 ? 'text-[var(--msp-bull)]' : adx >= 20 ? 'text-[var(--msp-warn)]' : 'text-[var(--msp-bear)]'}`}>{adx.toFixed(1)}</span></div>
-                            <div>Flow: <span className={`font-bold ${flowAligned ? 'text-[var(--msp-bull)]' : 'text-[var(--msp-warn)]'}`}>{flowAligned ? 'Aligned' : 'Divergent'}</span></div>
-                          </div>
-                        </div>
-
-                        <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2.5">
-                          <div className="mb-1 text-[0.68rem] font-extrabold uppercase tracking-[0.07em] text-[var(--msp-text-faint)]">Volatility & Liquidity</div>
-                          <div className="grid gap-1 text-[0.74rem] text-[var(--msp-text-muted)]">
-                            <div>Volatility: <span className={`font-bold ${atrPercent >= 3 ? 'text-[var(--msp-bear)]' : atrPercent >= 1.5 ? 'text-[var(--msp-warn)]' : 'text-[var(--msp-bull)]'}`}>{atrPercent >= 3 ? 'High' : atrPercent >= 1.5 ? 'Medium' : 'Controlled'}</span></div>
-                            <div>Range Compression: <span className={`font-bold ${atrPercent <= 1.5 ? 'text-[var(--msp-bull)]' : 'text-[var(--msp-warn)]'}`}>{atrPercent <= 1.5 ? 'Yes' : 'No'}</span></div>
-                            <div>Liquidity: <span className="font-bold text-[var(--msp-text)]">{result.volume ? 'Building' : 'Normal'}</span></div>
-                          </div>
-                        </div>
-
-                        <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2.5">
-                          <div className="mb-1 text-[0.68rem] font-extrabold uppercase tracking-[0.07em] text-[var(--msp-text-faint)]">Structure Integrity</div>
-                          <div className="grid gap-1 text-[0.74rem] text-[var(--msp-text-muted)]">
-                            <div>Break Level: <span className="font-bold text-[var(--msp-text)]">{entry != null ? entry.toFixed(2) : 'N/A'}</span></div>
-                            <div>Pullback Depth: <span className="font-bold text-[var(--msp-text)]">{result.atr != null && result.price ? `${Math.min(99, Math.round((result.atr / result.price) * 100 * 18))}%` : 'N/A'}</span></div>
-                            <div>Pattern: <span className="font-bold text-[var(--msp-text)]">{trendAligned ? 'Trend continuation' : 'Structure forming'}</span></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="md:col-span-5 rounded-xl border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-3 md:p-4">
-                      <div className="mb-3 text-[0.72rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Execution Plan</div>
-                      <div className="grid gap-3">
-                        <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2.5 text-[0.74rem] text-[var(--msp-text-muted)]">
-                          <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-[var(--msp-text-faint)]">Entry Trigger</div>
-                          <div>Entry: <span className="font-bold text-[var(--msp-text)]">{entry != null ? entry.toFixed(2) : 'N/A'}</span></div>
-                          <div>Trigger: <span className="font-bold text-[var(--msp-text)]">{direction === 'bullish' ? 'Close above trigger' : direction === 'bearish' ? 'Close below trigger' : 'Await directional break'}</span></div>
-                          <div>Confirmation: <span className="font-bold text-[var(--msp-text)]">Volume expansion</span></div>
-                        </div>
-
-                        <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2.5 text-[0.74rem] text-[var(--msp-text-muted)]">
-                          <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-[var(--msp-text-faint)]">Risk Parameters</div>
-                          <div>Stop: <span className="font-bold text-[var(--msp-bear)]">{stop != null ? stop.toFixed(2) : 'N/A'}</span></div>
-                          <div>Target 1: <span className="font-bold text-[var(--msp-bull)]">{target1 != null ? target1.toFixed(2) : 'N/A'}</span></div>
-                          <div>Target 2: <span className="font-bold text-[var(--msp-bull)]">{target2 != null ? target2.toFixed(2) : 'N/A'}</span></div>
-                          <div>R:R: <span className={`font-bold ${rr != null && rr >= 1.8 ? 'text-[var(--msp-bull)]' : 'text-[var(--msp-warn)]'}`}>{rr != null ? rr.toFixed(1) : 'N/A'}</span></div>
-                        </div>
-
-                        <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2.5 text-[0.74rem] text-[var(--msp-text-muted)]">
-                          <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-[var(--msp-text-faint)]">Risk Governor</div>
-                          <div>Capital Allocation: <span className={`font-bold ${tradeReady ? 'text-[var(--msp-bull)]' : 'text-[var(--msp-warn)]'}`}>{tradeReady ? '0.5% risk' : 'Review sizing'}</span></div>
-                          <div>Active Constraint: <span className="font-bold text-[var(--msp-text)]">{riskLocked ? 'RISK GOVERNOR LOCKED' : tradeReady ? 'Tactical sizing' : 'Risk constraints active'}</span></div>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2">
-                          {executionAllowed ? (
-                            <>
-                              <button type="button"
-                                onClick={() => {
-                                  if (result) {
-                                    deployRankCandidate({
-                                      symbol: result.symbol,
-                                      indicators: { price: result.price, atr: result.atr },
-                                      direction: result.direction || direction,
-                                      score: result.score,
-                                    });
-                                  }
-                                }}
-                                className="rounded-md border border-[var(--msp-bull)] bg-[var(--msp-bull-tint)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-bull)]"
-                              >Log Trade Plan</button>
-                              <button type="button"
-                                onClick={() => {
-                                  if (result) {
-                                    window.location.href = `/tools/alerts?symbol=${encodeURIComponent(result.symbol)}&price=${result.price || ''}&direction=${result.direction || ''}`;
-                                  }
-                                }}
-                                className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-muted)]"
-                              >Set Alert</button>
-                              <button type="button"
-                                onClick={() => {
-                                  if (result) {
-                                    void addScannerCandidateToWatchlist({
-                                      symbol: result.symbol,
-                                      indicators: { price: result.price },
-                                    });
-                                  }
-                                }}
-                                className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-muted)]"
-                              >Add to Watchlist</button>
-                            </>
-                          ) : (
-                            <>
-                              <button type="button"
-                                onClick={() => {
-                                  if (result) {
-                                    window.location.href = `/tools/alerts?symbol=${encodeURIComponent(result.symbol)}&price=${result.price || ''}&direction=${result.direction || ''}`;
-                                  }
-                                }}
-                                className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-muted)]"
-                              >Set Alert</button>
-                              <button type="button"
-                                onClick={() => {
-                                  if (result) {
-                                    void addScannerCandidateToWatchlist({
-                                      symbol: result.symbol,
-                                      indicators: { price: result.price },
-                                    });
-                                  }
-                                }}
-                                className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-muted)]"
-                              >Add to Watchlist</button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] px-3 py-3 md:px-4">
-                    <button type="button"
-                      onClick={() => setAdvancedIntelligenceOpen((prev) => !prev)}
-                      className="flex w-full items-center justify-between text-left"
-                    >
-                      <span className="text-[0.74rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text)]">Advanced Intelligence & AI Context</span>
-                      <span className="text-[0.72rem] font-extrabold uppercase text-[var(--msp-text-faint)]">{advancedIntelligenceOpen ? 'Collapse' : 'Expand'}</span>
-                    </button>
-                    {advancedIntelligenceOpen && (
-                      <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-                        <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2.5 text-[0.73rem] text-[var(--msp-text-muted)]"><div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-[var(--msp-text-faint)]">Setup Quality Check</div><div>{result.institutionalFilter?.recommendation?.replace('_', ' ') ?? 'No filter output'}</div></div>
-                        <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2.5 text-[0.73rem] text-[var(--msp-text-muted)]"><div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-[var(--msp-text-faint)]">AI Narrative Summary</div><div>{trendAligned && momentumAligned ? 'Structure and momentum aligned. Monitor trigger break for execution.' : 'Setup developing. Wait for stronger structure alignment before deployment.'}</div></div>
-                        <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2.5 text-[0.73rem] text-[var(--msp-text-muted)]"><div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-[var(--msp-text-faint)]">Autopilot Layer</div><div>State: <span className="font-bold text-[var(--msp-text)]">{presenceState}</span> • Mode: <span className="font-bold text-[var(--msp-text)]">{presenceMode}</span></div></div>
-                        <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2.5 text-[0.73rem] text-[var(--msp-text-muted)]"><div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-[var(--msp-text-faint)]">Personality Match</div><div>Profile: <span className="font-bold text-[var(--msp-text)]">{personalityMode === 'adaptive' ? 'Adaptive' : personalityMode}</span></div></div>
-                        <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2.5 text-[0.73rem] text-[var(--msp-text-muted)]"><div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-[var(--msp-text-faint)]">Flow Watch</div><div>Bull/Bear factors: <span className="font-bold text-[var(--msp-text)]">{result.signals?.bullish ?? 0} / {result.signals?.bearish ?? 0}</span></div></div>
-                        <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2.5 text-[0.73rem] text-[var(--msp-text-muted)]"><div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-[var(--msp-text-faint)]">Internal Diagnostics</div><div>Last updates: {presenceUpdates.slice(0, 2).join(' • ') || 'No state transitions yet'}</div></div>
-                      </div>
-                    )}
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        )}
-
-        {/* Active Symbol Cockpit Header */}
-        {result && !useInstitutionalDecisionCockpitV2 && (
-          <>
-            <div className="msp-panel sticky top-[68px] z-20 mb-2 flex flex-wrap items-center gap-2 px-3 py-2">
-              {(() => {
-                const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
-                const adx = result.adx ?? 0;
-                const atrPercent = result.atr && result.price ? (result.atr / result.price) * 100 : 0;
-                const regime = adx >= 30 ? 'TREND' : adx < 20 ? 'RANGE' : 'TRANSITION';
-                const riskState = atrPercent >= 3 ? 'HIGH' : atrPercent >= 1.5 ? 'MODERATE' : 'LOW';
-                const edge = Math.max(1, Math.min(99, Math.round(result.score ?? 50)));
-                const quality = edge >= 70 ? 'HIGH Q' : edge >= 55 ? 'MED Q' : 'LOW Q';
-                const trendAligned = result.price != null && result.ema200 != null
-                  ? (direction === 'bullish' ? result.price > result.ema200 : direction === 'bearish' ? result.price < result.ema200 : false)
-                  : false;
-                const momentumAligned = result.rsi != null && result.macd_hist != null
-                  ? (direction === 'bullish' ? result.rsi >= 50 && result.macd_hist >= 0 : direction === 'bearish' ? result.rsi <= 50 && result.macd_hist <= 0 : false)
-                  : false;
-                const action = direction === 'neutral'
-                  ? 'WAIT'
-                  : (trendAligned && momentumAligned ? 'EXECUTE' : 'PREP');
-                const trigger = trendAligned && momentumAligned
-                  ? 'Cluster Active'
-                  : regime === 'TREND'
-                  ? 'Cluster Building'
-                  : 'Await Trigger';
-
-                const stripTag = (label: string, value: string, type: 'bull' | 'bear' | 'warn' | 'accent' | 'neutral' = 'neutral') => {
-                  const colorMap: Record<'bull' | 'bear' | 'warn' | 'accent' | 'neutral', string> = {
-                    bull: 'text-msp-bull bg-msp-panel border-msp-borderStrong',
-                    bear: 'text-msp-bear bg-msp-panel border-msp-borderStrong',
-                    warn: 'text-msp-warn bg-msp-panel border-msp-borderStrong',
-                    accent: 'text-msp-accent bg-msp-panel border-msp-borderStrong',
-                    neutral: 'text-msp-neutral bg-msp-panel border-msp-border',
-                  };
-                  return (
-                  <div className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold ${colorMap[type]}`}>
-                    <span className="text-msp-faint uppercase">{label}</span>
-                    <span>{value}</span>
-                  </div>
-                  );
-                };
-
-                return (
-                  <>
-                    {stripTag('Symbol', result.symbol, 'accent')}
-                    {stripTag('Bias', direction.toUpperCase(), direction === 'bullish' ? 'bull' : direction === 'bearish' ? 'bear' : 'warn')}
-                    {stripTag('Edge', `${edge}%`, edge >= 70 ? 'bull' : edge >= 55 ? 'warn' : 'bear')}
-                    {stripTag('Quality', quality, quality === 'HIGH Q' ? 'bull' : quality === 'MED Q' ? 'warn' : 'bear')}
-                    {stripTag('Action', action, action === 'EXECUTE' ? 'bull' : action === 'PREP' ? 'warn' : 'neutral')}
-                    {stripTag('Trigger', trigger, trigger === 'Cluster Active' ? 'bull' : trigger === 'Cluster Building' ? 'warn' : 'neutral')}
-                    {stripTag('Risk', riskState, riskState === 'HIGH' ? 'bear' : riskState === 'MODERATE' ? 'warn' : 'bull')}
-                  </>
-                );
-              })()}
-            </div>
-
-            <div className="msp-card mb-3 flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-              <div className="text-msp-text text-sm font-bold tracking-wide">
-                🎯 ACTIVE SYMBOL COCKPIT — {result.symbol} ({timeframe.toUpperCase()})
-              </div>
-              <div className="text-msp-muted text-xs font-semibold">
-                All panels below are for {result.symbol} only
-              </div>
-              <button type="button"
-                onClick={() => {
-                  setFocusMode((prev) => !prev);
-                  setPersonalitySignals((prev) => ({ ...prev, focusToggles: prev.focusToggles + 1 }));
-                }}
-                className={`ml-auto rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide transition ${
-                  focusMode
-                    ? 'bg-msp-panel text-msp-accent border-msp-borderStrong'
-                    : 'bg-msp-panel text-msp-muted border-msp-border'
-                }`}
-              >
-                {focusMode ? 'Focus Mode: On' : 'Focus Mode'}
-              </button>
-
-              <div className="flex flex-wrap items-center gap-1.5">
-                {[{ label: 'Adaptive', value: 'adaptive' as const }, { label: 'Momentum', value: 'momentum' as const }, { label: 'Structure', value: 'structure' as const }, { label: 'Risk', value: 'risk' as const }, { label: 'Flow', value: 'flow' as const }].map((option) => {
-                  const active = personalityMode === option.value;
-                  return (
-                    <button type="button"
-                      key={option.value}
-                      onClick={() => setPersonalityMode(option.value)}
-                      className={`rounded-full border px-2 py-1 text-[11px] font-extrabold uppercase tracking-wide ${
-                        active
-                          ? 'bg-msp-panel text-msp-accent border-msp-borderStrong'
-                          : 'bg-msp-panel text-msp-muted border-msp-border'
-                      }`}
-                    >
-                      {option.label}
-                    </button>
-                  );
-                })}
+            <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5">
+              <div className="mb-1 text-[0.68rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Momentum State</div>
+              <div className="grid gap-1 text-[0.74rem] text-slate-400">
+                <div>RSI: <span className="font-bold text-white">{detail.rsi != null ? detail.rsi.toFixed(1) : 'N/A'}</span></div>
+                <div>ADX: <span className={`font-bold ${adx >= 25 ? 'text-emerald-400' : adx >= 20 ? 'text-amber-400' : 'text-red-400'}`}>{adx.toFixed(1)}</span></div>
+                <div>Flow: <span className={`font-bold ${flowAligned ? 'text-emerald-400' : 'text-amber-400'}`}>{flowAligned ? 'Aligned' : 'Divergent'}</span></div>
               </div>
             </div>
-          </>
-        )}
-
-        {/* Results Card */}
-        {result && !useInstitutionalDecisionCockpitV2 && (
-          <div key={scanKey} style={{
-            background: "var(--msp-card)",
-            borderRadius: "16px",
-            border: "1px solid var(--msp-borderStrong)",
-            padding: "2rem",
-            boxShadow: "var(--msp-shadow)"
-          }}>
-            {(() => {
-              const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
-              const quality = result.score >= 70 ? 'HIGH' : result.score >= 55 ? 'MEDIUM' : 'LOW';
-              const action = direction === 'bullish'
-                ? 'BUY PULLBACKS'
-                : direction === 'bearish'
-                ? 'SELL RIPS'
-                : 'WAIT FOR TRIGGER';
-
-              return (
-                <div style={{
-                  marginBottom: '1rem',
-                  background: 'var(--msp-panel)',
-                  border: '1px solid var(--msp-border)',
-                  borderRadius: '12px',
-                  padding: '0.8rem 0.95rem',
-                  color: 'var(--msp-text)',
-                  fontSize: '0.86rem',
-                  fontWeight: 800,
-                  letterSpacing: '0.05em',
-                  textTransform: 'uppercase',
-                }}>
-                  🔥 Trader Mode Header • {result.symbol} — {timeframe.toUpperCase()} • Edge: {direction.toUpperCase()} • Quality: {quality} • Action: {action}
-                </div>
-              );
-            })()}
-
-            {(() => {
-              const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
-              const confidence = Math.max(1, Math.min(99, Math.round(result.score ?? 50)));
-              const directionLabel = direction === 'bullish' ? 'BULLISH EDGE' : direction === 'bearish' ? 'BEARISH EDGE' : 'NEUTRAL EDGE';
-              const directionColor = direction === 'bullish' ? 'var(--msp-bull)' : direction === 'bearish' ? 'var(--msp-bear)' : 'var(--msp-warn)';
-              const quality = confidence >= 70 ? 'HIGH Q' : confidence >= 55 ? 'MED Q' : 'LOW Q';
-              const qualityColor = confidence >= 70 ? 'var(--msp-bull)' : confidence >= 55 ? 'var(--msp-warn)' : 'var(--msp-bear)';
-              const trendAligned = result.price != null && result.ema200 != null
-                ? (direction === 'bullish' ? result.price > result.ema200 : direction === 'bearish' ? result.price < result.ema200 : false)
-                : false;
-              const momentumAligned = result.rsi != null && result.macd_hist != null
-                ? (direction === 'bullish' ? result.rsi >= 50 && result.macd_hist >= 0 : direction === 'bearish' ? result.rsi <= 50 && result.macd_hist <= 0 : false)
-                : false;
-              const tradeState = direction === 'neutral'
-                ? 'WAITING FOR ENTRY'
-                : (trendAligned && momentumAligned ? 'EXECUTION WINDOW OPEN' : 'SETUP BUILDING');
-              const tradeStateColor = tradeState === 'EXECUTION WINDOW OPEN' ? 'var(--msp-bull)' : tradeState === 'SETUP BUILDING' ? 'var(--msp-warn)' : 'var(--msp-neutral)';
-
-              return (
-                <div style={{
-                  background: 'var(--msp-panel)',
-                  border: '1px solid var(--msp-border)',
-                  borderRadius: '14px',
-                  padding: '1rem 1.1rem',
-                  marginBottom: '1.2rem',
-                }}>
-                  <div style={{ color: 'var(--msp-muted)', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.55rem' }}>
-                    Command Bar
-                  </div>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '0.8rem',
-                    flexWrap: 'wrap',
-                  }}>
-                    <div style={{ color: directionColor, fontSize: 'clamp(1.08rem, 4.4vw, 1.5rem)', fontWeight: 900, letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>{directionLabel}</div>
-                    <div style={{ color: confidence >= 70 ? 'var(--msp-bull)' : confidence >= 50 ? 'var(--msp-warn)' : 'var(--msp-bear)', fontSize: 'clamp(0.92rem, 3.8vw, 1.26rem)', fontWeight: 900, letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>
-                      {confidence >= 75 ? 'A' : confidence >= 60 ? 'B' : confidence >= 45 ? 'C' : 'D'} · {confidence}%
-                    </div>
-                    <div style={{ color: qualityColor, fontSize: 'clamp(0.9rem, 3.6vw, 1.2rem)', fontWeight: 900, letterSpacing: '0.03em', whiteSpace: 'nowrap' }}>{quality}</div>
-                  </div>
-                  <div style={{
-                    marginTop: '0.6rem',
-                    borderTop: '1px solid var(--msp-border)',
-                    paddingTop: '0.55rem',
-                    color: tradeStateColor,
-                    fontSize: '0.76rem',
-                    fontWeight: 900,
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase',
-                  }}>
-                    🎯 Trade State: {tradeState}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {(() => {
-              const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
-              const confidence = Math.max(1, Math.min(99, Math.round(result.score ?? 50)));
-              const trendAligned = result.price != null && result.ema200 != null
-                ? (direction === 'bullish' ? result.price > result.ema200 : direction === 'bearish' ? result.price < result.ema200 : false)
-                : false;
-              const momentumAligned = result.rsi != null && result.macd_hist != null
-                ? (direction === 'bullish' ? result.rsi >= 50 && result.macd_hist >= 0 : direction === 'bearish' ? result.rsi <= 50 && result.macd_hist <= 0 : false)
-                : false;
-              const timingState = confidence >= 70 ? 'ACTIVE' : confidence >= 55 ? 'BUILDING' : 'DORMANT';
-              const volatilityState = (result.atr && result.price && (result.atr / result.price) * 100 >= 2.8) ? 'HIGH' : 'CONTROLLED';
-
-              return (
-                <div style={{
-                  marginBottom: '0.95rem',
-                  background: 'var(--msp-panel)',
-                  border: '1px solid var(--msp-border-strong)',
-                  borderRadius: '10px',
-                  padding: '0.72rem 0.82rem',
-                }}>
-                  <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.66rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.35rem' }}>
-                    Signal Blocks • Instant Read
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(150px, 100%), 1fr))', gap: '0.38rem' }}>
-                    {[
-                      { label: 'Structure', value: trendAligned ? '✔ ALIGNED' : '⚠ MISALIGNED', tone: trendAligned ? 'var(--msp-bull)' : 'var(--msp-bear)' },
-                      { label: 'Momentum', value: momentumAligned ? '✔ CONFIRMED' : '⚠ WEAK', tone: momentumAligned ? 'var(--msp-bull)' : 'var(--msp-warn)' },
-                      { label: 'Timing', value: timingState, tone: timingState === 'ACTIVE' ? 'var(--msp-bull)' : timingState === 'BUILDING' ? 'var(--msp-warn)' : 'var(--msp-neutral)' },
-                      { label: 'Volatility', value: volatilityState, tone: volatilityState === 'HIGH' ? 'var(--msp-bear)' : 'var(--msp-bull)' },
-                    ].map((block) => (
-                      <div key={block.label} style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border)', borderRadius: '8px', padding: '0.45rem 0.52rem' }}>
-                        <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.62rem', textTransform: 'uppercase', fontWeight: 800, marginBottom: '0.16rem', letterSpacing: '0.06em' }}>{block.label}</div>
-                        <div style={{ color: block.tone, fontSize: '0.76rem', fontWeight: 900 }}>{block.value}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {(() => {
-              const confidence = Math.max(1, Math.min(99, Math.round(result.score ?? 50)));
-              const heatColor = confidence >= 70 ? 'var(--msp-bull)' : confidence >= 50 ? 'var(--msp-warn)' : 'var(--msp-bear)';
-              const heatLabel = confidence >= 75 ? 'HOT' : confidence >= 55 ? 'BUILDING' : 'EXHAUSTED';
-
-              return (
-                <div style={{
-                  marginBottom: '1rem',
-                  background: 'var(--msp-panel)',
-                  border: '1px solid var(--msp-border)',
-                  borderRadius: '10px',
-                  padding: '0.85rem 0.9rem',
-                }}>
-                  <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.74rem', textTransform: 'uppercase', fontWeight: 800, marginBottom: '0.5rem', letterSpacing: '0.08em' }}>
-                    Edge Temperature
-                  </div>
-                  <div style={{ height: '10px', background: 'var(--msp-panel-2)', borderRadius: '999px', overflow: 'hidden', marginBottom: '0.4rem' }}>
-                    <div style={{ width: `${confidence}%`, height: '100%', background: heatColor }} />
-                  </div>
-                  <div style={{ color: heatColor, fontSize: '0.8rem', fontWeight: 800 }}>
-                    Edge State: {heatLabel} • {confidence}% confidence
-                  </div>
-                </div>
-              );
-            })()}
-
-            {focusMode && (() => {
-              const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
-              const adx = result.adx ?? 0;
-              const atrPercent = result.atr && result.price ? (result.atr / result.price) * 100 : 0;
-              const messages = [
-                `${direction === 'bullish' ? 'Buying' : direction === 'bearish' ? 'Selling' : 'Two-way'} pressure ${direction === 'neutral' ? 'is mixed' : 'is building'} near key structure.`,
-                `${adx >= 25 ? 'Trend strength is improving' : 'Trend strength remains moderate'} — watch for confirmation candle.`,
-                `${atrPercent >= 3 ? 'Volatility is elevated' : 'Volatility remains controlled'}; size risk accordingly.`,
-              ];
-              const msg = messages[deskFeedIndex % messages.length];
-
-              return (
-                <div style={{
-                  marginBottom: '0.7rem',
-                  background: 'var(--msp-panel)',
-                  border: '1px solid var(--msp-border)',
-                  borderRadius: '10px',
-                  padding: '0.55rem 0.7rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '0.6rem',
-                  flexWrap: 'wrap',
-                }}>
-                  <div style={{ color: 'var(--msp-muted)', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                    🧠 AI Desk Feed
-                  </div>
-                  <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.76rem', flex: 1 }}>{msg}</div>
-                </div>
-              );
-            })()}
-
-            {focusMode && (() => {
-              const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
-              const confidence = Math.max(1, Math.min(99, Math.round(result.score ?? 50)));
-              const entry = result.price != null
-                ? (direction === 'bullish' ? result.price + (result.atr ?? 0) * 0.2 : direction === 'bearish' ? result.price - (result.atr ?? 0) * 0.2 : result.price)
-                : null;
-              const invalidation = result.price != null
-                ? (direction === 'bullish' ? result.price - (result.atr ?? 0) * 0.8 : direction === 'bearish' ? result.price + (result.atr ?? 0) * 0.8 : result.price)
-                : null;
-              const target1 = result.price != null
-                ? (direction === 'bullish' ? result.price + (result.atr ?? 0) * 1.2 : direction === 'bearish' ? result.price - (result.atr ?? 0) * 1.2 : result.price)
-                : null;
-              const target2 = result.price != null
-                ? (direction === 'bullish' ? result.price + (result.atr ?? 0) * 2.0 : direction === 'bearish' ? result.price - (result.atr ?? 0) * 2.0 : result.price)
-                : null;
-
-              return (
-                <div style={{
-                  marginBottom: '1rem',
-                  background: 'var(--msp-panel-2)',
-                  border: '1px solid var(--msp-border)',
-                  borderRadius: '10px',
-                  padding: '0.75rem 0.8rem',
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))',
-                  gap: '0.45rem',
-                }}>
-                  <div><div style={{ color: 'var(--msp-neutral)', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Direction</div><div style={{ color: direction === 'bullish' ? 'var(--msp-bull)' : direction === 'bearish' ? 'var(--msp-bear)' : 'var(--msp-warn)', fontWeight: 900 }}>{direction.toUpperCase()}</div></div>
-                  <div><div style={{ color: 'var(--msp-neutral)', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Confidence</div><div style={{ color: 'var(--msp-text)', fontWeight: 900 }}>{confidence}%</div></div>
-                  <div><div style={{ color: 'var(--msp-neutral)', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Entry</div><div style={{ color: 'var(--msp-text)', fontWeight: 800 }}>{entry != null ? entry.toFixed(2) : 'N/A'}</div></div>
-                  <div><div style={{ color: 'var(--msp-neutral)', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Invalidation</div><div style={{ color: 'var(--msp-bear)', fontWeight: 800 }}>{invalidation != null ? invalidation.toFixed(2) : 'N/A'}</div></div>
-                  <div style={{ gridColumn: '1 / -1' }}><div style={{ color: 'var(--msp-neutral)', fontSize: '0.64rem', textTransform: 'uppercase', fontWeight: 700 }}>Targets</div><div style={{ color: 'var(--msp-text)', fontWeight: 800 }}>{target1 != null ? target1.toFixed(2) : 'N/A'}{target2 != null ? ` / ${target2.toFixed(2)}` : ''}</div></div>
-                </div>
-              );
-            })()}
-
-            {!focusMode && (() => {
-              const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
-              const confidence = Math.max(1, Math.min(99, Math.round(result.score ?? 50)));
-              const score = Math.max(1, Math.min(99, Math.round(result.score ?? 50)));
-              const adx = result.adx ?? 0;
-              const atrPercent = result.atr && result.price ? (result.atr / result.price) * 100 : 0;
-              const trendAligned = result.price != null && result.ema200 != null
-                ? (direction === 'bullish' ? result.price > result.ema200 : direction === 'bearish' ? result.price < result.ema200 : false)
-                : false;
-              const momentumActive = result.rsi != null && result.macd_hist != null
-                ? (direction === 'bullish' ? result.rsi >= 50 && result.macd_hist >= 0 : direction === 'bearish' ? result.rsi <= 50 && result.macd_hist <= 0 : false)
-                : false;
-
-              const regime = adx >= 30 ? 'TREND' : adx < 20 ? 'RANGE' : 'TRANSITION';
-              const regimeColor = regime === 'TREND' ? 'var(--msp-accent)' : regime === 'RANGE' ? 'var(--msp-neutral)' : 'var(--msp-warn)';
-              const institutionalIntent = result.institutionalFilter?.recommendation === 'TRADE_READY'
-                ? 'REPRICE_TREND'
-                : result.institutionalFilter?.recommendation === 'CAUTION'
-                ? 'WAIT_CONFIRMATION'
-                : 'NO_TRADE';
-              const ivEnvironment = atrPercent >= 3 ? 'HIGH IV (CAUTION)' : atrPercent <= 1.5 ? 'LOW IV (BUY PREMIUM)' : 'MID IV (NEUTRAL)';
-              const directionColor = direction === 'bullish' ? 'var(--msp-bull)' : direction === 'bearish' ? 'var(--msp-bear)' : 'var(--msp-warn)';
-              const grade = score >= 75 ? 'A' : score >= 60 ? 'B' : score >= 45 ? 'C' : 'D';
-
-              const structureEdge = trendAligned ? Math.min(90, score + 10) : Math.max(20, score - 20);
-              const timingEdge = Math.min(90, Math.max(20, Math.round((result.rsi != null ? 100 - Math.abs(result.rsi - 50) * 2 : 50))));
-              const flowEdge = result.signals ? Math.min(90, Math.max(20, Math.round((result.signals.bullish + result.signals.bearish) * 10))) : 45;
-              const executionEdge = Math.min(90, Math.max(20, Math.round(score * 0.9)));
-
-              const entry = result.price != null
-                ? (direction === 'bullish' ? result.price + (result.atr ?? 0) * 0.2 : direction === 'bearish' ? result.price - (result.atr ?? 0) * 0.2 : result.price)
-                : null;
-              const invalidation = result.price != null
-                ? (direction === 'bullish' ? result.price - (result.atr ?? 0) * 0.8 : direction === 'bearish' ? result.price + (result.atr ?? 0) * 0.8 : result.price)
-                : null;
-              const target1 = result.price != null
-                ? (direction === 'bullish' ? result.price + (result.atr ?? 0) * 1.2 : direction === 'bearish' ? result.price - (result.atr ?? 0) * 1.2 : result.price)
-                : null;
-              const target2 = result.price != null
-                ? (direction === 'bullish' ? result.price + (result.atr ?? 0) * 2.0 : direction === 'bearish' ? result.price - (result.atr ?? 0) * 2.0 : result.price)
-                : null;
-              const rr = entry != null && invalidation != null && target1 != null
-                ? Math.max(0, Math.abs(target1 - entry) / Math.max(0.0001, Math.abs(entry - invalidation)))
-                : null;
-
-              const edgeSentence = trendAligned && momentumActive
-                ? 'High probability trend continuation — edge comes from structure + momentum alignment.'
-                : trendAligned
-                ? 'Moderate edge — structure is aligned, momentum needs confirmation.'
-                : 'Low-quality edge — wait for structure and momentum alignment.';
-              const notEdgeSentence = atrPercent >= 3 ? 'Not a volatility-compression play.' : 'Not an event-driven volatility breakout.';
-              const riskStatus = atrPercent >= 3 ? 'HIGH VOL' : atrPercent >= 1.5 ? 'ELEVATED VOL' : 'CONTROLLED VOL';
-              const qualityGate = score >= 70 ? 'HIGH' : score >= 55 ? 'MODERATE' : 'LOW';
-              const baseProb = Math.max(5, Math.min(85, confidence));
-              const bullProb = direction === 'bullish' ? Math.max(15, Math.round(baseProb * 0.4)) : Math.max(10, Math.round((100 - baseProb) * 0.2));
-              const bearProb = Math.max(5, 100 - baseProb - bullProb);
-              const flowSignal = capitalFlow?.conviction ?? Math.round(flowEdge);
-
-              const personalityScores: Record<TraderPersonality, number> = {
-                momentum:
-                  (personalitySignals.highConfidenceScans * 1.3) +
-                  (personalitySignals.focusToggles * 0.8) +
-                  (score >= 70 ? 1.5 : 0) +
-                  (momentumActive ? 1.2 : 0),
-                structure:
-                  (personalitySignals.aiExpands * 1.1) +
-                  (personalitySignals.aiRequests * 0.6) +
-                  (trendAligned ? 1.4 : 0) +
-                  (result.ema200 != null ? 0.8 : 0),
-                risk:
-                  (personalitySignals.lowConfidenceScans * 1.1) +
-                  (personalitySignals.riskHeavyScans * 1.4) +
-                  (atrPercent >= 2 ? 1.4 : 0) +
-                  (qualityGate === 'LOW' ? 1 : 0),
-                flow:
-                  (personalitySignals.flowHeavyScans * 1.5) +
-                  (flowSignal >= 60 ? 1.4 : 0) +
-                  ((result.signals?.bullish ?? 0) + (result.signals?.bearish ?? 0) >= 8 ? 1 : 0),
-              };
-
-              const adaptivePersonality = (Object.entries(personalityScores)
-                .sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'risk') as TraderPersonality;
-              const activePersonality: TraderPersonality = personalityMode === 'adaptive' ? adaptivePersonality : personalityMode;
-              const personalityLabel = activePersonality === 'momentum'
-                ? 'Momentum Hunter'
-                : activePersonality === 'structure'
-                ? 'Structure Trader'
-                : activePersonality === 'risk'
-                ? 'Risk Manager'
-                : 'Opportunistic Flow Trader';
-              const personalityAccent = activePersonality === 'risk' ? 'var(--msp-warn)' : 'var(--msp-accent)';
-              const personalityHint = activePersonality === 'momentum'
-                ? 'Execution and timing are prioritized first.'
-                : activePersonality === 'structure'
-                ? 'Structure and levels are emphasized first.'
-                : activePersonality === 'risk'
-                ? 'Risk and quality gates stay dominant first.'
-                : 'Flow and confluence panels are prioritized first.';
-
-              const riskPriority = activePersonality === 'risk' ? 3 : activePersonality === 'momentum' ? 1 : 2;
-              const executionPriority = activePersonality === 'momentum' ? 3 : activePersonality === 'risk' ? 1 : 2;
-              const riskPanelOrder = riskPriority >= executionPriority ? 1 : 2;
-              const executionPanelOrder = riskPanelOrder === 1 ? 2 : 1;
-              const riskPanelScale = riskPriority >= executionPriority ? 1.08 : 0.94;
-              const executionPanelScale = executionPriority > riskPriority ? 1.08 : 0.95;
-              const decisionCoreScale = activePersonality === 'structure' ? 1.08 : activePersonality === 'risk' ? 0.95 : 1.02;
-              const flowPanelScale = activePersonality === 'flow' ? 1.08 : 0.98;
-              const edgeState: 'WAIT' | 'BUILDING EDGE' | 'ACTIVE EDGE' | 'DANGER' =
-                atrPercent >= 3 || score < 45
-                  ? 'DANGER'
-                  : direction === 'neutral'
-                  ? 'WAIT'
-                  : trendAligned && momentumActive && score >= 70
-                  ? 'ACTIVE EDGE'
-                  : 'BUILDING EDGE';
-              const lifecyclePhase =
-                edgeState === 'DANGER'
-                  ? 'EXIT RISK'
-                  : edgeState === 'WAIT'
-                  ? 'SCAN'
-                  : edgeState === 'ACTIVE EDGE'
-                  ? 'EXECUTION WINDOW'
-                  : 'BUILDING EDGE';
-              const edgeStateColor = edgeState === 'ACTIVE EDGE' ? 'var(--msp-accent)' : edgeState === 'BUILDING EDGE' ? 'var(--msp-accent)' : edgeState === 'DANGER' ? 'var(--msp-bear)' : 'var(--msp-neutral)';
-              const edgeStateBorder = edgeState === 'DANGER' ? 'var(--msp-bear)' : 'var(--msp-border-strong)';
-              const edgeStateBg = edgeState === 'ACTIVE EDGE'
-                ? 'var(--msp-accent-glow)'
-                : edgeState === 'BUILDING EDGE'
-                ? 'var(--msp-bull-tint)'
-                : edgeState === 'DANGER'
-                ? 'var(--msp-bear-tint)'
-                : 'var(--msp-divider)';
-              const priorityMode = edgeState === 'ACTIVE EDGE' ? 'strong' : edgeState === 'WAIT' || edgeState === 'DANGER' ? 'weak' : 'building';
-              const executionEdgeScore = Math.round(
-                (structureEdge * 0.35) +
-                (timingEdge * 0.30) +
-                (flowEdge * 0.25) +
-                (executionEdge * 0.10)
-              );
-              const executionEdgeState = executionEdgeScore > 75 ? 'READY' : executionEdgeScore >= 50 ? 'WATCH' : 'WAIT';
-              const executionEdgeColor = executionEdgeState === 'READY' ? 'var(--msp-bull)' : executionEdgeState === 'WATCH' ? 'var(--msp-warn)' : 'var(--msp-bear)';
-
-              const timeTriggerState = timingEdge >= 70 && edgeState === 'ACTIVE EDGE'
-                ? 'ACTIVE NOW'
-                : timingEdge >= 45
-                ? 'BUILDING'
-                : 'DORMANT';
-              const timeTriggerColor = timeTriggerState === 'ACTIVE NOW' ? 'var(--msp-bull)' : timeTriggerState === 'BUILDING' ? 'var(--msp-warn)' : 'var(--msp-neutral)';
-
-              const permissionStatus = result.institutionalFilter?.recommendation === 'NO_TRADE'
-                ? 'NO PERMISSION (TRAP RISK)'
-                : result.institutionalFilter?.recommendation === 'TRADE_READY' && direction === 'bullish'
-                ? 'LONG ALLOWED'
-                : result.institutionalFilter?.recommendation === 'TRADE_READY' && direction === 'bearish'
-                ? 'SHORT ALLOWED'
-                : 'LIMITED PERMISSION';
-              const permissionColor = permissionStatus.includes('NO PERMISSION')
-                ? 'var(--msp-bear)'
-                : permissionStatus.includes('ALLOWED')
-                ? 'var(--msp-bull)'
-                : 'var(--msp-warn)';
-              const permissionAllowed = permissionStatus.includes('ALLOWED');
-
-              const flowAligned = direction === 'bullish'
-                ? (result.signals?.bullish ?? 0) > (result.signals?.bearish ?? 0)
-                : direction === 'bearish'
-                ? (result.signals?.bearish ?? 0) > (result.signals?.bullish ?? 0)
-                : false;
-              const rrPass = (rr ?? 0) > 1.8;
-              const triggerChecklist = [
-                { label: 'Structure aligned', pass: trendAligned },
-                { label: 'Flow aligned', pass: flowAligned },
-                { label: 'Time edge active', pass: timeTriggerState === 'ACTIVE NOW' },
-                { label: 'R:R > 1.8', pass: rrPass },
-              ];
-              const executionEnabled = triggerChecklist.every((item) => item.pass) && permissionAllowed && executionEdgeState === 'READY';
-              const commanderLine = `AI COMMANDER: ${institutionalIntent.replace('_', ' ')} — ${direction === 'bullish' ? 'LONG BIAS' : direction === 'bearish' ? 'SHORT BIAS' : 'NEUTRAL BIAS'} — TIME EDGE ${timeTriggerState} — ${executionEnabled ? 'EXECUTION APPROVED' : 'WAIT SIGNAL'}`;
-
-              const aiThinkingStream = [
-                trendAligned
-                  ? `Structure ${direction === 'bullish' ? 'holding above' : direction === 'bearish' ? 'holding below' : 'tracking around'} EMA200`
-                  : 'Structure still misaligned with directional thesis',
-                momentumActive
-                  ? `Momentum confirming on ${timeframe.toUpperCase()} execution layer`
-                  : 'Momentum still weak — waiting for cleaner trigger',
-                entry != null
-                  ? `Next trigger: ${direction === 'bearish' ? 'rejection below' : 'reclaim above'} ${entry.toFixed(2)}`
-                  : 'Next trigger: awaiting reliable entry level',
-              ];
-
-              return (
-                <>
-                <div style={{
-                  marginBottom: '0.7rem',
-                  background: edgeStateBg,
-                  border: `1px solid ${edgeStateBorder}`,
-                  borderRadius: '10px',
-                  padding: '0.72rem 0.85rem',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: '0.6rem',
-                  flexWrap: 'wrap',
-                }}>
-                  <div style={{ color: edgeStateColor, fontSize: '0.76rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                    {edgeState === 'WAIT' ? 'WAIT' : edgeState} {edgeState === 'ACTIVE EDGE' ? '↑' : edgeState === 'DANGER' ? '⚠' : '•'}
-                  </div>
-                  <div style={{ color: 'var(--msp-text)', fontSize: '0.78rem', fontWeight: 700 }}>
-                    {trendAligned ? 'Structure improving' : 'Structure still forming'} • {momentumActive ? 'Momentum confirming' : 'Momentum weak'} • Risk {riskStatus === 'CONTROLLED VOL' ? 'stable' : 'elevated'}
-                  </div>
-                </div>
-
-                <div style={{
-                  marginBottom: '0.7rem',
-                  background: 'var(--msp-panel-2)',
-                  border: `1px solid ${edgeStateBorder}`,
-                  borderRadius: '999px',
-                  padding: '0.35rem 0.7rem',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.45rem',
-                }}>
-                  <span style={{ color: 'var(--msp-neutral)', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase' }}>Phase</span>
-                  <span style={{ color: edgeStateColor, fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{lifecyclePhase}</span>
-                </div>
-
-                <div style={{
-                  marginBottom: '0.7rem',
-                  background: 'var(--msp-panel-2)',
-                  border: `1px solid ${personalityMode === 'adaptive' ? 'var(--msp-accent)' : 'var(--msp-border-strong)'}`,
-                  borderRadius: '10px',
-                  padding: '0.52rem 0.7rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: '0.6rem',
-                  flexWrap: 'wrap',
-                }}>
-                  <div style={{ color: personalityAccent, fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                    Trader Personality: {personalityLabel}
-                  </div>
-                  <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.75rem' }}>
-                    {personalityHint}
-                  </div>
-                </div>
-
-                {(() => {
-                  const noEdge = edgeState === 'WAIT' || edgeState === 'DANGER';
-                  const strongEdge = edgeState === 'ACTIVE EDGE';
-                  const contextCollapsed = strongEdge;
-                  const edgeCollapsed = noEdge;
-                  const executionHidden = noEdge;
-                  const conflictLevel = Math.abs((result.signals?.bullish ?? 0) - (result.signals?.bearish ?? 0)) <= 1 ? 'MEDIUM' : 'LOW';
-                  const dominantEdge = [
-                    { label: 'STRUCTURE', value: structureEdge },
-                    { label: 'TIME', value: timingEdge },
-                    { label: 'FLOW', value: flowEdge },
-                    { label: 'EXECUTION', value: executionEdge },
-                  ].sort((a, b) => b.value - a.value)[0];
-                  const pressureMeter = Math.min(100, Math.round((atrPercent * 16) + (qualityGate === 'LOW' ? 24 : qualityGate === 'MODERATE' ? 14 : 7) + (conflictLevel === 'MEDIUM' ? 12 : 5)));
-                  const aiRankedSymbols = [result.symbol, ...quickRecoverySymbols.filter((sym) => sym !== result.symbol)].slice(0, 5);
-                  const maxPain = capitalFlow?.pin_strike;
-                  const marketChaos = riskStatus === 'HIGH VOL' || permissionStatus.includes('NO PERMISSION');
-                  const entryNear = timeTriggerState === 'ACTIVE NOW' && executionEdgeState === 'READY';
-                  const timeClusterMinutes = Math.max(3, Math.round((100 - timingEdge) * 0.6));
-                  const commanderVerdict = `${direction.toUpperCase()} ${institutionalIntent.replace('_', ' ')}`;
-                  const confidenceDropRisk = confidence < 55;
-                  const flowConflict = result.signals ? Math.abs((result.signals.bullish ?? 0) - (result.signals.bearish ?? 0)) <= 1 : false;
-                  const ivInvalidationRisk = riskStatus === 'HIGH VOL' && direction !== 'neutral';
-
-                  const autopilotState: 'WATCHING' | 'PREPARING' | 'READY' | 'COOL-DOWN' =
-                    confidenceDropRisk
-                      ? 'COOL-DOWN'
-                      : executionEnabled
-                      ? 'READY'
-                      : strongEdge || executionEdgeState === 'WATCH'
-                      ? 'PREPARING'
-                      : 'WATCHING';
-                  const autopilotColor =
-                    autopilotState === 'READY'
-                      ? 'var(--msp-bull)'
-                      : autopilotState === 'PREPARING'
-                      ? 'var(--msp-accent)'
-                      : 'var(--msp-neutral)';
-
-                  const opportunityList = [
-                    { symbol: result.symbol, label: `${qualityGate === 'HIGH' ? 'A+' : qualityGate === 'MODERATE' ? 'A' : 'B'} EDGE`, thesis: `${institutionalIntent.replace('_', ' ')} setup`, score: executionEdgeScore },
-                  ];
-
-                  const riskGuardAlerts = [
-                    confidenceDropRisk ? `⚠ Direction confidence soft (${confidence}%)` : null,
-                    flowConflict ? '⚠ Conflicting flow detected' : null,
-                    ivInvalidationRisk ? '⚠ IV spike invalidates long-premium bias' : null,
-                  ].filter(Boolean) as string[];
-
-                  const actionFeedEvents = [
-                    `${result.symbol} compression ${timingEdge >= 55 ? 'detected' : 'monitoring'}`,
-                    `${result.symbol} flow ${flowAligned ? 'aligned with bias' : 'mixed / conflicting'}`,
-                    `Time edge ${timeTriggerState.toLowerCase()} (${timeClusterMinutes}m)`,
-                    `Quality ${qualityGate === 'HIGH' ? 'B → A' : qualityGate === 'MODERATE' ? 'C → B' : 'D → C'} transition watch`,
-                    executionEnabled ? 'EXECUTION READY' : 'Execution gate pending',
-                  ];
-                  const decisionWhy = [
-                    { label: 'Structure Expansion', pass: trendAligned },
-                    { label: 'Flow Alignment', pass: flowAligned },
-                    { label: 'Time Cluster Active', pass: timeTriggerState === 'ACTIVE NOW' },
-                  ];
-                  const executionMode: 'WAIT' | 'PREP' | 'EXECUTE' = executionEnabled ? 'EXECUTE' : strongEdge ? 'PREP' : 'WAIT';
-                  const executionModeColor = executionMode === 'EXECUTE' ? 'var(--msp-bull)' : executionMode === 'PREP' ? 'var(--msp-warn)' : 'var(--msp-neutral)';
-                  const executionModeGlow = executionMode === 'EXECUTE' && (deskFeedIndex % 2 === 0);
-                  const liveEdgeEvents = [
-                    `⚡ ${result.symbol} time cluster ${timeTriggerState === 'ACTIVE NOW' ? 'activated' : 'building'}`,
-                    `${riskStatus === 'HIGH VOL' ? '⚠' : '🧠'} ${result.symbol} volatility ${riskStatus === 'HIGH VOL' ? 'spike' : 'stable'} (${riskStatus})`,
-                    `🧠 ${result.symbol} structure ${qualityGate === 'HIGH' ? 'upgraded to A+' : qualityGate === 'MODERATE' ? 'holding B quality' : 'still below quality gate'}`,
-                    `🔥 Flow update: ${(result.signals?.bullish ?? 0)}/${(result.signals?.bearish ?? 0)} bullish/bearish factors`,
-                  ];
-                  const heartbeatIndex = deskFeedIndex % liveEdgeEvents.length;
-                  const activeHeartbeat = liveEdgeEvents[heartbeatIndex];
-                  const heartbeatAction = executionEnabled ? 'Action now: execution enabled.' : strongEdge ? 'Action now: prepare execution plan.' : 'Action now: stay in watch mode.';
-                  const watchZoneEvents = [
-                    { t: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }), text: `${result.symbol} IV environment: ${ivEnvironment}` },
-                    { t: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }), text: `OI / flow bias shifted ${capitalFlow?.bias?.toUpperCase() ?? direction.toUpperCase()}` },
-                    { t: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }), text: `Time edge ${timeTriggerState.toLowerCase()} (${timeClusterMinutes}m)` },
-                    { t: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }), text: `Setup quality ${qualityGate} • ${executionEdgeScore}% execution edge` },
-                  ];
-
-                  return (
-                    <>
-                      <div style={{
-                        marginBottom: '0.68rem',
-                        background: 'var(--msp-panel)',
-                        border: '1px solid var(--msp-border-strong)',
-                        borderRadius: '10px',
-                        padding: '0.62rem 0.75rem',
-                      }}>
-                        <div style={{ color: 'var(--msp-accent)', fontSize: '0.68rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.28rem' }}>
-                          Market State
-                        </div>
-                        <div style={{ color: 'var(--msp-text)', fontSize: '0.76rem', lineHeight: 1.45 }}>
-                          <div><span style={{ color: 'var(--msp-neutral)' }}>Bias:</span> {commanderVerdict}</div>
-                          <div><span style={{ color: 'var(--msp-neutral)' }}>State:</span> <span style={{ color: autopilotColor, fontWeight: 900 }}>{presenceState === 'INVALIDATED' ? 'INVALIDATED' : autopilotState}</span></div>
-                          <div><span style={{ color: 'var(--msp-neutral)' }}>Focus:</span> Watch {timeframe.toUpperCase()} close ({timeClusterMinutes}m)</div>
-                          <div><span style={{ color: 'var(--msp-neutral)' }}>Risk:</span> {riskStatus === 'HIGH VOL' ? 'IV rising — avoid naked calls' : riskStatus === 'ELEVATED VOL' ? 'Elevated IV — stay defined risk' : 'Volatility controlled — follow plan'}</div>
-                          <div><span style={{ color: 'var(--msp-neutral)' }}>Mode:</span> {presenceMode}</div>
-                        </div>
-                      </div>
-
-                      {presenceUpdates.length > 0 && (
-                        <div style={{
-                          marginBottom: '0.62rem',
-                          background: 'var(--msp-panel-2)',
-                          border: '1px solid var(--msp-border-strong)',
-                          borderRadius: '8px',
-                          padding: '0.5rem 0.62rem',
-                        }}>
-                          <div style={{ color: 'var(--msp-neutral)', fontSize: '0.66rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.18rem' }}>
-                            Thinking Layer
-                          </div>
-                          <div style={{ display: 'grid', gap: '0.12rem', color: 'var(--msp-text-muted)', fontSize: '0.73rem' }}>
-                            {presenceUpdates.slice(0, 3).map((update, index) => (
-                              <div key={`${update}-${index}`}>{update}</div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {executionEnabled && (
-                        <div style={{
-                          marginBottom: '0.62rem',
-                          background: 'var(--msp-panel)',
-                          border: '1px solid var(--msp-border-strong)',
-                          borderRadius: '8px',
-                          padding: '0.55rem 0.66rem',
-                        }}>
-                          <div style={{ color: 'var(--msp-bull)', fontSize: '0.74rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.2rem' }}>
-                            AI Trader: Execution Window Open
-                          </div>
-                          <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.73rem', display: 'grid', gap: '0.1rem' }}>
-                            <div>• Structure confirmed</div>
-                            <div>• Flow aligned</div>
-                            <div>• Time edge active</div>
-                            <div>• R:R now {rr != null ? `${rr.toFixed(1)}:1` : 'N/A'}</div>
-                          </div>
-                        </div>
-                      )}
-
-                      <div style={{
-                        marginBottom: '0.72rem',
-                        background: 'var(--msp-panel)',
-                        border: '1px solid var(--msp-border-strong)',
-                        borderRadius: '10px',
-                        padding: '0.72rem 0.82rem',
-                        boxShadow: 'none',
-                      }}>
-                        <div style={{ color: 'var(--msp-accent)', fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.34rem' }}>
-                          Autopilot Layer
-                        </div>
-                        <div style={{ color: autopilotColor, fontSize: '0.8rem', fontWeight: 900, marginBottom: '0.5rem' }}>
-                          MSP Autopilot: {autopilotState}
-                          {autopilotState === 'READY' ? ' • EXECUTION WINDOW OPEN' : ''}
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: '0.6rem', marginBottom: '0.55rem' }}>
-                          <div style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border-strong)', borderRadius: '8px', padding: '0.58rem' }}>
-                            <div style={{ color: 'var(--msp-neutral)', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.24rem' }}>Market Watch</div>
-                            <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.74rem', display: 'grid', gap: '0.14rem' }}>
-                              <div>⚡ Structure {trendAligned ? 'holding trend regime' : 'seeking confirmation'}</div>
-                              <div>⚡ IV regime: {ivEnvironment}</div>
-                              <div>⚡ Time confluence: {timeTriggerState}</div>
-                            </div>
-                          </div>
-
-                          <div style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border-strong)', borderRadius: '8px', padding: '0.58rem' }}>
-                            <div style={{ color: 'var(--msp-accent)', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.24rem' }}>Setup Radar</div>
-                            <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.74rem', display: 'grid', gap: '0.14rem' }}>
-                              {opportunityList.map((item, idx) => (
-                                <div key={item.symbol + idx}>{idx + 1}) {item.symbol} — {item.label} ({item.thesis})</div>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border-strong)', borderRadius: '8px', padding: '0.58rem' }}>
-                            <div style={{ color: 'var(--msp-bear)', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.24rem' }}>Risk Guard</div>
-                            <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.74rem', display: 'grid', gap: '0.14rem' }}>
-                              {riskGuardAlerts.length ? riskGuardAlerts.map((alert) => <div key={alert}>{alert}</div>) : <div>✔ No critical guardrail breaches</div>}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border-strong)', borderRadius: '8px', padding: '0.58rem', marginBottom: '0.5rem' }}>
-                          <div style={{ color: 'var(--msp-accent)', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.22rem' }}>Action Feed</div>
-                          <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.74rem', display: 'grid', gap: '0.12rem' }}>
-                            {actionFeedEvents.map((event, idx) => (
-                              <div key={event}><span style={{ color: 'var(--msp-neutral)' }}>{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}</span> — {event}</div>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border-strong)', borderRadius: '8px', padding: '0.55rem 0.6rem' }}>
-                          <div style={{ color: 'var(--msp-accent)', fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.2rem' }}>AI Trade Narrative</div>
-                          <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.74rem', display: 'grid', gap: '0.1rem' }}>
-                            <div>• Structure {trendAligned ? 'supports expansion' : 'still re-aligning'}</div>
-                            <div>• Institutional flow {flowAligned ? 'aligning with bias' : 'still mixed'}</div>
-                            <div>• IV state {ivEnvironment.toLowerCase()} for current setup class</div>
-                            <div>• Time cluster focus in ~{timeClusterMinutes} min</div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div style={{
-                        marginBottom: '0.75rem',
-                        background: 'var(--msp-panel)',
-                        border: '1px solid var(--msp-border-strong)',
-                        borderRadius: '10px',
-                        padding: '0.68rem 0.78rem',
-                      }}>
-                        <div style={{ color: 'var(--msp-accent)', fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.3rem' }}>
-                          Top Strip • AI Command Bar
-                        </div>
-                        <div style={{ color: 'var(--msp-text)', fontSize: '0.82rem', fontWeight: 900, marginBottom: '0.46rem' }}>
-                          MSP AI EDGE: {commanderVerdict} | Confidence {confidence}% | {grade} Setup
-                        </div>
-                        <div style={{ color: 'var(--msp-bull)', fontSize: '0.76rem', fontWeight: 800, marginBottom: '0.35rem' }}>
-                          LIVE EDGE BAR: {activeHeartbeat}
-                        </div>
-                        <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.72rem', marginBottom: '0.4rem' }}>
-                          WHAT changed? {activeHeartbeat} • WHY it matters? {strongEdge ? 'Edge quality is elevated.' : 'Setup quality is still developing.'} • WHAT now? {heartbeatAction}
-                        </div>
-                        <div style={{ display: 'flex', gap: '0.38rem', flexWrap: 'wrap' }}>
-                          <span style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border)', borderRadius: '999px', padding: '0.18rem 0.52rem', color: regimeColor, fontSize: '0.68rem', fontWeight: 800 }}>Regime: {regime}</span>
-                          <span style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border)', borderRadius: '999px', padding: '0.18rem 0.52rem', color: riskStatus === 'HIGH VOL' ? 'var(--msp-bear)' : riskStatus === 'ELEVATED VOL' ? 'var(--msp-warn)' : 'var(--msp-bull)', fontSize: '0.68rem', fontWeight: 800 }}>Volatility: {riskStatus}</span>
-                          <span style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border)', borderRadius: '999px', padding: '0.18rem 0.52rem', color: timeTriggerColor, fontSize: '0.68rem', fontWeight: 800 }}>Time Edge: {timeTriggerState === 'ACTIVE NOW' ? 'cluster now' : `~${timeClusterMinutes}m`}</span>
-                        </div>
-                      </div>
-
-                      <div style={{
-                        marginBottom: '0.95rem',
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(min(270px, 100%), 1fr))',
-                        gap: '0.75rem',
-                        alignItems: 'start',
-                      }}>
-                        <div style={{
-                          background: 'var(--msp-panel-2)',
-                          border: '1px solid var(--msp-border)',
-                          borderRadius: '10px',
-                          padding: contextCollapsed ? '0.62rem 0.75rem' : '0.8rem 0.9rem',
-                          opacity: contextCollapsed ? 0.9 : 1,
-                          boxShadow: marketChaos ? '0 0 0 1px var(--msp-bear), 0 0 18px var(--msp-bear-tint)' : 'none',
-                        }}>
-                          <div style={{ color: 'var(--msp-neutral)', fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.42rem' }}>
-                            Left Panel • Market Context (Why)
-                          </div>
-
-                          {contextCollapsed ? (
-                            <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.77rem' }}>
-                              {regime} • Risk {riskStatus} • {timeframe.toUpperCase()} • Intent {institutionalIntent}
-                            </div>
-                          ) : (
-                            <>
-                              <div style={{ marginBottom: '0.48rem', color: 'var(--msp-text-muted)', fontSize: '0.76rem' }}>AI Ranked Symbols</div>
-                              <div style={{ display: 'flex', gap: '0.32rem', flexWrap: 'wrap', marginBottom: '0.55rem' }}>
-                                {aiRankedSymbols.map((sym, idx) => (
-                                  <span key={sym} style={{ background: idx === 0 ? 'var(--msp-accent-glow)' : 'var(--msp-panel-2)', border: `1px solid ${idx === 0 ? 'var(--msp-accent)' : 'var(--msp-border)'}`, borderRadius: '999px', padding: '0.16rem 0.5rem', color: idx === 0 ? 'var(--msp-bull)' : 'var(--msp-text-muted)', fontSize: '0.68rem', fontWeight: 800 }}>{sym}</span>
-                                ))}
-                              </div>
-
-                              <div style={{ display: 'grid', gap: '0.25rem', color: 'var(--msp-text-muted)', fontSize: '0.75rem' }}>
-                                <div>Regime: <span style={{ color: regimeColor, fontWeight: 800 }}>{regime}</span></div>
-                                <div>Market Risk: <span style={{ color: riskStatus === 'HIGH VOL' ? 'var(--msp-bear)' : riskStatus === 'ELEVATED VOL' ? 'var(--msp-warn)' : 'var(--msp-bull)', fontWeight: 800 }}>{riskStatus}</span></div>
-                                <div>Breadth / Volume: <span style={{ color: 'var(--msp-text)', fontWeight: 800 }}>{(result.signals?.bullish ?? 0) + (result.signals?.bearish ?? 0)} active factors</span></div>
-                                <div>AI Market State: <span style={{ color: 'var(--msp-text)', fontWeight: 800 }}>{institutionalIntent}</span></div>
-                              </div>
-
-                              <div style={{ marginTop: '0.56rem' }}>
-                                <div style={{ color: 'var(--msp-neutral)', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800, marginBottom: '0.24rem' }}>AI Pressure Meter</div>
-                                <div style={{ height: '7px', background: 'var(--msp-panel-2)', borderRadius: '999px', overflow: 'hidden', marginBottom: '0.22rem' }}>
-                                  <div style={{ width: `${pressureMeter}%`, height: '100%', background: pressureMeter >= 70 ? 'var(--msp-bear)' : pressureMeter >= 45 ? 'var(--msp-warn)' : 'var(--msp-bull)' }} />
-                                </div>
-                                <div style={{ color: pressureMeter >= 70 ? 'var(--msp-bear)' : 'var(--msp-text-muted)', fontSize: '0.72rem' }}>{pressureMeter >= 70 ? 'Macro risk elevated' : 'Macro pressure manageable'}</div>
-                              </div>
-
-                              {!!result.institutionalFilter?.filters?.length && (
-                                <div style={{ marginTop: '0.48rem', display: 'grid', gap: '0.14rem', color: 'var(--msp-neutral)', fontSize: '0.71rem' }}>
-                                  {result.institutionalFilter.filters.slice(0, 3).map((filter, idx) => (
-                                    <div key={idx}>{filter.status === 'pass' ? '✔' : filter.status === 'warn' ? '⚠' : '✖'} {filter.label}</div>
-                                  ))}
-                                </div>
-                              )}
-                            </>
-                          )}
-                        </div>
-
-                        <div style={{
-                          background: 'var(--msp-panel-2)',
-                          border: '1px solid var(--msp-border-strong)',
-                          borderRadius: '12px',
-                          padding: edgeCollapsed ? '0.72rem 0.82rem' : '1rem',
-                          boxShadow: 'none',
-                          transformOrigin: 'center top',
-                        }}>
-                          <div style={{ color: 'var(--msp-accent)', fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.28rem' }}>
-                            Primary Edge Banner
-                          </div>
-                          <div style={{ color: 'var(--msp-text)', fontSize: '0.78rem', fontWeight: 800, marginBottom: '0.52rem' }}>
-                            {dominantEdge.label} + {dominantEdge.label === 'TIME' ? 'FLOW' : 'TIME'} ALIGNMENT
-                          </div>
-
-                          <div style={{ color: 'var(--msp-accent)', fontSize: '0.76rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.55rem' }}>
-                            Center Panel • Decision Engine (The Brain)
-                          </div>
-
-                          {edgeCollapsed ? (
-                            <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.79rem' }}>
-                              Edge compressed: {edgeSentence} • Confidence {confidence}% • Waiting for cleaner alignment.
-                            </div>
-                          ) : (
-                            <>
-                              <div style={{
-                                marginBottom: '0.54rem',
-                                background: 'var(--msp-panel-2)',
-                                border: '1px solid var(--msp-border-strong)',
-                                borderRadius: '8px',
-                                padding: '0.62rem 0.68rem',
-                              }}>
-                                <div style={{ color: directionColor, fontSize: '0.84rem', fontWeight: 900, marginBottom: '0.16rem' }}>
-                                  {direction.toUpperCase()} EDGE
-                                </div>
-                                <div style={{ color: 'var(--msp-text)', fontSize: '0.75rem', fontWeight: 800, marginBottom: '0.22rem' }}>
-                                  Quality: {grade} • Confidence: {confidence}%
-                                </div>
-                                <div style={{ display: 'grid', gap: '0.14rem' }}>
-                                  {decisionWhy.map((item) => (
-                                    <div key={item.label} style={{ color: item.pass ? 'var(--msp-bull)' : 'var(--msp-bear)', fontSize: '0.72rem' }}>
-                                      {item.pass ? '✔' : '⚠'} {item.label}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-
-                              <div style={{ marginBottom: '0.54rem' }}>
-                                <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 800, marginBottom: '0.26rem' }}>Edge Temperature</div>
-                                <div style={{ height: '8px', background: 'var(--msp-panel-2)', borderRadius: '999px', overflow: 'hidden' }}>
-                                  <div style={{ width: `${confidence}%`, height: '100%', background: edgeStateColor }} />
-                                </div>
-                              </div>
-
-                              <div style={{ display: 'grid', gap: '0.54rem' }}>
-                                <div style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border-strong)', borderRadius: '8px', padding: '0.7rem' }}>
-                                  <div style={{ color: 'var(--msp-accent)', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.36rem' }}>Layer A • Structural Read</div>
-                                  <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.75rem', display: 'grid', gap: '0.2rem' }}>
-                                    <div>Trend Structure: <span style={{ color: trendAligned ? 'var(--msp-bull)' : 'var(--msp-warn)', fontWeight: 800 }}>{trendAligned ? 'Aligned' : 'Needs confirmation'}</span></div>
-                                    <div>Pattern State: <span style={{ color: 'var(--msp-text)', fontWeight: 800 }}>{edgeSentence.replace('High probability ', '').replace('Moderate edge — ', '').replace('Low-quality edge — ', '')}</span></div>
-                                    <div>Time Confluence: <span style={{ color: timeTriggerColor, fontWeight: 800 }}>{timeTriggerState}</span></div>
-                                    <div>Liquidity Zone: <span style={{ color: 'var(--msp-text)', fontWeight: 800 }}>{entry != null ? entry.toFixed(2) : 'N/A'} / {invalidation != null ? invalidation.toFixed(2) : 'N/A'}</span></div>
-                                  </div>
-                                </div>
-
-                                <div style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border-strong)', borderRadius: '8px', padding: '0.7rem', opacity: dominantEdge.label === 'FLOW' ? 1 : 0.9 }}>
-                                  <div style={{ color: 'var(--msp-accent)', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.36rem' }}>Layer B • Options Intelligence</div>
-                                  <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.75rem', display: 'grid', gap: '0.2rem' }}>
-                                    <div>IV Environment: <span style={{ color: 'var(--msp-text)', fontWeight: 800 }}>{ivEnvironment}</span></div>
-                                    <div>Flow / Unusual: <span style={{ color: flowEdge >= 65 ? 'var(--msp-bull)' : 'var(--msp-warn)', fontWeight: 800 }}>{flowEdge}%</span></div>
-                                    <div>OI Sentiment: <span style={{ color: 'var(--msp-text)', fontWeight: 800 }}>{capitalFlow?.bias?.toUpperCase() ?? direction.toUpperCase()}</span></div>
-                                    <div>Max Pain: <span style={{ color: 'var(--msp-text)', fontWeight: 800 }}>{maxPain != null ? maxPain.toFixed(2) : 'N/A'}</span></div>
-                                  </div>
-                                </div>
-
-                                <div style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border-strong)', borderRadius: '8px', padding: '0.7rem' }}>
-                                  <div style={{ color: 'var(--msp-accent)', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.36rem' }}>Layer C • Execution Trigger</div>
-                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: '0.34rem', color: 'var(--msp-text-muted)', fontSize: '0.74rem' }}>
-                                    <div>Direction: <span style={{ color: directionColor, fontWeight: 900 }}>{direction.toUpperCase()}</span></div>
-                                    <div>Confidence: <span style={{ color: 'var(--msp-text)', fontWeight: 900 }}>{confidence}%</span></div>
-                                    <div>Quality: <span style={{ color: qualityGate === 'HIGH' ? 'var(--msp-bull)' : qualityGate === 'MODERATE' ? 'var(--msp-warn)' : 'var(--msp-bear)', fontWeight: 900 }}>{qualityGate}</span></div>
-                                    <div>Entry/Invalidation: <span style={{ color: 'var(--msp-text)', fontWeight: 800 }}>{entry != null ? entry.toFixed(2) : 'N/A'} / {invalidation != null ? invalidation.toFixed(2) : 'N/A'}</span></div>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div style={{ marginTop: '0.55rem', background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border-strong)', borderRadius: '8px', padding: '0.58rem 0.66rem' }}>
-                                <div style={{ color: 'var(--msp-accent)', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.28rem' }}>AI Monitoring</div>
-                                <div style={{ display: 'grid', gap: '0.22rem', color: 'var(--msp-text-muted)', fontSize: '0.75rem' }}>
-                                  {aiThinkingStream.map((item) => (
-                                    <div key={item}>• {item}</div>
-                                  ))}
-                                </div>
-                              </div>
-                            </>
-                          )}
-                        </div>
-
-                        <div style={{
-                          background: executionHidden ? 'var(--msp-panel-2)' : 'var(--msp-panel)',
-                          border: executionHidden ? '1px dashed var(--msp-border-strong)' : '1px solid var(--msp-border-strong)',
-                          borderRadius: '10px',
-                          padding: '0.8rem 0.9rem',
-                          transformOrigin: 'center top',
-                          boxShadow: strongEdge && !executionHidden ? '0 0 0 1px var(--msp-accent)' : 'none',
-                        }}>
-                          <div style={{ color: 'var(--msp-text)', fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.42rem' }}>
-                            Right Panel • Execution & Risk (The Money)
-                          </div>
-
-                          {executionHidden ? (
-                            <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.78rem' }}>
-                              Execution hidden until edge improves. Current state: {edgeState}. Wait for confirmation.
-                            </div>
-                          ) : (
-                            <>
-                              <div style={{
-                                marginBottom: '0.5rem',
-                                background: 'var(--msp-panel-2)',
-                                border: '1px solid var(--msp-border-strong)',
-                                borderRadius: '8px',
-                                padding: '0.45rem 0.55rem',
-                                boxShadow: 'none',
-                              }}>
-                                <div style={{ color: executionModeColor, fontSize: '0.73rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-                                  Execution State: {executionMode}
-                                </div>
-                              </div>
-
-                              <div style={{ color: 'var(--msp-text)', fontSize: '0.75rem', marginBottom: '0.46rem' }}>
-                                A{grade} Setup • Permission Bias: <span style={{ color: permissionColor, fontWeight: 900 }}>{permissionStatus}</span> • Intent: <span style={{ color: 'var(--msp-text)', fontWeight: 900 }}>{institutionalIntent.replace('_', ' ')}</span>
-                              </div>
-
-                              <div style={{ display: 'grid', gap: '0.42rem', marginBottom: '0.55rem' }}>
-                                <div style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border-strong)', borderRadius: '8px', padding: '0.62rem' }}>
-                                  <div style={{ color: 'var(--msp-accent)', fontSize: '0.69rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.2rem' }}>Execution Block</div>
-                                  <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.74rem', lineHeight: 1.45 }}>
-                                    <div>Strategy: <span style={{ color: 'var(--msp-text)', fontWeight: 900 }}>{direction === 'bullish' ? 'Long Bias / Buy Pullback' : direction === 'bearish' ? 'Short Bias / Sell Bounce' : 'Wait / Neutral'}</span></div>
-                                    <div>Entry / Stop: <span style={{ color: 'var(--msp-text)', fontWeight: 900 }}>{entry != null ? entry.toFixed(2) : 'N/A'} / {invalidation != null ? invalidation.toFixed(2) : 'N/A'}</span></div>
-                                    <div>Target Zone: <span style={{ color: 'var(--msp-bull)', fontWeight: 900 }}>{target1 != null ? target1.toFixed(2) : 'N/A'}{target2 != null ? ` → ${target2.toFixed(2)}` : ''}</span></div>
-                                  </div>
-                                </div>
-
-                                <div style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border-strong)', borderRadius: '8px', padding: '0.62rem' }}>
-                                  <div style={{ color: 'var(--msp-accent)', fontSize: '0.69rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.2rem' }}>Risk Block</div>
-                                  <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.74rem', lineHeight: 1.45 }}>
-                                    <div>R:R: <span style={{ color: rrPass ? 'var(--msp-bull)' : 'var(--msp-warn)', fontWeight: 900 }}>{rr != null ? `${rr.toFixed(1)} : 1` : 'N/A'}</span></div>
-                                    <div>Max Loss: <span style={{ color: 'var(--msp-bear)', fontWeight: 900 }}>{invalidation != null && entry != null ? Math.abs(entry - invalidation).toFixed(2) : 'N/A'}</span></div>
-                                    <div>Quality / Conflict: <span style={{ color: 'var(--msp-text)', fontWeight: 900 }}>{qualityGate} / {conflictLevel}</span></div>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border-strong)', borderRadius: '10px', padding: '0.74rem 0.8rem' }}>
-                                <div style={{ color: 'var(--msp-accent)', fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.34rem' }}>
-                                  AI Trade Commander
-                                </div>
-                                <div style={{ color: 'var(--msp-text)', fontSize: '0.76rem', fontWeight: 700, marginBottom: '0.5rem' }}>
-                                  {commanderLine}
-                                </div>
-
-                                <div style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border-strong)', borderRadius: '8px', padding: '0.64rem' }}>
-                                  <div style={{ color: 'var(--msp-text)', fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.42rem' }}>Execution Trigger Layer</div>
-
-                                  <div style={{ display: 'grid', gap: '0.18rem', marginBottom: '0.45rem' }}>
-                                    {triggerChecklist.map((item) => (
-                                      <div key={item.label} style={{ color: item.pass ? 'var(--msp-bull)' : 'var(--msp-bear)', fontSize: '0.73rem' }}>{item.pass ? '✔' : '⚠'} {item.label}</div>
-                                    ))}
-                                  </div>
-
-                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(150px, 100%), 1fr))', gap: '0.35rem', marginBottom: '0.48rem' }}>
-                                    <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.73rem' }}>Edge: <span style={{ color: executionEdgeColor, fontWeight: 900 }}>{executionEdgeScore}%</span></div>
-                                    <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.73rem' }}>Time: <span style={{ color: timeTriggerColor, fontWeight: 900 }}>{timeTriggerState}</span></div>
-                                    <div style={{ color: 'var(--msp-text-muted)', fontSize: '0.73rem' }}>Permission: <span style={{ color: permissionColor, fontWeight: 900 }}>{permissionAllowed ? 'YES' : 'NO'}</span></div>
-                                  </div>
-
-                                  <div style={{ color: executionEnabled ? 'var(--msp-bull)' : 'var(--msp-warn)', fontSize: '0.73rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.45rem' }}>
-                                    {executionEnabled ? 'Execution Enabled' : 'Review Before Entry'}
-                                  </div>
-
-                                  <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
-                                    <button type="button"
-                                      onClick={() => {
-                                        if (result) {
-                                          deployRankCandidate({
-                                            symbol: result.symbol,
-                                            indicators: { price: result.price, atr: result.atr },
-                                            direction: result.direction || direction,
-                                            score: result.score,
-                                          });
-                                        }
-                                      }}
-                                      style={{
-                                        padding: '0.4rem 0.72rem',
-                                        borderRadius: '8px',
-                                        border: `1px solid ${executionEnabled ? 'var(--msp-bull)' : 'var(--msp-warn)'}`,
-                                        background: executionEnabled ? 'var(--msp-bull-tint)' : 'var(--msp-warn-tint, rgba(234,179,8,0.08))',
-                                        color: executionEnabled ? 'var(--msp-bull)' : 'var(--msp-warn)',
-                                        fontSize: '0.72rem',
-                                        fontWeight: 900,
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '0.05em',
-                                        cursor: 'pointer',
-                                      }}
-                                    >
-                                      {executionEnabled ? 'Log Trade Plan' : 'Log Trade Plan (Review)'}
-                                    </button>
-                                    <button type="button"
-                                      onClick={() => {
-                                        // Dismiss — user chooses to wait for stronger signal
-                                        setResult(null);
-                                        setOperatorTransition(null);
-                                      }}
-                                      style={{
-                                        padding: '0.4rem 0.72rem',
-                                        borderRadius: '8px',
-                                        border: '1px solid var(--msp-border)',
-                                        background: 'var(--msp-panel-2)',
-                                        color: 'var(--msp-text-muted)',
-                                        fontSize: '0.72rem',
-                                        fontWeight: 800,
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '0.05em',
-                                        cursor: 'pointer',
-                                      }}
-                                    >
-                                      Wait Signal
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      <div style={{
-                        marginTop: '0.15rem',
-                        background: 'var(--msp-panel)',
-                        border: '1px solid var(--msp-border-strong)',
-                        borderRadius: '10px',
-                        padding: '0.72rem 0.82rem',
-                      }}>
-                        <div style={{ color: 'var(--msp-accent)', fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.4rem' }}>
-                          Flow / Alert / AI Watch Zone
-                        </div>
-                        <div style={{ display: 'grid', gap: '0.2rem', marginBottom: '0.45rem' }}>
-                          {watchZoneEvents.map((event) => (
-                            <div key={`${event.t}-${event.text}`} style={{ color: 'var(--msp-text-muted)', fontSize: '0.75rem' }}>
-                              <span style={{ color: 'var(--msp-neutral)', marginRight: '0.35rem' }}>{event.t}</span>
-                              {event.text}
-                            </div>
-                          ))}
-                        </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.36rem' }}>
-                          <span style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border)', borderRadius: '999px', padding: '0.18rem 0.5rem', color: 'var(--msp-warn)', fontSize: '0.67rem', fontWeight: 800 }}>Evolution: {qualityGate} setup</span>
-                          <span style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border)', borderRadius: '999px', padding: '0.18rem 0.5rem', color: timeTriggerColor, fontSize: '0.67rem', fontWeight: 800 }}>Time Cluster: {timeTriggerState}</span>
-                          <span style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border)', borderRadius: '999px', padding: '0.18rem 0.5rem', color: permissionColor, fontSize: '0.67rem', fontWeight: 800 }}>Permission: {permissionAllowed ? 'ALLOWED' : 'BLOCKED'}</span>
-                        </div>
-                      </div>
-                    </>
-                  );
-                })()}
-                </>
-              );
-            })()}
-
-            {showLegacyTopAnalysis && (
-              <>
-            {/* NEW: Clear Verdict Tile - The WOW Factor */}
-            {(() => {
-              // Use direction from API if available, otherwise calculate from score
-              const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
-              const score = result.score ?? 50;
-              
-              const isBullish = direction === 'bullish';
-              const isBearish = direction === 'bearish';
-              
-              const biasText = isBullish ? "Bullish" : isBearish ? "Bearish" : "Neutral / Mixed";
-              const stanceText = isBullish ? "Risk-On – Favor Long Positions" : 
-                                 isBearish ? "Risk-Off – Defensive Positioning" : 
-                                 "Caution – Wait for Clarity";
-              const emoji = isBullish ? "🟢" : isBearish ? "🔴" : "🟡";
-              const bgGradient = isBullish 
-                ? "var(--msp-bull-tint)" 
-                : isBearish 
-                ? "var(--msp-bear-tint)"
-                : "var(--msp-warn-tint)";
-              const borderColor = isBullish ? "var(--msp-bull)" : isBearish ? "var(--msp-bear)" : "var(--msp-warn)";
-              const textColor = isBullish ? "var(--msp-bull)" : isBearish ? "var(--msp-bear)" : "var(--msp-warn)";
-              const scoreColor = isBullish ? "var(--msp-bull)" : isBearish ? "var(--msp-bear)" : "var(--msp-warn)";
-              
-              return (
-                <div style={{
-                  background: bgGradient,
-                  border: '1px solid var(--msp-border-strong)',
-                  borderLeft: `3px solid ${borderColor}`,
-                  borderRadius: "16px",
-                  padding: "1.5rem",
-                  marginBottom: "1.5rem",
-                  position: "relative",
-                  overflow: "hidden"
-                }}>
-                  {/* Glow effect */}
-                  <div style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: "4px",
-                    background: isBullish 
-                      ? "var(--msp-bull)"
-                      : isBearish 
-                      ? "var(--msp-bear)"
-                      : "var(--msp-warn)",
-                    borderRadius: "16px 16px 0 0"
-                  }} />
-                  
-                  <div style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr",
-                    gap: "1rem",
-                    alignItems: "center"
-                  }}
-                  className="sm:[grid-template-columns:1fr_auto] sm:gap-6"
-                  >
-                    {/* Left: Verdict Info */}
-                    <div>
-                      <div style={{ 
-                        display: "flex", 
-                        alignItems: "center", 
-                        gap: "0.75rem",
-                        marginBottom: "0.5rem"
-                      }}>
-                        <span style={{ fontSize: "2rem" }}>{emoji}</span>
-                        <div>
-                          <div style={{ 
-                            fontSize: "0.7rem", 
-                            color: "var(--msp-neutral)", 
-                            textTransform: "uppercase", 
-                            letterSpacing: "0.1em",
-                            marginBottom: "0.25rem"
-                          }}>
-                            Market Bias
-                          </div>
-                          <div style={{ 
-                            fontSize: "1.75rem", 
-                            fontWeight: "800", 
-                            color: textColor,
-                            lineHeight: 1
-                          }}>
-                            {biasText}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div style={{ 
-                        fontSize: "0.7rem", 
-                        color: "var(--msp-neutral)", 
-                        textTransform: "uppercase", 
-                        letterSpacing: "0.1em",
-                        marginBottom: "0.25rem",
-                        marginTop: "1rem"
-                      }}>
-                        Execution State
-                      </div>
-                      <div style={{ 
-                        fontSize: "1rem", 
-                        fontWeight: "600", 
-                        color: "var(--msp-text)"
-                      }}>
-                        {stanceText}
-                      </div>
-                      
-                      {/* Signal breakdown if available */}
-                      {result.signals && (
-                        <div style={{
-                          display: "flex",
-                          flexWrap: "wrap",
-                          gap: "1rem",
-                          marginTop: "1rem",
-                          fontSize: "0.85rem"
-                        }}>
-                          <span style={{ color: "var(--msp-bull)" }}>
-                            ✓ {result.signals.bullish} Bullish
-                          </span>
-                          <span style={{ color: "var(--msp-bear)" }}>
-                            ✗ {result.signals.bearish} Bearish
-                          </span>
-                          <span style={{ color: "var(--msp-neutral)" }}>
-                            ○ {result.signals.neutral} Neutral
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Right: Score Circle */}
-                    <div style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      gap: "0.5rem"
-                    }}>
-                      <div style={{
-                        width: "90px",
-                        height: "90px",
-                        borderRadius: "50%",
-                        background: `conic-gradient(${scoreColor} ${score * 3.6}deg, var(--msp-panel-2) 0deg)`,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        position: "relative"
-                      }}>
-                        <div style={{
-                          width: "70px",
-                          height: "70px",
-                          borderRadius: "50%",
-                          background: "var(--msp-bg)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexDirection: "column"
-                        }}>
-                          <span style={{
-                            fontSize: "1.75rem",
-                            fontWeight: "800",
-                            color: scoreColor,
-                            lineHeight: 1
-                          }}>
-                            {score}
-                          </span>
-                        </div>
-                      </div>
-                      <span style={{
-                        fontSize: "0.7rem",
-                        color: "var(--msp-neutral)",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.05em"
-                      }}>
-                        Confluence Score
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {(() => {
-              const direction = result.direction || (result.score >= 60 ? 'bullish' : result.score <= 40 ? 'bearish' : 'neutral');
-              const trendAligned = result.price != null && result.ema200 != null
-                ? (direction === 'bullish' ? result.price > result.ema200 : direction === 'bearish' ? result.price < result.ema200 : true)
-                : null;
-              const momentumAligned = result.rsi != null && result.macd_hist != null
-                ? (direction === 'bullish' ? result.rsi >= 50 && result.macd_hist >= 0 : direction === 'bearish' ? result.rsi <= 50 && result.macd_hist <= 0 : true)
-                : null;
-              const strengthAligned = result.adx != null ? result.adx >= 20 : null;
-
-              const reasons: string[] = [];
-              if (trendAligned === true) reasons.push('Trend aligned with EMA200 structure');
-              if (momentumAligned === true) reasons.push('Momentum alignment confirmed (RSI + MACD)');
-              if (strengthAligned === true) reasons.push('Trend strength supports continuation (ADX ≥ 20)');
-              if (result.signals && result.signals.bullish + result.signals.bearish + result.signals.neutral > 0) {
-                reasons.push(`Signal mix: ${result.signals.bullish} bull / ${result.signals.bearish} bear`);
-              }
-              if (reasons.length === 0) reasons.push('Core indicators available for directional read');
-
-              const blockers: string[] = [];
-              if (trendAligned === false) blockers.push('Price and primary trend structure are misaligned');
-              if (momentumAligned === false) blockers.push('Momentum does not confirm current directional bias');
-              if (strengthAligned === false) blockers.push('Low trend strength (ADX < 20) increases chop risk');
-              if (direction === 'neutral') blockers.push('Direction is mixed; wait for cleaner alignment');
-
-              const freshnessSource = lastUpdated || result.fetchedAt || null;
-              const freshnessMeta = getFreshnessMeta(freshnessSource);
-              const sourceLabel = assetType === 'crypto' ? 'AV + derivatives' : assetType === 'forex' ? 'Alpha Vantage FX' : 'Alpha Vantage';
-
-              const noTradeReasons: string[] = [];
-              if (direction === 'neutral') noTradeReasons.push('Directional bias is mixed');
-              if (strengthAligned === false) noTradeReasons.push('Trend strength is weak (ADX below threshold)');
-              if (trendAligned === false && momentumAligned === false) noTradeReasons.push('Trend and momentum are both misaligned');
-              if (freshnessMeta.status === 'bad') noTradeReasons.push('Data freshness is stale; wait for updated bars');
-              const showNoTrade = noTradeReasons.length > 0;
-
-              return (
-                <>
-                  <SetupConfidenceCard
-                    confidence={Math.max(1, Math.min(99, Math.round(result.score ?? 50)))}
-                    reasons={reasons}
-                    blockers={blockers}
-                    title="Setup Confidence"
-                  />
-                  <DataHealthBadges
-                    items={[
-                      { label: 'Freshness', value: freshnessMeta.label, status: freshnessMeta.status },
-                      { label: 'Feed', value: sourceLabel, status: 'good' },
-                      { label: 'Candle', value: result.lastCandleTime || 'Unavailable', status: result.lastCandleTime ? 'good' : 'warn' },
-                    ]}
-                    updatedAtText={lastUpdated ? new Date(lastUpdated).toLocaleString('en-US', { hour12: false }) : undefined}
-                  />
-                  {showNoTrade && (
-                    <div style={{
-                      background: 'rgba(245,158,11,0.12)',
-                      border: '1px solid rgba(245,158,11,0.35)',
-                      borderRadius: '12px',
-                      padding: '0.9rem 1rem',
-                      marginBottom: '1rem',
-                    }}>
-                      <div style={{ color: '#FBBF24', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: '0.45rem' }}>
-                        🛑 No-Trade Environment Detected
-                      </div>
-                      <div style={{ display: 'grid', gap: '0.35rem', marginBottom: '0.45rem' }}>
-                        {noTradeReasons.map((reason, idx) => (
-                          <div key={idx} style={{ color: '#FDE68A', fontSize: '0.82rem' }}>• {reason}</div>
-                        ))}
-                      </div>
-                      <div style={{ color: '#94A3B8', fontSize: '0.75rem' }}>
-                        Risk governor enforced — not financial advice. Execution blocked until conditions improve.
-                      </div>
-                    </div>
-                  )}
-                </>
-              );
-            })()}
-
-            {/* PRO FEATURES: Confluence Count, Market Regime, Timeframe Stack, Expected Move */}
-            {result && (
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(min(200px, 100%), 1fr))",
-                gap: "1rem",
-                marginBottom: "1.5rem",
-              }}>
-                {/* 1. Confluence Count with Checkmarks */}
-                <div style={{
-                  background: "rgba(30,41,59,0.6)",
-                  borderRadius: "12px",
-                  padding: "1rem",
-                  border: "1px solid rgba(100,116,139,0.3)",
-                }}>
-                  <div style={{ 
-                    fontSize: "0.7rem", 
-                    color: "#64748B", 
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                    marginBottom: "0.75rem",
-                  }}>
-                    Confluences Hit
-                  </div>
-                  {(() => {
-                    const confluences = [
-                      { name: "Trend", hit: result.ema200 && result.price ? (result.direction === 'bullish' ? result.price > result.ema200 : result.price < result.ema200) : false },
-                      { name: "Momentum", hit: result.rsi ? (result.direction === 'bullish' ? result.rsi > 50 : result.rsi < 50) : false },
-                      { name: "MACD", hit: result.macd_hist ? (result.direction === 'bullish' ? result.macd_hist > 0 : result.macd_hist < 0) : false },
-                      { name: "ADX Strength", hit: result.adx ? result.adx > 25 : false },
-                      { name: "Stochastic", hit: result.stoch_k && result.stoch_d ? (result.direction === 'bullish' ? result.stoch_k > result.stoch_d : result.stoch_k < result.stoch_d) : false },
-                      { name: "CCI", hit: result.cci ? (result.direction === 'bullish' ? result.cci > 0 : result.cci < 0) : false },
-                      { name: "Aroon", hit: result.aroon_up && result.aroon_down ? (result.direction === 'bullish' ? result.aroon_up > result.aroon_down : result.aroon_down > result.aroon_up) : false },
-                    ];
-                    const hitCount = confluences.filter(c => c.hit).length;
-                    const totalCount = confluences.length;
-                    
-                    return (
-                      <>
-                        <div style={{ 
-                          fontSize: "1.5rem", 
-                          fontWeight: "700", 
-                          color: hitCount >= 5 ? "#10B981" : hitCount >= 3 ? "#F59E0B" : "#EF4444",
-                          marginBottom: "0.5rem",
-                        }}>
-                          {hitCount} / {totalCount}
-                        </div>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
-                          {confluences.map((c, i) => (
-                            <span key={i} style={{
-                              fontSize: "0.7rem",
-                              padding: "2px 6px",
-                              borderRadius: "4px",
-                              background: c.hit ? "rgba(16,185,129,0.2)" : "rgba(100,116,139,0.2)",
-                              color: c.hit ? "#10B981" : "#64748B",
-                            }}>
-                              {c.hit ? "✓" : "✗"} {c.name}
-                            </span>
-                          ))}
-                        </div>
-                      </>
-                    );
-                  })()}
-                </div>
-
-                {/* 2. Market Regime Tag */}
-                <div style={{
-                  background: "rgba(30,41,59,0.6)",
-                  borderRadius: "12px",
-                  padding: "1rem",
-                  border: "1px solid rgba(100,116,139,0.3)",
-                }}>
-                  <div style={{ 
-                    fontSize: "0.7rem", 
-                    color: "#64748B", 
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                    marginBottom: "0.75rem",
-                  }}>
-                    Market Regime
-                  </div>
-                  {(() => {
-                    // Determine regime from ADX, ATR, and RSI
-                    const adx = result.adx || 0;
-                    const atr = result.atr || 0;
-                    const price = result.price || 1;
-                    const atrPercent = (atr / price) * 100;
-                    const rsi = result.rsi || 50;
-                    
-                    let regime = "Unknown";
-                    let regimeIcon = "❓";
-                    let regimeColor = "#64748B";
-                    let regimeAdvice = "";
-                    
-                    if (adx >= 30) {
-                      regime = "Trending";
-                      regimeIcon = "📈";
-                      regimeColor = "#10B981";
-                      regimeAdvice = "Trend-following strategies";
-                    } else if (adx < 20 && atrPercent < 2) {
-                      regime = "Compression";
-                      regimeIcon = "🔄";
-                      regimeColor = "var(--msp-accent)";
-                      regimeAdvice = "Breakout setups imminent";
-                    } else if (atrPercent >= 3) {
-                      regime = "High Volatility";
-                      regimeIcon = "⚡";
-                      regimeColor = "#F59E0B";
-                      regimeAdvice = "Wider stops, smaller size";
-                    } else {
-                      regime = "Ranging";
-                      regimeIcon = "↔️";
-                      regimeColor = "#38BDF8";
-                      regimeAdvice = "Mean-reversion plays";
-                    }
-                    
-                    return (
-                      <>
-                        <div style={{ 
-                          display: "flex", 
-                          alignItems: "center", 
-                          gap: "0.5rem",
-                          marginBottom: "0.5rem",
-                        }}>
-                          <span style={{ fontSize: "1.5rem" }}>{regimeIcon}</span>
-                          <span style={{ 
-                            fontSize: "1.25rem", 
-                            fontWeight: "700", 
-                            color: regimeColor,
-                          }}>
-                            {regime}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: "0.75rem", color: "#94A3B8" }}>
-                          {regimeAdvice}
-                        </div>
-                        <div style={{ 
-                          marginTop: "0.5rem",
-                          fontSize: "0.7rem", 
-                          color: "#64748B",
-                        }}>
-                          ADX: {adx.toFixed(1)} | ATR%: {atrPercent.toFixed(2)}%
-                        </div>
-                      </>
-                    );
-                  })()}
-                </div>
-
-                {/* 3. Timeframe Stack View */}
-                <div style={{
-                  background: "rgba(30,41,59,0.6)",
-                  borderRadius: "12px",
-                  padding: "1rem",
-                  border: "1px solid rgba(100,116,139,0.3)",
-                }}>
-                  <div style={{ 
-                    fontSize: "0.7rem", 
-                    color: "#64748B", 
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                    marginBottom: "0.75rem",
-                  }}>
-                    Timeframe Stack
-                  </div>
-                  {(() => {
-                    // Derive TF alignment from available indicators
-                    const direction = result.direction || 'neutral';
-                    const rsi = result.rsi || 50;
-                    const macdHist = result.macd_hist || 0;
-                    const priceVsEma = result.price && result.ema200 ? result.price > result.ema200 : null;
-                    
-                    // Simulate multi-TF view based on current TF indicators
-                    const tfStack = [
-                      { 
-                        tf: timeframe.toUpperCase(), 
-                        bias: direction === 'bullish' ? '↑' : direction === 'bearish' ? '↓' : '→',
-                        label: direction === 'bullish' ? 'bullish' : direction === 'bearish' ? 'bearish' : 'neutral',
-                        color: direction === 'bullish' ? '#10B981' : direction === 'bearish' ? '#EF4444' : '#F59E0B',
-                      },
-                      { 
-                        tf: 'HTF', 
-                        bias: priceVsEma === true ? '↑' : priceVsEma === false ? '↓' : '→',
-                        label: priceVsEma === true ? 'trend up' : priceVsEma === false ? 'trend down' : 'unclear',
-                        color: priceVsEma === true ? '#10B981' : priceVsEma === false ? '#EF4444' : '#64748B',
-                      },
-                      { 
-                        tf: 'MOM', 
-                        bias: macdHist > 0 ? '↑' : macdHist < 0 ? '↓' : '→',
-                        label: macdHist > 0 ? 'expanding' : macdHist < 0 ? 'contracting' : 'flat',
-                        color: macdHist > 0 ? '#10B981' : macdHist < 0 ? '#EF4444' : '#64748B',
-                      },
-                    ];
-                    
-                    const aligned = tfStack.filter(t => t.bias === tfStack[0].bias).length;
-                    
-                    return (
-                      <>
-                        <div style={{ display: "flex", gap: "0.75rem", marginBottom: "0.5rem" }}>
-                          {tfStack.map((tf, i) => (
-                            <div key={i} style={{
-                              display: "flex",
-                              flexDirection: "column",
-                              alignItems: "center",
-                              gap: "0.25rem",
-                            }}>
-                              <span style={{
-                                fontSize: "1.5rem",
-                                color: tf.color,
-                                fontWeight: "bold",
-                              }}>
-                                {tf.bias}
-                              </span>
-                              <span style={{ fontSize: "0.7rem", color: "#94A3B8", fontWeight: "600" }}>
-                                {tf.tf}
-                              </span>
-                              <span style={{ fontSize: "0.65rem", color: "#64748B" }}>
-                                {tf.label}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                        <div style={{ 
-                          fontSize: "0.75rem", 
-                          color: aligned === 3 ? "#10B981" : aligned === 2 ? "#F59E0B" : "#EF4444",
-                          fontWeight: "600",
-                        }}>
-                          {aligned === 3 ? "✓ Full Alignment" : aligned === 2 ? "⚠ Partial Alignment" : "✗ Conflicting"}
-                        </div>
-                      </>
-                    );
-                  })()}
-                </div>
-
-                {/* 4. Expected Move / Risk Box */}
-                <div style={{
-                  background: "rgba(30,41,59,0.6)",
-                  borderRadius: "12px",
-                  padding: "1rem",
-                  border: "1px solid rgba(100,116,139,0.3)",
-                }}>
-                  <div style={{ 
-                    fontSize: "0.7rem", 
-                    color: "#64748B", 
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                    marginBottom: "0.75rem",
-                  }}>
-                    Expected Move
-                  </div>
-                  {(() => {
-                    const atr = result.atr || 0;
-                    const price = result.price || 1;
-                    const atrPercent = (atr / price) * 100;
-                    
-                    // Expected move = 1-2x ATR typically
-                    const lowMove = atrPercent * 0.8;
-                    const highMove = atrPercent * 1.5;
-                    
-                    // Momentum strength from RSI deviation from 50
-                    const rsi = result.rsi || 50;
-                    const momentumStrength = Math.abs(rsi - 50) * 2; // 0-100 scale
-                    
-                    return (
-                      <>
-                        <div style={{ 
-                          fontSize: "1.25rem", 
-                          fontWeight: "700", 
-                          color: "#A855F7",
-                          marginBottom: "0.5rem",
-                        }}>
-                          {lowMove.toFixed(1)}% – {highMove.toFixed(1)}%
-                        </div>
-                        <div style={{ display: "grid", gap: "0.35rem", fontSize: "0.75rem" }}>
-                          <div style={{ display: "flex", justifyContent: "space-between" }}>
-                            <span style={{ color: "#64748B" }}>ATR Target:</span>
-                            <span style={{ color: "#E2E8F0" }}>${atr.toFixed(2)}</span>
-                          </div>
-                          <div style={{ display: "flex", justifyContent: "space-between" }}>
-                            <span style={{ color: "#64748B" }}>Risk Zone:</span>
-                            <span style={{ color: "#EF4444" }}>±{(atrPercent * 0.5).toFixed(2)}%</span>
-                          </div>
-                          <div style={{ display: "flex", justifyContent: "space-between" }}>
-                            <span style={{ color: "#64748B" }}>Momentum:</span>
-                            <span style={{ 
-                              color: momentumStrength > 60 ? "#10B981" : momentumStrength > 30 ? "#F59E0B" : "#64748B",
-                            }}>
-                              {momentumStrength > 60 ? "Strong" : momentumStrength > 30 ? "Moderate" : "Weak"} ({momentumStrength.toFixed(0)}%)
-                            </span>
-                          </div>
-                        </div>
-                      </>
-                    );
-                  })()}
-                </div>
+            <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5">
+              <div className="mb-1 text-[0.68rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Volatility &amp; Liquidity</div>
+              <div className="grid gap-1 text-[0.74rem] text-slate-400">
+                <div>Volatility: <span className={`font-bold ${atrPercent >= 3 ? 'text-red-400' : atrPercent >= 1.5 ? 'text-amber-400' : 'text-emerald-400'}`}>{atrPercent >= 3 ? 'High' : atrPercent >= 1.5 ? 'Medium' : 'Controlled'}</span></div>
+                <div>Range Compression: <span className={`font-bold ${atrPercent <= 1.5 ? 'text-emerald-400' : 'text-amber-400'}`}>{atrPercent <= 1.5 ? 'Yes' : 'No'}</span></div>
+                <div>Liquidity: <span className="font-bold text-white">{detail.volume ? 'Building' : 'Normal'}</span></div>
               </div>
-            )}
-              </>
-            )}
-
-            <h2 style={{ fontSize: "1.5rem", fontWeight: "600", color: "#fff", marginBottom: "0.5rem" }}>
-              {result.symbol} — {timeframe.toUpperCase()}
-            </h2>
-            {/* Timestamp Info */}
-            <div style={{ 
-              display: "flex", 
-              gap: "1.5rem", 
-              flexWrap: "wrap",
-              marginBottom: "1rem",
-              padding: "0.75rem 1rem",
-              background: "rgba(16, 185, 129, 0.08)",
-              borderRadius: "8px",
-              border: "1px solid rgba(16, 185, 129, 0.2)",
-            }}>
-              {lastUpdated && (
-                <div style={{ fontSize: "0.85rem", color: "#94A3B8" }}>
-                  <span style={{ color: "#10B981", fontWeight: "600" }}>Last Updated:</span>{" "}
-                  {new Date(lastUpdated).toLocaleString('en-US', { 
-                    timeZone: 'UTC',
-                    month: 'short', day: 'numeric', 
-                    hour: '2-digit', minute: '2-digit', second: '2-digit',
-                    hour12: false 
-                  })} UTC
-                </div>
-              )}
-              {result.lastCandleTime && (
-                <div style={{ fontSize: "0.85rem", color: "#94A3B8" }}>
-                  <span style={{ color: "#10B981", fontWeight: "600" }}>Candle Time:</span>{" "}
-                  {result.lastCandleTime}
-                </div>
-              )}
             </div>
-            {result.price && (
-              <p style={{ fontSize: "1.25rem", color: "#10B981", marginBottom: "1.5rem", fontWeight: "600" }}>
-                💰 ${typeof result.price === 'number' ? result.price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 8}) : 'N/A'}
-              </p>
-            )}
-
-            {showAdvancedEngineeringPanels && (
-              <>
-                {/* Interactive Price Chart (TradingView Lightweight Charts) */}
-                <div style={{ marginBottom: "2rem", borderRadius: "12px", overflow: "hidden", border: "1px solid rgba(16, 185, 129, 0.2)" }}>
-                  {result.chartData?.candles?.length ? (
-                    <InteractiveChart
-                      candles={result.chartData.candles}
-                      ema200={result.chartData.ema200}
-                      symbol={result.symbol.replace("-USD", "")}
-                      interval={timeframe}
-                      height={420}
-                      showEMA={true}
-                      showVolume={true}
-                    />
-                  ) : (
-                    <PriceChart 
-                      symbol={result.symbol.replace("-USD", "")} 
-                      interval={timeframe} 
-                      price={result.price} 
-                      chartData={result.chartData}
-                    />
-                  )}
-                </div>
-
-                {/* Score Explanation */}
-                <div style={{
-                  marginBottom: "2rem",
-                  background: "rgba(59, 130, 246, 0.1)",
-                  border: "1px solid rgba(59, 130, 246, 0.3)",
-                  borderRadius: "12px",
-                  padding: "1.25rem",
-                }}>
-              <div style={{ color: "#60A5FA", fontWeight: "600", marginBottom: "0.75rem", fontSize: "0.9rem" }}>
-                📊 How Your Score is Calculated
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(200px, 100%), 1fr))", gap: "1rem", fontSize: "0.85rem" }}>
-                <div>
-                  <div style={{ color: "#94A3B8", fontWeight: "500", marginBottom: "0.3rem" }}>
-                    ✓ EMA200 Trend
-                  </div>
-                  <div style={{ color: "#CBD5E1" }}>
-                    Price above 200 EMA = Bullish signal
-                  </div>
-                </div>
-                <div>
-                  <div style={{ color: "#94A3B8", fontWeight: "500", marginBottom: "0.3rem" }}>
-                    ✓ RSI Momentum
-                  </div>
-                  <div style={{ color: "#CBD5E1" }}>
-                    RSI &gt;55 = Bullish | RSI &lt;45 = Bearish
-                  </div>
-                </div>
-                <div>
-                  <div style={{ color: "#94A3B8", fontWeight: "500", marginBottom: "0.3rem" }}>
-                    ✓ MACD Signal
-                  </div>
-                  <div style={{ color: "#CBD5E1" }}>
-                    MACD above signal line = Bullish signal
-                  </div>
-                </div>
-                <div>
-                  <div style={{ color: "#94A3B8", fontWeight: "500", marginBottom: "0.3rem" }}>
-                    ✓ ADX Strength
-                  </div>
-                  <div style={{ color: "#CBD5E1" }}>
-                    ADX &gt;25 with +DI &gt; -DI = Strong trend
-                  </div>
-                </div>
-                <div>
-                  <div style={{ color: "#94A3B8", fontWeight: "500", marginBottom: "0.3rem" }}>
-                    ✓ Stochastic
-                  </div>
-                  <div style={{ color: "#CBD5E1" }}>
-                    %K &gt;50 = Bullish | %K &lt;50 = Bearish
-                  </div>
-                </div>
-                <div>
-                  <div style={{ color: "#94A3B8", fontWeight: "500", marginBottom: "0.3rem" }}>
-                    ✓ Aroon Indicator
-                  </div>
-                  <div style={{ color: "#CBD5E1" }}>
-                    Aroon Up &gt; Aroon Down = Bullish trend
-                  </div>
-                </div>
-                <div>
-                  <div style={{ color: "#94A3B8", fontWeight: "500", marginBottom: "0.3rem" }}>
-                    ✓ OBV Volume
-                  </div>
-                  <div style={{ color: "#CBD5E1" }}>
-                    Rising OBV = Bullish volume confirmation
-                  </div>
-                </div>
-                <div>
-                  <div style={{ color: "#94A3B8", fontWeight: "500", marginBottom: "0.3rem" }}>
-                    ✓ CCI Cycles
-                  </div>
-                  <div style={{ color: "#CBD5E1" }}>
-                    CCI &gt;100 = Strong bullish | CCI &lt;-100 = Strong bearish
-                  </div>
-                </div>
-                <div>
-                  <div style={{ color: "#94A3B8", fontWeight: "500", marginBottom: "0.3rem" }}>
-                    ✓ ATR Volatility
-                  </div>
-                  <div style={{ color: "#CBD5E1" }}>
-                    High ATR adds caution weight for risk management
-                  </div>
-                </div>
-              </div>
-              <div style={{ marginTop: "0.75rem", paddingTop: "0.75rem", borderTop: "1px solid rgba(59, 130, 246, 0.2)", color: "#94A3B8", fontSize: "0.8rem" }}>
-                <strong style={{ color: "#60A5FA" }}>Confluence Score:</strong> Percentage of indicators showing bullish signals | 🟢 Bullish: majority agree | 🟡 Neutral: mixed signals | 🔴 Bearish: majority bearish
-              </div>
-                </div>
-                <div style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(min(110px, 100%), 1fr))",
-                  gap: "1rem",
-                }}>
-              {/* Score */}
-              <div style={{
-                background: "rgba(30, 41, 59, 0.5)",
-                borderRadius: "12px",
-                padding: "1rem",
-                border: "1px solid rgba(16, 185, 129, 0.2)",
-              }}>
-                <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.5rem", fontWeight: "600" }}>
-                  SCORE
-                </div>
-                <div style={{
-                  fontSize: "2rem",
-                  fontWeight: "700",
-                  color: result.score >= 50 ? "#10B981" : result.score >= 20 ? "#F59E0B" : "#EF4444",
-                }}>
-                  {Math.max(1, result.score)}
-                </div>
-              </div>
-
-              {/* Price */}
-              {result.price !== undefined && (
-                <div style={{
-                  background: "rgba(30, 41, 59, 0.5)",
-                  borderRadius: "12px",
-                  padding: "1rem",
-                  border: "1px solid rgba(16, 185, 129, 0.2)",
-                }}>
-                  <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.5rem", fontWeight: "600" }}>
-                    PRICE
-                  </div>
-                  <div style={{
-                    fontSize: "1.5rem",
-                    fontWeight: "600",
-                    color: "#10B981",
-                  }}>
-                    ${result.price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 4})}
-                  </div>
-                </div>
-              )}
-
-              {/* ATR */}
-              {result.atr !== undefined && Number.isFinite(result.atr) && (
-                <div style={{
-                  background: "rgba(30, 41, 59, 0.5)",
-                  borderRadius: "12px",
-                  padding: "1rem",
-                  border: "1px solid rgba(16, 185, 129, 0.2)",
-                }}>
-                  <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.5rem", fontWeight: "600" }}>
-                    ATR
-                  </div>
-                  <div style={{
-                    fontSize: "1.3rem",
-                    fontWeight: "600",
-                    color: "#F59E0B",
-                  }}>
-                    {result.atr.toFixed(2)}
-                  </div>
-                  <div style={{ fontSize: "0.7rem", color: "#64748B", marginTop: "0.3rem" }}>
-                    Volatility
-                  </div>
-                </div>
-              )}
-
-              {/* RSI */}
-              {result.rsi !== undefined && (
-                <div style={{
-                  background: "rgba(30, 41, 59, 0.5)",
-                  borderRadius: "12px",
-                  padding: "1rem",
-                  border: "1px solid rgba(16, 185, 129, 0.2)",
-                }}>
-                  <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.5rem", fontWeight: "600" }}>
-                    RSI (14)
-                  </div>
-                  <div style={{
-                    fontSize: "1.5rem",
-                    fontWeight: "600",
-                    color: result.rsi > 70 ? "#EF4444" : result.rsi < 30 ? "#10B981" : "#F59E0B",
-                  }}>
-                    {result.rsi.toFixed(1)}
-                  </div>
-                  <div style={{ fontSize: "0.7rem", color: "#64748B", marginTop: "0.3rem" }}>
-                    {result.rsi > 70 ? "Overbought" : result.rsi < 30 ? "Oversold" : "Neutral"}
-                  </div>
-                </div>
-              )}
-
-              {/* MACD */}
-              {result.macd_hist !== undefined && (
-                <div style={{
-                  background: "rgba(30, 41, 59, 0.5)",
-                  borderRadius: "12px",
-                  padding: "1rem",
-                  border: "1px solid rgba(16, 185, 129, 0.2)",
-                }}>
-                  <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.5rem", fontWeight: "600" }}>
-                    MACD
-                  </div>
-                  <div style={{
-                    fontSize: "1.5rem",
-                    fontWeight: "600",
-                    color: result.macd_hist > 0 ? "#10B981" : "#EF4444",
-                  }}>
-                    {result.macd_hist > 0 ? "↑" : "↓"}
-                  </div>
-                  <div style={{ fontSize: "0.7rem", color: "#64748B", marginTop: "0.3rem" }}>
-                    {result.macd_hist > 0 ? "Bullish" : "Bearish"}
-                  </div>
-                </div>
-              )}
-
-              {/* EMA200 */}
-              {result.ema200 !== undefined && (
-                <div style={{
-                  background: "rgba(30, 41, 59, 0.5)",
-                  borderRadius: "12px",
-                  padding: "1rem",
-                  border: "1px solid rgba(16, 185, 129, 0.2)",
-                }}>
-                  <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.5rem", fontWeight: "600" }}>
-                    EMA200
-                  </div>
-                  <div style={{
-                    fontSize: "1.3rem",
-                    fontWeight: "600",
-                    color: "#10B981",
-                  }}>
-                    {result.ema200.toLocaleString('en-US', {maximumFractionDigits: 0})}
-                  </div>
-                  <div style={{ fontSize: "0.7rem", color: "#64748B", marginTop: "0.3rem" }}>
-                    Avg
-                  </div>
-                </div>
-              )}
-
-              {/* ADX */}
-              {result.adx !== undefined && Number.isFinite(result.adx) && (
-                <div style={{
-                  background: "rgba(30, 41, 59, 0.5)",
-                  borderRadius: "12px",
-                  padding: "1rem",
-                  border: "1px solid rgba(16, 185, 129, 0.2)",
-                }}>
-                  <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.5rem", fontWeight: "600" }}>
-                    ADX
-                  </div>
-                  <div style={{
-                    fontSize: "1.3rem",
-                    fontWeight: "600",
-                    color: result.adx > 25 ? "#10B981" : "#64748B",
-                  }}>
-                    {result.adx.toFixed(1)}
-                  </div>
-                  <div style={{ fontSize: "0.7rem", color: "#64748B", marginTop: "0.3rem" }}>
-                    {result.adx > 25 ? "Strong" : "Weak"}
-                  </div>
-                </div>
-              )}
-
-              {/* Stochastic K */}
-              {result.stoch_k !== undefined && Number.isFinite(result.stoch_k) && (
-                <div style={{
-                  background: "rgba(30, 41, 59, 0.5)",
-                  borderRadius: "12px",
-                  padding: "1rem",
-                  border: "1px solid rgba(16, 185, 129, 0.2)",
-                }}>
-                  <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.5rem", fontWeight: "600" }}>
-                    STOCH K
-                  </div>
-                  <div style={{
-                    fontSize: "1.3rem",
-                    fontWeight: "600",
-                    color: result.stoch_k > 70 ? "#EF4444" : result.stoch_k < 30 ? "#10B981" : "#F59E0B",
-                  }}>
-                    {result.stoch_k.toFixed(1)}
-                  </div>
-                  <div style={{ fontSize: "0.7rem", color: "#64748B", marginTop: "0.3rem" }}>
-                    K
-                  </div>
-                </div>
-              )}
-
-              {/* Stochastic D */}
-              {result.stoch_d !== undefined && Number.isFinite(result.stoch_d) && (
-                <div style={{
-                  background: "rgba(30, 41, 59, 0.5)",
-                  borderRadius: "12px",
-                  padding: "1rem",
-                  border: "1px solid rgba(16, 185, 129, 0.2)",
-                }}>
-                  <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.5rem", fontWeight: "600" }}>
-                    STOCH D
-                  </div>
-                  <div style={{
-                    fontSize: "1.3rem",
-                    fontWeight: "600",
-                    color: result.stoch_d > 70 ? "#EF4444" : result.stoch_d < 30 ? "#10B981" : "#F59E0B",
-                  }}>
-                    {result.stoch_d.toFixed(1)}
-                  </div>
-                  <div style={{ fontSize: "0.7rem", color: "#64748B", marginTop: "0.3rem" }}>
-                    D
-                  </div>
-                </div>
-              )}
-
-              {/* CCI */}
-              {result.cci !== undefined && Number.isFinite(result.cci) && (
-                <div style={{
-                  background: "rgba(30, 41, 59, 0.5)",
-                  borderRadius: "12px",
-                  padding: "1rem",
-                  border: "1px solid rgba(16, 185, 129, 0.2)",
-                }}>
-                  <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.5rem", fontWeight: "600" }}>
-                    CCI
-                  </div>
-                  <div style={{
-                    fontSize: "1.3rem",
-                    fontWeight: "600",
-                    color: result.cci > 100 ? "#EF4444" : result.cci < -100 ? "#10B981" : "#F59E0B",
-                  }}>
-                    {result.cci.toFixed(0)}
-                  </div>
-                  <div style={{ fontSize: "0.7rem", color: "#64748B", marginTop: "0.3rem" }}>
-                    Cycles
-                  </div>
-                </div>
-              )}
-
-              {/* AROON UP */}
-              {result.aroon_up !== undefined && Number.isFinite(result.aroon_up) && (
-                <div style={{
-                  background: "rgba(30, 41, 59, 0.5)",
-                  borderRadius: "12px",
-                  padding: "1rem",
-                  border: "1px solid rgba(16, 185, 129, 0.2)",
-                }}>
-                  <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.5rem", fontWeight: "600" }}>
-                    AROON UP
-                  </div>
-                  <div style={{
-                    fontSize: "1.3rem",
-                    fontWeight: "600",
-                    color: result.aroon_up > 50 ? "#10B981" : "#64748B",
-                  }}>
-                    {result.aroon_up.toFixed(0)}
-                  </div>
-                  <div style={{ fontSize: "0.7rem", color: "#64748B", marginTop: "0.3rem" }}>
-                    Trend
-                  </div>
-                </div>
-              )}
-
-              {/* AROON DOWN */}
-              {result.aroon_down !== undefined && Number.isFinite(result.aroon_down) && (
-                <div style={{
-                  background: "rgba(30, 41, 59, 0.5)",
-                  borderRadius: "12px",
-                  padding: "1rem",
-                  border: "1px solid rgba(16, 185, 129, 0.2)",
-                }}>
-                  <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.5rem", fontWeight: "600" }}>
-                    AROON DOWN
-                  </div>
-                  <div style={{
-                    fontSize: "1.3rem",
-                    fontWeight: "600",
-                    color: result.aroon_down > 50 ? "#EF4444" : "#64748B",
-                  }}>
-                    {result.aroon_down.toFixed(0)}
-                  </div>
-                  <div style={{ fontSize: "0.7rem", color: "#64748B", marginTop: "0.3rem" }}>
-                    Trend
-                  </div>
-                </div>
-              )}
-
-              {/* OBV */}
-              {result.obv !== undefined && Number.isFinite(result.obv) && (
-                <div style={{
-                  background: "rgba(30, 41, 59, 0.5)",
-                  borderRadius: "12px",
-                  padding: "1rem",
-                  border: "1px solid rgba(16, 185, 129, 0.2)",
-                }}>
-                  <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.5rem", fontWeight: "600" }}>
-                    OBV
-                  </div>
-                  <div style={{
-                    fontSize: "1.3rem",
-                    fontWeight: "600",
-                    color: "#10B981",
-                  }}>
-                    {result.obv.toLocaleString('en-US', { maximumFractionDigits: 0 })}
-                  </div>
-                  <div style={{ fontSize: "0.7rem", color: "#64748B", marginTop: "0.3rem" }}>
-                    Volume Flow
-                  </div>
-                </div>
-              )}
-
-              {/* Open Interest - Crypto Only */}
-              {result.derivatives?.openInterest !== undefined && result.derivatives.openInterest > 0 && (
-                <div style={{
-                  background: "rgba(30, 41, 59, 0.5)",
-                  borderRadius: "12px",
-                  padding: "1rem",
-                  border: "1px solid var(--msp-border)",
-                }}>
-                  <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.5rem", fontWeight: "600" }}>
-                    📊 OPEN INTEREST
-                  </div>
-                  <div style={{
-                    fontSize: "1.3rem",
-                    fontWeight: "600",
-                    color: "var(--msp-muted)",
-                  }}>
-                    ${result.derivatives.openInterest >= 1e9 
-                      ? (result.derivatives.openInterest / 1e9).toFixed(2) + 'B'
-                      : result.derivatives.openInterest >= 1e6 
-                        ? (result.derivatives.openInterest / 1e6).toFixed(1) + 'M'
-                        : result.derivatives.openInterest.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                  </div>
-                  <div style={{ fontSize: "0.7rem", color: "#64748B", marginTop: "0.3rem" }}>
-                    Futures OI
-                  </div>
-                </div>
-              )}
-
-              {/* Funding Rate - Crypto Only */}
-              {result.derivatives?.fundingRate !== undefined && (
-                <div style={{
-                  background: "rgba(30, 41, 59, 0.5)",
-                  borderRadius: "12px",
-                  padding: "1rem",
-                  border: `1px solid ${result.derivatives.fundingRate > 0.05 ? 'rgba(239, 68, 68, 0.3)' : result.derivatives.fundingRate < -0.05 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(148, 163, 184, 0.2)'}`,
-                }}>
-                  <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.5rem", fontWeight: "600" }}>
-                    💰 FUNDING RATE
-                  </div>
-                  <div style={{
-                    fontSize: "1.3rem",
-                    fontWeight: "600",
-                    color: result.derivatives.fundingRate > 0.05 ? '#ef4444' 
-                      : result.derivatives.fundingRate < -0.05 ? '#10b981' 
-                      : '#94a3b8',
-                  }}>
-                    {result.derivatives.fundingRate >= 0 ? '+' : ''}{result.derivatives.fundingRate.toFixed(4)}%
-                  </div>
-                  <div style={{ fontSize: "0.7rem", color: "#64748B", marginTop: "0.3rem" }}>
-                    {result.derivatives.fundingRate > 0.05 ? 'Longs Paying' : result.derivatives.fundingRate < -0.05 ? 'Shorts Paying' : '8h Rate'}
-                  </div>
-                </div>
-              )}
-
-              {/* Long/Short Ratio - Crypto Only */}
-              {result.derivatives?.longShortRatio !== undefined && (
-                <div style={{
-                  background: "rgba(30, 41, 59, 0.5)",
-                  borderRadius: "12px",
-                  padding: "1rem",
-                  border: `1px solid ${result.derivatives.longShortRatio > 1.5 ? 'rgba(16, 185, 129, 0.3)' : result.derivatives.longShortRatio < 0.67 ? 'rgba(239, 68, 68, 0.3)' : 'rgba(148, 163, 184, 0.2)'}`,
-                }}>
-                  <div style={{ color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.5rem", fontWeight: "600" }}>
-                    ⚖️ LONG/SHORT
-                  </div>
-                  <div style={{
-                    fontSize: "1.3rem",
-                    fontWeight: "600",
-                    color: result.derivatives.longShortRatio > 1.5 ? '#10b981' 
-                      : result.derivatives.longShortRatio < 0.67 ? '#ef4444' 
-                      : '#94a3b8',
-                  }}>
-                    {result.derivatives.longShortRatio.toFixed(2)}
-                  </div>
-                  <div style={{ fontSize: "0.7rem", color: "#64748B", marginTop: "0.3rem" }}>
-                    {result.derivatives.longShortRatio > 1.5 ? 'Long Bias' : result.derivatives.longShortRatio < 0.67 ? 'Short Bias' : 'L/S Ratio'}
-                  </div>
-                </div>
-              )}
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* Empty State */}
-        {!loading && !result && !error && (
-          <div style={{
-            textAlign: "center",
-            padding: "3rem",
-            color: "#94A3B8",
-            background: "rgba(15, 23, 42, 0.8)",
-            borderRadius: "16px",
-            border: "1px solid rgba(16, 185, 129, 0.2)",
-          }}>
-            <p style={{ fontSize: "1.125rem", marginBottom: "0.5rem" }}>
-              Ready to find your next setup
-            </p>
-            <p style={{ fontSize: "0.875rem" }}>
-              Pick an asset, choose a symbol, then click "Find Best Setup"
-            </p>
-          </div>
-        )}
-
-        {showPreTradeChecklist && (
-          <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 px-4">
-            <div className="w-full max-w-md rounded-xl border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-4">
-              <div className="mb-2 text-[0.84rem] font-extrabold uppercase tracking-[0.08em] text-[var(--msp-text)]">Pre-Trade Checklist</div>
-              <div className="mb-3 text-[0.74rem] text-[var(--msp-text-muted)]">
-                Confirm discipline checks before creating a plan{pendingDeployPick?.symbol ? ` for ${String(pendingDeployPick.symbol).toUpperCase()}` : ''}.
-              </div>
-              <div className="grid gap-2 text-[0.78rem] text-[var(--msp-text)]">
-                <label className="flex items-start gap-2 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2.5 py-2">
-                  <input
-                    id="pretrade-thesis"
-                    name="thesis"
-                    type="checkbox"
-                    checked={preTradeChecklist.thesis}
-                    onChange={(e) => setPreTradeChecklist((prev) => ({ ...prev, thesis: e.target.checked }))}
-                    className="mt-0.5"
-                  />
-                  <span>Thesis is clear and setup aligns with current regime.</span>
-                </label>
-                <label className="flex items-start gap-2 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2.5 py-2">
-                  <input
-                    id="pretrade-risk"
-                    name="risk"
-                    type="checkbox"
-                    checked={preTradeChecklist.risk}
-                    onChange={(e) => setPreTradeChecklist((prev) => ({ ...prev, risk: e.target.checked }))}
-                    className="mt-0.5"
-                  />
-                  <span>Stop/invalidation and risk budget are defined before entry.</span>
-                </label>
-                <label className="flex items-start gap-2 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2.5 py-2">
-                  <input
-                    id="pretrade-event-window"
-                    name="eventWindow"
-                    type="checkbox"
-                    checked={preTradeChecklist.eventWindow}
-                    onChange={(e) => setPreTradeChecklist((prev) => ({ ...prev, eventWindow: e.target.checked }))}
-                    className="mt-0.5"
-                  />
-                  <span>High-impact event window reviewed and throttle accepted.</span>
-                </label>
-              </div>
-              <div className="mt-3 flex gap-2">
-                <button type="button"
-                  onClick={() => {
-                    setShowPreTradeChecklist(false);
-                    setPendingDeployPick(null);
-                  }}
-                  className="h-9 flex-1 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 text-[0.7rem] font-extrabold uppercase text-[var(--msp-text-muted)]"
-                >
-                  Cancel
-                </button>
-                <button type="button"
-                  onClick={() => { void confirmDeployRankCandidate(); }}
-                  className="msp-btn-elite-primary h-9 flex-1 px-3 text-[0.7rem] font-extrabold uppercase"
-                >
-                  Confirm & Create Plan
-                </button>
+            <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5">
+              <div className="mb-1 text-[0.68rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Structure Integrity</div>
+              <div className="grid gap-1 text-[0.74rem] text-slate-400">
+                <div>Break Level: <span className="font-bold text-white">{entry != null ? entry.toFixed(2) : 'N/A'}</span></div>
+                <div>Pullback Depth: <span className="font-bold text-white">{detail.atr != null && detail.price ? `${Math.min(99, Math.round((detail.atr / detail.price) * 100 * 18))}%` : 'N/A'}</span></div>
+                <div>Pattern: <span className="font-bold text-white">{trendAligned ? 'Trend continuation' : 'Structure forming'}</span></div>
               </div>
             </div>
           </div>
-        )}
-
-        {/* Legal Disclaimer */}
-        <div style={{
-          marginTop: "1.5rem",
-          padding: "0.75rem 1rem",
-          background: "rgba(245, 158, 11, 0.1)",
-          border: "1px solid rgba(245, 158, 11, 0.3)",
-          borderRadius: "8px",
-          textAlign: "center",
-        }}>
-          <p style={{ fontSize: "0.75rem", color: "#D97706", margin: 0 }}>
-            ⚠️ <strong>Disclaimer:</strong> Scan results are for educational purposes only. This is not investment advice. 
-            Past performance does not guarantee future results. Always do your own research and consult a licensed financial advisor.
-          </p>
         </div>
 
-        {/* ─── Research Case Modal ─── */}
-        {researchCasePick && (
-          <ResearchCaseModal
-            pick={researchCasePick}
-            assetType={bulkScanResults?.type || 'equity'}
-            timeframe={bulkScanResults?.timeframe || '1d'}
-            onClose={() => setResearchCasePick(null)}
-          />
-        )}
+        {/* Execution Plan */}
+        <div className="md:col-span-5 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel)] p-3 md:p-4">
+          <div className="mb-3 text-[0.72rem] font-extrabold uppercase tracking-[0.08em] text-slate-500">Execution Plan</div>
+          <div className="grid gap-3">
+            <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5 text-[0.74rem] text-slate-400">
+              <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Entry Trigger</div>
+              <div>Entry: <span className="font-bold text-white">{entry != null ? entry.toFixed(2) : 'N/A'}</span></div>
+              <div>Trigger: <span className="font-bold text-white">{direction === 'bullish' ? 'Close above trigger' : direction === 'bearish' ? 'Close below trigger' : 'Await directional break'}</span></div>
+              <div>Confirmation: <span className="font-bold text-white">Volume expansion</span></div>
+            </div>
+            <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5 text-[0.74rem] text-slate-400">
+              <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Risk Parameters</div>
+              <div>Stop: <span className="font-bold text-red-400">{stop != null ? stop.toFixed(2) : 'N/A'}</span></div>
+              <div>Target 1: <span className="font-bold text-emerald-400">{target1 != null ? target1.toFixed(2) : 'N/A'}</span></div>
+              <div>Target 2: <span className="font-bold text-emerald-400">{target2 != null ? target2.toFixed(2) : 'N/A'}</span></div>
+              <div>R:R: <span className={`font-bold ${rr != null && rr >= 1.8 ? 'text-emerald-400' : 'text-amber-400'}`}>{rr != null ? rr.toFixed(1) : 'N/A'}</span></div>
+            </div>
+            <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5 text-[0.74rem] text-slate-400">
+              <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Risk Governor</div>
+              <div>Capital Allocation: <span className={`font-bold ${tradeReady ? 'text-emerald-400' : 'text-amber-400'}`}>{tradeReady ? '0.5% risk' : 'Review sizing'}</span></div>
+              <div>Active Constraint: <span className="font-bold text-white">{tradeReady ? 'Tactical sizing' : 'Risk constraints active'}</span></div>
+            </div>
 
-        {/* ─── Risk Block Modal (shown when governor BLOCK is enforced) ─── */}
-        {showRiskBlockModal && (
-          <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 px-4">
-            <div className="w-full max-w-md rounded-xl border border-red-500/40 bg-[var(--msp-panel)] p-5">
-              <div className="mb-2 flex items-center gap-2">
-                <span className="text-2xl">🚫</span>
-                <div className="text-[0.9rem] font-extrabold uppercase tracking-[0.08em] text-red-400">Trade Blocked by Risk Governor</div>
-              </div>
-              <div className="mb-3 rounded-md border border-red-500/20 bg-red-500/10 px-3 py-2 text-[0.78rem] text-red-300">
-                {riskBlockReason}
-              </div>
-              <div className="mb-3 text-[0.74rem] text-[var(--msp-text-muted)]">
-                The risk governor has blocked this trade. This is not a suggestion — the action has been prevented to protect capital.
-                Review the reason above, adjust your approach, or wait for conditions to improve.
-              </div>
-              <button type="button"
-                onClick={() => setShowRiskBlockModal(false)}
-                className="h-9 w-full rounded-md border border-red-500/30 bg-red-500/10 px-3 text-[0.7rem] font-extrabold uppercase text-red-300 hover:bg-red-500/20"
-              >
-                Understood
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-2">
+              <Link href={`/tools/alerts?symbol=${encodeURIComponent(detail.symbol)}&price=${detail.price || ''}&direction=${direction}`}
+                className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-slate-400 no-underline hover:bg-slate-700/50 transition-colors">
+                Set Alert
+              </Link>
+              <button type="button" onClick={handleAddToWatchlist}
+                className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-slate-400 hover:bg-slate-700/50 transition-colors">
+                Add to Watchlist
               </button>
             </div>
           </div>
-        )}
-
-        {/* ─── Behavioral Overtrading Screen ─── */}
-        {showBehavioralScreen && behavioralScreenData && (
-          <div className="fixed inset-0 z-[85] flex items-center justify-center bg-black/60 px-4">
-            <div className="w-full max-w-md rounded-xl border border-amber-500/40 bg-[var(--msp-panel)] p-5">
-              <div className="mb-2 flex items-center gap-2">
-                <span className="text-2xl">⚠️</span>
-                <div className="text-[0.9rem] font-extrabold uppercase tracking-[0.08em] text-amber-400">Overtrading Warning</div>
-              </div>
-              <div className="mb-3 rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-[0.78rem] text-amber-300">
-                You have taken <strong>{behavioralScreenData.tradesToday}</strong> trades today.
-                Your 30-day average is <strong>{behavioralScreenData.avgTradesPerSession.toFixed(1)}</strong> trades per session.
-              </div>
-              <div className="mb-3 text-[0.74rem] text-[var(--msp-text-muted)]">
-                Elevated trade frequency is a leading indicator of tilt. Consider whether this next trade meets your quality bar
-                or if you&apos;re reacting to the desire to &quot;get it back.&quot;
-              </div>
-              <div className="flex gap-2">
-                <button type="button"
-                  onClick={() => {
-                    setShowBehavioralScreen(false);
-                    setBehavioralScreenData(null);
-                  }}
-                  className="h-9 flex-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 text-[0.7rem] font-extrabold uppercase text-amber-300"
-                >
-                  Step Back — Cancel
-                </button>
-                <button type="button"
-                  onClick={() => {
-                    setShowBehavioralScreen(false);
-                    setBehavioralScreenData(null);
-                    if (pendingDeployPick) {
-                      setPreTradeChecklist({ thesis: false, risk: false, eventWindow: false });
-                      setShowPreTradeChecklist(true);
-                    }
-                  }}
-                  className="h-9 flex-1 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 text-[0.7rem] font-extrabold uppercase text-[var(--msp-text-muted)]"
-                >
-                  I Confirm — Proceed
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>}
-      />
+        </div>
+      </div>
     </div>
   );
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/*  MAIN PAGE                                                                 */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
 export default function ScannerPage() {
+  const { navigateTo, selectSymbol } = useV2();
+  const { tier } = useUserTier();
+  const regime = useRegime();
+
+  /* ─── Scanner mode toggle ─── */
+  const [mode, setMode] = useState<ScannerMode>('ranked');
+
+  /* ─── V2 Ranked Scan state ─── */
+  const [v2Timeframe, setV2Timeframe] = useState<ScanTimeframe>('daily');
+  const equity = useScannerResults('equity', v2Timeframe);
+  const crypto = useScannerResults('crypto', v2Timeframe);
+  const [activeTab, setActiveTab] = useState<typeof TABS[number]>('All');
+  const [sortKey, setSortKey] = useState<SortKey>('mspScore');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
+
+  /* ─── Pro Scan state ─── */
+  const [proAsset, setProAsset] = useState<AssetClass>('crypto');
+  const [proTimeframe, setProTimeframe] = useState<'15m' | '30m' | '1h' | '1d'>('1d');
+  const [proDepth, setProDepth] = useState<ScanDepth>('light');
+  const [proUniverseSize, setProUniverseSize] = useState(500);
+  const [proMinConfidence, setProMinConfidence] = useState<number>(50);
+  const [proMtfAlignment, setProMtfAlignment] = useState<number>(2);
+  const [proVolState, setProVolState] = useState<string>('all');
+  const [proSqueeze, setProSqueeze] = useState<'all' | 'squeeze'>('all');
+  const [proIntent, setProIntent] = useState<'observe' | 'decide'>('observe');
+  const [proScanLoading, setProScanLoading] = useState(false);
+  const [proScanResults, setProScanResults] = useState<any>(null);
+  const [proScanError, setProScanError] = useState<string | null>(null);
+  const [activeTemplateId, setActiveTemplateId] = useState<string | undefined>(undefined);
+  const [proDirection, setProDirection] = useState<'all' | 'long' | 'short'>('all');
+  const [proQuality, setProQuality] = useState<'all' | 'high' | 'medium'>('all');
+  const [proSort, setProSort] = useState<'rank' | 'confidence' | 'volatility' | 'trend'>('rank');
+  const [proBulkViewMode, setProBulkViewMode] = useState<'table' | 'cards'>('table');
+
+  /* ─── Shared detail state ─── */
+  const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
+  const [symbolDetail, setSymbolDetail] = useState<SymbolDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  const currentRegime = regime.data?.regime?.toLowerCase() || 'trend';
+
+  /* ─── Regime compatibility ─── */
+  const regimeSetupMap: Record<string, string[]> = {
+    trend: ['breakout', 'trend_continuation', 'pullback'],
+    range: ['mean_reversion', 'range_fade', 'liquidity_sweep'],
+    compression: ['volatility_expansion', 'squeeze', 'gamma_trap'],
+    transition: ['breakout', 'gamma_squeeze', 'volatility_expansion'],
+    expansion: ['breakout', 'trend_continuation', 'gamma_squeeze'],
+    risk_off: ['mean_reversion', 'hedge', 'range_fade'],
+    risk_on: ['breakout', 'trend_continuation', 'pullback'],
+  };
+
+  function isRegimeCompatible(r: ScanResult): boolean {
+    const setupType = (r.setup || r.dveSignalType || '').toLowerCase().replace(/\s+/g, '_');
+    const compatible = regimeSetupMap[currentRegime] || [];
+    if (!setupType || setupType === 'none') {
+      if (currentRegime === 'risk_off') return r.direction === 'bearish';
+      if (currentRegime === 'risk_on' || currentRegime === 'trend' || currentRegime === 'expansion') return r.direction === 'bullish';
+      return true;
+    }
+    return compatible.some(c => setupType.includes(c));
+  }
+
+  /* ─── V2 Ranked data ─── */
+  const allResults: ScanResult[] = useMemo(() => {
+    const eq = (equity.data?.results || []).map(r => ({ ...r, _assetClass: 'equity' as const }));
+    const cr = (crypto.data?.results || []).map(r => ({ ...r, _assetClass: 'crypto' as const }));
+    return [...eq, ...cr];
+  }, [equity.data, crypto.data]);
+
+  const filtered = useMemo(() => {
+    let items = allResults;
+    switch (activeTab) {
+      case 'Equities': items = items.filter(r => (r as any)._assetClass === 'equity'); break;
+      case 'Crypto': items = items.filter(r => (r as any)._assetClass === 'crypto'); break;
+      case 'Bullish': items = items.filter(r => r.direction === 'bullish'); break;
+      case 'Bearish': items = items.filter(r => r.direction === 'bearish'); break;
+      case 'High Score': items = items.filter(r => Math.abs(r.score) >= 5); break;
+      case 'DVE Signals': items = items.filter(r => (r.dveSignalType && r.dveSignalType !== 'none') || (r.dveFlags && r.dveFlags.length > 0)); break;
+      case 'Regime Match': items = items.filter(r => isRegimeCompatible(r)); break;
+    }
+    items.sort((a, b) => {
+      let av: any, bv: any;
+      switch (sortKey) {
+        case 'symbol': av = a.symbol; bv = b.symbol; break;
+        case 'score': av = a.score ?? 0; bv = b.score ?? 0; break;
+        case 'mspScore': av = computeMspScore(a, currentRegime); bv = computeMspScore(b, currentRegime); break;
+        case 'direction': av = a.direction ?? ''; bv = b.direction ?? ''; break;
+        case 'confidence': av = a.confidence ?? 0; bv = b.confidence ?? 0; break;
+        case 'rsi': av = a.rsi ?? 0; bv = b.rsi ?? 0; break;
+        case 'price': av = a.price ?? 0; bv = b.price ?? 0; break;
+        case 'dveBbwp': av = a.dveBbwp ?? 0; bv = b.dveBbwp ?? 0; break;
+        default: av = 0; bv = 0;
+      }
+      if (typeof av === 'string') return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+      return sortDir === 'asc' ? av - bv : bv - av;
+    });
+    return items;
+  }, [allResults, activeTab, sortKey, sortDir]);
+
+  const v2Loading = equity.loading || crypto.loading;
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortKey(key); setSortDir('desc'); }
+  }
+
+  /* ─── Fetch single symbol detail ─── */
+  const loadSymbolDetail = useCallback(async (symbol: string, tf: string, asset: string) => {
+    setSelectedSymbol(symbol);
+    setDetailLoading(true);
+    setSymbolDetail(null);
+    try {
+      const res = await fetch('/api/scanner/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: asset, timeframe: tf, minScore: 0, symbols: [symbol] }),
+      });
+      const data = await res.json();
+      if (data.success && data.results?.length > 0) {
+        setSymbolDetail(data.results[0]);
+      } else {
+        setSymbolDetail({ symbol, score: 0, direction: 'neutral' });
+      }
+    } catch {
+      setSymbolDetail({ symbol, score: 0, direction: 'neutral' });
+    } finally {
+      setDetailLoading(false);
+    }
+  }, []);
+
+  /* ─── V2 row click ─── */
+  const handleV2RowClick = useCallback((r: ScanResult) => {
+    const asset = (r as any)._assetClass === 'crypto' ? 'crypto' : 'equity';
+    const tfMap: Record<string, string> = { daily: '1d', weekly: '1d', '1h': '1h', '15m': '15m' };
+    loadSymbolDetail(r.symbol, tfMap[v2Timeframe] || '1d', asset);
+  }, [v2Timeframe, loadSymbolDetail]);
+
+  /* ─── Pro Scan: run bulk scan ─── */
+  const runProScan = useCallback(async () => {
+    setProScanLoading(true);
+    setProScanError(null);
+    setProScanResults(null);
+    setSelectedSymbol(null);
+    setSymbolDetail(null);
+    try {
+      const payload: any = { type: proAsset, timeframe: proTimeframe };
+      if (proAsset === 'crypto') {
+        payload.mode = proDepth;
+        if (proDepth === 'light') payload.universeSize = proUniverseSize;
+      } else {
+        payload.mode = 'hybrid';
+      }
+      const res = await fetch('/api/scanner/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 401) { setProScanError('Please log in to use the scanner'); return; }
+        setProScanError(data?.error || `Server returned ${res.status}`);
+        return;
+      }
+      setProScanResults(data);
+    } catch (e: any) {
+      setProScanError(e?.message || 'Network error');
+    } finally {
+      setProScanLoading(false);
+    }
+  }, [proAsset, proTimeframe, proDepth, proUniverseSize]);
+
+  /* ─── Pro Scan: template apply ─── */
+  const applyTemplate = useCallback((tmpl: ScanTemplate) => {
+    setActiveTemplateId(tmpl.id);
+    setProMinConfidence(tmpl.config.minConfidence);
+    setProMtfAlignment(tmpl.config.mtfAlignment);
+    setProVolState(tmpl.config.volatilityState);
+    if (tmpl.config.direction) setProDirection(tmpl.config.direction as 'all' | 'long' | 'short');
+    if (tmpl.config.quality) setProQuality(tmpl.config.quality as 'all' | 'high' | 'medium');
+  }, []);
+
+  /* ─── Pro scan filtered results → ScreenerRow[] ─── */
+  const proScreenerRows: ScreenerRow[] = useMemo(() => {
+    if (!proScanResults?.topPicks) return [];
+    return proScanResults.topPicks
+      .map((pick: any, idx: number) => {
+        const conf = pick.confidence ?? Math.min(99, Math.max(10, Math.round(pick.score ?? 50)));
+        const dir = (pick.direction === 'bullish' ? 'LONG' : pick.direction === 'bearish' ? 'SHORT' : 'NEUTRAL') as 'LONG' | 'SHORT' | 'NEUTRAL';
+        const qual = conf >= 70 ? 'high' : conf >= 50 ? 'medium' : 'low';
+        const adxVal = pick.adx ?? 0;
+        const atr = pick.atr ?? 0;
+        const priceVal = pick.price ?? 0;
+        const atrPct = priceVal > 0 ? (atr / priceVal) * 100 : 0;
+        const trendOk = dir === 'LONG' ? (pick.signals?.bullish ?? 0) > (pick.signals?.bearish ?? 0) : dir === 'SHORT' ? (pick.signals?.bearish ?? 0) > (pick.signals?.bullish ?? 0) : false;
+        const momOk = pick.rsi != null && ((dir === 'LONG' && pick.rsi > 45) || (dir === 'SHORT' && pick.rsi < 55));
+        const flowOk = dir === 'LONG' ? (pick.signals?.bullish ?? 0) >= (pick.signals?.neutral ?? 0) : dir === 'SHORT' ? (pick.signals?.bearish ?? 0) >= (pick.signals?.neutral ?? 0) : false;
+        const tfA = [trendOk, momOk, flowOk, dir !== 'NEUTRAL'].filter(Boolean).length;
+        const strat = pick.setup || (pick.macd_hist != null && pick.macd_hist > 0 ? 'MOM REV' : pick.rsi != null && pick.rsi < 35 ? 'MEAN REV' : atrPct < 1.5 ? 'BREAKOUT' : 'RANGE');
+        const rec = pick.institutionalFilter?.recommendation;
+        const perm = rec === 'TRADE_READY' && qual !== 'low' ? 'COMPLIANT' : (rec === 'NO_TRADE' || qual === 'low') ? 'BLOCKED' : 'TIGHT';
+        return {
+          rank: idx + 1, symbol: pick.symbol, direction: dir, confidence: conf, quality: qual,
+          strategy: strat, rsi: pick.rsi, adx: adxVal, atrPct, tfAlignment: tfA,
+          volume24h: pick.volume, price: priceVal, permission: perm,
+        } as ScreenerRow;
+      })
+      .filter((row: ScreenerRow) => {
+        if (proDirection !== 'all' && ((proDirection === 'long' && row.direction !== 'LONG') || (proDirection === 'short' && row.direction !== 'SHORT'))) return false;
+        if (proQuality !== 'all' && row.quality !== proQuality) return false;
+        if (row.confidence < proMinConfidence) return false;
+        if (row.tfAlignment != null && row.tfAlignment < proMtfAlignment) return false;
+        if (proVolState !== 'all') {
+          const atr = row.atrPct ?? 0;
+          if (proVolState === 'low' && atr > 1.5) return false;
+          if (proVolState === 'moderate' && (atr < 1.5 || atr > 3)) return false;
+          if (proVolState === 'high' && atr < 3) return false;
+        }
+        return true;
+      });
+  }, [proScanResults, proDirection, proQuality, proMinConfidence, proMtfAlignment, proVolState]);
+
+  /* ─── Pro scan row click ─── */
+  const handleProRowClick = useCallback((row: ScreenerRow) => {
+    loadSymbolDetail(row.symbol, proTimeframe, proAsset);
+  }, [proTimeframe, proAsset, loadSymbolDetail]);
+
+  /* ─── Detail section (shared between both modes) ─── */
+  const detailTimeframeLabel = mode === 'ranked'
+    ? (v2Timeframe === '15m' ? '15M' : v2Timeframe === '1h' ? '1H' : v2Timeframe === 'weekly' ? 'W' : 'D')
+    : proTimeframe.toUpperCase();
+  const detailAssetType = mode === 'ranked' ? 'crypto' : proAsset;
+
+  function SortHeader({ k, label, w }: { k: SortKey; label: string; w: string }) {
+    return (
+      <th className={`${w} text-left text-[10px] uppercase tracking-wider text-slate-500 cursor-pointer hover:text-slate-300 py-2 px-2 select-none whitespace-nowrap`} onClick={() => toggleSort(k)}>
+        {label} {sortKey === k ? (sortDir === 'desc' ? '▼' : '▲') : ''}
+      </th>
+    );
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════ */
   return (
-    <Suspense fallback={<div style={{ minHeight: "100vh", background: "var(--msp-bg, #0A101C)" }} />}>
-      <ScannerContent />
-    </Suspense>
+    <div className="space-y-5">
+      {/* ─── Header ─── */}
+      <SectionHeader title="Scanner" subtitle="Ranked opportunity engine — live scan results" />
+
+      {/* ─── Mode Toggle ─── */}
+      <div className="flex items-center gap-1 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-1 w-fit">
+        <button onClick={() => { setMode('ranked'); setSelectedSymbol(null); setSymbolDetail(null); }}
+          className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-[0.06em] transition-all ${mode === 'ranked' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:text-slate-200 border border-transparent'}`}>
+          Ranked Scan
+        </button>
+        <button onClick={() => { setMode('pro'); setSelectedSymbol(null); setSymbolDetail(null); }}
+          className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-[0.06em] transition-all ${mode === 'pro' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:text-slate-200 border border-transparent'}`}>
+          Pro Scanner
+        </button>
+      </div>
+
+      {/* ─── Active Regime Context ─── */}
+      {regime.data && (
+        <div className="flex items-center gap-3 px-3 py-2 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel-2)] flex-wrap">
+          <span className="text-[10px] uppercase tracking-wider text-slate-500">Active Regime</span>
+          <Badge label={regime.data.regime} color={REGIME_COLORS[currentRegime as RegimePriority] || '#64748B'} small />
+          <span className="text-[10px] text-slate-500">Risk: <span className="text-white">{regime.data.riskLevel}</span></span>
+          <span className="text-[10px] text-slate-500">Permission: <span className={regime.data.permission === 'full' ? 'text-emerald-400' : regime.data.permission === 'reduced' ? 'text-yellow-400' : 'text-red-400'}>{regime.data.permission}</span></span>
+          <div className="h-3 w-px bg-slate-700 mx-1" />
+          <span className="text-[10px] text-slate-600">Weights: {Object.entries(REGIME_WEIGHTS[currentRegime] || {}).map(([k, v]) => `${k}:${v}`).join(' · ')}</span>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════ V2 RANKED SCAN ═══════════════════════════════ */}
+      {mode === 'ranked' && !selectedSymbol && (
+        <>
+          {/* Timeframe selector */}
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] text-slate-500 mr-1 uppercase">Timeframe</span>
+            {SCAN_TIMEFRAMES.map(tf => (
+              <button key={tf.value} onClick={() => setV2Timeframe(tf.value)}
+                className={`px-2.5 py-1 text-[11px] rounded-md transition-colors ${v2Timeframe === tf.value ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-[var(--msp-border)]'}`}>
+                {tf.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Tabs — dropdown on mobile, pills on desktop */}
+          <div className="md:hidden">
+            <select
+              value={activeTab}
+              onChange={(e) => setActiveTab(e.target.value as typeof activeTab)}
+              className="w-full rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
+            >
+              {TABS.map(tab => {
+                const count = tab === 'All' ? allResults.length
+                  : tab === 'Equities' ? allResults.filter(r => (r as any)._assetClass === 'equity').length
+                  : tab === 'Crypto' ? allResults.filter(r => (r as any)._assetClass === 'crypto').length
+                  : tab === 'Bullish' ? allResults.filter(r => r.direction === 'bullish').length
+                  : tab === 'Bearish' ? allResults.filter(r => r.direction === 'bearish').length
+                  : tab === 'High Score' ? allResults.filter(r => Math.abs(r.score) >= 5).length
+                  : tab === 'DVE Signals' ? allResults.filter(r => (r.dveSignalType && r.dveSignalType !== 'none') || (r.dveFlags && r.dveFlags.length > 0)).length
+                  : tab === 'Regime Match' ? allResults.filter(r => isRegimeCompatible(r)).length
+                  : 0;
+                return <option key={tab} value={tab}>{tab} ({count})</option>;
+              })}
+            </select>
+          </div>
+          <div className="hidden md:flex items-center gap-1 overflow-x-auto pb-1">
+            {TABS.map(tab => (
+              <button key={tab} onClick={() => setActiveTab(tab)}
+                className={`px-2.5 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap transition-colors ${activeTab === tab ? 'bg-[rgba(16,185,129,0.1)] text-[var(--msp-accent)] border border-[rgba(16,185,129,0.4)]' : 'text-[var(--msp-text-muted)] hover:bg-slate-800/60 border border-transparent'}`}>
+                {tab}
+                <span className="ml-1 text-[10px] text-slate-600">
+                  {tab === 'All' ? allResults.length
+                    : tab === 'Equities' ? allResults.filter(r => (r as any)._assetClass === 'equity').length
+                    : tab === 'Crypto' ? allResults.filter(r => (r as any)._assetClass === 'crypto').length
+                    : tab === 'Bullish' ? allResults.filter(r => r.direction === 'bullish').length
+                    : tab === 'Bearish' ? allResults.filter(r => r.direction === 'bearish').length
+                    : tab === 'High Score' ? allResults.filter(r => Math.abs(r.score) >= 5).length
+                    : tab === 'DVE Signals' ? allResults.filter(r => (r.dveSignalType && r.dveSignalType !== 'none') || (r.dveFlags && r.dveFlags.length > 0)).length
+                    : tab === 'Regime Match' ? allResults.filter(r => isRegimeCompatible(r)).length
+                    : 0}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {/* Table */}
+          <Card>
+            {!canAccessUnlimitedScanning(tier) && (
+              <div className="mb-3 px-3 py-2 rounded-lg border border-amber-500/30 bg-amber-500/10 flex items-center justify-between">
+                <span className="text-xs text-amber-300">Free tier: {FREE_DAILY_SCAN_LIMIT} scans/day. Upgrade for unlimited scanning.</span>
+                <a href="/pricing" className="text-[10px] px-2 py-1 bg-amber-500/20 text-amber-400 rounded border border-amber-500/30 hover:bg-amber-500/30 transition-colors">Upgrade</a>
+              </div>
+            )}
+            {v2Loading ? (
+              <div className="space-y-3 py-4">{Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-8 bg-slate-700/30 rounded animate-pulse" />)}</div>
+            ) : filtered.length === 0 ? (
+              <div className="text-xs text-slate-500 py-12 text-center">No results match this filter.</div>
+            ) : (
+              <div className="overflow-x-auto -mx-1">
+                <table className="w-full text-xs" style={{ minWidth: 900 }}>
+                  <thead>
+                    <tr className="border-b border-[var(--msp-border)]">
+                      <SortHeader k="symbol" label="Symbol" w="w-20" />
+                      <SortHeader k="mspScore" label="MSP" w="w-14" />
+                      <SortHeader k="price" label="Price" w="w-20" />
+                      <SortHeader k="direction" label="Direction" w="w-16" />
+                      <SortHeader k="score" label="Raw" w="w-12" />
+                      <SortHeader k="confidence" label="Conf" w="w-12" />
+                      <SortHeader k="dveBbwp" label="BBWP" w="w-12" />
+                      <th className="w-20 text-left text-[10px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">DVE</th>
+                      <th className="w-16 text-left text-[10px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Regime</th>
+                      <th className="w-16 text-left text-[10px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Lifecycle</th>
+                      <th className="w-16 text-[10px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((r) => {
+                      const regimeLabel = r.scoreV2?.regime?.label || r.type || '';
+                      const msp = computeMspScore(r, currentRegime);
+                      const lifecycle = deriveLifecycleState(r, currentRegime);
+                      const mspColor = msp >= 70 ? '#10B981' : msp >= 50 ? '#F59E0B' : msp >= 30 ? '#94A3B8' : '#EF4444';
+                      return (
+                        <tr key={r.symbol} className="border-b border-slate-800/40 hover:bg-slate-800/30 cursor-pointer transition-colors" onClick={() => handleV2RowClick(r)}>
+                          <td className="py-2.5 px-2 whitespace-nowrap"><div className="font-bold text-white">{r.symbol}</div><div className="text-[10px] text-slate-600">{regimeLabel}</div></td>
+                          <td className="py-2.5 px-2 text-center whitespace-nowrap"><span className="text-sm font-black" style={{ color: mspColor }}>{msp}</span></td>
+                          <td className="py-2.5 px-2 text-slate-300 font-mono whitespace-nowrap">{formatPrice(r.price)}</td>
+                          <td className="py-2.5 px-2 whitespace-nowrap"><Badge label={r.direction || 'neutral'} color={dirColor(r.direction)} small /></td>
+                          <td className="py-2.5 px-2 text-slate-400 text-[10px] whitespace-nowrap">{r.score}</td>
+                          <td className="py-2.5 px-2 text-slate-400 text-[10px] whitespace-nowrap">{r.confidence != null ? `${r.confidence}%` : '—'}</td>
+                          <td className="py-2.5 px-2 whitespace-nowrap">
+                            <span className={r.dveBbwp != null ? (r.dveBbwp < 20 ? 'text-cyan-400' : r.dveBbwp > 80 ? 'text-orange-400' : 'text-slate-300') : 'text-slate-600'}>
+                              {r.dveBbwp != null ? r.dveBbwp.toFixed(0) : '—'}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-2 text-[10px] whitespace-nowrap max-w-[80px] truncate">
+                            {(() => {
+                              if (r.dveSignalType && r.dveSignalType !== 'none') return <span className="text-yellow-400 font-semibold">{r.dveSignalType.replace(/_/g, ' ')}</span>;
+                              if (r.dveFlags && r.dveFlags.length > 0) {
+                                const fc: Record<string, string> = { SQUEEZE_FIRE: 'text-yellow-400', COMPRESSED: 'text-cyan-400', EXPANDING: 'text-amber-400', CLIMAX: 'text-red-400', BREAKOUT: 'text-emerald-400', HIGH_BREAKOUT: 'text-emerald-300', VOL_TRAP: 'text-red-300', EXHAUSTION_RISK: 'text-orange-400', DIR_BULL: 'text-emerald-400', DIR_BEAR: 'text-red-400', EXTENDED_PHASE: 'text-slate-400', CONTINUATION: 'text-amber-300' };
+                                const top = r.dveFlags[0];
+                                return <span className={fc[top] || 'text-slate-400'}>{top.replace(/_/g, ' ')}{r.dveFlags.length > 1 ? ` +${r.dveFlags.length - 1}` : ''}</span>;
+                              }
+                              return <span className="text-slate-600">—</span>;
+                            })()}
+                          </td>
+                          <td className="py-2.5 px-2 whitespace-nowrap">
+                            {isRegimeCompatible(r)
+                              ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">✓ Match</span>
+                              : r.scoreV2?.regimeScore?.gated
+                                ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 border border-red-500/20">Gated</span>
+                                : <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-500/15 text-slate-500 border border-slate-500/20">Neutral</span>}
+                          </td>
+                          <td className="py-2.5 px-2 whitespace-nowrap">
+                            <span className="text-[10px] px-1.5 py-0.5 rounded border" style={{ color: LIFECYCLE_COLORS[lifecycle], borderColor: LIFECYCLE_COLORS[lifecycle] + '40', backgroundColor: LIFECYCLE_COLORS[lifecycle] + '15' }}>
+                              {lifecycle.replace('_', ' ')}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-2 text-center whitespace-nowrap">
+                            <button onClick={(e) => { e.stopPropagation(); handleV2RowClick(r); }} className="px-2 py-1 bg-emerald-500/10 text-emerald-400 rounded text-[10px] hover:bg-emerald-500/20 transition-colors">Analyze</button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-800/40">
+              <span className="text-[10px] text-slate-600">{filtered.length} symbols</span>
+              <button onClick={() => { equity.refetch(); crypto.refetch(); }} className="text-[10px] text-emerald-400 hover:underline">↻ Rescan</button>
+            </div>
+          </Card>
+        </>
+      )}
+
+      {/* ═══════════════════════════════ PRO SCANNER ═══════════════════════════════ */}
+      {mode === 'pro' && !selectedSymbol && (
+        <>
+          {/* Scan Configuration Form */}
+          <div className="rounded-xl border border-[var(--msp-border)] bg-[var(--msp-card)] p-4">
+            <div className="grid gap-4 md:grid-cols-12">
+              {/* Universe */}
+              <div className="md:col-span-5 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-3">
+                <div className="mb-2 text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Universe</div>
+                <div className="mb-3">
+                  <div className="mb-1 text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Asset Class</div>
+                  <div className="flex gap-1.5">
+                    {(['crypto', 'equity', 'forex'] as const).map(ac => (
+                      <button key={ac} onClick={() => setProAsset(ac)}
+                        className={`rounded-md border px-3 py-1.5 text-xs font-bold uppercase ${proAsset === ac ? 'border-slate-500 bg-slate-800 text-white' : 'border-[var(--msp-border)] text-slate-500 hover:text-slate-300'}`}>
+                        {ac}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {proAsset === 'crypto' && proDepth === 'light' && (
+                  <div className="mb-3">
+                    <label className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Universe</label>
+                    <select value={proUniverseSize} onChange={e => setProUniverseSize(Number(e.target.value))}
+                      className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm text-slate-200">
+                      <option value={100}>100</option>
+                      <option value={250}>250</option>
+                      <option value={500}>500</option>
+                      <option value={1000}>1000</option>
+                      <option value={5000}>5000</option>
+                    </select>
+                  </div>
+                )}
+                <div>
+                  <label className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Sector Filter</label>
+                  <select className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm text-slate-200">
+                    <option value="all">All</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Structure */}
+              <div className="md:col-span-7 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-3">
+                <div className="mb-2 text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Structure</div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Timeframe</label>
+                    <select value={proTimeframe} onChange={e => setProTimeframe(e.target.value as any)}
+                      className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm text-slate-200">
+                      <option value="1d">1d</option><option value="1h">1h</option><option value="30m">30m</option><option value="15m">15m</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">MTF Alignment</label>
+                    <select value={proMtfAlignment} onChange={e => setProMtfAlignment(Number(e.target.value))}
+                      className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm text-slate-200">
+                      <option value={2}>2/4+</option><option value={3}>3/4+</option><option value={4}>4/4</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Min Confidence</label>
+                    <select value={proMinConfidence} onChange={e => setProMinConfidence(Number(e.target.value))}
+                      className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm text-slate-200">
+                      <option value={50}>50</option><option value={60}>60</option><option value={70}>70</option><option value={80}>80</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Vol State</label>
+                    <select value={proVolState} onChange={e => setProVolState(e.target.value)}
+                      className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm text-slate-200">
+                      <option value="all">All</option><option value="low">Low</option><option value="moderate">Moderate</option><option value="high">High</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <label className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Squeeze</label>
+                  <select value={proSqueeze} onChange={e => setProSqueeze(e.target.value as any)}
+                    className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm text-slate-200">
+                    <option value="all">All</option><option value="squeeze">In Squeeze</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Mode + Intent */}
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="mb-1 text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Mode</div>
+                <div className="flex gap-1.5">
+                  {(['light', 'deep'] as const).map(d => (
+                    <button key={d} onClick={() => setProDepth(d)}
+                      className={`rounded-md border px-3 py-1.5 text-xs font-bold uppercase ${proDepth === d ? 'border-slate-500 bg-slate-800 text-white' : 'border-[var(--msp-border)] text-slate-500 hover:text-slate-300'}`}>
+                      {d === 'light' ? 'Fast' : 'Deep'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-1.5">
+                {(['observe', 'decide'] as const).map(i => (
+                  <button key={i} onClick={() => setProIntent(i)}
+                    className={`rounded-md border px-3 py-1.5 text-xs font-bold uppercase ${proIntent === i ? 'border-slate-500 bg-slate-800 text-white' : 'border-[var(--msp-border)] text-slate-500 hover:text-slate-300'}`}>
+                    {i}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Scan Button */}
+            <button type="button" onClick={runProScan} disabled={proScanLoading}
+              className="mt-4 w-full rounded-lg py-3.5 text-sm font-bold uppercase tracking-[0.1em] transition-all"
+              style={{
+                background: proScanLoading ? 'rgba(16, 185, 129, 0.25)' : 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                color: proScanLoading ? 'rgba(255,255,255,0.6)' : '#0F172A',
+                border: '1px solid rgba(16, 185, 129, 0.4)',
+                boxShadow: proScanLoading ? 'none' : '0 0 20px rgba(16, 185, 129, 0.25), 0 4px 12px rgba(0, 0, 0, 0.3)',
+                cursor: proScanLoading ? 'not-allowed' : 'pointer',
+              }}>
+              {proScanLoading ? '⏳ Scanning...' : '🔎 Scan For Setups'}
+            </button>
+          </div>
+
+          {/* Strategy Templates */}
+          <ScanTemplatesBar onSelect={applyTemplate} activeId={activeTemplateId} />
+
+          {/* Filters bar */}
+          {proScanResults && (
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-3">
+              <div className="flex items-center gap-2">
+                <label className="text-[10px] uppercase text-slate-500">Direction:</label>
+                <select value={proDirection} onChange={e => setProDirection(e.target.value as any)}
+                  className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200">
+                  <option value="all">All</option><option value="long">Long</option><option value="short">Short</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-[10px] uppercase text-slate-500">Quality:</label>
+                <select value={proQuality} onChange={e => setProQuality(e.target.value as any)}
+                  className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200">
+                  <option value="all">All</option><option value="high">High</option><option value="medium">Medium</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-[10px] uppercase text-slate-500">Sort:</label>
+                <select value={proSort} onChange={e => setProSort(e.target.value as any)}
+                  className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200">
+                  <option value="rank">Rank</option><option value="confidence">Confidence</option><option value="volatility">Volatility</option><option value="trend">Trend</option>
+                </select>
+              </div>
+              <div className="ml-auto flex gap-1">
+                <button onClick={() => setProBulkViewMode('table')} className={`rounded px-2 py-1 text-[10px] font-bold ${proBulkViewMode === 'table' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-500'}`}>Table</button>
+                <button onClick={() => setProBulkViewMode('cards')} className={`rounded px-2 py-1 text-[10px] font-bold ${proBulkViewMode === 'cards' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-500'}`}>Cards</button>
+              </div>
+            </div>
+          )}
+
+          {/* Pro Scan Error */}
+          {proScanError && (
+            <div className="rounded-lg border border-rose-500/25 bg-rose-500/10 px-4 py-2.5 text-sm text-rose-300">{proScanError}</div>
+          )}
+
+          {/* Pro Scan Results */}
+          {proScanResults && (
+            <div>
+              <div className="mb-2 flex items-center gap-3 text-[10px] text-slate-500">
+                <span>Scanned: {proScanResults.scanned ?? '—'}</span>
+                <span>Duration: {proScanResults.duration ?? '—'}</span>
+                <span>Mode: {proScanResults.mode ?? proDepth}</span>
+                {proScanResults.effectiveUniverseSize && <span>Universe: {proScanResults.effectiveUniverseSize}</span>}
+              </div>
+              <ScreenerTable rows={proScreenerRows} onRowClick={handleProRowClick} selectedSymbol={selectedSymbol ?? undefined} />
+              <div className="mt-2 text-[10px] text-slate-600">
+                Market Bias Context · Regime: {currentRegime.toUpperCase()} · Most setups: {proScreenerRows.filter(r => r.direction === 'LONG').length > proScreenerRows.filter(r => r.direction === 'SHORT').length ? 'Long' : 'Short'}
+              </div>
+            </div>
+          )}
+
+          {proScanLoading && (
+            <div className="space-y-3 py-4">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-10 bg-slate-700/30 rounded animate-pulse" />)}</div>
+          )}
+        </>
+      )}
+
+      {/* ═══════════════════════════════ INLINE DETAIL PANEL ═══════════════════════════════ */}
+      {selectedSymbol && (
+        <>
+          {detailLoading ? (
+            <Card>
+              <div className="flex items-center gap-3 py-8 justify-center">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+                <span className="text-sm text-slate-400">Loading analysis for {selectedSymbol}...</span>
+              </div>
+            </Card>
+          ) : symbolDetail ? (
+            <SymbolDetailPanel
+              detail={symbolDetail}
+              timeframeLabel={detailTimeframeLabel}
+              onClose={() => { setSelectedSymbol(null); setSymbolDetail(null); }}
+              assetType={detailAssetType}
+            />
+          ) : null}
+        </>
+      )}
+
+      {/* Errors */}
+      {mode === 'ranked' && (equity.error || crypto.error) && (
+        <div className="text-[10px] text-red-400/60 border border-red-900/30 rounded-lg p-3">
+          {equity.error && <div>Equity scan: {equity.error}</div>}
+          {crypto.error && <div>Crypto scan: {crypto.error}</div>}
+        </div>
+      )}
+    </div>
   );
 }

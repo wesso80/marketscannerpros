@@ -11,8 +11,11 @@ const effective = "20 December 2025";
 
 export default function RefundPolicyPage() {
   return (
-    <main className="prose prose-invert mx-auto max-w-3xl px-4 py-10">
-      <h1>Refund Policy</h1>
+    <main className="min-h-screen bg-[var(--msp-bg)] px-4 py-16 text-slate-200">
+      <div className="mx-auto max-w-[800px]">
+        <div className="rounded-3xl border border-emerald-500/20 bg-[var(--msp-card)] p-8 shadow-2xl md:p-12">
+          <div className="prose prose-invert prose-emerald max-w-none prose-headings:text-slate-100 prose-a:text-emerald-400 prose-strong:text-slate-200">
+      <h1 className="text-emerald-400">Refund Policy</h1>
       <p><strong>Effective Date:</strong> {effective}</p>
 
       <h2>Overview</h2>
@@ -119,6 +122,9 @@ export default function RefundPolicyPage() {
         By subscribing to MarketScanner Pros, you acknowledge that you have read, understood, and 
         agree to this Refund Policy.
       </p>
+          </div>
+        </div>
+      </div>
     </main>
   );
 }

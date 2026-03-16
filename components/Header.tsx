@@ -142,54 +142,54 @@ export default function Header() {
   }, [isOpen]);
 
   const toolsItems: DropdownItem[] = [
-    { href: '/operator', label: 'Operator Dashboard', icon: '🧭' },
-    { href: '/tools/watchlists', label: 'Watchlists', icon: '📋' },
-    { href: '/tools/portfolio', label: 'Portfolio Tracker', icon: '💼' },
-    { href: '/tools/backtest', label: 'Backtester', icon: '📈' },
-    { href: '/tools/journal', label: 'Trade Journal', icon: '📓' },
-    { href: '/tools/alerts', label: 'Price Alerts', icon: '🔔' },
+    { href: '/operator', label: 'Operator Dashboard' },
+    { href: '/tools/watchlists', label: 'Watchlists' },
+    { href: '/tools/portfolio', label: 'Portfolio Tracker' },
+    { href: '/tools/backtest', label: 'Backtester' },
+    { href: '/tools/journal', label: 'Trade Journal' },
+    { href: '/tools/alerts', label: 'Price Alerts' },
   ];
 
   const scannerItems: DropdownItem[] = [
-    { href: '/tools/scanner', label: 'Market Scanner', icon: '📊' },
-    { href: '/tools/options-confluence', label: 'Options Confluence', icon: '🎯' },
-    { href: '/tools/confluence-scanner', label: 'Time Confluence', icon: '🔮' },
-    { href: '/tools/golden-egg', label: 'Golden Egg', icon: '🥚' },
-    { href: '/tools/liquidity-sweep', label: 'Liquidity Sweep', icon: '🌊' },
-    { href: '/tools/options-flow', label: 'Options Flow', icon: '💸' },
-    { href: '/tools/volatility-engine', label: 'Volatility Engine', icon: '🌋' },
+    { href: '/tools/scanner', label: 'Market Scanner' },
+    { href: '/tools/options-confluence', label: 'Options Confluence' },
+    { href: '/tools/confluence-scanner', label: 'Time Confluence' },
+    { href: '/tools/golden-egg', label: 'Golden Egg' },
+    { href: '/tools/liquidity-sweep', label: 'Liquidity Sweep' },
+    { href: '/tools/options-flow', label: 'Options Flow' },
+    { href: '/tools/volatility-engine', label: 'Volatility Engine' },
   ];
 
   const marketItems: DropdownItem[] = [
-    { href: '/tools/markets', label: 'Markets Dashboard', icon: '🧭', section: 'Equities' },
-    { href: '/tools/equity-explorer', label: 'Equity Explorer', icon: '📊' },
-    { href: '/tools/company-overview', label: 'Company Overview', icon: '🏢' },
-    { href: '/tools/market-movers', label: 'Market Movers', icon: '📈' },
-    { href: '/tools/gainers-losers', label: 'Gainers & Losers', icon: '🚀' },
-    { href: '/tools/heatmap', label: 'Sector Heatmap', icon: '🗺️' },
-    { href: '/tools/intraday-charts', label: 'Intraday Charts', icon: '⏱️' },
-    { href: '/tools/crypto', label: 'Crypto Command Center', icon: '₿', section: 'Crypto' },
-    { href: '/tools/crypto-explorer', label: 'Crypto Explorer', icon: '🔍' },
-    { href: '/tools/crypto-heatmap', label: 'Crypto Heatmap', icon: '🪙' },
-    { href: '/tools/crypto-dashboard', label: 'Crypto Derivatives', icon: '📊' },
-    { href: '/tools/crypto-terminal', label: 'Crypto Terminal', icon: '💹' },
-    { href: '/tools/options-terminal', label: 'Options Terminal', icon: '📋', section: 'Macro & Options' },
-    { href: '/tools/macro', label: 'Macro Dashboard', icon: '🏛️' },
-    { href: '/tools/commodities', label: 'Commodities', icon: '🛢️' },
-    { href: '/tools/markets?tab=correlation', label: 'Cross-Asset Correlation', icon: '🔗' },
+    { href: '/tools/markets', label: 'Markets Dashboard', section: 'Equities' },
+    { href: '/tools/equity-explorer', label: 'Equity Explorer' },
+    { href: '/tools/company-overview', label: 'Company Overview' },
+    { href: '/tools/market-movers', label: 'Market Movers' },
+    { href: '/tools/gainers-losers', label: 'Gainers & Losers' },
+    { href: '/tools/heatmap', label: 'Sector Heatmap' },
+    { href: '/tools/intraday-charts', label: 'Intraday Charts' },
+    { href: '/tools/crypto', label: 'Crypto Command Center', section: 'Crypto' },
+    { href: '/tools/crypto-explorer', label: 'Crypto Explorer' },
+    { href: '/tools/crypto-heatmap', label: 'Crypto Heatmap' },
+    { href: '/tools/crypto-dashboard', label: 'Crypto Derivatives' },
+    { href: '/tools/crypto-terminal', label: 'Crypto Terminal' },
+    { href: '/tools/options-terminal', label: 'Options Terminal', section: 'Macro & Options' },
+    { href: '/tools/macro', label: 'Macro Dashboard' },
+    { href: '/tools/commodities', label: 'Commodities' },
+    { href: '/tools/markets?tab=correlation', label: 'Cross-Asset Correlation' },
   ];
 
   const calendarItems: DropdownItem[] = [
-    { href: '/tools/news?tab=earnings', label: 'Earnings Calendar', icon: '📅' },
-    { href: '/tools/economic-calendar', label: 'Economic Calendar', icon: '📊' },
-    { href: '/tools/news', label: 'Market News', icon: '📰' },
+    { href: '/tools/news?tab=earnings', label: 'Earnings Calendar' },
+    { href: '/tools/economic-calendar', label: 'Economic Calendar' },
+    { href: '/tools/news', label: 'Market News' },
   ];
 
   const resourceItems: DropdownItem[] = [
-    { href: '/resources', label: 'Resources Hub', icon: '🧭' },
-    { href: '/resources/platform-guide', label: 'Platform Guide', icon: '📚' },
-    { href: '/resources/trading-guides', label: 'Trading Guides', icon: '🧠' },
-    { href: '/partners', label: 'Partners', icon: '🤝' },
+    { href: '/resources', label: 'Resources Hub' },
+    { href: '/resources/platform-guide', label: 'Platform Guide' },
+    { href: '/resources/trading-guides', label: 'Trading Guides' },
+    { href: '/partners', label: 'Partners' },
   ];
 
   return (
@@ -215,7 +215,7 @@ export default function Header() {
           {tierLoading ? null : isLoggedIn ? (
             <>
               <span className={`ml-2 flex items-center gap-2 bg-teal-500/10 border border-slate-700 rounded-lg text-teal-300 text-xs ${isTerminalMode ? 'px-2 py-1' : 'px-3 py-1.5'}`}>
-                {tier === 'pro_trader' ? '⭐ Pro Trader' : tier === 'pro' ? '✨ Pro' : 'Free'}
+                {tier === 'pro_trader' ? 'Pro Trader' : tier === 'pro' ? 'Pro' : 'Free'}
               </span>
               <button
                 onClick={async () => {
@@ -259,23 +259,23 @@ export default function Header() {
           
           <div className="flex-1 overflow-y-auto p-4 min-h-0">
             <div className="flex flex-col gap-1">
-              <MobileAccordion label="🛠️ Tools" items={toolsItems} isOpen={mobileDropdown === 'tools'} onToggle={() => setMobileDropdown(mobileDropdown === 'tools' ? null : 'tools')} onLinkClick={() => setIsOpen(false)} />
-              <MobileAccordion label="🔎 Scanners" items={scannerItems} isOpen={mobileDropdown === 'scanners'} onToggle={() => setMobileDropdown(mobileDropdown === 'scanners' ? null : 'scanners')} onLinkClick={() => setIsOpen(false)} />
-              <MobileAccordion label="📈 Markets" items={marketItems} isOpen={mobileDropdown === 'markets'} onToggle={() => setMobileDropdown(mobileDropdown === 'markets' ? null : 'markets')} onLinkClick={() => setIsOpen(false)} />
-              <MobileAccordion label="� Calendar & News" items={calendarItems} isOpen={mobileDropdown === 'calendar'} onToggle={() => setMobileDropdown(mobileDropdown === 'calendar' ? null : 'calendar')} onLinkClick={() => setIsOpen(false)} />
-              <MobileAccordion label="�📚 Resources" items={resourceItems} isOpen={mobileDropdown === 'resources'} onToggle={() => setMobileDropdown(mobileDropdown === 'resources' ? null : 'resources')} onLinkClick={() => setIsOpen(false)} />
+              <MobileAccordion label="Tools" items={toolsItems} isOpen={mobileDropdown === 'tools'} onToggle={() => setMobileDropdown(mobileDropdown === 'tools' ? null : 'tools')} onLinkClick={() => setIsOpen(false)} />
+              <MobileAccordion label="Scanners" items={scannerItems} isOpen={mobileDropdown === 'scanners'} onToggle={() => setMobileDropdown(mobileDropdown === 'scanners' ? null : 'scanners')} onLinkClick={() => setIsOpen(false)} />
+              <MobileAccordion label="Markets" items={marketItems} isOpen={mobileDropdown === 'markets'} onToggle={() => setMobileDropdown(mobileDropdown === 'markets' ? null : 'markets')} onLinkClick={() => setIsOpen(false)} />
+              <MobileAccordion label="Calendar & News" items={calendarItems} isOpen={mobileDropdown === 'calendar'} onToggle={() => setMobileDropdown(mobileDropdown === 'calendar' ? null : 'calendar')} onLinkClick={() => setIsOpen(false)} />
+              <MobileAccordion label="Resources" items={resourceItems} isOpen={mobileDropdown === 'resources'} onToggle={() => setMobileDropdown(mobileDropdown === 'resources' ? null : 'resources')} onLinkClick={() => setIsOpen(false)} />
 
               <div className="mt-3 pt-3 border-t border-slate-700">
-                <Link href="/pricing" className="flex items-center gap-3 px-4 py-3 text-white hover:bg-teal-500/10 hover:text-teal-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>💰 Pricing</Link>
-                <Link href="/tools/referrals" className="flex items-center gap-3 px-4 py-3 text-white hover:bg-teal-500/10 hover:text-teal-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>🎁 Referrals</Link>
-                <Link href="/account" className="flex items-center gap-3 px-4 py-3 text-white hover:bg-teal-500/10 hover:text-teal-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>👤 Account</Link>
+                <Link href="/pricing" className="flex items-center gap-3 px-4 py-3 text-white hover:bg-teal-500/10 hover:text-teal-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>Pricing</Link>
+                <Link href="/tools/referrals" className="flex items-center gap-3 px-4 py-3 text-white hover:bg-teal-500/10 hover:text-teal-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>Referrals</Link>
+                <Link href="/account" className="flex items-center gap-3 px-4 py-3 text-white hover:bg-teal-500/10 hover:text-teal-300 rounded-lg transition-all" onClick={() => setIsOpen(false)}>Account</Link>
               </div>
               
               <div className="mt-4 pt-4 border-t border-slate-700/90 space-y-2">
                 {isLoggedIn ? (
                   <>
                     <Link href="/account" className="flex items-center justify-center gap-2 px-4 py-3 bg-teal-500/10 border border-slate-700 rounded-lg text-teal-300 font-medium transition-all" onClick={() => setIsOpen(false)}>
-                      {tier === 'pro_trader' ? '⭐ Pro Trader' : tier === 'pro' ? '✨ Pro' : '👤 Account'}
+                      {tier === 'pro_trader' ? 'Pro Trader' : tier === 'pro' ? 'Pro' : 'Account'}
                     </Link>
                     <button
                       onClick={async () => {
@@ -288,7 +288,7 @@ export default function Header() {
                     </button>
                   </>
                 ) : (
-                  <Link href="/auth" className="flex items-center justify-center gap-2 px-4 py-3 bg-teal-500/20 hover:bg-teal-500/30 border border-slate-700 rounded-lg text-teal-300 font-medium transition-all" onClick={() => setIsOpen(false)}>🔐 Sign In</Link>
+                  <Link href="/auth" className="flex items-center justify-center gap-2 px-4 py-3 bg-teal-500/20 hover:bg-teal-500/30 border border-slate-700 rounded-lg text-teal-300 font-medium transition-all" onClick={() => setIsOpen(false)}>Sign In</Link>
                 )}
               </div>
             </div>
