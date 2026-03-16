@@ -153,7 +153,7 @@ export function UpgradeGate({
             This feature requires the <strong style={{ color: tierColor }}>{tierLabel}</strong> plan.
           </div>
           <a
-            href="/v2/pricing"
+            href="/pricing"
             className="inline-block px-4 py-2 rounded-lg text-xs font-semibold transition-colors"
             style={{ backgroundColor: tierColor + '22', color: tierColor, border: `1px solid ${tierColor}44` }}
           >

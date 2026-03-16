@@ -652,7 +652,7 @@ export default function ScannerPage() {
             {!canAccessUnlimitedScanning(tier) && (
               <div className="mb-3 px-3 py-2 rounded-lg border border-amber-500/30 bg-amber-500/10 flex items-center justify-between">
                 <span className="text-xs text-amber-300">Free tier: {FREE_DAILY_SCAN_LIMIT} scans/day. Upgrade for unlimited scanning.</span>
-                <a href="/v2/pricing" className="text-[10px] px-2 py-1 bg-amber-500/20 text-amber-400 rounded border border-amber-500/30 hover:bg-amber-500/30 transition-colors">Upgrade</a>
+                <a href="/pricing" className="text-[10px] px-2 py-1 bg-amber-500/20 text-amber-400 rounded border border-amber-500/30 hover:bg-amber-500/30 transition-colors">Upgrade</a>
               </div>
             )}
             {v2Loading ? (

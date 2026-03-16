@@ -97,7 +97,8 @@ const nextConfig = {
       { source: '/v2/explorer', destination: '/tools/explorer', permanent: true },
       { source: '/v2/research', destination: '/tools/research', permanent: true },
       { source: '/v2/workspace', destination: '/tools/workspace', permanent: true },
-      { source: '/pricing', destination: '/v2/pricing', permanent: true },
+      { source: '/v2/pricing', destination: '/pricing', permanent: true },
+      { source: '/v2/backtest', destination: '/tools/workspace', permanent: true },
       { source: '/v2/referrals', destination: '/tools/referrals', permanent: true },
       { source: '/v2', destination: '/tools/dashboard', permanent: true },
 
@@ -141,6 +142,8 @@ const nextConfig = {
       // Workspace surface
       { source: '/tools/watchlists', destination: '/tools/workspace', permanent: true },
       { source: '/tools/journal', destination: '/tools/workspace', permanent: true },
+      { source: '/tools/portfolio', destination: '/tools/workspace', permanent: true },
+      { source: '/tools/alerts', destination: '/tools/workspace', permanent: true },
       { source: '/tools/backtest', destination: '/tools/workspace', permanent: true },
       { source: '/tools/settings', destination: '/tools/workspace', permanent: true },
 

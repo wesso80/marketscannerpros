@@ -301,7 +301,7 @@ export default function AccountSection() {
               {billingLoading ? 'Opening...' : 'Manage Billing'}
             </button>
             {normalizedTier !== 'pro_trader' && (
-              <Link href="/v2/pricing" className="px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/30 transition-colors">
+              <Link href="/pricing" className="px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/30 transition-colors">
                 Upgrade
               </Link>
             )}
