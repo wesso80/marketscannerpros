@@ -421,8 +421,6 @@ async function triggerSignalAlert(alert: SignalAlert, result: CheckResult, scan:
       await sendPushToUser(alert.workspace_id, {
         title: `🎯 ${alert.name || 'Signal Alert'}`,
         body: result.message || `${alert.symbol}: ${alert.condition_type.replace(/_/g, ' ')}`,
-        icon: '/icons/icon-192x192.png',
-        badge: '/icons/badge-72x72.png',
         tag: `signal-${alert.id}`,
         data: { url: '/tools/scanner', alertId: alert.id },
       });
