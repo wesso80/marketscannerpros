@@ -1,7 +1,7 @@
 'use client';
 
 /* ---------------------------------------------------------------------------
-   SURFACE 5: EXPLORER ï¿½ Cross-Market Intelligence
+   SURFACE 5: EXPLORER — Cross-Market Intelligence
    Real APIs: /api/sectors/heatmap + /api/crypto/market-overview +
               /api/market-movers + /api/commodities + /api/economic-indicators
    --------------------------------------------------------------------------- */
@@ -51,7 +51,7 @@ export default function ExplorerPage() {
 
   return (
     <div className="space-y-6">
-      <SectionHeader title="Market Explorer" subtitle="Cross-market intelligence ï¿½ live data" />
+      <SectionHeader title="Market Explorer" subtitle="Cross-market intelligence — live data" />
 
       <UpgradeGate requiredTier="pro" currentTier={tier} feature="Market Explorer">
       {/* Tabs */}
@@ -255,9 +255,9 @@ export default function ExplorerPage() {
                       <td className="py-2.5 px-2 text-white">{s.name}</td>
                       <td className="py-2.5 px-2 text-emerald-400">{s.symbol}</td>
                       <td className={`py-2.5 px-2 text-right font-mono ${pctColor(s.changePercent)}`}>{s.changePercent > 0 ? '+' : ''}{s.changePercent.toFixed(2)}%</td>
-                      <td className={`py-2.5 px-2 text-right font-mono ${pctColor(s.weekly || 0)}`}>{s.weekly != null ? `${s.weekly > 0 ? '+' : ''}${s.weekly.toFixed(2)}%` : 'ï¿½'}</td>
-                      <td className={`py-2.5 px-2 text-right font-mono ${pctColor(s.monthly || 0)}`}>{s.monthly != null ? `${s.monthly > 0 ? '+' : ''}${s.monthly.toFixed(2)}%` : 'ï¿½'}</td>
-                      <td className={`py-2.5 px-2 text-right font-mono text-slate-400`}>{(s as any).ytd != null ? `${(s as any).ytd > 0 ? '+' : ''}${(s as any).ytd.toFixed(2)}%` : 'ï¿½'}</td>
+                      <td className={`py-2.5 px-2 text-right font-mono ${pctColor(s.weekly || 0)}`}>{s.weekly != null ? `${s.weekly > 0 ? '+' : ''}${s.weekly.toFixed(2)}%` : '—'}</td>
+                      <td className={`py-2.5 px-2 text-right font-mono ${pctColor(s.monthly || 0)}`}>{s.monthly != null ? `${s.monthly > 0 ? '+' : ''}${s.monthly.toFixed(2)}%` : '—'}</td>
+                      <td className={`py-2.5 px-2 text-right font-mono text-slate-400`}>{(s as any).ytd != null ? `${(s as any).ytd > 0 ? '+' : ''}${(s as any).ytd.toFixed(2)}%` : '—'}</td>
                       <td className="py-2.5 px-2 text-right text-slate-400">{(s.weight * 100).toFixed(1)}%</td>
                     </tr>
                   ))}
@@ -281,7 +281,7 @@ export default function ExplorerPage() {
                   <div className="flex items-center justify-between mb-1">
                     <div>
                       <div className="text-sm font-bold text-white">{c.name}</div>
-                      <div className="text-[10px] text-slate-500">{c.category} ï¿½ {c.unit}</div>
+                      <div className="text-[10px] text-slate-500">{c.category} — {c.unit}</div>
                     </div>
                     <Badge label={c.changePercent > 0 ? 'UP' : c.changePercent < 0 ? 'DOWN' : 'FLAT'} color={c.changePercent > 0 ? '#10B981' : c.changePercent < 0 ? '#EF4444' : '#94A3B8'} small />
                   </div>

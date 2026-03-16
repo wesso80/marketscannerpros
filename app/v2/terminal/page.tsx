@@ -1,7 +1,7 @@
 'use client';
 
 /* ---------------------------------------------------------------------------
-   SURFACE 7: TERMINAL ï¿½ Charts + Close Calendar + Options Chain + Flow
+   SURFACE 7: TERMINAL — Charts + Close Calendar + Options Chain + Flow
    Real APIs: /api/confluence-scan (POST), /api/flow, TradingView embed
    --------------------------------------------------------------------------- */
 
@@ -10,8 +10,8 @@ import dynamic from 'next/dynamic';
 import { useV2 } from '../_lib/V2Context';
 import { useUserTier } from '@/lib/useUserTier';
 
-const OptionsTerminalView = dynamic(() => import('@/components/options-terminal/OptionsTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Options Terminalï¿½</div> });
-const CryptoTerminalView = dynamic(() => import('@/components/crypto-terminal/CryptoTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminalï¿½</div> });
+const OptionsTerminalView = dynamic(() => import('@/components/options-terminal/OptionsTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Options Terminal…</div> });
+const CryptoTerminalView = dynamic(() => import('@/components/crypto-terminal/CryptoTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminal…</div> });
 import {
   useCloseCalendar,
   useFlow,
@@ -59,7 +59,7 @@ function formatCalDate(iso: string, asset: 'crypto' | 'equity'): string {
 }
 
 function fmtMins(m: number | null): string {
-  if (m === null) return 'ï¿½';
+  if (m === null) return '—';
   if (m <= 0) return 'NOW';
   if (m < 60) return `${Math.round(m)}m`;
   if (m < 1440) { const h = Math.floor(m/60); const r = Math.round(m%60); return r > 0 ? `${h}h ${r}m` : `${h}h`; }
@@ -89,6 +89,11 @@ export default function TerminalPage() {
   /* Symbol management */
   const sym = selectedSymbol || symInput || 'BTCUSD';
   const asset = detectAssetClass(sym);
+
+  /* Auto-switch away from Options Terminal for crypto symbols */
+  useEffect(() => {
+    if (asset === 'crypto' && tab === 'Options Terminal') setTab('Crypto');
+  }, [asset, tab]);
 
   const handleSymSubmit = () => {
     const s = symInput.trim().toUpperCase();
@@ -126,7 +131,7 @@ export default function TerminalPage() {
 
   return (
     <div className="space-y-6">
-      <SectionHeader title="Terminal" subtitle="Close Calendar ï¿½ Options Terminal ï¿½ Crypto ï¿½ Flow" />
+      <SectionHeader title="Terminal" subtitle={asset === 'crypto' ? 'Close Calendar — Crypto — Flow' : 'Close Calendar — Options Terminal — Crypto — Flow'} />
 
       {/* Symbol Bar */}
       <Card>
@@ -156,7 +161,7 @@ export default function TerminalPage() {
 
       {/* Tabs */}
       <div className="flex items-center gap-1 overflow-x-auto pb-1">
-        {TABS.map(t => (
+        {TABS.filter(t => !(t === 'Options Terminal' && asset === 'crypto')).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-2.5 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap transition-colors ${tab === t ? 'bg-[rgba(16,185,129,0.1)] text-[var(--msp-accent)] border border-[rgba(16,185,129,0.4)]' : 'text-[var(--msp-text-muted)] hover:bg-slate-800/60 border border-transparent'}`}>
             {t}
           </button>
@@ -171,7 +176,7 @@ export default function TerminalPage() {
             <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
               <div>
                 <div className="text-sm font-semibold text-slate-100">
-                  {isPriorDay ? 'Close Calendar ï¿½ Prior Day Closes' : 'Close Calendar ï¿½ Forward Schedule'}
+                  {isPriorDay ? 'Close Calendar — Prior Day Closes' : 'Close Calendar — Forward Schedule'}
                 </div>
                 <div className="text-xs text-slate-400">
                   {isPriorDay
@@ -180,7 +185,7 @@ export default function TerminalPage() {
                 </div>
               </div>
               <button onClick={() => calendar.refetch()} disabled={calendar.loading} className="rounded-lg border border-slate-700 bg-slate-950/50 px-2.5 py-1.5 text-xs font-semibold text-slate-100 disabled:opacity-40">
-                {calendar.loading ? 'Loadingï¿½' : '? Refresh'}
+                {calendar.loading ? 'Loading…' : '? Refresh'}
               </button>
             </div>
 
@@ -214,7 +219,7 @@ export default function TerminalPage() {
           {calendar.error && <div className="rounded-lg border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">{calendar.error}</div>}
 
           {calendar.loading && !calData && (
-            <Card><div className="py-8 text-center text-xs text-slate-500">Computing forward close scheduleï¿½</div></Card>
+            <Card><div className="py-8 text-center text-xs text-slate-500">Computing forward close schedule…</div></Card>
           )}
 
           {calData && (
@@ -239,7 +244,7 @@ export default function TerminalPage() {
                         <div className="mt-0.5 flex flex-wrap gap-1">
                           {cluster.tfs.map(tf => (<span key={tf} className="rounded bg-slate-800/60 px-1.5 py-0.5 text-[10px] font-semibold text-slate-200">{tf}</span>))}
                         </div>
-                        <div className="mt-1 text-[10px] text-slate-400">Wt {Math.round(cluster.weight)} ï¿½ Score {cluster.clusterScore}</div>
+                        <div className="mt-1 text-[10px] text-slate-400">Wt {Math.round(cluster.weight)} — Score {cluster.clusterScore}</div>
                       </div>
                     ))}
                   </div>
@@ -283,7 +288,7 @@ export default function TerminalPage() {
       {/* -- OPTIONS TERMINAL ----------------------------------------------- */}
       {tab === 'Options Terminal' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Options Terminal">
-          <Suspense fallback={<div className="py-12 text-center text-xs text-slate-500">Loading Options Terminalï¿½</div>}>
+          <Suspense fallback={<div className="py-12 text-center text-xs text-slate-500">Loading Options Terminal…</div>}>
             <OptionsTerminalView />
           </Suspense>
         </UpgradeGate>
@@ -291,7 +296,7 @@ export default function TerminalPage() {
 
       {/* -- CRYPTO TERMINAL ------------------------------------------------ */}
       {tab === 'Crypto' && (
-        <Suspense fallback={<div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminalï¿½</div>}>
+        <Suspense fallback={<div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminal…</div>}>
           <CryptoTerminalView />
         </Suspense>
       )}
@@ -319,7 +324,7 @@ export default function TerminalPage() {
               {/* Header Strip */}
               <Card>
                 <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
-                  <h3 className="text-sm font-semibold text-white">Capital Flow ï¿½ {sym}</h3>
+                  <h3 className="text-sm font-semibold text-white">Capital Flow — {sym}</h3>
                   <div className="flex items-center gap-2">
                     {fd.asof && <span className="text-[10px] text-slate-500">as of {new Date(fd.asof).toLocaleTimeString()}</span>}
                     <button onClick={() => flow.refetch()} className="px-2 py-1 text-[10px] rounded border border-slate-700 text-slate-300 hover:bg-slate-800">
@@ -330,23 +335,23 @@ export default function TerminalPage() {
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                   <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
                     <div className="text-[10px] text-slate-500 uppercase">Bias</div>
-                    <div className={`text-lg font-bold capitalize ${biasColor}`}>{fd.bias || 'ï¿½'}</div>
+                    <div className={`text-lg font-bold capitalize ${biasColor}`}>{fd.bias || '—'}</div>
                   </div>
                   <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
                     <div className="text-[10px] text-slate-500 uppercase">Mode</div>
-                    <div className={`text-lg font-bold capitalize ${modeColor}`}>{fd.market_mode || 'ï¿½'}</div>
+                    <div className={`text-lg font-bold capitalize ${modeColor}`}>{fd.market_mode || '—'}</div>
                   </div>
                   <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
                     <div className="text-[10px] text-slate-500 uppercase">Gamma</div>
-                    <div className={`text-lg font-bold ${gammaColor}`}>{fd.gamma_state || 'ï¿½'}</div>
+                    <div className={`text-lg font-bold ${gammaColor}`}>{fd.gamma_state || '—'}</div>
                   </div>
                   <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
                     <div className="text-[10px] text-slate-500 uppercase">Conviction</div>
-                    <div className="text-lg font-bold text-white">{fd.conviction?.toFixed(0) ?? 'ï¿½'}%</div>
+                    <div className="text-lg font-bold text-white">{fd.conviction?.toFixed(0) ?? '—'}%</div>
                   </div>
                   <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
                     <div className="text-[10px] text-slate-500 uppercase">Spot</div>
-                    <div className="text-lg font-bold text-white">${fd.spot?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? 'ï¿½'}</div>
+                    <div className="text-lg font-bold text-white">${fd.spot?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) ?? '—'}</div>
                   </div>
                 </div>
               </Card>
@@ -358,15 +363,15 @@ export default function TerminalPage() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
                     <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
                       <div className="text-[10px] text-slate-500 uppercase">Continuation</div>
-                      <div className="text-base font-bold text-white">{(pm.continuation * 100).toFixed(0)}%</div>
+                      <div className="text-base font-bold text-white">{pm.continuation.toFixed(0)}%</div>
                     </div>
                     <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
                       <div className="text-[10px] text-slate-500 uppercase">Pin / Reversion</div>
-                      <div className="text-base font-bold text-white">{(pm.pinReversion * 100).toFixed(0)}%</div>
+                      <div className="text-base font-bold text-white">{pm.pinReversion.toFixed(0)}%</div>
                     </div>
                     <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
                       <div className="text-[10px] text-slate-500 uppercase">Expansion</div>
-                      <div className="text-base font-bold text-white">{(pm.expansion * 100).toFixed(0)}%</div>
+                      <div className="text-base font-bold text-white">{pm.expansion.toFixed(0)}%</div>
                     </div>
                     <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
                       <div className="text-[10px] text-slate-500 uppercase">Regime</div>
@@ -384,21 +389,21 @@ export default function TerminalPage() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
                     <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
                       <div className="text-[10px] text-slate-500 uppercase">Brain Score</div>
-                      <div className="text-base font-bold text-white">{brain.brain_score?.score?.toFixed(0) ?? fd.brain_decision?.score?.toFixed(0) ?? 'ï¿½'}</div>
+                      <div className="text-base font-bold text-white">{brain.brain_score?.score?.toFixed(0) ?? fd.brain_decision?.score?.toFixed(0) ?? '—'}</div>
                     </div>
                     <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
                       <div className="text-[10px] text-slate-500 uppercase">Permission</div>
                       <div className={`text-base font-bold ${brain.brain_score?.permission === 'ALLOW' || fd.brain_decision?.permission === 'ALLOW' ? 'text-emerald-400' : brain.brain_score?.permission === 'BLOCK' || fd.brain_decision?.permission === 'BLOCK' ? 'text-red-400' : 'text-amber-400'}`}>
-                        {brain.brain_score?.permission ?? fd.brain_decision?.permission ?? 'ï¿½'}
+                        {brain.brain_score?.permission ?? fd.brain_decision?.permission ?? '—'}
                       </div>
                     </div>
                     <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
                       <div className="text-[10px] text-slate-500 uppercase">Risk Mode</div>
-                      <div className="text-base font-bold text-white">{brain.brain_score?.mode ?? fd.brain_decision?.mode ?? 'ï¿½'}</div>
+                      <div className="text-base font-bold text-white">{brain.brain_score?.mode ?? fd.brain_decision?.mode ?? '—'}</div>
                     </div>
                     <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
                       <div className="text-[10px] text-slate-500 uppercase">Regime</div>
-                      <div className="text-base font-bold text-white">{brain.market_regime?.regime?.replace(/_/g, ' ') ?? 'ï¿½'}</div>
+                      <div className="text-base font-bold text-white">{brain.market_regime?.regime?.replace(/_/g, ' ') ?? '—'}</div>
                     </div>
                   </div>
                   {(brain.brain_score?.state_summary ?? fd.brain_decision?.stateSummary) && (
@@ -418,15 +423,15 @@ export default function TerminalPage() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                     <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
                       <div className="text-[10px] text-slate-500 uppercase">Entry Type</div>
-                      <div className="text-sm font-bold text-white capitalize">{plan.entry_type ?? plan.entryType ?? 'ï¿½'}</div>
+                      <div className="text-sm font-bold text-white capitalize">{plan.entry_type ?? plan.entryType ?? '—'}</div>
                     </div>
                     <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
                       <div className="text-[10px] text-slate-500 uppercase">Size</div>
-                      <div className="text-sm font-bold text-white">{typeof plan.size === 'number' ? `${(plan.size * 100).toFixed(0)}%` : 'ï¿½'}</div>
+                      <div className="text-sm font-bold text-white">{typeof plan.size === 'number' ? `${(plan.size * 100).toFixed(0)}%` : '—'}</div>
                     </div>
                     <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
                       <div className="text-[10px] text-slate-500 uppercase">Stop Rule</div>
-                      <div className="text-xs text-slate-300">{plan.stop_rule ?? plan.stopRule ?? 'ï¿½'}</div>
+                      <div className="text-xs text-slate-300">{plan.stop_rule ?? plan.stopRule ?? '—'}</div>
                     </div>
                   </div>
                   {(plan.triggers || plan.targets) && (
@@ -434,13 +439,13 @@ export default function TerminalPage() {
                       {plan.triggers?.length > 0 && (
                         <div className="bg-[var(--msp-panel-2)]/80 rounded-lg px-3 py-2">
                           <div className="text-[10px] text-slate-500 uppercase mb-1">Triggers</div>
-                          {plan.triggers.map((t: string, i: number) => <div key={i} className="text-xs text-slate-300">ï¿½ {t}</div>)}
+                          {plan.triggers.map((t: string, i: number) => <div key={i} className="text-xs text-slate-300">• {t}</div>)}
                         </div>
                       )}
                       {plan.targets?.length > 0 && (
                         <div className="bg-[var(--msp-panel-2)]/80 rounded-lg px-3 py-2">
                           <div className="text-[10px] text-slate-500 uppercase mb-1">Targets</div>
-                          {plan.targets.map((t: string, i: number) => <div key={i} className="text-xs text-slate-300">ï¿½ {t}</div>)}
+                          {plan.targets.map((t: string, i: number) => <div key={i} className="text-xs text-slate-300">• {t}</div>)}
                         </div>
                       )}
                     </div>
@@ -457,19 +462,19 @@ export default function TerminalPage() {
                     <div className="space-y-2">
                       <div className="flex justify-between text-xs">
                         <span className="text-slate-400">TPS</span>
-                        <span className="text-white font-mono">{perm.tps?.toFixed(0) ?? 'ï¿½'}</span>
+                        <span className="text-white font-mono">{perm.tps?.toFixed(0) ?? '—'}</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-slate-400">Risk Mode</span>
-                        <span className="text-white">{perm.riskMode ?? 'ï¿½'}</span>
+                        <span className="text-white">{perm.riskMode ?? '—'}</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-slate-400">Size Multiplier</span>
-                        <span className="text-white font-mono">{perm.sizeMultiplier?.toFixed(2) ?? 'ï¿½'}x</span>
+                        <span className="text-white font-mono">{perm.sizeMultiplier?.toFixed(2) ?? '—'}x</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-slate-400">Stop Style</span>
-                        <span className="text-white">{perm.stopStyle?.replace(/_/g, ' ') ?? 'ï¿½'}</span>
+                        <span className="text-white">{perm.stopStyle?.replace(/_/g, ' ') ?? '—'}</span>
                       </div>
                       {perm.blocked && <div className="mt-2 text-[10px] text-red-400 bg-red-500/10 rounded px-2 py-1">? Trading blocked: {perm.noTradeMode?.reason || 'risk limit'}</div>}
                       {perm.allowed?.length > 0 && (
@@ -490,11 +495,11 @@ export default function TerminalPage() {
                     <div className="space-y-2">
                       <div className="flex justify-between text-xs">
                         <span className="text-slate-400">IRS Score</span>
-                        <span className="text-white font-mono">{rg.irs?.toFixed(0) ?? 'ï¿½'}</span>
+                        <span className="text-white font-mono">{rg.irs?.toFixed(0) ?? '—'}</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-slate-400">Risk Mode</span>
-                        <span className={`font-semibold ${rg.riskMode === 'FULL_OFFENSE' ? 'text-emerald-400' : rg.riskMode === 'LOCKDOWN' ? 'text-red-400' : rg.riskMode === 'DEFENSIVE' ? 'text-amber-400' : 'text-white'}`}>{rg.riskMode ?? 'ï¿½'}</span>
+                        <span className={`font-semibold ${rg.riskMode === 'FULL_OFFENSE' ? 'text-emerald-400' : rg.riskMode === 'LOCKDOWN' ? 'text-red-400' : rg.riskMode === 'DEFENSIVE' ? 'text-amber-400' : 'text-white'}`}>{rg.riskMode ?? '—'}</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-slate-400">Execution</span>
@@ -502,11 +507,11 @@ export default function TerminalPage() {
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-slate-400">Vol Regime</span>
-                        <span className="text-white">{rg.volatility?.regime ?? 'ï¿½'}</span>
+                        <span className="text-white">{rg.volatility?.regime ?? '—'}</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-slate-400">Final Size</span>
-                        <span className="text-white font-mono">{typeof rg.sizing?.finalSize === 'number' ? `${(rg.sizing.finalSize * 100).toFixed(0)}%` : 'ï¿½'}</span>
+                        <span className="text-white font-mono">{typeof rg.sizing?.finalSize === 'number' ? `${(rg.sizing.finalSize * 100).toFixed(0)}%` : '—'}</span>
                       </div>
                       {rg.hardBlocked && rg.hardBlockReasons?.length > 0 && (
                         <div className="mt-2 text-[10px] text-red-400 bg-red-500/10 rounded px-2 py-1">
@@ -542,7 +547,7 @@ export default function TerminalPage() {
                                 : '#94A3B8'
                               } small />
                             </td>
-                            <td className="py-2 px-2 text-right font-mono text-slate-300">{typeof lv.prob === 'number' ? `${(lv.prob * 100).toFixed(0)}%` : 'ï¿½'}</td>
+                            <td className="py-2 px-2 text-right font-mono text-slate-300">{typeof lv.prob === 'number' ? `${(lv.prob * 100).toFixed(0)}%` : '—'}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -591,11 +596,11 @@ export default function TerminalPage() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
                       <div className="text-[10px] text-slate-500 uppercase">Phase</div>
-                      <div className="text-sm font-bold text-white capitalize">{session.phase?.replace(/_/g, ' ') ?? 'ï¿½'}</div>
+                      <div className="text-sm font-bold text-white capitalize">{session.phase?.replace(/_/g, ' ') ?? '—'}</div>
                     </div>
                     <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
                       <div className="text-[10px] text-slate-500 uppercase">Size Cap</div>
-                      <div className="text-sm font-bold text-white">{typeof session.size_cap_multiplier === 'number' ? `${(session.size_cap_multiplier * 100).toFixed(0)}%` : 'ï¿½'}</div>
+                      <div className="text-sm font-bold text-white">{typeof session.size_cap_multiplier === 'number' ? `${(session.size_cap_multiplier * 100).toFixed(0)}%` : '—'}</div>
                     </div>
                     <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
                       <div className="text-[10px] text-slate-500 uppercase">Tradable</div>
@@ -649,7 +654,7 @@ function AnchorDayTable({ rows, asset }: { rows: ForwardCloseScheduleRow[]; asse
                 <tbody>{catRows.map(row => (
                   <tr key={row.tf} className={`border-b border-slate-800/50 ${catBg(cat)}`}>
                     <td className={`py-1.5 pr-3 font-semibold ${catColor(cat)}`}>{row.tf}</td>
-                    <td className="py-1.5 pr-3 font-mono text-slate-300">{row.firstCloseAtISO ? formatCalDate(row.firstCloseAtISO, asset) : 'ï¿½'}</td>
+                    <td className="py-1.5 pr-3 font-mono text-slate-300">{row.firstCloseAtISO ? formatCalDate(row.firstCloseAtISO, asset) : '—'}</td>
                     <td className="py-1.5 pr-3 font-mono text-slate-400">{fmtMins(row.minsToFirstClose)}</td>
                     <td className="py-1.5 text-slate-500">{row.weight}</td>
                   </tr>
@@ -681,10 +686,10 @@ function FullScheduleTable({ rows, asset }: { rows: ForwardCloseScheduleRow[]; a
           <tr key={row.tf} className={`border-b border-slate-800/50 ${row.closesOnAnchorDay ? catBg(row.category) : ''}`}>
             <td className={`py-1.5 pr-3 font-semibold ${catColor(row.category)}`}>{row.tf}</td>
             <td className="py-1.5 pr-3"><span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium uppercase ${catBg(row.category)} ${catColor(row.category)}`}>{row.category}</span></td>
-            <td className="py-1.5 pr-3 font-mono text-slate-300">{row.firstCloseAtISO ? formatCalDate(row.firstCloseAtISO, asset) : 'ï¿½'}</td>
+            <td className="py-1.5 pr-3 font-mono text-slate-300">{row.firstCloseAtISO ? formatCalDate(row.firstCloseAtISO, asset) : '—'}</td>
             <td className="py-1.5 pr-3 font-mono text-slate-400">{fmtMins(row.minsToFirstClose)}</td>
             <td className="py-1.5 pr-3 text-center font-semibold text-slate-200">{row.closesInHorizon}</td>
-            <td className="py-1.5 pr-3 text-center">{row.closesOnAnchorDay ? <span className="inline-block rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-400">YES</span> : <span className="text-slate-600">ï¿½</span>}</td>
+            <td className="py-1.5 pr-3 text-center">{row.closesOnAnchorDay ? <span className="inline-block rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-400">YES</span> : <span className="text-slate-600">—</span>}</td>
             <td className="py-1.5 text-slate-500">{row.weight}</td>
           </tr>
         ))}</tbody>
