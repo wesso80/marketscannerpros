@@ -6,7 +6,7 @@ This is a **Next.js** financial market scanning platform with subscription manag
 
 ### Core Components
 - **Next.js App** (`/app`, `/components`, `/lib`) - Full website, auth, API routes, all trading tools
-- **Database** - PostgreSQL via Vercel (workspaces, subscriptions, portfolio, journal, alerts)
+- **Database** - PostgreSQL via Render (workspaces, subscriptions, portfolio, journal, alerts)
 - **Authentication** - Custom JWT + cookie-based (`lib/auth.ts`, middleware edge-compatible HMAC)
 - **Payments** - Stripe subscriptions with trial abuse prevention
 - **Data Source** - Alpha Vantage API for market data and technical indicators
@@ -111,7 +111,7 @@ npm run build
 **Required:**
 - `APP_SIGNING_SECRET` - HMAC key for JWT
 - `STRIPE_SECRET_KEY` - Payment processing
-- `DATABASE_URL` - Postgres connection (Vercel)
+- `DATABASE_URL` - Postgres connection (Render)
 - `OPENAI_API_KEY` - MSP Analyst chatbot
 - `ALPHA_VANTAGE_API_KEY` - Market data
 
