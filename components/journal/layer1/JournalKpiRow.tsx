@@ -38,6 +38,7 @@ export default function JournalKpiRow({ kpis }: JournalKpiRowProps) {
     };
 
   return (
+    <>
     <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-9">
       <KpiCard label="Equity / Balance" value={`$${data.equity.toFixed(2)}`} />
       <KpiCard label="Realized P&L (30d)" value={`$${data.realizedPnl30d.toFixed(2)}`} delta={data.realizedPnl30d} />
@@ -55,5 +56,23 @@ export default function JournalKpiRow({ kpis }: JournalKpiRowProps) {
         <KpiCard label="Avg R (30d)" value={data.avgR30d.toFixed(2)} suffix="R" delta={data.avgR30d} />
       )}
     </div>
+    {data.behavioralFlags && data.behavioralFlags.length > 0 && (
+      <div className="mt-3 space-y-1.5">
+        {data.behavioralFlags.map((flag, i) => (
+          <div key={i} className={`flex items-start gap-2 rounded-lg p-2 text-xs ${
+            flag.severity === 'alert' ? 'bg-red-500/10 border border-red-500/30' : 'bg-amber-500/10 border border-amber-500/30'
+          }`}>
+            <span className="mt-0.5">{flag.severity === 'alert' ? '🚨' : '⚠️'}</span>
+            <div>
+              <span className={`font-semibold ${flag.severity === 'alert' ? 'text-red-300' : 'text-amber-300'}`}>
+                {flag.type.replaceAll('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
+              </span>
+              <span className="text-slate-400"> — {flag.message}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </>
   );
 }

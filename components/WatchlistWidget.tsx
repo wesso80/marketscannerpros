@@ -25,6 +25,10 @@ interface WatchlistItem {
   added_price: number | null;
   sort_order: number;
   created_at: string;
+  confluenceScore?: number;
+  confluenceSignals?: string[];
+  current_price?: number;
+  change_percent?: number;
 }
 
 interface QuoteData {
@@ -717,6 +721,15 @@ export default function WatchlistWidget() {
                         {row.alignmentScore >= 3 && <span>🧠 Multi-TF Aligned</span>}
                         {row.stage === 'Conflict' && <span>⚠ Conflict</span>}
                         {row.momentumState === 'Rising' && <span>🔥 Momentum Shift</span>}
+                        {(item.confluenceScore ?? 0) > 0 && (
+                          <span className={`rounded px-1 font-semibold ${
+                            (item.confluenceScore ?? 0) >= 3 ? 'bg-emerald-500/20 text-emerald-400' :
+                            (item.confluenceScore ?? 0) >= 2 ? 'bg-amber-500/20 text-amber-300' :
+                            'bg-slate-700 text-slate-300'
+                          }`}>
+                            ⚙ {item.confluenceScore} signal{(item.confluenceScore ?? 0) > 1 ? 's' : ''}: {(item.confluenceSignals || []).join(', ')}
+                          </span>
+                        )}
                       </div>
 
                       <div className="mt-3 grid grid-cols-2 gap-1.5 sm:grid-cols-4">

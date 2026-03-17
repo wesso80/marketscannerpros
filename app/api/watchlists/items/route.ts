@@ -29,19 +29,48 @@ export async function GET(req: NextRequest) {
 
     const items = await q(`
       SELECT 
-        id,
-        symbol,
-        asset_type,
-        notes,
-        added_price,
-        sort_order,
-        created_at
-      FROM watchlist_items
-      WHERE watchlist_id = $1 AND workspace_id = $2
-      ORDER BY sort_order ASC, created_at ASC
+        wi.id,
+        wi.symbol,
+        wi.asset_type,
+        wi.notes,
+        wi.added_price,
+        wi.sort_order,
+        wi.created_at,
+        il.rsi14,
+        il.adx14,
+        il.in_squeeze,
+        il.mfi14,
+        ql.price AS current_price,
+        ql.change_percent
+      FROM watchlist_items wi
+      LEFT JOIN indicators_latest il ON il.symbol = wi.symbol AND il.timeframe = 'daily'
+      LEFT JOIN quotes_latest ql ON ql.symbol = wi.symbol
+      WHERE wi.watchlist_id = $1 AND wi.workspace_id = $2
+      ORDER BY wi.sort_order ASC, wi.created_at ASC
     `, [watchlistId, session.workspaceId]);
 
-    return NextResponse.json({ items });
+    // Compute confluence score per item
+    const enrichedItems = items.map((item: any) => {
+      let confluenceScore = 0;
+      let confluenceSignals: string[] = [];
+      if (item.rsi14 != null) {
+        if (item.rsi14 < 30) { confluenceScore += 1; confluenceSignals.push('RSI oversold'); }
+        else if (item.rsi14 > 70) { confluenceScore += 1; confluenceSignals.push('RSI overbought'); }
+      }
+      if (item.adx14 != null && item.adx14 > 25) { confluenceScore += 1; confluenceSignals.push('ADX trending'); }
+      if (item.in_squeeze) { confluenceScore += 1; confluenceSignals.push('Squeeze'); }
+      if (item.mfi14 != null) {
+        if (item.mfi14 < 20) { confluenceScore += 1; confluenceSignals.push('MFI oversold'); }
+        else if (item.mfi14 > 80) { confluenceScore += 1; confluenceSignals.push('MFI overbought'); }
+      }
+      return {
+        ...item,
+        confluenceScore,
+        confluenceSignals,
+      };
+    });
+
+    return NextResponse.json({ items: enrichedItems });
   } catch (error) {
     console.error('Error fetching watchlist items:', error);
     return NextResponse.json({ error: 'Failed to fetch items' }, { status: 500 });

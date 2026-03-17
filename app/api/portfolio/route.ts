@@ -143,6 +143,48 @@ export async function GET(req: NextRequest) {
       totalPL: parseFloat(p.total_pl)
     }));
 
+    // Compute portfolio risk analytics from daily snapshots
+    let riskAnalytics: {
+      dailySharpe: number;
+      annualizedSharpe: number;
+      var95: number;
+      maxDrawdown: number;
+      avgDailyReturn: number;
+      dailyVolatility: number;
+    } | null = null;
+
+    if (performanceHistory.length >= 5) {
+      const dailyReturns: number[] = [];
+      for (let i = 1; i < performanceHistory.length; i++) {
+        const prev = performanceHistory[i - 1].totalValue;
+        const curr = performanceHistory[i].totalValue;
+        if (prev > 0) dailyReturns.push(((curr - prev) / prev) * 100);
+      }
+      if (dailyReturns.length >= 3) {
+        const avgReturn = dailyReturns.reduce((a, b) => a + b, 0) / dailyReturns.length;
+        const stdDev = Math.sqrt(
+          dailyReturns.reduce((s, r) => s + Math.pow(r - avgReturn, 2), 0) / dailyReturns.length
+        );
+        const sortedReturns = [...dailyReturns].sort((a, b) => a - b);
+        const var95 = sortedReturns[Math.floor(sortedReturns.length * 0.05)] ?? 0;
+        let peak = performanceHistory[0].totalValue;
+        let maxDD = 0;
+        for (const snap of performanceHistory) {
+          if (snap.totalValue > peak) peak = snap.totalValue;
+          const dd = peak > 0 ? ((peak - snap.totalValue) / peak) * 100 : 0;
+          if (dd > maxDD) maxDD = dd;
+        }
+        riskAnalytics = {
+          dailySharpe: stdDev > 0 ? avgReturn / stdDev : 0,
+          annualizedSharpe: stdDev > 0 ? (avgReturn / stdDev) * Math.sqrt(252) : 0,
+          var95: Math.abs(var95),
+          maxDrawdown: maxDD,
+          avgDailyReturn: avgReturn,
+          dailyVolatility: stdDev,
+        };
+      }
+    }
+
     let cashState: CashState | null = null;
     try {
       const cashRows = await q(
@@ -171,7 +213,7 @@ export async function GET(req: NextRequest) {
       console.warn('portfolio_cash_ledger table not available yet; continuing without persisted cash state');
     }
 
-    return NextResponse.json({ positions, closedPositions, performanceHistory, cashState });
+    return NextResponse.json({ positions, closedPositions, performanceHistory, cashState, riskAnalytics });
   } catch (error) {
     console.error("Portfolio GET error:", error);
     return NextResponse.json({ error: "Failed to load portfolio" }, { status: 500 });

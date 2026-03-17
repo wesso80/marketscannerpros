@@ -26,6 +26,15 @@ export type JournalKpisModel = {
   avgMae30d?: number;
   /** Average R-multiple (closed trades, 30d) */
   avgR30d?: number;
+  /** Behavioral pattern detection */
+  behavioralFlags?: BehavioralFlag[];
+};
+
+export type BehavioralFlag = {
+  type: 'revenge_trading' | 'overtrading' | 'loss_chasing' | 'win_streak_oversize';
+  severity: 'warning' | 'alert';
+  message: string;
+  occurrences: number;
 };
 
 export type FiltersMetaModel = {

@@ -506,6 +506,10 @@ export function PortfolioContent() {
   const [density, setDensity] = useState<TerminalDensity>('normal');
   const [closedPositions, setClosedPositions] = useState<ClosedPosition[]>([]);
   const [performanceHistory, setPerformanceHistory] = useState<PerformanceSnapshot[]>([]);
+  const [riskAnalytics, setRiskAnalytics] = useState<{
+    dailySharpe: number; annualizedSharpe: number; var95: number;
+    maxDrawdown: number; avgDailyReturn: number; dailyVolatility: number;
+  } | null>(null);
   const [startingCapitalInput, setStartingCapitalInput] = useState<string>('10000');
   const [cashLedger, setCashLedger] = useState<CashLedgerEntry[]>([]);
   const [cashFlowDraft, setCashFlowDraft] = useState({
@@ -854,6 +858,7 @@ export function PortfolioContent() {
             setPositions(loadedPositions);
             setClosedPositions(data.closedPositions || []);
             setPerformanceHistory(data.performanceHistory || []);
+            if (data.riskAnalytics) setRiskAnalytics(data.riskAnalytics);
             if (data.cashState) {
               setStartingCapitalInput(String(Number(data.cashState.startingCapital || 10000)));
               setCashLedger(Array.isArray(data.cashState.cashLedger) ? data.cashState.cashLedger : []);
@@ -2108,6 +2113,38 @@ export function PortfolioContent() {
                   </div>
                 ))}
               </div>
+
+              {riskAnalytics && (
+                <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-4">
+                  <div className="mb-3 text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Risk Analytics</div>
+                  <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.06em] text-slate-500">Ann. Sharpe</div>
+                      <div className={`text-sm font-bold ${riskAnalytics.annualizedSharpe >= 1 ? 'text-emerald-400' : riskAnalytics.annualizedSharpe >= 0 ? 'text-amber-400' : 'text-red-400'}`}>{riskAnalytics.annualizedSharpe.toFixed(2)}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.06em] text-slate-500">VaR (95%)</div>
+                      <div className="text-sm font-bold text-red-400">{(riskAnalytics.var95 * 100).toFixed(2)}%</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.06em] text-slate-500">Max Drawdown</div>
+                      <div className="text-sm font-bold text-red-400">{(riskAnalytics.maxDrawdown * 100).toFixed(2)}%</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.06em] text-slate-500">Daily Vol</div>
+                      <div className="text-sm font-bold text-slate-100">{(riskAnalytics.dailyVolatility * 100).toFixed(2)}%</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.06em] text-slate-500">Ann. Vol</div>
+                      <div className="text-sm font-bold text-slate-100">{(riskAnalytics.dailyVolatility * Math.sqrt(252) * 100).toFixed(2)}%</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.06em] text-slate-500">Avg Daily</div>
+                      <div className={`text-sm font-bold ${riskAnalytics.avgDailyReturn >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{(riskAnalytics.avgDailyReturn * 100).toFixed(3)}%</div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <details className="rounded-lg border border-slate-700 bg-slate-900/40 p-3" open={showAiAnalysis}>
                 <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.06em] text-slate-300">AI Portfolio Review</summary>

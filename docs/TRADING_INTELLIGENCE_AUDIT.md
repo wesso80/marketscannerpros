@@ -775,20 +775,28 @@ Symbol organization and staging. Answers: *"What am I tracking?"*
 - Asset type filtering (stocks, crypto, forex, commodities)
 - Drag-and-drop reordering
 
-### EDGE ANALYSIS: **Informational Only**
+### EDGE ANALYSIS: **Partial Edge** *(upgraded from Informational Only)*
 
-Zero automated intelligence. Purely organizational tool for symbol staging. No scoring, ranking, or signal integration.
+**What creates edge:**
+- Confluence scoring per symbol (RSI, ADX, squeeze, MFI from `indicators_latest`) surfaces actionable setups within watchlists
+- Live price + change% enrichment from `quotes_latest` turns static lists into monitoring dashboards
+- Color-coded confluence badges (green ≥3, amber ≥2) provide instant visual signal ranking
+
+**What limits edge:**
+- No watchlist-level batch scanning
+- No auto-add from scanner results
+- No mini-chart sparklines
 
 ### WHAT IS CURRENTLY MISSING
+- ~~Rank by confluence score within watchlist~~ ✅ **RESOLVED** — confluence scoring (0-5) from RSI/ADX/squeeze/MFI with signal labels
 - Watchlist-level scanner integration (scan all watchlisted symbols)
-- Rank by confluence score within watchlist
 - Auto-add from scanner results
 - Smart watchlists (auto-populate based on criteria)
 - Alert integration (price changes on watchlisted symbols)
 - Mini-chart sparklines per symbol
 
 ### SIGNAL QUALITY
-- **Rating:** Organizational tool. No signals generated.
+- **Rating:** Enriched organizational tool with confluence scoring. Generates visual signal ranking within watchlists.
 
 ---
 
@@ -815,7 +823,7 @@ Position tracking and P&L management. Answers: *"How are my positions doing?"*
 
 **What limits edge:**
 - Manual position entry (no broker API integration)
-- No risk analytics (correlation, beta, VaR)
+- No correlation or beta analysis
 - No portfolio-level P&L alerts or drawdown warnings
 - AI analysis can hallucinate sector-specific details
 
@@ -823,13 +831,14 @@ Position tracking and P&L management. Answers: *"How are my positions doing?"*
 - ✅ Position-level tracking
 - ✅ Strategy tagging
 - ✅ AI-powered analysis
+- ✅ Risk analytics panel: annualized Sharpe, VaR (95%), max drawdown, daily/annualized volatility, avg daily return *(NEW)*
 - ❌ No broker integration
-- ❌ No risk analytics (correlation, beta, VaR, Sharpe)
+- ❌ No correlation or beta analysis
 - ❌ No portfolio heat (total risk exposure by sector/asset)
 - ❌ No rebalancing recommendations
 
 ### SIGNAL QUALITY
-- **Rating:** Tracking tool. Portfolio doesn't generate signals but connects to AI analysis for commentary.
+- **Rating:** Tracking tool with risk intelligence. Portfolio risk analytics (VaR, Sharpe, volatility) provide quantitative risk awareness. Connects to AI analysis for narrative commentary.
 
 ---
 
@@ -861,13 +870,13 @@ Trade outcome tracking and pattern recognition. Answers: *"Am I improving? What 
 - ✅ Entry/exit P&L tracking
 - ✅ Strategy-level analytics
 - ✅ Signal source linkage (unique)
+- ✅ Behavioral pattern detection: revenge trading, overtrading (4+ trades/day), loss chasing (3+ consecutive losses) *(NEW)*
 - ❌ No automatic trade import
 - ❌ No equity curve visualization
-- ❌ No behavioral pattern detection (revenge trading, overtrading, etc.)
 - ❌ No options P&L attribution
 
 ### SIGNAL QUALITY
-- **Rating:** Learning tool with feedback loop. The outcome labeler connecting journal entries back to signal quality is valuable infrastructure that improves all other signals over time.
+- **Rating:** Learning tool with behavioral coaching. The outcome labeler connects journal entries to signal quality. Behavioral flags (revenge trading, overtrading, loss chasing) provide real-time coaching alerts that improve trader discipline.
 
 ---
 
