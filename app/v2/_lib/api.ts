@@ -31,7 +31,11 @@ async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
     headers: { 'Content-Type': 'application/json', ...options?.headers },
   });
   if (res.status === 401 || res.status === 403) throw new AuthError(url);
-  if (!res.ok) throw new Error(`API ${res.status}: ${url}`);
+  if (!res.ok) {
+    let detail = '';
+    try { const body = await res.json(); detail = body?.error || body?.message || ''; } catch {}
+    throw new Error(detail ? `${detail}` : `API ${res.status}: ${url}`);
+  }
   return res.json();
 }
 

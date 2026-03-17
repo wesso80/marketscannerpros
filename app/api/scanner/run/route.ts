@@ -30,7 +30,7 @@ export const revalidate = 0; // Disable ISR caching
 // Scanner API - CoinGecko commercial feed for crypto
 // Equity & Forex require commercial data licenses - admin-only testing with Alpha Vantage
 // v3.0 - Added cache mode support for reduced AV calls
-const SCANNER_VERSION = 'v3.0';
+const SCANNER_VERSION = 'v3.1';
 const ALPHA_KEY = process.env.ALPHA_VANTAGE_API_KEY;
 const STABLECOIN_SYMBOLS = new Set([
   // USD-pegged
@@ -371,6 +371,8 @@ export async function POST(req: NextRequest) {
     const session = isCronBypass
       ? { workspaceId: 'system-cron', tier: 'pro_trader' as const, cid: 'system' }
       : (await getSessionFromCookie()) ?? { workspaceId: 'anonymous', tier: 'free' as const, cid: 'anonymous' };
+
+    console.info(`[scanner] session: tier=${session.tier} cid=${session.cid} ws=${session.workspaceId.substring(0, 8)}`);
 
     // Rate limit check - skip for cron jobs and paid tiers
     if (!isCronBypass && session.tier !== 'pro' && session.tier !== 'pro_trader') {
