@@ -380,7 +380,7 @@ export async function POST(req: NextRequest) {
 
     const session = { ...rawSession, tier: effectiveTier };
 
-    console.info(`[scanner] session: tier=${session.tier} cid=${session.cid} ws=${session.workspaceId.substring(0, 8)}`);
+    console.info(`[scanner] session: tier=${session.tier} cookieTier=${rawSession.tier} cid=${session.cid} ws=${session.workspaceId.substring(0, 8)}`);
 
     // Rate limit check - skip for cron jobs and paid tiers
     if (!isCronBypass && session.tier !== 'pro' && session.tier !== 'pro_trader') {

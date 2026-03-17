@@ -50,8 +50,10 @@ function extractEmailFromCid(cid: string): string | null {
  * Resolve the effective tier for a workspace using the same logic as /api/me:
  *  1) FREE_FOR_ALL_MODE → pro_trader
  *  2) Admin email → pro_trader
- *  3) DB user_subscriptions tier (source of truth from Stripe)
- *  4) Fallback to cookie tier
+ *  3) DB user_subscriptions tier by workspace_id
+ *  4) DB user_subscriptions tier by stripe_customer_id (cid for Stripe users)
+ *  5) DB user_subscriptions tier by email (from cid for trial/free users)
+ *  6) Fallback to cookie tier
  */
 export async function getEffectiveTier(
   workspaceId: string,
@@ -71,12 +73,40 @@ export async function getEffectiveTier(
   if (!dbQuery) return normalizeTier(cookieTier);
 
   try {
-    // First try by workspace_id
+    // 1) Try by workspace_id (primary key — fastest path)
     const rows = await dbQuery<{ email: string; tier: string; status: string }>(
       'SELECT email, tier, status FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1',
       [workspaceId]
     );
-    const dbSub = rows.length > 0 ? rows[0] : null;
+    let dbSub = rows.length > 0 ? rows[0] : null;
+
+    // 2) No row by workspace_id — try by stripe_customer_id
+    //    For Stripe users, cid IS the Stripe customer ID (cus_xxxxx)
+    if (!dbSub && cid && cid.startsWith('cus_')) {
+      const byCust = await dbQuery<{ email: string; tier: string; status: string }>(
+        'SELECT email, tier, status FROM user_subscriptions WHERE stripe_customer_id = $1 LIMIT 1',
+        [cid]
+      );
+      dbSub = byCust.length > 0 ? byCust[0] : null;
+      if (dbSub) {
+        console.info(`[getEffectiveTier] Found sub by stripe_customer_id=${cid} (workspace_id miss)`);
+      }
+    }
+
+    // 3) No row by stripe_customer_id — try by email (for trial/free users)
+    if (!dbSub && cid) {
+      const emailFromCid = extractEmailFromCid(cid);
+      if (emailFromCid) {
+        const byEmail = await dbQuery<{ email: string; tier: string; status: string }>(
+          'SELECT email, tier, status FROM user_subscriptions WHERE LOWER(email) = LOWER($1) AND (status = $2 OR status = $3) ORDER BY tier DESC LIMIT 1',
+          [emailFromCid, 'active', 'trialing']
+        );
+        dbSub = byEmail.length > 0 ? byEmail[0] : null;
+        if (dbSub) {
+          console.info(`[getEffectiveTier] Found sub by email=${emailFromCid} (workspace_id miss)`);
+        }
+      }
+    }
 
     if (dbSub) {
       // Check admin by DB email
@@ -85,24 +115,10 @@ export async function getEffectiveTier(
       if (dbSub.status !== 'active' && dbSub.status !== 'trialing') return 'free';
       return normalizeTier(dbSub.tier);
     }
-
-    // No row by workspace_id — try by email (workspace hash may differ from DB)
-    if (cid) {
-      const emailFromCid = extractEmailFromCid(cid);
-      if (emailFromCid) {
-        const byEmail = await dbQuery<{ email: string; tier: string; status: string }>(
-          'SELECT email, tier, status FROM user_subscriptions WHERE LOWER(email) = LOWER($1) AND (status = $2 OR status = $3) ORDER BY tier DESC LIMIT 1',
-          [emailFromCid, 'active', 'trialing']
-        );
-        if (byEmail.length > 0) {
-          if (ADMIN_EMAILS.includes(byEmail[0].email.toLowerCase())) return 'pro_trader';
-          return normalizeTier(byEmail[0].tier);
-        }
-      }
-    }
-  } catch {
-    // DB error — fall through to cookie tier
+  } catch (err) {
+    console.error('[getEffectiveTier] DB error:', err);
   }
 
+  console.warn(`[getEffectiveTier] No DB sub found for ws=${workspaceId.substring(0, 8)} cid=${cid} — falling back to cookie tier=${cookieTier}`);
   return normalizeTier(cookieTier);
 }

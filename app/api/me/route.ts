@@ -50,7 +50,18 @@ export async function GET() {
   }
 
   // Check DB for current subscription (source of truth for tier)
-  const dbSub = await getSubscriptionFromDB(session.workspaceId);
+  let dbSub = await getSubscriptionFromDB(session.workspaceId);
+  
+  // Fallback: look up by Stripe customer ID if workspace_id miss
+  if (!dbSub && session.cid && session.cid.startsWith('cus_')) {
+    try {
+      const rows = await q<{ email: string; tier: string; status: string }>(
+        'SELECT email, tier, status FROM user_subscriptions WHERE stripe_customer_id = $1 LIMIT 1',
+        [session.cid]
+      );
+      dbSub = rows.length > 0 ? rows[0] : null;
+    } catch { /* ignore */ }
+  }
   
   let email = dbSub?.email ?? null;
   
