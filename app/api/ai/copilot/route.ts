@@ -342,6 +342,7 @@ Effective Throttle: ${perfAdjusted.throttle.toFixed(3)}`,
       if (intelligenceSymbol) {
         const intelligenceCtx = await fetchIntelligenceContext(intelligenceSymbol, {
           scanData: pageData as Record<string, any>,
+          workspaceId: session?.workspaceId,
           confluenceComponents: {
             SQ: regimeScoring.rawComponents.SQ,
             TA: regimeScoring.rawComponents.TA,

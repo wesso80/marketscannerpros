@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getMarketData, CoinGeckoMarketData } from '@/lib/coingecko';
+import { getMarketData, CoinGeckoMarketData, getDefiData } from '@/lib/coingecko';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
 
@@ -61,8 +61,11 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Fetch market data from CoinGecko (single batched API call)
-    const marketData = await getMarketData({ ids: CRYPTO_IDS, per_page: 20 });
+    // Fetch market data + DeFi stats in parallel (both from CoinGecko)
+    const [marketData, defiData] = await Promise.all([
+      getMarketData({ ids: CRYPTO_IDS, per_page: 20 }),
+      getDefiData(),
+    ]);
     
     if (!marketData || marketData.length === 0) {
       return NextResponse.json({
@@ -142,6 +145,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       cryptos,
+      defi: defiData ?? null,
       timestamp: new Date().toISOString(),
       source: 'coingecko'
     });

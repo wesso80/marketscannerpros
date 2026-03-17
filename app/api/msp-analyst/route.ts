@@ -790,6 +790,7 @@ Always mention which derivatives signals support or contradict your analysis.
       const intelligenceCtx = await fetchIntelligenceContext(intelligenceSymbol, {
         assetClass: isCryptoQuery ? 'crypto' : 'equity',
         scanData: scanner?.scanData,
+        workspaceId,
         confluenceComponents: {
           SQ: regimeScoring.rawComponents.SQ,
           TA: regimeScoring.rawComponents.TA,

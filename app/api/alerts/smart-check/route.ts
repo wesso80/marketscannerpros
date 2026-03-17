@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { q } from '@/lib/db';
 import { sendAlertEmail } from '@/lib/email';
 import { sendPushToUser } from '@/lib/pushServer';
+import { fetchMPE } from '@/lib/goldenEggFetchers';
 
 /**
  * Smart Alerts Checker
@@ -129,8 +130,13 @@ async function checkSmartAlerts(req: NextRequest) {
 
         const result = checkSmartCondition(alert, derivativesData);
         
-        if (result.triggered) {
-          await triggerSmartAlert(alert, result);
+        // If the basic check didn't trigger, try extended conditions (portfolio/MPE/state)
+        const finalResult = result.triggered
+          ? result
+          : await checkExtendedCondition(alert, derivativesData);
+
+        if (finalResult.triggered) {
+          await triggerSmartAlert(alert, finalResult);
           triggered.push(alert.id);
         }
       } catch (err) {
@@ -360,6 +366,122 @@ function checkSmartCondition(alert: SmartAlert, data: DerivativesData): CheckRes
           message: `📉 BEARISH DIVERGENCE: OI ${oiChange.toFixed(2)}% - distribution/deleveraging`,
           context: { totalOI: data.oi?.total?.formatted },
         };
+      }
+      break;
+    }
+  }
+
+  return { triggered: false };
+}
+
+/**
+ * Extended condition checker for portfolio/MPE alerts
+ * These require async DB or API lookups per workspace
+ */
+async function checkExtendedCondition(alert: SmartAlert, data: DerivativesData): Promise<CheckResult> {
+  const { condition_type, condition_value, workspace_id, symbol } = alert;
+
+  switch (condition_type) {
+    case 'portfolio_drawdown': {
+      // Trigger when portfolio unrealized P&L drops below -X%
+      const rows = await q<{ total_cost: number; total_value: number }>(
+        `SELECT COALESCE(SUM(avg_cost * quantity), 0) as total_cost,
+                COALESCE(SUM(current_price * quantity), 0) as total_value
+         FROM portfolio_positions
+         WHERE workspace_id = $1 AND status = 'open'`,
+        [workspace_id]
+      );
+      const { total_cost, total_value } = rows[0] || { total_cost: 0, total_value: 0 };
+      if (total_cost > 0) {
+        const drawdownPct = ((total_value - total_cost) / total_cost) * 100;
+        if (drawdownPct <= -condition_value) {
+          return {
+            triggered: true,
+            value: drawdownPct,
+            threshold: -condition_value,
+            message: `🔴 PORTFOLIO DRAWDOWN: ${drawdownPct.toFixed(2)}% (threshold: -${condition_value}%)`,
+            context: { totalCost: total_cost, totalValue: total_value },
+          };
+        }
+      }
+      break;
+    }
+
+    case 'portfolio_daily_loss': {
+      // Trigger when closed P&L today exceeds -$X
+      const rows = await q<{ daily_pnl: number }>(
+        `SELECT COALESCE(SUM(realized_pnl), 0) as daily_pnl
+         FROM portfolio_closed
+         WHERE workspace_id = $1
+           AND closed_at >= CURRENT_DATE`,
+        [workspace_id]
+      );
+      const dailyPnl = rows[0]?.daily_pnl ?? 0;
+      if (dailyPnl <= -condition_value) {
+        return {
+          triggered: true,
+          value: dailyPnl,
+          threshold: -condition_value,
+          message: `💰 DAILY LOSS LIMIT: $${Math.abs(dailyPnl).toFixed(2)} lost today (threshold: $${condition_value})`,
+          context: { dailyPnl },
+        };
+      }
+      break;
+    }
+
+    case 'mpe_above': {
+      // Trigger when MPE composite exceeds threshold
+      if (!symbol) break;
+      const mpe = await fetchMPE(symbol, 'auto').catch(() => null);
+      if (mpe && mpe.composite >= condition_value) {
+        return {
+          triggered: true,
+          value: mpe.composite,
+          threshold: condition_value,
+          message: `🔥 MPE HIGH PRESSURE: ${symbol} MPE ${Math.round(mpe.composite)}/100 (threshold: ${condition_value})`,
+          context: { time: mpe.time, volatility: mpe.volatility, liquidity: mpe.liquidity },
+        };
+      }
+      break;
+    }
+
+    case 'mpe_below': {
+      // Trigger when MPE composite drops below threshold
+      if (!symbol) break;
+      const mpe = await fetchMPE(symbol, 'auto').catch(() => null);
+      if (mpe && mpe.composite <= condition_value) {
+        return {
+          triggered: true,
+          value: mpe.composite,
+          threshold: condition_value,
+          message: `❄️ MPE LOW PRESSURE: ${symbol} MPE ${Math.round(mpe.composite)}/100 (threshold: ${condition_value})`,
+          context: { time: mpe.time, volatility: mpe.volatility, liquidity: mpe.liquidity },
+        };
+      }
+      break;
+    }
+
+    case 'state_machine_change': {
+      // Trigger when symbol enters a specific state (condition_value is ignored, symbol required)
+      if (!symbol) break;
+      const smRows = await q<{ state: string; previous_state: string | null; updated_at: string }>(
+        `SELECT state, previous_state, updated_at
+         FROM symbol_state_machine
+         WHERE workspace_id = $1 AND symbol = $2
+         ORDER BY updated_at DESC LIMIT 1`,
+        [workspace_id, symbol.toUpperCase()]
+      );
+      if (smRows[0] && smRows[0].previous_state && smRows[0].state !== smRows[0].previous_state) {
+        // State changed recently — check if within last 30 minutes
+        const updatedAt = new Date(smRows[0].updated_at);
+        if (Date.now() - updatedAt.getTime() < 30 * 60 * 1000) {
+          return {
+            triggered: true,
+            value: 0,
+            message: `🔄 STATE CHANGE: ${symbol} moved from ${smRows[0].previous_state} → ${smRows[0].state}`,
+            context: { oldState: smRows[0].previous_state, newState: smRows[0].state },
+          };
+        }
       }
       break;
     }

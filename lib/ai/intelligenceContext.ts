@@ -11,6 +11,7 @@ import { fetchMPE, type TimeConfluenceData } from '@/lib/goldenEggFetchers';
 import { classifyBestDoctrine, type ClassifierInput } from '@/lib/doctrine/classifier';
 import { getIndicators, getQuote } from '@/lib/onDemandFetch';
 import { computeCapitalFlowEngine, type CapitalFlowResult, type CapitalFlowInput } from '@/lib/capitalFlowEngine';
+import { getLatestStateMachineBySymbol, type StoredStateMachineRow } from '@/lib/state-machine-store';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -25,6 +26,8 @@ export interface IntelligenceContextResult {
   doctrine: { id: string; confidence: number; reasons: string[]; regimeCompatible: boolean } | null;
   /** Raw CFE summary (subset for AI) */
   cfe: CFESummary | null;
+  /** Raw state machine state for symbol */
+  stateMachine: { state: string; direction: string; playbook: string; confidence: number | null; since: string; nextAction: string | null } | null;
 }
 
 export interface CFESummary {
@@ -70,17 +73,22 @@ export async function fetchIntelligenceContext(
     precomputedCFE?: CapitalFlowResult | null;
     /** Confluence component breakdown (SQ/TA/VA/LL/MTF/FD) from regime scoring */
     confluenceComponents?: ConfluenceComponentsInput | null;
+    /** Workspace ID — enables state machine context lookup */
+    workspaceId?: string;
   }
 ): Promise<IntelligenceContextResult> {
-  if (!symbol) return { systemMessage: null, mpe: null, doctrine: null, cfe: null };
+  if (!symbol) return { systemMessage: null, mpe: null, doctrine: null, cfe: null, stateMachine: null };
 
   const assetClass = opts?.assetClass || inferAssetClass(symbol);
 
-  // Fetch MPE and indicators in parallel
-  const [mpeResult, indicators, quote] = await Promise.all([
+  // Fetch MPE, indicators, and state machine in parallel
+  const [mpeResult, indicators, quote, smRow] = await Promise.all([
     fetchMPE(symbol, assetClass, opts?.tcData).catch(() => null),
     getIndicators(symbol, 'daily').catch(() => null),
     getQuote(symbol).catch(() => null),
+    opts?.workspaceId
+      ? getLatestStateMachineBySymbol(opts.workspaceId, symbol).catch(() => null)
+      : Promise.resolve(null),
   ]);
 
   // ---- MPE ----
@@ -167,6 +175,20 @@ export async function fetchIntelligenceContext(
     // CFE computation is non-critical
   }
 
+  // ---- State Machine ----
+  let stateMachine: IntelligenceContextResult['stateMachine'] = null;
+  if (smRow) {
+    const smJson = smRow.state_machine_json as any;
+    stateMachine = {
+      state: smRow.state,
+      direction: smRow.direction,
+      playbook: smRow.playbook,
+      confidence: smRow.state_confidence,
+      since: smRow.state_since,
+      nextAction: smJson?.next_best_action?.action ?? null,
+    };
+  }
+
   // ---- Build system message ----
   const parts: string[] = [];
   parts.push('=== UNIFIED INTELLIGENCE CONTEXT (Live) ===');
@@ -218,7 +240,28 @@ CONFLUENCE COMPONENT BREAKDOWN:
 - FD (Fundamentals/Deriv.): ${cc.FD !== undefined ? Math.round(cc.FD) : 'N/A'}/100`);
   }
 
-  if (mpe || doctrine || cfe || cc) {
+  if (stateMachine) {
+    const stateDescriptions: Record<string, string> = {
+      SCAN: 'scanning for setups — no active interest',
+      WATCH: 'on watchlist — monitoring for entry conditions',
+      STALK: 'actively stalking — waiting for final trigger',
+      ARMED: 'armed and ready — entry imminent on next signal',
+      EXECUTE: 'in execution — managing active position',
+      MANAGE: 'post-entry management — trailing/scaling',
+      COOLDOWN: 'cooldown period — recently exited, avoid re-entry',
+      BLOCKED: 'blocked — conditions prohibit trading this symbol',
+    };
+    parts.push(`
+INSTITUTIONAL STATE MACHINE:
+- Current State: ${stateMachine.state} — ${stateDescriptions[stateMachine.state] || 'unknown state'}
+- Direction: ${stateMachine.direction}
+- Playbook: ${stateMachine.playbook}
+- Confidence: ${stateMachine.confidence != null ? `${stateMachine.confidence}%` : 'N/A'}
+- In State Since: ${stateMachine.since}
+- Next Action: ${stateMachine.nextAction || 'N/A'}`);
+  }
+
+  if (mpe || doctrine || cfe || cc || stateMachine) {
     parts.push(`
 INTELLIGENCE INSTRUCTIONS:
 - Reference the MPE composite score when discussing trade timing and position sizing.
@@ -229,12 +272,14 @@ INTELLIGENCE INSTRUCTIONS:
 - If CFE brain permission is BLOCK, this overrides other bullish signals — stand aside.
 - If conviction < 40%, note weak institutional alignment and recommend smaller size.
 - When explaining confluence score, break it down by component — identify which factors are strong/weak.
-- If any component scores below 30, flag it as the "weak link" limiting the setup.`);
+- If any component scores below 30, flag it as the "weak link" limiting the setup.
+- Reference the state machine state when discussing trade readiness — SCAN/WATCH means not ready, STALK/ARMED means approaching entry, EXECUTE/MANAGE means active.
+- If state is BLOCKED or COOLDOWN, recommend NOT trading this symbol regardless of other signals.`);
   }
 
   const systemMessage = parts.length > 1 ? parts.join('\n') : null;
 
-  return { systemMessage, mpe, doctrine, cfe };
+  return { systemMessage, mpe, doctrine, cfe, stateMachine };
 }
 
 /* ------------------------------------------------------------------ */

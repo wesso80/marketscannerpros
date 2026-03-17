@@ -21,8 +21,19 @@ interface CryptoData {
   sector?: string;
 }
 
+interface DefiData {
+  defi_market_cap: string;
+  eth_market_cap: string;
+  defi_to_eth_ratio: string;
+  trading_volume_24h: string;
+  defi_dominance: string;
+  top_coin_name: string;
+  top_coin_defi_dominance: number;
+}
+
 export default function CryptoHeatmap() {
   const [cryptos, setCryptos] = useState<CryptoData[]>([]);
+  const [defi, setDefi] = useState<DefiData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
@@ -42,6 +53,7 @@ export default function CryptoHeatmap() {
       if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
       setCryptos(data.cryptos);
+      setDefi(data.defi ?? null);
       setLastUpdate(data.timestamp);
       if (typeof data.source === 'string' && data.source.trim()) {
         setDataSource(data.source.toLowerCase() === 'coingecko' ? 'CoinGecko' : data.source);
@@ -82,6 +94,15 @@ export default function CryptoHeatmap() {
     if (cap >= 1e9) return `$${(cap / 1e9).toFixed(2)}B`;
     if (cap >= 1e6) return `$${(cap / 1e6).toFixed(2)}M`;
     return `$${cap.toLocaleString()}`;
+  }
+
+  function formatDefiValue(val: string): string {
+    const n = parseFloat(val);
+    if (isNaN(n)) return val;
+    if (n >= 1e12) return `${(n / 1e12).toFixed(2)}T`;
+    if (n >= 1e9) return `${(n / 1e9).toFixed(2)}B`;
+    if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`;
+    return n.toLocaleString();
   }
 
   function calculateLayout(items: CryptoData[]): { x: number; y: number; w: number; h: number; crypto: CryptoData }[] {
@@ -393,7 +414,7 @@ export default function CryptoHeatmap() {
           <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
             <span>🧠</span> Crypto Intelligence
           </h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {/* Funding Rate Overview */}
             <div className="bg-slate-800/50 rounded-lg p-3">
               <h5 className="text-xs font-semibold text-slate-300 mb-2">Funding Rates</h5>
@@ -481,6 +502,37 @@ export default function CryptoHeatmap() {
                     ));
                 })()}
               </div>
+            </div>
+
+            {/* DeFi TVL Overview */}
+            <div className="bg-slate-800/50 rounded-lg p-3">
+              <h5 className="text-xs font-semibold text-slate-300 mb-2">DeFi TVL</h5>
+              {defi ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400">Market Cap</span>
+                    <span className="text-white font-medium">${formatDefiValue(defi.defi_market_cap)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400">24h Volume</span>
+                    <span className="text-white font-medium">${formatDefiValue(defi.trading_volume_24h)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400">DeFi Dominance</span>
+                    <span className="text-emerald-400 font-medium">{parseFloat(defi.defi_dominance).toFixed(2)}%</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400">DeFi/ETH Ratio</span>
+                    <span className="text-white font-medium">{parseFloat(defi.defi_to_eth_ratio).toFixed(2)}%</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-400">Top DeFi Coin</span>
+                    <span className="text-amber-400 font-medium">{defi.top_coin_name} ({defi.top_coin_defi_dominance.toFixed(1)}%)</span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[10px] text-slate-500">DeFi data unavailable</p>
+              )}
             </div>
           </div>
         </div>
