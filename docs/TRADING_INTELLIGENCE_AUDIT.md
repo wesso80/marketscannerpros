@@ -603,18 +603,21 @@ Crypto market cap visualization. Answers: *"What crypto assets are moving?"*
 - Displays top-30 cryptos by market cap with % change color coding
 - Same data source as Market Movers (CoinGecko coins/markets)
 
-### EDGE ANALYSIS: **Informational Only**
+### EDGE ANALYSIS: **Partial Edge**
 
-Same as Sector Heatmap but for crypto. Purely visual representation of price changes with no signal intelligence, confluence scoring, or derivative overlay.
+Crypto heatmap now includes derivatives intelligence and sector categorization, transforming it from a passive visualization into an actionable dashboard.
+
+### GAPS RESOLVED (v2 — Jan 2026)
+1. **Funding rate overlay** — Each tile shows real-time funding rate + bullish/bearish/neutral sentiment badge sourced from `derivatives_snapshots` DB. Extreme funding (>0.03% or <-0.01%) color-coded.
+2. **OI change overlay** — Tooltip displays total open interest and 24h OI change % (compared to snapshot >20h ago). Intelligence panel ranks all coins by OI change.
+3. **Sector categorization** — Static sector map classifies 16 coins into L1, L2, DeFi, Meme, Payments, Oracle, Store of Value. Sector badge on tiles + intelligence panel groups by sector with avg change%.
+4. **Crypto Intelligence panel** — Three-column panel below heatmap: funding rate summary (sorted by magnitude), OI change overview (sorted by delta), sector breakdown (grouped with avg performance).
 
 ### WHAT IS CURRENTLY MISSING
-- Funding rate overlay on heatmap (show which assets have extreme funding)
-- OI change overlay (which assets are building positions)
-- DeFi TVL comparison
-- Sector categorization (L1, L2, DeFi, GameFi, AI tokens)
+- DeFi TVL comparison (data available via `getDefiData()` but not yet wired to heatmap UI)
 
 ### SIGNAL QUALITY
-- **Rating:** Informational. Market awareness tool, not an edge generator.
+- **Rating:** Partial Edge. Funding rate extremes + OI divergence signals genuine positioning intelligence. Sector grouping enables rotation analysis across crypto sub-sectors.
 
 ---
 

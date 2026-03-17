@@ -12,6 +12,13 @@ interface CryptoData {
   color: string;
   volume?: number;
   marketCap?: number;
+  // Derivatives overlay
+  fundingRate?: number | null;
+  fundingSentiment?: string | null;
+  openInterest?: number | null;
+  oiChange24h?: number | null;
+  // Sector categorization
+  sector?: string;
 }
 
 export default function CryptoHeatmap() {
@@ -219,7 +226,23 @@ export default function CryptoHeatmap() {
               onMouseEnter={() => setHoveredCrypto(item.crypto.symbol)}
               onMouseLeave={() => setHoveredCrypto(null)}
             >
-              <div className="h-full flex flex-col items-center justify-center p-1 text-center overflow-hidden">
+              <div className="h-full flex flex-col items-center justify-center p-1 text-center overflow-hidden relative">
+                {/* Sector badge */}
+                {item.crypto.sector && (
+                  <span className="absolute top-0.5 left-0.5 text-[8px] font-semibold rounded px-1 py-0.5 leading-none bg-black/40 text-white/80 truncate max-w-[90%]">
+                    {item.crypto.sector}
+                  </span>
+                )}
+                {/* Funding sentiment indicator */}
+                {item.crypto.fundingSentiment && (
+                  <span className={`absolute top-0.5 right-0.5 text-[8px] font-bold rounded px-1 py-0.5 leading-none ${
+                    item.crypto.fundingSentiment === 'Bullish' ? 'bg-emerald-500/70 text-white' :
+                    item.crypto.fundingSentiment === 'Bearish' ? 'bg-red-500/70 text-white' :
+                    'bg-slate-500/50 text-white/80'
+                  }`}>
+                    {item.crypto.fundingRate != null ? `${(item.crypto.fundingRate).toFixed(3)}%` : item.crypto.fundingSentiment[0]}
+                  </span>
+                )}
                 <span className="text-white font-bold text-sm sm:text-base md:text-lg drop-shadow-lg">
                   {item.crypto.symbol}
                 </span>
@@ -238,8 +261,13 @@ export default function CryptoHeatmap() {
               
               {/* Hover tooltip - positioned to float above */}
               {isHovered && (
-                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-slate-900 border border-slate-600 rounded-lg p-3 text-xs shadow-xl min-w-[160px] z-50">
+                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-slate-900 border border-slate-600 rounded-lg p-3 text-xs shadow-xl min-w-[180px] z-50">
                   <div className="font-semibold text-white mb-2 text-center">{item.crypto.name}</div>
+                  {item.crypto.sector && (
+                    <div className="text-center mb-2">
+                      <span className="text-[10px] bg-slate-700 text-slate-300 rounded px-1.5 py-0.5">{item.crypto.sector}</span>
+                    </div>
+                  )}
                   {item.crypto.price > 0 && (
                     <div className="flex justify-between text-white/80 gap-4">
                       <span>Price:</span>
@@ -262,6 +290,43 @@ export default function CryptoHeatmap() {
                     <span>Weight:</span>
                     <span className="font-medium text-white">{item.crypto.weight}%</span>
                   </div>
+                  {/* Derivatives overlay */}
+                  {(item.crypto.fundingRate != null || item.crypto.openInterest != null) && (
+                    <div className="border-t border-slate-700 mt-2 pt-2 space-y-1">
+                      {item.crypto.fundingRate != null && (
+                        <div className="flex justify-between text-white/80 gap-4">
+                          <span>Funding:</span>
+                          <span className={`font-medium ${
+                            item.crypto.fundingRate > 0.03 ? 'text-emerald-400' :
+                            item.crypto.fundingRate < -0.01 ? 'text-red-400' : 'text-slate-300'
+                          }`}>{item.crypto.fundingRate.toFixed(4)}%</span>
+                        </div>
+                      )}
+                      {item.crypto.fundingSentiment && (
+                        <div className="flex justify-between text-white/80 gap-4">
+                          <span>Sentiment:</span>
+                          <span className={`font-medium ${
+                            item.crypto.fundingSentiment === 'Bullish' ? 'text-emerald-400' :
+                            item.crypto.fundingSentiment === 'Bearish' ? 'text-red-400' : 'text-slate-300'
+                          }`}>{item.crypto.fundingSentiment}</span>
+                        </div>
+                      )}
+                      {item.crypto.openInterest != null && item.crypto.openInterest > 0 && (
+                        <div className="flex justify-between text-white/80 gap-4">
+                          <span>Open Interest:</span>
+                          <span className="font-medium text-white">{formatMarketCap(item.crypto.openInterest)}</span>
+                        </div>
+                      )}
+                      {item.crypto.oiChange24h != null && (
+                        <div className="flex justify-between text-white/80 gap-4">
+                          <span>OI Chg 24h:</span>
+                          <span className={`font-medium ${
+                            item.crypto.oiChange24h >= 0 ? 'text-emerald-400' : 'text-red-400'
+                          }`}>{item.crypto.oiChange24h >= 0 ? '+' : ''}{item.crypto.oiChange24h.toFixed(1)}%</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {/* Arrow */}
                   <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-slate-900"></div>
                 </div>
@@ -321,6 +386,105 @@ export default function CryptoHeatmap() {
           </span>
         </div>
       </div>
+
+      {/* Crypto Intelligence Panel */}
+      {cryptos.some(c => c.fundingRate != null || c.sector) && (
+        <div className="p-4 border-t border-slate-700 bg-slate-900/30">
+          <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+            <span>🧠</span> Crypto Intelligence
+          </h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {/* Funding Rate Overview */}
+            <div className="bg-slate-800/50 rounded-lg p-3">
+              <h5 className="text-xs font-semibold text-slate-300 mb-2">Funding Rates</h5>
+              {cryptos.some(c => c.fundingRate != null) ? (
+                <div className="space-y-1">
+                  {[...cryptos]
+                    .filter(c => c.fundingRate != null)
+                    .sort((a, b) => Math.abs(b.fundingRate ?? 0) - Math.abs(a.fundingRate ?? 0))
+                    .map(c => (
+                      <div key={c.symbol} className="flex items-center justify-between text-xs">
+                        <span className="text-white">{c.symbol}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`font-medium ${
+                            (c.fundingRate ?? 0) > 0.03 ? 'text-emerald-400' :
+                            (c.fundingRate ?? 0) < -0.01 ? 'text-red-400' : 'text-slate-300'
+                          }`}>{(c.fundingRate ?? 0).toFixed(4)}%</span>
+                          <span className={`text-[9px] rounded px-1 ${
+                            c.fundingSentiment === 'Bullish' ? 'bg-emerald-500/20 text-emerald-400' :
+                            c.fundingSentiment === 'Bearish' ? 'bg-red-500/20 text-red-400' :
+                            'bg-slate-700 text-slate-400'
+                          }`}>{c.fundingSentiment?.[0] ?? '—'}</span>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <p className="text-[10px] text-slate-500">Funding data populates from derivatives cron</p>
+              )}
+            </div>
+
+            {/* OI Change */}
+            <div className="bg-slate-800/50 rounded-lg p-3">
+              <h5 className="text-xs font-semibold text-slate-300 mb-2">OI Change (24h)</h5>
+              {cryptos.some(c => c.oiChange24h != null) ? (
+                <div className="space-y-1">
+                  {[...cryptos]
+                    .filter(c => c.oiChange24h != null)
+                    .sort((a, b) => (b.oiChange24h ?? 0) - (a.oiChange24h ?? 0))
+                    .map(c => (
+                      <div key={c.symbol} className="flex items-center justify-between text-xs">
+                        <span className="text-white">{c.symbol}</span>
+                        <div className="flex items-center gap-1.5">
+                          {c.openInterest != null && c.openInterest > 0 && (
+                            <span className="text-slate-500 text-[10px]">{formatMarketCap(c.openInterest)}</span>
+                          )}
+                          <span className={`font-medium ${
+                            (c.oiChange24h ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'
+                          }`}>{(c.oiChange24h ?? 0) >= 0 ? '+' : ''}{(c.oiChange24h ?? 0).toFixed(1)}%</span>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <p className="text-[10px] text-slate-500">OI data populates from derivatives cron snapshots</p>
+              )}
+            </div>
+
+            {/* Sector Breakdown */}
+            <div className="bg-slate-800/50 rounded-lg p-3">
+              <h5 className="text-xs font-semibold text-slate-300 mb-2">Sector Breakdown</h5>
+              <div className="space-y-1">
+                {(() => {
+                  const sectors: Record<string, { coins: string[]; avgChange: number }> = {};
+                  for (const c of cryptos) {
+                    const sec = c.sector || 'Other';
+                    if (!sectors[sec]) sectors[sec] = { coins: [], avgChange: 0 };
+                    sectors[sec].coins.push(c.symbol);
+                    sectors[sec].avgChange += c.changePercent;
+                  }
+                  for (const s of Object.values(sectors)) {
+                    s.avgChange = s.coins.length > 0 ? s.avgChange / s.coins.length : 0;
+                  }
+                  return Object.entries(sectors)
+                    .sort((a, b) => b[1].avgChange - a[1].avgChange)
+                    .map(([name, data]) => (
+                      <div key={name} className="text-xs">
+                        <div className="flex justify-between items-center">
+                          <span className="text-white font-medium">{name}</span>
+                          <span className={`font-medium ${data.avgChange >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {data.avgChange >= 0 ? '+' : ''}{data.avgChange.toFixed(2)}%
+                          </span>
+                        </div>
+                        <span className="text-slate-500 text-[10px]">{data.coins.join(', ')}</span>
+                      </div>
+                    ));
+                })()}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

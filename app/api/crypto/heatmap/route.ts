@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getMarketData, CoinGeckoMarketData } from '@/lib/coingecko';
 import { getSessionFromCookie } from '@/lib/auth';
+import { q } from '@/lib/db';
+
+// Crypto sector categorization
+const CRYPTO_SECTORS: Record<string, string> = {
+  BTC: 'Store of Value', ETH: 'Layer 1', BNB: 'Layer 1',
+  SOL: 'Layer 1', XRP: 'Payments', ADA: 'Layer 1',
+  DOGE: 'Meme', AVAX: 'Layer 1', DOT: 'Layer 1',
+  MATIC: 'Layer 2', LINK: 'Oracle / DeFi', LTC: 'Payments',
+  SHIB: 'Meme', UNI: 'DeFi', ATOM: 'Layer 1', XLM: 'Payments',
+};
 
 // Top cryptocurrencies with display config
 const CRYPTO_CONFIG: Record<string, { weight: number; color: string }> = {
@@ -34,6 +44,13 @@ interface CryptoData {
   color: string;
   volume?: number;
   marketCap?: number;
+  // Derivatives overlay
+  fundingRate?: number | null;
+  fundingSentiment?: string | null;
+  openInterest?: number | null;
+  oiChange24h?: number | null;
+  // Sector categorization
+  sector?: string;
 }
 
 // GET /api/crypto/heatmap - Get crypto performance data via CoinGecko
@@ -58,9 +75,10 @@ export async function GET(req: NextRequest) {
 
     const cryptos: CryptoData[] = marketData.map((coin: CoinGeckoMarketData) => {
       const config = CRYPTO_CONFIG[coin.id] || { weight: 0.5, color: '#888888' };
+      const sym = coin.symbol.toUpperCase();
       
       return {
-        symbol: coin.symbol.toUpperCase(),
+        symbol: sym,
         name: coin.name,
         price: coin.current_price,
         change: coin.price_change_24h || 0,
@@ -69,8 +87,55 @@ export async function GET(req: NextRequest) {
         color: config.color,
         volume: coin.total_volume,
         marketCap: coin.market_cap,
+        sector: CRYPTO_SECTORS[sym] || 'Other',
       };
     });
+
+    // Enrich with derivatives data from DB (latest snapshots)
+    try {
+      const symbols = cryptos.map(c => c.symbol);
+      const placeholders = symbols.map((_, i) => `$${i + 1}`).join(',');
+
+      // Get latest derivatives snapshot per symbol
+      const derivRows = await q(
+        `SELECT DISTINCT ON (symbol) symbol, funding_rate_pct, sentiment, total_oi, total_volume_24h
+         FROM derivatives_snapshots
+         WHERE symbol IN (${placeholders})
+         ORDER BY symbol, captured_at DESC`,
+        symbols
+      );
+
+      // Get previous snapshot for OI change calculation (24h ago)
+      const prevRows = await q(
+        `SELECT DISTINCT ON (symbol) symbol, total_oi
+         FROM derivatives_snapshots
+         WHERE symbol IN (${placeholders})
+           AND captured_at < NOW() - INTERVAL '20 hours'
+         ORDER BY symbol, captured_at DESC`,
+        symbols
+      );
+
+      const derivMap = new Map<string, Record<string, unknown>>();
+      for (const r of derivRows) derivMap.set(r.symbol, r);
+      const prevMap = new Map<string, number>();
+      for (const r of prevRows) prevMap.set(r.symbol, parseFloat(r.total_oi) || 0);
+
+      for (const c of cryptos) {
+        const d = derivMap.get(c.symbol);
+        if (d) {
+          c.fundingRate = d.funding_rate_pct != null ? parseFloat(String(d.funding_rate_pct)) : null;
+          c.fundingSentiment = (d.sentiment as string) || null;
+          c.openInterest = d.total_oi != null ? parseFloat(String(d.total_oi)) : null;
+          // OI change %
+          const prevOI = prevMap.get(c.symbol);
+          if (prevOI && prevOI > 0 && c.openInterest && c.openInterest > 0) {
+            c.oiChange24h = Math.round(((c.openInterest - prevOI) / prevOI) * 10000) / 100;
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Crypto heatmap derivatives enrichment (non-fatal):', err);
+    }
 
     // Sort by weight (market cap proxy)
     cryptos.sort((a, b) => b.weight - a.weight);
