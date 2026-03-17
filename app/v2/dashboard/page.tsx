@@ -23,6 +23,11 @@ function pctColor(v: number) {
   if (v < 0) return 'text-red-400';
   return 'text-slate-400';
 }
+function fmtPrice(p: number) {
+  const abs = Math.abs(p);
+  const dec = abs >= 100 ? 2 : abs >= 1 ? 2 : abs >= 0.01 ? 4 : 6;
+  return '$' + p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: dec });
+}
 function parseChangePct(raw: string) {
   return parseFloat((raw || '0').replace('%', ''));
 }
@@ -123,7 +128,7 @@ export default function DashboardPage() {
                     <Badge label={r.direction} color={directionColor(r.direction)} small />
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-xs text-slate-300 font-mono">${r.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="text-xs text-slate-300 font-mono">{fmtPrice(r.price)}</span>
                     <span className={`text-xs font-mono ${r.changePct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{r.changePct >= 0 ? '+' : ''}{r.changePct.toFixed(2)}%</span>
                     <div className="text-right w-10">
                       <div className="text-sm font-bold" style={{ color: directionColor(r.direction) }}>
@@ -150,7 +155,7 @@ export default function DashboardPage() {
               ) : eqGainers.map((m: Mover) => (
                 <div key={`eg-${m.ticker}`} className="grid grid-cols-[5rem_1fr_6rem] items-center text-xs py-0.5 cursor-pointer hover:bg-slate-800/40 px-1 rounded" onClick={() => { selectSymbol(m.ticker); navigateTo('golden-egg', m.ticker); }}>
                   <span className="font-semibold text-white">{m.ticker}</span>
-                  <span className="text-slate-300 text-right font-mono tabular-nums">${parseFloat(m.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className="text-slate-300 text-right font-mono tabular-nums">{fmtPrice(parseFloat(m.price))}</span>
                   <span className="text-emerald-400 font-mono text-right tabular-nums">+{m.change_percentage}</span>
                 </div>
               ))}
@@ -160,7 +165,7 @@ export default function DashboardPage() {
               ) : eqLosers.map((m: Mover) => (
                 <div key={`el-${m.ticker}`} className="grid grid-cols-[5rem_1fr_6rem] items-center text-xs py-0.5 cursor-pointer hover:bg-slate-800/40 px-1 rounded" onClick={() => { selectSymbol(m.ticker); navigateTo('golden-egg', m.ticker); }}>
                   <span className="font-semibold text-white">{m.ticker}</span>
-                  <span className="text-slate-300 text-right font-mono tabular-nums">${parseFloat(m.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className="text-slate-300 text-right font-mono tabular-nums">{fmtPrice(parseFloat(m.price))}</span>
                   <span className="text-red-400 font-mono text-right tabular-nums">{m.change_percentage}</span>
                 </div>
               ))}
@@ -179,7 +184,7 @@ export default function DashboardPage() {
               ) : crGainers.map((m: Mover) => (
                 <div key={`cg-${m.ticker}`} className="grid grid-cols-[5rem_1fr_6rem] items-center text-xs py-0.5 cursor-pointer hover:bg-slate-800/40 px-1 rounded" onClick={() => { selectSymbol(m.ticker); navigateTo('golden-egg', m.ticker); }}>
                   <span className="font-semibold text-white">{m.ticker}</span>
-                  <span className="text-slate-300 text-right">${parseFloat(m.price).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                  <span className="text-slate-300 text-right font-mono tabular-nums">{fmtPrice(parseFloat(m.price))}</span>
                   <span className="text-emerald-400 font-mono text-right">+{m.change_percentage}</span>
                 </div>
               ))}
@@ -189,7 +194,7 @@ export default function DashboardPage() {
               ) : crLosers.map((m: Mover) => (
                 <div key={`cl-${m.ticker}`} className="grid grid-cols-[5rem_1fr_6rem] items-center text-xs py-0.5 cursor-pointer hover:bg-slate-800/40 px-1 rounded" onClick={() => { selectSymbol(m.ticker); navigateTo('golden-egg', m.ticker); }}>
                   <span className="font-semibold text-white">{m.ticker}</span>
-                  <span className="text-slate-300 text-right">${parseFloat(m.price).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                  <span className="text-slate-300 text-right font-mono tabular-nums">{fmtPrice(parseFloat(m.price))}</span>
                   <span className="text-red-400 font-mono text-right">{m.change_percentage}</span>
                 </div>
               ))}
