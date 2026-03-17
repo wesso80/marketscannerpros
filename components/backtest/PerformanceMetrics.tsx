@@ -12,6 +12,24 @@ interface Trade {
   holdingPeriodDays: number;
 }
 
+interface KellyCriterion {
+  kellyFraction: number;
+  halfKelly: number;
+  expectedEdge: number;
+}
+
+interface MonteCarloResult {
+  simulations: number;
+  medianReturn: number;
+  p5Return: number;
+  p25Return: number;
+  p75Return: number;
+  p95Return: number;
+  medianMaxDrawdown: number;
+  p95MaxDrawdown: number;
+  ruinProbability: number;
+}
+
 interface PerformanceMetricsProps {
   totalReturn: number;
   winRate: number;
@@ -28,6 +46,8 @@ interface PerformanceMetricsProps {
   timeInMarket: number;
   bestTrade: Trade | null;
   worstTrade: Trade | null;
+  kelly?: KellyCriterion;
+  monteCarlo?: MonteCarloResult;
 }
 
 function safe(v: number) {
@@ -60,7 +80,7 @@ function MetricCard({ label, children, emphasized, borderColor }: {
   );
 }
 
-export default function PerformanceMetrics({ totalReturn, winRate, totalTrades, profitFactor, sharpeRatio, maxDrawdown, avgWin, avgLoss, cagr, volatility, sortinoRatio, calmarRatio, timeInMarket, bestTrade, worstTrade }: PerformanceMetricsProps) {
+export default function PerformanceMetrics({ totalReturn, winRate, totalTrades, profitFactor, sharpeRatio, maxDrawdown, avgWin, avgLoss, cagr, volatility, sortinoRatio, calmarRatio, timeInMarket, bestTrade, worstTrade, kelly, monteCarlo }: PerformanceMetricsProps) {
   const pfColor = profitFactor >= 1.5 ? '#10b981' : profitFactor >= 1 ? '#fbbf24' : '#ef4444';
   const pfBorder = profitFactor >= 1.5 ? 'rgba(16,185,129,0.65)' : profitFactor >= 1 ? 'rgba(251,191,36,0.55)' : 'rgba(239,68,68,0.65)';
   const ddColor = maxDrawdown <= 10 ? '#10b981' : maxDrawdown <= 20 ? '#fbbf24' : '#ef4444';
@@ -183,6 +203,90 @@ export default function PerformanceMetrics({ totalReturn, winRate, totalTrades, 
           </div>
         )}
       </div>
+
+      {/* Kelly Criterion & Monte Carlo */}
+      {(kelly || monteCarlo) && (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {kelly && (
+            <div className="rounded-xl border border-violet-500/30 bg-slate-800/50 p-4">
+              <h3 className="mb-3 flex items-center gap-2 text-[12px] font-semibold uppercase tracking-wider text-violet-300">
+                <span>🎯</span> Kelly Criterion
+              </h3>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <div className="text-[10px] text-slate-400">Full Kelly</div>
+                  <div className="text-lg font-bold text-violet-300">{(kelly.kellyFraction * 100).toFixed(1)}%</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-slate-400">Half Kelly ✓</div>
+                  <div className="text-lg font-bold text-emerald-400">{(kelly.halfKelly * 100).toFixed(1)}%</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-slate-400">Edge / Trade</div>
+                  <div className={`text-lg font-bold ${kelly.expectedEdge >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    ${kelly.expectedEdge.toFixed(2)}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-2 text-[10px] text-slate-500">
+                {kelly.kellyFraction > 0 ? 'Positive expectancy. Half-Kelly recommended for conservative sizing.' : 'No positive edge — reduce position size.'}
+              </div>
+            </div>
+          )}
+
+          {monteCarlo && (
+            <div className="rounded-xl border border-amber-500/30 bg-slate-800/50 p-4">
+              <h3 className="mb-3 flex items-center gap-2 text-[12px] font-semibold uppercase tracking-wider text-amber-300">
+                <span>🎲</span> Monte Carlo ({monteCarlo.simulations} sims)
+              </h3>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">5th %ile (worst)</span>
+                  <span className={`font-medium ${monteCarlo.p5Return >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {monteCarlo.p5Return >= 0 ? '+' : ''}{monteCarlo.p5Return.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">25th %ile</span>
+                  <span className={`font-medium ${monteCarlo.p25Return >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {monteCarlo.p25Return >= 0 ? '+' : ''}{monteCarlo.p25Return.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Median</span>
+                  <span className={`font-bold ${monteCarlo.medianReturn >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {monteCarlo.medianReturn >= 0 ? '+' : ''}{monteCarlo.medianReturn.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">75th %ile</span>
+                  <span className={`font-medium ${monteCarlo.p75Return >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {monteCarlo.p75Return >= 0 ? '+' : ''}{monteCarlo.p75Return.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">95th %ile (best)</span>
+                  <span className="font-medium text-emerald-400">+{monteCarlo.p95Return.toFixed(1)}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Median DD</span>
+                  <span className="font-medium text-amber-400">{monteCarlo.medianMaxDrawdown.toFixed(1)}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">95th %ile DD</span>
+                  <span className="font-medium text-red-400">{monteCarlo.p95MaxDrawdown.toFixed(1)}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Ruin Prob (&gt;50% DD)</span>
+                  <span className={`font-bold ${monteCarlo.ruinProbability <= 5 ? 'text-emerald-400' : monteCarlo.ruinProbability <= 15 ? 'text-amber-400' : 'text-red-400'}`}>
+                    {monteCarlo.ruinProbability.toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

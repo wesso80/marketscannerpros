@@ -702,11 +702,15 @@ Strategy validation and historical signal verification. Answers: *"Does this str
 - ✅ Custom parameter configuration
 - ✅ Signal replay backtesting (unique)
 - ✅ Diagnostics health scoring
+- ✅ Kelly criterion position sizing (full & half-Kelly, expected edge per trade)
+- ✅ Monte Carlo simulation (500 sims, percentile return bands, ruin probability, DD distribution)
 - ⚠️ Partial: walk-forward analysis (forward test tracker exists but basic)
-- ❌ No position sizing / Kelly criterion
-- ❌ No Monte Carlo simulation
-- ❌ No correlation analysis between strategies
+- ❌ No correlation analysis between strategies (requires multi-strategy batch endpoint)
 - ❌ No options-specific backtesting (P&L with Greeks decay)
+
+### GAPS RESOLVED (v2 — Jan 2026)
+1. **Kelly criterion position sizing** — Computes optimal Kelly fraction, conservative half-Kelly, and expected edge per trade from win rate + avg win/loss. Displayed in PerformanceMetrics as a dedicated card.
+2. **Monte Carlo simulation** — 500-iteration shuffle of trade return ordering. Produces 5th/25th/50th/75th/95th percentile return bands, median and worst-case max drawdown, and ruin probability (>50% DD). Displayed as a distribution summary card.
 
 ### SIGNAL QUALITY
 - **Rating:** Validates other signals. The backtest engine doesn't generate trading signals itself, but validates and calibrates every other signal source — this is critical infrastructure.

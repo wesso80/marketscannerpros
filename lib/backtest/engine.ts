@@ -39,6 +39,24 @@ export interface BacktestEquityPoint {
   drawdown: number;
 }
 
+export interface KellyCriterion {
+  kellyFraction: number;    // optimal fraction of capital to risk per trade
+  halfKelly: number;        // conservative half-Kelly (commonly used)
+  expectedEdge: number;     // expected $ return per $1 risked
+}
+
+export interface MonteCarloResult {
+  simulations: number;
+  medianReturn: number;     // median final return %
+  p5Return: number;         // 5th percentile (worst-case)
+  p25Return: number;        // 25th percentile
+  p75Return: number;        // 75th percentile
+  p95Return: number;        // 95th percentile (best-case)
+  medianMaxDrawdown: number;
+  p95MaxDrawdown: number;   // worst-case drawdown at 95th percentile
+  ruinProbability: number;  // % of sims that hit > 50% drawdown
+}
+
 export interface BacktestEngineResult {
   totalTrades: number;
   winningTrades: number;
@@ -62,6 +80,8 @@ export interface BacktestEngineResult {
   validation?: BacktestValidation;
   dataCoverage?: BacktestDataCoverage;
   diagnostics?: unknown;
+  kelly?: KellyCriterion;
+  monteCarlo?: MonteCarloResult;
 }
 
 export function createEmptyBacktestResult(): BacktestEngineResult {
@@ -169,6 +189,68 @@ export function buildBacktestEngineResult(trades: BacktestTrade[], dates: string
   const bestTrade = trades.reduce((best, t) => t.returnPercent > (best?.returnPercent ?? -Infinity) ? t : best, trades[0]);
   const worstTrade = trades.reduce((worst, t) => t.returnPercent < (worst?.returnPercent ?? Infinity) ? t : worst, trades[0]);
 
+  // Kelly Criterion: f* = (W × B - L) / B  where W=win rate, L=loss rate, B=avg win / abs(avg loss)
+  let kelly: KellyCriterion | undefined;
+  if (winningTrades > 0 && losingTrades > 0 && avgLoss !== 0) {
+    const W = winningTrades / totalTrades;
+    const L = losingTrades / totalTrades;
+    const B = Math.abs(avgWin / avgLoss);
+    const kellyFraction = (W * B - L) / B;
+    kelly = {
+      kellyFraction: parseFloat(Math.max(0, kellyFraction).toFixed(4)),
+      halfKelly: parseFloat(Math.max(0, kellyFraction / 2).toFixed(4)),
+      expectedEdge: parseFloat((W * avgWin + L * avgLoss).toFixed(2)),
+    };
+  }
+
+  // Monte Carlo Simulation: shuffle trade returns 500 times, track equity paths
+  let monteCarlo: MonteCarloResult | undefined;
+  if (trades.length >= 8) {
+    const tradeReturns = trades.map(t => t.return);
+    const numSims = 500;
+    const finalReturns: number[] = [];
+    const maxDrawdowns: number[] = [];
+
+    for (let s = 0; s < numSims; s++) {
+      // Fisher-Yates shuffle of trade returns
+      const shuffled = [...tradeReturns];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      // Simulate equity path
+      let eq = initialCapital;
+      let pk = initialCapital;
+      let md = 0;
+      for (const ret of shuffled) {
+        eq += ret;
+        if (eq > pk) pk = eq;
+        const dd = pk > 0 ? ((pk - eq) / pk) * 100 : 0;
+        if (dd > md) md = dd;
+      }
+      finalReturns.push(((eq - initialCapital) / initialCapital) * 100);
+      maxDrawdowns.push(md);
+    }
+
+    finalReturns.sort((a, b) => a - b);
+    maxDrawdowns.sort((a, b) => a - b);
+
+    const percentile = (arr: number[], p: number) => arr[Math.floor(arr.length * p / 100)] ?? 0;
+    const ruinCount = maxDrawdowns.filter(d => d > 50).length;
+
+    monteCarlo = {
+      simulations: numSims,
+      medianReturn: parseFloat(percentile(finalReturns, 50).toFixed(2)),
+      p5Return: parseFloat(percentile(finalReturns, 5).toFixed(2)),
+      p25Return: parseFloat(percentile(finalReturns, 25).toFixed(2)),
+      p75Return: parseFloat(percentile(finalReturns, 75).toFixed(2)),
+      p95Return: parseFloat(percentile(finalReturns, 95).toFixed(2)),
+      medianMaxDrawdown: parseFloat(percentile(maxDrawdowns, 50).toFixed(2)),
+      p95MaxDrawdown: parseFloat(percentile(maxDrawdowns, 95).toFixed(2)),
+      ruinProbability: parseFloat(((ruinCount / numSims) * 100).toFixed(1)),
+    };
+  }
+
   return {
     totalTrades,
     winningTrades,
@@ -211,5 +293,7 @@ export function buildBacktestEngineResult(trades: BacktestTrade[], dates: string
       return: parseFloat(t.return.toFixed(2)),
       returnPercent: parseFloat(t.returnPercent.toFixed(2)),
     })),
+    kelly,
+    monteCarlo,
   };
 }

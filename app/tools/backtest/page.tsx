@@ -3050,6 +3050,8 @@ function BacktestContent() {
               timeInMarket={results.timeInMarket}
               bestTrade={results.bestTrade}
               worstTrade={results.worstTrade}
+              kelly={(results as any).kelly}
+              monteCarlo={(results as any).monteCarlo}
             />
 
             <TradeHistoryTable trades={results.trades || []} tier={tier} />
