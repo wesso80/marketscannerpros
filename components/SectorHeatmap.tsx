@@ -16,6 +16,16 @@ interface SectorData {
   yearly?: number;
   weight: number;
   color: string;
+  // Technical overlay
+  rsi14?: number | null;
+  adx14?: number | null;
+  ema200_dist?: number | null;
+  in_squeeze?: boolean | null;
+  mfi14?: number | null;
+  obv?: number | null;
+  // Rotation & RS
+  rs_rank?: number;
+  rotation_phase?: string;
 }
 
 type TimeFrame = 'realtime' | 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'ytd' | 'yearly';
@@ -269,7 +279,28 @@ export default function SectorHeatmap() {
               onMouseEnter={() => setHoveredSector(item.sector.symbol)}
               onMouseLeave={() => setHoveredSector(null)}
             >
-              <div className="h-full flex flex-col items-center justify-center p-1 text-center overflow-hidden">
+              <div className="h-full flex flex-col items-center justify-center p-1 text-center overflow-hidden relative">
+                {/* RS Rank badge */}
+                {item.sector.rs_rank != null && (
+                  <span className={`absolute top-1 left-1 text-[10px] font-bold rounded px-1 py-0.5 leading-none ${
+                    item.sector.rs_rank <= 3 ? 'bg-emerald-500/80 text-white' :
+                    item.sector.rs_rank <= 6 ? 'bg-slate-500/70 text-white' :
+                    'bg-red-500/70 text-white'
+                  }`}>
+                    #{item.sector.rs_rank}
+                  </span>
+                )}
+                {/* Rotation phase badge */}
+                {item.sector.rotation_phase && (
+                  <span className={`absolute top-1 right-1 text-[9px] font-semibold rounded px-1 py-0.5 leading-none ${
+                    item.sector.rotation_phase === 'Leading' ? 'bg-emerald-500/80 text-white' :
+                    item.sector.rotation_phase === 'Strengthening' || item.sector.rotation_phase === 'Improving' ? 'bg-cyan-500/70 text-white' :
+                    item.sector.rotation_phase === 'Weakening' || item.sector.rotation_phase === 'Deteriorating' ? 'bg-amber-500/70 text-white' :
+                    'bg-red-500/70 text-white'
+                  }`}>
+                    {item.sector.rotation_phase}
+                  </span>
+                )}
                 <span className="text-white font-bold text-xs sm:text-sm md:text-base drop-shadow-lg truncate max-w-full">
                   {item.sector.name}
                 </span>
@@ -283,7 +314,7 @@ export default function SectorHeatmap() {
               
               {/* Hover tooltip - positioned to float above */}
               {isHovered && (
-                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-slate-900 border border-slate-600 rounded-lg p-3 text-xs shadow-xl min-w-[140px] z-50">
+                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-slate-900 border border-slate-600 rounded-lg p-3 text-xs shadow-xl min-w-[180px] z-50">
                   <div className="font-semibold text-white mb-2 text-center">{item.sector.name}</div>
                   <div className="flex justify-between text-white/80 gap-4">
                     <span>Weight:</span>
@@ -299,6 +330,50 @@ export default function SectorHeatmap() {
                     <div className="flex justify-between text-white/80 gap-4 mt-1">
                       <span>Price:</span>
                       <span className="font-medium text-white">${item.sector.price.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {/* Technical overlay */}
+                  {(item.sector.rsi14 != null || item.sector.adx14 != null || item.sector.ema200_dist != null) && (
+                    <div className="border-t border-slate-700 mt-2 pt-2 space-y-1">
+                      {item.sector.rsi14 != null && (
+                        <div className="flex justify-between text-white/80 gap-4">
+                          <span>RSI(14):</span>
+                          <span className={`font-medium ${
+                            item.sector.rsi14 > 70 ? 'text-red-400' :
+                            item.sector.rsi14 < 30 ? 'text-emerald-400' : 'text-white'
+                          }`}>{item.sector.rsi14.toFixed(1)}</span>
+                        </div>
+                      )}
+                      {item.sector.adx14 != null && (
+                        <div className="flex justify-between text-white/80 gap-4">
+                          <span>ADX:</span>
+                          <span className={`font-medium ${
+                            item.sector.adx14 > 25 ? 'text-cyan-400' : 'text-slate-400'
+                          }`}>{item.sector.adx14.toFixed(1)}</span>
+                        </div>
+                      )}
+                      {item.sector.ema200_dist != null && (
+                        <div className="flex justify-between text-white/80 gap-4">
+                          <span>EMA200:</span>
+                          <span className={`font-medium ${
+                            item.sector.ema200_dist >= 0 ? 'text-emerald-400' : 'text-red-400'
+                          }`}>{item.sector.ema200_dist >= 0 ? '+' : ''}{item.sector.ema200_dist.toFixed(1)}%</span>
+                        </div>
+                      )}
+                      {item.sector.mfi14 != null && (
+                        <div className="flex justify-between text-white/80 gap-4">
+                          <span>MFI:</span>
+                          <span className={`font-medium ${
+                            item.sector.mfi14 > 80 ? 'text-red-400' :
+                            item.sector.mfi14 < 20 ? 'text-emerald-400' : 'text-white'
+                          }`}>{item.sector.mfi14.toFixed(1)}</span>
+                        </div>
+                      )}
+                      {item.sector.in_squeeze && (
+                        <div className="text-center mt-1">
+                          <span className="text-amber-400 font-semibold text-[10px] bg-amber-500/10 border border-amber-500/30 rounded px-1.5 py-0.5">SQUEEZE</span>
+                        </div>
+                      )}
                     </div>
                   )}
                   {/* Arrow */}
@@ -356,6 +431,97 @@ export default function SectorHeatmap() {
           </p>
         )}
       </div>
+
+      {/* Sector Intelligence Panel */}
+      {sectors.some(s => s.rs_rank != null || s.rotation_phase) && (
+        <div className="p-4 border-t border-slate-700 bg-slate-900/30">
+          <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+            <span>🧠</span> Sector Intelligence
+          </h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {/* RS Ranking Table */}
+            <div className="bg-slate-800/50 rounded-lg p-3">
+              <h5 className="text-xs font-semibold text-slate-300 mb-2">Relative Strength Ranking</h5>
+              <div className="space-y-1">
+                {[...sectors].sort((a, b) => (a.rs_rank ?? 99) - (b.rs_rank ?? 99)).map(s => (
+                  <div key={s.symbol} className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <span className={`w-4 text-center font-bold ${
+                        (s.rs_rank ?? 99) <= 3 ? 'text-emerald-400' :
+                        (s.rs_rank ?? 99) <= 6 ? 'text-slate-300' : 'text-red-400'
+                      }`}>{s.rs_rank ?? '-'}</span>
+                      <span className="text-white">{s.symbol}</span>
+                    </div>
+                    <span className={`font-medium ${s.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {s.changePercent >= 0 ? '+' : ''}{s.changePercent.toFixed(2)}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Rotation Model */}
+            <div className="bg-slate-800/50 rounded-lg p-3">
+              <h5 className="text-xs font-semibold text-slate-300 mb-2">Rotation Model</h5>
+              <div className="space-y-1">
+                {(['Leading', 'Strengthening', 'Improving', 'Weakening', 'Deteriorating', 'Lagging'] as const).map(phase => {
+                  const inPhase = sectors.filter(s => s.rotation_phase === phase);
+                  if (inPhase.length === 0) return null;
+                  return (
+                    <div key={phase} className="text-xs">
+                      <span className={`font-semibold ${
+                        phase === 'Leading' ? 'text-emerald-400' :
+                        phase === 'Strengthening' || phase === 'Improving' ? 'text-cyan-400' :
+                        phase === 'Weakening' || phase === 'Deteriorating' ? 'text-amber-400' :
+                        'text-red-400'
+                      }`}>{phase}:</span>
+                      <span className="text-slate-300 ml-1">{inPhase.map(s => s.symbol).join(', ')}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-slate-500 mt-2">
+                Based on weekly vs monthly vs quarterly momentum
+              </p>
+            </div>
+
+            {/* Money Flow Summary */}
+            <div className="bg-slate-800/50 rounded-lg p-3">
+              <h5 className="text-xs font-semibold text-slate-300 mb-2">Money Flow (MFI)</h5>
+              {sectors.some(s => s.mfi14 != null) ? (
+                <div className="space-y-1">
+                  {[...sectors]
+                    .filter(s => s.mfi14 != null)
+                    .sort((a, b) => (b.mfi14 ?? 0) - (a.mfi14 ?? 0))
+                    .map(s => (
+                      <div key={s.symbol} className="flex items-center justify-between text-xs">
+                        <span className="text-white">{s.symbol}</span>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-16 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${
+                                (s.mfi14 ?? 0) > 80 ? 'bg-red-400' :
+                                (s.mfi14 ?? 0) < 20 ? 'bg-emerald-400' :
+                                'bg-cyan-400'
+                              }`}
+                              style={{ width: `${Math.min(s.mfi14 ?? 0, 100)}%` }}
+                            />
+                          </div>
+                          <span className={`font-medium w-8 text-right ${
+                            (s.mfi14 ?? 0) > 80 ? 'text-red-400' :
+                            (s.mfi14 ?? 0) < 20 ? 'text-emerald-400' : 'text-slate-300'
+                          }`}>{(s.mfi14 ?? 0).toFixed(0)}</span>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <p className="text-[10px] text-slate-500">MFI data populates as sector ETFs are ingested by the worker</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

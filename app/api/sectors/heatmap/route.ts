@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { avTakeToken } from '@/lib/avRateGovernor';
+import { q } from '@/lib/db';
 
 // Sector ETF mappings
 const SECTOR_ETFS = [
@@ -40,6 +41,114 @@ interface SectorData {
   changePercent: number;
   weight: number;
   color: string;
+  daily?: number;
+  weekly?: number;
+  monthly?: number;
+  quarterly?: number;
+  ytd?: number;
+  yearly?: number;
+  // Technical overlay
+  rsi14?: number | null;
+  adx14?: number | null;
+  ema200_dist?: number | null;
+  in_squeeze?: boolean | null;
+  mfi14?: number | null;
+  obv?: number | null;
+  // Rotation & RS
+  rs_rank?: number;
+  rotation_phase?: string;
+}
+
+/** Classify sector rotation phase from multi-period momentum */
+function classifyRotation(s: {
+  changePercent?: number;
+  daily?: number;
+  weekly?: number;
+  monthly?: number;
+  quarterly?: number;
+}): string {
+  const short = s.weekly ?? s.daily ?? s.changePercent ?? 0;
+  const med = s.monthly ?? short;
+  const long = s.quarterly ?? med;
+
+  // Leading: positive across all periods, short-term still strong
+  if (short > 0 && med > 0 && long > 0 && short >= med * 0.5) return 'Leading';
+  // Weakening: long positive but short-term fading
+  if (long > 0 && short < med * 0.5) return 'Weakening';
+  // Strengthening: long negative but short improving
+  if (long <= 0 && short > med) return 'Strengthening';
+  // Lagging: negative across all
+  if (short <= 0 && med <= 0 && long <= 0) return 'Lagging';
+  // Default
+  return short > 0 ? 'Improving' : 'Deteriorating';
+}
+
+/** Enrich sectors with technical indicators, RS ranking, and rotation phase */
+async function enrichSectors(sectors: SectorData[]): Promise<SectorData[]> {
+  try {
+    const symbols = sectors.map(s => s.symbol);
+    const placeholders = symbols.map((_, i) => `$${i + 1}`).join(',');
+
+    // Fetch technicals from indicators_latest (daily timeframe)
+    const rows = await q(
+      `SELECT symbol, rsi14, adx14, ema200, in_squeeze,
+              COALESCE(warmup_json->>'mfi14', NULL) AS mfi14,
+              obv
+       FROM indicators_latest
+       WHERE symbol IN (${placeholders}) AND timeframe = 'daily'`,
+      symbols
+    );
+
+    const techMap = new Map<string, Record<string, unknown>>();
+    for (const r of rows) {
+      techMap.set(r.symbol, r);
+    }
+
+    // Fetch SPY benchmark for overall market context + current ETF prices
+    const priceRows = await q(
+      `SELECT symbol, price, change_percent FROM quotes_latest WHERE symbol IN (${placeholders})`,
+      symbols
+    );
+    const priceMap = new Map<string, { price: number; changePct: number }>();
+    for (const r of priceRows) {
+      priceMap.set(r.symbol, {
+        price: parseFloat(r.price) || 0,
+        changePct: parseFloat(r.change_percent) || 0,
+      });
+    }
+
+    // Enrich each sector
+    for (const s of sectors) {
+      const tech = techMap.get(s.symbol);
+      if (tech) {
+        s.rsi14 = tech.rsi14 != null ? parseFloat(String(tech.rsi14)) : null;
+        s.adx14 = tech.adx14 != null ? parseFloat(String(tech.adx14)) : null;
+        s.in_squeeze = tech.in_squeeze === true || tech.in_squeeze === 't';
+        s.mfi14 = tech.mfi14 != null ? parseFloat(String(tech.mfi14)) : null;
+        s.obv = tech.obv != null ? parseInt(String(tech.obv), 10) : null;
+
+        // EMA200 distance %
+        const ema200 = tech.ema200 != null ? parseFloat(String(tech.ema200)) : null;
+        const price = priceMap.get(s.symbol)?.price ?? s.price;
+        if (ema200 && ema200 > 0 && price && price > 0) {
+          s.ema200_dist = Math.round(((price - ema200) / ema200) * 10000) / 100;
+        }
+      }
+
+      // Rotation phase
+      s.rotation_phase = classifyRotation(s);
+    }
+
+    // RS ranking: rank by real-time changePercent (1 = strongest)
+    const sorted = [...sectors].sort((a, b) => (b.changePercent ?? 0) - (a.changePercent ?? 0));
+    sorted.forEach((s, i) => {
+      const match = sectors.find(x => x.symbol === s.symbol);
+      if (match) match.rs_rank = i + 1;
+    });
+  } catch (err) {
+    console.error('Sector enrichment error (non-fatal):', err);
+  }
+  return sectors;
 }
 
 // GET /api/sectors/heatmap - Get sector performance data
@@ -111,8 +220,9 @@ export async function GET(req: NextRequest) {
           };
         });
         
+        const enriched = await enrichSectors(sectorData);
         return NextResponse.json({
-          sectors: sectorData,
+          sectors: enriched,
           timestamp: new Date().toISOString(),
           source: 'alpha_vantage_sector'
         });
@@ -161,8 +271,9 @@ export async function GET(req: NextRequest) {
     const validSectors = results.filter(Boolean) as SectorData[];
     
     if (validSectors.length > 0) {
+      const enriched = await enrichSectors(validSectors);
       return NextResponse.json({
-        sectors: validSectors,
+        sectors: enriched,
         timestamp: new Date().toISOString(),
         source: 'alpha_vantage_etf'
       });

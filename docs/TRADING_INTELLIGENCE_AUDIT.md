@@ -544,30 +544,52 @@ Sector rotation and market breadth visualization. Answers: *"Which sectors are l
 - Color intensity = % gain/loss magnitude
 - Box size = S&P 500 weighting
 - Rotation patterns: Defensive (VIX spike) vs Growth (yield drop)
+- **Relative Strength ranking** — all 11 sectors ranked 1–11 by real-time change%, displayed as badge on each tile
+- **Sector rotation model** — each sector classified as Leading/Strengthening/Improving/Weakening/Deteriorating/Lagging based on weekly vs monthly vs quarterly momentum acceleration/deceleration
+- **Technical overlay per sector ETF** — RSI(14), ADX, EMA200 distance%, MFI (Money Flow Index), squeeze status enriched from `indicators_latest` (0 additional API calls)
+- **Money flow analysis** — MFI bar chart with overbought/oversold highlighting in Sector Intelligence panel
+- **Sector Intelligence panel** — below heatmap: RS ranking table, rotation model grouped by phase, MFI summary with visual bars
 
-**Data Sources:** Alpha Vantage / Yahoo Finance proxy (real-time with 15-min delay acceptable)
+**Data Sources:** Alpha Vantage SECTOR endpoint (primary) + GLOBAL_QUOTE fallback (ETF quotes, 600 RPM) + `indicators_latest` DB + `quotes_latest` DB
 
-### EDGE ANALYSIS: **Informational Only**
+### EDGE ANALYSIS: **Partial Edge**
 
-**What creates edge:** Sector rotation awareness helps with asset allocation and regime identification.
+**What creates edge:**
+- Sector rotation awareness helps with asset allocation and regime identification
+- RS ranking algorithm instantly shows which sectors are leading/lagging the market today
+- Rotation model classifies momentum regime per sector: traders can identify sectors accelerating out of weakness or decelerating from strength
+- Technical overlay (RSI extremes, ADX trend strength, EMA200 distance) adds confluence to sector analysis — overbought/oversold sectors flagged
+- Money Flow Index identifies sectors seeing institutional inflow/outflow pressure
+- Squeeze detection flags sectors with imminent volatility expansion
 
 **What limits edge:**
-- Price action only — no technical signals or confluence
-- Static S&P 500 weighting
-- No volume or money flow data
-- No sector-to-sector relative strength scoring
 - No alert triggers or automated scanning
+- No earnings density overlay (requires earnings calendar API)
+- Static S&P 500 weighting (not dynamically adjusted)
 
 ### WHAT PROFESSIONAL TRADERS WOULD EXPECT
 - ✅ Sector performance overview
-- ❌ No money flow analysis per sector
-- ❌ No relative strength ranking algorithm
-- ❌ No sector rotation model (where is capital flowing?)
-- ❌ No earnings density overlay (which sectors have upcoming earnings clusters)
-- ❌ No technical overlay per sector ETF
+- ✅ Relative strength ranking algorithm — sectors ranked 1–11 by performance with color-coded badges (#1-3 green, #4-6 gray, #7-11 red)
+- ✅ Sector rotation model — Leading/Strengthening/Weakening/Lagging classification from multi-period momentum analysis, grouped in intelligence panel
+- ✅ Technical overlay per sector ETF — RSI(14) with OB/OS coloring, ADX trend strength, EMA200 distance% (above/below), squeeze status badge in tooltip
+- ✅ Money flow analysis per sector — MFI(14) from `indicators_latest`, visual bar chart with overbought (>80 red) / oversold (<20 green) highlighting
+- ❌ No earnings density overlay (which sectors have upcoming earnings clusters) — *requires earnings calendar API, not available from AV or CoinGecko*
+- ❌ No cross-sector alert triggers
+
+### GAPS RESOLVED (March 2026)
+- ~~No relative strength ranking algorithm~~ ✅ **BUILT** — API route ranks all 11 sectors by real-time changePercent (1=strongest to 11=weakest). Frontend displays rank badge on each heatmap tile with color coding: #1-3 green (leaders), #4-6 gray (neutral), #7-11 red (laggards). Full RS ranking table in Sector Intelligence panel.
+- ~~No sector rotation model~~ ✅ **BUILT** — `classifyRotation()` in API route analyzes weekly vs monthly vs quarterly momentum for each sector. Classifies as Leading (all periods positive, short-term strong), Strengthening (improving from negative), Weakening (fading from positive), or Lagging (all periods negative). Rotation phase badge shown on each tile + grouped summary in intelligence panel.
+- ~~No technical overlay per sector ETF~~ ✅ **BUILT** — API route batch-queries `indicators_latest` for all 11 sector ETF symbols (daily timeframe). Enriches each sector with RSI(14), ADX, EMA200 distance%, MFI, OBV, squeeze status. Enhanced tooltip shows all technicals with color-coded OB/OS/trend signals. Squeeze badge highlights volatility compression. Zero additional API calls.
+- ~~No money flow analysis per sector~~ ✅ **BUILT** — MFI(14) from `indicators_latest` displayed as visual progress bars in Sector Intelligence panel. Color-coded: >80 red (overbought/distribution), <20 green (oversold/accumulation), middle cyan (neutral flow). Enables quick identification of institutional money rotation.
+
+### WHAT IS CURRENTLY MISSING
+- Earnings density overlay — **Requires earnings calendar API.** Not available from Alpha Vantage or CoinGecko. Would need FMP, Earnings Whispers, or similar.
+- Cross-sector alert triggers (e.g., "alert when XLE becomes #1 RS rank") — **Buildable (UI work).** The data infrastructure exists; needs alert system integration.
 
 ### SIGNAL QUALITY
-- **Rating:** Informational. Provides context but no actionable signals.
+- **Frequency:** Real-time with 60-second refresh + technical overlay from worker-populated indicators
+- **Context:** Now includes technical indicators, money flow, rotation model, and RS ranking alongside performance
+- **Rating:** Evaluative. With RS ranking, rotation model, and technical overlay, the sector heatmap now provides actionable intelligence about where capital is flowing and which sectors have technical confluence — upgraded from purely informational to evaluative.
 
 ---
 
