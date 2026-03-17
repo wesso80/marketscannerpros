@@ -300,6 +300,10 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
 
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-2">
+              <Link href={`/tools/golden-egg?symbol=${encodeURIComponent(detail.symbol)}`}
+                className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-amber-400 no-underline hover:bg-amber-500/20 transition-colors">
+                Golden Egg
+              </Link>
               <Link href={`/tools/alerts?symbol=${encodeURIComponent(detail.symbol)}&price=${detail.price || ''}&direction=${direction}`}
                 className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-slate-400 no-underline hover:bg-slate-700/50 transition-colors">
                 Set Alert

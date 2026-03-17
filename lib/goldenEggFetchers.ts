@@ -3,7 +3,7 @@
  * Used by: app/api/golden-egg/route.ts, app/api/dve/route.ts
  */
 
-import { avFetch } from '@/lib/avRateGovernor';
+import { avFetch, avTakeToken } from '@/lib/avRateGovernor';
 import { getIndicators, getQuote } from '@/lib/onDemandFetch';
 import { classifyRegime } from '@/lib/regime-classifier';
 import {
@@ -705,4 +705,66 @@ export async function fetchTimeConfluence(symbol: string): Promise<TimeConfluenc
       decompressionTarget,
     };
   } catch { return null; }
+}
+
+// ── Macro regime fetch (reuses /api/economic-indicators logic) ───────
+export interface MacroRegime {
+  riskState: 'risk_on' | 'neutral' | 'risk_off';
+  riskLevel: 'low' | 'medium' | 'high';
+  concerns: string[];
+}
+
+const macroCache: { data: MacroRegime | null; ts: number } = { data: null, ts: 0 };
+const MACRO_CACHE_TTL = 60 * 60 * 1000; // 1 hour (macro data is slow-moving)
+
+export async function fetchMacroRegime(): Promise<MacroRegime | null> {
+  const now = Date.now();
+  if (macroCache.data && now - macroCache.ts < MACRO_CACHE_TTL) return macroCache.data;
+
+  const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    // Fetch two key signals: 10Y yield + Fed Funds + Inflation
+    const indicators = [
+      { func: 'TREASURY_YIELD', maturity: '10year' },
+      { func: 'TREASURY_YIELD', maturity: '2year' },
+      { func: 'INFLATION' },
+    ];
+
+    const values: Record<string, number | null> = {};
+    for (const ind of indicators) {
+      let url = `https://www.alphavantage.co/query?function=${ind.func}&apikey=${apiKey}`;
+      if (ind.maturity) url += `&maturity=${ind.maturity}`;
+      await avTakeToken();
+      const res = await fetch(url);
+      const json = await res.json();
+      const val = json?.data?.[0]?.value ? parseFloat(json.data[0].value) : null;
+      values[ind.func + (ind.maturity || '')] = val;
+      await new Promise(r => setTimeout(r, 250));
+    }
+
+    const t10y = values['TREASURY_YIELD10year'];
+    const t2y = values['TREASURY_YIELD2year'];
+    const inflation = values['INFLATION'];
+    const yieldCurve = t10y != null && t2y != null ? t10y - t2y : null;
+
+    const concerns: string[] = [];
+    if (yieldCurve != null && yieldCurve < 0) concerns.push('Inverted yield curve');
+    if (inflation != null && inflation > 4) concerns.push('Elevated inflation');
+    if (t10y != null && t10y > 5) concerns.push('High interest rates');
+
+    let riskLevel: MacroRegime['riskLevel'] = 'medium';
+    let riskState: MacroRegime['riskState'] = 'neutral';
+    if (concerns.length >= 3) { riskLevel = 'high'; riskState = 'risk_off'; }
+    else if (concerns.length === 0 && inflation != null && inflation < 3) { riskLevel = 'low'; riskState = 'risk_on'; }
+
+    const result: MacroRegime = { riskState, riskLevel, concerns };
+    macroCache.data = result;
+    macroCache.ts = now;
+    return result;
+  } catch (err) {
+    console.warn('[fetchMacroRegime] Error:', err instanceof Error ? err.message : err);
+    return null;
+  }
 }

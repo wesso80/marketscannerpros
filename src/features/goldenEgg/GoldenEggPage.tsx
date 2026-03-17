@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import Link from 'next/link';
 import GEHeaderBar from '@/src/features/goldenEgg/components/GEHeaderBar';
 import GESignalHero from '@/src/features/goldenEgg/components/GESignalHero';
 import GERegimeBar from '@/src/features/goldenEgg/components/GERegimeBar';
@@ -169,6 +170,28 @@ export default function GoldenEggPage() {
               setupType={payload.layer2.setup.setupType}
               volatility={payload.layer3.structure.volatility}
             />
+
+            {/* Quick Actions */}
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <Link
+                href={`/tools/portfolio?add=${encodeURIComponent(payload.meta.symbol)}&price=${payload.meta.price}&side=${payload.layer1.direction === 'SHORT' ? 'short' : 'long'}`}
+                className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-xs font-bold uppercase tracking-wider text-emerald-400 no-underline transition hover:bg-emerald-500/20"
+              >
+                Add to Portfolio
+              </Link>
+              <Link
+                href={`/tools/alerts?symbol=${encodeURIComponent(payload.meta.symbol)}&price=${payload.meta.price}&direction=${payload.layer1.direction === 'LONG' ? 'bullish' : payload.layer1.direction === 'SHORT' ? 'bearish' : 'neutral'}`}
+                className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white/60 no-underline transition hover:bg-white/10"
+              >
+                Set Alert
+              </Link>
+              <Link
+                href={`/tools/scanner/backtest?symbol=${encodeURIComponent(payload.meta.symbol)}`}
+                className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white/60 no-underline transition hover:bg-white/10"
+              >
+                Backtest
+              </Link>
+            </div>
 
             {/* Regime + Timeframe + Confluence row */}
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

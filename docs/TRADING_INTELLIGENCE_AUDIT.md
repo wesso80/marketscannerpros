@@ -277,8 +277,8 @@ Institutional-grade multi-layer trade decision framework. Answers all 4 trading 
 ### WHAT IT DOES
 
 **Layer 1 — Decision Permission:**
-- Output: NO_TRADE | CONDITIONAL | YES
-- Inputs: Risk governor state machine, institutional filter gate, confluence stack alignment, news catalyst risk
+- Output: TRADE | WATCH | NO_TRADE
+- Inputs: Weighted confluence score (Structure 30%, Flow 25%, Momentum 20%, Risk 25%), direction voting, macro regime gate
 
 **Layer 2 — Trade Plan:**
 - Setup Card: Confluence level, entry zone, stop loss, risk targets (T1/T2/T3), R:R validation
@@ -304,8 +304,6 @@ Institutional-grade multi-layer trade decision framework. Answers all 4 trading 
 
 **What limits edge:**
 - Pro Trader gated — most users never see it
-- Macro Dashboard permission NOT connected to Golden Egg decision layer (architectural gap)
-- No auto-generation of Golden Egg candidates from scanner results
 
 **Signal timing:** Predictive — the combination of live indicator confluence, MPE pressure reading, and time confluence decompression windows creates forward-looking trade timing.
 
@@ -316,15 +314,21 @@ Institutional-grade multi-layer trade decision framework. Answers all 4 trading 
 - ✅ R:R validation before entry
 - ✅ Live data from 8+ sources (price, technicals, options, MPE, time, DVE, doctrine, crypto derivs)
 - ✅ MPE pressure composite feeding Decision Permission
-- ⚠️ Partial: Macro regime not connected to Golden Egg permission gate
-- ❌ No auto-population from scanner signals (candidates must be manually selected)
-- ❌ No trade execution link
+- ✅ Macro regime gate — `fetchMacroRegime()` in `lib/goldenEggFetchers.ts` fetches AV economic data (10Y yield, 2Y yield, inflation), computes `risk_on`/`neutral`/`risk_off`. RISK_OFF downgrades TRADE → WATCH with flip condition explaining macro concerns.
+- ✅ Scanner → GE navigation — "Golden Egg" button in V2 scanner detail panel links to `/tools/golden-egg?symbol=X`, V2Context reads `?symbol=` param for auto-analysis
+- ✅ Execution links — GE results page shows "Add to Portfolio", "Set Alert", and "Backtest" quick-action buttons below signal hero
+- ✅ Historical outcome tracking — `recordSignal()` writes every GE analysis to `signals_fired` table (signal_type=`golden_egg`) with confidence, permission, macro regime, and indicator features. Feeds existing outcome labeling pipeline.
+- ⚠️ Partial: Auto-population from scanner (scanner links to GE, but no auto-candidate list from top scan results)
 
 ### WHAT IS CURRENTLY MISSING
-- Macro Dashboard → Golden Egg permission gate connection (if macro = RISK_OFF, should flip GE to WATCH)
-- Auto-generated Golden Egg candidates from highest-confluence scanner results
-- Execution link (one-click to broker or at minimum to portfolio tracker)
-- Historical Golden Egg outcome tracking
+- Auto-generated top-N Golden Egg candidate list from highest-confluence scanner results (scanner → GE link exists, but no auto-populated list)
+- `getGoldenEggMockPayload()` in `src/features/goldenEgg/adapters.ts` is dead code — safe to delete
+
+### BUGS FIXED / GAPS RESOLVED (March 2026)
+- ~~Macro Dashboard → Golden Egg permission gate connection~~ ✅ **BUILT** — `fetchMacroRegime()` added to `lib/goldenEggFetchers.ts`. GE route fetches 10Y/2Y yield + inflation from Alpha Vantage (1-hour cache), computes `risk_on`/`neutral`/`risk_off`. When RISK_OFF, TRADE permission is downgraded to WATCH with a flip condition showing the specific macro concerns.
+- ~~Scanner → GE navigation~~ ✅ **BUILT** — "Golden Egg" button added to V2 scanner detail panel action bar. Links to `/tools/golden-egg?symbol=X`. V2Context reads URL `?symbol=` param for auto-analysis.
+- ~~Execution link~~ ✅ **BUILT** — GE results page now shows 3 quick-action buttons: "Add to Portfolio" (links to `/tools/portfolio?add=X&price=Y&side=Z`), "Set Alert" (links to `/tools/alerts?symbol=X`), and "Backtest" (links to `/tools/scanner/backtest?symbol=X`).
+- ~~Historical Golden Egg outcome tracking~~ ✅ **BUILT** — Every GE analysis now calls `recordSignal()` from `lib/signalRecorder.ts`, writing to `signals_fired` table with `signal_type='golden_egg'`, confidence score, direction, price at signal, and feature snapshot (permission, RSI, MACD, ADX, MPE composite, macro regime). This feeds into the existing `signal_outcomes` → `signal_accuracy_stats` pipeline.
 
 ### SIGNAL QUALITY
 - **Frequency:** On-demand per symbol — appropriate for decision-grade analysis

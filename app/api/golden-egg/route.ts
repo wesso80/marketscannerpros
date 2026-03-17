@@ -17,14 +17,17 @@ import {
   fetchCryptoDerivatives,
   fetchMPE,
   fetchTimeConfluence,
+  fetchMacroRegime,
   type Indicators,
   type OptionsSnapshot,
   type CryptoDerivatives,
   type TimeConfluenceData,
+  type MacroRegime,
 } from '@/lib/goldenEggFetchers';
 import { computeDVE } from '@/lib/directionalVolatilityEngine';
 import type { DVEInput, DVEReading } from '@/lib/directionalVolatilityEngine.types';
 import { classifyBestDoctrine, type ClassifierInput } from '@/lib/doctrine/classifier';
+import { recordSignal, type RecordSignalParams } from '@/lib/signalRecorder';
 import type { GoldenEggPayload, Permission, Direction, Verdict } from '@/src/features/goldenEgg/types';
 
 export const runtime = 'nodejs';
@@ -53,6 +56,7 @@ function buildPayload(
   tfLabel: string = '1D',
   cryptoDerivs: CryptoDerivatives | null = null,
   tcData: TimeConfluenceData | null = null,
+  macroRegime: MacroRegime | null = null,
 ): GoldenEggPayload {
   const p = price.price;
   const atr = ind?.atr ?? (price.high - price.low);
@@ -84,9 +88,15 @@ function buildPayload(
   if (confidence >= 70 && direction !== 'NEUTRAL') permission = 'TRADE';
   else if (confidence < 40) permission = 'NO_TRADE';
 
+  // Macro regime override: RISK_OFF downgrades TRADE → WATCH
+  if (macroRegime?.riskState === 'risk_off' && permission === 'TRADE') {
+    permission = 'WATCH';
+  }
+
   // Flip conditions
   const flipConditions: GoldenEggPayload['layer1']['flipConditions'] = [];
   if (permission !== 'TRADE') {
+    if (macroRegime?.riskState === 'risk_off') flipConditions.push({ id: 'f5', text: `Macro regime is RISK_OFF (${macroRegime.concerns.join(', ')}) — wait for macro environment to improve`, severity: 'must' });
     if (structureScore < 60) flipConditions.push({ id: 'f1', text: `Price needs to reclaim ${direction === 'SHORT' ? 'below' : 'above'} key moving averages`, severity: 'must' });
     if (flowScore < 50 && opts) flipConditions.push({ id: 'f2', text: `Options flow needs to confirm direction (P/C currently ${opts.putCallRatio.toFixed(2)})`, severity: 'should' });
     if (momentumScore < 50) flipConditions.push({ id: 'f3', text: `RSI needs to move ${direction === 'SHORT' ? 'below 45' : 'above 55'} to confirm momentum`, severity: 'must' });
@@ -682,9 +692,10 @@ export async function GET(request: NextRequest) {
     const assetClass = detectAssetClass(symbol);
 
     // Fetch core data in parallel — time confluence first, then MPE uses its data
-    const [priceData, tcData] = await Promise.all([
+    const [priceData, tcData, macroRegime] = await Promise.all([
       fetchPrice(symbol, assetClass, { requireHistoricals: true, avInterval }),
       fetchTimeConfluence(symbol),
+      fetchMacroRegime(),
     ]);
 
     // MPE uses tcData to avoid duplicate scanHierarchical call
@@ -706,7 +717,25 @@ export async function GET(request: NextRequest) {
       cryptoDerivsData = await fetchCryptoDerivatives(symbol);
     }
 
-    const payload = buildPayload(symbol, assetClass, priceData, indData, optsData, mpeData, tfLabel, cryptoDerivsData, tcData);
+    const payload = buildPayload(symbol, assetClass, priceData, indData, optsData, mpeData, tfLabel, cryptoDerivsData, tcData, macroRegime);
+
+    // Record signal for outcome tracking (fire-and-forget)
+    recordSignal({
+      symbol,
+      signalType: 'golden_egg',
+      direction: payload.layer1.direction === 'LONG' ? 'bullish' : payload.layer1.direction === 'SHORT' ? 'bearish' : 'bullish',
+      score: payload.layer1.confidence,
+      priceAtSignal: priceData.price,
+      timeframe: tfLabel,
+      features: {
+        permission: payload.layer1.permission,
+        rsi: indData?.rsi ?? undefined,
+        macd_hist: indData?.macdHist ?? undefined,
+        adx: indData?.adx ?? undefined,
+        mpe_composite: mpeData?.composite ?? undefined,
+        macro_regime: macroRegime?.riskState ?? undefined,
+      },
+    }).catch(() => {}); // never block response
 
     // Cache result
     cache.set(cacheKey, { data: payload, ts: Date.now() });
