@@ -248,7 +248,11 @@ function buildSlice(
 
 function generateInsights(slices: EdgeSlice[]): EdgeInsight[] {
   const insights: EdgeInsight[] = [];
-  const qualified = slices.filter(s => s.meetsThreshold && s.dimension !== 'overall');
+  const qualified = slices.filter(s =>
+    s.meetsThreshold &&
+    s.dimension !== 'overall' &&
+    s.value !== '(null)' && s.value !== 'null' && s.value !== 'unknown'
+  );
 
   // Best edge
   const byExpectancy = [...qualified].sort((a, b) => b.expectancy - a.expectancy);
@@ -382,7 +386,7 @@ const DIMENSIONS: EdgeDimension[] = [
   'volatility_regime',
   'day_of_week',
   // 'hour_of_day' excluded — trade_date is DATE so hour is always 0
-  'exit_reason',
+  // 'exit_reason' excluded — tautological (tp always wins, sl always loses)
   'trade_type',
 ];
 
