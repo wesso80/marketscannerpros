@@ -13,6 +13,7 @@ import { Card, SectionHeader, Badge, ScoreBar, UpgradeGate } from '@/app/v2/_com
 import { REGIME_COLORS, VERDICT_COLORS, CROSS_MARKET, LIFECYCLE_COLORS, REGIME_WEIGHTS } from '@/app/v2/_lib/constants';
 import type { RegimePriority, Verdict, LifecycleState } from '@/app/v2/_lib/types';
 import { useCachedTopSymbols } from '@/hooks/useCachedTopSymbols';
+import { useRegisterPageData } from '@/lib/ai/pageContext';
 
 /* ─── Dynamic imports: v1 deep-dive components ─── */
 const DeepAnalysis = dynamic(() => import('@/app/tools/deep-analysis/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Deep Analysis…</div> });
@@ -119,6 +120,43 @@ export default function GoldenEggPage() {
       setSymbolInput('');
     }
   }
+
+  /* ─── Register Golden Egg data for Arca AI context ─── */
+  const geAiData = useMemo(() => ({
+    symbol: sym,
+    timeframe,
+    permission: ge?.permission,
+    direction: ge?.direction,
+    verdict: ge?.verdict,
+    confidence: ge?.confidence,
+    confluenceScore: ge?.confluenceScore,
+    regime: ge?.regime,
+    price: quote.data?.price,
+    rsi: ge?.indicators?.rsi,
+    adx: ge?.indicators?.adx,
+    atr: ge?.indicators?.atr,
+    macdHist: ge?.indicators?.macd_hist,
+    bbwp: d?.bbwp,
+    dveDirection: d?.direction,
+    breakoutReadiness: d?.breakoutReadiness,
+    trapRisk: ge?.volTrapRisk,
+    doctrine: ge?.doctrine,
+    setupThesis: ge?.setupThesis,
+    entryZone: ge?.execution?.entryZone,
+    stopLoss: ge?.execution?.stopLoss,
+    targets: ge?.execution?.targets,
+    riskReward: ge?.execution?.riskReward,
+    optionsData: ge?.options,
+    mpeData: ge?.mpe,
+    timeConfluence: ge?.timeConfluence,
+  }), [sym, timeframe, ge, d, quote.data]);
+
+  const geAiSummary = useMemo(() => {
+    if (!ge) return `Golden Egg: Loading ${sym}...`;
+    return `${sym} — Permission: ${ge.permission}, Direction: ${ge.direction}, Confidence: ${ge.confidence}%, Regime: ${ge.regime}, Doctrine: ${ge.doctrine || 'N/A'}`;
+  }, [sym, ge]);
+
+  useRegisterPageData('scanner', geAiData, [sym], geAiSummary);
 
   return (
     <div className="space-y-6">

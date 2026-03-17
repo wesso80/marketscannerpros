@@ -16,6 +16,7 @@ import type { RegimePriority, LifecycleState } from '@/app/v2/_lib/types';
 import { useUserTier, FREE_DAILY_SCAN_LIMIT, canAccessUnlimitedScanning } from '@/lib/useUserTier';
 import ScreenerTable, { type ScreenerRow } from '@/components/scanner/ScreenerTable';
 import ScanTemplatesBar, { type ScanTemplate, SCAN_TEMPLATES } from '@/components/scanner/ScanTemplatesBar';
+import { useRegisterPageData } from '@/lib/ai/pageContext';
 
 /* ─── Helpers ─── */
 function dirColor(d?: string) {
@@ -422,6 +423,71 @@ export default function ScannerPage() {
   }, [allResults, activeTab, sortKey, sortDir]);
 
   const v2Loading = equity.loading || crypto.loading;
+
+  /* ─── Register scanner data for Arca AI context ─── */
+  const aiData = useMemo(() => {
+    const topPicks = filtered.slice(0, 20).map(r => ({
+      symbol: r.symbol,
+      score: r.score,
+      mspScore: computeMspScore(r, currentRegime),
+      direction: r.direction,
+      confidence: r.confidence,
+      rsi: r.rsi,
+      price: r.price,
+      dveBbwp: r.dveBbwp,
+      dveSignalType: r.dveSignalType,
+      lifecycle: deriveLifecycleState(r, currentRegime),
+      setup: r.setup,
+    }));
+    const bullish = filtered.filter(r => r.direction === 'bullish').length;
+    const bearish = filtered.filter(r => r.direction === 'bearish').length;
+    return {
+      mode,
+      regime: currentRegime,
+      timeframe: mode === 'ranked' ? v2Timeframe : proTimeframe,
+      assetClass: mode === 'ranked' ? 'all' : proAsset,
+      totalResults: filtered.length,
+      bullishCount: bullish,
+      bearishCount: bearish,
+      topPicks,
+      ...(proScanResults && {
+        proScanTotalScanned: proScanResults.totalScanned,
+        proScanAverageConfidence: proScanResults.averageConfidence,
+        proScanBullish: proScanResults.bullish,
+        proScanBearish: proScanResults.bearish,
+      }),
+      ...(symbolDetail && {
+        selectedSymbol: symbolDetail.symbol,
+        selectedScore: symbolDetail.score,
+        selectedDirection: symbolDetail.direction,
+        selectedPrice: symbolDetail.price,
+        selectedRsi: symbolDetail.rsi,
+        selectedAdx: symbolDetail.adx,
+        selectedAtr: symbolDetail.atr,
+        selectedCci: symbolDetail.cci,
+        selectedMacdHist: symbolDetail.macd_hist,
+        selectedConfidence: symbolDetail.confidence,
+        selectedSetup: symbolDetail.setup,
+        selectedInstitutionalFilter: symbolDetail.institutionalFilter,
+      }),
+    };
+  }, [mode, currentRegime, v2Timeframe, proTimeframe, proAsset, filtered, proScanResults, symbolDetail]);
+
+  const aiSymbols = useMemo(() =>
+    selectedSymbol ? [selectedSymbol] : filtered.slice(0, 5).map(r => r.symbol),
+    [selectedSymbol, filtered]
+  );
+
+  const aiSummary = useMemo(() => {
+    if (symbolDetail) {
+      return `${symbolDetail.symbol} — Score: ${symbolDetail.score}, Direction: ${symbolDetail.direction}, RSI: ${symbolDetail.rsi ?? 'N/A'}, ADX: ${symbolDetail.adx ?? 'N/A'}`;
+    }
+    const bullish = filtered.filter(r => r.direction === 'bullish').length;
+    const bearish = filtered.filter(r => r.direction === 'bearish').length;
+    return `Scanner: ${filtered.length} results, ${bullish} bullish / ${bearish} bearish, Regime: ${currentRegime}, Timeframe: ${mode === 'ranked' ? v2Timeframe : proTimeframe}`;
+  }, [symbolDetail, filtered, currentRegime, mode, v2Timeframe, proTimeframe]);
+
+  useRegisterPageData('scanner', aiData, aiSymbols, aiSummary);
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
