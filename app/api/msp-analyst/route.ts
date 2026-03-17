@@ -50,6 +50,7 @@ import { computeSessionPhaseOverlay } from '@/lib/ai/sessionPhase';
 import { buildV3EnginePrompt } from '@/lib/prompts/arcaV3Engine';
 import { getEdgeContext } from '@/lib/intelligence/edgeContextBuilder';
 import { openAICircuit, CircuitBreakerOpenError } from '@/lib/circuitBreaker';
+import { fetchIntelligenceContext } from '@/lib/ai/intelligenceContext';
 import type { PromptMode } from "@/lib/ai/types";
 
 export const runtime = "nodejs";
@@ -781,6 +782,20 @@ Always mention which derivatives signals support or contradict your analysis.
         // Silently fail - derivatives data is optional enhancement
         logger.debug('Failed to fetch derivatives data for AI context', { error: derivErr });
       }
+    }
+
+    // ===== UNIFIED INTELLIGENCE: MPE + Doctrine + CFE context =====
+    try {
+      const intelligenceSymbol = context?.symbol || (scanner?.scanData?.symbol as string) || undefined;
+      const intelligenceCtx = await fetchIntelligenceContext(intelligenceSymbol, {
+        assetClass: isCryptoQuery ? 'crypto' : 'equity',
+        scanData: scanner?.scanData,
+      });
+      if (intelligenceCtx.systemMessage) {
+        messages.push({ role: "system", content: intelligenceCtx.systemMessage });
+      }
+    } catch {
+      // Non-critical — intelligence context is supplementary
     }
 
     // ===== FINAL REINFORCEMENT: Platform navigation + V3 format reminder =====

@@ -978,7 +978,7 @@ The MPE is fully operational and unifies all four pressures into a single readin
 The MPE feeds directly into the Golden Egg framework as the primary pressure input for Decision Permission. Golden Egg calls `fetchMPE()` and uses all 4 pressures in its evidence stack and decision layer.
 
 ### REMAINING GAPS
-- MPE output not exposed to Arca AI (copilot/msp-analyst don't call MPE directly)
+- ~~MPE output not exposed to Arca AI~~ ✅ **RESOLVED** — `fetchIntelligenceContext()` injects MPE composite + 4-pressure breakdown + sizing guide into both MSP-Analyst and Copilot system messages (`lib/ai/intelligenceContext.ts`)
 - No historical MPE charting (pressure over time)
 - No MPE-based alerting ("MPE crossed 75 for BTC")
 
@@ -1212,11 +1212,11 @@ The NOW items fill the Layer 4 decision framing gap using existing architecture.
 | **Professional Utility** | **8/10** | Strong intelligence layer across all 5 product hierarchy layers. Golden Egg now live with MPE. Decision operationalization gap partially closed. Charting weakness is irrelevant — MSP is not a charting platform. |
 | **Decision Support** | **8.5/10** | Answers all 4 questions (What/When/Where Risk/Where Target) via scanner + options + macro + backtest. Golden Egg framework fully operational with live data + MPE. |
 | **Automation Potential** | **7/10** | State machine, alerts, signal recording infrastructure all exist. Missing: auto-execution, algorithm deployment, portfolio rebalancing. |
-| **AI Intelligence Integration** | **6/10** | Arca AI uses V2+V3 prompts, regime scoring, ACL, institutional filter. But missing: Capital Flow Engine, Probability Matrix, State Machine context, Doctrine feedback. See Section 26. |
+| **AI Intelligence Integration** | **7.5/10** | Arca AI uses V2+V3 prompts, regime scoring, ACL, institutional filter. MPE composite + Doctrine Classifier now injected into both AI routes via unified intelligence context. Remaining: State Machine lifecycle, full CFE detail, Bayesian feedback. |
 
-### **Composite Score: 7.9/10**
+### **Composite Score: 8.1/10**
 
-*Potential with intelligence wiring completed: 8.5+/10*
+*Potential with full intelligence wiring completed: 8.5+/10*
 
 ---
 
@@ -1296,11 +1296,11 @@ The platform has two AI endpoints:
 
 | Intelligence System | Built? | Used by Any AI? | Impact |
 |---|---|---|---|
-| **Capital Flow Engine** (market_mode, gamma_state, conviction) | ✅ `lib/capitalFlowEngine.ts` | ❌ NEVER | 🔴 CRITICAL — AI doesn't know flow state |
-| **Probability Matrix** (pTrend%, pPin%, pExpansion%) | ✅ Inside CFE | ❌ NEVER | 🔴 CRITICAL — AI doesn't know probability bias |
-| **Institutional State Machine** (SCAN→WATCH→STALK→ARMED→EXECUTE) | ✅ `lib/institutional-state-machine.ts` | ❌ NEVER | 🔴 CRITICAL — AI doesn't know lifecycle phase |
-| **Market Pressure Engine** (4-pressure composite) | ✅ `lib/marketPressureEngine.ts` | ❌ NEVER | 🟠 HIGH — AI doesn't know pressure reading |
-| **Doctrine Classifier** (playbook classification) | ✅ `lib/doctrine/classifier.ts` | ❌ NEVER | 🟠 HIGH — AI doesn't know current playbook |
+| **Capital Flow Engine** (market_mode, gamma_state, conviction) | ✅ `lib/capitalFlowEngine.ts` | ⚠️ Partial (via MPE liquidity) | 🟡 IMPROVED — MPE now injected into AI |
+| **Probability Matrix** (pTrend%, pPin%, pExpansion%) | ✅ Inside CFE | ⚠️ Partial (via MPE) | 🟡 IMPROVED — MPE composite reflects probability |
+| **Institutional State Machine** (SCAN→WATCH→STALK→ARMED→EXECUTE) | ✅ `lib/institutional-state-machine.ts` | ❌ NEVER | 🔴 CRITICAL — Requires per-symbol state persistence |
+| **Market Pressure Engine** (4-pressure composite) | ✅ `lib/marketPressureEngine.ts` | ✅ Both routes | ✅ **RESOLVED** — `fetchIntelligenceContext()` injects MPE via `fetchMPE()` |
+| **Doctrine Classifier** (playbook classification) | ✅ `lib/doctrine/classifier.ts` | ✅ Both routes | ✅ **RESOLVED** — `classifyBestDoctrine()` injected with indicator data |
 | **Outcome Feedback Loop** (Bayesian signal reweighting) | ❌ Not built | N/A | 🟠 HIGH — Outcomes don't improve AI confidence |
 
 ### CONSEQUENCE
@@ -1333,6 +1333,6 @@ This means the AI gives good generic analysis but misses the platform's most sop
 9. Wire Doctrine Classifier to journal auto-tagging
 10. Create unified intelligence context layer (`lib/ai/unifiedIntelligenceContext.ts`)
 
-### AI INTELLIGENCE SCORE: 6/10
+### AI INTELLIGENCE SCORE: 7.5/10 *(upgraded from 6/10)*
 
-The AI is smart but blind to the platform's best intelligence. Wiring Tier 1 items would push this to 8/10.
+The AI now receives MPE composite (4-pressure reading + sizing guide) and Doctrine Classifier (active playbook + match confidence) in both MSP-Analyst and Copilot routes. Remaining gaps: full Capital Flow Engine detail (market_mode, conviction factors), Institutional State Machine lifecycle phase, and Bayesian outcome feedback.

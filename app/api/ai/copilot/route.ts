@@ -16,6 +16,7 @@ import { MSP_ANALYST_V2_PROMPT, buildAnalystV2SystemMessages } from '@/lib/promp
 import { PINE_SCRIPT_V2_PROMPT, isPineScriptRequest } from '@/lib/prompts/pineScriptEngineerV2';
 import { mapToScoringRegime, computeRegimeScore, estimateComponentsFromContext } from '@/lib/ai/regimeScoring';
 import { computeACLFromScoring } from '@/lib/ai/adaptiveConfidenceLens';
+import { fetchIntelligenceContext } from '@/lib/ai/intelligenceContext';
 import { AI_MODEL_BY_TIER, normalizeTier } from '@/lib/entitlements';
 import { getVerifiedTier } from '@/lib/apiMiddleware';
 
@@ -230,6 +231,21 @@ export async function POST(req: NextRequest) {
       role: 'system',
       content: `Current context:\n${serializeContextForPrompt(context)}${v2State ? '\n' + v2State : ''}`,
     });
+
+    // ===== UNIFIED INTELLIGENCE: MPE + Doctrine context =====
+    try {
+      const intelligenceSymbol = (pageData?.symbol as string) || (pageData?.currentSymbol as string) || (pageContext?.symbols?.[0]) || undefined;
+      if (intelligenceSymbol) {
+        const intelligenceCtx = await fetchIntelligenceContext(intelligenceSymbol, {
+          scanData: pageData as Record<string, any>,
+        });
+        if (intelligenceCtx.systemMessage) {
+          messages.push({ role: 'system', content: intelligenceCtx.systemMessage });
+        }
+      }
+    } catch {
+      // Non-critical — intelligence context is supplementary
+    }
 
     // Add user message
     messages.push({ role: 'user', content: message });
