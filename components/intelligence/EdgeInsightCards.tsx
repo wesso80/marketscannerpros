@@ -31,6 +31,8 @@ const INSIGHT_COLORS: Record<string, { border: string; bg: string; text: string 
 function InsightCard({ insight }: { insight: EdgeInsight }) {
   const colors = INSIGHT_COLORS[insight.type] ?? INSIGHT_COLORS.pattern;
   const icon = INSIGHT_ICONS[insight.type] ?? '';
+  const edgeLabel = insight.confidence >= 0.7 ? 'Established edge' : insight.confidence >= 0.4 ? 'Developing edge' : 'Early signal';
+  const edgeLabelColor = insight.confidence >= 0.7 ? '#10B981' : insight.confidence >= 0.4 ? '#F59E0B' : '#6B7280';
 
   return (
     <div
@@ -40,8 +42,13 @@ function InsightCard({ insight }: { insight: EdgeInsight }) {
       <div className="flex items-start gap-2">
         <span className="text-base mt-0.5">{icon}</span>
         <div className="min-w-0 flex-1">
-          <div className="text-xs font-semibold" style={{ color: colors.text }}>
-            {insight.title}
+          <div className="flex items-center gap-2">
+            <div className="text-xs font-semibold" style={{ color: colors.text }}>
+              {insight.title}
+            </div>
+            <span className="text-[9px] px-1.5 py-0.5 rounded-full font-medium" style={{ color: edgeLabelColor, backgroundColor: `${edgeLabelColor}15` }}>
+              {edgeLabel}
+            </span>
           </div>
           <div className="text-[11px] text-slate-400 mt-1 leading-relaxed">
             {insight.body}
@@ -135,6 +142,7 @@ export default function EdgeInsightCards() {
 
   const overall = profile.slices.find(s => s.dimension === 'overall');
   const insights = profile.insights.slice(0, 5);
+  const summary = profile.edgeSummary;
 
   return (
     <div className="rounded-xl border border-slate-800/60 bg-[var(--msp-panel)] p-4 space-y-4">
@@ -148,6 +156,18 @@ export default function EdgeInsightCards() {
       </div>
 
       {overall && <OverallStats overall={overall} />}
+
+      {summary && (
+        <div className="rounded-lg bg-indigo-500/5 border border-indigo-500/15 p-3 space-y-1">
+          <div className="text-[10px] uppercase tracking-wider text-indigo-400/80">AI Edge Summary</div>
+          <div className="text-[11px] text-slate-300 leading-relaxed">
+            {summary.strongestStrategy && <span>Best strategy: <strong className="text-white">{summary.strongestStrategy}</strong>. </span>}
+            {summary.strongestRegime && <span>Best regime: <strong className="text-white">{summary.strongestRegime.replace(/_/g, ' ')}</strong>. </span>}
+            {summary.preferredSide && <span>Preferred: <strong className="text-white">{summary.preferredSide}</strong>. </span>}
+            <span>Expectancy: <strong className="text-white">{summary.expectancy.toFixed(2)}R</strong>.</span>
+          </div>
+        </div>
+      )}
 
       {insights.length > 0 && (
         <div className="space-y-2">
@@ -163,10 +183,16 @@ export default function EdgeInsightCards() {
           <div className="text-[10px] uppercase tracking-wider text-slate-500">Top Edges</div>
           {profile.topEdges.slice(0, 3).map(edge => (
             <div key={`${edge.dimension}_${edge.value}`} className="flex items-center justify-between py-1.5 px-2 rounded bg-emerald-500/5 border border-emerald-500/10">
-              <span className="text-[11px] text-slate-300">
-                {edge.dimension.replace(/_/g, ' ')}: <span className="text-white font-medium">{edge.value}</span>
-              </span>
-              <span className="text-[11px] text-emerald-400 font-mono">{edge.avgR.toFixed(2)}R / {(edge.winRate * 100).toFixed(0)}%</span>
+              <div className="flex flex-col">
+                <span className="text-[11px] text-slate-300">
+                  {edge.dimension.replace(/_/g, ' ')}: <span className="text-white font-medium">{edge.value}</span>
+                </span>
+                <span className="text-[9px] text-slate-500">{edge.sampleSize} trades &middot; {edge.confidence >= 0.7 ? 'established' : 'developing'}</span>
+              </div>
+              <div className="flex flex-col items-end">
+                <span className="text-[11px] text-emerald-400 font-mono">{edge.avgR.toFixed(2)}R / {(edge.winRate * 100).toFixed(0)}%</span>
+                <span className="text-[9px] text-emerald-500/70">exp: {edge.expectancy.toFixed(2)}R</span>
+              </div>
             </div>
           ))}
         </div>
@@ -177,10 +203,16 @@ export default function EdgeInsightCards() {
           <div className="text-[10px] uppercase tracking-wider text-slate-500">Weak Spots</div>
           {profile.weakSpots.slice(0, 3).map(edge => (
             <div key={`${edge.dimension}_${edge.value}`} className="flex items-center justify-between py-1.5 px-2 rounded bg-red-500/5 border border-red-500/10">
-              <span className="text-[11px] text-slate-300">
-                {edge.dimension.replace(/_/g, ' ')}: <span className="text-white font-medium">{edge.value}</span>
-              </span>
-              <span className="text-[11px] text-red-400 font-mono">{edge.avgR.toFixed(2)}R / {(edge.winRate * 100).toFixed(0)}%</span>
+              <div className="flex flex-col">
+                <span className="text-[11px] text-slate-300">
+                  {edge.dimension.replace(/_/g, ' ')}: <span className="text-white font-medium">{edge.value}</span>
+                </span>
+                <span className="text-[9px] text-slate-500">{edge.sampleSize} trades</span>
+              </div>
+              <div className="flex flex-col items-end">
+                <span className="text-[11px] text-red-400 font-mono">{edge.avgR.toFixed(2)}R / {(edge.winRate * 100).toFixed(0)}%</span>
+                <span className="text-[9px] text-red-500/70">exp: {edge.expectancy.toFixed(2)}R</span>
+              </div>
             </div>
           ))}
         </div>

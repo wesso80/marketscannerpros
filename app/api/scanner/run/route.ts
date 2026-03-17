@@ -19,6 +19,7 @@ import { estimateComponentsFromContext, computeRegimeScore, deriveRegimeConfiden
 import { computeACLFromScoring } from "@/lib/ai/adaptiveConfidenceLens";
 import { computeScanEnhancements, type ScanEnhancements } from "@/lib/scannerEnhancements";
 import { computeDVE } from "@/lib/directionalVolatilityEngine";
+import { getEdgeContext } from "@/lib/intelligence/edgeContextBuilder";
 import type { DVEInput, DVEReading, DVESignalType, VolRegime } from "@/lib/directionalVolatilityEngine.types";
 
 export const runtime = "nodejs";
@@ -2173,6 +2174,17 @@ export async function POST(req: NextRequest) {
       50
     );
 
+    // V3.2: Fetch edge profile hints for soft personalization (non-blocking)
+    let softHints: { preferredAssets: string[]; preferredSides: string[]; preferredStrategies: string[]; preferredRegimes: string[]; hasEnoughData: boolean } | null = null;
+    try {
+      if (session.workspaceId !== 'anonymous') {
+        const edgeCtx = await getEdgeContext(session.workspaceId);
+        softHints = edgeCtx.hints;
+      }
+    } catch {
+      // Non-critical — skip personalization on failure
+    }
+
     // Institutional Filter Engine: downgrade/block low-quality environments before trader sees setup
     const enriched = results.map((result) => {
       const adxValue = Number(result.adx ?? Number.NaN);
@@ -2345,6 +2357,50 @@ export async function POST(req: NextRequest) {
       }
       results.length = 0;
       results.push(...filtered);
+    }
+
+    // ===== V3.2 SOFT PERSONALIZATION: Apply edge hints as minor score modifier =====
+    // Maximum ±10% influence. Only when sufficient historical data exists.
+    if (softHints && softHints.hasEnoughData && results.length > 0) {
+      for (const r of results) {
+        let boost = 0;
+        const sym = (r.symbol || '').toUpperCase();
+        const dir = ((r as any).direction || '').toLowerCase();
+
+        // Asset class match (+3)
+        const assetClass = type === 'crypto' ? 'crypto'
+          : type === 'forex' ? 'forex'
+          : 'equity';
+        if (softHints.preferredAssets.some(a => a.toLowerCase() === assetClass)) {
+          boost += 3;
+        }
+
+        // Side match (+3)
+        if (dir && softHints.preferredSides.some(s => s.toLowerCase() === dir.replace('ish', ''))) {
+          boost += 3;
+        }
+
+        // Regime match (+2) — use the enriched regime if available
+        const resultRegime = ((r as any).scoreV2?.regime?.label || '').toUpperCase();
+        if (resultRegime && softHints.preferredRegimes.some(reg => reg.toUpperCase() === resultRegime)) {
+          boost += 2;
+        }
+
+        // Strategy match (+2) — compare setup label against preferred strategies
+        const setupLabel = ((r as any).setup || '').toLowerCase();
+        if (setupLabel && softHints.preferredStrategies.some(s => setupLabel.includes(s.toLowerCase()))) {
+          boost += 2;
+        }
+
+        // Cap at 10% of base score
+        const maxBoost = Math.max(1, Math.round(r.score * 0.1));
+        const clamped = Math.min(boost, maxBoost);
+
+        if (clamped > 0) {
+          r.score = Math.min(100, r.score + clamped);
+          (r as any).personalEdgeBoost = clamped;
+        }
+      }
     }
 
     // Cap output to top 20 results by score

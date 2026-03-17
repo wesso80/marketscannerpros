@@ -48,6 +48,7 @@ import { computeACLFromScoring } from '@/lib/ai/adaptiveConfidenceLens';
 import { computePerformanceThrottle, applyPerformanceDampener } from '@/lib/ai/performanceThrottle';
 import { computeSessionPhaseOverlay } from '@/lib/ai/sessionPhase';
 import { buildV3EnginePrompt } from '@/lib/prompts/arcaV3Engine';
+import { getEdgeContext } from '@/lib/intelligence/edgeContextBuilder';
 import { openAICircuit, CircuitBreakerOpenError } from '@/lib/circuitBreaker';
 import type { PromptMode } from "@/lib/ai/types";
 
@@ -368,6 +369,18 @@ export async function POST(req: NextRequest) {
         role: "system",
         content: buildV3EnginePrompt(signalMemory),
       });
+    }
+
+    // ===== V3.2 ADAPTIVE INTELLIGENCE: Edge Profile Context Injection =====
+    if (promptMode === 'analyst') {
+      try {
+        const edgeCtx = await getEdgeContext(workspaceId);
+        if (edgeCtx.systemMessage) {
+          messages.push({ role: "system", content: edgeCtx.systemMessage });
+        }
+      } catch {
+        // Non-critical — skip edge context on failure
+      }
     }
 
     if (mode) {

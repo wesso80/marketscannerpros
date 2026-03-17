@@ -79,6 +79,10 @@ export interface EdgeProfile {
   topEdges: EdgeSlice[];    // Best 5 edges by expectancy (meets threshold only)
   weakSpots: EdgeSlice[];   // Worst 5 edges by expectancy (meets threshold only)
   insights: EdgeInsight[];  // Human-readable insight cards
+  edgeSummary: EdgeSummary | null;       // AI-ready summary (v3.2)
+  strongestEdges: EdgeEntry[];           // Qualified strength entries (v3.2)
+  weakestEdges: EdgeEntry[];             // Qualified weakness entries (v3.2)
+  softEdgeHints: SoftEdgeHints;          // Scanner-ready hints (v3.2)
 }
 
 export interface EdgeInsight {
@@ -90,6 +94,42 @@ export interface EdgeInsight {
   value: string;
   confidence: number;
   sampleSize: number;
+}
+
+/* ── v3.2 Structured output types ──────────────────────────────────────── */
+
+/** AI-ready summary for prompt injection. */
+export interface EdgeSummary {
+  strongestAssetClass: string | null;
+  strongestStrategy: string | null;
+  strongestRegime: string | null;
+  preferredSide: string | null;
+  overallWinRate: number;
+  avgR: number;
+  expectancy: number;
+  profitFactor: number;
+  confidence: number;
+}
+
+/** Structured edge entry for strongest/weakest arrays. */
+export interface EdgeEntry {
+  dimension: EdgeDimension;
+  value: string;
+  sampleSize: number;
+  winRate: number;
+  avgR: number;
+  expectancy: number;
+  confidence: number;
+  insightType: 'strength' | 'weakness';
+}
+
+/** Scanner-ready soft personalization hints. */
+export interface SoftEdgeHints {
+  preferredAssets: string[];
+  preferredSides: string[];
+  preferredStrategies: string[];
+  preferredRegimes: string[];
+  hasEnoughData: boolean;
 }
 
 /* ── Dimension validation (prevents SQL injection) ─────────────────────── */
@@ -426,50 +466,92 @@ export async function computeEdgeProfile(
     topEdges,
     weakSpots,
     insights: generateInsights(allSlices),
+    edgeSummary: buildEdgeSummary(allSlices, overall),
+    strongestEdges: buildEdgeEntries(topEdges, 'strength'),
+    weakestEdges: buildEdgeEntries(weakSpots, 'weakness'),
+    softEdgeHints: buildSoftEdgeHints(allSlices, overall),
   };
 }
 
-/* ── Lightweight summary for scanner soft-personalization ───────────────── */
+/* ── v3.2 Structured builders ──────────────────────────────────────────── */
 
-export interface SoftEdgeHints {
-  preferredAssets: string[];     // asset classes with positive expectancy
-  preferredSides: string[];     // LONG/SHORT with positive expectancy
-  preferredRegimes: string[];   // regimes with positive expectancy
-  avoidCombos: string[];        // human-readable "avoid X in Y" hints
-  hasEnoughData: boolean;
+/** Dimensions allowed for personalization (statistically meaningful only). */
+const PERSONALIZATION_DIMS: EdgeDimension[] = ['asset_class', 'side', 'strategy', 'regime'];
+
+/** Minimum confidence for soft personalization hints. */
+const HINT_MIN_CONFIDENCE = 0.3;
+
+function bestByDim(slices: EdgeSlice[], dim: EdgeDimension): EdgeSlice | null {
+  return slices
+    .filter(s =>
+      s.dimension === dim &&
+      s.meetsThreshold &&
+      s.expectancy > 0 &&
+      s.confidence >= 0.5 &&
+      s.value !== '(null)' && s.value !== 'null' && s.value !== 'unknown'
+    )
+    .sort((a, b) => b.expectancy - a.expectancy)[0] ?? null;
 }
 
-export async function getSoftEdgeHints(workspaceId: string): Promise<SoftEdgeHints> {
-  const profile = await computeEdgeProfile(workspaceId, {
-    dimensions: ['overall', 'asset_class', 'side', 'regime'],
-  });
+function buildEdgeSummary(slices: EdgeSlice[], overall: EdgeSlice | undefined): EdgeSummary | null {
+  if (!overall || overall.sampleSize < MIN_SAMPLE_SIZE) return null;
 
-  const overall = profile.slices.find(s => s.dimension === 'overall');
-  const hasEnoughData = (overall?.sampleSize ?? 0) >= MIN_SAMPLE_SIZE;
-
-  if (!hasEnoughData) {
-    return { preferredAssets: [], preferredSides: [], preferredRegimes: [], avoidCombos: [], hasEnoughData: false };
-  }
-
-  const positive = (dim: EdgeDimension) =>
-    profile.slices
-      .filter(s => s.dimension === dim && s.meetsThreshold && s.expectancy > 0)
-      .map(s => s.value);
-
-  const negative = (dim: EdgeDimension) =>
-    profile.slices
-      .filter(s => s.dimension === dim && s.meetsThreshold && s.expectancy < -0.1)
-      .map(s => `Avoid ${formatDimLabel(dim)}: ${s.value} (${(s.winRate * 100).toFixed(0)}% WR, ${s.avgR.toFixed(2)}R)`);
+  const bestAsset = bestByDim(slices, 'asset_class');
+  const bestStrategy = bestByDim(slices, 'strategy');
+  const bestRegime = bestByDim(slices, 'regime');
+  const bestSide = bestByDim(slices, 'side');
 
   return {
-    preferredAssets: positive('asset_class'),
-    preferredSides: positive('side'),
-    preferredRegimes: positive('regime'),
-    avoidCombos: [
-      ...negative('asset_class'),
-      ...negative('side'),
-      ...negative('regime'),
-    ],
+    strongestAssetClass: bestAsset?.value ?? null,
+    strongestStrategy: bestStrategy?.value ?? null,
+    strongestRegime: bestRegime?.value ?? null,
+    preferredSide: bestSide?.value ?? null,
+    overallWinRate: overall.winRate,
+    avgR: overall.avgR,
+    expectancy: overall.expectancy,
+    profitFactor: overall.profitFactor === Infinity ? 999 : overall.profitFactor,
+    confidence: overall.confidence,
+  };
+}
+
+function buildEdgeEntries(slices: EdgeSlice[], type: 'strength' | 'weakness'): EdgeEntry[] {
+  return slices
+    .filter(s => s.value !== '(null)' && s.value !== 'null' && s.value !== 'unknown')
+    .map(s => ({
+      dimension: s.dimension,
+      value: s.value,
+      sampleSize: s.sampleSize,
+      winRate: s.winRate,
+      avgR: s.avgR,
+      expectancy: s.expectancy,
+      confidence: s.confidence,
+      insightType: type,
+    }));
+}
+
+function buildSoftEdgeHints(slices: EdgeSlice[], overall: EdgeSlice | undefined): SoftEdgeHints {
+  const hasEnoughData = (overall?.sampleSize ?? 0) >= MIN_SAMPLE_SIZE;
+  if (!hasEnoughData) {
+    return { preferredAssets: [], preferredSides: [], preferredStrategies: [], preferredRegimes: [], hasEnoughData: false };
+  }
+
+  const positiveValues = (dim: EdgeDimension) =>
+    slices
+      .filter(s =>
+        s.dimension === dim &&
+        s.meetsThreshold &&
+        s.expectancy > 0 &&
+        s.confidence >= HINT_MIN_CONFIDENCE &&
+        s.value !== '(null)' && s.value !== 'null' && s.value !== 'unknown'
+      )
+      .sort((a, b) => b.expectancy - a.expectancy)
+      .map(s => s.value);
+
+  return {
+    preferredAssets: positiveValues('asset_class'),
+    preferredSides: positiveValues('side'),
+    preferredStrategies: positiveValues('strategy'),
+    preferredRegimes: positiveValues('regime'),
     hasEnoughData: true,
   };
 }
