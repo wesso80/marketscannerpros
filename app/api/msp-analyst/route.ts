@@ -790,6 +790,15 @@ Always mention which derivatives signals support or contradict your analysis.
       const intelligenceCtx = await fetchIntelligenceContext(intelligenceSymbol, {
         assetClass: isCryptoQuery ? 'crypto' : 'equity',
         scanData: scanner?.scanData,
+        confluenceComponents: {
+          SQ: regimeScoring.rawComponents.SQ,
+          TA: regimeScoring.rawComponents.TA,
+          VA: regimeScoring.rawComponents.VA,
+          LL: regimeScoring.rawComponents.LL,
+          MTF: regimeScoring.rawComponents.MTF,
+          FD: regimeScoring.rawComponents.FD,
+          weightedScore: regimeScoring.weightedScore,
+        },
       });
       if (intelligenceCtx.systemMessage) {
         messages.push({ role: "system", content: intelligenceCtx.systemMessage });

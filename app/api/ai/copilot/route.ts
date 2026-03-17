@@ -14,9 +14,13 @@ import { SKILL_CONFIGS, CONTEXT_VERSION, SKILL_VERSION_PREFIX } from '@/lib/ai/t
 import type { PageContext, PageSkill, AIToolCall, CopilotMessage, SuggestedAction, PromptMode } from '@/lib/ai/types';
 import { MSP_ANALYST_V2_PROMPT, buildAnalystV2SystemMessages } from '@/lib/prompts/mspAnalystV2';
 import { PINE_SCRIPT_V2_PROMPT, isPineScriptRequest } from '@/lib/prompts/pineScriptEngineerV2';
-import { mapToScoringRegime, computeRegimeScore, estimateComponentsFromContext } from '@/lib/ai/regimeScoring';
+import { mapToScoringRegime, computeRegimeScore, estimateComponentsFromContext, deriveRegimeConfidence } from '@/lib/ai/regimeScoring';
 import { computeACLFromScoring } from '@/lib/ai/adaptiveConfidenceLens';
 import { fetchIntelligenceContext } from '@/lib/ai/intelligenceContext';
+import { buildV3EnginePrompt } from '@/lib/prompts/arcaV3Engine';
+import { getEdgeContext } from '@/lib/intelligence/edgeContextBuilder';
+import { computePerformanceThrottle, applyPerformanceDampener } from '@/lib/ai/performanceThrottle';
+import { computeSessionPhaseOverlay } from '@/lib/ai/sessionPhase';
 import { AI_MODEL_BY_TIER, normalizeTier } from '@/lib/entitlements';
 import { getVerifiedTier } from '@/lib/apiMiddleware';
 
@@ -160,6 +164,51 @@ export async function POST(req: NextRequest) {
       { role: 'system', content: systemPrompt },
     ];
 
+    // ===== V3 ENGINE: Decision Trace, Narrative, Liquidity Map, Trade Construction =====
+    // Fetch signal memory for edge learning (same as MSP-Analyst)
+    let signalMemory: Parameters<typeof buildV3EnginePrompt>[0] = null;
+    try {
+      const [regimeStats, recentSignals, totalResult] = await Promise.all([
+        q(
+          `SELECT regime, COUNT(*) as count,
+                  ROUND(100.0 * COUNT(*) FILTER (WHERE outcome = 'correct') / NULLIF(COUNT(*) FILTER (WHERE outcome != 'pending'), 0), 1) as win_rate
+           FROM ai_signal_log WHERE workspace_id = $1 AND signal_at > NOW() - INTERVAL '90 days'
+           GROUP BY regime ORDER BY count DESC`,
+          [session.workspaceId]
+        ),
+        q(
+          `SELECT symbol, verdict, confidence, outcome FROM ai_signal_log
+           WHERE workspace_id = $1 ORDER BY signal_at DESC LIMIT 5`,
+          [session.workspaceId]
+        ),
+        q(
+          `SELECT COUNT(*) as total FROM ai_signal_log WHERE workspace_id = $1`,
+          [session.workspaceId]
+        ),
+      ]);
+      signalMemory = {
+        totalSignals: parseInt(totalResult?.[0]?.total || '0'),
+        regimeStats: (regimeStats || []).map((r: any) => ({ regime: r.regime, count: parseInt(r.count), winRate: parseFloat(r.win_rate || '0') })),
+        recentSignals: (recentSignals || []).map((s: any) => ({ symbol: s.symbol, verdict: s.verdict, confidence: parseInt(s.confidence), outcome: s.outcome })),
+      };
+    } catch {
+      // ai_signal_log table may not exist yet
+    }
+
+    if (promptMode === 'analyst') {
+      messages.push({ role: 'system', content: buildV3EnginePrompt(signalMemory) });
+    }
+
+    // ===== EDGE CONTEXT: Trader's historical performance profile =====
+    try {
+      const edgeCtx = await getEdgeContext(session.workspaceId);
+      if (edgeCtx.systemMessage) {
+        messages.push({ role: 'system', content: edgeCtx.systemMessage });
+      }
+    } catch {
+      // Non-critical
+    }
+
     // Add conversation history (last 10 messages)
     const recentHistory = conversationHistory.slice(-10);
     for (const msg of recentHistory) {
@@ -227,17 +276,81 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // Derive regime confidence from available indicators
+    const regimeAgreement = deriveRegimeConfidence({
+      adx: typeof pageData?.adx === 'number' ? pageData.adx : undefined,
+      rsi: typeof pageData?.rsi === 'number' ? pageData.rsi : undefined,
+      aroonUp: typeof pageData?.aroonUp === 'number' ? pageData.aroonUp : undefined,
+      aroonDown: typeof pageData?.aroonDown === 'number' ? pageData.aroonDown : undefined,
+      inferredRegime: scoringRegime,
+    });
+
+    // Detect asset class for session phase
+    const copilotSymbol = (pageData?.symbol as string) || (pageData?.currentSymbol as string) || (pageContext?.symbols?.[0]) || '';
+    const isCryptoCopilot = /btc|eth|sol|xrp|doge|bnb|crypto|usdt/i.test(copilotSymbol);
+    const sessionPhase = computeSessionPhaseOverlay(
+      isCryptoCopilot ? 'crypto' : 'equities'
+    );
+
+    // ===== PERFORMANCE THROTTLE: Session P&L tracking =====
+    let perfThrottle = computePerformanceThrottle({ sessionPnlR: 0, consecutiveLosses: 0 });
+    try {
+      const recentTrades = await q(
+        `SELECT pnl_r FROM portfolio_closed
+         WHERE workspace_id = $1 AND created_at > NOW() - INTERVAL '24 hours'
+         ORDER BY created_at DESC LIMIT 20`,
+        [session.workspaceId]
+      );
+      if (recentTrades && recentTrades.length > 0) {
+        let sessionPnlR = 0;
+        let consecutiveLosses = 0;
+        let wins = 0;
+        const last5 = recentTrades.slice(0, 5);
+        for (const trade of recentTrades) sessionPnlR += Number(trade.pnl_r || 0);
+        for (const trade of recentTrades) {
+          if (Number(trade.pnl_r || 0) < 0) consecutiveLosses++;
+          else break;
+        }
+        for (const trade of last5) if (Number(trade.pnl_r || 0) > 0) wins++;
+        const rolling5WinRate = last5.length > 0 ? wins / last5.length : undefined;
+        perfThrottle = computePerformanceThrottle({ sessionPnlR, consecutiveLosses, rolling5WinRate });
+      }
+    } catch {
+      // Non-critical
+    }
+
+    const phaseAdjustedThrottle = aclResult.throttle * sessionPhase.multiplier;
+    const perfAdjusted = applyPerformanceDampener(phaseAdjustedThrottle, perfThrottle);
+
     messages.push({
       role: 'system',
       content: `Current context:\n${serializeContextForPrompt(context)}${v2State ? '\n' + v2State : ''}`,
     });
 
-    // ===== UNIFIED INTELLIGENCE: MPE + Doctrine context =====
+    // ===== SESSION PHASE + REGIME CONFIDENCE + PERFORMANCE =====
+    messages.push({
+      role: 'system',
+      content: `Session Phase: ${sessionPhase.phase} (${sessionPhase.favorable ? 'favorable' : 'unfavorable'}) — ${sessionPhase.reason}
+Regime Confidence: ${regimeAgreement.confidence}% (${regimeAgreement.agreementCount}/${regimeAgreement.totalChecks} indicators agree)
+Performance Throttle: ${perfThrottle.level} — ${perfThrottle.governorRecommendation}
+Effective Throttle: ${perfAdjusted.throttle.toFixed(3)}`,
+    });
+
+    // ===== UNIFIED INTELLIGENCE: MPE + Doctrine + CFE + Confluence Components =====
     try {
-      const intelligenceSymbol = (pageData?.symbol as string) || (pageData?.currentSymbol as string) || (pageContext?.symbols?.[0]) || undefined;
+      const intelligenceSymbol = copilotSymbol || undefined;
       if (intelligenceSymbol) {
         const intelligenceCtx = await fetchIntelligenceContext(intelligenceSymbol, {
           scanData: pageData as Record<string, any>,
+          confluenceComponents: {
+            SQ: regimeScoring.rawComponents.SQ,
+            TA: regimeScoring.rawComponents.TA,
+            VA: regimeScoring.rawComponents.VA,
+            LL: regimeScoring.rawComponents.LL,
+            MTF: regimeScoring.rawComponents.MTF,
+            FD: regimeScoring.rawComponents.FD,
+            weightedScore: regimeScoring.weightedScore,
+          },
         });
         if (intelligenceCtx.systemMessage) {
           messages.push({ role: 'system', content: intelligenceCtx.systemMessage });
