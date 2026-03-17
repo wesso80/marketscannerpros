@@ -69,7 +69,7 @@ export default function TimeConfluenceWidget({
   symbol,
 }: TimeConfluenceWidgetProps) {
   const [state, setState] = useState(() => getTimeConfluenceState());
-  const [activeTab, setActiveTab] = useState<'now' | 'today' | 'macro' | 'calendar'>('now');
+  const [activeTab, setActiveTab] = useState<'now' | 'today' | 'fib' | 'macro' | 'calendar'>('now');
   const [showTooltip, setShowTooltip] = useState(false);
   const [alertSet, setAlertSet] = useState(false);
   const [alertThreshold, setAlertThreshold] = useState(10);
@@ -226,6 +226,7 @@ export default function TimeConfluenceWidget({
         {[
           { id: 'now', label: '🔴 Live' },
           { id: 'today', label: '📅 Today' },
+          { id: 'fib', label: '🔢 Fib' },
           { id: 'macro', label: '📊 Macro' },
           { id: 'calendar', label: '🗓️ Calendar' },
         ].map((tab) => (
@@ -599,6 +600,61 @@ export default function TimeConfluenceWidget({
                         {conf.confluenceScore}
                       </div>
                       {impactBadge(conf.impactLevel)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* FIB Tab */}
+        {activeTab === 'fib' && (
+          <div>
+            <div style={{ color: '#64748B', fontSize: '0.8rem', marginBottom: '1rem' }}>
+              Fibonacci time confluence — minutes where 2+ Fib intervals close simultaneously
+            </div>
+
+            {state.fibConfluenceWindows.length === 0 ? (
+              <div style={{ color: '#94A3B8', textAlign: 'center', padding: '2rem' }}>
+                {state.marketOpen ? 'No multi-Fib confluences remaining today' : 'Market closed — Fib windows available during RTH'}
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '0.5rem', maxHeight: '340px', overflowY: 'auto' }}>
+                {state.fibConfluenceWindows.slice(0, 20).map((conf, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '0.75rem',
+                      background: 'rgba(0,0,0,0.2)',
+                      borderRadius: '8px',
+                      borderLeft: `3px solid ${conf.fibCount >= 4 ? '#EF4444' : conf.fibCount >= 3 ? '#F59E0B' : '#A855F7'}`,
+                    }}
+                  >
+                    <div>
+                      <div style={{ color: '#E2E8F0', fontWeight: 500 }}>{conf.timeET}</div>
+                      <div style={{ color: '#F59E0B', fontSize: '0.75rem' }}>
+                        {conf.closingCandles.filter(c => c.includes('Fib')).join(', ')}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                        <span style={{ color: '#F59E0B', fontWeight: 'bold', fontSize: '1.1rem' }}>
+                          {conf.fibScore.toFixed(1)}
+                        </span>
+                        <span style={{
+                          fontSize: '0.65rem',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          background: conf.fibCount >= 4 ? 'rgba(239,68,68,0.2)' : conf.fibCount >= 3 ? 'rgba(245,158,11,0.2)' : 'rgba(168,85,247,0.2)',
+                          color: conf.fibCount >= 4 ? '#EF4444' : conf.fibCount >= 3 ? '#F59E0B' : '#A855F7',
+                        }}>
+                          {conf.fibCount}× Fib
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ))}

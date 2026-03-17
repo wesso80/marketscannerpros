@@ -281,6 +281,10 @@ export interface TimeConfluence {
   isStandard: boolean;
   isMacro: boolean;
   description: string;
+  /** Number of Fibonacci intervals converging at this moment */
+  fibCount: number;
+  /** Weighted Fibonacci confluence score (higher Fib intervals = more weight) */
+  fibScore: number;
 }
 
 export interface MacroConfluence {
@@ -316,6 +320,9 @@ export interface TimeConfluenceState {
   
   // Today's upcoming confluences
   todayConfluences: TimeConfluence[];
+  
+  // Fibonacci time confluence windows (2+ Fib intervals converging)
+  fibConfluenceWindows: TimeConfluence[];
   
   // Macro calendar
   nextMacroConfluence: MacroConfluence | null;
@@ -962,6 +969,30 @@ export function getIntradayConfluence(date: Date): TimeConfluence {
   if (allClosing.includes('30m')) score += 1;
   if (allClosing.includes('15m')) score += 1;
   
+  // Fibonacci confluence scoring — weight by interval size
+  // Higher Fib intervals converging = more significant inflection potential
+  const FIB_INTERVAL_WEIGHT: Record<number, number> = {
+    1: 0.5, 2: 0.5, 3: 1, 5: 1.5, 8: 2, 13: 3, 21: 4, 34: 5, 55: 7, 89: 9, 144: 11,
+  };
+  const FIB_HOUR_WEIGHT: Record<number, number> = { 1: 3, 2: 5, 3: 7, 5: 9, 8: 11, 13: 14, 21: 17 };
+  let fibScore = 0;
+  let fibCount = 0;
+  for (const label of fibClosing) {
+    const hourMatch = label.match(/^Fib(\d+)H$/);
+    const minMatch = label.match(/^Fib(\d+)m$/);
+    if (hourMatch) {
+      fibScore += FIB_HOUR_WEIGHT[Number(hourMatch[1])] ?? 3;
+      fibCount++;
+    } else if (minMatch) {
+      fibScore += FIB_INTERVAL_WEIGHT[Number(minMatch[1])] ?? 1;
+      fibCount++;
+    }
+  }
+  // Multi-Fib convergence bonus — triple+ Fib overlap is a potential inflection
+  if (fibCount >= 4) { score += 4; fibScore += 6; }
+  else if (fibCount >= 3) { score += 2; fibScore += 3; }
+  else if (fibCount >= 2) { score += 1; fibScore += 1; }
+  
   // Determine impact level
   let impact: 'low' | 'medium' | 'high' | 'extreme' = 'low';
   if (score >= 12) impact = 'extreme';
@@ -989,6 +1020,8 @@ export function getIntradayConfluence(date: Date): TimeConfluence {
     isStandard: standardClosing.length > 0,
     isMacro: false,
     description: desc,
+    fibCount,
+    fibScore,
   };
 }
 
@@ -1019,6 +1052,37 @@ export function getTodayConfluences(date: Date): TimeConfluence[] {
   }
   
   return confluences;
+}
+
+/**
+ * Get Fibonacci-specific confluence windows for today.
+ * Scans every minute from open to close for moments where 2+ Fibonacci
+ * intervals converge (e.g. Fib8m + Fib3m + Fib2m at 9:54 = triple confluence).
+ * Returns only windows with fibCount >= 2, sorted by fibScore descending.
+ */
+export function getFibonacciConfluenceWindows(date: Date): TimeConfluence[] {
+  const clock = createMarketClock(date);
+  if (!clock.dayInfo.isTradingDay) return [];
+
+  const openMins = clock.dayInfo.openMinsET;
+  const closeMins = clock.dayInfo.closeMinsET;
+  const windows: TimeConfluence[] = [];
+
+  // Scan every minute of RTH session
+  for (let targetMins = openMins + 1; targetMins <= closeMins; targetMins++) {
+    const deltaMins = targetMins - clock.minutesSinceMidnight;
+    const checkTime = new Date(date.getTime() + deltaMins * 60000);
+    const confluence = getIntradayConfluence(checkTime);
+
+    // Only include moments with 2+ Fibonacci intervals converging
+    if (confluence.fibCount >= 2) {
+      windows.push(confluence);
+    }
+  }
+
+  // Sort by fibScore descending (highest-weight convergences first)
+  windows.sort((a, b) => b.fibScore - a.fibScore);
+  return windows;
 }
 
 /**
@@ -1358,6 +1422,9 @@ export function getTimeConfluenceState(date: Date = new Date()): TimeConfluenceS
   // Get today's confluences
   const todayConfluences = getTodayConfluences(date);
   
+  // Get Fibonacci confluence windows (2+ Fib intervals converging)
+  const fibConfluenceWindows = marketOpen ? getFibonacciConfluenceWindows(date) : [];
+  
   // Get macro confluence
   const { confluence: nextMacro, daysAway: daysToNextMacro } = getNextMacroConfluence(date);
   
@@ -1384,6 +1451,8 @@ export function getTimeConfluenceState(date: Date = new Date()): TimeConfluenceS
     minutesToNextMajor,
     
     todayConfluences,
+    
+    fibConfluenceWindows,
     
     nextMacroConfluence: nextMacro,
     daysToNextMacro,

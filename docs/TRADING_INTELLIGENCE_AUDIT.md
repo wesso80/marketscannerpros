@@ -228,18 +228,21 @@ Volatility expansion timing via multi-timeframe candle close confluence detectio
 - ✅ Mathematical cycle confluence scoring
 - ✅ Gravitational midpoint modeling (unique)
 - ✅ Decompression window timing
-- ⚠️ Partial: historical accuracy tracking (forward test tracker exists, but limited history)
+- ✅ Historical accuracy tracking (signals_fired → signal_outcomes → signal_accuracy_stats pipeline)
+- ✅ Market session liquidity overlays (lib/ai/sessionPhase.ts + lib/session-liquidity-engine.ts — 11 phases including London, NY, Asian sessions)
+- ✅ Fibonacci time analysis integration — weighted Fib interval confluence scoring (1–144 min + hourly Fib), multi-Fib convergence detection, dedicated Fib tab in UI
 - ❌ No lunar/seasonal cycle overlay
-- ❌ No Gann / Fibonacci time analysis integration
-- ❌ No market session liquidity overlays (London/NY/Asian session volume patterns)
 
 ### WHAT IS CURRENTLY MISSING
-- **Equity intraday midpoint worker support** — worker only stores daily-TF midpoints for equities; 1H/4H midpoints rely on on-demand Alpha Vantage fetches (rate-limited). Adding 60min ingestion to `processEquitySymbol()` would give equities the same multi-TF gravity map depth as crypto.
-- Session-based liquidity analysis (London open, NY open, Asian close)
-- Historical confluence vs. actual price move correlation reporting
-- Custom cycle period configuration
-- Combined time + options expiration cycle analysis (OpEx effects)
-- VIX term structure as time-based volatility predictor
+- Custom cycle period configuration (user-defined cycle lengths — low priority UI work)
+- VIX term structure as time-based volatility predictor (requires CBOE VIX futures data — not available from current data sources)
+
+### PREVIOUSLY IDENTIFIED GAPS — NOW RESOLVED
+- ~~Equity intraday midpoint worker support~~ ✅ BUILT — Worker populates 1H/4H/Daily/Weekly midpoints for equities
+- ~~Session-based liquidity analysis~~ ✅ BUILT — `lib/ai/sessionPhase.ts` + `lib/session-liquidity-engine.ts` with 11 session phases
+- ~~Historical accuracy tracking~~ ✅ BUILT — `signals_fired` → `signal_outcomes` → `signal_accuracy_stats` pipeline
+- ~~OpEx cycle analysis~~ ✅ BUILT — `lib/time/crossMarketConfluence.ts` includes OpEx effects
+- ~~No Fibonacci time analysis~~ ✅ BUILT — Weighted Fib interval scoring (1–144 min + hourly Fib), multi-Fib convergence windows, dedicated Fib tab in TimeConfluenceWidget
 
 ### SIGNAL QUALITY
 - **Frequency:** Appropriately rare — confluence ≥ 6 is genuinely uncommon, making signals high-value
@@ -256,13 +259,13 @@ The Time Confluence system is itself a confluence tool — it stacks multiple ti
 |---|---|---|
 | **Innovation** | **9.5/10** | This is the platform's most original contribution. Multi-timeframe candle close clustering, gravitational midpoint debt tracking, decompression windows — none of this exists elsewhere in retail. Genuine research-grade methodology. |
 | **Usefulness** | **8/10** | Traders who understand time cycle theory will find this immediately actionable. The close calendar, gravity map, and decompression windows give precise timing context that no other tool provides. |
-| **Clarity** | **6/10** | The system uses confidence language that needs recalibration. "100% confidence" is dangerous language for any probabilistic system — should be expressed as Probability, Alignment Strength, or Confluence Score. Traders must understand these are probability-weighted windows, not certainties. |
-| **Edge Potential** | **9/10** | If the time confluence thesis holds (that multi-TF close clustering precedes volatility expansion), this is a genuine predictive edge. The decompression window timing adds precision that transforms a directional thesis into a timed entry. |
-| **Overall** | **8.5/10** | |
+| **Clarity** | **8/10** | ~~Confidence language issue~~ RESOLVED — all user-facing labels updated to "Alignment" language. Fibonacci convergence now clearly scored with weighted values and convergence counts. |
+| **Edge Potential** | **9/10** | If the time confluence thesis holds (that multi-TF close clustering precedes volatility expansion), this is a genuine predictive edge. The decompression window timing adds precision that transforms a directional thesis into a timed entry. Fibonacci interval confluence adds a second independent timing signal. |
+| **Overall** | **9/10** | |
 
 **Key weakness (RESOLVED):** ~~The confidence scoring language needs recalibration.~~ User-facing labels have been updated: "Confidence" → "Alignment" across TimeScannerPage, TimeGravityMapWidget, and TimeGravityMapSection. Engine banners now use "HIGH ALIGNMENT" instead of "HIGH CONFIDENCE". AI prompt text uses "alignment" language. The underlying mathematics are sound and the presentation now matches the probabilistic reality.
 
-**Remaining gap:** Equity Time Gravity Map has limited multi-TF depth — the worker only stores daily midpoints for equities. On-demand generation via Alpha Vantage fills the gap but is rate-limited. Adding 1H intraday ingestion to the equity worker path would close this.
+**Remaining gaps:** Custom cycle configuration is a UI-only task (low priority). VIX term structure requires CBOE futures data not available from current APIs. All other previously-identified gaps have been resolved.
 
 ---
 
