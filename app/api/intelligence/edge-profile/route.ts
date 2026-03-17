@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { computeEdgeProfile, type EdgeDimension } from '@/lib/intelligence/edgeProfile';
+import { computeEdgeProfile, isValidDimension } from '@/lib/intelligence/edgeProfile';
 
 /**
  * GET /api/intelligence/edge-profile
@@ -22,8 +22,12 @@ export async function GET(req: NextRequest) {
 
   const lookbackDays = lookbackParam ? parseInt(lookbackParam, 10) : null;
   const dimensions = dimsParam
-    ? dimsParam.split(',').map(d => d.trim()) as EdgeDimension[]
+    ? dimsParam.split(',').map(d => d.trim()).filter(isValidDimension)
     : undefined;
+
+  if (dimsParam && (!dimensions || dimensions.length === 0)) {
+    return NextResponse.json({ error: 'Invalid dimensions parameter' }, { status: 400 });
+  }
 
   try {
     const profile = await computeEdgeProfile(session.workspaceId, {

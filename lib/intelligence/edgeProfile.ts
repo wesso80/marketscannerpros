@@ -92,6 +92,27 @@ export interface EdgeInsight {
   sampleSize: number;
 }
 
+/* ── Dimension validation (prevents SQL injection) ─────────────────────── */
+
+const VALID_DIMENSION_COLUMNS: Record<EdgeDimension, string> = {
+  overall: "'overall'",
+  asset_class: 'asset_class',
+  side: 'side',
+  strategy: 'LOWER(TRIM(strategy))',
+  setup: 'LOWER(TRIM(setup))',
+  regime: 'regime',
+  volatility_regime: 'volatility_regime',
+  day_of_week: 'day_of_week',
+  hour_of_day: 'hour_of_day',
+  outcome_label: 'outcome_label',
+  exit_reason: 'exit_reason',
+  trade_type: 'trade_type',
+};
+
+export function isValidDimension(d: string): d is EdgeDimension {
+  return d in VALID_DIMENSION_COLUMNS;
+}
+
 /* ── Core SQL aggregation ──────────────────────────────────────────────── */
 
 interface AggRow {
@@ -119,10 +140,16 @@ async function queryDimension(
   dimension: EdgeDimension,
   lookbackDays: number | null
 ): Promise<AggRow[]> {
-  const dimCol = dimension === 'overall' ? "'overall'" : dimension;
-  const lookbackClause = lookbackDays
-    ? `AND exit_ts >= NOW() - INTERVAL '${lookbackDays} days'`
-    : '';
+  // Validate dimension against allowlist (prevents SQL injection)
+  const dimCol = VALID_DIMENSION_COLUMNS[dimension];
+  if (!dimCol) throw new Error(`Invalid dimension: ${dimension}`);
+
+  const params: (string | number)[] = [workspaceId];
+  let lookbackClause = '';
+  if (lookbackDays != null && Number.isFinite(lookbackDays) && lookbackDays > 0) {
+    params.push(lookbackDays);
+    lookbackClause = `AND exit_ts >= NOW() - make_interval(days => $${params.length})`;
+  }
 
   const sql = `
     SELECT
@@ -142,7 +169,7 @@ async function queryDimension(
       COALESCE(MAX(r_multiple), 0)::FLOAT                   AS best_r,
       COALESCE(MIN(r_multiple), 0)::FLOAT                   AS worst_r,
       AVG(hold_duration_m)::FLOAT                           AS avg_hold_m,
-      STRING_AGG(outcome, ',' ORDER BY exit_ts)             AS outcomes_list
+      STRING_AGG(outcome, ',' ORDER BY exit_ts, journal_entry_id) AS outcomes_list
     FROM trade_outcomes
     WHERE workspace_id = $1
       AND outcome IN ('win','loss','breakeven')
@@ -152,7 +179,7 @@ async function queryDimension(
     ORDER BY sample_size DESC
   `;
 
-  return q<AggRow>(sql, [workspaceId]);
+  return q<AggRow>(sql, params);
 }
 
 /* ── Streak calculator ──────────────────────────────────────────────────── */
@@ -354,7 +381,7 @@ const DIMENSIONS: EdgeDimension[] = [
   'regime',
   'volatility_regime',
   'day_of_week',
-  'hour_of_day',
+  // 'hour_of_day' excluded — trade_date is DATE so hour is always 0
   'exit_reason',
   'trade_type',
 ];
