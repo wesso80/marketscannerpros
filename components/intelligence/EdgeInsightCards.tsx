@@ -114,8 +114,25 @@ function EmptyState() {
 
 /* ── Main component ─────────────────────────────────────────────────── */
 
+function PremiumGate() {
+  return (
+    <div className="text-center py-6">
+      <div className="text-2xl mb-2">🔒</div>
+      <div className="text-xs text-slate-400 mb-3">
+        Edge Profile insights require a Pro or Pro Trader subscription.
+      </div>
+      <a
+        href="/pricing"
+        className="inline-block text-xs font-medium px-4 py-2 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25 transition-colors"
+      >
+        Upgrade to Pro
+      </a>
+    </div>
+  );
+}
+
 export default function EdgeInsightCards() {
-  const { data: profile, loading, isEmpty } = useEdgeProfile();
+  const { data: profile, loading, isEmpty, isPremiumRequired } = useEdgeProfile();
 
   if (loading) {
     return (
@@ -125,6 +142,17 @@ export default function EdgeInsightCards() {
           <div className="h-16 bg-slate-700/30 rounded animate-pulse" />
           <div className="h-16 bg-slate-700/30 rounded animate-pulse" />
         </div>
+      </div>
+    );
+  }
+
+  if (isPremiumRequired) {
+    return (
+      <div className="rounded-xl border border-slate-800/60 bg-[var(--msp-panel)] p-4">
+        <h3 className="text-sm font-semibold text-white mb-2">
+          Your Trading Edge
+        </h3>
+        <PremiumGate />
       </div>
     );
   }

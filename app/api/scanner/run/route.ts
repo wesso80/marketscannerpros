@@ -20,6 +20,7 @@ import { computeACLFromScoring } from "@/lib/ai/adaptiveConfidenceLens";
 import { computeScanEnhancements, type ScanEnhancements } from "@/lib/scannerEnhancements";
 import { computeDVE } from "@/lib/directionalVolatilityEngine";
 import { getEdgeContext } from "@/lib/intelligence/edgeContextBuilder";
+import { normalizeSide } from "@/lib/intelligence/edgeProfile";
 import type { DVEInput, DVEReading, DVESignalType, VolRegime } from "@/lib/directionalVolatilityEngine.types";
 
 export const runtime = "nodejs";
@@ -2362,10 +2363,12 @@ export async function POST(req: NextRequest) {
     // ===== V3.2 SOFT PERSONALIZATION: Apply edge hints as minor score modifier =====
     // Maximum ±10% influence. Only when sufficient historical data exists.
     if (softHints && softHints.hasEnoughData && results.length > 0) {
+      let boostCount = 0;
       for (const r of results) {
         let boost = 0;
-        const sym = (r.symbol || '').toUpperCase();
+        const matchedDims: string[] = [];
         const dir = ((r as any).direction || '').toLowerCase();
+        const normalizedDir = normalizeSide(dir);
 
         // Asset class match (+3)
         const assetClass = type === 'crypto' ? 'crypto'
@@ -2373,23 +2376,27 @@ export async function POST(req: NextRequest) {
           : 'equity';
         if (softHints.preferredAssets.some(a => a.toLowerCase() === assetClass)) {
           boost += 3;
+          matchedDims.push('asset');
         }
 
-        // Side match (+3)
-        if (dir && softHints.preferredSides.some(s => s.toLowerCase() === dir.replace('ish', ''))) {
+        // Side match (+3) — uses normalized vocabulary (long/short)
+        if (normalizedDir !== 'neutral' && softHints.preferredSides.includes(normalizedDir)) {
           boost += 3;
+          matchedDims.push('side');
         }
 
         // Regime match (+2) — use the enriched regime if available
         const resultRegime = ((r as any).scoreV2?.regime?.label || '').toUpperCase();
         if (resultRegime && softHints.preferredRegimes.some(reg => reg.toUpperCase() === resultRegime)) {
           boost += 2;
+          matchedDims.push('regime');
         }
 
         // Strategy match (+2) — compare setup label against preferred strategies
         const setupLabel = ((r as any).setup || '').toLowerCase();
         if (setupLabel && softHints.preferredStrategies.some(s => setupLabel.includes(s.toLowerCase()))) {
           boost += 2;
+          matchedDims.push('strategy');
         }
 
         // Cap at 10% of base score
@@ -2397,9 +2404,26 @@ export async function POST(req: NextRequest) {
         const clamped = Math.min(boost, maxBoost);
 
         if (clamped > 0) {
+          const beforeScore = r.score;
           r.score = Math.min(100, r.score + clamped);
           (r as any).personalEdgeBoost = clamped;
+          boostCount++;
+
+          // v3.3 observability: structured log per boosted result
+          console.info(`[personalization] boost applied`, JSON.stringify({
+            symbol: r.symbol,
+            dims: matchedDims,
+            before: beforeScore,
+            after: r.score,
+            boost: clamped,
+            maxBoost,
+            ws: session.workspaceId?.slice(0, 8),
+            ts: new Date().toISOString(),
+          }));
         }
+      }
+      if (boostCount > 0) {
+        console.info(`[personalization] summary: ${boostCount}/${results.length} results boosted for workspace ${session.workspaceId?.slice(0, 8)}`);
       }
     }
 

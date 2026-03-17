@@ -126,10 +126,23 @@ export interface EdgeEntry {
 /** Scanner-ready soft personalization hints. */
 export interface SoftEdgeHints {
   preferredAssets: string[];
-  preferredSides: string[];
+  preferredSides: string[];      // Normalized: 'long' | 'short'
   preferredStrategies: string[];
   preferredRegimes: string[];
   hasEnoughData: boolean;
+}
+
+/**
+ * Normalize directional vocabulary to a common internal form.
+ * DB stores: LONG / SHORT
+ * Scanner uses: bullish / bearish / neutral
+ * Internal canonical: long / short / neutral
+ */
+export function normalizeSide(value: string): 'long' | 'short' | 'neutral' {
+  const v = value.toLowerCase().trim();
+  if (v === 'long' || v === 'bullish' || v === 'bull') return 'long';
+  if (v === 'short' || v === 'bearish' || v === 'bear') return 'short';
+  return 'neutral';
 }
 
 /* ── Dimension validation (prevents SQL injection) ─────────────────────── */
@@ -549,7 +562,7 @@ function buildSoftEdgeHints(slices: EdgeSlice[], overall: EdgeSlice | undefined)
 
   return {
     preferredAssets: positiveValues('asset_class'),
-    preferredSides: positiveValues('side'),
+    preferredSides: positiveValues('side').map(normalizeSide).filter(s => s !== 'neutral'),
     preferredStrategies: positiveValues('strategy'),
     preferredRegimes: positiveValues('regime'),
     hasEnoughData: true,

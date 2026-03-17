@@ -13,6 +13,7 @@ export interface UseEdgeProfileResult {
   error: string | null;
   loading: boolean;
   isEmpty: boolean;
+  isPremiumRequired: boolean;
   refetch: () => void;
 }
 
@@ -20,6 +21,7 @@ export function useEdgeProfile(lookbackDays?: number): UseEdgeProfileResult {
   const [data, setData] = useState<EdgeProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isPremiumRequired, setIsPremiumRequired] = useState(false);
   const [trigger, setTrigger] = useState(0);
 
   const refetch = useCallback(() => setTrigger(t => t + 1), []);
@@ -36,7 +38,11 @@ export function useEdgeProfile(lookbackDays?: number): UseEdgeProfileResult {
       credentials: 'same-origin',
     })
       .then(res => {
-        if (res.status === 401 || res.status === 403) return null;
+        if (res.status === 403) {
+          if (!cancelled) setIsPremiumRequired(true);
+          return null;
+        }
+        if (res.status === 401) return null;
         if (!res.ok) throw new Error(`Edge profile ${res.status}`);
         return res.json();
       })
@@ -61,6 +67,7 @@ export function useEdgeProfile(lookbackDays?: number): UseEdgeProfileResult {
     error,
     loading,
     isEmpty: !loading && (data?.totalOutcomes ?? 0) === 0,
+    isPremiumRequired,
     refetch,
   };
 }

@@ -36,35 +36,31 @@ export async function getEdgeContext(workspaceId: string): Promise<EdgeContext> 
     const { edgeSummary, softEdgeHints } = profile;
     if (!edgeSummary) return { ...empty, hints: softEdgeHints };
 
+    const confPct = Math.round(edgeSummary.confidence * 100);
+    const confLabel = confPct >= 70 ? 'high' : confPct >= 40 ? 'moderate' : 'low';
+
     const lines: string[] = [
-      'Trader Edge Profile (from closed trade history):',
+      `Trader Edge Profile (${confLabel} confidence, ${profile.totalOutcomes} closed trades):`,
     ];
 
     if (edgeSummary.strongestStrategy) {
-      lines.push(`- Historically performs best with "${edgeSummary.strongestStrategy}" strategies.`);
+      lines.push(`- Best strategy: "${edgeSummary.strongestStrategy}".`);
     }
     if (edgeSummary.strongestRegime) {
       lines.push(`- Best regime: ${edgeSummary.strongestRegime.replace(/_/g, ' ')}.`);
     }
-    if (edgeSummary.strongestAssetClass) {
-      lines.push(`- Preferred asset class: ${edgeSummary.strongestAssetClass}.`);
-    }
     if (edgeSummary.preferredSide) {
       lines.push(`- Preferred direction: ${edgeSummary.preferredSide.toLowerCase()}.`);
     }
+    lines.push(`- Win rate: ${(edgeSummary.overallWinRate * 100).toFixed(0)}%, Avg R: ${edgeSummary.avgR.toFixed(2)}, Expectancy: ${edgeSummary.expectancy.toFixed(2)}R.`);
 
-    lines.push(`- Overall win rate: ${(edgeSummary.overallWinRate * 100).toFixed(0)}%.`);
-    lines.push(`- Average R: ${edgeSummary.avgR.toFixed(2)}.`);
-    lines.push(`- Expectancy: ${edgeSummary.expectancy.toFixed(2)}R per trade.`);
-
-    if (edgeSummary.profitFactor < 999) {
-      lines.push(`- Profit factor: ${edgeSummary.profitFactor.toFixed(2)}.`);
+    if (confLabel === 'low') {
+      lines.push('NOTE: This profile has low statistical confidence. Treat these edges as preliminary patterns, not proven advantages.');
     }
 
-    lines.push(`- Profile confidence: ${(edgeSummary.confidence * 100).toFixed(0)}%.`);
     lines.push('');
-    lines.push('Use this history to tailor analysis and highlight setups that align with the trader\'s proven edges.');
-    lines.push('IMPORTANT: Do NOT override current market signals based solely on trader history. Market data takes priority.');
+    lines.push('When analyzing setups, mention alignment or conflict with these edges if relevant. Keep it brief.');
+    lines.push('IMPORTANT: Current market data and signals always take priority over historical edge patterns. Do not recommend trades solely because they match the trader\'s historical profile.');
 
     return {
       systemMessage: lines.join('\n'),
