@@ -450,16 +450,13 @@ export async function POST(req: NextRequest) {
     // If client didn't provide symbols, pull from symbol_universe DB table
     // (populated by the background worker) → full bi-directional coverage
     const FALLBACK_EQUITIES = [
-      "AAPL", "MSFT", "NVDA", "GOOGL", "AMZN",
-      "META", "AVGO", "LLY", "TSLA", "JPM"
+      "AAPL", "MSFT", "NVDA", "GOOGL", "AMZN"
     ];
     const FALLBACK_CRYPTO = [
-      "BTC-USD", "ETH-USD", "BNB-USD", "SOL-USD", "XRP-USD",
-      "ADA-USD", "DOGE-USD", "TRX-USD", "AVAX-USD", "DOT-USD"
+      "BTC-USD", "ETH-USD", "BNB-USD", "SOL-USD", "XRP-USD"
     ];
     const FALLBACK_FOREX = [
-      "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "NZDUSD",
-      "USDCAD", "USDCHF", "EURGBP", "EURJPY", "GBPJPY"
+      "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "NZDUSD"
     ];
 
     let symbolsToScan: string[];
@@ -1484,8 +1481,8 @@ export async function POST(req: NextRequest) {
     }
 
     // With prefer_cache mode, most equity data comes from DB cache — safe to scan many.
-    // Cache mode = zero AV calls; AV fallback mode = cap lower to avoid rate limits.
-    const MAX_PER_SCAN = shouldUseCache() ? 50 : 15;
+    // Cache mode = zero AV calls; AV fallback mode = cap to 5 to avoid 429 cascades.
+    const MAX_PER_SCAN = shouldUseCache() ? 50 : 5;
     const limited = symbolsToScan.slice(0, MAX_PER_SCAN);
     if (symbolsToScan.length > MAX_PER_SCAN) {
       console.info(`[scanner] Capped ${symbolsToScan.length} symbols to ${MAX_PER_SCAN} (cache=${shouldUseCache()})`);
