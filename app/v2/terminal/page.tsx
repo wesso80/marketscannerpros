@@ -13,6 +13,10 @@ import { useCachedTopSymbols } from '@/hooks/useCachedTopSymbols';
 
 const OptionsTerminalView = dynamic(() => import('@/components/options-terminal/OptionsTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Options Terminal…</div> });
 const CryptoTerminalView = dynamic(() => import('@/components/crypto-terminal/CryptoTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminal…</div> });
+const OptionsConfluence = dynamic(() => import('@/app/tools/options-confluence/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Confluence Engine…</div> });
+const OptionsFlow = dynamic(() => import('@/app/tools/options-flow/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Flow…</div> });
+const TimeScanner = dynamic(() => import('@/app/tools/time-scanner/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Time Gravity…</div> });
+const ConfluenceScanner = dynamic(() => import('@/app/tools/confluence-scanner/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Time Confluence Scanner…</div> });
 import {
   useCloseCalendar,
   useFlow,
@@ -27,7 +31,7 @@ function Skel({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
   return <div className={`${h} ${w} bg-slate-700/50 rounded animate-pulse`} />;
 }
 
-const TABS = ['Close Calendar', 'Options Terminal', 'Crypto', 'Flow'] as const;
+const TABS = ['Close Calendar', 'Options Terminal', 'Options Confluence', 'Options Flow', 'Crypto', 'Flow', 'Time Gravity', 'Time Confluence'] as const;
 const ANCHOR_OPTIONS: { value: CloseCalendarAnchor; label: string }[] = [
   { value: 'NOW', label: 'Now' },
   { value: 'TODAY', label: 'Today' },
@@ -162,7 +166,7 @@ export default function TerminalPage() {
 
       {/* Tabs */}
       <div className="flex items-center gap-1 overflow-x-auto pb-1">
-        {TABS.filter(t => !(t === 'Options Terminal' && asset === 'crypto')).map(t => (
+        {TABS.filter(t => !(asset === 'crypto' && (t === 'Options Terminal' || t === 'Options Confluence' || t === 'Options Flow'))).map(t => (
           <button key={t} onClick={() => setTab(t)} className={`px-2.5 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap transition-colors ${tab === t ? 'bg-[rgba(16,185,129,0.1)] text-[var(--msp-accent)] border border-[rgba(16,185,129,0.4)]' : 'text-[var(--msp-text-muted)] hover:bg-slate-800/60 border border-transparent'}`}>
             {t}
           </button>
@@ -621,6 +625,34 @@ export default function TerminalPage() {
         </div>
         );
       })()}
+
+      {/* ─── Options Confluence (v1 flagship decision engine) ─── */}
+      {tab === 'Options Confluence' && (
+        <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Options Confluence Engine">
+          <OptionsConfluence />
+        </UpgradeGate>
+      )}
+
+      {/* ─── Options Flow (v1 flow intelligence) ─── */}
+      {tab === 'Options Flow' && (
+        <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Options Flow Intelligence">
+          <OptionsFlow />
+        </UpgradeGate>
+      )}
+
+      {/* ─── Time Gravity Map (v1 time scanner) ─── */}
+      {tab === 'Time Gravity' && (
+        <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Time Gravity Map">
+          <TimeScanner />
+        </UpgradeGate>
+      )}
+
+      {/* ─── Time Confluence Scanner ─── */}
+      {tab === 'Time Confluence' && (
+        <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Time Confluence Scanner">
+          <ConfluenceScanner />
+        </UpgradeGate>
+      )}
     </div>
   );
 }

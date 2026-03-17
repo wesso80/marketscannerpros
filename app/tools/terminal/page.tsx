@@ -16,6 +16,7 @@ const CryptoTerminalView = dynamic(() => import('@/components/crypto-terminal/Cr
 const OptionsConfluence = dynamic(() => import('@/app/tools/options-confluence/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Confluence Engine…</div> });
 const OptionsFlow = dynamic(() => import('@/app/tools/options-flow/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Flow…</div> });
 const TimeScanner = dynamic(() => import('@/app/tools/time-scanner/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Time Gravity…</div> });
+const ConfluenceScanner = dynamic(() => import('@/app/tools/confluence-scanner/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Time Confluence Scanner…</div> });
 import {
   useCloseCalendar,
   useFlow,
@@ -30,7 +31,7 @@ function Skel({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
   return <div className={`${h} ${w} bg-slate-700/50 rounded animate-pulse`} />;
 }
 
-const TABS = ['Close Calendar', 'Options Terminal', 'Options Confluence', 'Options Flow', 'Crypto', 'Flow', 'Time Gravity'] as const;
+const TABS = ['Close Calendar', 'Options Terminal', 'Options Confluence', 'Options Flow', 'Crypto', 'Flow', 'Time Gravity', 'Time Confluence'] as const;
 const ANCHOR_OPTIONS: { value: CloseCalendarAnchor; label: string }[] = [
   { value: 'NOW', label: 'Now' },
   { value: 'TODAY', label: 'Today' },
@@ -641,6 +642,13 @@ export default function TerminalPage() {
       {tab === 'Time Gravity' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Time Gravity Map">
           <TimeScanner />
+        </UpgradeGate>
+      )}
+
+      {/* ─── Time Confluence Scanner ─── */}
+      {tab === 'Time Confluence' && (
+        <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Time Confluence Scanner">
+          <ConfluenceScanner />
         </UpgradeGate>
       )}
     </div>
