@@ -169,6 +169,14 @@ function calculateBollingerBands(data: IntradayBar[], period: number = 20, stdDe
 
 type IndicatorType = 'ema9' | 'ema21' | 'sma20' | 'sma50' | 'vwap' | 'bollinger';
 
+interface JournalMarker {
+  timestamp: string;
+  price: number;
+  side: 'LONG' | 'SHORT';
+  type: 'entry' | 'exit';
+  label: string;
+}
+
 // Candlestick Chart Component
 function CandlestickChart({ 
   data, 
@@ -177,6 +185,9 @@ function CandlestickChart({
   onHover,
   indicators = [],
   dealerOverlay = null,
+  showSessionMarkers = false,
+  journalMarkers = [],
+  compact = false,
 }: { 
   data: IntradayBar[]; 
   width?: number; 
@@ -184,6 +195,9 @@ function CandlestickChart({
   onHover?: (bar: IntradayBar | null) => void;
   indicators?: IndicatorType[];
   dealerOverlay?: DealerOverlayData | null;
+  showSessionMarkers?: boolean;
+  journalMarkers?: JournalMarker[];
+  compact?: boolean;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -372,6 +386,64 @@ function CandlestickChart({
             >
               {formatTime(bar.timestamp)}
             </text>
+          );
+        })}
+
+        {/* Session Markers (RTH open 9:30 ET, close 4:00 ET) */}
+        {showSessionMarkers && data.map((bar, i) => {
+          const d = new Date(bar.timestamp);
+          const etHour = d.getUTCHours() - 5; // approximate ET offset
+          const etMin = d.getUTCMinutes();
+          const isOpen = etHour === 9 && etMin === 30;
+          const isClose = etHour === 16 && etMin === 0;
+          if (!isOpen && !isClose) return null;
+          const x = scaleX(i);
+          return (
+            <g key={`session-${i}`}>
+              <line
+                x1={x} y1={padding.top} x2={x} y2={padding.top + chartHeight}
+                stroke={isOpen ? '#38bdf8' : '#f59e0b'}
+                strokeWidth="1.5"
+                strokeDasharray="6,3"
+                opacity="0.6"
+              />
+              <text x={x + 4} y={padding.top + 12} fill={isOpen ? '#38bdf8' : '#f59e0b'} fontSize="9" fontWeight="600">
+                {isOpen ? 'RTH Open' : 'RTH Close'}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Journal Trade Markers */}
+        {journalMarkers.map((marker, i) => {
+          // Find closest bar by timestamp
+          const markerTime = new Date(marker.timestamp).getTime();
+          let closestIdx = 0;
+          let closestDiff = Infinity;
+          for (let j = 0; j < data.length; j++) {
+            const diff = Math.abs(new Date(data[j].timestamp).getTime() - markerTime);
+            if (diff < closestDiff) { closestDiff = diff; closestIdx = j; }
+          }
+          const x = scaleX(closestIdx);
+          const y = scaleY(marker.price);
+          const isEntry = marker.type === 'entry';
+          const color = marker.side === 'LONG'
+            ? (isEntry ? '#22c55e' : '#86efac')
+            : (isEntry ? '#ef4444' : '#fca5a5');
+          return (
+            <g key={`jm-${i}`}>
+              {isEntry ? (
+                <polygon
+                  points={`${x},${y - 8} ${x - 6},${y + 4} ${x + 6},${y + 4}`}
+                  fill={color} stroke="#fff" strokeWidth="0.5"
+                />
+              ) : (
+                <rect x={x - 5} y={y - 5} width={10} height={10} fill={color} stroke="#fff" strokeWidth="0.5" rx="2" />
+              )}
+              <text x={x + 8} y={y + 4} fill={color} fontSize="9" fontWeight="600">
+                {marker.label}
+              </text>
+            </g>
           );
         })}
 
@@ -618,6 +690,15 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
   const [isCrypto, setIsCrypto] = useState(false);
   const [indicators, setIndicators] = useState<IndicatorType[]>([]);
   const [dealerOverlay, setDealerOverlay] = useState<DealerOverlayData | null>(null);
+  const [showSessionMarkers, setShowSessionMarkers] = useState(false);
+  // Multi-TF comparison
+  const [compareEnabled, setCompareEnabled] = useState(false);
+  const [compareInterval, setCompareInterval] = useState<Interval>('15min');
+  const [compareData, setCompareData] = useState<IntradayData | null>(null);
+  const [compareLoading, setCompareLoading] = useState(false);
+  // Journal trade overlay
+  const [journalMarkers, setJournalMarkers] = useState<JournalMarker[]>([]);
+  const [showJournalOverlay, setShowJournalOverlay] = useState(false);
 
   const toggleIndicator = (ind: IndicatorType) => {
     setIndicators(prev => 
@@ -695,6 +776,58 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
     }
   }, [fetchDealerOverlay]);
 
+  // Fetch comparison timeframe data
+  const fetchCompareData = useCallback(async (sym: string, int: Interval) => {
+    if (!sym) return;
+    setCompareLoading(true);
+    try {
+      const response = await fetch(
+        `/api/intraday?symbol=${encodeURIComponent(sym)}&interval=${int}&outputsize=compact&extended_hours=true`
+      );
+      if (response.ok) {
+        const result = await response.json();
+        setCompareData(result);
+      }
+    } catch { /* ignore */ }
+    setCompareLoading(false);
+  }, []);
+
+  // Fetch journal entries for current symbol
+  const fetchJournalMarkers = useCallback(async (sym: string) => {
+    try {
+      const response = await fetch('/api/journal');
+      if (!response.ok) { setJournalMarkers([]); return; }
+      const result = await response.json();
+      const entries = (result.entries || []).filter(
+        (e: any) => e.symbol?.toUpperCase() === sym.toUpperCase()
+      );
+      const markers: JournalMarker[] = [];
+      for (const e of entries) {
+        if (e.entryPrice && e.date) {
+          markers.push({
+            timestamp: e.date,
+            price: e.entryPrice,
+            side: e.side === 'SHORT' ? 'SHORT' : 'LONG',
+            type: 'entry',
+            label: `${e.side?.[0] || 'L'} Entry $${Number(e.entryPrice).toFixed(2)}`,
+          });
+        }
+        if (e.exitPrice && e.exitPrice > 0 && e.exitDate) {
+          markers.push({
+            timestamp: e.exitDate,
+            price: e.exitPrice,
+            side: e.side === 'SHORT' ? 'SHORT' : 'LONG',
+            type: 'exit',
+            label: `Exit $${Number(e.exitPrice).toFixed(2)}`,
+          });
+        }
+      }
+      setJournalMarkers(markers);
+    } catch {
+      setJournalMarkers([]);
+    }
+  }, []);
+
   // Sync symbol from prop (Golden Egg), V2Context, or fallback
   const { selectedSymbol: v2Symbol } = useV2();
   useEffect(() => {
@@ -702,10 +835,27 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
     if (target) {
       setSearchInput(target);
       fetchData(target, interval);
+      if (showJournalOverlay) fetchJournalMarkers(target);
     } else {
       fetchData('AAPL', '5min');
     }
   }, [propSymbol, v2Symbol]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch compare data when toggled or interval changes
+  useEffect(() => {
+    if (compareEnabled && symbol) {
+      fetchCompareData(symbol, compareInterval);
+    }
+  }, [compareEnabled, compareInterval, symbol, fetchCompareData]);
+
+  // Fetch journal markers when toggled
+  useEffect(() => {
+    if (showJournalOverlay && symbol) {
+      fetchJournalMarkers(symbol);
+    } else {
+      setJournalMarkers([]);
+    }
+  }, [showJournalOverlay, symbol, fetchJournalMarkers]);
 
   // Auto-refresh every 60 seconds if enabled
   useEffect(() => {
@@ -1054,6 +1204,42 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
                       Clear
                     </button>
                   )}
+                  <span className="mx-1 w-px h-5 bg-slate-700" />
+                  {!isCrypto && (
+                    <button
+                      type="button"
+                      onClick={() => setShowSessionMarkers(p => !p)}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+                        showSessionMarkers
+                          ? 'bg-sky-500/20 text-sky-400 border border-sky-500/50'
+                          : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
+                      }`}
+                    >
+                      RTH
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowJournalOverlay(p => !p)}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+                      showJournalOverlay
+                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/50'
+                        : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
+                    }`}
+                  >
+                    Trades
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCompareEnabled(p => !p)}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+                      compareEnabled
+                        ? 'bg-violet-500/20 text-violet-400 border border-violet-500/50'
+                        : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
+                    }`}
+                  >
+                    Compare TF
+                  </button>
                 </div>
 
                 <div className="overflow-x-auto pt-1">
@@ -1064,6 +1250,8 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
                     onHover={setHoveredBar}
                     indicators={indicators}
                     dealerOverlay={dealerOverlay}
+                    showSessionMarkers={showSessionMarkers && !isCrypto}
+                    journalMarkers={journalMarkers}
                   />
                 </div>
                 <div className="mt-2 overflow-x-auto">
@@ -1073,6 +1261,61 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
                     height={76}
                   />
                 </div>
+
+                {/* Multi-Timeframe Comparison Panel */}
+                {compareEnabled && (
+                  <div className="mt-2 rounded-lg border border-violet-500/30 bg-slate-800/50 p-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-medium text-violet-300">Compare: {symbol} — {compareInterval}</span>
+                      <div className="flex gap-1">
+                        {INTERVALS.filter(int => int.value !== interval).map(int => (
+                          <button
+                            key={int.value}
+                            type="button"
+                            onClick={() => setCompareInterval(int.value)}
+                            className={`rounded px-2 py-0.5 text-[10px] font-medium transition ${
+                              compareInterval === int.value
+                                ? 'bg-violet-600 text-white'
+                                : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+                            }`}
+                          >
+                            {int.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {compareLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    ) : compareData?.data?.length ? (
+                      <div className="overflow-x-auto">
+                        <CandlestickChart
+                          data={compareData.data}
+                          width={Math.max(800, compareData.data.length * 8)}
+                          height={220}
+                          indicators={indicators}
+                          showSessionMarkers={showSessionMarkers && !isCrypto}
+                          compact
+                        />
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-500 py-4 text-center">No comparison data available</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Journal Trades Legend */}
+                {showJournalOverlay && journalMarkers.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2 text-[10px] text-slate-400">
+                    <span className="text-amber-400 font-medium">Journal Trades:</span>
+                    {journalMarkers.map((m, i) => (
+                      <span key={i} className={m.side === 'LONG' ? 'text-emerald-400' : 'text-rose-400'}>
+                        {m.type === 'entry' ? '▲' : '■'} {m.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 

@@ -651,11 +651,17 @@ Real-time technical analysis with indicator overlays. Answers: *"What does the p
 - ✅ Multi-interval candlestick charts
 - ✅ Key technical indicators
 - ✅ Liquidity level detection
-- ❌ No multi-timeframe view (split-screen TFs)
-- ❌ No drawing tools
-- ❌ No trade entry/exit plotting on chart
-- ❌ No volume profile (poc, value area, distribution)
-- ❌ No order flow / footprint charts
+- ✅ Multi-timeframe comparison (split-screen Compare TF toggle)
+- ✅ Trade entry/exit plotting on chart (Journal trade overlay)
+- ✅ Session markers (RTH open/close vertical lines)
+- ❌ No drawing tools (trendlines, rectangles, fibonacci — requires canvas overlay)
+- ❌ No volume profile (poc, value area — requires tick-level data)
+- ❌ No order flow / footprint charts (requires L2 data)
+
+### GAPS RESOLVED (v2 — Jan 2026)
+1. **Multi-timeframe comparison** — "Compare TF" toggle renders a second chart panel below the main chart at a user-selected interval. Shared indicator overlays. Enables 5m + 15m or 5m + 1h side-by-side analysis.
+2. **Trade journal overlay** — "Trades" toggle fetches journal entries for the current symbol and plots entry/exit markers on the candlestick chart. Triangles for entries, squares for exits, color-coded by side (long=green, short=red).
+3. **Session markers** — "RTH" toggle adds vertical dashed lines at 9:30 AM (RTH Open) and 4:00 PM (RTH Close) ET for equity charts. Hidden for crypto.
 
 ### SIGNAL QUALITY
 - **Rating:** Visual tool. Provides context for manual analysis, not automated signals.
