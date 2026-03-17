@@ -291,14 +291,17 @@ async function generateMidpointsOnDemand(symbol: string, assetType: 'crypto' | '
     }
 
     // Add to symbol_universe so the worker maintains it going forward
-    try {
-      await q(
-        `INSERT INTO symbol_universe (symbol, asset_type, tier, enabled)
-         VALUES ($1, $2, 3, TRUE)
-         ON CONFLICT (symbol) DO NOTHING`,
-        [symbol.toUpperCase(), assetType]
-      );
-    } catch { /* non-fatal */ }
+    const cleanSym = symbol.toUpperCase().replace(/\s+/g, '').trim();
+    if (cleanSym.length >= 2 && cleanSym.length <= 12 && /^[A-Z0-9.\-\/=^]+$/.test(cleanSym)) {
+      try {
+        await q(
+          `INSERT INTO symbol_universe (symbol, asset_type, tier, enabled)
+           VALUES ($1, $2, 3, TRUE)
+           ON CONFLICT (symbol) DO NOTHING`,
+          [cleanSym, assetType]
+        );
+      } catch { /* non-fatal */ }
+    }
 
     return { totalStored, timeframesGenerated, rateLimited };
   })();
@@ -315,7 +318,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     
-    const symbol = searchParams.get('symbol');
+    const symbol = searchParams.get('symbol')?.toUpperCase().replace(/\s+/g, '').trim() || '';
     const priceStr = searchParams.get('price');
     const midpointsStr = searchParams.get('midpoints');
     const maxDistance = parseFloat(searchParams.get('maxDistance') || '10');

@@ -245,15 +245,19 @@ async function fetchBarsAndIndicatorsFromAV(symbol: string): Promise<{
 }
 
 /**
- * Add symbol to universe so worker will maintain it
+ * Add symbol to universe so worker will maintain it.
+ * Validates format to prevent garbage entries from typeahead/partial inputs.
  */
 async function addToUniverse(symbol: string, assetType: string = 'equity'): Promise<void> {
+  const clean = symbol.toUpperCase().replace(/\s+/g, '').trim();
+  // Reject empty, too short, too long, or symbols with invalid characters
+  if (!clean || clean.length < 2 || clean.length > 12 || !/^[A-Z0-9.\-\/=^]+$/.test(clean)) return;
   try {
     await q(`
       INSERT INTO symbol_universe (symbol, asset_type, tier, enabled)
       VALUES ($1, $2, 3, TRUE)
       ON CONFLICT (symbol) DO NOTHING
-    `, [symbol.toUpperCase(), assetType]);
+    `, [clean, assetType]);
   } catch (err) {
     // Ignore errors - not critical
   }

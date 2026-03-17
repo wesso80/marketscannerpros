@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const url = new URL(req.url);
-    const symbol = url.searchParams.get("symbol")?.toUpperCase() || "";
+    const symbol = url.searchParams.get("symbol")?.toUpperCase().replace(/\s+/g, '').trim() || "";
     const type = (url.searchParams.get("type") as AssetType) || "crypto";
     const market = url.searchParams.get("market")?.toUpperCase() || "USD";
     const strict = ['1', 'true', 'yes'].includes((url.searchParams.get('strict') || '').toLowerCase());

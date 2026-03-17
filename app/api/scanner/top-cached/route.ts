@@ -86,8 +86,7 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '10', 10), 1), 30);
 
   try {
-    // Join quotes + indicators — only symbols that have both fresh quote and indicator data
-    // Filter out data older than 2 hours to avoid serving stale prices
+    // Join quotes + indicators + symbol_universe — only enabled symbols with fresh data
     const rows = await q<Record<string, unknown>>(`
       SELECT
         ql.symbol,
@@ -108,6 +107,8 @@ export async function GET(req: NextRequest) {
       FROM quotes_latest ql
       INNER JOIN indicators_latest il
         ON ql.symbol = il.symbol AND il.timeframe = 'daily'
+      INNER JOIN symbol_universe su
+        ON ql.symbol = su.symbol AND su.enabled = true
       WHERE ql.price IS NOT NULL
         AND ql.price > 0
         AND il.rsi14 IS NOT NULL
