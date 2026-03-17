@@ -15,8 +15,16 @@ interface Mover {
   change: number;
   changePercent: number;
   volume: number;
+  asset_class: 'equity' | 'crypto';
+  rsi14: number | null;
+  ema200_dist: number | null;
+  adx14: number | null;
+  in_squeeze: boolean | null;
+  rs_vs_index: number | null;
+  momentum_accel: number | null;
 }
 
+type AssetFilter = 'all' | 'equity' | 'crypto';
 type SetupMode = 'breakout' | 'reversal' | 'momentum';
 type Eligibility = 'eligible' | 'conditional' | 'blocked';
 type Cluster = 'large_cap' | 'mid_cap' | 'small_cap' | 'microcap' | 'high_beta' | 'defensive';
@@ -35,6 +43,8 @@ interface EvaluatedMover extends Mover {
   microAdjustment?: number;
   overlayReasons?: string[];
   profileName?: string;
+  rsLabel?: string;
+  accelLabel?: string;
   thresholdsUsed: {
     liquidityMin: number;
     relVolMin: number;
@@ -111,6 +121,7 @@ export default function MarketMoversPage() {
   const [activeTab, setActiveTab] = useState<MoverTab>('gainers');
   const [logTab, setLogTab] = useState<LogTab>('alerts');
   const [setupMode, setSetupMode] = useState<SetupMode>('breakout');
+  const [assetFilter, setAssetFilter] = useState<AssetFilter>('all');
   const [upeBySymbol, setUpeBySymbol] = useState<Record<string, UpeMoverRow>>({});
 
   const { setPageData } = useAIPageContext();
@@ -151,6 +162,13 @@ export default function MarketMoversPage() {
                 change: parseFloat(g.change_amount) || 0,
                 changePercent: parseFloat(g.change_percentage?.replace('%', '') || '0') || 0,
                 volume: parseInt(g.volume, 10) || 0,
+                asset_class: g.asset_class || 'crypto',
+                rsi14: g.rsi14 ?? null,
+                ema200_dist: g.ema200_dist ?? null,
+                adx14: g.adx14 ?? null,
+                in_squeeze: g.in_squeeze ?? null,
+                rs_vs_index: g.rs_vs_index ?? null,
+                momentum_accel: g.momentum_accel ?? null,
               })) || [],
             topLosers:
               result.topLosers?.map((l: any) => ({
@@ -159,6 +177,13 @@ export default function MarketMoversPage() {
                 change: parseFloat(l.change_amount) || 0,
                 changePercent: parseFloat(l.change_percentage?.replace('%', '') || '0') || 0,
                 volume: parseInt(l.volume, 10) || 0,
+                asset_class: l.asset_class || 'crypto',
+                rsi14: l.rsi14 ?? null,
+                ema200_dist: l.ema200_dist ?? null,
+                adx14: l.adx14 ?? null,
+                in_squeeze: l.in_squeeze ?? null,
+                rs_vs_index: l.rs_vs_index ?? null,
+                momentum_accel: l.momentum_accel ?? null,
               })) || [],
             mostActive:
               result.mostActive?.map((a: any) => ({
@@ -167,6 +192,13 @@ export default function MarketMoversPage() {
                 change: parseFloat(a.change_amount) || 0,
                 changePercent: parseFloat(a.change_percentage?.replace('%', '') || '0') || 0,
                 volume: parseInt(a.volume, 10) || 0,
+                asset_class: a.asset_class || 'crypto',
+                rsi14: a.rsi14 ?? null,
+                ema200_dist: a.ema200_dist ?? null,
+                adx14: a.adx14 ?? null,
+                in_squeeze: a.in_squeeze ?? null,
+                rs_vs_index: a.rs_vs_index ?? null,
+                momentum_accel: a.momentum_accel ?? null,
               })) || [],
           }
         : result;
@@ -200,8 +232,12 @@ export default function MarketMoversPage() {
   usePolling(fetchData, 5 * 60 * 1000);
 
   const rows = useMemo(
-    () => (activeTab === 'gainers' ? data?.topGainers : activeTab === 'losers' ? data?.topLosers : data?.mostActive) || [],
-    [activeTab, data]
+    () => {
+      const tabRows = (activeTab === 'gainers' ? data?.topGainers : activeTab === 'losers' ? data?.topLosers : data?.mostActive) || [];
+      if (assetFilter === 'all') return tabRows;
+      return tabRows.filter((m) => m.asset_class === assetFilter);
+    },
+    [activeTab, data, assetFilter]
   );
 
   const environment = useMemo(() => {
@@ -339,14 +375,33 @@ export default function MarketMoversPage() {
         const liquidityPoints = clamp((mover.volume / Math.max(1, threshold.liquidityMin * 1.5)) * 100, 0, 100);
         const moveQualityPoints = clamp(100 - Math.max(0, Math.abs(mover.changePercent) - 12) * 6, 25, 100);
 
+        // Technical overlay bonus (0-15 points from RS + momentum accel)
+        let techBonus = 0;
+        if (mover.rs_vs_index != null && mover.rs_vs_index > 2) techBonus += 7; // outperforming index significantly
+        if (mover.momentum_accel != null && mover.momentum_accel >= 40) techBonus += 8; // accelerating momentum
+
         const confluenceScore = Math.round(
-          structurePoints * 0.3 +
-            relVolPoints * 0.25 +
-            liquidityPoints * 0.25 +
-            moveQualityPoints * 0.2
+          clamp(
+            structurePoints * 0.27 +
+              relVolPoints * 0.23 +
+              liquidityPoints * 0.23 +
+              moveQualityPoints * 0.17 +
+              techBonus * 0.10 * 10,
+            0, 100,
+          )
         );
 
         const liquidityScore = Math.round(clamp((mover.volume / Math.max(1, environment.medianVol * 1.6)) * 100, 0, 100));
+
+        // RS label
+        const rsLabel = mover.rs_vs_index != null
+          ? mover.rs_vs_index > 3 ? 'Strong' : mover.rs_vs_index > 0 ? 'Above' : mover.rs_vs_index > -3 ? 'Below' : 'Weak'
+          : undefined;
+
+        // Accel label
+        const accelLabel = mover.momentum_accel != null
+          ? mover.momentum_accel >= 60 ? 'High' : mover.momentum_accel >= 40 ? 'Rising' : mover.momentum_accel >= 20 ? 'Moderate' : 'Low'
+          : undefined;
 
         const blockReasons: string[] = [];
         if (mover.volume < threshold.liquidityMin) blockReasons.push('Liquidity below adaptive threshold');
@@ -387,6 +442,8 @@ export default function MarketMoversPage() {
           microAdjustment: upe?.microAdjustment,
           overlayReasons: upe?.overlayReasons,
           profileName: upe?.profileName,
+          rsLabel,
+          accelLabel,
           cluster,
           setupClass,
           thresholdsUsed: threshold,
@@ -436,6 +493,7 @@ export default function MarketMoversPage() {
         setupMode,
         moversTelemetry: evaluatedRows.slice(0, 20).map((row) => ({
           ticker: row.ticker,
+          asset_class: row.asset_class,
           cluster: row.cluster,
           deployment: row.deployment,
           crcsUser: row.crcsUser ?? null,
@@ -446,6 +504,10 @@ export default function MarketMoversPage() {
           liquidityScore: row.liquidityScore,
           structureBias: row.structureBias,
           setupClass: row.setupClass,
+          rsi14: row.rsi14,
+          ema200_dist: row.ema200_dist != null ? Number(row.ema200_dist.toFixed(2)) : null,
+          rs_vs_index: row.rs_vs_index != null ? Number(row.rs_vs_index.toFixed(2)) : null,
+          momentum_accel: row.momentum_accel,
           blockReason: row.blockReason || null,
           thresholdsUsed: row.thresholdsUsed,
         })),
@@ -608,6 +670,25 @@ export default function MarketMoversPage() {
                         {label}
                       </button>
                     ))}
+                    <span className="mx-1 w-px bg-slate-700" />
+                    {([
+                      ['all', 'All'],
+                      ['equity', 'Equity'],
+                      ['crypto', 'Crypto'],
+                    ] as Array<[AssetFilter, string]>).map(([id, label]) => (
+                      <button
+                        type="button"
+                        key={id}
+                        onClick={() => setAssetFilter(id)}
+                        className={`rounded-full border px-2 py-0.5 text-[10px] ${
+                          assetFilter === id
+                            ? 'border-cyan-400 bg-cyan-500/10 text-cyan-200'
+                            : 'border-slate-700 text-slate-400'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
@@ -681,15 +762,15 @@ export default function MarketMoversPage() {
                       <div className="border-t border-slate-700/50 px-2.5 pb-2.5 pt-2">
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
                           <div className="text-slate-400">Cluster</div><div className="text-slate-200">{toTitleCluster(mover.cluster)}</div>
+                          <div className="text-slate-400">Asset</div><div className="text-slate-200">{mover.asset_class === 'equity' ? '📈 Equity' : '₿ Crypto'}</div>
                           <div className="text-slate-400">RelVol</div><div className="text-slate-200">{(mover.relVolume || 0).toFixed(2)}x</div>
                           <div className="text-slate-400">Structure</div><div className="text-slate-300">{mover.structureBias}</div>
+                          <div className="text-slate-400">RSI</div><div className={mover.rsi14 != null ? (mover.rsi14 > 70 ? 'text-rose-300' : mover.rsi14 < 30 ? 'text-emerald-300' : 'text-slate-200') : 'text-slate-500'}>{mover.rsi14 != null ? mover.rsi14.toFixed(1) : '—'}</div>
+                          <div className="text-slate-400">EMA200 Dist</div><div className="text-slate-200">{mover.ema200_dist != null ? `${mover.ema200_dist >= 0 ? '+' : ''}${mover.ema200_dist.toFixed(1)}%` : '—'}</div>
+                          <div className="text-slate-400">RS vs Index</div><div className={mover.rsLabel === 'Strong' ? 'text-emerald-300' : mover.rsLabel === 'Weak' ? 'text-rose-300' : 'text-slate-200'}>{mover.rsLabel || '—'} {mover.rs_vs_index != null ? `(${mover.rs_vs_index >= 0 ? '+' : ''}${mover.rs_vs_index.toFixed(1)}%)` : ''}</div>
+                          <div className="text-slate-400">Momentum</div><div className={mover.accelLabel === 'High' ? 'text-amber-300' : mover.accelLabel === 'Rising' ? 'text-emerald-300' : 'text-slate-200'}>{mover.accelLabel || '—'}</div>
                           <div className="text-slate-400">CRCS</div><div className="text-cyan-300">{mover.crcsUser !== undefined && Number.isFinite(mover.crcsUser) ? mover.crcsUser.toFixed(1) : '—'}</div>
-                          <div className="text-slate-400">ΔHr</div>
-                          <div className={mover.microAdjustment === undefined ? 'text-slate-500' : mover.microAdjustment >= 0 ? 'text-emerald-300' : 'text-rose-300'}>
-                            {mover.microAdjustment === undefined ? '—' : `${mover.microAdjustment >= 0 ? '+' : ''}${mover.microAdjustment.toFixed(2)}`}
-                          </div>
                           <div className="text-slate-400">Confluence</div><div className="text-slate-200">{mover.confluenceScore}</div>
-                          <div className="text-slate-400">Liquidity</div><div className="text-slate-400">{mover.liquidityScore}</div>
                         </div>
                         <div className="mt-2">
                           {mover.deployment === 'blocked' ? (
@@ -710,17 +791,19 @@ export default function MarketMoversPage() {
 
                 {/* ── Movers table ── */}
                 <div className="overflow-x-auto rounded-md border border-slate-700 bg-slate-950/60" style={{ maxHeight: '560px', overflowY: 'auto' }}>
-                  <table className="w-full min-w-[640px] text-xs">
+                  <table className="w-full min-w-[900px] text-xs">
                     <thead className="sticky top-0 z-10 bg-slate-900">
                       <tr className="text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-700">
                         <th className="px-2.5 py-2 text-left">Symbol</th>
                         <th className="px-2.5 py-2 text-right">%Chg</th>
                         <th className="px-2.5 py-2 text-right">RelVol</th>
                         <th className="px-2.5 py-2 text-left">Structure</th>
+                        <th className="px-2.5 py-2 text-right">RSI</th>
+                        <th className="px-2.5 py-2 text-right">EMA200</th>
+                        <th className="px-2.5 py-2 text-center">RS</th>
+                        <th className="px-2.5 py-2 text-center">Accel</th>
                         <th className="px-2.5 py-2 text-right">CRCS</th>
-                        <th className="px-2.5 py-2 text-right">ΔHr</th>
                         <th className="px-2.5 py-2 text-right">Confluence</th>
-                        <th className="px-2.5 py-2 text-right">Liquidity</th>
                         <th className="px-2.5 py-2 text-center">Deploy</th>
                         <th className="px-2.5 py-2 text-center">Action</th>
                       </tr>
@@ -729,7 +812,12 @@ export default function MarketMoversPage() {
                       {evaluatedRows.map((mover, idx) => (
                         <tr key={`${mover.ticker}-${idx}`} className={`hover:bg-slate-800/50 ${mover.deployment === 'blocked' ? 'opacity-70' : ''}`} title={mover.blockReason || ''}>
                           <td className="px-2.5 py-2 font-semibold text-white">
-                            {mover.ticker}
+                            <div className="flex items-center gap-1">
+                              {mover.ticker}
+                              <span className={`text-[9px] ${mover.asset_class === 'equity' ? 'text-blue-400' : 'text-amber-400'}`}>
+                                {mover.asset_class === 'equity' ? 'EQ' : '₿'}
+                              </span>
+                            </div>
                             <div className="text-[10px] text-slate-400">{toTitleCluster(mover.cluster)}</div>
                           </td>
                           <td className={`px-2.5 py-2 text-right font-semibold ${(mover.changePercent || 0) >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
@@ -737,18 +825,47 @@ export default function MarketMoversPage() {
                           </td>
                           <td className="px-2.5 py-2 text-right text-slate-200">{(mover.relVolume || 0).toFixed(2)}x</td>
                           <td className="px-2.5 py-2 text-slate-300">{mover.structureBias}</td>
-                          <td className="px-2.5 py-2 text-right text-cyan-300">{mover.crcsUser !== undefined && Number.isFinite(mover.crcsUser) ? mover.crcsUser.toFixed(1) : '—'}</td>
+                          {/* RSI */}
                           <td className={`px-2.5 py-2 text-right ${
-                            mover.microAdjustment === undefined
-                              ? 'text-slate-500'
-                              : mover.microAdjustment >= 0
-                              ? 'text-emerald-300'
-                              : 'text-rose-300'
+                            mover.rsi14 == null ? 'text-slate-500'
+                            : mover.rsi14 > 70 ? 'text-rose-300'
+                            : mover.rsi14 < 30 ? 'text-emerald-300'
+                            : 'text-slate-200'
                           }`}>
-                            {mover.microAdjustment === undefined ? '—' : `${mover.microAdjustment >= 0 ? '+' : ''}${mover.microAdjustment.toFixed(2)}`}
+                            {mover.rsi14 != null ? mover.rsi14.toFixed(1) : '—'}
                           </td>
+                          {/* EMA200 Distance */}
+                          <td className={`px-2.5 py-2 text-right ${
+                            mover.ema200_dist == null ? 'text-slate-500'
+                            : mover.ema200_dist > 0 ? 'text-emerald-300'
+                            : 'text-rose-300'
+                          }`}>
+                            {mover.ema200_dist != null ? `${mover.ema200_dist >= 0 ? '+' : ''}${mover.ema200_dist.toFixed(1)}%` : '—'}
+                          </td>
+                          {/* RS vs Index */}
+                          <td className="px-2.5 py-2 text-center">
+                            {mover.rsLabel ? (
+                              <span className={`inline-block rounded-full border px-1.5 py-0.5 text-[10px] ${
+                                mover.rsLabel === 'Strong' ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
+                                : mover.rsLabel === 'Above' ? 'border-slate-600 bg-slate-800 text-emerald-200'
+                                : mover.rsLabel === 'Below' ? 'border-slate-600 bg-slate-800 text-slate-400'
+                                : 'border-rose-500/50 bg-rose-500/10 text-rose-300'
+                              }`}>{mover.rsLabel}</span>
+                            ) : <span className="text-slate-500">—</span>}
+                          </td>
+                          {/* Momentum Accel */}
+                          <td className="px-2.5 py-2 text-center">
+                            {mover.accelLabel ? (
+                              <span className={`inline-block rounded-full border px-1.5 py-0.5 text-[10px] ${
+                                mover.accelLabel === 'High' ? 'border-amber-500/50 bg-amber-500/10 text-amber-300'
+                                : mover.accelLabel === 'Rising' ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
+                                : mover.accelLabel === 'Moderate' ? 'border-slate-600 bg-slate-800 text-slate-300'
+                                : 'border-slate-700 bg-slate-900 text-slate-500'
+                              }`}>{mover.accelLabel}</span>
+                            ) : <span className="text-slate-500">—</span>}
+                          </td>
+                          <td className="px-2.5 py-2 text-right text-cyan-300">{mover.crcsUser !== undefined && Number.isFinite(mover.crcsUser) ? mover.crcsUser.toFixed(1) : '—'}</td>
                           <td className="px-2.5 py-2 text-right text-slate-200">{mover.confluenceScore}</td>
-                          <td className="px-2.5 py-2 text-right text-slate-300">{mover.liquidityScore}</td>
                           <td className="px-2.5 py-2 text-center">
                             <span
                               className={`inline-block rounded-full border px-2 py-0.5 text-[11px] font-medium ${

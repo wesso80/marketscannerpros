@@ -25,11 +25,6 @@ CREATE INDEX IF NOT EXISTS idx_active_sessions_workspace_id
   ON active_sessions (workspace_id)
   WHERE workspace_id IS NOT NULL;
 
--- Partial index for fast "online now" count (sessions active in last 10 min window)
-CREATE INDEX IF NOT EXISTS idx_active_sessions_online
-  ON active_sessions (last_seen DESC)
-  WHERE last_seen > NOW() - INTERVAL '10 minutes';
-
 -- Cleanup helper: delete sessions older than 7 days
 -- Run periodically: SELECT cleanup_stale_sessions();
 CREATE OR REPLACE FUNCTION cleanup_stale_sessions()

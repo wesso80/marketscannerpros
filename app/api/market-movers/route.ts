@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTopGainersLosers, getMarketData } from '@/lib/coingecko';
 import { avTakeToken } from '@/lib/avRateGovernor';
+import { q } from '@/lib/db';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -105,18 +106,136 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No top movers data available' }, { status: 500 });
     }
 
+    const allMovers = [
+      ...eqGainers, ...eqLosers, ...eqActive,
+      ...cryptoGainers, ...cryptoLosers,
+      ...(mostActive || []).slice(0, 10).map(normalizeMostActive),
+    ];
+
+    /* ── Technical enrichment from indicators_latest + benchmarks ─── */
+    const enrichmentMap: Record<string, {
+      rsi14: number | null;
+      ema200_dist: number | null;
+      adx14: number | null;
+      in_squeeze: boolean | null;
+      rs_vs_index: number | null;
+      momentum_accel: number | null;
+    }> = {};
+
+    try {
+      // Unique tickers across all lists
+      const uniqueTickers = [...new Set(allMovers.map(m => m.ticker))];
+
+      if (uniqueTickers.length > 0) {
+        // Batch fetch indicators (daily timeframe)
+        const placeholders = uniqueTickers.map((_, i) => `$${i + 1}`).join(',');
+        const indicatorRows = await q<{
+          symbol: string; rsi14: string | null; ema200: string | null;
+          adx14: string | null; in_squeeze: boolean | null;
+        }>(
+          `SELECT symbol, rsi14, ema200, adx14, in_squeeze
+           FROM indicators_latest
+           WHERE symbol = ANY($1) AND timeframe = 'daily'`,
+          [uniqueTickers]
+        );
+
+        // Fetch benchmark quotes: SPY for equities, BTC for crypto
+        const benchmarkRows = await q<{ symbol: string; change_percent: string }>(
+          `SELECT symbol, change_percent FROM quotes_latest WHERE symbol IN ('SPY', 'BTC')`,
+          []
+        );
+        const benchmarks: Record<string, number> = {};
+        for (const b of benchmarkRows) {
+          benchmarks[b.symbol] = Number(b.change_percent) || 0;
+        }
+        const spyChange = benchmarks['SPY'] ?? 0;
+        const btcChange = benchmarks['BTC'] ?? 0;
+
+        // Index indicator rows by symbol
+        const indMap: Record<string, typeof indicatorRows[0]> = {};
+        for (const row of indicatorRows) indMap[row.symbol] = row;
+
+        // Build enrichment for each mover
+        for (const mover of allMovers) {
+          const ind = indMap[mover.ticker];
+          const changePct = parseFloat(mover.change_percentage?.replace('%', '') || '0') || 0;
+          const benchmark = mover.asset_class === 'equity' ? spyChange : btcChange;
+          const price = parseFloat(mover.price) || 0;
+          const ema200Val = ind?.ema200 ? Number(ind.ema200) : null;
+
+          enrichmentMap[mover.ticker] = {
+            rsi14: ind?.rsi14 != null ? Number(ind.rsi14) : null,
+            ema200_dist: (ema200Val && price > 0) ? ((price - ema200Val) / ema200Val) * 100 : null,
+            adx14: ind?.adx14 != null ? Number(ind.adx14) : null,
+            in_squeeze: ind?.in_squeeze ?? null,
+            rs_vs_index: changePct - benchmark,
+            momentum_accel: null, // populated below from warmup_json if available
+          };
+        }
+
+        // Try to get momentum acceleration from warmup_json (pre-computed OHLCV bars)
+        const warmupRows = await q<{ symbol: string; warmup_json: any }>(
+          `SELECT symbol, warmup_json FROM indicators_latest
+           WHERE symbol = ANY($1) AND timeframe = 'daily' AND warmup_json IS NOT NULL`,
+          [uniqueTickers]
+        );
+        for (const row of warmupRows) {
+          try {
+            const bars = typeof row.warmup_json === 'string' ? JSON.parse(row.warmup_json) : row.warmup_json;
+            if (Array.isArray(bars) && bars.length >= 35) {
+              // Compute momentum acceleration inline (lightweight version)
+              const closes = bars.map((b: any) => Number(b.close || b.c || 0));
+              const volumes = bars.map((b: any) => Number(b.volume || b.v || 0));
+              const lookback = 5;
+              const lastClose = closes[closes.length - 1];
+              const prevClose = closes[closes.length - 1 - lookback];
+              const recentVols = volumes.slice(-20);
+              const avgVol = recentVols.reduce((s: number, v: number) => s + v, 0) / recentVols.length;
+              const lastVol = volumes[volumes.length - 1] || 0;
+              const volSurge = avgVol > 0 ? lastVol / avgVol : 1;
+              const priceMove = lastClose - prevClose;
+              // Simple ATR approximation from last 14 bars
+              const highs = bars.map((b: any) => Number(b.high || b.h || 0));
+              const lows = bars.map((b: any) => Number(b.low || b.l || 0));
+              let atrSum = 0;
+              for (let i = bars.length - 14; i < bars.length; i++) {
+                const tr = Math.max(highs[i] - lows[i], Math.abs(highs[i] - closes[Math.max(0, i - 1)]), Math.abs(lows[i] - closes[Math.max(0, i - 1)]));
+                atrSum += tr;
+              }
+              const atrVal = atrSum / 14;
+              const priceAtrMove = atrVal > 0 ? priceMove / atrVal : 0;
+              const volScore = Math.min(25, Math.max(0, (volSurge - 1) * 25));
+              const priceScore = Math.min(25, Math.abs(priceAtrMove) * 12.5);
+              const accelScore = Math.round(volScore + priceScore);
+              if (enrichmentMap[row.symbol]) {
+                enrichmentMap[row.symbol].momentum_accel = accelScore;
+              }
+            }
+          } catch { /* skip bad warmup data */ }
+        }
+      }
+    } catch (e) {
+      console.error('[Market Movers] Technical enrichment failed (non-fatal):', e);
+    }
+
+    // Attach enrichment fields to each mover
+    const enrich = (mover: any) => ({
+      ...mover,
+      ...(enrichmentMap[mover.ticker] || {}),
+    });
+
     const payload = {
       success: true,
       source: 'alphavantage+coingecko',
       duration,
       metadata: {
         provider: 'alphavantage+coingecko',
-        model: 'TOP_GAINERS_LOSERS + coins/top_gainers_losers',
+        model: 'TOP_GAINERS_LOSERS + coins/top_gainers_losers + indicators_latest',
       },
       lastUpdated: new Date().toISOString(),
-      topGainers: [...eqGainers, ...cryptoGainers],
-      topLosers: [...eqLosers, ...cryptoLosers],
-      mostActive: [...eqActive, ...(mostActive || []).slice(0, 10).map(normalizeMostActive)],
+      topGainers: [...eqGainers, ...cryptoGainers].map(enrich),
+      topLosers: [...eqLosers, ...cryptoLosers].map(enrich),
+      mostActive: [...eqActive, ...(mostActive || []).slice(0, 10).map(normalizeMostActive)].map(enrich),
     };
 
     // Cache successful response

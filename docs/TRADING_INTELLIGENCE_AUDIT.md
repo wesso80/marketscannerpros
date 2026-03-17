@@ -478,47 +478,59 @@ Crypto derivatives intelligence: funding rates, open interest, long/short ratios
 Identify high-momentum assets with deployment eligibility. Answers: *"What is moving right now and should I chase it?"*
 
 ### WHAT IT DOES
-- Confluence-weighted scoring (0–100) across: structure bias, relative volume, liquidity score, regime multiplier
+- Confluence-weighted scoring (0–100) across: structure bias, relative volume, liquidity score, regime multiplier, technical overlay (RSI, RS, momentum acceleration)
 - Setup classification: Breakout | Reversal | Early Momentum | Watch
 - Deployment eligibility: Eligible | Conditional | Blocked
 - Adaptive thresholds by capital tier (Large-cap: ≥55 score, Microcap: ≥74 score)
 - Liquidity minimums per tier ($2M–$10M)
+- **Equity + Crypto combined** — Alpha Vantage TOP_GAINERS_LOSERS (equities) + CoinGecko (crypto), merged with asset class tagging and filter
+- **Technical indicator overlay** — RSI, EMA200 distance, ADX, squeeze status enriched from `indicators_latest` DB (0 additional API calls)
+- **Relative strength vs. index** — Each mover's change% compared to SPY (equities) or BTC (crypto) from `quotes_latest`, displayed as Strong/Above/Below/Weak badge
+- **Momentum acceleration** — Computed from `warmup_json` OHLCV bars: volume surge + price/ATR move composite score, displayed as High/Rising/Moderate/Low badge
 
-**Data Sources:** CoinGecko commercial API (crypto gainers/losers/most-active, 60-second cache)
+**Data Sources:** Alpha Vantage TOP_GAINERS_LOSERS (equities, 600 RPM) + CoinGecko commercial API (crypto gainers/losers/most-active, 60-second cache) + `indicators_latest` DB + `quotes_latest` DB
 
-### EDGE ANALYSIS: **Partial Edge**
+### EDGE ANALYSIS: **Real Edge**
 
 **What creates edge:**
 - Adaptive thresholds by market cap tier prevents chasing illiquid microcaps
 - Deployment eligibility gating (Eligible/Conditional/Blocked) adds discipline
 - Structure bias inference from bar patterns provides directional context
+- Technical overlay (RSI extremes, EMA200 distance) adds indicator confluence to movers — avoids chasing extended names
+- Relative strength vs. benchmark separates genuine alpha from beta-driven moves
+- Momentum acceleration metric detects whether a move is still accelerating or exhausting
+- Combined equity + crypto in single view with asset class filtering
 
 **What limits edge:**
-- Crypto-only (no equity market movers)
-- Confluence score does NOT incorporate technicals (RSI, MACD, EMA) — only structure + volume + liquidity
-- Setup classification is binary — no granular edge groups
+- Technical enrichment depends on symbols being in `indicators_latest` (worker-ingested universe); movers outside that universe show no technicals
 - No predictive forward-testing capability
+- No real-time order flow
 
 ### WHAT PROFESSIONAL TRADERS WOULD EXPECT
 - ✅ Volume spike detection
 - ✅ Liquidity screening
 - ✅ Capital tier adaptive thresholds
-- ⚠️ Partial: momentum classification (structure bias only, no acceleration metric)
-- ❌ No equity market movers
-- ❌ No relative strength vs. sector/index
-- ❌ No institutional accumulation detection
-- ❌ No gap analysis (pre-market gappers are high-edge setups)
+- ✅ Equity market movers — Alpha Vantage TOP_GAINERS_LOSERS integrated, equity movers shown with `EQ` badge, filterable via asset class tabs
+- ✅ Technical indicator overlay — RSI (color-coded: >70 red, <30 green), EMA200 distance (% above/below), ADX trend strength, squeeze status from `indicators_latest`
+- ✅ Relative strength vs. index — Each mover scored against SPY (equities) or BTC (crypto) benchmark, displayed as Strong/Above/Below/Weak badge with RS factored into confluence score (+7 points for significant outperformance)
+- ✅ Momentum acceleration metric — Volume surge + price/ATR move composite, scored 0-100, displayed as High/Rising/Moderate/Low badge, factored into confluence score (+8 points for accelerating momentum ≥40)
+- ❌ No institutional accumulation detection — *requires dark pool / Level 2 data, not available from AV or CoinGecko*
+- ❌ No gap analysis (pre-market gappers) — *requires pre-market data feed, Alpha Vantage TOP_GAINERS_LOSERS is regular-hours only*
+
+### GAPS RESOLVED (March 2026)
+- ~~Equity market movers~~ ✅ **BUILT** — `fetchEquityMovers()` calls Alpha Vantage TOP_GAINERS_LOSERS, normalizes top 10 gainers/losers/active alongside crypto. Asset class tags (`equity`/`crypto`) preserved through API → frontend. New asset class filter tabs (All/Equity/Crypto) in UI.
+- ~~Technical indicator overlay on movers~~ ✅ **BUILT** — API route batch-queries `indicators_latest` table (daily timeframe) for all mover tickers. Enriches each mover with `rsi14`, `ema200_dist` (% distance from EMA200), `adx14`, `in_squeeze`. New table columns: RSI (color-coded OB/OS), EMA200 (% with directional color). Zero additional API calls — uses pre-computed worker data.
+- ~~Relative strength vs. index~~ ✅ **BUILT** — API queries `quotes_latest` for SPY and BTC benchmarks. Each mover's `rs_vs_index = changePct − benchmarkChangePct`. Frontend displays Strong (>3%)/Above (>0%)/Below (>-3%)/Weak (<-3%) badge. RS > 2% adds +7 confluence bonus.
+- ~~Momentum acceleration metric~~ ✅ **BUILT** — API extracts `warmup_json` OHLCV bars from `indicators_latest`, computes lightweight momentum acceleration (volume surge ratio + price/ATR move over 5-bar lookback). Score 0-100 displayed as badge: High (≥60), Rising (≥40), Moderate (≥20), Low (<20). Score ≥40 adds +8 confluence bonus. Uses existing `detectMomentumAcceleration()` methodology from `lib/indicators.ts`.
 
 ### WHAT IS CURRENTLY MISSING
-- Equity market movers (SPY component movers, earnings gappers)
-- Technical indicator overlay on movers (RSI extremes, EMA distances)
-- Pre-market / after-hours gap detection
-- Relative strength vs. index (BTC for crypto, SPY for equities)
-- Momentum acceleration metric (rate of change of rate of change)
+- Pre-market / after-hours gap detection — **Requires pre-market data feed.** Alpha Vantage TOP_GAINERS_LOSERS only covers regular hours. Would need Polygon.io or similar for extended-hours data.
+- Institutional accumulation detection — **Requires dark pool / FINRA data.** Not available from current APIs.
 
 ### SIGNAL QUALITY
-- **Frequency:** Real-time with 60-second refresh — appropriate for mover detection
-- **Rating:** Reacts to moves. Market movers by definition identify assets that have already moved. The deployment eligibility gating adds some forward value.
+- **Frequency:** Real-time with 60-second cache + 5-minute polling — appropriate for mover detection
+- **Context:** Now includes technical indicators, relative strength, and momentum acceleration alongside structure and volume
+- **Rating:** Reacts to and evaluates moves. Market movers identify assets that have moved, but the technical overlay, RS scoring, and momentum acceleration now help distinguish genuine setups from chasing. Upgraded from reactive to evaluative.
 
 ---
 
