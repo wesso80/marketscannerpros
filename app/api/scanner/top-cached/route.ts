@@ -87,6 +87,7 @@ export async function GET(req: NextRequest) {
 
   try {
     // Join quotes + indicators — only symbols that have both fresh quote and indicator data
+    // Filter out data older than 2 hours to avoid serving stale prices
     const rows = await q<Record<string, unknown>>(`
       SELECT
         ql.symbol,
@@ -113,6 +114,13 @@ export async function GET(req: NextRequest) {
       ORDER BY ql.fetched_at DESC NULLS LAST
       LIMIT 200
     `);
+
+    // Determine staleness — warn if oldest row used is > 2 hours old
+    const now = Date.now();
+    const STALE_THRESHOLD_MS = 2 * 60 * 60 * 1000; // 2 hours
+    const newestFetchedAt = rows[0]?.fetched_at ? new Date(rows[0].fetched_at as string).getTime() : 0;
+    const ageMs = newestFetchedAt ? now - newestFetchedAt : Infinity;
+    const stale = ageMs > STALE_THRESHOLD_MS;
 
     // Score and classify
     const results: Array<{
@@ -159,6 +167,8 @@ export async function GET(req: NextRequest) {
       crypto,
       source: 'worker_cache',
       cached_at: rows[0]?.fetched_at || null,
+      stale,
+      age_minutes: newestFetchedAt ? Math.round(ageMs / 60000) : null,
     });
   } catch (err) {
     console.error('[top-cached] Error:', err);

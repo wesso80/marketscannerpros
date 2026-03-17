@@ -27,6 +27,8 @@ export interface CachedTopSymbolsResult {
   crypto: CachedSymbol[];
   loading: boolean;
   error: string | null;
+  stale: boolean;
+  ageMinutes: number | null;
   refetch: () => void;
 }
 
@@ -35,6 +37,8 @@ export function useCachedTopSymbols(limit = 10): CachedTopSymbolsResult {
   const [crypto, setCrypto] = useState<CachedSymbol[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [stale, setStale] = useState(false);
+  const [ageMinutes, setAgeMinutes] = useState<number | null>(null);
   const [trigger, setTrigger] = useState(0);
 
   const refetch = useCallback(() => setTrigger(t => t + 1), []);
@@ -53,6 +57,8 @@ export function useCachedTopSymbols(limit = 10): CachedTopSymbolsResult {
         if (cancelled) return;
         setEquity(data.equity || []);
         setCrypto(data.crypto || []);
+        setStale(!!data.stale);
+        setAgeMinutes(data.age_minutes ?? null);
         setLoading(false);
       })
       .catch(err => {
@@ -64,5 +70,5 @@ export function useCachedTopSymbols(limit = 10): CachedTopSymbolsResult {
     return () => { cancelled = true; };
   }, [limit, trigger]);
 
-  return { equity, crypto, loading, error, refetch };
+  return { equity, crypto, loading, error, stale, ageMinutes, refetch };
 }

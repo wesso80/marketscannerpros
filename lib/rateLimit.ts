@@ -134,10 +134,10 @@ export const apiLimiter = createRateLimiter("api", {
   max: 60,
 });
 
-/** Scanner: 20 per minute per IP */
+/** Scanner: 120 per minute per IP (cache mode = 0 AV calls; shared IP behind CDN) */
 export const scannerLimiter = createRateLimiter("scanner", {
   windowMs: 60 * 1000,  // 1 minute
-  max: 20,
+  max: 120,
 });
 
 /** AI Analyst: Separate from daily DB limits, prevents spam */
