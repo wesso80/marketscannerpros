@@ -148,7 +148,7 @@ const COLUMNS: Column[] = [
   {
     key: 'sectorRelStr', label: 'Sec RS', width: '70px', align: 'right',
     render: (r) => {
-      if (r.sectorRelStr == null) return <span style={{ color: '#475569' }}>\u2014</span>;
+      if (r.sectorRelStr == null) return <span style={{ color: '#475569' }}>{"\u2014"}</span>;
       const color = r.sectorRelStr > 0 ? '#10B981' : r.sectorRelStr < 0 ? '#EF4444' : '#94a3b8';
       return <span style={{ fontSize: 11, fontWeight: 600, color }}>{r.sectorRelStr > 0 ? '+' : ''}{r.sectorRelStr.toFixed(1)}%</span>;
     },
@@ -158,9 +158,9 @@ const COLUMNS: Column[] = [
     render: (r) => (
       r.momentumAccel
         ? <span style={{ fontSize: 10, fontWeight: 700, color: '#10B981', background: 'rgba(16,185,129,0.12)', borderRadius: 4, padding: '1px 5px' }}>
-            \u26a1 {r.momentumAccelScore ?? 0}
+            {"\u26a1"} {r.momentumAccelScore ?? 0}
           </span>
-        : <span style={{ color: '#475569' }}>\u2014</span>
+        : <span style={{ color: '#475569' }}>{"\u2014"}</span>
     ),
   },
   {
