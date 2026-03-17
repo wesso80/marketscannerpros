@@ -7,6 +7,7 @@ import { avTakeToken } from "@/lib/avRateGovernor";
 import { shouldUseCache, canFallbackToAV, getCacheMode } from "@/lib/cacheMode";
 import { getCachedScanData, getBulkCachedScanData, CachedScanData } from "@/lib/scannerCache";
 import { verifyCronAuth } from "@/lib/adminAuth";
+import { isFreeForAllMode } from "@/lib/entitlements";
 import { recordSignalsBatch, RecordSignalParams } from "@/lib/signalRecorder";
 import { getRuntimeRiskSnapshotInput } from "@/lib/risk/runtimeSnapshot";
 import { buildPermissionSnapshot } from "@/lib/risk-governor-hard";
@@ -368,9 +369,14 @@ export async function POST(req: NextRequest) {
     // Auth check FIRST - cron jobs and paid users bypass rate limiter
     const isCronBypass = verifyCronAuth(req);
 
-    const session = isCronBypass
+    const rawSession = isCronBypass
       ? { workspaceId: 'system-cron', tier: 'pro_trader' as const, cid: 'system' }
       : (await getSessionFromCookie()) ?? { workspaceId: 'anonymous', tier: 'free' as const, cid: 'anonymous' };
+
+    // FREE_FOR_ALL_MODE: override tier to pro_trader (matches /api/me behavior)
+    const session = isFreeForAllMode()
+      ? { ...rawSession, tier: 'pro_trader' as const }
+      : rawSession;
 
     console.info(`[scanner] session: tier=${session.tier} cid=${session.cid} ws=${session.workspaceId.substring(0, 8)}`);
 
