@@ -2,6 +2,7 @@ import "./globals.css";
 import AnalyticsLoader from "../components/AnalyticsLoader";
 import ErrorBoundary from "../components/ErrorBoundary";
 import OperatorHeartbeat from "../components/OperatorHeartbeat";
+import PresenceHeartbeat from "../components/PresenceHeartbeat";
 import { validateEnv } from "@/lib/env";
 import { Suspense } from "react";
 import RouteChrome from "@/components/layout/RouteChrome";
@@ -69,6 +70,9 @@ export default function RootLayout({
             <AppUrlFixer />
             <Suspense>
               <OperatorHeartbeat />
+            </Suspense>
+            <Suspense>
+              <PresenceHeartbeat />
             </Suspense>
             <RouteChrome>{children}</RouteChrome>
             <Suspense>

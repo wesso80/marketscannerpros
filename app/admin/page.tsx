@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 interface Stats {
   overview: {
@@ -40,6 +40,11 @@ export default function AdminOverviewPage() {
   const [error, setError] = useState("");
   const [processingLearning, setProcessingLearning] = useState(false);
   const [learningResult, setLearningResult] = useState<{ ok: boolean; processed: number; errors: string[] } | null>(null);
+  const [liveUsers, setLiveUsers] = useState<{
+    totalOnline: number; loggedIn: number; anonymous: number;
+    pages: { path: string; count: number; section: string }[];
+    sections: { section: string; count: number }[];
+  } | null>(null);
 
   const learningMigrationSql = `-- Learning Machine tables
 -- Run this migration in your Neon PostgreSQL console
@@ -108,6 +113,9 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
 
   useEffect(() => {
     fetchStats();
+    fetchLiveUsers();
+    const liveInterval = setInterval(fetchLiveUsers, 30_000);
+    return () => clearInterval(liveInterval);
   }, []);
 
   const fetchStats = async () => {
@@ -129,6 +137,17 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchLiveUsers = async () => {
+    const secret = sessionStorage.getItem("admin_secret");
+    if (!secret) return;
+    try {
+      const res = await fetch("/api/analytics/online", {
+        headers: { Authorization: `Bearer ${secret}` },
+      });
+      if (res.ok) setLiveUsers(await res.json());
+    } catch { /* ignore */ }
   };
 
   const processLearningOutcomes = async () => {
@@ -267,6 +286,97 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
           </div>
           <div style={{ color: "#9CA3AF", fontSize: "0.875rem" }}>Pending Deletions</div>
         </div>
+      </div>
+
+      {/* Live Users Online */}
+      <div style={{
+        ...cardStyle,
+        marginBottom: "2rem",
+        border: "1px solid rgba(59, 130, 246, 0.3)",
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+          <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#E5E7EB" }}>
+            🟢 Live Users Online
+          </h2>
+          <span style={{ color: "#6B7280", fontSize: "0.75rem" }}>Auto-refreshes every 30s</span>
+        </div>
+        {liveUsers ? (
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem", marginBottom: "1.25rem" }}>
+              <div style={statBoxStyle}>
+                <div style={{ fontSize: "2rem", fontWeight: 700, color: "#3B82F6" }}>
+                  {liveUsers.totalOnline}
+                </div>
+                <div style={{ color: "#9CA3AF", fontSize: "0.8rem" }}>Total Online</div>
+              </div>
+              <div style={statBoxStyle}>
+                <div style={{ fontSize: "2rem", fontWeight: 700, color: "#10B981" }}>
+                  {liveUsers.loggedIn}
+                </div>
+                <div style={{ color: "#9CA3AF", fontSize: "0.8rem" }}>Logged In</div>
+              </div>
+              <div style={statBoxStyle}>
+                <div style={{ fontSize: "2rem", fontWeight: 700, color: "#9CA3AF" }}>
+                  {liveUsers.anonymous}
+                </div>
+                <div style={{ color: "#9CA3AF", fontSize: "0.8rem" }}>Anonymous</div>
+              </div>
+            </div>
+            {liveUsers.sections.length > 0 && (
+              <div>
+                <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "#94A3B8", marginBottom: "0.5rem" }}>
+                  Active by Section
+                </h3>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                  {liveUsers.sections.map((s) => (
+                    <span
+                      key={s.section}
+                      style={{
+                        background: "rgba(59, 130, 246, 0.15)",
+                        border: "1px solid rgba(59, 130, 246, 0.3)",
+                        borderRadius: "0.5rem",
+                        padding: "0.35rem 0.75rem",
+                        fontSize: "0.8rem",
+                        color: "#93C5FD",
+                      }}
+                    >
+                      {s.section} <strong style={{ color: "#3B82F6" }}>{s.count}</strong>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {liveUsers.pages.length > 0 && (
+              <div style={{ marginTop: "1rem" }}>
+                <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "#94A3B8", marginBottom: "0.5rem" }}>
+                  Top Pages
+                </h3>
+                <div style={{ maxHeight: "180px", overflowY: "auto" }}>
+                  <table style={{ width: "100%", fontSize: "0.8rem" }}>
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                        <th style={{ textAlign: "left", padding: "0.3rem", color: "#6B7280" }}>Path</th>
+                        <th style={{ textAlign: "left", padding: "0.3rem", color: "#6B7280" }}>Section</th>
+                        <th style={{ textAlign: "right", padding: "0.3rem", color: "#6B7280" }}>Users</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {liveUsers.pages.map((p, i) => (
+                        <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                          <td style={{ padding: "0.3rem", color: "#CBD5E1", fontFamily: "monospace", fontSize: "0.75rem" }}>{p.path}</td>
+                          <td style={{ padding: "0.3rem", color: "#94A3B8" }}>{p.section}</td>
+                          <td style={{ padding: "0.3rem", color: "#3B82F6", textAlign: "right", fontWeight: 600 }}>{p.count}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <p style={{ color: "#6B7280", fontSize: "0.875rem" }}>Loading live user data...</p>
+        )}
       </div>
 
       {/* Financial Summary */}
