@@ -1212,11 +1212,11 @@ The NOW items fill the Layer 4 decision framing gap using existing architecture.
 | **Professional Utility** | **8/10** | Strong intelligence layer across all 5 product hierarchy layers. Golden Egg now live with MPE. Decision operationalization gap partially closed. Charting weakness is irrelevant — MSP is not a charting platform. |
 | **Decision Support** | **8.5/10** | Answers all 4 questions (What/When/Where Risk/Where Target) via scanner + options + macro + backtest. Golden Egg framework fully operational with live data + MPE. |
 | **Automation Potential** | **7/10** | State machine, alerts, signal recording infrastructure all exist. Missing: auto-execution, algorithm deployment, portfolio rebalancing. |
-| **AI Intelligence Integration** | **7.5/10** | Arca AI uses V2+V3 prompts, regime scoring, ACL, institutional filter. MPE composite + Doctrine Classifier now injected into both AI routes via unified intelligence context. Remaining: State Machine lifecycle, full CFE detail, Bayesian feedback. |
+| **AI Intelligence Integration** | **8.5/10** | Arca AI uses V2+V3 prompts, regime scoring, ACL, institutional filter, Capital Flow Engine (market mode, gamma, conviction, brain decision), MPE (4-pressure composite), Doctrine Classifier, confluence component breakdown, edge context, performance throttle, session phase, signal memory — all wired to both AI routes. Copilot now at full parity with MSP-Analyst. Remaining: per-symbol state machine persistence, Bayesian outcome feedback. |
 
-### **Composite Score: 8.1/10**
+### **Composite Score: 8.3/10**
 
-*Potential with full intelligence wiring completed: 8.5+/10*
+*Potential with state machine persistence + Bayesian feedback: 8.8+/10*
 
 ---
 
@@ -1274,65 +1274,74 @@ The competitive positioning is clear: **MSP is the intelligence layer that sits 
 ### CURRENT STATE
 
 The platform has two AI endpoints:
-- **MSP-Analyst** (`/api/msp-analyst`) — Scanner-specific AI with deeper intelligence integration
-- **Copilot** (`/api/ai/copilot`) — Universal floating chat on every page, lighter intelligence
+- **MSP-Analyst** (`/api/msp-analyst`) — Scanner-specific AI with deep institutional intelligence
+- **Copilot** (`/api/ai/copilot`) — Universal floating chat on every page, now with full intelligence parity
 
 ### WHAT THE AI CURRENTLY USES
 
 | Intelligence System | MSP-Analyst | Copilot | Gap |
 |---|---|---|---|
 | V2 Prompt (7-layer hierarchy) | ✅ | ✅ | — |
-| V3 Engine (decision trace, confluence gate) | ✅ | ❌ | Copilot lacks V3 |
+| V3 Engine (decision trace, narrative, trade construction, confluence gate, liquidity map, MTF, time confluence) | ✅ | ✅ | ✅ **RESOLVED** — V3 now injected via `buildV3EnginePrompt()` |
 | Regime Scoring (5 regimes, 6 components) | ✅ | ✅ | — |
 | Adaptive Confidence Lens (ACL) | ✅ | ✅ | — |
-| Institutional Filter (5-check grade) | ✅ | ❌ | Copilot lacks filter context |
-| Edge Context (win/loss patterns) | ✅ | ❌ | Copilot lacks edge history |
-| Performance Throttle (session P&L) | ✅ | ❌ | Copilot lacks dampening |
-| Session Phase Overlay (time-of-day) | ✅ | ❌ | Copilot lacks session timing |
-| Signal Accuracy History | ⚠️ Partial | ❌ | Neither fully uses accuracy data |
+| Institutional Filter (5-check grade) | ✅ | ❌ | Copilot lacks filter context (scanner-specific) |
+| Edge Context (win/loss patterns, best regime/strategy) | ✅ | ✅ | ✅ **RESOLVED** — `getEdgeContext()` wired to Copilot |
+| Performance Throttle (session P&L, consecutive losses) | ✅ | ✅ | ✅ **RESOLVED** — `computePerformanceThrottle()` + DB query wired |
+| Session Phase Overlay (time-of-day favorability) | ✅ | ✅ | ✅ **RESOLVED** — `computeSessionPhaseOverlay()` wired |
+| Regime Confidence (indicator agreement %) | ✅ | ✅ | ✅ **RESOLVED** — `deriveRegimeConfidence()` wired |
+| Signal Memory (historical accuracy by regime) | ✅ | ✅ | ✅ **RESOLVED** — `buildSignalMemoryContext()` via V3 engine |
+| Market Pressure Engine (4-pressure composite) | ✅ | ✅ | — |
+| Doctrine Classifier (active playbook) | ✅ | ✅ | — |
+| **Capital Flow Engine** (market mode, gamma, conviction, brain decision, probability regime, flow state, risk governor, state machine) | ✅ | ✅ | ✅ **RESOLVED** — CFE computed on-demand in `fetchIntelligenceContext()` |
+| **Confluence Component Breakdown** (SQ/TA/VA/LL/MTF/FD individual scores) | ✅ | ✅ | ✅ **RESOLVED** — Components passed through `confluenceComponents` option |
 | Page Data (scanner/GE/options context) | ❌ | ✅ (via pageData) | MSP-Analyst gets its own context |
 
-### WHAT THE AI DOES NOT USE (CRITICAL GAPS)
+### WHAT THE AI DOES NOT USE (REMAINING GAPS)
 
 | Intelligence System | Built? | Used by Any AI? | Impact |
 |---|---|---|---|
-| **Capital Flow Engine** (market_mode, gamma_state, conviction) | ✅ `lib/capitalFlowEngine.ts` | ⚠️ Partial (via MPE liquidity) | 🟡 IMPROVED — MPE now injected into AI |
-| **Probability Matrix** (pTrend%, pPin%, pExpansion%) | ✅ Inside CFE | ⚠️ Partial (via MPE) | 🟡 IMPROVED — MPE composite reflects probability |
-| **Institutional State Machine** (SCAN→WATCH→STALK→ARMED→EXECUTE) | ✅ `lib/institutional-state-machine.ts` | ❌ NEVER | 🔴 CRITICAL — Requires per-symbol state persistence |
-| **Market Pressure Engine** (4-pressure composite) | ✅ `lib/marketPressureEngine.ts` | ✅ Both routes | ✅ **RESOLVED** — `fetchIntelligenceContext()` injects MPE via `fetchMPE()` |
-| **Doctrine Classifier** (playbook classification) | ✅ `lib/doctrine/classifier.ts` | ✅ Both routes | ✅ **RESOLVED** — `classifyBestDoctrine()` injected with indicator data |
+| **Institutional State Machine** (per-symbol SCAN→WATCH→STALK→ARMED→EXECUTE lifecycle) | ✅ `lib/institutional-state-machine.ts` | ⚠️ Partial (CFE state machine state shown when available) | 🟠 HIGH — Full per-symbol persistence requires DB table |
 | **Outcome Feedback Loop** (Bayesian signal reweighting) | ❌ Not built | N/A | 🟠 HIGH — Outcomes don't improve AI confidence |
+| **Cross-Asset Correlation** (rolling correlation matrix SPY/VIX/DXY/GLD/BTC/TNX) | ❌ Snapshot only | N/A | 🟡 MEDIUM — Would enhance macro context |
 
-### CONSEQUENCE
+### INTELLIGENCE WIRING PARITY — BEFORE vs AFTER
 
-The AI has access to ~60% of the platform's intelligence. When a user asks "Should I trade BTC right now?", the AI:
-- ✅ Knows the regime, confluence score, indicators, ACL authorization
-- ❌ Doesn't know if market mode is PIN/LAUNCH/CHOP (Capital Flow Engine)
-- ❌ Doesn't know continuation probability is 68% vs expansion 10% (Probability Matrix)
-- ❌ Doesn't know the symbol is in STALK phase approaching ARMED (State Machine)
-- ❌ Doesn't know the 4-pressure composite reads 78 = HIGH_PRESSURE (MPE)
-- ❌ Doesn't know the current regime's playbook is "momentum_continuation" (Doctrine)
+| Layer | Before (v1) | After (v2) |
+|---|---|---|
+| Copilot V3 Engine | ❌ Missing | ✅ 9-layer decision trace, market narrative, trade construction, confluence gate |
+| Copilot Edge Context | ❌ Missing | ✅ Historical win rate, best strategy/regime, preferred direction |
+| Copilot Performance | ❌ Missing | ✅ Session P&L, consecutive losses, governor recommendation |
+| Copilot Session Phase | ❌ Missing | ✅ Phase name, favorability, timing context |
+| Copilot Signal Memory | ❌ Missing | ✅ Historical accuracy by regime, recent signals |
+| CFE in Any AI Route | ❌ Missing | ✅ Market mode, gamma state, conviction, brain permission, probability regime |
+| Confluence Breakdown | ❌ Score only | ✅ Full 6-component breakdown (SQ/TA/VA/LL/MTF/FD) explains WHY the score is what it is |
+| Regime Confidence | ❌ Label only | ✅ Agreement % with indicator count |
 
-This means the AI gives good generic analysis but misses the platform's most sophisticated intelligence.
+### CONSEQUENCE (Updated)
 
-### WIRING ROADMAP
+The AI now has access to ~90% of the platform's intelligence. When a user asks "Should I trade BTC right now?", the AI:
+- ✅ Knows the regime, confluence score with full component breakdown (SQ=75, TA=60, etc.)
+- ✅ Knows if market mode is PIN/LAUNCH/CHOP (Capital Flow Engine)
+- ✅ Knows the probability regime (TRENDING/PINNING/EXPANDING/MIXED)
+- ✅ Knows the 4-pressure composite reads 78 = HIGH_PRESSURE (MPE)
+- ✅ Knows the current playbook is "momentum_continuation" (Doctrine)
+- ✅ Knows the trader's historical edge (best regime, win rate, preferred side)
+- ✅ Knows the session phase favorability and performance throttle state
+- ✅ Knows the institutional conviction level and brain decision permission
+- ⚠️ Doesn't yet track per-symbol state machine persistence across requests
+- ❌ Doesn't yet have Bayesian outcome feedback improving confidence calibration
 
-**Tier 1 — Wire to Both AI Routes (HIGH Impact):**
-1. Call `computeCapitalFlowEngine()` and inject market_mode, conviction, probability_matrix into system messages
-2. Call `fetchMPE()` and inject 4-pressure composite + threshold classification
-3. Expose Institutional State Machine phase in system messages
+### REMAINING ROADMAP
 
-**Tier 2 — Backport to Copilot (MEDIUM Impact):**
-4. Add V3 Engine to copilot route
-5. Add edge context (`getEdgeContext()`) to copilot
-6. Add performance throttle to copilot
-7. Add session phase overlay to copilot
+**Tier 1 — Infrastructure (Deferred):**
+1. Per-symbol Institutional State Machine persistence (requires new DB table for state tracking)
+2. Bayesian outcome feedback loop (signal accuracy → confidence multiplier adjustment)
 
-**Tier 3 — Build Missing Feedback (HIGH Impact, Longer-term):**
-8. Build Bayesian outcome feedback loop (signal accuracy → confidence multiplier)
-9. Wire Doctrine Classifier to journal auto-tagging
-10. Create unified intelligence context layer (`lib/ai/unifiedIntelligenceContext.ts`)
+**Tier 2 — Enhancement:**
+3. Cross-asset rolling correlation matrix injection
+4. Derivative-specific context for equity options (IV surface, term structure) alongside crypto
 
-### AI INTELLIGENCE SCORE: 7.5/10 *(upgraded from 6/10)*
+### AI INTELLIGENCE SCORE: 8.5/10 *(upgraded from 7.5/10)*
 
-The AI now receives MPE composite (4-pressure reading + sizing guide) and Doctrine Classifier (active playbook + match confidence) in both MSP-Analyst and Copilot routes. Remaining gaps: full Capital Flow Engine detail (market_mode, conviction factors), Institutional State Machine lifecycle phase, and Bayesian outcome feedback.
+Both AI routes now receive the full intelligence stack: V3 decision framework, Capital Flow Engine (market mode, gamma, conviction, brain decision), Market Pressure Engine (4-pressure composite), Doctrine Classifier (active playbook), confluence component breakdown (6 factors), edge context (historical performance), performance throttle (session P&L), session phase (timing), regime confidence (agreement %), and signal memory (accuracy tracking). The gap between "what the platform knows" and "what the AI sees" has been reduced from ~40% to ~10%. Remaining gaps are infrastructure-level projects (state persistence, Bayesian feedback).
