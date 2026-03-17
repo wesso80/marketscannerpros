@@ -18,6 +18,11 @@ export interface ScreenerRow {
   price?: number;
   change24h?: number;
   permission?: 'COMPLIANT' | 'TIGHT' | 'BLOCKED';
+  squeeze?: boolean;
+  squeezeStrength?: number;
+  momentumAccel?: boolean;
+  momentumAccelScore?: number;
+  sectorRelStr?: number;
   // extra fields from bulk scan
   liquidityState?: string;
   volatilityState?: string;
@@ -139,6 +144,34 @@ const COLUMNS: Column[] = [
   {
     key: 'volume24h', label: 'Volume', width: '90px', align: 'right',
     render: (r) => <span>{formatVol(r.volume24h)}</span>,
+  },
+  {
+    key: 'sectorRelStr', label: 'Sec RS', width: '70px', align: 'right',
+    render: (r) => {
+      if (r.sectorRelStr == null) return <span style={{ color: '#475569' }}>\u2014</span>;
+      const color = r.sectorRelStr > 0 ? '#10B981' : r.sectorRelStr < 0 ? '#EF4444' : '#94a3b8';
+      return <span style={{ fontSize: 11, fontWeight: 600, color }}>{r.sectorRelStr > 0 ? '+' : ''}{r.sectorRelStr.toFixed(1)}%</span>;
+    },
+  },
+  {
+    key: 'momentumAccelScore', label: 'Accel', width: '65px', align: 'center',
+    render: (r) => (
+      r.momentumAccel
+        ? <span style={{ fontSize: 10, fontWeight: 700, color: '#10B981', background: 'rgba(16,185,129,0.12)', borderRadius: 4, padding: '1px 5px' }}>
+            \u26a1 {r.momentumAccelScore ?? 0}
+          </span>
+        : <span style={{ color: '#475569' }}>\u2014</span>
+    ),
+  },
+  {
+    key: 'squeeze', label: 'Squeeze', width: '75px', align: 'center',
+    render: (r) => (
+      r.squeeze
+        ? <span style={{ fontSize: 10, fontWeight: 700, color: '#FBBF24', background: 'rgba(251,191,36,0.12)', borderRadius: 4, padding: '1px 5px' }}>
+            🔥 {r.squeezeStrength != null ? `${r.squeezeStrength}%` : ''}
+          </span>
+        : <span style={{ color: '#475569' }}>—</span>
+    ),
   },
   {
     key: 'permission', label: 'Rule', width: '85px', align: 'center',

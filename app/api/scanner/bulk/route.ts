@@ -11,7 +11,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getDerivativesForSymbols, getOHLC, getMarketData, COINGECKO_ID_MAP } from '@/lib/coingecko';
-import { adx, atr as atrFn, atrPercent as atrPctFn, cci, ema, getIndicatorWarmupStatus, macd, OHLCVBar, rsi, stochastic, detectSqueeze } from '@/lib/indicators';
+import { adx, atr as atrFn, atrPercent as atrPctFn, cci, ema, getIndicatorWarmupStatus, macd, OHLCVBar, rsi, stochastic, detectSqueeze, detectMomentumAcceleration } from '@/lib/indicators';
+import { getSectorETF, SECTOR_ETFS } from '@/lib/sectorMap';
 import { getSessionFromCookie } from '@/lib/auth';
 import {
   OHLCV,
@@ -183,6 +184,11 @@ interface Indicators {
   atr_percent?: number;
   squeeze?: boolean;
   squeezeStrength?: number;
+  momentumAccel?: boolean;
+  momentumAccelScore?: number;
+  momentumAccelDir?: 'bullish' | 'bearish' | 'neutral';
+  sectorETF?: string;
+  sectorRelStr?: number;     // stock% - sectorETF% → positive = outperforming
 }
 
 function computeScore(indicators: Indicators): { 
@@ -666,6 +672,14 @@ function analyzeAssetByTimeframe(
   if (squeezeResult) {
     indicators.squeeze = squeezeResult.inSqueeze;
     indicators.squeezeStrength = squeezeResult.squeezeStrength;
+  }
+
+  // Momentum acceleration detection
+  const momAccel = detectMomentumAcceleration(bars);
+  if (momAccel) {
+    indicators.momentumAccel = momAccel.accelerating;
+    indicators.momentumAccelScore = momAccel.score;
+    indicators.momentumAccelDir = momAccel.direction;
   }
   
   const { score, direction, signals } = computeScore(indicators);
@@ -1730,6 +1744,23 @@ async function runCachedEquityScan(startTime: number, timeframe: string, univers
   }
 
   // Rank by conviction strength
+  // Enrich with sector relative strength (DB-backed, 0 API calls)
+  try {
+    const sectorRows = await dbQuery<{ symbol: string; change_percent: string }>(
+      `SELECT symbol, change_percent FROM quotes_latest WHERE symbol = ANY($1)`,
+      [Array.from(SECTOR_ETFS)]
+    );
+    const sectorChanges = new Map<string, number>();
+    for (const r of sectorRows) sectorChanges.set(r.symbol.toUpperCase(), parseFloat(r.change_percent) || 0);
+    for (const item of scored) {
+      const etf = getSectorETF(item.symbol);
+      if (etf && sectorChanges.has(etf)) {
+        (item as any).indicators.sectorETF = etf;
+        (item as any).indicators.sectorRelStr = Math.round((item.change24h - sectorChanges.get(etf)!) * 100) / 100;
+      }
+    }
+  } catch { /* non-fatal — sector data may not be cached */ }
+
   const ranked = scored.sort((a, b) => Math.abs(b.score - 50) - Math.abs(a.score - 50));
 
   return {

@@ -814,10 +814,10 @@ const EXPIRATION_MAP = {
   intraday_30m: { dte: [1, 2, 3], label: '1-3 DTE', reason: 'Same-day to next-day moves' },
   intraday_1h: { dte: [2, 3, 5], label: '2-5 DTE', reason: 'Gives time for hourly confluence to play out' },
   intraday_4h: { dte: [3, 5, 7], label: '3-7 DTE', reason: '4H moves need a few days' },
-  swing_1d: { dte: [5, 7, 14], label: '5-14 DTE', reason: 'Daily confluence = weekly expiration' },
-  swing_3d: { dte: [7, 14, 21], label: '1-3 weeks', reason: '3-day moves need 2+ weeks' },
-  swing_1w: { dte: [14, 21, 30], label: '2-4 weeks', reason: 'Weekly confluence = monthly options' },
-  macro_monthly: { dte: [30, 45, 60], label: '30-60 DTE', reason: 'Monthly moves need time' },
+  swing_1d: { dte: [5, 7, 10, 14], label: '5-14 DTE', reason: 'Daily confluence = weekly expiration' },
+  swing_3d: { dte: [7, 14, 18, 21], label: '1-3 weeks', reason: '3-day moves need 2+ weeks' },
+  swing_1w: { dte: [14, 18, 21, 30], label: '2-4 weeks', reason: 'Weekly confluence = monthly options' },
+  macro_monthly: { dte: [30, 45, 52, 60], label: '30-60 DTE', reason: 'Monthly moves need time' },
   macro_yearly: { dte: [60, 90, 180], label: 'LEAPS', reason: 'Long-term positioning' },
 };
 
@@ -1245,14 +1245,14 @@ function analyzeOpenInterest(
         // Use normalized IV (handles both 0.25 and 25 formats)
         const iv = normalizeIV(call.implied_volatility, 0.25);
         
-        // Use estimateGreeks as fallback when API doesn't provide Greeks
+        // Use estimateGreeks as fallback when API doesn't provide Greeks or returns 0 (0DTE bug)
         let delta = apiDelta, gamma = apiGamma, theta = apiTheta, vega = apiVega;
-        if (apiDelta === undefined || apiGamma === undefined || apiTheta === undefined || apiVega === undefined) {
+        if (!apiDelta || !apiGamma || !apiTheta || !apiVega) {
           const estimated = estimateGreeks(currentPrice, strike, daysToExpiry, 0.05, iv, true);
-          delta = apiDelta ?? estimated.delta;
-          gamma = apiGamma ?? estimated.gamma;
-          theta = apiTheta ?? estimated.theta;
-          vega = apiVega ?? estimated.vega;
+          delta = apiDelta || estimated.delta;
+          gamma = apiGamma || estimated.gamma;
+          theta = apiTheta || estimated.theta;
+          vega = apiVega || estimated.vega;
         }
         
         contractsWithGreeks.push({
@@ -1295,14 +1295,14 @@ function analyzeOpenInterest(
         // Use normalized IV (handles both 0.25 and 25 formats)
         const iv = normalizeIV(put.implied_volatility, 0.25);
         
-        // Use estimateGreeks as fallback when API doesn't provide Greeks
+        // Use estimateGreeks as fallback when API doesn't provide Greeks or returns 0 (0DTE bug)
         let delta = apiDelta, gamma = apiGamma, theta = apiTheta, vega = apiVega;
-        if (apiDelta === undefined || apiGamma === undefined || apiTheta === undefined || apiVega === undefined) {
+        if (!apiDelta || !apiGamma || !apiTheta || !apiVega) {
           const estimated = estimateGreeks(currentPrice, strike, daysToExpiry, 0.05, iv, false);  // false = put
-          delta = apiDelta ?? estimated.delta;
-          gamma = apiGamma ?? estimated.gamma;
-          theta = apiTheta ?? estimated.theta;
-          vega = apiVega ?? estimated.vega;
+          delta = apiDelta || estimated.delta;
+          gamma = apiGamma || estimated.gamma;
+          theta = apiTheta || estimated.theta;
+          vega = apiVega || estimated.vega;
         }
         
         contractsWithGreeks.push({

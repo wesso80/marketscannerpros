@@ -185,11 +185,9 @@ function buildCandidates(rows: AVOptionRow[], symbol: string, spot: number, expe
     if (atmCall) {
       const callLeg = contractToLeg(atmCall, 'long');
       const debit = toNum(callLeg.mid, 0);
-      // B18 fix: estimate maxGain from delta × expected move instead of flat 2×
-      const rawCallDelta = callLeg.delta;
-      const callDelta = Math.abs(rawCallDelta != null && Number.isFinite(rawCallDelta) ? rawCallDelta : 0.5);
+      // B18+B19 fix: intrinsic value at target price minus premium — varies per strike
       const targetMove = spot * (expectedMovePct / 100);
-      const estimatedGain = callDelta * targetMove;
+      const estimatedGain = Math.max(0, (spot + targetMove) - callLeg.strike) - debit;
       candidates.push({
         strategyType: 'CALL',
         underlying: symbol,
@@ -207,11 +205,9 @@ function buildCandidates(rows: AVOptionRow[], symbol: string, spot: number, expe
     if (atmPut) {
       const putLeg = contractToLeg(atmPut, 'long');
       const debit = toNum(putLeg.mid, 0);
-      // B18 fix: estimate maxGain from delta × expected move instead of flat 2×
-      const rawPutDelta = putLeg.delta;
-      const putDelta = Math.abs(rawPutDelta != null && Number.isFinite(rawPutDelta) ? rawPutDelta : 0.5);
+      // B18+B19 fix: intrinsic value at target price minus premium — varies per strike
       const targetMove = spot * (expectedMovePct / 100);
-      const estimatedGain = putDelta * targetMove;
+      const estimatedGain = Math.max(0, putLeg.strike - (spot - targetMove)) - debit;
       candidates.push({
         strategyType: 'PUT',
         underlying: symbol,
@@ -376,7 +372,7 @@ function scoreCandidate(input: ScoreInput, candidate: MSPOptionCandidate): Candi
   const dteSuitability = (() => {
     const tf = input.timeframe;
     if (/scalp|intraday/i.test(tf)) return norm(14 - candidate.dte, 0, 14);
-    if (/swing/i.test(tf)) return norm(candidate.dte, 14, 45);
+    if (/swing/i.test(tf)) return norm(candidate.dte, 7, 45);
     return norm(candidate.dte, 30, 90);
   })();
 

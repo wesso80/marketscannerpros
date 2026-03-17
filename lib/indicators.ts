@@ -647,3 +647,72 @@ export function detectSqueeze(bars: OHLCVBar[], bbPeriod = 20, kcPeriod = 20, kc
   
   return { inSqueeze, squeezeStrength };
 }
+
+/**
+ * Detect momentum acceleration using RSI slope, MACD histogram expansion,
+ * volume surge, and price-vs-ATR movement.
+ * Returns null if insufficient data.
+ */
+export function detectMomentumAcceleration(bars: OHLCVBar[]): {
+  accelerating: boolean;
+  score: number;           // 0-100 composite
+  direction: 'bullish' | 'bearish' | 'neutral';
+  components: {
+    rsiSlope: number;       // RSI change over lookback
+    macdExpanding: boolean;
+    volumeSurge: number;    // ratio vs 20-bar avg
+    priceAtrMove: number;   // price move in ATR units over lookback
+  };
+} | null {
+  const lookback = 5;
+  const minBars = 35; // enough for MACD(26) + lookback
+  if (bars.length < minBars) return null;
+
+  const closes = bars.map(b => b.close);
+
+  // RSI at two points
+  const rsiNow = rsi(closes, 14);
+  const rsiPrev = rsi(closes.slice(0, -lookback), 14);
+  const rsiSlope = (rsiNow != null && rsiPrev != null) ? rsiNow - rsiPrev : 0;
+
+  // MACD histogram at two points
+  const macdNow = macd(closes);
+  const macdPrev = macd(closes.slice(0, -lookback));
+  const histNow = macdNow?.histogram ?? 0;
+  const histPrev = macdPrev?.histogram ?? 0;
+  const macdExpanding = Math.abs(histNow) > Math.abs(histPrev) && Math.sign(histNow) === Math.sign(histPrev);
+
+  // Volume surge: last bar volume vs 20-bar average
+  const volumes = bars.map(b => b.volume);
+  const recentVols = volumes.slice(-20);
+  const avgVol = recentVols.reduce((s, v) => s + v, 0) / recentVols.length;
+  const lastVol = volumes[volumes.length - 1] ?? 0;
+  const volumeSurge = avgVol > 0 ? lastVol / avgVol : 1;
+
+  // Price move vs ATR
+  const atrVal = atr(bars, 14);
+  const priceMove = closes[closes.length - 1] - closes[closes.length - 1 - lookback];
+  const priceAtrMove = (atrVal && atrVal > 0) ? priceMove / atrVal : 0;
+
+  // Score components (each 0-25)
+  const rsiScore = Math.min(25, Math.abs(rsiSlope) * 2.5);
+  const macdScore = macdExpanding ? Math.min(25, Math.abs(histNow - histPrev) * 50 + 10) : 0;
+  const volScore = Math.min(25, Math.max(0, (volumeSurge - 1) * 25));
+  const priceScore = Math.min(25, Math.abs(priceAtrMove) * 12.5);
+
+  const score = Math.round(rsiScore + macdScore + volScore + priceScore);
+
+  // Direction from RSI slope + price direction
+  let direction: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+  if (rsiSlope > 3 && priceMove > 0) direction = 'bullish';
+  else if (rsiSlope < -3 && priceMove < 0) direction = 'bearish';
+  else if (priceAtrMove > 0.5) direction = 'bullish';
+  else if (priceAtrMove < -0.5) direction = 'bearish';
+
+  return {
+    accelerating: score >= 40,
+    score,
+    direction,
+    components: { rsiSlope, macdExpanding, volumeSurge, priceAtrMove },
+  };
+}

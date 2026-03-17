@@ -1,6 +1,6 @@
 # MarketScanner Pros — Trading Intelligence & Decision Engine Audit
 
-**Date:** March 2026
+**Date:** March 2026 (Re-audited March 17, 2026 — Golden Egg live data confirmed, MPE implemented, crypto coverage corrected, AI intelligence gaps identified)
 **Scope:** Full codebase audit of trading intelligence, signal generation, decision engines, and edge quality
 **Perspective:** Professional trader, quant strategist, hedge fund analyst, platform architect
 **NOT a UI review** — this evaluates whether the platform provides a real trading edge.
@@ -25,7 +25,7 @@
 14. [Portfolio](#14-portfolio)
 15. [Trade Journal](#15-trade-journal)
 16. [Cross-System Intelligence Layer](#16-cross-system-intelligence-layer)
-17. [Market Pressure Engine (Proposed)](#17-market-pressure-engine-proposed)
+17. [Market Pressure Engine (Implemented)](#17-market-pressure-engine-implemented)
 18. [The 5 Biggest Trading Edge Improvements](#18-the-5-biggest-trading-edge-improvements)
 19. [The 3 Most Powerful Scanners That Should Exist](#19-the-3-most-powerful-scanners-that-should-exist)
 20. [Trader Experience Audit](#20-trader-experience-audit)
@@ -34,6 +34,7 @@
 23. [Implementation Roadmap](#23-implementation-roadmap)
 24. [Final Trading Platform Score](#24-final-trading-platform-score)
 25. [Final Verdict](#25-final-verdict)
+26. [Arca AI Intelligence Integration Audit](#26-arca-ai-intelligence-integration-audit-added-march-2026)
 
 ---
 
@@ -57,7 +58,7 @@ Entry timing, market direction, and setup identification across equities, crypto
 - Regime-adaptive weighting matrices — 5 different scoring profiles for TREND_EXPANSION, TREND_MATURE, RANGE_COMPRESSION, VOL_EXPANSION, TRANSITION
 - Hard minimum gate scores per regime (e.g., TREND_EXPANSION requires TA≥50, MTF≥40 — rejects weak setups)
 - Institutional Filter integration (regime, liquidity, volatility, data freshness, risk)
-- Capital Flow Engine overlay (gamma zones, pin strikes, flip points from derivatives)
+- Capital Flow Engine overlay (gamma zones, pin strikes, flip points from derivatives) — *built in `lib/capitalFlowEngine.ts` but not yet wired to scanner API route*
 - Pattern detection engine (breakouts, liquidity sweeps, double tops/bottoms, H&S, flags) with confidence scoring
 
 **Signal timing:** Confirms moves and occasionally predicts (confluence stacking + regime alignment creates anticipatory signals when multiple factors align before a breakout)
@@ -70,18 +71,18 @@ Entry timing, market direction, and setup identification across equities, crypto
 - ✅ Institutional filter gating
 - ✅ Pattern detection (breakouts, sweeps, reversals)
 - ✅ Multi-timeframe analysis
-- ⚠️ Partial: volatility expansion detection (via ATR/ADX but no Bollinger squeeze metric)
-- ❌ No real-time order flow (Level 2 / tape reading)
-- ❌ No dark pool print detection
+- ✅ Volatility compression detection — `detectSqueeze()` in `lib/indicators.ts` computes BB-inside-KC squeeze with strength scoring, stored in `indicators_latest`. **Now exposed as scanner filter** (V2 Squeeze tab + Pro Scan squeeze dropdown + Squeeze column in ScreenerTable).
+- ❌ No real-time order flow (Level 2 / tape reading) — *requires new data source (Polygon.io / exchange WebSockets), not available via AV or CoinGecko*
+- ❌ No dark pool print detection — *requires FINRA/Ortex data, not available via AV or CoinGecko*
 - ❌ No options flow clustering in scanner view (separate tool)
 
 ### WHAT IS CURRENTLY MISSING
-- Bollinger Band squeeze / Keltner Channel compression scanner
-- Real-time order flow (bid/ask imbalance, large block trades)
-- Dark pool / lit exchange print ratio
-- Momentum ignition detection (sudden acceleration patterns)
-- Sector relative strength ranking within scan results
-- Custom indicator building interface
+- ~~Bollinger Band squeeze / Keltner Channel compression scanner~~ **FULLY WIRED** — `detectSqueeze()` exists in `lib/indicators.ts`. Data stored in DB. Now exposed: V2 Squeeze tab, Pro Scan filter dropdown, Squeeze column + badge in ScreenerTable.
+- Real-time order flow (bid/ask imbalance, large block trades) — **Requires new data source.** Neither Alpha Vantage nor CoinGecko provide Level 2 / order book data. Would need Polygon.io (~$99/mo) for equities or Binance/Bybit WebSocket (free) for crypto.
+- Dark pool / lit exchange print ratio — **Requires new data source.** Needs FINRA ADF/TRF data or Ortex. Not available via AV or CoinGecko. Skip for now.
+- ~~Momentum ignition detection (sudden acceleration patterns)~~ **BUILT** — `detectMomentumAcceleration()` in `lib/indicators.ts` computes RSI slope + MACD expansion + volume surge + price/ATR move → composite score. Wired to both scanner routes: appears as `MOMENTUM_ACCEL` DVE flag in V2, and Accel column + badge in Pro Scan ScreenerTable.
+- ~~Sector relative strength ranking within scan results~~ **BUILT** — `lib/sectorMap.ts` maps ~55 stocks to SPDR sector ETFs. Bulk scanner fetches sector ETF change% from `quotes_latest` (0 API calls) and computes `stockChange% − sectorETFChange%`. Shows as Sec RS column in ScreenerTable.
+- Custom indicator building interface — **Buildable (UI work).** All OHLCV data already fetched, `lib/indicators.ts` has full calculation library. Needs expression parser UI.
 
 ### SIGNAL QUALITY
 - **Frequency:** Well-tuned — regime gating prevents signal flood in choppy markets
@@ -102,10 +103,10 @@ Separate but connected: Options flow (separate scanner, but Capital Flow Engine 
 | **Structure** | **9/10** | Architecture is institutional-grade. 6-factor regime-calibrated model with hard gating, institutional filter, capital flow overlay — this is how prop desks build signal pipelines. |
 | **Trader Workflow** | **9/10** | The scan → filter → score → gate → output pipeline is clean. Regime-adaptive weighting means the scanner thinks like a trader adjusting to conditions. |
 | **Signal Edge** | **6/10** | The architecture is excellent but the underlying indicators are traditional lagging signals (RSI, MACD, Stochastic, CCI). These confirm moves, rarely predict them. The edge comes from the gating and weighting, not from the raw indicators themselves. |
-| **Innovation** | **7/10** | Regime-adaptive weighting matrices are genuinely innovative for retail. Pattern detection with confidence scoring is solid. Missing: volatility compression scanner, liquidity targeting logic, smarter ranking beyond raw confluence score. |
+| **Innovation** | **8/10** | Regime-adaptive weighting matrices are genuinely innovative for retail. Pattern detection with confidence scoring is solid. Squeeze detection wired as scanner filter + tab. Momentum acceleration detection and sector relative strength ranking now built. Missing: custom indicator builder UI. |
 | **Overall** | **7.5/10** | |
 
-**Key weakness:** The 14 indicators are mostly momentum/trend-following (RSI, MACD, Stochastic, CCI, Aroon, ADX). Professional edge increasingly comes from volatility compression detection (Bollinger squeeze + Keltner), liquidity targeting (where are the stops?), and order flow — none of which are in the core indicator stack. The regime-adaptive architecture is the real edge here, not the indicators feeding it.
+**Key weakness:** The 14 indicators are mostly momentum/trend-following (RSI, MACD, Stochastic, CCI, Aroon, ADX). Volatility compression detection is now fully wired as a scanner filter. Momentum acceleration detection provides early warning for rapid moves. Sector relative strength shows stock-vs-sector performance. Professional edge increasingly comes from liquidity targeting and order flow — neither available via current APIs (AV/CoinGecko). The regime-adaptive architecture is the real edge here.
 
 ---
 
@@ -148,6 +149,11 @@ Options strike selection, dealer positioning insight, entry timing via options f
 - ❌ No implied volatility surface modeling
 - ❌ No spread recommendation engine (verticals, condors, etc.)
 
+### BUGS FIXED (March 2026)
+- ~~**0DTE Greeks = zero (HIGH):**~~ **FIXED** — `lib/options-confluence-analyzer.ts` call/put paths now use falsy check (`!apiDelta`) instead of `=== undefined`, and `||` instead of `??` for fallback. When Alpha Vantage returns `"0.0000"` (parses to `0`), `estimateGreeks()` Black-Scholes fallback now correctly triggers.
+- ~~**maxGain identical across strikes (MEDIUM):**~~ **FIXED** — `lib/scoring/options-v21.ts` call/put maxGain formula changed from `delta × targetMove` (constant per symbol) to `max(0, intrinsicValueAtTarget - strike) - debit` which correctly varies per strike.
+- ~~**DTE gaps 15-20 and 46-59 (MEDIUM):**~~ **FIXED** — `EXPIRATION_MAP` now includes intermediate DTE targets (10, 18, 52) closing gaps in swing_1d/swing_3d/swing_1w/macro_monthly buckets. `dteSuitability` swing norm widened from `norm(dte, 14, 45)` to `norm(dte, 7, 45)` so DTE 7-14 no longer penalized to near-zero.
+
 ### WHAT IS CURRENTLY MISSING
 - Real-time options tape with buy/sell classification
 - IV surface modeling and term structure analysis
@@ -172,11 +178,11 @@ The scoring system (`options-v21.ts`) integrates 7 distinct signal types with ba
 |---|---|---|
 | **Depth** | **8/10** | GEX computation, gamma flip prices, 7 confluence signal types with base win rates, permission-gated scoring multipliers — this is deeper than most retail options tools. |
 | **Professional Utility** | **8/10** | Strike recommendations with Greeks, DTE bucketing by style, macro event suppression — gives traders what they need to structure a trade. |
-| **Edge** | **7/10** | Dealer gamma positioning is genuinely anticipatory. Unusual activity detection adds forward value. Limited by snapshot-based data (not streaming options tape). |
+| **Edge** | **7.5/10** | Dealer gamma positioning is genuinely anticipatory. Unusual activity detection adds forward value. 0DTE Greeks, maxGain formula, and DTE gap bugs now fixed. Limited by snapshot-based data (not streaming options tape). |
 | **Clarity** | **6/10** | The confluence scoring is opaque — traders need to understand how TF confluence + IV rank + regime + macro + time permission combine into the final score. Needs clearer decomposition in the UI. |
-| **Overall** | **7.5/10** | |
+| **Overall** | **7.75/10** | |
 
-**Key weakness:** The platform computes GEX and gamma flip levels, but the options flow detection is based on volume/OI ratios rather than actual trade prints. Real options flow intelligence requires classifying individual prints (bought at ask vs. sold at bid, block vs. sweep, opening vs. closing). The current approach approximates smart money activity rather than directly observing it.
+**Key weakness:** The platform computes GEX and gamma flip levels, but the options flow detection is based on volume/OI ratios rather than actual trade prints. Real options flow intelligence requires classifying individual prints (bought at ask vs. sold at bid, block vs. sweep, opening vs. closing). The current approach approximates smart money activity rather than directly observing it. Three scoring bugs (0DTE Greeks fallback, identical maxGain, DTE coverage gaps) have been fixed — options scoring accuracy is now materially improved.
 
 ---
 
@@ -283,37 +289,45 @@ Institutional-grade multi-layer trade decision framework. Answers all 4 trading 
 
 **Flip Conditions:** When NO_TRADE, displays exactly what must change to flip to YES (e.g., "Confluence stack ≥ 5 + RSI > 45")
 
-### EDGE ANALYSIS: **Partial Edge (Framework Only)**
+### EDGE ANALYSIS: **Real Edge**
 
 **What creates edge:**
 - The 3-layer decision framework is architecturally sound — Permission → Plan → Evidence is how institutional desks operate
 - Flip conditions are excellent risk management (trader knows exactly what to watch for)
 - Evidence stack transparency shows why a signal exists
+- **100% live data** from 8+ sources: Alpha Vantage (price + technicals), CoinGecko (crypto derivatives), Market Pressure Engine (4-pressure composite), Time Confluence (decompression + midpoint debt), DVE (directional volatility + BBWP), Doctrine Classifier (playbook classification), Options chain (GEX + gamma + IV), Deep Analysis (GPT-powered)
+- MPE integration: receives full 4-pressure composite (Time, Volatility, Liquidity, Options) as primary pressure input
+- Execution framework: timing windows, session context, urgency flags, avoid windows all computed from live indicators
 
 **What limits edge:**
-- Currently shows demo/illustrative data only — not connected to live signal feeds
-- The framework is built but not populated with real-time intelligence
 - Pro Trader gated — most users never see it
+- Macro Dashboard permission NOT connected to Golden Egg decision layer (architectural gap)
+- No auto-generation of Golden Egg candidates from scanner results
 
-**Signal timing:** N/A — framework exists but requires live data integration to become operational.
+**Signal timing:** Predictive — the combination of live indicator confluence, MPE pressure reading, and time confluence decompression windows creates forward-looking trade timing.
 
 ### WHAT PROFESSIONAL TRADERS WOULD EXPECT
 - ✅ Permission-gated entry (don't trade when conditions are wrong)
 - ✅ Multi-layer evidence stacking
 - ✅ Flip conditions (actionable "watch for X")
 - ✅ R:R validation before entry
-- ❌ Currently demo data — needs live data pipeline
-- ❌ No auto-population from scanner signals
+- ✅ Live data from 8+ sources (price, technicals, options, MPE, time, DVE, doctrine, crypto derivs)
+- ✅ MPE pressure composite feeding Decision Permission
+- ⚠️ Partial: Macro regime not connected to Golden Egg permission gate
+- ❌ No auto-population from scanner signals (candidates must be manually selected)
 - ❌ No trade execution link
 
 ### WHAT IS CURRENTLY MISSING
-- Live data feed integration (connect to scanner/options/time/macro outputs)
+- Macro Dashboard → Golden Egg permission gate connection (if macro = RISK_OFF, should flip GE to WATCH)
 - Auto-generated Golden Egg candidates from highest-confluence scanner results
 - Execution link (one-click to broker or at minimum to portfolio tracker)
 - Historical Golden Egg outcome tracking
 
 ### SIGNAL QUALITY
-- **Rating:** Framework is excellent, signal quality depends on live data integration which is not yet complete.
+- **Frequency:** On-demand per symbol — appropriate for decision-grade analysis
+- **Timeliness:** Real-time with cached indicator feeds (45s–5min freshness)
+- **Context:** Excellent — integrates technical, derivatives, pressure, time, volatility, and doctrine
+- **Rating:** Predicts and frames. The 3-layer output (Permission → Plan → Evidence) with live data creates actionable trade decisions.
 
 ---
 
@@ -389,7 +403,7 @@ Global regime classification that gates ALL trading permission. The highest auth
 Crypto derivatives intelligence: funding rates, open interest, long/short ratios, liquidation heat. Answers: *"What is the crypto leverage positioning?"*
 
 ### WHAT IT DOES
-- Tracks funding rates across 10 major cryptos (BTC, ETH, SOL, XRP, DOGE, BNB, ADA, AVAX, DOT, LINK)
+- Tracks funding rates, OI, and derivatives data across 144 cryptos (top 50 by market cap + extended coverage to 150)
 - Long/Short ratio analysis (positioning sentiment)
 - Open Interest monitoring (trend/change signals)
 - Liquidation heat detection (cascading liquidation events)
@@ -406,7 +420,6 @@ Crypto derivatives intelligence: funding rates, open interest, long/short ratios
 - L/S ratio extremes signal positioning crowding
 
 **What limits edge:**
-- Limited to 10 major cryptos (cannot monitor altcoins where edge is often larger)
 - Snapshot only — no historical trend analysis or alerting thresholds
 - No cross-exchange comparison (Binance vs Bybit vs OKX funding rate differentials)
 - Auto-logs are simplistic (Long if green, Short if red — no confluence gating)
@@ -423,8 +436,7 @@ Crypto derivatives intelligence: funding rates, open interest, long/short ratios
 - ❌ No liquidation heatmap (price levels where liquidations cluster)
 
 ### WHAT IS CURRENTLY MISSING
-- Altcoin derivatives coverage (top 50 minimum)
-- Historical funding rate charting with overlay on price
+- Historical funding rate charting with overlay on price (data exists, UI visualization not implemented)
 - Cross-exchange funding rate differentials (arbitrage detection)
 - Liquidation heatmap by price level
 - Whale wallet tracking (large address movements)
@@ -432,9 +444,9 @@ Crypto derivatives intelligence: funding rates, open interest, long/short ratios
 - Stablecoin supply tracking (USDT/USDC minting as liquidity proxy)
 
 ### SIGNAL QUALITY
-- **Frequency:** Real-time snapshots — adequate for monitoring, insufficient for time-sensitive signals
+- **Frequency:** Real-time snapshots with 60-second refresh — adequate for monitoring
 - **Timeliness:** Near-real-time (45-second cache acceptable)
-- **Context:** Moderate — feeds into AI Analyst but not directly weighted in scanner confluence
+- **Context:** Moderate — feeds into AI Analyst and MPE liquidity pressure component
 - **Rating:** Confirms moves. Funding extremes and OI changes are confirmatory, not predictive.
 
 ---
@@ -826,22 +838,24 @@ The platform has a genuine intelligence layer that connects disconnected data st
 
 ---
 
-## 17. Market Pressure Engine (Proposed)
+## 17. Market Pressure Engine (Implemented)
 
-The single most impactful architectural addition to the platform. The Market Pressure Engine (MPE) would unify the four core pressure dimensions that drive every tradeable move into a single composite reading.
+The Market Pressure Engine (MPE) unifies the four core pressure dimensions that drive every tradeable move into a single composite reading. **Status: FULLY IMPLEMENTED** in `lib/marketPressureEngine.ts` with live data feeds, 5-minute cache, and integration into Golden Egg.
 
 ### CONCEPT
 
 Every trade setup exists within a pressure field. The MPE quantifies four orthogonal pressures and produces a weighted composite that answers: *"How much force is behind this setup right now?"*
 
+**Implementation:** `lib/marketPressureEngine.ts` | **API:** `app/api/market-pressure/route.ts` | **Cache:** 5-minute Redis
+
 ### THE FOUR PRESSURES
 
 | Pressure | Weight | Source | What It Measures |
 |---|---|---|---|
-| **Time Pressure** | 0.25 | Time Confluence Engine | How many timeframe closes are clustering? Decompression windows active? Midpoint debt outstanding? |
-| **Volatility Pressure** | 0.25 | Regime Classifier + ATR/ADX/VIX | Is volatility compressing (coiled spring) or expanding (trending)? IV rank position? |
-| **Liquidity Pressure** | 0.30 | Funding rates, OI, L/S ratio, exchange flows | Where is capital positioned? Crowded? Divergent? Building or unwinding? |
-| **Options Pressure** | 0.20 | GEX, gamma flip, unusual activity, P/C ratio | Where are dealers hedging? What is the options market pricing in? |
+| **Time Pressure** | 0.25 | `lib/confluence-learning-agent.ts` | Active TF closes, decompression windows, midpoint debt outstanding |
+| **Volatility Pressure** | 0.25 | `lib/regime-classifier.ts` + Alpha Vantage | Regime state, ADX, ATR%, IV rank position |
+| **Liquidity Pressure** | 0.30 | `lib/coingecko.ts` (crypto) | Funding rates, OI changes, L/S ratio, market mode |
+| **Options Pressure** | 0.20 | `lib/options-gex.ts` (equity Pro Trader) | Dealer gamma, gamma flip, P/C ratio, unusual activity |
 
 ### INTERFACE
 
@@ -875,30 +889,37 @@ function computeMPE(p: MarketPressureReading['pressures']): number {
 }
 ```
 
-### WHY THIS MATTERS
+### LIVE IMPLEMENTATION
 
-The platform already computes each of these pressures independently across different tools. The MPE unifies them into a single pressure reading per symbol. This transforms MSP from "check 4 different screens" to "one number tells you the pressure state."
+The MPE is fully operational and unifies all four pressures into a single reading per symbol. This transforms MSP from "check 4 different screens" to "one number tells you the pressure state."
 
-**MPE ≥ 75:** High pressure — volatility expansion likely, full sizing
-**MPE 50–74:** Building pressure — watch for trigger, reduced sizing
-**MPE 25–49:** Low pressure — range-bound or dissipating, probe only
-**MPE < 25:** No pressure — no trade
+**MPE ≥ 75:** HIGH_PRESSURE — volatility expansion likely, full sizing
+**MPE 50–74:** BUILDING — watch for trigger, reduced sizing
+**MPE 25–49:** LOW_PRESSURE — range-bound or dissipating, probe only
+**MPE < 25:** NO_PRESSURE — no trade
 
-The MPE feeds directly into the Golden Egg framework as the primary pressure input for Decision Permission.
+The MPE feeds directly into the Golden Egg framework as the primary pressure input for Decision Permission. Golden Egg calls `fetchMPE()` and uses all 4 pressures in its evidence stack and decision layer.
+
+### REMAINING GAPS
+- MPE output not exposed to Arca AI (copilot/msp-analyst don't call MPE directly)
+- No historical MPE charting (pressure over time)
+- No MPE-based alerting ("MPE crossed 75 for BTC")
 
 ---
 
 ## 18. The 5 Biggest Trading Edge Improvements
 
-### 1. Golden Egg Live Data Integration
-**Impact: EXTREME**
-Connect the Golden Egg framework to live scanner/options/time/macro data feeds. The architecture is already built — it just needs real-time population. Auto-generate Golden Egg candidates from highest-confluence scanner results. This would create a single-screen trade decisioning experience that no other retail platform offers.
+### ~~1. Golden Egg Live Data Integration~~ ✅ COMPLETED
+**Status: IMPLEMENTED** — Golden Egg now uses 100% live data from 8+ sources (Alpha Vantage, CoinGecko, MPE, Time Confluence, DVE, Doctrine, Options, Deep Analysis). All 3 layers populated with real-time intelligence. `getGoldenEggMockPayload()` in adapters.ts is dead code.
 
-### 2. Market Pressure Engine (MPE)
-**Impact: EXTREME**
-Implement the 4-pressure composite engine (Time 0.25, Volatility 0.25, Liquidity 0.30, Options 0.20) described in Section 17. This transforms 4 separate tool screens into a single actionable number per symbol. Every other improvement becomes more powerful when filtered through MPE.
+### ~~2. Market Pressure Engine (MPE)~~ ✅ COMPLETED
+**Status: IMPLEMENTED** — Full 4-pressure composite engine operational in `lib/marketPressureEngine.ts` with live data, 5-minute cache, correct thresholds, and Golden Egg integration.
 
-### 3. Research Case Outputs
+### 3. Wire Intelligence Layer to AI & UI
+**Impact: EXTREME**
+The platform's most sophisticated systems (Capital Flow Engine, Institutional State Machine, Probability Matrix) are built but not exposed to API routes, UI, or Arca AI. Wiring these creates a unified intelligence terminal. See Section 26.
+
+### 4. Research Case Outputs
 **Impact: HIGH**
 Every scan result should generate a "research case" — a structured, exportable document containing: setup thesis, confluence evidence, pressure state, risk parameters, time window, and invalidation conditions. This positions MSP as a research terminal, not just a signal generator. Traders can save, compare, and review cases over time.
 
@@ -906,7 +927,7 @@ Every scan result should generate a "research case" — a structured, exportable
 **Impact: HIGH**
 Add real-time options print classification (buy/sell at bid/ask, block vs. sweep, size relative to OI). This would transform the Options Confluence Scanner’s unusual activity detection from volume-based approximation to direct observation. Integrating flow data into the existing GEX/gamma framework would create the most comprehensive options intelligence tool in retail.
 
-### 5. Cross-Asset Correlation Engine
+### 6. Cross-Asset Correlation Engine
 **Impact: HIGH**
 Real-time correlation tracking between SPY/VIX/DXY/GLD/BTC/TNX with rolling windows. When correlations break (e.g., BTC becomes correlated with gold) or converge unexpectedly, it creates regime shift signals. This supercharges the already-strong macro dashboard and feeds directly into the regime classifier.
 
@@ -968,9 +989,9 @@ Real-time correlation tracking between SPY/VIX/DXY/GLD/BTC/TNX with rolling wind
 3. Options scanner provides strike recommendation
 4. **GAP:** No structured research case output (thesis + evidence + risk in one exportable view)
 5. **GAP:** Must manually enter position in Portfolio
-6. **GAP:** Golden Egg framework (the decision screen) uses demo data
+6. ~~**GAP:** Golden Egg framework (the decision screen) uses demo data~~ ✅ RESOLVED — Golden Egg now uses 100% live data from 8+ sources
 
-**Verdict:** The intelligence exists to support entry decisions, but the decision operationalization step — turning intelligence into a structured, actionable trade plan — requires manual assembly across multiple screens. This is not an execution gap (broker integration) but a decision framing gap (the platform knows the answer but doesn’t package it for action).
+**Verdict:** Golden Egg now provides live 3-layer decision framing (Permission → Plan → Evidence) with MPE integration. The remaining gap is structured research case outputs and auto-population from scanner candidates.
 
 ### Trade Management ⚠️ (Gap)
 1. Portfolio tracks P&L ✅
@@ -1057,7 +1078,7 @@ MSP's intelligence stack naturally forms a 5-layer product hierarchy. Each layer
 ### Layer 4: Decision Framing
 *"Should I take this trade, with what sizing, at what time, and at what risk?"*
 
-**Tools:** Golden Egg Framework, Market Pressure Engine (proposed), State Machine, Research Case Outputs (proposed)
+**Tools:** Golden Egg Framework (live), Market Pressure Engine (live), State Machine (built, not exposed to UI), Research Case Outputs (proposed)
 **Output:** Structured decision with permission, plan, evidence stack, and invalidation conditions
 **Value:** Transforms intelligence into an actionable, documented trade plan.
 
@@ -1069,7 +1090,7 @@ MSP's intelligence stack naturally forms a 5-layer product hierarchy. Each layer
 **Value:** Closes the loop. Every trade outcome improves future signal quality.
 
 ### Hierarchy Insight
-Most retail platforms operate at Layers 1–2 only (basic scanning). MSP has genuine infrastructure at all 5 layers. The gap is in Layer 4 (Decision Framing) — the Golden Egg framework exists architecturally but needs live data, and research case outputs don't exist yet. Filling Layer 4 is the single highest-impact improvement for the platform.
+Most retail platforms operate at Layers 1–2 only (basic scanning). MSP has genuine infrastructure at all 5 layers. Layer 4 (Decision Framing) has been significantly strengthened — Golden Egg is now live with MPE integration. The remaining Layer 4 gap is research case outputs and exposing the hidden intelligence systems (State Machine, Capital Flow Engine, Probability Matrix) to the UI and AI. The biggest cross-layer gap is that the sophisticated intelligence components are individually excellent but poorly wired together — see Section 26.
 
 ---
 
@@ -1078,10 +1099,11 @@ Most retail platforms operate at Layers 1–2 only (basic scanning). MSP has gen
 ### NOW (Immediate Priority)
 These are the highest-impact items that leverage existing architecture:
 
-1. **Golden Egg Live Data Integration** — Connect to scanner/options/time/macro feeds. Architecture exists. Wire it up.
-2. **Market Pressure Engine** — Implement the 4-pressure composite (Section 17). All component data already exists in separate tools.
-3. **Research Case Outputs** — Every scan result generates a structured, exportable research case. This is the Layer 4 gap filler.
-4. **Time Confluence Confidence Language** — Replace "100% confidence" with Probability/Alignment/Confluence Strength scoring.
+1. ~~**Golden Egg Live Data Integration**~~ ✅ COMPLETED — 100% live data from 8+ sources.
+2. ~~**Market Pressure Engine**~~ ✅ COMPLETED — 4-pressure composite operational with Golden Egg integration.
+3. **Wire Intelligence Layer to AI & UI** — Expose Capital Flow Engine, Institutional State Machine, and Probability Matrix through API routes and Arca AI. See Section 26.
+4. ~~**Time Confluence Confidence Language**~~ ✅ RESOLVED — "Confidence" → "Alignment" across all components.
+5. **Research Case Outputs** — Every scan result generates a structured, exportable research case. This is the Layer 4 gap filler.
 
 ### NEXT (Near-Term)
 Build new intelligence capabilities using the existing infrastructure:
@@ -1109,14 +1131,15 @@ The NOW items fill the Layer 4 decision framing gap using existing architecture.
 | Category | Score | Justification |
 |---|---|---|
 | **Signal Quality** | **7.5/10** | 14-indicator scanner with regime-adaptive weighting, options dealer gamma, time confluence. Architecture is excellent; underlying indicators are traditional (RSI/MACD/Stoch). Missing: real-time options flow, volatility compression detection. |
-| **Edge Potential** | **8.5/10** | Time confluence is genuinely unique (9.5/10 innovation). Regime-adaptive scoring, institutional state machine, probability matrix, gravitational midpoint model — few retail platforms have this depth. Upgraded from 8.0 based on unique methodology assessment. |
-| **Professional Utility** | **7.5/10** | Strong intelligence layer across all 5 product hierarchy layers. Decision operationalization gap (Layer 4) is the primary weakness, not broker integration. Charting weakness is irrelevant — MSP is not a charting platform. Upgraded from 6.5. |
-| **Decision Support** | **8/10** | Answers all 4 questions (What/When/Where Risk/Where Target) via scanner + options + macro + backtest. Golden Egg framework is architecturally excellent. MPE concept would push this to 9+. Upgraded from 7.5. |
+| **Edge Potential** | **8.5/10** | Time confluence is genuinely unique (9.5/10 innovation). Regime-adaptive scoring, institutional state machine, probability matrix, gravitational midpoint model — few retail platforms have this depth. |
+| **Professional Utility** | **8/10** | Strong intelligence layer across all 5 product hierarchy layers. Golden Egg now live with MPE. Decision operationalization gap partially closed. Charting weakness is irrelevant — MSP is not a charting platform. |
+| **Decision Support** | **8.5/10** | Answers all 4 questions (What/When/Where Risk/Where Target) via scanner + options + macro + backtest. Golden Egg framework fully operational with live data + MPE. |
 | **Automation Potential** | **7/10** | State machine, alerts, signal recording infrastructure all exist. Missing: auto-execution, algorithm deployment, portfolio rebalancing. |
+| **AI Intelligence Integration** | **6/10** | Arca AI uses V2+V3 prompts, regime scoring, ACL, institutional filter. But missing: Capital Flow Engine, Probability Matrix, State Machine context, Doctrine feedback. See Section 26. |
 
-### **Composite Score: 7.7/10**
+### **Composite Score: 7.9/10**
 
-*Potential with NOW roadmap items completed: 8.5+/10*
+*Potential with intelligence wiring completed: 8.5+/10*
 
 ---
 
@@ -1165,4 +1188,74 @@ MarketScanner Pros has **more sophisticated trading intelligence architecture th
 The competitive positioning is clear: **MSP is the intelligence layer that sits between market data and trade decisions.** It doesn't need to be the chart, the broker, or the social network. It needs to be the place where traders go to answer: *"What is the market telling me, across all dimensions, right now — and what should I do about it?"*
 
 **Current classification:** Confluence-based market intelligence terminal with signal generation and research capability
-**Potential classification (with NOW roadmap):** Complete professional trade research and decision intelligence platform
+**Potential classification (with intelligence wiring):** Complete professional trade research and decision intelligence platform
+
+---
+
+## 26. Arca AI Intelligence Integration Audit (Added March 2026)
+
+### CURRENT STATE
+
+The platform has two AI endpoints:
+- **MSP-Analyst** (`/api/msp-analyst`) — Scanner-specific AI with deeper intelligence integration
+- **Copilot** (`/api/ai/copilot`) — Universal floating chat on every page, lighter intelligence
+
+### WHAT THE AI CURRENTLY USES
+
+| Intelligence System | MSP-Analyst | Copilot | Gap |
+|---|---|---|---|
+| V2 Prompt (7-layer hierarchy) | ✅ | ✅ | — |
+| V3 Engine (decision trace, confluence gate) | ✅ | ❌ | Copilot lacks V3 |
+| Regime Scoring (5 regimes, 6 components) | ✅ | ✅ | — |
+| Adaptive Confidence Lens (ACL) | ✅ | ✅ | — |
+| Institutional Filter (5-check grade) | ✅ | ❌ | Copilot lacks filter context |
+| Edge Context (win/loss patterns) | ✅ | ❌ | Copilot lacks edge history |
+| Performance Throttle (session P&L) | ✅ | ❌ | Copilot lacks dampening |
+| Session Phase Overlay (time-of-day) | ✅ | ❌ | Copilot lacks session timing |
+| Signal Accuracy History | ⚠️ Partial | ❌ | Neither fully uses accuracy data |
+| Page Data (scanner/GE/options context) | ❌ | ✅ (via pageData) | MSP-Analyst gets its own context |
+
+### WHAT THE AI DOES NOT USE (CRITICAL GAPS)
+
+| Intelligence System | Built? | Used by Any AI? | Impact |
+|---|---|---|---|
+| **Capital Flow Engine** (market_mode, gamma_state, conviction) | ✅ `lib/capitalFlowEngine.ts` | ❌ NEVER | 🔴 CRITICAL — AI doesn't know flow state |
+| **Probability Matrix** (pTrend%, pPin%, pExpansion%) | ✅ Inside CFE | ❌ NEVER | 🔴 CRITICAL — AI doesn't know probability bias |
+| **Institutional State Machine** (SCAN→WATCH→STALK→ARMED→EXECUTE) | ✅ `lib/institutional-state-machine.ts` | ❌ NEVER | 🔴 CRITICAL — AI doesn't know lifecycle phase |
+| **Market Pressure Engine** (4-pressure composite) | ✅ `lib/marketPressureEngine.ts` | ❌ NEVER | 🟠 HIGH — AI doesn't know pressure reading |
+| **Doctrine Classifier** (playbook classification) | ✅ `lib/doctrine/classifier.ts` | ❌ NEVER | 🟠 HIGH — AI doesn't know current playbook |
+| **Outcome Feedback Loop** (Bayesian signal reweighting) | ❌ Not built | N/A | 🟠 HIGH — Outcomes don't improve AI confidence |
+
+### CONSEQUENCE
+
+The AI has access to ~60% of the platform's intelligence. When a user asks "Should I trade BTC right now?", the AI:
+- ✅ Knows the regime, confluence score, indicators, ACL authorization
+- ❌ Doesn't know if market mode is PIN/LAUNCH/CHOP (Capital Flow Engine)
+- ❌ Doesn't know continuation probability is 68% vs expansion 10% (Probability Matrix)
+- ❌ Doesn't know the symbol is in STALK phase approaching ARMED (State Machine)
+- ❌ Doesn't know the 4-pressure composite reads 78 = HIGH_PRESSURE (MPE)
+- ❌ Doesn't know the current regime's playbook is "momentum_continuation" (Doctrine)
+
+This means the AI gives good generic analysis but misses the platform's most sophisticated intelligence.
+
+### WIRING ROADMAP
+
+**Tier 1 — Wire to Both AI Routes (HIGH Impact):**
+1. Call `computeCapitalFlowEngine()` and inject market_mode, conviction, probability_matrix into system messages
+2. Call `fetchMPE()` and inject 4-pressure composite + threshold classification
+3. Expose Institutional State Machine phase in system messages
+
+**Tier 2 — Backport to Copilot (MEDIUM Impact):**
+4. Add V3 Engine to copilot route
+5. Add edge context (`getEdgeContext()`) to copilot
+6. Add performance throttle to copilot
+7. Add session phase overlay to copilot
+
+**Tier 3 — Build Missing Feedback (HIGH Impact, Longer-term):**
+8. Build Bayesian outcome feedback loop (signal accuracy → confidence multiplier)
+9. Wire Doctrine Classifier to journal auto-tagging
+10. Create unified intelligence context layer (`lib/ai/unifiedIntelligenceContext.ts`)
+
+### AI INTELLIGENCE SCORE: 6/10
+
+The AI is smart but blind to the platform's best intelligence. Wiring Tier 1 items would push this to 8/10.

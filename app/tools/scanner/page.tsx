@@ -29,7 +29,7 @@ function formatPrice(p: number | undefined | null) {
   return p < 1 ? `$${p.toFixed(4)}` : `$${p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-const TABS = ['All', 'Equities', 'Crypto', 'Bullish', 'Bearish', 'High Score', 'DVE Signals', 'Regime Match'] as const;
+const TABS = ['All', 'Equities', 'Crypto', 'Bullish', 'Bearish', 'High Score', 'DVE Signals', 'Squeeze', 'Regime Match'] as const;
 type SortKey = 'symbol' | 'score' | 'direction' | 'confidence' | 'rsi' | 'price' | 'dveBbwp' | 'mspScore';
 type SortDir = 'asc' | 'desc';
 
@@ -401,6 +401,7 @@ export default function ScannerPage() {
       case 'Bearish': items = items.filter(r => r.direction === 'bearish'); break;
       case 'High Score': items = items.filter(r => Math.abs(r.score) >= 5); break;
       case 'DVE Signals': items = items.filter(r => (r.dveSignalType && r.dveSignalType !== 'none') || (r.dveFlags && r.dveFlags.length > 0)); break;
+      case 'Squeeze': items = items.filter(r => r.dveFlags?.includes('SQUEEZE_FIRE')); break;
       case 'Regime Match': items = items.filter(r => isRegimeCompatible(r)); break;
     }
     items.sort((a, b) => {
@@ -594,6 +595,9 @@ export default function ScannerPage() {
           rank: idx + 1, symbol: pick.symbol, direction: dir, confidence: conf, quality: qual,
           strategy: strat, rsi: pickRsi, adx: adxVal, atrPct, tfAlignment: tfA,
           volume24h: pick.volume ?? ind.volume, price: priceVal, permission: perm,
+          squeeze: ind.squeeze ?? false, squeezeStrength: ind.squeezeStrength ?? 0,
+          momentumAccel: ind.momentumAccel ?? false, momentumAccelScore: ind.momentumAccelScore ?? 0,
+          sectorRelStr: ind.sectorRelStr,
         } as ScreenerRow;
       })
       .filter((row: ScreenerRow) => {
@@ -607,9 +611,10 @@ export default function ScannerPage() {
           if (proVolState === 'moderate' && (atr < 1.5 || atr > 3)) return false;
           if (proVolState === 'high' && atr < 3) return false;
         }
+        if (proSqueeze === 'squeeze' && !row.squeeze) return false;
         return true;
       });
-  }, [proScanResults, proDirection, proQuality, proMinConfidence, proMtfAlignment, proVolState]);
+  }, [proScanResults, proDirection, proQuality, proMinConfidence, proMtfAlignment, proVolState, proSqueeze]);
 
   /* ─── Pro scan row click ─── */
   const handleProRowClick = useCallback((row: ScreenerRow) => {
@@ -689,6 +694,7 @@ export default function ScannerPage() {
                   : tab === 'Bearish' ? allResults.filter(r => r.direction === 'bearish').length
                   : tab === 'High Score' ? allResults.filter(r => Math.abs(r.score) >= 5).length
                   : tab === 'DVE Signals' ? allResults.filter(r => (r.dveSignalType && r.dveSignalType !== 'none') || (r.dveFlags && r.dveFlags.length > 0)).length
+                  : tab === 'Squeeze' ? allResults.filter(r => r.dveFlags?.includes('SQUEEZE_FIRE')).length
                   : tab === 'Regime Match' ? allResults.filter(r => isRegimeCompatible(r)).length
                   : 0;
                 return <option key={tab} value={tab}>{tab} ({count})</option>;
@@ -708,6 +714,7 @@ export default function ScannerPage() {
                     : tab === 'Bearish' ? allResults.filter(r => r.direction === 'bearish').length
                     : tab === 'High Score' ? allResults.filter(r => Math.abs(r.score) >= 5).length
                     : tab === 'DVE Signals' ? allResults.filter(r => (r.dveSignalType && r.dveSignalType !== 'none') || (r.dveFlags && r.dveFlags.length > 0)).length
+                    : tab === 'Squeeze' ? allResults.filter(r => r.dveFlags?.includes('SQUEEZE_FIRE')).length
                     : tab === 'Regime Match' ? allResults.filter(r => isRegimeCompatible(r)).length
                     : 0}
                 </span>
@@ -768,7 +775,7 @@ export default function ScannerPage() {
                             {(() => {
                               if (r.dveSignalType && r.dveSignalType !== 'none') return <span className="text-yellow-400 font-semibold">{r.dveSignalType.replace(/_/g, ' ')}</span>;
                               if (r.dveFlags && r.dveFlags.length > 0) {
-                                const fc: Record<string, string> = { SQUEEZE_FIRE: 'text-yellow-400', COMPRESSED: 'text-cyan-400', EXPANDING: 'text-amber-400', CLIMAX: 'text-red-400', BREAKOUT: 'text-emerald-400', HIGH_BREAKOUT: 'text-emerald-300', VOL_TRAP: 'text-red-300', EXHAUSTION_RISK: 'text-orange-400', DIR_BULL: 'text-emerald-400', DIR_BEAR: 'text-red-400', EXTENDED_PHASE: 'text-slate-400', CONTINUATION: 'text-amber-300' };
+                                const fc: Record<string, string> = { SQUEEZE_FIRE: 'text-yellow-400', COMPRESSED: 'text-cyan-400', EXPANDING: 'text-amber-400', CLIMAX: 'text-red-400', BREAKOUT: 'text-emerald-400', HIGH_BREAKOUT: 'text-emerald-300', VOL_TRAP: 'text-red-300', EXHAUSTION_RISK: 'text-orange-400', DIR_BULL: 'text-emerald-400', DIR_BEAR: 'text-red-400', EXTENDED_PHASE: 'text-slate-400', CONTINUATION: 'text-amber-300', MOMENTUM_ACCEL: 'text-emerald-300' };
                                 const top = r.dveFlags[0];
                                 return <span className={fc[top] || 'text-slate-400'}>{top.replace(/_/g, ' ')}{r.dveFlags.length > 1 ? ` +${r.dveFlags.length - 1}` : ''}</span>;
                               }

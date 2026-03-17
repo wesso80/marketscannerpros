@@ -19,6 +19,7 @@ import { classifyRegime } from "@/lib/regime-classifier";
 import { estimateComponentsFromContext, computeRegimeScore, deriveRegimeConfidence } from "@/lib/ai/regimeScoring";
 import { computeACLFromScoring } from "@/lib/ai/adaptiveConfidenceLens";
 import { computeScanEnhancements, type ScanEnhancements } from "@/lib/scannerEnhancements";
+import { detectMomentumAcceleration } from "@/lib/indicators";
 import { computeDVE } from "@/lib/directionalVolatilityEngine";
 import { getEdgeContext } from "@/lib/intelligence/edgeContextBuilder";
 import { normalizeSide } from "@/lib/intelligence/edgeProfile";
@@ -224,7 +225,7 @@ function computeScannerDVE(
   lows: number[],
   price: number,
   symbol: string,
-  opts?: { adx?: number; atr?: number; stochK?: number; stochD?: number; fundingRate?: number; oiUsd?: number }
+  opts?: { adx?: number; atr?: number; stochK?: number; stochD?: number; fundingRate?: number; oiUsd?: number; volumes?: number[] }
 ): { dveFlags: string[]; dveBreakoutScore: number; dveBbwp: number; dveDirectionalBias: string; dveSignalType: DVESignalType | null; dveContractionContinuation: number; dveExpansionContinuation: number } | undefined {
   try {
     if (closes.length < 30) return undefined;
@@ -259,6 +260,19 @@ function computeScannerDVE(
     if (reading.phasePersistence.contraction.active && reading.phasePersistence.contraction.stats.agePercentile > 80) flags.push('EXTENDED_PHASE');
     if (reading.phasePersistence.expansion.active && reading.phasePersistence.expansion.stats.agePercentile > 80) flags.push('EXTENDED_PHASE');
     if (reading.breakout.score >= 60) flags.push('HIGH_BREAKOUT');
+
+    // Momentum acceleration detection
+    if (opts?.volumes && opts.volumes.length === closes.length) {
+      try {
+        const bars: import('@/lib/indicators').OHLCVBar[] = closes.map((c, i) => ({
+          timestamp: '', open: closes[Math.max(0, i - 1)] ?? c,
+          high: highs[i] ?? c, low: lows[i] ?? c,
+          close: c, volume: opts.volumes![i] ?? 0,
+        }));
+        const momAccel = detectMomentumAcceleration(bars);
+        if (momAccel?.accelerating) flags.push('MOMENTUM_ACCEL');
+      } catch { /* non-fatal */ }
+    }
 
     return {
       dveFlags: flags,
@@ -1633,6 +1647,7 @@ export async function POST(req: NextRequest) {
           const dveCrypto = computeScannerDVE(closes, highs, lows, price, baseSym, {
             adx: adxObj.adx, atr: atrVal, stochK: stochObj.k, stochD: stochObj.d,
             fundingRate: cryptoDerivatives?.fundingRate, oiUsd: cryptoDerivatives?.openInterest,
+            volumes,
           });
 
           const scoreResult = computeScore(
@@ -2055,6 +2070,7 @@ export async function POST(req: NextRequest) {
             // Compute DVE BEFORE scoring for equity AV path
             const dveAV = computeScannerDVE(closes, highs, lows, price, sym, {
               adx: adxObj.adx, atr: atrVal, stochK: stochObj.k, stochD: stochObj.d,
+              volumes,
             });
 
             const scoreResult = computeScore(
