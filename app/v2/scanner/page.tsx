@@ -508,24 +508,26 @@ export default function ScannerPage() {
     if (!proScanResults?.topPicks) return [];
     return proScanResults.topPicks
       .map((pick: any, idx: number) => {
+        const ind = pick.indicators || {};
         const conf = pick.confidence ?? Math.min(99, Math.max(10, Math.round(pick.score ?? 50)));
         const dir = (pick.direction === 'bullish' ? 'LONG' : pick.direction === 'bearish' ? 'SHORT' : 'NEUTRAL') as 'LONG' | 'SHORT' | 'NEUTRAL';
         const qual = conf >= 70 ? 'high' : conf >= 50 ? 'medium' : 'low';
-        const adxVal = pick.adx ?? 0;
-        const atr = pick.atr ?? 0;
-        const priceVal = pick.price ?? 0;
-        const atrPct = priceVal > 0 ? (atr / priceVal) * 100 : 0;
+        const pickRsi = pick.rsi ?? ind.rsi;
+        const adxVal = pick.adx ?? ind.adx ?? 0;
+        const atr = pick.atr ?? ind.atr ?? 0;
+        const priceVal = pick.price ?? ind.price ?? 0;
+        const atrPct = priceVal > 0 ? (atr / priceVal) * 100 : (ind.atr_percent ?? 0);
         const trendOk = dir === 'LONG' ? (pick.signals?.bullish ?? 0) > (pick.signals?.bearish ?? 0) : dir === 'SHORT' ? (pick.signals?.bearish ?? 0) > (pick.signals?.bullish ?? 0) : false;
-        const momOk = pick.rsi != null && ((dir === 'LONG' && pick.rsi > 45) || (dir === 'SHORT' && pick.rsi < 55));
+        const momOk = pickRsi != null && ((dir === 'LONG' && pickRsi > 45) || (dir === 'SHORT' && pickRsi < 55));
         const flowOk = dir === 'LONG' ? (pick.signals?.bullish ?? 0) >= (pick.signals?.neutral ?? 0) : dir === 'SHORT' ? (pick.signals?.bearish ?? 0) >= (pick.signals?.neutral ?? 0) : false;
         const tfA = [trendOk, momOk, flowOk, dir !== 'NEUTRAL'].filter(Boolean).length;
-        const strat = pick.setup || (pick.macd_hist != null && pick.macd_hist > 0 ? 'MOM REV' : pick.rsi != null && pick.rsi < 35 ? 'MEAN REV' : atrPct < 1.5 ? 'BREAKOUT' : 'RANGE');
+        const strat = pick.setup || (pick.macd_hist != null && pick.macd_hist > 0 ? 'MOM REV' : pickRsi != null && pickRsi < 35 ? 'MEAN REV' : atrPct < 1.5 ? 'BREAKOUT' : 'RANGE');
         const rec = pick.institutionalFilter?.recommendation;
         const perm = rec === 'TRADE_READY' && qual !== 'low' ? 'COMPLIANT' : (rec === 'NO_TRADE' || qual === 'low') ? 'BLOCKED' : 'TIGHT';
         return {
           rank: idx + 1, symbol: pick.symbol, direction: dir, confidence: conf, quality: qual,
-          strategy: strat, rsi: pick.rsi, adx: adxVal, atrPct, tfAlignment: tfA,
-          volume24h: pick.volume, price: priceVal, permission: perm,
+          strategy: strat, rsi: pickRsi, adx: adxVal, atrPct, tfAlignment: tfA,
+          volume24h: pick.volume ?? ind.volume, price: priceVal, permission: perm,
         } as ScreenerRow;
       })
       .filter((row: ScreenerRow) => {
