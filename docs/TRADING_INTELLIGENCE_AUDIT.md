@@ -421,45 +421,54 @@ Crypto derivatives intelligence: funding rates, open interest, long/short ratios
 - Liquidation heat detection (cascading liquidation events)
 - Sentiment classification: Bullish (funding > +0.02%), Bearish (funding < -0.01%), Neutral
 - 60-second auto-refresh with 45-second derivatives cache
+- **Derivatives Terminal:** Perpetuals table, inspector panel, positioning signals, funding rate heatmap (20 coins × 8 exchanges)
+- **Deployment Gate:** Morning Decision Engine computes risk from cap delta, BTC dominance, stablecoin dominance, OI, funding, volume, breadth → YES/CONDITIONAL/NO
 
 **Data Sources:** CoinGecko commercial derivatives API (funding rates, OI, volume)
 
-### EDGE ANALYSIS: **Partial Edge**
+### EDGE ANALYSIS: **Real Edge**
 
 **What creates edge:**
 - Funding rate extremes are genuine mean-reversion signals (crowded positioning unwinds)
 - OI change direction is a leading indicator of momentum vs. exhaustion
 - L/S ratio extremes signal positioning crowding
+- Historical funding rate charting with price overlay enables trend analysis
+- Cross-exchange funding arbitrage ranker identifies yield opportunities
+- Stablecoin liquidity proxy tracks USDT+USDC supply as market liquidity signal
 
 **What limits edge:**
-- Snapshot only — no historical trend analysis or alerting thresholds
-- No cross-exchange comparison (Binance vs Bybit vs OKX funding rate differentials)
+- ~~Snapshot only — no historical trend analysis~~ **RESOLVED** — per-coin derivatives snapshots now stored by cron, historical chart built
+- ~~No cross-exchange comparison~~ **RESOLVED** — Arbitrage ranker card ranks exchange pairs by funding spread with annualised yield
 - Auto-logs are simplistic (Long if green, Short if red — no confluence gating)
 
 ### WHAT PROFESSIONAL TRADERS WOULD EXPECT
 - ✅ Funding rate monitoring
 - ✅ Open Interest tracking
 - ✅ Long/Short ratio
+- ✅ Historical funding rate charts — SVG dual-axis chart (price line + funding rate bars) from `derivatives_snapshots` table, populated by smart-check cron
+- ✅ Cross-exchange arbitrage signals — Arbitrage ranker card in derivatives terminal ranks top 15 funding differentials across exchange pairs with estimated annualised yield
+- ✅ Stablecoin liquidity proxy — USDT+USDC market cap tracking via `/api/stablecoin-liquidity`, flags >$100M single-day mints/redemptions as LIQUIDITY_EXPANSION/CONTRACTION signals
 - ⚠️ Partial: liquidation detection (heat detection exists but no cascade prediction)
-- ❌ No historical funding rate charts
-- ❌ No cross-exchange arbitrage signals
-- ❌ No whale wallet tracking
-- ❌ No exchange flow analysis (CEX inflow/outflow)
-- ❌ No liquidation heatmap (price levels where liquidations cluster)
+- ❌ No whale wallet tracking — *requires Arkham/Nansen/WhaleAlert, not available from CoinGecko*
+- ❌ No exchange flow analysis (CEX inflow/outflow) — *requires CryptoQuant/Glassnode, not available from CoinGecko*
+- ❌ No liquidation heatmap (price levels where liquidations cluster) — *requires Coinglass API, not available from CoinGecko*
+
+### GAPS RESOLVED (March 2026)
+- ~~Historical funding rate charting~~ ✅ **BUILT** — New `derivatives_snapshots` DB table (migration 052) stores per-coin funding rate, OI, volume, price at each cron snapshot. Smart-check cron extended to snapshot top 20 coins every run. New `/api/crypto-derivatives/history` endpoint serves time series. SVG dual-axis chart in CryptoTerminalView shows price line (amber) + funding rate bars (green/red).
+- ~~Cross-exchange funding rate differentials~~ ✅ **BUILT** — Arbitrage ranker card in CryptoTerminalView computes max–min funding spread per coin across all exchanges, ranks top 15 by spread magnitude, displays both exchange names, funding rates, spread, and estimated annualised yield (before fees).
+- ~~Stablecoin supply tracking~~ ✅ **BUILT** — New `/api/stablecoin-liquidity` endpoint fetches USDT+USDC market caps from CoinGecko `/coins/markets` (5-min cache). Computes 24h delta, flags >$100M mints/redemptions. `stablecoin_snapshots` DB table stores historical supply. Stablecoin Liquidity Proxy card in CryptoTerminalView shows USDT/USDC caps, delta, and signal status.
 
 ### WHAT IS CURRENTLY MISSING
-- Historical funding rate charting with overlay on price (data exists, UI visualization not implemented)
-- Cross-exchange funding rate differentials (arbitrage detection)
-- Liquidation heatmap by price level
-- Whale wallet tracking (large address movements)
-- Exchange flow analysis (CEX deposits/withdrawals as buy/sell pressure)
-- Stablecoin supply tracking (USDT/USDC minting as liquidity proxy)
+- Liquidation heatmap by price level — **Requires Coinglass API** (~$49-199/month). CoinGecko has no liquidation data.
+- Whale wallet tracking (large address movements) — **Requires Arkham/Nansen/WhaleAlert.** Not available from CoinGecko.
+- Exchange flow analysis (CEX deposits/withdrawals) — **Requires CryptoQuant/Glassnode.** Not available from CoinGecko.
+- Stablecoin mint/burn event detection — **Requires Glassnode or DefiLlama.** Current proxy uses market cap delta only.
 
 ### SIGNAL QUALITY
-- **Frequency:** Real-time snapshots with 60-second refresh — adequate for monitoring
+- **Frequency:** Real-time snapshots with 60-second refresh — adequate for monitoring. Historical data accumulates over time.
 - **Timeliness:** Near-real-time (45-second cache acceptable)
-- **Context:** Moderate — feeds into AI Analyst and MPE liquidity pressure component
-- **Rating:** Confirms moves. Funding extremes and OI changes are confirmatory, not predictive.
+- **Context:** Strong — feeds into AI Analyst, MPE liquidity pressure, Morning Decision Engine, and now provides historical trend context
+- **Rating:** Confirms and partially predicts. Funding extremes + historical trend analysis + arbitrage detection + stablecoin liquidity signals create a more complete derivatives intelligence picture.
 
 ---
 

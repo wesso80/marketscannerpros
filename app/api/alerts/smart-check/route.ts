@@ -95,15 +95,21 @@ async function checkSmartAlerts(req: NextRequest) {
         AND (expires_at IS NULL OR expires_at > NOW())
     `);
 
-    if (alerts.length === 0) {
-      return NextResponse.json({ checked: 0, triggered: 0, message: 'No active smart alerts' });
-    }
-
-    // Fetch all derivatives data once
+    // Fetch all derivatives data once (always — snapshot even with 0 alerts)
     const derivativesData = await fetchDerivativesData(req);
     
     // Save snapshot for historical analysis
     await saveSnapshot(derivativesData);
+
+    // Save per-coin derivatives snapshots for historical charting
+    await savePerCoinSnapshots(req);
+
+    // Save stablecoin supply snapshot
+    await saveStablecoinSnapshot(req);
+
+    if (alerts.length === 0) {
+      return NextResponse.json({ checked: 0, triggered: 0, message: 'No active smart alerts', snapshotSaved: true });
+    }
 
     const triggered: string[] = [];
     const skipped: string[] = [];
@@ -484,5 +490,84 @@ async function saveSnapshot(data: DerivativesData) {
     );
   } catch (err) {
     console.error('Failed to save snapshot:', err);
+  }
+}
+
+/** Snapshot top-20 coin derivatives for historical funding rate / OI charting */
+async function savePerCoinSnapshots(req: NextRequest) {
+  try {
+    const host = req.headers.get('host') || 'localhost:5000';
+    const protocol = host.includes('localhost') ? 'http' : 'https';
+    const baseUrl = `${protocol}://${host}`;
+
+    const res = await fetch(`${baseUrl}/api/crypto-derivatives?mode=multi`, {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(INTERNAL_FETCH_TIMEOUT_MS),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data?.coins?.length) return;
+
+    const values: any[][] = [];
+    for (const coin of data.coins) {
+      values.push([
+        coin.symbol,
+        coin.aggregatedFunding?.fundingRatePct ?? null,
+        coin.aggregatedFunding?.annualised ?? null,
+        coin.aggregatedFunding?.sentiment ?? null,
+        coin.aggregatedOI?.totalOI ?? null,
+        coin.aggregatedOI?.totalVolume24h ?? null,
+        coin.aggregatedFunding?.exchangeCount ?? null,
+        coin.price ?? null,
+        coin.change24h ?? null,
+      ]);
+    }
+
+    // Batch insert — one row per coin per snapshot
+    for (const v of values) {
+      await q(
+        `INSERT INTO derivatives_snapshots
+          (symbol, funding_rate_pct, annualised_pct, sentiment,
+           total_oi, total_volume_24h, exchange_count, price, change_24h)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+        v
+      );
+    }
+    console.log(`[smart-check] Saved ${values.length} per-coin derivatives snapshots`);
+  } catch (err) {
+    console.error('Failed to save per-coin snapshots:', err);
+  }
+}
+
+/** Snapshot USDT + USDC market cap for stablecoin liquidity tracking */
+async function saveStablecoinSnapshot(req: NextRequest) {
+  try {
+    const host = req.headers.get('host') || 'localhost:5000';
+    const protocol = host.includes('localhost') ? 'http' : 'https';
+    const baseUrl = `${protocol}://${host}`;
+
+    const res = await fetch(`${baseUrl}/api/stablecoin-liquidity`, {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(INTERNAL_FETCH_TIMEOUT_MS),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data?.usdt || !data?.usdc) return;
+
+    await q(
+      `INSERT INTO stablecoin_snapshots
+        (usdt_market_cap, usdc_market_cap, total_stablecoin_cap, usdt_24h_change, usdc_24h_change)
+       VALUES ($1,$2,$3,$4,$5)`,
+      [
+        data.usdt.marketCap ?? null,
+        data.usdc.marketCap ?? null,
+        (data.usdt.marketCap ?? 0) + (data.usdc.marketCap ?? 0),
+        data.usdt.change24h ?? null,
+        data.usdc.change24h ?? null,
+      ]
+    );
+    console.log('[smart-check] Saved stablecoin liquidity snapshot');
+  } catch (err) {
+    console.error('Failed to save stablecoin snapshot:', err);
   }
 }

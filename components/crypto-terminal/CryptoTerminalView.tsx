@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   useCryptoDerivatives,
@@ -9,6 +9,31 @@ import {
   buildSignals,
 } from '@/hooks/useCryptoDerivatives';
 import type { DerivativeRow, DerivedSignal, FundingHeatmapCell } from '@/types/cryptoTerminal';
+
+/* ═══ TYPES FOR NEW FEATURES ═══ */
+interface FundingSnapshot {
+  time: string;
+  fundingPct: number;
+  oi: number;
+  price: number;
+}
+
+interface ArbitrageOpportunity {
+  symbol: string;
+  exchangeA: string;
+  exchangeB: string;
+  fundingA: number;
+  fundingB: number;
+  spread: number;
+  annualisedYield: number;
+}
+
+interface StablecoinData {
+  usdt: { marketCap: number; change24h: number };
+  usdc: { marketCap: number; change24h: number };
+  total: { marketCap: number; delta24h: number; deltaPct: number };
+  signals: { signal: string; significantMint: boolean; significantRedemption: boolean };
+}
 
 /* ══════════════════════════════════════════════════
    UI PRIMITIVES (same zinc-950 desk theme)
@@ -202,6 +227,98 @@ function SignalsInline({ signals }: { signals: DerivedSignal[] }) {
 }
 
 /* ══════════════════════════════════════════════════
+   FUNDING RATE HISTORY CHART (SVG dual-axis)
+   ══════════════════════════════════════════════════ */
+
+function FundingHistoryChart({ data }: { data: FundingSnapshot[] }) {
+  const W = 700, H = 220, PAD = { top: 20, right: 60, bottom: 30, left: 60 };
+  const plotW = W - PAD.left - PAD.right;
+  const plotH = H - PAD.top - PAD.bottom;
+
+  const prices = data.map(d => d.price).filter(p => p > 0);
+  const fundings = data.map(d => d.fundingPct);
+
+  if (prices.length < 2) return <p className="text-sm text-zinc-500 py-4">Not enough data points to chart</p>;
+
+  const pMin = Math.min(...prices);
+  const pMax = Math.max(...prices);
+  const pRange = pMax - pMin || 1;
+
+  const fMin = Math.min(...fundings, 0);
+  const fMax = Math.max(...fundings, 0);
+  const fRange = Math.max(fMax - fMin, 0.01);
+
+  const xScale = (i: number) => PAD.left + (i / (data.length - 1)) * plotW;
+  const yPrice = (p: number) => PAD.top + plotH - ((p - pMin) / pRange) * plotH;
+  const yFunding = (f: number) => PAD.top + plotH - ((f - fMin) / fRange) * plotH;
+  const yZero = yFunding(0);
+
+  // Price line points
+  const priceLine = data.map((d, i) => `${xScale(i)},${yPrice(d.price)}`).join(' ');
+
+  // Funding rate bars
+  const barWidth = Math.max(2, plotW / data.length - 1);
+
+  // X-axis labels (every ~7th point)
+  const stride = Math.max(1, Math.floor(data.length / 5));
+  const xLabels = data.filter((_, i) => i % stride === 0 || i === data.length - 1);
+
+  return (
+    <div className="overflow-x-auto">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ minWidth: 500 }}>
+        {/* Grid lines */}
+        {[0.25, 0.5, 0.75].map(frac => (
+          <line key={frac} x1={PAD.left} x2={W - PAD.right} y1={PAD.top + plotH * (1 - frac)} y2={PAD.top + plotH * (1 - frac)} stroke="#27272a" strokeWidth="0.5" />
+        ))}
+
+        {/* Zero line for funding */}
+        <line x1={PAD.left} x2={W - PAD.right} y1={yZero} y2={yZero} stroke="#52525b" strokeWidth="0.5" strokeDasharray="4,3" />
+
+        {/* Funding rate bars */}
+        {data.map((d, i) => {
+          const x = xScale(i) - barWidth / 2;
+          const top = d.fundingPct >= 0 ? yFunding(d.fundingPct) : yZero;
+          const barH = Math.abs(yFunding(d.fundingPct) - yZero);
+          return (
+            <rect key={i} x={x} y={top} width={barWidth} height={Math.max(barH, 0.5)}
+              fill={d.fundingPct >= 0 ? 'rgba(16,185,129,0.35)' : 'rgba(239,68,68,0.35)'}
+              rx="1" />
+          );
+        })}
+
+        {/* Price line */}
+        <polyline fill="none" stroke="#f59e0b" strokeWidth="1.5" points={priceLine} />
+
+        {/* Y-axis labels — Price (left) */}
+        <text x={PAD.left - 4} y={PAD.top + 4} textAnchor="end" fill="#a1a1aa" fontSize="9">${pMax >= 1000 ? `${(pMax / 1000).toFixed(1)}K` : pMax.toFixed(2)}</text>
+        <text x={PAD.left - 4} y={PAD.top + plotH} textAnchor="end" fill="#a1a1aa" fontSize="9">${pMin >= 1000 ? `${(pMin / 1000).toFixed(1)}K` : pMin.toFixed(2)}</text>
+        <text x={PAD.left - 4} y={PAD.top - 6} textAnchor="end" fill="#f59e0b" fontSize="8">Price</text>
+
+        {/* Y-axis labels — Funding (right) */}
+        <text x={W - PAD.right + 4} y={PAD.top + 4} textAnchor="start" fill="#a1a1aa" fontSize="9">{fMax.toFixed(3)}%</text>
+        <text x={W - PAD.right + 4} y={PAD.top + plotH} textAnchor="start" fill="#a1a1aa" fontSize="9">{fMin.toFixed(3)}%</text>
+        <text x={W - PAD.right + 4} y={PAD.top - 6} textAnchor="start" fill="#10B981" fontSize="8">Funding</text>
+
+        {/* X-axis date labels */}
+        {xLabels.map((d, li) => {
+          const idx = data.indexOf(d);
+          const date = new Date(d.time);
+          const label = `${date.getMonth() + 1}/${date.getDate()}`;
+          return (
+            <text key={li} x={xScale(idx)} y={H - 4} textAnchor="middle" fill="#71717a" fontSize="9">{label}</text>
+          );
+        })}
+      </svg>
+      <div className="flex items-center justify-center gap-6 mt-2 text-[10px] text-zinc-500">
+        <span><span className="inline-block w-3 h-0.5 bg-amber-500 mr-1 align-middle" /> Price</span>
+        <span><span className="inline-block w-3 h-2 bg-emerald-500/40 mr-1 align-middle rounded-sm" /> Funding (+)</span>
+        <span><span className="inline-block w-3 h-2 bg-red-500/40 mr-1 align-middle rounded-sm" /> Funding (&minus;)</span>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════
    MAIN VIEW
    ══════════════════════════════════════════════════ */
 
@@ -215,6 +332,33 @@ export default function CryptoTerminalView() {
   // Data hooks
   const single = useCryptoDerivatives(selectedSymbol);
   const multi = useMultiCoinDerivatives();
+
+  // New feature state
+  const [fundingHistory, setFundingHistory] = useState<FundingSnapshot[]>([]);
+  const [fundingHistoryLoading, setFundingHistoryLoading] = useState(false);
+  const [stablecoinData, setStablecoinData] = useState<StablecoinData | null>(null);
+
+  // Fetch funding rate history when symbol changes
+  useEffect(() => {
+    let cancelled = false;
+    setFundingHistoryLoading(true);
+    fetch(`/api/crypto-derivatives/history?symbol=${encodeURIComponent(selectedSymbol)}&days=30`, { credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!cancelled && data?.snapshots) setFundingHistory(data.snapshots);
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setFundingHistoryLoading(false); });
+    return () => { cancelled = true; };
+  }, [selectedSymbol]);
+
+  // Fetch stablecoin liquidity once
+  useEffect(() => {
+    fetch('/api/stablecoin-liquidity', { credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setStablecoinData(data); })
+      .catch(() => {});
+  }, []);
 
   // Switch coin
   const switchCoin = useCallback((sym: string) => {
@@ -265,6 +409,33 @@ export default function CryptoTerminalView() {
   const aggFunding = single.data?.aggregatedFunding;
   const aggOI = single.data?.aggregatedOI;
   const sortArrow = (col: typeof sortCol) => sortCol === col ? (sortDir === 'desc' ? ' ↓' : ' ↑') : '';
+
+  // Arbitrage opportunities — ranked funding differentials across exchange pairs
+  const arbitrageOpps = useMemo<ArbitrageOpportunity[]>(() => {
+    if (!multi.data?.coins) return [];
+    const opps: ArbitrageOpportunity[] = [];
+    for (const coin of multi.data.coins) {
+      const rows = coin.exchanges;
+      if (rows.length < 2) continue;
+      // Find max and min funding exchange for this coin
+      const sorted = [...rows].sort((a, b) => b.fundingPct - a.fundingPct);
+      const high = sorted[0];
+      const low = sorted[sorted.length - 1];
+      const spread = high.fundingPct - low.fundingPct;
+      if (spread > 0.005) { // >0.005% minimum to be interesting
+        opps.push({
+          symbol: coin.symbol,
+          exchangeA: high.market.replace(' (Futures)', '').replace(' (Derivatives)', ''),
+          exchangeB: low.market.replace(' (Futures)', '').replace(' (Derivatives)', ''),
+          fundingA: high.fundingPct,
+          fundingB: low.fundingPct,
+          spread,
+          annualisedYield: spread * 3 * 365, // 3 funding periods per day
+        });
+      }
+    }
+    return opps.sort((a, b) => b.spread - a.spread).slice(0, 15);
+  }, [multi.data]);
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -551,6 +722,81 @@ export default function CryptoTerminalView() {
             </Card>
           </div>
         </div>
+
+        {/* === FUNDING RATE HISTORY + ARBITRAGE ROW === */}
+        <div className="grid grid-cols-12 gap-4">
+          {/* ── Funding Rate History Chart ───────────── */}
+          <div className="col-span-12 xl:col-span-8">
+            <Card title={`${selectedSymbol} Funding Rate History`} right={<span className="text-xs text-zinc-400">30-day snapshots</span>}>
+              {fundingHistoryLoading ? (
+                <div className="py-8 text-center text-sm text-zinc-500 animate-pulse">Loading history…</div>
+              ) : fundingHistory.length > 0 ? (
+                <FundingHistoryChart data={fundingHistory} />
+              ) : (
+                <div className="py-8 text-center text-sm text-zinc-500">
+                  <p>No historical data yet</p>
+                  <p className="text-[11px] text-zinc-600 mt-1">Snapshots are captured periodically by the cron job. Data will appear after the first few runs.</p>
+                </div>
+              )}
+            </Card>
+          </div>
+
+          {/* ── Arbitrage Ranker ─────────────────────── */}
+          <div className="col-span-12 xl:col-span-4">
+            <Card title="Funding Arbitrage" right={<Badge color={arbitrageOpps.length > 5 ? 'emerald' : 'zinc'}>{arbitrageOpps.length}</Badge>}>
+              {arbitrageOpps.length > 0 ? (
+                <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                  {arbitrageOpps.map((opp, i) => (
+                    <div key={`${opp.symbol}-${i}`} className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-semibold text-zinc-100">{opp.symbol}</span>
+                        <span className="text-xs font-mono text-emerald-400">+{opp.spread.toFixed(4)}%</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[11px]">
+                        <span className={`font-mono ${fundingColor(opp.fundingA)}`}>{opp.exchangeA.slice(0, 12)}: {fmtFunding(opp.fundingA)}</span>
+                        <span className="text-zinc-600">→</span>
+                        <span className={`font-mono ${fundingColor(opp.fundingB)}`}>{opp.exchangeB.slice(0, 12)}: {fmtFunding(opp.fundingB)}</span>
+                      </div>
+                      <div className="mt-1 text-[10px] text-zinc-500">
+                        Est. annualised: <span className="text-emerald-400 font-mono">{opp.annualisedYield.toFixed(1)}%</span>
+                        <span className="text-zinc-600 ml-1">(before fees)</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : multi.loading ? (
+                <div className="py-8 text-center text-sm text-zinc-500 animate-pulse">Loading…</div>
+              ) : (
+                <p className="py-8 text-center text-sm text-zinc-500">No significant funding differentials detected</p>
+              )}
+            </Card>
+          </div>
+        </div>
+
+        {/* === STABLECOIN LIQUIDITY PROXY === */}
+        {stablecoinData && (
+          <div className="grid grid-cols-12 gap-4">
+            <div className="col-span-12">
+              <Card title="Stablecoin Liquidity Proxy" right={
+                <Badge color={stablecoinData.signals.signal === 'LIQUIDITY_EXPANSION' ? 'emerald' : stablecoinData.signals.signal === 'LIQUIDITY_CONTRACTION' ? 'red' : 'zinc'}>
+                  {stablecoinData.signals.signal.replace('_', ' ')}
+                </Badge>
+              }>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  <MiniStat label="USDT Market Cap" value={fmtUsd(stablecoinData.usdt.marketCap)} sub={`${stablecoinData.usdt.change24h >= 0 ? '+' : ''}${stablecoinData.usdt.change24h.toFixed(2)}% 24h`} />
+                  <MiniStat label="USDC Market Cap" value={fmtUsd(stablecoinData.usdc.marketCap)} sub={`${stablecoinData.usdc.change24h >= 0 ? '+' : ''}${stablecoinData.usdc.change24h.toFixed(2)}% 24h`} />
+                  <MiniStat label="Total Stablecoin" value={fmtUsd(stablecoinData.total.marketCap)} />
+                  <MiniStat label="24h Delta" value={fmtUsd(Math.abs(stablecoinData.total.delta24h))} sub={`${stablecoinData.total.delta24h >= 0 ? 'Inflow' : 'Outflow'}`} />
+                  <MiniStat
+                    label="Signal"
+                    value={stablecoinData.signals.significantMint ? '🟢 Major Mint' : stablecoinData.signals.significantRedemption ? '🔴 Major Redeem' : '⚪ Stable'}
+                    sub={stablecoinData.signals.significantMint ? '>$100M minted — bullish liquidity' : stablecoinData.signals.significantRedemption ? '>$100M redeemed — watch for sell pressure' : 'No significant supply change'}
+                  />
+                </div>
+              </Card>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
