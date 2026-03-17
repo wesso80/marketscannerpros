@@ -7,7 +7,7 @@ import { avTakeToken } from "@/lib/avRateGovernor";
 import { shouldUseCache, canFallbackToAV, getCacheMode } from "@/lib/cacheMode";
 import { getCachedScanData, getBulkCachedScanData, CachedScanData } from "@/lib/scannerCache";
 import { verifyCronAuth } from "@/lib/adminAuth";
-import { isFreeForAllMode } from "@/lib/entitlements";
+import { isFreeForAllMode, getEffectiveTier } from "@/lib/entitlements";
 import { recordSignalsBatch, RecordSignalParams } from "@/lib/signalRecorder";
 import { getRuntimeRiskSnapshotInput } from "@/lib/risk/runtimeSnapshot";
 import { buildPermissionSnapshot } from "@/lib/risk-governor-hard";
@@ -373,10 +373,12 @@ export async function POST(req: NextRequest) {
       ? { workspaceId: 'system-cron', tier: 'pro_trader' as const, cid: 'system' }
       : (await getSessionFromCookie()) ?? { workspaceId: 'anonymous', tier: 'free' as const, cid: 'anonymous' };
 
-    // FREE_FOR_ALL_MODE: override tier to pro_trader (matches /api/me behavior)
-    const session = isFreeForAllMode()
-      ? { ...rawSession, tier: 'pro_trader' as const }
-      : rawSession;
+    // Resolve effective tier from DB (matches /api/me logic — admin, FFA, Stripe subscription)
+    const effectiveTier = isCronBypass
+      ? 'pro_trader' as const
+      : await getEffectiveTier(rawSession.workspaceId, rawSession.tier, rawSession.cid, dbQuery);
+
+    const session = { ...rawSession, tier: effectiveTier };
 
     console.info(`[scanner] session: tier=${session.tier} cid=${session.cid} ws=${session.workspaceId.substring(0, 8)}`);
 
@@ -410,7 +412,7 @@ export async function POST(req: NextRequest) {
         );
         const currentCount = usage[0]?.scan_count ?? 0;
         if (currentCount >= scanDailyLimit) {
-          const upgradeMsg = session.tier === 'anonymous'
+          const upgradeMsg = session.workspaceId === 'anonymous'
             ? 'Sign up for a free account for 5 scans/day, or upgrade to Pro for unlimited.'
             : 'Upgrade to Pro for unlimited scanning.';
           return NextResponse.json(
