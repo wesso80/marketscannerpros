@@ -386,12 +386,12 @@ async function persistDecisionPacketMutation(workspaceId: string, mutation: Deci
     ) VALUES (
       $1, $2, $3, $4, $5, $6, $7, $8,
       $9::jsonb, $10, $11, $12::jsonb, $13, $14, $15,
-      $16, $17, $18, $18, $19, 1, $20::jsonb, $21::timestamptz, NOW(),
-      CASE WHEN $16 = 'candidate' THEN $18 ELSE NULL END,
-      CASE WHEN $16 = 'planned' THEN $18 ELSE NULL END,
-      CASE WHEN $16 = 'alerted' THEN $18 ELSE NULL END,
-      CASE WHEN $16 = 'executed' THEN $18 ELSE NULL END,
-      CASE WHEN $16 = 'closed' THEN $18 ELSE NULL END
+      $16::text, $17, $18, $18, $19, 1, $20::jsonb, $21::timestamptz, NOW(),
+      CASE WHEN $16::text = 'candidate' THEN $18 ELSE NULL END,
+      CASE WHEN $16::text = 'planned' THEN $18 ELSE NULL END,
+      CASE WHEN $16::text = 'alerted' THEN $18 ELSE NULL END,
+      CASE WHEN $16::text = 'executed' THEN $18 ELSE NULL END,
+      CASE WHEN $16::text = 'closed' THEN $18 ELSE NULL END
     )
     ON CONFLICT (workspace_id, packet_id) DO UPDATE
     SET

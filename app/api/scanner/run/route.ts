@@ -365,23 +365,24 @@ function buildScannerLiquidityLevels(
 export async function POST(req: NextRequest) {
   console.info(`[scanner] VERSION: ${SCANNER_VERSION} - stablecoins excluded`);
   try {
-    // Rate limit check
-    const ip = getClientIP(req);
-    const rl = scannerLimiter.check(ip);
-    if (!rl.allowed) {
-      return NextResponse.json(
-        { error: 'Too many scanner requests. Please wait before scanning again.', retryAfter: rl.retryAfter },
-        { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } }
-      );
-    }
-
-    // Auth check - allow internal cron jobs to bypass via x-cron-secret header
-    // Anonymous users get default scans with limited scope
+    // Auth check FIRST - cron jobs and paid users bypass rate limiter
     const isCronBypass = verifyCronAuth(req);
 
     const session = isCronBypass
       ? { workspaceId: 'system-cron', tier: 'pro_trader' as const, cid: 'system' }
       : (await getSessionFromCookie()) ?? { workspaceId: 'anonymous', tier: 'free' as const, cid: 'anonymous' };
+
+    // Rate limit check - skip for cron jobs and paid tiers
+    if (!isCronBypass && session.tier !== 'pro' && session.tier !== 'pro_trader') {
+      const ip = getClientIP(req);
+      const rl = scannerLimiter.check(ip);
+      if (!rl.allowed) {
+        return NextResponse.json(
+          { error: 'Too many scanner requests. Please wait before scanning again.', retryAfter: rl.retryAfter },
+          { status: 429, headers: { 'Retry-After': String(rl.retryAfter ?? 60) } }
+        );
+      }
+    }
 
     // ─── Daily scan limit enforcement ───
     // Free: 5/day, Anonymous: 3/day, Pro/Pro Trader: unlimited
