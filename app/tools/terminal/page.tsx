@@ -17,6 +17,7 @@ const OptionsConfluence = dynamic(() => import('@/app/tools/options-confluence/p
 const OptionsFlow = dynamic(() => import('@/app/tools/options-flow/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Flow…</div> });
 const TimeScanner = dynamic(() => import('@/app/tools/time-scanner/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Time Gravity…</div> });
 const ConfluenceScanner = dynamic(() => import('@/app/tools/confluence-scanner/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Time Confluence Scanner…</div> });
+const TimeConfluenceWidget = dynamic(() => import('@/components/TimeConfluenceWidget').then(m => ({ default: m.default })), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Fib Confluence…</div> });
 import {
   useCloseCalendar,
   useFlow,
@@ -649,6 +650,9 @@ export default function TerminalPage() {
       {tab === 'Time Confluence' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Time Confluence Scanner">
           <ConfluenceScanner />
+          <div className="mt-6">
+            <TimeConfluenceWidget showMacro showMicro showCalendar />
+          </div>
         </UpgradeGate>
       )}
     </div>

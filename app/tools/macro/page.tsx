@@ -24,9 +24,13 @@ interface IndicatorValue {
 interface MacroData {
   timestamp: string;
   rates: {
-    treasury10y: IndicatorValue;
+    treasury3m?: IndicatorValue;
     treasury2y: IndicatorValue;
+    treasury5y?: IndicatorValue;
+    treasury10y: IndicatorValue;
+    treasury30y?: IndicatorValue;
     yieldCurve: { value: number | null; inverted: boolean; label: string };
+    yieldCurve3m10y?: { value: number | null; inverted: boolean; label: string };
     fedFunds: IndicatorValue;
   };
   inflation: {
@@ -200,6 +204,9 @@ export default function MacroDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<string>('');
+  const [commodities, setCommodities] = useState<any[] | null>(null);
+  const [correlationRegime, setCorrelationRegime] = useState<any | null>(null);
+  const [spyPCRatio, setSpyPCRatio] = useState<{ ratio: number; signal: string; totalCalls: number; totalPuts: number } | null>(null);
 
   const { isAdmin } = useUserTier();
   const { setPageData } = useAIPageContext();
@@ -223,6 +230,55 @@ export default function MacroDashboardPage() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // Fetch commodities
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/commodities');
+        if (res.ok) {
+          const json = await res.json();
+          setCommodities(json.commodities || json.data || []);
+        }
+      } catch {}
+    })();
+  }, []);
+
+  // Fetch correlation regime
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/correlation-regime');
+        if (res.ok) {
+          const json = await res.json();
+          setCorrelationRegime(json);
+        }
+      } catch {}
+    })();
+  }, []);
+
+  // Fetch SPY P/C ratio
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/options-chain?symbol=SPY');
+        if (res.ok) {
+          const json = await res.json();
+          const contracts = json.contracts || [];
+          let totalCalls = 0;
+          let totalPuts = 0;
+          for (const opt of contracts) {
+            const oi = Number(opt.openInterest || 0);
+            if (opt.type === 'call') totalCalls += oi;
+            else if (opt.type === 'put') totalPuts += oi;
+          }
+          const ratio = totalCalls > 0 ? totalPuts / totalCalls : 0;
+          const signal = ratio > 1.0 ? 'Bearish (elevated put buying)' : ratio < 0.7 ? 'Bullish (low put/call)' : 'Neutral';
+          setSpyPCRatio({ ratio: Number(ratio.toFixed(2)), signal, totalCalls, totalPuts });
+        }
+      } catch {}
+    })();
   }, []);
 
   // Auto-refresh hourly (pauses when tab hidden)
@@ -279,7 +335,7 @@ export default function MacroDashboardPage() {
                 <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} className="h-4 w-4" />
                 Auto refresh
               </label>
-              {['decision', 'rates', 'inflation', 'growth', 'employment', 'implications'].map((tab) => (
+              {['decision', 'rates', 'yieldcurve', 'commodities', 'correlation', 'sentiment', 'inflation', 'growth', 'employment', 'implications'].map((tab) => (
                 <a key={tab} href={`#${tab}`} className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/70 hover:bg-white/10">
                   {tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </a>
@@ -400,6 +456,191 @@ export default function MacroDashboardPage() {
                 <div className="text-2xl font-semibold">{toPct(data.employment.unemployment.value, 1)}</div>
                 <div className="mt-1 text-xs text-white/60">Unemployment • {data.employment.trend}</div>
               </div>
+            </section>
+
+            {/* ─── Yield Curve ─── */}
+            <section id="yieldcurve" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
+              <div className="text-sm font-semibold text-white">Treasury Yield Curve</div>
+              <div className="mt-1 text-xs text-white/50">Full maturity spectrum: 3M → 2Y → 5Y → 10Y → 30Y</div>
+              <div className="mt-3">
+                {(() => {
+                  const points = [
+                    { label: '3M', value: data.rates.treasury3m?.value ?? null },
+                    { label: '2Y', value: data.rates.treasury2y.value },
+                    { label: '5Y', value: data.rates.treasury5y?.value ?? null },
+                    { label: '10Y', value: data.rates.treasury10y.value },
+                    { label: '30Y', value: data.rates.treasury30y?.value ?? null },
+                  ].filter(p => p.value !== null) as { label: string; value: number }[];
+                  if (points.length < 2) return <div className="text-xs text-white/40">Yield data loading…</div>;
+                  const minY = Math.min(...points.map(p => p.value)) - 0.2;
+                  const maxY = Math.max(...points.map(p => p.value)) + 0.2;
+                  const rangeY = maxY - minY || 1;
+                  const w = 400;
+                  const h = 120;
+                  const pad = { l: 40, r: 20, t: 10, b: 25 };
+                  const pw = w - pad.l - pad.r;
+                  const ph = h - pad.t - pad.b;
+                  const svgPoints = points.map((p, i) => ({
+                    x: pad.l + (i / (points.length - 1)) * pw,
+                    y: pad.t + ph - ((p.value - minY) / rangeY) * ph,
+                    ...p,
+                  }));
+                  const pathD = svgPoints.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+                  const inverted = (data.rates.treasury3m?.value ?? 0) > (data.rates.treasury10y.value ?? 0);
+                  return (
+                    <div>
+                      <svg viewBox={`0 0 ${w} ${h}`} className="w-full max-w-[500px]" style={{ height: 140 }}>
+                        {/* grid lines */}
+                        {[0, 0.25, 0.5, 0.75, 1].map(frac => {
+                          const y = pad.t + ph - frac * ph;
+                          const val = minY + frac * rangeY;
+                          return <g key={frac}><line x1={pad.l} y1={y} x2={w - pad.r} y2={y} stroke="rgba(255,255,255,0.08)" /><text x={pad.l - 4} y={y + 3} textAnchor="end" fill="rgba(255,255,255,0.4)" fontSize="9">{val.toFixed(1)}%</text></g>;
+                        })}
+                        {/* curve line */}
+                        <path d={pathD} fill="none" stroke={inverted ? '#f87171' : '#60a5fa'} strokeWidth="2" />
+                        {/* dots + labels */}
+                        {svgPoints.map(p => (
+                          <g key={p.label}>
+                            <circle cx={p.x} cy={p.y} r="4" fill={inverted ? '#f87171' : '#60a5fa'} />
+                            <text x={p.x} y={p.y - 8} textAnchor="middle" fill="white" fontSize="10" fontWeight="600">{p.value.toFixed(2)}%</text>
+                            <text x={p.x} y={h - 5} textAnchor="middle" fill="rgba(255,255,255,0.6)" fontSize="10">{p.label}</text>
+                          </g>
+                        ))}
+                      </svg>
+                      <div className="mt-2 flex flex-wrap gap-3 text-xs">
+                        <span className="text-white/60">2s10s Spread: <span className={data.rates.yieldCurve.inverted ? 'text-rose-400 font-semibold' : 'text-emerald-400 font-semibold'}>{toPct(data.rates.yieldCurve.value)} {data.rates.yieldCurve.label}</span></span>
+                        {data.rates.yieldCurve3m10y && (
+                          <span className="text-white/60">3m10y Spread: <span className={data.rates.yieldCurve3m10y.inverted ? 'text-rose-400 font-semibold' : 'text-emerald-400 font-semibold'}>{toPct(data.rates.yieldCurve3m10y.value)} {data.rates.yieldCurve3m10y.label}</span></span>
+                        )}
+                        <span className="text-white/60">Fed Funds: <span className="text-white font-semibold">{toPct(data.rates.fedFunds.value)}</span></span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </section>
+
+            {/* ─── Commodities ─── */}
+            <section id="commodities" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
+              <div className="text-sm font-semibold text-white">Commodities Monitor</div>
+              <div className="mt-1 text-xs text-white/50">Oil, metals, agriculture — growth proxy and inflation signals</div>
+              {commodities && commodities.length > 0 ? (
+                <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4">
+                  {commodities.map((c: any) => (
+                    <div key={c.symbol || c.name} className="rounded-lg border border-white/10 bg-black/20 p-2">
+                      <div className="text-[11px] text-white/50">{c.name || c.symbol}</div>
+                      <div className="mt-1 flex items-center justify-between">
+                        <span className="text-sm font-semibold text-white">${typeof c.price === 'number' ? c.price.toFixed(2) : 'N/A'}</span>
+                        <span className={`text-xs font-semibold ${(c.changePercent ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {(c.changePercent ?? 0) >= 0 ? '+' : ''}{typeof c.changePercent === 'number' ? c.changePercent.toFixed(1) : '0.0'}%
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-white/40">{c.category}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-3 text-xs text-white/40">{commodities === null ? 'Loading commodities data…' : 'No commodity data available'}</div>
+              )}
+            </section>
+
+            {/* ─── Correlation Regime ─── */}
+            <section id="correlation" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
+              <div className="text-sm font-semibold text-white">Cross-Asset Correlation Regime</div>
+              <div className="mt-1 text-xs text-white/50">BTC↔SPY correlation, VIX regime, DXY trend, sector rotation</div>
+              {correlationRegime ? (
+                <div className="mt-3">
+                  <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                    <div className="rounded-lg border border-white/10 bg-black/20 p-2">
+                      <div className="text-[11px] text-white/50">Regime</div>
+                      <div className={`mt-1 text-sm font-semibold ${
+                        correlationRegime.regime === 'RISK_ON' ? 'text-emerald-400' :
+                        correlationRegime.regime === 'RISK_OFF' || correlationRegime.regime === 'STRESS' ? 'text-rose-400' :
+                        'text-amber-400'
+                      }`}>{correlationRegime.regime.replace('_', ' ')}</div>
+                    </div>
+                    <div className="rounded-lg border border-white/10 bg-black/20 p-2">
+                      <div className="text-[11px] text-white/50">VIX Regime</div>
+                      <div className={`mt-1 text-sm font-semibold ${
+                        correlationRegime.vixRegime === 'LOW' ? 'text-emerald-400' :
+                        correlationRegime.vixRegime === 'EXTREME' ? 'text-rose-400' :
+                        correlationRegime.vixRegime === 'ELEVATED' ? 'text-amber-400' :
+                        'text-white'
+                      }`}>{correlationRegime.vixRegime}</div>
+                    </div>
+                    <div className="rounded-lg border border-white/10 bg-black/20 p-2">
+                      <div className="text-[11px] text-white/50">Risk Score</div>
+                      <div className="mt-1 text-sm font-semibold text-white">{correlationRegime.riskScore}/100</div>
+                    </div>
+                    <div className="rounded-lg border border-white/10 bg-black/20 p-2">
+                      <div className="text-[11px] text-white/50">Size Multiplier</div>
+                      <div className="mt-1 text-sm font-semibold text-white">{correlationRegime.sizeMultiplier}x</div>
+                    </div>
+                  </div>
+                  <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-4">
+                    <div className="rounded-lg border border-white/10 bg-black/20 p-2">
+                      <div className="text-[11px] text-white/50">DXY Trend</div>
+                      <div className="mt-1 text-xs text-white/80">{correlationRegime.dxyTrend}</div>
+                    </div>
+                    <div className="rounded-lg border border-white/10 bg-black/20 p-2">
+                      <div className="text-[11px] text-white/50">BTC↔SPY Corr</div>
+                      <div className="mt-1 text-xs text-white/80">{correlationRegime.btcSpyCorrelation}</div>
+                    </div>
+                    <div className="rounded-lg border border-white/10 bg-black/20 p-2">
+                      <div className="text-[11px] text-white/50">Sector Rotation</div>
+                      <div className="mt-1 text-xs text-white/80">{correlationRegime.sectorRotation?.replace('_', ' ') || 'MIXED'}</div>
+                    </div>
+                    <div className="rounded-lg border border-white/10 bg-black/20 p-2">
+                      <div className="text-[11px] text-white/50">Gold Safe Haven</div>
+                      <div className="mt-1 text-xs text-white/80">{correlationRegime.components?.goldSafeHaven ? '⚠️ Active' : 'Inactive'}</div>
+                    </div>
+                  </div>
+                  {correlationRegime.warnings?.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {correlationRegime.warnings.map((w: string, i: number) => (
+                        <div key={i} className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-300">{w}</div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="mt-2 rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-xs text-white/70">
+                    {correlationRegime.recommendation}
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-3 text-xs text-white/40">Loading correlation regime…</div>
+              )}
+            </section>
+
+            {/* ─── SPY Put/Call Ratio (Market Sentiment) ─── */}
+            <section id="sentiment" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
+              <div className="text-sm font-semibold text-white">Market Sentiment — SPY Put/Call Ratio</div>
+              <div className="mt-1 text-xs text-white/50">Aggregate options positioning as a contrarian sentiment indicator</div>
+              {spyPCRatio ? (
+                <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+                  <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                    <div className="text-[11px] text-white/50">P/C Ratio</div>
+                    <div className={`mt-1 text-2xl font-semibold ${
+                      spyPCRatio.ratio > 1.0 ? 'text-rose-400' : spyPCRatio.ratio < 0.7 ? 'text-emerald-400' : 'text-white'
+                    }`}>{spyPCRatio.ratio}</div>
+                  </div>
+                  <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                    <div className="text-[11px] text-white/50">Signal</div>
+                    <div className={`mt-1 text-sm font-semibold ${
+                      spyPCRatio.signal.startsWith('Bearish') ? 'text-rose-400' : spyPCRatio.signal.startsWith('Bullish') ? 'text-emerald-400' : 'text-white'
+                    }`}>{spyPCRatio.signal}</div>
+                  </div>
+                  <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                    <div className="text-[11px] text-white/50">Total Call OI</div>
+                    <div className="mt-1 text-sm font-semibold text-white">{spyPCRatio.totalCalls.toLocaleString()}</div>
+                  </div>
+                  <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                    <div className="text-[11px] text-white/50">Total Put OI</div>
+                    <div className="mt-1 text-sm font-semibold text-white">{spyPCRatio.totalPuts.toLocaleString()}</div>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-3 text-xs text-white/40">Loading SPY options data…</div>
+              )}
             </section>
 
             <section id="implications" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">

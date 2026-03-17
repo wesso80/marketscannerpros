@@ -103,6 +103,9 @@ async function fetchAllIndicators(apiKey: string, now: number) {
   const indicatorsToFetch = [
     { func: 'TREASURY_YIELD', maturity: '10year' },
     { func: 'TREASURY_YIELD', maturity: '2year' },
+    { func: 'TREASURY_YIELD', maturity: '3month' },
+    { func: 'TREASURY_YIELD', maturity: '5year' },
+    { func: 'TREASURY_YIELD', maturity: '30year' },
     { func: 'FEDERAL_FUNDS_RATE' },
     { func: 'CPI' },
     { func: 'INFLATION' },
@@ -139,6 +142,9 @@ async function fetchAllIndicators(apiKey: string, now: number) {
   // Process results
   const treasury10y = results.find(r => r.indicator === 'TREASURY_YIELD' && r.maturity === '10year');
   const treasury2y = results.find(r => r.indicator === 'TREASURY_YIELD' && r.maturity === '2year');
+  const treasury3m = results.find(r => r.indicator === 'TREASURY_YIELD' && r.maturity === '3month');
+  const treasury5y = results.find(r => r.indicator === 'TREASURY_YIELD' && r.maturity === '5year');
+  const treasury30y = results.find(r => r.indicator === 'TREASURY_YIELD' && r.maturity === '30year');
   const fedFunds = results.find(r => r.indicator === 'FEDERAL_FUNDS_RATE');
   const cpi = results.find(r => r.indicator === 'CPI');
   const inflation = results.find(r => r.indicator === 'INFLATION');
@@ -161,18 +167,30 @@ async function fetchAllIndicators(apiKey: string, now: number) {
   
   const t10y = getValue(treasury10y);
   const t2y = getValue(treasury2y);
+  const t3m = getValue(treasury3m);
+  const t5y = getValue(treasury5y);
+  const t30y = getValue(treasury30y);
   const yieldCurve = t10y && t2y ? t10y - t2y : null;
+  const yieldCurve3m10y = t10y && t3m ? t10y - t3m : null;
   
   const dashboard = {
     timestamp: new Date().toISOString(),
     
     rates: {
-      treasury10y: { value: t10y, history: getHistory(treasury10y) },
+      treasury3m: { value: t3m, history: getHistory(treasury3m) },
       treasury2y: { value: t2y, history: getHistory(treasury2y) },
+      treasury5y: { value: t5y, history: getHistory(treasury5y) },
+      treasury10y: { value: t10y, history: getHistory(treasury10y) },
+      treasury30y: { value: t30y, history: getHistory(treasury30y) },
       yieldCurve: { 
         value: yieldCurve ? Math.round(yieldCurve * 100) / 100 : null,
         inverted: yieldCurve !== null && yieldCurve < 0,
         label: yieldCurve !== null ? (yieldCurve < 0 ? '⚠️ Inverted' : 'Normal') : 'N/A',
+      },
+      yieldCurve3m10y: {
+        value: yieldCurve3m10y ? Math.round(yieldCurve3m10y * 100) / 100 : null,
+        inverted: yieldCurve3m10y !== null && yieldCurve3m10y < 0,
+        label: yieldCurve3m10y !== null ? (yieldCurve3m10y < 0 ? '⚠️ Inverted' : 'Normal') : 'N/A',
       },
       fedFunds: { value: getValue(fedFunds), history: getHistory(fedFunds) },
     },

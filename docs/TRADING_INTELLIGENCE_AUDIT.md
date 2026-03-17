@@ -366,7 +366,7 @@ Global regime classification that gates ALL trading permission. The highest auth
 - Tightening rates + weakening growth
 - Data > 6 hours stale
 
-**Data Sources:** Alpha Vantage TREASURY_YIELD, FEDERAL_FUNDS_RATE, CPI, INFLATION, UNEMPLOYMENT, REAL_GDP (1-hour cache)
+**Data Sources:** Alpha Vantage TREASURY_YIELD (3M/2Y/5Y/10Y/30Y), FEDERAL_FUNDS_RATE, CPI, INFLATION, UNEMPLOYMENT, REAL_GDP (1-hour cache), `/api/commodities` (12 commodities via ETF proxies), `/api/correlation-regime` (BTC/SPY/VIX/DXY/Gold), `/api/options-chain` (SPY P/C ratio)
 
 ### EDGE ANALYSIS: **Real Edge**
 
@@ -384,18 +384,23 @@ Global regime classification that gates ALL trading permission. The highest auth
 - ✅ Hard blocker rules (automatic NO)
 - ✅ Upcoming catalyst calendar (FOMC, CPI, NFP)
 - ✅ Confidence scoring with penalties
-- ⚠️ Partial: bond yield analysis (2Y/10Y tracked, but no full yield curve visualization)
-- ❌ No cross-asset correlation matrix (SPY/GLD/DXY/TNX/BTC)
-- ❌ No central bank policy tracker (beyond Fed — no ECB, BOJ, PBOC)
-- ❌ No commodity correlations (oil/copper as growth proxies)
+- ✅ Full yield curve visualization — 3M/2Y/5Y/10Y/30Y fetched from Alpha Vantage TREASURY_YIELD, rendered as interactive SVG curve chart. 2s10s and 3m10y spread calculations with inversion detection.
+- ✅ Cross-asset correlation regime — `lib/correlation-regime-engine.ts` (245 lines) integrated into macro page. Displays regime (RISK_ON/RISK_OFF/DIVERGENT/DECORRELATED/STRESS), VIX regime, risk score 0-100, size multiplier, DXY trend, BTC↔SPY correlation, sector rotation, gold safe-haven status, and warnings.
+- ✅ Commodities monitor — Macro page consumes `/api/commodities` endpoint (12 commodities: WTI, Brent, NatGas, Gold, Silver, Copper, Aluminum, Wheat, Corn, Cotton, Sugar, Coffee). Displays price, change%, and category as growth/inflation proxy signals.
+- ✅ SPY Put/Call ratio — Fetches SPY options chain via `/api/options-chain?symbol=SPY`, aggregates total call/put open interest, computes P/C ratio as contrarian sentiment indicator (>1.0 bearish, <0.7 bullish).
+- ❌ No central bank policy tracker (beyond Fed — no ECB, BOJ, PBOC) — *requires data source not available from AV/CoinGecko*
+- ❌ No credit spreads (HY vs IG) — *requires FRED API or ICE data, not available from current APIs*
 
 ### WHAT IS CURRENTLY MISSING
-- Full yield curve visualization (2Y/5Y/10Y/30Y spread)
-- Cross-asset correlation matrix with rolling windows
-- Global central bank policy tracking
-- Commodity cycle analysis (copper/oil as leading indicators)
-- Credit spreads (HY vs IG) as stress indicators
-- Put/Call ratio for macro risk overlay
+- Global central bank policy tracking — **Requires new data source.** ECB/BOJ/PBOC rate decisions not available from Alpha Vantage.
+- Credit spreads (HY vs IG) as stress indicators — **Requires FRED API** (ICE BofA indices). Not available via AV or CoinGecko. Skip for now.
+- Rolling cross-asset correlation windows (current implementation uses snapshot correlations; historical rolling windows would need price history DB)
+
+### GAPS RESOLVED (March 2026)
+- ~~Full yield curve visualization (2Y/5Y/10Y/30Y spread)~~ ✅ **BUILT** — API now fetches 3M/2Y/5Y/10Y/30Y yields. SVG yield curve chart with color-coded inversion detection. 2s10s and 3m10y spread calculations displayed.
+- ~~Cross-asset correlation matrix~~ ✅ **BUILT** — `lib/correlation-regime-engine.ts` was already fully coded but not wired to macro page. Now integrated: displays regime, VIX, risk score, size multiplier, DXY, BTC↔SPY correlation, sector rotation, gold safe-haven, warnings, and AI recommendation.
+- ~~Commodity cycle analysis (copper/oil as leading indicators)~~ ✅ **BUILT** — `/api/commodities` endpoint (310 lines) was already fully coded but not consumed by macro page. Now integrated: 12 commodities displayed with real-time ETF proxy prices and change%.
+- ~~Put/Call ratio for macro risk overlay~~ ✅ **BUILT** — SPY options chain P/C ratio computed from live Alpha Vantage REALTIME_OPTIONS_FMV data. Displayed as market sentiment section with ratio, signal classification, and total call/put OI.
 
 ### SIGNAL QUALITY
 - **Frequency:** Appropriate — macro regimes change slowly, signals update hourly
