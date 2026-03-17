@@ -402,7 +402,7 @@ export async function POST(req: NextRequest) {
       pro: null,       // unlimited
       pro_trader: null, // unlimited
     };
-    const scanDailyLimit = SCAN_DAILY_LIMITS[session.tier] ?? 5;
+    const scanDailyLimit = session.tier in SCAN_DAILY_LIMITS ? SCAN_DAILY_LIMITS[session.tier] : 5;
     if (scanDailyLimit !== null && !isCronBypass) {
       try {
         const today = new Date().toISOString().split('T')[0];
