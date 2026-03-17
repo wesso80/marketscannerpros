@@ -9,13 +9,13 @@ import { useState, useMemo, useEffect, useCallback, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useV2 } from '../_lib/V2Context';
 import { useUserTier } from '@/lib/useUserTier';
+import { useCachedTopSymbols } from '@/hooks/useCachedTopSymbols';
 
 const OptionsTerminalView = dynamic(() => import('@/components/options-terminal/OptionsTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Options Terminal…</div> });
 const CryptoTerminalView = dynamic(() => import('@/components/crypto-terminal/CryptoTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminal…</div> });
 import {
   useCloseCalendar,
   useFlow,
-  useScannerResults,
   type CloseCalendarAnchor,
   type ForwardCloseScheduleRow,
   type ForwardCloseCluster,
@@ -100,14 +100,15 @@ export default function TerminalPage() {
     if (s) { selectSymbol(s); }
   };
 
-  /* Quick symbols from scanner */
-  const equityScanner = useScannerResults('equity');
-  const cryptoScanner = useScannerResults('crypto');
+  /* Quick symbols from worker cache */
+  const cached = useCachedTopSymbols(5);
+  const FALLBACK_QS = ['BTC', 'ETH', 'SOL', 'XRP', 'BNB', 'AAPL', 'MSFT', 'NVDA', 'GOOGL', 'AMZN'];
   const quickSymbols = useMemo(() => {
-    const eq = (equityScanner.data?.results || []).slice(0, 5).map(r => r.symbol);
-    const cr = (cryptoScanner.data?.results || []).slice(0, 5).map(r => r.symbol);
-    return [...cr, ...eq];
-  }, [equityScanner.data, cryptoScanner.data]);
+    const cr = cached.crypto.map(c => c.symbol);
+    const eq = cached.equity.map(c => c.symbol);
+    const syms = [...cr, ...eq];
+    return syms.length > 0 ? syms.slice(0, 10) : FALLBACK_QS;
+  }, [cached.crypto, cached.equity]);
 
   /* Close Calendar state */
   const [anchor, setAnchor] = useState<CloseCalendarAnchor>('TODAY');

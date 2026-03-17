@@ -7,10 +7,11 @@
 
 import { useState, useMemo } from 'react';
 import { useV2 } from '../_lib/V2Context';
-import { useGoldenEgg, useDVE, useQuote, useRegime, useScannerResults, type ScanResult, type ScanTimeframe, SCAN_TIMEFRAMES } from '../_lib/api';
+import { useGoldenEgg, useDVE, useQuote, useRegime, type ScanTimeframe, SCAN_TIMEFRAMES } from '../_lib/api';
 import { Card, SectionHeader, Badge, ScoreBar, UpgradeGate } from '../_components/ui';
 import { REGIME_COLORS, VERDICT_COLORS, CROSS_MARKET, LIFECYCLE_COLORS, REGIME_WEIGHTS } from '../_lib/constants';
 import type { RegimePriority, Verdict, LifecycleState } from '../_lib/types';
+import { useCachedTopSymbols } from '@/hooks/useCachedTopSymbols';
 
 /* ─── Phase 5: Cross-Market Alignment ─── */
 function deriveCrossMarketAlignment(signals?: Array<{ source: string; regime: string; weight: number; stale: boolean }>): { alignment: 'supportive' | 'neutral' | 'headwind'; factors: string[] } {
@@ -76,14 +77,13 @@ export default function GoldenEggPage() {
   const [symbolInput, setSymbolInput] = useState('');
   const [timeframe, setTimeframe] = useState<ScanTimeframe>('daily');
 
-  // Get scanner results for symbol picker
-  const equity = useScannerResults('equity');
-  const crypto = useScannerResults('crypto');
-  const allScanned = useMemo(() => {
-    const eq = equity.data?.results || [];
-    const cr = crypto.data?.results || [];
-    return [...eq, ...cr].sort((a, b) => Math.abs(b.score) - Math.abs(a.score)).slice(0, 12);
-  }, [equity.data, crypto.data]);
+  // Quick-pick symbols from worker cache (falls back to defaults if empty)
+  const cached = useCachedTopSymbols(6);
+  const FALLBACK_SYMBOLS = ['BTC', 'ETH', 'SOL', 'AAPL', 'MSFT', 'NVDA', 'GOOGL', 'AMZN', 'TSLA', 'META'];
+  const quickSymbols = useMemo(() => {
+    const syms = [...cached.crypto.map(c => c.symbol), ...cached.equity.map(c => c.symbol)];
+    return syms.length > 0 ? syms.slice(0, 12) : FALLBACK_SYMBOLS;
+  }, [cached.crypto, cached.equity]);
 
   const sym = selectedSymbol || 'AAPL';
 
@@ -122,15 +122,15 @@ export default function GoldenEggPage() {
           <button onClick={handleSymbolSubmit} className="px-3 py-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg text-xs hover:bg-emerald-500/30 transition-colors">Go</button>
         </div>
         <div className="flex items-center gap-1 overflow-x-auto max-w-full">
-          {allScanned.map((s: ScanResult) => (
+          {quickSymbols.map((s: string) => (
             <button
-              key={s.symbol}
-              onClick={() => selectSymbol(s.symbol)}
+              key={s}
+              onClick={() => selectSymbol(s)}
               className={`px-2 py-1 rounded text-[10px] whitespace-nowrap transition-colors ${
-                s.symbol === sym ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-transparent'
+                s === sym ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-transparent'
               }`}
             >
-              {s.symbol}
+              {s}
             </button>
           ))}
         </div>

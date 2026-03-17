@@ -8,10 +8,11 @@
 import { useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useV2 } from '@/app/v2/_lib/V2Context';
-import { useRegime, useScannerResults, useMarketMovers, useNews, useEconomicCalendar, type ScanResult, type Mover, type NewsArticle, type EconomicEvent } from '@/app/v2/_lib/api';
+import { useRegime, useMarketMovers, useNews, useEconomicCalendar, type Mover, type NewsArticle, type EconomicEvent } from '@/app/v2/_lib/api';
 import { REGIME_COLORS, CROSS_MARKET } from '@/app/v2/_lib/constants';
-import { Card, SectionHeader, ScoreBar, Badge, ImpactDot, AuthPrompt, UpgradeGate } from '@/app/v2/_components/ui';
+import { Card, SectionHeader, Badge, ImpactDot, AuthPrompt, UpgradeGate } from '@/app/v2/_components/ui';
 import { useUserTier } from '@/lib/useUserTier';
+import { useCachedTopSymbols, type CachedSymbol } from '@/hooks/useCachedTopSymbols';
 
 /* ─── Dynamic imports: v1 deep-dive components ─── */
 const CryptoDashboard = dynamic(() => import('@/app/tools/crypto-dashboard/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Crypto Derivatives…</div> });
@@ -61,20 +62,12 @@ export default function DashboardPage() {
 
   /* -- Real API calls --------------------------------------------------- */
   const regime = useRegime();
-  const equityScan = useScannerResults('equity');
-  const cryptoScan = useScannerResults('crypto');
   const movers = useMarketMovers();
   const news = useNews();
   const calendar = useEconomicCalendar();
+  const cached = useCachedTopSymbols(5);
 
   /* -- Derived data ----------------------------------------------------- */
-  const allResults = useMemo(() => {
-    const eq = equityScan.data?.results || [];
-    const cr = cryptoScan.data?.results || [];
-    return [...eq, ...cr].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
-  }, [equityScan.data, cryptoScan.data]);
-
-  const topSetups = allResults.slice(0, 6);
   const highImpactEvents = useMemo(
     () => (calendar.data?.events || []).filter((e: EconomicEvent) => e.impact === 'high').slice(0, 5),
     [calendar.data]
@@ -87,10 +80,8 @@ export default function DashboardPage() {
   const crLosers = allLosers.filter((m: Mover) => m.asset_class === 'crypto').slice(0, 5);
   const articles = (news.data?.articles || []).slice(0, 6);
 
-  const scanLoading = equityScan.loading || cryptoScan.loading;
-
   // Show sign-in prompt if all data hooks report auth errors
-  const allAuthError = equityScan.isAuthError && movers.isAuthError && news.isAuthError;
+  const allAuthError = movers.isAuthError && news.isAuthError;
   if (allAuthError) {
     return <Card><AuthPrompt /></Card>;
   }
@@ -159,46 +150,30 @@ export default function DashboardPage() {
       {/* -- Edge Intelligence (v3.1) ----------------------------------- */}
       {isPro && <EdgeInsightCards />}
 
-      {/* -- Best Setups (from Scanner) --------------------------------- */}
-      {scanLoading ? <CardSkeleton rows={5} /> : (
-        <Card>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-white">Best Setups Now</h3>
-            <button onClick={() => navigateTo('scanner')} className="text-[10px] text-emerald-400 hover:underline">View Scanner ?</button>
+      {/* -- Best Setups (from worker cache) ------------------------------ */}
+      {cached.loading ? <CardSkeleton rows={5} /> : (
+      <Card>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-white">Best Setups Now</h3>
+          <button onClick={() => navigateTo('scanner')} className="text-[10px] text-emerald-400 hover:underline">Full Scanner &#x203A;</button>
+        </div>
+        {[...cached.equity, ...cached.crypto].length === 0 ? (
+          <div className="text-xs text-slate-500 py-4 text-center">
+            No cached data yet — <button onClick={() => navigateTo('scanner')} className="text-emerald-400 hover:underline">run the Scanner</button>
           </div>
-          {topSetups.length === 0 ? (
-            <div className="text-xs text-slate-500 py-6 text-center">No scan results available — scanner may not have run yet today.</div>
-          ) : (
-            <div className="space-y-1">
-              {topSetups.map((s: ScanResult) => (
-                <div
-                  key={s.symbol}
-                  className="flex items-center justify-between py-2 px-3 rounded-lg bg-[var(--msp-panel-2)] hover:bg-slate-800/50 cursor-pointer transition-colors"
-                  onClick={() => { selectSymbol(s.symbol); navigateTo('golden-egg', s.symbol); }}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="text-sm font-bold text-white shrink-0">{s.symbol}</div>
-                    <Badge label={s.direction || 'neutral'} color={directionColor(s.direction)} small />
-                    {s.setup && <span className="text-[10px] text-slate-400 truncate hidden md:inline">{s.setup}</span>}
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    {s.price != null && (
-                      <span className="text-xs text-slate-300 font-mono">${s.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                    )}
-                    <div className="text-right w-10">
-                      <div className="text-sm font-bold" style={{ color: directionColor(s.direction) }}>
-                        {s.score}
-                      </div>
-                    </div>
-                    <div className="w-14 hidden md:block">
-                      <ScoreBar value={Math.min(Math.abs(s.score) * 10, 100)} color={directionColor(s.direction)} />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
+        ) : (
+          <div className="space-y-1">
+            {[...cached.equity.slice(0, 3), ...cached.crypto.slice(0, 2)].map((r: CachedSymbol) => (
+              <div key={r.symbol} className="grid grid-cols-[5rem_3rem_1fr_4rem] items-center text-xs py-0.5 cursor-pointer hover:bg-slate-800/40 px-1 rounded" onClick={() => { selectSymbol(r.symbol); navigateTo('golden-egg', r.symbol); }}>
+                <span className="font-semibold text-white">{r.symbol}</span>
+                <span className="text-[10px]" style={{ color: directionColor(r.direction) }}>{r.direction === 'bullish' ? '▲' : r.direction === 'bearish' ? '▼' : '●'} {r.score}</span>
+                <span className="text-slate-300 text-right font-mono tabular-nums">${r.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                <span className={`font-mono text-right tabular-nums ${r.changePct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{r.changePct >= 0 ? '+' : ''}{r.changePct.toFixed(2)}%</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -339,8 +314,7 @@ export default function DashboardPage() {
       {/* -- Error / debug (collapsed) -------------------------------- */}
       {(() => {
         const errs = [
-          equityScan.error && `Scanner (equity): ${equityScan.error}`,
-          cryptoScan.error && `Scanner (crypto): ${cryptoScan.error}`,
+          cached.error && `Scanner cache: ${cached.error}`,
           movers.error && `Movers: ${movers.error}`,
           news.error && `News: ${news.error}`,
           calendar.error && `Calendar: ${calendar.error}`,

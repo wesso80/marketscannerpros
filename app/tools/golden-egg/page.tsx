@@ -5,13 +5,14 @@
    Real API data: /api/golden-egg + /api/dve + /api/quote
    --------------------------------------------------------------------------- */
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useV2 } from '@/app/v2/_lib/V2Context';
-import { useGoldenEgg, useDVE, useQuote, useRegime, useScannerResults, type ScanResult, type ScanTimeframe, SCAN_TIMEFRAMES } from '@/app/v2/_lib/api';
+import { useGoldenEgg, useDVE, useQuote, useRegime, type ScanTimeframe, SCAN_TIMEFRAMES } from '@/app/v2/_lib/api';
 import { Card, SectionHeader, Badge, ScoreBar, UpgradeGate } from '@/app/v2/_components/ui';
 import { REGIME_COLORS, VERDICT_COLORS, CROSS_MARKET, LIFECYCLE_COLORS, REGIME_WEIGHTS } from '@/app/v2/_lib/constants';
 import type { RegimePriority, Verdict, LifecycleState } from '@/app/v2/_lib/types';
+import { useCachedTopSymbols } from '@/hooks/useCachedTopSymbols';
 
 /* ─── Dynamic imports: v1 deep-dive components ─── */
 const DeepAnalysis = dynamic(() => import('@/app/tools/deep-analysis/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Deep Analysis…</div> });
@@ -87,14 +88,13 @@ export default function GoldenEggPage() {
   const [timeframe, setTimeframe] = useState<ScanTimeframe>('daily');
   const [activeTab, setActiveTab] = useState<GETab>('Verdict');
 
-  // Get scanner results for symbol picker
-  const equity = useScannerResults('equity');
-  const crypto = useScannerResults('crypto');
-  const allScanned = useMemo(() => {
-    const eq = equity.data?.results || [];
-    const cr = crypto.data?.results || [];
-    return [...eq, ...cr].sort((a, b) => Math.abs(b.score) - Math.abs(a.score)).slice(0, 12);
-  }, [equity.data, crypto.data]);
+  // Quick-pick symbols from worker cache (falls back to defaults if cache empty)
+  const cached = useCachedTopSymbols(5);
+  const FALLBACK_SYMBOLS = ['BTC', 'ETH', 'SOL', 'AAPL', 'MSFT', 'NVDA', 'GOOGL', 'AMZN', 'TSLA', 'META'];
+  const quickSymbols = useMemo(() => {
+    const syms = [...cached.crypto.map(c => c.symbol), ...cached.equity.map(c => c.symbol)];
+    return syms.length > 0 ? syms.slice(0, 10) : FALLBACK_SYMBOLS;
+  }, [cached.crypto, cached.equity]);
 
   const sym = selectedSymbol || 'AAPL';
 
@@ -138,15 +138,15 @@ export default function GoldenEggPage() {
           <button onClick={handleSymbolSubmit} className="px-3 py-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg text-xs hover:bg-emerald-500/30 transition-colors">Go</button>
         </div>
         <div className="flex items-center gap-1 overflow-x-auto max-w-full">
-          {allScanned.map((s: ScanResult) => (
+          {quickSymbols.map((s: string) => (
             <button
-              key={s.symbol}
-              onClick={() => selectSymbol(s.symbol)}
+              key={s}
+              onClick={() => selectSymbol(s)}
               className={`px-2 py-1 rounded text-[10px] whitespace-nowrap transition-colors ${
-                s.symbol === sym ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-transparent'
+                s === sym ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-transparent'
               }`}
             >
-              {s.symbol}
+              {s}
             </button>
           ))}
         </div>

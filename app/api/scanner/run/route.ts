@@ -1480,9 +1480,9 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    // With prefer_cache mode, most equity data comes from DB cache — safe to scan many.
-    // Cache mode = zero AV calls; AV fallback mode = cap to 5 to avoid 429 cascades.
-    const MAX_PER_SCAN = shouldUseCache() ? 50 : 5;
+    // Cap scan universe; return is further trimmed to top 5 per type.
+    // Cache mode = zero AV calls so safe to scan more; AV fallback = cap tight.
+    const MAX_PER_SCAN = shouldUseCache() ? 25 : 5;
     const limited = symbolsToScan.slice(0, MAX_PER_SCAN);
     if (symbolsToScan.length > MAX_PER_SCAN) {
       console.info(`[scanner] Capped ${symbolsToScan.length} symbols to ${MAX_PER_SCAN} (cache=${shouldUseCache()})`);
@@ -2424,10 +2424,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Cap output to top 20 results by score
-    if (results.length > 20) {
-      results.sort((a, b) => b.score - a.score);
-      results.length = 20;
+    // Return only the top 5 results by score
+    results.sort((a, b) => b.score - a.score);
+    if (results.length > 5) {
+      results.length = 5;
     }
 
     // Record signals for AI learning (async, non-blocking)
