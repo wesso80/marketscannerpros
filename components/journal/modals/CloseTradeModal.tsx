@@ -11,7 +11,7 @@ type CloseTradeModalProps = {
     exitPrice: number;
     exitTs: string;
     closeReason: 'tp' | 'sl' | 'time' | 'manual' | 'invalid' | 'signal_flip' | 'risk_off';
-    outcome: 'win' | 'loss' | 'scratch' | 'breakeven';
+    outcome: 'win' | 'loss' | 'breakeven';
     setupQuality: 'A' | 'B' | 'C' | 'D';
     followedPlan: boolean;
     errorType:
@@ -34,7 +34,7 @@ export default function CloseTradeModal({ open, trade, onClose, onSubmit }: Clos
   const [exitPrice, setExitPrice] = useState('');
   const [exitTs, setExitTs] = useState(new Date().toISOString().slice(0, 16));
   const [closeReason, setCloseReason] = useState<'tp' | 'sl' | 'time' | 'manual' | 'invalid' | 'signal_flip' | 'risk_off'>('manual');
-  const [outcome, setOutcome] = useState<'win' | 'loss' | 'scratch' | 'breakeven'>('breakeven');
+  const [outcome, setOutcome] = useState<'win' | 'loss' | 'breakeven'>('breakeven');
   const [setupQuality, setSetupQuality] = useState<'A' | 'B' | 'C' | 'D'>('B');
   const [followedPlan, setFollowedPlan] = useState(true);
   const [errorType, setErrorType] = useState<
@@ -136,7 +136,6 @@ export default function CloseTradeModal({ open, trade, onClose, onSubmit }: Clos
             <select id="close-outcome" value={outcome} onChange={(event) => setOutcome(event.target.value as typeof outcome)} aria-required="true" className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-100">
               <option value="win">win</option>
               <option value="loss">loss</option>
-              <option value="scratch">scratch</option>
               <option value="breakeven">breakeven</option>
             </select>
           </div>

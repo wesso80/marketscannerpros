@@ -169,7 +169,7 @@ export default function JournalPage({ tier }: { tier: UserTier }) {
     exitPrice: number;
     exitTs: string;
     closeReason: 'tp' | 'sl' | 'time' | 'manual' | 'invalid' | 'signal_flip' | 'risk_off';
-    outcome: 'win' | 'loss' | 'scratch' | 'breakeven';
+    outcome: 'win' | 'loss' | 'breakeven';
     setupQuality: 'A' | 'B' | 'C' | 'D';
     followedPlan: boolean;
     errorType:

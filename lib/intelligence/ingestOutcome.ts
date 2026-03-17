@@ -141,9 +141,11 @@ export async function ingestTradeOutcome(
 
   const rMul = toNum(entry.r_multiple);
   const pl = toNum(entry.pl);
-  const outcome = entry.outcome && entry.outcome !== 'open'
+  const rawOutcome = entry.outcome && entry.outcome !== 'open'
     ? entry.outcome
     : deriveOutcome(rMul, pl);
+  // Normalize "scratch" → "breakeven" (UI legacy; DB CHECK rejects scratch)
+  const outcome = rawOutcome === 'scratch' ? 'breakeven' : rawOutcome;
 
   await q(
     `INSERT INTO trade_outcomes (
@@ -277,9 +279,11 @@ export async function backfillTradeOutcomes(
 
       const rMul = toNum(entry.r_multiple);
       const pl = toNum(entry.pl);
-      const outcome = entry.outcome && entry.outcome !== 'open'
+      const rawOutcome = entry.outcome && entry.outcome !== 'open'
         ? entry.outcome
         : deriveOutcome(rMul, pl);
+      // Normalize "scratch" → "breakeven" (UI legacy; DB CHECK rejects scratch)
+      const outcome = rawOutcome === 'scratch' ? 'breakeven' : rawOutcome;
 
       await q(
         `INSERT INTO trade_outcomes (

@@ -6,10 +6,7 @@ import { hashWorkspaceId, signSessionToken } from "@/lib/auth";
 import { q } from "@/lib/db";
 import crypto from "crypto";
 
-const ADMIN_EMAILS = [
-  "xxneutronxx@yahoo.com",
-  "bradleywessling@yahoo.com.au",
-];
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
 
 function isAdminEmail(email: string): boolean {
   return ADMIN_EMAILS.includes(email.toLowerCase().trim());

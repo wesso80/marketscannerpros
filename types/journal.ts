@@ -154,7 +154,7 @@ export type TradeModel = TradeRowModel & {
 };
 
 export type TradeIntelligence = {
-  outcome?: 'win' | 'loss' | 'scratch' | 'breakeven';
+  outcome?: 'win' | 'loss' | 'breakeven';
   setupQuality?: 'A' | 'B' | 'C' | 'D';
   followedPlan?: boolean;
   errorType?:

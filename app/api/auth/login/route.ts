@@ -6,11 +6,8 @@ import { q } from "@/lib/db";
 import { loginLimiter, getClientIP } from "@/lib/rateLimit";
 import { isValidAdminSecret } from "@/lib/adminAuth";
 
-// Admin emails that get permanent sessions (365 days)
-const ADMIN_EMAILS = [
-  'xxneutronxx@yahoo.com',
-  'bradleywessling@yahoo.com.au',
-];
+// Admin emails from ADMIN_EMAILS env var (comma-separated)
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
 function isAdminEmail(email: string): boolean {
   return ADMIN_EMAILS.includes(email.toLowerCase().trim());
 }

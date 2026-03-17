@@ -34,6 +34,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Entitlement gate: full edge profile is Pro / Pro Trader only
+  const tier = session.tier ?? 'free';
+  if (tier !== 'pro' && tier !== 'pro_trader') {
+    return NextResponse.json({
+      error: 'Edge Profile requires a Pro or Pro Trader subscription',
+      requiredTier: 'pro',
+    }, { status: 403 });
+  }
+
   const url = new URL(req.url);
   const lookbackParam = url.searchParams.get('lookback');
   const dimsParam = url.searchParams.get('dimensions');
