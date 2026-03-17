@@ -5,55 +5,16 @@ const p = new Pool({
 });
 
 async function run() {
-  // 1. Find and disable garbage symbols (spaces, too short, high error counts)
-  const garbage = await p.query(`
-    SELECT symbol, asset_type, fetch_error_count, enabled 
-    FROM symbol_universe 
-    WHERE symbol ~ '\\s'                         -- contains spaces
-       OR (LENGTH(TRIM(symbol)) < 2)              -- too short
-       OR (fetch_error_count >= 50 AND enabled = true)  -- failing repeatedly
-    ORDER BY symbol
-  `);
-  console.log('=== GARBAGE SYMBOLS FOUND ===');
-  console.log(JSON.stringify(garbage.rows, null, 2));
-  console.log(`Total garbage: ${garbage.rows.length}`);
+  // Check user_subscriptions
+  const subs = await p.query(`SELECT workspace_id, email, tier, status FROM user_subscriptions ORDER BY email`);
+  console.log('=== USER SUBSCRIPTIONS ===');
+  console.log(JSON.stringify(subs.rows, null, 2));
+  console.log(`Total: ${subs.rows.length}`);
 
-  // 2. Disable garbage symbols (contain spaces)
-  const disableSpaces = await p.query(`
-    UPDATE symbol_universe 
-    SET enabled = false, updated_at = NOW()
-    WHERE symbol ~ '\\s'
-    RETURNING symbol
-  `);
-  console.log(`\nDisabled ${disableSpaces.rows.length} symbols with spaces:`, disableSpaces.rows.map(r => r.symbol));
-
-  // 3. Disable symbols with 50+ errors
-  const disableErrors = await p.query(`
-    UPDATE symbol_universe 
-    SET enabled = false, updated_at = NOW()
-    WHERE fetch_error_count >= 50 AND enabled = true
-    RETURNING symbol
-  `);
-  console.log(`\nDisabled ${disableErrors.rows.length} symbols with 50+ errors:`, disableErrors.rows.map(r => r.symbol));
-
-  // 4. Delete quotes_latest entries for garbage symbols (with spaces)
-  const deleteQuotes = await p.query(`
-    DELETE FROM quotes_latest 
-    WHERE symbol IN (SELECT symbol FROM symbol_universe WHERE symbol ~ '\\s')
-    RETURNING symbol
-  `);
-  console.log(`\nDeleted ${deleteQuotes.rows.length} stale quote rows for garbage symbols`);
-
-  // 5. Verify final state
-  const remaining = await p.query(`
-    SELECT COUNT(*) as total, 
-           COUNT(*) FILTER (WHERE enabled) as enabled_count,
-           COUNT(*) FILTER (WHERE NOT enabled) as disabled_count,
-           COUNT(*) FILTER (WHERE fetch_error_count >= 50) as high_error
-    FROM symbol_universe
-  `);
-  console.log('\n=== FINAL STATE ===');
-  console.log(JSON.stringify(remaining.rows[0], null, 2));
+  // Check scan_usage for today
+  const usage = await p.query(`SELECT * FROM scan_usage WHERE scan_date >= CURRENT_DATE - 1 ORDER BY scan_date DESC, workspace_id`);
+  console.log('\n=== SCAN USAGE (last 2 days) ===');
+  console.log(JSON.stringify(usage.rows, null, 2));
 
   await p.end();
 }
