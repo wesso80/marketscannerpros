@@ -7,7 +7,7 @@ import { buildPermissionSnapshot, evaluateCandidate, type StrategyTag } from "@/
 import { computeEntryRiskMetrics, getLatestPortfolioEquity } from "@/lib/journal/riskAtEntry";
 import { getRuntimeRiskSnapshotInput } from "@/lib/risk/runtimeSnapshot";
 import { runExecutionPipeline } from "@/lib/execution/runPipeline";
-import { backfillTradeOutcomes } from "@/lib/intelligence/ingestOutcome";
+import { backfillTradeOutcomes, maybeAutoEvolve } from "@/lib/intelligence/ingestOutcome";
 
 interface JournalEntry {
   id: number;
@@ -873,8 +873,11 @@ export async function POST(req: NextRequest) {
     }
 
     // v3.1: Backfill trade outcomes for edge-profile after full journal sync
-    backfillTradeOutcomes(workspaceId).catch((err) => {
-      console.warn('[journal] edge-profile backfill failed (non-blocking):', err);
+    backfillTradeOutcomes(workspaceId).then(() => {
+      // v4: Auto-trigger evolution if enough new outcomes accumulated
+      return maybeAutoEvolve(workspaceId);
+    }).catch((err) => {
+      console.warn('[journal] edge-profile backfill / auto-evolve failed (non-blocking):', err);
     });
 
     return NextResponse.json({ success: true });

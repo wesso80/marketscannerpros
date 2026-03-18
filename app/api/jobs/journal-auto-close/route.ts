@@ -3,7 +3,7 @@ import { q, tx } from '@/lib/db';
 import { enqueueEngineJob } from '@/lib/engine/jobQueue';
 import { emitTradeLifecycleEvent, hashDedupeKey } from '@/lib/notifications/tradeEvents';
 import { verifyCronAuth, verifyAdminAuth } from '@/lib/adminAuth';
-import { ingestTradeOutcome } from '@/lib/intelligence/ingestOutcome';
+import { ingestTradeOutcome, maybeAutoEvolve } from '@/lib/intelligence/ingestOutcome';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -410,6 +410,14 @@ export async function POST(req: NextRequest) {
 
       // v3.1: Ingest trade outcome for edge-profile intelligence
       await ingestTradeOutcome(entry.workspace_id, closeResult.entry.id).catch(() => undefined);
+    }
+
+    // v4: Auto-trigger evolution cycles for workspaces with enough new outcomes
+    if (closed > 0) {
+      const workspaceIds = [...new Set(closedTrades.map(t => t.workspaceId))];
+      for (const wsId of workspaceIds) {
+        await maybeAutoEvolve(wsId).catch(() => undefined);
+      }
     }
 
     return NextResponse.json({

@@ -9,6 +9,7 @@
 
 import { q } from '@/lib/db';
 import { classifyOutcome, deriveOutcome } from './outcomeClassifier';
+import { tagOutcome, computeLearningUpdate, type OutcomeTagInput } from '@/lib/learning-engine';
 
 /* ── Types ─────────────────────────────────────────────────────────────── */
 
@@ -110,6 +111,79 @@ function extractSnapshotContext(payload: SnapshotPayload | null): {
   };
 }
 
+/* ── Learning feedback helper ──────────────────────────────────────────── */
+
+interface LearningFeedback {
+  label: 'win' | 'loss' | 'flat' | 'skipped';
+  efficiency: number;
+  quality: number;
+  weightDelta: number;
+  thresholdDelta: number;
+  key: string;
+}
+
+/**
+ * Compute learning-engine feedback from available trade data.
+ * Approximates MFE/MAE since we don't track intra-trade excursions yet.
+ */
+function computeLearningFeedback(
+  entry: JournalRow,
+  rMul: number | null,
+  pl: number | null,
+  regime: string | null,
+  volatilityRegime: string | null,
+): LearningFeedback {
+  const resultR = rMul ?? 0;
+  const taken = true; // entry is closed → trade was taken
+
+  // Approximate MFE: if hit target, assume captured planned R:R; else use actual R
+  const plannedRR = toNum(entry.planned_rr);
+  const mfeR = entry.exit_reason === 'tp' && plannedRR != null
+    ? plannedRR
+    : resultR >= 0
+      ? resultR * 1.1   // winners usually saw slightly more than final R
+      : resultR * 0.3;  // losers may have briefly been positive
+
+  // Approximate MAE: if hit stop, full loss was experienced; else moderate drawdown
+  const maeR = entry.exit_reason === 'sl'
+    ? resultR
+    : resultR >= 0
+      ? -0.3            // winning trades had small adverse excursion
+      : resultR * 0.8;  // losing trades saw most of loss before close
+
+  // Rule adherence: followed_plan is the best proxy we have
+  const ruleAdherence = entry.followed_plan === true ? 80
+    : entry.followed_plan === false ? 40
+    : 60;
+
+  const flowState = volatilityRegime || 'NEUTRAL';
+  const playbook = entry.strategy?.toLowerCase().trim() || 'unknown';
+
+  const tagInput: OutcomeTagInput = {
+    symbol: entry.symbol,
+    regime: regime || 'UNKNOWN',
+    flowState,
+    playbook,
+    taken,
+    resultR,
+    mfeR,
+    maeR,
+    ruleAdherence,
+  };
+
+  const tag = tagOutcome(tagInput);
+  const update = computeLearningUpdate(tag);
+
+  return {
+    label: tag.label,
+    efficiency: tag.efficiency,
+    quality: tag.quality,
+    weightDelta: update.weightDelta,
+    thresholdDelta: update.thresholdDelta,
+    key: tag.key,
+  };
+}
+
 /* ── Single-entry ingest (real-time hook) ──────────────────────────────── */
 
 export async function ingestTradeOutcome(
@@ -147,6 +221,9 @@ export async function ingestTradeOutcome(
   // Normalize "scratch" → "breakeven" (UI legacy; DB CHECK rejects scratch)
   const outcome = rawOutcome === 'scratch' ? 'breakeven' : rawOutcome;
 
+  // Compute learning-engine feedback
+  const learning = computeLearningFeedback(entry, rMul, pl, snapshotCtx.regime, snapshotCtx.volatilityRegime);
+
   await q(
     `INSERT INTO trade_outcomes (
        workspace_id, journal_entry_id,
@@ -159,6 +236,8 @@ export async function ingestTradeOutcome(
        realized_pl, pl_percent, r_multiple, normalized_r,
        outcome, outcome_label,
        followed_plan, exit_reason, close_source,
+       learning_label, learning_efficiency, learning_quality,
+       learning_weight_delta, learning_threshold_delta, learning_key,
        computed_at
      ) VALUES (
        $1, $2,
@@ -171,6 +250,8 @@ export async function ingestTradeOutcome(
        $29, $30, $31, $32,
        $33, $34,
        $35, $36, $37,
+       $38, $39, $40,
+       $41, $42, $43,
        NOW()
      )
      ON CONFLICT (workspace_id, journal_entry_id)
@@ -187,6 +268,13 @@ export async function ingestTradeOutcome(
        followed_plan    = EXCLUDED.followed_plan,
        exit_reason      = EXCLUDED.exit_reason,
        close_source     = EXCLUDED.close_source,
+       learning_label           = EXCLUDED.learning_label,
+       learning_efficiency      = EXCLUDED.learning_efficiency,
+       learning_quality         = EXCLUDED.learning_quality,
+       learning_weight_delta    = EXCLUDED.learning_weight_delta,
+       learning_threshold_delta = EXCLUDED.learning_threshold_delta,
+       learning_key             = EXCLUDED.learning_key,
+       learning_processed       = false,
        computed_at      = NOW(),
        version          = trade_outcomes.version + 1`,
     [
@@ -208,6 +296,8 @@ export async function ingestTradeOutcome(
       rMul, toNum(entry.normalized_r),
       outcome, classifyOutcome(rMul, pl),
       entry.followed_plan, entry.exit_reason || null, entry.close_source || null,
+      learning.label, learning.efficiency, learning.quality,
+      learning.weightDelta, learning.thresholdDelta, learning.key,
     ]
   );
 
@@ -285,6 +375,9 @@ export async function backfillTradeOutcomes(
       // Normalize "scratch" → "breakeven" (UI legacy; DB CHECK rejects scratch)
       const outcome = rawOutcome === 'scratch' ? 'breakeven' : rawOutcome;
 
+      // Compute learning-engine feedback
+      const learning = computeLearningFeedback(entry, rMul, pl, snapshotCtx.regime, snapshotCtx.volatilityRegime);
+
       await q(
         `INSERT INTO trade_outcomes (
            workspace_id, journal_entry_id,
@@ -297,6 +390,8 @@ export async function backfillTradeOutcomes(
            realized_pl, pl_percent, r_multiple, normalized_r,
            outcome, outcome_label,
            followed_plan, exit_reason, close_source,
+           learning_label, learning_efficiency, learning_quality,
+           learning_weight_delta, learning_threshold_delta, learning_key,
            computed_at
          ) VALUES (
            $1, $2,
@@ -309,6 +404,8 @@ export async function backfillTradeOutcomes(
            $29, $30, $31, $32,
            $33, $34,
            $35, $36, $37,
+           $38, $39, $40,
+           $41, $42, $43,
            NOW()
          )
          ON CONFLICT (workspace_id, journal_entry_id)
@@ -325,6 +422,13 @@ export async function backfillTradeOutcomes(
            followed_plan    = EXCLUDED.followed_plan,
            exit_reason      = EXCLUDED.exit_reason,
            close_source     = EXCLUDED.close_source,
+           learning_label           = EXCLUDED.learning_label,
+           learning_efficiency      = EXCLUDED.learning_efficiency,
+           learning_quality         = EXCLUDED.learning_quality,
+           learning_weight_delta    = EXCLUDED.learning_weight_delta,
+           learning_threshold_delta = EXCLUDED.learning_threshold_delta,
+           learning_key             = EXCLUDED.learning_key,
+           learning_processed       = false,
            computed_at      = NOW(),
            version          = trade_outcomes.version + 1`,
         [
@@ -346,6 +450,8 @@ export async function backfillTradeOutcomes(
           rMul, toNum(entry.normalized_r),
           outcome, classifyOutcome(rMul, pl),
           entry.followed_plan, entry.exit_reason || null, entry.close_source || null,
+          learning.label, learning.efficiency, learning.quality,
+          learning.weightDelta, learning.thresholdDelta, learning.key,
         ]
       );
       ingested++;
@@ -356,4 +462,81 @@ export async function backfillTradeOutcomes(
   }
 
   return { processed: closedEntries.length, ingested, errors, orphansRemoved };
+}
+
+/* ── Auto-evolution trigger ────────────────────────────────────────────── */
+
+const AUTO_EVOLUTION_THRESHOLD = 10; // Run evolution cycle after N unprocessed outcomes
+
+/**
+ * Check if a workspace has accumulated enough new learning outcomes to auto-trigger
+ * an evolution cycle. Called after single-entry ingest or backfill.
+ */
+export async function maybeAutoEvolve(workspaceId: string): Promise<{ triggered: boolean; reason: string }> {
+  try {
+    const countRows = await q<{ count: string }>(
+      `SELECT COUNT(*)::TEXT AS count FROM trade_outcomes
+       WHERE workspace_id = $1 AND learning_processed = false`,
+      [workspaceId]
+    );
+    const unprocessed = parseInt(countRows[0]?.count ?? '0', 10);
+
+    if (unprocessed < AUTO_EVOLUTION_THRESHOLD) {
+      return { triggered: false, reason: `${unprocessed}/${AUTO_EVOLUTION_THRESHOLD} unprocessed outcomes` };
+    }
+
+    // Dynamically import evolution engine to avoid circular dependencies
+    const { loadEvolutionSamples, saveEvolutionAdjustment } = await import('@/lib/evolution-store');
+    const { runEvolutionCycle } = await import('@/lib/evolution-engine');
+
+    const samples = await loadEvolutionSamples(workspaceId, undefined, 400);
+    if (samples.length < 30) {
+      return { triggered: false, reason: `Only ${samples.length} total samples (need 30)` };
+    }
+
+    const { getLatestEvolutionAdjustments } = await import('@/lib/evolution-store');
+    const latest = (await getLatestEvolutionAdjustments(workspaceId, 1))[0] || null;
+
+    const baseWeights = {
+      regimeFit: 0.25, capitalFlow: 0.2, structureQuality: 0.2,
+      optionsAlignment: 0.15, timing: 0.1, dataHealth: 0.1,
+    };
+
+    // Use latest saved weights if available
+    const adj = latest?.adjustments_json as Record<string, any> | null;
+    const weights = adj?.weights;
+    const safeWeights = weights ? {
+      regimeFit: Number(weights.regimeFit) || baseWeights.regimeFit,
+      capitalFlow: Number(weights.capitalFlow) || baseWeights.capitalFlow,
+      structureQuality: Number(weights.structureQuality) || baseWeights.structureQuality,
+      optionsAlignment: Number(weights.optionsAlignment) || baseWeights.optionsAlignment,
+      timing: Number(weights.timing) || baseWeights.timing,
+      dataHealth: Number(weights.dataHealth) || baseWeights.dataHealth,
+    } : baseWeights;
+
+    const armedThreshold = Number(adj?.thresholds?.armedThreshold) || 0.7;
+
+    const output = runEvolutionCycle({
+      symbolGroup: 'General',
+      cadence: 'daily',
+      baselineWeights: safeWeights,
+      armedThreshold,
+      samples,
+    });
+
+    await saveEvolutionAdjustment(workspaceId, 'daily', output);
+
+    // Mark all outcomes as processed
+    await q(
+      `UPDATE trade_outcomes SET learning_processed = true
+       WHERE workspace_id = $1 AND learning_processed = false`,
+      [workspaceId]
+    );
+
+    console.log(`[ingestOutcome] Auto-evolution triggered for workspace ${workspaceId}: ${unprocessed} outcomes processed, confidence=${output.confidence.toFixed(2)}`);
+    return { triggered: true, reason: `Evolution cycle ran on ${unprocessed} new outcomes` };
+  } catch (err) {
+    console.warn('[ingestOutcome] Auto-evolution failed (non-blocking):', err);
+    return { triggered: false, reason: 'error' };
+  }
 }
