@@ -46,7 +46,7 @@ function computeMspScore(r: ScanResult, regime: string): number {
   const time = r.scoreV2?.acl?.confidence ?? 50;
   const raw = (structure * w.structure + momentum * w.momentum + volatility * w.volatility + options * w.options + time * w.time) / 100;
   // Apply regime gating penalty
-  if (r.scoreV2?.regimeScore?.gated) return Math.max(0, raw * 0.4);
+  if (r.scoreV2?.regimeScore?.gated) return Math.round(Math.max(0, raw * 0.4));
   return Math.round(Math.min(100, Math.max(0, raw)));
 }
 
