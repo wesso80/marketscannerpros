@@ -242,8 +242,8 @@ export default function GoldenEggPage() {
                   </ul>
                   <div className="mt-3">
                     <GEEmptyState
-                      title="Do not execute"
-                      body="Permission is NO_TRADE. Set alerts on flip conditions and wait for structure confirmation."
+                      title="Conditions not aligned"
+                      body="Confluence is insufficient. Set alerts on flip conditions and monitor for structure changes."
                     />
                   </div>
                 </GECard>

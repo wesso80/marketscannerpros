@@ -265,7 +265,7 @@ export function buildPermissionSnapshot(input?: {
     globalBlocks.push({ code: 'EVENT_THROTTLE', severity: 'WARN', msg: 'High-impact event window active.' });
   }
   if (enabled && riskMode === 'LOCKED') {
-    globalBlocks.push({ code: 'RISK_LOCKED', severity: 'BLOCK', msg: 'Risk governor is LOCKED. New trades disabled.' });
+    globalBlocks.push({ code: 'RISK_LOCKED', severity: 'BLOCK', msg: 'Risk governor is LOCKED. New simulated entries disabled.' });
   }
   if (enabled && dataStatus !== 'OK') {
     globalBlocks.push({
@@ -280,7 +280,7 @@ export function buildPermissionSnapshot(input?: {
   const tradeCountBlocked = enabled && tradesToday >= maxTradesPerDay;
 
   if (enabled && tradeCountBlocked) {
-    globalBlocks.push({ code: 'TRADE_COUNT_LIMIT', severity: 'BLOCK', msg: `Daily trade count limit reached (${tradesToday}/${maxTradesPerDay}). No new trades allowed.` });
+    globalBlocks.push({ code: 'TRADE_COUNT_LIMIT', severity: 'BLOCK', msg: `Daily entry count limit reached (${tradesToday}/${maxTradesPerDay}). No new simulated entries allowed.` });
   }
 
   return {

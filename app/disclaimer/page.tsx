@@ -33,6 +33,10 @@ export default function DisclaimerPage() {
             <span>·</span>
             <a href="#accuracy" style={{ color: '#22c55e', textDecoration: 'none' }}>Data & accuracy</a>
             <span>·</span>
+            <a href="#delay" style={{ color: '#22c55e', textDecoration: 'none' }}>Data delays</a>
+            <span>·</span>
+            <a href="#paper" style={{ color: '#22c55e', textDecoration: 'none' }}>Paper trade system</a>
+            <span>·</span>
             <a href="#backtests" style={{ color: '#22c55e', textDecoration: 'none' }}>Backtests</a>
             <span>·</span>
             <a href="#jurisdiction" style={{ color: '#22c55e', textDecoration: 'none' }}>Jurisdiction</a>
@@ -76,8 +80,33 @@ export default function DisclaimerPage() {
           </p>
         </section>
 
+        <section>          <h2 id="delay" style={{ fontSize: 22, fontWeight: 650, marginBottom: 12, marginTop: 24, color: '#f9fafb' }}>Data Delays &amp; Third-Party Sources</h2>
+          <p style={{ fontSize: 14, color: '#9ca3af', lineHeight: 1.6 }}>
+            Market data is sourced from Alpha Vantage Premium API and may be delayed by 15 minutes or more 
+            depending on the asset class and exchange. Real-time data availability varies by provider and plan. 
+            Options data, derivatives data, and certain crypto metrics may have additional delays. 
+            We do not guarantee real-time data delivery and are not responsible for delays, interruptions, 
+            or inaccuracies in third-party data feeds.
+          </p>
+        </section>
+
         <section>
-          <h2 id="backtests" style={{ fontSize: 22, fontWeight: 650, marginBottom: 12, marginTop: 24, color: '#f9fafb' }}>Backtests & Historical Data</h2>
+          <h2 id="paper" style={{ fontSize: 22, fontWeight: 650, marginBottom: 12, marginTop: 24, color: '#f9fafb' }}>Paper Trade &amp; Simulation System</h2>
+          <p style={{ fontSize: 14, color: '#9ca3af', lineHeight: 1.6 }}>
+            MarketScanner Pros is an educational paper trade simulation system. The portfolio tracker, 
+            trade journal, risk governor, scenario plans, and all analysis outputs are designed for 
+            educational purposes and simulated paper trading only. No feature of this platform executes 
+            real trades, connects to live brokerage accounts, or places orders on any exchange.
+          </p>
+          <p style={{ fontSize: 14, color: '#9ca3af', lineHeight: 1.6, marginTop: 12 }}>
+            Scores, alignment readings, confluence percentages, and scenario analyses reflect indicator 
+            agreement and technical pattern recognition — they do not represent profit probability, 
+            guaranteed outcomes, or trading instructions. All users are solely responsible for any 
+            decisions they make with their own capital outside this platform.
+          </p>
+        </section>
+
+        <section>          <h2 id="backtests" style={{ fontSize: 22, fontWeight: 650, marginBottom: 12, marginTop: 24, color: '#f9fafb' }}>Backtests & Historical Data</h2>
           <p style={{ fontSize: 14, color: '#9ca3af', lineHeight: 1.6 }}>
             Backtesting features use real historical data from Alpha Vantage Premium. However, backtested results 
             are hypothetical, do not reflect actual trading, and are for illustration only. They do not account for 

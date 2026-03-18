@@ -72,7 +72,7 @@ export async function evaluateGovernor(
   if (dailyLoss >= MAX_DAILY_LOSS_PCT) {
     allowed = false;
     reasonCodes.push('EXEC_DAILY_LOSS_CAP');
-    requiredActions.push(`Daily loss ${(dailyLoss * 100).toFixed(2)}% ≥ ${(MAX_DAILY_LOSS_PCT * 100).toFixed(1)}% cap — no new trades.`);
+    requiredActions.push(`Daily loss ${(dailyLoss * 100).toFixed(2)}% ≥ ${(MAX_DAILY_LOSS_PCT * 100).toFixed(1)}% cap — no new simulated entries.`);
   }
 
   // 2. Portfolio heat (total open risk)
@@ -80,7 +80,7 @@ export async function evaluateGovernor(
   if (heat >= MAX_PORTFOLIO_HEAT_PCT) {
     allowed = false;
     reasonCodes.push('EXEC_PORTFOLIO_HEAT');
-    requiredActions.push(`Portfolio heat ${(heat * 100).toFixed(2)}% ≥ ${(MAX_PORTFOLIO_HEAT_PCT * 100).toFixed(1)}% — reduce open risk.`);
+    requiredActions.push(`Portfolio heat ${(heat * 100).toFixed(2)}% ≥ ${(MAX_PORTFOLIO_HEAT_PCT * 100).toFixed(1)}% — reduce simulated exposure.`);
   }
 
   // 3. Open trade count
@@ -88,7 +88,7 @@ export async function evaluateGovernor(
   if (openCount >= MAX_OPEN_TRADES) {
     allowed = false;
     reasonCodes.push('EXEC_MAX_OPEN_TRADES');
-    requiredActions.push(`${openCount} open trades ≥ ${MAX_OPEN_TRADES} hard cap.`);
+    requiredActions.push(`${openCount} open positions ≥ ${MAX_OPEN_TRADES} hard cap.`);
   }
 
   // 4. Minimum R:R check

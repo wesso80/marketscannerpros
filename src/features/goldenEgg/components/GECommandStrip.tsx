@@ -10,9 +10,9 @@ export default function GECommandStrip({ meta, layer1 }: GECommandStripProps) {
   return (
     <div className="mt-4 flex flex-wrap items-center gap-2">
       <GEKpiPill label="Symbol" value={`${meta.symbol} · ${meta.timeframe}`} />
-      <GEKpiPill label="Permission" value={layer1.permission} />
+      <GEKpiPill label="Assessment" value={layer1.permission} />
       <GEKpiPill label="Direction" value={layer1.direction} />
-      <GEKpiPill label="Confidence" value={`${layer1.confidence}% (${layer1.grade})`} />
+      <GEKpiPill label="Confluence" value={`${layer1.confidence}% (${layer1.grade})`} />
       <GEKpiPill label="Price" value={(meta.price ?? 0).toFixed(2)} />
     </div>
   );

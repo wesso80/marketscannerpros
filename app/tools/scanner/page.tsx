@@ -158,7 +158,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
 
   const recommendation = detail.institutionalFilter?.recommendation;
   const tradeReady = recommendation === 'TRADE_READY' && quality !== 'LOW' && direction !== 'neutral';
-  const executionStatus = tradeReady ? 'HIGH CONVICTION' : quality === 'MEDIUM' && direction !== 'neutral' ? 'MODERATE SETUP' : 'LOW SETUP — REVIEW';
+  const executionStatus = tradeReady ? 'HIGH ALIGNMENT' : quality === 'MEDIUM' && direction !== 'neutral' ? 'MODERATE ALIGNMENT' : 'LOW ALIGNMENT — REVIEW';
   const statusColor = tradeReady ? '#10B981' : quality === 'MEDIUM' && direction !== 'neutral' ? '#F59E0B' : '#EF4444';
   const confBarColor = confidence >= 70 ? '#10B981' : confidence >= 55 ? '#F59E0B' : '#EF4444';
 
@@ -221,17 +221,18 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
         </div>
         <div className="md:col-span-3">
           <div className="rounded-lg border p-3" style={{ borderColor: statusColor + '66', background: 'var(--msp-panel-2)' }}>
-            <div className="text-[0.66rem] font-extrabold uppercase tracking-[0.08em] text-slate-500">Trade Readiness</div>
+            <div className="text-[0.66rem] font-extrabold uppercase tracking-[0.08em] text-slate-500">Setup Alignment</div>
             <div className="mt-1 text-[0.88rem] font-black uppercase" style={{ color: statusColor }}>{executionStatus}</div>
             <div className="mt-2 grid gap-1 text-[0.72rem] text-slate-400">
               {blockReasons.map(r => <div key={r}>• {r}</div>)}
             </div>
             {!tradeReady && (
               <div className="mt-2 text-[0.72rem] font-extrabold uppercase" style={{ color: statusColor }}>
-                ADVISORY: QUALITY {quality} — REVIEW STRUCTURE
+                NOTE: QUALITY {quality} — REVIEW ALIGNMENT
               </div>
             )}
           </div>
+          <div className="mt-2 text-[0.62rem] text-slate-600 leading-tight">Scores reflect indicator agreement, not profit probability. For educational analysis only.</div>
         </div>
       </div>
 
@@ -295,7 +296,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
             </div>
             <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5 text-[0.74rem] text-slate-400">
               <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Risk Governor</div>
-              <div>Capital Allocation: <span className={`font-bold ${tradeReady ? 'text-emerald-400' : 'text-amber-400'}`}>{tradeReady ? '0.5% risk' : 'Review sizing'}</span></div>
+              <div>Simulated Allocation: <span className={`font-bold ${tradeReady ? 'text-emerald-400' : 'text-amber-400'}`}>{tradeReady ? '0.5% risk (paper)' : 'Review sizing'}</span></div>
               <div>Active Constraint: <span className="font-bold text-white">{tradeReady ? 'Tactical sizing' : 'Risk constraints active'}</span></div>
             </div>
 
@@ -590,7 +591,7 @@ export default function ScannerPage() {
         const tfA = [trendOk, momOk, flowOk, dir !== 'NEUTRAL'].filter(Boolean).length;
         const strat = pick.setup || (pick.macd_hist != null && pick.macd_hist > 0 ? 'MOM REV' : pickRsi != null && pickRsi < 35 ? 'MEAN REV' : atrPct < 1.5 ? 'BREAKOUT' : 'RANGE');
         const rec = pick.institutionalFilter?.recommendation;
-        const perm = rec === 'TRADE_READY' && qual !== 'low' ? 'COMPLIANT' : (rec === 'NO_TRADE' || qual === 'low') ? 'BLOCKED' : 'TIGHT';
+        const perm = rec === 'TRADE_READY' && qual !== 'low' ? 'COMPLIANT' : (rec === 'NO_TRADE' || qual === 'low') ? 'NOT ALIGNED' : 'TIGHT';
         return {
           rank: idx + 1, symbol: pick.symbol, direction: dir, confidence: conf, quality: qual,
           strategy: strat, rsi: pickRsi, adx: adxVal, atrPct, tfAlignment: tfA,
@@ -659,7 +660,7 @@ export default function ScannerPage() {
           <span className="text-[10px] uppercase tracking-wider text-slate-500">Active Regime</span>
           <Badge label={regime.data.regime} color={REGIME_COLORS[currentRegime as RegimePriority] || '#64748B'} small />
           <span className="text-[10px] text-slate-500">Risk: <span className="text-white">{regime.data.riskLevel}</span></span>
-          <span className="text-[10px] text-slate-500">Permission: <span className={regime.data.permission === 'full' ? 'text-emerald-400' : regime.data.permission === 'reduced' ? 'text-yellow-400' : 'text-red-400'}>{regime.data.permission}</span></span>
+          <span className="text-[10px] text-slate-500">Regime State: <span className={regime.data.permission === 'full' ? 'text-emerald-400' : regime.data.permission === 'reduced' ? 'text-yellow-400' : 'text-red-400'}>{regime.data.permission}</span></span>
           <div className="h-3 w-px bg-slate-700 mx-1" />
           <span className="text-[10px] text-slate-600">Weights: {Object.entries(REGIME_WEIGHTS[currentRegime] || {}).map(([k, v]) => `${k}:${v}`).join(' · ')}</span>
         </div>

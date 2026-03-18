@@ -104,7 +104,7 @@ export default function GESignalHero({ meta, layer1, setupType, volatility }: Pr
             permission === 'NO_TRADE' ? 'bg-rose-500/15 text-rose-400' :
             'bg-amber-500/15 text-amber-400'
           }`}>
-            {permission === 'TRADE' ? 'Trade' : permission === 'NO_TRADE' ? 'No Trade' : 'Watch'}
+            {permission === 'TRADE' ? 'Aligned' : permission === 'NO_TRADE' ? 'Not Aligned' : 'Watch'}
           </span>
         </div>
 
@@ -138,7 +138,7 @@ export default function GESignalHero({ meta, layer1, setupType, volatility }: Pr
             {signalLabel(confidence)}
           </div>
           <div className="mt-1 text-sm text-slate-400">
-            Confidence: {confidence}% &bull; Grade {grade}
+            Confluence: {confidence}% &bull; Grade {grade}
           </div>
         </div>
 

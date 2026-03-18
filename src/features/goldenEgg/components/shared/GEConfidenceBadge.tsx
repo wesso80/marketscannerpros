@@ -16,7 +16,7 @@ export default function GEConfidenceBadge({ confidence, grade, permission }: GEC
 
   return (
     <div className={`rounded-xl border p-3 ${tone}`}>
-      <div className="text-xs uppercase tracking-wide">Confidence</div>
+      <div className="text-xs uppercase tracking-wide">Confluence</div>
       <div className="text-2xl font-semibold">{confidence}%</div>
       <div className="text-sm">Grade {grade}</div>
     </div>

@@ -4,7 +4,7 @@
  * EdgeInsightCards — Surfaces the trader's edge profile as actionable insight cards.
  * Designed for the Command Center dashboard (pro / pro_trader only).
  *
- * Soft personalization: insights are advisory hints, not hard filters.
+ * Soft personalization: insights are analytical observations, not recommendations.
  */
 
 import { useEdgeProfile } from '@/hooks/useEdgeProfile';
@@ -245,6 +245,10 @@ export default function EdgeInsightCards() {
           ))}
         </div>
       )}
+
+      <div className="text-[9px] text-slate-600 leading-tight pt-1 border-t border-slate-800/40">
+        Past performance does not guarantee future results. Edge insights are based on your journal history and are for educational analysis only.
+      </div>
     </div>
   );
 }

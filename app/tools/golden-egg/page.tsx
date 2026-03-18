@@ -304,13 +304,13 @@ export default function GoldenEggPage() {
                 <div className="flex items-center gap-4 flex-wrap">
                   <div className="text-center">
                     <div className="text-3xl font-bold uppercase tracking-wider" style={{ color: verdictColor(ge.layer1.permission) }}>
-                      {ge.layer1.permission === 'YES' ? 'TRADE' : ge.layer1.permission === 'NO' ? 'NO TRADE' : 'WATCH'}
+                      {ge.layer1.permission === 'YES' ? 'ALIGNED' : ge.layer1.permission === 'NO' ? 'NOT ALIGNED' : 'WATCH'}
                     </div>
-                    <div className="text-[10px] text-slate-500 uppercase">Verdict</div>
+                    <div className="text-[10px] text-slate-500 uppercase">Assessment</div>
                   </div>
                   <div className="text-center">
                     <div className="text-3xl font-bold" style={{ color: verdictColor(ge.layer1.permission) }}>{ge.layer1.confidence}%</div>
-                    <div className="text-[10px] text-slate-500 uppercase">Confidence</div>
+                    <div className="text-[10px] text-slate-500 uppercase">Confluence</div>
                   </div>
                 </div>
               </div>
@@ -798,7 +798,7 @@ export default function GoldenEggPage() {
 
           {/* -- F: TRADE PLAN ------------------------------------------- */}
           <Card>
-            <h3 className="text-xs font-semibold text-emerald-400 mb-3">F — Trade Plan</h3>
+            <h3 className="text-xs font-semibold text-emerald-400 mb-3">F — Scenario Plan (Paper Trade)</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <div className="text-[10px] text-slate-500 uppercase">Entry</div>

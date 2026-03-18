@@ -299,7 +299,7 @@ function buildPayload(
 
   // Narrative — incorporate ALL engines: structure, options, MPE, time confluence, DVE, derivatives
   const narrativeBullets: string[] = [];
-  if (permission === 'TRADE') narrativeBullets.push('Multiple factors aligned — conditions support trade entry.');
+  if (permission === 'TRADE') narrativeBullets.push('Multiple factors aligned — conditions support scenario analysis.');
   if (structureScore >= 70) narrativeBullets.push('Price structure supports the directional thesis.');
   if (opts?.unusualActivity !== 'Normal' && opts) narrativeBullets.push('Options flow showing unusual activity — watch for institutional moves.');
   if (mpe && mpe.composite >= 60) narrativeBullets.push('Market pressure engine confirms building pressure.');
@@ -494,7 +494,7 @@ function buildPayload(
         enabled: true,
         summary: permission === 'TRADE'
           ? `${symbol} shows ${direction.toLowerCase()} alignment with ${confidence}/100 confidence. Multiple factors support a ${setupType} entry.${tcData?.signalStrength === 'strong' ? ` Time confluence confirms with ${tcData.direction} bias.` : ''}${dveReading?.signal.type !== 'none' && dveReading ? ` DVE ${dveReading.signal.type.replace(/_/g, ' ')} signal active.` : ''}`
-          : `${symbol} is in ${permission === 'NO_TRADE' ? 'no-trade' : 'watch'} mode. Confluence is insufficient \u2014 monitor flip conditions.${tcData && tcData.direction !== 'neutral' ? ` Time confluence leans ${tcData.direction}.` : ''}`,
+          : `${symbol} is in ${permission === 'NO_TRADE' ? 'not-aligned' : 'watch'} mode. Confluence is insufficient \u2014 monitor flip conditions.${tcData && tcData.direction !== 'neutral' ? ` Time confluence leans ${tcData.direction}.` : ''}`,
         bullets: narrativeBullets,
         risks: narrativeRisks,
       },

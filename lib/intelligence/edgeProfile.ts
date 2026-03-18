@@ -314,7 +314,7 @@ function generateInsights(slices: EdgeSlice[]): EdgeInsight[] {
     insights.push({
       id: `strength_${s.dimension}_${s.value}`,
       type: 'strength',
-      title: `Strong edge: ${formatDimLabel(s.dimension)} = ${s.value}`,
+      title: `Historical pattern: ${formatDimLabel(s.dimension)} = ${s.value}`,
       body: `${(s.winRate * 100).toFixed(0)}% win rate with ${s.avgR.toFixed(2)}R avg across ${s.sampleSize} trades.` +
         (s.profitFactor !== Infinity ? ` Profit factor ${s.profitFactor.toFixed(2)}.` : ''),
       dimension: s.dimension,

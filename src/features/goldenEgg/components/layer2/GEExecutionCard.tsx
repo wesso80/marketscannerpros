@@ -17,7 +17,7 @@ export default function GEExecutionCard({ execution, permission }: GEExecutionCa
     <div className="lg:col-span-6">
       <GECard title="Execution">
         {permission === 'NO_TRADE' ? (
-          <GEEmptyState title="Do not execute" body="Set alerts on flip conditions and wait for permission upgrade." />
+          <GEEmptyState title="Conditions not aligned" body="Set alerts on flip conditions and monitor for changes." />
         ) : (
           <div className="space-y-3">
             <GETriggerList title="Entry Trigger" items={[execution.entryTrigger]} />

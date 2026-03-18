@@ -35,10 +35,10 @@ function barColor(value: number): string {
 
 export default function GEDecisionStrip({ layer1 }: GEDecisionStripProps) {
   const verdictLabel = layer1.permission === 'TRADE'
-    ? `${layer1.direction === 'LONG' ? 'BUY' : layer1.direction === 'SHORT' ? 'SELL' : 'HOLD'} (${layer1.confidence}% confidence)`
+    ? `${layer1.direction === 'LONG' ? 'LONG' : layer1.direction === 'SHORT' ? 'SHORT' : 'HOLD'} (${layer1.confidence}% confluence)`
     : layer1.permission === 'NO_TRADE'
-    ? `NO TRADE (${layer1.confidence}% confidence)`
-    : `HOLD (${layer1.confidence}% confidence)`;
+    ? `NOT ALIGNED (${layer1.confidence}% confluence)`
+    : `HOLD (${layer1.confidence}% confluence)`;
 
   const verdictBg = layer1.permission === 'TRADE'
     ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-200'

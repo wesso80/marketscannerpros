@@ -249,7 +249,7 @@ export async function POST(req: NextRequest) {
           const snapshot = buildPermissionSnapshot({ enabled: true, ...riskInput });
           if (snapshot.risk_mode === 'LOCKED') {
             return NextResponse.json(
-              { error: 'Risk governor is LOCKED — new positions are blocked. Close existing positions or wait for daily reset.', riskMode: 'LOCKED' },
+              { error: 'Risk governor is LOCKED — new paper positions are disabled. Close existing positions or wait for daily reset.', riskMode: 'LOCKED' },
               { status: 403 }
             );
           } else if (snapshot.risk_mode === 'DEFENSIVE') {

@@ -369,12 +369,12 @@ export function computeInstitutionalRiskGovernor(input: InstitutionalRiskGoverno
 
   if (correlationBlocked) blocked.push(`New ${proposedCluster} ${proposedDirection} positions`);
   if (volatilityBreakoutBlock) blocked.push('Breakout entries in EXTREME volatility');
-  if (cooldownActive) blocked.push('All new trades during 30-minute cooldown');
-  if (overtradingBlocked) blocked.push('New trades: overtrading + negative expectancy');
-  if (ruleViolationBlock) blocked.push('New trades after repeated rule violations');
-  if (drawdown.lockout) blocked.push('All trading lockout (drawdown governor)');
+  if (cooldownActive) blocked.push('All new entries during 30-minute cooldown');
+  if (overtradingBlocked) blocked.push('New entries: overtrading + negative expectancy');
+  if (ruleViolationBlock) blocked.push('New entries after repeated rule violations');
+  if (drawdown.lockout) blocked.push('All simulation lockout (drawdown governor)');
   if (capitalBlocked) blocked.push('New risk allocation (capital limits exceeded)');
-  if (mode === 'LOCKDOWN') blocked.push('All new trades (IRS lockdown mode)');
+  if (mode === 'LOCKDOWN') blocked.push('All new entries (IRS lockdown mode)');
 
   return {
     executionAllowed,
