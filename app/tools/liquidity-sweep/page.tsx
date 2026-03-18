@@ -216,10 +216,10 @@ export default function LiquiditySweepPage() {
                 return (
                   <div key={r.symbol} style={{
                     background: 'var(--msp-panel)',
-                    border: `1px solid ${r.sweepDetected ? 'rgba(239,68,68,0.35)' : 'var(--msp-border)'}`,
+                    border: `1px solid ${r.sweepDetected ? (r.direction === 'bullish' ? 'rgba(16,185,129,0.45)' : 'rgba(239,68,68,0.45)') : 'var(--msp-border)'}`,
                     borderRadius: '14px',
                     padding: '16px 18px',
-                    boxShadow: r.sweepDetected ? '0 0 12px rgba(239,68,68,0.1)' : 'none',
+                    boxShadow: r.sweepDetected ? (r.direction === 'bullish' ? '0 0 12px rgba(16,185,129,0.12)' : '0 0 12px rgba(239,68,68,0.12)') : 'none',
                   }}>
                     {/* Header row */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
