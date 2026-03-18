@@ -204,14 +204,14 @@ export function classifyVolRegime(
   if (bbwp < VOL_REGIME.COMPRESSION_THRESHOLD) {
     regime = 'compression';
     confidence = ((VOL_REGIME.COMPRESSION_THRESHOLD - bbwp) / VOL_REGIME.COMPRESSION_THRESHOLD) * 100;
-  } else if (bbwp > VOL_REGIME.CLIMAX_THRESHOLD) {
+  } else if (bbwp >= VOL_REGIME.CLIMAX_THRESHOLD) {
     regime = 'climax';
-    confidence = ((bbwp - VOL_REGIME.CLIMAX_THRESHOLD) / (100 - VOL_REGIME.CLIMAX_THRESHOLD)) * 100;
+    // Floor at 50%: BBWP at 90th+ percentile is a strong climax signal
+    confidence = Math.max(50, ((bbwp - VOL_REGIME.CLIMAX_THRESHOLD) / (100 - VOL_REGIME.CLIMAX_THRESHOLD)) * 100);
   } else if (bbwp > VOL_REGIME.EXPANSION_THRESHOLD) {
     regime = 'expansion';
-    const distFromLow = (bbwp - VOL_REGIME.EXPANSION_THRESHOLD) / 20;
-    const distFromHigh = (VOL_REGIME.CLIMAX_THRESHOLD - bbwp) / 20;
-    confidence = Math.min(distFromLow, distFromHigh) * 100;
+    // Confidence scales linearly with depth into expansion zone (70→90)
+    confidence = ((bbwp - VOL_REGIME.EXPANSION_THRESHOLD) / (VOL_REGIME.CLIMAX_THRESHOLD - VOL_REGIME.EXPANSION_THRESHOLD)) * 100;
   } else if (rateDirection === 'accelerating' && bbwp > 15 && bbwp < 40) {
     regime = 'transition';
     confidence = 50;

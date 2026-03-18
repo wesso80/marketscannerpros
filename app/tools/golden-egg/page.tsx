@@ -106,7 +106,7 @@ export default function GoldenEggPage() {
 
   // Core data
   const goldenEgg = useGoldenEgg(sym, timeframe);
-  const dve = useDVE(sym);
+  const dve = useDVE(sym, timeframe);
   const quote = useQuote(sym);
   const regime = useRegime();
 

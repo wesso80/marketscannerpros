@@ -15,7 +15,7 @@ import {
   type OptionsPressureInput,
 } from '@/lib/marketPressureEngine';
 import { confluenceLearningAgent, type ScanMode, type SessionMode } from '@/lib/confluence-learning-agent';
-import { getAggregatedFundingRates, getAggregatedOpenInterest, resolveSymbolToId, getCoinDetail, getOHLC } from '@/lib/coingecko';
+import { getAggregatedFundingRates, getAggregatedOpenInterest, resolveSymbolToId, getCoinDetail, getOHLC, getMarketChartHistory } from '@/lib/coingecko';
 
 const AV_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -129,8 +129,9 @@ export async function fetchPrice(
       if (!coinId) return null;
 
       const ohlcDays = opts?.requireHistoricals ? 365 : 90;
-      const [detail, ohlc] = await Promise.all([
+      const [detail, marketChart, ohlc] = await Promise.all([
         getCoinDetail(coinId),
+        getMarketChartHistory(coinId, ohlcDays),
         getOHLC(coinId, ohlcDays as 90 | 365),
       ]);
 
@@ -144,8 +145,58 @@ export async function fetchPrice(
       const low = md.low_24h?.usd ?? price;
       const volume = md.total_volume?.usd ?? 0;
 
-      // OHLC format: [timestamp, open, high, low, close]
-      const candles = ohlc ?? [];
+      // market_chart returns ~365 daily closes; OHLC returns ~90 sparse OHLC candles
+      const dailyPrices = marketChart?.prices ?? [];
+      const ohlcCandles = ohlc ?? [];
+
+      if (dailyPrices.length > ohlcCandles.length && dailyPrices.length > 0) {
+        // Use market_chart for daily closes (365 data points for robust BBWP)
+        // Interpolate H/L from sparse OHLC by finding nearest candle per daily timestamp
+        const ohlcByTs = ohlcCandles.map((c: number[]) => ({ ts: c[0], h: c[2], l: c[3] }));
+        ohlcByTs.sort((a, b) => a.ts - b.ts);
+
+        const historicalCloses: number[] = [];
+        const historicalHighs: number[] = [];
+        const historicalLows: number[] = [];
+
+        for (const [ts, closePrice] of dailyPrices) {
+          historicalCloses.push(closePrice);
+          if (ohlcByTs.length === 0) {
+            historicalHighs.push(closePrice);
+            historicalLows.push(closePrice);
+            continue;
+          }
+          // Binary search for nearest OHLC candle
+          let lo = 0, hi = ohlcByTs.length - 1;
+          while (lo < hi) {
+            const mid = (lo + hi) >> 1;
+            if (ohlcByTs[mid].ts < ts) lo = mid + 1;
+            else hi = mid;
+          }
+          let bestIdx = lo;
+          if (lo > 0 && Math.abs(ohlcByTs[lo - 1].ts - ts) < Math.abs(ohlcByTs[lo].ts - ts)) {
+            bestIdx = lo - 1;
+          }
+          historicalHighs.push(Math.max(ohlcByTs[bestIdx].h, closePrice));
+          historicalLows.push(Math.min(ohlcByTs[bestIdx].l, closePrice));
+        }
+
+        return {
+          price,
+          change,
+          changePct,
+          high,
+          low,
+          volume,
+          historicalCloses,
+          historicalHighs,
+          historicalLows,
+          avgVolume: volume, // Use current 24h volume as baseline
+        };
+      }
+
+      // Fallback: sparse OHLC only
+      const candles = ohlcCandles;
       return {
         price,
         change,
@@ -156,6 +207,7 @@ export async function fetchPrice(
         historicalCloses: candles.map((c: number[]) => c[4]),
         historicalHighs: candles.map((c: number[]) => c[2]),
         historicalLows: candles.map((c: number[]) => c[3]),
+        avgVolume: volume,
       };
     }
 

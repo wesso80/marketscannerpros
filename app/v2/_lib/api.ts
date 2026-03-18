@@ -453,8 +453,8 @@ export function fetchGoldenEgg(symbol: string, timeframe: ScanTimeframe = 'daily
 }
 
 // --- DVE ---
-export function fetchDVE(symbol: string): Promise<DVEResponse> {
-  return apiFetch(`/api/dve?symbol=${encodeURIComponent(symbol)}`);
+export function fetchDVE(symbol: string, timeframe: ScanTimeframe = 'daily'): Promise<DVEResponse> {
+  return apiFetch(`/api/dve?symbol=${encodeURIComponent(symbol)}&timeframe=${timeframe}`);
 }
 
 // --- Quote ---
@@ -650,8 +650,8 @@ export function useGoldenEgg(symbol: string | null, timeframe: ScanTimeframe = '
   return useApi(() => symbol ? fetchGoldenEgg(symbol, timeframe) : Promise.resolve(null as any), [symbol, timeframe]);
 }
 
-export function useDVE(symbol: string | null) {
-  return useApi(() => symbol ? fetchDVE(symbol) : Promise.resolve(null as any), [symbol]);
+export function useDVE(symbol: string | null, timeframe: ScanTimeframe = 'daily') {
+  return useApi(() => symbol ? fetchDVE(symbol, timeframe) : Promise.resolve(null as any), [symbol, timeframe]);
 }
 
 export function useQuote(symbol: string | null, type: 'stock' | 'crypto' = 'stock') {

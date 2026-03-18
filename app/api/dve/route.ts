@@ -41,15 +41,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Please log in' }, { status: 401 });
     }
 
-    // 2. Parse symbol
+    // 2. Parse symbol + timeframe
     const { searchParams } = new URL(request.url);
     const symbol = (searchParams.get('symbol') || '').trim().toUpperCase();
     if (!symbol) {
       return NextResponse.json({ success: false, error: 'Missing symbol parameter' }, { status: 400 });
     }
+    const timeframe = (searchParams.get('timeframe') || 'daily').toLowerCase();
+    const avIntervalMap: Record<string, string> = { '15m': '15min', '1h': '60min', 'daily': 'daily', 'weekly': 'weekly' };
+    const avInterval = avIntervalMap[timeframe] || 'daily';
 
-    // 3. Check cache
-    const cached = dveCache.get(symbol);
+    // 3. Check cache (include timeframe in key)
+    const cacheKey = `${symbol}_${timeframe}`;
+    const cached = dveCache.get(cacheKey);
     if (cached && Date.now() - cached.ts < DVE_CACHE_TTL) {
       return NextResponse.json({ success: true, data: cached.data, price: cached.price, cached: true });
     }
@@ -59,7 +63,7 @@ export async function GET(request: NextRequest) {
 
     // 5. Fetch price + MPE in parallel (DVE needs historical data)
     const [priceData, mpeData] = await Promise.all([
-      fetchPrice(symbol, assetClass, { requireHistoricals: true }),
+      fetchPrice(symbol, assetClass, { requireHistoricals: true, avInterval }),
       fetchMPE(symbol, assetClass),
     ]);
 
@@ -76,6 +80,7 @@ export async function GET(request: NextRequest) {
       priceData.historicalCloses,
       priceData.historicalHighs,
       priceData.historicalLows,
+      avInterval,
     );
 
     // 7. Fetch options (equities only)
@@ -173,7 +178,7 @@ export async function GET(request: NextRequest) {
     const reading = computeDVE(dveInput, symbol);
 
     // 12. Cache + return
-    dveCache.set(symbol, { data: reading, price: priceData.price, ts: Date.now() });
+    dveCache.set(cacheKey, { data: reading, price: priceData.price, ts: Date.now() });
     return NextResponse.json({ success: true, data: reading, price: priceData.price });
   } catch (error) {
     console.error('[DVE API] Error:', error);
