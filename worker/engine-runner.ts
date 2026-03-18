@@ -9,6 +9,7 @@ import {
   requeueStaleProcessingJobs,
 } from '../lib/engine/jobQueue';
 import { q } from '../lib/db';
+import { alertWorkerError } from '../lib/opsAlerting';
 
 type EngineHandler = (job: {
   id: number;
@@ -718,7 +719,8 @@ async function main() {
   }
 }
 
-main().catch((error) => {
+main().catch(async (error) => {
   console.error('[engine] fatal error', error);
+  await alertWorkerError('engine-runner', error?.message || String(error));
   process.exit(1);
 });

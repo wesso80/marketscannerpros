@@ -22,6 +22,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { verifyCronAuth, verifyAdminAuth } from '@/lib/adminAuth';
+import { alertCronFailure } from '@/lib/opsAlerting';
 import {
   computeEdgeProfile,
   MIN_SAMPLE_SIZE,
@@ -294,6 +295,7 @@ async function runOpportunityScan(req: NextRequest) {
     });
   } catch (err: any) {
     push(`Fatal error: ${err.message}`);
+    await alertCronFailure('opportunity-scan', err.message);
     // Return 200 to prevent cron exit-22
     return NextResponse.json({ success: false, error: err.message, log });
   }

@@ -1747,7 +1747,9 @@ async function main(): Promise<void> {
 }
 
 // Run if executed directly
-main().catch((err) => {
+main().catch(async (err) => {
   console.error('[worker] Fatal error:', err);
+  const { alertWorkerError } = await import('../lib/opsAlerting');
+  await alertWorkerError('ingest-data', err?.message || String(err));
   process.exit(1);
 });

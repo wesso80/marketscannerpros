@@ -1,6 +1,8 @@
 // lib/logger.ts
 // Production-ready structured logging with tracing and error tracking
 
+import { opsAlert } from '@/lib/opsAlerting';
+
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 interface LogEntry {
@@ -141,6 +143,17 @@ class Logger {
     }
 
     this.emit(this.formatEntry('error', message, data, err));
+
+    // Fire-and-forget ops alert for production errors
+    if (isProduction) {
+      opsAlert({
+        title: message.slice(0, 120),
+        message: err?.stack || err?.message || message,
+        severity: 'error',
+        source: `logger/${this.traceId || 'global'}`,
+        dedupeKey: errKey,
+      }).catch(() => {});
+    }
   }
 
   /** Log an API request/response with duration */

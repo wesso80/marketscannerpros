@@ -23,6 +23,7 @@ import {
   OHLCV, calculateSMA, calculateEMA, calculateRSI, calculateMACD,
   calculateADX, calculateStochastic, calculateAroon, calculateCCI,
 } from "@/lib/scanner-indicators";
+import { alertCronFailure } from "@/lib/opsAlerting";
 
 export const runtime = "nodejs";
 export const maxDuration = 300; // 5 minutes max
@@ -563,6 +564,7 @@ export async function POST(req: NextRequest) {
     console.log(`[scan-universe] Stored picks in database`);
   } catch (dbError: any) {
     console.error("[scan-universe] Database error:", dbError);
+    await alertCronFailure('scan-universe', `Database: ${dbError.message}`);
     errors.push(`Database: ${dbError.message}`);
   }
   

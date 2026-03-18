@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { timingSafeEqual } from 'crypto';
+import { alertCronFailure } from '@/lib/opsAlerting';
 
 function safeCompare(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
@@ -198,6 +199,7 @@ export async function POST(_req: NextRequest) {
     }
   } catch (err: any) {
     console.error('Learning outcomes job error:', err);
+    await alertCronFailure('learning-outcomes', err.message || 'Unknown error');
     errors.push(err.message || 'Unknown error');
   }
 

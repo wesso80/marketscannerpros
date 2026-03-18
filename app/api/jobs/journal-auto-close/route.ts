@@ -4,6 +4,7 @@ import { enqueueEngineJob } from '@/lib/engine/jobQueue';
 import { emitTradeLifecycleEvent, hashDedupeKey } from '@/lib/notifications/tradeEvents';
 import { verifyCronAuth, verifyAdminAuth } from '@/lib/adminAuth';
 import { ingestTradeOutcome, maybeAutoEvolve } from '@/lib/intelligence/ingestOutcome';
+import { alertCronFailure } from '@/lib/opsAlerting';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -434,6 +435,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: any) {
     console.error('[jobs/journal-auto-close] error:', error);
+    await alertCronFailure('journal-auto-close', error?.message || 'Failed to run journal auto-close sweep');
     // Return 200 with error details — prevents cron exit-22 for transient failures
     return NextResponse.json({
       success: false,

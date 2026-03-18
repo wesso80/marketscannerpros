@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { q } from "@/lib/db";
 import { avTakeToken } from "@/lib/avRateGovernor";
 import { verifyCronAuth, verifyAdminAuth } from "@/lib/adminAuth";
+import { alertCronFailure } from "@/lib/opsAlerting";
 
 export const runtime = "nodejs";
 export const maxDuration = 300; // 5 minutes max
@@ -593,10 +594,12 @@ async function runDailyScan(req: NextRequest) {
 
   } catch (error) {
     console.error("Daily scan error:", error);
+    const msg = error instanceof Error ? error.message : "Scan failed";
+    await alertCronFailure('scan-daily', msg);
     // Return 200 with error details — prevents cron exit-22 for transient failures
     return NextResponse.json({ 
       success: false, 
-      error: error instanceof Error ? error.message : "Scan failed" 
+      error: msg 
     });
   }
 }

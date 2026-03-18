@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { q } from "@/lib/db";
 import { verifyCronAuth } from "@/lib/adminAuth";
+import { alertCronFailure } from "@/lib/opsAlerting";
 
 export const runtime = "nodejs";
 
@@ -203,6 +204,7 @@ async function runMarketFocusJob(req: Request) {
       `update daily_market_focus set status='failed', notes=$2, updated_at=now() where id=$1`,
       [focusId, String(err?.message ?? err)]
     );
+    await alertCronFailure('generate-market-focus', String(err?.message ?? err));
     // Return 200 with error details — prevents cron exit-22 for transient failures
     return NextResponse.json({ status: "failed", error: String(err?.message ?? err) });
   }

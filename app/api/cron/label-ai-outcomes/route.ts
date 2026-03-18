@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { timingSafeEqual } from 'crypto';
+import { alertCronFailure } from '@/lib/opsAlerting';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -98,6 +99,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Labeling failed';
+    await alertCronFailure('label-ai-outcomes', message);
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

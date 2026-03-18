@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import { q, tx } from '@/lib/db';
+import { alertWorkerError } from '@/lib/opsAlerting';
 
 dotenv.config({ path: '.env.local' });
 dotenv.config();
@@ -100,7 +101,8 @@ runCleanup()
     console.log('cleanup_complete', summary);
     process.exit(0);
   })
-  .catch((error) => {
+  .catch(async (error) => {
     console.error('cleanup_failed', error);
+    await alertWorkerError('cleanup-stale-auto-drafts', error?.message || String(error));
     process.exit(1);
   });

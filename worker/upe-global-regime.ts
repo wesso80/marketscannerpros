@@ -3,6 +3,7 @@ dotenv.config({ path: '.env.local' });
 dotenv.config();
 
 import { q } from '../lib/db';
+import { alertWorkerError } from '../lib/opsAlerting';
 
 type SnapshotType = 'open' | 'close';
 type Regime = 'risk_on' | 'neutral' | 'risk_off';
@@ -222,7 +223,8 @@ async function main() {
   });
 }
 
-main().catch((error) => {
+main().catch(async (error) => {
   console.error('[upe-global-regime] fatal error', error);
+  await alertWorkerError('upe-global-regime', error?.message || String(error));
   process.exit(1);
 });

@@ -20,6 +20,7 @@ import dotenv from 'dotenv';
 dotenv.config({ path: '.env.local' });
 
 import { Pool } from 'pg';
+import { alertWorkerError } from '../lib/opsAlerting';
 
 // Lazy database connection
 let pool: Pool | null = null;
@@ -346,7 +347,8 @@ main()
   .then(() => {
     process.exit(0);
   })
-  .catch(err => {
+  .catch(async (err) => {
     console.error('💥 Fatal error:', err);
+    await alertWorkerError('label-outcomes', err?.message || String(err));
     process.exit(1);
   });

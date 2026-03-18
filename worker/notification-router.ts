@@ -5,6 +5,7 @@ dotenv.config();
 import { q } from '../lib/db';
 import { sendAlertEmail } from '../lib/email';
 import { ensureNotificationSchema } from '../lib/notifications/tradeEvents';
+import { alertWorkerError } from '../lib/opsAlerting';
 
 type TradeEventType = 'TRADE_ENTERED' | 'TRADE_CLOSED' | 'TRADE_CLOSE_FAILED';
 type DeliveryChannel = 'in_app' | 'email' | 'discord';
@@ -477,7 +478,8 @@ async function main() {
 
 main()
   .then(() => process.exit(0))
-  .catch((error) => {
+  .catch(async (error) => {
     console.error('[notification-router] fatal:', error);
+    await alertWorkerError('notification-router', error?.message || String(error));
     process.exit(1);
   });

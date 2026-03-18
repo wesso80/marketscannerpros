@@ -3,6 +3,7 @@ dotenv.config({ path: '.env.local' });
 dotenv.config();
 
 import { q } from '../lib/db';
+import { alertWorkerError } from '../lib/opsAlerting';
 
 type Regime = 'risk_on' | 'neutral' | 'risk_off';
 type CapitalMode = 'normal' | 'reduced' | 'defensive';
@@ -386,7 +387,8 @@ async function runHourly() {
   });
 }
 
-runHourly().catch((error) => {
+runHourly().catch(async (error) => {
   console.error('[upe-crcs-hourly] fatal error', error);
+  await alertWorkerError('upe-crcs-hourly', error?.message || String(error));
   process.exit(1);
 });
