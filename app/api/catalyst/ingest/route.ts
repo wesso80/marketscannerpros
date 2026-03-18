@@ -1,20 +1,30 @@
 /**
  * POST /api/catalyst/ingest
  *
- * Internal/admin endpoint to trigger SEC + news ingestion.
+ * Internal/cron endpoint to trigger SEC + news ingestion.
+ * Accepts either session auth (manual trigger from admin UI)
+ * or x-cron-secret header (Render cron job).
  * Returns counts of ingested/skipped/errored events.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { verifyCronAuth } from '@/lib/adminAuth';
 import { ingestSecFilings } from '@/lib/catalyst/secIngestion';
-import { ingestNews } from '@/lib/catalyst/newsProvider';
+import { ingestNews, setNewsProvider } from '@/lib/catalyst/newsProvider';
+import { AlphaVantageNewsProvider } from '@/lib/catalyst/alphaVantageNewsProvider';
+import { alertCronFailure } from '@/lib/opsAlerting';
 import type { IngestionResult } from '@/lib/catalyst/types';
+
+// Register the live news provider
+setNewsProvider(new AlphaVantageNewsProvider());
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSessionFromCookie();
-    if (!session?.workspaceId) {
+    // Allow cron jobs OR authenticated sessions
+    const isCron = verifyCronAuth(req);
+    const session = isCron ? null : await getSessionFromCookie();
+    if (!isCron && !session?.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -66,6 +76,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: any) {
     console.error('Catalyst ingest error:', error);
+    alertCronFailure('catalyst-ingest', error);
     return NextResponse.json({ error: 'Ingestion failed', detail: error.message }, { status: 500 });
   }
 }
