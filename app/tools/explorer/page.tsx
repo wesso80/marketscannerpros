@@ -273,7 +273,7 @@ export default function ExplorerPage() {
                       <td className={`py-2.5 px-2 text-right font-mono ${pctColor(s.weekly || 0)}`}>{s.weekly != null ? `${s.weekly > 0 ? '+' : ''}${s.weekly.toFixed(2)}%` : '—'}</td>
                       <td className={`py-2.5 px-2 text-right font-mono ${pctColor(s.monthly || 0)}`}>{s.monthly != null ? `${s.monthly > 0 ? '+' : ''}${s.monthly.toFixed(2)}%` : '—'}</td>
                       <td className={`py-2.5 px-2 text-right font-mono text-slate-400`}>{(s as any).ytd != null ? `${(s as any).ytd > 0 ? '+' : ''}${(s as any).ytd.toFixed(2)}%` : '—'}</td>
-                      <td className="py-2.5 px-2 text-right text-slate-400">{(s.weight * 100).toFixed(1)}%</td>
+                      <td className="py-2.5 px-2 text-right text-slate-400">{s.weight.toFixed(1)}%</td>
                     </tr>
                   ))}
                 </tbody>
