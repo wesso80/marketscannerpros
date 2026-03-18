@@ -15,19 +15,19 @@ type GEExecutionCardProps = {
 export default function GEExecutionCard({ execution, permission }: GEExecutionCardProps) {
   return (
     <div className="lg:col-span-6">
-      <GECard title="Execution">
+      <GECard title="Structure Map">
         {permission === 'NO_TRADE' ? (
           <GEEmptyState title="Conditions not aligned" body="Set alerts on flip conditions and monitor for changes." />
         ) : (
           <div className="space-y-3">
-            <GETriggerList title="Entry Trigger" items={[execution.entryTrigger]} />
+            <GETriggerList title="Reference Trigger" items={[execution.entryTrigger]} />
             <GEKeyValueRow
-              label="Entry"
+              label="Reference Level"
               value={execution.entry.type === 'market' ? 'Market' : `${execution.entry.type.toUpperCase()} ${execution.entry.price?.toFixed(2) || ''}`}
             />
-            <GEKeyValueRow label="Stop" value={`${(execution.stop.price ?? 0).toFixed(2)} · ${execution.stop.logic}`} />
+            <GEKeyValueRow label="Risk Level" value={`${(execution.stop.price ?? 0).toFixed(2)} · ${execution.stop.logic}`} />
             <div>
-              <GESectionHeader title="Targets" />
+              <GESectionHeader title="Key Levels" />
               <div className="mt-2">
                 <GELevelTable rows={execution.targets.map((target, index) => ({ label: `T${index + 1}`, price: target.price, note: target.note, rMultiple: target.rMultiple }))} />
               </div>

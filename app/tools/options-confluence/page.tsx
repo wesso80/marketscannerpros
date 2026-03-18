@@ -2756,9 +2756,9 @@ export default function OptionsConfluenceScanner() {
               </div>
 
               <div className={`grid gap-[0.45rem] rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel)] p-3 ${adaptiveModeMeta.layout.execOrderClass} ${adaptiveModeMeta.layout.execOpacityClass}`}>
-                <div className="text-[0.7rem] font-bold uppercase text-slate-400">Execution Panel</div>
+                <div className="text-[0.7rem] font-bold uppercase text-slate-400">Analysis Panel</div>
                 <div className="rounded-lg bg-black/20 p-[0.45rem]">
-                  <div className="text-[0.62rem] font-bold uppercase text-slate-500">Entry Zone</div>
+                  <div className="text-[0.62rem] font-bold uppercase text-slate-500">Reference Zone</div>
                   <div className="text-[0.8rem] font-extrabold text-slate-50">{result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)} - ${result.tradeLevels.entryZone.high.toFixed(2)}` : 'Await setup'}</div>
                 </div>
                 <div className="rounded-lg bg-black/20 p-[0.45rem]">
@@ -2766,7 +2766,7 @@ export default function OptionsConfluenceScanner() {
                   <div className="text-[0.8rem] font-extrabold text-red-300">{result.tradeLevels ? result.tradeLevels.stopLoss.toFixed(2) : (result.tradeSnapshot?.risk?.invalidationReason || 'N/A')}</div>
                 </div>
                 <div className="rounded-lg bg-black/20 p-[0.45rem]">
-                  <div className="text-[0.62rem] font-bold uppercase text-slate-500">Target / R:R</div>
+                  <div className="text-[0.62rem] font-bold uppercase text-slate-500">Key Level / R:R</div>
                   <div className="text-[0.8rem] font-extrabold text-emerald-200">{result.tradeLevels ? `${result.tradeLevels.target1.price.toFixed(2)} • ${result.tradeLevels.riskRewardRatio.toFixed(1)}:1` : 'Await trigger'}</div>
                 </div>
                 <div className="text-[0.7rem] text-slate-400">Permission: <span className={`font-extrabold ${tradePermission === 'ALLOWED' ? 'text-emerald-500' : tradePermission === 'BLOCKED' ? 'text-red-500' : 'text-amber-500'}`}>{tradePermission}</span></div>

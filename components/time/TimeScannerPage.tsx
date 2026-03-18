@@ -673,27 +673,27 @@ export default function TimeScannerPage() {
                       ? 'border-emerald-500/25 bg-emerald-500/5'
                       : 'border-rose-500/25 bg-rose-500/5'
                   }`}>
-                    <div className="text-[10px] uppercase tracking-wider text-slate-500">Target</div>
+                    <div className="text-[10px] uppercase tracking-wider text-slate-500">Key Level</div>
                     <div className={`text-base font-bold ${
                       scanData.direction === 'bullish' ? 'text-emerald-400' : 'text-rose-400'
                     }`}>{scanData.targetLevel > 0 ? formatPrice(scanData.targetLevel) : '—'}</div>
                   </div>
                 </div>
 
-                {/* Entry / Stop / Take Profit — only show when they differ meaningfully */}
+                {/* Reference / Risk / Reaction — only show when they differ meaningfully */}
                 {scanData.entry > 0 && scanData.stopLoss > 0 && Math.abs(scanData.entry - scanData.stopLoss) > 0.01 && (
                   <div className="grid grid-cols-3 gap-1.5">
                     <div className="rounded-lg border border-slate-800 bg-slate-950/25 px-2 py-1.5 text-center">
-                      <div className="text-[9px] uppercase tracking-wider text-slate-500">Entry</div>
+                      <div className="text-[9px] uppercase tracking-wider text-slate-500">Reference</div>
                       <div className="text-xs font-semibold text-slate-200">{formatPrice(scanData.entry)}</div>
                     </div>
                     <div className="rounded-lg border border-rose-500/20 bg-rose-500/5 px-2 py-1.5 text-center">
-                      <div className="text-[9px] uppercase tracking-wider text-slate-500">Stop</div>
+                      <div className="text-[9px] uppercase tracking-wider text-slate-500">Risk Level</div>
                       <div className="text-xs font-semibold text-rose-400">{formatPrice(scanData.stopLoss)}</div>
                       {scanData.riskPct > 0 && <div className="text-[9px] text-rose-500">-{scanData.riskPct.toFixed(1)}%</div>}
                     </div>
                     <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-2 py-1.5 text-center">
-                      <div className="text-[9px] uppercase tracking-wider text-slate-500">TP</div>
+                      <div className="text-[9px] uppercase tracking-wider text-slate-500">Reaction</div>
                       <div className="text-xs font-semibold text-emerald-400">{formatPrice(scanData.takeProfit)}</div>
                       {scanData.rewardPct > 0 && <div className="text-[9px] text-emerald-500">+{scanData.rewardPct.toFixed(1)}%</div>}
                     </div>

@@ -125,13 +125,13 @@ export default function TradeSuggestionCard({ suggestion, onAccept, onReject }: 
         marginTop: '0.5rem',
       }}>
         {s.suggested_entry != null && (
-          <LevelBox label="Entry" value={fmtPrice(s.suggested_entry)} color="#E2E8F0" />
+          <LevelBox label="Reference" value={fmtPrice(s.suggested_entry)} color="#E2E8F0" />
         )}
         {s.suggested_stop != null && (
-          <LevelBox label="Stop" value={fmtPrice(s.suggested_stop)} color="#EF4444" />
+          <LevelBox label="Risk Level" value={fmtPrice(s.suggested_stop)} color="#EF4444" />
         )}
         {s.suggested_target != null && (
-          <LevelBox label="Target" value={fmtPrice(s.suggested_target)} color="#10B981" />
+          <LevelBox label="Key Level" value={fmtPrice(s.suggested_target)} color="#10B981" />
         )}
         {s.risk_reward != null && (
           <LevelBox label="R:R" value={`${s.risk_reward.toFixed(1)}:1`} color="#60A5FA" />

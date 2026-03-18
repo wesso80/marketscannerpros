@@ -12,20 +12,20 @@ export default function ExecutionPlanCard({ plan, permission, onCopyPlan, onSend
   return (
     <div className="rounded-2xl border border-slate-700 bg-slate-950/35 p-3 shadow-sm">
       {permission === 'BLOCK' ? (
-        <div className="mt-3 rounded-lg border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">Do not execute. Wait for flip conditions.</div>
+        <div className="mt-3 rounded-lg border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">Conditions not aligned. Wait for flip conditions.</div>
       ) : (
         <>
           <div className="space-y-2">
             <div className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2">
-              <div className="text-[11px] uppercase tracking-wider text-slate-400">Entry</div>
+              <div className="text-[11px] uppercase tracking-wider text-slate-400">Reference Level</div>
               <div className="text-sm font-semibold text-slate-100">{plan.entry}</div>
             </div>
             <div className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2">
-              <div className="text-[11px] uppercase tracking-wider text-slate-400">Stop</div>
+              <div className="text-[11px] uppercase tracking-wider text-slate-400">Risk Level</div>
               <div className="text-sm font-semibold text-slate-100">{plan.stop}</div>
             </div>
             <div className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2">
-              <div className="text-[11px] uppercase tracking-wider text-slate-400">Target</div>
+              <div className="text-[11px] uppercase tracking-wider text-slate-400">Key Level</div>
               <div className="text-sm font-semibold text-slate-100">{plan.targets.join(' · ') || 'N/A'}</div>
             </div>
 

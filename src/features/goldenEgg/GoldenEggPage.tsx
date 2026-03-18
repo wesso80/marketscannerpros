@@ -228,9 +228,9 @@ export default function GoldenEggPage() {
               <GEDecisionStrip layer1={payload.layer1} />
             </section>
 
-            {/* Trade Plan */}
+            {/* Market Structure Map */}
             <section>
-              <SectionTitle icon="🎯" title="Trade Plan" />
+              <SectionTitle icon="🎯" title="Market Structure Map" />
               {noTrade ? (
                 <GECard title="Waiting For" variant="warning">
                   <ul className="space-y-2 text-sm text-slate-200">

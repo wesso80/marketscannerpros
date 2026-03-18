@@ -315,7 +315,7 @@ export default function GoldenEggPage() {
                 </div>
               </div>
 
-              {/* Trigger / Invalidation / Targets row */}
+              {/* Trigger / Invalidation / Key Levels row */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 border-t border-slate-800/50">
                 <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
                   <div className="text-[10px] text-slate-500 uppercase">Trigger</div>
@@ -330,7 +330,7 @@ export default function GoldenEggPage() {
                   <div className="text-[10px] text-slate-500 mt-0.5">{ge.layer2.execution.stop.logic}</div>
                 </div>
                 <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
-                  <div className="text-[10px] text-slate-500 uppercase">Targets</div>
+                  <div className="text-[10px] text-slate-500 uppercase">Key Levels</div>
                   <div className="flex items-center gap-2 flex-wrap">
                     {ge.layer2.execution.targets.map((t: any, i: number) => (
                       <span key={i} className="text-sm font-mono text-emerald-400">
@@ -544,13 +544,13 @@ export default function GoldenEggPage() {
                       ))}
                     </div>
 
-                    {/* Weighted Decompression Target — PROMINENT */}
+                    {/* Weighted Decompression Level — PROMINENT */}
                     {tc.decompressionTarget && tc.decompressionTarget.price > 0 && (
                       <div className="rounded-lg p-3 border" style={{
                         background: tc.decompressionTarget.direction === 'up' ? 'rgba(16,185,129,0.08)' : tc.decompressionTarget.direction === 'down' ? 'rgba(239,68,68,0.08)' : 'rgba(148,163,184,0.08)',
                         borderColor: tc.decompressionTarget.direction === 'up' ? 'rgba(16,185,129,0.25)' : tc.decompressionTarget.direction === 'down' ? 'rgba(239,68,68,0.25)' : 'rgba(148,163,184,0.15)',
                       }}>
-                        <div className="text-[10px] text-slate-500 uppercase mb-1">Likely Decompression Target</div>
+                        <div className="text-[10px] text-slate-500 uppercase mb-1">Likely Decompression Level</div>
                         <div className="flex items-baseline gap-3">
                           <span className="text-lg font-bold font-mono" style={{
                             color: tc.decompressionTarget.direction === 'up' ? '#10B981' : tc.decompressionTarget.direction === 'down' ? '#EF4444' : '#E2E8F0',
@@ -655,15 +655,15 @@ export default function GoldenEggPage() {
                       <div className="text-[10px] text-slate-500 uppercase mb-1">Prediction</div>
                       <div className="text-xs text-slate-300">{tc.prediction.reasoning}</div>
                       <div className="flex items-center gap-3 mt-1">
-                        <span className="text-[10px] text-slate-500">Target: <span className="text-white font-mono">{fmtPrice(tc.prediction.targetLevel)}</span></span>
+                        <span className="text-[10px] text-slate-500">Key Level: <span className="text-white font-mono">{fmtPrice(tc.prediction.targetLevel)}</span></span>
                         <span className="text-[10px] text-slate-500">Move in: <span className="text-white">{tc.prediction.expectedMoveTime}</span></span>
                       </div>
                     </div>
 
-                    {/* Best Entry Window */}
+                    {/* Best Reference Window */}
                     {tc.candleCloseConfluence.bestEntryWindow.reason && (
                       <div className="text-[10px] text-emerald-400">
-                        {'\u23F1'} Best entry: {tc.candleCloseConfluence.bestEntryWindow.reason}
+                        {'\u23F1'} Best window: {tc.candleCloseConfluence.bestEntryWindow.reason}
                       </div>
                     )}
                   </div>
@@ -796,24 +796,24 @@ export default function GoldenEggPage() {
             </Card>
           </div>
 
-          {/* -- F: TRADE PLAN ------------------------------------------- */}
+          {/* -- F: MARKET STRUCTURE MAP --------------------------------- */}
           <Card>
-            <h3 className="text-xs font-semibold text-emerald-400 mb-3">F — Scenario Plan (Paper Trade)</h3>
+            <h3 className="text-xs font-semibold text-emerald-400 mb-3">F — Market Structure Map</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <div className="text-[10px] text-slate-500 uppercase">Entry</div>
+                <div className="text-[10px] text-slate-500 uppercase">Reference Level</div>
                 <div className="text-sm text-white">{ge.layer2.execution.entryTrigger}</div>
                 {ge.layer2.execution.entry.price && (
                   <div className="text-xs font-mono text-emerald-400">${ge.layer2.execution.entry.price.toFixed(2)} ({ge.layer2.execution.entry.type})</div>
                 )}
               </div>
               <div>
-                <div className="text-[10px] text-slate-500 uppercase">Stop</div>
+                <div className="text-[10px] text-slate-500 uppercase">Risk Level</div>
                 <div className="text-sm font-mono text-red-400">${ge.layer2.execution.stop.price.toFixed(2)}</div>
                 <div className="text-[10px] text-slate-500">{ge.layer2.execution.stop.logic}</div>
               </div>
               <div>
-                <div className="text-[10px] text-slate-500 uppercase">Targets</div>
+                <div className="text-[10px] text-slate-500 uppercase">Key Levels</div>
                 {ge.layer2.execution.targets.map((t: any, i: number) => (
                   <div key={i} className="flex items-center gap-2 text-xs">
                     <span className="text-emerald-400 font-mono">${t.price.toFixed(2)}</span>

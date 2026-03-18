@@ -305,11 +305,11 @@ export default function ResearchCaseModal({ pick, assetType, timeframe, onClose 
           {/* ── Risk Parameters ── */}
           <Section title="Risk Parameters">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <KV label="Entry" value={fmtPrice(entry)} />
-              <KV label="Stop Loss" value={fmtPrice(stop)} accent="var(--msp-bear)" />
-              <KV label="Target 1 (1R)" value={fmtPrice(targets[0])} accent="var(--msp-bull)" />
-              <KV label="Target 2 (2R)" value={fmtPrice(targets[1])} accent="var(--msp-bull)" />
-              <KV label="Target 3 (3R)" value={fmtPrice(targets[2])} accent="var(--msp-bull)" />
+              <KV label="Reference Level" value={fmtPrice(entry)} />
+              <KV label="Invalidation Level" value={fmtPrice(stop)} accent="var(--msp-bear)" />
+              <KV label="Key Level 1 (1R)" value={fmtPrice(targets[0])} accent="var(--msp-bull)" />
+              <KV label="Key Level 2 (2R)" value={fmtPrice(targets[1])} accent="var(--msp-bull)" />
+              <KV label="Key Level 3 (3R)" value={fmtPrice(targets[2])} accent="var(--msp-bull)" />
               <KV label="Risk : Reward" value={`${rr.toFixed(1)} : 1`} accent={rr >= 2 ? 'var(--msp-bull)' : rr >= 1 ? 'var(--msp-warn)' : 'var(--msp-bear)'} />
             </div>
           </Section>

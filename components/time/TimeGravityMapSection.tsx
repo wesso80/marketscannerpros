@@ -174,7 +174,7 @@ export default function TimeGravityMapSection({
             </div>
 
             <div className="rounded-xl border border-slate-800 bg-slate-950/25 p-3 space-y-2">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">TARGET</div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">KEY LEVEL</div>
               {topZone ? (
                 <div className="space-y-1">
                   <div className="flex justify-between items-baseline">

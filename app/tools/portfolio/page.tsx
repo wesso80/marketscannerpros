@@ -263,7 +263,7 @@ function PositionSizerCalculator() {
         {/* Entry Price */}
         <div>
           <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
-            Entry Price ($)
+            Reference Price ($)
           </label>
           <input
             type="number"
@@ -286,7 +286,7 @@ function PositionSizerCalculator() {
         {/* Stop Loss */}
         <div>
           <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
-            Stop Loss ($)
+            Risk Level ($)
           </label>
           <input
             type="number"
@@ -309,7 +309,7 @@ function PositionSizerCalculator() {
         {/* Take Profit */}
         <div style={{ gridColumn: 'span 2' }}>
           <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
-            Take Profit ($) <span style={{ color: '#64748b' }}>(optional)</span>
+            Reaction Zone ($) <span style={{ color: '#64748b' }}>(optional)</span>
           </label>
           <input
             type="number"
@@ -2256,9 +2256,9 @@ export function PortfolioContent() {
                     <input value={deployDraft.strategyTag} onChange={(e) => setDeployDraft((prev) => ({ ...prev, strategyTag: e.target.value }))} placeholder="Strategy Tag" className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100" />
                   </div>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                    <input type="number" value={deployDraft.entry} onChange={(e) => setDeployDraft((prev) => ({ ...prev, entry: e.target.value }))} placeholder="Entry" className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100" />
-                    <input type="number" value={deployDraft.stop} onChange={(e) => setDeployDraft((prev) => ({ ...prev, stop: e.target.value }))} placeholder="Stop" className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100" />
-                    <input type="number" value={deployDraft.target} onChange={(e) => setDeployDraft((prev) => ({ ...prev, target: e.target.value }))} placeholder="Target" className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100" />
+                    <input type="number" value={deployDraft.entry} onChange={(e) => setDeployDraft((prev) => ({ ...prev, entry: e.target.value }))} placeholder="Reference" className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100" />
+                    <input type="number" value={deployDraft.stop} onChange={(e) => setDeployDraft((prev) => ({ ...prev, stop: e.target.value }))} placeholder="Risk Level" className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100" />
+                    <input type="number" value={deployDraft.target} onChange={(e) => setDeployDraft((prev) => ({ ...prev, target: e.target.value }))} placeholder="Key Level" className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100" />
                   </div>
                 </div>
                 <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3">
