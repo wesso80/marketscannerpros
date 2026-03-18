@@ -1,20 +1,7 @@
-﻿'use client';
+﻿import { redirect } from 'next/navigation';
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   MSP v2 — Landing Page
-   Redirects to /v2/dashboard (the default surface).
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-
+/* V2 pages have been merged into V1 (/tools/*).
+   Redirect any stale bookmarks. */
 export default function V2Landing() {
-  const router = useRouter();
-  useEffect(() => { router.replace('/v2/dashboard'); }, [router]);
-
-  return (
-    <div className="flex items-center justify-center py-20">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
-    </div>
-  );
+  redirect('/tools/markets');
 }
