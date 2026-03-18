@@ -684,13 +684,48 @@ export default function GoldenEggPage() {
                     <Badge label={d.volatility.regime} color={
                       d.volatility.regime === 'compression' ? '#06B6D4' : d.volatility.regime === 'expansion' ? '#F59E0B' : d.volatility.regime === 'climax' ? '#EF4444' : '#94A3B8'
                     } />
-                    <span className="text-xs text-slate-400">Confidence: {(d.volatility.regimeConfidence * 100).toFixed(0)}%</span>
+                    <span className="text-xs text-slate-400">Confidence: {d.volatility.regimeConfidence.toFixed(0)}%</span>
                   </div>
+
+                  {/* BBWP Gauge + Direction */}
                   <div className="grid grid-cols-2 gap-2">
                     <div className="bg-[var(--msp-panel-2)] rounded p-2">
-                      <div className="text-[10px] text-slate-500">BBWP</div>
-                      <div className="text-sm font-bold text-white">{d.volatility.bbwp.toFixed(1)}</div>
-                      <ScoreBar value={d.volatility.bbwp} color={d.volatility.bbwp < 20 ? '#06B6D4' : d.volatility.bbwp > 80 ? '#EF4444' : '#F59E0B'} />
+                      <div className="text-[10px] text-slate-500 mb-1">BBWP</div>
+                      <div className="flex flex-col items-center">
+                        {(() => {
+                          const bbwp = d.volatility.bbwp;
+                          const zones = [
+                            { max: 15, color: '#1E3A5F', text: '#60A5FA' },
+                            { max: 70, color: '#475569', text: '#94A3B8' },
+                            { max: 90, color: '#D97706', text: '#FBBF24' },
+                            { max: 100, color: '#DC2626', text: '#F87171' },
+                          ];
+                          const zone = zones.find(z => bbwp <= z.max) ?? zones[3];
+                          const r = 50, sw = 7, cx = 60, cy = 58;
+                          return (
+                            <>
+                              <svg viewBox="0 0 120 68" style={{ width: '100%', maxWidth: 140 }}>
+                                <path d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth={sw} strokeLinecap="round" />
+                                {zones.map((z, i) => {
+                                  const s = i === 0 ? 0 : zones[i - 1].max;
+                                  const x1 = cx - r * Math.cos(Math.PI - (s / 100) * Math.PI);
+                                  const y1 = cy - r * Math.sin(Math.PI - (s / 100) * Math.PI);
+                                  const x2 = cx - r * Math.cos(Math.PI - (z.max / 100) * Math.PI);
+                                  const y2 = cy - r * Math.sin(Math.PI - (z.max / 100) * Math.PI);
+                                  return <path key={i} d={`M ${x1} ${y1} A ${r} ${r} 0 ${z.max - s > 50 ? 1 : 0} 1 ${x2} ${y2}`} fill="none" stroke={z.color} strokeWidth={sw} opacity={0.5} />;
+                                })}
+                                {(() => {
+                                  const a = Math.PI * (1 - bbwp / 100);
+                                  const nl = r - sw;
+                                  return <line x1={cx} y1={cy} x2={cx - nl * Math.cos(a)} y2={cy - nl * Math.sin(a)} stroke={zone.text} strokeWidth={2} strokeLinecap="round" />;
+                                })()}
+                                <circle cx={cx} cy={cy} r={3} fill={zone.text} />
+                              </svg>
+                              <div className="text-sm font-bold -mt-1" style={{ color: zone.text }}>{bbwp.toFixed(1)}</div>
+                            </>
+                          );
+                        })()}
+                      </div>
                     </div>
                     <div className="bg-[var(--msp-panel-2)] rounded p-2">
                       <div className="text-[10px] text-slate-500">Direction</div>
@@ -701,13 +736,13 @@ export default function GoldenEggPage() {
                   {d.signal.active && d.signal.type !== 'none' && (
                     <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2">
                       <div className="text-[10px] text-emerald-400 font-semibold">Active Signal: {d.signal.type.replace(/_/g, ' ')}</div>
-                      <div className="text-[10px] text-slate-400">Strength: {(d.signal.strength * 100).toFixed(0)}%</div>
+                      <div className="text-[10px] text-slate-400">Strength: {d.signal.strength.toFixed(0)}%</div>
                     </div>
                   )}
                   {d.projection.expectedMovePct > 0 && (
                     <div className="text-xs text-slate-400">
                       Expected move: <span className="text-white font-semibold">{d.projection.expectedMovePct.toFixed(1)}%</span>
-                      <span className="text-slate-600 ml-1">(hit rate: {(d.projection.hitRate * 100).toFixed(0)}%, n={d.projection.sampleSize})</span>
+                      <span className="text-slate-600 ml-1">(hit rate: {d.projection.hitRate.toFixed(0)}%, n={d.projection.sampleSize})</span>
                     </div>
                   )}
                   {d.breakout.score > 40 && (
