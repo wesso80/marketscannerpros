@@ -187,7 +187,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
 
       {/* Action buttons */}
       <div className="flex items-center justify-end gap-2">
-        <Link href={`/tools/scanner/backtest?symbol=${encodeURIComponent(detail.symbol)}`}
+        <Link href={`/tools/workspace?tab=Backtest&symbol=${encodeURIComponent(detail.symbol)}`}
           className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-emerald-400 no-underline hover:bg-emerald-500/20 transition-colors">
           Backtest This Symbol
         </Link>

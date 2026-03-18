@@ -140,17 +140,17 @@ const nextConfig = {
       { source: '/tools/intraday-charts', destination: '/tools/golden-egg', permanent: true },
 
       // Workspace surface
-      { source: '/tools/watchlists', destination: '/tools/workspace', permanent: true },
-      { source: '/tools/journal', destination: '/tools/workspace', permanent: true },
-      { source: '/tools/portfolio', destination: '/tools/workspace', permanent: true },
-      { source: '/tools/alerts', destination: '/tools/workspace', permanent: true },
-      { source: '/tools/backtest', destination: '/tools/workspace', permanent: true },
-      { source: '/tools/settings', destination: '/tools/workspace', permanent: true },
+      { source: '/tools/watchlists', destination: '/tools/workspace?tab=Watchlists', permanent: true },
+      { source: '/tools/journal', destination: '/tools/workspace?tab=Journal', permanent: true },
+      { source: '/tools/portfolio', destination: '/tools/workspace?tab=Portfolio', permanent: true },
+      { source: '/tools/alerts', destination: '/tools/workspace?tab=Alerts', permanent: true },
+      { source: '/tools/backtest', destination: '/tools/workspace?tab=Backtest', permanent: true },
+      { source: '/tools/settings', destination: '/tools/workspace?tab=Settings', permanent: true },
 
       // Orphan pages → correct surfaces
       { source: '/tools/company-overview', destination: '/tools/golden-egg', permanent: true },
       { source: '/tools/liquidity-sweep', destination: '/tools/golden-egg', permanent: true },
-      { source: '/tools/scanner/backtest', destination: '/tools/workspace', permanent: true },
+      { source: '/tools/scanner/backtest', destination: '/tools/workspace?tab=Backtest', permanent: true },
     ];
   },
 };

@@ -5,8 +5,9 @@
    Real APIs: /api/watchlists, /api/journal, links to v1 portfolio & settings
    ═══════════════════════════════════════════════════════════════════════════ */
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { useSearchParams } from 'next/navigation';
 import { Card, SectionHeader, UpgradeGate } from '@/app/v2/_components/ui';
 import { useUserTier } from '@/lib/useUserTier';
 import { RiskPermissionProvider } from '@/components/risk/RiskPermissionContext';
@@ -22,8 +23,18 @@ const LearningTab = dynamic(() => import('./LearningTab'), { ssr: false, loading
 const TABS = ['Watchlists', 'Journal', 'Portfolio', 'Learning', 'Backtest', 'Alerts', 'Settings'] as const;
 
 export default function WorkspacePage() {
+  return (
+    <Suspense fallback={<div className="animate-pulse bg-slate-800/50 rounded-xl h-64" />}>
+      <WorkspaceContent />
+    </Suspense>
+  );
+}
+
+function WorkspaceContent() {
   const { tier } = useUserTier();
-  const [tab, setTab] = useState<typeof TABS[number]>('Watchlists');
+  const searchParams = useSearchParams();
+  const initialTab = TABS.find(t => t.toLowerCase() === searchParams.get('tab')?.toLowerCase()) || 'Watchlists';
+  const [tab, setTab] = useState<typeof TABS[number]>(initialTab);
 
   return (
     <div className="space-y-6">
