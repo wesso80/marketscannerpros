@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { getSessionFromCookie } from '@/lib/auth';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * POST /api/analytics/heartbeat
  * Records a user/session heartbeat for live presence tracking.
@@ -23,8 +25,9 @@ export async function POST(req: NextRequest) {
     let workspaceId: string | null = null;
     try {
       const session = await getSessionFromCookie();
-      if (session?.cid) userId = session.cid;
-      if (session?.workspaceId) workspaceId = session.workspaceId;
+      // Only use values that are valid UUIDs (anon- prefixed IDs are not valid for UUID columns)
+      if (session?.cid && UUID_RE.test(session.cid)) userId = session.cid;
+      if (session?.workspaceId && UUID_RE.test(session.workspaceId)) workspaceId = session.workspaceId;
     } catch {
       // Anonymous — that's fine
     }
