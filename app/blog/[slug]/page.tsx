@@ -113,9 +113,9 @@ export default async function BlogPost({ params }: { params: ParamsInput }) {
       </article>
 
       <div className="mt-12 p-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10">
-        <h3 className="text-xl font-bold mb-2">Ready to Find Your Edge?</h3>
+        <h3 className="text-xl font-bold mb-2">Ready to Explore the Markets?</h3>
         <p className="text-neutral-300 mb-4">
-          Stop manually checking charts. MarketScanner automates multi-timeframe confluence, squeeze detection, and risk management.
+          Stop manually checking charts. MarketScanner automates multi-timeframe confluence, squeeze detection, and risk analysis.
         </p>
         <Link
           href="/"

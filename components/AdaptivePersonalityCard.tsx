@@ -100,7 +100,7 @@ export default function AdaptivePersonalityCard(props: AdaptivePersonalityCardPr
           MSP AI Personality Match
         </div>
         <div style={{ color: data.match.noTradeBias ? '#EF4444' : tone, fontWeight: 800, fontSize: '0.75rem' }}>
-          {data.match.noTradeBias ? 'NO-TRADE BIAS ACTIVE' : `${data.match.adaptiveScore}% ADAPTIVE CONFIDENCE`}
+          {data.match.noTradeBias ? 'PATTERN MISMATCH' : `${data.match.adaptiveScore}% PATTERN ALIGNMENT`}
         </div>
       </div>
 
@@ -136,7 +136,7 @@ export default function AdaptivePersonalityCard(props: AdaptivePersonalityCardPr
               fontSize: '0.75rem',
               fontWeight: 800,
             }}>
-              {data.institutionalFilter.finalGrade} • {(data.institutionalFilter.finalScore ?? 0).toFixed(0)} • {(data.institutionalFilter.recommendation ?? 'UNKNOWN').replace('_', ' ')}
+              {data.institutionalFilter.finalGrade} • {(data.institutionalFilter.finalScore ?? 0).toFixed(0)} • {({'TRADE_READY': 'ALIGNED', 'CAUTION': 'CAUTION', 'NO_TRADE': 'NOT ALIGNED'}[data.institutionalFilter.recommendation] ?? 'UNKNOWN')}
             </span>
           </div>
 

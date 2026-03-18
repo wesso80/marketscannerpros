@@ -203,8 +203,8 @@ export default function CommandHub() {
           </h2>
 
           <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-slate-400 md:text-base">
-            Our AI engine analyzes 10,000+ assets across multiple timeframes to surface
-            high-probability setups — combining institutional signals, options flow,
+            Our AI engine analyzes 10,000+ assets across multiple timeframes to identify
+            technically aligned setups — combining scanner data, options flow,
             and market structure so you don&apos;t have to.
           </p>
 
@@ -242,10 +242,10 @@ export default function CommandHub() {
       <section className="border-t border-white/5 bg-gradient-to-b from-slate-950 to-[var(--msp-bg)]">
         <div className="mx-auto flex max-w-2xl flex-col items-center px-4 py-14 text-center md:py-20">
           <h2 className="text-2xl font-bold text-white md:text-3xl">
-            Ready to find your edge?
+            Ready to explore the markets?
           </h2>
           <p className="mt-3 text-sm text-slate-400 md:text-base">
-            Join traders using institutional-grade scanning to find high-probability setups faster.
+            Join traders using professional scanning to find technically aligned setups faster.
           </p>
           <Link
             href="/pricing"

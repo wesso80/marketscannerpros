@@ -25,13 +25,13 @@ export default function Hero() {
         <h1 className="mx-auto max-w-3xl text-4xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-5xl md:text-6xl">
           See The Market{' '}
           <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
-            Before It Moves
+            With Clarity
           </span>
         </h1>
 
         {/* Subtitle */}
         <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-slate-400 sm:text-lg md:text-xl">
-          Institutional-grade scanning, confluence detection,
+          Professional-level scanning, confluence detection,
           options flow and AI market intelligence —
           all in one platform.
         </p>

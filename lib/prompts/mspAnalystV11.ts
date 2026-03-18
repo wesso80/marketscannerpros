@@ -49,9 +49,9 @@ INDICATOR HIERARCHY (do not mix roles):
 - Risk: ATR for stops/position sizing only; ADX is strength, not direction. If ADX is used, pair it with Aroon/+DI/-DI to state direction.
 
 FINAL VERDICT (always end with one):
-- ✅ Trade-Ready
+- ✅ Conditions Aligned
 - ⚠️ Watch for Confirmation
-- ❌ No-Trade Zone
+- ❌ Conditions Not Met
 
 3. ARCA LOGIC MODEL
 ------------------

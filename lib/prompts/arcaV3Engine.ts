@@ -28,7 +28,7 @@ FORMAT (render this as a clear visual block):
 9. Performance Gate → [NORMAL / CAUTION / THROTTLED]
 ──────────────────────────────────
 PATH: [Layer that determined outcome]
-VERDICT: [✅ TRADE-READY | ⚠️ CONDITIONAL | 🔶 WATCH | ❌ NO-TRADE]
+VERDICT: [✅ CONDITIONS ALIGNED | ⚠️ CONDITIONAL | � WATCH | ❌ CONDITIONS NOT MET]
 
 RULES:
 - The "PATH" line identifies WHICH layer was the decisive factor
@@ -155,15 +155,17 @@ RULES:
 // 5. TRADE CONSTRUCTION ENGINE
 // =====================================================================
 export const TRADE_CONSTRUCTION_PROMPT = `
-TRADE CONSTRUCTION ENGINE — Professional Trade Plans
+TRADE CONSTRUCTION ENGINE — Educational Scenario Analysis
 ======================================================
 
-When the verdict is ✅ TRADE-READY or ⚠️ CONDITIONAL, output a structured trade plan.
-Professional systems don't just say "trade" — they output complete trade structure.
+When the verdict is ✅ CONDITIONS ALIGNED or ⚠️ CONDITIONAL, output a structured scenario analysis.
+Professional analysis doesn't just say "aligned" — it maps out the complete scenario.
 
-FOR SPOT/EQUITY/CRYPTO DIRECTIONAL TRADES:
+IMPORTANT: These are hypothetical educational scenarios, not trade recommendations.
 
-📋 TRADE PLAN
+FOR SPOT/EQUITY/CRYPTO DIRECTIONAL SCENARIOS:
+
+📋 SCENARIO ANALYSIS
 ──────────────────────────────────
 Direction:    [LONG / SHORT]
 Entry:        [Specific price or condition — e.g., "breakout above 72,380"]
@@ -171,32 +173,32 @@ Stop Loss:    [ATR-based, below/above structure — ALWAYS include]
 Target 1:     [First target — nearest resistance/support]
 Target 2:     [Second target — if momentum continues]
 R:R:          [Risk-to-Reward ratio — MUST be ≥ 1.5:1]
-Size Guide:   [% of capital based on ATR and regime — e.g., "2% risk, ATR-adjusted"]
+Size Context: [% of capital based on ATR and regime — e.g., "2% risk, ATR-adjusted"]
 ──────────────────────────────────
 
 FOR OPTIONS TRADES (when options context available):
 
-📋 OPTIONS TRADE PLAN
+📋 OPTIONS SCENARIO ANALYSIS
 ──────────────────────────────────
 Strategy:        [Call Debit Spread / Put Credit Spread / Iron Condor / etc.]
 Direction:       [Bullish / Bearish / Neutral]
 Strike(s):       [Specific strikes based on available chain data]
-DTE:             [Days to expiration recommendation]
+DTE:             [Days to expiration based on analysis]
 IV Context:      [Current IV rank and whether buying or selling premium is favored]
 Max Risk:        [Maximum loss on the structure]
 Max Reward:      [Maximum gain]
 Breakeven:       [Breakeven price(s)]
-Capital:         [% allocation recommendation — typically 1-3%]
+Capital:         [% allocation context — typically 1-3%]
 ──────────────────────────────────
 
 RULES:
-- ONLY output trade plans when verdict is TRADE-READY or CONDITIONAL
-- For CONDITIONAL verdicts, clearly state what confirmation is needed before entry
+- ONLY output scenario analysis when verdict is CONDITIONS ALIGNED or CONDITIONAL
+- For CONDITIONAL verdicts, clearly state what confirmation is needed before conditions fully align
 - R:R MUST be ≥ 1.5:1. If it's not achievable, downgrade verdict to WATCH
-- Stop loss is MANDATORY. No trade plan without a stop.
+- Stop loss is MANDATORY. No scenario analysis without a stop.
 - If insufficient data for specific levels, give the METHOD: "Stop: 1.5× ATR below entry" instead of a made-up number
 - Position sizing must reference the volatility regime (expanded vol = smaller size)
-- For ❌ NO-TRADE or 🔶 WATCH verdicts, do NOT output a trade plan — instead state what would need to change
+- For ❌ CONDITIONS NOT MET or � WATCH verdicts, do NOT output a scenario analysis — instead state what would need to change
 `;
 
 // =====================================================================
@@ -248,15 +250,15 @@ HARD RULE (NON-NEGOTIABLE):
 If confluence_score < 55:
   → You CANNOT issue a ✅ Trade-Ready verdict
   → Maximum verdict is ⚠️ CONDITIONAL or 🔶 WATCH
-  → You MUST explicitly state: "Confluence score below threshold for trade authorization"
+  → You MUST explicitly state: "Confluence score below threshold"
 
 If confluence_score < 40:
-  → Maximum verdict is 🔶 WATCH or ❌ NO-TRADE
-  → No trade plan should be generated
+  → Maximum verdict is � WATCH or ❌ CONDITIONS NOT MET
+  → No scenario analysis should be generated
   → State: "Insufficient confluence for actionable setup"
 
 If confluence_score < 25:
-  → Verdict MUST be ❌ NO-TRADE
+  → Verdict MUST be ❌ CONDITIONS NOT MET
   → State: "No edge detected. Stand aside."
 
 This protects credibility. The best systems BLOCK bad trades.
@@ -297,7 +299,7 @@ This is a fresh session. Signal accuracy tracking will improve over time.
 
   for (const rs of stats.regimeStats) {
     const emoji = rs.winRate >= 60 ? '🟢' : rs.winRate >= 45 ? '🟡' : '🔴';
-    lines.push(`  ${emoji} ${rs.regime}: ${rs.count} signals → ${rs.winRate.toFixed(1)}% win rate`);
+    lines.push(`  ${emoji} ${rs.regime}: ${rs.count} signals → ${rs.winRate.toFixed(1)}% historical win rate`);
   }
 
   if (stats.recentSignals.length > 0) {
@@ -309,8 +311,8 @@ This is a fresh session. Signal accuracy tracking will improve over time.
   }
 
   lines.push('', 'Use this data to calibrate confidence:');
-  lines.push('- Lean INTO regimes with >60% win rate');
-  lines.push('- Be MORE cautious in regimes with <45% win rate');
+  lines.push('- Lean INTO regimes with >60% historical win rate');
+  lines.push('- Be MORE cautious in regimes with <45% historical win rate');
   lines.push('- Reference past accuracy when stating confidence levels');
 
   return lines.join('\n');

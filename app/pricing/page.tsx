@@ -166,11 +166,11 @@ export default function PricingPage() {
     {
       id: "pro_trader",
       name: "Pro Trader",
-      tagline: "Institutional-style workflow with backtesting, derivatives, and decision engine.",
+      tagline: "Professional workflow with backtesting, derivatives, and decision engine.",
       priceMonthly: 89.99,
       priceYearly: 899.99,
       cta: "Upgrade to Pro Trader",
-      subCta: "Serious tools. Serious edge.",
+      subCta: "Advanced tools for serious traders.",
       badge: "Best Value",
       includes: [
         "Everything in Pro, plus:",

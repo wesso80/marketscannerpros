@@ -251,15 +251,15 @@ export default function AlertsWidget({
       case 'oi_divergence_bull': return '🐂 Bull Divergence';
       case 'oi_divergence_bear': return '🐻 Bear Divergence';
       // Scanner signal alerts
-      case 'scanner_buy_signal': return '🟢 Buy Signal';
-      case 'scanner_sell_signal': return '🔴 Sell Signal';
+      case 'scanner_buy_signal': return '🟢 Bullish Setup';
+      case 'scanner_sell_signal': return '🔴 Bearish Setup';
       case 'scanner_score_above': return '📈 Score Above';
       case 'scanner_score_below': return '📉 Score Below';
       case 'scanner_bullish_flip': return '🐂 Bullish Flip';
       case 'scanner_bearish_flip': return '🐻 Bearish Flip';
       // Strategy alerts
-      case 'strategy_buy_signal': return '📊 Strategy Buy';
-      case 'strategy_sell_signal': return '📊 Strategy Sell';
+      case 'strategy_buy_signal': return '📊 Strategy Long';
+      case 'strategy_sell_signal': return '📊 Strategy Short';
       case 'strategy_entry': return '🎯 Strategy Entry';
       case 'strategy_exit': return '🚪 Strategy Exit';
       default: return type;
@@ -274,22 +274,22 @@ export default function AlertsWidget({
       case 'funding_extreme_neg': return 'Funding rate too negative (overleveraged shorts - bullish signal)';
       case 'ls_ratio_high': return 'Long/Short ratio too high (crowded longs - squeeze risk)';
       case 'ls_ratio_low': return 'Long/Short ratio too low (crowded shorts - squeeze up risk)';
-      case 'fear_extreme': return 'Fear & Greed below threshold (contrarian buy opportunity)';
-      case 'greed_extreme': return 'Fear & Greed above threshold (consider taking profits)';
+      case 'fear_extreme': return 'Fear & Greed below threshold (extreme fear detected)';
+      case 'greed_extreme': return 'Fear & Greed above threshold (extreme greed detected)';
       case 'oi_divergence_bull': return 'OI rising while price down (smart money accumulating)';
       case 'oi_divergence_bear': return 'OI falling while price up (distribution/deleveraging)';
       // Scanner signal descriptions
-      case 'scanner_buy_signal': return 'Scanner detects bullish setup with score above threshold (BUY signal)';
-      case 'scanner_sell_signal': return 'Scanner detects bearish setup with score below threshold (SELL signal)';
+      case 'scanner_buy_signal': return 'Scanner detects bullish setup with score above threshold';
+      case 'scanner_sell_signal': return 'Scanner detects bearish setup with score below threshold';
       case 'scanner_score_above': return 'Scanner score rises above threshold (momentum building)';
       case 'scanner_score_below': return 'Scanner score drops below threshold (momentum fading)';
       case 'scanner_bullish_flip': return 'Direction flips from bearish/neutral to bullish (trend change)';
       case 'scanner_bearish_flip': return 'Direction flips from bullish/neutral to bearish (trend change)';
       // Strategy signal descriptions
-      case 'strategy_buy_signal': return 'Backtest strategy generates a BUY entry signal on this symbol';
-      case 'strategy_sell_signal': return 'Backtest strategy generates a SELL/exit signal on this symbol';
-      case 'strategy_entry': return 'Backtest strategy signals new position entry opportunity';
-      case 'strategy_exit': return 'Backtest strategy signals position exit (take profit/stop loss)';
+      case 'strategy_buy_signal': return 'Backtest strategy detects long entry conditions on this symbol';
+      case 'strategy_sell_signal': return 'Backtest strategy detects short/exit conditions on this symbol';
+      case 'strategy_entry': return 'Backtest strategy detects new entry conditions';
+      case 'strategy_exit': return 'Backtest strategy detects exit conditions (target/stop level hit)';
       default: return '';
     }
   };
@@ -804,12 +804,12 @@ export default function AlertsWidget({
                             // Custom Strategy Alert - starts with strategy type selected
                             'custom_strategy': { symbol: '', conditionType: 'strategy_buy_signal', conditionValue: '0', name: '', cooldownMinutes: 60, strategy: 'ema_crossover', timeframe: 'daily' },
                             // Scanner Signal Alerts
-                            'btc_buy_signal': { symbol: 'BTCUSDT', conditionType: 'scanner_buy_signal', conditionValue: '65', name: 'BTC Buy Signal', cooldownMinutes: 60 },
-                            'btc_sell_signal': { symbol: 'BTCUSDT', conditionType: 'scanner_sell_signal', conditionValue: '35', name: 'BTC Sell Signal', cooldownMinutes: 60 },
+                            'btc_buy_signal': { symbol: 'BTCUSDT', conditionType: 'scanner_buy_signal', conditionValue: '65', name: 'BTC Bullish Setup', cooldownMinutes: 60 },
+                            'btc_sell_signal': { symbol: 'BTCUSDT', conditionType: 'scanner_sell_signal', conditionValue: '35', name: 'BTC Bearish Setup', cooldownMinutes: 60 },
                             // Open Interest Alerts
                             'btc_oi_surge': { symbol: 'BTC', conditionType: 'oi_surge', conditionValue: '5', name: 'BTC OI Spike', cooldownMinutes: 60 },
-                            'extreme_fear': { symbol: '', conditionType: 'fear_extreme', conditionValue: '25', name: 'Extreme Fear Buy Signal', cooldownMinutes: 1440 },
-                            'extreme_greed': { symbol: '', conditionType: 'greed_extreme', conditionValue: '75', name: 'Extreme Greed Sell Signal', cooldownMinutes: 1440 },
+                            'extreme_fear': { symbol: '', conditionType: 'fear_extreme', conditionValue: '25', name: 'Extreme Fear Alert', cooldownMinutes: 1440 },
+                            'extreme_greed': { symbol: '', conditionType: 'greed_extreme', conditionValue: '75', name: 'Extreme Greed Alert', cooldownMinutes: 1440 },
                           };
                           const t = templates[e.target.value];
                           if (t && Object.keys(t).length > 0) {
@@ -823,13 +823,13 @@ export default function AlertsWidget({
                           <option value="custom_strategy">🎯 Custom Strategy Alert (Any Ticker + Strategy)</option>
                         </optgroup>
                         <optgroup label="🎯 Scanner Signals">
-                          <option value="btc_buy_signal">BTC Scanner Buy Signal</option>
-                          <option value="btc_sell_signal">BTC Scanner Sell Signal</option>
+                          <option value="btc_buy_signal">BTC Scanner Bullish Setup</option>
+                          <option value="btc_sell_signal">BTC Scanner Bearish Setup</option>
                         </optgroup>
                         <optgroup label="📊 Market Sentiment">
                           <option value="btc_oi_surge">BTC OI Spike</option>
-                          <option value="extreme_fear">Extreme Fear (Buy Opportunity)</option>
-                          <option value="extreme_greed">Extreme Greed (Sell Signal)</option>
+                          <option value="extreme_fear">Extreme Fear Alert</option>
+                          <option value="extreme_greed">Extreme Greed Alert</option>
                         </optgroup>
                       </select>
                     </div>
@@ -850,14 +850,14 @@ export default function AlertsWidget({
                           className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm focus:border-emerald-500 focus:outline-none"
                         >
                           <optgroup label="📊 Strategy Alerts (Backtest)">
-                            <option value="strategy_buy_signal">📈 Strategy Buy Signal</option>
-                            <option value="strategy_sell_signal">📉 Strategy Sell Signal</option>
+                            <option value="strategy_buy_signal">📈 Strategy Long Setup</option>
+                            <option value="strategy_sell_signal">📉 Strategy Short Setup</option>
                             <option value="strategy_entry">🎯 Strategy Entry</option>
                             <option value="strategy_exit">🚪 Strategy Exit</option>
                           </optgroup>
                           <optgroup label="🎯 Scanner Signals">
-                            <option value="scanner_buy_signal">🟢 Buy Signal (Score Above)</option>
-                            <option value="scanner_sell_signal">🔴 Sell Signal (Score Below)</option>
+                            <option value="scanner_buy_signal">🟢 Bullish Setup (Score Above)</option>
+                            <option value="scanner_sell_signal">🔴 Bearish Setup (Score Below)</option>
                             <option value="scanner_bullish_flip">🐂 Bullish Flip (Direction Change)</option>
                             <option value="scanner_bearish_flip">🐻 Bearish Flip (Direction Change)</option>
                             <option value="scanner_score_above">📈 Score Above Threshold</option>

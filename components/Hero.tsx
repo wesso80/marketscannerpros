@@ -41,12 +41,12 @@ export default function Hero() {
             </div>
 
             <h1 className="mb-5 text-4xl font-extrabold leading-[1.1] tracking-tight text-white md:text-5xl lg:text-6xl">
-              See The Market<br />
-              <span className="text-emerald-400">Before It Moves</span>
+              Scan The Market<br />
+              <span className="text-emerald-400">With Clarity</span>
             </h1>
 
             <p className="mx-auto mb-2 max-w-lg text-base leading-relaxed text-slate-400 md:mx-0 md:text-lg">
-              Institutional-grade scanning, confluence detection,
+              Professional-level scanning, confluence detection,
               options flow and AI market intelligence —<br />
               all in one platform.
             </p>

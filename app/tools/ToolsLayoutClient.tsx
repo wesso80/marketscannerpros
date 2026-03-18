@@ -105,6 +105,21 @@ export default function ToolsLayoutClient({
         </details>
 
         <ErrorBoundary>
+          {/* General Advice Warning — required on all tool pages (ASIC compliance) */}
+          <div style={{
+            background: 'rgba(234, 179, 8, 0.08)',
+            borderBottom: '1px solid rgba(234, 179, 8, 0.15)',
+            padding: '6px 12px',
+            textAlign: 'center',
+            fontSize: 11,
+            color: '#94A3B8',
+            lineHeight: 1.5,
+          }}>
+            <strong style={{ color: '#EAB308' }}>General Advice Warning:</strong>{' '}
+            This platform provides general information only. It does not consider your personal objectives, financial situation, or needs. 
+            MarketScanner Pros does not hold an Australian Financial Services Licence (AFSL) and is not a licensed financial adviser. 
+            Content is not financial advice — consult a licensed professional before making investment decisions.
+          </div>
           {wrappedChildren}
         </ErrorBoundary>
         <ErrorBoundary fallback={null}>

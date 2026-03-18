@@ -29,9 +29,9 @@ export default function Footer() {
           marginLeft: 'auto',
           marginRight: 'auto'
         }}>
-          ⚠️ <strong style={{ color: 'var(--msp-warn)' }}>Disclaimer:</strong> MarketScanner Pros is an educational and informational tool. 
-          It is not investment advice and should not be construed as such. Past performance does not guarantee future results. 
-          Trading involves substantial risk of loss. Consult a licensed financial advisor before making investment decisions.
+          ⚠️ <strong style={{ color: 'var(--msp-warn)' }}>Disclaimer:</strong> MarketScanner Pros provides general information only and does not hold an Australian Financial Services Licence (AFSL). 
+          Nothing on this platform is financial, investment, or trading advice, nor does it consider your personal objectives, financial situation, or needs. 
+          Past performance does not guarantee future results. Trading involves substantial risk of loss. Consult a licensed financial advisor before making investment decisions.
         </p>
       </div>
       
