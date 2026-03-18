@@ -334,7 +334,7 @@ export default function GoldenEggPage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     {ge.layer2.execution.targets.map((t: any, i: number) => (
                       <span key={i} className="text-sm font-mono text-emerald-400">
-                        ${t.price.toFixed(2)}{i < ge.layer2.execution.targets.length - 1 && <span className="text-slate-600 mx-1">?</span>}
+                        ${t.price.toFixed(2)}{i < ge.layer2.execution.targets.length - 1 && <span className="text-slate-600 mx-1">›</span>}
                       </span>
                     ))}
                   </div>
