@@ -35,7 +35,7 @@ export default function DataComingSoon({ toolName, description }: DataComingSoon
             lineHeight: '1.6'
           }}>
             We&apos;re upgrading our data infrastructure to bring you commercially-licensed 
-            real-time market data. This feature will be available soon with institutional-grade 
+            real-time market data. This feature will be available soon with professional-level 
             data feeds.
           </p>
           

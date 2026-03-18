@@ -248,7 +248,7 @@ function checkSignalCondition(alert: SignalAlert, scan: ScanResult): CheckResult
           triggered: true,
           value: scan.score,
           threshold: minScore,
-          message: `🟢 BUY SIGNAL: ${scan.symbol} score ${scan.score}/100 (${scan.signals.bullish} bullish signals)`,
+          message: `🟢 BULLISH SETUP: ${scan.symbol} score ${scan.score}/100 (${scan.signals.bullish} bullish signals)`,
           context: { 
             direction: scan.direction, 
             signals: scan.signals,
@@ -267,7 +267,7 @@ function checkSignalCondition(alert: SignalAlert, scan: ScanResult): CheckResult
           triggered: true,
           value: scan.score,
           threshold: maxScore,
-          message: `🔴 SELL SIGNAL: ${scan.symbol} score ${scan.score}/100 (${scan.signals.bearish} bearish signals)`,
+          message: `🔴 BEARISH SETUP: ${scan.symbol} score ${scan.score}/100 (${scan.signals.bearish} bearish signals)`,
           context: { 
             direction: scan.direction, 
             signals: scan.signals,

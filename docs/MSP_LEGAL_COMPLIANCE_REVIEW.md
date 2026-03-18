@@ -1,10 +1,11 @@
-# MSP Full Legal / Compliance Review
+# MSP Full Legal / Compliance Review — v2 (Post-Remediation)
 
-**Date:** March 18, 2026
+**Date:** March 19, 2026
+**Previous version:** March 18, 2026 (pre-remediation)
 **Scope:** Full product + website + workflow + planned features legal risk audit
 **Jurisdiction:** Australia — New South Wales — ASIC / Corporations Act 2001
 **Standard:** Substance over labels. Disclaimers alone do not resolve advisory conduct.
-**Status:** Independent internal compliance assessment (not legal advice — engage specialist counsel for binding opinions)
+**Status:** Internal compliance assessment following P0/P1 code remediation (not legal advice — engage specialist counsel for binding opinions)
 
 ---
 
@@ -12,108 +13,155 @@
 
 | Dimension | Rating | Detail |
 |-----------|--------|--------|
-| **Overall Legal Risk** | **MEDIUM-HIGH** | The platform has grown from a data display tool into a decision-making engine. Several features now have the substance of financial product advice, regardless of disclaimers. |
-| **Current Website Risk** | **MEDIUM** | Marketing copy is mostly compliant but contains specific claims ("See The Market Before It Moves", "high-probability setups", "institutional-grade") that overstate capability. Data delay disclosures missing. |
-| **Current Product Workflow Risk** | **HIGH** | The Scanner → Golden Egg → Trade Ticket → Execute pipeline, combined with personalized edge profiles, adaptive personality matching, and TRADE_READY verdicts, has the substance of personal financial product advice. |
-| **Biggest Concern Right Now** | **Personalized advisory outputs** | The combination of Edge Profile (`lib/intelligence/edgeProfile.ts`) + Adaptive Personality Card (`components/AdaptivePersonalityCard.tsx`) + TRADE_READY/NO_TRADE recommendations constitutes **personal financial product advice** under Corporations Act s.766B. This is the single biggest regulatory exposure. |
-| **Can MSP honestly position itself as educational/informational?** | **Partially** | The scanner, charts, heatmaps, macro dashboard, and data tools are genuinely informational. But the decision engine (Golden Egg verdicts, AI trade plans, adaptive personality scoring, edge-aware filtering, auto-sized trade tickets) has crossed into advisory territory in substance if not in label. |
+| **Overall Legal Risk** | **MEDIUM** *(was MEDIUM-HIGH)* | Significant remediation completed. Most advisory/directive language has been reframed to educational/analytical terminology. Remaining risk is concentrated in a small number of secondary components and alert API routes. |
+| **Current Website Risk** | **LOW-MEDIUM** *(was MEDIUM)* | Homepage hero changed to "See The Market With Clarity". "Serious edge" → "Advanced tools for serious traders." "Professional-level" replaces most "institutional-grade" in key marketing. Remaining: "high-probability" on about page and benefits component, "institutional-grade" in about page and AI FAQ. |
+| **Current Product Workflow Risk** | **MEDIUM** *(was HIGH)* | Scanner/Golden Egg/AI pipeline reframed from permission/advisory to educational/analytical. "TRADE_READY" displays as "ALIGNED", "NO_TRADE" as "NOT ALIGNED". "Confidence" → "Confluence" in Golden Egg. "BUY/SELL signal" → "Bullish/Bearish Setup" in AlertsWidget. Risk Governor reframed from "permission" to "risk metric". Paper trade framing consistent throughout. |
+| **Biggest Concern Now** | **Alert API routes + Fear & Greed components** | Three alert API routes (`signal-check`, `strategy-check`, `smart-check`) still generate "BUY SIGNAL"/"SELL SIGNAL" text in alert messages. Fear & Greed components display "buying opportunity" and "smart money accumulates here" language. These are the highest-priority remaining items. |
+| **Can MSP honestly position itself as educational/informational?** | **Mostly Yes** *(was Partially)* | With the paper trade framing, "ALIGNED/NOT ALIGNED" labels, confluence terminology, GAW banner on all tool pages, no-AFSL disclaimer prominently placed, and educational disclaimers throughout — the platform presents substantially as educational. The remaining risk is in specific component-level language that hasn't been updated. |
 
-### Core Problem
+### What Changed (P0/P1 Remediation Summary)
 
-The Corporations Act 2001 (Cth) defines "financial product advice" as a recommendation or statement of opinion that is **intended to, or could reasonably be regarded as being intended to, influence a person in making a decision about a financial product** (s.766B(1)). The test is objective — it doesn't matter what the provider calls it, it matters what a reasonable person would conclude.
+Three code commits addressed the most critical compliance issues:
 
-Several MSP features would fail this test:
-- "TRADE_READY" / "NO_TRADE" verdicts = recommendations about whether to trade
-- "72% Adaptive Confidence" + "Fits your setup preference" = personalized opinion
-- AI trade plans with specific entry/stop/target = opinion intended to influence a trading decision
-- "BUY signal" / "SELL signal" alerts = explicit directional recommendations
-- Edge profile filtering ("your strongest asset class is BTC") = tailored guidance
+**Commit ee31dd00 (P0 — 17 files):**
+- AlertsWidget.tsx: "Buy Signal"/"Sell Signal" → "Bullish Setup"/"Bearish Setup"
+- AdaptivePersonalityCard.tsx: "TRADE_READY" → "ALIGNED", "NO_TRADE" → "PATTERN MISMATCH", "recommendation" → "assessment"
+- edgeProfile.ts: Removed directive language ("Consider reducing size or skipping")
+- 4 AI prompt files: "TRADE-READY" → "CONDITIONS ALIGNED", "NO-TRADE" → "CONDITIONS NOT MET"
+- Footer.tsx: Added no-AFSL statement
+- disclaimer/page.tsx: Added AFSL/Corporations Act disclosure
+- ToolsLayoutClient.tsx: Added GAW banner on ALL tool pages
+- Hero.tsx, CommandHub.tsx, pricing/page.tsx, blog/[slug]/page.tsx: Marketing copy fixes
 
-Disclaimers stating "not financial advice" do not override the substance of conduct. ASIC has repeatedly stated that **a disclaimer cannot turn advice into non-advice** (see ASIC Report 632, RG 244, and enforcement actions against finfluencers in 2023-2025).
+**Commit 79246cf2 (P1 — 18 files):**
+- Golden Egg (8 files): TRADE/NO TRADE → ALIGNED/NOT ALIGNED, Verdict → Assessment, Confidence → Confluence, BUY/SELL → LONG/SHORT, Trade Plan → Scenario Plan (Paper Trade)
+- Scanner: HIGH CONVICTION → HIGH ALIGNMENT, Trade Readiness → Setup Alignment, Capital Allocation → Simulated Allocation (paper), Permission → Regime State, added score disclaimer
+- Risk Governor (4 files): "New trades disabled" → "New simulated entries disabled", "permission" → "risk metric"
+- Edge Profile: "Strong edge" → "Historical pattern", added past-performance disclaimer
+- Disclaimer page: Added Data Delays section and Paper Trade & Simulation System section
+- Terms of Service: Added Section 2A (Paper Trade System with AFSL disclosure) and Section 2B (AI-Generated Content)
+- Privacy Policy: Added edge profile, adaptive personality, portfolio/journal data collection, AI processing disclosures
 
----
+**Commit 5d6bbbbc (bugfix):**
+- Heartbeat API UUID validation fix (not compliance-related)
 
-## 2. What Looks Relatively Safe
+### Current Core Problem
 
-These features are consistent with an educational/informational platform:
+The original core problem was that the platform had the **substance of financial product advice** through directive language (TRADE_READY, BUY SIGNAL, etc.) and personalized outputs.
 
-| Feature | Why It's Safer |
-|---------|----------------|
-| **Intraday Charts** | Pure data visualization — user draws own conclusions |
-| **Sector Heatmap** | Market overview — no directional recommendation |
-| **Crypto Heatmap** | Market overview visualization |
-| **Market Movers** (data display only) | Showing what moved is factual reporting |
-| **Macro Dashboard** (regime display only) | Displaying yield curves, VIX, commodities is market data |
-| **Watchlists** | User-created lists — no platform opinion |
-| **Portfolio Tracker** (manual entry) | Record-keeping tool |
-| **Trade Journal** (manual journaling) | Self-reflection learning tool |
-| **Backtest Engine** (historical results) | Historical analysis — with proper "past performance" disclaimers |
-| **Economic/Earnings Calendars** | Factual event data |
-| **Blog / Educational Articles** | Educational content with disclaimers |
-| **Data Attribution** | Alpha Vantage and CoinGecko properly attributed |
-| **Footer Disclaimer** | Present on all pages |
-| **Terms of Service** | Well-structured with NSW governing law |
-| **Privacy Policy** | GDPR + CCPA coverage adequate |
-| **Cookie Policy** | Granular consent mechanism in place |
+**What's been resolved:** The primary user-facing display layer now uses educational/analytical framing. All tool pages carry a General Advice Warning. The disclaimer page includes comprehensive AFSL, paper trade, and data delay disclosures. AI prompts have been updated to use "CONDITIONS ALIGNED/NOT MET" labels.
+
+**What remains:** The substance-over-form risk still exists in specific secondary components and backend alerts that generate old-style "BUY SIGNAL"/"SELL SIGNAL" text. The Fear & Greed gauges still frame extreme conditions as "buying opportunities." The `CryptoMorningDecisionCard` still uses "PERMISSION" as a display label. These are specific, fixable issues rather than systemic problems.
 
 ---
 
-## 3. What Looks Risky
+## 2. What Is Now Compliant
 
-### 3A. Features That Drift Toward Financial Product Advice
+These features have been audited and are consistent with an educational/informational platform:
 
-| Feature | Risk | Specific Issue |
-|---------|------|----------------|
-| **Golden Egg "TRADE" / "NO TRADE" / "WATCH" verdicts** | HIGH | Binary permission language = recommendation on whether to acquire/dispose of a financial product |
-| **TRADE_READY / CAUTION / NO_TRADE recommendation badges** | **CRITICAL** | Explicit advisory classification — "recommendation" is literally the property name in code |
-| **Adaptive Personality Card ("72% Adaptive Confidence")** | **CRITICAL** | Personalized scoring of signal-to-user fit = personal financial product advice |
-| **Edge Profile insights ("Consider reducing size or skipping")** | HIGH | Directive language tailored to individual's trading history |
-| **AI Analyst trade plans with entry/stop/targets** | HIGH | Structured opinion on specific trade execution = advice |
-| **Scanner "BUY signal" / "SELL signal" alerts** | **CRITICAL** | Explicit buy/sell recommendations via alert system |
-| **"Fear & Greed below threshold (contrarian buy opportunity)"** | **CRITICAL** | Frames market condition as actionable buying opportunity |
-| **"HIGH CONVICTION" trade readiness labels** | HIGH | Implies platform endorsement of trade quality |
-| **AI sessions: "Lean INTO regimes with >60% win rate"** | HIGH | Prescriptive directive based on statistical claims |
-| **Risk Governor blocking/allowing trades** | MEDIUM-HIGH | Automated gate that permits or denies trading = advisory conduct |
-
-### 3B. Features That Drift Toward Personal Advice (vs General)
-
-Under the Corporations Act, **personal advice** (s.766B(3)) means advice given to a person where the provider has considered, or should reasonably be expected to have considered, the person's objectives, financial situation, or needs.
-
-| Feature | Risk | Why It Crosses from General → Personal |
-|---------|------|----------------------------------------|
-| **Edge Profile** | **CRITICAL** | Analyses the user's specific past trade outcomes and tailors recommendations to their individual performance patterns. This is the definition of considering "the person's... circumstances". |
-| **Adaptive Personality Card** | **CRITICAL** | Scores how well a signal matches the user's individual trading personality, risk DNA, decision timing. This explicitly considers the person's behavioral profile. |
-| **Account-linked position sizing** | HIGH | When broker balance feeds position sizing ("142 shares of AAPL based on your $50,000 account"), the platform is considering the person's financial situation. |
-| **Portfolio heat governor** | MEDIUM-HIGH | "You cannot trade because your portfolio heat is 10.2%" considers the person's existing financial position. |
-| **Edge-aware scanner nudging** | HIGH | If scanner results are filtered or weighted by user's edge profile, outputs are personalized advice. |
-
-### 3C. Features That Drift Toward Arranging/Dealing
-
-| Feature | Risk | Status |
-|---------|------|--------|
-| **Read-only broker sync** | LOW-MEDIUM | Displaying broker data is passive. Similar to portfolio trackers. |
-| **Trade ticket (without execution)** | MEDIUM | Pre-filling trade parameters from signals is close to "arranging" if it leads directly to execution. |
-| **"Save as Plan" (no broker action)** | LOW | Journaling intent without execution is safer. |
-| **Paper mode** | LOW-MEDIUM | Simulation without real orders is educational. |
-| **Direct order submission to broker** | **CRITICAL** | Submitting orders to a broker through MSP's system = "arranging" for dealing in financial products (s.766C). This likely requires an AFSL or authorized representative status. |
-| **Pre-filled trade tickets from AI/scanner signals** | HIGH | The combination of: (a) platform generates trade idea, (b) pre-fills order form, (c) user clicks submit → this is a complete advice-to-execution pipeline, regardless of the disclaimer checkbox. |
-
-### 3D. Misleading or Deceptive Conduct Risk
-
-| Claim/Feature | Risk | Issue |
-|---------------|------|-------|
-| **"See The Market Before It Moves"** | MEDIUM | Implies predictive capability. Could be seen as misleading about the platform's actual ability. |
-| **"high-probability setups"** | MEDIUM | "Probability" implies quantified accuracy that may not be validated. |
-| **"institutional-grade scanning"** | MEDIUM | Marketing puffery but could be challenged — actual institutional platforms have different data feeds, latency, and compliance infrastructure. |
-| **Win rate claims (55-65% base win rates for options signals)** | HIGH | Claiming specific win rates for signal types implies performance warranties. These appear in the TRADING_INTELLIGENCE_AUDIT.md and may reach users through AI outputs. |
-| **"Serious tools. Serious edge."** (Pro Trader CTA) | MEDIUM-HIGH | "Serious edge" implies the platform provides a trading advantage — this is a performance claim. |
-| **Backtest results displayed without adequate disclaimers** | MEDIUM | Backtests have survivorship bias, look-ahead bias, and transaction cost gaps. Current disclaimer ("past results do not predict future outcomes") is minimal. |
-| **"Confidence: 76%"** | HIGH | Users will interpret this as "76% chance this trade will work" — this is a misleading performance representation if not carefully contextualized. |
-| **AI-generated "win rate: 62.5% for AAPL"** | **CRITICAL** | Historical win rate presented as forward-looking predictive statistic for a specific asset = misleading performance claim. |
+| Feature | Compliance Status | Evidence |
+|---------|------------------|----------|
+| **Homepage Hero** | ✅ COMPLIANT | "See The Market With Clarity" — no predictive claims |
+| **Homepage Subtitle** | ✅ COMPLIANT | "Professional-level scanning, confluence detection..." — accurate description |
+| **Pricing Page Pro Trader CTA** | ✅ COMPLIANT | "Advanced tools for serious traders." — factual, no edge claims |
+| **AlertsWidget (UI)** | ✅ COMPLIANT | "Bullish Setup" / "Bearish Setup" — non-directive |
+| **AdaptivePersonalityCard** | ✅ COMPLIANT | "ALIGNED" / "PATTERN MISMATCH" labels, "assessment" property, no "recommendation" |
+| **Golden Egg (UI layer)** | ✅ COMPLIANT | "Aligned/Not Aligned/Watch" verdicts, "Confluence" percentages, "Scenario Plan (Paper Trade)" |
+| **Scanner (UI layer)** | ✅ COMPLIANT | "HIGH ALIGNMENT", "Setup Alignment", "Simulated Allocation (paper)", "Regime State", score disclaimer |
+| **Edge Profile (UI)** | ✅ COMPLIANT | "Historical pattern" framing, past-performance disclaimer footer, no directive language |
+| **Risk Governor** | ✅ COMPLIANT | "New simulated entries disabled" — educational framing, risk metric display |
+| **AI Prompts** | ✅ COMPLIANT | "CONDITIONS ALIGNED"/"CONDITIONS NOT MET" labels, educational framing, every response requires disclaimer |
+| **Footer** | ✅ COMPLIANT | No-AFSL statement present |
+| **Disclaimer Page** | ✅ COMPLIANT | Comprehensive: AFSL disclosure, data delays, paper trade system, backtest limitations, AI accuracy limits |
+| **Terms of Service** | ✅ COMPLIANT | Sections 2A (Paper Trade/AFSL) and 2B (AI Content) added |
+| **Privacy Policy** | ✅ COMPLIANT | Edge profile, adaptive personality, portfolio/journal, AI processing disclosures added |
+| **General Advice Warning** | ✅ COMPLIANT | GAW banner displayed on ALL tool pages via ToolsLayoutClient.tsx |
+| **Options Scanner** | ✅ COMPLIANT | "Educational Mode" alert, "This is a simulated workflow — no broker execution" |
+| **Intraday Charts** | ✅ COMPLIANT | Pure data visualization |
+| **Sector / Crypto Heatmaps** | ✅ COMPLIANT | Market overview visualizations |
+| **Market Movers** | ✅ COMPLIANT | Factual data display |
+| **Macro Dashboard** | ✅ COMPLIANT | Market data display |
+| **Watchlists** | ✅ COMPLIANT | User-created lists |
+| **Portfolio Tracker** | ✅ COMPLIANT | Record-keeping / paper trade framing |
+| **Trade Journal** | ✅ COMPLIANT | Self-reflection learning tool |
+| **Economic/Earnings Calendars** | ✅ COMPLIANT | Factual event data |
+| **Blog / Educational Articles** | ✅ COMPLIANT | Educational content with disclaimers |
+| **Cookie Policy** | ✅ COMPLIANT | Granular GDPR consent mechanism |
+| **Backtest Engine** | ✅ COMPLIANT | Hypothetical disclaimer, educational mode label, "not investment advice" statement |
+| **Data Attribution** | ✅ COMPLIANT | Alpha Vantage and CoinGecko properly attributed |
 
 ---
 
-## 4. Advice Risk Review
+## 3. What Still Needs Fixing
+
+### 3A. Alert API Routes — BUY/SELL SIGNAL Text (P0-REMAINING)
+
+The AlertsWidget UI was fixed, but the **backend alert generation routes** still produce old-style directive text. When these alerts are pushed to users, the text contains "BUY SIGNAL" / "SELL SIGNAL":
+
+| File | Line | Current Text | Required Change |
+|------|------|-------------|-----------------|
+| `app/api/alerts/signal-check/route.ts` | ~L251 | `🟢 BUY SIGNAL: ${scan.symbol}` | → `🟢 Bullish Setup: ${scan.symbol}` |
+| `app/api/alerts/signal-check/route.ts` | ~L270 | `🔴 SELL SIGNAL: ${scan.symbol}` | → `🔴 Bearish Setup: ${scan.symbol}` |
+| `app/api/alerts/strategy-check/route.ts` | ~L212 | `🟢 BUY SIGNAL: ${strategy.toUpperCase()} triggered` | → `🟢 Bullish Setup: ${strategy.toUpperCase()} triggered` |
+| `app/api/alerts/strategy-check/route.ts` | ~L219 | `🔴 SELL SIGNAL: ${strategy.toUpperCase()} triggered` | → `🔴 Bearish Setup: ${strategy.toUpperCase()} triggered` |
+| `app/api/alerts/smart-check/route.ts` | ~L322 | `contrarian BUY signal` | → `contrarian bullish setup` |
+
+**Risk:** MEDIUM-HIGH — These generate the actual alert text users see in notifications.
+
+### 3B. Fear & Greed Components — "Buying Opportunity" Language (P0-REMAINING)
+
+Three components contain language that frames extreme fear as an explicit buying opportunity:
+
+| File | Line | Current Text | Required Change |
+|------|------|-------------|-----------------|
+| `components/FearGreedGauge.tsx` | ~L71 | `potential buying opportunity` | → `potential oversold conditions` |
+| `components/FearGreedGauge.tsx` | ~L208 | `Extreme fear can indicate oversold conditions - potential buying opportunity.` | → `Extreme fear can indicate oversold conditions.` |
+| `components/CustomFearGreedGauge.tsx` | ~L244 | `Extreme fear often signals a buying opportunity - smart money accumulates here.` | → `Extreme fear often indicates oversold conditions — historically, these levels have preceded reversals.` |
+| `components/DerivativesWidget.tsx` | ~L112 | `Short bias — contrarian long potential` | → `Short bias — elevated short positioning` |
+
+**Risk:** MEDIUM-HIGH — "Buying opportunity" is an explicit directional recommendation. "Smart money accumulates here" implies privileged market insight.
+
+### 3C. CryptoMorningDecisionCard — "PERMISSION" Label (P1-REMAINING)
+
+| File | Line | Current Text | Required Change |
+|------|------|-------------|-----------------|
+| `components/CryptoMorningDecisionCard.tsx` | ~L205 | `PERMISSION: {decision.verdict}` | → `STATUS: {decision.verdict}` |
+
+**Risk:** MEDIUM — "Permission" implies the platform is granting authorization to trade.
+
+### 3D. Remaining Marketing Copy (P1-REMAINING)
+
+| File | Line | Current Text | Suggested Change |
+|------|------|-------------|------------------|
+| `components/Benefits.tsx` | L6 | `Focus on high-probability setups` | → `Focus on technically aligned setups` |
+| `app/about/page.tsx` | L22 | `institutional-grade tools in a single web-based dashboard` | → `professional-level tools in a single web-based dashboard` |
+| `app/about/page.tsx` | L52 | `identifies high-probability trade windows` | → `identifies technically aligned trade windows` |
+| `app/pricing/page.tsx` | L195 | `institutional-grade analysis` (in AI FAQ) | → `professional-level analysis` |
+| `app/tools/time-scanner/page.tsx` | L43 | `institutional-grade precision` | → `professional-level precision` |
+| `components/DataComingSoon.tsx` | L38 | `institutional-grade` | → `professional-level` |
+
+**Risk:** LOW-MEDIUM — "High-probability" and "institutional-grade" are aspirational marketing but could be challenged under misleading conduct provisions.
+
+### 3E. Probability Engine Labels (P2)
+
+| File | Line | Current Text | Notes |
+|------|------|-------------|-------|
+| `lib/signals/probability-engine.ts` | ~L598 | `confidenceLabel = 'High Conviction'` | Internal scoring label — review if user-visible |
+| `components/scanner/ScanTemplatesBar.tsx` | ~L90 | Template labeled `'High Conviction'` | User-visible scan template name |
+
+**Risk:** LOW — These are template names/internal labels. The scan template label is visible to users but could be interpreted as a quality filter rather than a prediction.
+
+### 3F. MSP Analyst Route — Fear & Greed Framing (P1-REMAINING)
+
+| File | Line | Current Text | Required Change |
+|------|------|-------------|-----------------|
+| `app/api/msp-analyst/route.ts` | ~L774 | `<25 = Extreme Fear (historically good buying opportunity)` | → `<25 = Extreme Fear (historically oversold conditions)` |
+
+**Risk:** MEDIUM — AI context that frames fear levels as buying opportunities.
+
+---
+
+## 4. Risk Assessment — Current State
 
 ### The Spectrum of Conduct
 
@@ -128,15 +176,17 @@ SAFE                                                    RISKY
                                       regimes"          fits YOUR style"
 ```
 
-### Where MSP Currently Sits
+### Where MSP Currently Sits (Post-Remediation)
 
-**Data Display (SAFE):** Charts, heatmaps, calendars, sector performance, crypto derivatives data, portfolio tracker, journal.
+**Data Display (SAFE):** Charts, heatmaps, calendars, sector performance, crypto derivatives data, portfolio tracker (paper trade framing), journal.
 
-**General Commentary (SAFE):** Macro dashboard regime labels, blog articles, educational guides, market overview text.
+**General Commentary (SAFE):** Macro dashboard regime labels, blog articles, educational guides, market overview text, AI prompts with educational framing.
 
-**General Advice (RISKY WITHOUT AFSL):** Scanner confluence scores, Golden Egg trade plans (entry/stop/target for any user), AI analyst trade plans, backtest strategy results, time confluence decompression windows. These provide opinions intended to influence trading decisions, but are not personalized to any individual. Under the Corporations Act, general advice requires either an AFSL or to be covered by an exemption (e.g., media exemption under s.911A(2)(a) or factual information exemption).
+**Educational Analytics (SAFER THAN BEFORE, STILL REQUIRES CARE):** Scanner confluence scores displayed as "alignment" with disclaimers. Golden Egg displayed as "scenario plans" with "aligned/not aligned" labels. AI outputs framed as "educational analysis" with mandatory disclaimers. Backtest engine with hypothetical performance warnings.
 
-**Personal Advice (REQUIRES AFSL):** Edge profile insights ("your strongest asset is BTC"), adaptive personality matching ("72% fit to your trading style"), account-linked position sizing, portfolio heat governor, "TRADE_READY" based on user's specific profile. These consider the person's individual circumstances and constitute personal financial product advice under s.766B(3).
+**Personal Analytics (REDUCED RISK):** Edge profile now shows "historical patterns" not "recommendations." Adaptive personality shows "pattern alignment" not "adaptive confidence." Portfolio heat governor shows "risk metrics" not "trade permission." **However**, the substance of personalization still exists — the platform still analyses individual user behaviour and presents tailored outputs. The reframing reduces but does not eliminate the s.766B(3) personal advice risk.
+
+**Dealing (NOT LIVE):** No broker execution, no order submission, no live account connectivity. Paper trade framing consistently applied.
 
 ### Key ASIC Regulatory Instruments
 
@@ -154,329 +204,340 @@ SAFE                                                    RISKY
 | **ASIC v. RI Advice Group (2021)** | Licensees must ensure advice is appropriate, even when technology-mediated |
 | **ASIC finfluencer prosecutions (2023-2025)** | ASIC pursued unlicensed advice providers on social media — "educational" framing did not protect those providing specific buy/sell guidance |
 
-### The Critical Question
+### The Critical Question — Reassessed
 
 **Could ASIC reasonably say MSP is providing digital financial product advice?**
 
-**Yes.** The combination of:
-1. Confluence scores with directional bias (bullish/bearish)
-2. Trade plans with specific entry/stop/target prices
-3. "TRADE_READY" / "NO_TRADE" permission verdicts
-4. AI-generated analysis saying "Trade-Ready" or "No-Trade Zone"
-5. Win rate statistics for specific signals
-6. Edge profile personalization ("fits your style")
+**Possibly, but the risk is significantly reduced.** Post-remediation:
+1. ✅ Confluence scores now labeled "alignment" with disclaimers — reduces but doesn't eliminate
+2. ✅ Trade plans labeled "scenario plans (paper trade)" — educational framing
+3. ✅ "ALIGNED" / "NOT ALIGNED" replaces "TRADE_READY" / "NO_TRADE" — less directive
+4. ✅ AI outputs include mandatory educational disclaimers — reduces risk
+5. ⚠️ Alert API routes still generate "BUY SIGNAL" / "SELL SIGNAL" — remains problematic
+6. ⚠️ Fear & Greed components still say "buying opportunity" — remains problematic
+7. ✅ Edge profile uses "historical pattern" framing — reduced personalization risk
 
-...constitutes financial product advice under s.766B. A reasonable person viewing the MSP interface would conclude the platform is telling them whether and how to trade. Disclaimers saying "not advice" do not change this conclusion under the substance-over-form test.
+A reasonable person viewing the current MSP interface sees "Confluence: 73%", "Scenario Plan (Paper Trade)", "Aligned" status, with a General Advice Warning banner and educational disclaimers. This is materially better than "HIGH CONVICTION", "TRADE_READY", "BUY SIGNAL" with no warnings.
 
 **Could ASIC reasonably say MSP is providing personal advice?**
 
-**Yes, for Pro Trader tier features.** The edge profile, adaptive personality card, account-linked sizing, and portfolio governor all consider the user's individual circumstances. Under s.766B(3), this is personal advice.
+**Reduced risk, but possible for Pro Trader tier.** The edge profile and adaptive personality card still analyse individual user behaviour. The reframing from "recommendation" to "assessment" and "confidence" to "alignment" helps, but ASIC's substance test looks at whether the platform considers "the person's objectives, financial situation, or needs" — which the edge profile and adaptive personality inherently do. The disclaimers and "paper trade" framing provide a stronger defensive position than before.
 
 ---
 
 ## 5. Broker / Trade Ticket Risk Review
 
-### Risk Assessment by Feature
+### Current Status
+
+No broker features are live. All portfolio/journal features operate as paper trade simulation. No order routing, no account connectivity, no execution capability exists in the deployed application.
+
+### Risk Assessment by Feature (Unchanged — Future Planning)
 
 | Feature | Risk Level | Assessment |
 |---------|-----------|------------|
-| **Read-only broker sync (positions, balances)** | LOW-MEDIUM | Displaying the user's own broker data is passive. Similar to Mint/Sharesight portfolio aggregators. The risk is low if MSP does not use this data to generate recommendations. **However**, if broker balance feeds into position sizing calculations that are presented alongside trade recommendations, the combined effect is personalized advice. |
-| **Read-only broker sync (fills → journal)** | LOW | Auto-populating journal entries from fills is record-keeping. Safe. |
-| **Trade ticket (display only, no broker)** | MEDIUM | Showing a structured trade plan (entry/stop/target/sizing) is general advice if generic, personal advice if sized to the user's account. The pre-fill from scanner/GE makes it advice-driven. |
-| **"Save as Plan" (no execution)** | LOW-MEDIUM | Journaling a trade plan without executing is closer to educational. The concern is that the trade plan was generated by an advisory signal. |
-| **Paper mode** | LOW-MEDIUM | Simulated trading is educational. However, paper mode combined with "TRADE_READY" signals is still advice about what to trade — it just doesn't execute the trade. |
-| **Broker deep-link / handoff** | MEDIUM-HIGH | Sending the user to their broker's website with pre-populated trade parameters is "arranging" conduct. The user still executes at the broker, but MSP facilitated the arrangement. |
-| **Direct "Submit Order" to broker** | **CRITICAL** | This is "arranging for a person to deal in a financial product" under s.766C. Combined with MSP generating the trade idea, this is a complete advice-to-execution pipeline. **Do not launch without external Australian financial services legal review.** |
-| **Future autonomous suggestions** | **CRITICAL** | Any feature that automatically suggests trades without user initiation (e.g., push notifications saying "BTC setup detected, trade here") crosses from passive tools into active solicitation. |
+| **Read-only broker sync (positions, balances)** | LOW-MEDIUM | Passive data display. Safe if not used for recommendations. |
+| **Read-only broker sync (fills → journal)** | LOW | Record-keeping. Safe. |
+| **Trade ticket (display only, no broker)** | MEDIUM | Now labeled "Scenario Plan (Paper Trade)" — reduced risk. |
+| **"Save as Plan" (no execution)** | LOW | Journaling. Safe. |
+| **Paper mode** | LOW | Current mode. Well-disclaimed. |
+| **Broker deep-link / handoff** | MEDIUM-HIGH | Still "arranging" conduct if implemented. |
+| **Direct "Submit Order" to broker** | **CRITICAL** | Requires AFSL assessment. Not implemented. |
+| **Future autonomous suggestions** | **CRITICAL** | Active solicitation. Not implemented. |
 
 ### What Requires External Legal Review Before Launch
 
 **MUST get specialist Australian financial services legal opinion before launching:**
-1. Direct order submission to any broker (Phase 3)
-2. Pre-filled trade tickets from scanner/GE/AI signals
+1. Direct order submission to any broker
+2. Pre-filled trade tickets from scanner/GE/AI connected to broker execution
 3. Account-linked position sizing using broker balances
-4. Any feature where MSP generates a trade idea AND facilitates its execution in one workflow
+4. Any feature where MSP generates a trade idea AND facilitates its execution
 
-**Can likely proceed with appropriate safeguards:**
-1. Read-only broker sync (display only, no advisory integration)
-2. Save as Plan (journaling, no execution)
-3. Paper/simulation mode (with disclaimers and no performance claims)
+**Can proceed with current safeguards:**
+1. ✅ Read-only portfolio tracker (paper trade framing — currently live)
+2. ✅ Save as Plan / journal (currently live)
+3. ✅ Paper/simulation mode (currently live, well-disclaimed)
 
 ---
 
-## 6. Copy / Wording Review
+## 6. Copy / Wording Review — Current State
 
-### Wording That Should Change
+### Previously Flagged Items — Resolution Status
+
+| Original Flagged Wording | Status | Current State |
+|--------------------------|--------|---------------|
+| "See The Market Before It Moves" | ✅ FIXED | "See The Market With Clarity" |
+| "Serious tools. Serious edge." | ✅ FIXED | "Advanced tools for serious traders." |
+| "BUY signal" / "SELL signal" (AlertsWidget UI) | ✅ FIXED | "Bullish Setup" / "Bearish Setup" |
+| "TRADE_READY" (display text) | ✅ FIXED | "ALIGNED" |
+| "NO_TRADE" (display text) | ✅ FIXED | "NOT ALIGNED" / "PATTERN MISMATCH" |
+| "recommendation" (property label) | ✅ FIXED | "assessment" |
+| "72% ADAPTIVE CONFIDENCE" | ✅ FIXED | Pattern alignment language |
+| "Fits your setup preference" | ✅ FIXED | Historical pattern language |
+| "Consider reducing size or skipping" | ✅ FIXED | Removed from edgeProfile.ts |
+| "Confidence: 76%" (Golden Egg) | ✅ FIXED | "Confluence: 76%" |
+| "HIGH CONVICTION" (Scanner UI) | ✅ FIXED | "HIGH ALIGNMENT" |
+| "Trade-Ready" (AI outputs) | ✅ FIXED | "CONDITIONS ALIGNED" |
+| "No-Trade Zone" (AI outputs) | ✅ FIXED | "CONDITIONS NOT MET" |
+| "Extreme Fear (Buy Opportunity)" (AlertsWidget UI) | ✅ FIXED | Removed from AlertsWidget |
+| General Advice Warning missing | ✅ FIXED | GAW on all tool pages |
+| No AFSL disclaimer | ✅ FIXED | Footer, disclaimer page, terms, tools layout |
+| Data delay disclosure missing | ✅ FIXED | Disclaimer page: "Data Delays & Third-Party Sources" section |
+| Backtest disclaimers too weak | ✅ FIXED | Comprehensive hypothetical/educational disclaimer |
+| AI disclaimer insufficient | ✅ FIXED | Strengthened AI/pattern matching disclaimers |
+| Terms of Service gaps | ✅ FIXED | Sections 2A (Paper Trade/AFSL) and 2B (AI Content) added |
+| Privacy Policy gaps | ✅ FIXED | Edge profile, adaptive personality, portfolio/journal, AI disclosures added |
+| Risk Governor "permission" language | ✅ FIXED | "Simulated entries" / "risk metric" language |
+| Edge profile directive language | ✅ FIXED | "Historical pattern" / past performance disclaimer |
+| Scanner score disclaimer missing | ✅ FIXED | "Scores reflect indicator agreement" disclaimer added |
+
+### Wording That Still Needs Change
 
 | Current Wording | Location | Problem | Suggested Replacement |
 |-----------------|----------|---------|----------------------|
-| "See The Market Before It Moves" | Homepage hero | Implies predictive capability | "Scan The Market With Clarity" or "Monitor Markets in Real Time" |
-| "high-probability setups" | Homepage, pricing, blog | Implies quantified probability | "pattern-based setups" or "technically aligned setups" |
-| "Serious tools. Serious edge." | Pricing page Pro Trader CTA | Performance claim | "Advanced tools for serious traders." |
-| "Institutional-grade scanning" | Homepage, about | Overstates sophistication | "Professional-level scanning tools" |
-| "BUY signal" / "SELL signal" | AlertsWidget.tsx | Explicit trade directive | "Bullish setup detected" / "Bearish setup detected" |
-| "Extreme Fear (Buy Opportunity)" | AlertsWidget.tsx | Explicit buy recommendation | "Extreme Fear Zone" (remove "Buy Opportunity") |
-| "TRADE_READY" | AdaptivePersonalityCard, AI outputs | Permission/recommendation language | "ALIGNED" or "CONDITIONS MET" |
-| "NO_TRADE" | AdaptivePersonalityCard, AI outputs | Permission language | "CONDITIONS NOT MET" or "MISALIGNED" |
-| "recommendation" (property name) | AdaptivePersonalityCard.tsx | Literally says "recommendation" | Rename to "assessment" or "status" |
-| "72% ADAPTIVE CONFIDENCE" | AdaptivePersonalityCard | Implies predictive certainty | "72% PATTERN ALIGNMENT" |
-| "Fits your setup preference" | AdaptivePersonalityCard | Personalized advisory | "Matches historical pattern" |
-| "Consider reducing size or skipping" | edgeProfile.ts | Directive advisory language | "Historical performance below average in this category" |
-| "Lean INTO regimes with >60% win rate" | AI prompt outputs | Prescriptive trading directive | Remove from AI outputs, or reframe as "Historical data shows higher win rates in these regimes" |
-| "Win rate: 62.5%" (AI output for specific asset) | arcaV3Engine prompts | Forward-looking performance claim | "Historical hit rate: 62.5% (past performance does not indicate future results)" |
-| "Confidence: 76%" | Golden Egg, scanner | Implies probability of success | "Alignment: 76%" or "Confluence: 76%" |
-| "HIGH CONVICTION" | Scanner detail | Implies platform endorsement | "HIGH ALIGNMENT" or "STRONG CONFLUENCE" |
-| "ready to find your edge?" | Homepage bottom CTA | "edge" implies trading advantage | "Ready to explore the markets?" |
-| "surface high-probability setups" | Homepage ARCxA section | Probability + setup = advice | "identify technically aligned patterns" |
-
-### AI System Prompt Language Changes Needed
-
-The AI prompts contain verdict labels that map directly to trade recommendations:
-- "Trade-Ready" → should be "Conditions Aligned"
-- "No-Trade Zone" → should be "Conditions Not Aligned"
-- "Watch for Confirmation" → acceptable (neutral)
-
-The AI prompts should include stronger framing:
-- "You are an educational analysis tool. You describe market conditions and technical patterns. You do not recommend trades."
-- Remove all "should" language ("you should consider" → "traders sometimes consider")
-- Remove "edge" in advisory context
+| `🟢 BUY SIGNAL: ${scan.symbol}` | `app/api/alerts/signal-check/route.ts` ~L251 | Directive alert text | `🟢 Bullish Setup: ${scan.symbol}` |
+| `🔴 SELL SIGNAL: ${scan.symbol}` | `app/api/alerts/signal-check/route.ts` ~L270 | Directive alert text | `🔴 Bearish Setup: ${scan.symbol}` |
+| `🟢 BUY SIGNAL: ${strategy}` | `app/api/alerts/strategy-check/route.ts` ~L212 | Directive alert text | `🟢 Bullish Setup: ${strategy}` |
+| `🔴 SELL SIGNAL: ${strategy}` | `app/api/alerts/strategy-check/route.ts` ~L219 | Directive alert text | `🔴 Bearish Setup: ${strategy}` |
+| `contrarian BUY signal` | `app/api/alerts/smart-check/route.ts` ~L322 | Directive + buy language | `contrarian bullish setup` |
+| `potential buying opportunity` | `components/FearGreedGauge.tsx` ~L71, ~L208 | Explicit buy recommendation | `potential oversold conditions` |
+| `buying opportunity - smart money accumulates here` | `components/CustomFearGreedGauge.tsx` ~L244 | Buy recommendation + privileged insight | `oversold conditions — historically precedes reversals` |
+| `contrarian long potential` | `components/DerivativesWidget.tsx` ~L112 | Directional suggestion | `elevated short positioning` |
+| `PERMISSION: {verdict}` | `components/CryptoMorningDecisionCard.tsx` ~L205 | Authorization language | `STATUS: {verdict}` |
+| `historically good buying opportunity` | `app/api/msp-analyst/route.ts` ~L774 | Buy recommendation in AI context | `historically oversold conditions` |
+| `high-probability setups` | `components/Benefits.tsx` L6 | Unqualified probability claim | `technically aligned setups` |
+| `high-probability trade windows` | `app/about/page.tsx` L52 | Unqualified probability claim | `technically aligned trade windows` |
+| `institutional-grade tools` | `app/about/page.tsx` L22 | Overstates sophistication | `professional-level tools` |
+| `institutional-grade analysis` | `app/pricing/page.tsx` L195 | Overstates sophistication | `professional-level analysis` |
+| `institutional-grade precision` | `app/tools/time-scanner/page.tsx` L43 | Overstates sophistication | `professional-level precision` |
+| `institutional-grade` | `components/DataComingSoon.tsx` L38 | Overstates sophistication | `professional-level` |
+| `High Conviction` | `components/scanner/ScanTemplatesBar.tsx` ~L90 | Predictive language in template name | `High Alignment` |
 
 ---
 
-## 7. Disclosure / Terms / Policy Gaps
+## 7. Disclosure / Terms / Policy Assessment — Current State
 
-### Missing or Weak Disclosures
+### Disclosures Now In Place
+
+| Disclosure | Status | Location |
+|------------|--------|----------|
+| **AFSL disclaimer** | ✅ PRESENT | Footer.tsx, disclaimer/page.tsx, ToolsLayoutClient.tsx (GAW banner), legal/terms/page.tsx |
+| **General Advice Warning (GAW)** | ✅ PRESENT | ToolsLayoutClient.tsx — displayed on ALL tool pages |
+| **Data delay disclosure** | ✅ PRESENT | disclaimer/page.tsx — "Data Delays & Third-Party Sources" section |
+| **Paper trade system disclosure** | ✅ PRESENT | disclaimer/page.tsx — "Paper Trade & Simulation System" section |
+| **Backtest disclaimers** | ✅ PRESENT | disclaimer/page.tsx (comprehensive) + tools/backtest/page.tsx (on-page disclaimer) |
+| **AI disclaimer** | ✅ PRESENT | disclaimer/page.tsx, AI prompt mandatory footer on every response |
+| **Score/alignment disclaimer** | ✅ PRESENT | disclaimer/page.tsx (paper trade section) + scanner page inline |
+| **Past performance disclaimer** | ✅ PRESENT | EdgeInsightCards.tsx footer, disclaimer/page.tsx |
+| **Terms of Service: Paper trade + AFSL** | ✅ PRESENT | Section 2A added |
+| **Terms of Service: AI content** | ✅ PRESENT | Section 2B added |
+| **Privacy Policy: Edge profile data** | ✅ PRESENT | Added disclosures for edge profile, adaptive personality, portfolio/journal, AI processing |
+| **Cookie consent** | ✅ PRESENT | Granular GDPR consent mechanism |
+
+### Remaining Disclosure Gaps
 
 | Gap | Priority | Detail |
 |-----|----------|--------|
-| **No ABN displayed** | P0 | If MSP operates as a business in Australia, it must display its ABN on the website. This is a legal requirement under the ABN Act 1999. |
-| **No AFSL disclaimer** | P0 | Should explicitly state: "MarketScanner Pros does not hold an Australian Financial Services Licence (AFSL). We do not provide financial product advice within the meaning of the Corporations Act 2001." |
-| **No data delay disclosure** | P1 | Users are told data is "real-time" but there is no disclosure of actual pipeline latency. Alpha Vantage premium provides real-time US equities during market hours, but CoinGecko has inherent API latency. Should state: "Market data may be subject to delays of up to [X] seconds/minutes." |
-| **No General Advice Warning (GAW)** | P0 | If any feature constitutes general advice, the Corporations Act requires a General Advice Warning: "This information does not take into account your personal objectives, financial situation, or needs. You should consider whether this information is appropriate for you before acting on it." This should appear on every tool page, not just the footer. |
-| **No "consider seeking independent advice" statement** | P1 | The standard Australian regulatory recommendation is: "Consider seeking independent financial advice before making any trading decisions." This appears on the pricing page FAQ but should be prominent on all tool pages. |
-| **Backtest disclaimers too weak** | P1 | Current: "past results do not predict future outcomes." Should add: "Backtested performance is hypothetical and has inherent limitations including survivorship bias, hindsight bias, and the absence of trading costs, slippage, and market impact. Actual results may differ materially." |
-| **AI disclaimer insufficient** | P1 | Current: "educational purposes only." Should add: "AI-generated analysis reflects mathematical pattern matching on historical data. AI outputs may contain errors, hallucinations, or outdated information. AI cannot predict future market movements." |
-| **No broker risk disclosure** | P1 (pre-launch) | Before any broker feature launches: "Broker integration is a convenience feature only. MSP does not execute trades, hold funds, or take responsibility for order execution. Trading through any broker involves risk of loss." |
+| **No ABN displayed** | P0 | If MSP operates as a business in Australia, it must display its ABN on the website. This is a legal requirement under the ABN Act 1999. *Blocked on business registration.* |
 | **No geographic restriction disclosure** | P2 | Should state which jurisdictions the platform is designed for and which it is not. |
-| **Win rate / performance claims need qualification** | P0 | Every instance of a win rate, accuracy percentage, or performance statistic must be accompanied by: "Based on historical data. Past performance does not indicate future results." |
-| **Confidence/score disclaimer needed** | P1 | "Scores and alignment percentages reflect the degree of technical indicator agreement, not the probability of a profitable trade outcome." |
-
-### Terms of Service Gaps
-
-| Gap | Priority |
-|-----|----------|
-| No clause addressing AI-generated content liability | P1 |
-| No clause addressing broker integration liability (for when it launches) | P1 |
-| No clause addressing personalization/edge profile data usage | P1 |
-| No explicit "not personal advice" clause (only says "not advice" generally) | P0 |
-| Terms effective date (Dec 2025) — should be updated when features change materially | P1 |
-| No clause about data accuracy limitations by source | P2 |
-| Class action waiver may not be enforceable under Australian Consumer Law — should be reviewed by Australian counsel | P2 |
-
-### Privacy Policy Gaps
-
-| Gap | Priority |
-|-----|----------|
-| No mention of edge profile / personalization data collection | P1 |
-| No mention of broker credential storage (for when it launches) | P1 |
-| No mention of AI interaction content storage beyond "debugging" | P2 |
-| No data breach notification procedure described | P2 |
+| **No broker risk disclosure** | P1 (pre-launch) | Before any broker feature launches: "Broker integration is a convenience feature only. MSP does not execute trades, hold funds, or take responsibility for order execution." |
+| **Backtest: survivorship bias language** | P2 | Disclaimer page covers backtests comprehensively but the on-page backtest disclaimer could mention survivorship bias specifically. |
+| **Class action waiver enforceability** | P2 | Class action waiver in Terms may not be enforceable under Australian Consumer Law — needs review by Australian counsel. |
+| **Data breach notification procedure** | P2 | Not described in privacy policy. Should be added if handling significant personal data. |
 
 ---
 
-## 8. Product Safeguards Needed
+## 8. Product Safeguards — Current State
 
-### Before Any Broker Feature Launches
+### Safeguards Now In Place
 
-| Safeguard | Priority | Detail |
-|-----------|----------|--------|
-| **External Australian financial services legal opinion** | P0 | Engage a law firm with ASIC/financial services expertise to review the broker integration design and advise on AFSL requirements |
-| **AFSL assessment** | P0 | Determine whether MSP needs an AFSL, an authorized representative arrangement, or can rely on an exemption |
-| **Kill switch for broker execution** | P0 | Already designed (`BROKER_WRITE_ENABLED=false`) — must default to OFF |
-| **Full audit trail** | P0 | Already designed (`order_audit_log`) — must be immutable |
-| **Geography gating** | P1 | Block broker features in jurisdictions where MSP has no regulatory clearance |
-| **Tier gating** | P1 | Already designed (Pro Trader only) — appropriate |
-| **Rate limiting** | P1 | Already designed (10/min) — appropriate |
+| Safeguard | Status | Implementation |
+|-----------|--------|----------------|
+| **General Advice Warning on all tool pages** | ✅ LIVE | `ToolsLayoutClient.tsx` — amber alert banner with ASIC-compliant language |
+| **No-AFSL disclaimer in footer** | ✅ LIVE | `Footer.tsx` — visible on every page |
+| **No-AFSL disclaimer in Terms** | ✅ LIVE | `legal/terms/page.tsx` Section 2A |
+| **Paper trade framing** | ✅ LIVE | Consistent across scanner, Golden Egg, portfolio, journal, options |
+| **Educational mode labeling** | ✅ LIVE | Backtest, options scanner, scanner pages |
+| **AI output disclaimers** | ✅ LIVE | Mandatory footer on every AI response |
+| **Past performance disclaimers** | ✅ LIVE | Edge profile insights, disclaimer page |
+| **Score/alignment disclaimers** | ✅ LIVE | Scanner page, disclaimer page |
+| **Data delay disclosure** | ✅ LIVE | Disclaimer page |
+| **Non-directive labels** | ✅ LIVE | ALIGNED/NOT ALIGNED, Bullish/Bearish Setup, Confluence (not Confidence) |
 
-### Before Personalization Features Continue to Expand
-
-| Safeguard | Priority | Detail |
-|-----------|----------|--------|
-| **Reframe all personalization as "analytics" not "advice"** | P0 | Edge profile should describe historical patterns, not recommend future actions |
-| **Remove all directive language from edge profile** | P0 | "Consider reducing size" → "Historical win rate below average" |
-| **Add disclaimers to every personalized output** | P0 | "This reflects your past trading patterns. Past performance does not indicate future results." |
-| **Rename "recommendation" property** | P0 | Property and UI text must not use "recommendation" |
-| **Remove "TRADE_READY" / "NO_TRADE" labels** | P0 | Replace with non-advisory labels |
-
-### General Platform Safeguards
+### Safeguards Still Needed
 
 | Safeguard | Priority | Detail |
 |-----------|----------|--------|
-| **Add General Advice Warning to all tool pages** | P0 | Standard Australian regulatory GAW |
-| **Add ABN to website** | P0 | Legal requirement |
-| **Compliance review checklist for new features** | P1 | Before any new feature launches, run through: "Does this feature recommend a trade? Does it consider the user's circumstances? Does it facilitate dealing?" |
-| **Content moderation for AI outputs** | P1 | Filter AI responses to remove explicit buy/sell language |
-| **Quarterly compliance review** | P2 | Re-review platform against ASIC guidance quarterly |
+| **Fix alert API route text** | P0 | `signal-check`, `strategy-check`, `smart-check` routes still generate BUY/SELL SIGNAL text |
+| **Fix Fear & Greed "buying opportunity"** | P0 | Three components still frame extreme fear as actionable buying opportunity |
+| **Fix CryptoMorningDecisionCard "PERMISSION"** | P1 | Change to "STATUS" or "TRADING STATUS" |
+| **Add ABN to website** | P0 | Blocked on registration |
+| **External AFSL legal opinion** | P0 (pre-broker) | Required before any broker integration launches |
+| **Geography gating** | P1 (pre-broker) | Block broker features in jurisdictions without regulatory clearance |
+| **Content moderation for AI outputs** | P2 | Filter AI responses to remove explicit buy/sell language (prompts already do this — verify enforcement) |
+| **Compliance review checklist** | P2 | Internal checklist for new feature launches |
 
 ---
 
-## 9. Launch Guidance
+## 9. Launch Guidance — Updated
 
-### Safe to Keep Live Now
+### Safe to Keep Live Now (No Changes Needed)
 
-- Intraday charts
-- Sector / crypto heatmaps
-- Market overview / macro dashboard (data display)
-- Watchlists
-- Portfolio tracker (manual entry)
-- Trade journal (manual journaling)
-- Economic / earnings calendars
-- Blog / educational articles
-- About, contact, legal pages
-- Backtest engine (with strengthened disclaimers)
-- Commodities dashboard
-- Market movers (data display)
-- News / sentiment feeds
+- ✅ All intraday charts, sector/crypto heatmaps, market overview
+- ✅ Watchlists, portfolio tracker (paper trade), trade journal
+- ✅ Economic, earnings, and ex-dividend calendars
+- ✅ Blog, educational articles, guides
+- ✅ About, contact, legal pages
+- ✅ Backtest engine (comprehensive disclaimers in place)
+- ✅ Commodities dashboard, market movers, news/sentiment feeds
+- ✅ Scanner (with current compliant labels and disclaimers)
+- ✅ Golden Egg (with current compliant labels and disclaimers)
+- ✅ AI Analyst (with current prompt guardrails and disclaimers)
+- ✅ Options scanner (educational mode, simulated workflow disclosure)
+- ✅ Time scanner / confluence tools
 
-### Safe With Wording Changes
+### Needs Specific Fixes Before Considered Fully Compliant
 
-| Feature | Required Changes |
-|---------|-----------------|
-| **Scanner** | Replace "BUY signal" / "SELL signal" → "Bullish setup" / "Bearish setup". Replace "HIGH CONVICTION" → "HIGH ALIGNMENT". Add GAW to page. |
-| **Golden Egg** | Replace "TRADE" / "NO TRADE" → "CONDITIONS ALIGNED" / "CONDITIONS NOT ALIGNED". Replace "Confidence" → "Confluence" or "Alignment" throughout. Add GAW to page. Remove "permission" language (TRADE/WATCH/NO_TRADE as authorization). |
-| **AI Analyst** | Update prompts to remove "Trade-Ready" → "Conditions Aligned". Add output filter for buy/sell directives. Strengthen disclaimer per response. Add GAW to page. |
-| **Alerts** | Remove "Buy Opportunity" labels. Change "BUY signal" / "SELL signal" → "Bullish setup detected" / "Bearish setup detected". Remove "consider taking profits" language. |
-| **Options Confluence** | Remove "High confidence prediction: 78%" → "High confluence alignment: 78%". Qualify all win rate mentions with "historical, past performance" language. |
-| **Homepage** | "See The Market Before It Moves" → less predictive. "high-probability" → "technically aligned". "Serious edge" → "Serious tools". |
-| **Pricing page** | Remove "Serious tools. Serious edge." Add prominance to "educational tool" classification. |
-
-### Safe Only With Stronger Safeguards
-
-| Feature | Required Safeguards |
-|---------|---------------------|
-| **Edge Profile** | Reframe from advice to analytics. Remove all directive language. Add "past performance" disclaimers to every insight. Do NOT use edge profile to filter or weight scanner results. |
-| **Adaptive Personality Card** | Remove "TRADE_READY" / "NO_TRADE" labels. Remove "recommendation" property. Rename "Adaptive Confidence" → "Pattern Alignment". Add disclaimer: "Based on historical patterns only." |
-| **Backtest Engine** | Add comprehensive backtest limitations disclaimer (survivorship bias, look-ahead bias, no transaction costs, no slippage, no market impact). Current disclaimer is too brief. |
-| **Position Sizing** (when account-linked) | Must NOT be presented alongside a trade recommendation. If account-linked sizing appears on the same screen as "TRADE_READY" or a trade plan, it constitutes personal advice. Either separate the features or obtain AFSL coverage. |
-| **Risk Governor** (blocking/allowing trades) | Reframe from "permission" to "risk metric display." Show the numbers, don't gate user actions with advisory labels. |
+| Feature | Required Fix | Priority |
+|---------|-------------|----------|
+| **Alert API routes** | Replace BUY/SELL SIGNAL text in 3 route files | P0 |
+| **FearGreedGauge** | Remove "buying opportunity" language | P0 |
+| **CustomFearGreedGauge** | Remove "buying opportunity" + "smart money" language | P0 |
+| **DerivativesWidget** | Remove "contrarian long potential" | P1 |
+| **CryptoMorningDecisionCard** | Change "PERMISSION" label | P1 |
+| **MSP Analyst route** | Fix Fear & Greed context text | P1 |
+| **Benefits component** | "high-probability" → "technically aligned" | P1 |
+| **About page** | "institutional-grade" → "professional-level", "high-probability" → "technically aligned" | P1 |
+| **Pricing FAQ** | "institutional-grade" → "professional-level" | P1 |
+| **Time scanner page** | "institutional-grade" → "professional-level" | P1 |
+| **DataComingSoon** | "institutional-grade" → "professional-level" | P2 |
+| **ScanTemplatesBar** | "High Conviction" template → "High Alignment" | P2 |
 
 ### Do Not Launch Without Specialist Australian Legal Review
 
-| Feature | Why |
-|---------|-----|
-| **Direct broker order submission (Phase 3)** | Likely constitutes "arranging" under s.766C. May require AFSL or authorized representative arrangement. |
-| **Pre-filled trade tickets from scanner/GE/AI signals connected to broker execution** | Complete advice-to-execution pipeline. Even with user confirmation, the chain from: (a) platform generates trade idea, (b) pre-fills order, (c) user clicks submit is likely regulated conduct. |
-| **Account-linked position sizing with broker balances feeding trade tickets** | Considers user's financial situation = personal advice. Combined with execution = dealing. |
-| **Any push notification that says "trade detected" or "setup ready" with a link to execute** | Active solicitation + execution link = regulated financial services. |
-| **Scaling edge profile into automated trade filtering/weighting** | If scanner results are personalized based on user's edge profile, this is algorithmically generated personal advice. |
+| Feature | Why | Status |
+|---------|-----|--------|
+| **Direct broker order submission** | Likely constitutes "arranging" under s.766C | NOT BUILT |
+| **Pre-filled trade tickets connected to broker execution** | Complete advice-to-execution pipeline | DESIGNED ONLY |
+| **Account-linked position sizing from broker balances** | Considers user's financial situation = personal advice | DESIGNED ONLY |
+| **Push notifications with trade directives + execution links** | Active solicitation | NOT BUILT |
+| **Automated trade filtering by edge profile** | Algorithmically generated personal advice | NOT BUILT |
 
 ---
 
-## 10. Priority Fixes
+## 10. Priority Fixes — Remaining
 
-### P0 — Urgent (should change before next deployment)
+### P0 — Urgent
 
-| # | Fix | Files Affected |
-|---|-----|----------------|
-| 1 | **Remove "BUY signal" / "SELL signal" from alerts** | `components/AlertsWidget.tsx` (~L277, L282-283) |
-| 2 | **Remove "Buy Opportunity" from Fear & Greed alerts** | `components/AlertsWidget.tsx` (~L277, L831) |
-| 3 | **Replace "TRADE_READY" / "NO_TRADE" with non-advisory labels** | `components/AdaptivePersonalityCard.tsx`, AI prompts |
-| 4 | **Rename "recommendation" property** | `components/AdaptivePersonalityCard.tsx` (~L28) |
-| 5 | **Remove "Consider reducing size or skipping" from edge profile** | `lib/intelligence/edgeProfile.ts` (~L334) |
-| 6 | **Add General Advice Warning to all tool pages** | All pages under `app/tools/` |
-| 7 | **Add ABN to footer and legal pages** (once registered) | `components/Footer.tsx`, legal pages |
-| 8 | **Add explicit "no AFSL" disclaimer** | `app/disclaimer/page.tsx`, `components/Footer.tsx` |
-| 9 | **Qualify all win rate / accuracy claims with "historical, past performance" language** | AI prompts, options confluence analyzer, edge profile |
-| 10 | **Replace "Confidence" labels with "Alignment" or "Confluence" everywhere** | Golden Egg, scanner, AI outputs, AdaptivePersonalityCard |
+| # | Fix | Files Affected | Status |
+|---|-----|----------------|--------|
+| 1 | **Replace BUY/SELL SIGNAL in alert API routes** | `app/api/alerts/signal-check/route.ts`, `strategy-check/route.ts`, `smart-check/route.ts` | ❌ NOT DONE |
+| 2 | **Remove "buying opportunity" from Fear & Greed components** | `components/FearGreedGauge.tsx`, `components/CustomFearGreedGauge.tsx` | ❌ NOT DONE |
+| 3 | **Add ABN to website** | `components/Footer.tsx`, legal pages | ⏳ BLOCKED (pending registration) |
 
 ### P1 — Should Change Soon
 
-| # | Fix |
-|---|-----|
-| 11 | Replace "See The Market Before It Moves" with less predictive headline |
-| 12 | Replace "high-probability setups" with "technically aligned setups" across site |
-| 13 | Replace "Serious tools. Serious edge." with "Advanced tools for serious traders." |
-| 14 | Add data delay disclosure to disclaimer page and tool pages |
-| 15 | Strengthen backtest disclaimers (add survivorship bias, no transaction costs, etc.) |
-| 16 | Strengthen AI output disclaimers (add pattern matching, not prediction, may contain errors) |
-| 17 | Update Terms of Service with AI content liability, personalization data, and broker clauses |
-| 18 | Update Privacy Policy with edge profile data collection and broker credential storage |
-| 19 | Add "past performance" disclaimer to every edge profile insight |
-| 20 | Add "scores reflect indicator agreement, not profit probability" disclaimer to scanner |
-| 21 | Reframe Risk Governor from "permission" language to "risk metric display" |
-| 22 | Remove "institutional-grade" → "professional-level" in marketing copy |
+| # | Fix | Status |
+|---|-----|--------|
+| 4 | Remove "contrarian long potential" from DerivativesWidget | ❌ NOT DONE |
+| 5 | Change "PERMISSION" label in CryptoMorningDecisionCard | ❌ NOT DONE |
+| 6 | Fix Fear & Greed context text in MSP Analyst route | ❌ NOT DONE |
+| 7 | Replace "high-probability" in Benefits.tsx and about/page.tsx | ❌ NOT DONE |
+| 8 | Replace "institutional-grade" in about/page.tsx, pricing FAQ, time-scanner, DataComingSoon | ❌ NOT DONE |
+| 9 | Rename "High Conviction" scan template to "High Alignment" | ❌ NOT DONE |
 
 ### P2 — Later / Pre-Launch
 
-| # | Fix |
-|---|-----|
-| 23 | Engage Australian financial services lawyer for AFSL assessment |
-| 24 | Implement geography-aware feature gating for broker features |
-| 25 | Create internal compliance review checklist for new features |
-| 26 | Review class action waiver enforceability under Australian Consumer Law |
-| 27 | Add data breach notification procedure to privacy policy |
-| 28 | Consider filing for ABN/ACN if not already registered |
-| 29 | Review whether media exemption (s.911A(2)(a)) could apply to general market commentary features |
-| 30 | Consider authorized representative arrangement with an AFSL holder for broker execution features |
+| # | Fix | Status |
+|---|-----|--------|
+| 10 | Engage Australian financial services lawyer for AFSL assessment | ⏳ BUSINESS ACTION |
+| 11 | Implement geography-aware feature gating for broker features | ⏳ FUTURE |
+| 12 | Create internal compliance review checklist for new features | ⏳ BUSINESS ACTION |
+| 13 | Review class action waiver enforceability under Australian Consumer Law | ⏳ LEGAL REVIEW |
+| 14 | Add data breach notification procedure to privacy policy | ⏳ FUTURE |
+| 15 | Consider ABN/ACN registration | ⏳ BUSINESS ACTION |
+| 16 | Review media exemption (s.911A(2)(a)) applicability | ⏳ LEGAL REVIEW |
+| 17 | Consider authorized representative arrangement for broker execution | ⏳ LEGAL REVIEW |
 
 ---
 
-## 11. Final Verdict
+## 11. Completed P0/P1 Items — Audit Trail
+
+These items from the original March 18 review have been verified as complete:
+
+| Original # | Fix | Commit | Verified |
+|-------------|-----|--------|----------|
+| P0-1 | Remove "BUY signal" / "SELL signal" from AlertsWidget UI | ee31dd00 | ✅ "Bullish Setup" / "Bearish Setup" |
+| P0-2 | Remove "Buy Opportunity" from AlertsWidget UI | ee31dd00 | ✅ Removed |
+| P0-3 | Replace "TRADE_READY"/"NO_TRADE" display labels | ee31dd00 | ✅ "ALIGNED" / "PATTERN MISMATCH" |
+| P0-4 | Rename "recommendation" property | ee31dd00 | ✅ "assessment" |
+| P0-5 | Remove "Consider reducing size or skipping" | ee31dd00 | ✅ Removed |
+| P0-6 | Add General Advice Warning to all tool pages | ee31dd00 | ✅ ToolsLayoutClient.tsx GAW banner |
+| P0-8 | Add explicit "no AFSL" disclaimer | ee31dd00 | ✅ Footer, disclaimer, terms, tools |
+| P0-10 | Replace "Confidence" with "Confluence" | 79246cf2 | ✅ Golden Egg uses "Confluence" |
+| P1-11 | Replace "See The Market Before It Moves" | ee31dd00 | ✅ "See The Market With Clarity" |
+| P1-13 | Replace "Serious tools. Serious edge." | ee31dd00 | ✅ "Advanced tools for serious traders." |
+| P1-14 | Add data delay disclosure | 79246cf2 | ✅ Disclaimer page "Data Delays" section |
+| P1-15 | Strengthen backtest disclaimers | 79246cf2 | ✅ Comprehensive disclaimer on page + disclaimer page |
+| P1-16 | Strengthen AI output disclaimers | ee31dd00 | ✅ AI prompts updated |
+| P1-17 | Update Terms of Service | 79246cf2 | ✅ Sections 2A, 2B added |
+| P1-18 | Update Privacy Policy | 79246cf2 | ✅ Edge profile, AI, portfolio disclosures |
+| P1-19 | Add past performance disclaimer to edge profile | 79246cf2 | ✅ EdgeInsightCards footer |
+| P1-20 | Add score disclaimer to scanner | 79246cf2 | ✅ Inline disclaimer added |
+| P1-21 | Reframe Risk Governor | 79246cf2 | ✅ "Simulated entries" / "risk metric" |
+
+---
+
+## 12. Final Verdict — Post-Remediation
 
 ### Where Does MSP Currently Stand Legally?
 
-MSP sits at a **crossroads**. The platform's foundation (market data, charts, scanning, backtesting) is genuinely educational and informational. The data display and analysis tools would likely be accepted by ASIC as information services, not financial product advice.
+MSP has moved from a **MEDIUM-HIGH risk** position to **MEDIUM risk** through systematic compliance remediation. The platform now presents substantially as an **educational paper trade simulation system** with appropriate disclaimers, non-directive labeling, and regulatory disclosures.
 
-However, several features have grown beyond informational tools into **advisory territory**:
-- The Golden Egg framework doesn't just display data — it tells the user whether to trade
-- The AI analyst doesn't just describe conditions — it issues trade plans with specific prices
-- The edge profile doesn't just show statistics — it recommends what to trade based on the user's personal history
-- The adaptive personality system doesn't just score alignment — it recommends "TRADE_READY" or "NO_TRADE"
+**The good:**
+- Every tool page carries a General Advice Warning (GAW)
+- The no-AFSL disclaimer appears in footer, disclaimer page, terms of service, and tools layout
+- "TRADE_READY"/"NO_TRADE" replaced with "ALIGNED"/"NOT ALIGNED" throughout all primary UI
+- "Confidence" replaced with "Confluence" in Golden Egg — reduced prediction framing
+- "BUY/SELL signal" replaced with "Bullish/Bearish Setup" in AlertsWidget
+- Paper trade framing is consistent across scanner, Golden Egg, portfolio, journal, options
+- AI prompts explicitly require educational disclaimer on every response
+- Terms of Service and Privacy Policy updated with Paper Trade, AI content, and AFSL disclosures
+- Disclaimer page is comprehensive: AFSL, data delays, paper trade system, backtest limitations, AI accuracy
 
-Under the Corporations Act, the test is not what you call the conduct — it's what a reasonable person would conclude from the substance. A user looking at "TRADE_READY" + "72% Adaptive Confidence" + "Entry: $185.50, Stop: $182.00, Targets: $189/$193.50/$198" is receiving financial product advice, regardless of how many disclaimers surround it.
+**The remaining gaps:**
+- Three alert API routes still generate "BUY SIGNAL"/"SELL SIGNAL" in notification text
+- Fear & Greed components still frame extreme conditions as "buying opportunities"
+- "PERMISSION" label in CryptoMorningDecisionCard
+- "high-probability" and "institutional-grade" in a few marketing pages
+- ABN not yet displayed (pending registration)
 
-### What Is the Biggest Legal Risk?
+### What Is the Biggest Legal Risk Now?
 
-**The personalized advisory pipeline:** Edge Profile → Adaptive Personality → TRADE_READY verdict → Pre-filled trade ticket → (future) broker execution.
+**The alert API routes** generating "BUY SIGNAL"/"SELL SIGNAL" text. These are the last remaining instances of explicit buy/sell directive language in user-facing outputs. The Fear & Greed "buying opportunity" language is the second biggest risk. Both are specific, bounded, and fixable.
 
-This is a complete personal financial advice → dealing pipeline. Each component individually increases risk; together they create a regulated activity.
+The broader personalization risk (edge profile + adaptive personality = personal advice under s.766B(3)) is **mitigated but not eliminated** by the reframing. The substance test still applies — the platform still analyses individual user behaviour and presents tailored outputs. The educational/paper trade framing provides a significantly stronger defensive position than before, but specialist legal counsel should still assess this.
 
-### What Should Change Immediately?
-
-1. **Remove all buy/sell/trade-ready directive language** from alerts, adaptive card, and AI outputs
-2. **Reframe "TRADE_READY"** → "CONDITIONS ALIGNED" or similar non-advisory label
-3. **Remove "Buy Opportunity"** from Fear & Greed alerts entirely
-4. **Add General Advice Warning** to every tool page
-5. **Add explicit "no AFSL" disclaimer** to footer and disclaimer page
-6. **Qualify all win rate / confidence claims** with "historical, past performance" language
-
-### What Should Not Be Launched Yet?
-
-1. **Direct broker order submission** — requires external AFSL legal assessment
-2. **Pre-filled trade tickets connected to broker execution** — complete advice-to-execution pipeline
-3. **Account-linked position sizing from broker balances** alongside trade recommendations
-4. **Any push notifications with trade directives + execution links**
-
-### Platform Classification
+### Platform Classification — Current
 
 | Classification | Status |
 |---------------|--------|
 | Data platform | **Yes** — Charts, heatmaps, calendars, data feeds |
 | Analytics platform | **Yes** — Scanner scoring, confluence analysis, technical indicators |
-| Decision-support tool | **Yes, but problematic** — Golden Egg verdicts, AI trade plans, regime gating |
-| Advice-like system | **Yes, in substance** — TRADE_READY verdicts, edge profile recommendations, adaptive personality matching |
-| Execution facilitator | **Designed but not live** — Trade ticket and broker integration designed, broker stub exists |
+| Educational simulation platform | **Yes (NEW)** — Paper trade framing, simulation mode, educational disclaimers |
+| Decision-support tool | **Yes, but well-disclaimed** — Golden Egg scenario plans, AI educational analysis |
+| Advice-like system | **Reduced** — Personalization still exists but uses analytical not advisory framing |
+| Execution facilitator | **Not live** — No broker connectivity deployed |
 
-**Current:** Analytics platform with advice-like features (requiring compliance remediation)
-**Trending toward:** Decision-support + execution facilitator (requiring AFSL assessment before launch)
+**Current:** Educational analytics platform with comprehensive regulatory disclosures
+**Remaining work:** Fix alert API routes, Fear & Greed components, and a handful of marketing copy items
 
-### The Smart Compliance Path
+### Recommended Next Steps
 
-1. **Immediate:** Fix P0 language issues (remove directive language, add GAW, qualify performance claims)
-2. **Short-term:** Reframe personalization from "advice" to "analytics" — show data, don't recommend
-3. **Before broker launch:** Engage specialist Australian financial services lawyer. Get a formal AFSL assessment. Determine whether MSP needs an AFSL, can operate as an authorized representative of an AFSL holder, or can rely on an exemption
-4. **Architecture decision:** Consider structuring broker integration as a separate legal entity with appropriate licensing, keeping the informational platform clean
-5. **Ongoing:** Quarterly compliance review as features evolve
+1. **Immediate (P0):** Fix the 3 alert API routes and 2 Fear & Greed components — these are the last explicit directive language
+2. **Soon (P1):** Clean up remaining "high-probability", "institutional-grade", "PERMISSION" labels
+3. **Business (P0 pre-broker):** Engage specialist Australian financial services lawyer before any broker integration
+4. **Business (P0):** Register ABN and display on website
+5. **Ongoing:** Re-run this compliance review whenever significant new features are added
 
 ---
 
@@ -486,20 +547,17 @@ This is a complete personal financial advice → dealing pipeline. Each componen
 
 | Source | Licence | Display Rules | Status |
 |--------|---------|---------------|--------|
-| **Alpha Vantage** | Premium commercial ($49.99/mo) | Can display to paid users. Cannot resell raw feeds. | ✅ Compliant |
+| **Alpha Vantage** | Premium commercial (600 RPM) | Can display to paid users. Cannot resell raw feeds. | ✅ Compliant |
 | **CoinGecko** | Commercial licence | Can display with attribution. Subject to rate limits. | ✅ Compliant |
 | **Nasdaq** | Licensed market data (via Alpha Vantage) | Display vs. non-display rules apply. Data redistribution restricted. | ⚠️ Verify — MSP displays derived calculations (scores, signals) from Nasdaq-sourced data. Need to confirm this is "derived data" not "redistribution" under Nasdaq's Data Agreement. |
 
-### Data Disclosure Gaps
+### Data Disclosure Status
 
-- No user-facing statement about data source freshness/latency
-- No disclosure that derived calculations (scores, signals) are MSP's interpretation, not guaranteed by data providers
-- "Real-time" claimed on multiple pages without defining what "real-time" means (is it <1s? <15s? <60s?)
-
-### Recommendation
-
-Add to disclaimer page:
-> "Market data is provided by Alpha Vantage and CoinGecko under commercial licence agreements. Data may be subject to delays. Derived metrics (scores, signals, confluence) are calculated by MarketScanner Pros and are not endorsed by, or guaranteed by, any data provider. Data accuracy is not guaranteed."
+| Disclosure | Status |
+|------------|--------|
+| Data source freshness/latency statement | ✅ PRESENT — Disclaimer page "Data Delays & Third-Party Sources" section |
+| Derived calculations disclaimer | ✅ PRESENT — "Scores, alignment readings, confluence percentages... reflect indicator agreement and technical pattern recognition — they do not represent profit probability" |
+| "Real-time" qualification | ✅ PRESENT — "Real-time data availability varies by provider and plan" |
 
 ---
 

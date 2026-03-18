@@ -72,7 +72,7 @@ export default function CatalystTab({ ctx }: { ctx: TickerContext }) {
       <div className="flex flex-col items-center justify-center rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-8 text-center">
         <p className="text-[11px] font-bold text-[var(--msp-text)]">Catalyst Event Studies</p>
         <p className="mt-1 text-[10px] text-[var(--msp-text-faint)]">
-          Institutional-grade event study analysis is available on the <span className="font-bold text-emerald-400">Pro Trader</span> plan.
+          Professional-level event study analysis is available on the <span className="font-bold text-emerald-400">Pro Trader</span> plan.
         </p>
         <a
           href="/pricing"

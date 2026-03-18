@@ -4027,7 +4027,7 @@ export default function OptionsConfluenceScanner() {
                     {result.unusualActivity.hasUnusualActivity ? (
                       <>
                         <div className={`mb-2 text-[0.85rem] ${result.unusualActivity.smartMoneyDirection === 'bullish' ? 'text-emerald-500' : result.unusualActivity.smartMoneyDirection === 'bearish' ? 'text-red-500' : 'text-slate-400'}`}>
-                          Smart Money: {result.unusualActivity.smartMoneyDirection.toUpperCase()}
+                          Institutional Flow: {result.unusualActivity.smartMoneyDirection.toUpperCase()}
                         </div>
                         <div className="max-h-[120px] overflow-y-auto">
                           {result.unusualActivity.unusualStrikes.slice(0, 3).map((strike, idx) => (

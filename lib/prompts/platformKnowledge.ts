@@ -36,7 +36,7 @@ SCANNERS (Signal Generation)
 3. /tools/confluence-scanner — Time Confluence Scanner
    Volatility expansion timing via multi-timeframe candle close confluence detection.
    Tracks 11 cycle times across 4 tiers (Micro, Monthly, Macro, Institutional).
-   Identifies high-probability move windows when multiple timeframes close simultaneously.
+   Identifies technically aligned move windows when multiple timeframes close simultaneously.
 
 4. /tools/deep-analysis — Deep Technical Analysis
    Full indicator breakdown: RSI, MACD, Stochastic, ATR, Bollinger Bands, moving averages.
@@ -51,8 +51,8 @@ SCANNERS (Signal Generation)
    Proximity analysis, confidence scoring, and sweep direction classification.
 
 7. /tools/options-flow — Options Flow Intelligence
-   Smart money options flow analysis. Block vs sweep detection, bid/ask trade direction inference.
-   IV skew analysis, term structure, net premium direction, and smart money scoring.
+   Options flow analysis. Block vs sweep detection, bid/ask trade direction inference.
+   IV skew analysis, term structure, net premium direction, and flow scoring.
 
 MARKETS & DATA (Research & Monitoring)
 ---------------------------------------
@@ -113,7 +113,7 @@ OPTIONS (Derivatives Trading)
 
 23. /tools/options-confluence — (see #2 above) GEX, gamma exposure, dealer positioning, strike selection.
 
-24. /tools/options-flow — (see #7 above) Smart money flow detection, block/sweep classification.
+24. /tools/options-flow — (see #7 above) Options flow detection, block/sweep classification.
 
 CHARTING
 ---------
@@ -121,10 +121,10 @@ CHARTING
     1min-60min candlestick charts with dealer gamma exposure overlay.
     Shows call/put walls, gamma flip levels overlaid on price action.
 
-EXECUTION & RISK
+ANALYSIS & RISK
 -----------------
 26. /operator — Operator Dashboard
-    Risk-managed execution cockpit. Session phases, correlation matrix, pipeline stages.
+    Risk-managed analysis cockpit. Session phases, correlation matrix, pipeline stages.
     Capital controls, permission gates, position sizing. The "control tower" for active trading.
 
 27. /tools/backtest — Backtester (Pro Trader)
@@ -170,7 +170,7 @@ When users ask about a feature:
 COMMON QUESTION MAPPING
 -------------------------
 "Where is GEX?" → /tools/options-confluence (Gamma Exposure analysis with dealer positioning)
-"Show me options flow" → /tools/options-flow (Smart money flow detection)
+"Show me options flow" → /tools/options-flow (Options flow detection)
 "Where are funding rates?" → /tools/crypto-dashboard (Crypto derivatives with funding rates)
 "How do I backtest?" → /tools/backtest (Strategy backtester, requires Pro Trader tier)
 "Where is open interest?" → /tools/crypto-dashboard (Crypto OI) or /tools/options-confluence (Equity options OI)

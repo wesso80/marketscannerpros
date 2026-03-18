@@ -68,7 +68,7 @@ export default function FearGreedGauge({
 
   const tooltipText = `Fear & Greed Index measures market sentiment from 0-100.
 
-🔴 0-24: Extreme Fear - Investors worried, potential buying opportunity
+🔴 0-24: Extreme Fear - Investors worried, historically oversold conditions
 🟠 25-44: Fear - Market anxiety, cautious sentiment
 🟡 45-55: Neutral - Balanced market conditions
 🟢 56-75: Greed - Optimism rising, watch for overextension
@@ -205,7 +205,7 @@ Based on: Volatility, Volume, Social Media, Surveys, BTC Dominance, Google Trend
       {/* Sentiment explanation */}
       <div className="mt-4 p-3 bg-slate-900/50 rounded-lg">
         <p className="text-sm text-slate-300">
-          {value <= 24 && "Extreme fear can indicate oversold conditions - potential buying opportunity."}
+          {value <= 24 && "Extreme fear can indicate oversold conditions - historically associated with market bottoms."}
           {value > 24 && value <= 44 && "Fear in the market - investors are worried. Watch for reversal signals."}
           {value > 44 && value <= 55 && "Neutral sentiment - market is balanced between bulls and bears."}
           {value > 55 && value <= 75 && "Greed is building - consider taking some profits."}

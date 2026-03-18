@@ -594,7 +594,7 @@ Use scanner-specific logic:
 2. Reference the technical indicators that created this setup
 3. Provide entry/exit guidance based on the signal strength
 4. Discuss risk management specific to this signal type
-5. End with a verdict: ✅ Trade-Ready | ⚠️ Wait for Confirmation | ❌ No-Trade Zone
+5. End with a verdict: ✅ Conditions Aligned | ⚠️ Wait for Confirmation | ❌ Conditions Not Met
           `.trim(),
         });
       }
@@ -650,7 +650,7 @@ Institutional Filter Engine (IFE):
 
 Instruction:
 - If No-Trade Trigger is ACTIVE, your default recommendation should be WAIT / NO TRADE unless there is exceptional contradictory evidence.
-- Always surface which institutional filters pass, warn, or block before giving execution guidance.
+- Always surface which institutional filters pass, warn, or block before giving scenario analysis.
       `.trim(),
     });
 
@@ -771,8 +771,8 @@ Use this data to enhance your analysis:
    - Neutral funding = Balanced market
 
 4. FEAR & GREED:
-   - <25 = Extreme Fear (historically good buying opportunity)
-   - >75 = Extreme Greed (historically good time to take profits)
+   - <25 = Extreme Fear (historically associated with oversold conditions)
+   - >75 = Extreme Greed (historically associated with overextended conditions)
 
 Always mention which derivatives signals support or contradict your analysis.
             `.trim(),
@@ -815,9 +815,9 @@ Always mention which derivatives signals support or contradict your analysis.
 1. PLATFORM NAVIGATION: When users ask "where is X" or "what page is Y on", answer with the EXACT path from your Platform Knowledge. GEX → /tools/options-confluence. Options flow → /tools/options-flow. Funding rates → /tools/crypto-dashboard. NEVER give vague answers.
 2. DECISION TRACE: Include the 9-layer decision trace in every analytical response.
 3. MARKET NARRATIVE: Start analytical responses with a 3-5 line macro narrative.
-4. TRADE PLAN: When verdict is Trade-Ready or Conditional, include a structured trade plan with entry/stop/targets/RR.
+4. TRADE PLAN: When verdict is Conditions Aligned or Conditional, include a structured trade plan with entry/stop/targets/RR.
 5. HONESTY: If confluence score < 55, say so. If there's no edge, say "No edge here. Stand aside."
-6. CONFLUENCE GATE: Score < 55 → cannot be Trade-Ready. Score < 25 → must be No-Trade.`.trim(),
+6. CONFLUENCE GATE: Score < 55 → cannot be Conditions Aligned. Score < 25 → must be No-Trade.`.trim(),
     });
 
     if (history && Array.isArray(history)) {
@@ -952,10 +952,10 @@ Always mention which derivatives signals support or contradict your analysis.
                             regimeScoring.tradeBias === 'HIGH_CONFLUENCE' ? 'TRADE_READY' : 'WATCH';
       const score = Math.round(regimeScoring.weightedScore);
       const textLower = text.toLowerCase();
-      const claimsTrade = textLower.includes('trade-ready') || textLower.includes('trade ready');
+      const claimsTrade = textLower.includes('conditions aligned') || textLower.includes('conditions-aligned') || textLower.includes('trade-ready') || textLower.includes('trade ready');
 
       if (claimsTrade && score < 55) {
-        validatedText += `\n\n---\n⚠️ **Confluence Gate Override** — The quantitative pipeline scored this setup at ${score}/100 (below the 55-point Trade-Ready threshold). Server verdict: **${serverVerdict}**. Do not treat this as a confirmed trade signal.`;
+        validatedText += `\n\n---\n⚠️ **Confluence Gate Override** — The quantitative pipeline scored this setup at ${score}/100 (below the 55-point threshold). Server verdict: **${serverVerdict}**. Do not treat this as a confirmed setup.`;
         logger.warn('Confluence gate override triggered', { score, serverVerdict, symbol: context?.symbol });
       } else if (serverVerdict === 'NO_TRADE' && claimsTrade) {
         validatedText += `\n\n---\n⚠️ **Risk Gate Override** — The institutional risk pipeline has **blocked** this setup (ACL: ${aclResult.authorization}). Server verdict: **NO_TRADE**. Stand aside.`;

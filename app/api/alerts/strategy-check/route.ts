@@ -209,14 +209,14 @@ async function checkStrategyAlerts(req: NextRequest) {
               case 'strategy_buy_signal':
                 if (signal.signalType === 'buy') {
                   shouldTrigger = true;
-                  alertMessage = `🟢 BUY SIGNAL: ${strategy.toUpperCase()} triggered on ${symbol} at $${signal.price.toFixed(2)}`;
+                  alertMessage = `🟢 BULLISH SETUP: ${strategy.toUpperCase()} triggered on ${symbol} at $${signal.price.toFixed(2)}`;
                 }
                 break;
 
               case 'strategy_sell_signal':
                 if (signal.signalType === 'sell') {
                   shouldTrigger = true;
-                  alertMessage = `🔴 SELL SIGNAL: ${strategy.toUpperCase()} triggered on ${symbol} at $${signal.price.toFixed(2)}`;
+                  alertMessage = `🔴 BEARISH SETUP: ${strategy.toUpperCase()} triggered on ${symbol} at $${signal.price.toFixed(2)}`;
                 }
                 break;
 

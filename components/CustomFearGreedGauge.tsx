@@ -241,7 +241,7 @@ export default function CustomFearGreedGauge({
             {classification}
           </div>
           <p className="text-sm text-slate-300 leading-relaxed">
-            {value <= 19 && "Extreme fear often signals a buying opportunity - smart money accumulates here."}
+            {value <= 19 && "Extreme fear often indicates oversold conditions - historically associated with market bottoms."}
             {value > 19 && value <= 39 && "Fear dominates - watch for capitulation or reversal signals."}
             {value > 39 && value <= 59 && "Balanced sentiment - market searching for direction."}
             {value > 59 && value <= 79 && "Greed rising - momentum is strong but watch for overextension."}

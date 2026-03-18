@@ -2,7 +2,7 @@ import CryptoTimeConfluenceWidget from '@/components/CryptoTimeConfluenceWidget'
 
 export const metadata = {
   title: 'Crypto Time Confluence - MarketScannerPros',
-  description: 'Track crypto market cycles from 1-365 days. Detect high-probability volatility expansion windows with institutional-grade time confluence analysis.',
+  description: 'Track crypto market cycles from 1-365 days. Detect technically aligned volatility expansion windows with professional-level time confluence analysis.',
 };
 
 export default function CryptoTimeConfluencePage() {
@@ -17,7 +17,7 @@ export default function CryptoTimeConfluencePage() {
           </h1>
           <p className="text-lg text-slate-400 max-w-3xl mx-auto">
             Track crypto market cycles from 1 to 365 days, all anchored to the UTC daily close.
-            Detect when multiple important time cycles align for high-probability setups.
+            Detect when multiple important time cycles align for technically aligned setups.
           </p>
         </div>
 
@@ -127,7 +127,7 @@ export default function CryptoTimeConfluencePage() {
             <div>
               <h3 className="text-lg font-semibold text-emerald-400 mb-2">Alert Threshold</h3>
               <p className="text-slate-400 mb-3">
-                When the confluence score reaches <strong className="text-orange-400">≥ 6</strong>, expect high-probability volatility expansion windows.
+                When the confluence score reaches <strong className="text-orange-400">≥ 6</strong>, expect technically aligned volatility expansion windows.
               </p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                 <div className="bg-slate-800/30 rounded px-3 py-2">

@@ -152,7 +152,7 @@ export function ProModeDashboard({
             🏦 PRO MODE
           </span>
           <span style={{ color: '#94A3B8', fontSize: '13px' }}>
-            Institutional-Grade Analysis
+            Professional-Level Analysis
           </span>
         </div>
         {symbol && (

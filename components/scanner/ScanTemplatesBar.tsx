@@ -87,7 +87,7 @@ export const SCAN_TEMPLATES: ScanTemplate[] = [
   },
   {
     id: 'high_conviction',
-    label: 'High Conviction',
+    label: 'High Alignment',
     icon: '🎯',
     description: 'Only A-setups: 70%+ confidence, 3+ MTF alignment, high quality',
     config: {

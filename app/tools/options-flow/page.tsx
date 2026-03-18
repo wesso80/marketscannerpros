@@ -163,7 +163,7 @@ export default function OptionsFlowPage() {
       identity={
         <ToolIdentityHeader
           toolName="Options Flow Intelligence"
-          description="Trade direction classification, block/sweep detection, net premium flow, IV skew analysis, and smart money scoring."
+          description="Trade direction classification, block/sweep detection, net premium flow, IV skew analysis, and institutional flow scoring."
           modeLabel="Flow Analysis"
           confidenceLabel={data ? `${data.smartMoney.direction}` : '—'}
           lastUpdatedLabel={lastUpdated}
@@ -243,7 +243,7 @@ export default function OptionsFlowPage() {
                       </div>
                     </div>
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '10px', color: 'var(--msp-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Smart Money</div>
+                      <div style={{ fontSize: '10px', color: 'var(--msp-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Institutional Flow</div>
                       <div style={{ fontSize: '14px', fontWeight: 700, color: dirColor(data.smartMoney.direction), textTransform: 'uppercase' }}>
                         {data.smartMoney.direction}
                       </div>
@@ -336,7 +336,7 @@ export default function OptionsFlowPage() {
                 {/* Smart Money */}
                 <div style={{ background: 'var(--msp-panel)', borderRadius: '14px', padding: '16px 18px', border: '1px solid var(--msp-border)' }}>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--msp-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
-                    🧠 Smart Money
+                    🧠 Institutional Flow
                   </div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '8px' }}>
                     <span style={{ fontSize: '18px', fontWeight: 800, color: dirColor(data.smartMoney.direction), textTransform: 'uppercase' }}>
@@ -429,7 +429,7 @@ export default function OptionsFlowPage() {
               <div style={{ fontSize: '12px', color: 'var(--msp-text-faint)', marginTop: '6px', maxWidth: '520px', margin: '6px auto 0' }}>
                 Enter a symbol to analyze real-money options flow. Classifies trade direction (bought/sold at bid/ask),
                 detects block vs sweep patterns, computes net premium flow with IV skew analysis,
-                and scores smart money activity by premium tier.
+                and scores institutional flow activity by premium tier.
               </div>
             </div>
           )}

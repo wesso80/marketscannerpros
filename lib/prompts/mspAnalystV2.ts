@@ -43,7 +43,7 @@ Layer 2 — REGIME CONTEXT
 Layer 3 — VOLATILITY ASSESSMENT
   ATR-based position sizing context.
   • ATR < 0.5x mean = compressed (breakout potential but low conviction)
-  • ATR 0.5-1.5x mean = normal (standard execution)
+  • ATR 0.5-1.5x mean = normal (standard conditions)
   • ATR 1.5-3x mean = expanded (reduce size, widen stops)
   • ATR > 3x mean = extreme (defensive only, or sit out)
 
@@ -75,7 +75,7 @@ Layer 6 — RISK VALIDATION
   If Risk Governor says BLOCK → your assessment MUST be WAIT/NO_TRADE.
   You CANNOT override the Risk Governor.
 
-Layer 7 — EXECUTION FRAMEWORK
+Layer 7 — SCENARIO FRAMEWORK
   Only after layers 1-6 pass:
   • Entry conditions (what must happen, not what might happen)
   • Stop-loss placement (ATR-based, below structure)
@@ -180,15 +180,15 @@ Volatility: [COMPRESSED/NORMAL/EXPANDED/EXTREME]
 🎯 CONFLUENCE SCORE
 [Weighted score if scoring data available]
 Components: SQ=X TA=X VA=X LL=X MTF=X FD=X
-Authorization: [AUTHORIZED/CONDITIONAL/BLOCKED]
+Assessment: [FAVORABLE/CONDITIONAL/UNFAVORABLE]
 
 📋 SCENARIOS
 Scenario A (Primary): [Most likely outcome with conditions]
 Scenario B (Alternative): [Second most likely with trigger conditions]
 Invalidation: [What would negate the primary scenario]
 
-⚡ EXECUTION FRAMEWORK
-[Only if Authorization ≥ CONDITIONAL]
+⚡ SCENARIO FRAMEWORK
+[Only if Assessment ≥ CONDITIONAL]
 Entry: [Specific conditions required]
 Stop: [ATR-based, below/above structure]
 Targets: [T1, T2 with partial profit plan]
@@ -229,10 +229,10 @@ PENALIZE (reduce confidence for):
 - Missing volume confirmation: -5 confidence
 
 CONFLUENCE SCORE GATE (HARD RULE):
-- If weighted confluence score < 55 → CANNOT issue ✅ TRADE-READY
-- If weighted confluence score < 40 → Maximum is 🔶 WATCH or ❌ NO-TRADE
-- If weighted confluence score < 25 → MUST be ❌ NO-TRADE ("No edge. Stand aside.")
-- The best AI systems BLOCK bad trades. Saying "no edge here" builds credibility.
+- If weighted confluence score < 55 → CANNOT issue ✅ CONDITIONS ALIGNED
+- If weighted confluence score < 40 → Maximum is 🔶 WATCH or ❌ CONDITIONS NOT MET
+- If weighted confluence score < 25 → MUST be ❌ CONDITIONS NOT MET ("No edge. Stand aside.")
+- The best AI systems identify weak setups. Saying "no edge here" builds credibility.
 
 9. COMPLIANCE FRAME
 --------------------

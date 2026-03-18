@@ -19,7 +19,7 @@ export default function AboutPage() {
               MarketScanner Pros is an advanced market scanning and trading
               intelligence platform built for retail and professional traders. We
               combine real-time technical analysis, AI-powered insights, and
-              institutional-grade tools in a single web-based dashboard.
+              professional-level tools in a single web-based dashboard.
             </p>
 
             <h2>What we offer</h2>
@@ -49,7 +49,7 @@ export default function AboutPage() {
               </li>
               <li>
                 <strong>Time Confluence Engine</strong> — proprietary timing
-                analysis that identifies high-probability trade windows using
+                analysis that identifies technically aligned trade windows using
                 multi-timeframe data.
               </li>
             </ul>

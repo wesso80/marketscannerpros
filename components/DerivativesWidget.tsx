@@ -109,7 +109,7 @@ function getPositioningInsight(lsRatio: number, fundingRate: number): {
     return { icon: '📊', text: 'Long bias — watching for exhaustion', color: 'text-yellow-400' };
   }
   if (isShortCrowded) {
-    return { icon: '📊', text: 'Short bias — contrarian long potential', color: 'text-yellow-400' };
+    return { icon: '📊', text: 'Short bias — elevated short positioning', color: 'text-yellow-400' };
   }
   if (highPositiveFunding) {
     return { icon: '💰', text: 'Longs paying premium — bullish sentiment', color: 'text-green-400' };

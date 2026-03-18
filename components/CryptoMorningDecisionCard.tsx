@@ -202,7 +202,7 @@ export default function CryptoMorningDecisionCard() {
           </div>
           <div className="mt-1 flex items-center gap-2">
             <span className="text-xl">{permissionBadge(decision.verdict)}</span>
-            <h2 className={`text-base font-extrabold ${permissionColor(decision.verdict)}`}>PERMISSION: {decision.verdict}</h2>
+            <h2 className={`text-base font-extrabold ${permissionColor(decision.verdict)}`}>STATUS: {decision.verdict}</h2>
           </div>
           <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
             <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Adaptive Confidence: {decision.adaptiveConfidence}%</span>

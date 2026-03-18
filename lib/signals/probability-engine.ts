@@ -595,7 +595,7 @@ export function calculateOptionsProbability(
   // Determine confidence label
   let confidenceLabel: string;
   if (dominantDirection === 'neutral') confidenceLabel = 'No Clear Signal';
-  else if (winProbabilityPercent >= 72) confidenceLabel = 'High Conviction';
+  else if (winProbabilityPercent >= 72) confidenceLabel = 'High Alignment';
   else if (winProbabilityPercent >= 65) confidenceLabel = 'Strong';
   else if (winProbabilityPercent >= 55) confidenceLabel = 'Moderate';
   else if (winProbabilityPercent >= 45) confidenceLabel = 'Weak';
@@ -646,7 +646,7 @@ export function getProbabilityColor(probability: number): string {
  */
 export function getConfidenceBadgeStyle(label: string): { bg: string; text: string; border: string } {
   switch (label) {
-    case 'High Conviction':
+    case 'High Alignment':
       return { bg: 'rgba(16,185,129,0.2)', text: '#10B981', border: 'rgba(16,185,129,0.5)' };
     case 'Strong':
       return { bg: 'rgba(34,197,94,0.2)', text: '#22C55E', border: 'rgba(34,197,94,0.5)' };

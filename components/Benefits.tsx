@@ -3,7 +3,7 @@ export default function Benefits() {
   const items = [
     { title: "Never miss a squeeze again", blurb: "Automatic detection across multiple timeframes." },
     { title: "Cut hours to minutes", blurb: "Bulk scans with confluence scores surface the best setups fast." },
-    { title: "Focus on high-probability setups", blurb: "Filter noise with momentum context and alerts." },
+    { title: "Focus on technically aligned setups", blurb: "Filter noise with momentum context and alerts." },
   ];
   return (
     <section className="border-b border-neutral-800 bg-neutral-950">

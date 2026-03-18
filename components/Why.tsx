@@ -14,7 +14,7 @@ export default function Why() {
     },
     {
       icon: "📊",
-      title: "High-probability setups only",
+      title: "Technically aligned setups only",
       desc: "Focus on trades with multi-timeframe confluence. Filter out noise and see only what matters."
     }
   ];

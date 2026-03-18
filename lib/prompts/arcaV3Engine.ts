@@ -107,7 +107,7 @@ LIQUIDITY CONCEPTS TO IDENTIFY:
 5. OPEN INTEREST CLUSTERS
    - Rising OI at key level = institutional positioning
    - Falling OI = position unwinding, less conviction
-   - OI + Price divergence = smart money repositioning
+   - OI + Price divergence = repositioning detected
 
 EXAMPLE REASONING (use this style when data available):
 "Price approaching liquidity cluster at 72,400. Gamma wall at 72,500.
@@ -116,7 +116,7 @@ OI increasing with rising price. Breakout probability rising."
 RULES:
 - Only reference liquidity data that is ACTUALLY provided in context
 - Do NOT invent liquidity levels — use scanner data, GEX data, or derivatives context
-- If no liquidity data available, note: "Liquidity map: Insufficient data for institutional-grade mapping"
+- If no liquidity data available, note: "Liquidity map: Insufficient data for detailed mapping"
 - Integrate liquidity observations into Structure Analysis (Layer 4) and Confluence Scoring
 `;
 
@@ -222,11 +222,11 @@ Expected Outcome:    [Volatility Expansion / Direction Confirmation / False Sign
 ──────────────────────────────────
 
 INTERPRETATION RULES:
-- 3+ timeframe convergence = HIGH probability volatility window
-- 5+ timeframe convergence = EXTREME probability — rare and powerful
+- 3+ timeframe convergence = HIGH alignment volatility window
+- 5+ timeframe convergence = EXTREME alignment — rare and powerful
 - Convergence + directional alignment = breakout likely in aligned direction
 - Convergence + mixed signals = volatile chop likely — reduce size or wait
-- Hot Zone (cluster of convergences) = institutional-grade timing signal
+- Hot Zone (cluster of convergences) = professional-level timing signal
 
 INTEGRATION WITH ANALYSIS:
 - If time confluence shows convergence approaching, mention it in Market Narrative
@@ -248,7 +248,7 @@ CONFLUENCE SCORE GATE — Credibility Protection
 HARD RULE (NON-NEGOTIABLE):
 
 If confluence_score < 55:
-  → You CANNOT issue a ✅ Trade-Ready verdict
+  → You CANNOT issue a ✅ Conditions Aligned verdict
   → Maximum verdict is ⚠️ CONDITIONAL or 🔶 WATCH
   → You MUST explicitly state: "Confluence score below threshold"
 
@@ -261,7 +261,7 @@ If confluence_score < 25:
   → Verdict MUST be ❌ CONDITIONS NOT MET
   → State: "No edge detected. Stand aside."
 
-This protects credibility. The best systems BLOCK bad trades.
+This protects credibility. The best systems identify low-quality setups.
 
 ALSO — HONESTY MANDATE:
 When there is no clear edge, you MUST say so clearly:
@@ -271,7 +271,7 @@ When there is no clear edge, you MUST say so clearly:
 "This is a coin-flip environment — professional traders sit these out."
 
 Most trading platforms force signals. The BEST systems protect capital by blocking trades.
-Your job is to help traders AVOID low-probability setups as much as to find high-probability ones.
+Your job is to help traders AVOID low-quality setups as much as to find technically aligned ones.
 `;
 
 // =====================================================================

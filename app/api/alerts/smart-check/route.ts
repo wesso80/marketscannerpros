@@ -319,7 +319,7 @@ function checkSmartCondition(alert: SmartAlert, data: DerivativesData): CheckRes
           triggered: true,
           value,
           threshold: condition_value,
-          message: `😱 EXTREME FEAR: ${value}/100 (${data.fearGreed?.classification}) - contrarian BUY signal`,
+          message: `😱 EXTREME FEAR: ${value}/100 (${data.fearGreed?.classification}) - contrarian bullish conditions`,
           context: { classification: data.fearGreed?.classification },
         };
       }
@@ -348,7 +348,7 @@ function checkSmartCondition(alert: SmartAlert, data: DerivativesData): CheckRes
           triggered: true,
           value: oiChange,
           threshold: condition_value,
-          message: `📈 BULLISH DIVERGENCE: OI +${oiChange.toFixed(2)}% - smart money accumulating`,
+          message: `📈 BULLISH DIVERGENCE: OI +${oiChange.toFixed(2)}% - accumulation detected`,
           context: { totalOI: data.oi?.total?.formatted },
         };
       }

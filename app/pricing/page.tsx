@@ -192,7 +192,7 @@ export default function PricingPage() {
   const faqs: FAQ[] = [
     {
       q: "What is ARCA AI Analyst?",
-      a: "ARCA AI Analyst is your decision-layer copilot. It turns scans + context into structured bias, rotation, volatility warnings, and trade plans. Free gets 10 questions/day (GPT-4o-mini), Pro gets 50/day (GPT-4o-mini), Pro Trader gets 50/day powered by GPT-4.1 for institutional-grade analysis.",
+      a: "ARCA AI Analyst is your decision-layer copilot. It turns scans + context into structured bias, rotation, volatility warnings, and trade plans. Free gets 10 questions/day (GPT-4o-mini), Pro gets 50/day (GPT-4o-mini), Pro Trader gets 50/day powered by GPT-4.1 for professional-level analysis.",
     },
     {
       q: "What's the difference between Pro and Pro Trader?",
