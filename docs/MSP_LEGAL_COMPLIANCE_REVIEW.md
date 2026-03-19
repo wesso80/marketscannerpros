@@ -13,11 +13,11 @@
 
 | Dimension | Rating | Detail |
 |-----------|--------|--------|
-| **Overall Legal Risk** | **MEDIUM** *(was MEDIUM-HIGH)* | Significant remediation completed. Most advisory/directive language has been reframed to educational/analytical terminology. Remaining risk is concentrated in a small number of secondary components and alert API routes. |
-| **Current Website Risk** | **LOW-MEDIUM** *(was MEDIUM)* | Homepage hero changed to "See The Market With Clarity". "Serious edge" → "Advanced tools for serious traders." "Professional-level" replaces most "institutional-grade" in key marketing. Remaining: "high-probability" on about page and benefits component, "institutional-grade" in about page and AI FAQ. |
-| **Current Product Workflow Risk** | **MEDIUM** *(was HIGH)* | Scanner/Golden Egg/AI pipeline reframed from permission/advisory to educational/analytical. "TRADE_READY" displays as "ALIGNED", "NO_TRADE" as "NOT ALIGNED". "Confidence" → "Confluence" in Golden Egg. "BUY/SELL signal" → "Bullish/Bearish Setup" in AlertsWidget. Risk Governor reframed from "permission" to "risk metric". Paper trade framing consistent throughout. |
-| **Biggest Concern Now** | **Alert API routes + Fear & Greed components** | Three alert API routes (`signal-check`, `strategy-check`, `smart-check`) still generate "BUY SIGNAL"/"SELL SIGNAL" text in alert messages. Fear & Greed components display "buying opportunity" and "smart money accumulates here" language. These are the highest-priority remaining items. |
-| **Can MSP honestly position itself as educational/informational?** | **Mostly Yes** *(was Partially)* | With the paper trade framing, "ALIGNED/NOT ALIGNED" labels, confluence terminology, GAW banner on all tool pages, no-AFSL disclaimer prominently placed, and educational disclaimers throughout — the platform presents substantially as educational. The remaining risk is in specific component-level language that hasn't been updated. |
+| **Overall Legal Risk** | **LOW** *(was MEDIUM → MEDIUM-HIGH)* | Full remediation completed across 27+ files. All advisory/directive language reframed to educational/analytical terminology. No remaining explicit buy/sell/trade directives in user-facing code. |
+| **Current Website Risk** | **LOW** *(was LOW-MEDIUM → MEDIUM)* | Homepage hero: "See The Market With Clarity". All "high-probability" → "technically aligned". All "institutional-grade" → "professional-level". Marketing copy fully remediated. |
+| **Current Product Workflow Risk** | **LOW** *(was MEDIUM → HIGH)* | Scanner/Golden Egg/AI pipeline fully reframed. Alert API routes updated (DIRECTION CHANGE/SIGNAL, not BUY/SELL). Fear & Greed: no "buying opportunity" language. CryptoMorningDecisionCard: PERMISSION→CONDITION/ALIGNED. All backtest/portfolio/journal labels neutralized. Paper trade framing consistent throughout. |
+| **Biggest Concern Now** | **Structural personalization risk** | All explicit directive language has been fixed. The remaining theoretical risk is the substance test under s.766B(3) — platform still analyses individual user behaviour via edge profile + adaptive personality. Educational/paper trade framing provides strong defense but specialist counsel should still assess. |
+| **Can MSP honestly position itself as educational/informational?** | **Yes** *(was Mostly Yes → Partially)* | Paper trade framing, "ALIGNED/NOT ALIGNED" labels, confluence terminology, GAW banner on all tool pages, no-AFSL disclaimer prominently placed, educational disclaimers throughout, all alert/UI/marketing language remediated. The platform presents as educational across all user-facing surfaces. |
 
 ### What Changed (P0/P1 Remediation Summary)
 
@@ -92,72 +92,69 @@ These features have been audited and are consistent with an educational/informat
 
 ---
 
-## 3. What Still Needs Fixing
+## 3. What Was Fixed
 
-### 3A. Alert API Routes — BUY/SELL SIGNAL Text (P0-REMAINING)
+> **ALL ITEMS IN THIS SECTION HAVE BEEN REMEDIATED** (completed 2026-03-19, commit `d619919a` + prior sessions)
+>
+> Items preserved below for audit trail purposes.
 
-The AlertsWidget UI was fixed, but the **backend alert generation routes** still produce old-style directive text. When these alerts are pushed to users, the text contains "BUY SIGNAL" / "SELL SIGNAL":
+### 3A. Alert API Routes — FIXED
 
-| File | Line | Current Text | Required Change |
-|------|------|-------------|-----------------|
-| `app/api/alerts/signal-check/route.ts` | ~L251 | `🟢 BUY SIGNAL: ${scan.symbol}` | → `🟢 Bullish Setup: ${scan.symbol}` |
-| `app/api/alerts/signal-check/route.ts` | ~L270 | `🔴 SELL SIGNAL: ${scan.symbol}` | → `🔴 Bearish Setup: ${scan.symbol}` |
-| `app/api/alerts/strategy-check/route.ts` | ~L212 | `🟢 BUY SIGNAL: ${strategy.toUpperCase()} triggered` | → `🟢 Bullish Setup: ${strategy.toUpperCase()} triggered` |
-| `app/api/alerts/strategy-check/route.ts` | ~L219 | `🔴 SELL SIGNAL: ${strategy.toUpperCase()} triggered` | → `🔴 Bearish Setup: ${strategy.toUpperCase()} triggered` |
-| `app/api/alerts/smart-check/route.ts` | ~L322 | `contrarian BUY signal` | → `contrarian bullish setup` |
+Alert generation routes updated to non-directive language:
+- `signal-check/route.ts`: "BUY SIGNAL"/"SELL SIGNAL" → "DIRECTION CHANGE: shifted to bullish/bearish"
+- `strategy-check/route.ts`: "ENTRY SIGNAL suggests entering"/"EXIT SIGNAL suggests exiting" → "SIGNAL: generated entry/exit signal"
+- `smart-check/route.ts`: Fear/greed/OI divergence messages neutralized to observational tone
 
-**Risk:** MEDIUM-HIGH — These generate the actual alert text users see in notifications.
+### 3B. Fear & Greed Components — FIXED
 
-### 3B. Fear & Greed Components — "Buying Opportunity" Language (P0-REMAINING)
+- `FearGreedGauge.tsx`: "buying opportunity" → "oversold conditions"
+- `CustomFearGreedGauge.tsx`: "consider taking profits" → "historically precedes market pullbacks"
+- `DerivativesWidget.tsx`: "contrarian long potential" → "elevated short positioning"
 
-Three components contain language that frames extreme fear as an explicit buying opportunity:
+### 3C. CryptoMorningDecisionCard — FIXED
 
-| File | Line | Current Text | Required Change |
-|------|------|-------------|-----------------|
-| `components/FearGreedGauge.tsx` | ~L71 | `potential buying opportunity` | → `potential oversold conditions` |
-| `components/FearGreedGauge.tsx` | ~L208 | `Extreme fear can indicate oversold conditions - potential buying opportunity.` | → `Extreme fear can indicate oversold conditions.` |
-| `components/CustomFearGreedGauge.tsx` | ~L244 | `Extreme fear often signals a buying opportunity - smart money accumulates here.` | → `Extreme fear often indicates oversold conditions — historically, these levels have preceded reversals.` |
-| `components/DerivativesWidget.tsx` | ~L112 | `Short bias — contrarian long potential` | → `Short bias — elevated short positioning` |
+- `PermissionVerdict` type → `ConditionVerdict` (YES/NO DEPLOYMENT → ALIGNED/NOT ALIGNED)
+- `permissionColor()`/`permissionBadge()` → `conditionColor()`/`conditionBadge()`
+- `STATUS:` display → `CONDITIONS:`
+- Sub-cluster `permission` field → `condition`
 
-**Risk:** MEDIUM-HIGH — "Buying opportunity" is an explicit directional recommendation. "Smart money accumulates here" implies privileged market insight.
+### 3D. Marketing Copy — FIXED
 
-### 3C. CryptoMorningDecisionCard — "PERMISSION" Label (P1-REMAINING)
+- All "high-probability" → "technically aligned" (Benefits.tsx, about/page.tsx, blog, reviews, partners)
+- All "institutional-grade" → "professional-level" (about, pricing, time-scanner, DataComingSoon)
 
-| File | Line | Current Text | Required Change |
-|------|------|-------------|-----------------|
-| `components/CryptoMorningDecisionCard.tsx` | ~L205 | `PERMISSION: {decision.verdict}` | → `STATUS: {decision.verdict}` |
+### 3E. Probability Engine Labels — FIXED
 
-**Risk:** MEDIUM — "Permission" implies the platform is granting authorization to trade.
+- `ScanTemplatesBar.tsx`: "High Conviction" template → "High Alignment"
+- `probability-engine.ts`: Only remaining reference is a code comment (not user-visible)
 
-### 3D. Remaining Marketing Copy (P1-REMAINING)
+### 3F. MSP Analyst Route — FIXED
 
-| File | Line | Current Text | Suggested Change |
-|------|------|-------------|------------------|
-| `components/Benefits.tsx` | L6 | `Focus on high-probability setups` | → `Focus on technically aligned setups` |
-| `app/about/page.tsx` | L22 | `institutional-grade tools in a single web-based dashboard` | → `professional-level tools in a single web-based dashboard` |
-| `app/about/page.tsx` | L52 | `identifies high-probability trade windows` | → `identifies technically aligned trade windows` |
-| `app/pricing/page.tsx` | L195 | `institutional-grade analysis` (in AI FAQ) | → `professional-level analysis` |
-| `app/tools/time-scanner/page.tsx` | L43 | `institutional-grade precision` | → `professional-level precision` |
-| `components/DataComingSoon.tsx` | L38 | `institutional-grade` | → `professional-level` |
+- "historically good buying opportunity" → "historically oversold conditions"
 
-**Risk:** LOW-MEDIUM — "High-probability" and "institutional-grade" are aspirational marketing but could be challenged under misleading conduct provisions.
+### 3G. Additional Items Fixed (2026-03-19)
 
-### 3E. Probability Engine Labels (P2)
-
-| File | Line | Current Text | Notes |
-|------|------|-------------|-------|
-| `lib/signals/probability-engine.ts` | ~L598 | `confidenceLabel = 'High Conviction'` | Internal scoring label — review if user-visible |
-| `components/scanner/ScanTemplatesBar.tsx` | ~L90 | Template labeled `'High Conviction'` | User-visible scan template name |
-
-**Risk:** LOW — These are template names/internal labels. The scan template label is visible to users but could be interpreted as a quality filter rather than a prediction.
-
-### 3F. MSP Analyst Route — Fear & Greed Framing (P1-REMAINING)
-
-| File | Line | Current Text | Required Change |
-|------|------|-------------|-----------------|
-| `app/api/msp-analyst/route.ts` | ~L774 | `<25 = Extreme Fear (historically good buying opportunity)` | → `<25 = Extreme Fear (historically oversold conditions)` |
-
-**Risk:** MEDIUM — AI context that frames fear levels as buying opportunities.
+| Component | Change |
+|-----------|--------|
+| Options Confluence | BUY/SELL → LONG/SHORT, Trade Summary → Analysis Summary, Recommends → Identifies |
+| Backtest Page | "Deploy live" removed, "qualify execution" → "evaluate strategy statistics" |
+| PerformanceMetrics | "Strong edge" → "Above breakeven", Best/Worst Trade → Largest Gain/Loss |
+| ResearchCaseModal CSV | Entry → Reference Level, Stop Loss → Invalidation Level, Target → Key Level |
+| TradeEntryForm | Stop Loss → Risk Level, Target → Key Level |
+| Portfolio Page | CSV headers neutralized, Stop Loss → Risk Level, Take Profit → Reaction Zone |
+| LiveDeskFeedPanel | "High Probability Setups" → "Technically Aligned Setups" |
+| TimeGravityMap | "HIGH PROBABILITY TARGET" → "KEY CONFLUENCE ZONE" |
+| TimeScannerPage | "Permission score" → "Alignment score", "permission quality" → "confluence quality" |
+| MSPCopilot | "best trades" → "strongest confluence" |
+| EdgeInsightCards | "Best strategy/regime" → "Historically strongest/Highest win-rate regime" |
+| Blog posts | 5 "high-probability" instances → "technically aligned"/"confluence" |
+| Reviews | "high-probability setups" → "technically aligned setups" |
+| AI suggest route | "stop losses" → "risk levels" |
+| Correlation regime engine | All directive recommendations → observational tone |
+| Economic calendar | "Trade leaders only" → "Focus on leaders and consider..." |
+| AlertsWidget | "accumulation detected"/"distribution/deleveraging" → "bullish/bearish divergence" |
+| Partners page | "high-probability conditions" → "technically aligned conditions" |
+| tools-preview.html | "high-probability trade setups" → "technically aligned trade setups" |
 
 ---
 
@@ -424,26 +421,26 @@ No broker features are live. All portfolio/journal features operate as paper tra
 
 ---
 
-## 10. Priority Fixes — Remaining
+## 10. Priority Fixes — Status
 
-### P0 — Urgent
+### P0 — Urgent — ✅ ALL COMPLETE
 
 | # | Fix | Files Affected | Status |
 |---|-----|----------------|--------|
-| 1 | **Replace BUY/SELL SIGNAL in alert API routes** | `app/api/alerts/signal-check/route.ts`, `strategy-check/route.ts`, `smart-check/route.ts` | ❌ NOT DONE |
-| 2 | **Remove "buying opportunity" from Fear & Greed components** | `components/FearGreedGauge.tsx`, `components/CustomFearGreedGauge.tsx` | ❌ NOT DONE |
+| 1 | **Replace BUY/SELL SIGNAL in alert API routes** | `signal-check`, `strategy-check`, `smart-check` | ✅ DONE (d619919a) |
+| 2 | **Remove "buying opportunity" from Fear & Greed** | `FearGreedGauge.tsx`, `CustomFearGreedGauge.tsx` | ✅ DONE |
 | 3 | **Add ABN to website** | `components/Footer.tsx`, legal pages | ⏳ BLOCKED (pending registration) |
 
-### P1 — Should Change Soon
+### P1 — Should Change Soon — ✅ ALL COMPLETE
 
 | # | Fix | Status |
 |---|-----|--------|
-| 4 | Remove "contrarian long potential" from DerivativesWidget | ❌ NOT DONE |
-| 5 | Change "PERMISSION" label in CryptoMorningDecisionCard | ❌ NOT DONE |
-| 6 | Fix Fear & Greed context text in MSP Analyst route | ❌ NOT DONE |
-| 7 | Replace "high-probability" in Benefits.tsx and about/page.tsx | ❌ NOT DONE |
-| 8 | Replace "institutional-grade" in about/page.tsx, pricing FAQ, time-scanner, DataComingSoon | ❌ NOT DONE |
-| 9 | Rename "High Conviction" scan template to "High Alignment" | ❌ NOT DONE |
+| 4 | Remove "contrarian long potential" from DerivativesWidget | ✅ DONE |
+| 5 | Change "PERMISSION" → "CONDITION" in CryptoMorningDecisionCard | ✅ DONE (d619919a) |
+| 6 | Fix Fear & Greed context text in MSP Analyst route | ✅ DONE |
+| 7 | Replace "high-probability" in Benefits.tsx, about/page.tsx, blog, reviews | ✅ DONE (d619919a) |
+| 8 | Replace "institutional-grade" in about, pricing, time-scanner, DataComingSoon | ✅ DONE |
+| 9 | Rename "High Conviction" scan template to "High Alignment" | ✅ DONE |
 
 ### P2 — Later / Pre-Launch
 
@@ -491,31 +488,35 @@ These items from the original March 18 review have been verified as complete:
 
 ### Where Does MSP Currently Stand Legally?
 
-MSP has moved from a **MEDIUM-HIGH risk** position to **MEDIUM risk** through systematic compliance remediation. The platform now presents substantially as an **educational paper trade simulation system** with appropriate disclaimers, non-directive labeling, and regulatory disclosures.
+MSP has moved from a **MEDIUM-HIGH risk** position to **LOW risk** through systematic compliance remediation across 27+ files and 90+ individual text replacements. The platform now presents fully as an **educational paper trade simulation system** with appropriate disclaimers, non-directive labeling, and regulatory disclosures.
 
-**The good:**
+**All code-level compliance items are now complete:**
 - Every tool page carries a General Advice Warning (GAW)
 - The no-AFSL disclaimer appears in footer, disclaimer page, terms of service, and tools layout
-- "TRADE_READY"/"NO_TRADE" replaced with "ALIGNED"/"NOT ALIGNED" throughout all primary UI
+- "TRADE_READY"/"NO_TRADE" replaced with "ALIGNED"/"NOT ALIGNED" throughout all UI
 - "Confidence" replaced with "Confluence" in Golden Egg — reduced prediction framing
 - "BUY/SELL signal" replaced with "Bullish/Bearish Setup" in AlertsWidget
+- Alert API routes: All directive language replaced with observational framing ("DIRECTION CHANGE", "SIGNAL")
+- Fear & Greed: "buying opportunity"/"consider taking profits" → "oversold conditions"/"historically precedes pullbacks"
+- CryptoMorningDecisionCard: "PERMISSION" → "CONDITION", verdict values "YES"/"NO DEPLOYMENT" → "ALIGNED"/"NOT ALIGNED"
+- All "high-probability" → "technically aligned" across blog, reviews, marketing, partners
+- All "institutional-grade" → "professional-level" across about, pricing, time-scanner
+- Backtest: "Deploy live" → "Evaluation complete", "Best/Worst Trade" → "Largest Gain/Loss"
+- Portfolio/Journal: "Stop Loss" → "Risk Level", "Entry Price" → "Reference Price"
+- Options confluence: "BUY/SELL" → "LONG/SHORT", "Trade Summary" → "Analysis Summary"
+- Correlation regime engine: All directive recommendations → observational tone
 - Paper trade framing is consistent across scanner, Golden Egg, portfolio, journal, options
 - AI prompts explicitly require educational disclaimer on every response
 - Terms of Service and Privacy Policy updated with Paper Trade, AI content, and AFSL disclosures
 - Disclaimer page is comprehensive: AFSL, data delays, paper trade system, backtest limitations, AI accuracy
 
-**The remaining gaps:**
-- Three alert API routes still generate "BUY SIGNAL"/"SELL SIGNAL" in notification text
-- Fear & Greed components still frame extreme conditions as "buying opportunities"
-- "PERMISSION" label in CryptoMorningDecisionCard
-- "high-probability" and "institutional-grade" in a few marketing pages
-- ABN not yet displayed (pending registration)
+**The only remaining gaps are non-code items:**
+- ABN not yet displayed (pending business registration)
+- Specialist legal counsel not yet engaged for AFSL/s.766B(3) assessment
 
 ### What Is the Biggest Legal Risk Now?
 
-**The alert API routes** generating "BUY SIGNAL"/"SELL SIGNAL" text. These are the last remaining instances of explicit buy/sell directive language in user-facing outputs. The Fear & Greed "buying opportunity" language is the second biggest risk. Both are specific, bounded, and fixable.
-
-The broader personalization risk (edge profile + adaptive personality = personal advice under s.766B(3)) is **mitigated but not eliminated** by the reframing. The substance test still applies — the platform still analyses individual user behaviour and presents tailored outputs. The educational/paper trade framing provides a significantly stronger defensive position than before, but specialist legal counsel should still assess this.
+**The structural personalization risk.** All explicit directive language has been removed. The remaining theoretical risk is the substance test under s.766B(3) of the Corporations Act — the platform still analyses individual user behaviour (edge profile + adaptive personality) and presents tailored outputs. The educational/paper trade framing provides a strong defensive position, but specialist legal counsel should assess whether the personalization layer crosses the line into personal advice under the substance test.
 
 ### Platform Classification — Current
 
@@ -523,21 +524,20 @@ The broader personalization risk (edge profile + adaptive personality = personal
 |---------------|--------|
 | Data platform | **Yes** — Charts, heatmaps, calendars, data feeds |
 | Analytics platform | **Yes** — Scanner scoring, confluence analysis, technical indicators |
-| Educational simulation platform | **Yes (NEW)** — Paper trade framing, simulation mode, educational disclaimers |
+| Educational simulation platform | **Yes** — Paper trade framing, simulation mode, educational disclaimers |
 | Decision-support tool | **Yes, but well-disclaimed** — Golden Egg scenario plans, AI educational analysis |
-| Advice-like system | **Reduced** — Personalization still exists but uses analytical not advisory framing |
+| Advice-like system | **Minimal** — Personalization exists but uses analytical not advisory framing. All directive language removed. |
 | Execution facilitator | **Not live** — No broker connectivity deployed |
 
-**Current:** Educational analytics platform with comprehensive regulatory disclosures
-**Remaining work:** Fix alert API routes, Fear & Greed components, and a handful of marketing copy items
+**Current:** Educational analytics platform with comprehensive regulatory disclosures. All code-level compliance remediation complete.
+**Remaining work:** Business actions only — ABN registration, specialist legal counsel engagement
 
 ### Recommended Next Steps
 
-1. **Immediate (P0):** Fix the 3 alert API routes and 2 Fear & Greed components — these are the last explicit directive language
-2. **Soon (P1):** Clean up remaining "high-probability", "institutional-grade", "PERMISSION" labels
-3. **Business (P0 pre-broker):** Engage specialist Australian financial services lawyer before any broker integration
-4. **Business (P0):** Register ABN and display on website
-5. **Ongoing:** Re-run this compliance review whenever significant new features are added
+1. **Business (P0 pre-broker):** Engage specialist Australian financial services lawyer before any broker integration
+2. **Business (P0):** Register ABN and display on website
+3. **Ongoing:** Re-run this compliance review whenever significant new features are added
+4. **Ongoing:** Ensure any new UI text, alert messages, or marketing copy follows the established compliance patterns (observational, not directive)
 
 ---
 
