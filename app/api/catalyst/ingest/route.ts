@@ -35,30 +35,32 @@ export async function POST(req: NextRequest) {
 
     const results: IngestionResult[] = [];
 
-    // SEC ingestion
-    try {
-      const sec = await ingestSecFilings(lookbackDays);
-      results.push(sec);
-    } catch (err: any) {
+    // Run SEC + News ingestion in parallel
+    const [secResult, newsResult] = await Promise.allSettled([
+      ingestSecFilings(lookbackDays),
+      ingestNews(tickers, lookbackHours),
+    ]);
+
+    if (secResult.status === 'fulfilled') {
+      results.push(secResult.value);
+    } else {
       results.push({
         source: 'SEC_EDGAR',
         ingested: 0,
         skipped: 0,
-        errors: [`SEC ingestion failed: ${err.message}`],
+        errors: [`SEC ingestion failed: ${secResult.reason?.message ?? secResult.reason}`],
         durationMs: 0,
       });
     }
 
-    // News ingestion
-    try {
-      const news = await ingestNews(tickers, lookbackHours);
-      results.push(news);
-    } catch (err: any) {
+    if (newsResult.status === 'fulfilled') {
+      results.push(newsResult.value);
+    } else {
       results.push({
         source: 'NEWS',
         ingested: 0,
         skipped: 0,
-        errors: [`News ingestion failed: ${err.message}`],
+        errors: [`News ingestion failed: ${newsResult.reason?.message ?? newsResult.reason}`],
         durationMs: 0,
       });
     }

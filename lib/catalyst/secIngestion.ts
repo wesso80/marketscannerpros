@@ -216,40 +216,78 @@ export async function ingestSecFilings(lookbackDays = 7): Promise<IngestionResul
   let skipped = 0;
   const errors: string[] = [];
 
+  // Build events array first, then batch upsert
+  const events: Array<{ event: NonNullable<ReturnType<typeof filingToCatalystEvent>>; accession: string }> = [];
   for (const filing of filings) {
-    try {
-      const event = filingToCatalystEvent(filing);
-      if (!event) { skipped++; continue; }
+    const event = filingToCatalystEvent(filing);
+    if (!event) { skipped++; continue; }
+    events.push({ event, accession: filing.accessionNumber });
+  }
 
-      // Upsert: skip if same ticker+source+timestamp already exists
-      const existing = await q(
-        `SELECT id FROM catalyst_events WHERE ticker = $1 AND source = $2 AND event_timestamp_utc = $3 LIMIT 1`,
-        [event.ticker, event.source, event.eventTimestampUtc]
+  // Batch upsert using ON CONFLICT DO NOTHING (eliminates N+1 SELECT queries)
+  const BATCH_SIZE = 50;
+  for (let i = 0; i < events.length; i += BATCH_SIZE) {
+    const batch = events.slice(i, i + BATCH_SIZE);
+    const values: any[] = [];
+    const placeholders: string[] = [];
+
+    for (let j = 0; j < batch.length; j++) {
+      const { event } = batch[j];
+      const offset = j * 14;
+      placeholders.push(
+        `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6},
+          $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10},
+          $${offset + 11}, $${offset + 12}, $${offset + 13}, $${offset + 14})`
       );
-      if (existing && existing.length > 0) { skipped++; continue; }
+      values.push(
+        event.ticker, event.source, event.headline, event.url,
+        event.catalystType, event.catalystSubtype,
+        event.eventTimestampUtc, event.eventTimestampEt,
+        event.session, event.anchorTimestampEt,
+        event.confidence, event.severity, event.classificationReason,
+        JSON.stringify(event.rawPayload),
+      );
+    }
 
-      await q(
+    try {
+      const result = await q(
         `INSERT INTO catalyst_events (
           ticker, source, headline, url, catalyst_type, catalyst_subtype,
           event_timestamp_utc, event_timestamp_et, session, anchor_timestamp_et,
           confidence, severity, classification_reason, raw_payload
-        ) VALUES (
-          $1, $2, $3, $4, $5, $6,
-          $7, $8, $9, $10,
-          $11, $12, $13, $14
-        )`,
-        [
-          event.ticker, event.source, event.headline, event.url,
-          event.catalystType, event.catalystSubtype,
-          event.eventTimestampUtc, event.eventTimestampEt,
-          event.session, event.anchorTimestampEt,
-          event.confidence, event.severity, event.classificationReason,
-          JSON.stringify(event.rawPayload),
-        ]
+        ) VALUES ${placeholders.join(', ')}
+        ON CONFLICT (ticker, source, event_timestamp_utc) DO NOTHING`,
+        values
       );
-      ingested++;
+      const inserted = (result as any)?.rowCount ?? batch.length;
+      ingested += inserted;
+      skipped += batch.length - inserted;
     } catch (err: any) {
-      errors.push(`${filing.accessionNumber}: ${err.message}`);
+      // Fall back to single inserts for this batch so partial failures don't lose everything
+      for (const { event, accession } of batch) {
+        try {
+          const res = await q(
+            `INSERT INTO catalyst_events (
+              ticker, source, headline, url, catalyst_type, catalyst_subtype,
+              event_timestamp_utc, event_timestamp_et, session, anchor_timestamp_et,
+              confidence, severity, classification_reason, raw_payload
+            ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+            ON CONFLICT (ticker, source, event_timestamp_utc) DO NOTHING`,
+            [
+              event.ticker, event.source, event.headline, event.url,
+              event.catalystType, event.catalystSubtype,
+              event.eventTimestampUtc, event.eventTimestampEt,
+              event.session, event.anchorTimestampEt,
+              event.confidence, event.severity, event.classificationReason,
+              JSON.stringify(event.rawPayload),
+            ]
+          );
+          const inserted = (res as any)?.rowCount ?? 0;
+          if (inserted > 0) ingested++; else skipped++;
+        } catch (innerErr: any) {
+          errors.push(`${accession}: ${innerErr.message}`);
+        }
+      }
     }
   }
 

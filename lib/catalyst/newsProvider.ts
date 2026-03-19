@@ -66,46 +66,111 @@ export async function ingestNews(tickers: string[] = [], lookbackHours = 24): Pr
   let skipped = 0;
   const errors: string[] = [];
 
+  // Build all events first, then batch upsert
+  interface PendingEvent {
+    ticker: string; source: string; headline: string; url: string;
+    catalystType: string; catalystSubtype: string;
+    eventTimestampUtc: Date; eventTimestampEt: Date;
+    session: string; anchorTimestampEt: Date;
+    confidence: number; severity: string;
+    classificationReason: string; rawPayload: string;
+  }
+
+  const pending: PendingEvent[] = [];
+
   for (const item of items) {
     try {
       const classification = classifyNews(item);
       if (!classification) { skipped++; continue; }
 
       for (const ticker of item.tickers) {
-        // Dedup check
-        const existing = await q(
-          `SELECT id FROM catalyst_events WHERE ticker = $1 AND source = $2 AND event_timestamp_utc = $3 AND headline = $4 LIMIT 1`,
-          [ticker.toUpperCase(), provider.name, item.timestamp, item.headline]
-        );
-        if (existing && existing.length > 0) { skipped++; continue; }
-
         const anchor = computeAnchor(item.timestamp);
         const sessionInfo = classifySession(item.timestamp);
 
-        await q(
-          `INSERT INTO catalyst_events (
-            ticker, source, headline, url, catalyst_type, catalyst_subtype,
-            event_timestamp_utc, event_timestamp_et, session, anchor_timestamp_et,
-            confidence, severity, classification_reason, raw_payload
-          ) VALUES (
-            $1, $2, $3, $4, $5, $6,
-            $7, $8, $9, $10,
-            $11, $12, $13, $14
-          )`,
-          [
-            ticker.toUpperCase(), provider.name, item.headline, item.url,
-            CatalystType.NEWS, classification.subtype,
-            item.timestamp, sessionInfo.inputTimestampET,
-            anchor.session, anchor.anchorTimestampET,
-            classification.confidence, classification.severity,
-            classification.reason,
-            JSON.stringify({ source: item.source, body: item.body?.slice(0, 2000) }),
-          ]
-        );
-        ingested++;
+        pending.push({
+          ticker: ticker.toUpperCase(),
+          source: provider.name,
+          headline: item.headline,
+          url: item.url,
+          catalystType: CatalystType.NEWS,
+          catalystSubtype: classification.subtype,
+          eventTimestampUtc: item.timestamp,
+          eventTimestampEt: sessionInfo.inputTimestampET,
+          session: anchor.session,
+          anchorTimestampEt: anchor.anchorTimestampET,
+          confidence: classification.confidence,
+          severity: classification.severity,
+          classificationReason: classification.reason,
+          rawPayload: JSON.stringify({ source: item.source, body: item.body?.slice(0, 2000) }),
+        });
       }
     } catch (err: any) {
       errors.push(`news "${item.headline.slice(0, 60)}": ${err.message}`);
+    }
+  }
+
+  // Batch upsert using ON CONFLICT DO NOTHING (eliminates N+1 SELECT queries)
+  const BATCH_SIZE = 50;
+  for (let i = 0; i < pending.length; i += BATCH_SIZE) {
+    const batch = pending.slice(i, i + BATCH_SIZE);
+    const values: any[] = [];
+    const placeholders: string[] = [];
+
+    for (let j = 0; j < batch.length; j++) {
+      const e = batch[j];
+      const offset = j * 14;
+      placeholders.push(
+        `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6},
+          $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10},
+          $${offset + 11}, $${offset + 12}, $${offset + 13}, $${offset + 14})`
+      );
+      values.push(
+        e.ticker, e.source, e.headline, e.url,
+        e.catalystType, e.catalystSubtype,
+        e.eventTimestampUtc, e.eventTimestampEt,
+        e.session, e.anchorTimestampEt,
+        e.confidence, e.severity, e.classificationReason, e.rawPayload,
+      );
+    }
+
+    try {
+      const result = await q(
+        `INSERT INTO catalyst_events (
+          ticker, source, headline, url, catalyst_type, catalyst_subtype,
+          event_timestamp_utc, event_timestamp_et, session, anchor_timestamp_et,
+          confidence, severity, classification_reason, raw_payload
+        ) VALUES ${placeholders.join(', ')}
+        ON CONFLICT (ticker, source, event_timestamp_utc) DO NOTHING`,
+        values
+      );
+      const inserted = (result as any)?.rowCount ?? batch.length;
+      ingested += inserted;
+      skipped += batch.length - inserted;
+    } catch (err: any) {
+      // Fall back to single inserts for this batch
+      for (const e of batch) {
+        try {
+          const res = await q(
+            `INSERT INTO catalyst_events (
+              ticker, source, headline, url, catalyst_type, catalyst_subtype,
+              event_timestamp_utc, event_timestamp_et, session, anchor_timestamp_et,
+              confidence, severity, classification_reason, raw_payload
+            ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+            ON CONFLICT (ticker, source, event_timestamp_utc) DO NOTHING`,
+            [
+              e.ticker, e.source, e.headline, e.url,
+              e.catalystType, e.catalystSubtype,
+              e.eventTimestampUtc, e.eventTimestampEt,
+              e.session, e.anchorTimestampEt,
+              e.confidence, e.severity, e.classificationReason, e.rawPayload,
+            ]
+          );
+          const inserted = (res as any)?.rowCount ?? 0;
+          if (inserted > 0) ingested++; else skipped++;
+        } catch (innerErr: any) {
+          errors.push(`news "${e.headline.slice(0, 60)}": ${innerErr.message}`);
+        }
+      }
     }
   }
 
