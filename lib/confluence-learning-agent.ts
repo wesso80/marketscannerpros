@@ -642,7 +642,7 @@ export class ConfluenceLearningAgent {
    * Fetch LIVE real-time price using GLOBAL_QUOTE or Crypto Exchange Rate
    */
   async fetchLivePrice(symbol: string): Promise<number | null> {
-    const isCrypto = symbol.includes('USD') && !symbol.includes('/');
+    const isCrypto = this.detectAssetClass(symbol) === 'crypto';
     
     try {
       if (isCrypto) {
@@ -672,7 +672,7 @@ export class ConfluenceLearningAgent {
   }
 
   async fetchHistoricalData(symbol: string, interval: string = '30min'): Promise<OHLCV[]> {
-    const isCrypto = symbol.includes('USD') && !symbol.includes('/');
+    const isCrypto = this.detectAssetClass(symbol) === 'crypto';
     
     if (isCrypto) {
       const base = normalizeCryptoBase(symbol);
