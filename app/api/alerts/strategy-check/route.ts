@@ -223,7 +223,7 @@ async function checkStrategyAlerts(req: NextRequest) {
               case 'strategy_entry':
                 if (signal.hasSignal && signal.signalType === 'buy') {
                   shouldTrigger = true;
-                  alertMessage = `📈 ENTRY SIGNAL: ${strategy.toUpperCase()} suggests entering ${symbol} at $${signal.price.toFixed(2)}`;
+                  alertMessage = `📈 SIGNAL: ${strategy.toUpperCase()} generated entry signal on ${symbol} at $${signal.price.toFixed(2)}`;
                 }
                 break;
 
@@ -231,7 +231,7 @@ async function checkStrategyAlerts(req: NextRequest) {
                 if (signal.hasSignal && signal.signalType === 'sell' && lastTrade) {
                   shouldTrigger = true;
                   const pnl = lastTrade.returnPercent >= 0 ? `+${lastTrade.returnPercent.toFixed(2)}%` : `${lastTrade.returnPercent.toFixed(2)}%`;
-                  alertMessage = `📉 EXIT SIGNAL: ${strategy.toUpperCase()} suggests exiting ${symbol} (Last trade: ${pnl})`;
+                  alertMessage = `📉 SIGNAL: ${strategy.toUpperCase()} generated exit signal on ${symbol} (Last simulated result: ${pnl})`;
                 }
                 break;
             }

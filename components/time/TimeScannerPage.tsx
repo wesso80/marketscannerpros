@@ -1023,7 +1023,7 @@ export default function TimeScannerPage() {
             <div className="flex items-center justify-between">
               <div>
                 <span className="text-sm font-semibold text-slate-100">⏱ Time Confluence Engine</span>
-                <span className="ml-2 text-xs text-slate-400">Permission score, decompression & execution</span>
+                <span className="ml-2 text-xs text-slate-400">Alignment score, decompression & structure</span>
               </div>
               <div className="text-xs text-slate-500">▾ expand</div>
             </div>
@@ -1033,7 +1033,7 @@ export default function TimeScannerPage() {
             <div className="space-y-3">
               <div>
                 <div className="text-sm font-semibold text-slate-100">Confluence Engine</div>
-                <div className="text-xs text-slate-400">Time alignment → permission quality</div>
+                <div className="text-xs text-slate-400">Time alignment → confluence quality</div>
               </div>
 
               <div className="rounded-2xl border border-slate-800 bg-slate-950/25 p-3">

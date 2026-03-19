@@ -525,7 +525,7 @@ export function computeTimeGravityMap(
   } else if (topZone && topZone.confidence >= 80) {
     const decompActive = topZone.activeDecompressionCount;
     const debt = topZone.debtCount;
-    alert = `🎯 HIGH PROBABILITY TARGET: ${topZone.centerPrice.toFixed(2)} | ${decompActive} active decompression windows | ${debt} unresolved debt midpoints | Confidence: ${topZone.confidence}%`;
+    alert = `🎯 KEY CONFLUENCE ZONE: ${topZone.centerPrice.toFixed(2)} | ${decompActive} active decompression windows | ${debt} unresolved debt midpoints | Confluence: ${topZone.confidence}%`;
   } else if (topZone && topZone.confidence >= 60) {
     alert = `⚠️ Moderate gravity zone at ${topZone.centerPrice.toFixed(2)} | Confidence: ${topZone.confidence}%`;
   }

@@ -319,7 +319,7 @@ function checkSmartCondition(alert: SmartAlert, data: DerivativesData): CheckRes
           triggered: true,
           value,
           threshold: condition_value,
-          message: `😱 EXTREME FEAR: ${value}/100 (${data.fearGreed?.classification}) - contrarian bullish conditions`,
+          message: `😱 EXTREME FEAR: ${value}/100 (${data.fearGreed?.classification}) — Market sentiment is fearful`,
           context: { classification: data.fearGreed?.classification },
         };
       }
@@ -333,7 +333,7 @@ function checkSmartCondition(alert: SmartAlert, data: DerivativesData): CheckRes
           triggered: true,
           value,
           threshold: condition_value,
-          message: `🤑 EXTREME GREED: ${value}/100 (${data.fearGreed?.classification}) - consider taking profits`,
+          message: `🤑 EXTREME GREED: ${value}/100 (${data.fearGreed?.classification}) — Market sentiment is extremely greedy`,
           context: { classification: data.fearGreed?.classification },
         };
       }
@@ -341,14 +341,14 @@ function checkSmartCondition(alert: SmartAlert, data: DerivativesData): CheckRes
     }
 
     case 'oi_divergence_bull': {
-      // OI increasing while price presumably down - accumulation
+      // OI increasing while price presumably down
       const oiChange = data.oi?.total?.change24h ?? 0;
       if (oiChange >= condition_value) {
         return {
           triggered: true,
           value: oiChange,
           threshold: condition_value,
-          message: `📈 BULLISH DIVERGENCE: OI +${oiChange.toFixed(2)}% - accumulation detected`,
+          message: `📈 OI DIVERGENCE: OI +${oiChange.toFixed(2)}% — Open interest rising while price declining`,
           context: { totalOI: data.oi?.total?.formatted },
         };
       }
@@ -356,14 +356,14 @@ function checkSmartCondition(alert: SmartAlert, data: DerivativesData): CheckRes
     }
 
     case 'oi_divergence_bear': {
-      // OI decreasing significantly - distribution/deleveraging
+      // OI decreasing significantly
       const oiChange = data.oi?.total?.change24h ?? 0;
       if (oiChange <= -condition_value) {
         return {
           triggered: true,
           value: oiChange,
           threshold: -condition_value,
-          message: `📉 BEARISH DIVERGENCE: OI ${oiChange.toFixed(2)}% - distribution/deleveraging`,
+          message: `📉 OI DIVERGENCE: OI ${oiChange.toFixed(2)}% — Open interest falling significantly`,
           context: { totalOI: data.oi?.total?.formatted },
         };
       }

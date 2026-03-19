@@ -204,12 +204,12 @@ export function computeCorrelationRegime(input: CorrelationRegimeInput): Correla
   // ─── Recommendation ───
 
   const recommendation =
-    regime === 'STRESS'  ? 'HALT new entries. VIX stress regime: wait for stabilization before deploying capital.'
-    : regime === 'RISK_OFF' ? 'Reduce exposure. Favor cash, defensive sectors, or hedged positions.'
-    : regime === 'DIVERGENT' ? 'BTC/SPY diverging — check which is leading. Trade the leader, not the laggard.'
-    : regime === 'DECORRELATED' ? 'Crypto and equities decorrelated. Manage each book independently.'
-    : riskScore > 70 ? 'Strong risk-on. Full allocation available, favor momentum setups.'
-    : 'Normal conditions. Standard allocation and setup selection.';
+    regime === 'STRESS'  ? 'VIX stress regime detected. Historically associated with elevated risk and choppy price action.'
+    : regime === 'RISK_OFF' ? 'Risk-off regime detected. Historically favors cash, defensive sectors, or hedged positioning.'
+    : regime === 'DIVERGENT' ? 'BTC/SPY diverging — check which asset is leading. Divergence often resolves toward the leader.'
+    : regime === 'DECORRELATED' ? 'Crypto and equities decorrelated. Each asset class showing independent behavior.'
+    : riskScore > 70 ? 'Strong risk-on conditions. Momentum setups historically perform well in this regime.'
+    : 'Normal conditions. No significant regime signal detected.';
 
   return {
     regime,

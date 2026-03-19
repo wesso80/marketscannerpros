@@ -79,7 +79,7 @@ Stop manually checking charts—let automation find squeezes for you.
 
 ❌ **Chasing late squeezes** - Enter early or wait for pullback  
 ❌ **Ignoring risk management** - Squeezes can reverse violently  
-❌ **Trading without confluence** - Single indicator ≠ high probability  
+❌ **Trading without confluence** - Single indicator ≠ strong confluence  
 ❌ **Missing the bigger picture** - Check multiple timeframes
 
 ## Conclusion
@@ -102,7 +102,7 @@ Short squeezes offer explosive profit potential, but only if you spot them early
     content: `
 # Best Free Crypto Screeners in 2025 (Comparison Guide)
 
-Finding high-probability crypto setups manually is time-consuming and inefficient. The right screening tool can save hours and surface opportunities you'd otherwise miss. Here's an honest comparison of the best free crypto screeners available in 2025.
+Finding technically aligned crypto setups manually is time-consuming and inefficient. The right screening tool can save hours and surface opportunities you'd otherwise miss. Here's an honest comparison of the best free crypto screeners available in 2025.
 
 ## What Makes a Good Crypto Screener?
 
@@ -254,7 +254,7 @@ All have free tiers—test each and see what fits your workflow.
   {
     slug: "multi-timeframe-confluence-trading",
     title: "Multi-Timeframe Confluence: The Secret to Higher Win Rates",
-    excerpt: "Stop trading off single charts. Learn how professional traders use multi-timeframe analysis to confirm high-probability setups and avoid false signals.",
+    excerpt: "Stop trading off single charts. Learn how professional traders use multi-timeframe analysis to confirm technically aligned setups and avoid false signals.",
     category: "Strategy",
     readTime: "6 min read",
     content: `
@@ -269,7 +269,7 @@ Confluence means **multiple pieces of evidence pointing to the same conclusion**
 - Medium timeframe confirms momentum
 - Lower timeframe provides entry signal
 
-When all three align → high-probability setup.  
+When all three align → technically aligned setup.  
 When they conflict → stay out.
 
 ## Why Single-Timeframe Trading Fails
@@ -340,7 +340,7 @@ Once direction (higher TF) and momentum (medium TF) align:
 - Entry above recent high ✅
 → **Entry triggered**
 
-**Result:** All 3 TFs align → HIGH probability long setup.
+**Result:** All 3 TFs align → HIGH confluence long setup.
 
 ## Common Timeframe Combinations
 

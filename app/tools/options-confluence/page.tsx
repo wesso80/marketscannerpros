@@ -3973,8 +3973,8 @@ export default function OptionsConfluenceScanner() {
                       </div>
                     </div>
                     <div className={`rounded-lg p-2 text-[0.75rem] ${result.ivAnalysis.ivSignal === 'sell_premium' ? 'bg-red-500/20 text-red-300' : result.ivAnalysis.ivSignal === 'buy_premium' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}`}>
-                      {result.ivAnalysis.ivSignal === 'sell_premium' ? '💰 SELL Premium' :
-                       result.ivAnalysis.ivSignal === 'buy_premium' ? '📈 BUY Premium' : '⚖️ Neutral'}
+                      {result.ivAnalysis.ivSignal === 'sell_premium' ? '💰 SHORT Premium' :
+                       result.ivAnalysis.ivSignal === 'buy_premium' ? '📈 LONG Premium' : '⚖️ Neutral'}
                       <div className="mt-1 text-[0.65rem] opacity-80">
                         {result.ivAnalysis.ivReason}
                       </div>
@@ -4596,11 +4596,11 @@ export default function OptionsConfluenceScanner() {
                 
                 <div className="flex-1">
                   <div className="mb-3">
-                    <div className="mb-1 text-[0.8rem] text-slate-500">🛑 Stop Loss Strategy</div>
+                    <div className="mb-1 text-[0.8rem] text-slate-500">🛑 Risk Management Strategy</div>
                     <div className="text-[0.85rem] text-slate-200">{result.stopLossStrategy}</div>
                   </div>
                   <div>
-                    <div className="mb-1 text-[0.8rem] text-slate-500">🎯 Profit Target Strategy</div>
+                    <div className="mb-1 text-[0.8rem] text-slate-500">🎯 Key Level Strategy</div>
                     <div className="text-[0.85rem] text-emerald-500">{result.profitTargetStrategy}</div>
                   </div>
                 </div>
@@ -4608,10 +4608,10 @@ export default function OptionsConfluenceScanner() {
             </details>
             )}
 
-            {/* Summary Trade Setup */}
+            {/* Analysis Summary */}
             {trapDoors.contracts && result.primaryStrike && result.primaryExpiration && (
               <div className="rounded-[16px] border border-emerald-500/50 bg-[var(--msp-card)] p-[1.15rem] shadow-msp-soft">
-                <h3 className="mb-4 text-[0.98rem] font-extrabold tracking-[0.3px] text-emerald-500">📋 Trade Summary</h3>
+                <h3 className="mb-4 text-[0.98rem] font-extrabold tracking-[0.3px] text-emerald-500">📋 Analysis Summary</h3>
                 
                 <div className="rounded-xl bg-black/30 p-5 font-mono text-base">
                   <div className="mb-2">
@@ -4622,9 +4622,9 @@ export default function OptionsConfluenceScanner() {
                   </div>
                   
                   <div className="mb-2">
-                    <span className="text-slate-500">Action:</span>
+                    <span className="text-slate-500">Scenario:</span>
                     <span className={`ml-2 font-bold ${result.primaryStrike.type === 'call' ? 'text-emerald-500' : 'text-red-500'}`}>
-                      BUY {result.primaryStrike.type.toUpperCase()}
+                      LONG {result.primaryStrike.type.toUpperCase()}
                     </span>
                   </div>
                   
@@ -4685,7 +4685,7 @@ export default function OptionsConfluenceScanner() {
                 <div className="mb-2 text-[1.5rem]">🎯</div>
                 <div className="mb-2 font-bold text-emerald-500">Strike Selection</div>
                 <div className="text-[0.85rem] text-slate-400">
-                  Recommends strikes based on 50% level clusters and target zones from decompressing timeframes.
+                  Identifies strikes based on 50% level clusters and target zones from decompressing timeframes.
                 </div>
               </div>
               

@@ -4,7 +4,7 @@ type Testimonial = { name: string; role: string; quote: string; rating: number }
 
 export default function Reviews() {
   const testimonials: Testimonial[] = [
-    { name: "Sarah M.", role: "Day Trader", quote: "MarketScanner Pros changed how I find high-probability setups.", rating: 5 },
+    { name: "Sarah M.", role: "Day Trader", quote: "MarketScanner Pros changed how I find technically aligned setups.", rating: 5 },
     { name: "James L.", role: "Swing Trader", quote: "The squeeze + confluence combo is my daily edge.", rating: 5 },
     { name: "Emily R.", role: "Investor", quote: "Clean UI, fast signals, and super easy to use.", rating: 5 },
   ];

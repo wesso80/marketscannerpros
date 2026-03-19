@@ -260,7 +260,7 @@ function PositionSizerCalculator() {
           </div>
         </div>
 
-        {/* Entry Price */}
+        {/* Reference Price */}
         <div>
           <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
             Reference Price ($)
@@ -283,7 +283,7 @@ function PositionSizerCalculator() {
           />
         </div>
 
-        {/* Stop Loss */}
+        {/* Risk Level */}
         <div>
           <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
             Risk Level ($)
@@ -291,7 +291,7 @@ function PositionSizerCalculator() {
           <input
             type="number"
             step="any"
-            placeholder={side === 'LONG' ? 'Below entry' : 'Above entry'}
+            placeholder={side === 'LONG' ? 'Below reference' : 'Above reference'}
             value={stopLoss}
             onChange={(e) => setStopLoss(e.target.value)}
             style={{
@@ -306,7 +306,7 @@ function PositionSizerCalculator() {
           />
         </div>
 
-        {/* Take Profit */}
+        {/* Reaction Zone */}
         <div style={{ gridColumn: 'span 2' }}>
           <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
             Reaction Zone ($) <span style={{ color: '#64748b' }}>(optional)</span>
@@ -1335,7 +1335,7 @@ export function PortfolioContent() {
       return;
     }
 
-    const headers = ['Symbol', 'Side', 'Quantity', 'Entry Price', 'Current Price', 'P&L', 'P&L %', 'Entry Date'];
+    const headers = ['Symbol', 'Side', 'Quantity', 'Reference Price', 'Current Price', 'P&L', 'P&L %', 'Date Added'];
     const rows = positions.map(p => [
       p.symbol,
       p.side,
@@ -1365,7 +1365,7 @@ export function PortfolioContent() {
       return;
     }
 
-    const headers = ['Symbol', 'Side', 'Quantity', 'Entry Price', 'Close Price', 'Realized P&L', 'Entry Date', 'Close Date'];
+    const headers = ['Symbol', 'Side', 'Quantity', 'Reference Price', 'Close Price', 'Realized P&L', 'Open Date', 'Close Date'];
     const rows = closedPositions.map(p => [
       p.symbol,
       p.side,

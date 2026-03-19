@@ -311,7 +311,7 @@ export default function EconomicCalendarPage() {
                 </div>
                 <ul className="space-y-1 text-xs text-white/70">
                   <li>• No new size 15 min pre/post high-impact prints.</li>
-                  <li>• Trade leaders only and reduce leverage during expansion.</li>
+                  <li>• Focus on leaders and consider reduced leverage during expansion.</li>
                   <li>• Avoid breakout chasing when event shock risk is active.</li>
                 </ul>
               </article>
@@ -481,7 +481,7 @@ export default function EconomicCalendarPage() {
                 <h3 className="mb-2 text-sm font-semibold text-white/90">If High Impact Today</h3>
                 <ul className="space-y-1 text-xs text-white/65">
                   <li>• Expect vol expansion and opening whipsaw around print windows.</li>
-                  <li>• Trade leaders only and reduce position size.</li>
+                  <li>• Focus on leaders and consider reduced position size.</li>
                   <li>• Avoid breakout chasing until post-window confirmation.</li>
                 </ul>
               </article>

@@ -416,7 +416,7 @@ export default function PartnersPage() {
             }}>
               <p style={{ fontSize: 14, color: '#9ca3af', margin: 0, fontStyle: 'italic' }}>
                 <strong style={{ color: 'var(--msp-accent)' }}>Example:</strong><br/>
-                "This page shows how [Partner Name] uses MarketScanner Pros to identify structure, phases, and high-probability conditions."
+                "This page shows how [Partner Name] uses MarketScanner Pros to identify structure, phases, and technically aligned conditions."
               </p>
             </div>
           </div>

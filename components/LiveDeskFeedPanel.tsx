@@ -121,7 +121,7 @@ export default function LiveDeskFeedPanel() {
           </div>
           <div style={{ display: 'grid', gap: '0.28rem', fontSize: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--msp-text-muted)' }}><span>Current Market Bias</span><strong style={{ color: 'var(--msp-warn)' }}>Neutral</strong></div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--msp-text-muted)' }}><span>High Probability Setups</span><strong style={{ color: 'var(--msp-bull)' }}>{highProb}</strong></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--msp-text-muted)' }}><span>Technically Aligned Setups</span><strong style={{ color: 'var(--msp-bull)' }}>{highProb}</strong></div>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--msp-text-muted)' }}><span>Scanner Events</span><strong style={{ color: 'var(--msp-bull)' }}>Active</strong></div>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--msp-text-muted)' }}><span>Avg Confidence</span><strong style={{ color: 'var(--msp-accent)' }}>{avgConfidence}%</strong></div>
           </div>

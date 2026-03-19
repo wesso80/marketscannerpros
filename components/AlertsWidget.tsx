@@ -276,8 +276,8 @@ export default function AlertsWidget({
       case 'ls_ratio_low': return 'Long/Short ratio too low (crowded shorts - squeeze up risk)';
       case 'fear_extreme': return 'Fear & Greed below threshold (extreme fear detected)';
       case 'greed_extreme': return 'Fear & Greed above threshold (extreme greed detected)';
-      case 'oi_divergence_bull': return 'OI rising while price down (accumulation detected)';
-      case 'oi_divergence_bear': return 'OI falling while price up (distribution/deleveraging)';
+      case 'oi_divergence_bull': return 'OI rising while price declining (bullish divergence)';
+      case 'oi_divergence_bear': return 'OI falling while price rising (bearish divergence)';
       // Scanner signal descriptions
       case 'scanner_buy_signal': return 'Scanner detects bullish setup with score above threshold';
       case 'scanner_sell_signal': return 'Scanner detects bearish setup with score below threshold';

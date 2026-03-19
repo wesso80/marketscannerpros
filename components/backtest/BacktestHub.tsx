@@ -414,8 +414,8 @@ export default function BacktestPage() {
                     <MetricRow label="Calmar" value={n(result.calmarRatio).toFixed(2)} />
                     <MetricRow label="Volatility" value={fmtPct(n(result.volatility))} />
                     <MetricRow label="Time in Market" value={`${n(result.timeInMarket).toFixed(1)}%`} />
-                    {result.bestTrade && <MetricRow label="Best Trade" value={fmtPct(n(result.bestTrade.returnPercent))} color="text-emerald-400" />}
-                    {result.worstTrade && <MetricRow label="Worst Trade" value={fmtPct(n(result.worstTrade.returnPercent))} color="text-red-400" />}
+                    {result.bestTrade && <MetricRow label="Largest Gain" value={fmtPct(n(result.bestTrade.returnPercent))} color="text-emerald-400" />}
+                    {result.worstTrade && <MetricRow label="Largest Loss" value={fmtPct(n(result.worstTrade.returnPercent))} color="text-red-400" />}
                   </div>
                 </Card>
 

@@ -390,7 +390,7 @@ function BacktestContent() {
       bias,
       action,
       risk,
-      next: action === 'EXECUTE' ? 'Deploy live with guardrails' : action === 'PREP' ? 'Refine and rerun sample' : 'Reject setup and iterate',
+      next: action === 'EXECUTE' ? 'Evaluation complete — review parameters' : action === 'PREP' ? 'Refine and rerun sample' : 'Reject setup and iterate',
       mode: 'EXECUTE',
     });
   }, [results, symbol]);
@@ -1228,7 +1228,7 @@ function BacktestContent() {
       <ToolsPageHeader
         badge="ELITE STRATEGY LAB"
         title="Strategy Backtester"
-        subtitle="Validate strategy edge in simulation before live decision-making (educational mode)."
+        subtitle="Evaluate historical strategy behavior in simulation (educational mode)."
         icon="🧪"
         backHref="/dashboard"
       />
@@ -1243,10 +1243,10 @@ function BacktestContent() {
           mode="EVALUATE"
           actionableNow={results
             ? `Top setup: ${symbol} • ${strategy} • ${results.winRate.toFixed(1)}% win rate`
-            : `No validated setup yet for ${symbol}. Run backtest to qualify execution.`}
+            : `No validated setup yet for ${symbol}. Run backtest to evaluate strategy statistics.`}
           nextStep={results
             ? results.profitFactor >= 1.25 && results.maxDrawdown <= 20
-              ? 'Convert validated setup into execution plan'
+              ? 'Review validated statistics and confluence factors'
               : 'Adjust rules/timeframe and revalidate'
             : 'Set strategy + timeframe and run validation'}
         />

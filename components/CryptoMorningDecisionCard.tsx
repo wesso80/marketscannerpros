@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-type PermissionVerdict = 'YES' | 'CONDITIONAL' | 'NO DEPLOYMENT';
+type ConditionVerdict = 'ALIGNED' | 'CONDITIONAL' | 'NOT ALIGNED';
 
 function clampScore(value: number): number {
   return Math.max(0, Math.min(100, value));
@@ -14,14 +14,14 @@ function getDominanceValue(dominance: Array<{ symbol: string; dominance: number 
   return typeof row?.dominance === 'number' ? row.dominance : 0;
 }
 
-function permissionColor(verdict: PermissionVerdict): string {
-  if (verdict === 'YES') return 'text-emerald-300';
+function conditionColor(verdict: ConditionVerdict): string {
+  if (verdict === 'ALIGNED') return 'text-emerald-300';
   if (verdict === 'CONDITIONAL') return 'text-amber-300';
   return 'text-red-300';
 }
 
-function permissionBadge(verdict: PermissionVerdict): string {
-  if (verdict === 'YES') return '🟢';
+function conditionBadge(verdict: ConditionVerdict): string {
+  if (verdict === 'ALIGNED') return '🟢';
   if (verdict === 'CONDITIONAL') return '🟡';
   return '🔴';
 }
@@ -146,32 +146,32 @@ export default function CryptoMorningDecisionCard() {
       (breadthScore * 0.2),
     );
 
-    let verdict: PermissionVerdict = 'CONDITIONAL';
-    if (hardBlockTriggered) verdict = 'NO DEPLOYMENT';
-    else if (adaptiveConfidence >= 65) verdict = 'YES';
-    else if (adaptiveConfidence < 40) verdict = 'NO DEPLOYMENT';
+    let verdict: ConditionVerdict = 'CONDITIONAL';
+    if (hardBlockTriggered) verdict = 'NOT ALIGNED';
+    else if (adaptiveConfidence >= 65) verdict = 'ALIGNED';
+    else if (adaptiveConfidence < 40) verdict = 'NOT ALIGNED';
     else verdict = 'CONDITIONAL';
 
-    if (verdict === 'YES' && (!longsAllowed || !shortsAllowed)) verdict = 'CONDITIONAL';
+    if (verdict === 'ALIGNED' && (!longsAllowed || !shortsAllowed)) verdict = 'CONDITIONAL';
 
-    const capitalMode = verdict === 'YES' ? 'Normal Size' : verdict === 'CONDITIONAL' ? 'Reduced Size' : 'Capital Preservation';
+    const capitalMode = verdict === 'ALIGNED' ? 'Normal Size' : verdict === 'CONDITIONAL' ? 'Reduced Size' : 'Capital Preservation';
 
     const subClusters = [
       {
         name: 'Large Caps',
-        permission: riskState === 'Risk-Off' ? 'Restricted' : leadership === 'Defensive Rotation' ? 'Conditional' : 'Allowed',
+        condition: riskState === 'Risk-Off' ? 'Restricted' : leadership === 'Defensive Rotation' ? 'Conditional' : 'Allowed',
       },
       {
         name: 'Mid/Alts',
-        permission: !longsAllowed || breadthScore < 45 ? 'Restricted' : breadthScore >= 60 ? 'Allowed' : 'Conditional',
+        condition: !longsAllowed || breadthScore < 45 ? 'Restricted' : breadthScore >= 60 ? 'Allowed' : 'Conditional',
       },
       {
         name: 'Meme/High Beta',
-        permission: verdict === 'YES' && liquidity === 'Expanding' && volatility !== 'Dislocation' ? 'Allowed' : 'Restricted',
+        condition: verdict === 'ALIGNED' && liquidity === 'Expanding' && volatility !== 'Dislocation' ? 'Allowed' : 'Restricted',
       },
       {
         name: 'DeFi',
-        permission: liquidity === 'Expanding' && breadthScore >= 50 ? 'Allowed' : liquidity === 'Contracting' ? 'Restricted' : 'Conditional',
+        condition: liquidity === 'Expanding' && breadthScore >= 50 ? 'Allowed' : liquidity === 'Contracting' ? 'Restricted' : 'Conditional',
       },
     ];
 
@@ -201,8 +201,8 @@ export default function CryptoMorningDecisionCard() {
             <span className="text-[10px] text-slate-500">{lastUpdate ? lastUpdate.toLocaleTimeString() : 'Loading'}</span>
           </div>
           <div className="mt-1 flex items-center gap-2">
-            <span className="text-xl">{permissionBadge(decision.verdict)}</span>
-            <h2 className={`text-base font-extrabold ${permissionColor(decision.verdict)}`}>STATUS: {decision.verdict}</h2>
+            <span className="text-xl">{conditionBadge(decision.verdict)}</span>
+            <h2 className={`text-base font-extrabold ${conditionColor(decision.verdict)}`}>CONDITIONS: {decision.verdict}</h2>
           </div>
           <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
             <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Adaptive Confidence: {decision.adaptiveConfidence}%</span>
@@ -214,7 +214,7 @@ export default function CryptoMorningDecisionCard() {
             {decision.subClusters.map((cluster) => (
               <div key={cluster.name} className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-[10px]">
                 <p className="text-slate-500">{cluster.name}</p>
-                <p className={`font-semibold ${cluster.permission === 'Allowed' ? 'text-emerald-300' : cluster.permission === 'Conditional' ? 'text-amber-300' : 'text-red-300'}`}>{cluster.permission}</p>
+                <p className={`font-semibold ${cluster.condition === 'Allowed' ? 'text-emerald-300' : cluster.condition === 'Conditional' ? 'text-amber-300' : 'text-red-300'}`}>{cluster.condition}</p>
               </div>
             ))}
           </div>

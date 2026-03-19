@@ -524,7 +524,7 @@ function AIAnalystCommentary({ tgm }: { tgm: TimeGravityMap }) {
         {tgm.topZone && tgm.topZone.confidence >= 60 && (
           <div className="mt-2 text-xs text-purple-300">
             💡 {tgm.topZone.activeDecompressionCount > 0
-              ? `${tgm.topZone.activeDecompressionCount} decompression window${tgm.topZone.activeDecompressionCount > 1 ? 's' : ''} active - high probability move incoming`
+              ? `${tgm.topZone.activeDecompressionCount} decompression window${tgm.topZone.activeDecompressionCount > 1 ? 's' : ''} active — multiple timeframes aligned`
               : 'Monitor for decompression window activation'}
           </div>
         )}

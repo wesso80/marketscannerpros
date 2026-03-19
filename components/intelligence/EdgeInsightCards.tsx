@@ -189,8 +189,8 @@ export default function EdgeInsightCards() {
         <div className="rounded-lg bg-indigo-500/5 border border-indigo-500/15 p-3 space-y-1">
           <div className="text-[10px] uppercase tracking-wider text-indigo-400/80">AI Edge Summary</div>
           <div className="text-[11px] text-slate-300 leading-relaxed">
-            {summary.strongestStrategy && <span>Best strategy: <strong className="text-white">{summary.strongestStrategy}</strong>. </span>}
-            {summary.strongestRegime && <span>Best regime: <strong className="text-white">{summary.strongestRegime.replace(/_/g, ' ')}</strong>. </span>}
+            {summary.strongestStrategy && <span>Historically strongest: <strong className="text-white">{summary.strongestStrategy}</strong>. </span>}
+            {summary.strongestRegime && <span>Highest win-rate regime: <strong className="text-white">{summary.strongestRegime.replace(/_/g, ' ')}</strong>. </span>}
             {summary.preferredSide && <span>Preferred: <strong className="text-white">{summary.preferredSide}</strong>. </span>}
             <span>Expectancy: <strong className="text-white">{summary.expectancy.toFixed(2)}R</strong>.</span>
           </div>

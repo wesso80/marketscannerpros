@@ -310,7 +310,7 @@ function checkSignalCondition(alert: SignalAlert, scan: ScanResult): CheckResult
         return {
           triggered: true,
           value: scan.score,
-          message: `🐂 BULLISH FLIP: ${scan.symbol} turned bullish! Score: ${scan.score}/100 (was ${prevDirection})`,
+          message: `🐂 DIRECTION CHANGE: ${scan.symbol} shifted to bullish. Score: ${scan.score}/100 (was ${prevDirection})`,
           context: { 
             prevDirection, 
             newDirection: scan.direction,
@@ -327,7 +327,7 @@ function checkSignalCondition(alert: SignalAlert, scan: ScanResult): CheckResult
         return {
           triggered: true,
           value: scan.score,
-          message: `🐻 BEARISH FLIP: ${scan.symbol} turned bearish! Score: ${scan.score}/100 (was ${prevDirection})`,
+          message: `🐻 DIRECTION CHANGE: ${scan.symbol} shifted to bearish. Score: ${scan.score}/100 (was ${prevDirection})`,
           context: { 
             prevDirection, 
             newDirection: scan.direction,

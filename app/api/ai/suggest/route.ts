@@ -297,7 +297,7 @@ async function generateSuggestions(
         id: crypto.randomUUID(),
         type: 'warning',
         title: `${losers.length} positions down >5%`,
-        description: `Consider reviewing your stop losses`,
+        description: `Consider reviewing your risk levels`,
         priority: 'medium',
         validUntil: validFor24h,
       });

@@ -119,7 +119,7 @@ export default function MSPCopilot({
               { icon: '📊', label: 'Why these symbols scored highest', question: `Analyze the top 3 scan results: ${top3.map(p => `${p.symbol} (${p.direction}, ${p.confidence}%)`).join(', ')}. What makes them stand out?` },
               { icon: '🔄', label: 'Bullish vs bearish bias', question: `The scan found ${bullish} bullish and ${bearish} bearish setups. What does this tell us about current market conditions?` },
               { icon: '⚡', label: 'Best setup to trade now', question: `Out of these ${totalResults} scan results, which setup has the best risk/reward and why?` },
-              { icon: '🎯', label: 'How to filter these results', question: 'How should I filter and prioritize these scan results for the best trades?' },
+              { icon: '🎯', label: 'How to filter these results', question: 'How should I filter and prioritize these scan results for the strongest confluence?' },
             ],
             footer: 'Click a topic to learn more.',
           },

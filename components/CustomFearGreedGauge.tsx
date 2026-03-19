@@ -245,7 +245,7 @@ export default function CustomFearGreedGauge({
             {value > 19 && value <= 39 && "Fear dominates - watch for capitulation or reversal signals."}
             {value > 39 && value <= 59 && "Balanced sentiment - market searching for direction."}
             {value > 59 && value <= 79 && "Greed rising - momentum is strong but watch for overextension."}
-            {value > 79 && "Extreme greed warns of potential correction - consider taking profits."}
+            {value > 79 && "Extreme greed warns of potential correction — historically precedes market pullbacks."}
           </p>
         </div>
       </div>

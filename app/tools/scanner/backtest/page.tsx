@@ -630,12 +630,12 @@ function ScannerBacktestContent() {
                   </div>
                 )}
 
-                {/* Best / Worst */}
+                {/* Largest Gain / Loss */}
                 {(result.bestTrade || result.worstTrade) && (
                   <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {result.bestTrade && (
                       <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-2">
-                        <div className="text-[10px] uppercase text-emerald-500">Best Trade</div>
+                        <div className="text-[10px] uppercase text-emerald-500">Largest Gain</div>
                         <div className="text-xs text-slate-300">
                           {result.bestTrade.side} {result.bestTrade.symbol} · {result.bestTrade.entryDate?.slice(0, 10)} →
                           {' '}{result.bestTrade.exitDate?.slice(0, 10)} ·
@@ -645,7 +645,7 @@ function ScannerBacktestContent() {
                     )}
                     {result.worstTrade && (
                       <div className="rounded-lg border border-rose-500/20 bg-rose-500/5 p-2">
-                        <div className="text-[10px] uppercase text-rose-500">Worst Trade</div>
+                        <div className="text-[10px] uppercase text-rose-500">Largest Loss</div>
                         <div className="text-xs text-slate-300">
                           {result.worstTrade.side} {result.worstTrade.symbol} · {result.worstTrade.entryDate?.slice(0, 10)} →
                           {' '}{result.worstTrade.exitDate?.slice(0, 10)} ·

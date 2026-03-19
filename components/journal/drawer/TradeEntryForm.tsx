@@ -348,10 +348,10 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
           </div>
         </div>
 
-        {/* Row 4: Stop Loss + Target */}
+        {/* Row 4: Risk Level + Key Level */}
         <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label htmlFor="trade-stop-loss" className={LABEL}>Stop Loss</label>
+            <label htmlFor="trade-stop-loss" className={LABEL}>Risk Level</label>
             <input
               id="trade-stop-loss"
               name="stopLoss"
@@ -365,7 +365,7 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
             />
           </div>
           <div>
-            <label htmlFor="trade-target" className={LABEL}>Target</label>
+            <label htmlFor="trade-target" className={LABEL}>Key Level</label>
             <input
               id="trade-target"
               name="target"

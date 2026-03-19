@@ -116,7 +116,7 @@ export default function PerformanceMetrics({ totalReturn, winRate, totalTrades, 
             {safe(profitFactor)?.toFixed(2) ?? '—'}
           </div>
           <div className="mt-0.5 text-[10px] text-slate-500">
-            {profitFactor >= 1.5 ? 'Strong edge' : profitFactor >= 1 ? 'Break-even' : 'Losing money'}
+            {profitFactor >= 1.5 ? 'Above breakeven' : profitFactor >= 1 ? 'Break-even' : 'Below breakeven'}
           </div>
         </MetricCard>
 
@@ -131,7 +131,7 @@ export default function PerformanceMetrics({ totalReturn, winRate, totalTrades, 
             {safe(maxDrawdown)?.toFixed(2) ?? '—'}%
           </div>
           <div className="mt-0.5 text-[10px] text-slate-500">
-            {maxDrawdown <= 10 ? 'Controlled risk' : maxDrawdown <= 20 ? 'Moderate risk' : 'High risk'}
+            {maxDrawdown <= 10 ? 'Low drawdown' : maxDrawdown <= 20 ? 'Moderate drawdown' : 'High drawdown'}
           </div>
         </MetricCard>
 
@@ -179,7 +179,7 @@ export default function PerformanceMetrics({ totalReturn, winRate, totalTrades, 
 
         {bestTrade && (
           <div className="rounded-xl border border-emerald-500/30 bg-slate-800/50 p-4">
-            <div className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-slate-400">Best Trade</div>
+            <div className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-slate-400">Largest Gain</div>
             <div className="text-lg font-bold text-emerald-500">
               +{bestTrade.returnPercent.toFixed(2)}% ({bestTrade.symbol})
             </div>
@@ -192,7 +192,7 @@ export default function PerformanceMetrics({ totalReturn, winRate, totalTrades, 
 
         {worstTrade && (
           <div className="rounded-xl border border-red-500/30 bg-slate-800/50 p-4">
-            <div className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-slate-400">Worst Trade</div>
+            <div className="mb-1.5 text-[11px] font-medium uppercase tracking-wider text-slate-400">Largest Loss</div>
             <div className="text-lg font-bold text-red-500">
               {worstTrade.returnPercent.toFixed(2)}% ({worstTrade.symbol})
             </div>
@@ -229,7 +229,7 @@ export default function PerformanceMetrics({ totalReturn, winRate, totalTrades, 
                 </div>
               </div>
               <div className="mt-2 text-[10px] text-slate-500">
-                {kelly.kellyFraction > 0 ? 'Positive expectancy. Half-Kelly recommended for conservative sizing.' : 'No positive edge — reduce position size.'}
+                {kelly.kellyFraction > 0 ? 'Positive expectancy detected. Half-Kelly shown for reference.' : 'No positive edge detected in simulation.'}
               </div>
             </div>
           )}
