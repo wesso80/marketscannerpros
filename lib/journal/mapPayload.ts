@@ -10,12 +10,15 @@ function normalizeAssetClass(raw?: string): TradeAssetClass {
 
 function mapEntry(entry: any): TradeRowModel {
   const notes = String(entry?.notes || '');
+  const rawTradeType = String(entry?.tradeType || 'Spot');
+  const tradeType = (['Spot','Options','Futures','Margin'].includes(rawTradeType) ? rawTradeType : 'Spot') as TradeRowModel['tradeType'];
   return {
     id: String(entry?.id || ''),
     symbol: String(entry?.symbol || 'N/A').toUpperCase(),
     assetClass: normalizeAssetClass(entry?.assetClass),
     side: String(entry?.side || 'LONG').toUpperCase() === 'SHORT' ? 'short' : 'long',
     status: entry?.isOpen ? 'open' : 'closed',
+    tradeType,
     entry: {
       price: Number(entry?.entryPrice || 0),
       ts: entry?.date || new Date().toISOString(),

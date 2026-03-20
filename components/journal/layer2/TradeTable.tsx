@@ -37,7 +37,7 @@ export default function TradeTable({ rows, sort, onSort, onSelectTrade, onQuickC
   return (
     <>
       {/* ── Mobile: finger-expandable trade cards ── */}
-      <div className="md:hidden space-y-2">
+      <div className="sm:hidden space-y-2">
         {loading && <div className="px-3 py-4 text-slate-300 text-sm">Loading trades...</div>}
         {error && !loading && <div className="px-3 py-4 text-rose-300 text-sm">{error}</div>}
         {!loading && !error && rows.length === 0 && <div className="px-3 py-4 text-slate-300 text-sm">No trades found for current filters.</div>}
@@ -79,7 +79,7 @@ export default function TradeTable({ rows, sort, onSort, onSelectTrade, onQuickC
       </div>
 
       {/* ── Desktop: full table ── */}
-      <div className="hidden md:block overflow-x-auto rounded-2xl border border-white/5 bg-slate-900/40">
+      <div className="hidden sm:block overflow-x-auto rounded-2xl border border-white/5 bg-slate-900/40">
       <table className="w-full min-w-[640px] text-sm">
         <thead className="border-b border-white/5 bg-white/5 text-slate-300">
           <tr>

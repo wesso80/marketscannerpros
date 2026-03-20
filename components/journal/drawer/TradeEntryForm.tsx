@@ -34,6 +34,10 @@ export interface TradeEntryInitialValues {
   strategy?: string;
   setup?: string;
   notes?: string;
+  optionType?: 'CALL' | 'PUT';
+  strikePrice?: string;
+  expirationDate?: string;
+  premium?: string;
 }
 
 interface TradeEntryFormProps {
@@ -66,10 +70,10 @@ export default function TradeEntryForm({ onSubmit, onCancel, initialValues }: Tr
   const [error, setError] = useState<string | null>(null);
 
   // Options-specific state
-  const [optionType, setOptionType] = useState<'CALL' | 'PUT'>('CALL');
-  const [strikePrice, setStrikePrice] = useState('');
-  const [expirationDate, setExpirationDate] = useState('');
-  const [premium, setPremium] = useState('');
+  const [optionType, setOptionType] = useState<'CALL' | 'PUT'>(iv?.optionType || 'CALL');
+  const [strikePrice, setStrikePrice] = useState(iv?.strikePrice || '');
+  const [expirationDate, setExpirationDate] = useState(iv?.expirationDate || '');
+  const [premium, setPremium] = useState(iv?.premium || '');
 
   // Leverage state (Futures / Margin)
   const [leverage, setLeverage] = useState('');

@@ -83,6 +83,10 @@ export default function JournalPage({ tier }: { tier: UserTier }) {
       strategy: searchParams.get('strategy') || undefined,
       setup: searchParams.get('setup') || undefined,
       notes: searchParams.get('notes') || undefined,
+      optionType: (['CALL', 'PUT'] as const).includes(searchParams.get('optionType')?.toUpperCase() as 'CALL' | 'PUT') ? (searchParams.get('optionType')!.toUpperCase() as 'CALL' | 'PUT') : undefined,
+      strikePrice: searchParams.get('strikePrice') || undefined,
+      expirationDate: searchParams.get('expirationDate') || undefined,
+      premium: searchParams.get('premium') || undefined,
     };
 
     setPrefillValues(iv);

@@ -103,7 +103,8 @@ export function useLivePrices(trades: TradeRowModel[]): {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Build a map of symbol → resolved type using trade assetClass
-  const openTrades = trades.filter((t) => t.status === 'open');
+  // Skip options trades — stock price ≠ option premium
+  const openTrades = trades.filter((t) => t.status === 'open' && t.tradeType !== 'Options');
   const tradeTypeMap = new Map<string, 'crypto' | 'stock'>();
   for (const t of openTrades) {
     const sym = normalizeSymbol(t.symbol);
@@ -176,6 +177,9 @@ export function enrichTradesWithLivePrices(
 ): TradeRowModel[] {
   return trades.map((trade) => {
     if (trade.status !== 'open') return trade;
+
+    // Skip live price enrichment for options — stock price ≠ option premium
+    if (trade.tradeType === 'Options') return trade;
 
     const sym = normalizeSymbol(trade.symbol);
     const livePrice = prices[sym];

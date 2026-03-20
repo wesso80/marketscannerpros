@@ -608,6 +608,10 @@ export default function OptionsTerminalView() {
                           strategy: 'Options',
                           setup: label,
                           tradeType: 'Options',
+                          optionType: selected!.side,
+                          strikePrice: c.strike.toString(),
+                          expirationDate: c.expiration,
+                          premium: c.mark.toFixed(2),
                         });
                         router.push(`/tools/journal?prefill=true&${params.toString()}`);
                       }}

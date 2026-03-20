@@ -126,11 +126,11 @@ export default function TimeScannerPage() {
                 likely to tag the midpoint:
               </p>
               <ul className="space-y-1 font-mono text-xs">
-                <li>• <span className="text-cyan-400">1H</span>: 7-9 min from open</li>
-                <li>• <span className="text-cyan-400">4H</span>: 9-12 min from open</li>
+                <li>• <span className="text-cyan-400">1H</span>: 7-9 min before close</li>
+                <li>• <span className="text-cyan-400">4H</span>: 9-12 min before close</li>
                 <li>• <span className="text-cyan-400">1D</span>: ~1 hour before close</li>
-                <li>• <span className="text-cyan-400">1W</span>: 2 hours before close</li>
-                <li>• <span className="text-cyan-400">1M</span>: 18 hours before close</li>
+                <li>• <span className="text-cyan-400">1W</span>: ~6.5 hours before close</li>
+                <li>• <span className="text-cyan-400">1M</span>: ~26 hours before close</li>
               </ul>
               <p className="text-purple-400">
                 💡 Active windows get 5x gravity multiplier

@@ -54,6 +54,7 @@ export type TradeRowModel = {
   assetClass: TradeAssetClass;
   side: TradeSide;
   status: TradeStatus;
+  tradeType?: 'Spot' | 'Options' | 'Futures' | 'Margin';
   entry: { price: number; ts: string };
   exit?: { price: number; ts: string };
   qty: number;
