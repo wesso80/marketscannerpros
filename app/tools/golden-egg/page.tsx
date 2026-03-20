@@ -342,7 +342,7 @@ export default function GoldenEggPage() {
                 </div>
               </div>
 
-              {/* Driver / Blocker */}
+              {/* Driver / Blocker + Create Trade Plan */}
               <div className="flex items-center gap-4 flex-wrap">
                 <div className="text-[10px] text-slate-500">
                   Driver: <span className="text-white font-semibold">{ge.layer1.primaryDriver}</span>
@@ -352,6 +352,12 @@ export default function GoldenEggPage() {
                     Blocker: <span className="text-red-400 font-semibold">{ge.layer1.primaryBlocker}</span>
                   </div>
                 )}
+                <a
+                  href={`/tools/journal?prefill=true&symbol=${encodeURIComponent(sym)}&side=${ge.layer1.direction === 'bullish' ? 'LONG' : ge.layer1.direction === 'bearish' ? 'SHORT' : 'LONG'}&entryPrice=${ge.layer2.execution.entry.price?.toFixed(2) || ''}&strategy=Golden+Egg&setup=${encodeURIComponent(`${sym} ${ge.layer1.direction} — Grade ${ge.layer1.grade}, ${ge.layer1.confidence}% confluence`)}&notes=${encodeURIComponent(`Golden Egg trade plan\nEntry: $${ge.layer2.execution.entry.price?.toFixed(2) || 'N/A'} (${ge.layer2.execution.entry.type})\nStop: $${ge.layer2.execution.stop.price.toFixed(2)} — ${ge.layer2.execution.stop.logic}\nTargets: ${ge.layer2.execution.targets.map((t: any) => '$' + t.price.toFixed(2)).join(' › ')}\nR:R ${ge.layer2.execution.rr.expectedR.toFixed(1)} | Setup: ${ge.layer2.setup.setupType.replace(/_/g, ' ')}\nThesis: ${ge.layer2.setup.thesis}`)}`}
+                  className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-emerald-400 no-underline hover:bg-emerald-500/20 transition-colors ml-auto"
+                >
+                  Create Trade Plan
+                </a>
               </div>
             </div>
 
@@ -828,8 +834,14 @@ export default function GoldenEggPage() {
                 <span className="text-[10px] text-slate-500">Expected R:R</span>
                 <span className="text-sm font-bold text-white ml-2">{ge.layer2.execution.rr.expectedR.toFixed(1)}R</span>
               </div>
-              <button onClick={() => navigateTo('terminal', sym)} className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-xs hover:bg-emerald-500/30 transition-colors">
-                Open in Terminal ?
+              <a
+                href={`/tools/journal?prefill=true&symbol=${encodeURIComponent(sym)}&side=${ge.layer1.direction === 'bullish' ? 'LONG' : ge.layer1.direction === 'bearish' ? 'SHORT' : 'LONG'}&entryPrice=${ge.layer2.execution.entry.price?.toFixed(2) || ''}&strategy=Golden+Egg&setup=${encodeURIComponent(`${sym} ${ge.layer1.direction} — Grade ${ge.layer1.grade}, ${ge.layer1.confidence}% confluence`)}&notes=${encodeURIComponent(`Golden Egg trade plan\nEntry: $${ge.layer2.execution.entry.price?.toFixed(2) || 'N/A'} (${ge.layer2.execution.entry.type})\nStop: $${ge.layer2.execution.stop.price.toFixed(2)} — ${ge.layer2.execution.stop.logic}\nTargets: ${ge.layer2.execution.targets.map((t: any) => '$' + t.price.toFixed(2)).join(' › ')}\nR:R ${ge.layer2.execution.rr.expectedR.toFixed(1)}`)}`}
+                className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-xs hover:bg-emerald-500/30 transition-colors no-underline"
+              >
+                Create Trade Plan
+              </a>
+              <button onClick={() => navigateTo('terminal', sym)} className="px-4 py-2 bg-slate-700/50 text-slate-400 rounded-lg text-xs hover:bg-slate-700/70 transition-colors">
+                Open in Terminal
               </button>
             </div>
           </Card>

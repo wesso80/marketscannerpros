@@ -187,8 +187,12 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
 
       {/* Action buttons */}
       <div className="flex items-center justify-end gap-2">
-        <Link href={`/tools/workspace?tab=Backtest&symbol=${encodeURIComponent(detail.symbol)}`}
+        <Link href={`/tools/journal?prefill=true&symbol=${encodeURIComponent(detail.symbol)}&side=${direction === 'bullish' ? 'LONG' : direction === 'bearish' ? 'SHORT' : 'LONG'}&entryPrice=${entry != null ? entry.toFixed(2) : ''}&strategy=Scanner&setup=${encodeURIComponent(`${detail.symbol} ${direction} — ${quality} quality, ${confidence}% confidence`)}&notes=${encodeURIComponent(`Scanner trade plan\nEntry: ${entry != null ? entry.toFixed(2) : 'N/A'} | Stop: ${stop != null ? stop.toFixed(2) : 'N/A'} | T1: ${target1 != null ? target1.toFixed(2) : 'N/A'} | T2: ${target2 != null ? target2.toFixed(2) : 'N/A'}\nR:R ${rr != null ? rr.toFixed(1) : 'N/A'} | RSI: ${detail.rsi != null ? detail.rsi.toFixed(1) : 'N/A'} | ADX: ${adx.toFixed(1)}`)}`}
           className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-emerald-400 no-underline hover:bg-emerald-500/20 transition-colors">
+          Create Trade Plan
+        </Link>
+        <Link href={`/tools/workspace?tab=Backtest&symbol=${encodeURIComponent(detail.symbol)}`}
+          className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-slate-400 no-underline hover:bg-slate-700/50 transition-colors">
           Backtest This Symbol
         </Link>
         <button type="button" onClick={onClose}
@@ -302,6 +306,10 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
 
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-2">
+              <Link href={`/tools/journal?prefill=true&symbol=${encodeURIComponent(detail.symbol)}&side=${direction === 'bullish' ? 'LONG' : direction === 'bearish' ? 'SHORT' : 'LONG'}&entryPrice=${entry != null ? entry.toFixed(2) : ''}&strategy=Scanner&setup=${encodeURIComponent(`${detail.symbol} ${direction} — ${quality} quality, ${confidence}% confidence`)}&notes=${encodeURIComponent(`Scanner trade plan\nEntry: ${entry != null ? entry.toFixed(2) : 'N/A'} | Stop: ${stop != null ? stop.toFixed(2) : 'N/A'} | T1: ${target1 != null ? target1.toFixed(2) : 'N/A'} | T2: ${target2 != null ? target2.toFixed(2) : 'N/A'}\nR:R ${rr != null ? rr.toFixed(1) : 'N/A'} | RSI: ${detail.rsi != null ? detail.rsi.toFixed(1) : 'N/A'} | ADX: ${adx.toFixed(1)}`)}`}
+                className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-emerald-400 no-underline hover:bg-emerald-500/20 transition-colors">
+                Create Trade Plan
+              </Link>
               <Link href={`/tools/alerts?symbol=${encodeURIComponent(detail.symbol)}&price=${detail.price || ''}&direction=${direction}`}
                 className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-slate-400 no-underline hover:bg-slate-700/50 transition-colors">
                 Set Alert
