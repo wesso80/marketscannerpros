@@ -241,6 +241,24 @@ a:hover {
   }
 }
 
+/* Explicit responsive trade table — immune to Tailwind layer ordering issues */
+.msp-mobile-cards {
+  display: block !important;
+}
+@media (min-width: 640px) {
+  .msp-mobile-cards {
+    display: none !important;
+  }
+}
+.msp-desktop-table {
+  display: none !important;
+}
+@media (min-width: 640px) {
+  .msp-desktop-table {
+    display: block !important;
+  }
+}
+
 /* Buttons */
 .btn {
   display: inline-block;

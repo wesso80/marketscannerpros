@@ -26,10 +26,7 @@ const AUTO_STRATEGY_TAGS = new Set([
 function isAutoTrade(row: TradeRowModel): boolean {
   if (!row.strategyTag) return false;
   const tag = row.strategyTag.toLowerCase();
-  if (AUTO_STRATEGY_TAGS.has(tag)) return true;
-  // Any tag that contains known auto-log identifiers
-  if (tag.includes('scanner') || tag.includes('alert') || tag.includes('auto') || tag.includes('confluence') || tag.includes('_scan')) return true;
-  return false;
+  return AUTO_STRATEGY_TAGS.has(tag);
 }
 
 type Layer2TradeInventoryProps = {
