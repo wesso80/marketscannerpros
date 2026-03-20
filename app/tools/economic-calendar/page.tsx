@@ -481,15 +481,15 @@ export default function EconomicCalendarPage() {
                 <h3 className="mb-2 text-sm font-semibold text-white/90">If High Impact Today</h3>
                 <ul className="space-y-1 text-xs text-white/65">
                   <li>• Expect vol expansion and opening whipsaw around print windows.</li>
-                  <li>• Focus on leaders and consider reduced position size.</li>
+                  <li>• Focus on leaders; note that volatility is historically elevated.</li>
                   <li>• Avoid breakout chasing until post-window confirmation.</li>
                 </ul>
               </article>
               <article className="rounded-xl border border-white/10 bg-white/5 p-4">
                 <h3 className="mb-2 text-sm font-semibold text-white/90">If Low Impact Today</h3>
                 <ul className="space-y-1 text-xs text-white/65">
-                  <li>• Trend-following permission is generally open.</li>
-                  <li>• Standard sizing is allowed with normal risk controls.</li>
+                  <li>• Trend-following conditions are generally aligned.</li>
+                  <li>• Normal conditions apply with standard risk awareness.</li>
                   <li>• Best windows are post-open trend continuation and power hour.</li>
                 </ul>
               </article>

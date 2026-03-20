@@ -236,7 +236,7 @@ export default function GainersLosersPage() {
       if (relVolume < t.relVolMin * 0.85) blockReasons.push("Relative volume below threshold");
       if (confluenceScore < t.confluenceMin) blockReasons.push("Confluence below threshold");
       if (environment.marketMode === "Risk-Off" && (cluster === "microcap" || cluster === "high_beta")) blockReasons.push("Cluster blocked in risk-off");
-      if (environment.deploymentMode === "NO" && setupMode === "breakout") blockReasons.push("Breakouts blocked by deployment gate");
+      if (environment.deploymentMode === "NO" && setupMode === "breakout") blockReasons.push("Breakouts blocked by analysis gate");
 
       let deployment: Deployment = "Conditional";
       if (!blockReasons.length && confluenceScore >= t.confluenceMin && relVolume >= t.relVolMin && volume >= t.liquidityMin) deployment = "Eligible";
@@ -371,7 +371,7 @@ export default function GainersLosersPage() {
         <ToolsPageHeader
           badge="MARKET MOVERS"
           title="Top Gainers & Losers"
-          subtitle="Institutional mover governance with deployment filtering."
+          subtitle="Real-time mover analysis with institutional-grade filtering."
           icon="📊"
           backHref="/dashboard"
         />
@@ -387,7 +387,7 @@ export default function GainersLosersPage() {
       <ToolsPageHeader
         badge="MARKET MOVERS"
         title="Top Gainers & Losers"
-        subtitle="Institutional mover governance with deployment filtering."
+        subtitle="Real-time mover analysis with institutional-grade filtering."
         icon="📊"
         backHref="/dashboard"
       />
@@ -421,9 +421,9 @@ export default function GainersLosersPage() {
 
           <div className="grid gap-3 grid-cols-1 sm:grid-cols-[1.15fr_1fr]" style={{ marginBottom: 16 }}>
             <div style={{ padding: "12px 14px", background: "var(--msp-panel)", border: "1px solid var(--msp-border)", borderRadius: 10 }}>
-              <div style={{ fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase", color: "#64748B", fontWeight: 700 }}>Market Deployment Status</div>
+              <div style={{ fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase", color: "#64748B", fontWeight: 700 }}>Market Analysis Status</div>
               <div style={{ marginTop: 6, fontSize: 18, fontWeight: 800, color: environment.deploymentMode === "YES" ? "#10B981" : environment.deploymentMode === "CONDITIONAL" ? "#FBBF24" : "#EF4444" }}>
-                {environment.deploymentMode === "YES" ? "🟢 PERMISSIONED" : environment.deploymentMode === "CONDITIONAL" ? "🟡 CONDITIONAL" : "🔴 NO DEPLOYMENT"}
+                {environment.deploymentMode === "YES" ? "🟢 ALIGNED" : environment.deploymentMode === "CONDITIONAL" ? "🟡 CONDITIONAL" : "🔴 NOT ALIGNED"}
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
                 <span style={{ padding: "2px 8px", border: "1px solid #334155", borderRadius: 999, fontSize: 11, color: "#CBD5E1" }}>Adaptive Confidence: {environment.adaptiveConfidence}%</span>
@@ -495,7 +495,7 @@ export default function GainersLosersPage() {
 
           {environment.deploymentMode === "NO" && (
             <div style={{ padding: "10px 14px", background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.2)", borderRadius: 8, marginBottom: 16, color: "#FBBF24", fontSize: 12 }}>
-              ⚠ No Permissioned Movers — environment not suitable for momentum deployment.
+              ⚠ No Aligned Movers — environment conditions are not suitable for momentum analysis.
             </div>
           )}
 
@@ -509,7 +509,7 @@ export default function GainersLosersPage() {
                   <thead>
                     <tr style={{ background: "rgba(30, 41, 59, 0.5)", borderBottom: "1px solid rgba(16, 185, 129, 0.2)" }}>
                       <th style={{ padding: "1rem", textAlign: "left", color: "#94A3B8", fontWeight: 600 }}>Symbol</th>
-                      <th style={{ padding: "1rem", textAlign: "center", color: "#94A3B8", fontWeight: 600 }}>Deployment</th>
+                      <th style={{ padding: "1rem", textAlign: "center", color: "#94A3B8", fontWeight: 600 }}>Status</th>
                       <th style={{ padding: "1rem", textAlign: "right", color: "#94A3B8", fontWeight: 600 }}>Change %</th>
                       <th style={{ padding: "1rem", textAlign: "right", color: "#94A3B8", fontWeight: 600 }}>RelVol</th>
                       <th style={{ padding: "1rem", textAlign: "left", color: "#94A3B8", fontWeight: 600 }}>Structure</th>
@@ -567,7 +567,7 @@ export default function GainersLosersPage() {
 
           {!loading && (
             <div style={{ marginTop: 12, color: "#64748B", fontSize: 12, textAlign: "right" }}>
-              Showing {currentData.length} of {rawData.length} results • Permissioned: {eligibleCount}
+              Showing {currentData.length} of {rawData.length} results • Eligible: {eligibleCount}
             </div>
           )}
         </div>

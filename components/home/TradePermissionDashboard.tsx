@@ -64,8 +64,8 @@ function reasonCodeCopy(code: string): string {
     EVENT_BLOCK: 'Event window blocks new trades.',
     DATA_STALE: 'Market data stale. Trading disabled.',
     STOP_TOO_TIGHT: 'Stop inside noise band (ATR floor).',
-    RISK_MODE_LOCKED: 'Risk governor locked. Only reduce-risk actions.',
-    CONFIDENCE_BELOW_THRESHOLD: 'Confidence below permission threshold.',
+    RISK_MODE_LOCKED: 'Risk analysis locked. Only reduce-risk actions.',
+    CONFIDENCE_BELOW_THRESHOLD: 'Confidence below analysis threshold.',
   };
   return map[code] || code;
 }
@@ -210,7 +210,7 @@ export default function TradePermissionDashboard() {
         <div className="grid grid-cols-12 gap-4">
           <section className="col-span-12" style={{ borderRadius: 14, border: '1px solid var(--msp-border-strong)', background: 'var(--msp-panel)', padding: '0.9rem', display: 'grid', gap: '0.7rem' }}>
             <div style={{ fontSize: '0.78rem', letterSpacing: '0.06em', color: 'var(--msp-text-faint)', textTransform: 'uppercase', fontWeight: 800 }}>
-              Risk Governor
+              Risk Analysis
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2">
               <div style={{ border: '1px solid var(--msp-border)', borderRadius: 10, padding: '0.45rem 0.55rem' }}><strong>Mode:</strong> {snapshot?.risk_mode || '...'}</div>

@@ -187,7 +187,7 @@ export default function CryptoTimeConfluencePage() {
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-emerald-400 mb-3">Position Sizing</h3>
+              <h3 className="text-lg font-semibold text-emerald-400 mb-3">Sizing Considerations (Educational)</h3>
               <ul className="space-y-2 text-sm text-slate-400">
                 <li>• Low (0-2): Standard size</li>
                 <li>• Medium (3-5): Standard size</li>

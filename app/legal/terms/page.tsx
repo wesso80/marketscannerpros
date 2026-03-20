@@ -46,7 +46,7 @@ export default function TermsPage() {
       <h2 id="paper">2A. Paper Trade &amp; Simulation System</h2>
       <ul>
         <li>The App is an <strong className="text-amber-500">educational paper trade simulation system</strong>. No feature of the App executes real trades, connects to live brokerage accounts, or places orders on any exchange.</li>
-        <li>The portfolio tracker, trade journal, risk governor, scenario plans, and all analysis outputs are for educational and simulated paper trading purposes only.</li>
+        <li>The portfolio tracker, trade journal, risk analysis engine, scenario plans, and all analysis outputs are for educational and simulated paper trading purposes only.</li>
         <li>Scores, alignment readings, confluence percentages, and scenario analyses reflect indicator agreement and technical pattern recognition &mdash; they do not represent profit probability, guaranteed outcomes, or trading instructions.</li>
         <li>Edge Profile insights are derived from your own journal data and reflect historical patterns only. Past performance does not guarantee future results.</li>
         <li><strong className="text-amber-500">MarketScanner Pros does not hold an Australian Financial Services Licence (AFSL)</strong> and is not authorised to provide personal or general financial product advice under the Corporations Act 2001 (Cth).</li>

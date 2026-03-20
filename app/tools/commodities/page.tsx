@@ -347,10 +347,10 @@ export default function CommoditiesPage() {
 
     const permissionReason =
       permission === 'YES'
-        ? `${impulseType === 'MIXED' ? 'Mixed but tradable' : impulseType} impulse confirmed with broad participation.`
+        ? `${impulseType === 'MIXED' ? 'Mixed but trending' : impulseType} impulse observed with broad participation.`
         : permission === 'CONDITIONAL'
-          ? `${impulseType} setup is incomplete; size down and avoid low-quality breakouts.`
-          : `Low participation and poor alignment with USD/rates backdrop; treat as noise.`;
+          ? `${impulseType} conditions are incomplete; indicators suggest caution.`
+          : `Low participation and poor alignment with USD/rates backdrop; conditions unclear.`;
 
     const macroRiskState: 'RISK_ON' | 'NEUTRAL' | 'RISK_OFF' =
       macroInputs?.regime?.riskLevel === 'low'
@@ -407,7 +407,7 @@ export default function CommoditiesPage() {
         `Commodities: ${data.summary.gainers} gainers, ${data.summary.losers} losers. ` +
         `Top Gainer: ${topGainerName} (${topGainerPct === 'N/A' ? 'N/A' : `+${topGainerPct}%`}). ` +
         `Top Loser: ${topLoserName} (${topLoserPct === 'N/A' ? 'N/A' : `${topLoserPct}%`}). ` +
-        `Impulse: ${derivedState?.impulseType || 'MIXED'} | Permission: ${derivedState?.permission || 'CONDITIONAL'}` : 
+        `Impulse: ${derivedState?.impulseType || 'MIXED'} | Status: ${derivedState?.permission || 'CONDITIONAL'}` : 
         'Loading commodity data...';
       
       setPageData({
@@ -538,9 +538,9 @@ export default function CommoditiesPage() {
             <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <article className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur">
                 <div className="mb-3 flex items-center justify-between gap-3">
-                  <h2 className="text-sm font-semibold text-white/90">Commodities Deployment Gate</h2>
+                  <h2 className="text-sm font-semibold text-white/90">Commodities Analysis Gate</h2>
                   <span className={`rounded-md border px-2 py-1 text-[11px] font-semibold ${permissionBadge[derivedState.permission]}`}>
-                    PERMISSION: {derivedState.permission}
+                    STATUS: {derivedState.permission}
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-2 text-xs">

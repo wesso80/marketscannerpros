@@ -423,7 +423,7 @@ export default function TerminalPage() {
                 const plan = brain?.execution_plan || fd.brain_decision?.plan;
                 return (
                 <Card>
-                  <h3 className="text-sm font-semibold text-white mb-3">Execution Plan</h3>
+                  <h3 className="text-sm font-semibold text-white mb-3">Reference Levels</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                     <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
                       <div className="text-[10px] text-slate-500 uppercase">Entry Type</div>
@@ -462,7 +462,7 @@ export default function TerminalPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {perm && (
                   <Card>
-                    <h3 className="text-sm font-semibold text-white mb-3">Trade Permission</h3>
+                    <h3 className="text-sm font-semibold text-white mb-3">Indicator Alignment</h3>
                     <div className="space-y-2">
                       <div className="flex justify-between text-xs">
                         <span className="text-slate-400">TPS</span>
@@ -495,7 +495,7 @@ export default function TerminalPage() {
 
                 {rg && (
                   <Card>
-                    <h3 className="text-sm font-semibold text-white mb-3">Risk Governor</h3>
+                    <h3 className="text-sm font-semibold text-white mb-3">Risk Analysis</h3>
                     <div className="space-y-2">
                       <div className="flex justify-between text-xs">
                         <span className="text-slate-400">IRS Score</span>

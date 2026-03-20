@@ -132,10 +132,10 @@ function PositionSizerCalculator() {
     }}>
       <div style={{ marginBottom: '24px' }}>
         <h2 style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          🎯 Position Sizing Calculator
+          🎯 Position Calculator (Educational)
         </h2>
         <p style={{ color: 'var(--msp-text-muted)', fontSize: '14px' }}>
-          Calculate optimal position sizes based on your risk tolerance and trading setup.
+          Estimate position metrics for study purposes.
         </p>
       </div>
 
@@ -418,7 +418,7 @@ function PositionSizerCalculator() {
         padding: '24px'
       }}>
         <h3 style={{ color: '#10b981', fontSize: '16px', fontWeight: '700', marginBottom: '16px' }}>
-          📊 Position Size Results
+          📊 Position Estimate Results
         </h3>
         
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))', gap: '16px', marginBottom: '20px' }}>
@@ -1065,7 +1065,7 @@ export function PortfolioContent() {
 
   const deployCapitalTrade = (quantity: number, entry: number) => {
     if (!deployDraft.symbol || quantity <= 0 || entry <= 0) {
-      alert('Complete trade input to deploy capital.');
+      alert('Complete trade input to model allocation.');
       return;
     }
     if (positions.length >= portfolioLimit) {
@@ -1869,7 +1869,7 @@ export function PortfolioContent() {
               <div className="text-xs text-slate-300">{portfolioRiskProfile}</div>
             </div>
             <div className="text-right">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500">Capital Deployment</div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500">Capital Exposure</div>
               <div className="text-2xl font-black text-slate-100">{deploymentPct.toFixed(1)}%</div>
               <div className={`text-sm ${availableCash >= 0 ? 'text-slate-300' : 'text-red-300'}`}>Available Cash {formatSignedMoney(availableCash)}</div>
               <div className="text-xs text-slate-400">Account Equity {formatMoney(accountEquity)}</div>

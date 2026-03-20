@@ -79,7 +79,7 @@ function PageLoadingSkeleton() {
 
 type Section = 'overview' | 'search' | 'market' | 'trending' | 'movers' | 'sectors' | 'defi' | 'dex' | 'newpools' | 'listings';
 type LogTab = 'alerts' | 'regime' | 'scanner' | 'notrade' | 'data';
-type PermissionVerdict = 'YES' | 'CONDITIONAL' | 'NO DEPLOYMENT';
+type PermissionVerdict = 'ALIGNED' | 'CONDITIONAL' | 'NOT ALIGNED';
 
 interface SidebarItem {
   id: Section;
@@ -112,13 +112,13 @@ function getDominanceValue(dominance: Array<{ symbol: string; dominance: number 
 }
 
 function permissionColor(verdict: PermissionVerdict): string {
-  if (verdict === 'YES') return 'text-emerald-300';
+  if (verdict === 'ALIGNED') return 'text-emerald-300';
   if (verdict === 'CONDITIONAL') return 'text-amber-300';
   return 'text-red-300';
 }
 
 function permissionBadge(verdict: PermissionVerdict): string {
-  if (verdict === 'YES') return '🟢';
+  if (verdict === 'ALIGNED') return '🟢';
   if (verdict === 'CONDITIONAL') return '🟡';
   return '🔴';
 }
@@ -278,14 +278,14 @@ function CryptoCommandCenterContent() {
     );
 
     let verdict: PermissionVerdict = 'CONDITIONAL';
-    if (hardBlockTriggered) verdict = 'NO DEPLOYMENT';
-    else if (adaptiveConfidence >= 65) verdict = 'YES';
-    else if (adaptiveConfidence < 40) verdict = 'NO DEPLOYMENT';
+    if (hardBlockTriggered) verdict = 'NOT ALIGNED';
+    else if (adaptiveConfidence >= 65) verdict = 'ALIGNED';
+    else if (adaptiveConfidence < 40) verdict = 'NOT ALIGNED';
     else verdict = 'CONDITIONAL';
 
-    if (verdict === 'YES' && (!longsAllowed || !shortsAllowed)) verdict = 'CONDITIONAL';
+    if (verdict === 'ALIGNED' && (!longsAllowed || !shortsAllowed)) verdict = 'CONDITIONAL';
 
-    const capitalMode = verdict === 'YES' ? 'Normal Size' : verdict === 'CONDITIONAL' ? 'Reduced Size' : 'Capital Preservation';
+    const capitalMode = verdict === 'ALIGNED' ? 'Normal Exposure' : verdict === 'CONDITIONAL' ? 'Reduced Exposure' : 'Minimal Exposure';
 
     const subClusters = [
       {
@@ -298,7 +298,7 @@ function CryptoCommandCenterContent() {
       },
       {
         name: 'Meme/High Beta',
-        permission: verdict === 'YES' && liquidity === 'Expanding' && volatility !== 'Dislocation' ? 'Allowed' : 'Restricted',
+        permission: verdict === 'ALIGNED' && liquidity === 'Expanding' && volatility !== 'Dislocation' ? 'Allowed' : 'Restricted',
       },
       {
         name: 'DeFi',
@@ -309,7 +309,7 @@ function CryptoCommandCenterContent() {
     const explanation =
       `${riskState} bias with ${leadership.toLowerCase()}. ` +
       `Liquidity is ${liquidity.toLowerCase()} and volatility is ${volatility.toLowerCase()}. ` +
-      `${verdict === 'YES' ? 'Deployment is permissioned with normal discipline.' : verdict === 'CONDITIONAL' ? 'Deploy selectively with size control.' : 'Stay defensive and prioritize preservation.'}`;
+      `${verdict === 'ALIGNED' ? 'Indicators are broadly aligned.' : verdict === 'CONDITIONAL' ? 'Partial alignment — review conditions before acting.' : 'Indicators suggest caution — prioritize observation.'}`;
 
     return {
       verdict,
@@ -345,7 +345,7 @@ function CryptoCommandCenterContent() {
       })
       .sort((a, b) => b.score - a.score);
 
-    const maxItems = morningDecision.verdict === 'YES' ? 5 : morningDecision.verdict === 'CONDITIONAL' ? 3 : 0;
+    const maxItems = morningDecision.verdict === 'ALIGNED' ? 5 : morningDecision.verdict === 'CONDITIONAL' ? 3 : 0;
     return scored.slice(0, maxItems);
   }, [marketData, morningDecision.verdict]);
 
@@ -463,11 +463,11 @@ function CryptoCommandCenterContent() {
         <section className="rounded-lg border border-slate-700 bg-slate-900 p-2">
           <div className="mb-2 grid gap-2 xl:grid-cols-[1.1fr_1fr]">
             <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
-              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Crypto Deployment Gate</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Crypto Analysis Gate</p>
               <div className="mt-1 flex items-center gap-2">
                 <span className="text-xl">{permissionBadge(morningDecision.verdict)}</span>
                 <h2 className={`text-base font-extrabold ${permissionColor(morningDecision.verdict)}`}>
-                  PERMISSION: {morningDecision.verdict}
+                  STATUS: {morningDecision.verdict}
                 </h2>
               </div>
               <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
@@ -594,10 +594,10 @@ function CryptoCommandCenterContent() {
               </div>
 
               <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
-                {morningDecision.verdict === 'NO DEPLOYMENT' ? (
+                {morningDecision.verdict === 'NOT ALIGNED' ? (
                   <>
-                    <p className="text-[10px] uppercase text-red-300">Capital Preservation Mode</p>
-                    <p className="mt-1 text-[11px] text-slate-400">Deployment blocked by gate. Focus on volatility alerts and no-trade discipline.</p>
+                    <p className="text-[10px] uppercase text-red-300">Caution Mode</p>
+                    <p className="mt-1 text-[11px] text-slate-400">Indicators not aligned. Focus on volatility alerts and observation.</p>
                     <div className="mt-1.5 flex gap-1.5">
                       <Link href="/tools/alerts" className="rounded border border-slate-700 px-2 py-1 text-[10px] text-slate-300">Volatility Alerts</Link>
                       <Link href="/tools/journal" className="rounded border border-slate-700 px-2 py-1 text-[10px] text-slate-300">Journal Review</Link>
@@ -606,7 +606,7 @@ function CryptoCommandCenterContent() {
                 ) : (
                   <>
                     <p className="text-[10px] uppercase text-slate-500">
-                      {morningDecision.verdict === 'YES' ? 'Ranked Opportunity List' : 'High-Quality Setups Only'}
+                      {morningDecision.verdict === 'ALIGNED' ? 'Top Movers by Change' : 'High-Quality Setups Only'}
                     </p>
                     <div className="mt-1 grid gap-1">
                       {rankedOpportunities.map((op, idx) => (

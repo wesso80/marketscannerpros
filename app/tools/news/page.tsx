@@ -755,7 +755,7 @@ export default function NewsSentimentPage() {
       eventRiskCountdown: macroEventCard?.daysUntil !== null && macroEventCard?.daysUntil !== undefined ? `${macroEventCard.daysUntil}d` : '--',
       briefAllowed:
         permission === 'NO'
-          ? ['Observation only until shock window clears.', 'Trade plans only, no fresh deployment.']
+          ? ['Observation only until shock window clears.', 'Study mode only, no fresh activity.']
           : permission === 'CONDITIONAL'
             ? ['Long leaders with tighter risk.', 'Fade overstretched moves only on confirmation.']
             : ['Trend continuation in confirmed leaders.', 'Normal sizing with discipline.'],
@@ -958,7 +958,7 @@ export default function NewsSentimentPage() {
                   <article className="rounded-2xl border border-white/10 bg-white/5 p-4">
                     <div className="text-xs text-white/60">Watchlist Triggers</div>
                     <div className="mt-2 space-y-1 text-xs text-white/70">
-                      <div>• If permission is NO: no fresh deployment.</div>
+                      <div>• If status is NO: observation mode only.</div>
                       <div>• If Event Shock: defined risk only.</div>
                       <div>• Trade leaders, not mid-pack laggards.</div>
                     </div>
@@ -1020,7 +1020,7 @@ export default function NewsSentimentPage() {
             <section className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
               <article className="rounded-xl border border-white/10 bg-white/5 p-4">
                 <div className="mb-3 flex items-center justify-between">
-                  <h2 className="text-sm font-semibold text-white/90">Catalyst Permission Gate</h2>
+                  <h2 className="text-sm font-semibold text-white/90">Catalyst Analysis Gate</h2>
                   <span className={`rounded-md border px-2 py-1 text-xs font-semibold ${
                     catalystState.permission === 'YES'
                       ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-300'
@@ -1028,7 +1028,7 @@ export default function NewsSentimentPage() {
                         ? 'border-rose-400/40 bg-rose-500/10 text-rose-300'
                         : 'border-amber-400/40 bg-amber-500/10 text-amber-300'
                   }`}>
-                    PERMISSION: {catalystState.permission}
+                    STATUS: {catalystState.permission}
                   </span>
                 </div>
                 <p className="mb-3 text-sm text-white/70">{catalystState.reason}</p>
@@ -1041,7 +1041,7 @@ export default function NewsSentimentPage() {
                 </div>
                 <ul className="space-y-1 text-xs text-white/70">
                   <li>• Avoid first 15 minutes when catalyst density is high.</li>
-                  <li>• Trade only A-tier setups when permission is conditional.</li>
+                  <li>• Focus on A-tier setups when status is conditional.</li>
                   <li>• No counter-trend scalps during expansion windows.</li>
                 </ul>
               </article>
@@ -1324,7 +1324,7 @@ export default function NewsSentimentPage() {
               <div className="rounded-xl border border-white/10 bg-white/5 p-10 text-center">
                 <div className="mb-2 text-4xl">📅</div>
                 <h3 className="mb-1 text-lg font-semibold text-white/90">Search for Earnings Catalysts</h3>
-                <p className="text-sm text-white/55">Enter symbols or run all-market search to generate catalyst permission output.</p>
+                <p className="text-sm text-white/55">Enter symbols or run all-market search to generate catalyst analysis output.</p>
               </div>
             )}
           </>

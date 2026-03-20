@@ -155,10 +155,10 @@ function computeMacroGate(data: MacroData | null): MacroGate | null {
 
   const notes =
     permission === 'no'
-      ? 'Permission: No — stand down; protect capital and wait for regime reset.'
+      ? 'Analysis: Unfavorable — indicators suggest caution; wait for regime clarity.'
       : permission === 'conditional'
-        ? 'Permission: Conditional — deploy reduced size and avoid high-beta chasing.'
-        : 'Permission: Yes — risk deployment allowed within playbook constraints.';
+        ? 'Analysis: Mixed — indicators show partial alignment; review before acting.'
+        : 'Analysis: Favorable — indicators broadly aligned within current regime.';
 
   return {
     ts: data.timestamp,
@@ -318,7 +318,7 @@ export default function MacroDashboardPage() {
     <div className="min-h-screen bg-[var(--msp-bg)] text-white">
       <ToolsPageHeader
         title="Macro Dashboard"
-        subtitle="Global regime layer for permission, sizing, and cross-asset deployment"
+        subtitle="Global regime layer for analysis, sizing, and cross-asset assessment"
         badge="Economic Data"
         icon="🏛️"
       />

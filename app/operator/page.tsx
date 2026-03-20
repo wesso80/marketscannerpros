@@ -1452,7 +1452,7 @@ export default function OperatorDashboardPage() {
       </div>
       <div className="mt-3 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs">
         <div className="flex items-center justify-between text-amber-200 uppercase tracking-wide">
-          <span>Risk Governor</span>
+          <span>Risk Analysis Engine</span>
           <button
             type="button"
             onClick={() => void refreshRiskGovernor(typeof loopDecisionPacketRiskScore === 'number' ? loopDecisionPacketRiskScore : undefined)}
@@ -1595,7 +1595,7 @@ export default function OperatorDashboardPage() {
   );
 
   const deploymentBlocked = riskGovernorDebug?.decisions.systemExecution.allowed === false;
-  const deploymentBlockReason = riskGovernorDebug?.decisions.systemExecution.reason || riskGovernorDebug?.decisions.autoAlert.reason || 'Risk governor blocked deployment.';
+  const deploymentBlockReason = riskGovernorDebug?.decisions.systemExecution.reason || riskGovernorDebug?.decisions.autoAlert.reason || 'Risk analysis engine blocked action.';
 
   const longExposureValue = useMemo(
     () => positions.filter((p) => p.side === 'LONG').reduce((sum, p) => sum + Math.abs(p.quantity * p.currentPrice), 0),

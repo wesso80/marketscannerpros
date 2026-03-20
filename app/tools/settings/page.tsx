@@ -141,11 +141,11 @@ export default function ToolsSettingsPage() {
                 <div className="mt-1 font-semibold text-slate-100">{regime.riskLevel.toUpperCase()}</div>
               </div>
               <div className="rounded-md border border-slate-700 bg-slate-900/40 px-3 py-2">
-                <div className="text-[10px] uppercase tracking-[0.08em] text-slate-500">Permission</div>
+                <div className="text-[10px] uppercase tracking-[0.08em] text-slate-500">Alignment</div>
                 <div className="mt-1 font-semibold text-slate-100">{regime.permission}</div>
               </div>
               <div className="rounded-md border border-slate-700 bg-slate-900/40 px-3 py-2">
-                <div className="text-[10px] uppercase tracking-[0.08em] text-slate-500">Position Sizing</div>
+                <div className="text-[10px] uppercase tracking-[0.08em] text-slate-500">Sizing Indicator</div>
                 <div className="mt-1 font-semibold text-slate-100">{regime.sizing}</div>
               </div>
             </div>
@@ -178,7 +178,7 @@ export default function ToolsSettingsPage() {
             <div className="mb-4">
               <h2 className="text-base font-bold text-slate-100">Risk Caps & Session Limits</h2>
               <p className="mt-1 text-xs text-slate-400">
-                Current risk parameters enforced by the risk governor.
+                Current risk parameters tracked by the analysis engine.
               </p>
             </div>
 

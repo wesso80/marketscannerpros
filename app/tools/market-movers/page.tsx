@@ -408,7 +408,7 @@ export default function MarketMoversPage() {
         if (relVolume < threshold.relVolMin * 0.85) blockReasons.push('Relative volume below threshold');
         if (confluenceScore < threshold.confluenceMin) blockReasons.push('Confluence below threshold');
         if (environment.marketMode === 'Risk-Off' && (cluster === 'microcap' || cluster === 'high_beta')) blockReasons.push('Cluster blocked in risk-off');
-        if (environment.deploymentMode === 'NO' && setupMode === 'breakout') blockReasons.push('Breakouts blocked by deployment gate');
+        if (environment.deploymentMode === 'NO' && setupMode === 'breakout') blockReasons.push('Breakouts blocked by analysis gate');
 
         let deployment: Eligibility = 'conditional';
         if (!blockReasons.length && confluenceScore >= threshold.confluenceMin && relVolume >= threshold.relVolMin && mover.volume >= threshold.liquidityMin) {
@@ -584,7 +584,7 @@ export default function MarketMoversPage() {
             ['Breadth', environment.breadthState],
             ['Liquidity', environment.liquidityState],
             ['Volatility', environment.volatilityState],
-            ['Deploy', environment.deploymentMode],
+            ['Status', environment.deploymentMode],
             ['Top Gainer', data?.summary?.topGainerTicker || 'N/A'],
             ['Top Loser', data?.summary?.topLoserTicker || 'N/A'],
             ['Data', loading ? 'Refreshing' : error ? 'Degraded' : 'Live'],
@@ -613,7 +613,7 @@ export default function MarketMoversPage() {
             <section className="rounded-lg border border-slate-700 bg-slate-900 p-2">
               <div className="grid gap-2 xl:grid-cols-[1.1fr_1fr]">
                 <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Market Deployment Status</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Market Analysis Status</p>
                   <h2 className={`mt-1 text-base font-extrabold ${
                     environment.deploymentMode === 'YES'
                       ? 'text-emerald-300'
@@ -621,11 +621,11 @@ export default function MarketMoversPage() {
                       ? 'text-amber-300'
                       : 'text-rose-300'
                   }`}>
-                    {environment.deploymentMode === 'YES' ? '🟢 PERMISSIONED' : environment.deploymentMode === 'CONDITIONAL' ? '🟡 CONDITIONAL' : '🔴 NO DEPLOYMENT'}
+                    {environment.deploymentMode === 'YES' ? '🟢 ALIGNED' : environment.deploymentMode === 'CONDITIONAL' ? '🟡 CONDITIONAL' : '🔴 NOT ALIGNED'}
                   </h2>
                   <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
                     <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Adaptive Confidence: {environment.adaptiveConfidence}%</span>
-                    <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Capital Mode: {environment.deploymentMode === 'YES' ? 'Normal Size' : environment.deploymentMode === 'CONDITIONAL' ? 'Reduced Size' : 'Preservation'}</span>
+                    <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Capital Mode: {environment.deploymentMode === 'YES' ? 'Normal Exposure' : environment.deploymentMode === 'CONDITIONAL' ? 'Reduced Exposure' : 'Minimal Exposure'}</span>
                     <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">High Beta: {environment.highBetaPolicy}</span>
                     <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Breakouts: {environment.breakoutPolicy}</span>
                     <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Mean Reversion: {environment.meanReversionPolicy}</span>
@@ -715,7 +715,7 @@ export default function MarketMoversPage() {
 
                 {environment.deploymentMode === 'NO' && (
                   <div className="mb-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-[11px] text-amber-200">
-                    ⚠ No Permissioned Movers — environment is not suitable for momentum deployment.
+                    ⚠ No Aligned Movers — environment conditions are not suitable for momentum analysis.
                   </div>
                 )}
 
@@ -913,7 +913,7 @@ export default function MarketMoversPage() {
 
                 <div className="grid gap-2">
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
-                    <p className="text-[10px] uppercase text-slate-400">Permissioned Movers</p>
+                    <p className="text-[10px] uppercase text-slate-400">Eligible Movers</p>
                     <p className="text-sm font-bold text-emerald-300">{permissionedCount}</p>
                     <p className="text-[11px] text-slate-300">of {evaluatedRows.length} in current queue</p>
                   </div>

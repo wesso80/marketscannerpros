@@ -949,7 +949,7 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
           <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
             <div className="grid gap-2 lg:grid-cols-4">
               <div className="rounded-lg border border-slate-700 bg-slate-800/70 p-3">
-                <div className="text-[11px] uppercase tracking-wide text-slate-400">Permission To Trade</div>
+                <div className="text-[11px] uppercase tracking-wide text-slate-400">Indicator Alignment</div>
                 <div className={`mt-1 text-lg font-semibold ${
                   permissionState === 'Yes' ? 'text-emerald-400' : permissionState === 'No' ? 'text-rose-400' : 'text-amber-300'
                 }`}>
@@ -980,7 +980,7 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
                 </div>
               </div>
               <div className="rounded-lg border border-slate-700 bg-slate-800/70 p-3">
-                <div className="text-[11px] uppercase tracking-wide text-slate-400">Recommended Playbook</div>
+                <div className="text-[11px] uppercase tracking-wide text-slate-400">Scenario Notes</div>
                 <div className="mt-1 text-xs text-slate-100 leading-5">{playbook}</div>
               </div>
             </div>

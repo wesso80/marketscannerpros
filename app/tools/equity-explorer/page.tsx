@@ -548,11 +548,11 @@ export default function EquityExplorerPage() {
               <div className="grid gap-2 lg:grid-cols-[1fr_420px]">
                 <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                   <div className="mb-2 flex items-center justify-between">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 1 • Equity Deployment Gate</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 1 • Equity Analysis Gate</p>
                     <span className="text-[10px] text-slate-500">US session anchor</span>
                   </div>
                   <div className="mb-2 flex flex-wrap gap-1">
-                    <span className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] text-slate-300">Permission: <span className={`${upeSignal?.eligibilityUser === 'eligible' ? 'text-emerald-300' : upeSignal?.eligibilityUser === 'conditional' ? 'text-amber-300' : 'text-rose-300'} font-semibold`}>{upeSignal ? (upeSignal.eligibilityUser === 'eligible' ? 'Eligible' : upeSignal.eligibilityUser === 'conditional' ? 'Conditional' : 'Blocked') : 'Pending'}</span></span>
+                    <span className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] text-slate-300">Status: <span className={`${upeSignal?.eligibilityUser === 'eligible' ? 'text-emerald-300' : upeSignal?.eligibilityUser === 'conditional' ? 'text-amber-300' : 'text-rose-300'} font-semibold`}>{upeSignal ? (upeSignal.eligibilityUser === 'eligible' ? 'Eligible' : upeSignal.eligibilityUser === 'conditional' ? 'Conditional' : 'Blocked') : 'Pending'}</span></span>
                     <span className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] text-slate-300">Capital Mode: <span className="font-semibold text-slate-100">{upeGlobal?.capitalMode || 'reduced'}</span></span>
                     <span className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] text-slate-300">Vol Regime: <span className="font-semibold text-slate-100">{upeGlobal?.volatilityState || 'unknown'}</span></span>
                   </div>
@@ -562,7 +562,7 @@ export default function EquityExplorerPage() {
                     <div className="rounded border border-slate-700 bg-slate-900/70 p-2"><p className="text-[10px] text-slate-500">High Beta</p><p className="text-xs font-semibold text-amber-300">Conditional</p></div>
                     <div className="rounded border border-slate-700 bg-slate-900/70 p-2"><p className="text-[10px] text-slate-500">Earnings Risk</p><p className="text-xs font-semibold text-slate-200">Review</p></div>
                   </div>
-                  <p className="mt-2 rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-[11px] text-slate-400">{upeSignal?.eligibilityUser === 'blocked' ? 'Blocked conditions detected — monitor only, do not force deployment.' : upeSignal?.eligibilityUser === 'conditional' ? 'Mixed conditions — require trend + volume confirmation before deployment.' : 'Conditions favorable for standard workflow execution.'}</p>
+                  <p className="mt-2 rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-[11px] text-slate-400">{upeSignal?.eligibilityUser === 'blocked' ? 'Blocked conditions detected — observation mode only.' : upeSignal?.eligibilityUser === 'conditional' ? 'Mixed conditions — require trend + volume confirmation.' : 'Conditions are broadly aligned.'}</p>
                 </div>
 
                 <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
@@ -753,7 +753,7 @@ export default function EquityExplorerPage() {
                     <p className="text-xs text-slate-200">Earnings: <span className="font-semibold">Upcoming schedule check</span> • News: <span className="font-semibold">{getAggregateSentiment(data.news)?.label || 'Neutral'}</span></p>
                   </div>
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 px-2 py-1 text-[11px] text-slate-400">
-                    {upeSignal?.eligibilityUser === 'conditional' ? 'Conditional — deploy only on trend + volume confirmation.' : upeSignal?.eligibilityUser === 'blocked' ? 'Blocked — no execution until governance state clears.' : 'Eligible — execution workflow is permissioned.'}
+                    {upeSignal?.eligibilityUser === 'conditional' ? 'Conditional — trend + volume confirmation suggested.' : upeSignal?.eligibilityUser === 'blocked' ? 'Blocked — conditions not aligned.' : 'Eligible — conditions broadly aligned.'}
                   </div>
                 </div>
               </div>

@@ -94,7 +94,7 @@ export default function DisclaimerPage() {
           <h2 id="paper" style={{ fontSize: 22, fontWeight: 650, marginBottom: 12, marginTop: 24, color: '#f9fafb' }}>Paper Trade &amp; Simulation System</h2>
           <p style={{ fontSize: 14, color: '#9ca3af', lineHeight: 1.6 }}>
             MarketScanner Pros is an educational paper trade simulation system. The portfolio tracker, 
-            trade journal, risk governor, scenario plans, and all analysis outputs are designed for 
+            trade journal, risk analysis engine, scenario plans, and all analysis outputs are designed for 
             educational purposes and simulated paper trading only. No feature of this platform executes 
             real trades, connects to live brokerage accounts, or places orders on any exchange.
           </p>

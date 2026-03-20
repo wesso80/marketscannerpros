@@ -197,10 +197,10 @@ export default function MSPCopilot({
           footer: isMarketsPage ? 'Ask me about any metric, flow data, or risk factor.' : 'Ask me to explain any specific metric or signal.',
         },
         plan: {
-          title: isMarketsPage ? '📋 Scenario & Execution Plan' : '📋 Trade Plan',
+          title: isMarketsPage ? '📋 Scenario & Analysis Framework' : '📋 Trade Plan',
           content: planContent,
           footer: isMarketsPage
-            ? (authorization === 'ALLOW' ? 'Ask me to build a full execution plan.' : 'Authorization restricted — ask me why.')
+            ? (authorization === 'ALLOW' ? 'Ask me to build a full analysis framework.' : 'Authorization restricted — ask me why.')
             : (direction ? 'Ask me to build a complete trade plan.' : 'Run a scan first to get trade planning.'),
         },
         act: {

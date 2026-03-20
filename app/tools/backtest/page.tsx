@@ -1499,7 +1499,7 @@ function BacktestContent() {
                 ))}
               </select>
               <p style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
-                Institutional flow: choose edge type first, then deploy the strategy variant.
+                Institutional flow: choose edge type first, then test the strategy variant.
               </p>
             </div>
 
@@ -2225,7 +2225,7 @@ function BacktestContent() {
                 <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(51,65,85,0.6)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
                     <div style={{ color: '#94a3b8', fontSize: '11px', textTransform: 'uppercase' }}>
-                      Recommendation Runner (TradingView-style inputs)
+                      Scenario Runner (TradingView-style inputs)
                     </div>
                     <button
                       type="button"
@@ -2338,7 +2338,7 @@ function BacktestContent() {
                         opacity: isLoading ? 0.65 : 1,
                       }}
                     >
-                      {isLoading ? 'Running…' : 'Run Recommendation'}
+                      {isLoading ? 'Running…' : 'Run Scenario'}
                     </button>
                   </div>
                   <datalist id="backtest-strategy-recommendation-options">

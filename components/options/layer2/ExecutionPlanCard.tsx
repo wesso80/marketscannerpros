@@ -46,17 +46,17 @@ export default function ExecutionPlanCard({ plan, permission, onCopyPlan, onSend
 
             {!compact && (
               <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2 text-xs text-slate-300">
-                Capital Allocation: {plan.positionSuggestion || 'N/A'}
+                Capital Exposure: {plan.positionSuggestion || 'N/A'}
               </div>
             )}
 
             <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2 text-xs text-slate-400">
-              Risk Governor: {plan.riskGovernor}
+              Risk Analysis: {plan.riskGovernor}
             </div>
           </div>
 
           <div className="mt-3 space-y-2">
-            <button onClick={onCopyPlan} className="w-full rounded-xl border border-slate-700 bg-slate-200/10 px-4 py-2 text-sm font-semibold text-slate-100">Deploy</button>
+            <button onClick={onCopyPlan} className="w-full rounded-xl border border-slate-700 bg-slate-200/10 px-4 py-2 text-sm font-semibold text-slate-100">Copy Plan</button>
             <div className="grid grid-cols-2 gap-2">
               <button onClick={onCopyPlan} className="rounded-xl border border-slate-800 bg-slate-200/5 px-3 py-2 text-xs font-semibold text-slate-100">Set Alert</button>
               <button onClick={onSendToJournal} className="rounded-xl border border-slate-800 bg-slate-200/5 px-3 py-2 text-xs font-semibold text-slate-100">Journal</button>
