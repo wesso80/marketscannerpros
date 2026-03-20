@@ -6,8 +6,8 @@
 
 **Prepared for:** External Legal Counsel (Australian Financial Services)
 **Prepared by:** MarketScanner Pros — Internal Compliance Review
-**Date:** 19 March 2026
-**Version:** 1.0
+**Date:** 20 March 2026
+**Version:** 1.1
 **Classification:** Confidential — Legal Privileged
 
 ---
@@ -61,7 +61,12 @@ MSP is structured to present as an educational and informational analytics syste
 
 ### Recent Remediation
 
-In March 2026, a comprehensive internal compliance remediation was conducted across 27+ source files involving 90+ individual text changes. This remediation was designed to remove language that could be characterised as directive, advisory, or predictive and replace it with observational, analytical, and educational framing. Details are set out in Section 5 below.
+In March 2026, two comprehensive internal compliance remediations were conducted:
+
+- **Round 1 (19 March 2026):** 27+ source files, 90+ individual text changes — removed directive, advisory, and predictive language from scanner outputs, AI prompts, Golden Egg reports, marketing copy, alerts, and dashboard interfaces.
+- **Round 2 (20 March 2026):** 23 additional source files, 131 insertions / 100 deletions — extended remediation to all remaining component-level UI text, including options terminals, crypto dashboards, decision bars, time scanners, risk governor displays, edge profile cards, operator workflows, and screener tables.
+
+Combined, the remediation covered 50+ source files with 220+ individual text changes. Details are set out in Section 5 below.
 
 ---
 
@@ -237,7 +242,9 @@ In March 2026, a comprehensive remediation effort was conducted to review and up
 
 ### 5.1 Terminology Changes
 
-The following table documents the major language changes implemented across 27+ source files:
+The following table documents the major language changes implemented across 50+ source files in two remediation rounds:
+
+**Round 1 — Scanner, AI, Golden Egg, Marketing, Alerts (19 March 2026)**
 
 | Previous Term | Replacement Term | Context |
 |---|---|---|
@@ -259,24 +266,83 @@ The following table documents the major language changes implemented across 27+ 
 | New trades disabled | New simulated entries disabled | Risk governor block messages |
 | Recommendation | Assessment | Edge Profile and AI outputs |
 
+**Round 2 — Component-Level UI Text Across All Tool Interfaces (20 March 2026)**
+
+| Previous Term | Replacement Term | Context |
+|---|---|---|
+| MSP One Brain Card / Brain Score | Confluence Card / Confluence Score | CapitalFlowCard main heading and scoring |
+| Risk Permission | Risk Metric | CapitalFlowCard and risk governor displays |
+| ALLOW / ALLOW_SMALL / BLOCK (display values) | ALIGNED / REDUCED / NOT ALIGNED | Permission status display mapping across all components |
+| Playbook | Framework | Scenario planning sections |
+| EXECUTION ALLOWED / BLOCKED | CONDITIONS MET / NOT MET | CapitalFlowCard risk governor summary |
+| Institutional Risk Governor | Risk Metrics Engine | CapitalFlowCard institutional section |
+| Flow Trade Permission Matrix | Flow Analysis Matrix | CapitalFlowCard matrix heading |
+| PERMITTED / BLOCKED (matrix labels) | ALIGNED / NOT ALIGNED | Flow analysis matrix status labels |
+| Risk governor lockout active | Risk threshold reached | Risk governor block message |
+| News Deployment Gate | News Condition Gate | PermissionGate crypto component |
+| PERMISSION: YES/NO/CONDITIONAL | CONDITION: ALIGNED/NOT ALIGNED/CONDITIONAL | Permission gate display labels |
+| Execution: reduce leverage and trade leaders only | Status: conditions suggest reduced exposure and large-cap focus | PermissionGate conditional message |
+| Institutional Decision Lens | Market Analysis Lens | DecisionLens heading |
+| TRADABLE | ALIGNED | DecisionLens verdict labels |
+| NOISE — SKIP | LOW CONFLUENCE | DecisionLens verdict labels |
+| Authorization: ALLOW/BLOCK | Regime State: ALIGNED/NOT ALIGNED | DecisionLens regime state display |
+| Operator Proposals | Workflow Suggestions | OperatorProposalRail heading |
+| Execute / Executed | Apply / Applied | OperatorProposalRail action buttons |
+| Assist blocked | Policy note | OperatorProposalRail status messages |
+| GO / WAIT / BLOCK (permission tone) | ALIGNED / CONDITIONAL / NOT ALIGNED | DecisionCommandBar, TimeScannerPage, TimeGateBar |
+| Conf (abbreviation) | Confluence | Options and time scanner metric pills |
+| Deploy / Deploy Strategy | View / View Strategy | DecisionCommandBar, DecisionBar action buttons |
+| MSP Deployment Status | Analysis Status | DecisionBar heading |
+| TIME DEPLOYMENT STATUS | TIME ANALYSIS STATUS | TimeGateBar heading |
+| Permission: ALLOW/WAIT/BLOCK | Condition: ALIGNED/CONDITIONAL/NOT ALIGNED | TimeGateBar, DecisionBar status labels |
+| Suggested Structures | Structure Examples | SuggestedPlaysCard heading |
+| Trade Permission | Market Condition | NewsDecisionCard labels |
+| Extract Signal | View Analysis | NewsDecisionCard action button |
+| Draft Trade Plan | Draft Notes | NewsDecisionCard action button |
+| Command Center State | Market Context | CommandCenterStateBar heading |
+| Operator Mode | Analysis Mode | CommandCenterStateBar mode label |
+| Actionable Now | Current Status | CommandCenterStateBar status label |
+| Crypto Deployment Gate | Crypto Condition Gate | CryptoMorningDecisionCard heading |
+| Adaptive Confidence | Confluence Score | CryptoMorningDecisionCard scoring |
+| Capital Mode: Normal Size / Reduced | Sizing Context: Standard / Reduced | CryptoMorningDecisionCard sizing display |
+| Longs: Allowed / Restricted | Long Conditions: Favorable / Unfavorable | CryptoMorningDecisionCard directional labels |
+| Shorts: Allowed / Restricted | Short Conditions: Favorable / Unfavorable | CryptoMorningDecisionCard directional labels |
+| Today's Permissioned Trades | Scenario Watchlist | TradeIdeasSection heading |
+| Trade idea output | Analytical scenarios | TradeIdeasSection description |
+| Today's decision | Today's analysis | DerivativesDecisionRow label |
+| COMPLIANT / TIGHT / BLOCKED (screener) | ALIGNED / CAUTION / NOT ALIGNED | ScreenerTable rule column display |
+| Rule (column header) | Status | ScreenerTable column label |
+| Rule Guard active | Risk Guard active | WatchlistWidget status message |
+| Sort: Edge Temperature | Sort: Alignment Score | WatchlistWidget sort label |
+| Your Trading Edge | Your Historical Patterns | EdgeInsightCards heading (×3 instances) |
+| Established edge / Developing edge | Established pattern / Developing pattern | EdgeInsightCards status labels |
+| Command / Decision / Execution (kickers) | Context / Analysis / Levels | DecisionCockpit section kicker labels |
+
 ### 5.2 Design Rationale
 
 These changes were implemented to reduce the risk that platform outputs could be characterised as "financial product advice" under s.766B of the Corporations Act. The intent is that all outputs are observational and analytical in nature — describing what technical conditions exist — rather than directive — instructing a user to take a specific action.
 
 ### 5.3 Scope of Remediation
 
-The remediation covered:
+The combined remediation (Rounds 1 and 2) covered:
 
-- Scanner output labels and status indicators
+- Scanner output labels and status indicators (ScreenerTable, WatchlistWidget)
 - Golden Egg scenario reports and scoring language
 - AI system prompts and output formatting rules
-- Edge Profile and Adaptive Personality display labels
-- Risk Governor display messages
+- Edge Profile and Adaptive Personality display labels (EdgeInsightCards, StateMachineTraderEyeCard)
+- Risk Governor display messages (CapitalFlowCard, risk metric labels)
 - Marketing copy on the homepage, pricing page, and feature descriptions
 - Alert and notification text
 - Component-level UI text across dashboard, portfolio, and journal interfaces
 - Fear & Greed gauge interpretation language (removed "buying opportunity" framing)
-- Crypto-specific components (e.g., CryptoMorningDecisionCard "PERMISSION" → "CONDITION")
+- Crypto-specific components (CryptoMorningDecisionCard, DerivativesDecisionRow, TradeIdeasSection)
+- Options terminal components (DecisionCommandBar, DecisionBar, SuggestedPlaysCard)
+- Time scanner components (TimeScannerPage, TimeGateBar)
+- News and decision components (NewsDecisionCard, PermissionGate, DecisionLens, DecisionCockpit)
+- Operator workflow components (OperatorProposalRail, CommandCenterStateBar)
+- Confluence and flow analysis displays (CapitalFlowCard — formerly "MSP One Brain Card")
+
+**Note:** The Operator HUD (comprising AdaptiveTraderPersonalityBar, OperatorCommandStrip, CapitalControlStrip, and GlobalSessionBar) remains hidden from the user interface pending further review. All other components are live with remediated language.
 
 ---
 
@@ -426,6 +492,8 @@ The Adaptive Personality feature adjusts certain UI presentation elements based 
 
 - Outputs are labelled as "Historical pattern" rather than "edge" or "prediction"
 - Status labels use "ALIGNED" / "PATTERN MISMATCH" rather than "TRADE_READY"
+- Section headings use "Your Historical Patterns" rather than "Your Trading Edge"
+- Pattern maturity labels use "Established pattern" / "Developing pattern" rather than "Established edge" / "Developing edge"
 - A disclaimer is displayed: *"Past performance does not guarantee future results. Edge insights are based on your journal history and are for educational analysis only."*
 - The Terms of Service (Section 2B) state: *"Personalisation features (Edge Profile, Adaptive Personality) use historical data to surface analytical patterns, NOT recommend trades."*
 
@@ -472,6 +540,9 @@ The Risk Governor is a rule-based evaluation system that assesses simulated trad
 - It does not control real broker execution
 - It does not hold funds or place orders
 - Display language uses "simulated entries" and "risk metric" — not "permission" or "trades disabled"
+- Status display uses "CONDITIONS MET" / "CONDITIONS NOT MET" rather than "EXECUTION ALLOWED" / "EXECUTION BLOCKED"
+- Block messages read "Risk threshold reached" rather than "Risk governor lockout active"
+- The component formerly titled "Institutional Risk Governor" is now titled "Risk Metrics Engine"
 - When a simulated proposal fails a risk check, the message reads: *"New simulated entries disabled"* with a specific reason code (e.g., *"Portfolio heat X% ≥ Y% — reduce simulated exposure"*)
 
 ### 9.4 Legal Significance
