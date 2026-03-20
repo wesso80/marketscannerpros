@@ -40,7 +40,7 @@ export default function RegimeBanner() {
         {data.riskLevel.toUpperCase()}
       </span>
       <span className="text-slate-600">|</span>
-      <span className="text-slate-500">Permission:</span>
+      <span className="text-slate-500">Alignment:</span>
       <span className={`font-semibold ${permissionColors[data.permission] || 'text-slate-400'}`}>
         {data.permission}
       </span>

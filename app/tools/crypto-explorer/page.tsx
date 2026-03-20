@@ -437,7 +437,7 @@ function CryptoDetailPageContent() {
         upeEligibility: upeSignal?.eligibilityUser,
         upeCrcs: upeSignal?.crcsFinal,
       },
-      summary: `Crypto Explorer: ${symbol} ($${(m.price_usd ?? 0).toFixed(2)}) — Rank #${m.rank || '?'}, 24h ${(coinData.price_changes?.['24h'] ?? 0).toFixed(1)}%, 7d ${(coinData.price_changes?.['7d'] ?? 0).toFixed(1)}%, Bias: ${decision.structureBias}, Permission: ${decision.tradePermission}.`,
+      summary: `Crypto Explorer: ${symbol} ($${(m.price_usd ?? 0).toFixed(2)}) — Rank #${m.rank || '?'}, 24h ${(coinData.price_changes?.['24h'] ?? 0).toFixed(1)}%, 7d ${(coinData.price_changes?.['7d'] ?? 0).toFixed(1)}%, Bias: ${decision.structureBias}, Status: ${decision.tradePermission}.`,
     });
   }, [coinData, decision, upeSignal, setPageData]);
 
@@ -630,7 +630,7 @@ function CryptoDetailPageContent() {
                   </div>
 
                   <div className="mt-2 rounded-md border border-slate-700 bg-slate-900/70 p-2">
-                    <p className="text-[10px] uppercase text-slate-500">Trade Permission</p>
+                    <p className="text-[10px] uppercase text-slate-500">Indicator Status</p>
                     <div className="mt-1 flex items-center justify-between">
                       <p className="text-sm font-bold text-slate-100">{permissionLabel}</p>
                       <p className="text-xs text-slate-400">Alignment {decision.alignmentScore}%</p>

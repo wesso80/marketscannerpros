@@ -156,7 +156,7 @@ export default function RiskManagerMode({ onExit }: { onExit?: () => void } = {}
                   </div>
                 </div>
                 <div className="text-xs text-slate-400">
-                  Permission: {regime.permission}
+                  Alignment: {regime.permission}
                 </div>
                 {regime.signals.length > 0 && (
                   <div className="space-y-1">

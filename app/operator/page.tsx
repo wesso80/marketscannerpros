@@ -741,7 +741,7 @@ export default function OperatorDashboardPage() {
     if (!proposal?.id) return;
 
     if (proposal.action.type === 'create_alert' && riskGovernorDebug && !riskGovernorDebug.decisions.autoAlert.allowed) {
-      setProposalFeedback(riskGovernorDebug.decisions.autoAlert.reason || 'Risk governor blocked this auto-alert draft.');
+      setProposalFeedback(riskGovernorDebug.decisions.autoAlert.reason || 'Risk analysis engine flagged this auto-alert draft.');
       return;
     }
 

@@ -229,10 +229,10 @@ export default function EconomicCalendarPage() {
       dangerWindow,
       reason:
         permission === 'NO'
-          ? 'High-impact print is inside immediate danger window; avoid new deployment.'
+          ? 'High-impact print is inside immediate danger window; conditions suggest caution.'
           : permission === 'CONDITIONAL'
-            ? 'Catalyst density is elevated; deploy selectively with tighter risk.'
-            : 'No immediate high-impact shock window; normal deployment permitted.',
+            ? 'Catalyst density is elevated; conditions warrant tighter risk parameters.'
+            : 'No immediate high-impact shock window; normal conditions apply.',
     };
   }, [enrichedEvents]);
 
@@ -284,7 +284,7 @@ export default function EconomicCalendarPage() {
             <section className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
               <article className="rounded-2xl border border-white/10 bg-white/5 p-4 shadow-sm lg:col-span-2">
                 <div className="mb-2 flex items-center justify-between">
-                  <h2 className="text-sm font-semibold text-white/90">Macro Permission Gate</h2>
+                  <h2 className="text-sm font-semibold text-white/90">Macro Analysis Gate</h2>
                   <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
                     gate.permission === 'YES'
                       ? 'bg-emerald-500/20 text-emerald-300'
@@ -292,7 +292,7 @@ export default function EconomicCalendarPage() {
                         ? 'bg-rose-500/20 text-rose-300'
                         : 'bg-amber-500/20 text-amber-300'
                   }`}>
-                    PERMISSION: {gate.permission}
+                    STATUS: {gate.permission}
                   </span>
                 </div>
                 <p className="mb-3 text-sm text-white/70">{gate.reason}</p>

@@ -153,7 +153,7 @@ export default function GoldenEggPage() {
 
   const geAiSummary = useMemo(() => {
     if (!ge) return `Golden Egg: Loading ${sym}...`;
-    return `${sym} — Permission: ${ge.permission}, Direction: ${ge.direction}, Confidence: ${ge.confidence}%, Regime: ${ge.regime}, Doctrine: ${ge.doctrine || 'N/A'}`;
+    return `${sym} — Status: ${ge.permission}, Direction: ${ge.direction}, Confidence: ${ge.confidence}%, Regime: ${ge.regime}, Doctrine: ${ge.doctrine || 'N/A'}`;
   }, [sym, ge]);
 
   useRegisterPageData('scanner', geAiData, [sym], geAiSummary);

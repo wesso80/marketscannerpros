@@ -2245,7 +2245,7 @@ export default function OptionsConfluenceScanner() {
           <h1 className="my-3 text-[clamp(1.5rem,4vw,2rem)] font-bold text-slate-100">
             <span className="inline-flex items-center gap-2"><img src="/assets/scanners/options-confluence.png" alt="Options Confluence Scanner icon" className="inline h-8 w-8 rounded-lg object-contain" /> Options Confluence Scanner</span>
           </h1>
-          <p className="text-sm text-slate-400">Strike & Expiration Recommendations Based on Time Confluence</p>
+          <p className="text-sm text-slate-400">Strike & Expiration Analysis Based on Time Confluence</p>
         </header>
         <main className="max-w-none px-4 pb-8">
           <UpgradeGate requiredTier="pro_trader" feature="Options Confluence Scanner" />
@@ -2258,7 +2258,7 @@ export default function OptionsConfluenceScanner() {
     <TerminalShell
       title="Options Confluence Scanner"
       image="/assets/scanners/options-confluence.png"
-      subtitle="Get intelligent strike & expiration recommendations based on Time Confluence analysis. Uses 50% levels, decompression timing, and Greeks-aware risk assessment."
+      subtitle="Get intelligent strike & expiration analysis based on Time Confluence data. Uses 50% levels, decompression timing, and Greeks-aware risk assessment."
     >
 
       <div
@@ -2314,7 +2314,7 @@ export default function OptionsConfluenceScanner() {
               { label: 'Confluence', value: `${result.confluenceStack} TF`, tone: result.confluenceStack >= 3 ? 'bull' : 'warn' },
               { label: 'Flow', value: (result.openInterestAnalysis?.sentiment || 'neutral').toUpperCase(), tone: result.openInterestAnalysis?.sentiment === 'bullish' ? 'bull' : result.openInterestAnalysis?.sentiment === 'bearish' ? 'bear' : 'neutral' },
               { label: 'Expected Move', value: result.expectedMove ? `${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'N/A', tone: (result.expectedMove?.selectedExpiryPercent ?? 0) >= 4 ? 'bear' : (result.expectedMove?.selectedExpiryPercent ?? 0) >= 2 ? 'warn' : 'bull' },
-              { label: 'Trade Permission', value: tradePermission, tone: tradePermission === 'ALLOWED' ? 'bull' : tradePermission === 'BLOCKED' ? 'bear' : 'warn' },
+              { label: 'Indicator Status', value: tradePermission, tone: tradePermission === 'ALLOWED' ? 'bull' : tradePermission === 'BLOCKED' ? 'bear' : 'warn' },
               { label: 'Mode', value: adaptiveModeMeta.label, tone: 'accent' },
               { label: 'Updated', value: commandUpdatedAgo !== null ? `${commandUpdatedAgo}s` : 'n/a', tone: 'neutral' },
             ]}
@@ -2769,7 +2769,7 @@ export default function OptionsConfluenceScanner() {
                   <div className="text-[0.62rem] font-bold uppercase text-slate-500">Key Level / R:R</div>
                   <div className="text-[0.8rem] font-extrabold text-emerald-200">{result.tradeLevels ? `${result.tradeLevels.target1.price.toFixed(2)} • ${result.tradeLevels.riskRewardRatio.toFixed(1)}:1` : 'Await trigger'}</div>
                 </div>
-                <div className="text-[0.7rem] text-slate-400">Permission: <span className={`font-extrabold ${tradePermission === 'ALLOWED' ? 'text-emerald-500' : tradePermission === 'BLOCKED' ? 'text-red-500' : 'text-amber-500'}`}>{tradePermission}</span></div>
+                <div className="text-[0.7rem] text-slate-400">Status: <span className={`font-extrabold ${tradePermission === 'ALLOWED' ? 'text-emerald-500' : tradePermission === 'BLOCKED' ? 'text-red-500' : 'text-amber-500'}`}>{tradePermission}</span></div>
 
                 {copilotPresence && (
                   <div className="mt-1 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.45rem_0.5rem]">
@@ -3802,7 +3802,7 @@ export default function OptionsConfluenceScanner() {
                 <div className={`text-[0.95rem] font-black ${commandStatusClass}`}>{commandStatus}</div>
                 <div className="text-[0.78rem] text-slate-300">Institutional Flow: {institutionalFlowState}</div>
                 <div className={`text-[0.78rem] font-extrabold ${tradePermission === 'ALLOWED' ? 'text-emerald-500' : tradePermission === 'BLOCKED' ? 'text-red-500' : 'text-amber-500'}`}>
-                  Trade Permission: {tradePermission}
+                  Indicator Status: {tradePermission}
                 </div>
               </div>
 

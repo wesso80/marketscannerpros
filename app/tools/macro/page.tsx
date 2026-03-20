@@ -723,7 +723,7 @@ export default function MacroDashboardPage() {
               <details className="rounded-xl border border-emerald-500/30 bg-emerald-500/5" open={false}>
                 <summary className="cursor-pointer list-none px-3 py-3 md:px-4 text-sm font-semibold text-emerald-300">Admin: Macro Gate Debug</summary>
                 <div className="border-t border-emerald-500/20 p-3 md:p-4 text-xs text-emerald-100/90">
-                  <div>Score: {gate.score} • Permission: {gate.permission} • Sizing: {gate.sizing}</div>
+                  <div>Score: {gate.score} • Alignment: {gate.permission} • Sizing: {gate.sizing}</div>
                   <div className="mt-2">Blockers: {gate.blockers.length ? gate.blockers.join(' | ') : 'None'}</div>
                   <div className="mt-2">Drivers: {gate.drivers.map((d) => `${d.label}:${d.impact}(${d.weight})`).join(' | ')}</div>
                 </div>
