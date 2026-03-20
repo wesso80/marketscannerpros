@@ -93,9 +93,9 @@ const FALLBACK_INPUT: TimeConfluenceV2Inputs = {
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
 
 function permissionTone(permission: 'ALLOW' | 'WAIT' | 'BLOCK') {
-  if (permission === 'ALLOW') return { border: 'border-emerald-500/30', dot: 'bg-emerald-400', label: 'GO' };
-  if (permission === 'WAIT') return { border: 'border-amber-500/30', dot: 'bg-amber-400', label: 'WAIT' };
-  return { border: 'border-rose-500/30', dot: 'bg-rose-400', label: 'BLOCK' };
+  if (permission === 'ALLOW') return { border: 'border-emerald-500/30', dot: 'bg-emerald-400', label: 'ALIGNED' };
+  if (permission === 'WAIT') return { border: 'border-amber-500/30', dot: 'bg-amber-400', label: 'CONDITIONAL' };
+  return { border: 'border-rose-500/30', dot: 'bg-rose-400', label: 'NOT ALIGNED' };
 }
 
 function riskLabel(permission: 'ALLOW' | 'WAIT' | 'BLOCK') {
@@ -627,7 +627,7 @@ export default function TimeScannerPage() {
 
             <div className="flex items-center justify-between gap-2 lg:justify-end">
               <div className="grid grid-cols-3 gap-2">
-                <MetricPill label="Conf" value={`${Math.round(out.timeConfluenceScore)}%`} />
+                <MetricPill label="Confluence" value={`${Math.round(out.timeConfluenceScore)}%`} />
                 <MetricPill label="Risk" value={riskLabel(out.permission)} />
                 <MetricPill label="R:R" value={rrDisplay} />
               </div>

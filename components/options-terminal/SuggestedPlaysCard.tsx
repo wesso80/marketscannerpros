@@ -93,7 +93,7 @@ export default function SuggestedPlaysCard({ ivMetrics, mode }: Props) {
     >
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--msp-text-faint)' }}>
-          Suggested Structures
+          Structure Examples
         </h3>
         <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.06)', color: 'var(--msp-text-faint)' }}>
           Educational

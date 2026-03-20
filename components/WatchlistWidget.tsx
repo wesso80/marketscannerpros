@@ -566,7 +566,7 @@ export default function WatchlistWidget() {
                 <div className="flex flex-col gap-2 md:items-end">
                   <div className="text-xs text-slate-400">{activeSymbols} symbols • readiness {trackingReadinessPct}%</div>
                   {riskLocked && (
-                    <div className="text-[11px] font-semibold text-rose-300">Rule Guard active: marked setups remain staged; new tracking actions are locked.</div>
+                    <div className="text-[11px] font-semibold text-rose-300">Risk Guard active: marked setups remain staged; new tracking actions are locked.</div>
                   )}
                   <div className="flex w-full flex-wrap gap-2 md:justify-end">
                     <button
@@ -639,7 +639,7 @@ export default function WatchlistWidget() {
                 </select>
                 <select value={sortMode} onChange={(e) => setSortMode(e.target.value as SortMode)} className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-xs text-slate-100">
                   <option value="confidence">Sort: Confidence</option>
-                  <option value="edge">Sort: Edge Temperature</option>
+                  <option value="edge">Sort: Alignment Score</option>
                   <option value="volatility">Sort: Volatility</option>
                   <option value="momentum">Sort: Momentum</option>
                   <option value="recent">Sort: Recently Updated</option>

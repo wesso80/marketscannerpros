@@ -35,8 +35,8 @@ export default function DecisionBar({ payload }: DecisionBarProps) {
     <section className={`rounded-2xl border p-6 ${stateClass}`}>
       <div className="grid grid-cols-12 gap-6">
         <div className="col-span-12 lg:col-span-8 space-y-2">
-          <div className="text-xs font-bold uppercase tracking-wide text-[var(--msp-muted)]">MSP Deployment Status</div>
-          <div className="text-sm text-[var(--msp-text)]">Permission: <span className="font-bold uppercase">{state}</span></div>
+          <div className="text-xs font-bold uppercase tracking-wide text-[var(--msp-muted)]">Analysis Status</div>
+          <div className="text-sm text-[var(--msp-text)]">Condition: <span className="font-bold uppercase">{state}</span></div>
           <div className="text-sm text-[var(--msp-text)]">Confidence: <span className="font-bold">{confidence}%</span> • Quality: <span className="font-bold uppercase">{quality}</span></div>
           <div className="text-sm text-[var(--msp-text)]">Context/Setup/Execution: <span className="font-bold">{context}/{setup}/{execution}</span></div>
           <div className="space-y-1 pt-1 text-sm text-[var(--msp-muted)]">
@@ -46,7 +46,7 @@ export default function DecisionBar({ payload }: DecisionBarProps) {
           </div>
         </div>
         <div className="col-span-12 lg:col-span-4 flex flex-col gap-3 lg:items-end">
-          <Button tone="primary" disabled={state === 'block'}>Deploy Strategy</Button>
+          <Button tone="primary" disabled={state === 'block'}>View Strategy</Button>
           <Button>Set Alert</Button>
           <Button>Add to Watchlist</Button>
         </div>

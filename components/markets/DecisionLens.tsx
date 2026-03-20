@@ -8,12 +8,12 @@ interface DecisionLensProps {
 }
 
 /**
- * The Institutional Decision Lens.
+ * The Market Analysis Lens.
  * Within 5 seconds of selecting any ticker, this tells you:
- *   "This is tradable" or "This is noise."
+ *   "Conditions align" or "Low confluence."
  *
  * 3-column layout:
- *   Left   — Alignment, Confidence, Authorization, R-Budget
+ *   Left   — Alignment, Confidence, Regime State, R-Budget
  *   Center — Bull/Bear scenarios, R-multiple, Verdict stamp
  *   Right  — Vol State, Event Risk, Liquidity, Expected Move
  */
@@ -24,7 +24,7 @@ export default function DecisionLens({ ctx }: DecisionLensProps) {
     return (
       <div className="rounded-lg border border-dashed border-[var(--msp-border)] bg-[var(--msp-panel)] p-6 text-center">
         <p className="text-sm text-[var(--msp-text-faint)]">Select a ticker above to activate the Decision Lens</p>
-        <p className="mt-1 text-[10px] text-[var(--msp-text-faint)]">Regime + Flow + Options + Structure → Tradable or Noise in 5 seconds</p>
+        <p className="mt-1 text-[10px] text-[var(--msp-text-faint)]">Regime + Flow + Options + Structure → Aligned or Low Confluence in 5 seconds</p>
       </div>
     );
   }
@@ -40,10 +40,10 @@ export default function DecisionLens({ ctx }: DecisionLensProps) {
   }
 
   const verdictStyles: Record<DecisionVerdict, { bg: string; border: string; text: string; label: string }> = {
-    tradable: { bg: 'bg-emerald-500/10', border: 'border-emerald-500/40', text: 'text-emerald-400', label: 'TRADABLE' },
+    tradable: { bg: 'bg-emerald-500/10', border: 'border-emerald-500/40', text: 'text-emerald-400', label: 'ALIGNED' },
     conditional: { bg: 'bg-amber-500/10', border: 'border-amber-500/40', text: 'text-amber-400', label: 'CONDITIONAL' },
-    noise: { bg: 'bg-slate-500/10', border: 'border-slate-500/40', text: 'text-slate-400', label: 'NOISE — SKIP' },
-    blocked: { bg: 'bg-red-500/10', border: 'border-red-500/40', text: 'text-red-400', label: 'BLOCKED' },
+    noise: { bg: 'bg-slate-500/10', border: 'border-slate-500/40', text: 'text-slate-400', label: 'LOW CONFLUENCE' },
+    blocked: { bg: 'bg-red-500/10', border: 'border-red-500/40', text: 'text-red-400', label: 'NOT ALIGNED' },
   };
   const vs = verdictStyles[lens.verdict];
 
@@ -52,7 +52,7 @@ export default function DecisionLens({ ctx }: DecisionLensProps) {
       {/* Verdict stamp */}
       <div className="mb-3 flex items-center justify-between">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--msp-text-faint)]">Institutional Decision Lens</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--msp-text-faint)]">Market Analysis Lens</p>
           <h3 className="text-sm font-bold text-[var(--msp-text)]">{ctx.symbol}</h3>
         </div>
         <div className={`rounded-md border ${vs.border} px-3 py-1 text-xs font-black tracking-wider ${vs.text}`}>
@@ -69,8 +69,8 @@ export default function DecisionLens({ ctx }: DecisionLensProps) {
           <LensMetric label="Confidence" value={`${lens.confidence}%`} color={lens.confidence >= 60 ? 'text-emerald-400' : lens.confidence >= 40 ? 'text-amber-400' : 'text-red-400'} />
           <LensBar value={lens.confidence} />
           <LensMetric
-            label="Authorization"
-            value={lens.authorization}
+            label="Regime State"
+            value={lens.authorization === 'ALLOW' ? 'ALIGNED' : lens.authorization === 'ALLOW_REDUCED' ? 'REDUCED' : 'NOT ALIGNED'}
             color={lens.authorization === 'ALLOW' ? 'text-emerald-400' : lens.authorization === 'ALLOW_REDUCED' ? 'text-amber-400' : 'text-red-400'}
           />
           <LensMetric label="R Budget" value={lens.ruBudget} color="text-slate-300" />

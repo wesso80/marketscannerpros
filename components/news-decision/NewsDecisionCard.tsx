@@ -39,7 +39,7 @@ export default function NewsDecisionCard({ item, gate, isOpen, isAdmin, onToggle
             Open
           </a>
           <button onClick={() => onToggle(item.id)} className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs hover:bg-white/10">
-            {isOpen ? 'Hide' : 'Extract Signal'}
+            {isOpen ? 'Hide' : 'View Analysis'}
           </button>
         </div>
       </div>
@@ -60,12 +60,12 @@ export default function NewsDecisionCard({ item, gate, isOpen, isAdmin, onToggle
               </div>
             </div>
             <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-white/70">
-              <div className="mb-2 text-white/60">Trade Permission</div>
+              <div className="mb-2 text-white/60">Market Condition</div>
               <div className="mb-2">{gate.permission} • {gate.executionMode}</div>
               <div className="grid grid-cols-2 gap-2">
                 <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/40 text-center" title="Coming soon">Create Alert</span>
-                <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/40 text-center" title="Coming soon">Draft Trade Plan</span>
-                <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/40 text-center" title="Coming soon">Extract Signal</span>
+                <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/40 text-center" title="Coming soon">Draft Notes</span>
+                <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/40 text-center" title="Coming soon">View Analysis</span>
                 {isAdmin ? <span className="rounded-xl border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-xs text-amber-200/40 text-center" title="Coming soon">Log to Journal</span> : null}
               </div>
             </div>

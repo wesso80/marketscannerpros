@@ -47,7 +47,7 @@ type OperatorProposalRailProps = {
 };
 
 export default function OperatorProposalRail({
-  title = 'Operator Proposals',
+  title = 'Workflow Suggestions',
   source,
   symbolFallback,
   timeframe,
@@ -183,7 +183,7 @@ export default function OperatorProposalRail({
       if (downgraded) {
         setFeedback(`Assist downgraded to Draft: ${executePayload?.downgradeReason || 'Policy gate failed'}`);
       } else {
-        setFeedback(`${mode === 'assist' ? 'Executed' : 'Draft created'} for ${selectedSymbol || 'focus symbol'} (${proposal.action.type.replaceAll('_', ' ')})`);
+        setFeedback(`${mode === 'assist' ? 'Applied' : 'Draft created'} for ${selectedSymbol || 'focus symbol'} (${proposal.action.type.replaceAll('_', ' ')})`);
       }
       await refresh();
     } finally {
@@ -208,12 +208,12 @@ export default function OperatorProposalRail({
           actionKey: 'wait',
           workflowId: `${workflowPrefix}_${selectedSymbol || 'symbol'}_${Date.now()}`,
           decisionPacketId: proposal.packetId,
-          reason: `Proposal dismissed: ${proposal.id}`,
+          reason: `Suggestion dismissed: ${proposal.id}`,
         }),
       });
 
       setDismissedIds((previous) => ({ ...previous, [proposal.id]: true }));
-      setFeedback(`Dismissed proposal for ${selectedSymbol || 'focus symbol'}`);
+      setFeedback(`Dismissed suggestion for ${selectedSymbol || 'focus symbol'}`);
     } finally {
       setBusyId(null);
     }
@@ -247,9 +247,9 @@ export default function OperatorProposalRail({
 
       <div className="mt-2 space-y-2">
         {loading && proposals.length === 0 ? (
-          <div className="text-xs text-indigo-100/80">Loading proposal queue…</div>
+          <div className="text-xs text-indigo-100/80">Loading suggestion queue…</div>
         ) : visibleProposals.length === 0 ? (
-          <div className="text-xs text-indigo-100/80">No active proposals. New decision packets will repopulate this queue.</div>
+          <div className="text-xs text-indigo-100/80">No active suggestions. New decision packets will repopulate this queue.</div>
         ) : (
           visibleProposals.map((proposal) => {
             const isBusy = busyId === proposal.id;
@@ -287,10 +287,10 @@ export default function OperatorProposalRail({
                     type="button"
                     disabled={isBusy || !proposal.canAssistExecute}
                     onClick={() => void runProposal(proposal, 'assist')}
-                    title={proposal.canAssistExecute ? 'Execute with policy checks' : proposal.blockReason || 'Assist-Execute blocked'}
+                    title={proposal.canAssistExecute ? 'Apply with policy checks' : proposal.blockReason || 'Assist blocked'}
                     className="rounded border border-cyan-500/40 bg-cyan-500/20 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-cyan-200 disabled:opacity-50"
                   >
-                    Execute
+                    Apply
                   </button>
                   <button
                     type="button"
@@ -302,7 +302,7 @@ export default function OperatorProposalRail({
                   </button>
                 </div>
                 {proposal.canAssistExecute === false && proposal.blockReason ? (
-                  <div className="mt-1 text-[11px] text-amber-200">Assist blocked: {proposal.blockReason}</div>
+                  <div className="mt-1 text-[11px] text-amber-200">Policy note: {proposal.blockReason}</div>
                 ) : null}
               </div>
             );

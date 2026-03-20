@@ -7,8 +7,8 @@ interface TradeIdeasSectionProps {
 export default function TradeIdeasSection({ ideas }: TradeIdeasSectionProps) {
   return (
     <div className="mb-4 rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
-      <div className="text-sm font-semibold text-white">Today’s Permissioned Trades</div>
-      <div className="text-xs text-white/50">Trade idea output aligned to shared state — max 3 cards.</div>
+      <div className="text-sm font-semibold text-white">Scenario Watchlist</div>
+      <div className="text-xs text-white/50">Analytical scenarios aligned to current regime — max 3 cards.</div>
 
       <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3">
         {ideas.map((idea) => (
@@ -46,7 +46,7 @@ export default function TradeIdeasSection({ ideas }: TradeIdeasSectionProps) {
                 Watch
               </a>
               <a
-                href={`/tools/journal?note=${encodeURIComponent(`Derivatives idea: ${idea.symbol} ${idea.direction}`)}`}
+                href={`/tools/journal?note=${encodeURIComponent(`Scenario note: ${idea.symbol} ${idea.direction}`)}`}
                 className="h-9 rounded-lg border border-white/10 bg-black/20 text-xs font-semibold text-white/80 hover:bg-white/10 flex items-center justify-center"
               >
                 Journal

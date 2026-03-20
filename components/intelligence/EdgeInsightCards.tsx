@@ -31,7 +31,7 @@ const INSIGHT_COLORS: Record<string, { border: string; bg: string; text: string 
 function InsightCard({ insight }: { insight: EdgeInsight }) {
   const colors = INSIGHT_COLORS[insight.type] ?? INSIGHT_COLORS.pattern;
   const icon = INSIGHT_ICONS[insight.type] ?? '';
-  const edgeLabel = insight.confidence >= 0.7 ? 'Established edge' : insight.confidence >= 0.4 ? 'Developing edge' : 'Early signal';
+  const edgeLabel = insight.confidence >= 0.7 ? 'Established pattern' : insight.confidence >= 0.4 ? 'Developing pattern' : 'Early signal';
   const edgeLabelColor = insight.confidence >= 0.7 ? '#10B981' : insight.confidence >= 0.4 ? '#F59E0B' : '#6B7280';
 
   return (
@@ -150,7 +150,7 @@ export default function EdgeInsightCards() {
     return (
       <div className="rounded-xl border border-slate-800/60 bg-[var(--msp-panel)] p-4">
         <h3 className="text-sm font-semibold text-white mb-2">
-          Your Trading Edge
+          Your Historical Patterns
         </h3>
         <PremiumGate />
       </div>
@@ -161,7 +161,7 @@ export default function EdgeInsightCards() {
     return (
       <div className="rounded-xl border border-slate-800/60 bg-[var(--msp-panel)] p-4">
         <h3 className="text-sm font-semibold text-white mb-2">
-          Your Trading Edge
+          Your Historical Patterns
         </h3>
         <EmptyState />
       </div>
@@ -176,7 +176,7 @@ export default function EdgeInsightCards() {
     <div className="rounded-xl border border-slate-800/60 bg-[var(--msp-panel)] p-4 space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-white">
-          Your Trading Edge
+          Your Historical Patterns
         </h3>
         <span className="text-[10px] text-slate-500">
           {profile.totalOutcomes} trades analyzed

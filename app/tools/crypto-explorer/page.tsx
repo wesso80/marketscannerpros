@@ -477,7 +477,7 @@ function CryptoDetailPageContent() {
           <p className="text-xs text-slate-400">Decision-grade asset view: status, permission, context, then details.</p>
         </header>
 
-        {/* LEGAL_HOLD: CryptoMorningDecisionCard hidden pending legal review ("Deployment Gate" / "Longs Allowed" framing may appear advisory) */}
+        <CryptoMorningDecisionCard />
 
         <section className="rounded-lg border border-slate-700 bg-slate-900 p-2" ref={searchRef}>
           <div className="relative">

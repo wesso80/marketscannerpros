@@ -147,8 +147,8 @@ export default function StateMachineTraderEyeCard({
       </div>
 
       <div style={{ color: '#A7F3D0', fontSize: '0.7rem' }}>
-        <strong>PERMISSION:</strong>{' '}
-        {stateMachine?.gates?.risk_governor?.permission || 'N/A'} ({Math.round((stateMachine?.gates?.risk_governor?.size_multiplier ?? 0) * 100)}x)
+        <strong>CONDITION:</strong>{' '}
+        {stateMachine?.gates?.risk_governor?.permission === 'ALLOW' ? 'ALIGNED' : stateMachine?.gates?.risk_governor?.permission === 'ALLOW_SMALL' ? 'REDUCED' : stateMachine?.gates?.risk_governor?.permission === 'BLOCK' ? 'NOT ALIGNED' : 'N/A'} ({Math.round((stateMachine?.gates?.risk_governor?.size_multiplier ?? 0) * 100)}x)
       </div>
 
       {stateMachine?.gates?.setup_quality?.invalidate_level !== null && stateMachine?.gates?.setup_quality?.invalidate_level !== undefined && (
@@ -159,7 +159,7 @@ export default function StateMachineTraderEyeCard({
 
       {!!stateMachine?.block_reasons?.length && (
         <div style={{ color: '#FCA5A5', fontSize: '0.7rem' }}>
-          <strong>BLOCKED:</strong> {stateMachine.block_reasons[0]}
+          <strong>NOT ALIGNED:</strong> {stateMachine.block_reasons[0]}
         </div>
       )}
     </div>

@@ -154,24 +154,24 @@ export default function CryptoMorningDecisionCard() {
 
     if (verdict === 'ALIGNED' && (!longsAllowed || !shortsAllowed)) verdict = 'CONDITIONAL';
 
-    const capitalMode = verdict === 'ALIGNED' ? 'Normal Size' : verdict === 'CONDITIONAL' ? 'Reduced Size' : 'Capital Preservation';
+    const capitalMode = verdict === 'ALIGNED' ? 'Standard' : verdict === 'CONDITIONAL' ? 'Reduced' : 'Preservation';
 
     const subClusters = [
       {
         name: 'Large Caps',
-        condition: riskState === 'Risk-Off' ? 'Restricted' : leadership === 'Defensive Rotation' ? 'Conditional' : 'Allowed',
+        condition: riskState === 'Risk-Off' ? 'Unfavorable' : leadership === 'Defensive Rotation' ? 'Mixed' : 'Favorable',
       },
       {
         name: 'Mid/Alts',
-        condition: !longsAllowed || breadthScore < 45 ? 'Restricted' : breadthScore >= 60 ? 'Allowed' : 'Conditional',
+        condition: !longsAllowed || breadthScore < 45 ? 'Unfavorable' : breadthScore >= 60 ? 'Favorable' : 'Mixed',
       },
       {
         name: 'Meme/High Beta',
-        condition: verdict === 'ALIGNED' && liquidity === 'Expanding' && volatility !== 'Dislocation' ? 'Allowed' : 'Restricted',
+        condition: verdict === 'ALIGNED' && liquidity === 'Expanding' && volatility !== 'Dislocation' ? 'Favorable' : 'Unfavorable',
       },
       {
         name: 'DeFi',
-        condition: liquidity === 'Expanding' && breadthScore >= 50 ? 'Allowed' : liquidity === 'Contracting' ? 'Restricted' : 'Conditional',
+        condition: liquidity === 'Expanding' && breadthScore >= 50 ? 'Favorable' : liquidity === 'Contracting' ? 'Unfavorable' : 'Mixed',
       },
     ];
 
@@ -197,7 +197,7 @@ export default function CryptoMorningDecisionCard() {
       <div className="mb-2 grid gap-2 xl:grid-cols-[1.1fr_1fr]">
         <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Crypto Deployment Gate</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Crypto Condition Gate</p>
             <span className="text-[10px] text-slate-500">{lastUpdate ? lastUpdate.toLocaleTimeString() : 'Loading'}</span>
           </div>
           <div className="mt-1 flex items-center gap-2">
@@ -205,16 +205,16 @@ export default function CryptoMorningDecisionCard() {
             <h2 className={`text-base font-extrabold ${conditionColor(decision.verdict)}`}>CONDITIONS: {decision.verdict}</h2>
           </div>
           <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
-            <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Adaptive Confidence: {decision.adaptiveConfidence}%</span>
-            <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Capital Mode: {decision.capitalMode}</span>
-            <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Longs: {decision.longsAllowed ? 'Allowed' : 'Restricted'}</span>
-            <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Shorts: {decision.shortsAllowed ? 'Allowed' : 'Restricted'}</span>
+            <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Confluence Score: {decision.adaptiveConfidence}%</span>
+            <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Sizing Context: {decision.capitalMode}</span>
+            <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Long Conditions: {decision.longsAllowed ? 'Favorable' : 'Unfavorable'}</span>
+            <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Short Conditions: {decision.shortsAllowed ? 'Favorable' : 'Unfavorable'}</span>
           </div>
           <div className="mt-2 grid grid-cols-2 gap-1.5 md:grid-cols-4">
             {decision.subClusters.map((cluster) => (
               <div key={cluster.name} className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-[10px]">
                 <p className="text-slate-500">{cluster.name}</p>
-                <p className={`font-semibold ${cluster.condition === 'Allowed' ? 'text-emerald-300' : cluster.condition === 'Conditional' ? 'text-amber-300' : 'text-red-300'}`}>{cluster.condition}</p>
+                <p className={`font-semibold ${cluster.condition === 'Favorable' ? 'text-emerald-300' : cluster.condition === 'Mixed' ? 'text-amber-300' : 'text-red-300'}`}>{cluster.condition}</p>
               </div>
             ))}
           </div>

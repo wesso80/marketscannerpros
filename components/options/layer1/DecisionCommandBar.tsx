@@ -104,18 +104,18 @@ export default function DecisionCommandBar({
         <div className="flex justify-start lg:justify-center">
           <div className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/45 px-3 py-2">
             <div className={`h-2.5 w-2.5 rounded-full ${t.dot}`} />
-            <div className="text-sm font-semibold tracking-wide text-slate-100">{decision.permission}</div>
+            <div className="text-sm font-semibold tracking-wide text-slate-100">{decision.permission === 'GO' ? 'ALIGNED' : decision.permission === 'WAIT' ? 'CONDITIONAL' : 'NOT ALIGNED'}</div>
           </div>
         </div>
 
         <div className="flex items-center justify-between gap-2 lg:justify-end">
           <div className="grid grid-cols-3 gap-2">
-            <MetricPill label="Conf" value={`${decision.confidence}%`} />
+            <MetricPill label="Confluence" value={`${decision.confidence}%`} />
             <MetricPill label="Risk" value={riskLabel(decision.permission)} />
             <MetricPill label="R:R" value={rrEstimate(decision.quality)} />
           </div>
           <div className="hidden gap-1.5 xl:flex">
-            <button disabled={!actions.deployEnabled} onClick={actions.onDeploy} className="rounded-lg border border-slate-700 bg-emerald-500/15 px-2 py-1.5 text-xs font-semibold text-emerald-200 disabled:opacity-40">Deploy</button>
+            <button disabled={!actions.deployEnabled} onClick={actions.onDeploy} className="rounded-lg border border-slate-700 bg-emerald-500/15 px-2 py-1.5 text-xs font-semibold text-emerald-200 disabled:opacity-40">View</button>
             <button disabled={!actions.alertEnabled} onClick={actions.onAlert} className="rounded-lg border border-slate-700 bg-slate-950/40 px-2 py-1.5 text-xs text-slate-100 disabled:opacity-40">Alert</button>
             <button disabled={!actions.watchlistEnabled} onClick={actions.onWatchlist} className="rounded-lg border border-slate-700 bg-slate-950/40 px-2 py-1.5 text-xs text-slate-100 disabled:opacity-40">Watch</button>
             <button disabled={!actions.journalEnabled} onClick={actions.onJournal} className="rounded-lg border border-slate-700 bg-slate-950/40 px-2 py-1.5 text-xs text-slate-100 disabled:opacity-40">Journal</button>

@@ -91,7 +91,7 @@ export default function CommandCenterStateBar({ mode, actionableNow, nextStep, h
       boxShadow: 'var(--msp-shadow)'
     }}>
       <div style={{ color: '#94a3b8', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>
-        Command Center State
+        Market Context
       </div>
 
       <div style={{ display: 'grid', gap: '10px', gridTemplateColumns: 'repeat(auto-fit,minmax(min(170px,100%),1fr))' }}>
@@ -111,7 +111,7 @@ export default function CommandCenterStateBar({ mode, actionableNow, nextStep, h
         </div>
 
         <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
-          <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Operator Mode</div>
+          <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Analysis Mode</div>
           <div style={{ color: toneForAction(state.action), fontSize: '14px', fontWeight: 700 }}>{mode}</div>
         </div>
       </div>
@@ -147,7 +147,7 @@ export default function CommandCenterStateBar({ mode, actionableNow, nextStep, h
           </span>
         </div>
         <div style={{ color: '#34d399', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-          Actionable Now
+          Current Status
         </div>
         <div style={{ color: '#d1fae5', fontSize: '13px' }}>{actionableNow}</div>
         <div style={{ color: '#94a3b8', fontSize: '12px' }}>

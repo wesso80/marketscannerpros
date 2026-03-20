@@ -174,13 +174,13 @@ const COLUMNS: Column[] = [
     ),
   },
   {
-    key: 'permission', label: 'Rule', width: '85px', align: 'center',
+    key: 'permission', label: 'Status', width: '85px', align: 'center',
     render: (r) => (
       <span style={{
         fontSize: 10, fontWeight: 700, color: permColor(r.permission),
         background: `${permColor(r.permission)}15`, borderRadius: 4, padding: '1px 5px',
       }}>
-        {r.permission ?? '—'}
+        {r.permission === 'COMPLIANT' ? 'ALIGNED' : r.permission === 'TIGHT' ? 'CAUTION' : r.permission === 'BLOCKED' ? 'NOT ALIGNED' : '\u2014'}
       </span>
     ),
   },

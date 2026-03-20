@@ -20,8 +20,8 @@ export default function TimeGateBar(props: TimeGateBarProps) {
     <div className={`rounded-2xl border p-4 ${tone}`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="text-xs text-slate-300">TIME DEPLOYMENT STATUS</div>
-          <div className="mt-1 text-lg font-semibold text-slate-100">Permission: {props.permission}</div>
+          <div className="text-xs text-slate-300">TIME ANALYSIS STATUS</div>
+          <div className="mt-1 text-lg font-semibold text-slate-100">Condition: {props.permission === 'ALLOW' ? 'ALIGNED' : props.permission === 'WAIT' ? 'CONDITIONAL' : 'NOT ALIGNED'}</div>
         </div>
 
         <div className="flex items-center gap-3">
