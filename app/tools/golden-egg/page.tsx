@@ -557,13 +557,13 @@ export default function GoldenEggPage() {
                         borderColor: tc.decompressionTarget.direction === 'up' ? 'rgba(16,185,129,0.25)' : tc.decompressionTarget.direction === 'down' ? 'rgba(239,68,68,0.25)' : 'rgba(148,163,184,0.15)',
                       }}>
                         <div className="text-[10px] text-slate-500 uppercase mb-1">Likely Decompression Level</div>
-                        <div className="flex items-baseline gap-3">
+                        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                           <span className="text-lg font-bold font-mono" style={{
                             color: tc.decompressionTarget.direction === 'up' ? '#10B981' : tc.decompressionTarget.direction === 'down' ? '#EF4444' : '#E2E8F0',
                           }}>
                             {tc.decompressionTarget.direction === 'up' ? '? ' : tc.decompressionTarget.direction === 'down' ? '? ' : ''}{fmtPrice(tc.decompressionTarget.price)}
                           </span>
-                          <span className="text-[10px] text-slate-400">
+                          <span className="text-[10px] text-slate-400 min-w-0 break-words">
                             weighted from {tc.decompressionTarget.contributingTFs.length} TFs ({tc.decompressionTarget.contributingTFs.join(', ')})
                           </span>
                         </div>
@@ -602,7 +602,8 @@ export default function GoldenEggPage() {
                     {tc.closeSchedule && tc.closeSchedule.length > 0 && (
                       <div>
                         <div className="text-[10px] text-slate-500 uppercase mb-1.5">Close Cluster Timeline — Next 24h</div>
-                        <div className="space-y-2">
+                        <div className="overflow-x-auto">
+                        <div className="space-y-2" style={{ minWidth: 380 }}>
                           {(['monthly', 'weekly', 'daily', 'intraday'] as const).map(cat => {
                             const rows = groups[cat];
                             if (!rows || rows.length === 0) return null;
@@ -634,6 +635,7 @@ export default function GoldenEggPage() {
                               </div>
                             );
                           })}
+                        </div>
                         </div>
                       </div>
                     )}

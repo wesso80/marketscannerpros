@@ -373,7 +373,7 @@ export function AlertsContent() {
             <span className="h-7 rounded-lg border border-slate-700 bg-slate-950/30 px-2 text-xs leading-7 text-slate-300">{zone3Open ? 'Collapse' : 'Expand'}</span>
           </summary>
           <div className="border-t border-slate-800 px-4 py-3">
-            <div className="max-h-[420px] overflow-auto rounded-lg border border-slate-800">
+            <div className="max-h-[420px] overflow-x-auto overflow-y-auto rounded-lg border border-slate-800">
               <table className="min-w-[540px] w-full text-sm">
                 <thead className="sticky top-0 z-10 bg-[#0b1220]/95 text-slate-300 backdrop-blur">
                   <tr>

@@ -22,6 +22,7 @@ export function isTerminalModePath(pathname: string): boolean {
     '/tools/research',
     '/tools/workspace',
     '/tools/signal-accuracy',
+    '/tools/golden-egg',
   ];
 
   return terminalPrefixes.some((prefix) => pathname.startsWith(prefix));
@@ -47,6 +48,7 @@ export function getToolsContainerVariant(pathname: string): ToolsContainerVarian
     '/tools/research',
     '/tools/workspace',
     '/tools/signal-accuracy',
+    '/tools/golden-egg',
   ];
   if (fullWidthPaths.some((p) => pathname.startsWith(p))) {
     return 'full';

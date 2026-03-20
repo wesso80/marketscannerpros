@@ -259,6 +259,13 @@ a:hover {
   }
 }
 
+/* Mobile: ensure flex rows with many fixed-width children don't overflow cards */
+@media (max-width: 639px) {
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 /* Buttons */
 .btn {
   display: inline-block;
