@@ -1778,17 +1778,7 @@ export function PortfolioContent() {
       />
 
       <div className="w-full max-w-none px-4 pt-3">
-        <CommandCenterStateBar
-          mode="MANAGE"
-          actionableNow={positions.length > 0
-            ? `Live book: ${positions.length} open positions • Top concentration ${topAllocation?.symbol || 'N/A'}`
-            : 'No active exposure. Build watchlist-to-portfolio plan before adding risk.'}
-          nextStep={positions.length > 0
-            ? totalReturn < 0
-              ? 'Reduce concentration and review underperformers'
-              : 'Protect winners and rebalance risk budgets'
-            : 'Add first position with predefined risk and invalidation'}
-        />
+        {/* LEGAL_HOLD: CommandCenterStateBar hidden pending legal review (may appear advisory) */}
 
         <CommandStrip
           symbol={positions[0]?.symbol || 'PORT'}

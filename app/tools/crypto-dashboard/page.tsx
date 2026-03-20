@@ -385,20 +385,9 @@ export default function CryptoDashboard() {
         )}
       </div>
 
-      {/* Zone 0: keep state anchor */}
-      <div className="mb-4">
-        <CryptoMorningDecisionCard />
-      </div>
+      {/* LEGAL_HOLD: CryptoMorningDecisionCard hidden pending legal review ("Deployment Gate" / "Longs Allowed" framing may appear advisory) */}
 
-      <DerivativesDecisionRow
-        permission={permission}
-        biasLabel={biasLabel}
-        rotation={rotation}
-        volRegime={volRegime}
-        liquidityState={liquidityState}
-        playbook={playbook}
-        drivers={decisionDrivers}
-      />
+      {/* LEGAL_HOLD: DerivativesDecisionRow hidden pending legal review ("Permission", "Playbook", "3 drivers behind today's decision" framing may appear advisory) */}
 
       <DerivativesMarketStrip items={marketStripItems} />
 
@@ -408,7 +397,7 @@ export default function CryptoDashboard() {
         liquidityState={liquidityState}
       />
 
-      <TradeIdeasSection ideas={tradeIdeas} />
+      {/* LEGAL_HOLD: TradeIdeasSection hidden pending legal review ("Today's Permissioned Trades" with direction/trigger/invalidation may appear advisory) */}
 
       <DerivativesContextSection />
     </div>

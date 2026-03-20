@@ -69,7 +69,9 @@ export default function ToolsLayoutClient({
           <RegimeBar />
         </ErrorBoundary>
 
-        {/* ── Operator HUD: collapsed by default to reduce visual overload ── */}
+        {/* ── LEGAL_HOLD: Operator HUD hidden pending legal review (may appear advisory) ── */}
+        {/* To restore: remove the {false && ...} wrapper below */}
+        {false && (
         <details className="group mx-auto w-full max-w-none">
           <summary
             className="sticky top-[48px] z-40 flex cursor-pointer items-center gap-2 border-b border-slate-700/40 bg-slate-900/90 px-3 py-1.5 text-[11px] font-semibold text-slate-400 backdrop-blur select-none list-none [&::-webkit-details-marker]:hidden"
@@ -103,6 +105,7 @@ export default function ToolsLayoutClient({
             </ErrorBoundary>
           </div>
         </details>
+        )}
 
         <ErrorBoundary>
           {/* General Advice Warning — required on all tool pages (ASIC compliance) */}

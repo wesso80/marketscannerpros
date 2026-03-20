@@ -1239,17 +1239,7 @@ function BacktestContent() {
         <div style={{ marginBottom: '12px', border: '1px solid rgba(148,163,184,0.3)', borderRadius: '10px', background: 'rgba(15,23,42,0.55)', padding: '10px 12px', color: '#cbd5e1', fontSize: '12px' }}>
           Educational backtest and scenario testing only. Outputs are learning statistics, not investment advice or automated execution instructions.
         </div>
-        <CommandCenterStateBar
-          mode="EVALUATE"
-          actionableNow={results
-            ? `Top setup: ${symbol} • ${strategy} • ${results.winRate.toFixed(1)}% win rate`
-            : `No validated setup yet for ${symbol}. Run backtest to evaluate strategy statistics.`}
-          nextStep={results
-            ? results.profitFactor >= 1.25 && results.maxDrawdown <= 20
-              ? 'Review validated statistics and confluence factors'
-              : 'Adjust rules/timeframe and revalidate'
-            : 'Set strategy + timeframe and run validation'}
-        />
+        {/* LEGAL_HOLD: CommandCenterStateBar hidden pending legal review (may appear advisory) */}
 
         {/* Options Scanner Context Banner */}
         {showOptionsBanner && (
