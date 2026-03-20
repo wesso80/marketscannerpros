@@ -206,10 +206,10 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
         <div className="md:col-span-6">
           <div className="text-[1.05rem] font-black tracking-tight text-white md:text-[1.25rem]">{detail.symbol} — {timeframeLabel}</div>
           <div className={`mt-1 text-[0.82rem] font-extrabold uppercase ${direction === 'bullish' ? 'text-emerald-400' : direction === 'bearish' ? 'text-red-400' : 'text-amber-400'}`}>
-            Edge: {direction.toUpperCase()}
+            Bias: {direction.toUpperCase()}
           </div>
           <div className="mt-1 text-[0.76rem] font-bold uppercase tracking-[0.06em] text-slate-400">
-            Mode: {direction === 'bullish' ? 'Trend Continuation' : direction === 'bearish' ? 'Trend Reversal Watch' : 'Wait for Structure'}
+            Pattern: {direction === 'bullish' ? 'Trend Continuation Structure' : direction === 'bearish' ? 'Trend Reversal Structure' : 'Structure Developing'}
           </div>
           <div className="mt-2 text-[0.74rem] text-slate-400">
             Regime: <span className="font-bold text-white">{regime}</span> · Timeframe Alignment: <span className="font-bold text-white">{tfAlignment} / 4</span>
@@ -236,7 +236,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
               </div>
             )}
           </div>
-          <div className="mt-2 text-[0.62rem] text-slate-600 leading-tight">Scores reflect indicator agreement, not profit probability. For educational analysis only.</div>
+          <div className="mt-2 text-[0.62rem] text-slate-600 leading-tight">Scores reflect indicator agreement, not profit probability. For educational analysis only. Not financial advice.</div>
         </div>
       </div>
 
@@ -283,25 +283,25 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
 
         {/* Execution Plan */}
         <div className="md:col-span-5 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel)] p-3 md:p-4">
-          <div className="mb-3 text-[0.72rem] font-extrabold uppercase tracking-[0.08em] text-slate-500">Execution Plan</div>
+          <div className="mb-3 text-[0.72rem] font-extrabold uppercase tracking-[0.08em] text-slate-500">Reference Levels</div>
           <div className="grid gap-3">
             <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5 text-[0.74rem] text-slate-400">
-              <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Entry Trigger</div>
-              <div>Entry: <span className="font-bold text-white">{entry != null ? entry.toFixed(2) : 'N/A'}</span></div>
-              <div>Trigger: <span className="font-bold text-white">{direction === 'bullish' ? 'Close above trigger' : direction === 'bearish' ? 'Close below trigger' : 'Await directional break'}</span></div>
+              <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Level of Interest</div>
+              <div>Reference: <span className="font-bold text-white">{entry != null ? entry.toFixed(2) : 'N/A'}</span></div>
+              <div>Condition: <span className="font-bold text-white">{direction === 'bullish' ? 'Close above level' : direction === 'bearish' ? 'Close below level' : 'Awaiting directional structure'}</span></div>
               <div>Confirmation: <span className="font-bold text-white">Volume expansion</span></div>
             </div>
             <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5 text-[0.74rem] text-slate-400">
-              <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Risk Parameters</div>
-              <div>Stop: <span className="font-bold text-red-400">{stop != null ? stop.toFixed(2) : 'N/A'}</span></div>
-              <div>Target 1: <span className="font-bold text-emerald-400">{target1 != null ? target1.toFixed(2) : 'N/A'}</span></div>
-              <div>Target 2: <span className="font-bold text-emerald-400">{target2 != null ? target2.toFixed(2) : 'N/A'}</span></div>
+              <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Key Levels (Educational)</div>
+              <div>Invalidation: <span className="font-bold text-red-400">{stop != null ? stop.toFixed(2) : 'N/A'}</span></div>
+              <div>Level 1: <span className="font-bold text-emerald-400">{target1 != null ? target1.toFixed(2) : 'N/A'}</span></div>
+              <div>Level 2: <span className="font-bold text-emerald-400">{target2 != null ? target2.toFixed(2) : 'N/A'}</span></div>
               <div>R:R: <span className={`font-bold ${rr != null && rr >= 1.8 ? 'text-emerald-400' : 'text-amber-400'}`}>{rr != null ? rr.toFixed(1) : 'N/A'}</span></div>
             </div>
             <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5 text-[0.74rem] text-slate-400">
-              <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Risk Governor</div>
-              <div>Simulated Allocation: <span className={`font-bold ${tradeReady ? 'text-emerald-400' : 'text-amber-400'}`}>{tradeReady ? '0.5% risk (paper)' : 'Review sizing'}</span></div>
-              <div>Active Constraint: <span className="font-bold text-white">{tradeReady ? 'Tactical sizing' : 'Risk constraints active'}</span></div>
+              <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Analysis Notes</div>
+              <div>Indicator Agreement: <span className={`font-bold ${tradeReady ? 'text-emerald-400' : 'text-amber-400'}`}>{tradeReady ? 'High alignment across indicators' : 'Mixed indicator signals'}</span></div>
+              <div>Structure: <span className="font-bold text-white">{tradeReady ? 'Indicators aligned' : 'Review indicator alignment'}</span></div>
             </div>
 
             {/* Action Buttons */}
@@ -648,7 +648,7 @@ export default function ScannerPage() {
   return (
     <div className="space-y-5">
       {/* ─── Header ─── */}
-      <SectionHeader title="Scanner" subtitle="Ranked opportunity engine — live scan results" />
+      <SectionHeader title="Scanner" subtitle="Technical analysis scanner — educational scan results" />
 
       {/* ─── Mode Toggle ─── */}
       <div className="flex items-center gap-1 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-1 w-fit">

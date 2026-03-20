@@ -1,7 +1,7 @@
 'use client';
 
 /* ---------------------------------------------------------------------------
-   SURFACE 3: GOLDEN EGG — Flagship Decision Page
+   SURFACE 3: GOLDEN EGG — Deep Analysis Page
    Real API data: /api/golden-egg + /api/dve + /api/quote
    --------------------------------------------------------------------------- */
 
@@ -160,7 +160,7 @@ export default function GoldenEggPage() {
 
   return (
     <div className="space-y-6">
-      <SectionHeader title="Golden Egg" subtitle="Flagship decision page — full symbol intelligence" />
+      <SectionHeader title="Golden Egg" subtitle="Deep analysis page — full symbol intelligence" />
 
       {/* Symbol picker */}
       <div className="flex items-center gap-2 flex-wrap">
@@ -315,10 +315,10 @@ export default function GoldenEggPage() {
                 </div>
               </div>
 
-              {/* Trigger / Invalidation / Key Levels row */}
+              {/* Level of Interest / Invalidation / Key Levels row */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 border-t border-slate-800/50">
                 <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
-                  <div className="text-[10px] text-slate-500 uppercase">Trigger</div>
+                  <div className="text-[10px] text-slate-500 uppercase">Level of Interest</div>
                   <div className="text-sm text-emerald-400 font-semibold">{ge.layer2.execution.entryTrigger}</div>
                   {ge.layer2.execution.entry.price && (
                     <div className="text-xs font-mono text-white mt-0.5">${ge.layer2.execution.entry.price.toFixed(2)} ({ge.layer2.execution.entry.type})</div>
@@ -831,7 +831,7 @@ export default function GoldenEggPage() {
             </div>
             <div className="flex items-center gap-4 mt-4 pt-3 border-t border-slate-800/50">
               <div>
-                <span className="text-[10px] text-slate-500">Expected R:R</span>
+                <span className="text-[10px] text-slate-500">Calculated R:R</span>
                 <span className="text-sm font-bold text-white ml-2">{ge.layer2.execution.rr.expectedR.toFixed(1)}R</span>
               </div>
               <a
@@ -844,6 +844,7 @@ export default function GoldenEggPage() {
                 Open in Terminal
               </button>
             </div>
+            <div className="mt-2 text-[10px] text-slate-600">Levels are calculated from technical indicators for educational purposes. Not financial advice or trade recommendations.</div>
           </Card>
 
           {/* -- G: NARRATIVE -------------------------------------------- */}
