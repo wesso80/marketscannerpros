@@ -18,8 +18,9 @@ import { useCachedTopSymbols, type CachedSymbol } from '@/hooks/useCachedTopSymb
 const CryptoDashboard = dynamic(() => import('@/app/tools/crypto-dashboard/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Crypto Derivatives…</div> });
 const MacroDashboard = dynamic(() => import('@/app/tools/macro/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Macro Dashboard…</div> });
 const EdgeInsightCards = dynamic(() => import('@/components/intelligence/EdgeInsightCards'), { ssr: false, loading: () => <div className="h-32 bg-slate-800/30 rounded-xl animate-pulse" /> });
+const FavoritesPanel = dynamic(() => import('@/components/FavoritesPanel'), { ssr: false, loading: () => <div className="h-48 bg-slate-800/30 rounded-xl animate-pulse" /> });
 
-const DASH_TABS = ['Command Center', 'Crypto Derivatives', 'Macro'] as const;
+const DASH_TABS = ['My Pages', 'Command Center', 'Crypto Derivatives', 'Macro'] as const;
 type DashTab = typeof DASH_TABS[number];
 
 /* -- helpers -------------------------------------------------------------- */
@@ -61,7 +62,7 @@ function CardSkeleton({ rows = 4 }: { rows?: number }) {
 
 export default function DashboardPage() {
   const { navigateTo, selectSymbol } = useV2();
-  const [dashTab, setDashTab] = useState<DashTab>('Command Center');
+  const [dashTab, setDashTab] = useState<DashTab>('My Pages');
   const { tier } = useUserTier();
   const isPro = tier === 'pro' || tier === 'pro_trader';
 
@@ -129,6 +130,9 @@ export default function DashboardPage() {
           </button>
         ))}
       </div>
+
+      {/* ─── My Pages Tab ─── */}
+      {dashTab === 'My Pages' && <FavoritesPanel />}
 
       {/* ─── Crypto Derivatives Tab ─── */}
       {dashTab === 'Crypto Derivatives' && <UpgradeGate requiredTier="pro" currentTier={tier} feature="Crypto Derivatives"><CryptoDashboard /></UpgradeGate>}

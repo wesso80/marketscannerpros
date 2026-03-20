@@ -15,6 +15,7 @@ import { RiskPermissionProvider } from '@/components/risk/RiskPermissionContext'
 import { RegimeProvider } from '@/lib/useRegime';
 import CapitalControlStrip from '@/components/risk/CapitalControlStrip';
 import GlobalSessionBar from '@/components/GlobalSessionBar';
+import FavoriteButton from '@/components/FavoriteButton';
 
 function getSkillFromPath(pathname: string): PageSkill {
   if (pathname.includes('/scanner')) return 'scanner';
@@ -56,6 +57,8 @@ export default function ToolsLayoutClient({
   const skill = getSkillFromPath(pathname);
   const layoutMode = getToolsLayoutMode(pathname);
   const containerVariant = getToolsContainerVariant(pathname);
+  // Extract page key from pathname for favorites (e.g. /tools/scanner → scanner)
+  const pageKey = pathname.replace(/^\/tools\//, '').replace(/\/.*$/, '') || 'dashboard';
   const wrappedChildren = layoutMode === 'terminal'
     ? <TerminalLayout containerVariant={containerVariant}>{children}</TerminalLayout>
     : <CommandLayout>{children}</CommandLayout>;
@@ -108,6 +111,12 @@ export default function ToolsLayoutClient({
         )}
 
         <ErrorBoundary>
+          {/* Favourite toggle — lets users pin this page to My Pages */}
+          {pageKey !== 'dashboard' && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '4px 12px 0' }}>
+              <FavoriteButton pageKey={pageKey} />
+            </div>
+          )}
           {wrappedChildren}
           {/* General Advice Warning — required on all tool pages (ASIC compliance) */}
           <div style={{
