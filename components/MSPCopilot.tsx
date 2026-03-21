@@ -34,6 +34,7 @@ export default function MSPCopilot({
   defaultOpen = false,
 }: MSPCopilotProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const [isMinimized, setIsMinimized] = useState(false);
   const [activeTab, setActiveTab] = useState<CopilotTab>('explain');
   const [messages, setMessages] = useState<CopilotMessage[]>([]);
   const [input, setInput] = useState('');
@@ -445,20 +446,59 @@ export default function MSPCopilot({
   };
 
   if (!isOpen) {
+    // Minimized state: tiny chip icon only
+    if (isMinimized) {
+      return (
+        <button
+          onClick={() => setIsMinimized(false)}
+          className="fixed bottom-4 right-4 z-50 flex items-center justify-center rounded-full shadow-lg transition-all hover:scale-110"
+          style={{
+            width: '2.5rem',
+            height: '2.5rem',
+            background: 'rgba(30, 41, 59, 0.85)',
+            border: '1px solid rgba(16, 185, 129, 0.3)',
+            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)',
+          }}
+          title="Show ARCA AI"
+        >
+          <img src="/logos/arcxa-chip.png" alt="ARCA AI" style={{ height: '1.25rem', width: '1.25rem', borderRadius: '3px', objectFit: 'cover' }} />
+        </button>
+      );
+    }
+
+    // Normal floating button with hide option
     return (
-      <button
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-full shadow-lg transition-all hover:scale-105"
-        style={{
-          background: 'var(--msp-accent)',
-          color: 'white',
-          fontWeight: '600',
-          boxShadow: '0 4px 20px rgba(16, 185, 129, 0.4)',
-        }}
-      >
-        <img src="/logos/arcxa-chip.png" alt="ARCA AI" style={{ height: '1.75rem', width: '1.75rem', borderRadius: '4px', objectFit: 'cover' }} />
-        <span>ARCA AI</span>
-      </button>
+      <div className="fixed bottom-6 right-6 z-50 flex items-center gap-1.5">
+        <button
+          onClick={() => setIsMinimized(true)}
+          className="flex items-center justify-center rounded-full transition-all hover:scale-110"
+          style={{
+            width: '1.75rem',
+            height: '1.75rem',
+            background: 'rgba(30, 41, 59, 0.8)',
+            border: '1px solid rgba(100, 116, 139, 0.4)',
+            color: '#94A3B8',
+            fontSize: '0.75rem',
+            lineHeight: 1,
+          }}
+          title="Minimize ARCA AI"
+        >
+          ✕
+        </button>
+        <button
+          onClick={() => setIsOpen(true)}
+          className="flex items-center gap-2 px-4 py-3 rounded-full shadow-lg transition-all hover:scale-105"
+          style={{
+            background: 'var(--msp-accent)',
+            color: 'white',
+            fontWeight: '600',
+            boxShadow: '0 4px 20px rgba(16, 185, 129, 0.4)',
+          }}
+        >
+          <img src="/logos/arcxa-chip.png" alt="ARCA AI" style={{ height: '1.75rem', width: '1.75rem', borderRadius: '4px', objectFit: 'cover' }} />
+          <span>ARCA AI</span>
+        </button>
+      </div>
     );
   }
 
