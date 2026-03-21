@@ -1410,6 +1410,10 @@ export class ConfluenceLearningAgent {
           if (date === lastTradingDay && !todayIsHoliday && currentTime < todayCloseMs) {
             return minsToTodayClose; // 2M closes today!
           }
+          if (date < lastTradingDay) {
+            const closeDate = closeAt(year, month, lastTradingDay);
+            return Math.floor((closeDate.getTime() - currentTime) / 60000);
+          }
         }
         // Find next 2M close
         let targetMonth = biMonthlyEnds.find(m => m > month) ?? biMonthlyEnds[0];
@@ -1431,6 +1435,10 @@ export class ConfluenceLearningAgent {
           if (date === lastTradingDay && !todayIsHoliday && currentTime < todayCloseMs) {
             return minsToTodayClose; // Quarter closes today!
           }
+          if (date < lastTradingDay) {
+            const closeDate = closeAt(year, month, lastTradingDay);
+            return Math.floor((closeDate.getTime() - currentTime) / 60000);
+          }
         }
         let targetMonth = quarterEnds.find(q => q > month) ?? quarterEnds[0];
         let targetYear = year;
@@ -1450,6 +1458,10 @@ export class ConfluenceLearningAgent {
           const lastTradingDay = lastTradingDayOfMonth(year, month);
           if (date === lastTradingDay && !todayIsHoliday && currentTime < todayCloseMs) {
             return minsToTodayClose;
+          }
+          if (date < lastTradingDay) {
+            const closeDate = closeAt(year, month, lastTradingDay);
+            return Math.floor((closeDate.getTime() - currentTime) / 60000);
           }
         }
         let targetMonth = fourMonthEnds.find(m => m > month) ?? fourMonthEnds[0];
@@ -1471,6 +1483,10 @@ export class ConfluenceLearningAgent {
           if (date === lastTradingDay && !todayIsHoliday && currentTime < todayCloseMs) {
             return minsToTodayClose;
           }
+          if (date < lastTradingDay) {
+            const closeDate = closeAt(year, month, lastTradingDay);
+            return Math.floor((closeDate.getTime() - currentTime) / 60000);
+          }
         }
         let targetMonth = fiveMonthEnds.find(m => m > month) ?? fiveMonthEnds[0];
         let targetYear = year;
@@ -1490,6 +1506,10 @@ export class ConfluenceLearningAgent {
           const lastTradingDay = lastTradingDayOfMonth(year, month);
           if (date === lastTradingDay && !todayIsHoliday && currentTime < todayCloseMs) {
             return minsToTodayClose;
+          }
+          if (date < lastTradingDay) {
+            const closeDate = closeAt(year, month, lastTradingDay);
+            return Math.floor((closeDate.getTime() - currentTime) / 60000);
           }
         }
         let targetMonth = halfYearEnds.find(h => h > month) ?? halfYearEnds[0];
@@ -1511,6 +1531,10 @@ export class ConfluenceLearningAgent {
           if (date === lastTradingDay && !todayIsHoliday && currentTime < todayCloseMs) {
             return minsToTodayClose;
           }
+          if (date < lastTradingDay) {
+            const closeDate = closeAt(year, month, lastTradingDay);
+            return Math.floor((closeDate.getTime() - currentTime) / 60000);
+          }
         }
         // Next July
         let targetYear = month >= 6 ? year + 1 : year;
@@ -1528,6 +1552,10 @@ export class ConfluenceLearningAgent {
           const lastTradingDay = lastTradingDayOfMonth(year, month);
           if (date === lastTradingDay && !todayIsHoliday && currentTime < todayCloseMs) {
             return minsToTodayClose;
+          }
+          if (date < lastTradingDay) {
+            const closeDate = closeAt(year, month, lastTradingDay);
+            return Math.floor((closeDate.getTime() - currentTime) / 60000);
           }
         }
         // Next August
@@ -1547,6 +1575,10 @@ export class ConfluenceLearningAgent {
           if (date === lastTradingDay && !todayIsHoliday && currentTime < todayCloseMs) {
             return minsToTodayClose;
           }
+          if (date < lastTradingDay) {
+            const closeDate = closeAt(year, month, lastTradingDay);
+            return Math.floor((closeDate.getTime() - currentTime) / 60000);
+          }
         }
         // Next September
         let targetYear = month >= 8 ? year + 1 : year;
@@ -1565,6 +1597,10 @@ export class ConfluenceLearningAgent {
           if (date === lastTradingDay && !todayIsHoliday && currentTime < todayCloseMs) {
             return minsToTodayClose;
           }
+          if (date < lastTradingDay) {
+            const closeDate = closeAt(year, month, lastTradingDay);
+            return Math.floor((closeDate.getTime() - currentTime) / 60000);
+          }
         }
         // Next October
         let targetYear = month >= 9 ? year + 1 : year;
@@ -1582,6 +1618,10 @@ export class ConfluenceLearningAgent {
           const lastTradingDay = lastTradingDayOfMonth(year, month);
           if (date === lastTradingDay && !todayIsHoliday && currentTime < todayCloseMs) {
             return minsToTodayClose;
+          }
+          if (date < lastTradingDay) {
+            const closeDate = closeAt(year, month, lastTradingDay);
+            return Math.floor((closeDate.getTime() - currentTime) / 60000);
           }
         }
         // Next November
