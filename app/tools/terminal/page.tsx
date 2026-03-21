@@ -396,9 +396,9 @@ export default function TerminalPage() {
                       <div className="text-base font-bold text-white">{brain.brain_score?.score?.toFixed(0) ?? fd.brain_decision?.score?.toFixed(0) ?? '—'}</div>
                     </div>
                     <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
-                      <div className="text-[10px] text-slate-500 uppercase">Permission</div>
+                      <div className="text-[10px] text-slate-500 uppercase">Status</div>
                       <div className={`text-base font-bold ${brain.brain_score?.permission === 'ALLOW' || fd.brain_decision?.permission === 'ALLOW' ? 'text-emerald-400' : brain.brain_score?.permission === 'BLOCK' || fd.brain_decision?.permission === 'BLOCK' ? 'text-red-400' : 'text-amber-400'}`}>
-                        {brain.brain_score?.permission ?? fd.brain_decision?.permission ?? '—'}
+                        {(brain.brain_score?.permission ?? fd.brain_decision?.permission ?? '—').replace('ALLOW', 'ALIGNED').replace('BLOCK', 'NOT ALIGNED')}
                       </div>
                     </div>
                     <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
@@ -426,15 +426,15 @@ export default function TerminalPage() {
                   <h3 className="text-sm font-semibold text-white mb-3">Reference Levels</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                     <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
-                      <div className="text-[10px] text-slate-500 uppercase">Entry Type</div>
+                      <div className="text-[10px] text-slate-500 uppercase">Signal Type</div>
                       <div className="text-sm font-bold text-white capitalize">{plan.entry_type ?? plan.entryType ?? '—'}</div>
                     </div>
                     <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
-                      <div className="text-[10px] text-slate-500 uppercase">Size</div>
+                      <div className="text-[10px] text-slate-500 uppercase">Weighting</div>
                       <div className="text-sm font-bold text-white">{typeof plan.size === 'number' ? `${(plan.size * 100).toFixed(0)}%` : '—'}</div>
                     </div>
                     <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
-                      <div className="text-[10px] text-slate-500 uppercase">Stop Rule</div>
+                      <div className="text-[10px] text-slate-500 uppercase">Invalidation Rule</div>
                       <div className="text-xs text-slate-300">{plan.stop_rule ?? plan.stopRule ?? '—'}</div>
                     </div>
                   </div>
@@ -448,7 +448,7 @@ export default function TerminalPage() {
                       )}
                       {plan.targets?.length > 0 && (
                         <div className="bg-[var(--msp-panel-2)]/80 rounded-lg px-3 py-2">
-                          <div className="text-[10px] text-slate-500 uppercase mb-1">Targets</div>
+                          <div className="text-[10px] text-slate-500 uppercase mb-1">Key Levels</div>
                           {plan.targets.map((t: string, i: number) => <div key={i} className="text-xs text-slate-300">• {t}</div>)}
                         </div>
                       )}
@@ -458,7 +458,7 @@ export default function TerminalPage() {
                 );
               })()}
 
-              {/* Trade Permission & Risk Governor */}
+              {/* Indicator Alignment & Risk Analysis */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {perm && (
                   <Card>
@@ -473,17 +473,17 @@ export default function TerminalPage() {
                         <span className="text-white">{perm.riskMode ?? '—'}</span>
                       </div>
                       <div className="flex justify-between text-xs">
-                        <span className="text-slate-400">Size Multiplier</span>
+                        <span className="text-slate-400">Weighting Factor</span>
                         <span className="text-white font-mono">{perm.sizeMultiplier?.toFixed(2) ?? '—'}x</span>
                       </div>
                       <div className="flex justify-between text-xs">
-                        <span className="text-slate-400">Stop Style</span>
+                        <span className="text-slate-400">Analysis Mode</span>
                         <span className="text-white">{perm.stopStyle?.replace(/_/g, ' ') ?? '—'}</span>
                       </div>
-                      {perm.blocked && <div className="mt-2 text-[10px] text-red-400 bg-red-500/10 rounded px-2 py-1">? Trading blocked: {perm.noTradeMode?.reason || 'risk limit'}</div>}
+                      {perm.blocked && <div className="mt-2 text-[10px] text-red-400 bg-red-500/10 rounded px-2 py-1">⚠ Analysis paused: {perm.noTradeMode?.reason || 'conditions not met'}</div>}
                       {perm.allowed?.length > 0 && (
                         <div className="mt-2">
-                          <div className="text-[10px] text-slate-500 uppercase mb-1">Allowed</div>
+                          <div className="text-[10px] text-slate-500 uppercase mb-1">Aligned</div>
                           <div className="flex flex-wrap gap-1">
                             {perm.allowed.map((a: string, i: number) => <span key={i} className="text-[10px] bg-emerald-500/10 text-emerald-400 rounded px-1.5 py-0.5">{a}</span>)}
                           </div>
@@ -506,15 +506,15 @@ export default function TerminalPage() {
                         <span className={`font-semibold ${rg.riskMode === 'FULL_OFFENSE' ? 'text-emerald-400' : rg.riskMode === 'LOCKDOWN' ? 'text-red-400' : rg.riskMode === 'DEFENSIVE' ? 'text-amber-400' : 'text-white'}`}>{rg.riskMode ?? '—'}</span>
                       </div>
                       <div className="flex justify-between text-xs">
-                        <span className="text-slate-400">Execution</span>
-                        <span className={rg.executionAllowed ? 'text-emerald-400' : 'text-red-400'}>{rg.executionAllowed ? 'Allowed' : 'Blocked'}</span>
+                        <span className="text-slate-400">Conditions</span>
+                        <span className={rg.executionAllowed ? 'text-emerald-400' : 'text-red-400'}>{rg.executionAllowed ? 'Aligned' : 'Not Aligned'}</span>
                       </div>
                       <div className="flex justify-between text-xs">
                         <span className="text-slate-400">Vol Regime</span>
                         <span className="text-white">{rg.volatility?.regime ?? '—'}</span>
                       </div>
                       <div className="flex justify-between text-xs">
-                        <span className="text-slate-400">Final Size</span>
+                        <span className="text-slate-400">Weighting</span>
                         <span className="text-white font-mono">{typeof rg.sizing?.finalSize === 'number' ? `${(rg.sizing.finalSize * 100).toFixed(0)}%` : '—'}</span>
                       </div>
                       {rg.hardBlocked && rg.hardBlockReasons?.length > 0 && (
@@ -603,15 +603,15 @@ export default function TerminalPage() {
                       <div className="text-sm font-bold text-white capitalize">{session.phase?.replace(/_/g, ' ') ?? '—'}</div>
                     </div>
                     <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
-                      <div className="text-[10px] text-slate-500 uppercase">Size Cap</div>
+                      <div className="text-[10px] text-slate-500 uppercase">Exposure Cap</div>
                       <div className="text-sm font-bold text-white">{typeof session.size_cap_multiplier === 'number' ? `${(session.size_cap_multiplier * 100).toFixed(0)}%` : '—'}</div>
                     </div>
                     <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
-                      <div className="text-[10px] text-slate-500 uppercase">Tradable</div>
+                      <div className="text-[10px] text-slate-500 uppercase">Active Session</div>
                       <div className={`text-sm font-bold ${session.tradable ? 'text-emerald-400' : 'text-red-400'}`}>{session.tradable ? 'Yes' : 'No'}</div>
                     </div>
                     <div className="bg-[var(--msp-panel-2)] rounded-lg p-3 text-center">
-                      <div className="text-[10px] text-slate-500 uppercase">Scalp OK</div>
+                      <div className="text-[10px] text-slate-500 uppercase">Short-Term OK</div>
                       <div className={`text-sm font-bold ${session.scalp_ok ? 'text-emerald-400' : 'text-slate-500'}`}>{session.scalp_ok ? 'Yes' : 'No'}</div>
                     </div>
                   </div>

@@ -802,7 +802,7 @@ export default function OptionsConfluenceScanner() {
 
     const next = result.entryTiming.urgency === 'no_trade'
       ? (result.entryTiming.reason || 'Wait for cleaner options structure')
-      : (result.tradeSnapshot?.action?.entryTrigger || result.entryTiming.reason || 'Execute with defined levels');
+      : (result.tradeSnapshot?.action?.entryTrigger || result.entryTiming.reason || 'Analyze with defined levels');
 
     writeOperatorState({
       symbol: result.symbol,
@@ -1352,11 +1352,11 @@ export default function OptionsConfluenceScanner() {
         detail: `${unusual ? 'Unusual activity present' : 'No unusual flow'} • OI ${oiSentiment || 'n/a'}`,
       },
       {
-        title: 'Execution Zone',
+        title: 'Analysis Zone',
         state: executionZone,
         detail: result.tradeLevels
-          ? `Entry ${result.tradeLevels.entryZone.low.toFixed(2)}-${result.tradeLevels.entryZone.high.toFixed(2)} • Stop ${result.tradeLevels.stopLoss.toFixed(2)}`
-          : 'No clear execution map yet',
+          ? `Zone ${result.tradeLevels.entryZone.low.toFixed(2)}-${result.tradeLevels.entryZone.high.toFixed(2)} • Invalidation ${result.tradeLevels.stopLoss.toFixed(2)}`
+          : 'No clear analysis map yet',
       },
       {
         title: 'Management',
@@ -2303,7 +2303,7 @@ export default function OptionsConfluenceScanner() {
         {result && (
           <DecisionCockpit
             left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">{result.symbol} • {thesisDirection.toUpperCase()}</div><div className="msp-muted">Regime: {institutionalMarketRegime || 'UNKNOWN'}</div><div className="msp-muted">Session: {(result.entryTiming.marketSession || 'n/a').toUpperCase()}</div></div>}
-            center={<div className="grid gap-1 text-sm"><Pill tone="accent">{unifiedPermission}</Pill><div className="msp-muted">Pipeline: {pipelineComplete}/{ladderSteps.length}</div><div className="msp-muted">Confidence: {unifiedConfidence.toFixed(0)}%</div></div>}
+            center={<div className="grid gap-1 text-sm"><Pill tone="accent">{unifiedPermission === 'ALLOW' ? 'ALIGNED' : unifiedPermission === 'BLOCK' ? 'NOT ALIGNED' : 'WAIT'}</Pill><div className="msp-muted">Pipeline: {pipelineComplete}/{ladderSteps.length}</div><div className="msp-muted">Confidence: {unifiedConfidence.toFixed(0)}%</div></div>}
             right={<div className="grid gap-1 text-sm"><div className="msp-muted">Trigger: <span className="font-bold text-[var(--msp-text)]">{decisionTrigger}</span></div><div className="msp-muted">Risk: {(result.expectedMove?.selectedExpiryPercent ?? 0) >= 4 ? 'HIGH' : (result.expectedMove?.selectedExpiryPercent ?? 0) >= 2 ? 'MODERATE' : 'LOW'}</div><div className="msp-muted">Data: {dataHealth}</div></div>}
           />
         )}
@@ -2314,7 +2314,7 @@ export default function OptionsConfluenceScanner() {
               { label: 'Confluence', value: `${result.confluenceStack} TF`, tone: result.confluenceStack >= 3 ? 'bull' : 'warn' },
               { label: 'Flow', value: (result.openInterestAnalysis?.sentiment || 'neutral').toUpperCase(), tone: result.openInterestAnalysis?.sentiment === 'bullish' ? 'bull' : result.openInterestAnalysis?.sentiment === 'bearish' ? 'bear' : 'neutral' },
               { label: 'Expected Move', value: result.expectedMove ? `${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'N/A', tone: (result.expectedMove?.selectedExpiryPercent ?? 0) >= 4 ? 'bear' : (result.expectedMove?.selectedExpiryPercent ?? 0) >= 2 ? 'warn' : 'bull' },
-              { label: 'Indicator Status', value: tradePermission, tone: tradePermission === 'ALLOWED' ? 'bull' : tradePermission === 'BLOCKED' ? 'bear' : 'warn' },
+              { label: 'Conditions', value: tradePermission === 'ALLOWED' ? 'ALIGNED' : tradePermission === 'BLOCKED' ? 'NOT ALIGNED' : 'WAIT', tone: tradePermission === 'ALLOWED' ? 'bull' : tradePermission === 'BLOCKED' ? 'bear' : 'warn' },
               { label: 'Mode', value: adaptiveModeMeta.label, tone: 'accent' },
               { label: 'Updated', value: commandUpdatedAgo !== null ? `${commandUpdatedAgo}s` : 'n/a', tone: 'neutral' },
             ]}
@@ -2518,11 +2518,11 @@ export default function OptionsConfluenceScanner() {
                 </DepthCard>
 
                 <DepthCard className={`rounded-[10px] border border-[var(--msp-border-strong)] border-l-[3px] border-l-[var(--msp-accent)] bg-[var(--msp-panel)] p-[0.74rem] shadow-[var(--msp-shadow)] ${executionGlowClass}`} tiltStrength={5.5}>
-                  <div className="text-[0.64rem] font-extrabold uppercase text-[var(--msp-accent)]">Risk + Execution</div>
+                  <div className="text-[0.64rem] font-extrabold uppercase text-[var(--msp-accent)]">Risk + Analysis</div>
                   <div className="mt-1 grid gap-1 text-[0.76rem]">
-                    <div className="text-slate-100">Entry: {result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)} - ${result.tradeLevels.entryZone.high.toFixed(2)}` : 'N/A'}</div>
-                    <div className="text-red-300">Stop: {result.tradeLevels ? result.tradeLevels.stopLoss.toFixed(2) : 'N/A'}</div>
-                    <div className="text-emerald-300">Targets: {result.tradeLevels ? `${result.tradeLevels.target1.price.toFixed(2)}${result.tradeLevels.target2 ? ` / ${result.tradeLevels.target2.price.toFixed(2)}` : ''}` : 'N/A'}</div>
+                    <div className="text-slate-100">Zone: {result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)} - ${result.tradeLevels.entryZone.high.toFixed(2)}` : 'N/A'}</div>
+                    <div className="text-red-300">Invalidation: {result.tradeLevels ? result.tradeLevels.stopLoss.toFixed(2) : 'N/A'}</div>
+                    <div className="text-emerald-300">Key Levels: {result.tradeLevels ? `${result.tradeLevels.target1.price.toFixed(2)}${result.tradeLevels.target2 ? ` / ${result.tradeLevels.target2.price.toFixed(2)}` : ''}` : 'N/A'}</div>
                     <div className="text-slate-200">Expected Move: {result.expectedMove ? `${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'N/A'}</div>
                     <div className="text-slate-400">Invalidation: {result.tradeSnapshot?.risk?.invalidationReason || 'Loss of setup structure'}</div>
                   </div>
@@ -2762,14 +2762,14 @@ export default function OptionsConfluenceScanner() {
                   <div className="text-[0.8rem] font-extrabold text-slate-50">{result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)} - ${result.tradeLevels.entryZone.high.toFixed(2)}` : 'Await setup'}</div>
                 </div>
                 <div className="rounded-lg bg-black/20 p-[0.45rem]">
-                  <div className="text-[0.62rem] font-bold uppercase text-slate-500">Stop / Invalidation</div>
+                  <div className="text-[0.62rem] font-bold uppercase text-slate-500">Invalidation Level</div>
                   <div className="text-[0.8rem] font-extrabold text-red-300">{result.tradeLevels ? result.tradeLevels.stopLoss.toFixed(2) : (result.tradeSnapshot?.risk?.invalidationReason || 'N/A')}</div>
                 </div>
                 <div className="rounded-lg bg-black/20 p-[0.45rem]">
                   <div className="text-[0.62rem] font-bold uppercase text-slate-500">Key Level / R:R</div>
                   <div className="text-[0.8rem] font-extrabold text-emerald-200">{result.tradeLevels ? `${result.tradeLevels.target1.price.toFixed(2)} • ${result.tradeLevels.riskRewardRatio.toFixed(1)}:1` : 'Await trigger'}</div>
                 </div>
-                <div className="text-[0.7rem] text-slate-400">Status: <span className={`font-extrabold ${tradePermission === 'ALLOWED' ? 'text-emerald-500' : tradePermission === 'BLOCKED' ? 'text-red-500' : 'text-amber-500'}`}>{tradePermission}</span></div>
+                <div className="text-[0.7rem] text-slate-400">Status: <span className={`font-extrabold ${tradePermission === 'ALLOWED' ? 'text-emerald-500' : tradePermission === 'BLOCKED' ? 'text-red-500' : 'text-amber-500'}`}>{tradePermission === 'ALLOWED' ? 'ALIGNED' : tradePermission === 'BLOCKED' ? 'NOT ALIGNED' : 'WAIT'}</span></div>
 
                 {copilotPresence && (
                   <div className="mt-1 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.45rem_0.5rem]">
@@ -2948,7 +2948,7 @@ export default function OptionsConfluenceScanner() {
                         </div>
                       </div>
                       <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
-                        <div className="text-[0.64rem] font-bold uppercase text-slate-500">Permission Bias</div>
+                        <div className="text-[0.64rem] font-bold uppercase text-slate-500">Directional Bias</div>
                         <div className={`text-[0.77rem] font-black ${result.institutionalIntent.permission_bias === 'LONG' ? 'text-emerald-500' : result.institutionalIntent.permission_bias === 'SHORT' ? 'text-red-500' : 'text-amber-500'}`}>
                           {result.institutionalIntent.permission_bias}
                         </div>
@@ -3097,7 +3097,7 @@ export default function OptionsConfluenceScanner() {
             {trapDoors.evidence && (result.capitalFlow || result.institutionalIntent || result.locationContext) && (
               <div className="rounded-[14px] border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[0.85rem_0.95rem]">
                 <div className="flex flex-wrap items-center justify-between gap-[0.6rem]">
-                  <div className="text-[0.72rem] font-bold uppercase text-slate-400">Liquidity & Stop Map</div>
+                  <div className="text-[0.72rem] font-bold uppercase text-slate-400">Liquidity & Level Map</div>
                   <div className="text-[0.78rem] font-extrabold text-[var(--msp-accent)]">
                     {(result.capitalFlow?.liquidity_levels?.length || 0) + (result.institutionalIntent?.key_levels?.liquidity_pools?.length || 0) + (result.locationContext?.keyZones?.length || 0)} Levels Mapped
                   </div>
@@ -3398,7 +3398,7 @@ export default function OptionsConfluenceScanner() {
                     </div>
                     {result.aiMarketState.scenarios.bull?.target != null && (
                       <div className="mt-[0.2rem] text-[0.82rem] font-extrabold text-emerald-200">
-                        Target: ${result.aiMarketState.scenarios.bull.target.toFixed(2)}
+                        Level: ${result.aiMarketState.scenarios.bull.target.toFixed(2)}
                       </div>
                     )}
                     <div className="mt-[0.15rem] text-[0.74rem] text-slate-300">
@@ -3421,7 +3421,7 @@ export default function OptionsConfluenceScanner() {
                     </div>
                     {result.aiMarketState.scenarios.base?.target != null && (
                       <div className="mt-[0.2rem] text-[0.82rem] font-extrabold text-slate-200">
-                        Target: ${result.aiMarketState.scenarios.base.target.toFixed(2)}
+                        Level: ${result.aiMarketState.scenarios.base.target.toFixed(2)}
                       </div>
                     )}
                     <div className="mt-[0.15rem] text-[0.74rem] text-slate-300">
@@ -3439,7 +3439,7 @@ export default function OptionsConfluenceScanner() {
                     </div>
                     {result.aiMarketState.scenarios.bear?.target != null && (
                       <div className="mt-[0.2rem] text-[0.82rem] font-extrabold text-red-200">
-                        Target: ${result.aiMarketState.scenarios.bear.target.toFixed(2)}
+                        Level: ${result.aiMarketState.scenarios.bear.target.toFixed(2)}
                       </div>
                     )}
                     <div className="mt-[0.15rem] text-[0.74rem] text-slate-300">
@@ -3802,7 +3802,7 @@ export default function OptionsConfluenceScanner() {
                 <div className={`text-[0.95rem] font-black ${commandStatusClass}`}>{commandStatus}</div>
                 <div className="text-[0.78rem] text-slate-300">Institutional Flow: {institutionalFlowState}</div>
                 <div className={`text-[0.78rem] font-extrabold ${tradePermission === 'ALLOWED' ? 'text-emerald-500' : tradePermission === 'BLOCKED' ? 'text-red-500' : 'text-amber-500'}`}>
-                  Indicator Status: {tradePermission}
+                  Conditions: {tradePermission === 'ALLOWED' ? 'ALIGNED' : tradePermission === 'BLOCKED' ? 'NOT ALIGNED' : 'WAIT'}
                 </div>
               </div>
 
@@ -4192,7 +4192,7 @@ export default function OptionsConfluenceScanner() {
 
                   {/* Best Entry Window */}
                   <div className="rounded-xl border-l-[3px] border-l-emerald-500 bg-slate-800/60 p-4">
-                    <div className="mb-2 text-[0.8rem] text-slate-400">Best Entry Window</div>
+                    <div className="mb-2 text-[0.8rem] text-slate-400">Best Analysis Window</div>
                     <div className="text-[1.1rem] font-bold text-emerald-500">
                       {result.candleCloseConfluence.bestEntryWindow.startMins === 0 ? 'NOW' : `In ${result.candleCloseConfluence.bestEntryWindow.startMins}m`}
                       {' → '}{result.candleCloseConfluence.bestEntryWindow.endMins}m
@@ -4265,7 +4265,7 @@ export default function OptionsConfluenceScanner() {
                             </span>
                           </div>
                           <div>
-                            <span className="text-slate-500">Target Level:</span>
+                            <span className="text-slate-500">Key Level:</span>
                             <span className="ml-1.5 text-emerald-500">
                               ${formatPrice(result.primaryStrike.targetLevel)}
                             </span>
@@ -4550,7 +4550,7 @@ export default function OptionsConfluenceScanner() {
               
               <div className="card-grid-mobile">
                 <div>
-                  <div className="mb-1 text-[0.8rem] text-slate-500">Target Delta</div>
+                  <div className="mb-1 text-[0.8rem] text-slate-500">Delta Guidance</div>
                   <div className="font-bold text-slate-200">{result.greeksAdvice.deltaTarget}</div>
                 </div>
                 
@@ -4591,12 +4591,12 @@ export default function OptionsConfluenceScanner() {
                   <div className="text-[1.5rem] font-bold text-red-500">
                     {result.maxRiskPercent}%
                   </div>
-                  <div className="text-[0.8rem] text-slate-400">Max Position Risk</div>
+                  <div className="text-[0.8rem] text-slate-400">Max Risk Exposure</div>
                 </div>
                 
                 <div className="flex-1">
                   <div className="mb-3">
-                    <div className="mb-1 text-[0.8rem] text-slate-500">🛑 Risk Management Strategy</div>
+                    <div className="mb-1 text-[0.8rem] text-slate-500">🛑 Risk Boundary Strategy</div>
                     <div className="text-[0.85rem] text-slate-200">{result.stopLossStrategy}</div>
                   </div>
                   <div>
