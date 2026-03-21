@@ -243,7 +243,7 @@ export default function GoldenEggPage() {
           <div className="space-y-4 py-8">
             <Skel h="h-8" w="w-48" />
             <Skel h="h-6" w="w-64" />
-            <div className="grid grid-cols-4 gap-4 mt-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
               {[1,2,3,4].map(i => <Skel key={i} h="h-20" />)}
             </div>
           </div>
@@ -477,7 +477,7 @@ export default function GoldenEggPage() {
                   <span className="text-[10px] text-slate-500 uppercase">Structure Verdict:</span>
                   <Badge label={ge.layer3.structure.verdict} color={ge.layer3.structure.verdict === 'agree' ? '#10B981' : ge.layer3.structure.verdict === 'disagree' ? '#EF4444' : '#F59E0B'} small />
                 </div>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {['htf', 'mtf', 'ltf'].map((tf) => (
                     <div key={tf} className="bg-[var(--msp-panel-2)] rounded p-2">
                       <div className="text-[10px] text-slate-500 uppercase">{tf}</div>
@@ -603,7 +603,7 @@ export default function GoldenEggPage() {
                       <div>
                         <div className="text-[10px] text-slate-500 uppercase mb-1.5">Close Cluster Timeline — Next 24h</div>
                         <div className="overflow-x-auto">
-                        <div className="space-y-2" style={{ minWidth: 380 }}>
+                        <div className="space-y-2" style={{ minWidth: 340 }}>
                           {(['monthly', 'weekly', 'daily', 'intraday'] as const).map(cat => {
                             const rows = groups[cat];
                             if (!rows || rows.length === 0) return null;

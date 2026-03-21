@@ -646,7 +646,7 @@ export default function PortfolioV2() {
           {strategy === 'options' && (
             <div className="space-y-3 rounded-lg border border-violet-500/20 bg-violet-500/5 p-3">
               <div className="text-[10px] uppercase tracking-wider text-violet-400 font-semibold">Options Details</div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-[10px] uppercase text-slate-500 mb-1.5 font-medium tracking-wider">Type</label>
                   <div className="flex gap-1">
@@ -667,7 +667,7 @@ export default function PortfolioV2() {
           )}
 
           {/* Quantity / Entry / Current row */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-[10px] uppercase text-slate-500 mb-1.5 font-medium tracking-wider">Quantity</label>
               <input value={quantity} onChange={e => setQuantity(e.target.value)} placeholder="0" type="number" className="w-full bg-[#0A101C] border border-slate-700/40 rounded-lg text-xs px-3 py-2.5 text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-600/40 transition-colors" />

@@ -83,7 +83,7 @@ function ConfidenceBar({ value }: { value: number }) {
 
 function OverallStats({ overall }: { overall: EdgeSlice }) {
   return (
-    <div className="grid grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
       <StatCell label="Win Rate" value={`${(overall.winRate * 100).toFixed(0)}%`} color={overall.winRate >= 0.5 ? '#10B981' : '#EF4444'} />
       <StatCell label="Avg R" value={`${overall.avgR.toFixed(2)}R`} color={overall.avgR >= 0 ? '#10B981' : '#EF4444'} />
       <StatCell label="Profit Factor" value={overall.profitFactor === Infinity ? '∞' : overall.profitFactor.toFixed(2)} color={overall.profitFactor >= 1 ? '#10B981' : '#EF4444'} />

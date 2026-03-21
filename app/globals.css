@@ -52,8 +52,8 @@ svg, svg *, img, video, canvas, iframe,
 table, thead, tbody, tr, th, td,
 button, a, input, select, textarea, label,
 .overflow-x-auto, .overflow-x-auto *,
-[style*="overflowX: auto"] *, [style*="overflow-x: auto"] *,
-[style*="overflowX: 'auto'"] *, [style*="overflow-x: auto"] * {
+[style*="overflowX"] *, [style*="overflow-x"] *,
+[style*="overflow: auto"] * {
   max-width: none;
 }
 
@@ -108,7 +108,6 @@ body {
   word-break: break-word;
   overflow-wrap: anywhere;
   min-width: 0;
-  overflow-x: clip;
 }
 .options-page-container *:not(svg):not(svg *) {
   max-width: 100%;
@@ -1033,7 +1032,8 @@ button.truncate {
    ======================================== */
 @media (max-width: 767px) {
   /* All panels/cards/containers must stay within screen.
-     Use overflow-x: clip (not hidden) so child overflow-x:auto scroll areas still work. */
+     NO overflow-x: hidden/clip here — that kills child overflow-x:auto scroll areas.
+     Width constraints + min-w-0 prevent content from pushing viewport wider. */
   .msp-elite-panel,
   .msp-elite-row,
   .msp-card,
@@ -1044,19 +1044,11 @@ button.truncate {
   main,
   article,
   aside,
+  section,
   .msp-layout-command,
   .msp-layout-terminal {
     max-width: 100vw !important;
     min-width: 0 !important;
-    overflow-x: clip;
-    word-break: break-word;
-  }
-
-  /* Sections need clip instead of hidden so child scroll containers work */
-  section {
-    max-width: 100vw !important;
-    min-width: 0 !important;
-    overflow-x: clip;
     word-break: break-word;
   }
 
@@ -1075,9 +1067,10 @@ button.truncate {
     padding-right: 12px !important;
   }
 
-  /* Force all grids to single column on small mobile */
-  .grid[class*="lg:grid-cols"],
-  .grid[class*="md:grid-cols"] {
+  /* Force grids to single column on mobile — but only if they don't already
+     define a reasonable mobile-safe base (grid-cols-1 or grid-cols-2). */
+  .grid:not([class*="grid-cols-1"]):not([class*="grid-cols-2"])[class*="lg:grid-cols"],
+  .grid:not([class*="grid-cols-1"]):not([class*="grid-cols-2"])[class*="md:grid-cols"] {
     grid-template-columns: 1fr !important;
   }
 
@@ -1100,5 +1093,14 @@ button.truncate {
   /* Sticky elements should not cause overflow */
   [class*="sticky"] {
     max-width: 100% !important;
+  }
+
+  /* Tables inside scroll wrappers: prevent column text from stacking vertically.
+     Forces the table wider than the container so overflow-x:auto kicks in. */
+  .overflow-x-auto table th,
+  .overflow-x-auto table td,
+  [style*="overflowX"] table th,
+  [style*="overflowX"] table td {
+    white-space: nowrap;
   }
 }

@@ -2201,7 +2201,7 @@ export function PortfolioContent() {
                       <option value="dividend">Dividend</option>
                     </select>
                   </div>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <label className="mb-1 block text-[11px] uppercase tracking-[0.06em] text-slate-500">Quantity</label>
                       <input

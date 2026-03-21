@@ -372,8 +372,8 @@ export default function OptionsFlowPage() {
                   <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--msp-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px' }}>
                     🔥 Top Flows by Premium
                   </div>
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                  <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                    <table style={{ width: '100%', minWidth: 700, borderCollapse: 'collapse', fontSize: '12px', whiteSpace: 'nowrap' }}>
                       <thead>
                         <tr style={{ borderBottom: '1px solid var(--msp-border)' }}>
                           {['Strike', 'Type', 'Direction', 'Volume', 'OI', 'Premium', 'Tier', 'IV', 'Delta', 'Moneyness'].map(h => (

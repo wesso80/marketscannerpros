@@ -205,7 +205,7 @@ export default function ExplorerPage() {
               </div>
             </Card>
           )}
-          {cryptoOverview.loading && <Card><div className="space-y-3"><Skel h="h-6" /><div className="grid grid-cols-4 gap-3">{[1,2,3,4].map(i => <Skel key={i} h="h-16" />)}</div></div></Card>}
+          {cryptoOverview.loading && <Card><div className="space-y-3"><Skel h="h-6" /><div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{[1,2,3,4].map(i => <Skel key={i} h="h-16" />)}</div></div></Card>}
 
           {/* Crypto Top Movers */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
