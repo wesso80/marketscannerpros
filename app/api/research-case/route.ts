@@ -202,7 +202,7 @@ function buildThesis(
     parts.push(`${symbol} is in ${cfe.market_mode?.toUpperCase() ?? 'UNKNOWN'} mode with ${cfe.gamma_state ?? 'mixed'} gamma.`);
     parts.push(`Capital flow bias: ${cfe.bias ?? 'neutral'}, conviction: ${cfe.conviction ?? 0}/100.`);
     if (cfe.brain_decision) {
-      parts.push(`Brain permission: ${cfe.brain_decision.permission}, operating in ${cfe.brain_decision.mode} mode.`);
+      parts.push(`Brain status: ${cfe.brain_decision.permission}, operating in ${cfe.brain_decision.mode} mode.`);
     }
   }
   if (regime) {
@@ -212,7 +212,7 @@ function buildThesis(
     parts.push(`Flow bias: ${flow.flowBias}, strength: ${flow.flowStrength}/100.`);
   }
   if (probMatrix) {
-    parts.push(`Probability: ${(probMatrix.pUp * 100).toFixed(0)}% up / ${(probMatrix.pDown * 100).toFixed(0)}% down. Best playbook: ${probMatrix.bestPlaybook}.`);
+    parts.push(`Probability: ${(probMatrix.pUp * 100).toFixed(0)}% up / ${(probMatrix.pDown * 100).toFixed(0)}% down. Best framework: ${probMatrix.bestPlaybook}.`);
   }
   if (doctrine) {
     parts.push(`Doctrine: ${doctrine.name} (${(doctrine.confidence * 100).toFixed(0)}% confidence).`);

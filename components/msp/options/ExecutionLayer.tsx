@@ -11,7 +11,7 @@ export default function ExecutionLayer({ payload }: ExecutionLayerProps) {
   const score = payload?.scores?.execution ?? 64;
 
   return (
-    <LayerSection tone="execution" title="Execution" subtitle="Can we deploy efficiently?" score={score}>
+    <LayerSection tone="execution" title="Timing" subtitle="Can we enter efficiently?" score={score}>
       <QuadGrid>
         <div className="col-span-12 lg:col-span-6"><StrategyBuilderCard payload={payload} /></div>
         <div className="col-span-12 lg:col-span-6"><RiskGeometryCard payload={payload} /></div>

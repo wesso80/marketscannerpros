@@ -36,7 +36,7 @@ const DEMO_RESULTS: Record<string, {
     direction: 'bullish',
     confidence: 94,
     price: '$142.85',
-    insight: 'Powerful uptrend with ADX at 45+. Volume surge confirms institutional accumulation. MACD histogram expanding bullishly.',
+        insight: 'Powerful uptrend with ADX at 45+. Volume surge confirms accumulation. MACD histogram expanding bullishly.',
     keyLevels: { support: '$135.00', resistance: '$155.00' }
   },
   'BTC': {
@@ -72,7 +72,7 @@ const DEMO_RESULTS: Record<string, {
     direction: 'bullish',
     confidence: 89,
     price: '$612.75',
-    insight: 'Strong uptrend intact. Recent flag pattern resolving higher. AI narrative continues to drive institutional interest.',
+        insight: 'Strong uptrend intact. Recent flag pattern resolving higher. AI narrative continues to drive interest.',
     keyLevels: { support: '$580.00', resistance: '$650.00' }
   },
   'SOL': {
@@ -107,7 +107,7 @@ export default function InstantDemo() {
         direction: 'neutral' as const,
         confidence: 75 + Math.floor(Math.random() * 20),
         price: '$---.--',
-        insight: `Full analysis for ${upperSymbol} is available in the scanner. Sign up free to get real-time AI insights, multi-timeframe analysis, and actionable trade ideas.`,
+        insight: `Full analysis for ${upperSymbol} is available in the scanner. Sign up free to get real-time AI insights, multi-timeframe analysis, and educational scenario breakdowns.`,
         keyLevels: { support: 'Login to view', resistance: 'Login to view' }
       };
       

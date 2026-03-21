@@ -344,7 +344,7 @@ export function ProModeDashboard({
               borderRadius: '8px',
               border: '1px solid rgba(239,68,68,0.3)',
             }}>
-              <div style={{ fontSize: '9px', color: '#EF4444', marginBottom: '2px' }}>STOP</div>
+              <div style={{ fontSize: '9px', color: '#EF4444', marginBottom: '2px' }}>RISK LEVEL</div>
               <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#EF4444' }}>
                 ${tradeLevels.stopLoss.toFixed(2)}
               </div>
@@ -374,12 +374,12 @@ export function ProModeDashboard({
               borderRadius: '8px',
               border: '1px solid rgba(16,185,129,0.3)',
             }}>
-              <div style={{ fontSize: '9px', color: '#10B981', marginBottom: '2px' }}>TARGET 1</div>
+              <div style={{ fontSize: '9px', color: '#10B981', marginBottom: '2px' }}>LEVEL 1</div>
               <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#10B981' }}>
                 ${tradeLevels.target1.price.toFixed(2)}
               </div>
               <div style={{ fontSize: '9px', color: '#34D399' }}>
-                Take {tradeLevels.target1.takeProfit}%
+                At {tradeLevels.target1.takeProfit}%
               </div>
             </div>
             
@@ -390,12 +390,12 @@ export function ProModeDashboard({
                 borderRadius: '8px',
                 border: '1px solid rgba(16,185,129,0.4)',
               }}>
-                <div style={{ fontSize: '9px', color: '#10B981', marginBottom: '2px' }}>TARGET 2</div>
+                <div style={{ fontSize: '9px', color: '#10B981', marginBottom: '2px' }}>LEVEL 2</div>
                 <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#10B981' }}>
                   ${tradeLevels.target2.price.toFixed(2)}
                 </div>
                 <div style={{ fontSize: '9px', color: '#34D399' }}>
-                  Take {tradeLevels.target2.takeProfit}%
+                  At {tradeLevels.target2.takeProfit}%
                 </div>
               </div>
             )}

@@ -30,7 +30,7 @@ SCANNERS (Signal Generation)
 2. /tools/options-confluence — Options Confluence Scanner
    Options probability engine. Analyzes IV Rank, Put/Call Ratio, Max Pain, Unusual Activity, Open Interest clustering.
    Computes dealer Gamma Exposure (GEX): flip prices, gamma walls, call/put GEX walls.
-   Generates strike recommendations with Greeks. 7 confluence signal types with base win rates.
+   Generates strike analysis with Greeks. 7 confluence signal types with base win rates.
    THIS is where GEX data lives. If a user asks "show me GEX for SPY", direct them here.
 
 3. /tools/confluence-scanner — Time Confluence Scanner
@@ -125,7 +125,7 @@ ANALYSIS & RISK
 -----------------
 26. /operator — Operator Dashboard
     Risk-managed analysis cockpit. Session phases, correlation matrix, pipeline stages.
-    Capital controls, permission gates, position sizing. The "control tower" for active trading.
+    Capital controls, condition gates, position sizing. The "control tower" for active trading.
 
 27. /tools/backtest — Backtester (Pro Trader)
     Strategy backtesting with edge groups, performance metrics, win rate, drawdown, inverse comparison.

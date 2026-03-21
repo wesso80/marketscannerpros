@@ -11,7 +11,7 @@ export default function SetupLayer({ payload }: SetupLayerProps) {
   const score = payload?.scores?.setup ?? 81;
 
   return (
-    <LayerSection tone="setup" title="Setup" subtitle="Is there asymmetric edge?" score={score}>
+    <LayerSection tone="setup" title="Setup" subtitle="Is there asymmetric opportunity?" score={score}>
       <QuadGrid>
         <div className="col-span-12 lg:col-span-6"><StructureAlignmentCard payload={payload} /></div>
         <div className="col-span-12 lg:col-span-6"><ExpectedMoveCard payload={payload} /></div>

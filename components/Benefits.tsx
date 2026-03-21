@@ -1,7 +1,7 @@
 // components/Benefits.tsx
 export default function Benefits() {
   const items = [
-    { title: "Never miss a squeeze again", blurb: "Automatic detection across multiple timeframes." },
+    { title: "Spot squeeze setups across timeframes", blurb: "Automatic detection across multiple timeframes." },
     { title: "Cut hours to minutes", blurb: "Bulk scans with confluence scores surface the best setups fast." },
     { title: "Focus on technically aligned setups", blurb: "Filter noise with momentum context and alerts." },
   ];

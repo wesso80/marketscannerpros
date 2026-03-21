@@ -919,7 +919,7 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
         : 'Conditional';
 
   const permissionReason = permissionState === 'Yes'
-    ? 'Structure supports intraday execution.'
+    ? 'Structure supports intraday analysis.'
     : permissionState === 'No'
       ? 'Short-gamma expansion risk is elevated.'
       : 'Mixed structure. Size down and wait for confirmation.';
@@ -930,7 +930,7 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
       ? 'Stand down or hedge only. Avoid fresh directional risk.'
       : 'Wait for reclaim/reject at VWAP before committing.';
 
-  const blockedActionReason = permissionState === 'No' ? 'Execution blocked by session risk state' : '';
+  const blockedActionReason = permissionState === 'No' ? 'Conditions not met due to session risk state' : '';
 
   if (tierLoading) return <div className="min-h-screen bg-[var(--msp-bg)]" />;
   if (!canAccessPortfolioInsights(tier)) return <UpgradeGate requiredTier="pro" feature="Intraday Charts" />;
@@ -1321,7 +1321,7 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
 
             <div className="space-y-2 xl:sticky xl:top-20 self-start">
               <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
-                <div className="text-[11px] uppercase tracking-wide text-slate-400">Execution Context</div>
+                <div className="text-[11px] uppercase tracking-wide text-slate-400">Analysis Context</div>
                 <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
                   <div className="rounded border border-slate-700 bg-slate-800/60 p-2">
                     <div className="text-slate-400">VWAP</div>
@@ -1383,7 +1383,7 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
               </div>
 
               <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
-                <div className="text-[11px] uppercase tracking-wide text-slate-400">Execution Actions</div>
+                <div className="text-[11px] uppercase tracking-wide text-slate-400">Analysis Actions</div>
                 <ExplorerActionGrid
                   assetType={assetType === 'crypto' ? 'crypto' : 'equity'}
                   symbol={symbol}

@@ -855,7 +855,7 @@ export default function AlertsWidget({
                             <option value="strategy_entry">🎯 Strategy Entry</option>
                             <option value="strategy_exit">🚪 Strategy Exit</option>
                           </optgroup>
-                          <optgroup label="🎯 Scanner Signals">
+                          <optgroup label="🎯 Scanner Setups">
                             <option value="scanner_buy_signal">🟢 Bullish Setup (Score Above)</option>
                             <option value="scanner_sell_signal">🔴 Bearish Setup (Score Below)</option>
                             <option value="scanner_bullish_flip">🐂 Bullish Flip (Direction Change)</option>
@@ -1129,14 +1129,14 @@ export default function AlertsWidget({
           <div>
             <div className="mb-4 p-3 rounded-lg border border-slate-700 bg-slate-900/40">
               <p className="text-xs text-slate-400">
-                Strategy layer combines scanner/strategy signal alerts with multi-condition chains.
+                Strategy layer combines scanner/strategy setup alerts with multi-condition chains.
               </p>
             </div>
 
             {/* Strategy Signal Alerts */}
             {strategySignalAlerts.length > 0 && (
               <div className="mb-4 space-y-2">
-                <p className="text-xs uppercase tracking-wide text-purple-300">Signal Alerts</p>
+                <p className="text-xs uppercase tracking-wide text-purple-300">Setup Alerts</p>
                 {strategySignalAlerts.map(alert => (
                   <div
                     key={alert.id}

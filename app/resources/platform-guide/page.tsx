@@ -16,8 +16,8 @@ const GUIDE = [
   },
   {
     title: "Operator Dashboard",
-    bullets: ["Review permission state", "Read context stack", "Choose deployment mode"],
-    tip: "Pro tip: Treat dashboard bias as a gate, not a signal trigger.",
+    bullets: ["Review condition state", "Read context stack", "Choose analysis mode"],
+    tip: "Pro tip: Treat dashboard bias as a gate, not a setup trigger.",
     cta: { label: "Open Markets", href: "/tools/markets" },
   },
   {

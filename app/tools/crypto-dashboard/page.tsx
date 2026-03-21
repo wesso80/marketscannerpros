@@ -284,7 +284,7 @@ export default function CryptoDashboard() {
       ? 'Liquidations skewed to longs (downside confirmation)'
       : data.liquidations.summary.marketBias === 'shorts_liquidated'
         ? 'Liquidations skewed to shorts (squeeze risk)'
-        : 'Liquidations balanced (no directional edge)'
+        : 'Liquidations balanced (no directional bias)'
     : 'Liquidation confirmation pending';
 
   const tradeIdeas: DerivativesTradeIdea[] = [

@@ -1438,10 +1438,10 @@ export function PortfolioContent() {
       : totalReturn < -2
       ? 'BEARISH'
       : 'NEUTRAL';
-    const action: 'WAIT' | 'PREP' | 'EXECUTE' = riskLoadLabel === 'High'
+    const action: 'WAIT' | 'PREP' | 'REVIEW' = riskLoadLabel === 'High'
       ? 'WAIT'
       : edge >= 60
-      ? 'EXECUTE'
+      ? 'REVIEW'
       : 'PREP';
     const risk: 'LOW' | 'MODERATE' | 'HIGH' = riskLoadLabel === 'High'
       ? 'HIGH'
@@ -1455,7 +1455,7 @@ export function PortfolioContent() {
       bias,
       action,
       risk,
-      next: action === 'WAIT' ? 'Protect capital and rebalance' : action === 'EXECUTE' ? 'Manage winners/losers actively' : 'Prepare rebalance plan',
+      next: action === 'WAIT' ? 'Protect capital and rebalance' : action === 'REVIEW' ? 'Manage winners/losers actively' : 'Prepare rebalance plan',
       mode: 'MANAGE',
     });
   }, [totalReturn, riskLoadLabel, topAllocation?.symbol]);
@@ -2196,7 +2196,7 @@ export function PortfolioContent() {
                       <option value="longterm">Long Term</option>
                       <option value="options">Options</option>
                       <option value="breakout">Breakout</option>
-                      <option value="ai_signal">AI Signal</option>
+                      <option value="ai_signal">AI Setup</option>
                       <option value="daytrade">Day Trade</option>
                       <option value="dividend">Dividend</option>
                     </select>

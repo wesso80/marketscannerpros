@@ -16,7 +16,7 @@ Your Market Scanner is a powerful tool that analyzes stocks and cryptocurrencies
 ### 🔍 Market Scanner
 - Analyzes stocks and crypto to find the best trading opportunities
 - Shows you which investments are trending up or down
-- Calculates how much you should invest based on your risk tolerance
+- Calculates suggested position sizes based on your risk tolerance
 
 ### 🚨 Price Alerts
 - Get notified when a stock or crypto reaches your target price
@@ -58,9 +58,9 @@ Your Market Scanner is a powerful tool that analyzes stocks and cryptocurrencies
 
 5. **Read Your Results**:
    - **Score**: Higher scores = better opportunities
-   - **Direction**: "Bullish" (buy) or "Bearish" (sell)
-   - **Size**: How many shares/coins to buy
-   - **Risk $**: How much you could lose if stopped out
+   - **Direction**: "Bullish" (long bias) or "Bearish" (short bias)
+   - **Size**: Suggested position size
+   - **Risk $**: How much you could lose if invalidation level is hit
 
 ### Setting Up Price Alerts
 
@@ -109,21 +109,21 @@ Your Market Scanner is a powerful tool that analyzes stocks and cryptocurrencies
 ### Scan Results Explained
 
 **What the Scores Mean:**
-- **75-100**: Very strong buy signal
-- **25-75**: Moderate buy signal
-- **0-25**: Weak buy signal
-- **-25-0**: Weak sell signal
-- **-75-25**: Moderate sell signal
-- **Below -75**: Very strong sell signal
+- **75-100**: Very strong bullish setup
+- **25-75**: Moderate bullish setup
+- **0-25**: Weak bullish setup
+- **-25-0**: Weak bearish setup
+- **-75-25**: Moderate bearish setup
+- **Below -75**: Very strong bearish setup
 
 **Key Columns:**
 - **Symbol**: The stock or crypto ticker
 - **Score**: Overall strength rating
-- **Direction**: Whether to buy (Bullish) or sell (Bearish)
+- **Direction**: Whether bias is Bullish or Bearish
 - **Close**: Current price
 - **RSI**: Momentum indicator (over 70 = overbought, under 30 = oversold)
-- **Size**: How many shares/coins to buy with your risk settings
-- **Stop**: Where to set your stop-loss order
+- **Size**: Suggested position size based on your risk settings
+- **Stop**: Invalidation level for risk management
 - **Risk $**: Maximum amount you could lose
 - **Notional $**: Total investment amount
 

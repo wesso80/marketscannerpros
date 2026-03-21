@@ -6,8 +6,8 @@
 
 **Prepared for:** External Legal Counsel (Australian Financial Services)
 **Prepared by:** MarketScanner Pros — Internal Compliance Review
-**Date:** 20 March 2026
-**Version:** 1.1
+**Date:** 21 March 2026
+**Version:** 1.2
 **Classification:** Confidential — Legal Privileged
 
 ---
@@ -65,8 +65,9 @@ In March 2026, two comprehensive internal compliance remediations were conducted
 
 - **Round 1 (19 March 2026):** 27+ source files, 90+ individual text changes — removed directive, advisory, and predictive language from scanner outputs, AI prompts, Golden Egg reports, marketing copy, alerts, and dashboard interfaces.
 - **Round 2 (20 March 2026):** 23 additional source files, 131 insertions / 100 deletions — extended remediation to all remaining component-level UI text, including options terminals, crypto dashboards, decision bars, time scanners, risk governor displays, edge profile cards, operator workflows, and screener tables.
+- **Round 3 (21 March 2026):** 45+ additional source files — deep sweep of all tool pages, AI prompt templates, API route outputs, blog content, user documentation, and resource pages. Addressed residual instances of "confidence" (→ "confluence"), "signal" (→ "setup"), "edge" (→ "pattern"/"advantage"), "institutional" (→ "analytical"), "operator" (→ "analysis"), "execution" (→ "analysis"/"timing"), "playbook" (→ "framework"), "Stop Loss" (→ "Invalidation"), "Target Price" (→ "Analyst Price Target"/"Key Levels"), "permission" (→ "condition"/"status"), "deploy" (→ "position"/"analyse"), "conviction" (→ "confluence"), "prediction" (→ "scenario"), and "recommendations" (→ "analysis"/"scenarios").
 
-Combined, the remediation covered 50+ source files with 220+ individual text changes. Details are set out in Section 5 below.
+Combined, the three remediation rounds covered 95+ source files with 350+ individual text changes. Details are set out in Section 5 below.
 
 ---
 
@@ -88,7 +89,7 @@ The following describes each major system within the platform, what it does, wha
 
 **Output:** A single-page report with sections covering price data, technical indicators, confluence scoring, macro regime state, options sentiment, and an AI-generated thesis paragraph. Outputs are framed as "scenario analysis" rather than trade recommendations.
 
-**Current framing:** The scoring label "Confidence" has been replaced with "Confluence" / "Alignment." The term "Trade Plan" has been replaced with "Scenario Plan (Paper Trade)." Scenario outputs describe observed conditions rather than recommending action.
+**Current framing:** The scoring label "Confidence" has been replaced with "Confluence" / "Alignment." The term "Trade Plan" has been replaced with "Scenario Plan (Paper Trade)." Scenario outputs describe observed conditions rather than recommending action. In Round 3, additional labels were remediated: "Live Market Signals" → "Live Market Setups", "Prediction" → "Scenario", "Active Signal" → "Active Setup", "confidence scores / conviction" → "confluence scores / alignment", and API output phrases "Buy/Sell on pullback" → "Enter long/Enter short on pullback".
 
 ### 2.3 AI Analyst (ARCA AI)
 
@@ -318,29 +319,118 @@ The following table documents the major language changes implemented across 50+ 
 | Established edge / Developing edge | Established pattern / Developing pattern | EdgeInsightCards status labels |
 | Command / Decision / Execution (kickers) | Context / Analysis / Levels | DecisionCockpit section kicker labels |
 
+**Round 3 — Deep Sweep: Tool Pages, AI Prompts, API Routes, Blog, Docs (21 March 2026)**
+
+| Previous Term | Replacement Term | Context |
+|---|---|---|
+| Confidence (Golden Egg labels) | Confluence | golden-egg/page.tsx — summary text, score labels, regime labels |
+| Live Market Signals | Live Market Setups | golden-egg/page.tsx — cross-market regime section |
+| Confidence scores / conviction | Confluence scores / alignment | golden-egg/page.tsx — cross-market description |
+| Prediction | Scenario | golden-egg/page.tsx — time confluence section |
+| Active Signal | Active Setup | golden-egg/page.tsx — DVE signal section |
+| Target Price (deep analysis) | Analyst Price Target | deep-analysis/page.tsx — company fundamentals card |
+| Operator Panel | Analysis Panel | options-confluence/page.tsx — panel heading |
+| Market Playbook Engine | Market Framework Engine | options-confluence/page.tsx — scenario panel |
+| Playbook invalidation | Framework invalidation | options-confluence/page.tsx — thesis invalidation |
+| MSP AI SIGNAL | MSP AI SETUP | options-confluence/page.tsx — AI setup panel |
+| supports intraday execution | supports intraday analysis | intraday-charts/page.tsx — permission reason |
+| Execution blocked | Conditions not met | intraday-charts/page.tsx — blocked state |
+| Execution Context / Actions | Analysis Context / Actions | intraday-charts/page.tsx — section headings |
+| Operator summary | Analysis summary | commodities/page.tsx — summary text |
+| permission (in summary) | status | commodities/page.tsx — summary text |
+| normal execution allowed | normal analysis allowed | news/page.tsx — catalyst summary |
+| Confidence (news) | Confluence | news/page.tsx — narrative label |
+| AI prediction performance | AI analysis performance | signal-accuracy/page.tsx — description text |
+| Signal Accuracy | Setup Accuracy | signal-accuracy/page.tsx — page title |
+| EXECUTE (portfolio action) | REVIEW | portfolio/page.tsx — operator state action |
+| AI Signal (strategy option) | AI Setup | portfolio/page.tsx — strategy dropdown |
+| Adaptive Confidence (equity) | Adaptive Confluence | equity-explorer/page.tsx — regime label |
+| Target Price (equity) | Analyst Price Target | equity-explorer/page.tsx — analyst data |
+| confidence (crypto summary) | confluence | crypto/page.tsx — AI summary text |
+| Adaptive Confidence (crypto) | Adaptive Confluence | crypto/page.tsx — morning decision label |
+| no directional edge | no directional bias | crypto-dashboard/page.tsx — liquidation text |
+| operator summary (backtest) | analysis summary | backtest/page.tsx — AI brief prompt |
+| Backtest confidence | Backtest confluence | backtest/page.tsx — journal auto-text |
+| ARCA Playbook Library | ARCA Framework Library | workspace/LearningTab.tsx — section heading |
+| Scanner Signals (alert groups) | Scanner Setups | AlertsWidget.tsx — optgroup labels |
+| Signal Alerts | Setup Alerts | AlertsWidget.tsx — strategy alert heading |
+| signal alerts (description) | setup alerts | AlertsWidget.tsx — description text |
+| daily edge (review) | daily go-to | Reviews.tsx — testimonial text |
+| fast signals (review) | real-time data | Reviews.tsx — testimonial text |
+| Confidence: [XX%] (ARCA prompt) | Confluence: [XX%] | arcaV3Engine.ts — output template |
+| Stop Loss (ARCA prompt) | Invalidation | arcaV3Engine.ts — scenario template |
+| Stop loss is MANDATORY | Invalidation level is MANDATORY | arcaV3Engine.ts — rules section |
+| reduced confidence / low conviction | reduced confluence / low alignment | arcaV3Engine.ts — multi-TF rules |
+| entry timing recommendations | entry timing analysis | arcaV3Engine.ts — time confluence rules |
+| highest conviction setup | highest confluence setup | arcaV3Engine.ts — time confluence rules |
+| High conviction move (analyst) | High confluence move | mspAnalystV2.ts — OI interpretation |
+| RISK GOVERNOR PERMISSION | RISK GOVERNOR STATUS | mspAnalystV2.ts — context builder |
+| recommendation MUST be WAIT | assessment MUST be WAIT | mspAnalystV2.ts — block message |
+| ADAPTIVE CONFIDENCE LENS | ADAPTIVE CONFLUENCE LENS | mspAnalystV2.ts — ACL section |
+| Active Playbook (doctrine) | Active Framework | intelligenceContext.ts — doctrine classifier |
+| Match Confidence (doctrine) | Match Confluence | intelligenceContext.ts — doctrine stats |
+| playbook may underperform | framework may underperform | intelligenceContext.ts — regime warning |
+| active doctrine playbook | active doctrine framework | intelligenceContext.ts — instructions |
+| strike recommendations | strike analysis | platformKnowledge.ts — tool description |
+| permission gates | condition gates | platformKnowledge.ts — tool description |
+| High Conviction (engine comment) | High Alignment | probability-engine.ts — label comment |
+| Buy / Sell on pullback (GE API) | Enter long / Enter short | golden-egg/route.ts — entry trigger text |
+| confidence (GE API narrative) | confluence | golden-egg/route.ts — narrative summary |
+| High conviction move (analyst API) | High confluence move | msp-analyst/route.ts — OI interpretation |
+| Confidence (regime agreement) | Confluence | msp-analyst/route.ts — system prompt |
+| Adaptive Confidence (analyst API) | Adaptive Confluence | msp-analyst/route.ts — system prompt |
+| High confidence signal | High confluence setup | ai/suggest/route.ts — suggestion title |
+| confidence detected | confluence detected | ai/suggest/route.ts — suggestion description |
+| Brain permission | Brain status | research-case/route.ts — thesis text |
+| Best playbook | Best framework | research-case/route.ts — probability text |
+| edge (blog — marketing CTA) | analytical advantage | blog/posts-data.ts — blog content |
+| Higher Win Rates (blog title) | Better Analysis | blog/posts-data.ts — blog post title |
+| extremely high win rate | extremely high confluence alignment | blog/posts-data.ts — blog content |
+| improves win rates | improves analysis quality | blog/posts-data.ts — blog content |
+| trade with confidence | analyse with confluence | blog/posts-data.ts — CTA link |
+| profit potential (blog) | move potential | blog/posts-data.ts — short squeeze blog |
+| squeeze alerts before market reacts | squeeze detection across timeframes | blog/posts-data.ts — CTA link |
+| should invest (user guide) | suggested position sizes | USER_INSTRUCTIONS.md — scanner description |
+| buy signal / sell signal scores | bullish setup / bearish setup | USER_INSTRUCTIONS.md — score meanings |
+| buy (Bullish) / sell (Bearish) | bias is Bullish / Bearish | USER_INSTRUCTIONS.md — direction column |
+| stop-loss order | invalidation level | USER_INSTRUCTIONS.md — column descriptions |
+| Guides and playbooks | Guides and frameworks | resources/page.tsx — description |
+| Playbooks (badge) | Frameworks | resources/page.tsx — card badge |
+| deploying size | positioning size | resources/trading-guides/page.tsx |
+| Volatility Window Playbook | Volatility Window Framework | resources/trading-guides/page.tsx |
+| permission state / deployment mode | condition state / analysis mode | resources/platform-guide/page.tsx |
+| signal trigger | setup trigger | resources/platform-guide/page.tsx |
+
 ### 5.2 Design Rationale
 
 These changes were implemented to reduce the risk that platform outputs could be characterised as "financial product advice" under s.766B of the Corporations Act. The intent is that all outputs are observational and analytical in nature — describing what technical conditions exist — rather than directive — instructing a user to take a specific action.
 
 ### 5.3 Scope of Remediation
 
-The combined remediation (Rounds 1 and 2) covered:
+The combined remediation (Rounds 1, 2, and 3) covered:
 
 - Scanner output labels and status indicators (ScreenerTable, WatchlistWidget)
 - Golden Egg scenario reports and scoring language
-- AI system prompts and output formatting rules
+- AI system prompts and output formatting rules (arcaV3Engine, mspAnalystV2, intelligenceContext, platformKnowledge)
 - Edge Profile and Adaptive Personality display labels (EdgeInsightCards, StateMachineTraderEyeCard)
 - Risk Governor display messages (CapitalFlowCard, risk metric labels)
 - Marketing copy on the homepage, pricing page, and feature descriptions
-- Alert and notification text
+- Alert and notification text (AlertsWidget scanner/strategy groups)
 - Component-level UI text across dashboard, portfolio, and journal interfaces
 - Fear & Greed gauge interpretation language (removed "buying opportunity" framing)
-- Crypto-specific components (CryptoMorningDecisionCard, DerivativesDecisionRow, TradeIdeasSection)
-- Options terminal components (DecisionCommandBar, DecisionBar, SuggestedPlaysCard)
+- Crypto-specific components (CryptoMorningDecisionCard, DerivativesDecisionRow, TradeIdeasSection, crypto/page.tsx, crypto-dashboard/page.tsx)
+- Options terminal components (DecisionCommandBar, DecisionBar, SuggestedPlaysCard, options-confluence/page.tsx)
 - Time scanner components (TimeScannerPage, TimeGateBar)
-- News and decision components (NewsDecisionCard, PermissionGate, DecisionLens, DecisionCockpit)
+- News and decision components (NewsDecisionCard, PermissionGate, DecisionLens, DecisionCockpit, news/page.tsx)
 - Operator workflow components (OperatorProposalRail, CommandCenterStateBar)
 - Confluence and flow analysis displays (CapitalFlowCard — formerly "MSP One Brain Card")
+- All tool pages: Golden Egg, deep analysis, options confluence, intraday charts, commodities, news, gainers-losers, signal accuracy, portfolio, equity explorer, crypto, crypto dashboard, backtest, workspace/LearningTab
+- API route outputs: golden-egg, msp-analyst, ai/suggest, research-case
+- AI prompt template files: arcaV3Engine.ts, mspAnalystV2.ts, intelligenceContext.ts, platformKnowledge.ts, probability-engine.ts
+- Blog content (posts-data.ts): marketing CTAs, "win rate" / "edge" / "profit" language
+- User documentation (USER_INSTRUCTIONS.md): "buy/sell signal" → "bullish/bearish setup", "stop-loss" → "invalidation level"
+- Resource pages: trading guides, platform guide
+- Reviews: testimonial language
 
 **Note:** The Operator HUD (comprising AdaptiveTraderPersonalityBar, OperatorCommandStrip, CapitalControlStrip, and GlobalSessionBar) remains hidden from the user interface pending further review. All other components are live with remediated language.
 

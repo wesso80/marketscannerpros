@@ -86,7 +86,7 @@ export default function SignalAccuracyPage() {
         <div className="bg-slate-800/60 rounded-2xl p-8 max-w-md text-center border border-slate-700">
           <div className="text-4xl mb-3">🔒</div>
           <h2 className="text-xl font-bold text-white mb-2">Pro Trader Feature</h2>
-          <p className="text-slate-400 text-sm">Signal accuracy analytics require a Pro Trader subscription to track AI prediction performance over time.</p>
+          <p className="text-slate-400 text-sm">Signal accuracy analytics require a Pro Trader subscription to track AI analysis performance over time.</p>
         </div>
       </div>
     );
@@ -129,8 +129,8 @@ export default function SignalAccuracyPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">🎯 Signal Accuracy</h1>
-          <p className="text-slate-400 text-sm mt-1">Track AI prediction performance across all scanners and horizons</p>
+          <h1 className="text-2xl font-bold tracking-tight">🎯 Setup Accuracy</h1>
+          <p className="text-slate-400 text-sm mt-1">Track AI analysis performance across all scanners and horizons</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">

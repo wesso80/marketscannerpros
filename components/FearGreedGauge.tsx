@@ -208,7 +208,7 @@ Based on: Volatility, Volume, Social Media, Surveys, BTC Dominance, Google Trend
           {value <= 24 && "Extreme fear can indicate oversold conditions - historically associated with market bottoms."}
           {value > 24 && value <= 44 && "Fear in the market - investors are worried. Watch for reversal signals."}
           {value > 44 && value <= 55 && "Neutral sentiment - market is balanced between bulls and bears."}
-          {value > 55 && value <= 75 && "Greed is building - consider taking some profits."}
+          {value > 55 && value <= 75 && "Greed is building - historically associated with increased volatility."}
           {value > 75 && "Extreme greed often precedes corrections - exercise caution."}
         </p>
       </div>

@@ -148,7 +148,7 @@ export default function TradeSuggestionCard({ suggestion, onAccept, onReject }: 
         flexWrap: 'wrap',
       }}>
         <span>Scanner: <strong style={{ color: '#CBD5E1' }}>{s.scanner_score}</strong>/100</span>
-        <span>Edge Match: <strong style={{ color: '#CBD5E1' }}>{edgeMatch}%</strong></span>
+        <span>Alignment Match: <strong style={{ color: '#CBD5E1' }}>{edgeMatch}%</strong></span>
         {s.strategy && <span>Strategy: <strong style={{ color: '#CBD5E1' }}>{s.strategy.replace(/_/g, ' ')}</strong></span>}
       </div>
 

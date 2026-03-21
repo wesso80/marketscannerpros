@@ -411,7 +411,7 @@ export default function NewsSentimentPage() {
         ? `Earnings density high with heavy pre-market catalysts; expect whipsaw and failed breakouts.`
         : permission === 'CONDITIONAL'
           ? `Catalyst cluster is tradable only with tighter selection and risk controls.`
-          : `Catalyst load is manageable; normal execution allowed with plan discipline.`;
+          : `Catalyst load is manageable; normal analysis allowed with plan discipline.`;
 
     const watchlist24 = enhancedEarningsRows
       .filter((row) => row.deltaDays <= 1 && myWatchlistSymbols.includes(row.symbol.toUpperCase()))
@@ -857,7 +857,7 @@ export default function NewsSentimentPage() {
                 <div className="text-xs text-white/60">Top Narrative</div>
                 <div className="mt-1 text-base font-semibold text-white/90">{newsGate.topNarrative}</div>
                 <div className="mt-3 flex items-center justify-between text-xs text-white/60">
-                  <span>Confidence</span>
+                  <span>Confluence</span>
                   <span>{newsGate.confidencePct}%</span>
                 </div>
                 <div className="mt-2 h-2 rounded-full bg-white/10">

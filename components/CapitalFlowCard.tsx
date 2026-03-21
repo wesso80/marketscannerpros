@@ -246,7 +246,7 @@ export default function CapitalFlowCard({
           gap: '0.35rem',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem' }}>
-            <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>Institutional Probability Matrix</div>
+            <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>Analytical Probability Matrix</div>
             <div style={{ color: '#E2E8F0', fontSize: '0.68rem', fontWeight: 700 }}>{flow.probability_matrix.regime}</div>
           </div>
 
@@ -286,7 +286,7 @@ export default function CapitalFlowCard({
           gap: '0.3rem',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem' }}>
-            <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>Institutional Flow State</div>
+            <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>Analytical Flow State</div>
             <div style={{ color: '#E2E8F0', fontSize: '0.72rem', fontWeight: 800 }}>
               {flow.flow_state.state} ({Math.round(flow.flow_state.confidence)}%)
             </div>

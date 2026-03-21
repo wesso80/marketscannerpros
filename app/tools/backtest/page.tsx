@@ -490,7 +490,7 @@ function BacktestContent() {
         win_rate: Number(results.winRate.toFixed(2)),
       },
       why_this_trade_auto: [
-        `Backtest confidence ${Math.round(results.winRate)}% win rate`,
+        `Backtest confluence ${Math.round(results.winRate)}% win rate`,
         `Profit factor ${results.profitFactor.toFixed(2)}`,
         `Max drawdown ${results.maxDrawdown.toFixed(2)}%`,
       ],
@@ -2771,7 +2771,7 @@ function BacktestContent() {
                   color: '#94a3b8',
                   fontSize: '13px'
                 }}>
-                  Generate the AI brief to get an operator summary before reviewing raw analytics.
+                  Generate the AI brief to get an analysis summary before reviewing raw analytics.
                 </div>
               )}
             </div>

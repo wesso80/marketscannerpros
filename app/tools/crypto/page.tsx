@@ -363,7 +363,7 @@ function CryptoCommandCenterContent() {
         permission: morningDecision.verdict,
         confidence: morningDecision.adaptiveConfidence,
       },
-      summary: `Crypto ${morningDecision.verdict} (${morningDecision.adaptiveConfidence}% confidence). Market: ${marketData.market?.totalMarketCapFormatted || 'N/A'} (${marketData.market?.marketCapChange24h?.toFixed(2) || '0'}% 24h)`,
+      summary: `Crypto ${morningDecision.verdict} (${morningDecision.adaptiveConfidence}% confluence). Market: ${marketData.market?.totalMarketCapFormatted || 'N/A'} (${marketData.market?.marketCapChange24h?.toFixed(2) || '0'}% 24h)`,
     });
   }, [marketData, morningDecision.adaptiveConfidence, morningDecision.verdict, setPageData]);
 
@@ -471,7 +471,7 @@ function CryptoCommandCenterContent() {
                 </h2>
               </div>
               <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
-                <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Adaptive Confidence: {morningDecision.adaptiveConfidence}%</span>
+                <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Adaptive Confluence: {morningDecision.adaptiveConfidence}%</span>
                 <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Capital Mode: {morningDecision.capitalMode}</span>
                 <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Longs: {morningDecision.longsAllowed ? 'Allowed' : 'Restricted'}</span>
                 <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Shorts: {morningDecision.shortsAllowed ? 'Allowed' : 'Restricted'}</span>

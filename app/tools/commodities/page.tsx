@@ -819,7 +819,7 @@ export default function CommoditiesPage() {
                 </div>
               </div>
               <div className="mt-3 rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/75">
-                Operator summary: {derivedState.impulseType} impulse, {derivedState.rotationLeader} leading, permission {derivedState.permission.toLowerCase()} ({derivedState.score}/100).
+                Analysis summary: {derivedState.impulseType} impulse, {derivedState.rotationLeader} leading, status {derivedState.permission.toLowerCase()} ({derivedState.score}/100).
               </div>
             </section>
 

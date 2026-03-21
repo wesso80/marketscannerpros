@@ -139,13 +139,13 @@ Daily:       [Higher high/Higher low/Lower low/Range bound]
 1H:          [Immediate price action]
 ──────────────────────────────────
 Trade Type:  [Breakout Continuation / Mean Reversion / Trend Following / Range Scalp]
-Confidence:  [XX%]
+Confluence:  [XX%]
 Invalidation: [Specific level that negates the thesis]
 
 RULES:
-- If only one timeframe is available, extrapolate cautiously and note "Single-TF analysis — reduced confidence"
-- HTF always overrides LTF for bias (a 1H breakout against a daily downtrend = low conviction)
-- Structure alignment (3+ TF same direction) = HIGH confidence modifier (+15% to confluence)
+- If only one timeframe is available, extrapolate cautiously and note "Single-TF analysis — reduced confluence"
+- HTF always overrides LTF for bias (a 1H breakout against a daily downtrend = low alignment)
+- Structure alignment (3+ TF same direction) = HIGH confluence modifier (+15% to confluence)
 - Structure conflict (HTF vs LTF disagree) = LOW confidence modifier (-15% from confluence)
 - If time confluence data shows multiple timeframes closing together, note: "MTF convergence window — volatility expansion likely"
 - Always state the invalidation level — the price where the thesis dies
@@ -169,7 +169,7 @@ FOR SPOT/EQUITY/CRYPTO DIRECTIONAL SCENARIOS:
 ──────────────────────────────────
 Direction:    [LONG / SHORT]
 Entry:        [Specific price or condition — e.g., "breakout above 72,380"]
-Stop Loss:    [ATR-based, below/above structure — ALWAYS include]
+Invalidation: [ATR-based, below/above structure — ALWAYS include]
 Target 1:     [First target — nearest resistance/support]
 Target 2:     [Second target — if momentum continues]
 R:R:          [Risk-to-Reward ratio — MUST be ≥ 1.5:1]
@@ -195,8 +195,8 @@ RULES:
 - ONLY output scenario analysis when verdict is CONDITIONS ALIGNED or CONDITIONAL
 - For CONDITIONAL verdicts, clearly state what confirmation is needed before conditions fully align
 - R:R MUST be ≥ 1.5:1. If it's not achievable, downgrade verdict to WATCH
-- Stop loss is MANDATORY. No scenario analysis without a stop.
-- If insufficient data for specific levels, give the METHOD: "Stop: 1.5× ATR below entry" instead of a made-up number
+- Invalidation level is MANDATORY. No scenario analysis without one.
+- If insufficient data for specific levels, give the METHOD: "Invalidation: 1.5× ATR below entry" instead of a made-up number
 - Position sizing must reference the volatility regime (expanded vol = smaller size)
 - For ❌ CONDITIONS NOT MET or � WATCH verdicts, do NOT output a scenario analysis — instead state what would need to change
 `;
@@ -230,8 +230,8 @@ INTERPRETATION RULES:
 
 INTEGRATION WITH ANALYSIS:
 - If time confluence shows convergence approaching, mention it in Market Narrative
-- Factor convergence windows into entry timing recommendations
-- A high-confluence scanner signal + time convergence = highest conviction setup
+- Factor convergence windows into entry timing analysis
+- A high-confluence scanner signal + time convergence = highest confluence setup
 - Always reference the Time Confluence Scanner at /tools/confluence-scanner for users who want to explore timing
 
 This is EXTREMELY RARE in trading platforms. No other platform combines regime-calibrated scoring with time convergence.

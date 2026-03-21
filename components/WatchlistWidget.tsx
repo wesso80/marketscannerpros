@@ -700,9 +700,9 @@ export default function WatchlistWidget() {
                       </div>
 
                       <div className="grid gap-1 text-[12px] text-slate-300">
-                        <div>Confidence: <span className="font-bold text-white">{row.confidence}%</span></div>
+                        <div>Confluence: <span className="font-bold text-white">{row.confidence}%</span></div>
                         <div>Timeframe Alignment: <span className="font-bold text-white">{row.alignmentScore}/4</span></div>
-                        <div>Edge: <span className={`font-bold ${row.edge === 'Bullish' ? 'text-emerald-400' : row.edge === 'Bearish' ? 'text-red-400' : 'text-amber-300'}`}>{row.edge}</span></div>
+                        <div>Bias: <span className={`font-bold ${row.edge === 'Bullish' ? 'text-emerald-400' : row.edge === 'Bearish' ? 'text-red-400' : 'text-amber-300'}`}>{row.edge}</span></div>
                         <div>Quality: <span className="font-bold text-white">{row.quality}</span></div>
                         <div>Momentum: <span className="font-bold text-white">{row.momentumState}</span></div>
                         <div>Volatility: <span className="font-bold text-white">{row.volatilityState}</span></div>

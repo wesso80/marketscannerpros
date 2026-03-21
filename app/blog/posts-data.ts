@@ -17,7 +17,7 @@ export const blogPosts: BlogPost[] = [
     content: `
 # What is a Short Squeeze? (And How to Spot One Early)
 
-A short squeeze is one of the most powerful price movements in trading. Understanding how they work—and how to spot them early—can give you a significant edge in the markets.
+A short squeeze is one of the most powerful price movements in trading. Understanding how they work—and how to spot them early—can give you a significant analytical advantage in the markets.
 
 ## How Short Squeezes Work
 
@@ -84,9 +84,9 @@ Stop manually checking charts—let automation find squeezes for you.
 
 ## Conclusion
 
-Short squeezes offer explosive profit potential, but only if you spot them early. Use technical indicators, watch for high short interest, and always confirm with multi-timeframe analysis.
+Short squeezes offer explosive move potential, but only if you spot them early. Use technical indicators, watch for high short interest, and always confirm with multi-timeframe analysis.
 
-[Try MarketScanner free](/) and get squeeze alerts before the market reacts.
+[Try MarketScanner free](/) and get squeeze detection across timeframes.
 
 ---
 
@@ -244,7 +244,7 @@ The best screener depends on your trading style:
 
 All have free tiers—test each and see what fits your workflow.
 
-[Start scanning for free](/) and find your edge.
+[Start scanning for free](/) and find your analytical advantage.
 
 ---
 
@@ -253,12 +253,12 @@ All have free tiers—test each and see what fits your workflow.
   },
   {
     slug: "multi-timeframe-confluence-trading",
-    title: "Multi-Timeframe Confluence: The Secret to Higher Win Rates",
+    title: "Multi-Timeframe Confluence: The Secret to Better Analysis",
     excerpt: "Stop trading off single charts. Learn how professional traders use multi-timeframe analysis to confirm technically aligned setups and avoid false signals.",
     category: "Strategy",
     readTime: "6 min read",
     content: `
-# Multi-Timeframe Confluence: The Secret to Higher Win Rates
+# Multi-Timeframe Confluence: The Secret to Better Analysis
 
 Most losing traders make the same mistake: they trade off a single timeframe. Professional traders? They demand **confluence across multiple timeframes** before risking capital. Here's why—and how to do it right.
 
@@ -281,7 +281,7 @@ A 15-minute chart shows a bullish breakout. You enter long. Minutes later, it re
 You short because the 1H chart looks bearish. But the 4H and daily are screaming bullish. You're trading against the bigger trend—low win rate guaranteed.
 
 **Problem #3: No Context**  
-Without higher timeframes, you don't know if you're at support/resistance, in consolidation, or trending. Context = edge.
+Without higher timeframes, you don't know if you're at support/resistance, in consolidation, or trending. Context = advantage.
 
 ## The Right Way: 3-Timeframe Analysis
 
@@ -385,7 +385,7 @@ The ultimate setup combines:
 2. **Squeeze indicators** (volatility about to expand)
 3. **Volume confirmation** (institutional interest)
 
-When all three hit → rare but extremely high win rate.
+When all three hit → rare but extremely high confluence alignment.
 
 ## Putting It Into Practice
 
@@ -400,9 +400,9 @@ When all three hit → rare but extremely high win rate.
 Single-timeframe trading = gambling.  
 Multi-timeframe confluence = professional trading.
 
-The best traders demand alignment across timeframes. It filters out noise, reduces false signals, and dramatically improves win rates.
+The best traders demand alignment across timeframes. It filters out noise, reduces false signals, and dramatically improves analysis quality.
 
-[Automate your multi-TF analysis](/) and trade with confidence.
+[Automate your multi-TF analysis](/) and analyse with confluence.
 
 ---
 

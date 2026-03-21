@@ -4,8 +4,8 @@ export default function Why() {
   const features = [
     {
       icon: "🎯",
-      title: "Never miss a squeeze again",
-      desc: "Get alerted before the crowd. Our scanner detects volatility compression across all your watchlists in real-time."
+      title: "Spot squeeze setups across timeframes",
+      desc: "Get notified when conditions align. Our scanner detects volatility compression across all your watchlists in real-time."
     },
     {
       icon: "⚡",
@@ -31,7 +31,7 @@ export default function Why() {
         <div style={{ textAlign: 'center', marginBottom: 40 }}>
           <h2 style={{ fontSize: 28, fontWeight: 650, marginBottom: 10 }}>Built for Serious Traders</h2>
           <p style={{ fontSize: 15, color: '#9ca3af', maxWidth: 500, margin: '0 auto' }}>
-            Stop guessing. Start trading with data-driven confidence and clarity.
+            Stop guessing. Start analysing with data-driven clarity and confluence.
           </p>
         </div>
 

@@ -60,9 +60,9 @@ export default function TimeTab({ ctx }: { ctx: TickerContext }) {
       <div className="rounded-md border border-dashed border-[var(--msp-border)] bg-[var(--msp-panel)] p-3 text-[11px] text-[var(--msp-text-faint)]">
         <p className="font-semibold text-[var(--msp-text-muted)] mb-1">How Time Confluence Works</p>
         <p>
-          Multiple timeframe candle closes + Fibonacci time ratios + TWAP execution windows are scored together.
+          Multiple timeframe candle closes + Fibonacci time ratios + TWAP windows are scored together.
           When several time factors align, the confluence score rises — historically correlated with higher directional hit rates.
-          Higher scores = higher probability windows for entry execution.
+          Higher scores = stronger confluence windows for analysis.
         </p>
       </div>
     </div>

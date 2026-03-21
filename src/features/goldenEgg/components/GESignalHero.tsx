@@ -10,11 +10,11 @@ type Props = {
 };
 
 function signalLabel(confidence: number): string {
-  if (confidence >= 75) return 'STRONG SIGNAL';
-  if (confidence >= 60) return 'MODERATE SIGNAL';
-  if (confidence >= 45) return 'NEUTRAL SIGNAL';
-  if (confidence >= 30) return 'WEAK SIGNAL';
-  return 'NO SIGNAL';
+  if (confidence >= 75) return 'STRONG SETUP';
+  if (confidence >= 60) return 'MODERATE SETUP';
+  if (confidence >= 45) return 'NEUTRAL SETUP';
+  if (confidence >= 30) return 'WEAK SETUP';
+  return 'NO SETUP';
 }
 
 function signalGlow(confidence: number): string {

@@ -44,7 +44,7 @@ export default function ResourcesHome() {
         </div>
         <h1 className="mt-3 text-2xl font-semibold tracking-tight">Learn the platform fast</h1>
         <p className="mt-2 max-w-2xl text-sm text-white/60">
-          Guides and playbooks that map directly to MSP modules — so users move from context → decision → execution.
+          Guides and frameworks that map directly to MSP modules — so users move from context → decision → analysis.
         </p>
       </div>
 
@@ -56,7 +56,7 @@ export default function ResourcesHome() {
           href="/resources/platform-guide"
         />
         <HubCard
-          badge="Playbooks"
+          badge="Frameworks"
           title="Trading Guides"
           description="Bias → Rotation → Volatility → Scenario frameworks and operator checklists."
           href="/resources/trading-guides"

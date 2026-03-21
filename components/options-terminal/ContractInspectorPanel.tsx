@@ -115,7 +115,7 @@ export default function ContractInspectorPanel({ contract, spot, mode }: Props) 
         </div>
         {mode === 'retail' && (
           <p className="text-[9px] mt-2 italic" style={{ color: 'var(--msp-text-faint)' }}>
-            Switch to Institutional mode for Γ, Vega, Rho
+            Switch to Advanced mode for Γ, Vega, Rho
           </p>
         )}
       </div>

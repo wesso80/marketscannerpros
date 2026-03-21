@@ -129,7 +129,7 @@ export default function AdaptivePersonalityCard(props: AdaptivePersonalityCardPr
             marginBottom: '0.3rem',
           }}>
             <span style={{ color: 'var(--msp-text-faint)', fontSize: '0.7rem', textTransform: 'uppercase', fontWeight: 800 }}>
-              Institutional Filter Engine
+              Analytical Filter Engine
             </span>
             <span style={{
               color: data.institutionalFilter.noTrade ? '#EF4444' : '#10B981',

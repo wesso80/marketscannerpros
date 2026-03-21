@@ -14,8 +14,8 @@ export default function HowItWorks() {
     },
     {
       num: "3",
-      title: "Act on signals",
-      desc: "See confluence scores, export CSVs, set alerts, and execute with confidence."
+      title: "Review aligned setups",
+      desc: "See confluence scores, export CSVs, set alerts, and analyse with clarity."
     }
   ];
 

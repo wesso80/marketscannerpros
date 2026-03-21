@@ -187,7 +187,7 @@ export default function EdgeInsightCards() {
 
       {summary && (
         <div className="rounded-lg bg-indigo-500/5 border border-indigo-500/15 p-3 space-y-1">
-          <div className="text-[10px] uppercase tracking-wider text-indigo-400/80">AI Edge Summary</div>
+          <div className="text-[10px] uppercase tracking-wider text-indigo-400/80">AI Pattern Summary</div>
           <div className="text-[11px] text-slate-300 leading-relaxed">
             {summary.strongestStrategy && <span>Historically strongest: <strong className="text-white">{summary.strongestStrategy}</strong>. </span>}
             {summary.strongestRegime && <span>Highest win-rate regime: <strong className="text-white">{summary.strongestRegime.replace(/_/g, ' ')}</strong>. </span>}

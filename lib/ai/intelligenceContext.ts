@@ -206,10 +206,10 @@ MARKET PRESSURE ENGINE (MPE):
 
   if (doctrine) {
     parts.push(`
-DOCTRINE CLASSIFIER (Active Playbook):
-- Playbook: ${doctrine.id.replace(/_/g, ' ')}
-- Match Confidence: ${doctrine.confidence}%
-- Regime Compatible: ${doctrine.regimeCompatible ? 'YES' : 'NO — playbook may underperform'}
+DOCTRINE CLASSIFIER (Active Framework):
+- Framework: ${doctrine.id.replace(/_/g, ' ')}
+- Match Confluence: ${doctrine.confidence}%
+- Regime Compatible: ${doctrine.regimeCompatible ? 'YES' : 'NO — framework may underperform'}
 - Evidence: ${doctrine.reasons.slice(0, 4).join(' | ')}`);
   }
 
@@ -255,8 +255,8 @@ CONFLUENCE COMPONENT BREAKDOWN:
 INSTITUTIONAL STATE MACHINE:
 - Current State: ${stateMachine.state} — ${stateDescriptions[stateMachine.state] || 'unknown state'}
 - Direction: ${stateMachine.direction}
-- Playbook: ${stateMachine.playbook}
-- Confidence: ${stateMachine.confidence != null ? `${stateMachine.confidence}%` : 'N/A'}
+- Framework: ${stateMachine.playbook}
+- Confluence: ${stateMachine.confidence != null ? `${stateMachine.confidence}%` : 'N/A'}
 - In State Since: ${stateMachine.since}
 - Next Action: ${stateMachine.nextAction || 'N/A'}`);
   }
@@ -266,7 +266,7 @@ INSTITUTIONAL STATE MACHINE:
 INTELLIGENCE INSTRUCTIONS:
 - Reference the MPE composite score when discussing trade timing and position sizing.
 - If MPE < 25, recommend standing aside regardless of other signals.
-- Name the active doctrine playbook when framing the trade setup type.
+- Name the active doctrine framework when framing the trade setup type.
 - If doctrine is not regime-compatible, flag this as a risk factor.
 - Reference CFE market mode (pin/launch/chop) when discussing trade style selection.
 - If CFE brain permission is BLOCK, this overrides other bullish signals — stand aside.

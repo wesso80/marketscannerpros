@@ -123,11 +123,11 @@ export default function LiveDeskFeedPanel() {
             <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--msp-text-muted)' }}><span>Current Market Bias</span><strong style={{ color: 'var(--msp-warn)' }}>Neutral</strong></div>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--msp-text-muted)' }}><span>Technically Aligned Setups</span><strong style={{ color: 'var(--msp-bull)' }}>{highProb}</strong></div>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--msp-text-muted)' }}><span>Scanner Events</span><strong style={{ color: 'var(--msp-bull)' }}>Active</strong></div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--msp-text-muted)' }}><span>Avg Confidence</span><strong style={{ color: 'var(--msp-accent)' }}>{avgConfidence}%</strong></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--msp-text-muted)' }}><span>Avg Confluence</span><strong style={{ color: 'var(--msp-accent)' }}>{avgConfidence}%</strong></div>
           </div>
 
           <div style={{ marginTop: '0.2rem', borderTop: '1px solid var(--msp-divider)', paddingTop: '0.45rem', display: 'grid', gap: '0.28rem', fontSize: 11, color: 'var(--msp-text-muted)' }}>
-            <div>Edge Score: <strong style={{ color: 'var(--msp-accent)' }}>73 / 100</strong></div>
+            <div>Alignment Score: <strong style={{ color: 'var(--msp-accent)' }}>73 / 100</strong></div>
             <div>Regime State: <strong style={{ color: 'var(--msp-warn)' }}>Balanced Rotation</strong></div>
             <div>Trigger Ladder: <strong style={{ color: 'var(--msp-bull)' }}>2 / 4 Armed</strong></div>
           </div>

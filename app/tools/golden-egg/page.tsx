@@ -153,7 +153,7 @@ export default function GoldenEggPage() {
 
   const geAiSummary = useMemo(() => {
     if (!ge) return `Golden Egg: Loading ${sym}...`;
-    return `${sym} — Status: ${ge.permission}, Direction: ${ge.direction}, Confidence: ${ge.confidence}%, Regime: ${ge.regime}, Doctrine: ${ge.doctrine || 'N/A'}`;
+    return `${sym} — Status: ${ge.permission}, Direction: ${ge.direction}, Confluence: ${ge.confidence}%, Regime: ${ge.regime}, Doctrine: ${ge.doctrine || 'N/A'}`;
   }, [sym, ge]);
 
   useRegisterPageData('scanner', geAiData, [sym], geAiSummary);
@@ -388,7 +388,7 @@ export default function GoldenEggPage() {
             {/* Dynamic signals from regime API */}
             {regime.data?.signals && regime.data.signals.length > 0 && (
               <div className="mb-4">
-                <div className="text-[10px] text-slate-500 uppercase mb-2">Live Market Signals</div>
+                <div className="text-[10px] text-slate-500 uppercase mb-2">Live Market Setups</div>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                   {regime.data.signals.map((sig: any, i: number) => {
                     const r = sig.regime?.toLowerCase() || '';
@@ -435,7 +435,7 @@ export default function GoldenEggPage() {
               ))}
             </div>
             <div className="mt-3 pt-2 border-t border-slate-800/50 text-[10px] text-slate-500">
-              Cross-market factors adjust confidence scores. Headwinds reduce conviction; tailwinds support it.
+              Cross-market factors adjust confluence scores. Headwinds reduce alignment; tailwinds support it.
             </div>
           </Card>
 
@@ -573,10 +573,10 @@ export default function GoldenEggPage() {
                       </div>
                     )}
 
-                    {/* Confidence + Score Breakdown */}
+                    {/* Confluence + Score Breakdown */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       <div className="bg-[var(--msp-panel-2)] rounded p-2">
-                        <div className="text-[10px] text-slate-500">Confidence</div>
+                        <div className="text-[10px] text-slate-500">Confluence</div>
                         <div className="text-sm font-bold text-white">{tc.confidence}%</div>
                         <ScoreBar value={tc.confidence} color="#10B981" />
                       </div>
@@ -658,9 +658,9 @@ export default function GoldenEggPage() {
                       {tc.candleCloseConfluence.isWeekEnd && <div className="text-[10px] text-blue-400 mt-0.5">{'\uD83D\uDCC5'} Week-end confluence</div>}
                     </div>
 
-                    {/* Prediction */}
+                    {/* Scenario */}
                     <div className="bg-[var(--msp-panel-2)] rounded-lg p-2">
-                      <div className="text-[10px] text-slate-500 uppercase mb-1">Prediction</div>
+                      <div className="text-[10px] text-slate-500 uppercase mb-1">Scenario</div>
                       <div className="text-xs text-slate-300">{tc.prediction.reasoning}</div>
                       <div className="flex items-center gap-3 mt-1">
                         <span className="text-[10px] text-slate-500">Key Level: <span className="text-white font-mono">{fmtPrice(tc.prediction.targetLevel)}</span></span>
@@ -692,7 +692,7 @@ export default function GoldenEggPage() {
                     <Badge label={d.volatility.regime} color={
                       d.volatility.regime === 'compression' ? '#06B6D4' : d.volatility.regime === 'expansion' ? '#F59E0B' : d.volatility.regime === 'climax' ? '#EF4444' : '#94A3B8'
                     } />
-                    <span className="text-xs text-slate-400">Confidence: {d.volatility.regimeConfidence.toFixed(0)}%</span>
+                    <span className="text-xs text-slate-400">Confluence: {d.volatility.regimeConfidence.toFixed(0)}%</span>
                   </div>
 
                   {/* BBWP Gauge + Direction */}
@@ -743,7 +743,7 @@ export default function GoldenEggPage() {
                   </div>
                   {d.signal.active && d.signal.type !== 'none' && (
                     <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2">
-                      <div className="text-[10px] text-emerald-400 font-semibold">Active Signal: {d.signal.type.replace(/_/g, ' ')}</div>
+                      <div className="text-[10px] text-emerald-400 font-semibold">Active Setup: {d.signal.type.replace(/_/g, ' ')}</div>
                       <div className="text-[10px] text-slate-400">Strength: {d.signal.strength.toFixed(0)}%</div>
                     </div>
                   )}

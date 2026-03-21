@@ -2346,7 +2346,7 @@ export default function OptionsConfluenceScanner() {
         {/* Operator Panel */}
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-3 py-2">
           <div className="text-[0.7rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">
-            Operator Panel
+            Analysis Panel
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-[0.66rem] font-bold uppercase tracking-[0.05em] text-slate-500">View Mode</span>
@@ -3372,7 +3372,7 @@ export default function OptionsConfluenceScanner() {
             )}
 
             {/* ═══════════════════════════════════════════════════════════════════
-                 INSTITUTIONAL PANEL 4 — MARKET PLAYBOOK ENGINE
+                 INSTITUTIONAL PANEL 4 — MARKET FRAMEWORK ENGINE
                  Scenario analysis: Bull / Base / Bear with triggers, targets, strategies
             ═══════════════════════════════════════════════════════════════════ */}
             {trapDoors.evidence && result.aiMarketState?.scenarios && (
@@ -3498,7 +3498,7 @@ export default function OptionsConfluenceScanner() {
                 {/* Invalidation Level */}
                 {result.aiMarketState.thesis?.invalidationLevel != null && (
                   <div className="mt-[0.45rem] text-[0.74rem] font-bold text-red-300/80">
-                    ⛔ Playbook invalidation: Below ${result.aiMarketState.thesis.invalidationLevel.toFixed(2)} — all scenarios void
+                    ⛔ Framework invalidation: Below ${result.aiMarketState.thesis.invalidationLevel.toFixed(2)} — all scenarios void
                   </div>
                 )}
               </div>
@@ -3512,7 +3512,7 @@ export default function OptionsConfluenceScanner() {
             <div className="grid min-h-[clamp(220px,32vh,380px)] gap-[0.8rem] rounded-[18px] border border-[var(--msp-border-strong)] border-l-[3px] border-l-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[1.1rem_1.2rem] shadow-[var(--msp-shadow)]">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="text-[0.95rem] font-black tracking-[0.4px] text-slate-50">
-                  ⭐ MSP AI SIGNAL
+                  ⭐ MSP AI SETUP
                 </div>
                 <div className="rounded-full border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-[2px] text-[0.72rem] font-bold text-[var(--msp-muted)]">
                   Powered by Nasdaq BX + FMV Options (LIVE)

@@ -17,7 +17,7 @@ const pillars = [
       </svg>
     ),
     title: 'Confluence',
-    description: 'Multi-timeframe alignment detection. Find setups where time, price, and structure converge for higher-probability trades.',
+    description: 'Multi-timeframe alignment detection. Find setups where time, price, and structure converge for technically aligned analysis.',
   },
   {
     icon: (
@@ -26,7 +26,7 @@ const pillars = [
       </svg>
     ),
     title: 'AI Intelligence',
-    description: 'ARCxA engine processes institutional signals, options flow, and sentiment — surfacing actionable trade ideas automatically.',
+    description: 'ARCxA engine processes market data, options flow, and sentiment — surfacing educational scenario analysis automatically.',
   },
 ];
 

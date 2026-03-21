@@ -16,7 +16,7 @@ const GUIDES = [
   {
     category: "Rotation",
     title: "BTC vs Alts Leadership",
-    summary: "Confirm where flows are rotating before deploying size.",
+    summary: "Confirm where flows are rotating before positioning size.",
     checks: ["Crypto market dashboard", "Category performance", "Relative strength"],
     links: [
       { label: "Crypto Derivatives", href: "/tools/crypto-dashboard" },
@@ -25,7 +25,7 @@ const GUIDES = [
   },
   {
     category: "Volatility",
-    title: "Volatility Window Playbook",
+    title: "Volatility Window Framework",
     summary: "Use event risk and derivatives stress to avoid low-quality entries.",
     checks: ["Economic calendar", "Funding / OI pressure", "Liquidation clusters"],
     links: [

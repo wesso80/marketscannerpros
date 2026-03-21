@@ -22,7 +22,7 @@ export interface SignalInput {
 
 export interface ProbabilityResult {
   winProbability: number;       // 0-100%
-  confidenceLabel: string;      // "High Conviction", "Strong", "Moderate", "Weak", "No Signal"
+  confidenceLabel: string;      // "High Alignment", "Strong", "Moderate", "Weak", "No Signal"
   signalCount: number;          // How many signals aligned
   totalSignals: number;         // Total signals checked
   confluenceScore: number;      // 0-100 based on alignment

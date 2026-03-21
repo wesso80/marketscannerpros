@@ -1355,7 +1355,7 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                         </div>
                       </div>
                       <div style={{ background: "rgba(30,41,59,0.5)", borderRadius: "10px", padding: "0.75rem", textAlign: "center" }}>
-                        <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>Target Price</div>
+                        <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>Analyst Price Target</div>
                         <div style={{ fontSize: "0.9rem", fontWeight: "600", color: "var(--msp-muted)" }}>${result.company.targetPrice?.toFixed(2) || 'N/A'}</div>
                         {result.company.targetPrice && result.price?.price && (
                           <div style={{ fontSize: "0.7rem", color: result.company.targetPrice > result.price.price ? "#10B981" : "#EF4444" }}>

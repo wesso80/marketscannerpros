@@ -1054,8 +1054,8 @@ export default function TimeScannerPage() {
 
             <div className="space-y-3">
               <div>
-                <div className="text-sm font-semibold text-slate-100">Execution</div>
-                <div className="text-xs text-slate-400">Only what you need to execute timing</div>
+                <div className="text-sm font-semibold text-slate-100">Timing</div>
+                <div className="text-xs text-slate-400">Key timing context for analysis</div>
               </div>
 
               <div className="rounded-2xl border border-slate-700 bg-slate-950/35 p-3 shadow-sm">
@@ -1071,7 +1071,7 @@ export default function TimeScannerPage() {
                   </div>
 
                   <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2 text-xs text-slate-400">
-                    {input.execution.notes?.[0] || 'No execution notes'}
+                    {input.execution.notes?.[0] || 'No timing notes'}
                   </div>
                 </div>
               </div>

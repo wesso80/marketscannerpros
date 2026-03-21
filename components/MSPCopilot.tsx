@@ -119,7 +119,7 @@ export default function MSPCopilot({
             topics: [
               { icon: '📊', label: 'Why these symbols scored highest', question: `Analyze the top 3 scan results: ${top3.map(p => `${p.symbol} (${p.direction}, ${p.confidence}%)`).join(', ')}. What makes them stand out?` },
               { icon: '🔄', label: 'Bullish vs bearish bias', question: `The scan found ${bullish} bullish and ${bearish} bearish setups. What does this tell us about current market conditions?` },
-              { icon: '⚡', label: 'Best setup to trade now', question: `Out of these ${totalResults} scan results, which setup has the best risk/reward and why?` },
+              { icon: '⚡', label: 'Most aligned setup right now', question: `Out of these ${totalResults} scan results, which setup has the best risk/reward and why?` },
               { icon: '🎯', label: 'How to filter these results', question: 'How should I filter and prioritize these scan results for the strongest confluence?' },
             ],
             footer: 'Click a topic to learn more.',
@@ -163,8 +163,8 @@ export default function MSPCopilot({
         { label: 'Price', value: price && typeof price === 'number' ? `$${price.toFixed(2)}` : 'N/A' },
         { label: 'Verdict', value: verdict.toUpperCase(), color: verdict === 'tradable' ? '#10B981' : verdict === 'conditional' ? '#F59E0B' : verdict === 'blocked' ? '#EF4444' : '#64748B' },
         { label: 'Alignment', value: alignment !== undefined ? `${alignment}%` : 'N/A', color: alignment >= 70 ? '#10B981' : alignment >= 50 ? '#F59E0B' : '#EF4444' },
-        { label: 'Confidence', value: confidence !== undefined ? `${confidence}%` : 'N/A', color: confidence >= 60 ? '#10B981' : confidence >= 40 ? '#F59E0B' : '#EF4444' },
-        { label: 'Authorization', value: authorization || 'N/A', color: authorization === 'ALLOW' ? '#10B981' : authorization === 'ALLOW_REDUCED' ? '#F59E0B' : '#EF4444' },
+        { label: 'Confluence', value: confidence !== undefined ? `${confidence}%` : 'N/A', color: confidence >= 60 ? '#10B981' : confidence >= 40 ? '#F59E0B' : '#EF4444' },
+        { label: 'Status', value: authorization || 'N/A', color: authorization === 'ALLOW' ? '#10B981' : authorization === 'ALLOW_REDUCED' ? '#F59E0B' : '#EF4444' },
         { label: 'Vol State', value: volState || 'N/A' },
         { label: 'Event Risk', value: (eventRisk || 'N/A').toUpperCase(), color: eventRisk === 'high' ? '#EF4444' : eventRisk === 'medium' ? '#F59E0B' : '#10B981' },
       ] : [
@@ -183,26 +183,26 @@ export default function MSPCopilot({
         { label: 'R Budget', value: ruBudget || 'N/A' },
         { label: 'Exp. Move', value: expectedMove || 'N/A' },
         ...(marketMode ? [{ label: 'Flow Mode', value: `${marketMode.toUpperCase()} / ${gammaState || '?'} gamma`, color: flowBias === 'bullish' ? '#10B981' : flowBias === 'bearish' ? '#EF4444' : '#64748B' }] : []),
-        ...(flowConviction ? [{ label: 'Conviction', value: `${flowConviction}%`, color: flowConviction >= 70 ? '#10B981' : flowConviction >= 40 ? '#F59E0B' : '#64748B' }] : []),
+        ...(flowConviction ? [{ label: 'Confluence', value: `${flowConviction}%`, color: flowConviction >= 70 ? '#10B981' : flowConviction >= 40 ? '#F59E0B' : '#64748B' }] : []),
       ] : direction ? [
         { label: 'Bias', value: direction.toUpperCase(), color: direction === 'bullish' ? '#10B981' : '#EF4444' },
         { label: 'Entry', value: pageData.entryTiming ? (pageData.entryTiming as { idealEntryWindow?: string })?.idealEntryWindow || 'See timing' : 'Wait for confirmation' },
         { label: 'Strategy', value: pageData.strategyRecommendation ? (pageData.strategyRecommendation as { name?: string })?.name || 'Review options' : 'Ask for recommendation' },
-        { label: 'Risk', value: pageData.tradeLevels && typeof (pageData.tradeLevels as { stopLoss?: number })?.stopLoss === 'number' ? `Stop: $${((pageData.tradeLevels as { stopLoss?: number }).stopLoss as number).toFixed(2)}` : 'Define your stop' },
+        { label: 'Risk', value: pageData.tradeLevels && typeof (pageData.tradeLevels as { stopLoss?: number })?.stopLoss === 'number' ? `Risk: $${((pageData.tradeLevels as { stopLoss?: number }).stopLoss as number).toFixed(2)}` : 'Define your risk' },
       ] : [];
 
       return {
         explain: {
-          title: isMarketsPage ? '🏛️ Institutional Decision Lens' : '📊 Scan Results Summary',
+          title: isMarketsPage ? '🏦 Market Analysis Lens' : '📊 Scan Results Summary',
           content: explainContent,
-          footer: isMarketsPage ? 'Ask me about any metric, flow data, or risk factor.' : 'Ask me to explain any specific metric or signal.',
+          footer: isMarketsPage ? 'Ask me about any metric, flow data, or risk factor.' : 'Ask me to explain any specific metric or condition.',
         },
         plan: {
-          title: isMarketsPage ? '📋 Scenario & Analysis Framework' : '📋 Trade Plan',
+          title: isMarketsPage ? '📋 Scenario & Analysis Framework' : '📋 Scenario Plan',
           content: planContent,
           footer: isMarketsPage
-            ? (authorization === 'ALLOW' ? 'Ask me to build a full analysis framework.' : 'Authorization restricted — ask me why.')
-            : (direction ? 'Ask me to build a complete trade plan.' : 'Run a scan first to get trade planning.'),
+            ? (authorization === 'ALLOW' ? 'Ask me to build a full analysis framework.' : 'Conditions restricted — ask me why.')
+            : (direction ? 'Ask me to build a complete scenario plan.' : 'Run a scan first to get scenario planning.'),
         },
         act: {
           title: '⚡ Suggested Actions',

@@ -47,7 +47,7 @@ const v2Surfaces = [
     icon: '💹',
     image: '/assets/platform-tools/crypto-command.png',
     title: 'Terminal',
-    description: 'Advanced charting, session analysis, and multi-asset execution surface.',
+    description: 'Advanced charting, session analysis, and multi-asset analytical surface.',
     gradient: 'from-cyan-500/20 to-cyan-900/10',
     border: 'border-cyan-500/30',
     glow: 'hover:shadow-[0_0_20px_rgba(6,182,212,.35)]',

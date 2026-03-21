@@ -83,7 +83,7 @@ export default function EvolutionStatusCard({ compact = true }: { compact?: bool
           System Adaptation Status
         </div>
         <div style={{ color: '#10B981', fontSize: '0.72rem', fontWeight: 800 }}>
-          {latest.cadence.toUpperCase()} • CONF {Math.round(latest.confidence * 100)}%
+          {latest.cadence.toUpperCase()} • CONFL {Math.round(latest.confidence * 100)}%
         </div>
       </div>
 

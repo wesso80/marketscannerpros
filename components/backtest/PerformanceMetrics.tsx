@@ -229,7 +229,7 @@ export default function PerformanceMetrics({ totalReturn, winRate, totalTrades, 
                 </div>
               </div>
               <div className="mt-2 text-[10px] text-slate-500">
-                {kelly.kellyFraction > 0 ? 'Positive expectancy detected. Half-Kelly shown for reference.' : 'No positive edge detected in simulation.'}
+                                {kelly.kellyFraction > 0 ? 'Positive expectancy detected. Half-Kelly shown for reference.' : 'No positive expectancy detected in simulation.'}
               </div>
             </div>
           )}

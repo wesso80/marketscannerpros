@@ -4,7 +4,7 @@ export interface OperatorState {
   symbol: string;
   edge: number;
   bias: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
-  action: 'WAIT' | 'PREP' | 'EXECUTE';
+  action: 'WAIT' | 'PREP' | 'EXECUTE' | 'REVIEW';
   risk: 'LOW' | 'MODERATE' | 'HIGH';
   next: string;
   mode?: OperatorFlowMode;
@@ -60,7 +60,7 @@ export function writeOperatorState(nextState: Partial<OperatorState>) {
     risk_environment: merged.risk,
     ai_attention_score: merged.edge,
     user_mode: merged.mode || 'OBSERVE',
-    cognitive_load: merged.action === 'EXECUTE' ? 72 : merged.action === 'PREP' ? 55 : 35,
+    cognitive_load: merged.action === 'EXECUTE' || merged.action === 'REVIEW' ? 72 : merged.action === 'PREP' ? 55 : 35,
     context_state: {
       bias: merged.bias,
       action: merged.action,

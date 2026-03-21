@@ -17,8 +17,8 @@ export default function HowSimple() {
     },
     {
       icon: BellAlertIcon,
-      title: "Act on Signals",
-      text: "Set alerts, export CSVs, and catch breakouts early — without the noise.",
+      title: "Review Aligned Setups",
+      text: "Set alerts, export CSVs, and monitor breakouts early — without the noise.",
     },
   ];
 

@@ -119,7 +119,7 @@ export default function LearningTab() {
 
       {/* ── Playbook Library ─────────────────────────────────── */}
       <Card>
-        <h3 className="text-sm font-bold text-white mb-3">ARCA Playbook Library</h3>
+        <h3 className="text-sm font-bold text-white mb-3">ARCA Framework Library</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {playbooks.map(pb => (
             <button

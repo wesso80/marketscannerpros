@@ -528,7 +528,7 @@ Session Phase Overlay:
 - Detail: ${sessionPhase.reason}
 
 Regime Agreement Score:
-- Confidence: ${regimeAgreement.confidence}% (${regimeAgreement.agreementCount}/${regimeAgreement.totalChecks} signals agree)
+- Confluence: ${regimeAgreement.confidence}% (${regimeAgreement.agreementCount}/${regimeAgreement.totalChecks} signals agree)
 - Details: ${regimeAgreement.details.join(' | ')}
 
 Performance Throttle:
@@ -627,7 +627,7 @@ Adaptive Trader Personality Layer (ATPL):
 - Risk DNA: ${adaptive.profile?.riskDNA || 'unknown'}
 - Decision Timing: ${adaptive.profile?.decisionTiming || 'unknown'}
 - Setup Fit Score: ${adaptive.match.personalityMatch}%
-- Adaptive Confidence: ${adaptive.match.adaptiveScore}%
+- Adaptive Confluence: ${adaptive.match.adaptiveScore}%
 - No-Trade Bias: ${adaptive.match.noTradeBias ? 'ACTIVE' : 'INACTIVE'}
 - Reasons: ${adaptive.match.reasons.join(' | ')}
 
@@ -758,7 +758,7 @@ Use this data to enhance your analysis:
    - OI ↑ + Price ↓ = Strong bearish (new shorts opening)
    - OI ↓ + Price ↑ = Weak rally (short covering)
    - OI ↓ + Price ↓ = Capitulation (long liquidations)
-   - OI change >5% in 24h = High conviction move
+   - OI change >5% in 24h = High confluence move
 
 2. LONG/SHORT RATIO:
    - L/S > 1.5 = Crowded longs (risk of squeeze down)

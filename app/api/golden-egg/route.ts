@@ -435,7 +435,7 @@ function buildPayload(
       },
       execution: {
         entryTrigger: permission === 'TRADE'
-          ? `${isLong ? 'Buy' : 'Sell'} on pullback to $${(isLong ? p - atr * 0.3 : p + atr * 0.3).toFixed(2)} or breakout confirmation.`
+          ? `${isLong ? 'Enter long' : 'Enter short'} on pullback to $${(isLong ? p - atr * 0.3 : p + atr * 0.3).toFixed(2)} or breakout confirmation.`
           : 'Wait for flip conditions to be met before entry.',
         entry: { type: permission === 'TRADE' ? 'limit' : 'stop', price: permission === 'TRADE' ? p : undefined },
         stop: { price: Math.round(stopPrice * 100) / 100, logic: `${(1.5).toFixed(1)}x ATR from entry — beyond recent structure` },
@@ -493,7 +493,7 @@ function buildPayload(
       narrative: {
         enabled: true,
         summary: permission === 'TRADE'
-          ? `${symbol} shows ${direction.toLowerCase()} alignment with ${confidence}/100 confidence. Multiple factors support a ${setupType} entry.${tcData?.signalStrength === 'strong' ? ` Time confluence confirms with ${tcData.direction} bias.` : ''}${dveReading?.signal.type !== 'none' && dveReading ? ` DVE ${dveReading.signal.type.replace(/_/g, ' ')} signal active.` : ''}`
+          ? `${symbol} shows ${direction.toLowerCase()} alignment with ${confidence}/100 confluence. Multiple factors support a ${setupType} entry.${tcData?.signalStrength === 'strong' ? ` Time confluence confirms with ${tcData.direction} bias.` : ''}${dveReading?.signal.type !== 'none' && dveReading ? ` DVE ${dveReading.signal.type.replace(/_/g, ' ')} signal active.` : ''}`
           : `${symbol} is in ${permission === 'NO_TRADE' ? 'not-aligned' : 'watch'} mode. Confluence is insufficient \u2014 monitor flip conditions.${tcData && tcData.direction !== 'neutral' ? ` Time confluence leans ${tcData.direction}.` : ''}`,
         bullets: narrativeBullets,
         risks: narrativeRisks,

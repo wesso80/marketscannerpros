@@ -574,7 +574,7 @@ export default function EquityExplorerPage() {
                     <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1"><span className="text-slate-500">Global Regime</span><p className="font-semibold text-slate-100">{upeGlobal?.regime || 'neutral'}</p></div>
                     <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1"><span className="text-slate-500">Equities Micro Regime</span><p className="font-semibold text-slate-100">{upeMicroState || 'neutral'}</p></div>
                     <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1"><span className="text-slate-500">Liquidity</span><p className="font-semibold text-slate-100">{upeGlobal?.liquidityState || 'stable'}</p></div>
-                    <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1"><span className="text-slate-500">Adaptive Confidence</span><p className="font-semibold text-slate-100">{upeGlobal?.adaptiveConfidence !== null && upeGlobal?.adaptiveConfidence !== undefined ? `${Math.round(upeGlobal.adaptiveConfidence)}%` : 'N/A'}</p></div>
+                    <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1"><span className="text-slate-500">Adaptive Confluence</span><p className="font-semibold text-slate-100">{upeGlobal?.adaptiveConfidence !== null && upeGlobal?.adaptiveConfidence !== undefined ? `${Math.round(upeGlobal.adaptiveConfidence)}%` : 'N/A'}</p></div>
                   </div>
                 </div>
               </div>
@@ -932,7 +932,7 @@ export default function EquityExplorerPage() {
                   <div className="space-y-4">
                     <AnalystRatingsBar analysts={data.analysts} />
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-400">Target Price</span>
+                      <span className="text-gray-400">Analyst Price Target</span>
                       <span className="text-xl font-bold text-emerald-400">
                         {formatPrice(data.analysts.targetPrice)}
                       </span>

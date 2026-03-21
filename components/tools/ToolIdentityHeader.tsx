@@ -21,8 +21,8 @@ export default function ToolIdentityHeader({
           <p className="text-[0.82rem] leading-tight text-[var(--msp-text-muted)]">{description}</p>
         </div>
         <div className="col-span-12 lg:col-span-4 flex flex-wrap items-center justify-start gap-2 lg:justify-end">
-          <span className="msp-state-chip msp-state-chip--observe">Operator Mode: {modeLabel}</span>
-          <span className="msp-state-chip msp-state-chip--observe">Confidence: {confidenceLabel}</span>
+          <span className="msp-state-chip msp-state-chip--observe">Analysis Mode: {modeLabel}</span>
+          <span className="msp-state-chip msp-state-chip--observe">Confluence: {confidenceLabel}</span>
           <span className="msp-state-chip msp-state-chip--observe">Last Scan: {lastUpdatedLabel}</span>
         </div>
       </div>

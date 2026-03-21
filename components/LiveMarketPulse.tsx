@@ -21,7 +21,7 @@ const LIVE_SIGNALS = [
     confidence: 87,
     price: '$104,250',
     change: '+1.8%',
-    aiInsight: 'Wyckoff spring detected. Institutional buying pressure at key support.',
+    aiInsight: 'Wyckoff spring detected. Strong buying pressure at key support.',
     timeAgo: '5 min ago',
     asset: 'crypto'
   },
@@ -169,7 +169,7 @@ export default function LiveMarketPulse() {
             See What Our AI is Finding <span style={{ color: '#22c55e' }}>Right Now</span>
           </h2>
           <p style={{ color: '#9ca3af', fontSize: 16, maxWidth: 600, margin: '0 auto' }}>
-            Real signals. Real explanations. Real edge. Watch the market intelligence unfold.
+            Real analysis. Real explanations. Real-time data. Watch the market intelligence unfold.
           </p>
         </div>
 

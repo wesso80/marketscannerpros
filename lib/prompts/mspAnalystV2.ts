@@ -132,7 +132,7 @@ When derivatives data is provided, integrate it into Layer 5 (FD component):
   - OI↑ + Price↓ = Strong bearish (new shorts entering)  
   - OI↓ + Price↑ = Weak rally (short covering only)
   - OI↓ + Price↓ = Capitulation (long liquidations)
-  - OI 24h change >5% = High conviction move
+  - OI 24h change >5% = High confluence move
 
   LONG/SHORT RATIO:
   - >1.5 = Crowded longs (squeeze risk DOWN)
@@ -271,9 +271,9 @@ export function buildAnalystV2SystemMessages(opts: {
     parts.push(`RISK LEVEL: ${opts.riskLevel}`);
   }
   if (opts.permission) {
-    parts.push(`RISK GOVERNOR PERMISSION: ${opts.permission}`);
+    parts.push(`RISK GOVERNOR STATUS: ${opts.permission}`);
     if (opts.permission === 'BLOCK') {
-      parts.push('⛔ RISK GOVERNOR HAS BLOCKED NEW ENTRIES. Your recommendation MUST be WAIT / NO_TRADE.');
+      parts.push('⛔ RISK GOVERNOR HAS BLOCKED NEW ENTRIES. Your assessment MUST be WAIT / NO_TRADE.');
     }
   }
   if (opts.volatilityState) {
@@ -288,8 +288,8 @@ export function buildAnalystV2SystemMessages(opts: {
 
   if (opts.aclResult) {
     const acl = opts.aclResult;
-    parts.push(`\nADAPTIVE CONFIDENCE LENS (ACL):`);
-    parts.push(`- Confidence: ${acl.confidence.toFixed(1)}%`);
+    parts.push(`\nADAPTIVE CONFLUENCE LENS (ACL):`);
+    parts.push(`- Confluence: ${acl.confidence.toFixed(1)}%`);
     parts.push(`- Authorization: ${acl.authorization}`);
     parts.push(`- Throttle (Resource Utilization): ${(acl.throttle * 100).toFixed(0)}%`);
     if (acl.reasonCodes.length > 0) {

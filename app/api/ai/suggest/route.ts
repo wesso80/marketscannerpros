@@ -261,8 +261,8 @@ async function generateSuggestions(
       suggestions.push({
         id: crypto.randomUUID(),
         type: 'opportunity',
-        title: `High confidence signal on ${top.symbol}`,
-        description: `${top.type} signal with ${top.confidence}% confidence detected`,
+        title: `High confluence setup on ${top.symbol}`,
+        description: `${top.type} setup with ${top.confidence}% confluence detected`,
         priority: 'high',
         tool: 'create_alert',
         toolParams: { symbol: top.symbol, alertType: 'price_above' },
