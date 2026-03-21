@@ -7,7 +7,7 @@ type CardProps = {
 
 export default function Card({ children, className = '' }: CardProps) {
   return (
-    <div className={`rounded-2xl border border-[var(--msp-border)] bg-[var(--msp-panel)] p-5 ${className}`}>
+    <div className={`rounded-2xl border border-[var(--msp-border)] bg-[var(--msp-panel)] p-5 min-w-0 overflow-hidden ${className}`}>
       {children}
     </div>
   );

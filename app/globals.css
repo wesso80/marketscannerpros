@@ -108,7 +108,7 @@ body {
   word-break: break-word;
   overflow-wrap: anywhere;
   min-width: 0;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 .options-page-container *:not(svg):not(svg *) {
   max-width: 100%;
@@ -1032,7 +1032,8 @@ button.truncate {
    Tables get horizontal scroll via overflow-x-auto wrappers.
    ======================================== */
 @media (max-width: 767px) {
-  /* All panels/cards/containers must stay within screen */
+  /* All panels/cards/containers must stay within screen.
+     Use overflow-x: clip (not hidden) so child overflow-x:auto scroll areas still work. */
   .msp-elite-panel,
   .msp-elite-row,
   .msp-card,
@@ -1047,7 +1048,7 @@ button.truncate {
   .msp-layout-terminal {
     max-width: 100vw !important;
     min-width: 0 !important;
-    overflow-x: hidden;
+    overflow-x: clip;
     word-break: break-word;
   }
 
