@@ -1158,23 +1158,38 @@ export class ConfluenceLearningAgent {
       return Math.max(0, Math.floor((close - nowMs) / 60_000));
     }
 
-    // ── Multi-month (2M–11M): aligned to January epoch ──
+    // ── Multi-month (2M–11M): calendar-year-aligned (matches Pine script) ──
+    // Close months: (month_0idx + 1) % N === 0,  e.g. 5M → May (4), Oct (9)
+    // Crypto boundary = 1st of the month AFTER the close month, 00:00 UTC
     const multiMonthMatch = tfId.match(/^(\d+)M$/);
     if (multiMonthMatch && tfId !== '1M') {
       const N = parseInt(multiMonthMatch[1]);
       const m = now.getUTCMonth();   // 0-11
       const y = now.getUTCFullYear();
-      const absMonth = y * 12 + m;
-      const nextBoundary = (Math.floor(absMonth / N) + 1) * N;
-      const targetYear = Math.floor(nextBoundary / 12);
-      const targetMonth = nextBoundary % 12;
-      const close = Date.UTC(targetYear, targetMonth, 1);
-      if (close <= nowMs) {
-        // Exactly at or past boundary — advance one more period
-        const after = nextBoundary + N;
-        return Math.max(0, Math.floor((Date.UTC(Math.floor(after / 12), after % 12, 1) - nowMs) / 60_000));
+
+      // Search from current month forward (up to 12 months) for next close
+      for (let offset = 0; offset < 12; offset++) {
+        const checkMonth = (m + offset) % 12;
+        const checkYear = y + Math.floor((m + offset) / 12);
+        if ((checkMonth + 1) % N === 0) {
+          // Close boundary = 1st of month AFTER checkMonth
+          const boundaryMonth = checkMonth + 1;
+          const boundaryYear = checkYear + (boundaryMonth > 11 ? 1 : 0);
+          const closeMs = Date.UTC(boundaryYear, boundaryMonth % 12, 1);
+          if (closeMs > nowMs) {
+            return Math.max(0, Math.floor((closeMs - nowMs) / 60_000));
+          }
+        }
       }
-      return Math.max(0, Math.floor((close - nowMs) / 60_000));
+      // Fallback: first close month of next year
+      for (let checkMonth = 0; checkMonth < 12; checkMonth++) {
+        if ((checkMonth + 1) % N === 0) {
+          const boundaryMonth = checkMonth + 1;
+          const boundaryYear = (y + 1) + (boundaryMonth > 11 ? 1 : 0);
+          return Math.max(0, Math.floor((Date.UTC(boundaryYear, boundaryMonth % 12, 1) - nowMs) / 60_000));
+        }
+      }
+      return null;
     }
 
     // ── Yearly: Jan 1 00:00 UTC ──
