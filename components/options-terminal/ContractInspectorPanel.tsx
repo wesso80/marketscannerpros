@@ -174,7 +174,7 @@ export default function ContractInspectorPanel({ contract, spot, mode }: Props) 
           className="w-full text-xs font-bold rounded-lg py-2 transition-all"
           style={{ background: 'rgba(255,255,255,0.04)', color: 'var(--msp-text-muted)', border: '1px solid var(--msp-border)' }}
         >
-          📝 Create Trade Plan
+          📝 Log to Journal
         </button>
       </div>
     </div>

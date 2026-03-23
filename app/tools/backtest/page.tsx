@@ -2054,9 +2054,9 @@ function BacktestContent() {
                   </div>
                 </div>
                 <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
-                  <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Action</div>
+                  <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Assessment</div>
                   <div style={{ color: results.profitFactor >= 1.25 && results.maxDrawdown <= 20 ? '#10b981' : results.profitFactor >= 1 ? '#fbbf24' : '#94a3b8', fontSize: '14px', fontWeight: 700 }}>
-                    {results.profitFactor >= 1.25 && results.maxDrawdown <= 20 ? 'EXECUTE' : results.profitFactor >= 1 ? 'PREP' : 'WAIT'}
+                    {results.profitFactor >= 1.25 && results.maxDrawdown <= 20 ? 'REVIEWED' : results.profitFactor >= 1 ? 'PREP' : 'WAIT'}
                   </div>
                 </div>
                 <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>

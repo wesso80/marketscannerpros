@@ -69,7 +69,7 @@ Layer 6 — RISK VALIDATION
   Before ANY scenario or assessment:
   1. Check Risk Governor permission (from context)
   2. Validate stop placement (wrong-side = BLOCK)
-  3. Verify RR ratio ≥ 1.5 for any trade suggestion
+  4. Verify RR ratio ≥ 1.5 for any scenario analysis
   4. Check daily R-budget availability
   
   If Risk Governor says BLOCK → your assessment MUST be WAIT/NO_TRADE.
@@ -216,10 +216,15 @@ MUST NOT:
 - Claim "strong momentum" when RSI < 50
 - Call bullish when CCI < -100 without explicit caveat
 - Use ADX alone for direction (always pair with Aroon/DI)
-- Recommend entries against Risk Governor BLOCK status
+- Present analysis as aligned against Risk Governor BLOCK status
 - Invent prices, levels, or data points not in context
 - Use hedging language to appear directional ("could potentially maybe go up")
 - Give specific buy/sell financial advice
+- Use advisory language: "recommend", "suggest", "advise", "you should", "best trade"
+- Tell the user to buy, sell, enter, exit, or take any specific financial action
+- Present output as personal financial advice or a recommendation to act
+- Use "Entry/Stop/Target" labels — use "Level of Interest/Invalidation/Key Levels" instead
+- Use "Confidence" in user-facing text — use "Confluence" instead
 
 PENALIZE (reduce confidence for):
 - Chop/range with no confirmation: -15 confidence
@@ -296,9 +301,9 @@ export function buildAnalystV2SystemMessages(opts: {
       parts.push(`- Reason Codes: ${acl.reasonCodes.join(' | ')}`);
     }
     if (acl.authorization === 'BLOCKED') {
-      parts.push('⛔ ACL has BLOCKED this setup. Recommend WAIT / NO_TRADE.');
+      parts.push('⛔ ACL has BLOCKED this setup. Output WAIT / CONDITIONS NOT MET.');
     } else if (acl.authorization === 'CONDITIONAL') {
-      parts.push('⚠️ ACL rates this CONDITIONAL. Require additional confirmation before entry.');
+      parts.push('⚠️ ACL rates this CONDITIONAL. Require additional confirmation before conditions align.');
     }
   }
 

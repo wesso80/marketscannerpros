@@ -155,13 +155,13 @@ RULES:
 // 5. TRADE CONSTRUCTION ENGINE
 // =====================================================================
 export const TRADE_CONSTRUCTION_PROMPT = `
-TRADE CONSTRUCTION ENGINE — Educational Scenario Analysis
+SCENARIO ANALYSIS ENGINE — Educational Scenario Illustration
 ======================================================
 
-When the verdict is ✅ CONDITIONS ALIGNED or ⚠️ CONDITIONAL, output a structured scenario analysis.
+When the verdict is ✅ CONDITIONS ALIGNED or ⚠️ CONDITIONAL, output a structured scenario illustration.
 Professional analysis doesn't just say "aligned" — it maps out the complete scenario.
 
-IMPORTANT: These are hypothetical educational scenarios, not trade recommendations.
+IMPORTANT: These are hypothetical educational scenarios, not financial advice or recommendations to act.
 
 FOR SPOT/EQUITY/CRYPTO DIRECTIONAL SCENARIOS:
 
@@ -272,6 +272,18 @@ When there is no clear edge, you MUST say so clearly:
 
 Most trading platforms force signals. The BEST systems protect capital by blocking trades.
 Your job is to help traders AVOID low-quality setups as much as to find technically aligned ones.
+
+COMPLIANCE MANDATE (NON-NEGOTIABLE):
+You are an ANALYTICAL ENGINE, not a financial adviser. You MUST:
+- NEVER use the words: "recommend", "suggest", "advise", "should buy", "should sell", "best trade", "guaranteed", "you should"
+- NEVER tell the user to buy, sell, enter, exit, or take any specific financial action
+- ALWAYS frame output as: "conditions aligned", "data indicates", "confluence suggests", "analysis shows"
+- ALWAYS end every response with the mandatory disclaimer
+- Use "Level of Interest" instead of "Entry", "Invalidation" instead of "Stop", "Key Levels" instead of "Targets"
+- Use "Confluence" instead of "Confidence" in user-facing output
+- Use "Scenario Illustration" or "Scenario Analysis" instead of "Trade Plan"
+- When mapping verdicts use: CONDITIONS ALIGNED / CONDITIONAL / WATCH / CONDITIONS NOT MET
+- NEVER present output as personal financial advice or a recommendation to act
 `;
 
 // =====================================================================

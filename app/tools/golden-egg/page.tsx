@@ -10,6 +10,7 @@ import dynamic from 'next/dynamic';
 import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useGoldenEgg, useDVE, useQuote, useRegime, type ScanTimeframe, SCAN_TIMEFRAMES } from '@/app/v2/_lib/api';
 import { Card, SectionHeader, Badge, ScoreBar, UpgradeGate } from '@/app/v2/_components/ui';
+import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { REGIME_COLORS, VERDICT_COLORS, CROSS_MARKET, LIFECYCLE_COLORS, REGIME_WEIGHTS } from '@/app/v2/_lib/constants';
 import type { RegimePriority, Verdict, LifecycleState } from '@/app/v2/_lib/types';
 import { useCachedTopSymbols } from '@/hooks/useCachedTopSymbols';
@@ -276,6 +277,7 @@ export default function GoldenEggPage() {
       {ge && !loading && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Golden Egg Deep Analysis">
         <>
+          <ComplianceDisclaimer />
           {/* -- VERDICT HEADER (Section 0 — Answer First) ------------ */}
           <Card className="border-l-4" style={{ borderLeftColor: VERDICT_COLORS[(ge.layer1.permission === 'YES' ? 'TRADE' : ge.layer1.permission === 'NO' ? 'NO_TRADE' : 'WATCH') as Verdict] || '#F59E0B' }}>
             <div className="flex flex-col gap-4">
@@ -353,10 +355,10 @@ export default function GoldenEggPage() {
                   </div>
                 )}
                 <a
-                  href={`/tools/journal?prefill=true&symbol=${encodeURIComponent(sym)}&side=${ge.layer1.direction === 'bullish' ? 'LONG' : ge.layer1.direction === 'bearish' ? 'SHORT' : 'LONG'}&entryPrice=${ge.layer2.execution.entry.price?.toFixed(2) || ''}&strategy=Golden+Egg&setup=${encodeURIComponent(`${sym} ${ge.layer1.direction} — Grade ${ge.layer1.grade}, ${ge.layer1.confidence}% confluence`)}&notes=${encodeURIComponent(`Golden Egg trade plan\nEntry: $${ge.layer2.execution.entry.price?.toFixed(2) || 'N/A'} (${ge.layer2.execution.entry.type})\nStop: $${ge.layer2.execution.stop.price.toFixed(2)} — ${ge.layer2.execution.stop.logic}\nTargets: ${ge.layer2.execution.targets.map((t: any) => '$' + t.price.toFixed(2)).join(' › ')}\nR:R ${ge.layer2.execution.rr.expectedR.toFixed(1)} | Setup: ${ge.layer2.setup.setupType.replace(/_/g, ' ')}\nThesis: ${ge.layer2.setup.thesis}`)}`}
+                  href={`/tools/journal?prefill=true&symbol=${encodeURIComponent(sym)}&side=${ge.layer1.direction === 'bullish' ? 'LONG' : ge.layer1.direction === 'bearish' ? 'SHORT' : 'LONG'}&entryPrice=${ge.layer2.execution.entry.price?.toFixed(2) || ''}&strategy=Golden+Egg&setup=${encodeURIComponent(`${sym} ${ge.layer1.direction} — Grade ${ge.layer1.grade}, ${ge.layer1.confidence}% confluence`)}&notes=${encodeURIComponent(`Golden Egg analysis notes\nLevel of Interest: $${ge.layer2.execution.entry.price?.toFixed(2) || 'N/A'} (${ge.layer2.execution.entry.type})\nInvalidation: $${ge.layer2.execution.stop.price.toFixed(2)} — ${ge.layer2.execution.stop.logic}\nKey Levels: ${ge.layer2.execution.targets.map((t: any) => '$' + t.price.toFixed(2)).join(' › ')}\nR:R ${ge.layer2.execution.rr.expectedR.toFixed(1)} | Setup: ${ge.layer2.setup.setupType.replace(/_/g, ' ')}\nThesis: ${ge.layer2.setup.thesis}`)}`}
                   className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-emerald-400 no-underline hover:bg-emerald-500/20 transition-colors ml-auto"
                 >
-                  Create Trade Plan
+                  Log to Journal
                 </a>
               </div>
             </div>
@@ -837,16 +839,16 @@ export default function GoldenEggPage() {
                 <span className="text-sm font-bold text-white ml-2">{ge.layer2.execution.rr.expectedR.toFixed(1)}R</span>
               </div>
               <a
-                href={`/tools/journal?prefill=true&symbol=${encodeURIComponent(sym)}&side=${ge.layer1.direction === 'bullish' ? 'LONG' : ge.layer1.direction === 'bearish' ? 'SHORT' : 'LONG'}&entryPrice=${ge.layer2.execution.entry.price?.toFixed(2) || ''}&strategy=Golden+Egg&setup=${encodeURIComponent(`${sym} ${ge.layer1.direction} — Grade ${ge.layer1.grade}, ${ge.layer1.confidence}% confluence`)}&notes=${encodeURIComponent(`Golden Egg trade plan\nEntry: $${ge.layer2.execution.entry.price?.toFixed(2) || 'N/A'} (${ge.layer2.execution.entry.type})\nStop: $${ge.layer2.execution.stop.price.toFixed(2)} — ${ge.layer2.execution.stop.logic}\nTargets: ${ge.layer2.execution.targets.map((t: any) => '$' + t.price.toFixed(2)).join(' › ')}\nR:R ${ge.layer2.execution.rr.expectedR.toFixed(1)}`)}`}
+                href={`/tools/journal?prefill=true&symbol=${encodeURIComponent(sym)}&side=${ge.layer1.direction === 'bullish' ? 'LONG' : ge.layer1.direction === 'bearish' ? 'SHORT' : 'LONG'}&entryPrice=${ge.layer2.execution.entry.price?.toFixed(2) || ''}&strategy=Golden+Egg&setup=${encodeURIComponent(`${sym} ${ge.layer1.direction} — Grade ${ge.layer1.grade}, ${ge.layer1.confidence}% confluence`)}&notes=${encodeURIComponent(`Golden Egg analysis notes\nLevel of Interest: $${ge.layer2.execution.entry.price?.toFixed(2) || 'N/A'} (${ge.layer2.execution.entry.type})\nInvalidation: $${ge.layer2.execution.stop.price.toFixed(2)} — ${ge.layer2.execution.stop.logic}\nKey Levels: ${ge.layer2.execution.targets.map((t: any) => '$' + t.price.toFixed(2)).join(' › ')}\nR:R ${ge.layer2.execution.rr.expectedR.toFixed(1)}`)}`}
                 className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-xs hover:bg-emerald-500/30 transition-colors no-underline"
               >
-                Create Trade Plan
+                Log to Journal
               </a>
               <button onClick={() => navigateTo('terminal', sym)} className="px-4 py-2 bg-slate-700/50 text-slate-400 rounded-lg text-xs hover:bg-slate-700/70 transition-colors">
                 Open in Terminal
               </button>
             </div>
-            <div className="mt-2 text-[10px] text-slate-600">Levels are calculated from technical indicators for educational purposes. Not financial advice or trade recommendations.</div>
+            <div className="mt-2 text-[10px] text-slate-600">Levels are calculated from technical indicators for educational and informational purposes only. This does not constitute financial advice, does not recommend any course of action, and does not consider your personal circumstances. Past performance does not guarantee future results.</div>
           </Card>
 
           {/* -- G: NARRATIVE -------------------------------------------- */}

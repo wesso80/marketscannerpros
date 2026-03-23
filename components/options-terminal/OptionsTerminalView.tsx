@@ -604,7 +604,7 @@ export default function OptionsTerminalView() {
                           side: selected!.side === 'CALL' ? 'LONG' : 'SHORT',
                           entryPrice: c.mark.toFixed(2),
                           quantity: '1',
-                          notes: `Trade plan: ${label}\nIV: ${(c.iv * 100).toFixed(1)}% | Δ ${c.delta.toFixed(3)} | OI ${c.openInterest.toLocaleString()}`,
+                          notes: `Analysis notes: ${label}\nIV: ${(c.iv * 100).toFixed(1)}% | Δ ${c.delta.toFixed(3)} | OI ${c.openInterest.toLocaleString()}`,
                           strategy: 'Options',
                           setup: label,
                           tradeType: 'Options',
@@ -617,7 +617,7 @@ export default function OptionsTerminalView() {
                       }}
                       className="w-full rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-zinc-950 hover:bg-emerald-500 transition"
                     >
-                      Create Trade Plan
+                      Log to Journal
                     </button>
                   </div>
                   <div className="text-xs text-zinc-400 text-center">Educational purposes only · Not financial advice</div>

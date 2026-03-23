@@ -8,6 +8,7 @@ import { useAIPageContext } from '@/lib/ai/pageContext';
 import UpgradeGate from '@/components/UpgradeGate';
 import CryptoMorningDecisionCard from '@/components/CryptoMorningDecisionCard';
 import ExplorerActionGrid from '@/components/explorer/ExplorerActionGrid';
+import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 
 interface CoinData {
   coin: {
@@ -452,19 +453,19 @@ function CryptoDetailPageContent() {
   }
   const permissionLabel = upeSignal
     ? upeSignal.eligibilityUser === 'eligible'
-      ? 'Eligible'
+      ? 'Aligned'
       : upeSignal.eligibilityUser === 'conditional'
       ? 'Conditional'
-      : 'Blocked'
+      : 'Not aligned'
     : decision.tradePermission === 'Yes'
-    ? 'Eligible'
+    ? 'Aligned'
     : decision.tradePermission === 'No'
-    ? 'Blocked'
+    ? 'Not aligned'
     : 'Conditional';
-  const isBlocked = permissionLabel === 'Blocked';
+  const isBlocked = permissionLabel === 'Not aligned';
   const blockReason = upeSignal?.overlayReasons?.length
     ? upeSignal.overlayReasons.join(' • ')
-    : 'Blocked by governance profile or global gate';
+    : 'Not aligned per governance profile or global gate';
 
   return (
     <div className="min-h-screen bg-[var(--msp-bg)] text-white">
@@ -476,6 +477,8 @@ function CryptoDetailPageContent() {
           </div>
           <p className="text-xs text-slate-400">Decision-grade asset view: status, permission, context, then details.</p>
         </header>
+
+        <ComplianceDisclaimer compact />
 
         <CryptoMorningDecisionCard />
 
@@ -636,9 +639,9 @@ function CryptoDetailPageContent() {
                       <p className="text-xs text-slate-400">Alignment {decision.alignmentScore}%</p>
                     </div>
                     <p className="mt-1 text-xs text-slate-300">
-                      {permissionLabel === 'Eligible' && 'Structure and liquidity conditions support execution workflow.'}
-                      {permissionLabel === 'Conditional' && 'Mixed conditions. Require tighter confirmation stack before entry.'}
-                      {permissionLabel === 'Blocked' && 'Condition stack fails risk policy. Monitor, do not force setup.'}
+                      {permissionLabel === 'Aligned' && 'Structure and liquidity conditions support analysis workflow.'}
+                      {permissionLabel === 'Conditional' && 'Mixed conditions. Require tighter confirmation stack.'}
+                      {permissionLabel === 'Not aligned' && 'Condition stack does not meet criteria. Monitor, do not force setup.'}
                     </p>
                   </div>
 

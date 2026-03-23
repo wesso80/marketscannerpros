@@ -46,7 +46,7 @@ export default function HowItWorks() {
           </div>
           <h2 style={{ fontSize: 28, fontWeight: 650, marginBottom: 10 }}>How It Works</h2>
           <p style={{ fontSize: 15, color: '#9ca3af', maxWidth: 450, margin: '0 auto' }}>
-            From charts to actionable insights in under 60 seconds.
+            From charts to data-driven insights in under 60 seconds.
           </p>
         </div>
 

@@ -58,7 +58,7 @@ export default function VEDirectionalCompass({ dir, missingInputs = [] }: { dir:
             Directional Bias
           </h3>
         </div>
-        <span className="text-[0.6rem] text-white/40">{dir.confidence.toFixed(0)}% confidence</span>
+        <span className="text-[0.6rem] text-white/40">{dir.confidence.toFixed(0)}% confluence</span>
       </div>
 
       {/* ── Compass Pressure Bar ── */}
@@ -93,7 +93,7 @@ export default function VEDirectionalCompass({ dir, missingInputs = [] }: { dir:
               {dir.bias}
             </span>
             <div className="text-[0.65rem] text-white/40">
-              Confidence: {confLabel}
+              Confluence: {confLabel}
             </div>
           </div>
         </div>

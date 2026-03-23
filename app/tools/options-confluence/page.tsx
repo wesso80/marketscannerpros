@@ -16,6 +16,7 @@ import { deriveCopilotPresence } from "@/lib/copilot/derive-copilot-presence";
 import type { OptionsSetup as AnalyzerOptionsSetup } from "@/lib/options-confluence-analyzer";
 import TerminalShell from "@/components/terminal/TerminalShell";
 import CommandStrip, { type TerminalDensity } from "@/components/terminal/CommandStrip";
+import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import DecisionCockpit from "@/components/terminal/DecisionCockpit";
 import SignalRail from "@/components/terminal/SignalRail";
 import Pill from "@/components/terminal/Pill";
@@ -2047,7 +2048,7 @@ export default function OptionsConfluenceScanner() {
       label: 'Trend Structure',
       score: Math.round(Math.max(0, Math.min(100, ((result.compositeScore?.confidence ?? 45) * 0.6) + (Math.abs(result.compositeScore?.directionScore ?? 0) * 0.4)))),
       state: trendStrength,
-      summary: `${thesisDirection.toUpperCase()} bias • ${result.compositeScore?.confidence?.toFixed(0) || '0'}% confidence`,
+      summary: `${thesisDirection.toUpperCase()} bias • ${result.compositeScore?.confidence?.toFixed(0) || '0'}% confluence`,
     },
     {
       label: 'Momentum',
@@ -2260,6 +2261,7 @@ export default function OptionsConfluenceScanner() {
       image="/assets/scanners/options-confluence.png"
       subtitle="Get intelligent strike & expiration analysis based on Time Confluence data. Uses 50% levels, decompression timing, and Greeks-aware risk assessment."
     >
+      <ComplianceDisclaimer compact />
 
       <div
         ref={scannerSurfaceRef}
@@ -2303,7 +2305,7 @@ export default function OptionsConfluenceScanner() {
         {result && (
           <DecisionCockpit
             left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">{result.symbol} • {thesisDirection.toUpperCase()}</div><div className="msp-muted">Regime: {institutionalMarketRegime || 'UNKNOWN'}</div><div className="msp-muted">Session: {(result.entryTiming.marketSession || 'n/a').toUpperCase()}</div></div>}
-            center={<div className="grid gap-1 text-sm"><Pill tone="accent">{unifiedPermission === 'ALLOW' ? 'ALIGNED' : unifiedPermission === 'BLOCK' ? 'NOT ALIGNED' : 'WAIT'}</Pill><div className="msp-muted">Pipeline: {pipelineComplete}/{ladderSteps.length}</div><div className="msp-muted">Confidence: {unifiedConfidence.toFixed(0)}%</div></div>}
+            center={<div className="grid gap-1 text-sm"><Pill tone="accent">{unifiedPermission === 'ALLOW' ? 'ALIGNED' : unifiedPermission === 'BLOCK' ? 'NOT ALIGNED' : 'WAIT'}</Pill><div className="msp-muted">Pipeline: {pipelineComplete}/{ladderSteps.length}</div><div className="msp-muted">Confluence: {unifiedConfidence.toFixed(0)}%</div></div>}
             right={<div className="grid gap-1 text-sm"><div className="msp-muted">Trigger: <span className="font-bold text-[var(--msp-text)]">{decisionTrigger}</span></div><div className="msp-muted">Risk: {(result.expectedMove?.selectedExpiryPercent ?? 0) >= 4 ? 'HIGH' : (result.expectedMove?.selectedExpiryPercent ?? 0) >= 2 ? 'MODERATE' : 'LOW'}</div><div className="msp-muted">Data: {dataHealth}</div></div>}
           />
         )}
@@ -2330,7 +2332,7 @@ export default function OptionsConfluenceScanner() {
               <span className="msp-muted">•</span>
               <span className="font-extrabold text-[var(--msp-accent)]">Market State: {adaptiveModeMeta.label}</span>
               <span className="msp-muted">•</span>
-              <span className="msp-muted">Confidence: {copilotPresence.confidence}%</span>
+              <span className="msp-muted">Confluence: {copilotPresence.confidence}%</span>
               <span className="msp-muted">•</span>
               <span className="msp-muted">Watching: {copilotPresence.watching}</span>
             </div>
@@ -2542,8 +2544,8 @@ export default function OptionsConfluenceScanner() {
             </div>
 
             <div className="-mt-4 rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] p-[0.5rem_0.65rem] text-[0.74rem] text-slate-300">
-              <span className="text-[0.64rem] font-extrabold uppercase text-slate-500">Trade Brief:</span>{' '}
-              {result.tradeSnapshot?.oneLine || `${result.symbol} ${thesisDirection.toUpperCase()} setup with ${(result.compositeScore?.confidence ?? 0).toFixed(0)}% confidence — ${commandStatus}.`}
+              <span className="text-[0.64rem] font-extrabold uppercase text-slate-500">Analysis Brief:</span>{' '}
+              {result.tradeSnapshot?.oneLine || `${result.symbol} ${thesisDirection.toUpperCase()} setup with ${(result.compositeScore?.confidence ?? 0).toFixed(0)}% confluence — ${commandStatus}.`}
             </div>
 
             <div className={`-mt-[0.35rem] rounded-[10px] border px-[0.7rem] py-[0.55rem] ${tradeabilityToneClass}`}>
@@ -2773,7 +2775,7 @@ export default function OptionsConfluenceScanner() {
 
                 {copilotPresence && (
                   <div className="mt-1 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.45rem_0.5rem]">
-                    <div className="text-[0.66rem] font-extrabold uppercase text-[var(--msp-accent)]">Co-Pilot Suggestion</div>
+                    <div className="text-[0.66rem] font-extrabold uppercase text-[var(--msp-accent)]">Co-Pilot Observation</div>
                     <div className="mt-[0.2rem] text-[0.74rem] font-bold text-slate-200">{copilotPresence.suggestion.action}</div>
                     <div className="mt-[0.15rem] text-[0.7rem] text-slate-400">{copilotPresence.suggestion.reason}</div>
                   </div>
@@ -2784,11 +2786,11 @@ export default function OptionsConfluenceScanner() {
 
             {trapDoors.evidence && copilotPresence && copilotPresence.notices.length > 0 && (
               <div className="grid gap-[0.42rem] rounded-xl border border-slate-400/25 bg-[var(--msp-panel)] p-[0.65rem_0.75rem]">
-                <div className="text-[0.68rem] font-bold uppercase text-slate-400">Co-Pilot Notices</div>
+                <div className="text-[0.68rem] font-bold uppercase text-slate-400">Co-Pilot Observations</div>
                 {copilotPresence.notices.map((notice, index) => (
                   <div key={`${notice.title}-${index}`} className={`rounded-lg border p-[0.4rem_0.48rem] ${notice.level === 'warn' ? 'border-red-500/25 bg-red-500/10' : notice.level === 'action' ? 'border-emerald-500/25 bg-emerald-500/10' : 'border-slate-400/25 bg-slate-400/10'}`}>
                     <div className="text-[0.72rem] font-extrabold text-slate-200">
-                      {notice.level === 'warn' ? '⚠️' : notice.level === 'action' ? '✅' : '⚡'} Co-Pilot Notice • {notice.title}
+                      {notice.level === 'warn' ? '⚠️' : notice.level === 'action' ? '✅' : '⚡'} Co-Pilot Note • {notice.title}
                     </div>
                     <div className="mt-[0.14rem] text-[0.7rem] text-slate-400">{notice.message}</div>
                   </div>
@@ -2879,7 +2881,7 @@ export default function OptionsConfluenceScanner() {
                 {institutionalLensMode === 'OBSERVE' && marketRegimeIntel?.regime !== 'CHAOTIC_NEWS' && 'Market reading mode: structure, flow, and regime first. Execution intentionally de-emphasized.'}
                 {institutionalLensMode === 'WATCH' && 'Setup identified but not permitted. Focus on pattern, confluence, and confirmation triggers.'}
                 {institutionalLensMode === 'ARMED' && 'Institutional alignment confirmed. Execution panel prioritized; non-essential analysis collapsed.'}
-                {institutionalLensMode === 'EXECUTE' && (hasActiveTradeForSymbol ? 'Live management mode active. Focus on risk, flow shifts, and exit discipline.' : 'Extreme confidence focus mode active. Only execution-critical data remains visible.')}
+                {institutionalLensMode === 'EXECUTE' && (hasActiveTradeForSymbol ? 'Active monitoring mode. Focus on risk, flow shifts, and analysis.' : 'High confluence focus mode active. Only primary analysis data remains visible.')}
               </div>
               <div className="mt-2 grid gap-[0.35rem] [grid-template-columns:repeat(auto-fit,minmax(min(165px,100%),1fr))]">
                 <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
@@ -2887,11 +2889,11 @@ export default function OptionsConfluenceScanner() {
                   <div className="text-[0.77rem] font-extrabold text-slate-200">{marketRegimeIntel?.regime || 'UNKNOWN'}</div>
                 </div>
                 <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
-                  <div className="text-[0.64rem] font-bold uppercase text-slate-500">MRI Confidence</div>
+                  <div className="text-[0.64rem] font-bold uppercase text-slate-500">MRI Confluence</div>
                   <div className="text-[0.77rem] font-extrabold text-slate-200">{marketRegimeIntel ? `${Math.round(marketRegimeIntel.confidence * 100)}%` : '—'}</div>
                 </div>
                 <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
-                  <div className="text-[0.64rem] font-bold uppercase text-slate-500">Adaptive Confidence</div>
+                  <div className="text-[0.64rem] font-bold uppercase text-slate-500">Adaptive Confluence</div>
                   <div className="text-[0.77rem] font-extrabold text-slate-200">{Math.round(adaptiveConfidenceScore)}% ({adaptiveConfidenceBand})</div>
                 </div>
                 <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
@@ -2919,7 +2921,7 @@ export default function OptionsConfluenceScanner() {
                   <>
                     <div className="mt-[0.45rem]">
                       <div className="mb-[0.2rem] flex justify-between text-[0.72rem] text-slate-400">
-                        <span>Confidence</span>
+                        <span>Confluence</span>
                         <span>{Math.round(result.institutionalIntent.intent_confidence * 100)}%</span>
                       </div>
                       <div className="h-[6px] overflow-hidden rounded-full bg-slate-500/25">
@@ -3355,7 +3357,7 @@ export default function OptionsConfluenceScanner() {
                 {/* Recommendation */}
                 {result.crossAssetFlow.recommendation && (
                   <div className="mt-[0.55rem] rounded-lg border border-[var(--msp-accent)]/25 bg-[var(--msp-accent-glow)] p-[0.45rem_0.55rem]">
-                    <div className="text-[0.64rem] font-bold uppercase text-[var(--msp-accent)]">Cross-Asset Recommendation</div>
+                    <div className="text-[0.64rem] font-bold uppercase text-[var(--msp-accent)]">Cross-Asset Analysis</div>
                     <div className="mt-[0.15rem] text-[0.78rem] font-bold text-slate-200">{result.crossAssetFlow.recommendation}</div>
                   </div>
                 )}
@@ -3869,7 +3871,7 @@ export default function OptionsConfluenceScanner() {
                           <div className={`text-[clamp(1rem,3vw,1.5rem)] font-bold ${result.compositeScore.confidence >= 70 ? 'text-emerald-500' : result.compositeScore.confidence >= 50 ? 'text-amber-500' : 'text-red-500'}`}>
                             {result.compositeScore.confidence.toFixed(0)}%
                           </div>
-                          <div className="text-[0.7rem] text-slate-500">Confidence</div>
+                          <div className="text-[0.7rem] text-slate-500">Confluence</div>
                         </div>
                         <div className="text-center">
                           <div className="text-[clamp(1rem,3vw,1.5rem)] font-bold text-violet-500">
@@ -4190,7 +4192,7 @@ export default function OptionsConfluenceScanner() {
                     </div>
                   </div>
 
-                  {/* Best Entry Window */}
+                  {/* Best Analysis Window */}
                   <div className="rounded-xl border-l-[3px] border-l-emerald-500 bg-slate-800/60 p-4">
                     <div className="mb-2 text-[0.8rem] text-slate-400">Best Analysis Window</div>
                     <div className="text-[1.1rem] font-bold text-emerald-500">
@@ -4271,7 +4273,7 @@ export default function OptionsConfluenceScanner() {
                             </span>
                           </div>
                           <div>
-                            <span className="text-slate-500">Confidence:</span>
+                            <span className="text-slate-500">Confluence:</span>
                             <span className="ml-1.5 text-slate-200">
                               {result.primaryStrike.confidenceScore.toFixed(0)}%
                             </span>
@@ -4296,14 +4298,14 @@ export default function OptionsConfluenceScanner() {
                     </>
                   ) : (
                     <div className="p-8 text-center text-slate-500">
-                      No clear strike recommendation - wait for directional signal
+                      No clear strike level identified — waiting for directional signal
                     </div>
                   )}
                 </div>
 
                 {/* Expiration Recommendation */}
                 <div className="rounded-[16px] border border-[var(--msp-border)] bg-[var(--msp-card)] p-[1.15rem] shadow-msp-soft">
-                  <h3 className="mb-4 text-[0.98rem] font-extrabold tracking-[0.3px] text-[var(--msp-muted)]">📅 Recommended Expiration</h3>
+                  <h3 className="mb-4 text-[0.98rem] font-extrabold tracking-[0.3px] text-[var(--msp-muted)]">📅 Expiration Analysis</h3>
                   
                   {result.primaryExpiration ? (
                     <>
@@ -4333,7 +4335,7 @@ export default function OptionsConfluenceScanner() {
                             </span>
                           </div>
                           <div>
-                            <span className="text-slate-500">Confidence:</span>
+                            <span className="text-slate-500">Confluence:</span>
                             <span className="ml-1.5 text-slate-200">
                               {result.primaryExpiration.confidenceScore.toFixed(0)}%
                             </span>

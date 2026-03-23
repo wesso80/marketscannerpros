@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'AI Tools | MarketScanner Pros',
   description:
-    'AI-powered trading tools including market analysis, scenario modelling, and actionable insights.',
+    'AI-powered analytical tools including market analysis, scenario modelling, and data-driven insights.',
 };
 
 export default function AIToolsLayout({ children }: { children: React.ReactNode }) {

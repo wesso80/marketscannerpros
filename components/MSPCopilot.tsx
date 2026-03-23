@@ -78,7 +78,7 @@ export default function MSPCopilot({
           { label: 'Scan Type', value: `${scanType.toUpperCase()} · ${tf}`, highlight: true },
           { label: 'Results', value: `${totalResults} setups from ${totalScanned} scanned` },
           { label: 'Bias', value: `${bullish} Bullish / ${bearish} Bearish`, color: bullish > bearish ? '#10B981' : bearish > bullish ? '#EF4444' : '#64748B' },
-          { label: 'Avg Confidence', value: `${avgConf}%`, color: avgConf >= 65 ? '#10B981' : avgConf >= 50 ? '#F59E0B' : '#EF4444' },
+          { label: 'Avg Confluence', value: `${avgConf}%`, color: avgConf >= 65 ? '#10B981' : avgConf >= 50 ? '#F59E0B' : '#EF4444' },
           ...top3.map((p, i) => ({
             label: `#${i + 1}`,
             value: `${p.symbol} · ${String(p.direction).toUpperCase()} · ${p.confidence}%`,
@@ -87,7 +87,7 @@ export default function MSPCopilot({
         ];
 
         const planContent = [
-          { label: 'Strongest Setup', value: top3[0] ? `${top3[0].symbol} (${top3[0].confidence}%)` : 'N/A', color: '#10B981' },
+          { label: 'Top Confluence Setup', value: top3[0] ? `${top3[0].symbol} (${top3[0].confidence}%)` : 'N/A', color: '#10B981' },
           { label: 'Strategy', value: top3[0] ? String(top3[0].strategy || 'MOMENTUM_REVERSAL').replace(/_/g, ' ') : 'N/A' },
           { label: 'Market Lean', value: bullish > bearish ? 'Bullish bias across scan' : bearish > bullish ? 'Bearish bias across scan' : 'Mixed / neutral', color: bullish > bearish ? '#10B981' : bearish > bullish ? '#EF4444' : '#64748B' },
           { label: 'Quality Filter', value: `${picks.filter((p: any) => p.quality === 'high').length} high quality setups` },
@@ -102,10 +102,10 @@ export default function MSPCopilot({
           plan: {
             title: '📋 Scan Strategy Summary',
             content: planContent,
-            footer: 'Ask me which setup is best for your trading style or to build a trade plan.',
+            footer: 'Ask me about any setup or to review a scenario analysis.',
           },
           act: {
-            title: '⚡ Suggested Actions',
+            title: '⚡ Analysis Actions',
             actions: [
               { icon: '🔍', label: `Deep scan ${top3[0]?.symbol || 'top pick'}`, action: 'deep_scan' },
               { icon: '📝', label: 'Log top pick to journal', action: 'journal_trade' },
@@ -205,7 +205,7 @@ export default function MSPCopilot({
             : (direction ? 'Ask me to build a complete scenario plan.' : 'Run a scan first to get scenario planning.'),
         },
         act: {
-          title: '⚡ Suggested Actions',
+          title: '⚡ Analysis Actions',
           actions: hasPageData ? [
             { icon: '🔔', label: `Create alert for ${symbol}`, action: 'create_alert' },
             { icon: '📝', label: 'Log to trade journal', action: 'journal_trade' },
@@ -428,7 +428,7 @@ export default function MSPCopilot({
         return [
           'Summarize the key signals',
           'What\'s the invalidation?',
-          'Create a trade plan',
+          'Review scenario analysis',
         ];
       case 'market_movers':
         return [
@@ -643,7 +643,7 @@ export default function MSPCopilot({
                         ))}
                       </div>
                     ) : (
-                      <div style={{ color: '#64748B', fontSize: '0.85rem' }}>Run a scan to see trade planning.</div>
+                      <div style={{ color: '#64748B', fontSize: '0.85rem' }}>Run a scan to see analysis results.</div>
                     )}
                     <div style={{ marginTop: '1rem', fontSize: '0.8rem', color: '#64748B', fontStyle: 'italic' }}>
                       {getTabContent.plan.footer}
@@ -894,7 +894,7 @@ export default function MSPCopilot({
           }}
         >
           <div style={{ fontSize: '0.85rem', color: '#F59E0B', marginBottom: '0.75rem' }}>
-            ⚡ Suggested Action:
+            ⚡ Analysis Note:
           </div>
           <div style={{ fontSize: '0.9rem', color: '#E2E8F0', marginBottom: '0.75rem' }}>
             {pendingAction.description}

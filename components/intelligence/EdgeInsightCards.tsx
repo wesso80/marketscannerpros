@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * EdgeInsightCards — Surfaces the trader's edge profile as actionable insight cards.
+ * EdgeInsightCards — Surfaces the trader's historical pattern profile as analytical insight cards.
  * Designed for the Command Center dashboard (pro / pro_trader only).
  *
  * Soft personalization: insights are analytical observations, not recommendations.
@@ -31,7 +31,7 @@ const INSIGHT_COLORS: Record<string, { border: string; bg: string; text: string 
 function InsightCard({ insight }: { insight: EdgeInsight }) {
   const colors = INSIGHT_COLORS[insight.type] ?? INSIGHT_COLORS.pattern;
   const icon = INSIGHT_ICONS[insight.type] ?? '';
-  const edgeLabel = insight.confidence >= 0.7 ? 'Established pattern' : insight.confidence >= 0.4 ? 'Developing pattern' : 'Early signal';
+  const edgeLabel = insight.confidence >= 0.7 ? 'Established pattern' : insight.confidence >= 0.4 ? 'Developing pattern' : 'Early observation';
   const edgeLabelColor = insight.confidence >= 0.7 ? '#10B981' : insight.confidence >= 0.4 ? '#F59E0B' : '#6B7280';
 
   return (

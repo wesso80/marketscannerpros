@@ -59,7 +59,7 @@ export default function TradeSuggestionCard({ suggestion, onAccept, onReject }: 
   }
 
   if (done) {
-    const label = acting === 'accept' ? 'Accepted — journal entry created' : 'Rejected';
+    const label = acting === 'accept' ? 'Logged — journal entry created' : 'Dismissed';
     const color = acting === 'accept' ? '#10B981' : '#94A3B8';
     return (
       <div className="msp-card" style={{ padding: '0.7rem 0.9rem', opacity: 0.7 }}>
@@ -104,7 +104,7 @@ export default function TradeSuggestionCard({ suggestion, onAccept, onReject }: 
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
           <span style={{ color: confColor, fontWeight: 800, fontSize: '0.78rem' }}>
-            {confidence}% confidence
+            {confidence}% confluence
           </span>
           <span style={{ color: '#64748B', fontSize: '0.65rem' }}>{expiresIn}</span>
         </div>
@@ -169,7 +169,7 @@ export default function TradeSuggestionCard({ suggestion, onAccept, onReject }: 
             opacity: acting && acting !== 'accept' ? 0.4 : 1,
           }}
         >
-          {acting === 'accept' ? 'Accepting…' : 'Accept'}
+          {acting === 'accept' ? 'Logging…' : 'Log to Journal'}
         </button>
         <button
           onClick={() => handleAction('reject')}
@@ -186,7 +186,7 @@ export default function TradeSuggestionCard({ suggestion, onAccept, onReject }: 
             opacity: acting && acting !== 'reject' ? 0.4 : 1,
           }}
         >
-          {acting === 'reject' ? 'Rejecting…' : 'Reject'}
+          {acting === 'reject' ? 'Dismissing…' : 'Dismiss'}
         </button>
       </div>
     </div>

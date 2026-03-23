@@ -125,7 +125,7 @@ export default function VEHeatmapGauge({ vol }: { vol: VolatilityState }) {
               {vol.extremeAlert === 'low' ? '❄️ Extreme Low' : '🔥 Extreme High'}
             </div>
           )}
-          <div>Confidence: <span className="font-semibold text-white/70">{vol.regimeConfidence.toFixed(0)}%</span></div>
+          <div>Confluence: <span className="font-semibold text-white/70">{vol.regimeConfidence.toFixed(0)}%</span></div>
         </div>
       </div>
     </div>

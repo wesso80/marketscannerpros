@@ -17,6 +17,7 @@ import { useUserTier, FREE_DAILY_SCAN_LIMIT, canAccessUnlimitedScanning } from '
 import ScreenerTable, { type ScreenerRow } from '@/components/scanner/ScreenerTable';
 import ScanTemplatesBar, { type ScanTemplate, SCAN_TEMPLATES } from '@/components/scanner/ScanTemplatesBar';
 import { useRegisterPageData } from '@/lib/ai/pageContext';
+import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 
 /* ─── Helpers ─── */
 function dirColor(d?: string) {
@@ -187,9 +188,9 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
 
       {/* Action buttons */}
       <div className="flex items-center justify-end gap-2">
-        <Link href={`/tools/journal?prefill=true&symbol=${encodeURIComponent(detail.symbol)}&side=${direction === 'bullish' ? 'LONG' : direction === 'bearish' ? 'SHORT' : 'LONG'}&entryPrice=${entry != null ? entry.toFixed(2) : ''}&strategy=Scanner&setup=${encodeURIComponent(`${detail.symbol} ${direction} — ${quality} quality, ${confidence}% confidence`)}&notes=${encodeURIComponent(`Scanner trade plan\nEntry: ${entry != null ? entry.toFixed(2) : 'N/A'} | Stop: ${stop != null ? stop.toFixed(2) : 'N/A'} | T1: ${target1 != null ? target1.toFixed(2) : 'N/A'} | T2: ${target2 != null ? target2.toFixed(2) : 'N/A'}\nR:R ${rr != null ? rr.toFixed(1) : 'N/A'} | RSI: ${detail.rsi != null ? detail.rsi.toFixed(1) : 'N/A'} | ADX: ${adx.toFixed(1)}`)}`}
+        <Link href={`/tools/journal?prefill=true&symbol=${encodeURIComponent(detail.symbol)}&side=${direction === 'bullish' ? 'LONG' : direction === 'bearish' ? 'SHORT' : 'LONG'}&entryPrice=${entry != null ? entry.toFixed(2) : ''}&strategy=Scanner&setup=${encodeURIComponent(`${detail.symbol} ${direction} — ${quality} quality, ${confidence}% confluence`)}&notes=${encodeURIComponent(`Scanner analysis notes\nLevel of Interest: ${entry != null ? entry.toFixed(2) : 'N/A'} | Invalidation: ${stop != null ? stop.toFixed(2) : 'N/A'} | Key Level 1: ${target1 != null ? target1.toFixed(2) : 'N/A'} | Key Level 2: ${target2 != null ? target2.toFixed(2) : 'N/A'}\nR:R ${rr != null ? rr.toFixed(1) : 'N/A'} | RSI: ${detail.rsi != null ? detail.rsi.toFixed(1) : 'N/A'} | ADX: ${adx.toFixed(1)}`)}`}
           className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-emerald-400 no-underline hover:bg-emerald-500/20 transition-colors">
-          Create Trade Plan
+          Log to Journal
         </Link>
         <Link href={`/tools/workspace?tab=Backtest&symbol=${encodeURIComponent(detail.symbol)}`}
           className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-slate-400 no-underline hover:bg-slate-700/50 transition-colors">
@@ -306,9 +307,9 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
 
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-2">
-              <Link href={`/tools/journal?prefill=true&symbol=${encodeURIComponent(detail.symbol)}&side=${direction === 'bullish' ? 'LONG' : direction === 'bearish' ? 'SHORT' : 'LONG'}&entryPrice=${entry != null ? entry.toFixed(2) : ''}&strategy=Scanner&setup=${encodeURIComponent(`${detail.symbol} ${direction} — ${quality} quality, ${confidence}% confidence`)}&notes=${encodeURIComponent(`Scanner trade plan\nEntry: ${entry != null ? entry.toFixed(2) : 'N/A'} | Stop: ${stop != null ? stop.toFixed(2) : 'N/A'} | T1: ${target1 != null ? target1.toFixed(2) : 'N/A'} | T2: ${target2 != null ? target2.toFixed(2) : 'N/A'}\nR:R ${rr != null ? rr.toFixed(1) : 'N/A'} | RSI: ${detail.rsi != null ? detail.rsi.toFixed(1) : 'N/A'} | ADX: ${adx.toFixed(1)}`)}`}
+              <Link href={`/tools/journal?prefill=true&symbol=${encodeURIComponent(detail.symbol)}&side=${direction === 'bullish' ? 'LONG' : direction === 'bearish' ? 'SHORT' : 'LONG'}&entryPrice=${entry != null ? entry.toFixed(2) : ''}&strategy=Scanner&setup=${encodeURIComponent(`${detail.symbol} ${direction} — ${quality} quality, ${confidence}% confluence`)}&notes=${encodeURIComponent(`Scanner analysis notes\nLevel of Interest: ${entry != null ? entry.toFixed(2) : 'N/A'} | Invalidation: ${stop != null ? stop.toFixed(2) : 'N/A'} | Key Level 1: ${target1 != null ? target1.toFixed(2) : 'N/A'} | Key Level 2: ${target2 != null ? target2.toFixed(2) : 'N/A'}\nR:R ${rr != null ? rr.toFixed(1) : 'N/A'} | RSI: ${detail.rsi != null ? detail.rsi.toFixed(1) : 'N/A'} | ADX: ${adx.toFixed(1)}`)}`}
                 className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-emerald-400 no-underline hover:bg-emerald-500/20 transition-colors">
-                Create Trade Plan
+                Log to Journal
               </Link>
               <Link href={`/tools/alerts?symbol=${encodeURIComponent(detail.symbol)}&price=${detail.price || ''}&direction=${direction}`}
                 className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-slate-400 no-underline hover:bg-slate-700/50 transition-colors">
@@ -649,6 +650,7 @@ export default function ScannerPage() {
     <div className="space-y-5">
       {/* ─── Header ─── */}
       <SectionHeader title="Scanner" subtitle="Technical analysis scanner — educational scan results" />
+      <ComplianceDisclaimer compact />
 
       {/* ─── Mode Toggle ─── */}
       <div className="flex items-center gap-1 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-1 w-fit">
@@ -967,7 +969,7 @@ export default function ScannerPage() {
                 <label className="text-[10px] uppercase text-slate-500">Sort:</label>
                 <select value={proSort} onChange={e => setProSort(e.target.value as any)}
                   className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200">
-                  <option value="rank">Rank</option><option value="confidence">Confidence</option><option value="volatility">Volatility</option><option value="trend">Trend</option>
+                  <option value="rank">Rank</option><option value="confidence">Confluence</option><option value="volatility">Volatility</option><option value="trend">Trend</option>
                 </select>
               </div>
               <div className="ml-auto flex gap-1">
