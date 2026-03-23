@@ -1375,12 +1375,12 @@ export default function OptionsConfluenceScanner() {
       : 'WAITING';
 
   const trendStrength = !result
-    ? 'WEAK'
+    ? 'LOW'
     : (result.compositeScore?.confidence ?? 0) >= 70
-      ? 'STRONG'
+      ? 'HIGH'
       : (result.compositeScore?.confidence ?? 0) >= 50
         ? 'MODERATE'
-        : 'WEAK';
+        : 'LOW';
 
   const executionState = !result
     ? 'WAIT'
@@ -1779,7 +1779,7 @@ export default function OptionsConfluenceScanner() {
       reasons.push(`Risk profile aligns with your ${adaptiveProfile.riskDNA} execution DNA`);
     }
     if (timingScore >= 70) {
-      reasons.push(`Entry timing fits your ${adaptiveProfile.decisionTiming.replace('_', ' ')} profile`);
+      reasons.push(`Timing window fits your ${adaptiveProfile.decisionTiming.replace('_', ' ')} profile`);
     }
     reasons.push(`Similar ${currentEnvironment} conditions: ${envWinRate.toFixed(0)}% historical win rate`);
 
@@ -1927,8 +1927,10 @@ export default function OptionsConfluenceScanner() {
               : (flowAligned && riskGovernorAllows ? 'EXECUTE' : ((result.compositeScore?.confidence ?? 0) >= watchThreshold ? 'WATCH' : 'OBSERVE'));
 
   const lensDisplayMode = institutionalLensMode === 'EXECUTE' && !hasActiveTradeForSymbol
-    ? 'EXECUTE_FOCUS'
-    : institutionalLensMode;
+    ? 'ACTIVE_FOCUS'
+    : institutionalLensMode === 'EXECUTE'
+      ? 'ACTIVE'
+      : institutionalLensMode;
 
   const modeAccentClass = institutionalLensMode === 'ARMED'
     ? 'text-emerald-500'
@@ -2053,7 +2055,7 @@ export default function OptionsConfluenceScanner() {
     {
       label: 'Momentum',
       score: result.signalStrength === 'strong' ? 84 : result.signalStrength === 'moderate' ? 66 : result.signalStrength === 'weak' ? 48 : 30,
-      state: result.signalStrength.toUpperCase(),
+      state: (result.signalStrength === 'strong' ? 'HIGH' : result.signalStrength === 'weak' ? 'LOW' : result.signalStrength.toUpperCase()),
       summary: `${result.confluenceStack} TFs aligned • ${result.entryTiming.urgency.replace('_', ' ')}`,
     },
     {
@@ -2072,7 +2074,7 @@ export default function OptionsConfluenceScanner() {
       label: 'Sentiment',
       score: result.capitalFlow?.conviction ? Math.max(35, Math.min(100, Math.round(result.capitalFlow.conviction))) : 52,
       state: (result.capitalFlow?.bias || result.openInterestAnalysis?.sentiment || 'neutral').toUpperCase(),
-      summary: `${result.capitalFlow?.market_mode || 'market mode n/a'} • ${result.institutionalFilter?.recommendation || 'no filter'}`,
+      summary: `${result.capitalFlow?.market_mode || 'market mode n/a'} • ${(result.institutionalFilter?.recommendation || 'no filter').replace('TRADE_READY', 'ALIGNED').replace('NO_TRADE', 'NOT ALIGNED')}`,
     },
   ] : [];
 
@@ -2444,7 +2446,7 @@ export default function OptionsConfluenceScanner() {
             disabled={loading}
             className={`rounded-xl px-8 py-3 text-base font-bold text-[var(--msp-bg)] transition ${loading ? 'cursor-not-allowed bg-[var(--msp-panel)]' : 'cursor-pointer bg-[var(--msp-accent)]'}`}
           >
-            {loading ? '🔄 Finding Best Options Setup...' : '🎯 Find Best Options Setup'}
+            {loading ? '🔄 Scanning Options Confluence...' : '🎯 Scan Options Confluence'}
           </button>
 
           {result && (
@@ -2501,7 +2503,7 @@ export default function OptionsConfluenceScanner() {
                 <DepthCard className="rounded-[10px] border border-slate-500/20 bg-slate-900/40 p-[0.7rem] opacity-[0.9]" tiltStrength={4}>
                   <div className="text-[0.64rem] font-extrabold uppercase text-slate-500">Decision Core</div>
                   <div className="mt-[0.2rem] text-[0.9rem] font-black text-slate-200">
-                    {result.tradeSnapshot?.oneLine || `${thesisDirection.toUpperCase()} setup ${commandStatus === 'ACTIVE' ? 'ready for execution' : 'requires trigger confirmation'}`}
+                    {result.tradeSnapshot?.oneLine || `${thesisDirection.toUpperCase()} setup ${commandStatus === 'ACTIVE' ? 'analysis complete' : 'requires trigger confirmation'}`}
                   </div>
                   <div className="mt-[0.35rem] flex flex-wrap gap-[0.35rem]">
                     <span className="rounded-full border border-[var(--msp-border)] bg-slate-400/20 px-2 py-[2px] text-[0.68rem] font-bold text-slate-200">
@@ -2551,7 +2553,7 @@ export default function OptionsConfluenceScanner() {
             <div className={`-mt-[0.35rem] rounded-[10px] border px-[0.7rem] py-[0.55rem] ${tradeabilityToneClass}`}>
               <div className="flex flex-wrap items-center justify-between gap-2 text-[0.75rem]">
                 <span className="font-extrabold uppercase tracking-[0.05em]">Tradeability State</span>
-                <span className="font-black">{tradeabilityState === 'EXECUTABLE' ? '🟢 EXECUTABLE' : tradeabilityState === 'CONDITIONAL' ? '🟡 CONDITIONAL' : '🔴 AVOID'}</span>
+                <span className="font-black">{tradeabilityState === 'EXECUTABLE' ? '🟢 CONDITIONS MET' : tradeabilityState === 'CONDITIONAL' ? '🟡 CONDITIONAL' : '🔴 AVOID'}</span>
               </div>
             </div>
 
@@ -2707,7 +2709,7 @@ export default function OptionsConfluenceScanner() {
                     <div className="text-[0.82rem] font-black text-slate-50">{terminalDecisionCard.direction}</div>
                   </div>
                   <div className="rounded-lg bg-[var(--msp-panel-2)] p-2">
-                    <div className="text-[0.64rem] font-bold uppercase text-slate-500">Best Setup</div>
+                    <div className="text-[0.64rem] font-bold uppercase text-slate-500">Primary Setup</div>
                     <div className="text-[0.82rem] font-extrabold text-slate-50">{terminalDecisionCard.setup}</div>
                   </div>
                   <div className="rounded-lg bg-[var(--msp-panel-2)] p-2">
@@ -2878,10 +2880,10 @@ export default function OptionsConfluenceScanner() {
               </div>
               <div className="mt-[0.4rem] text-[0.78rem] text-slate-300">
                 {marketRegimeIntel?.regime === 'CHAOTIC_NEWS' && '🚫 NO TRADE ENVIRONMENT — chaotic/news-dominated phase detected. Preserve capital and wait for stability.'}
-                {institutionalLensMode === 'OBSERVE' && marketRegimeIntel?.regime !== 'CHAOTIC_NEWS' && 'Market reading mode: structure, flow, and regime first. Execution intentionally de-emphasized.'}
+                {institutionalLensMode === 'OBSERVE' && marketRegimeIntel?.regime !== 'CHAOTIC_NEWS' && 'Market reading mode: structure, flow, and regime first. Analysis prioritized over action.'}
                 {institutionalLensMode === 'WATCH' && 'Setup identified but not permitted. Focus on pattern, confluence, and confirmation triggers.'}
-                {institutionalLensMode === 'ARMED' && 'Institutional alignment confirmed. Execution panel prioritized; non-essential analysis collapsed.'}
-                {institutionalLensMode === 'EXECUTE' && (hasActiveTradeForSymbol ? 'Active monitoring mode. Focus on risk, flow shifts, and analysis.' : 'High confluence focus mode active. Only primary analysis data remains visible.')}
+                {institutionalLensMode === 'ARMED' && 'Institutional alignment confirmed. Primary analysis panel prioritized; non-essential analysis collapsed.'}
+                {institutionalLensMode === 'EXECUTE' && (hasActiveTradeForSymbol ? 'Active monitoring mode. Focus on risk, flow shifts, and analysis.' : 'High confluence focus mode active. Primary analysis data prioritized.')}
               </div>
               <div className="mt-2 grid gap-[0.35rem] [grid-template-columns:repeat(auto-fit,minmax(min(165px,100%),1fr))]">
                 <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
@@ -4192,9 +4194,9 @@ export default function OptionsConfluenceScanner() {
                     </div>
                   </div>
 
-                  {/* Best Analysis Window */}
+                  {/* Primary Analysis Window */}
                   <div className="rounded-xl border-l-[3px] border-l-emerald-500 bg-slate-800/60 p-4">
-                    <div className="mb-2 text-[0.8rem] text-slate-400">Best Analysis Window</div>
+                    <div className="mb-2 text-[0.8rem] text-slate-400">Primary Analysis Window</div>
                     <div className="text-[1.1rem] font-bold text-emerald-500">
                       {result.candleCloseConfluence.bestEntryWindow.startMins === 0 ? 'NOW' : `In ${result.candleCloseConfluence.bestEntryWindow.startMins}m`}
                       {' → '}{result.candleCloseConfluence.bestEntryWindow.endMins}m
@@ -4235,7 +4237,7 @@ export default function OptionsConfluenceScanner() {
                 
                 {/* Strike Recommendation */}
                 <div className="rounded-[16px] border border-emerald-500/40 bg-[var(--msp-card)] p-[1.15rem] shadow-msp-soft">
-                  <h3 className="mb-4 text-[0.98rem] font-extrabold tracking-[0.3px] text-emerald-500">🎯 Recommended Strike</h3>
+                  <h3 className="mb-4 text-[0.98rem] font-extrabold tracking-[0.3px] text-emerald-500">🎯 Highest Confluence Strike</h3>
                   
                   {result.primaryStrike ? (
                     <>
@@ -4359,7 +4361,7 @@ export default function OptionsConfluenceScanner() {
                     </>
                   ) : (
                     <div className="p-8 text-center text-slate-500">
-                      No expiration recommendation available
+                      No expiration analysis available
                     </div>
                   )}
                 </div>

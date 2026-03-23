@@ -1124,7 +1124,7 @@ function BacktestContent() {
     }
 
     if (adjustmentKey === 'reduce_drawdown' || adjustmentKey === 'improve_rr') {
-      setBacktestError('Apply this manually by tightening stop/target logic in strategy rules, then rerun.');
+      setBacktestError('Apply this manually by tightening invalidation/key-level logic in strategy rules, then rerun.');
       return null;
     }
 
@@ -1160,7 +1160,7 @@ function BacktestContent() {
   const runRecommendation = async () => {
     const candidateStrategy = recommendationStrategy.trim();
     if (!isBacktestStrategy(candidateStrategy)) {
-      setBacktestError(`Unknown strategy in recommendation runner: ${candidateStrategy}`);
+      setBacktestError(`Unknown strategy in scenario runner: ${candidateStrategy}`);
       return;
     }
 

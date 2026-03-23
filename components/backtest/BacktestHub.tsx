@@ -274,7 +274,7 @@ export default function BacktestPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">ATR Stop ×</label>
+                  <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">ATR Invalidation ×</label>
                   <input
                     type="number"
                     min={0.5} max={5} step={0.5}
@@ -284,7 +284,7 @@ export default function BacktestPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">ATR Target ×</label>
+                  <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">ATR Key Level ×</label>
                   <input
                     type="number"
                     min={0.5} max={10} step={0.5}
