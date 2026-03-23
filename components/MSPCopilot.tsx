@@ -186,9 +186,9 @@ export default function MSPCopilot({
         ...(flowConviction ? [{ label: 'Confluence', value: `${flowConviction}%`, color: flowConviction >= 70 ? '#10B981' : flowConviction >= 40 ? '#F59E0B' : '#64748B' }] : []),
       ] : direction ? [
         { label: 'Bias', value: direction.toUpperCase(), color: direction === 'bullish' ? '#10B981' : '#EF4444' },
-        { label: 'Entry', value: pageData.entryTiming ? (pageData.entryTiming as { idealEntryWindow?: string })?.idealEntryWindow || 'See timing' : 'Wait for confirmation' },
-        { label: 'Strategy', value: pageData.strategyRecommendation ? (pageData.strategyRecommendation as { name?: string })?.name || 'Review options' : 'Ask for recommendation' },
-        { label: 'Risk', value: pageData.tradeLevels && typeof (pageData.tradeLevels as { stopLoss?: number })?.stopLoss === 'number' ? `Risk: $${((pageData.tradeLevels as { stopLoss?: number }).stopLoss as number).toFixed(2)}` : 'Define your risk' },
+        { label: 'Reference', value: pageData.entryTiming ? (pageData.entryTiming as { idealEntryWindow?: string })?.idealEntryWindow || 'See timing' : 'Wait for confirmation' },
+        { label: 'Strategy', value: pageData.strategyRecommendation ? (pageData.strategyRecommendation as { name?: string })?.name || 'Review options' : 'Ask for analysis' },
+        { label: 'Invalidation', value: pageData.tradeLevels && typeof (pageData.tradeLevels as { stopLoss?: number })?.stopLoss === 'number' ? `Level: $${((pageData.tradeLevels as { stopLoss?: number }).stopLoss as number).toFixed(2)}` : 'Define your risk' },
       ] : [];
 
       return {

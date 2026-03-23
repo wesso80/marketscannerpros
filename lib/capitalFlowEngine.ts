@@ -1122,7 +1122,7 @@ export function computeCapitalFlowEngine(input: CapitalFlowInput): CapitalFlowRe
       : [
           primaryLiquidity ? `Sweep ${primaryLiquidity.label} then fade` : 'Sweep both-side liquidity likely',
           vwap ? 'Mean-revert around VWAP' : 'Mean-revert around intraday midpoint',
-          directionalFlip ? `Wait for clean break of ${directionalFlip.level}` : 'Wait for decisive break before entry',
+          directionalFlip ? `Wait for clean break of ${directionalFlip.level}` : 'Wait for decisive break before acting',
         ];
 
   const risk = [

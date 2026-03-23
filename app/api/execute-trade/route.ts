@@ -140,13 +140,14 @@ export async function POST(req: NextRequest) {
 
     const journalEntryId = rows[0]?.id;
 
-    // ── 5. LIVE mode → broker stub ───────────────────────────────────
-    let brokerOrderId: string | undefined;
+    // ── COMPLIANCE: LIVE mode is permanently disabled ──────────────
+    // MSP does not provide trade execution, broker connections, or order
+    // submission. This platform is an analytical tool only.
     if (mode === 'LIVE') {
-      // TODO: wire real broker connector (Binance / IBKR / Phemex)
-      // For now we log a placeholder
-      console.log(`[execute-trade] LIVE mode — broker order would be sent:`, order);
-      brokerOrderId = `SIM-${order.client_order_id}`;
+      return NextResponse.json(
+        { error: 'LIVE execution is not available. MSP is an analytical platform and does not execute trades or connect to brokers.' },
+        { status: 403 },
+      );
     }
 
     const result: ExecutionResult = {
@@ -154,7 +155,6 @@ export async function POST(req: NextRequest) {
       mode,
       success: true,
       journal_entry_id: journalEntryId,
-      broker_order_id: brokerOrderId,
       ts: new Date().toISOString(),
     };
 

@@ -197,7 +197,7 @@ export default function CryptoTimeConfluencePage() {
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-emerald-400 mb-3">Best Setups</h3>
+              <h3 className="text-lg font-semibold text-emerald-400 mb-3">Top Confluence Criteria</h3>
               <ul className="space-y-2 text-sm text-slate-400">
                 <li>⭐ High time confluence (≥6)</li>
                 <li>⭐ Price at key level (S/R, Fib)</li>

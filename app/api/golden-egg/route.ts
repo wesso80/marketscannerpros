@@ -435,14 +435,14 @@ function buildPayload(
       },
       execution: {
         entryTrigger: permission === 'TRADE'
-          ? `${isLong ? 'Enter long' : 'Enter short'} on pullback to $${(isLong ? p - atr * 0.3 : p + atr * 0.3).toFixed(2)} or breakout confirmation.`
-          : 'Wait for flip conditions to be met before entry.',
+          ? `${isLong ? 'Long scenario' : 'Short scenario'}: pullback zone near $${(isLong ? p - atr * 0.3 : p + atr * 0.3).toFixed(2)} or breakout confirmation.`
+          : 'Wait for flip conditions to be met.',
         entry: { type: permission === 'TRADE' ? 'limit' : 'stop', price: permission === 'TRADE' ? p : undefined },
-        stop: { price: Math.round(stopPrice * 100) / 100, logic: `${(1.5).toFixed(1)}x ATR from entry — beyond recent structure` },
+        stop: { price: Math.round(stopPrice * 100) / 100, logic: `${(1.5).toFixed(1)}x ATR from reference — beyond recent structure` },
         targets: [
-          { price: Math.round(t1 * 100) / 100, rMultiple: stopDistance > 0 ? Math.round(Math.abs(t1 - p) / stopDistance * 10) / 10 : 1, note: 'First scale' },
-          { price: Math.round(t2 * 100) / 100, rMultiple: stopDistance > 0 ? Math.round(Math.abs(t2 - p) / stopDistance * 10) / 10 : 2, note: decompAligned ? `Primary target — Decomp target (${decompTarget!.contributingTFs.length} TFs)` : 'Primary target' },
-          { price: Math.round(t3 * 100) / 100, rMultiple: stopDistance > 0 ? Math.round(Math.abs(t3 - p) / stopDistance * 10) / 10 : 3, note: 'Extension' },
+          { price: Math.round(t1 * 100) / 100, rMultiple: stopDistance > 0 ? Math.round(Math.abs(t1 - p) / stopDistance * 10) / 10 : 1, note: 'First scale zone' },
+          { price: Math.round(t2 * 100) / 100, rMultiple: stopDistance > 0 ? Math.round(Math.abs(t2 - p) / stopDistance * 10) / 10 : 2, note: decompAligned ? `Primary level — Decomp zone (${decompTarget!.contributingTFs.length} TFs)` : 'Primary level' },
+          { price: Math.round(t3 * 100) / 100, rMultiple: stopDistance > 0 ? Math.round(Math.abs(t3 - p) / stopDistance * 10) / 10 : 3, note: 'Extension zone' },
         ],
         rr: { expectedR: Math.round(rr * 10) / 10, minR: 1.5 },
         sizingHint: { riskPct: confidence >= 70 ? 1.0 : confidence >= 55 ? 0.75 : 0.5 },

@@ -260,7 +260,7 @@ export default function AlertsWidget({
       // Strategy alerts
       case 'strategy_buy_signal': return '📊 Strategy Long';
       case 'strategy_sell_signal': return '📊 Strategy Short';
-      case 'strategy_entry': return '🎯 Strategy Entry';
+      case 'strategy_entry': return '🎯 Strategy Setup';
       case 'strategy_exit': return '🚪 Strategy Exit';
       default: return type;
     }
@@ -286,10 +286,10 @@ export default function AlertsWidget({
       case 'scanner_bullish_flip': return 'Direction flips from bearish/neutral to bullish (trend change)';
       case 'scanner_bearish_flip': return 'Direction flips from bullish/neutral to bearish (trend change)';
       // Strategy signal descriptions
-      case 'strategy_buy_signal': return 'Backtest strategy detects long entry conditions on this symbol';
+      case 'strategy_buy_signal': return 'Backtest strategy detects long setup conditions on this symbol';
       case 'strategy_sell_signal': return 'Backtest strategy detects short/exit conditions on this symbol';
-      case 'strategy_entry': return 'Backtest strategy detects new entry conditions';
-      case 'strategy_exit': return 'Backtest strategy detects exit conditions (target/stop level hit)';
+      case 'strategy_entry': return 'Backtest strategy detects new setup conditions';
+      case 'strategy_exit': return 'Backtest strategy detects exit conditions (key level/invalidation hit)';
       default: return '';
     }
   };
@@ -852,7 +852,7 @@ export default function AlertsWidget({
                           <optgroup label="📊 Strategy Alerts (Backtest)">
                             <option value="strategy_buy_signal">📈 Strategy Long Setup</option>
                             <option value="strategy_sell_signal">📉 Strategy Short Setup</option>
-                            <option value="strategy_entry">🎯 Strategy Entry</option>
+                            <option value="strategy_entry">🎯 Strategy Setup</option>
                             <option value="strategy_exit">🚪 Strategy Exit</option>
                           </optgroup>
                           <optgroup label="🎯 Scanner Setups">

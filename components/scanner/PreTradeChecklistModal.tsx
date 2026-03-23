@@ -22,7 +22,7 @@ export function PreTradeChecklistModal({ visible, symbol, checklist, onChange, o
 
   const items: { key: keyof PreTradeChecklistState; label: string }[] = [
     { key: 'thesis', label: 'Thesis is clear and setup aligns with current regime.' },
-    { key: 'risk', label: 'Stop/invalidation and risk budget are defined before entry.' },
+    { key: 'risk', label: 'Invalidation level and risk budget are defined before acting.' },
     { key: 'eventWindow', label: 'High-impact event window reviewed and throttle accepted.' },
   ];
 

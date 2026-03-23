@@ -1089,11 +1089,11 @@ function generateSignals(data: any): { signal: string; score: number; reasons: s
   
   const score = bullish - bearish;
   let signal = 'NEUTRAL';
-  if (score >= 4) signal = 'STRONG BUY';
-  else if (score >= 2) signal = 'BUY';
+  if (score >= 4) signal = 'STRONGLY BULLISH';
+  else if (score >= 2) signal = 'BULLISH';
   else if (score >= 1) signal = 'LEAN BULLISH';
-  else if (score <= -4) signal = 'STRONG SELL';
-  else if (score <= -2) signal = 'SELL';
+  else if (score <= -4) signal = 'STRONGLY BEARISH';
+  else if (score <= -2) signal = 'BEARISH';
   else if (score <= -1) signal = 'LEAN BEARISH';
   
   return { signal, score, reasons, bullishCount: bullish, bearishCount: bearish };

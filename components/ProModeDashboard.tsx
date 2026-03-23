@@ -359,7 +359,7 @@ export function ProModeDashboard({
               borderRadius: '8px',
               border: '1px solid var(--msp-border)',
             }}>
-              <div style={{ fontSize: '9px', color: 'var(--msp-accent)', marginBottom: '2px' }}>ENTRY</div>
+              <div style={{ fontSize: '9px', color: 'var(--msp-accent)', marginBottom: '2px' }}>REFERENCE</div>
               <div style={{ fontSize: '13px', fontWeight: 'bold', color: 'var(--msp-accent)' }}>
                 ${currentPrice.toFixed(2)}
               </div>

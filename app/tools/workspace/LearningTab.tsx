@@ -135,15 +135,15 @@ export default function LearningTab() {
               {activePlaybook === pb.id && (
                 <div className="mt-3 pt-3 border-t border-slate-700/50 space-y-2">
                   <div>
-                    <div className="text-[10px] text-[var(--msp-text-muted)] font-semibold mb-1">ENTRY CRITERIA</div>
+                    <div className="text-[10px] text-[var(--msp-text-muted)] font-semibold mb-1">SETUP CRITERIA</div>
                     <ul className="space-y-0.5">
                       {pb.entryCriteria.map((c, i) => <li key={i} className="text-[11px] text-slate-300">• {c}</li>)}
                     </ul>
                   </div>
                   <div>
                     <div className="text-[10px] text-[var(--msp-text-muted)] font-semibold mb-1">RISK MODEL</div>
-                    <div className="text-[11px] text-slate-300">Stop: {pb.riskModel.stopDescription}</div>
-                    <div className="text-[11px] text-slate-300">Target: {pb.riskModel.targetDescription} ({pb.riskModel.defaultRR}R)</div>
+                    <div className="text-[11px] text-slate-300">Invalidation: {pb.riskModel.stopDescription}</div>
+                    <div className="text-[11px] text-slate-300">Key Level: {pb.riskModel.targetDescription} ({pb.riskModel.defaultRR}R)</div>
                   </div>
                   <div>
                     <div className="text-[10px] text-[var(--msp-text-muted)] font-semibold mb-1">FAILURE SIGNALS</div>

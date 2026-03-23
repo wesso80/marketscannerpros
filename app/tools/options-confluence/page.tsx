@@ -4655,7 +4655,7 @@ export default function OptionsConfluenceScanner() {
                     <div className="mb-2 font-bold text-[var(--msp-muted)]">Expiration Logic</div>
                   <div className="border-t border-white/10 pt-3">
                     <span className="text-[0.85rem] text-slate-400">
-                    Target: ${formatPrice(result.primaryStrike.targetLevel)} (50% level) | 
+                    Key Level: ${formatPrice(result.primaryStrike.targetLevel)} (50% level) | 
                     Max Risk: {result.maxRiskPercent}% of portfolio
                     </span>
                   </div>

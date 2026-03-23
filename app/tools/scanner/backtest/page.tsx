@@ -679,11 +679,11 @@ function ScannerBacktestContent() {
                   through historical OHLCV data.
                 </p>
                 <p>
-                  <strong className="text-slate-200">Entry:</strong> When scanner score ≥ threshold (bullish) or
+                  <strong className="text-slate-200">Trigger:</strong> When scanner score ≥ threshold (bullish) or
                   ≤ (100 − threshold) (bearish). <br />
-                  <strong className="text-slate-200">Stop:</strong> ATR × stop multiplier from entry. <br />
-                  <strong className="text-slate-200">Target:</strong> ATR × target multiplier from entry. <br />
-                  <strong className="text-slate-200">Exit:</strong> Hit stop, hit target, signal flips to opposite direction,
+                  <strong className="text-slate-200">Invalidation:</strong> ATR × stop multiplier from reference. <br />
+                  <strong className="text-slate-200">Key Level:</strong> ATR × target multiplier from reference. <br />
+                  <strong className="text-slate-200">Exit:</strong> Hit invalidation, hit key level, signal flips to opposite direction,
                   or max holding period expires.
                 </p>
                 <p>

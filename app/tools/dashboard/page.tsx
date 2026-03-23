@@ -163,7 +163,7 @@ export default function DashboardPage() {
       {cached.loading ? <CardSkeleton rows={5} /> : (
       <Card>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-white">Best Setups Now</h3>
+          <h3 className="text-sm font-semibold text-white">Top Confluence Now</h3>
           <button onClick={() => navigateTo('scanner')} className="text-[10px] text-emerald-400 hover:underline">Full Scanner &#x203A;</button>
         </div>
         {[...cached.equity, ...cached.crypto].length === 0 ? (

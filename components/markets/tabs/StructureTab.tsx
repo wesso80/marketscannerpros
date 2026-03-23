@@ -70,21 +70,21 @@ export default function StructureTab({ ctx }: { ctx: TickerContext }) {
         </div>
       </div>
 
-      {/* Entry / Stop / Target levels from scanner */}
+      {/* Reference / Invalidation / Key Level from scanner */}
       {scanner && (
         <div className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2">
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--msp-text-faint)]">Trade Structure</p>
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--msp-text-faint)]">Structure Levels</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
             <div>
-              <p className="text-[10px] text-[var(--msp-text-faint)]">Entry</p>
+              <p className="text-[10px] text-[var(--msp-text-faint)]">Reference</p>
               <p className="text-sm font-bold text-cyan-400">${(scanner.entry ?? 0).toFixed(2)}</p>
             </div>
             <div>
-              <p className="text-[10px] text-[var(--msp-text-faint)]">Stop</p>
+              <p className="text-[10px] text-[var(--msp-text-faint)]">Invalidation</p>
               <p className="text-sm font-bold text-rose-400">${(scanner.stop ?? 0).toFixed(2)}</p>
             </div>
             <div>
-              <p className="text-[10px] text-[var(--msp-text-faint)]">Target</p>
+              <p className="text-[10px] text-[var(--msp-text-faint)]">Key Level</p>
               <p className="text-sm font-bold text-emerald-400">${(scanner.target ?? 0).toFixed(2)}</p>
             </div>
           </div>
@@ -101,8 +101,8 @@ export default function StructureTab({ ctx }: { ctx: TickerContext }) {
                 const targetPct = ((scanner.target - min) / range) * 100;
                 return (
                   <>
-                    <div className="absolute top-0 h-full w-px bg-rose-500/60" style={{ left: `${stopPct}%` }} title="Stop" />
-                    <div className="absolute top-0 h-full w-px bg-emerald-500/60" style={{ left: `${targetPct}%` }} title="Target" />
+                    <div className="absolute top-0 h-full w-px bg-rose-500/60" style={{ left: `${stopPct}%` }} title="Invalidation" />
+                    <div className="absolute top-0 h-full w-px bg-emerald-500/60" style={{ left: `${targetPct}%` }} title="Key Level" />
                     <div className="absolute top-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-cyan-400 border border-cyan-200" style={{ left: `${pricePct}%` }} title="Price" />
                   </>
                 );

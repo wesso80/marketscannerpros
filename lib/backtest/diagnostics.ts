@@ -62,7 +62,7 @@ export function buildBacktestDiagnostics(
     adjustments.push({
       key: 'tighten_entries',
       title: 'Tighten entry quality',
-      reason: `Win rate is ${result.winRate.toFixed(1)}%. Require stronger confirmation before entry (higher confluence / stricter trigger).`,
+      reason: `Win rate is ${result.winRate.toFixed(1)}%. Require stronger confirmation (higher confluence / stricter trigger).`,
     });
   }
 

@@ -129,7 +129,7 @@ export default function OverviewTab({ ctx }: { ctx: TickerContext }) {
             <div><span className="text-[var(--msp-text-faint)]">Setup:</span> <span className="text-[var(--msp-text)] font-medium">{scanner.setup}</span></div>
             <div><span className="text-[var(--msp-text-faint)]">Direction:</span> <span className={scanner.direction === 'LONG' ? 'text-emerald-400' : 'text-rose-400'}>{scanner.direction}</span></div>
             <div><span className="text-[var(--msp-text-faint)]">Score:</span> <span className="text-[var(--msp-text)]">{scanner.score}/100</span></div>
-            <div><span className="text-[var(--msp-text-faint)]">Entry:</span> <span className="text-[var(--msp-text)]">${(scanner.entry ?? 0).toFixed(2)}</span></div>
+            <div><span className="text-[var(--msp-text-faint)]">Reference:</span> <span className="text-[var(--msp-text)]">${(scanner.entry ?? 0).toFixed(2)}</span></div>
             <div><span className="text-[var(--msp-text-faint)]">R-Multiple:</span> <span className={(scanner.rMultiple ?? 0) >= 2 ? 'text-emerald-400' : 'text-amber-400'}>{(scanner.rMultiple ?? 0).toFixed(1)}R</span></div>
           </div>
         </div>

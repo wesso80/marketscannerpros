@@ -58,7 +58,7 @@ export default function RightRail({ ctx }: { ctx: TickerContext }) {
       {/* Trade Preview — compact entry/stop/target */}
       {ctx.scanner && (
         <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-card)] p-2">
-          <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Trade Preview</p>
+          <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--msp-text-faint)]">Scenario Preview</p>
           <div className="space-y-1 text-[11px]">
             <div className="flex justify-between">
               <span className="text-[var(--msp-text-faint)]">Direction</span>
@@ -67,15 +67,15 @@ export default function RightRail({ ctx }: { ctx: TickerContext }) {
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-[var(--msp-text-faint)]">Entry</span>
+              <span className="text-[var(--msp-text-faint)]">Reference</span>
               <span className="text-[var(--msp-text)]">${(ctx.scanner.entry ?? 0).toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-[var(--msp-text-faint)]">Stop</span>
+              <span className="text-[var(--msp-text-faint)]">Invalidation</span>
               <span className="text-rose-400">${(ctx.scanner.stop ?? 0).toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-[var(--msp-text-faint)]">Target</span>
+              <span className="text-[var(--msp-text-faint)]">Key Level</span>
               <span className="text-emerald-400">${(ctx.scanner.target ?? 0).toFixed(2)}</span>
             </div>
             <div className="flex justify-between border-t border-[var(--msp-divider)] pt-1">

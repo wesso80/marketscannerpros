@@ -271,8 +271,8 @@ export default function TopMoversWidget() {
         color: '#64748b'
       }}>
         💡 {view === 'gainers' 
-          ? `Top ${duration} gainers often indicate momentum - consider volume confirmation before entry.`
-          : `Big losers may present bounce opportunities - check support levels and volume.`
+          ? `Top ${duration} gainers often indicate momentum — review volume context before acting.`
+          : `Big losers may present bounce scenarios — check support levels and volume.`
         }
       </div>
     </div>

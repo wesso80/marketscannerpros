@@ -74,10 +74,10 @@ export async function GET(request: NextRequest) {
       const buyPercentage = ((strongBuy + buy) / totalRatings) * 100;
       const sellPercentage = ((sell + strongSell) / totalRatings) * 100;
       
-      if (buyPercentage >= 70) analystRating = 'Strong Buy';
-      else if (buyPercentage >= 50) analystRating = 'Buy';
-      else if (sellPercentage >= 50) analystRating = 'Sell';
-      else if (sellPercentage >= 70) analystRating = 'Strong Sell';
+      if (buyPercentage >= 70) analystRating = 'Analyst: Strong Buy';
+      else if (buyPercentage >= 50) analystRating = 'Analyst: Buy';
+      else if (sellPercentage >= 50) analystRating = 'Analyst: Sell';
+      else if (sellPercentage >= 70) analystRating = 'Analyst: Strong Sell';
       else analystRating = 'Hold';
     }
 

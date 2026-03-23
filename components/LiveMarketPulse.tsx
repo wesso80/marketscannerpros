@@ -21,7 +21,7 @@ const LIVE_SIGNALS = [
     confidence: 87,
     price: '$104,250',
     change: '+1.8%',
-    aiInsight: 'Wyckoff spring detected. Strong buying pressure at key support.',
+    aiInsight: 'Wyckoff spring detected. Accumulation activity at key support.',
     timeAgo: '5 min ago',
     asset: 'crypto'
   },

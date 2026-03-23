@@ -926,14 +926,15 @@ export default function EquityExplorerPage() {
                 </div>
               </div>
 
-              {/* Analyst Ratings */}
+              {/* Analyst Ratings (Third-Party Consensus) */}
               <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
                 <h3 className="mb-2 text-xs font-bold uppercase tracking-[0.08em] text-slate-400">
-                  Analyst Ratings
+                  Third-Party Analyst Consensus
                 </h3>
                 {data.analysts.totalRatings > 0 ? (
                   <div className="space-y-4">
                     <AnalystRatingsBar analysts={data.analysts} />
+                    <p className="text-[9px] text-slate-600">Source: external analyst consensus. MSP does not endorse or recommend any rating.</p>
                     <div className="flex justify-between items-center">
                       <span className="text-gray-400">Analyst Price Target</span>
                       <span className="text-xl font-bold text-emerald-400">

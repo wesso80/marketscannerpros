@@ -63,13 +63,13 @@ The strongest squeezes show alignment across multiple timeframes:
 **Risk Management:**
 - Never chase parabolic moves
 - Use position sizing based on volatility (ATR-based)
-- Plan exits before entry
+- Plan exits before acting
 
 ## Using MarketScanner to Find Squeezes
 
 [MarketScanner Pros](/) automates squeeze detection across hundreds of symbols:
 - **Real-time squeeze indicators** on multiple timeframes
-- **Confluence scoring** to rank best setups
+- **Confluence scoring** to rank highest-confluence setups
 - **ATR-based position sizing** for risk management
 - **Alert hooks** to notify you before crowds notice
 
@@ -77,7 +77,7 @@ Stop manually checking charts—let automation find squeezes for you.
 
 ## Common Mistakes to Avoid
 
-❌ **Chasing late squeezes** - Enter early or wait for pullback  
+❌ **Chasing late squeezes** - Identify setups early or wait for pullback  
 ❌ **Ignoring risk management** - Squeezes can reverse violently  
 ❌ **Trading without confluence** - Single indicator ≠ strong confluence  
 ❌ **Missing the bigger picture** - Check multiple timeframes

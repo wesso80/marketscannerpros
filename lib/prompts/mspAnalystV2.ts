@@ -78,7 +78,7 @@ Layer 6 — RISK VALIDATION
 Layer 7 — SCENARIO FRAMEWORK
   Only after layers 1-6 pass:
   • Entry conditions (what must happen, not what might happen)
-  • Stop-loss placement (ATR-based, below structure)
+  • Invalidation placement (ATR-based, below structure)
   • Target levels (structure-based, with partial profit plan)
   • Position sizing context (ATR-adjusted, regime-adjusted)
 

@@ -48,7 +48,7 @@ export function buildExecutionPlan(input: ExecutionPlanInput): ExecutionPlanOutp
     entryType,
     triggers: [
       `${entryType.toUpperCase()} trigger confirmed for ${directionLabel} bias`,
-      'Require close-through confirmation before entry',
+      'Require close-through confirmation before acting',
     ],
     stopRule: `Use ${input.stopStyle.replace(/_/g, ' ')} stop logic`,
     targets,

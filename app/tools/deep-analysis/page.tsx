@@ -189,8 +189,8 @@ function formatLargeNumber(num: number | null | undefined): string {
 }
 
 function getSignalColor(signal: string): string {
-  if (signal.includes('BUY')) return '#10B981';
-  if (signal.includes('SELL')) return '#EF4444';
+  if (signal.includes('BULLISH') || signal.includes('BUY')) return '#10B981';
+  if (signal.includes('BEARISH') || signal.includes('SELL')) return '#EF4444';
   return '#F59E0B';
 }
 
