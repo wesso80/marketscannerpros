@@ -140,7 +140,7 @@ export default function PartnerDemoPage() {
             lineHeight: 1.7,
           }}>
             A ready-built AI analytics suite covering equities, crypto, options, and commodities — 
-            white-label it, embed it, or integrate via API. No development cost on your side.
+            White-label it, embed it, or co-brand it. No development cost on your side.
           </p>
 
           <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
