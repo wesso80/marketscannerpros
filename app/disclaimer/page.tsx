@@ -27,6 +27,8 @@ export default function DisclaimerPage() {
         }}>
           <strong style={{ display: 'block', marginBottom: 8, color: '#f9fafb', fontSize: 14 }}>On this page</strong>
           <div style={{ fontSize: 13, color: '#9ca3af', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+            <a href="#gaw" style={{ color: '#EAB308', textDecoration: 'none' }}>General Advice Warning</a>
+            <span>·</span>
             <a href="#edu" style={{ color: '#22c55e', textDecoration: 'none' }}>Educational use</a>
             <span>·</span>
             <a href="#risk" style={{ color: '#22c55e', textDecoration: 'none' }}>Market risk</a>
@@ -46,6 +48,21 @@ export default function DisclaimerPage() {
             <a href="#contact" style={{ color: '#22c55e', textDecoration: 'none' }}>Contact</a>
           </div>
         </nav>
+
+        <section style={{
+          marginTop: 32,
+          background: 'rgba(234, 179, 8, 0.08)',
+          border: '1px solid rgba(234, 179, 8, 0.2)',
+          borderRadius: 10,
+          padding: '16px 20px',
+        }}>
+          <h2 id="gaw" style={{ fontSize: 18, fontWeight: 700, marginBottom: 10, marginTop: 0, color: '#EAB308' }}>General Advice Warning</h2>
+          <p style={{ fontSize: 14, color: '#cbd5e1', lineHeight: 1.6, margin: 0 }}>
+            This platform provides general information only. It does not consider your personal objectives, financial situation, or needs.
+            MarketScanner Pros does not hold an Australian Financial Services Licence (AFSL) and is not a licensed financial adviser.
+            Content is not financial advice — consult a licensed professional before making investment decisions.
+          </p>
+        </section>
 
         <section style={{ marginTop: 32 }}>
           <h2 id="edu" style={{ fontSize: 22, fontWeight: 650, marginBottom: 12, marginTop: 24, color: '#f9fafb' }}>Educational Use Only</h2>

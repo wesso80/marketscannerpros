@@ -6,8 +6,8 @@
 
 **Prepared for:** External Legal Counsel (Australian Financial Services)
 **Prepared by:** MarketScanner Pros — Internal Compliance Review
-**Date:** 21 March 2026
-**Version:** 1.2
+**Date:** 23 March 2026
+**Version:** 1.3
 **Classification:** Confidential — Legal Privileged
 
 ---
@@ -440,9 +440,9 @@ The combined remediation (Rounds 1, 2, and 3) covered:
 
 The following disclaimers are currently deployed across the platform.
 
-### 6.1 General Advice Warning (GAW) — All Tool Pages
+### 6.1 General Advice Warning (GAW) — Disclaimer Page
 
-**Placement:** Amber-coloured banner displayed at the top of every page within the `/tools/` section of the platform (scanner, Golden Egg, portfolio, journal, AI analyst, backtest, options, and all other tool pages).
+**Placement:** Displayed as a prominent amber-highlighted section at the top of the `/disclaimer` page. Previously displayed as a banner on every tool page; relocated to the disclaimer page on 23 March 2026 following external legal advice confirming this placement is sufficient.
 
 **Text:**
 
