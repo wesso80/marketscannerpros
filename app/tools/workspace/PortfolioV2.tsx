@@ -673,7 +673,7 @@ export default function PortfolioV2() {
               <input value={quantity} onChange={e => setQuantity(e.target.value)} placeholder="0" type="number" className="w-full bg-[#0A101C] border border-slate-700/40 rounded-lg text-xs px-3 py-2.5 text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-600/40 transition-colors" />
             </div>
             <div>
-              <label className="block text-[10px] uppercase text-slate-500 mb-1.5 font-medium tracking-wider">Entry Price</label>
+              <label className="block text-[10px] uppercase text-slate-500 mb-1.5 font-medium tracking-wider">Cost Basis</label>
               <input value={entryPrice} onChange={e => setEntryPrice(e.target.value)} placeholder="0.00" type="number" step="any" className="w-full bg-[#0A101C] border border-slate-700/40 rounded-lg text-xs px-3 py-2.5 text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-600/40 transition-colors" />
             </div>
             <div>
@@ -721,11 +721,11 @@ export default function PortfolioV2() {
                       <TH align="left">Symbol</TH>
                       <TH align="left">Side</TH>
                       <TH>Size %</TH>
-                      <TH>Entry</TH>
+                      <TH>Cost</TH>
                       <TH>Current</TH>
                       <TH>P&amp;L %</TH>
                       <TH>Risk Remaining</TH>
-                      <TH>Stop Dist %</TH>
+                      <TH>Inval Dist %</TH>
                       <TH align="left">Actions</TH>
                     </tr>
                   </thead>
@@ -796,7 +796,7 @@ export default function PortfolioV2() {
                     <TH align="left">Symbol</TH>
                     <TH align="left">Side</TH>
                     <TH>Qty</TH>
-                    <TH>Entry</TH>
+                    <TH>Open</TH>
                     <TH>Close</TH>
                     <TH>Realized P&amp;L</TH>
                     <TH>%</TH>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-const CATEGORIES = ["All", "Bias", "Rotation", "Volatility", "Execution", "Risk", "Journaling"];
+const CATEGORIES = ["All", "Bias", "Rotation", "Volatility", "Process", "Risk", "Journaling"];
 
 const GUIDES = [
   {
@@ -34,8 +34,8 @@ const GUIDES = [
     ],
   },
   {
-    category: "Execution",
-    title: "Execution Sequence with Confirmation",
+    category: "Process",
+    title: "Process Sequence with Confirmation",
     summary: "Force sequence: context first, setup second, trigger last.",
     checks: ["Permission state", "Catalyst alignment", "Defined invalidation"],
     links: [

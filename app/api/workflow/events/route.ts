@@ -828,7 +828,7 @@ async function autoCreateJournalDraftForEvent(workspaceId: string, event: MSPEve
   const setupSource = String(planPayload?.setup?.source || planPayload?.setup?.signal_type || 'scanner.plan').slice(0, 100);
   const strategy = String(planPayload?.setup?.signal_type || 'confluence_scan').slice(0, 100);
   const notes = [
-    'Auto-created from trade plan event.',
+    'Auto-created from scenario analysis event.',
     `Workflow: ${workflowId}`,
     `Plan: ${planId}`,
     `Decision Packet: ${decisionPacketId || 'n/a'}`,

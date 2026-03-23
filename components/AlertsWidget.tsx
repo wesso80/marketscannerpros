@@ -449,7 +449,7 @@ export default function AlertsWidget({
           operatorRisk: operatorState.risk,
           operatorEdge: operatorState.edge,
           marketRegime: operatorState.risk === 'HIGH' ? 'Volatility Expansion' : operatorState.bias === 'NEUTRAL' ? 'Range' : 'Trend',
-          marketMood: operatorState.action === 'EXECUTE' ? 'Action Ready' : operatorState.action === 'PREP' ? 'Building' : 'Defensive',
+          marketMood: operatorState.action === 'EXECUTE' ? 'Conditions Aligned' : operatorState.action === 'PREP' ? 'Building' : 'Defensive',
           derivativesBias: operatorState.bias,
           sectorStrength: operatorState.next,
         }),

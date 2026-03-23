@@ -102,11 +102,11 @@ export const TOOL_GUIDES: ToolGuide[] = [
     summary: 'Combine options flow, IV context, and structure to produce higher-quality setups.',
     steps: [
       'Load symbol and timeframe, then run confluence analysis.',
-      'Check confidence tier, trade levels, and strategy recommendation.',
+      'Check confluence tier, key levels, and strategy classification.',
       'Promote pass outcomes into workflow plans and alerts.',
     ],
     tips: [
-      'Guided mode is faster for execution; Advanced mode is better for diagnostics.',
+      'Guided mode is faster for analysis; Advanced mode is better for diagnostics.',
       'Avoid forcing setups when volatility regime and flow disagree.',
     ],
   },

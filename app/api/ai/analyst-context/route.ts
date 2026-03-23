@@ -63,25 +63,25 @@ Contextual summary of what the platform sees RIGHT NOW for this ticker/regime.
 Format: 3-5 bullet points, each 1-2 sentences.
 
 ## PLAN TAB
-Scenario planning based on current regime and authorization.
-If BLOCKED: "No trade plan available — [reason]. Monitor for regime change."
-If AUTHORIZED or CONDITIONAL:
-- Bull scenario: trigger + target + probability language
-- Bear scenario: trigger + target + probability language  
+Scenario planning based on current regime and conditions.
+If CONDITIONS NOT MET: "No scenario illustration available — [reason]. Monitor for regime change."
+If CONDITIONS MET or CONDITIONAL:
+- Bull scenario: trigger + key level + confluence language
+- Bear scenario: trigger + key level + confluence language  
 - Neutral/chop scenario: what would confirm range-bound
-- Which scenario the regime currently favors
+- Which scenario current conditions favor
 Format: 3 labeled scenarios, each 2-3 sentences.
 
 ## ACT TAB
-Execution checklist gated by authorization and RU throttle.
-If BLOCKED: "Execution blocked: [reason]. No action items."
-If CONDITIONAL: Reduced-size entries only, with specific conditions.
-If AUTHORIZED:
-- Entry zone (if price data available)
-- Position sizing guidance based on throttle %
-- Stop loss logic based on ATR/volatility if available
+Condition review checklist based on analytical state.
+If CONDITIONS NOT MET: "Conditions not met: [reason]. No items to review."
+If CONDITIONAL: Reduced-scope review only, with specific conditions.
+If CONDITIONS MET:
+- Reference zone (if price data available)
+- Position sizing context based on risk parameters
+- Invalidation logic based on ATR/volatility if available
 - Key level to watch
-- Time-in-force based on session phase
+- Time context based on session phase
 Format: Numbered checklist, 3-6 items.
 
 ## LEARN TAB

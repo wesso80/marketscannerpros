@@ -269,7 +269,7 @@ export function getScannerExplainerContext(params: {
     allowedBias = "Wait or conditional — NO directional bias allowed";
   } else if (score >= 20) {
     regime = "Weak/Risk";
-    allowedBias = "Cautious or no-trade — NO long recommendations";
+    allowedBias = "Cautious or no-trade — NO long scenarios";
   } else {
     regime = "Bearish";
     allowedBias = "Short bias ONLY or wait";

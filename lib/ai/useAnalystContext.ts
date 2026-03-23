@@ -179,7 +179,7 @@ function assessAuthorization(opts: {
   if (!opts.isLoggedIn) return { auth: 'BLOCKED', reason: 'Not authenticated — sign in to access analyst.' };
   if (opts.tier === 'free' || opts.tier === 'anonymous') return { auth: 'BLOCKED', reason: 'ARCA AI requires Pro or higher tier.' };
   if (opts.permission === 'NO') return { auth: 'BLOCKED', reason: `Trading blocked by risk governor (risk level: ${opts.riskLevel}).` };
-  if (opts.permission === 'CONDITIONAL') return { auth: 'CONDITIONAL', reason: 'Conditional authorization — reduced sizing recommended.' };
+  if (opts.permission === 'CONDITIONAL') return { auth: 'CONDITIONAL', reason: 'Conditional authorization — reduced sizing indicated.' };
   return { auth: 'AUTHORIZED', reason: null };
 }
 

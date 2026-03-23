@@ -46,7 +46,7 @@ function getConfidenceExplanation(state: ReturnType<typeof getTimeConfluenceStat
   }
   
   if (state.twapWindows.length > 0) {
-    parts.push('TWAP execution windows available');
+    parts.push('TWAP analysis windows available');
   }
   
   if (state.daysToNextMacro <= 2) {

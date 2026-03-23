@@ -485,7 +485,7 @@ export interface OptionsSetup {
   // DATA QUALITY TRACKING (Production critical)
   dataQuality: DataQuality;
   
-  // EXECUTION NOTES (Production warnings)
+  // ANALYSIS NOTES (Production warnings)
   executionNotes: string[];
   
   // CONFIDENCE CAPS (Why confidence was limited)
@@ -3143,7 +3143,7 @@ function buildProfessionalTradeStack(
       reason: 'Flow/OI + IV suitability composite',
     },
     executionPlan: {
-      label: 'Execution',
+      label: 'Readiness',
       state: executionState,
       score: Math.round(executionScore),
       status: toStatus(executionScore),
@@ -3831,16 +3831,16 @@ function calculateEntryTiming(
   
   if (estTimeDecimal >= 4 && estTimeDecimal < 9.5) {
     marketSession = 'premarket';
-    sessionWarning = '🌅 PRE-MARKET SESSION (4am-9:30am EST) - Options execution is limited/unavailable; spreads can be misleading. Use underlying-only context until regular hours.';
+    sessionWarning = '🌅 PRE-MARKET SESSION (4am-9:30am EST) - Options activity is limited/unavailable; spreads can be misleading. Use underlying-only context until regular hours.';
   } else if (estTimeDecimal >= 9.5 && estTimeDecimal < 16) {
     marketSession = 'regular';
     // No warning for regular hours
   } else if (estTimeDecimal >= 16 && estTimeDecimal < 20) {
     marketSession = 'afterhours';
-    sessionWarning = '🌙 AFTER-HOURS SESSION (4pm-8pm EST) - Options execution is limited/unavailable; displayed spreads can be misleading. Use underlying-only context.';
+    sessionWarning = '🌙 AFTER-HOURS SESSION (4pm-8pm EST) - Options activity is limited/unavailable; displayed spreads can be misleading. Use underlying-only context.';
   } else {
     marketSession = 'closed';
-    sessionWarning = '🔒 MARKET CLOSED - Current prices may gap at next open. Options execution is unavailable outside regular session.';
+    sessionWarning = '🔒 MARKET CLOSED - Current prices may gap at next open. Options activity is unavailable outside regular session.';
   }
   
   if (sessionWarning) {
@@ -4395,13 +4395,13 @@ export class OptionsConfluenceAnalyzer {
     // TODO: Hook into FOMC/CPI calendar
     // if (hasMacroEvent(7)) disclaimerFlags.push('⚠️ FOMC/CPI within 7 days');
     
-    // Add execution notes based on market conditions
+    // Add analysis notes based on market conditions
     const ivRankHeuristic = ivAnalysis?.ivRankHeuristic ?? ivAnalysis?.ivRank ?? 50;
     if (ivAnalysis && ivRankHeuristic > 70) {
-      executionNotes.push('High IV - consider credit strategies or wait for pullback');
+      executionNotes.push('High IV environment - credit strategies historically favoured');
     }
     if (ivAnalysis && ivRankHeuristic < 30) {
-      executionNotes.push('Low IV - debit strategies favorable, consider longer DTE');
+      executionNotes.push('Low IV environment - debit strategies historically favourable');
     }
     if (openInterestAnalysis && openInterestAnalysis.pcRatio > 1.5) {
       executionNotes.push('Heavy put positioning - contrarian bullish or hedge activity');

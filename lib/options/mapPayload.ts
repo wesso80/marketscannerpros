@@ -119,8 +119,8 @@ export function mapOptionsScanResponseToV3(raw: any, symbol: string): OptionsSca
       structure: {
         trendStructure: `${data?.direction || 'neutral'} / ${data?.signalStrength || 'unknown'}`,
         keyLevels: [
-          data?.tradeLevels?.entryZone ? `Entry zone ${Number(data.tradeLevels.entryZone.low).toFixed(2)}-${Number(data.tradeLevels.entryZone.high).toFixed(2)}` : 'Entry zone unavailable',
-          data?.tradeLevels?.stopLoss ? `Stop ${Number(data.tradeLevels.stopLoss).toFixed(2)}` : 'Stop unavailable',
+          data?.tradeLevels?.entryZone ? `Reference zone ${Number(data.tradeLevels.entryZone.low).toFixed(2)}-${Number(data.tradeLevels.entryZone.high).toFixed(2)}` : 'Reference zone unavailable',
+          data?.tradeLevels?.stopLoss ? `Invalidation ${Number(data.tradeLevels.stopLoss).toFixed(2)}` : 'Invalidation unavailable',
         ],
         state: data?.tradeQuality || 'Unknown',
       },

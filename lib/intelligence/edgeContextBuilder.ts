@@ -55,12 +55,12 @@ export async function getEdgeContext(workspaceId: string): Promise<EdgeContext> 
     lines.push(`- Win rate: ${(edgeSummary.overallWinRate * 100).toFixed(0)}%, Avg R: ${edgeSummary.avgR.toFixed(2)}, Expectancy: ${edgeSummary.expectancy.toFixed(2)}R.`);
 
     if (confLabel === 'low') {
-      lines.push('NOTE: This profile has low statistical confidence. Treat these edges as preliminary patterns, not proven advantages.');
+      lines.push('NOTE: This profile has low statistical confluence. Treat these edges as preliminary patterns, not established advantages.');
     }
 
     lines.push('');
     lines.push('When analyzing setups, mention alignment or conflict with these edges if relevant. Keep it brief.');
-    lines.push('IMPORTANT: Current market data and signals always take priority over historical edge patterns. Do not recommend trades solely because they match the trader\'s historical profile.');
+    lines.push('IMPORTANT: Current market data and signals always take priority over historical edge patterns. Do not suggest actions solely because they match historical patterns.');
 
     return {
       systemMessage: lines.join('\n'),

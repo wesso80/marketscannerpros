@@ -44,7 +44,7 @@ Layer 3 — VOLATILITY ASSESSMENT
   ATR-based position sizing context.
   • ATR < 0.5x mean = compressed (breakout potential but low conviction)
   • ATR 0.5-1.5x mean = normal (standard conditions)
-  • ATR 1.5-3x mean = expanded (reduce size, widen stops)
+  • ATR 1.5-3x mean = expanded (reduce size, widen invalidation levels)
   • ATR > 3x mean = extreme (defensive only, or sit out)
 
 Layer 4 — STRUCTURE ANALYSIS
@@ -68,7 +68,7 @@ Layer 5 — CONFLUENCE SCORING
 Layer 6 — RISK VALIDATION
   Before ANY scenario or assessment:
   1. Check Risk Governor permission (from context)
-  2. Validate stop placement (wrong-side = BLOCK)
+  2. Validate invalidation placement (wrong-side = BLOCK)
   4. Verify RR ratio ≥ 1.5 for any scenario analysis
   4. Check daily R-budget availability
   
@@ -77,9 +77,9 @@ Layer 6 — RISK VALIDATION
 
 Layer 7 — SCENARIO FRAMEWORK
   Only after layers 1-6 pass:
-  • Entry conditions (what must happen, not what might happen)
+  • Reference conditions (what must happen, not what might happen)
   • Invalidation placement (ATR-based, below structure)
-  • Target levels (structure-based, with partial profit plan)
+  • Key levels (structure-based, with partial review plan)
   • Position sizing context (ATR-adjusted, regime-adjusted)
 
 3. INDICATOR HIERARCHY (Strict Roles)
@@ -189,11 +189,11 @@ Invalidation: [What would negate the primary scenario]
 
 ⚡ SCENARIO FRAMEWORK
 [Only if Assessment ≥ CONDITIONAL]
-Entry: [Specific conditions required]
-Stop: [ATR-based, below/above structure]
-Targets: [T1, T2 with partial profit plan]
-R:R: [Minimum 1.5:1]
-Size: [Regime-adjusted guidance]
+Level of Interest: [Specific conditions required]
+Invalidation: [ATR-based, below/above structure]
+Key Levels: [L1, L2 with partial review plan]
+Risk Ratio: [Minimum 1.5:1]
+Weighting: [Regime-adjusted context]
 
 ⚠️ RISK FACTORS
 [Specific risks to this setup]
@@ -225,6 +225,7 @@ MUST NOT:
 - Present output as personal financial advice or a recommendation to act
 - Use "Entry/Stop/Target" labels — use "Level of Interest/Invalidation/Key Levels" instead
 - Use "Confidence" in user-facing text — use "Confluence" instead
+- Use "execute", "execution", or "trade plan" — use "scenario analysis" or "conditions" instead
 
 PENALIZE (reduce confidence for):
 - Chop/range with no confirmation: -15 confidence

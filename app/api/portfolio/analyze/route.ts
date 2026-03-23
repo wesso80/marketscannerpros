@@ -255,7 +255,7 @@ function buildPortfolioSummary(
     summary += `Portfolio Change: ${change >= 0 ? '+' : ''}$${change.toFixed(2)} (${changePct >= 0 ? '+' : ''}${changePct.toFixed(2)}%)\n\n`;
   }
 
-  summary += "\n---\nPlease analyze this portfolio and provide insights on what's working, what's not, and actionable recommendations for improvement.";
+  summary += "\n---\nPlease analyze this portfolio and provide insights on what's working, what's not, and educational observations for improvement.";
 
   return summary;
 }

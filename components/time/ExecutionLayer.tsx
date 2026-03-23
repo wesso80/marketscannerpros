@@ -13,7 +13,7 @@ function ExecutionSummary({ execution, permission }: { execution: TimeExecutionI
 
   return (
     <div className={`rounded-xl border p-4 ${tone}`}>
-      <div className="text-sm font-semibold text-slate-100">Execution Status</div>
+      <div className="text-sm font-semibold text-slate-100">Timing Status</div>
       <div className="mt-2 text-sm text-slate-200">
         Close: <span className="font-semibold">{execution.closeConfirmation}</span>
       </div>
@@ -29,7 +29,7 @@ function ExecutionSummary({ execution, permission }: { execution: TimeExecutionI
 
 export default function ExecutionLayer({ execution, out }: { execution: TimeExecutionInputs; out: TimeConfluenceV2Output }) {
   return (
-    <LayerSection title="Layer 3 — Execution (Timing Validity)" tone="execution" right={<MiniScore label="Exec" value={out.executionScore} />}>
+    <LayerSection title="Layer 3 — Timing (Validity Check)" tone="execution" right={<MiniScore label="Exec" value={out.executionScore} />}>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ExecutionChecklist execution={execution} />
         <ExecutionSummary execution={execution} permission={out.permission} />

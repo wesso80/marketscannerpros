@@ -1420,7 +1420,7 @@ export default function OperatorDashboardPage() {
               Win {formatNumber(workflowToday.lastCoachInsight.winRate)}% · Avg Win {formatNumber(workflowToday.lastCoachInsight.avgWin)} · Avg Loss {formatNumber(workflowToday.lastCoachInsight.avgLoss)} · Expectancy {formatNumber(workflowToday.lastCoachInsight.expectancy)}
             </div>
             <div className="text-violet-200/90">
-              {workflowToday.lastCoachInsight.recommendation || 'No recommendation available yet.'}
+              {workflowToday.lastCoachInsight.recommendation || 'No coach insight available yet.'}
             </div>
           </div>
         ) : (
@@ -1467,7 +1467,7 @@ export default function OperatorDashboardPage() {
             Auto Alert: <span className={`font-bold ${riskGovernorDebug?.decisions.autoAlert.allowed ? 'text-emerald-200' : 'text-rose-200'}`}>{riskGovernorDebug?.decisions.autoAlert.allowed ? 'Allowed' : 'Blocked'}</span>
           </div>
           <div className="rounded border border-amber-500/20 bg-slate-900/50 px-2 py-1">
-            System Execution: <span className={`font-bold ${riskGovernorDebug?.decisions.systemExecution.allowed ? 'text-emerald-200' : 'text-rose-200'}`}>{riskGovernorDebug?.decisions.systemExecution.allowed ? 'Allowed' : 'Blocked'}</span>
+            System Automation: <span className={`font-bold ${riskGovernorDebug?.decisions.systemExecution.allowed ? 'text-emerald-200' : 'text-rose-200'}`}>{riskGovernorDebug?.decisions.systemExecution.allowed ? 'Allowed' : 'Blocked'}</span>
           </div>
         </div>
         <div className="mt-2 text-amber-100/90">
@@ -1484,7 +1484,7 @@ export default function OperatorDashboardPage() {
             Auto Alerts 1h: <span className="font-semibold text-amber-100">{riskGovernorDebug?.snapshot.autoAlertsLastHour ?? 0}/{riskGovernorDebug?.thresholds.maxAutoAlertsPerHour ?? 0}</span>
           </div>
           <div className="rounded border border-slate-700 bg-slate-900/50 px-2 py-1">
-            Execution Opt-In: <span className="font-semibold text-amber-100">{riskGovernorDebug?.snapshot.executionAutomationOptIn ? 'Enabled' : 'Disabled'}</span>
+            Automation Opt-In: <span className="font-semibold text-amber-100">{riskGovernorDebug?.snapshot.executionAutomationOptIn ? 'Enabled' : 'Disabled'}</span>
           </div>
         </div>
       </div>
@@ -1549,7 +1549,7 @@ export default function OperatorDashboardPage() {
         </div>
         <AdaptivePersonalityCard
           skill="operator"
-          setupText={focusSignal ? `${focusSignal.symbol} operator execution context` : 'operator execution context'}
+          setupText={focusSignal ? `${focusSignal.symbol} operator analysis context` : 'operator analysis context'}
           direction={bias}
           timeframe="1d"
           urgency={currentStage === 'Ready' || currentStage === 'Active' ? 'immediate' : 'within_hour'}
@@ -1838,7 +1838,7 @@ export default function OperatorDashboardPage() {
                 <h1 className="mt-1 text-[1.05rem] font-bold uppercase tracking-[0.03em] text-[var(--msp-text)]">Operator Dashboard</h1>
                 <div className="mt-3 grid gap-2 text-[0.76rem]">
                   <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">MARKET REGIME</span><span className="font-semibold truncate text-right">{!focusSignal && !presence ? 'AWAITING DATA' : regimeADX >= 25 ? 'TRENDING' : 'TRANSITIONAL'}</span></div>
-                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">EXECUTION BIAS</span><span className="font-semibold truncate text-right">{bias === 'neutral' && !focusSignal ? 'AWAITING SIGNAL' : `${bias.toUpperCase()} CONTINUATION`}</span></div>
+                  <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">DIRECTIONAL BIAS</span><span className="font-semibold truncate text-right">{bias === 'neutral' && !focusSignal ? 'AWAITING SIGNAL' : `${bias.toUpperCase()} CONTINUATION`}</span></div>
                   <div className="msp-elite-row flex justify-between gap-2"><span className="shrink-0">STRATEGY MODE</span><span className="font-semibold truncate text-right">{!focusSignal ? 'AWAITING SCAN' : strategyModeLabel}</span></div>
                 </div>
               </div>

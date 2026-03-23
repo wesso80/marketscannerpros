@@ -325,12 +325,12 @@ export default function CapitalFlowCard({
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.8rem', color: '#CBD5E1', fontSize: '0.72rem' }}>
             <span><strong>Risk:</strong> {flow.flow_trade_permission.riskMode.toUpperCase()}</span>
             <span><strong>Size:</strong> {Math.round(toNum(flow.flow_trade_permission.sizeMultiplier) * 100)}%</span>
-            <span><strong>Stop:</strong> {flow.flow_trade_permission.stopStyle.replace('_', ' ')}</span>
+            <span><strong>Invalidation:</strong> {flow.flow_trade_permission.stopStyle.replace('_', ' ')}</span>
           </div>
 
           {flow.flow_trade_permission.noTradeMode?.active && (
             <div style={{ color: '#FCA5A5', fontSize: '0.7rem' }}>
-              ⚠ {flow.flow_trade_permission.noTradeMode.reason || 'No-trade mode active'}
+              ⚠ {flow.flow_trade_permission.noTradeMode.reason || 'Caution mode active'}
             </div>
           )}
 

@@ -2189,8 +2189,8 @@ export default function OptionsConfluenceScanner() {
         }
       : copilotDerived.attentionState === 'ACTIVE'
         ? {
-            action: 'Execution window open — follow trigger + invalidation strictly',
-            reason: 'Edge and confidence are aligned in ACTIVE state.',
+            action: 'Conditions aligned — review trigger + invalidation levels',
+            reason: 'Confluence and conditions are aligned in ACTIVE state.',
           }
         : {
             action: 'Wait for additional confirmation before scaling risk',
@@ -2642,7 +2642,7 @@ export default function OptionsConfluenceScanner() {
                 { key: 'evidence', label: '1) Evidence', count: `${result.confluenceStack} TF` },
                 { key: 'contracts', label: '2) Contracts & Greeks', count: result.primaryStrike ? 'Ready' : 'N/A' },
                 { key: 'narrative', label: '3) Analyst Narrative (Advanced)', count: `${(result.tradeSnapshot?.why || []).length || 0} notes` },
-                { key: 'logs', label: '4) Execution Diagnostics (Advanced)', count: `${(result.disclaimerFlags?.length || 0) + (result.dataConfidenceCaps?.length || 0)}` },
+                { key: 'logs', label: '4) Analysis Diagnostics (Advanced)', count: `${(result.disclaimerFlags?.length || 0) + (result.dataConfidenceCaps?.length || 0)}` },
               ] as const)
                 .filter((section) => !isGuidedMode || (section.key !== 'narrative' && section.key !== 'logs'))
                 .map((section) => (
@@ -2663,7 +2663,7 @@ export default function OptionsConfluenceScanner() {
                 { key: 'evidence', title: '1) Evidence', subtitle: 'Confluence map, decision card, and setup proof stack' },
                 { key: 'contracts', title: '2) Contracts & Greeks', subtitle: 'Strike, expiry, open interest, greeks, and risk setup' },
                 { key: 'narrative', title: '3) Analyst Narrative (Advanced)', subtitle: 'Institutional brain summary and long-form interpretation' },
-                { key: 'logs', title: '4) Execution Diagnostics (Advanced)', subtitle: 'Warnings, data quality, and execution diagnostic notes' },
+                { key: 'logs', title: '4) Analysis Diagnostics (Advanced)', subtitle: 'Warnings, data quality, and analysis diagnostic notes' },
               ] as const)
                 .filter((door) => !isGuidedMode || (door.key !== 'narrative' && door.key !== 'logs'))
                 .filter((door) => !trapDoors[door.key])
@@ -2879,7 +2879,7 @@ export default function OptionsConfluenceScanner() {
                 <div className={`text-[0.92rem] font-black tracking-[0.4px] ${modeAccentClass}`}>{lensDisplayMode}</div>
               </div>
               <div className="mt-[0.4rem] text-[0.78rem] text-slate-300">
-                {marketRegimeIntel?.regime === 'CHAOTIC_NEWS' && '🚫 NO TRADE ENVIRONMENT — chaotic/news-dominated phase detected. Preserve capital and wait for stability.'}
+                {marketRegimeIntel?.regime === 'CHAOTIC_NEWS' && '🚫 CAUTION ENVIRONMENT — chaotic/news-dominated phase detected. Preserve capital and monitor for stability.'}
                 {institutionalLensMode === 'OBSERVE' && marketRegimeIntel?.regime !== 'CHAOTIC_NEWS' && 'Market reading mode: structure, flow, and regime first. Analysis prioritized over action.'}
                 {institutionalLensMode === 'WATCH' && 'Setup identified but not permitted. Focus on pattern, confluence, and confirmation triggers.'}
                 {institutionalLensMode === 'ARMED' && 'Institutional alignment confirmed. Primary analysis panel prioritized; non-essential analysis collapsed.'}
@@ -3536,9 +3536,9 @@ export default function OptionsConfluenceScanner() {
 
               {hasExecutionMetrics && (
               <div className="rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.6rem_0.7rem]">
-                <div className="mb-1 text-[0.66rem] font-bold uppercase text-slate-400">Execution Layer</div>
+                <div className="mb-1 text-[0.66rem] font-bold uppercase text-slate-400">Analysis Layer</div>
                 <div className="grid gap-[0.4rem] [grid-template-columns:repeat(auto-fit,minmax(min(160px,100%),1fr))]">
-                  <div className="text-[0.78rem] text-slate-200">Execution Score <span className="font-black">{executionScore}</span></div>
+                  <div className="text-[0.78rem] text-slate-200">Analysis Score <span className="font-black">{executionScore}</span></div>
                   <div className="text-[0.78rem] text-slate-200">Fill Quality <span className="font-black">{typeof layerMetricFill === 'number' ? layerMetricFill.toFixed(2) : '—'}</span></div>
                   <div className="text-[0.78rem] text-slate-200">Time Fit <span className="font-black">{typeof layerMetricTimeFit === 'number' ? layerMetricTimeFit.toFixed(2) : '—'}</span></div>
                 </div>
@@ -3552,7 +3552,7 @@ export default function OptionsConfluenceScanner() {
                   </div>
                   {adaptiveMatch?.hasProfile && (
                     <div className={adaptiveMatch.noTradeBias ? 'font-extrabold text-red-500' : 'font-extrabold text-emerald-500'}>
-                      {adaptiveMatch.noTradeBias ? 'NO-TRADE FILTER ACTIVE' : 'PROFILE ALIGNED'}
+                      {adaptiveMatch.noTradeBias ? 'CAUTION FILTER ACTIVE' : 'HISTORICALLY SIMILAR'}
                     </div>
                   )}
                 </div>
@@ -3565,7 +3565,7 @@ export default function OptionsConfluenceScanner() {
                     </div>
                   </div>
                   <div>
-                    <div className="text-[0.67rem] font-bold uppercase text-slate-400">Adaptive Confidence</div>
+                    <div className="text-[0.67rem] font-bold uppercase text-slate-400">Adaptive Confluence</div>
                     <div className={`text-[1.02rem] font-black ${(adaptiveMatch?.adaptiveScore ?? 50) >= 70 ? 'text-emerald-500' : (adaptiveMatch?.adaptiveScore ?? 50) >= 50 ? 'text-amber-500' : 'text-red-500'}`}>
                       {adaptiveMatch?.adaptiveScore ?? (result.compositeScore?.confidence ?? 50)}%
                     </div>
@@ -3717,7 +3717,7 @@ export default function OptionsConfluenceScanner() {
               </div>
             )}
             
-            {/* Data Quality & Execution Notes */}
+            {/* Data Quality & Analysis Notes */}
             {diagnosticsVisible && ((result.executionNotes && result.executionNotes.length > 0) || 
               (result.dataConfidenceCaps && result.dataConfidenceCaps.length > 0)) && (
               <details className="rounded-xl border border-amber-500/40 bg-[var(--msp-warn-tint)] p-[0.875rem_1rem]">

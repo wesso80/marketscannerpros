@@ -215,7 +215,7 @@ export default function PartnerDemoPage() {
               },
               {
                 stat: "0",
-                label: "Execution Capability",
+                label: "Broker Integration",
                 detail: "No trades executed, no funds held, no broker connections. Pure analytics — your compliance team will appreciate this",
               },
               {

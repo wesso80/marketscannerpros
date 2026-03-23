@@ -314,7 +314,7 @@ function PositionSizerCalculator() {
           <input
             type="number"
             step="any"
-            placeholder={side === 'LONG' ? 'Above entry' : 'Below entry'}
+            placeholder={side === 'LONG' ? 'Above reference' : 'Below reference'}
             value={takeProfit}
             onChange={(e) => setTakeProfit(e.target.value)}
             style={{
@@ -2213,7 +2213,7 @@ export function PortfolioContent() {
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[11px] uppercase tracking-[0.06em] text-slate-500">Entry Price</label>
+                      <label className="mb-1 block text-[11px] uppercase tracking-[0.06em] text-slate-500">Cost Basis</label>
                       <input
                         type="number"
                         value={newPosition.entryPrice}
@@ -2390,12 +2390,12 @@ export function PortfolioContent() {
                       <th className="px-2 py-2 text-left">Symbol</th>
                       <th className="px-2 py-2 text-left">Side</th>
                       <th className="px-2 py-2 text-right">Size %</th>
-                      <th className="px-2 py-2 text-right">Entry</th>
+                      <th className="px-2 py-2 text-right">Cost</th>
                       <th className="px-2 py-2 text-right">Current</th>
                       <th className="px-2 py-2 text-right">R Multiple</th>
                       <th className="px-2 py-2 text-right">P&L %</th>
                       <th className="px-2 py-2 text-right">Risk Remaining</th>
-                      <th className="px-2 py-2 text-right">Stop Dist %</th>
+                      <th className="px-2 py-2 text-right">Inval Dist %</th>
                       <th className="px-2 py-2 text-left">Actions</th>
                     </tr>
                   </thead>
@@ -2535,7 +2535,7 @@ export function PortfolioContent() {
                 <table className="w-full text-xs" style={{ minWidth: '600px' }}>
                   <thead>
                     <tr className="border-b border-slate-700 text-slate-500">
-                      <th className="px-2 py-2 text-left">Entry</th>
+                      <th className="px-2 py-2 text-left">Open</th>
                       <th className="px-2 py-2 text-left">Exit</th>
                       <th className="px-2 py-2 text-right">R Multiple</th>
                       <th className="px-2 py-2 text-right">Holding Time</th>

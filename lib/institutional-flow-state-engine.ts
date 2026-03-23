@@ -87,11 +87,11 @@ function playbookForState(state: InstitutionalFlowState): string {
     case 'ACCUMULATION':
       return 'Range mean-reversion only; avoid breakout chasing';
     case 'POSITIONING':
-      return 'Breakout-prep; first pullback entries only with tight risk';
+      return 'Breakout-prep phase; first pullback scenarios with tight invalidation';
     case 'LAUNCH':
-      return 'Trend continuation + retest adds; trail stops into liquidity';
+      return 'Trend continuation + retest analysis; trail invalidation into liquidity';
     case 'EXHAUSTION':
-      return 'Reduce size, take profits into liquidity, wait for reversal confirmation';
+      return 'Reduced-size phase, manage risk into liquidity, monitor for reversal confirmation';
     default:
       return 'Wait for clearer phase structure';
   }

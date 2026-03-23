@@ -652,9 +652,9 @@ export async function GET() {
       if (actionKey.includes('alert')) {
         suggestedActions.push({ key: 'create_alert', label: 'Create Alert', reason: firstTask.detail || 'Top coach action pending.' });
       } else if (actionKey.includes('backtest')) {
-        suggestedActions.push({ key: 'run_backtest', label: 'Run Quick Backtest', reason: firstTask.detail || 'Coach recommends validation.' });
+        suggestedActions.push({ key: 'run_backtest', label: 'Run Quick Backtest', reason: firstTask.detail || 'Coach indicates validation pending.' });
       } else {
-        suggestedActions.push({ key: 'prepare_trade_plan', label: 'Prepare Trade Plan', reason: firstTask.detail || 'Coach suggests plan refinement.' });
+        suggestedActions.push({ key: 'prepare_trade_plan', label: 'Prepare Scenario Analysis', reason: firstTask.detail || 'Coach indicates analysis refinement.' });
       }
     }
 

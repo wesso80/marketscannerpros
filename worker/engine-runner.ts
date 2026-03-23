@@ -231,7 +231,7 @@ function buildCoachRecommendations(args: {
     recommendations.push({
       priority: 'medium',
       action: 'tighten_entry_filter',
-      detail: 'Win rate is below 45%. Increase selectivity on setup quality before execution.',
+      detail: 'Win rate is below 45%. Increase selectivity on setup quality before proceeding.',
     });
   }
 

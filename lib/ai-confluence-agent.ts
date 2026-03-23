@@ -608,13 +608,14 @@ When similar confluence states occurred in the past:
 
 ### Request
 Based on this confluence analysis:
-1. Provide your **DIRECTION** forecast (BULLISH, BEARISH, or NEUTRAL)
-2. Assign a **CONFIDENCE** score (0-100%)
-3. Give a specific **TARGET PRICE** 
-4. Give a specific **STOP LOSS**
+1. Provide your **DIRECTION** assessment (BULLISH, BEARISH, or NEUTRAL)
+2. Assign a **CONFLUENCE** score (0-100%)
+3. Give a specific **KEY LEVEL** for reference
+4. Give a specific **INVALIDATION LEVEL**
 5. Specify the **TIME HORIZON** (e.g., "4h", "8h", "1D")
 6. Explain your **REASONING** in 2-3 sentences
 
+This is analytical scenario modelling only — not a recommendation.
 Format your response clearly with these labeled sections.
 `;
   }

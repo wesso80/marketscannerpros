@@ -110,21 +110,21 @@ export const AI_TOOLS: Record<AIToolName, AITool> = {
 
   generate_trade_plan: {
     name: 'generate_trade_plan',
-    description: 'Generate a structured trade plan with entry, stops, and targets',
+    description: 'Generate a structured scenario analysis with reference levels, invalidations, and key levels',
     parameters: {
       type: 'object',
       additionalProperties: false,
       properties: {
         symbol: { type: 'string', minLength: 1, maxLength: 20, pattern: '^[A-Za-z0-9._-]{1,20}$', description: 'The trading symbol' },
         direction: { type: 'string', enum: ['long', 'short'], description: 'Trade direction' },
-        entryPrice: { type: 'number', minimum: 0, maximum: 1000000000, description: 'Planned entry price' },
-        stopLoss: { type: 'number', minimum: 0, maximum: 1000000000, description: 'Stop loss price' },
+        entryPrice: { type: 'number', minimum: 0, maximum: 1000000000, description: 'Reference price level' },
+        stopLoss: { type: 'number', minimum: 0, maximum: 1000000000, description: 'Invalidation price level' },
         targets: { 
           type: 'array', 
           minItems: 1,
           maxItems: 5,
           items: { type: 'number', minimum: 0, maximum: 1000000000 },
-          description: 'Array of profit target prices'
+          description: 'Array of key price levels'
         },
         timeframe: { type: 'string', enum: ['5m', '15m', '30m', '1H', '4H', '1D', '1W'], description: 'Trading timeframe' },
         thesis: { type: 'string', maxLength: 1000, description: 'The reasoning behind the trade' },
@@ -168,15 +168,15 @@ export const AI_TOOLS: Record<AIToolName, AITool> = {
 
   risk_position_size: {
     name: 'risk_position_size',
-    description: 'Calculate proper position size based on risk parameters',
+    description: 'Calculate position size based on risk parameters for educational modelling',
     parameters: {
       type: 'object',
       additionalProperties: false,
       properties: {
         accountSize: { type: 'number', minimum: 1, maximum: 1000000000, description: 'Total account size in USD' },
         riskPercent: { type: 'number', minimum: 0.1, maximum: 100, description: 'Risk percentage per trade (e.g., 1 or 2)' },
-        entryPrice: { type: 'number', minimum: 0, maximum: 1000000000, description: 'Planned entry price' },
-        stopLoss: { type: 'number', minimum: 0, maximum: 1000000000, description: 'Stop loss price' },
+        entryPrice: { type: 'number', minimum: 0, maximum: 1000000000, description: 'Reference price level' },
+        stopLoss: { type: 'number', minimum: 0, maximum: 1000000000, description: 'Invalidation price level' },
         symbol: { type: 'string', minLength: 1, maxLength: 20, pattern: '^[A-Za-z0-9._-]{1,20}$', description: 'The trading symbol' },
       },
       required: ['accountSize', 'riskPercent', 'entryPrice', 'stopLoss'],

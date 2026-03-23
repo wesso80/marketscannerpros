@@ -38,7 +38,7 @@ interface QuoteData {
   changePercent: number;
 }
 
-type IdeaStage = 'Pre-Staging' | 'Structure Building' | 'Trigger Watch' | 'Execution Ready' | 'Conflict' | 'Invalidated';
+type IdeaStage = 'Pre-Staging' | 'Structure Building' | 'Trigger Watch' | 'Conditions Met' | 'Conflict' | 'Invalidated';
 type WatchlistMode = 'PRE-STAGING' | 'ACTIVE' | 'RISK-CONTROL';
 type SortMode = 'confidence' | 'edge' | 'volatility' | 'momentum' | 'recent';
 
@@ -334,14 +334,14 @@ export default function WatchlistWidget() {
       } else if (edge === 'Neutral' && absChange >= 0.8) {
         stage = 'Conflict';
       } else if (confidence >= 78 && alignmentScore >= 3) {
-        stage = 'Execution Ready';
+        stage = 'Conditions Met';
       } else if (confidence >= 66) {
         stage = 'Trigger Watch';
       } else if (confidence >= 56) {
         stage = 'Structure Building';
       }
 
-      const structureState = stage === 'Execution Ready'
+      const structureState = stage === 'Conditions Met'
         ? 'Confirmed'
         : stage === 'Trigger Watch'
         ? 'Watching Trigger'
@@ -353,7 +353,7 @@ export default function WatchlistWidget() {
         ? 'Broken'
         : 'Pre-Staging';
 
-      const edgeTemperature = Math.max(5, Math.min(100, confidence + (stage === 'Execution Ready' ? 8 : 0) - (stage === 'Invalidated' ? 20 : 0)));
+      const edgeTemperature = Math.max(5, Math.min(100, confidence + (stage === 'Conditions Met' ? 8 : 0) - (stage === 'Invalidated' ? 20 : 0)));
 
       return {
         item,
@@ -372,7 +372,7 @@ export default function WatchlistWidget() {
     });
   }, [items, quotes]);
 
-  const readyToTrack = ideaRows.filter((row) => row.stage === 'Execution Ready').length;
+  const readyToTrack = ideaRows.filter((row) => row.stage === 'Conditions Met').length;
   const structureBuilding = ideaRows.filter((row) => row.stage === 'Structure Building').length;
   const triggerWatch = ideaRows.filter((row) => row.stage === 'Trigger Watch').length;
   const conflictCount = ideaRows.filter((row) => row.stage === 'Conflict').length;
@@ -393,7 +393,7 @@ export default function WatchlistWidget() {
 
   const filteredIdeas = useMemo(() => {
     const rows = ideaRows.filter((row) => {
-      if (readyOnly && row.stage !== 'Execution Ready') return false;
+      if (readyOnly && row.stage !== 'Conditions Met') return false;
       if (stageFilter !== 'all' && row.stage !== stageFilter) return false;
       if (biasFilter !== 'all') {
         const bias = row.edge === 'Bullish' ? 'long' : row.edge === 'Bearish' ? 'short' : 'neutral';
@@ -608,7 +608,7 @@ export default function WatchlistWidget() {
               <div className="grid gap-2 md:grid-cols-3 lg:grid-cols-6">
                 <select value={stageFilter} onChange={(e) => setStageFilter(e.target.value as 'all' | IdeaStage)} className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-xs text-slate-100">
                   <option value="all">Stage: All</option>
-                  <option value="Execution Ready">Stage: Ready</option>
+                  <option value="Conditions Met">Stage: Ready</option>
                   <option value="Structure Building">Stage: Building</option>
                   <option value="Trigger Watch">Stage: Trigger Watch</option>
                   <option value="Conflict">Stage: Conflict</option>
@@ -675,7 +675,7 @@ export default function WatchlistWidget() {
               <div className={`grid gap-3 ${compactView ? 'md:grid-cols-2' : 'md:grid-cols-2 xl:grid-cols-3'}`}>
                 {filteredIdeas.map((row) => {
                   const { item, quote } = row;
-                  const stageTone = row.stage === 'Execution Ready'
+                  const stageTone = row.stage === 'Conditions Met'
                     ? 'border-emerald-500/60'
                     : row.stage === 'Trigger Watch'
                     ? 'border-amber-500/60'

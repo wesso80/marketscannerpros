@@ -28,7 +28,7 @@ const GUIDE = [
   },
   {
     title: "Equity Explorer",
-    bullets: ["Narrative context", "Catalyst scan", "Execution checklist"],
+    bullets: ["Narrative context", "Catalyst scan", "Conditions checklist"],
     tip: "Pro tip: Use explorer only after macro and calendar checks are complete.",
     cta: { label: "Open Equity Explorer", href: "/tools/equity-explorer" },
   },

@@ -227,13 +227,13 @@ export function computeTimeConfluenceV2(input: TimeConfluenceV2Inputs): TimeConf
     reasons.push(...hardBlockers);
   } else if (gateScore >= 70 && exec.score >= 65 && setup.score >= 55) {
     permission = 'ALLOW';
-    reasons.push('ALLOW: GateScore>=70 with sufficient execution + setup.');
+    reasons.push('ALLOW: GateScore>=70 with sufficient timing + setup.');
   } else if (gateScore < 45 || setup.score < 45) {
     permission = 'BLOCK';
     reasons.push('BLOCK: GateScore<45 or SetupScore<45.');
   } else {
     permission = 'WAIT';
-    reasons.push('WAIT: Structure exists but execution timing is not fully confirmed.');
+    reasons.push('WAIT: Structure exists but timing conditions are not fully confirmed.');
   }
 
   const top = (arr: string[]) => arr.slice(0, 3);

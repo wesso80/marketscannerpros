@@ -290,7 +290,7 @@ export default function ResearchCaseModal({ pick, assetType, timeframe, onClose 
                 {dirLabel(dir)} — {quality} Quality — {setup}
               </div>
               <div style={{ fontSize: '12px', color: 'var(--msp-text-muted)', marginTop: '2px' }}>
-                {pick.score >= 70 ? 'TRADE — conditions support entry' : pick.score >= 55 ? 'WATCH — monitor for strengthening' : 'NO TRADE — insufficient confluence'}
+                {pick.score >= 70 ? 'ALIGNED — conditions support analysis' : pick.score >= 55 ? 'WATCH — monitor for strengthening' : 'NOT ALIGNED — insufficient confluence'}
               </div>
             </div>
           </div>
