@@ -73,12 +73,7 @@ const integrations = [
     icon: "🏷",
     effort: "Low",
   },
-  {
-    model: "API Integration",
-    description: "RESTful API endpoints delivering scanner results, analysis reports, and market data directly into your existing platform.",
-    icon: "🔌",
-    effort: "Medium",
-  },
+
   {
     model: "Co-Branded Platform",
     description: "Joint-branded instance with your logo, colours, and domain. Full customisation of the user experience.",
