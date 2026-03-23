@@ -82,7 +82,7 @@ const integrations = [
   },
   {
     model: "Authorised Rep Model",
-    description: "MSP operates as an authorised representative under your AFSL. Full compliance cover with your existing licence framework.",
+    description: "MSP operates under your AFSL as an authorised representative. Your licence, our technology — fully covered by your existing compliance framework.",
     icon: "📜",
     effort: "Legal review",
   },
@@ -90,7 +90,7 @@ const integrations = [
 
 /* ─── Revenue models ─── */
 const revenueModels = [
-  { model: "SaaS Licence", description: "Fixed monthly/annual fee for platform access", icon: "💰" },
+  { model: "SaaS Fee", description: "Fixed monthly/annual fee for platform access", icon: "💰" },
   { model: "Per-Seat Pricing", description: "Pay per active user accessing MSP tools", icon: "👤" },
   { model: "Revenue Share", description: "Percentage of premium tier fees from your clients", icon: "📊" },
   { model: "Custom Enterprise", description: "Tailored pricing for large-scale deployments", icon: "🏢" },
@@ -128,8 +128,8 @@ export default function PartnerDemoPage() {
           </div>
 
           <h1 style={{ fontSize: 44, fontWeight: 800, lineHeight: 1.15, marginBottom: 20 }}>
-            Licence MarketScanner Pros<br />
-            <span style={{ color: "#10b981" }}>For Your Clients</span>
+            Add MarketScanner Pros<br />
+            <span style={{ color: "#10b981" }}>To Your Platform</span>
           </h1>
 
           <p style={{
@@ -140,6 +140,7 @@ export default function PartnerDemoPage() {
             lineHeight: 1.7,
           }}>
             A ready-built AI analytics suite covering equities, crypto, options, and commodities — 
+            A ready-built AI analytics suite your clients can use under your existing licence. 
             White-label it, embed it, or co-brand it. No development cost on your side.
           </p>
 
@@ -185,7 +186,7 @@ export default function PartnerDemoPage() {
       }}>
         <div style={{ maxWidth: 960, margin: "0 auto" }}>
           <h2 style={{ fontSize: 28, fontWeight: 700, textAlign: "center", marginBottom: 12 }}>
-            Why Brokers Choose MSP
+            Why Brokers Add MSP
           </h2>
           <p style={{ fontSize: 16, color: "#94a3b8", textAlign: "center", marginBottom: 40, maxWidth: 600, marginLeft: "auto", marginRight: "auto" }}>
             Differentiate your platform. Retain active traders. Generate premium-tier revenue.
@@ -421,7 +422,7 @@ export default function PartnerDemoPage() {
               <li>✅ Mandatory disclaimers on every AI response, backtest result, and tool page</li>
               <li>✅ No execution capability — zero broker connections, zero order submission</li>
               <li>✅ Paper trade simulation only — clearly labelled throughout</li>
-              <li>✅ General Advice Warning, footer disclaimer, and dedicated disclaimer page</li>
+              <li>✅ General Advice Warning, footer disclaimer, and dedicated disclaimer page — MSP does not hold an AFSL and operates under the partner&apos;s licence</li>
               <li>✅ Risk metrics engine uses &quot;simulated entries&quot; language — never permission/execution</li>
               <li>✅ AI system prompts explicitly forbid financial advice, directive language</li>
               <li>✅ Full Legal Briefing Pack (v1.3) prepared for external counsel review</li>
