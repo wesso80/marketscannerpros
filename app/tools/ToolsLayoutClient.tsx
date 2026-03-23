@@ -16,6 +16,7 @@ import { RegimeProvider } from '@/lib/useRegime';
 import CapitalControlStrip from '@/components/risk/CapitalControlStrip';
 import GlobalSessionBar from '@/components/GlobalSessionBar';
 import FavoriteButton from '@/components/FavoriteButton';
+import DisclosureGate from '@/components/DisclosureGate';
 
 function getSkillFromPath(pathname: string): PageSkill {
   if (pathname.includes('/scanner')) return 'scanner';
@@ -64,6 +65,7 @@ export default function ToolsLayoutClient({
     : <CommandLayout>{children}</CommandLayout>;
 
   return (
+    <DisclosureGate>
     <RegimeProvider>
     <RiskPermissionProvider>
     <V2Provider>
@@ -126,5 +128,6 @@ export default function ToolsLayoutClient({
     </V2Provider>
     </RiskPermissionProvider>
     </RegimeProvider>
+    </DisclosureGate>
   );
 }
