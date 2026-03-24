@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { runPipeline, persistScanResult } from '@/lib/quant/orchestrator';
+import { sendQuantAlertEmail } from '@/lib/quant/alertMailer';
 import { DEFAULT_QUANT_CONFIG } from '@/lib/quant/types';
 
 export const runtime = 'nodejs';
@@ -49,8 +50,9 @@ export async function POST(req: NextRequest) {
       maxSymbols: body.maxSymbols,
     });
 
-    // Persist scan in background (non-blocking)
+    // Persist scan + email alerts in background (non-blocking)
     persistScanResult(result).catch(() => {});
+    sendQuantAlertEmail(result).catch(() => {});
 
     return NextResponse.json(result);
   } catch (err: any) {
