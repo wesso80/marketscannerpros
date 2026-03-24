@@ -5,7 +5,7 @@ import TradeSuggestionCard, { type TradeSuggestion } from './TradeSuggestionCard
 import { useUserTier } from '@/lib/useUserTier';
 
 /**
- * SuggestionsWidget — Renders pending trade suggestions for Pro Trader users.
+ * SuggestionsWidget — Renders pending scenario ideas for Pro Trader users.
  *
  * Drop into any dashboard or tools page:
  *   <SuggestionsWidget />
@@ -80,7 +80,7 @@ export default function SuggestionsWidget() {
           fontWeight: 800,
           letterSpacing: '0.04em',
         }}>
-          Trade Suggestions
+          Scenario Ideas
         </div>
         <div style={{
           color: '#F59E0B',

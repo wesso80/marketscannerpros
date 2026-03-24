@@ -1012,10 +1012,10 @@ export default function OperatorDashboardPage() {
 
   const coachSuggestion =
     avgWin > 0 && avgLoss > 0 && avgWin < avgLoss
-      ? 'Recent pattern: average losses are larger than wins. Suggestion: tighten risk cap and avoid adding to losing positions.'
+      ? 'Recent pattern: average losses are larger than wins. Observation: historically, tighter risk caps and avoiding adding to losers have improved results for similar profiles.'
       : wins > 0 && avgWin > avgLoss
-      ? 'Recent pattern: expectancy is positive. Suggestion: keep position sizing consistent and let winners complete target ladder.'
-      : 'Recent pattern: sample size still building. Suggestion: focus on disciplined entries and complete post-trade journal notes.';
+      ? 'Recent pattern: expectancy is positive. Observation: consistency in position sizing has historically helped maintain positive expectancy.'
+      : 'Recent pattern: sample size still building. Observation: disciplined entries and thorough post-trade notes help build useful data faster.';
 
   const adaptiveScore = Math.round(adaptive?.match?.adaptiveScore ?? 0);
   const personalityMatch = Math.round(adaptive?.match?.personalityMatch ?? 0);

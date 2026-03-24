@@ -107,7 +107,7 @@ export async function sendAlertEmail(params: SendEmailParams | SendAlertEmailPar
 
 const PRO_FEATURES = [
   ['📊', 'Unlimited Scanner', 'Run unlimited technical scans across the full market'],
-  ['🤖', 'AI Analyst (50/day)', 'GPT-powered market analysis and trade ideas'],
+  ['🤖', 'AI Analyst (50/day)', 'GPT-powered market analysis and research tools'],
   ['📈', 'Options Confluence', 'Multi-signal options flow analysis'],
   ['📥', 'CSV Exports', 'Download scan results and journal data'],
   ['📰', 'Real-Time News', 'Curated market news feed with alerts'],

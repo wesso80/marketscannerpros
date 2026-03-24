@@ -178,7 +178,7 @@ Your Market Scanner is a powerful tool that analyzes stocks and cryptocurrencies
 
 ### Scan Result Notifications
 1. In the sidebar, expand "Scan Result Notifications"  
-2. Check "Email top picks" to get scan results emailed
+2. Check "Email top results" to get scan results emailed
 3. Results will be sent to your configured email address
 
 ---

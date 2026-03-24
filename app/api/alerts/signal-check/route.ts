@@ -248,7 +248,7 @@ function checkSignalCondition(alert: SignalAlert, scan: ScanResult): CheckResult
           triggered: true,
           value: scan.score,
           threshold: minScore,
-          message: `🟢 BULLISH SETUP: ${scan.symbol} score ${scan.score}/100 (${scan.signals.bullish} bullish signals)`,
+          message: `🟢 BULLISH READING: ${scan.symbol} score ${scan.score}/100 (${scan.signals.bullish} bullish indicators)`,
           context: { 
             direction: scan.direction, 
             signals: scan.signals,
@@ -267,7 +267,7 @@ function checkSignalCondition(alert: SignalAlert, scan: ScanResult): CheckResult
           triggered: true,
           value: scan.score,
           threshold: maxScore,
-          message: `🔴 BEARISH SETUP: ${scan.symbol} score ${scan.score}/100 (${scan.signals.bearish} bearish signals)`,
+          message: `🔴 BEARISH READING: ${scan.symbol} score ${scan.score}/100 (${scan.signals.bearish} bearish indicators)`,
           context: { 
             direction: scan.direction, 
             signals: scan.signals,
@@ -310,7 +310,7 @@ function checkSignalCondition(alert: SignalAlert, scan: ScanResult): CheckResult
         return {
           triggered: true,
           value: scan.score,
-          message: `🐂 DIRECTION CHANGE: ${scan.symbol} shifted to bullish. Score: ${scan.score}/100 (was ${prevDirection})`,
+          message: `🐂 DIRECTION CHANGE: ${scan.symbol} shifted to bullish reading. Score: ${scan.score}/100 (was ${prevDirection})`,
           context: { 
             prevDirection, 
             newDirection: scan.direction,
@@ -327,7 +327,7 @@ function checkSignalCondition(alert: SignalAlert, scan: ScanResult): CheckResult
         return {
           triggered: true,
           value: scan.score,
-          message: `🐻 DIRECTION CHANGE: ${scan.symbol} shifted to bearish. Score: ${scan.score}/100 (was ${prevDirection})`,
+          message: `🐻 DIRECTION CHANGE: ${scan.symbol} shifted to bearish reading. Score: ${scan.score}/100 (was ${prevDirection})`,
           context: { 
             prevDirection, 
             newDirection: scan.direction,

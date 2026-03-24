@@ -142,7 +142,7 @@ export default function OptionsTerminalView() {
         <h2 className="text-xl font-bold mb-2">Options Terminal</h2>
         <p className="text-sm text-zinc-400 mb-6 max-w-md text-center">
           One ticker — the entire options decision surface. Enter a symbol to see
-          the full chain with Greeks, IV, OI, volume, and suggested plays.
+          the full chain with Greeks, IV, OI, volume, and strategy scenarios.
         </p>
         <form
           onSubmit={(e) => {
@@ -665,9 +665,9 @@ export default function OptionsTerminalView() {
             </Card>
           </div>
 
-          {/* Suggested Plays */}
+          {/* Strategy Scenarios */}
           <div className="col-span-12 xl:col-span-4">
-            <Card title="Suggested Plays (Educational)" right={<span className="text-xs text-zinc-400">no advice</span>}>
+            <Card title="Strategy Scenarios (Educational)" right={<span className="text-xs text-zinc-400">not advice</span>}>
               <SuggestedPlaysInline ivLevel={chain.ivMetrics.ivLevel} />
             </Card>
           </div>
@@ -851,27 +851,27 @@ function OIHeatmapInline({ heatmap, spot }: { heatmap: OIHeatmapRow[]; spot: num
   );
 }
 
-/* ─── Inline Suggested Plays ─────────────────────────────────── */
+/* ─── Inline Strategy Scenarios ─────────────────────────────────── */
 function SuggestedPlaysInline({ ivLevel }: { ivLevel: IVMetrics['ivLevel'] }) {
   const plays = useMemo(() => {
     if (ivLevel === 'high' || ivLevel === 'extreme') {
       return [
-        { title: 'Directional + Elevated IV', desc: 'Consider defined-risk credit spreads (bull put / bear call). Premium is rich — selling is favoured.' },
-        { title: 'Neutral + Elevated IV', desc: 'Iron condor around expected move zone. High IV inflates credit; keep wings wide enough for safety.' },
-        { title: 'Directional + Low IV', desc: 'Currently IV is high — skip naked longs unless you expect a further vol expansion event.' },
+        { title: 'Directional + Elevated IV', desc: 'Elevated IV typically benefits credit structures (bull put / bear call). Premium is rich — sellers historically have an edge here.' },
+        { title: 'Neutral + Elevated IV', desc: 'Iron condor around expected move zone. High IV inflates credit received; wider wings reduce risk of breach.' },
+        { title: 'Directional + Low IV', desc: 'Currently IV is high — naked long options face headwinds unless a further vol expansion event is expected.' },
       ];
     }
     if (ivLevel === 'low') {
       return [
-        { title: 'Directional + Low IV', desc: 'Long options may be viable — premium is cheap. Debit spreads keep cost defined.' },
-        { title: 'Calendar Spread', desc: 'Sell near-dated, buy further-dated. Benefits from IV expansion and theta differential.' },
-        { title: 'Neutral', desc: 'Skip premium selling in low IV — credits are thin. Wait for expansion or use directional plays.' },
+        { title: 'Directional + Low IV', desc: 'Low premium environment — debit structures cost less and define risk clearly.' },
+        { title: 'Calendar Spread', desc: 'Near-dated short / further-dated long benefits from IV expansion and theta differential.' },
+        { title: 'Neutral', desc: 'Low IV compresses credits — premium-selling structures offer thin reward relative to risk here.' },
       ];
     }
     return [
-      { title: 'Directional', desc: 'Balanced IV: debit spreads offer clean risk/reward. Pick liquid strikes near 25–40Δ.' },
-      { title: 'Range-Bound', desc: 'Butterfly or iron condor around expected move — moderate premium available.' },
-      { title: 'Event Play', desc: 'Check earnings/catalyst schedule. If event is near, IV crush risk applies to long options.' },
+      { title: 'Directional', desc: 'Balanced IV: debit spreads offer defined risk/reward. Liquid strikes near 25–40Δ tend to have tighter spreads.' },
+      { title: 'Range-Bound', desc: 'Butterfly or iron condor around expected move — moderate premium available in balanced IV.' },
+      { title: 'Event Play', desc: 'Earnings/catalyst proximity matters. Near-term events create IV crush risk for long options holders.' },
     ];
   }, [ivLevel]);
 
@@ -884,7 +884,7 @@ function SuggestedPlaysInline({ ivLevel }: { ivLevel: IVMetrics['ivLevel'] }) {
         </div>
       ))}
       <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4 text-xs text-zinc-400">
-        These are educational frameworks only. Always validate structure, event risk, and liquidity before any trade.
+        These are educational frameworks only — not personal advice. Validate structure, event risk, and liquidity independently before any trade.
       </div>
     </div>
   );

@@ -4180,12 +4180,12 @@ export class OptionsConfluenceAnalyzer {
     else maxRiskPercent = 0.5;
     
     const stopLossStrategy = signalStrength === 'strong'
-      ? 'Exit if option loses 50% of premium or price crosses against 50% level'
-      : 'Tight stop: Exit if option loses 35% of premium';
+      ? 'Common risk threshold: 50% of premium loss or price crossing against the 50% level'
+      : 'Tighter threshold: 35% of premium loss is often used in weaker setups';
     
     const profitTargetStrategy = signalStrength === 'strong'
-      ? 'Target 100-150% of premium at nearest 50% level cluster'
-      : 'Target 50-80% of premium, take profits early';
+      ? 'Typical target range: 100-150% of premium at nearest 50% level cluster'
+      : 'Typical range: 50-80% of premium captured';
     
     // PRO TRADER: Calculate specific entry/exit levels
     const tradeLevels = calculateTradeLevels(

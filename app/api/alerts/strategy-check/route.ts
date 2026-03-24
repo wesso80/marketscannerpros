@@ -209,21 +209,21 @@ async function checkStrategyAlerts(req: NextRequest) {
               case 'strategy_buy_signal':
                 if (signal.signalType === 'buy') {
                   shouldTrigger = true;
-                  alertMessage = `🟢 BULLISH SETUP: ${strategy.toUpperCase()} triggered on ${symbol} at $${signal.price.toFixed(2)}`;
+                  alertMessage = `🟢 BULLISH READING: ${strategy.toUpperCase()} criteria met on ${symbol} at $${signal.price.toFixed(2)}`;
                 }
                 break;
 
               case 'strategy_sell_signal':
                 if (signal.signalType === 'sell') {
                   shouldTrigger = true;
-                  alertMessage = `🔴 BEARISH SETUP: ${strategy.toUpperCase()} triggered on ${symbol} at $${signal.price.toFixed(2)}`;
+                  alertMessage = `🔴 BEARISH READING: ${strategy.toUpperCase()} criteria met on ${symbol} at $${signal.price.toFixed(2)}`;
                 }
                 break;
 
               case 'strategy_entry':
                 if (signal.hasSignal && signal.signalType === 'buy') {
                   shouldTrigger = true;
-                  alertMessage = `📈 SIGNAL: ${strategy.toUpperCase()} generated entry signal on ${symbol} at $${signal.price.toFixed(2)}`;
+                  alertMessage = `📈 SETUP: ${strategy.toUpperCase()} detected bullish alignment on ${symbol} at $${signal.price.toFixed(2)}`;
                 }
                 break;
 
@@ -231,7 +231,7 @@ async function checkStrategyAlerts(req: NextRequest) {
                 if (signal.hasSignal && signal.signalType === 'sell' && lastTrade) {
                   shouldTrigger = true;
                   const pnl = lastTrade.returnPercent >= 0 ? `+${lastTrade.returnPercent.toFixed(2)}%` : `${lastTrade.returnPercent.toFixed(2)}%`;
-                  alertMessage = `📉 SIGNAL: ${strategy.toUpperCase()} generated exit signal on ${symbol} (Last simulated result: ${pnl})`;
+                  alertMessage = `📉 SETUP: ${strategy.toUpperCase()} detected bearish alignment on ${symbol} (Last simulated result: ${pnl})`;
                 }
                 break;
             }

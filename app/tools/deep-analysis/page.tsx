@@ -1965,7 +1965,7 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
             <h3 style={{ color: "#fff", marginBottom: "0.5rem", fontSize: "1.5rem" }}>Enter any ticker to begin</h3>
             <p style={{ color: "#64748B", maxWidth: "500px", margin: "0 auto" }}>
               Supports stocks (AAPL, TSLA), crypto (BTC, ETH), forex (EURUSD), and commodities (GOLD).
-              Get complete technical analysis, AI insights, news sentiment, and trading signals in one view.
+              Get complete technical analysis, AI insights, news sentiment, and technical readings in one view.
             </p>
           </div>
         )}

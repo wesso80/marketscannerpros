@@ -78,7 +78,7 @@ export default function SuggestedPlaysCard({ ivMetrics, mode }: Props) {
     // Always show educational disclaimer entry
     result.push({
       title: 'Educational Only',
-      description: 'These are structure suggestions based on IV regime — not recommendations. Always evaluate your own risk tolerance, position sizing, and thesis.',
+      description: 'These are structure examples based on IV regime — not personal advice. Always evaluate your own risk tolerance, position sizing, and thesis.',
       condition: 'All conditions',
       icon: '📚',
     });

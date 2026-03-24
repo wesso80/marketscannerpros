@@ -132,7 +132,7 @@ export default function DailyAIMarketFocus() {
             <span>🎯</span> Today's AI Market Focus
           </h2>
           <p style={{ color: dateInfo.isStale ? '#f59e0b' : '#64748b', fontSize: 13, margin: '6px 0 0 0' }}>
-            {dateInfo.isStale ? `⚠️ Generated ${dateInfo.text}` : `Generated: ${dateInfo.text}`} • AI-curated picks across asset classes
+            {dateInfo.isStale ? `⚠️ Generated ${dateInfo.text}` : `Generated: ${dateInfo.text}`} • Notable setups across asset classes
           </p>
         </div>
         {dateInfo.isStale && data.status !== 'empty' && (
@@ -276,7 +276,7 @@ export default function DailyAIMarketFocus() {
       }}>
         <span style={{ fontSize: 18 }}>📊</span>
         <p style={{ color: '#94a3b8', fontSize: 13, margin: 0, lineHeight: 1.5 }}>
-          <strong style={{ color: '#c4b5fd' }}>How to use:</strong> This panel shows daily AI-curated picks based on multi-timeframe structure, phase logic, and volatility context. Use it for research, not as trade signals. Always do your own analysis.
+          <strong style={{ color: '#c4b5fd' }}>How to use:</strong> This panel highlights tickers with notable multi-timeframe structure, phase logic, and volatility context. For research only — not trade signals or personal advice. Always do your own analysis.
         </p>
       </div>
     </section>

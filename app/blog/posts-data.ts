@@ -267,7 +267,7 @@ Most losing traders make the same mistake: they trade off a single timeframe. Pr
 Confluence means **multiple pieces of evidence pointing to the same conclusion**. In trading, it means:
 - Higher timeframe shows uptrend
 - Medium timeframe confirms momentum
-- Lower timeframe provides entry signal
+- Lower timeframe confirms timing alignment
 
 When all three align → technically aligned setup.  
 When they conflict → stay out.
@@ -278,7 +278,7 @@ When they conflict → stay out.
 A 15-minute chart shows a bullish breakout. You enter long. Minutes later, it reverses. Why? The daily chart was in a strong downtrend.
 
 **Problem #2: Fighting the Trend**  
-You short because the 1H chart looks bearish. But the 4H and daily are screaming bullish. You're trading against the bigger trend—low win rate guaranteed.
+You short because the 1H chart looks bearish. But the 4H and daily are screaming bullish. You're trading against the bigger trend—historically a low-probability approach.
 
 **Problem #3: No Context**  
 Without higher timeframes, you don't know if you're at support/resistance, in consolidation, or trending. Context = advantage.
