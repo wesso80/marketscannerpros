@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Trade Journal | Trading Tools | MarketScanner Pros',
   description:
-    'Professional trade journal with live P&L tracking, risk metrics, equity curves, AI-powered analysis, and multi-device sync. Log, review, and improve every trade.',
+    'Professional trade journal with P&L tracking, risk metrics, equity curves, AI-powered data summaries, and multi-device sync. Log and review every trade.',
   openGraph: {
     title: 'Trade Journal | MarketScanner Pros',
     description:

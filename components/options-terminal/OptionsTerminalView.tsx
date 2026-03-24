@@ -298,9 +298,9 @@ export default function OptionsTerminalView() {
                   </div>
                 </div>
 
-                {/* Best Strikes (auto-computed) */}
+                {/* Notable Strikes (auto-computed) */}
                 <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4 space-y-3">
-                  <div className="text-xs font-semibold">Best Strikes (Auto)</div>
+                  <div className="text-xs font-semibold">Notable Strikes (Auto)</div>
                   <div className="grid grid-cols-2 gap-3">
                     {chain.bestStrikes.slice(0, 6).map((bs, i) => (
                       <BestStrikeCard
@@ -316,7 +316,7 @@ export default function OptionsTerminalView() {
                     ))}
                   </div>
                   {chain.bestStrikes.length === 0 && (
-                    <div className="text-xs text-zinc-400">Load a chain to see auto-computed best strikes.</div>
+                    <div className="text-xs text-zinc-400">Load a chain to see auto-computed notable strikes.</div>
                   )}
                 </div>
               </div>

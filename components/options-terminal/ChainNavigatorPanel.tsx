@@ -101,10 +101,10 @@ export default function ChainNavigatorPanel({
         </div>
       </section>
 
-      {/* ── Best Strikes ────────────────────────────────── */}
+      {/* ── Notable Strikes ────────────────────────────────── */}
       <section>
         <h3 className="text-[10px] uppercase tracking-wider font-bold mb-2" style={{ color: 'var(--msp-text-faint)' }}>
-          Best Strikes
+          Notable Strikes
         </h3>
         <div className="flex flex-col gap-1.5">
           {bestStrikes.map((bs, i) => (
@@ -138,7 +138,7 @@ export default function ChainNavigatorPanel({
           ))}
           {bestStrikes.length === 0 && (
             <p className="text-xs italic" style={{ color: 'var(--msp-text-faint)' }}>
-              Load a chain to see best strikes
+              Load a chain to see notable strikes
             </p>
           )}
         </div>

@@ -486,8 +486,8 @@ function PositionSizerCalculator() {
         borderRadius: '8px'
       }}>
         <div style={{ color: '#fbbf24', fontSize: '12px' }}>
-          ⚠️ <strong>Risk Disclaimer:</strong> This calculator is for educational purposes only. 
-          Always use proper risk management and never risk more than you can afford to lose.
+          ⚠️ <strong>Disclaimer:</strong> This calculator is for educational and informational purposes only. 
+          It displays mathematical outputs based on user-entered data and does not constitute investment advice.
         </div>
       </div>
     </div>
@@ -1418,12 +1418,12 @@ export function PortfolioContent() {
     ? 'Medium'
     : 'Low';
   const portfolioHealthLabel = totalReturn < -20
-    ? '⚠ Needs Work'
+    ? '⚠ Elevated Drawdown'
     : totalReturn < -5
-    ? 'Review Needed'
+    ? 'Below Baseline'
     : totalReturn > 12
-    ? 'Strong'
-    : 'Stable';
+    ? 'Above Baseline'
+    : 'Near Baseline';
   const edgeStateLabel = totalReturn < -10 || concentration > 50
     ? 'Defensive'
     : totalReturn > 10 && concentration < 35
@@ -1455,8 +1455,8 @@ export function PortfolioContent() {
       bias,
       action,
       risk,
-      next: action === 'WAIT' ? 'Protect capital and rebalance' : action === 'REVIEW' ? 'Manage winners/losers actively' : 'Prepare rebalance plan',
-      mode: 'MANAGE',
+      next: action === 'WAIT' ? 'High drawdown or concentration detected' : action === 'REVIEW' ? 'Positive return with moderate concentration' : 'Neutral conditions observed',
+      mode: 'OBSERVE',
     });
   }, [totalReturn, riskLoadLabel, topAllocation?.symbol]);
 
@@ -1759,9 +1759,8 @@ export function PortfolioContent() {
                 const inDrawdown = totalReturn < -20 && positions.length > 0;
                 if (inDrawdown && activeTab !== 'deploy-capital' && !drawdownAcknowledged) {
                   const proceed = confirm(
-                    '⚠️ Your portfolio is currently in a significant drawdown (-' + Math.abs(totalReturn).toFixed(1) + '%).\n\n' +
-                    'Consider reviewing your risk exposure before adding new positions.\n\n' +
-                    'Click OK to proceed anyway, or Cancel to review first.'
+                    '⚠️ Your portfolio data shows a significant drawdown (-' + Math.abs(totalReturn).toFixed(1) + '%).\n\n' +
+                    'Click OK to proceed, or Cancel to go back.'
                   );
                   if (!proceed) return;
                   setDrawdownAcknowledged(true);
@@ -1777,17 +1776,21 @@ export function PortfolioContent() {
         }
       />
 
+      <div className="mx-4 mt-2 rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-2.5 text-[11px] leading-relaxed text-slate-400">
+        This page displays user-entered simulation records and descriptive analytics only. It does not recommend keeping, selling, reducing, adding, or rebalancing any position or portfolio exposure.
+      </div>
+
       <div className="w-full max-w-none px-4 pt-3">
         <CommandCenterStateBar
-          mode="MANAGE"
+          mode="OBSERVE"
           actionableNow={positions.length > 0
-            ? `Live book: ${positions.length} open positions · Top concentration ${topAllocation?.symbol || 'N/A'}`
-            : 'No active exposure. Build watchlist-to-portfolio plan before adding risk.'}
+            ? `Recorded positions: ${positions.length} open · Largest allocation: ${topAllocation?.symbol || 'N/A'}`
+            : 'No recorded positions.'}
           nextStep={positions.length > 0
             ? totalReturn < 0
-              ? 'Reduce concentration and review underperformers'
-              : 'Protect winners and rebalance risk budgets'
-            : 'Add first position with predefined risk and invalidation'}
+              ? 'Portfolio shows negative return with current recorded data'
+              : 'Portfolio shows positive return with current recorded data'
+            : 'No position data recorded yet'}
         />
 
         <CommandStrip
@@ -2083,7 +2086,7 @@ export function PortfolioContent() {
                     </div>
                   </div>
                   <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3 text-xs">
-                    <div className="font-semibold uppercase tracking-[0.06em] text-slate-400">Risk Contributors</div>
+                    <div className="font-semibold uppercase tracking-[0.06em] text-slate-400">Exposure by Position</div>
                     <div className="mt-2 space-y-1 text-slate-300">
                       {riskContributors.map((risk) => (
                         <div key={risk.id} className="flex justify-between">
@@ -2093,8 +2096,8 @@ export function PortfolioContent() {
                       ))}
                       {riskContributors.length === 0 && <div className="text-slate-500">No contributors yet</div>}
                     </div>
-                    <div className="mt-2 text-slate-400">Best: {bestPerformer ? `${bestPerformer.symbol} ${formatPct(bestPerformer.plPercent)}` : 'N/A'}</div>
-                    <div className="text-slate-400">Worst: {worstPerformer ? `${worstPerformer.symbol} ${formatPct(worstPerformer.plPercent)}` : 'N/A'}</div>
+                    <div className="mt-2 text-slate-400">Top Gain: {bestPerformer ? `${bestPerformer.symbol} ${formatPct(bestPerformer.plPercent)}` : 'N/A'}</div>
+                    <div className="text-slate-400">Top Loss: {worstPerformer ? `${worstPerformer.symbol} ${formatPct(worstPerformer.plPercent)}` : 'N/A'}</div>
                   </div>
                 </div>
               </div>
@@ -2147,9 +2150,10 @@ export function PortfolioContent() {
               )}
 
               <details className="rounded-lg border border-slate-700 bg-slate-900/40 p-3" open={showAiAnalysis}>
-                <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.06em] text-slate-300">AI Portfolio Review</summary>
+                <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.06em] text-slate-300">AI Portfolio Summary (Descriptive Only)</summary>
+                <div className="mt-1 mb-2 text-[10px] text-slate-500">This summary is descriptive only and does not recommend any action regarding positions, allocations, entries, exits, or portfolio management.</div>
                 <div className="mt-2 text-sm text-slate-300">
-                  {aiLoading ? 'Analyzing portfolio...' : aiError ? aiError : aiAnalysis || 'Run analysis to generate AI review.'}
+                  {aiLoading ? 'Generating descriptive summary...' : aiError ? aiError : aiAnalysis || 'Run analysis to generate a descriptive data summary.'}
                 </div>
               </details>
             </div>

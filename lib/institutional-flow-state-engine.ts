@@ -85,15 +85,15 @@ function riskModeFromState(state: InstitutionalFlowState, confidence: number, da
 function playbookForState(state: InstitutionalFlowState): string {
   switch (state) {
     case 'ACCUMULATION':
-      return 'Range mean-reversion only; avoid breakout chasing';
+      return 'Range mean-reversion conditions observed; low breakout pressure';
     case 'POSITIONING':
-      return 'Breakout-prep phase; first pullback scenarios with tight invalidation';
+      return 'Pre-breakout structure forming; pullback zones near current levels';
     case 'LAUNCH':
-      return 'Trend continuation + retest analysis; trail invalidation into liquidity';
+      return 'Trend continuation structure detected; momentum expanding into liquidity';
     case 'EXHAUSTION':
-      return 'Reduced-size phase, manage risk into liquidity, monitor for reversal confirmation';
+      return 'Volume declining relative to trend; possible reversal signals emerging';
     default:
-      return 'Wait for clearer phase structure';
+      return 'Phase structure unclear from current data';
   }
 }
 

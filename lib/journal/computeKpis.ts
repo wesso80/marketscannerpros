@@ -66,7 +66,7 @@ function detectBehavioralFlags(trades: TradeRowModel[]): BehavioralFlag[] {
     flags.push({
       type: 'loss_chasing',
       severity: maxLossStreak >= 5 ? 'alert' : 'warning',
-      message: `${maxLossStreak} consecutive losses detected — review entry discipline`,
+      message: `${maxLossStreak} consecutive losses detected in recorded data`,
       occurrences: maxLossStreak,
     });
   }
