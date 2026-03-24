@@ -19,6 +19,9 @@ import type { IngestionResult } from '@/lib/catalyst/types';
 // Register the live news provider
 setNewsProvider(new AlphaVantageNewsProvider());
 
+export const runtime = 'nodejs';
+export const maxDuration = 120;
+
 export async function POST(req: NextRequest) {
   try {
     // Allow cron jobs OR authenticated sessions
@@ -78,7 +81,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: any) {
     console.error('Catalyst ingest error:', error);
-    alertCronFailure('catalyst-ingest', error);
+    alertCronFailure('catalyst-ingest', error?.message ?? String(error));
     return NextResponse.json({ error: 'Ingestion failed', detail: error.message }, { status: 500 });
   }
 }

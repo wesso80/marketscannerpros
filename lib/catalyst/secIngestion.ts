@@ -29,6 +29,7 @@ export async function loadCikTickerMap(): Promise<Map<string, string>> {
   const url = 'https://www.sec.gov/files/company_tickers.json';
   const res = await fetch(url, {
     headers: { 'User-Agent': 'MarketScannerPros/1.0 (contact@marketscannerpros.app)', Accept: 'application/json' },
+    signal: AbortSignal.timeout(15_000),
   });
 
   if (!res.ok) {
@@ -81,15 +82,20 @@ interface EftsHit {
 export async function queryEdgar(formTypes: string[], startDate: string, endDate: string): Promise<EdgarFiling[]> {
   const tickerMap = await loadCikTickerMap();
   const results: EdgarFiling[] = [];
+  const deadline = Date.now() + 60_000; // 60s time budget for all EDGAR queries
 
   for (const formType of formTypes) {
+    if (Date.now() > deadline) {
+      console.warn(`[SEC] EDGAR time budget exceeded, skipping remaining form types`);
+      break;
+    }
     try {
       // Paginate through results (EFTS max 100 per page)
       let from = 0;
       const size = 100;
       let hasMore = true;
 
-      while (hasMore) {
+      while (hasMore && Date.now() < deadline) {
         const params = new URLSearchParams({
           q: `"${formType}"`,
           dateRange: 'custom',
@@ -102,6 +108,7 @@ export async function queryEdgar(formTypes: string[], startDate: string, endDate
 
         const res = await fetch(`${EFTS_BASE}?${params}`, {
           headers: { 'User-Agent': 'MarketScannerPros/1.0 (contact@marketscannerpros.app)', Accept: 'application/json' },
+          signal: AbortSignal.timeout(10_000),
         });
 
         if (!res.ok) {
