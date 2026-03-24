@@ -44,20 +44,45 @@ function generateThesis(
     .sort((a, b) => b.normalized - a.normalized)
     .slice(0, 3);
 
-  const dirLabel = score.direction === 'LONG' ? 'bullish' : score.direction === 'SHORT' ? 'bearish' : 'neutral';
-  const dimNames = topDims.map(d => d.name).join(', ');
+  const dirLabel = score.direction === 'LONG' ? 'BULLISH' : score.direction === 'SHORT' ? 'BEARISH' : 'NEUTRAL';
 
-  return `${score.symbol}: ${dirLabel} setup in ${regime.phase} regime. ` +
-    `Strongest dimensions: ${dimNames}. ` +
-    `Fusion: ${score.composite.toFixed(0)}/100, Direction confidence: ${score.directionConfidence.toFixed(0)}%. ` +
-    `${permission.hardGatesPassed}/${permission.hardGatesTotal} hard gates passed.`;
+  const dimExplanations = score.dimensions.map(d => {
+    const emoji = d.normalized >= 70 ? '✅' : d.normalized >= 50 ? '◐' : '⚠️';
+    return `${emoji} ${d.name}: ${d.normalized.toFixed(0)}/100 (wt ${(d.weight * 100).toFixed(0)}%)`;
+  }).join(' | ');
+
+  const strengthPhrases = topDims.map(d => {
+    switch (d.name) {
+      case 'regime': return `regime is ${regime.phase} with ${regime.confidence}% confidence (${regime.agreement}/4 sources agree)`;
+      case 'structure': return `trend structure is aligned (EMA stacking + ADX confirming)`;
+      case 'volatility': return `volatility positioning is favorable for entry`;
+      case 'momentum': return `momentum indicators (RSI/MACD/Stoch) aligned ${dirLabel.toLowerCase()}`;
+      case 'participation': return `volume and institutional participation elevated`;
+      case 'asymmetry': return `risk:reward asymmetry favors this position`;
+      case 'freshness': return `data is fresh and high-confidence`;
+      case 'timing': return `time confluence window active`;
+      default: return `${d.name} scoring ${d.normalized.toFixed(0)}`;
+    }
+  }).join('; ');
+
+  const bottom2 = [...score.dimensions].sort((a, b) => a.normalized - b.normalized).slice(0, 2);
+  const weakPhrase = bottom2.map(d => `${d.name} (${d.normalized.toFixed(0)})`).join(', ');
+
+  return `${dirLabel} ${score.symbol} — Fusion ${score.composite.toFixed(0)}/100 in ${regime.phase} regime. ` +
+    `WHY: ${strengthPhrases}. ` +
+    `Direction confidence: ${score.directionConfidence.toFixed(0)}%. ` +
+    `Gates: ${permission.hardGatesPassed}/${permission.hardGatesTotal} hard, soft score ${permission.softGateScore.toFixed(0)}%. ` +
+    `Weakest: ${weakPhrase}. ` +
+    `ALL DIMS: ${dimExplanations}`;
 }
 
 function generateInvalidation(score: FusionScore, regime: UnifiedRegimeState): string {
   const weakest = [...score.dimensions].sort((a, b) => a.normalized - b.normalized)[0];
-  return `Invalidated if: regime shifts from ${regime.phase}, ` +
-    `or weakest dimension (${weakest?.name}: ${weakest?.normalized.toFixed(0)}) deteriorates further, ` +
-    `or fusion score drops below 50.`;
+  const secondWeakest = [...score.dimensions].sort((a, b) => a.normalized - b.normalized)[1];
+  return `INVALIDATED IF: (1) regime shifts from ${regime.phase} to RISK_OFF or conflicting, ` +
+    `(2) weakest dim ${weakest?.name} (${weakest?.normalized.toFixed(0)}) drops below 30, ` +
+    `(3) ${secondWeakest?.name} (${secondWeakest?.normalized.toFixed(0)}) deteriorates, ` +
+    `(4) fusion drops below 50, (5) direction flips from ${score.direction}.`;
 }
 
 // ─── TTL ────────────────────────────────────────────────────────────────────

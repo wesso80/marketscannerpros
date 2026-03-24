@@ -32,23 +32,49 @@ function buildAlertEmailHtml(alerts: InternalAlert[], result: PipelineResult): s
 
   const alertRows = alerts.map(a => {
     const { emoji } = tierLabel(a.tier);
-    const dimStr = a.topDimensions.slice(0, 3).map(d => `${d.name}: ${d.score}`).join(' · ');
     const dirColor = a.direction === 'LONG' ? '#10b981' : a.direction === 'SHORT' ? '#ef4444' : '#94a3b8';
 
+    // Build dimension bars for visual breakdown
+    const dimBars = a.topDimensions.map(d => {
+      const barWidth = Math.max(4, Math.round(d.score * 1.5));
+      const barColor = d.score >= 70 ? '#10b981' : d.score >= 50 ? '#eab308' : '#ef4444';
+      return `
+        <div style="display:flex;align-items:center;margin:2px 0;font-size:12px;">
+          <span style="width:90px;color:#94a3b8;text-transform:uppercase;font-size:10px;letter-spacing:0.5px;">${d.name}</span>
+          <div style="flex:1;background:#1f2937;border-radius:4px;height:12px;margin:0 8px;">
+            <div style="width:${barWidth}px;max-width:100%;background:${barColor};height:12px;border-radius:4px;"></div>
+          </div>
+          <span style="color:#f1f5f9;font-weight:600;width:30px;text-align:right;">${d.score}</span>
+        </div>`;
+    }).join('');
+
     return `
-      <tr style="border-bottom: 1px solid #334155;">
-        <td style="padding:12px 8px;font-size:14px;color:#f1f5f9;font-weight:600;">${emoji} ${a.symbol}</td>
-        <td style="padding:12px 8px;font-size:14px;color:${dirColor};font-weight:600;">${a.direction}</td>
-        <td style="padding:12px 8px;font-size:20px;font-weight:700;color:#10b981;">${a.fusionScore.toFixed(1)}</td>
-        <td style="padding:12px 8px;font-size:12px;color:#94a3b8;">${a.tier}</td>
-        <td style="padding:12px 8px;font-size:12px;color:#94a3b8;">${dimStr}</td>
-      </tr>
-      <tr>
-        <td colspan="5" style="padding:4px 8px 12px 8px;font-size:12px;color:#cbd5e1;">
-          <strong>Thesis:</strong> ${a.thesis}<br>
-          <strong>Invalidation:</strong> ${a.invalidation}
-        </td>
-      </tr>`;
+      <div style="background:#0f172a;border-radius:10px;padding:16px;margin-bottom:16px;border-left:4px solid ${dirColor};">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div>
+            <span style="font-size:18px;font-weight:700;color:#f1f5f9;">${emoji} ${a.symbol}</span>
+            <span style="font-size:14px;color:${dirColor};font-weight:600;margin-left:8px;">${a.direction}</span>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:28px;font-weight:800;color:#10b981;">${a.fusionScore.toFixed(1)}</div>
+            <div style="font-size:10px;color:#64748b;text-transform:uppercase;">${a.tier}</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          ${dimBars}
+        </div>
+
+        <div style="background:#111827;border-radius:8px;padding:12px;margin-bottom:8px;">
+          <div style="font-size:11px;color:#10b981;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Thesis</div>
+          <div style="font-size:13px;color:#e2e8f0;line-height:1.5;">${a.thesis}</div>
+        </div>
+
+        <div style="background:#111827;border-radius:8px;padding:12px;">
+          <div style="font-size:11px;color:#ef4444;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Invalidation</div>
+          <div style="font-size:12px;color:#94a3b8;line-height:1.4;">${a.invalidation}</div>
+        </div>
+      </div>`;
   }).join('');
 
   return `
@@ -76,15 +102,6 @@ function buildAlertEmailHtml(alerts: InternalAlert[], result: PipelineResult): s
     </p>
 
     <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-      <thead>
-        <tr style="border-bottom: 2px solid #1f2937;">
-          <th style="padding:8px;text-align:left;font-size:11px;color:#64748b;text-transform:uppercase;">Symbol</th>
-          <th style="padding:8px;text-align:left;font-size:11px;color:#64748b;text-transform:uppercase;">Dir</th>
-          <th style="padding:8px;text-align:left;font-size:11px;color:#64748b;text-transform:uppercase;">Score</th>
-          <th style="padding:8px;text-align:left;font-size:11px;color:#64748b;text-transform:uppercase;">Tier</th>
-          <th style="padding:8px;text-align:left;font-size:11px;color:#64748b;text-transform:uppercase;">Top Dims</th>
-        </tr>
-      </thead>
       <tbody>
         ${alertRows}
       </tbody>
