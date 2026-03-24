@@ -101,6 +101,24 @@ export async function middleware(req: NextRequest) {
   const ADMIN_CIDS = ADMIN_EMAILS_MW.flatMap(email => ADMIN_PREFIXES.map(p => `${p}${email}`));
 
   const cookie = req.cookies.get('ms_auth')?.value;
+
+  // ── /quant route guard — operators only ──
+  if (pathname.startsWith('/quant')) {
+    if (!cookie) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+    const quantSession = await verify(cookie);
+    if (!quantSession) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+    const quantCid = quantSession.cid || '';
+    const isQuantAdmin = ADMIN_CIDS.includes(quantCid) || ADMIN_EMAILS_MW.includes(quantCid.toLowerCase());
+    if (!isQuantAdmin) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+    // Operator verified — proceed
+  }
+
   if (cookie) {
     const session = await verify(cookie);
     if (session) {
