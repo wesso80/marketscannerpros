@@ -651,7 +651,7 @@ export default function TerminalPage() {
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Time Confluence Scanner">
           <ConfluenceScanner />
           <div className="mt-6">
-            <TimeConfluenceWidget showMacro showMicro showCalendar />
+            <TimeConfluenceWidget showMacro showMicro showCalendar assetClass={asset} />
           </div>
         </UpgradeGate>
       )}

@@ -1296,10 +1296,74 @@ export function getMacroClosingCandles(date: Date): string[] {
 }
 
 /**
+ * Get crypto macro candles closing on a given date.
+ * Uses TradingView-verified epoch anchors (same logic as Close Calendar).
+ * Multi-day: (epochDay - 20454) % N === 0  (anchor = Jan 1 2026)
+ * Weekly:   (epochDay - 20458) % (N*7) within prior 7 days (Friday UTC close)
+ * Monthly+: calendar month boundaries at UTC midnight
+ */
+export function getCryptoMacroClosingCandles(date: Date): string[] {
+  const closing: string[] = [];
+  const DAY_MS = 86_400_000;
+  const nowMs = date.getTime();
+  const TV_DAY_ANCHOR = 20454; // Jan 1, 2026 epoch day
+  const TV_WEEK_ANCHOR = 20458; // Jan 5, 2026 (Monday) epoch day
+
+  // Today's UTC date at midnight
+  const todayMidnightMs = Math.floor(nowMs / DAY_MS) * DAY_MS;
+  const epochDay = Math.floor(todayMidnightMs / DAY_MS);
+
+  // 1D always closes
+  closing.push('1D');
+
+  // Multi-day (2D–30D): closes when (epochDay - anchor) % N === 0
+  for (let N = 2; N <= 30; N++) {
+    if (((epochDay - TV_DAY_ANCHOR) % N + N) % N === 0) {
+      closing.push(`${N}D`);
+    }
+  }
+
+  // Weekly (1W–52W): TradingView crypto weekly closes on Monday UTC boundary.
+  // Period = N * 7 days anchored to epoch day 20458 (Jan 5, 2026 Monday).
+  // A close falls at day = TV_WEEK_ANCHOR + k * (N*7) for integer k.
+  // Check if today is such a boundary day.
+  for (let N = 1; N <= 52; N++) {
+    const period = N * 7;
+    if (((epochDay - TV_WEEK_ANCHOR) % period + period) % period === 0) {
+      closing.push(`${N}W`);
+    }
+  }
+
+  // Monthly (1M): closes at 1st of next month UTC midnight.
+  // A monthly candle closes "today" if today is the last day of the month
+  // (i.e., tomorrow is the 1st).
+  const utcMonth = date.getUTCMonth();
+  const utcYear = date.getUTCFullYear();
+  const utcDate = date.getUTCDate();
+  const tomorrowDate = new Date(Date.UTC(utcYear, utcMonth, utcDate + 1));
+  const isLastDayOfMonth = tomorrowDate.getUTCDate() === 1;
+
+  if (isLastDayOfMonth) {
+    closing.push('1M');
+    const closeMonth = utcMonth; // 0-indexed
+    // Multi-month: (month+1) % N === 0
+    for (let N = 2; N <= 11; N++) {
+      if ((closeMonth + 1) % N === 0) {
+        closing.push(`${N}M`);
+      }
+    }
+    // Yearly: December (month 11)
+    if (closeMonth === 11) closing.push('1Y');
+  }
+
+  return closing;
+}
+
+/**
  * Get macro confluence for a date
  */
-export function getMacroConfluence(date: Date): MacroConfluence {
-  const closing = getMacroClosingCandles(date);
+export function getMacroConfluence(date: Date, assetClass: 'crypto' | 'equity' = 'equity'): MacroConfluence {
+  const closing = assetClass === 'crypto' ? getCryptoMacroClosingCandles(date) : getMacroClosingCandles(date);
   const isQuarterly = closing.includes('3M');
   const isYearly = closing.includes('1Y');
   const isSemiAnnual = closing.includes('6M');
@@ -1341,9 +1405,26 @@ export function getMacroConfluence(date: Date): MacroConfluence {
 
 /**
  * Get next major macro confluence
- * Skips holidays and weekends properly
+ * Skips holidays and weekends properly (equity mode)
+ * For crypto: checks every calendar day (crypto trades 24/7)
  */
-export function getNextMacroConfluence(fromDate: Date): { confluence: MacroConfluence; daysAway: number } {
+export function getNextMacroConfluence(fromDate: Date, assetClass: 'crypto' | 'equity' = 'equity'): { confluence: MacroConfluence; daysAway: number } {
+  if (assetClass === 'crypto') {
+    // Crypto trades every day — check all calendar days
+    let checkDate = new Date(fromDate);
+    let daysAway = 0;
+    for (let i = 1; i <= 90; i++) {
+      checkDate = new Date(checkDate.getTime() + 86_400_000);
+      daysAway++;
+      const macro = getMacroConfluence(checkDate, 'crypto');
+      if (macro.isQuarterly || macro.closingCandles.length >= 4) {
+        return { confluence: macro, daysAway };
+      }
+    }
+    return { confluence: getMacroConfluence(checkDate, 'crypto'), daysAway };
+  }
+
+  // Equity: skip weekends and holidays
   const etParts = getETParts(fromDate);
   let checkDate = new Date(etParts.dateStr + 'T12:00:00');
   let daysAway = 0;
@@ -1360,7 +1441,7 @@ export function getNextMacroConfluence(fromDate: Date): { confluence: MacroConfl
     const dateKey = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`;
     if (NYSE_HOLIDAYS.has(dateKey)) continue;
     
-    const macro = getMacroConfluence(checkDate);
+    const macro = getMacroConfluence(checkDate, 'equity');
     
     // Return if quarterly or better
     if (macro.isQuarterly || macro.closingCandles.length >= 4) {
@@ -1369,7 +1450,7 @@ export function getNextMacroConfluence(fromDate: Date): { confluence: MacroConfl
   }
   
   // Fallback
-  return { confluence: getMacroConfluence(checkDate), daysAway };
+  return { confluence: getMacroConfluence(checkDate, 'equity'), daysAway };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1394,10 +1475,11 @@ export function getTWAPWindows(): { start: string; end: string; description: str
 // MAIN EXPORT: GET FULL CONFLUENCE STATE
 // ═══════════════════════════════════════════════════════════════════════════
 
-export function getTimeConfluenceState(date: Date = new Date()): TimeConfluenceState {
+export function getTimeConfluenceState(date: Date = new Date(), assetClass: 'crypto' | 'equity' = 'equity'): TimeConfluenceState {
+  const isCrypto = assetClass === 'crypto';
   const clock = createMarketClock(date);
-  const sessionType = getSessionType(date);
-  const marketOpen = clock.isMarketOpen;
+  const sessionType = isCrypto ? 'regular' as const : getSessionType(date);
+  const marketOpen = isCrypto ? true : clock.isMarketOpen;
   
   // Get current intraday confluence
   const now = getIntradayConfluence(date);
@@ -1426,7 +1508,7 @@ export function getTimeConfluenceState(date: Date = new Date()): TimeConfluenceS
   const fibConfluenceWindows = marketOpen ? getFibonacciConfluenceWindows(date) : [];
   
   // Get macro confluence
-  const { confluence: nextMacro, daysAway: daysToNextMacro } = getNextMacroConfluence(date);
+  const { confluence: nextMacro, daysAway: daysToNextMacro } = getNextMacroConfluence(date, assetClass);
   
   // TWAP windows
   const twapWindows = getTWAPWindows();

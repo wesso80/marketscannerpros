@@ -17,6 +17,8 @@ interface TimeConfluenceWidgetProps {
   compact?: boolean;
   /** Active ticker symbol for context display */
   symbol?: string;
+  /** Asset class — controls macro candle computation (crypto uses TradingView UTC anchors) */
+  assetClass?: 'crypto' | 'equity';
 }
 
 // Simulated historical hit rate based on confluence score patterns
@@ -67,8 +69,9 @@ export default function TimeConfluenceWidget({
   showCalendar = true,
   compact = false,
   symbol,
+  assetClass = 'crypto',
 }: TimeConfluenceWidgetProps) {
-  const [state, setState] = useState(() => getTimeConfluenceState());
+  const [state, setState] = useState(() => getTimeConfluenceState(new Date(), assetClass));
   const [activeTab, setActiveTab] = useState<'now' | 'today' | 'fib' | 'macro' | 'calendar'>('now');
   const [showTooltip, setShowTooltip] = useState(false);
   const [alertSet, setAlertSet] = useState(false);
@@ -76,11 +79,12 @@ export default function TimeConfluenceWidget({
 
   // Update every minute
   useEffect(() => {
+    setState(getTimeConfluenceState(new Date(), assetClass));
     const interval = setInterval(() => {
-      setState(getTimeConfluenceState());
+      setState(getTimeConfluenceState(new Date(), assetClass));
     }, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [assetClass]);
 
   const impactColor = (impact: string) => {
     switch (impact) {

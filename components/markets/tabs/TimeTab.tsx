@@ -34,6 +34,7 @@ export default function TimeTab({ ctx }: { ctx: TickerContext }) {
           showTWAP
           showCalendar
           symbol={symbol}
+          assetClass={ctx.assetClass === 'crypto' ? 'crypto' : 'equity'}
         />
       </div>
 
