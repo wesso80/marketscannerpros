@@ -73,6 +73,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: "/admin/trials", label: "Trials", icon: "🎁" },
     { href: "/admin/delete-requests", label: "Delete Requests", icon: "🗑️" },
     { href: "/admin/reporting", label: "Nasdaq Reporting", icon: "📋" },
+    { href: "/admin/quant", label: "Quant Terminal", icon: "🧠" },
   ];
 
   if (!isAuthed) {
