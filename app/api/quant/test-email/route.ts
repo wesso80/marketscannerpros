@@ -5,18 +5,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { isOperator } from '@/lib/quant/operatorAuth';
 import { sendAlertEmail } from '@/lib/email';
 import type { InternalAlert, PipelineResult } from '@/lib/quant/types';
 
 export const runtime = 'nodejs';
-
-const OPERATOR_EMAILS = (process.env.ADMIN_EMAILS || '')
-  .split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
-
-function isOperator(cid: string): boolean {
-  const lower = cid.toLowerCase();
-  return OPERATOR_EMAILS.some(email => lower === email || lower.endsWith(`_${email}`));
-}
 
 export async function GET(req: NextRequest) {
   const session = await getSessionFromCookie();
@@ -86,6 +79,7 @@ export async function GET(req: NextRequest) {
       symbolsScanned: 89,
       symbolsPassed: 12,
       alertsGenerated: 2,
+      timeframe: 'daily' as const,
       timestamp: new Date().toISOString(),
     },
   };
