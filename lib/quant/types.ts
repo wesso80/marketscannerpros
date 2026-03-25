@@ -71,6 +71,11 @@ export interface DiscoveryCandidate {
     mfi?: number;
     aroonUp?: number;
     aroonDown?: number;
+    willr?: number;
+    natr?: number;
+    ad?: number;
+    roc?: number;
+    bop?: number;
     price?: number;
     change?: number;
   };

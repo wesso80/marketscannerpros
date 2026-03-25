@@ -67,6 +67,11 @@ export interface IndicatorData {
   mfi14?: number;
   atrPercent14?: number;
   bbWidthPercent20?: number;
+  willr14?: number;
+  natr14?: number;
+  ad?: number;
+  roc12?: number;
+  bop?: number;
   inSqueeze?: boolean;
   squeezeStrength?: number;
   warmup?: IndicatorWarmupStatus;
@@ -203,6 +208,11 @@ async function fetchBarsAndIndicatorsFromAV(symbol: string): Promise<{
     mfi14: computed.mfi14,
     atrPercent14: computed.atrPercent14,
     bbWidthPercent20: computed.bbWidthPercent20,
+    willr14: computed.willr14,
+    natr14: computed.natr14,
+    ad: computed.ad,
+    roc12: computed.roc12,
+    bop: computed.bop,
     inSqueeze: squeeze?.inSqueeze ?? false,
     squeezeStrength: squeeze?.squeezeStrength ?? 0,
     warmup,
@@ -291,10 +301,14 @@ async function storeIndicators(ind: IndicatorData): Promise<void> {
         symbol, timeframe, rsi14, macd_line, macd_signal, macd_hist,
         ema9, ema20, ema50, ema200, sma20, sma50, sma200,
         atr14, adx14, plus_di, minus_di, stoch_k, stoch_d, cci20,
-        bb_upper, bb_middle, bb_lower, obv, vwap, mfi14, in_squeeze, squeeze_strength, warmup_json, computed_at
+        bb_upper, bb_middle, bb_lower, obv, vwap, mfi14, in_squeeze, squeeze_strength,
+        willr14, natr14, ad_line, roc12, bop,
+        warmup_json, computed_at
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-        $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29::jsonb, NOW()
+        $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28,
+        $29, $30, $31, $32, $33,
+        $34::jsonb, NOW()
       )
       ON CONFLICT (symbol, timeframe) DO UPDATE SET
         rsi14 = EXCLUDED.rsi14, macd_line = EXCLUDED.macd_line, macd_signal = EXCLUDED.macd_signal,
@@ -305,14 +319,21 @@ async function storeIndicators(ind: IndicatorData): Promise<void> {
         stoch_k = EXCLUDED.stoch_k, stoch_d = EXCLUDED.stoch_d, cci20 = EXCLUDED.cci20,
         bb_upper = EXCLUDED.bb_upper, bb_middle = EXCLUDED.bb_middle, bb_lower = EXCLUDED.bb_lower,
         obv = EXCLUDED.obv, vwap = EXCLUDED.vwap, mfi14 = EXCLUDED.mfi14, in_squeeze = EXCLUDED.in_squeeze,
-        squeeze_strength = EXCLUDED.squeeze_strength, warmup_json = EXCLUDED.warmup_json, computed_at = NOW()
+        squeeze_strength = EXCLUDED.squeeze_strength,
+        willr14 = EXCLUDED.willr14, natr14 = EXCLUDED.natr14, ad_line = EXCLUDED.ad_line,
+        roc12 = EXCLUDED.roc12, bop = EXCLUDED.bop,
+        warmup_json = EXCLUDED.warmup_json, computed_at = NOW()
     `, [
       ind.symbol, ind.timeframe, ind.rsi14, ind.macdLine, ind.macdSignal, ind.macdHist,
       ind.ema9, ind.ema20, ind.ema50, ind.ema200, ind.sma20, ind.sma50, ind.sma200,
       ind.atr14, ind.adx14, ind.plusDI, ind.minusDI, ind.stochK, ind.stochD, ind.cci20,
       ind.bbUpper, ind.bbMiddle, ind.bbLower, 
       ind.obv != null ? Math.round(ind.obv) : null, 
-      ind.vwap, ind.mfi14 ?? null, ind.inSqueeze, ind.squeezeStrength, ind.warmup ? JSON.stringify(ind.warmup) : null
+      ind.vwap, ind.mfi14 ?? null, ind.inSqueeze, ind.squeezeStrength,
+      ind.willr14 ?? null, ind.natr14 ?? null,
+      ind.ad != null ? Math.round(ind.ad) : null,
+      ind.roc12 ?? null, ind.bop ?? null,
+      ind.warmup ? JSON.stringify(ind.warmup) : null
     ]);
   } catch (err) {
     console.error('[onDemand] Failed to store indicators:', err);
@@ -430,6 +451,11 @@ export async function getIndicators(symbol: string, timeframe: string = 'daily')
         bbWidthPercent20: row.bb_width_percent20 != null ? parseFloat(row.bb_width_percent20) : undefined,
         inSqueeze: row.in_squeeze,
         squeezeStrength: row.squeeze_strength,
+        willr14: row.willr14 != null ? parseFloat(row.willr14) : undefined,
+        natr14: row.natr14 != null ? parseFloat(row.natr14) : undefined,
+        ad: row.ad_line != null ? parseFloat(row.ad_line) : undefined,
+        roc12: row.roc12 != null ? parseFloat(row.roc12) : undefined,
+        bop: row.bop != null ? parseFloat(row.bop) : undefined,
         warmup: row.warmup_json && typeof row.warmup_json === 'string'
           ? JSON.parse(row.warmup_json)
           : row.warmup_json || undefined,

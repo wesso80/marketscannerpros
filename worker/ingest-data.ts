@@ -869,10 +869,14 @@ async function upsertIndicators(symbol: string, timeframe: string, indicators: a
       symbol, timeframe, rsi14, macd_line, macd_signal, macd_hist,
       ema9, ema20, ema50, ema200, sma20, sma50, sma200,
       atr14, adx14, plus_di, minus_di, stoch_k, stoch_d, cci20,
-      bb_upper, bb_middle, bb_lower, obv, vwap, mfi14, in_squeeze, squeeze_strength, warmup_json, computed_at
+      bb_upper, bb_middle, bb_lower, obv, vwap, mfi14, in_squeeze, squeeze_strength,
+      willr14, natr14, ad_line, roc12, bop,
+      warmup_json, computed_at
     ) VALUES (
       $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-      $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29::jsonb, NOW()
+      $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28,
+      $29, $30, $31, $32, $33,
+      $34::jsonb, NOW()
     )
     ON CONFLICT (symbol, timeframe) DO UPDATE SET
       rsi14 = EXCLUDED.rsi14,
@@ -901,6 +905,11 @@ async function upsertIndicators(symbol: string, timeframe: string, indicators: a
       mfi14 = EXCLUDED.mfi14,
       in_squeeze = EXCLUDED.in_squeeze,
       squeeze_strength = EXCLUDED.squeeze_strength,
+      willr14 = EXCLUDED.willr14,
+      natr14 = EXCLUDED.natr14,
+      ad_line = EXCLUDED.ad_line,
+      roc12 = EXCLUDED.roc12,
+      bop = EXCLUDED.bop,
         warmup_json = EXCLUDED.warmup_json,
       computed_at = NOW()
   `, [
@@ -932,6 +941,11 @@ async function upsertIndicators(symbol: string, timeframe: string, indicators: a
     indicators.mfi14 ?? null,
     indicators.inSqueeze ?? null,
     indicators.squeezeStrength ?? null,
+    indicators.willr14 ?? null,
+    indicators.natr14 ?? null,
+    indicators.ad != null ? Math.round(indicators.ad) : null, // Round A/D to BIGINT
+    indicators.roc12 ?? null,
+    indicators.bop ?? null,
     indicators.warmup ? JSON.stringify(indicators.warmup) : null,
   ]);
 }

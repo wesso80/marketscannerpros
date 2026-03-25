@@ -38,6 +38,11 @@ export interface IndicatorResult {
   bbUpper?: number;
   bbMiddle?: number;
   bbLower?: number;
+  willr14?: number;
+  natr14?: number;
+  ad?: number;
+  roc12?: number;
+  bop?: number;
   obv?: number;
   vwap?: number;
   vwapIntraday?: number;
@@ -500,6 +505,72 @@ export function bbWidthPercent(closes: number[], period = 20, stdDevMult = 2): n
 }
 
 /**
+ * Williams %R — momentum oscillator measuring overbought/oversold.
+ * Returns value between -100 (oversold) and 0 (overbought).
+ */
+export function williamsR(bars: OHLCVBar[], period = 14): number | null {
+  if (bars.length < period) return null;
+  const slice = bars.slice(-period);
+  const highestHigh = Math.max(...slice.map(b => b.high));
+  const lowestLow = Math.min(...slice.map(b => b.low));
+  if (highestHigh === lowestLow) return -50;
+  const currentClose = bars[bars.length - 1].close;
+  return ((highestHigh - currentClose) / (highestHigh - lowestLow)) * -100;
+}
+
+/**
+ * Normalized ATR (NATR) — ATR as a percentage of close.
+ * Cross-asset comparable volatility measure (a $500 stock vs $5 stock).
+ */
+export function natr(bars: OHLCVBar[], period = 14): number | null {
+  const atrValue = atr(bars, period);
+  const lastClose = bars[bars.length - 1]?.close;
+  if (atrValue === null || !lastClose) return null;
+  return (atrValue / lastClose) * 100;
+}
+
+/**
+ * Chaikin Accumulation/Distribution Line.
+ * Volume-weighted cumulative measure of buying vs selling pressure.
+ */
+export function chaikinAD(bars: OHLCVBar[]): number | null {
+  if (bars.length < 2) return null;
+  let adLine = 0;
+  for (const bar of bars) {
+    const range = bar.high - bar.low;
+    if (range > 0) {
+      const clv = ((bar.close - bar.low) - (bar.high - bar.close)) / range;
+      adLine += clv * bar.volume;
+    }
+  }
+  return adLine;
+}
+
+/**
+ * Rate of Change (ROC) — percentage price change over n periods.
+ */
+export function roc(closes: number[], period = 12): number | null {
+  if (closes.length <= period) return null;
+  const current = closes[closes.length - 1];
+  const nAgo = closes[closes.length - 1 - period];
+  if (nAgo === 0) return null;
+  return ((current - nAgo) / nAgo) * 100;
+}
+
+/**
+ * Balance of Power (BOP) — measures buying vs selling pressure per bar.
+ * Returns the latest bar's BOP value: (close - open) / (high - low).
+ * Range: -1 (sellers dominate) to +1 (buyers dominate).
+ */
+export function balanceOfPower(bars: OHLCVBar[]): number | null {
+  if (bars.length < 1) return null;
+  const bar = bars[bars.length - 1];
+  const range = bar.high - bar.low;
+  if (range === 0) return 0;
+  return (bar.close - bar.open) / range;
+}
+
+/**
  * Calculate all indicators from OHLCV data
  * This is the main function used by the worker to compute everything at once
  */
@@ -597,6 +668,26 @@ export function calculateAllIndicators(bars: OHLCVBar[]): IndicatorResult {
   // OBV
   const obvValue = obv(bars);
   if (obvValue !== null) result.obv = obvValue;
+  
+  // Williams %R
+  const willrValue = williamsR(bars, 14);
+  if (willrValue !== null) result.willr14 = Math.round(willrValue * 100) / 100;
+
+  // NATR (Normalized ATR)
+  const natrValue = natr(bars, 14);
+  if (natrValue !== null) result.natr14 = Math.round(natrValue * 100) / 100;
+
+  // Chaikin A/D Line
+  const adValue = chaikinAD(bars);
+  if (adValue !== null) result.ad = Math.round(adValue);
+
+  // Rate of Change
+  const rocValue = roc(closes, 12);
+  if (rocValue !== null) result.roc12 = Math.round(rocValue * 100) / 100;
+
+  // Balance of Power
+  const bopValue = balanceOfPower(bars);
+  if (bopValue !== null) result.bop = Math.round(bopValue * 1000) / 1000;
   
   // VWAP
   const vwapValue = rollingVwap(bars);

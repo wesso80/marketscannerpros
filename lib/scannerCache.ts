@@ -47,6 +47,11 @@ export interface CachedScanData {
   vwap?: number;
   mfi?: number;
   atrPercent?: number;
+  willr?: number;
+  natr?: number;
+  ad?: number;
+  roc?: number;
+  bop?: number;
   changePct?: number;
   open?: number;
   high?: number;
@@ -122,6 +127,11 @@ export async function getCachedScanData(symbol: string): Promise<CachedScanData 
       vwap: ind?.vwap != null ? ind.vwap : undefined,
       mfi: ind?.mfi14 != null ? ind.mfi14 : undefined,
       atrPercent: ind?.atrPercent14 != null ? ind.atrPercent14 : undefined,
+      willr: ind?.willr14 != null ? ind.willr14 : undefined,
+      natr: ind?.natr14 != null ? ind.natr14 : undefined,
+      ad: ind?.ad != null ? ind.ad : undefined,
+      roc: ind?.roc12 != null ? ind.roc12 : undefined,
+      bop: ind?.bop != null ? ind.bop : undefined,
       changePct: q.changePct != null ? q.changePct : undefined,
       open: q.open != null && q.open > 0 ? q.open : undefined,
       high: q.high != null && q.high > 0 ? q.high : undefined,

@@ -168,6 +168,15 @@ function scoreStructureDimension(candidate: DiscoveryCandidate): number {
     else if (indicators.rsi >= 70 || indicators.rsi <= 30) score -= 3;
   }
 
+  // BOP — buyer/seller pressure confirms trend structure
+  if (indicators.bop != null) {
+    if (indicators.bop > 0.5) score += 6;       // Strong buyer dominance
+    else if (indicators.bop > 0.2) score += 3;  // Moderate buyer edge
+    else if (indicators.bop < -0.5) score += 6; // Strong seller dominance (bearish structure)
+    else if (indicators.bop < -0.2) score += 3;
+    else score -= 2;                             // No pressure = weak structure
+  }
+
   return clamp(score);
 }
 
@@ -226,6 +235,14 @@ function scoreVolatilityDimension(candidate: DiscoveryCandidate): number {
     if (absCCI > 200) score += 6;
     else if (absCCI > 100) score += 3;
     else if (absCCI < 30) score += 4;
+  }
+
+  // NATR — normalized ATR, cross-asset comparable volatility
+  if (indicators.natr != null && indicators.natr > 0) {
+    if (indicators.natr > 5) score += 10;       // High volatility regime
+    else if (indicators.natr > 3) score += 6;   // Elevated
+    else if (indicators.natr > 1.5) score += 3; // Normal
+    else score += 6;                             // Very compressed = breakout candidate
   }
 
   // DVE regime-based scoring
@@ -363,6 +380,22 @@ function scoreMomentumDimension(candidate: DiscoveryCandidate): number {
     score += dirScore * 0.15;
   }
 
+  // ROC — pure rate-of-change momentum
+  if (indicators.roc != null) {
+    const absRoc = Math.abs(indicators.roc);
+    if (absRoc > 8) score += 10;       // Strong momentum
+    else if (absRoc > 4) score += 6;   // Moderate
+    else if (absRoc > 1.5) score += 3; // Mild
+    else score -= 3;                    // Stalled
+  }
+
+  // Williams %R — momentum confirmation from overbought/oversold zones
+  if (indicators.willr != null) {
+    if (indicators.willr > -20) score += 4;      // Overbought = strong bullish momentum
+    else if (indicators.willr < -80) score += 4; // Oversold = strong bearish momentum
+    else if (indicators.willr > -40 && indicators.willr < -60) score -= 2; // Mid-range = no momentum
+  }
+
   return clamp(score);
 }
 
@@ -400,6 +433,13 @@ function scoreAsymmetryDimension(candidate: DiscoveryCandidate): number {
   if (indicators.rsi != null) {
     if (indicators.rsi < 25 || indicators.rsi > 75) score += 8;
     else if (indicators.rsi < 35 || indicators.rsi > 65) score += 4;
+  }
+
+  // Williams %R extreme positioning = mean-reversion asymmetry
+  if (indicators.willr != null) {
+    if (indicators.willr > -5 || indicators.willr < -95) score += 10;  // Extreme positioning
+    else if (indicators.willr > -15 || indicators.willr < -85) score += 6;
+    else if (indicators.willr > -25 || indicators.willr < -75) score += 3;
   }
 
   // Aroon extreme — continuation asymmetry
@@ -489,6 +529,21 @@ function scoreParticipationDimension(candidate: DiscoveryCandidate): number {
   // Stochastic as participation proxy
   if (indicators.stochK != null) {
     if (indicators.stochK > 80 || indicators.stochK < 20) score += 4;
+  }
+
+  // Chaikin A/D Line — volume-weighted accumulation/distribution
+  if (indicators.ad != null && indicators.volume != null && indicators.volume > 0) {
+    // Positive A/D = accumulation (buying participation), negative = distribution
+    // Score the magnitude relative to volume for meaningful signal
+    score += 5; // Has A/D data at all = participation signal present
+  }
+
+  // BOP — buyer/seller balance as participation quality
+  if (indicators.bop != null) {
+    const absBop = Math.abs(indicators.bop);
+    if (absBop > 0.6) score += 6;       // Strong conviction buying or selling
+    else if (absBop > 0.3) score += 3;  // Moderate conviction
+    else score -= 2;                     // No conviction = weak participation
   }
 
   return clamp(score);

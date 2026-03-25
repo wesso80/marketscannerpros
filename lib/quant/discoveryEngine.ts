@@ -183,6 +183,11 @@ function buildCandidateFromCache(
       mfi: data.mfi,
       aroonUp: data.aroonUp,
       aroonDown: data.aroonDown,
+      willr: data.willr,
+      natr: data.natr,
+      ad: data.ad,
+      roc: data.roc,
+      bop: data.bop,
       change: data.changePct,
     },
   };
