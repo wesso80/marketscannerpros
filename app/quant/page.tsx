@@ -42,6 +42,7 @@ interface ScanMeta {
   symbolsScanned: number;
   symbolsPassed: number;
   alertsGenerated: number;
+  timeframe: string;
   timestamp: string;
 }
 
@@ -98,6 +99,7 @@ export default function QuantTerminal() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [evidenceLoading, setEvidenceLoading] = useState(false);
+  const [timeframe, setTimeframe] = useState<'daily' | '1h' | '15min'>('daily');
 
   const runScan = useCallback(async (assetTypes?: string[]) => {
     setLoading(true);
@@ -106,7 +108,7 @@ export default function QuantTerminal() {
       const resp = await fetch('/api/quant/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ assetTypes }),
+        body: JSON.stringify({ assetTypes, timeframe }),
       });
       if (!resp.ok) {
         const data = await resp.json().catch(() => ({}));
@@ -119,7 +121,7 @@ export default function QuantTerminal() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [timeframe]);
 
   const loadEvidence = useCallback(async (symbol: string) => {
     setEvidenceLoading(true);
@@ -138,7 +140,24 @@ export default function QuantTerminal() {
   return (
     <div className="space-y-6">
       {/* ── Controls ── */}
-      <section className="flex items-center gap-3">
+      <section className="flex items-center gap-3 flex-wrap">
+        {/* Timeframe selector */}
+        <div className="flex items-center gap-1 border border-gray-700 rounded overflow-hidden">
+          {(['daily', '1h', '15min'] as const).map(tf => (
+            <button
+              key={tf}
+              onClick={() => setTimeframe(tf)}
+              className={`px-3 py-2 text-xs font-mono transition ${
+                timeframe === tf
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+              }`}
+            >
+              {tf === 'daily' ? 'DAILY' : tf === '1h' ? '1H' : '15MIN'}
+            </button>
+          ))}
+        </div>
+
         <button
           onClick={() => runScan()}
           disabled={loading}
@@ -162,7 +181,7 @@ export default function QuantTerminal() {
         </button>
         {result && (
           <span className="text-gray-500 text-xs font-mono ml-auto">
-            {result.meta.symbolsScanned} scanned · {result.meta.symbolsPassed} passed · {result.meta.alertsGenerated} alerts · {result.meta.scanDurationMs}ms
+            {result.meta.timeframe?.toUpperCase() ?? 'DAILY'} · {result.meta.symbolsScanned} scanned · {result.meta.symbolsPassed} passed · {result.meta.alertsGenerated} alerts · {result.meta.scanDurationMs}ms
           </span>
         )}
       </section>

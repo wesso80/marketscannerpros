@@ -55,6 +55,10 @@ export interface DiscoveryCandidate {
     vwap?: number;
     volume?: number;
     avgVolume?: number;
+    obv?: number;
+    mfi?: number;
+    aroonUp?: number;
+    aroonDown?: number;
     price?: number;
     change?: number;
   };

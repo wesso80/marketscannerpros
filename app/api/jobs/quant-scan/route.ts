@@ -38,15 +38,21 @@ async function runQuantScan(req: NextRequest) {
   try {
     push('Starting quant pipeline...');
 
-    // Determine asset types from query param (default: both)
+    // Determine asset types and timeframe from query params
     const url = new URL(req.url);
     const mode = url.searchParams.get('mode') || 'full';
+    const timeframeParam = url.searchParams.get('timeframe') || 'daily';
     const assetTypes: ('equity' | 'crypto')[] =
       mode === 'equity' ? ['equity'] :
       mode === 'crypto' ? ['crypto'] :
       ['equity', 'crypto'];
 
-    const config = { ...DEFAULT_QUANT_CONFIG, enabledAssetTypes: assetTypes };
+    const validTimeframes = ['daily', '1h', '15min'] as const;
+    const timeframe = validTimeframes.includes(timeframeParam as any)
+      ? (timeframeParam as 'daily' | '1h' | '15min')
+      : 'daily';
+
+    const config = { ...DEFAULT_QUANT_CONFIG, enabledAssetTypes: assetTypes, timeframe };
 
     // ── 1. Run pipeline ──────────────────────────────────────────────
     const result = await runPipeline(config);

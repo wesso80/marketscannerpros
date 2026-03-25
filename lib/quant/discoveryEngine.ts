@@ -44,6 +44,84 @@ export const CRYPTO_UNIVERSE = [
   'SUI', 'SEI', 'TIA', 'RUNE', 'STX', 'PENDLE', 'JUP', 'ONDO', 'PYTH',
 ];
 
+// ─── Derive DVE Regime from Available Indicators ────────────────────────────
+// Without close price arrays we can't compute true BBWP. Instead, we synthesize
+// a volatility regime from ATR%, ADX, CCI, Aroon, and Bollinger-width proxies.
+
+function deriveVolatilityRegime(data: CachedScanData): {
+  regime: string;
+  bbwpEstimate: number;
+  signal: string;
+  signalStrength: number;
+} {
+  const adx = data.adx ?? 0;
+  const atrPct = data.atrPercent ?? 0;
+  const cci = data.cci ?? 0;
+  const aroonUp = data.aroonUp ?? 50;
+  const aroonDown = data.aroonDown ?? 50;
+  const rsi = data.rsi ?? 50;
+  const stochK = data.stochK ?? 50;
+
+  // ── BBWP Estimate ──
+  // BBWP measures where current bandwidth sits in its percentile range.
+  // Proxy: combine ATR% magnitude + ADX + CCI volatility.
+  // Low ATR% + low ADX = compressed (low BBWP). High ATR% + high ADX = expanded (high BBWP).
+  let bbwpEstimate = 50;
+  // ATR% contribution: < 1% = compressed, > 4% = expanded
+  if (atrPct > 0) {
+    bbwpEstimate = Math.min(95, Math.max(5, atrPct * 18));
+  }
+  // ADX modulates: low ADX pulls toward compression, high pushes toward expansion
+  if (adx < 15) bbwpEstimate = Math.min(bbwpEstimate, bbwpEstimate * 0.7);
+  else if (adx > 35) bbwpEstimate = Math.max(bbwpEstimate, bbwpEstimate * 1.2);
+  // CCI extremes indicate expanded volatility
+  if (Math.abs(cci) > 150) bbwpEstimate = Math.min(95, bbwpEstimate + 10);
+  bbwpEstimate = Math.max(0, Math.min(100, bbwpEstimate));
+
+  // ── Regime Detection ──
+  let regime: string;
+  let signal = 'none';
+  let signalStrength = 0;
+
+  // Climax: extreme indicators + high volatility
+  if (adx > 40 && (Math.abs(cci) > 200 || rsi > 80 || rsi < 20) && atrPct > 3) {
+    regime = 'climax';
+    signalStrength = Math.min(100, adx + Math.abs(cci) * 0.1);
+    signal = rsi > 70 ? 'exhaustion_long' : rsi < 30 ? 'exhaustion_short' : 'climax';
+  }
+  // Expansion: strong trend + above-average volatility
+  else if (adx > 25 && atrPct > 1.5 && (aroonUp > 70 || aroonDown > 70)) {
+    regime = 'expansion';
+    signalStrength = Math.min(80, (adx - 25) * 2 + (atrPct - 1.5) * 10);
+    // Detect if expansion is directional
+    if (aroonUp > 80 && aroonDown < 30) signal = 'breakout_long';
+    else if (aroonDown > 80 && aroonUp < 30) signal = 'breakout_short';
+    else signal = 'trending';
+  }
+  // Compression: weak trend + low volatility
+  else if (adx < 20 && atrPct < 1.5 && Math.abs(aroonUp - aroonDown) < 30) {
+    regime = 'compression';
+    signalStrength = Math.min(70, (20 - adx) * 2 + (1.5 - atrPct) * 15);
+    // Stoch/RSI extremes in compression = potential breakout setup
+    if (stochK < 20 || stochK > 80) {
+      signal = 'compression_coil';
+      signalStrength += 15;
+    } else {
+      signal = 'range_bound';
+    }
+  }
+  // Neutral: moderate everything
+  else {
+    regime = 'neutral';
+    signalStrength = Math.max(0, adx * 0.5 + Math.abs(cci) * 0.05);
+    signal = adx > 20 ? 'mild_trend' : 'choppy';
+  }
+
+  signalStrength = Math.max(0, Math.min(100, signalStrength));
+
+  return { regime, bbwpEstimate, signal, signalStrength };
+}
+
 // ─── Build Discovery Candidate from cached scan data ────────────────────────
 
 function buildCandidateFromCache(
@@ -63,9 +141,15 @@ function buildCandidateFromCache(
       atr: data.atr,
       atrPercent: data.atrPercent,
       stochK: data.stochK,
+      stochD: data.stochD,
+      cci: data.cci,
       ema200: data.ema200,
       vwap: data.vwap,
       volume: data.volume,
+      obv: data.obv,
+      mfi: data.mfi,
+      aroonUp: data.aroonUp,
+      aroonDown: data.aroonDown,
     },
   };
 
@@ -95,11 +179,14 @@ function buildCandidateFromCache(
 
     const dirPressure = computeDirectionalPressure(dveInput);
 
+    // Derive meaningful DVE regime from available indicators instead of hardcoding 'neutral'
+    const derivedRegime = deriveVolatilityRegime(data);
+
     candidate.dve = {
-      bbwp: 0, // Not available without close series
-      regime: 'neutral',
-      signal: 'none',
-      signalStrength: 0,
+      bbwp: derivedRegime.bbwpEstimate,
+      regime: derivedRegime.regime,
+      signal: derivedRegime.signal,
+      signalStrength: derivedRegime.signalStrength,
       directionalBias: dirPressure.bias,
       directionalScore: dirPressure.score,
     };
