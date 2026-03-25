@@ -5,16 +5,20 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { isOperator } from '@/lib/quant/operatorAuth';
+import { isOperator, isAdminSecret } from '@/lib/quant/operatorAuth';
 import { sendAlertEmail } from '@/lib/email';
 import type { InternalAlert, PipelineResult } from '@/lib/quant/types';
 
 export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest) {
-  const session = await getSessionFromCookie();
-  if (!session || !isOperator(session.cid, session.workspaceId)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  // Auth gate: operators only (ms_auth cookie OR admin secret)
+  const adminAuth = isAdminSecret(req.headers.get('authorization'));
+  if (!adminAuth) {
+    const session = await getSessionFromCookie();
+    if (!session || !isOperator(session.cid, session.workspaceId)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
   }
 
   // Mock data that mimics a real PRIORITY alert

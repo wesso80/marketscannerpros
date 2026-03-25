@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { isOperator } from '@/lib/quant/operatorAuth';
+import { isOperator, isAdminSecret } from '@/lib/quant/operatorAuth';
 import { getBulkCachedScanData } from '@/lib/scannerCache';
 import { computeDirectionalPressure } from '@/lib/directionalVolatilityEngine';
 import { computeCapitalFlowEngine } from '@/lib/capitalFlowEngine';
@@ -20,9 +20,13 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ symbol: string }> },
 ) {
-  const session = await getSessionFromCookie();
-  if (!session || !isOperator(session.cid, session.workspaceId)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  // Auth gate: operators only (ms_auth cookie OR admin secret)
+  const adminAuth = isAdminSecret(req.headers.get('authorization'));
+  if (!adminAuth) {
+    const session = await getSessionFromCookie();
+    if (!session || !isOperator(session.cid, session.workspaceId)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
   }
 
   const { symbol } = await params;

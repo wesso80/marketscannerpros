@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { isOperator } from '@/lib/quant/operatorAuth';
+import { isOperator, isAdminSecret } from '@/lib/quant/operatorAuth';
 import { runPipeline, persistScanResult } from '@/lib/quant/orchestrator';
 import { sendQuantAlertEmail } from '@/lib/quant/alertMailer';
 import { DEFAULT_QUANT_CONFIG } from '@/lib/quant/types';
@@ -17,10 +17,13 @@ export const runtime = 'nodejs';
 export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
-  // Auth gate: operators only
-  const session = await getSessionFromCookie();
-  if (!session || !isOperator(session.cid, session.workspaceId)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  // Auth gate: operators only (ms_auth cookie OR admin secret)
+  const adminAuth = isAdminSecret(req.headers.get('authorization'));
+  if (!adminAuth) {
+    const session = await getSessionFromCookie();
+    if (!session || !isOperator(session.cid, session.workspaceId)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
   }
 
   try {

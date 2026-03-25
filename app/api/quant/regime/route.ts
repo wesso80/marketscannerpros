@@ -5,17 +5,21 @@
  * Returns the latest regime assessment without running the full pipeline.
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { isOperator } from '@/lib/quant/operatorAuth';
+import { isOperator, isAdminSecret } from '@/lib/quant/operatorAuth';
 import { computeUnifiedRegime, type RegimeSourceInputs } from '@/lib/quant/regimeEngine';
 
 export const runtime = 'nodejs';
 
-export async function GET() {
-  const session = await getSessionFromCookie();
-  if (!session || !isOperator(session.cid, session.workspaceId)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+export async function GET(req: NextRequest) {
+  // Auth gate: operators only (ms_auth cookie OR admin secret)
+  const adminAuth = isAdminSecret(req.headers.get('authorization'));
+  if (!adminAuth) {
+    const session = await getSessionFromCookie();
+    if (!session || !isOperator(session.cid, session.workspaceId)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
   }
 
   try {

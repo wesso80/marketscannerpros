@@ -10,6 +10,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { useAdmin } from '../layout';
 
 // ─── Types (client-side mirrors) ────────────────────────────────────────────
 
@@ -94,6 +95,7 @@ const REGIME_COLORS: Record<string, string> = {
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export default function QuantTerminal() {
+  const { secret } = useAdmin();
   const [result, setResult] = useState<PipelineResult | null>(null);
   const [evidence, setEvidence] = useState<EvidenceData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -107,7 +109,7 @@ export default function QuantTerminal() {
     try {
       const resp = await fetch('/api/quant/scan', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${secret}` },
         body: JSON.stringify({ assetTypes, timeframe }),
       });
       if (!resp.ok) {
@@ -121,12 +123,14 @@ export default function QuantTerminal() {
     } finally {
       setLoading(false);
     }
-  }, [timeframe]);
+  }, [timeframe, secret]);
 
   const loadEvidence = useCallback(async (symbol: string) => {
     setEvidenceLoading(true);
     try {
-      const resp = await fetch(`/api/quant/evidence/${encodeURIComponent(symbol)}`);
+      const resp = await fetch(`/api/quant/evidence/${encodeURIComponent(symbol)}`, {
+        headers: { 'Authorization': `Bearer ${secret}` },
+      });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json();
       setEvidence(data);
@@ -135,7 +139,7 @@ export default function QuantTerminal() {
     } finally {
       setEvidenceLoading(false);
     }
-  }, []);
+  }, [secret]);
 
   return (
     <div className="space-y-6">

@@ -5,18 +5,22 @@
  * Returns active alerts from the escalation engine + outcome stats.
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { isOperator } from '@/lib/quant/operatorAuth';
+import { isOperator, isAdminSecret } from '@/lib/quant/operatorAuth';
 import { getActiveAlerts } from '@/lib/quant/escalationEngine';
 import { getActiveLifecycles, getOutcomeStats } from '@/lib/quant/outcomeEngine';
 
 export const runtime = 'nodejs';
 
-export async function GET() {
-  const session = await getSessionFromCookie();
-  if (!session || !isOperator(session.cid, session.workspaceId)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+export async function GET(req: NextRequest) {
+  // Auth gate: operators only (ms_auth cookie OR admin secret)
+  const adminAuth = isAdminSecret(req.headers.get('authorization'));
+  if (!adminAuth) {
+    const session = await getSessionFromCookie();
+    if (!session || !isOperator(session.cid, session.workspaceId)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
   }
 
   try {
