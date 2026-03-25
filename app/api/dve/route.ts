@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 4. Detect asset class
-    const assetClass = detectAssetClass(symbol);
+    const assetClass = detectAssetClass(symbol, searchParams.get('type') || undefined);
 
     // 5. Fetch price + MPE in parallel (DVE needs historical data)
     const [priceData, mpeData] = await Promise.all([

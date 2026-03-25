@@ -682,14 +682,14 @@ export async function GET(request: NextRequest) {
     const avInterval = avIntervalMap[timeframe] || 'daily';
     const tfLabel = timeframe === '15m' ? '15m' : timeframe === '1h' ? '1H' : timeframe === 'weekly' ? '1W' : '1D';
 
-    // Check cache (include timeframe in key)
-    const cacheKey = `${symbol}_${timeframe}`;
+    const assetClass = detectAssetClass(symbol, searchParams.get('type') || undefined);
+
+    // Check cache (include timeframe + asset class in key)
+    const cacheKey = `${symbol}_${timeframe}_${assetClass}`;
     const cached = cache.get(cacheKey);
     if (cached && Date.now() - cached.ts < CACHE_TTL) {
       return NextResponse.json({ success: true, data: cached.data, cached: true });
     }
-
-    const assetClass = detectAssetClass(symbol);
 
     // Fetch core data in parallel — time confluence first, then MPE uses its data
     const [priceData, tcData, macroRegime] = await Promise.all([

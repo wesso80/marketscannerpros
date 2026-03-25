@@ -16,6 +16,19 @@ import type { RegimePriority, Verdict, LifecycleState } from '@/app/v2/_lib/type
 import { useCachedTopSymbols } from '@/hooks/useCachedTopSymbols';
 import { useRegisterPageData } from '@/lib/ai/pageContext';
 
+/** Client-safe copy of known crypto symbols for asset type detection */
+const CRYPTO_SET = new Set([
+  'BTC','ETH','XRP','SOL','ADA','DOGE','TRX','AVAX','LINK','DOT',
+  'MATIC','SHIB','LTC','BCH','NEAR','UNI','ATOM','XLM','ICP','HBAR',
+  'FIL','VET','IMX','APT','GRT','INJ','OP','THETA','FTM','RUNE',
+  'LDO','ALGO','XMR','AAVE','MKR','STX','EGLD','FLOW','AXS','SAND',
+  'EOS','XTZ','NEO','KAVA','CFX','MINA','SNX','CRV','DYDX','BLUR',
+  'AR','SUI','SEI','TIA','JUP','WIF','PEPE','BONK','FLOKI',
+  'PYTH','STRK','WLD','FET','RNDR','AGIX','OCEAN','TAO','ROSE',
+  'ZIL','IOTA','ZEC','DASH','BAT','ZRX','ENJ','MANA','GALA','APE',
+  'GMT','ARB','MAGIC','GMX','COMP','YFI','SUSHI','1INCH','BNB',
+]);
+
 /* ─── Dynamic imports: v1 deep-dive components ─── */
 const DeepAnalysis = dynamic(() => import('@/app/tools/deep-analysis/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Deep Analysis…</div> });
 const IntradayCharts = dynamic(() => import('@/app/tools/intraday-charts/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Charts…</div> });
@@ -89,6 +102,7 @@ export default function GoldenEggPage() {
   const [symbolInput, setSymbolInput] = useState('');
   const [timeframe, setTimeframe] = useState<ScanTimeframe>('daily');
   const [activeTab, setActiveTab] = useState<GETab>('Verdict');
+  const [assetType, setAssetType] = useState<'auto' | 'equity' | 'crypto'>('auto');
 
   // Quick-pick symbols from worker cache (falls back to defaults if cache empty)
   const cached = useCachedTopSymbols(5);
@@ -100,15 +114,20 @@ export default function GoldenEggPage() {
 
   const sym = selectedSymbol || 'AAPL';
 
+  // Resolve asset type: 'auto' uses detectAssetClass, otherwise user override
+  const resolvedType = assetType === 'auto' ? undefined : assetType;
+  const isCryptoSymbol = CRYPTO_SET.has(sym.toUpperCase());
+  const quoteType: 'stock' | 'crypto' = assetType === 'crypto' ? 'crypto' : assetType === 'equity' ? 'stock' : isCryptoSymbol ? 'crypto' : 'stock';
+
   // Ensure V2Context always reflects the resolved symbol so embedded tabs sync
   useEffect(() => {
     if (sym && !selectedSymbol) selectSymbol(sym);
   }, [sym, selectedSymbol, selectSymbol]);
 
   // Core data
-  const goldenEgg = useGoldenEgg(sym, timeframe);
-  const dve = useDVE(sym, timeframe);
-  const quote = useQuote(sym);
+  const goldenEgg = useGoldenEgg(sym, timeframe, resolvedType);
+  const dve = useDVE(sym, timeframe, resolvedType);
+  const quote = useQuote(sym, quoteType);
   const regime = useRegime();
 
   const ge = goldenEgg.data?.data;
@@ -175,6 +194,22 @@ export default function GoldenEggPage() {
             className="px-3 py-1.5 bg-[var(--msp-panel-2)] border border-[var(--msp-border)] rounded-lg text-sm text-white placeholder-slate-600 w-32 focus:border-emerald-500 focus:outline-none"
           />
           <button onClick={handleSymbolSubmit} className="px-3 py-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg text-xs hover:bg-emerald-500/30 transition-colors">Go</button>
+        </div>
+        {/* Asset type toggle — always visible for disambiguation */}
+        <div className="flex items-center gap-0 border border-[var(--msp-border)] rounded-lg overflow-hidden">
+          {(['auto', 'equity', 'crypto'] as const).map(t => (
+            <button
+              key={t}
+              onClick={() => setAssetType(t)}
+              className={`px-2.5 py-1.5 text-[10px] uppercase transition-colors ${
+                assetType === t
+                  ? 'bg-emerald-500/20 text-emerald-400'
+                  : 'text-slate-500 hover:bg-slate-800/60'
+              }`}
+            >
+              {t}
+            </button>
+          ))}
         </div>
         <div className="flex items-center gap-1 overflow-x-auto max-w-full">
           {quickSymbols.map((s: string) => (

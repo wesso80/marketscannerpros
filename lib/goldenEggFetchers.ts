@@ -32,7 +32,9 @@ export const CRYPTO_LIST = [
   'GMT','ARB','MAGIC','GMX','COMP','YFI','SUSHI','1INCH','BNB',
 ];
 
-export function detectAssetClass(symbol: string): 'equity' | 'crypto' | 'forex' {
+export function detectAssetClass(symbol: string, typeOverride?: string): 'equity' | 'crypto' | 'forex' {
+  if (typeOverride === 'equity') return 'equity';
+  if (typeOverride === 'crypto') return 'crypto';
   const s = symbol.toUpperCase();
   if (CRYPTO_LIST.includes(s) || s.endsWith('USDT') || s.endsWith('USD') && CRYPTO_LIST.some(c => s.startsWith(c))) return 'crypto';
   const fx = ['EUR','GBP','JPY','CHF','AUD','CAD','NZD'];
