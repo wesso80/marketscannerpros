@@ -1,5 +1,6 @@
 /**
  * Layer 6 — Outcome Engine (Memory / Learning Loop)
+ * @internal — NEVER import into user-facing components.
  *
  * Tracks the lifecycle of every signal from alert → outcome.
  * Records to DB for post-mortem analysis and weight adaptation.

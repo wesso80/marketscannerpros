@@ -1,5 +1,6 @@
 /**
  * Layer 4 — Permission Engine
+ * @internal — NEVER import into user-facing components.
  *
  * Adjudicates whether a scored candidate should be acted upon.
  * Uses hard gates (binary pass/fail) and soft gates (scored thresholds)
@@ -9,15 +10,20 @@
  *   MONITOR     — Fusion < threshold or regime conflicting
  *   READY       — All hard gates pass, soft gates partial
  *   GO          — All hard gates pass, strong soft gates
- *   PRIORITY_GO — All 8 dimensions above threshold simultaneously (rare)
+ *   PRIORITY_GO — All 9 dimensions above threshold simultaneously (rare)
  */
 
-import type { FusionScore, HardGate, PermissionLevel, PermissionResult, SoftGate, UnifiedRegimeState } from './types';
+import type { DiscoveryCandidate, FusionScore, HardGate, PermissionLevel, PermissionResult, SoftGate, UnifiedRegimeState } from './types';
 import { DEFAULT_QUANT_CONFIG } from './types';
+import { shouldBlockForCatalyst } from './catalystGate';
 
 // ─── Hard Gates (binary) ────────────────────────────────────────────────────
 
-function evaluateHardGates(score: FusionScore, regime: UnifiedRegimeState): HardGate[] {
+function evaluateHardGates(
+  score: FusionScore,
+  regime: UnifiedRegimeState,
+  candidate?: DiscoveryCandidate,
+): HardGate[] {
   const gates: HardGate[] = [];
 
   // 1. Regime clarity — must not be CONFLICTING with low confidence
@@ -67,12 +73,42 @@ function evaluateHardGates(score: FusionScore, regime: UnifiedRegimeState): Hard
       : `Fusion score: ${score.composite.toFixed(1)}`,
   });
 
+  // 6. Catalyst proximity — block if earnings within 2 days (equity only)
+  if (candidate?.catalystProximity) {
+    const blocked = shouldBlockForCatalyst(candidate.catalystProximity, 2);
+    gates.push({
+      name: 'catalyst_proximity',
+      passed: !blocked,
+      reason: blocked
+        ? `Earnings in ${candidate.catalystProximity.daysToEarnings} day(s) — too risky`
+        : candidate.catalystProximity.hasEarnings
+          ? `Earnings in ${candidate.catalystProximity.daysToEarnings} days (outside block window)`
+          : 'No imminent catalyst',
+    });
+  }
+
+  // 7. DVE exhaustion — block if exhaustion is extreme
+  if (candidate?.fullDve) {
+    const extremeExhaustion = candidate.fullDve.exhaustionLevel >= 85;
+    gates.push({
+      name: 'dve_exhaustion',
+      passed: !extremeExhaustion,
+      reason: extremeExhaustion
+        ? `Extreme exhaustion (${candidate.fullDve.exhaustionLevel}) — move likely spent`
+        : `Exhaustion: ${candidate.fullDve.exhaustionLabel} (${candidate.fullDve.exhaustionLevel})`,
+    });
+  }
+
   return gates;
 }
 
 // ─── Soft Gates (scored) ────────────────────────────────────────────────────
 
-function evaluateSoftGates(score: FusionScore, regime: UnifiedRegimeState): SoftGate[] {
+function evaluateSoftGates(
+  score: FusionScore,
+  regime: UnifiedRegimeState,
+  candidate?: DiscoveryCandidate,
+): SoftGate[] {
   const gates: SoftGate[] = [];
 
   // 1. Regime agreement (want ≥ 3 of 4 sources agreeing)
@@ -124,6 +160,32 @@ function evaluateSoftGates(score: FusionScore, regime: UnifiedRegimeState): Soft
     reason: `Participation: ${(partDim?.normalized ?? 0).toFixed(0)}`,
   });
 
+  // 6. Pressure alignment (V2) — MPE pressure supports the trade
+  const pressureDim = score.dimensions.find(d => d.name === 'pressure');
+  if (pressureDim) {
+    gates.push({
+      name: 'pressure_alignment',
+      score: pressureDim.normalized,
+      threshold: 50,
+      passed: pressureDim.normalized >= 50,
+      reason: `Pressure: ${pressureDim.normalized.toFixed(0)}`,
+    });
+  }
+
+  // 7. Trap risk (V2) — lower is better (penalizes false breakout risk)
+  if (candidate?.fullDve && candidate.fullDve.trapScore > 0) {
+    const trapSafe = candidate.fullDve.trapScore < 60;
+    gates.push({
+      name: 'trap_risk',
+      score: 100 - candidate.fullDve.trapScore, // Invert: high trap = low score
+      threshold: 40,
+      passed: trapSafe,
+      reason: trapSafe
+        ? `Trap risk low (${candidate.fullDve.trapScore})`
+        : `Elevated trap risk (${candidate.fullDve.trapScore}) — potential false breakout`,
+    });
+  }
+
   return gates;
 }
 
@@ -166,9 +228,10 @@ export function evaluatePermission(
   score: FusionScore,
   regime: UnifiedRegimeState,
   config = DEFAULT_QUANT_CONFIG,
+  candidate?: DiscoveryCandidate,
 ): PermissionResult {
-  const hardGates = evaluateHardGates(score, regime);
-  const softGates = evaluateSoftGates(score, regime);
+  const hardGates = evaluateHardGates(score, regime, candidate);
+  const softGates = evaluateSoftGates(score, regime, candidate);
   const level = adjudicatePermission(hardGates, softGates, score.composite, config);
 
   return {
@@ -194,9 +257,16 @@ export function evaluateAll(
   scores: FusionScore[],
   regime: UnifiedRegimeState,
   config = DEFAULT_QUANT_CONFIG,
+  candidates?: DiscoveryCandidate[],
 ): PermissionResult[] {
+  // Build symbol → candidate lookup for enriched gate data
+  const candidateMap = new Map<string, DiscoveryCandidate>();
+  if (candidates) {
+    for (const c of candidates) candidateMap.set(c.symbol, c);
+  }
+
   return scores
-    .map(s => evaluatePermission(s, regime, config))
+    .map(s => evaluatePermission(s, regime, config, candidateMap.get(s.symbol)))
     .filter(p => p.level !== 'BLOCK')
     .sort((a, b) => {
       const levelOrder: Record<PermissionLevel, number> = {

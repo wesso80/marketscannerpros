@@ -1,6 +1,7 @@
 /**
  * Quant Intelligence Layer — Core Type Definitions
  *
+ * @internal — NEVER import into user-facing components.
  * PRIVATE INTERNAL SYSTEM — not public-facing.
  * All types for the 6-layer fusion pipeline:
  *   Regime → Discovery → Fusion → Permission → Escalation → Memory
@@ -87,6 +88,57 @@ export interface DiscoveryCandidate {
     grade: string;
     score: number;
     recommendation: string;
+  };
+
+  // ─── Enhanced enrichment (V2) ──────────────────────────────────────────
+  /** Full 5-layer DVE (when available — BBWP, trap, exhaustion, projection) */
+  fullDve?: {
+    bbwp: number;
+    regime: string;
+    regimeConfidence: number;
+    signal: string;
+    signalStrength: number;
+    breakoutReadiness: number;  // 0-100
+    trapScore: number;          // 0-100 (higher = more trap risk)
+    exhaustionLevel: number;    // 0-100
+    exhaustionLabel: string;    // LOW | MODERATE | HIGH | EXTREME
+    phasePersistence?: {
+      continuationScore: number;
+      exitScore: number;
+      agePercentile: number;
+    };
+    projectedMovePct?: number;
+    projectedHitRate?: number;
+    flags: string[];
+  };
+  /** Time Confluence snapshot */
+  timeConfluence?: {
+    confluenceScore: number;     // 0-100
+    activeTFCount: number;
+    decompressionCount: number;
+    hotZoneActive: boolean;
+    nowImpact: string;           // low | medium | high | extreme
+    minutesToNextMajor: number;
+  };
+  /** Market Pressure Engine reading */
+  pressure?: {
+    composite: number;           // 0-100
+    direction: string;           // LONG | SHORT | NEUTRAL
+    alignment: number;           // 0-1
+    label: string;               // HIGH_PRESSURE | BUILDING | LOW_PRESSURE | NO_PRESSURE
+    components: {
+      time: number;
+      volatility: number;
+      liquidity: number;
+      options: number;
+    };
+  };
+  /** Catalyst proximity (earnings, SEC filings) — equity only */
+  catalystProximity?: {
+    hasEarnings: boolean;
+    daysToEarnings: number | null;
+    catalystType?: string;
+    severity?: string;
   };
 }
 
@@ -212,11 +264,14 @@ export interface PipelineResult {
     symbolsScanned: number;
     symbolsPassed: number;
     alertsGenerated: number;
+    timeframe: ScanTimeframe;
     timestamp: string;
   };
 }
 
 // ─── Operator Config ────────────────────────────────────────────────────────
+
+export type ScanTimeframe = 'daily' | '1h' | '15min';
 
 export interface QuantConfig {
   operatorEmails: string[];
@@ -225,6 +280,7 @@ export interface QuantConfig {
   cooldownMinutes: number;      // Per-symbol cooldown (default 240)
   maxAlertsPerScan: number;     // Cap alerts per pipeline run (default 10)
   enabledAssetTypes: ('equity' | 'crypto')[];
+  timeframe: ScanTimeframe;     // Bar timeframe: daily (default), 1h, or 15min
   regimeWeightProfiles: Record<MarketPhase, Record<string, number>>;
 }
 
@@ -235,34 +291,35 @@ export const DEFAULT_QUANT_CONFIG: QuantConfig = {
   cooldownMinutes: 240,
   maxAlertsPerScan: 10,
   enabledAssetTypes: ['equity', 'crypto'],
+  timeframe: 'daily',
   regimeWeightProfiles: {
     TREND_UP: {
-      regime: 0.10, structure: 0.15, volatility: 0.10, timing: 0.10,
-      momentum: 0.20, asymmetry: 0.15, participation: 0.10, freshness: 0.10,
+      regime: 0.08, structure: 0.13, volatility: 0.10, timing: 0.10,
+      momentum: 0.18, asymmetry: 0.13, participation: 0.08, freshness: 0.08, pressure: 0.12,
     },
     TREND_DOWN: {
-      regime: 0.10, structure: 0.15, volatility: 0.10, timing: 0.10,
-      momentum: 0.20, asymmetry: 0.15, participation: 0.10, freshness: 0.10,
+      regime: 0.08, structure: 0.13, volatility: 0.10, timing: 0.10,
+      momentum: 0.18, asymmetry: 0.13, participation: 0.08, freshness: 0.08, pressure: 0.12,
     },
     RANGE_COMPRESSION: {
-      regime: 0.15, structure: 0.10, volatility: 0.25, timing: 0.15,
-      momentum: 0.05, asymmetry: 0.10, participation: 0.10, freshness: 0.10,
+      regime: 0.12, structure: 0.08, volatility: 0.22, timing: 0.12,
+      momentum: 0.05, asymmetry: 0.08, participation: 0.08, freshness: 0.08, pressure: 0.17,
     },
     RANGE_NEUTRAL: {
-      regime: 0.10, structure: 0.15, volatility: 0.10, timing: 0.15,
-      momentum: 0.10, asymmetry: 0.15, participation: 0.15, freshness: 0.10,
+      regime: 0.08, structure: 0.12, volatility: 0.10, timing: 0.12,
+      momentum: 0.10, asymmetry: 0.13, participation: 0.12, freshness: 0.08, pressure: 0.15,
     },
     VOL_EXPANSION: {
-      regime: 0.15, structure: 0.10, volatility: 0.20, timing: 0.10,
-      momentum: 0.15, asymmetry: 0.10, participation: 0.10, freshness: 0.10,
+      regime: 0.12, structure: 0.08, volatility: 0.18, timing: 0.10,
+      momentum: 0.13, asymmetry: 0.10, participation: 0.08, freshness: 0.08, pressure: 0.13,
     },
     VOL_CLIMAX: {
-      regime: 0.20, structure: 0.05, volatility: 0.25, timing: 0.10,
-      momentum: 0.05, asymmetry: 0.15, participation: 0.10, freshness: 0.10,
+      regime: 0.18, structure: 0.05, volatility: 0.22, timing: 0.08,
+      momentum: 0.05, asymmetry: 0.12, participation: 0.08, freshness: 0.08, pressure: 0.14,
     },
     RISK_OFF: {
-      regime: 0.25, structure: 0.05, volatility: 0.20, timing: 0.10,
-      momentum: 0.05, asymmetry: 0.15, participation: 0.10, freshness: 0.10,
+      regime: 0.22, structure: 0.05, volatility: 0.18, timing: 0.08,
+      momentum: 0.05, asymmetry: 0.12, participation: 0.08, freshness: 0.08, pressure: 0.14,
     },
   },
 };

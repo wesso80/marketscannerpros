@@ -1,11 +1,13 @@
 /**
  * Quant Pipeline Orchestrator
+ * @internal — NEVER import into user-facing components.
  *
- * Master runner that executes the full 6-layer pipeline:
+ * Master runner that executes the enhanced pipeline:
  *   1. Regime Engine  → Unified regime state
- *   2. Discovery      → Raw candidates from all engines
- *   3. Fusion         → 8-dimension scoring per candidate
- *   4. Permission     → Hard/soft gate adjudication
+ *   2. Discovery      → Raw candidates (+ TC, MPE, catalyst enrichment)
+ *   3. Fusion         → 9-dimension scoring per candidate
+ *   3b. Correlation Dedup → Remove correlated duplicates
+ *   4. Permission     → Hard/soft gate adjudication (+ catalyst, exhaustion, trap)
  *   5. Escalation     → Alert generation with dedup + cooldown
  *   6. Outcome        → Signal lifecycle tracking (async, post-alert)
  *
@@ -19,6 +21,7 @@ import { runDiscovery, type DiscoveryOptions } from './discoveryEngine';
 import { fuseAll } from './fusionEngine';
 import { evaluateAll } from './permissionEngine';
 import { escalateAll, getActiveAlerts } from './escalationEngine';
+import { deduplicateCorrelated } from './correlationDedup';
 import { q as dbQuery } from '@/lib/db';
 
 // ─── Regime source builder ──────────────────────────────────────────────────
@@ -81,6 +84,7 @@ export async function runPipeline(
   // Layer 2: Discovery (run first to gather data for regime)
   const candidates = await runDiscovery({
     assetTypes: config.enabledAssetTypes,
+    timeframe: config.timeframe,
     ...discoveryOptions,
   });
 
@@ -88,11 +92,17 @@ export async function runPipeline(
   const regimeInputs = buildRegimeInputsFromCandidates(candidates);
   const regime = computeUnifiedRegime(regimeInputs);
 
-  // Layer 3: Fusion
-  const scored = fuseAll(candidates, regime);
+  // Layer 3: Fusion (9 dimensions including pressure)
+  const allScored = fuseAll(candidates, regime);
 
-  // Layer 4: Permission
-  const permitted = evaluateAll(scored, regime, config);
+  // Layer 3b: Correlation Dedup — remove correlated duplicates, keep best per group
+  const { kept: scored, removed: dedupRemoved } = deduplicateCorrelated(allScored);
+  if (dedupRemoved.length > 0) {
+    console.log(`[quant:orchestrator] Deduped ${dedupRemoved.length} correlated symbols: ${dedupRemoved.map(r => r.symbol).join(', ')}`);
+  }
+
+  // Layer 4: Permission (with candidate data for catalyst/exhaustion/trap gates)
+  const permitted = evaluateAll(scored, regime, config, candidates);
 
   // Layer 5: Escalation
   const alerts = escalateAll(permitted, scored, regime, config);
@@ -110,6 +120,7 @@ export async function runPipeline(
       symbolsScanned: candidates.length,
       symbolsPassed: permitted.length,
       alertsGenerated: alerts.length,
+      timeframe: config.timeframe ?? 'daily',
       timestamp: new Date().toISOString(),
     },
   };

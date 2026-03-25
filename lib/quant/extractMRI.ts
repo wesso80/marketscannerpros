@@ -1,5 +1,6 @@
 /**
  * Extract MRI (Market Regime Intel) — standalone callable wrapper
+ * @internal — NEVER import into user-facing components.
  *
  * PRIVATE INTERNAL — wraps the regime detection logic from
  * options-confluence-analyzer into a lightweight, independently callable function.

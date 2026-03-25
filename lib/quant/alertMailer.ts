@@ -1,5 +1,6 @@
 /**
  * Quant Alert Email Sender
+ * @internal — NEVER import into user-facing components.
  *
  * Sends operator email when ACTIONABLE or PRIORITY alerts fire.
  * Uses existing Resend infrastructure from lib/email.ts.

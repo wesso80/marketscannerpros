@@ -1,5 +1,6 @@
 /**
  * Layer 2 — Discovery Engine
+ * @internal — NEVER import into user-facing components.
  *
  * Multi-symbol scanner that pipes each candidate through available engines:
  *   - Scanner indicators (RSI, MACD, ADX, Stoch, etc.)
@@ -12,11 +13,15 @@
  * The orchestrator feeds these into the Fusion Engine next.
  */
 
-import type { DiscoveryCandidate } from './types';
+import type { DiscoveryCandidate, ScanTimeframe } from './types';
 import { getBulkCachedScanData, type CachedScanData } from '@/lib/scannerCache';
+import { getBulkIntradayScanData, type IntradayInterval } from './intradayFetcher';
 import { computeDirectionalPressure } from '@/lib/directionalVolatilityEngine';
 import { computeCapitalFlowEngine, type CapitalFlowInput } from '@/lib/capitalFlowEngine';
 import { computeInstitutionalFilter } from '@/lib/institutionalFilter';
+import { getTimeConfluenceState } from '@/lib/time-confluence';
+import { computeMarketPressure } from '@/lib/marketPressureEngine';
+import { checkCatalystProximity } from './catalystGate';
 
 // ─── Universe ───────────────────────────────────────────────────────────────
 
@@ -157,23 +162,30 @@ function buildCandidateFromCache(
 export interface DiscoveryOptions {
   assetTypes?: ('equity' | 'crypto')[];
   maxSymbols?: number;
+  timeframe?: ScanTimeframe;
 }
 
 export async function runDiscovery(
   options: DiscoveryOptions = {},
 ): Promise<DiscoveryCandidate[]> {
   const assetTypes = options.assetTypes ?? ['equity', 'crypto'];
+  const timeframe = options.timeframe ?? 'daily';
   const candidates: DiscoveryCandidate[] = [];
 
   for (const assetType of assetTypes) {
     const universe = assetType === 'equity' ? EQUITY_UNIVERSE : CRYPTO_UNIVERSE;
 
-    // Fetch cached scan data for all symbols
+    // Fetch data — intraday uses AV TIME_SERIES_INTRADAY (equity) or CRYPTO_INTRADAY (crypto)
     let cachedData: Map<string, CachedScanData>;
     try {
-      cachedData = await getBulkCachedScanData(universe);
+      if (timeframe !== 'daily') {
+        const interval: IntradayInterval = timeframe === '15min' ? '15min' : '60min';
+        cachedData = await getBulkIntradayScanData(universe, interval, assetType);
+      } else {
+        cachedData = await getBulkCachedScanData(universe);
+      }
     } catch {
-      console.warn(`[quant:discovery] Failed to fetch cached data for ${assetType}`);
+      console.warn(`[quant:discovery] Failed to fetch ${timeframe} data for ${assetType}`);
       continue;
     }
 
@@ -183,6 +195,82 @@ export async function runDiscovery(
 
       const candidate = buildCandidateFromCache(symbol, data, assetType);
       candidates.push(candidate);
+    }
+  }
+
+  // ─── V2 Enrichment Pass ─────────────────────────────────────────────────
+  // Time Confluence — computed once (purely time-based, no per-symbol data)
+  let tcSnapshot: DiscoveryCandidate['timeConfluence'];
+  try {
+    const tc = getTimeConfluenceState();
+    tcSnapshot = {
+      confluenceScore: tc.nowConfluenceScore ?? 0,
+      activeTFCount: tc.nowClosing?.length ?? 0,
+      decompressionCount: tc.decompressionCount ?? 0,
+      hotZoneActive: (tc.nowConfluenceScore ?? 0) >= 70,
+      nowImpact: tc.nowImpact ?? 'low',
+      minutesToNextMajor: tc.minutesToNextMajor ?? 999,
+    };
+  } catch {
+    // Time confluence unavailable — continue without it
+  }
+
+  // Market Pressure — per-symbol enrichment
+  for (const candidate of candidates) {
+    // Attach shared time confluence snapshot to every candidate
+    if (tcSnapshot) {
+      candidate.timeConfluence = tcSnapshot;
+    }
+
+    // MPE enrichment
+    try {
+      const mpeResult = computeMarketPressure({
+        symbol: candidate.symbol,
+        assetClass: candidate.assetType,
+        time: tcSnapshot ? {
+          confluenceScore: tcSnapshot.confluenceScore,
+          activeTFCount: tcSnapshot.activeTFCount,
+          hotZoneActive: tcSnapshot.hotZoneActive,
+        } : undefined,
+        volatility: candidate.indicators.atrPercent != null ? {
+          atrPercent: candidate.indicators.atrPercent,
+          adx: candidate.indicators.adx ?? 0,
+        } : undefined,
+      });
+      candidate.pressure = {
+        composite: mpeResult.composite,
+        direction: mpeResult.direction,
+        alignment: mpeResult.alignment,
+        label: mpeResult.label,
+        components: {
+          time: mpeResult.pressures.time.score,
+          volatility: mpeResult.pressures.volatility.score,
+          liquidity: mpeResult.pressures.liquidity.score,
+          options: mpeResult.pressures.options.score,
+        },
+      };
+    } catch {
+      // MPE enrichment failed — continue without it
+    }
+  }
+
+  // Catalyst proximity — equity only, batch check
+  const equitySymbols = candidates
+    .filter(c => c.assetType === 'equity')
+    .map(c => c.symbol);
+
+  if (equitySymbols.length > 0) {
+    try {
+      const catalystMap = await checkCatalystProximity(equitySymbols);
+      for (const candidate of candidates) {
+        if (candidate.assetType !== 'equity') continue;
+        const prox = catalystMap.get(candidate.symbol);
+        if (prox) {
+          candidate.catalystProximity = prox;
+        }
+      }
+    } catch {
+      // Catalyst check failed — continue without it
     }
   }
 

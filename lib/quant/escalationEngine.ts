@@ -1,5 +1,6 @@
 /**
  * Layer 5 — Escalation Engine
+ * @internal — NEVER import into user-facing components.
  *
  * Converts PermissionResults into actionable InternalAlerts with:
  *   - Tiered classification (WATCHLIST → INTERESTING → ACTIONABLE → PRIORITY)

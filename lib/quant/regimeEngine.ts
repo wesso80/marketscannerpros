@@ -1,5 +1,6 @@
 /**
  * Layer 1 — Unified Regime Engine
+ * @internal — NEVER import into user-facing components.
  *
  * Fuses regime signals from 4 independent sources:
  *   1. DVE (Directional Volatility Engine) — vol regime from BBWP

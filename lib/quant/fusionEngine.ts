@@ -1,19 +1,21 @@
 /**
  * Layer 3 — Fusion Engine
+ * @internal — NEVER import into user-facing components.
  *
  * Normalizes raw evidence from Discovery into 8 dimensions, applies
  * regime-adaptive weights, and produces a single composite FusionScore
  * per symbol. This is the core intelligence layer.
  *
- * 8 Dimensions:
+ * 9 Dimensions:
  *   1. Regime     — How clear and favorable is the current regime?
  *   2. Structure  — Trend structure quality (EMA stacking, ADX, HH/HL)
- *   3. Volatility — DVE regime + BBWP positioning
- *   4. Timing     — Time confluence / candle close alignment
+ *   3. Volatility — DVE regime + BBWP + trap/exhaustion/breakout
+ *   4. Timing     — Real fibonnaci time confluence (from TC engine)
  *   5. Momentum   — RSI, MACD, Stochastic alignment
  *   6. Asymmetry  — Risk:Reward positioning (distance to key levels)
  *   7. Participation — Volume, flow conviction, institutional grade
  *   8. Freshness  — Data recency and quality
+ *   9. Pressure   — Market Pressure Engine composite (time+vol+liq+options)
  */
 
 import type { DiscoveryCandidate, FusionDimension, FusionScore, MarketPhase, UnifiedRegimeState } from './types';
@@ -88,14 +90,87 @@ function scoreVolatilityDimension(candidate: DiscoveryCandidate): number {
     score = 25;
   }
 
+  // V2: Enhanced with full DVE data (trap, exhaustion, breakout)
+  if (candidate.fullDve) {
+    // Breakout readiness boosts score in compression
+    if (regime === 'compression' && candidate.fullDve.breakoutReadiness > 60) {
+      score += Math.min(15, (candidate.fullDve.breakoutReadiness - 60) * 0.4);
+    }
+    // Trap risk penalizes -- false breakout danger
+    if (candidate.fullDve.trapScore > 50) {
+      score -= Math.min(15, (candidate.fullDve.trapScore - 50) * 0.3);
+    }
+    // Exhaustion risk penalizes all phases
+    if (candidate.fullDve.exhaustionLevel > 60) {
+      score -= Math.min(20, (candidate.fullDve.exhaustionLevel - 60) * 0.5);
+    }
+  }
+
   return clamp(score);
 }
 
-function scoreTimingDimension(_candidate: DiscoveryCandidate): number {
-  // Time confluence requires real-time candle close data that the pipeline
-  // would inject externally. For now, return neutral baseline.
-  // The orchestrator can enrich this with computeTimeConfluenceV2 results.
-  return 50;
+function scoreTimingDimension(candidate: DiscoveryCandidate): number {
+  // V2: Real fibonacci time confluence scoring (when available)
+  // Falls back to indicator-based timing if TC data is missing.
+
+  if (candidate.timeConfluence) {
+    const tc = candidate.timeConfluence;
+    let score = 30; // baseline when TC is available
+
+    // Core: fibonacci confluence score (0-100) → primary signal
+    score += tc.confluenceScore * 0.4;
+
+    // Active timeframes — more = stronger timing edge
+    if (tc.activeTFCount >= 3) score += 15;
+    else if (tc.activeTFCount >= 2) score += 8;
+
+    // Decompression events happening = timing pressure releasing
+    if (tc.decompressionCount > 0) score += 10;
+
+    // Hot zone = extreme confluence, best timing possible
+    if (tc.hotZoneActive) score += 12;
+
+    // Impact level
+    if (tc.nowImpact === 'extreme') score += 10;
+    else if (tc.nowImpact === 'high') score += 6;
+    else if (tc.nowImpact === 'medium') score += 3;
+
+    // Proximity to next major event — closer = more pressure
+    if (tc.minutesToNextMajor < 15) score += 8;
+    else if (tc.minutesToNextMajor < 60) score += 4;
+
+    return clamp(score);
+  }
+
+  // Fallback: indicator-based timing (original V1 logic)
+  let score = 50;
+  const { indicators } = candidate;
+
+  if (indicators.stochK !== undefined) {
+    if (indicators.stochK < 25) score += 15;
+    else if (indicators.stochK < 40) score += 8;
+    else if (indicators.stochK > 75) score += 12;
+    else if (indicators.stochK > 60) score += 5;
+  }
+
+  if (indicators.macd?.histogram !== undefined) {
+    const hist = indicators.macd.histogram;
+    if (Math.abs(hist) > 0.5) score += 8;
+    else if (Math.abs(hist) > 0.2) score += 4;
+  }
+
+  if (indicators.vwap && indicators.price) {
+    const vwapDist = ((indicators.price - indicators.vwap) / indicators.vwap) * 100;
+    if (Math.abs(vwapDist) < 0.5) score += 10;
+    else if (Math.abs(vwapDist) < 1.5) score += 5;
+    else if (Math.abs(vwapDist) > 3) score -= 5;
+  }
+
+  if (candidate.dve && candidate.dve.directionalScore !== 0) {
+    score += Math.min(10, Math.abs(candidate.dve.directionalScore) * 0.1);
+  }
+
+  return clamp(score);
 }
 
 function scoreMomentumDimension(candidate: DiscoveryCandidate): number {
@@ -174,6 +249,29 @@ function scoreParticipationDimension(candidate: DiscoveryCandidate): number {
   return clamp(score);
 }
 
+function scorePressureDimension(candidate: DiscoveryCandidate): number {
+  // V2: Market Pressure Engine composite — how much total market pressure exists?
+  if (!candidate.pressure) return 50;
+
+  const { composite, alignment, direction } = candidate.pressure;
+  let score = composite; // MPE composite is already 0-100
+
+  // Alignment bonus — all pressure components agree on direction
+  if (alignment > 0.7) score += 10;
+  else if (alignment < 0.3) score -= 10;
+
+  // Directional pressure that agrees with candidate direction adds value
+  if (candidate.dve) {
+    const dveBullish = candidate.dve.directionalBias === 'bullish';
+    const pressureLong = direction === 'LONG';
+    if ((dveBullish && pressureLong) || (!dveBullish && !pressureLong && direction === 'SHORT')) {
+      score += 8; // DVE and pressure agree on direction
+    }
+  }
+
+  return clamp(score);
+}
+
 function scoreFreshnessDimension(candidate: DiscoveryCandidate): number {
   // Based on how recently the scan data was generated
   // Cached data is inherently delayed; penalize accordingly
@@ -232,6 +330,7 @@ export function fuseCandidate(
     { name: 'asymmetry', scorer: () => scoreAsymmetryDimension(candidate), source: 'capitalFlow' },
     { name: 'participation', scorer: () => scoreParticipationDimension(candidate), source: 'volume+filter+flow' },
     { name: 'freshness', scorer: () => scoreFreshnessDimension(candidate), source: 'meta' },
+    { name: 'pressure', scorer: () => scorePressureDimension(candidate), source: 'mpe' },
   ];
 
   const dimensions: FusionDimension[] = dimensionScorers.map(d => {
