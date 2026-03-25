@@ -23,6 +23,10 @@ import { getTimeConfluenceState } from '@/lib/time-confluence';
 import { computeMarketPressure } from '@/lib/marketPressureEngine';
 import { checkCatalystProximity } from './catalystGate';
 
+function clampNum(v: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, v));
+}
+
 // ─── Universe ───────────────────────────────────────────────────────────────
 
 export const EQUITY_UNIVERSE = [
@@ -63,20 +67,32 @@ function deriveVolatilityRegime(data: CachedScanData): {
   const stochK = data.stochK ?? 50;
 
   // ── BBWP Estimate ──
-  // BBWP measures where current bandwidth sits in its percentile range.
-  // Proxy: combine ATR% magnitude + ADX + CCI volatility.
-  // Low ATR% + low ADX = compressed (low BBWP). High ATR% + high ADX = expanded (high BBWP).
+  // If we have real Bollinger Bands, compute BB width % directly.
+  // BB width = (upper - lower) / middle * 100 — closely mirrors BBWP concept.
   let bbwpEstimate = 50;
-  // ATR% contribution: < 1% = compressed, > 4% = expanded
-  if (atrPct > 0) {
-    bbwpEstimate = Math.min(95, Math.max(5, atrPct * 18));
+  if (data.bbWidthPercent != null && data.bbWidthPercent > 0) {
+    // Real BBWP-like value from DB — map to 0-100 percentile range.
+    // Typical BB width %: 2-4% = tight, 5-10% = normal, >12% = wide.
+    bbwpEstimate = clampNum(data.bbWidthPercent * 5, 2, 98);
+  } else if (data.bbUpper != null && data.bbMiddle != null && data.bbLower != null && data.bbMiddle > 0) {
+    // Compute from raw Bollinger Bands
+    const bbWidth = ((data.bbUpper - data.bbLower) / data.bbMiddle) * 100;
+    bbwpEstimate = clampNum(bbWidth * 5, 2, 98);
+  } else if (atrPct > 0) {
+    // Fallback: proxy from ATR%
+    bbwpEstimate = clampNum(atrPct * 18, 5, 95);
   }
+
   // ADX modulates: low ADX pulls toward compression, high pushes toward expansion
   if (adx < 15) bbwpEstimate = Math.min(bbwpEstimate, bbwpEstimate * 0.7);
   else if (adx > 35) bbwpEstimate = Math.max(bbwpEstimate, bbwpEstimate * 1.2);
   // CCI extremes indicate expanded volatility
   if (Math.abs(cci) > 150) bbwpEstimate = Math.min(95, bbwpEstimate + 10);
-  bbwpEstimate = Math.max(0, Math.min(100, bbwpEstimate));
+  bbwpEstimate = clampNum(bbwpEstimate, 0, 100);
+
+  // ── Direct Squeeze Detection ──
+  // If worker already detected the squeeze, trust it directly.
+  const isSqueeze = data.inSqueeze === true;
 
   // ── Regime Detection ──
   let regime: string;
@@ -86,28 +102,31 @@ function deriveVolatilityRegime(data: CachedScanData): {
   // Climax: extreme indicators + high volatility
   if (adx > 40 && (Math.abs(cci) > 200 || rsi > 80 || rsi < 20) && atrPct > 3) {
     regime = 'climax';
-    signalStrength = Math.min(100, adx + Math.abs(cci) * 0.1);
+    signalStrength = clampNum(adx + Math.abs(cci) * 0.1, 0, 100);
     signal = rsi > 70 ? 'exhaustion_long' : rsi < 30 ? 'exhaustion_short' : 'climax';
   }
   // Expansion: strong trend + above-average volatility
   else if (adx > 25 && atrPct > 1.5 && (aroonUp > 70 || aroonDown > 70)) {
     regime = 'expansion';
-    signalStrength = Math.min(80, (adx - 25) * 2 + (atrPct - 1.5) * 10);
-    // Detect if expansion is directional
+    signalStrength = clampNum((adx - 25) * 2 + (atrPct - 1.5) * 10, 0, 80);
     if (aroonUp > 80 && aroonDown < 30) signal = 'breakout_long';
     else if (aroonDown > 80 && aroonUp < 30) signal = 'breakout_short';
     else signal = 'trending';
   }
-  // Compression: weak trend + low volatility
-  else if (adx < 20 && atrPct < 1.5 && Math.abs(aroonUp - aroonDown) < 30) {
+  // Compression: use real squeeze if available, or fallback to heuristics
+  else if (isSqueeze || (adx < 20 && atrPct < 1.5 && Math.abs(aroonUp - aroonDown) < 30)) {
     regime = 'compression';
-    signalStrength = Math.min(70, (20 - adx) * 2 + (1.5 - atrPct) * 15);
-    // Stoch/RSI extremes in compression = potential breakout setup
+    signalStrength = clampNum(
+      isSqueeze
+        ? 50 + (data.squeezeStrength ?? 0) * 10 // Real squeeze: high confidence
+        : (20 - adx) * 2 + (1.5 - atrPct) * 15,
+      0, 85,
+    );
     if (stochK < 20 || stochK > 80) {
       signal = 'compression_coil';
       signalStrength += 15;
     } else {
-      signal = 'range_bound';
+      signal = isSqueeze ? 'squeeze_active' : 'range_bound';
     }
   }
   // Neutral: moderate everything
@@ -117,7 +136,7 @@ function deriveVolatilityRegime(data: CachedScanData): {
     signal = adx > 20 ? 'mild_trend' : 'choppy';
   }
 
-  signalStrength = Math.max(0, Math.min(100, signalStrength));
+  signalStrength = clampNum(signalStrength, 0, 100);
 
   return { regime, bbwpEstimate, signal, signalStrength };
 }
@@ -143,13 +162,28 @@ function buildCandidateFromCache(
       stochK: data.stochK,
       stochD: data.stochD,
       cci: data.cci,
+      ema9: data.ema9,
+      ema20: data.ema20,
+      ema50: data.ema50,
       ema200: data.ema200,
+      sma20: data.sma20,
+      sma50: data.sma50,
+      sma200: data.sma200,
+      plusDI: data.plusDI,
+      minusDI: data.minusDI,
+      bbUpper: data.bbUpper,
+      bbMiddle: data.bbMiddle,
+      bbLower: data.bbLower,
+      bbWidthPercent: data.bbWidthPercent,
+      inSqueeze: data.inSqueeze,
+      squeezeStrength: data.squeezeStrength,
       vwap: data.vwap,
       volume: data.volume,
       obv: data.obv,
       mfi: data.mfi,
       aroonUp: data.aroonUp,
       aroonDown: data.aroonDown,
+      change: data.changePct,
     },
   };
 
@@ -162,8 +196,8 @@ function buildCandidateFromCache(
         macd: data.macdLine ?? null,
         macdSignal: data.macdSignal ?? null,
         macdHist: data.macdHist ?? null,
-        sma20: null,
-        sma50: null,
+        sma20: data.sma20 ?? null,
+        sma50: data.sma50 ?? null,
         adx: data.adx ?? null,
         atr: data.atr ?? null,
       },
@@ -172,7 +206,7 @@ function buildCandidateFromCache(
       price: {
         closes: [data.price],
         currentPrice: data.price,
-        changePct: 0,
+        changePct: data.changePct ?? 0,
         volume: data.volume ?? 0,
       },
     };

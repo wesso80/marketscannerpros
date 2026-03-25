@@ -20,19 +20,38 @@ export interface CachedScanData {
   macdLine: number;
   macdSignal: number;
   macdHist: number;
+  ema9?: number;
+  ema20?: number;
+  ema50?: number;
   ema200: number;
+  sma20?: number;
+  sma50?: number;
+  sma200?: number;
   atr: number;
   adx: number;
+  plusDI?: number;
+  minusDI?: number;
   stochK: number;
   stochD: number;
   cci: number;
   aroonUp: number;
   aroonDown: number;
+  bbUpper?: number;
+  bbMiddle?: number;
+  bbLower?: number;
+  bbWidthPercent?: number;
+  inSqueeze?: boolean;
+  squeezeStrength?: number;
   volume?: number;
   obv?: number;
   vwap?: number;
   mfi?: number;
   atrPercent?: number;
+  changePct?: number;
+  open?: number;
+  high?: number;
+  low?: number;
+  prevClose?: number;
   source: 'cache' | 'database' | 'unavailable';
 }
 
@@ -76,19 +95,38 @@ export async function getCachedScanData(symbol: string): Promise<CachedScanData 
       macdLine: safeNum(ind?.macdLine),
       macdSignal: safeNum(ind?.macdSignal),
       macdHist: safeNum(ind?.macdHist),
+      ema9: ind?.ema9 != null ? ind.ema9 : undefined,
+      ema20: ind?.ema20 != null ? ind.ema20 : undefined,
+      ema50: ind?.ema50 != null ? ind.ema50 : undefined,
       ema200: safeNum(ind?.ema200),
+      sma20: ind?.sma20 != null ? ind.sma20 : undefined,
+      sma50: ind?.sma50 != null ? ind.sma50 : undefined,
+      sma200: ind?.sma200 != null ? ind.sma200 : undefined,
       atr: safeNum(ind?.atr14),
       adx: safeNum(ind?.adx14),
+      plusDI: ind?.plusDI != null ? ind.plusDI : undefined,
+      minusDI: ind?.minusDI != null ? ind.minusDI : undefined,
       stochK: safeNum(ind?.stochK),
       stochD: safeNum(ind?.stochD),
       cci: safeNum(ind?.cci20),
       aroonUp: safeNum((ind as unknown as Record<string, number | undefined>)?.aroonUp),
       aroonDown: safeNum((ind as unknown as Record<string, number | undefined>)?.aroonDown),
+      bbUpper: ind?.bbUpper != null ? ind.bbUpper : undefined,
+      bbMiddle: ind?.bbMiddle != null ? ind.bbMiddle : undefined,
+      bbLower: ind?.bbLower != null ? ind.bbLower : undefined,
+      bbWidthPercent: ind?.bbWidthPercent20 != null ? ind.bbWidthPercent20 : undefined,
+      inSqueeze: ind?.inSqueeze != null ? ind.inSqueeze : undefined,
+      squeezeStrength: ind?.squeezeStrength != null ? ind.squeezeStrength : undefined,
       volume: Number.isFinite(q.volume) && q.volume > 0 ? q.volume : undefined,
       obv: ind?.obv != null ? ind.obv : undefined,
       vwap: ind?.vwap != null ? ind.vwap : undefined,
       mfi: ind?.mfi14 != null ? ind.mfi14 : undefined,
       atrPercent: ind?.atrPercent14 != null ? ind.atrPercent14 : undefined,
+      changePct: q.changePct != null ? q.changePct : undefined,
+      open: q.open != null && q.open > 0 ? q.open : undefined,
+      high: q.high != null && q.high > 0 ? q.high : undefined,
+      low: q.low != null && q.low > 0 ? q.low : undefined,
+      prevClose: q.prevClose != null && q.prevClose > 0 ? q.prevClose : undefined,
       source: q.source === 'live' ? 'database' : q.source,
     };
 

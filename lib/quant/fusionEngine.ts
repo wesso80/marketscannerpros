@@ -63,8 +63,15 @@ function scoreRegimeDimension(candidate: DiscoveryCandidate, regime: UnifiedRegi
 
   // ADX confirmation of regime clarity
   if (candidate.indicators.adx) {
-    if (candidate.indicators.adx > 30) score += 8; // Clear regime
-    else if (candidate.indicators.adx < 15) score -= 5; // No clear regime
+    if (candidate.indicators.adx > 30) score += 8;
+    else if (candidate.indicators.adx < 15) score -= 5;
+  }
+
+  // DI+/DI- — directional regime confirmation
+  if (candidate.indicators.plusDI != null && candidate.indicators.minusDI != null) {
+    const diSpread = Math.abs(candidate.indicators.plusDI - candidate.indicators.minusDI);
+    if (diSpread > 20) score += 6;  // Clear directional dominance supports regime
+    else if (diSpread < 5) score -= 4; // No directional edge — regime is murky
   }
 
   // Penalty for conflicting regime signals
@@ -77,57 +84,88 @@ function scoreStructureDimension(candidate: DiscoveryCandidate): number {
   let score = 40; // baseline — lower start so indicators push score up or down
   const { indicators } = candidate;
 
-  // Price vs EMA200 — trend position
-  if (indicators.price && indicators.ema200) {
+  // ── EMA Stacking — the gold standard of trend structure ──
+  // Full alignment: price > ema20 > ema50 > ema200 (bull) or reverse (bear)
+  if (indicators.price && indicators.ema20 && indicators.ema50 && indicators.ema200) {
+    const p = indicators.price;
+    const e20 = indicators.ema20;
+    const e50 = indicators.ema50;
+    const e200 = indicators.ema200;
+
+    const bullStack = p > e20 && e20 > e50 && e50 > e200;
+    const bearStack = p < e20 && e20 < e50 && e50 < e200;
+    const partialBull = p > e50 && e50 > e200;
+    const partialBear = p < e50 && e50 < e200;
+
+    if (bullStack || bearStack) score += 22;       // Perfect trend structure
+    else if (partialBull || partialBear) score += 12; // Partial alignment
+    else {
+      // Check for crossover setup (ema20 crossing ema50)
+      const crossDist = Math.abs(e20 - e50) / e50 * 100;
+      if (crossDist < 0.5) score += 6; // Near crossover — transitional structure
+      else score -= 3; // Tangled MAs
+    }
+
+    // Distance from price to ema20 — tight = orderly trend
+    const ema20Dist = Math.abs((p - e20) / e20) * 100;
+    if (ema20Dist < 1.5) score += 4; // Riding the 20EMA tightly
+    else if (ema20Dist > 8) score -= 4; // Extended from short MA
+  } else if (indicators.price && indicators.ema200) {
+    // Fallback: only EMA200 available
     const ema200Dist = ((indicators.price - indicators.ema200) / indicators.ema200) * 100;
     if (Math.abs(ema200Dist) > 2) {
-      score += 10; // Clear position relative to major MA
-      if (Math.abs(ema200Dist) > 8) score += 5; // Strong trend displacement
+      score += 10;
+      if (Math.abs(ema200Dist) > 8) score += 5;
     } else {
-      score -= 5; // Sitting right on EMA200 — no structure
+      score -= 5;
     }
+  }
+
+  // ── DI+/DI- — true directional strength ──
+  if (indicators.plusDI != null && indicators.minusDI != null) {
+    const diSpread = indicators.plusDI - indicators.minusDI;
+    const absSpread = Math.abs(diSpread);
+    if (absSpread > 20) score += 10;       // Strong directional dominance
+    else if (absSpread > 10) score += 5;   // Moderate
+    else score -= 3;                        // No directional edge
   }
 
   // ADX trend strength — primary structure indicator
   if (indicators.adx != null) {
-    if (indicators.adx > 35) score += 18;      // Very strong trend
-    else if (indicators.adx > 25) score += 12;  // Established trend
-    else if (indicators.adx > 18) score += 4;   // Weak trend
-    else score -= 8;                             // No trend structure
+    if (indicators.adx > 35) score += 14;
+    else if (indicators.adx > 25) score += 8;
+    else if (indicators.adx > 18) score += 3;
+    else score -= 6;
   }
 
   // Aroon crossover — directional structure quality
   if (indicators.aroonUp != null && indicators.aroonDown != null) {
     const aroonSpread = Math.abs(indicators.aroonUp - indicators.aroonDown);
-    if (aroonSpread > 60) score += 12;        // Strong directional structure
-    else if (aroonSpread > 30) score += 6;    // Moderate structure
-    else score -= 5;                           // No directional structure
-
-    // Aroon extreme: one at 100 = recent new high/low (strong structure)
-    if (indicators.aroonUp === 100 || indicators.aroonDown === 100) score += 5;
+    if (aroonSpread > 60) score += 8;
+    else if (aroonSpread > 30) score += 4;
+    else score -= 4;
+    if (indicators.aroonUp === 100 || indicators.aroonDown === 100) score += 3;
   }
 
   // MACD trend confirmation
   if (indicators.macd) {
-    // Signal line crossover direction confirms structure
     const macdAboveSignal = indicators.macd.value > indicators.macd.signal;
     const histStrength = Math.abs(indicators.macd.histogram);
-    if (histStrength > 0.5) score += 6;
-    else if (histStrength > 0.1) score += 3;
+    if (histStrength > 0.5) score += 4;
+    else if (histStrength > 0.1) score += 2;
 
-    // MACD and price trend agreement
     if (indicators.price && indicators.ema200) {
       const priceAboveEMA = indicators.price > indicators.ema200;
-      if (priceAboveEMA === macdAboveSignal) score += 5; // Agreement
-      else score -= 3; // Divergence = weakening structure
+      if (priceAboveEMA === macdAboveSignal) score += 4;
+      else score -= 3;
     }
   }
 
   // RSI trend zone confirmation
   if (indicators.rsi != null) {
-    if (indicators.rsi > 55 && indicators.rsi < 70) score += 4; // Bullish trend zone
-    else if (indicators.rsi < 45 && indicators.rsi > 30) score += 4; // Bearish trend zone
-    else if (indicators.rsi >= 70 || indicators.rsi <= 30) score -= 3; // Overextended
+    if (indicators.rsi > 55 && indicators.rsi < 70) score += 3;
+    else if (indicators.rsi < 45 && indicators.rsi > 30) score += 3;
+    else if (indicators.rsi >= 70 || indicators.rsi <= 30) score -= 3;
   }
 
   return clamp(score);
@@ -137,42 +175,65 @@ function scoreVolatilityDimension(candidate: DiscoveryCandidate): number {
   const { indicators } = candidate;
   let score = 40; // Lower baseline — let real data drive the score
 
-  // ATR% is the most direct volatility measure available
+  // ── Real Bollinger Bands — direct volatility measurement ──
+  if (indicators.bbUpper != null && indicators.bbLower != null && indicators.bbMiddle != null && indicators.bbMiddle > 0) {
+    const bbWidth = ((indicators.bbUpper - indicators.bbLower) / indicators.bbMiddle) * 100;
+
+    if (bbWidth < 3) score += 18;        // Very tight bands = strong compression → breakout candidate
+    else if (bbWidth < 5) score += 12;   // Moderate compression
+    else if (bbWidth < 8) score += 6;    // Normal bandwidth
+    else if (bbWidth > 15) score += 14;  // Very wide = expansion in progress
+    else if (bbWidth > 10) score += 8;   // Above-average expansion
+    else score += 3;
+
+    // Price position within bands — closer to edge = more pressure
+    if (indicators.price) {
+      const bandRange = indicators.bbUpper - indicators.bbLower;
+      if (bandRange > 0) {
+        const pctB = (indicators.price - indicators.bbLower) / bandRange; // 0 = at lower, 1 = at upper
+        if (pctB > 0.95 || pctB < 0.05) score += 8;  // Riding a band = directional pressure
+        else if (pctB > 0.85 || pctB < 0.15) score += 4;
+      }
+    }
+  }
+
+  // ── BB Width Percentile — BBWP proxy ──
+  if (indicators.bbWidthPercent != null) {
+    // Lower BBWP = more compressed historically = higher breakout probability
+    if (indicators.bbWidthPercent < 5) score += 10;
+    else if (indicators.bbWidthPercent < 10) score += 5;
+    else if (indicators.bbWidthPercent > 30) score += 6; // Wide = active expansion
+  }
+
+  // ── Direct Squeeze Detection ──
+  if (indicators.inSqueeze === true) {
+    score += 12; // Confirmed squeeze = high breakout potential
+    if (indicators.squeezeStrength != null && indicators.squeezeStrength > 2) {
+      score += Math.min(8, indicators.squeezeStrength * 2); // Stronger squeeze = tighter coil
+    }
+  }
+
+  // ATR% as additional volatility context
   if (indicators.atrPercent != null && indicators.atrPercent > 0) {
-    if (indicators.atrPercent > 4) score += 20;       // High volatility
-    else if (indicators.atrPercent > 2.5) score += 14; // Above average
-    else if (indicators.atrPercent > 1.5) score += 8;  // Normal
-    else if (indicators.atrPercent < 0.8) score += 15; // Very compressed — breakout potential
-    else score += 3;                                    // Low-normal
+    if (indicators.atrPercent > 4) score += 8;
+    else if (indicators.atrPercent > 2.5) score += 5;
+    else if (indicators.atrPercent < 0.8) score += 6; // Very compressed
   }
 
   // CCI extremes indicate volatility expansion
   if (indicators.cci != null) {
     const absCCI = Math.abs(indicators.cci);
-    if (absCCI > 200) score += 12;       // Extreme volatility
-    else if (absCCI > 100) score += 6;   // Elevated volatility
-    else if (absCCI < 30) score += 8;    // Very quiet — compression potential
+    if (absCCI > 200) score += 6;
+    else if (absCCI > 100) score += 3;
+    else if (absCCI < 30) score += 4;
   }
 
-  // DVE regime-based scoring (now uses real derived regime)
+  // DVE regime-based scoring
   if (candidate.dve) {
-    const { bbwp, regime, signalStrength } = candidate.dve;
-
-    if (regime === 'compression') {
-      score += 10 + Math.max(0, (30 - bbwp) * 0.3); // Low BBWP = tighter compression
-    } else if (regime === 'expansion') {
-      score += 8 + signalStrength * 0.12;
-    } else if (regime === 'climax') {
-      score -= 10; // Climax = dangerous vol environment
-    } else {
-      score += signalStrength * 0.08; // Neutral: mild credit for any signal
-    }
-  }
-
-  // ADX as trend-volatility proxy
-  if (indicators.adx != null) {
-    if (indicators.adx > 35) score += 5;  // High directional volatility
-    else if (indicators.adx < 12) score += 4; // Very low — compression
+    const { regime, signalStrength } = candidate.dve;
+    if (regime === 'compression') score += 6;
+    else if (regime === 'expansion') score += 5 + signalStrength * 0.08;
+    else if (regime === 'climax') score -= 10;
   }
 
   // V2: Enhanced with full DVE data (trap, exhaustion, breakout)
@@ -261,9 +322,9 @@ function scoreMomentumDimension(candidate: DiscoveryCandidate): number {
 
   // RSI
   if (indicators.rsi !== undefined) {
-    if (indicators.rsi > 50 && indicators.rsi < 70) score += 10; // Bullish momentum
-    else if (indicators.rsi < 50 && indicators.rsi > 30) score += 5; // Bearish momentum
-    else if (indicators.rsi > 70) score -= 5;  // Overextended
+    if (indicators.rsi > 50 && indicators.rsi < 70) score += 10;
+    else if (indicators.rsi < 50 && indicators.rsi > 30) score += 5;
+    else if (indicators.rsi > 70) score -= 5;
     else if (indicators.rsi < 30) score -= 5;
   }
 
@@ -275,8 +336,25 @@ function scoreMomentumDimension(candidate: DiscoveryCandidate): number {
   // Stochastic
   if (indicators.stochK !== undefined) {
     if (indicators.stochK > 20 && indicators.stochK < 80) score += 5;
-    if (indicators.stochK > 80) score -= 5; // Overbought
-    if (indicators.stochK < 20) score -= 5; // Oversold
+    if (indicators.stochK > 80) score -= 5;
+    if (indicators.stochK < 20) score -= 5;
+  }
+
+  // ── Change % — real price momentum ──
+  if (indicators.change != null) {
+    const absPct = Math.abs(indicators.change);
+    if (absPct > 5) score += 12;       // Big move = strong momentum
+    else if (absPct > 2) score += 8;   // Solid move
+    else if (absPct > 1) score += 4;   // Modest move
+    else if (absPct < 0.3) score -= 4; // Dead flat
+
+    // DI direction + price change agreement = confirmed momentum
+    if (indicators.plusDI != null && indicators.minusDI != null) {
+      const diBullish = indicators.plusDI > indicators.minusDI;
+      const priceUp = indicators.change > 0;
+      if (diBullish === priceUp) score += 6; // DI and price agree
+      else score -= 3; // Divergence
+    }
   }
 
   // Directional pressure from DVE
@@ -292,25 +370,43 @@ function scoreAsymmetryDimension(candidate: DiscoveryCandidate): number {
   let score = 40; // Lower baseline
   const { indicators } = candidate;
 
+  // ── Bollinger Band position — mean reversion asymmetry ──
+  if (indicators.bbUpper != null && indicators.bbLower != null && indicators.bbMiddle != null && indicators.price) {
+    const bandRange = indicators.bbUpper - indicators.bbLower;
+    if (bandRange > 0) {
+      const pctB = (indicators.price - indicators.bbLower) / bandRange;
+      // Far from middle in either direction = high asymmetry potential
+      if (pctB > 0.9) score += 14;        // Near upper band — short asymmetry
+      else if (pctB < 0.1) score += 14;   // Near lower band — long asymmetry
+      else if (pctB > 0.75 || pctB < 0.25) score += 8; // Moderate
+      else score += 2;                     // Mid-band = low asymmetry
+
+      // Distance from BB middle (mean) — larger = more reversion asymmetry
+      const distFromMid = Math.abs((indicators.price - indicators.bbMiddle) / indicators.bbMiddle) * 100;
+      if (distFromMid > 5) score += 6;
+      else if (distFromMid > 2) score += 3;
+    }
+  }
+
   // VWAP distance — mean reversion potential creates asymmetry
   if (indicators.vwap && indicators.price) {
     const vwapDist = Math.abs((indicators.price - indicators.vwap) / indicators.vwap) * 100;
-    if (vwapDist > 3) score += 15;       // Far from VWAP = high reversion asymmetry
-    else if (vwapDist > 1.5) score += 8; // Moderate distance
-    else score += 2;                      // Near VWAP
+    if (vwapDist > 3) score += 10;
+    else if (vwapDist > 1.5) score += 5;
+    else score += 2;
   }
 
-  // RSI extremes = reverse asymmetry (oversold = high long asymmetry, overbought = high short)
+  // RSI extremes = reverse asymmetry
   if (indicators.rsi != null) {
-    if (indicators.rsi < 25 || indicators.rsi > 75) score += 12; // Extreme = high asymmetry
-    else if (indicators.rsi < 35 || indicators.rsi > 65) score += 6; // Elevated
+    if (indicators.rsi < 25 || indicators.rsi > 75) score += 8;
+    else if (indicators.rsi < 35 || indicators.rsi > 65) score += 4;
   }
 
-  // Aroon extreme — one-sided trend creates continuation asymmetry
+  // Aroon extreme — continuation asymmetry
   if (indicators.aroonUp != null && indicators.aroonDown != null) {
     const aroonSpread = Math.abs(indicators.aroonUp - indicators.aroonDown);
-    if (aroonSpread > 70) score += 8; // Strong directional asymmetry
-    else if (aroonSpread > 40) score += 4;
+    if (aroonSpread > 70) score += 6;
+    else if (aroonSpread > 40) score += 3;
   }
 
   // Capital flow conviction indicates positional asymmetry
@@ -320,14 +416,14 @@ function scoreAsymmetryDimension(candidate: DiscoveryCandidate): number {
 
   // High gamma environment (equities) = strong magnet levels
   if (candidate.capitalFlow?.gammaState === 'Negative') {
-    score += 8; // Negative gamma = amplified moves
+    score += 8;
   }
 
-  // EMA200 displacement — further from major MA = more accumulated asymmetry
+  // EMA200 displacement
   if (indicators.price && indicators.ema200) {
     const ema200Pct = Math.abs((indicators.price - indicators.ema200) / indicators.ema200) * 100;
-    if (ema200Pct > 15) score += 6;     // Very far from MA
-    else if (ema200Pct > 5) score += 3; // Moderate displacement
+    if (ema200Pct > 15) score += 4;
+    else if (ema200Pct > 5) score += 2;
   }
 
   return clamp(score);
@@ -339,24 +435,23 @@ function scoreParticipationDimension(candidate: DiscoveryCandidate): number {
 
   // MFI (Money Flow Index) — combines price+volume, direct participation signal
   if (indicators.mfi != null) {
-    if (indicators.mfi > 70) score += 18;       // Strong money inflow = high participation
-    else if (indicators.mfi > 55) score += 12;  // Above average inflow
-    else if (indicators.mfi > 40) score += 6;   // Neutral-positive
-    else if (indicators.mfi < 25) score += 10;  // Extreme outflow = participation (just bearish)
-    else score += 2;                             // Weak participation
+    if (indicators.mfi > 70) score += 18;
+    else if (indicators.mfi > 55) score += 12;
+    else if (indicators.mfi > 40) score += 6;
+    else if (indicators.mfi < 25) score += 10;
+    else score += 2;
   }
 
   // OBV presence — on-balance volume shows cumulative participation
   if (indicators.obv != null && indicators.volume != null) {
-    // Can't compare to historical OBV, but nonzero volume = active trading
     if (indicators.volume > 0) score += 5;
   }
 
-  // Volume presence check (volume itself, even without avgVolume)
+  // Volume presence check
   if (indicators.volume != null) {
     if (indicators.volume > 0) score += 4;
   } else {
-    score -= 8; // No volume data at all
+    score -= 8;
   }
 
   // Volume vs average (when available)
@@ -366,6 +461,16 @@ function scoreParticipationDimension(candidate: DiscoveryCandidate): number {
     else if (volRatio > 1.5) score += 10;
     else if (volRatio > 1.0) score += 5;
     else score -= 5;
+  }
+
+  // ── Change % + Volume = conviction confirmation ──
+  if (indicators.change != null && indicators.volume != null && indicators.volume > 0) {
+    const absPct = Math.abs(indicators.change);
+    // Big move on volume = high participation
+    if (absPct > 3) score += 8;
+    else if (absPct > 1.5) score += 4;
+    // Small move on volume = accumulation/distribution (still participation)
+    else if (absPct < 0.5) score += 2;
   }
 
   // Institutional grade
@@ -381,9 +486,9 @@ function scoreParticipationDimension(candidate: DiscoveryCandidate): number {
     score += candidate.flowState.confidence * 0.12;
   }
 
-  // Stochastic as participation proxy — extreme readings = active trading
+  // Stochastic as participation proxy
   if (indicators.stochK != null) {
-    if (indicators.stochK > 80 || indicators.stochK < 20) score += 4; // Active extremes
+    if (indicators.stochK > 80 || indicators.stochK < 20) score += 4;
   }
 
   return clamp(score);
