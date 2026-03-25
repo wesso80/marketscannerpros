@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { isOperator } from '@/lib/quant/operatorAuth';
 import { getBulkCachedScanData } from '@/lib/scannerCache';
 import { computeDirectionalPressure } from '@/lib/directionalVolatilityEngine';
 import { computeCapitalFlowEngine } from '@/lib/capitalFlowEngine';
@@ -15,24 +16,12 @@ import { extractMRI } from '@/lib/quant/extractMRI';
 
 export const runtime = 'nodejs';
 
-const OPERATOR_EMAILS = (process.env.ADMIN_EMAILS || '')
-  .split(',')
-  .map(e => e.trim().toLowerCase())
-  .filter(Boolean);
-
-function isOperator(cid: string): boolean {
-  const lower = cid.toLowerCase();
-  return OPERATOR_EMAILS.some(email =>
-    lower === email || lower.endsWith(`_${email}`),
-  );
-}
-
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ symbol: string }> },
 ) {
   const session = await getSessionFromCookie();
-  if (!session || !isOperator(session.cid)) {
+  if (!session || !isOperator(session.cid, session.workspaceId)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 

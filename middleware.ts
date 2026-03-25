@@ -111,9 +111,28 @@ export async function middleware(req: NextRequest) {
     if (!quantSession) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
-    const quantCid = quantSession.cid || '';
-    const isQuantAdmin = ADMIN_CIDS.includes(quantCid) || ADMIN_EMAILS_MW.includes(quantCid.toLowerCase());
-    if (!isQuantAdmin) {
+    const quantCid = (quantSession.cid || '').toLowerCase();
+
+    // Check 1: CID matches prefixed admin email (trial_, free_, admin_)
+    const cidMatchesPrefixed = ADMIN_CIDS.some(id => quantCid === id);
+    // Check 2: CID is the plain admin email
+    const cidMatchesEmail = ADMIN_EMAILS_MW.includes(quantCid);
+    // Check 3: CID is a Stripe customer ID — verify workspace matches an admin email's workspace
+    let workspaceMatchesAdmin = false;
+    if (!cidMatchesPrefixed && !cidMatchesEmail && quantSession.workspaceId) {
+      for (const email of ADMIN_EMAILS_MW) {
+        const data = new TextEncoder().encode(email);
+        const hashBuf = await crypto.subtle.digest('SHA-256', data);
+        const hex = [...new Uint8Array(hashBuf)].map(b => b.toString(16).padStart(2, '0')).join('');
+        const wid = `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20,32)}`;
+        if (quantSession.workspaceId === wid) {
+          workspaceMatchesAdmin = true;
+          break;
+        }
+      }
+    }
+
+    if (!cidMatchesPrefixed && !cidMatchesEmail && !workspaceMatchesAdmin) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
     // Operator verified — proceed

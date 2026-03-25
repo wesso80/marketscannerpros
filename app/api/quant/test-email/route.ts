@@ -13,7 +13,7 @@ export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest) {
   const session = await getSessionFromCookie();
-  if (!session || !isOperator(session.cid)) {
+  if (!session || !isOperator(session.cid, session.workspaceId)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 

@@ -7,25 +7,14 @@
 
 import { NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { isOperator } from '@/lib/quant/operatorAuth';
 import { computeUnifiedRegime, type RegimeSourceInputs } from '@/lib/quant/regimeEngine';
 
 export const runtime = 'nodejs';
 
-const OPERATOR_EMAILS = (process.env.ADMIN_EMAILS || '')
-  .split(',')
-  .map(e => e.trim().toLowerCase())
-  .filter(Boolean);
-
-function isOperator(cid: string): boolean {
-  const lower = cid.toLowerCase();
-  return OPERATOR_EMAILS.some(email =>
-    lower === email || lower.endsWith(`_${email}`),
-  );
-}
-
 export async function GET() {
   const session = await getSessionFromCookie();
-  if (!session || !isOperator(session.cid)) {
+  if (!session || !isOperator(session.cid, session.workspaceId)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
