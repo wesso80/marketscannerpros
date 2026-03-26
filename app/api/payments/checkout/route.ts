@@ -15,21 +15,25 @@ const PRICE_IDS = {
   pro_trader_yearly: process.env.STRIPE_PRICE_PRO_TRADER_YEARLY || "",
 };
 
-const REFERRAL_CREDIT_CENTS = parseInt(process.env.REFERRAL_CREDIT_CENTS || '2000', 10);
-const REFERRAL_COUPON_ID = 'referral_20_off';
+// Plan-based referral discounts: $5 off Pro, $10 off Pro Trader
+const REFERRAL_DISCOUNTS: Record<string, { cents: number; couponId: string; label: string }> = {
+  pro:        { cents: 500,  couponId: 'referral_5_off',  label: 'Referral $5 Off' },
+  pro_trader: { cents: 1000, couponId: 'referral_10_off', label: 'Referral $10 Off' },
+};
 
-/** Get or create a reusable $20-off coupon for referral discounts */
-async function getOrCreateReferralCoupon(): Promise<string> {
+/** Get or create a plan-specific referral coupon */
+async function getOrCreateReferralCoupon(plan: string): Promise<string> {
+  const disc = REFERRAL_DISCOUNTS[plan] || REFERRAL_DISCOUNTS.pro;
   try {
-    const existing = await stripe.coupons.retrieve(REFERRAL_COUPON_ID);
+    const existing = await stripe.coupons.retrieve(disc.couponId);
     return existing.id;
   } catch {
     const coupon = await stripe.coupons.create({
-      id: REFERRAL_COUPON_ID,
-      amount_off: REFERRAL_CREDIT_CENTS,
+      id: disc.couponId,
+      amount_off: disc.cents,
       currency: 'usd',
       duration: 'once',
-      name: 'Referral $20 Off',
+      name: disc.label,
     });
     return coupon.id;
   }
@@ -87,12 +91,13 @@ export async function POST(req: NextRequest) {
           // Check if this price has a free trial — don't apply coupon during trials
           const price = await stripe.prices.retrieve(priceId);
           const hasTrial = (price.recurring?.trial_period_days ?? 0) > 0;
+          const disc = REFERRAL_DISCOUNTS[plan] || REFERRAL_DISCOUNTS.pro;
 
           if (hasTrial) {
             console.log(`[Checkout] Valid referral ${referralCode} — price has trial, coupon deferred until trial converts`);
           } else {
-            couponId = await getOrCreateReferralCoupon();
-            console.log(`[Checkout] Valid referral ${referralCode} — applying $${REFERRAL_CREDIT_CENTS / 100} coupon (no trial)`);
+            couponId = await getOrCreateReferralCoupon(plan);
+            console.log(`[Checkout] Valid referral ${referralCode} — applying $${disc.cents / 100} coupon for ${plan} (no trial)`);
           }
         }
       } catch (refErr) {

@@ -469,7 +469,7 @@ export default function AccountSection() {
                   </button>
                 </div>
                 <p className="mt-2 text-[11px] text-slate-500">
-                  Friends get $20 off at checkout. You earn $20 credit per conversion.
+                  Friends get $5 off Pro or $10 off Pro Trader at checkout. You earn matching credit per conversion.
                 </p>
               </Card>
 
@@ -589,7 +589,7 @@ export default function AccountSection() {
                 <div className="grid gap-3 md:grid-cols-3">
                   {[
                     { n: 1, title: 'Share Your Link', desc: 'Send your unique referral link to friends or post on social media.' },
-                    { n: 2, title: 'Friend Subscribes', desc: 'They get $20 off their first month. You earn $20 credit.' },
+                    { n: 2, title: 'Friend Subscribes', desc: 'They get $5 off Pro or $10 off Pro Trader. You earn matching credit.' },
                     { n: 3, title: 'Enter the Draw', desc: 'Every 5 qualifying referrals = 1 entry in the monthly $500 cash draw.' },
                   ].map(s => (
                     <div key={s.n} className="flex items-start gap-3">

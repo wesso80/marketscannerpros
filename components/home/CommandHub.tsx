@@ -145,11 +145,11 @@ export default function CommandHub() {
           <div className="flex items-center gap-2">
             <span className="text-xl">🎁</span>
             <span className="text-sm font-semibold text-emerald-400 sm:text-base">
-              Refer a Friend, Get $20 Off
+              Refer a Friend, Save on Your Plan
             </span>
           </div>
           <span className="text-xs text-slate-400 sm:text-sm">
-            Share your link — you both save $20 on your next month.
+            Share your link — your friend saves $5–$10 and you earn credit too.
           </span>
           <Link
             href="/tools/referrals"

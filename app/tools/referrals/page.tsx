@@ -89,7 +89,7 @@ export default function ReferralsPage() {
       <ToolsPageHeader
         badge="REFERRAL PROGRAM"
         title="Refer & Earn"
-        subtitle="Share your link — earn $20 credit for every friend who subscribes. They get $20 off at checkout too! 5 referrals = $500 draw entry."
+        subtitle="Share your link — earn credit for every friend who subscribes. They get $5 off Pro or $10 off Pro Trader at checkout! 5 referrals = $500 draw entry."
         icon="🎁"
         backHref="/tools"
       />
@@ -132,7 +132,7 @@ export default function ReferralsPage() {
                 </button>
               </div>
               <p className="mt-2 text-xs text-slate-500">
-                Share this link with friends. They get $20 off at checkout and you earn $20 credit.
+                Share this link with friends. They get $5 off Pro or $10 off Pro Trader at checkout and you earn matching credit.
               </p>
             </section>
 
@@ -267,7 +267,7 @@ export default function ReferralsPage() {
               <h2 className="text-sm font-bold text-slate-100 mb-3">How It Works</h2>
               <div className="grid gap-4 md:grid-cols-3">
                 <Step n={1} title="Share Your Link" desc="Send your unique referral link to friends or post it on social media." />
-                <Step n={2} title="Friend Subscribes" desc="They get $20 off their first month at checkout. You earn $20 credit on your next invoice." />
+                <Step n={2} title="Friend Subscribes" desc="They get $5 off Pro or $10 off Pro Trader at checkout. You earn matching credit on your next invoice." />
                 <Step n={3} title="Enter the Draw" desc="Every 5 qualifying referrals earns 1 entry in the monthly $500 cash draw." />
               </div>
             </section>

@@ -5,17 +5,17 @@
  */
 export const PLAN_PRICES = {
   pro: {
-    monthly: '$39.99',
-    yearly: '$399.99',
-    monthlyRaw: 39.99,
-    yearlyRaw: 399.99,
-    yearlySavings: '2 months free',
+    monthly: '$25',
+    yearly: '$225',
+    monthlyRaw: 25,
+    yearlyRaw: 225,
+    yearlySavings: 'Save $75/yr',
   },
   pro_trader: {
-    monthly: '$89.99',
-    yearly: '$899.99',
-    monthlyRaw: 89.99,
-    yearlyRaw: 899.99,
-    yearlySavings: '2 months free',
+    monthly: '$50',
+    yearly: '$550',
+    monthlyRaw: 50,
+    yearlyRaw: 550,
+    yearlySavings: '1 month free',
   },
 } as const;

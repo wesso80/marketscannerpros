@@ -154,8 +154,8 @@ AI & ANALYSIS
 SUBSCRIPTION TIERS
 -------------------
 - Free: Limited scans, 10 AI questions/day, basic features
-- Pro ($39.99/mo): Unlimited scanning, 50 AI questions/day, CSV exports
-- Pro Trader ($89.99/mo): Backtesting, trade journal, TradingView scripts, 50 AI questions/day powered by GPT-4.1
+- Pro ($25/mo or $225/yr): Unlimited scanning, 50 AI questions/day, CSV exports
+- Pro Trader ($50/mo or $550/yr): Backtesting, trade journal, TradingView scripts, 50 AI questions/day powered by GPT-4.1
 
 NAVIGATION RULES
 -----------------

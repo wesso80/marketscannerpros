@@ -126,8 +126,8 @@ export default function PricingPage() {
       id: "pro",
       name: "Pro",
       tagline: "Full scanning, market intelligence, and portfolio analytics for active traders.",
-      priceMonthly: 39.99,
-      priceYearly: 399.99,
+      priceMonthly: 25,
+      priceYearly: 225,
       cta: "Upgrade to Pro",
       subCta: "Cancel anytime",
       highlight: true,
@@ -167,8 +167,8 @@ export default function PricingPage() {
       id: "pro_trader",
       name: "Pro Trader",
       tagline: "Professional workflow with backtesting, derivatives, and decision engine.",
-      priceMonthly: 89.99,
-      priceYearly: 899.99,
+      priceMonthly: 50,
+      priceYearly: 550,
       cta: "Upgrade to Pro Trader",
       subCta: "Advanced tools for serious traders.",
       badge: "Best Value",
@@ -231,7 +231,7 @@ export default function PricingPage() {
         {/* Referral banner */}
         {referralCode && (
           <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-center text-sm text-emerald-300">
-            🎁 You were referred! You and your friend both get <strong>$20 off</strong> when you subscribe.
+            🎁 You were referred! Get <strong>$5 off Pro or $10 off Pro Trader</strong> when you subscribe.
           </div>
         )}
 
@@ -252,7 +252,7 @@ export default function PricingPage() {
             <span className={`text-xs ${cycle === "yearly" ? "text-white" : "text-white/50"}`}>
               Yearly{" "}
               <span className="ml-2 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-white/70">
-                Save 2 months
+                Save more yearly
               </span>
             </span>
           </div>

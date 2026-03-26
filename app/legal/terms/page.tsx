@@ -63,11 +63,11 @@ export default function TermsPage() {
 
       <h2 id="billing">3. Subscriptions &amp; Billing</h2>
       <ul>
-        <li>The App offers Free, Pro ($39.99/mo), and Pro Trader ($89.99/mo) plans.</li>
+        <li>The App offers Free, Pro ($25/mo or $225/yr), and Pro Trader ($50/mo or $550/yr) plans.</li>
         <li>Payments are processed securely via Stripe (web/Android) or Apple In-App Purchase (iOS).</li>
         <li><strong>Free Plan:</strong> Limited to Top 10 equities and Top 10 crypto symbols. Includes 5 AI questions per day with ARCA AI.</li>
-        <li><strong>Pro Plan ($39.99/mo):</strong> Unlimited symbol scanning, 50 AI questions per day, CSV exports, advanced charts, and priority support.</li>
-        <li><strong>Pro Trader Plan ($89.99/mo):</strong> Unlimited AI questions, real Alpha Vantage backtesting, TradingView script access, and premium support.</li>
+        <li><strong>Pro Plan ($25/mo or $225/yr):</strong> Unlimited symbol scanning, 50 AI questions per day, CSV exports, advanced charts, and priority support.</li>
+        <li><strong>Pro Trader Plan ($50/mo or $550/yr):</strong> Unlimited AI questions, real Alpha Vantage backtesting, TradingView script access, and premium support.</li>
         <li><strong>Email Required:</strong> You must provide a valid email address to verify trial eligibility.</li>
         <li><strong>One Trial Per Email:</strong> Each email address is eligible for one free trial per plan. Using multiple emails or accounts to access repeated trials is prohibited and may result in account termination.</li>
         <li>After your trial period ends, you will be automatically charged the monthly subscription fee unless you cancel before the trial expires.</li>

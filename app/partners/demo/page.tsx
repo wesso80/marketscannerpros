@@ -221,7 +221,7 @@ export default function PartnerDemoPage() {
               {
                 stat: "3",
                 label: "Subscription Tiers",
-                detail: "Free, Pro ($39.99/mo), Pro Trader ($89.99/mo) — ready for your pricing structure or bundled into your existing plans",
+                detail: "Free, Pro ($25/mo), Pro Trader ($50/mo) — ready for your pricing structure or bundled into your existing plans",
               },
               {
                 stat: "100%",
