@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
+import { hasProAccess } from '@/lib/entitlements';
 
 export const runtime = 'nodejs';
 
@@ -13,6 +14,9 @@ export async function POST(req: NextRequest) {
   const session = await getSessionFromCookie();
   if (!session?.workspaceId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (!hasProAccess(session.tier)) {
+    return NextResponse.json({ error: 'Pro subscription required' }, { status: 403 });
   }
 
   let body;

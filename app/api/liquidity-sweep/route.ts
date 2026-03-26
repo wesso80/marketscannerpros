@@ -15,6 +15,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { hasProAccess } from '@/lib/entitlements';
 import { getOHLC, COINGECKO_ID_MAP } from '@/lib/coingecko';
 import { avFetch } from '@/lib/avRateGovernor';
 import { atr as calcATR, OHLCVBar } from '@/lib/indicators';
@@ -305,6 +306,9 @@ export async function POST(req: NextRequest) {
   const session = await getSessionFromCookie();
   if (!session?.workspaceId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (!hasProAccess(session.tier)) {
+    return NextResponse.json({ error: 'Pro subscription required' }, { status: 403 });
   }
 
   let body: { type?: string } = {};

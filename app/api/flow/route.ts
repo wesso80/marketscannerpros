@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { hasProTraderAccess } from '@/lib/proTraderAccess';
 import { optionsAnalyzer } from '@/lib/options-confluence-analyzer';
 import { computeCapitalFlowEngine } from '@/lib/capitalFlowEngine';
 import { getDerivativesForSymbols, getGlobalData, getOHLC, resolveSymbolToId } from '@/lib/coingecko';
@@ -331,6 +332,9 @@ export async function GET(request: NextRequest) {
     const session = await getSessionFromCookie();
     if (!session?.workspaceId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+    if (!hasProTraderAccess(session.tier)) {
+      return NextResponse.json({ success: false, error: 'Pro Trader subscription required' }, { status: 403 });
     }
     const url = new URL(request.url);
     const symbol = (url.searchParams.get('symbol') || '').toUpperCase().trim();

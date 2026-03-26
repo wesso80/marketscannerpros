@@ -652,6 +652,7 @@ export function fuseCandidate(
 
   return {
     symbol: candidate.symbol,
+    assetType: candidate.assetType,
     composite,
     dimensions,
     regime: regime.phase,

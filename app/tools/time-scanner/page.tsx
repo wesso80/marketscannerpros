@@ -2,8 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import TimeGravityMapWidget from '@/components/TimeGravityMapWidget';
+import { useUserTier, canAccessTimeScanner } from '@/lib/useUserTier';
+import { UpgradeGate } from '@/app/v2/_components/ui';
 
 export default function TimeScannerPage() {
+  const { tier, isLoading } = useUserTier();
   const [symbol, setSymbol] = useState('BTCUSD');
   const [currentPrice, setCurrentPrice] = useState(0);
   const [symInput, setSymInput] = useState('BTCUSD');
@@ -28,6 +31,9 @@ export default function TimeScannerPage() {
     const s = symInput.trim().toUpperCase();
     if (s) setSymbol(s);
   };
+
+  if (isLoading) return <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black flex items-center justify-center"><div className="text-slate-500 text-sm">Loading…</div></div>;
+  if (!canAccessTimeScanner(tier)) return <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black flex items-center justify-center"><UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Time Scanner"><div /></UpgradeGate></div>;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black">

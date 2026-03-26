@@ -176,6 +176,7 @@ export interface FusionDimension {
 
 export interface FusionScore {
   symbol: string;
+  assetType?: 'equity' | 'crypto';
   composite: number;          // 0-100 final fusion score
   dimensions: FusionDimension[];
   regime: MarketPhase;

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
+import { hasProTraderAccess } from '@/lib/proTraderAccess';
 
 export async function GET() {
   try {
@@ -9,7 +10,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     // S6 FIX: Enforce Pro Trader tier for workflow endpoints
-    if (session.tier !== 'pro_trader') {
+    if (!hasProTraderAccess(session.tier)) {
       return NextResponse.json({ error: 'Pro Trader subscription required' }, { status: 403 });
     }
 

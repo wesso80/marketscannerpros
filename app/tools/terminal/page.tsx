@@ -300,12 +300,16 @@ export default function TerminalPage() {
 
       {/* -- CRYPTO TERMINAL ------------------------------------------------ */}
       {tab === 'Crypto' && (
-        <Suspense fallback={<div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminal…</div>}>
-          <CryptoTerminalView />
-        </Suspense>
+        <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Crypto Terminal">
+          <Suspense fallback={<div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminal…</div>}>
+            <CryptoTerminalView />
+          </Suspense>
+        </UpgradeGate>
       )}
       {/* -- FLOW ----------------------------------------------------- */}
       {tab === 'Flow' && (() => {
+        const proTraderRequired = tier !== 'pro_trader';
+        if (proTraderRequired) return <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Capital Flow Analysis"><div className="py-12" /></UpgradeGate>;
         const fd = flow.data?.data;
         const brain = fd?.brain_decision_v1;
         const rg = fd?.institutional_risk_governor;

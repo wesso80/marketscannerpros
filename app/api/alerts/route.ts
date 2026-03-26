@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
+import { hasProTraderAccess } from '@/lib/proTraderAccess';
+import { hasProAccess } from '@/lib/entitlements';
 
 /**
  * Price Alerts API
@@ -229,7 +231,7 @@ export async function POST(req: NextRequest) {
     
     // Smart alerts and multi-condition alerts require Pro or Pro Trader
     const tier = session.tier || 'free';
-    if (isSmartAlert && tier !== 'pro_trader') {
+    if (isSmartAlert && !hasProTraderAccess(tier)) {
       return NextResponse.json(
         { 
           error: 'Smart alerts require Pro Trader',
@@ -240,7 +242,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Multi-condition alerts require Pro or Pro Trader
-    if (isMultiCondition && tier === 'free') {
+    if (isMultiCondition && !hasProAccess(tier)) {
       return NextResponse.json(
         { 
           error: 'Multi-condition alerts require Pro',

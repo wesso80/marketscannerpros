@@ -51,7 +51,7 @@ interface PipelineResult {
   regime: RegimeState;
   alerts: Alert[];
   meta: ScanMeta;
-  scored: Array<{ symbol: string; composite: number; direction: string; dimensions: Array<{ name: string; normalized: number; weight: number }> }>;
+  scored: Array<{ symbol: string; assetType?: string; composite: number; direction: string; dimensions: Array<{ name: string; normalized: number; weight: number }> }>;
   permitted: Array<{ symbol: string; level: string; fusionScore: number }>;
 }
 
@@ -294,6 +294,7 @@ export default function QuantTerminal() {
               <thead>
                 <tr className="text-gray-600 border-b border-gray-800">
                   <th className="text-left py-2 px-2">Symbol</th>
+                  <th className="text-center py-2 px-2">Type</th>
                   <th className="text-right py-2 px-2">Fusion</th>
                   <th className="text-center py-2 px-2">Dir</th>
                   <th className="text-right py-2 px-2">Regime</th>
@@ -315,6 +316,11 @@ export default function QuantTerminal() {
                       onClick={() => loadEvidence(s.symbol)}
                     >
                       <td className="py-1.5 px-2 text-white">{s.symbol}</td>
+                      <td className="py-1.5 px-2 text-center">
+                        <span className={s.assetType === 'crypto' ? 'text-amber-400' : 'text-blue-400'}>
+                          {s.assetType === 'crypto' ? 'C' : 'E'}
+                        </span>
+                      </td>
                       <td className="py-1.5 px-2 text-right text-white">{s.composite.toFixed(1)}</td>
                       <td className="py-1.5 px-2 text-center">
                         <span className={s.direction === 'LONG' ? 'text-emerald-400' : s.direction === 'SHORT' ? 'text-red-400' : 'text-gray-500'}>

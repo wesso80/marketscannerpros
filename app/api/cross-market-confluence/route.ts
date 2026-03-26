@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSessionFromCookie } from '@/lib/auth';
+import { hasProTraderAccess } from '@/lib/proTraderAccess';
 import {
   computeCrossMarketConfluence,
   getCrossMarketSummary,
@@ -21,6 +23,14 @@ import { computeEquityTimeConfluence } from '@/lib/time/equityTimeConfluence';
  */
 export async function GET(request: NextRequest) {
   try {
+    const session = await getSessionFromCookie();
+    if (!session?.workspaceId) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+    if (!hasProTraderAccess(session.tier)) {
+      return NextResponse.json({ success: false, error: 'Pro Trader subscription required' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     const market = searchParams.get('market') || 'all';
     const summaryOnly = searchParams.get('summary') === 'true';
