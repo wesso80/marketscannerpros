@@ -399,7 +399,7 @@ export default function AccountPage() {
                 <h3 className="text-sm font-semibold text-emerald-400">Refer &amp; Earn</h3>
               </div>
               <p className="text-xs text-white/70">
-                Share your referral link — your friend gets <strong className="text-emerald-300">$20 off</strong> their first month and you earn <strong className="text-emerald-300">$20 credit</strong>.
+                Share your referral link — your friend gets <strong className="text-emerald-300">$5 off Pro or $10 off Pro Trader</strong> and you earn <strong className="text-emerald-300">matching credit</strong>.
               </p>
               <Link
                 href="/tools/referrals"
