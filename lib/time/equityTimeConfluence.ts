@@ -134,63 +134,52 @@ function getTradingDayIndex(date: Date): number {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// EQUITY CYCLES (same as crypto, but measured in trading sessions)
+// EQUITY CYCLES
+// Day-based cycles use trading day index; week-based close on Fridays.
+//
+// Tracked equity timeframes (12 total):
+//   Day-based: 1D, 2D, 4D, 8D, 11D, 22D
+//   Week-based: 1W, 2W, 3W, 4W, 6W, 12W
 // ═══════════════════════════════════════════════════════════════════════════
 
 export const EQUITY_CYCLES = {
-  // 1-7 Trading Day Micro Cycle
+  // Day-based (trading sessions)
   '1D': 1,
-  '2D': 2,
-  '3D': 3,   // Short-term trend reversals
-  '4D': 4,
-  '5D': 5,   // Weekly close (5 trading days = 1 week)
-  '6D': 6,
-  '7D': 7,
+  '2D': 2,    // 2-session cycle
+  '4D': 4,    // Mid-week structural node
+  '8D': 8,    // Extended pullback cycle
+  '11D': 11,  // Mid-month momentum cycle
+  '22D': 22,  // Full month cycle (~22 trading days)
   
-  // 8-30 Trading Day Monthly Cycle
-  '9D': 9,   // Harmonic trend acceleration
-  '10D': 10, // Momentum exhaustion window
-  '14D': 14, // Mid-cycle reset
-  '15D': 15, // 3-week cycle (~15 trading days)
-  '20D': 20, // Monthly close (~20 trading days = 4 weeks)
-  '21D': 21, // Full month cycle
-  
-  // 31-90 Trading Day Macro Rotation
-  '42D': 42, // 2-month cycle (~42 trading days)
-  '63D': 63, // Quarterly cycle (~63 trading days = 3 months)
-  
-  // 91-252 Trading Day Institutional Cycle
-  '126D': 126, // Half-year cycle (~126 trading days = 6 months)
-  '189D': 189, // 9-month cycle
-  '252D': 252, // Yearly cycle (~252 trading days = 1 year)
+  // Week-based (close on Friday at market close)
+  '1W': 5,    // 1 week = ~5 trading days
+  '2W': 10,   // Bi-weekly
+  '3W': 15,   // 3-week cycle
+  '4W': 20,   // Monthly (4 weeks)
+  '6W': 30,   // 6-week intermediate cycle
+  '12W': 60,  // Quarterly cycle (~12 weeks)
 } as const;
 
 /**
- * Cycle importance scores (same philosophy as crypto)
+ * Cycle importance scores
  */
 export const EQUITY_CYCLE_SCORES: Record<string, number> = {
   '1D': 0,
   '2D': 0,
-  '3D': 1,   // Short-term reversals
-  '4D': 0,
-  '5D': 2,   // Weekly close (major)
-  '6D': 0,
-  '7D': 1,
-  '9D': 1,
-  '10D': 1,
-  '14D': 1,  // Mid-cycle reset
-  '15D': 1,  // 3-week
-  '20D': 2,  // Monthly close
-  '21D': 2,  // Full month
-  '42D': 2,  // 2-month
-  '63D': 4,  // Quarterly close
-  '126D': 4, // Half-year
-  '189D': 2,
-  '252D': 5, // Yearly close
+  '4D': 1,    // Mid-week node
+  '8D': 1,    // Extended pullback
+  '11D': 1,   // Mid-month
+  '22D': 3,   // Full month cycle
+  '1W': 2,    // Weekly close (major)
+  '2W': 1,    // Bi-weekly
+  '3W': 1,    // 3-week
+  '4W': 2,    // Monthly close
+  '6W': 3,    // Intermediate cycle
+  '12W': 4,   // Quarterly close
 };
 
 export const HIGH_PRIORITY_EQUITY_CYCLES = [
-  '3D', '5D', '10D', '20D', '21D', '42D', '63D', '126D', '252D'
+  '4D', '22D', '1W', '4W', '6W', '12W'
 ] as const;
 
 export const EQUITY_CONFLUENCE_ALERT_THRESHOLD = 6;

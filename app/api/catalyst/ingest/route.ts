@@ -14,6 +14,7 @@ import { ingestSecFilings } from '@/lib/catalyst/secIngestion';
 import { ingestNews, setNewsProvider } from '@/lib/catalyst/newsProvider';
 import { AlphaVantageNewsProvider } from '@/lib/catalyst/alphaVantageNewsProvider';
 import { alertCronFailure } from '@/lib/opsAlerting';
+import { postToDiscord, buildResearchEmbed } from '@/lib/discord-bridge';
 import type { IngestionResult } from '@/lib/catalyst/types';
 
 // Register the live news provider
@@ -71,6 +72,15 @@ export async function POST(req: NextRequest) {
     const totalIngested = results.reduce((s, r) => s + r.ingested, 0);
     const totalSkipped = results.reduce((s, r) => s + r.skipped, 0);
     const totalErrors = results.reduce((s, r) => s + r.errors.length, 0);
+
+    // Post catalyst summary to Discord research channel
+    if (totalIngested > 0) {
+      postToDiscord('research', buildResearchEmbed({
+        title: `Catalyst Ingest: ${totalIngested} new events`,
+        summary: results.map(r => `${r.source}: ${r.ingested} ingested`).join(' | '),
+        impact: totalIngested >= 10 ? 'high' : totalIngested >= 3 ? 'medium' : 'low',
+      })).catch(() => {});
+    }
 
     return NextResponse.json({
       success: true,

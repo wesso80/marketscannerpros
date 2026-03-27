@@ -42,39 +42,25 @@ const CRYPTO_DAILY_CLOSE_UTC_MINUTE = 0;
 /**
  * Key crypto time confluence cycles (in days)
  * These are the highest-probability time nodes
+ *
+ * Tracked crypto timeframes (12 total):
+ *   Day-based: 1D, 2D, 3D, 5D, 6D, 9D, 10D, 15D, 18D, 30D
+ *   Month-based: 1M, 3M (handled separately via calendar boundaries)
  */
 export const CRYPTO_CYCLES = {
-  // 1-7 Day Micro Cycle
+  // Micro Cycle (1-6D)
   '1D': 1,
   '2D': 2,
   '3D': 3,   // Short-term trend reversals
-  '4D': 4,
   '5D': 5,   // Breakout continuation
-  '6D': 6,
-  '7D': 7,   // Weekly close (major structural reset)
+  '6D': 6,   // Harmonic expansion
   
-  // 8-30 Day Monthly Cycle
+  // Extended Cycle (9-30D)
   '9D': 9,   // Harmonic trend acceleration
   '10D': 10, // Momentum exhaustion window
-  '14D': 14, // Mid-cycle reset (RSI style)
   '15D': 15, // Half-month liquidity pivot
-  '20D': 20, // Institutional positioning window
-  '21D': 21, // 3-week cycle (important)
+  '18D': 18, // Mid-month structural node
   '30D': 30, // Monthly close
-  
-  // 31-90 Day Macro Rotation
-  '45D': 45, // Momentum expansion
-  '60D': 60, // 2-month cycle reset
-  '72D': 72, // Harmonic cycle (Gann style)
-  '90D': 90, // Quarterly close
-  
-  // 91-365 Day Institutional Cycle
-  '120D': 120, // 4-month trend cycle
-  '180D': 180, // Half-year macro pivot
-  '240D': 240, // Structural trend compression
-  '270D': 270, // Expansion window
-  '300D': 300, // Late cycle exhaustion
-  '365D': 365, // Yearly close
 } as const;
 
 /**
@@ -85,27 +71,13 @@ export const CYCLE_SCORES: Record<string, number> = {
   '1D': 0,
   '2D': 0,
   '3D': 1,   // Short-term trend reversals
-  '4D': 0,
   '5D': 1,   // Breakout continuation
   '6D': 0,
-  '7D': 2,   // Weekly structural reset
-  '9D': 1,
-  '10D': 1,
-  '14D': 1,  // Mid-cycle reset
-  '15D': 1,
-  '20D': 1,
-  '21D': 2,  // 3-week cycle
+  '9D': 1,   // Harmonic acceleration
+  '10D': 1,  // Momentum exhaustion
+  '15D': 2,  // Half-month pivot
+  '18D': 1,  // Mid-month node
   '30D': 3,  // Monthly close
-  '45D': 2,  // Momentum expansion
-  '60D': 2,  // 2-month reset
-  '72D': 1,
-  '90D': 4,  // Quarterly close
-  '120D': 2,
-  '180D': 4, // Half-year pivot
-  '240D': 2,
-  '270D': 2,
-  '300D': 2,
-  '365D': 5, // Yearly close
 };
 
 /**
@@ -113,7 +85,7 @@ export const CYCLE_SCORES: Record<string, number> = {
  * These cycles often mark major market turning points
  */
 export const HIGH_PRIORITY_CYCLES = [
-  '3D', '5D', '7D', '14D', '21D', '30D', '45D', '60D', '90D', '180D', '365D'
+  '3D', '5D', '10D', '15D', '18D', '30D'
 ] as const;
 
 /**

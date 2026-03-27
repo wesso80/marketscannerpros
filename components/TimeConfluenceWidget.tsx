@@ -751,14 +751,21 @@ export default function TimeConfluenceWidget({
                 MACRO TIMEFRAME GUIDE
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100px, 100%), 1fr))', gap: '0.5rem' }}>
-                {[
-                  { label: 'Daily', days: '1', color: '#64748B' },
-                  { label: 'Weekly', days: '5', color: 'var(--msp-accent)' },
-                  { label: 'Bi-weekly', days: '10', color: 'var(--msp-accent)' },
-                  { label: '3-Week', days: '15', color: 'var(--msp-muted)' },
-                  { label: 'Monthly', days: '21', color: '#F59E0B' },
-                  { label: 'Quarterly', days: '63', color: '#EF4444' },
-                ].map((tf) => (
+                {(assetClass === 'crypto' ? [
+                  { label: '1D', days: '1', color: '#64748B' },
+                  { label: '3D', days: '3', color: 'var(--msp-accent)' },
+                  { label: '10D', days: '10', color: 'var(--msp-accent)' },
+                  { label: '18D', days: '18', color: 'var(--msp-muted)' },
+                  { label: '30D', days: '30', color: '#F59E0B' },
+                  { label: '3M', days: 'Q', color: '#EF4444' },
+                ] : [
+                  { label: '1D', days: '1', color: '#64748B' },
+                  { label: '4D', days: '4', color: 'var(--msp-accent)' },
+                  { label: '22D', days: '22', color: 'var(--msp-accent)' },
+                  { label: '1W', days: '5', color: 'var(--msp-muted)' },
+                  { label: '4W', days: '~20', color: '#F59E0B' },
+                  { label: '12W', days: '~60', color: '#EF4444' },
+                ]).map((tf) => (
                   <div
                     key={tf.label}
                     style={{

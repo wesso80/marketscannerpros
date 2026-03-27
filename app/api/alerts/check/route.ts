@@ -5,6 +5,7 @@ import { sendAlertEmail } from '@/lib/email';
 import { sendPushToUser, PushTemplates } from '@/lib/pushServer';
 import { getPriceBySymbol } from '@/lib/coingecko';
 import { avTakeToken } from '@/lib/avRateGovernor';
+import { postToDiscord, buildAlertEmbed } from '@/lib/discord-bridge';
 
 /**
  * Alert Price Checker
@@ -343,6 +344,13 @@ async function triggerAlert(alert: Alert, triggerPrice: number) {
       console.error(`Failed to send push notification:`, pushError);
     }
   }
+
+  // Post to Discord bridge (msp-alerts channel)
+  postToDiscord('msp-alerts', buildAlertEmbed({
+    symbol: alert.symbol,
+    condition: conditionMet,
+    triggeredAt: new Date().toISOString(),
+  })).catch(() => {});
 
   console.log(`🔔 Alert triggered: ${alert.name || alert.symbol} - ${conditionMet}`);
 }

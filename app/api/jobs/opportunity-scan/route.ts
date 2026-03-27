@@ -23,6 +23,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { verifyCronAuth, verifyAdminAuth } from '@/lib/adminAuth';
 import { alertCronFailure } from '@/lib/opsAlerting';
+import { postToDiscord, buildScannerEmbed, buildGoldenEggEmbed } from '@/lib/discord-bridge';
 import {
   computeEdgeProfile,
   MIN_SAMPLE_SIZE,
@@ -283,6 +284,35 @@ async function runOpportunityScan(req: NextRequest) {
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(1);
     push(`Done in ${duration}s — ${totalInserted} suggestions created`);
+
+    // Post top picks to Discord scanner channel
+    if (picks.length > 0) {
+      postToDiscord('msp-scanner', buildScannerEmbed(
+        picks.slice(0, 10).map(p => {
+          const ind = indicatorMap.get(p.symbol);
+          return {
+            symbol: p.symbol,
+            score: p.score ?? 0,
+            side: p.direction ?? 'long',
+            rsi: ind?.rsi14 ?? undefined,
+            adx: ind?.adx14 ?? undefined,
+            squeeze: ind?.in_squeeze === true,
+          };
+        })
+      )).catch(() => {});
+
+      // Post top pick as Golden Egg if score is high enough
+      const topPick = picks[0];
+      if (topPick && (topPick.score ?? 0) >= 75) {
+        postToDiscord('golden-egg', buildGoldenEggEmbed({
+          symbol: topPick.symbol,
+          verdict: (topPick.score ?? 0) >= 85 ? 'TRADE' : 'WATCH',
+          bias: topPick.direction ?? 'neutral',
+          confluenceScore: topPick.score ?? 0,
+          reasoning: `High-confluence ${topPick.direction} setup on ${topPick.symbol} (score ${topPick.score})`,
+        })).catch(() => {});
+      }
+    }
 
     return NextResponse.json({
       success: true,

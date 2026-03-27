@@ -220,39 +220,34 @@ const DECOMPRESSION_WINDOW_START: Record<string, number> = {
   '6H': 20,
   'RTH': 20,  // Renamed from 8H
   
-  // Daily cycles (1-7 days)
+  // Day cycles — covers both crypto (1D,2D,3D,5D,6D,9D,10D,15D,18D,30D)
+  // and equity (1D,2D,4D,8D,11D,22D)
   '1D': 60,
   '2D': 120,
   '3D': 180,
   '4D': 240,
   '5D': 300,
   '6D': 360,
-  '7D': 390,
+  '8D': 420,
+  '9D': 450,
+  '10D': 480,
+  '11D': 510,
+  '15D': 630,
+  '18D': 720,
+  '22D': 840,
+  '30D': 1080,
   
-  // Weekly cycles (1-4 weeks)
+  // Weekly cycles (equity: 1W,2W,3W,4W,6W,12W)
   '1W': 390,
   '2W': 780,
   '3W': 1170,
   '4W': 1560,
+  '6W': 2340,
+  '12W': 4680,
   
-  // Monthly cycles
+  // Monthly cycles (crypto: 1M, 3M)
   '1M': 1560,
-  '2M': 3120,
   '3M': 4680,
-  '4M': 6240,
-  '5M': 7800,
-  '6M': 9360,
-  '7M': 10920,
-  '8M': 12480,
-  '9M': 14040,
-  '10M': 15600,
-  '11M': 17160,
-  '1Y': 18720,
-  
-  // Legacy
-  '2Y': 37440,
-  '4Y': 74880,
-  '8Y': 149760,
 };
 
 export interface DecompressionWindowStatus {
@@ -1191,11 +1186,13 @@ function getTradingWeekOfYear(date: Date): number {
 }
 
 /**
- * Get macro candles closing on a given date
- * Now tracks ALL 35 timeframes for complete confluence detection
- * 
- * IMPORTANT: Uses trading day index (not calendar day) for N-day cycles
- * to ensure proper alignment regardless of holidays/weekends
+ * Get equity macro candles closing on a given date.
+ *
+ * Tracked equity timeframes (12 total):
+ *   Day-based (trading days): 1D, 2D, 4D, 8D, 11D, 22D
+ *   Week-based (Friday close): 1W, 2W, 3W, 4W, 6W, 12W
+ *
+ * Uses trading day index for day cycles and trading week number for weekly.
  */
 export function getMacroClosingCandles(date: Date): string[] {
   const closing: string[] = [];
@@ -1203,37 +1200,21 @@ export function getMacroClosingCandles(date: Date): string[] {
   const tradingDayIdx = clock.tradingDayIndex;
   const weekNum = getTradingWeekOfYear(date);
   
-  const etParts = getETParts(date);
-  const month = new Date(etParts.dateStr).getMonth(); // 0-indexed
-  
   // ═══════════════════════════════════════════════════════════════════════════
-  // DAILY CYCLES (1D - 7D) - Uses trading day index, not calendar day
+  // DAY CYCLES - Uses trading day index, not calendar day
   // ═══════════════════════════════════════════════════════════════════════════
   
   // 1D: Always closes every trading day
   closing.push('1D');
   
-  // 2D: Closes every 2nd trading day
-  if (tradingDayIdx % 2 === 0) closing.push('2D');
-  
-  // 3D: Closes every 3rd trading day
-  if (tradingDayIdx % 3 === 0) closing.push('3D');
-  
-  // 4D: Closes every 4th trading day
-  if (tradingDayIdx % 4 === 0) closing.push('4D');
-  
-  // 5D: Closes every 5th trading day (1 week)
-  if (tradingDayIdx % 5 === 0) closing.push('5D');
-  
-  // 6D: Closes every 6th trading day
-  if (tradingDayIdx % 6 === 0) closing.push('6D');
-  
-  // 7D: Closes every 7th trading day
-  if (tradingDayIdx % 7 === 0) closing.push('7D');
+  // Tracked equity day intervals (matches Close Calendar cluster timeline)
+  const EQUITY_DAY_INTERVALS = [2, 4, 8, 11, 22];
+  for (const N of EQUITY_DAY_INTERVALS) {
+    if (tradingDayIdx % N === 0) closing.push(`${N}D`);
+  }
   
   // ═══════════════════════════════════════════════════════════════════════════
-  // WEEKLY CYCLES (1W - 4W) - All close on Friday (or last trading day of week)
-  // Uses trading week number for proper alignment
+  // WEEKLY CYCLES - Close on Friday (or last trading day of week)
   // ═══════════════════════════════════════════════════════════════════════════
   
   if (isFriday(date)) {
@@ -1246,50 +1227,14 @@ export function getMacroClosingCandles(date: Date): string[] {
     // 3W: Every 3rd trading week
     if (weekNum % 3 === 0) closing.push('3W');
     
-    // 4W: Every 4th trading week (roughly monthly)
+    // 4W: Every 4th trading week
     if (weekNum % 4 === 0) closing.push('4W');
-  }
-  
-  // ═══════════════════════════════════════════════════════════════════════════
-  // MONTHLY CYCLES (1M - 12M)
-  // ═══════════════════════════════════════════════════════════════════════════
-  
-  if (isLastTradingDayOfMonth(date)) {
-    // 1M: Every month end
-    closing.push('1M');
     
-    // 2M: Feb, Apr, Jun, Aug, Oct, Dec (bi-monthly)
-    if ([1, 3, 5, 7, 9, 11].includes(month)) closing.push('2M');
+    // 6W: Every 6th trading week
+    if (weekNum % 6 === 0) closing.push('6W');
     
-    // 3M: Mar, Jun, Sep, Dec (quarterly)
-    if ([2, 5, 8, 11].includes(month)) closing.push('3M');
-    
-    // 4M: Apr, Aug, Dec
-    if ([3, 7, 11].includes(month)) closing.push('4M');
-    
-    // 5M: May, Oct
-    if ([4, 9].includes(month)) closing.push('5M');
-    
-    // 6M: Jun, Dec (semi-annual)
-    if ([5, 11].includes(month)) closing.push('6M');
-    
-    // 7M: Jul
-    if (month === 6) closing.push('7M');
-    
-    // 8M: Aug
-    if (month === 7) closing.push('8M');
-    
-    // 9M: Sep
-    if (month === 8) closing.push('9M');
-    
-    // 10M: Oct
-    if (month === 9) closing.push('10M');
-    
-    // 11M: Nov
-    if (month === 10) closing.push('11M');
-    
-    // 1Y: Dec (yearly)
-    if (month === 11) closing.push('1Y');
+    // 12W: Every 12th trading week (quarterly)
+    if (weekNum % 12 === 0) closing.push('12W');
   }
   
   return closing;
@@ -1298,16 +1243,16 @@ export function getMacroClosingCandles(date: Date): string[] {
 /**
  * Get crypto macro candles closing on a given date.
  * Uses TradingView-verified epoch anchors (same logic as Close Calendar).
- * Multi-day: (epochDay - 20454) % N === 0  (anchor = Jan 1 2026)
- * Weekly:   (epochDay - 20458) % (N*7) within prior 7 days (Friday UTC close)
- * Monthly+: calendar month boundaries at UTC midnight
+ *
+ * Tracked crypto timeframes (12 total):
+ *   Day-based: 1D, 2D, 3D, 5D, 6D, 9D, 10D, 15D, 18D, 30D
+ *   Month-based: 1M, 3M
  */
 export function getCryptoMacroClosingCandles(date: Date): string[] {
   const closing: string[] = [];
   const DAY_MS = 86_400_000;
   const nowMs = date.getTime();
   const TV_DAY_ANCHOR = 20454; // Jan 1, 2026 epoch day
-  const TV_WEEK_ANCHOR = 20458; // Jan 5, 2026 (Monday) epoch day
 
   // Today's UTC date at midnight
   const todayMidnightMs = Math.floor(nowMs / DAY_MS) * DAY_MS;
@@ -1316,27 +1261,15 @@ export function getCryptoMacroClosingCandles(date: Date): string[] {
   // 1D always closes
   closing.push('1D');
 
-  // Multi-day (2D–30D): closes when (epochDay - anchor) % N === 0
-  for (let N = 2; N <= 30; N++) {
+  // Tracked crypto day intervals (matches Close Calendar cluster timeline)
+  const CRYPTO_DAY_INTERVALS = [2, 3, 5, 6, 9, 10, 15, 18, 30];
+  for (const N of CRYPTO_DAY_INTERVALS) {
     if (((epochDay - TV_DAY_ANCHOR) % N + N) % N === 0) {
       closing.push(`${N}D`);
     }
   }
 
-  // Weekly (1W–52W): TradingView crypto weekly closes on Monday UTC boundary.
-  // Period = N * 7 days anchored to epoch day 20458 (Jan 5, 2026 Monday).
-  // A close falls at day = TV_WEEK_ANCHOR + k * (N*7) for integer k.
-  // Check if today is such a boundary day.
-  for (let N = 1; N <= 52; N++) {
-    const period = N * 7;
-    if (((epochDay - TV_WEEK_ANCHOR) % period + period) % period === 0) {
-      closing.push(`${N}W`);
-    }
-  }
-
-  // Monthly (1M): closes at 1st of next month UTC midnight.
-  // A monthly candle closes "today" if today is the last day of the month
-  // (i.e., tomorrow is the 1st).
+  // Monthly: 1M and 3M only
   const utcMonth = date.getUTCMonth();
   const utcYear = date.getUTCFullYear();
   const utcDate = date.getUTCDate();
@@ -1345,15 +1278,8 @@ export function getCryptoMacroClosingCandles(date: Date): string[] {
 
   if (isLastDayOfMonth) {
     closing.push('1M');
-    const closeMonth = utcMonth; // 0-indexed
-    // Multi-month: (month+1) % N === 0
-    for (let N = 2; N <= 11; N++) {
-      if ((closeMonth + 1) % N === 0) {
-        closing.push(`${N}M`);
-      }
-    }
-    // Yearly: December (month 11)
-    if (closeMonth === 11) closing.push('1Y');
+    // 3M: quarterly (Mar, Jun, Sep, Dec)
+    if ([2, 5, 8, 11].includes(utcMonth)) closing.push('3M');
   }
 
   return closing;
@@ -1366,9 +1292,10 @@ export function getMacroConfluence(date: Date, assetClass: 'crypto' | 'equity' =
   const closing = assetClass === 'crypto' ? getCryptoMacroClosingCandles(date) : getMacroClosingCandles(date);
   const isQuarterly = closing.includes('3M');
   const isYearly = closing.includes('1Y');
-  const isSemiAnnual = closing.includes('6M');
+  const isSemiAnnual = closing.includes('6M') || closing.includes('6W');
   const isMonthly = closing.includes('1M');
   const isWeekly = closing.includes('1W');
+  const hasLargeWeekly = closing.includes('12W');
   
   // Score based on how many TFs are closing
   let score = closing.length;
@@ -1376,18 +1303,19 @@ export function getMacroConfluence(date: Date, assetClass: 'crypto' | 'equity' =
   // Bonus for significant periods
   if (isYearly) score += 10;
   else if (isSemiAnnual) score += 6;
-  else if (isQuarterly) score += 4;
+  else if (isQuarterly || hasLargeWeekly) score += 4;
   else if (isMonthly) score += 2;
   
   let impact: 'high' | 'very_high' | 'maximum' = 'high';
   if (isYearly) impact = 'maximum';
-  else if (isSemiAnnual || isQuarterly) impact = 'very_high';
+  else if (isSemiAnnual || isQuarterly || hasLargeWeekly) impact = 'very_high';
   else if (closing.length >= 6) impact = 'very_high';
   
   let desc = '';
   if (isYearly) desc = `YEAR END - ${closing.length} timeframes closing together`;
   else if (isSemiAnnual) desc = `SEMI-ANNUAL - ${closing.length} timeframes align`;
   else if (isQuarterly) desc = `QUARTER END - ${closing.length} timeframes converge`;
+  else if (hasLargeWeekly) desc = `12W cycle close - ${closing.length} TFs converge`;
   else if (isMonthly) desc = `Month end - ${closing.length} TFs closing`;
   else if (isWeekly) desc = `Weekly close - ${closing.length} TFs align`;
   else desc = `Daily - ${closing.length} timeframes closing`;
@@ -1437,7 +1365,7 @@ export function getNextMacroConfluence(fromDate: Date, assetClass: 'crypto' | 'e
   const nowClock = createMarketClock(fromDate);
   if (nowClock.dayInfo.isTradingDay && nowClock.minutesSinceMidnight < nowClock.dayInfo.closeMinsET) {
     const todayMacro = getMacroConfluence(fromDate, 'equity');
-    if (todayMacro.isQuarterly || todayMacro.closingCandles.length >= 4) {
+    if (todayMacro.isQuarterly || todayMacro.closingCandles.includes('12W') || todayMacro.closingCandles.length >= 4) {
       return { confluence: todayMacro, daysAway: 0 };
     }
   }
@@ -1460,8 +1388,8 @@ export function getNextMacroConfluence(fromDate: Date, assetClass: 'crypto' | 'e
     
     const macro = getMacroConfluence(checkDate, 'equity');
     
-    // Return if quarterly or better
-    if (macro.isQuarterly || macro.closingCandles.length >= 4) {
+    // Return if significant weekly close or 4+ TFs aligning
+    if (macro.isQuarterly || macro.closingCandles.includes('12W') || macro.closingCandles.length >= 4) {
       return { confluence: macro, daysAway };
     }
   }
@@ -1572,29 +1500,31 @@ export interface HighImpactDate {
 
 function mapMacroTfLabel(tf: string): string {
   const labelMap: Record<string, string> = {
+    // Day-based (crypto + equity)
     '1D': 'Daily',
     '2D': '2-Day',
     '3D': '3-Day',
     '4D': '4-Day',
     '5D': '5-Day',
     '6D': '6-Day',
-    '7D': '7-Day',
+    '8D': '8-Day',
+    '9D': '9-Day',
+    '10D': '10-Day',
+    '11D': '11-Day',
+    '15D': '15-Day',
+    '18D': '18-Day',
+    '22D': '22-Day',
+    '30D': '30-Day',
+    // Week-based (equity)
     '1W': 'Weekly',
     '2W': 'Bi-weekly',
     '3W': '3-Week',
     '4W': '4-Week',
+    '6W': '6-Week',
+    '12W': '12-Week',
+    // Month-based (crypto)
     '1M': 'Monthly',
-    '2M': '2-Month',
     '3M': 'Quarterly',
-    '4M': '4-Month',
-    '5M': '5-Month',
-    '6M': 'Semi-Annual',
-    '7M': '7-Month',
-    '8M': '8-Month',
-    '9M': '9-Month',
-    '10M': '10-Month',
-    '11M': '11-Month',
-    '1Y': 'Yearly',
   };
   return labelMap[tf] ?? tf;
 }
@@ -1612,12 +1542,15 @@ export function getHighImpactDates(year: number): HighImpactDate[] {
     if (!isWeekend && !NYSE_HOLIDAYS.has(dateKey)) {
       const macro = getMacroConfluence(dateCursor);
 
-      // Major monthly / quarterly / yearly closes
-      const isMajor = macro.isYearly || macro.isQuarterly || macro.closingCandles.includes('1M');
+      // Major close days: monthly/quarterly for crypto, high-confluence weekly for equity
+      const isMajor = macro.isYearly || macro.isQuarterly || macro.closingCandles.includes('1M')
+        || macro.closingCandles.includes('12W') || macro.closingCandles.length >= 6;
       if (isMajor) {
-        let description = `Month End - ${macro.closingCandles.length} TFs align`;
+        let description = `High confluence - ${macro.closingCandles.length} TFs align`;
         if (macro.isYearly) description = `YEAR END - ${macro.closingCandles.length} TFs align`;
         else if (macro.isQuarterly) description = `QUARTER END - ${macro.closingCandles.length} TFs align`;
+        else if (macro.closingCandles.includes('1M')) description = `Month End - ${macro.closingCandles.length} TFs align`;
+        else if (macro.closingCandles.includes('12W')) description = `12W cycle close - ${macro.closingCandles.length} TFs align`;
 
         results.push({
           date: dateKey,
