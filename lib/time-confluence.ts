@@ -1410,6 +1410,13 @@ export function getMacroConfluence(date: Date, assetClass: 'crypto' | 'equity' =
  */
 export function getNextMacroConfluence(fromDate: Date, assetClass: 'crypto' | 'equity' = 'equity'): { confluence: MacroConfluence; daysAway: number } {
   if (assetClass === 'crypto') {
+    // If today itself is a major macro close day, return it first.
+    // Crypto daily+ closes are evaluated on UTC calendar boundaries.
+    const todayMacro = getMacroConfluence(fromDate, 'crypto');
+    if (todayMacro.isQuarterly || todayMacro.closingCandles.length >= 4) {
+      return { confluence: todayMacro, daysAway: 0 };
+    }
+
     // Crypto trades every day — check all calendar days
     let checkDate = new Date(fromDate);
     let daysAway = 0;
@@ -1425,6 +1432,16 @@ export function getNextMacroConfluence(fromDate: Date, assetClass: 'crypto' | 'e
   }
 
   // Equity: skip weekends and holidays
+  // If today's close has not passed and today is already a major macro close day,
+  // return it to keep macro card aligned with close-calendar anchor-day closes.
+  const nowClock = createMarketClock(fromDate);
+  if (nowClock.dayInfo.isTradingDay && nowClock.minutesSinceMidnight < nowClock.dayInfo.closeMinsET) {
+    const todayMacro = getMacroConfluence(fromDate, 'equity');
+    if (todayMacro.isQuarterly || todayMacro.closingCandles.length >= 4) {
+      return { confluence: todayMacro, daysAway: 0 };
+    }
+  }
+
   const etParts = getETParts(fromDate);
   let checkDate = new Date(etParts.dateStr + 'T12:00:00');
   let daysAway = 0;
