@@ -23,7 +23,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { verifyCronAuth, verifyAdminAuth } from '@/lib/adminAuth';
 import { alertCronFailure } from '@/lib/opsAlerting';
-import { postToDiscord, buildScannerEmbed, buildGoldenEggEmbed } from '@/lib/discord-bridge';
+import { postToDiscord, buildScannerEmbed, buildGoldenEggEmbed, buildTimeConfluenceEmbed } from '@/lib/discord-bridge';
+import { computeCryptoTimeConfluence } from '@/lib/time/cryptoTimeConfluence';
+import { computeEquityTimeConfluence } from '@/lib/time/equityTimeConfluence';
 import {
   computeEdgeProfile,
   MIN_SAMPLE_SIZE,
@@ -312,6 +314,41 @@ async function runOpportunityScan(req: NextRequest) {
           reasoning: `High-confluence ${topPick.direction} setup on ${topPick.symbol} (score ${topPick.score})`,
         })).catch(() => {});
       }
+    }
+
+    // Post Time Confluence to Discord when significant events are near
+    try {
+      const crypto = computeCryptoTimeConfluence();
+      if (crypto.isHighConfluence) {
+        const closingCycles = crypto.activeCycles
+          .filter(c => c.hoursToClose <= 24)
+          .map(c => c.cycle);
+        if (closingCycles.length > 0) {
+          postToDiscord('time-confluence', buildTimeConfluenceEmbed({
+            assetClass: 'Crypto',
+            nextDate: crypto.nextDailyClose.toISOString().slice(0, 10),
+            daysAway: Math.round(crypto.hoursToNextDaily / 24),
+            closingCandles: closingCycles,
+          })).catch(() => {});
+        }
+      }
+
+      const equity = computeEquityTimeConfluence();
+      if (equity.isHighConfluence) {
+        const closingCycles = equity.activeCycles
+          .filter(c => c.hoursToClose <= 24)
+          .map(c => c.cycle);
+        if (closingCycles.length > 0) {
+          postToDiscord('time-confluence', buildTimeConfluenceEmbed({
+            assetClass: 'Equity',
+            nextDate: new Date().toISOString().slice(0, 10),
+            daysAway: 0,
+            closingCandles: closingCycles,
+          })).catch(() => {});
+        }
+      }
+    } catch (tcErr) {
+      push(`Time confluence Discord post skipped: ${(tcErr as Error).message}`);
     }
 
     return NextResponse.json({
