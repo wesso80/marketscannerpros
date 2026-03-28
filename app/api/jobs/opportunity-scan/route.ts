@@ -24,6 +24,7 @@ import { q } from '@/lib/db';
 import { verifyCronAuth, verifyAdminAuth } from '@/lib/adminAuth';
 import { alertCronFailure } from '@/lib/opsAlerting';
 import { postToDiscord, buildScannerEmbed, buildGoldenEggEmbed, buildTimeConfluenceEmbed } from '@/lib/discord-bridge';
+import { evaluateGoldenEgg } from '@/lib/goldenEggScoring';
 import { computeCryptoTimeConfluence } from '@/lib/time/cryptoTimeConfluence';
 import { computeEquityTimeConfluence } from '@/lib/time/equityTimeConfluence';
 import {
@@ -305,17 +306,39 @@ async function runOpportunityScan(req: NextRequest) {
       )).catch(() => {});
     }
 
-    if (picks.length > 0) {
-      // Post top pick as Golden Egg if score is high enough
-      const topPick = picks[0];
-      if (topPick && (topPick.score ?? 0) >= 75) {
+    // Golden Egg Discord posting is intentionally omitted here — Golden Egg is
+    // user-driven (watchlist tickers), not auto-scanned. It will be wired to post
+    // when users interact with the Golden Egg page instead.
+
+    // Run top scanner picks through Golden Egg scoring — post TRADE verdicts
+    const goldenEggCandidates = picks.filter(p => (p.score ?? 0) >= 75).slice(0, 5);
+    for (const pick of goldenEggCandidates) {
+      const ind = indicatorMap.get(pick.symbol);
+      const ge = evaluateGoldenEgg({
+        symbol: pick.symbol,
+        price: pick.price ?? 0,
+        changePct: pick.change_percent ?? 0,
+        rsi: ind?.rsi14,
+        adx: ind?.adx14,
+        atr: ind?.atr14,
+        sma20: null,   // not in indicators_latest
+        sma50: null,
+        bbUpper: ind?.bb_upper,
+        bbLower: ind?.bb_lower,
+        bbMiddle: ind?.bb_upper && ind?.bb_lower ? (ind.bb_upper + ind.bb_lower) / 2 : null,
+        inSqueeze: ind?.in_squeeze === true,
+        scannerDirection: pick.direction,
+      });
+      if (ge.permission === 'TRADE') {
+        push(`Golden Egg TRADE: ${pick.symbol} — ${ge.verdict}`);
         postToDiscord('golden-egg', buildGoldenEggEmbed({
-          symbol: topPick.symbol,
-          verdict: (topPick.score ?? 0) >= 85 ? 'TRADE' : 'WATCH',
-          bias: topPick.direction ?? 'neutral',
-          confluenceScore: topPick.score ?? 0,
-          reasoning: `High-confluence ${topPick.direction} setup on ${topPick.symbol} (score ${topPick.score})`,
+          symbol: pick.symbol,
+          verdict: ge.grade === 'A' ? 'TRADE' : 'WATCH',
+          bias: ge.direction === 'LONG' ? 'bullish' : ge.direction === 'SHORT' ? 'bearish' : 'neutral',
+          confluenceScore: ge.confidence,
+          reasoning: ge.verdict,
         })).catch(() => {});
+        break; // Only post the best one per cycle to avoid spam
       }
     }
 
