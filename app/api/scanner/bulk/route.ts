@@ -60,8 +60,14 @@ const FALLBACK_CRYPTO_UNIVERSE = [
   "ONT", "WAVES", "IOTA", "SC", "RVN", "BTT", "HOT", "CELR", "DENT", "CHZ"
 ];
 
+const FALLBACK_FOREX_UNIVERSE = [
+  "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "NZDUSD", "USDCAD", "USDCHF",
+  "EURGBP", "EURJPY", "GBPJPY", "AUDJPY", "EURAUD", "EURCHF", "GBPAUD",
+  "CADJPY", "NZDJPY", "AUDCAD", "GBPCAD", "AUDNZD", "EURNZD"
+];
+
 /** Query symbol_universe DB table for enabled symbols, fall back to hardcoded */
-async function getUniverseFromDB(assetType: 'equity' | 'crypto'): Promise<string[]> {
+async function getUniverseFromDB(assetType: 'equity' | 'crypto' | 'forex'): Promise<string[]> {
   try {
     const rows = await dbQuery<{ symbol: string }>(
       `SELECT symbol FROM symbol_universe WHERE enabled = TRUE AND COALESCE(asset_type, 'equity') = $1 ORDER BY tier ASC, symbol ASC`,
@@ -75,7 +81,7 @@ async function getUniverseFromDB(assetType: 'equity' | 'crypto'): Promise<string
   } catch (err: any) {
     console.warn(`[bulk-scan] Failed to query symbol_universe for ${assetType}, using fallback:`, err.message);
   }
-  const fallback = assetType === 'equity' ? FALLBACK_EQUITY_UNIVERSE : FALLBACK_CRYPTO_UNIVERSE;
+  const fallback = assetType === 'equity' ? FALLBACK_EQUITY_UNIVERSE : assetType === 'forex' ? FALLBACK_FOREX_UNIVERSE : FALLBACK_CRYPTO_UNIVERSE;
   console.log(`[bulk-scan] Using fallback ${assetType} universe (${fallback.length} symbols)`);
   return fallback;
 }
@@ -530,6 +536,53 @@ async function fetchAlphaVantageData(symbol: string, timeframe: string = '1d'): 
     return ohlcv.length >= 50 ? ohlcv : null;
   } catch (err) {
     console.error(`[bulk-scan] Alpha Vantage fetch error for ${symbol}:`, err);
+    return null;
+  }
+}
+
+/** Fetch forex candle data from Alpha Vantage FX_DAILY / FX_INTRADAY */
+async function fetchForexCandles(pair: string, timeframe: string = '1d'): Promise<OHLCV[] | null> {
+  try {
+    if (!ALPHA_KEY) return null;
+    const fromCurrency = pair.substring(0, 3);
+    const toCurrency = pair.substring(3, 6) || 'USD';
+    const interval = AV_INTERVAL_MAP[timeframe] || 'daily';
+    let url: string;
+    let tsKey: string;
+
+    if (interval === 'daily') {
+      url = `https://www.alphavantage.co/query?function=FX_DAILY&from_symbol=${fromCurrency}&to_symbol=${toCurrency}&outputsize=compact&apikey=${ALPHA_KEY}`;
+      tsKey = 'Time Series FX (Daily)';
+    } else {
+      url = `https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol=${fromCurrency}&to_symbol=${toCurrency}&interval=${interval}&outputsize=compact&apikey=${ALPHA_KEY}`;
+      tsKey = `Time Series FX (${interval})`;
+    }
+
+    const res = await (async () => { await avTakeToken(); return fetch(url, { cache: 'no-store' }); })();
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.Note || data.Information || data['Error Message']) {
+      console.warn(`[bulk-scan] AV forex issue for ${pair}:`, data.Note || data.Information || data['Error Message']);
+      return null;
+    }
+
+    const foundKey = Object.keys(data).find(k => k === tsKey || k.startsWith('Time Series FX ('));
+    const ts = (foundKey ? data[foundKey] : undefined) || {};
+
+    const ohlcv: OHLCV[] = Object.entries(ts).map(([date, v]: [string, any]) => ({
+      date,
+      open: parseFloat(v['1. open']),
+      high: parseFloat(v['2. high']),
+      low: parseFloat(v['3. low']),
+      close: parseFloat(v['4. close']),
+      volume: 0, // Forex has no volume
+    }))
+    .filter((c: OHLCV) => Number.isFinite(c.close))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+    return ohlcv.length >= 20 ? ohlcv : null;
+  } catch (err) {
+    console.error(`[bulk-scan] Forex fetch error for ${pair}:`, err);
     return null;
   }
 }
@@ -1876,6 +1929,58 @@ async function runLightEquityScan(startTime: number, timeframe: string, universe
   };
 }
 
+/**
+ * Forex bulk scan — fetches FX candles from Alpha Vantage, computes indicators locally,
+ * scores via analyzeAssetByTimeframe (same 9-signal scoring as equity).
+ * 1 AV call per pair (FX_DAILY/FX_INTRADAY) — very API-efficient.
+ */
+async function runForexBulkScan(startTime: number, timeframe: string) {
+  const forexUniverse = await getUniverseFromDB('forex');
+  // If DB returned short codes (e.g. "EUR"), convert to pairs vs USD
+  const pairs = forexUniverse.map(s => s.length === 3 ? `${s}USD` : s);
+  const maxPairs = Math.min(pairs.length, 20); // Cap at 20 pairs (20 AV calls)
+  const symbolsToScan = pairs.slice(0, maxPairs);
+
+  console.log(`[bulk-scan/forex] Scanning ${symbolsToScan.length} forex pairs on ${timeframe}...`);
+
+  const scored: Array<{
+    symbol: string;
+    score: number;
+    direction: 'bullish' | 'bearish' | 'neutral';
+    signals: { bullish: number; bearish: number; neutral: number };
+    indicators: Indicators;
+    change24h: number;
+  }> = [];
+  let apiCallsUsed = 0;
+
+  for (const pair of symbolsToScan) {
+    if (Date.now() - startTime > 50000) {
+      console.log(`[bulk-scan/forex] Time limit reached after ${scored.length} pairs`);
+      break;
+    }
+    const candles = await fetchForexCandles(pair, timeframe);
+    apiCallsUsed++;
+    if (!candles) continue;
+
+    const result = analyzeAssetByTimeframe(pair, candles, timeframe);
+    if (result) {
+      scored.push(result);
+    }
+  }
+
+  // Sort by signal strength (distance from 50)
+  scored.sort((a, b) => Math.abs(b.score - 50) - Math.abs(a.score - 50));
+
+  return {
+    scanned: scored.length,
+    topPicks: scored.slice(0, 20),
+    sourceSymbols: symbolsToScan.length,
+    apiCallsUsed,
+    apiCallsCap: maxPairs,
+    effectiveUniverseSize: symbolsToScan.length,
+  };
+}
+
 function applyInstitutionalFilterToTopPicks(
   topPicks: any[],
   params: {
@@ -2072,7 +2177,7 @@ export async function POST(req: NextRequest) {
       : null;
 
     const body = await req.json();
-    const { type, timeframe = '1d' } = body; // 'equity' or 'crypto', timeframe: '15m', '30m', '1h', '1d'
+    const { type, timeframe = '1d' } = body; // 'equity', 'crypto', or 'forex'
     const requestedMode = String(body?.mode || '').toLowerCase();
     const mode: BulkScanMode = requestedMode === 'hybrid'
       ? 'hybrid'
@@ -2085,8 +2190,8 @@ export async function POST(req: NextRequest) {
       ? Math.floor(universeSizeRaw)
       : 500;
     
-    if (!type || !['equity', 'crypto'].includes(type)) {
-      return NextResponse.json({ error: "Type must be 'equity' or 'crypto'" }, { status: 400 });
+    if (!type || !['equity', 'crypto', 'forex'].includes(type)) {
+      return NextResponse.json({ error: "Type must be 'equity', 'crypto', or 'forex'" }, { status: 400 });
     }
     
     const validTimeframes = ['15m', '30m', '1h', '1d'];
@@ -2146,6 +2251,34 @@ export async function POST(req: NextRequest) {
         apiCallsCap: equityResult.apiCallsCap,
         effectiveUniverseSize: equityResult.effectiveUniverseSize,
         cacheHitRate: (equityResult as any).cacheHitRate,
+        errors: [],
+      });
+    }
+
+    if (type === 'forex') {
+      const forexResult = await runForexBulkScan(startTime, selectedTimeframe);
+      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+      // Use 'equity' type for institutional filter since forex is similar
+      const institutional = applyInstitutionalFilterToTopPicks(forexResult.topPicks, {
+        type: 'equity',
+        timeframe: selectedTimeframe,
+        mode: 'hybrid',
+        traderRiskDNA: adaptive?.profile?.riskDNA,
+      });
+
+      return NextResponse.json({
+        success: true,
+        type,
+        timeframe: selectedTimeframe,
+        mode: 'hybrid',
+        scanned: forexResult.scanned,
+        duration: `${duration}s`,
+        topPicks: institutional.topPicks,
+        sourceSymbols: forexResult.sourceSymbols,
+        blockedByInstitutionalFilter: institutional.blockedCount,
+        apiCallsUsed: forexResult.apiCallsUsed,
+        apiCallsCap: forexResult.apiCallsCap,
+        effectiveUniverseSize: forexResult.effectiveUniverseSize,
         errors: [],
       });
     }
