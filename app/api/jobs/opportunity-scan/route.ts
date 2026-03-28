@@ -168,11 +168,10 @@ async function runOpportunityScan(req: NextRequest) {
     );
 
     if (!workspaces.length) {
-      push('No workspaces with sufficient trade history — skipping');
-      return NextResponse.json({ success: true, message: 'No eligible workspaces', log });
+      push('No workspaces with sufficient trade history — skipping suggestions');
+    } else {
+      push(`Found ${workspaces.length} eligible workspaces`);
     }
-
-    push(`Found ${workspaces.length} eligible workspaces`);
 
     let totalInserted = 0;
 
