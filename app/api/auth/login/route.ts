@@ -5,6 +5,7 @@ import { hashWorkspaceId, signSessionToken, verifySessionToken } from "@/lib/aut
 import { q } from "@/lib/db";
 import { loginLimiter, getClientIP } from "@/lib/rateLimit";
 import { isValidAdminSecret } from "@/lib/adminAuth";
+import { sendNewSignupNotification } from "@/lib/email";
 
 // Admin emails from ADMIN_EMAILS env var (comma-separated)
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
@@ -49,6 +50,10 @@ async function trackSubscription(
   isTrial: boolean = false
 ) {
   try {
+    // Check if user already exists before upserting
+    const existing = await q('SELECT 1 FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1', [workspaceId]);
+    const isNewUser = existing.length === 0;
+
     await q(`
       INSERT INTO user_subscriptions 
         (workspace_id, email, tier, status, stripe_customer_id, stripe_subscription_id,
@@ -65,6 +70,11 @@ async function trackSubscription(
         is_trial = EXCLUDED.is_trial,
         updated_at = NOW()
     `, [workspaceId, email, tier, status, stripeCustomerId, stripeSubscriptionId, periodEnd, isTrial]);
+
+    // Notify admin of new signups (fire-and-forget)
+    if (isNewUser) {
+      sendNewSignupNotification(email, tier).catch(() => {});
+    }
   } catch (error: any) {
     // Table might not exist yet - that's OK
     if (!error?.message?.includes('does not exist')) {

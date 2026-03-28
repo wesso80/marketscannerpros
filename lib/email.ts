@@ -201,6 +201,33 @@ export async function sendWelcomeEmail(to: string, tier: 'pro' | 'pro_trader') {
   return sendEmail({ to, subject, html });
 }
 
+export async function sendNewSignupNotification(email: string, tier: string) {
+  const subject = `🆕 New MSP Signup: ${email}`;
+  const now = new Date().toLocaleString('en-AU', { timeZone: 'Australia/Sydney' });
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f172a;color:#e2e8f0;padding:20px;">
+  <div style="max-width:500px;margin:0 auto;background:#1e293b;border-radius:12px;padding:24px;border:1px solid #334155;">
+    <h2 style="color:#10b981;margin:0 0 16px;">New User Signup</h2>
+    <table style="width:100%;border-collapse:collapse;">
+      <tr><td style="color:#94a3b8;padding:6px 0;">Email</td><td style="color:#f1f5f9;padding:6px 0;font-weight:600;">${email}</td></tr>
+      <tr><td style="color:#94a3b8;padding:6px 0;">Tier</td><td style="color:#f1f5f9;padding:6px 0;font-weight:600;">${tier}</td></tr>
+      <tr><td style="color:#94a3b8;padding:6px 0;">Time (AEST)</td><td style="color:#f1f5f9;padding:6px 0;">${now}</td></tr>
+    </table>
+    <p style="color:#64748b;font-size:12px;margin:20px 0 0;">MarketScanner Pros</p>
+  </div>
+</body>
+</html>`.trim();
+
+  try {
+    await sendEmail({ to: 'wesso@marketscannerpros.app', subject, html });
+  } catch (e) {
+    console.error('New signup notification failed:', e);
+  }
+}
+
 async function sendEmail({ to, subject, html }: SendEmailParams) {
   const client = getResendClient();
   if (!client) {
