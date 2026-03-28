@@ -110,6 +110,18 @@
         sync: false
 
   - type: cron
+    name: opportunity-scan
+    runtime: node
+    schedule: "7,37 * * * *"  # Every 30 minutes (offset :07) - scanner→Discord posting + trade suggestions
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/jobs/opportunity-scan" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
+    envVars:
+      - key: WEB_URL
+        value: "https://marketscannerpros.app"
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
     name: catalyst-study-compute
     runtime: node
     schedule: "14,44 * * * *"  # Every 30 minutes (offset :14) - incremental catalyst study computation
