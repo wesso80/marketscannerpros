@@ -590,11 +590,18 @@ export async function updateBridgeChannel(
   );
 }
 
-/** Send a test message to a channel */
-export async function testBridgeChannel(channelKey: ChannelKey): Promise<boolean> {
+/** Send a test message to a channel.
+ *  If webhookUrl is provided, posts directly to that URL (no DB lookup).
+ *  This lets users test before saving. */
+export async function testBridgeChannel(
+  channelKey: ChannelKey,
+  webhookUrl?: string
+): Promise<boolean> {
   const meta = CHANNEL_META[channelKey] || { emoji: '📡', color: MSP_GREEN, label: channelKey };
 
-  return postToDiscord(channelKey, {
+  const embed: DiscordPost = {
+    username: BOT_NAME,
+    avatar_url: AVATAR_URL,
     embeds: [{
       title: `${meta.emoji} ${meta.label} — Connection Test`,
       description: 'MSP Command Center bridge is connected and active.',
@@ -603,6 +610,26 @@ export async function testBridgeChannel(channelKey: ChannelKey): Promise<boolean
         { name: 'Channel', value: channelKey, inline: true },
         { name: 'Status', value: '✅ Connected', inline: true },
       ],
+      footer: { text: `MSP ${meta.label} • Educational analysis only` },
+      timestamp: new Date().toISOString(),
     }],
-  }, { forceSend: true });
+  };
+
+  // If a URL is provided directly, post to it without DB lookup
+  if (webhookUrl) {
+    try {
+      const res = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(embed),
+        signal: AbortSignal.timeout(8000),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  // Fallback: use saved DB config via postToDiscord
+  return postToDiscord(channelKey, embed, { forceSend: true });
 }

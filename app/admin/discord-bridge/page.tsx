@@ -24,6 +24,25 @@ const CATEGORY_LABELS: Record<string, { label: string; emoji: string }> = {
 
 const CATEGORY_ORDER = ["core", "engine", "signal", "education"];
 
+const CHANNEL_DESCRIPTIONS: Record<string, string> = {
+  "msp-dashboard":     "Daily market regime briefing — bull/bear/neutral bias, key levels, macro rotations. Posted once at market open.",
+  "msp-scanner":       "Top 10 highest-scoring scanner setups from the MSP universe — symbol, score, direction, RSI, ADX, squeeze status.",
+  "golden-egg":        "Institutional-grade verdict on the #1 setup — TRADE, WATCH, or NO TRADE with confluence score and reasoning.",
+  "trade-terminal":    "Execution environment updates — open positions, P&L snapshots, and terminal state when significant changes occur.",
+  "market-explorer":   "Cross-market intel — sector rotation, relative strength, and broad market context from the Explorer page.",
+  "research":          "Macro catalysts, earnings events, economic data releases, and news sentiment shifts from the Research pipeline.",
+  "workspace":         "Personal workspace activity — saved scans, watchlist changes, and sync events across devices.",
+  "volatility-engine":  "DVE regime alerts — compression, expansion, exhaustion, and squeeze signals with Bollinger Width and ATR readings.",
+  "time-confluence":    "Macro pivot timing windows — high-confluence cycle clusters closing within 24h for crypto and equity markets.",
+  "market-pressure":    "MPE buy/sell imbalance — net pressure readings, direction shifts, and significant pressure divergences.",
+  "confluence-engine":  "Composite confluence scores (0-100) — structure + volatility + timing + participation breakdown per symbol.",
+  "msp-alerts":         "Multi-condition alert triggers — fires only when user-defined alert rules are met across multiple indicators.",
+  "breakout-watch":     "Approaching key price levels — symbols nearing major support/resistance, trendline breaks, or range boundaries.",
+  "trap-detection":     "Fakeout & liquidity trap warnings — bull traps, bear traps, and stop-hunt patterns detected by the trap engine.",
+  "ai-analyst":         "AI-powered analysis summaries — GPT breakdowns explaining WHY conditions align, not just WHAT the numbers say.",
+  "trade-reviews":      "Post-trade analysis — journal entry reviews, win/loss breakdowns, and pattern recognition from completed trades.",
+};
+
 export default function DiscordBridgePage() {
   const { secret, isAuthed } = useAdmin();
   const [channels, setChannels] = useState<BridgeChannel[]>([]);
@@ -103,6 +122,15 @@ export default function DiscordBridgePage() {
   const testChannel = async (channelKey: string) => {
     setTesting(channelKey);
     setMessage(null);
+    // Send the current UI webhook URL so test works before saving
+    const ch = channels.find((c) => c.channel_key === channelKey);
+    const edited = ch ? getEdited(ch) : null;
+    const webhookUrl = edited?.webhook_url || '';
+    if (!webhookUrl) {
+      setMessage({ text: `No webhook URL for ${channelKey} — paste one first`, type: 'err' });
+      setTesting(null);
+      return;
+    }
     try {
       const res = await fetch("/api/admin/discord-bridge", {
         method: "POST",
@@ -110,7 +138,7 @@ export default function DiscordBridgePage() {
           "Content-Type": "application/json",
           "x-admin-secret": secret,
         },
-        body: JSON.stringify({ action: "test", channelKey }),
+        body: JSON.stringify({ action: "test", channelKey, webhookUrl }),
       });
       const data = await res.json();
       setMessage({
@@ -227,6 +255,11 @@ export default function DiscordBridgePage() {
                             </span>
                           )}
                         </div>
+                        {CHANNEL_DESCRIPTIONS[ch.channel_key] && (
+                          <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                            {CHANNEL_DESCRIPTIONS[ch.channel_key]}
+                          </p>
+                        )}
 
                         {/* Webhook URL input */}
                         <div className="mt-2 flex items-center gap-2">

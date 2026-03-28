@@ -287,10 +287,11 @@ async function runOpportunityScan(req: NextRequest) {
     const duration = ((Date.now() - startTime) / 1000).toFixed(1);
     push(`Done in ${duration}s — ${totalInserted} suggestions created`);
 
-    // Post top picks to Discord scanner channel
-    if (picks.length > 0) {
+    // Post top picks to Discord scanner channel — only quality setups (score ≥ 70)
+    const qualityPicks = picks.filter(p => (p.score ?? 0) >= 70);
+    if (qualityPicks.length > 0) {
       postToDiscord('msp-scanner', buildScannerEmbed(
-        picks.slice(0, 10).map(p => {
+        qualityPicks.slice(0, 10).map(p => {
           const ind = indicatorMap.get(p.symbol);
           return {
             symbol: p.symbol,
@@ -302,7 +303,9 @@ async function runOpportunityScan(req: NextRequest) {
           };
         })
       )).catch(() => {});
+    }
 
+    if (picks.length > 0) {
       // Post top pick as Golden Egg if score is high enough
       const topPick = picks[0];
       if (topPick && (topPick.score ?? 0) >= 75) {

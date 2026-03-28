@@ -33,7 +33,12 @@ export async function POST(req: NextRequest) {
     if (!channelKey) {
       return NextResponse.json({ error: 'channelKey required' }, { status: 400 });
     }
-    const sent = await testBridgeChannel(channelKey);
+    // Accept optional webhookUrl so users can test before saving
+    const webhookUrl = typeof body?.webhookUrl === 'string' ? body.webhookUrl.trim() : undefined;
+    if (webhookUrl && !/^https:\/\/discord\.com\/api\/webhooks\//.test(webhookUrl)) {
+      return NextResponse.json({ error: 'Invalid Discord webhook URL' }, { status: 400 });
+    }
+    const sent = await testBridgeChannel(channelKey, webhookUrl || undefined);
     return NextResponse.json({ sent });
   }
 
