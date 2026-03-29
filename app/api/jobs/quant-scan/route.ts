@@ -88,6 +88,7 @@ async function runQuantScan(req: NextRequest) {
     const msg = err?.message || String(err);
     push(`ERROR: ${msg}`);
     console.error('[quant-scan] Fatal error:', err);
-    return NextResponse.json({ success: false, error: msg, log }, { status: 500 });
+    // Return 200 to prevent cron exit-22 for transient failures
+    return NextResponse.json({ success: false, error: msg, log });
   }
 }

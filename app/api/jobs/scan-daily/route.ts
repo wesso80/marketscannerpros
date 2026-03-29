@@ -516,7 +516,7 @@ async function runDailyScan(req: NextRequest) {
 
     const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: "API key not configured" }, { status: 500 });
+      return NextResponse.json({ success: false, error: "API key not configured" });
     }
 
     const results: any[] = [];
@@ -524,9 +524,9 @@ async function runDailyScan(req: NextRequest) {
     const deadline = Date.now() + 250_000; // 250s hard budget (curl max-time is 290s)
     const hasTime = () => Date.now() < deadline;
 
-    // Scan equities (top 20 — bail early if approaching timeout)
+    // Scan equities (top 15 — bail early if approaching timeout)
     console.log("Starting equity scan...");
-    const equitiesToScan = EQUITY_UNIVERSE.slice(0, 20);
+    const equitiesToScan = EQUITY_UNIVERSE.slice(0, 15);
     for (const symbol of equitiesToScan) {
       if (!hasTime()) { console.log(`Time budget exhausted at equity:${symbol}`); break; }
       const result = await scanEquity(symbol, apiKey);
@@ -534,9 +534,9 @@ async function runDailyScan(req: NextRequest) {
       else errors.push(`equity:${symbol}`);
     }
 
-    // Scan crypto (top 10)
+    // Scan crypto (top 5 — AV indicator endpoints can be slow for crypto)
     console.log("Starting crypto scan...");
-    const cryptoToScan = CRYPTO_UNIVERSE.slice(0, 10);
+    const cryptoToScan = CRYPTO_UNIVERSE.slice(0, 5);
     for (const symbol of cryptoToScan) {
       if (!hasTime()) { console.log(`Time budget exhausted at crypto:${symbol}`); break; }
       const result = await scanCrypto(symbol, apiKey);
@@ -544,9 +544,9 @@ async function runDailyScan(req: NextRequest) {
       else errors.push(`crypto:${symbol}`);
     }
 
-    // Scan forex (top 10)
+    // Scan forex (top 5)
     console.log("Starting forex scan...");
-    const forexToScan = FOREX_UNIVERSE.slice(0, 10);
+    const forexToScan = FOREX_UNIVERSE.slice(0, 5);
     for (const symbol of forexToScan) {
       if (!hasTime()) { console.log(`Time budget exhausted at forex:${symbol}`); break; }
       const result = await scanForex(symbol, apiKey);
