@@ -82,21 +82,25 @@ export async function GET(req: NextRequest) {
         GROUP BY scan_date ORDER BY scan_date DESC
       `)),
 
-      // ─── Feature adoption (unique workspaces using each feature, last 30d) ───
-      safe(() => q(`
-        SELECT
-          (SELECT COUNT(DISTINCT workspace_id) FROM journal_entries
-           WHERE created_at > NOW() - INTERVAL '30 days') AS journal_users,
-          (SELECT COUNT(DISTINCT workspace_id) FROM portfolio_positions) AS portfolio_users,
-          (SELECT COUNT(DISTINCT workspace_id) FROM ai_usage
-           WHERE created_at > NOW() - INTERVAL '30 days') AS ai_users,
-          (SELECT COUNT(DISTINCT workspace_id) FROM scan_usage
-           WHERE scan_date > CURRENT_DATE - 30) AS scanner_users,
-          (SELECT COUNT(DISTINCT workspace_id) FROM trade_outcomes
-           WHERE created_at > NOW() - INTERVAL '30 days') AS trade_outcome_users,
-          (SELECT COUNT(*) FROM user_subscriptions
-           WHERE status IN ('active','trialing')) AS total_active_users
-      `)),
+      // ─── Feature adoption (each table individually safe-wrapped) ───
+      (async () => {
+        const [journal, portfolio, ai, scanner, outcomes, total] = await Promise.all([
+          safe(() => q(`SELECT COUNT(DISTINCT workspace_id)::int AS n FROM journal_entries WHERE created_at > NOW() - INTERVAL '30 days'`)),
+          safe(() => q(`SELECT COUNT(DISTINCT workspace_id)::int AS n FROM portfolio_positions`)),
+          safe(() => q(`SELECT COUNT(DISTINCT workspace_id)::int AS n FROM ai_usage WHERE created_at > NOW() - INTERVAL '30 days'`)),
+          safe(() => q(`SELECT COUNT(DISTINCT workspace_id)::int AS n FROM scan_usage WHERE scan_date > CURRENT_DATE - 30`)),
+          safe(() => q(`SELECT COUNT(DISTINCT workspace_id)::int AS n FROM trade_outcomes WHERE created_at > NOW() - INTERVAL '30 days'`)),
+          safe(() => q(`SELECT COUNT(*)::int AS n FROM user_subscriptions WHERE status IN ('active','trialing')`)),
+        ]);
+        return [{
+          journal_users: journal[0]?.n ?? 0,
+          portfolio_users: portfolio[0]?.n ?? 0,
+          ai_users: ai[0]?.n ?? 0,
+          scanner_users: scanner[0]?.n ?? 0,
+          trade_outcome_users: outcomes[0]?.n ?? 0,
+          total_active_users: total[0]?.n ?? 0,
+        }];
+      })(),
 
       // ─── Trade activity (last 30d) ───
       safe(() => q(`
@@ -167,12 +171,15 @@ export async function GET(req: NextRequest) {
       `)),
     ]);
 
+    const defaultAdoption = { journal_users: 0, portfolio_users: 0, ai_users: 0, scanner_users: 0, trade_outcome_users: 0, total_active_users: 0 };
+    const defaultTrades = { trades_30d: 0, trades_7d: 0, trades_today: 0, avg_win_rate: null, avg_r_multiple: null };
+
     return NextResponse.json({
       activeUsers: activeUsers[0] || { dau: 0, wau: 0, mau: 0, online_now: 0 },
-      signupFunnel: signupFunnel[0] || {},
+      signupFunnel: signupFunnel[0] || { signups_30d: 0, trials_30d: 0, paid_30d: 0, active_pro: 0, active_pro_trader: 0, churned_total: 0 },
       dailyScans,
-      featureAdoption: featureAdoption[0] || {},
-      tradeActivity: tradeActivity[0] || {},
+      featureAdoption: { ...defaultAdoption, ...featureAdoption[0] },
+      tradeActivity: { ...defaultTrades, ...tradeActivity[0] },
       tierDistribution,
       retentionCohorts,
       topActiveWorkspaces,

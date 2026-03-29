@@ -97,6 +97,16 @@ export default function UsageAnalyticsPage() {
   const paidRate = funnel.trials_30d > 0 ? ((funnel.paid_30d / funnel.trials_30d) * 100).toFixed(1) : "0";
   const totalActive = Number(adoption.total_active_users) || 1;
 
+  // Ensure numeric values for adoption (prevent NaN)
+  const safeAdoption = {
+    scanner_users: Number(adoption.scanner_users) || 0,
+    ai_users: Number(adoption.ai_users) || 0,
+    journal_users: Number(adoption.journal_users) || 0,
+    portfolio_users: Number(adoption.portfolio_users) || 0,
+    trade_outcome_users: Number(adoption.trade_outcome_users) || 0,
+    total_active_users: totalActive,
+  };
+
   // Scan volume stats
   const totalScans30d = dailyScans.reduce((s, d) => s + Number(d.scans), 0);
   const avgDailyScans = dailyScans.length > 0 ? Math.round(totalScans30d / dailyScans.length) : 0;
@@ -198,11 +208,11 @@ export default function UsageAnalyticsPage() {
             🧩 Feature Adoption (30d)
           </h2>
           {[
-            { label: "Scanner", users: Number(adoption.scanner_users), icon: "🔍" },
-            { label: "AI Analyst", users: Number(adoption.ai_users), icon: "🤖" },
-            { label: "Journal", users: Number(adoption.journal_users), icon: "📓" },
-            { label: "Portfolio", users: Number(adoption.portfolio_users), icon: "💼" },
-            { label: "Trade Outcomes", users: Number(adoption.trade_outcome_users), icon: "🎯" },
+            { label: "Scanner", users: safeAdoption.scanner_users, icon: "🔍" },
+            { label: "AI Analyst", users: safeAdoption.ai_users, icon: "🤖" },
+            { label: "Journal", users: safeAdoption.journal_users, icon: "📓" },
+            { label: "Portfolio", users: safeAdoption.portfolio_users, icon: "💼" },
+            { label: "Trade Outcomes", users: safeAdoption.trade_outcome_users, icon: "🎯" },
           ].map((f) => {
             const pct = totalActive > 0 ? (f.users / totalActive) * 100 : 0;
             return (
@@ -234,15 +244,15 @@ export default function UsageAnalyticsPage() {
           </h2>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
             <div>
-              <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "#10B981" }}>{Number(tradeActivity.trades_today)}</div>
+              <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "#10B981" }}>{Number(tradeActivity.trades_today) || 0}</div>
               <div style={statLabel}>Trades Today</div>
             </div>
             <div>
-              <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "#10B981" }}>{Number(tradeActivity.trades_7d)}</div>
+              <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "#10B981" }}>{Number(tradeActivity.trades_7d) || 0}</div>
               <div style={statLabel}>Trades (7d)</div>
             </div>
             <div>
-              <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "#10B981" }}>{Number(tradeActivity.trades_30d)}</div>
+              <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "#10B981" }}>{Number(tradeActivity.trades_30d) || 0}</div>
               <div style={statLabel}>Trades (30d)</div>
             </div>
             <div>
