@@ -92,6 +92,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error('Catalyst ingest error:', error);
     alertCronFailure('catalyst-ingest', error?.message ?? String(error));
-    return NextResponse.json({ error: 'Ingestion failed', detail: error.message }, { status: 500 });
+    // Return 200 with error details — prevents cron exit-22 for transient failures
+    return NextResponse.json({ success: false, error: 'Ingestion failed', detail: error.message });
   }
 }

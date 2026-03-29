@@ -18,33 +18,49 @@ import { CatalystType, MarketSession } from './types';
 // ─── CIK → Ticker mapping ──────────────────────────────────────────
 
 let cikTickerMap: Map<string, string> | null = null;
+let cikMapLastAttempt = 0;
+const CIK_MAP_RETRY_MS = 5 * 60 * 1000; // Retry after 5 minutes on failure
 
 /**
  * Load SEC company_tickers.json and build CIK→Ticker map.
- * Cached in memory after first call.
+ * Cached in memory after first successful call.
+ * On failure, retries after CIK_MAP_RETRY_MS instead of caching empty map.
  */
 export async function loadCikTickerMap(): Promise<Map<string, string>> {
-  if (cikTickerMap) return cikTickerMap;
+  if (cikTickerMap && cikTickerMap.size > 0) return cikTickerMap;
 
-  const url = 'https://www.sec.gov/files/company_tickers.json';
-  const res = await fetch(url, {
-    headers: { 'User-Agent': 'MarketScannerPros/1.0 (contact@marketscannerpros.app)', Accept: 'application/json' },
-    signal: AbortSignal.timeout(15_000),
-  });
-
-  if (!res.ok) {
-    console.error(`[SEC] Failed to load company_tickers.json: ${res.status}`);
-    cikTickerMap = new Map();
+  // If we recently failed, skip retry to avoid hammering SEC
+  if (cikTickerMap !== null && Date.now() - cikMapLastAttempt < CIK_MAP_RETRY_MS) {
     return cikTickerMap;
   }
 
-  const data: Record<string, { cik_str: number; ticker: string; title: string }> = await res.json();
-  const map = new Map<string, string>();
-  for (const entry of Object.values(data)) {
-    map.set(String(entry.cik_str).padStart(10, '0'), entry.ticker.toUpperCase());
+  cikMapLastAttempt = Date.now();
+
+  try {
+    const url = 'https://www.sec.gov/files/company_tickers.json';
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'MarketScannerPros/1.0 (contact@marketscannerpros.app)', Accept: 'application/json' },
+      signal: AbortSignal.timeout(15_000),
+    });
+
+    if (!res.ok) {
+      console.error(`[SEC] Failed to load company_tickers.json: ${res.status}`);
+      if (!cikTickerMap) cikTickerMap = new Map();
+      return cikTickerMap;
+    }
+
+    const data: Record<string, { cik_str: number; ticker: string; title: string }> = await res.json();
+    const map = new Map<string, string>();
+    for (const entry of Object.values(data)) {
+      map.set(String(entry.cik_str).padStart(10, '0'), entry.ticker.toUpperCase());
+    }
+    cikTickerMap = map;
+    return map;
+  } catch (err) {
+    console.error(`[SEC] Failed to fetch company_tickers.json:`, err);
+    if (!cikTickerMap) cikTickerMap = new Map();
+    return cikTickerMap;
   }
-  cikTickerMap = map;
-  return map;
 }
 
 /** Resolve CIK string to ticker. Returns null if unmapped. */

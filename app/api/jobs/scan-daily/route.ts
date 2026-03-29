@@ -52,8 +52,9 @@ const FOREX_UNIVERSE = [
   "SEK", "NOK", "MXN", "ZAR", "TRY", "INR", "BRL", "PLN", "THB", "KRW"
 ];
 
-// Rate limiter - Alpha Vantage allows 75/min for premium
-const RATE_LIMIT_DELAY = 850; // ms between calls (~70/min to be safe)
+// Rate limiter — avTakeToken() handles the global 400 RPM governor,
+// but add a small floor delay to avoid burst-hammering
+const RATE_LIMIT_DELAY = 200; // ms between calls (governor handles throttling)
 
 async function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -66,9 +67,9 @@ async function fetchWithRetry(url: string, retries = 2): Promise<any> {
       const res = await fetch(url);
       const data = await res.json();
       if (data.Note || data.Information) {
-        // Rate limited - wait and retry
+        // Rate limited - wait and retry (short wait, governor handles pacing)
         if (i < retries) {
-          await sleep(60000); // Wait 1 minute
+          await sleep(5000);
           continue;
         }
       }
@@ -520,11 +521,14 @@ async function runDailyScan(req: NextRequest) {
 
     const results: any[] = [];
     const errors: string[] = [];
+    const deadline = Date.now() + 250_000; // 250s hard budget (curl max-time is 290s)
+    const hasTime = () => Date.now() < deadline;
 
-    // Scan equities (top 20 — fits within 5-min budget at 8 calls × 850ms each)
+    // Scan equities (top 20 — bail early if approaching timeout)
     console.log("Starting equity scan...");
     const equitiesToScan = EQUITY_UNIVERSE.slice(0, 20);
     for (const symbol of equitiesToScan) {
+      if (!hasTime()) { console.log(`Time budget exhausted at equity:${symbol}`); break; }
       const result = await scanEquity(symbol, apiKey);
       if (result) results.push(result);
       else errors.push(`equity:${symbol}`);
@@ -534,6 +538,7 @@ async function runDailyScan(req: NextRequest) {
     console.log("Starting crypto scan...");
     const cryptoToScan = CRYPTO_UNIVERSE.slice(0, 10);
     for (const symbol of cryptoToScan) {
+      if (!hasTime()) { console.log(`Time budget exhausted at crypto:${symbol}`); break; }
       const result = await scanCrypto(symbol, apiKey);
       if (result) results.push(result);
       else errors.push(`crypto:${symbol}`);
@@ -543,6 +548,7 @@ async function runDailyScan(req: NextRequest) {
     console.log("Starting forex scan...");
     const forexToScan = FOREX_UNIVERSE.slice(0, 10);
     for (const symbol of forexToScan) {
+      if (!hasTime()) { console.log(`Time budget exhausted at forex:${symbol}`); break; }
       const result = await scanForex(symbol, apiKey);
       if (result) results.push(result);
       else errors.push(`forex:${symbol}`);
