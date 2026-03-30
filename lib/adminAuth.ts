@@ -23,11 +23,27 @@ export function isValidAdminSecret(provided: string | null | undefined, expected
  */
 export function verifyCronAuth(request: Request): boolean {
   const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret) return false;
+  if (!cronSecret) {
+    console.error('[verifyCronAuth] CRON_SECRET env var is not set');
+    return false;
+  }
 
-  const authHeader = request.headers.get('authorization') ?? request.headers.get('x-cron-secret') ?? '';
-  const stripped = authHeader.replace(/^Bearer\s+/i, '');
-  return isValidAdminSecret(stripped, cronSecret);
+  // Read x-cron-secret directly first (what cron curl sends), fall back to authorization
+  const cronHeader = request.headers.get('x-cron-secret');
+  const authHeader = request.headers.get('authorization');
+  const token = cronHeader || authHeader || '';
+  const stripped = token.replace(/^Bearer\s+/i, '');
+
+  if (!stripped) {
+    console.error(`[verifyCronAuth] No auth token found. x-cron-secret present: ${!!cronHeader}, authorization present: ${!!authHeader}`);
+    return false;
+  }
+
+  const valid = isValidAdminSecret(stripped, cronSecret);
+  if (!valid) {
+    console.error(`[verifyCronAuth] Token mismatch. token length: ${stripped.length}, expected length: ${cronSecret.length}`);
+  }
+  return valid;
 }
 
 /**

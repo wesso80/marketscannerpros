@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
     const isCron = verifyCronAuth(req);
     const session = isCron ? null : await getSessionFromCookie();
     if (!isCron && !session?.workspaceId) {
+      console.error('[catalyst-ingest] 401 — verifyCronAuth failed, no valid session');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

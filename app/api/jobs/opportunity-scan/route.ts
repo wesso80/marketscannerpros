@@ -113,6 +113,7 @@ export async function POST(req: NextRequest) { return runOpportunityScan(req); }
 
 async function runOpportunityScan(req: NextRequest) {
   if (!verifyCronAuth(req) && !verifyAdminAuth(req)) {
+    console.error('[opportunity-scan] 401 — verifyCronAuth and verifyAdminAuth both failed');
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
