@@ -38,6 +38,12 @@ import {
 export const runtime = 'nodejs';
 export const maxDuration = 120; // 2 min budget
 
+// Wall-clock budget: bail out before maxDuration / curl timeout
+const TIME_BUDGET_MS = 90_000; // 90s
+
+/** Max workspaces to process per cron run (prevent unbounded loop). */
+const MAX_WORKSPACES_PER_RUN = 20;
+
 /* ── Guardrail thresholds ─────────────────────────────────────────────── */
 
 /** Minimum scanner score to consider a pick (0-100). */
@@ -113,6 +119,7 @@ async function runOpportunityScan(req: NextRequest) {
   const startTime = Date.now();
   const log: string[] = [];
   const push = (msg: string) => { log.push(msg); console.log(`[opportunity-scan] ${msg}`); };
+  const hasTime = () => Date.now() - startTime < TIME_BUDGET_MS;
 
   try {
     // ── 0. Expire stale suggestions ────────────────────────────────────
@@ -163,8 +170,9 @@ async function runOpportunityScan(req: NextRequest) {
       `SELECT workspace_id, COUNT(*)::int as cnt
        FROM trade_outcomes
        GROUP BY workspace_id
-       HAVING COUNT(*) >= $1`,
-      [MIN_TRADE_HISTORY]
+       HAVING COUNT(*) >= $1
+       LIMIT $2`,
+      [MIN_TRADE_HISTORY, MAX_WORKSPACES_PER_RUN]
     );
 
     if (!workspaces.length) {
@@ -177,6 +185,11 @@ async function runOpportunityScan(req: NextRequest) {
 
     // ── 4. For each workspace: score & insert ──────────────────────────
     for (const ws of workspaces) {
+      if (!hasTime()) {
+        push('Time budget exhausted — stopping workspace loop');
+        break;
+      }
+
       try {
         // Check pending count cap
         const pendingRows = await q<{ cnt: number }>(

@@ -17,14 +17,21 @@ import { alertCronFailure } from '@/lib/opsAlerting';
 import { postToDiscord, buildResearchEmbed } from '@/lib/discord-bridge';
 import type { IngestionResult } from '@/lib/catalyst/types';
 
-// Register the live news provider
-setNewsProvider(new AlphaVantageNewsProvider());
-
 export const runtime = 'nodejs';
 export const maxDuration = 120;
 
+// Wall-clock budget: bail out before maxDuration / curl timeout
+const TIME_BUDGET_MS = 90_000; // 90s
+
 export async function POST(req: NextRequest) {
+  const t0 = Date.now();
+  const hasTime = () => Date.now() - t0 < TIME_BUDGET_MS;
+
   try {
+    // Register news provider inside handler (not module-level) to avoid
+    // import-time side-effects that bypass try/catch on failure
+    setNewsProvider(new AlphaVantageNewsProvider());
+
     // Allow cron jobs OR authenticated sessions
     const isCron = verifyCronAuth(req);
     const session = isCron ? null : await getSessionFromCookie();
@@ -38,6 +45,10 @@ export async function POST(req: NextRequest) {
     const tickers: string[] = Array.isArray(body.tickers) ? body.tickers : [];
 
     const results: IngestionResult[] = [];
+
+    if (!hasTime()) {
+      return NextResponse.json({ success: true, message: 'Time budget exhausted before work', results });
+    }
 
     // Run SEC + News ingestion in parallel
     const [secResult, newsResult] = await Promise.allSettled([
