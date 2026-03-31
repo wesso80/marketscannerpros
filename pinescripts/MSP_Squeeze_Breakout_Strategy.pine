@@ -1,0 +1,422 @@
+// This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
+// © MarketScanner Pros — Squeeze Breakout Strategy v2
+// Refactored breakout model:
+// - lower sizing
+// - fresh squeeze fire only
+// - ADX hard gate
+// - follow-through confirmation
+// - next-bar execution
+// - failed breakout exits
+// - grade-based targets/timeouts
+// - session/risk permission gating
+
+//@version=6
+strategy(
+     "MSP Squeeze Breakout Strategy v2",
+     shorttitle="MSP SqzBreak v2",
+     overlay=true,
+     initial_capital=10000,
+     default_qty_type=strategy.percent_of_equity,
+     default_qty_value=5,
+     commission_type=strategy.commission.percent,
+     commission_value=0.06,
+     pyramiding=0,
+     calc_on_every_tick=false,
+     calc_on_order_fills=true,
+     max_labels_count=300)
+
+// ═══════════════════════════════════════════════════════════════
+// INPUTS
+// ═══════════════════════════════════════════════════════════════
+
+grp_mode = "Mode / Permissions"
+allowStrategyTrades = input.bool(true, "Allow Strategy Trades", group=grp_mode)
+riskMode = input.string("ALLOW", "Risk Permission", options=["ALLOW", "DEFENSIVE", "BLOCK"], group=grp_mode)
+strictNextBarEntry = input.bool(true, "Strict Next-Bar Entry", group=grp_mode)
+
+grp_bbwp = "BBWP / Regime"
+bbLen     = input.int(13, "BB Length", minval=5, maxval=50, group=grp_bbwp)
+lookback  = input.int(252, "Percentile Lookback", minval=50, maxval=500, group=grp_bbwp)
+smaPeriod = input.int(5, "BBWP SMA", minval=2, maxval=20, group=grp_bbwp)
+stdMult   = input.float(2.0, "BB Std Mult", minval=0.5, maxval=4.0, step=0.5, group=grp_bbwp)
+
+grp_thresh = "Thresholds"
+compThresh  = input.float(15.0, "Compression Threshold", minval=1, maxval=40, step=0.5, group=grp_thresh)
+expThresh   = input.float(70.0, "Expansion Threshold", minval=40, maxval=95, step=0.5, group=grp_thresh)
+climThresh  = input.float(90.0, "Climax Threshold", minval=70, maxval=99, step=0.5, group=grp_thresh)
+minStrLong  = input.float(60.0, "Min Strength Long", minval=0, maxval=100, step=1, group=grp_thresh)
+minStrShort = input.float(65.0, "Min Strength Short", minval=0, maxval=100, step=1, group=grp_thresh)
+
+grp_dir = "Directional Bias"
+biasThresh = input.float(15.0, "Bias Threshold", minval=5, maxval=40, step=1, group=grp_dir)
+adxLen      = input.int(14, "ADX Length", minval=5, maxval=50, group=grp_dir)
+adxMinLong  = input.float(20.0, "ADX Minimum Long", minval=5, maxval=50, step=0.5, group=grp_dir)
+adxMinShort = input.float(22.0, "ADX Minimum Short", minval=5, maxval=50, step=0.5, group=grp_dir)
+stochK_len  = input.int(14, "Stochastic %K", minval=5, maxval=30, group=grp_dir)
+stochK_sm   = input.int(3, "Stochastic Smooth", minval=1, maxval=10, group=grp_dir)
+stochD_sm   = input.int(3, "Signal %D", minval=1, maxval=10, group=grp_dir)
+
+grp_kc = "Keltner / Squeeze"
+kcLen    = input.int(20, "Keltner Length", minval=10, maxval=50, group=grp_kc)
+kcMult   = input.float(1.5, "Keltner Multiplier", minval=0.5, maxval=3.0, step=0.1, group=grp_kc)
+reqSqueeze = input.bool(true, "Require Squeeze Fire", group=grp_kc)
+allowOneBarAfterFire = input.bool(true, "Allow One Bar After Fire", group=grp_kc)
+
+grp_follow = "Breakout Follow-Through"
+followLookback = input.int(3, "Breakout Lookback", minval=1, maxval=20, group=grp_follow)
+followAtrFrac  = input.float(0.25, "ATR Follow-Through", minval=0.05, maxval=2.0, step=0.05, group=grp_follow)
+
+grp_risk = "Risk / Exits"
+atrLen      = input.int(14, "ATR Length", minval=5, maxval=100, group=grp_risk)
+baseStopATR = input.float(1.0, "Base Stop ATR", minval=0.2, maxval=10.0, step=0.1, group=grp_risk)
+aTargetATR  = input.float(2.5, "A Grade Target ATR", minval=0.5, maxval=20.0, step=0.1, group=grp_risk)
+bTargetATR  = input.float(2.0, "B Grade Target ATR", minval=0.5, maxval=20.0, step=0.1, group=grp_risk)
+cTargetATR  = input.float(1.5, "C Grade Target ATR", minval=0.5, maxval=20.0, step=0.1, group=grp_risk)
+aTimeout    = input.int(5, "A Grade Timeout Bars", minval=1, maxval=100, group=grp_risk)
+bTimeout    = input.int(4, "B Grade Timeout Bars", minval=1, maxval=100, group=grp_risk)
+cTimeout    = input.int(3, "C Grade Timeout Bars", minval=1, maxval=100, group=grp_risk)
+cooldownBars = input.int(4, "Cooldown Bars", minval=0, maxval=100, group=grp_risk)
+
+grp_session = "Session Filter"
+useSessionFilter = input.bool(true, "Use Session Filter", group=grp_session)
+tradeSession     = input.session("0700-1700", "Allowed Session", group=grp_session)
+
+grp_vis = "Visuals"
+showLabels  = input.bool(true, "Show Labels", group=grp_vis)
+showBg      = input.bool(true, "Show Background", group=grp_vis)
+showTable   = input.bool(true, "Show Dashboard", group=grp_vis)
+showLevels  = input.bool(true, "Show EMA / Midline Levels", group=grp_vis)
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+
+clamp(v, lo, hi) =>
+    math.max(lo, math.min(hi, v))
+
+countBelow(src, length) =>
+    cnt = 0
+    for i = 1 to length
+        cnt += src[i] <= src ? 1 : 0
+    cnt
+
+targetByGrade(g) =>
+    g == "A" ? aTargetATR : g == "B" ? bTargetATR : cTargetATR
+
+timeoutByGrade(g) =>
+    g == "A" ? aTimeout : g == "B" ? bTimeout : cTimeout
+
+// ═══════════════════════════════════════════════════════════════
+// CORE SERIES
+// ═══════════════════════════════════════════════════════════════
+
+confirmedBar = barstate.isconfirmed
+atr = ta.atr(atrLen)
+
+// BBWP
+basis   = ta.sma(close, bbLen)
+dev     = ta.stdev(close, bbLen) * stdMult
+bbUpper = basis + dev
+bbLower = basis - dev
+bbWidth = basis != 0 ? (bbUpper - bbLower) / basis : 0.0
+
+rawPctRank = lookback > 0 ? countBelow(bbWidth, lookback) / lookback * 100.0 : 50.0
+bbwp    = clamp(rawPctRank, 0.0, 100.0)
+bbwpSma = ta.sma(bbwp, smaPeriod)
+
+vhmRoc       = bbwp - nz(bbwp[1])
+vhmSmoothed  = ta.sma(vhmRoc, smaPeriod)
+vhmAccel     = vhmSmoothed - nz(vhmSmoothed[1])
+vhmDirection = vhmAccel > 0.01 ? 1 : vhmAccel < -0.01 ? -1 : 0
+
+// Keltner squeeze
+kcBasis  = ta.sma(close, kcLen)
+kcRange  = ta.atr(kcLen) * kcMult
+kcUpper  = kcBasis + kcRange
+kcLower  = kcBasis - kcRange
+
+isSqueeze   = bbLower > kcLower and bbUpper < kcUpper
+squeezeFire = isSqueeze[1] and not isSqueeze
+
+freshSqueeze = reqSqueeze ? (squeezeFire or (allowOneBarAfterFire and squeezeFire[1])) : true
+
+// Directional bias
+stK       = ta.stoch(close, high, low, stochK_len)
+stKSmooth = ta.sma(stK, stochK_sm)
+stDSmooth = ta.sma(stKSmooth, stochD_sm)
+stSpread  = stKSmooth - stDSmooth
+stKSlope  = stKSmooth - nz(stKSmooth[1])
+stDSlope  = stDSmooth - nz(stDSmooth[1])
+
+stochScore = 0.0
+stochScore += stSpread > 0 ? 4.0 : stSpread < 0 ? -4.0 : 0.0
+stochScore += stKSlope > 0 ? 3.0 : stKSlope < 0 ? -3.0 : 0.0
+stochScore += stDSlope > 0 ? 3.0 : stDSlope < 0 ? -3.0 : 0.0
+stochScore += stKSmooth > 50 and stSpread > 0 ? 5.0 : stKSmooth < 50 and stSpread < 0 ? -5.0 : 0.0
+stochScore := clamp(stochScore, -15.0, 15.0)
+
+// Trend structure
+ema20 = ta.ema(close, 20)
+ema50 = ta.ema(close, 50)
+ema200 = ta.ema(close, 200)
+[diPlus, diMinus, adxVal] = ta.dmi(adxLen, adxLen)
+
+trendScore = 0.0
+trendScore += close > ema20 ? 5.0 : close < ema20 ? -5.0 : 0.0
+trendScore += close > ema50 ? 5.0 : close < ema50 ? -5.0 : 0.0
+trendScore += ema20 > ema50 ? 5.0 : ema20 < ema50 ? -5.0 : 0.0
+trendScore += adxVal >= 25 ? (diPlus > diMinus ? 5.0 : -5.0) : 0.0
+trendScore := clamp(trendScore, -20.0, 20.0)
+
+// Volume expansion
+volSma20    = ta.sma(volume, 20)
+volRatio    = volSma20 != 0 ? volume / volSma20 : 1.0
+volExpScore = clamp((volRatio - 0.5) / 1.5 * 10.0, 0.0, 10.0)
+changePct   = close[1] != 0 ? (close - close[1]) / close[1] * 100.0 : 0.0
+volDirScore = changePct > 0 ? volExpScore : changePct < 0 ? -volExpScore : 0.0
+
+dirScore   = clamp(stochScore + trendScore + volDirScore, -100.0, 100.0)
+isBullBias = dirScore > biasThresh
+isBearBias = dirScore < -biasThresh
+
+stochBull = stKSmooth > stDSmooth and stKSlope > 0
+stochBear = stKSmooth < stDSmooth and stKSlope < 0
+
+// Compression / release context
+wasCompressed = bbwp[1] <= compThresh or bbwp[2] <= compThresh or bbwp[3] <= compThresh
+crossedUp     = bbwp > compThresh
+bbwpConfirm   = bbwp > bbwpSma or vhmDirection == 1
+
+// Strength
+bbwpDist       = math.abs(bbwp - compThresh)
+strengthBBWP   = bbwpDist > 5 ? 30.0 : bbwpDist > 3 ? 20.0 : bbwpDist > 0 ? 10.0 : 0.0
+strengthSMA    = bbwp > bbwpSma ? 20.0 : vhmDirection == 1 ? 10.0 : 0.0
+absStoch       = math.abs(stSpread)
+strengthStoch  = absStoch >= 15 ? 25.0 : absStoch >= 10 ? 17.0 : absStoch >= 5 ? 8.0 : 0.0
+strengthDir    = math.abs(dirScore) / 100.0 * 25.0
+signalStrength = clamp(strengthBBWP + strengthSMA + strengthStoch + strengthDir, 0.0, 100.0)
+
+// Follow-through confirmation (collapsed — = at end of line is invalid in Pine v6)
+longFollowThrough = close > ta.highest(high[1], followLookback) or close > close[1] + atr * followAtrFrac
+
+shortFollowThrough = close < ta.lowest(low[1], followLookback) or close < close[1] - atr * followAtrFrac
+
+// Raw breakout logic (all on single line — and at end of line is invalid in Pine v6)
+rawLongSignal = confirmedBar and allowStrategyTrades and wasCompressed and crossedUp and bbwpConfirm and stochBull and isBullBias and freshSqueeze and adxVal >= adxMinLong and signalStrength >= minStrLong and longFollowThrough and close > ema20
+
+rawShortSignal = confirmedBar and allowStrategyTrades and wasCompressed and crossedUp and bbwpConfirm and stochBear and isBearBias and freshSqueeze and adxVal >= adxMinShort and signalStrength >= minStrShort and shortFollowThrough and close < ema20
+
+longFresh = rawLongSignal and not rawLongSignal[1]
+shortFresh = rawShortSignal and not rawShortSignal[1]
+
+// Risk permission (collapsed to single line)
+tradePermissionLong = riskMode == "ALLOW" ? true : riskMode == "DEFENSIVE" ? signalStrength >= 75 : false
+tradePermissionShort = riskMode == "ALLOW" ? true : riskMode == "DEFENSIVE" ? signalStrength >= 80 : false
+
+sessionOK = not useSessionFilter or not na(time(timeframe.period, tradeSession))
+
+longSignal = longFresh and tradePermissionLong and sessionOK
+shortSignal = shortFresh and tradePermissionShort and sessionOK
+
+// Grade (collapsed to single line)
+tradeGradeLong = signalStrength >= 80 and adxVal >= 25 and freshSqueeze ? "A" : signalStrength >= 70 and adxVal >= adxMinLong ? "B" : "C"
+tradeGradeShort = signalStrength >= 82 and adxVal >= 26 and freshSqueeze ? "A" : signalStrength >= 72 and adxVal >= adxMinShort ? "B" : "C"
+
+// ═══════════════════════════════════════════════════════════════
+// COOLDOWN
+// ═══════════════════════════════════════════════════════════════
+
+var int lastFlatBar = na
+justClosed = strategy.position_size == 0 and strategy.position_size[1] != 0
+if justClosed
+    lastFlatBar := bar_index
+
+cooldownActive = not na(lastFlatBar) and (bar_index - lastFlatBar) < cooldownBars
+canEnter = strategy.position_size == 0 and not cooldownActive
+
+longSignal := longSignal and canEnter
+shortSignal := shortSignal and canEnter
+
+// ═══════════════════════════════════════════════════════════════
+// NEXT-BAR EXECUTION
+// ═══════════════════════════════════════════════════════════════
+
+var bool pendingLong = false
+var bool pendingShort = false
+var string pendingGrade = ""
+var float pendingStop = na
+var float pendingTarget = na
+var int pendingSignalBar = na
+
+if longSignal
+    pendingLong := true
+    pendingShort := false
+    pendingGrade := tradeGradeLong
+    pendingStop := close - atr * baseStopATR
+    pendingTarget := close + atr * targetByGrade(tradeGradeLong)
+    pendingSignalBar := bar_index
+
+if shortSignal
+    pendingLong := false
+    pendingShort := true
+    pendingGrade := tradeGradeShort
+    pendingStop := close + atr * baseStopATR
+    pendingTarget := close - atr * targetByGrade(tradeGradeShort)
+    pendingSignalBar := bar_index
+
+var string activeGrade = ""
+var float activeStop = na
+var float activeTarget = na
+var int entryBar = na
+
+executeLong = strictNextBarEntry ? (pendingLong and strategy.position_size == 0 and pendingSignalBar < bar_index) : longSignal
+executeShort = strictNextBarEntry ? (pendingShort and strategy.position_size == 0 and pendingSignalBar < bar_index) : shortSignal
+
+if executeLong
+    strategy.entry("Long", strategy.long)
+    activeGrade := strictNextBarEntry ? pendingGrade : tradeGradeLong
+    activeStop := strictNextBarEntry ? pendingStop : close - atr * baseStopATR
+    activeTarget := strictNextBarEntry ? pendingTarget : close + atr * targetByGrade(tradeGradeLong)
+    entryBar := bar_index
+    pendingLong := false
+    pendingShort := false
+    pendingGrade := ""
+    pendingStop := na
+    pendingTarget := na
+    pendingSignalBar := na
+
+if executeShort
+    strategy.entry("Short", strategy.short)
+    activeGrade := strictNextBarEntry ? pendingGrade : tradeGradeShort
+    activeStop := strictNextBarEntry ? pendingStop : close + atr * baseStopATR
+    activeTarget := strictNextBarEntry ? pendingTarget : close - atr * targetByGrade(tradeGradeShort)
+    entryBar := bar_index
+    pendingLong := false
+    pendingShort := false
+    pendingGrade := ""
+    pendingStop := na
+    pendingTarget := na
+    pendingSignalBar := na
+
+// ═══════════════════════════════════════════════════════════════
+// EXITS
+// ═══════════════════════════════════════════════════════════════
+
+if strategy.position_size > 0 and not na(activeStop) and not na(activeTarget)
+    strategy.exit("Long TP/SL", "Long", stop=activeStop, limit=activeTarget)
+
+if strategy.position_size < 0 and not na(activeStop) and not na(activeTarget)
+    strategy.exit("Short TP/SL", "Short", stop=activeStop, limit=activeTarget)
+
+// Fast failed-breakout exits (first value on = line)
+failedLong = strategy.position_size > 0 and (close < ema20 or vhmDirection < 0 or not stochBull or bbwp < bbwpSma)
+
+failedShort = strategy.position_size < 0 and (close > ema20 or vhmDirection < 0 or not stochBear or bbwp < bbwpSma)
+
+// give one bar of room before fast failure applies
+barsInTrade = strategy.position_size != 0 and not na(entryBar) ? (bar_index - entryBar) : 0
+if failedLong and barsInTrade >= 1
+    strategy.close("Long", comment="FailBreak")
+
+if failedShort and barsInTrade >= 1
+    strategy.close("Short", comment="FailBreak")
+
+// Timeout exits
+timeoutBars = timeoutByGrade(activeGrade)
+timeoutActive = strategy.position_size != 0 and barsInTrade >= timeoutBars
+
+stuckLong = strategy.position_size > 0 and timeoutActive and close <= strategy.position_avg_price + atr * 0.2
+stuckShort = strategy.position_size < 0 and timeoutActive and close >= strategy.position_avg_price - atr * 0.2
+
+if stuckLong
+    strategy.close("Long", comment="Timeout")
+
+if stuckShort
+    strategy.close("Short", comment="Timeout")
+
+// emergency invalidation
+bbwpInvalid = strategy.position_size != 0 and bbwp < compThresh
+if bbwpInvalid
+    strategy.close_all(comment="BBWP Invalid")
+
+if justClosed
+    activeGrade := ""
+    activeStop := na
+    activeTarget := na
+    entryBar := na
+
+// ═══════════════════════════════════════════════════════════════
+// VISUALS
+// ═══════════════════════════════════════════════════════════════
+
+plot(showLevels ? ema20 : na, "EMA20", color=color.new(color.yellow, 0), linewidth=1)
+plot(showLevels ? ema50 : na, "EMA50", color=color.new(color.orange, 0), linewidth=1)
+plot(showLevels ? ema200 : na, "EMA200", color=color.new(color.red, 35), linewidth=1)
+plot(showLevels ? basis : na, "BB Basis", color=color.new(color.white, 60), linewidth=1)
+
+bgColor = not showBg ? na : strategy.position_size > 0 ? color.new(#10B981, 92) : strategy.position_size < 0 ? color.new(color.red, 92) : longFresh ? color.new(#10B981, 95) : shortFresh ? color.new(color.red, 95) : na
+bgcolor(bgColor)
+
+plotshape(showLabels and squeezeFire, "Squeeze Fire", shape.labelup, location.belowbar, color=color.new(color.aqua, 0), text="SQZ", size=size.tiny)
+plotshape(showLabels and longFresh, "Long Signal", shape.labelup, location.belowbar, color=color.new(#10B981, 0), text="SIG L", size=size.tiny)
+plotshape(showLabels and shortFresh, "Short Signal", shape.labeldown, location.abovebar, color=color.new(color.red, 0), text="SIG S", size=size.tiny)
+plotshape(showLabels and executeLong, "Long Exec", shape.arrowup, location.belowbar, color=color.new(color.aqua, 0), text="LONG", size=size.tiny)
+plotshape(showLabels and executeShort, "Short Exec", shape.arrowdown, location.abovebar, color=color.new(color.fuchsia, 0), text="SHORT", size=size.tiny)
+
+// ═══════════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+
+var table tb = table.new(position.top_right, 2, 11, bgcolor=color.new(#0F172A, 8), frame_width=1, frame_color=color.new(color.gray, 70))
+
+regimeStr = bbwp >= climThresh ? "CLIMAX" : bbwp >= expThresh ? "EXPANSION" : bbwp < compThresh ? "COMPRESSION" : "NEUTRAL"
+biasStr = isBullBias ? "BULL" : isBearBias ? "BEAR" : "NEUTRAL"
+sqzStr = isSqueeze ? "ON" : squeezeFire ? "FIRE" : "OFF"
+stateStr = strategy.position_size > 0 ? "LONG" : strategy.position_size < 0 ? "SHORT" : pendingLong ? "PENDING L" : pendingShort ? "PENDING S" : "FLAT"
+gradeStr = activeGrade != "" ? activeGrade : pendingGrade != "" ? pendingGrade : "—"
+rrStr = gradeStr == "A" ? str.tostring(aTargetATR / baseStopATR, "#.1") + ":1" : gradeStr == "B" ? str.tostring(bTargetATR / baseStopATR, "#.1") + ":1" : gradeStr == "C" ? str.tostring(cTargetATR / baseStopATR, "#.1") + ":1" : "—"
+
+if barstate.islast and showTable
+    table.cell(tb, 0, 0, "RISK", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 0, riskMode, text_color=riskMode == "ALLOW" ? #10B981 : riskMode == "DEFENSIVE" ? color.yellow : color.red, text_size=size.small)
+
+    table.cell(tb, 0, 1, "STATE", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 1, stateStr, text_color=strategy.position_size > 0 ? #10B981 : strategy.position_size < 0 ? color.red : color.white, text_size=size.small)
+
+    table.cell(tb, 0, 2, "REGIME", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 2, regimeStr, text_color=regimeStr == "COMPRESSION" ? color.aqua : regimeStr == "EXPANSION" ? color.orange : regimeStr == "CLIMAX" ? color.red : color.white, text_size=size.small)
+
+    table.cell(tb, 0, 3, "SQUEEZE", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 3, sqzStr, text_color=sqzStr == "FIRE" ? color.aqua : sqzStr == "ON" ? color.fuchsia : color.gray, text_size=size.small)
+
+    table.cell(tb, 0, 4, "BIAS", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 4, biasStr + " (" + str.tostring(dirScore, "#.0") + ")", text_color=isBullBias ? #10B981 : isBearBias ? color.red : color.gray, text_size=size.small)
+
+    table.cell(tb, 0, 5, "STRENGTH", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 5, str.tostring(signalStrength, "#.0"), text_color=signalStrength >= 80 ? #10B981 : signalStrength >= 65 ? color.yellow : color.gray, text_size=size.small)
+
+    table.cell(tb, 0, 6, "BBWP", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 6, str.tostring(bbwp, "#.1"), text_color=bbwp < compThresh ? color.aqua : bbwp < expThresh ? color.yellow : color.red, text_size=size.small)
+
+    table.cell(tb, 0, 7, "VHM", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 7, str.tostring(vhmSmoothed, "#.2"), text_color=vhmDirection > 0 ? #10B981 : vhmDirection < 0 ? color.red : color.gray, text_size=size.small)
+
+    table.cell(tb, 0, 8, "ADX", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 8, str.tostring(adxVal, "#.1"), text_color=adxVal >= adxMinShort ? #10B981 : color.yellow, text_size=size.small)
+
+    table.cell(tb, 0, 9, "GRADE", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 9, gradeStr, text_color=gradeStr == "A" ? #10B981 : gradeStr == "B" ? color.yellow : gradeStr == "C" ? color.orange : color.gray, text_size=size.small)
+
+    table.cell(tb, 0, 10, "R:R", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 10, rrStr, text_color=color.white, text_size=size.small)
+
+// ═══════════════════════════════════════════════════════════════
+// ALERTS
+// ═══════════════════════════════════════════════════════════════
+
+alertcondition(longSignal, "Long Signal", "MSP SqzBreak v2: long signal staged")
+alertcondition(shortSignal, "Short Signal", "MSP SqzBreak v2: short signal staged")
+alertcondition(executeLong, "Long Executed", "MSP SqzBreak v2: long executed")
+alertcondition(executeShort, "Short Executed", "MSP SqzBreak v2: short executed")
+alertcondition(squeezeFire, "Squeeze Fire", "MSP SqzBreak v2: squeeze fired")
+alertcondition(cooldownActive, "Cooldown Active", "MSP SqzBreak v2: cooldown active")

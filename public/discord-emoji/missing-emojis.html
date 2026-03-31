@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>MSP Missing Discord Emojis</title>
+<style>
+  body { background: #1a1a2e; padding: 40px; font-family: Arial, sans-serif; color: white; text-align: center; }
+  .grid { display: inline-grid; grid-template-columns: repeat(4, 180px); gap: 24px; margin-top: 20px; }
+  .emoji-card { text-align: center; }
+  .emoji-card canvas { border-radius: 8px; cursor: pointer; }
+  .emoji-card p { margin: 8px 0 0; font-size: 13px; color: #94A3B8; }
+  h2 { color: #10B981; }
+  p.sub { color: #CBD5E1; margin-bottom: 24px; }
+  button { padding: 10px 24px; background: #10B981; color: white; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 14px; margin: 6px; }
+  button:hover { background: #059669; }
+</style>
+</head>
+<body>
+
+<h2>4 Missing MSP Channel Emojis</h2>
+<p class="sub">Click any icon to download individually, or hit Download All.</p>
+<button onclick="downloadAll()">Download All 4</button>
+
+<div class="grid" id="grid"></div>
+
+<script>
+const ICONS = [
+  { name: 'msp_equities',     bg: '#10B981', draw: drawEquities },
+  { name: 'msp_commodities',  bg: '#F59E0B', draw: drawCommodities },
+  { name: 'msp_crypto',       bg: '#F59E0B', draw: drawCrypto },
+  { name: 'msp_research',     bg: '#3B82F6', draw: drawResearch },
+];
+
+const S = 128;
+const grid = document.getElementById('grid');
+
+ICONS.forEach(icon => {
+  const card = document.createElement('div');
+  card.className = 'emoji-card';
+  const canvas = document.createElement('canvas');
+  canvas.width = S; canvas.height = S;
+  canvas.title = 'Click to download';
+  canvas.onclick = () => downloadOne(canvas, icon.name);
+  const label = document.createElement('p');
+  label.textContent = icon.name;
+  card.appendChild(canvas);
+  card.appendChild(label);
+  grid.appendChild(card);
+
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#0F172A';
+  roundRect(ctx, 0, 0, S, S, 16);
+  ctx.fill();
+  ctx.fillStyle = icon.bg;
+  ctx.globalAlpha = 0.15;
+  ctx.beginPath();
+  ctx.arc(S/2, S/2, 48, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  icon.draw(ctx, icon.bg);
+});
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function drawEquities(ctx, c) {
+  // Candlestick chart icon
+  ctx.strokeStyle = c; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+  // Rising price line behind
+  ctx.globalAlpha = 0.25;
+  ctx.beginPath();
+  ctx.moveTo(30, 84);
+  ctx.lineTo(50, 68);
+  ctx.lineTo(70, 74);
+  ctx.lineTo(90, 44);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+  // Candlesticks
+  const candles = [
+    { x: 38, top: 50, bot: 72, wickT: 44, wickB: 78, bull: false },
+    { x: 54, top: 54, bot: 70, wickT: 48, wickB: 76, bull: true },
+    { x: 70, top: 46, bot: 64, wickT: 40, wickB: 70, bull: true },
+    { x: 86, top: 38, bot: 56, wickT: 32, wickB: 62, bull: true },
+  ];
+  candles.forEach(cd => {
+    // Wick
+    ctx.strokeStyle = cd.bull ? c : '#EF4444';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(cd.x, cd.wickT); ctx.lineTo(cd.x, cd.wickB); ctx.stroke();
+    // Body
+    ctx.fillStyle = cd.bull ? c : '#EF4444';
+    const bodyH = cd.bot - cd.top;
+    ctx.fillRect(cd.x - 5, cd.top, 10, bodyH);
+  });
+  // Uptrend arrow
+  ctx.strokeStyle = c; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(90, 44); ctx.lineTo(96, 38); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(96, 38); ctx.lineTo(88, 38); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(96, 38); ctx.lineTo(96, 46); ctx.stroke();
+}
+
+function drawCommodities(ctx, c) {
+  // Oil barrel icon
+  ctx.strokeStyle = c; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  // Barrel body (rounded rectangle)
+  const bx = 42, by = 36, bw = 44, bh = 56;
+  // Slightly curved sides for barrel effect
+  ctx.beginPath();
+  ctx.moveTo(bx + 4, by);
+  ctx.lineTo(bx + bw - 4, by);
+  ctx.quadraticCurveTo(bx + bw + 2, by + bh / 2, bx + bw - 4, by + bh);
+  ctx.lineTo(bx + 4, by + bh);
+  ctx.quadraticCurveTo(bx - 2, by + bh / 2, bx + 4, by);
+  ctx.closePath();
+  ctx.stroke();
+  // Top ellipse
+  ctx.beginPath();
+  ctx.ellipse(bx + bw / 2, by, bw / 2 - 2, 6, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  // Horizontal bands
+  ctx.lineWidth = 2; ctx.globalAlpha = 0.5;
+  [by + 18, by + 38].forEach(y => {
+    ctx.beginPath();
+    const w1 = bw / 2 + 2;
+    ctx.ellipse(bx + bw / 2, y, w1 - 4, 3, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+  ctx.globalAlpha = 1;
+  // Drop symbol on barrel
+  ctx.fillStyle = c; ctx.globalAlpha = 0.7;
+  ctx.beginPath();
+  ctx.moveTo(64, 52);
+  ctx.quadraticCurveTo(72, 64, 68, 72);
+  ctx.arc(64, 72, 4, 0, Math.PI, false);
+  ctx.quadraticCurveTo(56, 64, 64, 52);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+function drawCrypto(ctx, c) {
+  // Bitcoin B in circle
+  ctx.strokeStyle = c; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(64, 64, 26, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = c; ctx.font = 'bold 32px Arial';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('\u20BF', 64, 65);
+  ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic';
+  // Sparkle dots
+  ctx.globalAlpha = 0.5;
+  [[38, 40], [90, 88], [88, 40]].forEach(([x, y]) => {
+    ctx.beginPath(); ctx.arc(x, y, 2, 0, Math.PI * 2); ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+}
+
+function drawResearch(ctx, c) {
+  // Document with magnifier
+  ctx.strokeStyle = c; ctx.lineWidth = 2.5;
+  roundRect(ctx, 38, 36, 36, 48, 4);
+  ctx.stroke();
+  // Lines on doc
+  ctx.globalAlpha = 0.4;
+  [48, 56, 64, 72].forEach(y => {
+    ctx.beginPath(); ctx.moveTo(44, y); ctx.lineTo(68, y); ctx.stroke();
+  });
+  ctx.globalAlpha = 1;
+  // Magnifier overlapping
+  ctx.fillStyle = '#0F172A';
+  ctx.beginPath(); ctx.arc(78, 74, 14, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = c; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(78, 74, 14, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(88, 84); ctx.lineTo(96, 92); ctx.stroke();
+}
+
+function downloadOne(canvas, name) {
+  const link = document.createElement('a');
+  link.download = name + '.png';
+  link.href = canvas.toDataURL('image/png');
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function downloadAll() {
+  const canvases = document.querySelectorAll('canvas');
+  let i = 0;
+  function next() {
+    if (i >= canvases.length) return;
+    downloadOne(canvases[i], ICONS[i].name);
+    i++;
+    setTimeout(next, 300);
+  }
+  next();
+}
+</script>
+</body>
+</html>

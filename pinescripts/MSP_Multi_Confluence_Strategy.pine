@@ -1,0 +1,478 @@
+// This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
+// © MarketScanner Pros — Multi-Confluence Strategy v2
+// High-conviction refactor: stricter core filters, DVE hard gate,
+// cohesion penalty, grade filter, cooldown, session gating, quality exits
+
+//@version=6
+strategy(
+     "MSP Multi-Confluence Strategy v2",
+     shorttitle="MSP Confluence v2",
+     overlay=true,
+     initial_capital=10000,
+     default_qty_type=strategy.percent_of_equity,
+     default_qty_value=5,
+     commission_type=strategy.commission.percent,
+     commission_value=0.06,
+     pyramiding=0,
+     calc_on_every_tick=false,
+     calc_on_order_fills=true,
+     max_labels_count=300
+)
+
+// ═══════════════════════════════════════════════════════════════
+// INPUTS
+// ═══════════════════════════════════════════════════════════════
+
+grp_mode = "Mode / Permissions"
+mode               = input.string("Strategy", "Mode", options=["Overlay", "Strategy"], group=grp_mode)
+allowStrategyTrades = input.bool(true, "Allow Strategy Trades", group=grp_mode)
+riskMode           = input.string("ALLOW", "Risk Permission", options=["ALLOW", "DEFENSIVE", "BLOCK"], group=grp_mode)
+
+grp_trend = "Trend / Core Conditions"
+emaFastLen = input.int(14, "EMA Fast", minval=3, maxval=100, group=grp_trend)
+emaMidLen  = input.int(25, "EMA Mid", minval=5, maxval=150, group=grp_trend)
+emaSlowLen = input.int(200, "EMA Slow", minval=20, maxval=400, group=grp_trend)
+adxLen     = input.int(14, "ADX Length", minval=5, maxval=50, group=grp_trend)
+minADXLong = input.float(22.0, "Min ADX Long", minval=5, maxval=50, step=0.5, group=grp_trend)
+minADXShort= input.float(24.0, "Min ADX Short", minval=5, maxval=50, step=0.5, group=grp_trend)
+
+grp_momentum = "Momentum / Secondary Conditions"
+rsiLen       = input.int(14, "RSI Length", minval=5, maxval=50, group=grp_momentum)
+rsiBullTh    = input.float(52.0, "RSI Bull Threshold", minval=40, maxval=80, step=0.5, group=grp_momentum)
+rsiBearTh    = input.float(48.0, "RSI Bear Threshold", minval=20, maxval=60, step=0.5, group=grp_momentum)
+macdFast     = input.int(12, "MACD Fast", minval=5, maxval=50, group=grp_momentum)
+macdSlow     = input.int(26, "MACD Slow", minval=10, maxval=80, group=grp_momentum)
+macdSignalLn = input.int(9, "MACD Signal", minval=3, maxval=30, group=grp_momentum)
+
+grp_structure = "Structure / Midline"
+bbLen         = input.int(20, "BB Basis Length", minval=5, maxval=100, group=grp_structure)
+bbStd         = input.float(2.0, "BB Std Mult", minval=0.5, maxval=5.0, step=0.1, group=grp_structure)
+useBBMidline  = input.bool(true, "Use BB Midline Secondary", group=grp_structure)
+
+grp_volume = "Flow / Participation"
+volLen       = input.int(20, "Volume SMA Length", minval=5, maxval=100, group=grp_volume)
+volSpikeMult = input.float(1.4, "Volume Spike Mult", minval=1.0, maxval=5.0, step=0.1, group=grp_volume)
+
+grp_dve = "DVE / Volatility Gate"
+bbwpLen      = input.int(13, "BBWP Length", minval=5, maxval=50, group=grp_dve)
+bbwpLookback = input.int(252, "BBWP Lookback", minval=50, maxval=500, group=grp_dve)
+bbwpSmaLen   = input.int(5, "BBWP SMA", minval=2, maxval=20, group=grp_dve)
+maxBbwp      = input.float(70.0, "Max BBWP for Entries", minval=30, maxval=99, step=1, group=grp_dve)
+compTh       = input.float(15.0, "Compression Threshold", minval=1, maxval=40, step=0.5, group=grp_dve)
+useDVEGate   = input.bool(true, "Use DVE Hard Gate", group=grp_dve)
+
+grp_quality = "Quality / Grade"
+minQualityLong  = input.float(75.0, "Min Quality Long", minval=40, maxval=100, step=1, group=grp_quality)
+minQualityShort = input.float(80.0, "Min Quality Short", minval=40, maxval=100, step=1, group=grp_quality)
+minGrade        = input.string("B", "Minimum Trade Grade", options=["A", "B", "C"], group=grp_quality)
+useCohesionPenalty = input.bool(true, "Use Cohesion Penalty", group=grp_quality)
+
+grp_risk = "Risk / Exit Management"
+atrLen       = input.int(14, "ATR Length", minval=5, maxval=100, group=grp_risk)
+baseStopATR  = input.float(1.0, "Base Stop ATR", minval=0.2, maxval=10.0, step=0.1, group=grp_risk)
+aTargetATR   = input.float(2.5, "A Grade Target ATR", minval=0.5, maxval=20.0, step=0.1, group=grp_risk)
+bTargetATR   = input.float(2.0, "B Grade Target ATR", minval=0.5, maxval=20.0, step=0.1, group=grp_risk)
+cTargetATR   = input.float(1.5, "C Grade Target ATR", minval=0.5, maxval=20.0, step=0.1, group=grp_risk)
+aTimeout     = input.int(8, "A Grade Timeout Bars", minval=1, maxval=100, group=grp_risk)
+bTimeout     = input.int(5, "B Grade Timeout Bars", minval=1, maxval=100, group=grp_risk)
+cTimeout     = input.int(3, "C Grade Timeout Bars", minval=1, maxval=100, group=grp_risk)
+cooldownBars = input.int(6, "Cooldown Bars After Exit", minval=0, maxval=100, group=grp_risk)
+
+grp_session = "Session Filter"
+useSessionFilter = input.bool(true, "Use Session Filter", group=grp_session)
+tradeSession     = input.session("0700-1700", "Allowed Session", group=grp_session)
+
+grp_vis = "Visuals"
+showLabels = input.bool(true, "Show Labels", group=grp_vis)
+showBg     = input.bool(true, "Show Background", group=grp_vis)
+showTable  = input.bool(true, "Show Table", group=grp_vis)
+showBands  = input.bool(true, "Show BB Bands", group=grp_vis)
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+
+clamp(v, lo, hi) =>
+    math.max(lo, math.min(hi, v))
+
+gradeOk(g) =>
+    minGrade == "C" or g == "A" or (minGrade == "B" and g == "B") or (minGrade == "C" and g == "C")
+
+countBelow(src, length) =>
+    cnt = 0
+    for i = 1 to length
+        cnt += src[i] <= src ? 1 : 0
+    cnt
+
+// ═══════════════════════════════════════════════════════════════
+// CORE INDICATORS
+// ═══════════════════════════════════════════════════════════════
+
+confirmedBar = barstate.isconfirmed
+
+emaFast = ta.ema(close, emaFastLen)
+emaMid  = ta.ema(close, emaMidLen)
+emaSlow = ta.ema(close, emaSlowLen)
+
+[diPlus, diMinus, adxVal] = ta.dmi(adxLen, adxLen)
+
+rsiVal = ta.rsi(close, rsiLen)
+[macdLine, macdSignal, macdHist] = ta.macd(close, macdFast, macdSlow, macdSignalLn)
+
+volSma = ta.sma(volume, volLen)
+volumeSpike = volSma > 0 and volume > volSma * volSpikeMult
+
+atr = ta.atr(atrLen)
+
+// Bollinger basis / midline
+bbBasis = ta.sma(close, bbLen)
+bbDev   = ta.stdev(close, bbLen) * bbStd
+bbUpper = bbBasis + bbDev
+bbLower = bbBasis - bbDev
+
+bbBull = not useBBMidline or close > bbBasis
+bbBear = not useBBMidline or close < bbBasis
+
+// DVE / BBWP proxy
+dveBasis = ta.sma(close, bbwpLen)
+dveDev   = ta.stdev(close, bbwpLen) * 2.0
+dveUpper = dveBasis + dveDev
+dveLower = dveBasis - dveDev
+dveWidth = dveBasis != 0 ? (dveUpper - dveLower) / dveBasis : 0.0
+
+rawPctRank = bbwpLookback > 0 ? countBelow(dveWidth, bbwpLookback) / bbwpLookback * 100.0 : 50.0
+bbwp = clamp(rawPctRank, 0.0, 100.0)
+bbwpSma = ta.sma(bbwp, bbwpSmaLen)
+bbwpMom = bbwp - nz(bbwp[1])
+
+// ═══════════════════════════════════════════════════════════════
+// CONDITIONS
+// ═══════════════════════════════════════════════════════════════
+
+// Core mandatory conditions
+emaBull = emaFast > emaMid and emaMid > emaSlow and close > emaFast
+emaBear = emaFast < emaMid and emaMid < emaSlow and close < emaFast
+
+adxBull = adxVal >= minADXLong and diPlus > diMinus
+adxBear = adxVal >= minADXShort and diMinus > diPlus
+
+macdBull = macdHist > 0 and macdHist > nz(macdHist[1])
+macdBear = macdHist < 0 and macdHist < nz(macdHist[1])
+
+coreBull = emaBull and adxBull and macdBull
+coreBear = emaBear and adxBear and macdBear
+
+// Secondary conditions
+rsiBull = rsiVal > rsiBullTh
+rsiBear = rsiVal < rsiBearTh
+
+secBullCount = (rsiBull ? 1 : 0) + (bbBull ? 1 : 0)
+secBearCount = (rsiBear ? 1 : 0) + (bbBear ? 1 : 0)
+
+signalBull = confirmedBar and coreBull and secBullCount >= 1
+signalBear = confirmedBar and coreBear and secBearCount >= 1
+
+bullFresh = signalBull and not signalBull[1]
+bearFresh = signalBear and not signalBear[1]
+
+// DVE hard gate
+dveBiasBull = bbwpMom >= 0 and close >= emaFast
+dveBiasBear = bbwpMom >= 0 and close <= emaFast
+dveCompression = bbwp < compTh
+dveExhaustion = bbwp > maxBbwp
+
+dveBullOK = not useDVEGate or ((dveCompression or bbwp < maxBbwp) and not dveExhaustion and dveBiasBull)
+dveBearOK = not useDVEGate or ((dveCompression or bbwp < maxBbwp) and not dveExhaustion and dveBiasBear)
+
+// Session filter
+sessionOK = not useSessionFilter or not na(time(timeframe.period, tradeSession))
+
+// Risk permission
+tradePermissionLong = riskMode == "ALLOW" ? true : riskMode == "DEFENSIVE" ? true : false
+tradePermissionShort = riskMode == "ALLOW" ? true : riskMode == "DEFENSIVE" ? false : false
+
+// ═══════════════════════════════════════════════════════════════
+// QUALITY MODEL
+// ═══════════════════════════════════════════════════════════════
+
+// Long side pillars
+structureBull = 0.0
+structureBull += emaBull ? 35 : 0
+structureBull += close > emaSlow ? 15 : 0
+structureBull += close > bbBasis ? 10 : 0
+
+flowBull = 0.0
+flowBull += volumeSpike ? 20 : 10
+flowBull += diPlus > diMinus ? 15 : 0
+
+momentumBull = 0.0
+momentumBull += macdBull ? 20 : 0
+momentumBull += rsiBull ? 15 : 0
+
+riskBull = 0.0
+riskBull += bbwp < maxBbwp ? 15 : 0
+riskBull += dveCompression ? 10 : 5
+riskBull += adxVal >= minADXLong ? 10 : 0
+
+bullQualityRaw = structureBull + flowBull + momentumBull + riskBull
+
+// Short side pillars
+structureBear = 0.0
+structureBear += emaBear ? 35 : 0
+structureBear += close < emaSlow ? 15 : 0
+structureBear += close < bbBasis ? 10 : 0
+
+flowBear = 0.0
+flowBear += volumeSpike ? 20 : 10
+flowBear += diMinus > diPlus ? 15 : 0
+
+momentumBear = 0.0
+momentumBear += macdBear ? 20 : 0
+momentumBear += rsiBear ? 15 : 0
+
+riskBear = 0.0
+riskBear += bbwp < maxBbwp ? 15 : 0
+riskBear += dveCompression ? 10 : 5
+riskBear += adxVal >= minADXShort ? 10 : 0
+
+bearQualityRaw = structureBear + flowBear + momentumBear + riskBear
+
+// Cohesion penalty
+bullPillarMax = math.max(math.max(structureBull, flowBull), math.max(momentumBull, riskBull))
+bullPillarMin = math.min(math.min(structureBull, flowBull), math.min(momentumBull, riskBull))
+bullSpread = bullPillarMax - bullPillarMin
+
+bearPillarMax = math.max(math.max(structureBear, flowBear), math.max(momentumBear, riskBear))
+bearPillarMin = math.min(math.min(structureBear, flowBear), math.min(momentumBear, riskBear))
+bearSpread = bearPillarMax - bearPillarMin
+
+bullPenalty = not useCohesionPenalty ? 0 : bullSpread > 35 ? 10 : bullSpread > 25 ? 6 : bullSpread > 15 ? 3 : 0
+bearPenalty = not useCohesionPenalty ? 0 : bearSpread > 35 ? 10 : bearSpread > 25 ? 6 : bearSpread > 15 ? 3 : 0
+
+bullQuality = clamp(bullQualityRaw - bullPenalty, 0, 100)
+bearQuality = clamp(bearQualityRaw - bearPenalty, 0, 100)
+
+// Grades
+bullGrade = bullQuality >= 85 ? "A" : bullQuality >= 75 ? "B" : bullQuality >= 65 ? "C" : "D"
+bearGrade = bearQuality >= 85 ? "A" : bearQuality >= 80 ? "B" : bearQuality >= 70 ? "C" : "D"
+
+// Final quality gates
+qualityBullOK = bullQuality >= minQualityLong and gradeOk(bullGrade)
+qualityBearOK = bearQuality >= minQualityShort and gradeOk(bearGrade)
+
+// ═══════════════════════════════════════════════════════════════
+// COOLDOWN / ENTRY GATING
+// ═══════════════════════════════════════════════════════════════
+
+var int lastFlatBar = na
+justClosed = strategy.position_size == 0 and strategy.position_size[1] != 0
+if justClosed
+    lastFlatBar := bar_index
+
+cooldownActive = not na(lastFlatBar) and (bar_index - lastFlatBar) < cooldownBars
+canEnter = strategy.position_size == 0 and not cooldownActive
+
+longSignal = canEnter and allowStrategyTrades and sessionOK and tradePermissionLong and bullFresh and dveBullOK and qualityBullOK
+shortSignal = canEnter and allowStrategyTrades and sessionOK and tradePermissionShort and bearFresh and dveBearOK and qualityBearOK
+
+// ═══════════════════════════════════════════════════════════════
+// STAGED NEXT-BAR EXECUTION
+// ═══════════════════════════════════════════════════════════════
+
+var bool   pendingLong = false
+var bool   pendingShort = false
+var string pendingGrade = ""
+var float  pendingQuality = na
+var float  pendingStopPx = na
+var float  pendingTargetPx = na
+var int    pendingSignalBar = na
+
+// Stage signal on confirmed bar
+if longSignal
+    pendingLong := true
+    pendingShort := false
+    pendingGrade := bullGrade
+    pendingQuality := bullQuality
+    pendingStopPx := close - atr * baseStopATR
+    pendingTargetPx := close + atr * (bullGrade == "A" ? aTargetATR : bullGrade == "B" ? bTargetATR : cTargetATR)
+    pendingSignalBar := bar_index
+
+if shortSignal
+    pendingLong := false
+    pendingShort := true
+    pendingGrade := bearGrade
+    pendingQuality := bearQuality
+    pendingStopPx := close + atr * baseStopATR
+    pendingTargetPx := close - atr * (bearGrade == "A" ? aTargetATR : bearGrade == "B" ? bTargetATR : cTargetATR)
+    pendingSignalBar := bar_index
+
+var string activeGrade = ""
+var float  activeQuality = na
+var float  stopPx = na
+var float  targetPx = na
+var int    entryBar = na
+
+executeLong = pendingLong and strategy.position_size == 0 and pendingSignalBar < bar_index
+executeShort = pendingShort and strategy.position_size == 0 and pendingSignalBar < bar_index
+
+if executeLong
+    strategy.entry("Long", strategy.long)
+    activeGrade := pendingGrade
+    activeQuality := pendingQuality
+    stopPx := pendingStopPx
+    targetPx := pendingTargetPx
+    entryBar := bar_index
+    pendingLong := false
+    pendingShort := false
+    pendingGrade := ""
+    pendingQuality := na
+    pendingStopPx := na
+    pendingTargetPx := na
+    pendingSignalBar := na
+
+if executeShort
+    strategy.entry("Short", strategy.short)
+    activeGrade := pendingGrade
+    activeQuality := pendingQuality
+    stopPx := pendingStopPx
+    targetPx := pendingTargetPx
+    entryBar := bar_index
+    pendingLong := false
+    pendingShort := false
+    pendingGrade := ""
+    pendingQuality := na
+    pendingStopPx := na
+    pendingTargetPx := na
+    pendingSignalBar := na
+
+// ═══════════════════════════════════════════════════════════════
+// EXITS
+// ═══════════════════════════════════════════════════════════════
+
+if strategy.position_size > 0 and not na(stopPx) and not na(targetPx)
+    strategy.exit("Long Exit", "Long", stop=stopPx, limit=targetPx)
+
+if strategy.position_size < 0 and not na(stopPx) and not na(targetPx)
+    strategy.exit("Short Exit", "Short", stop=stopPx, limit=targetPx)
+
+// Dissipation exit
+bullDissipating = strategy.position_size > 0 and (not emaBull or macdHist < 0 or adxVal < minADXLong)
+bearDissipating = strategy.position_size < 0 and (not emaBear or macdHist > 0 or adxVal < minADXShort)
+
+if bullDissipating
+    strategy.close("Long", comment="Dissipation")
+
+if bearDissipating
+    strategy.close("Short", comment="Dissipation")
+
+// Timeout by grade
+timeoutBars = activeGrade == "A" ? aTimeout : activeGrade == "B" ? bTimeout : activeGrade == "C" ? cTimeout : 3
+
+barsInTrade = strategy.position_size != 0 and not na(entryBar) ? (bar_index - entryBar) : 0
+timeoutActive = strategy.position_size != 0 and barsInTrade >= timeoutBars
+
+stuckLong = strategy.position_size > 0 and timeoutActive and close <= strategy.position_avg_price + atr * 0.2
+stuckShort = strategy.position_size < 0 and timeoutActive and close >= strategy.position_avg_price - atr * 0.2
+
+if stuckLong
+    strategy.close("Long", comment="Timeout")
+
+if stuckShort
+    strategy.close("Short", comment="Timeout")
+
+if justClosed
+    activeGrade := ""
+    activeQuality := na
+    stopPx := na
+    targetPx := na
+    entryBar := na
+
+// ═══════════════════════════════════════════════════════════════
+// VISUALS
+// ═══════════════════════════════════════════════════════════════
+
+plot(emaFast, "EMA Fast", color=color.new(color.yellow, 0), linewidth=1)
+plot(emaMid,  "EMA Mid",  color=color.new(color.orange, 0), linewidth=1)
+plot(emaSlow, "EMA Slow", color=color.new(color.red, 35), linewidth=1)
+
+plot(showBands ? bbUpper : na, "BB Upper", color=color.new(color.gray, 75), linewidth=1)
+plot(showBands ? bbBasis : na, "BB Basis", color=color.new(color.white, 65), linewidth=1)
+plot(showBands ? bbLower : na, "BB Lower", color=color.new(color.gray, 75), linewidth=1)
+
+bgCol = showBg ? (
+    strategy.position_size > 0 ? color.new(#10B981, 92) :
+    strategy.position_size < 0 ? color.new(color.red, 92) :
+    bullFresh ? color.new(#10B981, 95) :
+    bearFresh ? color.new(color.red, 95) :
+    na
+) : na
+bgcolor(bgCol)
+
+plotshape(showLabels and bullFresh, title="Bull Signal", style=shape.labelup, location=location.belowbar, color=color.new(#10B981, 0), text="CONF L", size=size.tiny)
+plotshape(showLabels and bearFresh, title="Bear Signal", style=shape.labeldown, location=location.abovebar, color=color.new(color.red, 0), text="CONF S", size=size.tiny)
+
+plotshape(showLabels and executeLong, title="Long Exec", style=shape.arrowup, location=location.belowbar, color=color.new(color.aqua, 0), text="LONG", size=size.tiny)
+plotshape(showLabels and executeShort, title="Short Exec", style=shape.arrowdown, location=location.abovebar, color=color.new(color.fuchsia, 0), text="SHORT", size=size.tiny)
+
+// ═══════════════════════════════════════════════════════════════
+// TABLE
+// ═══════════════════════════════════════════════════════════════
+
+var table tb = table.new(position.top_right, 2, 12, bgcolor=color.new(#0F172A, 8), frame_width=1, frame_color=color.new(color.gray, 70))
+
+stateStr = strategy.position_size > 0 ? "LONG" : strategy.position_size < 0 ? "SHORT" : pendingLong ? "PENDING LONG" : pendingShort ? "PENDING SHORT" : "FLAT"
+gradeStr = activeGrade != "" ? activeGrade : pendingGrade != "" ? pendingGrade : "—"
+qualityStr = not na(activeQuality) ? str.tostring(activeQuality, "#.0") : not na(pendingQuality) ? str.tostring(pendingQuality, "#.0") : "—"
+rrStr = activeGrade == "A" ? str.tostring(aTargetATR / baseStopATR, "#.1") + ":1" :
+       activeGrade == "B" ? str.tostring(bTargetATR / baseStopATR, "#.1") + ":1" :
+       activeGrade == "C" ? str.tostring(cTargetATR / baseStopATR, "#.1") + ":1" :
+       pendingGrade == "A" ? str.tostring(aTargetATR / baseStopATR, "#.1") + ":1" :
+       pendingGrade == "B" ? str.tostring(bTargetATR / baseStopATR, "#.1") + ":1" :
+       pendingGrade == "C" ? str.tostring(cTargetATR / baseStopATR, "#.1") + ":1" : "—"
+
+if barstate.islast and showTable
+    table.cell(tb, 0, 0, "MODE", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 0, mode, text_color=color.white, text_size=size.small)
+
+    table.cell(tb, 0, 1, "RISK", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 1, riskMode, text_color=riskMode == "ALLOW" ? #10B981 : riskMode == "DEFENSIVE" ? color.yellow : color.red, text_size=size.small)
+
+    table.cell(tb, 0, 2, "STATE", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 2, stateStr, text_color=strategy.position_size > 0 ? #10B981 : strategy.position_size < 0 ? color.red : color.white, text_size=size.small)
+
+    table.cell(tb, 0, 3, "GRADE", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 3, gradeStr, text_color=gradeStr == "A" ? #10B981 : gradeStr == "B" ? color.yellow : gradeStr == "C" ? color.orange : color.gray, text_size=size.small)
+
+    table.cell(tb, 0, 4, "QUALITY", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 4, qualityStr, text_color=color.white, text_size=size.small)
+
+    table.cell(tb, 0, 5, "BBWP", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 5, str.tostring(bbwp, "#.1"), text_color=bbwp < compTh ? #10B981 : bbwp < maxBbwp ? color.yellow : color.red, text_size=size.small)
+
+    table.cell(tb, 0, 6, "ADX", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 6, str.tostring(adxVal, "#.1"), text_color=adxVal >= minADXLong ? #10B981 : color.red, text_size=size.small)
+
+    table.cell(tb, 0, 7, "EMA", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 7, emaBull ? "BULL" : emaBear ? "BEAR" : "MIXED", text_color=emaBull ? #10B981 : emaBear ? color.red : color.gray, text_size=size.small)
+
+    table.cell(tb, 0, 8, "MACD", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 8, str.tostring(macdHist, "#.0000"), text_color=macdBull ? #10B981 : macdBear ? color.red : color.gray, text_size=size.small)
+
+    table.cell(tb, 0, 9, "RSI", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 9, str.tostring(rsiVal, "#.1"), text_color=rsiBull ? #10B981 : rsiBear ? color.red : color.gray, text_size=size.small)
+
+    table.cell(tb, 0, 10, "R:R", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 10, rrStr, text_color=color.white, text_size=size.small)
+
+    table.cell(tb, 0, 11, "COOLDOWN", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 11, cooldownActive ? str.tostring(cooldownBars - (bar_index - lastFlatBar)) : "READY", text_color=cooldownActive ? color.orange : #10B981, text_size=size.small)
+
+// ═══════════════════════════════════════════════════════════════
+// ALERTS
+// ═══════════════════════════════════════════════════════════════
+
+alertcondition(longSignal, "Long Signal", "MSP Confluence v2: Long signal staged")
+alertcondition(shortSignal, "Short Signal", "MSP Confluence v2: Short signal staged")
+alertcondition(executeLong, "Long Executed", "MSP Confluence v2: Long executed")
+alertcondition(executeShort, "Short Executed", "MSP Confluence v2: Short executed")
+alertcondition(cooldownActive, "Cooldown Active", "MSP Confluence v2: Cooldown active")

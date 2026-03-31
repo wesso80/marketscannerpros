@@ -1,0 +1,429 @@
+// This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
+// © MarketScanner Pros — Day Trader v2
+// Refactored execution framework: continuation + reversal playbooks,
+// stricter gating, setup-specific exits, lower risk defaults
+
+//@version=6
+strategy(
+     "MSP Day Trader v2",
+     shorttitle="MSP DayTrader v2",
+     overlay=true,
+     initial_capital=10000,
+     default_qty_type=strategy.percent_of_equity,
+     default_qty_value=5,
+     commission_type=strategy.commission.percent,
+     commission_value=0.06,
+     pyramiding=0,
+     calc_on_every_tick=false,
+     calc_on_order_fills=true,
+     max_labels_count=300
+)
+
+// ═══════════════════════════════════════════════════════════════
+// INPUTS
+// ═══════════════════════════════════════════════════════════════
+
+grp_mode = "Mode / Permissions"
+strategyMode      = input.string("Strategy", "Mode", options=["Discretionary", "Strategy"], group=grp_mode)
+allowStrategyTrades = input.bool(true, "Allow Strategy Trades", group=grp_mode)
+useLocalRegimeGate = input.bool(true, "Use Local Regime Gate", group=grp_mode)
+
+grp_trend = "Trend Engine"
+emaFastLen       = input.int(9,   "EMA Fast", minval=3, maxval=50, group=grp_trend)
+emaMidLen        = input.int(21,  "EMA Mid", minval=5, maxval=100, group=grp_trend)
+emaSlowLen       = input.int(55,  "EMA Slow", minval=10, maxval=200, group=grp_trend)
+htfTf            = input.timeframe("240", "HTF Trend Timeframe", group=grp_trend)
+htfEmaLen        = input.int(200, "HTF EMA Length", minval=50, maxval=400, group=grp_trend)
+adxLen           = input.int(14,  "ADX Length", minval=5, maxval=50, group=grp_trend)
+minADX           = input.float(20.0, "Min ADX", minval=5, maxval=50, step=0.5, group=grp_trend)
+strongADX        = input.float(25.0, "Strong ADX", minval=10, maxval=50, step=0.5, group=grp_trend)
+
+grp_momentum = "Momentum"
+rsiLen           = input.int(14, "RSI Length", minval=5, maxval=50, group=grp_momentum)
+rsiBullTh        = input.float(52.0, "RSI Bull Threshold", minval=40, maxval=80, step=0.5, group=grp_momentum)
+rsiBearTh        = input.float(48.0, "RSI Bear Threshold", minval=20, maxval=60, step=0.5, group=grp_momentum)
+macdFast         = input.int(12, "MACD Fast", minval=5, maxval=30, group=grp_momentum)
+macdSlow         = input.int(26, "MACD Slow", minval=10, maxval=60, group=grp_momentum)
+macdSignalLen    = input.int(9,  "MACD Signal", minval=3, maxval=20, group=grp_momentum)
+
+grp_volume = "Participation"
+volSmaLen        = input.int(20, "Volume SMA Length", minval=5, maxval=100, group=grp_volume)
+volSpikeMult     = input.float(1.4, "Volume Spike Mult", minval=1.0, maxval=5.0, step=0.1, group=grp_volume)
+
+grp_structure = "Structure / FVG / Sweep"
+swingLen         = input.int(5, "Swing Length", minval=2, maxval=20, group=grp_structure)
+fvgLookback      = input.int(12, "FVG Lookback", minval=3, maxval=50, group=grp_structure)
+fvgAtrTol        = input.float(0.35, "Near FVG ATR Tolerance", minval=0.1, maxval=2.0, step=0.05, group=grp_structure)
+useSweepFilter   = input.bool(true, "Use Sweep Logic", group=grp_structure)
+
+grp_risk = "Risk / Exits"
+atrLen           = input.int(14, "ATR Length", minval=5, maxval=100, group=grp_risk)
+contStopATR      = input.float(1.2, "Continuation Stop ATR", minval=0.2, maxval=10.0, step=0.1, group=grp_risk)
+contTPATR        = input.float(2.2, "Continuation TP ATR", minval=0.5, maxval=20.0, step=0.1, group=grp_risk)
+revStopATR       = input.float(0.8, "Reversal Stop ATR", minval=0.2, maxval=10.0, step=0.1, group=grp_risk)
+revTPATR         = input.float(1.5, "Reversal TP ATR", minval=0.5, maxval=20.0, step=0.1, group=grp_risk)
+contTimeoutBars  = input.int(8, "Continuation Timeout Bars", minval=1, maxval=100, group=grp_risk)
+revTimeoutBars   = input.int(4, "Reversal Timeout Bars", minval=1, maxval=100, group=grp_risk)
+cooldownBars     = input.int(5, "Cooldown Bars After Exit", minval=0, maxval=100, group=grp_risk)
+
+grp_chop = "Chop Filter"
+useChopFilter    = input.bool(true, "Use Chop Filter", group=grp_chop)
+emaCompressionATR= input.float(0.25, "EMA Compression ATR Factor", minval=0.05, maxval=2.0, step=0.05, group=grp_chop)
+flatMacdTh       = input.float(0.0, "Flat MACD Hist Threshold", minval=0.0, maxval=1.0, step=0.0001, group=grp_chop)
+flatRsiBand      = input.float(5.0, "Flat RSI Band Around 50", minval=1.0, maxval=20.0, step=0.5, group=grp_chop)
+atrWeakFactor    = input.float(0.8, "ATR Weak Factor vs ATR SMA", minval=0.1, maxval=2.0, step=0.05, group=grp_chop)
+
+grp_vis = "Visuals"
+showLabels       = input.bool(true, "Show Labels", group=grp_vis)
+showBg           = input.bool(true, "Show Background Bias", group=grp_vis)
+showTable        = input.bool(true, "Show State Table", group=grp_vis)
+showFVG          = input.bool(true, "Show FVG Guide", group=grp_vis)
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+
+clamp(v, lo, hi) =>
+    math.max(lo, math.min(hi, v))
+
+// ═══════════════════════════════════════════════════════════════
+// CORE ENGINES
+// ═══════════════════════════════════════════════════════════════
+
+// EMA ribbon
+emaFast = ta.ema(close, emaFastLen)
+emaMid  = ta.ema(close, emaMidLen)
+emaSlow = ta.ema(close, emaSlowLen)
+
+// HTF trend
+htfClose = request.security(syminfo.tickerid, htfTf, close)
+htfEma   = request.security(syminfo.tickerid, htfTf, ta.ema(close, htfEmaLen))
+
+// DMI / ADX
+[diPlus, diMinus, adxVal] = ta.dmi(adxLen, adxLen)
+
+// Momentum
+rsiVal = ta.rsi(close, rsiLen)
+[macdLine, macdSignal, macdHist] = ta.macd(close, macdFast, macdSlow, macdSignalLen)
+
+// Volume
+volSma = ta.sma(volume, volSmaLen)
+volumeSpike = volSma > 0 and volume > volSma * volSpikeMult
+
+// ATR
+atr = ta.atr(atrLen)
+atrSma = ta.sma(atr, 20)
+
+// Trend conditions
+emaBull = emaFast > emaMid and emaMid > emaSlow and close > emaFast
+emaBear = emaFast < emaMid and emaMid < emaSlow and close < emaFast
+
+htfBull = htfClose > htfEma
+htfBear = htfClose < htfEma
+
+adxBull = adxVal >= minADX and diPlus > diMinus
+adxBear = adxVal >= minADX and diMinus > diPlus
+
+rsiBull = rsiVal > rsiBullTh
+rsiBear = rsiVal < rsiBearTh
+
+macdBull = macdHist > 0 and macdHist > nz(macdHist[1])
+macdBear = macdHist < 0 and macdHist < nz(macdHist[1])
+
+// ═══════════════════════════════════════════════════════════════
+// FVG PROXY
+// ═══════════════════════════════════════════════════════════════
+
+// Simple 3-candle FVG proxies
+bullFVG = low > high[2]
+bearFVG = high < low[2]
+
+var float lastBullFVG = na
+var float lastBearFVG = na
+
+if bullFVG
+    lastBullFVG := (low + high[2]) / 2.0
+
+if bearFVG
+    lastBearFVG := (high + low[2]) / 2.0
+
+nearBullFVG = not na(lastBullFVG) and math.abs(close - lastBullFVG) <= atr * fvgAtrTol
+nearBearFVG = not na(lastBearFVG) and math.abs(close - lastBearFVG) <= atr * fvgAtrTol
+
+// ═══════════════════════════════════════════════════════════════
+// LIQUIDITY SWEEP PROXY
+// ═══════════════════════════════════════════════════════════════
+
+priorSwingLow  = ta.lowest(low[1], swingLen)
+priorSwingHigh = ta.highest(high[1], swingLen)
+
+sweepBull = useSweepFilter and low < priorSwingLow and close > priorSwingLow
+sweepBear = useSweepFilter and high > priorSwingHigh and close < priorSwingHigh
+
+// ═══════════════════════════════════════════════════════════════
+// LOCAL REGIME / CHOP FILTERS
+// ═══════════════════════════════════════════════════════════════
+
+emaCompression = math.abs(emaFast - emaMid) < atr * emaCompressionATR and math.abs(emaMid - emaSlow) < atr * emaCompressionATR
+flatMomentum   = math.abs(macdHist) <= flatMacdTh and math.abs(rsiVal - 50.0) < flatRsiBand
+weakATR        = atr < atrSma * atrWeakFactor
+
+chopFilter = useChopFilter and (adxVal < minADX or emaCompression or flatMomentum or weakATR)
+
+// Simplified local regime okay
+localRegimeOkay = not chopFilter and adxVal >= minADX
+
+entryAllowed = allowStrategyTrades and (not useLocalRegimeGate or localRegimeOkay)
+
+// ═══════════════════════════════════════════════════════════════
+// PLAYBOOK A — CONTINUATION
+// Core conditions mandatory
+// ═══════════════════════════════════════════════════════════════
+
+coreBullCont = emaBull and htfBull and adxBull
+coreBearCont = emaBear and htfBear and adxBear
+
+secBullContCount = (rsiBull ? 1 : 0) + (macdBull ? 1 : 0) + (volumeSpike ? 1 : 0) + (nearBullFVG ? 1 : 0)
+secBearContCount = (rsiBear ? 1 : 0) + (macdBear ? 1 : 0) + (volumeSpike ? 1 : 0) + (nearBearFVG ? 1 : 0)
+
+// tighter in strategy mode
+minContSecs = strategyMode == "Strategy" ? 2 : 1
+
+bullContinuationEntry = entryAllowed and coreBullCont and secBullContCount >= minContSecs
+bearContinuationEntry = entryAllowed and coreBearCont and secBearContCount >= minContSecs
+
+bullContQuality = 0.0
+bullContQuality += emaBull ? 25 : 0
+bullContQuality += htfBull ? 25 : 0
+bullContQuality += adxVal >= strongADX ? 20 : adxVal >= minADX ? 10 : 0
+bullContQuality += rsiBull ? 10 : 0
+bullContQuality += macdBull ? 10 : 0
+bullContQuality += volumeSpike ? 5 : 0
+bullContQuality += nearBullFVG ? 5 : 0
+
+bearContQuality = 0.0
+bearContQuality += emaBear ? 25 : 0
+bearContQuality += htfBear ? 25 : 0
+bearContQuality += adxVal >= strongADX ? 20 : adxVal >= minADX ? 10 : 0
+bearContQuality += rsiBear ? 10 : 0
+bearContQuality += macdBear ? 10 : 0
+bearContQuality += volumeSpike ? 5 : 0
+bearContQuality += nearBearFVG ? 5 : 0
+
+// ═══════════════════════════════════════════════════════════════
+// PLAYBOOK B — REVERSAL
+// Separate logic, smaller targets, faster timeout
+// ═══════════════════════════════════════════════════════════════
+
+bullReversalCore    = sweepBull and macdBull and rsiBull
+bullReversalConfirm = volumeSpike or nearBullFVG
+bullReversalEntry   = entryAllowed and bullReversalCore and bullReversalConfirm and not emaBear
+
+bearReversalCore    = sweepBear and macdBear and rsiBear
+bearReversalConfirm = volumeSpike or nearBearFVG
+bearReversalEntry   = entryAllowed and bearReversalCore and bearReversalConfirm and not emaBull
+
+bullRevQuality = 0.0
+bullRevQuality += sweepBull ? 30 : 0
+bullRevQuality += macdBull ? 20 : 0
+bullRevQuality += rsiBull ? 15 : 0
+bullRevQuality += volumeSpike ? 15 : 0
+bullRevQuality += nearBullFVG ? 10 : 0
+bullRevQuality += close > emaMid ? 10 : 0
+
+bearRevQuality = 0.0
+bearRevQuality += sweepBear ? 30 : 0
+bearRevQuality += macdBear ? 20 : 0
+bearRevQuality += rsiBear ? 15 : 0
+bearRevQuality += volumeSpike ? 15 : 0
+bearRevQuality += nearBearFVG ? 10 : 0
+bearRevQuality += close < emaMid ? 10 : 0
+
+// ═══════════════════════════════════════════════════════════════
+// COOLDOWN AFTER EXIT
+// ═══════════════════════════════════════════════════════════════
+
+var int lastFlatBar = na
+justClosed = strategy.position_size == 0 and strategy.position_size[1] != 0
+if justClosed
+    lastFlatBar := bar_index
+
+cooldownActive = not na(lastFlatBar) and (bar_index - lastFlatBar) < cooldownBars
+
+// Final entries with cooldown and one-position-only logic
+canEnter = strategy.position_size == 0 and not cooldownActive
+
+enterLongCont = canEnter and bullContinuationEntry and not bullReversalEntry
+enterShortCont = canEnter and bearContinuationEntry and not bearReversalEntry
+enterLongRev = canEnter and bullReversalEntry and not bullContinuationEntry
+enterShortRev = canEnter and bearReversalEntry and not bearContinuationEntry
+
+// Priority in case both happen (rare)
+enterLong = enterLongCont or (not enterLongCont and enterLongRev)
+enterShort = enterShortCont or (not enterShortCont and enterShortRev)
+
+// ═══════════════════════════════════════════════════════════════
+// STRATEGY ORDERS
+// ═══════════════════════════════════════════════════════════════
+
+var string setupType = ""
+var int entryBarIdx = na
+var float entryAtr = na
+var float entryPx = na
+var float stopPx = na
+var float targetPx = na
+var string tradeGrade = ""
+
+// Entry execution
+if enterLong
+    setupType := enterLongCont ? "LONG_CONT" : "LONG_REV"
+    tradeGrade := (enterLongCont ? bullContQuality : bullRevQuality) >= 85 ? "A" : (enterLongCont ? bullContQuality : bullRevQuality) >= 70 ? "B" : "C"
+    strategy.entry("Long", strategy.long)
+    entryBarIdx := bar_index
+    entryAtr := atr
+    entryPx := close
+    stopPx := enterLongCont ? close - atr * contStopATR : close - atr * revStopATR
+    targetPx := enterLongCont ? close + atr * contTPATR : close + atr * revTPATR
+
+if enterShort
+    setupType := enterShortCont ? "SHORT_CONT" : "SHORT_REV"
+    tradeGrade := (enterShortCont ? bearContQuality : bearRevQuality) >= 85 ? "A" : (enterShortCont ? bearContQuality : bearRevQuality) >= 70 ? "B" : "C"
+    strategy.entry("Short", strategy.short)
+    entryBarIdx := bar_index
+    entryAtr := atr
+    entryPx := close
+    stopPx := enterShortCont ? close + atr * contStopATR : close + atr * revStopATR
+    targetPx := enterShortCont ? close - atr * contTPATR : close - atr * revTPATR
+
+// Apply exits while in position
+if strategy.position_size > 0
+    strategy.exit("Long Exit", "Long", stop=stopPx, limit=targetPx)
+
+if strategy.position_size < 0
+    strategy.exit("Short Exit", "Short", stop=stopPx, limit=targetPx)
+
+// Timeout logic
+barsInTrade = strategy.position_size != 0 and not na(entryBarIdx) ? (bar_index - entryBarIdx) : 0
+timeoutBars = str.contains(setupType, "_CONT") ? contTimeoutBars : revTimeoutBars
+timeoutActive = strategy.position_size != 0 and barsInTrade >= timeoutBars
+
+// Timeout condition: if trade is not moving enough after timeout
+stuckLong = strategy.position_size > 0 and timeoutActive and close <= strategy.position_avg_price + atr * 0.2
+stuckShort = strategy.position_size < 0 and timeoutActive and close >= strategy.position_avg_price - atr * 0.2
+
+if stuckLong
+    strategy.close("Long", comment="Timeout")
+
+if stuckShort
+    strategy.close("Short", comment="Timeout")
+
+// Basic invalidation upgrades
+contLongInvalid = strategy.position_size > 0 and setupType == "LONG_CONT" and (not emaBull or not htfBull)
+contShortInvalid = strategy.position_size < 0 and setupType == "SHORT_CONT" and (not emaBear or not htfBear)
+
+revLongInvalid = strategy.position_size > 0 and setupType == "LONG_REV" and macdHist < 0
+revShortInvalid = strategy.position_size < 0 and setupType == "SHORT_REV" and macdHist > 0
+
+if contLongInvalid or revLongInvalid
+    strategy.close("Long", comment="Invalidation")
+
+if contShortInvalid or revShortInvalid
+    strategy.close("Short", comment="Invalidation")
+
+// Reset metadata when flat
+if strategy.position_size == 0 and justClosed
+    setupType := ""
+    entryBarIdx := na
+    entryAtr := na
+    entryPx := na
+    stopPx := na
+    targetPx := na
+    tradeGrade := ""
+
+// ═══════════════════════════════════════════════════════════════
+// VISUALS
+// ═══════════════════════════════════════════════════════════════
+
+plot(emaFast, "EMA Fast", color=color.new(color.yellow, 0), linewidth=1)
+plot(emaMid,  "EMA Mid",  color=color.new(color.orange, 0), linewidth=1)
+plot(emaSlow, "EMA Slow", color=color.new(color.red, 35), linewidth=1)
+
+plot(showFVG and not na(lastBullFVG) ? lastBullFVG : na, "Bull FVG Mid", color=color.new(color.aqua, 50), linewidth=1, style=plot.style_linebr)
+plot(showFVG and not na(lastBearFVG) ? lastBearFVG : na, "Bear FVG Mid", color=color.new(color.fuchsia, 50), linewidth=1, style=plot.style_linebr)
+
+bgColor = showBg ? (
+     emaBull and htfBull ? color.new(#10B981, 92) :
+     emaBear and htfBear ? color.new(color.red, 92) :
+     chopFilter ? color.new(color.yellow, 95) :
+     na
+) : na
+bgcolor(bgColor)
+
+plotshape(showLabels and enterLongCont, title="Long Cont", style=shape.labelup, location=location.belowbar, color=color.new(#10B981, 0), text="LONG C", size=size.tiny)
+plotshape(showLabels and enterShortCont, title="Short Cont", style=shape.labeldown, location=location.abovebar, color=color.new(color.red, 0), text="SHORT C", size=size.tiny)
+
+plotshape(showLabels and enterLongRev, title="Long Rev", style=shape.labelup, location=location.belowbar, color=color.new(color.teal, 0), text="LONG R", size=size.tiny)
+plotshape(showLabels and enterShortRev, title="Short Rev", style=shape.labeldown, location=location.abovebar, color=color.new(color.maroon, 0), text="SHORT R", size=size.tiny)
+
+plotshape(showLabels and sweepBull, title="Sweep Bull", style=shape.triangleup, location=location.belowbar, color=color.new(color.aqua, 15), size=size.tiny)
+plotshape(showLabels and sweepBear, title="Sweep Bear", style=shape.triangledown, location=location.abovebar, color=color.new(color.fuchsia, 15), size=size.tiny)
+
+// ═══════════════════════════════════════════════════════════════
+// STATE TABLE
+// ═══════════════════════════════════════════════════════════════
+
+var table tb = table.new(position.top_right, 2, 12, bgcolor=color.new(#0F172A, 8), frame_width=1, frame_color=color.new(color.gray, 70))
+
+modeStr = strategyMode
+biasStr = emaBull and htfBull ? "BULL" : emaBear and htfBear ? "BEAR" : "MIXED"
+regimeStr = entryAllowed ? "OPEN" : "BLOCKED"
+playbookStr = strategy.position_size != 0 ? setupType : (enterLongCont or enterShortCont ? "CONTINUATION" : enterLongRev or enterShortRev ? "REVERSAL" : "—")
+rrNow = str.contains(setupType, "_CONT") ? contTPATR / contStopATR : str.contains(setupType, "_REV") ? revTPATR / revStopATR : na
+
+if barstate.islast and showTable
+    table.cell(tb, 0, 0, "MODE", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 0, modeStr, text_color=color.white, text_size=size.small)
+
+    table.cell(tb, 0, 1, "REGIME", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 1, regimeStr, text_color=entryAllowed ? #10B981 : color.red, text_size=size.small)
+
+    table.cell(tb, 0, 2, "BIAS", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 2, biasStr, text_color=biasStr == "BULL" ? #10B981 : biasStr == "BEAR" ? color.red : color.yellow, text_size=size.small)
+
+    table.cell(tb, 0, 3, "PLAYBOOK", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 3, playbookStr, text_color=color.white, text_size=size.small)
+
+    table.cell(tb, 0, 4, "ADX", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 4, str.tostring(adxVal, "#.1"), text_color=adxVal >= strongADX ? #10B981 : adxVal >= minADX ? color.yellow : color.red, text_size=size.small)
+
+    table.cell(tb, 0, 5, "RSI", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 5, str.tostring(rsiVal, "#.1"), text_color=rsiBull ? #10B981 : rsiBear ? color.red : color.gray, text_size=size.small)
+
+    table.cell(tb, 0, 6, "MACD", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 6, str.tostring(macdHist, "#.0000"), text_color=macdBull ? #10B981 : macdBear ? color.red : color.gray, text_size=size.small)
+
+    table.cell(tb, 0, 7, "VOL", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 7, volumeSpike ? "SPIKE" : "NORMAL", text_color=volumeSpike ? #10B981 : color.gray, text_size=size.small)
+
+    table.cell(tb, 0, 8, "CHOP", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 8, chopFilter ? "YES" : "NO", text_color=chopFilter ? color.red : #10B981, text_size=size.small)
+
+    table.cell(tb, 0, 9, "GRADE", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 9, tradeGrade == "" ? "—" : tradeGrade, text_color=tradeGrade == "A" ? #10B981 : tradeGrade == "B" ? color.yellow : tradeGrade == "C" ? color.orange : color.gray, text_size=size.small)
+
+    table.cell(tb, 0, 10, "R:R", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 10, na(rrNow) ? "—" : str.tostring(rrNow, "#.1") + ":1", text_color=na(rrNow) ? color.gray : rrNow >= 2 ? #10B981 : color.yellow, text_size=size.small)
+
+    table.cell(tb, 0, 11, "COOLDOWN", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 11, cooldownActive ? str.tostring(cooldownBars - (bar_index - lastFlatBar)) : "READY", text_color=cooldownActive ? color.orange : #10B981, text_size=size.small)
+
+// ═══════════════════════════════════════════════════════════════
+// ALERTS
+// ═══════════════════════════════════════════════════════════════
+
+alertcondition(enterLongCont, "Long Continuation", "MSP DayTrader v2: Long continuation entry")
+alertcondition(enterShortCont, "Short Continuation", "MSP DayTrader v2: Short continuation entry")
+alertcondition(enterLongRev, "Long Reversal", "MSP DayTrader v2: Long reversal entry")
+alertcondition(enterShortRev, "Short Reversal", "MSP DayTrader v2: Short reversal entry")
+alertcondition(chopFilter, "Chop Filter Active", "MSP DayTrader v2: Chop filter active")
+alertcondition(cooldownActive, "Cooldown Active", "MSP DayTrader v2: Cooldown active")

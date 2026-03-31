@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>MSP Discord Emoji Generator</title>
+<style>
+  body { background: #1a1a2e; padding: 20px; font-family: Arial, sans-serif; color: white; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, 160px); gap: 20px; }
+  .emoji-card { text-align: center; }
+  .emoji-card canvas { border-radius: 8px; cursor: pointer; }
+  .emoji-card p { margin: 6px 0 0; font-size: 12px; color: #94A3B8; }
+  .instructions { margin-bottom: 24px; padding: 16px; background: #1E293B; border-radius: 8px; border: 1px solid #334155; }
+  .instructions h2 { color: #10B981; margin-top: 0; }
+  .instructions p { color: #CBD5E1; line-height: 1.6; }
+  button { margin-top: 16px; padding: 10px 24px; background: #10B981; color: white; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 14px; }
+  button:hover { background: #059669; }
+</style>
+</head>
+<body>
+
+<div class="instructions">
+  <h2>MSP Discord Emoji Pack</h2>
+  <p>Click <strong>"Download All"</strong> to save every icon as a 128x128 PNG.<br>
+  Then upload them to Discord: Server Settings → Emoji → Upload Emoji.<br>
+  Name each file as the emoji name (e.g. <code>msp_scanner</code>).</p>
+  <button onclick="downloadAll()">Download All PNGs</button>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<script>
+const ICONS = [
+  { name: 'msp_welcome',       bg: '#10B981', draw: drawWelcome },
+  { name: 'msp_dashboard',     bg: '#3B82F6', draw: drawDashboard },
+  { name: 'msp_scanner',       bg: '#10B981', draw: drawScanner },
+  { name: 'msp_golden_egg',    bg: '#F59E0B', draw: drawGoldenEgg },
+  { name: 'msp_time_confluence', bg: '#8B5CF6', draw: drawTimeCon },
+  { name: 'msp_options_terminal', bg: '#EF4444', draw: drawTerminal },
+  { name: 'msp_options_confluence', bg: '#F97316', draw: drawTarget },
+  { name: 'msp_journal',       bg: '#06B6D4', draw: drawJournal },
+  { name: 'msp_portfolio',     bg: '#10B981', draw: drawPortfolio },
+  { name: 'msp_arca_ai',       bg: '#10B981', draw: drawArcaAI },
+  { name: 'msp_crypto',        bg: '#F59E0B', draw: drawCrypto },
+  { name: 'msp_alerts',        bg: '#EF4444', draw: drawAlerts },
+  { name: 'msp_breakout',      bg: '#22D3EE', draw: drawBreakout },
+  { name: 'msp_trap',          bg: '#EF4444', draw: drawTrap },
+  { name: 'msp_volatility',    bg: '#F97316', draw: drawVolatility },
+  { name: 'msp_pressure',      bg: '#8B5CF6', draw: drawPressure },
+  { name: 'msp_research',      bg: '#3B82F6', draw: drawResearch },
+  { name: 'msp_reviews',       bg: '#06B6D4', draw: drawReviews },
+];
+
+const S = 128;
+const grid = document.getElementById('grid');
+
+ICONS.forEach(icon => {
+  const card = document.createElement('div');
+  card.className = 'emoji-card';
+  const canvas = document.createElement('canvas');
+  canvas.width = S; canvas.height = S;
+  canvas.title = 'Click to download';
+  canvas.onclick = () => downloadOne(canvas, icon.name);
+  const label = document.createElement('p');
+  label.textContent = icon.name;
+  card.appendChild(canvas);
+  card.appendChild(label);
+  grid.appendChild(card);
+
+  const ctx = canvas.getContext('2d');
+  // Dark background with rounded corners
+  ctx.fillStyle = '#0F172A';
+  roundRect(ctx, 0, 0, S, S, 16);
+  ctx.fill();
+
+  // Accent circle
+  ctx.fillStyle = icon.bg;
+  ctx.globalAlpha = 0.15;
+  ctx.beginPath();
+  ctx.arc(S/2, S/2, 48, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Draw the icon
+  icon.draw(ctx, icon.bg);
+});
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+// ── Icon draw functions ──
+
+function drawWelcome(ctx, c) {
+  // Hand wave
+  ctx.strokeStyle = c; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.arc(64, 58, 22, Math.PI * 1.1, Math.PI * 1.9);
+  ctx.stroke();
+  // Palm
+  ctx.fillStyle = c;
+  ctx.beginPath();
+  ctx.arc(64, 64, 16, 0, Math.PI * 2);
+  ctx.fill();
+  // Fingers
+  [[-12, -18], [-4, -24], [6, -24], [14, -18], [20, -8]].forEach(([dx, dy]) => {
+    ctx.beginPath();
+    ctx.moveTo(64 + dx * 0.4, 64 + dy * 0.4);
+    ctx.lineTo(64 + dx, 64 + dy);
+    ctx.lineWidth = 5;
+    ctx.stroke();
+  });
+}
+
+function drawDashboard(ctx, c) {
+  ctx.strokeStyle = c; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  // 4 quadrant boxes
+  const m = 36, s = 24;
+  [[m, m], [m + s + 4, m], [m, m + s + 4], [m + s + 4, m + s + 4]].forEach(([x, y], i) => {
+    ctx.strokeStyle = i === 0 ? c : (i === 1 ? '#3B82F6' : i === 2 ? '#8B5CF6' : '#06B6D4');
+    roundRect(ctx, x, y, s, s, 4);
+    ctx.stroke();
+  });
+  // Mini bar chart in first box
+  ctx.fillStyle = c;
+  [0, 6, 12].forEach((dx, i) => {
+    const h = [10, 16, 12][i];
+    ctx.fillRect(m + 4 + dx, m + s - 2 - h, 4, h);
+  });
+}
+
+function drawScanner(ctx, c) {
+  ctx.strokeStyle = c; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  // Magnifying glass
+  ctx.beginPath();
+  ctx.arc(58, 56, 20, 0, Math.PI * 2);
+  ctx.stroke();
+  // Handle
+  ctx.beginPath();
+  ctx.moveTo(72, 70);
+  ctx.lineTo(88, 86);
+  ctx.stroke();
+  // Scan lines inside
+  ctx.lineWidth = 2; ctx.globalAlpha = 0.6;
+  [48, 56, 64].forEach(y => {
+    ctx.beginPath();
+    ctx.moveTo(44, y);
+    ctx.lineTo(72, y);
+    ctx.stroke();
+  });
+  ctx.globalAlpha = 1;
+}
+
+function drawGoldenEgg(ctx, c) {
+  // Egg shape
+  ctx.fillStyle = c;
+  ctx.beginPath();
+  ctx.ellipse(64, 68, 22, 28, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Shine
+  ctx.fillStyle = '#FDE68A';
+  ctx.beginPath();
+  ctx.ellipse(54, 54, 6, 10, -0.4, 0, Math.PI * 2);
+  ctx.fill();
+  // Sparkle
+  ctx.strokeStyle = '#FDE68A'; ctx.lineWidth = 2;
+  [[82, 40], [86, 50]].forEach(([x, y]) => {
+    ctx.beginPath(); ctx.moveTo(x, y - 5); ctx.lineTo(x, y + 5); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - 5, y); ctx.lineTo(x + 5, y); ctx.stroke();
+  });
+}
+
+function drawTimeCon(ctx, c) {
+  // Clock face
+  ctx.strokeStyle = c; ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(64, 64, 26, 0, Math.PI * 2);
+  ctx.stroke();
+  // Hour hand
+  ctx.lineWidth = 4; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(64, 64); ctx.lineTo(64, 46); ctx.stroke();
+  // Minute hand
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(64, 64); ctx.lineTo(78, 58); ctx.stroke();
+  // Center dot
+  ctx.fillStyle = c;
+  ctx.beginPath(); ctx.arc(64, 64, 3, 0, Math.PI * 2); ctx.fill();
+  // Confluence rays
+  ctx.globalAlpha = 0.4; ctx.lineWidth = 2;
+  [0, 60, 120, 180, 240, 300].forEach(a => {
+    const rad = a * Math.PI / 180;
+    ctx.beginPath();
+    ctx.moveTo(64 + Math.cos(rad) * 30, 64 + Math.sin(rad) * 30);
+    ctx.lineTo(64 + Math.cos(rad) * 38, 64 + Math.sin(rad) * 38);
+    ctx.stroke();
+  });
+  ctx.globalAlpha = 1;
+}
+
+function drawTerminal(ctx, c) {
+  // Monitor frame
+  ctx.strokeStyle = c; ctx.lineWidth = 3;
+  roundRect(ctx, 32, 34, 64, 44, 6);
+  ctx.stroke();
+  // Stand
+  ctx.beginPath(); ctx.moveTo(56, 78); ctx.lineTo(56, 88); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(72, 78); ctx.lineTo(72, 88); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(48, 88); ctx.lineTo(80, 88); ctx.stroke();
+  // Command prompt inside
+  ctx.fillStyle = c; ctx.font = 'bold 18px monospace';
+  ctx.fillText('> _', 40, 62);
+}
+
+function drawTarget(ctx, c) {
+  // Concentric rings
+  ctx.strokeStyle = c; ctx.lineWidth = 3;
+  [26, 18, 10].forEach(r => {
+    ctx.beginPath(); ctx.arc(64, 64, r, 0, Math.PI * 2); ctx.stroke();
+  });
+  // Bullseye
+  ctx.fillStyle = c;
+  ctx.beginPath(); ctx.arc(64, 64, 4, 0, Math.PI * 2); ctx.fill();
+  // Crosshair
+  ctx.lineWidth = 1.5; ctx.globalAlpha = 0.5;
+  ctx.beginPath(); ctx.moveTo(64, 34); ctx.lineTo(64, 94); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(34, 64); ctx.lineTo(94, 64); ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+function drawJournal(ctx, c) {
+  // Notebook body
+  ctx.fillStyle = '#1E293B';
+  roundRect(ctx, 38, 32, 52, 64, 4);
+  ctx.fill();
+  ctx.strokeStyle = c; ctx.lineWidth = 2.5;
+  roundRect(ctx, 38, 32, 52, 64, 4);
+  ctx.stroke();
+  // Lines
+  ctx.strokeStyle = c; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.4;
+  [46, 54, 62, 70, 78].forEach(y => {
+    ctx.beginPath(); ctx.moveTo(46, y); ctx.lineTo(82, y); ctx.stroke();
+  });
+  ctx.globalAlpha = 1;
+  // Spine binding
+  ctx.fillStyle = c;
+  ctx.fillRect(36, 42, 4, 8);
+  ctx.fillRect(36, 56, 4, 8);
+  ctx.fillRect(36, 70, 4, 8);
+}
+
+function drawPortfolio(ctx, c) {
+  // Briefcase body
+  ctx.fillStyle = '#1E293B';
+  roundRect(ctx, 32, 48, 64, 40, 6);
+  ctx.fill();
+  ctx.strokeStyle = c; ctx.lineWidth = 3;
+  roundRect(ctx, 32, 48, 64, 40, 6);
+  ctx.stroke();
+  // Handle
+  ctx.beginPath();
+  ctx.moveTo(52, 48); ctx.lineTo(52, 40);
+  ctx.quadraticCurveTo(52, 36, 56, 36);
+  ctx.lineTo(72, 36);
+  ctx.quadraticCurveTo(76, 36, 76, 40);
+  ctx.lineTo(76, 48);
+  ctx.stroke();
+  // Dollar sign
+  ctx.fillStyle = c; ctx.font = 'bold 22px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('$', 64, 76);
+  ctx.textAlign = 'start';
+}
+
+function drawArcaAI(ctx, c) {
+  // Brain / chip outline
+  ctx.strokeStyle = c; ctx.lineWidth = 3;
+  // Hexagonal chip shape
+  const cx = 64, cy = 64, r = 26;
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const a = (i * 60 - 30) * Math.PI / 180;
+    const x = cx + r * Math.cos(a);
+    const y = cy + r * Math.sin(a);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath(); ctx.stroke();
+  // Inner circuit lines
+  ctx.lineWidth = 2; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(54, 56); ctx.lineTo(64, 56); ctx.lineTo(64, 72); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(74, 56); ctx.lineTo(68, 56); ctx.lineTo(68, 64); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(56, 68); ctx.lineTo(64, 68); ctx.stroke();
+  // Core dot
+  ctx.fillStyle = c;
+  ctx.beginPath(); ctx.arc(64, 64, 4, 0, Math.PI * 2); ctx.fill();
+  // Pin connectors
+  ctx.lineWidth = 2;
+  [[-30, -8], [-30, 8], [30, -8], [30, 8], [-8, -32], [8, -32], [-8, 32], [8, 32]].forEach(([dx, dy]) => {
+    ctx.beginPath();
+    ctx.moveTo(cx + dx * 0.85, cy + dy * 0.85);
+    ctx.lineTo(cx + dx, cy + dy);
+    ctx.stroke();
+  });
+}
+
+function drawCrypto(ctx, c) {
+  // Bitcoin-inspired B
+  ctx.strokeStyle = c; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(64, 64, 26, 0, Math.PI * 2); ctx.stroke();
+  // BTC symbol
+  ctx.fillStyle = c; ctx.font = 'bold 32px Arial';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('₿', 64, 65);
+  ctx.textAlign = 'start'; ctx.textBaseline = 'alphabetic';
+  // Sparkle dots
+  ctx.globalAlpha = 0.5;
+  [[38, 40], [90, 88], [88, 40]].forEach(([x, y]) => {
+    ctx.beginPath(); ctx.arc(x, y, 2, 0, Math.PI * 2); ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+}
+
+function drawAlerts(ctx, c) {
+  // Bell shape
+  ctx.fillStyle = c;
+  ctx.beginPath();
+  ctx.moveTo(44, 72);
+  ctx.quadraticCurveTo(44, 44, 64, 38);
+  ctx.quadraticCurveTo(84, 44, 84, 72);
+  ctx.lineTo(44, 72);
+  ctx.fill();
+  // Bell bottom rim
+  ctx.fillRect(40, 72, 48, 6);
+  // Clapper
+  ctx.beginPath(); ctx.arc(64, 84, 5, 0, Math.PI * 2); ctx.fill();
+  // Top knob
+  ctx.beginPath(); ctx.arc(64, 36, 3, 0, Math.PI * 2); ctx.fill();
+  // Alert flash
+  ctx.strokeStyle = '#FDE68A'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(86, 42); ctx.lineTo(94, 36); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(90, 50); ctx.lineTo(98, 50); ctx.stroke();
+}
+
+function drawBreakout(ctx, c) {
+  // Arrow bursting up
+  ctx.strokeStyle = c; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  // Resistance line
+  ctx.globalAlpha = 0.3;
+  ctx.beginPath(); ctx.moveTo(32, 56); ctx.lineTo(96, 56); ctx.stroke();
+  ctx.globalAlpha = 1;
+  // Price line going up through resistance
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(36, 82);
+  ctx.lineTo(50, 70);
+  ctx.lineTo(58, 60);
+  ctx.lineTo(66, 56);
+  ctx.lineTo(74, 44);
+  ctx.lineTo(86, 32);
+  ctx.stroke();
+  // Arrow head
+  ctx.fillStyle = c;
+  ctx.beginPath();
+  ctx.moveTo(86, 32);
+  ctx.lineTo(78, 38);
+  ctx.lineTo(82, 42);
+  ctx.closePath();
+  ctx.fill();
+  // Burst lines
+  ctx.lineWidth = 2; ctx.globalAlpha = 0.5;
+  ctx.beginPath(); ctx.moveTo(88, 28); ctx.lineTo(94, 22); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(92, 34); ctx.lineTo(98, 32); ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+function drawTrap(ctx, c) {
+  // Bear trap / warning
+  ctx.strokeStyle = c; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  // Triangle warning
+  ctx.beginPath();
+  ctx.moveTo(64, 34);
+  ctx.lineTo(90, 86);
+  ctx.lineTo(38, 86);
+  ctx.closePath();
+  ctx.stroke();
+  // Exclamation
+  ctx.fillStyle = c;
+  ctx.fillRect(61, 50, 6, 20);
+  ctx.beginPath(); ctx.arc(64, 78, 3, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawVolatility(ctx, c) {
+  // Zigzag wave
+  ctx.strokeStyle = c; ctx.lineWidth = 3.5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(28, 64);
+  ctx.lineTo(40, 42);
+  ctx.lineTo(52, 82);
+  ctx.lineTo(64, 38);
+  ctx.lineTo(76, 86);
+  ctx.lineTo(88, 44);
+  ctx.lineTo(100, 64);
+  ctx.stroke();
+  // Expanding envelope
+  ctx.globalAlpha = 0.2; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(28, 54); ctx.lineTo(100, 34); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(28, 74); ctx.lineTo(100, 94); ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+function drawPressure(ctx, c) {
+  // Gauge
+  ctx.strokeStyle = c; ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.arc(64, 70, 28, Math.PI, 0);
+  ctx.stroke();
+  // Needle
+  ctx.strokeStyle = '#EF4444'; ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(64, 70);
+  ctx.lineTo(82, 50);
+  ctx.stroke();
+  // Center pivot
+  ctx.fillStyle = c;
+  ctx.beginPath(); ctx.arc(64, 70, 4, 0, Math.PI * 2); ctx.fill();
+  // Tick marks
+  ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.globalAlpha = 0.5;
+  [150, 170, 190, 210, 230, 250, 270, 290, 310, 330, 350, 370, 390].forEach((a, i) => {
+    if (i > 12) return;
+    const rad = (a) * Math.PI / 180;
+    ctx.beginPath();
+    ctx.moveTo(64 + Math.cos(rad) * 24, 70 + Math.sin(rad) * 24);
+    ctx.lineTo(64 + Math.cos(rad) * 28, 70 + Math.sin(rad) * 28);
+    ctx.stroke();
+  });
+  ctx.globalAlpha = 1;
+}
+
+function drawResearch(ctx, c) {
+  // Microscope / magnifier with document
+  ctx.strokeStyle = c; ctx.lineWidth = 2.5;
+  // Document
+  roundRect(ctx, 38, 36, 36, 48, 4);
+  ctx.stroke();
+  // Lines on doc
+  ctx.globalAlpha = 0.4;
+  [48, 56, 64, 72].forEach(y => {
+    ctx.beginPath(); ctx.moveTo(44, y); ctx.lineTo(68, y); ctx.stroke();
+  });
+  ctx.globalAlpha = 1;
+  // Magnifier overlapping
+  ctx.fillStyle = '#0F172A';
+  ctx.beginPath(); ctx.arc(78, 74, 14, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = c; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(78, 74, 14, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(88, 84); ctx.lineTo(96, 92); ctx.stroke();
+}
+
+function drawReviews(ctx, c) {
+  // Star / rating
+  ctx.fillStyle = c;
+  function star(cx, cy, r) {
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const a1 = (i * 72 - 90) * Math.PI / 180;
+      const a2 = ((i * 72) + 36 - 90) * Math.PI / 180;
+      ctx.lineTo(cx + r * Math.cos(a1), cy + r * Math.sin(a1));
+      ctx.lineTo(cx + r * 0.4 * Math.cos(a2), cy + r * 0.4 * Math.sin(a2));
+    }
+    ctx.closePath(); ctx.fill();
+  }
+  star(64, 58, 22);
+  // Checkmark below
+  ctx.strokeStyle = c; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(50, 88);
+  ctx.lineTo(60, 96);
+  ctx.lineTo(80, 80);
+  ctx.stroke();
+}
+
+// ── Download helpers ──
+
+function downloadOne(canvas, name) {
+  const link = document.createElement('a');
+  link.download = name + '.png';
+  link.href = canvas.toDataURL('image/png');
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function downloadAll() {
+  const canvases = document.querySelectorAll('canvas');
+  let i = 0;
+  function next() {
+    if (i >= canvases.length) return;
+    downloadOne(canvases[i], ICONS[i].name);
+    i++;
+    setTimeout(next, 300);
+  }
+  next();
+}
+</script>
+</body>
+</html>

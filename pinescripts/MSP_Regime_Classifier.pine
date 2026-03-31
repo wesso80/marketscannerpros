@@ -1,0 +1,358 @@
+// This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
+// © MarketScanner Pros — Correlation & Risk Governor
+// Upgraded from Regime Classifier into terminal-grade macro/correlation governor
+
+//@version=6
+indicator("MSP — Correlation & Risk Governor", shorttitle="MSP RiskGov", overlay=true, max_labels_count=300)
+
+// ═══════════════════════════════════════════════════════════════
+// INPUTS
+// ═══════════════════════════════════════════════════════════════
+
+grp_assets = "Reference Assets"
+vixSym     = input.symbol("CBOE:VIX",          "VIX Symbol",      group=grp_assets)
+dxySym     = input.symbol("TVC:DXY",           "DXY Symbol",      group=grp_assets)
+spySym     = input.symbol("AMEX:SPY",          "SPY Symbol",      group=grp_assets)
+btcSym     = input.symbol("BINANCE:BTCUSDT",   "BTC Symbol",      group=grp_assets)
+goldSym    = input.symbol("COMEX:GC1!",        "Gold Symbol",     group=grp_assets)
+
+grp_sector = "Sector ETFs"
+xlkSym     = input.symbol("AMEX:XLK",          "XLK (Tech)",      group=grp_sector)
+xluSym     = input.symbol("AMEX:XLU",          "XLU (Utilities)", group=grp_sector)
+xlfSym     = input.symbol("AMEX:XLF",          "XLF (Financials)",group=grp_sector)
+
+grp_thresh = "Regime Thresholds"
+vixLow     = input.float(14,   "VIX Low",                minval=8,   maxval=20, group=grp_thresh)
+vixNorm    = input.float(20,   "VIX Normal",             minval=15,  maxval=25, group=grp_thresh)
+vixElev    = input.float(30,   "VIX Elevated",           minval=25,  maxval=40, group=grp_thresh)
+btcMomTh   = input.float(0.5,  "BTC Mom Threshold %",    minval=0.1, maxval=2.0, step=0.1, group=grp_thresh)
+spyMomTh   = input.float(0.3,  "SPY Mom Threshold %",    minval=0.1, maxval=1.0, step=0.1, group=grp_thresh)
+dxyTh      = input.float(0.15, "DXY Trend Threshold %",  minval=0.05,maxval=0.5, step=0.05, group=grp_thresh)
+
+grp_corr   = "Correlation Engine"
+corrLen        = input.int(20,   "Correlation Length", minval=5, maxval=100, group=grp_corr)
+btcSpyAlignTh  = input.float(0.50, "BTC/SPY Aligned >", minval=-1, maxval=1, step=0.05, group=grp_corr)
+btcSpyBreakTh  = input.float(0.20, "BTC/SPY Breakdown <", minval=-1, maxval=1, step=0.05, group=grp_corr)
+clusterCorrTh  = input.float(0.70, "Cluster Risk Corr >", minval=-1, maxval=1, step=0.05, group=grp_corr)
+allCorrOneTh   = input.float(0.80, "All Corr-to-1 BTC/SPY >", minval=-1, maxval=1, step=0.05, group=grp_corr)
+dxyPosCorrTh   = input.float(0.50, "All Corr-to-1 SPY/DXY >", minval=-1, maxval=1, step=0.05, group=grp_corr)
+
+grp_vis = "Visuals"
+uiMode           = input.string("Pro", "Display Mode", options=["Clean", "Pro", "Diagnostic"], group=grp_vis)
+showBg           = input.bool(true,  "Show Regime Background",         group=grp_vis)
+showTransitionBg = input.bool(true,  "Show Transition Flash",          group=grp_vis)
+showTable        = input.bool(true,  "Show Regime Dashboard",          group=grp_vis)
+showSize         = input.bool(true,  "Show Size Multiplier",           group=grp_vis)
+showLastBarLbl   = input.bool(false, "Show Last-Bar Command Label",    group=grp_vis)
+showCorrDebug    = input.bool(false, "Show Correlation Debug Plots",   group=grp_vis)
+bgTransparency   = input.int(95, "Background Transparency", minval=85, maxval=100, group=grp_vis)
+
+isCleanMode = uiMode == "Clean"
+isProMode   = uiMode == "Pro"
+isDiagMode  = uiMode == "Diagnostic"
+
+// ═══════════════════════════════════════════════════════════════
+// CROSS-ASSET DATA (Daily close via request.security)
+// ═══════════════════════════════════════════════════════════════
+
+vixClose  = request.security(vixSym,  "D", close)
+dxyClose  = request.security(dxySym,  "D", close)
+spyClose  = request.security(spySym,  "D", close)
+btcClose  = request.security(btcSym,  "D", close)
+goldClose = request.security(goldSym, "D", close)
+xlkClose  = request.security(xlkSym,  "D", close)
+xluClose  = request.security(xluSym,  "D", close)
+xlfClose  = request.security(xlfSym,  "D", close)
+
+// Previous closes
+vixPrev   = request.security(vixSym,  "D", close[1])
+dxyPrev   = request.security(dxySym,  "D", close[1])
+spyPrev   = request.security(spySym,  "D", close[1])
+btcPrev   = request.security(btcSym,  "D", close[1])
+goldPrev  = request.security(goldSym, "D", close[1])
+xlkPrev   = request.security(xlkSym,  "D", close[1])
+xluPrev   = request.security(xluSym,  "D", close[1])
+xlfPrev   = request.security(xlfSym,  "D", close[1])
+
+// 24h momentum (%)
+btcMom   = btcPrev  != 0 ? (btcClose  - btcPrev)  / btcPrev  * 100 : 0.0
+spyMom   = spyPrev  != 0 ? (spyClose  - spyPrev)  / spyPrev  * 100 : 0.0
+dxyChg   = dxyPrev  != 0 ? (dxyClose  - dxyPrev)  / dxyPrev  * 100 : 0.0
+goldChg  = goldPrev != 0 ? (goldClose - goldPrev) / goldPrev * 100 : 0.0
+xlkChg   = xlkPrev  != 0 ? (xlkClose  - xlkPrev)  / xlkPrev  * 100 : 0.0
+xluChg   = xluPrev  != 0 ? (xluClose  - xluPrev)  / xluPrev  * 100 : 0.0
+xlfChg   = xlfPrev  != 0 ? (xlfClose  - xlfPrev)  / xlfPrev  * 100 : 0.0
+
+// ═══════════════════════════════════════════════════════════════
+// CORRELATION ENGINE (Daily rolling correlations)
+// ═══════════════════════════════════════════════════════════════
+
+btcSpyCorr = ta.correlation(btcClose, spyClose, corrLen)
+btcDxyCorr = ta.correlation(btcClose, dxyClose, corrLen)
+spyDxyCorr = ta.correlation(spyClose, dxyClose, corrLen)
+
+// Correlation states
+corrAligned     = btcSpyCorr > btcSpyAlignTh and spyDxyCorr < -0.30
+corrBreakdown   = btcSpyCorr < btcSpyBreakTh
+corrClusterRisk = btcSpyCorr > clusterCorrTh and vixClose >= vixNorm
+allCorrToOne    = btcSpyCorr > allCorrOneTh and spyDxyCorr > dxyPosCorrTh and vixClose >= vixNorm
+
+corrState = allCorrToOne ? "ALL-CORR-1" :
+     corrClusterRisk ? "CLUSTER RISK" :
+     corrBreakdown ? "BREAKDOWN" :
+     corrAligned ? "ALIGNED" :
+     "MIXED"
+
+corrColor = allCorrToOne ? color.red :
+     corrClusterRisk ? color.orange :
+     corrBreakdown ? color.yellow :
+     corrAligned ? #10B981 :
+     color.gray
+
+// ═══════════════════════════════════════════════════════════════
+// VIX REGIME
+// ═══════════════════════════════════════════════════════════════
+
+// 1=LOW, 2=NORMAL, 3=ELEVATED, 4=EXTREME
+vixRegime = vixClose > vixElev ? 4 : vixClose > vixNorm ? 3 : vixClose > vixLow ? 2 : 1
+vixLabel  = vixRegime == 4 ? "EXTREME" : vixRegime == 3 ? "ELEVATED" : vixRegime == 2 ? "NORMAL" : "LOW"
+
+// ═══════════════════════════════════════════════════════════════
+// MARKET REGIME CLASSIFICATION
+// ═══════════════════════════════════════════════════════════════
+
+// 1=RISK_ON, 2=RISK_OFF, 3=STRESS, 4=DECORRELATED, 5=DIVERGENT
+regime = 0
+if vixRegime == 4 or allCorrToOne
+    regime := 3  // STRESS
+else if corrBreakdown
+    regime := 4  // DECORRELATED
+else if btcMom > btcMomTh and spyMom > spyMomTh and vixRegime < 3 and corrAligned
+    regime := 1  // RISK_ON
+else if btcMom < -btcMomTh and spyMom < -spyMomTh
+    regime := 2  // RISK_OFF
+else if (btcMom > btcMomTh and spyMom < -spyMomTh) or (btcMom < -btcMomTh and spyMom > spyMomTh)
+    regime := 5  // DIVERGENT
+else if vixRegime >= 3 and (btcMom < -btcMomTh or spyMom < -spyMomTh)
+    regime := 2  // RISK_OFF (secondary)
+else
+    regime := 1  // default bias
+
+regimeLabel = regime == 1 ? "RISK ON" :
+     regime == 2 ? "RISK OFF" :
+     regime == 3 ? "STRESS" :
+     regime == 4 ? "DECORRELATED" :
+     "DIVERGENT"
+
+// ═══════════════════════════════════════════════════════════════
+// SECTOR ROTATION
+// ═══════════════════════════════════════════════════════════════
+
+// 1=GROWTH, 2=DEFENSIVE, 3=VALUE, 4=MIXED
+sectorRotation = xlkChg > xluChg + 0.3 and xlkChg > xlfChg ? 1 :
+     xluChg > xlkChg + 0.3 ? 2 :
+     xlfChg > xlkChg + 0.3 ? 3 : 4
+
+sectorLabel = sectorRotation == 1 ? "GROWTH" :
+     sectorRotation == 2 ? "DEFENSIVE" :
+     sectorRotation == 3 ? "VALUE" :
+     "MIXED"
+
+// ═══════════════════════════════════════════════════════════════
+// DXY TREND
+// ═══════════════════════════════════════════════════════════════
+
+dxyTrend = dxyChg > dxyTh ? 1 : dxyChg < -dxyTh ? -1 : 0
+dxyLabel = dxyTrend == 1 ? "STRONG $" : dxyTrend == -1 ? "WEAK $" : "NEUTRAL"
+
+// ═══════════════════════════════════════════════════════════════
+// GOLD SAFE HAVEN
+// ═══════════════════════════════════════════════════════════════
+
+goldSafeHaven = goldChg > 0.5 and spyMom < -spyMomTh
+
+// ═══════════════════════════════════════════════════════════════
+// RISK SCORE (0-100, base 50)
+// ═══════════════════════════════════════════════════════════════
+
+riskBase      = 50.0
+btcContrib    = math.max(-15.0, math.min(15.0, btcMom * 5))
+spyContrib    = math.max(-15.0, math.min(15.0, spyMom * 5))
+vixContrib    = vixClose < vixLow ? 15.0 : vixClose < vixNorm ? 5.0 : vixClose < 25 ? -5.0 : vixClose < vixElev ? -12.0 : -20.0
+dxyContrib    = dxyTrend == -1 ? 5.0 : dxyTrend == 1 ? -5.0 : 0.0
+stressContrib = regime == 3 ? -15.0 : regime == 2 ? -10.0 : regime == 5 ? -5.0 : 0.0
+corrContrib   = corrAligned ? 8.0 : corrBreakdown ? -8.0 : corrClusterRisk ? -10.0 : 0.0
+
+riskScore = math.max(0.0, math.min(100.0,
+     riskBase + btcContrib + spyContrib + vixContrib + dxyContrib + stressContrib + corrContrib))
+
+// ═══════════════════════════════════════════════════════════════
+// POSITION SIZE MULTIPLIER (0.0 - 1.0)
+// ═══════════════════════════════════════════════════════════════
+
+baseMult = regime == 3 ? 0.25 :
+     regime == 2 ? 0.60 :
+     regime == 5 ? 0.80 :
+     regime == 4 ? 0.70 :
+     1.00
+
+sizeMult = vixRegime == 4 ? math.min(baseMult, 0.30) :
+     vixRegime == 3 ? math.min(baseMult, 0.75) :
+     baseMult
+
+if allCorrToOne
+    sizeMult := math.min(sizeMult, 0.25)
+
+// ═══════════════════════════════════════════════════════════════
+// TRADE PERMISSION ENGINE
+// ═══════════════════════════════════════════════════════════════
+
+tradePermission = allCorrToOne ? "BLOCK" :
+     regime == 3 ? "BLOCK" :
+     regime == 2 ? "DEFENSIVE" :
+     regime == 5 ? "REDUCE" :
+     regime == 4 ? "REDUCE" :
+     "ALLOW"
+
+permColor = tradePermission == "ALLOW" ? #10B981 :
+     tradePermission == "DEFENSIVE" ? color.yellow :
+     tradePermission == "REDUCE" ? color.orange :
+     color.red
+
+// ═══════════════════════════════════════════════════════════════
+// WARNINGS
+// ═══════════════════════════════════════════════════════════════
+
+warnVixExtreme      = vixRegime == 4
+warnVixElevated     = vixRegime == 3
+warnDxyHeadwind     = dxyTrend == 1
+warnFlightToSafety  = goldSafeHaven
+warnCorrBreakdown   = corrBreakdown
+warnClusterRisk     = corrClusterRisk
+warnAllCorrToOne    = allCorrToOne
+
+warnStr = warnAllCorrToOne ? "⚠ ALL-CORR-TO-1" :
+     warnVixExtreme ? "⚠ ALL-CORR-TO-1 RISK" :
+     warnClusterRisk ? "⚠ CLUSTER RISK" :
+     warnVixElevated ? "⚠ REDUCE SIZES" :
+     warnCorrBreakdown ? "⚠ CORR BREAKDOWN" :
+     warnDxyHeadwind ? "$ HEADWIND" :
+     warnFlightToSafety ? "FLIGHT TO SAFETY" :
+     "—"
+
+warnCol = warnAllCorrToOne ? color.red :
+     warnVixExtreme ? color.red :
+     warnClusterRisk ? color.orange :
+     warnVixElevated ? color.orange :
+     warnCorrBreakdown ? color.yellow :
+     warnDxyHeadwind or warnFlightToSafety ? color.yellow :
+     color.gray
+
+// ═══════════════════════════════════════════════════════════════
+// REGIME TRANSITION ENGINE
+// ═══════════════════════════════════════════════════════════════
+
+regimeChange = regime != regime[1]
+
+transitionSeverity = regime == 3 ? "HIGH" :
+     regime == 2 or regime == 4 or regime == 5 ? "MEDIUM" :
+     "LOW"
+
+// ═══════════════════════════════════════════════════════════════
+// PLOTS (overlay mode — command layer, not clutter layer)
+// ═══════════════════════════════════════════════════════════════
+
+// Minimal persistent background — highlight danger, not everything
+regimeBG = showBg ?
+     (regime == 3 ? color.new(color.red, math.max(bgTransparency - 2, 85)) :
+      regime == 2 and not isCleanMode ? color.new(color.orange, bgTransparency) :
+      regime == 5 and isDiagMode ? color.new(color.yellow, math.min(bgTransparency + 1, 100)) :
+      na) : na
+bgcolor(regimeBG, title="Regime Background")
+
+// Transition flash
+transitionBG = showTransitionBg and regimeChange ? color.new(permColor, 85) : na
+bgcolor(transitionBG, title="Transition Flash")
+
+// Only event-level warnings, not constant clutter
+plotshape(regimeChange, "Regime Shift", shape.labeldown, location.top, color=color.new(color.yellow, 0), text="SHIFT", size=size.tiny)
+plotshape(warnAllCorrToOne and barstate.islast, "ALL CORR TO 1", shape.xcross, location.abovebar, color=color.red, size=size.small)
+plotshape((isProMode or isDiagMode) and warnFlightToSafety and barstate.islast, "Flight to Safety", shape.flag, location.abovebar, color=color.new(#FFD700, 0), size=size.tiny)
+
+// Optional last-bar command label
+if showLastBarLbl and barstate.islast
+    label.new(bar_index, high, tradePermission + " | " + regimeLabel + " | " + corrState,
+         style=label.style_label_down,
+         color=color.new(permColor, 0),
+         textcolor=color.white,
+         size=size.small)
+
+// Optional correlation debug plots
+plot(showCorrDebug and isDiagMode ? btcSpyCorr * 10 : na, "BTC-SPY Corr x10", color=color.new(#10B981, 0), linewidth=1)
+plot(showCorrDebug and isDiagMode ? spyDxyCorr * 10 : na, "SPY-DXY Corr x10", color=color.new(color.orange, 0), linewidth=1)
+plot(showCorrDebug and isDiagMode ? btcDxyCorr * 10 : na, "BTC-DXY Corr x10", color=color.new(color.aqua, 0), linewidth=1)
+
+// ═══════════════════════════════════════════════════════════════
+// TABLE — Command Dashboard
+// ═══════════════════════════════════════════════════════════════
+
+var table tb = table.new(position.bottom_right, 2, 12, bgcolor=color.new(#0F172A, 5), frame_width=1, frame_color=color.new(color.gray, 60))
+
+if barstate.islast and showTable
+    regimeCol = regime == 1 ? #10B981 : regime == 2 ? color.orange : regime == 3 ? color.red : regime == 5 ? color.yellow : color.aqua
+
+    table.cell(tb, 0, 0, "PERMISSION", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 0, tradePermission, text_color=permColor, text_size=size.normal, text_font_family=font.family_monospace)
+
+    table.cell(tb, 0, 1, "REGIME", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 1, regimeLabel, text_color=regimeCol, text_size=size.normal, text_font_family=font.family_monospace)
+
+    table.cell(tb, 0, 2, "CORRELATION", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 2, corrState, text_color=corrColor, text_size=size.small)
+
+    table.cell(tb, 0, 3, "RISK SCORE", text_color=color.gray, text_size=size.tiny)
+    riskCol = riskScore >= 60 ? #10B981 : riskScore >= 40 ? color.yellow : color.red
+    table.cell(tb, 1, 3, str.tostring(riskScore, "#.0") + "/100", text_color=riskCol, text_size=size.normal, text_font_family=font.family_monospace)
+
+    table.cell(tb, 0, 4, "SIZE MULT", text_color=color.gray, text_size=size.tiny)
+    sizeCol = sizeMult >= 0.9 ? #10B981 : sizeMult >= 0.6 ? color.yellow : color.red
+    table.cell(tb, 1, 4, showSize ? str.tostring(sizeMult, "#.00") + "x" : "—", text_color=sizeCol, text_size=size.normal, text_font_family=font.family_monospace)
+
+    table.cell(tb, 0, 5, "VIX", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 5, str.tostring(vixClose, "#.1") + " (" + vixLabel + ")", text_color=vixRegime >= 3 ? color.red : vixRegime == 2 ? color.white : #10B981, text_size=size.small)
+
+    table.cell(tb, 0, 6, "BTC / SPY", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 6, str.tostring(btcMom, "#.2") + "% / " + str.tostring(spyMom, "#.2") + "%", text_color=(btcMom > 0 and spyMom > 0) ? #10B981 : (btcMom < 0 and spyMom < 0) ? color.red : color.yellow, text_size=size.small)
+
+    table.cell(tb, 0, 7, "DXY", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 7, dxyLabel + " (" + str.tostring(dxyChg, "#.2") + "%)", text_color=dxyTrend == 1 ? color.red : dxyTrend == -1 ? #10B981 : color.gray, text_size=size.small)
+
+    table.cell(tb, 0, 8, "SECTOR", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 8, sectorLabel, text_color=sectorRotation == 1 ? #10B981 : sectorRotation == 2 ? color.orange : sectorRotation == 3 ? color.aqua : color.white, text_size=size.small)
+
+    table.cell(tb, 0, 9, "GOLD", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 9, str.tostring(goldChg, "#.2") + "%" + (goldSafeHaven ? " ⚠" : ""), text_color=goldChg > 0 ? #FFD700 : color.white, text_size=size.small)
+
+    table.cell(tb, 0, 10, "CORR METRIC", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 10, "B/S " + str.tostring(btcSpyCorr, "#.2") + " | S/$ " + str.tostring(spyDxyCorr, "#.2"), text_color=corrColor, text_size=size.small)
+
+    table.cell(tb, 0, 11, "WARNING", text_color=color.gray, text_size=size.tiny)
+    table.cell(tb, 1, 11, warnStr, text_color=warnCol, text_size=size.small)
+
+// ═══════════════════════════════════════════════════════════════
+// ALERTS
+// ═══════════════════════════════════════════════════════════════
+
+alertcondition(regime == 3,                     "STRESS Regime",        "MSP RiskGov: STRESS mode — reduce all positions")
+alertcondition(regime == 2,                     "RISK OFF Regime",      "MSP RiskGov: RISK OFF — defensive positioning")
+alertcondition(regime == 4,                     "DECORRELATED Regime",  "MSP RiskGov: DECORRELATED — correlation breakdown")
+alertcondition(regime == 5,                     "DIVERGENT Regime",     "MSP RiskGov: BTC/SPY diverging — reduced conviction")
+alertcondition(regime == 1 and regime[1] != 1,  "RISK ON Entry",        "MSP RiskGov: entering RISK ON regime")
+alertcondition(regimeChange,                    "Regime Shift",         "MSP RiskGov: regime changed")
+alertcondition(corrBreakdown,                   "Correlation Breakdown","MSP RiskGov: BTC/SPY correlation breakdown")
+alertcondition(corrClusterRisk,                 "Cluster Risk",         "MSP RiskGov: cluster risk rising")
+alertcondition(allCorrToOne,                    "ALL CORR TO 1",        "MSP RiskGov: all-correlation-to-one risk detected")
+alertcondition(goldSafeHaven,                   "Flight to Safety",     "MSP RiskGov: gold rallying + equities falling")
+alertcondition(sizeMult <= 0.30,                "Emergency Sizing",     "MSP RiskGov: position sizing <= 0.30x")
+alertcondition(tradePermission == "BLOCK",      "Permission BLOCK",     "MSP RiskGov: trade permission BLOCK")
+alertcondition(tradePermission == "ALLOW",      "Permission ALLOW",     "MSP RiskGov: trade permission ALLOW")
