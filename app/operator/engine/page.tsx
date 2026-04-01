@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserTier } from '@/lib/useUserTier';
 import type {
@@ -46,6 +46,29 @@ interface HealthData {
   };
 }
 
+interface WatchlistInfo {
+  key: string;
+  name: string;
+  market: string;
+  symbolCount: number;
+}
+
+interface AutoScanData {
+  active: boolean;
+  watchlistKey: string;
+  timeframe: string;
+  lastScanAt: string | null;
+  lastScanDurationMs: number;
+  symbolsScanned: number;
+  totalScans: number;
+  liveRadar: RadarOpportunity[];
+  radarHistory: { timestamp: string; symbol: string; action: 'appeared' | 'dropped'; permission: string; confidence: number }[];
+  errors: { symbol: string; error: string }[];
+  availableWatchlists: WatchlistInfo[];
+}
+
+type TabMode = 'auto' | 'manual';
+
 /* ── Color helpers ──────────────────────────────────────────── */
 
 const permissionColor: Record<Permission, string> = {
@@ -75,6 +98,75 @@ const envModeColor: Record<EnvironmentMode, string> = {
   LIVE_AUTO: '#EF4444',
 };
 
+/* ── Radar Card (shared between tabs) ───────────────────────── */
+
+function RadarCard({ opp }: { opp: RadarOpportunity }) {
+  return (
+    <div style={{
+      background: '#1E293B', borderRadius: 8, padding: 16,
+      border: `1px solid ${permissionColor[opp.permission]}40`,
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontWeight: 700, fontSize: 18 }}>{opp.symbol}</span>
+          <span style={{
+            fontSize: 11, fontWeight: 600, padding: '2px 6px', borderRadius: 4,
+            background: opp.direction === 'LONG' ? '#10B98120' : '#EF444420',
+            color: opp.direction === 'LONG' ? '#10B981' : '#EF4444',
+          }}>
+            {opp.direction}
+          </span>
+        </div>
+        <span style={{
+          fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4,
+          background: `${permissionColor[opp.permission]}20`,
+          color: permissionColor[opp.permission],
+        }}>
+          {opp.permission}
+        </span>
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+        <span style={{
+          fontSize: 11, padding: '2px 6px', borderRadius: 4,
+          background: `${regimeColor[opp.regime]}20`,
+          color: regimeColor[opp.regime],
+        }}>
+          {opp.regime.replace(/_/g, ' ')}
+        </span>
+        <span style={{
+          fontSize: 11, padding: '2px 6px', borderRadius: 4,
+          background: '#312E81', color: '#A5B4FC',
+        }}>
+          {opp.playbook.replace(/_/g, ' ')}
+        </span>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+        <span style={{ color: '#94A3B8' }}>
+          Confidence: <strong style={{ color: '#E2E8F0' }}>{(opp.confidenceScore * 100).toFixed(1)}%</strong>
+        </span>
+        <span style={{ color: '#94A3B8' }}>
+          Size: <strong style={{ color: '#E2E8F0' }}>{opp.sizeMultiplier.toFixed(1)}x</strong>
+        </span>
+      </div>
+      <div style={{ marginTop: 6, fontSize: 12 }}>
+        <span style={{ color: '#64748B' }}>Symbol Trust: </span>
+        <span style={{
+          color: opp.symbolTrust > 0.7 ? '#10B981' :
+            opp.symbolTrust > 0.5 ? '#F59E0B' : '#EF4444',
+          fontWeight: 600,
+        }}>
+          {(opp.symbolTrust * 100).toFixed(0)}%
+        </span>
+      </div>
+      {opp.reasonCodes.length > 0 && (
+        <div style={{ marginTop: 6, fontSize: 11, color: '#64748B' }}>
+          {opp.reasonCodes.slice(0, 4).join(' · ')}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Component ──────────────────────────────────────────────── */
 
 export default function OperatorEnginePage() {
@@ -82,13 +174,25 @@ export default function OperatorEnginePage() {
   const { tier } = useUserTier();
   const [authorized, setAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<TabMode>('auto');
 
-  // Scan state
+  // Manual scan state
   const [symbols, setSymbols] = useState('AAPL, MSFT, NVDA, TSLA, AMZN');
   const [market, setMarket] = useState<string>('EQUITIES');
   const [timeframe, setTimeframe] = useState('1D');
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [scanning, setScanning] = useState(false);
+
+  // Auto-scan state
+  const [autoScan, setAutoScan] = useState<AutoScanData | null>(null);
+  const [autoWatchlist, setAutoWatchlist] = useState('us-mega-cap');
+  const [autoTimeframe, setAutoTimeframe] = useState('1D');
+  const [autoInterval, setAutoInterval] = useState(300); // seconds
+  const [autoRunning, setAutoRunning] = useState(false);
+  const [autoScanning, setAutoScanning] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Kill switch
   const [killSwitch, setKillSwitch] = useState<KillSwitchState>({
@@ -98,15 +202,24 @@ export default function OperatorEnginePage() {
   // Health
   const [health, setHealth] = useState<HealthData | null>(null);
 
-  // Auth check + health fetch
+  // Criteria panel
+  const [showCriteria, setShowCriteria] = useState(false);
+
+  // Auth check + health fetch + auto-scan state
   useEffect(() => {
     if (!tier) return;
     Promise.all([
       fetch('/api/operator/engine/radar').then(r => r.ok),
       fetch('/api/operator/engine/health').then(r => r.ok ? r.json() : null),
-    ]).then(([authOk, healthResp]) => {
+      fetch('/api/operator/engine/auto-scan').then(r => r.ok ? r.json() : null),
+    ]).then(([authOk, healthResp, autoResp]) => {
       setAuthorized(authOk);
       if (healthResp?.data) setHealth(healthResp.data);
+      if (autoResp?.data) {
+        setAutoScan(autoResp.data);
+        setAutoWatchlist(autoResp.data.watchlistKey || 'us-mega-cap');
+        setAutoTimeframe(autoResp.data.timeframe || '1D');
+      }
       setLoading(false);
     }).catch(() => {
       setAuthorized(false);
@@ -114,7 +227,64 @@ export default function OperatorEnginePage() {
     });
   }, [tier]);
 
-  // Run scan
+  // Run one auto-scan cycle
+  const runAutoScanCycle = useCallback(async () => {
+    setAutoScanning(true);
+    try {
+      const res = await fetch('/api/operator/engine/auto-scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ watchlist: autoWatchlist, timeframe: autoTimeframe }),
+      });
+      if (!res.ok) throw new Error('Auto-scan failed');
+      const envelope = await res.json();
+      if (envelope.data) setAutoScan(envelope.data);
+    } catch (err) {
+      console.error('Auto-scan error:', err);
+    } finally {
+      setAutoScanning(false);
+    }
+  }, [autoWatchlist, autoTimeframe]);
+
+  // Start auto-scan loop
+  const startAutoScan = useCallback(() => {
+    if (killSwitch.active) return;
+    setAutoRunning(true);
+    setCountdown(0);
+
+    // Run immediately
+    runAutoScanCycle();
+
+    // Then repeat on interval
+    intervalRef.current = setInterval(() => {
+      runAutoScanCycle();
+      setCountdown(autoInterval);
+    }, autoInterval * 1000);
+
+    // Countdown ticker
+    setCountdown(autoInterval);
+    countdownRef.current = setInterval(() => {
+      setCountdown(prev => Math.max(0, prev - 1));
+    }, 1000);
+  }, [autoInterval, runAutoScanCycle, killSwitch.active]);
+
+  // Stop auto-scan
+  const stopAutoScan = useCallback(() => {
+    setAutoRunning(false);
+    if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+    if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
+    setCountdown(0);
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, []);
+
+  // Run manual scan
   const runScan = useCallback(async () => {
     setScanning(true);
     try {
@@ -148,11 +318,12 @@ export default function OperatorEnginePage() {
       if (res.ok) {
         const data = await res.json();
         setKillSwitch(data.killSwitch);
+        if (!killSwitch.active) stopAutoScan(); // Kill switch activated → stop auto
       }
     } catch (err) {
       console.error('Kill switch error:', err);
     }
-  }, [killSwitch.active]);
+  }, [killSwitch.active, stopAutoScan]);
 
   if (loading) {
     return (
@@ -171,6 +342,7 @@ export default function OperatorEnginePage() {
   }
 
   const envMode = scanResult?.environmentMode ?? health?.environmentMode ?? 'RESEARCH';
+  const liveRadar = autoScan?.liveRadar ?? [];
 
   return (
     <div style={{ background: '#0F172A', minHeight: '100vh', color: '#E2E8F0', padding: '24px' }}>
@@ -185,7 +357,6 @@ export default function OperatorEnginePage() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          {/* Environment Mode Badge §13.6 */}
           <span style={{
             padding: '6px 14px', borderRadius: 6, fontWeight: 700, fontSize: 12,
             background: `${envModeColor[envMode]}20`,
@@ -194,7 +365,6 @@ export default function OperatorEnginePage() {
           }}>
             {envMode}
           </span>
-          {/* Meta-Health Indicator §13.7 */}
           {health?.metaHealth && (
             <span style={{
               padding: '6px 14px', borderRadius: 6, fontSize: 12, fontWeight: 600,
@@ -206,7 +376,6 @@ export default function OperatorEnginePage() {
               Health: {(health.metaHealth.compositeHealth * 100).toFixed(0)}%
             </span>
           )}
-          {/* Kill Switch */}
           <button
             onClick={toggleKillSwitch}
             style={{
@@ -221,200 +390,429 @@ export default function OperatorEnginePage() {
         </div>
       </div>
 
-      {/* Scan Controls */}
-      <div style={{
-        background: '#1E293B', borderRadius: 12, padding: 20, marginBottom: 24,
-        border: '1px solid #334155',
-      }}>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <div style={{ flex: '1 1 300px' }}>
-            <label style={{ display: 'block', fontSize: 12, color: '#94A3B8', marginBottom: 4 }}>
-              Symbols (comma-separated)
-            </label>
-            <input
-              value={symbols}
-              onChange={e => setSymbols(e.target.value)}
-              style={{
-                width: '100%', padding: '8px 12px', borderRadius: 6,
-                background: '#0F172A', border: '1px solid #334155', color: '#E2E8F0',
-                fontSize: 14,
-              }}
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: 12, color: '#94A3B8', marginBottom: 4 }}>
-              Market
-            </label>
-            <select
-              value={market}
-              onChange={e => setMarket(e.target.value)}
-              style={{
-                padding: '8px 12px', borderRadius: 6,
-                background: '#0F172A', border: '1px solid #334155', color: '#E2E8F0',
-                fontSize: 14,
-              }}
-            >
-              <option value="EQUITIES">Equities</option>
-              <option value="CRYPTO">Crypto</option>
-              <option value="OPTIONS">Options</option>
-              <option value="FUTURES">Futures</option>
-              <option value="FOREX">Forex</option>
-            </select>
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: 12, color: '#94A3B8', marginBottom: 4 }}>
-              Timeframe
-            </label>
-            <select
-              value={timeframe}
-              onChange={e => setTimeframe(e.target.value)}
-              style={{
-                padding: '8px 12px', borderRadius: 6,
-                background: '#0F172A', border: '1px solid #334155', color: '#E2E8F0',
-                fontSize: 14,
-              }}
-            >
-              <option value="5m">5m</option>
-              <option value="15m">15m</option>
-              <option value="1H">1H</option>
-              <option value="4H">4H</option>
-              <option value="1D">1D</option>
-              <option value="1W">1W</option>
-            </select>
-          </div>
+      {/* Tab Switcher */}
+      <div style={{ display: 'flex', gap: 0, marginBottom: 24 }}>
+        {(['auto', 'manual'] as const).map(t => (
           <button
-            onClick={runScan}
-            disabled={scanning || killSwitch.active}
+            key={t}
+            onClick={() => setTab(t)}
             style={{
-              padding: '8px 24px', borderRadius: 6, border: 'none',
-              background: killSwitch.active ? '#374151' : '#10B981',
-              color: '#FFF', fontWeight: 600, fontSize: 14, cursor: 'pointer',
-              opacity: scanning ? 0.6 : 1,
+              padding: '10px 28px', border: 'none', cursor: 'pointer',
+              fontWeight: 600, fontSize: 14,
+              borderBottom: tab === t ? '2px solid #10B981' : '2px solid transparent',
+              background: 'transparent',
+              color: tab === t ? '#10B981' : '#64748B',
             }}
           >
-            {scanning ? 'Scanning...' : 'Run Scan'}
+            {t === 'auto' ? '⚡ Auto-Scan' : '🔍 Manual Scan'}
           </button>
-        </div>
+        ))}
+        <div style={{ flex: 1 }} />
+        <button
+          onClick={() => setShowCriteria(!showCriteria)}
+          style={{
+            padding: '6px 14px', borderRadius: 6, border: '1px solid #334155',
+            background: showCriteria ? '#334155' : 'transparent',
+            color: '#94A3B8', fontSize: 12, cursor: 'pointer',
+          }}
+        >
+          {showCriteria ? 'Hide' : 'Show'} Pass Criteria
+        </button>
       </div>
 
-      {/* Scan Metadata §13.2 */}
-      {scanResult && (
+      {/* Pass Criteria Explainer */}
+      {showCriteria && (
         <div style={{
-          background: '#1E293B', borderRadius: 8, padding: 12, marginBottom: 16,
-          border: '1px solid #334155', display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12,
+          background: '#1E293B', borderRadius: 12, padding: 20, marginBottom: 24,
+          border: '1px solid #334155',
         }}>
-          <span style={{ color: '#64748B' }}>Request: <span style={{ color: '#94A3B8' }}>{scanResult.requestId}</span></span>
-          <span style={{ color: '#64748B' }}>Scanned: <span style={{ color: '#94A3B8' }}>{scanResult.symbolsScanned} symbols</span></span>
-          <span style={{ color: '#64748B' }}>Mode: <span style={{ color: envModeColor[scanResult.environmentMode] }}>{scanResult.environmentMode}</span></span>
-          <span style={{ color: '#64748B' }}>Orchestrator: <span style={{ color: '#94A3B8' }}>v{scanResult.engineVersions.orchestratorVersion}</span></span>
-        </div>
-      )}
-
-      {/* Radar Results */}
-      {scanResult && (
-        <div style={{ marginBottom: 24 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>
-            Radar — {scanResult.radar.length} Opportunities
-          </h2>
-          <div style={{ fontSize: 12, color: '#64748B', marginBottom: 12 }}>
-            {new Date(scanResult.timestamp).toLocaleTimeString()}
-            {scanResult.errors.length > 0 && ` · ${scanResult.errors.length} errors`}
-          </div>
-
-          {scanResult.radar.length === 0 ? (
-            <div style={{
-              background: '#1E293B', borderRadius: 8, padding: 40,
-              textAlign: 'center', color: '#64748B', border: '1px solid #334155',
-            }}>
-              No actionable opportunities found. All candidates scored below thresholds.
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 12 }}>
-              {scanResult.radar.map((opp, i) => (
-                <div key={i} style={{
-                  background: '#1E293B', borderRadius: 8, padding: 16,
-                  border: `1px solid ${permissionColor[opp.permission]}40`,
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontWeight: 700, fontSize: 18 }}>{opp.symbol}</span>
-                      <span style={{
-                        fontSize: 11, fontWeight: 600, padding: '2px 6px', borderRadius: 4,
-                        background: opp.direction === 'LONG' ? '#10B98120' : '#EF444420',
-                        color: opp.direction === 'LONG' ? '#10B981' : '#EF4444',
-                      }}>
-                        {opp.direction}
-                      </span>
-                    </div>
-                    <span style={{
-                      fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4,
-                      background: `${permissionColor[opp.permission]}20`,
-                      color: permissionColor[opp.permission],
-                    }}>
-                      {opp.permission}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-                    <span style={{
-                      fontSize: 11, padding: '2px 6px', borderRadius: 4,
-                      background: `${regimeColor[opp.regime]}20`,
-                      color: regimeColor[opp.regime],
-                    }}>
-                      {opp.regime.replace(/_/g, ' ')}
-                    </span>
-                    <span style={{
-                      fontSize: 11, padding: '2px 6px', borderRadius: 4,
-                      background: '#312E81', color: '#A5B4FC',
-                    }}>
-                      {opp.playbook.replace(/_/g, ' ')}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                    <span style={{ color: '#94A3B8' }}>
-                      Confidence: <strong style={{ color: '#E2E8F0' }}>{(opp.confidenceScore * 100).toFixed(1)}%</strong>
-                    </span>
-                    <span style={{ color: '#94A3B8' }}>
-                      Size: <strong style={{ color: '#E2E8F0' }}>{opp.sizeMultiplier.toFixed(1)}x</strong>
-                    </span>
-                  </div>
-                  {/* §13.3 Symbol Trust */}
-                  <div style={{ marginTop: 6, fontSize: 12 }}>
-                    <span style={{ color: '#64748B' }}>Symbol Trust: </span>
-                    <span style={{
-                      color: opp.symbolTrust > 0.7 ? '#10B981' :
-                        opp.symbolTrust > 0.5 ? '#F59E0B' : '#EF4444',
-                      fontWeight: 600,
-                    }}>
-                      {(opp.symbolTrust * 100).toFixed(0)}%
-                    </span>
-                  </div>
-                  {opp.reasonCodes.length > 0 && (
-                    <div style={{ marginTop: 6, fontSize: 11, color: '#64748B' }}>
-                      {opp.reasonCodes.slice(0, 4).join(' · ')}
-                    </div>
-                  )}
+          <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 0, marginBottom: 12, color: '#10B981' }}>
+            How a Symbol Passes the Engine
+          </h3>
+          <div style={{ fontSize: 13, lineHeight: 1.8, color: '#94A3B8' }}>
+            <p style={{ margin: '0 0 8px' }}>
+              Each symbol goes through an <strong style={{ color: '#E2E8F0' }}>8-engine pipeline</strong>. A weighted confidence score is computed from 10 evidence dimensions:
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 6, marginBottom: 12, fontSize: 12 }}>
+              {[
+                { name: 'Regime Fit', weight: '18%' },
+                { name: 'Structure Quality', weight: '18%' },
+                { name: 'Volatility', weight: '14%' },
+                { name: 'Time Confluence', weight: '10%' },
+                { name: 'Volume / Flow', weight: '10%' },
+                { name: 'Cross-Market', weight: '8%' },
+                { name: 'Event Safety', weight: '7%' },
+                { name: 'Extension Safety', weight: '5%' },
+                { name: 'Symbol Trust', weight: '5%' },
+                { name: 'Model Health', weight: '5%' },
+              ].map(d => (
+                <div key={d.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 8px', background: '#0F172A', borderRadius: 4 }}>
+                  <span>{d.name}</span>
+                  <span style={{ color: '#10B981', fontWeight: 600 }}>{d.weight}</span>
                 </div>
               ))}
             </div>
-          )}
-        </div>
-      )}
-
-      {/* Errors */}
-      {scanResult && scanResult.errors.length > 0 && (
-        <div style={{ marginBottom: 24 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 600, color: '#F59E0B', marginBottom: 8 }}>Scan Errors</h3>
-          <div style={{ background: '#1E293B', borderRadius: 8, padding: 12, border: '1px solid #334155' }}>
-            {scanResult.errors.map((e, i) => (
-              <div key={i} style={{ fontSize: 12, color: '#EF4444', padding: '4px 0' }}>
-                <strong>{e.symbol}</strong>: {e.error}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8 }}>
+              <div style={{ background: '#10B98115', padding: '8px 12px', borderRadius: 6, borderLeft: '3px solid #10B981' }}>
+                <strong style={{ color: '#10B981' }}>ALLOW</strong> — Confidence ≥ 80%<br />Full position size (1.0x)
               </div>
-            ))}
+              <div style={{ background: '#F59E0B15', padding: '8px 12px', borderRadius: 6, borderLeft: '3px solid #F59E0B' }}>
+                <strong style={{ color: '#F59E0B' }}>ALLOW_REDUCED</strong> — 68–79%<br />Half position size (0.5x)
+              </div>
+              <div style={{ background: '#6B728015', padding: '8px 12px', borderRadius: 6, borderLeft: '3px solid #6B7280' }}>
+                <strong style={{ color: '#6B7280' }}>WAIT</strong> — 55–67%<br />On radar, no execution
+              </div>
+              <div style={{ background: '#EF444415', padding: '8px 12px', borderRadius: 6, borderLeft: '3px solid #EF4444' }}>
+                <strong style={{ color: '#EF4444' }}>BLOCK</strong> — Below 55%<br />Filtered out entirely
+              </div>
+            </div>
+            <p style={{ margin: '12px 0 0', fontSize: 12, color: '#64748B' }}>
+              Governance then applies portfolio-level risk limits (daily loss cap, drawdown, correlation, kill switch) which can downgrade or block.
+            </p>
           </div>
         </div>
       )}
 
-      {/* Meta-Health Panel §13.7 */}
+      {/* ────────────────── AUTO-SCAN TAB ──────────────────── */}
+      {tab === 'auto' && (
+        <>
+          {/* Auto-Scan Controls */}
+          <div style={{
+            background: '#1E293B', borderRadius: 12, padding: 20, marginBottom: 24,
+            border: autoRunning ? '1px solid #10B98160' : '1px solid #334155',
+          }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, color: '#94A3B8', marginBottom: 4 }}>
+                  Watchlist
+                </label>
+                <select
+                  value={autoWatchlist}
+                  onChange={e => setAutoWatchlist(e.target.value)}
+                  disabled={autoRunning}
+                  style={{
+                    padding: '8px 12px', borderRadius: 6, minWidth: 200,
+                    background: '#0F172A', border: '1px solid #334155', color: '#E2E8F0',
+                    fontSize: 14, opacity: autoRunning ? 0.6 : 1,
+                  }}
+                >
+                  {(autoScan?.availableWatchlists ?? []).map(wl => (
+                    <option key={wl.key} value={wl.key}>
+                      {wl.name} ({wl.market} · {wl.symbolCount} symbols)
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, color: '#94A3B8', marginBottom: 4 }}>
+                  Timeframe
+                </label>
+                <select
+                  value={autoTimeframe}
+                  onChange={e => setAutoTimeframe(e.target.value)}
+                  disabled={autoRunning}
+                  style={{
+                    padding: '8px 12px', borderRadius: 6,
+                    background: '#0F172A', border: '1px solid #334155', color: '#E2E8F0',
+                    fontSize: 14, opacity: autoRunning ? 0.6 : 1,
+                  }}
+                >
+                  <option value="5m">5m</option>
+                  <option value="15m">15m</option>
+                  <option value="1H">1H</option>
+                  <option value="4H">4H</option>
+                  <option value="1D">1D</option>
+                  <option value="1W">1W</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, color: '#94A3B8', marginBottom: 4 }}>
+                  Scan Every
+                </label>
+                <select
+                  value={autoInterval}
+                  onChange={e => setAutoInterval(Number(e.target.value))}
+                  disabled={autoRunning}
+                  style={{
+                    padding: '8px 12px', borderRadius: 6,
+                    background: '#0F172A', border: '1px solid #334155', color: '#E2E8F0',
+                    fontSize: 14, opacity: autoRunning ? 0.6 : 1,
+                  }}
+                >
+                  <option value={60}>1 min</option>
+                  <option value={120}>2 min</option>
+                  <option value={300}>5 min</option>
+                  <option value={600}>10 min</option>
+                  <option value={900}>15 min</option>
+                  <option value={1800}>30 min</option>
+                  <option value={3600}>1 hour</option>
+                </select>
+              </div>
+              {!autoRunning ? (
+                <button
+                  onClick={startAutoScan}
+                  disabled={killSwitch.active}
+                  style={{
+                    padding: '8px 28px', borderRadius: 6, border: 'none',
+                    background: killSwitch.active ? '#374151' : '#10B981',
+                    color: '#FFF', fontWeight: 600, fontSize: 14, cursor: 'pointer',
+                  }}
+                >
+                  ▶ Start Auto-Scan
+                </button>
+              ) : (
+                <button
+                  onClick={stopAutoScan}
+                  style={{
+                    padding: '8px 28px', borderRadius: 6, border: 'none',
+                    background: '#EF4444',
+                    color: '#FFF', fontWeight: 600, fontSize: 14, cursor: 'pointer',
+                  }}
+                >
+                  ⏹ Stop
+                </button>
+              )}
+            </div>
+
+            {/* Status bar */}
+            {autoRunning && (
+              <div style={{ marginTop: 12, display: 'flex', gap: 16, alignItems: 'center', fontSize: 12 }}>
+                <span style={{ color: '#10B981', fontWeight: 600 }}>
+                  {autoScanning ? '⟳ Scanning...' : `● Live`}
+                </span>
+                {countdown > 0 && !autoScanning && (
+                  <span style={{ color: '#64748B' }}>
+                    Next scan in {Math.floor(countdown / 60)}:{String(countdown % 60).padStart(2, '0')}
+                  </span>
+                )}
+                {autoScan?.totalScans != null && (
+                  <span style={{ color: '#64748B' }}>Cycles: {autoScan.totalScans}</span>
+                )}
+                {autoScan?.lastScanDurationMs != null && autoScan.lastScanDurationMs > 0 && (
+                  <span style={{ color: '#64748B' }}>Last: {(autoScan.lastScanDurationMs / 1000).toFixed(1)}s</span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Live Radar */}
+          <div style={{ marginBottom: 24 }}>
+            <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>
+              Live Radar — {liveRadar.length} Opportunities
+              {autoScan?.lastScanAt && (
+                <span style={{ fontSize: 12, color: '#64748B', fontWeight: 400, marginLeft: 12 }}>
+                  Last scan: {new Date(autoScan.lastScanAt).toLocaleTimeString()} · {autoScan.symbolsScanned} symbols scanned
+                </span>
+              )}
+            </h2>
+
+            {liveRadar.length === 0 ? (
+              <div style={{
+                background: '#1E293B', borderRadius: 8, padding: 40,
+                textAlign: 'center', border: '1px solid #334155',
+              }}>
+                <div style={{ color: '#64748B', marginBottom: 8 }}>
+                  {autoScan?.totalScans ? 'No opportunities found meeting confidence thresholds.' : 'Start auto-scan to begin monitoring.'}
+                </div>
+                <div style={{ color: '#475569', fontSize: 12 }}>
+                  Symbols need ≥55% confidence across 10 weighted evidence dimensions to appear on radar.
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 12 }}>
+                {liveRadar.map((opp, i) => (
+                  <RadarCard key={`${opp.symbol}-${i}`} opp={opp} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Radar History Feed */}
+          {autoScan?.radarHistory && autoScan.radarHistory.length > 0 && (
+            <div style={{
+              background: '#1E293B', borderRadius: 12, padding: 20, marginBottom: 24,
+              border: '1px solid #334155',
+            }}>
+              <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 0, marginBottom: 12 }}>Radar Activity Feed</h3>
+              <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+                {[...autoScan.radarHistory].reverse().slice(0, 30).map((ev, i) => (
+                  <div key={i} style={{
+                    display: 'flex', gap: 12, padding: '4px 0', fontSize: 12,
+                    borderBottom: '1px solid #1E293B',
+                  }}>
+                    <span style={{ color: '#475569', minWidth: 70 }}>
+                      {new Date(ev.timestamp).toLocaleTimeString()}
+                    </span>
+                    <span style={{
+                      color: ev.action === 'appeared' ? '#10B981' : '#EF4444',
+                      fontWeight: 600, minWidth: 80,
+                    }}>
+                      {ev.action === 'appeared' ? '▲ APPEARED' : '▼ DROPPED'}
+                    </span>
+                    <span style={{ fontWeight: 600 }}>{ev.symbol}</span>
+                    <span style={{ color: '#64748B' }}>
+                      {ev.permission} · {(ev.confidence * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Auto-Scan Errors */}
+          {autoScan?.errors && autoScan.errors.length > 0 && (
+            <div style={{ marginBottom: 24 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 600, color: '#F59E0B', marginBottom: 8 }}>Scan Errors</h3>
+              <div style={{ background: '#1E293B', borderRadius: 8, padding: 12, border: '1px solid #334155', maxHeight: 150, overflowY: 'auto' }}>
+                {autoScan.errors.map((e, i) => (
+                  <div key={i} style={{ fontSize: 12, color: '#EF4444', padding: '2px 0' }}>
+                    <strong>{e.symbol}</strong>: {e.error}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ────────────────── MANUAL SCAN TAB ────────────────── */}
+      {tab === 'manual' && (
+        <>
+          {/* Scan Controls */}
+          <div style={{
+            background: '#1E293B', borderRadius: 12, padding: 20, marginBottom: 24,
+            border: '1px solid #334155',
+          }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              <div style={{ flex: '1 1 300px' }}>
+                <label style={{ display: 'block', fontSize: 12, color: '#94A3B8', marginBottom: 4 }}>
+                  Symbols (comma-separated)
+                </label>
+                <input
+                  value={symbols}
+                  onChange={e => setSymbols(e.target.value)}
+                  style={{
+                    width: '100%', padding: '8px 12px', borderRadius: 6,
+                    background: '#0F172A', border: '1px solid #334155', color: '#E2E8F0',
+                    fontSize: 14,
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, color: '#94A3B8', marginBottom: 4 }}>
+                  Market
+                </label>
+                <select
+                  value={market}
+                  onChange={e => setMarket(e.target.value)}
+                  style={{
+                    padding: '8px 12px', borderRadius: 6,
+                    background: '#0F172A', border: '1px solid #334155', color: '#E2E8F0',
+                    fontSize: 14,
+                  }}
+                >
+                  <option value="EQUITIES">Equities</option>
+                  <option value="CRYPTO">Crypto</option>
+                  <option value="OPTIONS">Options</option>
+                  <option value="FUTURES">Futures</option>
+                  <option value="FOREX">Forex</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, color: '#94A3B8', marginBottom: 4 }}>
+                  Timeframe
+                </label>
+                <select
+                  value={timeframe}
+                  onChange={e => setTimeframe(e.target.value)}
+                  style={{
+                    padding: '8px 12px', borderRadius: 6,
+                    background: '#0F172A', border: '1px solid #334155', color: '#E2E8F0',
+                    fontSize: 14,
+                  }}
+                >
+                  <option value="5m">5m</option>
+                  <option value="15m">15m</option>
+                  <option value="1H">1H</option>
+                  <option value="4H">4H</option>
+                  <option value="1D">1D</option>
+                  <option value="1W">1W</option>
+                </select>
+              </div>
+              <button
+                onClick={runScan}
+                disabled={scanning || killSwitch.active}
+                style={{
+                  padding: '8px 24px', borderRadius: 6, border: 'none',
+                  background: killSwitch.active ? '#374151' : '#10B981',
+                  color: '#FFF', fontWeight: 600, fontSize: 14, cursor: 'pointer',
+                  opacity: scanning ? 0.6 : 1,
+                }}
+              >
+                {scanning ? 'Scanning...' : 'Run Scan'}
+              </button>
+            </div>
+          </div>
+
+          {/* Scan Metadata */}
+          {scanResult && (
+            <div style={{
+              background: '#1E293B', borderRadius: 8, padding: 12, marginBottom: 16,
+              border: '1px solid #334155', display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12,
+            }}>
+              <span style={{ color: '#64748B' }}>Request: <span style={{ color: '#94A3B8' }}>{scanResult.requestId}</span></span>
+              <span style={{ color: '#64748B' }}>Scanned: <span style={{ color: '#94A3B8' }}>{scanResult.symbolsScanned} symbols</span></span>
+              <span style={{ color: '#64748B' }}>Mode: <span style={{ color: envModeColor[scanResult.environmentMode] }}>{scanResult.environmentMode}</span></span>
+            </div>
+          )}
+
+          {/* Radar Results */}
+          {scanResult && (
+            <div style={{ marginBottom: 24 }}>
+              <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 12 }}>
+                Radar — {scanResult.radar.length} Opportunities
+              </h2>
+              <div style={{ fontSize: 12, color: '#64748B', marginBottom: 12 }}>
+                {new Date(scanResult.timestamp).toLocaleTimeString()}
+                {scanResult.errors.length > 0 && ` · ${scanResult.errors.length} errors`}
+              </div>
+
+              {scanResult.radar.length === 0 ? (
+                <div style={{
+                  background: '#1E293B', borderRadius: 8, padding: 40,
+                  textAlign: 'center', color: '#64748B', border: '1px solid #334155',
+                }}>
+                  No actionable opportunities found. All candidates scored below thresholds.
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 12 }}>
+                  {scanResult.radar.map((opp, i) => (
+                    <RadarCard key={`${opp.symbol}-${i}`} opp={opp} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Manual Errors */}
+          {scanResult && scanResult.errors.length > 0 && (
+            <div style={{ marginBottom: 24 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 600, color: '#F59E0B', marginBottom: 8 }}>Scan Errors</h3>
+              <div style={{ background: '#1E293B', borderRadius: 8, padding: 12, border: '1px solid #334155' }}>
+                {scanResult.errors.map((e, i) => (
+                  <div key={i} style={{ fontSize: 12, color: '#EF4444', padding: '4px 0' }}>
+                    <strong>{e.symbol}</strong>: {e.error}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ────────────────── BOTTOM PANELS (both tabs) ──────── */}
+
+      {/* Meta-Health Panel */}
       {health?.metaHealth && (
         <div style={{
           background: '#1E293B', borderRadius: 12, padding: 20, marginBottom: 24,
@@ -462,35 +860,7 @@ export default function OperatorEnginePage() {
         </div>
       )}
 
-      {/* Decision Replay Stats §13.1 */}
-      {health?.snapshotStats && (
-        <div style={{
-          background: '#1E293B', borderRadius: 12, padding: 20, marginBottom: 24,
-          border: '1px solid #334155',
-        }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600, marginTop: 0, marginBottom: 16 }}>Decision Replay Store</h2>
-          <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', fontSize: 13 }}>
-            <div>
-              <span style={{ color: '#64748B' }}>Snapshots:</span>{' '}
-              <strong>{health.snapshotStats.totalStored}</strong> / {health.snapshotStats.maxCapacity}
-            </div>
-            {health.snapshotStats.oldestTimestamp && (
-              <div>
-                <span style={{ color: '#64748B' }}>Oldest:</span>{' '}
-                <span style={{ color: '#94A3B8' }}>{new Date(health.snapshotStats.oldestTimestamp).toLocaleString()}</span>
-              </div>
-            )}
-            {health.snapshotStats.newestTimestamp && (
-              <div>
-                <span style={{ color: '#64748B' }}>Newest:</span>{' '}
-                <span style={{ color: '#94A3B8' }}>{new Date(health.snapshotStats.newestTimestamp).toLocaleString()}</span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Engine Status Grid + Versions §13.2 */}
+      {/* Engine Status Grid */}
       <div style={{
         background: '#1E293B', borderRadius: 12, padding: 20,
         border: '1px solid #334155',
