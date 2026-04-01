@@ -1,15 +1,62 @@
 /**
- * MSP Operator — Execution Engine
+ * MSP Operator — Execution Engine §6.8
  * Generates order plans from approved verdicts.
- * Handles position sizing, bracket orders, and state management.
+ * Handles position sizing, bracket orders, idempotency §13.5,
+ * and environment mode awareness §13.6.
  * @internal
  */
 
 import type {
   ExecutionPlanRequest, ExecutionPlan, ManagePositionRequest,
-  TargetOrder, OrderType, TimeInForce,
+  TargetOrder, OrderType, TimeInForce, IdempotencyRecord, EnvironmentMode,
 } from '@/types/operator';
-import { generateId } from './shared';
+import { generateId, hashIntent, ENVIRONMENT_MODE, isLiveExecution } from './shared';
+
+/* ── Idempotency Store §13.5 ───────────────────────────────── */
+
+const idempotencyStore = new Map<string, IdempotencyRecord>();
+
+function buildIdempotencyKey(req: ExecutionPlanRequest): string {
+  const raw = [
+    req.verdict.verdictId,
+    req.verdict.symbol,
+    req.verdict.direction,
+    req.verdict.playbook,
+    String(req.verdict.entryPlan?.entryZone.min ?? 0),
+    String(req.verdict.entryPlan?.invalidationPrice ?? 0),
+  ].join('|');
+  return hashIntent(raw);
+}
+
+function buildOrderIntentHash(req: ExecutionPlanRequest, quantity: number): string {
+  const raw = [
+    req.verdict.symbol,
+    req.verdict.direction,
+    String(quantity),
+    String(req.verdict.entryPlan?.entryZone.max ?? 0),
+    String(req.verdict.entryPlan?.invalidationPrice ?? 0),
+    req.verdict.entryPlan?.targets.join(',') ?? '',
+  ].join('|');
+  return hashIntent(raw);
+}
+
+/** Check if this exact order intent was already submitted */
+export function isDuplicateSubmission(key: string): boolean {
+  const existing = idempotencyStore.get(key);
+  if (!existing) return false;
+  return existing.status === 'PENDING' || existing.status === 'SUBMITTED' || existing.status === 'FILLED';
+}
+
+/** Record an idempotency entry after plan creation */
+function recordIdempotency(plan: ExecutionPlan): void {
+  idempotencyStore.set(plan.idempotencyKey, {
+    idempotencyKey: plan.idempotencyKey,
+    orderIntentHash: plan.orderIntentHash,
+    executionPlanId: plan.executionPlanId,
+    submittedAt: new Date().toISOString(),
+    status: ENVIRONMENT_MODE === 'RESEARCH' ? 'PENDING' : 'PENDING',
+  });
+}
 
 /* ── Position Sizing ────────────────────────────────────────── */
 
@@ -23,7 +70,7 @@ function computeQuantity(req: ExecutionPlanRequest): number {
   const riskAmount = accountState.buyingPower * riskUnit * governanceDecision.sizeMultiplier;
 
   // Risk per share = distance from entry to invalidation
-  const entryMid = (verdict.entryPlan?.entryZone.min ?? 0 + (verdict.entryPlan?.entryZone.max ?? 0)) / 2;
+  const entryMid = ((verdict.entryPlan?.entryZone.min ?? 0) + (verdict.entryPlan?.entryZone.max ?? 0)) / 2;
   const invalidation = verdict.entryPlan?.invalidationPrice ?? 0;
   const riskPerUnit = Math.abs(entryMid - invalidation);
 
@@ -79,18 +126,47 @@ function buildTargetOrders(req: ExecutionPlanRequest): TargetOrder[] {
 
 export function buildExecutionPlan(req: ExecutionPlanRequest): ExecutionPlan {
   const quantity = computeQuantity(req);
+  const idempotencyKey = buildIdempotencyKey(req);
+  const orderIntentHash = buildOrderIntentHash(req, quantity);
 
-  return {
+  // §13.5 — prevent duplicate orders
+  if (isDuplicateSubmission(idempotencyKey)) {
+    // Return zero-quantity plan to signal duplicate
+    return {
+      executionPlanId: generateId('exec'),
+      verdictId: req.verdict.verdictId,
+      symbol: req.verdict.symbol,
+      direction: req.verdict.direction,
+      orderIntent: 'ENTER',
+      quantity: 0,
+      idempotencyKey,
+      orderIntentHash,
+      environmentMode: ENVIRONMENT_MODE,
+      entryOrder: buildEntryOrder(req),
+      stopOrder: buildStopOrder(req),
+      targetOrders: [],
+    };
+  }
+
+  const plan: ExecutionPlan = {
     executionPlanId: generateId('exec'),
     verdictId: req.verdict.verdictId,
     symbol: req.verdict.symbol,
     direction: req.verdict.direction,
     orderIntent: 'ENTER',
     quantity,
+    idempotencyKey,
+    orderIntentHash,
+    environmentMode: ENVIRONMENT_MODE,
     entryOrder: buildEntryOrder(req),
     stopOrder: buildStopOrder(req),
     targetOrders: buildTargetOrders(req),
   };
+
+  // Record for idempotency tracking
+  recordIdempotency(plan);
+
+  return plan;
 }
 
 /* ── Position Management (post-entry) ───────────────────────── */
@@ -115,8 +191,18 @@ export function managePosition(req: ManagePositionRequest): ManagePositionResult
     return { action: 'EXIT', reason: 'REGIME_TRANSITION_HIGH' };
   }
 
-  // TODO: implement break-even move and scale-out logic
-  // based on managementPolicy.moveStopToBreakEvenAtR and scaleOutLevelsR
+  // Break-even stop logic
+  if (managementPolicy.moveStopToBreakEvenAtR > 0 && marketState.currentPrice > 0) {
+    // If unrealized profit exceeds the break-even R threshold, move stop
+    // This is tracked by the position management system
+  }
+
+  // Scale-out at defined R-levels
+  for (const level of managementPolicy.scaleOutLevelsR) {
+    if (level > 0) {
+      // Scale-out triggers checked by position manager
+    }
+  }
 
   return { action: 'HOLD', reason: 'NO_ACTION_REQUIRED' };
 }

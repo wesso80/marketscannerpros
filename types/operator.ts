@@ -221,6 +221,10 @@ export interface ExecutionPlan {
   direction: Direction;
   orderIntent: OrderIntent;
   quantity: number;
+  /** §13.5 idempotency */
+  idempotencyKey: string;
+  orderIntentHash: string;
+  environmentMode: EnvironmentMode;
   entryOrder: {
     type: OrderType;
     price?: number | null;
@@ -477,10 +481,13 @@ export interface RadarOpportunity {
   symbol: string;
   playbook: Playbook;
   regime: Regime;
+  direction: Direction;
   confidenceScore: number;
   permission: Permission;
   sizeMultiplier: number;
   reasonCodes: string[];
+  /** §13.3 symbol trust composite */
+  symbolTrust: number;
 }
 
 export interface PlaybookPermission {
@@ -493,6 +500,116 @@ export interface PermissionMatrix {
   timeframe: string;
   regime: Regime;
   playbooks: PlaybookPermission[];
+}
+
+/* ────────────────────────── Environment Modes §13.6 ─────────────── */
+
+export type EnvironmentMode = 'RESEARCH' | 'PAPER' | 'LIVE_ASSISTED' | 'LIVE_AUTO';
+
+/* ────────────────────────── Engine Versions §13.2 ───────────────── */
+
+export interface EngineVersions {
+  featureEngineVersion: string;
+  regimeEngineVersion: string;
+  playbookEngineVersion: string;
+  doctrineVersion: string;
+  scoringProfileVersion: string;
+  governancePolicyVersion: string;
+  orchestratorVersion: string;
+  symbolTrustVersion: string;
+  metaHealthVersion: string;
+}
+
+/* ────────────────────────── Decision Snapshot §13.1 ─────────────── */
+
+export interface DecisionSnapshot {
+  snapshotId: string;
+  requestId: string;
+  symbol: string;
+  timestamp: string;
+  engineVersions: EngineVersions;
+  environmentMode: EnvironmentMode;
+  /** Raw inputs */
+  inputs: {
+    bars: Bar[];
+    keyLevels: KeyLevel[];
+    crossMarket: CrossMarketState;
+    eventWindow: EventWindow;
+  };
+  /** Stage outputs */
+  featureVector: FeatureVector;
+  regimeDecision: RegimeDecision;
+  candidates: TradeCandidate[];
+  doctrineEvaluations: DoctrineEvaluation[];
+  verdicts: Verdict[];
+  governanceDecisions: GovernanceDecision[];
+  executionPlans: (ExecutionPlan | null)[];
+  /** Metadata */
+  durationMs: number;
+}
+
+/* ────────────────────────── Symbol Trust §13.3 ──────────────────── */
+
+export interface SymbolTrustProfile {
+  symbol: string;
+  market: Market;
+  lastUpdated: string;
+  sampleSize: number;
+  /** 0–1 scores (higher = more trustworthy) */
+  falseBreakRate: number;
+  slippageQuality: number;
+  followThroughRate: number;
+  spreadStability: number;
+  sessionReliability: number;
+  eventSensitivity: number;
+  /** Composite trust score 0–1 */
+  compositeTrust: number;
+}
+
+/* ────────────────────────── Thesis Integrity §13.4 ──────────────── */
+
+export interface ThesisIntegrityState {
+  candidateId: string;
+  symbol: string;
+  timestamp: string;
+  /** Individual dimension scores 0–1 */
+  structureValid: number;
+  volatilitySupportive: number;
+  timingEdgeAlive: number;
+  regimeStable: number;
+  crossMarketAligned: number;
+  /** Composite integrity score 0–1 */
+  thesisIntegrityScore: number;
+  /** Recommended action */
+  recommendation: 'HOLD' | 'REDUCE' | 'EXIT';
+  reasons: string[];
+}
+
+/* ────────────────────────── Meta-Health §13.7 ───────────────────── */
+
+export interface MetaHealthState {
+  timestamp: string;
+  windowSize: number;
+  confidenceInflation: number;
+  expectancyTrend: number;
+  overPermissionRate: number;
+  playbookDrift: number;
+  slippageDeterioration: number;
+  /** Composite health 0–1 (1 = healthy) */
+  compositeHealth: number;
+  /** Global throttle multiplier 0–1 */
+  throttleMultiplier: number;
+  alerts: string[];
+}
+
+/* ────────────────────────── Idempotency §13.5 ───────────────────── */
+
+export interface IdempotencyRecord {
+  idempotencyKey: string;
+  orderIntentHash: string;
+  executionPlanId: string;
+  submittedAt: string;
+  status: 'PENDING' | 'SUBMITTED' | 'FILLED' | 'REJECTED' | 'CANCELLED';
 }
 
 /* ────────────────────────── Event Bus ────────────────────────── */

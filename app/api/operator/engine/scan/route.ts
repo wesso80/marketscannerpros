@@ -1,6 +1,13 @@
 /**
  * POST /api/operator/engine/scan — Run full Operator Engine scan pipeline
  * PRIVATE — requires operator authentication (ms_auth cookie OR admin secret).
+ *
+ * Returns:
+ *   - radar: ranked opportunities
+ *   - pipelines: full pipeline detail per candidate
+ *   - snapshots: decision snapshots for replay §13.1
+ *   - environmentMode: current engine mode §13.6
+ *   - engineVersions: all engine versions §13.2
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -44,6 +51,7 @@ const DEFAULT_CONTEXT: ScanContext = {
     playbookHealthScore: 0.7,
     modelHealthScore: 0.7,
   },
+  metaHealthThrottle: 1.0,
 };
 
 export async function POST(req: NextRequest) {

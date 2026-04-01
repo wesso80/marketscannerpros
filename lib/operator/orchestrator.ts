@@ -1,9 +1,16 @@
 /**
- * MSP Operator — Orchestrator
- * Chains all service engines in sequence per §6:
+ * MSP Operator — Orchestrator §7
+ * Chains all service engines in sequence per spec:
  *   MarketData → FeatureEngine → RegimeEngine → PlaybookEngine
  *   → (for each candidate) → DoctrineEngine → ScoringEngine
  *   → GovernanceEngine → ExecutionEngine
+ *
+ * Includes:
+ *   - Decision replay capture §13.1
+ *   - Engine version stamping §13.2
+ *   - Symbol trust integration §13.3
+ *   - Environment mode awareness §13.6
+ *   - Meta-health throttle §13.7
  *
  * Returns the full pipeline result: radar opportunities + execution plans.
  * @internal
@@ -14,9 +21,11 @@ import type {
   GovernanceDecision, ExecutionPlan, RadarOpportunity, PortfolioState,
   RiskPolicy, ExecutionEnvironment, AccountState, InstrumentMeta,
   HealthContext, DoctrineEvaluation, Bar, KeyLevel,
-  CrossMarketState, EventWindow,
+  CrossMarketState, EventWindow, EnvironmentMode, DecisionSnapshot,
+  MetaHealthState,
 } from '@/types/operator';
-import { generateId, nowISO, makeEnvelope } from './shared';
+import { generateId, nowISO, makeEnvelope, ENVIRONMENT_MODE } from './shared';
+import { ENGINE_VERSIONS } from './version-registry';
 import { computeFeatureVector } from './feature-engine';
 import { classifyRegime } from './regime-engine';
 import { evaluateDoctrine } from './doctrine-engine';
@@ -24,6 +33,8 @@ import { detectPlaybooks } from './playbook-engine';
 import { scoreCandidate } from './scoring-engine';
 import { checkGovernance } from './governance-engine';
 import { buildExecutionPlan } from './execution-engine';
+import { computeSymbolTrust } from './symbol-trust';
+import { captureDecisionSnapshot, type SnapshotCaptureInput } from './decision-replay';
 
 /* ── Pipeline Types ─────────────────────────────────────────── */
 
@@ -40,6 +51,8 @@ export interface ScanContext {
   accountState: AccountState;
   instrumentMeta: Record<string, InstrumentMeta>;
   healthContext: HealthContext;
+  /** §13.7 meta-health throttle multiplier */
+  metaHealthThrottle?: number;
 }
 
 export interface CandidatePipeline {
@@ -53,14 +66,16 @@ export interface CandidatePipeline {
 export interface ScanResult {
   requestId: string;
   timestamp: string;
+  environmentMode: EnvironmentMode;
+  engineVersions: typeof ENGINE_VERSIONS;
   symbolsScanned: number;
   radar: RadarOpportunity[];
   pipelines: CandidatePipeline[];
+  snapshots: DecisionSnapshot[];
   errors: { symbol: string; error: string }[];
 }
 
 /* ── Data Provider Interface ────────────────────────────────── */
-// These will be implemented when wiring to real data sources
 
 export interface MarketDataProvider {
   getBars(symbol: string, market: Market, timeframe: string): Promise<Bar[]>;
@@ -75,9 +90,11 @@ async function runSymbolPipeline(
   symbol: string,
   market: Market,
   timeframe: string,
+  requestId: string,
   dataProvider: MarketDataProvider,
   context: ScanContext,
-): Promise<{ candidates: CandidatePipeline[]; errors: string[] }> {
+): Promise<{ candidates: CandidatePipeline[]; snapshot: DecisionSnapshot | null; errors: string[] }> {
+  const startTime = Date.now();
   const errors: string[] = [];
 
   // 1. Market Data
@@ -89,8 +106,15 @@ async function runSymbolPipeline(
   ]);
 
   if (bars.length === 0) {
-    return { candidates: [], errors: ['NO_BAR_DATA'] };
+    return { candidates: [], snapshot: null, errors: ['NO_BAR_DATA'] };
   }
+
+  // §13.3 — compute symbol trust from bar history
+  const trustProfile = computeSymbolTrust(symbol, market, bars);
+  const healthContext: HealthContext = {
+    ...context.healthContext,
+    symbolTrustScore: trustProfile.compositeTrust,
+  };
 
   // 2. Feature Engine
   const featureVector = computeFeatureVector({
@@ -103,6 +127,9 @@ async function runSymbolPipeline(
     crossMarketSnapshot: crossMarket,
     eventSnapshot: eventWindow,
   });
+
+  // Inject symbol trust into feature vector
+  featureVector.features.symbolTrustScore = trustProfile.compositeTrust;
 
   // 3. Regime Engine
   const regimeDecision = classifyRegime({
@@ -122,12 +149,12 @@ async function runSymbolPipeline(
     keyLevels,
   });
 
-  if (tradeCandidates.length === 0) {
-    return { candidates: [], errors: [] };
-  }
-
   // 5–8. For each candidate: Doctrine → Scoring → Governance → Execution
   const pipelines: CandidatePipeline[] = [];
+  const doctrineEvals: DoctrineEvaluation[] = [];
+  const verdicts: Verdict[] = [];
+  const govDecisions: GovernanceDecision[] = [];
+  const execPlans: (ExecutionPlan | null)[] = [];
 
   for (const candidate of tradeCandidates) {
     // 5. Doctrine Engine
@@ -144,6 +171,7 @@ async function runSymbolPipeline(
         invalidationPrice: candidate.invalidationPrice,
       },
     });
+    doctrineEvals.push(doctrine);
 
     // 6. Scoring Engine
     const verdict = scoreCandidate({
@@ -151,8 +179,18 @@ async function runSymbolPipeline(
       featureVector,
       regimeDecision,
       doctrineEvaluation: doctrine,
-      healthContext: context.healthContext,
+      healthContext,
     });
+    verdicts.push(verdict);
+
+    // §13.7 — apply meta-health throttle to size multiplier
+    if (context.metaHealthThrottle !== undefined && context.metaHealthThrottle < 1) {
+      verdict.sizeMultiplier *= context.metaHealthThrottle;
+      if (context.metaHealthThrottle === 0) {
+        verdict.permission = 'BLOCK';
+        verdict.reasonCodes.push('META_HEALTH_THROTTLED');
+      }
+    }
 
     // 7. Governance Engine
     const governance = checkGovernance({
@@ -161,10 +199,14 @@ async function runSymbolPipeline(
       riskPolicy: context.riskPolicy,
       executionEnvironment: context.executionEnvironment,
     });
+    govDecisions.push(governance);
 
-    // 8. Execution Engine (only if approved)
+    // 8. Execution Engine (only if approved and not in RESEARCH mode)
     let executionPlan: ExecutionPlan | null = null;
-    if (governance.finalPermission === 'ALLOW' || governance.finalPermission === 'ALLOW_REDUCED') {
+    if (
+      (governance.finalPermission === 'ALLOW' || governance.finalPermission === 'ALLOW_REDUCED') &&
+      ENVIRONMENT_MODE !== 'RESEARCH'
+    ) {
       const meta = context.instrumentMeta[symbol] ?? {
         lotSize: 1,
         tickSize: 0.01,
@@ -177,11 +219,27 @@ async function runSymbolPipeline(
         instrumentMeta: meta,
       });
     }
+    execPlans.push(executionPlan);
 
     pipelines.push({ candidate, doctrine, verdict, governance, executionPlan });
   }
 
-  return { candidates: pipelines, errors };
+  // §13.1 — capture decision snapshot for replay
+  const snapshot = captureDecisionSnapshot({
+    requestId,
+    symbol,
+    inputs: { bars, keyLevels, crossMarket, eventWindow },
+    featureVector,
+    regimeDecision,
+    candidates: tradeCandidates,
+    doctrineEvaluations: doctrineEvals,
+    verdicts,
+    governanceDecisions: govDecisions,
+    executionPlans: execPlans,
+    startTime,
+  });
+
+  return { candidates: pipelines, snapshot, errors };
 }
 
 /* ── Main Orchestrator Entry Point ──────────────────────────── */
@@ -193,16 +251,18 @@ export async function runScan(
 ): Promise<ScanResult> {
   const requestId = generateId('scan');
   const allPipelines: CandidatePipeline[] = [];
+  const allSnapshots: DecisionSnapshot[] = [];
   const allErrors: { symbol: string; error: string }[] = [];
 
   // Process each symbol
   for (const symbol of request.symbols) {
     try {
-      const { candidates, errors } = await runSymbolPipeline(
+      const { candidates, snapshot, errors } = await runSymbolPipeline(
         symbol, request.market, request.timeframe,
-        dataProvider, context,
+        requestId, dataProvider, context,
       );
       allPipelines.push(...candidates);
+      if (snapshot) allSnapshots.push(snapshot);
       errors.forEach(e => allErrors.push({ symbol, error: e }));
     } catch (err) {
       allErrors.push({
@@ -219,24 +279,29 @@ export async function runScan(
       symbol: p.candidate.symbol,
       playbook: p.candidate.playbook,
       regime: p.verdict.regime,
+      direction: p.candidate.direction,
       confidenceScore: p.verdict.confidenceScore,
       permission: p.governance.finalPermission,
       sizeMultiplier: p.governance.sizeMultiplier,
       reasonCodes: p.verdict.reasonCodes,
+      symbolTrust: p.verdict.evidence.symbolTrust,
     }))
     .sort((a, b) => b.confidenceScore - a.confidenceScore);
 
   return {
     requestId,
     timestamp: nowISO(),
+    environmentMode: ENVIRONMENT_MODE,
+    engineVersions: ENGINE_VERSIONS,
     symbolsScanned: request.symbols.length,
     radar,
     pipelines: allPipelines,
+    snapshots: allSnapshots,
     errors: allErrors,
   };
 }
 
 /** Wrap scan result in API envelope */
 export function createScanEnvelope(result: ScanResult) {
-  return makeEnvelope('orchestrator', result);
+  return makeEnvelope('orchestrator', result, ENGINE_VERSIONS.orchestratorVersion);
 }

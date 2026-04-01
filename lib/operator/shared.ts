@@ -4,6 +4,7 @@
  */
 
 import crypto from 'crypto';
+import type { EnvironmentMode } from '@/types/operator';
 
 export function generateId(prefix: string): string {
   return `${prefix}_${crypto.randomBytes(12).toString('base64url')}`;
@@ -15,6 +16,11 @@ export function nowISO(): string {
 
 export function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
+}
+
+/** Create a deterministic hash for idempotency §13.5 */
+export function hashIntent(input: string): string {
+  return crypto.createHash('sha256').update(input).digest('base64url').slice(0, 24);
 }
 
 export function makeEnvelope<T>(
@@ -48,7 +54,7 @@ export function makeError(
   };
 }
 
-/** Default adaptive scoring weights — see blueprint §5.2 */
+/** Default adaptive scoring weights — see spec §6.6 */
 export const DEFAULT_SCORING_WEIGHTS = {
   regimeFit: 0.18,
   structureQuality: 0.18,
@@ -62,7 +68,7 @@ export const DEFAULT_SCORING_WEIGHTS = {
   modelHealth: 0.05,
 } as const;
 
-/** Permission score thresholds — see blueprint §5.4 */
+/** Permission score thresholds — see spec §6.6 */
 export const PERMISSION_THRESHOLDS = {
   ALLOW: 0.80,
   ALLOW_REDUCED: 0.68,
@@ -70,8 +76,23 @@ export const PERMISSION_THRESHOLDS = {
   // below 0.55 → BLOCK
 } as const;
 
-/** Max weight shift per learning cycle — see blueprint §Step 5 */
+/** Max weight shift per learning cycle — see spec §8.2 */
 export const MAX_WEIGHT_DELTA = 0.03;
 
 /** Minimum sample size for learning adjustment */
 export const MIN_LEARNING_SAMPLE = 30;
+
+/** §13.6 environment mode — determines execution behavior */
+export const ENVIRONMENT_MODE: EnvironmentMode = (
+  process.env.OPERATOR_ENV_MODE as EnvironmentMode
+) || 'RESEARCH';
+
+/** Whether execution should submit real orders */
+export function isLiveExecution(): boolean {
+  return ENVIRONMENT_MODE === 'LIVE_ASSISTED' || ENVIRONMENT_MODE === 'LIVE_AUTO';
+}
+
+/** Whether the mode requires manual approval */
+export function requiresApproval(): boolean {
+  return ENVIRONMENT_MODE === 'LIVE_ASSISTED' || ENVIRONMENT_MODE === 'PAPER';
+}
