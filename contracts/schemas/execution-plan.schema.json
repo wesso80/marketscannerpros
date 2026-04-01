@@ -1,0 +1,16 @@
+{
+  "$id": "ExecutionPlan",
+  "type": "object",
+  "required": ["executionPlanId","verdictId","symbol","direction","orderIntent","quantity","entryOrder","stopOrder","targetOrders"],
+  "properties": {
+    "executionPlanId": { "type": "string" },
+    "verdictId": { "type": "string" },
+    "symbol": { "type": "string" },
+    "direction": { "type": "string", "enum": ["LONG","SHORT"] },
+    "orderIntent": { "type": "string", "enum": ["ENTER","REDUCE","EXIT","CANCEL","REPLACE"] },
+    "quantity": { "type": "number" },
+    "entryOrder": { "type": "object", "required": ["type","timeInForce"], "properties": { "type": { "type": "string", "enum": ["MARKET","LIMIT","STOP","STOP_LIMIT"] }, "price": { "type": ["number","null"] }, "stopPrice": { "type": ["number","null"] }, "timeInForce": { "type": "string", "enum": ["DAY","GTC","IOC","FOK"] } } },
+    "stopOrder": { "type": "object", "required": ["type","stopPrice"], "properties": { "type": { "type": "string", "enum": ["STOP","STOP_LIMIT"] }, "price": { "type": ["number","null"] }, "stopPrice": { "type": "number" } } },
+    "targetOrders": { "type": "array", "items": { "type": "object", "required": ["price","quantityPct"], "properties": { "price": { "type": "number" }, "quantityPct": { "type": "number", "minimum": 0, "maximum": 1 } } } }
+  }
+}

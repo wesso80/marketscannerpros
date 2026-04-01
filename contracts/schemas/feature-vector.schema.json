@@ -1,0 +1,35 @@
+{
+  "$id": "FeatureVector",
+  "type": "object",
+  "required": ["symbol","market","timeframe","timestamp","features"],
+  "properties": {
+    "symbol": { "type": "string" },
+    "market": { "type": "string" },
+    "timeframe": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "schemaVersion": { "type": "string" },
+    "engineVersion": { "type": "string" },
+    "features": {
+      "type": "object",
+      "required": ["trendScore","emaAlignmentScore","atrPercentile","bbwpPercentile","volExpansionScore","momentumScore","extensionScore","structureScore","timeConfluenceScore","liquidityScore","relativeVolumeScore","eventRiskScore","crossMarketScore"],
+      "properties": {
+        "trendScore": { "type": "number", "minimum": 0, "maximum": 1 },
+        "emaAlignmentScore": { "type": "number", "minimum": 0, "maximum": 1 },
+        "atrPercentile": { "type": "number", "minimum": 0, "maximum": 1 },
+        "bbwpPercentile": { "type": "number", "minimum": 0, "maximum": 1 },
+        "volExpansionScore": { "type": "number", "minimum": 0, "maximum": 1 },
+        "momentumScore": { "type": "number", "minimum": 0, "maximum": 1 },
+        "extensionScore": { "type": "number", "minimum": 0, "maximum": 1 },
+        "structureScore": { "type": "number", "minimum": 0, "maximum": 1 },
+        "timeConfluenceScore": { "type": "number", "minimum": 0, "maximum": 1 },
+        "liquidityScore": { "type": "number", "minimum": 0, "maximum": 1 },
+        "relativeVolumeScore": { "type": "number", "minimum": 0, "maximum": 1 },
+        "eventRiskScore": { "type": "number", "minimum": 0, "maximum": 1 },
+        "crossMarketScore": { "type": "number", "minimum": 0, "maximum": 1 },
+        "optionsFlowScore": { "type": ["number","null"], "minimum": 0, "maximum": 1 },
+        "symbolTrustScore": { "type": ["number","null"], "minimum": 0, "maximum": 1 },
+        "playbookHealthScore": { "type": ["number","null"], "minimum": 0, "maximum": 1 }
+      }
+    }
+  }
+}

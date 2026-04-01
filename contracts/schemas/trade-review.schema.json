@@ -1,0 +1,16 @@
+{
+  "$id": "TradeReview",
+  "type": "object",
+  "required": ["positionId","timestamp","outcomeClass","rootCause","entryEfficiency","exitEfficiency","mae","mfe"],
+  "properties": {
+    "positionId": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "outcomeClass": { "type": "string", "enum": ["RIGHT_IDEA_WRONG_TIMING","RIGHT_TIMING_BAD_STRUCTURE","VALID_SETUP_LOW_PARTICIPATION","GOOD_SETUP_EVENT_INTERFERENCE","BAD_EXECUTION","EARLY_ENTRY","LATE_ENTRY","REGIME_MISMATCH","PLAYBOOK_DRIFT","CLEAN_EXECUTION"] },
+    "rootCause": { "type": "string" },
+    "entryEfficiency": { "type": "number", "minimum": 0, "maximum": 1 },
+    "exitEfficiency": { "type": "number", "minimum": 0, "maximum": 1 },
+    "mae": { "type": "number" },
+    "mfe": { "type": "number" },
+    "reviewNotes": { "type": "array", "items": { "type": "string" } }
+  }
+}

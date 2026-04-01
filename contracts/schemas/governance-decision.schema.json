@@ -1,0 +1,15 @@
+{
+  "$id": "GovernanceDecision",
+  "type": "object",
+  "required": ["governanceDecisionId","verdictId","timestamp","finalPermission","sizeMultiplier","blockReasons","throttleReasons","lockouts"],
+  "properties": {
+    "governanceDecisionId": { "type": "string" },
+    "verdictId": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "finalPermission": { "type": "string", "enum": ["ALLOW","ALLOW_REDUCED","WAIT","BLOCK"] },
+    "sizeMultiplier": { "type": "number", "minimum": 0, "maximum": 5 },
+    "blockReasons": { "type": "array", "items": { "type": "string" } },
+    "throttleReasons": { "type": "array", "items": { "type": "string" } },
+    "lockouts": { "type": "array", "items": { "type": "string" } }
+  }
+}

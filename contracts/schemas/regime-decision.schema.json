@@ -1,0 +1,17 @@
+{
+  "$id": "RegimeDecision",
+  "type": "object",
+  "required": ["symbol","market","timeframe","timestamp","regime","confidence","transitionRisk","allowedPlaybooks","blockedPlaybooks"],
+  "properties": {
+    "symbol": { "type": "string" },
+    "market": { "type": "string" },
+    "timeframe": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "regime": { "type": "string", "enum": ["TREND_EXPANSION","TREND_CONTINUATION","TREND_EXHAUSTION","ROTATIONAL_RANGE","COMPRESSION_COIL","FAILED_BREAKOUT_TRAP","EVENT_SHOCK","POST_NEWS_PRICE_DISCOVERY","ILLIQUID_DRIFT","PANIC_CORRELATION_CASCADE"] },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "transitionRisk": { "type": "number", "minimum": 0, "maximum": 1 },
+    "secondaryRegimes": { "type": "array", "items": { "type": "object", "required": ["name","probability"], "properties": { "name": { "type": "string" }, "probability": { "type": "number", "minimum": 0, "maximum": 1 } } } },
+    "allowedPlaybooks": { "type": "array", "items": { "type": "string" } },
+    "blockedPlaybooks": { "type": "array", "items": { "type": "string" } }
+  }
+}

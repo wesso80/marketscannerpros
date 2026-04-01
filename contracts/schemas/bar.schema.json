@@ -1,0 +1,17 @@
+{
+  "$id": "Bar",
+  "type": "object",
+  "required": ["symbol","market","timeframe","timestamp","open","high","low","close","volume"],
+  "properties": {
+    "symbol": { "type": "string" },
+    "market": { "type": "string", "enum": ["EQUITIES","CRYPTO","OPTIONS","FUTURES","FOREX"] },
+    "timeframe": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "open": { "type": "number" },
+    "high": { "type": "number" },
+    "low": { "type": "number" },
+    "close": { "type": "number" },
+    "volume": { "type": "number" },
+    "session": { "type": "string", "enum": ["RTH","EXTENDED","FULL","ASIA","LONDON","NEW_YORK","UNKNOWN"] }
+  }
+}

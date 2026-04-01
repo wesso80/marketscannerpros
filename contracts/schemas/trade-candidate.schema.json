@@ -1,0 +1,20 @@
+{
+  "$id": "TradeCandidate",
+  "type": "object",
+  "required": ["candidateId","symbol","market","timeframe","timestamp","playbook","direction","entryZone","invalidationPrice","targets","candidateState"],
+  "properties": {
+    "candidateId": { "type": "string" },
+    "symbol": { "type": "string" },
+    "market": { "type": "string" },
+    "timeframe": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "playbook": { "type": "string", "enum": ["BREAKOUT_CONTINUATION","PULLBACK_CONTINUATION","FAILED_BREAKOUT_REVERSAL","RANGE_MEAN_REVERSION","POST_EVENT_RECLAIM","SQUEEZE_EXPANSION","LIQUIDITY_SWEEP_REVERSAL"] },
+    "direction": { "type": "string", "enum": ["LONG","SHORT"] },
+    "entryZone": { "type": "object", "required": ["min","max"], "properties": { "min": { "type": "number" }, "max": { "type": "number" } } },
+    "triggerPrice": { "type": ["number","null"] },
+    "invalidationPrice": { "type": "number" },
+    "targets": { "type": "array", "items": { "type": "number" } },
+    "candidateState": { "type": "string", "enum": ["DISCOVERED","CANDIDATE","VALIDATED","READY","ORDER_PENDING","PARTIALLY_FILLED","ACTIVE","REDUCING","EXITED","INVALIDATED","BLOCKED"] },
+    "notes": { "type": "array", "items": { "type": "string" } }
+  }
+}

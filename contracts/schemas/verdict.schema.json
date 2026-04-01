@@ -1,0 +1,40 @@
+{
+  "$id": "Verdict",
+  "type": "object",
+  "required": ["verdictId","candidateId","symbol","market","timeframe","timestamp","playbook","regime","direction","confidenceScore","qualityScore","permission","sizeMultiplier","riskUnit","evidence","reasonCodes"],
+  "properties": {
+    "verdictId": { "type": "string" },
+    "candidateId": { "type": "string" },
+    "symbol": { "type": "string" },
+    "market": { "type": "string" },
+    "timeframe": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "playbook": { "type": "string" },
+    "regime": { "type": "string" },
+    "direction": { "type": "string", "enum": ["LONG","SHORT"] },
+    "confidenceScore": { "type": "number", "minimum": 0, "maximum": 1 },
+    "qualityScore": { "type": "number", "minimum": 0, "maximum": 1 },
+    "permission": { "type": "string", "enum": ["ALLOW","ALLOW_REDUCED","WAIT","BLOCK"] },
+    "sizeMultiplier": { "type": "number", "minimum": 0, "maximum": 5 },
+    "riskUnit": { "type": "number", "minimum": 0 },
+    "evidence": {
+      "type": "object",
+      "required": ["regimeFit","structureQuality","timeConfluence","volatilityAlignment","participationFlow","crossMarketConfirmation","eventSafety","extensionSafety","symbolTrust","modelHealth"],
+      "properties": {
+        "regimeFit": { "type": "number" },
+        "structureQuality": { "type": "number" },
+        "timeConfluence": { "type": "number" },
+        "volatilityAlignment": { "type": "number" },
+        "participationFlow": { "type": "number" },
+        "crossMarketConfirmation": { "type": "number" },
+        "eventSafety": { "type": "number" },
+        "extensionSafety": { "type": "number" },
+        "symbolTrust": { "type": "number" },
+        "modelHealth": { "type": "number" }
+      }
+    },
+    "boosts": { "type": "array", "items": { "type": "object", "required": ["code","value"], "properties": { "code": { "type": "string" }, "value": { "type": "number" } } } },
+    "penalties": { "type": "array", "items": { "type": "object", "required": ["code","value"], "properties": { "code": { "type": "string" }, "value": { "type": "number" } } } },
+    "reasonCodes": { "type": "array", "items": { "type": "string" } }
+  }
+}

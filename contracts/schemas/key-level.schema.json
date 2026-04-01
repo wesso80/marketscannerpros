@@ -1,0 +1,11 @@
+{
+  "$id": "KeyLevel",
+  "type": "object",
+  "required": ["name","price","category"],
+  "properties": {
+    "name": { "type": "string" },
+    "price": { "type": "number" },
+    "category": { "type": "string", "enum": ["PDH","PDL","ONH","ONL","VWAP","WEEKLY_HIGH","WEEKLY_LOW","MONTHLY_HIGH","MONTHLY_LOW","MIDPOINT","SUPPLY","DEMAND","GAMMA_WALL","LIQUIDITY_POOL","CUSTOM"] },
+    "strength": { "type": "number", "minimum": 0, "maximum": 1 }
+  }
+}
