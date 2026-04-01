@@ -1,10 +1,11 @@
 "use client";
 
 import AdminCard from "../shared/AdminCard";
-import { mockSymbol } from "@/lib/admin/mock-data";
+import type { AdminSymbolIntelligence } from "@/lib/admin/types";
 
-export default function IndicatorMatrixCard() {
-  const i = mockSymbol.indicators;
+export default function IndicatorMatrixCard({ data }: { data: AdminSymbolIntelligence | null }) {
+  if (!data) return <AdminCard title="Indicator Matrix"><div className="text-white/30 text-sm">Loading…</div></AdminCard>;
+  const i = data.indicators;
 
   const rows = [
     { label: "EMA.20", val1: "-1.1% 🔖", val2: i.ema20.toFixed(2), val3: "1.20" },

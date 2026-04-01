@@ -1,0 +1,142 @@
+/**
+ * Admin Terminal — Serializer
+ * Converts real operator engine output (ScanResult, Verdict, etc.)
+ * into the admin UI types (AdminSymbolIntelligence, ScannerHit).
+ *
+ * This is the ONLY file that bridges operator internals → admin UI.
+ * @internal
+ */
+
+import type { ScanResult, CandidatePipeline } from "@/lib/operator/orchestrator";
+import type { Bar } from "@/types/operator";
+import type {
+  AdminSymbolIntelligence,
+  ScannerHit,
+  SystemHealth,
+} from "./types";
+import { toPermissionState, toBiasState } from "./types";
+
+/* ── Scanner hit (one row) from a pipeline result ── */
+export function pipelineToScannerHit(p: CandidatePipeline): ScannerHit {
+  const v = p.verdict;
+  const g = p.governance;
+  return {
+    symbol: v.symbol,
+    bias: toBiasState(v.direction),
+    regime: v.regime,
+    permission: toPermissionState(g.finalPermission),
+    confidence: Math.round(v.confidenceScore * 10) / 10,
+    symbolTrust: Math.round((v.evidence.symbolTrust ?? 0.5) * 100),
+    sizeMultiplier: Math.round(v.sizeMultiplier * 100) / 100,
+    playbook: v.playbook,
+    blockReasons: g.blockReasons ?? v.reasonCodes ?? [],
+    timestamp: v.timestamp,
+  };
+}
+
+/* ── Full scanner results → ScannerHit[] ── */
+export function scanResultToHits(result: ScanResult): ScannerHit[] {
+  return result.pipelines
+    .map(pipelineToScannerHit)
+    .sort((a, b) => b.confidence - a.confidence);
+}
+
+/* ── Full symbol intelligence from a pipeline + bars ── */
+export function pipelineToSymbolIntelligence(
+  p: CandidatePipeline,
+  bars: Bar[],
+  dveFlags: string[] = [],
+): AdminSymbolIntelligence {
+  const v = p.verdict;
+  const g = p.governance;
+  const c = p.candidate;
+  const lastBar = bars[bars.length - 1];
+  const prevBar = bars.length > 1 ? bars[bars.length - 2] : lastBar;
+  const price = lastBar?.close ?? 0;
+  const changePercent = prevBar?.close
+    ? ((price - prevBar.close) / prevBar.close) * 100
+    : 0;
+
+  // Extract indicator values from feature vector if available
+  // These get populated by the feature engine
+  const features = (p as any)._featureVector?.features;
+
+  return {
+    symbol: v.symbol,
+    timeframe: v.timeframe,
+    session: lastBar?.session ?? "UNKNOWN",
+    price,
+    changePercent: Math.round(changePercent * 100) / 100,
+    bias: toBiasState(v.direction),
+    regime: v.regime,
+    permission: toPermissionState(g.finalPermission),
+    confidence: Math.round(v.confidenceScore * 10) / 10,
+    symbolTrust: Math.round((v.evidence.symbolTrust ?? 0.5) * 100),
+    sizeMultiplier: Math.round(v.sizeMultiplier * 100) / 100,
+    lastScanAt: v.timestamp,
+    blockReasons: g.blockReasons ?? [],
+    penalties: v.penalties?.map((pen) => pen.code) ?? [],
+    playbook: v.playbook,
+    indicators: {
+      ema20: features?.emaAlignmentScore ?? 0,
+      ema50: 0,
+      ema200: 0,
+      vwap: 0,
+      atr: features?.atrPercentile ?? 0,
+      bbwpPercentile: features?.bbwpPercentile ?? 0,
+      adx: 0,
+      rvol: features?.relativeVolumeScore ?? 0,
+    },
+    dve: {
+      state: dveFlags.find((f) => f.includes("EXPAND")) ? "EXPANSION" :
+             dveFlags.find((f) => f.includes("COMPRESS")) ? "COMPRESSION" :
+             dveFlags.find((f) => f.includes("BREAKOUT")) ? "BREAKOUT" : "NEUTRAL",
+      direction: v.direction === "LONG" ? "BULLISH" : v.direction === "SHORT" ? "BEARISH" : "NEUTRAL",
+      persistence: features?.volExpansionScore ?? 0,
+      breakoutReadiness: features?.structureScore ?? 0,
+      trap: dveFlags.includes("VOL_TRAP"),
+      exhaustion: dveFlags.includes("EXHAUSTION_RISK"),
+    },
+    timeConfluence: {
+      score: features?.timeConfluenceScore ?? 0,
+      hotWindow: (features?.timeConfluenceScore ?? 0) > 70,
+      alignmentCount: 0,
+      nextClusterAt: "",
+    },
+    levels: {
+      pdh: 0,
+      pdl: 0,
+      weeklyHigh: 0,
+      weeklyLow: 0,
+      monthlyHigh: 0,
+      monthlyLow: 0,
+      midpoint: 0,
+      vwap: 0,
+    },
+    targets: {
+      entry: c.entryZone?.min ?? 0,
+      invalidation: c.invalidationPrice ?? 0,
+      target1: c.targets?.[0] ?? 0,
+      target2: c.targets?.[1] ?? 0,
+      target3: c.targets?.[2] ?? 0,
+    },
+    evidence: v.evidence,
+  };
+}
+
+/* ── System health from a scan result ── */
+export function scanResultToHealth(
+  result: ScanResult | null,
+  feedOk: boolean,
+): SystemHealth {
+  return {
+    feed: feedOk ? "HEALTHY" : "DEGRADED",
+    websocket: "DISCONNECTED", // Will be CONNECTED once WS is added
+    scanner: result ? "RUNNING" : "IDLE",
+    cache: "OK",
+    api: "LOW_LATENCY",
+    lastScanAt: result?.timestamp,
+    symbolsScanned: result?.symbolsScanned ?? 0,
+    errorsCount: result?.errors?.length ?? 0,
+  };
+}

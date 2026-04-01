@@ -2,10 +2,11 @@
 
 import AdminCard from "../shared/AdminCard";
 import DataRow from "../shared/DataRow";
-import { mockSymbol } from "@/lib/admin/mock-data";
+import type { AdminSymbolIntelligence } from "@/lib/admin/types";
 
-export default function TimeConfluenceDetailCard() {
-  const t = mockSymbol.timeConfluence;
+export default function TimeConfluenceDetailCard({ data }: { data: AdminSymbolIntelligence | null }) {
+  if (!data) return <AdminCard title="Time Confluence Detail"><div className="text-white/30 text-sm">Loading…</div></AdminCard>;
+  const t = data.timeConfluence;
   return (
     <AdminCard title="Time Confluence Detail">
       <div className="space-y-0.5">

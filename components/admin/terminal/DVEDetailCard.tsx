@@ -2,10 +2,11 @@
 
 import AdminCard from "../shared/AdminCard";
 import DataRow from "../shared/DataRow";
-import { mockSymbol } from "@/lib/admin/mock-data";
+import type { AdminSymbolIntelligence } from "@/lib/admin/types";
 
-export default function DVEDetailCard() {
-  const d = mockSymbol.dve;
+export default function DVEDetailCard({ data }: { data: AdminSymbolIntelligence | null }) {
+  if (!data) return <AdminCard title="DVE Detail"><div className="text-white/30 text-sm">Loading…</div></AdminCard>;
+  const d = data.dve;
   return (
     <AdminCard title="DVE Detail">
       <div className="space-y-0.5">

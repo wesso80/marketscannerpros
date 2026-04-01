@@ -2,10 +2,11 @@
 
 import AdminCard from "../shared/AdminCard";
 import DataRow from "../shared/DataRow";
-import { mockSymbol } from "@/lib/admin/mock-data";
+import type { AdminSymbolIntelligence } from "@/lib/admin/types";
 
-export default function TargetsInvalidationCard() {
-  const t = mockSymbol.targets;
+export default function TargetsInvalidationCard({ data }: { data: AdminSymbolIntelligence | null }) {
+  if (!data) return <AdminCard title="Targets / Invalidation"><div className="text-white/30 text-sm">Loading…</div></AdminCard>;
+  const t = data.targets;
   return (
     <AdminCard title="Targets / Invalidation" actions={<span className="text-white/30 text-xs cursor-pointer">≡</span>}>
       <div className="space-y-0.5">

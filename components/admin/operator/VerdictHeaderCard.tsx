@@ -1,10 +1,11 @@
 "use client";
 
 import AdminCard from "../shared/AdminCard";
-import { mockSymbol } from "@/lib/admin/mock-data";
+import type { AdminSymbolIntelligence } from "@/lib/admin/types";
 
-export default function VerdictHeaderCard() {
-  const s = mockSymbol;
+export default function VerdictHeaderCard({ data }: { data: AdminSymbolIntelligence | null }) {
+  const s = data;
+  if (!s) return <AdminCard title="Verdict"><div className="text-white/30 text-sm">Loading…</div></AdminCard>;
   return (
     <AdminCard title="Verdict" actions={<span className="text-white/30 text-xs cursor-pointer">⊡ ⚙ ≡</span>}>
       <div className="mb-3">

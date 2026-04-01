@@ -15,16 +15,17 @@ import LiquidityMapCard from "./LiquidityMapCard";
 import CrossMarketCard from "./CrossMarketCard";
 import EventRiskCard from "./EventRiskCard";
 import FlowCard from "./FlowCard";
+import type { AdminSymbolIntelligence } from "@/lib/admin/types";
 
-export default function TerminalMainGrid() {
+export default function TerminalMainGrid({ data }: { data: AdminSymbolIntelligence | null }) {
   return (
     <div className="grid gap-3 xl:grid-cols-[minmax(0,1.2fr)_380px]">
       {/* Left: Chart + Detail cards */}
       <div className="space-y-3">
         <ChartToolbar />
-        <LiveChartPanel />
+        <LiveChartPanel data={data} />
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-          <KeyLevelsCard />
+          <KeyLevelsCard data={data} />
           <LiquidityMapCard />
           <CrossMarketCard />
           <EventRiskCard />
@@ -34,13 +35,13 @@ export default function TerminalMainGrid() {
 
       {/* Right: Intelligence cards */}
       <div className="space-y-3 overflow-y-auto" style={{ maxHeight: "calc(100vh - 14rem)" }}>
-        <ConfidenceCard />
+        <ConfidenceCard data={data} />
         <SymbolTrustCard />
         <EvidenceStackCard />
-        <DVEDetailCard />
-        <TimeConfluenceDetailCard />
-        <RiskStateCard />
-        <PositionSizingCard />
+        <DVEDetailCard data={data} />
+        <TimeConfluenceDetailCard data={data} />
+        <RiskStateCard data={data} />
+        <PositionSizingCard data={data} />
         <SetupTypeCard />
       </div>
     </div>

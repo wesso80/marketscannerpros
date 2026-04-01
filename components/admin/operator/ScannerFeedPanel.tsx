@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import StatusPill from "../shared/StatusPill";
-import { mockScannerHits } from "@/lib/admin/mock-data";
-import type { PermissionState } from "@/lib/admin/types";
+import type { ScannerHit, PermissionState } from "@/lib/admin/types";
 
 function permissionTone(p: PermissionState) {
   if (p === "GO") return "green" as const;
@@ -11,7 +10,7 @@ function permissionTone(p: PermissionState) {
   return "red" as const;
 }
 
-export default function ScannerFeedPanel() {
+export default function ScannerFeedPanel({ hits }: { hits: ScannerHit[] }) {
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
@@ -19,7 +18,7 @@ export default function ScannerFeedPanel() {
         <span className="text-[10px] text-white/30">ADC_0</span>
       </div>
       <div className="space-y-1.5">
-        {mockScannerHits.map((hit) => (
+        {hits.map((hit) => (
           <Link
             key={hit.symbol}
             href={`/admin/terminal/${encodeURIComponent(hit.symbol)}`}
@@ -38,9 +37,9 @@ export default function ScannerFeedPanel() {
             <div className="text-[11px] text-white/40">
               Confidence: {hit.confidence}% · Trust: {hit.symbolTrust}% · Size: {hit.sizeMultiplier}x
             </div>
-            {hit.permission === "BLOCK" && (
+            {hit.permission === "BLOCK" && hit.blockReasons && hit.blockReasons.length > 0 && (
               <div className="mt-1 text-[10px] text-red-400/70">
-                WAIT_ZONE · LOW_LIQUIDITY
+                {hit.blockReasons.join(" · ")}
               </div>
             )}
           </Link>

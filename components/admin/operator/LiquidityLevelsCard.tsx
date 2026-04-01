@@ -2,10 +2,11 @@
 
 import AdminCard from "../shared/AdminCard";
 import DataRow from "../shared/DataRow";
-import { mockSymbol } from "@/lib/admin/mock-data";
+import type { AdminSymbolIntelligence } from "@/lib/admin/types";
 
-export default function LiquidityLevelsCard() {
-  const l = mockSymbol.levels;
+export default function LiquidityLevelsCard({ data }: { data: AdminSymbolIntelligence | null }) {
+  if (!data) return <AdminCard title="Liquidity / Levels"><div className="text-white/30 text-sm">Loading…</div></AdminCard>;
+  const l = data.levels;
   return (
     <AdminCard title="Liquidity / Levels">
       <div className="space-y-0.5">

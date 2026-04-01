@@ -1,6 +1,46 @@
-export type PermissionState = "GO" | "WAIT" | "BLOCK";
+/**
+ * Admin Terminal — UI-facing types
+ * These are serializable subsets of the operator engine types,
+ * safe for client components. The API bridge converts real
+ * operator output into these shapes.
+ */
+import type { Permission, Regime, Direction, Playbook } from "@/types/operator";
+
+/* ── Bias is a simplified Direction for the UI ── */
 export type BiasState = "LONG" | "SHORT" | "NEUTRAL";
 
+/* ── Permission simplified for admin cards ── */
+export type PermissionState = "GO" | "WAIT" | "BLOCK";
+
+/** Map real operator Permission → admin PermissionState */
+export function toPermissionState(p: Permission): PermissionState {
+  if (p === "ALLOW" || p === "ALLOW_REDUCED") return "GO";
+  if (p === "WAIT") return "WAIT";
+  return "BLOCK";
+}
+
+/** Map real operator Direction → BiasState */
+export function toBiasState(d: Direction | undefined): BiasState {
+  if (d === "LONG") return "LONG";
+  if (d === "SHORT") return "SHORT";
+  return "NEUTRAL";
+}
+
+/* ── Scanner hit (one row in the live feed) ── */
+export type ScannerHit = {
+  symbol: string;
+  bias: BiasState;
+  regime: Regime | string;
+  permission: PermissionState;
+  confidence: number;
+  symbolTrust: number;
+  sizeMultiplier: number;
+  playbook?: Playbook | string;
+  blockReasons?: string[];
+  timestamp?: string;
+};
+
+/* ── Full symbol intelligence payload ── */
 export type AdminSymbolIntelligence = {
   symbol: string;
   timeframe: string;
@@ -8,7 +48,7 @@ export type AdminSymbolIntelligence = {
   price: number;
   changePercent: number;
   bias: BiasState;
-  regime: string;
+  regime: Regime | string;
   permission: PermissionState;
   confidence: number;
   symbolTrust: number;
@@ -16,6 +56,7 @@ export type AdminSymbolIntelligence = {
   lastScanAt: string;
   blockReasons: string[];
   penalties: string[];
+  playbook?: Playbook | string;
   indicators: {
     ema20: number;
     ema50: number;
@@ -57,24 +98,47 @@ export type AdminSymbolIntelligence = {
     target2: number;
     target3: number;
   };
+  /** Evidence breakdown from scoring engine */
+  evidence?: {
+    regimeFit: number;
+    structureQuality: number;
+    timeConfluence: number;
+    volatilityAlignment: number;
+    participationFlow: number;
+    crossMarketConfirmation: number;
+    eventSafety: number;
+    extensionSafety: number;
+    symbolTrust: number;
+    modelHealth: number;
+  };
 };
 
-export type ScannerHit = {
-  symbol: string;
-  bias: BiasState;
-  regime: string;
-  permission: PermissionState;
-  confidence: number;
-  symbolTrust: number;
-  sizeMultiplier: number;
-};
-
+/* ── System health ── */
 export type SystemHealth = {
   feed: string;
   websocket: string;
   scanner: string;
   cache: string;
   api: string;
+  lastScanAt?: string;
+  symbolsScanned?: number;
+  errorsCount?: number;
+};
+
+/* ── Signal outcome (for learning loop) ── */
+export type SignalOutcome = {
+  signalId: string;
+  symbol: string;
+  triggeredAt: string;
+  regime: string;
+  permission: PermissionState;
+  score: number;
+  mfe: number;
+  mae: number;
+  outcomeLabel: "SUCCESS" | "FAIL" | "CHOP" | "TRAP";
+  horizon15m: number;
+  horizon1h: number;
+  horizon4h: number;
 };
 
 export type BottomTabKey =

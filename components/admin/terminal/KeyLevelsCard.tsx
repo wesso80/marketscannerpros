@@ -2,10 +2,11 @@
 
 import AdminCard from "../shared/AdminCard";
 import DataRow from "../shared/DataRow";
-import { mockSymbol } from "@/lib/admin/mock-data";
+import type { AdminSymbolIntelligence } from "@/lib/admin/types";
 
-export default function KeyLevelsCard() {
-  const l = mockSymbol.levels;
+export default function KeyLevelsCard({ data }: { data: AdminSymbolIntelligence | null }) {
+  if (!data) return <AdminCard title="Key Levels"><div className="text-white/30 text-sm">Loading…</div></AdminCard>;
+  const l = data.levels;
   return (
     <AdminCard title="Key Levels">
       <DataRow label="PDH" value={l.pdh.toFixed(3)} />

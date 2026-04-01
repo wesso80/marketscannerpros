@@ -1,8 +1,8 @@
 "use client";
 
-import { mockSymbol } from "@/lib/admin/mock-data";
+import type { AdminSymbolIntelligence } from "@/lib/admin/types";
 
-export default function LiveChartPanel() {
+export default function LiveChartPanel({ data }: { data: AdminSymbolIntelligence | null }) {
   return (
     <div className="relative rounded-xl border border-white/[0.06] bg-[#0b1220] overflow-hidden" style={{ height: 380 }}>
       {/* EMA overlay header */}
@@ -49,7 +49,7 @@ export default function LiveChartPanel() {
       {/* Current price tag */}
       <div className="absolute right-0 top-[42%] z-10">
         <div className="rounded-l-md bg-emerald-500 px-2 py-0.5 text-[11px] font-bold text-white">
-          {mockSymbol.price.toFixed(3)}
+          {(data?.price ?? 0).toFixed(3)}
         </div>
       </div>
 

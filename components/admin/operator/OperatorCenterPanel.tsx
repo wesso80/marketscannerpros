@@ -5,15 +5,16 @@ import ChartToolbar from "./ChartToolbar";
 import LiveChartPanel from "./LiveChartPanel";
 import OverlayLegend from "./OverlayLegend";
 import TimeConfluenceStrip from "./TimeConfluenceStrip";
+import type { AdminSymbolIntelligence } from "@/lib/admin/types";
 
-export default function OperatorCenterPanel() {
+export default function OperatorCenterPanel({ data }: { data: AdminSymbolIntelligence | null }) {
   return (
     <div className="flex flex-col gap-2 min-w-0">
-      <SymbolContextHeader />
+      <SymbolContextHeader data={data} />
       <ChartToolbar />
-      <LiveChartPanel />
+      <LiveChartPanel data={data} />
       <OverlayLegend />
-      <TimeConfluenceStrip />
+      <TimeConfluenceStrip data={data} />
     </div>
   );
 }

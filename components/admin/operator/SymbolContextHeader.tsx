@@ -1,10 +1,11 @@
 "use client";
 
 import StatusPill from "../shared/StatusPill";
-import { mockSymbol } from "@/lib/admin/mock-data";
+import type { AdminSymbolIntelligence } from "@/lib/admin/types";
 
-export default function SymbolContextHeader() {
-  const s = mockSymbol;
+export default function SymbolContextHeader({ data }: { data: AdminSymbolIntelligence | null }) {
+  const s = data;
+  if (!s) return <div className="rounded-xl border border-white/[0.08] bg-[#101826] px-4 py-3 text-white/30 text-sm">No symbol data loaded</div>;
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/[0.08] bg-[#101826] px-4 py-3">
       <div className="flex items-center gap-4">
