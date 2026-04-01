@@ -76,6 +76,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: "/admin/quant", label: "Quant Terminal", icon: "🧠" },
     { href: "/operator/engine", label: "Operator Engine", icon: "⚡" },
     { href: "/admin/discord-bridge", label: "Discord Bridge", icon: "📡" },
+    // ── Operator Terminal ──
+    { href: "/admin/operator-terminal", label: "Operator Terminal", icon: "🖥️" },
+    { href: "/admin/terminal/ADA", label: "Symbol Terminal", icon: "🔬" },
+    { href: "/admin/live-scanner", label: "Live Scanner", icon: "📡" },
+    { href: "/admin/risk", label: "Risk Governor", icon: "🛡️" },
+    { href: "/admin/diagnostics", label: "Diagnostics", icon: "🩺" },
+    { href: "/admin/system", label: "System", icon: "⚙️" },
+    { href: "/admin/logs", label: "Logs", icon: "📜" },
+    { href: "/admin/alerts", label: "Alerts", icon: "🔔" },
+    { href: "/admin/settings", label: "Settings", icon: "🔧" },
   ];
 
   if (!isAuthed) {
@@ -172,8 +182,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   gap: "0.75rem",
                   padding: "0.75rem 1rem",
                   borderRadius: "0.5rem",
-                  color: pathname === item.href ? "#10B981" : "#9CA3AF",
-                  background: pathname === item.href ? "rgba(16, 185, 129, 0.1)" : "transparent",
+                  color: (pathname === item.href || (item.href.startsWith("/admin/terminal/") && pathname?.startsWith("/admin/terminal/"))) ? "#10B981" : "#9CA3AF",
+                  background: (pathname === item.href || (item.href.startsWith("/admin/terminal/") && pathname?.startsWith("/admin/terminal/"))) ? "rgba(16, 185, 129, 0.1)" : "transparent",
                   textDecoration: "none",
                   marginBottom: "0.25rem",
                   transition: "all 0.2s",
