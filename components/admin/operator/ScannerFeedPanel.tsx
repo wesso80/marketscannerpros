@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import StatusPill from "../shared/StatusPill";
 import type { ScannerHit, PermissionState } from "@/lib/admin/types";
 
@@ -10,19 +9,27 @@ function permissionTone(p: PermissionState) {
   return "red" as const;
 }
 
-export default function ScannerFeedPanel({ hits }: { hits: ScannerHit[] }) {
+export default function ScannerFeedPanel({ hits, activeSymbol, onSelect }: {
+  hits: ScannerHit[];
+  activeSymbol?: string;
+  onSelect?: (symbol: string) => void;
+}) {
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
         <span className="text-xs font-medium text-white/50 uppercase tracking-wider">Live Scanner</span>
-        <span className="text-[10px] text-white/30">ADC_0</span>
+        <span className="text-[10px] text-white/30">{hits.length} hits</span>
       </div>
       <div className="space-y-1.5">
         {hits.map((hit) => (
-          <Link
+          <button
             key={hit.symbol}
-            href={`/admin/terminal/${encodeURIComponent(hit.symbol)}`}
-            className="block rounded-lg border border-white/[0.06] bg-white/[0.02] p-2.5 transition hover:bg-white/[0.04] hover:border-white/10"
+            onClick={() => onSelect?.(hit.symbol)}
+            className={`block w-full text-left rounded-lg border p-2.5 transition hover:bg-white/[0.04] hover:border-white/10 ${
+              activeSymbol === hit.symbol
+                ? "border-emerald-500/30 bg-emerald-500/[0.06]"
+                : "border-white/[0.06] bg-white/[0.02]"
+            }`}
           >
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-2">
@@ -42,7 +49,7 @@ export default function ScannerFeedPanel({ hits }: { hits: ScannerHit[] }) {
                 {hit.blockReasons.join(" · ")}
               </div>
             )}
-          </Link>
+          </button>
         ))}
       </div>
     </div>
