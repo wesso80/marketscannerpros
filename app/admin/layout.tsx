@@ -74,6 +74,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: "/admin/delete-requests", label: "Delete Requests", icon: "🗑️" },
     { href: "/admin/reporting", label: "Nasdaq Reporting", icon: "📋" },
     { href: "/admin/quant", label: "Quant Terminal", icon: "🧠" },
+    { href: "/operator/engine", label: "Operator Engine", icon: "⚡" },
     { href: "/admin/discord-bridge", label: "Discord Bridge", icon: "📡" },
   ];
 
