@@ -19,6 +19,8 @@ export default function AdminSubscriptionsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<string>("all");
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState("");
 
   useEffect(() => {
     fetchSubscriptions();
@@ -48,6 +50,30 @@ export default function AdminSubscriptionsPage() {
   const filtered = filter === "all" 
     ? subscriptions 
     : subscriptions.filter(s => s.tier === filter || s.status === filter);
+
+  const syncFromStripe = async () => {
+    const secret = sessionStorage.getItem("admin_secret");
+    if (!secret) return;
+    setSyncing(true);
+    setSyncResult("");
+    try {
+      const res = await fetch("/api/admin/sync-stripe", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${secret}` },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSyncResult(`Synced ${data.synced} subscriptions from Stripe`);
+        fetchSubscriptions();
+      } else {
+        setSyncResult(`Sync failed: ${data.error}`);
+      }
+    } catch {
+      setSyncResult("Sync network error");
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const tierBadge = (tier: string) => {
     const colors: Record<string, { bg: string; text: string }> = {
@@ -94,9 +120,41 @@ export default function AdminSubscriptionsPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
-      <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "#E5E7EB", marginBottom: "1.5rem" }}>
-        💳 Subscriptions
-      </h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "#E5E7EB" }}>
+          💳 Subscriptions
+        </h1>
+        <button
+          onClick={syncFromStripe}
+          disabled={syncing}
+          style={{
+            padding: "0.5rem 1rem",
+            background: syncing ? "rgba(107,114,128,0.2)" : "rgba(16,185,129,0.15)",
+            border: "1px solid rgba(16,185,129,0.3)",
+            borderRadius: "0.5rem",
+            color: syncing ? "#6B7280" : "#10B981",
+            fontSize: "0.8rem",
+            fontWeight: 600,
+            cursor: syncing ? "default" : "pointer",
+          }}
+        >
+          {syncing ? "Syncing…" : "↻ Sync from Stripe"}
+        </button>
+      </div>
+
+      {syncResult && (
+        <div style={{
+          background: "rgba(16,185,129,0.1)",
+          border: "1px solid rgba(16,185,129,0.3)",
+          borderRadius: "0.5rem",
+          padding: "0.75rem 1rem",
+          color: "#10B981",
+          marginBottom: "1rem",
+          fontSize: "0.85rem",
+        }}>
+          {syncResult}
+        </div>
+      )}
 
       {error && (
         <div style={{
