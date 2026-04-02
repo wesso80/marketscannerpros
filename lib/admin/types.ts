@@ -113,6 +113,16 @@ export type AdminSymbolIntelligence = {
     modelHealth: number;
   };
 
+  /** OHLCV bar data for charting */
+  bars?: {
+    timestamp: string;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+  }[];
+
   /** Truth Layer — authoritative decision object */
   truth?: TruthObject;
 };

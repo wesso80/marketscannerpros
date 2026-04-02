@@ -11,14 +11,18 @@ export default function OperatorTopToolbar({
   onTimeframeChange,
   onMarketChange,
   onRescan,
+  onKillSwitch,
   scanning,
+  killActive,
 }: {
   timeframe: string;
   market: string;
   onTimeframeChange: (tf: string) => void;
   onMarketChange: (m: string) => void;
   onRescan: () => void;
+  onKillSwitch?: () => void;
   scanning?: boolean;
+  killActive?: boolean;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#101826] px-4 py-2.5">
@@ -65,8 +69,11 @@ export default function OperatorTopToolbar({
         >
           {scanning ? "Scanning…" : "↻ Rescan"}
         </button>
-        <button className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-300 hover:bg-red-500/20 transition">
-          Kill Switch
+        <button className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-300 hover:bg-red-500/20 transition"
+          onClick={onKillSwitch}
+          style={killActive ? { background: "rgba(239,68,68,0.3)", borderColor: "rgba(239,68,68,0.5)" } : {}}
+        >
+          {killActive ? "⛔ Kill Active" : "Kill Switch"}
         </button>
       </div>
     </div>

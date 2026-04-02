@@ -116,8 +116,19 @@ export async function GET(
     const pipeline = result.pipelines[0];
     const intelligence = pipelineToSymbolIntelligence(pipeline, bars, [], result.timestamp);
 
+    // Include bar data for charting (last 200 bars max)
+    const chartBars = bars.slice(-200).map((b) => ({
+      timestamp: b.timestamp,
+      open: b.open,
+      high: b.high,
+      low: b.low,
+      close: b.close,
+      volume: b.volume,
+    }));
+
     return NextResponse.json({
       ...intelligence,
+      bars: chartBars,
       meta: {
         pipelinesCount: result.pipelines.length,
         errors: result.errors,
