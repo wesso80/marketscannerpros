@@ -15,6 +15,7 @@ import type {
   SystemHealth,
 } from "./types";
 import { toPermissionState, toBiasState } from "./types";
+import { renderTruth } from "./truth-layer";
 
 /* ── Map KeyLevel[] → flat levels object for admin UI ── */
 function extractLevels(keyLevels: KeyLevel[]): AdminSymbolIntelligence["levels"] {
@@ -61,6 +62,7 @@ export function pipelineToSymbolIntelligence(
   p: CandidatePipeline,
   bars: Bar[],
   dveFlags: string[] = [],
+  scanTimestamp?: string,
 ): AdminSymbolIntelligence {
   const v = p.verdict;
   const g = p.governance;
@@ -127,6 +129,7 @@ export function pipelineToSymbolIntelligence(
       target3: c.targets?.[2] ?? 0,
     },
     evidence: v.evidence,
+    truth: renderTruth(p, scanTimestamp ?? v.timestamp),
   };
 }
 

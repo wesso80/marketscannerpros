@@ -5,6 +5,7 @@
  * operator output into these shapes.
  */
 import type { Permission, Regime, Direction, Playbook } from "@/types/operator";
+import type { TruthObject } from "./truth-layer";
 
 /* ── Bias is a simplified Direction for the UI ── */
 export type BiasState = "LONG" | "SHORT" | "NEUTRAL";
@@ -111,6 +112,9 @@ export type AdminSymbolIntelligence = {
     symbolTrust: number;
     modelHealth: number;
   };
+
+  /** Truth Layer — authoritative decision object */
+  truth?: TruthObject;
 };
 
 /* ── System health ── */

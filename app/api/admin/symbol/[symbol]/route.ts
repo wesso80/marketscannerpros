@@ -16,6 +16,7 @@ import type { ScanContext } from "@/lib/operator/orchestrator";
 import type { Market } from "@/types/operator";
 import { alphaVantageProvider } from "@/lib/operator/market-data";
 import { pipelineToSymbolIntelligence } from "@/lib/admin/serializer";
+import { emptyTruth } from "@/lib/admin/truth-layer";
 
 export const runtime = "nodejs";
 
@@ -101,6 +102,7 @@ export async function GET(
         timeConfluence: { score: 0, hotWindow: false, alignmentCount: 0, nextClusterAt: "" },
         levels: { pdh: 0, pdl: 0, weeklyHigh: 0, weeklyLow: 0, monthlyHigh: 0, monthlyLow: 0, midpoint: 0, vwap: 0 },
         targets: { entry: 0, invalidation: 0, target1: 0, target2: 0, target3: 0 },
+        truth: emptyTruth(symbol, result.errors[0]?.error ?? "No valid setup candidate"),
         meta: {
           errors: result.errors,
           timestamp: result.timestamp,
@@ -112,7 +114,7 @@ export async function GET(
     // Get bars for this symbol to compute price/change
     const bars = await alphaVantageProvider.getBars(symbol, market, timeframe);
     const pipeline = result.pipelines[0];
-    const intelligence = pipelineToSymbolIntelligence(pipeline, bars);
+    const intelligence = pipelineToSymbolIntelligence(pipeline, bars, [], result.timestamp);
 
     return NextResponse.json({
       ...intelligence,
