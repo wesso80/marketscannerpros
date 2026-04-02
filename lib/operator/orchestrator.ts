@@ -64,6 +64,7 @@ export interface CandidatePipeline {
   verdict: Verdict;
   governance: GovernanceDecision;
   executionPlan: ExecutionPlan | null;
+  keyLevels?: KeyLevel[];
 }
 
 export interface ScanResult {
@@ -225,7 +226,7 @@ async function runSymbolPipeline(
     }
     execPlans.push(executionPlan);
 
-    pipelines.push({ candidate, doctrine, verdict, governance, executionPlan });
+    pipelines.push({ candidate, doctrine, verdict, governance, executionPlan, keyLevels });
   }
 
   // §13.1 — capture decision snapshot for replay

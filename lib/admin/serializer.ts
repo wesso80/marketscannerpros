@@ -8,13 +8,28 @@
  */
 
 import type { ScanResult, CandidatePipeline } from "@/lib/operator/orchestrator";
-import type { Bar } from "@/types/operator";
+import type { Bar, KeyLevel } from "@/types/operator";
 import type {
   AdminSymbolIntelligence,
   ScannerHit,
   SystemHealth,
 } from "./types";
 import { toPermissionState, toBiasState } from "./types";
+
+/* ── Map KeyLevel[] → flat levels object for admin UI ── */
+function extractLevels(keyLevels: KeyLevel[]): AdminSymbolIntelligence["levels"] {
+  const find = (cat: string) => keyLevels.find((l) => l.category === cat)?.price ?? 0;
+  return {
+    pdh: find("PDH"),
+    pdl: find("PDL"),
+    weeklyHigh: find("WEEKLY_HIGH"),
+    weeklyLow: find("WEEKLY_LOW"),
+    monthlyHigh: find("MONTHLY_HIGH"),
+    monthlyLow: find("MONTHLY_LOW"),
+    midpoint: find("MIDPOINT"),
+    vwap: find("VWAP"),
+  };
+}
 
 /* ── Scanner hit (one row) from a pipeline result ── */
 export function pipelineToScannerHit(p: CandidatePipeline): ScannerHit {
@@ -103,16 +118,7 @@ export function pipelineToSymbolIntelligence(
       alignmentCount: 0,
       nextClusterAt: "",
     },
-    levels: {
-      pdh: 0,
-      pdl: 0,
-      weeklyHigh: 0,
-      weeklyLow: 0,
-      monthlyHigh: 0,
-      monthlyLow: 0,
-      midpoint: 0,
-      vwap: 0,
-    },
+    levels: extractLevels(p.keyLevels ?? []),
     targets: {
       entry: c.entryZone?.min ?? 0,
       invalidation: c.invalidationPrice ?? 0,
