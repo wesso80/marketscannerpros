@@ -1,16 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
-import { timingSafeEqual } from 'crypto';
-
-// Verify admin secret (timing-safe)
-function verifyAdmin(req: NextRequest): boolean {
-  const auth = req.headers.get('authorization');
-  if (!auth?.startsWith('Bearer ')) return false;
-  const secret = auth.slice(7);
-  const adminSecret = process.env.ADMIN_SECRET || '';
-  if (!secret || !adminSecret || secret.length !== adminSecret.length) return false;
-  return timingSafeEqual(Buffer.from(secret), Buffer.from(adminSecret));
-}
+import { isAdminSecret } from '@/lib/quant/operatorAuth';
 
 // Subscription pricing
 const SUBSCRIPTION_PRICES = {
@@ -71,7 +61,7 @@ const STRIPE_PERCENTAGE = 0.029;
 const STRIPE_FIXED = 0.30;
 
 export async function GET(req: NextRequest) {
-  if (!verifyAdmin(req)) {
+  if (!isAdminSecret(req.headers.get('authorization'))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

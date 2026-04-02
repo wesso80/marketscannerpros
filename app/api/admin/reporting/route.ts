@@ -1,21 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { q } from "@/lib/db";
-import { timingSafeEqual } from "crypto";
-
-/* ------------------------------------------------------------------ */
-/*  Admin auth guard (same pattern as all /api/admin/* routes)         */
-/* ------------------------------------------------------------------ */
-function timingSafeCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
-}
-
-function auth(req: NextRequest): boolean {
-  const header = req.headers.get("authorization");
-  const secret = header?.replace("Bearer ", "");
-  const adminSecret = process.env.ADMIN_SECRET || "";
-  return !!(secret && adminSecret && timingSafeCompare(secret, adminSecret));
-}
+import { isAdminSecret } from '@/lib/quant/operatorAuth';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -40,7 +25,7 @@ function revisionDeadline(due: string): string {
 /*  GET  — list reports + live subscriber snapshot                     */
 /* ------------------------------------------------------------------ */
 export async function GET(req: NextRequest) {
-  if (!auth(req)) {
+  if (!isAdminSecret(req.headers.get('authorization'))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -120,7 +105,7 @@ export async function GET(req: NextRequest) {
 /*  POST  — generate or save a report for a given month               */
 /* ------------------------------------------------------------------ */
 export async function POST(req: NextRequest) {
-  if (!auth(req)) {
+  if (!isAdminSecret(req.headers.get('authorization'))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

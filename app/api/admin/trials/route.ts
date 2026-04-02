@@ -1,23 +1,11 @@
 // Admin API for managing user trials
 import { NextRequest, NextResponse } from "next/server";
 import { q } from "@/lib/db";
-import { timingSafeEqual } from 'crypto';
-
-// Admin secret - MUST be set in environment variables
-const ADMIN_SECRET = process.env.ADMIN_SECRET;
-if (!ADMIN_SECRET) console.warn('[admin/trials] ADMIN_SECRET not set — route is locked');
-
-function isAuthorized(req: NextRequest): boolean {
-  if (!ADMIN_SECRET) return false; // Locked if env not set
-  const authHeader = req.headers.get("authorization");
-  const secret = authHeader?.replace("Bearer ", "");
-  if (!secret || secret.length !== ADMIN_SECRET.length) return false;
-  return timingSafeEqual(Buffer.from(secret), Buffer.from(ADMIN_SECRET));
-}
+import { isAdminSecret } from '@/lib/quant/operatorAuth';
 
 // GET - List all trials (active and expired)
 export async function GET(req: NextRequest) {
-  if (!isAuthorized(req)) {
+  if (!isAdminSecret(req.headers.get('authorization'))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -47,7 +35,7 @@ export async function GET(req: NextRequest) {
 
 // POST - Grant a new trial
 export async function POST(req: NextRequest) {
-  if (!isAuthorized(req)) {
+  if (!isAdminSecret(req.headers.get('authorization'))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -114,7 +102,7 @@ export async function POST(req: NextRequest) {
 
 // DELETE - Revoke a trial
 export async function DELETE(req: NextRequest) {
-  if (!isAuthorized(req)) {
+  if (!isAdminSecret(req.headers.get('authorization'))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

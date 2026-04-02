@@ -13,6 +13,7 @@ import type {
 import {
   DEFAULT_SCORING_WEIGHTS, MAX_WEIGHT_DELTA, MIN_LEARNING_SAMPLE, clamp,
 } from './shared';
+import { q } from '@/lib/db';
 
 /* ── Edge & Drift Metrics ───────────────────────────────────── */
 
@@ -156,4 +157,47 @@ export function applyAdjustments(
   }
 
   return newWeights;
+}
+
+/* ── DB Persistence ─────────────────────────────────────────── */
+
+/**
+ * Load the most recent persisted weights from `operator_weights`.
+ * Falls back to DEFAULT_SCORING_WEIGHTS if no rows exist.
+ */
+export async function loadActiveWeights(): Promise<Record<string, number>> {
+  try {
+    const rows = await q(
+      'SELECT weights FROM operator_weights ORDER BY applied_at DESC LIMIT 1',
+    );
+    if (rows.length > 0 && rows[0].weights) {
+      return rows[0].weights as Record<string, number>;
+    }
+  } catch (err) {
+    console.error('[learning-engine] Failed to load weights from DB, using defaults:', err);
+  }
+  return { ...DEFAULT_SCORING_WEIGHTS };
+}
+
+/**
+ * Persist adjusted weights to `operator_weights` (append-only log).
+ */
+export async function saveWeights(
+  newWeights: Record<string, number>,
+  previousWeights: Record<string, number>,
+  adjustments: unknown[],
+  mode: string,
+  appliedBy: string,
+): Promise<void> {
+  await q(
+    `INSERT INTO operator_weights (weights, previous_weights, adjustments, mode, applied_by)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [
+      JSON.stringify(newWeights),
+      JSON.stringify(previousWeights),
+      JSON.stringify(adjustments),
+      mode,
+      appliedBy,
+    ],
+  );
 }

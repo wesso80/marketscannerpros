@@ -16,14 +16,8 @@ export default function RiskGovernorCard({ data }: { data: AdminSymbolIntelligen
           </span>
         </div>
         <DataRow label="Size Multiplier" value={`${data.sizeMultiplier}x`} />
-        <div className="flex items-center justify-between py-1.5 text-sm">
-          <span className="text-white/55">Size Multiplie:</span>
-          <span className="text-white/90">0.0x</span>
-        </div>
-        <div className="flex items-center justify-between py-1.5 text-sm">
-          <span className="text-white/55" />
-          <span className="text-white/90">2</span>
-        </div>
+        <DataRow label="Confidence" value={`${data.confidence}%`} />
+        <DataRow label="Symbol Trust" value={`${data.symbolTrust}%`} />
       </div>
     </AdminCard>
   );

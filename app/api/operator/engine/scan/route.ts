@@ -17,6 +17,8 @@ import { runScan, createScanEnvelope } from '@/lib/operator/orchestrator';
 import type { ScanRequest, ScanContext } from '@/lib/operator/orchestrator';
 import type { Market } from '@/types/operator';
 import { alphaVantageProvider } from '@/lib/operator/market-data';
+import { opsAlert } from '@/lib/opsAlerting';
+import { radarState } from '@/lib/operator/radar-state';
 
 export const runtime = 'nodejs';
 
@@ -81,6 +83,29 @@ export async function POST(req: NextRequest) {
     const context: ScanContext = { ...DEFAULT_CONTEXT, ...body.context };
 
     const result = await runScan(scanRequest, context, alphaVantageProvider);
+
+    // Update shared radar state
+    radarState.liveRadar = result.radar;
+    radarState.lastScanAt = new Date().toISOString();
+
+    // Fire ops alert for actionable signals
+    const actionable = result.radar.filter(r => r.permission === 'ALLOW' || r.permission === 'ALLOW_REDUCED');
+    if (actionable.length > 0) {
+      opsAlert({
+        title: 'Operator Scan — Actionable Signals',
+        message: actionable.map(r => `${r.symbol} ${r.playbook} (${r.permission} @ ${(r.confidenceScore * 100).toFixed(1)}%)`).join('\n'),
+        severity: 'info',
+        source: 'operator-scan',
+        metadata: {
+          symbolsScanned: result.symbolsScanned,
+          radarCount: result.radar.length,
+          actionableCount: actionable.length,
+          mode: result.environmentMode,
+        },
+        dedupeKey: `operator-scan:${symbols.sort().join(',')}`,
+      }).catch(() => { /* never block on alert failure */ });
+    }
+
     return NextResponse.json(createScanEnvelope(result));
   } catch (err: unknown) {
     console.error('[operator:engine:scan] Error:', err);

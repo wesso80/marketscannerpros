@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { q } from "@/lib/db";
+import { isAdminSecret } from '@/lib/quant/operatorAuth';
 
 // Helper to safely run a query and return empty on error
 async function safeQuery<T = any>(queryFn: () => Promise<T[]>, defaultValue: T[] = []): Promise<T[]> {
@@ -11,18 +12,8 @@ async function safeQuery<T = any>(queryFn: () => Promise<T[]>, defaultValue: T[]
   }
 }
 
-function timingSafeCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  const { timingSafeEqual } = require('crypto');
-  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
-}
-
 export async function GET(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  const secret = authHeader?.replace("Bearer ", "");
-  const adminSecret = process.env.ADMIN_SECRET || '';
-  
-  if (!secret || !adminSecret || !timingSafeCompare(secret, adminSecret)) {
+  if (!isAdminSecret(req.headers.get('authorization'))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

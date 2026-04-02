@@ -8,14 +8,14 @@ export default function IndicatorMatrixCard({ data }: { data: AdminSymbolIntelli
   const i = data.indicators;
 
   const rows = [
-    { label: "EMA.20", val1: "-1.1% 🔖", val2: i.ema20.toFixed(2), val3: "1.20" },
-    { label: "EMA20", val1: "1.79", val2: "-1.11", val3: "1.11" },
-    { label: "EMA240", val1: "1.11", val2: "1.29", val3: "-0.004" },
-    { label: "VWAP", val1: "1.28", val2: (i.vwap).toFixed(3), val3: "-0.634" },
-    { label: "ATR", val1: `${i.atr.toFixed(2)}`, val2: "0.55%", val3: "" },
-    { label: "BBWP %", val1: "", val2: "", val3: `${i.bbwpPercentile}` },
-    { label: "PLO", val1: "1.0", val2: "", val3: "" },
-    { label: "ADX", val1: "", val2: "", val3: `${i.adx}` },
+    { label: "EMA 20", val1: i.ema20.toFixed(2), val2: "", val3: "" },
+    { label: "EMA 50", val1: i.ema50.toFixed(2), val2: "", val3: "" },
+    { label: "EMA 200", val1: i.ema200.toFixed(2), val2: "", val3: "" },
+    { label: "VWAP", val1: i.vwap.toFixed(3), val2: "", val3: "" },
+    { label: "ATR", val1: i.atr.toFixed(4), val2: "", val3: "" },
+    { label: "BBWP %", val1: `${i.bbwpPercentile}`, val2: "", val3: "" },
+    { label: "ADX", val1: `${i.adx.toFixed(1)}`, val2: "", val3: "" },
+    { label: "RVOL", val1: `${i.rvol.toFixed(2)}x`, val2: "", val3: "" },
   ];
 
   return (

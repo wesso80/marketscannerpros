@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { isOperator, isAdminSecret } from '@/lib/quant/operatorAuth';
+import { radarState } from '@/lib/operator/radar-state';
 
 export const runtime = 'nodejs';
 
@@ -19,13 +20,11 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // TODO: Pull from cached scan results or run lightweight scan
-    // For now return empty radar
     return NextResponse.json({
       ok: true,
-      radar: [],
-      lastScanAt: null,
-      note: 'Radar endpoint ready. Run POST /api/operator/engine/scan to populate.',
+      radar: radarState.liveRadar,
+      lastScanAt: radarState.lastScanAt,
+      count: radarState.liveRadar.length,
     });
   } catch (err: unknown) {
     console.error('[operator:engine:radar] Error:', err);

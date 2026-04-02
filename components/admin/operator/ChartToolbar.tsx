@@ -2,7 +2,7 @@
 
 export default function ChartToolbar() {
   const timeframes = ["1m", "5m", "15m", "1h", "4h", "1D"];
-  const tools = ["Trend", "Reks", "Cone", "Indiatr", "Time Swiners"];
+  const tools = ["Trend", "Fib Retracement", "Range", "Indicators", "Time Confluence"];
 
   return (
     <div className="flex flex-wrap items-center gap-1 text-xs">

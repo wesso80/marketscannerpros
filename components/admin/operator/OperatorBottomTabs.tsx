@@ -3,15 +3,9 @@
 import { useState } from "react";
 import Tabs from "../shared/Tabs";
 import StatusPill from "../shared/StatusPill";
-import type { BottomTabKey, PermissionState } from "@/lib/admin/types";
+import type { BottomTabKey, ScannerHit } from "@/lib/admin/types";
 
 const tabKeys: BottomTabKey[] = ["signals", "logs", "news", "options", "notes", "audit", "ai"];
-
-const signalRows = [
-  { symbol: "ADA", bias: "LONG" as const, confidence: 68.5, regime: "TREND_EXPANSION", time: "⏰ 4f1s 2:45PM", score: "- 0.0x", permission: ["WAIT_ZONE", "LOW_LIQUIDITY"] as string[] },
-  { symbol: "SUI", bias: "LONG" as const, confidence: 68.0, regime: "TREND_CONTINUATION", time: "⏰ 4 6f 1:50PM", score: "- 0.0x", permission: ["OVERRECT", "TREND_ESPERANCE"] as string[] },
-  { symbol: "MATIC", bias: "LONG" as const, confidence: 68.0, regime: "TREND_CONTINUATION", time: "", score: "", permission: ["OVERRECT", "TREND_ESPERANCE"] as string[] },
-];
 
 function permissionTone(perms: string[]) {
   if (perms.some(p => p.includes("LOW") || p.includes("BLOCK"))) return "red" as const;
@@ -19,7 +13,7 @@ function permissionTone(perms: string[]) {
   return "green" as const;
 }
 
-export default function OperatorBottomTabs() {
+export default function OperatorBottomTabs({ hits = [] }: { hits?: ScannerHit[] }) {
   const [active, setActive] = useState<BottomTabKey>("signals");
 
   return (
@@ -34,7 +28,7 @@ export default function OperatorBottomTabs() {
         </div>
         <div className="flex items-center gap-2">
           <button className="rounded border border-white/[0.06] bg-white/[0.02] px-2 py-0.5 text-[10px] text-white/40">🔍</button>
-          <span className="text-[10px] text-white/30">Dirty res ▾</span>
+          <span className="text-[10px] text-white/30">Filter ▾</span>
         </div>
       </div>
 
@@ -51,7 +45,10 @@ export default function OperatorBottomTabs() {
 
       {/* Signal rows */}
       <div className="divide-y divide-white/[0.03]">
-        {signalRows.map((row) => (
+        {hits.length === 0 && (
+          <div className="px-4 py-4 text-center text-xs text-white/30">No signals yet — run a scan</div>
+        )}
+        {hits.map((row) => (
           <div key={row.symbol} className="grid grid-cols-[120px_80px_100px_100px_120px_80px_auto] gap-2 px-4 py-2.5 items-center hover:bg-white/[0.02] transition cursor-pointer">
             <div className="flex items-center gap-2">
               <span className="font-medium text-sm text-white">{row.symbol}</span>
@@ -59,11 +56,11 @@ export default function OperatorBottomTabs() {
             </div>
             <span className="text-xs text-emerald-400">{row.bias}</span>
             <span className="text-xs text-white/60">- {row.confidence}%</span>
-            <StatusPill label={row.regime} tone="purple" />
-            <span className="text-[10px] text-white/40">{row.time}</span>
-            <span className="text-xs text-white/50">{row.score}</span>
+            <StatusPill label={String(row.regime)} tone="purple" />
+            <span className="text-[10px] text-white/40">{row.timestamp ?? ""}</span>
+            <span className="text-xs text-white/50">{(row.confidence / 100).toFixed(2)}</span>
             <div className="flex flex-wrap gap-1">
-              {row.permission.map((p) => (
+              {(row.blockReasons ?? [row.permission]).map((p) => (
                 <span key={p} className="rounded bg-white/[0.04] border border-white/[0.06] px-1.5 py-0.5 text-[9px] text-white/40">
                   {p}
                 </span>

@@ -16,8 +16,8 @@ export default function OperatorLeftRail({ hits, activeSymbol, onSelectSymbol }:
     <div className="flex flex-col gap-4 overflow-y-auto pr-1" style={{ maxHeight: "calc(100vh - 12rem)" }}>
       <SymbolSearch onSelect={onSelectSymbol} />
       <ScannerFeedPanel hits={hits} activeSymbol={activeSymbol} onSelect={onSelectSymbol} />
-      <RecentSymbolsPanel />
-      <AlertsMiniFeed />
+      <RecentSymbolsPanel hits={hits} />
+      <AlertsMiniFeed hits={hits} />
       <WorkspaceSwitcher />
     </div>
   );

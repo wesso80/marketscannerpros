@@ -17,6 +17,8 @@ import type { ScanContext } from '@/lib/operator/orchestrator';
 import type { Market, RadarOpportunity } from '@/types/operator';
 import { alphaVantageProvider } from '@/lib/operator/market-data';
 import { DEFAULT_WATCHLISTS } from '@/lib/operator/watchlists';
+import { opsAlert } from '@/lib/opsAlerting';
+import { radarState } from '@/lib/operator/radar-state';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -192,6 +194,28 @@ export async function POST(req: NextRequest) {
     autoState.lastScanDurationMs = duration;
     autoState.symbolsScanned = result.symbolsScanned;
     autoState.totalScans++;
+
+    // Sync to shared radar state for GET /api/operator/engine/radar
+    radarState.liveRadar = result.radar;
+    radarState.lastScanAt = now;
+
+    // Fire ops alert for new radar appearances
+    const newAppearances = autoState.radarHistory.filter(h => h.timestamp === now && h.action === 'appeared');
+    if (newAppearances.length > 0) {
+      opsAlert({
+        title: `Auto-Scan — ${newAppearances.length} New Signal(s)`,
+        message: newAppearances.map(a => `${a.symbol} (${a.permission} @ ${(a.confidence * 100).toFixed(1)}%)`).join('\n'),
+        severity: 'info',
+        source: 'auto-scan',
+        metadata: {
+          watchlist: watchlistKey,
+          symbolsScanned: result.symbolsScanned,
+          totalRadar: result.radar.length,
+          durationMs: duration,
+          scanNumber: autoState.totalScans,
+        },
+      }).catch(() => { /* never block on alert failure */ });
+    }
 
     return NextResponse.json({
       ok: true,

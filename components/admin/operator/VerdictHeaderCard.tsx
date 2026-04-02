@@ -10,7 +10,7 @@ export default function VerdictHeaderCard({ data }: { data: AdminSymbolIntellige
     <AdminCard title="Verdict" actions={<span className="text-white/30 text-xs cursor-pointer">⊡ ⚙ ≡</span>}>
       <div className="mb-3">
         <div className="text-3xl font-bold text-white">{s.price.toFixed(3)}</div>
-        <div className="text-xs text-white/40 mt-0.5">10 ISGE P4u0.30%</div>
+        <div className="text-xs text-white/40 mt-0.5">Confidence: {(s.confidence * 100).toFixed(1)}%</div>
       </div>
       <div className="space-y-0.5 text-sm">
         <div className="flex justify-between py-1">

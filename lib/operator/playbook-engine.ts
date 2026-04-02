@@ -7,13 +7,54 @@
 
 import type {
   PlaybookDetectRequest, TradeCandidate, Playbook, Direction,
-  FeatureVector, RegimeDecision, KeyLevel, EntryZone,
+  FeatureVector, RegimeDecision, KeyLevel, EntryZone, Bar,
 } from '@/types/operator';
 import { generateId, nowISO } from './shared';
 
+/* ── ATR helper for entry zone computation ──────────────────── */
+
+function computeATR(bars: Bar[], period = 14): number {
+  if (bars.length < period + 1) return 0;
+  const recent = bars.slice(-(period + 1));
+  let atrSum = 0;
+  for (let i = 1; i < recent.length; i++) {
+    const tr = Math.max(
+      recent[i].high - recent[i].low,
+      Math.abs(recent[i].high - recent[i - 1].close),
+      Math.abs(recent[i].low - recent[i - 1].close),
+    );
+    atrSum += tr;
+  }
+  return atrSum / period;
+}
+
+function computeEntryZone(
+  bars: Bar[] | undefined,
+  direction: Direction,
+  refPrice: number,
+  levels: KeyLevel[],
+): { entryZone: EntryZone; invalidationPrice: number; targets: number[] } {
+  const lastClose = bars?.length ? bars[bars.length - 1].close : refPrice;
+  const atr = bars?.length ? computeATR(bars) : lastClose * 0.015;
+  const base = refPrice > 0 ? refPrice : lastClose;
+
+  if (direction === 'LONG') {
+    return {
+      entryZone: { min: base - atr * 0.3, max: base + atr * 0.1 },
+      invalidationPrice: base - atr * 1.5,
+      targets: [base + atr * 1.5, base + atr * 3],
+    };
+  }
+  return {
+    entryZone: { min: base - atr * 0.1, max: base + atr * 0.3 },
+    invalidationPrice: base + atr * 1.5,
+    targets: [base - atr * 1.5, base - atr * 3],
+  };
+}
+
 interface PlaybookDetector {
   playbook: Playbook;
-  detect(f: FeatureVector['features'], r: RegimeDecision, levels: KeyLevel[]): DetectionResult | null;
+  detect(f: FeatureVector['features'], r: RegimeDecision, levels: KeyLevel[], bars?: Bar[]): DetectionResult | null;
 }
 
 interface DetectionResult {
@@ -57,96 +98,103 @@ const detectors: PlaybookDetector[] = [
   },
   {
     playbook: 'PULLBACK_CONTINUATION',
-    detect(f, r) {
+    detect(f, r, levels, bars) {
       if (f.trendScore < 0.5) return null;
       if (f.extensionScore > 0.7) return null;
       if (f.emaAlignmentScore < 0.4) return null;
 
       const direction: Direction = f.trendScore > 0 ? 'LONG' : 'SHORT';
+      const { entryZone, invalidationPrice, targets } = computeEntryZone(bars, direction, 0, levels);
       return {
         direction,
-        entryZone: { min: 0, max: 0 }, // TODO: compute from ATR + EMA pullback zone
-        invalidationPrice: 0,
-        targets: [],
+        entryZone,
+        invalidationPrice,
+        targets,
         notes: ['Pullback in trend with EMA alignment'],
       };
     },
   },
   {
     playbook: 'FAILED_BREAKOUT_REVERSAL',
-    detect(f, r) {
+    detect(f, r, levels, bars) {
       if (r.regime !== 'FAILED_BREAKOUT_TRAP' && r.regime !== 'TREND_EXHAUSTION') return null;
       if (f.structureScore < 0.4) return null;
 
       const direction: Direction = f.momentumScore < 0.5 ? 'SHORT' : 'LONG';
+      const { entryZone, invalidationPrice, targets } = computeEntryZone(bars, direction, 0, levels);
       return {
         direction,
-        entryZone: { min: 0, max: 0 },
-        invalidationPrice: 0,
-        targets: [],
+        entryZone,
+        invalidationPrice,
+        targets,
         notes: ['Failed breakout trap detected'],
       };
     },
   },
   {
     playbook: 'RANGE_MEAN_REVERSION',
-    detect(f, r) {
+    detect(f, r, levels, bars) {
       if (r.regime !== 'ROTATIONAL_RANGE' && r.regime !== 'TREND_EXHAUSTION') return null;
       if (f.extensionScore < 0.55) return null;
 
       const direction: Direction = f.extensionScore > 0.5 ? 'SHORT' : 'LONG';
+      const { entryZone, invalidationPrice, targets } = computeEntryZone(bars, direction, 0, levels);
       return {
         direction,
-        entryZone: { min: 0, max: 0 },
-        invalidationPrice: 0,
-        targets: [],
+        entryZone,
+        invalidationPrice,
+        targets,
         notes: ['Extended within range, mean reversion setup'],
       };
     },
   },
   {
     playbook: 'SQUEEZE_EXPANSION',
-    detect(f, r) {
+    detect(f, r, levels, bars) {
       if (r.regime !== 'COMPRESSION_COIL' && f.bbwpPercentile > 0.2) return null;
       if (f.atrPercentile > 0.3) return null;
 
       const direction: Direction = f.emaAlignmentScore > 0.5 ? 'LONG' : 'SHORT';
+      const { entryZone, invalidationPrice, targets } = computeEntryZone(bars, direction, 0, levels);
       return {
         direction,
-        entryZone: { min: 0, max: 0 },
-        invalidationPrice: 0,
-        targets: [],
+        entryZone,
+        invalidationPrice,
+        targets,
         notes: ['Squeeze/compression coil, expansion imminent'],
       };
     },
   },
   {
     playbook: 'POST_EVENT_RECLAIM',
-    detect(f, r) {
+    detect(f, r, levels, bars) {
       if (r.regime !== 'EVENT_SHOCK' && r.regime !== 'POST_NEWS_PRICE_DISCOVERY') return null;
       if (f.structureScore < 0.3) return null;
 
+      const direction: Direction = 'LONG';
+      const { entryZone, invalidationPrice, targets } = computeEntryZone(bars, direction, 0, levels);
       return {
-        direction: 'LONG' as Direction,
-        entryZone: { min: 0, max: 0 },
-        invalidationPrice: 0,
-        targets: [],
+        direction,
+        entryZone,
+        invalidationPrice,
+        targets,
         notes: ['Post-event reclaim setup'],
       };
     },
   },
   {
     playbook: 'LIQUIDITY_SWEEP_REVERSAL',
-    detect(f, r) {
+    detect(f, r, levels, bars) {
       if (r.regime !== 'FAILED_BREAKOUT_TRAP') return null;
       if (f.liquidityScore > 0.5) return null;
 
       const direction: Direction = f.momentumScore < 0.5 ? 'LONG' : 'SHORT';
+      const { entryZone, invalidationPrice, targets } = computeEntryZone(bars, direction, 0, levels);
       return {
         direction,
-        entryZone: { min: 0, max: 0 },
-        invalidationPrice: 0,
-        targets: [],
+        entryZone,
+        invalidationPrice,
+        targets,
         notes: ['Liquidity sweep below key level'],
       };
     },
@@ -156,14 +204,14 @@ const detectors: PlaybookDetector[] = [
 /* ── Main Detection ─────────────────────────────────────────── */
 
 export function detectPlaybooks(req: PlaybookDetectRequest): TradeCandidate[] {
-  const { symbol, market, timeframe, featureVector, regimeDecision, keyLevels } = req;
+  const { symbol, market, timeframe, featureVector, regimeDecision, keyLevels, bars } = req;
   const candidates: TradeCandidate[] = [];
 
   for (const detector of detectors) {
     // Skip if this playbook is blocked by regime
     if (regimeDecision.blockedPlaybooks.includes(detector.playbook)) continue;
 
-    const result = detector.detect(featureVector.features, regimeDecision, keyLevels);
+    const result = detector.detect(featureVector.features, regimeDecision, keyLevels, bars);
     if (!result) continue;
 
     candidates.push({

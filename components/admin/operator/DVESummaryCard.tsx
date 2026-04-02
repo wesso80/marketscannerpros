@@ -12,8 +12,8 @@ export default function DVESummaryCard({ data }: { data: AdminSymbolIntelligence
       <div className="space-y-0.5">
         <DataRow label="State:" value={d.state} valueColor="text-emerald-300" />
         <DataRow label="Direction" value={d.direction} valueColor="text-emerald-300" />
-        <DataRow label="Permanisce: Siro" value={`Alignments: ${data.timeConfluence.alignmentCount}`} />
-        <DataRow label="Next suatter: Eevotes" value={`Next Cluster: 22:45 PM`} />
+        <DataRow label="Alignments" value={`${data.timeConfluence.alignmentCount}`} />
+        <DataRow label="Next Cluster" value={data.timeConfluence.nextClusterAt || '—'} />
       </div>
     </AdminCard>
   );

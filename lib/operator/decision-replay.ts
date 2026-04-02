@@ -5,7 +5,7 @@
  *   - stored doctrine output, score breakdown, governance result
  *   - exact engine versions
  *
- * In-memory store for now. Future: persist to database.
+ * Dual-store: in-memory ring buffer (hot cache) + PostgreSQL (durable).
  * @internal
  */
 
@@ -17,6 +17,7 @@ import type {
 import { generateId, nowISO } from './shared';
 import { ENGINE_VERSIONS } from './version-registry';
 import { ENVIRONMENT_MODE } from './shared';
+import { q } from '@/lib/db';
 
 /* ── In-memory snapshot store (bounded ring buffer) ─────────── */
 
@@ -72,19 +73,36 @@ export function captureDecisionSnapshot(input: SnapshotCaptureInput): DecisionSn
   snapshotStore.set(snapshot.snapshotId, snapshot);
   snapshotOrder.push(snapshot.snapshotId);
 
+  // Persist to DB (fire-and-forget — don't block the pipeline)
+  persistSnapshotToDB(snapshot).catch(err =>
+    console.error('[decision-replay] DB persist failed:', err),
+  );
+
   return snapshot;
 }
 
-/* ── Retrieval ──────────────────────────────────────────────── */
+/* ── Retrieval (memory cache → DB fallback) ─────────────────── */
 
-export function getSnapshot(snapshotId: string): DecisionSnapshot | null {
-  return snapshotStore.get(snapshotId) ?? null;
+export async function getSnapshot(snapshotId: string): Promise<DecisionSnapshot | null> {
+  const cached = snapshotStore.get(snapshotId);
+  if (cached) return cached;
+  try {
+    const rows = await q(
+      'SELECT snapshot FROM decision_snapshots WHERE snapshot_id = $1 LIMIT 1',
+      [snapshotId],
+    );
+    return rows.length > 0 ? (rows[0].snapshot as DecisionSnapshot) : null;
+  } catch { return null; }
 }
 
-export function getSnapshotsBySymbol(symbol: string): DecisionSnapshot[] {
-  return Array.from(snapshotStore.values())
-    .filter(s => s.symbol === symbol)
-    .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+export async function getSnapshotsBySymbol(symbol: string, limit = 50): Promise<DecisionSnapshot[]> {
+  try {
+    const rows = await q(
+      'SELECT snapshot FROM decision_snapshots WHERE symbol = $1 ORDER BY created_at DESC LIMIT $2',
+      [symbol, limit],
+    );
+    return rows.map(r => r.snapshot as DecisionSnapshot);
+  } catch { return []; }
 }
 
 export function getRecentSnapshots(limit = 20): DecisionSnapshot[] {
@@ -92,9 +110,24 @@ export function getRecentSnapshots(limit = 20): DecisionSnapshot[] {
   return ids.map(id => snapshotStore.get(id)!).filter(Boolean);
 }
 
-export function getSnapshotsByRequest(requestId: string): DecisionSnapshot[] {
-  return Array.from(snapshotStore.values())
-    .filter(s => s.requestId === requestId);
+export async function getRecentSnapshotsFromDB(limit = 50): Promise<DecisionSnapshot[]> {
+  try {
+    const rows = await q(
+      'SELECT snapshot FROM decision_snapshots ORDER BY created_at DESC LIMIT $1',
+      [limit],
+    );
+    return rows.map(r => r.snapshot as DecisionSnapshot);
+  } catch { return []; }
+}
+
+export async function getSnapshotsByRequest(requestId: string): Promise<DecisionSnapshot[]> {
+  try {
+    const rows = await q(
+      'SELECT snapshot FROM decision_snapshots WHERE request_id = $1 ORDER BY created_at DESC',
+      [requestId],
+    );
+    return rows.map(r => r.snapshot as DecisionSnapshot);
+  } catch { return []; }
 }
 
 /* ── Replay ─────────────────────────────────────────────────── */
@@ -111,11 +144,22 @@ export async function replayDecision(
   snapshotId: string,
   rerunPipeline: (snapshot: DecisionSnapshot) => Promise<DecisionSnapshot>,
 ): Promise<{ original: DecisionSnapshot; replayed: DecisionSnapshot } | null> {
-  const original = getSnapshot(snapshotId);
+  const original = await getSnapshot(snapshotId);
   if (!original) return null;
 
   const replayed = await rerunPipeline(original);
   return { original, replayed };
+}
+
+/* ── DB Persistence ─────────────────────────────────────────── */
+
+async function persistSnapshotToDB(snapshot: DecisionSnapshot): Promise<void> {
+  await q(
+    `INSERT INTO decision_snapshots (snapshot_id, request_id, symbol, snapshot)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (snapshot_id) DO NOTHING`,
+    [snapshot.snapshotId, snapshot.requestId, snapshot.symbol, JSON.stringify(snapshot)],
+  );
 }
 
 /* ── Stats ──────────────────────────────────────────────────── */

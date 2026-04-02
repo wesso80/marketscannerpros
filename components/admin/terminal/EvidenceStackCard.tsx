@@ -1,25 +1,42 @@
 "use client";
 
 import AdminCard from "../shared/AdminCard";
+import type { AdminSymbolIntelligence } from "@/lib/admin/types";
 
-const evidence = [
-  { label: "Directional", status: "constructive", tone: "text-emerald-400" },
-  { label: "Volatility", status: "expansion phase", tone: "text-amber-300" },
-  { label: "Structure", status: "continuation intact", tone: "text-emerald-400" },
-  { label: "Participation", status: "acceptable", tone: "text-white/70" },
-  { label: "Flow", status: "neutral", tone: "text-white/50" },
-  { label: "Timing", status: "hot window active", tone: "text-amber-300" },
-  { label: "Cross-Market", status: "aligned", tone: "text-emerald-400" },
-];
+function scoreTone(v: number) {
+  if (v >= 0.7) return "text-emerald-400";
+  if (v >= 0.4) return "text-amber-300";
+  return "text-red-400";
+}
+function scoreLabel(v: number) {
+  if (v >= 0.7) return "strong";
+  if (v >= 0.4) return "moderate";
+  return "weak";
+}
 
-export default function EvidenceStackCard() {
+export default function EvidenceStackCard({ data }: { data: AdminSymbolIntelligence | null }) {
+  if (!data) return <AdminCard title="Evidence Stack"><div className="text-white/30 text-sm">Loading…</div></AdminCard>;
+  const e = data.evidence;
+  if (!e) return <AdminCard title="Evidence Stack"><div className="text-white/30 text-xs">No evidence data</div></AdminCard>;
+  const rows = [
+    { label: "Regime Fit", val: e.regimeFit },
+    { label: "Structure", val: e.structureQuality },
+    { label: "Timing", val: e.timeConfluence },
+    { label: "Volatility", val: e.volatilityAlignment },
+    { label: "Participation", val: e.participationFlow },
+    { label: "Cross-Market", val: e.crossMarketConfirmation },
+    { label: "Event Safety", val: e.eventSafety },
+    { label: "Extension Safety", val: e.extensionSafety },
+    { label: "Symbol Trust", val: e.symbolTrust },
+    { label: "Model Health", val: e.modelHealth },
+  ];
   return (
     <AdminCard title="Evidence Stack">
       <div className="space-y-1">
-        {evidence.map((e) => (
-          <div key={e.label} className="flex items-center justify-between text-xs py-0.5">
-            <span className="text-white/50">{e.label}</span>
-            <span className={e.tone}>{e.status}</span>
+        {rows.map((r) => (
+          <div key={r.label} className="flex items-center justify-between text-xs py-0.5">
+            <span className="text-white/50">{r.label}</span>
+            <span className={scoreTone(r.val)}>{scoreLabel(r.val)} ({(r.val * 100).toFixed(0)}%)</span>
           </div>
         ))}
       </div>

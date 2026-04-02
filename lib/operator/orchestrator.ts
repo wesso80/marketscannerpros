@@ -35,6 +35,7 @@ import { checkGovernance } from './governance-engine';
 import { buildExecutionPlan } from './execution-engine';
 import { computeSymbolTrust } from './symbol-trust';
 import { captureDecisionSnapshot, type SnapshotCaptureInput } from './decision-replay';
+import { loadActiveWeights } from './learning-engine';
 
 /* ── Pipeline Types ─────────────────────────────────────────── */
 
@@ -53,6 +54,8 @@ export interface ScanContext {
   healthContext: HealthContext;
   /** §13.7 meta-health throttle multiplier */
   metaHealthThrottle?: number;
+  /** Adaptive scoring weights loaded from DB (populated by orchestrator) */
+  scoringWeights?: Record<string, number>;
 }
 
 export interface CandidatePipeline {
@@ -147,6 +150,7 @@ async function runSymbolPipeline(
     featureVector,
     regimeDecision,
     keyLevels,
+    bars,
   });
 
   // 5–8. For each candidate: Doctrine → Scoring → Governance → Execution
@@ -173,14 +177,14 @@ async function runSymbolPipeline(
     });
     doctrineEvals.push(doctrine);
 
-    // 6. Scoring Engine
+    // 6. Scoring Engine (uses persisted adaptive weights if available)
     const verdict = scoreCandidate({
       candidate,
       featureVector,
       regimeDecision,
       doctrineEvaluation: doctrine,
       healthContext,
-    });
+    }, context.scoringWeights);
     verdicts.push(verdict);
 
     // §13.7 — apply meta-health throttle to size multiplier
@@ -253,6 +257,11 @@ export async function runScan(
   const allPipelines: CandidatePipeline[] = [];
   const allSnapshots: DecisionSnapshot[] = [];
   const allErrors: { symbol: string; error: string }[] = [];
+
+  // Load persisted adaptive weights (falls back to defaults if no DB rows)
+  if (!context.scoringWeights) {
+    context.scoringWeights = await loadActiveWeights();
+  }
 
   // Process each symbol
   for (const symbol of request.symbols) {

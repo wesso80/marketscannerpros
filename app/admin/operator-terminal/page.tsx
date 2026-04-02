@@ -46,7 +46,7 @@ export default function OperatorTerminalPage() {
         <OperatorRightRail data={symbolData} />
       </div>
 
-      <OperatorBottomTabs />
+      <OperatorBottomTabs hits={hits} />
     </div>
   );
 }

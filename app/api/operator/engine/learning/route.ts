@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { isOperator, isAdminSecret } from '@/lib/quant/operatorAuth';
-import { analyzeLearningWindow, applyAdjustments } from '@/lib/operator/learning-engine';
+import { analyzeLearningWindow, applyAdjustments, loadActiveWeights, saveWeights } from '@/lib/operator/learning-engine';
 import { DEFAULT_SCORING_WEIGHTS } from '@/lib/operator/shared';
 import type { LearningWindowRequest } from '@/types/operator';
 
@@ -27,6 +27,9 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    // Load persisted weights (falls back to defaults if no DB rows)
+    const currentWeights = await loadActiveWeights();
+
     // TODO: Pull actual trade metrics from review history
     const placeholderMetrics = {
       winRate: 0,
@@ -48,7 +51,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      currentWeights: DEFAULT_SCORING_WEIGHTS,
+      currentWeights,
       learningWindow: result,
       note: 'No trade history yet. Requires 30+ reviewed trades for adaptive adjustments.',
     });
@@ -75,15 +78,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'adjustments array is required' }, { status: 400 });
     }
 
+    // Load current weights from DB (or defaults)
+    const currentWeights = await loadActiveWeights();
+
     const newWeights = applyAdjustments(
       { adjustments, approvedBy: 'operator', mode },
-      { ...DEFAULT_SCORING_WEIGHTS },
+      { ...currentWeights },
     );
 
-    // TODO: Persist new weights to database
+    // Persist to database
+    await saveWeights(newWeights, currentWeights, adjustments, mode, 'operator');
+
     return NextResponse.json({
       ok: true,
-      previousWeights: DEFAULT_SCORING_WEIGHTS,
+      previousWeights: currentWeights,
       newWeights,
       appliedAt: new Date().toISOString(),
     });

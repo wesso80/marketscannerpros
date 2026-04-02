@@ -221,9 +221,114 @@ async function fetchCrossMarketState(): Promise<CrossMarketState> {
 
 /* ── Event Window ───────────────────────────────────────────── */
 
+/**
+ * Known high-impact economic events.
+ * Dates are in YYYY-MM-DD format (UTC).
+ * FOMC: 2-day meetings, we mark the announcement day (day 2).
+ * CPI/PPI: release day. NFP (Jobs): first Friday of month.
+ */
+interface ScheduledEvent {
+  date: string;
+  name: string;
+  severity: 'high' | 'medium';
+  /** Hours before the event to start the caution window */
+  leadHours: number;
+  /** Hours after the event to keep the window active */
+  trailHours: number;
+}
+
+const ECONOMIC_CALENDAR_2026: ScheduledEvent[] = [
+  // FOMC announcements (2:00 PM ET on day 2)
+  { date: '2026-01-28', name: 'FOMC', severity: 'high', leadHours: 24, trailHours: 2 },
+  { date: '2026-03-18', name: 'FOMC', severity: 'high', leadHours: 24, trailHours: 2 },
+  { date: '2026-04-29', name: 'FOMC', severity: 'high', leadHours: 24, trailHours: 2 },
+  { date: '2026-06-17', name: 'FOMC', severity: 'high', leadHours: 24, trailHours: 2 },
+  { date: '2026-07-29', name: 'FOMC', severity: 'high', leadHours: 24, trailHours: 2 },
+  { date: '2026-09-16', name: 'FOMC', severity: 'high', leadHours: 24, trailHours: 2 },
+  { date: '2026-10-28', name: 'FOMC', severity: 'high', leadHours: 24, trailHours: 2 },
+  { date: '2026-12-16', name: 'FOMC', severity: 'high', leadHours: 24, trailHours: 2 },
+  // CPI releases (8:30 AM ET, typically mid-month)
+  { date: '2026-01-14', name: 'CPI', severity: 'high', leadHours: 12, trailHours: 2 },
+  { date: '2026-02-11', name: 'CPI', severity: 'high', leadHours: 12, trailHours: 2 },
+  { date: '2026-03-11', name: 'CPI', severity: 'high', leadHours: 12, trailHours: 2 },
+  { date: '2026-04-14', name: 'CPI', severity: 'high', leadHours: 12, trailHours: 2 },
+  { date: '2026-05-12', name: 'CPI', severity: 'high', leadHours: 12, trailHours: 2 },
+  { date: '2026-06-10', name: 'CPI', severity: 'high', leadHours: 12, trailHours: 2 },
+  { date: '2026-07-14', name: 'CPI', severity: 'high', leadHours: 12, trailHours: 2 },
+  { date: '2026-08-12', name: 'CPI', severity: 'high', leadHours: 12, trailHours: 2 },
+  { date: '2026-09-11', name: 'CPI', severity: 'high', leadHours: 12, trailHours: 2 },
+  { date: '2026-10-13', name: 'CPI', severity: 'high', leadHours: 12, trailHours: 2 },
+  { date: '2026-11-12', name: 'CPI', severity: 'high', leadHours: 12, trailHours: 2 },
+  { date: '2026-12-10', name: 'CPI', severity: 'high', leadHours: 12, trailHours: 2 },
+  // NFP / Jobs Report (8:30 AM ET, first Friday)
+  { date: '2026-01-09', name: 'NFP', severity: 'high', leadHours: 12, trailHours: 2 },
+  { date: '2026-02-06', name: 'NFP', severity: 'high', leadHours: 12, trailHours: 2 },
+  { date: '2026-03-06', name: 'NFP', severity: 'high', leadHours: 12, trailHours: 2 },
+  { date: '2026-04-03', name: 'NFP', severity: 'high', leadHours: 12, trailHours: 2 },
+  { date: '2026-05-01', name: 'NFP', severity: 'high', leadHours: 12, trailHours: 2 },
+  { date: '2026-06-05', name: 'NFP', severity: 'high', leadHours: 12, trailHours: 2 },
+  { date: '2026-07-02', name: 'NFP', severity: 'high', leadHours: 12, trailHours: 2 },
+  { date: '2026-08-07', name: 'NFP', severity: 'high', leadHours: 12, trailHours: 2 },
+  { date: '2026-09-04', name: 'NFP', severity: 'high', leadHours: 12, trailHours: 2 },
+  { date: '2026-10-02', name: 'NFP', severity: 'high', leadHours: 12, trailHours: 2 },
+  { date: '2026-11-06', name: 'NFP', severity: 'high', leadHours: 12, trailHours: 2 },
+  { date: '2026-12-04', name: 'NFP', severity: 'high', leadHours: 12, trailHours: 2 },
+  // PPI (day after CPI, medium impact)
+  { date: '2026-01-15', name: 'PPI', severity: 'medium', leadHours: 6, trailHours: 1 },
+  { date: '2026-02-12', name: 'PPI', severity: 'medium', leadHours: 6, trailHours: 1 },
+  { date: '2026-03-12', name: 'PPI', severity: 'medium', leadHours: 6, trailHours: 1 },
+  { date: '2026-04-15', name: 'PPI', severity: 'medium', leadHours: 6, trailHours: 1 },
+  { date: '2026-05-13', name: 'PPI', severity: 'medium', leadHours: 6, trailHours: 1 },
+  { date: '2026-06-11', name: 'PPI', severity: 'medium', leadHours: 6, trailHours: 1 },
+  { date: '2026-07-15', name: 'PPI', severity: 'medium', leadHours: 6, trailHours: 1 },
+  { date: '2026-08-13', name: 'PPI', severity: 'medium', leadHours: 6, trailHours: 1 },
+  { date: '2026-09-14', name: 'PPI', severity: 'medium', leadHours: 6, trailHours: 1 },
+  { date: '2026-10-14', name: 'PPI', severity: 'medium', leadHours: 6, trailHours: 1 },
+  { date: '2026-11-13', name: 'PPI', severity: 'medium', leadHours: 6, trailHours: 1 },
+  { date: '2026-12-11', name: 'PPI', severity: 'medium', leadHours: 6, trailHours: 1 },
+];
+
+/**
+ * Evaluate whether the current moment falls within (or near) a known
+ * high-impact economic event window.  Returns the nearest event that
+ * the lead/trail window overlaps with "now".
+ */
 function getEventWindow(_symbol: string): EventWindow {
-  // Placeholder — would check earnings calendar, FOMC dates, etc.
-  return { isActive: false, severity: null, nextEventAt: null };
+  const now = Date.now();
+
+  let nearest: { event: ScheduledEvent; eventMs: number; distMs: number } | null = null;
+
+  for (const ev of ECONOMIC_CALENDAR_2026) {
+    // Parse date as 13:30 UTC for CPI/NFP/PPI, 18:00 UTC for FOMC
+    const releaseHour = ev.name === 'FOMC' ? 18 : 13;
+    const eventMs = new Date(`${ev.date}T${String(releaseHour).padStart(2, '0')}:30:00Z`).getTime();
+
+    const leadStart = eventMs - ev.leadHours * 3600_000;
+    const trailEnd = eventMs + ev.trailHours * 3600_000;
+
+    // Is now inside the event window?
+    if (now >= leadStart && now <= trailEnd) {
+      return {
+        isActive: true,
+        severity: ev.severity,
+        nextEventAt: new Date(eventMs).toISOString(),
+      };
+    }
+
+    // Track nearest future event
+    if (eventMs > now) {
+      const dist = eventMs - now;
+      if (!nearest || dist < nearest.distMs) {
+        nearest = { event: ev, eventMs, distMs: dist };
+      }
+    }
+  }
+
+  return {
+    isActive: false,
+    severity: null,
+    nextEventAt: nearest ? new Date(nearest.eventMs).toISOString() : null,
+  };
 }
 
 /* ── Public Provider ────────────────────────────────────────── */

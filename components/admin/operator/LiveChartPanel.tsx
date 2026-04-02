@@ -7,13 +7,13 @@ export default function LiveChartPanel({ data }: { data: AdminSymbolIntelligence
     <div className="relative rounded-xl border border-white/[0.06] bg-[#0b1220] overflow-hidden" style={{ height: 380 }}>
       {/* EMA overlay header */}
       <div className="absolute top-2 left-3 z-10 flex flex-wrap gap-2 text-[10px]">
-        <span className="text-amber-400">EEMFI ☆ RA38A0 216.6%</span>
-        <span className="text-emerald-400">RESCHNED</span>
-        <span className="text-white/40">EML20 -1.34</span>
-        <span className="text-white/40">EMA30 -1:10</span>
-        <span className="text-white/40">AMA300 .111</span>
-        <span className="text-white/40">VWAP 1.227</span>
-        <span className="text-white/40">PRO1_1286</span>
+        <span className="text-amber-400">{data?.symbol ?? ""} · {data?.timeframe ?? ""}</span>
+        <span className="text-emerald-400">{data?.regime ?? ""}</span>
+        <span className="text-white/40">EMA20 {data?.indicators.ema20.toFixed(2) ?? "—"}</span>
+        <span className="text-white/40">EMA50 {data?.indicators.ema50.toFixed(2) ?? "—"}</span>
+        <span className="text-white/40">EMA200 {data?.indicators.ema200.toFixed(2) ?? "—"}</span>
+        <span className="text-white/40">VWAP {data?.indicators.vwap.toFixed(3) ?? "—"}</span>
+        <span className="text-white/40">ATR {data?.indicators.atr.toFixed(4) ?? "—"}</span>
       </div>
 
       {/* Price axis on right */}
@@ -30,19 +30,19 @@ export default function LiveChartPanel({ data }: { data: AdminSymbolIntelligence
       <div className="absolute right-16 top-[35%] text-[9px]">
         <div className="text-white/40 flex items-center gap-1">
           <span className="h-px w-4 bg-white/20 inline-block" />
-          Invalidation R.
+          Invalidation
         </div>
       </div>
       <div className="absolute right-16 top-[55%] text-[9px]">
         <div className="text-white/30 flex items-center gap-1">
           <span className="h-px w-4 bg-white/15 inline-block" />
-          Symbol Trust
+          Entry
         </div>
       </div>
       <div className="absolute right-16 top-[65%] text-[9px]">
         <div className="text-white/30 flex items-center gap-1">
           <span className="h-px w-4 bg-white/15 inline-block" />
-          Danger_Trust
+          Target 1
         </div>
       </div>
 
@@ -105,10 +105,10 @@ export default function LiveChartPanel({ data }: { data: AdminSymbolIntelligence
 
       {/* Overlay toggles at bottom of chart */}
       <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-1 text-[9px]">
-        <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-white/30">CHOISAL</span>
-        <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-amber-400/60">VNLMGBD</span>
-        <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-white/30">PAIT_GONET</span>
-        <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-white/30">OM FRANTOP</span>
+        <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-white/30">EMA</span>
+        <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-amber-400/60">VWAP</span>
+        <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-white/30">Levels</span>
+        <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-white/30">Volume</span>
       </div>
     </div>
   );

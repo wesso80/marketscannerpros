@@ -12,23 +12,20 @@ export default function SymbolContextHeader({ data }: { data: AdminSymbolIntelli
         <div>
           <div className="flex items-center gap-2">
             <span className="text-lg font-bold text-white">{s.symbol}</span>
-            <span className="text-xs text-white/30">ISB FILES</span>
+            <span className="text-xs text-white/30">{s.timeframe}</span>
           </div>
           <div className="text-xs text-white/40 mt-0.5">
-            Next scan 15:45 pm · 68%/60% Stats: 24 symbols scanned
+            Confidence: {(s.confidence * 100).toFixed(1)}% · Permission: {s.permission}
           </div>
         </div>
       </div>
       <div className="flex items-center gap-6 text-xs text-white/50">
         <div className="flex items-center gap-1.5">
-          <span className="text-white/30">EMAol</span>
-          <span className="text-white/70">A Indices:</span>
-          <span>88.4a/7.3dn</span>
+          <span className="text-white/30">Regime:</span>
+          <span className="text-white/70">{s.regime}</span>
         </div>
-        <div>Scnrs</div>
-        <div>CrgGk +3.0% 651,825</div>
-        <div>+39.67b</div>
-        <div>+90.5Ma 125% 55h 80d Am</div>
+        <div>Playbook: {s.playbook || '—'}</div>
+        <div>Bias: {s.bias || '—'}</div>
       </div>
     </div>
   );

@@ -1,21 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { q } from "@/lib/db";
-import { timingSafeEqual } from 'crypto';
-
-function timingSafeCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
-}
-
-function verifyAdmin(req: NextRequest): boolean {
-  const authHeader = req.headers.get("authorization");
-  const secret = authHeader?.replace("Bearer ", "");
-  const adminSecret = process.env.ADMIN_SECRET || '';
-  return !!secret && !!adminSecret && timingSafeCompare(secret, adminSecret);
-}
+import { isAdminSecret } from '@/lib/quant/operatorAuth';
 
 export async function GET(req: NextRequest) {
-  if (!verifyAdmin(req)) {
+  if (!isAdminSecret(req.headers.get('authorization'))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -43,7 +31,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  if (!verifyAdmin(req)) {
+  if (!isAdminSecret(req.headers.get('authorization'))) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

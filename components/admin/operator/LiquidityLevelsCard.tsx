@@ -12,10 +12,9 @@ export default function LiquidityLevelsCard({ data }: { data: AdminSymbolIntelli
       <div className="space-y-0.5">
         <DataRow label="PDH" value={l.pdh.toFixed(3)} />
         <DataRow label="PDL" value={l.pdl.toFixed(3)} />
-        <DataRow label="Viously Migh." value={`${l.weeklyHigh.toFixed(2)}`} />
-        <DataRow label="Montlly Low" value={`-${l.monthlyLow.toFixed(2)}`} />
-        <DataRow label="Moudy Low" value={`-${l.monthlyLow.toFixed(2)}`} />
-        <DataRow label="Midpiont" value={l.midpoint.toFixed(3)} />
+        <DataRow label="Weekly High" value={`${l.weeklyHigh.toFixed(2)}`} />
+        <DataRow label="Monthly Low" value={`${l.monthlyLow.toFixed(2)}`} />
+        <DataRow label="Midpoint" value={l.midpoint.toFixed(3)} />
       </div>
     </AdminCard>
   );

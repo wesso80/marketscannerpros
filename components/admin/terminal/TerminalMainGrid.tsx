@@ -27,22 +27,22 @@ export default function TerminalMainGrid({ data }: { data: AdminSymbolIntelligen
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           <KeyLevelsCard data={data} />
           <LiquidityMapCard />
-          <CrossMarketCard />
-          <EventRiskCard />
-          <FlowCard />
+          <CrossMarketCard data={data} />
+          <EventRiskCard data={data} />
+          <FlowCard data={data} />
         </div>
       </div>
 
       {/* Right: Intelligence cards */}
       <div className="space-y-3 overflow-y-auto" style={{ maxHeight: "calc(100vh - 14rem)" }}>
         <ConfidenceCard data={data} />
-        <SymbolTrustCard />
-        <EvidenceStackCard />
+        <SymbolTrustCard data={data} />
+        <EvidenceStackCard data={data} />
         <DVEDetailCard data={data} />
         <TimeConfluenceDetailCard data={data} />
         <RiskStateCard data={data} />
         <PositionSizingCard data={data} />
-        <SetupTypeCard />
+        <SetupTypeCard data={data} />
       </div>
     </div>
   );

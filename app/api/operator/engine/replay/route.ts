@@ -12,6 +12,7 @@ import {
   getSnapshot,
   getSnapshotsBySymbol,
   getSnapshotStats,
+  getRecentSnapshotsFromDB,
 } from '@/lib/operator/decision-replay';
 
 export const runtime = 'nodejs';
@@ -34,17 +35,24 @@ export async function GET(req: NextRequest) {
   const limit = parseInt(url.searchParams.get('limit') ?? '20', 10);
 
   if (snapshotId) {
-    const snapshot = getSnapshot(snapshotId);
+    const snapshot = await getSnapshot(snapshotId);
     if (!snapshot) return NextResponse.json({ error: 'Snapshot not found' }, { status: 404 });
     return NextResponse.json({ ok: true, data: snapshot });
   }
 
   if (symbol) {
-    const snapshots = getSnapshotsBySymbol(symbol.toUpperCase());
-    return NextResponse.json({ ok: true, data: snapshots.slice(0, limit) });
+    const snapshots = await getSnapshotsBySymbol(symbol.toUpperCase(), limit);
+    return NextResponse.json({ ok: true, data: snapshots });
   }
 
-  const snapshots = getRecentSnapshots(limit);
+  // Try memory cache first, fall back to DB for full history
+  const memSnapshots = getRecentSnapshots(limit);
+  if (memSnapshots.length >= limit) {
+    const stats = getSnapshotStats();
+    return NextResponse.json({ ok: true, data: { snapshots: memSnapshots, stats } });
+  }
+
+  const dbSnapshots = await getRecentSnapshotsFromDB(limit);
   const stats = getSnapshotStats();
-  return NextResponse.json({ ok: true, data: { snapshots, stats } });
+  return NextResponse.json({ ok: true, data: { snapshots: dbSnapshots.length > memSnapshots.length ? dbSnapshots : memSnapshots, stats } });
 }

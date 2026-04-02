@@ -340,6 +340,8 @@ export interface PlaybookDetectRequest {
   featureVector: FeatureVector;
   regimeDecision: RegimeDecision;
   keyLevels: KeyLevel[];
+  /** OHLCV bars for ATR-based entry zone computation */
+  bars?: Bar[];
 }
 
 export interface HealthContext {

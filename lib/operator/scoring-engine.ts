@@ -41,7 +41,7 @@ function computeEvidenceScores(req: ScoringRequest): EvidenceScores {
 }
 
 /** Weighted sum per §5.2 scoring formula */
-function weightedSum(ev: EvidenceScores, weights: Record<WeightKey, number>): number {
+function weightedSum(ev: EvidenceScores, weights: Record<string, number>): number {
   let sum = 0;
   const map: Record<WeightKey, number> = {
     regimeFit: ev.regimeFit,
@@ -79,18 +79,35 @@ function computeSizeMultiplier(permission: Permission, conf: number): number {
   }
 }
 
-/** Risk unit based on ATR and account parameters */
+/** Risk unit based on ATR percentile and stop distance */
 function computeRiskUnit(req: ScoringRequest): number {
-  // TODO: wire into actual account risk parameters
-  // Default: 1% of notional risk
-  return 0.01;
+  const BASE_RISK = 0.01; // 1% of account equity
+
+  // 1. ATR volatility scaling — high atrPercentile = volatile = reduce risk
+  const atrPct = req.featureVector.features.atrPercentile;
+  // Scale from 1.0 (calm, atrPct=0) down to 0.5 (extreme vol, atrPct=1)
+  const volScale = clamp(1 - atrPct * 0.5, 0.5, 1.0);
+
+  // 2. Stop distance scaling — wide stops relative to entry = reduce risk
+  const entryMid = (req.candidate.entryZone.min + req.candidate.entryZone.max) / 2;
+  const invalidation = req.candidate.invalidationPrice;
+  let stopScale = 1.0;
+  if (entryMid > 0 && invalidation > 0) {
+    const stopDistPct = Math.abs(entryMid - invalidation) / entryMid;
+    // Stops wider than 3% → scale down proportionally, floor at 0.4
+    if (stopDistPct > 0.03) {
+      stopScale = clamp(0.03 / stopDistPct, 0.4, 1.0);
+    }
+  }
+
+  return clamp(BASE_RISK * volScale * stopScale, 0.002, 0.02);
 }
 
 /* ── Main Scoring ───────────────────────────────────────────── */
 
 export function scoreCandidate(
   req: ScoringRequest,
-  weights: Record<WeightKey, number> = DEFAULT_SCORING_WEIGHTS as Record<WeightKey, number>,
+  weights: Record<string, number> = DEFAULT_SCORING_WEIGHTS as Record<string, number>,
 ): Verdict {
   const evidence = computeEvidenceScores(req);
   const baseScore = weightedSum(evidence, weights);
