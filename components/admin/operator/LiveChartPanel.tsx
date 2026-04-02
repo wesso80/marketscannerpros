@@ -3,24 +3,20 @@
 import { useEffect, useRef, useMemo } from "react";
 import type { AdminSymbolIntelligence } from "@/lib/admin/types";
 
+let lwcModule: typeof import("lightweight-charts") | null = null;
+
 export default function LiveChartPanel({ data }: { data: AdminSymbolIntelligence | null }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<any>(null);
-  const candleRef = useRef<any>(null);
-  const volumeRef = useRef<any>(null);
-  const ema20Ref = useRef<any>(null);
-  const ema50Ref = useRef<any>(null);
+  const seriesRef = useRef<{ candle: any; volume: any; ema20: any; ema50: any } | null>(null);
 
-  // Convert bars to lightweight-charts format (time as UTC seconds)
+  // Convert bars to lightweight-charts format
   const candles = useMemo(() => {
     if (!data?.bars?.length) return [];
     return data.bars
       .map((b) => ({
-        time: Math.floor(new Date(b.timestamp).getTime() / 1000) as any,
-        open: b.open,
-        high: b.high,
-        low: b.low,
-        close: b.close,
+        time: (Math.floor(new Date(b.timestamp).getTime() / 1000)) as any,
+        open: b.open, high: b.high, low: b.low, close: b.close,
       }))
       .sort((a: any, b: any) => a.time - b.time);
   }, [data?.bars]);
@@ -29,21 +25,19 @@ export default function LiveChartPanel({ data }: { data: AdminSymbolIntelligence
     if (!data?.bars?.length) return [];
     return data.bars
       .map((b) => ({
-        time: Math.floor(new Date(b.timestamp).getTime() / 1000) as any,
+        time: (Math.floor(new Date(b.timestamp).getTime() / 1000)) as any,
         value: b.volume,
         color: b.close >= b.open ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)",
       }))
       .sort((a: any, b: any) => a.time - b.time);
   }, [data?.bars]);
 
-  // Compute EMA line data from bars
-  const emaData = useMemo(() => {
+  const emaLines = useMemo(() => {
     if (!data?.bars?.length) return { ema20: [] as any[], ema50: [] as any[] };
     const closes = data.bars.map((b) => b.close);
     const times = data.bars.map((b) => Math.floor(new Date(b.timestamp).getTime() / 1000));
-
-    function computeEma(values: number[], period: number) {
-      const result: { time: any; value: number }[] = [];
+    function calcEma(values: number[], period: number) {
+      const out: { time: any; value: number }[] = [];
       const k = 2 / (period + 1);
       let prev: number | null = null;
       for (let i = 0; i < values.length; i++) {
@@ -53,28 +47,28 @@ export default function LiveChartPanel({ data }: { data: AdminSymbolIntelligence
         } else {
           prev = values[i] * k + prev * (1 - k);
         }
-        result.push({ time: times[i] as any, value: prev });
+        out.push({ time: times[i] as any, value: prev });
       }
-      return result.sort((a: any, b: any) => a.time - b.time);
+      return out.sort((a: any, b: any) => a.time - b.time);
     }
-
-    return { ema20: computeEma(closes, 20), ema50: computeEma(closes, 50) };
+    return { ema20: calcEma(closes, 20), ema50: calcEma(closes, 50) };
   }, [data?.bars]);
 
-  // Initialize chart
+  // Create chart once on mount
   useEffect(() => {
     if (!containerRef.current) return;
-    let chart: any;
+    let disposed = false;
 
-    (async () => {
-      const { createChart, ColorType, CrosshairMode, PriceScaleMode } = await import("lightweight-charts");
-
-      if (chartRef.current) {
-        chartRef.current.remove();
+    async function init() {
+      if (!lwcModule) {
+        lwcModule = await import("lightweight-charts");
       }
+      if (disposed || !containerRef.current) return;
 
-      chart = createChart(containerRef.current!, {
-        width: containerRef.current!.clientWidth,
+      const { createChart, CandlestickSeries, HistogramSeries, LineSeries, ColorType, CrosshairMode, PriceScaleMode } = lwcModule;
+
+      const chart = createChart(containerRef.current, {
+        width: containerRef.current.clientWidth,
         height: 380,
         layout: {
           background: { type: ColorType.Solid, color: "#0b1220" },
@@ -97,16 +91,13 @@ export default function LiveChartPanel({ data }: { data: AdminSymbolIntelligence
         },
       });
 
-      const candleSeries = chart.addCandlestickSeries({
-        upColor: "#10B981",
-        downColor: "#EF4444",
-        borderDownColor: "#EF4444",
-        borderUpColor: "#10B981",
-        wickDownColor: "#EF4444",
-        wickUpColor: "#10B981",
+      const candleSeries = chart.addSeries(CandlestickSeries, {
+        upColor: "#10B981", downColor: "#EF4444",
+        borderDownColor: "#EF4444", borderUpColor: "#10B981",
+        wickDownColor: "#EF4444", wickUpColor: "#10B981",
       });
 
-      const volumeSeries = chart.addHistogramSeries({
+      const volumeSeries = chart.addSeries(HistogramSeries, {
         color: "rgba(99,102,241,0.25)",
         priceFormat: { type: "volume" },
         priceScaleId: "",
@@ -115,94 +106,84 @@ export default function LiveChartPanel({ data }: { data: AdminSymbolIntelligence
         scaleMargins: { top: 0.85, bottom: 0 },
       });
 
-      const ema20Series = chart.addLineSeries({
-        color: "rgba(59,130,246,0.6)",
-        lineWidth: 1,
-        priceLineVisible: false,
-        lastValueVisible: false,
+      const ema20Series = chart.addSeries(LineSeries, {
+        color: "rgba(59,130,246,0.6)", lineWidth: 1,
+        priceLineVisible: false, lastValueVisible: false,
       });
 
-      const ema50Series = chart.addLineSeries({
-        color: "rgba(251,191,36,0.6)",
-        lineWidth: 1,
-        priceLineVisible: false,
-        lastValueVisible: false,
+      const ema50Series = chart.addSeries(LineSeries, {
+        color: "rgba(251,191,36,0.6)", lineWidth: 1,
+        priceLineVisible: false, lastValueVisible: false,
       });
 
       chartRef.current = chart;
-      candleRef.current = candleSeries;
-      volumeRef.current = volumeSeries;
-      ema20Ref.current = ema20Series;
-      ema50Ref.current = ema50Series;
+      seriesRef.current = { candle: candleSeries, volume: volumeSeries, ema20: ema20Series, ema50: ema50Series };
 
-      // Set data
-      if (candles.length > 0) {
-        candleSeries.setData(candles);
-        volumeSeries.setData(volumes);
-        if (emaData.ema20.length) ema20Series.setData(emaData.ema20);
-        if (emaData.ema50.length) ema50Series.setData(emaData.ema50);
-        chart.timeScale().fitContent();
-      }
-
-      // Add price lines for key levels
-      if (data?.targets) {
-        const addLevel = (price: number, color: string, title: string) => {
-          if (!price) return;
-          candleSeries.createPriceLine({
-            price,
-            color,
-            lineWidth: 1,
-            lineStyle: 2, // dashed
-            axisLabelVisible: true,
-            title,
-          });
-        };
-        addLevel(data.targets.entry, "#10B981", "Entry");
-        addLevel(data.targets.invalidation, "#EF4444", "Stop");
-        addLevel(data.targets.target1, "#3B82F6", "T1");
-        addLevel(data.targets.target2, "#3B82F6", "T2");
-        addLevel(data.targets.target3, "#8B5CF6", "T3");
-      }
-
-      // Add key levels
-      if (data?.levels) {
-        const addKeyLevel = (price: number, title: string) => {
-          if (!price) return;
-          candleSeries.createPriceLine({
-            price,
-            color: "rgba(255,255,255,0.12)",
-            lineWidth: 1,
-            lineStyle: 1, // dotted
-            axisLabelVisible: false,
-            title,
-          });
-        };
-        addKeyLevel(data.levels.pdh, "PDH");
-        addKeyLevel(data.levels.pdl, "PDL");
-        addKeyLevel(data.levels.vwap, "VWAP");
-      }
-
-      // Resize observer
+      // Resize handler
       const ro = new ResizeObserver(() => {
-        if (containerRef.current && chart) {
-          chart.applyOptions({ width: containerRef.current.clientWidth });
+        if (containerRef.current && chartRef.current) {
+          chartRef.current.applyOptions({ width: containerRef.current.clientWidth });
         }
       });
-      ro.observe(containerRef.current!);
+      ro.observe(containerRef.current);
 
-      return () => {
-        ro.disconnect();
-        chart.remove();
-      };
-    })();
+      // Store cleanup for resize observer
+      (chartRef.current as any)._ro = ro;
+    }
+
+    init();
 
     return () => {
+      disposed = true;
       if (chartRef.current) {
+        (chartRef.current as any)._ro?.disconnect();
         chartRef.current.remove();
         chartRef.current = null;
+        seriesRef.current = null;
       }
     };
-  }, [candles, volumes, emaData, data?.targets, data?.levels]);
+  }, []); // Mount once only
+
+  // Update data when candles/volumes/ema change
+  useEffect(() => {
+    const s = seriesRef.current;
+    const chart = chartRef.current;
+    if (!s || !chart || candles.length === 0) return;
+
+    s.candle.setData(candles);
+    s.volume.setData(volumes);
+    if (emaLines.ema20.length) s.ema20.setData(emaLines.ema20);
+    if (emaLines.ema50.length) s.ema50.setData(emaLines.ema50);
+    chart.timeScale().fitContent();
+  }, [candles, volumes, emaLines]);
+
+  // Update price lines when targets/levels change
+  useEffect(() => {
+    const s = seriesRef.current;
+    if (!s || !data) return;
+
+    // Price lines are re-set on each data change — lightweight-charts replaces previous ones when setData is called
+    // So we create new ones each time targets change
+    const addLine = (price: number, color: string, title: string, style = 2) => {
+      if (!price) return;
+      try {
+        s.candle.createPriceLine({ price, color, lineWidth: 1, lineStyle: style, axisLabelVisible: style === 2, title });
+      } catch { /* price line may already exist */ }
+    };
+
+    if (data.targets) {
+      addLine(data.targets.entry, "#10B981", "Entry");
+      addLine(data.targets.invalidation, "#EF4444", "Stop");
+      addLine(data.targets.target1, "#3B82F6", "T1");
+      addLine(data.targets.target2, "#3B82F6", "T2");
+      if (data.targets.target3) addLine(data.targets.target3, "#8B5CF6", "T3");
+    }
+    if (data.levels) {
+      addLine(data.levels.pdh, "rgba(255,255,255,0.12)", "PDH", 1);
+      addLine(data.levels.pdl, "rgba(255,255,255,0.12)", "PDL", 1);
+      if (data.levels.vwap) addLine(data.levels.vwap, "rgba(251,191,36,0.2)", "VWAP", 1);
+    }
+  }, [data?.targets, data?.levels, candles]); // re-run after candles so series exists
 
   if (!data?.bars?.length) {
     return (
@@ -214,7 +195,6 @@ export default function LiveChartPanel({ data }: { data: AdminSymbolIntelligence
 
   return (
     <div className="rounded-xl border border-white/[0.06] bg-[#0b1220] overflow-hidden relative">
-      {/* Indicator overlay header */}
       <div className="absolute top-1.5 left-3 z-10 flex flex-wrap gap-2 text-[10px] pointer-events-none">
         <span className="text-amber-400 font-medium">{data.symbol} · {data.timeframe}</span>
         <span className="text-emerald-400">{data.regime}</span>

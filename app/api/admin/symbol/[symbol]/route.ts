@@ -103,6 +103,7 @@ export async function GET(
         levels: { pdh: 0, pdl: 0, weeklyHigh: 0, weeklyLow: 0, monthlyHigh: 0, monthlyLow: 0, midpoint: 0, vwap: 0 },
         targets: { entry: 0, invalidation: 0, target1: 0, target2: 0, target3: 0 },
         truth: emptyTruth(symbol, result.errors[0]?.error ?? "No valid setup candidate"),
+        bars: [],
         meta: {
           errors: result.errors,
           timestamp: result.timestamp,
