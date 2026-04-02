@@ -324,14 +324,21 @@ function computeLiquidity(bars: Bar[]): number {
 }
 
 /**
- * Relative volume: current bar volume vs same-period average.
+ * Relative volume: recent bar volume vs historical average.
+ * Uses max(current, previous) to handle partial current-day bars
+ * (daily data fetched during market hours has incomplete volume).
  */
 function computeRelativeVolume(bars: Bar[]): number {
   if (bars.length < 10) return 0.5;
   const current = bars[bars.length - 1].volume;
-  const avg = bars.slice(0, -1).reduce((s, b) => s + b.volume, 0) / (bars.length - 1);
+  const prev = bars.length >= 2 ? bars[bars.length - 2].volume : current;
+  // Use the higher of current or previous to handle partial bars
+  const effectiveVol = Math.max(current, prev);
+  const histBars = bars.slice(0, -2);
+  if (histBars.length < 5) return 0.5;
+  const avg = histBars.reduce((s, b) => s + b.volume, 0) / histBars.length;
   if (avg <= 0) return 0.5;
-  const rvol = current / avg;
+  const rvol = effectiveVol / avg;
   // RVOL 1.0 = average → 0.5; 2.0+ = very high → ~0.85; 3.0+ → 1.0
   return clamp(rvol / 3, 0, 1);
 }

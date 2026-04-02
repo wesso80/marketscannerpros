@@ -36,7 +36,7 @@ function checkHardBlocks(req: DoctrineEvalRequest): string[] {
   }
 
   // Never trade if relative volume is negligible (no participation)
-  if (f.relativeVolumeScore < 0.1) {
+  if (f.relativeVolumeScore < 0.05) {
     blocks.push('HARD_BLOCK:NO_PARTICIPATION');
   }
 

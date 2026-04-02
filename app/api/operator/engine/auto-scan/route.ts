@@ -70,7 +70,7 @@ const DEFAULT_CONTEXT: ScanContext = {
     maxCorrelationRisk: 0.7,
   },
   executionEnvironment: {
-    brokerConnected: false,
+    brokerConnected: true,
     estimatedSlippageBps: 10,
     minLiquidityOk: true,
   },

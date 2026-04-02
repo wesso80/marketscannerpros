@@ -158,6 +158,18 @@
         sync: false
 
   - type: cron
+    name: label-signal-outcomes
+    runtime: node
+    schedule: "7 2,8,14,20 * * *"  # Every 6 hours - label operator signal outcomes after 24h
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/cron/label-ai-outcomes" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
+    envVars:
+      - key: WEB_URL
+        value: "https://marketscannerpros.app"
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
     name: learning-outcomes
     runtime: node
     schedule: "9,24,39,54 * * * *"  # Every 15 minutes (offset :09) - process learning machine predictions

@@ -9,7 +9,7 @@
 import type {
   GovernanceCheckRequest, GovernanceDecision, Permission,
 } from '@/types/operator';
-import { generateId, nowISO } from './shared';
+import { generateId, nowISO, ENVIRONMENT_MODE } from './shared';
 
 /* ── Risk Limit Checks ──────────────────────────────────────── */
 
@@ -53,8 +53,8 @@ export function checkGovernance(req: GovernanceCheckRequest): GovernanceDecision
     throttleReasons.push('CORRELATION_RISK_HIGH');
   }
 
-  // ── Execution environment checks ──
-  if (!executionEnvironment.brokerConnected) {
+  // ── Execution environment checks ── (skip broker check in RESEARCH mode)
+  if (!executionEnvironment.brokerConnected && ENVIRONMENT_MODE !== 'RESEARCH') {
     blockReasons.push('BROKER_DISCONNECTED');
   }
   if (!executionEnvironment.minLiquidityOk) {

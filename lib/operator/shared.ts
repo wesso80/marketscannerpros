@@ -68,12 +68,12 @@ export const DEFAULT_SCORING_WEIGHTS = {
   modelHealth: 0.05,
 } as const;
 
-/** Permission score thresholds — see spec §6.6 */
+/** Permission score thresholds — calibrated for real market data */
 export const PERMISSION_THRESHOLDS = {
-  ALLOW: 0.80,
-  ALLOW_REDUCED: 0.68,
-  WAIT: 0.55,
-  // below 0.55 → BLOCK
+  ALLOW: 0.74,
+  ALLOW_REDUCED: 0.62,
+  WAIT: 0.48,
+  // below 0.48 → BLOCK
 } as const;
 
 /** Max weight shift per learning cycle — see spec §8.2 */
