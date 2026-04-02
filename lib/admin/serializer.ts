@@ -9,6 +9,8 @@
 
 import type { ScanResult, CandidatePipeline } from "@/lib/operator/orchestrator";
 import type { Bar, KeyLevel } from "@/types/operator";
+import type { OHLCVBar } from "@/lib/indicators";
+import { ema, atr, adx, vwap } from "@/lib/indicators";
 import type {
   AdminSymbolIntelligence,
   ScannerHit,
@@ -16,6 +18,24 @@ import type {
 } from "./types";
 import { toPermissionState, toBiasState } from "./types";
 import { renderTruth } from "./truth-layer";
+
+/* ── Compute raw indicator values from bars ── */
+function computeRawIndicators(bars: Bar[]) {
+  const ohlcv: OHLCVBar[] = bars.map((b) => ({
+    timestamp: b.timestamp, open: b.open, high: b.high,
+    low: b.low, close: b.close, volume: b.volume,
+  }));
+  const closes = bars.map((b) => b.close);
+  const adxResult = ohlcv.length >= 28 ? adx(ohlcv, 14) : null;
+  return {
+    ema20: ema(closes, 20) ?? 0,
+    ema50: ema(closes, 50) ?? 0,
+    ema200: ema(closes, 200) ?? 0,
+    vwap: vwap(ohlcv) ?? 0,
+    atr: atr(ohlcv, 14) ?? 0,
+    adx: adxResult?.adx ?? 0,
+  };
+}
 
 /* ── Map KeyLevel[] → flat levels object for admin UI ── */
 function extractLevels(keyLevels: KeyLevel[]): AdminSymbolIntelligence["levels"] {
@@ -78,6 +98,9 @@ export function pipelineToSymbolIntelligence(
   // These get populated by the feature engine
   const features = (p as any)._featureVector?.features;
 
+  // Compute raw indicator values from candle data
+  const raw = bars.length > 0 ? computeRawIndicators(bars) : null;
+
   return {
     symbol: v.symbol,
     timeframe: v.timeframe,
@@ -95,13 +118,13 @@ export function pipelineToSymbolIntelligence(
     penalties: v.penalties?.map((pen) => pen.code) ?? [],
     playbook: v.playbook,
     indicators: {
-      ema20: features?.emaAlignmentScore ?? 0,
-      ema50: 0,
-      ema200: 0,
-      vwap: 0,
-      atr: features?.atrPercentile ?? 0,
+      ema20: raw?.ema20 ?? 0,
+      ema50: raw?.ema50 ?? 0,
+      ema200: raw?.ema200 ?? 0,
+      vwap: raw?.vwap ?? 0,
+      atr: raw?.atr ?? 0,
       bbwpPercentile: features?.bbwpPercentile ?? 0,
-      adx: 0,
+      adx: raw?.adx ?? 0,
       rvol: features?.relativeVolumeScore ?? 0,
     },
     dve: {

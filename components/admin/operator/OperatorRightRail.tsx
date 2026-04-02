@@ -15,7 +15,7 @@ export default function OperatorRightRail({ data }: { data: AdminSymbolIntellige
   return (
     <div className="flex flex-col gap-3 overflow-y-auto pr-1" style={{ maxHeight: "calc(100vh - 12rem)" }}>
       {/* Tier 1 — Truth Layer (always visible) */}
-      <TruthRail truth={data?.truth ?? null} />
+      <TruthRail truth={data?.truth ?? null} data={data} />
 
       {/* Tier 2 toggle */}
       <button

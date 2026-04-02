@@ -1,6 +1,8 @@
 "use client";
 
 import type { TruthObject } from "@/lib/admin/truth-layer";
+import type { AdminSymbolIntelligence } from "@/lib/admin/types";
+import { useState } from "react";
 
 /* ═════════════════════════════════════════════════════
    COLOR / LABEL HELPERS
@@ -112,7 +114,28 @@ function Label({ children }: { children: React.ReactNode }) {
    BLOCK 1 — FINAL DECISION
    ═════════════════════════════════════════════════════ */
 
-function FinalDecisionBlock({ truth }: { truth: TruthObject }) {
+function FinalDecisionBlock({ truth, data }: { truth: TruthObject; data?: AdminSymbolIntelligence | null }) {
+  const [copied, setCopied] = useState(false);
+
+  function handleActionClick() {
+    if (!data) return;
+    const lines = [
+      `${data.symbol} ${data.bias} ${truth.finalVerdict}`,
+      `Action: ${actionLabel(truth.operatorAction)}`,
+      `Entry: ${data.targets.entry || data.price}`,
+      `Stop: ${data.targets.invalidation || "—"}`,
+      `T1: ${data.targets.target1 || "—"}`,
+      `T2: ${data.targets.target2 || "—"}`,
+      `Size: ${truth.effectiveSize}x`,
+      `Confidence: ${truth.confidenceClass}`,
+      `Regime: ${data.regime} · Playbook: ${data.playbook || "—"}`,
+    ];
+    navigator.clipboard.writeText(lines.join("\n")).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
   return (
     <Card>
       {/* Verdict */}
@@ -131,18 +154,23 @@ function FinalDecisionBlock({ truth }: { truth: TruthObject }) {
         </span>
       </div>
 
-      {/* Action */}
-      <div style={{
-        background: `${actionColor(truth.operatorAction)}15`,
-        border: `1px solid ${actionColor(truth.operatorAction)}30`,
-        borderRadius: "0.5rem",
-        padding: "0.4rem 0.75rem",
-        marginBottom: 8,
-      }}>
+      {/* Action — clickable button that copies trade params */}
+      <button
+        onClick={handleActionClick}
+        style={{
+          display: "block", width: "100%", textAlign: "left", cursor: "pointer",
+          background: `${actionColor(truth.operatorAction)}15`,
+          border: `1px solid ${actionColor(truth.operatorAction)}30`,
+          borderRadius: "0.5rem",
+          padding: "0.4rem 0.75rem",
+          marginBottom: 8,
+          transition: "opacity 0.15s",
+        }}
+      >
         <span style={{ fontSize: "0.75rem", fontWeight: 700, color: actionColor(truth.operatorAction) }}>
-          {actionLabel(truth.operatorAction)}
+          {copied ? "✓ Copied trade params" : actionLabel(truth.operatorAction)}
         </span>
-      </div>
+      </button>
 
       {/* Confidence + Size */}
       <div style={{ display: "flex", gap: 16, fontSize: "0.7rem" }}>
@@ -361,7 +389,7 @@ function FreshnessBlock({ truth }: { truth: TruthObject }) {
    MAIN EXPORT — TRUTH RAIL
    ═════════════════════════════════════════════════════ */
 
-export default function TruthRail({ truth }: { truth: TruthObject | null | undefined }) {
+export default function TruthRail({ truth, data }: { truth: TruthObject | null | undefined; data?: AdminSymbolIntelligence | null }) {
   if (!truth) {
     return (
       <div style={{
@@ -374,7 +402,7 @@ export default function TruthRail({ truth }: { truth: TruthObject | null | undef
 
   return (
     <div className="flex flex-col gap-2.5">
-      <FinalDecisionBlock truth={truth} />
+      <FinalDecisionBlock truth={truth} data={data} />
       <PrimaryReasonBlock truth={truth} />
       <ReasonStackBlock truth={truth} />
       <UpgradeKillBlock truth={truth} />
