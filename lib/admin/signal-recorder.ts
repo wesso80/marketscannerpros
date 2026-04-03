@@ -30,6 +30,7 @@ export async function recordSignals(
     const v = p.verdict;
     const g = p.governance;
     const c = p.candidate;
+    const marketPrice = p.lastPrice ?? c.entryZone?.min ?? null;
 
     // Dedupe: skip if same symbol+regime logged in last 15 min
     try {
@@ -65,7 +66,7 @@ export async function recordSignals(
           Math.round(v.qualityScore * 100),
           g.finalPermission,
           v.direction,
-          c.entryZone?.min ?? null,
+          marketPrice,
           c.entryZone?.min ?? null,
           c.invalidationPrice ?? null,
           c.targets?.[0] ?? null,

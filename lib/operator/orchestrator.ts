@@ -65,6 +65,8 @@ export interface CandidatePipeline {
   governance: GovernanceDecision;
   executionPlan: ExecutionPlan | null;
   keyLevels?: KeyLevel[];
+  /** Last bar close price — the actual market price at scan time */
+  lastPrice?: number;
 }
 
 export interface ScanResult {
@@ -226,7 +228,7 @@ async function runSymbolPipeline(
     }
     execPlans.push(executionPlan);
 
-    pipelines.push({ candidate, doctrine, verdict, governance, executionPlan, keyLevels });
+    pipelines.push({ candidate, doctrine, verdict, governance, executionPlan, keyLevels, lastPrice: bars[bars.length - 1]?.close });
   }
 
   // §13.1 — capture decision snapshot for replay

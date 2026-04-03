@@ -6,12 +6,66 @@ import { alertCronFailure } from '@/lib/opsAlerting';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+const AV_KEY = () => process.env.ALPHA_VANTAGE_API_KEY || '';
+
+/**
+ * Fetch current price for a crypto symbol via AV CURRENCY_EXCHANGE_RATE (1 call each).
+ * Falls back to the latest signal's price_at_signal if AV fails.
+ */
+async function fetchCurrentPrices(symbols: string[]): Promise<Record<string, number>> {
+  const priceMap: Record<string, number> = {};
+
+  // Batch: fetch from Alpha Vantage (lightweight exchange-rate endpoint, 1 per symbol)
+  const key = AV_KEY();
+  if (key) {
+    // Process serially to avoid rate limit spikes (max ~10 symbols per cron run is fine)
+    for (const sym of symbols) {
+      try {
+        const url = `https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=${encodeURIComponent(sym)}&to_currency=USD&apikey=${key}`;
+        const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+        if (res.ok) {
+          const json = await res.json();
+          const rate = json?.['Realtime Currency Exchange Rate']?.['5. Exchange Rate'];
+          if (rate) {
+            const price = parseFloat(rate);
+            if (price > 0) priceMap[sym] = price;
+          }
+        }
+      } catch {
+        // AV call failed for this symbol, will try fallback
+      }
+    }
+  }
+
+  // Fallback: for any symbols not fetched, use the latest signal price
+  const missing = symbols.filter(s => !(s in priceMap));
+  if (missing.length > 0) {
+    const placeholders = missing.map((_, i) => `$${i + 1}`).join(',');
+    const rows = await q(
+      `SELECT DISTINCT ON (symbol) symbol, price_at_signal
+       FROM ai_signal_log
+       WHERE symbol IN (${placeholders})
+         AND price_at_signal IS NOT NULL
+         AND price_at_signal > 0
+       ORDER BY symbol, signal_at DESC`,
+      missing,
+    );
+    for (const r of rows) {
+      const p = parseFloat(String((r as any).price_at_signal));
+      if (p > 0 && !((r as any).symbol in priceMap)) {
+        priceMap[(r as any).symbol] = p;
+      }
+    }
+  }
+
+  return priceMap;
+}
+
 /**
  * POST /api/cron/label-ai-outcomes
  * Cron job that labels ai_signal_log entries with outcomes.
  * Checks entries older than 4h where outcome is still 'pending'.
- * Uses the latest price_at_signal for each symbol as the "current" price
- * (operator scans run continuously so the most recent signal has fresh price).
+ * Fetches current prices from Alpha Vantage for accurate comparison.
  */
 export async function POST(req: NextRequest) {
   const secret = req.headers.get('x-cron-secret') || '';
@@ -36,43 +90,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, labeled: 0, message: 'No pending signals to label' });
     }
 
-    // Get current prices from the LATEST signal for each symbol
-    // (operator scans run continuously, so the newest signal has the current price)
+    // Collect unique symbols and fetch current prices
     const symbols = [...new Set(pending.map((r: any) => r.symbol).filter(Boolean))];
-    const priceMap: Record<string, number> = {};
-
-    if (symbols.length > 0) {
-      const placeholders = symbols.map((_, i) => `$${i + 1}`).join(',');
-      const latestPrices = await q(
-        `SELECT DISTINCT ON (symbol) symbol, price_at_signal
-         FROM ai_signal_log
-         WHERE symbol IN (${placeholders})
-           AND price_at_signal IS NOT NULL
-           AND price_at_signal > 0
-         ORDER BY symbol, signal_at DESC`,
-        symbols,
-      );
-      for (const p of latestPrices) {
-        const price = parseFloat(String((p as any).price_at_signal));
-        if (price > 0) priceMap[(p as any).symbol] = price;
-      }
-    }
+    const priceMap = await fetchCurrentPrices(symbols);
 
     let labeled = 0;
     let correct = 0;
     let wrong = 0;
     let neutral = 0;
     let expired = 0;
+    let skippedNoPrice = 0;
 
     for (const signal of pending) {
       const s = signal as any;
       const entryPrice = parseFloat(String(s.price_at_signal));
-      if (!entryPrice) continue;
 
-      const currentPrice = priceMap[s.symbol];
-
-      // If no recent price and signal is >7 days old, expire it
-      if (!currentPrice) {
+      // If entry price was never recorded, try to use the current AV price
+      // and label as neutral (we can't compute direction without entry price)
+      if (!entryPrice || !Number.isFinite(entryPrice)) {
         const signalAge = Date.now() - new Date(s.signal_at).getTime();
         if (signalAge > 7 * 24 * 60 * 60 * 1000) {
           await q(
@@ -81,6 +116,36 @@ export async function POST(req: NextRequest) {
           );
           expired++;
           labeled++;
+        } else {
+          // Backfill the price and mark neutral since we don't know entry
+          const nowPrice = priceMap[s.symbol];
+          if (nowPrice) {
+            await q(
+              `UPDATE ai_signal_log SET outcome = 'neutral', price_at_signal = $1, price_after_24h = $1, pct_move_24h = 0, outcome_measured_at = NOW() WHERE id = $2`,
+              [nowPrice, s.id],
+            );
+            neutral++;
+            labeled++;
+          } else {
+            skippedNoPrice++;
+          }
+        }
+        continue;
+      }
+
+      const currentPrice = priceMap[s.symbol];
+      if (!currentPrice) {
+        // No current price available at all — expire if old enough
+        const signalAge = Date.now() - new Date(s.signal_at).getTime();
+        if (signalAge > 7 * 24 * 60 * 60 * 1000) {
+          await q(
+            `UPDATE ai_signal_log SET outcome = 'expired', outcome_measured_at = NOW() WHERE id = $1`,
+            [s.id],
+          );
+          expired++;
+          labeled++;
+        } else {
+          skippedNoPrice++;
         }
         continue;
       }
@@ -115,8 +180,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       labeled,
-      breakdown: { correct, wrong, neutral, expired },
+      breakdown: { correct, wrong, neutral, expired, skippedNoPrice },
       pendingTotal: pending.length,
+      pricesResolved: Object.keys(priceMap).length,
+      symbolsTotal: symbols.length,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Labeling failed';
