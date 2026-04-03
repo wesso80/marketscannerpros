@@ -160,12 +160,20 @@ export default function LiveChartPanel({ data }: { data: AdminSymbolIntelligence
   // Update price lines when targets/levels change
   useEffect(() => {
     const s = seriesRef.current;
-    if (!s || !data) return;
+    if (!s || !data || candles.length === 0) return;
 
-    // Price lines are re-set on each data change — lightweight-charts replaces previous ones when setData is called
-    // So we create new ones each time targets change
+    // Compute valid price range from candles to filter out bogus price lines
+    const highs = candles.map((c: any) => c.high);
+    const lows = candles.map((c: any) => c.low);
+    const chartHigh = Math.max(...highs);
+    const chartLow = Math.min(...lows);
+    const range = chartHigh - chartLow;
+    const margin = range * 0.5; // allow 50% beyond visible range
+    const validMin = chartLow - margin;
+    const validMax = chartHigh + margin;
+
     const addLine = (price: number, color: string, title: string, style = 2) => {
-      if (!price) return;
+      if (!price || price < validMin || price > validMax) return;
       try {
         s.candle.createPriceLine({ price, color, lineWidth: 1, lineStyle: style, axisLabelVisible: style === 2, title });
       } catch { /* price line may already exist */ }
