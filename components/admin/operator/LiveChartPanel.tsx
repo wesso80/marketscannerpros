@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 import type { AdminSymbolIntelligence } from "@/lib/admin/types";
 
 let lwcModule: typeof import("lightweight-charts") | null = null;
@@ -9,6 +9,7 @@ export default function LiveChartPanel({ data }: { data: AdminSymbolIntelligence
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<any>(null);
   const seriesRef = useRef<{ candle: any; volume: any; ema20: any; ema50: any } | null>(null);
+  const [chartReady, setChartReady] = useState(false);
 
   // Convert bars to lightweight-charts format
   const candles = useMemo(() => {
@@ -118,6 +119,7 @@ export default function LiveChartPanel({ data }: { data: AdminSymbolIntelligence
 
       chartRef.current = chart;
       seriesRef.current = { candle: candleSeries, volume: volumeSeries, ema20: ema20Series, ema50: ema50Series };
+      setChartReady(true);
 
       // Resize handler
       const ro = new ResizeObserver(() => {
@@ -140,6 +142,7 @@ export default function LiveChartPanel({ data }: { data: AdminSymbolIntelligence
         chartRef.current.remove();
         chartRef.current = null;
         seriesRef.current = null;
+        setChartReady(false);
       }
     };
   }, []); // Mount once only
@@ -155,7 +158,7 @@ export default function LiveChartPanel({ data }: { data: AdminSymbolIntelligence
     if (emaLines.ema20.length) s.ema20.setData(emaLines.ema20);
     if (emaLines.ema50.length) s.ema50.setData(emaLines.ema50);
     chart.timeScale().fitContent();
-  }, [candles, volumes, emaLines]);
+  }, [candles, volumes, emaLines, chartReady]);
 
   // Update price lines when targets/levels change
   useEffect(() => {
@@ -191,7 +194,7 @@ export default function LiveChartPanel({ data }: { data: AdminSymbolIntelligence
       addLine(data.levels.pdl, "rgba(255,255,255,0.12)", "PDL", 1);
       if (data.levels.vwap) addLine(data.levels.vwap, "rgba(251,191,36,0.2)", "VWAP", 1);
     }
-  }, [data?.targets, data?.levels, candles]); // re-run after candles so series exists
+  }, [data?.targets, data?.levels, candles, chartReady]); // re-run after candles so series exists
 
   if (!data?.bars?.length) {
     return (
