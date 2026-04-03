@@ -20,7 +20,7 @@ export default function OperatorCenterPanel({
     <div className="flex flex-col gap-2 min-w-0">
       <SymbolContextHeader data={data} />
       <ChartToolbar timeframe={timeframe ?? data?.timeframe ?? "15m"} onTimeframeChange={onTimeframeChange} />
-      <LiveChartPanel data={data} />
+      <LiveChartPanel data={data} key={data?.symbol ?? "chart"} />
       <OverlayLegend data={data} />
       <TimeConfluenceStrip data={data} />
     </div>
