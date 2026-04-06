@@ -1,0 +1,182 @@
+// This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
+// © MarketScanner Pros — Cypher Macro Filters v1
+// Replicates: MACRO FILTERS panel — BTC.D, BTC Price, DXY Index, USDT.D
+// Cross-asset correlation dashboard for crypto trading context
+// Overlay indicator with table-only display
+
+//@version=6
+indicator("MSP — Cypher Macro Filters", shorttitle="MSP Macro", overlay=true, max_labels_count=50)
+
+// ═══════════════════════════════════════════════════════════════
+// INPUTS
+// ═══════════════════════════════════════════════════════════════
+
+grp_sym = "Symbols"
+btcDomSym  = input.symbol("CRYPTOCAP:BTC.D",   "BTC Dominance",   group=grp_sym)
+btcSym     = input.symbol("BINANCE:BTCUSDT",    "BTC Price",       group=grp_sym)
+dxySym     = input.symbol("TVC:DXY",            "DXY Index",       group=grp_sym)
+usdtDomSym = input.symbol("CRYPTOCAP:USDT.D",   "USDT Dominance",  group=grp_sym)
+
+grp_set = "Settings"
+lookback   = input.int(20,  "Trend Lookback",    minval=5,  maxval=50,  group=grp_set)
+maLen      = input.int(50,  "MA Length for Bias", minval=10, maxval=200, group=grp_set)
+
+grp_vis = "Display"
+showTable  = input.bool(true,  "Show Macro Table",  group=grp_vis)
+tablePos   = input.string("top_right", "Table Position", options=["top_right", "top_left", "bottom_right", "bottom_left"], group=grp_vis)
+showAlertLabels = input.bool(false, "Show Alert Labels on Chart", group=grp_vis)
+
+// ═══════════════════════════════════════════════════════════════
+// DATA FETCHING
+// ═══════════════════════════════════════════════════════════════
+
+// BTC Dominance
+btcD       = request.security(btcDomSym, timeframe.period, close)
+btcD_prev  = request.security(btcDomSym, timeframe.period, close[1])
+btcD_sma   = request.security(btcDomSym, timeframe.period, ta.sma(close, maLen))
+btcD_chg   = btcD - btcD_prev
+
+// BTC Price
+btcPrice      = request.security(btcSym, timeframe.period, close)
+btcPrice_prev = request.security(btcSym, timeframe.period, close[1])
+btcPrice_sma  = request.security(btcSym, timeframe.period, ta.sma(close, maLen))
+btcPrice_chg  = btcPrice > 0 and btcPrice_prev > 0 ? (btcPrice - btcPrice_prev) / btcPrice_prev * 100 : 0
+
+// DXY
+dxy       = request.security(dxySym, timeframe.period, close)
+dxy_prev  = request.security(dxySym, timeframe.period, close[1])
+dxy_sma   = request.security(dxySym, timeframe.period, ta.sma(close, maLen))
+dxy_rsi   = request.security(dxySym, timeframe.period, ta.rsi(close, 14))
+dxy_chg   = dxy - dxy_prev
+
+// USDT Dominance
+usdtD       = request.security(usdtDomSym, timeframe.period, close)
+usdtD_prev  = request.security(usdtDomSym, timeframe.period, close[1])
+usdtD_sma   = request.security(usdtDomSym, timeframe.period, ta.sma(close, maLen))
+usdtD_chg   = usdtD - usdtD_prev
+
+// ═══════════════════════════════════════════════════════════════
+// ANALYSIS LOGIC
+// ═══════════════════════════════════════════════════════════════
+
+// --- BTC.D Analysis ---
+// Rising BTC.D = money flowing from alts to BTC (bearish for alts)
+// Falling BTC.D = money flowing from BTC to alts (bullish for alts, alt season)
+btcD_trend = btcD > btcD_sma ? "UP" : "DOWN"
+btcD_signal = btcD > btcD_sma ? "ALTS: DUMP" : "ALTS: PUMP"
+
+// --- BTC Price Analysis ---
+btcTrend = btcPrice > btcPrice_sma ? "UP" : "DOWN"
+btcSignal = btcPrice > btcPrice_sma ? "ON" : "OFF"
+
+// Market flow assessment
+btcD_up = btcD > btcD_sma
+btcPrice_up = btcPrice > btcPrice_sma
+marketFlow = btcPrice_up and not btcD_up ? "ALT SEASON" : btcPrice_up and btcD_up ? "BTC SEASON" : not btcPrice_up and btcD_up ? "CAPITULATION" : "MARKET FLOW"
+
+// --- DXY Analysis ---
+// Rising DXY = bearish for risk assets (crypto)
+// Falling DXY = bullish for risk assets
+dxyTrend = dxy > dxy_sma ? "UP" : "DOWN"
+dxyStrength = dxy_rsi > 60 ? "STRONG" : dxy_rsi < 40 ? "WEAK" : "NEUTRAL"
+dxyLabel = "STRENGTH [" + str.tostring(math.round(dxy_rsi * 10) / 10) + "]"
+dxyWind = dxy > dxy_sma ? "BEAR WIND" : "BULL WIND"
+
+// --- USDT.D Analysis ---
+// Rising USDT.D = risk-off (money to stablecoins, bearish crypto)
+// Falling USDT.D = risk-on (money out of stablecoins, bullish crypto)
+usdtD_trend = usdtD > usdtD_sma ? "UP" : "DOWN"
+usdtD_signal = usdtD > usdtD_sma ? "RISK OFF" : "RISK ON"
+usdtD_flow = usdtD_chg > 0 ? "EXITING" : "MONEY IN"
+usdtD_pct = str.tostring(math.round(usdtD * 100) / 100) + "%"
+
+// ═══════════════════════════════════════════════════════════════
+// COMPOSITE MACRO SCORE
+// ═══════════════════════════════════════════════════════════════
+
+// Each factor scored -1 to +1 (positive = bullish crypto)
+scoreBtcD = btcD_up ? -0.5 : 0.5  // falling BTC.D = bullish alts
+scoreBtcPrice = btcPrice_up ? 1.0 : -1.0
+scoreDxy = dxy > dxy_sma ? -0.75 : 0.75 // falling DXY = bullish crypto
+scoreUsdtD = usdtD > usdtD_sma ? -0.75 : 0.75 // falling USDT.D = bullish
+
+macroScore = (scoreBtcD + scoreBtcPrice + scoreDxy + scoreUsdtD) / 4.0 * 100
+macroState = macroScore > 30 ? "RISK ON" : macroScore < -30 ? "RISK OFF" : "TRANSITIONAL"
+
+// Moderate bull bias flag
+isBullBias = not usdtD[0] and usdtD_chg < 0 and btcPrice_up
+
+// ═══════════════════════════════════════════════════════════════
+// TABLE DISPLAY
+// ═══════════════════════════════════════════════════════════════
+
+if showTable and barstate.islast
+    tblPos = tablePos == "top_right" ? position.top_right : tablePos == "top_left" ? position.top_left : tablePos == "bottom_right" ? position.bottom_right : position.bottom_left
+
+    var tbl = table.new(tblPos, 4, 7, bgcolor=color.new(#0F172A, 5), border_color=color.new(#334155, 30), border_width=1, frame_color=color.new(#10B981, 60), frame_width=1)
+
+    headerBg = color.new(#1E293B, 0)
+    green  = color.new(#10B981, 0)
+    red    = color.new(#EF4444, 0)
+    amber  = color.new(#F59E0B, 0)
+    cyan   = color.new(#06B6D4, 0)
+    white  = color.new(#E2E8F0, 0)
+    dim    = color.new(#94A3B8, 0)
+    panelBg = color.new(#0F172A, 10)
+
+    // Header
+    table.cell(tbl, 0, 0, "MACRO FILTERS", text_color=green, text_size=size.tiny, bgcolor=headerBg)
+    table.cell(tbl, 1, 0, "", bgcolor=headerBg)
+    table.cell(tbl, 2, 0, "", bgcolor=headerBg)
+    table.cell(tbl, 3, 0, "", bgcolor=headerBg)
+
+    // BTC.D
+    btcDclr = btcD_up ? red : green
+    table.cell(tbl, 0, 1, "BTC.D", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 1, 1, btcD_trend, text_color=btcDclr, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 2, 1, btcD_signal, text_color=btcDclr, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 3, 1, marketFlow, text_color=marketFlow == "ALT SEASON" ? green : marketFlow == "BTC SEASON" ? amber : red, text_size=size.tiny, bgcolor=panelBg)
+
+    // BTC Price
+    btcClr = btcPrice_up ? green : red
+    table.cell(tbl, 0, 2, "BTC Price", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 1, 2, btcSignal, text_color=btcClr, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 2, 2, str.tostring(math.round(btcPrice)), text_color=btcClr, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 3, 2, btcPrice_chg > 0 ? "+" + str.tostring(math.round(btcPrice_chg * 100) / 100) + "%" : str.tostring(math.round(btcPrice_chg * 100) / 100) + "%", text_color=btcPrice_chg > 0 ? green : red, text_size=size.tiny, bgcolor=panelBg)
+
+    // DXY
+    dxyClr = dxy > dxy_sma ? red : green  // inverted: strong DXY = bearish crypto
+    table.cell(tbl, 0, 3, "DXY Index", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 1, 3, dxyLabel, text_color=dxyClr, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 2, 3, dxyTrend, text_color=dxyClr, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 3, 3, dxyWind, text_color=dxyClr, text_size=size.tiny, bgcolor=panelBg)
+
+    // USDT.D
+    usdtClr = usdtD > usdtD_sma ? red : green
+    table.cell(tbl, 0, 4, "USDT.D", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 1, 4, usdtD_pct, text_color=usdtClr, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 2, 4, usdtD_flow, text_color=usdtClr, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 3, 4, usdtD_signal, text_color=usdtClr, text_size=size.tiny, bgcolor=panelBg)
+
+    // Separator
+    table.cell(tbl, 0, 5, "", bgcolor=headerBg)
+    table.cell(tbl, 1, 5, "", bgcolor=headerBg)
+    table.cell(tbl, 2, 5, "", bgcolor=headerBg)
+    table.cell(tbl, 3, 5, "", bgcolor=headerBg)
+
+    // Composite
+    mClr = macroScore > 30 ? green : macroScore < -30 ? red : amber
+    table.cell(tbl, 0, 6, "REGIME", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 1, 6, macroState, text_color=mClr, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 2, 6, str.tostring(math.round(macroScore)) + "/100", text_color=mClr, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 3, 6, "", bgcolor=panelBg)
+
+// ═══════════════════════════════════════════════════════════════
+// ALERTS
+// ═══════════════════════════════════════════════════════════════
+
+alertcondition(ta.crossover(macroScore, 30), "Macro Risk On", "MSP Macro: Regime shifted to RISK ON")
+alertcondition(ta.crossunder(macroScore, -30), "Macro Risk Off", "MSP Macro: Regime shifted to RISK OFF")
+alertcondition(ta.crossunder(btcD, btcD_sma), "Alt Season Signal", "MSP Macro: BTC.D crossed below MA — potential alt season")
+alertcondition(ta.crossunder(usdtD, usdtD_sma), "USDT.D Risk On", "MSP Macro: USDT.D crossed below MA — money flowing into crypto")
+alertcondition(ta.crossunder(dxy, dxy_sma), "DXY Weakening", "MSP Macro: DXY crossed below MA — bullish wind for crypto")

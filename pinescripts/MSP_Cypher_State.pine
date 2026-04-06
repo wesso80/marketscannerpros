@@ -1,0 +1,200 @@
+// This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
+// © MarketScanner Pros — Cypher State Multi-Timeframe v1
+// Replicates: CYPHER STATE panel + TIMEFRAME columns
+// Shows trend state (TRENDING UP/DOWN, RANGING) across 5 timeframes
+// Plus live price ticker and session context
+
+//@version=6
+indicator("MSP — Cypher State MTF", shorttitle="MSP Cypher State", overlay=true, max_labels_count=50)
+
+// ═══════════════════════════════════════════════════════════════
+// INPUTS
+// ═══════════════════════════════════════════════════════════════
+
+grp_tf = "Timeframes"
+tf1 = input.timeframe("5",    "TF 1", group=grp_tf)
+tf2 = input.timeframe("15",   "TF 2", group=grp_tf)
+tf3 = input.timeframe("60",   "TF 3", group=grp_tf)
+tf4 = input.timeframe("240",  "TF 4", group=grp_tf)
+tf5 = input.timeframe("D",    "TF 5", group=grp_tf)
+
+grp_set = "State Detection"
+emaFastLen  = input.int(9,   "Fast EMA",   minval=3,  maxval=21,  group=grp_set)
+emaSlowLen  = input.int(21,  "Slow EMA",   minval=10, maxval=55,  group=grp_set)
+adxLen      = input.int(14,  "ADX Length",  minval=7,  maxval=30,  group=grp_set)
+adxThresh   = input.int(20,  "ADX Trend Threshold", minval=15, maxval=35, group=grp_set)
+rsiLen      = input.int(14,  "RSI Length",  minval=7,  maxval=21,  group=grp_set)
+
+grp_vis = "Display"
+showTable    = input.bool(true,  "Show State Table", group=grp_vis)
+tablePos     = input.string("bottom_right", "Table Position", options=["top_right", "top_left", "bottom_right", "bottom_left"], group=grp_vis)
+showPriceLbl = input.bool(true, "Show Live Price Label", group=grp_vis)
+
+// ═══════════════════════════════════════════════════════════════
+// MTF STATE DETECTION FUNCTION
+// ═══════════════════════════════════════════════════════════════
+
+// Returns: [state, emaFast, emaSlow, adx, rsi, momentum]
+// State: 1=TRENDING UP, -1=TRENDING DOWN, 0=RANGING
+tfState(emaF, emaS, adxV, rsiV, c) =>
+    isTrending = adxV > adxThresh
+    isBull = emaF > emaS and c > emaF
+    isBear = emaF < emaS and c < emaF
+    state = isTrending and isBull ? 1 : isTrending and isBear ? -1 : 0
+    state
+
+// ═══════════════════════════════════════════════════════════════
+// FETCH DATA FROM EACH TIMEFRAME
+// ═══════════════════════════════════════════════════════════════
+
+// Pre-compute ADX on current chart (ta.dmi returns tuple — extract ADX value)
+[_dp, _dm, adxCurrent] = ta.dmi(adxLen, adxLen)
+
+// TF1
+tf1_emaF = request.security(syminfo.tickerid, tf1, ta.ema(close, emaFastLen))
+tf1_emaS = request.security(syminfo.tickerid, tf1, ta.ema(close, emaSlowLen))
+tf1_close = request.security(syminfo.tickerid, tf1, close)
+tf1_adx = request.security(syminfo.tickerid, tf1, adxCurrent)
+tf1_rsi = request.security(syminfo.tickerid, tf1, ta.rsi(close, rsiLen))
+tf1_state = tfState(tf1_emaF, tf1_emaS, tf1_adx, tf1_rsi, tf1_close)
+
+// TF2
+tf2_emaF = request.security(syminfo.tickerid, tf2, ta.ema(close, emaFastLen))
+tf2_emaS = request.security(syminfo.tickerid, tf2, ta.ema(close, emaSlowLen))
+tf2_close = request.security(syminfo.tickerid, tf2, close)
+tf2_adx = request.security(syminfo.tickerid, tf2, adxCurrent)
+tf2_rsi = request.security(syminfo.tickerid, tf2, ta.rsi(close, rsiLen))
+tf2_state = tfState(tf2_emaF, tf2_emaS, tf2_adx, tf2_rsi, tf2_close)
+
+// TF3
+tf3_emaF = request.security(syminfo.tickerid, tf3, ta.ema(close, emaFastLen))
+tf3_emaS = request.security(syminfo.tickerid, tf3, ta.ema(close, emaSlowLen))
+tf3_close = request.security(syminfo.tickerid, tf3, close)
+tf3_adx = request.security(syminfo.tickerid, tf3, adxCurrent)
+tf3_rsi = request.security(syminfo.tickerid, tf3, ta.rsi(close, rsiLen))
+tf3_state = tfState(tf3_emaF, tf3_emaS, tf3_adx, tf3_rsi, tf3_close)
+
+// TF4
+tf4_emaF = request.security(syminfo.tickerid, tf4, ta.ema(close, emaFastLen))
+tf4_emaS = request.security(syminfo.tickerid, tf4, ta.ema(close, emaSlowLen))
+tf4_close = request.security(syminfo.tickerid, tf4, close)
+tf4_adx = request.security(syminfo.tickerid, tf4, adxCurrent)
+tf4_rsi = request.security(syminfo.tickerid, tf4, ta.rsi(close, rsiLen))
+tf4_state = tfState(tf4_emaF, tf4_emaS, tf4_adx, tf4_rsi, tf4_close)
+
+// TF5
+tf5_emaF = request.security(syminfo.tickerid, tf5, ta.ema(close, emaFastLen))
+tf5_emaS = request.security(syminfo.tickerid, tf5, ta.ema(close, emaSlowLen))
+tf5_close = request.security(syminfo.tickerid, tf5, close)
+tf5_adx = request.security(syminfo.tickerid, tf5, adxCurrent)
+tf5_rsi = request.security(syminfo.tickerid, tf5, ta.rsi(close, rsiLen))
+tf5_state = tfState(tf5_emaF, tf5_emaS, tf5_adx, tf5_rsi, tf5_close)
+
+// ═══════════════════════════════════════════════════════════════
+// ALIGNMENT SCORE
+// ═══════════════════════════════════════════════════════════════
+
+alignScore = tf1_state + tf2_state + tf3_state + tf4_state + tf5_state
+isBullAligned = alignScore >= 3
+isBearAligned = alignScore <= -3
+isConflicted = math.abs(alignScore) <= 1
+
+alignLabel = isBullAligned ? "ALIGNED BULL" : isBearAligned ? "ALIGNED BEAR" : isConflicted ? "CONFLICTED" : alignScore > 0 ? "LEAN BULL" : "LEAN BEAR"
+
+// ═══════════════════════════════════════════════════════════════
+// HELPER: TF label and state label
+// ═══════════════════════════════════════════════════════════════
+
+tfLabel(tf) =>
+    tf == "1" ? "1m" : tf == "3" ? "3m" : tf == "5" ? "5m" : tf == "15" ? "15m" : tf == "30" ? "30m" : tf == "60" ? "1H" : tf == "120" ? "2H" : tf == "240" ? "4H" : tf == "D" ? "1D" : tf == "W" ? "1W" : tf == "M" ? "1M" : tf
+
+stateLabel(s) =>
+    s > 0 ? "TRENDING UP" : s < 0 ? "TRENDING DN" : "RANGING"
+
+stateClr(s) =>
+    s > 0 ? color.new(#10B981, 0) : s < 0 ? color.new(#EF4444, 0) : color.new(#F59E0B, 0)
+
+// ═══════════════════════════════════════════════════════════════
+// TABLE DISPLAY
+// ═══════════════════════════════════════════════════════════════
+
+if showTable and barstate.islast
+    tblPos = tablePos == "top_right" ? position.top_right : tablePos == "top_left" ? position.top_left : tablePos == "bottom_right" ? position.bottom_right : position.bottom_left
+
+    var tbl = table.new(tblPos, 3, 9, bgcolor=color.new(#0F172A, 5), border_color=color.new(#334155, 30), border_width=1, frame_color=color.new(#10B981, 60), frame_width=1)
+
+    headerBg = color.new(#1E293B, 0)
+    green  = color.new(#10B981, 0)
+    red    = color.new(#EF4444, 0)
+    amber  = color.new(#F59E0B, 0)
+    cyan   = color.new(#06B6D4, 0)
+    white  = color.new(#E2E8F0, 0)
+    dim    = color.new(#94A3B8, 0)
+    panelBg = color.new(#0F172A, 10)
+
+    // Header
+    table.cell(tbl, 0, 0, "TIMEFRAME", text_color=dim, text_size=size.tiny, bgcolor=headerBg)
+    table.cell(tbl, 1, 0, "CYPHER STATE", text_color=dim, text_size=size.tiny, bgcolor=headerBg)
+    table.cell(tbl, 2, 0, "RSI", text_color=dim, text_size=size.tiny, bgcolor=headerBg)
+
+    // TF1
+    table.cell(tbl, 0, 1, tfLabel(tf1), text_color=white, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 1, 1, stateLabel(tf1_state), text_color=stateClr(tf1_state), text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 2, 1, str.tostring(math.round(tf1_rsi)), text_color=tf1_rsi > 60 ? green : tf1_rsi < 40 ? red : dim, text_size=size.tiny, bgcolor=panelBg)
+
+    // TF2
+    table.cell(tbl, 0, 2, tfLabel(tf2), text_color=white, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 1, 2, stateLabel(tf2_state), text_color=stateClr(tf2_state), text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 2, 2, str.tostring(math.round(tf2_rsi)), text_color=tf2_rsi > 60 ? green : tf2_rsi < 40 ? red : dim, text_size=size.tiny, bgcolor=panelBg)
+
+    // TF3
+    table.cell(tbl, 0, 3, tfLabel(tf3), text_color=white, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 1, 3, stateLabel(tf3_state), text_color=stateClr(tf3_state), text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 2, 3, str.tostring(math.round(tf3_rsi)), text_color=tf3_rsi > 60 ? green : tf3_rsi < 40 ? red : dim, text_size=size.tiny, bgcolor=panelBg)
+
+    // TF4
+    table.cell(tbl, 0, 4, tfLabel(tf4), text_color=white, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 1, 4, stateLabel(tf4_state), text_color=stateClr(tf4_state), text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 2, 4, str.tostring(math.round(tf4_rsi)), text_color=tf4_rsi > 60 ? green : tf4_rsi < 40 ? red : dim, text_size=size.tiny, bgcolor=panelBg)
+
+    // TF5
+    table.cell(tbl, 0, 5, tfLabel(tf5), text_color=white, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 1, 5, stateLabel(tf5_state), text_color=stateClr(tf5_state), text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 2, 5, str.tostring(math.round(tf5_rsi)), text_color=tf5_rsi > 60 ? green : tf5_rsi < 40 ? red : dim, text_size=size.tiny, bgcolor=panelBg)
+
+    // Separator
+    table.cell(tbl, 0, 6, "", bgcolor=headerBg)
+    table.cell(tbl, 1, 6, "", bgcolor=headerBg)
+    table.cell(tbl, 2, 6, "", bgcolor=headerBg)
+
+    // Alignment
+    alignClr = isBullAligned ? green : isBearAligned ? red : isConflicted ? amber : cyan
+    table.cell(tbl, 0, 7, "ALIGNMENT", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 1, 7, alignLabel, text_color=alignClr, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 2, 7, str.tostring(alignScore) + "/5", text_color=alignClr, text_size=size.tiny, bgcolor=panelBg)
+
+    // Live price
+    chgPct = close[1] != 0 ? (close - close[1]) / close[1] * 100 : 0
+    priceClr = chgPct > 0 ? green : chgPct < 0 ? red : white
+    table.cell(tbl, 0, 8, syminfo.ticker, text_color=white, text_size=size.tiny, bgcolor=headerBg)
+    table.cell(tbl, 1, 8, str.tostring(close, format.mintick), text_color=priceClr, text_size=size.tiny, bgcolor=headerBg)
+    table.cell(tbl, 2, 8, (chgPct > 0 ? "+" : "") + str.tostring(math.round(chgPct * 100) / 100) + "%", text_color=priceClr, text_size=size.tiny, bgcolor=headerBg)
+
+// ═══════════════════════════════════════════════════════════════
+// LIVE PRICE LABEL (optional — top of chart)
+// ═══════════════════════════════════════════════════════════════
+
+if showPriceLbl and barstate.islast
+    priceStr = str.tostring(close, format.mintick)
+    chg = close[1] != 0 ? (close - close[1]) / close[1] * 100 : 0.0
+    chgStr = (chg > 0 ? "+" : "") + str.tostring(math.round(chg * 100) / 100) + "%"
+    lblClr = chg > 0 ? color.new(#10B981, 10) : chg < 0 ? color.new(#EF4444, 10) : color.new(#64748B, 10)
+    label.new(bar_index + 3, high, priceStr + "  " + chgStr, color=lblClr, textcolor=color.white, size=size.normal, style=label.style_label_left)
+
+// ═══════════════════════════════════════════════════════════════
+// ALERTS
+// ═══════════════════════════════════════════════════════════════
+
+alertcondition(alignScore >= 3 and alignScore[1] < 3, "Bull Alignment", "MSP Cypher State: 3+ timeframes now TRENDING UP — bull alignment")
+alertcondition(alignScore <= -3 and alignScore[1] > -3, "Bear Alignment", "MSP Cypher State: 3+ timeframes now TRENDING DOWN — bear alignment")
+alertcondition(math.abs(alignScore) <= 1 and math.abs(alignScore[1]) > 1, "Alignment Lost", "MSP Cypher State: Timeframe alignment lost — conflicting signals")
