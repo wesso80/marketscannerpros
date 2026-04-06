@@ -37,6 +37,23 @@ export const dynamic = 'force-dynamic';
 const cache = new Map<string, { data: GoldenEggPayload; ts: number }>();
 const CACHE_TTL = 3 * 60 * 1000;
 
+// ── Adaptive price rounding (preserves precision for sub-dollar assets) ──
+function roundPrice(v: number): number {
+  if (v === 0) return 0;
+  const abs = Math.abs(v);
+  if (abs >= 1)    return Math.round(v * 100)    / 100;    // 2 dp  ($1.23)
+  if (abs >= 0.01) return Math.round(v * 10000)  / 10000;  // 4 dp  ($0.2345)
+  return Math.round(v * 1000000) / 1000000;                // 6 dp  ($0.001234)
+}
+
+function fmtPriceStr(v: number): string {
+  if (v === 0) return '0';
+  const abs = Math.abs(v);
+  if (abs >= 1)    return v.toFixed(2);
+  if (abs >= 0.01) return v.toPrecision(4);
+  return v.toPrecision(4);
+}
+
 // ── Score → Grade ───────────────────────────────────────────────────────
 function scoreToGrade(score: number): 'A' | 'B' | 'C' | 'D' {
   if (score >= 75) return 'A';
@@ -239,7 +256,7 @@ function buildPayload(
         { label: 'IV Rank', value: `${opts.ivRank.toFixed(0)}%` },
         { label: 'Dealer Gamma', value: opts.dealerGamma },
         { label: 'Unusual Activity', value: opts.unusualActivity },
-        { label: 'Max Pain', value: `$${opts.maxPain.toFixed(2)}` },
+        { label: 'Max Pain', value: `$${fmtPriceStr(opts.maxPain)}` },
       ],
       notes: [
         opts.unusualActivity !== 'Normal' ? `Unusual options activity detected (${opts.unusualActivity})` : 'Options flow appears normal',
@@ -310,7 +327,7 @@ function buildPayload(
   }
   if (tcData?.decompressionTarget && tcData.decompressionTarget.price > 0) {
     const dtDir = tcData.decompressionTarget.direction === 'up' ? 'upward' : tcData.decompressionTarget.direction === 'down' ? 'downward' : 'neutral';
-    narrativeBullets.push(`Decompression target $${tcData.decompressionTarget.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${dtDir}) from ${tcData.decompressionTarget.contributingTFs.length} TF mid-50 levels.`);
+    narrativeBullets.push(`Decompression target $${fmtPriceStr(tcData.decompressionTarget.price)} (${dtDir}) from ${tcData.decompressionTarget.contributingTFs.length} TF mid-50 levels.`);
   }
   if (tcData?.closeSchedule && tcData.closeSchedule.length > 0) {
     const dailyPlus = tcData.closeSchedule.filter(r => r.weight >= 10);
@@ -431,18 +448,18 @@ function buildPayload(
         thesis: buildThesis(direction, setupType, ind, opts, mpe, symbol, tcData, dveReading),
         timeframeAlignment: { score: tfScore, max: 4, details: tfDetails },
         keyLevels,
-        invalidation: `Thesis invalid if price ${isLong ? 'closes below' : 'closes above'} $${stopPrice.toFixed(2)} with volume confirmation.`,
+        invalidation: `Thesis invalid if price ${isLong ? 'closes below' : 'closes above'} $${fmtPriceStr(stopPrice)} with volume confirmation.`,
       },
       execution: {
         entryTrigger: permission === 'TRADE'
-          ? `${isLong ? 'Long scenario' : 'Short scenario'}: pullback zone near $${(isLong ? p - atr * 0.3 : p + atr * 0.3).toFixed(2)} or breakout confirmation.`
+          ? `${isLong ? 'Long scenario' : 'Short scenario'}: pullback zone near $${fmtPriceStr(isLong ? p - atr * 0.3 : p + atr * 0.3)} or breakout confirmation.`
           : 'Wait for flip conditions to be met.',
         entry: { type: permission === 'TRADE' ? 'limit' : 'stop', price: permission === 'TRADE' ? p : undefined },
-        stop: { price: Math.round(stopPrice * 100) / 100, logic: `${(1.5).toFixed(1)}x ATR from reference — beyond recent structure` },
+        stop: { price: roundPrice(stopPrice), logic: `${(1.5).toFixed(1)}x ATR from reference — beyond recent structure` },
         targets: [
-          { price: Math.round(t1 * 100) / 100, rMultiple: stopDistance > 0 ? Math.round(Math.abs(t1 - p) / stopDistance * 10) / 10 : 1, note: 'First scale zone' },
-          { price: Math.round(t2 * 100) / 100, rMultiple: stopDistance > 0 ? Math.round(Math.abs(t2 - p) / stopDistance * 10) / 10 : 2, note: decompAligned ? `Primary level — Decomp zone (${decompTarget!.contributingTFs.length} TFs)` : 'Primary level' },
-          { price: Math.round(t3 * 100) / 100, rMultiple: stopDistance > 0 ? Math.round(Math.abs(t3 - p) / stopDistance * 10) / 10 : 3, note: 'Extension zone' },
+          { price: roundPrice(t1), rMultiple: stopDistance > 0 ? Math.round(Math.abs(t1 - p) / stopDistance * 10) / 10 : 1, note: 'First scale zone' },
+          { price: roundPrice(t2), rMultiple: stopDistance > 0 ? Math.round(Math.abs(t2 - p) / stopDistance * 10) / 10 : 2, note: decompAligned ? `Primary level — Decomp zone (${decompTarget!.contributingTFs.length} TFs)` : 'Primary level' },
+          { price: roundPrice(t3), rMultiple: stopDistance > 0 ? Math.round(Math.abs(t3 - p) / stopDistance * 10) / 10 : 3, note: 'Extension zone' },
         ],
         rr: { expectedR: Math.round(rr * 10) / 10, minR: 1.5 },
         sizingHint: { riskPct: confidence >= 70 ? 1.0 : confidence >= 55 ? 0.75 : 0.5 },
@@ -454,7 +471,7 @@ function buildPayload(
         trend: { htf: trendHTF, mtf: trendMTF, ltf: trendLTF },
         volatility: {
           regime: volRegime,
-          atr: atr > 0 ? Math.round(atr * 100) / 100 : undefined,
+          atr: atr > 0 ? roundPrice(atr) : undefined,
           ...(dveReading ? {
             bbwp: dveReading.volatility.bbwp,
             bbwpSma5: dveReading.volatility.bbwpSma5,
@@ -482,9 +499,9 @@ function buildPayload(
           } : {}),
         },
         liquidity: {
-          overhead: ind?.bbUpper ? `BB Upper $${ind.bbUpper.toFixed(2)}` : undefined,
-          below: ind?.bbLower ? `BB Lower $${ind.bbLower.toFixed(2)}` : undefined,
-          note: opts?.maxPain ? `Max pain at $${opts.maxPain.toFixed(2)} — settlement gravity` : undefined,
+          overhead: ind?.bbUpper ? `BB Upper $${fmtPriceStr(ind.bbUpper)}` : undefined,
+          below: ind?.bbLower ? `BB Lower $${fmtPriceStr(ind.bbLower)}` : undefined,
+          note: opts?.maxPain ? `Max pain at $${fmtPriceStr(opts.maxPain)} — settlement gravity` : undefined,
         },
       },
       options: optionsEvidence,
@@ -619,16 +636,16 @@ function determineSetupType(ind: Indicators | null, price: { changePct: number }
 
 function buildKeyLevels(p: number, ind: Indicators | null, opts: OptionsSnapshot | null, atr: number, tcData?: TimeConfluenceData | null): GoldenEggPayload['layer2']['setup']['keyLevels'] {
   const levels: GoldenEggPayload['layer2']['setup']['keyLevels'] = [];
-  if (ind?.sma20 != null) levels.push({ label: 'SMA 20', price: Math.round(ind.sma20 * 100) / 100, kind: 'pivot' });
-  if (ind?.sma50 != null) levels.push({ label: 'SMA 50', price: Math.round(ind.sma50 * 100) / 100, kind: 'support' });
-  if (ind?.bbUpper != null) levels.push({ label: 'BB Upper', price: Math.round(ind.bbUpper * 100) / 100, kind: 'resistance' });
-  if (ind?.bbLower != null) levels.push({ label: 'BB Lower', price: Math.round(ind.bbLower * 100) / 100, kind: 'support' });
-  if (opts?.maxPain) levels.push({ label: 'Max Pain', price: Math.round(opts.maxPain * 100) / 100, kind: 'value' });
+  if (ind?.sma20 != null) levels.push({ label: 'SMA 20', price: roundPrice(ind.sma20), kind: 'pivot' });
+  if (ind?.sma50 != null) levels.push({ label: 'SMA 50', price: roundPrice(ind.sma50), kind: 'support' });
+  if (ind?.bbUpper != null) levels.push({ label: 'BB Upper', price: roundPrice(ind.bbUpper), kind: 'resistance' });
+  if (ind?.bbLower != null) levels.push({ label: 'BB Lower', price: roundPrice(ind.bbLower), kind: 'support' });
+  if (opts?.maxPain) levels.push({ label: 'Max Pain', price: roundPrice(opts.maxPain), kind: 'value' });
   if (opts?.highestOICallStrike) levels.push({ label: 'Call Wall', price: opts.highestOICallStrike, kind: 'resistance' });
   if (opts?.highestOIPutStrike) levels.push({ label: 'Put Wall', price: opts.highestOIPutStrike, kind: 'support' });
   // Add decompression target as a value level
   if (tcData?.decompressionTarget && tcData.decompressionTarget.price > 0) {
-    levels.push({ label: `Decomp Target (${tcData.decompressionTarget.contributingTFs.length} TFs)`, price: Math.round(tcData.decompressionTarget.price * 100) / 100, kind: 'value' });
+    levels.push({ label: `Decomp Target (${tcData.decompressionTarget.contributingTFs.length} TFs)`, price: roundPrice(tcData.decompressionTarget.price), kind: 'value' });
   }
   // Add highest-weight close schedule mid-50 levels (daily+ only)
   if (tcData?.closeSchedule) {
@@ -638,7 +655,7 @@ function buildKeyLevels(p: number, ind: Indicators | null, opts: OptionsSnapshot
       .slice(0, 3);
     for (const r of dailyPlus) {
       const kind = r.mid50Level! > p ? 'resistance' : 'support';
-      levels.push({ label: `${r.tf} Mid-50`, price: Math.round(r.mid50Level! * 100) / 100, kind });
+      levels.push({ label: `${r.tf} Mid-50`, price: roundPrice(r.mid50Level!), kind });
     }
   }
   // Sort by distance from current price

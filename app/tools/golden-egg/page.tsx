@@ -96,6 +96,14 @@ function gradeColor(g: string) {
   return '#EF4444';
 }
 
+/** Adaptive price formatter — keeps sub-dollar assets readable */
+function fmtP(v: number | null | undefined): string {
+  if (v == null || isNaN(v)) return '—';
+  const abs = Math.abs(v);
+  if (abs >= 1) return v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return v.toPrecision(4);
+}
+
 export default function GoldenEggPage() {
   const { selectedSymbol, selectSymbol, navigateTo } = useV2();
   const { tier } = useUserTier();
@@ -328,7 +336,7 @@ export default function GoldenEggPage() {
                     {(() => { const cm = deriveCrossMarketAlignment(regime.data?.signals); return <span className="text-[10px] px-1.5 py-0.5 rounded border font-semibold" style={{ color: ALIGNMENT_COLOR[cm.alignment], borderColor: ALIGNMENT_COLOR[cm.alignment] + '40', backgroundColor: ALIGNMENT_COLOR[cm.alignment] + '15' }}>{cm.alignment === 'headwind' ? '⚠ Headwind' : cm.alignment === 'supportive' ? '✓ Tailwind' : '— Neutral'}</span>; })()}
                   </div>
                   <div className="text-lg font-bold text-white">
-                    ${ge.meta.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    ${fmtP(ge.meta.price)}
                     {quote.data?.changePercent != null && (
                       <span className={`ml-2 text-sm ${quote.data.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                         {quote.data.changePercent >= 0 ? '+' : ''}{quote.data.changePercent.toFixed(2)}%
@@ -358,12 +366,12 @@ export default function GoldenEggPage() {
                   <div className="text-[10px] text-slate-500 uppercase">Level of Interest</div>
                   <div className="text-sm text-emerald-400 font-semibold">{ge.layer2.execution.entryTrigger}</div>
                   {ge.layer2.execution.entry.price && (
-                    <div className="text-xs font-mono text-white mt-0.5">${ge.layer2.execution.entry.price.toFixed(2)} ({ge.layer2.execution.entry.type})</div>
+                    <div className="text-xs font-mono text-white mt-0.5">${fmtP(ge.layer2.execution.entry.price)} ({ge.layer2.execution.entry.type})</div>
                   )}
                 </div>
                 <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
                   <div className="text-[10px] text-slate-500 uppercase">Invalidation</div>
-                  <div className="text-sm text-red-400 font-semibold">${ge.layer2.execution.stop.price.toFixed(2)}</div>
+                  <div className="text-sm text-red-400 font-semibold">${fmtP(ge.layer2.execution.stop.price)}</div>
                   <div className="text-[10px] text-slate-500 mt-0.5">{ge.layer2.execution.stop.logic}</div>
                 </div>
                 <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
@@ -371,7 +379,7 @@ export default function GoldenEggPage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     {ge.layer2.execution.targets.map((t: any, i: number) => (
                       <span key={i} className="text-sm font-mono text-emerald-400">
-                        ${t.price.toFixed(2)}{i < ge.layer2.execution.targets.length - 1 && <span className="text-slate-600 mx-1">›</span>}
+                        ${fmtP(t.price)}{i < ge.layer2.execution.targets.length - 1 && <span className="text-slate-600 mx-1">›</span>}
                       </span>
                     ))}
                   </div>
@@ -390,7 +398,7 @@ export default function GoldenEggPage() {
                   </div>
                 )}
                 <a
-                  href={`/tools/journal?prefill=true&symbol=${encodeURIComponent(sym)}&side=${ge.layer1.direction === 'bullish' ? 'LONG' : ge.layer1.direction === 'bearish' ? 'SHORT' : 'LONG'}&entryPrice=${ge.layer2.execution.entry.price?.toFixed(2) || ''}&strategy=Golden+Egg&setup=${encodeURIComponent(`${sym} ${ge.layer1.direction} — Grade ${ge.layer1.grade}, ${ge.layer1.confidence}% confluence`)}&notes=${encodeURIComponent(`Golden Egg analysis notes\nLevel of Interest: $${ge.layer2.execution.entry.price?.toFixed(2) || 'N/A'} (${ge.layer2.execution.entry.type})\nInvalidation: $${ge.layer2.execution.stop.price.toFixed(2)} — ${ge.layer2.execution.stop.logic}\nKey Levels: ${ge.layer2.execution.targets.map((t: any) => '$' + t.price.toFixed(2)).join(' › ')}\nR:R ${ge.layer2.execution.rr.expectedR.toFixed(1)} | Setup: ${ge.layer2.setup.setupType.replace(/_/g, ' ')}\nThesis: ${ge.layer2.setup.thesis}`)}`}
+                  href={`/tools/journal?prefill=true&symbol=${encodeURIComponent(sym)}&side=${ge.layer1.direction === 'bullish' ? 'LONG' : ge.layer1.direction === 'bearish' ? 'SHORT' : 'LONG'}&entryPrice=${ge.layer2.execution.entry.price ? fmtP(ge.layer2.execution.entry.price) : ''}&strategy=Golden+Egg&setup=${encodeURIComponent(`${sym} ${ge.layer1.direction} — Grade ${ge.layer1.grade}, ${ge.layer1.confidence}% confluence`)}&notes=${encodeURIComponent(`Golden Egg analysis notes\nLevel of Interest: $${ge.layer2.execution.entry.price ? fmtP(ge.layer2.execution.entry.price) : 'N/A'} (${ge.layer2.execution.entry.type})\nInvalidation: $${fmtP(ge.layer2.execution.stop.price)} — ${ge.layer2.execution.stop.logic}\nKey Levels: ${ge.layer2.execution.targets.map((t: any) => '$' + fmtP(t.price)).join(' › ')}\nR:R ${ge.layer2.execution.rr.expectedR.toFixed(1)} | Setup: ${ge.layer2.setup.setupType.replace(/_/g, ' ')}\nThesis: ${ge.layer2.setup.thesis}`)}`}
                   className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-emerald-400 no-underline hover:bg-emerald-500/20 transition-colors ml-auto"
                 >
                   Log to Journal
@@ -528,7 +536,7 @@ export default function GoldenEggPage() {
                     {ge.layer2.setup.keyLevels.map((lv: any, i: number) => (
                       <div key={i} className="flex items-center justify-between text-xs">
                         <span className="text-slate-400">{lv.label} <span className="text-[10px] text-slate-600">({lv.kind})</span></span>
-                        <span className="font-mono text-white">${lv.price.toFixed(2)}</span>
+                        <span className="font-mono text-white">${fmtP(lv.price)}</span>
                       </div>
                     ))}
                   </div>
@@ -552,7 +560,7 @@ export default function GoldenEggPage() {
               <h3 className="text-xs font-semibold text-emerald-400 mb-3">C — Timing (Time Confluence)</h3>
               {ge.layer3.timeConfluence?.enabled ? (() => {
                 const tc = ge.layer3.timeConfluence;
-                const fmtPrice = (v: number) => v >= 1 ? `$${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `$${v.toPrecision(4)}`;
+                const fmtPrice = (v: number) => `$${fmtP(v)}`;
                 const fmtTime = (iso: string) => {
                   const d = new Date(iso);
                   const h = d.getUTCHours().toString().padStart(2,'0');
@@ -849,19 +857,19 @@ export default function GoldenEggPage() {
                 <div className="text-[10px] text-slate-500 uppercase">Reference Level</div>
                 <div className="text-sm text-white">{ge.layer2.execution.entryTrigger}</div>
                 {ge.layer2.execution.entry.price && (
-                  <div className="text-xs font-mono text-emerald-400">${ge.layer2.execution.entry.price.toFixed(2)} ({ge.layer2.execution.entry.type})</div>
+                  <div className="text-xs font-mono text-emerald-400">${fmtP(ge.layer2.execution.entry.price)} ({ge.layer2.execution.entry.type})</div>
                 )}
               </div>
               <div>
                 <div className="text-[10px] text-slate-500 uppercase">Risk Level</div>
-                <div className="text-sm font-mono text-red-400">${ge.layer2.execution.stop.price.toFixed(2)}</div>
+                <div className="text-sm font-mono text-red-400">${fmtP(ge.layer2.execution.stop.price)}</div>
                 <div className="text-[10px] text-slate-500">{ge.layer2.execution.stop.logic}</div>
               </div>
               <div>
                 <div className="text-[10px] text-slate-500 uppercase">Key Levels</div>
                 {ge.layer2.execution.targets.map((t: any, i: number) => (
                   <div key={i} className="flex items-center gap-2 text-xs">
-                    <span className="text-emerald-400 font-mono">${t.price.toFixed(2)}</span>
+                    <span className="text-emerald-400 font-mono">${fmtP(t.price)}</span>
                     {t.rMultiple && <span className="text-slate-500">{t.rMultiple.toFixed(1)}R</span>}
                     {t.note && <span className="text-slate-600">{t.note}</span>}
                   </div>
@@ -874,7 +882,7 @@ export default function GoldenEggPage() {
                 <span className="text-sm font-bold text-white ml-2">{ge.layer2.execution.rr.expectedR.toFixed(1)}R</span>
               </div>
               <a
-                href={`/tools/journal?prefill=true&symbol=${encodeURIComponent(sym)}&side=${ge.layer1.direction === 'bullish' ? 'LONG' : ge.layer1.direction === 'bearish' ? 'SHORT' : 'LONG'}&entryPrice=${ge.layer2.execution.entry.price?.toFixed(2) || ''}&strategy=Golden+Egg&setup=${encodeURIComponent(`${sym} ${ge.layer1.direction} — Grade ${ge.layer1.grade}, ${ge.layer1.confidence}% confluence`)}&notes=${encodeURIComponent(`Golden Egg analysis notes\nLevel of Interest: $${ge.layer2.execution.entry.price?.toFixed(2) || 'N/A'} (${ge.layer2.execution.entry.type})\nInvalidation: $${ge.layer2.execution.stop.price.toFixed(2)} — ${ge.layer2.execution.stop.logic}\nKey Levels: ${ge.layer2.execution.targets.map((t: any) => '$' + t.price.toFixed(2)).join(' › ')}\nR:R ${ge.layer2.execution.rr.expectedR.toFixed(1)}`)}`}
+                href={`/tools/journal?prefill=true&symbol=${encodeURIComponent(sym)}&side=${ge.layer1.direction === 'bullish' ? 'LONG' : ge.layer1.direction === 'bearish' ? 'SHORT' : 'LONG'}&entryPrice=${ge.layer2.execution.entry.price ? fmtP(ge.layer2.execution.entry.price) : ''}&strategy=Golden+Egg&setup=${encodeURIComponent(`${sym} ${ge.layer1.direction} — Grade ${ge.layer1.grade}, ${ge.layer1.confidence}% confluence`)}&notes=${encodeURIComponent(`Golden Egg analysis notes\nLevel of Interest: $${ge.layer2.execution.entry.price ? fmtP(ge.layer2.execution.entry.price) : 'N/A'} (${ge.layer2.execution.entry.type})\nInvalidation: $${fmtP(ge.layer2.execution.stop.price)} — ${ge.layer2.execution.stop.logic}\nKey Levels: ${ge.layer2.execution.targets.map((t: any) => '$' + fmtP(t.price)).join(' › ')}\nR:R ${ge.layer2.execution.rr.expectedR.toFixed(1)}`)}`}
                 className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-xs hover:bg-emerald-500/30 transition-colors no-underline"
               >
                 Log to Journal
