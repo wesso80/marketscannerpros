@@ -19,6 +19,7 @@ import FavoriteButton from '@/components/FavoriteButton';
 import DisclosureGate from '@/components/DisclosureGate';
 
 function getSkillFromPath(pathname: string): PageSkill {
+  if (pathname.includes('/scalper')) return 'scanner';
   if (pathname.includes('/scanner')) return 'scanner';
   if (pathname.includes('/crypto-dashboard') || pathname.includes('/open-interest')) return 'derivatives';
   if (pathname.includes('/options')) return 'options';
