@@ -16,7 +16,6 @@ import { useUserTier } from '@/lib/useUserTier';
 const SURFACES = [
   { href: '/tools/dashboard',   label: 'Dashboard' },
   { href: '/tools/scanner',     label: 'Scanner' },
-  { href: '/tools/scalper',     label: 'Scalper' },
   { href: '/tools/golden-egg',  label: 'Golden Egg' },
   { href: '/tools/terminal',    label: 'Terminal' },
   { href: '/tools/explorer',    label: 'Explorer' },

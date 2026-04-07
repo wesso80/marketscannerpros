@@ -80,6 +80,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: "/admin/operator-terminal", label: "Operator Terminal", icon: "🖥️" },
     { href: "/admin/terminal/ADA", label: "Symbol Terminal", icon: "🔬" },
     { href: "/admin/live-scanner", label: "Live Scanner", icon: "📡" },
+    { href: "/admin/scalper", label: "Scalper", icon: "⚡" },
     { href: "/admin/risk", label: "Risk Governor", icon: "🛡️" },
     { href: "/admin/diagnostics", label: "Diagnostics", icon: "🩺" },
     { href: "/admin/system", label: "System", icon: "⚙️" },
