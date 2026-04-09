@@ -10,8 +10,8 @@ export default function ContactPage() {
     <main className="min-h-screen bg-[var(--msp-bg)] px-4 py-16 text-slate-200">
       <div className="mx-auto max-w-[800px]">
         <div className="rounded-3xl border border-emerald-500/20 bg-[var(--msp-card)] p-8 shadow-2xl md:p-12">
-          <h1 className="mb-2 text-4xl font-bold text-emerald-400">Contact Us</h1>
-          <p className="mb-8 text-lg text-slate-400">
+          <h1 className="mb-2 text-3xl md:text-4xl font-bold text-emerald-400">Contact Us</h1>
+          <p className="mb-8 text-base md:text-lg text-slate-400">
             Questions, feedback, or privacy requests? We&apos;d love to hear from you.
           </p>
 

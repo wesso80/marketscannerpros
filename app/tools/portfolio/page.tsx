@@ -1998,14 +1998,14 @@ export function PortfolioContent() {
                     return (
                       <div className="relative h-56 w-full">
                         {/* Y-axis labels */}
-                        <div className="absolute left-0 top-0 bottom-6 w-14 flex flex-col justify-between text-right pr-1">
+                        <div className="absolute left-0 top-0 bottom-6 w-10 sm:w-14 flex flex-col justify-between text-right pr-1">
                           {Array.from({ length: gridLines }).map((_, gi) => {
                             const v = max - (range / (gridLines - 1)) * gi;
                             return <span key={gi} className="text-[11px] leading-none text-slate-400 font-medium">{fmtVal(v)}</span>;
                           })}
                         </div>
                         {/* Chart area */}
-                        <div className="ml-14 mr-1 h-full pb-6 relative">
+                        <div className="ml-10 sm:ml-14 mr-1 h-full pb-6 relative">
                           <svg width="100%" height="100%" viewBox="0 0 400 200" preserveAspectRatio="none" className="overflow-visible">
                             <defs>
                               <linearGradient id="eqGradGreen" x1="0" y1="0" x2="0" y2="1">
@@ -2059,7 +2059,7 @@ export function PortfolioContent() {
                           )}
                         </div>
                         {/* X-axis labels */}
-                        <div className="ml-14 mr-1 flex justify-between -mt-1">
+                        <div className="ml-10 sm:ml-14 mr-1 flex justify-between -mt-1">
                           {pts.filter((_, i) => i % Math.max(1, Math.floor(pts.length / 5)) === 0 || i === pts.length - 1).map((p, i) => (
                             <span key={i} className="text-[11px] text-slate-400 font-medium">{new Date(p.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                           ))}
@@ -2486,13 +2486,13 @@ export function PortfolioContent() {
                   const gridLines = 3;
                   return (
                     <div className="relative h-32 w-full">
-                      <div className="absolute left-0 top-0 bottom-5 w-14 flex flex-col justify-between text-right pr-1">
+                      <div className="absolute left-0 top-0 bottom-5 w-10 sm:w-14 flex flex-col justify-between text-right pr-1">
                         {Array.from({ length: gridLines }).map((_, gi) => {
                           const v = max - (range / (gridLines - 1)) * gi;
                           return <span key={gi} className="text-[11px] leading-none text-slate-400 font-medium">{fmtVal(v)}</span>;
                         })}
                       </div>
-                      <div className="ml-14 mr-1 h-full pb-5">
+                      <div className="ml-10 sm:ml-14 mr-1 h-full pb-5">
                         <svg width="100%" height="100%" viewBox="0 0 400 120" preserveAspectRatio="none" className="overflow-visible">
                           <defs>
                             <linearGradient id="clGrad" x1="0" y1="0" x2="0" y2="1">
@@ -2525,7 +2525,7 @@ export function PortfolioContent() {
                           })()}
                         </svg>
                       </div>
-                      <div className="ml-14 mr-1 flex justify-between -mt-0.5">
+                      <div className="ml-10 sm:ml-14 mr-1 flex justify-between -mt-0.5">
                         {pts.filter((_, i) => i % Math.max(1, Math.floor(pts.length / 5)) === 0 || i === pts.length - 1).map((p, i) => (
                           <span key={i} className="text-[11px] text-slate-400 font-medium">{new Date(p.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                         ))}

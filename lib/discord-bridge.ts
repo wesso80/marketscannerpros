@@ -213,8 +213,8 @@ export function buildScannerEmbed(picks: Array<{
     name: `${i + 1}. ${p.symbol}`,
     value: [
       `**${p.side.toUpperCase()}** • Score: ${p.score}/100`,
-      p.rsi != null ? `RSI ${p.rsi.toFixed(1)}` : null,
-      p.adx != null ? `ADX ${p.adx.toFixed(1)}` : null,
+      p.rsi != null ? `RSI ${Number(p.rsi).toFixed(1)}` : null,
+      p.adx != null ? `ADX ${Number(p.adx).toFixed(1)}` : null,
       p.squeeze ? '🔥 Squeeze' : null,
     ].filter(Boolean).join(' | '),
     inline: true,

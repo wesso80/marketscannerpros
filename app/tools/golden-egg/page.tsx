@@ -648,7 +648,7 @@ export default function GoldenEggPage() {
                       <div>
                         <div className="text-[10px] text-slate-500 uppercase mb-1.5">Close Cluster Timeline — Next 24h</div>
                         <div className="overflow-x-auto">
-                        <div className="space-y-2" style={{ minWidth: 340 }}>
+                        <div className="space-y-2" style={{ minWidth: 'min(100%, 340px)' }}>
                           {(['monthly', 'weekly', 'daily', 'intraday'] as const).map(cat => {
                             const rows = groups[cat];
                             if (!rows || rows.length === 0) return null;

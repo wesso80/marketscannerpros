@@ -17,13 +17,13 @@ function permTone(p: string): "green" | "yellow" | "red" {
 
 function HitRow({ hit }: { hit: ScannerHit }) {
   return (
-    <div className="grid grid-cols-[80px_60px_1fr_80px_70px_60px] items-center gap-2 border-b border-white/5 py-2 text-sm">
+    <div className="grid grid-cols-[1fr_60px_1fr] md:grid-cols-[80px_60px_1fr_80px_70px_60px] items-center gap-2 border-b border-white/5 py-2 text-sm">
       <span className="font-semibold text-white/90">{hit.symbol}</span>
       <StatusPill label={hit.bias} tone={hit.bias === "LONG" ? "green" : hit.bias === "SHORT" ? "red" : "neutral"} />
       <span className="truncate text-white/50 text-xs">{hit.playbook ?? "—"}</span>
-      <StatusPill label={hit.permission} tone={permTone(hit.permission)} />
-      <span className="text-right font-mono text-white/70">{hit.confidence.toFixed(1)}%</span>
-      <span className="text-right font-mono text-white/50">{hit.symbolTrust}%</span>
+      <span className="hidden md:block"><StatusPill label={hit.permission} tone={permTone(hit.permission)} /></span>
+      <span className="hidden md:block text-right font-mono text-white/70">{hit.confidence.toFixed(1)}%</span>
+      <span className="hidden md:block text-right font-mono text-white/50">{hit.symbolTrust}%</span>
     </div>
   );
 }

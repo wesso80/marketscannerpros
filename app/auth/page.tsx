@@ -162,9 +162,9 @@ function AuthContent() {
         </div>
       ) : (
       <>
-      <div className="pointer-events-none fixed inset-0">
-        <div className="absolute left-1/2 top-24 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-emerald-500/10 blur-3xl" />
-        <div className="absolute left-1/2 top-48 h-[760px] w-[760px] -translate-x-1/2 rounded-full bg-cyan-500/5 blur-3xl" />
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute left-1/2 top-24 h-[300px] w-[300px] md:h-[520px] md:w-[520px] -translate-x-1/2 rounded-full bg-emerald-500/10 blur-3xl" />
+        <div className="absolute left-1/2 top-48 h-[400px] w-[400px] md:h-[760px] md:w-[760px] -translate-x-1/2 rounded-full bg-cyan-500/5 blur-3xl" />
       </div>
 
       <div className="relative mx-auto flex min-h-screen max-w-7xl items-center justify-center px-4 py-14">

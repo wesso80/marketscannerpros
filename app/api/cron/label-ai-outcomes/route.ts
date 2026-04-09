@@ -9,30 +9,48 @@ export const dynamic = 'force-dynamic';
 const AV_KEY = () => process.env.ALPHA_VANTAGE_API_KEY || '';
 
 /**
- * Fetch current price for a crypto symbol via AV CURRENCY_EXCHANGE_RATE (1 call each).
+ * Fetch current prices for symbols via Alpha Vantage.
+ * Uses GLOBAL_QUOTE for equities, CURRENCY_EXCHANGE_RATE for crypto.
  * Falls back to the latest signal's price_at_signal if AV fails.
  */
-async function fetchCurrentPrices(symbols: string[]): Promise<Record<string, number>> {
+async function fetchCurrentPrices(
+  symbols: string[],
+  assetTypeMap: Record<string, string>,
+): Promise<Record<string, number>> {
   const priceMap: Record<string, number> = {};
 
-  // Batch: fetch from Alpha Vantage (lightweight exchange-rate endpoint, 1 per symbol)
   const key = AV_KEY();
   if (key) {
-    // Process serially to avoid rate limit spikes (max ~10 symbols per cron run is fine)
-    for (const sym of symbols) {
-      try {
-        const url = `https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=${encodeURIComponent(sym)}&to_currency=USD&apikey=${key}`;
-        const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
-        if (res.ok) {
-          const json = await res.json();
-          const rate = json?.['Realtime Currency Exchange Rate']?.['5. Exchange Rate'];
-          if (rate) {
-            const price = parseFloat(rate);
-            if (price > 0) priceMap[sym] = price;
+    // Parallel batches of 5 to stay well within 600 RPM
+    const batchSize = 5;
+    for (let i = 0; i < symbols.length; i += batchSize) {
+      const batch = symbols.slice(i, i + batchSize);
+      const results = await Promise.allSettled(
+        batch.map(async (sym) => {
+          const isCrypto = (assetTypeMap[sym] || 'equity') === 'crypto';
+          let url: string;
+          if (isCrypto) {
+            url = `https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=${encodeURIComponent(sym)}&to_currency=USD&apikey=${key}`;
+          } else {
+            url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(sym)}&apikey=${key}`;
           }
-        }
-      } catch {
-        // AV call failed for this symbol, will try fallback
+          const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+          if (!res.ok) return;
+          const json = await res.json();
+          let price: number | undefined;
+          if (isCrypto) {
+            const rate = json?.['Realtime Currency Exchange Rate']?.['5. Exchange Rate'];
+            if (rate) price = parseFloat(rate);
+          } else {
+            const quote = json?.['Global Quote']?.['05. price'];
+            if (quote) price = parseFloat(quote);
+          }
+          if (price && price > 0) priceMap[sym] = price;
+        }),
+      );
+      // tiny delay between batches to be kind to AV
+      if (i + batchSize < symbols.length) {
+        await new Promise((r) => setTimeout(r, 200));
       }
     }
   }
@@ -77,22 +95,29 @@ export async function POST(req: NextRequest) {
   try {
     // Get pending signals older than 4 hours (enough time for price to move)
     const pending = await q(`
-      SELECT id, workspace_id, symbol, trade_bias, price_at_signal,
+      SELECT id, workspace_id, symbol, asset_type, trade_bias, price_at_signal,
              confidence, signal_at
       FROM ai_signal_log
       WHERE outcome = 'pending'
         AND signal_at < NOW() - INTERVAL '4 hours'
       ORDER BY signal_at ASC
-      LIMIT 500
+      LIMIT 200
     `);
 
     if (!pending.length) {
       return NextResponse.json({ success: true, labeled: 0, message: 'No pending signals to label' });
     }
 
-    // Collect unique symbols and fetch current prices
+    // Collect unique symbols and build asset type map for correct AV endpoint
     const symbols = [...new Set(pending.map((r: any) => r.symbol).filter(Boolean))];
-    const priceMap = await fetchCurrentPrices(symbols);
+    const assetTypeMap: Record<string, string> = {};
+    for (const r of pending) {
+      const s = r as any;
+      if (s.symbol && !assetTypeMap[s.symbol]) {
+        assetTypeMap[s.symbol] = s.asset_type || 'equity';
+      }
+    }
+    const priceMap = await fetchCurrentPrices(symbols, assetTypeMap);
 
     let labeled = 0;
     let correct = 0;
@@ -151,6 +176,8 @@ export async function POST(req: NextRequest) {
       }
 
       const pctMove = ((currentPrice - entryPrice) / entryPrice) * 100;
+      // Clamp to fit NUMERIC(10,4) column — prevents DB overflow on extreme micro-cap moves
+      const clampedPct = Math.max(-999999, Math.min(999999, Math.round(pctMove * 10000) / 10000));
       const direction = (s.trade_bias || 'LONG').toUpperCase();
 
       // Thresholds: >1% in right direction = correct, >1% wrong = wrong, else neutral
@@ -172,7 +199,7 @@ export async function POST(req: NextRequest) {
         `UPDATE ai_signal_log
          SET outcome = $1, price_after_24h = $2, pct_move_24h = $3, outcome_measured_at = NOW()
          WHERE id = $4`,
-        [outcome, currentPrice, Math.round(pctMove * 10000) / 10000, s.id],
+        [outcome, currentPrice, clampedPct, s.id],
       );
       labeled++;
     }

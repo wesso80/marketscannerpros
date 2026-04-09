@@ -37,6 +37,11 @@ async function fetchEquityMovers(): Promise<{
   }
 }
 
+/* Valid equity ticker: 1-6 uppercase letters only (no ^, digits-only, non-ASCII) */
+const VALID_EQ_TICKER = /^[A-Z]{1,6}$/;
+/* Valid crypto symbol: 1-12 uppercase alphanumeric (no non-ASCII like 马币) */
+const VALID_CRYPTO_TICKER = /^[A-Z0-9]{1,12}$/;
+
 function normalizeAVMover(item: any) {
   return {
     ticker: String(item.ticker || '').toUpperCase(),
@@ -90,11 +95,12 @@ export async function GET(request: NextRequest) {
     });
 
     // Merge equity + crypto gainers/losers, equity first
-    const eqGainers = equityMovers.gainers.slice(0, 10).map(normalizeAVMover);
-    const eqLosers = equityMovers.losers.slice(0, 10).map(normalizeAVMover);
-    const eqActive = equityMovers.active.slice(0, 10).map(normalizeAVMover);
-    const cryptoGainers = (topMovers?.top_gainers || []).slice(0, 10).map(normalizeCryptoMover);
-    const cryptoLosers = (topMovers?.top_losers || []).slice(0, 10).map(normalizeCryptoMover);
+    // Filter out garbage tickers (non-ASCII, special chars like ^, warrants like +)
+    const eqGainers = equityMovers.gainers.map(normalizeAVMover).filter(m => VALID_EQ_TICKER.test(m.ticker)).slice(0, 10);
+    const eqLosers = equityMovers.losers.map(normalizeAVMover).filter(m => VALID_EQ_TICKER.test(m.ticker)).slice(0, 10);
+    const eqActive = equityMovers.active.map(normalizeAVMover).filter(m => VALID_EQ_TICKER.test(m.ticker)).slice(0, 10);
+    const cryptoGainers = (topMovers?.top_gainers || []).map(normalizeCryptoMover).filter(m => VALID_CRYPTO_TICKER.test(m.ticker)).slice(0, 10);
+    const cryptoLosers = (topMovers?.top_losers || []).map(normalizeCryptoMover).filter(m => VALID_CRYPTO_TICKER.test(m.ticker)).slice(0, 10);
 
     // If both sources failed, try returning cached data
     if (eqGainers.length === 0 && cryptoGainers.length === 0) {

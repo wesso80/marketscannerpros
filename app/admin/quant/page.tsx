@@ -218,7 +218,7 @@ export default function QuantTerminal() {
               <div>Confidence: <span className="text-white">{result.regime.confidence}%</span> ({result.regime.confidenceBand})</div>
               <div>Agreement: <span className="text-white">{result.regime.agreement}/4</span> sources</div>
             </div>
-            <div className="ml-auto grid grid-cols-4 gap-3 text-xs font-mono">
+            <div className="ml-auto grid grid-cols-2 md:grid-cols-4 gap-3 text-xs font-mono">
               {Object.entries(result.regime.sources).map(([key, src]) => (
                 <div key={key} className="text-center">
                   <div className="text-gray-600 uppercase">{key}</div>

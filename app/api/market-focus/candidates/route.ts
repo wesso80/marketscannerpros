@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getOHLC, resolveSymbolToId, COINGECKO_ID_MAP } from "@/lib/coingecko";
 import { getSessionFromCookie } from '@/lib/auth';
+import { verifyCronAuth } from '@/lib/adminAuth';
 import { avTakeToken } from '@/lib/avRateGovernor';
 
 export const runtime = "nodejs";
@@ -381,9 +382,13 @@ async function analyzeAsset(
 
 export async function GET(req: NextRequest) {
   // Auth guard: AV license requires authenticated users only
-  const session = await getSessionFromCookie();
-  if (!session?.workspaceId) {
-    return NextResponse.json({ error: 'Please log in to access market data' }, { status: 401 });
+  // Also allow internal cron calls via x-cron-secret
+  const isCron = verifyCronAuth(req);
+  if (!isCron) {
+    const session = await getSessionFromCookie();
+    if (!session?.workspaceId) {
+      return NextResponse.json({ error: 'Please log in to access market data' }, { status: 401 });
+    }
   }
 
   const { searchParams } = new URL(req.url);

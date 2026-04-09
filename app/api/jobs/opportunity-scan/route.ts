@@ -311,8 +311,8 @@ async function runOpportunityScan(req: NextRequest) {
             symbol: p.symbol,
             score: p.score ?? 0,
             side: p.direction ?? 'long',
-            rsi: ind?.rsi14 ?? undefined,
-            adx: ind?.adx14 ?? undefined,
+            rsi: ind?.rsi14 != null ? Number(ind.rsi14) : undefined,
+            adx: ind?.adx14 != null ? Number(ind.adx14) : undefined,
             squeeze: ind?.in_squeeze === true,
           };
         })
@@ -497,8 +497,8 @@ function classifySetup(
   pick: DailyPick,
   ind: IndicatorRow | undefined
 ): { strategy: string; setup: string } {
-  const rsi = ind?.rsi14;
-  const adx = ind?.adx14;
+  const rsi = ind?.rsi14 != null ? Number(ind.rsi14) : null;
+  const adx = ind?.adx14 != null ? Number(ind.adx14) : null;
   const squeeze = ind?.in_squeeze;
 
   // Squeeze breakout
@@ -600,8 +600,8 @@ function buildReasoning(
 
   parts.push(`Scanner score ${pick.score}/100 (${pick.direction}).`);
 
-  if (ind?.rsi14 != null) parts.push(`RSI ${ind.rsi14.toFixed(0)}.`);
-  if (ind?.adx14 != null) parts.push(`ADX ${ind.adx14.toFixed(0)}.`);
+  if (ind?.rsi14 != null) parts.push(`RSI ${Number(ind.rsi14).toFixed(0)}.`);
+  if (ind?.adx14 != null) parts.push(`ADX ${Number(ind.adx14).toFixed(0)}.`);
   if (ind?.in_squeeze) parts.push('Bollinger/Keltner squeeze active.');
 
   parts.push(`Strategy: ${strategy}.`);

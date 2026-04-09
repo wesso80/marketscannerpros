@@ -37,8 +37,13 @@ async function fetchCandidates(assetClass: Candidate["assetClass"]): Promise<Can
   
   const url = `${baseUrl}/api/market-focus/candidates?assetClass=${assetClass}`;
 
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (process.env.CRON_SECRET) {
+    headers["x-cron-secret"] = process.env.CRON_SECRET;
+  }
+
   const res = await fetch(url, {
-    headers: { "Content-Type": "application/json" },
+    headers,
     cache: "no-store",
   });
 
