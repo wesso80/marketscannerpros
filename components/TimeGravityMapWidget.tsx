@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { computeTimeGravityMap, type TimeGravityMap, type GravityZone, type GravityPoint, type TargetStatus } from '@/lib/time/timeGravityMap';
+import { computeTimeGravityMap, type TimeGravityMap, type GravityZone, type GravityPoint, type TargetStatus, type CloseConfluence, type CoverageDiagnostics } from '@/lib/time/timeGravityMap';
 import type { MidpointRecord } from '@/lib/time/midpointDebt';
 import type { MomentumOverrideState, ExpansionTarget } from '@/lib/time/momentumOverride';
 
@@ -313,7 +313,7 @@ function MidpointLadder({ points }: { points: GravityPoint[] }) {
     return acc;
   }, {} as Record<string, GravityPoint[]>);
   
-  const timeframes = ['5Y', '1Y', '3M', '1M', '1W', '1D', '4H', '1H'];
+  const timeframes = ['5Y', '1Y', '3M', '1M', '1W', '1D', '8H', '6H', '4H', '2H', '1H', '30m', '15m'];
   
   return (
     <div className="space-y-1">
@@ -395,7 +395,7 @@ function DecompressionTimers({ points }: { points: GravityPoint[] }) {
     return acc;
   }, {} as Record<string, GravityPoint>);
   
-  const timeframes = ['1H', '4H', '1D', '1W', '1M'];
+  const timeframes = ['15m', '30m', '1H', '2H', '4H', '6H', '8H', '1D', '1W', '1M'];
   
   return (
     <div className="space-y-1">
@@ -534,6 +534,111 @@ function AIAnalystCommentary({ tgm }: { tgm: TimeGravityMap }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// TRUTH DIAGNOSTICS COMPONENTS
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Coverage Bar — shows which TFs have data vs expected
+ */
+function CoverageBar({ coverage }: { coverage: CoverageDiagnostics }) {
+  const pct = coverage.percent;
+  const barColor = pct >= 80 ? 'bg-green-500' : pct >= 50 ? 'bg-yellow-500' : 'bg-red-500';
+  const textColor = pct >= 80 ? 'text-green-400' : pct >= 50 ? 'text-yellow-400' : 'text-red-400';
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-xs">
+        <span className="text-gray-400">DATA COVERAGE</span>
+        <span className={`font-mono ${textColor}`}>{pct}%</span>
+      </div>
+      <div className="bg-gray-900/50 h-2 rounded-full overflow-hidden">
+        <div className={`h-full ${barColor} transition-all duration-300`} style={{ width: `${pct}%` }} />
+      </div>
+      <div className="flex flex-wrap gap-1 mt-1">
+        {coverage.expected.map(tf => {
+          const has = coverage.available.includes(tf);
+          return (
+            <span
+              key={tf}
+              className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
+                has ? 'bg-green-950/40 text-green-400 border border-green-800' : 'bg-red-950/40 text-red-400 border border-red-800'
+              }`}
+            >
+              {tf}
+            </span>
+          );
+        })}
+      </div>
+      {coverage.missing.length > 0 && (
+        <div className="text-[10px] text-amber-500 mt-0.5">
+          ⚠️ Missing: {coverage.missing.join(', ')}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Close Confluence Panel — shows temporal stacking of TF closes
+ */
+function CloseConfluencePanel({ confluence }: { confluence: CloseConfluence }) {
+  if (confluence.stacks.length === 0 && confluence.todayCloses.length === 0) {
+    return (
+      <div className="space-y-1">
+        <div className="text-xs text-gray-400">CLOSE CONFLUENCE</div>
+        <div className="bg-black/40 border border-gray-800 rounded p-2 text-[10px] text-gray-600">
+          No close stacks detected
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      <div className="text-xs text-gray-400">CLOSE CONFLUENCE</div>
+      <div className="bg-black/40 border border-gray-800 rounded p-2 space-y-2">
+        {/* Today closes summary */}
+        {confluence.todayCloses.length > 0 && (
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-cyan-400">📅</span>
+            <span className="text-gray-300">
+              {confluence.todayCloses.length} TF{confluence.todayCloses.length > 1 ? 's' : ''} close today
+            </span>
+            {confluence.highestOrderClose && (
+              <span className="text-cyan-400 font-mono text-[10px]">
+                (highest: {confluence.highestOrderClose})
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Active stacks */}
+        {confluence.stacks.map((stack, i) => (
+          <div key={i} className="border-t border-gray-800 pt-1.5">
+            <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-1.5">
+                <span className="text-orange-400">⚡</span>
+                <span className="text-gray-300 font-mono">
+                  {stack.entries.map(e => e.timeframe).join(' + ')}
+                </span>
+              </div>
+              <span className={`font-mono text-[10px] ${stack.factor >= 1.5 ? 'text-orange-400' : 'text-gray-400'}`}>
+                {stack.factor.toFixed(2)}x
+              </span>
+            </div>
+            <div className="flex items-center gap-2 mt-0.5 text-[10px] text-gray-500">
+              <span>Window: {stack.windowMinutes.toFixed(0)}m</span>
+              <span>Quality: {(stack.quality * 100).toFixed(0)}%</span>
+              <span>Σw: {stack.totalWeight.toFixed(1)}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // MAIN WIDGET
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -561,6 +666,7 @@ export default function TimeGravityMapWidget({
     rateLimited: boolean;
     error?: string;
   } | null>(null);
+  const [coverage, setCoverage] = useState<CoverageDiagnostics | null>(null);
   
   // Fetch TGM data from API
   const fetchTGM = async (forceGenerate = false) => {
@@ -606,6 +712,7 @@ export default function TimeGravityMapWidget({
         setTGM(data.data);
         setResolvedPrice(data.data.currentPrice || currentPrice || 0);
         setLastUpdate(new Date());
+        if (data.coverage) setCoverage(data.coverage);
         
         // If we got TGM data but zero midpoints, don't treat as success
         if (apiMidpointCount === 0 && !data.generationAttempted) {
@@ -874,6 +981,16 @@ export default function TimeGravityMapWidget({
           <DecompressionTimers points={tgm.allPoints} />
           <MidpointDebtTracker tgm={tgm} />
         </div>
+      </div>
+
+      {/* Truth Diagnostics Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+        {tgm.closeConfluence && (
+          <CloseConfluencePanel confluence={tgm.closeConfluence} />
+        )}
+        {coverage && (
+          <CoverageBar coverage={coverage} />
+        )}
       </div>
       
       {/* Footer */}

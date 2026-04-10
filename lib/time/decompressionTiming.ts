@@ -49,6 +49,10 @@ interface DecompressionWindow {
  * Complete decompression timing map — all before candle close
  */
 export const DECOMPRESSION_WINDOWS: Record<string, DecompressionWindow> = {
+  // Sub-hour — decompression in final minutes before close
+  '15m': { timeframe: '15m', windowStart: 3, windowEnd: 2 },     // 2–3 min before close
+  '30m': { timeframe: '30m', windowStart: 5, windowEnd: 4 },     // 4–5 min before close
+
   // Intraday — decompression in final minutes before close
   '1H': { timeframe: '1H', windowStart: 9, windowEnd: 7 },       // 7–9 min before close
   '2H': { timeframe: '2H', windowStart: 11, windowEnd: 8 },      // 8–11 min before close
@@ -67,6 +71,7 @@ export const DECOMPRESSION_WINDOWS: Record<string, DecompressionWindow> = {
   '2W': { timeframe: '2W', windowStart: 780, windowEnd: 624 },     // ~13 hrs before close
   '1M': { timeframe: '1M', windowStart: 1560, windowEnd: 1248 },   // ~26 hrs before close
   '2M': { timeframe: '2M', windowStart: 3120, windowEnd: 2496 },   // ~52 hrs before close
+  '3M': { timeframe: '3M', windowStart: 4680, windowEnd: 3744 },   // ~3.25 days before close
   '6M': { timeframe: '6M', windowStart: 9360, windowEnd: 7488 },   // ~6.5 days before close
   '1Y': { timeframe: '1Y', windowStart: 18720, windowEnd: 14976 }, // ~13 days before close
   '2Y': { timeframe: '2Y', windowStart: 37440, windowEnd: 29952 }, // ~26 days before close
@@ -83,6 +88,8 @@ const MS_DAY = 86_400_000;
 
 /** Duration lookup for simple epoch-aligned timeframes */
 const TF_DURATION_MS: Record<string, number> = {
+  '15m': MS_HOUR / 4,
+  '30m': MS_HOUR / 2,
   '1H': MS_HOUR,
   '2H': MS_HOUR * 2,
   '3H': MS_HOUR * 3,
@@ -143,6 +150,13 @@ export function getCurrentCandleBoundaries(
     const pair = Math.floor(d.getUTCMonth() / 2) * 2;
     const open = new Date(Date.UTC(d.getUTCFullYear(), pair, 1));
     const close = new Date(Date.UTC(d.getUTCFullYear(), pair + 2, 1));
+    return { open, close };
+  }
+  if (timeframe === '3M') {
+    const d = new Date(currentTime);
+    const quarter = Math.floor(d.getUTCMonth() / 3) * 3;
+    const open = new Date(Date.UTC(d.getUTCFullYear(), quarter, 1));
+    const close = new Date(Date.UTC(d.getUTCFullYear(), quarter + 3, 1));
     return { open, close };
   }
   if (timeframe === '6M') {

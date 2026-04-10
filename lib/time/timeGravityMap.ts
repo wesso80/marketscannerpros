@@ -56,8 +56,10 @@ export interface GravityPoint {
   decompressionMultiplier: number; // 1x-5x boost when window active
   isDebt: boolean;               // Unresolved midpoint = stronger pull
   debtMultiplier: number;        // 2x boost for debt
+  closeStackFactor: number;      // 1.0-2.5 temporal close confluence
+  todayCloseFactor: number;      // 1.0-1.25 today close proximity
   rawGravity: number;            // weight / distance
-  adjustedGravity: number;       // rawGravity × decompression × debt
+  adjustedGravity: number;       // rawGravity × decompression × debt × closeStack × todayClose
   visualStrength: number;        // 0-100 for heatmap
   label: string;
 }
@@ -108,12 +110,53 @@ export interface TimeGravityMap {
   summary: string;
   alert: string | null;
 
+  /** Close confluence: temporal stacking of TF closes */
+  closeConfluence: CloseConfluence | null;
+
   /** Stats from pre-computation tagging pass */
   taggingStats: {
     taggedThisCycle: number;      // Midpoints tagged in this computation
     overshotTagged: number;       // Auto-tagged because price blew past
     remainingUntagged: number;    // Still active
   };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CLOSE CONFLUENCE TYPES
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface CloseStackEntry {
+  timeframe: string;
+  closeTime: Date;
+  minutesUntilClose: number;
+  decompressionStatus: DecompressionStatus;
+  weight: number;
+}
+
+export interface CloseStack {
+  entries: CloseStackEntry[];
+  windowMinutes: number;         // Temporal width of the stack
+  totalWeight: number;           // Sum of TF weights in stack
+  highestOrderTf: string;        // Highest-weight TF in stack
+  quality: number;               // 0-1 quality score
+  factor: number;                // Final multiplier (1.0-2.5)
+}
+
+export interface CloseConfluence {
+  stacks: CloseStack[];
+  todayCloses: string[];
+  highestOrderClose: string | null;
+  activeWindowCount: number;
+  totalStackedTfs: number;
+}
+
+export interface CoverageDiagnostics {
+  expected: string[];
+  available: string[];
+  missing: string[];
+  fromDb: number;
+  onDemandGenerated: string[];
+  percent: number;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -145,6 +188,187 @@ function getDecompressionMultiplier(status: DecompressionStatus): number {
  */
 function getDebtMultiplier(isDebt: boolean): number {
   return isDebt ? 2.0 : 1.0;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CLOSE CONFLUENCE ENGINE
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Get close-stack entry for a single timeframe.
+ */
+function getCloseStackEntry(
+  timeframe: string,
+  currentTime: Date
+): CloseStackEntry | null {
+  const { open, close } = getCurrentCandleBoundaries(timeframe, currentTime);
+  const minutesUntilClose = (close.getTime() - currentTime.getTime()) / 60_000;
+  if (minutesUntilClose < 0) return null;
+
+  const decomp = calculateDecompressionState(timeframe, open, close, currentTime);
+  const weight = TF_WEIGHTS[timeframe] || 1;
+
+  return {
+    timeframe,
+    closeTime: close,
+    minutesUntilClose,
+    decompressionStatus: decomp.status,
+    weight,
+  };
+}
+
+/**
+ * Finalize a close stack from a group of entries.
+ * Quality-aware: penalizes stacks of only low-weight TFs, rewards diversity.
+ * Factor uses log-diminishing returns, capped at 2.5.
+ */
+function finishCloseStack(entries: CloseStackEntry[]): CloseStack {
+  const totalWeight = entries.reduce((s, e) => s + e.weight, 0);
+  const highestOrderTf = entries.reduce(
+    (best, e) => (e.weight > best.weight ? e : best),
+    entries[0]
+  ).timeframe;
+
+  const maxWeight = Math.max(...entries.map(e => e.weight));
+  const minWeight = Math.min(...entries.map(e => e.weight));
+  const diversity = maxWeight > 0 ? (maxWeight - minWeight) / maxWeight : 0;
+
+  const activeCount = entries.filter(
+    e => e.decompressionStatus === 'ACTIVE' || e.decompressionStatus === 'PRE_WINDOW'
+  ).length;
+  const activeRatio = activeCount / entries.length;
+
+  // Quality = blend of TF diversity, active ratio, and count depth
+  const quality = Math.min(
+    1,
+    diversity * 0.3 + activeRatio * 0.5 + Math.min(entries.length / 5, 1) * 0.2
+  );
+
+  // Log-diminishing factor, capped at 2.5
+  const factor = Math.min(2.5, 1 + Math.log(1 + totalWeight * quality) * 0.2);
+
+  const closeTimesMs = entries.map(e => e.closeTime.getTime());
+  const windowMinutes =
+    (Math.max(...closeTimesMs) - Math.min(...closeTimesMs)) / 60_000;
+
+  return { entries, windowMinutes, totalWeight, highestOrderTf, quality, factor };
+}
+
+/**
+ * Build close stacks: groups of TFs closing within a proximity window.
+ * Intraday TFs (< 8 hrs to close): 30 min proximity.
+ * Daily+ TFs: 4 hr proximity.
+ */
+function buildCloseStacks(
+  timeframes: string[],
+  currentTime: Date = new Date()
+): CloseStack[] {
+  const entries: CloseStackEntry[] = [];
+  for (const tf of timeframes) {
+    const entry = getCloseStackEntry(tf, currentTime);
+    if (entry) entries.push(entry);
+  }
+
+  entries.sort((a, b) => a.minutesUntilClose - b.minutesUntilClose);
+
+  const stacks: CloseStack[] = [];
+  let cur: CloseStackEntry[] = [];
+
+  for (const entry of entries) {
+    if (cur.length === 0) {
+      cur.push(entry);
+      continue;
+    }
+    const last = cur[cur.length - 1];
+    const gap = Math.abs(entry.minutesUntilClose - last.minutesUntilClose);
+    const proximity = entry.minutesUntilClose < 480 ? 30 : 240;
+
+    if (gap <= proximity) {
+      cur.push(entry);
+    } else {
+      if (cur.length >= 2) stacks.push(finishCloseStack(cur));
+      cur = [entry];
+    }
+  }
+  if (cur.length >= 2) stacks.push(finishCloseStack(cur));
+
+  return stacks.sort((a, b) => b.factor - a.factor);
+}
+
+/**
+ * Compute full close confluence for a set of timeframes.
+ */
+export function computeCloseConfluence(
+  timeframes: string[],
+  currentTime: Date = new Date()
+): CloseConfluence {
+  const stacks = buildCloseStacks(timeframes, currentTime);
+
+  const todayCloses: string[] = [];
+  let highestOrderClose: string | null = null;
+  let highestWeight = 0;
+
+  for (const tf of timeframes) {
+    const entry = getCloseStackEntry(tf, currentTime);
+    if (entry && entry.minutesUntilClose <= 1440) {
+      todayCloses.push(tf);
+      if (entry.weight > highestWeight) {
+        highestWeight = entry.weight;
+        highestOrderClose = tf;
+      }
+    }
+  }
+
+  return {
+    stacks,
+    todayCloses,
+    highestOrderClose,
+    activeWindowCount: stacks.filter(s =>
+      s.entries.some(e => e.decompressionStatus === 'ACTIVE')
+    ).length,
+    totalStackedTfs: stacks.reduce((s, st) => s + st.entries.length, 0),
+  };
+}
+
+/**
+ * Get the close-stack factor for a specific TF.
+ * Returns the factor of the stack this TF belongs to, or 1.0.
+ */
+function getCloseStackFactorForTf(
+  timeframe: string,
+  closeConfluence: CloseConfluence
+): number {
+  for (const stack of closeConfluence.stacks) {
+    if (stack.entries.some(e => e.timeframe === timeframe)) {
+      return stack.factor;
+    }
+  }
+  return 1.0;
+}
+
+/**
+ * Today-close contextual boost: mild boost for TFs closing today
+ * that are NOT yet in their decompression window (avoids double-boost).
+ *
+ * Returns 1.0–1.25 graduated by proximity to close.
+ */
+function getTodayCloseFactor(
+  decompressionStatus: DecompressionStatus,
+  minutesUntilClose: number
+): number {
+  // Already in/near window - decompression multiplier already handles this
+  if (decompressionStatus === 'ACTIVE' || decompressionStatus === 'PRE_WINDOW') return 1.0;
+  // Past or tagged - no boost
+  if (decompressionStatus === 'POST_WINDOW' || decompressionStatus === 'TAGGED') return 1.0;
+  // Only boost if closing within 24 hours
+  if (minutesUntilClose > 1440) return 1.0;
+
+  const hoursAway = minutesUntilClose / 60;
+  if (hoursAway <= 1) return 1.25;
+  if (hoursAway <= 3) return 1.20;
+  if (hoursAway <= 6) return 1.15;
+  if (hoursAway <= 12) return 1.10;
+  return 1.05;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -217,6 +441,8 @@ export function calculateGravityPoint(
     decompressionMultiplier,
     isDebt: !midpoint.tagged,
     debtMultiplier,
+    closeStackFactor: 1.0,   // Set by engine post-processing
+    todayCloseFactor: 1.0,   // Set by engine post-processing
     rawGravity,
     adjustedGravity,
     visualStrength,
@@ -405,6 +631,23 @@ export function computeTimeGravityMap(
     return calculateGravityPoint(midpoint, decompressionState, currentPrice);
   });
 
+  // ─── 1.5. CLOSE CONFLUENCE + TODAY-CLOSE BOOST ─────────────────────
+  // Compute close stacking and today-close factors, then apply to points.
+  const activeTimeframes = [...new Set(activeMidpoints.map(m => m.timeframe))];
+  const closeConfluence = computeCloseConfluence(activeTimeframes, currentTime);
+
+  for (const point of allPoints) {
+    const csf = getCloseStackFactorForTf(point.timeframe, closeConfluence);
+    const tcf = getTodayCloseFactor(
+      point.decompressionState.status,
+      point.decompressionState.minutesUntilClose
+    );
+    point.closeStackFactor = csf;
+    point.todayCloseFactor = tcf;
+    point.adjustedGravity *= csf * tcf;
+    point.visualStrength = Math.min(100, (point.adjustedGravity / 1000) * 100);
+  }
+
   // ─── 2. MOMENTUM OVERRIDE ──────────────────────────────────────────
   let momentumOverride: MomentumOverrideState | null = null;
   let expansionTargets: ExpansionTarget[] = [];
@@ -501,33 +744,51 @@ export function computeTimeGravityMap(
   // ─── 8. HEATMAP ────────────────────────────────────────────────────
   const { heatmap, heatmapPrices } = generateHeatmap(allPoints, currentPrice);
 
-  // ─── 9. SUMMARY ────────────────────────────────────────────────────
+  // ─── 9. SUMMARY (truthful — references close stacks + coverage) ─────
   let summary = '';
+  const stackNote = closeConfluence.stacks.length > 0
+    ? ` ${closeConfluence.totalStackedTfs} TFs in ${closeConfluence.stacks.length} close stack(s).`
+    : '';
+  const todayNote = closeConfluence.todayCloses.length > 0
+    ? ` ${closeConfluence.todayCloses.length} TF(s) close today${closeConfluence.highestOrderClose ? ` (highest: ${closeConfluence.highestOrderClose})` : ''}.`
+    : '';
+  const coverageNote = activeTimeframes.length < 4
+    ? ' ⚠️ Sparse data — fewer than 4 timeframes available.'
+    : '';
+
   if (momentumOverride?.isOverride) {
-    summary = `⚡ MOMENTUM OVERRIDE: ${momentumOverride.reasons.join(' + ')}. Midpoint magnets dampened. Expansion targets active.`;
+    summary = `⚡ MOMENTUM OVERRIDE: ${momentumOverride.reasons.join(' + ')}. Midpoint magnets dampened. Expansion targets active.${stackNote}`;
   } else if (targetStatus === 'TARGET_HIT') {
     summary = `✅ TARGET HIT — All ${taggedThisCycle} midpoint(s) tagged this cycle. Awaiting new midpoints.`;
   } else if (targetStatus === 'OVERSHOT') {
     summary = `🚀 TARGET OVERSHOT — Price blew past ${overshotTagged} midpoint(s). ${remainingUntagged > 0 ? `${remainingUntagged} still active.` : 'No active targets remain.'}`;
   } else if (zones.length === 0) {
-    summary = 'No significant gravity zones detected.';
+    summary = `No significant gravity zones detected.${coverageNote}`;
   } else if (topZone) {
     const direction = topZone.centerPrice > currentPrice ? 'above' : 'below';
-    summary = `Strongest gravity ${direction} at ${topZone.centerPrice.toFixed(2)} (${topZone.dominantTimeframes.join(', ')}). ${topZone.activeDecompressionCount} active decompression windows.`;
+    summary = `Strongest gravity ${direction} at ${topZone.centerPrice.toFixed(2)} (${topZone.dominantTimeframes.join(', ')}). ${topZone.activeDecompressionCount} active decompression windows.${stackNote}${todayNote}${coverageNote}`;
   }
 
-  // ─── 10. ALERT ──────────────────────────────────────────────────────
+  // ─── 10. ALERT (truthful — downgrades when data is sparse) ─────────
   let alert: string | null = null;
+  const isSparse = activeTimeframes.length < 4;
+
   if (momentumOverride?.isOverride) {
     alert = `⚡ MOMENTUM OVERRIDE: ${momentumOverride.reasons.join(' + ')} | Mode: EXPANSION | Gravity dampened to ${Math.round(momentumOverride.gravityMultiplier * 100)}%`;
   } else if (targetStatus === 'TARGET_HIT' || targetStatus === 'OVERSHOT') {
     alert = `✅ TARGET ${targetStatus === 'TARGET_HIT' ? 'HIT' : 'OVERSHOT'} — ${taggedThisCycle} midpoint(s) cleared | ${remainingUntagged} remaining`;
-  } else if (topZone && topZone.confidence >= 80) {
+  } else if (topZone && topZone.confidence >= 80 && !isSparse) {
     const decompActive = topZone.activeDecompressionCount;
     const debt = topZone.debtCount;
-    alert = `🎯 KEY CONFLUENCE ZONE: ${topZone.centerPrice.toFixed(2)} | ${decompActive} active decompression windows | ${debt} unresolved debt midpoints | Confluence: ${topZone.confidence}%`;
+    const stackStr = closeConfluence.stacks.length > 0
+      ? ` | ${closeConfluence.totalStackedTfs} TFs stacking`
+      : '';
+    alert = `🎯 KEY CONFLUENCE ZONE: ${topZone.centerPrice.toFixed(2)} | ${decompActive} active windows | ${debt} debt midpoints${stackStr} | Confluence: ${topZone.confidence}%`;
   } else if (topZone && topZone.confidence >= 60) {
-    alert = `⚠️ Moderate gravity zone at ${topZone.centerPrice.toFixed(2)} | Confidence: ${topZone.confidence}%`;
+    const qualifier = isSparse ? ' (sparse data)' : '';
+    alert = `⚠️ Moderate gravity zone at ${topZone.centerPrice.toFixed(2)} | Confidence: ${topZone.confidence}%${qualifier}`;
+  } else if (topZone && isSparse) {
+    alert = `⚠️ Low-confidence zone at ${topZone.centerPrice.toFixed(2)} | Only ${activeTimeframes.length} TF(s) available — data may be incomplete`;
   }
 
   return {
@@ -548,6 +809,7 @@ export function computeTimeGravityMap(
     heatmapPrices,
     summary,
     alert,
+    closeConfluence,
     taggingStats: {
       taggedThisCycle,
       overshotTagged,

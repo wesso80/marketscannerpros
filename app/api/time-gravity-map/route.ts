@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { computeTimeGravityMap, type ComputeTGMOptions } from '@/lib/time/timeGravityMap';
+import { computeTimeGravityMap, computeCloseConfluence, type ComputeTGMOptions, type CoverageDiagnostics } from '@/lib/time/timeGravityMap';
 import type { MidpointRecord } from '@/lib/time/midpointDebt';
 import { getMidpointService } from '@/lib/midpointService';
 import { getCandleProcessor, parseCoinGeckoOHLC } from '@/lib/candleProcessor';
@@ -50,10 +50,10 @@ function isCryptoSymbol(symbol: string): boolean {
 }
 
 // ── Candle aggregation helpers ─────────────────────────────────────────────
-function aggregate1HTo4H(bars: OHLCVBar[]): OHLCVBar[] {
+function aggregateHourlyBars(bars: OHLCVBar[], factor: number): OHLCVBar[] {
   const result: OHLCVBar[] = [];
-  for (let i = 0; i < bars.length; i += 4) {
-    const chunk = bars.slice(i, i + 4);
+  for (let i = 0; i < bars.length; i += factor) {
+    const chunk = bars.slice(i, i + factor);
     if (chunk.length === 0) continue;
     result.push({
       time: chunk[chunk.length - 1].time,
@@ -65,6 +65,10 @@ function aggregate1HTo4H(bars: OHLCVBar[]): OHLCVBar[] {
     });
   }
   return result;
+}
+
+function aggregate1HTo4H(bars: OHLCVBar[]): OHLCVBar[] {
+  return aggregateHourlyBars(bars, 4);
 }
 
 function aggregateDailyToWeekly(bars: OHLCVBar[]): OHLCVBar[] {
@@ -276,6 +280,16 @@ async function generateMidpointsOnDemand(symbol: string, assetType: 'crypto' | '
                 totalStored += fhStored;
                 if (fhStored > 0) timeframesGenerated.push('4H');
               }
+
+              // Aggregate 1H → 2H, 6H, 8H (no extra API calls)
+              for (const [label, factor] of [['2H', 2], ['6H', 6], ['8H', 8]] as const) {
+                const aggBars = aggregateHourlyBars(hourlyBars, factor);
+                if (aggBars.length > 0) {
+                  const stored = await processor.processCandleBatch(symbol, label, aggBars, 'equity');
+                  totalStored += stored;
+                  if (stored > 0) timeframesGenerated.push(label);
+                }
+              }
             }
           } else {
             console.warn(`[TGM on-demand] AV intraday response for ${symbol} missing Time Series key. Keys: ${Object.keys(intradayJson).join(', ')}`);
@@ -462,8 +476,32 @@ export async function GET(request: NextRequest) {
     
     // Determine data source
     const dataSource = midpointsStr ? 'custom' : 'database';
+
+    // ── Coverage diagnostics ─────────────────────────────────────────
+    const assetType: 'crypto' | 'equity' = (assetTypeHint === 'stock' || assetTypeHint === 'equity')
+      ? 'equity'
+      : (assetTypeHint === 'crypto' ? 'crypto' : (isCryptoSymbol(symbol) ? 'crypto' : 'equity'));
+
+    const EXPECTED_TFS: Record<string, string[]> = {
+      equity: ['1H', '2H', '4H', '6H', '8H', '1D', '1W'],
+      crypto: ['30m', '1H', '4H', '1D', '1W'],
+    };
+    const expectedTfs = EXPECTED_TFS[assetType] || EXPECTED_TFS.equity;
+    const availableTfs = [...new Set(midpoints.map(m => m.timeframe))];
+    const missingTfs = expectedTfs.filter(tf => !availableTfs.includes(tf));
+
+    const coverage: CoverageDiagnostics = {
+      expected: expectedTfs,
+      available: availableTfs,
+      missing: missingTfs,
+      fromDb: midpoints.length,
+      onDemandGenerated: generationResult?.timeframesGenerated ?? [],
+      percent: expectedTfs.length > 0
+        ? Math.round((availableTfs.filter(tf => expectedTfs.includes(tf)).length / expectedTfs.length) * 100)
+        : 0,
+    };
     
-    // Return full TGM data with generation status
+    // Return full TGM data with generation status + diagnostics
     return NextResponse.json({
       success: true,
       symbol,
@@ -472,6 +510,7 @@ export async function GET(request: NextRequest) {
       midpointCount: midpoints.length,
       targetStatus: tgm.targetStatus,
       data: tgm,
+      coverage,
       // On-demand generation status (helps widget show proper feedback)
       generationAttempted,
       generationResult: generationAttempted ? {
