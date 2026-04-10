@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { computeTimeGravityMap, type TimeGravityMap, type GravityZone, type GravityPoint, type TargetStatus, type CloseConfluence, type CoverageDiagnostics } from '@/lib/time/timeGravityMap';
 import type { MidpointRecord } from '@/lib/time/midpointDebt';
 import type { MomentumOverrideState, ExpansionTarget } from '@/lib/time/momentumOverride';
+import type { ForwardCloseCalendar, ForwardCloseScheduleRow, ForwardCloseCluster } from '@/lib/confluence-learning-agent';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -639,6 +640,229 @@ function CloseConfluencePanel({ confluence }: { confluence: CloseConfluence }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// FORWARD CLOSE SCHEDULE PANEL
+// ═══════════════════════════════════════════════════════════════════════════
+
+function fmtMinsShort(mins: number | null): string {
+  if (mins === null) return '—';
+  if (mins <= 0) return 'NOW';
+  if (mins < 60) return `${Math.round(mins)}m`;
+  if (mins < 1440) {
+    const h = Math.floor(mins / 60);
+    const m = Math.round(mins % 60);
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  }
+  const d = Math.floor(mins / 1440);
+  const h = Math.round((mins % 1440) / 60);
+  if (d >= 30) return `${Math.round(d / 30)}mo`;
+  return h > 0 ? `${d}d ${h}h` : `${d}d`;
+}
+
+function fmtCloseTime(iso: string | null, assetClass: 'crypto' | 'equity'): string {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  const tz = assetClass === 'crypto' ? 'UTC' : 'America/New_York';
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    weekday: 'short', month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(d);
+  const v = (t: string) => parts.find(p => p.type === t)?.value ?? '';
+  const suffix = assetClass === 'crypto' ? 'UTC' : 'ET';
+  return `${v('weekday')} ${v('month')} ${v('day')} ${v('hour')}:${v('minute')} ${suffix}`;
+}
+
+function catColor(cat: string): string {
+  switch (cat) {
+    case 'intraday': return 'text-slate-400';
+    case 'daily': return 'text-cyan-400';
+    case 'weekly': return 'text-emerald-400';
+    case 'monthly': return 'text-amber-400';
+    case 'yearly': return 'text-rose-400';
+    default: return 'text-gray-400';
+  }
+}
+
+function catBg(cat: string): string {
+  switch (cat) {
+    case 'intraday': return 'bg-slate-900/40 border-slate-700';
+    case 'daily': return 'bg-cyan-950/30 border-cyan-800';
+    case 'weekly': return 'bg-emerald-950/30 border-emerald-800';
+    case 'monthly': return 'bg-amber-950/30 border-amber-800';
+    case 'yearly': return 'bg-rose-950/30 border-rose-800';
+    default: return 'bg-gray-900/40 border-gray-700';
+  }
+}
+
+function urgencyBg(mins: number | null): string {
+  if (mins === null) return '';
+  if (mins <= 10) return 'bg-red-500/20';
+  if (mins <= 30) return 'bg-orange-500/15';
+  if (mins <= 60) return 'bg-yellow-500/10';
+  return '';
+}
+
+function ForwardSchedulePanel({
+  calendar,
+  loading,
+}: {
+  calendar: ForwardCloseCalendar | null;
+  loading: boolean;
+}) {
+  const [showFull, setShowFull] = useState(false);
+  const [catFilter, setCatFilter] = useState<string | null>(null);
+
+  if (loading) {
+    return (
+      <div className="space-y-1">
+        <div className="text-xs text-gray-400">CLOSE CALENDAR — FORWARD SCHEDULE</div>
+        <div className="bg-black/40 border border-gray-800 rounded p-3 text-center text-gray-500 text-xs animate-pulse">
+          Loading close schedule...
+        </div>
+      </div>
+    );
+  }
+
+  if (!calendar) return null;
+
+  const { schedule, forwardClusters, closesOnAnchorDay, assetClass } = calendar;
+  const anchorDayRows = closesOnAnchorDay;
+  const displayRows = showFull ? schedule : anchorDayRows;
+  const filteredRows = catFilter
+    ? displayRows.filter(r => r.category === catFilter)
+    : displayRows;
+
+  // Group by category
+  const categories = ['intraday', 'daily', 'weekly', 'monthly', 'yearly'];
+  const catCounts = categories.reduce((acc, cat) => {
+    acc[cat] = displayRows.filter(r => r.category === cat).length;
+    return acc;
+  }, {} as Record<string, number>);
+
+  return (
+    <div className="space-y-2">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-gray-400">
+          ⏰ CLOSE CALENDAR — {showFull ? 'FULL SCHEDULE' : 'CLOSES TODAY'}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-gray-500">
+            {anchorDayRows.length} today • {schedule.length} total
+          </span>
+          <button
+            onClick={() => setShowFull(!showFull)}
+            className="text-[10px] text-cyan-400 hover:text-cyan-300 transition-colors"
+          >
+            {showFull ? 'Today Only' : 'Full Schedule'}
+          </button>
+        </div>
+      </div>
+
+      {/* Cluster Cards (top 5) */}
+      {forwardClusters.length > 0 && (
+        <div className="flex gap-1.5 overflow-x-auto pb-1">
+          {forwardClusters.slice(0, 5).map((cluster, i) => (
+            <div
+              key={i}
+              className="flex-shrink-0 bg-orange-950/30 border border-orange-700/50 rounded px-2 py-1 min-w-[100px]"
+            >
+              <div className="text-[10px] text-orange-300 font-mono whitespace-nowrap">
+                {cluster.label}
+              </div>
+              <div className="flex flex-wrap gap-0.5 mt-0.5">
+                {cluster.tfs.slice(0, 6).map(tf => (
+                  <span key={tf} className="text-[9px] bg-orange-900/40 text-orange-200 px-1 rounded">
+                    {tf}
+                  </span>
+                ))}
+                {cluster.tfs.length > 6 && (
+                  <span className="text-[9px] text-orange-400">+{cluster.tfs.length - 6}</span>
+                )}
+              </div>
+              <div className="text-[9px] text-gray-500 mt-0.5">
+                Score: {cluster.clusterScore} • Wt: {cluster.weight.toFixed(0)}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Category filter pills */}
+      <div className="flex gap-1 flex-wrap">
+        <button
+          onClick={() => setCatFilter(null)}
+          className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${
+            !catFilter ? 'bg-gray-700 border-gray-500 text-white' : 'bg-black/30 border-gray-700 text-gray-500 hover:text-gray-300'
+          }`}
+        >
+          All ({displayRows.length})
+        </button>
+        {categories.map(cat => catCounts[cat] > 0 && (
+          <button
+            key={cat}
+            onClick={() => setCatFilter(catFilter === cat ? null : cat)}
+            className={`text-[10px] px-2 py-0.5 rounded border transition-colors capitalize ${
+              catFilter === cat
+                ? `${catBg(cat)} ${catColor(cat)}`
+                : 'bg-black/30 border-gray-700 text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            {cat} ({catCounts[cat]})
+          </button>
+        ))}
+      </div>
+
+      {/* Schedule table */}
+      <div className="bg-black/40 border border-gray-800 rounded overflow-hidden">
+        {/* Table header */}
+        <div className="grid grid-cols-[60px_1fr_70px_50px] gap-1 px-2 py-1.5 bg-gray-900/60 text-[10px] text-gray-500 font-semibold uppercase">
+          <span>TF</span>
+          <span>Close Time</span>
+          <span className="text-right">In</span>
+          <span className="text-right">Wt</span>
+        </div>
+
+        {/* Rows */}
+        <div className="divide-y divide-gray-800/50 max-h-[400px] overflow-y-auto">
+          {filteredRows.length === 0 ? (
+            <div className="px-2 py-3 text-center text-gray-600 text-xs">
+              No closes in this view
+            </div>
+          ) : (
+            filteredRows.map((row, i) => (
+              <div
+                key={`${row.tf}-${i}`}
+                className={`grid grid-cols-[60px_1fr_70px_50px] gap-1 px-2 py-1 text-xs items-center ${urgencyBg(row.minsToFirstClose)}`}
+              >
+                <span className={`font-mono font-semibold ${catColor(row.category)}`}>
+                  {row.tf}
+                </span>
+                <span className="text-gray-300 text-[11px] font-mono truncate">
+                  {fmtCloseTime(row.firstCloseAtISO, assetClass)}
+                </span>
+                <span className={`text-right font-mono ${
+                  row.minsToFirstClose !== null && row.minsToFirstClose <= 30
+                    ? 'text-red-400 font-bold'
+                    : row.minsToFirstClose !== null && row.minsToFirstClose <= 120
+                    ? 'text-orange-400'
+                    : 'text-gray-400'
+                }`}>
+                  {fmtMinsShort(row.minsToFirstClose)}
+                </span>
+                <span className="text-right text-gray-500 font-mono">
+                  {row.weight.toFixed(0)}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // MAIN WIDGET
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -667,6 +891,36 @@ export default function TimeGravityMapWidget({
     error?: string;
   } | null>(null);
   const [coverage, setCoverage] = useState<CoverageDiagnostics | null>(null);
+  const [calendar, setCalendar] = useState<ForwardCloseCalendar | null>(null);
+  const [calendarLoading, setCalendarLoading] = useState(false);
+
+  // Fetch forward close calendar from confluence-scan API
+  const fetchCalendar = useCallback(async () => {
+    if (!symbol) return;
+    setCalendarLoading(true);
+    try {
+      const res = await fetch('/api/confluence-scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol,
+          mode: 'calendar',
+          anchor: 'TODAY',
+          horizonDays: 1,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.data || data.schedule) {
+          setCalendar(data.data ?? data);
+        }
+      }
+    } catch {
+      // Calendar is non-critical — fail silently
+    } finally {
+      setCalendarLoading(false);
+    }
+  }, [symbol]);
   
   // Fetch TGM data from API
   const fetchTGM = async (forceGenerate = false) => {
@@ -750,6 +1004,7 @@ export default function TimeGravityMapWidget({
   // Initial fetch
   useEffect(() => {
     fetchTGM();
+    fetchCalendar();
   }, [symbol, currentPrice]);
   
   // Auto-refresh — pauses when the browser tab is hidden to save resources
@@ -760,7 +1015,7 @@ export default function TimeGravityMapWidget({
 
     const start = () => {
       if (interval) return;
-      interval = setInterval(() => { fetchTGM(); }, refreshInterval);
+      interval = setInterval(() => { fetchTGM(); fetchCalendar(); }, refreshInterval);
     };
     const stop = () => {
       if (interval) { clearInterval(interval); interval = null; }
@@ -991,6 +1246,11 @@ export default function TimeGravityMapWidget({
         {coverage && (
           <CoverageBar coverage={coverage} />
         )}
+      </div>
+
+      {/* Forward Close Calendar — Full Schedule */}
+      <div className="mt-4">
+        <ForwardSchedulePanel calendar={calendar} loading={calendarLoading} />
       </div>
       
       {/* Footer */}

@@ -1,0 +1,837 @@
+// This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
+// © MarketScanner Pros — Time Gravity Map v1
+// Full gravitational field model: multi-TF 50% midpoints act as masses pulling price.
+// Integrates: decompression windows, midpoint debt, gravity zones, close stacking,
+// today-close boost, zone clustering with confidence scoring.
+// Display Modes: Clean / Pro / Diagnostic
+
+//@version=6
+indicator("MSP — Time Gravity Map", shorttitle="MSP TGM", overlay=true, max_lines_count=500, max_labels_count=500, max_boxes_count=200)
+
+// ═══════════════════════════════════════════════════════════════
+// INPUTS
+// ═══════════════════════════════════════════════════════════════
+
+grp_tf = "Timeframe Selection"
+use1H  = input.bool(true,  "1H Midpoints",  group=grp_tf)
+use2H  = input.bool(true,  "2H Midpoints",  group=grp_tf)
+use4H  = input.bool(true,  "4H Midpoints",  group=grp_tf)
+use6H  = input.bool(false, "6H Midpoints",  group=grp_tf)
+use8H  = input.bool(false, "8H Midpoints",  group=grp_tf)
+use1D  = input.bool(true,  "1D Midpoints",  group=grp_tf)
+use1W  = input.bool(true,  "1W Midpoints",  group=grp_tf)
+use1M  = input.bool(true,  "1M Midpoints",  group=grp_tf)
+use3M  = input.bool(false, "3M Midpoints",  group=grp_tf)
+
+grp_grav = "Gravity Engine"
+maxDistance   = input.float(5.0, "Max Distance %", minval=1.0, maxval=20.0, step=0.5, group=grp_grav, tooltip="Only show midpoints within this % distance from price")
+clusterPct   = input.float(0.5, "Zone Cluster %", minval=0.1, maxval=2.0, step=0.1, group=grp_grav, tooltip="Midpoints within this % proximity form a zone")
+decompBoost  = input.float(5.0, "Decompression Boost", minval=1.0, maxval=10.0, step=0.5, group=grp_grav, tooltip="Gravity multiplier during active decompression window")
+preBoost     = input.float(2.0, "Pre-Window Boost", minval=1.0, maxval=5.0, step=0.5, group=grp_grav)
+debtBoost    = input.float(2.0, "Debt Multiplier", minval=1.0, maxval=5.0, step=0.5, group=grp_grav, tooltip="Boost for midpoints not yet tagged by price")
+
+grp_decomp = "Decompression Windows"
+decompPct    = input.float(15.0, "Window % of Candle", minval=5.0, maxval=30.0, step=1.0, group=grp_decomp, tooltip="Decompression window = last X% of candle duration")
+preWindowPct = input.float(5.0, "Pre-Window % Advance", minval=1.0, maxval=15.0, step=1.0, group=grp_decomp, tooltip="Pre-window warning zone before decompression starts")
+
+grp_stack = "Close Stacking"
+enableStacking   = input.bool(true, "Enable Close Stack Boost", group=grp_stack)
+stackProximity   = input.float(30.0, "Stack Proximity (min)", minval=5.0, maxval=120.0, step=5.0, group=grp_stack, tooltip="TFs closing within this many minutes are 'stacked'")
+stackMaxBoost    = input.float(2.5, "Max Stack Boost", minval=1.5, maxval=4.0, step=0.25, group=grp_stack)
+enableTodayBoost = input.bool(true, "Enable Today Close Boost", group=grp_stack)
+
+grp_tag = "Midpoint Tagging"
+tagBuffer    = input.float(0.1, "Tag Buffer %", minval=0.01, maxval=1.0, step=0.05, group=grp_tag, tooltip="Mark midpoint as tagged when price comes within this % of it")
+lookbackBars = input.int(1, "Lookback Candles", minval=1, maxval=5, group=grp_tag, tooltip="Number of candles back to check high/low against midpoint for tagging")
+
+grp_vis = "Visual Settings"
+uiMode       = input.string("Pro", "Display Mode", options=["Clean", "Pro", "Diagnostic"], group=grp_vis)
+showZones    = input.bool(true,  "Show Gravity Zones",   group=grp_vis)
+showMids     = input.bool(true,  "Show Midpoint Lines",  group=grp_vis)
+showLabels   = input.bool(true,  "Show Midpoint Labels", group=grp_vis)
+showTable    = input.bool(true,  "Show Status Table",    group=grp_vis)
+showTarget   = input.bool(true,  "Show Target Box",      group=grp_vis)
+showBands    = input.bool(true,  "Show 30-50% Bands",    group=grp_vis)
+showDecomp   = input.bool(true,  "Show Decompression Bars", group=grp_vis)
+tablePos     = input.string("top_right", "Table Position", options=["top_right", "top_left", "bottom_right", "bottom_left"], group=grp_vis)
+zoneTransp   = input.int(90, "Zone Transparency", minval=70, maxval=98, group=grp_vis)
+
+grp_cal = "Close Calendar"
+showCalendar = input.bool(true, "Show Close Calendar", group=grp_cal)
+calendarPos  = input.string("bottom_right", "Calendar Position", options=["top_right", "top_left", "bottom_right", "bottom_left"], group=grp_cal)
+
+isCleanMode = uiMode == "Clean"
+isProMode   = uiMode == "Pro"
+isDiagMode  = uiMode == "Diagnostic"
+
+// ═══════════════════════════════════════════════════════════════
+// TYPES — all at global scope (Pine v6 requirement)
+// ═══════════════════════════════════════════════════════════════
+
+type MidpointData
+    float mid = na
+    float h = na
+    float l = na
+    float r30h = na
+    float r30l = na
+    bool  tagged = false
+    float gravity = 0.0
+    float adjGravity = 0.0
+    float distance = 0.0
+    float weight = 0.0
+    string tfName = ""
+    string decompStatus = "COMPRESSION"
+    float closeStackFactor = 1.0
+    float todayCloseFactor = 1.0
+    float decompMultiplier = 1.0
+    float debtMultiplier = 1.0
+    float minClose = na
+    float candleDurMin = na
+    float closeTime = na
+
+type GravZone
+    float minP = na
+    float maxP = na
+    float center = na
+    float totalGrav = 0.0
+    int   count = 0
+    string tfs = ""
+    int   debtN = 0
+    int   activeN = 0
+    float confidence = 0.0
+
+// ═══════════════════════════════════════════════════════════════
+// TIMEFRAME WEIGHTS (from TGM engine)
+// ═══════════════════════════════════════════════════════════════
+
+wt1H = 2.0
+wt2H = 2.5
+wt4H = 3.5
+wt6H = 4.0
+wt8H = 4.5
+wt1D = 6.0
+wt1W = 10.0
+wt1M = 12.0
+wt3M = 14.0
+
+// ═══════════════════════════════════════════════════════════════
+// HELPER FUNCTIONS — all at global scope (Pine v6 requirement)
+// ═══════════════════════════════════════════════════════════════
+
+f_midpoint(h, l) =>
+    (h + l) / 2.0
+
+f_retrace30High(h, l) =>
+    h - (h - l) * 0.3
+
+f_retrace30Low(h, l) =>
+    l + (h - l) * 0.3
+
+f_distance(price, mid) =>
+    math.abs((mid - price) / price) * 100.0
+
+f_isTagged(mid, priceH, priceL, bufferPct) =>
+    bufferAbs = mid * bufferPct / 100.0
+    priceH >= (mid - bufferAbs) and priceL <= (mid + bufferAbs)
+
+f_wasTagged(mid, bufferPct, lbk) =>
+    tagged = false
+    for i = 0 to lbk - 1
+        if f_isTagged(mid, high[i], low[i], bufferPct)
+            tagged := true
+    tagged
+
+f_gravity(wt, distPct) =>
+    distPct > 0 ? wt / (distPct + 0.01) : wt * 100.0
+
+f_decompStatus(msUntilClose, candleDurationMs) =>
+    windowMs = candleDurationMs * decompPct / 100.0
+    preMs = candleDurationMs * preWindowPct / 100.0
+    result = "COMPRESSION"
+    if msUntilClose <= 0
+        result := "POST_WINDOW"
+    else if msUntilClose <= windowMs
+        result := "ACTIVE"
+    else if msUntilClose <= windowMs + preMs
+        result := "PRE_WINDOW"
+    result
+
+f_decompMult(status) =>
+    status == "ACTIVE" ? decompBoost :
+      status == "PRE_WINDOW" ? preBoost :
+      status == "POST_WINDOW" ? 0.5 :
+      1.0
+
+// Format minutes to human-readable string
+f_fmtMin(mins) =>
+    result = "—"
+    if not na(mins) and mins >= 0
+        if mins < 60
+            result := str.tostring(int(math.round(mins))) + "m"
+        else if mins < 1440
+            hh = int(math.floor(mins / 60))
+            mm = int(math.round(mins - hh * 60))
+            result := str.tostring(hh) + "h " + str.tostring(mm) + "m"
+        else
+            dd = int(math.floor(mins / 1440))
+            hh = int(math.round((mins - dd * 1440) / 60))
+            result := str.tostring(dd) + "d " + str.tostring(hh) + "h"
+    result
+
+// Format minutes to countdown: mm:ss for < 120min, else human-readable
+f_fmtCountdown(mins) =>
+    result = "—"
+    if not na(mins) and mins >= 0
+        if mins < 120
+            totalSecs = int(math.round(mins * 60))
+            mm = int(math.floor(totalSecs / 60))
+            ss = totalSecs % 60
+            mStr = mm < 10 ? "0" + str.tostring(mm) : str.tostring(mm)
+            sStr = ss < 10 ? "0" + str.tostring(ss) : str.tostring(ss)
+            result := mStr + ":" + sStr
+        else
+            result := f_fmtMin(mins)
+    result
+
+// Build a MidpointData entry from HTF candle data
+f_buildMid(useFlag, htfH, htfL, wt, name, msClose, dur, tcMs) =>
+    MidpointData mp = MidpointData.new()
+    if useFlag and not na(htfH) and not na(htfL) and htfH > 0 and htfL > 0
+        mp.mid     := f_midpoint(htfH, htfL)
+        mp.h       := htfH
+        mp.l       := htfL
+        mp.r30h    := f_retrace30High(htfH, htfL)
+        mp.r30l    := f_retrace30Low(htfH, htfL)
+        mp.weight  := wt
+        mp.tfName  := name
+        mp.distance := f_distance(close, mp.mid)
+        mp.tagged  := f_wasTagged(mp.mid, tagBuffer, lookbackBars)
+        mp.debtMultiplier := mp.tagged ? 1.0 : debtBoost
+        if not na(msClose) and not na(dur) and dur > 0
+            mp.decompStatus    := f_decompStatus(msClose, dur)
+            mp.decompMultiplier := f_decompMult(mp.decompStatus)
+            mp.minClose := msClose / 60000.0
+            mp.candleDurMin := dur / 60000.0
+        if not na(tcMs) and tcMs > 0
+            mp.closeTime := tcMs
+        mp.gravity    := f_gravity(wt, mp.distance)
+        mp.adjGravity := mp.gravity * mp.decompMultiplier * mp.debtMultiplier
+    mp
+
+// Finalize a gravity zone from collected midpoint data
+f_finalizeZone(mids_arr, starts, ends) =>
+    lo = 999999.0
+    hi = 0.0
+    gSum = 0.0
+    tfStr = ""
+    dbt = 0
+    act = 0
+    cnt = 0
+    for k = starts to ends
+        v = array.get(mids_arr, k)
+        lo := math.min(lo, v.mid)
+        hi := math.max(hi, v.mid)
+        gSum += v.adjGravity
+        tfStr := tfStr + (cnt > 0 ? "+" : "") + v.tfName
+        if not v.tagged
+            dbt += 1
+        if v.decompStatus == "ACTIVE"
+            act += 1
+        cnt += 1
+    ctr = (lo + hi) / 2.0
+    conf = math.min(100.0, 50.0 + cnt * 10.0 + dbt * 10.0 + act * 10.0)
+    GravZone.new(lo, hi, ctr, gSum, cnt, tfStr, dbt, act, conf)
+
+// ═══════════════════════════════════════════════════════════════
+// HTF DATA — request.security for each enabled TF
+// ═══════════════════════════════════════════════════════════════
+
+f_htfHL(tf) =>
+    request.security(syminfo.tickerid, tf, [high[1], low[1]], barmerge.gaps_off, barmerge.lookahead_on)
+
+f_htfClose(tf) =>
+    request.security(syminfo.tickerid, tf, [time_close - time, time_close - time_close[1]], barmerge.gaps_off, barmerge.lookahead_on)
+
+// Fetch candle data (Pine v6: ternary cannot return tuples, must use if/else)
+[h1H,  l1H]  = f_htfHL("60")
+[h2H,  l2H]  = f_htfHL("120")
+[h4H,  l4H]  = f_htfHL("240")
+[h6H,  l6H]  = f_htfHL("360")
+[h8H,  l8H]  = f_htfHL("480")
+[h1D,  l1D]  = f_htfHL("D")
+[h1W,  l1W]  = f_htfHL("W")
+[h1M,  l1M]  = f_htfHL("M")
+[h3M,  l3M]  = f_htfHL("3M")
+
+// Fetch decompression timing (ms to close, candle duration)
+[mc1H,  cd1H]  = f_htfClose("60")
+[mc2H,  cd2H]  = f_htfClose("120")
+[mc4H,  cd4H]  = f_htfClose("240")
+[mc6H,  cd6H]  = f_htfClose("360")
+[mc8H,  cd8H]  = f_htfClose("480")
+[mc1D,  cd1D]  = f_htfClose("D")
+[mc1W,  cd1W]  = f_htfClose("W")
+[mc1M,  cd1M]  = f_htfClose("M")
+[mc3M,  cd3M]  = f_htfClose("3M")
+
+// Fetch actual close timestamps for calendar display
+tc1H = request.security(syminfo.tickerid, "60",  time_close, barmerge.gaps_off, barmerge.lookahead_on)
+tc2H = request.security(syminfo.tickerid, "120", time_close, barmerge.gaps_off, barmerge.lookahead_on)
+tc4H = request.security(syminfo.tickerid, "240", time_close, barmerge.gaps_off, barmerge.lookahead_on)
+tc6H = request.security(syminfo.tickerid, "360", time_close, barmerge.gaps_off, barmerge.lookahead_on)
+tc8H = request.security(syminfo.tickerid, "480", time_close, barmerge.gaps_off, barmerge.lookahead_on)
+tc1D = request.security(syminfo.tickerid, "D",   time_close, barmerge.gaps_off, barmerge.lookahead_on)
+tc1W = request.security(syminfo.tickerid, "W",   time_close, barmerge.gaps_off, barmerge.lookahead_on)
+tc1M = request.security(syminfo.tickerid, "M",   time_close, barmerge.gaps_off, barmerge.lookahead_on)
+tc3M = request.security(syminfo.tickerid, "3M",  time_close, barmerge.gaps_off, barmerge.lookahead_on)
+
+// ═══════════════════════════════════════════════════════════════
+// BUILD MIDPOINT DATA (barstate.islast — drawings only on last bar)
+// ═══════════════════════════════════════════════════════════════
+
+var MidpointData[] mids = array.new<MidpointData>(0)
+var GravZone[] zones = array.new<GravZone>(0)
+var float targetPrice = na
+var string targetStatus = "NO_TARGET"
+var float targetConf = 0.0
+var int validCount = 0
+var int activeDecompCount = 0
+var int debtCount = 0
+var int todayCloseCount = 0
+var int numZones = 0
+
+if barstate.islast
+    array.clear(mids)
+    array.clear(zones)
+    targetPrice := na
+    targetStatus := "NO_TARGET"
+    targetConf := 0.0
+    validCount := 0
+    activeDecompCount := 0
+    debtCount := 0
+    todayCloseCount := 0
+    numZones := 0
+
+    // ── Build midpoint entries ──────────────────────────────────
+    array.push(mids, f_buildMid(use1H, h1H, l1H, wt1H, "1H", mc1H, cd1H, tc1H))
+    array.push(mids, f_buildMid(use2H, h2H, l2H, wt2H, "2H", mc2H, cd2H, tc2H))
+    array.push(mids, f_buildMid(use4H, h4H, l4H, wt4H, "4H", mc4H, cd4H, tc4H))
+    array.push(mids, f_buildMid(use6H, h6H, l6H, wt6H, "6H", mc6H, cd6H, tc6H))
+    array.push(mids, f_buildMid(use8H, h8H, l8H, wt8H, "8H", mc8H, cd8H, tc8H))
+    array.push(mids, f_buildMid(use1D, h1D, l1D, wt1D, "1D", mc1D, cd1D, tc1D))
+    array.push(mids, f_buildMid(use1W, h1W, l1W, wt1W, "1W", mc1W, cd1W, tc1W))
+    array.push(mids, f_buildMid(use1M, h1M, l1M, wt1M, "1M", mc1M, cd1M, tc1M))
+    array.push(mids, f_buildMid(use3M, h3M, l3M, wt3M, "3M", mc3M, cd3M, tc3M))
+
+    // ═══════════════════════════════════════════════════════════════
+    // CLOSE STACKING + TODAY BOOST
+    // ═══════════════════════════════════════════════════════════════
+
+    if enableStacking or enableTodayBoost
+        for i = 0 to array.size(mids) - 1
+            mp = array.get(mids, i)
+            if na(mp.mid) or mp.mid <= 0
+                continue
+
+            thisTfClose = mp.minClose
+            if na(thisTfClose)
+                continue
+
+            // Close stacking: count nearby TF closes
+            if enableStacking
+                stackWeight = 0.0
+                stackCount = 0
+                for j = 0 to array.size(mids) - 1
+                    if j == i
+                        continue
+                    other = array.get(mids, j)
+                    if na(other.mid) or other.mid <= 0 or na(other.minClose)
+                        continue
+                    gap = math.abs(other.minClose - thisTfClose)
+                    if gap <= stackProximity
+                        stackWeight += other.weight
+                        stackCount += 1
+
+                if stackCount >= 1
+                    quality = math.min(1.0, stackCount / 5.0 * 0.2 + 0.5)
+                    csf = math.min(stackMaxBoost, 1.0 + math.log(1.0 + stackWeight * quality) * 0.2)
+                    mp.closeStackFactor := csf
+
+            // Today-close boost
+            if enableTodayBoost
+                hoursAway = thisTfClose / 60.0
+                notInDecomp = mp.decompStatus != "ACTIVE" and mp.decompStatus != "PRE_WINDOW"
+                if notInDecomp and hoursAway > 0 and hoursAway <= 24.0
+                    tcf = hoursAway <= 1.0 ? 1.25 :
+                      hoursAway <= 3.0 ? 1.20 :
+                      hoursAway <= 6.0 ? 1.15 :
+                      hoursAway <= 12.0 ? 1.10 :
+                      1.05
+                    mp.todayCloseFactor := tcf
+
+            mp.adjGravity := mp.adjGravity * mp.closeStackFactor * mp.todayCloseFactor
+
+    // ═══════════════════════════════════════════════════════════════
+    // FILTER + COLLECT STATS — index list of valid midpoints
+    // ═══════════════════════════════════════════════════════════════
+
+    var int[] validIdx = array.new<int>(0)
+    array.clear(validIdx)
+
+    for i = 0 to array.size(mids) - 1
+        mp = array.get(mids, i)
+        if not na(mp.mid) and mp.mid > 0 and mp.distance <= maxDistance
+            array.push(validIdx, i)
+            validCount += 1
+            if mp.decompStatus == "ACTIVE"
+                activeDecompCount += 1
+            if not mp.tagged
+                debtCount += 1
+            if mp.todayCloseFactor > 1.0
+                todayCloseCount += 1
+
+    // ═══════════════════════════════════════════════════════════════
+    // GRAVITY ZONE CLUSTERING
+    // ═══════════════════════════════════════════════════════════════
+
+    // Sort valid midpoints by price (selection sort on index list, max 9 items)
+    for i = 0 to array.size(validIdx) - 2
+        minIdx = i
+        for j = i + 1 to array.size(validIdx) - 1
+            mi = array.get(mids, array.get(validIdx, j))
+            mMin = array.get(mids, array.get(validIdx, minIdx))
+            if mi.mid < mMin.mid
+                minIdx := j
+        if minIdx != i
+            tmp = array.get(validIdx, i)
+            array.set(validIdx, i, array.get(validIdx, minIdx))
+            array.set(validIdx, minIdx, tmp)
+
+    // Cluster into zones — use array of MidpointData refs via validIdx
+    if array.size(validIdx) > 0
+        zoneStart = 0
+        prevMid = 0.0
+
+        for i = 0 to array.size(validIdx) - 1
+            idx = array.get(validIdx, i)
+            mp = array.get(mids, idx)
+            gap = prevMid > 0 ? math.abs(mp.mid - prevMid) / prevMid * 100.0 : 0.0
+
+            needNewZone = i > 0 and gap > clusterPct
+
+            if needNewZone
+                // Finalize previous zone [zoneStart .. i-1]
+                lo = 999999.0
+                hi = 0.0
+                gSum = 0.0
+                tfStr = ""
+                dbt = 0
+                act = 0
+                cnt = 0
+                for k = zoneStart to i - 1
+                    kIdx = array.get(validIdx, k)
+                    v = array.get(mids, kIdx)
+                    lo := math.min(lo, v.mid)
+                    hi := math.max(hi, v.mid)
+                    gSum += v.adjGravity
+                    tfStr := tfStr + (cnt > 0 ? "+" : "") + v.tfName
+                    if not v.tagged
+                        dbt += 1
+                    if v.decompStatus == "ACTIVE"
+                        act += 1
+                    cnt += 1
+                ctr = (lo + hi) / 2.0
+                conf = math.min(100.0, 50.0 + cnt * 10.0 + dbt * 10.0 + act * 10.0)
+                array.push(zones, GravZone.new(lo, hi, ctr, gSum, cnt, tfStr, dbt, act, conf))
+                zoneStart := i
+
+            prevMid := mp.mid
+
+        // Final zone
+        lo = 999999.0
+        hi = 0.0
+        gSum = 0.0
+        tfStr = ""
+        dbt = 0
+        act = 0
+        cnt = 0
+        for k = zoneStart to array.size(validIdx) - 1
+            kIdx = array.get(validIdx, k)
+            v = array.get(mids, kIdx)
+            lo := math.min(lo, v.mid)
+            hi := math.max(hi, v.mid)
+            gSum += v.adjGravity
+            tfStr := tfStr + (cnt > 0 ? "+" : "") + v.tfName
+            if not v.tagged
+                dbt += 1
+            if v.decompStatus == "ACTIVE"
+                act += 1
+            cnt += 1
+        ctr = (lo + hi) / 2.0
+        conf = math.min(100.0, 50.0 + cnt * 10.0 + dbt * 10.0 + act * 10.0)
+        array.push(zones, GravZone.new(lo, hi, ctr, gSum, cnt, tfStr, dbt, act, conf))
+
+    // Sort zones by gravity descending
+    numZones := array.size(zones)
+    for i = 0 to numZones - 2
+        for j = i + 1 to numZones - 1
+            zi = array.get(zones, i)
+            zj = array.get(zones, j)
+            if zj.totalGrav > zi.totalGrav
+                array.set(zones, i, zj)
+                array.set(zones, j, zi)
+
+    // Target = top zone center
+    if numZones > 0
+        topZ = array.get(zones, 0)
+        targetPrice := topZ.center
+        targetConf := topZ.confidence
+        isHit = f_isTagged(targetPrice, high, low, tagBuffer)
+        targetStatus := isHit ? "TARGET_HIT" : "ACTIVE"
+
+    // ═══════════════════════════════════════════════════════════════
+    // DRAWING — MIDPOINT LINES + LABELS
+    // ═══════════════════════════════════════════════════════════════
+
+    if showMids
+        for i = 0 to array.size(validIdx) - 1
+            idx = array.get(validIdx, i)
+            vm = array.get(mids, idx)
+
+            lineCol = vm.decompStatus == "ACTIVE" ? color.new(color.blue, 20) :
+              vm.decompStatus == "PRE_WINDOW" ? color.new(color.yellow, 30) :
+              vm.tagged ? color.new(color.gray, 60) :
+              color.new(color.white, 40)
+            lineWidth = vm.decompStatus == "ACTIVE" ? 2 : 1
+            lineStyle = vm.tagged ? line.style_dotted : line.style_solid
+
+            line.new(bar_index - 20, vm.mid, bar_index + 5, vm.mid, color=lineCol, width=lineWidth, style=lineStyle)
+
+            if showLabels and (isProMode or isDiagMode)
+                gravStr = str.tostring(vm.adjGravity, "#.0")
+                dIcon = vm.decompStatus == "ACTIVE" ? "🔵" :
+                  vm.decompStatus == "PRE_WINDOW" ? "🟡" :
+                  vm.tagged ? "✅" :
+                  "⚪"
+                debtIcon = vm.tagged ? "" : " 🔴"
+                stackStr = vm.closeStackFactor > 1.01 ? " ⚡" + str.tostring(vm.closeStackFactor, "#.##") + "x" : ""
+                lblText = vm.tfName + " " + dIcon + debtIcon + " " + str.tostring(vm.mid, "#.##") + " G:" + gravStr + stackStr
+
+                lblCol = vm.decompStatus == "ACTIVE" ? color.blue :
+                  vm.decompStatus == "PRE_WINDOW" ? color.yellow :
+                  vm.tagged ? color.gray :
+                  color.white
+
+                label.new(bar_index + 6, vm.mid, lblText, style=label.style_label_left, color=color.new(color.black, 60), textcolor=lblCol, size=size.tiny)
+
+    // ═══════════════════════════════════════════════════════════════
+    // DRAWING — GRAVITY ZONES (boxes)
+    // ═══════════════════════════════════════════════════════════════
+
+    if showZones
+        for i = 0 to math.min(numZones - 1, 4)
+            z = array.get(zones, i)
+            isTop = i == 0
+            zCol = isTop ? color.green : i == 1 ? color.yellow : color.gray
+            fillCol = color.new(zCol, zoneTransp)
+            borderCol = color.new(zCol, isTop ? 20 : 50)
+
+            buf = z.maxP == z.minP ? close * 0.001 : 0.0
+            box.new(bar_index - 30, z.maxP + buf, bar_index + 10, z.minP - buf, bgcolor=fillCol, border_color=borderCol, border_width=isTop ? 2 : 1)
+
+            if isTop and showTarget
+                tgtLbl = "🎯 TARGET\n" + str.tostring(z.center, "#.##") + "\n" + z.tfs + "\nConf: " + str.tostring(z.confidence, "#") + "%"
+                label.new(bar_index + 11, z.center, tgtLbl, style=label.style_label_left, color=color.new(color.green, 50), textcolor=color.green, size=size.small)
+
+    // ═══════════════════════════════════════════════════════════════
+    // DRAWING — 30-50% ZONE BANDS (Pro/Diagnostic only)
+    // ═══════════════════════════════════════════════════════════════
+
+    if showBands and (isProMode or isDiagMode)
+        for i = 0 to array.size(validIdx) - 1
+            idx = array.get(validIdx, i)
+            vm = array.get(mids, idx)
+            if not vm.tagged and not na(vm.r30h) and not na(vm.r30l)
+                isAbove = close > vm.mid
+                zLo = vm.mid
+                zHi = isAbove ? vm.r30h : vm.r30l
+                zLoF = math.min(zLo, zHi)
+                zHiF = math.max(zLo, zHi)
+                box.new(bar_index - 15, zHiF, bar_index + 5, zLoF, bgcolor=color.new(color.purple, 94), border_color=color.new(color.purple, 70), border_width=1, border_style=line.style_dotted)
+
+    // ═══════════════════════════════════════════════════════════════
+    // DECOMPRESSION PROGRESS BARS (Diagnostic mode)
+    // ═══════════════════════════════════════════════════════════════
+
+    if showDecomp and isDiagMode
+        for i = 0 to array.size(validIdx) - 1
+            idx = array.get(validIdx, i)
+            vm = array.get(mids, idx)
+            barY = vm.mid - (vm.h - vm.l) * 0.05 * (i + 1)
+            barCol = vm.decompStatus == "ACTIVE" ? color.blue :
+              vm.decompStatus == "PRE_WINDOW" ? color.yellow :
+              color.gray
+            label.new(bar_index - 25, barY, vm.tfName + " " + vm.decompStatus, style=label.style_none, textcolor=barCol, size=size.tiny)
+
+    // ═══════════════════════════════════════════════════════════════
+    // STATUS TABLE
+    // ═══════════════════════════════════════════════════════════════
+
+    if showTable
+        tblPos = tablePos == "top_right" ? position.top_right :
+          tablePos == "top_left" ? position.top_left :
+          tablePos == "bottom_right" ? position.bottom_right :
+          position.bottom_left
+
+        nRows = isCleanMode ? 5 : isDiagMode ? 8 + validCount : 6 + validCount
+        var table tbl = table.new(tblPos, 2, nRows, bgcolor=color.new(color.black, 30), border_width=1, border_color=color.new(color.gray, 70))
+
+        // Header
+        table.cell(tbl, 0, 0, "⏰ TIME GRAVITY MAP", text_color=color.aqua, text_size=size.small, text_halign=text.align_left)
+        table.cell(tbl, 1, 0, syminfo.ticker, text_color=color.white, text_size=size.small, text_halign=text.align_right)
+
+        // Target row
+        tgtStr = not na(targetPrice) ? str.tostring(targetPrice, "#.##") : "—"
+        sCol = targetStatus == "TARGET_HIT" ? color.green : targetStatus == "ACTIVE" ? color.aqua : color.gray
+        sIcon = targetStatus == "TARGET_HIT" ? "✅ HIT" : targetStatus == "ACTIVE" ? "🎯 ACTIVE" : "—"
+        table.cell(tbl, 0, 1, "Target", text_color=color.gray, text_size=size.tiny, text_halign=text.align_left)
+        table.cell(tbl, 1, 1, tgtStr + " " + sIcon, text_color=sCol, text_size=size.tiny, text_halign=text.align_right)
+
+        // Confidence row
+        confCol = targetConf >= 80 ? color.green : targetConf >= 60 ? color.yellow : color.gray
+        table.cell(tbl, 0, 2, "Confidence", text_color=color.gray, text_size=size.tiny, text_halign=text.align_left)
+        table.cell(tbl, 1, 2, str.tostring(targetConf, "#") + "%", text_color=confCol, text_size=size.tiny, text_halign=text.align_right)
+
+        // Stats
+        table.cell(tbl, 0, 3, "Active TFs", text_color=color.gray, text_size=size.tiny, text_halign=text.align_left)
+        table.cell(tbl, 1, 3, str.tostring(validCount) + " | " + str.tostring(activeDecompCount) + " decomp", text_color=color.white, text_size=size.tiny, text_halign=text.align_right)
+
+        table.cell(tbl, 0, 4, "Debt / Today", text_color=color.gray, text_size=size.tiny, text_halign=text.align_left)
+        table.cell(tbl, 1, 4, str.tostring(debtCount) + " debt | " + str.tostring(todayCloseCount) + " today", text_color=color.orange, text_size=size.tiny, text_halign=text.align_right)
+
+        // Per-TF rows (Pro and Diagnostic modes)
+        if not isCleanMode
+            row = 5
+            table.cell(tbl, 0, row, "─ MIDPOINTS ─", text_color=color.gray, text_size=size.tiny, text_halign=text.align_left)
+            table.cell(tbl, 1, row, "", text_color=color.gray, text_size=size.tiny)
+            row += 1
+
+            for i = 0 to array.size(validIdx) - 1
+                rIdx = row + i
+                if rIdx >= nRows
+                    break
+                idx = array.get(validIdx, i)
+                vm = array.get(mids, idx)
+                dI = vm.decompStatus == "ACTIVE" ? "🔵" :
+                  vm.decompStatus == "PRE_WINDOW" ? "🟡" :
+                  vm.tagged ? "✅" :
+                  "⚪"
+                dtStr = vm.tagged ? "" : "🔴"
+                stStr = vm.closeStackFactor > 1.01 ? "⚡" : ""
+                mCol = vm.decompStatus == "ACTIVE" ? color.blue :
+                  vm.decompStatus == "PRE_WINDOW" ? color.yellow :
+                  vm.tagged ? color.gray :
+                  color.white
+
+                table.cell(tbl, 0, rIdx, vm.tfName + " " + dI + dtStr + stStr, text_color=mCol, text_size=size.tiny, text_halign=text.align_left)
+                table.cell(tbl, 1, rIdx, str.tostring(vm.mid, "#.##") + " G:" + str.tostring(vm.adjGravity, "#.0"), text_color=mCol, text_size=size.tiny, text_halign=text.align_right)
+
+            // Diagnostic extras
+            if isDiagMode
+                covRow = row + validCount
+                if covRow < nRows
+                    expectedN = 0
+                    if use1H
+                        expectedN += 1
+                    if use2H
+                        expectedN += 1
+                    if use4H
+                        expectedN += 1
+                    if use6H
+                        expectedN += 1
+                    if use8H
+                        expectedN += 1
+                    if use1D
+                        expectedN += 1
+                    if use1W
+                        expectedN += 1
+                    if use1M
+                        expectedN += 1
+                    if use3M
+                        expectedN += 1
+                    covPct = expectedN > 0 ? validCount * 100.0 / expectedN : 0.0
+                    covCol = covPct >= 80 ? color.green : covPct >= 50 ? color.yellow : color.red
+                    table.cell(tbl, 0, covRow, "Coverage", text_color=color.gray, text_size=size.tiny, text_halign=text.align_left)
+                    table.cell(tbl, 1, covRow, str.tostring(validCount) + "/" + str.tostring(expectedN) + " " + str.tostring(covPct, "#") + "%", text_color=covCol, text_size=size.tiny, text_halign=text.align_right)
+
+                    zRow = covRow + 1
+                    if zRow < nRows
+                        table.cell(tbl, 0, zRow, "Zones", text_color=color.gray, text_size=size.tiny, text_halign=text.align_left)
+                        zText = numZones > 0 ? str.tostring(numZones) + " zones" : "No zones"
+                        table.cell(tbl, 1, zRow, zText, text_color=color.white, text_size=size.tiny, text_halign=text.align_right)
+
+    // ═══════════════════════════════════════════════════════════════
+    // CLOSE CALENDAR — Forward Schedule (matches website)
+    // Shows actual close times happening today, split INTRADAY / DAILY
+    // ═══════════════════════════════════════════════════════════════
+
+    if showCalendar
+        // Collect TFs with valid close timestamps
+        var int[] calIdx = array.new<int>(0)
+        array.clear(calIdx)
+        for i = 0 to array.size(mids) - 1
+            mp = array.get(mids, i)
+            if not na(mp.mid) and mp.mid > 0 and not na(mp.closeTime) and mp.closeTime > 0
+                array.push(calIdx, i)
+
+        calSize = array.size(calIdx)
+
+        // Sort by closeTime ascending
+        for i = 0 to calSize - 2
+            minI = i
+            for j = i + 1 to calSize - 1
+                a = array.get(mids, array.get(calIdx, j))
+                b = array.get(mids, array.get(calIdx, minI))
+                if a.closeTime < b.closeTime
+                    minI := j
+            if minI != i
+                tmpC = array.get(calIdx, i)
+                array.set(calIdx, i, array.get(calIdx, minI))
+                array.set(calIdx, minI, tmpC)
+
+        // Count intraday (H) vs daily+ TFs
+        intraN = 0
+        dailyN = 0
+        for i = 0 to calSize - 1
+            vm = array.get(mids, array.get(calIdx, i))
+            if str.contains(vm.tfName, "H")
+                intraN += 1
+            else
+                dailyN += 1
+
+        if calSize > 0
+            calPos = calendarPos == "top_right" ? position.top_right :
+              calendarPos == "top_left" ? position.top_left :
+              calendarPos == "bottom_right" ? position.bottom_right :
+              position.bottom_left
+
+            sectRows = (intraN > 0 ? 1 : 0) + (dailyN > 0 ? 1 : 0)
+            calRows = 2 + sectRows + calSize
+            var table cal = table.new(calPos, 4, calRows, bgcolor=color.new(color.black, 20), border_width=1, border_color=color.new(color.gray, 60))
+
+            // Title row
+            titBg = color.new(color.black, 30)
+            table.cell(cal, 0, 0, "⏰ CLOSE CALENDAR", bgcolor=titBg, text_color=color.aqua, text_size=size.small, text_halign=text.align_left)
+            table.cell(cal, 1, 0, "Forward Schedule", bgcolor=titBg, text_color=color.gray, text_size=size.small, text_halign=text.align_center)
+            table.cell(cal, 2, 0, str.tostring(calSize) + " closes", bgcolor=titBg, text_color=color.white, text_size=size.small, text_halign=text.align_center)
+            table.cell(cal, 3, 0, "", bgcolor=titBg, text_size=size.small)
+
+            // Column headers
+            hdrBg = color.new(color.black, 40)
+            table.cell(cal, 0, 1, "TF", bgcolor=hdrBg, text_color=color.white, text_size=size.small, text_halign=text.align_center)
+            table.cell(cal, 1, 1, "CLOSE TIME", bgcolor=hdrBg, text_color=color.white, text_size=size.small, text_halign=text.align_center)
+            table.cell(cal, 2, 1, "IN", bgcolor=hdrBg, text_color=color.white, text_size=size.small, text_halign=text.align_center)
+            table.cell(cal, 3, 1, "WEIGHT", bgcolor=hdrBg, text_color=color.white, text_size=size.small, text_halign=text.align_center)
+
+            cr = 2
+
+            // ── INTRADAY section ──
+            if intraN > 0
+                secBg = color.new(color.teal, 70)
+                table.cell(cal, 0, cr, "INTRADAY", bgcolor=secBg, text_color=color.aqua, text_size=size.small, text_halign=text.align_left)
+                table.cell(cal, 1, cr, "", bgcolor=secBg, text_size=size.small)
+                table.cell(cal, 2, cr, "", bgcolor=secBg, text_size=size.small)
+                table.cell(cal, 3, cr, "", bgcolor=secBg, text_size=size.small)
+                cr += 1
+
+                for i = 0 to calSize - 1
+                    vm = array.get(mids, array.get(calIdx, i))
+                    if not str.contains(vm.tfName, "H")
+                        continue
+
+                    minsLeft = math.max(0.0, (vm.closeTime - timenow) / 60000.0)
+
+                    // TF cell — per-TF coloring
+                    tfBg = vm.tfName == "1H" ? color.new(color.aqua, 60) :
+                      vm.tfName == "2H" ? color.new(color.blue, 60) :
+                      vm.tfName == "4H" ? color.new(color.orange, 60) :
+                      vm.tfName == "6H" ? color.new(color.purple, 60) :
+                      color.new(color.red, 60)
+                    table.cell(cal, 0, cr, vm.tfName, bgcolor=tfBg, text_color=color.white, text_size=size.small, text_halign=text.align_center)
+
+                    // Close Time — actual datetime
+                    timeStr = str.format_time(int(vm.closeTime), "EEE MMM dd HH:mm", "UTC")
+                    table.cell(cal, 1, cr, timeStr + " UTC", text_color=color.white, text_size=size.small, text_halign=text.align_center)
+
+                    // Countdown — urgency coloring
+                    cBg = minsLeft <= 10 ? color.new(color.red, 0) :
+                      minsLeft <= 30 ? color.new(color.orange, 10) :
+                      minsLeft <= 60 ? color.new(color.green, 20) :
+                      color.new(color.black, 50)
+                    cTx = minsLeft <= 30 ? color.black : color.white
+                    table.cell(cal, 2, cr, f_fmtMin(minsLeft), text_color=cTx, bgcolor=cBg, text_size=size.small, text_halign=text.align_center)
+
+                    // Weight
+                    table.cell(cal, 3, cr, str.tostring(vm.weight, "#.0"), text_color=color.white, text_size=size.small, text_halign=text.align_center)
+                    cr += 1
+
+            // ── DAILY section ──
+            if dailyN > 0
+                secBg = color.new(color.green, 70)
+                table.cell(cal, 0, cr, "DAILY", bgcolor=secBg, text_color=color.green, text_size=size.small, text_halign=text.align_left)
+                table.cell(cal, 1, cr, "", bgcolor=secBg, text_size=size.small)
+                table.cell(cal, 2, cr, "", bgcolor=secBg, text_size=size.small)
+                table.cell(cal, 3, cr, "", bgcolor=secBg, text_size=size.small)
+                cr += 1
+
+                for i = 0 to calSize - 1
+                    vm = array.get(mids, array.get(calIdx, i))
+                    if str.contains(vm.tfName, "H")
+                        continue
+
+                    minsLeft = math.max(0.0, (vm.closeTime - timenow) / 60000.0)
+
+                    // TF cell — per-TF coloring (green text for daily like website)
+                    tfBg = vm.tfName == "1D" ? color.new(color.white, 60) :
+                      vm.tfName == "1W" ? color.new(color.yellow, 60) :
+                      vm.tfName == "1M" ? color.new(color.fuchsia, 60) :
+                      color.new(color.fuchsia, 50)
+                    tfTc = vm.tfName == "1D" ? color.green : color.white
+                    table.cell(cal, 0, cr, vm.tfName, bgcolor=tfBg, text_color=tfTc, text_size=size.small, text_halign=text.align_center)
+
+                    // Close Time — actual datetime
+                    timeStr = str.format_time(int(vm.closeTime), "EEE MMM dd HH:mm", "UTC")
+                    table.cell(cal, 1, cr, timeStr + " UTC", text_color=color.white, text_size=size.small, text_halign=text.align_center)
+
+                    // Countdown
+                    cBg = minsLeft <= 60 ? color.new(color.orange, 10) :
+                      minsLeft <= 360 ? color.new(color.green, 30) :
+                      color.new(color.black, 50)
+                    cTx = minsLeft <= 60 ? color.black : color.white
+                    table.cell(cal, 2, cr, f_fmtMin(minsLeft), text_color=cTx, bgcolor=cBg, text_size=size.small, text_halign=text.align_center)
+
+                    // Weight
+                    table.cell(cal, 3, cr, str.tostring(vm.weight, "#.0"), text_color=color.white, text_size=size.small, text_halign=text.align_center)
+                    cr += 1
+
+// ═══════════════════════════════════════════════════════════════
+// ALERTS
+// ═══════════════════════════════════════════════════════════════
+
+isTargetHit = barstate.islast and targetStatus == "TARGET_HIT"
+alertcondition(isTargetHit, title="TGM Target Hit", message="⏰ Time Gravity: Target hit on {{ticker}} at {{close}}")
+
+hasActiveDecomp = false
+if barstate.islast
+    for i = 0 to array.size(mids) - 1
+        mp = array.get(mids, i)
+        if not na(mp.mid) and mp.decompStatus == "ACTIVE"
+            hasActiveDecomp := true
+alertcondition(hasActiveDecomp, title="TGM Decompression Active", message="⏰ Decompression window ACTIVE on {{ticker}}")
+
+highConfluence = false
+if barstate.islast and numZones > 0
+    tz = array.get(zones, 0)
+    if tz.confidence >= 80 and tz.count >= 3
+        highConfluence := true
+alertcondition(highConfluence, title="TGM High Confluence", message="⏰ High confluence gravity zone on {{ticker}} at {{close}}")
