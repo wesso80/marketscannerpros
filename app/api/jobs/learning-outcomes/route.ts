@@ -51,8 +51,38 @@ async function ensureLearningSchema() {
       win_rate DECIMAL(6, 2) DEFAULT 0,
       avg_move_pct DECIMAL(10, 4) DEFAULT 0,
       avg_time_to_move_mins DECIMAL(10, 2) DEFAULT 0,
-      last_updated TIMESTAMPTZ DEFAULT NOW()
+      last_updated TIMESTAMPTZ DEFAULT NOW(),
+      bullish_total INT DEFAULT 0,
+      bullish_wins INT DEFAULT 0,
+      bullish_win_rate DECIMAL(6, 2) DEFAULT 0,
+      bearish_total INT DEFAULT 0,
+      bearish_wins INT DEFAULT 0,
+      bearish_win_rate DECIMAL(6, 2) DEFAULT 0,
+      target_hit_rate DECIMAL(6, 2) DEFAULT 0,
+      stop_hit_rate DECIMAL(6, 2) DEFAULT 0,
+      avg_winner_pct DECIMAL(10, 4) DEFAULT 0,
+      avg_loser_pct DECIMAL(10, 4) DEFAULT 0,
+      direction_bias DECIMAL(6, 2) DEFAULT 0
     )`);
+    // Self-heal: add new columns if table already exists without them
+    const newCols = [
+      ['bullish_total', 'INT DEFAULT 0'],
+      ['bullish_wins', 'INT DEFAULT 0'],
+      ['bullish_win_rate', 'DECIMAL(6,2) DEFAULT 0'],
+      ['bearish_total', 'INT DEFAULT 0'],
+      ['bearish_wins', 'INT DEFAULT 0'],
+      ['bearish_win_rate', 'DECIMAL(6,2) DEFAULT 0'],
+      ['target_hit_rate', 'DECIMAL(6,2) DEFAULT 0'],
+      ['stop_hit_rate', 'DECIMAL(6,2) DEFAULT 0'],
+      ['avg_winner_pct', 'DECIMAL(10,4) DEFAULT 0'],
+      ['avg_loser_pct', 'DECIMAL(10,4) DEFAULT 0'],
+      ['direction_bias', 'DECIMAL(6,2) DEFAULT 0'],
+    ];
+    for (const [col, def] of newCols) {
+      try {
+        await q(`ALTER TABLE learning_stats ADD COLUMN IF NOT EXISTS ${col} ${def}`);
+      } catch { /* column already exists */ }
+    }
   } catch (e) {
     console.warn('[learning-outcomes] ensureLearningSchema warning:', e);
   }
@@ -169,30 +199,106 @@ export async function POST(_req: NextRequest) {
 
       await q(`UPDATE learning_predictions SET status = 'processed' WHERE id = $1`, [pred.id]);
 
-      // Update rolling stats
-      const stats = await q<{ total_predictions: number; win_rate: number; avg_move_pct: number; avg_time_to_move_mins: number; }>(
-        `SELECT total_predictions, win_rate, avg_move_pct, avg_time_to_move_mins
+      // Update rolling stats with directional breakdown
+      const stats = await q<{
+        total_predictions: number; win_rate: number; avg_move_pct: number; avg_time_to_move_mins: number;
+        bullish_total: number; bullish_wins: number; bearish_total: number; bearish_wins: number;
+        target_hit_rate: number; stop_hit_rate: number;
+        avg_winner_pct: number; avg_loser_pct: number;
+      }>(
+        `SELECT total_predictions, win_rate, avg_move_pct, avg_time_to_move_mins,
+                COALESCE(bullish_total, 0) as bullish_total, COALESCE(bullish_wins, 0) as bullish_wins,
+                COALESCE(bearish_total, 0) as bearish_total, COALESCE(bearish_wins, 0) as bearish_wins,
+                COALESCE(target_hit_rate, 0) as target_hit_rate, COALESCE(stop_hit_rate, 0) as stop_hit_rate,
+                COALESCE(avg_winner_pct, 0) as avg_winner_pct, COALESCE(avg_loser_pct, 0) as avg_loser_pct
          FROM learning_stats WHERE symbol = $1`,
         [pred.symbol]
       );
 
       const prev = stats[0];
       const total = (prev?.total_predictions || 0) + 1;
-      const wins = (prev ? Math.round((prev.win_rate / 100) * prev.total_predictions) : 0) + (hitTarget ? 1 : 0);
+
+      // Directional win = price moved in the predicted direction by > 0.2%
+      const isBullish = pred.prediction_direction === 'bullish';
+      const isBearish = pred.prediction_direction === 'bearish';
+      const directionCorrect = (isBullish && movePct > 0.2) || (isBearish && movePct < -0.2);
+
+      // Overall wins (direction correct OR hit target)
+      const isWin = directionCorrect || hitTarget;
+      const prevWins = prev ? Math.round((prev.win_rate / 100) * prev.total_predictions) : 0;
+      const wins = prevWins + (isWin ? 1 : 0);
       const winRate = (wins / total) * 100;
-      const avgMove = ((prev?.avg_move_pct || 0) * (total - 1) + Math.abs(movePct)) / total;
+
+      // Per-direction tracking
+      const bullTotal = (prev?.bullish_total || 0) + (isBullish ? 1 : 0);
+      const bullWins = (prev?.bullish_wins || 0) + (isBullish && isWin ? 1 : 0);
+      const bullWinRate = bullTotal > 0 ? (bullWins / bullTotal) * 100 : 0;
+
+      const bearTotal = (prev?.bearish_total || 0) + (isBearish ? 1 : 0);
+      const bearWins = (prev?.bearish_wins || 0) + (isBearish && isWin ? 1 : 0);
+      const bearWinRate = bearTotal > 0 ? (bearWins / bearTotal) * 100 : 0;
+
+      // Target/stop hit rates
+      const prevTargetHits = prev ? Math.round((prev.target_hit_rate / 100) * prev.total_predictions) : 0;
+      const prevStopHits = prev ? Math.round((prev.stop_hit_rate / 100) * prev.total_predictions) : 0;
+      const targetHitRate = ((prevTargetHits + (hitTarget ? 1 : 0)) / total) * 100;
+      const stopHitRate = ((prevStopHits + (hitStop ? 1 : 0)) / total) * 100;
+
+      // Separate winner/loser average move sizes
+      const absMov = Math.abs(movePct);
+      let avgWinner = prev?.avg_winner_pct || 0;
+      let avgLoser = prev?.avg_loser_pct || 0;
+      if (isWin) {
+        const prevWinnerCount = prevWins;
+        avgWinner = prevWinnerCount > 0 ? (avgWinner * prevWinnerCount + absMov) / (prevWinnerCount + 1) : absMov;
+      } else {
+        const prevLoserCount = (prev?.total_predictions || 0) - prevWins;
+        avgLoser = prevLoserCount > 0 ? (avgLoser * prevLoserCount + absMov) / (prevLoserCount + 1) : absMov;
+      }
+
+      const avgMove = ((prev?.avg_move_pct || 0) * (total - 1) + absMov) / total;
       const avgTime = ((prev?.avg_time_to_move_mins || 0) * (total - 1) + minutesSince) / total;
 
+      // Direction bias: positive = symbol tends bullish, negative = bearish
+      // Based on actual price moves, not predictions
+      const directionBias = bullTotal + bearTotal > 5
+        ? bullWinRate - bearWinRate
+        : 0;
+
       await q(
-        `INSERT INTO learning_stats (symbol, total_predictions, win_rate, avg_move_pct, avg_time_to_move_mins, last_updated)
-         VALUES ($1,$2,$3,$4,$5,NOW())
+        `INSERT INTO learning_stats (
+          symbol, total_predictions, win_rate, avg_move_pct, avg_time_to_move_mins,
+          bullish_total, bullish_wins, bullish_win_rate,
+          bearish_total, bearish_wins, bearish_win_rate,
+          target_hit_rate, stop_hit_rate,
+          avg_winner_pct, avg_loser_pct, direction_bias, last_updated
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,NOW())
          ON CONFLICT (symbol) DO UPDATE SET
            total_predictions = EXCLUDED.total_predictions,
            win_rate = EXCLUDED.win_rate,
            avg_move_pct = EXCLUDED.avg_move_pct,
            avg_time_to_move_mins = EXCLUDED.avg_time_to_move_mins,
+           bullish_total = EXCLUDED.bullish_total,
+           bullish_wins = EXCLUDED.bullish_wins,
+           bullish_win_rate = EXCLUDED.bullish_win_rate,
+           bearish_total = EXCLUDED.bearish_total,
+           bearish_wins = EXCLUDED.bearish_wins,
+           bearish_win_rate = EXCLUDED.bearish_win_rate,
+           target_hit_rate = EXCLUDED.target_hit_rate,
+           stop_hit_rate = EXCLUDED.stop_hit_rate,
+           avg_winner_pct = EXCLUDED.avg_winner_pct,
+           avg_loser_pct = EXCLUDED.avg_loser_pct,
+           direction_bias = EXCLUDED.direction_bias,
            last_updated = NOW()`
-        , [pred.symbol, total, Number(winRate.toFixed(2)), Number(avgMove.toFixed(4)), Number(avgTime.toFixed(2))]
+        , [
+          pred.symbol, total,
+          Number(winRate.toFixed(2)), Number(avgMove.toFixed(4)), Number(avgTime.toFixed(2)),
+          bullTotal, bullWins, Number(bullWinRate.toFixed(2)),
+          bearTotal, bearWins, Number(bearWinRate.toFixed(2)),
+          Number(targetHitRate.toFixed(2)), Number(stopHitRate.toFixed(2)),
+          Number(avgWinner.toFixed(4)), Number(avgLoser.toFixed(4)),
+          Number(directionBias.toFixed(2)),
+        ]
       );
 
       processed.push(pred.id);

@@ -339,8 +339,6 @@ export function getScanModes(): ScanModeConfig[] {
 }
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 function normalizeCryptoBase(symbol: string): string {
   const upper = symbol.toUpperCase();
@@ -620,11 +618,32 @@ export class ConfluenceLearningAgent {
     win_rate: number;
     avg_move_pct: number;
     avg_time_to_move_mins: number;
+    bullish_win_rate: number;
+    bearish_win_rate: number;
+    target_hit_rate: number;
+    stop_hit_rate: number;
+    avg_winner_pct: number;
+    avg_loser_pct: number;
+    direction_bias: number;
   } | null> {
     if (!process.env.DATABASE_URL) return null;
     try {
-      const rows = await q<{ total_predictions: number; win_rate: number; avg_move_pct: number; avg_time_to_move_mins: number }>(
-        'SELECT total_predictions, win_rate, avg_move_pct, avg_time_to_move_mins FROM learning_stats WHERE symbol = $1',
+      const rows = await q<{
+        total_predictions: number; win_rate: number; avg_move_pct: number; avg_time_to_move_mins: number;
+        bullish_win_rate: number; bearish_win_rate: number;
+        target_hit_rate: number; stop_hit_rate: number;
+        avg_winner_pct: number; avg_loser_pct: number;
+        direction_bias: number;
+      }>(
+        `SELECT total_predictions, win_rate, avg_move_pct, avg_time_to_move_mins,
+                COALESCE(bullish_win_rate, 0) as bullish_win_rate,
+                COALESCE(bearish_win_rate, 0) as bearish_win_rate,
+                COALESCE(target_hit_rate, 0) as target_hit_rate,
+                COALESCE(stop_hit_rate, 0) as stop_hit_rate,
+                COALESCE(avg_winner_pct, 0) as avg_winner_pct,
+                COALESCE(avg_loser_pct, 0) as avg_loser_pct,
+                COALESCE(direction_bias, 0) as direction_bias
+         FROM learning_stats WHERE symbol = $1`,
         [symbol]
       );
       return rows[0] || null;
@@ -3833,7 +3852,90 @@ export class ConfluenceLearningAgent {
 
     // Apply live learning stats if available
     const liveStats = await this.getLearningStats(symbol);
-    if (liveStats) {
+    if (liveStats && liveStats.total_predictions >= 5) {
+      // ═══════════════════════════════════════════════════════════════════════
+      // DEEP LEARNING FEEDBACK — adapts direction, confidence, targets, stops
+      // Requires 5+ predictions before adjustments kick in
+      // ═══════════════════════════════════════════════════════════════════════
+
+      // 1. CONFIDENCE — blend model confidence with observed win rate (50/50)
+      const blendedConfidence = Math.round((prediction.confidence + liveStats.win_rate) / 2);
+
+      // 2. DIRECTION — if this symbol historically wins more in one direction,
+      //    nudge the prediction. direction_bias > 0 = bullish edge, < 0 = bearish edge
+      let adjustedDirection = prediction.direction;
+      if (liveStats.total_predictions >= 10 && Math.abs(liveStats.direction_bias) > 15) {
+        const bias = liveStats.direction_bias;
+        if (prediction.direction === 'neutral') {
+          // Neutral predictions get pushed toward the historically winning direction
+          adjustedDirection = bias > 0 ? 'bullish' : 'bearish';
+          console.log(`📊 Learning: neutral → ${adjustedDirection} (direction_bias: ${bias.toFixed(1)})`);
+        } else if (
+          (prediction.direction === 'bullish' && bias < -25) ||
+          (prediction.direction === 'bearish' && bias > 25)
+        ) {
+          // Strong counter-bias: dampen confidence instead of flipping direction
+          const dampening = Math.min(15, Math.abs(bias) * 0.3);
+          prediction.confidence = Math.max(40, prediction.confidence - dampening);
+          console.log(`📊 Learning: dampened ${prediction.direction} confidence by ${dampening.toFixed(0)} (bias: ${bias.toFixed(1)})`);
+        }
+      }
+
+      // 3. TARGET CALIBRATION — if targets are rarely hit (< 20%), they're too ambitious.
+      //    If frequently hit (> 60%), they're too conservative. Adjust target distance.
+      let adjustedTarget = prediction.targetPrice;
+      if (liveStats.total_predictions >= 10 && liveStats.target_hit_rate > 0) {
+        const thr = liveStats.target_hit_rate;
+        if (thr < 20 && liveStats.avg_winner_pct > 0) {
+          // Targets too far — pull them closer using actual avg winner size
+          const learnedMove = (liveStats.avg_winner_pct / 100) * currentPrice;
+          const modelMove = Math.abs(prediction.targetPrice - currentPrice);
+          // Blend: 60% learned, 40% model (gradual calibration)
+          const blendedMove = learnedMove * 0.6 + modelMove * 0.4;
+          adjustedTarget = adjustedDirection === 'bearish'
+            ? currentPrice - blendedMove
+            : currentPrice + blendedMove;
+          console.log(`🎯 Learning: targets too far (hit ${thr.toFixed(0)}%), pulling closer. Model: ${modelMove.toFixed(2)} → Blended: ${blendedMove.toFixed(2)}`);
+        } else if (thr > 60 && liveStats.avg_move_pct > 0) {
+          // Targets too conservative — push them out using avg total move
+          const expandedMove = (liveStats.avg_move_pct / 100) * currentPrice * 1.2;
+          const modelMove = Math.abs(prediction.targetPrice - currentPrice);
+          const blendedMove = Math.max(modelMove, expandedMove * 0.5 + modelMove * 0.5);
+          adjustedTarget = adjustedDirection === 'bearish'
+            ? currentPrice - blendedMove
+            : currentPrice + blendedMove;
+          console.log(`🎯 Learning: targets too tight (hit ${thr.toFixed(0)}%), pushing out. Model: ${modelMove.toFixed(2)} → Blended: ${blendedMove.toFixed(2)}`);
+        }
+      }
+
+      // 4. STOP CALIBRATION — if stops hit too often (> 40%), they're too tight.
+      //    Widen stops using learned average loser size.
+      let adjustedStop = prediction.stopLoss;
+      if (liveStats.total_predictions >= 10 && liveStats.stop_hit_rate > 40 && liveStats.avg_loser_pct > 0) {
+        const learnedStop = (liveStats.avg_loser_pct / 100) * currentPrice * 1.3; // 30% wider than avg loss
+        const modelStop = Math.abs(prediction.stopLoss - currentPrice);
+        const blendedStop = Math.max(modelStop, learnedStop * 0.5 + modelStop * 0.5);
+        adjustedStop = adjustedDirection === 'bearish'
+          ? currentPrice + blendedStop
+          : currentPrice - blendedStop;
+        console.log(`🛑 Learning: stops too tight (hit ${liveStats.stop_hit_rate.toFixed(0)}%), widening. Model: ${modelStop.toFixed(2)} → Blended: ${blendedStop.toFixed(2)}`);
+      }
+
+      // 5. TIMING — use observed average time to move
+      const adjustedDecompMins = Math.round(Math.max(1, liveStats.avg_time_to_move_mins || prediction.expectedDecompMins));
+
+      prediction = {
+        ...prediction,
+        direction: adjustedDirection,
+        confidence: Math.min(90, Math.max(10, blendedConfidence)),
+        targetPrice: adjustedTarget,
+        stopLoss: adjustedStop,
+        expectedDecompMins: adjustedDecompMins,
+      };
+
+      console.log(`🧠 Learning applied for ${symbol}: conf=${prediction.confidence}, dir=${prediction.direction}, target=${prediction.targetPrice.toFixed(2)}, stop=${prediction.stopLoss.toFixed(2)}, timing=${prediction.expectedDecompMins}min [${liveStats.total_predictions} samples, bull_wr=${liveStats.bullish_win_rate.toFixed(0)}%, bear_wr=${liveStats.bearish_win_rate.toFixed(0)}%, tgt_hit=${liveStats.target_hit_rate.toFixed(0)}%, stp_hit=${liveStats.stop_hit_rate.toFixed(0)}%]`);
+    } else if (liveStats) {
+      // Less than 5 predictions — only do basic confidence blending (original behavior)
       const blendedConfidence = Math.round((prediction.confidence + liveStats.win_rate) / 2);
       prediction = {
         ...prediction,
