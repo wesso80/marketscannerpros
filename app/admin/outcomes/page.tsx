@@ -125,6 +125,10 @@ export default function OutcomesPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  // Labeler state
+  const [labelerRunning, setLabelerRunning] = useState(false);
+  const [labelerResult, setLabelerResult] = useState<Record<string, unknown> | null>(null);
+
   // Filters
   const [filterSymbol, setFilterSymbol] = useState("");
   const [filterRegime, setFilterRegime] = useState("");
@@ -157,6 +161,27 @@ export default function OutcomesPage() {
     } catch { /* ignore */ }
   }, [filterSymbol, filterRegime, filterOutcome, page]);
 
+  const runLabeler = useCallback(async () => {
+    setLabelerRunning(true);
+    setLabelerResult(null);
+    try {
+      const res = await fetch("/api/cron/label-ai-outcomes", {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      setLabelerResult({ status: res.status, ...data });
+      // Refresh stats after labeling
+      if (res.ok) {
+        await Promise.all([fetchStats(), fetchSignals()]);
+      }
+    } catch (err) {
+      setLabelerResult({ error: String(err) });
+    } finally {
+      setLabelerRunning(false);
+    }
+  }, [fetchStats, fetchSignals]);
+
   useEffect(() => {
     Promise.all([fetchStats(), fetchSignals()]).then(() => setLoading(false));
   }, [fetchStats, fetchSignals]);
@@ -173,16 +198,67 @@ export default function OutcomesPage() {
             Every scanner signal logged · Outcome tracking across regimes & verdicts
           </p>
         </div>
-        <button
-          onClick={() => { fetchStats(); fetchSignals(); }}
-          style={{
-            padding: "0.5rem 1rem", background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.3)",
-            borderRadius: "0.5rem", color: "#10B981", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer",
-          }}
-        >
-          ↻ Refresh
-        </button>
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          <button
+            onClick={runLabeler}
+            disabled={labelerRunning}
+            style={{
+              padding: "0.5rem 1rem", background: labelerRunning ? "rgba(251,191,36,0.1)" : "rgba(251,191,36,0.15)",
+              border: "1px solid rgba(251,191,36,0.3)", borderRadius: "0.5rem",
+              color: "#FBBF24", fontSize: "0.8rem", fontWeight: 600,
+              cursor: labelerRunning ? "wait" : "pointer", opacity: labelerRunning ? 0.6 : 1,
+            }}
+          >
+            {labelerRunning ? "⏳ Labeling…" : "⚡ Run Labeler Now"}
+          </button>
+          <button
+            onClick={() => { fetchStats(); fetchSignals(); }}
+            style={{
+              padding: "0.5rem 1rem", background: "rgba(16,185,129,0.15)", border: "1px solid rgba(16,185,129,0.3)",
+              borderRadius: "0.5rem", color: "#10B981", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer",
+            }}
+          >
+            ↻ Refresh
+          </button>
+        </div>
       </div>
+
+      {/* ── Labeler Result Banner ── */}
+      {labelerResult && (
+        <div style={{
+          padding: "0.75rem 1rem", marginBottom: "1rem", borderRadius: "0.5rem",
+          background: labelerResult.success ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)",
+          border: `1px solid ${labelerResult.success ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)"}`,
+          fontSize: "0.8rem", color: labelerResult.success ? "#10B981" : "#EF4444",
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              {labelerResult.success
+                ? `✅ Labeled ${labelerResult.labeled ?? 0} signals`
+                : `❌ ${labelerResult.error ?? "Labeling failed"}`}
+              {labelerResult.breakdown && (
+                <span style={{ color: "#9CA3AF", marginLeft: 8 }}>
+                  (✓{(labelerResult.breakdown as Record<string, number>).correct ?? 0}
+                  {" "}✗{(labelerResult.breakdown as Record<string, number>).wrong ?? 0}
+                  {" "}~{(labelerResult.breakdown as Record<string, number>).neutral ?? 0}
+                  {" "}⏰{(labelerResult.breakdown as Record<string, number>).expired ?? 0}
+                  {(labelerResult.breakdown as Record<string, number>).skippedNoPrice > 0 &&
+                    ` | ${(labelerResult.breakdown as Record<string, number>).skippedNoPrice} skipped (no price)`})
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => setLabelerResult(null)}
+              style={{ background: "none", border: "none", color: "#6B7280", cursor: "pointer", fontSize: "1rem" }}
+            >×</button>
+          </div>
+          {labelerResult.status === 401 && (
+            <div style={{ color: "#FBBF24", marginTop: 4, fontSize: "0.75rem" }}>
+              ⚠️ Auth failed — check that ADMIN_SECRET is set in Render env vars and matches your admin login secret.
+            </div>
+          )}
+        </div>
+      )}
 
       {loading ? (
         <div style={{ color: "#6B7280", textAlign: "center", padding: "3rem" }}>Loading signal data…</div>

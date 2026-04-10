@@ -86,9 +86,16 @@ async function fetchCurrentPrices(
  * Fetches current prices from Alpha Vantage for accurate comparison.
  */
 export async function POST(req: NextRequest) {
-  const secret = req.headers.get('x-cron-secret') || '';
-  const expected = process.env.CRON_SECRET || '';
-  if (!expected || !timingSafeCompare(secret, expected)) {
+  // Accept cron secret (automated) or admin secret (manual trigger from admin panel)
+  const cronSecret = process.env.CRON_SECRET || '';
+  const adminSecret = process.env.ADMIN_SECRET || '';
+  const headerCron = req.headers.get('x-cron-secret') || '';
+  const headerAuth = req.headers.get('authorization')?.replace('Bearer ', '') || '';
+
+  const cronOk = cronSecret && timingSafeCompare(headerCron, cronSecret);
+  const adminOk = adminSecret && timingSafeCompare(headerAuth, adminSecret);
+
+  if (!cronOk && !adminOk) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

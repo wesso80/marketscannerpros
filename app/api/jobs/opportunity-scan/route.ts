@@ -89,6 +89,11 @@ interface IndicatorRow {
   adx14: number | null;
   atr14: number | null;
   ema200: number | null;
+  sma20: number | null;
+  sma50: number | null;
+  macd_line: number | null;
+  macd_hist: number | null;
+  stoch_k: number | null;
   in_squeeze: boolean | null;
   bb_upper: number | null;
   bb_lower: number | null;
@@ -159,7 +164,8 @@ async function runOpportunityScan(req: NextRequest) {
     // ── 2. Enrich with indicators_latest ───────────────────────────────
     const symbols = picks.map(p => p.symbol);
     const indicatorRows: IndicatorRow[] = await q(
-      `SELECT symbol, rsi14, adx14, atr14, ema200, in_squeeze, bb_upper, bb_lower
+      `SELECT symbol, rsi14, adx14, atr14, ema200, sma20, sma50,
+              macd_line, macd_hist, stoch_k, in_squeeze, bb_upper, bb_lower
        FROM indicators_latest
        WHERE symbol = ANY($1) AND timeframe = 'daily'`,
       [symbols]
@@ -334,19 +340,23 @@ async function runOpportunityScan(req: NextRequest) {
         rsi: ind?.rsi14,
         adx: ind?.adx14,
         atr: ind?.atr14,
-        sma20: null,   // not in indicators_latest
-        sma50: null,
+        sma20: ind?.sma20 ?? null,
+        sma50: ind?.sma50 ?? null,
+        macd: ind?.macd_line ?? null,
+        macdHist: ind?.macd_hist ?? null,
+        stochK: ind?.stoch_k ?? null,
         bbUpper: ind?.bb_upper,
         bbLower: ind?.bb_lower,
         bbMiddle: ind?.bb_upper && ind?.bb_lower ? (ind.bb_upper + ind.bb_lower) / 2 : null,
         inSqueeze: ind?.in_squeeze === true,
         scannerDirection: pick.direction,
       });
-      if (ge.permission === 'TRADE') {
-        push(`Golden Egg TRADE: ${pick.symbol} — ${ge.verdict}`);
+      // Post TRADE and WATCH verdicts (WATCH = developing setup worth monitoring)
+      if (ge.permission === 'TRADE' || ge.permission === 'WATCH') {
+        push(`Golden Egg ${ge.permission}: ${pick.symbol} — ${ge.verdict}`);
         postToDiscord('golden-egg', buildGoldenEggEmbed({
           symbol: pick.symbol,
-          verdict: ge.grade === 'A' ? 'TRADE' : 'WATCH',
+          verdict: ge.permission === 'TRADE' ? 'TRADE' : 'WATCH',
           bias: ge.direction === 'LONG' ? 'bullish' : ge.direction === 'SHORT' ? 'bearish' : 'neutral',
           confluenceScore: ge.confidence,
           reasoning: ge.verdict,
@@ -355,12 +365,13 @@ async function runOpportunityScan(req: NextRequest) {
       }
     }
 
-    // Post Time Confluence to Discord when significant events are near
+    // Post Time Confluence to Discord when events are active
+    // Threshold lowered to ≥ 3 (MEDIUM level) — ≥ 6 was too strict and never fired
     try {
       const crypto = computeCryptoTimeConfluence();
-      if (crypto.isHighConfluence) {
+      if (crypto.confluenceScore >= 3 && crypto.activeCycles.length > 0) {
         const closingCycles = crypto.activeCycles
-          .filter(c => c.hoursToClose <= 24)
+          .filter(c => c.hoursToClose <= 48)
           .map(c => c.cycle);
         if (closingCycles.length > 0) {
           postToDiscord('time-confluence', buildTimeConfluenceEmbed({
@@ -373,9 +384,9 @@ async function runOpportunityScan(req: NextRequest) {
       }
 
       const equity = computeEquityTimeConfluence();
-      if (equity.isHighConfluence) {
+      if (equity.confluenceScore >= 3 && equity.activeCycles.length > 0) {
         const closingCycles = equity.activeCycles
-          .filter(c => c.hoursToClose <= 24)
+          .filter(c => c.hoursToClose <= 48)
           .map(c => c.cycle);
         if (closingCycles.length > 0) {
           postToDiscord('time-confluence', buildTimeConfluenceEmbed({
