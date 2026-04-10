@@ -236,16 +236,17 @@ export default function OutcomesPage() {
               {labelerResult.success
                 ? `✅ Labeled ${labelerResult.labeled ?? 0} signals`
                 : `❌ ${labelerResult.error ?? "Labeling failed"}`}
-              {labelerResult.breakdown && (
+              {labelerResult.breakdown ? (
                 <span style={{ color: "#9CA3AF", marginLeft: 8 }}>
                   (✓{(labelerResult.breakdown as Record<string, number>).correct ?? 0}
                   {" "}✗{(labelerResult.breakdown as Record<string, number>).wrong ?? 0}
                   {" "}~{(labelerResult.breakdown as Record<string, number>).neutral ?? 0}
                   {" "}⏰{(labelerResult.breakdown as Record<string, number>).expired ?? 0}
-                  {(labelerResult.breakdown as Record<string, number>).skippedNoPrice > 0 &&
-                    ` | ${(labelerResult.breakdown as Record<string, number>).skippedNoPrice} skipped (no price)`})
+                  {(labelerResult.breakdown as Record<string, number>).skippedNoPrice > 0
+                    ? ` | ${(labelerResult.breakdown as Record<string, number>).skippedNoPrice} skipped (no price)`
+                    : ""})
                 </span>
-              )}
+              ) : null}
             </div>
             <button
               onClick={() => setLabelerResult(null)}
