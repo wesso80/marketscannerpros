@@ -274,12 +274,12 @@ export default function OutcomesPage() {
             <StatCard label="Pending" value={stats?.overall.pending ?? 0} color="#FBBF24" />
             <StatCard
               label="Avg Move (✓)"
-              value={stats?.overall.avgMoveCorrect != null ? `${stats.overall.avgMoveCorrect}%` : "—"}
+              value={stats?.overall.avgMoveCorrect != null ? `${Number(stats.overall.avgMoveCorrect).toFixed(2)}%` : "—"}
               color="#10B981"
             />
             <StatCard
               label="Avg Move (✗)"
-              value={stats?.overall.avgMoveWrong != null ? `${stats.overall.avgMoveWrong}%` : "—"}
+              value={stats?.overall.avgMoveWrong != null ? `${Number(stats.overall.avgMoveWrong).toFixed(2)}%` : "—"}
               color="#EF4444"
             />
             <StatCard label="Avg Confluence" value={stats?.overall.avgConfluence ?? "—"} />

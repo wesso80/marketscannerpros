@@ -39,8 +39,8 @@ export async function GET(req: NextRequest) {
          COUNT(*) FILTER (WHERE outcome = 'wrong')::int AS wrong,
          COUNT(*) FILTER (WHERE outcome = 'neutral')::int AS neutral,
          COUNT(*) FILTER (WHERE outcome = 'expired')::int AS expired,
-         ROUND(AVG(pct_move_24h) FILTER (WHERE outcome = 'correct'), 4) AS avg_move_correct,
-         ROUND(AVG(pct_move_24h) FILTER (WHERE outcome = 'wrong'), 4) AS avg_move_wrong,
+         ROUND(AVG(pct_move_24h) FILTER (WHERE outcome = 'correct' AND ABS(pct_move_24h) <= 100), 2) AS avg_move_correct,
+         ROUND(AVG(ABS(pct_move_24h)) FILTER (WHERE outcome = 'wrong' AND ABS(pct_move_24h) <= 100), 2) AS avg_move_wrong,
          ROUND(AVG(confluence_score), 1) AS avg_confluence
        FROM ai_signal_log
        WHERE workspace_id = $1`,
