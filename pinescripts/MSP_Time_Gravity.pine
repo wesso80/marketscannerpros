@@ -62,10 +62,10 @@ calendarPos  = input.string("bottom_right", "Calendar Position", options=["top_r
 
 grp_learn = "Learning Engine"
 enableLearning = input.bool(true, "Enable Self-Learning", group=grp_learn, tooltip="Track per-TF midpoint pull rates across chart history and adapt gravity weights")
-learnMinSample = input.int(30, "Min Samples", minval=10, maxval=200, group=grp_learn, tooltip="Bar samples required before learning adjusts weights")
+learnMinSample = input.int(50, "Min Samples", minval=10, maxval=200, group=grp_learn, tooltip="Bar samples required before learning adjusts weights")
 showLearning   = input.bool(true, "Show Learning Panel", group=grp_learn)
 learnPos       = input.string("bottom_left", "Panel Position", options=["top_right", "top_left", "bottom_right", "bottom_left"], group=grp_learn)
-learnMaxAdj    = input.float(2.0, "Max Weight Adjust", minval=1.2, maxval=3.0, step=0.1, group=grp_learn, tooltip="Maximum weight multiplier (1.0=no change, 2.0=double)")
+learnMaxAdj    = input.float(1.6, "Max Weight Adjust", minval=1.2, maxval=3.0, step=0.1, group=grp_learn, tooltip="Maximum weight multiplier (1.0=no change, 1.6=conservative)")
 
 isCleanMode = uiMode == "Clean"
 isProMode   = uiMode == "Pro"
