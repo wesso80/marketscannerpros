@@ -1,11 +1,11 @@
 // This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
-// © MarketScanner Pros — Cypher Intel & Signals v1
-// Replicates: CYPHER INTEL panel — Scalping direction, Exhaustion detection,
+// © MarketScanner Pros —Intel & Signals v1
+// Replicates:INTEL panel — Scalping direction, Exhaustion detection,
 // Spot Pump/Dump, Volume Decline, Signal classification
 // Real-time trade intelligence with signal strength scoring
 
 //@version=6
-indicator("MSP — Cypher Intel", shorttitle="MSP Cypher Intel", overlay=true, max_labels_count=500, max_bars_back=500)
+indicator("MSP — Intel", shorttitle="MSP Cypher Intel", overlay=true, max_labels_count=500, max_bars_back=500)
 
 // ═══════════════════════════════════════════════════════════════
 // INPUTS

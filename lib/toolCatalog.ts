@@ -30,6 +30,7 @@ export const TOOL_CATALOG: ToolPage[] = [
   { key: 'crypto-heatmap',     href: '/tools/crypto-heatmap',     label: 'Crypto Heatmap',       description: 'Visual crypto sector heatmap',                     icon: '🌡️', category: 'Crypto' },
   { key: 'crypto-terminal',    href: '/tools/crypto-terminal',    label: 'Crypto Terminal',      description: 'Full crypto trading terminal',                     icon: '💹', category: 'Crypto', tier: 'pro' },
   { key: 'crypto-time-confluence', href: '/tools/crypto-time-confluence', label: 'Crypto Time Confluence', description: 'Crypto time-based patterns',             icon: '🕐', category: 'Crypto' },
+  { key: 'crypto-intel',       href: '/tools/crypto-intel',       label: 'Crypto Intelligence',  description: 'GT Score, whale tracker, treasury & crypto news', icon: '🧠', category: 'Crypto' },
 
   // ─── Options ───
   { key: 'options',            href: '/tools/options',            label: 'Options',              description: 'Options chain overview',                           icon: '📋', category: 'Options', tier: 'pro' },

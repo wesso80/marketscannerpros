@@ -43,6 +43,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/tools/crypto',
     '/tools/crypto-dashboard',
     '/tools/crypto-explorer',
+    '/tools/crypto-intel',
     '/tools/crypto-heatmap',
     '/tools/equity-explorer',
     '/tools/intraday-charts',

@@ -1607,3 +1607,215 @@ export async function getDerivativesExchangesData(
     return null;
   }
 }
+
+// ============================================
+// CRYPTO NEWS (Analyst Plan)
+// ============================================
+
+export interface CryptoNewsItem {
+  title: string;
+  url: string;
+  image: string;
+  author: string;
+  posted_at: string;
+  type: 'news' | 'guides';
+  source_name: string;
+  related_coin_ids: string[];
+}
+
+/**
+ * Get latest crypto news from CoinGecko.
+ * Endpoint: /news
+ */
+export async function getCryptoNews(options?: {
+  coin_id?: string;
+  language?: string;
+  type?: 'news' | 'guides';
+  page?: number;
+  per_page?: number;
+}): Promise<CryptoNewsItem[] | null> {
+  try {
+    const params = new URLSearchParams();
+    if (options?.coin_id) params.set('coin_id', options.coin_id);
+    if (options?.language) params.set('language', options.language);
+    if (options?.type) params.set('type', options.type);
+    if (options?.page) params.set('page', String(options.page));
+    if (options?.per_page) params.set('per_page', String(options.per_page));
+    return await cgFetch<CryptoNewsItem[]>('/news', {
+      params,
+      init: { next: { revalidate: 300 } },
+    });
+  } catch (error) {
+    console.error('[CoinGecko] Crypto news error:', error);
+    return null;
+  }
+}
+
+// ============================================
+// TOKEN INFO - GT Score, Honeypot, Security (Analyst Plan)
+// ============================================
+
+export interface TokenInfo {
+  id: string;
+  type: string;
+  attributes: {
+    address: string;
+    name: string;
+    symbol: string;
+    decimals: number;
+    image_url: string | null;
+    image?: {
+      thumb?: string;
+      small?: string;
+      large?: string;
+    };
+    coingecko_coin_id: string | null;
+    websites: string[];
+    discord_url: string | null;
+    farcaster_url: string | null;
+    zora_url: string | null;
+    telegram_handle: string | null;
+    twitter_handle: string | null;
+    description: string | null;
+    gt_score: number | null;
+    gt_score_details: {
+      pool: number;
+      transaction: number;
+      creation: number;
+      info: number;
+      holders: number;
+    } | null;
+    gt_verified: boolean;
+    categories: string[];
+    gt_category_ids: string[];
+    holders: {
+      count: number;
+      distribution_percentage: {
+        top_10: string;
+        [key: string]: string;
+      };
+      last_updated: string;
+    } | null;
+    mint_authority: string | null;
+    freeze_authority: string | null;
+    is_honeypot: boolean | null;
+  };
+}
+
+/**
+ * Get token security info: GT Score, honeypot status, mint/freeze authority.
+ * Endpoint: /onchain/networks/{network}/tokens/{address}/info
+ */
+export async function getTokenInfo(
+  network: string,
+  address: string
+): Promise<TokenInfo | null> {
+  try {
+    const data = await cgFetch<{ data: TokenInfo }>(
+      `/onchain/networks/${network}/tokens/${address}/info`,
+      { init: { next: { revalidate: 60 } } }
+    );
+    return data.data ?? null;
+  } catch (error) {
+    console.error('[CoinGecko] Token info error:', error);
+    return null;
+  }
+}
+
+// ============================================
+// TOP TRADERS / WHALE TRACKER (Analyst Plan)
+// ============================================
+
+export interface TopTrader {
+  address: string;
+  name: string | null;
+  label: string | null;
+  type: string;
+  realized_pnl_usd: string;
+  unrealized_pnl_usd: string;
+  token_balance: string;
+  average_buy_price_usd: string;
+  average_sell_price_usd: string | null;
+  total_buy_count: number;
+  total_sell_count: number;
+  total_buy_token_amount: string;
+  total_sell_token_amount: string;
+  total_buy_usd: string;
+  total_sell_usd: string;
+  explorer_url: string;
+}
+
+/**
+ * Get top traders for a token with realized/unrealized PnL.
+ * Endpoint: /onchain/networks/{network}/tokens/{address}/traders
+ */
+export async function getTopTraders(
+  network: string,
+  address: string,
+  options?: { period?: '5m' | '1h' | '6h' | '24h' }
+): Promise<TopTrader[] | null> {
+  try {
+    const params = new URLSearchParams();
+    if (options?.period) params.set('period', options.period);
+    const data = await cgFetch<{
+      data: { id: string; type: string; attributes: { traders: TopTrader[] } };
+    }>(`/onchain/networks/${network}/tokens/${address}/traders`, {
+      params,
+      init: { next: { revalidate: 60 } },
+    });
+    return data.data?.attributes?.traders ?? null;
+  } catch (error) {
+    console.error('[CoinGecko] Top traders error:', error);
+    return null;
+  }
+}
+
+// ============================================
+// POOL WITH VOLUME BREAKDOWN (Buy/Sell pressure)
+// ============================================
+
+export interface PoolVolumeBreakdown {
+  volume_breakdown?: {
+    m5?: { buys?: string; sells?: string };
+    m15?: { buys?: string; sells?: string };
+    m30?: { buys?: string; sells?: string };
+    h1?: { buys?: string; sells?: string };
+    h6?: { buys?: string; sells?: string };
+    h24?: { buys?: string; sells?: string };
+  };
+  net_buy_volume_usd?: {
+    m5?: string; m15?: string; m30?: string;
+    h1?: string; h6?: string; h24?: string;
+  };
+  buy_volume_usd?: {
+    m5?: string; m15?: string; m30?: string;
+    h1?: string; h6?: string; h24?: string;
+  };
+  sell_volume_usd?: {
+    m5?: string; m15?: string; m30?: string;
+    h1?: string; h6?: string; h24?: string;
+  };
+}
+
+/**
+ * Get pool data with buy/sell volume breakdown.
+ * Endpoint: /onchain/networks/{network}/pools/{address}?include_volume_breakdown=true
+ */
+export async function getPoolWithVolumeBreakdown(
+  network: string,
+  poolAddress: string
+): Promise<(TrendingPool & { attributes: TrendingPool['attributes'] & PoolVolumeBreakdown }) | null> {
+  try {
+    const params = new URLSearchParams({ include_volume_breakdown: 'true' });
+    const data = await cgFetch<{
+      data: TrendingPool & { attributes: TrendingPool['attributes'] & PoolVolumeBreakdown };
+    }>(`/onchain/networks/${network}/pools/${poolAddress}`, {
+      params,
+      init: { next: { revalidate: 30 } },
+    });
+    return data.data ?? null;
+  } catch (error) {
+    console.error('[CoinGecko] Pool volume breakdown error:', error);
+    return null;
+  }
+}
