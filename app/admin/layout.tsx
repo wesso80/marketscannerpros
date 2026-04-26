@@ -60,32 +60,61 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     sessionStorage.removeItem("admin_secret");
   };
 
-  const navItems = [
-    { href: "/admin", label: "Overview", icon: "📊" },
-    { href: "/admin/usage-analytics", label: "Usage Analytics", icon: "📈" },
-    { href: "/admin/income", label: "Income", icon: "💵" },
-    { href: "/admin/costs", label: "AI Costs", icon: "💰" },
-    { href: "/admin/subscriptions", label: "Subscriptions", icon: "💳" },
-    { href: "/admin/ai-usage", label: "AI Usage", icon: "🤖" },
-    { href: "/admin/trials", label: "Trials", icon: "🎁" },
-    { href: "/admin/delete-requests", label: "Delete Requests", icon: "🗑️" },
-    { href: "/admin/reporting", label: "Nasdaq Reporting", icon: "📋" },
-    { href: "/admin/quant", label: "Quant Terminal", icon: "🧠" },
-    { href: "/operator/engine", label: "Operator Engine", icon: "⚡" },
-    { href: "/admin/discord-bridge", label: "Discord Bridge", icon: "📡" },
-    // ── Operator Terminal ──
-    { href: "/admin/operator-terminal", label: "Operator Terminal", icon: "🖥️" },
-    { href: "/admin/terminal/ADA", label: "Symbol Terminal", icon: "🔬" },
-    { href: "/admin/live-scanner", label: "Live Scanner", icon: "📡" },
-    { href: "/admin/scalper", label: "Scalper", icon: "⚡" },
-    { href: "/admin/risk", label: "Risk Governor", icon: "🛡️" },
-    { href: "/admin/diagnostics", label: "Diagnostics", icon: "🩺" },
-    { href: "/admin/system", label: "System", icon: "⚙️" },
-    { href: "/admin/logs", label: "Logs", icon: "📜" },
-    { href: "/admin/alerts", label: "Alerts", icon: "🔔" },
-    { href: "/admin/outcomes", label: "Signal Outcomes", icon: "🎯" },
-    { href: "/admin/settings", label: "Settings", icon: "🔧" },
+  const navSections = [
+    {
+      label: "Command",
+      items: [
+        { href: "/admin", label: "Command Center", code: "CC" },
+        { href: "/admin/operator-terminal", label: "Operator Terminal", code: "OT" },
+        { href: "/admin/terminal/ADA", label: "Symbol Terminal", code: "ST" },
+        { href: "/operator/engine", label: "Operator Engine", code: "OE" },
+      ],
+    },
+    {
+      label: "Markets",
+      items: [
+        { href: "/admin/live-scanner", label: "Live Scanner", code: "LS" },
+        { href: "/admin/scalper", label: "Scalper", code: "SC" },
+        { href: "/admin/quant", label: "Quant Terminal", code: "QT" },
+        { href: "/admin/outcomes", label: "Signal Outcomes", code: "SO" },
+      ],
+    },
+    {
+      label: "Risk & Alerts",
+      items: [
+        { href: "/admin/risk", label: "Risk Governor", code: "RG" },
+        { href: "/admin/alerts", label: "Alerts", code: "AL" },
+        { href: "/admin/discord-bridge", label: "Discord Bridge", code: "DB" },
+        { href: "/admin/reporting", label: "Nasdaq Reporting", code: "NR" },
+      ],
+    },
+    {
+      label: "Business",
+      items: [
+        { href: "/admin/usage-analytics", label: "Usage Analytics", code: "UA" },
+        { href: "/admin/income", label: "Income", code: "IN" },
+        { href: "/admin/costs", label: "AI Costs", code: "AC" },
+        { href: "/admin/subscriptions", label: "Subscriptions", code: "SB" },
+        { href: "/admin/ai-usage", label: "AI Usage", code: "AI" },
+        { href: "/admin/trials", label: "Trials", code: "TR" },
+        { href: "/admin/delete-requests", label: "Delete Requests", code: "DR" },
+      ],
+    },
+    {
+      label: "System",
+      items: [
+        { href: "/admin/diagnostics", label: "Diagnostics", code: "DX" },
+        { href: "/admin/system", label: "System", code: "SY" },
+        { href: "/admin/logs", label: "Logs", code: "LG" },
+        { href: "/admin/settings", label: "Settings", code: "SE" },
+      ],
+    },
   ];
+
+  const isActiveRoute = (href: string) =>
+    pathname === href ||
+    (href !== "/admin" && pathname?.startsWith(href)) ||
+    (href.startsWith("/admin/terminal/") && pathname?.startsWith("/admin/terminal/"));
 
   if (!isAuthed) {
     return (
@@ -111,7 +140,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             color: "#10B981",
             marginBottom: "1.5rem",
             textAlign: "center",
-          }}>🔐 Admin Login</h1>
+          }}>Private Operator Login</h1>
           <input
             type="password"
             placeholder="Enter admin secret"
@@ -153,44 +182,77 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       }}>
         {/* Sidebar */}
         <aside style={{
-          width: "240px",
+          width: "268px",
           background: "rgba(17, 24, 39, 0.95)",
           borderRight: "1px solid rgba(16, 185, 129, 0.2)",
-          padding: "1.5rem 1rem",
+          padding: "1.25rem 0.85rem",
           display: "flex",
           flexDirection: "column",
+          overflowY: "auto",
         }}>
           <div style={{
-            fontSize: "1.25rem",
+            fontSize: "1.15rem",
             fontWeight: 700,
-            color: "#10B981",
-            marginBottom: "2rem",
+            color: "#E5E7EB",
+            marginBottom: "1.5rem",
             padding: "0 0.5rem",
           }}>
-            ⚙️ Admin Panel
+            <div style={{ color: "#10B981" }}>MSP Operator</div>
+            <div style={{ color: "#64748B", fontSize: "0.72rem", letterSpacing: "0.16em", textTransform: "uppercase", marginTop: "0.25rem" }}>
+              Private desk
+            </div>
           </div>
           
           <nav style={{ flex: 1 }}>
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.75rem",
-                  padding: "0.75rem 1rem",
-                  borderRadius: "0.5rem",
-                  color: (pathname === item.href || (item.href.startsWith("/admin/terminal/") && pathname?.startsWith("/admin/terminal/"))) ? "#10B981" : "#9CA3AF",
-                  background: (pathname === item.href || (item.href.startsWith("/admin/terminal/") && pathname?.startsWith("/admin/terminal/"))) ? "rgba(16, 185, 129, 0.1)" : "transparent",
-                  textDecoration: "none",
-                  marginBottom: "0.25rem",
-                  transition: "all 0.2s",
-                }}
-              >
-                <span>{item.icon}</span>
-                <span>{item.label}</span>
-              </Link>
+            {navSections.map((section) => (
+              <div key={section.label} style={{ marginBottom: "1rem" }}>
+                <div style={{
+                  color: "#64748B",
+                  fontSize: "0.68rem",
+                  letterSpacing: "0.16em",
+                  textTransform: "uppercase",
+                  padding: "0 0.6rem",
+                  marginBottom: "0.4rem",
+                  fontWeight: 800,
+                }}>
+                  {section.label}
+                </div>
+                {section.items.map((item) => {
+                  const active = isActiveRoute(item.href);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.65rem",
+                        padding: "0.58rem 0.65rem",
+                        borderRadius: "0.5rem",
+                        color: active ? "#10B981" : "#9CA3AF",
+                        background: active ? "rgba(16, 185, 129, 0.1)" : "transparent",
+                        border: active ? "1px solid rgba(16,185,129,0.22)" : "1px solid transparent",
+                        textDecoration: "none",
+                        marginBottom: "0.18rem",
+                        transition: "all 0.2s",
+                        fontSize: "0.88rem",
+                      }}
+                    >
+                      <span style={{
+                        minWidth: 28,
+                        textAlign: "center",
+                        color: active ? "#0F172A" : "#94A3B8",
+                        background: active ? "#10B981" : "rgba(148,163,184,0.12)",
+                        borderRadius: 6,
+                        padding: "0.16rem 0.22rem",
+                        fontSize: "0.62rem",
+                        fontWeight: 900,
+                      }}>{item.code}</span>
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
             ))}
           </nav>
 
@@ -206,7 +268,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               marginTop: "auto",
             }}
           >
-            🚪 Logout
+              Logout
           </button>
         </aside>
 

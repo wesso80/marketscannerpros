@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
 
 interface Stats {
   overview: {
@@ -39,7 +40,18 @@ export default function AdminOverviewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [processingLearning, setProcessingLearning] = useState(false);
+  const [symbolJump, setSymbolJump] = useState("ADA");
   const [learningResult, setLearningResult] = useState<{ ok: boolean; processed: number; errors: string[] } | null>(null);
+  const [systemHealth, setSystemHealth] = useState<{
+    feed?: string;
+    websocket?: string;
+    scanner?: string;
+    cache?: string;
+    api?: string;
+    lastScanAt?: string | null;
+    errorsCount?: number;
+    dbConnected?: boolean;
+  } | null>(null);
   const [liveUsers, setLiveUsers] = useState<{
     totalOnline: number; loggedIn: number; anonymous: number;
     pages: { path: string; count: number; section: string }[];
@@ -114,6 +126,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
   useEffect(() => {
     fetchStats();
     fetchLiveUsers();
+    fetchSystemHealth();
     const liveInterval = setInterval(fetchLiveUsers, 30_000);
     return () => clearInterval(liveInterval);
   }, []);
@@ -148,6 +161,16 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
     } catch { /* ignore */ }
   };
 
+  const fetchSystemHealth = async () => {
+    const secret = sessionStorage.getItem("admin_secret");
+    try {
+      const res = await fetch("/api/admin/system/health", {
+        headers: secret ? { Authorization: `Bearer ${secret}` } : {},
+      });
+      if (res.ok) setSystemHealth(await res.json());
+    } catch { /* ignore */ }
+  };
+
   const processLearningOutcomes = async () => {
     setProcessingLearning(true);
     setLearningResult(null);
@@ -166,6 +189,12 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
     } finally {
       setProcessingLearning(false);
     }
+  };
+
+  const openSymbolTerminal = () => {
+    const symbol = symbolJump.trim().toUpperCase().replace(/[^A-Z0-9.-]/g, "");
+    if (!symbol) return;
+    window.location.href = `/admin/terminal/${encodeURIComponent(symbol)}`;
   };
 
   if (loading) {
@@ -190,36 +219,262 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
     textAlign: "center",
   };
 
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat("en-AU", {
+      style: "currency",
+      currency: "AUD",
+      maximumFractionDigits: 0,
+    }).format(value);
+
+  const financials = stats?.overview.financials;
+  const learningTotals = stats?.learning?.totals;
+  const learningOutcomes = Number(learningTotals?.wins || 0) + Number(learningTotals?.stops || 0);
+  const learningWinRate = learningOutcomes > 0 ? (Number(learningTotals?.wins || 0) / learningOutcomes) * 100 : 0;
+  const pendingLearning = Number(learningTotals?.pending || 0);
+  const bestSymbols = [...(stats?.learning?.stats || [])]
+    .filter((item) => Number(item.total_predictions || 0) > 0)
+    .sort((a, b) => Number(b.win_rate || 0) - Number(a.win_rate || 0))
+    .slice(0, 5);
+  const pendingPredictions = (stats?.learning?.recentPredictions || [])
+    .filter((item) => item.status === "pending")
+    .sort((a, b) => Number(b.confidence || 0) - Number(a.confidence || 0))
+    .slice(0, 5);
+  const operatorScore = Math.max(0, Math.min(100, Math.round(
+    (financials && financials.monthlyProfit >= 0 ? 20 : 0) +
+    (pendingLearning === 0 ? 20 : 8) +
+    (learningWinRate >= 55 ? 25 : learningWinRate >= 45 ? 15 : 6) +
+    (systemHealth?.dbConnected ? 15 : 3) +
+    ((stats?.overview.pendingDeleteRequests || 0) === 0 ? 20 : 8)
+  )));
+  const operatorState = operatorScore >= 75 ? "READY" : operatorScore >= 50 ? "WATCH" : "CHECK";
+  const actionQueue = [
+    systemHealth?.dbConnected === false ? "Database health check failed" : "Database connected",
+    pendingLearning > 0 ? `${pendingLearning} learning predictions need processing` : "Learning queue clear",
+    (stats?.overview.pendingDeleteRequests || 0) > 0 ? `${stats?.overview.pendingDeleteRequests} delete requests pending` : "No deletion backlog",
+    financials && financials.monthlyProfit < 0 ? `Monthly burn ${formatCurrency(Math.abs(financials.monthlyProfit))}` : "Monthly P/L stable",
+    pendingPredictions.length > 0 ? `${pendingPredictions.length} pending high-confidence predictions` : "No pending prediction cluster",
+  ];
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
         <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "#E5E7EB" }}>
-          📊 Dashboard Overview
+          Operator Command Center
         </h1>
         <span style={{ color: "#9CA3AF", fontSize: "0.9rem" }}>
           {new Date().toLocaleDateString('en-AU', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
         </span>
       </div>
 
-      {/* Learning Machine Migration */}
       <div style={{
-        background: "rgba(15, 23, 42, 0.8)",
-        border: "1px solid rgba(59, 130, 246, 0.3)",
-        borderRadius: "1rem",
-        padding: "1.25rem",
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(min(360px, 100%), 1fr))",
+        gap: "1rem",
+        marginBottom: "1.25rem",
+      }}>
+        <section style={{
+          ...cardStyle,
+          border: operatorState === "READY" ? "1px solid rgba(16,185,129,0.45)" : operatorState === "WATCH" ? "1px solid rgba(245,158,11,0.45)" : "1px solid rgba(239,68,68,0.45)",
+          background: "linear-gradient(135deg, rgba(15,23,42,0.96), rgba(17,24,39,0.88))",
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", alignItems: "flex-start", marginBottom: "1rem" }}>
+            <div>
+              <div style={{ color: "#94A3B8", fontSize: "0.75rem", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "0.35rem" }}>Private operator state</div>
+              <div style={{ display: "flex", gap: "0.75rem", alignItems: "baseline", flexWrap: "wrap" }}>
+                <span style={{ color: operatorState === "READY" ? "#10B981" : operatorState === "WATCH" ? "#F59E0B" : "#EF4444", fontSize: "2.4rem", fontWeight: 800, lineHeight: 1 }}>{operatorState}</span>
+                <span style={{ color: "#CBD5E1", fontSize: "1rem" }}>{operatorScore}/100 readiness</span>
+              </div>
+            </div>
+            <button
+              onClick={() => { fetchStats(); fetchLiveUsers(); fetchSystemHealth(); }}
+              style={{
+                background: "rgba(16,185,129,0.12)",
+                border: "1px solid rgba(16,185,129,0.35)",
+                color: "#10B981",
+                padding: "0.55rem 0.8rem",
+                borderRadius: 8,
+                cursor: "pointer",
+                fontSize: "0.8rem",
+                fontWeight: 700,
+              }}
+            >
+              Refresh Desk
+            </button>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(150px, 100%), 1fr))", gap: "0.75rem", marginBottom: "1rem" }}>
+            <div style={statBoxStyle}>
+              <div style={{ color: financials && financials.monthlyProfit >= 0 ? "#10B981" : "#EF4444", fontSize: "1.35rem", fontWeight: 800 }}>
+                {financials ? formatCurrency(financials.monthlyProfit) : "$0"}
+              </div>
+              <div style={{ color: "#94A3B8", fontSize: "0.75rem" }}>Monthly P/L</div>
+            </div>
+            <div style={statBoxStyle}>
+              <div style={{ color: pendingLearning > 0 ? "#F59E0B" : "#10B981", fontSize: "1.35rem", fontWeight: 800 }}>{pendingLearning}</div>
+              <div style={{ color: "#94A3B8", fontSize: "0.75rem" }}>Learning Queue</div>
+            </div>
+            <div style={statBoxStyle}>
+              <div style={{ color: learningWinRate >= 55 ? "#10B981" : learningWinRate >= 45 ? "#F59E0B" : "#EF4444", fontSize: "1.35rem", fontWeight: 800 }}>
+                {learningOutcomes ? `${learningWinRate.toFixed(1)}%` : "No data"}
+              </div>
+              <div style={{ color: "#94A3B8", fontSize: "0.75rem" }}>Hit Rate</div>
+            </div>
+            <div style={statBoxStyle}>
+              <div style={{ color: systemHealth?.dbConnected ? "#10B981" : "#EF4444", fontSize: "1.35rem", fontWeight: 800 }}>
+                {systemHealth?.dbConnected ? "ONLINE" : "CHECK"}
+              </div>
+              <div style={{ color: "#94A3B8", fontSize: "0.75rem" }}>System Health</div>
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(120px, 100%), 1fr))", gap: "0.5rem", marginBottom: "1rem" }}>
+            {[
+              ["Feed", systemHealth?.feed || "UNKNOWN"],
+              ["Scanner", systemHealth?.scanner || "UNKNOWN"],
+              ["Cache", systemHealth?.cache || "UNKNOWN"],
+              ["API", systemHealth?.api || "UNKNOWN"],
+            ].map(([label, value]) => (
+              <div key={label} style={{
+                border: "1px solid rgba(148,163,184,0.13)",
+                background: "rgba(15,23,42,0.45)",
+                borderRadius: 8,
+                padding: "0.55rem 0.65rem",
+              }}>
+                <div style={{ color: "#64748B", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.12em" }}>{label}</div>
+                <div style={{ color: String(value).includes("ERROR") || String(value).includes("DEGRADED") ? "#EF4444" : "#CBD5E1", fontSize: "0.78rem", fontWeight: 800, marginTop: "0.2rem" }}>{value}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(220px, 100%), 1fr))", gap: "0.75rem" }}>
+            {actionQueue.map((item, index) => (
+              <div key={item} style={{
+                border: "1px solid rgba(148,163,184,0.16)",
+                background: "rgba(2,6,23,0.35)",
+                borderRadius: 8,
+                padding: "0.75rem",
+                color: "#CBD5E1",
+                fontSize: "0.85rem",
+              }}>
+                <span style={{ color: index === 0 && pendingLearning > 0 ? "#F59E0B" : "#10B981", fontWeight: 800, marginRight: "0.45rem" }}>{String(index + 1).padStart(2, "0")}</span>
+                {item}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section style={{ ...cardStyle, border: "1px solid rgba(59,130,246,0.32)" }}>
+          <div style={{ color: "#94A3B8", fontSize: "0.75rem", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "0.6rem" }}>Launch deck</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "0.55rem", marginBottom: "1rem" }}>
+            {[
+              ["/admin/live-scanner", "Live Scanner"],
+              ["/admin/operator-terminal", "Operator Terminal"],
+              ["/admin/risk", "Risk Governor"],
+              ["/admin/outcomes", "Signal Outcomes"],
+              ["/admin/quant", "Quant Terminal"],
+              ["/admin/system", "System Health"],
+            ].map(([href, label]) => (
+              <Link key={href} href={href} style={{
+                border: "1px solid rgba(148,163,184,0.18)",
+                background: "rgba(15,23,42,0.65)",
+                color: "#E5E7EB",
+                borderRadius: 8,
+                padding: "0.7rem",
+                textDecoration: "none",
+                fontSize: "0.85rem",
+                fontWeight: 700,
+              }}>
+                {label}
+              </Link>
+            ))}
+          </div>
+          <div style={{ borderTop: "1px solid rgba(148,163,184,0.14)", paddingTop: "1rem" }}>
+            <label style={{ display: "block", color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.45rem" }}>Symbol terminal jump</label>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <input
+                value={symbolJump}
+                onChange={(event) => setSymbolJump(event.target.value.toUpperCase())}
+                onKeyDown={(event) => { if (event.key === "Enter") openSymbolTerminal(); }}
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  background: "rgba(2,6,23,0.75)",
+                  border: "1px solid rgba(148,163,184,0.22)",
+                  color: "#E5E7EB",
+                  borderRadius: 8,
+                  padding: "0.65rem 0.75rem",
+                  fontWeight: 800,
+                  letterSpacing: "0.08em",
+                }}
+              />
+              <button
+                onClick={openSymbolTerminal}
+                style={{
+                  background: "#10B981",
+                  border: "none",
+                  color: "#03130D",
+                  borderRadius: 8,
+                  padding: "0.65rem 0.85rem",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              >
+                Open
+              </button>
+            </div>
+          </div>
+          <div style={{ borderTop: "1px solid rgba(148,163,184,0.14)", marginTop: "1rem", paddingTop: "1rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", marginBottom: "0.55rem" }}>
+              <span style={{ color: "#94A3B8", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.12em" }}>Edge watchlist</span>
+              <span style={{ color: "#64748B", fontSize: "0.75rem" }}>{bestSymbols.length} ranked</span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+              {(bestSymbols.length ? bestSymbols : [{ symbol: "No edge data", win_rate: 0, total_predictions: 0, avg_move_pct: 0 }]).slice(0, 4).map((item) => (
+                <button
+                  key={item.symbol}
+                  onClick={() => item.symbol !== "No edge data" && (window.location.href = `/admin/terminal/${encodeURIComponent(item.symbol)}`)}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    border: "1px solid rgba(148,163,184,0.14)",
+                    background: "rgba(2,6,23,0.38)",
+                    borderRadius: 8,
+                    padding: "0.5rem 0.6rem",
+                    color: "#E5E7EB",
+                    cursor: item.symbol === "No edge data" ? "default" : "pointer",
+                    textAlign: "left",
+                  }}
+                >
+                  <span style={{ fontWeight: 800 }}>{item.symbol}</span>
+                  <span style={{ color: Number(item.win_rate) >= 50 ? "#10B981" : "#F59E0B", fontSize: "0.78rem", fontWeight: 800 }}>
+                    {Number(item.win_rate).toFixed(1)}% / {Number(item.total_predictions)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <details style={{
+        background: "rgba(15, 23, 42, 0.72)",
+        border: "1px solid rgba(59, 130, 246, 0.22)",
+        borderRadius: "0.75rem",
+        padding: "0.9rem 1rem",
         marginBottom: "1.5rem"
       }}>
-        <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "0.5rem" }}>
-          🧠 Learning Machine — Neon Migration
-        </h2>
-        <p style={{ color: "#9CA3AF", fontSize: "0.9rem", marginBottom: "0.75rem" }}>
-          Run the SQL below in your Neon PostgreSQL console to enable prediction logging + learning outcomes.
+        <summary style={{ color: "#93C5FD", cursor: "pointer", fontWeight: 700 }}>
+          Maintenance drawer: Learning Machine migration SQL
+        </summary>
+        <p style={{ color: "#9CA3AF", fontSize: "0.85rem", marginTop: "0.85rem", marginBottom: "0.75rem" }}>
+          Use this only when the learning tables need to be created or restored.
         </p>
-        <p style={{ color: "var(--msp-accent)", fontSize: "0.9rem", marginBottom: "0.75rem" }}>
-          Migration file: [migrations/015_learning_machine.sql](migrations/015_learning_machine.sql)
+        <p style={{ color: "var(--msp-accent)", fontSize: "0.85rem", marginBottom: "0.75rem" }}>
+          Migration file: migrations/015_learning_machine.sql
         </p>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-          <span style={{ color: "#94A3B8", fontSize: "0.8rem" }}>SQL (copy & run in Neon)</span>
+          <span style={{ color: "#94A3B8", fontSize: "0.8rem" }}>SQL</span>
           <button
             onClick={() => navigator.clipboard.writeText(learningMigrationSql)}
             style={{
@@ -250,7 +505,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
             fontSize: 12
           }}
         />
-      </div>
+      </details>
 
       {/* Key metrics */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(200px, 100%), 1fr))", gap: "1rem", marginBottom: "2rem" }}>
