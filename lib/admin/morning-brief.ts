@@ -261,6 +261,7 @@ export type MorningBrief = {
   operatorNote: string;
   topPlays: ScannerHit[];
   watchlist: ScannerHit[];
+  researchSetups: ScannerHit[];
   avoidList: ScannerHit[];
   catalysts: MorningCatalyst[];
   risk: MorningRiskState;
@@ -482,12 +483,13 @@ export async function buildMorningBrief(options: {
   const topPlays = rankedHits.filter((hit) => hit.permission === "GO").slice(0, 5);
   const watchlist = rankedHits.filter((hit) => hit.permission === "WAIT").slice(0, 8);
   const avoidList = rankedHits.filter((hit) => hit.permission === "BLOCK").slice(0, 6);
+  const researchSetups = buildResearchSetups(rankedHits, topPlays, watchlist, risk);
   const deskState = resolveDeskState(risk, health, topPlays, watchlist);
   const comparison = await buildBriefComparison(briefId, market, timeframe, deskState, topPlays, catalysts);
-  const executionChecklist = buildExecutionChecklist(deskState, topPlays, watchlist, catalysts, risk, learning, comparison);
+  const executionChecklist = buildExecutionChecklist(deskState, topPlays, watchlist.length ? watchlist : researchSetups, catalysts, risk, learning, comparison);
   const riskGovernor = buildMorningRiskGovernor(risk, sessionScore, expectancy);
-  const scenarioTree = buildScenarioTree(topPlays, watchlist, catalysts, riskGovernor, expectancy);
-  const commander = buildCommanderView(deskState, risk, topPlays, executionChecklist, riskGovernor, outcomeGrade, scenarioTree);
+  const scenarioTree = buildScenarioTree(topPlays, watchlist, researchSetups, catalysts, riskGovernor, expectancy);
+  const commander = buildCommanderView(deskState, risk, topPlays, researchSetups, executionChecklist, riskGovernor, outcomeGrade, scenarioTree);
 
   return {
     briefId,
@@ -499,6 +501,7 @@ export async function buildMorningBrief(options: {
     operatorNote: buildOperatorNote(deskState, topPlays, watchlist, risk, learning),
     topPlays,
     watchlist,
+    researchSetups,
     avoidList,
     catalysts,
     risk,
@@ -803,6 +806,9 @@ export function renderMorningBriefEmail(brief: MorningBrief): string {
   const watchRows = brief.watchlist.length > 0
     ? brief.watchlist.slice(0, 5).map((play) => playRow(play, appUrl)).join("")
     : emptyRow("No watchlist candidates worth forcing.");
+  const researchRows = brief.researchSetups.length > 0
+    ? brief.researchSetups.slice(0, 6).map((play) => playRow(play, appUrl)).join("")
+    : emptyRow("No research-only setups found while risk is locked.");
   const catalystRows = brief.catalysts.length > 0
     ? brief.catalysts.slice(0, 8).map((event) => `
       <tr>
@@ -908,6 +914,7 @@ export function renderMorningBriefEmail(brief: MorningBrief): string {
       `)}
       ${section("Best Plays", `<table style="width:100%;border-collapse:collapse;">${topRows}</table>`)}
       ${section("Watch, Do Not Chase", `<table style="width:100%;border-collapse:collapse;">${watchRows}</table>`)}
+      ${section("Research Setups While Locked", `<p style="margin:0 0 12px;color:#94a3b8;font-size:13px;line-height:1.5;">These are market-structure candidates only. They are not executable while risk is blocked or locked.</p><table style="width:100%;border-collapse:collapse;">${researchRows}</table>`)}
       ${section("News And Catalyst Risk", `<table style="width:100%;border-collapse:collapse;">${catalystRows}</table>`)}
       ${section("Playbook Scorecard", `
         <table style="width:100%;border-collapse:collapse;">
@@ -1721,7 +1728,7 @@ async function buildPreviousBriefOutcomeGrade(): Promise<MorningOutcomeGrade> {
     const prior = rows[0];
     if (!prior?.snapshot) return empty;
 
-    const plays = [...(prior.snapshot.topPlays ?? []), ...(prior.snapshot.watchlist ?? []).slice(0, 4)];
+    const plays = [...(prior.snapshot.topPlays ?? []), ...(prior.snapshot.watchlist ?? []).slice(0, 4), ...(prior.snapshot.researchSetups ?? []).slice(0, 4)];
     const symbols = uniqueSymbols(plays.map((play) => play.symbol), prior.snapshot.market ?? "CRYPTO");
     if (!symbols.length) return emptyOutcomeGrade("Prior brief had no plays to grade.", prior.brief_id, prior.generated_at);
 
@@ -1904,11 +1911,12 @@ function buildMorningRiskGovernor(
 function buildScenarioTree(
   topPlays: ScannerHit[],
   watchlist: ScannerHit[],
+  researchSetups: ScannerHit[],
   catalysts: MorningCatalyst[],
   governor: MorningRiskGovernor,
   expectancy: MorningExpectancyDashboard,
 ): MorningScenarioTree[] {
-  const candidates = [...topPlays, ...watchlist].slice(0, 5);
+  const candidates = [...topPlays, ...watchlist, ...researchSetups].slice(0, 5);
   return candidates.map((play) => {
     const symbolCatalyst = catalysts.find((event) => event.ticker === play.symbol);
     const expectancyHit = [...expectancy.bestSymbols, ...expectancy.bestPlaybooks].find((item) => item.key === play.symbol || item.key === (play.playbook || play.regime));
@@ -1930,12 +1938,13 @@ function buildCommanderView(
   state: DeskState,
   risk: MorningRiskState,
   topPlays: ScannerHit[],
+  researchSetups: ScannerHit[],
   checklist: MorningExecutionChecklist,
   governor: MorningRiskGovernor,
   outcomeGrade: MorningOutcomeGrade,
   scenarios: MorningScenarioTree[],
 ): MorningCommanderView {
-  const topSymbols = topPlays.slice(0, 3).map((play) => play.symbol);
+  const topSymbols = (topPlays.length ? topPlays : researchSetups).slice(0, 3).map((play) => play.symbol);
   return {
     permission: governor.mode === "LOCKED" || state === "BLOCK" ? "BLOCK" : state,
     primaryAction: checklist.firstAction,
@@ -2323,6 +2332,28 @@ function rankHitsWithLearning(hits: ScannerHit[], learning: MorningLearningSnaps
     catalystPenalty.set(event.ticker, Math.max(catalystPenalty.get(event.ticker) ?? 0, penalty));
   });
   return [...hits].sort((a, b) => learningAdjustedScore(b, playbookScores, symbolScores, catalystPenalty) - learningAdjustedScore(a, playbookScores, symbolScores, catalystPenalty));
+}
+
+function buildResearchSetups(
+  rankedHits: ScannerHit[],
+  topPlays: ScannerHit[],
+  watchlist: ScannerHit[],
+  risk: MorningRiskState,
+) {
+  const executionBlocked = risk.killSwitchActive || risk.permission === "BLOCK" || risk.dailyDrawdown >= 0.02;
+  if (!executionBlocked) return [];
+  const used = new Set([...topPlays, ...watchlist].map((hit) => hit.symbol));
+  return rankedHits
+    .filter((hit) => !used.has(hit.symbol))
+    .slice(0, 6)
+    .map((hit) => ({
+      ...hit,
+      permission: "WAIT" as const,
+      blockReasons: [
+        "Research only while risk is blocked or locked.",
+        ...(hit.blockReasons ?? []).slice(0, 3),
+      ],
+    }));
 }
 
 function learningAdjustedScore(

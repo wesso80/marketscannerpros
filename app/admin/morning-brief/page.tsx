@@ -41,6 +41,7 @@ type MorningBrief = {
   operatorNote: string;
   topPlays: ScannerHit[];
   watchlist: ScannerHit[];
+  researchSetups: ScannerHit[];
   avoidList: ScannerHit[];
   catalysts: MorningCatalyst[];
   risk: {
@@ -872,6 +873,17 @@ export default function MorningBriefPage() {
 
           <section className="mb-5">
             <AdminCard>
+              <SectionTitle title="Research Setups While Locked" subtitle="Best technical structures remain visible, but they are watch-only until risk permission unlocks." />
+              <div className="grid gap-3 xl:grid-cols-2">
+                {brief.researchSetups.length > 0 ? brief.researchSetups.map((play) => (
+                  <CompactPlay key={`research-${play.symbol}`} play={play} feedback={feedbackStatus[play.symbol]} onFeedback={markFeedback} />
+                )) : <EmptyState text="No research-only setups found in the current scan." />}
+              </div>
+            </AdminCard>
+          </section>
+
+          <section className="mb-5">
+            <AdminCard>
               <SectionTitle title="What Changed" subtitle="Difference versus the previous saved morning brief." />
               <div className="rounded-md border border-sky-400/15 bg-sky-400/5 p-4 text-sm leading-6 text-sky-100">
                 {brief.comparison.summary}
@@ -889,7 +901,7 @@ export default function MorningBriefPage() {
             <AdminCard>
               <SectionTitle title="End-Of-Session Review" subtitle="Close the loop after trading so tomorrow's brief learns from what actually happened." />
               <div className="space-y-3">
-                {[...brief.topPlays, ...brief.watchlist.slice(0, 4)].length > 0 ? [...brief.topPlays, ...brief.watchlist.slice(0, 4)].map((play) => (
+                {[...brief.topPlays, ...brief.watchlist.slice(0, 4), ...brief.researchSetups.slice(0, 3)].length > 0 ? [...brief.topPlays, ...brief.watchlist.slice(0, 4), ...brief.researchSetups.slice(0, 3)].map((play) => (
                   <ReviewPlay
                     key={`review-${play.symbol}`}
                     play={play}

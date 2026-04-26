@@ -26,6 +26,7 @@ type CommanderBrief = {
   headline: string;
   topPlays: ScannerHit[];
   watchlist: ScannerHit[];
+  researchSetups: ScannerHit[];
   commander: {
     permission: string;
     primaryAction: string;
@@ -196,6 +197,15 @@ export default function CommanderPage() {
               <SectionTitle title="Watch Queue" subtitle="Do not chase these without permission improving." />
               <div className="space-y-3">
                 {brief.watchlist.length > 0 ? brief.watchlist.slice(0, 5).map((play) => <PlayRow key={play.symbol} play={play} compact />) : <Empty text="No WAIT candidates worth attention." />}
+              </div>
+            </AdminCard>
+          </section>
+
+          <section className="mb-5">
+            <AdminCard>
+              <SectionTitle title="Research Setups While Locked" subtitle="Market structure stays visible, but these are not executable until risk unlocks." />
+              <div className="grid gap-3 xl:grid-cols-3">
+                {brief.researchSetups.length > 0 ? brief.researchSetups.slice(0, 6).map((play) => <PlayRow key={`research-${play.symbol}`} play={play} compact />) : <Empty text="No research-only setups found in the current scan." />}
               </div>
             </AdminCard>
           </section>
