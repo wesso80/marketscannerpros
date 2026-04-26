@@ -25,6 +25,7 @@ export interface ScreenerRow {
   sectorRelStr?: number;
   reason?: string;
   dataQuality?: 'GOOD' | 'DEGRADED' | 'MISSING' | string;
+  dataQualityDetail?: string;
   // extra fields from bulk scan
   liquidityState?: string;
   volatilityState?: string;
@@ -144,7 +145,7 @@ const COLUMNS: Column[] = [
       const label = r.dataQuality || 'DEGRADED';
       const color = dataQualityColor(label);
       return (
-        <span style={{ fontSize: 11, fontWeight: 700, color, background: `${color}15`, border: `1px solid ${color}40`, borderRadius: 4, padding: '1px 5px' }}>
+        <span title={r.dataQualityDetail || `${label} scanner inputs`} style={{ fontSize: 11, fontWeight: 700, color, background: `${color}15`, border: `1px solid ${color}40`, borderRadius: 4, padding: '1px 5px' }}>
           {label}
         </span>
       );

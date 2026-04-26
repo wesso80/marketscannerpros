@@ -47,15 +47,35 @@ function getDataQualityLabel(input: { price?: number | null; atr?: number | null
   return missing === 0 ? 'GOOD' : missing <= 1 ? 'DEGRADED' : 'MISSING';
 }
 
+function getMissingInputs(input: { price?: number | null; atr?: number | null; rsi?: number | null; adx?: number | null; direction?: string | null }): string[] {
+  return [
+    !isUsableNumber(input.price) ? 'price' : null,
+    !isUsableNumber(input.atr) ? 'ATR' : null,
+    !isUsableNumber(input.rsi) ? 'RSI' : null,
+    !isUsableNumber(input.adx) ? 'ADX' : null,
+    !input.direction || input.direction === 'neutral' ? 'direction' : null,
+  ].filter(Boolean) as string[];
+}
+
+function dataQualityDetail(label: string, missing: string[]): string {
+  if (label === 'GOOD') return 'Price, ATR, RSI, ADX, and directional context are available.';
+  if (missing.length === 0) return `${label} scanner inputs.`;
+  return `Missing or weak: ${missing.join(', ')}.`;
+}
+
 function dataQualityColor(label: string): string {
   if (label === 'GOOD') return '#10B981';
   if (label === 'DEGRADED') return '#F59E0B';
   return '#EF4444';
 }
 
-function summarizeRankedReason(r: ScanResult, lifecycle: LifecycleState, regimeCompatible: boolean): string {
+function summarizeRankedReason(r: ScanResult, lifecycle: LifecycleState, regimeCompatible: boolean, activeRegime: string): string {
   if (r.scoreV2?.regimeScore?.gated) return 'Gated by regime';
-  if (!regimeCompatible) return 'Regime mismatch';
+  if (!regimeCompatible) {
+    const setup = r.direction === 'bullish' ? 'Bull trend setup' : r.direction === 'bearish' ? 'Bear trend setup' : 'Directional setup';
+    if (activeRegime.toLowerCase().includes('range')) return `${setup} in range regime`;
+    return `${setup} outside active regime`;
+  }
   if (r.dveFlags?.includes('COMPRESSED')) return `${lifecycle === 'READY' ? 'Ready' : 'Watch'} compression`;
   if (r.dveFlags?.includes('MOMENTUM_ACCEL')) return 'Momentum accel';
   if (r.dveFlags?.includes('CLIMAX')) return 'Volatility risk';
@@ -70,6 +90,16 @@ function rankedTrustLabel(r: ScanResult): 'GOOD' | 'DEGRADED' | 'MISSING' {
   if (r.confidence == null || r.score == null) return 'DEGRADED';
   if (r.dveBbwp == null && !r.dveSignalType && !r.dveFlags?.length) return 'DEGRADED';
   return 'GOOD';
+}
+
+function rankedTrustDetail(r: ScanResult): string {
+  if (!isUsableNumber(r.price)) return 'Missing usable price.';
+  const missing = [
+    r.confidence == null ? 'confidence' : null,
+    r.score == null ? 'raw score' : null,
+    r.dveBbwp == null && !r.dveSignalType && !r.dveFlags?.length ? 'DVE context' : null,
+  ].filter(Boolean) as string[];
+  return missing.length ? `Missing or weak: ${missing.join(', ')}.` : 'Price, score, confidence, and volatility context are available.';
 }
 
 function summarizeDetailNextCheck(args: { hasScenarioLevels: boolean; trendAligned: boolean; momentumAligned: boolean; flowAligned: boolean; dataQuality: string; direction: string }) {
@@ -199,6 +229,8 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
       : false;
   const tfAlignment = [trendAligned, momentumAligned, flowAligned, direction !== 'neutral'].filter(Boolean).length;
   const dataQuality = getDataQualityLabel({ price: detail.price, atr: detail.atr, rsi: detail.rsi, adx: detail.adx, direction });
+  const missingInputs = getMissingInputs({ price: detail.price, atr: detail.atr, rsi: detail.rsi, adx: detail.adx, direction });
+  const dataQualityTitle = dataQualityDetail(dataQuality, missingInputs);
   const hasScenarioLevels = isUsableNumber(detail.price) && isUsableNumber(detail.atr) && direction !== 'neutral';
 
   const entry = hasScenarioLevels
@@ -341,7 +373,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
           <div className="rounded-lg border p-3" style={{ borderColor: statusColor + '66', background: 'var(--msp-panel-2)' }}>
             <div className="text-[0.66rem] font-extrabold uppercase tracking-[0.08em] text-slate-500">Setup Alignment</div>
             <div className="mt-1 text-[0.88rem] font-black uppercase" style={{ color: statusColor }}>{executionStatus}</div>
-            <div className="mt-2 inline-flex rounded border px-2 py-0.5 text-[11px] font-bold uppercase" style={{ color: dataQualityColor(dataQuality), borderColor: dataQualityColor(dataQuality) + '55', backgroundColor: dataQualityColor(dataQuality) + '15' }}>
+            <div title={dataQualityTitle} className="mt-2 inline-flex rounded border px-2 py-0.5 text-[11px] font-bold uppercase" style={{ color: dataQualityColor(dataQuality), borderColor: dataQualityColor(dataQuality) + '55', backgroundColor: dataQualityColor(dataQuality) + '15' }}>
               Data {dataQuality}
             </div>
             <div className="mt-2 grid gap-1 text-[0.72rem] text-slate-400">
@@ -721,7 +753,9 @@ export default function ScannerPage() {
         const strat = pick.setup || (pick.macd_hist != null && pick.macd_hist > 0 ? 'MOM REV' : pickRsi != null && pickRsi < 35 ? 'MEAN REV' : atrPct < 1.5 ? 'BREAKOUT' : 'RANGE');
         const rec = pick.institutionalFilter?.recommendation;
         const dataQuality = getDataQualityLabel({ price: priceVal, atr, rsi: pickRsi, adx: adxVal, direction: pick.direction });
-        const reason = dataQuality !== 'GOOD' ? 'Data incomplete'
+        const missingInputs = getMissingInputs({ price: priceVal, atr, rsi: pickRsi, adx: adxVal, direction: pick.direction });
+        const dataQualityDetailText = dataQualityDetail(dataQuality, missingInputs);
+        const reason = dataQuality !== 'GOOD' ? dataQualityDetailText.replace(/\.$/, '')
           : tfA >= 4 && qual !== 'low' ? 'High MTF alignment'
           : atrPct < 1.5 ? 'Compression setup'
           : ind.momentumAccel ? 'Momentum acceleration'
@@ -734,7 +768,7 @@ export default function ScannerPage() {
           volume24h: pick.volume ?? ind.volume, price: priceVal, permission: perm,
           squeeze: ind.squeeze ?? false, squeezeStrength: ind.squeezeStrength ?? 0,
           momentumAccel: ind.momentumAccel ?? false, momentumAccelScore: ind.momentumAccelScore ?? 0,
-          sectorRelStr: ind.sectorRelStr, reason, dataQuality,
+          sectorRelStr: ind.sectorRelStr, reason, dataQuality, dataQualityDetail: dataQualityDetailText,
         } as ScreenerRow;
       })
       .filter((row: ScreenerRow) => {
@@ -774,26 +808,26 @@ export default function ScannerPage() {
 
   /* ═══════════════════════════════════════════════════════════════════════ */
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* ─── Header ─── */}
       <SectionHeader title="Scanner" subtitle="Technical analysis scanner — educational scan results" />
       <ComplianceDisclaimer compact />
 
       {/* ─── Mode Toggle ─── */}
-      <div className="flex items-center gap-1 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-1 w-fit">
+      <div className="flex items-center gap-1 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-1 w-fit">
         <button onClick={() => { setMode('ranked'); setSelectedSymbol(null); setSymbolDetail(null); }}
-          className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-[0.06em] transition-all ${mode === 'ranked' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:text-slate-200 border border-transparent'}`}>
+          className={`px-3.5 py-1.5 rounded-md text-xs font-bold uppercase tracking-[0.06em] transition-all ${mode === 'ranked' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:text-slate-200 border border-transparent'}`}>
           Ranked Scan
         </button>
         <button onClick={() => { setMode('pro'); setSelectedSymbol(null); setSymbolDetail(null); }}
-          className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-[0.06em] transition-all ${mode === 'pro' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:text-slate-200 border border-transparent'}`}>
+          className={`px-3.5 py-1.5 rounded-md text-xs font-bold uppercase tracking-[0.06em] transition-all ${mode === 'pro' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:text-slate-200 border border-transparent'}`}>
           Pro Scanner
         </button>
       </div>
 
       {/* ─── Active Regime Context ─── */}
       {regime.data && (
-        <div className="flex items-center gap-3 px-3 py-2 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel-2)] flex-wrap">
+        <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] flex-wrap">
           <span className="text-[11px] uppercase tracking-wider text-slate-500">Active Regime</span>
           <Badge label={regime.data.regime} color={REGIME_COLORS[currentRegime as RegimePriority] || '#64748B'} small />
           <span className="text-[11px] text-slate-500">Risk: <span className="text-white">{regime.data.riskLevel}</span></span>
@@ -915,7 +949,8 @@ export default function ScannerPage() {
                       const mspColor = msp >= 70 ? '#10B981' : msp >= 50 ? '#F59E0B' : msp >= 30 ? '#94A3B8' : '#EF4444';
                       const regimeCompatible = isRegimeCompatible(r);
                       const trust = rankedTrustLabel(r);
-                      const reason = summarizeRankedReason(r, lifecycle, regimeCompatible);
+                      const reason = summarizeRankedReason(r, lifecycle, regimeCompatible, currentRegime);
+                      const trustDetail = rankedTrustDetail(r);
                       return (
                         <tr key={r.symbol} className="border-b border-slate-800/40 hover:bg-slate-800/30 cursor-pointer transition-colors" onClick={() => handleV2RowClick(r)}>
                           <td className="py-2.5 px-2 whitespace-nowrap"><div className="font-bold text-white">{r.symbol}</div><div className="text-[11px] text-slate-600">{regimeLabel}</div></td>
@@ -931,7 +966,7 @@ export default function ScannerPage() {
                           </td>
                           <td className="py-2.5 px-2 text-[11px] whitespace-nowrap max-w-[110px] truncate text-slate-300" title={reason}>{reason}</td>
                           <td className="py-2.5 px-2 whitespace-nowrap">
-                            <span className="rounded border px-1.5 py-0.5 text-[11px] font-bold" style={{ color: dataQualityColor(trust), borderColor: dataQualityColor(trust) + '55', backgroundColor: dataQualityColor(trust) + '15' }}>
+                            <span title={trustDetail} className="rounded border px-1.5 py-0.5 text-[11px] font-bold" style={{ color: dataQualityColor(trust), borderColor: dataQualityColor(trust) + '55', backgroundColor: dataQualityColor(trust) + '15' }}>
                               {trust}
                             </span>
                           </td>

@@ -6,6 +6,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { usePathname } from 'next/navigation';
 import type { 
   PageSkill, 
   CopilotTab, 
@@ -33,6 +34,7 @@ export default function MSPCopilot({
   onActionExecute,
   defaultOpen = false,
 }: MSPCopilotProps) {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [isMinimized, setIsMinimized] = useState(false);
   const [activeTab, setActiveTab] = useState<CopilotTab>('explain');
@@ -444,6 +446,8 @@ export default function MSPCopilot({
         ];
     }
   };
+
+  if (pathname?.startsWith('/tools/scanner')) return null;
 
   if (!isOpen) {
     // Minimized state: tiny chip icon only
