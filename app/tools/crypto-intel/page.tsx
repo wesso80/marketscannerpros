@@ -3,9 +3,6 @@
 import { Suspense } from 'react';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import CryptoNewsWidget from '@/components/CryptoNewsWidget';
-import TokenSecurityWidget from '@/components/TokenSecurityWidget';
-import WhaleTrackerWidget from '@/components/WhaleTrackerWidget';
-import NetBuySellWidget from '@/components/NetBuySellWidget';
 import PublicTreasuryWidget from '@/components/PublicTreasuryWidget';
 
 export default function CryptoIntelPage() {
@@ -41,31 +38,6 @@ export default function CryptoIntelPage() {
           </Suspense>
           <Suspense fallback={<WidgetSkeleton />}>
             <PublicTreasuryWidget />
-          </Suspense>
-        </div>
-
-        {/* Middle row: Token Security + Whale Tracker */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '20px',
-          marginBottom: '20px',
-          alignItems: 'start',
-        }}
-        className="responsive-grid-2col"
-        >
-          <Suspense fallback={<WidgetSkeleton />}>
-            <TokenSecurityWidget />
-          </Suspense>
-          <Suspense fallback={<WidgetSkeleton />}>
-            <WhaleTrackerWidget />
-          </Suspense>
-        </div>
-
-        {/* Bottom row: Net Buy/Sell Pressure (full width) */}
-        <div style={{ marginBottom: '20px' }}>
-          <Suspense fallback={<WidgetSkeleton />}>
-            <NetBuySellWidget />
           </Suspense>
         </div>
 
