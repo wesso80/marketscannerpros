@@ -31,6 +31,57 @@ function formatPrice(p: number | undefined | null) {
   return p < 1 ? `$${p.toFixed(4)}` : `$${p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+function isUsableNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0;
+}
+
+function formatLevel(value: number | undefined | null): string {
+  if (!isUsableNumber(value)) return 'Unavailable';
+  return value < 1 ? value.toFixed(4) : value.toFixed(2);
+}
+
+function getDataQualityLabel(input: { price?: number | null; atr?: number | null; rsi?: number | null; adx?: number | null; direction?: string | null }) {
+  if (!isUsableNumber(input.price)) return 'MISSING';
+  const missing = [input.atr, input.rsi, input.adx].filter((value) => !isUsableNumber(value)).length;
+  if (!input.direction || input.direction === 'neutral') return 'DEGRADED';
+  return missing === 0 ? 'GOOD' : missing <= 1 ? 'DEGRADED' : 'MISSING';
+}
+
+function dataQualityColor(label: string): string {
+  if (label === 'GOOD') return '#10B981';
+  if (label === 'DEGRADED') return '#F59E0B';
+  return '#EF4444';
+}
+
+function summarizeRankedReason(r: ScanResult, lifecycle: LifecycleState, regimeCompatible: boolean): string {
+  if (r.scoreV2?.regimeScore?.gated) return 'Gated by regime';
+  if (!regimeCompatible) return 'Regime mismatch';
+  if (r.dveFlags?.includes('COMPRESSED')) return `${lifecycle === 'READY' ? 'Ready' : 'Watch'} compression`;
+  if (r.dveFlags?.includes('MOMENTUM_ACCEL')) return 'Momentum accel';
+  if (r.dveFlags?.includes('CLIMAX')) return 'Volatility risk';
+  if (r.confidence != null && r.confidence >= 70) return 'High confluence';
+  if (r.direction === 'bullish') return 'Bullish alignment';
+  if (r.direction === 'bearish') return 'Bearish alignment';
+  return 'Mixed evidence';
+}
+
+function rankedTrustLabel(r: ScanResult): 'GOOD' | 'DEGRADED' | 'MISSING' {
+  if (!isUsableNumber(r.price)) return 'MISSING';
+  if (r.confidence == null || r.score == null) return 'DEGRADED';
+  if (r.dveBbwp == null && !r.dveSignalType && !r.dveFlags?.length) return 'DEGRADED';
+  return 'GOOD';
+}
+
+function summarizeDetailNextCheck(args: { hasScenarioLevels: boolean; trendAligned: boolean; momentumAligned: boolean; flowAligned: boolean; dataQuality: string; direction: string }) {
+  if (args.dataQuality !== 'GOOD') return 'Refresh scanner inputs before relying on reference levels.';
+  if (!args.hasScenarioLevels) return 'Wait for valid reference and invalidation levels before escalation.';
+  if (!args.trendAligned) return 'Watch for structure to align with the observed direction.';
+  if (!args.momentumAligned) return 'Watch for momentum confirmation before treating the case as clean.';
+  if (!args.flowAligned) return 'Check whether signal split improves from mixed to aligned.';
+  if (args.direction === 'neutral') return 'Wait for directional structure to resolve.';
+  return 'Monitor whether price respects the reference level and data quality holds.';
+}
+
 const TABS = ['All', 'Equities', 'Crypto', 'Bullish', 'Bearish', 'High Score', 'DVE Signals', 'Squeeze', 'Regime Match'] as const;
 type SortKey = 'symbol' | 'score' | 'direction' | 'confidence' | 'rsi' | 'price' | 'dveBbwp' | 'mspScore';
 type SortDir = 'asc' | 'desc';
@@ -147,27 +198,30 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
       ? (detail.signals?.bearish ?? 0) >= (detail.signals?.neutral ?? 0)
       : false;
   const tfAlignment = [trendAligned, momentumAligned, flowAligned, direction !== 'neutral'].filter(Boolean).length;
+  const dataQuality = getDataQualityLabel({ price: detail.price, atr: detail.atr, rsi: detail.rsi, adx: detail.adx, direction });
+  const hasScenarioLevels = isUsableNumber(detail.price) && isUsableNumber(detail.atr) && direction !== 'neutral';
 
-  const entry = detail.price != null
-    ? (direction === 'bullish' ? detail.price + (detail.atr ?? 0) * 0.2 : direction === 'bearish' ? detail.price - (detail.atr ?? 0) * 0.2 : detail.price) : null;
-  const stop = detail.price != null
-    ? (direction === 'bullish' ? detail.price - (detail.atr ?? 0) * 0.8 : direction === 'bearish' ? detail.price + (detail.atr ?? 0) * 0.8 : detail.price) : null;
-  const target1 = detail.price != null
-    ? (direction === 'bullish' ? detail.price + (detail.atr ?? 0) * 1.2 : direction === 'bearish' ? detail.price - (detail.atr ?? 0) * 1.2 : detail.price) : null;
-  const target2 = detail.price != null
-    ? (direction === 'bullish' ? detail.price + (detail.atr ?? 0) * 2.0 : direction === 'bearish' ? detail.price - (detail.atr ?? 0) * 2.0 : detail.price) : null;
-  const rr = entry != null && stop != null && target1 != null
+  const entry = hasScenarioLevels
+    ? (direction === 'bullish' ? detail.price! + detail.atr! * 0.2 : detail.price! - detail.atr! * 0.2) : null;
+  const stop = hasScenarioLevels
+    ? (direction === 'bullish' ? detail.price! - detail.atr! * 0.8 : detail.price! + detail.atr! * 0.8) : null;
+  const target1 = hasScenarioLevels
+    ? (direction === 'bullish' ? detail.price! + detail.atr! * 1.2 : detail.price! - detail.atr! * 1.2) : null;
+  const target2 = hasScenarioLevels
+    ? (direction === 'bullish' ? detail.price! + detail.atr! * 2.0 : detail.price! - detail.atr! * 2.0) : null;
+  const rr = hasScenarioLevels && entry != null && stop != null && target1 != null
     ? Math.max(0, Math.abs(target1 - entry) / Math.max(0.0001, Math.abs(entry - stop))) : null;
+  const nextUsefulCheck = summarizeDetailNextCheck({ hasScenarioLevels, trendAligned, momentumAligned, flowAligned, dataQuality, direction });
 
   const recommendation = detail.institutionalFilter?.recommendation;
-  const tradeReady = recommendation === 'TRADE_READY' && quality !== 'LOW' && direction !== 'neutral';
-  const executionStatus = tradeReady ? 'HIGH ALIGNMENT' : quality === 'MEDIUM' && direction !== 'neutral' ? 'MODERATE ALIGNMENT' : 'LOW ALIGNMENT — REVIEW';
+  const tradeReady = recommendation === 'TRADE_READY' && quality !== 'LOW' && direction !== 'neutral' && dataQuality === 'GOOD' && hasScenarioLevels;
+  const executionStatus = !hasScenarioLevels ? 'DATA WEAK — REVIEW' : tradeReady ? 'HIGH ALIGNMENT' : quality === 'MEDIUM' && direction !== 'neutral' ? 'MODERATE ALIGNMENT' : 'LOW ALIGNMENT — REVIEW';
   const statusColor = tradeReady ? '#10B981' : quality === 'MEDIUM' && direction !== 'neutral' ? '#F59E0B' : '#EF4444';
   const confBarColor = confidence >= 70 ? '#10B981' : confidence >= 55 ? '#F59E0B' : '#EF4444';
 
   const blockReasons = tradeReady
     ? ['Structure aligned', direction === 'bullish' ? 'Bias: Long' : direction === 'bearish' ? 'Bias: Short' : 'Bias: Neutral']
-    : [quality === 'LOW' ? 'Quality below threshold' : null, !trendAligned ? 'Structure incomplete' : null, atrPercent >= 3 ? 'Volatility mismatch' : null].filter(Boolean) as string[];
+    : [dataQuality !== 'GOOD' ? `Data quality: ${dataQuality.toLowerCase()}` : null, !hasScenarioLevels ? 'Reference levels unavailable' : null, quality === 'LOW' ? 'Quality below threshold' : null, !trendAligned ? 'Structure incomplete' : null, atrPercent >= 3 ? 'Volatility mismatch' : null].filter(Boolean) as string[];
 
   const handleAddToWatchlist = async () => {
     try {
@@ -190,7 +244,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
           assetClass: assetType,
           sourceType: 'scanner-detail',
           generatedAt: new Date().toISOString(),
-          dataQuality: detail.price != null && detail.rsi != null && detail.adx != null ? 'GOOD' : 'DEGRADED',
+          dataQuality,
           title: `${detail.symbol} scanner research case`,
           thesis: `${detail.symbol} shows ${quality.toLowerCase()} scanner alignment on ${timeframeLabel}.`,
           setup: { direction, quality, confidence, regime, timeframe: timeframeLabel },
@@ -205,10 +259,10 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
               detail.rsi == null ? 'RSI' : null,
               detail.adx == null ? 'ADX' : null,
             ].filter(Boolean),
-            dataQuality: detail.price != null && detail.rsi != null && detail.adx != null ? 'GOOD' : 'DEGRADED',
+            dataQuality,
             riskFlags: blockReasons,
-            invalidation: stop != null ? `Scenario invalidation reference: ${stop.toFixed(2)}` : 'Scenario invalidation reference unavailable',
-            nextUsefulCheck: 'Refresh scanner data and review whether technical alignment improves or weakens.',
+            invalidation: isUsableNumber(stop) ? `Scenario invalidation reference: ${formatLevel(stop)}` : 'Scenario invalidation reference unavailable',
+            nextUsefulCheck,
             disclaimer: 'Educational market research only. Not financial advice.',
           },
           scenarioPlan: {
@@ -248,14 +302,6 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
 
       {/* Action buttons */}
       <div className="flex items-center justify-end gap-2">
-        <button type="button" onClick={handleSaveCase} disabled={savingCase}
-          className="rounded-md border border-blue-500/40 bg-blue-500/10 px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-blue-300 hover:bg-blue-500/20 disabled:cursor-wait disabled:opacity-70">
-          {savingCase ? 'Saving...' : 'Save Case'}
-        </button>
-        <Link href={`/tools/journal?prefill=true&symbol=${encodeURIComponent(detail.symbol)}&side=${direction === 'bullish' ? 'LONG' : direction === 'bearish' ? 'SHORT' : 'LONG'}&entryPrice=${entry != null ? entry.toFixed(2) : ''}&strategy=Scanner&setup=${encodeURIComponent(`${detail.symbol} ${direction} — ${quality} quality, ${confidence}% confluence`)}&notes=${encodeURIComponent(`Scanner analysis notes\nLevel of Interest: ${entry != null ? entry.toFixed(2) : 'N/A'} | Invalidation: ${stop != null ? stop.toFixed(2) : 'N/A'} | Reaction Zone 1: ${target1 != null ? target1.toFixed(2) : 'N/A'} | Reaction Zone 2: ${target2 != null ? target2.toFixed(2) : 'N/A'}\nHypothetical R:R ${rr != null ? rr.toFixed(1) : 'N/A'} | RSI: ${detail.rsi != null ? detail.rsi.toFixed(1) : 'N/A'} | ADX: ${adx.toFixed(1)}`)}`}
-          className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-emerald-400 no-underline hover:bg-emerald-500/20 transition-colors">
-          Save Research Note
-        </Link>
         <Link href={`/tools/workspace?tab=Backtest&symbol=${encodeURIComponent(detail.symbol)}`}
           className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-slate-400 no-underline hover:bg-slate-700/50 transition-colors">
           Backtest This Symbol
@@ -270,6 +316,9 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
       <div className="grid gap-3 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel)] p-3 md:grid-cols-12 md:p-4">
         <div className="md:col-span-6">
           <div className="text-[1.05rem] font-black tracking-tight text-white md:text-[1.25rem]">{detail.symbol} — {timeframeLabel}</div>
+          <div className="mt-1 text-xs leading-relaxed text-slate-300">
+            {direction === 'bullish' ? 'Bullish' : direction === 'bearish' ? 'Bearish' : 'Neutral'} structure, {quality.toLowerCase()} setup quality. {nextUsefulCheck}
+          </div>
           <div className={`mt-1 text-[0.82rem] font-extrabold uppercase ${direction === 'bullish' ? 'text-emerald-400' : direction === 'bearish' ? 'text-red-400' : 'text-amber-400'}`}>
             Bias: {direction.toUpperCase()}
           </div>
@@ -292,6 +341,9 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
           <div className="rounded-lg border p-3" style={{ borderColor: statusColor + '66', background: 'var(--msp-panel-2)' }}>
             <div className="text-[0.66rem] font-extrabold uppercase tracking-[0.08em] text-slate-500">Setup Alignment</div>
             <div className="mt-1 text-[0.88rem] font-black uppercase" style={{ color: statusColor }}>{executionStatus}</div>
+            <div className="mt-2 inline-flex rounded border px-2 py-0.5 text-[11px] font-bold uppercase" style={{ color: dataQualityColor(dataQuality), borderColor: dataQualityColor(dataQuality) + '55', backgroundColor: dataQualityColor(dataQuality) + '15' }}>
+              Data {dataQuality}
+            </div>
             <div className="mt-2 grid gap-1 text-[0.72rem] text-slate-400">
               {blockReasons.map(r => <div key={r}>• {r}</div>)}
             </div>
@@ -323,7 +375,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
               <div className="mb-1 text-[0.68rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Momentum State</div>
               <div className="grid gap-1 text-[0.74rem] text-slate-400">
                 <div>RSI: <span className="font-bold text-white">{detail.rsi != null ? detail.rsi.toFixed(1) : 'N/A'}</span></div>
-                <div>ADX: <span className={`font-bold ${adx >= 25 ? 'text-emerald-400' : adx >= 20 ? 'text-amber-400' : 'text-red-400'}`}>{adx.toFixed(1)}</span></div>
+                <div>ADX: <span className={`font-bold ${adx >= 25 ? 'text-emerald-400' : adx >= 20 ? 'text-amber-400' : 'text-red-400'}`}>{detail.adx != null ? adx.toFixed(1) : 'N/A'}</span></div>
                 <div>Flow: <span className={`font-bold ${flowAligned ? 'text-emerald-400' : 'text-amber-400'}`}>{flowAligned ? 'Aligned' : 'Divergent'}</span></div>
               </div>
             </div>
@@ -338,7 +390,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
             <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5">
               <div className="mb-1 text-[0.68rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Structure Integrity</div>
               <div className="grid gap-1 text-[0.74rem] text-slate-400">
-                <div>Break Level: <span className="font-bold text-white">{entry != null ? entry.toFixed(2) : 'N/A'}</span></div>
+                <div>Break Level: <span className="font-bold text-white">{formatLevel(entry)}</span></div>
                 <div>Pullback Depth: <span className="font-bold text-white">{detail.atr != null && detail.price ? `${Math.min(99, Math.round((detail.atr / detail.price) * 100 * 18))}%` : 'N/A'}</span></div>
                 <div>Pattern: <span className="font-bold text-white">{trendAligned ? 'Trend continuation' : 'Structure forming'}</span></div>
               </div>
@@ -352,16 +404,20 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
           <div className="grid gap-3">
             <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5 text-[0.74rem] text-slate-400">
               <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Level of Interest</div>
-              <div>Reference: <span className="font-bold text-white">{entry != null ? entry.toFixed(2) : 'N/A'}</span></div>
+              <div>Reference: <span className="font-bold text-white">{formatLevel(entry)}</span></div>
               <div>Condition: <span className="font-bold text-white">{direction === 'bullish' ? 'Close above level' : direction === 'bearish' ? 'Close below level' : 'Awaiting directional structure'}</span></div>
-              <div>Confirmation: <span className="font-bold text-white">Volume expansion</span></div>
+              <div>Confirmation: <span className="font-bold text-white">{hasScenarioLevels ? 'Volume expansion' : 'Awaiting valid levels'}</span></div>
             </div>
             <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5 text-[0.74rem] text-slate-400">
               <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Key Levels (Educational)</div>
-              <div>Invalidation: <span className="font-bold text-red-400">{stop != null ? stop.toFixed(2) : 'N/A'}</span></div>
-              <div>Reaction Zone 1: <span className="font-bold text-emerald-400">{target1 != null ? target1.toFixed(2) : 'N/A'}</span></div>
-              <div>Reaction Zone 2: <span className="font-bold text-emerald-400">{target2 != null ? target2.toFixed(2) : 'N/A'}</span></div>
-              <div>Hypothetical R:R: <span className={`font-bold ${rr != null && rr >= 1.8 ? 'text-emerald-400' : 'text-amber-400'}`}>{rr != null ? rr.toFixed(1) : 'N/A'}</span></div>
+              <div>Invalidation: <span className="font-bold text-red-400">{formatLevel(stop)}</span></div>
+              <div>Reaction Zone 1: <span className="font-bold text-emerald-400">{formatLevel(target1)}</span></div>
+              <div>Reaction Zone 2: <span className="font-bold text-emerald-400">{formatLevel(target2)}</span></div>
+              <div>Hypothetical R:R: <span className={`font-bold ${rr != null && rr >= 1.8 ? 'text-emerald-400' : 'text-amber-400'}`}>{rr != null && hasScenarioLevels ? rr.toFixed(1) : 'Unavailable'}</span></div>
+            </div>
+            <div className="rounded-lg border border-blue-500/25 bg-blue-500/10 p-2.5 text-[0.74rem] text-blue-100">
+              <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-blue-300">Next Useful Check</div>
+              <div>{nextUsefulCheck}</div>
             </div>
             <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5 text-[0.74rem] text-slate-400">
               <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Analysis Notes</div>
@@ -371,10 +427,10 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
 
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-2">
-              <Link href={`/tools/journal?prefill=true&symbol=${encodeURIComponent(detail.symbol)}&side=${direction === 'bullish' ? 'LONG' : direction === 'bearish' ? 'SHORT' : 'LONG'}&entryPrice=${entry != null ? entry.toFixed(2) : ''}&strategy=Scanner&setup=${encodeURIComponent(`${detail.symbol} ${direction} — ${quality} quality, ${confidence}% confluence`)}&notes=${encodeURIComponent(`Scanner analysis notes\nLevel of Interest: ${entry != null ? entry.toFixed(2) : 'N/A'} | Invalidation: ${stop != null ? stop.toFixed(2) : 'N/A'} | Reaction Zone 1: ${target1 != null ? target1.toFixed(2) : 'N/A'} | Reaction Zone 2: ${target2 != null ? target2.toFixed(2) : 'N/A'}\nHypothetical R:R ${rr != null ? rr.toFixed(1) : 'N/A'} | RSI: ${detail.rsi != null ? detail.rsi.toFixed(1) : 'N/A'} | ADX: ${adx.toFixed(1)}`)}`}
-                className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-emerald-400 no-underline hover:bg-emerald-500/20 transition-colors">
-                Save Research Note
-              </Link>
+              <button type="button" onClick={handleSaveCase} disabled={savingCase}
+                className="rounded-md border border-blue-500/40 bg-blue-500/10 px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-blue-300 hover:bg-blue-500/20 disabled:cursor-wait disabled:opacity-70">
+                {savingCase ? 'Saving...' : 'Save Case'}
+              </button>
               <Link href={`/tools/alerts?symbol=${encodeURIComponent(detail.symbol)}&price=${detail.price || ''}&direction=${direction}`}
                 className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-slate-400 no-underline hover:bg-slate-700/50 transition-colors">
                 Set Alert
@@ -420,7 +476,7 @@ export default function ScannerPage() {
   const [proMtfAlignment, setProMtfAlignment] = useState<number>(2);
   const [proVolState, setProVolState] = useState<string>('all');
   const [proSqueeze, setProSqueeze] = useState<'all' | 'squeeze'>('all');
-  const [proIntent, setProIntent] = useState<'observe' | 'decide'>('observe');
+  const [proIntent, setProIntent] = useState<'observe' | 'review'>('observe');
   const [proScanLoading, setProScanLoading] = useState(false);
   const [proScanResults, setProScanResults] = useState<any>(null);
   const [proScanError, setProScanError] = useState<string | null>(null);
@@ -664,14 +720,21 @@ export default function ScannerPage() {
         const tfA = [trendOk, momOk, flowOk, dir !== 'NEUTRAL'].filter(Boolean).length;
         const strat = pick.setup || (pick.macd_hist != null && pick.macd_hist > 0 ? 'MOM REV' : pickRsi != null && pickRsi < 35 ? 'MEAN REV' : atrPct < 1.5 ? 'BREAKOUT' : 'RANGE');
         const rec = pick.institutionalFilter?.recommendation;
-        const perm = rec === 'TRADE_READY' && qual !== 'low' ? 'COMPLIANT' : (rec === 'NO_TRADE' || qual === 'low') ? 'NOT ALIGNED' : 'TIGHT';
+        const dataQuality = getDataQualityLabel({ price: priceVal, atr, rsi: pickRsi, adx: adxVal, direction: pick.direction });
+        const reason = dataQuality !== 'GOOD' ? 'Data incomplete'
+          : tfA >= 4 && qual !== 'low' ? 'High MTF alignment'
+          : atrPct < 1.5 ? 'Compression setup'
+          : ind.momentumAccel ? 'Momentum acceleration'
+          : trendOk ? 'Trend alignment'
+          : 'Mixed evidence';
+        const perm = rec === 'TRADE_READY' && qual !== 'low' && dataQuality === 'GOOD' ? 'COMPLIANT' : (rec === 'NO_TRADE' || qual === 'low' || dataQuality === 'MISSING') ? 'BLOCKED' : 'TIGHT';
         return {
           rank: idx + 1, symbol: pick.symbol, direction: dir, confidence: conf, quality: qual,
           strategy: strat, rsi: pickRsi, adx: adxVal, atrPct, tfAlignment: tfA,
           volume24h: pick.volume ?? ind.volume, price: priceVal, permission: perm,
           squeeze: ind.squeeze ?? false, squeezeStrength: ind.squeezeStrength ?? 0,
           momentumAccel: ind.momentumAccel ?? false, momentumAccelScore: ind.momentumAccelScore ?? 0,
-          sectorRelStr: ind.sectorRelStr,
+          sectorRelStr: ind.sectorRelStr, reason, dataQuality,
         } as ScreenerRow;
       })
       .filter((row: ScreenerRow) => {
@@ -703,7 +766,7 @@ export default function ScannerPage() {
 
   function SortHeader({ k, label, w }: { k: SortKey; label: string; w: string }) {
     return (
-      <th className={`${w} text-left text-[10px] uppercase tracking-wider text-slate-500 cursor-pointer hover:text-slate-300 py-2 px-2 select-none whitespace-nowrap`} onClick={() => toggleSort(k)}>
+      <th className={`${w} text-left text-[11px] uppercase tracking-wider text-slate-500 cursor-pointer hover:text-slate-300 py-2 px-2 select-none whitespace-nowrap`} onClick={() => toggleSort(k)}>
         {label} {sortKey === k ? (sortDir === 'desc' ? '▼' : '▲') : ''}
       </th>
     );
@@ -731,12 +794,12 @@ export default function ScannerPage() {
       {/* ─── Active Regime Context ─── */}
       {regime.data && (
         <div className="flex items-center gap-3 px-3 py-2 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel-2)] flex-wrap">
-          <span className="text-[10px] uppercase tracking-wider text-slate-500">Active Regime</span>
+          <span className="text-[11px] uppercase tracking-wider text-slate-500">Active Regime</span>
           <Badge label={regime.data.regime} color={REGIME_COLORS[currentRegime as RegimePriority] || '#64748B'} small />
-          <span className="text-[10px] text-slate-500">Risk: <span className="text-white">{regime.data.riskLevel}</span></span>
-          <span className="text-[10px] text-slate-500">Regime State: <span className={regime.data.permission === 'full' ? 'text-emerald-400' : regime.data.permission === 'reduced' ? 'text-yellow-400' : 'text-red-400'}>{regime.data.permission}</span></span>
+          <span className="text-[11px] text-slate-500">Risk: <span className="text-white">{regime.data.riskLevel}</span></span>
+          <span className="text-[11px] text-slate-500">Regime State: <span className={regime.data.permission === 'full' ? 'text-emerald-400' : regime.data.permission === 'reduced' ? 'text-yellow-400' : 'text-red-400'}>{regime.data.permission}</span></span>
           <div className="h-3 w-px bg-slate-700 mx-1" />
-          <span className="text-[10px] text-slate-600">Weights: {Object.entries(REGIME_WEIGHTS[currentRegime] || {}).map(([k, v]) => `${k}:${v}`).join(' · ')}</span>
+          <span className="text-[11px] text-slate-600">Weights: {Object.entries(REGIME_WEIGHTS[currentRegime] || {}).map(([k, v]) => `${k}:${v}`).join(' · ')}</span>
         </div>
       )}
 
@@ -745,7 +808,7 @@ export default function ScannerPage() {
         <>
           {/* Timeframe selector */}
           <div className="flex items-center gap-1">
-            <span className="text-[10px] text-slate-500 mr-1 uppercase">Timeframe</span>
+            <span className="text-[11px] text-slate-500 mr-1 uppercase">Timeframe</span>
             {SCAN_TIMEFRAMES.map(tf => (
               <button key={tf.value} onClick={() => setV2Timeframe(tf.value)}
                 className={`px-2.5 py-1 text-[11px] rounded-md transition-colors ${v2Timeframe === tf.value ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-[var(--msp-border)]'}`}>
@@ -781,7 +844,7 @@ export default function ScannerPage() {
               <button key={tab} onClick={() => setActiveTab(tab)}
                 className={`px-2.5 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap transition-colors ${activeTab === tab ? 'bg-[rgba(16,185,129,0.1)] text-[var(--msp-accent)] border border-[rgba(16,185,129,0.4)]' : 'text-[var(--msp-text-muted)] hover:bg-slate-800/60 border border-transparent'}`}>
                 {tab}
-                <span className="ml-1 text-[10px] text-slate-600">
+                <span className="ml-1 text-[11px] text-slate-600">
                   {tab === 'All' ? allResults.length
                     : tab === 'Equities' ? allResults.filter(r => (r as any)._assetClass === 'equity').length
                     : tab === 'Crypto' ? allResults.filter(r => (r as any)._assetClass === 'crypto').length
@@ -797,12 +860,27 @@ export default function ScannerPage() {
             ))}
           </div>
 
+          <div className="grid gap-2 md:grid-cols-5">
+            {[
+              ['Symbols', String(filtered.length), '#CBD5E1'],
+              ['Ready', String(filtered.filter(r => deriveLifecycleState(r, currentRegime) === 'READY').length), '#10B981'],
+              ['Setting Up', String(filtered.filter(r => deriveLifecycleState(r, currentRegime) === 'SETTING_UP').length), '#A855F7'],
+              ['Gated', String(filtered.filter(r => r.scoreV2?.regimeScore?.gated).length), '#EF4444'],
+              ['Degraded Data', String(filtered.filter(r => rankedTrustLabel(r) !== 'GOOD').length), '#F59E0B'],
+            ].map(([label, value, color]) => (
+              <div key={label} className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2">
+                <div className="text-[11px] uppercase tracking-wider text-slate-500">{label}</div>
+                <div className="mt-0.5 text-base font-black" style={{ color }}>{value}</div>
+              </div>
+            ))}
+          </div>
+
           {/* Table */}
           <Card>
             {!canAccessUnlimitedScanning(tier) && (
               <div className="mb-3 px-3 py-2 rounded-lg border border-amber-500/30 bg-amber-500/10 flex items-center justify-between">
                 <span className="text-xs text-amber-300">Free tier: {FREE_DAILY_SCAN_LIMIT} scans/day. Upgrade for unlimited scanning.</span>
-                <a href="/pricing" className="text-[10px] px-2 py-1 bg-amber-500/20 text-amber-400 rounded border border-amber-500/30 hover:bg-amber-500/30 transition-colors">Upgrade</a>
+                <a href="/pricing" className="text-[11px] px-2 py-1 bg-amber-500/20 text-amber-400 rounded border border-amber-500/30 hover:bg-amber-500/30 transition-colors">Upgrade</a>
               </div>
             )}
             {v2Loading ? (
@@ -811,7 +889,7 @@ export default function ScannerPage() {
               <div className="text-xs text-slate-500 py-12 text-center">No results match this filter.</div>
             ) : (
               <div className="overflow-x-auto -mx-1">
-                <table className="w-full text-xs" style={{ minWidth: 900 }}>
+                <table className="w-full text-xs" style={{ minWidth: 1040 }}>
                   <thead>
                     <tr className="border-b border-[var(--msp-border)]">
                       <SortHeader k="symbol" label="Symbol" w="w-20" />
@@ -821,10 +899,12 @@ export default function ScannerPage() {
                       <SortHeader k="score" label="Raw" w="w-12" />
                       <SortHeader k="confidence" label="Conf" w="w-12" />
                       <SortHeader k="dveBbwp" label="BBWP" w="w-12" />
-                      <th className="w-20 text-left text-[10px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">DVE</th>
-                      <th className="w-16 text-left text-[10px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Regime</th>
-                      <th className="w-16 text-left text-[10px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Lifecycle</th>
-                      <th className="w-16 text-[10px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Action</th>
+                      <th className="w-24 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Reason</th>
+                      <th className="w-16 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Trust</th>
+                      <th className="w-20 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">DVE</th>
+                      <th className="w-16 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Regime</th>
+                      <th className="w-16 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Lifecycle</th>
+                      <th className="w-16 text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -833,20 +913,29 @@ export default function ScannerPage() {
                       const msp = computeMspScore(r, currentRegime);
                       const lifecycle = deriveLifecycleState(r, currentRegime);
                       const mspColor = msp >= 70 ? '#10B981' : msp >= 50 ? '#F59E0B' : msp >= 30 ? '#94A3B8' : '#EF4444';
+                      const regimeCompatible = isRegimeCompatible(r);
+                      const trust = rankedTrustLabel(r);
+                      const reason = summarizeRankedReason(r, lifecycle, regimeCompatible);
                       return (
                         <tr key={r.symbol} className="border-b border-slate-800/40 hover:bg-slate-800/30 cursor-pointer transition-colors" onClick={() => handleV2RowClick(r)}>
-                          <td className="py-2.5 px-2 whitespace-nowrap"><div className="font-bold text-white">{r.symbol}</div><div className="text-[10px] text-slate-600">{regimeLabel}</div></td>
+                          <td className="py-2.5 px-2 whitespace-nowrap"><div className="font-bold text-white">{r.symbol}</div><div className="text-[11px] text-slate-600">{regimeLabel}</div></td>
                           <td className="py-2.5 px-2 text-center whitespace-nowrap"><span className="text-sm font-black" style={{ color: mspColor }}>{msp}</span></td>
                           <td className="py-2.5 px-2 text-slate-300 font-mono whitespace-nowrap">{formatPrice(r.price)}</td>
                           <td className="py-2.5 px-2 whitespace-nowrap"><Badge label={r.direction || 'neutral'} color={dirColor(r.direction)} small /></td>
-                          <td className="py-2.5 px-2 text-slate-400 text-[10px] whitespace-nowrap">{r.score}</td>
-                          <td className="py-2.5 px-2 text-slate-400 text-[10px] whitespace-nowrap">{r.confidence != null ? `${r.confidence}%` : '—'}</td>
+                          <td className="py-2.5 px-2 text-slate-400 text-[11px] whitespace-nowrap">{r.score}</td>
+                          <td className="py-2.5 px-2 text-slate-400 text-[11px] whitespace-nowrap">{r.confidence != null ? `${r.confidence}%` : '—'}</td>
                           <td className="py-2.5 px-2 whitespace-nowrap">
                             <span className={r.dveBbwp != null ? (r.dveBbwp < 20 ? 'text-cyan-400' : r.dveBbwp > 80 ? 'text-orange-400' : 'text-slate-300') : 'text-slate-600'}>
                               {r.dveBbwp != null ? r.dveBbwp.toFixed(0) : '—'}
                             </span>
                           </td>
-                          <td className="py-2.5 px-2 text-[10px] whitespace-nowrap max-w-[80px] truncate">
+                          <td className="py-2.5 px-2 text-[11px] whitespace-nowrap max-w-[110px] truncate text-slate-300" title={reason}>{reason}</td>
+                          <td className="py-2.5 px-2 whitespace-nowrap">
+                            <span className="rounded border px-1.5 py-0.5 text-[11px] font-bold" style={{ color: dataQualityColor(trust), borderColor: dataQualityColor(trust) + '55', backgroundColor: dataQualityColor(trust) + '15' }}>
+                              {trust}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-2 text-[11px] whitespace-nowrap max-w-[80px] truncate">
                             {(() => {
                               if (r.dveSignalType && r.dveSignalType !== 'none') return <span className="text-yellow-400 font-semibold">{r.dveSignalType.replace(/_/g, ' ')}</span>;
                               if (r.dveFlags && r.dveFlags.length > 0) {
@@ -858,19 +947,19 @@ export default function ScannerPage() {
                             })()}
                           </td>
                           <td className="py-2.5 px-2 whitespace-nowrap">
-                            {isRegimeCompatible(r)
-                              ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">✓ Match</span>
+                            {regimeCompatible
+                              ? <span className="text-[11px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">Match</span>
                               : r.scoreV2?.regimeScore?.gated
-                                ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 border border-red-500/20">Gated</span>
-                                : <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-500/15 text-slate-500 border border-slate-500/20">Neutral</span>}
+                                ? <span className="text-[11px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 border border-red-500/20">Gated</span>
+                                : <span className="text-[11px] px-1.5 py-0.5 rounded bg-slate-500/15 text-slate-500 border border-slate-500/20">Neutral</span>}
                           </td>
                           <td className="py-2.5 px-2 whitespace-nowrap">
-                            <span className="text-[10px] px-1.5 py-0.5 rounded border" style={{ color: LIFECYCLE_COLORS[lifecycle], borderColor: LIFECYCLE_COLORS[lifecycle] + '40', backgroundColor: LIFECYCLE_COLORS[lifecycle] + '15' }}>
+                            <span className="text-[11px] px-1.5 py-0.5 rounded border" style={{ color: LIFECYCLE_COLORS[lifecycle], borderColor: LIFECYCLE_COLORS[lifecycle] + '40', backgroundColor: LIFECYCLE_COLORS[lifecycle] + '15' }}>
                               {lifecycle.replace('_', ' ')}
                             </span>
                           </td>
                           <td className="py-2.5 px-2 text-center whitespace-nowrap">
-                            <button onClick={(e) => { e.stopPropagation(); handleV2RowClick(r); }} className="px-2 py-1 bg-emerald-500/10 text-emerald-400 rounded text-[10px] hover:bg-emerald-500/20 transition-colors">Analyze</button>
+                            <button onClick={(e) => { e.stopPropagation(); handleV2RowClick(r); }} className="px-2.5 py-1.5 bg-emerald-500/10 text-emerald-400 rounded text-[11px] font-semibold hover:bg-emerald-500/20 transition-colors">Analyze</button>
                           </td>
                         </tr>
                       );
@@ -880,8 +969,8 @@ export default function ScannerPage() {
               </div>
             )}
             <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-800/40">
-              <span className="text-[10px] text-slate-600">{filtered.length} symbols</span>
-              <button onClick={() => { equity.refetch(); crypto.refetch(); }} className="text-[10px] text-emerald-400 hover:underline">↻ Rescan</button>
+              <span className="text-[11px] text-slate-600">{filtered.length} symbols</span>
+              <button onClick={() => { equity.refetch(); crypto.refetch(); }} className="text-[11px] text-emerald-400 hover:underline">Rescan</button>
             </div>
           </Card>
         </>
@@ -986,7 +1075,7 @@ export default function ScannerPage() {
                 </div>
               </div>
               <div className="flex gap-1.5">
-                {(['observe', 'decide'] as const).map(i => (
+                {(['observe', 'review'] as const).map(i => (
                   <button key={i} onClick={() => setProIntent(i)}
                     className={`rounded-md border px-3 py-1.5 text-xs font-bold uppercase ${proIntent === i ? 'border-slate-500 bg-slate-800 text-white' : 'border-[var(--msp-border)] text-slate-500 hover:text-slate-300'}`}>
                     {i}
@@ -1005,7 +1094,7 @@ export default function ScannerPage() {
                 boxShadow: proScanLoading ? 'none' : '0 0 20px rgba(16, 185, 129, 0.25), 0 4px 12px rgba(0, 0, 0, 0.3)',
                 cursor: proScanLoading ? 'not-allowed' : 'pointer',
               }}>
-              {proScanLoading ? '⏳ Scanning...' : '🔎 Scan For Setups'}
+              {proScanLoading ? 'Scanning...' : 'Run Scan'}
             </button>
           </div>
 
@@ -1016,29 +1105,29 @@ export default function ScannerPage() {
           {proScanResults && (
             <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-3">
               <div className="flex items-center gap-2">
-                <label className="text-[10px] uppercase text-slate-500">Direction:</label>
+                <label className="text-[11px] uppercase text-slate-500">Direction:</label>
                 <select value={proDirection} onChange={e => setProDirection(e.target.value as any)}
                   className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200">
                   <option value="all">All</option><option value="long">Long</option><option value="short">Short</option>
                 </select>
               </div>
               <div className="flex items-center gap-2">
-                <label className="text-[10px] uppercase text-slate-500">Quality:</label>
+                <label className="text-[11px] uppercase text-slate-500">Quality:</label>
                 <select value={proQuality} onChange={e => setProQuality(e.target.value as any)}
                   className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200">
                   <option value="all">All</option><option value="high">High</option><option value="medium">Medium</option>
                 </select>
               </div>
               <div className="flex items-center gap-2">
-                <label className="text-[10px] uppercase text-slate-500">Sort:</label>
+                <label className="text-[11px] uppercase text-slate-500">Sort:</label>
                 <select value={proSort} onChange={e => setProSort(e.target.value as any)}
                   className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200">
                   <option value="rank">Rank</option><option value="confidence">Confluence</option><option value="volatility">Volatility</option><option value="trend">Trend</option>
                 </select>
               </div>
               <div className="ml-auto flex gap-1">
-                <button onClick={() => setProBulkViewMode('table')} className={`rounded px-2 py-1 text-[10px] font-bold ${proBulkViewMode === 'table' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-500'}`}>Table</button>
-                <button onClick={() => setProBulkViewMode('cards')} className={`rounded px-2 py-1 text-[10px] font-bold ${proBulkViewMode === 'cards' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-500'}`}>Cards</button>
+                <button onClick={() => setProBulkViewMode('table')} className={`rounded px-2 py-1 text-[11px] font-bold ${proBulkViewMode === 'table' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-500'}`}>Table</button>
+                <button onClick={() => setProBulkViewMode('cards')} className={`rounded px-2 py-1 text-[11px] font-bold ${proBulkViewMode === 'cards' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-500'}`}>Cards</button>
               </div>
             </div>
           )}
@@ -1051,14 +1140,28 @@ export default function ScannerPage() {
           {/* Pro Scan Results */}
           {proScanResults && (
             <div>
-              <div className="mb-2 flex items-center gap-3 text-[10px] text-slate-500">
+              <div className="mb-2 grid gap-2 md:grid-cols-5">
+                {[
+                  ['Scanned', String(proScanResults.scanned ?? '—'), '#CBD5E1'],
+                  ['Candidates', String(proScreenerRows.length), '#10B981'],
+                  ['Clean', String(proScreenerRows.filter(r => r.permission === 'COMPLIANT').length), '#10B981'],
+                  ['Mixed', String(proScreenerRows.filter(r => r.permission === 'TIGHT').length), '#F59E0B'],
+                  ['Data Weak', String(proScreenerRows.filter(r => r.dataQuality !== 'GOOD').length), '#EF4444'],
+                ].map(([label, value, color]) => (
+                  <div key={label} className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2">
+                    <div className="text-[11px] uppercase tracking-wider text-slate-500">{label}</div>
+                    <div className="mt-0.5 text-base font-black" style={{ color }}>{value}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="mb-2 flex items-center gap-3 text-[11px] text-slate-500">
                 <span>Scanned: {proScanResults.scanned ?? '—'}</span>
                 <span>Duration: {proScanResults.duration ?? '—'}</span>
                 <span>Mode: {proScanResults.mode ?? proDepth}</span>
                 {proScanResults.effectiveUniverseSize && <span>Universe: {proScanResults.effectiveUniverseSize}</span>}
               </div>
               <ScreenerTable rows={proScreenerRows} onRowClick={handleProRowClick} selectedSymbol={selectedSymbol ?? undefined} />
-              <div className="mt-2 text-[10px] text-slate-600">
+              <div className="mt-2 text-[11px] text-slate-600">
                 Market Bias Context · Regime: {currentRegime.toUpperCase()} · Most setups: {proScreenerRows.filter(r => r.direction === 'LONG').length > proScreenerRows.filter(r => r.direction === 'SHORT').length ? 'Long' : 'Short'}
               </div>
             </div>
@@ -1094,7 +1197,7 @@ export default function ScannerPage() {
 
       {/* Errors */}
       {mode === 'ranked' && (equity.error || crypto.error) && (
-        <div className="text-[10px] text-red-400/60 border border-red-900/30 rounded-lg p-3">
+        <div className="text-[11px] text-red-400/60 border border-red-900/30 rounded-lg p-3">
           {equity.error && <div>Equity scan: {equity.error}</div>}
           {crypto.error && <div>Crypto scan: {crypto.error}</div>}
         </div>

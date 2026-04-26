@@ -23,6 +23,8 @@ export interface ScreenerRow {
   momentumAccel?: boolean;
   momentumAccelScore?: number;
   sectorRelStr?: number;
+  reason?: string;
+  dataQuality?: 'GOOD' | 'DEGRADED' | 'MISSING' | string;
   // extra fields from bulk scan
   liquidityState?: string;
   volatilityState?: string;
@@ -68,6 +70,13 @@ function permColor(p: string | undefined): string {
   if (p === 'COMPLIANT') return '#10B981';
   if (p === 'TIGHT') return '#FBBF24';
   if (p === 'BLOCKED') return '#EF4444';
+  return '#64748b';
+}
+
+function dataQualityColor(q: string | undefined): string {
+  if (q === 'GOOD') return '#10B981';
+  if (q === 'DEGRADED') return '#FBBF24';
+  if (q === 'MISSING') return '#EF4444';
   return '#64748b';
 }
 
@@ -126,6 +135,22 @@ const COLUMNS: Column[] = [
   },
   { key: 'strategy', label: 'Strategy', width: '130px' },
   {
+    key: 'reason', label: 'Reason', width: '135px',
+    render: (r) => <span title={r.reason} style={{ color: '#cbd5e1' }}>{r.reason || 'Mixed evidence'}</span>,
+  },
+  {
+    key: 'dataQuality', label: 'Trust', width: '80px', align: 'center',
+    render: (r) => {
+      const label = r.dataQuality || 'DEGRADED';
+      const color = dataQualityColor(label);
+      return (
+        <span style={{ fontSize: 11, fontWeight: 700, color, background: `${color}15`, border: `1px solid ${color}40`, borderRadius: 4, padding: '1px 5px' }}>
+          {label}
+        </span>
+      );
+    },
+  },
+  {
     key: 'rsi', label: 'RSI', width: '55px', align: 'right',
     render: (r) => <span>{formatNum(r.rsi, 0)}</span>,
   },
@@ -157,8 +182,8 @@ const COLUMNS: Column[] = [
     key: 'momentumAccelScore', label: 'Accel', width: '65px', align: 'center',
     render: (r) => (
       r.momentumAccel
-        ? <span style={{ fontSize: 10, fontWeight: 700, color: '#10B981', background: 'rgba(16,185,129,0.12)', borderRadius: 4, padding: '1px 5px' }}>
-            {"\u26a1"} {r.momentumAccelScore ?? 0}
+        ? <span style={{ fontSize: 11, fontWeight: 700, color: '#10B981', background: 'rgba(16,185,129,0.12)', borderRadius: 4, padding: '1px 5px' }}>
+            {r.momentumAccelScore ?? 0}
           </span>
         : <span style={{ color: '#475569' }}>{"\u2014"}</span>
     ),
@@ -167,8 +192,8 @@ const COLUMNS: Column[] = [
     key: 'squeeze', label: 'Squeeze', width: '75px', align: 'center',
     render: (r) => (
       r.squeeze
-        ? <span style={{ fontSize: 10, fontWeight: 700, color: '#FBBF24', background: 'rgba(251,191,36,0.12)', borderRadius: 4, padding: '1px 5px' }}>
-            🔥 {r.squeezeStrength != null ? `${r.squeezeStrength}%` : ''}
+        ? <span style={{ fontSize: 11, fontWeight: 700, color: '#FBBF24', background: 'rgba(251,191,36,0.12)', borderRadius: 4, padding: '1px 5px' }}>
+            {r.squeezeStrength != null ? `${r.squeezeStrength}%` : 'Yes'}
           </span>
         : <span style={{ color: '#475569' }}>—</span>
     ),
@@ -177,10 +202,10 @@ const COLUMNS: Column[] = [
     key: 'permission', label: 'Status', width: '85px', align: 'center',
     render: (r) => (
       <span style={{
-        fontSize: 10, fontWeight: 700, color: permColor(r.permission),
+        fontSize: 11, fontWeight: 700, color: permColor(r.permission),
         background: `${permColor(r.permission)}15`, borderRadius: 4, padding: '1px 5px',
       }}>
-        {r.permission === 'COMPLIANT' ? 'ALIGNED' : r.permission === 'TIGHT' ? 'CAUTION' : r.permission === 'BLOCKED' ? 'NOT ALIGNED' : '\u2014'}
+        {r.permission === 'COMPLIANT' ? 'CLEAN' : r.permission === 'TIGHT' ? 'MIXED' : r.permission === 'BLOCKED' ? 'NOT ALIGNED' : '\u2014'}
       </span>
     ),
   },
