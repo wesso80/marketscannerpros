@@ -5,19 +5,17 @@ import type { DVEInvalidation } from '@/src/features/volatilityEngine/types';
 export default function VEInvalidationCard({ inv }: { inv: DVEInvalidation }) {
   const statusColor = inv.invalidated ? '#EF4444' : '#10B981';
   const statusText = inv.invalidated ? 'INVALIDATED' : 'VALID';
-  const statusIcon = inv.invalidated ? '❌' : '✅';
 
   return (
     <div className={`rounded-xl border p-5 ${inv.invalidated ? 'border-red-500/30 bg-red-500/5' : 'border-white/10 bg-white/5'}`}>
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-base">🛡️</span>
           <h3 className="text-xs font-semibold uppercase tracking-widest text-amber-400">
             Invalidation Levels
           </h3>
         </div>
-        <span className="flex items-center gap-1 text-[0.65rem] font-bold" style={{ color: statusColor }}>
-          {statusIcon} {statusText}
+        <span className="flex items-center gap-1 text-[11px] font-bold" style={{ color: statusColor }}>
+          {statusText}
         </span>
       </div>
 
@@ -49,7 +47,7 @@ export default function VEInvalidationCard({ inv }: { inv: DVEInvalidation }) {
       {inv.ruleSet.length > 0 && (
         <div className="mt-3 space-y-0.5 border-t border-white/10 pt-2">
           {inv.ruleSet.map((r, i) => (
-            <p key={i} className="text-[0.6rem] text-white/40">• {r}</p>
+            <p key={i} className="text-[11px] text-white/40">• {r}</p>
           ))}
         </div>
       )}

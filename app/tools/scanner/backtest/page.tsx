@@ -323,7 +323,7 @@ function ScannerBacktestContent() {
         maxHoldBars,
         allowShorts,
       };
-      // Create entry alert
+      // Create scenario-open alert
       const entryRes = await fetch('/api/alerts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -332,7 +332,7 @@ function ScannerBacktestContent() {
           assetType: isCrypto ? 'crypto' : 'equity',
           conditionType: 'strategy_entry',
           conditionValue: 0,
-          name: `${symbol} Scanner Entry Alert`,
+          name: `${symbol} Scanner Scenario Open Alert`,
           isRecurring: true,
           notifyEmail: true,
           notifyPush: true,
@@ -343,9 +343,9 @@ function ScannerBacktestContent() {
       });
       if (!entryRes.ok) {
         const data = await entryRes.json();
-        throw new Error(data.error || data.message || 'Failed to create entry alert');
+        throw new Error(data.error || data.message || 'Failed to create scenario-open alert');
       }
-      // Create exit alert
+      // Create scenario-close alert
       const exitRes = await fetch('/api/alerts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -354,7 +354,7 @@ function ScannerBacktestContent() {
           assetType: isCrypto ? 'crypto' : 'equity',
           conditionType: 'strategy_exit',
           conditionValue: 0,
-          name: `${symbol} Scanner Exit Alert`,
+          name: `${symbol} Scanner Scenario Close Alert`,
           isRecurring: true,
           notifyEmail: true,
           notifyPush: true,
@@ -365,7 +365,7 @@ function ScannerBacktestContent() {
       });
       if (!exitRes.ok) {
         const data = await exitRes.json();
-        throw new Error(data.error || data.message || 'Failed to create exit alert');
+        throw new Error(data.error || data.message || 'Failed to create scenario-close alert');
       }
       setAlertStatus('created');
     } catch (err) {
@@ -573,15 +573,15 @@ function ScannerBacktestContent() {
                           ? 'bg-slate-700 text-slate-400 opacity-60'
                           : 'bg-amber-500/15 text-amber-300 border border-amber-500/30 hover:bg-amber-500/25'
                       }`}
-                      title="Create alerts that notify you when this strategy opens or closes a trade"
+                      title="Create alerts that notify you when this strategy scenario opens or closes historically similar conditions"
                     >
-                      {alertStatus === 'created' ? '✓ Alerts Created' : alertStatus === 'creating' ? 'Creating…' : '🔔 Alert Me on Trades'}
+                      {alertStatus === 'created' ? '✓ Alerts Created' : alertStatus === 'creating' ? 'Creating…' : '🔔 Alert Me on Scenario Conditions'}
                     </button>
                   </div>
                 </div>
                 {alertStatus === 'created' && (
                   <div className="mb-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-300">
-                    ✓ Entry &amp; exit alerts created for <strong>{symbol}</strong> using this strategy config. You&apos;ll get email + push notifications every 15 min when trades open/close.
+                    ✓ Scenario open/close alerts created for <strong>{symbol}</strong> using this strategy config. You&apos;ll get email + push notifications every 15 min when matching conditions appear or fade.
                   </div>
                 )}
                 {alertStatus === 'error' && alertError && (

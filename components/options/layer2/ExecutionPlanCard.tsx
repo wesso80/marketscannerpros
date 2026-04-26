@@ -39,7 +39,7 @@ export default function ExecutionPlanCard({ plan, permission, onCopyPlan, onSend
                 <div className="text-sm font-semibold text-slate-100">{compact ? 'N/A' : '1.0%'}</div>
               </div>
               <div className="rounded-xl border border-slate-800 bg-slate-950/30 px-2.5 py-1.5">
-                <div className="text-[10px] uppercase tracking-wider text-slate-400">Size</div>
+                <div className="text-[10px] uppercase tracking-wider text-slate-400">Model</div>
                 <div className="text-sm font-semibold text-slate-100">{plan.positionSuggestion || 'N/A'}</div>
               </div>
             </div>
@@ -56,7 +56,7 @@ export default function ExecutionPlanCard({ plan, permission, onCopyPlan, onSend
           </div>
 
           <div className="mt-3 space-y-2">
-            <button onClick={onCopyPlan} className="w-full rounded-xl border border-slate-700 bg-slate-200/10 px-4 py-2 text-sm font-semibold text-slate-100">Copy Plan</button>
+            <button onClick={onCopyPlan} className="w-full rounded-xl border border-slate-700 bg-slate-200/10 px-4 py-2 text-sm font-semibold text-slate-100">Copy Scenario</button>
             <div className="grid grid-cols-2 gap-2">
               <button onClick={onCopyPlan} className="rounded-xl border border-slate-800 bg-slate-200/5 px-3 py-2 text-xs font-semibold text-slate-100">Set Alert</button>
               <button onClick={onSendToJournal} className="rounded-xl border border-slate-800 bg-slate-200/5 px-3 py-2 text-xs font-semibold text-slate-100">Journal</button>

@@ -33,7 +33,7 @@ export default function GECompanyOverview({ company, price }: Props) {
     : null;
 
   return (
-    <div className="rounded-2xl border border-white/5 bg-slate-900/40 p-5">
+    <div className="rounded-lg border border-white/5 bg-slate-900/40 p-5">
       <div className="mb-4 flex items-center gap-2 border-b border-white/5 pb-3">
         <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
         <h2 className="text-sm font-semibold uppercase tracking-wider text-amber-400">Company Overview</h2>
@@ -49,7 +49,7 @@ export default function GECompanyOverview({ company, price }: Props) {
       <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
         {stats.map((s) => (
           <div key={s.label} className="rounded-lg border border-white/5 bg-white/5 px-3 py-2">
-            <div className="text-[10px] uppercase tracking-wide text-slate-500">{s.label}</div>
+            <div className="text-[11px] uppercase tracking-wide text-slate-500">{s.label}</div>
             <div className="text-sm font-semibold text-white">{s.value}</div>
           </div>
         ))}
@@ -58,7 +58,7 @@ export default function GECompanyOverview({ company, price }: Props) {
       {/* 52-week position */}
       {w52Pct != null && (
         <div className="mt-4">
-          <div className="mb-1 flex justify-between text-[10px] text-slate-500">
+          <div className="mb-1 flex justify-between text-[11px] text-slate-500">
             <span>52W Low ${company.week52Low?.toFixed(2)}</span>
             <span>52W High ${company.week52High?.toFixed(2)}</span>
           </div>
@@ -96,7 +96,7 @@ export default function GECompanyOverview({ company, price }: Props) {
             <div className="bg-amber-400" style={{ width: `${holdPct}%` }} />
             <div className="bg-rose-500" style={{ width: `${sellPct}%` }} />
           </div>
-          <div className="mt-1 flex justify-between text-[10px] text-slate-400">
+          <div className="mt-1 flex justify-between text-[11px] text-slate-400">
             <span className="text-emerald-400">Buy {company.strongBuy + company.buy}</span>
             <span className="text-amber-400">Hold {company.hold}</span>
             <span className="text-rose-400">Sell {company.sell + company.strongSell}</span>

@@ -7,7 +7,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { isOperator, isAdminSecret } from '@/lib/quant/operatorAuth';
+import { isOperator } from '@/lib/quant/operatorAuth';
+import { requireAdmin } from '@/lib/adminAuth';
 import { getBulkCachedScanData } from '@/lib/scannerCache';
 import { computeDirectionalPressure } from '@/lib/directionalVolatilityEngine';
 import { computeCapitalFlowEngine } from '@/lib/capitalFlowEngine';
@@ -21,7 +22,7 @@ export async function GET(
   { params }: { params: Promise<{ symbol: string }> },
 ) {
   // Auth gate: operators only (ms_auth cookie OR admin secret)
-  const adminAuth = isAdminSecret(req.headers.get('authorization'));
+  const adminAuth = (await requireAdmin(req)).ok;
   if (!adminAuth) {
     const session = await getSessionFromCookie();
     if (!session || !isOperator(session.cid, session.workspaceId)) {

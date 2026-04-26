@@ -33,7 +33,6 @@ export default function AdminTrialsPage() {
 
   const fetchTrials = async () => {
     const secret = getSecret();
-    if (!secret) return;
     
     setLoading(true);
     try {

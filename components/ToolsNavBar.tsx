@@ -58,7 +58,7 @@ export default function ToolsNavBar() {
         <Link href="/account" className="text-teal-300/70 hover:text-teal-300 whitespace-nowrap hidden md:inline">Account</Link>
         {tierLoading ? null : isLoggedIn ? (
           <>
-            <span className="flex items-center bg-teal-500/10 border border-slate-700 rounded-lg text-teal-300 text-[10px] px-2 py-0.5">
+            <span className="flex items-center bg-teal-500/10 border border-slate-700 rounded-lg text-teal-300 text-[11px] px-2 py-0.5">
               {tier === 'pro_trader' ? '⭐ Pro Trader' : tier === 'pro' ? '✨ Pro' : 'Free'}
             </span>
             <button

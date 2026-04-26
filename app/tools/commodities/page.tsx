@@ -151,7 +151,7 @@ function sparklineBars(history: { date: string; value: number }[], isPositive: b
 
   return (
     <div className="mt-3">
-      <div className="mb-1 text-[10px] text-white/45">Last 7 days</div>
+      <div className="mb-1 text-[11px] text-white/45">Last 7 days</div>
       <div className="flex h-8 items-end gap-1">
         {segment.map((point, index) => {
           const height = ((point.value - min) / range) * 100;
@@ -724,7 +724,7 @@ export default function CommoditiesPage() {
                           <div>
                             <div className="text-sm font-semibold text-white/90">{commodity.name}</div>
                             <div
-                              className="mt-1 inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px]"
+                              className="mt-1 inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px]"
                               style={{ color: catConfig.color, background: catConfig.bgColor }}
                             >
                               {catConfig.icon} {commodity.category}
@@ -744,11 +744,11 @@ export default function CommoditiesPage() {
                       </div>
 
                       <div className="mt-2 flex flex-wrap gap-1">
-                        {inflationSensitive && <span className={`rounded px-1.5 py-0.5 text-[10px] border ${chipTone.warn}`}>Inflation-sensitive</span>}
-                        {growthSensitive && <span className={`rounded px-1.5 py-0.5 text-[10px] border ${chipTone.good}`}>Growth-sensitive</span>}
-                        {usdSensitive && <span className={`rounded px-1.5 py-0.5 text-[10px] border ${chipTone.neutral}`}>USD-sensitive</span>}
+                        {inflationSensitive && <span className={`rounded px-1.5 py-0.5 text-[11px] border ${chipTone.warn}`}>Inflation-sensitive</span>}
+                        {growthSensitive && <span className={`rounded px-1.5 py-0.5 text-[11px] border ${chipTone.good}`}>Growth-sensitive</span>}
+                        {usdSensitive && <span className={`rounded px-1.5 py-0.5 text-[11px] border ${chipTone.neutral}`}>USD-sensitive</span>}
                         {Math.abs(safeCommodityChangePercent) > 1.4 && (
-                          <span className={`rounded px-1.5 py-0.5 text-[10px] border ${chipTone.bad}`}>Breakout watch</span>
+                          <span className={`rounded px-1.5 py-0.5 text-[11px] border ${chipTone.bad}`}>Breakout watch</span>
                         )}
                       </div>
 
@@ -765,7 +765,7 @@ export default function CommoditiesPage() {
                         </div>
                       </div>
 
-                      <div className="mt-2 text-right text-[10px] text-white/40">Updated: {commodity.date}</div>
+                      <div className="mt-2 text-right text-[11px] text-white/40">Updated: {commodity.date}</div>
                     </article>
                   );
                 })}

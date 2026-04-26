@@ -523,7 +523,7 @@ function CryptoDetailPageContent() {
                 type="button"
                 key={coin.symbol}
                 onClick={() => loadCoinBySymbolOrId(coin.symbol)}
-                className={`rounded-full border px-2 py-0.5 text-[10px] ${
+                className={`rounded-full border px-2 py-0.5 text-[11px] ${
                   selectedCoin === coin.symbol ? 'border-emerald-400 bg-emerald-500/10 text-emerald-200' : 'border-slate-700 text-slate-300'
                 }`}
               >
@@ -571,7 +571,7 @@ function CryptoDetailPageContent() {
                 ['CRCS', upeSignal && Number.isFinite(upeSignal.crcsUser) ? upeSignal.crcsUser.toFixed(1) : '—'],
                 ['ΔHr', upeSignal && Number.isFinite(upeSignal.microAdjustment) ? `${upeSignal.microAdjustment >= 0 ? '+' : ''}${upeSignal.microAdjustment.toFixed(2)}` : '—'],
               ].map(([k, v]) => (
-                <div key={k} className="rounded-full border border-slate-700 px-1.5 py-0.5 text-[9px] leading-tight text-slate-300 md:px-2 md:text-[10px]">
+                <div key={k} className="rounded-full border border-slate-700 px-1.5 py-0.5 text-[11px] leading-tight text-slate-300 md:px-2 md:text-[11px]">
                   <span className="font-semibold text-slate-100">{k}</span> · {v}
                 </div>
               ))}
@@ -581,13 +581,13 @@ function CryptoDetailPageContent() {
               <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
                 <div className="mb-1 flex flex-wrap items-start justify-between gap-1.5 md:items-center">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Action</p>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Action</p>
                     <h2 className="text-xs font-bold">Price + Permission Console</h2>
                   </div>
                   <button
                     type="button"
                     onClick={() => selectedCoin && loadCoinBySymbolOrId(selectedCoin)}
-                    className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-slate-300"
+                    className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px] text-slate-300"
                   >
                     Refresh
                   </button>
@@ -604,14 +604,14 @@ function CryptoDetailPageContent() {
                       <button
                         type="button"
                         onClick={() => setChartView('ohlc')}
-                        className={`rounded px-2 py-1 text-[10px] ${chartView === 'ohlc' ? 'bg-emerald-500 text-white' : 'text-slate-300'}`}
+                        className={`rounded px-2 py-1 text-[11px] ${chartView === 'ohlc' ? 'bg-emerald-500 text-white' : 'text-slate-300'}`}
                       >
                         Candles
                       </button>
                       <button
                         type="button"
                         onClick={() => setChartView('sparkline')}
-                        className={`rounded px-2 py-1 text-[10px] ${chartView === 'sparkline' ? 'bg-emerald-500 text-white' : 'text-slate-300'}`}
+                        className={`rounded px-2 py-1 text-[11px] ${chartView === 'sparkline' ? 'bg-emerald-500 text-white' : 'text-slate-300'}`}
                       >
                         Sparkline
                       </button>
@@ -633,7 +633,7 @@ function CryptoDetailPageContent() {
                   </div>
 
                   <div className="mt-2 rounded-md border border-slate-700 bg-slate-900/70 p-2">
-                    <p className="text-[10px] uppercase text-slate-500">Indicator Status</p>
+                    <p className="text-[11px] uppercase text-slate-500">Indicator Status</p>
                     <div className="mt-1 flex items-center justify-between">
                       <p className="text-sm font-bold text-slate-100">{permissionLabel}</p>
                       <p className="text-xs text-slate-400">Alignment {decision.alignmentScore}%</p>
@@ -656,26 +656,26 @@ function CryptoDetailPageContent() {
 
               <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
                 <div className="mb-1">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Context</p>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Context</p>
                   <h2 className="text-xs font-bold">Trend / RS / Liquidity Context</h2>
                 </div>
 
                 <div className="grid gap-2">
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
-                    <p className="text-[10px] uppercase text-slate-500">Structure Bias</p>
+                    <p className="text-[11px] uppercase text-slate-500">Structure Bias</p>
                     <p className="text-sm font-bold text-slate-100">{decision.structureBias}</p>
                     <p className="text-[11px] text-slate-400">Weekly {coinData.price_changes['7d']?.toFixed(2) ?? 'N/A'}% • Monthly {coinData.price_changes['30d']?.toFixed(2) ?? 'N/A'}%</p>
                   </div>
 
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
-                    <p className="text-[10px] uppercase text-slate-500">Relative Strength vs BTC (7D)</p>
+                    <p className="text-[11px] uppercase text-slate-500">Relative Strength vs BTC (7D)</p>
                     <p className={`text-sm font-bold ${decision.relativeStrengthVsBtc === null ? 'text-slate-400' : decision.relativeStrengthVsBtc >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
                       {decision.relativeStrengthVsBtc === null ? 'N/A' : `${decision.relativeStrengthVsBtc >= 0 ? '+' : ''}${decision.relativeStrengthVsBtc.toFixed(2)}%`}
                     </p>
                   </div>
 
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
-                    <p className="text-[10px] uppercase text-slate-500">Volatility + Liquidity</p>
+                    <p className="text-[11px] uppercase text-slate-500">Volatility + Liquidity</p>
                     <p className="text-[11px] text-slate-300">Volatility: {decision.volatilityState}</p>
                     <p className="text-[11px] text-slate-300">Liquidity: {decision.liquidityState}</p>
                     <p className="text-[11px] text-slate-400">24h Vol {formatNumber(coinData.market.total_volume_24h)} • MCap {formatNumber(coinData.market.market_cap)}</p>
@@ -683,7 +683,7 @@ function CryptoDetailPageContent() {
 
                   {coinData.derivatives && (
                     <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
-                      <p className="text-[10px] uppercase text-slate-500">Derivatives Overlay</p>
+                      <p className="text-[11px] uppercase text-slate-500">Derivatives Overlay</p>
                       <p className="text-[11px] text-slate-300">Funding: {coinData.derivatives.funding_rate !== undefined ? `${(coinData.derivatives.funding_rate * 100).toFixed(4)}%` : 'N/A'}</p>
                       <p className="text-[11px] text-slate-300">Sentiment: {coinData.derivatives.funding_sentiment?.toUpperCase() || 'N/A'}</p>
                       <p className="text-[11px] text-slate-300">Open Interest: {formatNumber(coinData.derivatives.open_interest)}</p>
@@ -696,14 +696,14 @@ function CryptoDetailPageContent() {
             <details className="group rounded-lg border border-slate-700 bg-slate-900 p-2">
               <summary className="flex list-none cursor-pointer items-center justify-between text-xs font-bold">
                 <span>Zone 3 • Informational (Collapsed by Default)</span>
-                <span className="text-[10px] text-slate-500 group-open:hidden">Expand</span>
-                <span className="hidden text-[10px] text-slate-500 group-open:inline">Collapse</span>
+                <span className="text-[11px] text-slate-500 group-open:hidden">Expand</span>
+                <span className="hidden text-[11px] text-slate-500 group-open:inline">Collapse</span>
               </summary>
 
               <div className="mt-2 max-h-[420px] overflow-y-auto space-y-2 pr-1">
                 <div className="grid gap-2 md:grid-cols-2">
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
-                    <p className="mb-1 text-[10px] uppercase text-slate-500">Performance</p>
+                    <p className="mb-1 text-[11px] uppercase text-slate-500">Performance</p>
                     {([
                       ['24h', coinData.price_changes['24h']],
                       ['7d', coinData.price_changes['7d']],
@@ -720,7 +720,7 @@ function CryptoDetailPageContent() {
                   </div>
 
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
-                    <p className="mb-1 text-[10px] uppercase text-slate-500">ATH / ATL</p>
+                    <p className="mb-1 text-[11px] uppercase text-slate-500">ATH / ATL</p>
                     <div className="text-xs text-slate-300">ATH: {formatPrice(coinData.market.ath.usd)} ({coinData.market.ath.change_percentage?.toFixed(2) ?? 'N/A'}%)</div>
                     <div className="text-xs text-slate-300">ATL: {formatPrice(coinData.market.atl.usd)} ({coinData.market.atl.change_percentage?.toFixed(2) ?? 'N/A'}%)</div>
                     <div className="mt-1 text-xs text-slate-400">FDV: {formatNumber(coinData.market.fully_diluted_valuation)}</div>
@@ -730,7 +730,7 @@ function CryptoDetailPageContent() {
 
                 {(coinData.sentiment.votes_up_percentage !== undefined || coinData.sentiment.watchlist_users) && (
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
-                    <p className="mb-1 text-[10px] uppercase text-slate-500">Sentiment</p>
+                    <p className="mb-1 text-[11px] uppercase text-slate-500">Sentiment</p>
                     <p className="text-xs text-slate-300">Bullish votes: {coinData.sentiment.votes_up_percentage?.toFixed(1) ?? 'N/A'}%</p>
                     <p className="text-xs text-slate-300">Watchlist users: {coinData.sentiment.watchlist_users?.toLocaleString() ?? 'N/A'}</p>
                   </div>
@@ -738,7 +738,7 @@ function CryptoDetailPageContent() {
 
                 {coinData.developer && coinData.developer.github_stars && (
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
-                    <p className="mb-1 text-[10px] uppercase text-slate-500">Developer Activity</p>
+                    <p className="mb-1 text-[11px] uppercase text-slate-500">Developer Activity</p>
                     <div className="grid grid-cols-2 gap-1 text-xs text-slate-300">
                       <span>Stars: {coinData.developer.github_stars?.toLocaleString() || 'N/A'}</span>
                       <span>Forks: {coinData.developer.github_forks?.toLocaleString() || 'N/A'}</span>
@@ -750,7 +750,7 @@ function CryptoDetailPageContent() {
 
                 {coinData.tickers?.length > 0 && (
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
-                    <p className="mb-1 text-[10px] uppercase text-slate-500">Exchange Tickers</p>
+                    <p className="mb-1 text-[11px] uppercase text-slate-500">Exchange Tickers</p>
                     <div className="space-y-1">
                       {coinData.tickers.slice(0, 8).map((ticker, idx) => (
                         <div key={`${ticker.exchange}-${idx}`} className="flex items-center justify-between rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-xs">
@@ -764,7 +764,7 @@ function CryptoDetailPageContent() {
 
                 {coinData.coin.description && (
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
-                    <p className="mb-1 text-[10px] uppercase text-slate-500">About</p>
+                    <p className="mb-1 text-[11px] uppercase text-slate-500">About</p>
                     <p className="text-xs leading-5 text-slate-300">{coinData.coin.description}</p>
                   </div>
                 )}
@@ -779,7 +779,7 @@ function CryptoDetailPageContent() {
 
         {!selectedCoin && !loading && (
           <div className="rounded-lg border border-slate-700 bg-slate-900 p-10 text-center">
-            <div className="mx-auto mb-2 h-14 w-14 overflow-hidden rounded-2xl"><img src="/assets/platform-tools/crypto-explorer.png" alt="Crypto Explorer" className="h-full w-full object-contain p-1" /></div>
+            <div className="mx-auto mb-2 h-14 w-14 overflow-hidden rounded-lg"><img src="/assets/platform-tools/crypto-explorer.png" alt="Crypto Explorer" className="h-full w-full object-contain p-1" /></div>
             <h3 className="text-lg font-semibold text-slate-200">Ready to evaluate a crypto setup?</h3>
             <p className="mt-1 text-sm text-slate-500">Search or choose a popular coin to generate decision context.</p>
           </div>

@@ -27,7 +27,6 @@ export default function UsageAnalyticsPage() {
 
   const fetchData = async () => {
     const secret = sessionStorage.getItem("admin_secret");
-    if (!secret) return;
     try {
       const res = await fetch("/api/admin/usage-analytics", {
         headers: { Authorization: `Bearer ${secret}` },

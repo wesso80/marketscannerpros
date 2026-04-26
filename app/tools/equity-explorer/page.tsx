@@ -192,7 +192,7 @@ function PercentBadge({ value }: { value: number | undefined }) {
   if (value === undefined || value === null || isNaN(value)) return <span className="text-gray-500">N/A</span>;
   const isPositive = value >= 0;
   return (
-    <span className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${isPositive ? 'border-green-500/30 bg-green-500/20 text-green-300' : 'border-red-500/30 bg-red-500/20 text-red-300'}`}>
+    <span className={`rounded border px-1.5 py-0.5 text-[11px] font-semibold ${isPositive ? 'border-green-500/30 bg-green-500/20 text-green-300' : 'border-red-500/30 bg-red-500/20 text-red-300'}`}>
       {isPositive ? '▲' : '▼'} {Math.abs(value).toFixed(2)}%
     </span>
   );
@@ -238,7 +238,7 @@ function SentimentBadge({ sentiment }: { sentiment: string }) {
   };
   
   return (
-    <span className={`rounded border border-slate-700 px-1.5 py-0.5 text-[10px] font-semibold ${colors[sentiment] || colors['Neutral']}`}>
+    <span className={`rounded border border-slate-700 px-1.5 py-0.5 text-[11px] font-semibold ${colors[sentiment] || colors['Neutral']}`}>
       {sentiment}
     </span>
   );
@@ -337,7 +337,7 @@ function AnalystRatingsBar({ analysts }: { analysts: EquityData['analysts'] }) {
           />
         ))}
       </div>
-      <div className="flex justify-between text-[10px] text-gray-400">
+      <div className="flex justify-between text-[11px] text-gray-400">
         <span>Strong Buy ({analysts.strongBuy})</span>
         <span>Hold ({analysts.hold})</span>
         <span>Strong Sell ({analysts.strongSell})</span>
@@ -518,7 +518,7 @@ export default function EquityExplorerPage() {
                   setSearchInput(stock.symbol);
                   fetchEquityData(stock.symbol);
                 }}
-                className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-colors ${
+                className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold transition-colors ${
                   symbol === stock.symbol
                     ? 'border-emerald-400 bg-emerald-500/10 text-emerald-200'
                     : 'border-slate-700 text-slate-300 hover:bg-slate-800'
@@ -551,27 +551,27 @@ export default function EquityExplorerPage() {
               <div className="grid gap-2 lg:grid-cols-[1fr_420px]">
                 <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                   <div className="mb-2 flex items-center justify-between">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 1 • Equity Analysis Gate</p>
-                    <span className="text-[10px] text-slate-500">US session anchor</span>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 1 • Equity Analysis Gate</p>
+                    <span className="text-[11px] text-slate-500">US session anchor</span>
                   </div>
                   <div className="mb-2 flex flex-wrap gap-1">
-                    <span className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] text-slate-300">Status: <span className={`${upeSignal?.eligibilityUser === 'eligible' ? 'text-emerald-300' : upeSignal?.eligibilityUser === 'conditional' ? 'text-amber-300' : 'text-rose-300'} font-semibold`}>{upeSignal ? (upeSignal.eligibilityUser === 'eligible' ? 'Aligned' : upeSignal.eligibilityUser === 'conditional' ? 'Conditional' : 'Not aligned') : 'Pending'}</span></span>
-                    <span className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] text-slate-300">Capital Mode: <span className="font-semibold text-slate-100">{upeGlobal?.capitalMode || 'reduced'}</span></span>
-                    <span className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] text-slate-300">Vol Regime: <span className="font-semibold text-slate-100">{upeGlobal?.volatilityState || 'unknown'}</span></span>
+                    <span className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-300">Status: <span className={`${upeSignal?.eligibilityUser === 'eligible' ? 'text-emerald-300' : upeSignal?.eligibilityUser === 'conditional' ? 'text-amber-300' : 'text-rose-300'} font-semibold`}>{upeSignal ? (upeSignal.eligibilityUser === 'eligible' ? 'Aligned' : upeSignal.eligibilityUser === 'conditional' ? 'Conditional' : 'Not aligned') : 'Pending'}</span></span>
+                    <span className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-300">Capital Mode: <span className="font-semibold text-slate-100">{upeGlobal?.capitalMode || 'reduced'}</span></span>
+                    <span className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-300">Vol Regime: <span className="font-semibold text-slate-100">{upeGlobal?.volatilityState || 'unknown'}</span></span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-                    <div className="rounded border border-slate-700 bg-slate-900/70 p-2"><p className="text-[10px] text-slate-500">Large Cap</p><p className="text-xs font-semibold text-emerald-300">Aligned</p></div>
-                    <div className="rounded border border-slate-700 bg-slate-900/70 p-2"><p className="text-[10px] text-slate-500">Mid Cap</p><p className="text-xs font-semibold text-amber-300">Conditional</p></div>
-                    <div className="rounded border border-slate-700 bg-slate-900/70 p-2"><p className="text-[10px] text-slate-500">High Beta</p><p className="text-xs font-semibold text-amber-300">Conditional</p></div>
-                    <div className="rounded border border-slate-700 bg-slate-900/70 p-2"><p className="text-[10px] text-slate-500">Earnings Risk</p><p className="text-xs font-semibold text-slate-200">Review</p></div>
+                    <div className="rounded border border-slate-700 bg-slate-900/70 p-2"><p className="text-[11px] text-slate-500">Large Cap</p><p className="text-xs font-semibold text-emerald-300">Aligned</p></div>
+                    <div className="rounded border border-slate-700 bg-slate-900/70 p-2"><p className="text-[11px] text-slate-500">Mid Cap</p><p className="text-xs font-semibold text-amber-300">Conditional</p></div>
+                    <div className="rounded border border-slate-700 bg-slate-900/70 p-2"><p className="text-[11px] text-slate-500">High Beta</p><p className="text-xs font-semibold text-amber-300">Conditional</p></div>
+                    <div className="rounded border border-slate-700 bg-slate-900/70 p-2"><p className="text-[11px] text-slate-500">Earnings Risk</p><p className="text-xs font-semibold text-slate-200">Review</p></div>
                   </div>
                   <p className="mt-2 rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-[11px] text-slate-400">{upeSignal?.eligibilityUser === 'blocked' ? 'Conditions not aligned — observation mode only.' : upeSignal?.eligibilityUser === 'conditional' ? 'Mixed conditions — require trend + volume confirmation.' : 'Conditions are broadly aligned.'}</p>
                 </div>
 
                 <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                   <div className="mb-2 flex items-center justify-between">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Environment Breakdown</p>
-                    <span className="text-[10px] text-slate-500">Inputs</span>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Environment Breakdown</p>
+                    <span className="text-[11px] text-slate-500">Inputs</span>
                   </div>
                   <div className="grid gap-1.5 text-xs">
                     <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1"><span className="text-slate-500">Global Regime</span><p className="font-semibold text-slate-100">{upeGlobal?.regime || 'neutral'}</p></div>
@@ -597,7 +597,7 @@ export default function EquityExplorerPage() {
                 ['Volume', formatVolume(data.quote.volume)],
                 ['P/E', data.valuation.pe > 0 ? data.valuation.pe.toFixed(2) : 'N/A'],
               ].map(([k, v]) => (
-                <div key={k} className="rounded-full border border-slate-700 px-1.5 py-0.5 text-[9px] leading-tight text-slate-300 md:px-2 md:text-[10px]">
+                <div key={k} className="rounded-full border border-slate-700 px-1.5 py-0.5 text-[11px] leading-tight text-slate-300 md:px-2 md:text-[11px]">
                   <span className="font-semibold text-slate-100">{k}</span> · {v}
                 </div>
               ))}
@@ -607,14 +607,14 @@ export default function EquityExplorerPage() {
               <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
                 <div className="mb-1 flex items-center justify-between">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Action</p>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Action</p>
                     <h2 className="text-xs font-bold">Price + Permission Console</h2>
                   </div>
                   <button
                     type="button"
                     onClick={handleRefresh}
                     disabled={refreshing}
-                    className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] text-slate-300"
+                    className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px] text-slate-300"
                   >
                     {refreshing ? 'Refreshing...' : 'Refresh'}
                   </button>
@@ -624,7 +624,7 @@ export default function EquityExplorerPage() {
                 <div>
                   <div className="mb-1 flex items-center gap-2">
                     <h2 className="text-lg font-bold">{data.company.symbol}</h2>
-                    <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] text-slate-300">
+                    <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-[11px] text-slate-300">
                       {data.company.exchange}
                     </span>
                   </div>
@@ -641,7 +641,7 @@ export default function EquityExplorerPage() {
                     </span>
                     <PercentBadge value={data.quote.changePercent} />
                   </div>
-                  <p className="mt-1 text-[10px] text-slate-500">
+                  <p className="mt-1 text-[11px] text-slate-500">
                     Last updated: {data.quote.latestTradingDay}
                   </p>
                 </div>
@@ -667,25 +667,25 @@ export default function EquityExplorerPage() {
                 return (
                   <div className="mt-2 flex flex-wrap justify-center gap-1">
                     <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-950/60 px-2 py-1">
-                      <span className="text-[10px] uppercase text-slate-500">Trend</span>
+                      <span className="text-[11px] uppercase text-slate-500">Trend</span>
                       <span className={`text-xs font-semibold ${signals.trend.color}`}>
                         {signals.trend.icon} {signals.trend.label}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-950/60 px-2 py-1">
-                      <span className="text-[10px] uppercase text-slate-500">Momentum</span>
+                      <span className="text-[11px] uppercase text-slate-500">Momentum</span>
                       <span className={`text-xs font-semibold ${signals.momentum.color}`}>
                         {signals.momentum.icon} {signals.momentum.label}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-950/60 px-2 py-1">
-                      <span className="text-[10px] uppercase text-slate-500">Volatility</span>
+                      <span className="text-[11px] uppercase text-slate-500">Volatility</span>
                       <span className={`text-xs font-semibold ${signals.volatility.color}`}>
                         {signals.volatility.icon} {signals.volatility.label}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-950/60 px-2 py-1">
-                      <span className="text-[10px] uppercase text-slate-500">Permission</span>
+                      <span className="text-[11px] uppercase text-slate-500">Permission</span>
                       <span
                         className={`text-xs font-semibold ${
                           eligibilityLabel === 'Aligned'
@@ -702,12 +702,12 @@ export default function EquityExplorerPage() {
                     </div>
                     {upeSignal && (
                       <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-950/60 px-2 py-1">
-                        <span className="text-[10px] uppercase text-slate-500">Action</span>
+                        <span className="text-[11px] uppercase text-slate-500">Action</span>
                         {upeSignal.eligibilityUser === 'blocked' ? (
                           <button
                             type="button"
                             disabled
-                            className="cursor-not-allowed rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] text-slate-500"
+                            className="cursor-not-allowed rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-[11px] text-slate-500"
                             title={upeSignal.overlayReasons?.length ? upeSignal.overlayReasons.join(' • ') : 'Not aligned per governance profile or global gate'}
                           >
                             Not aligned
@@ -715,7 +715,7 @@ export default function EquityExplorerPage() {
                         ) : (
                           <Link
                             href={`/tools/confluence-scanner?symbol=${data.company.symbol}&eligibility=${upeSignal.eligibilityUser}&crcs=${upeSignal.crcsUser.toFixed(1)}`}
-                            className="rounded border border-emerald-500/50 bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-200"
+                            className="rounded border border-emerald-500/50 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-200"
                           >
                             Open Scanner
                           </Link>
@@ -735,24 +735,24 @@ export default function EquityExplorerPage() {
 
               <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
                 <div className="mb-1">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Context</p>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Context</p>
                   <h2 className="text-xs font-bold">Trend / RS / Volatility Context</h2>
                 </div>
                 <div className="grid gap-2">
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
-                    <p className="text-[10px] uppercase text-slate-500">Structure Bias</p>
+                    <p className="text-[11px] uppercase text-slate-500">Structure Bias</p>
                     <p className="text-xs text-slate-200">Weekly: <span className="font-semibold">{data.technicals.priceVs200MA >= 0 ? 'Bullish' : 'Bearish'}</span> • Daily: <span className="font-semibold">{data.technicals.priceVs50MA >= 0 ? 'Bullish' : 'Bearish'}</span></p>
                   </div>
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
-                    <p className="text-[10px] uppercase text-slate-500">Relative Strength</p>
+                    <p className="text-[11px] uppercase text-slate-500">Relative Strength</p>
                     <p className="text-xs text-slate-200">vs SPY: <span className={`font-semibold ${(data.quote.changePercent ?? 0) >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>{(data.quote.changePercent ?? 0) >= 0 ? '+' : ''}{(data.quote.changePercent ?? 0).toFixed(2)}%</span> • vs Sector: <span className="font-semibold text-slate-300">proxy</span></p>
                   </div>
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
-                    <p className="text-[10px] uppercase text-slate-500">Volatility + Liquidity</p>
+                    <p className="text-[11px] uppercase text-slate-500">Volatility + Liquidity</p>
                     <p className="text-xs text-slate-200">ATR state: <span className="font-semibold">{upeGlobal?.volatilityState || 'normal'}</span> • RVOL proxy: <span className="font-semibold">{(data.quote.volume / Math.max(1, data.valuation.marketCap / 1000)).toFixed(2)}x</span></p>
                   </div>
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
-                    <p className="text-[10px] uppercase text-slate-500">Event Risk</p>
+                    <p className="text-[11px] uppercase text-slate-500">Event Risk</p>
                     <p className="text-xs text-slate-200">Earnings: <span className="font-semibold">Upcoming schedule check</span> • News: <span className="font-semibold">{getAggregateSentiment(data.news)?.label || 'Neutral'}</span></p>
                   </div>
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 px-2 py-1 text-[11px] text-slate-400">
@@ -765,27 +765,27 @@ export default function EquityExplorerPage() {
             <details className="group rounded-lg border border-slate-700 bg-slate-900 p-2">
               <summary className="flex list-none cursor-pointer items-center justify-between text-xs font-bold">
                 <span>Zone 3 • Informational (Collapsed by Default)</span>
-                <span className="text-[10px] text-slate-500 group-open:hidden">Expand</span>
-                <span className="hidden text-[10px] text-slate-500 group-open:inline">Collapse</span>
+                <span className="text-[11px] text-slate-500 group-open:hidden">Expand</span>
+                <span className="hidden text-[11px] text-slate-500 group-open:inline">Collapse</span>
               </summary>
 
               <div className="mt-2 space-y-2">
             {/* Key Stats Grid */}
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
               <div className="rounded-md border border-slate-700 bg-slate-900 p-2">
-                <p className="text-[10px] uppercase text-slate-500">Market Cap</p>
+                <p className="text-[11px] uppercase text-slate-500">Market Cap</p>
                 <p className="text-sm font-bold">{formatNumber(data.valuation.marketCap)}</p>
               </div>
               <div className="rounded-md border border-slate-700 bg-slate-900 p-2">
-                <p className="text-[10px] uppercase text-slate-500">P/E Ratio</p>
+                <p className="text-[11px] uppercase text-slate-500">P/E Ratio</p>
                 <p className="text-sm font-bold">{data.valuation.pe > 0 ? data.valuation.pe.toFixed(2) : 'N/A'}</p>
               </div>
               <div className="rounded-md border border-slate-700 bg-slate-900 p-2">
-                <p className="text-[10px] uppercase text-slate-500">Volume</p>
+                <p className="text-[11px] uppercase text-slate-500">Volume</p>
                 <p className="text-sm font-bold">{formatVolume(data.quote.volume)}</p>
               </div>
               <div className="rounded-md border border-slate-700 bg-slate-900 p-2">
-                <p className="text-[10px] uppercase text-slate-500">Dividend Yield</p>
+                <p className="text-[11px] uppercase text-slate-500">Dividend Yield</p>
                 <p className="text-sm font-bold">{data.dividend.dividendYield > 0 ? `${(data.dividend.dividendYield * 100).toFixed(2)}%` : 'N/A'}</p>
               </div>
             </div>
@@ -934,7 +934,7 @@ export default function EquityExplorerPage() {
                 {data.analysts.totalRatings > 0 ? (
                   <div className="space-y-4">
                     <AnalystRatingsBar analysts={data.analysts} />
-                    <p className="text-[9px] text-slate-600">Source: external analyst consensus. MSP does not endorse or recommend any rating.</p>
+                    <p className="text-[11px] text-slate-600">Source: external analyst consensus. MSP does not endorse or recommend any rating.</p>
                     <div className="flex justify-between items-center">
                       <span className="text-gray-400">Analyst Price Target</span>
                       <span className="text-xl font-bold text-emerald-400">
@@ -1006,7 +1006,7 @@ export default function EquityExplorerPage() {
                     if (!sentiment) return null;
                     return (
                       <div className="flex items-center gap-2 rounded-md border border-slate-700 bg-slate-950/60 px-2 py-1">
-                        <span className="text-[10px] text-slate-400">News Sentiment:</span>
+                        <span className="text-[11px] text-slate-400">News Sentiment:</span>
                         <span className={`font-bold ${sentiment.color}`}>
                           {sentiment.score}% {sentiment.label}
                         </span>
@@ -1091,7 +1091,7 @@ export default function EquityExplorerPage() {
         {/* Empty State */}
         {!data && !loading && !error && (
           <div className="rounded-lg border border-slate-700 bg-slate-900 p-10 text-center">
-            <div className="mx-auto mb-3 h-14 w-14 rounded-2xl overflow-hidden"><img src="/assets/platform-tools/equity-explorer.png" alt="" className="h-full w-full object-contain p-1" /></div>
+            <div className="mx-auto mb-3 h-14 w-14 rounded-lg overflow-hidden"><img src="/assets/platform-tools/equity-explorer.png" alt="" className="h-full w-full object-contain p-1" /></div>
             <h3 className="text-lg font-semibold text-slate-200">Ready to evaluate an equity setup?</h3>
             <p className="mt-1 text-sm text-slate-500">Search or choose a popular symbol to generate decision context.</p>
           </div>

@@ -120,7 +120,6 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
 
   const fetchStats = async () => {
     const secret = sessionStorage.getItem("admin_secret");
-    if (!secret) return;
 
     try {
       const res = await fetch("/api/admin/stats", {
@@ -141,7 +140,6 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
 
   const fetchLiveUsers = async () => {
     const secret = sessionStorage.getItem("admin_secret");
-    if (!secret) return;
     try {
       const res = await fetch("/api/analytics/online", {
         headers: { Authorization: `Bearer ${secret}` },

@@ -11,7 +11,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { isOperator, isAdminSecret } from '@/lib/quant/operatorAuth';
+import { isOperator } from '@/lib/quant/operatorAuth';
+import { requireAdmin } from '@/lib/adminAuth';
 import { runScan, createScanEnvelope } from '@/lib/operator/orchestrator';
 import type { ScanContext } from '@/lib/operator/orchestrator';
 import type { Market, RadarOpportunity } from '@/types/operator';
@@ -90,7 +91,7 @@ const DEFAULT_CONTEXT: ScanContext = {
 /* ── Auth helper ────────────────────────────────────────────── */
 
 async function checkAuth(req: NextRequest): Promise<boolean> {
-  const adminAuth = isAdminSecret(req.headers.get('authorization'));
+  const adminAuth = (await requireAdmin(req)).ok;
   if (adminAuth) return true;
   const session = await getSessionFromCookie();
   return !!(session && isOperator(session.cid, session.workspaceId));

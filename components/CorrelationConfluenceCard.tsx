@@ -62,7 +62,7 @@ function CorrelationChart({ chart, targetSymbol, compareSymbol }: {
   compareSymbol: string;
 }) {
   if (!chart.length) {
-    return <div className="py-3 text-center text-[10px] text-zinc-600">No chart data available</div>;
+    return <div className="py-3 text-center text-[11px] text-zinc-600">No chart data available</div>;
   }
 
   const W = 440;
@@ -163,11 +163,11 @@ function CorrelationChart({ chart, targetSymbol, compareSymbol }: {
       <div className="flex items-center justify-center gap-4 mt-1">
         <div className="flex items-center gap-1">
           <div className="h-[2px] w-3 rounded bg-emerald-400" />
-          <span className="text-[9px] text-emerald-400/70">{targetSymbol}</span>
+          <span className="text-[11px] text-emerald-400/70">{targetSymbol}</span>
         </div>
         <div className="flex items-center gap-1">
           <div className="h-[2px] w-3 rounded bg-amber-400" />
-          <span className="text-[9px] text-amber-400/70">{compareSymbol}</span>
+          <span className="text-[11px] text-amber-400/70">{compareSymbol}</span>
         </div>
       </div>
     </div>
@@ -278,7 +278,7 @@ export default function CorrelationConfluenceCard({ symbol, type, className = ''
         <div className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full bg-emerald-400" />
           <h3 className="text-sm font-semibold text-white">Correlation Confluence</h3>
-          <span className="text-[10px] text-zinc-500">({window}D)</span>
+          <span className="text-[11px] text-zinc-500">({window}D)</span>
         </div>
 
         {/* Window toggle */}
@@ -287,7 +287,7 @@ export default function CorrelationConfluenceCard({ symbol, type, className = ''
             <button
               key={w}
               onClick={() => setWindow(w)}
-              className={`rounded px-2 py-0.5 text-[10px] font-medium transition-colors ${
+              className={`rounded px-2 py-0.5 text-[11px] font-medium transition-colors ${
                 window === w
                   ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-400/30'
                   : 'text-zinc-500 hover:text-zinc-300 border border-transparent'
@@ -306,7 +306,7 @@ export default function CorrelationConfluenceCard({ symbol, type, className = ''
           <div className="mb-3 flex items-center gap-2">
             <span className={`text-[11px] font-medium ${regime.color}`}>{regime.label}</span>
             {data.divergenceBadge && (
-              <span className="rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-400">
+              <span className="rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[11px] text-amber-400">
                 ⚡ Divergence
               </span>
             )}
@@ -329,7 +329,7 @@ export default function CorrelationConfluenceCard({ symbol, type, className = ''
         {/* Results */}
         {!loading && !error && topCorrelations.length > 0 && (
           <div className="space-y-1.5">
-            <div className="mb-1 text-[10px] text-zinc-600 italic">Click any row to expand price chart</div>
+            <div className="mb-1 text-[11px] text-zinc-600 italic">Click any row to expand price chart</div>
             {topCorrelations.map((item) => {
               const style = LABEL_STYLES[item.label] || LABEL_STYLES.NONE;
               const isExpanded = expandedSymbol === item.symbol;
@@ -346,12 +346,12 @@ export default function CorrelationConfluenceCard({ symbol, type, className = ''
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       {hasChart && (
-                        <span className={`text-[10px] text-zinc-500 transition-transform ${isExpanded ? 'rotate-90' : ''}`}>▶</span>
+                        <span className={`text-[11px] text-zinc-500 transition-transform ${isExpanded ? 'rotate-90' : ''}`}>▶</span>
                       )}
                       <span className="text-xs font-medium text-white truncate">{item.name}</span>
-                      <span className="text-[10px] text-zinc-500">{item.symbol}</span>
+                      <span className="text-[11px] text-zinc-500">{item.symbol}</span>
                       {item.diverging && (
-                        <span className="flex-shrink-0 rounded bg-amber-500/10 px-1 py-0.5 text-[9px] text-amber-400">
+                        <span className="flex-shrink-0 rounded bg-amber-500/10 px-1 py-0.5 text-[11px] text-amber-400">
                           diverging
                         </span>
                       )}
@@ -367,7 +367,7 @@ export default function CorrelationConfluenceCard({ symbol, type, className = ''
 
                       {/* Label badge */}
                       <span
-                        className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${style.bg} ${style.text} ${style.border}`}
+                        className={`rounded border px-1.5 py-0.5 text-[11px] font-semibold ${style.bg} ${style.text} ${style.border}`}
                       >
                         {item.label === 'HIGH' && 'Moves Together'}
                         {item.label === 'MEDIUM' && 'Moderate'}
@@ -398,7 +398,7 @@ export default function CorrelationConfluenceCard({ symbol, type, className = ''
                 {topCorrelations
                   .filter(c => c.leadLag)
                   .map(c => (
-                    <div key={`lag-${c.symbol}`} className="text-[10px] text-zinc-500">
+                    <div key={`lag-${c.symbol}`} className="text-[11px] text-zinc-500">
                       ↳ {c.leadLag} (±1 bar)
                     </div>
                   ))}
@@ -430,7 +430,7 @@ export default function CorrelationConfluenceCard({ symbol, type, className = ''
             <button
               onClick={addCustomSymbol}
               disabled={!customInput.trim()}
-              className="rounded bg-emerald-500/20 px-2 py-1 text-[10px] font-medium text-emerald-400 hover:bg-emerald-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="rounded bg-emerald-500/20 px-2 py-1 text-[11px] font-medium text-emerald-400 hover:bg-emerald-500/30 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               Add
             </button>
@@ -442,7 +442,7 @@ export default function CorrelationConfluenceCard({ symbol, type, className = ''
               {customSymbols.map(sym => (
                 <span
                   key={sym}
-                  className="inline-flex items-center gap-1 rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] text-zinc-300"
+                  className="inline-flex items-center gap-1 rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[11px] text-zinc-300"
                 >
                   {sym}
                   <button
@@ -459,7 +459,7 @@ export default function CorrelationConfluenceCard({ symbol, type, className = ''
 
         {/* Operator summary line */}
         {data && !loading && (
-          <div className="mt-2 text-[10px] text-zinc-500">
+          <div className="mt-2 text-[11px] text-zinc-500">
             {data.type === 'crypto' ? '🔗 Crypto majors' : data.type === 'forex' ? '💱 Forex pairs' : '📊 Equity peers'}
             {customSymbols.length > 0 ? ` + ${customSymbols.length} custom` : ''}
             {' • '}

@@ -18,7 +18,7 @@ export default function Hero() {
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
           </span>
-          Scanning 10,000+ assets across crypto, equities, options &amp; commodities
+          Structured research across crypto, equities, options &amp; commodities
         </div>
 
         {/* H1 */}
@@ -31,16 +31,15 @@ export default function Hero() {
 
         {/* Subtitle */}
         <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-slate-400 sm:text-lg md:text-xl">
-          Professional-level scanning, confluence detection,
-          options flow and AI market intelligence —
-          all in one platform.
+          Educational market analysis, confluence detection,
+          options flow and AI research context in one platform.
         </p>
 
         {/* CTAs */}
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
           <Link
             href="/pricing"
-            className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-8 py-3.5 text-base font-bold text-white shadow-lg shadow-emerald-500/25 transition-all hover:bg-emerald-400 hover:shadow-emerald-500/40 hover:scale-[1.02] active:scale-[0.98]"
+            className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-8 py-3.5 text-base font-bold text-white shadow-lg shadow-emerald-500/20 transition-colors hover:bg-emerald-400 active:bg-emerald-500"
           >
             Start Free Trial
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -49,7 +48,7 @@ export default function Hero() {
           </Link>
           <Link
             href="/tools/scanner"
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-600 bg-slate-800/50 px-6 py-3.5 text-base font-semibold text-slate-200 transition-all hover:border-slate-500 hover:bg-slate-800 hover:text-white"
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-600 bg-slate-800/50 px-6 py-3.5 text-base font-semibold text-slate-200 transition-colors hover:border-slate-500 hover:bg-slate-800 hover:text-white"
           >
             Try the Scanner
           </Link>
@@ -57,15 +56,14 @@ export default function Hero() {
 
         {/* Platform preview image */}
         <div className="relative mx-auto mt-12 w-full max-w-4xl">
-          <div className="absolute -inset-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-transparent to-teal-500/10 blur-xl" />
-          <div className="relative overflow-hidden rounded-xl border border-white/10 shadow-2xl shadow-black/40">
+          <div className="relative overflow-hidden rounded-lg border border-white/10 shadow-2xl shadow-black/30">
             <img
               src="/logos/landing-hero.png"
               alt="MarketScannerPros platform — multi-asset scanner, confluence detection, and AI analysis dashboard"
               className="w-full"
               loading="eager"
             />
-            <div className="absolute inset-0 rounded-xl border border-white/5" />
+            <div className="absolute inset-0 rounded-lg border border-white/5" />
           </div>
         </div>
 

@@ -27,22 +27,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   // Check auth on mount
   useEffect(() => {
-    const stored = sessionStorage.getItem("admin_secret");
-    if (stored) {
-      setSecret(stored);
-      verifyAuth(stored);
-    }
+    const stored = sessionStorage.getItem("admin_secret") || "";
+    verifyAuth(stored);
   }, []);
 
-  const verifyAuth = async (key: string) => {
+  const verifyAuth = async (key = "") => {
     try {
-      const res = await fetch("/api/admin/verify", {
-        headers: { Authorization: `Bearer ${key}` },
-      });
+      const headers = key ? { Authorization: `Bearer ${key}` } : undefined;
+      const res = await fetch("/api/admin/verify", { headers });
       if (res.ok) {
         setIsAuthed(true);
         setSecret(key);
-        sessionStorage.setItem("admin_secret", key);
+        sessionStorage.removeItem("admin_secret");
       } else {
         setIsAuthed(false);
         sessionStorage.removeItem("admin_secret");
@@ -54,10 +50,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    verifyAuth(inputSecret);
+    verifyAuth(inputSecret.trim());
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await fetch("/api/admin/verify", { method: "DELETE" }).catch(() => null);
     setSecret("");
     setIsAuthed(false);
     sessionStorage.removeItem("admin_secret");

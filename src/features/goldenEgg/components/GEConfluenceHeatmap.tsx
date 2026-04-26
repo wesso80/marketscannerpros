@@ -41,7 +41,7 @@ export default function GEConfluenceHeatmap({ scoreBreakdown, confidence }: Prop
   const totalSegments = 10;
 
   return (
-    <div className="rounded-2xl border border-white/5 bg-slate-900/40 p-5">
+    <div className="rounded-lg border border-white/5 bg-slate-900/40 p-5">
       <div className="mb-4 flex items-center justify-between border-b border-white/5 pb-3">
         <div className="flex items-center gap-2">
           <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
@@ -94,15 +94,15 @@ export default function GEConfluenceHeatmap({ scoreBreakdown, confidence }: Prop
       <div className="mt-4 flex items-center justify-center gap-4 border-t border-white/5 pt-3">
         <div className="flex items-center gap-1.5">
           <div className="h-2 w-2 rounded-sm bg-emerald-500" />
-          <span className="text-[10px] text-slate-500">Bullish (65+)</span>
+          <span className="text-[11px] text-slate-500">Bullish (65+)</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="h-2 w-2 rounded-sm bg-amber-500" />
-          <span className="text-[10px] text-slate-500">Neutral (45-64)</span>
+          <span className="text-[11px] text-slate-500">Neutral (45-64)</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="h-2 w-2 rounded-sm bg-rose-500" />
-          <span className="text-[10px] text-slate-500">Bearish (&lt;45)</span>
+          <span className="text-[11px] text-slate-500">Bearish (&lt;45)</span>
         </div>
       </div>
     </div>

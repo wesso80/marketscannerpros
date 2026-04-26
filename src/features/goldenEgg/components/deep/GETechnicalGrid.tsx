@@ -61,7 +61,7 @@ export default function GETechnicalGrid({ indicators, price }: Props) {
   }
 
   return (
-    <div className="rounded-2xl border border-white/5 bg-slate-900/40 p-5">
+    <div className="rounded-lg border border-white/5 bg-slate-900/40 p-5">
       <div className="mb-4 flex items-center gap-2 border-b border-white/5 pb-3">
         <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
         <h2 className="text-sm font-semibold uppercase tracking-wider text-amber-400">Technical Indicators</h2>
@@ -72,10 +72,10 @@ export default function GETechnicalGrid({ indicators, price }: Props) {
           const b = badge(key, raw);
           return (
             <div key={key} className="rounded-lg border border-white/5 bg-white/5 px-3 py-2.5">
-              <div className="text-[10px] uppercase tracking-wide text-slate-500">{label}</div>
+              <div className="text-[11px] uppercase tracking-wide text-slate-500">{label}</div>
               <div className={`mt-0.5 text-base font-bold ${indicatorColor(key, raw)}`}>{value}</div>
               {b.text && (
-                <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${b.color}`}>{b.text}</span>
+                <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ${b.color}`}>{b.text}</span>
               )}
             </div>
           );

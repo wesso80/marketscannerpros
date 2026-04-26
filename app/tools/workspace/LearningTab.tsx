@@ -59,28 +59,28 @@ export default function LearningTab() {
             <Card>
               <div className="text-xs text-[var(--msp-text-muted)] mb-1">Best Doctrine</div>
               <div className="text-sm font-bold text-emerald-400">{profile.bestDoctrine.label}</div>
-              <div className="text-[10px] text-slate-400">{(profile.bestDoctrine.winRate * 100).toFixed(0)}% win · {profile.bestDoctrine.totalTrades} trades</div>
+              <div className="text-[11px] text-slate-400">{(profile.bestDoctrine.winRate * 100).toFixed(0)}% win · {profile.bestDoctrine.totalTrades} trades</div>
             </Card>
           )}
           {profile.worstDoctrine && (
             <Card>
               <div className="text-xs text-[var(--msp-text-muted)] mb-1">Worst Doctrine</div>
               <div className="text-sm font-bold text-red-400">{profile.worstDoctrine.label}</div>
-              <div className="text-[10px] text-slate-400">{(profile.worstDoctrine.winRate * 100).toFixed(0)}% win · {profile.worstDoctrine.totalTrades} trades</div>
+              <div className="text-[11px] text-slate-400">{(profile.worstDoctrine.winRate * 100).toFixed(0)}% win · {profile.worstDoctrine.totalTrades} trades</div>
             </Card>
           )}
           {profile.bestRegime && (
             <Card>
               <div className="text-xs text-[var(--msp-text-muted)] mb-1">Best Regime</div>
               <div className="text-sm font-bold text-emerald-400 capitalize">{profile.bestRegime.regime}</div>
-              <div className="text-[10px] text-slate-400">{(profile.bestRegime.winRate * 100).toFixed(0)}% win · {profile.bestRegime.trades} trades</div>
+              <div className="text-[11px] text-slate-400">{(profile.bestRegime.winRate * 100).toFixed(0)}% win · {profile.bestRegime.trades} trades</div>
             </Card>
           )}
           {profile.worstRegime && (
             <Card>
               <div className="text-xs text-[var(--msp-text-muted)] mb-1">Worst Regime</div>
               <div className="text-sm font-bold text-red-400 capitalize">{profile.worstRegime.regime}</div>
-              <div className="text-[10px] text-slate-400">{(profile.worstRegime.winRate * 100).toFixed(0)}% win · {profile.worstRegime.trades} trades</div>
+              <div className="text-[11px] text-slate-400">{(profile.worstRegime.winRate * 100).toFixed(0)}% win · {profile.worstRegime.trades} trades</div>
             </Card>
           )}
         </div>
@@ -129,30 +129,30 @@ export default function LearningTab() {
             >
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs font-bold text-white">{pb.label}</span>
-                <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${directionColor(pb.direction)}`}>{pb.direction}</span>
+                <span className={`text-[11px] font-medium px-1.5 py-0.5 rounded ${directionColor(pb.direction)}`}>{pb.direction}</span>
               </div>
               <p className="text-[11px] text-[var(--msp-text-muted)] leading-relaxed">{pb.description}</p>
               {activePlaybook === pb.id && (
                 <div className="mt-3 pt-3 border-t border-slate-700/50 space-y-2">
                   <div>
-                    <div className="text-[10px] text-[var(--msp-text-muted)] font-semibold mb-1">SETUP CRITERIA</div>
+                    <div className="text-[11px] text-[var(--msp-text-muted)] font-semibold mb-1">SETUP CRITERIA</div>
                     <ul className="space-y-0.5">
                       {pb.entryCriteria.map((c, i) => <li key={i} className="text-[11px] text-slate-300">• {c}</li>)}
                     </ul>
                   </div>
                   <div>
-                    <div className="text-[10px] text-[var(--msp-text-muted)] font-semibold mb-1">RISK MODEL</div>
+                    <div className="text-[11px] text-[var(--msp-text-muted)] font-semibold mb-1">RISK MODEL</div>
                     <div className="text-[11px] text-slate-300">Invalidation: {pb.riskModel.stopDescription}</div>
                     <div className="text-[11px] text-slate-300">Key Level: {pb.riskModel.targetDescription} ({pb.riskModel.defaultRR}R)</div>
                   </div>
                   <div>
-                    <div className="text-[10px] text-[var(--msp-text-muted)] font-semibold mb-1">FAILURE SIGNALS</div>
+                    <div className="text-[11px] text-[var(--msp-text-muted)] font-semibold mb-1">FAILURE SIGNALS</div>
                     <ul className="space-y-0.5">
                       {pb.failureSignals.map((s, i) => <li key={i} className="text-[11px] text-red-400/80">⚠ {s}</li>)}
                     </ul>
                   </div>
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {pb.compatibleRegimes.map(r => <span key={r} className="text-[9px] px-1.5 py-0.5 rounded bg-slate-700/50 text-slate-400 capitalize">{r}</span>)}
+                    {pb.compatibleRegimes.map(r => <span key={r} className="text-[11px] px-1.5 py-0.5 rounded bg-slate-700/50 text-slate-400 capitalize">{r}</span>)}
                   </div>
                 </div>
               )}
@@ -168,7 +168,7 @@ export default function LearningTab() {
 function StatCard({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
     <Card>
-      <div className="text-[10px] text-[var(--msp-text-muted)] mb-1">{label}</div>
+      <div className="text-[11px] text-[var(--msp-text-muted)] mb-1">{label}</div>
       <div className={`text-xl font-bold ${accent ? 'text-[var(--msp-accent)]' : 'text-white'}`}>{value}</div>
     </Card>
   );

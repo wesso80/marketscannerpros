@@ -3,6 +3,7 @@
 // Requires ADMIN_LOGIN_SECRET env var as passphrase.
 import { NextRequest, NextResponse } from "next/server";
 import { hashWorkspaceId, signSessionToken } from "@/lib/auth";
+import { ADMIN_SESSION_COOKIE, createAdminSessionToken, getAdminSessionCookieOptions } from '@/lib/adminAuth';
 import { q } from "@/lib/db";
 import crypto from "crypto";
 
@@ -100,6 +101,7 @@ export async function POST(req: NextRequest) {
       message: "Admin session activated (365 days).",
     });
     res.cookies.set("ms_auth", token, cookieOptions);
+    res.cookies.set(ADMIN_SESSION_COOKIE, createAdminSessionToken(`admin_${email}`), getAdminSessionCookieOptions(req));
     return res;
   } catch (err) {
     console.error("Admin login error:", err);

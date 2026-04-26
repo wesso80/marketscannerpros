@@ -842,7 +842,7 @@ async function autoCreateJournalDraftForEvent(workspaceId: string, event: MSPEve
     tags.push(`dp_${decisionPacketId}`);
   }
 
-  // ── Run execution engine pipeline for proper stops/targets ────────
+  // ── Run paper scenario pipeline for reference levels ──────────────
   const pipeline = await runExecutionPipeline({
     workspaceId,
     symbol,
@@ -857,8 +857,8 @@ async function autoCreateJournalDraftForEvent(workspaceId: string, event: MSPEve
   });
 
   if (!pipeline.ok) {
-    console.warn(`[workflow/events] Execution pipeline rejected ${symbol}: ${pipeline.reason}`);
-    // Still create the entry but with fallback risk metrics (no execution engine)
+    console.warn(`[workflow/events] Paper scenario pipeline rejected ${symbol}: ${pipeline.reason}`);
+    // Still create the entry but with fallback risk metrics (no scenario model)
     const snapshot = buildPermissionSnapshot({ enabled: true });
     const equityAtEntry = await getLatestPortfolioEquity(workspaceId);
     const entryRisk = computeEntryRiskMetrics({
@@ -866,8 +866,8 @@ async function autoCreateJournalDraftForEvent(workspaceId: string, event: MSPEve
       dynamicRiskPerTrade: snapshot.caps.risk_per_trade,
     });
     // Insert WITHOUT stops — but tag it so we know it's incomplete
-    tags.push('missing_execution_engine');
-    const incompleteNotes = notes + `\n⚠️ Execution engine rejected: ${pipeline.reason}`;
+    tags.push('missing_scenario_model');
+    const incompleteNotes = notes + `\nScenario model incomplete: ${pipeline.reason}`;
     await q(
       `INSERT INTO journal_entries (
         workspace_id, trade_date, symbol, side, trade_type, quantity, entry_price,
@@ -893,15 +893,15 @@ async function autoCreateJournalDraftForEvent(workspaceId: string, event: MSPEve
   const engineNotes = [
     notes,
     '',
-    'EXECUTION ENGINE (PAPER)',
+    'PAPER SCENARIO MODEL',
     `ATR: ${atr.toFixed(4)}`,
-    `Stop: ${exits.stop_price} | TP1: ${exits.take_profit_1} | TP2: ${exits.take_profit_2 ?? 'n/a'}`,
+    `Invalidation: ${exits.stop_price} | Reaction 1: ${exits.take_profit_1} | Reaction 2: ${exits.take_profit_2 ?? 'n/a'}`,
     `Trail: ${exits.trail_rule} | Time Stop: ${exits.time_stop_minutes}m`,
-    `Qty: ${sizing.quantity} | Risk: $${sizing.total_risk_usd.toFixed(2)} (${(sizing.risk_pct * 100).toFixed(2)}%)`,
+    `Model units: ${sizing.quantity} | Hypothetical risk: $${sizing.total_risk_usd.toFixed(2)} (${(sizing.risk_pct * 100).toFixed(2)}%)`,
     `Leverage: ${leverageResult.recommended_leverage}× | R:R ${exits.rr_at_tp1}:1`,
   ].join('\n');
 
-  tags.push('execution_engine', 'paper_trade');
+  tags.push('scenario_model', 'paper_trade');
 
   await q(
     `INSERT INTO journal_entries (
@@ -958,7 +958,7 @@ function buildCoachRecommendations(args: {
     recommendations.push({
       priority: 'medium',
       action: 'tighten_entry_filter',
-      detail: 'Win rate is below 45%. Increase selectivity on setup quality before execution.',
+      detail: 'Win rate is below 45%. Increase selectivity on setup quality before scenario escalation.',
     });
   }
 

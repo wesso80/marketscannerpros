@@ -243,12 +243,12 @@ CONFLUENCE COMPONENT BREAKDOWN:
   if (stateMachine) {
     const stateDescriptions: Record<string, string> = {
       SCAN: 'scanning for setups — no active interest',
-      WATCH: 'on watchlist — monitoring for entry conditions',
-      STALK: 'actively stalking — waiting for final trigger',
-      ARMED: 'armed and ready — entry imminent on next signal',
-      EXECUTE: 'in execution — managing active position',
-      MANAGE: 'post-entry management — trailing/scaling',
-      COOLDOWN: 'cooldown period — recently exited, avoid re-entry',
+      WATCH: 'on watchlist — monitoring for confirmation evidence',
+      STALK: 'active observation — waiting for final evidence',
+      ARMED: 'scenario prepared — waiting for confirmation signal',
+      EXECUTE: 'active scenario — tracking live conditions',
+      MANAGE: 'scenario management — monitoring reaction zones',
+      COOLDOWN: 'cooldown period — recently closed, avoid forcing a new scenario',
       BLOCKED: 'blocked — conditions prohibit trading this symbol',
     };
     parts.push(`
@@ -264,17 +264,17 @@ INSTITUTIONAL STATE MACHINE:
   if (mpe || doctrine || cfe || cc || stateMachine) {
     parts.push(`
 INTELLIGENCE INSTRUCTIONS:
-- Reference the MPE composite score when discussing trade timing and position sizing.
-- If MPE < 25, recommend standing aside regardless of other signals.
+- Reference the MPE composite score when discussing timing context and hypothetical risk modelling.
+- If MPE < 25, frame the evidence as insufficient regardless of other signals.
 - Name the active doctrine framework when framing the trade setup type.
 - If doctrine is not regime-compatible, flag this as a risk factor.
-- Reference CFE market mode (pin/launch/chop) when discussing trade style selection.
-- If CFE brain permission is BLOCK, this overrides other bullish signals — stand aside.
-- If conviction < 40%, note weak institutional alignment and recommend smaller size.
+- Reference CFE market mode (pin/launch/chop) when discussing scenario style.
+- If CFE brain permission is BLOCK, this overrides other bullish signals — describe the setup as not aligned.
+- If conviction < 40%, note weak institutional alignment and avoid sizing language.
 - When explaining confluence score, break it down by component — identify which factors are strong/weak.
 - If any component scores below 30, flag it as the "weak link" limiting the setup.
-- Reference the state machine state when discussing trade readiness — SCAN/WATCH means not ready, STALK/ARMED means approaching entry, EXECUTE/MANAGE means active.
-- If state is BLOCKED or COOLDOWN, recommend NOT trading this symbol regardless of other signals.`);
+- Reference the state machine state when discussing scenario readiness — SCAN/WATCH means not enough evidence, STALK/ARMED means approaching confirmation, EXECUTE/MANAGE means active monitoring.
+- If state is BLOCKED or COOLDOWN, state that the current evidence does not support a new scenario regardless of other signals.`);
   }
 
   const systemMessage = parts.length > 1 ? parts.join('\n') : null;

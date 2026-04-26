@@ -14,7 +14,7 @@ export default function GENewsFeed({ news }: Props) {
   if (!news.length) return null;
 
   return (
-    <div className="rounded-2xl border border-white/5 bg-slate-900/40 p-5">
+    <div className="rounded-lg border border-white/5 bg-slate-900/40 p-5">
       <div className="mb-4 flex items-center gap-2 border-b border-white/5 pb-3">
         <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
         <h2 className="text-sm font-semibold uppercase tracking-wider text-amber-400">News &amp; Sentiment</h2>
@@ -33,14 +33,14 @@ export default function GENewsFeed({ news }: Props) {
             >
               <div className="flex items-start justify-between gap-3">
                 <h3 className="text-sm font-medium leading-snug text-slate-100">{item.title}</h3>
-                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${badge.cls}`}>
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${badge.cls}`}>
                   {badge.text}
                 </span>
               </div>
               {item.summary && (
                 <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-400">{item.summary}</p>
               )}
-              <div className="mt-2 flex items-center gap-2 text-[10px] text-slate-500">
+              <div className="mt-2 flex items-center gap-2 text-[11px] text-slate-500">
                 <span>{item.source}</span>
                 {item.publishedAt && (
                   <>

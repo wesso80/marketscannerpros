@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import NotificationBell from './NotificationBell';
 import { useUserTier } from '@/lib/useUserTier';
@@ -25,6 +25,8 @@ const SURFACES = [
 
 export default function Header() {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const drawerRef = useRef<HTMLDivElement | null>(null);
+  const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const pathname = usePathname();
   const { isLoggedIn, isLoading: tierLoading, tier } = useUserTier();
   const isAppRoute = pathname.startsWith('/tools') || pathname.startsWith('/operator');
@@ -32,6 +34,39 @@ export default function Header() {
   useEffect(() => {
     document.body.style.overflow = drawerOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
+  }, [drawerOpen]);
+
+  useEffect(() => {
+    if (!drawerOpen) return;
+
+    const drawer = drawerRef.current;
+    const focusable = drawer?.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    );
+    focusable?.[0]?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setDrawerOpen(false);
+        menuButtonRef.current?.focus();
+        return;
+      }
+
+      if (event.key !== 'Tab' || !focusable || focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, [drawerOpen]);
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
@@ -102,7 +137,14 @@ export default function Header() {
               {tier === 'pro_trader' ? 'Pro Trader' : tier === 'pro' ? 'Pro' : 'Free'}
             </span>
           )}
-          <button onClick={() => setDrawerOpen(true)} className="flex flex-col gap-1.5 p-2" aria-label="Open menu">
+          <button
+            ref={menuButtonRef}
+            onClick={() => setDrawerOpen(true)}
+            className="flex flex-col gap-1.5 p-2"
+            aria-label="Open menu"
+            aria-expanded={drawerOpen}
+            aria-controls="msp-mobile-menu"
+          >
             <span className="block h-0.5 w-6 bg-teal-300 rounded" />
             <span className="block h-0.5 w-6 bg-teal-300 rounded" />
             <span className="block h-0.5 w-6 bg-teal-300 rounded" />
@@ -112,16 +154,23 @@ export default function Header() {
 
       {/* ── Mobile Overlay ── */}
       {drawerOpen && (
-        <div className="fixed inset-0 bg-black/60 z-[200] md:hidden backdrop-blur-sm" onClick={() => setDrawerOpen(false)} />
+        <div className="fixed inset-0 bg-black/60 z-[200] md:hidden backdrop-blur-sm" onClick={() => setDrawerOpen(false)} aria-hidden="true" />
       )}
 
       {/* ── Mobile Drawer ── */}
-      <div className={`fixed top-0 right-0 h-[100dvh] w-[min(300px,85vw)] bg-[#111C2D] z-[201] transform transition-transform duration-300 ease-in-out md:hidden border-l border-slate-700/90 shadow-2xl ${drawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+      <div
+        id="msp-mobile-menu"
+        ref={drawerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Site navigation"
+        className={`fixed top-0 right-0 h-[100dvh] w-[min(300px,85vw)] bg-[#111C2D] z-[201] transform transition-transform duration-300 ease-in-out md:hidden border-l border-slate-700/90 shadow-2xl ${drawerOpen ? 'translate-x-0' : 'translate-x-full'}`}
+      >
         <div className="flex flex-col h-full">
           {/* Drawer header */}
           <div className="flex items-center justify-between p-4 border-b border-slate-700/90">
             <span className="text-lg font-semibold text-teal-300">Menu</span>
-            <button onClick={() => setDrawerOpen(false)} className="text-2xl text-teal-300 hover:text-teal-400 transition-colors p-1">&times;</button>
+            <button onClick={() => { setDrawerOpen(false); menuButtonRef.current?.focus(); }} className="text-2xl text-teal-300 hover:text-teal-400 transition-colors p-1" aria-label="Close menu">&times;</button>
           </div>
 
           {/* Drawer body — same 7 surfaces always shown */}

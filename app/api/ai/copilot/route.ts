@@ -604,11 +604,11 @@ function formatToolLabel(toolName: string, params: Record<string, unknown>): str
     case 'add_to_watchlist':
       return `Add ${params.symbol} to watchlist`;
     case 'journal_trade':
-      return `Log ${params.symbol} ${params.direction} trade to journal`;
+      return `Save ${params.symbol} research note to journal`;
     case 'run_backtest':
       return `Run backtest on ${params.symbol}`;
     case 'generate_trade_plan':
-      return `Generate trade plan for ${params.symbol}`;
+      return `Generate scenario map for ${params.symbol}`;
     default:
       return toolName.replace(/_/g, ' ');
   }

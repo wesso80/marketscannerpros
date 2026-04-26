@@ -19,7 +19,20 @@ const ENV_ADMINS = (process.env.ADMIN_EMAILS || "").split(",").map(e => e.trim()
 const ADMIN_EMAILS = [...new Set([...HARDCODED_ADMINS, ...ENV_ADMINS])];
 
 export function isFreeForAllMode(): boolean {
-  return process.env.FREE_FOR_ALL_MODE === "true";
+  if (process.env.FREE_FOR_ALL_MODE !== "true") return false;
+  if (isProductionRuntime() && process.env.ALLOW_PROD_ACCESS_BYPASS !== "true") {
+    console.error('[access] FREE_FOR_ALL_MODE ignored in production because ALLOW_PROD_ACCESS_BYPASS is not true');
+    return false;
+  }
+  return true;
+}
+
+export function isProductionRuntime(): boolean {
+  return process.env.NODE_ENV === 'production' || Boolean(process.env.RENDER_SERVICE_NAME || process.env.RENDER_EXTERNAL_URL);
+}
+
+export function isProductionAccessBypassAllowed(): boolean {
+  return !isProductionRuntime() || process.env.ALLOW_PROD_ACCESS_BYPASS === 'true';
 }
 
 export function normalizeTier(tier: string | null | undefined): AppTier {

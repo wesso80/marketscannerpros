@@ -384,7 +384,7 @@ export default function PortfolioV2() {
       {/* ═══ HEADER ═══ */}
       <div className="flex items-start justify-between">
         <div>
-          <div className="text-[10px] uppercase tracking-widest text-emerald-400 font-semibold mb-1">Portfolio Tracker</div>
+          <div className="text-[11px] uppercase tracking-widest text-emerald-400 font-semibold mb-1">Portfolio Tracker</div>
           <h2 className="text-lg font-bold text-white">Portfolio Tracking</h2>
           <p className="text-xs text-slate-500 mt-0.5">Manually add a position to track in your portfolio. Use the refresh button on active positions to fetch live prices.</p>
         </div>
@@ -394,7 +394,7 @@ export default function PortfolioV2() {
       {/* ═══ KPI ROW ═══ */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <div className="rounded-xl border border-white/5 bg-[#0D1321]/80 px-4 py-3.5">
-          <div className="text-[10px] uppercase text-slate-500 font-medium tracking-wider mb-1.5">Cash Level</div>
+          <div className="text-[11px] uppercase text-slate-500 font-medium tracking-wider mb-1.5">Cash Level</div>
           {editingCapital ? (
             <div className="flex items-center gap-1.5">
               <span className="text-base font-bold font-mono text-white">$</span>
@@ -424,7 +424,7 @@ export default function PortfolioV2() {
           ) : (
             <div className="flex items-center gap-2 cursor-pointer group" onClick={() => { setCapitalInput(String(startingCapital)); setEditingCapital(true); }}>
               <span className={`text-base font-bold font-mono ${currentCash >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>${fmt(currentCash)}</span>
-              <span className="text-[10px] text-slate-600 group-hover:text-slate-400 transition-colors">✏️</span>
+              <span className="text-[11px] text-slate-600 group-hover:text-slate-400 transition-colors">✏️</span>
             </div>
           )}
         </div>
@@ -446,10 +446,10 @@ export default function PortfolioV2() {
             {t.label}
           </button>
         ))}
-        {syncing && <span className="text-[10px] text-slate-500 ml-auto">Syncing...</span>}
+        {syncing && <span className="text-[11px] text-slate-500 ml-auto">Syncing...</span>}
       </div>
 
-      {error && <div className="text-[10px] text-red-400/60 px-1">Error: {error}</div>}
+      {error && <div className="text-[11px] text-red-400/60 px-1">Error: {error}</div>}
 
       {/* ═══════════════════════════════════════════════════════════ */}
       {/* ═══ OVERVIEW TAB                                      ═══ */}
@@ -463,7 +463,7 @@ export default function PortfolioV2() {
               <div>
                 <div className="flex items-center gap-2 mb-0.5">
                   <span className="text-xs font-semibold text-white">Portfolio Insight</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 font-medium">Concentration</span>
+                  <span className="text-[11px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 font-medium">Concentration</span>
                 </div>
                 <p className="text-xs text-slate-400">{allocation[0].symbol} represents {allocation[0].pct.toFixed(0)}% of your portfolio. Consider rebalancing if unintentional.</p>
               </div>
@@ -501,7 +501,7 @@ export default function PortfolioV2() {
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
                       <span className="text-lg font-bold text-white">{positions.length}</span>
-                      <span className="text-[10px] text-slate-500">positions</span>
+                      <span className="text-[11px] text-slate-500">positions</span>
                     </div>
                   </div>
                   <div className="w-full space-y-2.5">
@@ -513,7 +513,7 @@ export default function PortfolioV2() {
                         </div>
                         <div className="text-right">
                           <span className="text-xs font-semibold" style={{ color: ALLOC_COLORS[i % ALLOC_COLORS.length] }}>{a.pct.toFixed(1)}%</span>
-                          <div className="text-[10px] text-slate-500">${fmt(a.value)}</div>
+                          <div className="text-[11px] text-slate-500">${fmt(a.value)}</div>
                         </div>
                       </div>
                     ))}
@@ -549,7 +549,7 @@ export default function PortfolioV2() {
                   </svg>
                   <div className="flex justify-between mt-1">
                     {chartData.points.filter((_, i) => i === 0 || i === chartData.points.length - 1 || i === Math.floor(chartData.points.length / 2)).map((p, idx) => (
-                      <span key={idx} className="text-[10px] text-slate-600">{new Date(p.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                      <span key={idx} className="text-[11px] text-slate-600">{new Date(p.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                     ))}
                   </div>
                 </div>
@@ -574,19 +574,19 @@ export default function PortfolioV2() {
           {closedPositions.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="rounded-xl border border-white/5 bg-[#0D1321]/80 px-4 py-3 text-center">
-                <div className="text-[10px] uppercase text-slate-500 tracking-wider mb-1">Win Rate</div>
+                <div className="text-[11px] uppercase text-slate-500 tracking-wider mb-1">Win Rate</div>
                 <div className={`text-sm font-bold font-mono ${winRate >= 50 ? 'text-emerald-400' : 'text-red-400'}`}>{winRate.toFixed(0)}%</div>
               </div>
               <div className="rounded-xl border border-white/5 bg-[#0D1321]/80 px-4 py-3 text-center">
-                <div className="text-[10px] uppercase text-slate-500 tracking-wider mb-1">Total Trades</div>
+                <div className="text-[11px] uppercase text-slate-500 tracking-wider mb-1">Total Trades</div>
                 <div className="text-sm font-bold font-mono text-white">{closedPositions.length}</div>
               </div>
               <div className="rounded-xl border border-white/5 bg-[#0D1321]/80 px-4 py-3 text-center">
-                <div className="text-[10px] uppercase text-slate-500 tracking-wider mb-1">Winners</div>
+                <div className="text-[11px] uppercase text-slate-500 tracking-wider mb-1">Winners</div>
                 <div className="text-sm font-bold font-mono text-emerald-400">{winners}</div>
               </div>
               <div className="rounded-xl border border-white/5 bg-[#0D1321]/80 px-4 py-3 text-center">
-                <div className="text-[10px] uppercase text-slate-500 tracking-wider mb-1">Losers</div>
+                <div className="text-[11px] uppercase text-slate-500 tracking-wider mb-1">Losers</div>
                 <div className="text-sm font-bold font-mono text-red-400">{closedPositions.length - winners}</div>
               </div>
             </div>
@@ -604,7 +604,7 @@ export default function PortfolioV2() {
 
           {/* Symbol Tips */}
           <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/5 px-4 py-3">
-            <div className="text-[10px] uppercase tracking-wider text-cyan-400 font-semibold mb-1">Symbol Tips</div>
+            <div className="text-[11px] uppercase tracking-wider text-cyan-400 font-semibold mb-1">Symbol Tips</div>
             <p className="text-xs text-slate-300">
               <span className="text-emerald-400 font-medium">Crypto:</span> BTC, ETH, XRP, SOL &nbsp;·&nbsp;
               <span className="text-blue-400 font-medium">Stocks:</span> AAPL, TSLA, NVDA &nbsp;·&nbsp;
@@ -645,21 +645,21 @@ export default function PortfolioV2() {
           {/* Options-specific fields */}
           {strategy === 'options' && (
             <div className="space-y-3 rounded-lg border border-violet-500/20 bg-violet-500/5 p-3">
-              <div className="text-[10px] uppercase tracking-wider text-violet-400 font-semibold">Options Details</div>
+              <div className="text-[11px] uppercase tracking-wider text-violet-400 font-semibold">Options Details</div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[10px] uppercase text-slate-500 mb-1.5 font-medium tracking-wider">Type</label>
+                  <label className="block text-[11px] uppercase text-slate-500 mb-1.5 font-medium tracking-wider">Type</label>
                   <div className="flex gap-1">
                     <button onClick={() => setOptionType('call')} className={`flex-1 py-2 text-xs rounded-lg font-semibold border transition-colors ${optionType === 'call' ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400' : 'bg-[#0A101C] border-slate-700/40 text-slate-500'}`}>Call</button>
                     <button onClick={() => setOptionType('put')} className={`flex-1 py-2 text-xs rounded-lg font-semibold border transition-colors ${optionType === 'put' ? 'bg-red-500/15 border-red-500/30 text-red-400' : 'bg-[#0A101C] border-slate-700/40 text-slate-500'}`}>Put</button>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[10px] uppercase text-slate-500 mb-1.5 font-medium tracking-wider">Strike Price</label>
+                  <label className="block text-[11px] uppercase text-slate-500 mb-1.5 font-medium tracking-wider">Strike Price</label>
                   <input value={strikePrice} onChange={e => setStrikePrice(e.target.value)} placeholder="0.00" type="number" step="any" className="w-full bg-[#0A101C] border border-slate-700/40 rounded-lg text-xs px-3 py-2.5 text-white placeholder:text-slate-600 focus:outline-none focus:border-violet-600/40 transition-colors" />
                 </div>
                 <div>
-                  <label className="block text-[10px] uppercase text-slate-500 mb-1.5 font-medium tracking-wider">Expiration</label>
+                  <label className="block text-[11px] uppercase text-slate-500 mb-1.5 font-medium tracking-wider">Expiration</label>
                   <input value={expirationDate} onChange={e => setExpirationDate(e.target.value)} type="date" className="w-full bg-[#0A101C] border border-slate-700/40 rounded-lg text-xs px-3 py-2.5 text-white focus:outline-none focus:border-violet-600/40 transition-colors" />
                 </div>
               </div>
@@ -669,15 +669,15 @@ export default function PortfolioV2() {
           {/* Quantity / Entry / Current row */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-[10px] uppercase text-slate-500 mb-1.5 font-medium tracking-wider">Quantity</label>
+              <label className="block text-[11px] uppercase text-slate-500 mb-1.5 font-medium tracking-wider">Quantity</label>
               <input value={quantity} onChange={e => setQuantity(e.target.value)} placeholder="0" type="number" className="w-full bg-[#0A101C] border border-slate-700/40 rounded-lg text-xs px-3 py-2.5 text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-600/40 transition-colors" />
             </div>
             <div>
-              <label className="block text-[10px] uppercase text-slate-500 mb-1.5 font-medium tracking-wider">Cost Basis</label>
+              <label className="block text-[11px] uppercase text-slate-500 mb-1.5 font-medium tracking-wider">Cost Basis</label>
               <input value={entryPrice} onChange={e => setEntryPrice(e.target.value)} placeholder="0.00" type="number" step="any" className="w-full bg-[#0A101C] border border-slate-700/40 rounded-lg text-xs px-3 py-2.5 text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-600/40 transition-colors" />
             </div>
             <div>
-              <label className="block text-[10px] uppercase text-slate-500 mb-1.5 font-medium tracking-wider">Current Price</label>
+              <label className="block text-[11px] uppercase text-slate-500 mb-1.5 font-medium tracking-wider">Current Price</label>
               <input value={currentPrice} onChange={e => setCurrentPrice(e.target.value)} placeholder="0.00" type="number" step="any" className="w-full bg-[#0A101C] border border-slate-700/40 rounded-lg text-xs px-3 py-2.5 text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-600/40 transition-colors" />
             </div>
           </div>
@@ -695,11 +695,11 @@ export default function PortfolioV2() {
         <div className="space-y-3">
           {/* Refresh bar */}
           <div className="flex items-center justify-between">
-            <span className="text-[10px] text-slate-500">Prices refresh every 2 min</span>
+            <span className="text-[11px] text-slate-500">Prices refresh every 2 min</span>
             <button
               onClick={() => refreshAllPrices(positions)}
               disabled={refreshingAll || positions.length === 0}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] rounded border border-slate-700/40 text-slate-400 hover:text-white hover:border-slate-600 disabled:opacity-30 transition-colors font-medium"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] rounded border border-slate-700/40 text-slate-400 hover:text-white hover:border-slate-600 disabled:opacity-30 transition-colors font-medium"
             >
               {refreshingAll ? (
                 <span className="animate-spin inline-block w-3 h-3 border border-slate-400 border-t-transparent rounded-full" />
@@ -743,7 +743,7 @@ export default function PortfolioV2() {
                         <tr key={p.id} className="border-b border-slate-800/30 hover:bg-slate-800/20 group">
                           <td className="py-3 px-3 text-white font-semibold">
                             {p.symbol}
-                            {p.journalEntryId && <span className="ml-1.5 text-[10px] px-1 py-0.5 rounded bg-cyan-500/15 text-cyan-400 font-medium align-middle">Journal</span>}
+                            {p.journalEntryId && <span className="ml-1.5 text-[11px] px-1 py-0.5 rounded bg-cyan-500/15 text-cyan-400 font-medium align-middle">Journal</span>}
                           </td>
                           <td className="py-3 px-3">
                             <span className={`${p.side === 'LONG' ? 'text-emerald-400' : 'text-red-400'} font-semibold`}>{p.side}</span>
@@ -760,10 +760,10 @@ export default function PortfolioV2() {
                               <div className="h-full bg-emerald-400/60 rounded" style={{ width: `${Math.max(5, Math.min(100, riskRemainingPct))}%` }} />
                             </div>
                             <div className="flex flex-wrap gap-1">
-                              <button onClick={() => { setClosingId(p.id); setClosePrice(String(p.currentPrice)); }} className="rounded border border-red-500/40 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-red-300 hover:bg-red-500/20 transition-colors">Close</button>
-                              <button onClick={() => reduceHalf(p.id)} className="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-300 hover:bg-amber-500/20 transition-colors">Reduce 50%</button>
-                              <button onClick={() => moveStop(p.id)} className="rounded border border-blue-500/40 bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-blue-300 hover:bg-blue-500/20 transition-colors">Move Stop</button>
-                              <button onClick={() => handleDelete(p.id)} className="rounded border border-zinc-500/40 bg-zinc-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-zinc-400 hover:text-red-300 hover:border-red-500/40 transition-colors">✕ Delete</button>
+                              <button onClick={() => { setClosingId(p.id); setClosePrice(String(p.currentPrice)); }} className="rounded border border-red-500/40 bg-red-500/10 px-1.5 py-0.5 text-[11px] font-semibold uppercase text-red-300 hover:bg-red-500/20 transition-colors">Close</button>
+                              <button onClick={() => reduceHalf(p.id)} className="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[11px] font-semibold uppercase text-amber-300 hover:bg-amber-500/20 transition-colors">Reduce 50%</button>
+                              <button onClick={() => moveStop(p.id)} className="rounded border border-blue-500/40 bg-blue-500/10 px-1.5 py-0.5 text-[11px] font-semibold uppercase text-blue-300 hover:bg-blue-500/20 transition-colors">Move Stop</button>
+                              <button onClick={() => handleDelete(p.id)} className="rounded border border-zinc-500/40 bg-zinc-500/10 px-1.5 py-0.5 text-[11px] font-semibold uppercase text-zinc-400 hover:text-red-300 hover:border-red-500/40 transition-colors">✕ Delete</button>
                             </div>
                           </td>
                         </tr>
@@ -808,7 +808,7 @@ export default function PortfolioV2() {
                     <tr key={p.id} className="border-b border-slate-800/30 hover:bg-slate-800/20">
                       <td className="py-3 px-3 text-white font-semibold">
                         {p.symbol}
-                        {p.journalEntryId && <span className="ml-1.5 text-[10px] px-1 py-0.5 rounded bg-cyan-500/15 text-cyan-400 font-medium align-middle">Journal</span>}
+                        {p.journalEntryId && <span className="ml-1.5 text-[11px] px-1 py-0.5 rounded bg-cyan-500/15 text-cyan-400 font-medium align-middle">Journal</span>}
                       </td>
                       <td className="py-3 px-3">
                         <span className={`${p.side === 'LONG' ? 'text-emerald-400' : 'text-red-400'} font-semibold`}>{p.side}</span>
@@ -837,7 +837,7 @@ export default function PortfolioV2() {
               Closing <span className="text-white font-semibold">{positions.find(p => p.id === closingId)?.symbol}</span> &mdash; enter the exit price.
             </p>
             <div>
-              <label className="block text-[10px] uppercase text-slate-500 mb-1.5 font-medium tracking-wider">Close Price</label>
+              <label className="block text-[11px] uppercase text-slate-500 mb-1.5 font-medium tracking-wider">Close Price</label>
               <input
                 value={closePrice}
                 onChange={e => setClosePrice(e.target.value)}
@@ -863,7 +863,7 @@ export default function PortfolioV2() {
 function KPICard({ label, value, color = 'text-white' }: { label: string; value: string; color?: string }) {
   return (
     <div className="rounded-xl border border-white/5 bg-[#0D1321]/80 px-4 py-3.5">
-      <div className="text-[10px] uppercase text-slate-500 font-medium tracking-wider mb-1.5">{label}</div>
+      <div className="text-[11px] uppercase text-slate-500 font-medium tracking-wider mb-1.5">{label}</div>
       <div className={`text-base font-bold font-mono ${color}`}>{value}</div>
     </div>
   );
@@ -872,12 +872,12 @@ function KPICard({ label, value, color = 'text-white' }: { label: string; value:
 function MetricCell({ label, value, color = 'text-white' }: { label: string; value: string; color?: string }) {
   return (
     <div className="text-center py-2">
-      <div className="text-[10px] uppercase text-slate-500 font-medium tracking-wider mb-1">{label}</div>
+      <div className="text-[11px] uppercase text-slate-500 font-medium tracking-wider mb-1">{label}</div>
       <div className={`text-sm font-bold font-mono ${color}`}>{value}</div>
     </div>
   );
 }
 
 function TH({ children, align = 'right' }: { children: React.ReactNode; align?: 'left' | 'right' }) {
-  return <th className={`${align === 'left' ? 'text-left' : 'text-right'} py-3 px-3 text-[10px] uppercase text-slate-500 font-medium tracking-wider`}>{children}</th>;
+  return <th className={`${align === 'left' ? 'text-left' : 'text-right'} py-3 px-3 text-[11px] uppercase text-slate-500 font-medium tracking-wider`}>{children}</th>;
 }

@@ -8,7 +8,7 @@ const pillars = [
       </svg>
     ),
     title: 'Speed',
-    description: 'Scan thousands of assets in seconds. Multi-market filters deliver results before the move happens.',
+    description: 'Review thousands of assets quickly. Multi-market filters surface conditions that deserve closer research.',
   },
   {
     icon: (
@@ -17,7 +17,7 @@ const pillars = [
       </svg>
     ),
     title: 'Confluence',
-    description: 'Multi-timeframe alignment detection. Find setups where time, price, and structure converge for technically aligned analysis.',
+    description: 'Multi-timeframe alignment detection. Review scenarios where time, price, and structure converge.',
   },
   {
     icon: (
@@ -35,19 +35,19 @@ export default function WhyMSP() {
     <section className="border-b border-white/5">
       <div className="mx-auto max-w-5xl px-4 py-12 md:py-16">
         <h2 className="mb-2 text-center text-2xl font-bold text-white md:text-3xl">
-          Why Traders Choose MarketScannerPros
+          Why Researchers Choose MarketScannerPros
         </h2>
         <p className="mx-auto mb-10 max-w-xl text-center text-sm text-slate-400">
-          Built for traders who need speed, confluence, and intelligence — not noise.
+          Built for market participants who need speed, confluence, and research context - not noise.
         </p>
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
           {pillars.map((p) => (
             <div
               key={p.title}
-              className="flex flex-col items-center rounded-xl border border-slate-700/50 bg-slate-900/40 p-6 text-center transition-all hover:border-emerald-500/30 hover:bg-slate-900/60"
+              className="flex flex-col items-center rounded-lg border border-slate-700/50 bg-slate-900/40 p-6 text-center transition-colors hover:border-emerald-500/30 hover:bg-slate-900/60"
             >
-              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-emerald-500/10">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-emerald-500/10">
                 {p.icon}
               </div>
               <h3 className="mb-2 text-lg font-bold text-white">{p.title}</h3>

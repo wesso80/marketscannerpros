@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { isAdminSecret } from '@/lib/quant/operatorAuth';
+import { requireAdmin } from '@/lib/adminAuth';
 import { stripe } from '@/lib/stripe';
 import { hashWorkspaceId } from '@/lib/auth';
 import { q } from '@/lib/db';
@@ -38,7 +38,7 @@ function getTierFromProductName(name: string): 'pro' | 'pro_trader' | 'free' {
 }
 
 export async function POST(req: NextRequest) {
-  if (!isAdminSecret(req.headers.get('authorization'))) {
+  if (!(await requireAdmin(req)).ok) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

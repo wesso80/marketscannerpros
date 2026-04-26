@@ -19,7 +19,7 @@ export default function GEOptionsDetail({ options }: Props) {
   ];
 
   return (
-    <div className="rounded-2xl border border-white/5 bg-slate-900/40 p-5">
+    <div className="rounded-lg border border-white/5 bg-slate-900/40 p-5">
       <div className="mb-4 flex items-center justify-between border-b border-white/5 pb-3">
         <div className="flex items-center gap-2">
           <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
@@ -36,7 +36,7 @@ export default function GEOptionsDetail({ options }: Props) {
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {stats.map((s) => (
           <div key={s.label} className="rounded-lg border border-white/5 bg-white/5 px-3 py-2">
-            <div className="text-[10px] uppercase tracking-wide text-slate-500">{s.label}</div>
+            <div className="text-[11px] uppercase tracking-wide text-slate-500">{s.label}</div>
             <div className="text-sm font-semibold text-white">{s.value}</div>
           </div>
         ))}

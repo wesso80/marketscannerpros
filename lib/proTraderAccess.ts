@@ -1,4 +1,4 @@
-import { isFreeForAllMode } from '@/lib/entitlements';
+import { isFreeForAllMode, isProductionAccessBypassAllowed } from '@/lib/entitlements';
 
 export function isTemporaryProTraderBypassActive(nowMs: number = Date.now()): boolean {
   const freeForAllMode = isFreeForAllMode();
@@ -6,6 +6,10 @@ export function isTemporaryProTraderBypassActive(nowMs: number = Date.now()): bo
 
   const untilRaw = process.env.PRO_TRADER_BYPASS_UNTIL || process.env.TEMP_PRO_TRADER_BYPASS_UNTIL;
   if (!untilRaw) return false;
+  if (!isProductionAccessBypassAllowed()) {
+    console.error('[access] Temporary Pro Trader bypass ignored in production because ALLOW_PROD_ACCESS_BYPASS is not true');
+    return false;
+  }
 
   const untilMs = Date.parse(untilRaw);
   if (!Number.isFinite(untilMs)) return false;

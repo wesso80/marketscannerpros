@@ -264,7 +264,7 @@ export default function AccountSection() {
     return (
       <Card>
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="text-2xl mb-3">🔒</div>
+          <div className="mb-3 h-7 w-7 rounded-full border border-slate-600 bg-slate-900" aria-hidden="true" />
           <div className="text-sm font-semibold text-white mb-1">Sign In Required</div>
           <div className="text-xs text-slate-500 mb-4">Sign in to manage your account settings.</div>
           <Link href="/auth" className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-xs border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors">
@@ -288,7 +288,7 @@ export default function AccountSection() {
               <Badge label={currentTier.name} color={currentTier.color} small />
             </div>
             <div className="text-xs text-slate-500 mt-1">{email || 'Email unavailable'}</div>
-            <div className="text-[10px] text-slate-500 mt-0.5">
+            <div className="text-[11px] text-slate-500 mt-0.5">
               AI Remaining: {Math.max(0, aiLimit - aiUsed)} / {aiLimit} today
             </div>
           </div>
@@ -484,7 +484,7 @@ export default function AccountSection() {
                   <Card key={s.label}>
                     <div className="text-center">
                       <div className={`text-lg font-bold ${s.accent ? 'text-emerald-400' : 'text-white'}`}>{s.value}</div>
-                      <div className="text-[10px] text-slate-500 uppercase tracking-wider mt-1">{s.label}</div>
+                      <div className="text-[11px] text-slate-500 uppercase tracking-wider mt-1">{s.label}</div>
                     </div>
                   </Card>
                 ))}
@@ -502,7 +502,7 @@ export default function AccountSection() {
                   </div>
                   <div className="text-right">
                     <div className="text-xl font-bold text-amber-400">{referralData.contest.yourEntries}</div>
-                    <div className="text-[10px] text-slate-500 uppercase tracking-wider">Your Entries</div>
+                    <div className="text-[11px] text-slate-500 uppercase tracking-wider">Your Entries</div>
                   </div>
                 </div>
                 <div>
@@ -518,7 +518,7 @@ export default function AccountSection() {
                   </div>
                 </div>
                 {referralData.contest.totalEntries > 0 && (
-                  <p className="mt-2 text-[10px] text-slate-500">{referralData.contest.totalEntries} total entries this month</p>
+                  <p className="mt-2 text-[11px] text-slate-500">{referralData.contest.totalEntries} total entries this month</p>
                 )}
               </Card>
 
@@ -539,7 +539,7 @@ export default function AccountSection() {
                         <span>
                           <span className="font-bold mr-2">#{entry.rank}</span>
                           {entry.label}
-                          {entry.isYou && <span className="ml-2 text-[10px] uppercase tracking-wider text-emerald-500">(You)</span>}
+                          {entry.isYou && <span className="ml-2 text-[11px] uppercase tracking-wider text-emerald-500">(You)</span>}
                         </span>
                         <span className="font-semibold">{entry.referrals} referrals</span>
                       </div>
@@ -557,7 +557,7 @@ export default function AccountSection() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs">
                       <thead>
-                        <tr className="border-b border-slate-700 text-left text-[10px] text-slate-500 uppercase tracking-wider">
+                        <tr className="border-b border-slate-700 text-left text-[11px] text-slate-500 uppercase tracking-wider">
                           <th className="pb-2 pr-3">Email</th>
                           <th className="pb-2 pr-3">Status</th>
                           <th className="pb-2 pr-3">Date</th>
@@ -593,7 +593,7 @@ export default function AccountSection() {
                     { n: 3, title: 'Enter the Draw', desc: 'Every 5 qualifying referrals = 1 entry in the monthly $500 cash draw.' },
                   ].map(s => (
                     <div key={s.n} className="flex items-start gap-3">
-                      <div className="flex-shrink-0 h-6 w-6 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-[10px] font-bold text-emerald-400">
+                      <div className="flex-shrink-0 h-6 w-6 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-[11px] font-bold text-emerald-400">
                         {s.n}
                       </div>
                       <div>
@@ -631,7 +631,7 @@ function StatusBadge({ status }: { status: string }) {
     expired: 'border-slate-600/30 bg-slate-700/20 text-slate-500',
   };
   return (
-    <span className={`inline-block rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${styles[status] || styles.pending}`}>
+    <span className={`inline-block rounded-full border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${styles[status] || styles.pending}`}>
       {status}
     </span>
   );

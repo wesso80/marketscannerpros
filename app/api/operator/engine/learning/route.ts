@@ -6,7 +6,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { isOperator, isAdminSecret } from '@/lib/quant/operatorAuth';
+import { isOperator } from '@/lib/quant/operatorAuth';
+import { requireAdmin } from '@/lib/adminAuth';
 import { analyzeLearningWindow, applyAdjustments, loadActiveWeights, saveWeights } from '@/lib/operator/learning-engine';
 import { DEFAULT_SCORING_WEIGHTS } from '@/lib/operator/shared';
 import type { LearningWindowRequest } from '@/types/operator';
@@ -15,7 +16,7 @@ export const runtime = 'nodejs';
 
 function checkAuth(req: NextRequest): Promise<boolean> {
   return (async () => {
-    if (isAdminSecret(req.headers.get('authorization'))) return true;
+    if ((await requireAdmin(req)).ok) return true;
     const session = await getSessionFromCookie();
     return !!(session && isOperator(session.cid, session.workspaceId));
   })();

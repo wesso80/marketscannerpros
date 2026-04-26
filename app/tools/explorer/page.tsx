@@ -82,7 +82,7 @@ export default function ExplorerPage() {
       {tab === 'Overview' && (
         <div className="space-y-4">
           {/* --- Equities Section --------------- */}
-          <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Equities</div>
+          <div className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Equities</div>
 
           {/* Sector Heatmap */}
           {sectorData.length > 0 && (
@@ -100,8 +100,8 @@ export default function ExplorerPage() {
                       }}
                       onClick={() => { selectSymbol(s.symbol); navigateTo('golden-egg', s.symbol); }}
                     >
-                      <div className="text-[10px] text-white font-semibold">{s.symbol}</div>
-                      <div className="text-[10px] text-slate-300 truncate">{s.name}</div>
+                      <div className="text-[11px] text-white font-semibold">{s.symbol}</div>
+                      <div className="text-[11px] text-slate-300 truncate">{s.name}</div>
                       <div className={`text-xs font-bold ${pctColor(pct)}`}>
                         {pct > 0 ? '+' : ''}{pct.toFixed(2)}%
                       </div>
@@ -150,7 +150,7 @@ export default function ExplorerPage() {
           </div>
 
           {/* --- Crypto Section --------------- */}
-          <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mt-2">Crypto</div>
+          <div className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold mt-2">Crypto</div>
 
           {/* Crypto Sector Performance */}
           {cryptoSectors.length > 0 && (
@@ -169,7 +169,7 @@ export default function ExplorerPage() {
                     >
                       <div className="text-xs font-semibold text-white truncate">{cat.name}</div>
                       <div className="flex items-baseline justify-between mt-1">
-                        <span className="text-[10px] text-slate-400">${cat.marketCap >= 1e12 ? (cat.marketCap / 1e12).toFixed(2) + 'T' : cat.marketCap >= 1e9 ? (cat.marketCap / 1e9).toFixed(0) + 'B' : (cat.marketCap / 1e6).toFixed(0) + 'M'}</span>
+                        <span className="text-[11px] text-slate-400">${cat.marketCap >= 1e12 ? (cat.marketCap / 1e12).toFixed(2) + 'T' : cat.marketCap >= 1e9 ? (cat.marketCap / 1e9).toFixed(0) + 'B' : (cat.marketCap / 1e6).toFixed(0) + 'M'}</span>
                         <span className={`text-xs font-bold ${pctColor(pct)}`}>{pct > 0 ? '+' : ''}{pct.toFixed(1)}%</span>
                       </div>
                     </div>
@@ -186,20 +186,20 @@ export default function ExplorerPage() {
               <h3 className="text-sm font-semibold text-white mb-3">Crypto Market</h3>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
-                  <div className="text-[10px] text-slate-500 uppercase">Total Market Cap</div>
+                  <div className="text-[11px] text-slate-500 uppercase">Total Market Cap</div>
                   <div className="text-sm font-bold text-white">{cryptoData.totalMarketCapFormatted}</div>
-                  <div className={`text-[10px] ${pctColor(cryptoData.marketCapChange24h)}`}>{cryptoData.marketCapChange24h > 0 ? '+' : ''}{cryptoData.marketCapChange24h.toFixed(2)}%</div>
+                  <div className={`text-[11px] ${pctColor(cryptoData.marketCapChange24h)}`}>{cryptoData.marketCapChange24h > 0 ? '+' : ''}{cryptoData.marketCapChange24h.toFixed(2)}%</div>
                 </div>
                 <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
-                  <div className="text-[10px] text-slate-500 uppercase">24h Volume</div>
+                  <div className="text-[11px] text-slate-500 uppercase">24h Volume</div>
                   <div className="text-sm font-bold text-white">{cryptoData.totalVolumeFormatted}</div>
                 </div>
                 <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
-                  <div className="text-[10px] text-slate-500 uppercase">BTC Dominance</div>
+                  <div className="text-[11px] text-slate-500 uppercase">BTC Dominance</div>
                   <div className="text-sm font-bold text-white">{cryptoData.btcDominance.toFixed(1)}%</div>
                 </div>
                 <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
-                  <div className="text-[10px] text-slate-500 uppercase">ETH Dominance</div>
+                  <div className="text-[11px] text-slate-500 uppercase">ETH Dominance</div>
                   <div className="text-sm font-bold text-white">{cryptoData.ethDominance.toFixed(1)}%</div>
                 </div>
               </div>
@@ -255,13 +255,13 @@ export default function ExplorerPage() {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-[var(--msp-border)]">
-                    <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Sector</th>
-                    <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">ETF</th>
-                    <th className="text-right py-2 px-2 text-[10px] uppercase text-slate-500">Change %</th>
-                    <th className="text-right py-2 px-2 text-[10px] uppercase text-slate-500">Weekly</th>
-                    <th className="text-right py-2 px-2 text-[10px] uppercase text-slate-500">Monthly</th>
-                    <th className="text-right py-2 px-2 text-[10px] uppercase text-slate-500">YTD</th>
-                    <th className="text-right py-2 px-2 text-[10px] uppercase text-slate-500">Weight</th>
+                    <th className="text-left py-2 px-2 text-[11px] uppercase text-slate-500">Sector</th>
+                    <th className="text-left py-2 px-2 text-[11px] uppercase text-slate-500">ETF</th>
+                    <th className="text-right py-2 px-2 text-[11px] uppercase text-slate-500">Change %</th>
+                    <th className="text-right py-2 px-2 text-[11px] uppercase text-slate-500">Weekly</th>
+                    <th className="text-right py-2 px-2 text-[11px] uppercase text-slate-500">Monthly</th>
+                    <th className="text-right py-2 px-2 text-[11px] uppercase text-slate-500">YTD</th>
+                    <th className="text-right py-2 px-2 text-[11px] uppercase text-slate-500">Weight</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -296,7 +296,7 @@ export default function ExplorerPage() {
                   <div className="flex items-center justify-between mb-1">
                     <div>
                       <div className="text-sm font-bold text-white">{c.name}</div>
-                      <div className="text-[10px] text-slate-500">{c.category} — {c.unit}</div>
+                      <div className="text-[11px] text-slate-500">{c.category} — {c.unit}</div>
                     </div>
                     <Badge label={c.changePercent > 0 ? 'UP' : c.changePercent < 0 ? 'DOWN' : 'FLAT'} color={c.changePercent > 0 ? '#10B981' : c.changePercent < 0 ? '#EF4444' : '#94A3B8'} small />
                   </div>
@@ -308,7 +308,7 @@ export default function ExplorerPage() {
               ))}
             </div>
           )}
-          {commodities.error && <div className="text-[10px] text-red-400/60 mt-2">Error: {commodities.error}</div>}
+          {commodities.error && <div className="text-[11px] text-red-400/60 mt-2">Error: {commodities.error}</div>}
         </Card>
       )}
 
@@ -320,7 +320,7 @@ export default function ExplorerPage() {
           {/* Dynamic regime signals */}
           {regime.data?.signals && regime.data.signals.length > 0 && (
             <div className="mb-4">
-              <div className="text-[10px] text-slate-500 uppercase mb-2">Live Market Regime Signals</div>
+              <div className="text-[11px] text-slate-500 uppercase mb-2">Live Market Regime Signals</div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                 {regime.data.signals.map((sig: any, i: number) => {
                   const r = sig.regime?.toLowerCase() || '';
@@ -333,14 +333,14 @@ export default function ExplorerPage() {
                         <span className="text-sm font-semibold text-white">{sig.source}</span>
                         <div className="flex items-center gap-1">
                           <Badge label={sig.regime} color={REGIME_COLORS[r as RegimePriority] || '#64748B'} small />
-                          {sig.stale && <span className="text-[9px] text-yellow-500 border border-yellow-500/30 px-1 rounded">stale</span>}
+                          {sig.stale && <span className="text-[11px] text-yellow-500 border border-yellow-500/30 px-1 rounded">stale</span>}
                         </div>
                       </div>
                       <div className="flex items-center gap-2 mt-1.5">
                         <div className="h-1.5 flex-1 bg-slate-800 rounded-full overflow-hidden">
                           <div className="h-full rounded-full" style={{ width: `${Math.min(sig.weight * 100, 100)}%`, backgroundColor: color }} />
                         </div>
-                        <span className="text-[10px] font-semibold" style={{ color }}>{isHeadwind ? 'Headwind' : isTailwind ? 'Tailwind' : 'Neutral'}</span>
+                        <span className="text-[11px] font-semibold" style={{ color }}>{isHeadwind ? 'Headwind' : isTailwind ? 'Tailwind' : 'Neutral'}</span>
                       </div>
                     </div>
                   );
@@ -350,7 +350,7 @@ export default function ExplorerPage() {
           )}
 
           {/* Static known relationships */}
-          <div className="text-[10px] text-slate-500 uppercase mb-2">Known Relationships</div>
+          <div className="text-[11px] text-slate-500 uppercase mb-2">Known Relationships</div>
           <div className="space-y-3">
             {CROSS_MARKET.map(cm => (
               <div key={cm.from} className="bg-[var(--msp-panel-2)] rounded-lg p-3">
@@ -369,7 +369,7 @@ export default function ExplorerPage() {
 
       {/* Errors */}
       {(sectors.error || cryptoOverview.error || movers.error || commodities.error) && (
-        <div className="text-[10px] text-red-400/60 border border-red-900/30 rounded-lg p-3 space-y-1">
+        <div className="text-[11px] text-red-400/60 border border-red-900/30 rounded-lg p-3 space-y-1">
           {sectors.error && <div>Sectors: {sectors.error}</div>}
           {cryptoOverview.error && <div>Crypto: {cryptoOverview.error}</div>}
           {movers.error && <div>Movers: {movers.error}</div>}

@@ -123,8 +123,10 @@ export interface GoldenEggResponse {
   data: {
     meta: { symbol: string; assetClass: string; price: number; asOfTs: string; timeframe: string };
     layer1: {
+      assessment: string;
       permission: string;
       direction: string;
+      confluenceScore: number;
       confidence: number;
       grade: string;
       primaryDriver: string;
@@ -145,6 +147,14 @@ export interface GoldenEggResponse {
         stop: { price: number; logic: string };
         targets: Array<{ price: number; rMultiple?: number; note?: string }>;
         rr: { expectedR: number; minR: number };
+      };
+      scenario: {
+        referenceTrigger: string;
+        referenceLevel: { type: string; price?: number };
+        invalidationLevel: { price: number; logic: string };
+        reactionZones: Array<{ price: number; rMultiple?: number; note?: string }>;
+        hypotheticalRr: { expectedR: number; minR: number };
+        hypotheticalRisk?: { riskPct: number; riskUsd?: number; sizeUnits?: number };
       };
     };
     layer3: {

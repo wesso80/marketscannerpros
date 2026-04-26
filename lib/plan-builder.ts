@@ -22,8 +22,8 @@ export function buildExecutionPlan(input: ExecutionPlanInput): ExecutionPlanOutp
   if (input.permission === 'BLOCK') {
     return {
       entryType: 'none',
-      triggers: ['No-trade: permission blocked by governance'],
-      stopRule: 'No active position',
+      triggers: ['Scenario not aligned: governance conditions blocked'],
+      stopRule: 'No active paper scenario',
       targets: [],
       management: ['Wait for governance reset'],
       size: 0,
@@ -48,11 +48,11 @@ export function buildExecutionPlan(input: ExecutionPlanInput): ExecutionPlanOutp
     entryType,
     triggers: [
       `${entryType.toUpperCase()} trigger confirmed for ${directionLabel} bias`,
-      'Require close-through confirmation before acting',
+      'Require close-through confirmation before scenario escalation',
     ],
-    stopRule: `Use ${input.stopStyle.replace(/_/g, ' ')} stop logic`,
+    stopRule: `Use ${input.stopStyle.replace(/_/g, ' ')} invalidation logic`,
     targets,
-    management: ['Move stop to BE at +1R', 'Take partial at +2R', 'Trail runner by structure/ATR'],
+    management: ['Mark breakeven reference at +1R', 'Mark partial reaction zone at +2R', 'Track continuation by structure/ATR'],
     size: Number(input.finalSize.toFixed(2)),
   };
 }

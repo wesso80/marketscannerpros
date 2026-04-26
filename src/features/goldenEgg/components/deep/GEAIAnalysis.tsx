@@ -5,11 +5,11 @@ export default function GEAIAnalysis({ analysis }: Props) {
   const sections = analysis.split(/(?=📊|📈|📰|🎯|⚠️|💡)/g).filter(Boolean);
 
   return (
-    <div className="rounded-2xl border border-white/5 bg-slate-900/40 p-5">
+    <div className="rounded-lg border border-white/5 bg-slate-900/40 p-5">
       <div className="mb-4 flex items-center gap-2 border-b border-white/5 pb-3">
         <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
         <h2 className="text-sm font-semibold uppercase tracking-wider text-amber-400">AI Deep Analysis</h2>
-        <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-medium text-emerald-300">GPT-4o</span>
+        <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[11px] font-medium text-emerald-300">GPT-4o</span>
       </div>
 
       <div className="space-y-4">

@@ -31,8 +31,8 @@ function WatchlistsContent() {
               <h1 className="mb-2 text-3xl font-bold text-white">Institutional Watchlist Engine</h1>
               <p className="text-slate-400">Monitor and organize symbols for tactical scanning with live market data (educational mode)</p>
             </div>
-            <div className="mx-auto max-w-md rounded-xl border border-slate-700 bg-slate-900/80 p-8 text-center">
-              <div className="mb-4 text-4xl">🔒</div>
+            <div className="mx-auto max-w-md rounded-lg border border-slate-700 bg-slate-900/80 p-8 text-center">
+              <div className="mx-auto mb-4 h-10 w-10 rounded-full border border-slate-600 bg-slate-950" aria-hidden="true" />
               <h2 className="mb-2 text-xl font-bold text-white">Sign in to access Watchlists</h2>
               <p className="mb-6 text-sm text-slate-400">Create and manage watchlists by signing in with your MarketScanner Pros account.</p>
               <Link href="/login" className="inline-block rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500 transition-colors">

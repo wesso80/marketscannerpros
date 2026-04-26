@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
         proposal_id: proposal.proposal_id,
         mode,
         success: false,
-        error: `Governor blocked at execution time: ${governor.reason_codes.join(', ')}`,
+        error: `Risk governor blocked this paper scenario: ${governor.reason_codes.join(', ')}`,
         ts: new Date().toISOString(),
       };
       return NextResponse.json({ result }, { status: 403 });
@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
         sizing.total_risk_usd,                          // $11
         exits.rr_at_tp1,                                // $12
         intent.strategy_tag,                            // $13
-        `Execution Engine — ${proposal.summary}`,       // $14 setup
+        `Scenario Model - ${proposal.summary}`,         // $14 setup
         JSON.stringify({                                // $15 notes (structured)
           proposal_id: proposal.proposal_id,
           leverage: proposal.leverage,
@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
     // submission. This platform is an analytical tool only.
     if (mode === 'LIVE') {
       return NextResponse.json(
-        { error: 'LIVE execution is not available. MSP is an analytical platform and does not execute trades or connect to brokers.' },
+        { error: 'LIVE order submission is not available. MSP is an analytical platform and does not place orders or connect to brokers for trading.' },
         { status: 403 },
       );
     }

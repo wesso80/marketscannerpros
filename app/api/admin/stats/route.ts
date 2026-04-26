@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { q } from "@/lib/db";
-import { isAdminSecret } from '@/lib/quant/operatorAuth';
+import { requireAdmin } from '@/lib/adminAuth';
 
 // Helper to safely run a query and return empty on error
 async function safeQuery<T = any>(queryFn: () => Promise<T[]>, defaultValue: T[] = []): Promise<T[]> {
@@ -13,7 +13,7 @@ async function safeQuery<T = any>(queryFn: () => Promise<T[]>, defaultValue: T[]
 }
 
 export async function GET(req: NextRequest) {
-  if (!isAdminSecret(req.headers.get('authorization'))) {
+  if (!(await requireAdmin(req)).ok) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

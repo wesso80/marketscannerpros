@@ -590,7 +590,7 @@ export default function MarketMoversPage() {
             ['Data', loading ? 'Refreshing' : error ? 'Degraded' : 'Live'],
             ['Last Refresh', data ? new Date(data.lastUpdated || data.timestamp).toLocaleTimeString() : '—'],
           ].map(([k, v]) => (
-            <div key={k} className="rounded-full border border-slate-700 px-1.5 py-0.5 text-[9px] leading-tight text-slate-300 md:px-2 md:text-[10px]">
+            <div key={k} className="rounded-full border border-slate-700 px-1.5 py-0.5 text-[11px] leading-tight text-slate-300 md:px-2 md:text-[11px]">
               <span className="font-semibold text-slate-100">{k}</span> · {v}
             </div>
           ))}
@@ -613,7 +613,7 @@ export default function MarketMoversPage() {
             <section className="rounded-lg border border-slate-700 bg-slate-900 p-2">
               <div className="grid gap-2 xl:grid-cols-[1.1fr_1fr]">
                 <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Market Analysis Status</p>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Market Analysis Status</p>
                   <h2 className={`mt-1 text-base font-extrabold ${
                     environment.deploymentMode === 'YES'
                       ? 'text-emerald-300'
@@ -633,7 +633,7 @@ export default function MarketMoversPage() {
                 </div>
 
                 <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Movers Context Card</p>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Movers Context Card</p>
                   <div className="mt-1 grid grid-cols-2 gap-1.5 text-[11px]">
                     <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1"><span className="text-slate-500">Market Mode</span><p className="font-semibold text-slate-200">{environment.marketMode}</p></div>
                     <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1"><span className="text-slate-500">Breadth</span><p className="font-semibold text-slate-200">{environment.breadthState}</p></div>
@@ -648,7 +648,7 @@ export default function MarketMoversPage() {
               <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
                 <div className="mb-1 flex flex-wrap items-start justify-between gap-1.5 md:items-center">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Action</p>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Action</p>
                     <h2 className="text-xs font-bold">Today&apos;s Plays / Movers Queue</h2>
                   </div>
                   <div className="flex flex-wrap gap-1">
@@ -661,7 +661,7 @@ export default function MarketMoversPage() {
                         type="button"
                         key={id}
                         onClick={() => setActiveTab(id)}
-                        className={`rounded-full border px-2 py-0.5 text-[10px] ${
+                        className={`rounded-full border px-2 py-0.5 text-[11px] ${
                           activeTab === id
                             ? 'border-emerald-400 bg-emerald-500/10 text-emerald-200'
                             : 'border-slate-700 text-slate-400'
@@ -680,7 +680,7 @@ export default function MarketMoversPage() {
                         type="button"
                         key={id}
                         onClick={() => setAssetFilter(id)}
-                        className={`rounded-full border px-2 py-0.5 text-[10px] ${
+                        className={`rounded-full border px-2 py-0.5 text-[11px] ${
                           assetFilter === id
                             ? 'border-cyan-400 bg-cyan-500/10 text-cyan-200'
                             : 'border-slate-700 text-slate-400'
@@ -702,7 +702,7 @@ export default function MarketMoversPage() {
                       type="button"
                       key={id}
                       onClick={() => setSetupMode(id)}
-                      className={`rounded-full border px-2 py-0.5 text-[10px] ${
+                      className={`rounded-full border px-2 py-0.5 text-[11px] ${
                         setupMode === id
                           ? 'border-emerald-400 bg-emerald-500/10 text-emerald-200'
                           : 'border-slate-700 text-slate-400'
@@ -746,7 +746,7 @@ export default function MarketMoversPage() {
                             {(mover.changePercent || 0) >= 0 ? '+' : ''}{(mover.changePercent || 0).toFixed(2)}%
                           </span>
                           <span
-                            className={`rounded-full border px-1.5 py-0.5 text-[9px] ${
+                            className={`rounded-full border px-1.5 py-0.5 text-[11px] ${
                               mover.deployment === 'eligible'
                                 ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
                                 : mover.deployment === 'conditional'
@@ -757,7 +757,7 @@ export default function MarketMoversPage() {
                             {mover.deployment === 'eligible' ? 'Eligible' : mover.deployment === 'conditional' ? 'Conditional' : 'Blocked'}
                           </span>
                         </div>
-                        <span className="text-[10px] text-slate-500 transition-transform group-open:rotate-90">▶</span>
+                        <span className="text-[11px] text-slate-500 transition-transform group-open:rotate-90">▶</span>
                       </summary>
                       <div className="border-t border-slate-700/50 px-2.5 pb-2.5 pt-2">
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
@@ -774,7 +774,7 @@ export default function MarketMoversPage() {
                         </div>
                         <div className="mt-2">
                           {mover.deployment === 'blocked' ? (
-                            <span className="text-[10px] text-slate-500">{mover.overlayReasons?.map(toReasonLabel).join(' • ') || mover.blockReason || 'Blocked by governance'}</span>
+                            <span className="text-[11px] text-slate-500">{mover.overlayReasons?.map(toReasonLabel).join(' • ') || mover.blockReason || 'Blocked by governance'}</span>
                           ) : (
                             <Link
                               href={`/tools/options-confluence?symbol=${mover.ticker}&setupClass=${encodeURIComponent(mover.setupClass)}&eligibility=${mover.deployment}&confluence=${mover.confluenceScore}&deploymentMode=${environment.deploymentMode}`}
@@ -793,7 +793,7 @@ export default function MarketMoversPage() {
                 <div className="overflow-x-auto rounded-md border border-slate-700 bg-slate-950/60" style={{ maxHeight: '560px', overflowY: 'auto' }}>
                   <table className="w-full min-w-[900px] text-xs">
                     <thead className="sticky top-0 z-10 bg-slate-900">
-                      <tr className="text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-700">
+                      <tr className="text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-700">
                         <th className="px-2.5 py-2 text-left">Symbol</th>
                         <th className="px-2.5 py-2 text-right">%Chg</th>
                         <th className="px-2.5 py-2 text-right">RelVol</th>
@@ -814,11 +814,11 @@ export default function MarketMoversPage() {
                           <td className="px-2.5 py-2 font-semibold text-white">
                             <div className="flex items-center gap-1">
                               {mover.ticker}
-                              <span className={`text-[9px] ${mover.asset_class === 'equity' ? 'text-blue-400' : 'text-amber-400'}`}>
+                              <span className={`text-[11px] ${mover.asset_class === 'equity' ? 'text-blue-400' : 'text-amber-400'}`}>
                                 {mover.asset_class === 'equity' ? 'EQ' : '₿'}
                               </span>
                             </div>
-                            <div className="text-[10px] text-slate-400">{toTitleCluster(mover.cluster)}</div>
+                            <div className="text-[11px] text-slate-400">{toTitleCluster(mover.cluster)}</div>
                           </td>
                           <td className={`px-2.5 py-2 text-right font-semibold ${(mover.changePercent || 0) >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
                             {(mover.changePercent || 0) >= 0 ? '+' : ''}{(mover.changePercent || 0).toFixed(2)}%
@@ -845,7 +845,7 @@ export default function MarketMoversPage() {
                           {/* RS vs Index */}
                           <td className="px-2.5 py-2 text-center">
                             {mover.rsLabel ? (
-                              <span className={`inline-block rounded-full border px-1.5 py-0.5 text-[10px] ${
+                              <span className={`inline-block rounded-full border px-1.5 py-0.5 text-[11px] ${
                                 mover.rsLabel === 'Strong' ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
                                 : mover.rsLabel === 'Above' ? 'border-slate-600 bg-slate-800 text-emerald-200'
                                 : mover.rsLabel === 'Below' ? 'border-slate-600 bg-slate-800 text-slate-400'
@@ -856,7 +856,7 @@ export default function MarketMoversPage() {
                           {/* Momentum Accel */}
                           <td className="px-2.5 py-2 text-center">
                             {mover.accelLabel ? (
-                              <span className={`inline-block rounded-full border px-1.5 py-0.5 text-[10px] ${
+                              <span className={`inline-block rounded-full border px-1.5 py-0.5 text-[11px] ${
                                 mover.accelLabel === 'High' ? 'border-amber-500/50 bg-amber-500/10 text-amber-300'
                                 : mover.accelLabel === 'Rising' ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
                                 : mover.accelLabel === 'Moderate' ? 'border-slate-600 bg-slate-800 text-slate-300'
@@ -907,23 +907,23 @@ export default function MarketMoversPage() {
 
               <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
                 <div className="mb-1">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Context</p>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Context</p>
                   <h2 className="text-xs font-bold">Snapshot / Rotation Context</h2>
                 </div>
 
                 <div className="grid gap-2">
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
-                    <p className="text-[10px] uppercase text-slate-400">Eligible Movers</p>
+                    <p className="text-[11px] uppercase text-slate-400">Eligible Movers</p>
                     <p className="text-sm font-bold text-emerald-300">{permissionedCount}</p>
                     <p className="text-[11px] text-slate-300">of {evaluatedRows.length} in current queue</p>
                   </div>
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
-                    <p className="text-[10px] uppercase text-slate-400">Adaptive Threshold Base</p>
+                    <p className="text-[11px] uppercase text-slate-400">Adaptive Threshold Base</p>
                     <p className="text-sm font-bold text-cyan-300">{formatVolume(environment.medianVol)}</p>
                     <p className="text-[11px] text-slate-300">median tape volume baseline</p>
                   </div>
                   <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
-                    <p className="text-[10px] uppercase text-slate-400">Behavior Mode</p>
+                    <p className="text-[11px] uppercase text-slate-400">Behavior Mode</p>
                     <p className="text-sm font-bold text-amber-300">
                       {setupMode === 'breakout' ? 'Breakout Continuation' : setupMode === 'reversal' ? 'Mean Reversion' : 'Early Momentum'}
                     </p>
@@ -931,10 +931,10 @@ export default function MarketMoversPage() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-1.5">
-                    <Link href="/tools/scanner" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[10px] text-slate-300">Open Scanner</Link>
-                    <Link href="/tools/alerts" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[10px] text-slate-300">Create Alert</Link>
-                    <Link href="/tools/news" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[10px] text-slate-300">News Context</Link>
-                    <Link href="/tools/journal" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[10px] text-slate-300">Log to Journal</Link>
+                    <Link href="/tools/scanner" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[11px] text-slate-300">Open Scanner</Link>
+                    <Link href="/tools/alerts" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[11px] text-slate-300">Create Alert</Link>
+                    <Link href="/tools/news" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[11px] text-slate-300">News Context</Link>
+                    <Link href="/tools/journal" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[11px] text-slate-300">Save Research Note</Link>
                   </div>
                 </div>
               </div>
@@ -943,8 +943,8 @@ export default function MarketMoversPage() {
             <details className="group rounded-lg border border-slate-700 bg-slate-900 p-2" open>
               <summary className="flex list-none cursor-pointer items-center justify-between text-xs font-bold">
                 <span>Zone 3 • Audit / Log</span>
-                <span className="text-[10px] text-slate-500 group-open:hidden">Expand</span>
-                <span className="hidden text-[10px] text-slate-500 group-open:inline">Collapse</span>
+                <span className="text-[11px] text-slate-500 group-open:hidden">Expand</span>
+                <span className="hidden text-[11px] text-slate-500 group-open:inline">Collapse</span>
               </summary>
 
               <div className="mt-2 grid gap-2">
@@ -960,7 +960,7 @@ export default function MarketMoversPage() {
                       type="button"
                       key={id}
                       onClick={() => setLogTab(id)}
-                      className={`rounded-full border px-2 py-0.5 text-[10px] ${
+                      className={`rounded-full border px-2 py-0.5 text-[11px] ${
                         logTab === id
                           ? 'border-emerald-400 bg-emerald-500/10 text-emerald-200'
                           : 'border-slate-700 text-slate-400'
@@ -975,7 +975,7 @@ export default function MarketMoversPage() {
                   <div className="grid gap-1.5">
                     {logs[logTab].map((entry, idx) => (
                       <div key={`${entry.t}-${idx}`} className="rounded border border-slate-700 bg-slate-900/70 p-1.5">
-                        <div className="flex items-center justify-between text-[10px] text-slate-500">
+                        <div className="flex items-center justify-between text-[11px] text-slate-500">
                           <span>{entry.t}</span>
                           <span className="text-slate-300">{entry.e}</span>
                         </div>
@@ -990,21 +990,21 @@ export default function MarketMoversPage() {
             <details className="group rounded-lg border border-slate-700 bg-slate-900 p-2">
               <summary className="flex list-none cursor-pointer items-center justify-between text-xs font-bold">
                 <span>Zone 4 • Capabilities / Plan / Help</span>
-                <span className="text-[10px] text-slate-500 group-open:hidden">Expand</span>
-                <span className="hidden text-[10px] text-slate-500 group-open:inline">Collapse</span>
+                <span className="text-[11px] text-slate-500 group-open:hidden">Expand</span>
+                <span className="hidden text-[11px] text-slate-500 group-open:inline">Collapse</span>
               </summary>
 
               <div className="mt-2 grid gap-2 md:grid-cols-3">
                 <div className="rounded border border-slate-700 bg-slate-950/60 p-2 text-[11px] text-slate-400">
-                  <p className="mb-1 text-[10px] uppercase text-slate-500">Capabilities</p>
+                  <p className="mb-1 text-[11px] uppercase text-slate-500">Capabilities</p>
                   Live movers feed, trend buckets, scanner handoff, and alert routing are available from this page.
                 </div>
                 <div className="rounded border border-slate-700 bg-slate-950/60 p-2 text-[11px] text-slate-400">
-                  <p className="mb-1 text-[10px] uppercase text-slate-500">Plan Limits</p>
+                  <p className="mb-1 text-[11px] uppercase text-slate-500">Plan Limits</p>
                   Deeper intraday mover history and expanded symbol universe are enabled by subscription tier.
                 </div>
                 <div className="rounded border border-slate-700 bg-slate-950/60 p-2 text-[11px] text-slate-400">
-                  <p className="mb-1 text-[10px] uppercase text-slate-500">Help</p>
+                  <p className="mb-1 text-[11px] uppercase text-slate-500">Help</p>
                   Use Zone 1 for regime read, Zone 2 for action, Zone 3 for evidence, and Zone 4 for reference only.
                 </div>
               </div>

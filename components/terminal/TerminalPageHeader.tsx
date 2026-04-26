@@ -27,17 +27,17 @@ export default function TerminalPageHeader({
         <div className="col-span-12 lg:col-span-8">
           <div className="flex items-start gap-3">
             {image ? (
-              <div className="grid h-[40px] w-[40px] place-items-center rounded-[12px] border border-[var(--msp-border-strong)] bg-[var(--msp-panel-2)] overflow-hidden">
+              <div className="grid h-[40px] w-[40px] place-items-center rounded-lg border border-[var(--msp-border-strong)] bg-[var(--msp-panel-2)] overflow-hidden">
                 <img src={image} alt="" className="h-full w-full object-contain p-1" />
               </div>
             ) : icon ? (
-              <div className="grid h-[40px] w-[40px] place-items-center rounded-[12px] border border-[var(--msp-border-strong)] bg-[var(--msp-panel-2)] text-[20px] leading-none text-[var(--msp-accent)]">
+              <div className="grid h-[40px] w-[40px] place-items-center rounded-lg border border-[var(--msp-border-strong)] bg-[var(--msp-panel-2)] text-[20px] leading-none text-[var(--msp-accent)]">
                 {icon}
               </div>
             ) : null}
             <div>
               {badge ? (
-                <div className="mb-1 inline-flex items-center rounded-full border border-[var(--msp-border-strong)] bg-[var(--msp-panel-2)] px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--msp-accent)]">
+                <div className="mb-1 inline-flex items-center rounded-full border border-[var(--msp-border-strong)] bg-[var(--msp-panel-2)] px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--msp-accent)]">
                   {badge}
                 </div>
               ) : null}

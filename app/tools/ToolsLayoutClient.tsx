@@ -86,8 +86,8 @@ export default function ToolsLayoutClient({
             <span className="uppercase tracking-wider">Operator HUD</span>
             <span className="text-slate-600">|</span>
             <span className="text-slate-500 font-normal">Personality &middot; Flow &middot; Risk &middot; Session</span>
-            <span className="ml-auto text-[10px] text-slate-600 group-open:hidden">Click to expand</span>
-            <span className="ml-auto text-[10px] text-slate-600 hidden group-open:inline">Click to collapse</span>
+            <span className="ml-auto text-[11px] text-slate-600 group-open:hidden">Click to expand</span>
+            <span className="ml-auto text-[11px] text-slate-600 hidden group-open:inline">Click to collapse</span>
           </summary>
 
           <div className="border-b border-slate-700/30 pb-2">

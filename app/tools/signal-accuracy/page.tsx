@@ -83,8 +83,8 @@ export default function SignalAccuracyPage() {
   if (!tierLoading && isLoggedIn && tier !== 'pro_trader') {
     return (
       <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-6">
-        <div className="bg-slate-800/60 rounded-2xl p-8 max-w-md text-center border border-slate-700">
-          <div className="text-4xl mb-3">🔒</div>
+        <div className="bg-slate-800/60 rounded-lg p-8 max-w-md text-center border border-slate-700">
+          <div className="mx-auto mb-3 h-10 w-10 rounded-full border border-slate-600 bg-slate-900" aria-hidden="true" />
           <h2 className="text-xl font-bold text-white mb-2">Pro Trader Feature</h2>
           <p className="text-slate-400 text-sm">Signal accuracy analytics require a Pro Trader subscription to track AI analysis performance over time.</p>
         </div>
@@ -95,8 +95,8 @@ export default function SignalAccuracyPage() {
   if (!tierLoading && !isLoggedIn) {
     return (
       <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-6">
-        <div className="bg-slate-800/60 rounded-2xl p-8 max-w-md text-center border border-slate-700">
-          <div className="text-4xl mb-3">🔐</div>
+        <div className="bg-slate-800/60 rounded-lg p-8 max-w-md text-center border border-slate-700">
+          <div className="mx-auto mb-3 h-10 w-10 rounded-full border border-slate-600 bg-slate-900" aria-hidden="true" />
           <h2 className="text-xl font-bold text-white mb-2">Login Required</h2>
           <p className="text-slate-400 text-sm">Please log in to view signal accuracy analytics.</p>
         </div>
@@ -134,19 +134,19 @@ export default function SignalAccuracyPage() {
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">
-            <label className="text-[10px] text-slate-500 uppercase">Lookback</label>
+            <label className="text-[11px] text-slate-500 uppercase">Lookback</label>
             {(['30', '90', 'all'] as const).map(v => (
               <button key={v} onClick={() => setLookback(v)}
-                className={`px-2 py-1 rounded text-[10px] font-bold transition-colors ${lookback === v ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500 hover:text-slate-300'}`}>
+                className={`px-2 py-1 rounded text-[11px] font-bold transition-colors ${lookback === v ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500 hover:text-slate-300'}`}>
                 {v === 'all' ? 'All' : `${v}d`}
               </button>
             ))}
           </div>
           <div className="flex items-center gap-1.5">
-            <label className="text-[10px] text-slate-500 uppercase">Min Samples</label>
+            <label className="text-[11px] text-slate-500 uppercase">Min Samples</label>
             {[5, 10, 30].map(v => (
               <button key={v} onClick={() => setMinSamples(v)}
-                className={`px-2 py-1 rounded text-[10px] font-bold transition-colors ${minSamples === v ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500 hover:text-slate-300'}`}>
+                className={`px-2 py-1 rounded text-[11px] font-bold transition-colors ${minSamples === v ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-800 text-slate-500 hover:text-slate-300'}`}>
                 {v}
               </button>
             ))}
@@ -180,7 +180,7 @@ export default function SignalAccuracyPage() {
               <h3 className="text-xs font-semibold text-slate-300 mb-2">Outcome Thresholds</h3>
               <div className="flex flex-wrap gap-3">
                 {thresholds.map(t => (
-                  <div key={t.horizon_minutes} className="bg-slate-900/50 rounded-lg px-3 py-1.5 text-[10px]">
+                  <div key={t.horizon_minutes} className="bg-slate-900/50 rounded-lg px-3 py-1.5 text-[11px]">
                     <span className="text-white font-medium">{t.horizon_label}</span>
                     <span className="text-slate-500 ml-2">✓ &ge;{t.correct_threshold}%</span>
                     <span className="text-slate-500 ml-2">✗ &le;{t.wrong_threshold}%</span>
@@ -197,14 +197,14 @@ export default function SignalAccuracyPage() {
                 <div key={scannerType} className="bg-slate-800/40 rounded-xl border border-slate-700/50 overflow-hidden">
                   <div className="px-4 py-3 border-b border-slate-700/50 flex items-center justify-between">
                     <h3 className="text-sm font-bold text-white">{scannerType}</h3>
-                    <span className="text-[10px] text-slate-500">
+                    <span className="text-[11px] text-slate-500">
                       {scannerStats.reduce((s, r) => s + r.labeled_signals, 0).toLocaleString()} labeled signals
                     </span>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs">
                       <thead>
-                        <tr className="text-[10px] text-slate-500 uppercase tracking-wider border-b border-slate-700/30">
+                        <tr className="text-[11px] text-slate-500 uppercase tracking-wider border-b border-slate-700/30">
                           <th className="text-left px-4 py-2">Direction</th>
                           <th className="text-left px-3 py-2">Horizon</th>
                           <th className="text-right px-3 py-2">Signals</th>
@@ -266,7 +266,7 @@ export default function SignalAccuracyPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="text-[10px] text-slate-500 uppercase tracking-wider border-b border-slate-700/30">
+                    <tr className="text-[11px] text-slate-500 uppercase tracking-wider border-b border-slate-700/30">
                       <th className="text-left px-4 py-2">Symbol</th>
                       <th className="text-left px-3 py-2">Direction</th>
                       <th className="text-left px-3 py-2">Scanner</th>
@@ -291,7 +291,7 @@ export default function SignalAccuracyPage() {
                           {s.pct_move != null ? `${s.pct_move >= 0 ? '+' : ''}${s.pct_move.toFixed(2)}%` : '—'}
                         </td>
                         <td className="px-3 py-2 text-center">
-                          <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                          <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-bold ${
                             s.outcome === 'correct' ? 'bg-emerald-500/20 text-emerald-400' :
                             s.outcome === 'wrong' ? 'bg-red-500/20 text-red-400' :
                             s.outcome === 'neutral' ? 'bg-amber-500/20 text-amber-400' :
@@ -309,7 +309,7 @@ export default function SignalAccuracyPage() {
 
           {/* Metadata */}
           {data?.metadata && (
-            <p className="text-[10px] text-slate-500 text-center">{data.metadata.note}</p>
+            <p className="text-[11px] text-slate-500 text-center">{data.metadata.note}</p>
           )}
         </>
       )}
@@ -320,9 +320,9 @@ export default function SignalAccuracyPage() {
 function SummaryCard({ label, value, sub, color = 'text-white' }: { label: string; value: string; sub?: string; color?: string }) {
   return (
     <div className="bg-slate-800/40 rounded-xl border border-slate-700/50 p-3">
-      <div className="text-[10px] text-slate-500 uppercase tracking-wider">{label}</div>
+      <div className="text-[11px] text-slate-500 uppercase tracking-wider">{label}</div>
       <div className={`text-lg font-bold mt-0.5 ${color}`}>{value}</div>
-      {sub && <div className="text-[10px] text-slate-500 mt-0.5">{sub}</div>}
+      {sub && <div className="text-[11px] text-slate-500 mt-0.5">{sub}</div>}
     </div>
   );
 }

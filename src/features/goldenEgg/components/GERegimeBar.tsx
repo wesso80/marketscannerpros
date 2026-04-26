@@ -72,7 +72,7 @@ export default function GERegimeBar({ structure }: Props) {
   const activeRegime = regimes.find(r => r.active) || regimes[0];
 
   return (
-    <div className="rounded-2xl border border-white/5 bg-slate-900/40 p-5">
+    <div className="rounded-lg border border-white/5 bg-slate-900/40 p-5">
       <div className="mb-4 flex items-center gap-2 border-b border-white/5 pb-3">
         <span className="h-1.5 w-1.5 rounded-full bg-violet-400" />
         <h2 className="text-sm font-semibold uppercase tracking-wider text-violet-400">Market Regime</h2>
@@ -104,7 +104,7 @@ export default function GERegimeBar({ structure }: Props) {
         <div className="flex items-center gap-2">
           <span className="text-base">{activeRegime.icon}</span>
           <span className="text-sm font-medium text-white">{activeRegime.label}</span>
-          <span className="text-[10px] uppercase tracking-wider text-violet-400">Active</span>
+          <span className="text-[11px] uppercase tracking-wider text-violet-400">Active</span>
         </div>
         <p className="mt-1 text-xs text-slate-400">{activeRegime.description}</p>
       </div>
@@ -120,7 +120,7 @@ export default function GERegimeBar({ structure }: Props) {
           const isBear = tf.value.toLowerCase().includes('down') || tf.value.toLowerCase().includes('bear');
           return (
             <div key={tf.label} className="rounded-lg border border-white/5 bg-white/[0.03] px-2 py-1.5">
-              <div className="text-[10px] uppercase tracking-wider text-slate-500">{tf.label}</div>
+              <div className="text-[11px] uppercase tracking-wider text-slate-500">{tf.label}</div>
               <div className={`text-xs font-semibold ${isBull ? 'text-emerald-400' : isBear ? 'text-rose-400' : 'text-slate-300'}`}>
                 {tf.value}
               </div>

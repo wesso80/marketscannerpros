@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
-import { isAdminSecret } from '@/lib/quant/operatorAuth';
+import { requireAdmin } from '@/lib/adminAuth';
 
 // Subscription pricing
 const SUBSCRIPTION_PRICES = {
@@ -61,7 +61,7 @@ const STRIPE_PERCENTAGE = 0.029;
 const STRIPE_FIXED = 0.30;
 
 export async function GET(req: NextRequest) {
-  if (!isAdminSecret(req.headers.get('authorization'))) {
+  if (!(await requireAdmin(req)).ok) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

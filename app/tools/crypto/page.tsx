@@ -453,17 +453,17 @@ function CryptoCommandCenterContent() {
             ['Data', marketData ? 'CoinGecko Live' : 'Loading…'],
             ['Last Refresh', lastUpdate ? lastUpdate.toLocaleTimeString() : '—'],
           ].map(([k, v]) => (
-            <div key={k} className="rounded-full border border-slate-700 px-2 py-0.5 text-[10px] text-slate-300">
+            <div key={k} className="rounded-full border border-slate-700 px-2 py-0.5 text-[11px] text-slate-300">
               <span className="font-semibold text-slate-100">{k}</span> · {v}
             </div>
           ))}
-          {marketData && <span className="ml-auto rounded-full border border-emerald-500/50 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">LIVE</span>}
+          {marketData && <span className="ml-auto rounded-full border border-emerald-500/50 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-300">LIVE</span>}
         </section>
 
         <section className="rounded-lg border border-slate-700 bg-slate-900 p-2">
           <div className="mb-2 grid gap-2 xl:grid-cols-[1.1fr_1fr]">
             <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
-              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Crypto Analysis Gate</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Crypto Analysis Gate</p>
               <div className="mt-1 flex items-center gap-2">
                 <span className="text-xl">{permissionBadge(morningDecision.verdict)}</span>
                 <h2 className={`text-base font-extrabold ${permissionColor(morningDecision.verdict)}`}>
@@ -479,7 +479,7 @@ function CryptoCommandCenterContent() {
               <p className="mt-2 text-[11px] text-slate-400">{morningDecision.explanation}</p>
               <div className="mt-2 grid grid-cols-2 gap-1.5 md:grid-cols-4">
                 {morningDecision.subClusters.map((cluster) => (
-                  <div key={cluster.name} className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-[10px]">
+                  <div key={cluster.name} className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-[11px]">
                     <p className="text-slate-500">{cluster.name}</p>
                     <p className={`font-semibold ${cluster.permission === 'Allowed' ? 'text-emerald-300' : cluster.permission === 'Conditional' ? 'text-amber-300' : 'text-red-300'}`}>{cluster.permission}</p>
                   </div>
@@ -488,7 +488,7 @@ function CryptoCommandCenterContent() {
             </div>
 
             <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
-              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Environment Breakdown (5 Inputs)</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Environment Breakdown (5 Inputs)</p>
               <div className="mt-1 grid gap-1 text-[11px]">
                 <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1">
                   <span className="text-slate-500">Risk State</span>
@@ -511,7 +511,7 @@ function CryptoCommandCenterContent() {
                   <p className="font-semibold text-slate-200">{morningDecision.breadthLabel} ({morningDecision.breadthScore}%)</p>
                 </div>
               </div>
-              <div className="mt-2 rounded border border-slate-700 bg-slate-900/70 p-1.5 text-[10px] text-slate-400">
+              <div className="mt-2 rounded border border-slate-700 bg-slate-900/70 p-1.5 text-[11px] text-slate-400">
                 Hard Blocks: {morningDecision.hardBlocks.length ? morningDecision.hardBlocks.join(' • ') : 'None'}
               </div>
             </div>
@@ -522,10 +522,10 @@ function CryptoCommandCenterContent() {
           <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
             <div className="mb-1 flex items-center justify-between">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Action</p>
+                <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Action</p>
                 <h1 className="text-xs font-bold">Crypto Command Console</h1>
               </div>
-              <Link href="/tools/scanner?asset=crypto" className="text-[10px] font-semibold text-emerald-300">Open Scanner</Link>
+              <Link href="/tools/scanner?asset=crypto" className="text-[11px] font-semibold text-emerald-300">Open Scanner</Link>
             </div>
 
             <div className="max-h-[590px] overflow-y-auto rounded-md border border-slate-700 bg-slate-950/60 p-1.5">
@@ -541,14 +541,14 @@ function CryptoCommandCenterContent() {
                         : 'border-slate-700 bg-slate-900 text-slate-300'
                     }`}
                   >
-                    <div className="text-[11px] font-semibold sm:text-[10px]">{item.icon} {item.label}</div>
-                    <div className="mt-0.5 text-[10px] text-slate-500 sm:text-[9px]">{item.description}</div>
+                    <div className="text-[11px] font-semibold sm:text-[11px]">{item.icon} {item.label}</div>
+                    <div className="mt-0.5 text-[11px] text-slate-500 sm:text-[11px]">{item.description}</div>
                   </button>
                 ))}
               </div>
 
               <div className="rounded-md border border-slate-700 bg-slate-900/70 p-1.5">
-                <div className="mb-1 flex items-center gap-2 text-[10px] text-slate-400">
+                <div className="mb-1 flex items-center gap-2 text-[11px] text-slate-400">
                   <span>{currentSection?.icon}</span>
                   <span className="font-semibold text-slate-200">{currentSection?.label}</span>
                   <span className="text-slate-500">• {currentSection?.description}</span>
@@ -560,13 +560,13 @@ function CryptoCommandCenterContent() {
 
           <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
             <div className="mb-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Context</p>
+              <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Context</p>
               <h2 className="text-xs font-bold">Context / Rotation / Routing</h2>
             </div>
 
             <div className="grid gap-2">
               <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
-                <p className="text-[10px] uppercase text-slate-500">Market Snapshot</p>
+                <p className="text-[11px] uppercase text-slate-500">Market Snapshot</p>
                 <p className="text-[11px] text-slate-300">Cap: {marketData?.market?.totalMarketCapFormatted || 'N/A'}</p>
                 <p className="text-[11px] text-slate-300">
                   24h: {typeof marketData?.market?.marketCapChange24h === 'number' ? `${marketData.market.marketCapChange24h.toFixed(2)}%` : 'N/A'}
@@ -575,7 +575,7 @@ function CryptoCommandCenterContent() {
               </div>
 
               <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
-                <p className="text-[10px] uppercase text-slate-500">Trending Leadership</p>
+                <p className="text-[11px] uppercase text-slate-500">Trending Leadership</p>
                 <div className="mt-1 grid gap-1 text-[11px]">
                   {(marketData?.trending?.coins || []).slice(0, 5).map((coin: any, idx: number) => (
                     <div key={`${coin.symbol}-${idx}`} className="flex items-center justify-between rounded border border-slate-700 bg-slate-900/70 px-1.5 py-1">
@@ -587,25 +587,25 @@ function CryptoCommandCenterContent() {
               </div>
 
               <div className="grid grid-cols-2 gap-1.5">
-                <Link href="/tools/crypto-dashboard" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[10px] text-slate-300">Derivatives</Link>
-                <Link href="/tools/crypto-heatmap" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[10px] text-slate-300">Full Heatmap</Link>
-                <Link href="/tools/crypto-explorer" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[10px] text-slate-300">Explorer</Link>
-                <Link href="/tools/alerts" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[10px] text-slate-300">Create Alert</Link>
+                <Link href="/tools/crypto-dashboard" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[11px] text-slate-300">Derivatives</Link>
+                <Link href="/tools/crypto-heatmap" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[11px] text-slate-300">Full Heatmap</Link>
+                <Link href="/tools/crypto-explorer" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[11px] text-slate-300">Explorer</Link>
+                <Link href="/tools/alerts" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[11px] text-slate-300">Create Alert</Link>
               </div>
 
               <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
                 {morningDecision.verdict === 'NOT ALIGNED' ? (
                   <>
-                    <p className="text-[10px] uppercase text-red-300">Caution Mode</p>
+                    <p className="text-[11px] uppercase text-red-300">Caution Mode</p>
                     <p className="mt-1 text-[11px] text-slate-400">Indicators not aligned. Focus on volatility alerts and observation.</p>
                     <div className="mt-1.5 flex gap-1.5">
-                      <Link href="/tools/alerts" className="rounded border border-slate-700 px-2 py-1 text-[10px] text-slate-300">Volatility Alerts</Link>
-                      <Link href="/tools/journal" className="rounded border border-slate-700 px-2 py-1 text-[10px] text-slate-300">Journal Review</Link>
+                      <Link href="/tools/alerts" className="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-300">Volatility Alerts</Link>
+                      <Link href="/tools/journal" className="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-300">Journal Review</Link>
                     </div>
                   </>
                 ) : (
                   <>
-                    <p className="text-[10px] uppercase text-slate-500">
+                    <p className="text-[11px] uppercase text-slate-500">
                       {morningDecision.verdict === 'ALIGNED' ? 'Top Movers by Change' : 'High-Quality Setups Only'}
                     </p>
                     <div className="mt-1 grid gap-1">
@@ -626,8 +626,8 @@ function CryptoCommandCenterContent() {
         <details className="group rounded-lg border border-slate-700 bg-slate-900 p-2" open>
           <summary className="flex list-none cursor-pointer items-center justify-between text-xs font-bold">
             <span>Zone 3 • Audit / Log</span>
-            <span className="text-[10px] text-slate-500 group-open:hidden">Expand</span>
-            <span className="hidden text-[10px] text-slate-500 group-open:inline">Collapse</span>
+            <span className="text-[11px] text-slate-500 group-open:hidden">Expand</span>
+            <span className="hidden text-[11px] text-slate-500 group-open:inline">Collapse</span>
           </summary>
 
           <div className="mt-2 grid gap-2">
@@ -643,7 +643,7 @@ function CryptoCommandCenterContent() {
                   type="button"
                   key={id}
                   onClick={() => setLogTab(id)}
-                  className={`rounded-full border px-2 py-0.5 text-[10px] ${
+                  className={`rounded-full border px-2 py-0.5 text-[11px] ${
                     logTab === id
                       ? 'border-emerald-400 bg-emerald-500/10 text-emerald-200'
                       : 'border-slate-700 text-slate-400'
@@ -658,7 +658,7 @@ function CryptoCommandCenterContent() {
               <div className="grid gap-1.5">
                 {logs[logTab].map((entry, idx) => (
                   <div key={`${entry.t}-${idx}`} className="rounded border border-slate-700 bg-slate-900/70 p-1.5">
-                    <div className="flex items-center justify-between text-[10px] text-slate-500">
+                    <div className="flex items-center justify-between text-[11px] text-slate-500">
                       <span>{entry.t}</span>
                       <span className="text-slate-300">{entry.e}</span>
                     </div>
@@ -673,21 +673,21 @@ function CryptoCommandCenterContent() {
         <details className="group rounded-lg border border-slate-700 bg-slate-900 p-2">
           <summary className="flex list-none cursor-pointer items-center justify-between text-xs font-bold">
             <span>Zone 4 • Capabilities / Plan / Help</span>
-            <span className="text-[10px] text-slate-500 group-open:hidden">Expand</span>
-            <span className="hidden text-[10px] text-slate-500 group-open:inline">Collapse</span>
+            <span className="text-[11px] text-slate-500 group-open:hidden">Expand</span>
+            <span className="hidden text-[11px] text-slate-500 group-open:inline">Collapse</span>
           </summary>
 
           <div className="mt-2 grid gap-2 md:grid-cols-3">
             <div className="rounded border border-slate-700 bg-slate-950/60 p-2 text-[11px] text-slate-400">
-              <p className="mb-1 text-[10px] uppercase text-slate-500">Capabilities</p>
+              <p className="mb-1 text-[11px] uppercase text-slate-500">Capabilities</p>
               Live CoinGecko intelligence, heatmaps, movers, categories, DeFi, DEX, listings, and search are available.
             </div>
             <div className="rounded border border-slate-700 bg-slate-950/60 p-2 text-[11px] text-slate-400">
-              <p className="mb-1 text-[10px] uppercase text-slate-500">Plan Limits</p>
+              <p className="mb-1 text-[11px] uppercase text-slate-500">Plan Limits</p>
               Crypto Command Center remains tier-gated and follows your active subscription entitlement policy.
             </div>
             <div className="rounded border border-slate-700 bg-slate-950/60 p-2 text-[11px] text-slate-400">
-              <p className="mb-1 text-[10px] uppercase text-slate-500">Help</p>
+              <p className="mb-1 text-[11px] uppercase text-slate-500">Help</p>
               Use Zone 1 for state, Zone 2 for execution context, Zone 3 for receipts, and Zone 4 only when needed.
             </div>
           </div>

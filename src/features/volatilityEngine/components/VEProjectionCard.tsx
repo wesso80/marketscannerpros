@@ -48,15 +48,15 @@ export default function VEProjectionCard({ proj, volatility, phase, currentPrice
 
             {/* Expected range bands */}
             <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-              <div className="text-[0.65rem] uppercase text-white/40 mb-2">Expected Move Range (1 ATR)</div>
+              <div className="mb-2 text-[11px] uppercase text-white/40">Expected Move Range (1 ATR)</div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="text-center">
-                  <div className="text-[0.6rem] text-red-400/60">Downside</div>
+                  <div className="text-[11px] text-red-400/60">Downside</div>
                   <div className="text-sm font-bold text-red-400">${downTarget.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                   <div className="text-[0.55rem] text-white/25">-{expectedPct.toFixed(1)}%</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-[0.6rem] text-emerald-400/60">Upside</div>
+                  <div className="text-[11px] text-emerald-400/60">Upside</div>
                   <div className="text-sm font-bold text-emerald-400">${upTarget.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                   <div className="text-[0.55rem] text-white/25">+{expectedPct.toFixed(1)}%</div>
                 </div>
@@ -64,15 +64,15 @@ export default function VEProjectionCard({ proj, volatility, phase, currentPrice
             </div>
 
             <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
-              <div className="text-[0.65rem] uppercase text-white/40 mb-2">Extended Range (1.5× ATR)</div>
+              <div className="mb-2 text-[11px] uppercase text-white/40">Extended Range (1.5× ATR)</div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="text-center">
-                  <div className="text-[0.6rem] text-red-400/40">Downside</div>
+                  <div className="text-[11px] text-red-400/40">Downside</div>
                   <div className="text-sm font-bold text-red-400/70">${downExtended.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                   <div className="text-[0.55rem] text-white/20">-{(expectedPct * 1.5).toFixed(1)}%</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-[0.6rem] text-emerald-400/40">Upside</div>
+                  <div className="text-[11px] text-emerald-400/40">Upside</div>
                   <div className="text-sm font-bold text-emerald-400/70">${upExtended.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                   <div className="text-[0.55rem] text-white/20">+{(expectedPct * 1.5).toFixed(1)}%</div>
                 </div>

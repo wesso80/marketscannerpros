@@ -89,7 +89,7 @@ export default function GESignalHero({ meta, layer1, setupType, volatility }: Pr
   }
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl border border-white/5 bg-gradient-to-b from-slate-800/80 to-slate-900/80 shadow-2xl ${signalGlow(confidence)}`}>
+    <div className={`relative overflow-hidden rounded-lg border border-white/5 bg-slate-900/80 shadow-2xl ${signalGlow(confidence)}`}>
       {/* Decorative top accent */}
       <div className={`absolute inset-x-0 top-0 h-[2px] ${confidence >= 65 ? 'bg-emerald-500' : confidence >= 45 ? 'bg-amber-500' : 'bg-rose-500'}`} />
 
@@ -146,7 +146,7 @@ export default function GESignalHero({ meta, layer1, setupType, volatility }: Pr
         <div className="mx-auto mt-6 flex max-w-sm flex-wrap justify-center gap-3">
           {pillData.map((p) => (
             <div key={p.label} className="rounded-lg border border-white/5 bg-white/5 px-4 py-2 text-center">
-              <div className="text-[10px] uppercase tracking-wider text-slate-500">{p.label}</div>
+              <div className="text-[11px] uppercase tracking-wider text-slate-500">{p.label}</div>
               <div className={`text-sm font-semibold ${p.color}`}>{p.value}</div>
             </div>
           ))}
@@ -157,7 +157,7 @@ export default function GESignalHero({ meta, layer1, setupType, volatility }: Pr
           <div className="mx-auto mt-3 flex max-w-md flex-wrap justify-center gap-3">
             {volPills.map((p) => (
               <div key={p.label} className="rounded-lg border border-white/5 bg-white/5 px-4 py-2 text-center">
-                <div className="text-[10px] uppercase tracking-wider text-slate-500">{p.label}</div>
+                <div className="text-[11px] uppercase tracking-wider text-slate-500">{p.label}</div>
                 <div className={`text-sm font-semibold ${p.color}`}>{p.value}</div>
               </div>
             ))}

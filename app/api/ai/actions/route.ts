@@ -550,7 +550,7 @@ async function simulateAction(
       };
     case 'journal_trade':
       return {
-        wouldDo: `Create journal entry for ${parameters.direction} ${parameters.symbol}`,
+        wouldDo: `Create research journal note for ${parameters.symbol}`,
         wouldAffect: ['journal_entries table'],
         reversible: true,
       };
@@ -734,9 +734,9 @@ async function executeJournalTrade(
       if (pipeline.ok) {
         const { exits, sizing, leverage: leverageResult, entryRisk } = pipeline.result;
         const engineNotes = [
-          notes || 'AI-initiated trade with execution engine.',
+          notes || 'AI-assisted research note with scenario modelling.',
           '',
-          `EXECUTION ENGINE: Stop ${exits.stop_price} | TP1 ${exits.take_profit_1} | R:R ${exits.rr_at_tp1}:1`,
+          `SCENARIO MODEL: Invalidation ${exits.stop_price} | Reaction zone ${exits.take_profit_1} | Hypothetical R:R ${exits.rr_at_tp1}:1`,
         ].join('\n');
 
         const result = await q(
@@ -792,7 +792,7 @@ async function executeJournalTrade(
           success: true,
           data: {
             entryId: result[0]?.id,
-            message: `Journal entry created for ${safeSymbol} ${side} with execution engine (stop: ${exits.stop_price}, tp1: ${exits.take_profit_1})`,
+            message: `Research journal note created for ${safeSymbol} ${side} with scenario model (invalidation: ${exits.stop_price}, reaction zone: ${exits.take_profit_1})`,
           },
         };
       }
@@ -841,7 +841,7 @@ async function executeJournalTrade(
       success: true, 
       data: { 
         entryId: result[0]?.id,
-        message: `Journal entry created for ${safeSymbol} ${side} (no execution engine — ATR unavailable)`
+        message: `Research journal note created for ${safeSymbol} ${side} (basic scenario only — ATR unavailable)`
       }
     };
   } catch (error) {
@@ -890,10 +890,10 @@ function executePositionSize(
       entryPrice: entry,
       stopLoss: stop,
       riskPerShare: riskPerShare.toFixed(4),
-      recommendedShares: shares,
+      modelShares: shares,
       positionValue: positionValue.toFixed(2),
       positionPercent: positionPercent.toFixed(2),
-      message: `Risk $${dollarRisk.toFixed(0)} on ${shares} shares = $${positionValue.toFixed(0)} position (${positionPercent.toFixed(1)}% of account)`,
+      message: `Educational model: $${dollarRisk.toFixed(0)} hypothetical risk maps to ${shares} units, or $${positionValue.toFixed(0)} notional (${positionPercent.toFixed(1)}% of account)`,
     },
   };
 }
@@ -922,19 +922,19 @@ function generateTradePlan(
 
   const plan = {
     symbol: (symbol as string).toUpperCase(),
-    direction,
+    scenarioDirection: direction,
     timeframe: timeframe || 'swing',
-    entry: entry || 'TBD',
-    stopLoss: stop || 'TBD',
-    riskPercent,
-    targets: targetList.length > 0 ? targetList : ['TBD'],
-    rewardRatios,
+    referenceLevel: entry || 'TBD',
+    invalidationLevel: stop || 'TBD',
+    hypotheticalRiskPercent: riskPercent,
+    reactionZones: targetList.length > 0 ? targetList : ['TBD'],
+    hypotheticalRewardRatios: rewardRatios,
     thesis: thesis || 'No thesis provided',
-    invalidation: `Trade invalid if price moves beyond ${stop}`,
+    invalidation: `Scenario weakens if price moves beyond ${stop || 'the invalidation level'}`,
     rules: [
-      `Risk no more than 1-2% of account`,
-      `Wait for entry confirmation before sizing`,
-      `Scale out at targets, don't move stops to breakeven too early`,
+      `Treat this as educational scenario modelling, not an instruction to place an order`,
+      `Wait for confirmation evidence before considering any real-world action`,
+      `Use reaction zones and invalidation levels for review, not personal financial advice`,
     ],
   };
 

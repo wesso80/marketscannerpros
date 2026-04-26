@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
+import { saveResearchCase } from '@/lib/clientResearchCases';
 
 /* ─── Types ─── */
 
@@ -44,9 +45,22 @@ function fmtPrice(n: number | undefined | null): string {
 }
 
 function dirLabel(d?: string): string {
-  if (d === 'bullish') return 'LONG';
-  if (d === 'bearish') return 'SHORT';
+  if (d === 'bullish') return 'Bullish scenario';
+  if (d === 'bearish') return 'Bearish scenario';
   return 'NEUTRAL';
+}
+
+function dataQuality(ind: Record<string, any>, pick: ScanPick): { label: string; missing: string[]; flags: string[] } {
+  const missing: string[] = [];
+  const flags: string[] = [];
+  if (!Number.isFinite(Number(ind.price)) || Number(ind.price) <= 0) missing.push('reference price');
+  if (!Number.isFinite(Number(ind.atr))) missing.push('ATR');
+  if (!Number.isFinite(Number(ind.rsi))) missing.push('RSI');
+  if (!Number.isFinite(Number(ind.adx))) missing.push('ADX');
+  if (!pick.derivatives) flags.push('derivatives context unavailable');
+  if (!pick.signals) flags.push('signal split unavailable');
+  const label = missing.length === 0 ? 'GOOD' : missing.length <= 2 ? 'DEGRADED' : 'INCOMPLETE';
+  return { label, missing, flags };
 }
 
 function qualityLabel(score: number): string {
@@ -87,12 +101,15 @@ function computeTargets(price: number, dir: string, atr: number): number[] {
 /* ─── Component ─── */
 
 export default function ResearchCaseModal({ pick, assetType, timeframe, onClose }: ResearchCaseModalProps) {
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [saveError, setSaveError] = useState<string | null>(null);
   const ind = pick.indicators || {};
   const price = Number(ind.price) || 0;
   const atr = Number(ind.atr) || price * 0.02;
   const dir = pick.direction || 'neutral';
   const changePct = Number(pick.change24h) || 0;
   const quality = qualityLabel(pick.score);
+  const truth = useMemo(() => dataQuality(ind, pick), [ind, pick]);
 
   const setup = useMemo(() => setupType(ind, changePct), [ind, changePct]);
   const entry = useMemo(() => computeEntry(price, dir, atr), [price, dir, atr]);
@@ -156,6 +173,65 @@ export default function ResearchCaseModal({ pick, assetType, timeframe, onClose 
   const bearCount = evidence.filter(e => e.verdict === 'bear').length;
   const confluenceVerdict = bullCount > bearCount ? 'Supportive' : bearCount > bullCount ? 'Opposing' : 'Mixed';
 
+  const researchCase = useMemo(() => ({
+    symbol: pick.symbol,
+    assetClass: assetType,
+    sourceType: 'scanner-modal',
+    generatedAt: new Date().toISOString(),
+    dataQuality: truth.label === 'INCOMPLETE' ? 'MISSING' : truth.label,
+    title: `${pick.symbol} scanner research case`,
+    thesis,
+    setup: {
+      type: setup,
+      direction: dirLabel(dir),
+      score: pick.score,
+      alignment: quality,
+      timeframe,
+    },
+    truthLayer: {
+      whatWeKnow: [
+        `${pick.symbol} has scanner confluence data available.`,
+        `Scanner score is ${pick.score}.`,
+        `Observed scenario direction is ${dirLabel(dir)}.`,
+      ],
+      whatWeDoNotKnow: truth.missing,
+      dataQuality: truth.label === 'INCOMPLETE' ? 'MISSING' : truth.label,
+      riskFlags: truth.flags,
+      lastUpdated: new Date().toISOString(),
+      invalidation,
+      nextUsefulCheck: 'Refresh scanner data and review whether confluence improves or weakens.',
+      disclaimer: 'Educational market research only. Not financial advice.',
+    },
+    scenarioPlan: {
+      referenceType: 'scanner-reference',
+      triggers: ['Review close-through confirmation and volume context'],
+      invalidationLogic: invalidation,
+      reactionZones: targets.map((target) => fmtPrice(target)),
+      managementNotes: ['Track whether confluence and data quality improve or deteriorate'],
+      modelSize: null,
+    },
+    evidenceStack: evidence.map((item) => ({ label: item.label, value: item.value, status: item.verdict })),
+    missingEvidence: truth.missing,
+    technicals: ind,
+    disclaimer: 'Educational market research only. This is not financial advice and is not a recommendation to buy, sell, hold, or rebalance any financial product.',
+  }), [pick, assetType, truth, thesis, setup, dir, quality, timeframe, invalidation, targets, evidence, ind]);
+
+  const handleSaveResearchCase = useCallback(async () => {
+    try {
+      setSaveState('saving');
+      setSaveError(null);
+      await saveResearchCase({
+        sourceType: 'scanner-modal',
+        title: `${pick.symbol} scanner research case`,
+        researchCase,
+      });
+      setSaveState('saved');
+    } catch (err) {
+      setSaveState('error');
+      setSaveError(err instanceof Error ? err.message : 'Unable to save research case');
+    }
+  }, [pick.symbol, researchCase]);
+
   // ── CSV export ──
   const exportCSV = useCallback(() => {
     const rows: string[][] = [
@@ -172,15 +248,20 @@ export default function ResearchCaseModal({ pick, assetType, timeframe, onClose 
       ['Timeframe', timeframe],
       ['Asset Type', assetType],
       [],
-      ['RISK PARAMETERS'],
+      ['SCENARIO LEVELS'],
       ['Current Price', fmtPrice(price)],
       ['Reference Level', fmtPrice(entry)],
       ['Invalidation Level', fmtPrice(stop)],
-      ['Key Level 1', fmtPrice(targets[0])],
-      ['Key Level 2', fmtPrice(targets[1])],
-      ['Key Level 3', fmtPrice(targets[2])],
-      ['Risk:Reward', `${rr.toFixed(1)}:1`],
+      ['Reaction Zone 1', fmtPrice(targets[0])],
+      ['Reaction Zone 2', fmtPrice(targets[1])],
+      ['Reaction Zone 3', fmtPrice(targets[2])],
+      ['Hypothetical R:R', `${rr.toFixed(1)}:1`],
       ['ATR', fmt(atr)],
+      [],
+      ['TRUTH LAYER'],
+      ['Data Quality', truth.label],
+      ['Missing Evidence', truth.missing.join('; ') || 'None detected from scanner payload'],
+      ['Risk Flags', truth.flags.join('; ') || 'None detected from scanner payload'],
       [],
       ['CONFLUENCE EVIDENCE'],
       ['Indicator', 'Value', 'Verdict'],
@@ -207,7 +288,7 @@ export default function ResearchCaseModal({ pick, assetType, timeframe, onClose 
     a.download = `research-case-${pick.symbol}-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [pick, thesis, setup, dir, quality, timeframe, assetType, price, entry, stop, targets, rr, atr, evidence, confluenceVerdict, bullCount, bearCount, ind, changePct, invalidation]);
+  }, [pick, thesis, setup, dir, quality, timeframe, assetType, price, entry, stop, targets, rr, atr, truth, evidence, confluenceVerdict, bullCount, bearCount, ind, changePct, invalidation]);
 
   // ── Verdict color ──
   const verdictColor = (v: 'bull' | 'bear' | 'neutral') =>
@@ -248,6 +329,20 @@ export default function ResearchCaseModal({ pick, assetType, timeframe, onClose 
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
               type="button"
+              onClick={handleSaveResearchCase}
+              disabled={saveState === 'saving'}
+              style={{
+                padding: '6px 14px', fontSize: '12px', fontWeight: '600',
+                background: saveState === 'saved' ? 'rgba(16,185,129,0.16)' : 'rgba(59,130,246,0.12)',
+                color: saveState === 'saved' ? 'var(--msp-bull)' : '#93c5fd',
+                border: `1px solid ${saveState === 'saved' ? 'var(--msp-bull)' : 'rgba(147,197,253,0.7)'}`,
+                borderRadius: '8px', cursor: saveState === 'saving' ? 'wait' : 'pointer',
+              }}
+            >
+              {saveState === 'saving' ? 'Saving...' : saveState === 'saved' ? 'Saved' : 'Save Case'}
+            </button>
+            <button
+              type="button"
               onClick={exportCSV}
               style={{
                 padding: '6px 14px', fontSize: '12px', fontWeight: '600',
@@ -272,6 +367,11 @@ export default function ResearchCaseModal({ pick, assetType, timeframe, onClose 
         </div>
 
         <div style={{ padding: '20px 24px' }}>
+          {saveState === 'error' && (
+            <div style={{ marginBottom: '12px', padding: '8px 12px', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.35)', background: 'rgba(239,68,68,0.08)', color: '#fca5a5', fontSize: '12px' }}>
+              {saveError || 'Unable to save research case'}
+            </div>
+          )}
           {/* ── Permission Badge ── */}
           <div style={{
             display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '20px',
@@ -287,7 +387,7 @@ export default function ResearchCaseModal({ pick, assetType, timeframe, onClose 
             </div>
             <div>
               <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--msp-text)' }}>
-                {dirLabel(dir)} — {quality} Quality — {setup}
+                {dirLabel(dir)} — {quality} Alignment — {setup}
               </div>
               <div style={{ fontSize: '12px', color: 'var(--msp-text-muted)', marginTop: '2px' }}>
                 {pick.score >= 70 ? 'ALIGNED — conditions support analysis' : pick.score >= 55 ? 'WATCH — monitor for strengthening' : 'NOT ALIGNED — insufficient confluence'}
@@ -302,15 +402,24 @@ export default function ResearchCaseModal({ pick, assetType, timeframe, onClose 
             </p>
           </Section>
 
-          {/* ── Risk Parameters ── */}
-          <Section title="Risk Parameters">
+          {/* ── Scenario Levels ── */}
+          <Section title="Scenario Levels">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               <KV label="Reference Level" value={fmtPrice(entry)} />
               <KV label="Invalidation Level" value={fmtPrice(stop)} accent="var(--msp-bear)" />
-              <KV label="Key Level 1 (1R)" value={fmtPrice(targets[0])} accent="var(--msp-bull)" />
-              <KV label="Key Level 2 (2R)" value={fmtPrice(targets[1])} accent="var(--msp-bull)" />
-              <KV label="Key Level 3 (3R)" value={fmtPrice(targets[2])} accent="var(--msp-bull)" />
-              <KV label="Risk : Reward" value={`${rr.toFixed(1)} : 1`} accent={rr >= 2 ? 'var(--msp-bull)' : rr >= 1 ? 'var(--msp-warn)' : 'var(--msp-bear)'} />
+              <KV label="Reaction Zone 1 (1R)" value={fmtPrice(targets[0])} accent="var(--msp-bull)" />
+              <KV label="Reaction Zone 2 (2R)" value={fmtPrice(targets[1])} accent="var(--msp-bull)" />
+              <KV label="Reaction Zone 3 (3R)" value={fmtPrice(targets[2])} accent="var(--msp-bull)" />
+              <KV label="Hypothetical R:R" value={`${rr.toFixed(1)} : 1`} accent={rr >= 2 ? 'var(--msp-bull)' : rr >= 1 ? 'var(--msp-warn)' : 'var(--msp-bear)'} />
+            </div>
+          </Section>
+
+          {/* ── Truth Layer ── */}
+          <Section title="Data Quality">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
+              <KV label="Status" value={truth.label} accent={truth.label === 'GOOD' ? 'var(--msp-bull)' : truth.label === 'DEGRADED' ? 'var(--msp-warn)' : 'var(--msp-bear)'} />
+              <KV label="Missing Evidence" value={truth.missing.join(', ') || 'None detected from scanner payload'} />
+              <KV label="Risk Flags" value={truth.flags.join(', ') || 'None detected from scanner payload'} />
             </div>
           </Section>
 

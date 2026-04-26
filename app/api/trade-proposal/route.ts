@@ -20,10 +20,10 @@ import { q } from '@/lib/db';
 /**
  * POST /api/trade-proposal
  *
- * Receives a TradeIntent, runs every execution-engine module, and returns
- * a full TradeProposal (the "Trade Decision Object").
+ * Receives a TradeIntent, runs the paper scenario model, and returns
+ * a full TradeProposal for educational review.
  *
- * Does NOT execute or write to journal — that's /api/execute-trade.
+ * Does NOT submit orders or write to journal — persistence is handled separately.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -246,7 +246,7 @@ function buildSummary(p: TradeProposal): string {
       : p.validation_errors.map((e) => e.code).join(', ');
     parts.push(`⛔ BLOCKED: ${reasons}`);
   } else {
-    parts.push('✅ EXECUTABLE');
+    parts.push('CONDITIONS ALIGNED');
   }
 
   return parts.join(' | ');

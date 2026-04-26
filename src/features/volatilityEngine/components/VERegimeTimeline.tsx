@@ -12,18 +12,18 @@ function regimeColor(regime: string): string {
   }
 }
 
-const FLAG_CFG: Record<string, { emoji: string; bg: string; text: string }> = {
-  BREAKOUT_WATCH: { emoji: '🔥', bg: 'bg-amber-500/15', text: 'text-amber-400' },
-  EXPANSION_UP: { emoji: '📈', bg: 'bg-emerald-500/15', text: 'text-emerald-400' },
-  EXPANSION_DOWN: { emoji: '📉', bg: 'bg-red-500/15', text: 'text-red-400' },
-  TRAP_CANDIDATE: { emoji: '🔍', bg: 'bg-amber-500/10', text: 'text-amber-400' },
-  TRAP_DETECTED: { emoji: '⚠️', bg: 'bg-red-500/20', text: 'text-red-300' },
-  CLIMAX_WARNING: { emoji: '🔥', bg: 'bg-red-500/15', text: 'text-red-400' },
-  COMPRESSION_EXTREME: { emoji: '❄️', bg: 'bg-blue-500/15', text: 'text-blue-400' },
-  CONTRACTION_EXIT_RISK: { emoji: '💥', bg: 'bg-amber-500/15', text: 'text-amber-400' },
-  EXPANSION_EXIT_RISK: { emoji: '🔻', bg: 'bg-red-500/15', text: 'text-red-400' },
-  SIGNAL_UP: { emoji: '🟢', bg: 'bg-emerald-500/15', text: 'text-emerald-400' },
-  SIGNAL_DOWN: { emoji: '🔴', bg: 'bg-red-500/15', text: 'text-red-400' },
+const FLAG_CFG: Record<string, { bg: string; text: string }> = {
+  BREAKOUT_WATCH: { bg: 'bg-amber-500/15', text: 'text-amber-400' },
+  EXPANSION_UP: { bg: 'bg-emerald-500/15', text: 'text-emerald-400' },
+  EXPANSION_DOWN: { bg: 'bg-red-500/15', text: 'text-red-400' },
+  TRAP_CANDIDATE: { bg: 'bg-amber-500/10', text: 'text-amber-400' },
+  TRAP_DETECTED: { bg: 'bg-red-500/20', text: 'text-red-300' },
+  CLIMAX_WARNING: { bg: 'bg-red-500/15', text: 'text-red-400' },
+  COMPRESSION_EXTREME: { bg: 'bg-blue-500/15', text: 'text-blue-400' },
+  CONTRACTION_EXIT_RISK: { bg: 'bg-amber-500/15', text: 'text-amber-400' },
+  EXPANSION_EXIT_RISK: { bg: 'bg-red-500/15', text: 'text-red-400' },
+  SIGNAL_UP: { bg: 'bg-emerald-500/15', text: 'text-emerald-400' },
+  SIGNAL_DOWN: { bg: 'bg-red-500/15', text: 'text-red-400' },
 };
 
 // Regime phase positions on the timeline (0-100)
@@ -102,7 +102,6 @@ export default function VERegimeTimeline({
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-5">
       <div className="mb-4 flex items-center gap-2">
-        <span className="text-base">🔮</span>
         <h3 className="text-xs font-semibold uppercase tracking-widest text-amber-400">
           Regime &amp; Outlook
         </h3>
@@ -110,10 +109,10 @@ export default function VERegimeTimeline({
 
       {/* ── Visual Regime Timeline ── */}
       <div className="mb-5 rounded-lg border border-white/10 bg-white/[0.03] p-4">
-        <div className="text-[0.65rem] uppercase text-white/40 mb-3">Volatility Regime Timeline</div>
+        <div className="mb-3 text-[11px] uppercase text-white/40">Volatility Regime Timeline</div>
         <div className="relative">
           {/* Timeline track */}
-          <div className="relative h-8 rounded-full bg-gradient-to-r from-blue-500/20 via-slate-500/20 via-purple-500/20 via-amber-500/20 to-red-500/20">
+          <div className="relative h-8 rounded-full bg-slate-800/80">
             {/* Regime labels */}
             {REGIMES_ORDER.map((r) => {
               const pos = REGIME_POS[r];
@@ -157,7 +156,7 @@ export default function VERegimeTimeline({
             {REGIMES_ORDER.map((r) => (
               <div
                 key={r}
-                className="absolute -translate-x-1/2 text-[0.55rem] font-bold uppercase"
+                className="absolute -translate-x-1/2 text-[11px] font-bold uppercase"
                 style={{ left: `${REGIME_POS[r]}%`, color: r === currentRegime ? regimeColor(r) : regimeColor(r) + '66' }}
               >
                 {r}
@@ -169,19 +168,19 @@ export default function VERegimeTimeline({
         {/* Event markers */}
         <div className="mt-5 flex flex-wrap gap-2">
           {flags.includes('TRAP_DETECTED') && (
-            <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[0.6rem] font-bold text-red-300">⚠️ Trap Detected</span>
+            <span className="rounded-full bg-red-500/15 px-2 py-0.5 text-[11px] font-bold text-red-300">Trap Detected</span>
           )}
           {exhaustion.level >= 60 && (
-            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[0.6rem] font-bold text-amber-300">🔥 Exhaustion Risk</span>
+            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold text-amber-300">Exhaustion Risk</span>
           )}
           {flags.includes('BREAKOUT_WATCH') && (
-            <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[0.6rem] font-bold text-emerald-300">🎯 Breakout Watch</span>
+            <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-bold text-emerald-300">Breakout Watch</span>
           )}
           {phase?.contraction.active && phase.contraction.stats.agePercentile > 80 && (
-            <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-[0.6rem] font-bold text-blue-300">❄️ Extended Compression</span>
+            <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-[11px] font-bold text-blue-300">Extended Compression</span>
           )}
           {phase?.expansion.active && phase.expansion.stats.agePercentile > 80 && (
-            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[0.6rem] font-bold text-amber-300">🔥 Extended Expansion</span>
+            <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold text-amber-300">Extended Expansion</span>
           )}
         </div>
       </div>
@@ -240,13 +239,13 @@ export default function VERegimeTimeline({
       {/* Flags */}
       {flags.length > 0 && (
         <div className="mb-4">
-          <div className="mb-1.5 text-[0.7rem] uppercase text-white/40">Active Flags</div>
+          <div className="mb-1.5 text-[11px] uppercase text-white/40">Active Flags</div>
           <div className="flex flex-wrap gap-1.5">
             {flags.map((f) => {
-              const c = FLAG_CFG[f] || { emoji: '📊', bg: 'bg-white/10', text: 'text-white/60' };
+              const c = FLAG_CFG[f] || { bg: 'bg-white/10', text: 'text-white/60' };
               return (
-                <span key={f} className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[0.7rem] font-bold uppercase ${c.bg} ${c.text}`}>
-                  {c.emoji} {f.replace(/_/g, ' ')}
+                <span key={f} className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-bold uppercase ${c.bg} ${c.text}`}>
+                  {f.replace(/_/g, ' ')}
                 </span>
               );
             })}

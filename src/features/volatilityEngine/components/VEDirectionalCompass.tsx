@@ -53,23 +53,22 @@ export default function VEDirectionalCompass({ dir, missingInputs = [] }: { dir:
     <div className="rounded-xl border border-white/10 bg-white/5 p-5">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-base">🧭</span>
           <h3 className="text-xs font-semibold uppercase tracking-widest text-amber-400">
             Directional Bias
           </h3>
         </div>
-        <span className="text-[0.6rem] text-white/40">{dir.confidence.toFixed(0)}% confluence</span>
+        <span className="text-[11px] text-white/40">{dir.confidence.toFixed(0)}% confluence</span>
       </div>
 
       {/* ── Compass Pressure Bar ── */}
       <div className="mb-5 rounded-lg border border-white/10 bg-white/[0.03] p-4">
-        <div className="flex items-center justify-between text-[0.65rem] text-white/50 mb-2">
+        <div className="mb-2 flex items-center justify-between text-[11px] text-white/50">
           <span className="text-red-400 font-semibold">← Bearish</span>
           <span className="text-slate-400">Neutral</span>
           <span className="text-emerald-400 font-semibold">Bullish →</span>
         </div>
         {/* Track */}
-        <div className="relative h-3 rounded-full bg-gradient-to-r from-red-500/30 via-slate-600/30 to-emerald-500/30">
+        <div className="relative h-3 rounded-full bg-slate-800/80">
           {/* Center tick */}
           <div className="absolute left-1/2 top-0 h-full w-px bg-white/20" />
           {/* Needle */}
@@ -92,7 +91,7 @@ export default function VEDirectionalCompass({ dir, missingInputs = [] }: { dir:
             <span className="text-sm font-bold uppercase" style={{ color }}>
               {dir.bias}
             </span>
-            <div className="text-[0.65rem] text-white/40">
+            <div className="text-[11px] text-white/40">
               Confluence: {confLabel}
             </div>
           </div>
@@ -109,10 +108,10 @@ export default function VEDirectionalCompass({ dir, missingInputs = [] }: { dir:
           const barColor = isNA ? '#334155' : value > 0 ? '#10B981' : value < 0 ? '#EF4444' : '#475569';
           return (
             <div key={key} className="space-y-0.5">
-              <div className="flex items-center justify-between text-[0.65rem]">
+              <div className="flex items-center justify-between text-[11px]">
                 <span className={isNA ? 'text-white/25' : 'text-white/60'}>{LABELS[key] || key}</span>
                 {isNA ? (
-                  <span className="text-[0.6rem] text-white/20">N/A</span>
+                  <span className="text-[11px] text-white/20">N/A</span>
                 ) : (
                   <span className="font-semibold" style={{ color: barColor }}>
                     {value > 0 ? '+' : ''}{value.toFixed(0)}/{max}
@@ -135,7 +134,7 @@ export default function VEDirectionalCompass({ dir, missingInputs = [] }: { dir:
       {dir.componentDetails.length > 0 && (
         <div className="mt-3 space-y-0.5 border-t border-white/10 pt-2">
           {dir.componentDetails.slice(0, 3).map((d, i) => (
-            <p key={i} className="text-[0.6rem] text-white/40">{d}</p>
+            <p key={i} className="text-[11px] text-white/40">{d}</p>
           ))}
         </div>
       )}

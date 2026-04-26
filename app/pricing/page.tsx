@@ -125,7 +125,7 @@ export default function PricingPage() {
     {
       id: "pro",
       name: "Pro",
-      tagline: "Full scanning, market intelligence, and portfolio analytics for active traders.",
+      tagline: "Full scanning, market intelligence, and portfolio analytics for structured research.",
       priceMonthly: 25,
       priceYearly: 225,
       cta: "Upgrade to Pro",
@@ -166,11 +166,11 @@ export default function PricingPage() {
     {
       id: "pro_trader",
       name: "Pro Trader",
-      tagline: "Professional workflow with backtesting, derivatives, and decision engine.",
+      tagline: "Advanced workflow with backtesting, derivatives, and scenario analysis.",
       priceMonthly: 50,
       priceYearly: 550,
       cta: "Upgrade to Pro Trader",
-      subCta: "Advanced tools for serious traders.",
+      subCta: "Advanced tools for serious market research.",
       badge: "Best Value",
       includes: [
         "Everything in Pro, plus:",
@@ -192,7 +192,7 @@ export default function PricingPage() {
   const faqs: FAQ[] = [
     {
       q: "What is ARCA AI Analyst?",
-      a: "ARCA AI Analyst is your analytical copilot. It turns scans + context into structured bias, rotation, volatility warnings, and scenario analysis. Free gets 10 questions/day (GPT-4o-mini), Pro gets 50/day (GPT-4o-mini), Pro Trader gets 50/day powered by GPT-4.1 for professional-level analysis.",
+      a: "ARCA AI Analyst is your analytical copilot. It turns scans and context into structured bias, rotation, volatility warnings, and educational scenario analysis. Free gets 10 questions/day (GPT-4o-mini), Pro gets 50/day (GPT-4o-mini), Pro Trader gets 50/day powered by GPT-4.1 for deeper analysis.",
     },
     {
       q: "What's the difference between Pro and Pro Trader?",
@@ -230,8 +230,8 @@ export default function PricingPage() {
 
         {/* Referral banner */}
         {referralCode && (
-          <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-center text-sm text-emerald-300">
-            🎁 You were referred! Get <strong>$5 off Pro or $10 off Pro Trader</strong> when you subscribe.
+          <div className="mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-center text-sm text-emerald-300">
+            Referral applied: get <strong>$5 off Pro or $10 off Pro Trader</strong> when you subscribe.
           </div>
         )}
 
@@ -243,7 +243,7 @@ export default function PricingPage() {
 
           <h1 className="mt-4 text-3xl font-semibold tracking-tight">Simple, Transparent Pricing</h1>
           <p className="mx-auto mt-2 max-w-2xl text-sm text-white/60">
-            Start free. Upgrade when you’re ready for advanced scanning, intelligence, and decision workflows.
+            Start free. Upgrade when you’re ready for advanced scanning, intelligence, and research workflows.
           </p>
 
           <div className="mt-6 flex items-center justify-center gap-3">
@@ -251,18 +251,18 @@ export default function PricingPage() {
             <BillingSwitch cycle={cycle} onToggle={() => setCycle((c) => (c === "monthly" ? "yearly" : "monthly"))} />
             <span className={`text-xs ${cycle === "yearly" ? "text-white" : "text-white/50"}`}>
               Yearly{" "}
-              <span className="ml-2 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-white/70">
+              <span className="ml-2 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] text-white/70">
                 Save more yearly
               </span>
             </span>
           </div>
 
-          <div className="mx-auto mt-6 max-w-3xl rounded-2xl border border-white/10 bg-gradient-to-b from-white/10 to-white/5 p-3">
+          <div className="mx-auto mt-6 max-w-3xl rounded-lg border border-white/10 bg-white/[0.04] p-3">
             <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-white/70">
-              <span>✅ Cancel anytime</span>
-              <span>✅ Secure checkout</span>
-              <span>✅ Educational tool (not advice)</span>
-              <span>✅ Priority support on paid tiers</span>
+              <span>Cancel anytime</span>
+              <span>Secure checkout</span>
+              <span>Educational tool, not advice</span>
+              <span>Priority support on paid tiers</span>
             </div>
           </div>
         </header>
@@ -304,12 +304,12 @@ export default function PricingPage() {
           </div>
         </section>
 
-        <div className="mx-auto mt-10 max-w-3xl rounded-2xl border border-white/10 bg-white/5 p-4">
+        <div className="mx-auto mt-10 max-w-3xl rounded-lg border border-white/10 bg-white/[0.04] p-4">
           <div className="text-xs text-white/60">Disclaimer</div>
           <p className="mt-2 text-xs text-white/70">
             MarketScanner Pros is an educational and informational tool. It is not investment advice and should not be
-            construed as such. Past performance does not guarantee future results. Trading involves substantial risk of
-            loss. Consult a licensed financial advisor before making investment decisions.
+            construed as such. Past performance does not guarantee future results. Market participation involves risk.
+            Consult a licensed financial advisor before making investment decisions.
           </p>
         </div>
       </div>
@@ -336,15 +336,15 @@ function PlanCard({
   return (
     <div
       className={[
-        "relative rounded-3xl border p-5",
+        "relative rounded-lg border p-5",
         plan.highlight
-          ? "border-white/25 bg-gradient-to-b from-white/12 to-white/6 shadow-[0_0_0_1px_rgba(255,255,255,0.06)]"
-          : "border-white/10 bg-white/5",
+          ? "border-emerald-500/35 bg-emerald-500/[0.06] shadow-[0_0_0_1px_rgba(16,185,129,0.08)]"
+          : "border-white/10 bg-white/[0.04]",
       ].join(" ")}
     >
       {plan.badge ? (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-          <span className="inline-flex items-center rounded-full border border-white/10 bg-white/10 px-3 py-1 text-[11px] font-semibold text-white/80">
+          <span className="inline-flex items-center rounded-full border border-white/10 bg-slate-950 px-3 py-1 text-[11px] font-semibold text-white/80">
             {plan.badge}
           </span>
         </div>
@@ -357,7 +357,7 @@ function PlanCard({
         </div>
 
         {savingsText && cycle === "yearly" ? (
-          <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] text-white/70">
+          <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-white/70">
             {savingsText}
           </span>
         ) : null}
@@ -416,7 +416,7 @@ function PlanCard({
           onClick={onCheckout}
           disabled={loading}
           className={[
-            "w-full rounded-2xl px-4 py-3 text-sm font-semibold transition",
+            "w-full rounded-lg px-4 py-3 text-sm font-semibold transition-colors",
             plan.highlight
               ? "border border-white/15 bg-white/15 hover:bg-white/20"
               : "border border-white/10 bg-white/10 hover:bg-white/20",
@@ -435,6 +435,7 @@ function BillingSwitch({ cycle, onToggle }: { cycle: BillingCycle; onToggle: () 
   const on = cycle === "yearly";
   return (
     <button
+      type="button"
       onClick={onToggle}
       className="relative inline-flex h-7 w-14 items-center rounded-full border border-white/10 bg-white/5 p-1"
       aria-label="Toggle billing cycle"
@@ -451,9 +452,11 @@ function BillingSwitch({ cycle, onToggle }: { cycle: BillingCycle; onToggle: () 
 
 function FaqItem({ faq, open, onToggle }: { faq: FAQ; open: boolean; onToggle: () => void }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5">
+    <div className="rounded-lg border border-white/10 bg-white/[0.04]">
       <button
+        type="button"
         onClick={onToggle}
+        aria-expanded={open}
         className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left"
       >
         <div className="text-sm font-semibold">{faq.q}</div>

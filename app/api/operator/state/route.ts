@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
+import { isOperator } from '@/lib/quant/operatorAuth';
 
 type OperatorPulsePayload = {
   current_focus?: string;
@@ -23,6 +24,9 @@ export async function GET() {
     const session = await getSessionFromCookie();
     if (!session?.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (!isOperator(session.cid, session.workspaceId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const rows = await q(
@@ -57,6 +61,9 @@ export async function POST(req: NextRequest) {
     const session = await getSessionFromCookie();
     if (!session?.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (!isOperator(session.cid, session.workspaceId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const body = (await req.json()) as OperatorPulsePayload;

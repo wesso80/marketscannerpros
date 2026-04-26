@@ -15,8 +15,8 @@ export default function UpgradeGate({ requiredTier, feature, children }: Upgrade
   
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-5 py-10">
-      <div className="msp-card w-full max-w-[480px] rounded-[20px] px-5 py-8 text-center sm:px-10 sm:py-12">
-        <div style={{ fontSize: "56px", marginBottom: "20px" }}>🔒</div>
+      <div className="msp-card w-full max-w-[480px] rounded-lg px-5 py-8 text-center sm:px-10 sm:py-12">
+        <div className="mx-auto mb-5 h-12 w-12 rounded-full border border-msp-borderStrong bg-msp-panel" aria-hidden="true" />
         
         <h2 style={{
           fontSize: "26px",
@@ -50,7 +50,7 @@ export default function UpgradeGate({ requiredTier, feature, children }: Upgrade
 
         <Link
           href="/pricing"
-          className="inline-block rounded-full border border-msp-borderStrong bg-msp-accent px-8 py-3.5 text-base font-semibold text-[#061018] no-underline"
+          className="inline-block rounded-lg border border-msp-borderStrong bg-msp-accent px-8 py-3.5 text-base font-semibold text-[#061018] no-underline"
         >
           Upgrade to {tierName}
         </Link>

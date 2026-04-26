@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
+import { isOperator } from '@/lib/quant/operatorAuth';
 import {
   evaluateAdaptiveReality,
   mapUserModeToIntentMode,
@@ -49,6 +50,9 @@ export async function GET() {
     const session = await getSessionFromCookie();
     if (!session?.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (!isOperator(session.cid, session.workspaceId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const [

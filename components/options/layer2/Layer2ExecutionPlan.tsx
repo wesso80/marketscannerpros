@@ -19,7 +19,7 @@ export default function Layer2ExecutionPlan(props: Layer2ExecutionPlanProps) {
           <div className="flex items-end justify-between gap-3">
             <div>
               <div className="text-sm font-semibold text-slate-100">Confluence Engine</div>
-              <div className="text-xs text-slate-400">Signal alignment → trade quality</div>
+              <div className="text-xs text-slate-400">Signal alignment to scenario quality</div>
             </div>
           </div>
           <SetupCard setup={props.setup} compact={props.viewMode === 'compact'} />
@@ -28,8 +28,8 @@ export default function Layer2ExecutionPlan(props: Layer2ExecutionPlanProps) {
         <div className="space-y-3">
           <div className="flex items-end justify-between gap-3">
             <div>
-              <div className="text-sm font-semibold text-slate-100">Execution</div>
-              <div className="text-xs text-slate-400">Only what you need to place a trade</div>
+              <div className="text-sm font-semibold text-slate-100">Scenario Notes</div>
+              <div className="text-xs text-slate-400">Reference levels for paper research</div>
             </div>
           </div>
           <ExecutionPlanCard

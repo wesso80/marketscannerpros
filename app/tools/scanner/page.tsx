@@ -18,6 +18,7 @@ import ScreenerTable, { type ScreenerRow } from '@/components/scanner/ScreenerTa
 import ScanTemplatesBar, { type ScanTemplate, SCAN_TEMPLATES } from '@/components/scanner/ScanTemplatesBar';
 import { useRegisterPageData } from '@/lib/ai/pageContext';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
+import { saveResearchCase } from '@/lib/clientResearchCases';
 
 /* ─── Helpers ─── */
 function dirColor(d?: string) {
@@ -128,6 +129,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
   assetType: string;
 }) {
   const [flashMsg, setFlashMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [savingCase, setSavingCase] = useState(false);
 
   const direction = detail.direction || 'neutral';
   const confidence = detail.confidence ?? Math.min(99, Math.max(10, Math.round(detail.score)));
@@ -177,6 +179,64 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
     setTimeout(() => setFlashMsg(null), 3000);
   };
 
+  const handleSaveCase = async () => {
+    try {
+      setSavingCase(true);
+      await saveResearchCase({
+        sourceType: 'scanner-detail',
+        title: `${detail.symbol} scanner research case`,
+        researchCase: {
+          symbol: detail.symbol,
+          assetClass: assetType,
+          sourceType: 'scanner-detail',
+          generatedAt: new Date().toISOString(),
+          dataQuality: detail.price != null && detail.rsi != null && detail.adx != null ? 'GOOD' : 'DEGRADED',
+          title: `${detail.symbol} scanner research case`,
+          thesis: `${detail.symbol} shows ${quality.toLowerCase()} scanner alignment on ${timeframeLabel}.`,
+          setup: { direction, quality, confidence, regime, timeframe: timeframeLabel },
+          truthLayer: {
+            whatWeKnow: [
+              `Scanner score is ${detail.score}.`,
+              `Observed direction is ${direction}.`,
+              `Confidence reading is ${confidence}%.`,
+            ],
+            whatWeDoNotKnow: [
+              detail.price == null ? 'reference price' : null,
+              detail.rsi == null ? 'RSI' : null,
+              detail.adx == null ? 'ADX' : null,
+            ].filter(Boolean),
+            dataQuality: detail.price != null && detail.rsi != null && detail.adx != null ? 'GOOD' : 'DEGRADED',
+            riskFlags: blockReasons,
+            invalidation: stop != null ? `Scenario invalidation reference: ${stop.toFixed(2)}` : 'Scenario invalidation reference unavailable',
+            nextUsefulCheck: 'Refresh scanner data and review whether technical alignment improves or weakens.',
+            disclaimer: 'Educational market research only. Not financial advice.',
+          },
+          scenarioPlan: {
+            referenceLevel: entry,
+            invalidationLevel: stop,
+            reactionZones: [target1, target2].filter((value) => value != null),
+            hypotheticalRr: rr,
+          },
+          technicals: {
+            price: detail.price,
+            rsi: detail.rsi,
+            adx: detail.adx,
+            atr: detail.atr,
+            volume: detail.volume,
+            signals: detail.signals,
+          },
+          disclaimer: 'Educational market research only. This is not financial advice and is not a recommendation to buy, sell, hold, or rebalance any financial product.',
+        },
+      });
+      setFlashMsg({ text: 'Research case saved', type: 'success' });
+    } catch (e: any) {
+      setFlashMsg({ text: e?.message || 'Unable to save research case', type: 'error' });
+    } finally {
+      setSavingCase(false);
+      setTimeout(() => setFlashMsg(null), 3000);
+    }
+  };
+
   return (
     <div className="space-y-4 mt-4">
       {flashMsg && (
@@ -188,9 +248,13 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
 
       {/* Action buttons */}
       <div className="flex items-center justify-end gap-2">
-        <Link href={`/tools/journal?prefill=true&symbol=${encodeURIComponent(detail.symbol)}&side=${direction === 'bullish' ? 'LONG' : direction === 'bearish' ? 'SHORT' : 'LONG'}&entryPrice=${entry != null ? entry.toFixed(2) : ''}&strategy=Scanner&setup=${encodeURIComponent(`${detail.symbol} ${direction} — ${quality} quality, ${confidence}% confluence`)}&notes=${encodeURIComponent(`Scanner analysis notes\nLevel of Interest: ${entry != null ? entry.toFixed(2) : 'N/A'} | Invalidation: ${stop != null ? stop.toFixed(2) : 'N/A'} | Key Level 1: ${target1 != null ? target1.toFixed(2) : 'N/A'} | Key Level 2: ${target2 != null ? target2.toFixed(2) : 'N/A'}\nR:R ${rr != null ? rr.toFixed(1) : 'N/A'} | RSI: ${detail.rsi != null ? detail.rsi.toFixed(1) : 'N/A'} | ADX: ${adx.toFixed(1)}`)}`}
+        <button type="button" onClick={handleSaveCase} disabled={savingCase}
+          className="rounded-md border border-blue-500/40 bg-blue-500/10 px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-blue-300 hover:bg-blue-500/20 disabled:cursor-wait disabled:opacity-70">
+          {savingCase ? 'Saving...' : 'Save Case'}
+        </button>
+        <Link href={`/tools/journal?prefill=true&symbol=${encodeURIComponent(detail.symbol)}&side=${direction === 'bullish' ? 'LONG' : direction === 'bearish' ? 'SHORT' : 'LONG'}&entryPrice=${entry != null ? entry.toFixed(2) : ''}&strategy=Scanner&setup=${encodeURIComponent(`${detail.symbol} ${direction} — ${quality} quality, ${confidence}% confluence`)}&notes=${encodeURIComponent(`Scanner analysis notes\nLevel of Interest: ${entry != null ? entry.toFixed(2) : 'N/A'} | Invalidation: ${stop != null ? stop.toFixed(2) : 'N/A'} | Reaction Zone 1: ${target1 != null ? target1.toFixed(2) : 'N/A'} | Reaction Zone 2: ${target2 != null ? target2.toFixed(2) : 'N/A'}\nHypothetical R:R ${rr != null ? rr.toFixed(1) : 'N/A'} | RSI: ${detail.rsi != null ? detail.rsi.toFixed(1) : 'N/A'} | ADX: ${adx.toFixed(1)}`)}`}
           className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-emerald-400 no-underline hover:bg-emerald-500/20 transition-colors">
-          Log to Journal
+          Save Research Note
         </Link>
         <Link href={`/tools/workspace?tab=Backtest&symbol=${encodeURIComponent(detail.symbol)}`}
           className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-slate-400 no-underline hover:bg-slate-700/50 transition-colors">
@@ -295,9 +359,9 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
             <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5 text-[0.74rem] text-slate-400">
               <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Key Levels (Educational)</div>
               <div>Invalidation: <span className="font-bold text-red-400">{stop != null ? stop.toFixed(2) : 'N/A'}</span></div>
-              <div>Level 1: <span className="font-bold text-emerald-400">{target1 != null ? target1.toFixed(2) : 'N/A'}</span></div>
-              <div>Level 2: <span className="font-bold text-emerald-400">{target2 != null ? target2.toFixed(2) : 'N/A'}</span></div>
-              <div>R:R: <span className={`font-bold ${rr != null && rr >= 1.8 ? 'text-emerald-400' : 'text-amber-400'}`}>{rr != null ? rr.toFixed(1) : 'N/A'}</span></div>
+              <div>Reaction Zone 1: <span className="font-bold text-emerald-400">{target1 != null ? target1.toFixed(2) : 'N/A'}</span></div>
+              <div>Reaction Zone 2: <span className="font-bold text-emerald-400">{target2 != null ? target2.toFixed(2) : 'N/A'}</span></div>
+              <div>Hypothetical R:R: <span className={`font-bold ${rr != null && rr >= 1.8 ? 'text-emerald-400' : 'text-amber-400'}`}>{rr != null ? rr.toFixed(1) : 'N/A'}</span></div>
             </div>
             <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5 text-[0.74rem] text-slate-400">
               <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Analysis Notes</div>
@@ -307,9 +371,9 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
 
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-2">
-              <Link href={`/tools/journal?prefill=true&symbol=${encodeURIComponent(detail.symbol)}&side=${direction === 'bullish' ? 'LONG' : direction === 'bearish' ? 'SHORT' : 'LONG'}&entryPrice=${entry != null ? entry.toFixed(2) : ''}&strategy=Scanner&setup=${encodeURIComponent(`${detail.symbol} ${direction} — ${quality} quality, ${confidence}% confluence`)}&notes=${encodeURIComponent(`Scanner analysis notes\nLevel of Interest: ${entry != null ? entry.toFixed(2) : 'N/A'} | Invalidation: ${stop != null ? stop.toFixed(2) : 'N/A'} | Key Level 1: ${target1 != null ? target1.toFixed(2) : 'N/A'} | Key Level 2: ${target2 != null ? target2.toFixed(2) : 'N/A'}\nR:R ${rr != null ? rr.toFixed(1) : 'N/A'} | RSI: ${detail.rsi != null ? detail.rsi.toFixed(1) : 'N/A'} | ADX: ${adx.toFixed(1)}`)}`}
+              <Link href={`/tools/journal?prefill=true&symbol=${encodeURIComponent(detail.symbol)}&side=${direction === 'bullish' ? 'LONG' : direction === 'bearish' ? 'SHORT' : 'LONG'}&entryPrice=${entry != null ? entry.toFixed(2) : ''}&strategy=Scanner&setup=${encodeURIComponent(`${detail.symbol} ${direction} — ${quality} quality, ${confidence}% confluence`)}&notes=${encodeURIComponent(`Scanner analysis notes\nLevel of Interest: ${entry != null ? entry.toFixed(2) : 'N/A'} | Invalidation: ${stop != null ? stop.toFixed(2) : 'N/A'} | Reaction Zone 1: ${target1 != null ? target1.toFixed(2) : 'N/A'} | Reaction Zone 2: ${target2 != null ? target2.toFixed(2) : 'N/A'}\nHypothetical R:R ${rr != null ? rr.toFixed(1) : 'N/A'} | RSI: ${detail.rsi != null ? detail.rsi.toFixed(1) : 'N/A'} | ADX: ${adx.toFixed(1)}`)}`}
                 className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-emerald-400 no-underline hover:bg-emerald-500/20 transition-colors">
-                Log to Journal
+                Save Research Note
               </Link>
               <Link href={`/tools/alerts?symbol=${encodeURIComponent(detail.symbol)}&price=${detail.price || ''}&direction=${direction}`}
                 className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-slate-400 no-underline hover:bg-slate-700/50 transition-colors">

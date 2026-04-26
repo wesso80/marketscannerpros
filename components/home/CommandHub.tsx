@@ -13,20 +13,20 @@ const featuredTools = [
     icon: '📊',
     image: '/assets/scanners/multi-market-scanner.png',
     title: 'Market Scanner',
-    description: 'Scan equities, crypto, and forex with structured filters across all markets.',
-    gradient: 'from-emerald-500/20 to-emerald-900/10',
+    description: 'Review equities, crypto, and forex with structured filters across all markets.',
+    gradient: 'from-slate-800/70 to-slate-950/40',
     border: 'border-emerald-500/30',
-    glow: 'hover:shadow-[0_0_20px_rgba(16,185,129,.35)]',
+    glow: 'hover:border-emerald-500/45',
   },
   {
     href: '/tools/golden-egg',
     icon: '🥚',
     image: '/assets/scanners/golden-egg.png',
     title: 'Golden Egg',
-    description: 'Deep conviction scoring with evidence layering and narrative alignment.',
-    gradient: 'from-amber-500/20 to-amber-900/10',
+    description: 'Evidence-layered scenario scoring with narrative and data-quality context.',
+    gradient: 'from-slate-800/70 to-slate-950/40',
     border: 'border-amber-500/30',
-    glow: 'hover:shadow-[0_0_20px_rgba(245,158,11,.35)]',
+    glow: 'hover:border-amber-500/45',
   },
 ];
 
@@ -37,10 +37,10 @@ const v2Surfaces = [
     icon: '🧭',
     image: '/assets/platform-tools/operator-dashboard.png',
     title: 'Command Center',
-    description: 'Unified dashboard with market overview, regime context, and real-time signal flow.',
-    gradient: 'from-emerald-500/20 to-emerald-900/10',
+    description: 'Unified dashboard with market overview, regime context, and live research flow.',
+    gradient: 'from-slate-800/70 to-slate-950/40',
     border: 'border-emerald-500/30',
-    glow: 'hover:shadow-[0_0_20px_rgba(16,185,129,.35)]',
+    glow: 'hover:border-emerald-500/45',
   },
   {
     href: '/tools/terminal',
@@ -48,19 +48,19 @@ const v2Surfaces = [
     image: '/assets/platform-tools/crypto-command.png',
     title: 'Terminal',
     description: 'Advanced charting, session analysis, and multi-asset analytical surface.',
-    gradient: 'from-cyan-500/20 to-cyan-900/10',
+    gradient: 'from-slate-800/70 to-slate-950/40',
     border: 'border-cyan-500/30',
-    glow: 'hover:shadow-[0_0_20px_rgba(6,182,212,.35)]',
+    glow: 'hover:border-cyan-500/45',
   },
   {
     href: '/tools/explorer',
     icon: '🔍',
     image: '/assets/platform-tools/equity-explorer.png',
     title: 'Market Explorer',
-    description: 'Deep-dive into any asset with fundamentals, technicals, and on-chain data.',
-    gradient: 'from-violet-500/20 to-violet-900/10',
+    description: 'Research assets with fundamentals, technicals, and on-chain data where available.',
+    gradient: 'from-slate-800/70 to-slate-950/40',
     border: 'border-violet-500/30',
-    glow: 'hover:shadow-[0_0_20px_rgba(139,92,246,.35)]',
+    glow: 'hover:border-violet-500/45',
   },
   {
     href: '/tools/research',
@@ -68,9 +68,9 @@ const v2Surfaces = [
     image: '/assets/platform-tools/news-sentiment.png',
     title: 'Research',
     description: 'News, sentiment, macro data, earnings, and commodities in one research hub.',
-    gradient: 'from-blue-500/20 to-blue-900/10',
+    gradient: 'from-slate-800/70 to-slate-950/40',
     border: 'border-blue-500/30',
-    glow: 'hover:shadow-[0_0_20px_rgba(59,130,246,.35)]',
+    glow: 'hover:border-blue-500/45',
   },
   {
     href: '/tools/workspace',
@@ -78,16 +78,15 @@ const v2Surfaces = [
     image: '/assets/platform-tools/portfolio.png',
     title: 'Workspace',
     description: 'Watchlists, journal, portfolio, alerts, and settings — all in one place.',
-    gradient: 'from-rose-500/20 to-rose-900/10',
+    gradient: 'from-slate-800/70 to-slate-950/40',
     border: 'border-rose-500/30',
-    glow: 'hover:shadow-[0_0_20px_rgba(244,63,94,.35)]',
+    glow: 'hover:border-rose-500/45',
   },
 ];
 
 /* ─── Featured tile component ─── */
 function FeaturedTile({
   href,
-  icon,
   image,
   title,
   description,
@@ -96,7 +95,6 @@ function FeaturedTile({
   glow,
 }: {
   href: string;
-  icon: string;
   image: string;
   title: string;
   description: string;
@@ -107,16 +105,15 @@ function FeaturedTile({
   return (
     <Link
       href={href}
-      className={`group relative flex flex-col overflow-hidden rounded-2xl border ${border} bg-gradient-to-br ${gradient} transition-all duration-200 hover:scale-[1.02] hover:shadow-xl ${glow}`}
+      className={`group relative flex flex-col overflow-hidden rounded-lg border ${border} bg-slate-950/40 transition-colors duration-200 ${glow}`}
     >
       {/* Image hero */}
       <div className="relative h-48 w-full overflow-hidden bg-slate-950/40">
         <img
           src={image}
           alt={title}
-          className="h-full w-full object-contain object-center p-1 transition-transform duration-300 group-hover:scale-105"
+          className="h-full w-full object-contain object-center p-1"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent" />
       </div>
       {/* Content */}
       <div className="flex flex-1 flex-col justify-between p-5">
@@ -140,10 +137,10 @@ export default function CommandHub() {
       <Hero />
 
       {/* ─── Referral Promo ─── */}
-      <section className="border-b border-white/5 bg-gradient-to-r from-emerald-950/30 via-slate-950/60 to-emerald-950/30">
+      <section className="border-b border-white/5 bg-slate-950/70">
         <div className="mx-auto flex max-w-5xl flex-col items-center gap-2 px-4 py-5 text-center sm:flex-row sm:justify-center sm:gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-xl">🎁</span>
+            <span className="h-2 w-2 rounded-full bg-emerald-400" aria-hidden="true" />
             <span className="text-sm font-semibold text-emerald-400 sm:text-base">
               Refer a Friend, Save on Your Plan
             </span>
@@ -183,17 +180,12 @@ export default function CommandHub() {
 
       {/* ─── ARCxA Intelligence Engine (rewritten) ─── */}
       <section className="relative overflow-hidden border-b border-white/5">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/[0.05] blur-3xl" />
-        </div>
-
         <div className="relative mx-auto flex max-w-4xl flex-col items-center px-4 py-10 text-center md:py-14">
           <div className="relative mb-4">
-            <div className="absolute -inset-3 animate-pulse rounded-full bg-emerald-500/10 blur-xl" />
             <img
               src="/logos/arcxa-chip.png"
               alt="ARCxA Intelligence Engine"
-              className="relative h-16 w-auto rounded-lg drop-shadow-[0_0_30px_rgba(16,185,129,0.4)] md:h-20"
+              className="relative h-16 w-auto rounded-lg md:h-20"
               loading="lazy"
             />
           </div>
@@ -204,8 +196,8 @@ export default function CommandHub() {
 
           <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-slate-400 md:text-base">
             Our AI engine analyzes 10,000+ assets across multiple timeframes to identify
-            technically aligned setups — combining scanner data, options flow,
-            and market structure so you don&apos;t have to.
+            technically aligned scenarios, combining scanner data, options flow,
+            and market structure for educational research context.
           </p>
 
           <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-xs text-slate-500">
@@ -239,17 +231,17 @@ export default function CommandHub() {
       </div>
 
       {/* ─── Bottom CTA ─── */}
-      <section className="border-t border-white/5 bg-gradient-to-b from-slate-950 to-[var(--msp-bg)]">
+      <section className="border-t border-white/5 bg-slate-950/80">
         <div className="mx-auto flex max-w-2xl flex-col items-center px-4 py-14 text-center md:py-20">
           <h2 className="text-2xl font-bold text-white md:text-3xl">
             Ready to explore the markets?
           </h2>
           <p className="mt-3 text-sm text-slate-400 md:text-base">
-            Join traders using professional scanning to find technically aligned setups faster.
+            Use structured market research to review technically aligned scenarios faster.
           </p>
           <Link
             href="/pricing"
-            className="mt-8 inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-8 py-3.5 text-base font-bold text-white shadow-lg shadow-emerald-500/25 transition-all hover:bg-emerald-400 hover:shadow-emerald-500/40 hover:scale-[1.02] active:scale-[0.98]"
+            className="mt-8 inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-8 py-3.5 text-base font-bold text-white shadow-lg shadow-emerald-500/20 transition-colors hover:bg-emerald-400 active:bg-emerald-500"
           >
             Get Started Free
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>

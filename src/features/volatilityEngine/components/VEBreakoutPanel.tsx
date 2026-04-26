@@ -40,7 +40,6 @@ export default function VEBreakoutPanel({ breakout, missingInputs = [] }: { brea
     <div className="rounded-xl border border-white/10 bg-white/5 p-5">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-base">🎯</span>
           <h3 className="text-xs font-semibold uppercase tracking-widest text-amber-400">
             Breakout Readiness
           </h3>
@@ -48,13 +47,13 @@ export default function VEBreakoutPanel({ breakout, missingInputs = [] }: { brea
         <div className="flex items-center gap-3">
           <div className="text-right">
             <span className="text-xl font-black" style={{ color }}>{total.toFixed(0)}</span>
-            <span className="text-[0.6rem] text-white/30">/100</span>
+            <span className="text-[11px] text-white/30">/100</span>
           </div>
           <div className="flex flex-col items-center">
-            <span className="rounded-full px-2 py-0.5 text-[0.6rem] font-bold uppercase" style={{ background: color + '22', color }}>
+            <span className="rounded-full px-2 py-0.5 text-[11px] font-bold uppercase" style={{ background: color + '22', color }}>
               {breakout.label}
             </span>
-            <span className="mt-0.5 text-[0.6rem] font-semibold" style={{ color: probColor }}>
+            <span className="mt-0.5 text-[11px] font-semibold" style={{ color: probColor }}>
               {probability.toFixed(0)}% prob
             </span>
           </div>
@@ -68,10 +67,10 @@ export default function VEBreakoutPanel({ breakout, missingInputs = [] }: { brea
           const pct = isNA ? 0 : max > 0 ? Math.min(100, (value / max) * 100) : 0;
           return (
             <div key={key} className="space-y-0.5">
-              <div className="flex items-center justify-between text-[0.65rem]">
+              <div className="flex items-center justify-between text-[11px]">
                 <span className={isNA ? 'text-white/25' : 'text-white/60'}>{label}</span>
                 {isNA ? (
-                  <span className="text-[0.6rem] text-white/20">N/A</span>
+                  <span className="text-[11px] text-white/20">N/A</span>
                 ) : (
                   <span className="font-semibold text-white/80">{value.toFixed(0)}/{max}</span>
                 )}
@@ -89,7 +88,7 @@ export default function VEBreakoutPanel({ breakout, missingInputs = [] }: { brea
       {breakout.componentDetails.length > 0 && (
         <div className="mt-3 space-y-0.5 border-t border-white/10 pt-2">
           {breakout.componentDetails.slice(0, 3).map((d, i) => (
-            <p key={i} className="text-[0.6rem] text-white/40">{d}</p>
+            <p key={i} className="text-[11px] text-white/40">{d}</p>
           ))}
         </div>
       )}

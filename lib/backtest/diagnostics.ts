@@ -133,7 +133,7 @@ export function buildBacktestDiagnostics(
     ? `Edge is stable on ${timeframe} with score ${score}/100. Maintain current rule set and monitor drift.`
     : verdict === 'invalidated'
     ? `Edge is invalidated on ${timeframe}. Prioritize the top adjustments before deploying.`
-    : `Edge is borderline on ${timeframe} with score ${score}/100. Tighten rules before execution.`;
+    : `Edge is borderline on ${timeframe} with score ${score}/100. Tighten rules before scenario escalation.`;
 
   return {
     score,

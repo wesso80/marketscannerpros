@@ -31,11 +31,11 @@ function todayKeyUTC(): string {
 }
 
 function getScoreBias(score: number): { bias: string; stance: string } {
-  if (score >= 80) return { bias: "Bullish", stance: "Bullish Continuation" };
-  if (score >= 70) return { bias: "Bullish-Leaning", stance: "Constructive – Favor Longs" };
-  if (score >= 55) return { bias: "Neutral", stance: "Range Rotation – Wait for Clarity" };
-  if (score >= 40) return { bias: "Bearish-Leaning", stance: "Cautious – Reduce Exposure" };
-  return { bias: "Bearish", stance: "Risk-Off – Defensive Positioning" };
+  if (score >= 80) return { bias: "Bullish", stance: "Bullish continuation conditions" };
+  if (score >= 70) return { bias: "Bullish-Leaning", stance: "Constructive bullish scenario" };
+  if (score >= 55) return { bias: "Neutral", stance: "Range rotation observation" };
+  if (score >= 40) return { bias: "Bearish-Leaning", stance: "Cautious bearish scenario" };
+  return { bias: "Bearish", stance: "Risk-off conditions observed" };
 }
 
 function buildMSPPrompt(c: Candidate): string {
@@ -53,7 +53,7 @@ BIAS LOCK: Score ${c.score} = ${bias.toUpperCase()}. Do NOT contradict this.
 
 OUTPUT (exactly this format, ~80 words max):
 
-**Trade Stance:** ${stance}
+**Scenario Stance:** ${stance}
 
 **Summary:** [1 sentence stating the ${biasWord} bias and primary driver.]
 
@@ -63,9 +63,9 @@ OUTPUT (exactly this format, ~80 words max):
 - Support: ${c.keyLevels?.support ?? "N/A"} – break invalidates ${biasWord} thesis
 - Resistance: ${c.keyLevels?.resistance ?? "N/A"} – clear to accelerate move
 
-**Risk:** [1 sentence: entry guidance + "A break below/above X invalidates the ${biasWord} thesis."]
+**Risk:** [1 sentence: reference condition + "A break below/above X invalidates the ${biasWord} thesis."]
 
-RULES: No buy/sell advice. No filler. Sound like a desk note, not a tutorial.
+RULES: No buy/sell advice. No entry/exit instructions. No filler. Sound like an educational desk note, not a tutorial.
 `.trim();
 }
 

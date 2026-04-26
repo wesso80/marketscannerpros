@@ -12,7 +12,7 @@ import React from 'react';
 export function Badge({ label, color, small }: { label: string; color: string; small?: boolean }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full font-semibold uppercase tracking-wide ${small ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-1 text-xs'}`}
+      className={`inline-flex items-center rounded-full font-semibold uppercase tracking-wide ${small ? 'px-2 py-0.5 text-[11px]' : 'px-2.5 py-1 text-xs'}`}
       style={{ backgroundColor: color + '22', color, border: `1px solid ${color}44` }}
     >
       {label}
@@ -25,7 +25,7 @@ export function Badge({ label, color, small }: { label: string; color: string; s
 export function Card({ children, className = '', onClick, style }: { children: React.ReactNode; className?: string; onClick?: () => void; style?: React.CSSProperties }) {
   return (
     <div
-      className={`rounded-xl border border-[var(--msp-border)] bg-[var(--msp-card)] p-4 ${onClick ? 'cursor-pointer hover:border-slate-600 transition-colors' : ''} ${className}`}
+      className={`rounded-lg border border-[var(--msp-border)] bg-[var(--msp-card)] p-4 ${onClick ? 'cursor-pointer hover:border-slate-600 transition-colors' : ''} ${className}`}
       onClick={onClick}
       style={style}
     >
@@ -64,9 +64,9 @@ export function ScoreBar({ value, max = 100, color = '#10B981' }: { value: numbe
 export function StatBox({ label, value, color, sub }: { label: string; value: string | number; color?: string; sub?: string }) {
   return (
     <div className="text-center">
-      <div className="text-[10px] uppercase tracking-wider text-[var(--msp-text-faint)] mb-1">{label}</div>
+      <div className="text-[11px] uppercase tracking-wider text-[var(--msp-text-faint)] mb-1">{label}</div>
       <div className="text-[1rem] font-semibold" style={{ color: color || '#fff' }}>{value}</div>
-      {sub && <div className="text-[10px] text-slate-500 mt-0.5">{sub}</div>}
+      {sub && <div className="text-[11px] text-slate-500 mt-0.5">{sub}</div>}
     </div>
   );
 }
@@ -109,7 +109,7 @@ export function TabBar({ tabs, active, onChange }: { tabs: string[]; active: str
 export function AuthPrompt() {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
-      <div className="text-2xl mb-3">🔒</div>
+      <div className="mb-3 h-7 w-7 rounded-full border border-slate-600 bg-slate-900" aria-hidden="true" />
       <div className="text-sm text-white font-semibold mb-1">Sign in required</div>
       <div className="text-xs text-slate-500 mb-4">Log in to access live market data and your workspace.</div>
       <a href="/auth" className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-xs border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors">
@@ -146,8 +146,8 @@ export function UpgradeGate({
         {children}
       </div>
       <div className="absolute inset-0 flex items-center justify-center">
-        <div className="text-center bg-[#101A2A]/95 border border-slate-700/50 rounded-xl px-6 py-5 max-w-sm">
-          <div className="text-2xl mb-2">🔒</div>
+        <div className="text-center bg-[#101A2A]/95 border border-slate-700/50 rounded-lg px-6 py-5 max-w-sm">
+          <div className="mx-auto mb-3 h-7 w-7 rounded-full border border-slate-600 bg-slate-900" aria-hidden="true" />
           <div className="text-sm font-bold text-white mb-1">{feature}</div>
           <div className="text-xs text-slate-400 mb-3">
             This feature requires the <strong style={{ color: tierColor }}>{tierLabel}</strong> plan.

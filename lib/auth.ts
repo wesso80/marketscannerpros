@@ -1,6 +1,7 @@
 // lib/auth.ts
 import crypto from "crypto";
 import { cookies } from "next/headers";
+import { isFreeForAllMode } from '@/lib/entitlements';
 
 if (!process.env.APP_SIGNING_SECRET) {
   throw new Error("APP_SIGNING_SECRET environment variable is required");
@@ -41,7 +42,7 @@ export async function getSessionFromCookie(): Promise<SessionPayload | null> {
     // DEV BYPASS: auto-authenticate as pro_trader for local testing
     if (
       (process.env.NODE_ENV === 'development' && process.env.DEV_AUTH_BYPASS === 'true') ||
-      process.env.FREE_FOR_ALL_MODE === 'true'
+      isFreeForAllMode()
     ) {
       // Use ms_anon cookie (set by middleware) so each browser gets its own workspace
       const anonId = cookieStore.get('ms_anon')?.value || 'anonymous';

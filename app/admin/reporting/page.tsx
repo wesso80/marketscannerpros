@@ -146,7 +146,6 @@ export default function AdminReportingPage() {
 
   const fetchData = useCallback(async () => {
     const secret = sessionStorage.getItem("admin_secret");
-    if (!secret) return;
     try {
       const res = await fetch("/api/admin/reporting", {
         headers: { Authorization: `Bearer ${secret}` },
@@ -172,7 +171,6 @@ export default function AdminReportingPage() {
 
   const doAction = async (body: Record<string, unknown>) => {
     const secret = sessionStorage.getItem("admin_secret");
-    if (!secret) return;
     setActionMsg("");
     try {
       const res = await fetch("/api/admin/reporting", {

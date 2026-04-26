@@ -18,7 +18,7 @@ export default function GECard({ title, rightSlot, children, variant = 'default'
       : 'border-white/5';
 
   return (
-    <section className={`rounded-2xl border bg-slate-900/40 p-4 ${tone}`}>
+    <section className={`rounded-lg border bg-slate-900/40 p-4 ${tone}`}>
       {(title || rightSlot) && (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-white/5 pb-3">
           <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-amber-400">

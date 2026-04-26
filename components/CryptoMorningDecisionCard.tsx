@@ -197,8 +197,8 @@ export default function CryptoMorningDecisionCard() {
       <div className="mb-2 grid gap-2 xl:grid-cols-[1.1fr_1fr]">
         <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Crypto Condition Gate</p>
-            <span className="text-[10px] text-slate-500">{lastUpdate ? lastUpdate.toLocaleTimeString() : 'Loading'}</span>
+            <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Crypto Condition Gate</p>
+            <span className="text-[11px] text-slate-500">{lastUpdate ? lastUpdate.toLocaleTimeString() : 'Loading'}</span>
           </div>
           <div className="mt-1 flex items-center gap-2">
             <span className="text-xl">{conditionBadge(decision.verdict)}</span>
@@ -212,7 +212,7 @@ export default function CryptoMorningDecisionCard() {
           </div>
           <div className="mt-2 grid grid-cols-2 gap-1.5 md:grid-cols-4">
             {decision.subClusters.map((cluster) => (
-              <div key={cluster.name} className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-[10px]">
+              <div key={cluster.name} className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-[11px]">
                 <p className="text-slate-500">{cluster.name}</p>
                 <p className={`font-semibold ${cluster.condition === 'Favorable' ? 'text-emerald-300' : cluster.condition === 'Mixed' ? 'text-amber-300' : 'text-red-300'}`}>{cluster.condition}</p>
               </div>
@@ -221,7 +221,7 @@ export default function CryptoMorningDecisionCard() {
         </div>
 
         <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
-          <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">Environment Breakdown (5 Inputs)</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Environment Breakdown (5 Inputs)</p>
           <div className="mt-1 grid gap-1 text-[11px]">
             <div className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1">
               <span className="text-slate-500">Risk State</span>
@@ -244,7 +244,7 @@ export default function CryptoMorningDecisionCard() {
               <p className="font-semibold text-slate-200">{decision.breadthLabel} ({decision.breadthScore}%)</p>
             </div>
           </div>
-          <div className="mt-2 rounded border border-slate-700 bg-slate-900/70 p-1.5 text-[10px] text-slate-400">
+          <div className="mt-2 rounded border border-slate-700 bg-slate-900/70 p-1.5 text-[11px] text-slate-400">
             Hard Blocks: {decision.hardBlocks.length ? decision.hardBlocks.join(' • ') : 'None'}
           </div>
         </div>

@@ -47,7 +47,6 @@ export default function AdminAIUsagePage() {
 
   const fetchData = async () => {
     const secret = sessionStorage.getItem("admin_secret");
-    if (!secret) return;
 
     try {
       const res = await fetch("/api/admin/ai-usage", {

@@ -97,7 +97,7 @@ export default function DashboardPage() {
       {/* -- Regime Banner ---------------------------------------------- */}
       {regime.data && (
         <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-[var(--msp-panel-2)] border border-[var(--msp-border)] flex-wrap">
-          <span className="text-[10px] uppercase tracking-wider text-slate-500">Market Regime</span>
+          <span className="text-[11px] uppercase tracking-wider text-slate-500">Market Regime</span>
           <Badge
             label={regime.data.regime.replace(/_/g, ' ')}
             color={
@@ -141,7 +141,7 @@ export default function DashboardPage() {
       {dashTab === 'Macro' && (!isPro ? (
         <div>
           <div className="text-xs text-center text-slate-400 bg-slate-800/50 border border-slate-700/30 rounded-lg px-3 py-2 mb-3">
-            🔒 <span className="text-emerald-400 font-semibold">Upgrade to Pro</span> to interact with the Macro Dashboard
+            <span className="text-emerald-400 font-semibold">Pro required:</span> upgrade to interact with the Macro Dashboard
           </div>
           <div className="pointer-events-none select-none"><MacroDashboard /></div>
         </div>
@@ -151,7 +151,7 @@ export default function DashboardPage() {
       {dashTab === 'Command Center' && <>
       {!isPro && (
         <div className="text-xs text-center text-slate-400 bg-slate-800/50 border border-slate-700/30 rounded-lg px-3 py-2">
-          🔒 <span className="text-emerald-400 font-semibold">Upgrade to Pro</span> to interact with the Command Center
+          <span className="text-emerald-400 font-semibold">Pro required:</span> upgrade to interact with the Command Center
         </div>
       )}
       <div className={!isPro ? 'pointer-events-none select-none' : undefined}>
@@ -164,7 +164,7 @@ export default function DashboardPage() {
       <Card>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-white">Top Confluence Now</h3>
-          <button onClick={() => navigateTo('scanner')} className="text-[10px] text-emerald-400 hover:underline">Full Scanner &#x203A;</button>
+          <button onClick={() => navigateTo('scanner')} className="text-[11px] text-emerald-400 hover:underline">Full Scanner &#x203A;</button>
         </div>
         {[...cached.equity, ...cached.crypto].length === 0 ? (
           <div className="text-xs text-slate-500 py-4 text-center">
@@ -175,7 +175,7 @@ export default function DashboardPage() {
             {[...cached.equity.slice(0, 3), ...cached.crypto.slice(0, 2)].map((r: CachedSymbol) => (
               <div key={r.symbol} className="grid grid-cols-[5rem_3rem_1fr_4rem] items-center text-xs py-0.5 cursor-pointer hover:bg-slate-800/40 px-1 rounded" onClick={() => { selectSymbol(r.symbol); navigateTo('golden-egg', r.symbol); }}>
                 <span className="font-semibold text-white">{r.symbol}</span>
-                <span className="text-[10px]" style={{ color: directionColor(r.direction) }}>{r.direction === 'bullish' ? '▲' : r.direction === 'bearish' ? '▼' : '●'} {r.score}</span>
+                <span className="text-[11px]" style={{ color: directionColor(r.direction) }}>{r.direction === 'bullish' ? '▲' : r.direction === 'bearish' ? '▼' : '●'} {r.score}</span>
                 <span className="text-slate-300 text-right font-mono tabular-nums">{fmtPrice(r.price)}</span>
                 <span className={`font-mono text-right tabular-nums ${r.changePct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{r.changePct >= 0 ? '+' : ''}{r.changePct.toFixed(2)}%</span>
               </div>
@@ -191,7 +191,7 @@ export default function DashboardPage() {
           <Card>
             <h3 className="text-sm font-semibold text-white mb-3">Equity Movers</h3>
             <div className="space-y-1">
-              <div className="text-[10px] uppercase text-emerald-500 tracking-wider mb-1">Gainers</div>
+              <div className="mb-1 text-[11px] uppercase tracking-wider text-emerald-500">Gainers</div>
               {eqGainers.length === 0 ? (
                 <div className="text-xs text-slate-500 py-1">No equity data</div>
               ) : eqGainers.map((m: Mover) => (
@@ -201,7 +201,7 @@ export default function DashboardPage() {
                   <span className="text-emerald-400 font-mono text-right tabular-nums">+{m.change_percentage}</span>
                 </div>
               ))}
-              <div className="text-[10px] uppercase text-red-500 tracking-wider mb-1 mt-2">Losers</div>
+              <div className="mb-1 mt-2 text-[11px] uppercase tracking-wider text-red-500">Losers</div>
               {eqLosers.length === 0 ? (
                 <div className="text-xs text-slate-500 py-1">No equity data</div>
               ) : eqLosers.map((m: Mover) => (
@@ -220,7 +220,7 @@ export default function DashboardPage() {
           <Card>
             <h3 className="text-sm font-semibold text-white mb-3">Crypto Movers</h3>
             <div className="space-y-1">
-              <div className="text-[10px] uppercase text-emerald-500 tracking-wider mb-1">Gainers</div>
+              <div className="mb-1 text-[11px] uppercase tracking-wider text-emerald-500">Gainers</div>
               {crGainers.length === 0 ? (
                 <div className="text-xs text-slate-500 py-1">No crypto data</div>
               ) : crGainers.map((m: Mover) => (
@@ -230,7 +230,7 @@ export default function DashboardPage() {
                   <span className="text-emerald-400 font-mono text-right">+{m.change_percentage}</span>
                 </div>
               ))}
-              <div className="text-[10px] uppercase text-red-500 tracking-wider mb-1 mt-2">Losers</div>
+              <div className="mb-1 mt-2 text-[11px] uppercase tracking-wider text-red-500">Losers</div>
               {crLosers.length === 0 ? (
                 <div className="text-xs text-slate-500 py-1">No crypto data</div>
               ) : crLosers.map((m: Mover) => (
@@ -266,7 +266,7 @@ export default function DashboardPage() {
                 ))}
               </div>
             )}
-            <button onClick={() => navigateTo('research')} className="text-[10px] text-emerald-400 hover:underline mt-2 block">Full Calendar ?</button>
+            <button onClick={() => navigateTo('research')} className="mt-2 block text-[11px] text-emerald-400 hover:underline">Full Calendar &#x203A;</button>
           </Card>
         )}
 
@@ -280,7 +280,7 @@ export default function DashboardPage() {
                 <span className="text-slate-500 text-right">{cm.effect}</span>
               </div>
             ))}
-            <button onClick={() => navigateTo('explorer')} className="text-[10px] text-emerald-400 hover:underline mt-1 block">Market Explorer ?</button>
+            <button onClick={() => navigateTo('explorer')} className="mt-1 block text-[11px] text-emerald-400 hover:underline">Market Explorer &#x203A;</button>
           </div>
         </Card>
       </div>
@@ -290,7 +290,7 @@ export default function DashboardPage() {
         <Card>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-white">Latest Headlines</h3>
-            <button onClick={() => navigateTo('research')} className="text-[10px] text-emerald-400 hover:underline">All News ?</button>
+            <button onClick={() => navigateTo('research')} className="text-[11px] text-emerald-400 hover:underline">All News &#x203A;</button>
           </div>
           {articles.length === 0 ? (
             <div className="text-xs text-slate-500 py-4 text-center">No recent news</div>
@@ -330,7 +330,7 @@ export default function DashboardPage() {
         ].filter(Boolean) as string[];
         if (!errs.length) return null;
         return (
-          <details className="text-[10px] text-red-400/40 border border-red-900/20 rounded-lg p-2">
+          <details className="rounded-lg border border-red-900/20 p-2 text-[11px] text-red-400/40">
             <summary className="cursor-pointer hover:text-red-400/60">{errs.length} API issue{errs.length > 1 ? 's' : ''} — click to expand</summary>
             <div className="mt-1 space-y-0.5 pl-3">{errs.map((e, i) => <div key={i}>{e}</div>)}</div>
           </details>

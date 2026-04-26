@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { isFreeForAllMode } from '@/lib/entitlements';
 
 const APP_SIGNING_SECRET = process.env.APP_SIGNING_SECRET!;
 const ONE_DAY = 60 * 60 * 24;
@@ -164,7 +165,7 @@ export async function middleware(req: NextRequest) {
   // ── FFA anonymous workspace isolation ──
   // When FREE_FOR_ALL_MODE is on and user has no session, assign a persistent
   // anonymous ID so each browser gets its own workspace (no shared data).
-  if (process.env.FREE_FOR_ALL_MODE === 'true' && !cookie) {
+  if (isFreeForAllMode() && !cookie) {
     const existing = req.cookies.get('ms_anon')?.value;
     if (!existing) {
       const anonId = crypto.randomUUID();

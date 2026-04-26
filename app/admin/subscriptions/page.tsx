@@ -28,7 +28,6 @@ export default function AdminSubscriptionsPage() {
 
   const fetchSubscriptions = async () => {
     const secret = sessionStorage.getItem("admin_secret");
-    if (!secret) return;
 
     try {
       const res = await fetch("/api/admin/subscriptions", {
@@ -53,7 +52,6 @@ export default function AdminSubscriptionsPage() {
 
   const syncFromStripe = async () => {
     const secret = sessionStorage.getItem("admin_secret");
-    if (!secret) return;
     setSyncing(true);
     setSyncResult("");
     try {

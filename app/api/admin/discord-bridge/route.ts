@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyAdminAuth } from '@/lib/adminAuth';
+import { requireAdmin } from '@/lib/adminAuth';
 import {
   listBridgeChannels,
   updateBridgeChannel,
@@ -11,7 +11,7 @@ export const runtime = 'nodejs';
 
 /** GET — list all bridge channel configs */
 export async function GET(req: NextRequest) {
-  if (!verifyAdminAuth(req)) {
+  if (!(await requireAdmin(req)).ok) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
 
 /** POST — update channel config or test a channel */
 export async function POST(req: NextRequest) {
-  if (!verifyAdminAuth(req)) {
+  if (!(await requireAdmin(req)).ok) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -38,8 +38,8 @@ export async function POST(req: NextRequest) {
     if (webhookUrl && !/^https:\/\/discord\.com\/api\/webhooks\//.test(webhookUrl)) {
       return NextResponse.json({ error: 'Invalid Discord webhook URL' }, { status: 400 });
     }
-    const sent = await testBridgeChannel(channelKey, webhookUrl || undefined);
-    return NextResponse.json({ sent });
+    const result = await testBridgeChannel(channelKey, webhookUrl || undefined);
+    return NextResponse.json(result, { status: result.ok ? 200 : 502 });
   }
 
   if (action === 'update') {

@@ -12,7 +12,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { isOperator, isAdminSecret } from '@/lib/quant/operatorAuth';
+import { isOperator } from '@/lib/quant/operatorAuth';
+import { requireAdmin } from '@/lib/adminAuth';
 import { runScan, createScanEnvelope } from '@/lib/operator/orchestrator';
 import type { ScanRequest, ScanContext } from '@/lib/operator/orchestrator';
 import type { Market } from '@/types/operator';
@@ -58,7 +59,7 @@ const DEFAULT_CONTEXT: ScanContext = {
 
 export async function POST(req: NextRequest) {
   // Auth gate: operators only
-  const adminAuth = isAdminSecret(req.headers.get('authorization'));
+  const adminAuth = (await requireAdmin(req)).ok;
   if (!adminAuth) {
     const session = await getSessionFromCookie();
     if (!session || !isOperator(session.cid, session.workspaceId)) {

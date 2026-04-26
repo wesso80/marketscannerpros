@@ -48,7 +48,7 @@ export default function GETimeframeContext({ setupType, timeframe }: Props) {
   const activeH = horizons.find(h => h.active)!;
 
   return (
-    <div className="rounded-2xl border border-white/5 bg-slate-900/40 p-5">
+    <div className="rounded-lg border border-white/5 bg-slate-900/40 p-5">
       <div className="mb-4 flex items-center gap-2 border-b border-white/5 pb-3">
         <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
         <h2 className="text-sm font-semibold uppercase tracking-wider text-sky-400">Signal Horizon</h2>

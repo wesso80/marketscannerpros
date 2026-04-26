@@ -5,6 +5,8 @@
 **Perspective:** Professional trader, quant strategist, hedge fund analyst, platform architect
 **NOT a UI review** — this evaluates whether the platform provides a real trading edge.
 
+> **Internal-use note:** This audit is intentionally written as a product and trading-intelligence review for MarketScanner Pros operators. It should not be published as public website copy without rewriting direct trading terms such as “entry,” “target,” “stop,” “recommendation,” “permission,” and “what should I trade” into educational, informational, and analytical language.
+
 ---
 
 ## Table of Contents

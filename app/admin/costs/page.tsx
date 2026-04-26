@@ -52,7 +52,6 @@ export default function AdminCostsPage() {
 
   const fetchStats = async () => {
     const secret = sessionStorage.getItem("admin_secret");
-    if (!secret) return;
 
     try {
       const res = await fetch("/api/admin/costs", {

@@ -25,7 +25,6 @@ export default function AdminDeleteRequestsPage() {
 
   const fetchRequests = async () => {
     const secret = sessionStorage.getItem("admin_secret");
-    if (!secret) return;
 
     try {
       const res = await fetch("/api/admin/delete-requests", {
@@ -46,7 +45,6 @@ export default function AdminDeleteRequestsPage() {
 
   const updateStatus = async (id: string, status: string, notes?: string) => {
     const secret = sessionStorage.getItem("admin_secret");
-    if (!secret) return;
 
     setError("");
     setSuccess("");

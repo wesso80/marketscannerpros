@@ -286,7 +286,7 @@ export default function CryptoHeatmap() {
                   <div className="font-semibold text-white mb-2 text-center">{item.crypto.name}</div>
                   {item.crypto.sector && (
                     <div className="text-center mb-2">
-                      <span className="text-[10px] bg-slate-700 text-slate-300 rounded px-1.5 py-0.5">{item.crypto.sector}</span>
+                      <span className="text-[11px] bg-slate-700 text-slate-300 rounded px-1.5 py-0.5">{item.crypto.sector}</span>
                     </div>
                   )}
                   {item.crypto.price > 0 && (
@@ -431,7 +431,7 @@ export default function CryptoHeatmap() {
                             (c.fundingRate ?? 0) > 0.03 ? 'text-emerald-400' :
                             (c.fundingRate ?? 0) < -0.01 ? 'text-red-400' : 'text-slate-300'
                           }`}>{(c.fundingRate ?? 0).toFixed(4)}%</span>
-                          <span className={`text-[9px] rounded px-1 ${
+                          <span className={`text-[11px] rounded px-1 ${
                             c.fundingSentiment === 'Bullish' ? 'bg-emerald-500/20 text-emerald-400' :
                             c.fundingSentiment === 'Bearish' ? 'bg-red-500/20 text-red-400' :
                             'bg-slate-700 text-slate-400'
@@ -441,7 +441,7 @@ export default function CryptoHeatmap() {
                     ))}
                 </div>
               ) : (
-                <p className="text-[10px] text-slate-500">Funding data populates from derivatives cron</p>
+                <p className="text-[11px] text-slate-500">Funding data populates from derivatives cron</p>
               )}
             </div>
 
@@ -458,7 +458,7 @@ export default function CryptoHeatmap() {
                         <span className="text-white">{c.symbol}</span>
                         <div className="flex items-center gap-1.5">
                           {c.openInterest != null && c.openInterest > 0 && (
-                            <span className="text-slate-500 text-[10px]">{formatMarketCap(c.openInterest)}</span>
+                            <span className="text-slate-500 text-[11px]">{formatMarketCap(c.openInterest)}</span>
                           )}
                           <span className={`font-medium ${
                             (c.oiChange24h ?? 0) >= 0 ? 'text-emerald-400' : 'text-red-400'
@@ -468,7 +468,7 @@ export default function CryptoHeatmap() {
                     ))}
                 </div>
               ) : (
-                <p className="text-[10px] text-slate-500">OI data populates from derivatives cron snapshots</p>
+                <p className="text-[11px] text-slate-500">OI data populates from derivatives cron snapshots</p>
               )}
             </div>
 
@@ -497,7 +497,7 @@ export default function CryptoHeatmap() {
                             {data.avgChange >= 0 ? '+' : ''}{data.avgChange.toFixed(2)}%
                           </span>
                         </div>
-                        <span className="text-slate-500 text-[10px]">{data.coins.join(', ')}</span>
+                        <span className="text-slate-500 text-[11px]">{data.coins.join(', ')}</span>
                       </div>
                     ));
                 })()}
@@ -531,7 +531,7 @@ export default function CryptoHeatmap() {
                   </div>
                 </div>
               ) : (
-                <p className="text-[10px] text-slate-500">DeFi data unavailable</p>
+                <p className="text-[11px] text-slate-500">DeFi data unavailable</p>
               )}
             </div>
           </div>

@@ -9,7 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { isAdminSecret } from "@/lib/quant/operatorAuth";
+import { requireAdmin } from "@/lib/adminAuth";
 import { getSessionFromCookie } from "@/lib/auth";
 import { isOperator } from "@/lib/quant/operatorAuth";
 import { runScan } from "@/lib/operator/orchestrator";
@@ -59,7 +59,7 @@ const DEFAULT_SYMBOLS = ["ADA", "SUI", "MATIC", "FET", "SOL", "AVAX", "DOT", "LI
 
 export async function GET(req: NextRequest) {
   // Auth gate
-  const adminAuth = isAdminSecret(req.headers.get("authorization"));
+  const adminAuth = (await requireAdmin(req)).ok;
   if (!adminAuth) {
     const session = await getSessionFromCookie();
     if (!session || !isOperator(session.cid, session.workspaceId)) {

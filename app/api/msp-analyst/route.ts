@@ -540,9 +540,9 @@ Performance Throttle:
 
 Instruction:
 - If session phase is unfavorable, mention it explicitly and recommend waiting for a better window.
-- If performance throttle is not NORMAL, advise reduced position sizing or waiting.
+- If performance throttle is not NORMAL, frame it as reduced hypothetical exposure or waiting.
 - If regime agreement is below 55%, flag regime uncertainty in your analysis.
-- Factor session timing into breakout vs mean reversion recommendations.
+- Factor session timing into breakout vs mean reversion scenario analysis.
       `.trim(),
     });
 
@@ -588,13 +588,13 @@ This query originated from the MarketScannerPros scanner.
 - Direction: ${scanner.direction ?? "N/A"}
 - Signal Score: ${scanner.score ?? "N/A"}
 
-CRITICAL: Your trade guidance MUST NOT contradict the score of ${scanner.score ?? "N/A"}.
+CRITICAL: Your educational market analysis MUST NOT contradict the score of ${scanner.score ?? "N/A"}.
 Use scanner-specific logic:
 1. Focus on explaining WHY this specific signal fired
 2. Reference the technical indicators that created this setup
-3. Provide entry/exit guidance based on the signal strength
-4. Discuss risk management specific to this signal type
-5. End with a verdict: ✅ Conditions Aligned | ⚠️ Wait for Confirmation | ❌ Conditions Not Met
+3. Provide educational scenario levels and invalidation conditions based on signal strength
+4. Discuss risk considerations specific to this signal type without telling the user what to trade
+5. End with a verdict: Conditions Aligned | Wait for More Evidence | Conditions Not Met
           `.trim(),
         });
       }
@@ -632,8 +632,8 @@ Adaptive Trader Personality Layer (ATPL):
 - Reasons: ${adaptive.match.reasons.join(' | ')}
 
 Instruction:
-- Personalize recommendations to this profile.
-- If No-Trade Bias is ACTIVE, prioritize wait/skip language unless very strong counter-evidence exists.
+- Personalize educational explanations to this profile.
+- If No-Trade Bias is ACTIVE, prioritize missing-evidence and observation language unless very strong counter-evidence exists.
 - If profile is warming up, clearly state lower personalization confidence.
       `.trim(),
     });
@@ -644,13 +644,13 @@ Instruction:
 Institutional Filter Engine (IFE):
 - Final Quality Score: ${institutionalFilter.finalScore}
 - Final Grade: ${institutionalFilter.finalGrade}
-- Recommendation: ${institutionalFilter.recommendation}
+- Educational Assessment: ${institutionalFilter.recommendation}
 - No-Trade Trigger: ${institutionalFilter.noTrade ? 'ACTIVE' : 'INACTIVE'}
 - Filter States: ${institutionalFilter.filters.map(f => `${f.label}=${f.status}`).join(' | ')}
 
 Instruction:
-- If No-Trade Trigger is ACTIVE, your default recommendation should be WAIT / NO TRADE unless there is exceptional contradictory evidence.
-- Always surface which institutional filters pass, warn, or block before giving scenario analysis.
+- If No-Trade Trigger is ACTIVE, your default assessment should be "insufficient evidence" unless there is exceptional contradictory evidence.
+- Always surface which institutional filters pass, warn, or block before giving educational scenario analysis.
       `.trim(),
     });
 
@@ -815,9 +815,9 @@ Always mention which derivatives signals support or contradict your analysis.
 1. PLATFORM NAVIGATION: When users ask "where is X" or "what page is Y on", answer with the EXACT path from your Platform Knowledge. GEX → /tools/options-confluence. Options flow → /tools/options-flow. Funding rates → /tools/crypto-dashboard. NEVER give vague answers.
 2. DECISION TRACE: Include the 9-layer decision trace in every analytical response.
 3. MARKET NARRATIVE: Start analytical responses with a 3-5 line macro narrative.
-4. TRADE PLAN: When verdict is Conditions Aligned or Conditional, include a structured trade plan with entry/stop/targets/RR.
-5. HONESTY: If confluence score < 55, say so. If there's no edge, say "No edge here. Stand aside."
-6. CONFLUENCE GATE: Score < 55 → cannot be Conditions Aligned. Score < 25 → must be No-Trade.`.trim(),
+4. EDUCATIONAL SCENARIO MAP: When verdict is Conditions Aligned or Conditional, include reference levels, invalidation conditions, reaction zones, and key risks. Do not provide instructions to enter, exit, buy, sell, hold, size, or place orders.
+5. HONESTY: If confluence score < 55, say so. If evidence is weak, say "No clear educational edge in the current evidence."
+6. CONFLUENCE GATE: Score < 55 → cannot be Conditions Aligned. Score < 25 → must be Conditions Not Met.`.trim(),
     });
 
     if (history && Array.isArray(history)) {

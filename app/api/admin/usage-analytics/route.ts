@@ -8,14 +8,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
-import { isAdminSecret } from '@/lib/quant/operatorAuth';
+import { requireAdmin } from '@/lib/adminAuth';
 
 async function safe<T = any>(fn: () => Promise<T[]>, fallback: T[] = []): Promise<T[]> {
   try { return await fn(); } catch { return fallback; }
 }
 
 export async function GET(req: NextRequest) {
-  if (!isAdminSecret(req.headers.get('authorization'))) {
+  if (!(await requireAdmin(req)).ok) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

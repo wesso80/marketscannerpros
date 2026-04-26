@@ -535,7 +535,7 @@ export default function MacroDashboardPage() {
                           {(c.changePercent ?? 0) >= 0 ? '+' : ''}{typeof c.changePercent === 'number' ? c.changePercent.toFixed(1) : '0.0'}%
                         </span>
                       </div>
-                      <div className="text-[10px] text-white/40">{c.category}</div>
+                      <div className="text-[11px] text-white/40">{c.category}</div>
                     </div>
                   ))}
                 </div>
@@ -688,7 +688,7 @@ export default function MacroDashboardPage() {
                   </div>
                 ))}
               </div>
-              <p className="mt-2 text-[10px] text-white/40 text-center">Check an economic calendar for exact dates and times.</p>
+              <p className="mt-2 text-[11px] text-white/40 text-center">Check an economic calendar for exact dates and times.</p>
             </section>
 
             <details className="rounded-xl border border-white/10 bg-white/5" open={false}>

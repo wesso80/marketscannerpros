@@ -5,13 +5,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { isOperator, isAdminSecret } from '@/lib/quant/operatorAuth';
+import { isOperator } from '@/lib/quant/operatorAuth';
+import { requireAdmin } from '@/lib/adminAuth';
 import { radarState } from '@/lib/operator/radar-state';
 
 export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest) {
-  const adminAuth = isAdminSecret(req.headers.get('authorization'));
+  const adminAuth = (await requireAdmin(req)).ok;
   if (!adminAuth) {
     const session = await getSessionFromCookie();
     if (!session || !isOperator(session.cid, session.workspaceId)) {

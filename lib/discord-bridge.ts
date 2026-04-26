@@ -56,6 +56,15 @@ export interface DiscordPost {
   avatar_url?: string;       // Override webhook avatar
 }
 
+export interface DiscordPostResult {
+  ok: boolean;
+  sent: boolean;
+  status?: number;
+  statusText?: string;
+  responseSnippet?: string;
+  skippedReason?: 'not_configured' | 'disabled' | 'cooldown' | 'request_failed' | 'unknown';
+}
+
 interface ChannelRow {
   id: number;
   channel_key: string;
@@ -125,14 +134,14 @@ async function ensureSchema() {
 
 /**
  * Post a message to a Discord channel via the bridge.
- * Returns true if posted, false if skipped (disabled/cooldown/no webhook).
- * Never throws — failures are logged silently.
+ * Returns detailed diagnostics without exposing webhook URLs.
+ * Never throws — failures are logged and returned.
  */
-export async function postToDiscord(
+export async function postToDiscordDetailed(
   channelKey: ChannelKey,
   post: DiscordPost,
   options?: { forceSend?: boolean }
-): Promise<boolean> {
+): Promise<DiscordPostResult> {
   try {
     await ensureSchema();
 
@@ -145,12 +154,13 @@ export async function postToDiscord(
     );
 
     const channel = rows[0];
-    if (!channel?.webhook_url || !channel.enabled) return false;
+    if (!channel?.webhook_url) return { ok: false, sent: false, skippedReason: 'not_configured' };
+    if (!channel.enabled) return { ok: false, sent: false, skippedReason: 'disabled' };
 
     // Cooldown check
     if (!options?.forceSend && channel.last_posted_at) {
       const elapsed = Date.now() - new Date(channel.last_posted_at).getTime();
-      if (elapsed < channel.cooldown_minutes * 60_000) return false;
+      if (elapsed < channel.cooldown_minutes * 60_000) return { ok: false, sent: false, skippedReason: 'cooldown' };
     }
 
     // Apply MSP branding defaults
@@ -177,10 +187,18 @@ export async function postToDiscord(
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(8000),
     });
+    const responseText = await res.text().catch(() => '');
 
     if (!res.ok) {
-      console.error(`[discord-bridge] ${channelKey} webhook ${res.status}`);
-      return false;
+      console.error(`[discord-bridge] ${channelKey} webhook ${res.status}`, responseText.slice(0, 300));
+      return {
+        ok: false,
+        sent: false,
+        status: res.status,
+        statusText: res.statusText,
+        responseSnippet: responseText.slice(0, 300),
+        skippedReason: 'request_failed',
+      };
     }
 
     // Update stats
@@ -191,11 +209,26 @@ export async function postToDiscord(
       [channel.id]
     ).catch(() => {});
 
-    return true;
+    return {
+      ok: true,
+      sent: true,
+      status: res.status,
+      statusText: res.statusText,
+      responseSnippet: responseText.slice(0, 300),
+    };
   } catch (err) {
     console.error(`[discord-bridge] ${channelKey} error:`, err);
-    return false;
+    return { ok: false, sent: false, skippedReason: 'unknown', responseSnippet: err instanceof Error ? err.message.slice(0, 300) : undefined };
   }
+}
+
+export async function postToDiscord(
+  channelKey: ChannelKey,
+  post: DiscordPost,
+  options?: { forceSend?: boolean }
+): Promise<boolean> {
+  const result = await postToDiscordDetailed(channelKey, post, options);
+  return result.sent;
 }
 
 /* ── Pre-built embed builders ──────────────────────────────────────────── */
@@ -234,23 +267,27 @@ export function buildScannerEmbed(picks: Array<{
 /** Golden Egg verdict */
 export function buildGoldenEggEmbed(egg: {
   symbol: string;
-  verdict: 'TRADE' | 'WATCH' | 'NO TRADE';
+  verdict: 'ALIGNED' | 'WATCH' | 'NOT ALIGNED' | 'TRADE' | 'NO TRADE';
   bias: string;
   confluenceScore: number;
   reasoning: string;
-  entry?: number;
-  stop?: number;
-  target?: number;
+  referenceLevel?: number;
+  invalidationLevel?: number;
+  reactionZone?: number;
 }): DiscordPost {
   const verdictColors: Record<string, number> = {
+    'ALIGNED': MSP_GREEN,
     'TRADE': MSP_GREEN,
     'WATCH': MSP_GOLD,
+    'NOT ALIGNED': MSP_RED,
     'NO TRADE': MSP_RED,
   };
 
   const verdictEmoji: Record<string, string> = {
+    'ALIGNED': '🟢',
     'TRADE': '🟢',
     'WATCH': '🟡',
+    'NOT ALIGNED': '🔴',
     'NO TRADE': '🔴',
   };
 
@@ -260,9 +297,9 @@ export function buildGoldenEggEmbed(egg: {
     { name: 'Confluence', value: `${egg.confluenceScore}/100`, inline: true },
   ];
 
-  if (egg.entry != null) fields.push({ name: 'Entry', value: `$${egg.entry}`, inline: true });
-  if (egg.stop != null)  fields.push({ name: 'Stop', value: `$${egg.stop}`, inline: true });
-  if (egg.target != null) fields.push({ name: 'Target', value: `$${egg.target}`, inline: true });
+  if (egg.referenceLevel != null) fields.push({ name: 'Reference Level', value: `$${egg.referenceLevel}`, inline: true });
+  if (egg.invalidationLevel != null)  fields.push({ name: 'Scenario Invalidation', value: `$${egg.invalidationLevel}`, inline: true });
+  if (egg.reactionZone != null) fields.push({ name: 'Reaction Zone', value: `$${egg.reactionZone}`, inline: true });
 
   return {
     embeds: [{
@@ -596,7 +633,7 @@ export async function updateBridgeChannel(
 export async function testBridgeChannel(
   channelKey: ChannelKey,
   webhookUrl?: string
-): Promise<boolean> {
+): Promise<DiscordPostResult> {
   const meta = CHANNEL_META[channelKey] || { emoji: '📡', color: MSP_GREEN, label: channelKey };
 
   const embed: DiscordPost = {
@@ -624,12 +661,20 @@ export async function testBridgeChannel(
         body: JSON.stringify(embed),
         signal: AbortSignal.timeout(8000),
       });
-      return res.ok;
-    } catch {
-      return false;
+      const responseText = await res.text().catch(() => '');
+      return {
+        ok: res.ok,
+        sent: res.ok,
+        status: res.status,
+        statusText: res.statusText,
+        responseSnippet: responseText.slice(0, 300),
+        skippedReason: res.ok ? undefined : 'request_failed',
+      };
+    } catch (error) {
+      return { ok: false, sent: false, skippedReason: 'request_failed', responseSnippet: error instanceof Error ? error.message.slice(0, 300) : undefined };
     }
   }
 
   // Fallback: use saved DB config via postToDiscord
-  return postToDiscord(channelKey, embed, { forceSend: true });
+  return postToDiscordDetailed(channelKey, embed, { forceSend: true });
 }

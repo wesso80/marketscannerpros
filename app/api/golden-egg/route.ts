@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { hasProTraderAccess } from '@/lib/proTraderAccess';
 import {
   detectAssetClass,
   fetchPrice,
@@ -60,6 +61,12 @@ function scoreToGrade(score: number): 'A' | 'B' | 'C' | 'D' {
   if (score >= 60) return 'B';
   if (score >= 40) return 'C';
   return 'D';
+}
+
+function toPublicAssessment(permission: Permission): GoldenEggPayload['layer1']['assessment'] {
+  if (permission === 'TRADE') return 'ALIGNED';
+  if (permission === 'NO_TRADE') return 'NOT_ALIGNED';
+  return 'WATCH';
 }
 
 // ── Build GoldenEggPayload from live data ───────────────────────────────
@@ -316,7 +323,7 @@ function buildPayload(
 
   // Narrative — incorporate ALL engines: structure, options, MPE, time confluence, DVE, derivatives
   const narrativeBullets: string[] = [];
-  if (permission === 'TRADE') narrativeBullets.push('Multiple factors aligned — conditions support scenario analysis.');
+  if (permission === 'TRADE') narrativeBullets.push('Multiple factors aligned — conditions support educational scenario analysis.');
   if (structureScore >= 70) narrativeBullets.push('Price structure supports the directional thesis.');
   if (opts?.unusualActivity !== 'Normal' && opts) narrativeBullets.push('Options flow showing unusual activity — watch for institutional moves.');
   if (mpe && mpe.composite >= 60) narrativeBullets.push('Market pressure engine confirms building pressure.');
@@ -341,7 +348,7 @@ function buildPayload(
       narrativeBullets.push(`DVE ${dveReading.signal.type.replace(/_/g, ' ')} signal active at ${(dveReading.signal.strength * 100).toFixed(0)}% strength.`);
     }
     if (dveReading.volatility.regime === 'compression' && dveReading.volatility.bbwp < 20) {
-      narrativeBullets.push(`Volatility compressed (BBWP ${dveReading.volatility.bbwp.toFixed(1)}) — expansion imminent.`);
+      narrativeBullets.push(`Volatility compressed (BBWP ${dveReading.volatility.bbwp.toFixed(1)}) — expansion risk is elevated.`);
     }
   }
   // Crypto derivatives context
@@ -353,7 +360,7 @@ function buildPayload(
   if (narrativeBullets.length === 0) narrativeBullets.push('Confluence is building but not yet at actionable thresholds.');
 
   const narrativeRisks: string[] = [];
-  if (atrPct > 4) narrativeRisks.push('Elevated volatility increases stop distance and position sizing risk.');
+  if (atrPct > 4) narrativeRisks.push('Elevated volatility widens invalidation distance and makes hypothetical risk examples less stable.');
   if (opts && opts.ivRank > 70) narrativeRisks.push('IV Rank is elevated — options premium is expensive.');
   if (mpe && mpe.composite < 40) narrativeRisks.push('Low market pressure — range-bound conditions likely.');
   if (weakest.val < 40) narrativeRisks.push(`${weakest.key} score is weak — significant blocker to thesis.`);
@@ -427,8 +434,10 @@ function buildPayload(
       timeframe: tfLabel,
     },
     layer1: {
+      assessment: toPublicAssessment(permission),
       permission,
       direction,
+      confluenceScore: confidence,
       confidence,
       grade,
       primaryDriver,
@@ -448,21 +457,35 @@ function buildPayload(
         thesis: buildThesis(direction, setupType, ind, opts, mpe, symbol, tcData, dveReading),
         timeframeAlignment: { score: tfScore, max: 4, details: tfDetails },
         keyLevels,
-        invalidation: `Thesis invalid if price ${isLong ? 'closes below' : 'closes above'} $${fmtPriceStr(stopPrice)} with volume confirmation.`,
+        invalidation: `Scenario weakens if price ${isLong ? 'closes below' : 'closes above'} $${fmtPriceStr(stopPrice)} with volume confirmation.`,
       },
       execution: {
         entryTrigger: permission === 'TRADE'
-          ? `${isLong ? 'Long scenario' : 'Short scenario'}: pullback zone near $${fmtPriceStr(isLong ? p - atr * 0.3 : p + atr * 0.3)} or breakout confirmation.`
-          : 'Wait for flip conditions to be met.',
+          ? `${isLong ? 'Bullish scenario' : 'Bearish scenario'}: reference zone near $${fmtPriceStr(isLong ? p - atr * 0.3 : p + atr * 0.3)} or confirmation evidence.`
+          : 'Monitor whether flip conditions are met.',
         entry: { type: permission === 'TRADE' ? 'limit' : 'stop', price: permission === 'TRADE' ? p : undefined },
         stop: { price: roundPrice(stopPrice), logic: `${(1.5).toFixed(1)}x ATR from reference — beyond recent structure` },
         targets: [
-          { price: roundPrice(t1), rMultiple: stopDistance > 0 ? Math.round(Math.abs(t1 - p) / stopDistance * 10) / 10 : 1, note: 'First scale zone' },
+          { price: roundPrice(t1), rMultiple: stopDistance > 0 ? Math.round(Math.abs(t1 - p) / stopDistance * 10) / 10 : 1, note: 'First reaction zone' },
           { price: roundPrice(t2), rMultiple: stopDistance > 0 ? Math.round(Math.abs(t2 - p) / stopDistance * 10) / 10 : 2, note: decompAligned ? `Primary level — Decomp zone (${decompTarget!.contributingTFs.length} TFs)` : 'Primary level' },
-          { price: roundPrice(t3), rMultiple: stopDistance > 0 ? Math.round(Math.abs(t3 - p) / stopDistance * 10) / 10 : 3, note: 'Extension zone' },
+          { price: roundPrice(t3), rMultiple: stopDistance > 0 ? Math.round(Math.abs(t3 - p) / stopDistance * 10) / 10 : 3, note: 'Extension reaction zone' },
         ],
         rr: { expectedR: Math.round(rr * 10) / 10, minR: 1.5 },
         sizingHint: { riskPct: confidence >= 70 ? 1.0 : confidence >= 55 ? 0.75 : 0.5 },
+      },
+      scenario: {
+        referenceTrigger: permission === 'TRADE'
+          ? `${isLong ? 'Bullish scenario' : 'Bearish scenario'}: reference zone near $${fmtPriceStr(isLong ? p - atr * 0.3 : p + atr * 0.3)} or confirmation evidence.`
+          : 'Monitor whether flip conditions are met.',
+        referenceLevel: { type: permission === 'TRADE' ? 'reference' : 'confirmation', price: permission === 'TRADE' ? roundPrice(p) : undefined },
+        invalidationLevel: { price: roundPrice(stopPrice), logic: `${(1.5).toFixed(1)}x ATR from reference — beyond recent structure` },
+        reactionZones: [
+          { price: roundPrice(t1), rMultiple: stopDistance > 0 ? Math.round(Math.abs(t1 - p) / stopDistance * 10) / 10 : 1, note: 'First reaction zone' },
+          { price: roundPrice(t2), rMultiple: stopDistance > 0 ? Math.round(Math.abs(t2 - p) / stopDistance * 10) / 10 : 2, note: decompAligned ? `Primary level — Decomp zone (${decompTarget!.contributingTFs.length} TFs)` : 'Primary level' },
+          { price: roundPrice(t3), rMultiple: stopDistance > 0 ? Math.round(Math.abs(t3 - p) / stopDistance * 10) / 10 : 3, note: 'Extension reaction zone' },
+        ],
+        hypotheticalRr: { expectedR: Math.round(rr * 10) / 10, minR: 1.5 },
+        hypotheticalRisk: { riskPct: confidence >= 70 ? 1.0 : confidence >= 55 ? 0.75 : 0.5 },
       },
     },
     layer3: {
@@ -510,7 +533,7 @@ function buildPayload(
       narrative: {
         enabled: true,
         summary: permission === 'TRADE'
-          ? `${symbol} shows ${direction.toLowerCase()} alignment with ${confidence}/100 confluence. Multiple factors support a ${setupType} entry.${tcData?.signalStrength === 'strong' ? ` Time confluence confirms with ${tcData.direction} bias.` : ''}${dveReading?.signal.type !== 'none' && dveReading ? ` DVE ${dveReading.signal.type.replace(/_/g, ' ')} signal active.` : ''}`
+          ? `${symbol} shows ${direction.toLowerCase()} alignment with ${confidence}/100 confluence. Multiple factors support a ${setupType} educational scenario.${tcData?.signalStrength === 'strong' ? ` Time confluence confirms with ${tcData.direction} bias.` : ''}${dveReading?.signal.type !== 'none' && dveReading ? ` DVE ${dveReading.signal.type.replace(/_/g, ' ')} signal active.` : ''}`
           : `${symbol} is in ${permission === 'NO_TRADE' ? 'not-aligned' : 'watch'} mode. Confluence is insufficient \u2014 monitor flip conditions.${tcData && tcData.direction !== 'neutral' ? ` Time confluence leans ${tcData.direction}.` : ''}`,
         bullets: narrativeBullets,
         risks: narrativeRisks,
@@ -686,6 +709,9 @@ export async function GET(request: NextRequest) {
     const session = await getSessionFromCookie();
     if (!session?.workspaceId) {
       return NextResponse.json({ success: false, error: 'Please log in' }, { status: 401 });
+    }
+    if (!hasProTraderAccess(session.tier)) {
+      return NextResponse.json({ success: false, error: 'Pro Trader access required' }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);

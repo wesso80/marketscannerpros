@@ -17,7 +17,7 @@ export default function VETrapAlert({ trap }: { trap: VolatilityTrap }) {
       }}
     >
       <div className="flex items-center gap-3">
-        <span className="text-2xl">{isTrap ? '⚠️' : '🔍'}</span>
+        <span className={`h-2.5 w-2.5 rounded-full ${isTrap ? 'bg-red-400' : 'bg-amber-400'}`} aria-hidden="true" />
         <div className="min-w-0 flex-1">
           <p className={`text-sm font-bold tracking-wide ${isTrap ? 'text-red-400' : 'text-amber-400'}`}>
             {isTrap ? 'VOLATILITY TRAP DETECTED' : 'TRAP CANDIDATE'}{' '}

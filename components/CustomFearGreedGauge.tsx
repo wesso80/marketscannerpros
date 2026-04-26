@@ -105,7 +105,7 @@ export default function CustomFearGreedGauge({
   // Compact version
   if (compact) {
     return (
-      <div className={`bg-gradient-to-br ${getBgGradient(value)} rounded-xl p-4 border border-slate-700/50 ${className}`}>
+      <div className={`rounded-lg border border-slate-700/50 bg-slate-900/70 p-4 ${className}`}>
         {/* Market toggle */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex bg-slate-800/50 rounded-lg p-0.5">
@@ -130,7 +130,7 @@ export default function CustomFearGreedGauge({
               📈 Stocks
             </button>
           </div>
-          <span className="text-[10px] text-slate-500">MSP Index</span>
+          <span className="text-[11px] text-slate-500">MSP Index</span>
         </div>
 
         <div className="flex items-center gap-4">
@@ -159,7 +159,7 @@ export default function CustomFearGreedGauge({
                 }}
               />
             </div>
-            <div className="flex justify-between text-[10px] text-slate-500 mt-1">
+            <div className="flex justify-between text-[11px] text-slate-500 mt-1">
               <span>Fear</span>
               <span>Greed</span>
             </div>
@@ -171,7 +171,7 @@ export default function CustomFearGreedGauge({
 
   // Full version
   return (
-    <div className={`bg-gradient-to-br ${getBgGradient(value)} rounded-xl p-6 border border-slate-700/50 ${className}`}>
+    <div className={`rounded-lg border border-slate-700/50 bg-slate-900/70 p-6 ${className}`}>
       {/* Header with market toggle */}
       <div className="flex items-center justify-between mb-4">
         <div>

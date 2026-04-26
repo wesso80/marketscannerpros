@@ -688,13 +688,13 @@ export default function WatchlistWidget() {
                     : 'border-blue-500/40';
 
                   return (
-                    <div key={item.id} className={`flex h-full flex-col rounded-xl border bg-slate-900/55 p-3 ${stageTone}`}>
+                    <div key={item.id} className={`flex h-full flex-col rounded-lg border bg-slate-900/55 p-3 ${stageTone}`}>
                       <div className="mb-2 flex items-start justify-between gap-2">
                         <div>
                           <div className="text-lg font-black text-white">{item.symbol}</div>
                           <div className="text-[11px] uppercase tracking-[0.06em] text-slate-500">{item.asset_type}</div>
                         </div>
-                        <span className="rounded-full border border-slate-700 bg-slate-800 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.07em] text-slate-200">
+                        <span className="rounded-full border border-slate-700 bg-slate-800 px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.07em] text-slate-200">
                           {row.stage}
                         </span>
                       </div>
@@ -716,31 +716,31 @@ export default function WatchlistWidget() {
                           style={{ width: `${row.edgeTemperature}%` }}
                         />
                       </div>
-                      <div className="mt-1 flex flex-wrap gap-1 text-[10px] text-slate-400">
-                        {row.volatilityState === 'Expanding' && <span>⚡ Volatility Expansion</span>}
-                        {row.alignmentScore >= 3 && <span>🧠 Multi-TF Aligned</span>}
-                        {row.stage === 'Conflict' && <span>⚠ Conflict</span>}
-                        {row.momentumState === 'Rising' && <span>🔥 Momentum Shift</span>}
+                      <div className="mt-1 flex flex-wrap gap-1 text-[11px] text-slate-400">
+                        {row.volatilityState === 'Expanding' && <span>Volatility Expansion</span>}
+                        {row.alignmentScore >= 3 && <span>Multi-TF Aligned</span>}
+                        {row.stage === 'Conflict' && <span>Conflict</span>}
+                        {row.momentumState === 'Rising' && <span>Momentum Shift</span>}
                         {(item.confluenceScore ?? 0) > 0 && (
                           <span className={`rounded px-1 font-semibold ${
                             (item.confluenceScore ?? 0) >= 3 ? 'bg-emerald-500/20 text-emerald-400' :
                             (item.confluenceScore ?? 0) >= 2 ? 'bg-amber-500/20 text-amber-300' :
                             'bg-slate-700 text-slate-300'
                           }`}>
-                            ⚙ {item.confluenceScore} signal{(item.confluenceScore ?? 0) > 1 ? 's' : ''}: {(item.confluenceSignals || []).join(', ')}
+                            {item.confluenceScore} signal{(item.confluenceScore ?? 0) > 1 ? 's' : ''}: {(item.confluenceSignals || []).join(', ')}
                           </span>
                         )}
                       </div>
 
                       <div className="mt-3 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-                        <button onClick={() => launchTool('scan', item.symbol)} className="rounded border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-1 text-[10px] font-semibold uppercase text-emerald-300">Scan</button>
-                        <button onClick={() => launchTool('deep', item.symbol)} className="rounded border border-slate-600 bg-slate-800 px-1.5 py-1 text-[10px] font-semibold uppercase text-slate-200">Deep</button>
-                        <button onClick={() => launchTool('flow', item.symbol)} className="rounded border border-purple-500/40 bg-purple-500/10 px-1.5 py-1 text-[10px] font-semibold uppercase text-purple-300">Options</button>
-                        <button onClick={() => launchTool('alert', item.symbol)} className="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-1 text-[10px] font-semibold uppercase text-amber-300">Alert</button>
+                        <button onClick={() => launchTool('scan', item.symbol)} className="rounded border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-1 text-[11px] font-semibold uppercase text-emerald-300">Scan</button>
+                        <button onClick={() => launchTool('deep', item.symbol)} className="rounded border border-slate-600 bg-slate-800 px-1.5 py-1 text-[11px] font-semibold uppercase text-slate-200">Deep</button>
+                        <button onClick={() => launchTool('flow', item.symbol)} className="rounded border border-purple-500/40 bg-purple-500/10 px-1.5 py-1 text-[11px] font-semibold uppercase text-purple-300">Options</button>
+                        <button onClick={() => launchTool('alert', item.symbol)} className="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-1 text-[11px] font-semibold uppercase text-amber-300">Alert</button>
                       </div>
                       <div className="mt-2 flex items-center gap-2">
-                        <button onClick={() => router.push(`/tools/scanner?symbol=${encodeURIComponent(item.symbol)}`)} className="flex-1 rounded border border-blue-500/40 bg-blue-500/10 px-2 py-1 text-[10px] font-semibold uppercase text-blue-300">Open Cockpit</button>
-                        <button onClick={() => removeSymbol(item.id)} className="rounded border border-red-500/40 bg-red-500/10 px-2 py-1 text-[10px] font-semibold uppercase text-red-300">Remove</button>
+                        <button onClick={() => router.push(`/tools/scanner?symbol=${encodeURIComponent(item.symbol)}`)} className="flex-1 rounded border border-blue-500/40 bg-blue-500/10 px-2 py-1 text-[11px] font-semibold uppercase text-blue-300">Open Cockpit</button>
+                        <button onClick={() => removeSymbol(item.id)} className="rounded border border-red-500/40 bg-red-500/10 px-2 py-1 text-[11px] font-semibold uppercase text-red-300">Remove</button>
                       </div>
                     </div>
                   );
@@ -748,8 +748,8 @@ export default function WatchlistWidget() {
               </div>
             )}
 
-            <div className="rounded-xl border border-slate-700 bg-slate-900/50 p-3">
-              <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-slate-400">Bulk Actions</div>
+            <div className="rounded-lg border border-slate-700 bg-slate-900/50 p-3">
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">Bulk Actions</div>
               <div className="flex flex-wrap gap-2">
                 <button onClick={runScanAll} className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-emerald-300">Open Scanner</button>
                 <button onClick={runConfluenceCheck} className="rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-cyan-300">Refresh Prices</button>

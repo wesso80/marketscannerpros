@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { q } from "@/lib/db";
-import { isAdminSecret } from '@/lib/quant/operatorAuth';
+import { requireAdmin } from '@/lib/adminAuth';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -25,7 +25,7 @@ function revisionDeadline(due: string): string {
 /*  GET  — list reports + live subscriber snapshot                     */
 /* ------------------------------------------------------------------ */
 export async function GET(req: NextRequest) {
-  if (!isAdminSecret(req.headers.get('authorization'))) {
+  if (!(await requireAdmin(req)).ok) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -105,7 +105,7 @@ export async function GET(req: NextRequest) {
 /*  POST  — generate or save a report for a given month               */
 /* ------------------------------------------------------------------ */
 export async function POST(req: NextRequest) {
-  if (!isAdminSecret(req.headers.get('authorization'))) {
+  if (!(await requireAdmin(req)).ok) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -63,11 +63,17 @@ export function getToolsContainerVariant(pathname: string): ToolsContainerVarian
 
 export function CommandLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="msp-layout-command mx-auto w-full min-w-0 max-w-none px-4 md:px-4">
+    <div className="msp-layout-command mx-auto w-full min-w-0 max-w-[1280px] px-4 md:px-5">
       {children}
     </div>
   );
 }
+
+const terminalContainerClasses: Record<ToolsContainerVariant, string> = {
+  standard: 'mx-auto max-w-[1280px]',
+  wide: 'mx-auto max-w-[1560px]',
+  full: 'max-w-none',
+};
 
 export function TerminalLayout({
   children,
@@ -76,10 +82,10 @@ export function TerminalLayout({
   children: ReactNode;
   containerVariant?: ToolsContainerVariant;
 }) {
-  const containerClass = 'max-w-none';
+  const containerClass = terminalContainerClasses[containerVariant] ?? terminalContainerClasses.standard;
 
   return (
-    <div className={`msp-layout-terminal w-full min-w-0 px-3 md:px-4 ${containerClass}`}>
+    <div data-container-variant={containerVariant} className={`msp-layout-terminal w-full min-w-0 px-3 md:px-4 ${containerClass}`}>
       {children}
     </div>
   );

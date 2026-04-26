@@ -4,7 +4,7 @@ import { readOperatorState } from '@/lib/operatorState';
 
 /**
  * Shared auto-log helper for all scanner/tool pages.
- * Fires POST /api/journal/auto-log with execution-engine fields.
+ * Fires POST /api/journal/auto-log with paper scenario fields.
  * 
  * Returns { ok: boolean; entryId?: number; error?: string }
  */

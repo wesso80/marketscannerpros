@@ -49,7 +49,7 @@ uiMode       = input.string("Pro", "Display Mode", options=["Clean", "Pro", "Dia
 showZones    = input.bool(true,  "Show Gravity Zones",   group=grp_vis)
 showMids     = input.bool(true,  "Show Midpoint Lines",  group=grp_vis)
 showLabels   = input.bool(true,  "Show Midpoint Labels", group=grp_vis)
-showTable    = input.bool(true,  "Show Status Table",    group=grp_vis)
+showTable    = input.bool(false, "Show Status Table",    group=grp_vis)
 showTarget   = input.bool(true,  "Show Target Box",      group=grp_vis)
 showBands    = input.bool(true,  "Show 30-50% Bands",    group=grp_vis)
 showDecomp   = input.bool(true,  "Show Decompression Bars", group=grp_vis)
@@ -57,13 +57,13 @@ tablePos     = input.string("top_right", "Table Position", options=["top_right",
 zoneTransp   = input.int(90, "Zone Transparency", minval=70, maxval=98, group=grp_vis)
 
 grp_cal = "Close Calendar"
-showCalendar = input.bool(true, "Show Close Calendar", group=grp_cal)
+showCalendar = input.bool(false, "Show Close Calendar", group=grp_cal)
 calendarPos  = input.string("bottom_right", "Calendar Position", options=["top_right", "top_left", "bottom_right", "bottom_left"], group=grp_cal)
 
 grp_learn = "Learning Engine"
-enableLearning = input.bool(true, "Enable Self-Learning", group=grp_learn, tooltip="Track per-TF midpoint pull rates across chart history and adapt gravity weights")
+enableLearning = input.bool(false, "Enable Self-Learning", group=grp_learn, tooltip="Track per-TF midpoint pull rates across chart history and adapt gravity weights")
 learnMinSample = input.int(50, "Min Samples", minval=10, maxval=200, group=grp_learn, tooltip="Bar samples required before learning adjusts weights")
-showLearning   = input.bool(true, "Show Learning Panel", group=grp_learn)
+showLearning   = input.bool(false, "Show Learning Panel", group=grp_learn)
 learnPos       = input.string("bottom_left", "Panel Position", options=["top_right", "top_left", "bottom_right", "bottom_left"], group=grp_learn)
 learnMaxAdj    = input.float(1.6, "Max Weight Adjust", minval=1.2, maxval=3.0, step=0.1, group=grp_learn, tooltip="Maximum weight multiplier (1.0=no change, 1.6=conservative)")
 

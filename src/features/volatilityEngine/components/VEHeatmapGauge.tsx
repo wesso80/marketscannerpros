@@ -97,7 +97,7 @@ export default function VEHeatmapGauge({ vol }: { vol: VolatilityState }) {
           <span className="text-lg font-black sm:text-xl" style={{ color: zone.text }}>
             {bbwp.toFixed(1)}
           </span>
-          <span className="ml-1 text-[0.6rem] text-white/40">BBWP</span>
+          <span className="ml-1 text-[11px] text-white/40">BBWP</span>
         </div>
 
         {/* Regime label */}
