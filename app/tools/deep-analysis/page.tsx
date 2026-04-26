@@ -763,7 +763,7 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
       {!embeddedInGoldenEgg && <ToolsPageHeader badge="PRO TRADER" title="Golden Egg Deep Analysis" subtitle="AI-assisted educational research with structured multi-factor context" icon="GE" />}
       
       <main className={`max-w-none px-4 ${embeddedInGoldenEgg ? 'py-3' : 'py-8'}`}>
-        {result && (
+        {result && !embeddedInGoldenEgg && (
           <CommandStrip
             symbol={result.symbol}
             status={result.signals.signal}
@@ -775,7 +775,7 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
           />
         )}
 
-        {result && (
+        {result && !embeddedInGoldenEgg && (
           <DecisionCockpit
             left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">{result.symbol} • {result.assetType.toUpperCase()}</div><div className="msp-muted">Price: ${result.price.price.toFixed(2)}</div><div className="msp-muted">24h: {result.price.changePercent.toFixed(2)}%</div></div>}
             center={<div className="grid gap-1 text-sm"><div className="font-extrabold text-[var(--msp-accent)]">{result.signals.signal}</div><div className="msp-muted">Score: {result.signals.score.toFixed(0)}</div><div className="msp-muted">Response: {result.responseTime}</div></div>}
@@ -783,7 +783,7 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
           />
         )}
 
-        {result && (
+        {result && !embeddedInGoldenEgg && (
           <SignalRail
             items={[
               { label: 'Sentiment', value: result.news?.[0]?.sentiment || 'N/A', tone: (result.news?.[0]?.sentiment || '').toLowerCase().includes('bull') ? 'bull' : (result.news?.[0]?.sentiment || '').toLowerCase().includes('bear') ? 'bear' : 'neutral' },
@@ -866,7 +866,7 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
 
         {/* Results */}
         {result && (
-          <div className="grid gap-6">
+          <div className={embeddedInGoldenEgg ? 'grid gap-4' : 'grid gap-6'}>
             {(() => {
               const dataQuality = getDeepDataQuality(result);
               const weighted = calculateWeightedSignal(result.indicators, result.optionsData, result.news, result.cryptoData);
@@ -875,7 +875,13 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/60 pb-3">
                     <div>
                       <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-slate-500">Research Packet</div>
-                      <div className="mt-1 text-sm font-bold text-white">{result.symbol} · {result.assetType.toUpperCase()}</div>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-sm font-bold text-white">
+                        <span>{result.symbol} · {result.assetType.toUpperCase()}</span>
+                        <span className="font-mono text-slate-300">${formatNumber(result.price.price, result.assetType === 'crypto' ? 4 : 2)}</span>
+                        <span className={result.price.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                          {result.price.changePercent >= 0 ? '+' : ''}{formatNumber(result.price.changePercent)}% 24h
+                        </span>
+                      </div>
                     </div>
                     <span title={dataQuality.detail} className="rounded border px-2 py-1 text-[11px] font-bold" style={{ color: deepDataQualityColor(dataQuality.label), borderColor: `${deepDataQualityColor(dataQuality.label)}66`, background: `${deepDataQualityColor(dataQuality.label)}15` }}>
                       Data {dataQuality.label}
@@ -900,7 +906,7 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
             })()}
             
             {/* Main Signal Banner */}
-            <div
+            {!embeddedInGoldenEgg && <div
               className="rounded-[20px] border border-[var(--msp-border-strong)] p-8 text-center"
               style={{
                 background: `${getSignalColor(result.signals.signal)}20`,
@@ -958,7 +964,7 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                   Scenario score: {result.signals.score > 0 ? '+' : ''}{result.signals.score} · {result.signals.bullishCount || 0} bullish / {result.signals.bearishCount || 0} bearish signals
                 </div>
               </div>
-            </div>
+            </div>}
             
             {/* Key Takeaways Section */}
             <div style={{ 
