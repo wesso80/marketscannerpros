@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import NotificationBell from './NotificationBell';
 import { useUserTier } from '@/lib/useUserTier';
+import { primaryNavTools, secondaryToolLinks } from '@/lib/toolWorkflows';
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MSP v2 Header — Matches Full Site Map
@@ -13,24 +14,13 @@ import { useUserTier } from '@/lib/useUserTier';
    Mobile: Hamburger → flat drawer with same links
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const SURFACES = [
-  { href: '/tools/dashboard',   label: 'Dashboard' },
-  { href: '/tools/scanner',     label: 'Scanner' },
-  { href: '/tools/golden-egg',  label: 'Golden Egg' },
-  { href: '/tools/terminal',    label: 'Terminal' },
-  { href: '/tools/explorer',    label: 'Explorer' },
-  { href: '/tools/research',    label: 'Research' },
-  { href: '/tools/workspace',   label: 'Workspace' },
-];
+const SURFACES = primaryNavTools;
 
 const MORE_TOOLS = [
-  { href: '/tools/backtest', label: 'Backtest' },
-  { href: '/tools/options-flow', label: 'Options Flow' },
-  { href: '/tools/options-terminal', label: 'Options Terminal' },
-  { href: '/tools/crypto-dashboard', label: 'Crypto Derivatives' },
-  { href: '/tools/scalper', label: 'Scalper' },
-  { href: '/tools/time-scanner', label: 'Time Scanner' },
-  { href: '/tools/volatility-engine', label: 'Volatility Engine' },
+  ...secondaryToolLinks.map((tool) => ({ href: tool.href, label: tool.label })),
+  { href: '/tools/terminal', label: 'Terminal' },
+  { href: '/tools/explorer', label: 'Explorer' },
+  { href: '/tools/research', label: 'Research' },
   { href: '/compliance-hub', label: 'Compliance Hub' },
 ];
 
