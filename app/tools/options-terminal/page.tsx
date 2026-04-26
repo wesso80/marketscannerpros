@@ -23,7 +23,7 @@ function OptionsTerminalInner() {
         <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-100">
           Options involve substantial risk and can expire worthless. This terminal displays educational scenarios and market data only — not options advice, broker execution, or a recommendation to buy or sell contracts.
         </div>
-        <ComplianceDisclaimer compact />
+        <ComplianceDisclaimer compact variant="options" />
       </div>
       <OptionsTerminalView />
     </div>

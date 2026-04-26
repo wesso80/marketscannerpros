@@ -1240,7 +1240,7 @@ function BacktestContent() {
         <div style={{ marginBottom: '12px', border: '1px solid rgba(148,163,184,0.3)', borderRadius: '10px', background: 'rgba(15,23,42,0.55)', padding: '10px 12px', color: '#cbd5e1', fontSize: '12px' }}>
           Educational backtest and scenario testing only. Outputs are learning statistics, not investment advice or automated execution instructions.
         </div>
-        <ComplianceDisclaimer compact />
+        <ComplianceDisclaimer compact variant="backtest" />
         <CommandCenterStateBar
           mode="EVALUATE"
           actionableNow={results
@@ -2021,7 +2021,7 @@ function BacktestContent() {
               fontSize: '12px',
               lineHeight: 1.55,
             }}>
-              <strong>Paper-trading simulation only.</strong> These backtest results are historical research statistics, not real performance and not a recommendation to trade. They may not model live-market slippage, commissions, spread, liquidity, latency, survivorship bias, or behavioural execution errors. Past results do not predict or guarantee future outcomes.
+              <strong>Paper-trading simulation only.</strong> These backtest results are historical research statistics, not real performance and not a recommendation to trade. They may not model live-market slippage, commissions, spread, liquidity, latency, survivorship bias, overfitting, regime changes, or behavioural execution errors. Past results do not predict or guarantee future outcomes.
             </div>
             <div style={{
               background: 'var(--msp-card)',
@@ -2144,7 +2144,7 @@ function BacktestContent() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
                   <div>
                     <div style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      Validation
+                      Historical Pattern Check
                     </div>
                     <div style={{ color: '#94a3b8', fontSize: '12px' }}>{results.validation.reason}</div>
                   </div>

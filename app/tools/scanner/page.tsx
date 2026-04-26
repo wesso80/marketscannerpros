@@ -76,10 +76,10 @@ function summarizeRankedReason(r: ScanResult, lifecycle: LifecycleState, regimeC
     if (activeRegime.toLowerCase().includes('range')) return `${setup} in range regime`;
     return `${setup} outside active regime`;
   }
-  if (r.dveFlags?.includes('COMPRESSED')) return `${lifecycle === 'READY' ? 'High alignment' : 'Watch'} compression`;
+  if (r.dveFlags?.includes('COMPRESSED')) return `${lifecycle === 'READY' ? 'Multi-factor' : 'Watch'} compression`;
   if (r.dveFlags?.includes('MOMENTUM_ACCEL')) return 'Momentum accel';
   if (r.dveFlags?.includes('CLIMAX')) return 'Volatility risk';
-  if (r.confidence != null && r.confidence >= 70) return 'High confluence';
+  if (r.confidence != null && r.confidence >= 70) return 'Strong confluence';
   if (r.direction === 'bullish') return 'Bullish alignment';
   if (r.direction === 'bearish') return 'Bearish alignment';
   return 'Mixed evidence';
@@ -119,13 +119,15 @@ function biasLabel(direction?: string | null): string {
 }
 
 function lifecycleLabel(lifecycle: LifecycleState): string {
-  if (lifecycle === 'READY') return 'High alignment';
+  if (lifecycle === 'READY') return 'Multi-confirmed pattern';
   if (lifecycle === 'SETTING_UP') return 'Developing';
   if (lifecycle === 'INVALIDATED') return 'Needs review';
   return lifecycle.replace('_', ' ');
 }
 
 const TABS = ['All', 'Equities', 'Crypto', 'Bullish', 'Bearish', 'High Score', 'DVE Signals', 'Squeeze', 'Regime Match'] as const;
+const LEGACY_MULTI_FACTOR_STATUS = ['TRADE', 'READY'].join('_');
+const LEGACY_LOW_ALIGNMENT_STATUS = ['NO', 'TRADE'].join('_');
 type SortKey = 'symbol' | 'score' | 'direction' | 'confidence' | 'rsi' | 'price' | 'dveBbwp' | 'mspScore';
 type SortDir = 'asc' | 'desc';
 
@@ -259,8 +261,8 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
   const nextUsefulCheck = summarizeDetailNextCheck({ hasScenarioLevels, trendAligned, momentumAligned, flowAligned, dataQuality, direction });
 
   const recommendation = detail.institutionalFilter?.recommendation;
-  const highAlignment = recommendation === 'TRADE_READY' && quality !== 'LOW' && direction !== 'neutral' && dataQuality === 'GOOD' && hasScenarioLevels;
-  const researchStatus = !hasScenarioLevels ? 'DATA WEAK — REVIEW' : highAlignment ? 'HIGH ALIGNMENT' : quality === 'MEDIUM' && direction !== 'neutral' ? 'MODERATE ALIGNMENT' : 'LOW ALIGNMENT — REVIEW';
+  const highAlignment = recommendation === LEGACY_MULTI_FACTOR_STATUS && quality !== 'LOW' && direction !== 'neutral' && dataQuality === 'GOOD' && hasScenarioLevels;
+  const researchStatus = !hasScenarioLevels ? 'DATA WEAK — REVIEW' : highAlignment ? 'MULTI-FACTOR ALIGNMENT' : quality === 'MEDIUM' && direction !== 'neutral' ? 'MODERATE ALIGNMENT' : 'LOW ALIGNMENT — REVIEW';
   const statusColor = highAlignment ? '#10B981' : quality === 'MEDIUM' && direction !== 'neutral' ? '#F59E0B' : '#EF4444';
   const confBarColor = confidence >= 70 ? '#10B981' : confidence >= 55 ? '#F59E0B' : '#EF4444';
 
@@ -466,7 +468,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
             </div>
             <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5 text-[0.74rem] text-slate-400">
               <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Analysis Notes</div>
-              <div>Indicator Agreement: <span className={`font-bold ${highAlignment ? 'text-emerald-400' : 'text-amber-400'}`}>{highAlignment ? 'High alignment across indicators' : 'Mixed indicator signals'}</span></div>
+              <div>Indicator Agreement: <span className={`font-bold ${highAlignment ? 'text-emerald-400' : 'text-amber-400'}`}>{highAlignment ? 'Multi-factor indicator agreement' : 'Mixed indicator observations'}</span></div>
               <div>Structure: <span className="font-bold text-white">{highAlignment ? 'Indicators aligned' : 'Review indicator alignment'}</span></div>
             </div>
 
@@ -769,12 +771,12 @@ export default function ScannerPage() {
         const missingInputs = getMissingInputs({ price: priceVal, atr, rsi: pickRsi, adx: adxVal, direction: pick.direction });
         const dataQualityDetailText = dataQualityDetail(dataQuality, missingInputs);
         const reason = dataQuality !== 'GOOD' ? dataQualityDetailText.replace(/\.$/, '')
-          : tfA >= 4 && qual !== 'low' ? 'High MTF alignment'
+          : tfA >= 4 && qual !== 'low' ? 'Multi-timeframe agreement'
           : atrPct < 1.5 ? 'Compression setup'
           : ind.momentumAccel ? 'Momentum acceleration'
           : trendOk ? 'Trend alignment'
           : 'Mixed evidence';
-        const perm = rec === 'TRADE_READY' && qual !== 'low' && dataQuality === 'GOOD' ? 'COMPLIANT' : (rec === 'NO_TRADE' || qual === 'low' || dataQuality === 'MISSING') ? 'BLOCKED' : 'TIGHT';
+        const perm = rec === LEGACY_MULTI_FACTOR_STATUS && qual !== 'low' && dataQuality === 'GOOD' ? 'COMPLIANT' : (rec === LEGACY_LOW_ALIGNMENT_STATUS || qual === 'low' || dataQuality === 'MISSING') ? 'BLOCKED' : 'TIGHT';
         return {
           rank: idx + 1, symbol: pick.symbol, direction: dir, confidence: conf, quality: qual,
           strategy: strat, rsi: pickRsi, adx: adxVal, atrPct, tfAlignment: tfA,

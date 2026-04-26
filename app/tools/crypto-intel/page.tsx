@@ -19,7 +19,7 @@ export default function CryptoIntelPage() {
             Crypto Intelligence
           </h1>
           <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>
-            Real-time onchain data - token security, whale activity, DEX pressure, treasury holdings &amp; crypto news
+            Real-time onchain data - token security, large-wallet activity estimates, DEX pressure, treasury holdings &amp; crypto news
           </p>
         </div>
 

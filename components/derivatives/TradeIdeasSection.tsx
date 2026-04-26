@@ -7,8 +7,8 @@ interface TradeIdeasSectionProps {
 export default function TradeIdeasSection({ ideas }: TradeIdeasSectionProps) {
   return (
     <div className="mb-4 rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
-      <div className="text-sm font-semibold text-white">Scenario Watchlist</div>
-      <div className="text-xs text-white/50">Analytical scenarios aligned to current regime — max 3 cards.</div>
+      <div className="text-sm font-semibold text-white">Research Scenario Watchlist</div>
+      <div className="text-xs text-white/50">Educational scenarios aligned to current regime — observations only, not trade instructions.</div>
 
       <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3">
         {ideas.map((idea) => (
@@ -21,14 +21,14 @@ export default function TradeIdeasSection({ ideas }: TradeIdeasSectionProps) {
             <div className="mt-2 text-xs text-white/50">Setup</div>
             <div className="text-sm font-semibold text-white/80">{idea.setupType}</div>
 
-            <div className="mt-3 text-xs text-white/50">Trigger</div>
+            <div className="mt-3 text-xs text-white/50">Condition</div>
             <div className="text-sm text-white/80">{idea.trigger}</div>
 
             <div className="mt-3 text-xs text-white/50">Invalidation</div>
             <div className="text-sm text-white/80">{idea.invalidation}</div>
 
             <div className="mt-3 flex items-center justify-between">
-              <div className="text-xs text-white/50">Risk mode</div>
+              <div className="text-xs text-white/50">Scenario risk</div>
               <div className="text-xs font-semibold text-white/80">{idea.riskMode}</div>
             </div>
 

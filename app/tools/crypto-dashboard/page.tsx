@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useUserTier, canAccessCryptoCommandCenter } from '@/lib/useUserTier';
 import { fireAutoLog } from '@/lib/autoLog';
 import UpgradeGate from '@/components/UpgradeGate';
+import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { useAIPageContext } from '@/lib/ai/pageContext';
 import CryptoMorningDecisionCard from '@/components/CryptoMorningDecisionCard';
 import DerivativesDecisionRow from '@/components/derivatives/DerivativesDecisionRow';
@@ -24,7 +25,7 @@ export default function CryptoDashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -82,7 +83,7 @@ export default function CryptoDashboard() {
     };
   }, [fetchData, autoRefresh]);
 
-  // ── Auto-log crypto trade ideas to execution engine (paper trade) ──
+  // ── Auto-log crypto research observations to the paper-trade journal context ──
   const cryptoAutoLogRef = useRef<string>('');
   useEffect(() => {
     if (!data.prices.BTC) return; // data not loaded yet
@@ -97,7 +98,7 @@ export default function CryptoDashboard() {
       cryptoAutoLogRef.current += key + ',';
       fireAutoLog({
         symbol: `${idea.sym}-USD`,
-        conditionType: 'crypto_derivatives',
+          conditionType: 'crypto_derivatives_observation',
         conditionMet: `${idea.dir.toUpperCase()}_DERIVATIVES`,
         triggerPrice: idea.price!,
         source: 'crypto_dashboard',
@@ -254,14 +255,14 @@ export default function CryptoDashboard() {
       : 'Conditional';
 
   const playbook = permission === 'No'
-    ? 'No-trade'
+    ? 'No scenario'
     : biasLabel.includes('Bearish')
       ? 'Fade pumps'
       : biasLabel.includes('Bullish') && volRegime === 'Expansion'
         ? 'Trend follow'
         : biasLabel.includes('Bullish')
           ? 'Mean reversion'
-          : 'No-trade';
+          : 'No scenario';
 
   const fundingDriver = data.fundingRates
     ? data.fundingRates.avgRate > 0.01
@@ -292,38 +293,38 @@ export default function CryptoDashboard() {
       id: 'btc',
       symbol: 'BTC',
       direction: permission === 'No' ? 'Flat' : biasLabel.includes('Bearish') ? 'Short' : biasLabel.includes('Bullish') ? 'Long' : 'Flat',
-      setupType: permission === 'No' ? 'No-trade' : biasLabel.includes('Bearish') ? 'Fade / short rallies' : biasLabel.includes('Bullish') ? 'Trend follow' : 'Mean reversion',
+      setupType: permission === 'No' ? 'No scenario' : biasLabel.includes('Bearish') ? 'Failed-bounce study' : biasLabel.includes('Bullish') ? 'Trend-continuation study' : 'Mean-reversion study',
       trigger: permission === 'No'
-        ? 'Vol expansion + contracting liquidity; wait for compression.'
+        ? 'Vol expansion + contracting liquidity; wait for compression evidence.'
         : biasLabel.includes('Bearish')
-          ? 'OI rising + positive funding + long-liq pressure on failed bounce.'
-          : 'OI building + squeeze risk + reclaim above intraday VWAP.',
+          ? 'OI rising + positive funding + long-liq pressure around failed-bounce conditions.'
+          : 'OI building + squeeze risk + reclaim conditions around intraday VWAP.',
       invalidation: biasLabel.includes('Bearish') ? 'Break and hold above prior local high.' : 'Lose VWAP and fail retest.',
-      riskMode: permission === 'No' ? 'No-trade' : permission === 'Conditional' ? 'Reduced' : 'Normal',
+      riskMode: permission === 'No' ? 'High scenario risk' : permission === 'Conditional' ? 'Conditional scenario' : 'Normal scenario risk',
     },
     {
       id: 'eth',
       symbol: 'ETH',
       direction: permission === 'No' ? 'Flat' : biasLabel.includes('Bearish') ? 'Short' : 'Long',
-      setupType: biasLabel.includes('Bearish') ? 'Breakdown retest' : 'Trend follow',
+      setupType: biasLabel.includes('Bearish') ? 'Breakdown-retest study' : 'Trend-continuation study',
       trigger: biasLabel.includes('Bearish')
-        ? 'Breakdown retest failure with weak OI follow-through.'
-        : 'Momentum continuation with supportive funding/OI alignment.',
+        ? 'Breakdown-retest failure conditions with weak OI follow-through.'
+        : 'Momentum-continuation conditions with supportive funding/OI alignment.',
       invalidation: biasLabel.includes('Bearish') ? 'Reclaim above retest zone.' : 'Rejection and close back below trend trigger.',
-      riskMode: permission === 'No' ? 'No-trade' : permission === 'Conditional' ? 'Reduced' : 'Normal',
+      riskMode: permission === 'No' ? 'High scenario risk' : permission === 'Conditional' ? 'Conditional scenario' : 'Normal scenario risk',
     },
     {
       id: 'sol',
       symbol: 'SOL',
       direction: permission === 'No' ? 'Flat' : volRegime === 'Expansion' ? 'Flat' : biasLabel.includes('Bearish') ? 'Short' : 'Long',
-      setupType: volRegime === 'Expansion' ? 'Squeeze / whipsaw risk' : biasLabel.includes('Bearish') ? 'Fade' : 'Trend follow',
+      setupType: volRegime === 'Expansion' ? 'Squeeze / whipsaw risk' : biasLabel.includes('Bearish') ? 'Failed-rally study' : 'Trend-continuation study',
       trigger: volRegime === 'Expansion'
-        ? 'Wait for volatility compression before directional entries.'
+        ? 'Wait for volatility compression before directional scenario review.'
         : biasLabel.includes('Bearish')
-          ? 'Short failed breakout with rising leverage.'
-          : 'Long breakout with OI confirmation.',
+          ? 'Failed-breakout conditions with rising leverage.'
+          : 'Breakout conditions with OI confirmation.',
       invalidation: volRegime === 'Expansion' ? 'N/A' : 'Reverse through setup origin level.',
-      riskMode: permission === 'No' ? 'No-trade' : permission === 'Conditional' ? 'Reduced' : 'Normal',
+      riskMode: permission === 'No' ? 'High scenario risk' : permission === 'Conditional' ? 'Conditional scenario' : 'Normal scenario risk',
     },
   ];
 
@@ -355,7 +356,7 @@ export default function CryptoDashboard() {
               <div className="h-10 w-10 flex-shrink-0 rounded-xl overflow-hidden"><img src="/assets/platform-tools/crypto-derivatives.png" alt="" className="h-full w-full object-contain p-0.5" /></div>
               <div>
                 <h1 className="text-3xl font-bold text-white mb-2">Crypto Derivatives Dashboard</h1>
-                <p className="text-gray-400">Bias → Rotation → Volatility → Execution</p>
+                <p className="text-gray-400">Bias → Rotation → Volatility → Scenario Review</p>
               </div>
             </div>
           </div>
@@ -383,6 +384,10 @@ export default function CryptoDashboard() {
         {lastUpdate && (
           <p className="text-xs text-gray-500 mt-2">Last updated: {lastUpdate.toLocaleTimeString()}</p>
         )}
+      </div>
+
+      <div className="mb-4">
+        <ComplianceDisclaimer variant="cryptoDerivatives" />
       </div>
 
       {/* Zone 0: keep state anchor */}

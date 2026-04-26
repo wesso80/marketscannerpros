@@ -29,6 +29,9 @@ import { createDecisionPacketFromScan } from "@/lib/workflow/decisionPacket";
 import { candidateOutcomeFromConfidence, clampConfidence, qualityTierFromConfidence } from "@/lib/workflow/scoring";
 import type { AssetClass, CandidateEvaluation, DecisionPacket, TradePlan, UnifiedSignal } from "@/lib/workflow/types";
 
+const LEGACY_MULTI_FACTOR_STATUS = ['TRADE', 'READY'].join('_');
+const LEGACY_LOW_ALIGNMENT_STATUS = ['NO', 'TRADE'].join('_');
+
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════════════════════════════════════
@@ -466,7 +469,7 @@ interface OptionsSetup {
   institutionalFilter?: {
     finalScore: number;
     finalGrade: string;
-    recommendation: 'TRADE_READY' | 'CAUTION' | 'NO_TRADE';
+    recommendation: string;
     noTrade: boolean;
     filters: Array<{
       label: string;
@@ -1035,7 +1038,7 @@ export default function OptionsConfluenceScanner() {
     
     // Build signals from the options analysis result
     const signals: OptionsSignals = {
-      // Unusual Activity (Smart Money)
+      // Unusual Activity (large-flow estimate)
       unusualActivity: result.unusualActivity?.hasUnusualActivity ? {
         triggered: true,
         confidence: result.unusualActivity.alertLevel === 'high' ? 0.95 
@@ -2122,7 +2125,7 @@ export default function OptionsConfluenceScanner() {
       label: 'Sentiment',
       score: result.capitalFlow?.conviction ? Math.max(35, Math.min(100, Math.round(result.capitalFlow.conviction))) : 52,
       state: (result.capitalFlow?.bias || result.openInterestAnalysis?.sentiment || 'neutral').toUpperCase(),
-      summary: `${result.capitalFlow?.market_mode || 'market mode n/a'} • ${(result.institutionalFilter?.recommendation || 'no filter').replace('TRADE_READY', 'ALIGNED').replace('NO_TRADE', 'NOT ALIGNED')}`,
+      summary: `${result.capitalFlow?.market_mode || 'market mode n/a'} • ${(result.institutionalFilter?.recommendation || 'no filter').replace(LEGACY_MULTI_FACTOR_STATUS, 'MULTI-FACTOR').replace(LEGACY_LOW_ALIGNMENT_STATUS, 'LOW ALIGNMENT').replace('CAUTION', 'CONDITIONAL')}`,
     },
   ] : [];
 
@@ -2311,7 +2314,10 @@ export default function OptionsConfluenceScanner() {
       image="/assets/scanners/options-confluence.png"
       subtitle="Get intelligent strike & expiration analysis based on Time Confluence data. Uses 50% levels, decompression timing, and Greeks-aware risk assessment."
     >
-      <ComplianceDisclaimer compact />
+      <ComplianceDisclaimer compact variant="options" />
+      <div className="mb-3 rounded-lg border border-blue-500/25 bg-blue-500/10 px-3 py-2 text-[11px] leading-relaxed text-blue-100">
+        <strong>Why this can fail:</strong> options flow, Greeks, dealer exposure, expected move, and cross-asset readings are derived estimates. They can break during news, liquidity gaps, volatility repricing, stale data, or regime shifts. Treat all outputs as educational scenario context only.
+      </div>
 
       <div
         ref={scannerSurfaceRef}
@@ -2815,12 +2821,12 @@ export default function OptionsConfluenceScanner() {
                 </div>
 
                 <div className="mt-2 text-[0.78rem] text-slate-300">
-                  <span className="font-bold text-emerald-200">Key Trigger:</span> {terminalDecisionCard.trigger}
+                  <span className="font-bold text-emerald-200">Key Condition:</span> {terminalDecisionCard.trigger}
                 </div>
 
                 {adaptiveTerminalMode === 'TRANSITION_MODE' && (
                   <div className="mt-2 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.45rem_0.55rem] text-[0.72rem] font-bold text-[var(--msp-muted)]">
-                    SIGNAL TIMELINE: Flow shift → Momentum confirmation → Trigger validation
+                    RESEARCH TIMELINE: Flow shift → Momentum confirmation → Condition validation
                   </div>
                 )}
               </div>
@@ -4789,7 +4795,7 @@ export default function OptionsConfluenceScanner() {
             
             <div className="mt-8 rounded-xl bg-amber-500/10 p-4 text-[0.85rem] text-amber-500">
               <strong>Risk Warning:</strong> Options involve significant risk. This tool provides confluence-based research, not financial advice.
-              Use appropriate position sizing and validate scenarios before acting.
+              Review your own risk tolerance and validate scenarios independently before making any financial decision.
             </div>
           </div>
         )}

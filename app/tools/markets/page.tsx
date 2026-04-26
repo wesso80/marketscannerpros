@@ -50,6 +50,7 @@ export default function MarketsPage() {
 
   const ctx = useTickerData(symbol || null, assetClass);
   const lens = useDecisionLens(ctx);
+  const lensResearchStatus = lens?.authorization === 'ALLOW' ? 'ALIGNED' : lens?.authorization === 'ALLOW_REDUCED' ? 'CONDITIONAL' : lens ? 'NOT_ALIGNED' : undefined;
 
   // ── Auto-log research observation when Markets scanner produces a high-alignment observation ──
   const marketsAutoLogRef = useRef<string>('');
@@ -96,7 +97,7 @@ export default function MarketsPage() {
       data.verdict = lens.verdict;
       data.alignment = lens.alignment;
       data.confidence = lens.confidence;
-      data.researchStatus = lens.authorization;
+      data.researchStatus = lensResearchStatus;
       data.ruBudget = lens.ruBudget;
       data.bullScenario = lens.bullScenario;
       data.bearScenario = lens.bearScenario;
@@ -179,7 +180,7 @@ export default function MarketsPage() {
     if (!ctx.symbol || !lens) return undefined;
     return `${ctx.symbol} (${ctx.assetClass}) — Verdict: ${lens.verdict.toUpperCase()}, ` +
       `Alignment: ${lens.alignment}%, Confidence: ${lens.confidence}%, ` +
-      `Research Status: ${lens.authorization}, R-Budget: ${lens.ruBudget}` +
+      `Research Status: ${lensResearchStatus}, R-Budget: ${lens.ruBudget}` +
       (ctx.flow ? `, Flow: ${ctx.flow.market_mode}/${ctx.flow.gamma_state}/${ctx.flow.bias} (${ctx.flow.conviction}% conviction)` : '') +
       (ctx.scanner ? `, Scanner: ${ctx.scanner.direction} ${ctx.scanner.setup} score=${ctx.scanner.score}` : '');
   }, [ctx, lens]);
@@ -198,7 +199,7 @@ export default function MarketsPage() {
     <div className="min-h-screen bg-[var(--msp-bg)] px-2 py-3 text-slate-100 md:px-3">
       <div className="mx-auto grid w-full max-w-none gap-2">
         <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 px-3 py-2 text-xs text-amber-100">
-          Markets Cockpit is an educational research dashboard. Decision lens states, scanner levels, and flow readings are analytical reference points only — not financial advice, order authorization, or broker execution.
+          Markets Cockpit is an educational research dashboard. Analysis-lens states, scanner levels, and flow readings are analytical reference points only — not financial advice, order authorization, or broker execution.
         </div>
         <ComplianceDisclaimer compact />
 

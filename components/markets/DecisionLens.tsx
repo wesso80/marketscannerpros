@@ -23,8 +23,8 @@ export default function DecisionLens({ ctx }: DecisionLensProps) {
   if (!ctx.symbol) {
     return (
       <div className="rounded-lg border border-dashed border-[var(--msp-border)] bg-[var(--msp-panel)] p-6 text-center">
-        <p className="text-sm text-[var(--msp-text-faint)]">Select a ticker above to activate the Decision Lens</p>
-        <p className="mt-1 text-[10px] text-[var(--msp-text-faint)]">Regime + Flow + Options + Structure → Aligned or Low Confluence in 5 seconds</p>
+        <p className="text-sm text-[var(--msp-text-faint)]">Select a ticker above to activate the Market Analysis Lens</p>
+        <p className="mt-1 text-[10px] text-[var(--msp-text-faint)]">Regime + Flow + Options + Structure → Pattern status context in 5 seconds</p>
       </div>
     );
   }
@@ -62,15 +62,15 @@ export default function DecisionLens({ ctx }: DecisionLensProps) {
 
       {/* 3-column grid */}
       <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-        {/* LEFT — Authorization */}
+        {/* LEFT — Pattern status */}
         <div className="space-y-2 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2">
           <LensMetric label="Alignment" value={`${lens.alignment}%`} color={lens.alignment >= 70 ? 'text-emerald-400' : lens.alignment >= 50 ? 'text-amber-400' : 'text-red-400'} />
           <LensBar value={lens.alignment} />
           <LensMetric label="Confidence" value={`${lens.confidence}%`} color={lens.confidence >= 60 ? 'text-emerald-400' : lens.confidence >= 40 ? 'text-amber-400' : 'text-red-400'} />
           <LensBar value={lens.confidence} />
           <LensMetric
-            label="Regime State"
-            value={lens.authorization === 'ALLOW' ? 'ALIGNED' : lens.authorization === 'ALLOW_REDUCED' ? 'REDUCED' : 'NOT ALIGNED'}
+            label="Pattern Status"
+            value={lens.authorization === 'ALLOW' ? 'ALIGNED' : lens.authorization === 'ALLOW_REDUCED' ? 'CONDITIONAL' : 'NOT ALIGNED'}
             color={lens.authorization === 'ALLOW' ? 'text-emerald-400' : lens.authorization === 'ALLOW_REDUCED' ? 'text-amber-400' : 'text-red-400'}
           />
           <LensMetric label="R Budget" value={lens.ruBudget} color="text-slate-300" />

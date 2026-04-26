@@ -262,9 +262,7 @@ export default function ScalperPage() {
         {/* ─── Results Grid ─── */}
         {results.length > 0 && (
           <div className="space-y-4">
-            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-100">
-              <strong>Educational intraday simulation only.</strong> Short-timeframe observations, bias labels, and reference levels are for learning and review. They are not live trading instructions, not financial advice, and no broker execution occurs.
-            </div>
+            <ComplianceDisclaimer variant="intraday" />
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
               {/* Left: Signal Table */}
             <div className="xl:col-span-2 overflow-x-auto">
@@ -340,7 +338,7 @@ export default function ScalperPage() {
         )}
 
         <div className="mt-8">
-          <ComplianceDisclaimer />
+          <ComplianceDisclaimer variant="intraday" />
         </div>
       </div>
     </div>
@@ -400,6 +398,9 @@ function DetailPanel({ result: r }: { result: ScalpResult }) {
         <div className="mt-2 flex items-center justify-between text-[10px]">
           <span className="text-slate-500">Scenario Ratio</span>
           <span className="font-bold" style={{ color: r.riskReward >= 1.5 ? '#10B981' : '#F59E0B' }}>{r.riskReward > 0 ? `${r.riskReward}:1` : '—'}</span>
+        </div>
+        <div className="mt-3 rounded-lg border border-blue-500/25 bg-blue-500/10 px-3 py-2 text-[10px] leading-relaxed text-blue-100">
+          <strong>Why this can fail:</strong> short-timeframe data can lag, spreads can widen, volatility can reverse, and reference levels can invalidate quickly. Review data freshness and market context before drawing conclusions.
         </div>
       </div>
 

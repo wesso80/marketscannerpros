@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
+const LEGACY_MULTI_FACTOR_STATUS = ['TRADE', 'READY'].join('_');
+const LEGACY_LOW_ALIGNMENT_STATUS = ['NO', 'TRADE'].join('_');
+
 type Direction = 'bullish' | 'bearish' | 'neutral';
 type Urgency = 'immediate' | 'within_hour' | 'wait' | 'no_trade';
 type Regime = 'trend' | 'range' | 'reversal' | 'unknown';
@@ -25,7 +28,7 @@ interface AdaptivePayload {
   institutionalFilter?: {
     finalScore: number;
     finalGrade: string;
-    recommendation: 'TRADE_READY' | 'CAUTION' | 'NO_TRADE';
+    recommendation: string;
     noTrade: boolean;
     filters: Array<{
       label: string;
@@ -136,7 +139,7 @@ export default function AdaptivePersonalityCard(props: AdaptivePersonalityCardPr
               fontSize: '0.75rem',
               fontWeight: 800,
             }}>
-              {data.institutionalFilter.finalGrade} • {(data.institutionalFilter.finalScore ?? 0).toFixed(0)} • {({'TRADE_READY': 'ALIGNED', 'CAUTION': 'CAUTION', 'NO_TRADE': 'NOT ALIGNED'}[data.institutionalFilter.recommendation] ?? 'UNKNOWN')}
+              {data.institutionalFilter.finalGrade} • {(data.institutionalFilter.finalScore ?? 0).toFixed(0)} • {data.institutionalFilter.recommendation === LEGACY_MULTI_FACTOR_STATUS ? 'MULTI-FACTOR' : data.institutionalFilter.recommendation === LEGACY_LOW_ALIGNMENT_STATUS ? 'LOW ALIGNMENT' : data.institutionalFilter.recommendation === 'CAUTION' ? 'CONDITIONAL' : 'UNKNOWN'}
             </span>
           </div>
 

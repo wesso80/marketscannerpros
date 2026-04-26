@@ -5,6 +5,7 @@ import ToolPageLayout from '@/components/tools/ToolPageLayout';
 import ToolIdentityHeader from '@/components/tools/ToolIdentityHeader';
 import { useUserTier, canAccessScanner } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
+import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 
 /* ── Types matching API response ── */
 
@@ -163,7 +164,7 @@ export default function OptionsFlowPage() {
       identity={
         <ToolIdentityHeader
           toolName="Options Flow Intelligence"
-          description="Trade direction classification, block/sweep detection, net premium flow, IV skew analysis, and institutional flow scoring."
+          description="Research bias classification, block/sweep detection, net premium flow, IV skew analysis, and large-flow estimation."
           modeLabel="Flow Analysis"
           confidenceLabel={data ? `${data.smartMoney.direction}` : '—'}
           lastUpdatedLabel={lastUpdated}
@@ -171,6 +172,11 @@ export default function OptionsFlowPage() {
       }
       primary={
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <ComplianceDisclaimer variant="options" />
+          <div style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: '12px', padding: '12px 14px', fontSize: '12px', color: '#BFDBFE', lineHeight: 1.55 }}>
+            Flow classifications are estimates derived from public options-chain data. “Large flow” labels may not reflect actual institutional positioning, hedging intent, or future price direction.
+          </div>
+
           {/* Symbol input + scan */}
           <div className="msp-elite-panel" style={{ padding: '14px 20px' }}>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -333,10 +339,10 @@ export default function OptionsFlowPage() {
                   </div>
                 </div>
 
-                {/* Smart Money */}
+                {/* Large flow estimate */}
                 <div style={{ background: 'var(--msp-panel)', borderRadius: '14px', padding: '16px 18px', border: '1px solid var(--msp-border)' }}>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--msp-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
-                    🧠 Institutional Flow
+                    🧠 Large Flow Estimate
                   </div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '8px' }}>
                     <span style={{ fontSize: '18px', fontWeight: 800, color: dirColor(data.smartMoney.direction), textTransform: 'uppercase' }}>
@@ -349,12 +355,12 @@ export default function OptionsFlowPage() {
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', fontSize: '11px' }}>
                     {data.smartMoney.whaleCount > 0 && (
                       <span style={{ padding: '2px 8px', borderRadius: '6px', background: 'rgba(139,92,246,0.12)', color: '#8b5cf6', fontWeight: 700 }}>
-                        🐋 {data.smartMoney.whaleCount} whale
+                        🐋 {data.smartMoney.whaleCount} large-flow estimate
                       </span>
                     )}
                     {data.smartMoney.institutionalCount > 0 && (
                       <span style={{ padding: '2px 8px', borderRadius: '6px', background: 'rgba(59,130,246,0.12)', color: '#3b82f6', fontWeight: 700 }}>
-                        🏦 {data.smartMoney.institutionalCount} institutional
+                        🏦 {data.smartMoney.institutionalCount} institutional proxy
                       </span>
                     )}
                   </div>

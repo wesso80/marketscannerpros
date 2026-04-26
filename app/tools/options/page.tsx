@@ -15,7 +15,7 @@ export default function Page() {
         <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-100">
           Options scanner outputs are educational research observations only. Options can expire worthless and involve substantial risk. Nothing here is options advice or a recommendation to buy, sell, or write contracts.
         </div>
-        <ComplianceDisclaimer compact />
+        <ComplianceDisclaimer compact variant="options" />
       </div>
       <OptionsScannerPage />
     </div>

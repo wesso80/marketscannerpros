@@ -141,7 +141,7 @@ export default function MSPCopilot({
       const verdict = pageData.verdict as string;
       const alignment = pageData.alignment as number;
       const confidence = pageData.confidence as number;
-      const authorization = pageData.authorization as string;
+      const authorization = (pageData.researchStatus || pageData.authorization) as string;
       const ruBudget = pageData.ruBudget as string;
       const bullScenario = pageData.bullScenario as string;
       const bearScenario = pageData.bearScenario as string;
@@ -166,7 +166,7 @@ export default function MSPCopilot({
         { label: 'Verdict', value: verdict.toUpperCase(), color: verdict === 'tradable' ? '#10B981' : verdict === 'conditional' ? '#F59E0B' : verdict === 'blocked' ? '#EF4444' : '#64748B' },
         { label: 'Alignment', value: alignment !== undefined ? `${alignment}%` : 'N/A', color: alignment >= 70 ? '#10B981' : alignment >= 50 ? '#F59E0B' : '#EF4444' },
         { label: 'Confluence', value: confidence !== undefined ? `${confidence}%` : 'N/A', color: confidence >= 60 ? '#10B981' : confidence >= 40 ? '#F59E0B' : '#EF4444' },
-        { label: 'Status', value: authorization || 'N/A', color: authorization === 'ALLOW' ? '#10B981' : authorization === 'ALLOW_REDUCED' ? '#F59E0B' : '#EF4444' },
+        { label: 'Research Status', value: authorization || 'N/A', color: authorization === 'ALIGNED' || authorization === 'ALLOW' ? '#10B981' : authorization === 'CONDITIONAL' || authorization === 'ALLOW_REDUCED' ? '#F59E0B' : '#EF4444' },
         { label: 'Vol State', value: volState || 'N/A' },
         { label: 'Event Risk', value: (eventRisk || 'N/A').toUpperCase(), color: eventRisk === 'high' ? '#EF4444' : eventRisk === 'medium' ? '#F59E0B' : '#10B981' },
       ] : [
@@ -203,7 +203,7 @@ export default function MSPCopilot({
           title: isMarketsPage ? '📋 Scenario & Analysis Framework' : '📋 Scenario Plan',
           content: planContent,
           footer: isMarketsPage
-            ? (authorization === 'ALLOW' ? 'Ask me to build a full analysis framework.' : 'Conditions restricted — ask me why.')
+            ? (authorization === 'ALIGNED' || authorization === 'ALLOW' ? 'Ask me to build a full analysis framework.' : 'Conditions are mixed — ask me why.')
             : (direction ? 'Ask me to build a complete scenario plan.' : 'Run a scan first to get scenario planning.'),
         },
         act: {

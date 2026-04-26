@@ -12,6 +12,7 @@ import { fireAutoLog } from "@/lib/autoLog";
 import CommandStrip, { type TerminalDensity } from "@/components/terminal/CommandStrip";
 import DecisionCockpit from "@/components/terminal/DecisionCockpit";
 import SignalRail from "@/components/terminal/SignalRail";
+import ComplianceDisclaimer from "@/components/ComplianceDisclaimer";
 
 interface PriceData {
   price: number;
@@ -242,12 +243,12 @@ function summarizeDeepNextCheck(result: AnalysisResult): string {
   return 'Monitor whether the scenario score and main evidence stack remain stable.';
 }
 
-function summarizeDeepDoNothing(result: AnalysisResult): string {
+function summarizeDeepResearchCaution(result: AnalysisResult): string {
   const dataQuality = getDeepDataQuality(result);
-  if (dataQuality.label !== 'GOOD') return 'Do nothing because the data stack is incomplete.';
-  if (Math.abs(result.signals.score) < 40) return 'Do nothing because the scenario score is not decisive.';
-  if ((result.news?.length || 0) === 0 && !result.optionsData) return 'Do nothing because external confirmation is thin.';
-  return 'Do nothing until price action confirms the research scenario.';
+  if (dataQuality.label !== 'GOOD') return 'Research caution: the data stack is incomplete.';
+  if (Math.abs(result.signals.score) < 40) return 'Research caution: scenario score is not decisive.';
+  if ((result.news?.length || 0) === 0 && !result.optionsData) return 'Research caution: external confirmation is thin.';
+  return 'Research caution: verify whether price action confirms or rejects the scenario.';
 }
 
 function getSentimentColor(sentiment: string): string {
@@ -763,6 +764,12 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
       {!embeddedInGoldenEgg && <ToolsPageHeader badge="PRO TRADER" title="Golden Egg Deep Analysis" subtitle="AI-assisted educational research with structured multi-factor context" icon="GE" />}
       
       <main className={`max-w-none px-4 ${embeddedInGoldenEgg ? 'py-3' : 'py-8'}`}>
+        {!embeddedInGoldenEgg && (
+          <div className="mb-4">
+            <ComplianceDisclaimer variant="aiData" />
+          </div>
+        )}
+
         {result && !embeddedInGoldenEgg && (
           <CommandStrip
             symbol={result.symbol}
@@ -893,7 +900,7 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                       ['Scenario Score', `${result.signals.score > 0 ? '+' : ''}${result.signals.score}`, getSignalColor(result.signals.signal)],
                       ['Research Bias', biasLabel(weighted.bias), weighted.bias === 'BUY' ? '#10B981' : weighted.bias === 'SELL' ? '#EF4444' : '#F59E0B'],
                       ['Next Check', summarizeDeepNextCheck(result), '#93C5FD'],
-                      ['Do Nothing', summarizeDeepDoNothing(result), '#F59E0B'],
+                      ['Research Caution', summarizeDeepResearchCaution(result), '#F59E0B'],
                     ].map(([label, value, color]) => (
                       <div key={label} title={value} className="rounded-md border border-slate-700/50 bg-[#0A101C]/50 px-3 py-2">
                         <div className="text-[11px] uppercase tracking-wide text-slate-500">{label}</div>

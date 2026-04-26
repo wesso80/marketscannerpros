@@ -645,19 +645,19 @@ export default function MacroDashboardPage() {
 
             <section id="implications" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
               <div className="text-sm font-semibold text-white">Implications Matrix</div>
-              <div className="mt-1 text-xs text-white/50">Regime → best deployment map across asset classes</div>
+              <div className="mt-1 text-xs text-white/50">Regime → educational scenario map across asset classes</div>
               <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
                 <div className="rounded-lg border border-white/10 bg-black/20 p-3 text-xs text-white/80">
                   <div className="mb-1 text-[11px] text-white/50">Equities</div>
-                  {gate.permission === 'no' ? 'Defensive only; avoid high-beta.' : gate.permission === 'conditional' ? 'Quality growth favored; small caps reduced.' : 'Growth + cyclicals allowed with discipline.'}
+                  {gate.permission === 'no' ? 'Defensive context; high-beta risk elevated.' : gate.permission === 'conditional' ? 'Quality growth context; small-cap risk reduced.' : 'Growth + cyclicals showing supportive context.'}
                 </div>
                 <div className="rounded-lg border border-white/10 bg-black/20 p-3 text-xs text-white/80">
                   <div className="mb-1 text-[11px] text-white/50">Crypto</div>
-                  {gate.riskState === 'risk_off' ? 'BTC-led defense; alts/meme off.' : gate.riskState === 'neutral' ? 'Selective BTC + majors only.' : 'BTC + selective alts rotation on.'}
+                  {gate.riskState === 'risk_off' ? 'BTC-led defensive context; alts/meme risk elevated.' : gate.riskState === 'neutral' ? 'BTC + majors context only.' : 'BTC + selective alts rotation context.'}
                 </div>
                 <div className="rounded-lg border border-white/10 bg-black/20 p-3 text-xs text-white/80">
                   <div className="mb-1 text-[11px] text-white/50">Vol</div>
-                  {gate.volRegime === 'expansion' ? 'Buy vol / reduce directional size.' : gate.volRegime === 'compression' ? 'Sell vol / trend follow allowed.' : 'Normal vol; standard execution.'}
+                  {gate.volRegime === 'expansion' ? 'Volatility expansion; directional scenario risk elevated.' : gate.volRegime === 'compression' ? 'Volatility compression; trend-follow context may improve.' : 'Normal volatility; standard scenario review.'}
                 </div>
                 <div className="rounded-lg border border-white/10 bg-black/20 p-3 text-xs text-white/80">
                   <div className="mb-1 text-[11px] text-white/50">USD</div>

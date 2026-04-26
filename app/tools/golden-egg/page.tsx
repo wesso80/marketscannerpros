@@ -176,13 +176,13 @@ function summarizeGEReason(args: { direction?: string | null; setupType?: string
   return `${direction}${setup} is forming, but confluence is still below high-conviction threshold.`;
 }
 
-function summarizeGEDoNothing(args: { dataQuality: string; hasScenarioLevels: boolean; assessment?: string | null; confluence: number; primaryBlocker?: string | null }) {
-  if (args.dataQuality !== 'GOOD') return 'Do nothing because core inputs are incomplete or weak.';
-  if (!args.hasScenarioLevels) return 'Do nothing because reference and invalidation levels are not both available.';
-  if (args.primaryBlocker) return `Do nothing until the blocker improves: ${args.primaryBlocker}.`;
-  if ((args.assessment || '').toUpperCase() !== 'ALIGNED') return 'Do nothing until Golden Egg assessment moves into scenario aligned.';
-  if (args.confluence < 70) return 'Do nothing until confluence improves above the high-conviction threshold.';
-  return 'Do nothing until price interacts with the reference level and confirms the scenario.';
+function summarizeGEResearchCaution(args: { dataQuality: string; hasScenarioLevels: boolean; assessment?: string | null; confluence: number; primaryBlocker?: string | null }) {
+  if (args.dataQuality !== 'GOOD') return 'Research caution: core inputs are incomplete or weak.';
+  if (!args.hasScenarioLevels) return 'Research caution: reference and invalidation levels are not both available.';
+  if (args.primaryBlocker) return `Research caution: blocker still present — ${args.primaryBlocker}.`;
+  if ((args.assessment || '').toUpperCase() !== 'ALIGNED') return 'Research caution: Golden Egg assessment is not scenario aligned.';
+  if (args.confluence < 70) return 'Research caution: confluence remains below the high-conviction threshold.';
+  return 'Research caution: verify whether price interaction confirms or rejects the scenario.';
 }
 
 function buildGEInvalidationConditions(args: { confluence: number; dataQuality: string; primaryBlocker?: string | null; crossMarket: 'supportive' | 'neutral' | 'headwind'; dveRegime?: string | null; timeVerdict?: string | null }) {
@@ -262,7 +262,7 @@ export default function GoldenEggPage() {
   const geNextUsefulCheck = summarizeGENextCheck({ dataQuality: geDataQuality, hasScenarioLevels: geHasScenarioLevels, assessment: geAssessment, primaryBlocker: ge?.layer1?.primaryBlocker, confluence: geConfluenceScore, crossMarket: crossMarketAlignment.alignment });
   const geAssessmentLabel = assessmentDisplayLabel(geAssessment);
   const geReason = summarizeGEReason({ direction: ge?.layer1?.direction, setupType: ge?.layer2?.setup?.setupType, confluence: geConfluenceScore, crossMarket: crossMarketAlignment.alignment, dataQuality: geDataQuality, primaryDriver: ge?.layer1?.primaryDriver, primaryBlocker: ge?.layer1?.primaryBlocker });
-  const geDoNothing = summarizeGEDoNothing({ dataQuality: geDataQuality, hasScenarioLevels: geHasScenarioLevels, assessment: geAssessment, confluence: geConfluenceScore, primaryBlocker: ge?.layer1?.primaryBlocker });
+  const geDoNothing = summarizeGEResearchCaution({ dataQuality: geDataQuality, hasScenarioLevels: geHasScenarioLevels, assessment: geAssessment, confluence: geConfluenceScore, primaryBlocker: ge?.layer1?.primaryBlocker });
   const geInvalidationConditions = buildGEInvalidationConditions({ confluence: geConfluenceScore, dataQuality: geDataQuality, primaryBlocker: ge?.layer1?.primaryBlocker, crossMarket: crossMarketAlignment.alignment, dveRegime: d?.volatility?.regime, timeVerdict: ge?.layer3?.timeConfluence?.verdict });
   const geFreshness = [
     { label: 'Quote', value: formatTimestamp(ge?.meta?.asOfTs) },
@@ -568,7 +568,7 @@ export default function GoldenEggPage() {
                   <div>{geReason}</div>
                 </div>
                 <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-50">
-                  <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.07em] text-amber-300">Do Nothing Because</div>
+                  <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.07em] text-amber-300">Research Caution</div>
                   <div>{geDoNothing}</div>
                 </div>
               </div>
