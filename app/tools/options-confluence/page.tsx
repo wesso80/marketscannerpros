@@ -1297,7 +1297,7 @@ export default function OptionsConfluenceScanner() {
   type LadderState = 'valid' | 'partial' | 'fail';
   const stateVisual = (state: LadderState) => {
     if (state === 'valid') return { label: 'VALID', icon: '✔', containerClass: 'border border-emerald-500/40 bg-emerald-500/15', textClass: 'text-emerald-500' };
-    if (state === 'partial') return { label: 'PARTIAL', icon: '⚠', containerClass: 'border border-amber-500/40 bg-amber-500/15', textClass: 'text-amber-500' };
+    if (state === 'partial') return { label: 'PARTIAL', icon: '!', containerClass: 'border border-amber-500/40 bg-amber-500/15', textClass: 'text-amber-500' };
     return { label: 'FAIL', icon: '✖', containerClass: 'border border-red-500/40 bg-red-500/15', textClass: 'text-red-500' };
   };
 
@@ -1580,6 +1580,54 @@ export default function OptionsConfluenceScanner() {
             : `Break ${result.tradeLevels.entryZone.low.toFixed(2)}-${result.tradeLevels.entryZone.high.toFixed(2)}`)
         : 'Await cleaner trigger + liquidity confirmation'))
     : 'Await trigger';
+
+  const researchStateLabel = tradeabilityState === 'EXECUTABLE'
+    ? 'Scenario Aligned'
+    : tradeabilityState === 'CONDITIONAL'
+      ? 'Needs Confirmation'
+      : 'Not Aligned';
+
+  const researchWhyItems = result
+    ? [
+        ...(result.tradeSnapshot?.why || []),
+        ...decisionReasons,
+        result.openInterestAnalysis?.sentimentReason,
+        result.primaryStrike?.reason,
+      ].filter(Boolean).slice(0, 3)
+    : [];
+
+  const researchDoNothingItems = result
+    ? [
+        tradePermission === 'BLOCKED' ? 'Institutional filter is blocking this scenario.' : null,
+        commandStatus !== 'ACTIVE' ? 'Scenario is still waiting for confirmation.' : null,
+        !result.tradeLevels ? 'No clean reference zone is available yet.' : null,
+        result.entryTiming.urgency === 'no_trade' ? (result.entryTiming.reason || 'Timing model says wait.') : null,
+        (result.expectedMove?.selectedExpiryPercent ?? 0) >= 4 ? 'Expected move is elevated; option premium may be less forgiving.' : null,
+        dataHealth === 'CACHED' || dataHealth === 'DELAYED' || dataHealth === 'EOD' || dataHealth === 'STALE' ? 'Data freshness is capped, so size the conclusion down.' : null,
+      ].filter(Boolean).slice(0, 3)
+    : [];
+
+  const researchInvalidationItems = result
+    ? [
+        result.tradeLevels ? `Price loses ${result.tradeLevels.stopLoss.toFixed(2)} invalidation.` : null,
+        result.tradeSnapshot?.risk?.invalidationReason,
+        result.openInterestAnalysis?.sentiment && result.openInterestAnalysis.sentiment !== 'neutral' && result.openInterestAnalysis.sentiment !== result.direction
+          ? 'Open interest sentiment diverges from the scenario.'
+          : null,
+        dealerGamma?.regime === 'SHORT_GAMMA' ? 'Short-gamma expansion can make levels less stable.' : null,
+      ].filter(Boolean).slice(0, 3)
+    : [];
+
+  const dataTrustItems = result
+    ? [
+        `Data: ${dataHealth}`,
+        result.dataQuality?.optionsChainSource ? `Options: ${result.dataQuality.optionsChainSource.replace('_', ' ')}` : null,
+        result.dataQuality?.hasGreeksFromAPI ? 'Greeks from API' : 'Greeks estimated',
+        result.dataQuality?.hasMeaningfulOI ? 'OI usable' : 'OI limited',
+        result.primaryStrike ? 'Strike map present' : 'Strike map missing',
+        result.primaryExpiration ? 'Expiry map present' : 'Expiry map missing',
+      ].filter(Boolean).slice(0, 4)
+    : [];
 
   const riskState = !result
     ? 'UNKNOWN'
@@ -2482,8 +2530,8 @@ export default function OptionsConfluenceScanner() {
 
             <div className="-mt-1 rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-3 py-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-[0.7rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Decision Engine</span>
-                <span className="text-[0.7rem] font-bold uppercase tracking-[0.05em] text-slate-500">Research First • Evidence Second • Deep Analysis On Demand</span>
+                <span className="text-[0.7rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Options Research Packet</span>
+                <span className="text-[0.7rem] font-bold uppercase tracking-[0.05em] text-slate-500">Scenario • Evidence • Invalidation • Data Trust</span>
               </div>
             </div>
 
@@ -2499,55 +2547,100 @@ export default function OptionsConfluenceScanner() {
             </div>
 
             <div className="rounded-[14px] border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[0.85rem]">
-              <div className="grid gap-[0.65rem] md:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1.2fr)]">
-                <DepthCard className="rounded-[10px] border border-slate-500/20 bg-slate-900/40 p-[0.7rem] opacity-[0.9]" tiltStrength={4}>
-                  <div className="text-[0.64rem] font-extrabold uppercase text-slate-500">Decision Core</div>
-                  <div className="mt-[0.2rem] text-[0.9rem] font-black text-slate-200">
-                    {result.tradeSnapshot?.oneLine || `${thesisDirection.toUpperCase()} setup ${commandStatus === 'ACTIVE' ? 'analysis complete' : 'requires trigger confirmation'}`}
+              <div className="grid gap-[0.75rem] lg:grid-cols-[minmax(0,1.6fr)_minmax(260px,0.9fr)]">
+                <DepthCard className={`rounded-[10px] border border-[var(--msp-border-strong)] border-l-[3px] border-l-[var(--msp-accent)] bg-[var(--msp-panel)] p-[0.85rem] shadow-[var(--msp-shadow)] ${executionGlowClass}`} tiltStrength={5.5}>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-[0.64rem] font-extrabold uppercase text-[var(--msp-accent)]">Scenario</div>
+                      <div className="mt-[0.2rem] text-[1rem] font-black text-slate-100">
+                        {result.symbol} • {thesisDirection.toUpperCase()} • {researchStateLabel}
+                      </div>
+                      <div className="mt-[0.25rem] text-[0.76rem] text-slate-400">
+                        {result.tradeSnapshot?.oneLine || `${setupLabel || 'Options setup'} with ${unifiedConfidence}% confluence.`}
+                      </div>
+                    </div>
+                    <div className="grid min-w-[118px] gap-1 rounded-[10px] border border-[var(--msp-border)] bg-black/20 px-3 py-2 text-right">
+                      <span className="text-[0.62rem] font-bold uppercase text-slate-500">Confluence</span>
+                      <span className="text-[1.15rem] font-black text-[var(--msp-accent)]">{unifiedConfidence}%</span>
+                    </div>
                   </div>
-                  <div className="mt-[0.35rem] flex flex-wrap gap-[0.35rem]">
-                    <span className="rounded-full border border-[var(--msp-border)] bg-slate-400/20 px-2 py-[2px] text-[0.68rem] font-bold text-slate-200">
-                      Grade {result.tradeQuality}
-                    </span>
-                    <span className={`rounded-full border border-[var(--msp-border)] px-2 py-[2px] text-[0.68rem] font-extrabold ${commandStatus === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-500' : commandStatus === 'WAIT' ? 'bg-amber-500/20 text-amber-500' : 'bg-red-500/20 text-red-500'}`}>
-                      {commandStatus}
-                    </span>
-                    <span className="rounded-full border border-[var(--msp-border)] bg-slate-400/20 px-2 py-[2px] text-[0.68rem] font-bold text-slate-300">
-                      Trigger: {decisionTrigger}
-                    </span>
+
+                  <div className="mt-3 grid gap-2 md:grid-cols-3">
+                    <div className="rounded-lg bg-black/20 p-2">
+                      <div className="text-[0.62rem] font-bold uppercase text-slate-500">Contract Focus</div>
+                      <div className="mt-1 text-[0.82rem] font-extrabold text-slate-100">
+                        {result.primaryStrike ? `${result.primaryStrike.strike} ${result.primaryStrike.type.toUpperCase()}` : 'Await strike map'}
+                      </div>
+                      <div className="text-[0.68rem] text-slate-500">{result.primaryStrike?.moneyness || 'N/A'}</div>
+                    </div>
+                    <div className="rounded-lg bg-black/20 p-2">
+                      <div className="text-[0.62rem] font-bold uppercase text-slate-500">Expiry Focus</div>
+                      <div className="mt-1 text-[0.82rem] font-extrabold text-slate-100">
+                        {result.primaryExpiration ? `${result.primaryExpiration.dte} DTE` : 'Await expiry map'}
+                      </div>
+                      <div className="text-[0.68rem] text-slate-500">{result.primaryExpiration?.expirationDate || 'N/A'}</div>
+                    </div>
+                    <div className="rounded-lg bg-black/20 p-2">
+                      <div className="text-[0.62rem] font-bold uppercase text-slate-500">Reference Zone</div>
+                      <div className="mt-1 text-[0.82rem] font-extrabold text-slate-100">
+                        {result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)} - ${result.tradeLevels.entryZone.high.toFixed(2)}` : 'N/A'}
+                      </div>
+                      <div className="text-[0.68rem] text-slate-500">Trigger: {decisionTrigger}</div>
+                    </div>
                   </div>
-                  <div className="mt-[0.35rem] text-[0.72rem] text-slate-400">
-                    {(result.tradeSnapshot?.why || primaryWhyItems).slice(0, 2).join(' • ')}
+
+                  <div className="mt-3 grid gap-2 md:grid-cols-3">
+                    <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-2">
+                      <div className="text-[0.62rem] font-bold uppercase text-emerald-300">Why This Appeared</div>
+                      <ul className="mt-1 grid gap-1 text-[0.72rem] text-slate-300">
+                        {(researchWhyItems.length ? researchWhyItems : ['Confluence engine found a structured options scenario.']).map((item, index) => (
+                          <li key={`${item}-${index}`}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-2">
+                      <div className="text-[0.62rem] font-bold uppercase text-amber-300">Do Nothing Because</div>
+                      <ul className="mt-1 grid gap-1 text-[0.72rem] text-slate-300">
+                        {(researchDoNothingItems.length ? researchDoNothingItems : ['No hard blocker is present; still confirm liquidity and timing.']).map((item, index) => (
+                          <li key={`${item}-${index}`}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-2">
+                      <div className="text-[0.62rem] font-bold uppercase text-red-300">Invalidates If</div>
+                      <ul className="mt-1 grid gap-1 text-[0.72rem] text-slate-300">
+                        {(researchInvalidationItems.length ? researchInvalidationItems : ['Scenario loses structure or fresh data contradicts the setup.']).map((item, index) => (
+                          <li key={`${item}-${index}`}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
                 </DepthCard>
 
-                <DepthCard className={`rounded-[10px] border border-[var(--msp-border-strong)] border-l-[3px] border-l-[var(--msp-accent)] bg-[var(--msp-panel)] p-[0.74rem] shadow-[var(--msp-shadow)] ${executionGlowClass}`} tiltStrength={5.5}>
-                  <div className="text-[0.64rem] font-extrabold uppercase text-[var(--msp-accent)]">Risk + Analysis</div>
-                  <div className="mt-1 grid gap-1 text-[0.76rem]">
-                    <div className="text-slate-100">Zone: {result.tradeLevels ? `${result.tradeLevels.entryZone.low.toFixed(2)} - ${result.tradeLevels.entryZone.high.toFixed(2)}` : 'N/A'}</div>
-                    <div className="text-red-300">Invalidation: {result.tradeLevels ? result.tradeLevels.stopLoss.toFixed(2) : 'N/A'}</div>
-                    <div className="text-emerald-300">Key Levels: {result.tradeLevels ? `${result.tradeLevels.target1.price.toFixed(2)}${result.tradeLevels.target2 ? ` / ${result.tradeLevels.target2.price.toFixed(2)}` : ''}` : 'N/A'}</div>
-                    <div className="text-slate-200">Expected Move: {result.expectedMove ? `${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'N/A'}</div>
-                    <div className="text-slate-400">Invalidation: {result.tradeSnapshot?.risk?.invalidationReason || 'Loss of setup structure'}</div>
-                  </div>
-                </DepthCard>
+                <div className="grid gap-[0.65rem]">
+                  <DepthCard className="rounded-[10px] border border-slate-500/20 bg-slate-900/40 p-[0.7rem] opacity-[0.95]" tiltStrength={4}>
+                    <div className="text-[0.64rem] font-extrabold uppercase text-slate-500">Options Snapshot</div>
+                    <div className="mt-1 grid gap-1 text-[0.76rem]">
+                      <div className="text-slate-200">P/C: {result.openInterestAnalysis ? result.openInterestAnalysis.pcRatio.toFixed(2) : 'N/A'}</div>
+                      <div className="text-slate-200">IV Rank: {result.ivAnalysis ? `${result.ivAnalysis.ivRank.toFixed(0)}%` : 'N/A'}</div>
+                      <div className="text-slate-200">Strategy: {(result.strategyRecommendation?.strategy || 'N/A').toUpperCase()}</div>
+                      <div className="text-slate-300">Expected Move: {result.expectedMove ? `${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'N/A'}</div>
+                      <div className="text-slate-400">Theta: {result.primaryExpiration ? result.primaryExpiration.thetaRisk.toUpperCase() : 'N/A'}</div>
+                    </div>
+                  </DepthCard>
 
-                <DepthCard className="rounded-[10px] border border-slate-500/20 bg-slate-900/40 p-[0.7rem] opacity-[0.9]" tiltStrength={4}>
-                  <div className="text-[0.64rem] font-extrabold uppercase text-slate-500">Options Snapshot</div>
-                  <div className="mt-1 grid gap-1 text-[0.76rem]">
-                    <div className="text-slate-200">P/C: {result.openInterestAnalysis ? result.openInterestAnalysis.pcRatio.toFixed(2) : 'N/A'}</div>
-                    <div className="text-slate-200">IV Rank: {result.ivAnalysis ? `${result.ivAnalysis.ivRank.toFixed(0)}%` : 'N/A'}</div>
-                    <div className="text-slate-200">Strategy: {(result.strategyRecommendation?.strategy || 'N/A').toUpperCase()}</div>
-                    <div className="text-slate-300">Contract: {result.primaryStrike ? `${result.primaryStrike.strike}${result.primaryStrike.type === 'call' ? 'C' : 'P'}` : 'N/A'}</div>
-                    <div className="text-slate-400">Theta: {result.primaryExpiration ? result.primaryExpiration.thetaRisk.toUpperCase() : 'N/A'}</div>
-                  </div>
-                </DepthCard>
+                  <DepthCard className="rounded-[10px] border border-slate-500/20 bg-slate-900/40 p-[0.7rem] opacity-[0.95]" tiltStrength={4}>
+                    <div className="text-[0.64rem] font-extrabold uppercase text-slate-500">Data Trust</div>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {dataTrustItems.map((item) => (
+                        <span key={item} className="rounded-full border border-[var(--msp-border)] bg-black/20 px-2 py-[2px] text-[0.66rem] font-bold text-slate-300">
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  </DepthCard>
+                </div>
               </div>
-            </div>
-
-            <div className="-mt-4 rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] p-[0.5rem_0.65rem] text-[0.74rem] text-slate-300">
-              <span className="text-[0.64rem] font-extrabold uppercase text-slate-500">Analysis Brief:</span>{' '}
-              {result.tradeSnapshot?.oneLine || `${result.symbol} ${thesisDirection.toUpperCase()} setup with ${(result.compositeScore?.confidence ?? 0).toFixed(0)}% confluence — ${commandStatus}.`}
             </div>
 
             <div className={`-mt-[0.35rem] rounded-[10px] border px-[0.7rem] py-[0.55rem] ${tradeabilityToneClass}`}>
@@ -2991,7 +3084,7 @@ export default function OptionsConfluenceScanner() {
                 <div className="flex flex-wrap items-center justify-between gap-[0.6rem]">
                   <div className="text-[0.72rem] font-bold uppercase text-slate-400">Dealer Positioning Engine</div>
                   <div className={`text-[0.84rem] font-black tracking-[0.3px] ${dealerGamma.regime === 'SHORT_GAMMA' ? 'text-red-400' : dealerGamma.regime === 'LONG_GAMMA' ? 'text-emerald-400' : 'text-amber-400'}`}>
-                    {dealerGamma.regime === 'SHORT_GAMMA' ? '🔴 SHORT GAMMA' : dealerGamma.regime === 'LONG_GAMMA' ? '🟢 LONG GAMMA' : '🟡 NEUTRAL'}
+                    {dealerGamma.regime === 'SHORT_GAMMA' ? 'SHORT GAMMA' : dealerGamma.regime === 'LONG_GAMMA' ? 'LONG GAMMA' : 'NEUTRAL'}
                   </div>
                 </div>
 
@@ -3041,20 +3134,20 @@ export default function OptionsConfluenceScanner() {
                     <div className="text-[0.64rem] font-bold uppercase text-slate-500">Vanna Flow Direction</div>
                     <div className="mt-[0.15rem] text-[0.78rem] font-extrabold text-slate-200">
                       {dealerGamma.netDexUsd > 0
-                        ? '📈 Positive Vanna — IV decline lifts delta, dealers buy underlying'
+                        ? 'Positive Vanna - IV decline lifts delta, dealers buy underlying'
                         : dealerGamma.netDexUsd < 0
-                          ? '📉 Negative Vanna — IV rise pushes delta down, dealers sell underlying'
-                          : '➡️ Flat Vanna — Minimal directional delta/vanna pressure'}
+                          ? 'Negative Vanna - IV rise pushes delta down, dealers sell underlying'
+                          : 'Flat Vanna - Minimal directional delta/vanna pressure'}
                     </div>
                   </div>
                   <div className="rounded-lg border border-slate-500/20 bg-slate-900/35 p-[0.45rem_0.55rem]">
                     <div className="text-[0.64rem] font-bold uppercase text-slate-500">Charm Decay Pressure</div>
                     <div className="mt-[0.15rem] text-[0.78rem] font-extrabold text-slate-200">
                       {dealerGamma.callGexUsd > dealerGamma.putGexUsd
-                        ? '⏳ Call-heavy — Charm decay adds upward delta pressure into expiry'
+                        ? 'Call-heavy - Charm decay adds upward delta pressure into expiry'
                         : dealerGamma.putGexUsd > dealerGamma.callGexUsd
-                          ? '⏳ Put-heavy — Charm decay adds downward delta pressure into expiry'
-                          : '⏳ Balanced — Charm decay neutral across strikes'}
+                          ? 'Put-heavy - Charm decay adds downward delta pressure into expiry'
+                          : 'Balanced - Charm decay neutral across strikes'}
                     </div>
                   </div>
                 </div>
@@ -3070,10 +3163,10 @@ export default function OptionsConfluenceScanner() {
                   <div className="text-[0.64rem] font-bold uppercase text-slate-400">Dealer Pressure Summary</div>
                   <div className="mt-[0.2rem] text-[0.78rem] font-bold text-slate-200">
                     {dealerGamma.regime === 'SHORT_GAMMA'
-                      ? `⚡ Dealers are short gamma — expect AMPLIFIED moves. Pin zone: ${dealerGamma.pinZone || 'N/A'}. Volatility state: ${dealerVolatilityBias}. ${dealerIntel?.attention?.triggered ? `⚠ ${dealerIntel.attention.reason}` : 'No immediate attention triggers.'}`
+                      ? `Dealers are short gamma - expect amplified moves. Pin zone: ${dealerGamma.pinZone || 'N/A'}. Volatility state: ${dealerVolatilityBias}. ${dealerIntel?.attention?.triggered ? dealerIntel.attention.reason : 'No immediate attention triggers.'}`
                       : dealerGamma.regime === 'LONG_GAMMA'
-                        ? `🛡️ Dealers are long gamma — expect DAMPENED moves toward pin. Pin zone: ${dealerGamma.pinZone || 'N/A'}. Volatility state: ${dealerVolatilityBias}. Price likely gravitates to gamma flip.`
-                        : `⚖️ Neutral gamma environment — low dealer hedging pressure. Watch for regime shift near $${dealerGamma.gammaFlipPrice?.toFixed(2) || 'N/A'}.`}
+                        ? `Dealers are long gamma - expect dampened moves toward pin. Pin zone: ${dealerGamma.pinZone || 'N/A'}. Volatility state: ${dealerVolatilityBias}. Price likely gravitates to gamma flip.`
+                        : `Neutral gamma environment - low dealer hedging pressure. Watch for regime shift near $${dealerGamma.gammaFlipPrice?.toFixed(2) || 'N/A'}.`}
                   </div>
                 </div>
 
@@ -3250,7 +3343,7 @@ export default function OptionsConfluenceScanner() {
                 {result.capitalFlow?.risk && result.capitalFlow.risk.length > 0 && (
                   <div className="mt-[0.45rem]">
                     {result.capitalFlow.risk.slice(0, 3).map((r, idx) => (
-                      <div key={idx} className="text-[0.72rem] text-red-300/80">⚠ {r}</div>
+                      <div key={idx} className="text-[0.72rem] text-red-300/80">{r}</div>
                     ))}
                   </div>
                 )}
@@ -3272,7 +3365,7 @@ export default function OptionsConfluenceScanner() {
                     : result.crossAssetFlow.regime === 'DIVERGENT' ? 'text-amber-400'
                     : 'text-slate-400'
                   }`}>
-                    {result.crossAssetFlow.regime === 'RISK_ON' ? '🟢' : result.crossAssetFlow.regime === 'RISK_OFF' ? '🔴' : result.crossAssetFlow.regime === 'STRESS' ? '🚨' : result.crossAssetFlow.regime === 'DIVERGENT' ? '🟡' : '⚪'} {result.crossAssetFlow.regime.replace('_', ' ')}
+                    {result.crossAssetFlow.regime.replace('_', ' ')}
                   </div>
                 </div>
 
@@ -3297,7 +3390,7 @@ export default function OptionsConfluenceScanner() {
                       : result.crossAssetFlow.dxyTrend === 'weakening' ? 'text-emerald-300'
                       : 'text-slate-300'
                     }`}>
-                      {result.crossAssetFlow.dxyTrend === 'strengthening' ? '💪 Strengthening' : result.crossAssetFlow.dxyTrend === 'weakening' ? '📉 Weakening' : '➡️ Neutral'}
+                      {result.crossAssetFlow.dxyTrend === 'strengthening' ? 'Strengthening' : result.crossAssetFlow.dxyTrend === 'weakening' ? 'Weakening' : 'Neutral'}
                       {result.crossAssetFlow.components?.dxyLevel ? ` (${result.crossAssetFlow.components.dxyLevel.toFixed(2)})` : ''}
                     </div>
                   </div>
@@ -3326,7 +3419,7 @@ export default function OptionsConfluenceScanner() {
                   <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
                     <div className="text-[0.62rem] font-bold uppercase text-slate-500">Gold Safe Haven</div>
                     <div className="text-[0.82rem] font-extrabold text-slate-200">
-                      {result.crossAssetFlow.components?.goldSafeHaven ? '🟡 ACTIVE' : '⚪ Inactive'}
+                      {result.crossAssetFlow.components?.goldSafeHaven ? 'ACTIVE' : 'Inactive'}
                     </div>
                   </div>
                 </div>
@@ -3367,7 +3460,7 @@ export default function OptionsConfluenceScanner() {
                 {result.crossAssetFlow.warnings && result.crossAssetFlow.warnings.length > 0 && (
                   <div className="mt-[0.45rem]">
                     {result.crossAssetFlow.warnings.map((warning, idx) => (
-                      <div key={idx} className="text-[0.72rem] text-amber-300/80">⚠ {warning}</div>
+                      <div key={idx} className="text-[0.72rem] text-amber-300/80">{warning}</div>
                     ))}
                   </div>
                 )}
@@ -3394,7 +3487,7 @@ export default function OptionsConfluenceScanner() {
                   {/* Bull Scenario */}
                   <div className="rounded-[10px] border border-emerald-500/25 bg-emerald-500/5 p-[0.55rem_0.65rem]">
                     <div className="flex items-center justify-between gap-2">
-                      <div className="text-[0.66rem] font-extrabold uppercase text-emerald-400">🐂 Bull Case</div>
+                      <div className="text-[0.66rem] font-extrabold uppercase text-emerald-400">Bull Case</div>
                       {result.aiMarketState.scenarios.bull?.probability != null && (
                         <div className="text-[0.78rem] font-black text-emerald-300">{result.aiMarketState.scenarios.bull.probability}%</div>
                       )}
@@ -3417,7 +3510,7 @@ export default function OptionsConfluenceScanner() {
                   {/* Base Scenario */}
                   <div className="rounded-[10px] border border-slate-400/25 bg-slate-400/5 p-[0.55rem_0.65rem]">
                     <div className="flex items-center justify-between gap-2">
-                      <div className="text-[0.66rem] font-extrabold uppercase text-slate-400">📊 Base Case</div>
+                      <div className="text-[0.66rem] font-extrabold uppercase text-slate-400">Base Case</div>
                       {result.aiMarketState.scenarios.base?.probability != null && (
                         <div className="text-[0.78rem] font-black text-slate-200">{result.aiMarketState.scenarios.base.probability}%</div>
                       )}
@@ -3597,7 +3690,7 @@ export default function OptionsConfluenceScanner() {
                   <div className="grid gap-[0.2rem]">
                     {(result.institutionalFilter.filters || []).slice(0, 4).map((filter, idx) => (
                       <div key={idx} className="text-[0.74rem] text-slate-300">
-                        {filter.status === 'pass' ? '✔' : filter.status === 'warn' ? '⚠' : '✖'} {filter.label}
+                        {filter.status.toUpperCase()} {filter.label}
                       </div>
                     ))}
                   </div>
@@ -3689,19 +3782,18 @@ export default function OptionsConfluenceScanner() {
             )}
             
             {/* ═══════════════════════════════════════════════════════════════════════════ */}
-            {/* ⚠️ CRITICAL WARNINGS (Earnings, FOMC, Data Quality) */}
+            {/* Critical warnings: earnings, FOMC, data quality */}
             {/* ═══════════════════════════════════════════════════════════════════════════ */}
             {diagnosticsVisible && (
               <div ref={(element) => { sectionAnchorsRef.current.logs = element; }} className="-mt-[0.2rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-[0.7rem] py-[0.4rem] text-[0.72rem]">
-                <span className="font-extrabold uppercase tracking-[0.04em] text-slate-300">Section 4 — Execution Diagnostics (Advanced)</span>
-                <span className="ml-2 text-slate-500">Risk flags, data quality, confidence caps, execution notes</span>
+                <span className="font-extrabold uppercase tracking-[0.04em] text-slate-300">Section 4 — Research Diagnostics (Advanced)</span>
+                <span className="ml-2 text-slate-500">Risk flags, data quality, confidence caps, and diagnostic notes</span>
               </div>
             )}
 
             {diagnosticsVisible && (result.disclaimerFlags && result.disclaimerFlags.length > 0) && (
               <div className="rounded-2xl border-2 border-red-500 bg-[var(--msp-bear-tint)] p-[1rem_1.25rem]">
                 <div className="mb-3 flex items-center gap-3">
-                  <span className="text-[1.25rem]">🚨</span>
                   <span className="text-[0.9rem] font-bold uppercase tracking-[0.5px] text-red-500">
                     Critical Risk Events
                   </span>
@@ -3721,7 +3813,6 @@ export default function OptionsConfluenceScanner() {
               (result.dataConfidenceCaps && result.dataConfidenceCaps.length > 0)) && (
               <details className="rounded-xl border border-amber-500/40 bg-[var(--msp-warn-tint)] p-[0.875rem_1rem]">
                 <summary className="flex cursor-pointer list-none items-center gap-2">
-                  <span className="text-[1rem]">📋</span>
                   <span className="text-[0.8rem] font-bold uppercase text-amber-500">
                     System Diagnostics (Advanced)
                   </span>
@@ -3734,19 +3825,19 @@ export default function OptionsConfluenceScanner() {
                 <div className="mt-[0.6rem] flex flex-wrap gap-2">
                   {result.dataConfidenceCaps?.map((cap, idx) => (
                     <span key={`cap-${idx}`} className="rounded-md bg-black/20 px-2 py-1 text-[0.75rem] text-amber-300">
-                      ⚠️ {cap}
+                      {cap}
                     </span>
                   ))}
                   {result.executionNotes?.map((note, idx) => (
                     <span key={`note-${idx}`} className="rounded-md bg-black/15 px-2 py-1 text-[0.75rem] text-slate-400">
-                      💡 {note}
+                      {note}
                     </span>
                   ))}
                 </div>
               </details>
             )}
 
-            {/* 📈 PATTERN FORMATION */}
+            {/* Pattern formation */}
             {trapDoors.evidence && (() => {
               const biasAligned = !!bestPattern && (
                 bestPattern.bias === 'neutral' ||
@@ -3756,9 +3847,7 @@ export default function OptionsConfluenceScanner() {
               return (
                 <div className="rounded-2xl border border-[var(--msp-border-strong)] border-l-[3px] border-l-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[0.85rem_1rem] shadow-[var(--msp-shadow)]">
                   <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                    <div className="text-[0.9rem] font-black tracking-[0.35px] text-slate-200">
-                      🧩 PATTERN FORMATION
-                    </div>
+                    <div className="text-[0.9rem] font-black tracking-[0.35px] text-slate-200">Pattern Formation</div>
                     <span className={`rounded-full border px-[10px] py-[3px] text-[0.68rem] font-bold uppercase ${hasConfirmedPattern && bestPattern?.bias === 'bullish' ? 'border-emerald-500/50 bg-emerald-500/20 text-emerald-300' : hasConfirmedPattern && bestPattern?.bias === 'bearish' ? 'border-red-500/50 bg-red-500/20 text-red-300' : hasConfirmedPattern ? 'border-amber-500/50 bg-amber-500/20 text-amber-300' : 'border-amber-500/50 bg-amber-500/20 text-amber-300'}`}>
                       {hasConfirmedPattern ? 'Confirmed' : 'Pending'}
                     </span>
@@ -3786,17 +3875,16 @@ export default function OptionsConfluenceScanner() {
             {narrativeVisible && (
               <div ref={(element) => { sectionAnchorsRef.current.narrative = element; }} className="-mt-[0.2rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-[0.7rem] py-[0.4rem] text-[0.72rem]">
                 <span className="font-extrabold uppercase tracking-[0.04em] text-slate-300">Section 3 — Analyst Narrative (Advanced)</span>
-                <span className="ml-2 text-slate-500">Institutional interpretation and strategy rationale</span>
+                <span className="ml-2 text-slate-500">Institutional interpretation and scenario rationale</span>
               </div>
             )}
 
             {narrativeVisible && (
             <details className="mb-4 rounded-[16px] border border-[var(--msp-border-strong)] bg-[var(--msp-card)] p-[1.15rem] shadow-msp-soft">
               <summary className="mb-5 flex cursor-pointer list-none items-center gap-3 border-b border-violet-500/30 pb-3">
-                <span className="text-[1.5rem]">🎯</span>
                 <h2 className="m-0 flex-1 text-[1.25rem] text-slate-200">Institutional Brain Summary</h2>
                 <span className="rounded-lg bg-violet-500/20 px-[10px] py-1 text-[0.75rem] text-[var(--msp-muted)]">
-                  ▼ Show Details
+                  Show Details
                 </span>
               </summary>
 
@@ -3805,7 +3893,7 @@ export default function OptionsConfluenceScanner() {
                 <div className={`text-[0.95rem] font-black ${commandStatusClass}`}>{commandStatus}</div>
                 <div className="text-[0.78rem] text-slate-300">Institutional Flow: {institutionalFlowState}</div>
                 <div className={`text-[0.78rem] font-extrabold ${tradePermission === 'ALLOWED' ? 'text-emerald-500' : tradePermission === 'BLOCKED' ? 'text-red-500' : 'text-amber-500'}`}>
-                  Conditions: {tradePermission === 'ALLOWED' ? 'ALIGNED' : tradePermission === 'BLOCKED' ? 'NOT ALIGNED' : 'WAIT'}
+                  Conditions: {tradePermission === 'ALLOWED' ? 'SCENARIO ALIGNED' : tradePermission === 'BLOCKED' ? 'NOT ALIGNED' : 'WATCH'}
                 </div>
               </div>
 
@@ -3819,14 +3907,14 @@ export default function OptionsConfluenceScanner() {
                         <div>
                           <div className="mb-2 flex flex-wrap items-center gap-2">
                             <span className="text-[1.25rem]">
-                              {result.strategyRecommendation.strategyType === 'sell_premium' ? '💰' :
-                               result.strategyRecommendation.strategyType === 'buy_premium' ? '📈' : '⚖️'}
+                              {result.strategyRecommendation.strategyType === 'sell_premium' ? 'Short Premium' :
+                               result.strategyRecommendation.strategyType === 'buy_premium' ? 'Long Premium' : 'Neutral'}
                             </span>
                             <span className={`text-[1.4rem] font-bold ${result.strategyRecommendation.strategyType === 'sell_premium' ? 'text-red-400' : result.strategyRecommendation.strategyType === 'buy_premium' ? 'text-emerald-400' : 'text-slate-400'}`}>
                               {result.strategyRecommendation.strategy}
                             </span>
                             <span className={`rounded-full px-2 py-[2px] text-[0.7rem] font-semibold ${result.strategyRecommendation.riskProfile === 'defined' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}`}>
-                              {result.strategyRecommendation.riskProfile === 'defined' ? '✓ Defined Risk' : '⚠️ Undefined Risk'}
+                              {result.strategyRecommendation.riskProfile === 'defined' ? 'Defined Risk' : 'Undefined Risk'}
                             </span>
                           </div>
                           <div className="mb-2 text-[0.85rem] text-slate-300">
@@ -3942,7 +4030,7 @@ export default function OptionsConfluenceScanner() {
                     {result.compositeScore.conflicts.length > 0 && (
                       <div className="rounded-lg border border-red-500/40 bg-red-500/15 p-3">
                         <div className="mb-2 text-[0.8rem] font-semibold text-red-300">
-                          ⚠️ Signal Conflicts Detected
+                          Signal Conflicts Detected
                         </div>
                         {result.compositeScore.conflicts.map((conflict, idx) => (
                           <div key={idx} className="mb-1 text-[0.75rem] text-rose-300">
@@ -3960,7 +4048,7 @@ export default function OptionsConfluenceScanner() {
                 {/* IV Analysis Card */}
                 {result.ivAnalysis && (
                   <div className="rounded-xl border border-violet-500/30 bg-slate-800/80 p-4">
-                    <h4 className="mb-3 mt-0 text-[0.9rem] text-violet-500">📊 IV Rank / Percentile</h4>
+                    <h4 className="mb-3 mt-0 text-[0.9rem] text-violet-500">IV Rank / Percentile</h4>
                     <div className="mb-3 flex flex-wrap gap-4">
                       <div className="text-center">
                         <div className={`text-[1.75rem] font-bold ${result.ivAnalysis.ivRank >= 70 ? 'text-red-500' : result.ivAnalysis.ivRank <= 30 ? 'text-emerald-500' : 'text-amber-500'}`}>
@@ -3976,8 +4064,8 @@ export default function OptionsConfluenceScanner() {
                       </div>
                     </div>
                     <div className={`rounded-lg p-2 text-[0.75rem] ${result.ivAnalysis.ivSignal === 'sell_premium' ? 'bg-red-500/20 text-red-300' : result.ivAnalysis.ivSignal === 'buy_premium' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}`}>
-                      {result.ivAnalysis.ivSignal === 'sell_premium' ? '💰 SHORT Premium' :
-                       result.ivAnalysis.ivSignal === 'buy_premium' ? '📈 LONG Premium' : '⚖️ Neutral'}
+                      {result.ivAnalysis.ivSignal === 'sell_premium' ? 'Short Premium' :
+                       result.ivAnalysis.ivSignal === 'buy_premium' ? 'Long Premium' : 'Neutral'}
                       <div className="mt-1 text-[0.65rem] opacity-80">
                         {result.ivAnalysis.ivReason}
                       </div>
@@ -3988,7 +4076,7 @@ export default function OptionsConfluenceScanner() {
                 {/* Expected Move Card */}
                 {result.expectedMove && (
                   <div className="rounded-xl border border-[var(--msp-border)] bg-slate-800/80 p-4">
-                    <h4 className="mb-3 mt-0 text-[0.9rem] text-[var(--msp-muted)]">📏 Expected Move</h4>
+                    <h4 className="mb-3 mt-0 text-[0.9rem] text-[var(--msp-muted)]">Expected Move</h4>
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center justify-between">
                         <span className="text-[0.75rem] text-slate-400">Weekly (7 DTE):</span>
@@ -4019,7 +4107,7 @@ export default function OptionsConfluenceScanner() {
                 {result.unusualActivity && (
                   <div className={`rounded-xl bg-slate-800/80 p-4 ${result.unusualActivity.alertLevel === 'high' ? 'border border-red-500/50' : result.unusualActivity.alertLevel === 'moderate' ? 'border border-amber-500/50' : 'border border-slate-500/30'}`}>
                     <h4 className="mb-3 mt-0 text-[0.9rem] text-amber-500">
-                      🔥 Unusual Activity
+                      Unusual Activity
                       {result.unusualActivity.alertLevel === 'high' && (
                         <span className="ml-2 rounded-full bg-red-500/30 px-2 py-[2px] text-[0.65rem] text-red-300">
                           HIGH ALERT
@@ -4061,7 +4149,6 @@ export default function OptionsConfluenceScanner() {
             {trapDoors.evidence && institutionalLensMode === 'OBSERVE' && (
             <details className="rounded-[16px] border border-[var(--msp-border)] bg-[var(--msp-card)] p-[1.15rem] shadow-msp-soft">
               <summary className="mb-4 flex cursor-pointer list-none items-center gap-2 border-b border-[var(--msp-border)] pb-3 text-violet-400">
-                <span className="text-violet-500">🔮</span>
                 <span>Confluence Analysis</span>
                 <span className="ml-auto text-[0.7rem] text-slate-500">
                   {result.confluenceStack} TFs closing together • click to expand
@@ -4073,7 +4160,7 @@ export default function OptionsConfluenceScanner() {
                     {result.confluenceStack}
                   </div>
                   <div className="text-[0.8rem] text-slate-400">
-                    {result.confluenceStack >= 4 ? 'TFs Closing Together 🔥' : 
+                    {result.confluenceStack >= 4 ? 'TFs Closing Together' : 
                      result.confluenceStack >= 2 ? 'TFs Aligned' : 
                      result.confluenceStack === 1 ? 'TF Active' : 'No Clustering'}
                   </div>
@@ -4097,12 +4184,11 @@ export default function OptionsConfluenceScanner() {
             </details>
             )}
 
-            {/* 🕐 CANDLE CLOSE CONFLUENCE - When multiple TFs close together */}
+            {/* Candle close confluence - when multiple TFs close together */}
             {trapDoors.evidence && institutionalLensMode === 'OBSERVE' && result.candleCloseConfluence && (
               <div className={`rounded-[16px] border bg-[var(--msp-card)] p-[1.15rem] shadow-msp-soft ${result.candleCloseConfluence.confluenceRating === 'extreme' ? 'border-red-500/50' : result.candleCloseConfluence.confluenceRating === 'high' ? 'border-amber-500/50' : 'border-[var(--msp-border)]'}`}>
                 {result.candleCloseConfluence.isMarketOpen === false && (
                   <div className="mb-4 flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5">
-                    <span className="text-base">🔒</span>
                     <div>
                       <div className="text-xs font-semibold text-amber-400">MARKET CLOSED</div>
                       <div className="text-[10px] text-amber-400/70">
@@ -4113,15 +4199,15 @@ export default function OptionsConfluenceScanner() {
                 )}
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
                   <h3 className="m-0 mb-4 text-[0.98rem] font-extrabold tracking-[0.3px] text-amber-500">
-                    🕐 Candle Close Confluence
+                    Candle Close Confluence
                     {result.candleCloseConfluence.confluenceRating === 'extreme' && (
                       <span className="ml-2 rounded-full bg-red-500/30 px-[10px] py-[3px] text-[0.68rem] font-bold uppercase tracking-[0.3px] text-red-300">
-                        🔥 EXTREME
+                        EXTREME
                       </span>
                     )}
                     {result.candleCloseConfluence.confluenceRating === 'high' && (
                       <span className="ml-2 rounded-full bg-amber-500/30 px-[10px] py-[3px] text-[0.68rem] font-bold uppercase tracking-[0.3px] text-amber-300">
-                        ⚡ HIGH
+                        HIGH
                       </span>
                     )}
                   </h3>
@@ -4167,20 +4253,20 @@ export default function OptionsConfluenceScanner() {
                     <div className="mb-2 text-[0.8rem] text-slate-400">Special Events</div>
                     <div className="flex flex-col gap-1">
                       {result.candleCloseConfluence.specialEvents.isYearEnd && (
-                        <span className="text-[0.8rem] font-semibold text-red-300">📅 YEAR END</span>
+                        <span className="text-[0.8rem] font-semibold text-red-300">YEAR END</span>
                       )}
                       {result.candleCloseConfluence.specialEvents.isQuarterEnd && (
-                        <span className="text-[0.8rem] font-semibold text-amber-300">📅 QUARTER END</span>
+                        <span className="text-[0.8rem] font-semibold text-amber-300">QUARTER END</span>
                       )}
                       {result.candleCloseConfluence.specialEvents.isMonthEnd && (
-                        <span className="text-[0.8rem] font-semibold text-violet-200">📅 Month End</span>
+                        <span className="text-[0.8rem] font-semibold text-violet-200">Month End</span>
                       )}
                       {result.candleCloseConfluence.specialEvents.isWeekEnd && (
-                        <span className="text-[0.8rem] text-slate-300">📅 Week End (Friday)</span>
+                        <span className="text-[0.8rem] text-slate-300">Week End (Friday)</span>
                       )}
                       {result.candleCloseConfluence.specialEvents.sessionClose !== 'none' && (
                         <span className="text-[0.8rem] text-[var(--msp-text)]">
-                          🌍 {result.candleCloseConfluence.specialEvents.sessionClose.toUpperCase()} Session Close
+                          {result.candleCloseConfluence.specialEvents.sessionClose.toUpperCase()} Session Close
                         </span>
                       )}
                       {!result.candleCloseConfluence.specialEvents.isYearEnd && 
@@ -4226,7 +4312,7 @@ export default function OptionsConfluenceScanner() {
             {trapDoors.contracts && (
               <div ref={(element) => { sectionAnchorsRef.current.contracts = element; }} className="-mt-[0.2rem] rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-[0.7rem] py-[0.4rem] text-[0.72rem]">
                 <span className="font-extrabold uppercase tracking-[0.04em] text-slate-300">Section 2 — Contracts & Greeks</span>
-                <span className="ml-2 text-slate-500">Strike + expiry + OI + greeks + risk management</span>
+                <span className="ml-2 text-slate-500">Strike + expiry + OI + greeks + scenario risk</span>
               </div>
             )}
 
@@ -4236,7 +4322,7 @@ export default function OptionsConfluenceScanner() {
                 
                 {/* Strike Recommendation */}
                 <div className="rounded-[16px] border border-emerald-500/40 bg-[var(--msp-card)] p-[1.15rem] shadow-msp-soft">
-                  <h3 className="mb-4 text-[0.98rem] font-extrabold tracking-[0.3px] text-emerald-500">🎯 Highest Confluence Strike</h3>
+                  <h3 className="mb-4 text-[0.98rem] font-extrabold tracking-[0.3px] text-emerald-500">Highest Confluence Strike</h3>
                   
                   {result.primaryStrike ? (
                     <>
@@ -4306,7 +4392,7 @@ export default function OptionsConfluenceScanner() {
 
                 {/* Expiration Recommendation */}
                 <div className="rounded-[16px] border border-[var(--msp-border)] bg-[var(--msp-card)] p-[1.15rem] shadow-msp-soft">
-                  <h3 className="mb-4 text-[0.98rem] font-extrabold tracking-[0.3px] text-[var(--msp-muted)]">📅 Expiration Analysis</h3>
+                  <h3 className="mb-4 text-[0.98rem] font-extrabold tracking-[0.3px] text-[var(--msp-muted)]">Expiration Window</h3>
                   
                   {result.primaryExpiration ? (
                     <>
@@ -4320,9 +4406,7 @@ export default function OptionsConfluenceScanner() {
                           </span>
                         </div>
                         
-                        <div className="mb-2 text-base text-slate-200">
-                          📆 {result.primaryExpiration.expirationDate}
-                        </div>
+                        <div className="mb-2 text-base text-slate-200">{result.primaryExpiration.expirationDate}</div>
                         
                         <div className="mb-3 text-[0.85rem] text-slate-400">
                           {result.primaryExpiration.reason}
@@ -4371,10 +4455,10 @@ export default function OptionsConfluenceScanner() {
             {trapDoors.contracts && (result.openInterestAnalysis ? (
               <div className="rounded-[16px] border border-[color:var(--msp-accent)] bg-[var(--msp-card)] p-[1.15rem] shadow-msp-soft">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="m-0 text-[0.98rem] font-extrabold tracking-[0.3px] text-[var(--msp-accent)]">📈 Open Interest Analysis</h3>
+                  <h3 className="m-0 text-[0.98rem] font-extrabold tracking-[0.3px] text-[var(--msp-accent)]">Open Interest Context</h3>
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="rounded-full bg-amber-500/20 px-[10px] py-[3px] text-[0.68rem] font-bold uppercase tracking-[0.3px] text-amber-500">
-                      📅 EOD Data
+                      EOD Data
                     </span>
                     <span className="rounded-full bg-[var(--msp-panel-2)] px-[10px] py-[3px] text-[0.68rem] font-bold uppercase tracking-[0.3px] text-[var(--msp-accent)]">
                       Expiry: {result.openInterestAnalysis.expirationDate}
@@ -4411,8 +4495,7 @@ export default function OptionsConfluenceScanner() {
                   <div className={`rounded-xl p-4 text-center ${result.openInterestAnalysis.sentiment === 'bullish' ? 'bg-emerald-500/15' : result.openInterestAnalysis.sentiment === 'bearish' ? 'bg-red-500/15' : 'bg-slate-500/15'}`}>
                     <div className="mb-1 text-[0.8rem] text-slate-400">O/I Sentiment</div>
                     <div className={`text-[1.5rem] font-bold ${result.openInterestAnalysis.sentiment === 'bullish' ? 'text-emerald-500' : result.openInterestAnalysis.sentiment === 'bearish' ? 'text-red-500' : 'text-gray-500'}`}>
-                      {result.openInterestAnalysis.sentiment === 'bullish' ? '🟢 BULLISH' : 
-                       result.openInterestAnalysis.sentiment === 'bearish' ? '🔴 BEARISH' : '⚪ NEUTRAL'}
+                      {result.openInterestAnalysis.sentiment.toUpperCase()}
                     </div>
                     <div className="text-[0.75rem] text-slate-500">
                       {result.openInterestAnalysis.sentimentReason}
@@ -4440,7 +4523,7 @@ export default function OptionsConfluenceScanner() {
                 {result.openInterestAnalysis.highOIStrikes.length > 0 && (
                   <details open className="mt-2">
                     <summary className="flex cursor-pointer items-center gap-2 py-2 text-[0.85rem] text-violet-400">
-                      📊 Strike Analysis with Greeks ({result.openInterestAnalysis.highOIStrikes.length} strikes)
+                      Strike Analysis with Greeks ({result.openInterestAnalysis.highOIStrikes.length} strikes)
                     </summary>
                     <div className="mt-3">
                       <div className="greeks-table-container overflow-x-auto">
@@ -4502,15 +4585,15 @@ export default function OptionsConfluenceScanner() {
                   {(result.direction === 'bullish' && result.openInterestAnalysis.sentiment === 'bullish') ||
                    (result.direction === 'bearish' && result.openInterestAnalysis.sentiment === 'bearish') ? (
                     <span className="text-emerald-500">
-                      ✅ O/I sentiment CONFIRMS confluence direction — higher confidence trade
+                      O/I sentiment supports the confluence direction.
                     </span>
                   ) : result.openInterestAnalysis.sentiment === 'neutral' ? (
                     <span className="text-amber-500">
-                      ⚠️ O/I sentiment neutral — rely on confluence signals
+                      O/I sentiment is neutral; keep the scenario evidence weighted.
                     </span>
                   ) : (
                     <span className="text-red-500">
-                      ⚠️ O/I sentiment DIVERGES from confluence — proceed with caution
+                      O/I sentiment diverges from confluence; scenario confidence should be capped.
                     </span>
                   )}
                 </div>
@@ -4519,14 +4602,13 @@ export default function OptionsConfluenceScanner() {
               /* No Options Data Available - Show Placeholder */
               <div className="rounded-[16px] border border-[color:var(--msp-accent)] bg-[var(--msp-card)] p-[1.15rem] shadow-msp-soft">
                 <div className="mb-4 flex items-center justify-between">
-                  <h3 className="m-0 text-[0.98rem] font-extrabold tracking-[0.3px] text-[var(--msp-accent)]">📈 Open Interest Analysis</h3>
+                  <h3 className="m-0 text-[0.98rem] font-extrabold tracking-[0.3px] text-[var(--msp-accent)]">Open Interest Context</h3>
                   <span className="rounded-full bg-amber-500/20 px-[10px] py-[3px] text-[0.68rem] font-bold uppercase tracking-[0.3px] text-amber-500">
-                    ⚠️ Data Unavailable
+                    Data Unavailable
                   </span>
                 </div>
                 
                 <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-5 text-center">
-                  <div className="mb-3 text-[2rem]">�</div>
                   <div className="mb-2 text-[1.1rem] font-bold text-amber-500">
                     Options Data Loading Issue
                   </div>
@@ -4535,7 +4617,7 @@ export default function OptionsConfluenceScanner() {
                     API rate limits, market hours, or the symbol not having options available.
                   </div>
                   <div className="mt-4 rounded-lg bg-emerald-500/10 p-3 text-[0.85rem] text-emerald-500">
-                    ✅ Strike & Expiration recommendations still work based on price action confluence!
+                    Strike and expiration context can still be estimated from price-action confluence.
                   </div>
                 </div>
               </div>
@@ -4545,9 +4627,9 @@ export default function OptionsConfluenceScanner() {
             {trapDoors.contracts && (
             <details className="rounded-[16px] border border-amber-500/35 bg-[var(--msp-card)] p-[1.15rem] shadow-msp-soft">
               <summary className="mb-4 flex cursor-pointer list-none items-center gap-2 border-b border-[var(--msp-border)] pb-3 font-semibold text-amber-500">
-                📊 Greeks & Risk Advice
+                Greeks & Scenario Risk
                 <span className="ml-auto text-[0.72rem] font-normal text-slate-500">
-                  ▼ Show advanced data
+                  Show advanced data
                 </span>
               </summary>
               
@@ -4579,13 +4661,13 @@ export default function OptionsConfluenceScanner() {
             </details>
             )}
 
-            {/* Risk Management - Collapsible (advanced) */}
+            {/* Scenario risk plan - collapsible advanced section */}
             {trapDoors.contracts && (
             <details className="rounded-[16px] border border-red-500/35 bg-[var(--msp-card)] p-[1.15rem] shadow-msp-soft">
               <summary className="mb-4 flex cursor-pointer list-none items-center gap-2 border-b border-[var(--msp-border)] pb-3 font-semibold text-red-500">
-                ⚠️ Risk Management
+                Scenario Risk Plan
                 <span className="ml-auto text-[0.72rem] font-normal text-slate-500">
-                  {result.maxRiskPercent}% max risk • ▼ Show details
+                  {result.maxRiskPercent}% max risk • Show details
                 </span>
               </summary>
               
@@ -4599,11 +4681,11 @@ export default function OptionsConfluenceScanner() {
                 
                 <div className="flex-1">
                   <div className="mb-3">
-                    <div className="mb-1 text-[0.8rem] text-slate-500">🛑 Risk Boundary Strategy</div>
+                    <div className="mb-1 text-[0.8rem] text-slate-500">Risk Boundary</div>
                     <div className="text-[0.85rem] text-slate-200">{result.stopLossStrategy}</div>
                   </div>
                   <div>
-                    <div className="mb-1 text-[0.8rem] text-slate-500">🎯 Key Level Strategy</div>
+                    <div className="mb-1 text-[0.8rem] text-slate-500">Key Level Map</div>
                     <div className="text-[0.85rem] text-emerald-500">{result.profitTargetStrategy}</div>
                   </div>
                 </div>
@@ -4611,10 +4693,10 @@ export default function OptionsConfluenceScanner() {
             </details>
             )}
 
-            {/* Analysis Summary */}
+            {/* Scenario summary */}
             {trapDoors.contracts && result.primaryStrike && result.primaryExpiration && (
               <div className="rounded-[16px] border border-emerald-500/50 bg-[var(--msp-card)] p-[1.15rem] shadow-msp-soft">
-                <h3 className="mb-4 text-[0.98rem] font-extrabold tracking-[0.3px] text-emerald-500">📋 Analysis Summary</h3>
+                <h3 className="mb-4 text-[0.98rem] font-extrabold tracking-[0.3px] text-emerald-500">Scenario Summary</h3>
                 
                 <div className="rounded-xl bg-black/30 p-5 font-mono text-base">
                   <div className="mb-2">
@@ -4625,9 +4707,9 @@ export default function OptionsConfluenceScanner() {
                   </div>
                   
                   <div className="mb-2">
-                    <span className="text-slate-500">Scenario:</span>
+                    <span className="text-slate-500">Contract Type:</span>
                     <span className={`ml-2 font-bold ${result.primaryStrike.type === 'call' ? 'text-emerald-500' : 'text-red-500'}`}>
-                      LONG {result.primaryStrike.type.toUpperCase()}
+                      {result.primaryStrike.type.toUpperCase()}
                     </span>
                   </div>
                   
@@ -4677,7 +4759,6 @@ export default function OptionsConfluenceScanner() {
             
             <div className="card-grid-mobile gap-6">
               <div>
-                <div className="mb-2 text-[1.5rem]">🔮</div>
                 <div className="mb-2 font-bold text-violet-500">Time Confluence</div>
                 <div className="text-[0.85rem] text-slate-400">
                   Scans multiple timeframes for decompression events - when candles are gravitating toward their 50% levels.
@@ -4685,7 +4766,6 @@ export default function OptionsConfluenceScanner() {
               </div>
               
               <div>
-                <div className="mb-2 text-[1.5rem]">🎯</div>
                 <div className="mb-2 font-bold text-emerald-500">Strike Selection</div>
                 <div className="text-[0.85rem] text-slate-400">
                   Identifies strikes based on 50% level clusters and target zones from decompressing timeframes.
@@ -4693,15 +4773,13 @@ export default function OptionsConfluenceScanner() {
               </div>
               
               <div>
-                <div className="mb-2 text-[1.5rem]">📅</div>
                 <div className="mb-2 font-bold text-[var(--msp-muted)]">Expiration Logic</div>
                 <div className="text-[0.85rem] text-slate-400">
-                  Matches expiration to your trading timeframe - scalping gets 0-2 DTE, swing trading gets weekly/monthly options.
+                  Matches expiration to the selected timeframe - scalping gets 0-2 DTE, swing scenarios get weekly/monthly options.
                 </div>
               </div>
               
               <div>
-                <div className="mb-2 text-[1.5rem]">📊</div>
                 <div className="mb-2 font-bold text-amber-500">Greeks-Aware</div>
                 <div className="text-[0.85rem] text-slate-400">
                   Provides delta targets, theta decay warnings, and gamma considerations based on your chosen timeframe.
@@ -4710,8 +4788,8 @@ export default function OptionsConfluenceScanner() {
             </div>
             
             <div className="mt-8 rounded-xl bg-amber-500/10 p-4 text-[0.85rem] text-amber-500">
-              ⚠️ <strong>Risk Warning:</strong> Options trading involves significant risk. This tool provides confluence-based analysis, not financial advice. 
-              Always manage position sizes and use stops. Paper trade first!
+              <strong>Risk Warning:</strong> Options involve significant risk. This tool provides confluence-based research, not financial advice.
+              Use appropriate position sizing and validate scenarios before acting.
             </div>
           </div>
         )}
