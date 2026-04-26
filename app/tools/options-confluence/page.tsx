@@ -542,15 +542,15 @@ interface OptionsSetup {
 type ScanModeType = 'scalping' | 'intraday_30m' | 'intraday_1h' | 'intraday_4h' | 'swing_1d' | 'swing_3d' | 'swing_1w' | 'macro_monthly' | 'macro_yearly';
 
 const TIMEFRAME_OPTIONS: { value: ScanModeType; label: string; desc: string }[] = [
-  { value: 'scalping', label: '⚡ Scalping (5-15m)', desc: '0-2 DTE' },
-  { value: 'intraday_30m', label: '📊 30 Minute', desc: '1-3 DTE' },
-  { value: 'intraday_1h', label: '📊 1 Hour', desc: '2-5 DTE' },
-  { value: 'intraday_4h', label: '📊 4 Hour', desc: '3-7 DTE' },
-  { value: 'swing_1d', label: '📅 Daily', desc: '5-14 DTE' },
-  { value: 'swing_3d', label: '📅 3-Day', desc: '1-3 weeks' },
-  { value: 'swing_1w', label: '📅 Weekly', desc: '2-4 weeks' },
-  { value: 'macro_monthly', label: '🏛️ Monthly', desc: '30-60 DTE' },
-  { value: 'macro_yearly', label: '🏛️ LEAPS', desc: '60+ DTE' },
+  { value: 'scalping', label: 'Scalping (5-15m)', desc: '0-2 DTE' },
+  { value: 'intraday_30m', label: '30 Minute', desc: '1-3 DTE' },
+  { value: 'intraday_1h', label: '1 Hour', desc: '2-5 DTE' },
+  { value: 'intraday_4h', label: '4 Hour', desc: '3-7 DTE' },
+  { value: 'swing_1d', label: 'Daily', desc: '5-14 DTE' },
+  { value: 'swing_3d', label: '3-Day', desc: '1-3 weeks' },
+  { value: 'swing_1w', label: 'Weekly', desc: '2-4 weeks' },
+  { value: 'macro_monthly', label: 'Monthly', desc: '30-60 DTE' },
+  { value: 'macro_yearly', label: 'LEAPS', desc: '60+ DTE' },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -622,7 +622,7 @@ export default function OptionsConfluenceScanner() {
   const [personalityLoaded, setPersonalityLoaded] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [density, setDensity] = useState<TerminalDensity>('normal');
-  const [operatorViewMode, setOperatorViewMode] = useState<OperatorViewMode>('advanced');
+  const [operatorViewMode, setOperatorViewMode] = useState<OperatorViewMode>('guided');
   const [showDealerHistogram, setShowDealerHistogram] = useState(false);
   const [cursorLightEnabled, setCursorLightEnabled] = useState(false);
   const [cursorLight, setCursorLight] = useState({ x: 50, y: 20, active: false });
@@ -789,7 +789,7 @@ export default function OptionsConfluenceScanner() {
     const action: 'WAIT' | 'PREP' | 'EXECUTE' = result.entryTiming.urgency === 'no_trade'
       ? 'WAIT'
       : result.tradeLevels && edge >= 60
-      ? 'EXECUTE'
+      ? 'PREP'
       : 'PREP';
 
     const expectedMoveRisk = result.expectedMove?.selectedExpiryPercent ?? 0;
@@ -1234,11 +1234,11 @@ export default function OptionsConfluenceScanner() {
 
   const gradeEmoji = (grade: string) => {
     switch (grade) {
-      case 'A+': return '🏆';
-      case 'A': return '✅';
-      case 'B': return '⚡';
-      case 'C': return '⚠️';
-      default: return '❌';
+      case 'A+': return 'A+';
+      case 'A': return 'A';
+      case 'B': return 'B';
+      case 'C': return 'C';
+      default: return 'F';
     }
   };
 
@@ -1253,10 +1253,10 @@ export default function OptionsConfluenceScanner() {
 
   const urgencyEmoji = (urgency: string) => {
     switch (urgency) {
-      case 'immediate': return '🚀';
-      case 'within_hour': return '⏰';
-      case 'wait': return '⏳';
-      default: return '🚫';
+      case 'immediate': return 'Now';
+      case 'within_hour': return 'Soon';
+      case 'wait': return 'Wait';
+      default: return 'No';
     }
   };
 
@@ -1393,27 +1393,27 @@ export default function OptionsConfluenceScanner() {
   const heatSignalStrip = result ? [
     {
       label: 'TREND',
-      state: thesisDirection === 'bullish' ? '🟢' : thesisDirection === 'bearish' ? '🔴' : '🟡',
+      state: thesisDirection === 'bullish' ? 'Bull' : thesisDirection === 'bearish' ? 'Bear' : 'Mix',
       value: thesisDirection.toUpperCase(),
     },
     {
       label: 'FLOW',
-      state: result.unusualActivity?.hasUnusualActivity ? '🟢' : '🟡',
+      state: result.unusualActivity?.hasUnusualActivity ? 'Active' : 'Quiet',
       value: result.unusualActivity?.hasUnusualActivity ? 'ACTIVE' : 'QUIET',
     },
     {
       label: 'VOL',
-      state: result.expectedMove && result.expectedMove.selectedExpiryPercent > 4 ? '🔴' : result.expectedMove ? '🟡' : '⚪',
+      state: result.expectedMove && result.expectedMove.selectedExpiryPercent > 4 ? 'High' : result.expectedMove ? 'Moderate' : 'N/A',
       value: result.expectedMove ? `${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'N/A',
     },
     {
       label: 'LIQ',
-      state: result.openInterestAnalysis?.highOIStrikes?.length ? '🟢' : '🟡',
+      state: result.openInterestAnalysis?.highOIStrikes?.length ? 'Supported' : 'Thin',
       value: result.openInterestAnalysis?.highOIStrikes?.length ? 'SUPPORTED' : 'THIN',
     },
     {
-      label: 'EXEC',
-      state: executionState === 'READY' ? '🟢' : executionState === 'WAIT' ? '🟡' : '❌',
+      label: 'SETUP',
+      state: executionState === 'READY' ? 'Ready' : executionState === 'WAIT' ? 'Watch' : 'Blocked',
       value: executionState,
     },
   ] : [];
@@ -1501,10 +1501,10 @@ export default function OptionsConfluenceScanner() {
   const dealerRegimeLabel = !dealerGamma
     ? 'N/A'
     : dealerGamma.regime === 'LONG_GAMMA'
-      ? '🟢 Long Gamma (Compression)'
+      ? 'Long Gamma (Compression)'
       : dealerGamma.regime === 'SHORT_GAMMA'
-        ? '🔴 Short Gamma (Expansion)'
-        : '🟡 Neutral Gamma';
+        ? 'Short Gamma (Expansion)'
+        : 'Neutral Gamma';
   const dealerTopStrikes = dealerGamma
     ? [...dealerGamma.topPositiveStrikes, ...dealerGamma.topNegativeStrikes]
         .sort((a, b) => Math.abs(b.netGexUsd) - Math.abs(a.netGexUsd))
@@ -1884,14 +1884,14 @@ export default function OptionsConfluenceScanner() {
   useEffect(() => {
     if (operatorModeHydrated) return;
     try {
-      const storedMode = window.localStorage.getItem('msp_options_operator_mode_v1');
+      const storedMode = window.localStorage.getItem('msp_options_operator_mode_v2');
       if (storedMode === 'guided' || storedMode === 'advanced') {
         setOperatorViewMode(storedMode);
       } else {
-        setOperatorViewMode(tier === 'pro_trader' ? 'advanced' : 'guided');
+        setOperatorViewMode('guided');
       }
     } catch {
-      setOperatorViewMode(tier === 'pro_trader' ? 'advanced' : 'guided');
+      setOperatorViewMode('guided');
     } finally {
       setOperatorModeHydrated(true);
     }
@@ -1900,7 +1900,7 @@ export default function OptionsConfluenceScanner() {
   useEffect(() => {
     if (!operatorModeHydrated) return;
     try {
-      window.localStorage.setItem('msp_options_operator_mode_v1', operatorViewMode);
+      window.localStorage.setItem('msp_options_operator_mode_v2', operatorViewMode);
     } catch {
     }
   }, [operatorViewMode, operatorModeHydrated]);
@@ -2288,7 +2288,7 @@ export default function OptionsConfluenceScanner() {
             symbol={result.symbol}
             status={commandStatus}
             confidence={unifiedConfidence}
-            dataHealth={`${dataHealth}${(dataHealth === 'REALTIME' || dataHealth === 'LIVE') ? ' ✔' : ''}`}
+            dataHealth={dataHealth}
             mode={adaptiveModeMeta.label}
             density={density}
             onDensityChange={setDensity}
@@ -2307,7 +2307,7 @@ export default function OptionsConfluenceScanner() {
         {result && (
           <DecisionCockpit
             left={<div className="grid gap-1 text-sm"><div className="font-bold text-[var(--msp-text)]">{result.symbol} • {thesisDirection.toUpperCase()}</div><div className="msp-muted">Regime: {institutionalMarketRegime || 'UNKNOWN'}</div><div className="msp-muted">Session: {(result.entryTiming.marketSession || 'n/a').toUpperCase()}</div></div>}
-            center={<div className="grid gap-1 text-sm"><Pill tone="accent">{unifiedPermission === 'ALLOW' ? 'ALIGNED' : unifiedPermission === 'BLOCK' ? 'NOT ALIGNED' : 'WAIT'}</Pill><div className="msp-muted">Pipeline: {pipelineComplete}/{ladderSteps.length}</div><div className="msp-muted">Confluence: {unifiedConfidence.toFixed(0)}%</div></div>}
+            center={<div className="grid gap-1 text-sm"><Pill tone="accent">{unifiedPermission === 'ALLOW' ? 'SCENARIO ALIGNED' : unifiedPermission === 'BLOCK' ? 'NOT ALIGNED' : 'WATCH'}</Pill><div className="msp-muted">Pipeline: {pipelineComplete}/{ladderSteps.length}</div><div className="msp-muted">Confluence: {unifiedConfidence.toFixed(0)}%</div></div>}
             right={<div className="grid gap-1 text-sm"><div className="msp-muted">Trigger: <span className="font-bold text-[var(--msp-text)]">{decisionTrigger}</span></div><div className="msp-muted">Risk: {(result.expectedMove?.selectedExpiryPercent ?? 0) >= 4 ? 'HIGH' : (result.expectedMove?.selectedExpiryPercent ?? 0) >= 2 ? 'MODERATE' : 'LOW'}</div><div className="msp-muted">Data: {dataHealth}</div></div>}
           />
         )}
@@ -2318,7 +2318,7 @@ export default function OptionsConfluenceScanner() {
               { label: 'Confluence', value: `${result.confluenceStack} TF`, tone: result.confluenceStack >= 3 ? 'bull' : 'warn' },
               { label: 'Flow', value: (result.openInterestAnalysis?.sentiment || 'neutral').toUpperCase(), tone: result.openInterestAnalysis?.sentiment === 'bullish' ? 'bull' : result.openInterestAnalysis?.sentiment === 'bearish' ? 'bear' : 'neutral' },
               { label: 'Expected Move', value: result.expectedMove ? `${result.expectedMove.selectedExpiryPercent.toFixed(1)}%` : 'N/A', tone: (result.expectedMove?.selectedExpiryPercent ?? 0) >= 4 ? 'bear' : (result.expectedMove?.selectedExpiryPercent ?? 0) >= 2 ? 'warn' : 'bull' },
-              { label: 'Conditions', value: tradePermission === 'ALLOWED' ? 'ALIGNED' : tradePermission === 'BLOCKED' ? 'NOT ALIGNED' : 'WAIT', tone: tradePermission === 'ALLOWED' ? 'bull' : tradePermission === 'BLOCKED' ? 'bear' : 'warn' },
+              { label: 'Conditions', value: tradePermission === 'ALLOWED' ? 'SCENARIO ALIGNED' : tradePermission === 'BLOCKED' ? 'NOT ALIGNED' : 'WATCH', tone: tradePermission === 'ALLOWED' ? 'bull' : tradePermission === 'BLOCKED' ? 'bear' : 'warn' },
               { label: 'Mode', value: adaptiveModeMeta.label, tone: 'accent' },
               { label: 'Updated', value: commandUpdatedAgo !== null ? `${commandUpdatedAgo}s` : 'n/a', tone: 'neutral' },
             ]}
@@ -2423,10 +2423,10 @@ export default function OptionsConfluenceScanner() {
             className={`rounded-xl border bg-[var(--msp-panel)] px-4 py-3 text-[0.9rem] font-semibold ${expirations.length > 0 ? 'cursor-pointer border-[var(--msp-border-strong)] text-[var(--msp-text)]' : 'cursor-not-allowed border-[var(--msp-border)] text-[var(--msp-text-faint)]'}`}
           >
             <option value="">
-              {loadingExpirations ? '⏳ Loading...' : 
-               expirationsError ? '⚠ Expirations unavailable' :
-               expirations.length === 0 ? '📅 Enter symbol first' : 
-               '📅 Auto-select expiry'}
+              {loadingExpirations ? 'Loading expirations...' : 
+               expirationsError ? 'Expirations unavailable' :
+               expirations.length === 0 ? 'Enter symbol first' : 
+               'Auto-select expiry'}
             </option>
             {expirations.map(exp => (
               <option key={exp.date} value={exp.date}>
@@ -2446,7 +2446,7 @@ export default function OptionsConfluenceScanner() {
             disabled={loading}
             className={`rounded-xl px-8 py-3 text-base font-bold text-[var(--msp-bg)] transition ${loading ? 'cursor-not-allowed bg-[var(--msp-panel)]' : 'cursor-pointer bg-[var(--msp-accent)]'}`}
           >
-            {loading ? '🔄 Scanning Options Confluence...' : '🎯 Scan Options Confluence'}
+            {loading ? 'Running Research...' : 'Run Options Research'}
           </button>
 
           {result && (
@@ -2456,7 +2456,7 @@ export default function OptionsConfluenceScanner() {
               disabled={loading}
               className="cursor-pointer rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-4 py-3 text-[0.85rem] text-[var(--msp-text-muted)]"
             >
-              🔄 Refresh
+              Refresh
             </button>
           )}
         </div>
@@ -2472,7 +2472,7 @@ export default function OptionsConfluenceScanner() {
         {/* Error Display */}
         {error && (
           <div className="mb-6 rounded-xl border border-[color:var(--msp-bear)] bg-[var(--msp-bear-tint)] p-4 text-center text-[var(--msp-bear)]">
-            ❌ {error}
+            {error}
           </div>
         )}
 
@@ -2483,7 +2483,7 @@ export default function OptionsConfluenceScanner() {
             <div className="-mt-1 rounded-[10px] border border-[var(--msp-border)] bg-[var(--msp-panel)] px-3 py-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-[0.7rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-faint)]">Decision Engine</span>
-                <span className="text-[0.7rem] font-bold uppercase tracking-[0.05em] text-slate-500">Decision First • Evidence Second • Deep Analysis On Demand</span>
+                <span className="text-[0.7rem] font-bold uppercase tracking-[0.05em] text-slate-500">Research First • Evidence Second • Deep Analysis On Demand</span>
               </div>
             </div>
 
@@ -2552,8 +2552,8 @@ export default function OptionsConfluenceScanner() {
 
             <div className={`-mt-[0.35rem] rounded-[10px] border px-[0.7rem] py-[0.55rem] ${tradeabilityToneClass}`}>
               <div className="flex flex-wrap items-center justify-between gap-2 text-[0.75rem]">
-                <span className="font-extrabold uppercase tracking-[0.05em]">Tradeability State</span>
-                <span className="font-black">{tradeabilityState === 'EXECUTABLE' ? '🟢 CONDITIONS MET' : tradeabilityState === 'CONDITIONAL' ? '🟡 CONDITIONAL' : '🔴 AVOID'}</span>
+                <span className="font-extrabold uppercase tracking-[0.05em]">Research State</span>
+                <span className="font-black">{tradeabilityState === 'EXECUTABLE' ? 'SCENARIO ALIGNED' : tradeabilityState === 'CONDITIONAL' ? 'CONDITIONAL' : 'NOT ALIGNED'}</span>
               </div>
             </div>
 
@@ -2562,7 +2562,6 @@ export default function OptionsConfluenceScanner() {
               <div className="-mt-[0.35rem] rounded-[12px] border border-violet-500/30 bg-[var(--msp-panel)] p-[0.65rem_0.75rem]">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-[0.4rem]">
                   <div className="flex items-center gap-[0.35rem]">
-                    <span className="text-[0.72rem]">🎯</span>
                     <span className="text-[0.7rem] font-bold uppercase tracking-[0.04em] text-violet-400">Decompression Stack</span>
                   </div>
                   <div className="flex items-center gap-[0.4rem]">
@@ -2693,7 +2692,7 @@ export default function OptionsConfluenceScanner() {
             {trapDoors.evidence && terminalDecisionCard && (
               <div className={`rounded-[14px] border border-[var(--msp-border-strong)] border-l-[3px] bg-[var(--msp-panel)] p-[0.95rem_1rem] shadow-[var(--msp-shadow)] ${adaptiveModeMeta.accentBorderClass}`}>
                 <div className="flex flex-wrap items-center justify-between gap-[0.6rem]">
-                  <div className="text-[0.72rem] font-bold uppercase text-slate-400">AI Trade Command Card</div>
+                  <div className="text-[0.72rem] font-bold uppercase text-slate-400">AI Research Card</div>
                   <div className="text-[0.86rem] font-extrabold text-slate-200">Conviction {terminalDecisionCard.conviction}%</div>
                 </div>
 
@@ -2773,7 +2772,7 @@ export default function OptionsConfluenceScanner() {
                   <div className="text-[0.62rem] font-bold uppercase text-slate-500">Key Level / R:R</div>
                   <div className="text-[0.8rem] font-extrabold text-emerald-200">{result.tradeLevels ? `${result.tradeLevels.target1.price.toFixed(2)} • ${result.tradeLevels.riskRewardRatio.toFixed(1)}:1` : 'Await trigger'}</div>
                 </div>
-                <div className="text-[0.7rem] text-slate-400">Status: <span className={`font-extrabold ${tradePermission === 'ALLOWED' ? 'text-emerald-500' : tradePermission === 'BLOCKED' ? 'text-red-500' : 'text-amber-500'}`}>{tradePermission === 'ALLOWED' ? 'ALIGNED' : tradePermission === 'BLOCKED' ? 'NOT ALIGNED' : 'WAIT'}</span></div>
+                <div className="text-[0.7rem] text-slate-400">Status: <span className={`font-extrabold ${tradePermission === 'ALLOWED' ? 'text-emerald-500' : tradePermission === 'BLOCKED' ? 'text-red-500' : 'text-amber-500'}`}>{tradePermission === 'ALLOWED' ? 'SCENARIO ALIGNED' : tradePermission === 'BLOCKED' ? 'NOT ALIGNED' : 'WATCH'}</span></div>
 
                 {copilotPresence && (
                   <div className="mt-1 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-[0.45rem_0.5rem]">
@@ -2792,7 +2791,7 @@ export default function OptionsConfluenceScanner() {
                 {copilotPresence.notices.map((notice, index) => (
                   <div key={`${notice.title}-${index}`} className={`rounded-lg border p-[0.4rem_0.48rem] ${notice.level === 'warn' ? 'border-red-500/25 bg-red-500/10' : notice.level === 'action' ? 'border-emerald-500/25 bg-emerald-500/10' : 'border-slate-400/25 bg-slate-400/10'}`}>
                     <div className="text-[0.72rem] font-extrabold text-slate-200">
-                      {notice.level === 'warn' ? '⚠️' : notice.level === 'action' ? '✅' : '⚡'} Co-Pilot Note • {notice.title}
+                      Co-Pilot Note • {notice.title}
                     </div>
                     <div className="mt-[0.14rem] text-[0.7rem] text-slate-400">{notice.message}</div>
                   </div>
