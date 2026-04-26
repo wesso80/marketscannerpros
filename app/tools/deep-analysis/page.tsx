@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import ToolsPageHeader from "@/components/ToolsPageHeader";
 import { useUserTier, canAccessDeepAnalysis } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
@@ -192,6 +193,61 @@ function getSignalColor(signal: string): string {
   if (signal.includes('BULLISH') || signal.includes('BUY')) return '#10B981';
   if (signal.includes('BEARISH') || signal.includes('SELL')) return '#EF4444';
   return '#F59E0B';
+}
+
+function scenarioLabel(signal: string | undefined): string {
+  const normalized = (signal || '').toUpperCase();
+  if (normalized.includes('BULLISH') || normalized.includes('BUY')) return 'Bullish Scenario';
+  if (normalized.includes('BEARISH') || normalized.includes('SELL')) return 'Bearish Scenario';
+  return 'Watch Scenario';
+}
+
+function biasLabel(bias: 'BUY' | 'SELL' | 'HOLD'): string {
+  if (bias === 'BUY') return 'Bullish Research Bias';
+  if (bias === 'SELL') return 'Bearish Research Bias';
+  return 'Watch / Mixed Bias';
+}
+
+function signalTone(result: 'bullish' | 'bearish' | 'neutral'): string {
+  if (result === 'bullish') return 'Bullish';
+  if (result === 'bearish') return 'Bearish';
+  return 'Neutral';
+}
+
+function getDeepDataQuality(result: AnalysisResult): { label: 'GOOD' | 'DEGRADED' | 'MISSING'; detail: string } {
+  const missing = [
+    !result.price?.price ? 'price' : null,
+    !result.indicators || Object.values(result.indicators).filter((value) => value !== null && value !== undefined).length < 3 ? 'technical indicators' : null,
+    !result.signals?.signal ? 'scenario signal' : null,
+    !result.aiAnalysis ? 'AI narrative' : null,
+  ].filter(Boolean) as string[];
+
+  if (missing.length === 0) return { label: 'GOOD', detail: 'Price, technicals, scenario signal, and AI narrative are available.' };
+  if (missing.length <= 1) return { label: 'DEGRADED', detail: `Weak or missing: ${missing.join(', ')}.` };
+  return { label: 'MISSING', detail: `Weak or missing: ${missing.join(', ')}.` };
+}
+
+function deepDataQualityColor(label: string): string {
+  if (label === 'GOOD') return '#10B981';
+  if (label === 'DEGRADED') return '#F59E0B';
+  return '#EF4444';
+}
+
+function summarizeDeepNextCheck(result: AnalysisResult): string {
+  const dataQuality = getDeepDataQuality(result);
+  if (dataQuality.label !== 'GOOD') return 'Refresh inputs before treating the research context as complete.';
+  if (Math.abs(result.signals.score) < 40) return 'Wait for stronger agreement across technicals, flow, and news.';
+  if (result.optionsData?.unusualActivity && result.optionsData.unusualActivity !== 'Normal') return 'Check whether unusual options activity persists or fades.';
+  if (result.indicators?.rsi != null && (result.indicators.rsi > 70 || result.indicators.rsi < 30)) return 'Watch whether momentum normalizes or confirms continuation.';
+  return 'Monitor whether the scenario score and main evidence stack remain stable.';
+}
+
+function summarizeDeepDoNothing(result: AnalysisResult): string {
+  const dataQuality = getDeepDataQuality(result);
+  if (dataQuality.label !== 'GOOD') return 'Do nothing because the data stack is incomplete.';
+  if (Math.abs(result.signals.score) < 40) return 'Do nothing because the scenario score is not decisive.';
+  if ((result.news?.length || 0) === 0 && !result.optionsData) return 'Do nothing because external confirmation is thin.';
+  return 'Do nothing until price action confirms the research scenario.';
 }
 
 function getSentimentColor(sentiment: string): string {
@@ -511,41 +567,43 @@ function calculateWeightedSignal(indicators: any, optionsData: any, news: any[] 
 }
 
 // News impact classification
-function getNewsImpact(title: string, summary: string): { tag: string; color: string; emoji: string } {
+function getNewsImpact(title: string, summary: string): { tag: string; color: string } {
   const text = (title + ' ' + summary).toLowerCase();
   
   // High impact (red)
   if (text.includes('earnings') || text.includes('quarterly report') || text.includes('guidance')) {
-    return { tag: 'Earnings', color: '#EF4444', emoji: '🔴' };
+    return { tag: 'Earnings', color: '#EF4444' };
   }
   if (text.includes('sec') || text.includes('lawsuit') || text.includes('investigation') || text.includes('regulatory')) {
-    return { tag: 'Regulatory', color: '#F59E0B', emoji: '🟡' };
+    return { tag: 'Regulatory', color: '#F59E0B' };
   }
   if (text.includes('fed') || text.includes('interest rate') || text.includes('inflation') || text.includes('fomc')) {
-    return { tag: 'Macro', color: '#EF4444', emoji: '🔴' };
+    return { tag: 'Macro', color: '#EF4444' };
   }
   
   // Medium impact (yellow)
   if (text.includes('upgrade') || text.includes('downgrade') || text.includes('price target')) {
-    return { tag: 'Analyst', color: '#F59E0B', emoji: '🟡' };
+    return { tag: 'Analyst', color: '#F59E0B' };
   }
   if (text.includes('acquisition') || text.includes('merger') || text.includes('buyout')) {
-    return { tag: 'M&A', color: '#F59E0B', emoji: '🟡' };
+    return { tag: 'M&A', color: '#F59E0B' };
   }
   if (text.includes('partnership') || text.includes('contract') || text.includes('deal')) {
-    return { tag: 'Catalyst', color: '#10B981', emoji: '🟢' };
+    return { tag: 'Catalyst', color: '#10B981' };
   }
   
   // Low impact (green/gray)
   if (text.includes('product') || text.includes('launch') || text.includes('release')) {
-    return { tag: 'Product', color: '#10B981', emoji: '🟢' };
+    return { tag: 'Product', color: '#10B981' };
   }
   
-  return { tag: 'News', color: '#64748B', emoji: '⚪' };
+  return { tag: 'News', color: '#64748B' };
 }
 
 export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: string } = {}) {
   const { tier } = useUserTier();
+  const pathname = usePathname();
+  const embeddedInGoldenEgg = pathname?.startsWith('/tools/golden-egg') ?? false;
   const [symbol, setSymbol] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -620,7 +678,7 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
     const action: 'WAIT' | 'PREP' | 'EXECUTE' = bias === 'NEUTRAL'
       ? 'WAIT'
       : edge >= 70
-      ? 'EXECUTE'
+      ? 'PREP'
       : 'PREP';
 
     const risk: 'LOW' | 'MODERATE' | 'HIGH' = atrPercent >= 3
@@ -629,9 +687,7 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
       ? 'MODERATE'
       : 'LOW';
 
-    const next = action === 'EXECUTE'
-      ? 'Confirm trigger then execute'
-      : action === 'PREP'
+    const next = action === 'PREP'
       ? 'Wait for stronger confluence'
       : 'Monitor for directional edge';
 
@@ -650,8 +706,8 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
   if (!canAccessDeepAnalysis(tier)) {
     return (
       <div className="min-h-screen bg-[var(--msp-bg)]">
-        <ToolsPageHeader badge="PRO TRADER" title="Golden Egg Deep Analysis" subtitle="Find AI-powered market context with structured multi-factor analysis" icon="🥚" />
-        <main className="max-w-none px-4 py-8">
+        {!embeddedInGoldenEgg && <ToolsPageHeader badge="PRO TRADER" title="Golden Egg Deep Analysis" subtitle="AI-assisted educational research with structured multi-factor context" icon="GE" />}
+        <main className={`max-w-none px-4 ${embeddedInGoldenEgg ? 'py-2' : 'py-8'}`}>
           <UpgradeGate requiredTier="pro_trader" feature="Deep Analysis" />
         </main>
       </div>
@@ -677,7 +733,7 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
       } else {
         setResult(data);
 
-        // ── Auto-log to execution engine (paper trade) ──
+        // ── Auto-log research context for the operator engine ──
         const signal = String(data?.signals?.signal || '').toUpperCase();
         const score = data?.signals?.score ?? 0;
         if ((signal.includes('BUY') || signal.includes('SELL')) && score >= 60) {
@@ -704,9 +760,9 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
 
   return (
     <div className="min-h-screen bg-[var(--msp-bg)]">
-      <ToolsPageHeader badge="PRO TRADER" title="Golden Egg Deep Analysis" subtitle="Find AI-powered market context with structured multi-factor analysis" icon="🥚" />
+      {!embeddedInGoldenEgg && <ToolsPageHeader badge="PRO TRADER" title="Golden Egg Deep Analysis" subtitle="AI-assisted educational research with structured multi-factor context" icon="GE" />}
       
-      <main className="max-w-none px-4 py-8">
+      <main className={`max-w-none px-4 ${embeddedInGoldenEgg ? 'py-3' : 'py-8'}`}>
         {result && (
           <CommandStrip
             symbol={result.symbol}
@@ -741,18 +797,18 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
         )}
 
         {/* Hero Header */}
-        <div className="mb-8 text-center">
-          <div className="mb-2 text-[clamp(2.5rem,8vw,4rem)]">🥚</div>
+        {!result && !embeddedInGoldenEgg && <div className="mb-8 text-center">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 text-sm font-black text-amber-300">GE</div>
           <h1 className="mb-2 text-[clamp(1.5rem,6vw,2.5rem)] font-bold text-[var(--msp-text)]">
             The Golden Egg
           </h1>
           <p className="text-[clamp(0.9rem,3vw,1.1rem)] text-[var(--msp-text-muted)]">
-            Complete market analysis • Any asset • One search
+            Multi-factor research context for one symbol
           </p>
-        </div>
+        </div>}
 
         {/* Search Box */}
-        <div className="msp-card mb-8 rounded-[20px] p-6">
+        <div className={`msp-card ${result ? 'mb-4 rounded-lg p-4' : 'mb-8 rounded-lg p-5'}`}>
           <div className="options-form-controls flex flex-wrap gap-3">
             <input
               type="text"
@@ -770,9 +826,9 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
               className={`flex shrink-0 items-center gap-2 rounded-xl px-6 py-3.5 text-base font-bold text-[#061018] ${loading ? 'cursor-wait bg-[var(--msp-panel)]' : 'cursor-pointer bg-[var(--msp-accent)]'}`}
             >
               {loading ? (
-                <>⏳ Finding Market Edge...</>
+                <>Running Research...</>
               ) : (
-                <>🔍 Find Market Edge</>
+                <>Run Research</>
               )}
             </button>
           </div>
@@ -793,15 +849,15 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
         {/* Error */}
         {error && (
           <div className="mb-6 rounded-xl border border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.1)] p-4 text-center text-[#EF4444]">
-            ❌ {error}
+            {error}
           </div>
         )}
 
         {/* Loading State */}
         {loading && (
           <div className="p-16 text-center">
-            <div className="mb-4 text-[4rem] [animation:pulse_1s_infinite]">🥚</div>
-            <p className="text-[1.2rem] text-[#F59E0B]">Hatching your golden analysis...</p>
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 text-sm font-black text-amber-300 [animation:pulse_1s_infinite]">GE</div>
+            <p className="text-[1.2rem] text-[#F59E0B]">Building the research context...</p>
             <p className="mt-2 text-[0.9rem] text-[#64748B]">
               Fetching price data, technical indicators, news sentiment, and AI insights...
             </p>
@@ -811,6 +867,37 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
         {/* Results */}
         {result && (
           <div className="grid gap-6">
+            {(() => {
+              const dataQuality = getDeepDataQuality(result);
+              const weighted = calculateWeightedSignal(result.indicators, result.optionsData, result.news, result.cryptoData);
+              return (
+                <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-card)] p-4">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/60 pb-3">
+                    <div>
+                      <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-slate-500">Research Packet</div>
+                      <div className="mt-1 text-sm font-bold text-white">{result.symbol} · {result.assetType.toUpperCase()}</div>
+                    </div>
+                    <span title={dataQuality.detail} className="rounded border px-2 py-1 text-[11px] font-bold" style={{ color: deepDataQualityColor(dataQuality.label), borderColor: `${deepDataQualityColor(dataQuality.label)}66`, background: `${deepDataQualityColor(dataQuality.label)}15` }}>
+                      Data {dataQuality.label}
+                    </span>
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-5">
+                    {[
+                      ['Scenario', scenarioLabel(result.signals.signal), getSignalColor(result.signals.signal)],
+                      ['Scenario Score', `${result.signals.score > 0 ? '+' : ''}${result.signals.score}`, getSignalColor(result.signals.signal)],
+                      ['Research Bias', biasLabel(weighted.bias), weighted.bias === 'BUY' ? '#10B981' : weighted.bias === 'SELL' ? '#EF4444' : '#F59E0B'],
+                      ['Next Check', summarizeDeepNextCheck(result), '#93C5FD'],
+                      ['Do Nothing', summarizeDeepDoNothing(result), '#F59E0B'],
+                    ].map(([label, value, color]) => (
+                      <div key={label} title={value} className="rounded-md border border-slate-700/50 bg-[#0A101C]/50 px-3 py-2">
+                        <div className="text-[11px] uppercase tracking-wide text-slate-500">{label}</div>
+                        <div className="mt-1 truncate text-xs font-bold" style={{ color }}>{value}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
             
             {/* Main Signal Banner */}
             <div
@@ -821,8 +908,8 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
               }}
             >
               <div className="mb-4 flex flex-wrap items-center justify-center gap-3">
-                <span className="text-[clamp(2rem,6vw,3rem)]">
-                  {result.assetType === 'crypto' ? '₿' : result.assetType === 'forex' ? '💱' : '📈'}
+                <span className="flex h-11 w-11 items-center justify-center rounded-lg border border-slate-700 bg-slate-900 text-xs font-black text-slate-300">
+                  {result.assetType === 'crypto' ? 'CR' : result.assetType === 'forex' ? 'FX' : result.assetType === 'commodity' ? 'CM' : 'EQ'}
                 </span>
                 <div>
                   <h2 className="m-0 text-[clamp(1.5rem,6vw,2.5rem)] font-bold text-white">
@@ -865,10 +952,10 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                   fontWeight: "bold",
                   fontSize: "clamp(1.1rem, 4vw, 1.5rem)"
                 }}>
-                  {result.signals.signal}
+                  {scenarioLabel(result.signals.signal)}
                 </div>
                 <div className="mt-3 text-[0.9rem] text-[#94A3B8]">
-                  Score: {result.signals.score > 0 ? '+' : ''}{result.signals.score} • {result.signals.bullishCount || 0} bullish / {result.signals.bearishCount || 0} bearish signals
+                  Scenario score: {result.signals.score > 0 ? '+' : ''}{result.signals.score} · {result.signals.bullishCount || 0} bullish / {result.signals.bearishCount || 0} bearish signals
                 </div>
               </div>
             </div>
@@ -881,13 +968,11 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
               padding: "1.5rem"
             }}>
               <h3 style={{ color: "#F59E0B", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <span style={{ background: "var(--msp-warn-tint)", borderRadius: "6px", padding: "4px 6px" }}>⚡</span>
                 Quick Summary
               </h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))", gap: "0.75rem" }}>
                 {/* Technical Stance */}
                 <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", background: "rgba(30,41,59,0.5)", borderRadius: "10px" }}>
-                  <span style={{ fontSize: "1.5rem" }}>📊</span>
                   <div>
                     <div style={{ fontSize: "0.7rem", color: "#64748B", textTransform: "uppercase" }}>Technical Stance</div>
                     <div style={{ fontSize: "1rem", fontWeight: "600", color: "#fff" }}>
@@ -901,7 +986,6 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                 {/* Price Position */}
                 {result.company?.week52Low && result.company?.week52High && result.price?.price && (
                   <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", background: "rgba(30,41,59,0.5)", borderRadius: "10px" }}>
-                    <span style={{ fontSize: "1.5rem" }}>📍</span>
                     <div>
                       <div style={{ fontSize: "0.7rem", color: "#64748B", textTransform: "uppercase" }}>52W Position</div>
                       <div style={{ fontSize: "1rem", fontWeight: "600", color: "#fff" }}>
@@ -921,7 +1005,6 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                 {/* Analyst View */}
                 {result.company?.targetPrice && result.price?.price && (
                   <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", background: "rgba(30,41,59,0.5)", borderRadius: "10px" }}>
-                    <span style={{ fontSize: "1.5rem" }}>🎯</span>
                     <div>
                       <div style={{ fontSize: "0.7rem", color: "#64748B", textTransform: "uppercase" }}>Analyst Target</div>
                       <div style={{ fontSize: "1rem", fontWeight: "600", color: result.company.targetPrice > result.price.price ? "#10B981" : "#EF4444" }}>
@@ -934,7 +1017,6 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                 {/* Trend Strength */}
                 {result.indicators?.adx !== undefined && result.indicators?.adx !== null && (
                   <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", background: "rgba(30,41,59,0.5)", borderRadius: "10px" }}>
-                    <span style={{ fontSize: "1.5rem" }}>📈</span>
                     <div>
                       <div style={{ fontSize: "0.7rem", color: "#64748B", textTransform: "uppercase" }}>Trend Strength</div>
                       <div style={{ fontSize: "1rem", fontWeight: "600", color: result.indicators.adx > 25 ? "#10B981" : "#F59E0B" }}>
@@ -947,7 +1029,6 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                 {/* Crypto Fear/Greed */}
                 {result.cryptoData?.fearGreed && (
                   <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", background: "rgba(30,41,59,0.5)", borderRadius: "10px" }}>
-                    <span style={{ fontSize: "1.5rem" }}>{result.cryptoData.fearGreed.value < 40 ? '😨' : result.cryptoData.fearGreed.value > 60 ? '🤑' : '😐'}</span>
                     <div>
                       <div style={{ fontSize: "0.7rem", color: "#64748B", textTransform: "uppercase" }}>Market Sentiment</div>
                       <div style={{ fontSize: "1rem", fontWeight: "600", color: "#fff" }}>
@@ -960,7 +1041,6 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                 {/* News Sentiment */}
                 {result.news && result.news.length > 0 && (
                   <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", background: "rgba(30,41,59,0.5)", borderRadius: "10px" }}>
-                    <span style={{ fontSize: "1.5rem" }}>📰</span>
                     <div>
                       <div style={{ fontSize: "0.7rem", color: "#64748B", textTransform: "uppercase" }}>News Sentiment</div>
                       <div style={{ fontSize: "1rem", fontWeight: "600", color: "#fff" }}>
@@ -992,7 +1072,6 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                   padding: "1.5rem"
                 }}>
                   <h3 style={{ color: "#10B981", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <span style={{ background: "var(--msp-panel-2)", borderRadius: "6px", padding: "4px 6px" }}>📊</span>
                     Technical Indicators
                   </h3>
                   
@@ -1154,7 +1233,6 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                 padding: "1.5rem"
               }}>
                 <h3 style={{ color: "#F59E0B", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <span style={{ background: "var(--msp-warn-tint)", borderRadius: "6px", padding: "4px 6px" }}>🎯</span>
                   Signal Breakdown
                 </h3>
                 
@@ -1166,7 +1244,7 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                       {/* Confidence Bar */}
                       <div style={{ marginBottom: "1.25rem" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-                          <span style={{ fontSize: "0.8rem", color: "#94A3B8", fontWeight: "500" }}>Trade Bias Confidence</span>
+                          <span style={{ fontSize: "0.8rem", color: "#94A3B8", fontWeight: "500" }}>Scenario Confidence</span>
                           <span style={{ 
                             fontSize: "1.1rem", 
                             fontWeight: "700", 
@@ -1237,13 +1315,13 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                               fontWeight: "600",
                               color: factor.result === 'bullish' ? "#10B981" : factor.result === 'bearish' ? "#EF4444" : "#F59E0B"
                             }}>
-                              {factor.result === 'bullish' ? '🟢 Bullish' : factor.result === 'bearish' ? '🔴 Bearish' : '🟡 Neutral'}
+                              {signalTone(factor.result)}
                             </span>
                           </div>
                         ))}
                       </div>
 
-                      {/* Final Bias */}
+                      {/* Research Bias */}
                       <div style={{ 
                         display: "flex", 
                         alignItems: "center", 
@@ -1255,16 +1333,16 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                         border: `1px solid ${weighted.bias === 'BUY' ? "rgba(16,185,129,0.4)" : weighted.bias === 'SELL' ? "rgba(239,68,68,0.4)" : "rgba(245,158,11,0.4)"}`
                       }}>
                         <span style={{ fontSize: "1.5rem" }}>
-                          {weighted.bias === 'BUY' ? '📈' : weighted.bias === 'SELL' ? '📉' : '⚖️'}
+                          {weighted.bias === 'BUY' ? 'UP' : weighted.bias === 'SELL' ? 'DN' : 'MX'}
                         </span>
                         <div>
-                          <div style={{ fontSize: "0.7rem", color: "#94A3B8", textTransform: "uppercase" }}>Final Bias</div>
+                          <div style={{ fontSize: "0.7rem", color: "#94A3B8", textTransform: "uppercase" }}>Research Bias</div>
                           <div style={{ 
                             fontSize: "1.25rem", 
                             fontWeight: "700", 
                             color: weighted.bias === 'BUY' ? "#10B981" : weighted.bias === 'SELL' ? "#EF4444" : "#F59E0B"
                           }}>
-                            {weighted.bias} ({weighted.confidence.toFixed(0)}% confidence)
+                            {biasLabel(weighted.bias)} ({weighted.confidence.toFixed(0)}% confidence)
                           </div>
                         </div>
                       </div>
@@ -1289,8 +1367,8 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                         }}>
                           <span style={{ color: reason.toLowerCase().includes('bullish') || reason.toLowerCase().includes('oversold') || reason.toLowerCase().includes('buy') ? "#10B981" : 
                                               reason.toLowerCase().includes('bearish') || reason.toLowerCase().includes('overbought') || reason.toLowerCase().includes('sell') ? "#EF4444" : "#F59E0B" }}>
-                            {reason.toLowerCase().includes('bullish') || reason.toLowerCase().includes('oversold') || reason.toLowerCase().includes('buy') ? "🟢" : 
-                             reason.toLowerCase().includes('bearish') || reason.toLowerCase().includes('overbought') || reason.toLowerCase().includes('sell') ? "🔴" : "🟡"}
+                             {reason.toLowerCase().includes('bullish') || reason.toLowerCase().includes('oversold') || reason.toLowerCase().includes('buy') ? "Bull" : 
+                              reason.toLowerCase().includes('bearish') || reason.toLowerCase().includes('overbought') || reason.toLowerCase().includes('sell') ? "Bear" : "Mix"}
                           </span>
                           <span style={{ color: "#CBD5E1" }}>{reason}</span>
                         </div>
@@ -1310,7 +1388,6 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                 padding: "1.5rem"
               }}>
                 <h3 style={{ color: "var(--msp-muted)", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <span style={{ background: "var(--msp-panel-2)", borderRadius: "6px", padding: "4px 6px" }}>🏢</span>
                   {result.company ? 'Company Overview' : 'Market Data'}
                 </h3>
                 
@@ -1476,7 +1553,7 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
               </div>
             )}
 
-            {/* Options Flow - Show data for admins, Coming Soon for others */}
+            {/* Options Flow */}
             {result.assetType === 'stock' && (result.optionsData ? (
               <div style={{ 
                 background: "var(--msp-card)",
@@ -1485,9 +1562,8 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                 padding: "1.5rem"
               }}>
                 <h3 style={{ color: "var(--msp-muted)", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <span style={{ background: "var(--msp-panel-2)", borderRadius: "6px", padding: "4px 6px" }}>📊</span>
                   Options Flow (Weekly Expiry)
-                  <span style={{ marginLeft: "auto", fontSize: "0.7rem", background: "rgba(16,185,129,0.2)", padding: "2px 8px", borderRadius: "10px", color: "#10B981" }}>ADMIN PREVIEW</span>
+                  <span style={{ marginLeft: "auto", fontSize: "0.7rem", background: "rgba(16,185,129,0.2)", padding: "2px 8px", borderRadius: "10px", color: "#10B981" }}>DATA AVAILABLE</span>
                 </h3>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(120px, 100%), 1fr))", gap: "1rem" }}>
                   <div style={{ textAlign: "center", padding: "1rem", background: "rgba(0,0,0,0.2)", borderRadius: "10px" }}>
@@ -1517,7 +1593,7 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                 </div>
                 {result.optionsData.unusualActivity && result.optionsData.unusualActivity !== 'Normal' && (
                   <div style={{ marginTop: "1rem", padding: "0.75rem", background: "rgba(245,158,11,0.1)", borderRadius: "8px", fontSize: "0.85rem", color: "#F59E0B" }}>
-                    ⚠️ Unusual Activity: {result.optionsData.unusualActivity}
+                    Unusual activity: {result.optionsData.unusualActivity}
                   </div>
                 )}
                 
@@ -1528,7 +1604,7 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                     {result.optionsData.highestOICall && (
                       <div className="greeks-card" style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.3)" }}>
                         <div style={{ color: "#10B981", fontSize: "0.85rem", fontWeight: "600", marginBottom: "0.75rem", display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-                          📈 Highest OI Call
+                          Highest OI Call
                           <span style={{ background: "rgba(16,185,129,0.2)", padding: "2px 8px", borderRadius: "8px", fontSize: "0.75rem" }}>
                             ${result.optionsData.highestOICall.strike}
                           </span>
@@ -1566,7 +1642,7 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                     {result.optionsData.highestOIPut && (
                       <div className="greeks-card" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)" }}>
                         <div style={{ color: "#EF4444", fontSize: "0.85rem", fontWeight: "600", marginBottom: "0.75rem", display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-                          📉 Highest OI Put
+                          Highest OI Put
                           <span style={{ background: "rgba(239,68,68,0.2)", padding: "2px 8px", borderRadius: "8px", fontSize: "0.75rem" }}>
                             ${result.optionsData.highestOIPut.strike}
                           </span>
@@ -1612,11 +1688,10 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                 overflow: "hidden"
               }}>
                 <h3 style={{ color: "var(--msp-muted)", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <span style={{ background: "var(--msp-panel-2)", borderRadius: "6px", padding: "4px 6px" }}>📊</span>
                   Options Flow (Weekly Expiry)
                 </h3>
                 
-                {/* Coming Soon Overlay */}
+                {/* Unavailable options data state */}
                 <div style={{
                   display: "flex",
                   flexDirection: "column",
@@ -1630,7 +1705,7 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                     marginBottom: "1rem",
                     animation: "pulse 2s ease-in-out infinite"
                   }}>
-                    🚀
+                    Options data
                   </div>
                   <div style={{ 
                     fontSize: "1.5rem", 
@@ -1639,7 +1714,7 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                     WebkitBackgroundClip: "text",
                     marginBottom: "0.5rem"
                   }}>
-                    Coming Soon
+                    Data Unavailable
                   </div>
                   <p style={{ 
                     color: "#94A3B8", 
@@ -1685,7 +1760,6 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                 padding: "1.5rem"
               }}>
                 <h3 style={{ color: "#F59E0B", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <span style={{ background: "var(--msp-warn-tint)", borderRadius: "6px", padding: "4px 6px" }}>📅</span>
                   Earnings Report
                 </h3>
                 
@@ -1700,7 +1774,6 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                     borderRadius: "10px",
                     marginBottom: "1rem"
                   }}>
-                    <div style={{ fontSize: "2rem" }}>📆</div>
                     <div>
                       <div style={{ fontSize: "0.7rem", color: "#94A3B8", textTransform: "uppercase" }}>Next Earnings Report</div>
                       <div style={{ fontSize: "1.2rem", fontWeight: "bold", color: "#F59E0B" }}>
@@ -1736,7 +1809,7 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                       }}>
                         <div style={{ fontSize: "0.65rem", color: "#64748B", textTransform: "uppercase" }}>Result</div>
                         <div style={{ fontSize: "1.1rem", fontWeight: "bold", color: result.earnings.lastBeat ? "#10B981" : "#EF4444" }}>
-                          {result.earnings.lastBeat ? "✅ BEAT" : "❌ MISS"}
+                          {result.earnings.lastBeat ? "BEAT" : "MISS"}
                         </div>
                         {result.earnings.lastSurprisePercent !== null && (
                           <div style={{ fontSize: "0.7rem", color: "#94A3B8" }}>
@@ -1796,7 +1869,6 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                 padding: "1.5rem"
               }}>
                 <h3 style={{ color: "var(--msp-muted)", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <span style={{ background: "var(--msp-panel-2)", borderRadius: "6px", padding: "4px 6px" }}>📰</span>
                   Latest News & Sentiment
                 </h3>
                 
@@ -1847,7 +1919,7 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                                 alignItems: "center",
                                 gap: "0.25rem"
                               }}>
-                                {impact.emoji} {impact.tag}
+                                {impact.tag}
                               </span>
                             );
                           })()}
@@ -1895,7 +1967,6 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                 padding: "1.5rem"
               }}>
                 <h3 style={{ color: "#F59E0B", fontSize: "1rem", fontWeight: "600", textTransform: "uppercase", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <span style={{ background: "var(--msp-warn-tint)", borderRadius: "6px", padding: "4px 6px" }}>🤖</span>
                   AI Deep Analysis
                 </h3>
                 
@@ -1940,7 +2011,6 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
               lineHeight: "1.6"
             }}>
               <div style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem" }}>
-                <span style={{ fontSize: "0.9rem" }}>⚠️</span>
                 <div>
                   <strong style={{ color: "#94A3B8" }}>Disclaimer:</strong> The Golden Egg analysis is for educational and informational purposes only and does not constitute investment advice, financial advice, trading advice, or any other type of advice. 
                   Options trading involves substantial risk of loss and is not suitable for all investors. Past performance does not guarantee future results. 
@@ -1961,7 +2031,7 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
             borderRadius: "16px",
             border: "1px solid rgba(51,65,85,0.5)"
           }}>
-            <div style={{ fontSize: "4rem", marginBottom: "1rem" }}>🥚✨</div>
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 text-sm font-black text-amber-300">GE</div>
             <h3 style={{ color: "#fff", marginBottom: "0.5rem", fontSize: "1.5rem" }}>Enter any ticker to begin</h3>
             <p style={{ color: "#64748B", maxWidth: "500px", margin: "0 auto" }}>
               Supports stocks (AAPL, TSLA), crypto (BTC, ETH), forex (EURUSD), and commodities (GOLD).
