@@ -110,6 +110,54 @@ function fmtP(v: number | null | undefined): string {
   return v.toPrecision(4);
 }
 
+function isUsableNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0;
+}
+
+function formatLevel(value: number | null | undefined): string {
+  if (!isUsableNumber(value)) return 'Unavailable';
+  return `$${fmtP(value)}`;
+}
+
+function getGEDataQuality(input: { price?: number | null; confluence?: number | null; assessment?: string | null; reference?: number | null; invalidation?: number | null }) {
+  if (!isUsableNumber(input.price)) return 'MISSING';
+  const missing = [input.confluence, input.reference, input.invalidation].filter((value) => !isUsableNumber(value)).length;
+  if (!input.assessment) return 'DEGRADED';
+  return missing === 0 ? 'GOOD' : missing <= 1 ? 'DEGRADED' : 'MISSING';
+}
+
+function geDataQualityColor(label: string): string {
+  if (label === 'GOOD') return '#10B981';
+  if (label === 'DEGRADED') return '#F59E0B';
+  return '#EF4444';
+}
+
+function geMissingInputs(input: { price?: number | null; confluence?: number | null; assessment?: string | null; reference?: number | null; invalidation?: number | null }): string[] {
+  return [
+    !isUsableNumber(input.price) ? 'price' : null,
+    !isUsableNumber(input.confluence) ? 'confluence' : null,
+    !input.assessment ? 'assessment' : null,
+    !isUsableNumber(input.reference) ? 'reference level' : null,
+    !isUsableNumber(input.invalidation) ? 'invalidation level' : null,
+  ].filter(Boolean) as string[];
+}
+
+function geDataQualityDetail(label: string, missing: string[]): string {
+  if (label === 'GOOD') return 'Price, assessment, confluence, reference level, and invalidation level are available.';
+  if (missing.length === 0) return `${label} Golden Egg inputs.`;
+  return `Missing or weak: ${missing.join(', ')}.`;
+}
+
+function summarizeGENextCheck(args: { dataQuality: string; hasScenarioLevels: boolean; assessment?: string | null; primaryBlocker?: string | null; confluence: number; crossMarket: 'supportive' | 'neutral' | 'headwind' }) {
+  if (args.dataQuality !== 'GOOD') return 'Refresh Golden Egg inputs before relying on reference levels.';
+  if (!args.hasScenarioLevels) return 'Wait for valid reference and invalidation levels before escalation.';
+  if (args.primaryBlocker) return `Review blocker: ${args.primaryBlocker}.`;
+  if (args.crossMarket === 'headwind') return 'Check whether cross-market headwinds ease before treating the setup as clean.';
+  if ((args.assessment || '').toUpperCase() !== 'ALIGNED') return 'Wait for assessment to move from watch/mixed into aligned.';
+  if (args.confluence < 70) return 'Watch for confluence to improve above the high-conviction threshold.';
+  return 'Monitor whether price respects the reference level and confluence holds.';
+}
+
 export default function GoldenEggPage() {
   const { selectedSymbol, selectSymbol, navigateTo } = useV2();
   const { tier } = useUserTier();
@@ -159,6 +207,13 @@ export default function GoldenEggPage() {
   } : null);
   const d = dve.data?.data;
   const loading = goldenEgg.loading;
+  const geReferencePrice = geSafeScenario?.referenceLevel?.price;
+  const geInvalidationPrice = geSafeScenario?.invalidationLevel?.price;
+  const geHasScenarioLevels = isUsableNumber(geReferencePrice) && isUsableNumber(geInvalidationPrice);
+  const geDataQuality = getGEDataQuality({ price: quote.data?.price ?? ge?.meta?.price, confluence: geConfluenceScore, assessment: geAssessment, reference: geReferencePrice, invalidation: geInvalidationPrice });
+  const geDataQualityTitle = geDataQualityDetail(geDataQuality, geMissingInputs({ price: quote.data?.price ?? ge?.meta?.price, confluence: geConfluenceScore, assessment: geAssessment, reference: geReferencePrice, invalidation: geInvalidationPrice }));
+  const crossMarketAlignment = deriveCrossMarketAlignment(regime.data?.signals);
+  const geNextUsefulCheck = summarizeGENextCheck({ dataQuality: geDataQuality, hasScenarioLevels: geHasScenarioLevels, assessment: geAssessment, primaryBlocker: ge?.layer1?.primaryBlocker, confluence: geConfluenceScore, crossMarket: crossMarketAlignment.alignment });
 
   function handleSymbolSubmit() {
     if (symbolInput.trim()) {
@@ -200,7 +255,6 @@ export default function GoldenEggPage() {
     try {
       setSavingCase(true);
       setSaveCaseMsg(null);
-      const dataQuality = quote.data?.price && geConfluenceScore ? 'GOOD' : 'DEGRADED';
       await saveResearchCase({
         sourceType: 'golden-egg',
         title: `${sym} Golden Egg research case`,
@@ -209,7 +263,7 @@ export default function GoldenEggPage() {
           assetClass: quoteType === 'crypto' ? 'crypto' : 'equity',
           sourceType: 'golden-egg',
           generatedAt: new Date().toISOString(),
-          dataQuality,
+          dataQuality: geDataQuality,
           title: `${sym} Golden Egg research case`,
           thesis: ge.layer2?.setup?.thesis || `${sym} Golden Egg educational research case.`,
           assessment: geAssessment,
@@ -221,11 +275,11 @@ export default function GoldenEggPage() {
               `Confluence score is ${geConfluenceScore}%.`,
               ge.layer1?.primaryDriver ? `Primary driver: ${ge.layer1.primaryDriver}.` : null,
             ].filter(Boolean),
-            whatWeDoNotKnow: [quote.data?.price ? null : 'current quote'].filter(Boolean),
-            dataQuality,
+            whatWeDoNotKnow: geMissingInputs({ price: quote.data?.price ?? ge?.meta?.price, confluence: geConfluenceScore, assessment: geAssessment, reference: geReferencePrice, invalidation: geInvalidationPrice }),
+            dataQuality: geDataQuality,
             riskFlags: [ge.layer1?.primaryBlocker].filter(Boolean),
-            invalidation: geSafeScenario?.invalidationLevel?.price ? `Scenario invalidation reference: ${fmtP(geSafeScenario.invalidationLevel.price)}` : 'Scenario invalidation reference unavailable',
-            nextUsefulCheck: 'Refresh Golden Egg and compare whether confluence, regime, and data quality improve or weaken.',
+            invalidation: isUsableNumber(geInvalidationPrice) ? `Scenario invalidation reference: ${fmtP(geInvalidationPrice)}` : 'Scenario invalidation reference unavailable',
+            nextUsefulCheck: geNextUsefulCheck,
             disclaimer: 'Educational market research only. Not financial advice.',
           },
           scenarioPlan: geSafeScenario ? {
@@ -255,7 +309,7 @@ export default function GoldenEggPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <SectionHeader title="Golden Egg" subtitle="Deep analysis page — full symbol intelligence" />
 
       {/* Symbol picker */}
@@ -267,12 +321,12 @@ export default function GoldenEggPage() {
             onChange={(e) => setSymbolInput(e.target.value.toUpperCase())}
             onKeyDown={(e) => e.key === 'Enter' && handleSymbolSubmit()}
             placeholder="Enter symbol..."
-            className="px-3 py-1.5 bg-[var(--msp-panel-2)] border border-[var(--msp-border)] rounded-lg text-sm text-white placeholder-slate-600 w-32 focus:border-emerald-500 focus:outline-none"
+            className="px-3 py-1.5 bg-[var(--msp-panel-2)] border border-[var(--msp-border)] rounded-md text-sm text-white placeholder-slate-600 w-32 focus:border-emerald-500 focus:outline-none"
           />
-          <button onClick={handleSymbolSubmit} className="px-3 py-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg text-xs hover:bg-emerald-500/30 transition-colors">Go</button>
+          <button onClick={handleSymbolSubmit} className="px-3 py-1.5 bg-emerald-500/20 text-emerald-400 rounded-md text-xs hover:bg-emerald-500/30 transition-colors">Go</button>
         </div>
         {/* Asset type toggle — always visible for disambiguation */}
-        <div className="flex items-center gap-0 border border-[var(--msp-border)] rounded-lg overflow-hidden">
+        <div className="flex items-center gap-0 border border-[var(--msp-border)] rounded-md overflow-hidden">
           {(['auto', 'equity', 'crypto'] as const).map(t => (
             <button
               key={t}
@@ -401,10 +455,11 @@ export default function GoldenEggPage() {
                     <Badge label={ge.layer1.direction} color={dirColor(ge.layer1.direction)} />
                     <Badge label={`Grade ${ge.layer1.grade}`} color={gradeColor(ge.layer1.grade)} small />
                     {(() => { const lc = deriveGELifecycle(geAssessment, geConfluenceScore); return <span className="text-[11px] px-1.5 py-0.5 rounded border font-semibold" style={{ color: LIFECYCLE_COLORS[lc], borderColor: LIFECYCLE_COLORS[lc] + '40', backgroundColor: LIFECYCLE_COLORS[lc] + '15' }}>{lc.replace('_', ' ')}</span>; })()}
-                    {(() => { const cm = deriveCrossMarketAlignment(regime.data?.signals); return <span className="text-[11px] px-1.5 py-0.5 rounded border font-semibold" style={{ color: ALIGNMENT_COLOR[cm.alignment], borderColor: ALIGNMENT_COLOR[cm.alignment] + '40', backgroundColor: ALIGNMENT_COLOR[cm.alignment] + '15' }}>{cm.alignment === 'headwind' ? 'Headwind' : cm.alignment === 'supportive' ? 'Tailwind' : 'Neutral'}</span>; })()}
+                    <span className="text-[11px] px-1.5 py-0.5 rounded border font-semibold" style={{ color: ALIGNMENT_COLOR[crossMarketAlignment.alignment], borderColor: ALIGNMENT_COLOR[crossMarketAlignment.alignment] + '40', backgroundColor: ALIGNMENT_COLOR[crossMarketAlignment.alignment] + '15' }}>{crossMarketAlignment.alignment === 'headwind' ? 'Headwind' : crossMarketAlignment.alignment === 'supportive' ? 'Tailwind' : 'Neutral'}</span>
+                    <span title={geDataQualityTitle} className="text-[11px] px-1.5 py-0.5 rounded border font-semibold" style={{ color: geDataQualityColor(geDataQuality), borderColor: geDataQualityColor(geDataQuality) + '40', backgroundColor: geDataQualityColor(geDataQuality) + '15' }}>Data {geDataQuality}</span>
                   </div>
                   <div className="text-lg font-bold text-white">
-                    ${fmtP(ge.meta.price)}
+                    {formatLevel(ge.meta.price)}
                     {quote.data?.changePercent != null && (
                       <span className={`ml-2 text-sm ${quote.data.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                         {quote.data.changePercent >= 0 ? '+' : ''}{quote.data.changePercent.toFixed(2)}%
@@ -434,12 +489,12 @@ export default function GoldenEggPage() {
                   <div className="text-[11px] text-slate-500 uppercase">Level of Interest</div>
                   <div className="text-sm text-emerald-400 font-semibold">{geSafeScenario?.referenceTrigger}</div>
                   {geSafeScenario?.referenceLevel.price && (
-                    <div className="text-xs font-mono text-white mt-0.5">${fmtP(geSafeScenario.referenceLevel.price)} ({geSafeScenario.referenceLevel.type})</div>
+                    <div className="text-xs font-mono text-white mt-0.5">{formatLevel(geSafeScenario.referenceLevel.price)} ({geSafeScenario.referenceLevel.type})</div>
                   )}
                 </div>
                 <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
                   <div className="text-[11px] text-slate-500 uppercase">Invalidation</div>
-                  <div className="text-sm text-red-400 font-semibold">${fmtP(geSafeScenario?.invalidationLevel.price)}</div>
+                  <div className="text-sm text-red-400 font-semibold">{formatLevel(geInvalidationPrice)}</div>
                   <div className="text-[11px] text-slate-500 mt-0.5">{geSafeScenario?.invalidationLevel.logic}</div>
                 </div>
                 <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
@@ -447,15 +502,20 @@ export default function GoldenEggPage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     {geSafeScenario?.reactionZones.map((t: any, i: number) => (
                       <span key={i} className="text-sm font-mono text-emerald-400">
-                        ${fmtP(t.price)}{i < geSafeScenario.reactionZones.length - 1 && <span className="text-slate-600 mx-1">›</span>}
+                        {formatLevel(t.price)}{i < geSafeScenario.reactionZones.length - 1 && <span className="text-slate-600 mx-1">›</span>}
                       </span>
                     ))}
                   </div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">Hypothetical R:R {geSafeScenario?.hypotheticalRr.expectedR.toFixed(1)}</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">Hypothetical R:R {isUsableNumber(geSafeScenario?.hypotheticalRr?.expectedR) ? geSafeScenario.hypotheticalRr.expectedR.toFixed(1) : 'Unavailable'}</div>
                 </div>
               </div>
 
               {/* Driver / Blocker + Research Note */}
+              <div className="rounded-lg border border-blue-500/25 bg-blue-500/10 p-3 text-xs text-blue-100">
+                <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.07em] text-blue-300">Next Useful Check</div>
+                <div>{geNextUsefulCheck}</div>
+              </div>
+
               <div className="flex items-center gap-4 flex-wrap">
                 <div className="text-[11px] text-slate-500">
                   Driver: <span className="text-white font-semibold">{ge.layer1.primaryDriver}</span>
@@ -473,12 +533,9 @@ export default function GoldenEggPage() {
                 >
                   {savingCase ? 'Saving...' : 'Save Case'}
                 </button>
-                <a
-                  href={`/tools/journal?prefill=true&symbol=${encodeURIComponent(sym)}&strategy=Golden+Egg&setup=${encodeURIComponent(`${sym} ${ge.layer1.direction} — Grade ${ge.layer1.grade}, ${geConfluenceScore}% confluence`)}&notes=${encodeURIComponent(`Golden Egg educational research note\nReference Zone: $${geSafeScenario?.referenceLevel.price ? fmtP(geSafeScenario.referenceLevel.price) : 'N/A'} (${geSafeScenario?.referenceLevel.type ?? 'reference'})\nScenario Invalidation: $${fmtP(geSafeScenario?.invalidationLevel.price)} — ${geSafeScenario?.invalidationLevel.logic ?? 'N/A'}\nReaction Zones: ${geSafeScenario?.reactionZones.map((t: any) => '$' + fmtP(t.price)).join(' › ') ?? 'N/A'}\nHypothetical R:R ${geSafeScenario?.hypotheticalRr.expectedR.toFixed(1) ?? 'N/A'} | Setup: ${ge.layer2.setup.setupType.replace(/_/g, ' ')}\nThesis: ${ge.layer2.setup.thesis}`)}`}
-                  className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-extrabold uppercase tracking-[0.06em] text-emerald-400 no-underline hover:bg-emerald-500/20 transition-colors"
-                >
-                  Save Research Note
-                </a>
+                <button onClick={() => navigateTo('terminal', sym)} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-xs font-extrabold uppercase tracking-[0.06em] text-slate-400 hover:bg-slate-700/50 transition-colors">
+                  Open Terminal
+                </button>
               </div>
               {saveCaseMsg && (
                 <div className={`mt-3 rounded-lg border px-3 py-2 text-xs ${saveCaseMsg.type === 'success' ? 'border-emerald-500/30 bg-emerald-950/30 text-emerald-300' : 'border-red-500/30 bg-red-950/30 text-red-300'}`}>
@@ -617,7 +674,7 @@ export default function GoldenEggPage() {
                     {ge.layer2.setup.keyLevels.map((lv: any, i: number) => (
                       <div key={i} className="flex items-center justify-between text-xs">
                         <span className="text-slate-400">{lv.label} <span className="text-[11px] text-slate-600">({lv.kind})</span></span>
-                        <span className="font-mono text-white">${fmtP(lv.price)}</span>
+                        <span className="font-mono text-white">{formatLevel(lv.price)}</span>
                       </div>
                     ))}
                   </div>
@@ -687,7 +744,7 @@ export default function GoldenEggPage() {
                           <span className="text-lg font-bold font-mono" style={{
                             color: tc.decompressionTarget.direction === 'up' ? '#10B981' : tc.decompressionTarget.direction === 'down' ? '#EF4444' : '#E2E8F0',
                           }}>
-                            {tc.decompressionTarget.direction === 'up' ? '? ' : tc.decompressionTarget.direction === 'down' ? '? ' : ''}{fmtPrice(tc.decompressionTarget.price)}
+                            {tc.decompressionTarget.direction === 'up' ? 'Up to ' : tc.decompressionTarget.direction === 'down' ? 'Down to ' : ''}{fmtPrice(tc.decompressionTarget.price)}
                           </span>
                           <span className="text-[11px] text-slate-400 min-w-0 break-words">
                             weighted from {tc.decompressionTarget.contributingTFs.length} TFs ({tc.decompressionTarget.contributingTFs.join(', ')})
@@ -749,7 +806,7 @@ export default function GoldenEggPage() {
                                         <>
                                           <span className="font-mono text-white w-24 text-right">{fmtPrice(row.mid50Level)}</span>
                                           <span className={`w-14 text-right ${row.pullDirection === 'up' ? 'text-emerald-400' : row.pullDirection === 'down' ? 'text-red-400' : 'text-slate-500'}`}>
-                                            {row.pullDirection === 'up' ? '?' : row.pullDirection === 'down' ? '?' : '—'} {row.distanceToMid50 != null ? `${row.distanceToMid50 > 0 ? '+' : ''}${row.distanceToMid50.toFixed(2)}%` : ''}
+                                            {row.pullDirection === 'up' ? 'Up' : row.pullDirection === 'down' ? 'Down' : 'Flat'} {row.distanceToMid50 != null ? `${row.distanceToMid50 > 0 ? '+' : ''}${row.distanceToMid50.toFixed(2)}%` : ''}
                                           </span>
                                         </>
                                       ) : (
@@ -918,7 +975,7 @@ export default function GoldenEggPage() {
                       onClick={() => navigateTo('terminal', sym)}
                       className="mt-2 text-[11px] text-emerald-400 hover:underline"
                     >
-                      Open Options Terminal ?
+                        Open Options Terminal
                     </button>
                   )}
                 </div>
@@ -938,19 +995,19 @@ export default function GoldenEggPage() {
                 <div className="text-[11px] text-slate-500 uppercase">Reference Level</div>
                 <div className="text-sm text-white">{geSafeScenario?.referenceTrigger}</div>
                 {geSafeScenario?.referenceLevel.price && (
-                  <div className="text-xs font-mono text-emerald-400">${fmtP(geSafeScenario.referenceLevel.price)} ({geSafeScenario.referenceLevel.type})</div>
+                  <div className="text-xs font-mono text-emerald-400">{formatLevel(geSafeScenario.referenceLevel.price)} ({geSafeScenario.referenceLevel.type})</div>
                 )}
               </div>
               <div>
                 <div className="text-[11px] text-slate-500 uppercase">Risk Level</div>
-                <div className="text-sm font-mono text-red-400">${fmtP(geSafeScenario?.invalidationLevel.price)}</div>
+                <div className="text-sm font-mono text-red-400">{formatLevel(geInvalidationPrice)}</div>
                 <div className="text-[11px] text-slate-500">{geSafeScenario?.invalidationLevel.logic}</div>
               </div>
               <div>
                 <div className="text-[11px] text-slate-500 uppercase">Key Levels</div>
                 {geSafeScenario?.reactionZones.map((t: any, i: number) => (
                   <div key={i} className="flex items-center gap-2 text-xs">
-                    <span className="text-emerald-400 font-mono">${fmtP(t.price)}</span>
+                    <span className="text-emerald-400 font-mono">{formatLevel(t.price)}</span>
                     {t.rMultiple && <span className="text-slate-500">{t.rMultiple.toFixed(1)}R</span>}
                     {t.note && <span className="text-slate-600">{t.note}</span>}
                   </div>
@@ -960,7 +1017,7 @@ export default function GoldenEggPage() {
             <div className="flex items-center gap-4 mt-4 pt-3 border-t border-slate-800/50">
               <div>
                 <span className="text-[11px] text-slate-500">Hypothetical R:R</span>
-                <span className="text-sm font-bold text-white ml-2">{geSafeScenario?.hypotheticalRr.expectedR.toFixed(1)}R</span>
+                <span className="text-sm font-bold text-white ml-2">{isUsableNumber(geSafeScenario?.hypotheticalRr?.expectedR) ? `${geSafeScenario.hypotheticalRr.expectedR.toFixed(1)}R` : 'Unavailable'}</span>
               </div>
               <button
                 type="button"
@@ -970,12 +1027,6 @@ export default function GoldenEggPage() {
               >
                 {savingCase ? 'Saving...' : 'Save Case'}
               </button>
-              <a
-                href={`/tools/journal?prefill=true&symbol=${encodeURIComponent(sym)}&strategy=Golden+Egg&setup=${encodeURIComponent(`${sym} ${ge.layer1.direction} — Grade ${ge.layer1.grade}, ${geConfluenceScore}% confluence`)}&notes=${encodeURIComponent(`Golden Egg educational research note\nReference Zone: $${geSafeScenario?.referenceLevel.price ? fmtP(geSafeScenario.referenceLevel.price) : 'N/A'} (${geSafeScenario?.referenceLevel.type ?? 'reference'})\nScenario Invalidation: $${fmtP(geSafeScenario?.invalidationLevel.price)} — ${geSafeScenario?.invalidationLevel.logic ?? 'N/A'}\nReaction Zones: ${geSafeScenario?.reactionZones.map((t: any) => '$' + fmtP(t.price)).join(' › ') ?? 'N/A'}\nHypothetical R:R ${geSafeScenario?.hypotheticalRr.expectedR.toFixed(1) ?? 'N/A'}`)}`}
-                className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-xs hover:bg-emerald-500/30 transition-colors no-underline"
-              >
-                Save Research Note
-              </a>
               <button onClick={() => navigateTo('terminal', sym)} className="px-4 py-2 bg-slate-700/50 text-slate-400 rounded-lg text-xs hover:bg-slate-700/70 transition-colors">
                 Open in Terminal
               </button>
