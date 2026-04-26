@@ -14,6 +14,7 @@ export type EliteSignalScore = {
   riskPermissionScore: number;
   triggerDistancePct: number | null;
   setupState: "DISCOVERED" | "WATCHING" | "TRIGGERED" | "INVALIDATED" | "EXPIRED";
+  featureImportance: { factor: string; score: number; weight: number; contribution: number; note: string }[];
   notes: string[];
 };
 
@@ -53,6 +54,38 @@ function resolveSetupState(pipeline: CandidatePipeline, price: number): EliteSig
   return pipeline.governance.finalPermission === "ALLOW" || pipeline.governance.finalPermission === "ALLOW_REDUCED" ? "WATCHING" : "DISCOVERED";
 }
 
+function componentWeights(pipeline: CandidatePipeline) {
+  if (pipeline.candidate.market === "CRYPTO") {
+    return {
+      edgeScore: 0.23,
+      timingScore: 0.19,
+      liquidityScore: 0.19,
+      asymmetryScore: 0.15,
+      cleanlinessScore: 0.12,
+      riskPermissionScore: 0.12,
+    };
+  }
+
+  return {
+    edgeScore: 0.27,
+    timingScore: 0.18,
+    liquidityScore: 0.15,
+    asymmetryScore: 0.16,
+    cleanlinessScore: 0.14,
+    riskPermissionScore: 0.10,
+  };
+}
+
+function importanceRow(factor: string, score: number, weight: number, note: string) {
+  return {
+    factor,
+    score: roundPct(score),
+    weight: Math.round(weight * 1000) / 10,
+    contribution: Math.round(score * weight * 1000) / 10,
+    note,
+  };
+}
+
 export function computeEliteSignalScore(pipeline: CandidatePipeline, bars: Bar[] = []): EliteSignalScore {
   const ev = pipeline.verdict.evidence;
   const price = pipeline.lastPrice ?? bars[bars.length - 1]?.close ?? 0;
@@ -75,14 +108,15 @@ export function computeEliteSignalScore(pipeline: CandidatePipeline, bars: Bar[]
   const rr = stopDistance > 0 ? targetDistance / stopDistance : 0;
   const asymmetryScore = clamp(rr / 2.5);
   const cleanlinessScore = clamp((ev.eventSafety * 0.35) + (ev.extensionSafety * 0.3) + (ev.crossMarketConfirmation * 0.2) + (pipeline.verdict.penalties.length ? 0.05 : 0.15));
+  const weights = componentWeights(pipeline);
 
   const raw = (
-    edgeScore * 0.27 +
-    timingScore * 0.18 +
-    liquidityScore * 0.15 +
-    asymmetryScore * 0.16 +
-    cleanlinessScore * 0.14 +
-    riskPermissionScore * 0.10
+    edgeScore * weights.edgeScore +
+    timingScore * weights.timingScore +
+    liquidityScore * weights.liquidityScore +
+    asymmetryScore * weights.asymmetryScore +
+    cleanlinessScore * weights.cleanlinessScore +
+    riskPermissionScore * weights.riskPermissionScore
   ) * 100;
   const score = Math.round(raw * 10) / 10;
   const notes: string[] = [];
@@ -103,6 +137,14 @@ export function computeEliteSignalScore(pipeline: CandidatePipeline, bars: Bar[]
     riskPermissionScore: roundPct(riskPermissionScore),
     triggerDistancePct: distance == null ? null : Math.round(distance * 10000) / 100,
     setupState: resolveSetupState(pipeline, price),
+    featureImportance: [
+      importanceRow("Edge", edgeScore, weights.edgeScore, "Regime fit, structure quality, symbol trust, and model health."),
+      importanceRow("Timing", timingScore, weights.timingScore, "Time confluence, volatility alignment, and trigger proximity."),
+      importanceRow("Liquidity", liquidityScore, weights.liquidityScore, pipeline.candidate.market === "CRYPTO" ? "Participation flow and cross-market confirmation carry higher crypto weight." : "Participation flow and cross-market confirmation."),
+      importanceRow("Asymmetry", asymmetryScore, weights.asymmetryScore, "Reward-to-risk profile into the first target."),
+      importanceRow("Cleanliness", cleanlinessScore, weights.cleanlinessScore, "Event safety, extension safety, and contradiction penalties."),
+      importanceRow("Risk Permission", riskPermissionScore, weights.riskPermissionScore, "Risk governor permission after account, environment, and policy checks."),
+    ].sort((a, b) => b.contribution - a.contribution),
     notes,
   };
 }

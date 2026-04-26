@@ -12,6 +12,7 @@ import { getSessionFromCookie } from '@/lib/auth';
 import { apiLimiter, getClientIP } from '@/lib/rateLimit';
 import { avTryToken } from '@/lib/avRateGovernor';
 import { avCircuit } from '@/lib/circuitBreaker';
+import { getCachedBarsOnly, setCachedBars } from '@/lib/barCache';
 import {
   calculateAllIndicators,
   rsi,
@@ -45,6 +46,9 @@ async function fetchEquityIntraday(
   symbol: string,
   interval: ScalpTimeframe,
 ): Promise<OHLCVBar[] | null> {
+  const cached = getCachedBarsOnly(symbol, 'equity', interval);
+  if (cached) return cached.bars;
+
   if (!AV_KEY()) return null;
   if (!(await avTryToken())) return null;
 
@@ -62,7 +66,9 @@ async function fetchEquityIntraday(
     if (!res.ok) return null;
     const json = await res.json();
     const tsKey = `Time Series (${interval})`;
-    return parseTimeSeries(json[tsKey]);
+    const bars = parseTimeSeries(json[tsKey]);
+    if (bars) setCachedBars(symbol, 'equity', interval, bars);
+    return bars;
   } catch {
     return null;
   }
@@ -72,6 +78,9 @@ async function fetchCryptoIntraday(
   symbol: string,
   interval: ScalpTimeframe,
 ): Promise<OHLCVBar[] | null> {
+  const cached = getCachedBarsOnly(symbol, 'crypto', interval);
+  if (cached) return cached.bars;
+
   if (!AV_KEY()) return null;
   if (!(await avTryToken())) return null;
 
@@ -90,7 +99,9 @@ async function fetchCryptoIntraday(
     const json = await res.json();
     const tsKey = Object.keys(json).find((k) => k.includes('Time Series'));
     if (!tsKey) return null;
-    return parseTimeSeries(json[tsKey]);
+    const bars = parseTimeSeries(json[tsKey]);
+    if (bars) setCachedBars(symbol, 'crypto', interval, bars);
+    return bars;
   } catch {
     return null;
   }

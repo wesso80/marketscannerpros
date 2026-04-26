@@ -6,7 +6,7 @@
  */
 import type { Permission, Regime, Direction, Playbook } from "@/types/operator";
 import type { TruthObject } from "./truth-layer";
-import type { EliteGrade } from "@/lib/operator/elite-score";
+import type { EliteGrade, EliteSignalScore } from "@/lib/operator/elite-score";
 
 /* ── Bias is a simplified Direction for the UI ── */
 export type BiasState = "LONG" | "SHORT" | "NEUTRAL";
@@ -39,6 +39,7 @@ export type ScannerHit = {
   eliteGrade?: EliteGrade;
   setupState?: "DISCOVERED" | "WATCHING" | "TRIGGERED" | "INVALIDATED" | "EXPIRED";
   triggerDistancePct?: number | null;
+  featureImportance?: EliteSignalScore["featureImportance"];
   riskSource?: "portfolio_journal" | "operator_state" | "fallback";
   symbolTrust: number;
   sizeMultiplier: number;
@@ -82,6 +83,7 @@ export type AdminSymbolIntelligence = {
   eliteGrade?: EliteGrade;
   setupState?: "DISCOVERED" | "WATCHING" | "TRIGGERED" | "INVALIDATED" | "EXPIRED";
   triggerDistancePct?: number | null;
+  featureImportance?: EliteSignalScore["featureImportance"];
   riskSource?: "portfolio_journal" | "operator_state" | "fallback";
   symbolTrust: number;
   sizeMultiplier: number;

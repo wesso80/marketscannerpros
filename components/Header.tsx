@@ -23,6 +23,17 @@ const SURFACES = [
   { href: '/tools/workspace',   label: 'Workspace' },
 ];
 
+const MORE_TOOLS = [
+  { href: '/tools/backtest', label: 'Backtest' },
+  { href: '/tools/options-flow', label: 'Options Flow' },
+  { href: '/tools/options-terminal', label: 'Options Terminal' },
+  { href: '/tools/crypto-dashboard', label: 'Crypto Derivatives' },
+  { href: '/tools/scalper', label: 'Scalper' },
+  { href: '/tools/time-scanner', label: 'Time Scanner' },
+  { href: '/tools/volatility-engine', label: 'Volatility Engine' },
+  { href: '/compliance-hub', label: 'Compliance Hub' },
+];
+
 export default function Header() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement | null>(null);
@@ -105,6 +116,7 @@ export default function Header() {
             {isLoggedIn && (
               <Link href="/tools/referrals" className="text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">Referrals</Link>
             )}
+            <Link href="/compliance-hub" className="text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">Compliance</Link>
             <NotificationBell compact={isAppRoute} />
             {isLoggedIn && (
               <Link href="/account" className="text-xs text-slate-400 hover:text-teal-300 px-2 py-1 rounded-lg hover:bg-slate-800/60 transition-colors whitespace-nowrap">Account</Link>
@@ -187,6 +199,16 @@ export default function Header() {
                       : 'text-white hover:bg-teal-500/10 hover:text-teal-300'
                   }`}
                 >
+                  {s.label}
+                </Link>
+              ))}
+            </div>
+
+            {/* Supporting links */}
+            <div className="mt-4 pt-4 border-t border-slate-700 flex flex-col gap-0.5">
+              <div className="px-4 pb-1 text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500">More tools</div>
+              {MORE_TOOLS.map(s => (
+                <Link key={s.href} href={s.href} onClick={() => setDrawerOpen(false)} className="flex items-center px-4 py-2.5 text-sm text-white hover:bg-teal-500/10 hover:text-teal-300 rounded-lg transition-all">
                   {s.label}
                 </Link>
               ))}

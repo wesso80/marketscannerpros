@@ -84,6 +84,22 @@ const v2Surfaces = [
   },
 ];
 
+const valueStack = [
+  { label: 'Scan faster', detail: 'Rank equities, crypto, forex, and options context with one research workflow.' },
+  { label: 'Verify context', detail: 'Combine regime, volatility, flow, news, and data-quality warnings before review.' },
+  { label: 'Test safely', detail: 'Use backtests, paper simulation, journal analytics, and scenario notes before real-world decisions.' },
+  { label: 'Track your edge', detail: 'Sync watchlists, alerts, journal, and portfolio research across devices.' },
+];
+
+const guidedPaths = [
+  { goal: 'Find new market scenarios', href: '/tools/scanner', tool: 'Market Scanner', detail: 'Ranked research candidates and Pro Scanner filters.' },
+  { goal: 'Analyse one symbol deeply', href: '/tools/golden-egg', tool: 'Golden Egg', detail: 'Multi-factor scenario packet with data-quality context.' },
+  { goal: 'Review options flow', href: '/tools/options-flow', tool: 'Options Flow', detail: 'Large-flow estimates, IV skew, and chain context.' },
+  { goal: 'Test a strategy', href: '/tools/backtest', tool: 'Backtest', detail: 'Historical paper simulation with overfitting warnings.' },
+  { goal: 'Track process and outcomes', href: '/tools/workspace', tool: 'Workspace', detail: 'Journal, portfolio, watchlists, and alerts.' },
+  { goal: 'Study crypto derivatives', href: '/tools/crypto-dashboard', tool: 'Crypto Dashboard', detail: 'Funding, OI, liquidations, and long/short context.' },
+];
+
 /* ─── Featured tile component ─── */
 function FeaturedTile({
   href,
@@ -163,8 +179,54 @@ export default function CommandHub() {
       {/* ─── Stats Bar ─── */}
       <SocialProof />
 
+      {/* ─── 30-second value stack ─── */}
+      <section className="border-y border-white/5 bg-slate-950/60">
+        <div className="mx-auto max-w-7xl px-4 py-8 md:px-6">
+          <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-400">30-second value stack</p>
+              <h2 className="mt-1 text-2xl font-bold text-white">What MSP helps you do</h2>
+            </div>
+            <p className="max-w-xl text-sm leading-relaxed text-slate-400">
+              MarketScanner Pros is an educational research cockpit: no broker execution, no personal advice, just faster structure, cleaner evidence, and better review loops.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {valueStack.map((item) => (
+              <div key={item.label} className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+                <div className="text-sm font-extrabold text-white">{item.label}</div>
+                <p className="mt-1 text-xs leading-relaxed text-slate-400">{item.detail}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Guided tool chooser ─── */}
+      <section className="mx-auto w-full max-w-7xl px-4 pt-10 md:px-6">
+        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-5 md:p-6">
+          <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-400">Not sure where to start?</p>
+              <h2 className="mt-1 text-2xl font-bold text-white">Choose by trader workflow</h2>
+            </div>
+            <Link href="/guide" className="text-sm font-semibold text-emerald-300 hover:text-emerald-200">Open full platform guide →</Link>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {guidedPaths.map((path) => (
+              <Link key={path.href} href={path.href} className="group rounded-xl border border-white/10 bg-slate-950/50 p-4 transition hover:border-emerald-500/40 hover:bg-slate-900/80">
+                <div className="text-xs font-bold uppercase tracking-[0.08em] text-slate-500">I want to</div>
+                <div className="mt-1 text-sm font-extrabold text-white">{path.goal}</div>
+                <div className="mt-2 text-xs font-bold text-emerald-300">Use {path.tool}</div>
+                <p className="mt-1 text-xs leading-relaxed text-slate-400">{path.detail}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ─── Core Scanners ─── */}
-      <div className="mx-auto w-full max-w-7xl px-4 pb-4 pt-12 md:px-6">
+      <div className="mx-auto w-full max-w-7xl px-4 pb-4 pt-10 md:px-6">
         <section>
           <h2 className="mb-6 text-2xl font-bold text-white">Core Scanners</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

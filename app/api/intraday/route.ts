@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getOHLC, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
 import { getSessionFromCookie } from '@/lib/auth';
 import { avTakeToken } from '@/lib/avRateGovernor';
+import { getCachedBarsOnly, setCachedBars } from '@/lib/barCache';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -34,7 +35,7 @@ interface IntradayResponse {
   interval: IntradayInterval;
   lastRefreshed: string;
   timeZone: string;
-  source?: 'coingecko' | 'alpha_vantage';
+  source?: 'coingecko' | 'alpha_vantage' | 'memory';
   data: IntradayBar[];
   metadata: {
     information: string;
@@ -74,6 +75,36 @@ export async function GET(req: NextRequest) {
   }
 
   const isCrypto = isCryptoSymbol(symbol);
+
+  const cached = getCachedBarsOnly(symbol, isCrypto ? 'crypto' : 'equity', interval);
+  if (cached) {
+    const cachedBars: IntradayBar[] = cached.bars.map((bar) => ({
+      timestamp: typeof bar.timestamp === 'string' ? bar.timestamp : bar.timestamp.toISOString(),
+      open: bar.open,
+      high: bar.high,
+      low: bar.low,
+      close: bar.close,
+      volume: bar.volume,
+    }));
+    const lastRefreshed = cachedBars[cachedBars.length - 1]?.timestamp || new Date().toISOString();
+    return NextResponse.json({
+      symbol,
+      interval,
+      lastRefreshed,
+      timeZone: 'UTC',
+      source: 'memory',
+      data: cachedBars,
+      metadata: {
+        information: 'Served from MarketScanner Pros bar cache',
+        symbol,
+        lastRefreshed,
+        interval,
+        outputSize,
+        timeZone: 'UTC',
+      },
+      isCrypto,
+    } satisfies IntradayResponse);
+  }
 
   if (!isCrypto && !ALPHA_VANTAGE_KEY) {
     return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
@@ -132,6 +163,8 @@ export async function GET(req: NextRequest) {
         },
         isCrypto: true,
       };
+
+      setCachedBars(symbol, 'crypto', interval, bars);
 
       return NextResponse.json(result);
     }
@@ -222,6 +255,8 @@ export async function GET(req: NextRequest) {
       },
       isCrypto: false
     };
+
+    setCachedBars(symbol, 'equity', interval, bars);
 
     return NextResponse.json(result);
   } catch (error) {

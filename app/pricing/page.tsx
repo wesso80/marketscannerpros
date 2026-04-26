@@ -20,6 +20,19 @@ type Plan = {
 
 type FAQ = { q: string; a: string };
 
+const featureMatrix = [
+  { feature: 'Daily market scans', free: '5/day', pro: 'Unlimited', trader: 'Unlimited' },
+  { feature: 'AI analyst questions', free: '10/day', pro: '50/day', trader: '50/day + deeper model' },
+  { feature: 'Scanner + research dashboard', free: 'Basic', pro: 'Full', trader: 'Full' },
+  { feature: 'Trade journal + analytics', free: '—', pro: 'Included', trader: 'Included' },
+  { feature: 'Portfolio insights + CSV export', free: 'Limited', pro: 'Included', trader: 'Included' },
+  { feature: 'Backtesting engine', free: '—', pro: '—', trader: 'Included' },
+  { feature: 'Options terminal + confluence', free: '—', pro: 'Flow only', trader: 'Included' },
+  { feature: 'Golden Egg + Deep Analysis', free: '—', pro: '—', trader: 'Included' },
+  { feature: 'Time scanner + volatility engine', free: '—', pro: '—', trader: 'Included' },
+  { feature: 'Educational risk disclaimers', free: 'Included', pro: 'Included', trader: 'Included' },
+];
+
 export default function PricingPage() {
   const [cycle, setCycle] = React.useState<BillingCycle>("monthly");
   const [openFaq, setOpenFaq] = React.useState<number | null>(0);
@@ -285,6 +298,40 @@ export default function PricingPage() {
             {checkoutError}
           </div>
         ) : null}
+
+        <section className="mt-14 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
+          <div className="border-b border-white/10 px-5 py-4">
+            <h2 className="text-lg font-semibold text-white">Compare plans by workflow</h2>
+            <p className="mt-1 text-sm text-white/60">
+              See exactly when to move from exploration to full research to Pro Trader scenario testing.
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-left text-sm">
+              <thead className="bg-slate-950/50 text-xs uppercase tracking-[0.08em] text-white/50">
+                <tr>
+                  <th className="px-5 py-3">Feature</th>
+                  <th className="px-5 py-3">Free</th>
+                  <th className="px-5 py-3">Pro</th>
+                  <th className="px-5 py-3">Pro Trader</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/10">
+                {featureMatrix.map((row) => (
+                  <tr key={row.feature} className="text-white/75">
+                    <td className="px-5 py-3 font-semibold text-white/90">{row.feature}</td>
+                    <td className="px-5 py-3">{row.free}</td>
+                    <td className="px-5 py-3 text-emerald-200">{row.pro}</td>
+                    <td className="px-5 py-3 text-amber-200">{row.trader}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="border-t border-white/10 px-5 py-3 text-xs text-white/50">
+            All plans are educational/informational only. No broker execution, no personal advice, and no guarantee of market outcomes.
+          </div>
+        </section>
 
         <section className="mt-14">
           <h2 className="text-center text-lg font-semibold">Frequently Asked Questions</h2>
