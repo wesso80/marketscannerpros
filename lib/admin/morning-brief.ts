@@ -34,6 +34,8 @@ export type MorningLearningSnapshot = {
   labeled: number;
   pending: number;
   accuracyRate: number | null;
+  briefFeedbackTotal: number;
+  briefFeedbackByAction: Record<string, number>;
 };
 
 export type MorningBrief = {
@@ -105,6 +107,8 @@ const FALLBACK_LEARNING: MorningLearningSnapshot = {
   labeled: 0,
   pending: 0,
   accuracyRate: null,
+  briefFeedbackTotal: 0,
+  briefFeedbackByAction: {},
 };
 
 export async function buildMorningBrief(options: {
@@ -243,7 +247,7 @@ async function loadRiskState(): Promise<MorningRiskState> {
 
 async function loadLearningSnapshot(): Promise<MorningLearningSnapshot> {
   try {
-    const rows = await q<MorningLearningSnapshot>(`
+    const rows = await q<Omit<MorningLearningSnapshot, "briefFeedbackTotal" | "briefFeedbackByAction">>(`
       SELECT
         COUNT(*)::int AS "totalSignals",
         COUNT(*) FILTER (WHERE outcome != 'pending')::int AS labeled,
@@ -252,7 +256,21 @@ async function loadLearningSnapshot(): Promise<MorningLearningSnapshot> {
       FROM ai_signal_log
       WHERE signal_at > NOW() - INTERVAL '30 days'
     `);
-    return rows[0] ?? FALLBACK_LEARNING;
+    const feedbackRows = await q<{ action: string; count: number }>(`
+      SELECT action, COUNT(*)::int AS count
+      FROM admin_morning_brief_feedback
+      WHERE created_at > NOW() - INTERVAL '30 days'
+      GROUP BY action
+    `).catch(() => []);
+    const briefFeedbackByAction = Object.fromEntries(
+      feedbackRows.map((row) => [row.action, Number(row.count ?? 0)]),
+    );
+    const briefFeedbackTotal = feedbackRows.reduce((sum, row) => sum + Number(row.count ?? 0), 0);
+    return {
+      ...(rows[0] ?? FALLBACK_LEARNING),
+      briefFeedbackTotal,
+      briefFeedbackByAction,
+    };
   } catch {
     return FALLBACK_LEARNING;
   }

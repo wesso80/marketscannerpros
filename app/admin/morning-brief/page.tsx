@@ -52,6 +52,8 @@ type MorningBrief = {
     labeled: number;
     pending: number;
     accuracyRate: number | null;
+    briefFeedbackTotal: number;
+    briefFeedbackByAction: Record<string, number>;
   };
   health: {
     scanner: string;
@@ -63,6 +65,17 @@ type MorningBrief = {
   };
   nextImprovements: string[];
 };
+
+type FeedbackAction = "taken" | "ignored" | "missed" | "worked" | "failed" | "invalidated";
+
+const feedbackActions: Array<{ action: FeedbackAction; label: string; tone: "green" | "yellow" | "red" | "blue" | "neutral" }> = [
+  { action: "taken", label: "Taken", tone: "green" },
+  { action: "ignored", label: "Ignored", tone: "neutral" },
+  { action: "missed", label: "Missed", tone: "yellow" },
+  { action: "worked", label: "Worked", tone: "green" },
+  { action: "failed", label: "Failed", tone: "red" },
+  { action: "invalidated", label: "Invalidated", tone: "red" },
+];
 
 function stateTone(state: MorningBrief["deskState"]): "green" | "yellow" | "red" | "blue" {
   if (state === "TRADE") return "green";
@@ -89,6 +102,8 @@ export default function MorningBriefPage() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [emailStatus, setEmailStatus] = useState<string | null>(null);
+  const [feedbackStatus, setFeedbackStatus] = useState<Record<string, string>>({});
+  const [savingFeedback, setSavingFeedback] = useState<string | null>(null);
 
   const refresh = async () => {
     setLoading(true);
@@ -122,6 +137,47 @@ export default function MorningBriefPage() {
       setEmailStatus(err instanceof Error ? err.message : "Unable to send email");
     } finally {
       setSending(false);
+    }
+  };
+
+  const markFeedback = async (play: ScannerHit, action: FeedbackAction) => {
+    if (!brief) return;
+    const key = `${play.symbol}:${action}`;
+    setSavingFeedback(key);
+    try {
+      const res = await fetch("/api/admin/morning-brief/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(authHeaders() ?? {}) },
+        body: JSON.stringify({
+          briefId: brief.generatedAt.slice(0, 10),
+          symbol: play.symbol,
+          action,
+          market: brief.market,
+          timeframe: brief.timeframe,
+          permission: play.permission,
+          bias: play.bias,
+          playbook: play.playbook,
+          confidence: play.confidence,
+          snapshot: play,
+        }),
+      });
+      if (!res.ok) throw new Error(`Feedback failed (${res.status})`);
+      setFeedbackStatus((current) => ({ ...current, [play.symbol]: action }));
+      setBrief((current) => current ? {
+        ...current,
+        learning: {
+          ...current.learning,
+          briefFeedbackTotal: current.learning.briefFeedbackTotal + 1,
+          briefFeedbackByAction: {
+            ...current.learning.briefFeedbackByAction,
+            [action]: (current.learning.briefFeedbackByAction[action] ?? 0) + 1,
+          },
+        },
+      } : current);
+    } catch (err) {
+      setEmailStatus(err instanceof Error ? err.message : "Unable to save feedback");
+    } finally {
+      setSavingFeedback(null);
     }
   };
 
@@ -186,6 +242,7 @@ export default function MorningBriefPage() {
                 <Metric label="Correlation" value={`${(brief.risk.correlationRisk * 100).toFixed(0)}%`} />
                 <Metric label="Positions" value={`${brief.risk.activePositions}/${brief.risk.maxPositions}`} />
                 <Metric label="Learning" value={brief.learning.accuracyRate == null ? "Building" : `${brief.learning.accuracyRate.toFixed(1)}%`} />
+                <Metric label="Brief Labels" value={String(brief.learning.briefFeedbackTotal ?? 0)} />
               </div>
             </AdminCard>
           </section>
@@ -194,14 +251,24 @@ export default function MorningBriefPage() {
             <AdminCard className="xl:col-span-2">
               <SectionTitle title="Best Plays" subtitle="GO candidates only. Confirm trigger, invalidation, catalyst risk, and exposure before action." />
               <div className="space-y-3">
-                {brief.topPlays.length > 0 ? brief.topPlays.map((play) => <PlayCard key={play.symbol} play={play} />) : <EmptyState text="No green-lit candidates. That is useful information." />}
+                {brief.topPlays.length > 0 ? brief.topPlays.map((play) => (
+                  <PlayCard
+                    key={play.symbol}
+                    play={play}
+                    feedback={feedbackStatus[play.symbol]}
+                    savingFeedback={savingFeedback}
+                    onFeedback={markFeedback}
+                  />
+                )) : <EmptyState text="No green-lit candidates. That is useful information." />}
               </div>
             </AdminCard>
 
             <AdminCard>
               <SectionTitle title="Watch, Do Not Chase" subtitle="Candidates with structure, but not enough permission yet." />
               <div className="space-y-2">
-                {brief.watchlist.length > 0 ? brief.watchlist.slice(0, 8).map((play) => <CompactPlay key={play.symbol} play={play} />) : <EmptyState text="No WAIT candidates worth attention." />}
+                {brief.watchlist.length > 0 ? brief.watchlist.slice(0, 8).map((play) => (
+                  <CompactPlay key={play.symbol} play={play} feedback={feedbackStatus[play.symbol]} onFeedback={markFeedback} />
+                )) : <EmptyState text="No WAIT candidates worth attention." />}
               </div>
             </AdminCard>
           </section>
@@ -225,6 +292,14 @@ export default function MorningBriefPage() {
 
             <AdminCard>
               <SectionTitle title="Keep Making This Better" subtitle="Trader-brain improvements I would want next while using this daily." />
+              <div className="mb-4 grid grid-cols-3 gap-2 text-xs">
+                {feedbackActions.map((item) => (
+                  <div key={item.action} className="rounded-md border border-white/10 bg-slate-950/40 p-2">
+                    <div className="text-slate-500">{item.label}</div>
+                    <div className="mt-1 text-lg font-black text-white">{brief.learning.briefFeedbackByAction?.[item.action] ?? 0}</div>
+                  </div>
+                ))}
+              </div>
               <div className="space-y-3">
                 {brief.nextImprovements.map((item) => (
                   <div key={item} className="rounded-md border border-emerald-500/15 bg-emerald-500/5 p-3 text-sm leading-5 text-emerald-100">
@@ -250,9 +325,19 @@ function Metric({ label, value, tone = "neutral" }: { label: string; value: stri
   );
 }
 
-function PlayCard({ play }: { play: ScannerHit }) {
+function PlayCard({
+  play,
+  feedback,
+  savingFeedback,
+  onFeedback,
+}: {
+  play: ScannerHit;
+  feedback?: string;
+  savingFeedback: string | null;
+  onFeedback: (play: ScannerHit, action: FeedbackAction) => void;
+}) {
   return (
-    <Link href={`/admin/terminal/${encodeURIComponent(play.symbol)}`} className="block rounded-lg border border-white/10 bg-slate-950/40 p-4 transition hover:border-emerald-400/40">
+    <div className="rounded-lg border border-white/10 bg-slate-950/40 p-4 transition hover:border-emerald-400/40">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="text-xl font-black text-white">{play.symbol}</div>
@@ -270,19 +355,47 @@ function PlayCard({ play }: { play: ScannerHit }) {
         <Metric label="Size" value={`${play.sizeMultiplier.toFixed(2)}x`} />
       </div>
       {play.blockReasons?.length ? <div className="mt-3 text-xs text-amber-300">Watch: {play.blockReasons.slice(0, 2).join(", ")}</div> : null}
-    </Link>
+      <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-white/10 pt-3">
+        <Link href={`/admin/terminal/${encodeURIComponent(play.symbol)}`} className="rounded-md border border-sky-400/30 px-3 py-1.5 text-xs font-bold text-sky-200 hover:bg-sky-400/10">
+          Open Terminal
+        </Link>
+        {feedbackActions.map((item) => (
+          <button
+            key={item.action}
+            onClick={() => onFeedback(play, item.action)}
+            disabled={savingFeedback === `${play.symbol}:${item.action}`}
+            className={`rounded-md border px-3 py-1.5 text-xs font-bold ${feedback === item.action ? "border-emerald-400 bg-emerald-400/15 text-emerald-200" : "border-white/10 text-slate-300 hover:border-emerald-400/30"}`}
+          >
+            {savingFeedback === `${play.symbol}:${item.action}` ? "Saving" : item.label}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
-function CompactPlay({ play }: { play: ScannerHit }) {
+function CompactPlay({ play, feedback, onFeedback }: { play: ScannerHit; feedback?: string; onFeedback: (play: ScannerHit, action: FeedbackAction) => void }) {
   return (
-    <Link href={`/admin/terminal/${encodeURIComponent(play.symbol)}`} className="flex items-center justify-between gap-3 rounded-md border border-white/10 bg-slate-950/40 p-3 hover:border-sky-400/30">
-      <div>
-        <div className="font-black text-white">{play.symbol}</div>
-        <div className="text-xs text-slate-500">{play.playbook || play.regime}</div>
+    <div className="rounded-md border border-white/10 bg-slate-950/40 p-3 hover:border-sky-400/30">
+      <div className="flex items-center justify-between gap-3">
+        <Link href={`/admin/terminal/${encodeURIComponent(play.symbol)}`}>
+          <div className="font-black text-white">{play.symbol}</div>
+          <div className="text-xs text-slate-500">{play.playbook || play.regime}</div>
+        </Link>
+        <StatusPill label={`${play.confidence}%`} tone="blue" />
       </div>
-      <StatusPill label={`${play.confidence}%`} tone="blue" />
-    </Link>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {(["ignored", "missed", "worked", "failed"] as FeedbackAction[]).map((action) => (
+          <button
+            key={action}
+            onClick={() => onFeedback(play, action)}
+            className={`rounded border px-2 py-1 text-[11px] font-bold capitalize ${feedback === action ? "border-emerald-400 bg-emerald-400/15 text-emerald-200" : "border-white/10 text-slate-400 hover:border-emerald-400/30"}`}
+          >
+            {action}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
