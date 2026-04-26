@@ -16,6 +16,10 @@ import { makeEnvelope } from './shared';
 
 const AV_KEY = () => process.env.ALPHA_VANTAGE_API_KEY || '';
 
+function operatorOutputSize(): 'compact' | 'full' {
+  return process.env.OPERATOR_AV_OUTPUTSIZE === 'full' ? 'full' : 'compact';
+}
+
 /* ── Timeframe → AV function mapping ───────────────────────── */
 
 interface AVFunctionConfig {
@@ -36,7 +40,7 @@ function resolveAVFunction(
       return {
         fn: 'CRYPTO_INTRADAY',
         tsKey: `Time Series Crypto (${interval})`,
-        extraParams: `&market=USD&interval=${interval}&outputsize=full`,
+        extraParams: `&market=USD&interval=${interval}&outputsize=${operatorOutputSize()}`,
       };
     }
     return {
@@ -48,16 +52,16 @@ function resolveAVFunction(
 
   // Equities / Futures / Forex / Options → standard endpoints
   if (['5m', '5min'].includes(tf)) {
-    return { fn: 'TIME_SERIES_INTRADAY', tsKey: 'Time Series (5min)', extraParams: '&interval=5min&outputsize=full&entitlement=realtime' };
+    return { fn: 'TIME_SERIES_INTRADAY', tsKey: 'Time Series (5min)', extraParams: `&interval=5min&outputsize=${operatorOutputSize()}&entitlement=realtime` };
   }
   if (['15m', '15min'].includes(tf)) {
-    return { fn: 'TIME_SERIES_INTRADAY', tsKey: 'Time Series (15min)', extraParams: '&interval=15min&outputsize=full&entitlement=realtime' };
+    return { fn: 'TIME_SERIES_INTRADAY', tsKey: 'Time Series (15min)', extraParams: `&interval=15min&outputsize=${operatorOutputSize()}&entitlement=realtime` };
   }
   if (['1h', '60min'].includes(tf)) {
-    return { fn: 'TIME_SERIES_INTRADAY', tsKey: 'Time Series (60min)', extraParams: '&interval=60min&outputsize=full&entitlement=realtime' };
+    return { fn: 'TIME_SERIES_INTRADAY', tsKey: 'Time Series (60min)', extraParams: `&interval=60min&outputsize=${operatorOutputSize()}&entitlement=realtime` };
   }
   // Daily, 4H, 1W all use daily adjusted (4H/1W aggregated from daily)
-  return { fn: 'TIME_SERIES_DAILY_ADJUSTED', tsKey: 'Time Series (Daily)', extraParams: '&outputsize=full&entitlement=realtime' };
+  return { fn: 'TIME_SERIES_DAILY_ADJUSTED', tsKey: 'Time Series (Daily)', extraParams: `&outputsize=${operatorOutputSize()}&entitlement=realtime` };
 }
 
 /* ── Core Bar Fetcher ───────────────────────────────────────── */
@@ -196,10 +200,30 @@ async function fetchCrossMarketState(): Promise<CrossMarketState> {
   };
 
   try {
-    // VIX check (use CBOE VIX ticker via AV)
+    // VIX check: prefer Alpha Vantage INDEX_DATA, fallback to legacy daily-adjusted lookup.
     if (AV_KEY() && (await avTryToken())) {
-      const vixUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=VIX&outputsize=compact&entitlement=realtime&apikey=${AV_KEY()}`;
+      const vixUrl = `https://www.alphavantage.co/query?function=INDEX_DATA&symbol=VIX&interval=daily&apikey=${AV_KEY()}`;
       const res = await avCircuit.call(() => fetch(vixUrl, { signal: AbortSignal.timeout(15_000) }));
+      if (res.ok) {
+        const json = await res.json();
+        const ts = json['Time Series (Daily)'] || json.data;
+        if (ts) {
+          const rows = Array.isArray(ts)
+            ? ts
+            : Object.keys(ts).sort().reverse().map((date) => ({ date, ...ts[date] }));
+          if (rows.length > 0) {
+            const latest = rows[0];
+            const vix = parseFloat(latest.close || latest['4. close'] || '20');
+            state.vixState = vix > 30 ? 'elevated' : vix > 20 ? 'cautious' : 'normal';
+            return state;
+          }
+        }
+      }
+    }
+
+    if (AV_KEY() && (await avTryToken())) {
+      const fallbackUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=VIX&outputsize=compact&entitlement=realtime&apikey=${AV_KEY()}`;
+      const res = await avCircuit.call(() => fetch(fallbackUrl, { signal: AbortSignal.timeout(15_000) }));
       if (res.ok) {
         const json = await res.json();
         const ts = json['Time Series (Daily)'];

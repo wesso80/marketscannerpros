@@ -3,6 +3,8 @@ import { requireAdmin } from '@/lib/adminAuth';
 import { getSessionFromCookie } from '@/lib/auth';
 import { isOperator } from '@/lib/quant/operatorAuth';
 import { getBarCacheStats } from '@/lib/barCache';
+import { getAlphaVantageProviderStatus } from '@/lib/avRateGovernor';
+import { getCoinGeckoProviderStatus } from '@/lib/coingecko';
 import { q } from '@/lib/db';
 import { logger, generateTraceId } from '@/lib/logger';
 
@@ -53,6 +55,10 @@ export async function GET(req: NextRequest) {
 
     const barCache = getBarCacheStats();
     const staleEntries = barCache.entries.filter((entry) => entry.stale).length;
+    const [alphaVantage, coinGecko] = await Promise.all([
+      getAlphaVantageProviderStatus(),
+      Promise.resolve(getCoinGeckoProviderStatus()),
+    ]);
 
     return NextResponse.json({
       ok: true,
@@ -63,6 +69,10 @@ export async function GET(req: NextRequest) {
       scanners: {
         signalCount24h,
         lastSignalAt,
+      },
+      providers: {
+        alphaVantage,
+        coinGecko,
       },
       barCache: {
         size: barCache.size,

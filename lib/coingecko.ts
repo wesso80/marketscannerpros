@@ -18,6 +18,7 @@ const FREE_URL = 'https://api.coingecko.com/api/v3';
 
 // Use Pro API if key is available, otherwise fall back to free tier
 const getBaseUrl = () => getApiKey() ? BASE_URL : FREE_URL;
+const getWebSocketUrl = () => process.env.COINGECKO_WS_URL || '';
 
 // Circuit breaker — trips after repeated non-429 failures (500s, timeouts)
 import { coinGeckoCircuit } from '@/lib/circuitBreaker';
@@ -36,6 +37,8 @@ const getHeaders = (): HeadersInit => {
 
 const DERIVATIVES_CACHE_TTL_MS = 45_000;
 const SYMBOL_RESOLUTION_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+const ERROR_COOLDOWN_TTL_MS = 5 * 60 * 1000;
+const RATE_LIMIT_COOLDOWN_TTL_MS = 60 * 1000;
 
 // CoinGecko daily budget tracking removed — usage is monitored via CoinGecko dashboard directly.
 
@@ -44,6 +47,21 @@ let derivativesInFlight: Promise<DerivativeTicker[] | null> | null = null;
 
 const symbolResolutionCache = new Map<string, { id: string | null; expiresAt: number }>();
 const symbolResolutionInFlight = new Map<string, Promise<string | null>>();
+const providerErrorCooldown = new Map<string, { error: Error; expiresAt: number }>();
+
+type CoinGeckoErrorCode = 10002 | 10005 | 10010 | 10011;
+
+class CoinGeckoProviderError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly code?: CoinGeckoErrorCode,
+    public readonly retryable = false,
+  ) {
+    super(message);
+    this.name = 'CoinGeckoProviderError';
+  }
+}
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -62,6 +80,54 @@ function buildCoinGeckoUrl(path: string, params?: URLSearchParams): string {
   return url.toString();
 }
 
+export function getCoinGeckoProviderStatus() {
+  return {
+    provider: 'coingecko',
+    baseUrl: getBaseUrl(),
+    planMode: getApiKey() ? 'pro' : 'public',
+    hasApiKey: Boolean(getApiKey()),
+    websocket: {
+      configured: Boolean(getWebSocketUrl()),
+      url: getWebSocketUrl() ? 'configured' : null,
+      note: 'CoinGecko WebSocket should only be enabled when the paid plan supports Analyst+ real-time feeds.',
+    },
+    cooldowns: providerErrorCooldown.size,
+  };
+}
+
+export function getCoinGeckoWebSocketUrl(): string | null {
+  return getWebSocketUrl() || null;
+}
+
+function getCooldownKey(path: string, params?: URLSearchParams): string {
+  return `${getBaseUrl()}${path}?${params?.toString() || ''}`;
+}
+
+function parseCoinGeckoErrorCode(body: string): CoinGeckoErrorCode | undefined {
+  const match = body.match(/\b(10002|10005|10010|10011)\b/);
+  if (!match) return undefined;
+  return Number(match[1]) as CoinGeckoErrorCode;
+}
+
+function isNonRetryableCoinGeckoError(code?: CoinGeckoErrorCode): boolean {
+  return code === 10002 || code === 10005 || code === 10010 || code === 10011;
+}
+
+function describeCoinGeckoError(code?: CoinGeckoErrorCode): string {
+  switch (code) {
+    case 10002:
+      return 'missing CoinGecko API key';
+    case 10005:
+      return 'endpoint requires a paid CoinGecko plan';
+    case 10010:
+      return 'CoinGecko Pro key appears to be used with the wrong base URL';
+    case 10011:
+      return 'CoinGecko Demo key appears to be used with the wrong base URL';
+    default:
+      return 'CoinGecko provider error';
+  }
+}
+
 async function cgFetch<T>(
   path: string,
   options?: {
@@ -72,8 +138,15 @@ async function cgFetch<T>(
   }
 ): Promise<T> {
   const url = buildCoinGeckoUrl(path, options?.params);
+  const cooldownKey = getCooldownKey(path, options?.params);
   const retries = options?.retries ?? 3;
   const timeoutMs = options?.timeoutMs ?? 12_000;
+
+  const cooledDown = providerErrorCooldown.get(cooldownKey);
+  if (cooledDown && cooledDown.expiresAt > Date.now()) {
+    throw cooledDown.error;
+  }
+  if (cooledDown) providerErrorCooldown.delete(cooldownKey);
 
   const execute = async (remainingRetries: number): Promise<T> => {
     const controller = new AbortController();
@@ -89,21 +162,47 @@ async function cgFetch<T>(
         signal: controller.signal,
       }));
 
-      if (response.status === 429 && remainingRetries > 0) {
+      if (response.status === 429) {
         const retryAfterSeconds = Number(response.headers.get('retry-after') || '0');
         const jitterMs = Math.floor(Math.random() * 250);
         const backoffMs = retryAfterSeconds > 0
           ? retryAfterSeconds * 1000
           : (4 - remainingRetries) * 500 + jitterMs;
-        await sleep(backoffMs);
-        return execute(remainingRetries - 1);
+
+        if (remainingRetries > 0) {
+          await sleep(backoffMs);
+          return execute(remainingRetries - 1);
+        }
+
+        const error = new CoinGeckoProviderError(
+          `[CoinGecko] 429 rate limit exceeded for ${path}`,
+          429,
+          undefined,
+          true,
+        );
+        providerErrorCooldown.set(cooldownKey, {
+          error,
+          expiresAt: Date.now() + Math.max(RATE_LIMIT_COOLDOWN_TTL_MS, backoffMs),
+        });
+        throw error;
       }
 
       if (!response.ok) {
         const body = await response.text().catch(() => '');
-        const statusError = new Error(
-          `[CoinGecko] ${response.status} ${response.statusText} :: ${body.slice(0, 300)}`
+        const providerCode = parseCoinGeckoErrorCode(body);
+        const statusError = new CoinGeckoProviderError(
+          `[CoinGecko] ${response.status} ${response.statusText} (${describeCoinGeckoError(providerCode)}) :: ${body.slice(0, 300)}`,
+          response.status,
+          providerCode,
+          response.status >= 500,
         );
+        if (isNonRetryableCoinGeckoError(providerCode)) {
+          providerErrorCooldown.set(cooldownKey, {
+            error: statusError,
+            expiresAt: Date.now() + ERROR_COOLDOWN_TTL_MS,
+          });
+          throw statusError;
+        }
         if (response.status >= 500 && remainingRetries > 0) {
           const jitterMs = Math.floor(Math.random() * 250);
           await sleep((4 - remainingRetries) * 500 + jitterMs);

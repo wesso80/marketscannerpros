@@ -5,6 +5,7 @@
 
 import { avFetch, avTakeToken } from '@/lib/avRateGovernor';
 import { getIndicators, getQuote } from '@/lib/onDemandFetch';
+import { calculateAllIndicators, detectSqueeze, type OHLCVBar } from '@/lib/indicators';
 import { classifyRegime } from '@/lib/regime-classifier';
 import {
   computeMarketPressure,
@@ -79,6 +80,58 @@ export interface MPEData {
   volatility: number;
   liquidity: number;
   options: number;
+}
+
+function buildLocalBars(
+  closes: number[],
+  highs?: number[],
+  lows?: number[],
+): OHLCVBar[] {
+  return closes
+    .map((close, index) => {
+      const prevClose = index > 0 ? closes[index - 1] : close;
+      const high = highs?.[index] ?? Math.max(close, prevClose);
+      const low = lows?.[index] ?? Math.min(close, prevClose);
+      return {
+        timestamp: String(index),
+        open: prevClose,
+        high: Math.max(high, close, prevClose),
+        low: Math.min(low, close, prevClose),
+        close,
+        volume: 0,
+      };
+    })
+    .filter((bar) => Number.isFinite(bar.close) && bar.close > 0);
+}
+
+function mapLocalIndicators(
+  closes: number[],
+  highs?: number[],
+  lows?: number[],
+): Indicators | null {
+  const bars = buildLocalBars(closes, highs, lows);
+  if (bars.length < 20) return null;
+
+  const ind = calculateAllIndicators(bars);
+  const squeeze = detectSqueeze(bars);
+
+  return {
+    rsi: ind.rsi14 ?? null,
+    macd: ind.macdLine ?? null,
+    macdHist: ind.macdHist ?? null,
+    macdSignal: ind.macdSignal ?? null,
+    sma20: ind.sma20 ?? null,
+    sma50: ind.sma50 ?? null,
+    adx: ind.adx14 ?? null,
+    atr: ind.atr14 ?? null,
+    bbUpper: ind.bbUpper ?? null,
+    bbMiddle: ind.bbMiddle ?? null,
+    bbLower: ind.bbLower ?? null,
+    stochK: ind.stochK ?? null,
+    stochD: ind.stochD ?? null,
+    inSqueeze: squeeze?.inSqueeze ?? (ind.bbWidthPercent20 != null ? ind.bbWidthPercent20 < 6 : false),
+    squeezeStrength: squeeze?.squeezeStrength ?? (ind.bbWidthPercent20 != null && ind.bbWidthPercent20 < 6 ? Math.max(0, (6 - ind.bbWidthPercent20) / 6) : 0),
+  };
 }
 
 // ── Helper: fetch price ─────────────────────────────────────────────────
@@ -291,27 +344,14 @@ export async function fetchIndicators(
   try {
     const isIntraday = avInterval !== 'daily' && avInterval !== 'weekly';
 
-    // Crypto with enough bars and daily: compute locally from OHLC
-    if (assetClass === 'crypto' && closes.length >= 20 && !isIntraday && avInterval !== 'weekly') {
-      const { calculateEMA, calculateRSI, calculateStochastic, calculateATR } = await import('@/lib/yahoo-finance');
-      const sma20 = closes.slice(-20).reduce((a, b) => a + b, 0) / 20;
-      const sma50 = closes.length >= 50 ? closes.slice(-50).reduce((a, b) => a + b, 0) / 50 : null;
-      const ema12 = calculateEMA(closes, 12);
-      const ema26 = calculateEMA(closes, 26);
-      const rsi = calculateRSI(closes, 14);
-      const stoch = calculateStochastic(highs || closes, lows || closes, closes, 14, 3);
-      const atr = calculateATR(highs || closes, lows || closes, closes, 14);
-      // Compute Bollinger Bands for squeeze detection
-      const bbStd = Math.sqrt(closes.slice(-20).reduce((s, c) => s + (c - sma20) ** 2, 0) / 20);
-      const bbUpper = sma20 + 2 * bbStd;
-      const bbLower = sma20 - 2 * bbStd;
-      const bbWidth = sma20 > 0 ? ((bbUpper - bbLower) / sma20) * 100 : 0;
-      const inSqueeze = bbWidth < 6;
-      const squeezeStrength = inSqueeze ? Math.max(0, (6 - bbWidth) / 6) : 0;
-      return { rsi, macd: ema12 - ema26, macdHist: null, macdSignal: null, sma20, sma50, adx: null, atr, bbUpper, bbMiddle: sma20, bbLower, stochK: stoch.k, stochD: stoch.d, inSqueeze, squeezeStrength };
+    const local = mapLocalIndicators(closes, highs, lows);
+
+    // Crypto and intraday paths already fetched OHLC. Use local computation to avoid separate AV technical calls.
+    if (local && (assetClass === 'crypto' || isIntraday || avInterval === 'weekly')) {
+      return local;
     }
 
-    // Equity daily: use cached indicators
+    // Equity daily: prefer cached worker indicators, then local computation from fetched bars.
     if (!isIntraday && avInterval !== 'weekly') {
       const ind = await getIndicators(symbol, 'daily');
       if (ind) {
@@ -335,79 +375,7 @@ export async function fetchIndicators(
       }
     }
 
-    // If we have enough bars from price fetch, compute locally
-    if (closes.length >= 20) {
-      const { calculateEMA, calculateRSI, calculateStochastic, calculateATR } = await import('@/lib/yahoo-finance');
-      const sma20 = closes.slice(-20).reduce((a, b) => a + b, 0) / 20;
-      const sma50 = closes.length >= 50 ? closes.slice(-50).reduce((a, b) => a + b, 0) / 50 : null;
-      const ema12 = calculateEMA(closes, 12);
-      const ema26 = calculateEMA(closes, 26);
-      const rsi = calculateRSI(closes, 14);
-      const stoch = calculateStochastic(highs || closes, lows || closes, closes, 14, 3);
-      const atr = calculateATR(highs || closes, lows || closes, closes, 14);
-      const bbStd = Math.sqrt(closes.slice(-20).reduce((s, c) => s + (c - sma20) ** 2, 0) / 20);
-      const bbUpper = sma20 + 2 * bbStd;
-      const bbLower = sma20 - 2 * bbStd;
-      const bbWidth = sma20 > 0 ? ((bbUpper - bbLower) / sma20) * 100 : 0;
-      const inSqueeze = bbWidth < 6;
-      const squeezeStrength = inSqueeze ? Math.max(0, (6 - bbWidth) / 6) : 0;
-      return { rsi, macd: ema12 - ema26, macdHist: null, macdSignal: null, sma20, sma50, adx: null, atr, bbUpper, bbMiddle: sma20, bbLower, stochK: stoch.k, stochD: stoch.d, inSqueeze, squeezeStrength };
-    }
-
-    // AV fallback for key indicators — uses the requested interval
-    const avSym = assetClass === 'crypto' ? symbol.replace(/-?USD$/, '') : symbol;
-    const [rsiData, macdData, adxData, bbandsData, stochData] = await Promise.all([
-      avFetch<any>(`https://www.alphavantage.co/query?function=RSI&symbol=${encodeURIComponent(avSym)}&interval=${avInterval}&time_period=14&series_type=close&apikey=${AV_KEY}`, `RSI ${avSym}`),
-      avFetch<any>(`https://www.alphavantage.co/query?function=MACD&symbol=${encodeURIComponent(avSym)}&interval=${avInterval}&series_type=close&apikey=${AV_KEY}`, `MACD ${avSym}`),
-      avFetch<any>(`https://www.alphavantage.co/query?function=ADX&symbol=${encodeURIComponent(avSym)}&interval=${avInterval}&time_period=14&apikey=${AV_KEY}`, `ADX ${avSym}`),
-      avFetch<any>(`https://www.alphavantage.co/query?function=BBANDS&symbol=${encodeURIComponent(avSym)}&interval=${avInterval}&time_period=20&series_type=close&apikey=${AV_KEY}`, `BBANDS ${avSym}`),
-      avFetch<any>(`https://www.alphavantage.co/query?function=STOCH&symbol=${encodeURIComponent(avSym)}&interval=${avInterval}&fastkperiod=14&slowkperiod=3&slowdperiod=3&apikey=${AV_KEY}`, `STOCH ${avSym}`),
-    ]);
-
-    const rsiVal = rsiData?.['Technical Analysis: RSI'];
-    const macdVal = macdData?.['Technical Analysis: MACD'];
-    const adxVal = adxData?.['Technical Analysis: ADX'];
-    const bbVal = bbandsData?.['Technical Analysis: BBANDS'];
-    const stochVal = stochData?.['Technical Analysis: STOCH'];
-    const latestMacd = macdVal ? Object.values(macdVal)[0] as any : null;
-    const latestBb = bbVal ? Object.values(bbVal)[0] as any : null;
-    const latestStoch = stochVal ? Object.values(stochVal)[0] as any : null;
-
-    // Compute SMA20/SMA50 from historical closes (AV doesn't return these directly)
-    const compSma20 = closes.length >= 20 ? closes.slice(-20).reduce((a, b) => a + b, 0) / 20 : null;
-    const compSma50 = closes.length >= 50 ? closes.slice(-50).reduce((a, b) => a + b, 0) / 50 : null;
-
-    // Compute ATR from highs/lows/closes if available
-    let compAtr: number | null = null;
-    if (highs && lows && highs.length >= 15) {
-      let atrSum = 0;
-      for (let i = 1; i < Math.min(15, highs.length); i++) {
-        atrSum += Math.max(highs[i] - lows[i], Math.abs(highs[i] - closes[i - 1]), Math.abs(lows[i] - closes[i - 1]));
-      }
-      compAtr = atrSum / Math.min(14, highs.length - 1);
-    }
-
-    const bbUp = latestBb?.['Real Upper Band'] ? parseFloat(latestBb['Real Upper Band']) : null;
-    const bbMid = latestBb?.['Real Middle Band'] ? parseFloat(latestBb['Real Middle Band']) : null;
-    const bbLo = latestBb?.['Real Lower Band'] ? parseFloat(latestBb['Real Lower Band']) : null;
-    const bbW = (bbUp && bbLo && bbMid && bbMid > 0) ? ((bbUp - bbLo) / bbMid) * 100 : 0;
-
-    return {
-      rsi: rsiVal ? parseFloat((Object.values(rsiVal)[0] as any)?.RSI) || null : null,
-      macd: latestMacd?.MACD ? parseFloat(latestMacd.MACD) : null,
-      macdHist: latestMacd?.MACD_Hist ? parseFloat(latestMacd.MACD_Hist) : null,
-      macdSignal: latestMacd?.MACD_Signal ? parseFloat(latestMacd.MACD_Signal) : null,
-      sma20: compSma20, sma50: compSma50,
-      adx: adxVal ? parseFloat((Object.values(adxVal)[0] as any)?.ADX) || null : null,
-      atr: compAtr,
-      bbUpper: bbUp,
-      bbMiddle: bbMid,
-      bbLower: bbLo,
-      stochK: latestStoch?.SlowK ? parseFloat(latestStoch.SlowK) : null,
-      stochD: latestStoch?.SlowD ? parseFloat(latestStoch.SlowD) : null,
-      inSqueeze: bbW > 0 && bbW < 6,
-      squeezeStrength: bbW > 0 && bbW < 6 ? Math.max(0, (6 - bbW) / 6) : 0,
-    };
+    return local;
   } catch { return null; }
 }
 
@@ -417,6 +385,10 @@ export async function fetchOptionsSnapshot(symbol: string, price: number): Promi
   try {
     const realtimeUrl = `https://www.alphavantage.co/query?function=REALTIME_OPTIONS_FMV&symbol=${encodeURIComponent(symbol)}&require_greeks=true&apikey=${AV_KEY}`;
     let optData = await avFetch<any>(realtimeUrl, `OPTIONS_FMV ${symbol}`);
+    if (!optData?.data?.length) {
+      const documentedRealtimeUrl = `https://www.alphavantage.co/query?function=REALTIME_OPTIONS&symbol=${encodeURIComponent(symbol)}&require_greeks=true&apikey=${AV_KEY}`;
+      optData = await avFetch<any>(documentedRealtimeUrl, `REALTIME_OPTIONS ${symbol}`);
+    }
     if (!optData?.data?.length) {
       const histUrl = `https://www.alphavantage.co/query?function=HISTORICAL_OPTIONS&symbol=${encodeURIComponent(symbol)}&require_greeks=true&apikey=${AV_KEY}`;
       optData = await avFetch<any>(histUrl, `HISTORICAL_OPTIONS ${symbol}`);

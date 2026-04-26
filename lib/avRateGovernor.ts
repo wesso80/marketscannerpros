@@ -229,3 +229,14 @@ export async function avAvailable(): Promise<number> {
   }
   return getMemGovernor().available();
 }
+
+export async function getAlphaVantageProviderStatus() {
+  return {
+    provider: 'alpha_vantage',
+    configuredRpm: RPM,
+    availableNow: await avAvailable(),
+    hasApiKey: Boolean(process.env.ALPHA_VANTAGE_API_KEY),
+    liveOutputSize: process.env.OPERATOR_AV_OUTPUTSIZE === 'full' ? 'full' : 'compact',
+    realtimeEntitlementRequested: true,
+  };
+}
