@@ -35,6 +35,29 @@ interface Stats {
   };
 }
 
+interface AdminRiskState {
+  openExposure: number;
+  dailyDrawdown: number;
+  correlationRisk: number;
+  maxPositions: number;
+  activePositions: number;
+  killSwitchActive: boolean;
+  permission: string;
+  sizeMultiplier: number;
+}
+
+interface AdminScannerHit {
+  symbol: string;
+  bias: string;
+  regime: string;
+  permission: string;
+  confidence: number;
+  symbolTrust: number;
+  sizeMultiplier: number;
+  playbook?: string;
+  blockReasons?: string[];
+}
+
 export default function AdminOverviewPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,6 +75,8 @@ export default function AdminOverviewPage() {
     errorsCount?: number;
     dbConnected?: boolean;
   } | null>(null);
+  const [riskState, setRiskState] = useState<AdminRiskState | null>(null);
+  const [scannerHits, setScannerHits] = useState<AdminScannerHit[]>([]);
   const [liveUsers, setLiveUsers] = useState<{
     totalOnline: number; loggedIn: number; anonymous: number;
     pages: { path: string; count: number; section: string }[];
@@ -127,6 +152,8 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
     fetchStats();
     fetchLiveUsers();
     fetchSystemHealth();
+    fetchRiskState();
+    fetchScannerFeed();
     const liveInterval = setInterval(fetchLiveUsers, 30_000);
     return () => clearInterval(liveInterval);
   }, []);
@@ -168,6 +195,30 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
         headers: secret ? { Authorization: `Bearer ${secret}` } : {},
       });
       if (res.ok) setSystemHealth(await res.json());
+    } catch { /* ignore */ }
+  };
+
+  const fetchRiskState = async () => {
+    const secret = sessionStorage.getItem("admin_secret");
+    try {
+      const res = await fetch("/api/admin/risk/state", {
+        headers: secret ? { Authorization: `Bearer ${secret}` } : {},
+      });
+      if (res.ok) setRiskState(await res.json());
+    } catch { /* ignore */ }
+  };
+
+  const fetchScannerFeed = async () => {
+    const secret = sessionStorage.getItem("admin_secret");
+    try {
+      const params = new URLSearchParams({ market: "CRYPTO", timeframe: "15m" });
+      const res = await fetch(`/api/admin/scanner/live?${params}`, {
+        headers: secret ? { Authorization: `Bearer ${secret}` } : {},
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setScannerHits(data.hits || []);
+      }
     } catch { /* ignore */ }
   };
 
@@ -239,15 +290,23 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
     .filter((item) => item.status === "pending")
     .sort((a, b) => Number(b.confidence || 0) - Number(a.confidence || 0))
     .slice(0, 5);
+  const riskPermission = riskState?.killSwitchActive ? "KILL" : riskState?.permission || "WAIT";
+  const riskAllowsTrading = ["ALLOW", "GO", "ALLOW_REDUCED"].includes(riskPermission);
+  const topScannerHits = [...scannerHits]
+    .sort((a, b) => (Number(b.confidence || 0) + Number(b.symbolTrust || 0)) - (Number(a.confidence || 0) + Number(a.symbolTrust || 0)))
+    .slice(0, 5);
   const operatorScore = Math.max(0, Math.min(100, Math.round(
-    (financials && financials.monthlyProfit >= 0 ? 20 : 0) +
+    (riskAllowsTrading ? 25 : riskPermission === "KILL" || riskPermission === "BLOCK" ? 0 : 10) +
+    (financials && financials.monthlyProfit >= 0 ? 15 : 0) +
     (pendingLearning === 0 ? 20 : 8) +
-    (learningWinRate >= 55 ? 25 : learningWinRate >= 45 ? 15 : 6) +
+    (learningWinRate >= 55 ? 20 : learningWinRate >= 45 ? 12 : 5) +
     (systemHealth?.dbConnected ? 15 : 3) +
-    ((stats?.overview.pendingDeleteRequests || 0) === 0 ? 20 : 8)
+    ((stats?.overview.pendingDeleteRequests || 0) === 0 ? 5 : 2)
   )));
   const operatorState = operatorScore >= 75 ? "READY" : operatorScore >= 50 ? "WATCH" : "CHECK";
   const actionQueue = [
+    riskPermission === "KILL" ? "Kill switch active: stand down" : riskAllowsTrading ? `Risk governor ${riskPermission}` : `Risk governor says ${riskPermission}`,
+    topScannerHits.length > 0 ? `${topScannerHits.length} live scanner candidates ranked` : "No live scanner candidates",
     systemHealth?.dbConnected === false ? "Database health check failed" : "Database connected",
     pendingLearning > 0 ? `${pendingLearning} learning predictions need processing` : "Learning queue clear",
     (stats?.overview.pendingDeleteRequests || 0) > 0 ? `${stats?.overview.pendingDeleteRequests} delete requests pending` : "No deletion backlog",
@@ -286,7 +345,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
               </div>
             </div>
             <button
-              onClick={() => { fetchStats(); fetchLiveUsers(); fetchSystemHealth(); }}
+              onClick={() => { fetchStats(); fetchLiveUsers(); fetchSystemHealth(); fetchRiskState(); fetchScannerFeed(); }}
               style={{
                 background: "rgba(16,185,129,0.12)",
                 border: "1px solid rgba(16,185,129,0.35)",
@@ -303,6 +362,12 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(150px, 100%), 1fr))", gap: "0.75rem", marginBottom: "1rem" }}>
+            <div style={statBoxStyle}>
+              <div style={{ color: riskAllowsTrading ? "#10B981" : riskPermission === "KILL" || riskPermission === "BLOCK" ? "#EF4444" : "#F59E0B", fontSize: "1.35rem", fontWeight: 800 }}>
+                {riskPermission}
+              </div>
+              <div style={{ color: "#94A3B8", fontSize: "0.75rem" }}>Risk Permission</div>
+            </div>
             <div style={statBoxStyle}>
               <div style={{ color: financials && financials.monthlyProfit >= 0 ? "#10B981" : "#EF4444", fontSize: "1.35rem", fontWeight: 800 }}>
                 {financials ? formatCurrency(financials.monthlyProfit) : "$0"}
@@ -387,6 +452,41 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
                 {label}
               </Link>
             ))}
+          </div>
+          <div style={{ borderTop: "1px solid rgba(148,163,184,0.14)", paddingTop: "1rem", marginBottom: "1rem" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", marginBottom: "0.55rem" }}>
+              <span style={{ color: "#94A3B8", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.12em" }}>Live candidates</span>
+              <span style={{ color: "#64748B", fontSize: "0.75rem" }}>15m crypto</span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+              {(topScannerHits.length ? topScannerHits : ([{ symbol: "No candidates", bias: "WAIT", permission: "WAIT", confidence: 0, symbolTrust: 0, regime: "—" }] as AdminScannerHit[])).slice(0, 4).map((hit) => (
+                <button
+                  key={hit.symbol}
+                  onClick={() => hit.symbol !== "No candidates" && (window.location.href = `/admin/terminal/${encodeURIComponent(hit.symbol)}`)}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "64px 58px 1fr 68px",
+                    gap: "0.45rem",
+                    alignItems: "center",
+                    border: "1px solid rgba(148,163,184,0.14)",
+                    background: "rgba(2,6,23,0.38)",
+                    borderRadius: 8,
+                    padding: "0.5rem 0.6rem",
+                    color: "#E5E7EB",
+                    cursor: hit.symbol === "No candidates" ? "default" : "pointer",
+                    textAlign: "left",
+                    fontSize: "0.78rem",
+                  }}
+                >
+                  <span style={{ fontWeight: 900 }}>{hit.symbol}</span>
+                  <span style={{ color: hit.bias === "LONG" ? "#10B981" : hit.bias === "SHORT" ? "#EF4444" : "#94A3B8", fontWeight: 800 }}>{hit.bias}</span>
+                  <span style={{ color: hit.permission === "GO" ? "#10B981" : hit.permission === "BLOCK" ? "#EF4444" : "#F59E0B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {hit.playbook || hit.regime || "—"}
+                  </span>
+                  <span style={{ color: "#CBD5E1", textAlign: "right", fontWeight: 800 }}>{Number(hit.confidence || 0).toFixed(0)}%</span>
+                </button>
+              ))}
+            </div>
           </div>
           <div style={{ borderTop: "1px solid rgba(148,163,184,0.14)", paddingTop: "1rem" }}>
             <label style={{ display: "block", color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.45rem" }}>Symbol terminal jump</label>
@@ -579,6 +679,30 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
               <div>
                 <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "#94A3B8", marginBottom: "0.5rem" }}>
                   Active by Section
+
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(180px, 100%), 1fr))",
+            gap: "0.5rem",
+            marginBottom: "1rem",
+          }}>
+            {[
+              ["Exposure", riskState ? `$${Number(riskState.openExposure || 0).toLocaleString()}` : "—"],
+              ["Drawdown", riskState ? `${(Number(riskState.dailyDrawdown || 0) * 100).toFixed(2)}%` : "—"],
+              ["Correlation", riskState ? `${(Number(riskState.correlationRisk || 0) * 100).toFixed(0)}%` : "—"],
+              ["Positions", riskState ? `${riskState.activePositions} / ${riskState.maxPositions}` : "—"],
+            ].map(([label, value]) => (
+              <div key={label} style={{
+                border: "1px solid rgba(148,163,184,0.13)",
+                background: "rgba(2,6,23,0.32)",
+                borderRadius: 8,
+                padding: "0.55rem 0.65rem",
+              }}>
+                <div style={{ color: "#64748B", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.12em" }}>{label}</div>
+                <div style={{ color: label === "Drawdown" && Number(riskState?.dailyDrawdown || 0) > 0.015 ? "#EF4444" : "#CBD5E1", fontSize: "0.86rem", fontWeight: 800, marginTop: "0.2rem" }}>{value}</div>
+              </div>
+            ))}
+          </div>
                 </h3>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
                   {liveUsers.sections.map((s) => (
