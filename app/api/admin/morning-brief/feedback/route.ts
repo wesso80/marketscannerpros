@@ -4,7 +4,7 @@ import { q } from "@/lib/db";
 
 export const runtime = "nodejs";
 
-const ACTIONS = ["taken", "ignored", "missed", "worked", "failed", "invalidated"] as const;
+const ACTIONS = ["taken", "ignored", "missed", "worked", "failed", "invalidated", "rule_broken"] as const;
 type BriefAction = typeof ACTIONS[number];
 
 export async function GET(req: NextRequest) {
@@ -94,7 +94,7 @@ async function ensureFeedbackTable() {
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       brief_id TEXT NOT NULL,
       symbol TEXT NOT NULL,
-      action TEXT NOT NULL CHECK (action IN ('taken', 'ignored', 'missed', 'worked', 'failed', 'invalidated')),
+      action TEXT NOT NULL CHECK (action IN ('taken', 'ignored', 'missed', 'worked', 'failed', 'invalidated', 'rule_broken')),
       market TEXT,
       timeframe TEXT,
       permission TEXT,
@@ -106,7 +106,17 @@ async function ensureFeedbackTable() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
+  await q(`
+    ALTER TABLE admin_morning_brief_feedback
+    DROP CONSTRAINT IF EXISTS admin_morning_brief_feedback_action_check
+  `).catch(() => undefined);
+  await q(`
+    ALTER TABLE admin_morning_brief_feedback
+    ADD CONSTRAINT admin_morning_brief_feedback_action_check
+    CHECK (action IN ('taken', 'ignored', 'missed', 'worked', 'failed', 'invalidated', 'rule_broken'))
+  `).catch(() => undefined);
   await q(`CREATE INDEX IF NOT EXISTS idx_admin_mbf_symbol_created ON admin_morning_brief_feedback (symbol, created_at DESC)`);
   await q(`CREATE INDEX IF NOT EXISTS idx_admin_mbf_action_created ON admin_morning_brief_feedback (action, created_at DESC)`);
   await q(`CREATE INDEX IF NOT EXISTS idx_admin_mbf_brief ON admin_morning_brief_feedback (brief_id)`);
+  await q(`CREATE INDEX IF NOT EXISTS idx_admin_mbf_playbook_created ON admin_morning_brief_feedback (playbook, created_at DESC)`);
 }

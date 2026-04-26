@@ -19,6 +19,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { q } from "@/lib/db";
+import { verifyAdminAuth, verifyCronAuth } from "@/lib/adminAuth";
 import {
   OHLCV, calculateSMA, calculateEMA, calculateRSI, calculateMACD,
   calculateADX, calculateStochastic, calculateAroon, calculateCCI,
@@ -366,11 +367,7 @@ function analyzeAsset(symbol: string, ohlcv: OHLCV[]): {
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
   
-  // Verify cron secret
-  const authHeader = req.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-  
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!verifyCronAuth(req) && !verifyAdminAuth(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   

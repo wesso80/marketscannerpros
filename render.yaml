@@ -110,6 +110,18 @@
         sync: false
 
   - type: cron
+    name: prewake-universe-scan
+    runtime: node
+    schedule: "35 19 * * *"  # 7:35 PM UTC daily - refresh broad universe before morning brief
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -fL --retry 2 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 290 -X POST "$WEB_URL/api/jobs/scan-universe" -H "Authorization:Bearer $CRON_SECRET" -H "Content-Type:application/json"
+    envVars:
+      - key: WEB_URL
+        value: "https://marketscannerpros.app"
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
     name: opportunity-scan
     runtime: node
     schedule: "7,37 * * * *"  # Every 30 minutes (offset :07) - scanner→Discord posting + trade suggestions
@@ -160,9 +172,23 @@
   - type: cron
     name: daily-operator-morning-brief
     runtime: node
-    schedule: "0 20 * * *"  # 8 PM UTC daily - morning brief email before Australia trading day
+    schedule: "15 20 * * *"  # 8:15 PM UTC daily - after prewake universe refresh
     buildCommand: echo "Cron job ready"
-    startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 180 -X POST "$WEB_URL/api/jobs/email-morning-brief" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
+    startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 180 -X POST "$WEB_URL/api/jobs/email-morning-brief" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json" --data '{"scanLimit":80}'
+    envVars:
+      - key: WEB_URL
+        value: "https://marketscannerpros.app"
+      - key: CRON_SECRET
+        sync: false
+      - key: ADMIN_DAILY_BRIEF_EMAILS
+        sync: false
+
+  - type: cron
+    name: daily-operator-review-email
+    runtime: node
+    schedule: "30 7 * * 1-5"  # 7:30 AM UTC weekdays - post-session execution review
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 180 -X POST "$WEB_URL/api/jobs/email-daily-review" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
       - key: WEB_URL
         value: "https://marketscannerpros.app"

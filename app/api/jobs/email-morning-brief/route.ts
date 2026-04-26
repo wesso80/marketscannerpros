@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin, verifyCronAuth } from "@/lib/adminAuth";
 import { sendAlertEmail } from "@/lib/email";
-import { buildMorningBrief, renderMorningBriefEmail } from "@/lib/admin/morning-brief";
+import { buildMorningBrief, renderMorningBriefEmail, saveMorningBriefSnapshot } from "@/lib/admin/morning-brief";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -16,20 +16,25 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json().catch(() => ({}));
+    const preview = Boolean(body.preview);
     const recipients = resolveRecipients(body.to);
     const brief = await buildMorningBrief({
       symbols: Array.isArray(body.symbols) ? body.symbols : undefined,
       market: body.market,
       timeframe: body.timeframe,
+      scanLimit: body.scanLimit ?? (preview ? 20 : undefined),
     });
+    if (!preview) {
+      await saveMorningBriefSnapshot(brief, isCron ? "cron" : "email");
+    }
     const html = renderMorningBriefEmail(brief);
-    const subject = `MSP Morning Brief: ${brief.deskState} - ${brief.topPlays.length} top play${brief.topPlays.length === 1 ? "" : "s"}`;
+    const subject = `${preview ? "[PREVIEW] " : ""}MSP Morning Brief: ${brief.deskState} - ${brief.topPlays.length} top play${brief.topPlays.length === 1 ? "" : "s"}`;
 
     const sent = await Promise.all(
       recipients.map((to) => sendAlertEmail({ to, subject, html })),
     );
 
-    return NextResponse.json({ ok: true, recipients, sent, brief });
+    return NextResponse.json({ ok: true, preview, recipients, sent, brief });
   } catch (err: unknown) {
     console.error("[jobs:email-morning-brief] Error:", err);
     return NextResponse.json(
