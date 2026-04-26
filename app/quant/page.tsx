@@ -139,6 +139,10 @@ export default function QuantTerminal() {
 
   return (
     <div className="space-y-6">
+      <section className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm leading-relaxed text-amber-100">
+        <strong>Private educational operator console.</strong> This page displays research observations from auth-gated APIs only. Alerts, directions, and scores are analytical context, not financial advice, not public recommendations, and not broker execution instructions.
+      </section>
+
       {/* ── Controls ── */}
       <section className="flex items-center gap-3 flex-wrap">
         {/* Timeframe selector */}

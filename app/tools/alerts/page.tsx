@@ -5,6 +5,7 @@ import { ToolsPageHeader } from "@/components/ToolsPageHeader";
 import AlertsWidget from "@/components/AlertsWidget";
 import { useUserTier } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
+import ComplianceDisclaimer from "@/components/ComplianceDisclaimer";
 import { useAIPageContext } from "@/lib/ai/pageContext";
 import { useRiskPermission } from "@/components/risk/RiskPermissionContext";
 import RegimeBanner from '@/components/RegimeBanner';
@@ -248,6 +249,11 @@ export function AlertsContent() {
 
   return (
     <div className="mx-auto w-full max-w-none space-y-4 px-4 py-6 md:px-6">
+      <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-100">
+        Alerts are user-defined notifications only. Triggered alerts are not trading signals, financial advice, or recommendations to buy, sell, hold, short, or trade any asset.
+      </div>
+      <ComplianceDisclaimer compact />
+
       <section className="rounded-xl border border-slate-800 bg-slate-900/40 px-3 py-3 md:h-[88px] md:px-6">
         <div className="grid h-full grid-cols-1 items-center gap-3 md:grid-cols-[1.2fr_1fr_1fr]">
           <div className="flex gap-2 lg:gap-3">

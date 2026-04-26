@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useUserTier } from '@/lib/useUserTier';
+import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 
 type Stat = {
   signal_type: string;
@@ -86,7 +87,7 @@ export default function SignalAccuracyPage() {
         <div className="bg-slate-800/60 rounded-lg p-8 max-w-md text-center border border-slate-700">
           <div className="mx-auto mb-3 h-10 w-10 rounded-full border border-slate-600 bg-slate-900" aria-hidden="true" />
           <h2 className="text-xl font-bold text-white mb-2">Pro Trader Feature</h2>
-          <p className="text-slate-400 text-sm">Signal accuracy analytics require a Pro Trader subscription to track AI analysis performance over time.</p>
+          <p className="text-slate-400 text-sm">Historical observation analytics require a Pro Trader subscription to review AI research outcomes over time.</p>
         </div>
       </div>
     );
@@ -98,7 +99,7 @@ export default function SignalAccuracyPage() {
         <div className="bg-slate-800/60 rounded-lg p-8 max-w-md text-center border border-slate-700">
           <div className="mx-auto mb-3 h-10 w-10 rounded-full border border-slate-600 bg-slate-900" aria-hidden="true" />
           <h2 className="text-xl font-bold text-white mb-2">Login Required</h2>
-          <p className="text-slate-400 text-sm">Please log in to view signal accuracy analytics.</p>
+          <p className="text-slate-400 text-sm">Please log in to view historical observation analytics.</p>
         </div>
       </div>
     );
@@ -129,8 +130,8 @@ export default function SignalAccuracyPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">🎯 Setup Accuracy</h1>
-          <p className="text-slate-400 text-sm mt-1">Track AI analysis performance across all scanners and horizons</p>
+          <h1 className="text-2xl font-bold tracking-tight">🎯 Historical Observation Accuracy</h1>
+          <p className="text-slate-400 text-sm mt-1">Review how educational AI research observations behaved after scanner horizons elapsed.</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">
@@ -162,10 +163,15 @@ export default function SignalAccuracyPage() {
         <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 text-center text-red-400">{error}</div>
       ) : (
         <>
+          <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-100">
+            This page reviews historical scanner observations for educational pattern analysis only. It does not validate future performance, does not provide trading signals, and does not recommend buying, selling, holding, shorting, or trading any asset.
+          </div>
+          <ComplianceDisclaimer compact />
+
           {/* Overall Summary Cards */}
           {overall && (
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-              <SummaryCard label="Total Signals" value={overall.total.toLocaleString()} />
+              <SummaryCard label="Total Observations" value={overall.total.toLocaleString()} />
               <SummaryCard label="Labeled" value={overall.labeled.toLocaleString()} sub={`${overall.total > 0 ? ((overall.labeled / overall.total) * 100).toFixed(0) : 0}% resolved`} />
               <SummaryCard label="Win Rate" value={overall.win_rate != null ? `${overall.win_rate.toFixed(1)}%` : '—'}
                 color={overall.win_rate != null && overall.win_rate >= 55 ? 'text-emerald-400' : overall.win_rate != null && overall.win_rate < 45 ? 'text-red-400' : 'text-amber-400'} />
@@ -198,7 +204,7 @@ export default function SignalAccuracyPage() {
                   <div className="px-4 py-3 border-b border-slate-700/50 flex items-center justify-between">
                     <h3 className="text-sm font-bold text-white">{scannerType}</h3>
                     <span className="text-[11px] text-slate-500">
-                      {scannerStats.reduce((s, r) => s + r.labeled_signals, 0).toLocaleString()} labeled signals
+                      {scannerStats.reduce((s, r) => s + r.labeled_signals, 0).toLocaleString()} labeled observations
                     </span>
                   </div>
                   <div className="overflow-x-auto">
@@ -207,7 +213,7 @@ export default function SignalAccuracyPage() {
                         <tr className="text-[11px] text-slate-500 uppercase tracking-wider border-b border-slate-700/30">
                           <th className="text-left px-4 py-2">Direction</th>
                           <th className="text-left px-3 py-2">Horizon</th>
-                          <th className="text-right px-3 py-2">Signals</th>
+                          <th className="text-right px-3 py-2">Observations</th>
                           <th className="text-right px-3 py-2">Win Rate</th>
                           <th className="text-right px-3 py-2">Avg Win</th>
                           <th className="text-right px-3 py-2">Avg Loss</th>
@@ -252,16 +258,16 @@ export default function SignalAccuracyPage() {
             </div>
           ) : (
             <div className="bg-slate-800/30 rounded-xl border border-slate-700/50 p-8 text-center">
-              <p className="text-slate-400 text-sm">No signal accuracy data available yet.</p>
-              <p className="text-slate-500 text-xs mt-1">Signals are recorded during scanner runs and labeled after their horizon expires.</p>
+              <p className="text-slate-400 text-sm">No historical observation data available yet.</p>
+              <p className="text-slate-500 text-xs mt-1">Observations are recorded during scanner runs and labeled after their horizon expires.</p>
             </div>
           )}
 
-          {/* Recent Signals */}
+          {/* Recent Observations */}
           {recentSignals.length > 0 && (
             <div className="bg-slate-800/40 rounded-xl border border-slate-700/50 overflow-hidden">
               <div className="px-4 py-3 border-b border-slate-700/50">
-                <h3 className="text-sm font-bold text-white">Recent Signals</h3>
+                <h3 className="text-sm font-bold text-white">Recent Observations</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">

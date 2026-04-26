@@ -105,7 +105,7 @@ export default function TradingGuidesPage() {
         </div>
         <h1 className="mt-3 text-2xl font-semibold tracking-tight">Trading Guides</h1>
         <p className="mt-2 text-sm text-white/60">
-          Frameworks that force sequence: <span className="text-emerald-200">Bias → Rotation → Volatility → Execution</span>.
+          Frameworks that force sequence: <span className="text-emerald-200">Bias → Rotation → Volatility → Setup Validation</span>.
         </p>
       </div>
 

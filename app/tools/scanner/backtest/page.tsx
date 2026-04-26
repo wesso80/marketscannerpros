@@ -554,6 +554,10 @@ function ScannerBacktestContent() {
           {/* ─── Results ─── */}
           {result && (
             <>
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-100">
+                <strong>Historical paper simulation only.</strong> Scanner backtests use historical data for educational scenario review. Results are not real performance, do not model every live-market cost or liquidity constraint, and do not predict or guarantee future outcomes.
+              </div>
+
               {/* Key stats */}
               <section className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
                 <div className="mb-3 flex items-center justify-between flex-wrap gap-2">

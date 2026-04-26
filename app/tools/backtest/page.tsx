@@ -4,6 +4,7 @@ import { Suspense, useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import ToolsPageHeader from '@/components/ToolsPageHeader';
+import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import UpgradeGate from '@/components/UpgradeGate';
 import { useUserTier, canAccessBacktest } from '@/lib/useUserTier';
 import PerformanceMetrics from '@/components/backtest/PerformanceMetrics';
@@ -1239,6 +1240,7 @@ function BacktestContent() {
         <div style={{ marginBottom: '12px', border: '1px solid rgba(148,163,184,0.3)', borderRadius: '10px', background: 'rgba(15,23,42,0.55)', padding: '10px 12px', color: '#cbd5e1', fontSize: '12px' }}>
           Educational backtest and scenario testing only. Outputs are learning statistics, not investment advice or automated execution instructions.
         </div>
+        <ComplianceDisclaimer compact />
         <CommandCenterStateBar
           mode="EVALUATE"
           actionableNow={results
@@ -2010,6 +2012,18 @@ function BacktestContent() {
         {results && (
           <>
             <div style={{
+              background: 'rgba(245,158,11,0.10)',
+              border: '1px solid rgba(245,158,11,0.35)',
+              borderRadius: '14px',
+              padding: '14px 16px',
+              marginBottom: '16px',
+              color: '#fde68a',
+              fontSize: '12px',
+              lineHeight: 1.55,
+            }}>
+              <strong>Paper-trading simulation only.</strong> These backtest results are historical research statistics, not real performance and not a recommendation to trade. They may not model live-market slippage, commissions, spread, liquidity, latency, survivorship bias, or behavioural execution errors. Past results do not predict or guarantee future outcomes.
+            </div>
+            <div style={{
               background: 'var(--msp-card)',
               border: '1px solid var(--msp-border-strong)',
               borderRadius: '14px',
@@ -2056,7 +2070,7 @@ function BacktestContent() {
                 <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
                   <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Assessment</div>
                   <div style={{ color: results.profitFactor >= 1.25 && results.maxDrawdown <= 20 ? '#10b981' : results.profitFactor >= 1 ? '#fbbf24' : '#94a3b8', fontSize: '14px', fontWeight: 700 }}>
-                    {results.profitFactor >= 1.25 && results.maxDrawdown <= 20 ? 'REVIEWED' : results.profitFactor >= 1 ? 'PREP' : 'WAIT'}
+                    {results.profitFactor >= 1.25 && results.maxDrawdown <= 20 ? 'HIGH ALIGNMENT' : results.profitFactor >= 1 ? 'NEEDS REVIEW' : 'LOW ALIGNMENT'}
                   </div>
                 </div>
                 <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>

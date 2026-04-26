@@ -345,7 +345,7 @@ export default function LiquiditySweepPage() {
           fontSize: '11px', color: 'var(--msp-text-faint)', textAlign: 'center',
           padding: '12px 0',
         }}>
-          ⚠️ Liquidity sweep detection is for educational purposes only. Not financial advice.
+          ⚠️ Liquidity sweep detection is for educational purposes only. Sweeps are technical price-pattern observations and do not predict future direction or provide buy/sell signals. Not financial advice.
           Sweep setups detect institutional stop hunts but do not guarantee reversal.
         </div>
       }

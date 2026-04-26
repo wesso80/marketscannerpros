@@ -226,17 +226,17 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
       else riskText = "lower volatility";
     }
     
-    // Investor fit
+    // Neutral metric profile — avoid suitability or investor-fit wording.
     let fitText = "";
     if (!isNaN(pe) && !isNaN(beta)) {
       if (pe > 40 && beta > 1.3) {
-        fitText = "Best suited for momentum or high-conviction growth investors rather than value-focused strategies.";
+        fitText = "High valuation with elevated volatility versus value-oriented benchmarks.";
       } else if (pe < 20 && beta < 1.0) {
-        fitText = "May appeal to value investors seeking stable, lower-risk holdings.";
+        fitText = "Lower valuation and lower beta versus broad market benchmarks.";
       } else if (pe > 25 && beta > 1.0) {
-        fitText = "Suitable for growth-oriented investors comfortable with above-average volatility.";
+        fitText = "Growth-style valuation profile with above-average volatility.";
       } else {
-        fitText = "May fit balanced portfolios seeking a mix of growth and stability.";
+        fitText = "Balanced valuation and volatility profile versus broad market benchmarks.";
       }
     }
     
@@ -543,6 +543,9 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
                 />
                 <MetricCard label="Beta" value={formatValue(data.beta)} />
               </div>
+              <p style={{ color: "var(--msp-text-faint)", fontSize: "12px", marginTop: "10px" }}>
+                Analyst targets and valuation comparisons are third-party data points for educational research only. They are not MarketScanner Pros recommendations or price forecasts.
+              </p>
             </div>
 
             {/* Profitability */}

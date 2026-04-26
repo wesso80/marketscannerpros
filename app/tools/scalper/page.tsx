@@ -261,8 +261,12 @@ export default function ScalperPage() {
 
         {/* ─── Results Grid ─── */}
         {results.length > 0 && (
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-            {/* Left: Signal Table */}
+          <div className="space-y-4">
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-100">
+              <strong>Educational intraday simulation only.</strong> Short-timeframe observations, bias labels, and reference levels are for learning and review. They are not live trading instructions, not financial advice, and no broker execution occurs.
+            </div>
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+              {/* Left: Signal Table */}
             <div className="xl:col-span-2 overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
@@ -327,9 +331,10 @@ export default function ScalperPage() {
                 <DetailPanel result={selected} />
               ) : (
                 <div className="bg-[#1E293B] border border-slate-700/30 rounded-xl p-6 text-center">
-                  <p className="text-slate-500 text-sm">Click a row to view signal detail</p>
+                  <p className="text-slate-500 text-sm">Click a row to view observation detail</p>
                 </div>
               )}
+            </div>
             </div>
           </div>
         )}
@@ -371,29 +376,29 @@ function DetailPanel({ result: r }: { result: ScalpResult }) {
         </span>
       </div>
 
-      {/* Execution Levels */}
+      {/* Reference Levels */}
       <div className="px-4 py-3 border-b border-slate-700/30">
-        <div className="text-[10px] text-slate-500 mb-2 font-semibold uppercase tracking-wider">Execution Levels</div>
+        <div className="text-[10px] text-slate-500 mb-2 font-semibold uppercase tracking-wider">Reference Levels (Educational)</div>
         <div className="grid grid-cols-2 gap-2 text-xs">
           <div className="bg-[#0F172A] rounded-lg px-3 py-2">
-            <div className="text-slate-500 text-[10px]">Entry</div>
+            <div className="text-slate-500 text-[10px]">Reference</div>
             <div className="text-white font-mono font-bold">{fmtP(r.entry)}</div>
           </div>
           <div className="bg-[#0F172A] rounded-lg px-3 py-2">
-            <div className="text-red-400 text-[10px]">Stop Loss</div>
+            <div className="text-red-400 text-[10px]">Invalidation</div>
             <div className="text-red-400 font-mono font-bold">{fmtP(r.stop)}</div>
           </div>
           <div className="bg-[#0F172A] rounded-lg px-3 py-2">
-            <div className="text-emerald-400 text-[10px]">Target 1</div>
+            <div className="text-emerald-400 text-[10px]">Reaction Zone 1</div>
             <div className="text-emerald-400 font-mono font-bold">{fmtP(r.target1)}</div>
           </div>
           <div className="bg-[#0F172A] rounded-lg px-3 py-2">
-            <div className="text-emerald-300 text-[10px]">Target 2</div>
+            <div className="text-emerald-300 text-[10px]">Reaction Zone 2</div>
             <div className="text-emerald-300 font-mono font-bold">{fmtP(r.target2)}</div>
           </div>
         </div>
         <div className="mt-2 flex items-center justify-between text-[10px]">
-          <span className="text-slate-500">Risk:Reward</span>
+          <span className="text-slate-500">Scenario Ratio</span>
           <span className="font-bold" style={{ color: r.riskReward >= 1.5 ? '#10B981' : '#F59E0B' }}>{r.riskReward > 0 ? `${r.riskReward}:1` : '—'}</span>
         </div>
       </div>

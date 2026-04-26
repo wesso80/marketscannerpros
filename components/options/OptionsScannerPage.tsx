@@ -136,7 +136,7 @@ function OptionsScannerPageContent() {
       journalEnabled: payload?.decision.permission === 'GO',
       onDeploy: () => {
         if (!payload) return;
-        alert(`⚠️ Educational Mode\n\nDeploy signal for ${symbol}:\nDirection: ${payload.decision.direction}\nConfidence: ${payload.decision.confidence}%\n\nThis is a simulated workflow — no broker execution.`);
+        alert(`⚠️ Educational Mode\n\nReview observation for ${symbol}:\nDirection bias: ${payload.decision.direction}\nConfidence: ${payload.decision.confidence}%\n\nThis is a simulated research workflow — no recommendation and no broker execution.`);
       },
       onAlert: async () => {
         try {

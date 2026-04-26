@@ -9,7 +9,7 @@ const oiScenarios = [
     emoji: "📈",
     interpretation: "New money entering the market",
     meaning: "Strong bullish trend - new longs are opening positions, confirming the uptrend with fresh capital.",
-    action: "Trend following. Look for pullback entries in the direction of the trend.",
+    action: "Research note: analysts often monitor pullbacks in the direction of the observed trend.",
     color: "green"
   },
   {
@@ -17,7 +17,7 @@ const oiScenarios = [
     emoji: "📉",
     interpretation: "New shorts entering the market",
     meaning: "Strong bearish trend - new shorts are opening, confirming selling pressure with fresh capital.",
-    action: "Avoid longs. Consider short opportunities on bounces.",
+    action: "Research note: analysts often treat bounces as areas for extra caution and confirmation checks.",
     color: "red"
   },
   {
@@ -25,7 +25,7 @@ const oiScenarios = [
     emoji: "⚠️",
     interpretation: "Short squeeze / weak rally",
     meaning: "Shorts are closing (covering) causing price to rise. No new buyers entering - rally may be unsustainable.",
-    action: "Be cautious with longs. This rally may exhaust quickly.",
+    action: "Research note: analysts often watch whether the rally exhausts as short-covering fades.",
     color: "amber"
   },
   {
@@ -33,7 +33,7 @@ const oiScenarios = [
     emoji: "💨",
     interpretation: "Long liquidation / capitulation",
     meaning: "Longs are closing (selling) causing price to fall. Deleveraging event - could signal a bottom forming.",
-    action: "Watch for capitulation exhaustion. Potential reversal setup.",
+    action: "Research note: analysts often monitor for capitulation exhaustion and reversal evidence.",
     color: "amber"
   }
 ];
@@ -64,19 +64,19 @@ const longShortExplainer = [
     ratio: "> 1.5",
     meaning: "Crowded Long",
     interpretation: "More traders are long than short. Market is bullish but vulnerable.",
-    contrarian: "Potential long squeeze if price drops. Consider reducing long exposure at extremes."
+    contrarian: "Potential long squeeze if price drops. Extreme readings may warrant extra risk review."
   },
   {
     ratio: "< 0.7",
     meaning: "Crowded Short",
     interpretation: "More traders are short than long. Market is bearish but vulnerable.",
-    contrarian: "Potential short squeeze if price rises. Consider reducing short exposure at extremes."
+    contrarian: "Potential short squeeze if price rises. Extreme readings may warrant extra risk review."
   },
   {
     ratio: "0.9 - 1.1",
     meaning: "Balanced",
     interpretation: "Relatively equal long/short positioning.",
-    contrarian: "No extreme to fade. Follow technical signals."
+    contrarian: "No positioning extreme is present. Use other technical context for research confirmation."
   }
 ];
 
@@ -214,7 +214,7 @@ export default function OpenInterestGuidePage() {
                     </ul>
                   </div>
                   <div>
-                    <h4 className="font-semibold text-white mb-3">Quick Signals:</h4>
+                    <h4 className="font-semibold text-white mb-3">Quick Observations:</h4>
                     <div className="space-y-2 text-sm">
                       <div className="flex items-center gap-2 bg-green-500/10 p-2 rounded">
                         <span className="text-green-400">↑ +5% OI</span>
@@ -269,7 +269,7 @@ export default function OpenInterestGuidePage() {
                   </div>
                   <p className="text-slate-300 text-sm mb-3">{item.meaning}</p>
                   <div className="bg-slate-900/50 rounded-lg p-3">
-                    <span className="text-xs text-slate-500 uppercase">Trading Action:</span>
+                    <span className="text-xs text-slate-500 uppercase">Research Interpretation:</span>
                     <p className="text-emerald-400 text-sm font-medium">{item.action}</p>
                   </div>
                 </div>
@@ -373,8 +373,8 @@ export default function OpenInterestGuidePage() {
               <h4 className="font-semibold text-red-400 mb-2">⚠️ Important Caveat</h4>
               <p className="text-slate-300 text-sm">
                 L/S ratio alone is NOT a trading signal. Extreme readings can persist during strong trends. 
-                Use it to <strong>adjust position sizing</strong> and <strong>set tighter stops</strong> 
-                when the crowd is heavily positioned in your direction.
+                      Use it to <strong>review scenario risk</strong> and <strong>stress-test invalidation levels</strong>
+                  when the crowd is heavily positioned in one direction.
               </p>
             </div>
           </div>
@@ -383,7 +383,7 @@ export default function OpenInterestGuidePage() {
         {/* Pro Tips Tab */}
         {activeTab === 'tips' && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold mb-4">Pro Trading Tips</h2>
+            <h2 className="text-2xl font-bold mb-4">Educational Research Tips</h2>
             
             <div className="grid gap-4">
               <div className="bg-gradient-to-r from-emerald-900/30 to-emerald-800/10 rounded-xl p-5 border border-emerald-500/30">
@@ -392,12 +392,12 @@ export default function OpenInterestGuidePage() {
                   <div>
                     <h3 className="font-bold text-white mb-2">Combine All Three Metrics</h3>
                     <p className="text-slate-300 text-sm">
-                      The most powerful signals come when OI, funding, and L/S ratio align:
+                      Stronger research context can appear when OI, funding, and L/S ratio align:
                     </p>
                     <ul className="text-sm text-slate-400 mt-2 space-y-1">
-                      <li>• <strong className="text-green-400">Bullish setup:</strong> Rising OI + slightly positive funding + balanced L/S</li>
-                      <li>• <strong className="text-red-400">Bearish setup:</strong> Rising OI + negative funding + L/S &lt; 1</li>
-                      <li>• <strong className="text-amber-400">Reversal setup:</strong> Extreme funding + crowded positioning + OI starting to fall</li>
+                      <li>• <strong className="text-green-400">Bullish-alignment context:</strong> Rising OI + slightly positive funding + balanced L/S</li>
+                      <li>• <strong className="text-red-400">Bearish-alignment context:</strong> Rising OI + negative funding + L/S &lt; 1</li>
+                      <li>• <strong className="text-amber-400">Reversal-watch context:</strong> Extreme funding + crowded positioning + OI starting to fall</li>
                     </ul>
                   </div>
                 </div>
@@ -425,7 +425,7 @@ export default function OpenInterestGuidePage() {
                     <p className="text-slate-300 text-sm">
                       A sudden spike in OI (&gt;5% in 24h) often precedes major moves. 
                       This shows traders are aggressively positioning - volatility is coming.
-                      Combine with technical levels for entry timing.
+                      Combine with technical levels for research timing context.
                     </p>
                   </div>
                 </div>
@@ -465,36 +465,36 @@ export default function OpenInterestGuidePage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-600">
-                      <th className="text-left py-2 text-slate-400">Signal</th>
+                      <th className="text-left py-2 text-slate-400">Observation</th>
                       <th className="text-left py-2 text-slate-400">Meaning</th>
-                      <th className="text-left py-2 text-slate-400">Action</th>
+                      <th className="text-left py-2 text-slate-400">Research Lens</th>
                     </tr>
                   </thead>
                   <tbody className="text-slate-300">
                     <tr className="border-b border-slate-700">
                       <td className="py-2">OI ↑ + Price ↑</td>
                       <td>Strong bull trend</td>
-                      <td className="text-green-400">Buy dips</td>
+                      <td className="text-green-400">Monitor pullbacks</td>
                     </tr>
                     <tr className="border-b border-slate-700">
                       <td className="py-2">OI ↑ + Price ↓</td>
                       <td>Strong bear trend</td>
-                      <td className="text-red-400">Sell rallies</td>
+                      <td className="text-red-400">Monitor bounce failures</td>
                     </tr>
                     <tr className="border-b border-slate-700">
                       <td className="py-2">OI ↓ + Price ↑</td>
                       <td>Short squeeze</td>
-                      <td className="text-amber-400">Caution on longs</td>
+                      <td className="text-amber-400">Review bullish exposure risk</td>
                     </tr>
                     <tr className="border-b border-slate-700">
                       <td className="py-2">OI ↓ + Price ↓</td>
                       <td>Capitulation</td>
-                      <td className="text-amber-400">Watch for bottom</td>
+                      <td className="text-amber-400">Monitor exhaustion evidence</td>
                     </tr>
                     <tr className="border-b border-slate-700">
                       <td className="py-2">Funding &gt; 0.05%</td>
                       <td>Overheated longs</td>
-                      <td className="text-amber-400">Reduce long size</td>
+                      <td className="text-amber-400">Review long-crowding risk</td>
                     </tr>
                     <tr className="border-b border-slate-700">
                       <td className="py-2">Funding &lt; -0.05%</td>
