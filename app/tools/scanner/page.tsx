@@ -76,7 +76,7 @@ function summarizeRankedReason(r: ScanResult, lifecycle: LifecycleState, regimeC
     if (activeRegime.toLowerCase().includes('range')) return `${setup} in range regime`;
     return `${setup} outside active regime`;
   }
-  if (r.dveFlags?.includes('COMPRESSED')) return `${lifecycle === 'READY' ? 'Ready' : 'Watch'} compression`;
+  if (r.dveFlags?.includes('COMPRESSED')) return `${lifecycle === 'READY' ? 'High alignment' : 'Watch'} compression`;
   if (r.dveFlags?.includes('MOMENTUM_ACCEL')) return 'Momentum accel';
   if (r.dveFlags?.includes('CLIMAX')) return 'Volatility risk';
   if (r.confidence != null && r.confidence >= 70) return 'High confluence';
@@ -106,10 +106,23 @@ function summarizeDetailNextCheck(args: { hasScenarioLevels: boolean; trendAlign
   if (args.dataQuality !== 'GOOD') return 'Refresh scanner inputs before relying on reference levels.';
   if (!args.hasScenarioLevels) return 'Wait for valid reference and invalidation levels before escalation.';
   if (!args.trendAligned) return 'Watch for structure to align with the observed direction.';
-  if (!args.momentumAligned) return 'Watch for momentum confirmation before treating the case as clean.';
+  if (!args.momentumAligned) return 'Watch for momentum confirmation before treating the case as aligned.';
   if (!args.flowAligned) return 'Check whether signal split improves from mixed to aligned.';
   if (args.direction === 'neutral') return 'Wait for directional structure to resolve.';
   return 'Monitor whether price respects the reference level and data quality holds.';
+}
+
+function biasLabel(direction?: string | null): string {
+  if (direction === 'bullish' || direction === 'LONG') return 'Bullish bias';
+  if (direction === 'bearish' || direction === 'SHORT') return 'Bearish bias';
+  return 'Neutral bias';
+}
+
+function lifecycleLabel(lifecycle: LifecycleState): string {
+  if (lifecycle === 'READY') return 'High alignment';
+  if (lifecycle === 'SETTING_UP') return 'Developing';
+  if (lifecycle === 'INVALIDATED') return 'Needs review';
+  return lifecycle.replace('_', ' ');
 }
 
 const TABS = ['All', 'Equities', 'Crypto', 'Bullish', 'Bearish', 'High Score', 'DVE Signals', 'Squeeze', 'Regime Match'] as const;
@@ -246,13 +259,13 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
   const nextUsefulCheck = summarizeDetailNextCheck({ hasScenarioLevels, trendAligned, momentumAligned, flowAligned, dataQuality, direction });
 
   const recommendation = detail.institutionalFilter?.recommendation;
-  const tradeReady = recommendation === 'TRADE_READY' && quality !== 'LOW' && direction !== 'neutral' && dataQuality === 'GOOD' && hasScenarioLevels;
-  const executionStatus = !hasScenarioLevels ? 'DATA WEAK — REVIEW' : tradeReady ? 'HIGH ALIGNMENT' : quality === 'MEDIUM' && direction !== 'neutral' ? 'MODERATE ALIGNMENT' : 'LOW ALIGNMENT — REVIEW';
-  const statusColor = tradeReady ? '#10B981' : quality === 'MEDIUM' && direction !== 'neutral' ? '#F59E0B' : '#EF4444';
+  const highAlignment = recommendation === 'TRADE_READY' && quality !== 'LOW' && direction !== 'neutral' && dataQuality === 'GOOD' && hasScenarioLevels;
+  const researchStatus = !hasScenarioLevels ? 'DATA WEAK — REVIEW' : highAlignment ? 'HIGH ALIGNMENT' : quality === 'MEDIUM' && direction !== 'neutral' ? 'MODERATE ALIGNMENT' : 'LOW ALIGNMENT — REVIEW';
+  const statusColor = highAlignment ? '#10B981' : quality === 'MEDIUM' && direction !== 'neutral' ? '#F59E0B' : '#EF4444';
   const confBarColor = confidence >= 70 ? '#10B981' : confidence >= 55 ? '#F59E0B' : '#EF4444';
 
-  const blockReasons = tradeReady
-    ? ['Structure aligned', direction === 'bullish' ? 'Bias: Long' : direction === 'bearish' ? 'Bias: Short' : 'Bias: Neutral']
+  const blockReasons = highAlignment
+    ? ['Structure aligned', biasLabel(direction)]
     : [dataQuality !== 'GOOD' ? `Data quality: ${dataQuality.toLowerCase()}` : null, !hasScenarioLevels ? 'Reference levels unavailable' : null, quality === 'LOW' ? 'Quality below threshold' : null, !trendAligned ? 'Structure incomplete' : null, atrPercent >= 3 ? 'Volatility mismatch' : null].filter(Boolean) as string[];
 
   const handleAddToWatchlist = async () => {
@@ -336,7 +349,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
       <div className="flex items-center justify-end gap-2">
         <Link href={`/tools/workspace?tab=Backtest&symbol=${encodeURIComponent(detail.symbol)}`}
           className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-slate-400 no-underline hover:bg-slate-700/50 transition-colors">
-          Backtest This Symbol
+          Open Historical Test
         </Link>
         <button type="button" onClick={onClose}
           className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-muted)]">
@@ -372,14 +385,14 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
         <div className="md:col-span-3">
           <div className="rounded-lg border p-3" style={{ borderColor: statusColor + '66', background: 'var(--msp-panel-2)' }}>
             <div className="text-[0.66rem] font-extrabold uppercase tracking-[0.08em] text-slate-500">Setup Alignment</div>
-            <div className="mt-1 text-[0.88rem] font-black uppercase" style={{ color: statusColor }}>{executionStatus}</div>
+            <div className="mt-1 text-[0.88rem] font-black uppercase" style={{ color: statusColor }}>{researchStatus}</div>
             <div title={dataQualityTitle} className="mt-2 inline-flex rounded border px-2 py-0.5 text-[11px] font-bold uppercase" style={{ color: dataQualityColor(dataQuality), borderColor: dataQualityColor(dataQuality) + '55', backgroundColor: dataQualityColor(dataQuality) + '15' }}>
               Data {dataQuality}
             </div>
             <div className="mt-2 grid gap-1 text-[0.72rem] text-slate-400">
               {blockReasons.map(r => <div key={r}>• {r}</div>)}
             </div>
-            {!tradeReady && (
+            {!highAlignment && (
               <div className="mt-2 text-[0.72rem] font-extrabold uppercase" style={{ color: statusColor }}>
                 NOTE: QUALITY {quality} — REVIEW ALIGNMENT
               </div>
@@ -453,8 +466,8 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
             </div>
             <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5 text-[0.74rem] text-slate-400">
               <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Analysis Notes</div>
-              <div>Indicator Agreement: <span className={`font-bold ${tradeReady ? 'text-emerald-400' : 'text-amber-400'}`}>{tradeReady ? 'High alignment across indicators' : 'Mixed indicator signals'}</span></div>
-              <div>Structure: <span className="font-bold text-white">{tradeReady ? 'Indicators aligned' : 'Review indicator alignment'}</span></div>
+              <div>Indicator Agreement: <span className={`font-bold ${highAlignment ? 'text-emerald-400' : 'text-amber-400'}`}>{highAlignment ? 'High alignment across indicators' : 'Mixed indicator signals'}</span></div>
+              <div>Structure: <span className="font-bold text-white">{highAlignment ? 'Indicators aligned' : 'Review indicator alignment'}</span></div>
             </div>
 
             {/* Action Buttons */}
@@ -897,9 +910,9 @@ export default function ScannerPage() {
           <div className="grid gap-2 md:grid-cols-5">
             {[
               ['Symbols', String(filtered.length), '#CBD5E1'],
-              ['Ready', String(filtered.filter(r => deriveLifecycleState(r, currentRegime) === 'READY').length), '#10B981'],
-              ['Setting Up', String(filtered.filter(r => deriveLifecycleState(r, currentRegime) === 'SETTING_UP').length), '#A855F7'],
-              ['Gated', String(filtered.filter(r => r.scoreV2?.regimeScore?.gated).length), '#EF4444'],
+              ['High Align', String(filtered.filter(r => deriveLifecycleState(r, currentRegime) === 'READY').length), '#10B981'],
+              ['Developing', String(filtered.filter(r => deriveLifecycleState(r, currentRegime) === 'SETTING_UP').length), '#A855F7'],
+              ['Needs Review', String(filtered.filter(r => r.scoreV2?.regimeScore?.gated).length), '#EF4444'],
               ['Degraded Data', String(filtered.filter(r => rankedTrustLabel(r) !== 'GOOD').length), '#F59E0B'],
             ].map(([label, value, color]) => (
               <div key={label} className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2">
@@ -990,7 +1003,7 @@ export default function ScannerPage() {
                           </td>
                           <td className="py-2.5 px-2 whitespace-nowrap">
                             <span className="text-[11px] px-1.5 py-0.5 rounded border" style={{ color: LIFECYCLE_COLORS[lifecycle], borderColor: LIFECYCLE_COLORS[lifecycle] + '40', backgroundColor: LIFECYCLE_COLORS[lifecycle] + '15' }}>
-                              {lifecycle.replace('_', ' ')}
+                              {lifecycleLabel(lifecycle)}
                             </span>
                           </td>
                           <td className="py-2.5 px-2 text-center whitespace-nowrap">
@@ -1129,7 +1142,7 @@ export default function ScannerPage() {
                 boxShadow: proScanLoading ? 'none' : '0 0 20px rgba(16, 185, 129, 0.25), 0 4px 12px rgba(0, 0, 0, 0.3)',
                 cursor: proScanLoading ? 'not-allowed' : 'pointer',
               }}>
-              {proScanLoading ? 'Scanning...' : 'Run Scan'}
+              {proScanLoading ? 'Analyzing...' : 'Run Educational Scan'}
             </button>
           </div>
 
@@ -1179,8 +1192,8 @@ export default function ScannerPage() {
                 {[
                   ['Scanned', String(proScanResults.scanned ?? '—'), '#CBD5E1'],
                   ['Candidates', String(proScreenerRows.length), '#10B981'],
-                  ['Clean', String(proScreenerRows.filter(r => r.permission === 'COMPLIANT').length), '#10B981'],
-                  ['Mixed', String(proScreenerRows.filter(r => r.permission === 'TIGHT').length), '#F59E0B'],
+                  ['Aligned', String(proScreenerRows.filter(r => r.permission === 'COMPLIANT').length), '#10B981'],
+                  ['Mixed Evidence', String(proScreenerRows.filter(r => r.permission === 'TIGHT').length), '#F59E0B'],
                   ['Data Weak', String(proScreenerRows.filter(r => r.dataQuality !== 'GOOD').length), '#EF4444'],
                 ].map(([label, value, color]) => (
                   <div key={label} className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2">
@@ -1197,7 +1210,7 @@ export default function ScannerPage() {
               </div>
               <ScreenerTable rows={proScreenerRows} onRowClick={handleProRowClick} selectedSymbol={selectedSymbol ?? undefined} />
               <div className="mt-2 text-[11px] text-slate-600">
-                Market Bias Context · Regime: {currentRegime.toUpperCase()} · Most setups: {proScreenerRows.filter(r => r.direction === 'LONG').length > proScreenerRows.filter(r => r.direction === 'SHORT').length ? 'Long' : 'Short'}
+                Market Bias Context · Regime: {currentRegime.toUpperCase()} · Most observations: {proScreenerRows.filter(r => r.direction === 'LONG').length > proScreenerRows.filter(r => r.direction === 'SHORT').length ? 'Bullish bias' : 'Bearish bias'}
               </div>
             </div>
           )}

@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCached, CACHE_KEYS, CACHE_TTL, setCached } from '@/lib/redis';
 import { q } from '@/lib/db';
+import { scannerComplianceMetadata, scannerDataQualityMetadata } from '@/lib/scanner/compliance';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -24,6 +25,15 @@ export async function GET(req: NextRequest) {
       universe,
       timeframe,
       ...cached,
+      compliance: scannerComplianceMetadata(),
+      dataQuality: scannerDataQualityMetadata({
+        source: 'redis_cache',
+        computedAt: cached.computedAt ?? cached.computed_at ?? null,
+        stale: false,
+        coverageScore: typeof cached.matchesFound === 'number' && typeof cached.totalSymbols === 'number' && cached.totalSymbols > 0
+          ? Math.round((cached.matchesFound / cached.totalSymbols) * 100)
+          : null,
+      }),
       source: 'cache',
     });
   }
@@ -48,6 +58,13 @@ export async function GET(req: NextRequest) {
         matchesFound: 0,
         computedAt: null,
         hint: 'No cached results. Worker will compute on next cycle.',
+        compliance: scannerComplianceMetadata(),
+        dataQuality: scannerDataQualityMetadata({
+          source: 'none',
+          stale: true,
+          coverageScore: 0,
+          warnings: ['No cached scanner data is currently available.'],
+        }),
         source: 'none',
       });
     }
@@ -61,6 +78,13 @@ export async function GET(req: NextRequest) {
       totalSymbols: data.total_symbols,
       matchesFound: data.matches_found,
       computedAt: data.computed_at,
+      compliance: scannerComplianceMetadata(),
+      dataQuality: scannerDataQualityMetadata({
+        source: 'database',
+        computedAt: data.computed_at,
+        stale: false,
+        coverageScore: data.total_symbols > 0 ? Math.round((data.matches_found / data.total_symbols) * 100) : 0,
+      }),
       source: 'database',
     };
 
@@ -71,6 +95,15 @@ export async function GET(req: NextRequest) {
 
   } catch (err: any) {
     console.error('[api/cached/scanner] DB error:', err?.message || err);
-    return NextResponse.json({ error: 'Database error' }, { status: 500 });
+    return NextResponse.json({
+      error: 'Database error',
+      compliance: scannerComplianceMetadata(),
+      dataQuality: scannerDataQualityMetadata({
+        source: 'error',
+        stale: true,
+        coverageScore: 0,
+        warnings: ['Unable to load cached scanner data.'],
+      }),
+    }, { status: 500 });
   }
 }

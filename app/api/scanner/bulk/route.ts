@@ -2,11 +2,11 @@
  * Bulk Scanner API - Client-triggered universe scan
  * 
  * @route POST /api/scanner/bulk
- * @description Scans top stocks or crypto to find best opportunities
+ * @description Scans top stocks or crypto to find educational research observations
  *              - Crypto: CoinGecko Commercial API (licensed, 500 calls/min)
  *              - Equity: Alpha Vantage Premium (licensed, 300 calls/min)
  * 
- * No auth required - rate limited by normal request throttling
+ * Pro/Pro Trader access required for client-triggered bulk scans.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -24,6 +24,8 @@ import { computeInstitutionalFilter, inferStrategyFromText } from '@/lib/institu
 import { avTakeToken } from '@/lib/avRateGovernor';
 import { getBulkCachedScanData, CachedScanData } from '@/lib/scannerCache';
 import { q as dbQuery } from '@/lib/db';
+import { getEffectiveTier } from '@/lib/entitlements';
+import { scannerComplianceMetadata, scannerDataQualityMetadata } from '@/lib/scanner/compliance';
 
 export const runtime = "nodejs";
 export const maxDuration = 60; // 60 seconds max for client requests
@@ -2172,6 +2174,18 @@ export async function POST(req: NextRequest) {
   
   try {
     const session = await getSessionFromCookie();
+    if (!session?.workspaceId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const effectiveTier = await getEffectiveTier(session.workspaceId, session.tier, session.cid, dbQuery);
+    if (effectiveTier !== 'pro' && effectiveTier !== 'pro_trader') {
+      return NextResponse.json({
+        error: 'Advanced research scanner requires Pro access.',
+        compliance: scannerComplianceMetadata(),
+      }, { status: 403 });
+    }
+
     const adaptive = session?.workspaceId
       ? await getAdaptiveLayer(session.workspaceId, { skill: 'scanner' }, 50)
       : null;
@@ -2186,9 +2200,11 @@ export async function POST(req: NextRequest) {
         : 'deep';
     const isLightMode = mode === 'light' || mode === 'hybrid';
     const universeSizeRaw = Number(body?.universeSize ?? body?.maxCoins ?? 0);
-    const universeSize = Number.isFinite(universeSizeRaw) && universeSizeRaw > 0
+    const requestedUniverseSize = Number.isFinite(universeSizeRaw) && universeSizeRaw > 0
       ? Math.floor(universeSizeRaw)
       : 500;
+    const maxUniverseSize = effectiveTier === 'pro_trader' ? 500 : 250;
+    const universeSize = Math.min(requestedUniverseSize, maxUniverseSize);
     
     if (!type || !['equity', 'crypto', 'forex'].includes(type)) {
       return NextResponse.json({ error: "Type must be 'equity', 'crypto', or 'forex'" }, { status: 400 });
@@ -2210,6 +2226,7 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
+        compliance: scannerComplianceMetadata(),
         type,
         timeframe: selectedTimeframe,
         mode,
@@ -2221,6 +2238,13 @@ export async function POST(req: NextRequest) {
         apiCallsUsed: lightResult.apiCallsUsed,
         apiCallsCap: lightResult.apiCallsCap,
         effectiveUniverseSize: lightResult.effectiveUniverseSize,
+        dataQuality: scannerDataQualityMetadata({
+          source: 'coingecko_market_data',
+          computedAt: new Date(),
+          stale: false,
+          coverageScore: lightResult.scanned ? Math.min(100, Math.round((lightResult.scanned / Math.max(1, lightResult.effectiveUniverseSize)) * 100)) : 0,
+          warnings: universeSize < requestedUniverseSize ? [`Universe capped at ${universeSize} for ${effectiveTier}.`] : [],
+        }),
         errors: [],
       });
     }
@@ -2239,6 +2263,7 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
+        compliance: scannerComplianceMetadata(),
         type,
         timeframe: selectedTimeframe,
         mode: cachedResult ? 'cached' : (isLightMode ? 'hybrid' : mode),
@@ -2251,6 +2276,13 @@ export async function POST(req: NextRequest) {
         apiCallsCap: equityResult.apiCallsCap,
         effectiveUniverseSize: equityResult.effectiveUniverseSize,
         cacheHitRate: (equityResult as any).cacheHitRate,
+        dataQuality: scannerDataQualityMetadata({
+          source: cachedResult ? 'worker_cache' : 'alpha_vantage_light_scan',
+          computedAt: new Date(),
+          stale: false,
+          coverageScore: equityResult.scanned ? Math.min(100, Math.round((equityResult.scanned / Math.max(1, equityResult.effectiveUniverseSize)) * 100)) : 0,
+          warnings: universeSize < requestedUniverseSize ? [`Universe capped at ${universeSize} for ${effectiveTier}.`] : [],
+        }),
         errors: [],
       });
     }
@@ -2268,6 +2300,7 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
+        compliance: scannerComplianceMetadata(),
         type,
         timeframe: selectedTimeframe,
         mode: 'hybrid',
@@ -2279,6 +2312,13 @@ export async function POST(req: NextRequest) {
         apiCallsUsed: forexResult.apiCallsUsed,
         apiCallsCap: forexResult.apiCallsCap,
         effectiveUniverseSize: forexResult.effectiveUniverseSize,
+        dataQuality: scannerDataQualityMetadata({
+          source: 'alpha_vantage_forex',
+          computedAt: new Date(),
+          stale: false,
+          coverageScore: forexResult.scanned ? Math.min(100, Math.round((forexResult.scanned / Math.max(1, forexResult.effectiveUniverseSize)) * 100)) : 0,
+          warnings: universeSize < requestedUniverseSize ? [`Universe capped at ${universeSize} for ${effectiveTier}.`] : [],
+        }),
         errors: [],
       });
     }
@@ -2394,6 +2434,7 @@ export async function POST(req: NextRequest) {
     
     return NextResponse.json({
       success: true,
+      compliance: scannerComplianceMetadata(),
       type,
       timeframe: selectedTimeframe,
       mode,
@@ -2401,11 +2442,30 @@ export async function POST(req: NextRequest) {
       duration: `${duration}s`,
       topPicks: institutional.topPicks,
       blockedByInstitutionalFilter: institutional.blockedCount,
+      dataQuality: scannerDataQualityMetadata({
+        source: type === 'crypto' ? 'coingecko_ohlc' : 'alpha_vantage',
+        computedAt: new Date(),
+        stale: false,
+        coverageScore: results.length ? Math.max(0, 100 - Math.min(50, errors.length * 5)) : 0,
+        warnings: [
+          ...(universeSize < requestedUniverseSize ? [`Universe capped at ${universeSize} for ${effectiveTier}.`] : []),
+          ...errors.slice(0, 5),
+        ],
+      }),
       errors: errors.slice(0, 5)
     });
     
   } catch (error: any) {
     console.error("[bulk-scan] Error:", error);
-    return NextResponse.json({ error: error.message || "Scan failed" }, { status: 500 });
+    return NextResponse.json({
+      error: error.message || "Scan failed",
+      compliance: scannerComplianceMetadata(),
+      dataQuality: scannerDataQualityMetadata({
+        source: 'error',
+        stale: true,
+        coverageScore: 0,
+        warnings: ['Unable to complete the advanced research scan.'],
+      }),
+    }, { status: 500 });
   }
 }

@@ -1,13 +1,14 @@
 /**
- * Daily Top Picks API
+ * Daily Ranked Research API
  * 
  * @route GET /api/scanner/daily-picks
- * @description Returns pre-computed top 10 picks for each asset class
- *              Includes both bullish (top) and bearish (bottom) opportunities
+ * @description Returns pre-computed educational research observations for each asset class.
+ *              Includes both bullish-alignment and bearish-alignment observations.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { q } from "@/lib/db";
+import { scannerComplianceMetadata, scannerDataQualityMetadata } from "@/lib/scanner/compliance";
 
 export const runtime = "nodejs";
 
@@ -26,7 +27,7 @@ export async function GET(req: NextRequest) {
       rankFilter = "AND rank_type = 'bottom'";
     }
     
-    // Get picks (or most recent if today not available)
+    // Get research observations (or most recent if today not available)
     const picks = await q(`
       WITH latest_date AS (
         SELECT MAX(scan_date) as scan_date FROM daily_picks
@@ -94,20 +95,28 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      compliance: scannerComplianceMetadata(),
       scanDate,
-      // Top bullish opportunities
+      // Highest bullish-alignment observations
       topPicks: {
         equity: topPicks.equity,
         crypto: topPicks.crypto,
         forex: topPicks.forex
       },
-      // Bottom bearish opportunities (for shorts)
+      // Highest bearish-alignment observations
       bottomPicks: {
         equity: bottomPicks.equity,
         crypto: bottomPicks.crypto,
         forex: bottomPicks.forex
       },
-      // Quick access to #1 picks
+      dataQuality: scannerDataQualityMetadata({
+        source: 'daily_picks_database',
+        computedAt: scanDate,
+        stale: false,
+        coverageScore: picks.length ? 100 : 0,
+        warnings: picks.length ? [] : ['No daily research observations are available yet.'],
+      }),
+      // Quick access to #1 research observations
       featured: {
         topEquity: topPicks.equity[0] || null,
         topCrypto: topPicks.crypto[0] || null,
@@ -116,7 +125,7 @@ export async function GET(req: NextRequest) {
       },
       // Powered by attribution
       attribution: {
-        crypto: "Powered by Yahoo Finance"
+        marketData: "Powered by licensed market data providers"
       }
     });
 
@@ -124,10 +133,17 @@ export async function GET(req: NextRequest) {
     console.error("Daily picks error:", error);
     return NextResponse.json({ 
       success: false, 
-      error: "Failed to fetch daily picks",
+      compliance: scannerComplianceMetadata(),
+      error: "Failed to fetch daily research observations",
       topPicks: { equity: [], crypto: [], forex: [] },
       bottomPicks: { equity: [], crypto: [], forex: [] },
-      featured: { topEquity: null, topCrypto: null, bottomEquity: null, bottomCrypto: null }
+      featured: { topEquity: null, topCrypto: null, bottomEquity: null, bottomCrypto: null },
+      dataQuality: scannerDataQualityMetadata({
+        source: 'error',
+        stale: true,
+        coverageScore: 0,
+        warnings: ['Unable to load daily research observations.'],
+      }),
     }, { status: 500 });
   }
 }

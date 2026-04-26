@@ -61,6 +61,12 @@ function dirColor(dir: string): string {
   return '#94a3b8';
 }
 
+function dirLabel(dir: string): string {
+  if (dir === 'LONG') return 'Bullish';
+  if (dir === 'SHORT') return 'Bearish';
+  return 'Neutral';
+}
+
 function qualityColor(q: string): string {
   if (q === 'high') return '#10B981';
   if (q === 'medium') return '#FBBF24';
@@ -105,13 +111,13 @@ const COLUMNS: Column[] = [
     ),
   },
   {
-    key: 'direction', label: 'Dir', width: '70px', align: 'center',
+    key: 'direction', label: 'Bias', width: '82px', align: 'center',
     render: (r) => (
       <span style={{
         fontSize: 11, fontWeight: 700, color: dirColor(r.direction),
         background: `${dirColor(r.direction)}18`, borderRadius: 4, padding: '2px 6px',
       }}>
-        {r.direction}
+        {dirLabel(r.direction)}
       </span>
     ),
   },
@@ -200,13 +206,13 @@ const COLUMNS: Column[] = [
     ),
   },
   {
-    key: 'permission', label: 'Status', width: '85px', align: 'center',
+    key: 'permission', label: 'Research', width: '105px', align: 'center',
     render: (r) => (
       <span style={{
         fontSize: 11, fontWeight: 700, color: permColor(r.permission),
         background: `${permColor(r.permission)}15`, borderRadius: 4, padding: '1px 5px',
       }}>
-        {r.permission === 'COMPLIANT' ? 'CLEAN' : r.permission === 'TIGHT' ? 'MIXED' : r.permission === 'BLOCKED' ? 'NOT ALIGNED' : '\u2014'}
+        {r.permission === 'COMPLIANT' ? 'ALIGNED' : r.permission === 'TIGHT' ? 'MIXED' : r.permission === 'BLOCKED' ? 'NOT ALIGNED' : '\u2014'}
       </span>
     ),
   },

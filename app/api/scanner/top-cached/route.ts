@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
+import { scannerComplianceMetadata, scannerDataQualityMetadata } from '@/lib/scanner/compliance';
 
 export const runtime = 'nodejs';
 
@@ -56,9 +57,11 @@ function computeQuickScore(row: Record<string, unknown>): { score: number; direc
     else bearish += 20;
   }
 
-  // ADX trend strength
-  if (adx > 25) bullish += 10;  // strong trend
-  else bearish += 5;
+  // ADX is trend strength, not direction. It only amplifies the side already supported by directional evidence.
+  if (adx > 25) {
+    if (bullish > bearish) bullish += 10;
+    else if (bearish > bullish) bearish += 10;
+  }
 
   // Stochastic
   if (stochK > 20 && stochK < 80) bullish += 10;
@@ -164,20 +167,35 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      compliance: scannerComplianceMetadata(),
       equity,
       crypto,
       source: 'worker_cache',
       cached_at: rows[0]?.fetched_at || null,
       stale,
       age_minutes: newestFetchedAt ? Math.round(ageMs / 60000) : null,
+      dataQuality: scannerDataQualityMetadata({
+        source: 'worker_cache',
+        computedAt: rows[0]?.fetched_at as string | undefined,
+        stale,
+        coverageScore: rows.length ? Math.min(100, Math.round((results.length / Math.max(1, rows.length)) * 100)) : 0,
+        warnings: stale ? ['Cached scanner data is older than the freshness threshold.'] : [],
+      }),
     });
   } catch (err) {
     console.error('[top-cached] Error:', err);
     return NextResponse.json({
       success: false,
+      compliance: scannerComplianceMetadata(),
       equity: [],
       crypto: [],
       source: 'error',
+      dataQuality: scannerDataQualityMetadata({
+        source: 'error',
+        stale: true,
+        coverageScore: 0,
+        warnings: ['Unable to load cached scanner data.'],
+      }),
     }, { status: 500 });
   }
 }

@@ -24,6 +24,7 @@ import { computeDVE } from "@/lib/directionalVolatilityEngine";
 import { getEdgeContext } from "@/lib/intelligence/edgeContextBuilder";
 import { normalizeSide } from "@/lib/intelligence/edgeProfile";
 import type { DVEInput, DVEReading, DVESignalType, VolRegime } from "@/lib/directionalVolatilityEngine.types";
+import { scannerComplianceMetadata, scannerDataQualityMetadata } from "@/lib/scanner/compliance";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic"; // Disable static optimization
@@ -2526,11 +2527,19 @@ export async function POST(req: NextRequest) {
       results,
       errors,
       metadata: {
+        compliance: scannerComplianceMetadata(),
         timestamp: new Date().toISOString(),
         count: results.length,
         minScore,
         timeframe,
         type,
+        dataQuality: scannerDataQualityMetadata({
+          source: type === 'crypto' ? 'coingecko' : type === 'equity' ? 'alpha_vantage_or_worker_cache' : 'alpha_vantage',
+          computedAt: new Date(),
+          stale: false,
+          coverageScore: results.length ? Math.max(0, 100 - Math.min(50, errors.length * 5)) : 0,
+          warnings: errors.slice(0, 5),
+        }),
         blockedByInstitutionalFilter: blockedCount,
         adaptiveTrader: {
           profile: adaptive.profile,

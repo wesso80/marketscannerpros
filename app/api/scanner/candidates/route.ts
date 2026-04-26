@@ -1,16 +1,17 @@
 /**
  * GET /api/scanner/candidates
  *
- * Returns the latest daily-pick scanner results mapped to the Candidate shape
- * consumed by TradePermissionDashboard. Uses real data from the nightly
+ * Returns the latest daily research observations mapped to the Candidate shape
+ * consumed by public research-alignment widgets. Uses real data from the nightly
  * scan-daily cron job stored in `daily_picks`.
  *
- * Falls back to an empty array if no picks are available.
+ * Falls back to an empty array if no research observations are available.
  */
 
 import { NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import type { StrategyTag, Direction } from '@/lib/risk-governor-hard';
+import { scannerComplianceMetadata, scannerDataQualityMetadata } from '@/lib/scanner/compliance';
 
 interface DailyPick {
   asset_class: string;
@@ -29,6 +30,8 @@ interface LiveCandidate {
   direction: Direction;
   confidence: number;
   asset_class: 'equities' | 'crypto';
+  reference_price: number;
+  invalidation_price: number;
   entry_price: number;
   stop_price: number;
   atr: number;
@@ -100,7 +103,17 @@ export async function GET() {
     `);
 
     if (!rows.length) {
-      return NextResponse.json({ candidates: [], source: 'none' });
+      return NextResponse.json({
+        candidates: [],
+        source: 'none',
+        compliance: scannerComplianceMetadata(),
+        dataQuality: scannerDataQualityMetadata({
+          source: 'none',
+          stale: true,
+          coverageScore: 0,
+          warnings: ['No scanner research observations are available yet.'],
+        }),
+      });
     }
 
     const candidates: LiveCandidate[] = rows
@@ -134,6 +147,8 @@ export async function GET() {
           direction,
           confidence,
           asset_class: assetClass,
+          reference_price: price,
+          invalidation_price: stopPrice,
           entry_price: price,
           stop_price: stopPrice,
           atr: Math.round(safeAtr * 100) / 100,
@@ -146,9 +161,26 @@ export async function GET() {
       candidates,
       source: 'daily_picks',
       count: candidates.length,
+      compliance: scannerComplianceMetadata(),
+      dataQuality: scannerDataQualityMetadata({
+        source: 'daily_picks_database',
+        computedAt: new Date(),
+        stale: false,
+        coverageScore: rows.length ? Math.round((candidates.length / Math.max(1, rows.length)) * 100) : 0,
+      }),
     });
   } catch (err: any) {
     console.error('[scanner/candidates]', err?.message || err);
-    return NextResponse.json({ candidates: [], source: 'error' });
+    return NextResponse.json({
+      candidates: [],
+      source: 'error',
+      compliance: scannerComplianceMetadata(),
+      dataQuality: scannerDataQualityMetadata({
+        source: 'error',
+        stale: true,
+        coverageScore: 0,
+        warnings: ['Unable to load scanner research observations.'],
+      }),
+    });
   }
 }
