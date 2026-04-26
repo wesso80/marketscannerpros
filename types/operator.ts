@@ -108,6 +108,15 @@ export interface FeatureVector {
     relativeVolumeScore: number;
     eventRiskScore: number;
     crossMarketScore: number;
+    trendDirection?: Direction | 'NEUTRAL';
+    momentumDirection?: Direction | 'NEUTRAL';
+    breakoutDirection?: Direction | 'NEUTRAL';
+    levelReclaimDirection?: Direction | 'NEUTRAL';
+    sweepDirection?: Direction | 'NEUTRAL';
+    cryptoSessionScore?: number | null;
+    microstructureProxyScore?: number | null;
+    relativeStrengthScore?: number | null;
+    fundingPressureProxy?: number | null;
     optionsFlowScore?: number | null;
     symbolTrustScore?: number | null;
     playbookHealthScore?: number | null;

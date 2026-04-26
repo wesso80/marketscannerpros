@@ -18,6 +18,7 @@ import type {
 } from "./types";
 import { toPermissionState, toBiasState } from "./types";
 import { renderTruth } from "./truth-layer";
+import { computeEliteSignalScore } from "@/lib/operator/elite-score";
 
 /* ── Compute raw indicator values from bars ── */
 function computeRawIndicators(bars: Bar[]) {
@@ -56,12 +57,17 @@ function extractLevels(keyLevels: KeyLevel[]): AdminSymbolIntelligence["levels"]
 export function pipelineToScannerHit(p: CandidatePipeline): ScannerHit {
   const v = p.verdict;
   const g = p.governance;
+  const elite = computeEliteSignalScore(p);
   return {
     symbol: v.symbol,
     bias: toBiasState(v.direction),
     regime: v.regime,
     permission: toPermissionState(g.finalPermission),
     confidence: Math.round(v.confidenceScore * 10) / 10,
+    eliteScore: elite.score,
+    eliteGrade: elite.grade,
+    setupState: elite.setupState,
+    triggerDistancePct: elite.triggerDistancePct,
     symbolTrust: Math.round((v.evidence.symbolTrust ?? 0.5) * 100),
     sizeMultiplier: Math.round(v.sizeMultiplier * 100) / 100,
     playbook: v.playbook,
@@ -96,10 +102,11 @@ export function pipelineToSymbolIntelligence(
 
   // Extract indicator values from feature vector if available
   // These get populated by the feature engine
-  const features = (p as any)._featureVector?.features;
+  const features = p.featureVector?.features ?? (p as any)._featureVector?.features;
 
   // Compute raw indicator values from candle data
   const raw = bars.length > 0 ? computeRawIndicators(bars) : null;
+  const elite = computeEliteSignalScore(p, bars);
 
   return {
     symbol: v.symbol,
@@ -111,6 +118,10 @@ export function pipelineToSymbolIntelligence(
     regime: v.regime,
     permission: toPermissionState(g.finalPermission),
     confidence: Math.round(v.confidenceScore * 10) / 10,
+    eliteScore: elite.score,
+    eliteGrade: elite.grade,
+    setupState: elite.setupState,
+    triggerDistancePct: elite.triggerDistancePct,
     symbolTrust: Math.round((v.evidence.symbolTrust ?? 0.5) * 100),
     sizeMultiplier: Math.round(v.sizeMultiplier * 100) / 100,
     lastScanAt: v.timestamp,

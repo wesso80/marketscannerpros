@@ -12,47 +12,13 @@ import { requireAdmin } from "@/lib/adminAuth";
 import { getSessionFromCookie } from "@/lib/auth";
 import { isOperator } from "@/lib/quant/operatorAuth";
 import { runScan } from "@/lib/operator/orchestrator";
-import type { ScanContext } from "@/lib/operator/orchestrator";
 import type { Market } from "@/types/operator";
 import { alphaVantageProvider } from "@/lib/operator/market-data";
 import { pipelineToSymbolIntelligence } from "@/lib/admin/serializer";
 import { emptyTruth } from "@/lib/admin/truth-layer";
+import { buildAdminScanContext } from "@/lib/admin/scan-context";
 
 export const runtime = "nodejs";
-
-const DEFAULT_CONTEXT: ScanContext = {
-  portfolioState: {
-    equity: 100000,
-    dailyPnl: 0,
-    drawdownPct: 0,
-    openRisk: 0,
-    correlationRisk: 0,
-    activePositions: 0,
-    killSwitchActive: false,
-  },
-  riskPolicy: {
-    maxDailyLossPct: 0.02,
-    maxDrawdownPct: 0.06,
-    maxOpenRiskPct: 0.05,
-    maxCorrelationRisk: 0.7,
-  },
-  executionEnvironment: {
-    brokerConnected: true,
-    estimatedSlippageBps: 10,
-    minLiquidityOk: true,
-  },
-  accountState: {
-    buyingPower: 100000,
-    accountRiskUnit: 0.01,
-  },
-  instrumentMeta: {},
-  healthContext: {
-    symbolTrustScore: 0.7,
-    playbookHealthScore: 0.7,
-    modelHealthScore: 0.7,
-  },
-  metaHealthThrottle: 1.0,
-};
 
 export async function GET(
   req: NextRequest,
@@ -74,9 +40,11 @@ export async function GET(
     const market = (searchParams.get("market") || "CRYPTO") as Market;
     const timeframe = searchParams.get("timeframe") || "15m";
 
+    const { context, risk } = await buildAdminScanContext();
+
     const result = await runScan(
       { symbols: [symbol], market, timeframe },
-      DEFAULT_CONTEXT,
+      context,
       alphaVantageProvider,
     );
 
@@ -92,6 +60,11 @@ export async function GET(
         regime: "ROTATIONAL_RANGE",
         permission: "WAIT",
         confidence: 0,
+        eliteScore: 0,
+        eliteGrade: "D",
+        setupState: "DISCOVERED",
+        triggerDistancePct: null,
+        riskSource: risk.source,
         symbolTrust: 50,
         sizeMultiplier: 0,
         lastScanAt: result.timestamp,
@@ -108,6 +81,7 @@ export async function GET(
           errors: result.errors,
           timestamp: result.timestamp,
           environmentMode: result.environmentMode,
+          risk,
         },
       });
     }
@@ -115,7 +89,10 @@ export async function GET(
     // Get bars for this symbol to compute price/change
     const bars = await alphaVantageProvider.getBars(symbol, market, timeframe);
     const pipeline = result.pipelines[0];
-    const intelligence = pipelineToSymbolIntelligence(pipeline, bars, [], result.timestamp);
+    const intelligence = {
+      ...pipelineToSymbolIntelligence(pipeline, bars, [], result.timestamp),
+      riskSource: risk.source,
+    };
 
     // Include bar data for charting (last 200 bars max)
     const chartBars = bars.slice(-200).map((b) => ({
@@ -136,6 +113,7 @@ export async function GET(
         timestamp: result.timestamp,
         environmentMode: result.environmentMode,
         engineVersions: result.engineVersions,
+        risk,
       },
     });
   } catch (err: unknown) {

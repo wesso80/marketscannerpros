@@ -6,6 +6,7 @@ import { scanResultToHealth, scanResultToHits } from "@/lib/admin/serializer";
 import type { ScannerHit, SystemHealth } from "@/lib/admin/types";
 import type { Market } from "@/types/operator";
 import { DEFAULT_WATCHLISTS } from "@/lib/operator/watchlists";
+import { enrichHitsWithExpectancy } from "@/lib/admin/expectancy";
 
 export type DeskState = "TRADE" | "WAIT" | "DEFENSIVE" | "BLOCK";
 
@@ -475,7 +476,7 @@ export async function buildMorningBrief(options: {
   };
 
   const scan = await runScan({ symbols, market, timeframe }, context, alphaVantageProvider);
-  const hits = scanResultToHits(scan);
+  const hits = await enrichHitsWithExpectancy(scanResultToHits(scan).map((hit) => ({ ...hit, riskSource: risk.source })));
   const health = scanResultToHealth(scan, true);
   const catalysts = await loadCatalysts(symbols, hits);
   const rankedHits = rankHitsWithLearning(hits, learning, catalysts);
@@ -2363,7 +2364,12 @@ function learningAdjustedScore(
   catalystPenalty: Map<string, number>,
 ) {
   const playbook = String(hit.playbook || hit.regime || "Unknown");
-  return Number(hit.confidence ?? 0)
+  const baseScore = hit.eliteScore != null
+    ? Number(hit.eliteScore)
+    : Number(hit.confidence ?? 0);
+  const expectancyBoost = hit.expectancy?.scoreBoost ?? 0;
+  return baseScore
+    + expectancyBoost
     + (symbolScores.get(hit.symbol) ?? 0)
     + (playbookScores.get(playbook) ?? 0)
     - (catalystPenalty.get(hit.symbol) ?? 0);

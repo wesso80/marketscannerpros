@@ -10,6 +10,7 @@ export default function RiskPage() {
   const { risk, error, refetch } = useRiskState(15_000);
 
   const exposure = risk?.openExposure ?? 0;
+  const openRiskUsd = risk?.openRiskUsd ?? 0;
   const drawdown = risk?.dailyDrawdown ?? 0;
   const killActive = risk?.killSwitchActive ?? false;
 
@@ -18,7 +19,7 @@ export default function RiskPage() {
       <SectionTitle title="Risk Governor" subtitle={error ? `Error: ${error}` : undefined} />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <MiniStat label="Open Exposure" value={`$${exposure.toLocaleString()}`} />
+        <MiniStat label="Open Risk" value={`$${openRiskUsd.toLocaleString()}`} />
         <MiniStat label="Daily Drawdown" value={`${(drawdown * 100).toFixed(2)}%`} />
         <MiniStat label="Correlation Risk" value={risk ? `${(risk.correlationRisk * 100).toFixed(0)}%` : "—"} />
         <MiniStat label="Positions" value={risk ? `${risk.activePositions} / ${risk.maxPositions}` : "— / —"} />
@@ -37,8 +38,16 @@ export default function RiskPage() {
             <span className="text-white/55 text-sm">Permission</span>
             <StatusPill
               label={risk?.permission ?? "WAIT"}
-              tone={risk?.permission === "ALLOW" ? "green" : risk?.permission === "BLOCK" ? "red" : "yellow"}
+              tone={risk?.permission === "GO" ? "green" : risk?.permission === "BLOCK" ? "red" : "yellow"}
             />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-white/55 text-sm">Risk Source</span>
+            <span className="text-white/60 text-xs font-mono">{risk?.source ?? "fallback"}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-white/55 text-sm">Open Exposure</span>
+            <span className="text-white/90 text-sm font-mono">{(exposure * 100).toFixed(2)}%</span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-white/55 text-sm">Size Multiplier</span>

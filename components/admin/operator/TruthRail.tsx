@@ -119,6 +119,13 @@ function FinalDecisionBlock({ truth, data }: { truth: TruthObject; data?: AdminS
 
   function handleActionClick() {
     if (!data) return;
+
+    // 1. Open TradingView chart for this symbol
+    const sym = data.symbol.replace(/USD$/, "").replace(/USDT$/, "");
+    const tvSymbol = `BINANCE:${sym}USDT`;
+    window.open(`https://www.tradingview.com/chart/?symbol=${tvSymbol}`, "_blank", "noopener");
+
+    // 2. Copy trade params to clipboard
     const lines = [
       `${data.symbol} ${data.bias} ${truth.finalVerdict}`,
       `Action: ${actionLabel(truth.operatorAction)}`,
@@ -168,7 +175,7 @@ function FinalDecisionBlock({ truth, data }: { truth: TruthObject; data?: AdminS
         }}
       >
         <span style={{ fontSize: "0.75rem", fontWeight: 700, color: actionColor(truth.operatorAction) }}>
-          {copied ? "✓ Copied trade params" : actionLabel(truth.operatorAction)}
+          {copied ? "✓ Opened TradingView · Params copied" : actionLabel(truth.operatorAction)}
         </span>
       </button>
 

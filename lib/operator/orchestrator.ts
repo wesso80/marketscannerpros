@@ -60,6 +60,7 @@ export interface ScanContext {
 
 export interface CandidatePipeline {
   candidate: TradeCandidate;
+  featureVector?: FeatureVector;
   doctrine: DoctrineEvaluation;
   verdict: Verdict;
   governance: GovernanceDecision;
@@ -228,7 +229,7 @@ async function runSymbolPipeline(
     }
     execPlans.push(executionPlan);
 
-    pipelines.push({ candidate, doctrine, verdict, governance, executionPlan, keyLevels, lastPrice: bars[bars.length - 1]?.close });
+    pipelines.push({ candidate, featureVector, doctrine, verdict, governance, executionPlan, keyLevels, lastPrice: bars[bars.length - 1]?.close });
   }
 
   // §13.1 — capture decision snapshot for replay

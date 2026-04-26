@@ -20,6 +20,14 @@ type WeightKey = keyof typeof DEFAULT_SCORING_WEIGHTS;
 function computeEvidenceScores(req: ScoringRequest): EvidenceScores {
   const f = req.featureVector.features;
   const r = req.regimeDecision;
+  const microstructure = f.microstructureProxyScore ?? f.relativeVolumeScore;
+  const cryptoStrength = f.relativeStrengthScore ?? f.momentumScore;
+  const participationFlow = req.candidate.market === 'CRYPTO'
+    ? clamp((f.relativeVolumeScore * 0.45) + (microstructure * 0.35) + (cryptoStrength * 0.20), 0, 1)
+    : clamp(f.relativeVolumeScore, 0, 1);
+  const timeConfluence = req.candidate.market === 'CRYPTO'
+    ? clamp(((f.cryptoSessionScore ?? f.timeConfluenceScore) * 0.7) + ((f.fundingPressureProxy ?? 0.5) * 0.3), 0, 1)
+    : clamp(f.timeConfluenceScore, 0, 1);
 
   // regimeFit: how well the regime supports this playbook
   const regimeFit = r.allowedPlaybooks.includes(req.candidate.playbook)
@@ -29,9 +37,9 @@ function computeEvidenceScores(req: ScoringRequest): EvidenceScores {
   return {
     regimeFit: clamp(regimeFit, 0, 1),
     structureQuality: clamp(f.structureScore, 0, 1),
-    timeConfluence: clamp(f.timeConfluenceScore, 0, 1),
+    timeConfluence,
     volatilityAlignment: clamp((f.volExpansionScore + (1 - f.extensionScore)) / 2, 0, 1),
-    participationFlow: clamp(f.relativeVolumeScore, 0, 1),
+    participationFlow,
     crossMarketConfirmation: clamp(f.crossMarketScore, 0, 1),
     eventSafety: clamp(f.eventRiskScore, 0, 1),
     extensionSafety: clamp(1 - f.extensionScore, 0, 1),

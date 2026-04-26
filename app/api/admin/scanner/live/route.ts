@@ -13,47 +13,14 @@ import { requireAdmin } from "@/lib/adminAuth";
 import { getSessionFromCookie } from "@/lib/auth";
 import { isOperator } from "@/lib/quant/operatorAuth";
 import { runScan } from "@/lib/operator/orchestrator";
-import type { ScanContext } from "@/lib/operator/orchestrator";
 import type { Market } from "@/types/operator";
 import { alphaVantageProvider } from "@/lib/operator/market-data";
 import { scanResultToHits, scanResultToHealth } from "@/lib/admin/serializer";
 import { recordSignals } from "@/lib/admin/signal-recorder";
+import { buildAdminScanContext } from "@/lib/admin/scan-context";
+import { enrichHitsWithExpectancy } from "@/lib/admin/expectancy";
 
 export const runtime = "nodejs";
-
-const DEFAULT_CONTEXT: ScanContext = {
-  portfolioState: {
-    equity: 100000,
-    dailyPnl: 0,
-    drawdownPct: 0,
-    openRisk: 0,
-    correlationRisk: 0,
-    activePositions: 0,
-    killSwitchActive: false,
-  },
-  riskPolicy: {
-    maxDailyLossPct: 0.02,
-    maxDrawdownPct: 0.06,
-    maxOpenRiskPct: 0.05,
-    maxCorrelationRisk: 0.7,
-  },
-  executionEnvironment: {
-    brokerConnected: false,
-    estimatedSlippageBps: 10,
-    minLiquidityOk: true,
-  },
-  accountState: {
-    buyingPower: 100000,
-    accountRiskUnit: 0.01,
-  },
-  instrumentMeta: {},
-  healthContext: {
-    symbolTrustScore: 0.7,
-    playbookHealthScore: 0.7,
-    modelHealthScore: 0.7,
-  },
-  metaHealthThrottle: 1.0,
-};
 
 const DEFAULT_SYMBOLS = ["ADA", "SUI", "MATIC", "FET", "SOL", "AVAX", "DOT", "LINK"];
 
@@ -75,13 +42,17 @@ export async function GET(req: NextRequest) {
     const market = (searchParams.get("market") || "CRYPTO") as Market;
     const timeframe = searchParams.get("timeframe") || "15m";
 
+    const { context, risk } = await buildAdminScanContext();
+
     const result = await runScan(
       { symbols, market, timeframe },
-      DEFAULT_CONTEXT,
+      context,
       alphaVantageProvider,
     );
 
-    const hits = scanResultToHits(result);
+    const hits = await enrichHitsWithExpectancy(
+      scanResultToHits(result).map((hit) => ({ ...hit, riskSource: risk.source })),
+    );
     const health = scanResultToHealth(result, true);
 
     // Fire-and-forget: log signals for outcome tracking
@@ -99,6 +70,7 @@ export async function GET(req: NextRequest) {
         timestamp: result.timestamp,
         engineVersions: result.engineVersions,
         environmentMode: result.environmentMode,
+        risk,
       },
     });
   } catch (err: unknown) {

@@ -6,7 +6,7 @@
  */
 
 import type {
-  Bar, FeatureVector, FeatureComputeRequest, Market, CrossMarketState, EventWindow, KeyLevel,
+  Bar, FeatureVector, FeatureComputeRequest, Market, CrossMarketState, EventWindow, KeyLevel, Direction,
 } from '@/types/operator';
 import type { OHLCVBar } from '@/lib/indicators';
 import {
@@ -48,11 +48,16 @@ export function computeFeatureVector(req: FeatureComputeRequest): FeatureVector 
     momentumScore: computeMomentum(ohlcv, closes),
     extensionScore: computeExtension(closes),
     structureScore: computeStructure(bars, keyLevels),
-    timeConfluenceScore: computeTimeConfluence(),
-    liquidityScore: computeLiquidity(bars),
+    timeConfluenceScore: computeTimeConfluence(market),
+    liquidityScore: computeLiquidity(bars, market),
     relativeVolumeScore: computeRelativeVolume(bars),
     eventRiskScore: computeEventRisk(eventSnapshot),
     crossMarketScore: computeCrossMarket(crossMarketSnapshot),
+    ...computeDirectionalContext(bars, closes, keyLevels),
+    cryptoSessionScore: market === 'CRYPTO' ? computeCryptoSessionScore() : null,
+    microstructureProxyScore: market === 'CRYPTO' ? computeMicrostructureProxy(bars) : null,
+    relativeStrengthScore: market === 'CRYPTO' ? computeRelativeStrengthProxy(closes) : null,
+    fundingPressureProxy: market === 'CRYPTO' ? computeFundingPressureProxy(bars) : null,
     optionsFlowScore: null as number | null,
     symbolTrustScore: null as number | null,
     playbookHealthScore: null as number | null,
@@ -282,7 +287,9 @@ function computeStructure(bars: Bar[], keyLevels: KeyLevel[]): number {
 /**
  * Time confluence: is current time in a favorable session window?
  */
-function computeTimeConfluence(): number {
+function computeTimeConfluence(market: Market): number {
+  if (market === 'CRYPTO') return computeCryptoSessionScore();
+
   const now = new Date();
   const hour = now.getUTCHours();
   const minute = now.getUTCMinutes();
@@ -303,9 +310,34 @@ function computeTimeConfluence(): number {
 }
 
 /**
+ * Crypto trades 24/7. Score the high-liquidity overlap windows instead of
+ * applying equity RTH timing to coins.
+ */
+function computeCryptoSessionScore(): number {
+  const now = new Date();
+  const hour = now.getUTCHours();
+  const day = now.getUTCDay();
+  const weekendPenalty = day === 0 || day === 6 ? -0.12 : 0;
+
+  let score = 0.5;
+  // Asia impulse / liquidity reset.
+  if (hour >= 0 && hour <= 3) score = 0.7;
+  // London open and Europe risk transfer.
+  else if (hour >= 7 && hour <= 10) score = 0.78;
+  // NY open / US macro overlap.
+  else if (hour >= 13 && hour <= 16) score = 0.85;
+  // NY afternoon continuation window.
+  else if (hour >= 18 && hour <= 20) score = 0.68;
+  // Thin liquidity windows.
+  else if (hour >= 21 || hour <= 23) score = 0.42;
+
+  return clamp(score + weekendPenalty, 0.25, 0.95);
+}
+
+/**
  * Liquidity: volume consistency and depth proxy.
  */
-function computeLiquidity(bars: Bar[]): number {
+function computeLiquidity(bars: Bar[], market: Market): number {
   if (bars.length < 10) return 0.5;
   const recent = bars.slice(-20);
   const volumes = recent.map(b => b.volume);
@@ -316,11 +348,122 @@ function computeLiquidity(bars: Bar[]): number {
   const variance = volumes.reduce((s, v) => s + Math.pow(v - avgVol, 2), 0) / volumes.length;
   const cv = Math.sqrt(variance) / avgVol;
 
-  // Also check absolute volume (>100k shares/day = good for equities)
-  const volScore = clamp(avgVol / 500000, 0, 0.5);
+  const volumeNormalizer = market === 'CRYPTO' ? Math.max(1, median(volumes) * 2.5) : 500000;
+  const volScore = clamp(avgVol / volumeNormalizer, 0, 0.5);
   const stabilityScore = clamp(1 - cv, 0, 0.5);
 
   return clamp(volScore + stabilityScore, 0, 1);
+}
+
+function median(values: number[]): number {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+function computeDirectionalContext(
+  bars: Bar[],
+  closes: number[],
+  keyLevels: KeyLevel[],
+): {
+  trendDirection: Direction | 'NEUTRAL';
+  momentumDirection: Direction | 'NEUTRAL';
+  breakoutDirection: Direction | 'NEUTRAL';
+  levelReclaimDirection: Direction | 'NEUTRAL';
+  sweepDirection: Direction | 'NEUTRAL';
+} {
+  const price = closes[closes.length - 1] ?? 0;
+  const ema20 = ema(closes, 20);
+  const ema50 = ema(closes, 50);
+  const recent = bars.slice(-6);
+  const prev = bars.length > 1 ? bars[bars.length - 2] : null;
+  const last = bars[bars.length - 1] ?? null;
+
+  let trendDirection: Direction | 'NEUTRAL' = 'NEUTRAL';
+  if (ema20 !== null && ema50 !== null) {
+    if (price > ema20 && ema20 > ema50) trendDirection = 'LONG';
+    else if (price < ema20 && ema20 < ema50) trendDirection = 'SHORT';
+  }
+
+  let momentumDirection: Direction | 'NEUTRAL' = 'NEUTRAL';
+  if (recent.length >= 2) {
+    const first = recent[0].close;
+    const lastClose = recent[recent.length - 1].close;
+    const change = first ? (lastClose - first) / first : 0;
+    if (change > 0.003) momentumDirection = 'LONG';
+    else if (change < -0.003) momentumDirection = 'SHORT';
+  }
+
+  let breakoutDirection: Direction | 'NEUTRAL' = 'NEUTRAL';
+  if (recent.length >= 4) {
+    const prior = recent.slice(0, -1);
+    const priorHigh = Math.max(...prior.map((b) => b.high));
+    const priorLow = Math.min(...prior.map((b) => b.low));
+    if (last && last.close > priorHigh) breakoutDirection = 'LONG';
+    else if (last && last.close < priorLow) breakoutDirection = 'SHORT';
+  }
+
+  let levelReclaimDirection: Direction | 'NEUTRAL' = 'NEUTRAL';
+  if (last && prev && keyLevels.length) {
+    const nearest = keyLevels
+      .map((level) => ({ level, dist: Math.abs(level.price - last.close) }))
+      .sort((a, b) => a.dist - b.dist)[0]?.level;
+    if (nearest) {
+      if (prev.close < nearest.price && last.close > nearest.price) levelReclaimDirection = 'LONG';
+      else if (prev.close > nearest.price && last.close < nearest.price) levelReclaimDirection = 'SHORT';
+    }
+  }
+
+  let sweepDirection: Direction | 'NEUTRAL' = 'NEUTRAL';
+  if (last && recent.length >= 4) {
+    const prior = recent.slice(0, -1);
+    const priorHigh = Math.max(...prior.map((b) => b.high));
+    const priorLow = Math.min(...prior.map((b) => b.low));
+    if (last.high > priorHigh && last.close < priorHigh) sweepDirection = 'SHORT';
+    else if (last.low < priorLow && last.close > priorLow) sweepDirection = 'LONG';
+  }
+
+  return { trendDirection, momentumDirection, breakoutDirection, levelReclaimDirection, sweepDirection };
+}
+
+function computeMicrostructureProxy(bars: Bar[]): number {
+  if (bars.length < 12) return 0.5;
+  const recent = bars.slice(-12);
+  let buyPressure = 0;
+  let total = 0;
+  for (const b of recent) {
+    const range = Math.max(1e-9, b.high - b.low);
+    const closeLocation = (b.close - b.low) / range;
+    const signed = (closeLocation - 0.5) * b.volume;
+    buyPressure += signed;
+    total += Math.abs(b.volume);
+  }
+  if (!total) return 0.5;
+  return clamp(0.5 + buyPressure / total, 0, 1);
+}
+
+function computeRelativeStrengthProxy(closes: number[]): number {
+  if (closes.length < 30) return 0.5;
+  const shortStart = closes[closes.length - 8];
+  const longStart = closes[closes.length - 30];
+  const current = closes[closes.length - 1];
+  const shortReturn = shortStart ? (current - shortStart) / shortStart : 0;
+  const longReturn = longStart ? (current - longStart) / longStart : 0;
+  return clamp(0.5 + shortReturn * 8 + longReturn * 3, 0, 1);
+}
+
+function computeFundingPressureProxy(bars: Bar[]): number {
+  if (bars.length < 20) return 0.5;
+  const recent = bars.slice(-8);
+  const prior = bars.slice(-20, -8);
+  const recentRange = recent.reduce((sum, b) => sum + (b.high - b.low), 0) / recent.length;
+  const priorRange = prior.reduce((sum, b) => sum + (b.high - b.low), 0) / prior.length;
+  const recentVol = recent.reduce((sum, b) => sum + b.volume, 0) / recent.length;
+  const priorVol = prior.reduce((sum, b) => sum + b.volume, 0) / prior.length;
+  const expansion = priorRange > 0 ? recentRange / priorRange : 1;
+  const participation = priorVol > 0 ? recentVol / priorVol : 1;
+  return clamp((expansion * 0.55 + participation * 0.45) / 2, 0, 1);
 }
 
 /**

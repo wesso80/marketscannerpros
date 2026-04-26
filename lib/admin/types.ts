@@ -6,6 +6,7 @@
  */
 import type { Permission, Regime, Direction, Playbook } from "@/types/operator";
 import type { TruthObject } from "./truth-layer";
+import type { EliteGrade } from "@/lib/operator/elite-score";
 
 /* ── Bias is a simplified Direction for the UI ── */
 export type BiasState = "LONG" | "SHORT" | "NEUTRAL";
@@ -34,11 +35,36 @@ export type ScannerHit = {
   regime: Regime | string;
   permission: PermissionState;
   confidence: number;
+  eliteScore?: number;
+  eliteGrade?: EliteGrade;
+  setupState?: "DISCOVERED" | "WATCHING" | "TRIGGERED" | "INVALIDATED" | "EXPIRED";
+  triggerDistancePct?: number | null;
+  riskSource?: "portfolio_journal" | "operator_state" | "fallback";
   symbolTrust: number;
   sizeMultiplier: number;
   playbook?: Playbook | string;
   blockReasons?: string[];
   timestamp?: string;
+  expectancy?: {
+    symbol: {
+      sample: number;
+      winRate: number | null;
+      avgR: number;
+      totalR: number;
+      profitFactor: number | null;
+      note: string;
+    };
+    playbook: {
+      sample: number;
+      winRate: number | null;
+      avgR: number;
+      totalR: number;
+      profitFactor: number | null;
+      note: string;
+    };
+    blendedAvgR: number;
+    scoreBoost: number;
+  };
 };
 
 /* ── Full symbol intelligence payload ── */
@@ -52,6 +78,11 @@ export type AdminSymbolIntelligence = {
   regime: Regime | string;
   permission: PermissionState;
   confidence: number;
+  eliteScore?: number;
+  eliteGrade?: EliteGrade;
+  setupState?: "DISCOVERED" | "WATCHING" | "TRIGGERED" | "INVALIDATED" | "EXPIRED";
+  triggerDistancePct?: number | null;
+  riskSource?: "portfolio_journal" | "operator_state" | "fallback";
   symbolTrust: number;
   sizeMultiplier: number;
   lastScanAt: string;

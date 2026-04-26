@@ -65,6 +65,21 @@ interface DetectionResult {
   notes: string[];
 }
 
+function directionalConsensus(
+  f: FeatureVector['features'],
+  fallback: Direction = 'LONG',
+): Direction {
+  const votes: Direction[] = [];
+  if (f.trendDirection && f.trendDirection !== 'NEUTRAL') votes.push(f.trendDirection);
+  if (f.momentumDirection && f.momentumDirection !== 'NEUTRAL') votes.push(f.momentumDirection);
+  if (f.levelReclaimDirection && f.levelReclaimDirection !== 'NEUTRAL') votes.push(f.levelReclaimDirection);
+  const longs = votes.filter((v) => v === 'LONG').length;
+  const shorts = votes.filter((v) => v === 'SHORT').length;
+  if (longs > shorts) return 'LONG';
+  if (shorts > longs) return 'SHORT';
+  return fallback;
+}
+
 /* ── Individual playbook detectors ──────────────────────────── */
 
 const detectors: PlaybookDetector[] = [
@@ -83,7 +98,9 @@ const detectors: PlaybookDetector[] = [
       );
 
       // Default entry zone — actual prices will come from live data
-      const direction: Direction = f.momentumScore > 0.5 ? 'LONG' : 'SHORT';
+      const direction: Direction = f.breakoutDirection && f.breakoutDirection !== 'NEUTRAL'
+        ? f.breakoutDirection
+        : directionalConsensus(f, f.momentumScore >= 0.5 ? 'LONG' : 'SHORT');
       const refLevel = direction === 'LONG' ? resistanceLevels[0] : supportLevels[0];
       const refPrice = refLevel?.price ?? 0;
 
@@ -103,7 +120,7 @@ const detectors: PlaybookDetector[] = [
       if (f.extensionScore > 0.7) return null;
       if (f.emaAlignmentScore < 0.4) return null;
 
-      const direction: Direction = f.trendScore > 0 ? 'LONG' : 'SHORT';
+      const direction: Direction = directionalConsensus(f, 'LONG');
       const { entryZone, invalidationPrice, targets } = computeEntryZone(bars, direction, 0, levels);
       return {
         direction,
@@ -120,7 +137,9 @@ const detectors: PlaybookDetector[] = [
       if (r.regime !== 'FAILED_BREAKOUT_TRAP' && r.regime !== 'TREND_EXHAUSTION') return null;
       if (f.structureScore < 0.4) return null;
 
-      const direction: Direction = f.momentumScore < 0.5 ? 'SHORT' : 'LONG';
+      const direction: Direction = f.sweepDirection && f.sweepDirection !== 'NEUTRAL'
+        ? f.sweepDirection
+        : f.momentumDirection === 'LONG' ? 'SHORT' : 'LONG';
       const { entryZone, invalidationPrice, targets } = computeEntryZone(bars, direction, 0, levels);
       return {
         direction,
@@ -137,7 +156,9 @@ const detectors: PlaybookDetector[] = [
       if (r.regime !== 'ROTATIONAL_RANGE' && r.regime !== 'TREND_EXHAUSTION') return null;
       if (f.extensionScore < 0.55) return null;
 
-      const direction: Direction = f.extensionScore > 0.5 ? 'SHORT' : 'LONG';
+      const direction: Direction = f.sweepDirection && f.sweepDirection !== 'NEUTRAL'
+        ? f.sweepDirection
+        : f.momentumDirection === 'LONG' ? 'SHORT' : 'LONG';
       const { entryZone, invalidationPrice, targets } = computeEntryZone(bars, direction, 0, levels);
       return {
         direction,
@@ -154,7 +175,9 @@ const detectors: PlaybookDetector[] = [
       if (r.regime !== 'COMPRESSION_COIL' && f.bbwpPercentile > 0.2) return null;
       if (f.atrPercentile > 0.3) return null;
 
-      const direction: Direction = f.emaAlignmentScore > 0.5 ? 'LONG' : 'SHORT';
+      const direction: Direction = f.breakoutDirection && f.breakoutDirection !== 'NEUTRAL'
+        ? f.breakoutDirection
+        : directionalConsensus(f, f.emaAlignmentScore >= 0.5 ? 'LONG' : 'SHORT');
       const { entryZone, invalidationPrice, targets } = computeEntryZone(bars, direction, 0, levels);
       return {
         direction,
@@ -188,7 +211,9 @@ const detectors: PlaybookDetector[] = [
       if (r.regime !== 'FAILED_BREAKOUT_TRAP') return null;
       if (f.liquidityScore > 0.5) return null;
 
-      const direction: Direction = f.momentumScore < 0.5 ? 'LONG' : 'SHORT';
+      const direction: Direction = f.sweepDirection && f.sweepDirection !== 'NEUTRAL'
+        ? f.sweepDirection
+        : f.momentumDirection === 'SHORT' ? 'LONG' : 'SHORT';
       const { entryZone, invalidationPrice, targets } = computeEntryZone(bars, direction, 0, levels);
       return {
         direction,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { timingSafeEqual } from 'crypto';
 import { alertCronFailure } from '@/lib/opsAlerting';
+import { requireAdmin } from '@/lib/adminAuth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -94,8 +95,9 @@ export async function POST(req: NextRequest) {
 
   const cronOk = cronSecret && timingSafeCompare(headerCron, cronSecret);
   const adminOk = adminSecret && timingSafeCompare(headerAuth, adminSecret);
+  const adminSessionOk = (await requireAdmin(req)).ok;
 
-  if (!cronOk && !adminOk) {
+  if (!cronOk && !adminOk && !adminSessionOk) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -146,6 +148,7 @@ export async function POST(req: NextRequest) {
             `UPDATE ai_signal_log SET outcome = 'expired', outcome_measured_at = NOW() WHERE id = $1`,
             [s.id],
           );
+          await updateLifecycleState(s.id, 'EXPIRED');
           expired++;
           labeled++;
         } else {
@@ -156,6 +159,7 @@ export async function POST(req: NextRequest) {
               `UPDATE ai_signal_log SET outcome = 'neutral', price_at_signal = $1, price_after_24h = $1, pct_move_24h = 0, outcome_measured_at = NOW() WHERE id = $2`,
               [nowPrice, s.id],
             );
+            await updateLifecycleState(s.id, 'EXPIRED');
             neutral++;
             labeled++;
           } else {
@@ -174,6 +178,7 @@ export async function POST(req: NextRequest) {
             `UPDATE ai_signal_log SET outcome = 'expired', outcome_measured_at = NOW() WHERE id = $1`,
             [s.id],
           );
+          await updateLifecycleState(s.id, 'EXPIRED');
           expired++;
           labeled++;
         } else {
@@ -208,6 +213,7 @@ export async function POST(req: NextRequest) {
          WHERE id = $4`,
         [outcome, currentPrice, clampedPct, s.id],
       );
+      await updateLifecycleState(s.id, outcome === 'correct' ? 'TARGET_1_HIT' : outcome === 'wrong' ? 'STOPPED' : 'EXPIRED', clampedPct);
       labeled++;
     }
 
@@ -223,6 +229,28 @@ export async function POST(req: NextRequest) {
     const message = err instanceof Error ? err.message : 'Labeling failed';
     await alertCronFailure('label-ai-outcomes', message);
     return NextResponse.json({ success: false, error: message }, { status: 500 });
+  }
+}
+
+async function updateLifecycleState(id: number, state: string, pctMove?: number) {
+  try {
+    await q(
+      `UPDATE ai_signal_log
+       SET lifecycle_state = $1,
+           target_1_hit_at = CASE WHEN $1 = 'TARGET_1_HIT' THEN NOW() ELSE target_1_hit_at END,
+           stop_hit_at = CASE WHEN $1 = 'STOPPED' THEN NOW() ELSE stop_hit_at END,
+           max_favorable_pct = CASE WHEN $2::numeric IS NOT NULL AND $2::numeric > 0 THEN GREATEST(COALESCE(max_favorable_pct, 0), $2::numeric) ELSE max_favorable_pct END,
+           max_adverse_pct = CASE WHEN $2::numeric IS NOT NULL AND $2::numeric < 0 THEN LEAST(COALESCE(max_adverse_pct, 0), $2::numeric) ELSE max_adverse_pct END,
+           expectancy_r = CASE
+             WHEN $1 = 'TARGET_1_HIT' THEN 1
+             WHEN $1 = 'STOPPED' THEN -1
+             ELSE 0
+           END
+       WHERE id = $3`,
+      [state, pctMove ?? null, id],
+    );
+  } catch {
+    // Lifecycle columns are optional until migration 068 is applied.
   }
 }
 

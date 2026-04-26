@@ -146,6 +146,10 @@ export function useSystemHealth(pollInterval = 30000) {
 /* ── Risk State ── */
 type RiskState = {
   openExposure: number;
+  openRiskUsd?: number;
+  exposureUsd?: number;
+  equity?: number;
+  dailyPnl?: number;
   dailyDrawdown: number;
   correlationRisk: number;
   maxPositions: number;
@@ -153,6 +157,9 @@ type RiskState = {
   killSwitchActive: boolean;
   permission: string;
   sizeMultiplier: number;
+  source?: string;
+  lastUpdatedAt?: string | null;
+  notes?: string[];
 };
 
 export function useRiskState(pollInterval = 30000) {
