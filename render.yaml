@@ -158,6 +158,20 @@
         sync: false
 
   - type: cron
+    name: daily-operator-morning-brief
+    runtime: node
+    schedule: "0 20 * * *"  # 8 PM UTC daily - morning brief email before Australia trading day
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 180 -X POST "$WEB_URL/api/jobs/email-morning-brief" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
+    envVars:
+      - key: WEB_URL
+        value: "https://marketscannerpros.app"
+      - key: CRON_SECRET
+        sync: false
+      - key: ADMIN_DAILY_BRIEF_EMAILS
+        sync: false
+
+  - type: cron
     name: label-signal-outcomes
     runtime: node
     schedule: "7 2,8,14,20 * * *"  # Every 6 hours - label operator signal outcomes after 24h
