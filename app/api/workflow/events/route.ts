@@ -1147,8 +1147,8 @@ async function attachCoachSummaryToJournalDraft(workspaceId: string, coachEvent:
     `UPDATE journal_entries
      SET notes = $2,
          updated_at = NOW()
-     WHERE id = $1`,
-    [draft.id, mergedNotes]
+     WHERE id = $1 AND workspace_id = $3`,
+    [draft.id, mergedNotes, workspaceId]
   );
 
   return true;

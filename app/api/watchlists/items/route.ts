@@ -104,8 +104,8 @@ export async function POST(req: NextRequest) {
 
     // Check item limit per watchlist (free: 10, pro: 50, pro_trader: unlimited)
     const countResult = await q(
-      'SELECT COUNT(*)::int as count FROM watchlist_items WHERE watchlist_id = $1',
-      [watchlistId]
+      'SELECT COUNT(*)::int as count FROM watchlist_items WHERE watchlist_id = $1 AND workspace_id = $2',
+      [watchlistId, session.workspaceId]
     );
     const currentCount = countResult[0]?.count || 0;
 
@@ -121,8 +121,8 @@ export async function POST(req: NextRequest) {
 
     // Get next sort order
     const sortResult = await q(
-      'SELECT COALESCE(MAX(sort_order), -1) + 1 as next_order FROM watchlist_items WHERE watchlist_id = $1',
-      [watchlistId]
+      'SELECT COALESCE(MAX(sort_order), -1) + 1 as next_order FROM watchlist_items WHERE watchlist_id = $1 AND workspace_id = $2',
+      [watchlistId, session.workspaceId]
     );
     const nextOrder = sortResult[0]?.next_order || 0;
 

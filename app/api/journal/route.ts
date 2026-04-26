@@ -231,6 +231,7 @@ async function ensureJournalSchema() {
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS proposal_id UUID`);
   await q(`ALTER TABLE journal_entries ADD COLUMN IF NOT EXISTS broker_order_id VARCHAR(120)`);
 
+  // tenant-audit: allow-global-migration — self-healing legacy normalization, not a user data read path.
   await q(`
     UPDATE journal_entries
        SET asset_class = CASE

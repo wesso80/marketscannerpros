@@ -11,6 +11,7 @@
     "test:dataQuality": "vitest run test/dataQuality.test.ts",
     "test:compliance": "vitest run test/public-compliance-copy.test.ts",
     "test:audit": "vitest run test/institutional-audit.test.ts",
+    "audit:tenant": "npx tsx scripts/audit-tenant-isolation.ts",
     "test:all": "vitest run",
     "migrate:midpoints": "npx tsx scripts/run-midpoints-migration.ts",
     "backfill:midpoints": "npx tsx scripts/backfill-midpoints.ts",
