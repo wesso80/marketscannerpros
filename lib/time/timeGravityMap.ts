@@ -519,16 +519,31 @@ function buildGravityZone(points: GravityPoint[]): GravityZone {
     .slice(0, 3)
     .map(p => p.timeframe);
   
-  // Calculate confidence (0-100)
-  let confidence = 50; // Base
-  confidence += Math.min(30, points.length * 10);  // More TFs = more confidence
-  confidence += Math.min(20, debtCount * 10);      // Debt adds confidence
-  confidence += Math.min(20, activeDecompressionCount * 10); // Active windows add confidence
-  confidence = Math.min(100, confidence);
-  
   // Visual intensity for heatmap
   const maxGravity = 500;
   const visualIntensity = Math.min(100, (totalGravity / maxGravity) * 100);
+
+  // Calculate confidence (0-100). Count/debt alone should not print a
+  // "100%" confluence reading when the actual gravity field is weak or no
+  // decompression window is active.
+  const stackedPointCount = points.filter(p => p.closeStackFactor > 1.15).length;
+  const avgDistance = points.reduce((sum, p) => sum + p.distance, 0) / points.length;
+  let confidence = 30;
+  confidence += Math.min(25, points.length * 6);                  // More TFs = more confidence
+  confidence += Math.min(15, debtCount * 4);                      // Debt adds context, not certainty
+  confidence += Math.min(20, activeDecompressionCount * 10);      // Active windows are the real timing edge
+  confidence += Math.min(10, stackedPointCount * 4);              // Close-stack support
+  confidence += Math.min(10, Math.max(0, 1.25 - avgDistance) * 8); // Nearer magnets are stronger
+  confidence += Math.min(10, visualIntensity / 5);                // Gravity-field strength
+
+  if (activeDecompressionCount === 0 && stackedPointCount === 0) {
+    confidence = Math.min(confidence, 72);
+  }
+  if (activeDecompressionCount === 0 && visualIntensity < 20) {
+    confidence = Math.min(confidence, 68);
+  }
+  if (visualIntensity < 10) confidence = Math.min(confidence, 60);
+  confidence = Math.min(100, Math.round(confidence));
   
   const tfs = points.map(p => p.timeframe).join(' • ');
   const label = `${minPrice.toFixed(2)}–${maxPrice.toFixed(2)} (${tfs})`;
@@ -603,8 +618,12 @@ export function computeTimeGravityMap(
   const liveMidpoints = midpoints.map(mp => {
     if (mp.tagged) return mp;  // Already tagged
 
-    // Direct touch: current price is within the midpoint's candle range
-    if (currentPrice >= mp.low && currentPrice <= mp.high) {
+    // Direct touch: without a live bar high/low, only mark as tagged when
+    // current price is actually at the midpoint area. The historical candle's
+    // full high/low range can contain current price while the 50% magnet is
+    // still untouched, so using that range caused false TARGET_HIT states.
+    const midpointDistancePct = Math.abs(((currentPrice - mp.midpoint) / currentPrice) * 100);
+    if (midpointDistancePct <= 0.03) {
       taggedThisCycle++;
       return { ...mp, tagged: true, taggedAt: currentTime };
     }

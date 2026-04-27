@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { computeTimeGravityMap, computeCloseConfluence, type ComputeTGMOptions, type CoverageDiagnostics } from '@/lib/time/timeGravityMap';
-import type { MidpointRecord } from '@/lib/time/midpointDebt';
+import { computeTimeGravityMap, type CoverageDiagnostics } from '@/lib/time/timeGravityMap';
+import { TF_WEIGHTS, type MidpointRecord } from '@/lib/time/midpointDebt';
 import { getMidpointService } from '@/lib/midpointService';
 import { getCandleProcessor, parseCoinGeckoOHLC } from '@/lib/candleProcessor';
 import type { OHLCVBar } from '@/lib/candleProcessor';
@@ -47,6 +47,56 @@ function isCryptoSymbol(symbol: string): boolean {
   if (CRYPTO_SUFFIXES.some(s => upper.endsWith(s) && upper.length > s.length)) return true;
   if (KNOWN_CRYPTO.has(upper)) return true;
   return false;
+}
+
+function isLocalTimeGravityDemoAllowed(): boolean {
+  return process.env.LOCAL_DEMO_MARKET_DATA === 'true' || process.env.NODE_ENV !== 'production';
+}
+
+function buildLocalDemoMidpoints(symbol: string, currentPrice: number, assetType: 'crypto' | 'equity'): MidpointRecord[] {
+  const now = new Date();
+  const tfSpecs = assetType === 'crypto'
+    ? [
+        ['30m', 0.32, 0.16],
+        ['1H', 0.42, 0.18],
+        ['4H', 0.55, 0.22],
+        ['1D', 0.72, 0.34],
+        ['1W', -1.15, 0.70],
+      ] as const
+    : [
+        ['1H', 0.40, 0.18],
+        ['2H', 0.50, 0.20],
+        ['4H', 0.66, 0.26],
+        ['1D', 0.90, 0.38],
+        ['1W', -1.35, 0.80],
+      ] as const;
+
+  return tfSpecs.map(([timeframe, distancePct, halfRangePct], index) => {
+    const midpoint = currentPrice * (1 + distancePct / 100);
+    const high = midpoint * (1 + halfRangePct / 100);
+    const low = midpoint * (1 - halfRangePct / 100);
+    const range = high - low;
+    const candleCloseTime = new Date(now.getTime() - (index + 1) * 60 * 60_000);
+    const candleOpenTime = new Date(candleCloseTime.getTime() - (index + 1) * 60 * 60_000);
+    return {
+      timeframe,
+      midpoint,
+      high,
+      low,
+      range,
+      retrace30High: high - range * 0.3,
+      retrace30Low: low + range * 0.3,
+      createdAt: candleCloseTime,
+      candleOpenTime,
+      candleCloseTime,
+      tagged: false,
+      taggedAt: null,
+      distanceFromPrice: ((midpoint - currentPrice) / currentPrice) * 100,
+      ageMinutes: Math.max(0, (now.getTime() - candleCloseTime.getTime()) / 60_000),
+      weight: TF_WEIGHTS[timeframe] || 1,
+      isAbovePrice: midpoint > currentPrice,
+    };
+  });
 }
 
 // ── Candle aggregation helpers ─────────────────────────────────────────────
@@ -467,6 +517,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Local/demo fallback: keeps the UI and math auditable when the developer
+    // machine has no midpoint DB/market-data keys. Never silently fake data in
+    // production.
+    const assetType: 'crypto' | 'equity' = (assetTypeHint === 'stock' || assetTypeHint === 'equity')
+      ? 'equity'
+      : (assetTypeHint === 'crypto' ? 'crypto' : (isCryptoSymbol(symbol) ? 'crypto' : 'equity'));
+
+    let localDemo = false;
+    const warnings: string[] = [];
+    if (midpoints.length === 0 && isLocalTimeGravityDemoAllowed()) {
+      midpoints = buildLocalDemoMidpoints(symbol, currentPrice, assetType);
+      localDemo = true;
+      warnings.push(`Local demo Time Gravity midpoints generated for ${symbol}. Not live market-data output.`);
+    }
+
     // No midpoints found — could mean all were tagged (target hit!)
     // Still compute TGM so the state machine returns TARGET_HIT / OVERSHOT
     // instead of a static "no data" error.
@@ -475,13 +540,9 @@ export async function GET(request: NextRequest) {
     const tgm = computeTimeGravityMap(midpoints, currentPrice);
     
     // Determine data source
-    const dataSource = midpointsStr ? 'custom' : 'database';
+    const dataSource = midpointsStr ? 'custom' : (localDemo ? 'local_demo' : 'database');
 
     // ── Coverage diagnostics ─────────────────────────────────────────
-    const assetType: 'crypto' | 'equity' = (assetTypeHint === 'stock' || assetTypeHint === 'equity')
-      ? 'equity'
-      : (assetTypeHint === 'crypto' ? 'crypto' : (isCryptoSymbol(symbol) ? 'crypto' : 'equity'));
-
     const EXPECTED_TFS: Record<string, string[]> = {
       equity: ['1H', '2H', '4H', '6H', '8H', '1D', '1W'],
       crypto: ['30m', '1H', '4H', '1D', '1W'],
@@ -507,6 +568,8 @@ export async function GET(request: NextRequest) {
       symbol,
       timestamp: new Date().toISOString(),
       dataSource,
+      localDemo,
+      warnings,
       midpointCount: midpoints.length,
       targetStatus: tgm.targetStatus,
       data: tgm,

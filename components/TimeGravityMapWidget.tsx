@@ -890,6 +890,7 @@ export default function TimeGravityMapWidget({
     rateLimited: boolean;
     error?: string;
   } | null>(null);
+  const [localDemoInfo, setLocalDemoInfo] = useState<{ active: boolean; warnings: string[] }>({ active: false, warnings: [] });
   const [coverage, setCoverage] = useState<CoverageDiagnostics | null>(null);
   const [calendar, setCalendar] = useState<ForwardCloseCalendar | null>(null);
   const [calendarLoading, setCalendarLoading] = useState(false);
@@ -947,6 +948,7 @@ export default function TimeGravityMapWidget({
       }
       
       const data = await res.json();
+      setLocalDemoInfo({ active: Boolean(data.localDemo), warnings: Array.isArray(data.warnings) ? data.warnings : [] });
       
       // Track midpoint count and generation info from API
       const apiMidpointCount = data.midpointCount ?? 0;
@@ -1154,6 +1156,13 @@ export default function TimeGravityMapWidget({
       
       {/* Target Status Banner */}
       <TargetStatusBanner tgm={tgm} />
+
+      {localDemoInfo.active && (
+        <div className="bg-amber-950/30 border border-amber-500/40 rounded-lg px-3 py-2 mb-3 text-xs text-amber-200">
+          <div className="font-semibold text-amber-300 mb-1">Local demo data — not live market output</div>
+          <div>{localDemoInfo.warnings[0] || 'Synthetic Time Gravity midpoints are being used because local live midpoint data is unavailable.'}</div>
+        </div>
+      )}
 
       {/* ── Empty state: No midpoint data for this symbol ────────────── */}
       {hasNoData && (
