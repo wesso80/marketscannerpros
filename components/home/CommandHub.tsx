@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import Hero from './Hero';
-import HomeProofStrip from './HomeProofStrip';
 import SocialProof from './SocialProof';
 import WhyMSP from './WhyMSP';
 
@@ -152,9 +151,6 @@ export default function CommandHub() {
     <main className="min-h-screen bg-[var(--msp-bg)] text-white">
       {/* ─── Coded Hero ─── */}
       <Hero />
-
-      {/* ─── Product proof strip (real screenshots under hero) ─── */}
-      <HomeProofStrip />
 
       {/* ─── Referral Promo ─── */}
       <section className="border-b border-white/5 bg-slate-950/70">
