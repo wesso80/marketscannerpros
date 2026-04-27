@@ -25,31 +25,35 @@ export default function ToolsPage() {
             Use MSP in one clear sequence.
           </h1>
           <p className="mt-4 max-w-3xl text-base leading-7 text-slate-300 sm:text-lg">
-            The tools are not all meant to compete for attention. Start with discovery, validate one symbol,
-            test the idea, then track outcomes. Specialist tools sit underneath that workflow.
+            Find scenarios, validate evidence, test safely, then track outcomes. Specialist tools sit underneath that workflow.
           </p>
         </div>
 
         <div className="mt-8 grid gap-4 md:grid-cols-4">
-          {['Find scenarios', 'Validate evidence', 'Test safely', 'Track outcomes'].map((step, index) => (
-            <div key={step} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+          {[
+            { id: 'find',     label: 'Find scenarios',    desc: 'Scanner, markets, macro, crypto context.' },
+            { id: 'validate', label: 'Validate evidence', desc: 'Golden Egg, Deep Analysis, options and liquidity context.' },
+            { id: 'test',     label: 'Test safely',       desc: 'Backtest and accuracy review before relying on a pattern.' },
+            { id: 'track',    label: 'Track outcomes',    desc: 'Journal, portfolio, workspace, alerts, and process improvement.' },
+          ].map((step, index) => (
+            <a
+              key={step.id}
+              href={`#${step.id}`}
+              className="group rounded-2xl border border-white/10 bg-white/[0.04] p-4 transition hover:-translate-y-0.5 hover:border-emerald-400/35 hover:bg-emerald-400/[0.06]"
+            >
               <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-400/15 text-sm font-black text-emerald-300">
                 {index + 1}
               </div>
-              <div className="text-sm font-bold text-white">{step}</div>
-              <div className="mt-1 text-xs leading-5 text-slate-400">
-                {index === 0 && 'Scanner, markets, macro, crypto context.'}
-                {index === 1 && 'Golden Egg, Deep Analysis, options and liquidity context.'}
-                {index === 2 && 'Backtest and accuracy review before relying on a pattern.'}
-                {index === 3 && 'Journal, portfolio, workspace, alerts, and process improvement.'}
-              </div>
-            </div>
+              <div className="text-sm font-bold text-white group-hover:text-emerald-200">{step.label}</div>
+              <div className="mt-1 text-xs leading-5 text-slate-400">{step.desc}</div>
+              <div className="mt-2 text-[11px] font-semibold text-emerald-300/70 group-hover:text-emerald-300">Jump to section ↓</div>
+            </a>
           ))}
         </div>
 
         <div className="mt-10 space-y-5">
           {toolWorkflows.map((workflow) => (
-            <section key={workflow.id} className="rounded-3xl border border-white/10 bg-slate-900/70 p-5 shadow-2xl shadow-black/20">
+            <section key={workflow.id} id={workflow.id} className="scroll-mt-24 rounded-3xl border border-white/10 bg-slate-900/70 p-5 shadow-2xl shadow-black/20">
               <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                   <h2 className="text-2xl font-black text-white">{workflow.title}</h2>
@@ -78,7 +82,7 @@ export default function ToolsPage() {
                     </div>
                     <div className="mt-4 flex items-center justify-between text-xs">
                       <span className="rounded-full border border-white/10 bg-slate-950/70 px-2 py-1 text-slate-300">{tierLabel[tool.tier]}</span>
-                      <span className="text-emerald-300 opacity-0 transition group-hover:opacity-100">Open →</span>
+                      <span className="text-emerald-300/70 transition group-hover:text-emerald-300 group-hover:translate-x-0.5">Open →</span>
                     </div>
                   </Link>
                 ))}

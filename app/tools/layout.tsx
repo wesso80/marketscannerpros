@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     template: '%s | Trading Tools | MarketScanner Pros',
   },
   description:
-    'Advanced market tools for scanner workflows, options confluence, portfolio tracking, heatmaps, earnings, macro, and AI-assisted analysis.',
+    'Workflow-first market research toolkit: scan, validate, test, journal. Educational tools only — no advice or execution.',
   alternates: {
     canonical: '/tools',
   },
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     url: 'https://marketscannerpros.app/tools',
     title: 'Trading Tools | MarketScanner Pros',
     description:
-      'Advanced market tools for scanner workflows, options confluence, portfolio tracking, heatmaps, earnings, macro, and AI-assisted analysis.',
+      'Use MSP in one clear sequence: find scenarios, validate evidence, test safely, track outcomes.',
     siteName: 'MarketScanner Pros',
     images: [
       {
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Trading Tools | MarketScanner Pros',
     description:
-      'Advanced market tools for scanner workflows, options confluence, portfolio tracking, heatmaps, earnings, macro, and AI-assisted analysis.',
+      'Use MSP in one clear sequence: find scenarios, validate evidence, test safely, track outcomes.',
     images: ['/scan-banner.png'],
   },
   robots: {
