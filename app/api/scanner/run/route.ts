@@ -203,10 +203,15 @@ function localDemoScanResponse(args: {
     forex: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'NZDUSD'],
   };
   const universe = (args.symbols?.length ? args.symbols : defaults[args.type]).slice(0, 8);
+  const demoPrices: Record<'crypto' | 'equity' | 'forex', Record<string, number>> = {
+    crypto: { BTC: 65000, ETH: 3250, SOL: 145, BNB: 580, XRP: 0.52, LINK: 15.5, AVAX: 36, DOGE: 0.15 },
+    equity: { AAPL: 520, MSFT: 473, NVDA: 426, GOOGL: 379, AMZN: 332, TSLA: 285, META: 510, AVGO: 1280 },
+    forex: { EURUSD: 1.08, GBPUSD: 1.27, USDJPY: 156.4, AUDUSD: 0.65, NZDUSD: 0.59, USDCAD: 1.36, USDCHF: 0.91, EURJPY: 168.9 },
+  };
   const results: ScanResult[] = universe.map((symbol, index) => {
     const bullish = index % 3 !== 2;
     const baseScore = Math.max(4, 9 - index);
-    const priceBase = args.type === 'crypto' ? 65000 / (index + 1) : args.type === 'forex' ? 1 + index * 0.12 : 520 - index * 47;
+    const priceBase = demoPrices[args.type][symbol.toUpperCase()] ?? (args.type === 'crypto' ? 65000 / (index + 1) : args.type === 'forex' ? 1 + index * 0.12 : 520 - index * 47);
     return {
       symbol,
       score: bullish ? baseScore : -baseScore,

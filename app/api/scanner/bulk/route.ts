@@ -829,6 +829,110 @@ const LIGHT_SCAN_PER_PAGE = 250;
 const LIGHT_SCAN_MAX_API_CALLS = Math.max(1, Number(process.env.SCANNER_LIGHT_MAX_CG_CALLS || 30));
 const LIGHT_EQUITY_MAX_API_CALLS = Math.max(2, Number(process.env.SCANNER_LIGHT_MAX_AV_CALLS || 8));
 
+function isLocalBulkDemoAllowed(): boolean {
+  return process.env.NODE_ENV !== 'production' || process.env.LOCAL_DEMO_MARKET_DATA === 'true';
+}
+
+function localDemoBulkScanResponse(args: {
+  type: 'equity' | 'crypto' | 'forex';
+  timeframe: string;
+  mode: BulkScanMode;
+  requestedUniverseSize: number;
+  reason: string;
+}) {
+  const symbolsByType: Record<'equity' | 'crypto' | 'forex', string[]> = {
+    equity: ['AAPL', 'MSFT', 'NVDA', 'GOOGL', 'AMZN', 'META', 'AVGO', 'TSLA'],
+    crypto: ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'LINK', 'AVAX', 'DOGE'],
+    forex: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'NZDUSD', 'USDCAD', 'USDCHF', 'EURJPY'],
+  };
+  const pricesByType: Record<'equity' | 'crypto' | 'forex', Record<string, number>> = {
+    equity: { AAPL: 520, MSFT: 473, NVDA: 426, GOOGL: 379, AMZN: 332, META: 510, AVGO: 1280, TSLA: 285 },
+    crypto: { BTC: 65000, ETH: 3250, SOL: 145, BNB: 580, XRP: 0.52, LINK: 15.5, AVAX: 36, DOGE: 0.15 },
+    forex: { EURUSD: 1.08, GBPUSD: 1.27, USDJPY: 156.4, AUDUSD: 0.65, NZDUSD: 0.59, USDCAD: 1.36, USDCHF: 0.91, EURJPY: 168.9 },
+  };
+
+  const topPicks = symbolsByType[args.type].map((symbol, index) => {
+    const bullish = index % 4 !== 2;
+    const neutral = index === 5;
+    const direction = neutral ? 'neutral' : bullish ? 'bullish' : 'bearish';
+    const price = pricesByType[args.type][symbol];
+    const atr = price * (0.018 + index * 0.0025);
+    const rsiValue = direction === 'bullish' ? 58 + index : direction === 'bearish' ? 43 - index : 50;
+    const adxValue = 18 + index * 2;
+    const confidence = Math.max(48, 82 - index * 5);
+    const signalStrength = Math.max(2, 8 - index);
+    const score = direction === 'bearish' ? Math.max(8, 100 - confidence) : confidence;
+    const setup = adxValue < 20
+      ? 'range_break_watch'
+      : direction === 'bullish'
+      ? 'trend_continuation_watch'
+      : direction === 'bearish'
+      ? 'downside_pressure_watch'
+      : 'mixed_structure_watch';
+    const trade = computeTradeParams(price, atr, direction);
+
+    return {
+      symbol,
+      score,
+      direction,
+      confidence,
+      setup,
+      signals: direction === 'bullish'
+        ? { bullish: signalStrength, bearish: 2, neutral: 1 }
+        : direction === 'bearish'
+        ? { bullish: 2, bearish: signalStrength, neutral: 1 }
+        : { bullish: 2, bearish: 2, neutral: signalStrength },
+      indicators: {
+        price: Number(price.toFixed(args.type === 'forex' ? 4 : 2)),
+        rsi: rsiValue,
+        adx: adxValue,
+        atr: Number(atr.toFixed(args.type === 'forex' ? 4 : 2)),
+        atr_percent: Number(((atr / price) * 100).toFixed(2)),
+        volume: args.type === 'forex' ? undefined : Math.round(1_500_000 * (index + 1)),
+        squeeze: index === 0,
+        squeezeStrength: index === 0 ? 72 : 0,
+        momentumAccel: index === 1,
+        momentumAccelScore: index === 1 ? 68 : 0,
+        sectorRelStr: args.type === 'equity' ? Number((1.4 - index * 0.3).toFixed(1)) : undefined,
+      },
+      change24h: direction === 'bearish' ? -1.2 - index * 0.2 : direction === 'bullish' ? 1.1 + index * 0.25 : 0.2,
+      ...trade,
+    };
+  });
+
+  const institutional = applyInstitutionalFilterToTopPicks(topPicks, {
+    type: args.type === 'crypto' ? 'crypto' : 'equity',
+    timeframe: args.timeframe,
+    mode: args.mode,
+  });
+
+  return NextResponse.json({
+    success: true,
+    compliance: scannerComplianceMetadata(),
+    type: args.type,
+    timeframe: args.timeframe,
+    mode: args.mode,
+    scanned: topPicks.length,
+    duration: '0.1s',
+    topPicks: institutional.topPicks,
+    blockedByInstitutionalFilter: institutional.blockedCount,
+    apiCallsUsed: 0,
+    apiCallsCap: 0,
+    effectiveUniverseSize: Math.min(args.requestedUniverseSize, topPicks.length),
+    dataQuality: scannerDataQualityMetadata({
+      source: 'local_demo',
+      computedAt: new Date(),
+      stale: true,
+      coverageScore: 0,
+      warnings: [
+        'Development-only Pro Scanner sample rows for workflow testing. Not live market data.',
+        args.reason,
+      ],
+    }),
+    errors: [`Local demo data is shown because live ${args.type} bulk scanner data is unavailable locally.`],
+  });
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
@@ -2171,12 +2275,34 @@ async function fetchCryptoDerivatives(symbol: string): Promise<DerivativesData |
 
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
+  let localFallbackArgs: { type: 'equity' | 'crypto' | 'forex'; timeframe: string; mode: BulkScanMode; requestedUniverseSize: number } | null = null;
   
   try {
     const session = await getSessionFromCookie();
     if (!session?.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const body = await req.json();
+    const { type, timeframe = '1d' } = body; // 'equity', 'crypto', or 'forex'
+    const validTimeframes = ['15m', '30m', '1h', '1d'];
+    const requestedMode = String(body?.mode || '').toLowerCase();
+    const mode: BulkScanMode = requestedMode === 'hybrid'
+      ? 'hybrid'
+      : requestedMode === 'light'
+        ? 'light'
+        : 'deep';
+    const isLightMode = mode === 'light' || mode === 'hybrid';
+    const universeSizeRaw = Number(body?.universeSize ?? body?.maxCoins ?? 0);
+    const requestedUniverseSize = Number.isFinite(universeSizeRaw) && universeSizeRaw > 0
+      ? Math.floor(universeSizeRaw)
+      : 500;
+    localFallbackArgs = {
+      type: ['equity', 'crypto', 'forex'].includes(type) ? type : 'crypto',
+      timeframe: validTimeframes.includes(timeframe) ? timeframe : '1d',
+      mode,
+      requestedUniverseSize,
+    };
 
     const effectiveTier = await getEffectiveTier(session.workspaceId, session.tier, session.cid, dbQuery);
     if (effectiveTier !== 'pro' && effectiveTier !== 'pro_trader') {
@@ -2190,19 +2316,6 @@ export async function POST(req: NextRequest) {
       ? await getAdaptiveLayer(session.workspaceId, { skill: 'scanner' }, 50)
       : null;
 
-    const body = await req.json();
-    const { type, timeframe = '1d' } = body; // 'equity', 'crypto', or 'forex'
-    const requestedMode = String(body?.mode || '').toLowerCase();
-    const mode: BulkScanMode = requestedMode === 'hybrid'
-      ? 'hybrid'
-      : requestedMode === 'light'
-        ? 'light'
-        : 'deep';
-    const isLightMode = mode === 'light' || mode === 'hybrid';
-    const universeSizeRaw = Number(body?.universeSize ?? body?.maxCoins ?? 0);
-    const requestedUniverseSize = Number.isFinite(universeSizeRaw) && universeSizeRaw > 0
-      ? Math.floor(universeSizeRaw)
-      : 500;
     const maxUniverseSize = effectiveTier === 'pro_trader' ? 500 : 250;
     const universeSize = Math.min(requestedUniverseSize, maxUniverseSize);
     
@@ -2210,7 +2323,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Type must be 'equity', 'crypto', or 'forex'" }, { status: 400 });
     }
     
-    const validTimeframes = ['15m', '30m', '1h', '1d'];
     const selectedTimeframe = validTimeframes.includes(timeframe) ? timeframe : '1d';
 
     if (type === 'crypto' && isLightMode) {
@@ -2457,6 +2569,12 @@ export async function POST(req: NextRequest) {
     
   } catch (error: any) {
     console.error("[bulk-scan] Error:", error);
+    if (isLocalBulkDemoAllowed() && localFallbackArgs) {
+      return localDemoBulkScanResponse({
+        ...localFallbackArgs,
+        reason: error?.message || 'Bulk scanner live data failed.',
+      });
+    }
     return NextResponse.json({
       error: error.message || "Scan failed",
       compliance: scannerComplianceMetadata(),

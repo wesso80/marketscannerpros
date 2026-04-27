@@ -267,11 +267,12 @@ async function addToWatchlist(symbol: string, assetType: string, price?: number)
 }
 
 /* ─── Inline Detail Panel ─── */
-function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
+function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeRegime }: {
   detail: SymbolDetail;
   timeframeLabel: string;
   onClose: () => void;
   assetType: string;
+  activeRegime?: string;
 }) {
   const [flashMsg, setFlashMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [savingCase, setSavingCase] = useState(false);
@@ -281,7 +282,8 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
   const quality = confidence >= 70 ? 'HIGH' : confidence >= 50 ? 'MEDIUM' : 'LOW';
   const adx = detail.adx ?? 0;
   const atrPercent = detail.atr && detail.price ? (detail.atr / detail.price) * 100 : 0;
-  const regime = adx >= 30 ? 'Trending' : adx < 20 ? 'Range' : 'Transitional';
+  const localRegime = adx >= 30 ? 'Trending' : adx < 20 ? 'Range' : 'Transitional';
+  const regime = activeRegime === 'range' ? 'Range' : localRegime;
 
   const trendAligned = (detail.signals?.bullish ?? 0) > (detail.signals?.bearish ?? 0) && direction === 'bullish'
     || (detail.signals?.bearish ?? 0) > (detail.signals?.bullish ?? 0) && direction === 'bearish';
@@ -837,9 +839,10 @@ export default function ScannerPage() {
     return proScanResults.topPicks
       .map((pick: any, idx: number) => {
         const ind = pick.indicators || {};
-        const conf = pick.confidence ?? Math.min(99, Math.max(10, Math.round(pick.score ?? 50)));
+        const scoreV2 = pick.scoreV2;
+        const conf = scoreV2?.final?.confidence ?? pick.confidence ?? Math.min(99, Math.max(10, Math.round(pick.score ?? 50)));
         const dir = (pick.direction === 'bullish' ? 'LONG' : pick.direction === 'bearish' ? 'SHORT' : 'NEUTRAL') as 'LONG' | 'SHORT' | 'NEUTRAL';
-        const qual = conf >= 70 ? 'high' : conf >= 50 ? 'medium' : 'low';
+        const qual = scoreV2?.final?.qualityTier ?? (conf >= 70 ? 'high' : conf >= 50 ? 'medium' : 'low');
         const pickRsi = pick.rsi ?? ind.rsi;
         const adxVal = pick.adx ?? ind.adx ?? 0;
         const atr = pick.atr ?? ind.atr ?? 0;
@@ -854,13 +857,32 @@ export default function ScannerPage() {
         const dataQuality = getDataQualityLabel({ price: priceVal, atr, rsi: pickRsi, adx: adxVal, direction: pick.direction });
         const missingInputs = getMissingInputs({ price: priceVal, atr, rsi: pickRsi, adx: adxVal, direction: pick.direction });
         const dataQualityDetailText = dataQualityDetail(dataQuality, missingInputs);
+        const blockReasons = scoreV2?.execution?.blockReasons || [];
+        const strategyKey = String(strat).toLowerCase();
+        const rangeConfirmationNeeded = currentRegime === 'range'
+          && dir !== 'NEUTRAL'
+          && !strategyKey.includes('range_fade')
+          && !strategyKey.includes('mean_reversion');
         const reason = dataQuality !== 'GOOD' ? dataQualityDetailText.replace(/\.$/, '')
+          : blockReasons.includes('risk_mode_block') ? 'Risk mode blocks escalation'
+          : blockReasons.includes('tf_alignment_low') ? 'Alignment below threshold'
+          : strategyKey.includes('range_break') ? 'Range break watch — needs expansion confirmation'
+          : rangeConfirmationNeeded ? 'Directional setup inside range — confirm break/fade'
           : tfA >= 4 && qual !== 'low' ? 'Multi-timeframe agreement'
           : atrPct < 1.5 ? 'Compression setup'
           : ind.momentumAccel ? 'Momentum acceleration'
           : trendOk ? 'Trend alignment'
           : 'Mixed evidence';
-        const perm = rec === LEGACY_MULTI_FACTOR_STATUS && qual !== 'low' && dataQuality === 'GOOD' ? 'COMPLIANT' : (rec === LEGACY_LOW_ALIGNMENT_STATUS || qual === 'low' || dataQuality === 'MISSING') ? 'BLOCKED' : 'TIGHT';
+        const enginePermission = scoreV2?.execution?.permission;
+        const perm = enginePermission === 'blocked' || rec === LEGACY_LOW_ALIGNMENT_STATUS || qual === 'low' || dataQuality === 'MISSING'
+            ? 'BLOCKED'
+            : rangeConfirmationNeeded && dataQuality === 'GOOD'
+              ? 'TIGHT'
+              : enginePermission === 'allowed' && dataQuality === 'GOOD'
+                ? 'COMPLIANT'
+            : rec === LEGACY_MULTI_FACTOR_STATUS && qual !== 'low' && dataQuality === 'GOOD'
+              ? 'COMPLIANT'
+              : 'TIGHT';
         return {
           rank: idx + 1, symbol: pick.symbol, direction: dir, confidence: conf, quality: qual,
           strategy: strat, rsi: pickRsi, adx: adxVal, atrPct, tfAlignment: tfA,
@@ -883,13 +905,34 @@ export default function ScannerPage() {
         }
         if (proSqueeze === 'squeeze' && !row.squeeze) return false;
         return true;
-      });
-  }, [proScanResults, proDirection, proQuality, proMinConfidence, proMtfAlignment, proVolState, proSqueeze]);
+      })
+      .map((row: ScreenerRow, index: number) => ({ ...row, rank: index + 1 }));
+  }, [proScanResults, proDirection, proQuality, proMinConfidence, proMtfAlignment, proVolState, proSqueeze, currentRegime]);
 
   /* ─── Pro scan row click ─── */
   const handleProRowClick = useCallback((row: ScreenerRow) => {
-    loadSymbolDetail(row.symbol, proTimeframe, proAsset);
-  }, [proTimeframe, proAsset, loadSymbolDetail]);
+    const direction = row.direction === 'LONG' ? 'bullish' : row.direction === 'SHORT' ? 'bearish' : 'neutral';
+    const atr = row.price && row.atrPct != null ? row.price * (row.atrPct / 100) : undefined;
+    const signalCount = Math.max(1, row.tfAlignment ?? 0);
+    setSelectedSymbol(row.symbol);
+    setDetailLoading(false);
+    setSymbolDetail({
+      symbol: row.symbol,
+      score: row.confidence,
+      direction,
+      price: row.price,
+      rsi: row.rsi,
+      adx: row.adx,
+      atr,
+      confidence: row.confidence,
+      setup: row.strategy,
+      signals: direction === 'bullish'
+        ? { bullish: signalCount, bearish: 1, neutral: 1 }
+        : direction === 'bearish'
+          ? { bullish: 1, bearish: signalCount, neutral: 1 }
+          : { bullish: 1, bearish: 1, neutral: signalCount },
+    });
+  }, []);
 
   /* ─── Detail section (shared between both modes) ─── */
   const detailTimeframeLabel = mode === 'ranked'
@@ -1291,6 +1334,12 @@ export default function ScannerPage() {
             <div className="rounded-lg border border-rose-500/25 bg-rose-500/10 px-4 py-2.5 text-sm text-rose-300">{proScanError}</div>
           )}
 
+          {proScanResults?.dataQuality?.source === 'local_demo' && (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-200">
+              <strong>Local demo Pro Scanner rows:</strong> live bulk scanner data is unavailable in this local environment, so these rows are sample research outputs for workflow testing only. Do not treat them as live scanner output.
+            </div>
+          )}
+
           {/* Pro Scan Results */}
           {proScanResults && (
             <div>
@@ -1344,6 +1393,7 @@ export default function ScannerPage() {
               timeframeLabel={detailTimeframeLabel}
               onClose={() => { setSelectedSymbol(null); setSymbolDetail(null); }}
               assetType={detailAssetType}
+              activeRegime={currentRegime}
             />
           ) : null}
         </>
