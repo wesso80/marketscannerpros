@@ -11,11 +11,20 @@ export const metadata: Metadata = {
       'Start free. Upgrade for unlimited scanning, AI analyst, backtesting, and Pro Trader research workflows.',
     url: 'https://marketscannerpros.app/pricing',
     type: 'website',
+    images: [
+      {
+        url: '/scan-banner.png',
+        width: 1200,
+        height: 630,
+        alt: 'MarketScanner Pros pricing plans',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Pricing — MarketScanner Pros',
     description: 'Free, Pro, and Pro Trader plans for educational market research.',
+    images: ['/scan-banner.png'],
   },
 };
 

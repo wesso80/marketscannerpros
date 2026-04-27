@@ -66,7 +66,7 @@ export default function PricingPage() {
 
   // Pre-fetch logged-in user's email for Stripe checkout pre-fill
   React.useEffect(() => {
-    fetch("/api/me").then(r => r.json()).then(d => {
+    fetch("/api/me").then(r => (r.ok ? r.json() : null)).then(d => {
       if (d?.email) setUserEmail(d.email);
     }).catch(() => {});
   }, []);
@@ -197,6 +197,14 @@ export default function PricingPage() {
     return savings > 0 ? `Save ${savingsPct}% yearly` : "";
   };
 
+  const annualSavingsLine = (plan: Plan) => {
+    if (plan.priceMonthly === 0) return "";
+    const yearlyEquivalent = plan.priceMonthly * 12;
+    const savings = Math.max(0, yearlyEquivalent - plan.priceYearly);
+    if (savings <= 0) return `or $${formatPrice(plan.priceYearly)}/year`;
+    return `or $${formatPrice(plan.priceYearly)}/year (save $${formatPrice(savings)})`;
+  };
+
   return (
     <main className="min-h-screen bg-[var(--msp-bg)] text-white">
       <div className="mx-auto max-w-6xl px-4 pb-16">
@@ -255,6 +263,7 @@ export default function PricingPage() {
               plan={p}
               cycle={cycle}
               savingsText={annualSavingsText(p)}
+              savingsLine={annualSavingsLine(p)}
               onCheckout={() => handleCheckout(p.id)}
               loading={loadingPlan === p.id}
             />
@@ -336,12 +345,14 @@ function PlanCard({
   plan,
   cycle,
   savingsText,
+  savingsLine,
   onCheckout,
   loading,
 }: {
   plan: Plan;
   cycle: BillingCycle;
   savingsText: string;
+  savingsLine: string;
   onCheckout: () => void;
   loading: boolean;
 }) {
@@ -352,7 +363,9 @@ function PlanCard({
     <div
       className={[
         "relative rounded-lg border p-5",
-        plan.highlight
+        plan.id === "pro_trader"
+          ? "border-amber-400/35 bg-amber-400/[0.055] shadow-[0_0_0_1px_rgba(251,191,36,0.08)]"
+          : plan.highlight
           ? "border-emerald-500/35 bg-emerald-500/[0.06] shadow-[0_0_0_1px_rgba(16,185,129,0.08)]"
           : "border-white/10 bg-white/[0.04]",
       ].join(" ")}
@@ -394,7 +407,7 @@ function PlanCard({
         {plan.priceMonthly > 0 ? (
           <div className="mt-1 text-xs text-white/50">
             {cycle === "monthly"
-              ? `or $${formatPrice(plan.priceYearly)}/year (save 2 months)`
+              ? savingsLine
               : `equivalent to $${formatPrice(plan.priceYearly / 12)}/month`}
           </div>
         ) : null}
@@ -432,6 +445,7 @@ function PlanCard({
 
       <div className="mt-6">
         <button
+          type="button"
           onClick={onCheckout}
           disabled={loading}
           className={[
@@ -458,6 +472,7 @@ function BillingSwitch({ cycle, onToggle }: { cycle: BillingCycle; onToggle: () 
     <button
       type="button"
       onClick={onToggle}
+      aria-pressed={on}
       className="relative inline-flex h-7 w-14 items-center rounded-full border border-white/10 bg-white/5 p-1"
       aria-label="Toggle billing cycle"
     >
@@ -481,7 +496,7 @@ function FaqItem({ faq, open, onToggle }: { faq: FAQ; open: boolean; onToggle: (
         className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left"
       >
         <div className="text-sm font-semibold">{faq.q}</div>
-        <span className="text-xs text-white/60">{open ? "—" : "+"}</span>
+        <span className="text-xs text-white/60" aria-hidden="true">{open ? "—" : "+"}</span>
       </button>
       {open ? (
         <div className="border-t border-white/10 px-4 py-4 text-sm text-white/70">
