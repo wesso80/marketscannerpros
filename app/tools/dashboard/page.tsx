@@ -13,6 +13,7 @@ import { REGIME_COLORS, CROSS_MARKET } from '@/app/v2/_lib/constants';
 import { Card, SectionHeader, Badge, ImpactDot, AuthPrompt, UpgradeGate } from '@/app/v2/_components/ui';
 import { useUserTier } from '@/lib/useUserTier';
 import { useCachedTopSymbols, type CachedSymbol } from '@/hooks/useCachedTopSymbols';
+import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 
 /* ─── Dynamic imports: v1 deep-dive components ─── */
 const CryptoDashboard = dynamic(() => import('@/app/tools/crypto-dashboard/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Crypto Derivatives…</div> });
@@ -62,7 +63,7 @@ function CardSkeleton({ rows = 4 }: { rows?: number }) {
 
 export default function DashboardPage() {
   const { navigateTo, selectSymbol } = useV2();
-  const [dashTab, setDashTab] = useState<DashTab>('My Pages');
+  const [dashTab, setDashTab] = useState<DashTab>('Command Center');
   const { tier } = useUserTier();
   const isPro = tier === 'pro' || tier === 'pro_trader';
 
@@ -92,6 +93,18 @@ export default function DashboardPage() {
     return <Card><AuthPrompt /></Card>;
   }
 
+  function openGoldenEgg(symbol: string) {
+    selectSymbol(symbol);
+    navigateTo('golden-egg', symbol);
+  }
+
+  function onSymbolRowKey(event: React.KeyboardEvent, symbol: string) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openGoldenEgg(symbol);
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* -- Regime Banner ---------------------------------------------- */}
@@ -113,12 +126,15 @@ export default function DashboardPage() {
       )}
 
       <SectionHeader title="Command Center" subtitle="What matters today — live data" />
+      <ComplianceDisclaimer collapsible />
 
       {/* ─── Tab Bar ─── */}
       <div className="flex items-center gap-1 flex-wrap border-b border-slate-800/50 pb-1">
         {DASH_TABS.map(t => (
           <button
             key={t}
+            type="button"
+            aria-pressed={dashTab === t}
             onClick={() => setDashTab(t)}
             className={`px-3 py-1.5 text-[11px] rounded-t-md whitespace-nowrap transition-colors ${
               dashTab === t
@@ -164,16 +180,16 @@ export default function DashboardPage() {
       <Card>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-white">Top Confluence Now</h3>
-          <button onClick={() => navigateTo('scanner')} className="text-[11px] text-emerald-400 hover:underline">Full Scanner &#x203A;</button>
+          <button type="button" onClick={() => navigateTo('scanner')} className="text-[11px] text-emerald-400 hover:underline">Full Scanner &#x203A;</button>
         </div>
         {[...cached.equity, ...cached.crypto].length === 0 ? (
           <div className="text-xs text-slate-500 py-4 text-center">
-            No cached data yet — <button onClick={() => navigateTo('scanner')} className="text-emerald-400 hover:underline">run the Scanner</button>
+            No cached data yet — <button type="button" onClick={() => navigateTo('scanner')} className="text-emerald-400 hover:underline">run the Scanner</button>
           </div>
         ) : (
           <div className="space-y-1">
             {[...cached.equity.slice(0, 3), ...cached.crypto.slice(0, 2)].map((r: CachedSymbol) => (
-              <div key={r.symbol} className="grid grid-cols-[5rem_3rem_1fr_4rem] items-center text-xs py-0.5 cursor-pointer hover:bg-slate-800/40 px-1 rounded" onClick={() => { selectSymbol(r.symbol); navigateTo('golden-egg', r.symbol); }}>
+              <div key={r.symbol} role="button" tabIndex={0} aria-label={`Open Golden Egg for ${r.symbol}`} className="grid grid-cols-[5rem_3rem_1fr_4rem] items-center text-xs py-0.5 cursor-pointer hover:bg-slate-800/40 focus:bg-slate-800/40 focus:outline-none px-1 rounded" onClick={() => openGoldenEgg(r.symbol)} onKeyDown={(e) => onSymbolRowKey(e, r.symbol)}>
                 <span className="font-semibold text-white">{r.symbol}</span>
                 <span className="text-[11px]" style={{ color: directionColor(r.direction) }}>{r.direction === 'bullish' ? '▲' : r.direction === 'bearish' ? '▼' : '●'} {r.score}</span>
                 <span className="text-slate-300 text-right font-mono tabular-nums">{fmtPrice(r.price)}</span>
@@ -195,7 +211,7 @@ export default function DashboardPage() {
               {eqGainers.length === 0 ? (
                 <div className="text-xs text-slate-500 py-1">No equity data</div>
               ) : eqGainers.map((m: Mover) => (
-                <div key={`eg-${m.ticker}`} className="grid grid-cols-[5rem_1fr_6rem] items-center text-xs py-0.5 cursor-pointer hover:bg-slate-800/40 px-1 rounded" onClick={() => { selectSymbol(m.ticker); navigateTo('golden-egg', m.ticker); }}>
+                <div key={`eg-${m.ticker}`} role="button" tabIndex={0} aria-label={`Open Golden Egg for ${m.ticker}`} className="grid grid-cols-[5rem_1fr_6rem] items-center text-xs py-0.5 cursor-pointer hover:bg-slate-800/40 focus:bg-slate-800/40 focus:outline-none px-1 rounded" onClick={() => openGoldenEgg(m.ticker)} onKeyDown={(e) => onSymbolRowKey(e, m.ticker)}>
                   <span className="font-semibold text-white">{m.ticker}</span>
                   <span className="text-slate-300 text-right font-mono tabular-nums">{fmtPrice(parseFloat(m.price))}</span>
                   <span className="text-emerald-400 font-mono text-right tabular-nums">+{m.change_percentage}</span>
@@ -205,7 +221,7 @@ export default function DashboardPage() {
               {eqLosers.length === 0 ? (
                 <div className="text-xs text-slate-500 py-1">No equity data</div>
               ) : eqLosers.map((m: Mover) => (
-                <div key={`el-${m.ticker}`} className="grid grid-cols-[5rem_1fr_6rem] items-center text-xs py-0.5 cursor-pointer hover:bg-slate-800/40 px-1 rounded" onClick={() => { selectSymbol(m.ticker); navigateTo('golden-egg', m.ticker); }}>
+                <div key={`el-${m.ticker}`} role="button" tabIndex={0} aria-label={`Open Golden Egg for ${m.ticker}`} className="grid grid-cols-[5rem_1fr_6rem] items-center text-xs py-0.5 cursor-pointer hover:bg-slate-800/40 focus:bg-slate-800/40 focus:outline-none px-1 rounded" onClick={() => openGoldenEgg(m.ticker)} onKeyDown={(e) => onSymbolRowKey(e, m.ticker)}>
                   <span className="font-semibold text-white">{m.ticker}</span>
                   <span className="text-slate-300 text-right font-mono tabular-nums">{fmtPrice(parseFloat(m.price))}</span>
                   <span className="text-red-400 font-mono text-right tabular-nums">{m.change_percentage}</span>
@@ -224,7 +240,7 @@ export default function DashboardPage() {
               {crGainers.length === 0 ? (
                 <div className="text-xs text-slate-500 py-1">No crypto data</div>
               ) : crGainers.map((m: Mover) => (
-                <div key={`cg-${m.ticker}`} className="grid grid-cols-[5rem_1fr_6rem] items-center text-xs py-0.5 cursor-pointer hover:bg-slate-800/40 px-1 rounded" onClick={() => { selectSymbol(m.ticker); navigateTo('golden-egg', m.ticker); }}>
+                <div key={`cg-${m.ticker}`} role="button" tabIndex={0} aria-label={`Open Golden Egg for ${m.ticker}`} className="grid grid-cols-[5rem_1fr_6rem] items-center text-xs py-0.5 cursor-pointer hover:bg-slate-800/40 focus:bg-slate-800/40 focus:outline-none px-1 rounded" onClick={() => openGoldenEgg(m.ticker)} onKeyDown={(e) => onSymbolRowKey(e, m.ticker)}>
                   <span className="font-semibold text-white">{m.ticker}</span>
                   <span className="text-slate-300 text-right font-mono tabular-nums">{fmtPrice(parseFloat(m.price))}</span>
                   <span className="text-emerald-400 font-mono text-right">+{m.change_percentage}</span>
@@ -234,7 +250,7 @@ export default function DashboardPage() {
               {crLosers.length === 0 ? (
                 <div className="text-xs text-slate-500 py-1">No crypto data</div>
               ) : crLosers.map((m: Mover) => (
-                <div key={`cl-${m.ticker}`} className="grid grid-cols-[5rem_1fr_6rem] items-center text-xs py-0.5 cursor-pointer hover:bg-slate-800/40 px-1 rounded" onClick={() => { selectSymbol(m.ticker); navigateTo('golden-egg', m.ticker); }}>
+                <div key={`cl-${m.ticker}`} role="button" tabIndex={0} aria-label={`Open Golden Egg for ${m.ticker}`} className="grid grid-cols-[5rem_1fr_6rem] items-center text-xs py-0.5 cursor-pointer hover:bg-slate-800/40 focus:bg-slate-800/40 focus:outline-none px-1 rounded" onClick={() => openGoldenEgg(m.ticker)} onKeyDown={(e) => onSymbolRowKey(e, m.ticker)}>
                   <span className="font-semibold text-white">{m.ticker}</span>
                   <span className="text-slate-300 text-right font-mono tabular-nums">{fmtPrice(parseFloat(m.price))}</span>
                   <span className="text-red-400 font-mono text-right">{m.change_percentage}</span>
@@ -266,7 +282,7 @@ export default function DashboardPage() {
                 ))}
               </div>
             )}
-            <button onClick={() => navigateTo('research')} className="mt-2 block text-[11px] text-emerald-400 hover:underline">Full Calendar &#x203A;</button>
+            <button type="button" onClick={() => navigateTo('research')} className="mt-2 block text-[11px] text-emerald-400 hover:underline">Full Calendar &#x203A;</button>
           </Card>
         )}
 
@@ -280,7 +296,7 @@ export default function DashboardPage() {
                 <span className="text-slate-500 text-right">{cm.effect}</span>
               </div>
             ))}
-            <button onClick={() => navigateTo('explorer')} className="mt-1 block text-[11px] text-emerald-400 hover:underline">Market Explorer &#x203A;</button>
+            <button type="button" onClick={() => navigateTo('explorer')} className="mt-1 block text-[11px] text-emerald-400 hover:underline">Market Explorer &#x203A;</button>
           </div>
         </Card>
       </div>
@@ -290,7 +306,7 @@ export default function DashboardPage() {
         <Card>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-white">Latest Headlines</h3>
-            <button onClick={() => navigateTo('research')} className="text-[11px] text-emerald-400 hover:underline">All News &#x203A;</button>
+            <button type="button" onClick={() => navigateTo('research')} className="text-[11px] text-emerald-400 hover:underline">All News &#x203A;</button>
           </div>
           {articles.length === 0 ? (
             <div className="text-xs text-slate-500 py-4 text-center">No recent news</div>
@@ -306,7 +322,7 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-slate-600">{n.source}</span>
                       {n.tickerSentiments?.slice(0, 3).map(ts => (
-                        <span key={ts.ticker} className="text-emerald-400 cursor-pointer hover:underline" onClick={() => { selectSymbol(ts.ticker); navigateTo('golden-egg', ts.ticker); }}>{ts.ticker}</span>
+                        <button key={ts.ticker} type="button" className="text-emerald-400 cursor-pointer hover:underline" onClick={() => openGoldenEgg(ts.ticker)}>{ts.ticker}</button>
                       ))}
                     </div>
                   </div>
