@@ -241,6 +241,8 @@ export default function GoldenEggPage() {
   const regime = useRegime();
 
   const ge = goldenEgg.data?.data;
+  const geLocalDemo = Boolean((goldenEgg.data as any)?.localDemo);
+  const geWarnings = ((goldenEgg.data as any)?.warnings || []) as string[];
   const geAssessment = ge?.layer1?.assessment ?? ge?.layer1?.permission;
   const geConfluenceScore = ge?.layer1?.confluenceScore ?? ge?.layer1?.confidence ?? 0;
   const geScenario = ge?.layer2?.scenario;
@@ -520,6 +522,16 @@ export default function GoldenEggPage() {
       {ge && !loading && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Golden Egg Deep Analysis">
         <>
+          {geLocalDemo && (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-200">
+              <strong>Local demo Golden Egg payload:</strong> live data is unavailable in this local environment, so this decision packet is sample data for workflow testing only. Do not treat it as live market output.
+              {geWarnings.length > 0 && (
+                <ul className="mt-1 list-disc pl-4 text-[11px] text-amber-300/90">
+                  {geWarnings.slice(0, 2).map((warning) => <li key={warning}>{warning}</li>)}
+                </ul>
+              )}
+            </div>
+          )}
           <ComplianceDisclaimer />
           {/* -- VERDICT HEADER (Section 0 — Answer First) ------------ */}
           <Card className="border-l-4" style={{ borderLeftColor: verdictColor(geAssessment || 'WATCH') }}>

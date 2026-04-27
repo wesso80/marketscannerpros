@@ -38,6 +38,95 @@ export const dynamic = 'force-dynamic';
 const cache = new Map<string, { data: GoldenEggPayload; ts: number }>();
 const CACHE_TTL = 3 * 60 * 1000;
 
+function isLocalGoldenEggDemoAllowed(): boolean {
+  return process.env.NODE_ENV !== 'production' || process.env.LOCAL_DEMO_MARKET_DATA === 'true';
+}
+
+function buildLocalDemoGoldenEggPayload(
+  symbol: string,
+  assetClass: 'equity' | 'crypto' | 'forex',
+  tfLabel: string,
+  reason: string,
+): GoldenEggPayload {
+  const demoPrices: Record<'equity' | 'crypto' | 'forex', Record<string, number>> = {
+    equity: { AAPL: 520, MSFT: 473, NVDA: 426, GOOGL: 379, AMZN: 332, META: 510, AVGO: 1280, TSLA: 285 },
+    crypto: { BTC: 65000, ETH: 3250, SOL: 145, BNB: 580, XRP: 0.52, LINK: 15.5, AVAX: 36, DOGE: 0.15 },
+    forex: { EURUSD: 1.08, GBPUSD: 1.27, USDJPY: 156.4, AUDUSD: 0.65, NZDUSD: 0.59, USDCAD: 1.36, USDCHF: 0.91, EURJPY: 168.9 },
+  };
+  const key = symbol.toUpperCase();
+  const basePrice = demoPrices[assetClass]?.[key] ?? (assetClass === 'crypto' ? 65000 : assetClass === 'forex' ? 1.1 : 420);
+  const closes = Array.from({ length: 260 }, (_, i) => {
+    const drift = (i / 259) * 0.12 - 0.04;
+    const wave = Math.sin(i / 12) * 0.012;
+    return basePrice * (1 + drift + wave);
+  });
+  const highs = closes.map((c) => c * 1.01);
+  const lows = closes.map((c) => c * 0.99);
+  const priceNow = closes[closes.length - 1];
+  const prev = closes[closes.length - 2];
+  const change = priceNow - prev;
+  const changePct = prev > 0 ? (change / prev) * 100 : 0;
+  const high = Math.max(...highs.slice(-20));
+  const low = Math.min(...lows.slice(-20));
+  const volume = assetClass === 'forex' ? 0 : 1_800_000;
+
+  const priceData = {
+    price: priceNow,
+    change,
+    changePct,
+    high,
+    low,
+    volume,
+    avgVolume: assetClass === 'forex' ? undefined : 1_500_000,
+    historicalCloses: closes,
+    historicalHighs: highs,
+    historicalLows: lows,
+  };
+
+  const indData: Indicators = {
+    rsi: 58,
+    macd: 0.85,
+    macdSignal: 0.44,
+    macdHist: 0.41,
+    adx: 24,
+    atr: priceNow * 0.025,
+    sma20: priceNow * 0.98,
+    sma50: priceNow * 0.94,
+    bbUpper: priceNow * 1.03,
+    bbMiddle: priceNow,
+    bbLower: priceNow * 0.97,
+    stochK: 63,
+    stochD: 56,
+    inSqueeze: false,
+    squeezeStrength: 18,
+  };
+
+  const payload = buildPayload(symbol, assetClass, priceData, indData, null, null, tfLabel, null, null, null);
+  const baseNarrative = payload.layer3.narrative ?? {
+    enabled: true,
+    summary: `${symbol} local demo Golden Egg context is available for workflow testing only.`,
+    bullets: [],
+    risks: [],
+  };
+  return {
+    ...payload,
+    layer1: {
+      ...payload.layer1,
+      primaryBlocker: payload.layer1.primaryBlocker || 'Live market data unavailable locally — demo payload',
+      flipConditions: payload.layer1.flipConditions.length
+        ? payload.layer1.flipConditions
+        : [{ id: 'ld1', text: 'Local demo payload only. Validate with live market data before acting.', severity: 'must' }],
+    },
+    layer3: {
+      ...payload.layer3,
+      narrative: {
+        ...baseNarrative,
+        summary: `${baseNarrative.summary} Local demo payload: ${reason}.`,
+      },
+    },
+  };
+}
+
 // ── Adaptive price rounding (preserves precision for sub-dollar assets) ──
 function roundPrice(v: number): number {
   if (v === 0) return 0;
@@ -170,13 +259,24 @@ function buildPayload(
     if (isLong) return Math.min(raw, p * (1 + maxTargetPct));
     return Math.max(raw, p * (1 - maxTargetPct));
   };
-  const t1Raw = isLong ? p + stopDistance * (2 / 3) : p - stopDistance * (2 / 3);
-  const t2Raw = decompAligned ? decompTarget!.price : (isLong ? p + stopDistance * (4 / 3) : p - stopDistance * (4 / 3));
-  const t3Raw = isLong ? p + stopDistance * 2 : p - stopDistance * 2;
+  const t1Raw = isLong ? p + stopDistance : p - stopDistance;
+  const defaultPrimaryTarget = isLong ? p + stopDistance * 1.5 : p - stopDistance * 1.5;
+  const t2Raw = decompAligned ? decompTarget!.price : defaultPrimaryTarget;
+  const t3Raw = isLong ? p + stopDistance * 2.5 : p - stopDistance * 2.5;
   const t1 = capTarget(t1Raw);
-  const t2 = capTarget(t2Raw);
+  const t2 = capTarget(isLong ? Math.max(t2Raw, defaultPrimaryTarget) : Math.min(t2Raw, defaultPrimaryTarget));
   const t3 = capTarget(t3Raw);
   const rr = stopDistance > 0 ? (Math.abs(t2 - p)) / stopDistance : 0;
+  const referencePrice = permission === 'TRADE'
+    ? p
+    : permission === 'WATCH'
+    ? (isLong ? p + atr * 0.3 : p - atr * 0.3)
+    : undefined;
+  const referenceTrigger = permission === 'TRADE'
+    ? `${isLong ? 'Bullish scenario' : 'Bearish scenario'}: reference zone near $${fmtPriceStr(isLong ? p - atr * 0.3 : p + atr * 0.3)} or confirmation evidence.`
+    : permission === 'WATCH' && referencePrice
+    ? `Watch for ${isLong ? 'bullish' : 'bearish'} confirmation near $${fmtPriceStr(referencePrice)} with volume or volatility expansion.`
+    : 'Monitor whether flip conditions are met.';
 
   // Timeframe alignment from MPE time pressure
   const tfScore = mpe ? Math.min(4, Math.round(mpe.time / 25)) : 2;
@@ -460,10 +560,8 @@ function buildPayload(
         invalidation: `Scenario weakens if price ${isLong ? 'closes below' : 'closes above'} $${fmtPriceStr(stopPrice)} with volume confirmation.`,
       },
       execution: {
-        entryTrigger: permission === 'TRADE'
-          ? `${isLong ? 'Bullish scenario' : 'Bearish scenario'}: reference zone near $${fmtPriceStr(isLong ? p - atr * 0.3 : p + atr * 0.3)} or confirmation evidence.`
-          : 'Monitor whether flip conditions are met.',
-        entry: { type: permission === 'TRADE' ? 'limit' : 'stop', price: permission === 'TRADE' ? p : undefined },
+        entryTrigger: referenceTrigger,
+        entry: { type: permission === 'TRADE' ? 'limit' : 'stop', price: referencePrice ? roundPrice(referencePrice) : undefined },
         stop: { price: roundPrice(stopPrice), logic: `${(1.5).toFixed(1)}x ATR from reference — beyond recent structure` },
         targets: [
           { price: roundPrice(t1), rMultiple: stopDistance > 0 ? Math.round(Math.abs(t1 - p) / stopDistance * 10) / 10 : 1, note: 'First reaction zone' },
@@ -474,10 +572,8 @@ function buildPayload(
         sizingHint: { riskPct: confidence >= 70 ? 1.0 : confidence >= 55 ? 0.75 : 0.5 },
       },
       scenario: {
-        referenceTrigger: permission === 'TRADE'
-          ? `${isLong ? 'Bullish scenario' : 'Bearish scenario'}: reference zone near $${fmtPriceStr(isLong ? p - atr * 0.3 : p + atr * 0.3)} or confirmation evidence.`
-          : 'Monitor whether flip conditions are met.',
-        referenceLevel: { type: permission === 'TRADE' ? 'reference' : 'confirmation', price: permission === 'TRADE' ? roundPrice(p) : undefined },
+        referenceTrigger,
+        referenceLevel: { type: permission === 'TRADE' ? 'reference' : 'confirmation', price: referencePrice ? roundPrice(referencePrice) : undefined },
         invalidationLevel: { price: roundPrice(stopPrice), logic: `${(1.5).toFixed(1)}x ATR from reference — beyond recent structure` },
         reactionZones: [
           { price: roundPrice(t1), rMultiple: stopDistance > 0 ? Math.round(Math.abs(t1 - p) / stopDistance * 10) / 10 : 1, note: 'First reaction zone' },
@@ -705,6 +801,9 @@ function buildThesis(dir: Direction, setup: string, ind: Indicators | null, opts
 
 // ── GET handler ─────────────────────────────────────────────────────────
 export async function GET(request: NextRequest) {
+  let fallbackSymbol = 'AAPL';
+  let fallbackAssetClass: 'equity' | 'crypto' | 'forex' = 'equity';
+  let fallbackTfLabel = '1D';
   try {
     const session = await getSessionFromCookie();
     if (!session?.workspaceId) {
@@ -726,6 +825,9 @@ export async function GET(request: NextRequest) {
     const tfLabel = timeframe === '15m' ? '15m' : timeframe === '1h' ? '1H' : timeframe === 'weekly' ? '1W' : '1D';
 
     const assetClass = detectAssetClass(symbol, searchParams.get('type') || undefined);
+    fallbackSymbol = symbol;
+    fallbackAssetClass = assetClass;
+    fallbackTfLabel = tfLabel;
 
     // Check cache (include timeframe + asset class in key)
     const cacheKey = `${symbol}_${timeframe}_${assetClass}`;
@@ -745,6 +847,17 @@ export async function GET(request: NextRequest) {
     const mpeData = await fetchMPE(symbol, assetClass, tcData);
 
     if (!priceData) {
+      if (isLocalGoldenEggDemoAllowed()) {
+        return NextResponse.json({
+          success: true,
+          data: buildLocalDemoGoldenEggPayload(symbol, assetClass, tfLabel, `Unable to fetch live price data for ${symbol}`),
+          localDemo: true,
+          warnings: [
+            'Development-only Golden Egg payload for workflow testing. Not live market data.',
+            `Unable to fetch live price data for ${symbol}`,
+          ],
+        });
+      }
       return NextResponse.json({ success: false, error: `Unable to fetch price data for ${symbol}` }, { status: 404 });
     }
 
@@ -786,6 +899,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, data: payload });
   } catch (error) {
     console.error('[Golden Egg API] Error:', error);
+    if (isLocalGoldenEggDemoAllowed()) {
+      return NextResponse.json({
+        success: true,
+        data: buildLocalDemoGoldenEggPayload(fallbackSymbol, fallbackAssetClass, fallbackTfLabel, error instanceof Error ? error.message : 'Unknown Golden Egg error'),
+        localDemo: true,
+        warnings: [
+          'Development-only Golden Egg payload for workflow testing. Not live market data.',
+          error instanceof Error ? error.message : 'Unknown Golden Egg error',
+        ],
+      });
+    }
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : 'Analysis failed' },
       { status: 500 }
