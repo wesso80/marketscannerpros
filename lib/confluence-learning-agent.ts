@@ -590,7 +590,7 @@ export interface HierarchicalScanResult {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export class ConfluenceLearningAgent {
-  private openai: OpenAI;
+  private openai: OpenAI | null;
   private learningCache: Map<string, SymbolLearning> = new Map();
 
   /**
@@ -608,9 +608,9 @@ export class ConfluenceLearningAgent {
   private tvCalibrationOffset: number | null = null;
 
   constructor() {
-    this.openai = new OpenAI({
+    this.openai = process.env.OPENAI_API_KEY ? new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
-    });
+    }) : null;
   }
 
   private async getLearningStats(symbol: string): Promise<{
@@ -4230,6 +4230,10 @@ Provide a concise analysis (3-4 sentences) explaining:
 2. When price should start decompressing (moving)
 3. The most likely direction based on learned patterns
 4. Key 50% levels to watch`;
+
+    if (!this.openai) {
+      return 'AI narrative is unavailable because OPENAI_API_KEY is not configured. Review the structured confluence, timing, level, and risk fields directly; this fallback is informational only and is not financial advice.';
+    }
 
     const response = await this.openai.chat.completions.create({
       model: 'gpt-4o',

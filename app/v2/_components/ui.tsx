@@ -40,7 +40,7 @@ export function SectionHeader({ title, subtitle, action }: { title: string; subt
   return (
     <div className="flex items-center justify-between mb-4">
       <div>
-        <h2 className="text-[1.25rem] font-semibold text-white uppercase tracking-[0.03em]">{title}</h2>
+        <h1 className="text-[1.25rem] font-semibold text-white uppercase tracking-[0.03em]">{title}</h1>
         {subtitle && <p className="text-[0.82rem] text-[var(--msp-text-muted)] mt-0.5">{subtitle}</p>}
       </div>
       {action}
@@ -90,6 +90,8 @@ export function TabBar({ tabs, active, onChange }: { tabs: string[]; active: str
       {tabs.map(t => (
         <button
           key={t}
+          type="button"
+          aria-pressed={active === t}
           onClick={() => onChange(t)}
           className={`px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap transition-colors ${
             active === t

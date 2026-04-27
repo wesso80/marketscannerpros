@@ -9,10 +9,19 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const rows = await q(
-    'SELECT page_key, display_order FROM user_favorites WHERE workspace_id = $1 ORDER BY display_order ASC, added_at ASC',
-    [session.workspaceId]
-  );
+  let rows: Array<{ page_key: string; display_order: number }> = [];
+  try {
+    rows = await q(
+      'SELECT page_key, display_order FROM user_favorites WHERE workspace_id = $1 ORDER BY display_order ASC, added_at ASC',
+      [session.workspaceId]
+    );
+  } catch (error: any) {
+    if (error?.code === 'ECONNREFUSED' || error?.code === 'ENOTFOUND' || !process.env.DATABASE_URL) {
+      console.warn('[Favorites] Database unavailable; returning empty local fallback.');
+      return NextResponse.json({ favorites: [], degraded: true });
+    }
+    throw error;
+  }
 
   return NextResponse.json({ favorites: rows.map(r => r.page_key) });
 }

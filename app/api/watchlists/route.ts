@@ -71,6 +71,10 @@ export async function GET(req: NextRequest) {
         console.error('Error auto-creating watchlist tables:', createErr);
       }
     }
+    if (error?.code === 'ECONNREFUSED' || error?.code === 'ENOTFOUND' || !process.env.DATABASE_URL) {
+      console.warn('[Watchlists] Database unavailable; returning empty local fallback.');
+      return NextResponse.json({ watchlists: [], degraded: true });
+    }
     console.error('Error fetching watchlists:', error);
     return NextResponse.json({ error: 'Failed to fetch watchlists' }, { status: 500 });
   }

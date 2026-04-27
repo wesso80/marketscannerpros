@@ -509,9 +509,9 @@ export default function GoldenEggPage() {
       {goldenEgg.error && !loading && (
         <Card>
           <div className="py-8 text-center">
-            <div className="text-red-400 text-sm mb-2">Failed to load Golden Egg for {sym}</div>
+            <div className="text-amber-300 text-sm mb-2">Market data unavailable for {sym}</div>
             <div className="text-[11px] text-slate-500 mb-4">{goldenEgg.error}</div>
-            <button onClick={() => goldenEgg.refetch()} className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-xs hover:bg-emerald-500/30">Retry</button>
+            <button type="button" onClick={() => goldenEgg.refetch()} className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-xs hover:bg-emerald-500/30">Retry</button>
           </div>
         </Card>
       )}

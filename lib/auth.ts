@@ -3,11 +3,13 @@ import crypto from "crypto";
 import { cookies } from "next/headers";
 import { isFreeForAllMode } from '@/lib/entitlements';
 
-if (!process.env.APP_SIGNING_SECRET) {
+const isProductionRuntime = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
+
+if (!process.env.APP_SIGNING_SECRET && isProductionRuntime) {
   throw new Error("APP_SIGNING_SECRET environment variable is required");
 }
 
-const APP_SIGNING_SECRET: string = process.env.APP_SIGNING_SECRET;
+const APP_SIGNING_SECRET: string = process.env.APP_SIGNING_SECRET || 'msp-local-dev-signing-secret-do-not-use-in-production';
 
 function verify(token: string) {
   const [body, sig] = token.split(".");
