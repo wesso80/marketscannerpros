@@ -109,9 +109,10 @@ function rankedTrustDetail(r: ScanResult): string {
   return missing.length ? `Missing or weak: ${missing.join(', ')}.` : 'Price, score, confidence, and volatility context are available.';
 }
 
-function summarizeDetailNextCheck(args: { hasScenarioLevels: boolean; trendAligned: boolean; momentumAligned: boolean; flowAligned: boolean; dataQuality: string; direction: string }) {
+function summarizeDetailNextCheck(args: { hasScenarioLevels: boolean; trendAligned: boolean; momentumAligned: boolean; flowAligned: boolean; dataQuality: string; direction: string; regime?: string }) {
   if (args.dataQuality !== 'GOOD') return 'Refresh scanner inputs before relying on reference levels.';
   if (!args.hasScenarioLevels) return 'Wait for valid reference and invalidation levels before escalation.';
+  if (args.regime === 'Range' && args.direction !== 'neutral' && args.trendAligned) return 'Wait for a confirmed range break with volume or ADX expansion before escalation.';
   if (!args.trendAligned) return 'Watch for structure to align with the observed direction.';
   if (!args.momentumAligned) return 'Watch for momentum confirmation before treating the case as aligned.';
   if (!args.flowAligned) return 'Check whether signal split improves from mixed to aligned.';
@@ -301,22 +302,50 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
   const stop = hasScenarioLevels
     ? (direction === 'bullish' ? detail.price! - detail.atr! * 0.8 : detail.price! + detail.atr! * 0.8) : null;
   const target1 = hasScenarioLevels
-    ? (direction === 'bullish' ? detail.price! + detail.atr! * 1.2 : detail.price! - detail.atr! * 1.2) : null;
+    ? (direction === 'bullish' ? detail.price! + detail.atr! * 1.7 : detail.price! - detail.atr! * 1.7) : null;
   const target2 = hasScenarioLevels
-    ? (direction === 'bullish' ? detail.price! + detail.atr! * 2.0 : detail.price! - detail.atr! * 2.0) : null;
+    ? (direction === 'bullish' ? detail.price! + detail.atr! * 2.7 : detail.price! - detail.atr! * 2.7) : null;
   const rr = hasScenarioLevels && entry != null && stop != null && target1 != null
     ? Math.max(0, Math.abs(target1 - entry) / Math.max(0.0001, Math.abs(entry - stop))) : null;
-  const nextUsefulCheck = summarizeDetailNextCheck({ hasScenarioLevels, trendAligned, momentumAligned, flowAligned, dataQuality, direction });
+  const nextUsefulCheck = summarizeDetailNextCheck({ hasScenarioLevels, trendAligned, momentumAligned, flowAligned, dataQuality, direction, regime });
 
   const recommendation = detail.institutionalFilter?.recommendation;
-  const highAlignment = recommendation === LEGACY_MULTI_FACTOR_STATUS && quality !== 'LOW' && direction !== 'neutral' && dataQuality === 'GOOD' && hasScenarioLevels;
-  const researchStatus = !hasScenarioLevels ? 'DATA WEAK — REVIEW' : highAlignment ? 'MULTI-FACTOR ALIGNMENT' : quality === 'MEDIUM' && direction !== 'neutral' ? 'MODERATE ALIGNMENT' : 'LOW ALIGNMENT — REVIEW';
-  const statusColor = highAlignment ? '#10B981' : quality === 'MEDIUM' && direction !== 'neutral' ? '#F59E0B' : '#EF4444';
+  const alignedInputs = tfAlignment >= 3 && dataQuality === 'GOOD' && hasScenarioLevels && direction !== 'neutral';
+  const rangeBreakNeedsConfirmation = regime === 'Range' && trendAligned;
+  const highAlignment = (recommendation === LEGACY_MULTI_FACTOR_STATUS || alignedInputs) && quality !== 'LOW' && !rangeBreakNeedsConfirmation;
+  const needsConfirmation = alignedInputs && rangeBreakNeedsConfirmation;
+  const researchStatus = !hasScenarioLevels
+    ? 'DATA WEAK — REVIEW'
+    : highAlignment
+      ? 'MULTI-FACTOR ALIGNMENT'
+      : needsConfirmation
+        ? 'RANGE BREAK CONFIRMATION NEEDED'
+        : alignedInputs
+          ? 'HIGH OBSERVATIONAL ALIGNMENT'
+          : quality === 'MEDIUM' && direction !== 'neutral'
+            ? 'MODERATE ALIGNMENT'
+            : 'LOW ALIGNMENT — REVIEW';
+  const statusColor = highAlignment ? '#10B981' : needsConfirmation || (quality === 'MEDIUM' && direction !== 'neutral') || alignedInputs ? '#F59E0B' : '#EF4444';
   const confBarColor = confidence >= 70 ? '#10B981' : confidence >= 55 ? '#F59E0B' : '#EF4444';
 
   const blockReasons = highAlignment
     ? ['Structure aligned', biasLabel(direction)]
-    : [dataQuality !== 'GOOD' ? `Data quality: ${dataQuality.toLowerCase()}` : null, !hasScenarioLevels ? 'Reference levels unavailable' : null, quality === 'LOW' ? 'Quality below threshold' : null, !trendAligned ? 'Structure incomplete' : null, atrPercent >= 3 ? 'Volatility mismatch' : null].filter(Boolean) as string[];
+    : [dataQuality !== 'GOOD' ? `Data quality: ${dataQuality.toLowerCase()}` : null, !hasScenarioLevels ? 'Reference levels unavailable' : null, quality === 'LOW' ? 'Quality below threshold' : null, !trendAligned ? 'Structure incomplete' : null, rangeBreakNeedsConfirmation ? 'Range regime needs breakout confirmation' : null, atrPercent >= 3 ? 'Volatility mismatch' : null].filter(Boolean) as string[];
+
+  const agreementNote = highAlignment
+    ? 'Multi-factor indicator agreement'
+    : needsConfirmation
+      ? 'Directional signals aligned; range confirmation needed'
+      : alignedInputs
+        ? 'High observational alignment'
+        : 'Mixed indicator observations';
+  const structureNote = highAlignment
+    ? 'Indicators aligned'
+    : needsConfirmation
+      ? 'Await range break confirmation'
+      : alignedInputs
+        ? 'Aligned but not fully confirmed'
+        : 'Review indicator alignment';
 
   const handleAddToWatchlist = async () => {
     try {
@@ -516,8 +545,8 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType }: {
             </div>
             <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5 text-[0.74rem] text-slate-400">
               <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Analysis Notes</div>
-              <div>Indicator Agreement: <span className={`font-bold ${highAlignment ? 'text-emerald-400' : 'text-amber-400'}`}>{highAlignment ? 'Multi-factor indicator agreement' : 'Mixed indicator observations'}</span></div>
-              <div>Structure: <span className="font-bold text-white">{highAlignment ? 'Indicators aligned' : 'Review indicator alignment'}</span></div>
+              <div>Indicator Agreement: <span className={`font-bold ${highAlignment ? 'text-emerald-400' : 'text-amber-400'}`}>{agreementNote}</span></div>
+              <div>Structure: <span className="font-bold text-white">{structureNote}</span></div>
             </div>
 
             {/* Action Buttons */}
