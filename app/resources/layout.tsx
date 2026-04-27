@@ -1,3 +1,19 @@
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Resources',
+  description: 'Educational MarketScanner Pros resources, platform guides, and workflow notes for structured market research.',
+  alternates: { canonical: '/resources' },
+  openGraph: {
+    title: 'MarketScanner Pros Resources',
+    description: 'Educational platform guides and market research workflow resources.',
+    url: 'https://marketscannerpros.app/resources',
+    siteName: 'MarketScanner Pros',
+    images: [{ url: '/scan-banner.png', width: 1200, height: 630, alt: 'MarketScanner Pros resources' }],
+  },
+  twitter: { card: 'summary_large_image', images: ['/scan-banner.png'] },
+};
+
 export default function ResourcesLayout({ children }: { children: React.ReactNode }) {
   return (
     <main className="min-h-screen bg-[var(--msp-bg)] text-white">

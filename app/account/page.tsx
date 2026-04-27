@@ -253,6 +253,7 @@ export default function AccountPage() {
 
           <div className="flex flex-wrap gap-3">
             <button
+              type="button"
               onClick={() => void openBillingPortal()}
               disabled={billingLoading || normalizedTier === "free"}
               className="px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
@@ -265,6 +266,7 @@ export default function AccountPage() {
               </Link>
             ) : null}
             <button
+              type="button"
               onClick={async () => {
                 await fetch('/api/auth/logout', { method: 'POST' });
                 window.location.href = '/';
@@ -360,6 +362,7 @@ export default function AccountPage() {
                   {prefsMessage ? <p className="mt-4 text-xs text-emerald-300">{prefsMessage}</p> : null}
 
                   <button
+                    type="button"
                     onClick={() => void saveNotificationPrefs()}
                     disabled={prefsSaving}
                     className="mt-6 px-4 py-2 rounded-xl bg-white/10 border border-white/10 text-sm hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -414,6 +417,7 @@ export default function AccountPage() {
               <p className="mt-2 text-xs text-white/60">Request deletion of your account and associated data.</p>
 
               <button
+                type="button"
                 onClick={() => void deleteDataRequest()}
                 className="mt-4 w-full px-4 py-2 rounded-xl border border-red-400/40 text-red-300 text-sm hover:bg-red-500/10"
               >
