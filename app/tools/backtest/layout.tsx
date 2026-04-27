@@ -1,25 +1,27 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Strategy Backtester | Trading Tools | MarketScanner Pros',
+  title: 'Strategy Backtester',
   description:
-    'Backtest 25+ elite trading strategies with real market data. Multi-timeframe testing, equity curves, AI analysis, and full performance metrics.',
+    'Educational strategy backtesting with historical data, multi-timeframe testing, equity curves, assumptions, and performance metrics.',
   openGraph: {
     title: 'Strategy Backtester | MarketScanner Pros',
     description:
       'Backtest 25+ elite trading strategies with real market data. Multi-timeframe testing, equity curves, AI analysis, and full performance metrics.',
-    url: 'https://app.marketscannerpros.app/tools/backtest',
+    url: 'https://marketscannerpros.app/tools/backtest',
     siteName: 'MarketScanner Pros',
+    images: [{ url: '/scan-banner.png', width: 1200, height: 630, alt: 'MarketScanner Pros — Strategy Backtester' }],
     type: 'website',
   },
   twitter: {
-    card: 'summary',
+    card: 'summary_large_image',
     title: 'Strategy Backtester | MarketScanner Pros',
     description:
-      'Backtest 25+ elite trading strategies with real market data. Multi-timeframe testing, equity curves, and AI analysis.',
+      'Educational strategy backtesting with assumptions, equity curves, and performance metrics.',
+    images: ['/scan-banner.png'],
   },
   alternates: {
-    canonical: 'https://app.marketscannerpros.app/tools/backtest',
+    canonical: 'https://marketscannerpros.app/tools/backtest',
   },
 };
 

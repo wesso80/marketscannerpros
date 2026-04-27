@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Time Confluence Scanner | Trading Tools | MarketScanner Pros',
+  title: 'Time Confluence Scanner',
   description:
-    'Multi-timeframe time confluence scanner for identifying technically aligned trading windows where multiple temporal cycles align.',
+    'Educational multi-timeframe time confluence scanner for reviewing aligned timing windows and temporal market context.',
 };
 
 export default function ConfluenceScannerLayout({ children }: { children: React.ReactNode }) {

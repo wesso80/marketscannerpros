@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Options Confluence Scanner | Trading Tools | MarketScanner Pros',
+  title: 'Options Confluence Scanner',
   description:
-    'Strike and expiry analysis powered by time confluence scoring. Discover options setups with professional-level multi-timeframe alignment.',
+    'Educational strike and expiry context powered by options confluence and multi-timeframe alignment scoring.',
 };
 
 export default function OptionsConfluenceLayout({ children }: { children: React.ReactNode }) {

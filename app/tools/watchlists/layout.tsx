@@ -1,25 +1,27 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Institutional Watchlist Engine | Trading Tools | MarketScanner Pros',
+  title: 'Watchlists',
   description:
-    'Monitor and organize symbols for tactical scanning with live market data. Stage ideas through confluence-ranked watchlists with real-time quotes.',
+    'Monitor and organize symbols for educational market scanning, watchlists, live quotes, and research workflow staging.',
   openGraph: {
-    title: 'Institutional Watchlist Engine | MarketScanner Pros',
+    title: 'Watchlists | MarketScanner Pros',
     description:
       'Monitor and organize symbols for tactical scanning with live market data.',
-    url: 'https://app.marketscannerpros.app/tools/watchlists',
+    url: 'https://marketscannerpros.app/tools/watchlists',
     siteName: 'MarketScanner Pros',
+    images: [{ url: '/scan-banner.png', width: 1200, height: 630, alt: 'MarketScanner Pros — Watchlists' }],
     type: 'website',
   },
   twitter: {
-    card: 'summary',
-    title: 'Institutional Watchlist Engine | MarketScanner Pros',
+    card: 'summary_large_image',
+    title: 'Watchlists | MarketScanner Pros',
     description:
       'Monitor and organize symbols for tactical scanning with live market data.',
+    images: ['/scan-banner.png'],
   },
   alternates: {
-    canonical: 'https://app.marketscannerpros.app/tools/watchlists',
+    canonical: 'https://marketscannerpros.app/tools/watchlists',
   },
 };
 

@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Golden Egg Deep Analysis | Trading Tools | MarketScanner Pros",
+  title: "Deep Analysis",
   description:
-    "Multi-factor deep analysis combining technical indicators, AI insights, options flow, news sentiment, and earnings data into a single comprehensive view.",
+    "Educational single-symbol deep analysis combining technical indicators, AI context, options flow, news sentiment, and earnings data.",
 };
 
 export default function DeepAnalysisLayout({

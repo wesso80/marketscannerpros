@@ -17,6 +17,29 @@ import CapitalControlStrip from '@/components/risk/CapitalControlStrip';
 import GlobalSessionBar from '@/components/GlobalSessionBar';
 import FavoriteButton from '@/components/FavoriteButton';
 import DisclosureGate from '@/components/DisclosureGate';
+import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
+
+const GLOBAL_COMPLIANCE_ROUTES = new Set([
+  '/tools/company-overview',
+  '/tools/confluence-scanner',
+  '/tools/crypto-heatmap',
+  '/tools/crypto-terminal',
+  '/tools/crypto-time-confluence',
+  '/tools/crypto',
+  '/tools/economic-calendar',
+  '/tools/explorer',
+  '/tools/heatmap',
+  '/tools/intraday-charts',
+  '/tools/liquidity-sweep',
+  '/tools/macro',
+  '/tools/research',
+  '/tools/scanner/backtest',
+  '/tools/settings',
+  '/tools/time-scanner',
+  '/tools/volatility-engine',
+  '/tools/watchlists',
+  '/tools/workspace',
+]);
 
 function getSkillFromPath(pathname: string): PageSkill {
   if (pathname.includes('/scanner')) return 'scanner';
@@ -118,6 +141,11 @@ export default function ToolsLayoutClient({
           {pageKey !== 'dashboard' && (
             <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '4px 12px 0' }}>
               <FavoriteButton pageKey={pageKey} />
+            </div>
+          )}
+          {GLOBAL_COMPLIANCE_ROUTES.has(pathname) && (
+            <div className="mx-auto w-full max-w-none px-3 pt-2 md:px-4">
+              <ComplianceDisclaimer collapsible />
             </div>
           )}
           {wrappedChildren}

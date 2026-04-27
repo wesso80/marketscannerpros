@@ -76,7 +76,7 @@ export default function RefundPolicyPage() {
       
       <h3>Web/Android Users (Stripe):</h3>
       <ol>
-        <li>Log in to your account at <a href="https://app.marketscannerpros.app">app.marketscannerpros.app</a></li>
+        <li>Log in to your account at <a href="https://marketscannerpros.app/account">marketscannerpros.app/account</a></li>
         <li>Go to Settings → Subscription Management</li>
         <li>Click "Manage Subscription" to open Stripe Customer Portal</li>
         <li>Click "Cancel Subscription"</li>

@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Time Scanner | Trading Tools | MarketScanner Pros',
+  title: 'Time Scanner',
   description:
-    'Advanced Time Gravity Analysis — track decompression windows, midpoint debt, and multi-timeframe confluence zones with professional-level precision.',
+    'Educational time scanner for reviewing decompression windows, midpoint debt, and multi-timeframe confluence zones.',
 };
 
 export default function TimeScannerLayout({ children }: { children: React.ReactNode }) {
