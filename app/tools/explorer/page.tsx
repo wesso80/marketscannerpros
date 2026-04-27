@@ -40,6 +40,11 @@ export default function ExplorerPage() {
   const { navigateTo, selectSymbol } = useV2();
   const [tab, setTab] = useState<typeof TABS[number]>('Overview');
 
+  const openGoldenEgg = (symbol: string) => {
+    selectSymbol(symbol);
+    navigateTo('golden-egg', symbol);
+  };
+
   const sectors = useSectorsHeatmap();
   const cryptoOverview = useCryptoOverview();
   const cryptoCats = useCryptoCategories();
@@ -65,7 +70,7 @@ export default function ExplorerPage() {
       {/* Tabs */}
       <div className="flex items-center gap-1 flex-wrap pb-1">
         {TABS.map(t => (
-          <button key={t} onClick={() => setTab(t)} className={`px-2.5 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap transition-colors ${tab === t ? 'bg-[rgba(16,185,129,0.1)] text-[var(--msp-accent)] border border-[rgba(16,185,129,0.4)]' : 'text-[var(--msp-text-muted)] hover:bg-slate-800/60 border border-transparent'}`}>
+          <button key={t} type="button" aria-pressed={tab === t} onClick={() => setTab(t)} className={`px-2.5 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap transition-colors ${tab === t ? 'bg-[rgba(16,185,129,0.1)] text-[var(--msp-accent)] border border-[rgba(16,185,129,0.4)]' : 'text-[var(--msp-text-muted)] hover:bg-slate-800/60 border border-transparent'}`}>
             {t}
           </button>
         ))}
@@ -92,20 +97,22 @@ export default function ExplorerPage() {
                 {sectorData.map((s: SectorData) => {
                   const pct = s.changePercent ?? s.daily ?? 0;
                   return (
-                    <div
+                    <button
+                      type="button"
                       key={s.symbol}
-                      className="rounded-lg p-2.5 text-center cursor-pointer hover:ring-1 hover:ring-white/20 transition-all"
+                      className="rounded-lg p-2.5 text-center cursor-pointer hover:ring-1 hover:ring-white/20 transition-all focus:outline-none focus:ring-1 focus:ring-emerald-400/60"
                       style={{
                         backgroundColor: pct > 0 ? `rgba(16, 185, 129, ${Math.min(Math.abs(pct) / 3, 0.6)})` : pct < 0 ? `rgba(239, 68, 68, ${Math.min(Math.abs(pct) / 3, 0.6)})` : 'rgba(148, 163, 184, 0.1)',
                       }}
-                      onClick={() => { selectSymbol(s.symbol); navigateTo('golden-egg', s.symbol); }}
+                      onClick={() => openGoldenEgg(s.symbol)}
+                      aria-label={`Open ${s.symbol} in Golden Egg`}
                     >
                       <div className="text-[11px] text-white font-semibold">{s.symbol}</div>
                       <div className="text-[11px] text-slate-300 truncate">{s.name}</div>
                       <div className={`text-xs font-bold ${pctColor(pct)}`}>
                         {pct > 0 ? '+' : ''}{pct.toFixed(2)}%
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -122,11 +129,11 @@ export default function ExplorerPage() {
               ) : (
                 <div className="space-y-1">
                   {eqGainers.map((m: Mover) => (
-                    <div key={m.ticker} className="flex items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer" onClick={() => { selectSymbol(m.ticker); navigateTo('golden-egg', m.ticker); }}>
+                    <button key={m.ticker} type="button" className="flex w-full items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(m.ticker)} aria-label={`Open ${m.ticker} in Golden Egg`}>
                       <span className="font-semibold text-white w-16">{m.ticker}</span>
                       <span className="text-slate-300 font-mono">${parseFloat(m.price).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                       <span className="text-emerald-400 font-mono w-20 text-right">+{m.change_percentage}</span>
-                    </div>
+                    </button>
                   ))}
                 </div>
               )}
@@ -138,11 +145,11 @@ export default function ExplorerPage() {
               ) : (
                 <div className="space-y-1">
                   {eqLosers.map((m: Mover) => (
-                    <div key={m.ticker} className="flex items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer" onClick={() => { selectSymbol(m.ticker); navigateTo('golden-egg', m.ticker); }}>
+                    <button key={m.ticker} type="button" className="flex w-full items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(m.ticker)} aria-label={`Open ${m.ticker} in Golden Egg`}>
                       <span className="font-semibold text-white w-16">{m.ticker}</span>
                       <span className="text-slate-300 font-mono">${parseFloat(m.price).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                       <span className="text-red-400 font-mono w-20 text-right">{m.change_percentage}</span>
-                    </div>
+                    </button>
                   ))}
                 </div>
               )}
@@ -216,11 +223,11 @@ export default function ExplorerPage() {
               ) : (
                 <div className="space-y-1">
                   {cryptoGainers.map((m: Mover) => (
-                    <div key={m.ticker} className="flex items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer" onClick={() => { selectSymbol(m.ticker); navigateTo('golden-egg', m.ticker); }}>
+                    <button key={m.ticker} type="button" className="flex w-full items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(m.ticker)} aria-label={`Open ${m.ticker} in Golden Egg`}>
                       <span className="font-semibold text-white w-16">{m.ticker}</span>
                       <span className="text-slate-300 font-mono">${parseFloat(m.price).toLocaleString(undefined, { maximumFractionDigits: 4 })}</span>
                       <span className="text-emerald-400 font-mono w-20 text-right">+{m.change_percentage}</span>
-                    </div>
+                    </button>
                   ))}
                 </div>
               )}
@@ -232,11 +239,11 @@ export default function ExplorerPage() {
               ) : (
                 <div className="space-y-1">
                   {cryptoLosers.map((m: Mover) => (
-                    <div key={m.ticker} className="flex items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer" onClick={() => { selectSymbol(m.ticker); navigateTo('golden-egg', m.ticker); }}>
+                    <button key={m.ticker} type="button" className="flex w-full items-center justify-between text-xs py-1 px-1 rounded hover:bg-slate-800/40 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(m.ticker)} aria-label={`Open ${m.ticker} in Golden Egg`}>
                       <span className="font-semibold text-white w-16">{m.ticker}</span>
                       <span className="text-slate-300 font-mono">${parseFloat(m.price).toLocaleString(undefined, { maximumFractionDigits: 4 })}</span>
                       <span className="text-red-400 font-mono w-20 text-right">{m.change_percentage}</span>
-                    </div>
+                    </button>
                   ))}
                 </div>
               )}

@@ -5,7 +5,7 @@
    Real API data: /api/news-sentiment + /api/economic-calendar + /api/earnings
    --------------------------------------------------------------------------- */
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, type KeyboardEvent } from 'react';
 import dynamic from 'next/dynamic';
 import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useNews, useEconomicCalendar, useEarningsCalendar, type NewsArticle, type EconomicEvent, type EarningsEntry } from '@/app/v2/_lib/api';
@@ -103,6 +103,18 @@ export default function ResearchPage() {
   const nextWeek = earnings.data?.nextWeek || [];
   const majorEarnings = earnings.data?.majorEarnings || [];
 
+  const openGoldenEgg = useCallback((symbol: string) => {
+    selectSymbol(symbol);
+    navigateTo('golden-egg', symbol);
+  }, [navigateTo, selectSymbol]);
+
+  const onSymbolRowKey = useCallback((event: KeyboardEvent, symbol: string) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openGoldenEgg(symbol);
+    }
+  }, [openGoldenEgg]);
+
   const refreshSavedCases = useCallback(async () => {
     setSavedLoading(true);
     setSavedError(null);
@@ -186,6 +198,8 @@ export default function ResearchPage() {
         {TABS.map(t => (
           <button
             key={t}
+            type="button"
+            aria-pressed={tab === t}
             onClick={() => setTab(t)}
             className={`px-2.5 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap transition-colors ${tab === t ? 'bg-[rgba(16,185,129,0.1)] text-[var(--msp-accent)] border border-[rgba(16,185,129,0.4)]' : 'text-[var(--msp-text-muted)] hover:bg-slate-800/60 border border-transparent'}`}
           >
@@ -223,9 +237,9 @@ export default function ResearchPage() {
                           {n.sentiment.label}
                         </span>
                         {n.tickerSentiments?.slice(0, 4).map(ts => (
-                          <span key={ts.ticker} className="text-[10px] text-emerald-400 cursor-pointer hover:underline" onClick={() => { selectSymbol(ts.ticker); navigateTo('golden-egg', ts.ticker); }}>
+                          <button key={ts.ticker} type="button" className="text-[10px] text-emerald-400 cursor-pointer hover:underline focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(ts.ticker)} aria-label={`Open ${ts.ticker} in Golden Egg`}>
                             {ts.ticker}
-                          </span>
+                          </button>
                         ))}
                       </div>
                     </div>
@@ -243,7 +257,7 @@ export default function ResearchPage() {
         <Card>
           <div className="flex items-center gap-2 mb-3">
             {['all', 'high', 'medium', 'low'].map(f => (
-              <button key={f} onClick={() => setCalFilter(f)} className={`px-2 py-1 text-[10px] rounded ${calFilter === f ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-500 hover:text-slate-300'}`}>
+              <button key={f} type="button" aria-pressed={calFilter === f} onClick={() => setCalFilter(f)} className={`px-2 py-1 text-[10px] rounded ${calFilter === f ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-500 hover:text-slate-300'}`}>
                 {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)} Impact
                 {f === 'all' ? ` (${(calendar.data?.events || []).length})` : ` (${(calendar.data?.events || []).filter(e => e.impact === f).length})`}
               </button>
@@ -318,7 +332,7 @@ export default function ResearchPage() {
                         </thead>
                         <tbody>
                           {group.items.map((e: EarningsEntry, i: number) => (
-                            <tr key={i} className="border-b border-slate-800/30 hover:bg-slate-800/20 cursor-pointer" onClick={() => { selectSymbol(e.symbol); navigateTo('golden-egg', e.symbol); }}>
+                            <tr key={i} className="border-b border-slate-800/30 hover:bg-slate-800/20 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(e.symbol)} onKeyDown={(event) => onSymbolRowKey(event, e.symbol)} role="button" tabIndex={0} aria-label={`Open ${e.symbol} earnings in Golden Egg`}>
                               <td className="py-1.5 px-2 text-emerald-400 font-semibold">{e.symbol}</td>
                               <td className="py-1.5 px-2 text-white">{e.name}</td>
                               <td className="py-1.5 px-2 text-slate-400">{e.reportDate}</td>
@@ -367,7 +381,8 @@ export default function ResearchPage() {
                     <div className="min-w-0">
                       <button
                         type="button"
-                        onClick={() => { selectSymbol(item.symbol); navigateTo('golden-egg', item.symbol); }}
+                        onClick={() => openGoldenEgg(item.symbol)}
+                        aria-label={`Open ${item.symbol} saved research case in Golden Egg`}
                         className="truncate text-left text-sm font-bold text-white hover:text-emerald-400"
                       >
                         {item.title || `${item.symbol} Research Case`}
