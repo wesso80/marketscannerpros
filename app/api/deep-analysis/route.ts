@@ -18,6 +18,10 @@ const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 // NOTE: Using HISTORICAL_OPTIONS / REALTIME_OPTIONS_FMV - available with 600 RPM premium plan
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
+function isLocalDeepAnalysisDemoAllowed(): boolean {
+  return process.env.NODE_ENV !== 'production' || process.env.LOCAL_DEMO_MARKET_DATA === 'true';
+}
+
 // Get the Friday of the current week (or next week if past Friday)
 function getThisWeekFriday(): number {
   const now = new Date();
@@ -917,7 +921,7 @@ function buildAnalysisPrompt(data: any): string {
     prompt += '\n';
   }
   
-  prompt += `Based on ALL the data above, provide a comprehensive Golden Egg analysis with a clear, actionable verdict.`;
+  prompt += `Based on ALL the data above, provide a comprehensive Golden Egg analysis with a clear educational reading. Do not include trade instructions or action directives.`;
   
   return prompt;
 }
@@ -1104,6 +1108,107 @@ function generateSignals(data: any): { signal: string; score: number; reasons: s
   return { signal, score, reasons, bullishCount: bullish, bearishCount: bearish };
 }
 
+function buildLocalDemoDeepAnalysisResponse(symbol: string, assetType: 'crypto' | 'forex' | 'commodity' | 'stock', reason: string, startTime: number) {
+  const key = symbol.toUpperCase();
+  const demoPrices: Record<string, number> = {
+    AAPL: 520,
+    MSFT: 473,
+    NVDA: 426,
+    GOOGL: 379,
+    AMZN: 332,
+    META: 510,
+    AVGO: 1280,
+    TSLA: 285,
+    EURUSD: 1.08,
+    GBPUSD: 1.27,
+    USDJPY: 156.4,
+    GOLD: 2325,
+  };
+  const priceNow = demoPrices[key] ?? (assetType === 'forex' ? 1.1 : assetType === 'commodity' ? 2300 : 420);
+  const changePercent = 1.35;
+  const change = priceNow * (changePercent / 100);
+  const indicators = {
+    rsi: 58,
+    macd: 1.25,
+    macdSignal: 0.82,
+    macdHist: 0.43,
+    sma20: priceNow * 0.98,
+    sma50: priceNow * 0.94,
+    ema12: priceNow * 0.99,
+    ema26: priceNow * 0.96,
+    stochK: 63,
+    stochD: 56,
+    atr: priceNow * 0.025,
+    volumeRatio: assetType === 'forex' ? undefined : 1.2,
+    priceVsSma20: 2.04,
+    priceVsSma50: 6.38,
+    bbUpper: priceNow * 1.03,
+    bbMiddle: priceNow,
+    bbLower: priceNow * 0.97,
+    adx: 24,
+  };
+  const price = {
+    price: priceNow,
+    change,
+    changePercent,
+    high24h: priceNow * 1.015,
+    low24h: priceNow * 0.985,
+    volume: assetType === 'forex' ? 0 : 1_800_000,
+    quoteVolume: assetType === 'crypto' ? priceNow * 1_800_000 : undefined,
+  };
+  const company = assetType === 'stock' ? {
+    name: `${key} Demo Corp`,
+    description: 'Development-only sample company profile for local workflow testing when live market data is unavailable.',
+    sector: 'Technology',
+    industry: 'Sample Data',
+    marketCap: String(priceNow * 1_000_000_000),
+    peRatio: 28.4,
+    forwardPE: 24.8,
+    eps: 6.25,
+    dividendYield: 0.5,
+    week52High: priceNow * 1.12,
+    week52Low: priceNow * 0.72,
+    targetPrice: priceNow * 1.08,
+    strongBuy: 8,
+    buy: 14,
+    hold: 9,
+    sell: 1,
+    strongSell: 0,
+  } : null;
+  const news = [{
+    title: `${key} local demo research context`,
+    summary: 'Live news is unavailable locally; this sample headline exists only to exercise the Deep Analysis UI.',
+    source: 'MarketScanner Pros Local Demo',
+    sentiment: 'Neutral',
+    sentimentScore: 0,
+    url: '',
+    publishedAt: new Date().toISOString(),
+  }];
+  const demoData = { symbol: key, assetType, price, indicators, company, news, cryptoData: null, earnings: null, optionsData: null };
+  const signals = generateSignals(demoData);
+  return {
+    success: true,
+    localDemo: true,
+    warnings: [
+      'Development-only Deep Analysis payload for workflow testing. Not live market data.',
+      reason,
+    ],
+    symbol: key,
+    assetType,
+    timestamp: new Date().toISOString(),
+    responseTime: `${Date.now() - startTime}ms`,
+    price,
+    indicators,
+    company,
+    news,
+    cryptoData: null,
+    earnings: null,
+    optionsData: null,
+    signals,
+    aiAnalysis: null,
+  };
+}
+
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
   
@@ -1158,6 +1263,9 @@ export async function GET(request: NextRequest) {
     }
     
     if (!price) {
+      if (isLocalDeepAnalysisDemoAllowed()) {
+        return NextResponse.json(buildLocalDemoDeepAnalysisResponse(symbol, assetType, `Unable to fetch live data for ${symbol}`, startTime));
+      }
       return NextResponse.json({ 
         success: false, 
         error: `Unable to fetch data for ${symbol}. Please check the symbol and try again.` 

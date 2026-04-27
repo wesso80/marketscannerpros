@@ -161,6 +161,8 @@ interface OptionsData {
 
 interface AnalysisResult {
   success: boolean;
+  localDemo?: boolean;
+  warnings?: string[];
   symbol: string;
   assetType: 'crypto' | 'forex' | 'commodity' | 'stock';
   timestamp: string;
@@ -209,6 +211,18 @@ function biasLabel(bias: 'BUY' | 'SELL' | 'HOLD'): string {
   return 'Watch / Mixed Bias';
 }
 
+function weightedScenarioLabel(bias: 'BUY' | 'SELL' | 'HOLD'): string {
+  if (bias === 'BUY') return 'Bullish Scenario';
+  if (bias === 'SELL') return 'Bearish Scenario';
+  return 'Watch Scenario';
+}
+
+function weightedToneColor(bias: 'BUY' | 'SELL' | 'HOLD'): string {
+  if (bias === 'BUY') return '#10B981';
+  if (bias === 'SELL') return '#EF4444';
+  return '#F59E0B';
+}
+
 function signalTone(result: 'bullish' | 'bearish' | 'neutral'): string {
   if (result === 'bullish') return 'Bullish';
   if (result === 'bearish') return 'Bearish';
@@ -216,16 +230,21 @@ function signalTone(result: 'bullish' | 'bearish' | 'neutral'): string {
 }
 
 function getDeepDataQuality(result: AnalysisResult): { label: 'GOOD' | 'DEGRADED' | 'MISSING'; detail: string } {
-  const missing = [
+  if (result.localDemo) {
+    return { label: 'DEGRADED', detail: `Local demo payload: ${(result.warnings || []).join(' ') || 'live data unavailable.'}` };
+  }
+
+  const missingCore = [
     !result.price?.price ? 'price' : null,
     !result.indicators || Object.values(result.indicators).filter((value) => value !== null && value !== undefined).length < 3 ? 'technical indicators' : null,
     !result.signals?.signal ? 'scenario signal' : null,
-    !result.aiAnalysis ? 'AI narrative' : null,
   ].filter(Boolean) as string[];
+  const missingAi = !result.aiAnalysis;
 
-  if (missing.length === 0) return { label: 'GOOD', detail: 'Price, technicals, scenario signal, and AI narrative are available.' };
-  if (missing.length <= 1) return { label: 'DEGRADED', detail: `Weak or missing: ${missing.join(', ')}.` };
-  return { label: 'MISSING', detail: `Weak or missing: ${missing.join(', ')}.` };
+  if (missingCore.length === 0 && !missingAi) return { label: 'GOOD', detail: 'Price, technicals, scenario signal, and AI narrative are available.' };
+  if (missingCore.length === 0) return { label: 'DEGRADED', detail: 'AI narrative unavailable; price, technicals, and scenario signal are available.' };
+  if (missingCore.length <= 1) return { label: 'DEGRADED', detail: `Weak or missing: ${missingCore.join(', ')}.` };
+  return { label: 'MISSING', detail: `Weak or missing: ${missingCore.join(', ')}.` };
 }
 
 function deepDataQualityColor(label: string): string {
@@ -236,7 +255,11 @@ function deepDataQualityColor(label: string): string {
 
 function summarizeDeepNextCheck(result: AnalysisResult): string {
   const dataQuality = getDeepDataQuality(result);
-  if (dataQuality.label !== 'GOOD') return 'Refresh inputs before treating the research context as complete.';
+  if (result.localDemo) return 'Live market data is unavailable locally; use this packet for workflow testing only.';
+  if (dataQuality.label !== 'GOOD') {
+    if (!result.aiAnalysis && result.price?.price && result.signals?.signal) return 'Review technical/flow evidence; AI narrative is unavailable in this environment.';
+    return 'Refresh inputs before treating the research context as complete.';
+  }
   if (Math.abs(result.signals.score) < 40) return 'Wait for stronger agreement across technicals, flow, and news.';
   if (result.optionsData?.unusualActivity && result.optionsData.unusualActivity !== 'Normal') return 'Check whether unusual options activity persists or fades.';
   if (result.indicators?.rsi != null && (result.indicators.rsi > 70 || result.indicators.rsi < 30)) return 'Watch whether momentum normalizes or confirms continuation.';
@@ -245,7 +268,11 @@ function summarizeDeepNextCheck(result: AnalysisResult): string {
 
 function summarizeDeepResearchCaution(result: AnalysisResult): string {
   const dataQuality = getDeepDataQuality(result);
-  if (dataQuality.label !== 'GOOD') return 'Research caution: the data stack is incomplete.';
+  if (result.localDemo) return 'Research caution: local demo data is not live market output.';
+  if (dataQuality.label !== 'GOOD') {
+    if (!result.aiAnalysis && result.price?.price && result.signals?.signal) return 'Research caution: AI narrative is unavailable; rely on displayed data only.';
+    return 'Research caution: the data stack is incomplete.';
+  }
   if (Math.abs(result.signals.score) < 40) return 'Research caution: scenario score is not decisive.';
   if ((result.news?.length || 0) === 0 && !result.optionsData) return 'Research caution: external confirmation is thin.';
   return 'Research caution: verify whether price action confirms or rejects the scenario.';
@@ -384,7 +411,7 @@ function calculateWeightedSignal(indicators: any, optionsData: any, news: any[] 
     let flowScore = -deviation * 200; // Negative because high P/C = bearish
     
     // Min volume gating: reduce score if volume is low
-    const totalOI = (optionsData.callOI || 0) + (optionsData.putOI || 0);
+    const totalOI = (optionsData.totalCallOI || optionsData.callOI || 0) + (optionsData.totalPutOI || optionsData.putOI || 0);
     const volumeMultiplier = totalOI > 50000 ? 1.0 : totalOI > 10000 ? 0.7 : 0.4;
     flowScore *= volumeMultiplier;
     
@@ -877,8 +904,19 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
             {(() => {
               const dataQuality = getDeepDataQuality(result);
               const weighted = calculateWeightedSignal(result.indicators, result.optionsData, result.news, result.cryptoData);
+              const weightedColor = weightedToneColor(weighted.bias);
               return (
                 <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-card)] p-4">
+                  {result.localDemo && (
+                    <div className="mb-3 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-200">
+                      <strong>Local demo Deep Analysis payload:</strong> live data is unavailable in this local environment, so this research packet is sample data for workflow testing only.
+                      {(result.warnings || []).length > 0 && (
+                        <ul className="mt-1 list-disc pl-4 text-[11px] text-amber-300/90">
+                          {(result.warnings || []).slice(0, 2).map((warning) => <li key={warning}>{warning}</li>)}
+                        </ul>
+                      )}
+                    </div>
+                  )}
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/60 pb-3">
                     <div>
                       <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-slate-500">Research Packet</div>
@@ -896,8 +934,8 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                   </div>
                   <div className="grid gap-2 md:grid-cols-5">
                     {[
-                      ['Scenario', scenarioLabel(result.signals.signal), getSignalColor(result.signals.signal)],
-                      ['Scenario Score', `${result.signals.score > 0 ? '+' : ''}${result.signals.score}`, getSignalColor(result.signals.signal)],
+                      ['Scenario', weightedScenarioLabel(weighted.bias), weightedColor],
+                      ['Scenario Confidence', `${weighted.confidence.toFixed(0)}%`, weightedColor],
                       ['Research Bias', biasLabel(weighted.bias), weighted.bias === 'BUY' ? '#10B981' : weighted.bias === 'SELL' ? '#EF4444' : '#F59E0B'],
                       ['Next Check', summarizeDeepNextCheck(result), '#93C5FD'],
                       ['Research Caution', summarizeDeepResearchCaution(result), '#F59E0B'],
