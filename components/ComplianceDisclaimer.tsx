@@ -1,10 +1,18 @@
 'use client';
 
+import { useState } from 'react';
+
 /**
  * ComplianceDisclaimer — Reusable disclaimer banner for all tool pages.
  * Renders a clearly-visible educational disclaimer, with optional tool-specific variants.
+ *
+ * Modes:
+ *   default      — full bordered amber callout (most pages)
+ *   compact      — small inline text (slim pages)
+ *   collapsible  — single-line "ⓘ Educational use only — read disclaimer" that
+ *                  expands the full text on click. Used on data-dense pages where
+ *                  above-the-fold space is critical (Scanner, Dashboard, etc).
  */
-
 type ComplianceVariant = 'general' | 'options' | 'backtest' | 'cryptoDerivatives' | 'intraday' | 'aiData';
 
 const VARIANT_COPY: Record<ComplianceVariant, { title: string; body: string }> = {
@@ -34,8 +42,43 @@ const VARIANT_COPY: Record<ComplianceVariant, { title: string; body: string }> =
   },
 };
 
-export default function ComplianceDisclaimer({ compact = false, variant = 'general' }: { compact?: boolean; variant?: ComplianceVariant }) {
+export default function ComplianceDisclaimer({
+  compact = false,
+  collapsible = false,
+  variant = 'general',
+}: {
+  compact?: boolean;
+  collapsible?: boolean;
+  variant?: ComplianceVariant;
+}) {
   const copy = VARIANT_COPY[variant];
+  const [open, setOpen] = useState(false);
+
+  if (collapsible) {
+    return (
+      <div className="rounded-lg border border-amber-500/20 bg-amber-500/[0.04]">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          className="flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left text-[11px] text-amber-300/90 hover:text-amber-200"
+        >
+          <span>
+            <span aria-hidden="true">ⓘ </span>
+            <strong className="font-semibold">{copy.title}</strong> — educational use only.
+          </span>
+          <span className="shrink-0 text-[10px] text-amber-300/70">
+            {open ? 'Hide ▴' : 'Read ▾'}
+          </span>
+        </button>
+        {open ? (
+          <p className="border-t border-amber-500/15 px-3 py-2 text-[11px] leading-relaxed text-amber-200/80">
+            {copy.body}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
 
   if (compact) {
     return (

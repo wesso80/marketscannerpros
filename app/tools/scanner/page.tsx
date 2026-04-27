@@ -6,7 +6,7 @@
    Click any symbol for inline analysis with Backtest / Alert / Watchlist.
    --------------------------------------------------------------------------- */
 
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useScannerResults, useRegime, type ScanResult, type ScanTimeframe, SCAN_TIMEFRAMES } from '@/app/v2/_lib/api';
@@ -602,6 +602,15 @@ export default function ScannerPage() {
 
   const v2Loading = equity.loading || crypto.loading;
 
+  /* ─── Track last successful scan timestamp (E) ─── */
+  const [lastScanAt, setLastScanAt] = useState<Date | null>(null);
+  useEffect(() => {
+    if (!v2Loading && (equity.data || crypto.data)) {
+      setLastScanAt(new Date());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [v2Loading]);
+
   /* ─── Register scanner data for Arca AI context ─── */
   const aiData = useMemo(() => {
     const topPicks = filtered.slice(0, 20).map(r => ({
@@ -826,7 +835,7 @@ export default function ScannerPage() {
     <div className="space-y-4">
       {/* ─── Header ─── */}
       <SectionHeader title="Scanner" subtitle="Technical analysis scanner — educational scan results" />
-      <ComplianceDisclaimer compact />
+      <ComplianceDisclaimer collapsible />
 
       {/* ─── Mode Toggle ─── */}
       <div className="flex items-center gap-1 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-1 w-fit">
@@ -926,12 +935,6 @@ export default function ScannerPage() {
 
           {/* Table */}
           <Card>
-            {!canAccessUnlimitedScanning(tier) && (
-              <div className="mb-3 px-3 py-2 rounded-lg border border-amber-500/30 bg-amber-500/10 flex items-center justify-between">
-                <span className="text-xs text-amber-300">Free tier: {FREE_DAILY_SCAN_LIMIT} scans/day. Upgrade for unlimited scanning.</span>
-                <a href="/pricing" className="text-[11px] px-2 py-1 bg-amber-500/20 text-amber-400 rounded border border-amber-500/30 hover:bg-amber-500/30 transition-colors">Upgrade</a>
-              </div>
-            )}
             {v2Loading ? (
               <div className="space-y-3 py-4">{Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-8 bg-slate-700/30 rounded animate-pulse" />)}</div>
             ) : filtered.length === 0 ? (
@@ -1019,8 +1022,22 @@ export default function ScannerPage() {
               </div>
             )}
             <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-800/40">
-              <span className="text-[11px] text-slate-600">{filtered.length} symbols</span>
-              <button onClick={() => { equity.refetch(); crypto.refetch(); }} className="text-[11px] text-emerald-400 hover:underline">Rescan</button>
+              <div className="flex items-center gap-3 text-[11px] text-slate-500">
+                <span>{filtered.length} symbols</span>
+                {lastScanAt && (
+                  <span className="text-slate-600">
+                    · Last scan: {lastScanAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {!canAccessUnlimitedScanning(tier) && (
+                  <a href="/pricing" className="text-[11px] text-amber-400 hover:underline">
+                    Free: {FREE_DAILY_SCAN_LIMIT}/day — Upgrade
+                  </a>
+                )}
+                <button onClick={() => { equity.refetch(); crypto.refetch(); }} className="text-[11px] text-emerald-400 hover:underline">Rescan</button>
+              </div>
             </div>
           </Card>
         </>
