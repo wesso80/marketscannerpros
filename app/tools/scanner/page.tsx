@@ -73,7 +73,12 @@ function summarizeRankedReason(r: ScanResult, lifecycle: LifecycleState, regimeC
   if (r.scoreV2?.regimeScore?.gated) return 'Gated by regime';
   if (!regimeCompatible) {
     const setup = r.direction === 'bullish' ? 'Bull trend setup' : r.direction === 'bearish' ? 'Bear trend setup' : 'Directional setup';
-    if (activeRegime.toLowerCase().includes('range')) return `${setup} in range regime`;
+    const setupType = setupTypeForRegime(r);
+    if (normalizeRegimeKey(activeRegime) === 'range') {
+      if (setupType.includes('compression_release')) return 'Breakout candidate in range — wait for confirmation';
+      if (setupType.includes('expansion_continuation')) return 'Trend continuation vs range — confirm acceptance';
+      return `${setup} vs range — wait for break or fade`;
+    }
     return `${setup} outside active regime`;
   }
   if (r.dveFlags?.includes('COMPRESSED')) return `${lifecycle === 'READY' ? 'Multi-factor' : 'Watch'} compression`;
@@ -133,9 +138,50 @@ const LEGACY_LOW_ALIGNMENT_STATUS = ['NO', 'TRADE'].join('_');
 type SortKey = 'symbol' | 'score' | 'direction' | 'confidence' | 'rsi' | 'price' | 'dveBbwp' | 'mspScore';
 type SortDir = 'asc' | 'desc';
 
+const REGIME_SETUP_MAP: Record<string, string[]> = {
+  trend: ['breakout', 'trend_continuation', 'pullback', 'expansion_continuation'],
+  range: ['mean_reversion', 'range_fade', 'liquidity_sweep'],
+  compression: ['volatility_expansion', 'squeeze', 'gamma_trap', 'compression_release'],
+  transition: ['breakout', 'gamma_squeeze', 'volatility_expansion', 'compression_release'],
+  expansion: ['breakout', 'trend_continuation', 'gamma_squeeze', 'expansion_continuation'],
+  risk_off: ['mean_reversion', 'hedge', 'range_fade'],
+  risk_on: ['breakout', 'trend_continuation', 'pullback', 'expansion_continuation'],
+};
+
+function normalizeRegimeKey(regime?: string | null): RegimePriority {
+  const value = String(regime || '').toLowerCase();
+  if (value.includes('risk_off') || value.includes('risk-off') || value.includes('defensive')) return 'risk_off';
+  if (value.includes('risk_on') || value.includes('risk-on')) return 'risk_on';
+  if (value.includes('compress') || value.includes('squeeze')) return 'compression';
+  if (value.includes('transition') || value.includes('neutral')) return value.includes('range') ? 'range' : 'transition';
+  if (value.includes('expand')) return 'expansion';
+  if (value.includes('range')) return 'range';
+  if (value.includes('trend')) return 'trend';
+  return 'trend';
+}
+
+function setupTypeForRegime(r: ScanResult): string {
+  const dveSignal = r.dveSignalType && r.dveSignalType !== 'none' ? r.dveSignalType : '';
+  const setup = String(r.setup || '').replace(/^Local demo:\s*/i, '');
+  return String(dveSignal || setup).toLowerCase().replace(/\s+/g, '_');
+}
+
+function isRegimeCompatibleForRegime(r: ScanResult, regime: string): boolean {
+  const regimeKey = normalizeRegimeKey(regime);
+  const setupType = setupTypeForRegime(r);
+  const compatible = REGIME_SETUP_MAP[regimeKey] || [];
+  if (!setupType || setupType === 'none') {
+    if (regimeKey === 'risk_off') return r.direction === 'bearish';
+    if (regimeKey === 'risk_on' || regimeKey === 'trend' || regimeKey === 'expansion') return r.direction === 'bullish';
+    return true;
+  }
+  return compatible.some(c => setupType.includes(c));
+}
+
 /* ─── Phase 2: Regime-Weighted MSP Score ─── */
 function computeMspScore(r: ScanResult, regime: string): number {
-  const w = REGIME_WEIGHTS[regime] || REGIME_WEIGHTS.trend;
+  const regimeKey = normalizeRegimeKey(regime);
+  const w = REGIME_WEIGHTS[regimeKey] || REGIME_WEIGHTS.trend;
   // Normalize each component to 0-100 scale
   const structure = Math.min(100, Math.max(0, Math.abs(r.score ?? 0) * 10));
   const momentum = Math.min(100, Math.max(0, r.confidence ?? (Math.abs(r.score ?? 0) * 8)));
@@ -540,28 +586,11 @@ export default function ScannerPage() {
   const [symbolDetail, setSymbolDetail] = useState<SymbolDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
-  const currentRegime = regime.data?.regime?.toLowerCase() || 'trend';
-
-  /* ─── Regime compatibility ─── */
-  const regimeSetupMap: Record<string, string[]> = {
-    trend: ['breakout', 'trend_continuation', 'pullback'],
-    range: ['mean_reversion', 'range_fade', 'liquidity_sweep'],
-    compression: ['volatility_expansion', 'squeeze', 'gamma_trap'],
-    transition: ['breakout', 'gamma_squeeze', 'volatility_expansion'],
-    expansion: ['breakout', 'trend_continuation', 'gamma_squeeze'],
-    risk_off: ['mean_reversion', 'hedge', 'range_fade'],
-    risk_on: ['breakout', 'trend_continuation', 'pullback'],
-  };
+  const currentRegimeRaw = regime.data?.regime || 'trend';
+  const currentRegime = normalizeRegimeKey(currentRegimeRaw);
 
   function isRegimeCompatible(r: ScanResult): boolean {
-    const setupType = (r.setup || r.dveSignalType || '').toLowerCase().replace(/\s+/g, '_');
-    const compatible = regimeSetupMap[currentRegime] || [];
-    if (!setupType || setupType === 'none') {
-      if (currentRegime === 'risk_off') return r.direction === 'bearish';
-      if (currentRegime === 'risk_on' || currentRegime === 'trend' || currentRegime === 'expansion') return r.direction === 'bullish';
-      return true;
-    }
-    return compatible.some(c => setupType.includes(c));
+    return isRegimeCompatibleForRegime(r, currentRegimeRaw);
   }
 
   /* ─── V2 Ranked data ─── */
@@ -877,7 +906,7 @@ export default function ScannerPage() {
       {regime.data && (
         <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] flex-wrap">
           <span className="text-[11px] uppercase tracking-wider text-slate-500">Active Regime</span>
-          <Badge label={regime.data.regime} color={REGIME_COLORS[currentRegime as RegimePriority] || '#64748B'} small />
+          <Badge label={regime.data.regime} color={REGIME_COLORS[currentRegime] || '#64748B'} small />
           <span className="text-[11px] text-slate-500">Risk: <span className="text-white">{regime.data.riskLevel}</span></span>
           <span className="text-[11px] text-slate-500">Regime State: <span className={regime.data.permission === 'full' ? 'text-emerald-400' : regime.data.permission === 'reduced' ? 'text-yellow-400' : 'text-red-400'}>{regime.data.permission}</span></span>
           <div className="h-3 w-px bg-slate-700 mx-1" />
@@ -927,7 +956,7 @@ export default function ScannerPage() {
           <div className="grid gap-2 md:grid-cols-5">
             {[
               ['Symbols', String(filtered.length), '#CBD5E1'],
-              ['High Align', String(filtered.filter(r => deriveLifecycleState(r, currentRegime) === 'READY').length), '#10B981'],
+              ['Ready Setups', String(filtered.filter(r => deriveLifecycleState(r, currentRegime) === 'READY').length), '#10B981'],
               ['Developing', String(filtered.filter(r => deriveLifecycleState(r, currentRegime) === 'SETTING_UP').length), '#A855F7'],
               ['Needs Review', String(filtered.filter(r => r.scoreV2?.regimeScore?.gated).length), '#EF4444'],
               ['Degraded Data', String(filtered.filter(r => rankedTrustLabel(r) !== 'GOOD').length), '#F59E0B'],
