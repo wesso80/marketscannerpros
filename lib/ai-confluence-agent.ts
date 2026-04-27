@@ -109,13 +109,13 @@ async function fetchCoinGeckoBars(symbol: string, days: 1 | 7 | 14 | 30 | 90 | 1
 }
 
 export class AIConfluenceAgent {
-  private openai: OpenAI;
+  private openai: OpenAI | null;
   private historicalPatterns: Map<string, HistoricalPattern[]> = new Map();
 
   constructor() {
-    this.openai = new OpenAI({
+    this.openai = process.env.OPENAI_API_KEY ? new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
-    });
+    }) : null;
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -522,24 +522,29 @@ export class AIConfluenceAgent {
       dailyBars: dailyBars.slice(-10),
     });
 
-    // Get AI analysis
-    const aiResponse = await this.openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'system',
-          content: `You are an expert quantitative analyst specializing in multi-timeframe confluence analysis. 
+    let aiAnalysis: string;
+    if (this.openai) {
+      // Get AI analysis
+      const aiResponse = await this.openai.chat.completions.create({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: `You are an expert quantitative analyst specializing in multi-timeframe confluence analysis.
 You analyze market data using the Time Confluence Windows methodology which identifies technically aligned 
 reversal/continuation zones when multiple timeframe closes align. You provide clear, data-driven analysis 
 with specific levels and risk parameters. Always be direct and evidence-based in your analysis.`,
-        },
-        { role: 'user', content: prompt },
-      ],
-      temperature: 0.3,
-      max_tokens: 1500,
-    });
+          },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.3,
+        max_tokens: 1500,
+      });
 
-    const aiAnalysis = aiResponse.choices[0]?.message?.content || 'Analysis unavailable';
+      aiAnalysis = aiResponse.choices[0]?.message?.content || 'Analysis unavailable';
+    } else {
+      aiAnalysis = `AI narrative unavailable because OPENAI_API_KEY is not configured. Structured confluence state: stack=${currentState.stack}, clusters=${currentState.clusters.length}, hotZone=${currentState.isHotZone}, historical bias=${patternBias}. This is educational scenario context only, not financial advice.`;
+    }
 
     // Parse AI response for structured prediction
     const prediction = this.parseAIPrediction(aiAnalysis, currentState, patternBias);

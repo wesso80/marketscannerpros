@@ -2186,14 +2186,21 @@ export class ConfluenceLearningAgent {
     else rating = 'none';
     
     // ── 6. BEST ENTRY WINDOW ──
-    const entryStart = Math.max(0, peakWindow - 15);
-    const entryEnd = peakWindow + 5;
+    // Separate the actionable intraday window from the full-universe peak.
+    // The full peak may be several days away (daily/monthly stack), so it should
+    // not label the next 45-65 minutes as a 13-TF high-volatility window.
+    const actionablePeakCluster = bestClusterCount >= 5 && bestClusterStart <= 240;
+    const entryStart = actionablePeakCluster ? Math.max(0, bestClusterStart - 15) : Math.max(0, peakWindow - 15);
+    const entryEnd = actionablePeakCluster ? bestClusterEnd + 5 : peakWindow + 5;
     
     let entryReason = '';
-    if (bestClusterCount >= 5) {
+    if (actionablePeakCluster) {
       entryReason = `${bestClusterCount} timeframes stacking in ${bestClusterStart}-${bestClusterEnd}m window - HIGH volatility expected`;
+    } else if (bestClusterCount >= 5) {
+      const startsIn = bestClusterStart >= 1440 ? `${(bestClusterStart / 1440).toFixed(1)}d` : `${bestClusterStart}m`;
+      entryReason = `Next actionable window uses near-term closes; larger ${bestClusterCount}-TF cluster starts in ${startsIn}.`;
     } else if (peakCount >= 3) {
-      entryReason = `${peakCount} timeframes closing - moderate confluence`;
+      entryReason = `${peakCount} timeframes closing in the near-term window - moderate confluence`;
     } else {
       entryReason = 'Standard market conditions';
     }
@@ -2981,11 +2988,12 @@ export class ConfluenceLearningAgent {
     
     // SIGNAL STRENGTH with gates (not just confidence)
     let signalStrength: 'strong' | 'moderate' | 'weak' | 'no_signal' = 'no_signal';
-    if (confidence >= 75 && activeTFCount >= 4 && dominantClusterRatio >= 0.70 && hasHigherTFActive) {
+    const directionalConviction = Math.abs(directionScore);
+    if (confidence >= 75 && directionalConviction >= 55 && activeTFCount >= 4 && dominantClusterRatio >= 0.70 && hasHigherTFActive) {
       signalStrength = 'strong';
-    } else if (confidence >= 55 && activeTFCount >= 3 && dominantClusterRatio >= 0.60) {
+    } else if (confidence >= 55 && directionalConviction >= 35 && activeTFCount >= 3 && dominantClusterRatio >= 0.60) {
       signalStrength = 'moderate';
-    } else if (confidence >= 40 && activeTFCount >= 2) {
+    } else if (confidence >= 40 && directionalConviction >= 20 && activeTFCount >= 2) {
       signalStrength = 'weak';
     }
     
@@ -3012,7 +3020,7 @@ export class ConfluenceLearningAgent {
     }
     
     // HIGH ALIGNMENT
-    if (confidence >= 80) {
+    if (confidence >= 80 && directionalConviction >= 35) {
       banners.push('HIGH ALIGNMENT');
     }
     
@@ -3025,7 +3033,7 @@ export class ConfluenceLearningAgent {
       reasoningParts.push(`${activeTFCount} TFs decompressing`);
     }
     if (clusteredCount >= 2) {
-      reasoningParts.push(`${clusteredCount} TFs clustered (${dominantClusterRatio.toFixed(0)}% ratio)`);
+      reasoningParts.push(`${clusteredCount} TFs clustered (${(dominantClusterRatio * 100).toFixed(0)}% ratio)`);
     }
     if (direction !== 'neutral') {
       reasoningParts.push(`Direction: ${direction.toUpperCase()} (${directionScore > 0 ? '+' : ''}${directionScore.toFixed(0)})`);
@@ -3315,6 +3323,12 @@ export class ConfluenceLearningAgent {
       confidence = Math.min(90, confidence + 10);
     } else if (candleCloseConfluence.confluenceRating === 'moderate') {
       confidence = Math.min(85, confidence + 5);
+    }
+
+    // Timing clusters alone should not imply high directional confidence.
+    // Keep the direction visible, but cap confidence when directional pull is weak.
+    if (direction !== 'neutral' && directionalConviction < 35) {
+      confidence = Math.min(confidence, 62);
     }
     
     // Add candle close info to reasoning

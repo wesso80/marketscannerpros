@@ -269,17 +269,21 @@ function mapScanToInput(symbol: string, scanMode: ScanModeType, scan: any): Time
   const peakCluster = scan?.candleCloseConfluence?.peakCloseCluster;
   const peakClusterCount = Number(peakCluster?.count || 0);
   const peakClusterWeight = Number(peakCluster?.weightedScore || 0);
+  const peakClusterStartMins = Number(peakCluster?.windowStartMins ?? Infinity);
+  const actionablePeakCluster = peakClusterCount >= 3 && peakClusterStartMins <= 240;
+  const actionablePeakClusterCount = actionablePeakCluster ? peakClusterCount : 0;
+  const actionablePeakClusterWeight = actionablePeakCluster ? peakClusterWeight : 0;
 
   const warnings: TimeConfluenceV2Inputs['setup']['warnings'] = [];
   if (alignmentCount / tfCount < 0.5) warnings.push('LOW_ALIGNMENT_COUNT');
-  if (clusterRatio < 0.55 && peakClusterCount < 3) warnings.push('LOW_CLUSTER_INTEGRITY');
+  if (clusterRatio < 0.55 && actionablePeakClusterCount < 3) warnings.push('LOW_CLUSTER_INTEGRITY');
   if (directionScore < 0.5) warnings.push('MIXED_DIRECTION');
   if (confluenceScore < 0.55) warnings.push('WEAK_CLOSE_STRENGTH');
 
   const specialEvents = scan?.candleCloseConfluence?.specialEvents || {};
   const extremeConditions: TimeConfluenceV2Inputs['context']['extremeConditions'] = [];
   if (specialEvents.isMonthEnd || specialEvents.isQuarterEnd || specialEvents.isYearEnd) extremeConditions.push('NEWS_RISK');
-  if ((scan?.decompression?.clusteredCount || 0) >= 4 || peakClusterCount >= 5) extremeConditions.push('PRICE_MAGNET');
+  if ((scan?.decompression?.clusteredCount || 0) >= 4 || actionablePeakClusterCount >= 5) extremeConditions.push('PRICE_MAGNET');
   if (directionScore < 0.35) extremeConditions.push('HTF_CONFLICT');
 
   const closeNowCount = Number(scan?.candleCloseConfluence?.closingNow?.count || 0);
@@ -291,7 +295,7 @@ function mapScanToInput(symbol: string, scanMode: ScanModeType, scan: any): Time
 
   // Improved cluster integrity: blend decompression clusterRatio with peak cluster score
   const blendedClusterIntegrity = clamp01(
-    0.5 * clusterRatio + 0.5 * clamp01(peakClusterWeight / 50)
+    0.5 * clusterRatio + 0.5 * clamp01(actionablePeakClusterWeight / 50)
   );
 
   return {
@@ -329,12 +333,12 @@ function mapScanToInput(symbol: string, scanMode: ScanModeType, scan: any): Time
       primaryDirection: direction,
       decomposition: decompositionRows,
       window: {
-        status: closeNowCount > 0 || closeSoonCount > 0 || peakClusterCount >= 3 ? 'ACTIVE' : 'INACTIVE',
+        status: closeNowCount > 0 || closeSoonCount > 0 || actionablePeakClusterCount >= 3 ? 'ACTIVE' : 'INACTIVE',
         durationHours: Math.max(1, Math.round((Number(scan?.candleCloseConfluence?.bestEntryWindow?.endMins || 60) - Number(scan?.candleCloseConfluence?.bestEntryWindow?.startMins || 0)) / 60)),
         timeRemainingMinutes: Number(scan?.candleCloseConfluence?.bestEntryWindow?.startMins || 0),
         strength: clamp01(Math.max(
           Number(scan?.decompression?.temporalCluster?.score || 0) / 100,
-          peakClusterWeight / 100,
+          actionablePeakClusterWeight / 100,
         )),
         clusterIntegrity: blendedClusterIntegrity,
         directionConsistency: clamp01(directionScore),
