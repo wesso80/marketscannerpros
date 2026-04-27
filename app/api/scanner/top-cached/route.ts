@@ -182,7 +182,26 @@ export async function GET(req: NextRequest) {
         warnings: stale ? ['Cached scanner data is older than the freshness threshold.'] : [],
       }),
     });
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.code === 'ECONNREFUSED' || err?.code === 'ENOTFOUND' || !process.env.DATABASE_URL) {
+      console.warn('[top-cached] Database unavailable; returning empty local fallback.');
+      return NextResponse.json({
+        success: true,
+        compliance: scannerComplianceMetadata(),
+        equity: [],
+        crypto: [],
+        source: 'local_fallback',
+        cached_at: null,
+        stale: true,
+        age_minutes: null,
+        dataQuality: scannerDataQualityMetadata({
+          source: 'local_fallback',
+          stale: true,
+          coverageScore: 0,
+          warnings: ['Local database is unavailable, so cached scanner candidates cannot be displayed.'],
+        }),
+      });
+    }
     console.error('[top-cached] Error:', err);
     return NextResponse.json({
       success: false,

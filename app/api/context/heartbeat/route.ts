@@ -191,7 +191,11 @@ export async function POST(req: NextRequest) {
       page,
       route,
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === 'ECONNREFUSED' || error?.code === 'ENOTFOUND' || !process.env.DATABASE_URL) {
+      console.warn('[context/heartbeat] Database unavailable; accepting heartbeat without persistence.');
+      return NextResponse.json({ success: true, degraded: true, emitted: false });
+    }
     console.error('[context/heartbeat] POST error:', error);
     return NextResponse.json({ error: 'Failed to persist context heartbeat' }, { status: 500 });
   }

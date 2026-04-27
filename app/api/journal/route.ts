@@ -493,7 +493,11 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json({ entries });
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === 'ECONNREFUSED' || error?.code === 'ENOTFOUND' || !process.env.DATABASE_URL) {
+      console.warn('[journal] Database unavailable; returning empty local fallback.');
+      return NextResponse.json({ entries: [], degraded: true });
+    }
     console.error("Journal GET error:", error);
     return NextResponse.json({ error: "Failed to load journal" }, { status: 500 });
   }
