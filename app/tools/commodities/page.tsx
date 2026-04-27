@@ -6,6 +6,7 @@ import { useUserTier, canAccessPortfolioInsights } from '@/lib/useUserTier';
 import { ToolsPageHeader } from '@/components/ToolsPageHeader';
 import { useAIPageContext } from '@/lib/ai/pageContext';
 import UpgradeGate from '@/components/UpgradeGate';
+import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 
 interface CommodityData {
   symbol: string;
@@ -456,7 +457,12 @@ export default function CommoditiesPage() {
           icon="🛢️"
         />
         <main style={{ padding: '24px 16px', display: 'flex', justifyContent: 'center' }}>
-          <UpgradeGate feature="Commodities Dashboard" requiredTier="pro" />
+          <div style={{ width: '100%', maxWidth: 960 }}>
+            <ComplianceDisclaimer collapsible />
+            <div style={{ marginTop: 16, display: 'flex', justifyContent: 'center' }}>
+              <UpgradeGate feature="Commodities Dashboard" requiredTier="pro" />
+            </div>
+          </div>
         </main>
       </div>
     );
@@ -533,6 +539,7 @@ export default function CommoditiesPage() {
         }
       />
       <main className="mx-auto max-w-none px-4 py-6 sm:px-6 lg:px-8">
+        <ComplianceDisclaimer collapsible />
         {derivedState && (
           <>
             <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">

@@ -1,25 +1,27 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Trade Journal | Trading Tools | MarketScanner Pros',
+  title: 'Trade Journal',
   description:
-    'Professional trade journal with P&L tracking, risk metrics, equity curves, AI-powered data summaries, and multi-device sync. Log and review every trade.',
+    'Educational trade journal for logging decisions, reviewing outcomes, tracking risk metrics, equity curves, and syncing process notes across devices.',
   openGraph: {
     title: 'Trade Journal | MarketScanner Pros',
     description:
       'Professional trade journal with live P&L tracking, risk metrics, equity curves, AI-powered analysis, and multi-device sync.',
-    url: 'https://app.marketscannerpros.app/tools/journal',
+    url: 'https://marketscannerpros.app/tools/journal',
     siteName: 'MarketScanner Pros',
+    images: [{ url: '/scan-banner.png', width: 1200, height: 630, alt: 'MarketScanner Pros — Trade Journal' }],
     type: 'website',
   },
   twitter: {
-    card: 'summary',
+    card: 'summary_large_image',
     title: 'Trade Journal | MarketScanner Pros',
     description:
-      'Professional trade journal with live P&L tracking, risk metrics, equity curves, and AI-powered analysis.',
+      'Educational trade journal for logging decisions, reviewing outcomes, and tracking risk metrics.',
+    images: ['/scan-banner.png'],
   },
   alternates: {
-    canonical: 'https://app.marketscannerpros.app/tools/journal',
+    canonical: 'https://marketscannerpros.app/tools/journal',
   },
 };
 

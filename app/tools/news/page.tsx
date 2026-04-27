@@ -10,6 +10,7 @@ import NarrativeStack from "@/components/news-decision/NarrativeStack";
 import RotationBoard from "@/components/news-decision/RotationBoard";
 import NewsGroup from "@/components/news-decision/NewsGroup";
 import type { DecisionNewsItem, NarrativeGroup, NewsGateModel } from "@/components/news-decision/types";
+import ComplianceDisclaimer from "@/components/ComplianceDisclaimer";
 
 interface TickerSentiment {
   ticker: string;
@@ -782,7 +783,12 @@ export default function NewsSentimentPage() {
           backHref="/dashboard"
         />
         <main style={{ padding: "24px 16px", display: "flex", justifyContent: "center" }}>
-          <UpgradeGate feature="Market Intelligence" requiredTier="pro" />
+          <div style={{ width: "100%", maxWidth: 960 }}>
+            <ComplianceDisclaimer collapsible />
+            <div style={{ marginTop: 16, display: "flex", justifyContent: "center" }}>
+              <UpgradeGate feature="Market Intelligence" requiredTier="pro" />
+            </div>
+          </div>
         </main>
       </div>
     );
@@ -799,6 +805,7 @@ export default function NewsSentimentPage() {
       />
       <main style={{ minHeight: "100vh", padding: "24px 16px", width: '100%' }}>
         <div style={{ maxWidth: "none", margin: "0 auto", padding: 0, width: '100%' }}>
+        <ComplianceDisclaimer collapsible />
 
         {/* Tabs */}
         <div

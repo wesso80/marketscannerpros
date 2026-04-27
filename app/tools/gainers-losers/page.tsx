@@ -7,6 +7,7 @@ import { useUserTier, canAccessPortfolioInsights } from "@/lib/useUserTier";
 import UpgradeGate from "@/components/UpgradeGate";
 import { useAIPageContext } from "@/lib/ai/pageContext";
 import { fireAutoLog } from "@/lib/autoLog";
+import ComplianceDisclaimer from "@/components/ComplianceDisclaimer";
 
 interface MarketMover {
   ticker: string;
@@ -376,7 +377,12 @@ export default function GainersLosersPage() {
           backHref="/dashboard"
         />
         <main style={{ padding: "24px 16px", display: "flex", justifyContent: "center" }}>
-          <UpgradeGate feature="Market Movers" requiredTier="pro" />
+          <div style={{ width: "100%", maxWidth: 960 }}>
+            <ComplianceDisclaimer collapsible />
+            <div style={{ marginTop: 16, display: "flex", justifyContent: "center" }}>
+              <UpgradeGate feature="Market Movers" requiredTier="pro" />
+            </div>
+          </div>
         </main>
       </div>
     );
@@ -393,6 +399,7 @@ export default function GainersLosersPage() {
       />
       <main style={{ padding: "24px 16px", width: "100%" }}>
         <div style={{ maxWidth: "none", margin: "0 auto", width: "100%" }}>
+          <ComplianceDisclaimer collapsible />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
             <div style={{ color: "#64748b", fontSize: 13 }}>
               {marketDate && <div>📅 Market data: {marketDate}</div>}

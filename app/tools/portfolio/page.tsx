@@ -17,6 +17,7 @@ import { useRiskPermission } from '@/components/risk/RiskPermissionContext';
 import { amountToR, formatDollar, formatR } from '@/lib/riskDisplay';
 import { detectAssetClass } from '@/lib/detectAssetClass';
 import { formatPrice, formatPriceRaw } from '@/lib/formatPrice';
+import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 
 interface Position {
   id: number;
@@ -1776,8 +1777,11 @@ export function PortfolioContent() {
         }
       />
 
-      <div className="mx-4 mt-2 rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-2.5 text-[11px] leading-relaxed text-slate-400">
-        This page displays user-entered simulation records and descriptive analytics only. It does not recommend keeping, selling, reducing, adding, or rebalancing any position or portfolio exposure.
+      <div className="mx-4 mt-2">
+        <ComplianceDisclaimer collapsible />
+        <div className="mt-2 rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-2.5 text-[11px] leading-relaxed text-slate-400">
+          This page displays user-entered simulation records and descriptive analytics only. It does not recommend keeping, selling, reducing, adding, or rebalancing any position or portfolio exposure.
+        </div>
       </div>
 
       <div className="w-full max-w-none px-4 pt-3">

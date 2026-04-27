@@ -10,6 +10,7 @@ import dynamic from 'next/dynamic';
 import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useUserTier } from '@/lib/useUserTier';
 import { useCachedTopSymbols } from '@/hooks/useCachedTopSymbols';
+import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 
 const OptionsTerminalView = dynamic(() => import('@/components/options-terminal/OptionsTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Options Terminal…</div> });
 const CryptoTerminalView = dynamic(() => import('@/components/crypto-terminal/CryptoTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminal…</div> });
@@ -136,6 +137,7 @@ export default function TerminalPage() {
   return (
     <div className="space-y-6">
       <SectionHeader title="Terminal" subtitle={asset === 'crypto' ? 'Close Calendar — Crypto — Flow' : 'Close Calendar — Options Terminal — Crypto — Flow'} />
+      <ComplianceDisclaimer collapsible variant={asset === 'crypto' ? 'cryptoDerivatives' : 'options'} />
 
       {/* Symbol Bar */}
       <Card>

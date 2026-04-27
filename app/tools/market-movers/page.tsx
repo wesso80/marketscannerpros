@@ -8,6 +8,7 @@ import MarketStatusBadge from '@/components/MarketStatusBadge';
 import { useAIPageContext } from '@/lib/ai/pageContext';
 import { useUserTier, canAccessPortfolioInsights } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
+import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 
 interface Mover {
   ticker: string;
@@ -566,7 +567,7 @@ export default function MarketMoversPage() {
   };
 
   if (tierLoading) return <div className="min-h-screen bg-[var(--msp-bg)]" />;
-  if (!canAccessPortfolioInsights(tier)) return <UpgradeGate requiredTier="pro" feature="Market Movers" />;
+  if (!canAccessPortfolioInsights(tier)) return <><ComplianceDisclaimer collapsible /><UpgradeGate requiredTier="pro" feature="Market Movers" /></>;
 
   return (
     <div className="min-h-screen bg-[var(--msp-bg)] text-white">
@@ -578,6 +579,7 @@ export default function MarketMoversPage() {
       />
 
       <main className="mx-auto w-full max-w-none space-y-2 px-2 pb-6 pt-3 md:px-3">
+        <ComplianceDisclaimer collapsible />
         <section className="z-20 flex flex-wrap items-center gap-1 rounded-lg border border-slate-700 bg-slate-900/95 p-1 backdrop-blur md:sticky md:top-2 md:gap-1.5 md:p-1.5">
           {[
             ['Mode', environment.marketMode],

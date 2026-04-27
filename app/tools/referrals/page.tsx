@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useUserTier } from '@/lib/useUserTier';
 import ToolsPageHeader from '@/components/ToolsPageHeader';
 import Link from 'next/link';
+import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 
 interface ReferralDashboardData {
   referralCode: string;
@@ -95,6 +96,7 @@ export default function ReferralsPage() {
       />
 
       <main className="mx-auto w-full max-w-4xl space-y-6 px-4 py-6 md:px-6">
+        <ComplianceDisclaimer collapsible />
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
