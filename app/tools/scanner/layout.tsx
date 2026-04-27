@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Market Scanner | Trading Tools | MarketScanner Pros',
+  title: 'Market Scanner',
   description:
-    'Scan equities, crypto, and forex with 15+ technical indicators. Ranked candidates, decision cockpit, risk analysis, and AI-powered trade analysis.',
+    'Scan equities, crypto, and forex with technical indicators, regime context, data-quality warnings, and educational scenario analysis.',
   openGraph: {
     title: 'Market Scanner | MarketScanner Pros',
     description:
-      'Scan equities, crypto, and forex with 15+ technical indicators. Ranked candidates, decision cockpit, risk analysis, and AI-powered analysis.',
+      'Scan equities, crypto, and forex with technical indicators, regime context, data-quality warnings, and educational scenario analysis.',
     url: 'https://marketscannerpros.app/tools/scanner',
     siteName: 'MarketScanner Pros',
     images: [
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Market Scanner | MarketScanner Pros',
     description:
-      'Scan equities, crypto, and forex with 15+ technical indicators. Ranked candidates, risk analysis, and AI analysis.',
+      'Ranked market scanner with regime context and educational scenario analysis.',
     images: ['/scan-banner.png'],
   },
   alternates: {

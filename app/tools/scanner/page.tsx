@@ -600,6 +600,18 @@ export default function ScannerPage() {
     return items;
   }, [allResults, activeTab, sortKey, sortDir]);
 
+  const tabCounts = useMemo(() => ({
+    All: allResults.length,
+    Equities: allResults.filter(r => (r as any)._assetClass === 'equity').length,
+    Crypto: allResults.filter(r => (r as any)._assetClass === 'crypto').length,
+    Bullish: allResults.filter(r => r.direction === 'bullish').length,
+    Bearish: allResults.filter(r => r.direction === 'bearish').length,
+    'High Score': allResults.filter(r => Math.abs(r.score) >= 5).length,
+    'DVE Signals': allResults.filter(r => (r.dveSignalType && r.dveSignalType !== 'none') || (r.dveFlags && r.dveFlags.length > 0)).length,
+    Squeeze: allResults.filter(r => r.dveFlags?.includes('SQUEEZE_FIRE')).length,
+    'Regime Match': allResults.filter(r => isRegimeCompatible(r)).length,
+  }), [allResults, currentRegime]);
+
   const v2Loading = equity.loading || crypto.loading;
 
   /* ─── Track last successful scan timestamp (E) ─── */
@@ -824,8 +836,15 @@ export default function ScannerPage() {
 
   function SortHeader({ k, label, w }: { k: SortKey; label: string; w: string }) {
     return (
-      <th className={`${w} text-left text-[11px] uppercase tracking-wider text-slate-500 cursor-pointer hover:text-slate-300 py-2 px-2 select-none whitespace-nowrap`} onClick={() => toggleSort(k)}>
-        {label} {sortKey === k ? (sortDir === 'desc' ? '▼' : '▲') : ''}
+      <th className={`${w} text-left py-2 px-2 whitespace-nowrap`}>
+        <button
+          type="button"
+          onClick={() => toggleSort(k)}
+          className="text-left text-[11px] uppercase tracking-wider text-slate-500 hover:text-slate-300"
+          aria-label={`Sort scanner table by ${label}`}
+        >
+          {label} {sortKey === k ? (sortDir === 'desc' ? '▼' : '▲') : ''}
+        </button>
       </th>
     );
   }
@@ -839,11 +858,11 @@ export default function ScannerPage() {
 
       {/* ─── Mode Toggle ─── */}
       <div className="flex items-center gap-1 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-1 w-fit">
-        <button onClick={() => { setMode('ranked'); setSelectedSymbol(null); setSymbolDetail(null); }}
+        <button type="button" aria-pressed={mode === 'ranked'} onClick={() => { setMode('ranked'); setSelectedSymbol(null); setSymbolDetail(null); }}
           className={`px-3.5 py-1.5 rounded-md text-xs font-bold uppercase tracking-[0.06em] transition-all ${mode === 'ranked' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:text-slate-200 border border-transparent'}`}>
           Ranked Scan
         </button>
-        <button onClick={() => { setMode('pro'); setSelectedSymbol(null); setSymbolDetail(null); }}
+        <button type="button" aria-pressed={mode === 'pro'} onClick={() => { setMode('pro'); setSelectedSymbol(null); setSymbolDetail(null); }}
           className={`px-3.5 py-1.5 rounded-md text-xs font-bold uppercase tracking-[0.06em] transition-all ${mode === 'pro' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:text-slate-200 border border-transparent'}`}>
           Pro Scanner
         </button>
@@ -868,7 +887,7 @@ export default function ScannerPage() {
           <div className="flex items-center gap-1">
             <span className="text-[11px] text-slate-500 mr-1 uppercase">Timeframe</span>
             {SCAN_TIMEFRAMES.map(tf => (
-              <button key={tf.value} onClick={() => setV2Timeframe(tf.value)}
+              <button key={tf.value} type="button" aria-pressed={v2Timeframe === tf.value} onClick={() => setV2Timeframe(tf.value)}
                 className={`px-2.5 py-1 text-[11px] rounded-md transition-colors ${v2Timeframe === tf.value ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-[var(--msp-border)]'}`}>
                 {tf.label}
               </button>
@@ -883,36 +902,18 @@ export default function ScannerPage() {
               className="w-full rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
             >
               {TABS.map(tab => {
-                const count = tab === 'All' ? allResults.length
-                  : tab === 'Equities' ? allResults.filter(r => (r as any)._assetClass === 'equity').length
-                  : tab === 'Crypto' ? allResults.filter(r => (r as any)._assetClass === 'crypto').length
-                  : tab === 'Bullish' ? allResults.filter(r => r.direction === 'bullish').length
-                  : tab === 'Bearish' ? allResults.filter(r => r.direction === 'bearish').length
-                  : tab === 'High Score' ? allResults.filter(r => Math.abs(r.score) >= 5).length
-                  : tab === 'DVE Signals' ? allResults.filter(r => (r.dveSignalType && r.dveSignalType !== 'none') || (r.dveFlags && r.dveFlags.length > 0)).length
-                  : tab === 'Squeeze' ? allResults.filter(r => r.dveFlags?.includes('SQUEEZE_FIRE')).length
-                  : tab === 'Regime Match' ? allResults.filter(r => isRegimeCompatible(r)).length
-                  : 0;
+                const count = tabCounts[tab];
                 return <option key={tab} value={tab}>{tab} ({count})</option>;
               })}
             </select>
           </div>
           <div className="hidden md:flex items-center gap-1 overflow-x-auto pb-1">
             {TABS.map(tab => (
-              <button key={tab} onClick={() => setActiveTab(tab)}
+              <button key={tab} type="button" aria-pressed={activeTab === tab} onClick={() => setActiveTab(tab)}
                 className={`px-2.5 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap transition-colors ${activeTab === tab ? 'bg-[rgba(16,185,129,0.1)] text-[var(--msp-accent)] border border-[rgba(16,185,129,0.4)]' : 'text-[var(--msp-text-muted)] hover:bg-slate-800/60 border border-transparent'}`}>
                 {tab}
                 <span className="ml-1 text-[11px] text-slate-600">
-                  {tab === 'All' ? allResults.length
-                    : tab === 'Equities' ? allResults.filter(r => (r as any)._assetClass === 'equity').length
-                    : tab === 'Crypto' ? allResults.filter(r => (r as any)._assetClass === 'crypto').length
-                    : tab === 'Bullish' ? allResults.filter(r => r.direction === 'bullish').length
-                    : tab === 'Bearish' ? allResults.filter(r => r.direction === 'bearish').length
-                    : tab === 'High Score' ? allResults.filter(r => Math.abs(r.score) >= 5).length
-                    : tab === 'DVE Signals' ? allResults.filter(r => (r.dveSignalType && r.dveSignalType !== 'none') || (r.dveFlags && r.dveFlags.length > 0)).length
-                    : tab === 'Squeeze' ? allResults.filter(r => r.dveFlags?.includes('SQUEEZE_FIRE')).length
-                    : tab === 'Regime Match' ? allResults.filter(r => isRegimeCompatible(r)).length
-                    : 0}
+                  {tabCounts[tab]}
                 </span>
               </button>
             ))}
@@ -935,13 +936,17 @@ export default function ScannerPage() {
 
           {/* Table */}
           <Card>
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
+              <span>Click or press Enter on a row to open symbol analysis.</span>
+              <span className="text-slate-600">Sorted by {sortKey} ({sortDir})</span>
+            </div>
             {v2Loading ? (
               <div className="space-y-3 py-4">{Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-8 bg-slate-700/30 rounded animate-pulse" />)}</div>
             ) : filtered.length === 0 ? (
               <div className="text-xs text-slate-500 py-12 text-center">No results match this filter.</div>
             ) : (
               <div className="overflow-x-auto -mx-1">
-                <table className="w-full text-xs" style={{ minWidth: 1040 }}>
+                <table className="w-full text-xs" style={{ minWidth: 1040 }} aria-label="Ranked scanner results">
                   <thead>
                     <tr className="border-b border-[var(--msp-border)]">
                       <SortHeader k="symbol" label="Symbol" w="w-20" />
@@ -970,7 +975,20 @@ export default function ScannerPage() {
                       const reason = summarizeRankedReason(r, lifecycle, regimeCompatible, currentRegime);
                       const trustDetail = rankedTrustDetail(r);
                       return (
-                        <tr key={r.symbol} className="border-b border-slate-800/40 hover:bg-slate-800/30 cursor-pointer transition-colors" onClick={() => handleV2RowClick(r)}>
+                        <tr
+                          key={r.symbol}
+                          role="button"
+                          tabIndex={0}
+                          className="border-b border-slate-800/40 hover:bg-slate-800/30 focus:bg-slate-800/40 focus:outline-none cursor-pointer transition-colors"
+                          onClick={() => handleV2RowClick(r)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              handleV2RowClick(r);
+                            }
+                          }}
+                          aria-label={`Analyze ${r.symbol}`}
+                        >
                           <td className="py-2.5 px-2 whitespace-nowrap"><div className="font-bold text-white">{r.symbol}</div><div className="text-[11px] text-slate-600">{regimeLabel}</div></td>
                           <td className="py-2.5 px-2 text-center whitespace-nowrap"><span className="text-sm font-black" style={{ color: mspColor }}>{msp}</span></td>
                           <td className="py-2.5 px-2 text-slate-300 font-mono whitespace-nowrap">{formatPrice(r.price)}</td>
@@ -1012,7 +1030,7 @@ export default function ScannerPage() {
                             </span>
                           </td>
                           <td className="py-2.5 px-2 text-center whitespace-nowrap">
-                            <button onClick={(e) => { e.stopPropagation(); handleV2RowClick(r); }} className="px-2.5 py-1.5 bg-emerald-500/10 text-emerald-400 rounded text-[11px] font-semibold hover:bg-emerald-500/20 transition-colors">Analyze</button>
+                            <button type="button" onClick={(e) => { e.stopPropagation(); handleV2RowClick(r); }} className="px-2.5 py-1.5 bg-emerald-500/10 text-emerald-400 rounded text-[11px] font-semibold hover:bg-emerald-500/20 transition-colors">Analyze</button>
                           </td>
                         </tr>
                       );
@@ -1036,7 +1054,7 @@ export default function ScannerPage() {
                     Free: {FREE_DAILY_SCAN_LIMIT}/day — Upgrade
                   </a>
                 )}
-                <button onClick={() => { equity.refetch(); crypto.refetch(); }} className="text-[11px] text-emerald-400 hover:underline">Rescan</button>
+                <button type="button" onClick={() => { equity.refetch(); crypto.refetch(); }} className="text-[11px] text-emerald-400 hover:underline">Rescan</button>
               </div>
             </div>
           </Card>
