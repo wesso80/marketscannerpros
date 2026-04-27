@@ -1,3 +1,5 @@
+import type { Metadata } from 'next';
+
 /**
  * /quant layout — Private operator terminal layout
  *
@@ -5,9 +7,11 @@
  * Auth-gated at the API level (layout just provides structure).
  */
 
-export const metadata = {
-  title: 'Quant Terminal — Internal',
-  robots: 'noindex, nofollow',
+export const metadata: Metadata = {
+  title: 'Quant Operator Console',
+  description: 'Private educational operator console for internal MarketScanner Pros quant research observations.',
+  alternates: { canonical: '/quant' },
+  robots: { index: false, follow: false },
 };
 
 export default function QuantLayout({

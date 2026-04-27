@@ -150,6 +150,8 @@ export default function QuantTerminal() {
           {(['daily', '1h', '15min'] as const).map(tf => (
             <button
               key={tf}
+              type="button"
+              aria-pressed={timeframe === tf}
               onClick={() => setTimeframe(tf)}
               className={`px-3 py-2 text-xs font-mono transition ${
                 timeframe === tf
@@ -163,6 +165,7 @@ export default function QuantTerminal() {
         </div>
 
         <button
+          type="button"
           onClick={() => runScan()}
           disabled={loading}
           className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 text-white text-sm font-mono rounded transition"
@@ -170,6 +173,7 @@ export default function QuantTerminal() {
           {loading ? 'SCANNING...' : 'RUN FULL SCAN'}
         </button>
         <button
+          type="button"
           onClick={() => runScan(['equity'])}
           disabled={loading}
           className="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-mono rounded transition"
@@ -177,6 +181,7 @@ export default function QuantTerminal() {
           EQUITY ONLY
         </button>
         <button
+          type="button"
           onClick={() => runScan(['crypto'])}
           disabled={loading}
           className="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-mono rounded transition"
@@ -352,6 +357,7 @@ export default function QuantTerminal() {
               Evidence: {evidence.symbol}
             </h2>
             <button
+              type="button"
               onClick={() => setEvidence(null)}
               className="text-xs font-mono text-gray-600 hover:text-gray-400"
             >
