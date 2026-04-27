@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import Hero from './Hero';
+import HomePreviewStrip from './HomePreviewStrip';
 import SocialProof from './SocialProof';
 import WhyMSP from './WhyMSP';
 
@@ -151,6 +152,9 @@ export default function CommandHub() {
     <main className="min-h-screen bg-[var(--msp-bg)] text-white">
       {/* ─── Coded Hero ─── */}
       <Hero />
+
+      {/* ─── Inside the platform (UI preview, sample data) ─── */}
+      <HomePreviewStrip />
 
       {/* ─── Referral Promo ─── */}
       <section className="border-b border-white/5 bg-slate-950/70">
