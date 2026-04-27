@@ -156,27 +156,26 @@ export default function CommandHub() {
       {/* ─── Inside the platform (UI preview, sample data) ─── */}
       <HomePreviewStrip />
 
-      {/* ─── Referral Promo ─── */}
-      <section className="border-b border-white/5 bg-slate-950/70">
-        <div className="mx-auto flex max-w-5xl flex-col items-center gap-2 px-4 py-5 text-center sm:flex-row sm:justify-center sm:gap-4">
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-400" aria-hidden="true" />
-            <span className="text-sm font-semibold text-emerald-400 sm:text-base">
-              Refer a Friend, Save on Your Plan
-            </span>
+      {/* ─── Guided tool chooser ─── */}
+      <section className="mx-auto w-full max-w-7xl px-4 pt-10 md:px-6">
+        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-5 md:p-6">
+          <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-400">Not sure where to start?</p>
+              <h2 className="mt-1 text-2xl font-bold text-white">Choose by trader workflow</h2>
+            </div>
+            <Link href="/guide" className="text-sm font-semibold text-emerald-300 hover:text-emerald-200">Open full platform guide →</Link>
           </div>
-          <span className="text-xs text-slate-400 sm:text-sm">
-            Share your link — your friend saves $5–$10 and you earn credit too.
-          </span>
-          <Link
-            href="/tools/referrals"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-1.5 text-xs font-semibold text-emerald-400 transition-all hover:bg-emerald-500/20 hover:border-emerald-500/50 sm:text-sm"
-          >
-            Learn More
-            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-            </svg>
-          </Link>
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {guidedPaths.map((path) => (
+              <Link key={path.href} href={path.href} className="group rounded-xl border border-white/10 bg-slate-950/50 p-4 transition hover:border-emerald-500/40 hover:bg-slate-900/80">
+                <div className="text-xs font-bold uppercase tracking-[0.08em] text-slate-500">I want to</div>
+                <div className="mt-1 text-sm font-extrabold text-white">{path.goal}</div>
+                <div className="mt-2 text-xs font-bold text-emerald-300">Use {path.tool}</div>
+                <p className="mt-1 text-xs leading-relaxed text-slate-400">{path.detail}</p>
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -201,29 +200,6 @@ export default function CommandHub() {
                 <div className="text-sm font-extrabold text-white">{item.label}</div>
                 <p className="mt-1 text-xs leading-relaxed text-slate-400">{item.detail}</p>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Guided tool chooser ─── */}
-      <section className="mx-auto w-full max-w-7xl px-4 pt-10 md:px-6">
-        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-5 md:p-6">
-          <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-400">Not sure where to start?</p>
-              <h2 className="mt-1 text-2xl font-bold text-white">Choose by trader workflow</h2>
-            </div>
-            <Link href="/guide" className="text-sm font-semibold text-emerald-300 hover:text-emerald-200">Open full platform guide →</Link>
-          </div>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {guidedPaths.map((path) => (
-              <Link key={path.href} href={path.href} className="group rounded-xl border border-white/10 bg-slate-950/50 p-4 transition hover:border-emerald-500/40 hover:bg-slate-900/80">
-                <div className="text-xs font-bold uppercase tracking-[0.08em] text-slate-500">I want to</div>
-                <div className="mt-1 text-sm font-extrabold text-white">{path.goal}</div>
-                <div className="mt-2 text-xs font-bold text-emerald-300">Use {path.tool}</div>
-                <p className="mt-1 text-xs leading-relaxed text-slate-400">{path.detail}</p>
-              </Link>
             ))}
           </div>
         </div>
@@ -261,9 +237,8 @@ export default function CommandHub() {
           </h2>
 
           <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-slate-400 md:text-base">
-            Our AI engine analyzes 10,000+ assets across multiple timeframes to identify
-            technically aligned scenarios, combining scanner data, options flow,
-            and market structure for educational research context.
+            ARCxA helps organize scanner, regime, volatility, flow, and market-structure
+            context into educational research summaries — a copilot for review, not a trade oracle.
           </p>
 
           <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-xs text-slate-500">
@@ -295,6 +270,30 @@ export default function CommandHub() {
           </div>
         </section>
       </div>
+
+      {/* ─── Referral Promo ─── */}
+      <section className="border-t border-white/5 bg-slate-950/70">
+        <div className="mx-auto flex max-w-5xl flex-col items-center gap-2 px-4 py-5 text-center sm:flex-row sm:justify-center sm:gap-4">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-emerald-400" aria-hidden="true" />
+            <span className="text-sm font-semibold text-emerald-400 sm:text-base">
+              Refer a Friend, Save on Your Plan
+            </span>
+          </div>
+          <span className="text-xs text-slate-400 sm:text-sm">
+            Share your link — your friend saves $5–$10 and you earn credit too.
+          </span>
+          <Link
+            href="/tools/referrals"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-1.5 text-xs font-semibold text-emerald-400 transition-all hover:bg-emerald-500/20 hover:border-emerald-500/50 sm:text-sm"
+          >
+            Learn More
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </Link>
+        </div>
+      </section>
 
       {/* ─── Bottom CTA ─── */}
       <section className="border-t border-white/5 bg-slate-950/80">
