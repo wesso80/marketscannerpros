@@ -178,7 +178,7 @@ function buildPayload(
   // ── Layer 1: Decision Permission ──────────────────────────────────
   // Score breakdown: Structure (30%), Flow (25%), Momentum (20%), Risk (25%)
   const structureScore = computeStructureScore(ind, price);
-  const flowScore = computeFlowScore(opts, mpe);
+  const flowScore = computeFlowScore(opts, mpe, cryptoDerivs);
   const momentumScore = computeMomentumScore(ind, price);
   const riskScore = computeRiskScore(ind, price, mpe);
 
@@ -201,6 +201,20 @@ function buildPayload(
   if (confidence >= 70 && direction !== 'NEUTRAL') permission = 'TRADE';
   else if (confidence < 40) permission = 'NO_TRADE';
 
+  const timeConfluenceOpposesDirection = tcData && direction !== 'NEUTRAL' && tcData.direction !== 'neutral' &&
+    ((direction === 'LONG' && tcData.direction === 'bearish') || (direction === 'SHORT' && tcData.direction === 'bullish'));
+  const decompressionOpposesDirection = tcData?.decompressionTarget && direction !== 'NEUTRAL' && tcData.decompressionTarget.price > 0 &&
+    ((direction === 'LONG' && tcData.decompressionTarget.direction === 'down') || (direction === 'SHORT' && tcData.decompressionTarget.direction === 'up'));
+  const timeConfluenceHardConflict = Boolean(timeConfluenceOpposesDirection && (
+    tcData!.confidence >= 40 ||
+    tcData!.signalStrength !== 'no_signal' ||
+    decompressionOpposesDirection
+  ));
+
+  if (permission === 'TRADE' && timeConfluenceHardConflict) {
+    permission = 'WATCH';
+  }
+
   // Macro regime override: RISK_OFF downgrades TRADE → WATCH
   if (macroRegime?.riskState === 'risk_off' && permission === 'TRADE') {
     permission = 'WATCH';
@@ -209,9 +223,11 @@ function buildPayload(
   // Flip conditions
   const flipConditions: GoldenEggPayload['layer1']['flipConditions'] = [];
   if (permission !== 'TRADE') {
+    if (timeConfluenceHardConflict) flipConditions.push({ id: 'f6', text: `Time confluence is ${tcData!.direction} while the setup is ${direction.toLowerCase()} — wait for timing to agree or for the conflict to clear`, severity: 'must' });
     if (macroRegime?.riskState === 'risk_off') flipConditions.push({ id: 'f5', text: `Macro regime is RISK_OFF (${macroRegime.concerns.join(', ')}) — wait for macro environment to improve`, severity: 'must' });
     if (structureScore < 60) flipConditions.push({ id: 'f1', text: `Price needs to reclaim ${direction === 'SHORT' ? 'below' : 'above'} key moving averages`, severity: 'must' });
     if (flowScore < 50 && opts) flipConditions.push({ id: 'f2', text: `Options flow needs to confirm direction (P/C currently ${opts.putCallRatio.toFixed(2)})`, severity: 'should' });
+    if (flowScore < 50 && cryptoDerivs) flipConditions.push({ id: 'f7', text: `Crypto derivatives are crowded (funding ${cryptoDerivs.fundingRatePercent.toFixed(4)}%) — wait for positioning to cool or confirm with price`, severity: 'should' });
     if (momentumScore < 50) flipConditions.push({ id: 'f3', text: `RSI needs to move ${direction === 'SHORT' ? 'below 45' : 'above 55'} to confirm momentum`, severity: 'must' });
     if (mpe && mpe.composite < 50) flipConditions.push({ id: 'f4', text: `Market pressure composite needs to reach 50+ (currently ${mpe.composite.toFixed(0)})`, severity: 'should' });
     if (flipConditions.length === 0) flipConditions.push({ id: 'f0', text: 'Overall score below threshold — waiting for improved confluence', severity: 'must' });
@@ -225,9 +241,11 @@ function buildPayload(
     { key: 'Risk', val: riskScore },
   ].sort((a, b) => b.val - a.val);
 
-  const primaryDriver = `${sortedScores[0].key} leads at ${sortedScores[0].val.toFixed(0)}/100 — ${describeScore(sortedScores[0].key, sortedScores[0].val, ind, opts, price)}`;
+  const primaryDriver = `${sortedScores[0].key} leads at ${sortedScores[0].val.toFixed(0)}/100 — ${describeScore(sortedScores[0].key, sortedScores[0].val, ind, opts, cryptoDerivs, price)}`;
   const weakest = sortedScores[sortedScores.length - 1];
-  const primaryBlocker = weakest.val < 55 ? `${weakest.key} holding back at ${weakest.val.toFixed(0)}/100` : undefined;
+  const primaryBlocker = timeConfluenceHardConflict
+    ? `Time confluence ${tcData!.direction} conflicts with the ${direction.toLowerCase()} scenario`
+    : weakest.val < 55 ? `${weakest.key} holding back at ${weakest.val.toFixed(0)}/100` : undefined;
 
   // CTA
   const cta: GoldenEggPayload['layer1']['cta'] = permission === 'TRADE'
@@ -478,6 +496,10 @@ function buildPayload(
   if (cryptoDerivs && cryptoDerivs.fundingRatePercent < -0.03) narrativeRisks.push('Negative funding — short squeeze risk if price rises.');
   if (narrativeRisks.length === 0) narrativeRisks.push('No major risk flags at current levels.');
 
+  const timeConfluenceVerdict: Verdict | undefined = tcData
+    ? timeConfluenceHardConflict ? 'disagree' : tcData.confidence >= 65 ? 'agree' : tcData.confidence >= 40 ? 'neutral' : 'disagree'
+    : undefined;
+
   // ── Doctrine Classification ───────────────────────────────────────
   let doctrineResult: GoldenEggPayload['doctrine'] = null;
   try {
@@ -545,7 +567,7 @@ function buildPayload(
       flipConditions,
       scoreBreakdown: [
         { key: 'Structure', weight: 30, value: Math.round(structureScore), note: structureScore >= 65 ? 'Trend alignment supportive' : structureScore >= 45 ? 'Mixed structure' : 'Structure opposing' },
-        { key: 'Flow', weight: 25, value: Math.round(flowScore), note: opts ? `P/C ${opts.putCallRatio.toFixed(2)}` : 'No options data' },
+        { key: 'Flow', weight: 25, value: Math.round(flowScore), note: opts ? `P/C ${opts.putCallRatio.toFixed(2)}` : cryptoDerivs ? `Funding ${cryptoDerivs.fundingRatePercent.toFixed(4)}%` : 'No options/derivatives data' },
         { key: 'Momentum', weight: 20, value: Math.round(momentumScore), note: ind?.rsi ? `RSI ${ind.rsi.toFixed(0)}` : undefined },
         { key: 'Risk', weight: 25, value: Math.round(riskScore), note: atr ? `ATR ${atrPct.toFixed(1)}%` : undefined },
       ],
@@ -630,13 +652,15 @@ function buildPayload(
         enabled: true,
         summary: permission === 'TRADE'
           ? `${symbol} shows ${direction.toLowerCase()} alignment with ${confidence}/100 confluence. Multiple factors support a ${setupType} educational scenario.${tcData?.signalStrength === 'strong' ? ` Time confluence confirms with ${tcData.direction} bias.` : ''}${dveReading?.signal.type !== 'none' && dveReading ? ` DVE ${dveReading.signal.type.replace(/_/g, ' ')} signal active.` : ''}`
-          : `${symbol} is in ${permission === 'NO_TRADE' ? 'not-aligned' : 'watch'} mode. Confluence is insufficient \u2014 monitor flip conditions.${tcData && tcData.direction !== 'neutral' ? ` Time confluence leans ${tcData.direction}.` : ''}`,
+          : permission === 'NO_TRADE'
+          ? `${symbol} is not aligned. Confluence is insufficient — monitor flip conditions.${tcData && tcData.direction !== 'neutral' ? ` Time confluence leans ${tcData.direction}.` : ''}`
+          : `${symbol} is in watch mode. Alignment is gated by ${primaryBlocker ? primaryBlocker.toLowerCase() : 'unresolved confirmation'} — monitor flip conditions.${tcData && tcData.direction !== 'neutral' ? ` Time confluence leans ${tcData.direction}.` : ''}`,
         bullets: narrativeBullets,
         risks: narrativeRisks,
       },
       timeConfluence: tcData ? {
         enabled: true,
-        verdict: tcData.confidence >= 65 ? 'agree' : tcData.confidence >= 40 ? 'neutral' : 'disagree',
+        verdict: timeConfluenceVerdict!,
         confidence: tcData.confidence,
         direction: tcData.direction,
         signalStrength: tcData.signalStrength,
@@ -667,7 +691,7 @@ function computeStructureScore(ind: Indicators | null, price: { price: number; c
   return Math.max(0, Math.min(100, score));
 }
 
-function computeFlowScore(opts: OptionsSnapshot | null, mpe: { composite: number; time: number; volatility: number; liquidity: number; options: number } | null): number {
+function computeFlowScore(opts: OptionsSnapshot | null, mpe: { composite: number; time: number; volatility: number; liquidity: number; options: number } | null, cryptoDerivs: CryptoDerivatives | null = null): number {
   let score = 50;
   if (opts) {
     if (opts.putCallRatio < 0.7) score += 15;
@@ -683,6 +707,14 @@ function computeFlowScore(opts: OptionsSnapshot | null, mpe: { composite: number
 
     if (opts.dealerGamma.includes('Long')) score += 5;
     else if (opts.dealerGamma.includes('Short')) score -= 3;
+  }
+  if (cryptoDerivs) {
+    const absFunding = Math.abs(cryptoDerivs.fundingRatePercent);
+    if (cryptoDerivs.totalOpenInterest > 0) score += 5;
+    if (cryptoDerivs.volume24h > 0) score += 5;
+    if (absFunding > 0.05) score -= 15;
+    else if (absFunding > 0.03) score -= 8;
+    else if (absFunding < 0.01) score += 5;
   }
   if (mpe) {
     score += (mpe.liquidity - 50) * 0.2;
@@ -731,9 +763,11 @@ function computeRiskScore(ind: Indicators | null, price: { price: number; high: 
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────
-function describeScore(key: string, val: number, ind: Indicators | null, opts: OptionsSnapshot | null, price: { changePct: number }): string {
+function describeScore(key: string, val: number, ind: Indicators | null, opts: OptionsSnapshot | null, cryptoDerivs: CryptoDerivatives | null, price: { changePct: number }): string {
   if (key === 'Structure') return ind?.sma50 ? 'price aligned with major moving averages' : 'trend structure evaluated';
-  if (key === 'Flow') return opts ? `options P/C ${opts.putCallRatio.toFixed(2)}, ${opts.unusualActivity} activity` : 'no options data available';
+  if (key === 'Flow') return opts
+    ? `options P/C ${opts.putCallRatio.toFixed(2)}, ${opts.unusualActivity} activity`
+    : cryptoDerivs ? `crypto derivatives funding ${cryptoDerivs.fundingRatePercent.toFixed(4)}%, OI tracked across ${cryptoDerivs.exchanges} exchanges` : 'no options/derivatives data available';
   if (key === 'Momentum') return ind?.rsi ? `RSI ${ind.rsi.toFixed(0)}, today ${price.changePct > 0 ? '+' : ''}${price.changePct.toFixed(1)}%` : 'momentum indicators pending';
   if (key === 'Risk') return 'risk parameters within acceptable range';
   return '';
