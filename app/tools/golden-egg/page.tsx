@@ -253,6 +253,7 @@ export default function GoldenEggPage() {
   } : null);
   const d = dve.data?.data;
   const loading = goldenEgg.loading;
+  const isAuthBlocked = goldenEgg.isAuthError && !loading;
   const geReferencePrice = geSafeScenario?.referenceLevel?.price;
   const geInvalidationPrice = geSafeScenario?.invalidationLevel?.price;
   const geHasScenarioLevels = isUsableNumber(geReferencePrice) && isUsableNumber(geInvalidationPrice);
@@ -305,7 +306,7 @@ export default function GoldenEggPage() {
     return `${sym} — Assessment: ${geAssessment}, Direction: ${ge.layer1.direction}, Confluence: ${geConfluenceScore}%`;
   }, [sym, ge, geAssessment, geConfluenceScore]);
 
-  useRegisterPageData('scanner', geAiData, [sym], geAiSummary);
+  useRegisterPageData('deep_analysis', geAiData, [sym], geAiSummary);
 
   async function handleSaveResearchCase() {
     if (!ge) return;
@@ -367,10 +368,33 @@ export default function GoldenEggPage() {
 
   return (
     <div className="space-y-4">
-      <SectionHeader title="Golden Egg" subtitle="Deep analysis page — full symbol intelligence" />
+      <SectionHeader title="Golden Egg" subtitle="Single-symbol confluence: regime, bias, volatility, liquidity, and scenario context" />
+      <ComplianceDisclaimer collapsible />
+
+      {isAuthBlocked && (
+        <Card>
+          <div className="mx-auto max-w-xl py-8 text-center">
+            <div className="mb-2 text-sm font-semibold text-amber-300">Sign in required</div>
+            <h2 className="text-xl font-bold text-white">Unlock Golden Egg confluence analysis</h2>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">
+              Golden Egg is a Pro Trader workflow for reviewing one symbol across regime, confluence, volatility, liquidity, and educational scenario context.
+            </p>
+            <div className="mt-5 grid gap-2 text-left text-xs text-slate-300 sm:grid-cols-2">
+              <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Regime and bias context</div>
+              <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Confluence and data-quality checks</div>
+              <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Scenario reference and invalidation levels</div>
+              <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Volatility, liquidity, and timing context</div>
+            </div>
+            <div className="mt-6 flex flex-col items-center justify-center gap-2 sm:flex-row">
+              <a href="/auth" className="inline-flex rounded-lg bg-emerald-500/20 px-4 py-2 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500/30">Sign In</a>
+              <a href="/pricing" className="inline-flex rounded-lg border border-white/10 px-4 py-2 text-xs font-semibold text-slate-300 transition hover:border-white/20 hover:text-white">See Pricing</a>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Symbol picker */}
-      <div className="flex items-center gap-2 flex-wrap">
+      {!isAuthBlocked && <div className="flex items-center gap-2 flex-wrap">
         <div className="flex items-center gap-1">
           <input
             type="text"
@@ -380,13 +404,15 @@ export default function GoldenEggPage() {
             placeholder="Enter symbol..."
             className="px-3 py-1.5 bg-[var(--msp-panel-2)] border border-[var(--msp-border)] rounded-md text-sm text-white placeholder-slate-600 w-32 focus:border-emerald-500 focus:outline-none"
           />
-          <button onClick={handleSymbolSubmit} className="px-3 py-1.5 bg-emerald-500/20 text-emerald-400 rounded-md text-xs hover:bg-emerald-500/30 transition-colors">Go</button>
+          <button type="button" onClick={handleSymbolSubmit} className="px-3 py-1.5 bg-emerald-500/20 text-emerald-400 rounded-md text-xs hover:bg-emerald-500/30 transition-colors">Go</button>
         </div>
         {/* Asset type toggle — always visible for disambiguation */}
         <div className="flex items-center gap-0 border border-[var(--msp-border)] rounded-md overflow-hidden">
           {(['auto', 'equity', 'crypto'] as const).map(t => (
             <button
               key={t}
+              type="button"
+              aria-pressed={assetType === t}
               onClick={() => setAssetType(t)}
               className={`px-2.5 py-1.5 text-[11px] uppercase transition-colors ${
                 assetType === t
@@ -402,6 +428,8 @@ export default function GoldenEggPage() {
           {quickSymbols.map((s: string) => (
             <button
               key={s}
+              type="button"
+              aria-pressed={s === sym}
               onClick={() => selectSymbol(s)}
               className={`px-2 py-1 rounded text-[11px] whitespace-nowrap transition-colors ${
                 s === sym ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-transparent'
@@ -411,27 +439,31 @@ export default function GoldenEggPage() {
             </button>
           ))}
         </div>
-      </div>
+      </div>}
 
       {/* Timeframe selector */}
-      <div className="flex items-center gap-1">
+      {!isAuthBlocked && <div className="flex items-center gap-1">
         <span className="text-[11px] text-slate-500 mr-1 uppercase">Timeframe</span>
         {SCAN_TIMEFRAMES.map(tf => (
           <button
             key={tf.value}
+            type="button"
+            aria-pressed={timeframe === tf.value}
             onClick={() => setTimeframe(tf.value)}
             className={`px-2.5 py-1 text-[11px] rounded-md transition-colors ${timeframe === tf.value ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-[var(--msp-border)]'}`}
           >
             {tf.label}
           </button>
         ))}
-      </div>
+      </div>}
 
       {/* ─── Tab Bar ─── */}
-      <div className="flex items-center gap-1 overflow-x-auto border-b border-slate-800/50 pb-1">
+      {!isAuthBlocked && <div className="flex items-center gap-1 overflow-x-auto border-b border-slate-800/50 pb-1">
         {GE_TABS.map(tab => (
           <button
             key={tab}
+            type="button"
+            aria-pressed={activeTab === tab}
             onClick={() => setActiveTab(tab)}
             className={`px-3 py-1.5 text-[11px] rounded-t-md whitespace-nowrap transition-colors ${
               activeTab === tab
@@ -442,24 +474,24 @@ export default function GoldenEggPage() {
             {tab}
           </button>
         ))}
-      </div>
+      </div>}
 
       {/* ─── Deep-dive Tabs (v1 components) ─── */}
-      {activeTab === 'Chart' && (
+      {!isAuthBlocked && activeTab === 'Chart' && (
         <Card><IntradayCharts symbol={sym} /></Card>
       )}
-      {activeTab === 'Deep Analysis' && (
+      {!isAuthBlocked && activeTab === 'Deep Analysis' && (
         <Card><DeepAnalysis symbol={sym} /></Card>
       )}
-      {activeTab === 'Fundamentals' && (
+      {!isAuthBlocked && activeTab === 'Fundamentals' && (
         <Card><CompanyOverview symbol={sym} /></Card>
       )}
-      {activeTab === 'Liquidity' && (
+      {!isAuthBlocked && activeTab === 'Liquidity' && (
         <Card><LiquiditySweep /></Card>
       )}
 
       {/* ─── Verdict Tab (main GE analysis) ─── */}
-      {activeTab === 'Verdict' && <>
+      {!isAuthBlocked && activeTab === 'Verdict' && <>
       {/* Loading state */}
       {loading && (
         <Card>
@@ -469,17 +501,6 @@ export default function GoldenEggPage() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
               {[1,2,3,4].map(i => <Skel key={i} h="h-20" />)}
             </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Auth error state */}
-      {goldenEgg.isAuthError && !loading && (
-        <Card>
-          <div className="py-8 text-center">
-            <div className="text-amber-400 text-sm mb-2">Sign in required</div>
-            <div className="text-[11px] text-slate-500 mb-4">Please sign in to access Golden Egg analysis</div>
-            <a href="/auth/login" className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-xs hover:bg-emerald-500/30 inline-block">Sign In</a>
           </div>
         </Card>
       )}
