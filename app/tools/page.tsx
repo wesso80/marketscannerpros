@@ -13,6 +13,21 @@ const roleTone = {
   specialist: 'border-violet-400/30 bg-violet-400/10 text-violet-200',
 };
 
+const tierTone = {
+  free: 'border-emerald-400/25 bg-emerald-400/10 text-emerald-200',
+  pro: 'border-sky-400/25 bg-sky-400/10 text-sky-200',
+  pro_trader: 'border-amber-400/25 bg-amber-400/10 text-amber-200',
+};
+
+const workflowJumpCards = toolWorkflows
+  .filter((workflow) => workflow.id !== 'advanced')
+  .map((workflow) => ({
+    id: workflow.id,
+    label: workflow.title.replace(/^\d+\.\s*/, ''),
+    desc: workflow.subtitle,
+    startTool: workflow.tools.find((tool) => tool.role === 'primary') ?? workflow.tools[0],
+  }));
+
 export default function ToolsPage() {
   return (
     <main className="min-h-screen bg-[#0F172A] text-white">
@@ -30,15 +45,11 @@ export default function ToolsPage() {
         </div>
 
         <div className="mt-8 grid gap-4 md:grid-cols-4">
-          {[
-            { id: 'find',     label: 'Find scenarios',    desc: 'Scanner, markets, macro, crypto context.' },
-            { id: 'validate', label: 'Validate evidence', desc: 'Golden Egg, Deep Analysis, options and liquidity context.' },
-            { id: 'test',     label: 'Test safely',       desc: 'Backtest and accuracy review before relying on a pattern.' },
-            { id: 'track',    label: 'Track outcomes',    desc: 'Journal, portfolio, workspace, alerts, and process improvement.' },
-          ].map((step, index) => (
+          {workflowJumpCards.map((step, index) => (
             <a
               key={step.id}
               href={`#${step.id}`}
+              aria-label={`Jump to ${step.label}`}
               className="group rounded-2xl border border-white/10 bg-white/[0.04] p-4 transition hover:-translate-y-0.5 hover:border-emerald-400/35 hover:bg-emerald-400/[0.06]"
             >
               <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-400/15 text-sm font-black text-emerald-300">
@@ -46,9 +57,17 @@ export default function ToolsPage() {
               </div>
               <div className="text-sm font-bold text-white group-hover:text-emerald-200">{step.label}</div>
               <div className="mt-1 text-xs leading-5 text-slate-400">{step.desc}</div>
-              <div className="mt-2 text-[11px] font-semibold text-emerald-300/70 group-hover:text-emerald-300">Jump to section ↓</div>
+              <div className="mt-2 text-[11px] font-semibold text-emerald-300/70 group-hover:text-emerald-300">
+                Start with {step.startTool.label} ↓
+              </div>
             </a>
           ))}
+        </div>
+
+        <div className="mt-4 flex justify-center">
+          <a href="#advanced" className="text-xs font-semibold text-slate-500 transition hover:text-slate-300">
+            Already know the workflow? Jump to specialist tools ↓
+          </a>
         </div>
 
         <div className="mt-10 space-y-5">
@@ -60,7 +79,12 @@ export default function ToolsPage() {
                   <p className="mt-1 text-sm text-slate-300">{workflow.subtitle}</p>
                 </div>
                 <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-xs leading-5 text-emerald-100 lg:max-w-md">
-                  <span className="font-bold text-emerald-300">Outcome:</span> {workflow.outcome}
+                  <div><span className="font-bold text-emerald-300">Outcome:</span> {workflow.outcome}</div>
+                  {workflow.tools[0] ? (
+                    <Link href={workflow.tools[0].href} className="mt-2 inline-flex font-bold text-emerald-200 hover:text-white">
+                      Open {workflow.tools[0].label} →
+                    </Link>
+                  ) : null}
                 </div>
               </div>
 
@@ -81,7 +105,7 @@ export default function ToolsPage() {
                       </span>
                     </div>
                     <div className="mt-4 flex items-center justify-between text-xs">
-                      <span className="rounded-full border border-white/10 bg-slate-950/70 px-2 py-1 text-slate-300">{tierLabel[tool.tier]}</span>
+                      <span className={`rounded-full border px-2 py-1 ${tierTone[tool.tier]}`}>{tierLabel[tool.tier]}</span>
                       <span className="text-emerald-300/70 transition group-hover:text-emerald-300 group-hover:translate-x-0.5">Open →</span>
                     </div>
                   </Link>
