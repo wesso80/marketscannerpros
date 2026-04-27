@@ -1,4 +1,19 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
+
+export const metadata: Metadata = {
+  title: 'Compliance Hub',
+  description: 'MarketScanner Pros compliance guardrails for educational use, no personal advice, no broker execution, data limitations, and risk disclosures.',
+  alternates: { canonical: '/compliance-hub' },
+  openGraph: {
+    title: 'MarketScanner Pros Compliance Hub',
+    description: 'Educational-use guardrails, legal disclosures, data limitations, and risk information for MarketScanner Pros.',
+    url: 'https://marketscannerpros.app/compliance-hub',
+    siteName: 'MarketScanner Pros',
+    images: [{ url: '/scan-banner.png', width: 1200, height: 630, alt: 'MarketScanner Pros compliance hub' }],
+  },
+  twitter: { card: 'summary_large_image', images: ['/scan-banner.png'] },
+};
 
 const pillars = [
   {
