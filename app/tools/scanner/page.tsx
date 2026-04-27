@@ -86,6 +86,7 @@ function summarizeRankedReason(r: ScanResult, lifecycle: LifecycleState, regimeC
 }
 
 function rankedTrustLabel(r: ScanResult): 'GOOD' | 'DEGRADED' | 'MISSING' {
+  if (String(r.setup || '').startsWith('Local demo:')) return 'DEGRADED';
   if (!isUsableNumber(r.price)) return 'MISSING';
   if (r.confidence == null || r.score == null) return 'DEGRADED';
   if (r.dveBbwp == null && !r.dveSignalType && !r.dveFlags?.length) return 'DEGRADED';
@@ -93,6 +94,7 @@ function rankedTrustLabel(r: ScanResult): 'GOOD' | 'DEGRADED' | 'MISSING' {
 }
 
 function rankedTrustDetail(r: ScanResult): string {
+  if (String(r.setup || '').startsWith('Local demo:')) return 'Development-only sample row. Not live market data.';
   if (!isUsableNumber(r.price)) return 'Missing usable price.';
   const missing = [
     r.confidence == null ? 'confidence' : null,
@@ -569,6 +571,8 @@ export default function ScannerPage() {
     return [...eq, ...cr];
   }, [equity.data, crypto.data]);
 
+  const rankedLocalDemo = Boolean(equity.data?.metadata?.localDemo || crypto.data?.metadata?.localDemo);
+
   const filtered = useMemo(() => {
     let items = allResults;
     switch (activeTab) {
@@ -612,7 +616,8 @@ export default function ScannerPage() {
     'Regime Match': allResults.filter(r => isRegimeCompatible(r)).length,
   }), [allResults, currentRegime]);
 
-  const v2Loading = equity.loading || crypto.loading;
+  const v2Loading = allResults.length === 0 && (equity.loading || crypto.loading);
+  const v2PartialLoading = allResults.length > 0 && (equity.loading || crypto.loading);
 
   /* ─── Track last successful scan timestamp (E) ─── */
   const [lastScanAt, setLastScanAt] = useState<Date | null>(null);
@@ -934,10 +939,16 @@ export default function ScannerPage() {
             ))}
           </div>
 
+          {rankedLocalDemo && (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-200">
+              <strong>Local demo scanner rows:</strong> live market data keys/cache are unavailable in this local environment, so these rows are sample data for workflow testing only. Do not treat them as live scanner output.
+            </div>
+          )}
+
           {/* Table */}
           <Card>
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
-              <span>Click or press Enter on a row to open symbol analysis.</span>
+              <span>{v2PartialLoading ? 'Showing available rows while the other market finishes loading.' : 'Click or press Enter on a row to open symbol analysis.'}</span>
               <span className="text-slate-600">Sorted by {sortKey} ({sortDir})</span>
             </div>
             {v2Loading ? (

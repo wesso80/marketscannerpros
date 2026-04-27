@@ -113,6 +113,7 @@ export interface ScannerResponse {
   metadata: {
     timestamp: string;
     count: number;
+    localDemo?: boolean;
     riskGovernor?: { regime: string; riskMode: string; permission: string } | null;
   };
 }

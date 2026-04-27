@@ -187,6 +187,78 @@ interface ScanResult {
   dveExpansionContinuation?: number;
 }
 
+function isLocalScannerDemoAllowed(): boolean {
+  return process.env.NODE_ENV !== 'production' || process.env.LOCAL_DEMO_MARKET_DATA === 'true';
+}
+
+function localDemoScanResponse(args: {
+  type: 'crypto' | 'equity' | 'forex';
+  timeframe: string;
+  symbols?: string[];
+  reason: string;
+}) {
+  const defaults: Record<'crypto' | 'equity' | 'forex', string[]> = {
+    equity: ['NVDA', 'MSFT', 'AAPL', 'TSLA', 'AMZN'],
+    crypto: ['BTC', 'ETH', 'SOL', 'BNB', 'XRP'],
+    forex: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'NZDUSD'],
+  };
+  const universe = (args.symbols?.length ? args.symbols : defaults[args.type]).slice(0, 8);
+  const results: ScanResult[] = universe.map((symbol, index) => {
+    const bullish = index % 3 !== 2;
+    const baseScore = Math.max(4, 9 - index);
+    const priceBase = args.type === 'crypto' ? 65000 / (index + 1) : args.type === 'forex' ? 1 + index * 0.12 : 520 - index * 47;
+    return {
+      symbol,
+      score: bullish ? baseScore : -baseScore,
+      direction: bullish ? 'bullish' : 'bearish',
+      signals: bullish ? { bullish: baseScore, bearish: 2, neutral: 1 } : { bullish: 2, bearish: baseScore, neutral: 1 },
+      timeframe: args.timeframe,
+      type: args.type,
+      price: Number(priceBase.toFixed(args.type === 'forex' ? 4 : 2)),
+      confidence: Math.max(48, 82 - index * 5),
+      setup: bullish ? 'Local demo: momentum alignment' : 'Local demo: downside pressure',
+      entry: Number((priceBase * (bullish ? 1.002 : 0.998)).toFixed(args.type === 'forex' ? 4 : 2)),
+      stop: Number((priceBase * (bullish ? 0.972 : 1.028)).toFixed(args.type === 'forex' ? 4 : 2)),
+      target: Number((priceBase * (bullish ? 1.061 : 0.939)).toFixed(args.type === 'forex' ? 4 : 2)),
+      rMultiple: 2,
+      rsi: bullish ? 58 + index : 42 - index,
+      atr: Number((priceBase * 0.025).toFixed(args.type === 'forex' ? 4 : 2)),
+      adx: 19 + index * 2,
+      dveBbwp: 18 + index * 9,
+      dveFlags: index === 0 ? ['COMPRESSED', 'DIR_BULL'] : index === 1 ? ['EXPANDING'] : [],
+      dveSignalType: index === 0 ? (bullish ? 'compression_release_up' : 'compression_release_down') : index === 1 ? (bullish ? 'expansion_continuation_up' : 'expansion_continuation_down') : 'none',
+    };
+  });
+
+  return NextResponse.json({
+    success: true,
+    message: `Local demo scanner data — ${args.reason}`,
+    redirect: null,
+    results,
+    errors: [`Local demo data is shown because live ${args.type} scanner data is unavailable locally.`],
+    metadata: {
+      compliance: scannerComplianceMetadata(),
+      timestamp: new Date().toISOString(),
+      count: results.length,
+      minScore: null,
+      timeframe: args.timeframe,
+      type: args.type,
+      localDemo: true,
+      dataQuality: scannerDataQualityMetadata({
+        source: 'local_demo',
+        computedAt: new Date(),
+        stale: true,
+        coverageScore: 0,
+        warnings: [
+          'Development-only sample rows for workflow testing. Not live market data.',
+          args.reason,
+        ],
+      }),
+      riskGovernor: null,
+    },
+  });
+}
+
 // Fetch derivatives data from CoinGecko commercial derivatives endpoint
 async function fetchCryptoDerivatives(symbol: string): Promise<DerivativesData | null> {
   try {
@@ -380,6 +452,9 @@ function buildScannerLiquidityLevels(
 
 export async function POST(req: NextRequest) {
   console.info(`[scanner] VERSION: ${SCANNER_VERSION} - stablecoins excluded`);
+  let requestedType: 'crypto' | 'equity' | 'forex' = 'crypto';
+  let requestedTimeframe = 'daily';
+  let requestedSymbols: string[] | undefined;
   try {
     // Auth check FIRST - cron jobs and paid users bypass rate limiter
     const isCronBypass = verifyCronAuth(req);
@@ -459,6 +534,9 @@ export async function POST(req: NextRequest) {
     
     const body = (await req.json()) as ScanRequest;
     const { type, timeframe, minScore, symbols } = body;
+    if (type === 'crypto' || type === 'equity' || type === 'forex') requestedType = type;
+    requestedTimeframe = timeframe || 'daily';
+    requestedSymbols = Array.isArray(symbols) ? symbols.map(String) : undefined;
     console.info("[scanner] request", { type, timeframe, minScore, symbolsCount: Array.isArray(symbols) ? symbols.length : 0 });
 
     // Validate inputs
@@ -537,6 +615,14 @@ export async function POST(req: NextRequest) {
     } else if (type === "equity" || type === "forex") {
       // Equity & Forex use Alpha Vantage (admin-only testing, requires commercial license for production)
       if (!ALPHA_KEY) {
+        if (isLocalScannerDemoAllowed()) {
+          return localDemoScanResponse({
+            type,
+            timeframe,
+            symbols: symbolsToScan,
+            reason: 'ALPHA_VANTAGE_API_KEY is not configured.',
+          });
+        }
         return NextResponse.json({
           success: false,
           message: "Stock/Forex data requires commercial licensing - Coming Soon",
@@ -2568,6 +2654,14 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error("Scanner error:", error);
     const msg = error?.message || "Unknown error";
+    if (isLocalScannerDemoAllowed()) {
+      return localDemoScanResponse({
+        type: requestedType,
+        timeframe: requestedTimeframe,
+        symbols: requestedSymbols,
+        reason: msg,
+      });
+    }
     const friendly = msg.includes("limit") || msg.includes("premium")
       ? "Alpha Vantage rate limit hit or premium access required. Please retry in a minute."
       : msg;
