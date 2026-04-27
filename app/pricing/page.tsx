@@ -114,25 +114,11 @@ export default function PricingPage() {
       cta: "Get Started Free",
       subCta: "Email verification required",
       includes: [
-        "Market Scanner (5 scans/day)",
-        "Portfolio tracker (up to 3 positions)",
-        "Watchlists",
-        "Macro dashboard",
-        "Markets dashboard",
-        "MSP AI Analyst (10 questions/day, GPT-4o-mini)",
-        "Account settings",
-      ],
-      excludes: [
-        "Unlimited scanning",
-        "Trade journal",
-        "Market Explorer + Crypto Explorer",
-        "Heatmaps + Intraday charts",
-        "News + Economic calendar + Earnings",
-        "Crypto Command Center + Crypto Terminal",
-        "Portfolio insights + CSV export",
-        "Backtesting + Options Terminal",
-        "Golden Egg + Deep Analysis",
-        "Time Confluence + Volatility Engine",
+        "Market Scanner — 5 scans/day",
+        "Portfolio tracker — up to 3 positions",
+        "Watchlists + Macro + Markets dashboards",
+        "MSP AI Analyst — 10 questions/day",
+        "No credit card required",
       ],
     },
     {
@@ -148,32 +134,11 @@ export default function PricingPage() {
       includes: [
         "Everything in Free, plus:",
         "Unlimited market scanning",
-        "MSP AI Analyst (50 questions/day, GPT-4o-mini)",
-        "Trade journal with analytics",
-        "Unlimited portfolio positions",
-        "Portfolio insights + CSV export",
-        "Equity Explorer + Crypto Explorer",
-        "Market Movers + Gainers & Losers",
-        "Sector Heatmap + Crypto Heatmap",
-        "Intraday charts",
-        "News + Market intelligence",
-        "Economic calendar + Earnings calendar",
-        "Crypto Command Center",
-        "Crypto Terminal + Crypto Derivatives",
-        "Liquidity Sweep scanner",
-        "Options Flow",
-        "Commodities dashboard",
-        "Company Overview",
+        "MSP AI Analyst — 50 questions/day",
+        "Trade journal + unlimited portfolio + CSV export",
+        "Explorers, heatmaps, news, calendars, options flow",
+        "Crypto Command Center + Terminal + Derivatives",
         "Priority support",
-      ],
-      excludes: [
-        "Backtesting engine",
-        "Options Terminal + Options Confluence",
-        "Golden Egg + Deep Analysis",
-        "Time Confluence + Confluence Scanner",
-        "Volatility Engine",
-        "Journal Intelligence dock",
-        "ARCA AI (GPT-4.1)",
       ],
     },
     {
@@ -182,21 +147,16 @@ export default function PricingPage() {
       tagline: "Advanced workflow with backtesting, derivatives, and scenario analysis.",
       priceMonthly: 50,
       priceYearly: 550,
-      cta: "Upgrade to Pro Trader",
-      subCta: "Advanced tools for serious market research.",
+      cta: "Start Pro Trader",
+      subCta: "7-day money-back guarantee",
       badge: "Best Value",
       includes: [
         "Everything in Pro, plus:",
-        "ARCA AI Analyst — GPT-4.1 (50 questions/day)",
+        "ARCA AI Analyst — GPT-4.1 (deeper model)",
         "Strategy backtesting engine",
         "Options Terminal + Options Confluence",
-        "Golden Egg deep analysis",
-        "Deep Analysis reports",
-        "Time Confluence scanner",
-        "Confluence Scanner",
-        "Volatility Engine",
-        "Journal Intelligence dock",
-        "Catalyst event studies",
+        "Golden Egg + Deep Analysis reports",
+        "Time Confluence + Volatility Engine",
         "Premium support",
       ],
     },
@@ -270,12 +230,20 @@ export default function PricingPage() {
             </span>
           </div>
 
-          <div className="mx-auto mt-6 max-w-3xl rounded-lg border border-white/10 bg-white/[0.04] p-3">
-            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-white/70">
-              <span>Cancel anytime</span>
-              <span>Secure checkout</span>
-              <span>Educational tool, not advice</span>
-              <span>Priority support on paid tiers</span>
+          <div className="mx-auto mt-6 max-w-3xl rounded-lg border border-emerald-500/20 bg-emerald-500/[0.04] p-3">
+            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-white/80">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="text-emerald-300">✓</span> 7-day money-back guarantee
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="text-emerald-300">✓</span> Cancel anytime
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="text-emerald-300">✓</span> Secure Stripe checkout
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="text-emerald-300">✓</span> Priority support on paid tiers
+              </span>
             </div>
           </div>
         </header>
@@ -299,7 +267,7 @@ export default function PricingPage() {
           </div>
         ) : null}
 
-        <section className="mt-14 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
+        <section className="mt-14 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]" id="compare">
           <div className="border-b border-white/10 px-5 py-4">
             <h2 className="text-lg font-semibold text-white">Compare plans by workflow</h2>
             <p className="mt-1 text-sm text-white/60">
@@ -456,6 +424,10 @@ function PlanCard({
             </ul>
           </>
         ) : null}
+
+        <a href="#compare" className="mt-4 inline-block text-xs font-semibold text-white/60 hover:text-white">
+          See full comparison ↓
+        </a>
       </div>
 
       <div className="mt-6">
@@ -464,15 +436,17 @@ function PlanCard({
           disabled={loading}
           className={[
             "w-full rounded-lg px-4 py-3 text-sm font-semibold transition-colors",
-            plan.highlight
-              ? "border border-white/15 bg-white/15 hover:bg-white/20"
+            plan.id === "pro_trader"
+              ? "border border-amber-400/40 bg-amber-400/15 text-amber-100 hover:bg-amber-400/25"
+              : plan.highlight
+              ? "border border-emerald-400/40 bg-emerald-400/15 text-emerald-50 hover:bg-emerald-400/25"
               : "border border-white/10 bg-white/10 hover:bg-white/20",
             loading ? "opacity-60 cursor-not-allowed" : "",
           ].join(" ")}
         >
           {loading ? "Redirecting..." : plan.cta}
         </button>
-        {plan.subCta ? <div className="mt-2 text-center text-xs text-white/50">{plan.subCta}</div> : null}
+        {plan.subCta ? <div className="mt-2 text-center text-xs text-white/55">{plan.subCta}</div> : null}
       </div>
     </div>
   );
