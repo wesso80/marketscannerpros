@@ -1,16 +1,16 @@
-import { Permission } from '@/src/features/goldenEgg/types';
+import { PublicAssessment } from '@/src/features/goldenEgg/types';
 
 type GEConfidenceBadgeProps = {
   confidence: number;
   grade: 'A' | 'B' | 'C' | 'D';
-  permission: Permission;
+  assessment: PublicAssessment;
 };
 
-export default function GEConfidenceBadge({ confidence, grade, permission }: GEConfidenceBadgeProps) {
+export default function GEConfidenceBadge({ confidence, grade, assessment }: GEConfidenceBadgeProps) {
   const tone =
-    permission === 'TRADE'
+    assessment === 'ALIGNED'
       ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'
-      : permission === 'WATCH'
+      : assessment === 'WATCH'
       ? 'border-amber-500/30 bg-amber-500/10 text-amber-200'
       : 'border-rose-500/30 bg-rose-500/10 text-rose-200';
 

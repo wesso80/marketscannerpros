@@ -1,3 +1,5 @@
+import type { MarketDataProviderStatus } from '@/lib/scanner/providerStatus';
+
 export const SCANNER_EDUCATIONAL_NOTE =
   'Scanner outputs are educational market research only. They are not financial advice and are not recommendations to buy, sell, hold, short, or trade any asset.';
 
@@ -16,6 +18,7 @@ export type ScannerDataQualityInput = {
   stale?: boolean;
   coverageScore?: number | null;
   warnings?: string[];
+  providerStatus?: MarketDataProviderStatus;
 };
 
 export function scannerDataQualityMetadata(input: ScannerDataQualityInput) {
@@ -25,5 +28,6 @@ export function scannerDataQualityMetadata(input: ScannerDataQualityInput) {
     stale: Boolean(input.stale),
     coverageScore: typeof input.coverageScore === 'number' ? Math.max(0, Math.min(100, Math.round(input.coverageScore))) : null,
     warnings: input.warnings?.filter(Boolean) ?? [],
+    providerStatus: input.providerStatus ?? null,
   };
 }

@@ -22,11 +22,12 @@ export type AdminRiskSnapshot = {
   notes: string[];
 };
 
-const DEFAULT_EQUITY = 100000;
+const UNKNOWN_EQUITY = 0;
+const LIVE_ACCOUNT_RISK_UNIT = 0.01;
 
 export const DEFAULT_ADMIN_SCAN_CONTEXT: ScanContext = {
   portfolioState: {
-    equity: DEFAULT_EQUITY,
+    equity: UNKNOWN_EQUITY,
     dailyPnl: 0,
     drawdownPct: 0,
     openRisk: 0,
@@ -46,8 +47,8 @@ export const DEFAULT_ADMIN_SCAN_CONTEXT: ScanContext = {
     minLiquidityOk: true,
   },
   accountState: {
-    buyingPower: DEFAULT_EQUITY,
-    accountRiskUnit: 0.01,
+    buyingPower: UNKNOWN_EQUITY,
+    accountRiskUnit: 0,
   },
   instrumentMeta: {},
   healthContext: {
@@ -59,7 +60,7 @@ export const DEFAULT_ADMIN_SCAN_CONTEXT: ScanContext = {
 };
 
 export const FALLBACK_ADMIN_RISK: AdminRiskSnapshot = {
-  equity: DEFAULT_EQUITY,
+  equity: UNKNOWN_EQUITY,
   dailyPnl: 0,
   dailyDrawdown: 0,
   openExposure: 0,
@@ -67,14 +68,14 @@ export const FALLBACK_ADMIN_RISK: AdminRiskSnapshot = {
   exposureUsd: 0,
   correlationRisk: 0,
   activePositions: 0,
-  maxPositions: 10,
+  maxPositions: 0,
   killSwitchActive: false,
   permission: "WAIT",
-  sizeMultiplier: 0.5,
+  sizeMultiplier: 0,
   source: "fallback",
   workspaceId: null,
   lastUpdatedAt: null,
-  notes: ["No live portfolio or operator risk state found; scanner permissions are downgraded to WAIT."],
+  notes: ["No live portfolio or operator risk state found; scanner permissions are research-only WAIT with no sizing context."],
 };
 
 function formatUsd(value: number) {
@@ -89,14 +90,18 @@ async function loadOperatorRiskState(): Promise<AdminRiskSnapshot> {
     const ctx = rows[0]?.context_state;
     if (!ctx) return FALLBACK_ADMIN_RISK;
 
-    const equity = Math.max(1, Number(ctx.equity ?? DEFAULT_EQUITY));
+    const rawEquity = Number(ctx.equity ?? 0);
+    const hasLiveEquity = Number.isFinite(rawEquity) && rawEquity > 0;
+    const equity = hasLiveEquity ? rawEquity : UNKNOWN_EQUITY;
     const openExposure = Number(ctx.openRisk ?? 0);
     const killSwitchActive = Boolean(ctx.killSwitchActive);
     const dailyDrawdown = Number(ctx.dailyDrawdown ?? 0);
     const correlationRisk = Number(ctx.correlationRisk ?? 0);
     const activePositions = Number(ctx.activePositions ?? 0);
     const maxPositions = Number(ctx.maxPositions ?? 10);
-    const permission = killSwitchActive
+    const permission = !hasLiveEquity
+      ? "WAIT"
+      : killSwitchActive
       ? "BLOCK"
       : dailyDrawdown >= 0.02 || correlationRisk >= 0.65 || activePositions >= maxPositions
         ? "WAIT"
@@ -109,18 +114,21 @@ async function loadOperatorRiskState(): Promise<AdminRiskSnapshot> {
       dailyPnl: Number(ctx.dailyPnl ?? 0),
       dailyDrawdown,
       openExposure,
-      openRiskUsd: openExposure * equity,
+      openRiskUsd: hasLiveEquity ? openExposure * equity : 0,
       exposureUsd: Number(ctx.exposureUsd ?? 0),
       correlationRisk,
       activePositions,
       maxPositions,
       killSwitchActive,
       permission,
-      sizeMultiplier: permission === "BLOCK" ? 0 : Number(ctx.sizeMultiplier ?? (permission === "GO" ? 1 : 0.5)),
+      sizeMultiplier: !hasLiveEquity || permission === "BLOCK" ? 0 : Number(ctx.sizeMultiplier ?? (permission === "GO" ? 1 : 0.5)),
       source: "operator_state",
       workspaceId: null,
       lastUpdatedAt: rows[0]?.updated_at ?? null,
-      notes: ["Risk read from latest operator state; portfolio/journal sync was unavailable."],
+      notes: [
+        "Risk read from latest operator state; portfolio/journal sync was unavailable.",
+        ...(hasLiveEquity ? [] : ["Operator state has no live equity value; sizing is disabled and permission is capped at WAIT."]),
+      ],
     };
   } catch {
     return FALLBACK_ADMIN_RISK;
@@ -193,16 +201,20 @@ export async function loadAdminRiskSnapshot(): Promise<AdminRiskSnapshot> {
     const exposureUsd = Number(positions?.exposure_usd ?? 0);
     const openRiskUsd = Number(journal?.open_risk_usd ?? 0);
     const dailyPnl = Number(journal?.daily_pl ?? 0) + Number(positions?.unrealized_pl ?? 0);
-    const equity = Math.max(1, Number(performance?.latest_equity ?? 0) || operatorRisk.equity || DEFAULT_EQUITY);
-    const peakEquity = Math.max(equity, Number(performance?.peak_equity ?? equity));
-    const dailyDrawdown = Math.max(operatorRisk.dailyDrawdown, dailyPnl < 0 ? Math.abs(dailyPnl) / equity : 0, peakEquity > 0 ? Math.max(0, (peakEquity - equity) / peakEquity) : 0);
+    const rawEquity = Number(performance?.latest_equity ?? 0) || operatorRisk.equity;
+    const hasLiveEquity = Number.isFinite(rawEquity) && rawEquity > 0;
+    const equity = hasLiveEquity ? rawEquity : UNKNOWN_EQUITY;
+    const peakEquity = hasLiveEquity ? Math.max(equity, Number(performance?.peak_equity ?? equity)) : UNKNOWN_EQUITY;
+    const dailyDrawdown = hasLiveEquity
+      ? Math.max(operatorRisk.dailyDrawdown, dailyPnl < 0 ? Math.abs(dailyPnl) / equity : 0, peakEquity > 0 ? Math.max(0, (peakEquity - equity) / peakEquity) : 0)
+      : operatorRisk.dailyDrawdown;
     const largestSymbolExposure = Number(positions?.largest_symbol_exposure ?? 0);
     const correlationRisk = Math.max(operatorRisk.correlationRisk, exposureUsd > 0 ? largestSymbolExposure / exposureUsd : 0);
     const activePositions = Number(positions?.active_positions ?? 0);
-    const openExposure = openRiskUsd > 0 ? openRiskUsd / equity : exposureUsd > 0 ? Math.min(0.05, (exposureUsd / equity) * 0.25) : 0;
+    const openExposure = hasLiveEquity && openRiskUsd > 0 ? openRiskUsd / equity : hasLiveEquity && exposureUsd > 0 ? Math.min(0.05, (exposureUsd / equity) * 0.25) : 0;
     const killSwitchActive = operatorRisk.killSwitchActive || dailyDrawdown >= 0.04;
-    const permission = killSwitchActive ? "BLOCK" : dailyDrawdown >= 0.02 || correlationRisk >= 0.65 ? "WAIT" : activePositions >= operatorRisk.maxPositions ? "WAIT" : "GO";
-    const sizeMultiplier = permission === "GO"
+    const permission = !hasLiveEquity ? "WAIT" : killSwitchActive ? "BLOCK" : dailyDrawdown >= 0.02 || correlationRisk >= 0.65 ? "WAIT" : activePositions >= operatorRisk.maxPositions ? "WAIT" : "GO";
+    const sizeMultiplier = !hasLiveEquity ? 0 : permission === "GO"
       ? Math.max(0.25, Math.min(1, 1 - Math.max(dailyDrawdown / 0.04, correlationRisk / 1.4)))
       : permission === "WAIT" ? 0.5 : 0;
 
@@ -224,7 +236,9 @@ export async function loadAdminRiskSnapshot(): Promise<AdminRiskSnapshot> {
       lastUpdatedAt: positions?.last_updated_at ?? journal?.last_updated_at ?? performance?.latest_snapshot ?? null,
       notes: [
         `Risk synced from workspace portfolio/journal (${activePositions} open position${activePositions === 1 ? "" : "s"}).`,
-        `Open risk ${formatUsd(openRiskUsd)} on ${formatUsd(equity)} equity; exposure ${formatUsd(exposureUsd)}.`,
+        ...(hasLiveEquity
+          ? [`Open risk ${formatUsd(openRiskUsd)} on ${formatUsd(equity)} equity; exposure ${formatUsd(exposureUsd)}.`]
+          : ["No live portfolio equity value found; sizing is disabled and permission is capped at WAIT."]),
       ],
     };
   } catch {
@@ -234,7 +248,7 @@ export async function loadAdminRiskSnapshot(): Promise<AdminRiskSnapshot> {
 
 export async function buildAdminScanContext(): Promise<{ context: ScanContext; risk: AdminRiskSnapshot }> {
   const risk = await loadAdminRiskSnapshot();
-  const fallbackThrottle = risk.source === "fallback" ? 0.75 : 1.0;
+  const fallbackThrottle = risk.source === "fallback" ? 0.25 : 1.0;
   const riskThrottle = risk.permission === "BLOCK" ? 0 : risk.permission === "WAIT" ? 0.5 : risk.sizeMultiplier;
   const context: ScanContext = {
     ...DEFAULT_ADMIN_SCAN_CONTEXT,
@@ -250,7 +264,8 @@ export async function buildAdminScanContext(): Promise<{ context: ScanContext; r
     },
     accountState: {
       ...DEFAULT_ADMIN_SCAN_CONTEXT.accountState,
-      buyingPower: Math.max(0, risk.equity - risk.exposureUsd),
+      buyingPower: risk.equity > 0 ? Math.max(0, risk.equity - risk.exposureUsd) : 0,
+      accountRiskUnit: risk.equity > 0 && risk.source !== "fallback" ? LIVE_ACCOUNT_RISK_UNIT : 0,
     },
     metaHealthThrottle: Math.min(fallbackThrottle, riskThrottle),
   };

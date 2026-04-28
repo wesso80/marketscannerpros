@@ -16,6 +16,10 @@ import type { RegimePriority, Verdict, LifecycleState } from '@/app/v2/_lib/type
 import { useCachedTopSymbols } from '@/hooks/useCachedTopSymbols';
 import { useRegisterPageData } from '@/lib/ai/pageContext';
 import { saveResearchCase } from '@/lib/clientResearchCases';
+import EvidenceStack from '@/components/market/EvidenceStack';
+import MarketStatusStrip from '@/components/market/MarketStatusStrip';
+import RiskFlagPanel, { type RiskFlag } from '@/components/market/RiskFlagPanel';
+import { buildMarketDataProviderStatus } from '@/lib/scanner/providerStatus';
 
 /** Client-safe copy of known crypto symbols for asset type detection */
 const CRYPTO_SET = new Set([
@@ -60,10 +64,10 @@ function deriveCrossMarketAlignment(signals?: Array<{ source: string; regime: st
 const ALIGNMENT_COLOR: Record<string, string> = { supportive: '#10B981', neutral: '#F59E0B', headwind: '#EF4444' };
 
 /* ─── Phase 6: Lifecycle State from GE data ─── */
-function deriveGELifecycle(permission?: string, confidence?: number, gated?: boolean): LifecycleState {
+function deriveGELifecycle(assessment?: string, confidence?: number, gated?: boolean): LifecycleState {
   if (gated) return 'INVALIDATED';
   const conf = confidence ?? 0;
-  const perm = (permission || '').toUpperCase();
+  const perm = (assessment || '').toUpperCase();
   if (perm === 'YES' && conf >= 65) return 'READY';
   if (perm === 'ALIGNED' && conf >= 65) return 'READY';
   if (perm === 'YES' && conf >= 40) return 'SETTING_UP';
@@ -80,9 +84,7 @@ function Skel({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
 }
 
 function verdictColor(v: string) {
-  if (v === 'TRADE' || v === 'YES') return '#10B981';
   if (v === 'ALIGNED') return '#10B981';
-  if (v === 'NO_TRADE' || v === 'NO') return '#EF4444';
   if (v === 'NOT_ALIGNED') return '#EF4444';
   return '#F59E0B';
 }
@@ -204,6 +206,18 @@ function formatTimestamp(value: unknown): string {
   return date.toLocaleString();
 }
 
+function evidenceStatus(value: boolean | undefined, missingDetail?: string) {
+  if (value) return 'supportive' as const;
+  return missingDetail ? 'missing' as const : 'neutral' as const;
+}
+
+function riskSeverity(label: string): RiskFlag['severity'] {
+  const lower = label.toLowerCase();
+  if (lower.includes('unavailable') || lower.includes('missing') || lower.includes('climax')) return 'critical';
+  if (lower.includes('degraded') || lower.includes('headwind') || lower.includes('blocker') || lower.includes('below')) return 'warning';
+  return 'info';
+}
+
 export default function GoldenEggPage() {
   const { selectedSymbol, selectSymbol, navigateTo } = useV2();
   const { tier } = useUserTier();
@@ -243,16 +257,10 @@ export default function GoldenEggPage() {
   const ge = goldenEgg.data?.data;
   const geLocalDemo = Boolean((goldenEgg.data as any)?.localDemo);
   const geWarnings = ((goldenEgg.data as any)?.warnings || []) as string[];
-  const geAssessment = ge?.layer1?.assessment ?? ge?.layer1?.permission;
+  const geAssessment = ge?.layer1?.assessment;
   const geConfluenceScore = ge?.layer1?.confluenceScore ?? ge?.layer1?.confidence ?? 0;
   const geScenario = ge?.layer2?.scenario;
-  const geSafeScenario = geScenario ?? (ge?.layer2?.execution ? {
-    referenceTrigger: ge.layer2.execution.entryTrigger,
-    referenceLevel: { type: ge.layer2.execution.entry.type, price: ge.layer2.execution.entry.price },
-    invalidationLevel: ge.layer2.execution.stop,
-    reactionZones: ge.layer2.execution.targets,
-    hypotheticalRr: ge.layer2.execution.rr,
-  } : null);
+  const geSafeScenario = geScenario ?? null;
   const d = dve.data?.data;
   const loading = goldenEgg.loading;
   const isAuthBlocked = goldenEgg.isAuthError && !loading;
@@ -267,13 +275,91 @@ export default function GoldenEggPage() {
   const geReason = summarizeGEReason({ direction: ge?.layer1?.direction, setupType: ge?.layer2?.setup?.setupType, confluence: geConfluenceScore, crossMarket: crossMarketAlignment.alignment, dataQuality: geDataQuality, primaryDriver: ge?.layer1?.primaryDriver, primaryBlocker: ge?.layer1?.primaryBlocker });
   const geDoNothing = summarizeGEResearchCaution({ dataQuality: geDataQuality, hasScenarioLevels: geHasScenarioLevels, assessment: geAssessment, confluence: geConfluenceScore, primaryBlocker: ge?.layer1?.primaryBlocker });
   const geInvalidationConditions = buildGEInvalidationConditions({ confluence: geConfluenceScore, dataQuality: geDataQuality, primaryBlocker: ge?.layer1?.primaryBlocker, crossMarket: crossMarketAlignment.alignment, dveRegime: d?.volatility?.regime, timeVerdict: ge?.layer3?.timeConfluence?.verdict });
-  const geFreshness = [
-    { label: 'Quote', value: formatTimestamp(ge?.meta?.asOfTs) },
-    { label: 'Regime', value: regime.data ? 'Live context loaded' : 'Unavailable' },
-    { label: 'DVE', value: d ? 'Available' : dve.loading ? 'Loading' : 'Unavailable' },
-    { label: ge?.meta?.assetClass === 'crypto' ? 'Derivatives' : 'Options', value: ge?.layer3?.options?.enabled ? 'Available' : 'Unavailable' },
-    { label: 'Time', value: ge?.layer3?.timeConfluence?.enabled ? 'Active' : 'Unavailable' },
+  const geMarketStatusItems = [
+    {
+      label: 'Quote',
+      computedAt: ge?.meta?.asOfTs,
+      status: buildMarketDataProviderStatus({
+        source: 'quote',
+        provider: quoteType === 'crypto' ? 'crypto quote' : 'equity quote',
+        localDemo: geLocalDemo,
+        stale: !ge?.meta?.asOfTs,
+        degraded: !isUsableNumber(quote.data?.price ?? ge?.meta?.price),
+        warnings: [
+          !isUsableNumber(quote.data?.price ?? ge?.meta?.price) ? 'Quote price unavailable.' : null,
+          !ge?.meta?.asOfTs ? 'Quote timestamp unavailable.' : null,
+          ...geWarnings,
+        ].filter(Boolean) as string[],
+      }),
+    },
+    {
+      label: 'Regime',
+      status: buildMarketDataProviderStatus({
+        source: 'regime',
+        provider: 'cross-market regime',
+        degraded: !regime.data,
+        warnings: regime.data ? [] : ['Regime context unavailable.'],
+      }),
+    },
+    {
+      label: 'DVE',
+      status: buildMarketDataProviderStatus({
+        source: 'dve',
+        provider: 'volatility engine',
+        degraded: !d,
+        warnings: d ? [] : [dve.loading ? 'DVE is still loading.' : 'DVE unavailable.'],
+      }),
+    },
+    {
+      label: ge?.meta?.assetClass === 'crypto' ? 'Derivatives' : 'Options',
+      status: buildMarketDataProviderStatus({
+        source: ge?.meta?.assetClass === 'crypto' ? 'derivatives' : 'options',
+        provider: ge?.meta?.assetClass === 'crypto' ? 'derivatives evidence' : 'options evidence',
+        degraded: !ge?.layer3?.options?.enabled,
+        warnings: ge?.layer3?.options?.enabled ? [] : ['Options or derivatives evidence unavailable.'],
+      }),
+    },
+    {
+      label: 'Time',
+      status: buildMarketDataProviderStatus({
+        source: 'time-confluence',
+        provider: 'time confluence',
+        degraded: !ge?.layer3?.timeConfluence?.enabled,
+        warnings: ge?.layer3?.timeConfluence?.enabled ? [] : ['Time confluence unavailable.'],
+      }),
+    },
   ];
+  const geEvidenceItems = [
+    {
+      label: 'Why This Appeared',
+      value: geDataQuality === 'GOOD' ? 'Supported' : geDataQuality,
+      status: geDataQuality === 'GOOD' ? 'supportive' as const : 'missing' as const,
+      detail: geReason,
+    },
+    {
+      label: 'Cross Market',
+      value: crossMarketAlignment.alignment === 'headwind' ? 'Headwind' : crossMarketAlignment.alignment === 'supportive' ? 'Tailwind' : 'Neutral',
+      status: crossMarketAlignment.alignment === 'supportive' ? 'supportive' as const : crossMarketAlignment.alignment === 'headwind' ? 'conflicting' as const : 'neutral' as const,
+      detail: crossMarketAlignment.factors.slice(0, 3).join(' | ') || 'No cross-market data.',
+    },
+    {
+      label: 'Scenario Levels',
+      value: geHasScenarioLevels ? 'Available' : 'Incomplete',
+      status: evidenceStatus(geHasScenarioLevels, 'Scenario reference or invalidation is missing.'),
+      detail: geHasScenarioLevels ? `Reference ${formatLevel(geReferencePrice)} / invalidation ${formatLevel(geInvalidationPrice)}.` : 'Scenario reference and invalidation levels are not both available.',
+    },
+    {
+      label: 'Research Caution',
+      value: geDoNothing.includes('verify') ? 'Monitor' : 'Active',
+      status: geDoNothing.includes('verify') ? 'neutral' as const : 'conflicting' as const,
+      detail: geDoNothing,
+    },
+  ];
+  const geRiskFlags = geInvalidationConditions.slice(0, 6).map((condition) => ({
+    label: condition,
+    severity: riskSeverity(condition),
+    detail: 'Invalidates or weakens this educational research case.',
+  }));
 
   function handleSymbolSubmit() {
     if (symbolInput.trim()) {
@@ -580,7 +666,7 @@ export default function GoldenEggPage() {
                 </div>
                 <div className="grid gap-2 md:grid-cols-6">
                   {[
-                    ['Assessment', geAssessmentLabel, verdictColor(geAssessment || 'WATCH'), 'Scenario alignment, not a trade recommendation.'],
+                    ['Assessment', geAssessmentLabel, verdictColor(geAssessment || 'WATCH'), 'Scenario alignment for educational research only.'],
                     ['Data Trust', geDataQuality, geDataQualityColor(geDataQuality), geDataQualityTitle],
                     ['Reference', formatLevel(geReferencePrice), '#10B981', geSafeScenario?.referenceTrigger || 'Reference unavailable.'],
                     ['Invalidation', formatLevel(geInvalidationPrice), '#EF4444', geSafeScenario?.invalidationLevel?.logic || 'Invalidation unavailable.'],
@@ -595,25 +681,9 @@ export default function GoldenEggPage() {
                 </div>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-emerald-50">
-                  <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.07em] text-emerald-300">Why This Appeared</div>
-                  <div>{geReason}</div>
-                </div>
-                <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-50">
-                  <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.07em] text-amber-300">Research Caution</div>
-                  <div>{geDoNothing}</div>
-                </div>
-              </div>
+              <EvidenceStack title="Golden Egg Evidence Stack" items={geEvidenceItems} />
 
-              <div className="grid gap-2 md:grid-cols-5">
-                {geFreshness.map((item) => (
-                  <div key={item.label} className="rounded-md border border-slate-800 bg-[#0A101C]/40 px-2.5 py-2">
-                    <div className="text-[11px] uppercase tracking-wide text-slate-500">{item.label}</div>
-                    <div className="mt-1 truncate text-[11px] font-semibold text-slate-300" title={item.value}>{item.value}</div>
-                  </div>
-                ))}
-              </div>
+              <MarketStatusStrip items={geMarketStatusItems} className="md:grid-cols-5" />
 
               {/* Level of Interest / Invalidation / Key Levels row */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-3 border-t border-slate-800/50">
@@ -642,14 +712,12 @@ export default function GoldenEggPage() {
                 </div>
               </div>
 
-              <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-xs text-red-50">
-                <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.07em] text-red-300">Research Case Invalidates If</div>
-                <div className="grid gap-1 md:grid-cols-2">
-                  {geInvalidationConditions.slice(0, 6).map((condition) => (
+              <RiskFlagPanel title="Research Case Invalidates If" flags={geRiskFlags} />
+              <div className="sr-only">
+                {geInvalidationConditions.slice(0, 6).map((condition) => (
                     <div key={condition} className="text-red-100/80">{condition}</div>
                   ))}
                 </div>
-              </div>
 
               {/* Driver / Blocker + Research Note */}
               <div className="flex items-center gap-4 flex-wrap">

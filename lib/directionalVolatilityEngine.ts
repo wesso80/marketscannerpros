@@ -863,6 +863,10 @@ export function computeSignalProjection(
     averageBarsToMove: 0,
     hitRate: 0,
     sampleSize: 0,
+    dispersionPct: 0,
+    projectionQuality: 'unavailable',
+    projectionQualityScore: 0,
+    projectionWarning: 'Projection unavailable: no active signal or not enough historical data.',
   };
 
   if (signalType === 'none' || bbwpSeries.length < PROJECTION.FORWARD_BARS + 10) return zeroed;
@@ -897,7 +901,11 @@ export function computeSignalProjection(
   }
 
   if (signalBars.length < PROJECTION.MIN_SAMPLE_SIZE) {
-    return { ...zeroed, sampleSize: signalBars.length };
+    return {
+      ...zeroed,
+      sampleSize: signalBars.length,
+      projectionWarning: `Thin projection sample: ${signalBars.length}/${PROJECTION.MIN_SAMPLE_SIZE} historical signals found.`,
+    };
   }
 
   const forwardReturns: number[] = [];
@@ -930,17 +938,37 @@ export function computeSignalProjection(
   }
 
   if (forwardReturns.length < PROJECTION.MIN_SAMPLE_SIZE) {
-    return { ...zeroed, sampleSize: forwardReturns.length };
+    return {
+      ...zeroed,
+      sampleSize: forwardReturns.length,
+      projectionWarning: `Thin projection sample: ${forwardReturns.length}/${PROJECTION.MIN_SAMPLE_SIZE} valid forward outcomes found.`,
+    };
   }
 
   const expectedMovePct = forwardReturns.reduce((a, b) => a + b, 0) / forwardReturns.length;
   const medianMovePct = median(forwardReturns);
   const maxHistoricalMovePct = Math.max(...maxFavorableExcursions);
   const averageBarsToMove = barsToMoves.reduce((a, b) => a + b, 0) / barsToMoves.length;
+  const variance = forwardReturns.reduce((sum, value) => sum + Math.pow(value - expectedMovePct, 2), 0) / forwardReturns.length;
+  const dispersionPct = Math.sqrt(variance);
 
   // Hit rate: % of favorable outcomes
   const hitCount = forwardReturns.filter(r => isUp ? r > 0 : r < 0).length;
   const hitRate = (hitCount / forwardReturns.length) * 100;
+  const sampleScore = Math.min(100, (forwardReturns.length / 30) * 100);
+  const dispersionPenalty = Math.min(60, dispersionPct * 8);
+  const balancePenalty = Math.abs(expectedMovePct - medianMovePct) * 5;
+  const projectionQualityScore = clamp(Math.round(sampleScore - dispersionPenalty - balancePenalty), 0, 100);
+  const projectionQuality = projectionQualityScore >= 70
+    ? 'high'
+    : projectionQualityScore >= 40
+    ? 'medium'
+    : 'low';
+  const projectionWarning = projectionQuality === 'high'
+    ? `Projection quality high: ${forwardReturns.length} historical outcomes with ${dispersionPct.toFixed(1)}% dispersion.`
+    : projectionQuality === 'medium'
+    ? `Projection quality medium: ${forwardReturns.length} outcomes; dispersion is ${dispersionPct.toFixed(1)}%, so treat the estimate as a range.`
+    : `Projection quality low: ${forwardReturns.length} outcomes and ${dispersionPct.toFixed(1)}% dispersion make this estimate unstable.`;
 
   return {
     signalType,
@@ -950,6 +978,10 @@ export function computeSignalProjection(
     averageBarsToMove: Math.round(averageBarsToMove * 10) / 10,
     hitRate: Math.round(hitRate * 10) / 10,
     sampleSize: forwardReturns.length,
+    dispersionPct: Math.round(dispersionPct * 100) / 100,
+    projectionQuality,
+    projectionQualityScore,
+    projectionWarning,
   };
 }
 
@@ -1027,6 +1059,7 @@ export function detectVolatilityTrap(
   volState: VolatilityState,
   options?: DVEInput['options'],
   time?: DVEInput['time'],
+  currentPrice?: number,
 ): VolatilityTrap {
   const components: string[] = [];
 
@@ -1044,20 +1077,17 @@ export function detectVolatilityTrap(
   // Gamma Lock (0-30)
   let gammaScore = 0;
   let gammaLockDetected = false;
+  const hasUsableCurrentPrice = Number.isFinite(currentPrice) && (currentPrice ?? 0) > 0;
   if (options?.maxPain != null && options.maxPain > 0) {
-    const dist = Math.abs(volState.bbwp) < 20 // only check during compression-ish
-      ? Math.abs((options as { currentPrice?: number }).currentPrice ?? 0) // placeholder
-      : 0;
-    // Use highest OI strikes for gamma proximity
     const strikes = [options.maxPain, options.highestOICallStrike, options.highestOIPutStrike].filter(Boolean) as number[];
-    for (const strike of strikes) {
-      // We can't access currentPrice here directly — this is a simplified check
-      if (options.maxPain > 0) {
-        const proximity = Math.abs(strike - options.maxPain) / options.maxPain * 100;
+    if (hasUsableCurrentPrice && volState.bbwp < 20) {
+      for (const strike of strikes) {
+        const proximity = Math.abs(strike - currentPrice!) / currentPrice! * 100;
         if (proximity < TRAP.GAMMA_PROXIMITY_PCT) {
           gammaScore = Math.max(gammaScore, 20);
           gammaLockDetected = true;
-          components.push(`Price near gamma wall at ${strike}`);
+          components.push(`Price ${proximity.toFixed(1)}% from gamma wall at ${strike}`);
+          break;
         }
       }
     }
@@ -1401,7 +1431,7 @@ export function computeDVE(input: DVEInput, symbol: string): DVEReading {
 
   // Remaining supporting
   const breakout = computeBreakoutReadiness(volState, input);
-  const trap = detectVolatilityTrap(volState, input.options, input.time);
+  const trap = detectVolatilityTrap(volState, input.options, input.time, input.price.currentPrice);
   const transition = predictTransition(regime, vhm.direction, bbwpResult.bbwp);
   const flags = deriveFlags(regime, direction, breakout, trap, exhaustion, phasePersistence, signal, bbwpResult.bbwp);
   const dataQuality = assessDataQuality(input);

@@ -15,7 +15,7 @@ import { computeEntryRiskMetrics, getLatestPortfolioEquity } from '@/lib/journal
  * Mode:
  *   DRY_RUN  — validate only, return result without writing
  *   PAPER    — write to journal (no broker)
- *   LIVE     — write to journal + send to broker (stub for now)
+ *   LIVE     — disabled; MSP does not place orders or connect to brokers
  */
 export async function POST(req: NextRequest) {
   try {
@@ -32,6 +32,16 @@ export async function POST(req: NextRequest) {
 
     if (!proposal?.proposal_id) {
       return NextResponse.json({ error: 'proposal is required' }, { status: 400 });
+    }
+
+    // MSP is an analytical platform only. Reject LIVE before governor checks,
+    // risk calculations, or journal persistence so no live-mode request can
+    // create a record that looks like an executed trade.
+    if (mode === 'LIVE') {
+      return NextResponse.json(
+        { error: 'Live order submission is not available. MSP is an analytical platform and does not place orders or connect to brokers for trading.' },
+        { status: 403 },
+      );
     }
 
     // ── 1. Re-check governor (prices may have moved since proposal) ──
@@ -131,7 +141,7 @@ export async function POST(req: NextRequest) {
         riskMetrics.dynamicR,                           // $23
         riskMetrics.riskPerTradeAtEntry,                // $24
         riskMetrics.equityAtEntry,                      // $25
-        mode === 'LIVE' ? 'LIVE' : 'PAPER',            // $26 execution_mode
+        'PAPER',                                      // $26 execution_mode
         exits.trail_rule,                               // $27 trail_rule
         exits.time_stop_minutes,                        // $28 time_stop_minutes
         exits.take_profit_2 ?? null,                    // $29 take_profit_2
@@ -139,16 +149,6 @@ export async function POST(req: NextRequest) {
     );
 
     const journalEntryId = rows[0]?.id;
-
-    // ── COMPLIANCE: LIVE mode is permanently disabled ──────────────
-    // MSP does not provide trade execution, broker connections, or order
-    // submission. This platform is an analytical tool only.
-    if (mode === 'LIVE') {
-      return NextResponse.json(
-        { error: 'LIVE order submission is not available. MSP is an analytical platform and does not place orders or connect to brokers for trading.' },
-        { status: 403 },
-      );
-    }
 
     const result: ExecutionResult = {
       proposal_id: proposal.proposal_id,

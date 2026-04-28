@@ -33,6 +33,11 @@ interface Stats {
     stats: { symbol: string; total_predictions: number; win_rate: number; avg_move_pct: number; avg_time_to_move_mins: number; last_updated: string }[];
     recentPredictions: { symbol: string; prediction_direction: string; confidence: number; current_price: number; created_at: string; status: string; move_pct: number | null; hit_target: boolean | null; hit_stop: boolean | null; outcome_direction: string | null }[];
   };
+  meta?: {
+    degraded: boolean;
+    failedQueries: string[];
+    warnings: string[];
+  };
 }
 
 interface AdminRiskState {
@@ -324,6 +329,24 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
           {new Date().toLocaleDateString('en-AU', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
         </span>
       </div>
+
+      {stats?.meta?.degraded && (
+        <div style={{
+          marginBottom: "1rem",
+          border: "1px solid rgba(245,158,11,0.35)",
+          background: "rgba(245,158,11,0.12)",
+          borderRadius: "0.75rem",
+          padding: "0.85rem 1rem",
+          color: "#FCD34D",
+          fontSize: "0.82rem",
+          fontWeight: 700,
+        }}>
+          Analytics degraded: {stats.meta.failedQueries.length} query{stats.meta.failedQueries.length === 1 ? "" : "ies"} failed. Do not treat empty dashboard values as confirmed zero activity.
+          <div style={{ color: "#FDE68A", fontSize: "0.74rem", fontWeight: 500, marginTop: "0.35rem" }}>
+            {stats.meta.failedQueries.slice(0, 6).join(", ")}{stats.meta.failedQueries.length > 6 ? " ..." : ""}
+          </div>
+        </div>
+      )}
 
       <div style={{
         display: "grid",

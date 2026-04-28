@@ -156,7 +156,7 @@ export default function GoldenEggPage() {
         {/* ── Empty State ─────────────────────────────────────── */}
         {!payload && !loading && !error && (
           <div className="mt-20 text-center">
-            <p className="text-sm text-white/40">Enter a symbol above to generate a live multi-factor trade analysis</p>
+            <p className="text-sm text-white/40">Enter a symbol above to generate a live multi-factor research analysis</p>
           </div>
         )}
 
@@ -250,7 +250,7 @@ export default function GoldenEggPage() {
               ) : (
                 <GEPlanGrid>
                   <GESetupCard setup={payload.layer2.setup} />
-                  <GEExecutionCard execution={payload.layer2.execution} permission={payload.layer1.permission} />
+                  <GEExecutionCard scenario={payload.layer2.scenario} assessment={payload.layer1.assessment} />
                   <GEDVEConditions volatility={payload.layer3.structure.volatility} />
                 </GEPlanGrid>
               )}

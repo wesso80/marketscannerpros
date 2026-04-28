@@ -41,6 +41,7 @@ import {
 } from '@/lib/backtest/timeframe';
 import { buildBacktestDiagnostics, inferStrategyDirection } from '@/lib/backtest/diagnostics';
 import { buildValidationPayload } from '@/lib/backtest/validationPayload';
+import { buildBacktestAssumptionsMetadata } from '@/lib/backtest/assumptions';
 import {
   fetchPriceData,
   isCryptoSymbol,
@@ -152,6 +153,14 @@ export async function POST(req: NextRequest) {
       coverage.bars,
     );
     const validation = buildValidationPayload(strategyDefinition.id, strategyDirection, result);
+    const executionAssumptions = buildBacktestAssumptionsMetadata({
+      strategyId: strategyDefinition.id,
+      timeframe: parsedTimeframe.normalized,
+      assetType: isCrypto ? 'crypto' : 'stock',
+      totalTrades: result.totalTrades,
+      bars: coverage.bars,
+      volumeUnavailable,
+    });
 
     logger.info('Backtest completed successfully', { 
       symbol, 
@@ -182,6 +191,7 @@ export async function POST(req: NextRequest) {
         bars: coverage.bars,
         provider: priceDataSource,
       },
+      executionAssumptions,
       validation,
       strategyProfile: {
         id: strategyDefinition.id,

@@ -19,6 +19,8 @@ import ScanTemplatesBar, { type ScanTemplate, SCAN_TEMPLATES } from '@/component
 import { useRegisterPageData } from '@/lib/ai/pageContext';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { saveResearchCase } from '@/lib/clientResearchCases';
+import DataFreshnessBadge from '@/components/market/DataFreshnessBadge';
+import MarketStatusStrip from '@/components/market/MarketStatusStrip';
 
 /* ─── Helpers ─── */
 function dirColor(d?: string) {
@@ -69,7 +71,10 @@ function dataQualityColor(label: string): string {
   return '#EF4444';
 }
 
+type ProviderStatus = NonNullable<NonNullable<ReturnType<typeof useScannerResults>['data']>['metadata']['dataQuality']>['providerStatus'];
+
 function summarizeRankedReason(r: ScanResult, lifecycle: LifecycleState, regimeCompatible: boolean, activeRegime: string): string {
+  if (r.rankExplanation?.summary) return r.rankExplanation.summary;
   if (r.scoreV2?.regimeScore?.gated) return 'Gated by regime';
   if (!regimeCompatible) {
     const setup = r.direction === 'bullish' ? 'Bull trend setup' : r.direction === 'bearish' ? 'Bear trend setup' : 'Directional setup';
@@ -93,6 +98,8 @@ function summarizeRankedReason(r: ScanResult, lifecycle: LifecycleState, regimeC
 function rankedTrustLabel(r: ScanResult): 'GOOD' | 'DEGRADED' | 'MISSING' {
   if (String(r.setup || '').startsWith('Local demo:')) return 'DEGRADED';
   if (!isUsableNumber(r.price)) return 'MISSING';
+  if (r.scoreQuality?.freshnessStatus === 'missing') return 'MISSING';
+  if ((r.scoreQuality?.missingEvidencePenalty ?? 0) > 0 || (r.scoreQuality?.staleDataPenalty ?? 0) > 0 || (r.scoreQuality?.liquidityPenalty ?? 0) > 0 || r.rankWarnings?.length) return 'DEGRADED';
   if (r.confidence == null || r.score == null) return 'DEGRADED';
   if (r.dveBbwp == null && !r.dveSignalType && !r.dveFlags?.length) return 'DEGRADED';
   return 'GOOD';
@@ -101,6 +108,14 @@ function rankedTrustLabel(r: ScanResult): 'GOOD' | 'DEGRADED' | 'MISSING' {
 function rankedTrustDetail(r: ScanResult): string {
   if (String(r.setup || '').startsWith('Local demo:')) return 'Development-only sample row. Not live market data.';
   if (!isUsableNumber(r.price)) return 'Missing usable price.';
+  const qualityWarnings = [
+    r.scoreQuality?.freshnessStatus && r.scoreQuality.freshnessStatus !== 'fresh' ? `freshness ${r.scoreQuality.freshnessStatus}` : null,
+    (r.scoreQuality?.missingEvidencePenalty ?? 0) > 0 ? `missing evidence penalty ${r.scoreQuality?.missingEvidencePenalty}` : null,
+    (r.scoreQuality?.staleDataPenalty ?? 0) > 0 ? `stale data penalty ${r.scoreQuality?.staleDataPenalty}` : null,
+    (r.scoreQuality?.liquidityPenalty ?? 0) > 0 ? `liquidity penalty ${r.scoreQuality?.liquidityPenalty}` : null,
+    ...(r.rankWarnings ?? []),
+  ].filter(Boolean) as string[];
+  if (qualityWarnings.length) return qualityWarnings.join(' · ');
   const missing = [
     r.confidence == null ? 'confidence' : null,
     r.score == null ? 'raw score' : null,
@@ -230,6 +245,10 @@ interface SymbolDetail {
   confidence?: number;
   setup?: string;
   signals?: { bullish: number; bearish: number; neutral: number };
+  scoreQuality?: ScanResult['scoreQuality'];
+  rankWarnings?: string[];
+  rankExplanation?: ScanResult['rankExplanation'];
+  providerStatus?: ProviderStatus | null;
   institutionalFilter?: {
     recommendation?: string;
     noTrade?: boolean;
@@ -296,7 +315,14 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
   const tfAlignment = [trendAligned, momentumAligned, flowAligned, direction !== 'neutral'].filter(Boolean).length;
   const dataQuality = getDataQualityLabel({ price: detail.price, atr: detail.atr, rsi: detail.rsi, adx: detail.adx, direction });
   const missingInputs = getMissingInputs({ price: detail.price, atr: detail.atr, rsi: detail.rsi, adx: detail.adx, direction });
-  const dataQualityTitle = dataQualityDetail(dataQuality, missingInputs);
+  const scoreQualityWarnings = [
+    detail.scoreQuality?.freshnessStatus && detail.scoreQuality.freshnessStatus !== 'fresh' ? `Freshness: ${detail.scoreQuality.freshnessStatus}` : null,
+    (detail.scoreQuality?.missingEvidencePenalty ?? 0) > 0 ? `Missing evidence penalty: ${detail.scoreQuality?.missingEvidencePenalty}` : null,
+    (detail.scoreQuality?.staleDataPenalty ?? 0) > 0 ? `Stale data penalty: ${detail.scoreQuality?.staleDataPenalty}` : null,
+    (detail.scoreQuality?.liquidityPenalty ?? 0) > 0 ? `Liquidity penalty: ${detail.scoreQuality?.liquidityPenalty}` : null,
+    ...(detail.rankWarnings ?? []),
+  ].filter(Boolean) as string[];
+  const dataQualityTitle = scoreQualityWarnings.length ? scoreQualityWarnings.join(' · ') : dataQualityDetail(dataQuality, missingInputs);
   const hasScenarioLevels = isUsableNumber(detail.price) && isUsableNumber(detail.atr) && direction !== 'neutral';
 
   const entry = hasScenarioLevels
@@ -470,6 +496,9 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
             <div title={dataQualityTitle} className="mt-2 inline-flex rounded border px-2 py-0.5 text-[11px] font-bold uppercase" style={{ color: dataQualityColor(dataQuality), borderColor: dataQualityColor(dataQuality) + '55', backgroundColor: dataQualityColor(dataQuality) + '15' }}>
               Data {dataQuality}
             </div>
+            {detail.providerStatus && (
+              <DataFreshnessBadge status={detail.providerStatus} label={`${detail.providerStatus.provider}`} className="ml-2 mt-2" />
+            )}
             <div className="mt-2 grid gap-1 text-[0.72rem] text-slate-400">
               {blockReasons.map(r => <div key={r}>• {r}</div>)}
             </div>
@@ -521,6 +550,16 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
                 <div>Pattern: <span className="font-bold text-white">{trendAligned ? 'Trend continuation' : 'Structure forming'}</span></div>
               </div>
             </div>
+            {detail.rankExplanation && (
+              <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-2.5">
+                <div className="mb-1 text-[0.68rem] font-extrabold uppercase tracking-[0.07em] text-emerald-300">Rank Explanation</div>
+                <div className="text-[0.74rem] leading-relaxed text-emerald-50">{detail.rankExplanation.summary}</div>
+                <div className="mt-2 grid gap-1 text-[0.7rem] text-emerald-100/80">
+                  {detail.rankExplanation.strengths.slice(0, 3).map((item) => <div key={item}>+ {item}</div>)}
+                  {detail.rankExplanation.penalties.slice(0, 3).map((item) => <div key={item}>- {item}</div>)}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -632,6 +671,10 @@ export default function ScannerPage() {
   }, [equity.data, crypto.data]);
 
   const rankedLocalDemo = Boolean(equity.data?.metadata?.localDemo || crypto.data?.metadata?.localDemo);
+  const rankedProviderStatuses = useMemo(() => ([
+    { label: 'Equity', status: equity.data?.metadata?.dataQuality?.providerStatus ?? null, quality: equity.data?.metadata?.dataQuality ?? null },
+    { label: 'Crypto', status: crypto.data?.metadata?.dataQuality?.providerStatus ?? null, quality: crypto.data?.metadata?.dataQuality ?? null },
+  ]), [equity.data, crypto.data]);
 
   const filtered = useMemo(() => {
     let items = allResults;
@@ -771,7 +814,7 @@ export default function ScannerPage() {
       });
       const data = await res.json();
       if (data.success && data.results?.length > 0) {
-        setSymbolDetail(data.results[0]);
+        setSymbolDetail({ ...data.results[0], providerStatus: data.metadata?.dataQuality?.providerStatus ?? null });
       } else {
         setSymbolDetail({ symbol, score: 0, direction: 'neutral' });
       }
@@ -1046,6 +1089,17 @@ export default function ScannerPage() {
             </div>
           )}
 
+          <MarketStatusStrip
+            items={rankedProviderStatuses.map(({ label, status, quality }) => ({
+              label,
+              status,
+              source: quality?.source,
+              coverageScore: quality?.coverageScore,
+              computedAt: quality?.computedAt,
+              warnings: quality?.warnings,
+            }))}
+          />
+
           {/* Table */}
           <Card>
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
@@ -1112,7 +1166,7 @@ export default function ScannerPage() {
                               {r.dveBbwp != null ? r.dveBbwp.toFixed(0) : '—'}
                             </span>
                           </td>
-                          <td className="py-2.5 px-2 text-[11px] whitespace-nowrap max-w-[110px] truncate text-slate-300" title={reason}>{reason}</td>
+                          <td className="py-2.5 px-2 text-[11px] whitespace-nowrap max-w-[110px] truncate text-slate-300" title={[reason, ...(r.rankExplanation?.strengths ?? []), ...(r.rankExplanation?.penalties ?? []), ...(r.rankExplanation?.warnings ?? [])].filter(Boolean).join(' · ')}>{reason}</td>
                           <td className="py-2.5 px-2 whitespace-nowrap">
                             <span title={trustDetail} className="rounded border px-1.5 py-0.5 text-[11px] font-bold" style={{ color: dataQualityColor(trust), borderColor: dataQualityColor(trust) + '55', backgroundColor: dataQualityColor(trust) + '15' }}>
                               {trust}

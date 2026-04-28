@@ -13,6 +13,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { hasProTraderAccess } from '@/lib/proTraderAccess';
 import {
   detectAssetClass,
   fetchPrice,
@@ -39,6 +40,9 @@ export async function GET(request: NextRequest) {
     const session = await getSessionFromCookie();
     if (!session?.workspaceId) {
       return NextResponse.json({ success: false, error: 'Please log in' }, { status: 401 });
+    }
+    if (!hasProTraderAccess(session.tier)) {
+      return NextResponse.json({ success: false, error: 'Pro Trader subscription required for Volatility Engine' }, { status: 403 });
     }
 
     // 2. Parse symbol + timeframe

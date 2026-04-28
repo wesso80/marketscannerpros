@@ -379,6 +379,22 @@ function catalystTone(label: MorningCatalyst["impactLabel"]): "green" | "yellow"
   return "blue";
 }
 
+function sourceTone(source: MorningBrief["risk"]["source"]): "green" | "yellow" | "red" {
+  if (source === "portfolio_journal") return "green";
+  if (source === "operator_state") return "yellow";
+  return "red";
+}
+
+function freshnessTone(freshness: MorningBrief["universe"]["workerStatus"]["freshness"]): "green" | "yellow" | "red" {
+  if (freshness === "fresh") return "green";
+  if (freshness === "stale") return "yellow";
+  return "red";
+}
+
+function formatSource(value: string) {
+  return value.replace(/_/g, " ").toUpperCase();
+}
+
 export default function MorningBriefPage() {
   const [brief, setBrief] = useState<MorningBrief | null>(null);
   const [loading, setLoading] = useState(true);
@@ -568,6 +584,8 @@ export default function MorningBriefPage() {
 
       {brief ? (
         <>
+          <DataTruthStrip brief={brief} />
+
           <section className="mb-5 grid gap-4 lg:grid-cols-[1.4fr_1fr]">
             <AdminCard>
               <div className="text-xs uppercase tracking-[0.18em] text-emerald-300">Generated {generated}</div>
@@ -1010,6 +1028,59 @@ function Metric({ label, value, tone = "neutral" }: { label: string; value: stri
     <div className="rounded-md border border-white/10 bg-slate-950/40 p-3">
       <div className="text-xs uppercase tracking-wide text-slate-500">{label}</div>
       <div className={`mt-1 text-lg font-black ${color}`}>{value}</div>
+    </div>
+  );
+}
+
+function DataTruthStrip({ brief }: { brief: MorningBrief }) {
+  const hasLiveRisk = brief.risk.source === "portfolio_journal" && brief.risk.equity > 0;
+  const learningSample = brief.learning.labeled + brief.learning.briefFeedbackTotal;
+  const sampleTone: "green" | "yellow" | "red" = learningSample >= 30 ? "green" : learningSample >= 10 ? "yellow" : "red";
+  const scanTone: "green" | "yellow" | "red" = (brief.health.errorsCount ?? 0) > 0 || brief.health.feed !== "HEALTHY" ? "yellow" : freshnessTone(brief.universe.workerStatus.freshness);
+
+  return (
+    <section className="mb-5 grid gap-3 lg:grid-cols-4">
+      <TruthTile
+        title="Risk Source"
+        status={hasLiveRisk ? "LIVE PORTFOLIO" : formatSource(brief.risk.source)}
+        tone={sourceTone(brief.risk.source)}
+        detail={brief.risk.notes[0] || "Risk source unavailable."}
+      />
+      <TruthTile
+        title="Worker Freshness"
+        status={brief.universe.workerStatus.freshness.toUpperCase()}
+        tone={freshnessTone(brief.universe.workerStatus.freshness)}
+        detail={brief.universe.workerStatus.note}
+      />
+      <TruthTile
+        title="Scanner Health"
+        status={`${brief.health.scanner} / ${brief.health.feed}`}
+        tone={scanTone}
+        detail={`${brief.health.errorsCount ?? 0} errors · ${brief.health.symbolsScanned ?? brief.universe.scannedCount} symbols scanned${brief.health.lastScanAt ? ` · scan ${formatMaybeDate(brief.health.lastScanAt)}` : ""}.`}
+      />
+      <TruthTile
+        title="Learning Sample"
+        status={`${learningSample} labels`}
+        tone={sampleTone}
+        detail={`${brief.expectancy.sampleTrades} closed journal trades · ${brief.learning.pending} pending signal labels.`}
+      />
+    </section>
+  );
+}
+
+function TruthTile({ title, status, detail, tone }: { title: string; status: string; detail: string; tone: "green" | "yellow" | "red" }) {
+  const toneClasses = tone === "green"
+    ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-100"
+    : tone === "yellow"
+      ? "border-amber-500/25 bg-amber-500/10 text-amber-100"
+      : "border-red-500/25 bg-red-500/10 text-red-100";
+  return (
+    <div className={`rounded-lg border p-3 ${toneClasses}`}>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="text-[0.68rem] font-black uppercase tracking-[0.12em] opacity-70">{title}</div>
+        <StatusPill label={status} tone={tone} />
+      </div>
+      <div className="text-xs leading-5 opacity-85">{detail}</div>
     </div>
   );
 }

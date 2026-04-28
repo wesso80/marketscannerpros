@@ -45,7 +45,11 @@ type CommanderBrief = {
     correlationRisk: number;
     activePositions: number;
     maxPositions: number;
-    source: string;
+    killSwitchActive: boolean;
+    permission: string;
+    source: "portfolio_journal" | "operator_state" | "fallback";
+    lastUpdatedAt?: string | null;
+    notes: string[];
   };
   riskGovernor: {
     mode: "NORMAL" | "THROTTLED" | "DEFENSIVE" | "LOCKED";
@@ -99,6 +103,55 @@ function stateTone(value: string): Tone {
   if (value === "BLOCK" || value === "LOCKED") return "red";
   if (value === "THROTTLED") return "blue";
   return "neutral";
+}
+
+type CommandState = "GO" | "WAIT" | "BLOCK";
+
+function minutesSince(value?: string | null) {
+  if (!value) return null;
+  const parsed = Date.parse(value);
+  if (!Number.isFinite(parsed)) return null;
+  return Math.max(0, Math.round((Date.now() - parsed) / 60000));
+}
+
+function formatAge(minutes: number | null) {
+  if (minutes == null) return "unknown";
+  if (minutes < 60) return `${minutes}m ago`;
+  return `${Math.floor(minutes / 60)}h ${minutes % 60}m ago`;
+}
+
+function sourceLabel(source: CommanderBrief["risk"]["source"]) {
+  if (source === "portfolio_journal") return "Live portfolio/journal";
+  if (source === "operator_state") return "Operator state";
+  return "Fallback risk";
+}
+
+function deriveCommandState(brief: CommanderBrief): CommandState {
+  if (brief.risk.killSwitchActive || brief.riskGovernor.mode === "LOCKED" || brief.commander.permission === "BLOCK") return "BLOCK";
+  if (brief.risk.source === "fallback" || brief.risk.permission === "WAIT" || brief.commander.permission === "WAIT") return "WAIT";
+  if (brief.topPlays.length === 0 || brief.riskGovernor.remainingTrades <= 0) return "WAIT";
+  if (brief.riskGovernor.mode === "DEFENSIVE" || brief.riskGovernor.mode === "THROTTLED") return "WAIT";
+  return "GO";
+}
+
+function commandReasons(brief: CommanderBrief, state: CommandState) {
+  const reasons = [
+    ...brief.riskGovernor.lockouts,
+    ...brief.commander.blocks,
+    brief.risk.source === "fallback" ? "Risk source is fallback; live equity unavailable." : null,
+    brief.topPlays.length === 0 ? "No GO plays cleared the scan." : null,
+    brief.risk.killSwitchActive ? "Kill switch is active." : null,
+  ].filter(Boolean) as string[];
+
+  if (reasons.length) return Array.from(new Set(reasons)).slice(0, 4);
+  if (state === "GO") return [`${brief.topPlays.length} GO play${brief.topPlays.length === 1 ? "" : "s"} available with ${brief.riskGovernor.remainingTrades} trade budget remaining.`];
+  return ["No hard lockout, but conditions are not strong enough for a GO state."];
+}
+
+function allowedNextAction(brief: CommanderBrief, state: CommandState) {
+  if (state === "BLOCK") return "Stand down. Reconcile risk, review outcomes, or wait for the next session.";
+  if (state === "WAIT") return brief.commander.primaryAction || "Monitor scenarios and wait for risk/data confirmation.";
+  return brief.commander.primaryAction || "Review the top play only after scenario confirmation and risk checks.";
 }
 
 export default function CommanderPage() {
@@ -160,6 +213,8 @@ export default function CommanderPage() {
 
       {brief ? (
         <>
+          <CommandStateStrip brief={brief} />
+
           <section className="mb-5 grid gap-4 xl:grid-cols-[1.4fr_1fr]">
             <AdminCard>
               <div className="mb-2 text-xs uppercase tracking-[0.18em] text-emerald-300">Generated {generated}</div>
@@ -269,6 +324,59 @@ export default function CommanderPage() {
         </>
       ) : null}
     </main>
+  );
+}
+
+function CommandStateStrip({ brief }: { brief: CommanderBrief }) {
+  const commandState = deriveCommandState(brief);
+  const generatedAge = minutesSince(brief.generatedAt);
+  const riskAge = minutesSince(brief.risk.lastUpdatedAt);
+  const tone = stateTone(commandState);
+  const borderColor = commandState === "GO" ? "border-emerald-500/35" : commandState === "WAIT" ? "border-amber-500/35" : "border-red-500/40";
+  const bgColor = commandState === "GO" ? "bg-emerald-500/10" : commandState === "WAIT" ? "bg-amber-500/10" : "bg-red-500/10";
+  const textColor = commandState === "GO" ? "text-emerald-100" : commandState === "WAIT" ? "text-amber-100" : "text-red-100";
+  const reasons = commandReasons(brief, commandState);
+
+  return (
+    <section className={`mb-5 rounded-lg border ${borderColor} ${bgColor} p-4 ${textColor}`}>
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-stretch xl:justify-between">
+        <div className="min-w-0 flex-1">
+          <div className="mb-2 text-xs font-black uppercase tracking-[0.16em] opacity-70">Command State</div>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="text-5xl font-black tracking-tight md:text-6xl">{commandState}</div>
+            <StatusPill label={brief.riskGovernor.mode} tone={stateTone(brief.riskGovernor.mode)} />
+            <StatusPill label={brief.risk.killSwitchActive ? "KILL SWITCH ON" : "KILL SWITCH OFF"} tone={brief.risk.killSwitchActive ? "red" : "green"} />
+            <StatusPill label={sourceLabel(brief.risk.source)} tone={brief.risk.source === "portfolio_journal" ? "green" : brief.risk.source === "operator_state" ? "yellow" : "red"} />
+          </div>
+          <div className="mt-3 text-sm font-semibold leading-6">Allowed Next Action: {allowedNextAction(brief, commandState)}</div>
+        </div>
+
+        <div className="grid min-w-[min(100%,520px)] gap-3 md:grid-cols-3">
+          <CommandFact label="Data Age" value={formatAge(generatedAge)} detail="brief generated" tone={generatedAge != null && generatedAge <= 30 ? "green" : generatedAge != null && generatedAge <= 90 ? "yellow" : "red"} />
+          <CommandFact label="Risk Age" value={formatAge(riskAge)} detail={sourceLabel(brief.risk.source)} tone={brief.risk.source === "fallback" ? "red" : riskAge != null && riskAge <= 60 ? "green" : "yellow"} />
+          <CommandFact label="Budget" value={`${brief.riskGovernor.remainingTrades}/${brief.riskGovernor.maxTradesToday}`} detail={`${money(brief.riskGovernor.maxRiskPerTradeUsd)} max risk`} tone={tone} />
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+        {reasons.map((reason) => (
+          <div key={reason} className="rounded-md border border-current/20 bg-slate-950/30 p-3 text-xs font-semibold leading-5">
+            {reason}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function CommandFact({ label, value, detail, tone }: { label: string; value: string; detail: string; tone: Tone }) {
+  const color = tone === "green" ? "text-emerald-200" : tone === "yellow" ? "text-amber-200" : tone === "red" ? "text-red-200" : tone === "blue" ? "text-sky-200" : "text-slate-100";
+  return (
+    <div className="rounded-md border border-white/10 bg-slate-950/35 p-3">
+      <div className="text-[0.68rem] font-black uppercase tracking-[0.1em] text-slate-400">{label}</div>
+      <div className={`mt-1 text-lg font-black ${color}`}>{value}</div>
+      <div className="mt-1 text-xs text-slate-400">{detail}</div>
+    </div>
   );
 }
 

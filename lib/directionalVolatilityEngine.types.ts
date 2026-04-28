@@ -190,6 +190,10 @@ export interface SignalProjection {
   averageBarsToMove: number;
   hitRate: number;
   sampleSize: number;
+  dispersionPct: number;
+  projectionQuality: 'unavailable' | 'low' | 'medium' | 'high';
+  projectionQualityScore: number;
+  projectionWarning: string;
 }
 
 // ── SUPPORTING ───────────────────────────────────────────────────────────
@@ -217,6 +221,7 @@ export interface VolatilityTrap {
 }
 
 export interface ExhaustionRisk {
+  /** 0-100 risk score. Label thresholds are the canonical consumer contract. */
   level: number;
   label: string;
   signals: string[];

@@ -89,7 +89,27 @@ export type JournalDockSummaryModel = {
   missingStops: number;
   missingOutcomes: number;
   reviewQueue: number;
+  playbookSamples?: number;
+  playbookSampleStatus?: SampleStatus;
   lastLearningTs?: string;
+};
+
+export type SampleStatus = 'insufficient' | 'developing' | 'minimum_met';
+
+export type PlaybookExpectancyModel = {
+  playbook: string;
+  sampleSize: number;
+  minSampleSize: number;
+  sampleStatus: SampleStatus;
+  isMinimumMet: boolean;
+  winRate: number;
+  winRateCiLow: number;
+  winRateCiHigh: number;
+  expectancyR: number;
+  expectancyCiLow: number;
+  expectancyCiHigh: number;
+  totalR: number;
+  warning: string;
 };
 
 export type RiskModuleModel = {
@@ -100,6 +120,7 @@ export type RiskModuleModel = {
 
 export type ReviewModuleModel = {
   queue: Array<{ tradeId: string; summary: string }>;
+  playbookExpectancy?: PlaybookExpectancyModel[];
 };
 
 export type LabelingModuleModel = {

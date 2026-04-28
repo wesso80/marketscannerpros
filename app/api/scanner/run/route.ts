@@ -25,6 +25,12 @@ import { getEdgeContext } from "@/lib/intelligence/edgeContextBuilder";
 import { normalizeSide } from "@/lib/intelligence/edgeProfile";
 import type { DVEInput, DVEReading, DVESignalType, VolRegime } from "@/lib/directionalVolatilityEngine.types";
 import { scannerComplianceMetadata, scannerDataQualityMetadata } from "@/lib/scanner/compliance";
+import { evaluateScannerFreshness } from "@/lib/scanner/dataQuality";
+import { evaluateScannerLiquidity } from "@/lib/scanner/liquidity";
+import { buildMarketDataProviderStatus, emitProductionDemoDataAlert, isLocalDemoMarketDataAllowed } from "@/lib/scanner/providerStatus";
+import { buildScannerRankExplanation, type ScannerRankExplanation } from "@/lib/scanner/rankExplanation";
+import { computeScannerDerivativesContribution, type ScannerDerivativesEvidenceStatus } from "@/lib/scanner/scoring";
+import { calculateScannerVwapSeries, scannerVwapModeFor } from "@/lib/scanner/vwap";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic"; // Disable static optimization
@@ -141,6 +147,18 @@ interface ScanResult {
     bearish: number;
     neutral: number;
   };
+  scoreQuality?: {
+    evidenceLayers: number;
+    missingEvidencePenalty: number;
+    derivativesEvidenceStatus?: ScannerDerivativesEvidenceStatus;
+    derivativesBoost?: number;
+    staleDataPenalty?: number;
+    freshnessStatus?: 'fresh' | 'stale' | 'missing';
+    liquidityPenalty?: number;
+    liquidityStatus?: 'sufficient' | 'thin' | 'missing' | 'not_applicable';
+  };
+  rankWarnings?: string[];
+  rankExplanation?: ScannerRankExplanation;
   timeframe: string;
   type: string;
   price?: number;
@@ -157,6 +175,7 @@ interface ScanResult {
   obv?: number;
   mfi?: number;
   vwap?: number;
+  avgVolume?: number;
   lastCandleTime?: string;
   // Computed trade setup fields (populated by both cached and AV paths)
   confidence?: number;
@@ -188,7 +207,10 @@ interface ScanResult {
 }
 
 function isLocalScannerDemoAllowed(): boolean {
-  return process.env.NODE_ENV !== 'production' || process.env.LOCAL_DEMO_MARKET_DATA === 'true';
+  return isLocalDemoMarketDataAllowed({
+    nodeEnv: process.env.NODE_ENV,
+    localDemoMarketData: process.env.LOCAL_DEMO_MARKET_DATA,
+  }).allowed;
 }
 
 function localDemoScanResponse(args: {
@@ -197,6 +219,13 @@ function localDemoScanResponse(args: {
   symbols?: string[];
   reason: string;
 }) {
+  const demoPolicy = isLocalDemoMarketDataAllowed({
+    nodeEnv: process.env.NODE_ENV,
+    localDemoMarketData: process.env.LOCAL_DEMO_MARKET_DATA,
+  });
+  if (demoPolicy.productionDemoEnabled) {
+    emitProductionDemoDataAlert('scanner/run', args.reason, { type: args.type, timeframe: args.timeframe });
+  }
   const defaults: Record<'crypto' | 'equity' | 'forex', string[]> = {
     equity: ['NVDA', 'MSFT', 'AAPL', 'TSLA', 'AMZN'],
     crypto: ['BTC', 'ETH', 'SOL', 'BNB', 'XRP'],
@@ -256,8 +285,21 @@ function localDemoScanResponse(args: {
         coverageScore: 0,
         warnings: [
           'Development-only sample rows for workflow testing. Not live market data.',
+          ...(demoPolicy.productionDemoEnabled ? ['CRITICAL: LOCAL_DEMO_MARKET_DATA is enabled in production.'] : []),
           args.reason,
         ],
+        providerStatus: buildMarketDataProviderStatus({
+          source: 'local_demo',
+          provider: 'local_demo',
+          localDemo: true,
+          stale: true,
+          productionDemoEnabled: demoPolicy.productionDemoEnabled,
+          warnings: [
+            'Development-only sample rows for workflow testing. Not live market data.',
+            ...(demoPolicy.productionDemoEnabled ? ['CRITICAL: LOCAL_DEMO_MARKET_DATA is enabled in production.'] : []),
+            args.reason,
+          ],
+        }),
       }),
       riskGovernor: null,
     },
@@ -333,7 +375,7 @@ function computeScannerDVE(
     if (reading.signal.type === 'expansion_continuation_up' || reading.signal.type === 'expansion_continuation_down') flags.push('CONTINUATION');
     if (reading.volatility.inSqueeze) flags.push('SQUEEZE_FIRE');
     if (reading.trap.detected) flags.push('VOL_TRAP');
-    if (reading.exhaustion.level > 70) flags.push('EXHAUSTION_RISK');
+    if (reading.exhaustion.label === 'HIGH' || reading.exhaustion.label === 'EXTREME') flags.push('EXHAUSTION_RISK');
     if (reading.direction.bias !== 'neutral') flags.push(reading.direction.bias === 'bullish' ? 'DIR_BULL' : 'DIR_BEAR');
     if (reading.phasePersistence.contraction.active && reading.phasePersistence.contraction.stats.agePercentile > 80) flags.push('EXTENDED_PHASE');
     if (reading.phasePersistence.expansion.active && reading.phasePersistence.expansion.stats.agePercentile > 80) flags.push('EXTENDED_PHASE');
@@ -439,9 +481,15 @@ function buildScannerLiquidityLevels(
     if (eql <= 0.0015) levels.push({ level: (current.l + next.l) / 2, label: 'EQL' });
   }
 
-  const sumPv = recent.reduce((acc, bar) => acc + (((bar.h + bar.l + bar.c) / 3) * Math.max(1, bar.volume ?? 1)), 0);
-  const sumVol = recent.reduce((acc, bar) => acc + Math.max(1, bar.volume ?? 1), 0);
-  const vwap = sumVol > 0 ? sumPv / sumVol : undefined;
+  const vwapSeries = calculateScannerVwapSeries(
+    recent.map((bar) => bar.h),
+    recent.map((bar) => bar.l),
+    recent.map((bar) => bar.c),
+    recent.map((bar) => Math.max(1, bar.volume ?? 1)),
+    recent.map((bar) => bar.t),
+    'exchange_session',
+  );
+  const vwap = vwapSeries[vwapSeries.length - 1];
 
   const roundLevel = spot >= 1000 ? Math.round(spot / 100) * 100 : spot >= 100 ? Math.round(spot / 10) * 10 : spot >= 10 ? Math.round(spot) : Number((Math.round(spot * 10) / 10).toFixed(1));
   levels.push({ level: roundLevel, label: 'ROUND' });
@@ -1172,18 +1220,15 @@ export async function POST(req: NextRequest) {
       return result;
     }
 
-    // VWAP (cumulative within the candle set — resets daily in real intraday, here runs across full set)
-    function vwap(highs: number[], lows: number[], closes: number[], volumes: number[]): number[] {
-      const result: number[] = [];
-      let cumTPV = 0;
-      let cumVol = 0;
-      for (let i = 0; i < closes.length; i++) {
-        const tp = (highs[i] + lows[i] + closes[i]) / 3;
-        cumTPV += tp * volumes[i];
-        cumVol += volumes[i];
-        result.push(cumVol > 0 ? cumTPV / cumVol : tp);
-      }
-      return result;
+    function vwap(
+      highs: number[],
+      lows: number[],
+      closes: number[],
+      volumes: number[],
+      timestamps: string[] = [],
+      marketType: 'crypto' | 'equity' | 'forex' = 'equity',
+    ): number[] {
+      return calculateScannerVwapSeries(highs, lows, closes, volumes, timestamps, scannerVwapModeFor(marketType));
     }
 
     // ── Smart setup label based on technical context ──────────────────
@@ -1326,7 +1371,8 @@ export async function POST(req: NextRequest) {
       dveFlags?: string[],
       fundingRate?: number,
       oiChangePercent?: number,
-    ): { score: number; direction: 'bullish' | 'bearish' | 'neutral'; signals: { bullish: number; bearish: number; neutral: number } } {
+      derivativesExpected = false,
+    ): { score: number; direction: 'bullish' | 'bearish' | 'neutral'; signals: { bullish: number; bearish: number; neutral: number }; scoreQuality: { evidenceLayers: number; missingEvidencePenalty: number; derivativesEvidenceStatus: ScannerDerivativesEvidenceStatus; derivativesBoost: number } } {
       let bullishSignals = 0;
       let bearishSignals = 0;
       let neutralSignals = 0;
@@ -1518,21 +1564,13 @@ export async function POST(req: NextRequest) {
       // LAYER 5: DERIVATIVES (crypto only, up to 8% boost)
       // Funding rate, OI changes = smart money positioning.
       // =================================================================
-      let derivativesBoost = 0;
-
-      if (Number.isFinite(fundingRate)) {
-        // Extreme funding = crowded trade, fade potential
-        if (fundingRate! > 0.05) { bearishSignals += 0.8; derivativesBoost += 2; }     // Crowded long
-        else if (fundingRate! < -0.05) { bullishSignals += 0.8; derivativesBoost += 2; } // Crowded short
-        else if (fundingRate! > 0.01) { bullishSignals += 0.3; } // Mild long bias
-        else if (fundingRate! < -0.01) { bearishSignals += 0.3; }
-      }
-
-      if (Number.isFinite(oiChangePercent)) {
-        // Rising OI + direction = confirms the move, more conviction
-        if (Math.abs(oiChangePercent!) > 5) { derivativesBoost += 3; } // Big OI change = active positioning
-        else if (Math.abs(oiChangePercent!) > 2) { derivativesBoost += 1; }
-      }
+      const derivativesContribution = computeScannerDerivativesContribution({
+        fundingRate,
+        oiChangePercent,
+        expected: derivativesExpected,
+      });
+      bullishSignals += derivativesContribution.bullishSignal;
+      bearishSignals += derivativesContribution.bearishSignal;
 
       // =================================================================
       // DIRECTION DETERMINATION — 15% threshold for hysteresis
@@ -1574,6 +1612,7 @@ export async function POST(req: NextRequest) {
         Number.isFinite(mfiVal), Number.isFinite(adxVal), Number.isFinite(aroonUp),
       ].filter(Boolean).length;
       const confluenceBonus = layersContributing >= 7 ? 8 : layersContributing >= 5 ? 4 : 0;
+      const missingEvidencePenalty = layersContributing < 5 ? (5 - layersContributing) * 6 : 0;
 
       // Base score: blend of net conviction (50%) and agreement strength (50%)
       let score = Math.round((netConviction * 0.5 + agreementRatio * 0.5) * 85);
@@ -1581,7 +1620,8 @@ export async function POST(req: NextRequest) {
       // Add bonuses
       score += confluenceBonus;
       score += Math.max(-10, Math.min(15, volatilityBoost));
-      score += Math.max(0, Math.min(8, derivativesBoost));
+      score += Math.max(0, Math.min(8, derivativesContribution.boost));
+      score -= missingEvidencePenalty;
 
       // Clamp to 0-100
       score = Math.max(0, Math.min(100, score));
@@ -1593,6 +1633,12 @@ export async function POST(req: NextRequest) {
           bullish: Math.round(bullishSignals * 10) / 10,
           bearish: Math.round(bearishSignals * 10) / 10,
           neutral: Math.round(neutralSignals * 10) / 10
+        },
+        scoreQuality: {
+          evidenceLayers: layersContributing,
+          missingEvidencePenalty,
+          derivativesEvidenceStatus: derivativesContribution.evidenceStatus,
+          derivativesBoost: derivativesContribution.boost,
         }
       };
     }
@@ -1668,6 +1714,7 @@ export async function POST(req: NextRequest) {
           const highs = candles.map(c => c.high);
           const lows = candles.map(c => c.low);
           const volumes = candles.map(c => c.volume);
+          const timestamps = candles.map(c => c.t);
           
           const rsiArr = rsi(closes, 14);
           const macObj = macd(closes, 12, 26, 9);
@@ -1679,7 +1726,7 @@ export async function POST(req: NextRequest) {
           const aroonObj = aroon(highs, lows, 25);
           const obvArr = obv(closes, volumes);
           const mfiArr = mfi(highs, lows, closes, volumes, 14);
-          const vwapArr = vwap(highs, lows, closes, volumes);
+          const vwapArr = vwap(highs, lows, closes, volumes, timestamps, 'crypto');
           
           const last = closes.length - 1;
           const rsiVal = rsiArr[last];
@@ -1748,6 +1795,7 @@ export async function POST(req: NextRequest) {
             mfiVal, vwapVal, stochObj.d, adxObj.plus_di, adxObj.minus_di,
             dveCrypto?.dveBbwp, dveCrypto?.dveBreakoutScore, dveCrypto?.dveFlags,
             cryptoDerivatives?.fundingRate, cryptoDerivatives?.oiChangePercent,
+            true,
           );
 
           // Compute trade setup fields (same logic as equity cached/AV paths)
@@ -1766,6 +1814,7 @@ export async function POST(req: NextRequest) {
             score: scoreResult.score,
             direction: scoreResult.direction,
             signals: scoreResult.signals,
+            scoreQuality: scoreResult.scoreQuality,
             confidence: confidenceCalcCrypto,
             setup: setupLabelCrypto,
             entry: entryPriceCrypto,
@@ -1788,6 +1837,7 @@ export async function POST(req: NextRequest) {
             obv: obvArr[last] ?? NaN,
             mfi: mfiVal,
             vwap: vwapVal,
+            avgVolume: volumes.slice(-20).reduce((sum, volume) => sum + volume, 0) / Math.max(1, volumes.slice(-20).length),
             lastCandleTime,
             chartData: {
               candles: chartCandles,
@@ -1882,6 +1932,7 @@ export async function POST(req: NextRequest) {
           const highs = candles.map(c => c.high);
           const lows = candles.map(c => c.low);
           const volumes = new Array(closes.length).fill(1000);
+          const timestamps = candles.map(c => c.t);
           
           const rsiArr = rsi(closes, 14);
           const macObj = macd(closes, 12, 26, 9);
@@ -1893,7 +1944,7 @@ export async function POST(req: NextRequest) {
           const aroonObj = aroon(highs, lows, 25);
           const obvArr = obv(closes, volumes);
           const mfiArr = mfi(highs, lows, closes, volumes, 14);
-          const vwapArr = vwap(highs, lows, closes, volumes);
+          const vwapArr = vwap(highs, lows, closes, volumes, timestamps, 'forex');
           
           const last = closes.length - 1;
           const rsiVal = rsiArr[last];
@@ -1937,6 +1988,7 @@ export async function POST(req: NextRequest) {
             score: scoreResult.score,
             direction: scoreResult.direction,
             signals: scoreResult.signals,
+            scoreQuality: scoreResult.scoreQuality,
             confidence: confidenceCalcFx,
             setup: setupLabelFx,
             entry: entryPriceFx,
@@ -1959,6 +2011,7 @@ export async function POST(req: NextRequest) {
             obv: obvArr[last] ?? NaN,
             mfi: mfiValForex,
             vwap: vwapValForex,
+            avgVolume: undefined,
             lastCandleTime,
           };
           // Compute enhancements for forex
@@ -2032,6 +2085,7 @@ export async function POST(req: NextRequest) {
               score: scoreResult.score,
               direction: scoreResult.direction,
               signals: scoreResult.signals,
+              scoreQuality: scoreResult.scoreQuality,
               confidence: confidenceCalc,
               setup: setupLabel,
               entry: entryPrice,
@@ -2045,6 +2099,7 @@ export async function POST(req: NextRequest) {
               macd_hist: macHist,
               ema200: ema200Val,
               atr: atrVal,
+              avgVolume: cachedData.volume,
               adx: adxVal,
               stoch_k: stochK,
               stoch_d: stochD,
@@ -2127,6 +2182,7 @@ export async function POST(req: NextRequest) {
             const highs = candles.map((c) => c.high);
             const lows = candles.map((c) => c.low);
             const volumes = candles.map((c) => (Number.isFinite(c.volume) && c.volume > 0 ? c.volume : 1000));
+            const timestamps = candles.map((c) => c.t);
 
             const rsiArr = rsi(closes, 14);
             const macObj = macd(closes, 12, 26, 9);
@@ -2138,7 +2194,7 @@ export async function POST(req: NextRequest) {
             const aroonObj = aroon(highs, lows, 25);
             const obvArr = obv(closes, volumes);
             const mfiArr = mfi(highs, lows, closes, volumes, 14);
-            const vwapArr = vwap(highs, lows, closes, volumes);
+            const vwapArr = vwap(highs, lows, closes, volumes, timestamps, 'equity');
 
             const last = closes.length - 1;
             let price = closes[last];
@@ -2206,6 +2262,7 @@ export async function POST(req: NextRequest) {
               score: scoreResult.score,
               direction: scoreResult.direction,
               signals: scoreResult.signals,
+              scoreQuality: scoreResult.scoreQuality,
               confidence: confidenceCalcAV,
               setup: setupLabelAV,
               entry: entryPriceAV,
@@ -2228,6 +2285,7 @@ export async function POST(req: NextRequest) {
               obv: obvCurrent,
               mfi: mfiValEq,
               vwap: vwapValEq,
+              avgVolume: volumes.slice(-20).reduce((sum, volume) => sum + volume, 0) / Math.max(1, volumes.slice(-20).length),
               lastCandleTime,
               // Chart data (last 50 candles) for equity AV path
               chartData: (() => {
@@ -2543,11 +2601,47 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    for (const result of results) {
+      const freshness = evaluateScannerFreshness(result.lastCandleTime, timeframe);
+      const liquidity = evaluateScannerLiquidity({ type, averageVolume: result.avgVolume });
+      if (freshness.penalty > 0) {
+        result.score = Math.max(0, result.score - freshness.penalty);
+      }
+      if (liquidity.penalty > 0) {
+        result.score = Math.max(0, result.score - liquidity.penalty);
+      }
+      result.scoreQuality = {
+        ...(result.scoreQuality ?? { evidenceLayers: 0, missingEvidencePenalty: 0 }),
+        staleDataPenalty: freshness.penalty,
+        freshnessStatus: freshness.status,
+        liquidityPenalty: liquidity.penalty,
+        liquidityStatus: liquidity.status,
+      };
+      const rankWarnings = [...freshness.warnings, ...liquidity.warnings];
+      if (rankWarnings.length) {
+        result.rankWarnings = [...(result.rankWarnings ?? []), ...rankWarnings];
+      }
+    }
+
     // Return only the top 5 results by score
     results.sort((a, b) => b.score - a.score);
     if (results.length > 5) {
       results.length = 5;
     }
+
+    const leaderScore = results[0]?.score ?? 0;
+    results.forEach((result, index) => {
+      result.rankExplanation = buildScannerRankExplanation({
+        rank: index + 1,
+        symbol: result.symbol,
+        score: result.score,
+        topScore: leaderScore,
+        direction: result.direction,
+        scoreQuality: result.scoreQuality,
+        rankWarnings: result.rankWarnings,
+        dveFlags: result.dveFlags,
+      });
+    });
 
     // Record signals for AI learning (async, non-blocking)
     if (results.length > 0) {
@@ -2611,6 +2705,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Return results with cache-prevention headers
+    const providerSource = type === 'crypto' ? 'coingecko' : type === 'equity' ? 'alpha_vantage_or_worker_cache' : 'alpha_vantage';
+    const providerWarnings = errors.slice(0, 5);
     return NextResponse.json({
       success: true,
       message: results.length ? "OK" : "No symbols matched the minimum score (showing first for debug)",
@@ -2625,11 +2721,18 @@ export async function POST(req: NextRequest) {
         timeframe,
         type,
         dataQuality: scannerDataQualityMetadata({
-          source: type === 'crypto' ? 'coingecko' : type === 'equity' ? 'alpha_vantage_or_worker_cache' : 'alpha_vantage',
+          source: providerSource,
           computedAt: new Date(),
-          stale: false,
+          stale: results.some((result) => result.scoreQuality?.freshnessStatus === 'stale' || result.scoreQuality?.freshnessStatus === 'missing'),
           coverageScore: results.length ? Math.max(0, 100 - Math.min(50, errors.length * 5)) : 0,
-          warnings: errors.slice(0, 5),
+          warnings: providerWarnings,
+          providerStatus: buildMarketDataProviderStatus({
+            source: providerSource,
+            provider: providerSource,
+            stale: results.some((result) => result.scoreQuality?.freshnessStatus === 'stale' || result.scoreQuality?.freshnessStatus === 'missing'),
+            degraded: errors.length > 0,
+            warnings: providerWarnings,
+          }),
         }),
         blockedByInstitutionalFilter: blockedCount,
         adaptiveTrader: {

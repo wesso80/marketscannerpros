@@ -4,10 +4,12 @@ import { getAlternativeBacktestStrategies } from '@/lib/strategies/registry';
 export function buildValidationPayload(
   strategyId: string,
   strategyDirection: 'bullish' | 'bearish' | 'both',
-  result: { winRate: number; profitFactor: number; totalReturn: number },
+  result: { winRate: number; profitFactor: number | null; totalReturn: number; profitFactorLabel?: string },
 ): BacktestValidation {
-  const invalidated = result.winRate < 40 || result.profitFactor < 1 || result.totalReturn <= 0;
-  const validated = result.winRate >= 50 && result.profitFactor >= 1.2 && result.totalReturn > 0;
+  const profitFactorScore = result.profitFactor ?? 3;
+  const profitFactorText = result.profitFactor == null ? result.profitFactorLabel ?? 'no losing trades in sample' : result.profitFactor.toFixed(2);
+  const invalidated = result.winRate < 40 || (result.profitFactor != null && result.profitFactor < 1) || result.totalReturn <= 0;
+  const validated = result.winRate >= 50 && profitFactorScore >= 1.2 && result.totalReturn > 0;
 
   const status: BacktestValidation['status'] = invalidated
     ? 'invalidated'
@@ -16,10 +18,10 @@ export function buildValidationPayload(
       : 'mixed';
 
   const reason = status === 'invalidated'
-    ? `Invalidated: WR ${result.winRate.toFixed(1)}%, PF ${result.profitFactor.toFixed(2)}, Return ${result.totalReturn.toFixed(2)}%.`
+    ? `Invalidated: WR ${result.winRate.toFixed(1)}%, PF ${profitFactorText}, Return ${result.totalReturn.toFixed(2)}%.`
     : status === 'validated'
-      ? `Validated: WR ${result.winRate.toFixed(1)}%, PF ${result.profitFactor.toFixed(2)}, Return ${result.totalReturn.toFixed(2)}%.`
-      : `Mixed: WR ${result.winRate.toFixed(1)}%, PF ${result.profitFactor.toFixed(2)}, Return ${result.totalReturn.toFixed(2)}%.`;
+      ? `Validated: WR ${result.winRate.toFixed(1)}%, PF ${profitFactorText}, Return ${result.totalReturn.toFixed(2)}%.`
+      : `Mixed: WR ${result.winRate.toFixed(1)}%, PF ${profitFactorText}, Return ${result.totalReturn.toFixed(2)}%.`;
 
   let suggestedAlternatives: BacktestValidation['suggestedAlternatives'] | undefined;
   if (status === 'invalidated' && strategyDirection !== 'both') {

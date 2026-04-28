@@ -1,4 +1,4 @@
-import { isFreeForAllMode, isProductionAccessBypassAllowed } from '@/lib/entitlements';
+import { isFreeForAllMode, isProductionAccessBypassAllowed } from './entitlements';
 
 export function isTemporaryProTraderBypassActive(nowMs: number = Date.now()): boolean {
   const freeForAllMode = isFreeForAllMode();

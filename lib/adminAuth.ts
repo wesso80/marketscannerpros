@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { cookies } from 'next/headers';
-import { hashWorkspaceId, signSessionToken, verifySessionToken } from '@/lib/auth';
-import { isOperator } from '@/lib/quant/operatorAuth';
+import { hashWorkspaceId, signSessionToken, verifySessionToken } from './auth';
+import { isOperator } from './quant/operatorAuth';
 
 export const ADMIN_SESSION_COOKIE = 'ms_admin';
 const ADMIN_SESSION_MAX_AGE = 60 * 60 * 12;

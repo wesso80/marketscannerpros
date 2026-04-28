@@ -1780,7 +1780,7 @@ export function PortfolioContent() {
       <div className="mx-4 mt-2">
         <ComplianceDisclaimer collapsible />
         <div className="mt-2 rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-2.5 text-[11px] leading-relaxed text-slate-400">
-          This page displays user-entered simulation records and descriptive analytics only. It does not recommend keeping, selling, reducing, adding, or rebalancing any position or portfolio exposure.
+          This page displays user-entered simulation records and descriptive analytics only. It is not guidance for future portfolio decisions or allocation changes.
         </div>
       </div>
 
@@ -2155,7 +2155,7 @@ export function PortfolioContent() {
 
               <details className="rounded-lg border border-slate-700 bg-slate-900/40 p-3" open={showAiAnalysis}>
                 <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.06em] text-slate-300">AI Portfolio Summary (Descriptive Only)</summary>
-                <div className="mt-1 mb-2 text-[10px] text-slate-500">This summary is descriptive only and does not recommend any action regarding positions, allocations, entries, exits, or portfolio management.</div>
+                <div className="mt-1 mb-2 text-[10px] text-slate-500">This summary is a factual restatement of recorded simulation data only.</div>
                 <div className="mt-2 text-sm text-slate-300">
                   {aiLoading ? 'Generating descriptive summary...' : aiError ? aiError : aiAnalysis || 'Run analysis to generate a descriptive data summary.'}
                 </div>
@@ -2445,9 +2445,9 @@ export function PortfolioContent() {
                               <div className="h-full bg-emerald-400" style={{ width: `${Math.max(5, Math.min(100, riskRemainingPct))}%` }} />
                             </div>
                             <div className="flex flex-wrap gap-1">
-                              <button onClick={() => closePosition(position.id)} className="rounded border border-red-500/40 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-red-300">Close</button>
-                              <button onClick={() => reducePositionHalf(position.id)} className="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-300">Reduce 50%</button>
-                              <button onClick={() => moveStopToBreakeven(position.id)} className="rounded border border-blue-500/40 bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-blue-300">Move Stop</button>
+                              <button onClick={() => closePosition(position.id)} className="rounded border border-red-500/40 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-red-300">Record Full Close</button>
+                              <button onClick={() => reducePositionHalf(position.id)} className="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-300">Record 50% Close</button>
+                              <button onClick={() => moveStopToBreakeven(position.id)} className="rounded border border-blue-500/40 bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-blue-300">Edit Stop</button>
                               <button onClick={() => deletePosition(position.id)} className="rounded border border-zinc-500/40 bg-zinc-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-zinc-400 hover:text-red-300 hover:border-red-500/40" title="Delete this position (mistake entry)">✕ Delete</button>
                             </div>
                           </td>

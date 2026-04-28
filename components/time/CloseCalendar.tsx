@@ -103,6 +103,12 @@ function clusterScoreColor(score: number): string {
   return "border-slate-700 bg-slate-900/30";
 }
 
+function scheduleModelTone(model?: ForwardCloseCalendar['scheduleModel']): string {
+  if (model === 'crypto_247') return 'border-cyan-500/35 bg-cyan-500/10 text-cyan-200';
+  if (model === 'equity_session') return 'border-emerald-500/35 bg-emerald-500/10 text-emerald-200';
+  return 'border-slate-700 bg-slate-900/40 text-slate-300';
+}
+
 // ── Main Component ──
 
 interface CloseCalendarProps {
@@ -280,6 +286,12 @@ export default function CloseCalendar({ symbol: propSymbol, onClusterClick, acti
             <span className="text-slate-400">
               {isPriorDay ? 'Prior Day' : 'Anchor'}: <span className="font-semibold text-slate-200">{formatDate(data.anchorTimeISO, assetClass)}</span>
             </span>
+            <span className={`rounded-md border px-2 py-1 text-[11px] font-black uppercase tracking-[0.08em] ${scheduleModelTone(data.scheduleModel)}`} title={data.scheduleBasis}>
+              {data.scheduleModelLabel || data.scheduleModel}
+            </span>
+            <span className="text-slate-400">
+              Basis: <span className="font-semibold text-slate-200">{data.timezone}{data.assetClass === 'equity' ? ` / ${data.sessionMode}` : ''}</span>
+            </span>
             {!isPriorDay && (
               <span className="text-slate-400">
                 Horizon: <span className="font-semibold text-slate-200">{data.horizonDays}d → {formatDate(data.horizonEndISO, assetClass)}</span>
@@ -289,6 +301,13 @@ export default function CloseCalendar({ symbol: propSymbol, onClusterClick, acti
               Daily+ closes in window: <span className="font-semibold text-emerald-400">{data.totalCloseEventsInHorizon}</span>
             </span>
           </div>
+
+          {data.scheduleBasis && (
+            <div className="rounded-lg border border-slate-800 bg-slate-950/25 px-3 py-2 text-xs leading-5 text-slate-400">
+              <span className="font-semibold text-slate-200">Schedule Basis:</span> {data.scheduleBasis}
+              {data.warnings?.length ? <span className="text-amber-200"> {data.warnings[0]}</span> : null}
+            </div>
+          )}
 
           {/* ── Forward Close Clusters (the money shot) ── */}
           {data.forwardClusters.length > 0 && (

@@ -20,11 +20,12 @@ export interface InverseComparableResult {
   totalTrades: number;
   winningTrades: number;
   losingTrades: number;
+  breakevenTrades?: number;
   winRate: number;
   totalReturn: number;
   maxDrawdown: number;
   sharpeRatio: number;
-  profitFactor: number;
+  profitFactor: number | null;
   avgWin: number;
   avgLoss: number;
   cagr: number;
@@ -48,7 +49,7 @@ export interface InverseComparisonSnapshot<T extends InverseComparableResult> {
   };
 }
 
-const toFinite = (value: number): number => (Number.isFinite(value) ? value : 0);
+const toFinite = (value: number | null | undefined): number => (value != null && Number.isFinite(value) ? value : 0);
 
 const round = (value: number, digits = 4): number => {
   const factor = 10 ** digits;
@@ -140,7 +141,7 @@ export function buildInverseBacktestResult<T extends InverseComparableResult>(ba
     winRate: round(winRate),
     totalReturn: round(totalReturn),
     maxDrawdown: round(maxDrawdown),
-    profitFactor: round(grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? 99 : 0),
+    profitFactor: grossLoss > 0 ? round(grossProfit / grossLoss) : grossProfit > 0 ? null : 0,
     avgWin: round(avgWin),
     avgLoss: round(avgLoss),
     bestTrade,
@@ -165,7 +166,7 @@ export function buildInverseComparisonSnapshot<T extends InverseComparableResult
       totalReturn: round(inverse.totalReturn - toFinite(base.totalReturn)),
       winRate: round(inverse.winRate - toFinite(base.winRate)),
       maxDrawdown: round(inverse.maxDrawdown - toFinite(base.maxDrawdown)),
-      profitFactor: round(inverse.profitFactor - toFinite(base.profitFactor)),
+      profitFactor: round(toFinite(inverse.profitFactor) - toFinite(base.profitFactor)),
     },
   };
 }

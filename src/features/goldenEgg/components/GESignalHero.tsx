@@ -60,7 +60,7 @@ function setupLabel(type: string): string {
 }
 
 export default function GESignalHero({ meta, layer1, setupType, volatility }: Props) {
-  const { confidence, direction, permission, grade } = layer1;
+  const { confidence, direction, assessment, grade } = layer1;
   const circumference = 2 * Math.PI * 54;
   const progress = (confidence / 100) * circumference;
 
@@ -100,11 +100,11 @@ export default function GESignalHero({ meta, layer1, setupType, volatility }: Pr
             {meta.assetClass} &bull; {meta.timeframe}
           </span>
           <span className={`rounded-md px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider ${
-            permission === 'TRADE' ? 'bg-emerald-500/15 text-emerald-400' :
-            permission === 'NO_TRADE' ? 'bg-rose-500/15 text-rose-400' :
+            assessment === 'ALIGNED' ? 'bg-emerald-500/15 text-emerald-400' :
+            assessment === 'NOT_ALIGNED' ? 'bg-rose-500/15 text-rose-400' :
             'bg-amber-500/15 text-amber-400'
           }`}>
-            {permission === 'TRADE' ? 'Aligned' : permission === 'NO_TRADE' ? 'Not Aligned' : 'Watch'}
+            {assessment === 'ALIGNED' ? 'Aligned' : assessment === 'NOT_ALIGNED' ? 'Not Aligned' : 'Watch'}
           </span>
         </div>
 
@@ -138,7 +138,7 @@ export default function GESignalHero({ meta, layer1, setupType, volatility }: Pr
             {signalLabel(confidence)}
           </div>
           <div className="mt-1 text-sm text-slate-400">
-            Confluence: {confidence}% &bull; Grade {grade}
+            Evidence alignment: {confidence}% &bull; Grade {grade}
           </div>
         </div>
 

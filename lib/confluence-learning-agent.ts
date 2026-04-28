@@ -463,6 +463,7 @@ export interface CandleCloseConfluence {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export type CloseCalendarAnchor = 'NOW' | 'TODAY' | 'PRIOR_DAY' | 'EOW' | 'EOM' | 'CUSTOM';
+export type CloseCalendarScheduleModel = 'crypto_247' | 'equity_session' | 'forex_session';
 
 export interface ForwardCloseScheduleRow {
   tf: string;
@@ -490,6 +491,12 @@ export interface ForwardCloseCalendar {
   horizonDays: number;
   horizonEndISO: string;
   assetClass: 'crypto' | 'equity';
+  scheduleModel: CloseCalendarScheduleModel;
+  scheduleModelLabel: string;
+  scheduleBasis: string;
+  timezone: 'UTC' | 'America/New_York';
+  sessionMode: SessionMode;
+  warnings: string[];
   schedule: ForwardCloseScheduleRow[];
   forwardClusters: ForwardCloseCluster[];
   closesOnAnchorDay: ForwardCloseScheduleRow[];
@@ -1258,7 +1265,9 @@ export class ConfluenceLearningAgent {
       return minsToClose;
     }
     
-    // For daily and above, all closes are anchored to NY market close (4:00 PM ET, DST-aware)
+    // For daily and above, TradingView's standard US equity candles close on
+    // the regular session, even when intraday confluence is using extended hours.
+    const dailyAndAboveSessionMode: SessionMode = 'regular';
     const currentTime = now.getTime();
     const nyNow = this.getNYDateTimeParts(now);
     const year = nyNow.year;
@@ -1279,7 +1288,7 @@ export class ConfluenceLearningAgent {
         }
         break;
       }
-      return new Date(this.getEquitySessionCloseUtcMs(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), sessionMode));
+      return new Date(this.getEquitySessionCloseUtcMs(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), dailyAndAboveSessionMode));
     };
 
     // Today's market close time
@@ -1344,7 +1353,7 @@ export class ConfluenceLearningAgent {
           if (isUSMarketHoliday(futureNy.year, futureNy.month, futureNy.day)) continue; // skip holidays
           const futureTdIdx = this.getTradingDayIndex(futureDate);
           if (safeMod(futureTdIdx, N) === N - 1) {
-            const closeMs = this.getEquitySessionCloseUtcMs(futureNy.year, futureNy.month, futureNy.day, sessionMode);
+            const closeMs = this.getEquitySessionCloseUtcMs(futureNy.year, futureNy.month, futureNy.day, dailyAndAboveSessionMode);
             return Math.floor((closeMs - currentTime) / 60_000);
           }
         }
@@ -1390,7 +1399,7 @@ export class ConfluenceLearningAgent {
             target = new Date(target.getTime() - DAY_MS_L);
           }
 
-          const closeMs = this.getEquitySessionCloseUtcMs(target.getUTCFullYear(), target.getUTCMonth(), target.getUTCDate(), sessionMode);
+          const closeMs = this.getEquitySessionCloseUtcMs(target.getUTCFullYear(), target.getUTCMonth(), target.getUTCDate(), dailyAndAboveSessionMode);
           if (closeMs > currentTime) {
             return Math.floor((closeMs - currentTime) / 60_000);
           }
@@ -1839,6 +1848,14 @@ export class ConfluenceLearningAgent {
 
     const anchorMs = anchorDate.getTime();
     const horizonEndMs = anchorMs + clampedHorizon * 86400_000;
+    const scheduleModel: CloseCalendarScheduleModel = assetClass === 'crypto' ? 'crypto_247' : 'equity_session';
+    const timezone: ForwardCloseCalendar['timezone'] = assetClass === 'crypto' ? 'UTC' : 'America/New_York';
+    const scheduleWarnings = assetClass === 'crypto'
+      ? ['Crypto schedule uses 24/7 UTC TradingView-style close boundaries; it does not observe weekends or exchange holidays.']
+      : ['Equity schedule uses NYSE trading sessions with weekend and US market holiday handling; daily and higher timeframes use regular-session TradingView-style closes; early-close calendars are not yet modeled.'];
+    const scheduleBasis = assetClass === 'crypto'
+      ? '24/7 UTC candle boundaries: intraday fixed intervals, daily at 00:00 UTC, weekly Monday 00:00 UTC, monthly first day 00:00 UTC.'
+      : `NYSE ${sessionMode} intraday boundaries in America/New_York; daily+ closes use regular-session trading days, weekends, and US market holidays.`;
     // Anchor day boundaries: UTC for crypto, NY for equity
     // Use anchorDayDate when set (e.g. TODAY → full day) otherwise derive from anchorDate
     const dayRef = anchorDayDate ?? anchorDate;
@@ -1948,7 +1965,7 @@ export class ConfluenceLearningAgent {
     // ── Build forward clusters ──
     // Bucket all close events into 60-min windows, then merge adjacent dense windows
     const BUCKET_MINS = 60;
-    const buckets = new Map<number, { tf: string; weight: number }[]>();
+    const buckets = new Map<number, { tf: string; weight: number; closeAtMs: number }[]>();
 
     for (const evt of allCloseEvents) {
       // Only cluster daily+ TFs (intraday TFs close constantly)
@@ -1957,7 +1974,7 @@ export class ConfluenceLearningAgent {
 
       const bucketKey = Math.floor((evt.closeAtMs - anchorMs) / (BUCKET_MINS * 60_000));
       if (!buckets.has(bucketKey)) buckets.set(bucketKey, []);
-      buckets.get(bucketKey)!.push({ tf: evt.tf, weight: evt.weight });
+      buckets.get(bucketKey)!.push({ tf: evt.tf, weight: evt.weight, closeAtMs: evt.closeAtMs });
     }
 
     // Sort buckets and find dense windows (weight >= 20 or count >= 2)
@@ -1971,14 +1988,15 @@ export class ConfluenceLearningAgent {
 
       const windowStartMs = anchorMs + key * BUCKET_MINS * 60_000;
       const windowEndMs = windowStartMs + BUCKET_MINS * 60_000;
+      const clusterCloseMs = Math.min(...items.map((item) => item.closeAtMs));
 
       forwardClusters.push({
-        windowStartISO: new Date(windowStartMs).toISOString(),
+        windowStartISO: new Date(clusterCloseMs).toISOString(),
         windowEndISO: new Date(windowEndMs).toISOString(),
         tfs: items.map((i) => i.tf),
         weight: totalWeight,
         clusterScore: Math.min(100, Math.round(totalWeight * items.length * 0.5)),
-        label: this.clusterLabel(new Date(windowStartMs), assetClass),
+        label: this.clusterLabel(new Date(clusterCloseMs), assetClass),
       });
     }
 
@@ -1994,6 +2012,12 @@ export class ConfluenceLearningAgent {
       horizonDays: clampedHorizon,
       horizonEndISO: new Date(horizonEndMs).toISOString(),
       assetClass,
+      scheduleModel,
+      scheduleModelLabel: scheduleModel === 'crypto_247' ? 'Crypto 24/7 UTC' : 'Equity NYSE Session',
+      scheduleBasis,
+      timezone,
+      sessionMode,
+      warnings: scheduleWarnings,
       schedule,
       forwardClusters: forwardClusters.slice(0, 20), // top 20
       closesOnAnchorDay,

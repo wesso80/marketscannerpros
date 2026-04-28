@@ -46,6 +46,55 @@ EXAMPLE of correct output style:
 Current date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
 `;
 
+const REQUIRED_PORTFOLIO_FOOTER = 'This summary is descriptive only and does not indicate what action, if any, should be taken.';
+
+const PORTFOLIO_ADVICE_PATTERNS = [
+  /\b(recommend|recommendation|suggest|consider|should|must|need to|try to)\b/i,
+  /\b(buy|sell|hold|trim|reduce|add|rebalance|rotate|hedge|de-risk)\b/i,
+  /\b(take profit|cut losses|protect gains|lock in|action plan|next steps|key takeaway)\b/i,
+  /\b(top performers|underperformers|best holding|worst holding|concentration risk)\b/i,
+];
+
+function hasPortfolioAdviceLanguage(text: string): boolean {
+  const withoutRequiredFooter = text.replace(REQUIRED_PORTFOLIO_FOOTER, '');
+  return PORTFOLIO_ADVICE_PATTERNS.some((pattern) => pattern.test(withoutRequiredFooter));
+}
+
+function money(value: unknown): string {
+  const parsed = Number(value || 0);
+  return `${parsed >= 0 ? '+' : ''}$${parsed.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function plainMoney(value: unknown): string {
+  const parsed = Number(value || 0);
+  return `$${parsed.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function pct(value: unknown): string {
+  const parsed = Number(value || 0);
+  return `${parsed >= 0 ? '+' : ''}${parsed.toFixed(2)}%`;
+}
+
+function buildDeterministicPortfolioDescription(positions: any[] = [], closedPositions: any[] = []): string {
+  const open = Array.isArray(positions) ? positions : [];
+  const closed = Array.isArray(closedPositions) ? closedPositions : [];
+  const openSymbols = open.map((position) => String(position.symbol || 'N/A').toUpperCase()).join(', ') || 'none';
+  const totalValue = open.reduce((sum, position) => sum + Number(position.currentPrice || 0) * Number(position.quantity || 0), 0);
+  const totalCost = open.reduce((sum, position) => sum + Number(position.entryPrice || 0) * Number(position.quantity || 0), 0);
+  const totalUnrealized = open.reduce((sum, position) => sum + Number(position.pl || 0), 0);
+  const totalRealized = closed.reduce((sum, position) => sum + Number(position.realizedPL || 0), 0);
+
+  const positionText = open.length > 0
+    ? open.map((position) => {
+        const symbol = String(position.symbol || 'N/A').toUpperCase();
+        const quantity = Number(position.quantity || 0);
+        return `${symbol}: ${quantity} units, entry ${plainMoney(position.entryPrice)}, current ${plainMoney(position.currentPrice)}, recorded unrealised change ${money(position.pl)} / ${pct(position.plPercent)}`;
+      }).join('; ')
+    : 'No open position records are present.';
+
+  return `The current simulation record shows ${open.length} open position${open.length === 1 ? '' : 's'}: ${openSymbols}. ${positionText}. Total recorded market value is ${plainMoney(totalValue)}, total recorded cost basis is ${plainMoney(totalCost)}, and net unrealised change is ${money(totalUnrealized)}. Closed simulation records total ${closed.length}, with recorded realised P&L of ${money(totalRealized)}. ${REQUIRED_PORTFOLIO_FOOTER}`;
+}
+
 export async function POST(req: NextRequest) {
   try {
     // Check for API key
@@ -112,7 +161,12 @@ export async function POST(req: NextRequest) {
       max_tokens: 1500,
     });
 
-    const analysis = completion.choices[0]?.message?.content || "Unable to generate analysis.";
+    const rawAnalysis = completion.choices[0]?.message?.content || "Unable to generate analysis.";
+    const analysis = hasPortfolioAdviceLanguage(rawAnalysis)
+      ? buildDeterministicPortfolioDescription(positions, closedPositions)
+      : rawAnalysis.includes(REQUIRED_PORTFOLIO_FOOTER)
+      ? rawAnalysis
+      : `${rawAnalysis.trim()} ${REQUIRED_PORTFOLIO_FOOTER}`;
 
     // Log AI usage
     if (workspaceId !== "free-mode") {
@@ -173,17 +227,17 @@ function buildPortfolioSummary(
     }
     summary += "\n";
 
-    // Top winners and losers
+    // Highest and lowest recorded open-position changes
     const sorted = [...positions].sort((a, b) => b.plPercent - a.plPercent);
     if (sorted.length > 0) {
-      const winners = sorted.filter(p => p.plPercent > 0).slice(0, 3);
-      const losers = sorted.filter(p => p.plPercent < 0).slice(-3).reverse();
+      const positiveChanges = sorted.filter(p => p.plPercent > 0).slice(0, 3);
+      const negativeChanges = sorted.filter(p => p.plPercent < 0).slice(-3).reverse();
       
-      if (winners.length > 0) {
-        summary += `**Best Performers:** ${winners.map(p => `${p.symbol} (+${p.plPercent.toFixed(1)}%)`).join(', ')}\n`;
+      if (positiveChanges.length > 0) {
+        summary += `**Highest Positive Recorded Changes:** ${positiveChanges.map(p => `${p.symbol} (+${p.plPercent.toFixed(1)}%)`).join(', ')}\n`;
       }
-      if (losers.length > 0) {
-        summary += `**Worst Performers:** ${losers.map(p => `${p.symbol} (${p.plPercent.toFixed(1)}%)`).join(', ')}\n`;
+      if (negativeChanges.length > 0) {
+        summary += `**Lowest Negative Recorded Changes:** ${negativeChanges.map(p => `${p.symbol} (${p.plPercent.toFixed(1)}%)`).join(', ')}\n`;
       }
       summary += "\n";
     }
@@ -225,16 +279,16 @@ function buildPortfolioSummary(
     }
     summary += "\n";
 
-    // Biggest wins and losses from history
+    // Largest realized positive and negative records from history
     const sortedClosed = [...closedPositions].sort((a, b) => (b.realizedPL || 0) - (a.realizedPL || 0));
-    const biggestWins = sortedClosed.filter(p => (p.realizedPL || 0) > 0).slice(0, 3);
-    const biggestLosses = sortedClosed.filter(p => (p.realizedPL || 0) < 0).slice(-3).reverse();
+    const largestPositive = sortedClosed.filter(p => (p.realizedPL || 0) > 0).slice(0, 3);
+    const largestNegative = sortedClosed.filter(p => (p.realizedPL || 0) < 0).slice(-3).reverse();
     
-    if (biggestWins.length > 0) {
-      summary += `**Biggest Wins:** ${biggestWins.map(p => `${p.symbol} (+$${(p.realizedPL || 0).toFixed(0)})`).join(', ')}\n`;
+    if (largestPositive.length > 0) {
+      summary += `**Largest Positive Realized Records:** ${largestPositive.map(p => `${p.symbol} (+$${(p.realizedPL || 0).toFixed(0)})`).join(', ')}\n`;
     }
-    if (biggestLosses.length > 0) {
-      summary += `**Biggest Losses:** ${biggestLosses.map(p => `${p.symbol} ($${(p.realizedPL || 0).toFixed(0)})`).join(', ')}\n`;
+    if (largestNegative.length > 0) {
+      summary += `**Largest Negative Realized Records:** ${largestNegative.map(p => `${p.symbol} ($${(p.realizedPL || 0).toFixed(0)})`).join(', ')}\n`;
     }
   } else {
     summary += "### TRADE HISTORY\nNo closed trades yet.\n\n";
@@ -252,7 +306,7 @@ function buildPortfolioSummary(
     summary += `Portfolio Change: ${change >= 0 ? '+' : ''}$${change.toFixed(2)} (${changePct >= 0 ? '+' : ''}${changePct.toFixed(2)}%)\n\n`;
   }
 
-  summary += "\n---\nPlease analyze this portfolio and provide insights on what's working, what's not, and educational observations for improvement.";
+  summary += "\n---\nRestate the simulation records in plain English only. Do not include interpretation, commentary, guidance, or future-oriented language.";
 
   return summary;
 }

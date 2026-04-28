@@ -15,7 +15,6 @@ const NAV_LINKS: [string, string][] = [
   ["Journal", "/tools/journal"],
   ["Volatility", "/tools/volatility-engine"],
   ["Referrals", "/tools/referrals"],
-  ["Advanced", "/operator"],
 ];
 
 export default function ToolsNavBar() {

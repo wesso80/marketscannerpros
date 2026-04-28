@@ -10,8 +10,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminAuth';
 
-async function safe<T = any>(fn: () => Promise<T[]>, fallback: T[] = []): Promise<T[]> {
-  try { return await fn(); } catch { return fallback; }
+type DegradationState = {
+  failedQueries: string[];
+  warnings: string[];
+};
+
+function recordQueryFailure(state: DegradationState, queryName: string, error: unknown) {
+  state.failedQueries.push(queryName);
+  const message = error instanceof Error ? error.message : String(error);
+  state.warnings.push(`${queryName} unavailable: ${message}`);
+  console.warn(`Usage analytics query failed: ${queryName}`, error);
+}
+
+async function safe<T = any>(
+  queryName: string,
+  state: DegradationState,
+  fn: () => Promise<T[]>,
+  fallback: T[] = [],
+): Promise<T[]> {
+  try { return await fn(); } catch (error) { recordQueryFailure(state, queryName, error); return fallback; }
 }
 
 export async function GET(req: NextRequest) {
@@ -20,6 +37,8 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const degradation: DegradationState = { failedQueries: [], warnings: [] };
+
     const [
       activeUsers,
       signupFunnel,
@@ -31,7 +50,7 @@ export async function GET(req: NextRequest) {
       topActiveWorkspaces,
     ] = await Promise.all([
       // ─── DAU / WAU / MAU from active_sessions ───
-      safe(() => q(`
+      safe('active_users', degradation, () => q(`
         SELECT
           (SELECT COUNT(DISTINCT COALESCE(workspace_id::text, session_id))
            FROM active_sessions WHERE last_seen > NOW() - INTERVAL '24 hours') AS dau,
@@ -44,7 +63,7 @@ export async function GET(req: NextRequest) {
       `)),
 
       // ─── Conversion funnel: signups → trials → paid (last 30 days) ───
-      safe(() => q(`
+      safe('signup_funnel', degradation, () => q(`
         SELECT
           (SELECT COUNT(*) FROM workspaces
            WHERE created_at > NOW() - INTERVAL '30 days') AS signups_30d,
@@ -64,7 +83,7 @@ export async function GET(req: NextRequest) {
       `)),
 
       // ─── Daily scan volume (last 30d) ───
-      safe(() => q(`
+      safe('daily_scans', degradation, () => q(`
         SELECT scan_date::text AS date,
                SUM(scan_count)::int AS scans,
                COUNT(DISTINCT workspace_id)::int AS unique_scanners
@@ -76,12 +95,12 @@ export async function GET(req: NextRequest) {
       // ─── Feature adoption (each table individually safe-wrapped) ───
       (async () => {
         const [journal, portfolio, ai, scanner, outcomes, total] = await Promise.all([
-          safe(() => q(`SELECT COUNT(DISTINCT workspace_id)::int AS n FROM journal_entries WHERE created_at > NOW() - INTERVAL '30 days'`)),
-          safe(() => q(`SELECT COUNT(DISTINCT workspace_id)::int AS n FROM portfolio_positions`)),
-          safe(() => q(`SELECT COUNT(DISTINCT workspace_id)::int AS n FROM ai_usage WHERE created_at > NOW() - INTERVAL '30 days'`)),
-          safe(() => q(`SELECT COUNT(DISTINCT workspace_id)::int AS n FROM scan_usage WHERE scan_date > CURRENT_DATE - 30`)),
-          safe(() => q(`SELECT COUNT(DISTINCT workspace_id)::int AS n FROM trade_outcomes WHERE created_at > NOW() - INTERVAL '30 days'`)),
-          safe(() => q(`SELECT COUNT(*)::int AS n FROM user_subscriptions WHERE status IN ('active','trialing')`)),
+          safe('feature_adoption_journal', degradation, () => q(`SELECT COUNT(DISTINCT workspace_id)::int AS n FROM journal_entries WHERE created_at > NOW() - INTERVAL '30 days'`)),
+          safe('feature_adoption_portfolio', degradation, () => q(`SELECT COUNT(DISTINCT workspace_id)::int AS n FROM portfolio_positions`)),
+          safe('feature_adoption_ai', degradation, () => q(`SELECT COUNT(DISTINCT workspace_id)::int AS n FROM ai_usage WHERE created_at > NOW() - INTERVAL '30 days'`)),
+          safe('feature_adoption_scanner', degradation, () => q(`SELECT COUNT(DISTINCT workspace_id)::int AS n FROM scan_usage WHERE scan_date > CURRENT_DATE - 30`)),
+          safe('feature_adoption_outcomes', degradation, () => q(`SELECT COUNT(DISTINCT workspace_id)::int AS n FROM trade_outcomes WHERE created_at > NOW() - INTERVAL '30 days'`)),
+          safe('feature_adoption_total', degradation, () => q(`SELECT COUNT(*)::int AS n FROM user_subscriptions WHERE status IN ('active','trialing')`)),
         ]);
         return [{
           journal_users: journal[0]?.n ?? 0,
@@ -94,7 +113,7 @@ export async function GET(req: NextRequest) {
       })(),
 
       // ─── Trade activity (last 30d) ───
-      safe(() => q(`
+      safe('trade_activity', degradation, () => q(`
         SELECT
           (SELECT COUNT(*) FROM trade_outcomes
            WHERE created_at > NOW() - INTERVAL '30 days') AS trades_30d,
@@ -110,7 +129,7 @@ export async function GET(req: NextRequest) {
       `)),
 
       // ─── Tier distribution (current) ───
-      safe(() => q(`
+      safe('tier_distribution', degradation, () => q(`
         SELECT tier, status, COUNT(*)::int AS count
         FROM user_subscriptions
         GROUP BY tier, status
@@ -118,7 +137,7 @@ export async function GET(req: NextRequest) {
       `)),
 
       // ─── Retention: weekly active cohorts (last 8 weeks) ───
-      safe(() => q(`
+      safe('retention_cohorts', degradation, () => q(`
         SELECT
           DATE_TRUNC('week', last_seen)::date::text AS week,
           COUNT(DISTINCT COALESCE(workspace_id::text, session_id))::int AS active_users
@@ -129,7 +148,7 @@ export async function GET(req: NextRequest) {
       `)),
 
       // ─── Top active workspaces (composite activity score, last 7d) ───
-      safe(() => q(`
+      safe('top_active_workspaces', degradation, () => q(`
         SELECT
           us.workspace_id,
           us.email,
@@ -174,6 +193,11 @@ export async function GET(req: NextRequest) {
       tierDistribution,
       retentionCohorts,
       topActiveWorkspaces,
+      meta: {
+        degraded: degradation.failedQueries.length > 0,
+        failedQueries: degradation.failedQueries,
+        warnings: degradation.warnings,
+      },
     });
   } catch (err: any) {
     console.error('Usage analytics error:', err);

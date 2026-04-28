@@ -48,11 +48,13 @@ interface BacktestResult {
   totalTrades: number;
   winningTrades: number;
   losingTrades: number;
+  breakevenTrades?: number;
   winRate: number;
   totalReturn: number;
   maxDrawdown: number;
   sharpeRatio: number;
-  profitFactor: number;
+  profitFactor: number | null;
+  profitFactorLabel?: string;
   avgWin: number;
   avgLoss: number;
   cagr: number;

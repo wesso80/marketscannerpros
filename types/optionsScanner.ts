@@ -19,6 +19,14 @@ export type FeedHealth = {
   integrity: string;
   latencySec: number | null;
   feedStatus: string;
+  provider?: string;
+  alertLevel?: string;
+  warnings?: string[];
+  chainQuality?: string;
+  avgSpreadPct?: number | null;
+  liquidContracts?: number;
+  totalContracts?: number;
+  candidateGate?: string;
 };
 
 export type DeskHeaderModel = {
@@ -110,6 +118,10 @@ export type AINarrativeEvidenceModel = {
 export type RiskComplianceEvidenceModel = {
   dataIntegrity: string;
   latency: string;
+  provider: string;
+  chainQuality: string;
+  spread: string;
+  candidateGate: string;
   whyBlocked: string;
 };
 

@@ -132,6 +132,19 @@ describe('computeBBWP', () => {
     }
   });
 
+  test('percentile rank stays bounded at a high-volatility boundary', () => {
+    const closes = [
+      ...Array.from({ length: 80 }, (_, index) => 100 + index * 0.02),
+      ...Array.from({ length: 40 }, (_, index) => index % 2 === 0 ? 90 : 112),
+    ];
+
+    const result = computeBBWP(closes, 13, 80);
+
+    expect(result.bbwp).toBeGreaterThanOrEqual(0);
+    expect(result.bbwp).toBeLessThanOrEqual(100);
+    expect(result.bbwpSeries.every((value) => value >= 0 && value <= 100)).toBe(true);
+  });
+
   test('volatile series produces higher bbwp than calm series', () => {
     // Create a series that's calm then turns volatile
     const calm = generateCalmSeries(250, 100);
@@ -146,6 +159,17 @@ describe('computeBBWP', () => {
     // The current BBWP should be higher than the historical average
     // due to the recent volatile period
     expect(result.bbwp).toBeGreaterThan(0);
+  });
+});
+
+describe('classifyVolRegime strict boundaries', () => {
+  test('uses canonical compression, transition, expansion, and climax thresholds', () => {
+    expect(classifyVolRegime(14.99, 'flat').regime).toBe('compression');
+    expect(classifyVolRegime(15, 'flat').regime).toBe('neutral');
+    expect(classifyVolRegime(16, 'accelerating').regime).toBe('transition');
+    expect(classifyVolRegime(70, 'flat').regime).toBe('neutral');
+    expect(classifyVolRegime(70.01, 'flat').regime).toBe('expansion');
+    expect(classifyVolRegime(90, 'flat').regime).toBe('climax');
   });
 });
 
@@ -520,6 +544,67 @@ describe('computePhasePersistence', () => {
     });
     expect(result.expansion.active).toBe(false);
   });
+
+  test('expansion exit risk rises when climax phase is stretched and decelerating', () => {
+    const result = computePhasePersistence({
+      bbwp: 91,
+      bbwpSma5: 92,
+      volatility: makeVolState(91, 'decelerating'),
+      contractionStats: makeStats(0, 5, 4),
+      expansionStats: { currentBars: 9, averageBars: 5, medianBars: 4, maxBars: 10, agePercentile: 90, episodeCount: 8 },
+      direction: makeDirection('bullish'),
+      stochKSlope: -2,
+    });
+
+    expect(result.expansion.active).toBe(true);
+    expect(result.expansion.exitProbability).toBeGreaterThanOrEqual(65);
+  });
+});
+
+describe('computeDVE data-quality and exhaustion boundaries', () => {
+  test('downgrades data quality when core indicators, options, time, and liquidity are missing', () => {
+    const closes = Array.from({ length: 20 }, (_, index) => 100 + index * 0.1);
+    const reading = computeDVE({
+      price: { closes, currentPrice: closes[closes.length - 1], changePct: 0.2 },
+    }, 'THIN');
+
+    expect(reading.dataQuality.score).toBeLessThan(60);
+    expect(reading.dataQuality.missing).toEqual(expect.arrayContaining(['indicators', 'options', 'time', 'liquidity']));
+    expect(reading.dataQuality.warnings.some((warning) => warning.includes('need 50+'))).toBe(true);
+    expect(reading.dataQuality.warnings.some((warning) => warning.includes('need 100+'))).toBe(true);
+  });
+
+  test('keeps exhaustion low outside expansion and labels extreme exhaustion inside climax', () => {
+    const neutral = computeExhaustion({
+      bbwp: 60,
+      bbwpSma5: 60,
+      regime: 'neutral',
+      regimeConfidence: 80,
+      rateOfChange: 0,
+      rateSmoothed: 0,
+      acceleration: 0,
+      rateDirection: 'flat',
+      inSqueeze: false,
+      squeezeStrength: 0,
+    });
+    const extreme = computeExhaustion({
+      bbwp: 98,
+      bbwpSma5: 96,
+      regime: 'climax',
+      regimeConfidence: 90,
+      rateOfChange: -1,
+      rateSmoothed: -0.8,
+      acceleration: -0.2,
+      rateDirection: 'decelerating',
+      inSqueeze: false,
+      squeezeStrength: 0,
+    }, { stochK: 92, adx: 42 });
+
+    expect(neutral).toEqual({ level: 0, label: 'LOW', signals: [] });
+    expect(extreme.level).toBeGreaterThanOrEqual(80);
+    expect(extreme.label).toBe('EXTREME');
+    expect(extreme.signals.join(' ')).toContain('BBWP > 95');
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -722,6 +807,26 @@ describe('computeSignalProjection', () => {
     const proj = computeSignalProjection('compression_release_up', closes, bbwpSeries);
     expect(proj.sampleSize).toBeLessThan(5);
     expect(proj.expectedMovePct).toBe(0);
+    expect(proj.projectionQuality).toBe('unavailable');
+    expect(proj.projectionQualityScore).toBe(0);
+    expect(proj.projectionWarning).toContain('Thin projection sample');
+  });
+
+  test('returns high projection quality for broad low-dispersion samples', () => {
+    const closes: number[] = [];
+    const bbwp: number[] = [];
+    for (let i = 0; i < 1000; i++) {
+      closes.push(100 + i * 0.5);
+      bbwp.push(i % 30 === 0 ? 10 : 25);
+    }
+
+    const proj = computeSignalProjection('compression_release_up', closes, bbwp);
+
+    expect(proj.sampleSize).toBeGreaterThanOrEqual(30);
+    expect(proj.dispersionPct).toBeGreaterThanOrEqual(0);
+    expect(proj.projectionQuality).toBe('high');
+    expect(proj.projectionQualityScore).toBeGreaterThanOrEqual(70);
+    expect(proj.projectionWarning).toContain('Projection quality high');
   });
 
   test('identifies compression release transitions in history', () => {
@@ -804,6 +909,46 @@ describe('detectVolatilityTrap', () => {
     // Gamma: 0. Total could be around 70
     expect(trap.score).toBeGreaterThanOrEqual(TRAP.MIN_SCORE);
     expect(trap.detected).toBe(true);
+  });
+
+  test('uses actual current price for gamma wall proximity', () => {
+    const volState: VolatilityState = {
+      bbwp: 12, bbwpSma5: 10, regime: 'compression', regimeConfidence: 75,
+      rateOfChange: -0.5, rateSmoothed: -0.3, acceleration: 0, rateDirection: 'flat',
+      inSqueeze: false, squeezeStrength: 0,
+    };
+
+    const trap = detectVolatilityTrap(
+      volState,
+      { maxPain: 100, highestOICallStrike: 101, highestOIPutStrike: 98 },
+      { activeTFCount: 3 },
+      100.8,
+    );
+
+    expect(trap.gammaLockDetected).toBe(true);
+    expect(trap.components.some(component => component.includes('from gamma wall at'))).toBe(true);
+    expect(trap.detected).toBe(true);
+  });
+
+  test('does not claim gamma lock when strikes are near max pain but far from current price', () => {
+    const volState: VolatilityState = {
+      bbwp: 12, bbwpSma5: 10, regime: 'compression', regimeConfidence: 75,
+      rateOfChange: -0.5, rateSmoothed: -0.3, acceleration: 0, rateDirection: 'flat',
+      inSqueeze: false, squeezeStrength: 0,
+    };
+
+    const trap = detectVolatilityTrap(
+      volState,
+      { maxPain: 100, highestOICallStrike: 101, highestOIPutStrike: 99 },
+      { activeTFCount: 3 },
+      150,
+    );
+
+    expect(trap.gammaLockDetected).toBe(false);
+    expect(trap.components.some(component => component.includes('gamma wall'))).toBe(false);
+    expect(trap.score).toBe(60);
+    expect(trap.detected).toBe(false);
+    expect(trap.candidate).toBe(true);
   });
 
   test('partial detection stays below threshold', () => {

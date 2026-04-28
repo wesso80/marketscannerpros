@@ -33,6 +33,44 @@ export interface BacktestDataCoverage {
   notes?: string;
 }
 
+export interface BacktestExecutionAssumptions {
+  version: string;
+  strategyId: string;
+  timeframe: string;
+  assetType: 'stock' | 'crypto';
+  fillModel: {
+    label: string;
+    entryTiming: string;
+    exitTiming: string;
+    intrabarPriority: string;
+    intrabarAmbiguity: string;
+    endOfDataExit: string;
+  };
+  costs: {
+    slippageBps: number;
+    slippageApplied: boolean;
+    spreadModel: string;
+    commissionModel: string;
+    feeModel: string;
+    borrowCostsModel: string;
+    marketImpactModel: string;
+  };
+  liquidity: {
+    volumeData: string;
+    sizeModel: string;
+    partialFills: string;
+    depthModel: string;
+  };
+  bias: Record<string, string>;
+  sampleQuality: {
+    label: string;
+    totalTrades: number;
+    bars: number;
+    warning: string;
+  };
+  warnings: string[];
+}
+
 export interface BacktestEquityPoint {
   date: string;
   equity: number;
@@ -47,6 +85,7 @@ export interface KellyCriterion {
 
 export interface MonteCarloResult {
   simulations: number;
+  seed: number;
   medianReturn: number;     // median final return %
   p5Return: number;         // 5th percentile (worst-case)
   p25Return: number;        // 25th percentile
@@ -61,11 +100,13 @@ export interface BacktestEngineResult {
   totalTrades: number;
   winningTrades: number;
   losingTrades: number;
+  breakevenTrades: number;
   winRate: number;
   totalReturn: number;
   maxDrawdown: number;
   sharpeRatio: number;
-  profitFactor: number;
+  profitFactor: number | null;
+  profitFactorLabel?: string;
   avgWin: number;
   avgLoss: number;
   cagr: number;
@@ -79,6 +120,7 @@ export interface BacktestEngineResult {
   trades: BacktestTrade[];
   validation?: BacktestValidation;
   dataCoverage?: BacktestDataCoverage;
+  executionAssumptions?: BacktestExecutionAssumptions;
   diagnostics?: unknown;
   kelly?: KellyCriterion;
   monteCarlo?: MonteCarloResult;
@@ -89,6 +131,7 @@ export function createEmptyBacktestResult(): BacktestEngineResult {
     totalTrades: 0,
     winningTrades: 0,
     losingTrades: 0,
+    breakevenTrades: 0,
     winRate: 0,
     totalReturn: 0,
     maxDrawdown: 0,
@@ -108,6 +151,54 @@ export function createEmptyBacktestResult(): BacktestEngineResult {
   };
 }
 
+const MONTE_CARLO_SEED = 20260427;
+
+function seededRandom(seed: number) {
+  let state = seed >>> 0;
+  return () => {
+    state += 0x6D2B79F5;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function computeMergedTimeInMarket(trades: BacktestTrade[], dates: string[]): number {
+  if (dates.length === 0 || trades.length === 0) return 0;
+
+  const dateIndex = new Map(dates.map((date, index) => [date, index]));
+  const intervals = trades
+    .map((trade) => {
+      const start = dateIndex.get(trade.entryDate);
+      const end = dateIndex.get(trade.exitDate);
+      if (start == null || end == null) return null;
+      return { start: Math.min(start, end), end: Math.max(start, end) };
+    })
+    .filter((interval): interval is { start: number; end: number } => interval != null)
+    .sort((a, b) => a.start - b.start || a.end - b.end);
+
+  if (intervals.length === 0) return 0;
+
+  let coveredBars = 0;
+  let currentStart = intervals[0].start;
+  let currentEnd = intervals[0].end;
+
+  for (const interval of intervals.slice(1)) {
+    if (interval.start <= currentEnd + 1) {
+      currentEnd = Math.max(currentEnd, interval.end);
+      continue;
+    }
+
+    coveredBars += currentEnd - currentStart + 1;
+    currentStart = interval.start;
+    currentEnd = interval.end;
+  }
+
+  coveredBars += currentEnd - currentStart + 1;
+  return Math.min(100, (coveredBars / dates.length) * 100);
+}
+
 export function buildBacktestEngineResult(trades: BacktestTrade[], dates: string[], initialCapital: number): BacktestEngineResult {
   if (trades.length === 0) {
     return createEmptyBacktestResult();
@@ -115,7 +206,8 @@ export function buildBacktestEngineResult(trades: BacktestTrade[], dates: string
 
   const totalTrades = trades.length;
   const winningTrades = trades.filter(t => t.return > 0).length;
-  const losingTrades = trades.filter(t => t.return <= 0).length;
+  const losingTrades = trades.filter(t => t.return < 0).length;
+  const breakevenTrades = trades.filter(t => t.return === 0).length;
   const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
 
   const totalReturn = trades.reduce((sum, t) => sum + t.return, 0);
@@ -172,18 +264,18 @@ export function buildBacktestEngineResult(trades: BacktestTrade[], dates: string
   const volatility = stdDev * Math.sqrt(252);
 
   const grossProfit = trades.filter(t => t.return > 0).reduce((sum, t) => sum + t.return, 0);
-  const grossLoss = Math.abs(trades.filter(t => t.return <= 0).reduce((sum, t) => sum + t.return, 0));
-  const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? 999 : 0;
+  const grossLoss = Math.abs(trades.filter(t => t.return < 0).reduce((sum, t) => sum + t.return, 0));
+  const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? null : 0;
+  const profitFactorLabel = profitFactor == null ? 'No losing trades in sample' : undefined;
 
   const avgWin = winningTrades > 0
     ? trades.filter(t => t.return > 0).reduce((sum, t) => sum + t.return, 0) / winningTrades
     : 0;
   const avgLoss = losingTrades > 0
-    ? trades.filter(t => t.return <= 0).reduce((sum, t) => sum + t.return, 0) / losingTrades
+    ? trades.filter(t => t.return < 0).reduce((sum, t) => sum + t.return, 0) / losingTrades
     : 0;
 
-  const totalHoldingDays = trades.reduce((sum, t) => sum + t.holdingPeriodDays, 0);
-  const timeInMarket = tradingDays > 0 ? (totalHoldingDays / tradingDays) * 100 : 0;
+  const timeInMarket = computeMergedTimeInMarket(trades, dates);
   const calmarRatio = maxDrawdown > 0 ? (cagr * 100) / maxDrawdown : 0;
 
   const bestTrade = trades.reduce((best, t) => t.returnPercent > (best?.returnPercent ?? -Infinity) ? t : best, trades[0]);
@@ -208,6 +300,7 @@ export function buildBacktestEngineResult(trades: BacktestTrade[], dates: string
   if (trades.length >= 8) {
     const tradeReturns = trades.map(t => t.return);
     const numSims = 500;
+    const random = seededRandom(MONTE_CARLO_SEED);
     const finalReturns: number[] = [];
     const maxDrawdowns: number[] = [];
 
@@ -215,7 +308,7 @@ export function buildBacktestEngineResult(trades: BacktestTrade[], dates: string
       // Fisher-Yates shuffle of trade returns
       const shuffled = [...tradeReturns];
       for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
+        const j = Math.floor(random() * (i + 1));
         [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
       }
       // Simulate equity path
@@ -240,6 +333,7 @@ export function buildBacktestEngineResult(trades: BacktestTrade[], dates: string
 
     monteCarlo = {
       simulations: numSims,
+      seed: MONTE_CARLO_SEED,
       medianReturn: parseFloat(percentile(finalReturns, 50).toFixed(2)),
       p5Return: parseFloat(percentile(finalReturns, 5).toFixed(2)),
       p25Return: parseFloat(percentile(finalReturns, 25).toFixed(2)),
@@ -255,11 +349,13 @@ export function buildBacktestEngineResult(trades: BacktestTrade[], dates: string
     totalTrades,
     winningTrades,
     losingTrades,
+    breakevenTrades,
     winRate: parseFloat(winRate.toFixed(2)),
     totalReturn: parseFloat(totalReturnPercent.toFixed(2)),
     maxDrawdown: parseFloat(maxDrawdown.toFixed(2)),
     sharpeRatio: parseFloat(sharpeRatio.toFixed(2)),
-    profitFactor: parseFloat(profitFactor.toFixed(2)),
+    profitFactor: profitFactor == null ? null : parseFloat(profitFactor.toFixed(2)),
+    profitFactorLabel,
     avgWin: parseFloat(avgWin.toFixed(2)),
     avgLoss: parseFloat(avgLoss.toFixed(2)),
     cagr: parseFloat((cagr * 100).toFixed(2)),

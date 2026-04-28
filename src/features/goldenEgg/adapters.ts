@@ -11,7 +11,6 @@ export function getGoldenEggMockPayload(): GoldenEggPayload {
     },
     layer1: {
       assessment: 'WATCH',
-      permission: 'WATCH',
       direction: 'LONG',
       confluenceScore: 68,
       confidence: 68,
@@ -49,18 +48,6 @@ export function getGoldenEggMockPayload(): GoldenEggPayload {
           { label: 'Support', price: 1116.5, kind: 'support' },
         ],
         invalidation: 'Scenario weakens if 1H closes below 1116.5 with breadth deterioration.',
-      },
-      execution: {
-        entryTrigger: 'Reference condition: 1H close > 1142.0 and first pullback holds above reclaim.',
-        entry: { type: 'stop', price: 1143.0 },
-        stop: { price: 1116.5, logic: 'Below invalidation structure + failed reclaim' },
-        targets: [
-          { price: 1168.0, rMultiple: 1.0, note: 'First reaction zone' },
-          { price: 1196.0, rMultiple: 2.0, note: 'Primary reaction zone' },
-          { price: 1224.0, rMultiple: 3.0, note: 'Extension reaction zone' },
-        ],
-        rr: { expectedR: 2.1, minR: 1.6 },
-        sizingHint: { riskPct: 0.75, riskUsd: 750, sizeUnits: 28 },
       },
       scenario: {
         referenceTrigger: 'Reference condition: 1H close > 1142.0 and first pullback holds above reclaim.',

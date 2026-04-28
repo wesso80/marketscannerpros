@@ -21,6 +21,11 @@ export default function DockHeader({ summary, onExpandAll, onCollapseAll }: Dock
         {summary.reviewQueue > 0 && (
           <span className="rounded-full bg-white/10 px-2 py-1 text-xs">Review Queue {summary.reviewQueue}</span>
         )}
+        {typeof summary.playbookSamples === 'number' && summary.playbookSamples > 0 && (
+          <span className={`rounded-full px-2 py-1 text-xs ${summary.playbookSampleStatus === 'minimum_met' ? 'bg-emerald-500/20 text-emerald-200' : summary.playbookSampleStatus === 'developing' ? 'bg-amber-500/20 text-amber-200' : 'bg-rose-500/20 text-rose-200'}`}>
+            Playbook samples {summary.playbookSampleStatus === 'minimum_met' ? 'ready' : summary.playbookSampleStatus === 'developing' ? 'developing' : 'thin'}
+          </span>
+        )}
       </div>
       <div className="flex gap-2">
         <button onClick={onExpandAll} className="rounded-lg bg-white/10 px-3 py-1.5 text-xs text-slate-100">Expand all</button>

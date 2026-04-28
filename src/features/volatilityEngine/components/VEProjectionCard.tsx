@@ -9,6 +9,20 @@ interface ProjectionCardProps {
   currentPrice?: number;
 }
 
+function qualityTone(quality?: SignalProjection['projectionQuality']): string {
+  if (quality === 'high') return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200';
+  if (quality === 'medium') return 'border-amber-500/30 bg-amber-500/10 text-amber-200';
+  if (quality === 'low') return 'border-rose-500/30 bg-rose-500/10 text-rose-200';
+  return 'border-white/10 bg-white/5 text-white/50';
+}
+
+function qualityLabel(quality?: SignalProjection['projectionQuality']): string {
+  if (quality === 'high') return 'High quality';
+  if (quality === 'medium') return 'Medium quality';
+  if (quality === 'low') return 'Low quality';
+  return 'Unavailable';
+}
+
 export default function VEProjectionCard({ proj, volatility, phase, currentPrice }: ProjectionCardProps) {
   if (proj.signalType === 'none') {
     // Show expected move range bands based on current volatility when no signal
@@ -97,14 +111,21 @@ export default function VEProjectionCard({ proj, volatility, phase, currentPrice
   const isUp = proj.signalType.includes('up');
   const moveColor = isUp ? '#10B981' : '#EF4444';
   const hitColor = proj.hitRate >= 60 ? '#10B981' : proj.hitRate >= 40 ? '#D97706' : '#EF4444';
+  const qualityScore = proj.projectionQualityScore ?? 0;
+  const dispersionPct = proj.dispersionPct ?? 0;
 
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-5">
-      <div className="mb-3 flex items-center gap-2">
-        <span className="text-base">📊</span>
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-amber-400">
-          Outcome Projection
-        </h3>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-base">📊</span>
+          <h3 className="text-xs font-semibold uppercase tracking-widest text-amber-400">
+            Outcome Projection
+          </h3>
+        </div>
+        <span className={`rounded-full border px-2 py-1 text-[0.65rem] font-semibold uppercase tracking-wide ${qualityTone(proj.projectionQuality)}`}>
+          {qualityLabel(proj.projectionQuality)} - {qualityScore}/100
+        </span>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -132,11 +153,17 @@ export default function VEProjectionCard({ proj, volatility, phase, currentPrice
           <div className="mt-1 text-lg font-bold text-white/80">
             {proj.averageBarsToMove.toFixed(1)}
           </div>
+          <div className="text-[0.65rem] text-white/30">Dispersion {dispersionPct.toFixed(1)}%</div>
         </div>
       </div>
 
-      <div className="mt-3 text-[0.7rem] text-white/30 text-center">
-        Max historical: {proj.maxHistoricalMovePct >= 0 ? '+' : ''}{proj.maxHistoricalMovePct.toFixed(1)}%
+      <div className="mt-3 rounded-lg border border-white/10 bg-white/[0.03] p-3 text-[0.7rem] text-white/40">
+        <div className="text-center">
+          Max historical: {proj.maxHistoricalMovePct >= 0 ? '+' : ''}{proj.maxHistoricalMovePct.toFixed(1)}%
+        </div>
+        {proj.projectionWarning && (
+          <div className="mt-2 text-center text-white/35">{proj.projectionWarning}</div>
+        )}
       </div>
     </div>
   );

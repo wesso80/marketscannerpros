@@ -1,7 +1,7 @@
 // lib/auth.ts
 import crypto from "crypto";
 import { cookies } from "next/headers";
-import { isFreeForAllMode } from '@/lib/entitlements';
+import { isFreeForAllMode } from './entitlements';
 
 const isProductionRuntime = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
 

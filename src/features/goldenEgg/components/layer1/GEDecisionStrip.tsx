@@ -34,19 +34,19 @@ function barColor(value: number): string {
 }
 
 export default function GEDecisionStrip({ layer1 }: GEDecisionStripProps) {
-  const verdictLabel = layer1.permission === 'TRADE'
-    ? `${layer1.direction === 'LONG' ? 'LONG' : layer1.direction === 'SHORT' ? 'SHORT' : 'HOLD'} (${layer1.confidence}% confluence)`
-    : layer1.permission === 'NO_TRADE'
+  const verdictLabel = layer1.assessment === 'ALIGNED'
+    ? `SCENARIO ALIGNED (${layer1.confidence}% confluence)`
+    : layer1.assessment === 'NOT_ALIGNED'
     ? `NOT ALIGNED (${layer1.confidence}% confluence)`
-    : `HOLD (${layer1.confidence}% confluence)`;
+    : `WATCH (${layer1.confidence}% confluence)`;
 
-  const verdictBg = layer1.permission === 'TRADE'
+  const verdictBg = layer1.assessment === 'ALIGNED'
     ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-200'
-    : layer1.permission === 'NO_TRADE'
+    : layer1.assessment === 'NOT_ALIGNED'
     ? 'bg-rose-500/15 border-rose-500/30 text-rose-200'
     : 'bg-amber-500/15 border-amber-500/30 text-amber-200';
 
-  const verdictIcon = layer1.permission === 'TRADE' ? '✅' : layer1.permission === 'NO_TRADE' ? '🚫' : '👀';
+  const verdictIcon = layer1.assessment === 'ALIGNED' ? '✅' : layer1.assessment === 'NOT_ALIGNED' ? '🚫' : '👀';
 
   return (
     <div className="space-y-5">
@@ -64,7 +64,7 @@ export default function GEDecisionStrip({ layer1 }: GEDecisionStripProps) {
       <GECard title="Signal Breakdown">
         <div className="mb-5">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-300">Trade Confidence</span>
+            <span className="text-sm text-slate-300">Evidence Alignment</span>
             <span className="text-sm font-bold text-white">{layer1.confidence}%</span>
           </div>
           <div className="mt-2 h-3 overflow-hidden rounded-full bg-slate-700/50">
@@ -113,7 +113,7 @@ export default function GEDecisionStrip({ layer1 }: GEDecisionStripProps) {
       </div>
 
       {/* Flip Conditions */}
-      {layer1.flipConditions.length > 0 && layer1.permission !== 'TRADE' && (
+      {layer1.flipConditions.length > 0 && layer1.assessment !== 'ALIGNED' && (
         <GECard title="What Needs to Flip">
           <GEFlipConditions items={layer1.flipConditions} />
         </GECard>

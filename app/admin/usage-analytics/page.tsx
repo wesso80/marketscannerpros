@@ -10,6 +10,7 @@ interface TradeActivity { trades_30d: number; trades_7d: number; trades_today: n
 interface TierRow { tier: string; status: string; count: number }
 interface RetentionWeek { week: string; active_users: number }
 interface TopWorkspace { workspace_id: string; email: string; tier: string; scans_7d: number; trades_7d: number; ai_questions_7d: number; journal_entries_7d: number; activity_score: number }
+interface AnalyticsMeta { degraded: boolean; failedQueries: string[]; warnings: string[] }
 
 export default function UsageAnalyticsPage() {
   const [activeUsers, setActiveUsers] = useState<ActiveUsers>({ dau: 0, wau: 0, mau: 0, online_now: 0 });
@@ -20,6 +21,7 @@ export default function UsageAnalyticsPage() {
   const [tierDist, setTierDist] = useState<TierRow[]>([]);
   const [retention, setRetention] = useState<RetentionWeek[]>([]);
   const [topWorkspaces, setTopWorkspaces] = useState<TopWorkspace[]>([]);
+  const [meta, setMeta] = useState<AnalyticsMeta>({ degraded: false, failedQueries: [], warnings: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -41,6 +43,7 @@ export default function UsageAnalyticsPage() {
         setTierDist(data.tierDistribution || []);
         setRetention(data.retentionCohorts || []);
         setTopWorkspaces(data.topActiveWorkspaces || []);
+        setMeta(data.meta || { degraded: false, failedQueries: [], warnings: [] });
       } else {
         setError(data.error || "Failed to fetch");
       }
@@ -128,6 +131,24 @@ export default function UsageAnalyticsPage() {
           color: "#F87171",
           marginBottom: "1rem",
         }}>{error}</div>
+      )}
+
+      {meta.degraded && (
+        <div style={{
+          background: "rgba(245, 158, 11, 0.12)",
+          border: "1px solid rgba(245, 158, 11, 0.35)",
+          borderRadius: "0.75rem",
+          padding: "0.85rem 1rem",
+          color: "#FCD34D",
+          marginBottom: "1rem",
+          fontSize: "0.82rem",
+          fontWeight: 700,
+        }}>
+          Analytics degraded: {meta.failedQueries.length} query{meta.failedQueries.length === 1 ? "" : "ies"} failed. Empty charts may mean unavailable data, not zero activity.
+          <div style={{ color: "#FDE68A", fontSize: "0.74rem", fontWeight: 500, marginTop: "0.35rem" }}>
+            {meta.failedQueries.slice(0, 8).join(", ")}{meta.failedQueries.length > 8 ? " ..." : ""}
+          </div>
+        </div>
       )}
 
       {/* ─── Active Users ───────────────────────────────────── */}

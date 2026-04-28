@@ -1,5 +1,7 @@
 'use client';
 
+import { BACKTEST_SLIPPAGE_BPS } from '@/lib/backtest/assumptions';
+
 interface Trade {
   entryDate: string;
   exitDate: string;
@@ -20,6 +22,7 @@ interface KellyCriterion {
 
 interface MonteCarloResult {
   simulations: number;
+  seed?: number;
   medianReturn: number;
   p5Return: number;
   p25Return: number;
@@ -34,7 +37,8 @@ interface PerformanceMetricsProps {
   totalReturn: number;
   winRate: number;
   totalTrades: number;
-  profitFactor: number;
+  profitFactor: number | null;
+  profitFactorLabel?: string;
   sharpeRatio: number;
   maxDrawdown: number;
   avgWin: number;
@@ -52,6 +56,14 @@ interface PerformanceMetricsProps {
 
 function safe(v: number) {
   return Number.isFinite(v) ? v : null;
+}
+
+function scoreProfitFactor(value: number | null | undefined) {
+  return value ?? 3;
+}
+
+function formatProfitFactor(value: number | null | undefined, label?: string) {
+  return value == null ? label ?? 'No losses' : value.toFixed(2);
 }
 
 function MetricCard({ label, children, emphasized, borderColor }: {
@@ -80,9 +92,79 @@ function MetricCard({ label, children, emphasized, borderColor }: {
   );
 }
 
-export default function PerformanceMetrics({ totalReturn, winRate, totalTrades, profitFactor, sharpeRatio, maxDrawdown, avgWin, avgLoss, cagr, volatility, sortinoRatio, calmarRatio, timeInMarket, bestTrade, worstTrade, kelly, monteCarlo }: PerformanceMetricsProps) {
-  const pfColor = profitFactor >= 1.5 ? '#10b981' : profitFactor >= 1 ? '#fbbf24' : '#ef4444';
-  const pfBorder = profitFactor >= 1.5 ? 'rgba(16,185,129,0.65)' : profitFactor >= 1 ? 'rgba(251,191,36,0.55)' : 'rgba(239,68,68,0.65)';
+function AssumptionTile({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return (
+    <div className="rounded-lg border border-slate-700/50 bg-slate-950/35 p-3">
+      <div className="text-[10px] font-black uppercase tracking-[0.09em] text-slate-500">{label}</div>
+      <div className="mt-1 text-sm font-bold text-slate-100">{value}</div>
+      <div className="mt-1 text-[11px] leading-5 text-slate-400">{detail}</div>
+    </div>
+  );
+}
+
+function BacktestAssumptionsPanel({ totalTrades, monteCarlo }: { totalTrades: number; monteCarlo?: MonteCarloResult }) {
+  const sampleTone = totalTrades >= 50 ? 'text-emerald-300' : totalTrades >= 20 ? 'text-amber-300' : 'text-red-300';
+
+  return (
+    <div className="mb-5 rounded-xl border border-amber-500/25 bg-amber-500/10 p-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="text-[11px] font-black uppercase tracking-[0.1em] text-amber-300">Backtest Assumptions</div>
+          <div className="mt-1 text-xs leading-5 text-amber-100/80">Historical research statistics only. These fields show what the result does and does not model.</div>
+        </div>
+        <div className={`rounded-md border border-current/20 bg-slate-950/30 px-2 py-1 text-[11px] font-black uppercase ${sampleTone}`}>
+          Sample: {totalTrades} trades
+        </div>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <AssumptionTile
+          label="Fill Model"
+          value="Historical bar simulation"
+          detail="Live queue priority, latency, partial fills, taxes, borrow costs, and broker execution are not modeled."
+        />
+        <AssumptionTile
+          label="Costs"
+          value={`${BACKTEST_SLIPPAGE_BPS} bps slippage applied`}
+          detail="Spread, commissions, exchange fees, borrow costs, taxes, and market impact remain unmodeled."
+        />
+        <AssumptionTile
+          label="Liquidity"
+          value="Not enforced"
+          detail="Position size, borrow availability, option depth, and ability to exit in stressed markets are not guaranteed by this sample."
+        />
+        <AssumptionTile
+          label="Bias Controls"
+          value="Review required"
+          detail="Survivorship bias, regime changes, overfitting, and data coverage gaps can distort historical results."
+        />
+      </div>
+
+      <div className="mt-3 grid gap-3 md:grid-cols-3">
+        <AssumptionTile
+          label="Sample Quality"
+          value={totalTrades >= 50 ? 'Broader sample' : totalTrades >= 20 ? 'Moderate sample' : 'Thin sample'}
+          detail="Use larger samples before treating the statistics as stable; low trade counts can swing sharply."
+        />
+        <AssumptionTile
+          label="Monte Carlo"
+          value={monteCarlo ? `${monteCarlo.simulations} simulations` : 'Not available'}
+          detail={monteCarlo?.seed != null ? `Deterministic seed ${monteCarlo.seed}; sequence risk only, not live execution risk.` : 'Monte Carlo appears after enough trades for a shuffle simulation.'}
+        />
+        <AssumptionTile
+          label="Interpretation"
+          value="Scenario evidence"
+          detail="Past sample behaviour does not predict or guarantee future outcomes and is not a recommendation."
+        />
+      </div>
+    </div>
+  );
+}
+
+export default function PerformanceMetrics({ totalReturn, winRate, totalTrades, profitFactor, profitFactorLabel, sharpeRatio, maxDrawdown, avgWin, avgLoss, cagr, volatility, sortinoRatio, calmarRatio, timeInMarket, bestTrade, worstTrade, kelly, monteCarlo }: PerformanceMetricsProps) {
+  const pfScore = scoreProfitFactor(profitFactor);
+  const pfColor = pfScore >= 1.5 ? '#10b981' : pfScore >= 1 ? '#fbbf24' : '#ef4444';
+  const pfBorder = pfScore >= 1.5 ? 'rgba(16,185,129,0.65)' : pfScore >= 1 ? 'rgba(251,191,36,0.55)' : 'rgba(239,68,68,0.65)';
   const ddColor = maxDrawdown <= 10 ? '#10b981' : maxDrawdown <= 20 ? '#fbbf24' : '#ef4444';
   const ddBorder = maxDrawdown <= 10 ? 'rgba(16,185,129,0.55)' : maxDrawdown <= 20 ? 'rgba(251,191,36,0.55)' : 'rgba(239,68,68,0.65)';
 
@@ -92,6 +174,8 @@ export default function PerformanceMetrics({ totalReturn, winRate, totalTrades, 
         <span className="rounded-lg bg-[var(--msp-muted)] px-2 py-1.5 text-sm">📊</span>
         Performance Metrics
       </h2>
+
+      <BacktestAssumptionsPanel totalTrades={totalTrades} monteCarlo={monteCarlo} />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         <MetricCard label="Total Return">
@@ -113,10 +197,10 @@ export default function PerformanceMetrics({ totalReturn, winRate, totalTrades, 
 
         <MetricCard label="⚡ Profit Factor" emphasized borderColor={pfBorder}>
           <div className="text-2xl font-extrabold" style={{ color: pfColor }}>
-            {safe(profitFactor)?.toFixed(2) ?? '—'}
+            {formatProfitFactor(profitFactor, profitFactorLabel)}
           </div>
           <div className="mt-0.5 text-[10px] text-slate-500">
-            {profitFactor >= 1.5 ? 'Above breakeven' : profitFactor >= 1 ? 'Break-even' : 'Below breakeven'}
+            {profitFactor == null ? 'No losing trades in sample' : pfScore >= 1.5 ? 'Above breakeven' : pfScore >= 1 ? 'Break-even' : 'Below breakeven'}
           </div>
         </MetricCard>
 

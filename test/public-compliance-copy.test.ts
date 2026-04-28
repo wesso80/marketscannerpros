@@ -86,4 +86,31 @@ describe('public educational compliance copy', () => {
 
     expect(violations).toEqual([]);
   });
+
+  it('keeps public portfolio summaries and controls record-oriented', () => {
+    const portfolioPage = readFileSync(join(root, 'app/tools/portfolio/page.tsx'), 'utf8');
+    const portfolioAnalyzeRoute = readFileSync(join(root, 'app/api/portfolio/analyze/route.ts'), 'utf8');
+
+    const blockedPortfolioSnippets = [
+      'Reduce 50%',
+      'This summary is descriptive only and does not recommend any action regarding positions, allocations, entries, exits, or portfolio management.',
+      'Please analyze this portfolio and provide insights',
+      'Best Performers',
+      'Worst Performers',
+      'Biggest Wins',
+      'Biggest Losses',
+    ];
+
+    const violations = blockedPortfolioSnippets.flatMap((snippet) => {
+      const hits = [];
+      if (portfolioPage.includes(snippet)) hits.push(`app/tools/portfolio/page.tsx: ${snippet}`);
+      if (portfolioAnalyzeRoute.includes(snippet)) hits.push(`app/api/portfolio/analyze/route.ts: ${snippet}`);
+      return hits;
+    });
+
+    expect(violations).toEqual([]);
+    expect(portfolioPage).toContain('Record 50% Close');
+    expect(portfolioAnalyzeRoute).toContain('buildDeterministicPortfolioDescription');
+    expect(portfolioAnalyzeRoute).toContain('Restate the simulation records in plain English only');
+  });
 });

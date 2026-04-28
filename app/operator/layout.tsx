@@ -31,8 +31,9 @@ export const metadata: Metadata = {
     images: ['/scan-banner.png'],
   },
   robots: {
-    index: true,
-    follow: true,
+    index: false,
+    follow: false,
+    nocache: true,
   },
 };
 

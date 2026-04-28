@@ -276,6 +276,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Main content */}
         <main style={{ flex: 1, padding: "2rem", overflow: "auto" }}>
+          <div style={{
+            marginBottom: "1rem",
+            border: "1px solid rgba(16,185,129,0.22)",
+            background: "rgba(16,185,129,0.08)",
+            color: "#A7F3D0",
+            borderRadius: "0.5rem",
+            padding: "0.65rem 0.8rem",
+            fontSize: "0.78rem",
+            fontWeight: 800,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+          }}>
+            Private admin research terminal. Internal use only; execution decisions remain outside MarketScanner Pros.
+          </div>
           {children}
         </main>
       </div>

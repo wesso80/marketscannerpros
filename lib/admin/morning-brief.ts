@@ -361,7 +361,7 @@ const AV_CRYPTO_SYMBOLS = new Set([
 
 const DEFAULT_CONTEXT: ScanContext = {
   portfolioState: {
-    equity: 100000,
+    equity: 0,
     dailyPnl: 0,
     drawdownPct: 0,
     openRisk: 0,
@@ -381,8 +381,8 @@ const DEFAULT_CONTEXT: ScanContext = {
     minLiquidityOk: true,
   },
   accountState: {
-    buyingPower: 100000,
-    accountRiskUnit: 0.01,
+    buyingPower: 0,
+    accountRiskUnit: 0,
   },
   instrumentMeta: {},
   healthContext: {
@@ -397,19 +397,19 @@ const FALLBACK_RISK: MorningRiskState = {
   openExposure: 0,
   openRiskUsd: 0,
   exposureUsd: 0,
-  equity: 100000,
+  equity: 0,
   dailyPnl: 0,
   dailyDrawdown: 0,
   correlationRisk: 0,
-  maxPositions: 10,
+  maxPositions: 0,
   activePositions: 0,
   killSwitchActive: false,
   permission: "WAIT",
-  sizeMultiplier: 1,
+  sizeMultiplier: 0,
   source: "fallback",
   workspaceId: null,
   lastUpdatedAt: null,
-  notes: ["No live portfolio or operator risk state found; using conservative fallback."],
+  notes: ["No live portfolio or operator risk state found; permission is WAIT and sizing is disabled."],
 };
 
 const FALLBACK_LEARNING: MorningLearningSnapshot = {
@@ -840,6 +840,18 @@ export function renderMorningBriefEmail(brief: MorningBrief): string {
         </tr>
       </table>
 
+      ${section("Data Truth Layer", `
+        <table style="width:100%;border-collapse:collapse;">
+          <tr>
+            ${miniCell("Risk Source", brief.risk.source.replace("_", " ").toUpperCase())}
+            ${miniCell("Worker Freshness", brief.universe.workerStatus.freshness.toUpperCase())}
+            ${miniCell("Scanner Health", `${brief.health.scanner} / ${brief.health.feed}`)}
+            ${miniCell("Learning Sample", `${brief.learning.labeled + brief.learning.briefFeedbackTotal} labels / ${brief.expectancy.sampleTrades} trades`)}
+          </tr>
+        </table>
+        <p style="margin:12px 0 0;color:#94a3b8;font-size:13px;line-height:1.5;">${escapeHtml(brief.universe.workerStatus.note)} ${escapeHtml(brief.risk.notes[0] || "Risk source unavailable.")}</p>
+      `)}
+
       ${section("Real Account Risk", `
         <table style="width:100%;border-collapse:collapse;">
           <tr>
@@ -986,16 +998,20 @@ async function loadRiskState(): Promise<MorningRiskState> {
     const exposureUsd = Number(positions?.exposure_usd ?? 0);
     const openRiskUsd = Number(journal?.open_risk_usd ?? 0);
     const dailyPnl = Number(journal?.daily_pl ?? 0) + Number(positions?.unrealized_pl ?? 0);
-    const equity = Math.max(1, Number(performance?.latest_equity ?? 0) || Number(operatorRisk.equity ?? 0) || DEFAULT_CONTEXT.portfolioState.equity);
-    const peakEquity = Math.max(equity, Number(performance?.peak_equity ?? equity));
-    const dailyDrawdown = Math.max(operatorRisk.dailyDrawdown, dailyPnl < 0 ? Math.abs(dailyPnl) / equity : 0, peakEquity > 0 ? Math.max(0, (peakEquity - equity) / peakEquity) : 0);
+    const rawEquity = Number(performance?.latest_equity ?? 0) || Number(operatorRisk.equity ?? 0);
+    const hasLiveEquity = Number.isFinite(rawEquity) && rawEquity > 0;
+    const equity = hasLiveEquity ? rawEquity : 0;
+    const peakEquity = hasLiveEquity ? Math.max(equity, Number(performance?.peak_equity ?? equity)) : 0;
+    const dailyDrawdown = hasLiveEquity
+      ? Math.max(operatorRisk.dailyDrawdown, dailyPnl < 0 ? Math.abs(dailyPnl) / equity : 0, peakEquity > 0 ? Math.max(0, (peakEquity - equity) / peakEquity) : 0)
+      : operatorRisk.dailyDrawdown;
     const largestSymbolExposure = Number(positions?.largest_symbol_exposure ?? 0);
     const correlationRisk = Math.max(operatorRisk.correlationRisk, exposureUsd > 0 ? largestSymbolExposure / exposureUsd : 0);
     const activePositions = Number(positions?.active_positions ?? 0);
-    const openExposure = openRiskUsd > 0 ? openRiskUsd / equity : exposureUsd > 0 ? Math.min(0.05, exposureUsd / equity * 0.25) : 0;
+    const openExposure = hasLiveEquity && openRiskUsd > 0 ? openRiskUsd / equity : hasLiveEquity && exposureUsd > 0 ? Math.min(0.05, exposureUsd / equity * 0.25) : 0;
     const killSwitchActive = operatorRisk.killSwitchActive || dailyDrawdown >= 0.04;
-    const permission = killSwitchActive ? "BLOCK" : dailyDrawdown >= 0.02 || correlationRisk >= 0.65 ? "WAIT" : activePositions >= operatorRisk.maxPositions ? "WAIT" : "GO";
-    const sizeMultiplier = permission === "GO"
+    const permission = !hasLiveEquity ? "WAIT" : killSwitchActive ? "BLOCK" : dailyDrawdown >= 0.02 || correlationRisk >= 0.65 ? "WAIT" : activePositions >= operatorRisk.maxPositions ? "WAIT" : "GO";
+    const sizeMultiplier = !hasLiveEquity ? 0 : permission === "GO"
       ? Math.max(0.25, Math.min(1, 1 - Math.max(dailyDrawdown / 0.04, correlationRisk / 1.4)))
       : permission === "WAIT" ? 0.5 : 0;
 
@@ -1017,7 +1033,9 @@ async function loadRiskState(): Promise<MorningRiskState> {
       lastUpdatedAt: positions?.last_updated_at ?? journal?.last_updated_at ?? performance?.latest_snapshot ?? null,
       notes: [
         `Risk synced from workspace portfolio/journal (${activePositions} open position${activePositions === 1 ? "" : "s"}).`,
-        `Open risk ${formatUsd(openRiskUsd)} on ${formatUsd(equity)} equity; exposure ${formatUsd(exposureUsd)}.`,
+        ...(hasLiveEquity
+          ? [`Open risk ${formatUsd(openRiskUsd)} on ${formatUsd(equity)} equity; exposure ${formatUsd(exposureUsd)}.`]
+          : ["No live equity value found; sizing is disabled and permission is capped at WAIT."]),
       ],
     };
   } catch {
@@ -1032,25 +1050,30 @@ async function loadOperatorRiskState(): Promise<MorningRiskState> {
     );
     const ctx = rows[0]?.context_state;
     if (!ctx) return FALLBACK_RISK;
-    const equity = Number(ctx.equity ?? DEFAULT_CONTEXT.portfolioState.equity);
+    const rawEquity = Number(ctx.equity ?? 0);
+    const hasLiveEquity = Number.isFinite(rawEquity) && rawEquity > 0;
+    const equity = hasLiveEquity ? rawEquity : 0;
     const openExposure = Number(ctx.openRisk ?? 0);
     return {
       openExposure,
-      openRiskUsd: openExposure * equity,
+      openRiskUsd: hasLiveEquity ? openExposure * equity : 0,
       exposureUsd: Number(ctx.exposureUsd ?? 0),
       equity,
       dailyPnl: Number(ctx.dailyPnl ?? 0),
       dailyDrawdown: Number(ctx.dailyDrawdown ?? 0),
       correlationRisk: Number(ctx.correlationRisk ?? 0),
-      maxPositions: Number(ctx.maxPositions ?? 10),
+      maxPositions: hasLiveEquity ? Number(ctx.maxPositions ?? 10) : 0,
       activePositions: Number(ctx.activePositions ?? 0),
       killSwitchActive: Boolean(ctx.killSwitchActive),
-      permission: ctx.killSwitchActive ? "BLOCK" : String(ctx.permission ?? "WAIT"),
-      sizeMultiplier: Number(ctx.sizeMultiplier ?? 1),
+      permission: !hasLiveEquity ? "WAIT" : ctx.killSwitchActive ? "BLOCK" : String(ctx.permission ?? "WAIT"),
+      sizeMultiplier: hasLiveEquity ? Number(ctx.sizeMultiplier ?? 1) : 0,
       source: "operator_state",
       workspaceId: null,
       lastUpdatedAt: rows[0]?.updated_at ?? null,
-      notes: ["Risk read from latest operator state; portfolio/journal sync was unavailable."],
+      notes: [
+        "Risk read from latest operator state; portfolio/journal sync was unavailable.",
+        ...(hasLiveEquity ? [] : ["Operator state has no live equity value; sizing is disabled and permission is capped at WAIT."]),
+      ],
     };
   } catch {
     return FALLBACK_RISK;
@@ -1872,14 +1895,16 @@ function buildMorningRiskGovernor(
 ): MorningRiskGovernor {
   const dailyStopUsd = risk.equity * 0.02;
   const portfolioHeatLimitUsd = risk.equity * 0.06;
+  const hasLiveEquity = Number.isFinite(risk.equity) && risk.equity > 0;
   const baseMaxTrades = sessionScore.ruleBreaks > 0 || sessionScore.disciplineScore < 60 ? 1 : sessionScore.executionScore >= 75 ? 4 : 3;
-  const maxTradesToday = risk.killSwitchActive || risk.dailyDrawdown >= 0.04 ? 0 : baseMaxTrades;
+  const maxTradesToday = !hasLiveEquity || risk.killSwitchActive || risk.dailyDrawdown >= 0.04 ? 0 : baseMaxTrades;
   const remainingTrades = Math.max(0, maxTradesToday - sessionScore.closedTrades);
   const lockouts: string[] = [];
+  if (!hasLiveEquity) lockouts.push("Live equity unavailable");
   if (risk.killSwitchActive) lockouts.push("Kill switch active");
   if (risk.dailyDrawdown >= 0.04) lockouts.push("Daily drawdown hard stop reached");
-  if (Math.abs(Math.min(0, risk.dailyPnl)) >= dailyStopUsd) lockouts.push("Daily loss cap reached");
-  if (risk.openRiskUsd >= portfolioHeatLimitUsd) lockouts.push("Portfolio heat cap reached");
+  if (hasLiveEquity && Math.abs(Math.min(0, risk.dailyPnl)) >= dailyStopUsd) lockouts.push("Daily loss cap reached");
+  if (hasLiveEquity && risk.openRiskUsd >= portfolioHeatLimitUsd) lockouts.push("Portfolio heat cap reached");
   if (remainingTrades <= 0 && maxTradesToday > 0) lockouts.push("Trade count budget used");
   const mode: MorningRiskGovernor["mode"] = lockouts.length || maxTradesToday === 0
     ? "LOCKED"
@@ -1891,7 +1916,7 @@ function buildMorningRiskGovernor(
   const maxRiskPerTradePct = mode === "NORMAL" ? 0.01 : mode === "THROTTLED" ? 0.0075 : mode === "DEFENSIVE" ? 0.005 : 0;
   const instructions = [
     mode === "LOCKED" ? "No new risk. Review, reconcile, or wait for the next session." : `Maximum ${remainingTrades} new trade${remainingTrades === 1 ? "" : "s"} left today.`,
-    `Single-trade risk cap: ${(maxRiskPerTradePct * 100).toFixed(2)}% (${formatUsd(risk.equity * maxRiskPerTradePct)}).`,
+    hasLiveEquity ? `Single-trade risk cap: ${(maxRiskPerTradePct * 100).toFixed(2)}% (${formatUsd(risk.equity * maxRiskPerTradePct)}).` : "Single-trade risk cap unavailable until live equity is synced.",
     risk.correlationRisk >= 0.65 ? "Correlation is high; do not add similar exposure." : "Correlation guard is clear enough for selective setups.",
   ];
   return {

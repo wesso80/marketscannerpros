@@ -27,6 +27,14 @@ function uniquePush(target: string[], value: string) {
   }
 }
 
+  function numericProfitFactor(result: BacktestEngineResult): number {
+    return result.profitFactor ?? 3;
+  }
+
+  function formatProfitFactor(result: BacktestEngineResult): string {
+    return result.profitFactor == null ? 'no losing trades in sample' : result.profitFactor.toFixed(2);
+  }
+
 export function inferStrategyDirection(strategyId: string, trades: BacktestTrade[]): StrategyDirection {
   const hasLong = trades.some((trade) => trade.side === 'LONG');
   const hasShort = trades.some((trade) => trade.side === 'SHORT');
@@ -66,7 +74,7 @@ export function buildBacktestDiagnostics(
     });
   }
 
-  if (result.profitFactor < 1) {
+  if (result.profitFactor != null && result.profitFactor < 1) {
     uniquePush(failureTags, 'negative_expectancy');
     adjustments.push({
       key: 'raise_expectancy',
@@ -107,20 +115,20 @@ export function buildBacktestDiagnostics(
     : `Invalidated when ${strategyDirection} edge has return < 0% or profit factor < 1.00`;
 
   const invalidationStatus: 'valid' | 'watch' | 'invalidated' =
-    result.totalReturn < 0 && result.profitFactor < 1
+    result.totalReturn < 0 && result.profitFactor != null && result.profitFactor < 1
       ? 'invalidated'
-      : result.totalReturn < 0 || result.profitFactor < 1 || result.winRate < 45
+      : result.totalReturn < 0 || (result.profitFactor != null && result.profitFactor < 1) || result.winRate < 45
       ? 'watch'
       : 'valid';
 
   const invalidationReason = invalidationStatus === 'invalidated'
-    ? `Setup is currently invalidated (${result.totalReturn.toFixed(2)}% return, PF ${result.profitFactor.toFixed(2)}).`
+    ? `Setup is currently invalidated (${result.totalReturn.toFixed(2)}% return, PF ${formatProfitFactor(result)}).`
     : invalidationStatus === 'watch'
-    ? `Setup is fragile (${result.totalReturn.toFixed(2)}% return, PF ${result.profitFactor.toFixed(2)}, WR ${result.winRate.toFixed(1)}%).`
-    : `Setup remains valid (${result.totalReturn.toFixed(2)}% return, PF ${result.profitFactor.toFixed(2)}).`;
+    ? `Setup is fragile (${result.totalReturn.toFixed(2)}% return, PF ${formatProfitFactor(result)}, WR ${result.winRate.toFixed(1)}%).`
+    : `Setup remains valid (${result.totalReturn.toFixed(2)}% return, PF ${formatProfitFactor(result)}).`;
 
   const scoreRaw =
-    (result.profitFactor * 35) +
+    (numericProfitFactor(result) * 35) +
     (result.winRate * 0.35) +
     (Math.max(result.totalReturn, -40) * 0.4) -
     (result.maxDrawdown * 1.1);

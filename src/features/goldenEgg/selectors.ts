@@ -7,5 +7,5 @@ export function topScoreBreakdownRows(payload: GoldenEggPayload) {
 }
 
 export function isNoTrade(payload: GoldenEggPayload) {
-  return payload.layer1.permission === 'NO_TRADE';
+  return payload.layer1.assessment === 'NOT_ALIGNED';
 }

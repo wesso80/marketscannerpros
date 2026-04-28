@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCached, CACHE_KEYS, CACHE_TTL, setCached } from '@/lib/redis';
 import { q } from '@/lib/db';
 import { scannerComplianceMetadata, scannerDataQualityMetadata } from '@/lib/scanner/compliance';
+import { buildMarketDataProviderStatus } from '@/lib/scanner/providerStatus';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -33,6 +34,7 @@ export async function GET(req: NextRequest) {
         coverageScore: typeof cached.matchesFound === 'number' && typeof cached.totalSymbols === 'number' && cached.totalSymbols > 0
           ? Math.round((cached.matchesFound / cached.totalSymbols) * 100)
           : null,
+        providerStatus: buildMarketDataProviderStatus({ source: 'redis_cache', provider: 'redis_cache' }),
       }),
       source: 'cache',
     });
@@ -64,6 +66,13 @@ export async function GET(req: NextRequest) {
           stale: true,
           coverageScore: 0,
           warnings: ['No cached scanner data is currently available.'],
+          providerStatus: buildMarketDataProviderStatus({
+            source: 'none',
+            provider: 'scanner_worker_cache',
+            stale: true,
+            degraded: true,
+            warnings: ['No cached scanner data is currently available.'],
+          }),
         }),
         source: 'none',
       });
@@ -84,6 +93,7 @@ export async function GET(req: NextRequest) {
         computedAt: data.computed_at,
         stale: false,
         coverageScore: data.total_symbols > 0 ? Math.round((data.matches_found / data.total_symbols) * 100) : 0,
+        providerStatus: buildMarketDataProviderStatus({ source: 'database', provider: 'scanner_results_cache' }),
       }),
       source: 'database',
     };
@@ -103,6 +113,13 @@ export async function GET(req: NextRequest) {
         stale: true,
         coverageScore: 0,
         warnings: ['Unable to load cached scanner data.'],
+        providerStatus: buildMarketDataProviderStatus({
+          source: 'error',
+          provider: 'scanner_results_cache',
+          stale: true,
+          degraded: true,
+          warnings: ['Unable to load cached scanner data.'],
+        }),
       }),
     }, { status: 500 });
   }

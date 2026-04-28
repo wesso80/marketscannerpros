@@ -29,7 +29,8 @@ import { computeDVE } from '@/lib/directionalVolatilityEngine';
 import type { DVEInput, DVEReading } from '@/lib/directionalVolatilityEngine.types';
 import { classifyBestDoctrine, type ClassifierInput } from '@/lib/doctrine/classifier';
 import { recordSignal, type RecordSignalParams } from '@/lib/signalRecorder';
-import type { GoldenEggPayload, Permission, Direction, Verdict } from '@/src/features/goldenEgg/types';
+import type { GoldenEggPayload, Direction, Verdict } from '@/src/features/goldenEgg/types';
+import { buildMarketDataProviderStatus, emitProductionDemoDataAlert, isLocalDemoMarketDataAllowed } from '@/lib/scanner/providerStatus';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -37,9 +38,44 @@ export const dynamic = 'force-dynamic';
 // ── In-memory cache (3 min) ─────────────────────────────────────────────
 const cache = new Map<string, { data: GoldenEggPayload; ts: number }>();
 const CACHE_TTL = 3 * 60 * 1000;
+type InternalPermission = 'TRADE' | 'NO_TRADE' | 'WATCH';
 
 function isLocalGoldenEggDemoAllowed(): boolean {
-  return process.env.NODE_ENV !== 'production' || process.env.LOCAL_DEMO_MARKET_DATA === 'true';
+  return isLocalDemoMarketDataAllowed({
+    nodeEnv: process.env.NODE_ENV,
+    localDemoMarketData: process.env.LOCAL_DEMO_MARKET_DATA,
+  }).allowed;
+}
+
+function goldenEggDemoDataQuality(reason: string, context: Record<string, unknown> = {}) {
+  const demoPolicy = isLocalDemoMarketDataAllowed({
+    nodeEnv: process.env.NODE_ENV,
+    localDemoMarketData: process.env.LOCAL_DEMO_MARKET_DATA,
+  });
+  if (demoPolicy.productionDemoEnabled) {
+    emitProductionDemoDataAlert('golden-egg', reason, context);
+  }
+  const warnings = [
+    'Development-only Golden Egg payload for workflow testing. Not live market data.',
+    ...(demoPolicy.productionDemoEnabled ? ['CRITICAL: LOCAL_DEMO_MARKET_DATA is enabled in production.'] : []),
+    reason,
+  ];
+  return buildMarketDataProviderStatus({
+    source: 'local_demo',
+    provider: 'local_demo',
+    localDemo: true,
+    stale: true,
+    productionDemoEnabled: demoPolicy.productionDemoEnabled,
+    warnings,
+  });
+}
+
+function goldenEggLiveDataQuality(assetClass: 'equity' | 'crypto' | 'forex') {
+  const provider = assetClass === 'crypto' ? 'coingecko' : 'alpha_vantage';
+  return buildMarketDataProviderStatus({
+    source: provider,
+    provider,
+  });
 }
 
 function buildLocalDemoGoldenEggPayload(
@@ -152,7 +188,7 @@ function scoreToGrade(score: number): 'A' | 'B' | 'C' | 'D' {
   return 'D';
 }
 
-function toPublicAssessment(permission: Permission): GoldenEggPayload['layer1']['assessment'] {
+function toPublicAssessment(permission: InternalPermission): GoldenEggPayload['layer1']['assessment'] {
   if (permission === 'TRADE') return 'ALIGNED';
   if (permission === 'NO_TRADE') return 'NOT_ALIGNED';
   return 'WATCH';
@@ -197,7 +233,7 @@ function buildPayload(
   const direction: Direction = bullish > bearish + 1 ? 'LONG' : bearish > bullish + 1 ? 'SHORT' : 'NEUTRAL';
 
   // Permission
-  let permission: Permission = 'WATCH';
+  let permission: InternalPermission = 'WATCH';
   if (confidence >= 70 && direction !== 'NEUTRAL') permission = 'TRADE';
   else if (confidence < 40) permission = 'NO_TRADE';
 
@@ -557,7 +593,6 @@ function buildPayload(
     },
     layer1: {
       assessment: toPublicAssessment(permission),
-      permission,
       direction,
       confluenceScore: confidence,
       confidence,
@@ -580,18 +615,6 @@ function buildPayload(
         timeframeAlignment: { score: tfScore, max: 4, details: tfDetails },
         keyLevels,
         invalidation: `Scenario weakens if price ${isLong ? 'closes below' : 'closes above'} $${fmtPriceStr(stopPrice)} with volume confirmation.`,
-      },
-      execution: {
-        entryTrigger: referenceTrigger,
-        entry: { type: permission === 'TRADE' ? 'limit' : 'stop', price: referencePrice ? roundPrice(referencePrice) : undefined },
-        stop: { price: roundPrice(stopPrice), logic: `${(1.5).toFixed(1)}x ATR from reference — beyond recent structure` },
-        targets: [
-          { price: roundPrice(t1), rMultiple: stopDistance > 0 ? Math.round(Math.abs(t1 - p) / stopDistance * 10) / 10 : 1, note: 'First reaction zone' },
-          { price: roundPrice(t2), rMultiple: stopDistance > 0 ? Math.round(Math.abs(t2 - p) / stopDistance * 10) / 10 : 2, note: decompAligned ? `Primary level — Decomp zone (${decompTarget!.contributingTFs.length} TFs)` : 'Primary level' },
-          { price: roundPrice(t3), rMultiple: stopDistance > 0 ? Math.round(Math.abs(t3 - p) / stopDistance * 10) / 10 : 3, note: 'Extension reaction zone' },
-        ],
-        rr: { expectedR: Math.round(rr * 10) / 10, minR: 1.5 },
-        sizingHint: { riskPct: confidence >= 70 ? 1.0 : confidence >= 55 ? 0.75 : 0.5 },
       },
       scenario: {
         referenceTrigger,
@@ -867,7 +890,12 @@ export async function GET(request: NextRequest) {
     const cacheKey = `${symbol}_${timeframe}_${assetClass}`;
     const cached = cache.get(cacheKey);
     if (cached && Date.now() - cached.ts < CACHE_TTL) {
-      return NextResponse.json({ success: true, data: cached.data, cached: true });
+      return NextResponse.json({
+        success: true,
+        data: cached.data,
+        cached: true,
+        dataQuality: buildMarketDataProviderStatus({ source: 'memory_cache', provider: 'memory_cache' }),
+      });
     }
 
     // Fetch core data in parallel — time confluence first, then MPE uses its data
@@ -882,14 +910,13 @@ export async function GET(request: NextRequest) {
 
     if (!priceData) {
       if (isLocalGoldenEggDemoAllowed()) {
+        const reason = `Unable to fetch live price data for ${symbol}`;
         return NextResponse.json({
           success: true,
-          data: buildLocalDemoGoldenEggPayload(symbol, assetClass, tfLabel, `Unable to fetch live price data for ${symbol}`),
+          data: buildLocalDemoGoldenEggPayload(symbol, assetClass, tfLabel, reason),
           localDemo: true,
-          warnings: [
-            'Development-only Golden Egg payload for workflow testing. Not live market data.',
-            `Unable to fetch live price data for ${symbol}`,
-          ],
+          warnings: goldenEggDemoDataQuality(reason, { symbol, assetClass, timeframe: tfLabel }).warnings,
+          dataQuality: goldenEggDemoDataQuality(reason, { symbol, assetClass, timeframe: tfLabel }),
         });
       }
       return NextResponse.json({ success: false, error: `Unable to fetch price data for ${symbol}` }, { status: 404 });
@@ -918,7 +945,7 @@ export async function GET(request: NextRequest) {
       priceAtSignal: priceData.price,
       timeframe: tfLabel,
       features: {
-        permission: payload.layer1.permission,
+        assessment: payload.layer1.assessment,
         rsi: indData?.rsi ?? undefined,
         macd_hist: indData?.macdHist ?? undefined,
         adx: indData?.adx ?? undefined,
@@ -930,18 +957,17 @@ export async function GET(request: NextRequest) {
     // Cache result
     cache.set(cacheKey, { data: payload, ts: Date.now() });
 
-    return NextResponse.json({ success: true, data: payload });
+    return NextResponse.json({ success: true, data: payload, dataQuality: goldenEggLiveDataQuality(assetClass) });
   } catch (error) {
     console.error('[Golden Egg API] Error:', error);
     if (isLocalGoldenEggDemoAllowed()) {
+      const reason = error instanceof Error ? error.message : 'Unknown Golden Egg error';
       return NextResponse.json({
         success: true,
-        data: buildLocalDemoGoldenEggPayload(fallbackSymbol, fallbackAssetClass, fallbackTfLabel, error instanceof Error ? error.message : 'Unknown Golden Egg error'),
+        data: buildLocalDemoGoldenEggPayload(fallbackSymbol, fallbackAssetClass, fallbackTfLabel, reason),
         localDemo: true,
-        warnings: [
-          'Development-only Golden Egg payload for workflow testing. Not live market data.',
-          error instanceof Error ? error.message : 'Unknown Golden Egg error',
-        ],
+        warnings: goldenEggDemoDataQuality(reason, { symbol: fallbackSymbol, assetClass: fallbackAssetClass, timeframe: fallbackTfLabel }).warnings,
+        dataQuality: goldenEggDemoDataQuality(reason, { symbol: fallbackSymbol, assetClass: fallbackAssetClass, timeframe: fallbackTfLabel }),
       });
     }
     return NextResponse.json(

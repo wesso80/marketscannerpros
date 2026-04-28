@@ -49,6 +49,26 @@ async function verify(token: string) {
   return payload;
 }
 
+async function verifyAdminSessionToken(token: string | undefined) {
+  if (!token) return null;
+  const payload = await verify(token);
+  return (payload as { kind?: string } | null)?.kind === 'admin' ? payload : null;
+}
+
+function withNoIndexHeaders(res: NextResponse) {
+  res.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
+  return res;
+}
+
+function sessionMatchesAdminList(
+  session: { cid?: string } | null,
+  adminEmails: string[],
+  adminCids: string[],
+) {
+  const cid = session?.cid?.toLowerCase() || '';
+  return Boolean(cid && (adminCids.includes(cid) || adminEmails.includes(cid)));
+}
+
 // ─── Global API rate limiter (Edge-compatible, in-memory) ───
 const GLOBAL_API_WINDOW_MS = 60_000;
 const GLOBAL_API_MAX = 300;
@@ -102,6 +122,42 @@ export async function middleware(req: NextRequest) {
   const ADMIN_CIDS = ADMIN_EMAILS_MW.flatMap(email => ADMIN_PREFIXES.map(p => `${p}${email}`));
 
   const cookie = req.cookies.get('ms_auth')?.value;
+
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) {
+    const adminSession = await verifyAdminSessionToken(req.cookies.get('ms_admin')?.value);
+    let appSessionIsAdmin = false;
+
+    if (!adminSession && cookie) {
+      appSessionIsAdmin = sessionMatchesAdminList(await verify(cookie), ADMIN_EMAILS_MW, ADMIN_CIDS);
+    }
+
+    if (!adminSession && !appSessionIsAdmin) {
+      const url = req.nextUrl.clone();
+      url.pathname = '/auth';
+      url.searchParams.set('next', pathname);
+      return withNoIndexHeaders(NextResponse.redirect(url));
+    }
+
+    return withNoIndexHeaders(NextResponse.next());
+  }
+
+  if (pathname === '/operator' || pathname.startsWith('/operator/')) {
+    const adminSession = await verifyAdminSessionToken(req.cookies.get('ms_admin')?.value);
+    let appSessionIsOperator = false;
+
+    if (!adminSession && cookie) {
+      appSessionIsOperator = sessionMatchesAdminList(await verify(cookie), ADMIN_EMAILS_MW, ADMIN_CIDS);
+    }
+
+    if (!adminSession && !appSessionIsOperator) {
+      const url = req.nextUrl.clone();
+      url.pathname = '/auth';
+      url.searchParams.set('next', pathname);
+      return withNoIndexHeaders(NextResponse.redirect(url));
+    }
+
+    return withNoIndexHeaders(NextResponse.next());
+  }
 
   // ── /quant → redirect to /admin/quant ──
   if (pathname.startsWith('/quant')) {

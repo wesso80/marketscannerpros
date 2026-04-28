@@ -2,15 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { optionsAnalyzer, OptionsSetup } from '@/lib/options-confluence-analyzer';
 import { ScanMode } from '@/lib/confluence-learning-agent';
 import { getSessionFromCookie } from '@/lib/auth';
+import { hasProTraderAccess } from '@/lib/proTraderAccess';
 import { getAdaptiveLayer } from '@/lib/adaptiveTrader';
 import { computeInstitutionalFilter, inferStrategyFromText } from '@/lib/institutionalFilter';
 import { computeCapitalFlowEngine } from '@/lib/capitalFlowEngine';
 import { getLatestStateMachine, upsertStateMachine } from '@/lib/state-machine-store';
 import { buildDealerIntelligence, calculateDealerGammaSnapshot } from '@/lib/options-gex';
-import { AVOptionRow, scoreOptionCandidatesV21 } from '@/lib/scoring/options-v21';
+import { AVOptionRow, scoreOptionCandidatesV21WithDiagnostics } from '@/lib/scoring/options-v21';
 import { avFetch } from '@/lib/avRateGovernor';
 import { getCached, setCached, CACHE_KEYS, CACHE_TTL } from '@/lib/redis';
 import { computeCorrelationRegime, type CorrelationRegimeOutput } from '@/lib/correlation-regime-engine';
+import { buildMarketDataProviderStatus } from '@/lib/scanner/providerStatus';
+import { assessOptionsChainQuality } from '@/lib/options/dataQuality';
 
 const ALPHA_VANTAGE_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 const AV_OPTIONS_REALTIME_ENABLED = (process.env.AV_OPTIONS_REALTIME_ENABLED ?? 'true').toLowerCase() !== 'false';
@@ -95,6 +98,11 @@ export async function POST(request: NextRequest) {
     if (!session?.workspaceId) {
       return NextResponse.json({ success: false, error: 'Please log in to use the Options Scanner' }, { status: 401 });
     }
+
+    if (!hasProTraderAccess(session.tier)) {
+      return NextResponse.json({ success: false, error: 'Options Scanner requires Pro Trader access' }, { status: 403 });
+    }
+
     const workspaceId = session.workspaceId;
 
     const body = await request.json();
@@ -352,6 +360,7 @@ export async function POST(request: NextRequest) {
     }
     
     const rawOptions = await fetchRawOptionsRows(symbol.toUpperCase(), expirationDate);
+    const optionsChainQuality = assessOptionsChainQuality(rawOptions.rows);
     const lastUpdated = analysis.dataQuality?.lastUpdated ? Date.parse(analysis.dataQuality.lastUpdated) : Number.NaN;
     const staleSeconds = Number.isFinite(lastUpdated)
       ? Math.max(0, Math.round((Date.now() - lastUpdated) / 1000))
@@ -367,7 +376,7 @@ export async function POST(request: NextRequest) {
           : 0.4;
     const macroRisk = (analysis.disclaimerFlags || []).some((flag) => /earnings|fomc|cpi|event|volatility/i.test(flag)) ? 0.35 : 0.8;
 
-    const scoredOptionCandidatesV21 = scoreOptionCandidatesV21({
+    const scoredOptionCandidatesV21 = scoreOptionCandidatesV21WithDiagnostics({
       symbol: symbol.toUpperCase(),
       timeframe: scanMode,
       spot: Number(analysis.currentPrice || 0),
@@ -386,11 +395,29 @@ export async function POST(request: NextRequest) {
     });
 
     console.log(`✅ Options scan complete: ${symbol.toUpperCase()} - ${analysis.direction} signal, Grade: ${analysis.tradeQuality}`);
+    const providerWarnings = [
+      ...rawOptions.warnings,
+      ...optionsChainQuality.warnings,
+      ...scoredOptionCandidatesV21.diagnostics.warnings,
+      ...(analysis.dataConfidenceCaps || []),
+    ].filter(Boolean);
+    const optionsProviderStatus = buildMarketDataProviderStatus({
+      source: rawOptions.provider === 'none' ? 'none' : 'alpha_vantage',
+      provider: rawOptions.provider,
+      stale: analysis.dataQuality?.freshness === 'STALE' || staleSeconds > 900,
+      degraded: rawOptions.provider === 'none' || optionsChainQuality.status !== 'sufficient' || providerWarnings.length > 0,
+      warnings: providerWarnings,
+    });
     
     return NextResponse.json({
       success: true,
       data: {
         ...analysis,
+        dataQuality: {
+          ...(analysis.dataQuality || {}),
+          providerStatus: optionsProviderStatus,
+          optionsChainQuality,
+        },
         adaptiveLayer: {
           profile: adaptive.profile,
           match: adaptive.match,
@@ -407,12 +434,14 @@ export async function POST(request: NextRequest) {
             permission: timePermission,
             quality: timeQuality,
           },
-          topCandidates: scoredOptionCandidatesV21.slice(0, 12),
+          topCandidates: scoredOptionCandidatesV21.candidates.slice(0, 12),
           diagnostics: {
             optionsProvider: rawOptions.provider,
             warnings: rawOptions.warnings,
             staleSeconds,
             tfConfluenceScore,
+            optionsChainQuality,
+            candidateEligibility: scoredOptionCandidatesV21.diagnostics,
           },
         },
       },

@@ -1,4 +1,3 @@
-export type Permission = 'TRADE' | 'NO_TRADE' | 'WATCH';
 export type PublicAssessment = 'ALIGNED' | 'NOT_ALIGNED' | 'WATCH';
 export type Direction = 'LONG' | 'SHORT' | 'NEUTRAL';
 export type Verdict = 'agree' | 'disagree' | 'neutral' | 'unknown';
@@ -106,7 +105,6 @@ export interface GoldenEggPayload {
   };
   layer1: {
     assessment: PublicAssessment;
-    permission: Permission;
     direction: Direction;
     confluenceScore: number;
     confidence: number;
@@ -124,14 +122,6 @@ export interface GoldenEggPayload {
       timeframeAlignment: { score: number; max: number; details: string[] };
       keyLevels: Array<{ label: string; price: number; kind: 'support' | 'resistance' | 'pivot' | 'value' }>;
       invalidation: string;
-    };
-    execution: {
-      entryTrigger: string;
-      entry: { type: 'market' | 'limit' | 'stop'; price?: number };
-      stop: { price: number; logic: string };
-      targets: Array<{ price: number; rMultiple?: number; note?: string }>;
-      rr: { expectedR: number; minR: number };
-      sizingHint?: { riskPct: number; riskUsd?: number; sizeUnits?: number };
     };
     scenario: {
       referenceTrigger: string;

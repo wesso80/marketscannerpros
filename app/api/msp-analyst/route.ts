@@ -48,6 +48,7 @@ import { computeACLFromScoring } from '@/lib/ai/adaptiveConfidenceLens';
 import { computePerformanceThrottle, applyPerformanceDampener } from '@/lib/ai/performanceThrottle';
 import { computeSessionPhaseOverlay } from '@/lib/ai/sessionPhase';
 import { buildV3EnginePrompt } from '@/lib/prompts/arcaV3Engine';
+import { PUBLIC_AI_SAFETY_GUARDRAILS, appendPublicAISafetyCorrection, buildPublicAIDataBindingGuardrail } from '@/lib/prompts/publicAiSafety';
 import { getEdgeContext } from '@/lib/intelligence/edgeContextBuilder';
 import { openAICircuit, CircuitBreakerOpenError } from '@/lib/circuitBreaker';
 import { fetchIntelligenceContext } from '@/lib/ai/intelligenceContext';
@@ -830,6 +831,21 @@ Always mention which derivatives signals support or contradict your analysis.
     }
 
     messages.push({
+      role: "system",
+      content: PUBLIC_AI_SAFETY_GUARDRAILS,
+    });
+
+    messages.push({
+      role: "system",
+      content: buildPublicAIDataBindingGuardrail({
+        route: 'msp-analyst',
+        query,
+        scanner: scanner as Record<string, unknown> | null | undefined,
+        context: context as Record<string, unknown> | null | undefined,
+      }),
+    });
+
+    messages.push({
       role: "user",
       content: query,
     });
@@ -962,6 +978,8 @@ Always mention which derivatives signals support or contradict your analysis.
         logger.warn('Risk gate override triggered', { authorization: aclResult.authorization, symbol: context?.symbol });
       }
     }
+
+    validatedText = appendPublicAISafetyCorrection(validatedText);
 
     return new Response(
       JSON.stringify({

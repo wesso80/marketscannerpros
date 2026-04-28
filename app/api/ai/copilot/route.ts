@@ -18,6 +18,7 @@ import { mapToScoringRegime, computeRegimeScore, estimateComponentsFromContext, 
 import { computeACLFromScoring } from '@/lib/ai/adaptiveConfidenceLens';
 import { fetchIntelligenceContext } from '@/lib/ai/intelligenceContext';
 import { buildV3EnginePrompt } from '@/lib/prompts/arcaV3Engine';
+import { PUBLIC_AI_SAFETY_GUARDRAILS, appendPublicAISafetyCorrection, buildPublicAIDataBindingGuardrail } from '@/lib/prompts/publicAiSafety';
 import { getEdgeContext } from '@/lib/intelligence/edgeContextBuilder';
 import { computePerformanceThrottle, applyPerformanceDampener } from '@/lib/ai/performanceThrottle';
 import { computeSessionPhaseOverlay } from '@/lib/ai/sessionPhase';
@@ -361,7 +362,18 @@ Effective Throttle: ${perfAdjusted.throttle.toFixed(3)}`,
       // Non-critical — intelligence context is supplementary
     }
 
+    messages.push({
+      role: 'system',
+      content: buildPublicAIDataBindingGuardrail({
+        route: 'ai-copilot',
+        query: message,
+        pageData: pageData || {},
+        context: pageContext as unknown as Record<string, unknown>,
+      }),
+    });
+
     // Add user message
+    messages.push({ role: 'system', content: PUBLIC_AI_SAFETY_GUARDRAILS });
     messages.push({ role: 'user', content: message });
 
     // Get tools for this skill
@@ -380,7 +392,7 @@ Effective Throttle: ${perfAdjusted.throttle.toFixed(3)}`,
     });
 
     const assistantMessage = completion.choices[0]?.message;
-    const responseContent = assistantMessage?.content || '';
+    const responseContent = appendPublicAISafetyCorrection(assistantMessage?.content || '');
     const toolCalls: AIToolCall[] = [];
     const suggestedActions: SuggestedAction[] = [];
 

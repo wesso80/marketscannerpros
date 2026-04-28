@@ -1,4 +1,4 @@
-import { GATE_MULTIPLIER, OPTIONS_SCORING_THRESHOLDS } from '@/lib/scoring/config';
+import { GATE_MULTIPLIER, OPTIONS_SCORING_THRESHOLDS } from './config';
 import {
   MSPContribution,
   MSPOptionCandidate,
@@ -6,7 +6,7 @@ import {
   MSPOptionStrategyType,
   MSPPermissionState,
   MSPScorePayloadV2,
-} from '@/lib/scoring/types';
+} from './types';
 
 export interface AVOptionRow {
   contractID?: string;
@@ -49,6 +49,21 @@ type CandidateScored = {
   payload: MSPScorePayloadV2;
   rank: { permissionRank: number; confidence: number; execution: number };
 };
+
+export interface OptionsCandidateEligibilityDiagnostics {
+  totalCandidates: number;
+  allowCandidates: number;
+  waitCandidates: number;
+  blockedCandidates: number;
+  topCandidateBlocked: boolean;
+  blockerCounts: Record<string, number>;
+  warnings: string[];
+}
+
+export interface OptionsCandidateScoringResult {
+  candidates: MSPScorePayloadV2[];
+  diagnostics: OptionsCandidateEligibilityDiagnostics;
+}
 
 const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, value));
 const clamp100 = (value: number) => clamp(value, 0, 100);
@@ -537,14 +552,46 @@ function scoreCandidate(input: ScoreInput, candidate: MSPOptionCandidate): Candi
   };
 }
 
-export function scoreOptionCandidatesV21(input: ScoreInput): MSPScorePayloadV2[] {
+export function scoreOptionCandidatesV21WithDiagnostics(input: ScoreInput): OptionsCandidateScoringResult {
   const candidates = buildCandidates(input.optionsRows, input.symbol, input.spot, input.expectedMovePct);
   const scored = candidates.map((candidate) => scoreCandidate(input, candidate));
-  return scored
+  const sorted = scored
     .sort((a, b) => {
       if (a.rank.permissionRank !== b.rank.permissionRank) return a.rank.permissionRank - b.rank.permissionRank;
       if (a.rank.confidence !== b.rank.confidence) return b.rank.confidence - a.rank.confidence;
       return b.rank.execution - a.rank.execution;
     })
     .map((item) => item.payload);
+
+  const blockerCounts: Record<string, number> = {};
+  for (const item of sorted) {
+    for (const blocker of item.permission.blockers) {
+      blockerCounts[blocker] = (blockerCounts[blocker] ?? 0) + 1;
+    }
+  }
+
+  const allowCandidates = sorted.filter((item) => item.permission.state === 'ALLOW').length;
+  const waitCandidates = sorted.filter((item) => item.permission.state === 'WAIT').length;
+  const blockedCandidates = sorted.filter((item) => item.permission.state === 'BLOCK').length;
+
+  return {
+    candidates: sorted,
+    diagnostics: {
+      totalCandidates: sorted.length,
+      allowCandidates,
+      waitCandidates,
+      blockedCandidates,
+      topCandidateBlocked: sorted[0]?.permission.state === 'BLOCK',
+      blockerCounts,
+      warnings: allowCandidates === 0 && sorted.length > 0
+        ? ['no_allow_candidates_after_spread_liquidity_data_gates']
+        : sorted.length === 0
+          ? ['no_option_candidates_built_from_chain']
+          : [],
+    },
+  };
+}
+
+export function scoreOptionCandidatesV21(input: ScoreInput): MSPScorePayloadV2[] {
+  return scoreOptionCandidatesV21WithDiagnostics(input).candidates;
 }

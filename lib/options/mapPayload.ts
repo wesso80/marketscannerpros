@@ -29,6 +29,10 @@ export function mapOptionsScanResponseToV3(raw: any, symbol: string): OptionsSca
   if (!data) return null;
 
   const top = data?.universalScoringV21?.topCandidates?.[0] || null;
+  const dataSources = data?.dataSources || raw?.dataSources || {};
+  const providerStatus = data?.dataQuality?.providerStatus || null;
+  const chainQuality = data?.dataQuality?.optionsChainQuality || data?.universalScoringV21?.diagnostics?.optionsChainQuality || null;
+  const candidateEligibility = data?.universalScoringV21?.diagnostics?.candidateEligibility || null;
   const permission = normalizePermission(top?.permission?.state);
   const direction = normalizeDirection(data?.direction || top?.direction);
 
@@ -73,7 +77,17 @@ export function mapOptionsScanResponseToV3(raw: any, symbol: string): OptionsSca
         latencySec: data?.dataQuality?.lastUpdated
           ? Math.max(0, Math.round((Date.now() - new Date(data.dataQuality.lastUpdated).getTime()) / 1000))
           : null,
-        feedStatus: data?.dataSources?.optionsChain || 'unknown',
+        feedStatus: providerStatus?.alertLevel === 'critical' ? 'critical' : providerStatus?.stale ? 'stale' : providerStatus?.degraded ? 'degraded' : dataSources?.optionsChain || 'unknown',
+        provider: providerStatus?.provider || dataSources?.optionsChain || 'unknown',
+        alertLevel: providerStatus?.alertLevel || 'none',
+        warnings: providerStatus?.warnings || [],
+        chainQuality: chainQuality?.status || 'unknown',
+        avgSpreadPct: chainQuality?.avgSpreadPct ?? null,
+        liquidContracts: chainQuality?.liquidContracts ?? 0,
+        totalContracts: chainQuality?.totalContracts ?? 0,
+        candidateGate: candidateEligibility
+          ? `${candidateEligibility.allowCandidates ?? 0} allow / ${candidateEligibility.waitCandidates ?? 0} wait / ${candidateEligibility.blockedCandidates ?? 0} blocked`
+          : 'unknown',
       },
     },
     decision: {
@@ -139,8 +153,10 @@ export function mapOptionsScanResponseToV3(raw: any, symbol: string): OptionsSca
       },
       liquidityTape: {
         magnetLevels: data?.dealerGamma?.nearSpotDominance ? 'Near-spot gamma magnet' : 'No clear magnet',
-        sweepFlags: blockers.find((item) => item.toLowerCase().includes('liquidity')) || 'No sweep flags',
-        volumeProfile: data?.institutionalFilter?.summary || 'No profile data',
+        sweepFlags: blockers.find((item) => item.toLowerCase().includes('liquidity')) || (chainQuality?.warnings || []).join(', ') || 'No sweep flags',
+        volumeProfile: chainQuality
+          ? `${chainQuality.liquidContracts}/${chainQuality.totalContracts} liquid contracts${chainQuality.avgSpreadPct == null ? '' : ` · avg spread ${chainQuality.avgSpreadPct}%`}`
+          : data?.institutionalFilter?.summary || 'No profile data',
       },
       aiNarrative: {
         summaryBullets: (data?.tradeSnapshot?.why || []).slice(0, 3),
@@ -157,6 +173,12 @@ export function mapOptionsScanResponseToV3(raw: any, symbol: string): OptionsSca
           const ms = Date.now() - new Date(data.dataQuality.lastUpdated).getTime();
           return Number.isFinite(ms) ? `${Math.max(0, Math.round(ms / 1000))}s` : 'Unknown';
         })(),
+        provider: providerStatus?.provider || dataSources?.optionsChain || 'unknown',
+        chainQuality: chainQuality?.status || 'unknown',
+        spread: chainQuality?.avgSpreadPct == null ? 'Unknown' : `${chainQuality.avgSpreadPct}% average spread`,
+        candidateGate: candidateEligibility
+          ? `${candidateEligibility.allowCandidates ?? 0} allow / ${candidateEligibility.waitCandidates ?? 0} wait / ${candidateEligibility.blockedCandidates ?? 0} blocked`
+          : 'Unknown',
         whyBlocked: blockers[0] || 'No hard blocker',
       },
     },

@@ -75,6 +75,25 @@ export interface ScanResult {
   score: number;
   direction?: string;
   signals?: { bullish: number; bearish: number; neutral: number };
+  scoreQuality?: {
+    evidenceLayers: number;
+    missingEvidencePenalty: number;
+    derivativesEvidenceStatus?: 'available' | 'missing' | 'not_applicable';
+    derivativesBoost?: number;
+    staleDataPenalty?: number;
+    freshnessStatus?: 'fresh' | 'stale' | 'missing';
+    liquidityPenalty?: number;
+    liquidityStatus?: 'sufficient' | 'thin' | 'missing' | 'not_applicable';
+  };
+  rankWarnings?: string[];
+  rankExplanation?: {
+    rank: number;
+    scoreGapToLeader: number;
+    summary: string;
+    strengths: string[];
+    penalties: string[];
+    warnings: string[];
+  };
   timeframe: string;
   type: string;
   price?: number;
@@ -114,6 +133,24 @@ export interface ScannerResponse {
     timestamp: string;
     count: number;
     localDemo?: boolean;
+    dataQuality?: {
+      source: string;
+      computedAt: string | null;
+      stale: boolean;
+      coverageScore: number | null;
+      warnings: string[];
+      providerStatus?: {
+        source: string;
+        provider: string;
+        live: boolean;
+        simulated: boolean;
+        stale: boolean;
+        degraded: boolean;
+        productionDemoEnabled: boolean;
+        alertLevel: 'none' | 'info' | 'warning' | 'critical';
+        warnings: string[];
+      } | null;
+    };
     riskGovernor?: { regime: string; riskMode: string; permission: string } | null;
   };
 }
@@ -281,7 +318,16 @@ export interface DVEResponse {
       expansion: { active: boolean; continuationProbability: number; stats: { currentBars: number; agePercentile: number } };
     };
     signal: { type: string; state: string; active: boolean; strength: number; triggerReason: string[] };
-    projection: { expectedMovePct: number; hitRate: number; sampleSize: number; averageBarsToMove: number };
+    projection: {
+      expectedMovePct: number;
+      hitRate: number;
+      sampleSize: number;
+      averageBarsToMove: number;
+      dispersionPct?: number;
+      projectionQuality?: 'unavailable' | 'low' | 'medium' | 'high';
+      projectionQualityScore?: number;
+      projectionWarning?: string;
+    };
     breakout: { score: number; label: string; components: Record<string, number> };
     trap: { detected: boolean; score: number };
     exhaustion: { level: number; label: string; signals: string[] };
@@ -426,6 +472,51 @@ export interface OptionsScanResponse {
     tradeSnapshot: { oneLine: string };
     unusualActivity: { hasUnusualActivity: boolean };
     locationContext: { keyZones: Array<{ level: number; type: string }> };
+    dataQuality?: {
+      freshness?: 'REALTIME' | 'DELAYED' | 'EOD' | 'STALE';
+      lastUpdated?: string;
+      providerStatus?: {
+        source: string;
+        provider: string;
+        live: boolean;
+        simulated: boolean;
+        stale: boolean;
+        degraded: boolean;
+        productionDemoEnabled: boolean;
+        alertLevel: 'none' | 'info' | 'warning' | 'critical';
+        warnings: string[];
+      } | null;
+      optionsChainQuality?: {
+        status: 'sufficient' | 'thin' | 'missing';
+        totalContracts: number;
+        quotedContracts: number;
+        liquidContracts: number;
+        avgSpreadPct: number | null;
+        warnings: string[];
+      };
+    };
+    universalScoringV21?: {
+      topCandidates?: unknown[];
+      diagnostics?: {
+        optionsProvider?: string;
+        warnings?: string[];
+        staleSeconds?: number;
+        tfConfluenceScore?: number;
+        candidateEligibility?: {
+          totalCandidates: number;
+          allowCandidates: number;
+          waitCandidates: number;
+          blockedCandidates: number;
+          topCandidateBlocked: boolean;
+          blockerCounts: Record<string, number>;
+          warnings: string[];
+        };
+      };
+    };
+  };
+  dataSources?: {
+    underlyingPrice: string;
+    optionsChain: string;
   };
 }
 
@@ -561,6 +652,7 @@ export function fetchFlow(symbol: string, marketType = 'equity'): Promise<{ succ
 
 // --- Close Calendar (Confluence Scan) ---
 export type CloseCalendarAnchor = 'NOW' | 'TODAY' | 'PRIOR_DAY' | 'EOW' | 'EOM' | 'CUSTOM';
+export type CloseCalendarScheduleModel = 'crypto_247' | 'equity_session' | 'forex_session';
 
 export interface ForwardCloseScheduleRow {
   tf: string;
@@ -580,9 +672,17 @@ export interface ForwardCloseCluster {
 }
 
 export interface ForwardCloseCalendar {
+  anchor: CloseCalendarAnchor;
   anchorTimeISO: string;
   horizonDays: number;
   horizonEndISO: string;
+  assetClass: 'crypto' | 'equity';
+  scheduleModel: CloseCalendarScheduleModel;
+  scheduleModelLabel: string;
+  scheduleBasis: string;
+  timezone: 'UTC' | 'America/New_York';
+  sessionMode: 'regular' | 'extended' | 'full';
+  warnings: string[];
   totalCloseEventsInHorizon: number;
   schedule: ForwardCloseScheduleRow[];
   closesOnAnchorDay: ForwardCloseScheduleRow[];
@@ -776,11 +876,13 @@ export interface BacktestResult {
   totalTrades: number;
   winningTrades: number;
   losingTrades: number;
+  breakevenTrades?: number;
   winRate: number;
   totalReturn: number;
   maxDrawdown: number;
   sharpeRatio: number;
-  profitFactor: number;
+  profitFactor: number | null;
+  profitFactorLabel?: string;
   avgWin: number;
   avgLoss: number;
   cagr: number;
@@ -797,6 +899,42 @@ export interface BacktestResult {
     applied: { startDate: string; endDate: string };
     bars: number;
     provider?: string;
+  };
+  executionAssumptions?: {
+    version: string;
+    strategyId: string;
+    timeframe: string;
+    assetType: 'stock' | 'crypto';
+    fillModel: {
+      label: string;
+      entryTiming: string;
+      exitTiming: string;
+      intrabarPriority: string;
+      intrabarAmbiguity: string;
+      endOfDataExit: string;
+    };
+    costs: {
+      slippageBps: number;
+      slippageApplied: boolean;
+      spreadModel: string;
+      commissionModel: string;
+      feeModel: string;
+      borrowCostsModel: string;
+      marketImpactModel: string;
+    };
+    liquidity: {
+      volumeData: string;
+      sizeModel: string;
+      partialFills: string;
+      depthModel: string;
+    };
+    sampleQuality: {
+      label: string;
+      totalTrades: number;
+      bars: number;
+      warning: string;
+    };
+    warnings: string[];
   };
   diagnostics?: {
     score: number;

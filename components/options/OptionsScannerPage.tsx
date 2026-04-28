@@ -244,7 +244,7 @@ function OptionsScannerPageContent() {
               greeksIv: { ivRank: 'N/A', ivPercentile: 'N/A', skewTerm: 'N/A', greeksSummary: 'N/A', gammaRisk: 'N/A' },
               liquidityTape: { magnetLevels: 'N/A', sweepFlags: 'N/A', volumeProfile: 'N/A' },
               aiNarrative: { summaryBullets: [], signalChecklist: [] },
-              riskCompliance: { dataIntegrity: 'N/A', latency: 'N/A', whyBlocked: 'N/A' },
+              riskCompliance: { dataIntegrity: 'N/A', latency: 'N/A', provider: 'N/A', chainQuality: 'N/A', spread: 'N/A', candidateGate: 'N/A', whyBlocked: 'N/A' },
             }
           }
           viewMode={viewMode}

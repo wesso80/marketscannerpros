@@ -2,19 +2,19 @@ import GEKeyValueRow from '@/src/features/goldenEgg/components/shared/GEKeyValue
 import { GoldenEggPayload } from '@/src/features/goldenEgg/types';
 
 type GERiskSizerInlineProps = {
-  rr: GoldenEggPayload['layer2']['execution']['rr'];
-  sizingHint?: GoldenEggPayload['layer2']['execution']['sizingHint'];
+  rr: GoldenEggPayload['layer2']['scenario']['hypotheticalRr'];
+  hypotheticalRisk?: GoldenEggPayload['layer2']['scenario']['hypotheticalRisk'];
 };
 
-export default function GERiskSizerInline({ rr, sizingHint }: GERiskSizerInlineProps) {
+export default function GERiskSizerInline({ rr, hypotheticalRisk }: GERiskSizerInlineProps) {
   return (
     <div className="space-y-2">
-      <GEKeyValueRow label="Expected R" value={(rr.expectedR ?? 0).toFixed(2)} />
-      <GEKeyValueRow label="Min R" value={(rr.minR ?? 0).toFixed(2)} />
-      {sizingHint && (
+      <GEKeyValueRow label="Scenario R" value={(rr.expectedR ?? 0).toFixed(2)} />
+      <GEKeyValueRow label="Minimum Scenario R" value={(rr.minR ?? 0).toFixed(2)} />
+      {hypotheticalRisk && (
         <GEKeyValueRow
-          label="Sizing Hint"
-          value={`${sizingHint.riskPct}% risk${sizingHint.riskUsd ? ` · $${sizingHint.riskUsd}` : ''}${sizingHint.sizeUnits ? ` · ${sizingHint.sizeUnits} units` : ''}`}
+          label="Hypothetical Risk Example"
+          value={`${hypotheticalRisk.riskPct}% model risk${hypotheticalRisk.riskUsd ? ` · $${hypotheticalRisk.riskUsd}` : ''}${hypotheticalRisk.sizeUnits ? ` · ${hypotheticalRisk.sizeUnits} units` : ''}`}
         />
       )}
     </div>

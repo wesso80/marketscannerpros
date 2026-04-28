@@ -31,6 +31,8 @@ export default function DeskHeaderSticky({ header }: DeskHeaderStickyProps) {
           <Pill label="Integrity" value={header.feed.integrity} />
           <Pill label="Latency" value={header.feed.latencySec == null ? 'N/A' : `${header.feed.latencySec}s`} />
           <Pill label="Feed" value={header.feed.feedStatus} />
+          <Pill label="Chain" value={header.feed.chainQuality || 'unknown'} />
+          <Pill label="Gate" value={header.feed.candidateGate || 'unknown'} />
         </div>
       </div>
     </div>

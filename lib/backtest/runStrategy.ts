@@ -12,6 +12,7 @@ import type { BacktestTrade } from './engine';
 import { runCoreStrategyStep } from './strategyExecutors';
 import { parseBacktestTimeframe } from './timeframe';
 import { enrichTradesWithMetadata } from './tradeForensics';
+import { BACKTEST_SLIPPAGE_BPS } from './assumptions';
 import {
   calculateEMA,
   calculateSMA,
@@ -106,15 +107,13 @@ function checkHitSLTP(
 // Applies realistic execution slippage (configurable basis points).
 // Entry: long fills higher, short fills lower (adverse).
 // Exit: SL/TP price already set, but signal-flip exits get adverse slippage.
-const SLIPPAGE_BPS = 5; // 5 basis points = 0.05% per fill
-
 function applyEntrySlippage(price: number, side: 'LONG' | 'SHORT'): number {
-  const slip = price * (SLIPPAGE_BPS / 10_000);
+  const slip = price * (BACKTEST_SLIPPAGE_BPS / 10_000);
   return side === 'LONG' ? price + slip : price - slip;
 }
 
 function applyExitSlippage(price: number, side: 'LONG' | 'SHORT'): number {
-  const slip = price * (SLIPPAGE_BPS / 10_000);
+  const slip = price * (BACKTEST_SLIPPAGE_BPS / 10_000);
   // Exit slippage is adverse: longs exit lower, shorts exit higher
   return side === 'LONG' ? price - slip : price + slip;
 }

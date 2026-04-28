@@ -1,4 +1,5 @@
 import { computeKpis } from '@/lib/journal/computeKpis';
+import { computePlaybookExpectancy } from '@/lib/journal/playbookExpectancy';
 import { JournalPayload, TradeAssetClass, TradeRowModel } from '@/types/journal';
 
 function normalizeAssetClass(raw?: string): TradeAssetClass {
@@ -48,6 +49,14 @@ export function mapJournalResponseToPayload(raw: any): JournalPayload {
   const kpis = computeKpis(trades);
   const openTrades = trades.filter((trade) => trade.status === 'open');
   const closedTrades = trades.filter((trade) => trade.status === 'closed');
+  const playbookExpectancy = computePlaybookExpectancy(trades);
+  const weakestPlaybookSample = playbookExpectancy.some((item) => item.sampleStatus === 'insufficient')
+    ? 'insufficient'
+    : playbookExpectancy.some((item) => item.sampleStatus === 'developing')
+    ? 'developing'
+    : playbookExpectancy.length > 0
+    ? 'minimum_met'
+    : undefined;
 
   return {
     header: {
@@ -80,6 +89,8 @@ export function mapJournalResponseToPayload(raw: any): JournalPayload {
       missingStops: openTrades.filter((trade) => trade.stop == null).length,
       missingOutcomes: closedTrades.filter((trade) => trade.rMultiple == null).length,
       reviewQueue: closedTrades.filter((trade) => Math.abs(Number(trade.rMultiple || 0)) >= 3).length,
+      playbookSamples: playbookExpectancy.length,
+      playbookSampleStatus: weakestPlaybookSample,
       lastLearningTs: new Date().toISOString(),
     },
     dockModules: {
@@ -96,6 +107,7 @@ export function mapJournalResponseToPayload(raw: any): JournalPayload {
           .filter((trade) => Math.abs(Number(trade.rMultiple || 0)) >= 3)
           .slice(0, 6)
           .map((trade) => ({ tradeId: trade.id, summary: `${trade.symbol} moved ${trade.rMultiple?.toFixed(2)}R` })),
+        playbookExpectancy,
       },
       labeling: {
         missingOutcomes: closedTrades.filter((trade) => trade.rMultiple == null).length,
