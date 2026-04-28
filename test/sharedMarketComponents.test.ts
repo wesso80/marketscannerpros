@@ -72,4 +72,17 @@ describe('shared market truth components', () => {
     expect(page).toContain('<RiskFlagPanel title="Options Terminal Risk Flags"');
     expect(page).toContain('<MarketStatusStrip items={optionsMarketStatusItems}');
   });
+
+  it('uses the shared truth, evidence, and risk components on the admin Morning Brief', () => {
+    const page = read('app/admin/morning-brief/page.tsx');
+
+    expect(page).toContain('import EvidenceStack from "@/components/market/EvidenceStack"');
+    expect(page).toContain('import MarketStatusStrip from "@/components/market/MarketStatusStrip"');
+    expect(page).toContain('import RiskFlagPanel');
+    expect(page).toContain('buildMarketDataProviderStatus');
+    expect(page).toContain('<EvidenceStack title="Morning Brief Evidence Stack"');
+    expect(page).toContain('<RiskFlagPanel title="Morning Brief Risk Flags"');
+    expect(page).toContain('<MarketStatusStrip items={statusItems}');
+    expect(page).not.toContain('function TruthTile');
+  });
 });

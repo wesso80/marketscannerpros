@@ -10,10 +10,14 @@ describe("morning brief data truth layer", () => {
     const page = read("app/admin/morning-brief/page.tsx");
 
     expect(page).toContain("DataTruthStrip");
-    expect(page).toContain("Risk Source");
-    expect(page).toContain("Worker Freshness");
+    expect(page).toContain("Morning Brief Evidence Stack");
+    expect(page).toContain("Morning Brief Risk Flags");
+    expect(page).toContain("MarketStatusStrip");
+    expect(page).toContain("Risk Permission");
+    expect(page).toContain("Worker Cache");
     expect(page).toContain("Scanner Health");
     expect(page).toContain("Learning Sample");
+    expect(page).toContain("buildMarketDataProviderStatus");
     expect(page).toContain("brief.risk.source");
     expect(page).toContain("brief.universe.workerStatus.freshness");
     expect(page).toContain("brief.expectancy.sampleTrades");

@@ -405,7 +405,7 @@ Manual QA:
 5. Add source-quality weighting to every engine.
 
 ### Design Upgrade
-1. First four passes completed: added shared `MarketStatusStrip`, `DataFreshnessBadge`, `EvidenceStack`, and `RiskFlagPanel` under `components/market/`; wired scanner Data Truth/status badges; migrated Golden Egg's evidence stack, data-truth strip, and invalidation/risk flags; migrated the Volatility Engine/DVE summary layer; then migrated Options Terminal chain/provider/liquidity/IV summary onto shared data-truth, evidence, and risk components. Next pass should migrate admin Morning Brief local variants.
+1. Shared market truth consolidation completed for the core surfaces in this pass: added shared `MarketStatusStrip`, `DataFreshnessBadge`, `EvidenceStack`, and `RiskFlagPanel` under `components/market/`; wired scanner Data Truth/status badges; migrated Golden Egg's evidence stack, data-truth strip, and invalidation/risk flags; migrated the Volatility Engine/DVE summary layer; migrated Options Terminal chain/provider/liquidity/IV summary; and migrated admin Morning Brief risk/source/freshness/scanner/learning truth tiles onto the shared components.
 2. Convert public Golden Egg from execution-like layout to educational evidence packet.
 3. Add TimeClusterTimeline and VolatilityPhaseCard.
 4. Reduce repeated tool pages and merge overlapping options/research views.

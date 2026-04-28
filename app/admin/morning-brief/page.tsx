@@ -5,6 +5,10 @@ import Link from "next/link";
 import AdminCard from "@/components/admin/shared/AdminCard";
 import SectionTitle from "@/components/admin/shared/SectionTitle";
 import StatusPill from "@/components/admin/shared/StatusPill";
+import EvidenceStack from "@/components/market/EvidenceStack";
+import MarketStatusStrip from "@/components/market/MarketStatusStrip";
+import RiskFlagPanel, { type RiskFlag } from "@/components/market/RiskFlagPanel";
+import { buildMarketDataProviderStatus } from "@/lib/scanner/providerStatus";
 
 type ScannerHit = {
   symbol: string;
@@ -379,20 +383,15 @@ function catalystTone(label: MorningCatalyst["impactLabel"]): "green" | "yellow"
   return "blue";
 }
 
-function sourceTone(source: MorningBrief["risk"]["source"]): "green" | "yellow" | "red" {
-  if (source === "portfolio_journal") return "green";
-  if (source === "operator_state") return "yellow";
-  return "red";
-}
-
-function freshnessTone(freshness: MorningBrief["universe"]["workerStatus"]["freshness"]): "green" | "yellow" | "red" {
-  if (freshness === "fresh") return "green";
-  if (freshness === "stale") return "yellow";
-  return "red";
-}
-
 function formatSource(value: string) {
   return value.replace(/_/g, " ").toUpperCase();
+}
+
+function riskSeverity(label: string): RiskFlag["severity"] {
+  const lower = label.toLowerCase();
+  if (lower.includes("block") || lower.includes("locked") || lower.includes("fallback") || lower.includes("unknown")) return "critical";
+  if (lower.includes("stale") || lower.includes("error") || lower.includes("low") || lower.includes("defensive") || lower.includes("throttled")) return "warning";
+  return "info";
 }
 
 export default function MorningBriefPage() {
@@ -1035,53 +1034,121 @@ function Metric({ label, value, tone = "neutral" }: { label: string; value: stri
 function DataTruthStrip({ brief }: { brief: MorningBrief }) {
   const hasLiveRisk = brief.risk.source === "portfolio_journal" && brief.risk.equity > 0;
   const learningSample = brief.learning.labeled + brief.learning.briefFeedbackTotal;
-  const sampleTone: "green" | "yellow" | "red" = learningSample >= 30 ? "green" : learningSample >= 10 ? "yellow" : "red";
-  const scanTone: "green" | "yellow" | "red" = (brief.health.errorsCount ?? 0) > 0 || brief.health.feed !== "HEALTHY" ? "yellow" : freshnessTone(brief.universe.workerStatus.freshness);
+  const workerFreshness = brief.universe.workerStatus.freshness;
+  const scannerWarnings = [
+    (brief.health.errorsCount ?? 0) > 0 ? `${brief.health.errorsCount ?? 0} scanner errors.` : null,
+    brief.health.feed !== "HEALTHY" ? `Feed status is ${brief.health.feed}.` : null,
+    workerFreshness !== "fresh" ? `Worker freshness is ${workerFreshness}.` : null,
+  ].filter(Boolean) as string[];
+  const riskWarnings = [
+    !hasLiveRisk ? `Risk source is ${formatSource(brief.risk.source)}.` : null,
+    brief.risk.killSwitchActive ? "Risk kill switch active." : null,
+    ...brief.risk.notes.slice(0, 2),
+  ].filter(Boolean) as string[];
+  const learningWarnings = [
+    learningSample < 30 ? `Learning sample is still low at ${learningSample} labels.` : null,
+    brief.expectancy.sampleTrades < 30 ? `${brief.expectancy.sampleTrades} closed journal trades in expectancy sample.` : null,
+    brief.learning.pending > 0 ? `${brief.learning.pending} pending signal labels.` : null,
+  ].filter(Boolean) as string[];
+  const statusItems = [
+    {
+      label: "Risk",
+      status: buildMarketDataProviderStatus({
+        source: "admin-risk",
+        provider: formatSource(brief.risk.source),
+        stale: !brief.risk.lastUpdatedAt,
+        degraded: !hasLiveRisk || brief.risk.killSwitchActive,
+        warnings: riskWarnings,
+      }),
+      coverageScore: hasLiveRisk ? 100 : brief.risk.source === "operator_state" ? 60 : 20,
+      computedAt: brief.risk.lastUpdatedAt ?? null,
+    },
+    {
+      label: "Worker",
+      status: buildMarketDataProviderStatus({
+        source: "admin-worker-cache",
+        provider: brief.universe.workerStatus.lastWorkerName || "morning worker",
+        stale: workerFreshness === "stale",
+        degraded: workerFreshness !== "fresh" || brief.universe.workerStatus.lastWorkerErrors > 0,
+        warnings: [brief.universe.workerStatus.note, brief.universe.workerStatus.lastWorkerErrors > 0 ? `${brief.universe.workerStatus.lastWorkerErrors} worker errors.` : null].filter(Boolean) as string[],
+      }),
+      coverageScore: workerFreshness === "fresh" ? 100 : workerFreshness === "stale" ? 60 : 20,
+      computedAt: brief.universe.workerStatus.lastWorkerRunAt ?? brief.universe.workerStatus.latestScannerCacheAt,
+    },
+    {
+      label: "Scanner",
+      status: buildMarketDataProviderStatus({
+        source: "admin-scanner-health",
+        provider: `${brief.health.scanner} / ${brief.health.feed}`,
+        degraded: scannerWarnings.length > 0,
+        warnings: scannerWarnings,
+      }),
+      coverageScore: brief.universe.totalCandidates > 0 ? Math.round((brief.universe.scannedCount / brief.universe.totalCandidates) * 100) : 0,
+      computedAt: brief.health.lastScanAt ?? null,
+    },
+    {
+      label: "Learning",
+      status: buildMarketDataProviderStatus({
+        source: "admin-learning-sample",
+        provider: "journal and brief feedback",
+        degraded: learningSample < 30 || brief.expectancy.sampleTrades < 30,
+        warnings: learningWarnings,
+      }),
+      coverageScore: Math.min(100, Math.round((learningSample / 30) * 100)),
+      computedAt: brief.expectancy.generatedAt,
+    },
+  ];
+  const evidenceItems = [
+    {
+      label: "Risk Permission",
+      value: brief.risk.killSwitchActive ? "BLOCK" : brief.risk.permission,
+      status: hasLiveRisk && !brief.risk.killSwitchActive ? "supportive" as const : "conflicting" as const,
+      detail: brief.risk.notes[0] || "Risk source unavailable.",
+    },
+    {
+      label: "Worker Cache",
+      value: workerFreshness.toUpperCase(),
+      status: workerFreshness === "fresh" ? "supportive" as const : workerFreshness === "stale" ? "neutral" as const : "missing" as const,
+      detail: brief.universe.workerStatus.note,
+    },
+    {
+      label: "Scanner Health",
+      value: `${brief.health.scanner} / ${brief.health.feed}`,
+      status: scannerWarnings.length === 0 ? "supportive" as const : "conflicting" as const,
+      detail: `${brief.health.errorsCount ?? 0} errors; ${brief.health.symbolsScanned ?? brief.universe.scannedCount} symbols scanned${brief.health.lastScanAt ? `; scan ${formatMaybeDate(brief.health.lastScanAt)}` : ""}.`,
+    },
+    {
+      label: "Learning Sample",
+      value: `${learningSample} labels`,
+      status: learningSample >= 30 ? "supportive" as const : learningSample >= 10 ? "neutral" as const : "missing" as const,
+      detail: `${brief.expectancy.sampleTrades} closed journal trades; ${brief.learning.pending} pending signal labels.`,
+    },
+  ];
+  const riskFlags = [
+    brief.risk.killSwitchActive ? "Risk kill switch active." : null,
+    !hasLiveRisk ? `Risk source is ${formatSource(brief.risk.source)}.` : null,
+    workerFreshness !== "fresh" ? `Worker freshness is ${workerFreshness}.` : null,
+    (brief.health.errorsCount ?? 0) > 0 ? `${brief.health.errorsCount ?? 0} scanner errors.` : null,
+    brief.health.feed !== "HEALTHY" ? `Feed status is ${brief.health.feed}.` : null,
+    brief.riskGovernor.mode === "LOCKED" ? "Risk governor locked." : null,
+    brief.riskGovernor.mode === "DEFENSIVE" || brief.riskGovernor.mode === "THROTTLED" ? `Risk governor ${brief.riskGovernor.mode}.` : null,
+    learningSample < 10 ? "Learning sample too small for strong calibration." : null,
+    ...brief.riskGovernor.lockouts.slice(0, 3),
+    ...brief.commander.blocks.slice(0, 3),
+  ].filter(Boolean).map((label) => ({
+    label: label as string,
+    severity: riskSeverity(label as string),
+    detail: "Private Morning Brief constraint to review before acting.",
+  }));
 
   return (
-    <section className="mb-5 grid gap-3 lg:grid-cols-4">
-      <TruthTile
-        title="Risk Source"
-        status={hasLiveRisk ? "LIVE PORTFOLIO" : formatSource(brief.risk.source)}
-        tone={sourceTone(brief.risk.source)}
-        detail={brief.risk.notes[0] || "Risk source unavailable."}
-      />
-      <TruthTile
-        title="Worker Freshness"
-        status={brief.universe.workerStatus.freshness.toUpperCase()}
-        tone={freshnessTone(brief.universe.workerStatus.freshness)}
-        detail={brief.universe.workerStatus.note}
-      />
-      <TruthTile
-        title="Scanner Health"
-        status={`${brief.health.scanner} / ${brief.health.feed}`}
-        tone={scanTone}
-        detail={`${brief.health.errorsCount ?? 0} errors · ${brief.health.symbolsScanned ?? brief.universe.scannedCount} symbols scanned${brief.health.lastScanAt ? ` · scan ${formatMaybeDate(brief.health.lastScanAt)}` : ""}.`}
-      />
-      <TruthTile
-        title="Learning Sample"
-        status={`${learningSample} labels`}
-        tone={sampleTone}
-        detail={`${brief.expectancy.sampleTrades} closed journal trades · ${brief.learning.pending} pending signal labels.`}
-      />
-    </section>
-  );
-}
-
-function TruthTile({ title, status, detail, tone }: { title: string; status: string; detail: string; tone: "green" | "yellow" | "red" }) {
-  const toneClasses = tone === "green"
-    ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-100"
-    : tone === "yellow"
-      ? "border-amber-500/25 bg-amber-500/10 text-amber-100"
-      : "border-red-500/25 bg-red-500/10 text-red-100";
-  return (
-    <div className={`rounded-lg border p-3 ${toneClasses}`}>
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="text-[0.68rem] font-black uppercase tracking-[0.12em] opacity-70">{title}</div>
-        <StatusPill label={status} tone={tone} />
+    <section className="mb-5 space-y-3">
+      <div className="grid gap-3 xl:grid-cols-[1.2fr_1fr]">
+        <EvidenceStack title="Morning Brief Evidence Stack" items={evidenceItems} />
+        <RiskFlagPanel title="Morning Brief Risk Flags" flags={riskFlags} emptyText="No active Morning Brief risk, freshness, scanner, or calibration flags." />
       </div>
-      <div className="text-xs leading-5 opacity-85">{detail}</div>
-    </div>
+      <MarketStatusStrip items={statusItems} className="md:grid-cols-4" />
+    </section>
   );
 }
 
