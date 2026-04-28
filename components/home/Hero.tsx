@@ -18,21 +18,20 @@ export default function Hero() {
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
           </span>
-          Structured research across crypto, equities, options &amp; commodities
+          Educational scanner, confluence, testing, and review workflow
         </div>
 
         {/* H1 */}
-        <h1 className="mx-auto max-w-3xl text-4xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-5xl md:text-6xl">
-          See The Market{' '}
+        <h1 className="mx-auto max-w-4xl text-4xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-5xl md:text-6xl">
+          Educational market intelligence{' '}
           <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
-            With Clarity
+            for cleaner context
           </span>
         </h1>
 
         {/* Subtitle */}
-        <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-slate-400 sm:text-lg md:text-xl">
-          Educational market analysis, confluence detection,
-          options flow and AI research context in one platform.
+        <p className="mx-auto mt-5 max-w-3xl text-base leading-relaxed text-slate-400 sm:text-lg md:text-xl">
+          Scan equities, crypto, options flow, volatility, and multi-timeframe confluence in one research workflow. No brokerage execution. No financial advice.
         </p>
 
         {/* CTAs */}
@@ -50,21 +49,8 @@ export default function Hero() {
             href="/tools/scanner"
             className="inline-flex items-center gap-2 rounded-lg border border-slate-600 bg-slate-800/50 px-6 py-3.5 text-base font-semibold text-slate-200 transition-colors hover:border-slate-500 hover:bg-slate-800 hover:text-white"
           >
-            Try the Scanner
+            Open Scanner Preview
           </Link>
-        </div>
-
-        {/* Platform preview image */}
-        <div className="relative mx-auto mt-12 w-full max-w-4xl">
-          <div className="relative overflow-hidden rounded-lg border border-white/10 shadow-2xl shadow-black/30">
-            <img
-              src="/logos/landing-hero.png"
-              alt="MarketScannerPros platform — multi-asset scanner, confluence detection, and AI analysis dashboard"
-              className="w-full"
-              loading="eager"
-            />
-            <div className="absolute inset-0 rounded-lg border border-white/5" />
-          </div>
         </div>
 
         {/* Data provider logos */}

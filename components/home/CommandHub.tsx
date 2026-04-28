@@ -153,18 +153,15 @@ export default function CommandHub() {
       {/* ─── Coded Hero ─── */}
       <Hero />
 
-      {/* ─── Inside the platform (UI preview, sample data) ─── */}
-      <HomePreviewStrip />
-
-      {/* ─── Guided tool chooser ─── */}
+      {/* ─── Guided workflow chooser ─── */}
       <section className="mx-auto w-full max-w-7xl px-4 pt-10 md:px-6">
         <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-5 md:p-6">
           <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-400">Not sure where to start?</p>
-              <h2 className="mt-1 text-2xl font-bold text-white">Choose by trader workflow</h2>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-400">Start with the workflow</p>
+              <h2 className="mt-1 text-2xl font-bold text-white">Find, validate, test, then track.</h2>
             </div>
-            <Link href="/guide" className="text-sm font-semibold text-emerald-300 hover:text-emerald-200">Open full platform guide →</Link>
+            <Link href="/tools" className="text-sm font-semibold text-emerald-300 hover:text-emerald-200">Open workflow map →</Link>
           </div>
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {guidedPaths.map((path) => (
@@ -178,6 +175,9 @@ export default function CommandHub() {
           </div>
         </div>
       </section>
+
+      {/* ─── Inside the platform (UI preview, sample data) ─── */}
+      <HomePreviewStrip />
 
       {/* ─── Stats Bar ─── */}
       <SocialProof />

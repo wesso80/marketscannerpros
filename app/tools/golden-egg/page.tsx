@@ -38,10 +38,98 @@ const CRYPTO_SET = new Set([
 const DeepAnalysis = dynamic(() => import('@/app/tools/deep-analysis/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Deep Analysis…</div> });
 const IntradayCharts = dynamic(() => import('@/app/tools/intraday-charts/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Charts…</div> });
 const CompanyOverview = dynamic(() => import('@/app/tools/company-overview/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Fundamentals…</div> });
-const LiquiditySweep = dynamic(() => import('@/app/tools/liquidity-sweep/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Liquidity Sweep…</div> });
 
-const GE_TABS = ['Verdict', 'Chart', 'Deep Analysis', 'Fundamentals', 'Liquidity'] as const;
+const GE_TABS = ['Verdict', 'Chart', 'Deep Analysis', 'Fundamentals'] as const;
 type GETab = typeof GE_TABS[number];
+
+const GE_TAB_META: Record<GETab, { eyebrow: string; description: string }> = {
+  Verdict: {
+    eyebrow: '1. Decision packet',
+    description: 'Answer first: alignment, data trust, reference, invalidation, and next check.',
+  },
+  Chart: {
+    eyebrow: '2. Price context',
+    description: 'Inspect price action and intraday structure around the scenario levels.',
+  },
+  'Deep Analysis': {
+    eyebrow: '3. Evidence detail',
+    description: 'Review the deeper technical evidence behind the verdict.',
+  },
+  Fundamentals: {
+    eyebrow: '4. Business context',
+    description: 'Check company or asset fundamentals before trusting the setup.',
+  },
+};
+
+function GoldenEggTabRail({ activeTab, onSelectTab }: { activeTab: GETab; onSelectTab: (tab: GETab) => void }) {
+  return (
+    <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2" aria-label="Golden Egg validation views">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
+        <div>
+          <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-amber-300">Validation workbench</div>
+          <div className="text-[0.72rem] text-slate-500">Move left to right: verdict, chart, evidence, then fundamentals.</div>
+        </div>
+        <a href="/tools/liquidity-sweep" className="rounded-md border border-slate-700/70 bg-slate-900/60 px-3 py-1.5 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-400 no-underline transition hover:border-emerald-400/30 hover:text-emerald-300">
+          Open Liquidity Sweep
+        </a>
+      </div>
+
+      <div className="grid gap-2 lg:grid-cols-4">
+        {GE_TABS.map((tab) => {
+          const meta = GE_TAB_META[tab];
+          const isActive = activeTab === tab;
+          return (
+            <button
+              key={tab}
+              type="button"
+              aria-pressed={isActive}
+              onClick={() => onSelectTab(tab)}
+              className={`rounded-lg border px-3 py-2 text-left transition ${
+                isActive
+                  ? 'border-emerald-400/40 bg-emerald-400/10 text-white'
+                  : 'border-white/10 bg-white/[0.025] text-slate-300 hover:border-emerald-400/30 hover:bg-emerald-400/[0.05]'
+              }`}
+            >
+              <div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{meta.eyebrow}</div>
+              <div className={`mt-1 text-sm font-black ${isActive ? 'text-emerald-200' : 'text-white'}`}>{tab}</div>
+              <div className="mt-1 text-[11px] leading-4 text-slate-500">{meta.description}</div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function GoldenEggSubviewFrame({
+  tab,
+  symbol,
+  children,
+}: {
+  tab: Exclude<GETab, 'Verdict'>;
+  symbol: string;
+  children: React.ReactNode;
+}) {
+  const meta = GE_TAB_META[tab];
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Golden Egg subview</div>
+            <h2 className="mt-1 text-base font-black text-white">{tab} check for {symbol}</h2>
+            <p className="mt-1 text-xs leading-5 text-slate-400">{meta.description}</p>
+          </div>
+          <div className="rounded-full border border-slate-700/70 bg-slate-950/60 px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-500">
+            {meta.eyebrow}
+          </div>
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
 
 /* ─── Phase 5: Cross-Market Alignment ─── */
 function deriveCrossMarketAlignment(signals?: Array<{ source: string; regime: string; weight: number; stale: boolean }>): { alignment: 'supportive' | 'neutral' | 'headwind'; factors: string[] } {
@@ -456,7 +544,7 @@ export default function GoldenEggPage() {
 
   return (
     <div className="space-y-4">
-      <SectionHeader title="Golden Egg" subtitle="Single-symbol confluence: regime, bias, volatility, liquidity, and scenario context" />
+      <SectionHeader title="Golden Egg" subtitle="Single-symbol confluence: regime, bias, volatility, and scenario context" />
       <ComplianceDisclaimer collapsible />
 
       {isAuthBlocked && (
@@ -465,13 +553,13 @@ export default function GoldenEggPage() {
             <div className="mb-2 text-sm font-semibold text-amber-300">Sign in required</div>
             <h2 className="text-xl font-bold text-white">Unlock Golden Egg confluence analysis</h2>
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-400">
-              Golden Egg is a Pro Trader workflow for reviewing one symbol across regime, confluence, volatility, liquidity, and educational scenario context.
+              Golden Egg is a Pro Trader workflow for reviewing one symbol across regime, confluence, volatility, and educational scenario context.
             </p>
             <div className="mt-5 grid gap-2 text-left text-xs text-slate-300 sm:grid-cols-2">
               <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Regime and bias context</div>
               <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Confluence and data-quality checks</div>
               <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Scenario reference and invalidation levels</div>
-              <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Volatility, liquidity, and timing context</div>
+              <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Volatility, flow, and timing context</div>
             </div>
             <div className="mt-6 flex flex-col items-center justify-center gap-2 sm:flex-row">
               <a href="/auth" className="inline-flex rounded-lg bg-emerald-500/20 px-4 py-2 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500/30">Sign In</a>
@@ -546,38 +634,24 @@ export default function GoldenEggPage() {
       </div>}
 
       {/* ─── Tab Bar ─── */}
-      {!isAuthBlocked && <div className="flex items-center gap-1 overflow-x-auto border-b border-slate-800/50 pb-1">
-        {GE_TABS.map(tab => (
-          <button
-            key={tab}
-            type="button"
-            aria-pressed={activeTab === tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-3 py-1.5 text-[11px] rounded-t-md whitespace-nowrap transition-colors ${
-              activeTab === tab
-                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 border-b-0'
-                : 'text-slate-400 hover:bg-slate-800/60 border border-transparent'
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>}
+      {!isAuthBlocked && <GoldenEggTabRail activeTab={activeTab} onSelectTab={setActiveTab} />}
 
       {/* ─── Deep-dive Tabs (v1 components) ─── */}
       {!isAuthBlocked && activeTab === 'Chart' && (
-        <Card><IntradayCharts symbol={sym} /></Card>
+        <GoldenEggSubviewFrame tab="Chart" symbol={sym}>
+          <IntradayCharts symbol={sym} />
+        </GoldenEggSubviewFrame>
       )}
       {!isAuthBlocked && activeTab === 'Deep Analysis' && (
-        <Card><DeepAnalysis symbol={sym} /></Card>
+        <GoldenEggSubviewFrame tab="Deep Analysis" symbol={sym}>
+          <DeepAnalysis symbol={sym} />
+        </GoldenEggSubviewFrame>
       )}
       {!isAuthBlocked && activeTab === 'Fundamentals' && (
-        <Card><CompanyOverview symbol={sym} /></Card>
+        <GoldenEggSubviewFrame tab="Fundamentals" symbol={sym}>
+          <CompanyOverview symbol={sym} />
+        </GoldenEggSubviewFrame>
       )}
-      {!isAuthBlocked && activeTab === 'Liquidity' && (
-        <Card><LiquiditySweep /></Card>
-      )}
-
       {/* ─── Verdict Tab (main GE analysis) ─── */}
       {!isAuthBlocked && activeTab === 'Verdict' && <>
       {/* Loading state */}

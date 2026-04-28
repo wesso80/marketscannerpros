@@ -9,7 +9,7 @@ export type WorkflowTool = {
 };
 
 export type ToolWorkflow = {
-  id: 'find' | 'validate' | 'test' | 'track' | 'advanced';
+  id: 'find' | 'validate' | 'mechanics' | 'test' | 'track' | 'advanced';
   title: string;
   subtitle: string;
   outcome: string;
@@ -18,9 +18,10 @@ export type ToolWorkflow = {
 
 export const primaryNavTools = [
   { href: '/tools/dashboard', label: 'Dashboard' },
-  { href: '/tools', label: 'Tools' },
+  { href: '/tools', label: 'Workflow' },
   { href: '/tools/scanner', label: 'Scanner' },
   { href: '/tools/golden-egg', label: 'Golden Egg' },
+  { href: '/tools/terminal', label: 'Terminal' },
   { href: '/tools/backtest', label: 'Backtest' },
   { href: '/tools/journal', label: 'Journal' },
   { href: '/tools/workspace', label: 'Workspace' },
@@ -48,12 +49,23 @@ export const toolWorkflows: ToolWorkflow[] = [
       { href: '/tools/golden-egg', label: 'Golden Egg', description: 'Single-symbol confluence summary and educational scenario view.', tier: 'pro', role: 'primary' },
       { href: '/tools/deep-analysis', label: 'Deep Analysis', description: 'More detailed symbol research, risks, and evidence checks.', tier: 'pro', role: 'primary' },
       { href: '/tools/options-flow', label: 'Options Flow', description: 'Large-options-flow estimates and unusual activity context.', tier: 'pro_trader', role: 'advanced' },
-      { href: '/tools/liquidity-sweep', label: 'Liquidity Sweep', description: 'Sweep/reclaim style context and liquidity-zone research.', tier: 'pro_trader', role: 'advanced' },
+    ],
+  },
+  {
+    id: 'mechanics',
+    title: '3. Inspect market mechanics',
+    subtitle: 'Check timing, options, flow, crypto derivatives, and close-calendar pressure before testing.',
+    outcome: 'A mechanics read that explains whether the validated scenario has timing, flow, and positioning support.',
+    tools: [
+      { href: '/tools/terminal', label: 'Terminal', description: 'Close calendar, options, crypto, flow, and time-confluence checks before backtesting.', tier: 'pro', role: 'primary' },
+      { href: '/tools/options-terminal', label: 'Options Terminal', description: 'Options chain, strikes, spreads, IV, and liquidity context.', tier: 'pro_trader', role: 'advanced' },
+      { href: '/tools/options-confluence', label: 'Options Confluence', description: 'Options positioning and confluence dashboard.', tier: 'pro_trader', role: 'advanced' },
+      { href: '/tools/time-scanner', label: 'Time Scanner', description: 'Time-window and session confluence research.', tier: 'pro_trader', role: 'advanced' },
     ],
   },
   {
     id: 'test',
-    title: '3. Test the idea',
+    title: '4. Test the idea',
     subtitle: 'Check whether similar conditions had useful historical behaviour.',
     outcome: 'A paper/simulation view of the research idea before journaling it.',
     tools: [
@@ -64,7 +76,7 @@ export const toolWorkflows: ToolWorkflow[] = [
   },
   {
     id: 'track',
-    title: '4. Track and improve',
+    title: '5. Track and improve',
     subtitle: 'Turn research into a repeatable learning loop.',
     outcome: 'A logged process, performance history, and better future filters.',
     tools: [
@@ -80,10 +92,8 @@ export const toolWorkflows: ToolWorkflow[] = [
     subtitle: 'Specialist tools for experienced users after the core workflow is clear.',
     outcome: 'More granular context for options, intraday, crypto, volatility, and market structure.',
     tools: [
-      { href: '/tools/options-terminal', label: 'Options Terminal', description: 'Advanced options chain and Greeks research.', tier: 'pro_trader', role: 'specialist' },
-      { href: '/tools/options-confluence', label: 'Options Confluence', description: 'Options positioning and confluence dashboard.', tier: 'pro_trader', role: 'specialist' },
       { href: '/tools/scalper', label: 'Scalper', description: 'Intraday 5/15m educational scan surface.', tier: 'pro_trader', role: 'specialist' },
-      { href: '/tools/time-scanner', label: 'Time Scanner', description: 'Time-window and session confluence research.', tier: 'pro_trader', role: 'specialist' },
+      { href: '/tools/liquidity-sweep', label: 'Liquidity Sweep', description: 'Broad sweep/reclaim scanner for liquidity-zone research.', tier: 'pro_trader', role: 'specialist' },
       { href: '/tools/volatility-engine', label: 'Volatility Engine', description: 'Volatility expansion/compression research.', tier: 'pro_trader', role: 'specialist' },
       { href: '/tools/crypto-dashboard', label: 'Crypto Derivatives', description: 'Crypto derivatives, funding, and open-interest context.', tier: 'pro_trader', role: 'specialist' },
     ],

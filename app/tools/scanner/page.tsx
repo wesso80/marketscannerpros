@@ -224,8 +224,59 @@ function deriveLifecycleState(r: ScanResult, regime: string): LifecycleState {
   return 'DISCOVERED';
 }
 type ScannerMode = 'ranked' | 'pro';
+type ScannerStage = ScannerMode | 'analysis';
 type AssetClass = 'crypto' | 'equity' | 'forex';
 type ScanDepth = 'light' | 'deep';
+
+function ScannerFlowRail({
+  activeStage,
+  selectedSymbol,
+  onSelectMode,
+}: {
+  activeStage: ScannerStage;
+  selectedSymbol: string | null;
+  onSelectMode: (mode: ScannerMode) => void;
+}) {
+  const stages: Array<{ id: ScannerStage; label: string; eyebrow: string; detail: string }> = [
+    { id: 'ranked', label: 'Ranked', eyebrow: '1. Triage', detail: 'Auto-ranked market queue' },
+    { id: 'pro', label: 'Pro', eyebrow: '2. Configure', detail: 'Manual scan controls' },
+    { id: 'analysis', label: 'Analysis', eyebrow: '3. Inspect', detail: selectedSymbol ? `${selectedSymbol} case review` : 'Opens after symbol select' },
+  ];
+
+  return (
+    <div className="grid gap-2 md:grid-cols-3" aria-label="Scanner workflow views">
+      {stages.map((stage) => {
+        const isActive = activeStage === stage.id;
+        const isAnalysis = stage.id === 'analysis';
+        const disabled = isAnalysis && !selectedSymbol;
+        const content = (
+          <div className={`h-full rounded-lg border px-3 py-2 text-left transition ${
+            isActive
+              ? 'border-emerald-400/40 bg-emerald-400/10 text-white'
+              : disabled
+                ? 'border-white/10 bg-white/[0.025] text-slate-600'
+                : 'border-white/10 bg-white/[0.035] text-slate-300 hover:border-emerald-400/30 hover:bg-emerald-400/[0.05]'
+          }`}>
+            <div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{stage.eyebrow}</div>
+            <div className={`mt-1 text-sm font-black ${isActive ? 'text-emerald-200' : disabled ? 'text-slate-600' : 'text-white'}`}>{stage.label}</div>
+            <div className="mt-0.5 text-[11px] leading-4 text-slate-500">{stage.detail}</div>
+          </div>
+        );
+
+        if (stage.id === 'ranked' || stage.id === 'pro') {
+          const selectableStage = stage.id;
+          return (
+            <button key={stage.id} type="button" onClick={() => onSelectMode(selectableStage)} aria-pressed={isActive} className="block w-full">
+              {content}
+            </button>
+          );
+        }
+
+        return <div key={stage.id} aria-disabled={disabled}>{content}</div>;
+      })}
+    </div>
+  );
+}
 
 /* ─── Detail data from /api/scanner/run ─── */
 interface SymbolDetail {
@@ -286,12 +337,13 @@ async function addToWatchlist(symbol: string, assetType: string, price?: number)
 }
 
 /* ─── Inline Detail Panel ─── */
-function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeRegime }: {
+function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeRegime, returnLabel }: {
   detail: SymbolDetail;
   timeframeLabel: string;
   onClose: () => void;
   assetType: string;
   activeRegime?: string;
+  returnLabel?: string;
 }) {
   const [flashMsg, setFlashMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [savingCase, setSavingCase] = useState(false);
@@ -453,15 +505,21 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
       )}
 
       {/* Action buttons */}
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-emerald-300">Analysis view</div>
+          <div className="text-[0.72rem] text-slate-500">Symbol case review from the active scanner workflow.</div>
+        </div>
+        <div className="flex items-center gap-2">
         <Link href={`/tools/workspace?tab=Backtest&symbol=${encodeURIComponent(detail.symbol)}`}
           className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-slate-400 no-underline hover:bg-slate-700/50 transition-colors">
           Open Historical Test
         </Link>
         <button type="button" onClick={onClose}
           className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-muted)]">
-          Back to Rank
+          {returnLabel ?? 'Back to Scanner'}
         </button>
+        </div>
       </div>
 
       {/* Header row */}
@@ -982,6 +1040,12 @@ export default function ScannerPage() {
     ? (v2Timeframe === '15m' ? '15M' : v2Timeframe === '1h' ? '1H' : v2Timeframe === 'weekly' ? 'W' : 'D')
     : proTimeframe.toUpperCase();
   const detailAssetType = mode === 'ranked' ? 'crypto' : proAsset;
+  const activeScannerStage: ScannerStage = selectedSymbol ? 'analysis' : mode;
+  const selectScannerMode = useCallback((nextMode: ScannerMode) => {
+    setMode(nextMode);
+    setSelectedSymbol(null);
+    setSymbolDetail(null);
+  }, []);
 
   function SortHeader({ k, label, w }: { k: SortKey; label: string; w: string }) {
     return (
@@ -1005,17 +1069,7 @@ export default function ScannerPage() {
       <SectionHeader title="Scanner" subtitle="Technical analysis scanner — educational scan results" />
       <ComplianceDisclaimer collapsible />
 
-      {/* ─── Mode Toggle ─── */}
-      <div className="flex items-center gap-1 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-1 w-fit">
-        <button type="button" aria-pressed={mode === 'ranked'} onClick={() => { setMode('ranked'); setSelectedSymbol(null); setSymbolDetail(null); }}
-          className={`px-3.5 py-1.5 rounded-md text-xs font-bold uppercase tracking-[0.06em] transition-all ${mode === 'ranked' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:text-slate-200 border border-transparent'}`}>
-          Ranked Scan
-        </button>
-        <button type="button" aria-pressed={mode === 'pro'} onClick={() => { setMode('pro'); setSelectedSymbol(null); setSymbolDetail(null); }}
-          className={`px-3.5 py-1.5 rounded-md text-xs font-bold uppercase tracking-[0.06em] transition-all ${mode === 'pro' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:text-slate-200 border border-transparent'}`}>
-          Pro Scanner
-        </button>
-      </div>
+      <ScannerFlowRail activeStage={activeScannerStage} selectedSymbol={selectedSymbol} onSelectMode={selectScannerMode} />
 
       {/* ─── Active Regime Context ─── */}
       {regime.data && (
@@ -1448,6 +1502,7 @@ export default function ScannerPage() {
               onClose={() => { setSelectedSymbol(null); setSymbolDetail(null); }}
               assetType={detailAssetType}
               activeRegime={currentRegime}
+              returnLabel={mode === 'ranked' ? 'Back to Ranked' : 'Back to Pro Scanner'}
             />
           ) : null}
         </>

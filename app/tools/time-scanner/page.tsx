@@ -5,11 +5,18 @@ import TimeGravityMapWidget from '@/components/TimeGravityMapWidget';
 import { useUserTier, canAccessTimeScanner } from '@/lib/useUserTier';
 import { UpgradeGate } from '@/app/v2/_components/ui';
 
-export default function TimeScannerPage() {
+export default function TimeScannerPage({ symbol: propSymbol, embeddedInTerminal = false }: { symbol?: string; embeddedInTerminal?: boolean } = {}) {
   const { tier, isLoading } = useUserTier();
-  const [symbol, setSymbol] = useState('BTCUSD');
+  const [symbol, setSymbol] = useState(propSymbol || 'BTCUSD');
   const [currentPrice, setCurrentPrice] = useState(0);
-  const [symInput, setSymInput] = useState('BTCUSD');
+  const [symInput, setSymInput] = useState(propSymbol || 'BTCUSD');
+
+  useEffect(() => {
+    const nextSymbol = propSymbol?.trim().toUpperCase();
+    if (!nextSymbol) return;
+    setSymbol(nextSymbol);
+    setSymInput(nextSymbol);
+  }, [propSymbol]);
 
   // Fetch live price on mount and when symbol changes
   useEffect(() => {
@@ -32,14 +39,14 @@ export default function TimeScannerPage() {
     if (s) setSymbol(s);
   };
 
-  if (isLoading) return <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black flex items-center justify-center"><div className="text-slate-500 text-sm">Loading…</div></div>;
-  if (!canAccessTimeScanner(tier)) return <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black flex items-center justify-center"><UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Time Scanner"><div /></UpgradeGate></div>;
+  if (isLoading) return <div className={`${embeddedInTerminal ? 'min-h-[12rem]' : 'min-h-screen'} bg-[var(--msp-bg)] flex items-center justify-center`}><div className="text-slate-500 text-sm">Loading…</div></div>;
+  if (!canAccessTimeScanner(tier)) return <div className={`${embeddedInTerminal ? 'min-h-[12rem]' : 'min-h-screen'} bg-[var(--msp-bg)] flex items-center justify-center`}><UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Time Scanner"><div /></UpgradeGate></div>;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black">
-      <div className="container mx-auto px-4 py-8">
+    <div className={`${embeddedInTerminal ? '' : 'min-h-screen'} bg-[var(--msp-bg)]`}>
+      <div className={`${embeddedInTerminal ? 'px-0 py-0' : 'container mx-auto px-4 py-8'}`}>
         {/* Hero Header */}
-        <div className="text-center mb-8">
+        {!embeddedInTerminal && <div className="text-center mb-8">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">
             ⏰ Time Scanner
             <span className="ml-3 text-2xl text-cyan-400">ELITE</span>
@@ -48,10 +55,10 @@ export default function TimeScannerPage() {
             Advanced Time Gravity Analysis - Track decompression windows, midpoint debt,
             and multi-timeframe confluence zones with professional-level precision.
           </p>
-        </div>
+        </div>}
 
         {/* Controls */}
-        <div className="max-w-4xl mx-auto mb-8">
+        <div className={`${embeddedInTerminal ? 'mb-4' : 'max-w-4xl mx-auto mb-8'}`}>
           <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
@@ -93,7 +100,7 @@ export default function TimeScannerPage() {
         </div>
 
         {/* Main Time Gravity Map Widget — handles its own data fetching */}
-        <div className="max-w-7xl mx-auto">
+        <div className={embeddedInTerminal ? '' : 'max-w-7xl mx-auto'}>
           <TimeGravityMapWidget
             symbol={symbol}
             currentPrice={currentPrice}
@@ -104,7 +111,7 @@ export default function TimeScannerPage() {
         </div>
 
         {/* Documentation Section */}
-        <div className="max-w-7xl mx-auto mt-12 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {!embeddedInTerminal && <div className="max-w-7xl mx-auto mt-12 grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* What is Time Gravity Map? */}
           <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
             <h3 className="text-lg font-bold text-white mb-3">🎯 What is Time Gravity Map?</h3>
@@ -164,10 +171,10 @@ export default function TimeScannerPage() {
               </p>
             </div>
           </div>
-        </div>
+        </div>}
 
         {/* Legend */}
-        <div className="max-w-7xl mx-auto mt-8 bg-gray-900 border border-gray-800 rounded-lg p-6">
+        {!embeddedInTerminal && <div className="max-w-7xl mx-auto mt-8 bg-gray-900 border border-gray-800 rounded-lg p-6">
           <h3 className="text-lg font-bold text-white mb-4">📊 Status Indicators</h3>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
             <div className="flex items-center gap-2">
@@ -191,7 +198,7 @@ export default function TimeScannerPage() {
               <span className="text-gray-300">Compression</span>
             </div>
           </div>
-        </div>
+        </div>}
       </div>
     </div>
   );

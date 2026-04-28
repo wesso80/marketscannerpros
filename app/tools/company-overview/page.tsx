@@ -40,6 +40,7 @@ interface CompanyData {
 }
 
 function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
+  const embeddedInGoldenEgg = Boolean(propSymbol);
   const { tier } = useUserTier();
   const searchParams = useSearchParams();
   const [symbol, setSymbol] = useState("");
@@ -323,14 +324,16 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
   // Gate entire page for Pro+ users
   if (!canAccessPortfolioInsights(tier)) {
     return (
-      <div style={{ minHeight: "100vh", background: "var(--msp-bg)" }}>
-        <ToolsPageHeader
-          badge="FUNDAMENTALS"
-          title="Company Overview"
-          subtitle="Find key fundamentals, technical levels, and valuation context fast."
-          icon="🏢"
-          backHref="/dashboard"
-        />
+      <div style={{ minHeight: embeddedInGoldenEgg ? "auto" : "100vh", background: "var(--msp-bg)" }}>
+        {!embeddedInGoldenEgg && (
+          <ToolsPageHeader
+            badge="FUNDAMENTALS"
+            title="Company Overview"
+            subtitle="Find key fundamentals, technical levels, and valuation context fast."
+            icon="🏢"
+            backHref="/dashboard"
+          />
+        )}
         <main style={{ padding: "24px 16px", display: "flex", justifyContent: "center" }}>
           <UpgradeGate feature="Company Overview" requiredTier="pro" />
         </main>
@@ -339,15 +342,17 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--msp-bg)" }}>
-      <ToolsPageHeader
-        badge="FUNDAMENTALS"
-        title="Company Overview"
-        subtitle="Find key fundamentals, technical levels, and valuation context fast."
-        icon="🏢"
-        backHref="/dashboard"
-      />
-      <main style={{ minHeight: "100vh", padding: "24px 16px" }}>
+    <div style={{ minHeight: embeddedInGoldenEgg ? "auto" : "100vh", background: "var(--msp-bg)" }}>
+      {!embeddedInGoldenEgg && (
+        <ToolsPageHeader
+          badge="FUNDAMENTALS"
+          title="Company Overview"
+          subtitle="Find key fundamentals, technical levels, and valuation context fast."
+          icon="🏢"
+          backHref="/dashboard"
+        />
+      )}
+      <main style={{ minHeight: embeddedInGoldenEgg ? "auto" : "100vh", padding: embeddedInGoldenEgg ? "8px 0 0" : "24px 16px" }}>
         <div style={{ maxWidth: "none", margin: "0 auto", padding: 0 }}>
 
         {/* Regime & Personality Context */}

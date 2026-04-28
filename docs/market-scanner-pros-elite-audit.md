@@ -116,6 +116,31 @@ Route inventory is grouped because the app has 109 pages and 275 API routes. The
 | `/dashboard` | C+ | Likely too general compared with tool pages. | Turn into action hub: today, stale data, watchlist, latest research. | Partial |
 | Marketing/legal pages | B- | Must avoid hype and stay educational. | Replace performance/edge claims with capability claims. | No |
 
+## 5A. Full Design Verdict
+
+Current design state: strong direction, inconsistent execution. The dark institutional market-desk look is the right identity for MarketScanner Pros, but the app still feels like several design generations stitched together: newer Terminal/Golden Egg/Scanner surfaces use tighter panels and evidence-first language, while older standalone tools still use inline styles, emoji headings, large rounded cards, local badge systems, and page shells that do not always know whether they are standalone or embedded.
+
+Design grade after the latest workflow passes: B. The product now has a clearer research sequence: Workflow -> Scanner -> Golden Egg -> Terminal -> Backtest -> Journal -> Workspace. Golden Egg is closer to a real validation workbench, Scanner has Ranked/Pro/Analysis states, Terminal has a defined role before Backtest, and admin chrome leakage has been addressed. The remaining design gap is system-level consistency, not lack of features.
+
+Strict design blockers before this can feel elite:
+- One app shell: every `/tools` page should use the same header density, page width, section rhythm, disclaimer placement, and data-truth treatment.
+- One visual language: cards at 8-10px radius, restrained panels, no large playful emoji, no decorative gradients/orbs, no page-local button styles unless the component is truly special.
+- One workflow language: public tools should say research, review, evidence, alignment, reference, invalidation, scenario, and historical simulation. Direct trading/admin language belongs only in private admin/operator surfaces.
+- One state system: loading, empty, degraded, stale, locked, unauthenticated, and provider-limited states need shared components. A page that fails to load data should not look like a zero-value market state.
+- One mobile model: dense tables cannot simply shrink. Scanner, Golden Egg, Backtest, Journal, Options, and Portfolio need card-first mobile views.
+- One asset system: landing and tool pages need real product screenshots or clearly labelled sample UI. Generic product art is weaker than actual platform proof.
+
+Design implementation order:
+1. Build shared app primitives: `ToolPageHeader`, `ToolPanel`, `StatusPill`, `TierBadge`, `ResearchModeBadge`, `DataTruthPanel`, `EmptyState`, `ErrorState`, and `LoadingSkeleton`.
+2. Migrate the primary workflow pages first: Scanner, Golden Egg, Terminal, Backtest, Journal, Workspace, Dashboard.
+3. Rebuild `/tools/dashboard` as the morning research start page, not a general widget drawer.
+4. Consolidate or demote duplicate routes: AI Tools, News, Market Movers, Gainers/Losers, Company Overview standalone, Deep Analysis standalone, Intraday Charts standalone, Options overlap, Crypto overlap, and legacy `/v2` routes.
+5. Add mobile-first result cards for Scanner and Golden Egg before polishing lower-priority marketing pages.
+6. Replace emoji-heavy professional surfaces with consistent iconography or text glyphs.
+7. Capture real screenshots for landing, guide, pricing, and product cards once the primary workflow pages are visually stable.
+
+Design principle for the rest of the rebuild: every major page must answer, in the first viewport, `What am I checking?`, `Can I trust the data?`, `What evidence supports or conflicts?`, and `What is the next research step?` If a page cannot answer those four questions quickly, it is not yet good enough.
+
 ## 6. Math / Algorithm Findings
 
 | Engine | Function | Status | Issue | Recommended Fix |

@@ -14,13 +14,14 @@ type RouteChromeProps = {
 
 export default function RouteChrome({ children }: RouteChromeProps) {
   const pathname = usePathname() || '';
+  const isAdminRoute = pathname.startsWith('/admin');
   const isOperatorRoute = pathname.startsWith('/operator');
   const isV2Route = pathname.startsWith('/v2');
-  const isAppRoute = pathname.startsWith('/tools') || isOperatorRoute;
+  const isAppRoute = pathname.startsWith('/tools') || isAdminRoute || isOperatorRoute;
 
   return (
     <>
-      {!isOperatorRoute && !isV2Route && <Header />}
+      {!isAdminRoute && !isOperatorRoute && !isV2Route && <Header />}
       <main className="msp-main-shell">{children}</main>
       {!isAppRoute && !isV2Route ? <Footer /> : null}
       <CookieBanner />

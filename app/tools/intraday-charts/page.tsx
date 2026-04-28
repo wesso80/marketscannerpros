@@ -677,6 +677,7 @@ function VolumeChart({ data, width = 800, height = 80 }: { data: IntradayBar[]; 
 }
 
 export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: string } = {}) {
+  const embeddedInGoldenEgg = Boolean(propSymbol);
   const { tier, isLoading: tierLoading } = useUserTier();
   const [symbol, setSymbol] = useState('');
   const [searchInput, setSearchInput] = useState('');
@@ -936,13 +937,18 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
   if (!canAccessPortfolioInsights(tier)) return <UpgradeGate requiredTier="pro" feature="Intraday Charts" />;
 
   return (
-    <div className="min-h-screen bg-[var(--msp-bg)] text-white">
+    <div className={`${embeddedInGoldenEgg ? '' : 'min-h-screen'} bg-[var(--msp-bg)] text-white`}>
       <main className="mx-auto w-full max-w-none space-y-2 px-2 pb-6 pt-3 md:px-3">
         <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-700 bg-slate-900 p-2">
-          <div className="text-xs text-slate-400 uppercase tracking-wide">Intraday Console</div>
-          <Link href="/dashboard" className="text-sm text-slate-400 hover:text-white">
-            ← Dashboard
-          </Link>
+          <div>
+            <div className="text-xs text-slate-400 uppercase tracking-wide">{embeddedInGoldenEgg ? 'Golden Egg Chart Check' : 'Intraday Console'}</div>
+            {embeddedInGoldenEgg ? <div className="mt-1 text-[11px] text-slate-500">Validate price action around the Golden Egg scenario levels.</div> : null}
+          </div>
+          {!embeddedInGoldenEgg && (
+            <Link href="/dashboard" className="text-sm text-slate-400 hover:text-white">
+              ← Dashboard
+            </Link>
+          )}
         </div>
 
         {stats && (

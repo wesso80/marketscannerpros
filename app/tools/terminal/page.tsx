@@ -7,6 +7,7 @@
 
 import { useState, useMemo, useEffect, useCallback, Suspense } from 'react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useUserTier } from '@/lib/useUserTier';
 import { useCachedTopSymbols } from '@/hooks/useCachedTopSymbols';
@@ -34,6 +35,113 @@ function Skel({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
 }
 
 const TABS = ['Close Calendar', 'Options Terminal', 'Options Confluence', 'Options Flow', 'Crypto', 'Flow', 'Time Gravity', 'Time Confluence'] as const;
+type TerminalTab = typeof TABS[number];
+
+const TERMINAL_TAB_META: Record<TerminalTab, { eyebrow: string; description: string }> = {
+  'Close Calendar': {
+    eyebrow: '1. Timing map',
+    description: 'Find candle-close clusters and session pressure before checking positioning.',
+  },
+  'Options Terminal': {
+    eyebrow: '2. Chain quality',
+    description: 'Inspect strikes, spreads, open interest, IV, and chain data truth.',
+  },
+  'Options Confluence': {
+    eyebrow: '3. Options setup',
+    description: 'Check strike and expiry alignment against the selected research scenario.',
+  },
+  'Options Flow': {
+    eyebrow: '4. Flow estimate',
+    description: 'Review premium-flow classification, skew, and large-flow estimates.',
+  },
+  Crypto: {
+    eyebrow: '2. Derivatives map',
+    description: 'Inspect funding, open interest, liquidations, exchanges, and stablecoin context.',
+  },
+  Flow: {
+    eyebrow: '5. Capital pressure',
+    description: 'Read flow, probability, gamma, liquidity, and session context together.',
+  },
+  'Time Gravity': {
+    eyebrow: '6. Gravity map',
+    description: 'Locate decompression windows, midpoint debt, and gravity zones.',
+  },
+  'Time Confluence': {
+    eyebrow: '7. Final timing check',
+    description: 'Combine timing, pressure, close calendar, and macro/fib confluence.',
+  },
+};
+
+function TerminalTabRail({
+  activeTab,
+  asset,
+  onSelectTab,
+}: {
+  activeTab: TerminalTab;
+  asset: 'crypto' | 'equity';
+  onSelectTab: (tab: TerminalTab) => void;
+}) {
+  const visibleTabs = TABS.filter(t => !(asset === 'crypto' && (t === 'Options Terminal' || t === 'Options Confluence' || t === 'Options Flow')));
+
+  return (
+    <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2" aria-label="Terminal market mechanics views">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
+        <div>
+          <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Mechanics workbench</div>
+          <div className="text-[0.72rem] text-slate-500">Move from timing to positioning, flow, and final confluence before Backtest.</div>
+        </div>
+        <div className="rounded-full border border-slate-700/70 bg-slate-950/60 px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-500">
+          {asset === 'crypto' ? 'Crypto path' : 'Equity path'}
+        </div>
+      </div>
+      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+        {visibleTabs.map((terminalTab) => {
+          const meta = TERMINAL_TAB_META[terminalTab];
+          const isActive = activeTab === terminalTab;
+          return (
+            <button
+              key={terminalTab}
+              type="button"
+              aria-pressed={isActive}
+              onClick={() => onSelectTab(terminalTab)}
+              className={`rounded-lg border px-3 py-2 text-left transition ${
+                isActive
+                  ? 'border-emerald-400/40 bg-emerald-400/10 text-white'
+                  : 'border-white/10 bg-white/[0.025] text-slate-300 hover:border-emerald-400/30 hover:bg-emerald-400/[0.05]'
+              }`}
+            >
+              <div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{meta.eyebrow}</div>
+              <div className={`mt-1 text-sm font-black ${isActive ? 'text-emerald-200' : 'text-white'}`}>{terminalTab}</div>
+              <div className="mt-1 text-[11px] leading-4 text-slate-500">{meta.description}</div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function TerminalSubviewFrame({ tab, symbol, children }: { tab: Exclude<TerminalTab, 'Close Calendar'>; symbol: string; children: React.ReactNode }) {
+  const meta = TERMINAL_TAB_META[tab];
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Terminal subview</div>
+            <h2 className="mt-1 text-base font-black text-white">{tab} check for {symbol}</h2>
+            <p className="mt-1 text-xs leading-5 text-slate-400">{meta.description}</p>
+          </div>
+          <div className="rounded-full border border-slate-700/70 bg-slate-950/60 px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-500">
+            {meta.eyebrow}
+          </div>
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
 const ANCHOR_OPTIONS: { value: CloseCalendarAnchor; label: string }[] = [
   { value: 'NOW', label: 'Now' },
   { value: 'TODAY', label: 'Today' },
@@ -89,7 +197,7 @@ function clusterColors(s: number) {
 export default function TerminalPage() {
   const { tier } = useUserTier();
   const { selectedSymbol, selectSymbol, navigateTo } = useV2();
-  const [tab, setTab] = useState<typeof TABS[number]>('Close Calendar');
+  const [tab, setTab] = useState<TerminalTab>('Close Calendar');
   const [symInput, setSymInput] = useState(selectedSymbol || 'BTCUSD');
 
   /* Symbol management */
@@ -139,6 +247,26 @@ export default function TerminalPage() {
       <SectionHeader title="Terminal" subtitle={asset === 'crypto' ? 'Close Calendar — Crypto — Flow' : 'Close Calendar — Options Terminal — Crypto — Flow'} />
       <ComplianceDisclaimer collapsible variant={asset === 'crypto' ? 'cryptoDerivatives' : 'options'} />
 
+      <Card>
+        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+          <div>
+            <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Workflow step 3 · Market mechanics check</div>
+            <h2 className="mt-1 text-lg font-black text-white">Use Terminal before Backtest.</h2>
+            <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">
+              Golden Egg validates the symbol. Terminal checks whether timing, options positioning, flow, crypto derivatives, and close-calendar pressure support the scenario before you test it historically.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 md:justify-end">
+            <Link href="/tools/golden-egg" className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-slate-400 no-underline hover:bg-slate-700/50">
+              Back to Golden Egg
+            </Link>
+            <Link href="/tools/backtest" className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-emerald-300 no-underline hover:bg-emerald-500/20">
+              Continue to Backtest
+            </Link>
+          </div>
+        </div>
+      </Card>
+
       {/* Symbol Bar */}
       <Card>
         <div className="flex items-center gap-2 flex-wrap">
@@ -165,14 +293,7 @@ export default function TerminalPage() {
         </div>
       </Card>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-1 flex-wrap pb-1">
-        {TABS.filter(t => !(asset === 'crypto' && (t === 'Options Terminal' || t === 'Options Confluence' || t === 'Options Flow'))).map(t => (
-          <button key={t} type="button" aria-pressed={tab === t} onClick={() => setTab(t)} className={`px-2.5 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap transition-colors ${tab === t ? 'bg-[rgba(16,185,129,0.1)] text-[var(--msp-accent)] border border-[rgba(16,185,129,0.4)]' : 'text-[var(--msp-text-muted)] hover:bg-slate-800/60 border border-transparent'}`}>
-            {t}
-          </button>
-        ))}
-      </div>
+      <TerminalTabRail activeTab={tab} asset={asset} onSelectTab={setTab} />
 
       {/* -- CLOSE CALENDAR ------------------------------------------- */}
       {tab === 'Close Calendar' && (
@@ -294,18 +415,22 @@ export default function TerminalPage() {
       {/* -- OPTIONS TERMINAL ----------------------------------------------- */}
       {tab === 'Options Terminal' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Options Terminal">
-          <Suspense fallback={<div className="py-12 text-center text-xs text-slate-500">Loading Options Terminal…</div>}>
-            <OptionsTerminalView />
-          </Suspense>
+          <TerminalSubviewFrame tab="Options Terminal" symbol={sym}>
+            <Suspense fallback={<div className="py-12 text-center text-xs text-slate-500">Loading Options Terminal…</div>}>
+              <OptionsTerminalView />
+            </Suspense>
+          </TerminalSubviewFrame>
         </UpgradeGate>
       )}
 
       {/* -- CRYPTO TERMINAL ------------------------------------------------ */}
       {tab === 'Crypto' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Crypto Terminal">
-          <Suspense fallback={<div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminal…</div>}>
-            <CryptoTerminalView />
-          </Suspense>
+          <TerminalSubviewFrame tab="Crypto" symbol={sym}>
+            <Suspense fallback={<div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminal…</div>}>
+              <CryptoTerminalView />
+            </Suspense>
+          </TerminalSubviewFrame>
         </UpgradeGate>
       )}
       {/* -- FLOW ----------------------------------------------------- */}
@@ -634,31 +759,39 @@ export default function TerminalPage() {
       {/* ─── Options Confluence (v1 flagship decision engine) ─── */}
       {tab === 'Options Confluence' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Options Confluence Engine">
-          <OptionsConfluence />
+          <TerminalSubviewFrame tab="Options Confluence" symbol={sym}>
+            <OptionsConfluence />
+          </TerminalSubviewFrame>
         </UpgradeGate>
       )}
 
       {/* ─── Options Flow (v1 flow intelligence) ─── */}
       {tab === 'Options Flow' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Options Flow Intelligence">
-          <OptionsFlow />
+          <TerminalSubviewFrame tab="Options Flow" symbol={sym}>
+            <OptionsFlow />
+          </TerminalSubviewFrame>
         </UpgradeGate>
       )}
 
       {/* ─── Time Gravity Map (v1 time scanner) ─── */}
       {tab === 'Time Gravity' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Time Gravity Map">
-          <TimeScanner />
+          <TerminalSubviewFrame tab="Time Gravity" symbol={sym}>
+            <TimeScanner symbol={sym} embeddedInTerminal />
+          </TerminalSubviewFrame>
         </UpgradeGate>
       )}
 
       {/* ─── Time Confluence Scanner ─── */}
       {tab === 'Time Confluence' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Time Confluence Scanner">
-          <ConfluenceScanner />
-          <div className="mt-6">
-            <TimeConfluenceWidget showMacro showMicro showCalendar assetClass={asset} />
-          </div>
+          <TerminalSubviewFrame tab="Time Confluence" symbol={sym}>
+            <ConfluenceScanner />
+            <div className="mt-6">
+              <TimeConfluenceWidget showMacro showMicro showCalendar assetClass={asset} />
+            </div>
+          </TerminalSubviewFrame>
         </UpgradeGate>
       )}
     </div>
