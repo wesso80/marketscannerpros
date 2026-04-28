@@ -9,6 +9,10 @@
 
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import EvidenceStack from '@/components/market/EvidenceStack';
+import MarketStatusStrip from '@/components/market/MarketStatusStrip';
+import RiskFlagPanel, { type RiskFlag } from '@/components/market/RiskFlagPanel';
+import { buildMarketDataProviderStatus } from '@/lib/scanner/providerStatus';
 import { useOptionsChain } from '@/hooks/useOptionsChain';
 import type {
   OptionsContract,
@@ -21,6 +25,17 @@ import type {
 
 type Mode = 'retail' | 'institutional';
 type CPFilter = 'BOTH' | 'CALLS' | 'PUTS';
+
+function evidenceStatus(value: boolean) {
+  return value ? 'supportive' as const : 'missing' as const;
+}
+
+function riskSeverity(label: string): RiskFlag['severity'] {
+  const lower = label.toLowerCase();
+  if (lower.includes('error') || lower.includes('unavailable') || lower.includes('extreme') || lower.includes('no contracts')) return 'critical';
+  if (lower.includes('delayed') || lower.includes('stale') || lower.includes('wide') || lower.includes('thin') || lower.includes('high')) return 'warning';
+  return 'info';
+}
 
 /* ─────────────────────────────────────────────────────────────────
    Main Component
@@ -131,6 +146,106 @@ export default function OptionsTerminalView() {
     const id = window.setInterval(tick, 5_000);
     return () => window.clearInterval(id);
   }, [chain.loading, chain.lastFetchedAt]);
+
+  const chainAgeSeconds = chain.lastFetchedAt ? Math.round((Date.now() - chain.lastFetchedAt) / 1000) : null;
+  const chainIsStale = chainAgeSeconds != null && chainAgeSeconds > 15 * 60;
+  const chainCoverage = chain.expirations.length > 0
+    ? Math.min(100, Math.round((chain.contracts.length / Math.max(chain.expirations.length * 20, 1)) * 100))
+    : 0;
+  const liquidContracts = chain.contracts.filter((contract) => contract.spreadPct > 0 && Number.isFinite(contract.spreadPct));
+  const avgSpreadPct = liquidContracts.length
+    ? liquidContracts.reduce((sum, contract) => sum + contract.spreadPct, 0) / liquidContracts.length
+    : 0;
+  const tightSpreadPct = liquidContracts.length
+    ? Math.round((liquidContracts.filter((contract) => contract.spreadPct <= 8).length / liquidContracts.length) * 100)
+    : 0;
+  const providerStatus = buildMarketDataProviderStatus({
+    source: 'options-terminal',
+    provider: chain.provider || 'options chain',
+    stale: chainIsStale,
+    degraded: Boolean(chain.error) || chain.contracts.length === 0 || chainCoverage < 50 || chain.provider === 'HISTORICAL_OPTIONS',
+    warnings: [
+      chain.error ? `Options chain error: ${chain.error}` : null,
+      chain.contracts.length === 0 && ticker ? 'No option contracts loaded.' : null,
+      chain.provider === 'HISTORICAL_OPTIONS' ? 'Historical options provider is delayed context.' : null,
+      chainIsStale ? 'Options chain data is older than 15 minutes.' : null,
+      avgSpreadPct > 12 ? `Average contract spread is wide at ${avgSpreadPct.toFixed(1)}%.` : null,
+    ].filter(Boolean) as string[],
+  });
+  const optionsMarketStatusItems = [
+    {
+      label: 'Chain',
+      status: providerStatus,
+      source: chain.provider || 'unknown',
+      coverageScore: chainCoverage,
+      computedAt: chain.lastFetchedAt ? new Date(chain.lastFetchedAt) : null,
+    },
+    {
+      label: 'Liquidity',
+      status: buildMarketDataProviderStatus({
+        source: 'options-liquidity',
+        provider: 'bid ask and OI',
+        degraded: liquidContracts.length === 0 || tightSpreadPct < 60,
+        warnings: [
+          liquidContracts.length === 0 ? 'No spread data available.' : null,
+          tightSpreadPct < 60 && liquidContracts.length > 0 ? `${tightSpreadPct}% of contracts have spreads at or below 8%.` : null,
+        ].filter(Boolean) as string[],
+      }),
+      coverageScore: tightSpreadPct,
+    },
+    {
+      label: 'IV',
+      status: buildMarketDataProviderStatus({
+        source: 'options-iv',
+        provider: 'implied volatility model',
+        degraded: chain.ivMetrics.avgIV <= 0 || chain.ivMetrics.ivLevel === 'extreme',
+        warnings: [
+          chain.ivMetrics.avgIV <= 0 ? 'Average IV unavailable.' : null,
+          chain.ivMetrics.ivLevel === 'extreme' ? 'Extreme IV requires event and spread checks.' : null,
+        ].filter(Boolean) as string[],
+      }),
+      coverageScore: chain.ivMetrics.avgIV > 0 ? Math.min(100, Math.round(chain.ivMetrics.avgIV * 100)) : 0,
+    },
+  ];
+  const optionsEvidenceItems = [
+    {
+      label: 'Chain Coverage',
+      value: chain.contracts.length > 0 ? `${chain.contracts.length} contracts` : 'Unavailable',
+      status: evidenceStatus(chain.contracts.length > 0),
+      detail: `${chain.expirations.length} expirations loaded; ${rows.length} strikes visible after filters.`,
+    },
+    {
+      label: 'Provider',
+      value: chain.provider || 'Unknown',
+      status: chain.provider === 'REALTIME_OPTIONS_FMV' ? 'supportive' as const : chain.provider ? 'neutral' as const : 'missing' as const,
+      detail: updatedLabel || 'No fetch timestamp available.',
+    },
+    {
+      label: 'Liquidity',
+      value: liquidContracts.length ? `${tightSpreadPct}% tight` : 'Unavailable',
+      status: liquidContracts.length === 0 ? 'missing' as const : tightSpreadPct >= 60 ? 'supportive' as const : 'conflicting' as const,
+      detail: liquidContracts.length ? `Average spread ${avgSpreadPct.toFixed(1)}% across priced contracts.` : 'Load a chain to compute spread and OI quality.',
+    },
+    {
+      label: 'IV Context',
+      value: chain.ivMetrics.ivLevel.toUpperCase(),
+      status: chain.ivMetrics.avgIV > 0 ? 'neutral' as const : 'missing' as const,
+      detail: chain.ivMetrics.avgIV > 0 ? `ATM IV ${(chain.ivMetrics.avgIV * 100).toFixed(1)}%, expected move ${chain.ivMetrics.expectedMovePct.toFixed(1)}%.` : 'IV metrics unavailable until contracts load.',
+    },
+  ];
+  const optionsRiskFlags = [
+    chain.error ? `Options chain error: ${chain.error}` : null,
+    chain.contracts.length === 0 && ticker ? 'No contracts loaded for selected ticker.' : null,
+    chain.provider === 'HISTORICAL_OPTIONS' ? 'Delayed provider context.' : null,
+    chainIsStale ? 'Options chain is stale.' : null,
+    avgSpreadPct > 12 ? `Average spread is wide at ${avgSpreadPct.toFixed(1)}%.` : null,
+    chain.ivMetrics.ivLevel === 'extreme' ? 'Extreme IV environment.' : null,
+    rows.length === 0 && chain.contracts.length > 0 ? 'Current filters hide every strike.' : null,
+  ].filter(Boolean).map((label) => ({
+    label: label as string,
+    severity: riskSeverity(label as string),
+    detail: 'Limits educational options scenario quality until checked.',
+  }));
 
   /* ── Landing state (no ticker) ─────────────────────────────── */
   if (!ticker && chain.contracts.length === 0) {
@@ -261,6 +376,14 @@ export default function OptionsTerminalView() {
           </div>
         </div>
       )}
+
+      <div className="w-full px-4 pt-4">
+        <div className="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
+          <EvidenceStack title="Options Terminal Evidence Stack" items={optionsEvidenceItems} />
+          <RiskFlagPanel title="Options Terminal Risk Flags" flags={optionsRiskFlags} emptyText="No active chain, liquidity, IV, or provider flags." />
+        </div>
+        <MarketStatusStrip items={optionsMarketStatusItems} className="mt-4 md:grid-cols-3" />
+      </div>
 
       {/* ── Page shell ────────────────────────────────────── */}
       <div className="w-full px-4 py-4 space-y-4">

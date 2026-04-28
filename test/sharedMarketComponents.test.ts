@@ -60,4 +60,16 @@ describe('shared market truth components', () => {
     expect(page).toContain('<MarketStatusStrip items={dveMarketStatusItems}');
     expect(page).not.toContain('function DataQualityBadge');
   });
+
+  it('uses the shared truth, evidence, and risk components on the Options Terminal', () => {
+    const page = read('components/options-terminal/OptionsTerminalView.tsx');
+
+    expect(page).toContain("import EvidenceStack from '@/components/market/EvidenceStack'");
+    expect(page).toContain("import MarketStatusStrip from '@/components/market/MarketStatusStrip'");
+    expect(page).toContain("import RiskFlagPanel");
+    expect(page).toContain('buildMarketDataProviderStatus');
+    expect(page).toContain('<EvidenceStack title="Options Terminal Evidence Stack"');
+    expect(page).toContain('<RiskFlagPanel title="Options Terminal Risk Flags"');
+    expect(page).toContain('<MarketStatusStrip items={optionsMarketStatusItems}');
+  });
 });
