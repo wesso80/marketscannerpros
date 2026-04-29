@@ -168,6 +168,50 @@ export default function ScalperPage() {
 
   return (
     <div className="min-h-screen bg-[#0F172A] text-white">
+      <section
+        className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)] mx-2 mt-2 md:mx-3"
+        aria-label="Scalper command header"
+      >
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)]">
+          <div>
+            <div className="flex flex-wrap items-center gap-2 text-[0.68rem] font-extrabold uppercase tracking-[0.16em]">
+              <span className="text-emerald-300">Scalping scanner</span>
+              <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">{assetClass.toUpperCase()} mode</span>
+              <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">{timeframe}</span>
+            </div>
+            <h1 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Find scalping setups in real time.</h1>
+            <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">Short-timeframe momentum scanner with VWAP, EMA, RSI, and volume confluence — designed for fast intraday decisions.</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button type="button" onClick={runScan} disabled={loading} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 transition-colors hover:bg-amber-400/15 disabled:opacity-50">{loading ? 'Scanning…' : 'Run Scan'}</button>
+              <a href="/tools/golden-egg" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15">Open Golden Egg</a>
+              <a href="/tools/terminal" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Open Terminal</a>
+            </div>
+          </div>
+          <div className="grid self-start gap-1.5 sm:grid-cols-2">
+            <div className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+              <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Asset</div>
+              <div className="mt-0.5 truncate text-sm font-black" style={{ color: assetClass === 'crypto' ? '#F59E0B' : '#818CF8' }}>{assetClass === 'crypto' ? 'Crypto' : 'Equity'}</div>
+              <div className="mt-0.5 truncate text-[11px] text-slate-500">Scan universe</div>
+            </div>
+            <div className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+              <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Timeframe</div>
+              <div className="mt-0.5 truncate text-sm font-black text-cyan-300">{timeframe}</div>
+              <div className="mt-0.5 truncate text-[11px] text-slate-500">Candle interval</div>
+            </div>
+            <div className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+              <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Results</div>
+              <div className="mt-0.5 truncate text-sm font-black text-emerald-400">{results.length}</div>
+              <div className="mt-0.5 truncate text-[11px] text-slate-500">Symbols matched</div>
+            </div>
+            <div className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+              <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Status</div>
+              <div className="mt-0.5 truncate text-sm font-black text-sky-300">{loading ? 'Scanning' : 'Ready'}</div>
+              <div className="mt-0.5 truncate text-[11px] text-slate-500">Scanner state</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ─── Header ─── */}
       <div className="border-b border-slate-800 bg-[#0F172A]/80 backdrop-blur-sm sticky top-0 z-20">
         <div className="max-w-[1600px] mx-auto px-4 py-3 flex flex-wrap items-center gap-3">

@@ -390,6 +390,40 @@ export default function GainersLosersPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#0f172a" }}>
+      <section
+        className="mx-2 mt-2 md:mx-3 rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
+        aria-label="Gainers Losers command header"
+      >
+        <div className="flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em]">
+          <span className="rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2.5 py-0.5 text-emerald-200">MARKET MOVERS</span>
+          <span className="rounded-full border border-amber-400/35 bg-amber-500/10 px-2.5 py-0.5 text-amber-200">FLOW</span>
+          <span className="rounded-full border border-sky-400/35 bg-sky-500/10 px-2.5 py-0.5 text-sky-200">FILTERS</span>
+        </div>
+        <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-white">Top Gainers &amp; Losers</h1>
+            <p className="mt-1 text-sm text-slate-400">Real-time mover analysis with institutional-grade filtering.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => fetchData(true)} disabled={refreshing} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-xs font-bold text-amber-200 hover:bg-amber-400/20 disabled:opacity-50">{refreshing ? 'Refreshing…' : 'Refresh'}</button>
+            <a href="/tools/markets" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-xs font-bold text-emerald-200 hover:bg-emerald-400/20">Open Markets</a>
+            <a href="/tools/scanner" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-xs font-bold text-sky-200 hover:bg-sky-400/20">Open Scanner</a>
+          </div>
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {[
+            { label: 'Active Tab', value: activeTab === 'gainers' ? 'Gainers' : activeTab === 'losers' ? 'Losers' : 'Active', tone: 'text-emerald-300' },
+            { label: 'Setup Mode', value: setupMode, tone: 'text-sky-300' },
+            { label: 'Mode', value: environment.deploymentMode, tone: environment.deploymentMode === 'YES' ? 'text-emerald-300' : environment.deploymentMode === 'CONDITIONAL' ? 'text-amber-300' : 'text-rose-300' },
+            { label: 'Updated', value: lastUpdated ? lastUpdated.toLocaleTimeString() : '—', tone: 'text-amber-300' },
+          ].map((m) => (
+            <div key={m.label} className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-white/55">{m.label}</div>
+              <div className={`mt-1 truncate text-sm font-bold ${m.tone}`}>{m.value}</div>
+            </div>
+          ))}
+        </div>
+      </section>
       <ToolsPageHeader
         badge="MARKET MOVERS"
         title="Top Gainers & Losers"

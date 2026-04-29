@@ -559,8 +559,8 @@ describe('layout and flow audit regressions', () => {
     expect(workspacePage).toContain('<BacktestPage embeddedInWorkspace />');
     expect(workspacePage).toContain('Workflow memory');
     expect(workspacePage).toContain('Watchlists, journal, portfolio, learning, backtest, alerts, and account settings in one compact workbench.');
-    expect(workspacePage).toContain('rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2');
-    expect(workspacePage).toContain('shrink-0 rounded-md border px-3 py-1.5 text-[11px]');
+    expect(workspacePage).toContain('aria-label="Workspace command header"');
+    expect(workspacePage).toContain('grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-7');
     expect(workspacePage).not.toContain('<SectionHeader title="Workspace"');
     expect(workspacePage).toContain('useEffect(() => {');
     expect(workspacePage).toContain("const requestedTab = TABS.find(t => t.toLowerCase() === searchParams.get('tab')?.toLowerCase());");
@@ -1400,5 +1400,44 @@ describe('layout and flow audit regressions', () => {
     expect(fundamentalsPage).toContain('const embeddedInGoldenEgg = Boolean(propSymbol);');
     expect(fundamentalsPage).toContain('{!embeddedInGoldenEgg && (');
     expect(fundamentalsPage).toContain('padding: embeddedInGoldenEgg ? "8px 0 0" : "24px 16px"');
+  });
+
+  it('promotes remaining tier-1 tools to the A-grade command header treatment', () => {
+    const workspacePage = read('app/tools/workspace/page.tsx');
+    const researchPage = read('app/tools/research/page.tsx');
+    const liquiditySweepPage = read('app/tools/liquidity-sweep/page.tsx');
+    const scalperPage = read('app/tools/scalper/page.tsx');
+    const signalAccuracyPage = read('app/tools/signal-accuracy/page.tsx');
+    const newsPage = read('app/tools/news/page.tsx');
+    const economicCalendarPage = read('app/tools/economic-calendar/page.tsx');
+    const gainersLosersPage = read('app/tools/gainers-losers/page.tsx');
+
+    expect(workspacePage).toContain('aria-label="Workspace command header"');
+    expect(workspacePage).toContain('WORKSPACE_TAB_META');
+    expect(workspacePage).toContain('function WorkspaceMetric');
+    expect(workspacePage).toContain('grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-7');
+
+    expect(researchPage).toContain('aria-label="Research command header"');
+    expect(researchPage).toContain('RESEARCH_TAB_META');
+    expect(researchPage).toContain('function ResearchMetric');
+
+    expect(liquiditySweepPage).toContain('aria-label="Liquidity Sweep command header"');
+    expect(liquiditySweepPage).toContain('Open Golden Egg');
+
+    expect(scalperPage).toContain('aria-label="Scalper command header"');
+    expect(scalperPage).toContain('Open Golden Egg');
+
+    expect(signalAccuracyPage).toContain('aria-label="Signal Accuracy command header"');
+    expect(signalAccuracyPage).toContain('Open Scanner');
+
+    expect(newsPage).toContain('aria-label="News command header"');
+    expect(newsPage).toContain('View News');
+    expect(newsPage).toContain('View Earnings');
+
+    expect(economicCalendarPage).toContain('aria-label="Economic Calendar command header"');
+    expect(economicCalendarPage).toContain('Refresh Calendar');
+
+    expect(gainersLosersPage).toContain('aria-label="Gainers Losers command header"');
+    expect(gainersLosersPage).toContain('Open Markets');
   });
 });

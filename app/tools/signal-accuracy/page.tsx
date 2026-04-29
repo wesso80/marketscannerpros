@@ -127,11 +127,44 @@ export default function SignalAccuracyPage() {
 
   return (
     <div className="min-h-screen bg-[#0F172A] text-white p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-      {/* Header */}
+      <section
+        className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
+        aria-label="Signal Accuracy command header"
+      >
+        <div className="flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em]">
+          <span className="rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2.5 py-0.5 text-emerald-200">SIGNAL ACCURACY</span>
+          <span className="rounded-full border border-amber-400/35 bg-amber-500/10 px-2.5 py-0.5 text-amber-200">EDUCATIONAL REVIEW</span>
+          <span className="rounded-full border border-sky-400/35 bg-sky-500/10 px-2.5 py-0.5 text-sky-200">HISTORICAL ONLY</span>
+        </div>
+        <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-white">Historical Research Accuracy</h1>
+            <p className="mt-1 text-sm text-slate-400">Review how educational AI research observations behaved after scanner horizons elapsed.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <a href="/tools/golden-egg" className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-xs font-bold text-amber-200 hover:bg-amber-400/20">Open Golden Egg</a>
+            <a href="/tools/scanner" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-xs font-bold text-emerald-200 hover:bg-emerald-400/20">Open Scanner</a>
+            <a href="/tools/research" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-xs font-bold text-sky-200 hover:bg-sky-400/20">Open Research</a>
+          </div>
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {[
+            { label: 'Lookback', value: lookback === 'all' ? 'All' : `${lookback}d`, tone: 'text-emerald-300' },
+            { label: 'Min Samples', value: String(minSamples), tone: 'text-sky-300' },
+            { label: 'Status', value: loading ? 'Loading' : error ? 'Error' : 'Ready', tone: loading ? 'text-amber-300' : error ? 'text-rose-300' : 'text-emerald-300' },
+            { label: 'Mode', value: 'Educational', tone: 'text-amber-300' },
+          ].map((m) => (
+            <div key={m.label} className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-white/55">{m.label}</div>
+              <div className={`mt-1 text-sm font-bold ${m.tone}`}>{m.value}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+      {/* Header controls */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Historical Research Accuracy</h1>
-          <p className="text-slate-400 text-sm mt-1">Review how educational AI research observations behaved after scanner horizons elapsed.</p>
+        <div className="sr-only">
+          <h2>Historical Research Accuracy controls</h2>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5">

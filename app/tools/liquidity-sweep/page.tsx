@@ -110,13 +110,49 @@ export default function LiquiditySweepPage() {
   return (
     <ToolPageLayout
       identity={
-        <ToolIdentityHeader
-          toolName="Liquidity Sweep Scanner"
-          description="Detect stop hunts and liquidity sweeps at key levels — PDH/PDL, WEEK_HIGH/LOW, EQH/EQL, ROUND."
-          modeLabel="Sweep Detection"
-          confidenceLabel={data ? `${data.sweepCount} active` : '—'}
-          lastUpdatedLabel={lastUpdated}
-        />
+        <section
+          className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
+          aria-label="Liquidity Sweep command header"
+        >
+          <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)]">
+            <div>
+              <div className="flex flex-wrap items-center gap-2 text-[0.68rem] font-extrabold uppercase tracking-[0.16em]">
+                <span className="text-emerald-300">Liquidity sweep scanner</span>
+                <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">{scanType.toUpperCase()} mode</span>
+                <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">Filter {filter}</span>
+              </div>
+              <h1 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Detect stop hunts before sizing risk.</h1>
+              <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">Detect liquidity sweeps at PDH/PDL, WEEK_HIGH/LOW, EQH/EQL, and ROUND levels — confirm stop-hunt patterns before placing or invalidating a trade.</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button type="button" onClick={runScan} disabled={loading} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 transition-colors hover:bg-amber-400/15 disabled:opacity-50">{loading ? 'Scanning…' : 'Run Scan'}</button>
+                <a href="/tools/golden-egg" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15">Open Golden Egg</a>
+                <a href="/tools/terminal" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Open Terminal</a>
+              </div>
+            </div>
+            <div className="grid self-start gap-1.5 sm:grid-cols-2">
+              <div className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+                <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Mode</div>
+                <div className="mt-0.5 truncate text-sm font-black" style={{ color: scanType === 'crypto' ? '#F59E0B' : '#818CF8' }}>{scanType === 'crypto' ? 'Crypto' : 'Equity'}</div>
+                <div className="mt-0.5 truncate text-[11px] text-slate-500">Sweep detection</div>
+              </div>
+              <div className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+                <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Sweeps</div>
+                <div className="mt-0.5 truncate text-sm font-black text-emerald-400">{data ? String(data.sweepCount) : '—'}</div>
+                <div className="mt-0.5 truncate text-[11px] text-slate-500">Active observations</div>
+              </div>
+              <div className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+                <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Filter</div>
+                <div className="mt-0.5 truncate text-sm font-black text-cyan-300">{filter === 'sweep' ? 'Sweeps Only' : filter === 'near' ? 'Near Level' : 'All'}</div>
+                <div className="mt-0.5 truncate text-[11px] text-slate-500">Result filter applied</div>
+              </div>
+              <div className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+                <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Updated</div>
+                <div className="mt-0.5 truncate text-sm font-black text-sky-300">{lastUpdated}</div>
+                <div className="mt-0.5 truncate text-[11px] text-slate-500">Local time</div>
+              </div>
+            </div>
+          </div>
+        </section>
       }
       primary={
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>

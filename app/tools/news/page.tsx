@@ -797,6 +797,42 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
 
   return (
     <div style={{ minHeight: embeddedInResearch ? undefined : "100vh", background: embeddedInResearch ? 'transparent' : "#0f172a" }}>
+      {!embeddedInResearch && (
+        <section
+          className="mx-2 mt-2 md:mx-3 rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
+          aria-label="News command header"
+        >
+          <div className="flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em]">
+            <span className="rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2.5 py-0.5 text-emerald-200">NEWS</span>
+            <span className="rounded-full border border-amber-400/35 bg-amber-500/10 px-2.5 py-0.5 text-amber-200">CATALYSTS</span>
+            <span className="rounded-full border border-sky-400/35 bg-sky-500/10 px-2.5 py-0.5 text-sky-200">SENTIMENT</span>
+          </div>
+          <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h1 className="text-xl font-bold tracking-tight text-white">Market Intelligence</h1>
+              <p className="mt-1 text-sm text-slate-400">News sentiment, earnings catalysts, and insider activity in one view.</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={() => setActiveTab('news')} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-xs font-bold text-amber-200 hover:bg-amber-400/20">View News</button>
+              <button type="button" onClick={() => setActiveTab('earnings')} className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-xs font-bold text-emerald-200 hover:bg-emerald-400/20">View Earnings</button>
+              <a href="/tools/research" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-xs font-bold text-sky-200 hover:bg-sky-400/20">Open Research</a>
+            </div>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {[
+              { label: 'Active Lens', value: activeTab === 'news' ? 'News' : 'Earnings', tone: 'text-emerald-300' },
+              { label: 'Top Narrative', value: newsGate.topNarrative, tone: 'text-sky-300' },
+              { label: 'Confluence', value: `${newsGate.confidencePct}%`, tone: 'text-amber-300' },
+              { label: 'Mode', value: 'Intelligence', tone: 'text-emerald-300' },
+            ].map((m) => (
+              <div key={m.label} className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+                <div className="text-[10px] font-black uppercase tracking-[0.16em] text-white/55">{m.label}</div>
+                <div className={`mt-1 truncate text-sm font-bold ${m.tone}`}>{m.value}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
       {!embeddedInResearch && <ToolsPageHeader
         badge="INTELLIGENCE"
         title="Market Intelligence"
