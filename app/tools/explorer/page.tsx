@@ -13,7 +13,7 @@ import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useSectorsHeatmap, useCryptoOverview, useCryptoCategories, useMarketMovers, useCommodities, useRegime, type SectorData, type Mover, type CommodityData, type CryptoCategory } from '@/app/v2/_lib/api';
 import { CROSS_MARKET, REGIME_COLORS } from '@/app/v2/_lib/constants';
 import type { RegimePriority } from '@/app/v2/_lib/types';
-import { Card, SectionHeader, Badge, UpgradeGate } from '@/app/v2/_components/ui';
+import { Card, Badge, UpgradeGate } from '@/app/v2/_components/ui';
 import { useUserTier } from '@/lib/useUserTier';
 
 /* ─── Dynamic imports: v1 deep-dive components ─── */
@@ -90,21 +90,29 @@ export default function ExplorerPage() {
   const cryptoSectors = cryptoCats.data?.highlighted || [];
 
   return (
-    <div className="space-y-6">
-      <SectionHeader title="Market Explorer" subtitle="Cross-market intelligence — live data" />
+    <div className="space-y-3">
+      <Card>
+        <div>
+          <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Cross-market map</div>
+          <h1 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Market Explorer</h1>
+          <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">Scan sector heat, crypto breadth, commodity context, macro pressure, and mover evidence before selecting one symbol.</p>
+        </div>
+      </Card>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 flex-wrap pb-1">
-        {TABS.map(t => (
-          <button key={t} type="button" aria-pressed={tab === t} onClick={() => setTab(t)} className={`px-2.5 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap transition-colors ${tab === t ? 'bg-[rgba(16,185,129,0.1)] text-[var(--msp-accent)] border border-[rgba(16,185,129,0.4)]' : 'text-[var(--msp-text-muted)] hover:bg-slate-800/60 border border-transparent'}`}>
-            {t}
-          </button>
-        ))}
+      <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2">
+        <div className="flex items-center gap-1 overflow-x-auto">
+          {TABS.map(t => (
+            <button key={t} type="button" aria-pressed={tab === t} onClick={() => setTab(t)} className={`shrink-0 rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors ${tab === t ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300' : 'border-slate-800 bg-slate-950/35 text-slate-400 hover:border-slate-600 hover:text-slate-200'}`}>
+              {t}
+            </button>
+          ))}
+        </div>
       </div>
 
       {(tier === 'free' || tier === 'anonymous') && (
         <div className="text-xs text-center text-slate-400 bg-slate-800/50 border border-slate-700/30 rounded-lg px-3 py-2">
-          \uD83D\uDD12 <span className="text-emerald-400 font-semibold">Upgrade to Pro</span> to interact with the Market Explorer
+          <span className="text-emerald-400 font-semibold">Upgrade to Pro</span> to interact with the Market Explorer
         </div>
       )}
       <div className={(tier === 'free' || tier === 'anonymous') ? 'pointer-events-none select-none' : undefined}>

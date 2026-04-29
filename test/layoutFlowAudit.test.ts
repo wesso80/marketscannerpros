@@ -608,6 +608,11 @@ describe('layout and flow audit regressions', () => {
     expect(dashboardPage).toContain("crypto: 'Crypto Derivatives'");
     expect(dashboardPage).toContain('if (requestedTab && requestedTab !== dashTab) setDashTab(requestedTab);');
     expect(explorerPage).toContain('const EXPLORER_TAB_PARAM_MAP');
+    expect(explorerPage).toContain('Cross-market map');
+    expect(explorerPage).toContain('Scan sector heat, crypto breadth, commodity context, macro pressure, and mover evidence before selecting one symbol.');
+    expect(explorerPage).toContain('rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2');
+    expect(explorerPage).toContain('shrink-0 rounded-md border px-3 py-1.5 text-[11px]');
+    expect(explorerPage).not.toContain('<SectionHeader title="Market Explorer"');
     expect(explorerPage).toContain("'market-movers': 'Movers Intelligence'");
     expect(explorerPage).toContain("'equity-explorer': 'Equity Search'");
     expect(explorerPage).toContain('if (requestedTab && requestedTab !== tab) setTab(requestedTab);');
@@ -664,6 +669,10 @@ describe('layout and flow audit regressions', () => {
     const toolsLayout = read('app/tools/layout.tsx');
 
     expect(researchPage).toContain('Research lens');
+    expect(researchPage).toContain('Evidence layer');
+    expect(researchPage).toContain('News, events, catalysts, earnings, and saved evidence for validating the morning research queue.');
+    expect(researchPage).toContain('shrink-0 rounded-md border px-3 py-1.5 text-[11px]');
+    expect(researchPage).not.toContain('<SectionHeader title="Research"');
     expect(researchPage).toContain('const TAB_PARAM_MAP');
     expect(researchPage).toContain("earnings: 'Earnings'");
     expect(researchPage).toContain("const initialTab = TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()] || 'News';");

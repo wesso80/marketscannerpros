@@ -10,7 +10,7 @@ import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useNews, useEconomicCalendar, useEarningsCalendar, type NewsArticle, type EconomicEvent, type EarningsEntry } from '@/app/v2/_lib/api';
-import { Card, SectionHeader, Badge, ImpactDot, UpgradeGate } from '@/app/v2/_components/ui';
+import { Card, Badge, ImpactDot, UpgradeGate } from '@/app/v2/_components/ui';
 import { useUserTier } from '@/lib/useUserTier';
 import { deleteSavedResearchCase, listSavedResearchCases, updateSavedResearchCaseOutcome, type SavedResearchCaseOutcome, type SavedResearchCaseSummary } from '@/lib/clientResearchCases';
 
@@ -209,8 +209,14 @@ export default function ResearchPage() {
   }, []);
 
   return (
-    <div className="space-y-6">
-      <SectionHeader title="Research" subtitle="News, events, catalysts, and saved research evidence." />
+    <div className="space-y-3">
+      <Card>
+        <div>
+          <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Evidence layer</div>
+          <h1 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Research</h1>
+          <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">News, events, catalysts, earnings, and saved evidence for validating the morning research queue.</p>
+        </div>
+      </Card>
 
       <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
@@ -219,19 +225,19 @@ export default function ResearchPage() {
             <div className="text-[0.72rem] text-slate-500">Switch between catalyst feeds, macro calendar, earnings, saved cases, and deeper intelligence views.</div>
           </div>
         </div>
-      <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
-        {TABS.map(t => (
-          <button
-            key={t}
-            type="button"
-            aria-pressed={tab === t}
-            onClick={() => setTab(t)}
-            className={`shrink-0 rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors ${tab === t ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300' : 'border-slate-800 bg-slate-950/35 text-slate-400 hover:border-slate-600 hover:text-slate-200'}`}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
+        <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
+          {TABS.map(t => (
+            <button
+              key={t}
+              type="button"
+              aria-pressed={tab === t}
+              onClick={() => setTab(t)}
+              className={`shrink-0 rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors ${tab === t ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300' : 'border-slate-800 bg-slate-950/35 text-slate-400 hover:border-slate-600 hover:text-slate-200'}`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
       </div>
 
       {(tier === 'free' || tier === 'anonymous') && (

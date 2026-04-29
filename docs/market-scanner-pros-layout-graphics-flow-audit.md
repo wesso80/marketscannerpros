@@ -21,6 +21,7 @@ Implementation status update: 2026-04-29
 - Completed: shared tool-header treatment now uses the compact command-workbench shell, tighter actions/help, and text-code identity blocks for pages using `ToolsPageHeader`.
 - Completed: Terminal route now uses the same compact command-workbench treatment as Dashboard and Golden Egg: slim compliance, command handoff header, and horizontal workbench rail.
 - Completed: Workspace, Journal, Scanner, and Backtest local shell pass normalized old section headers, collapsible disclaimers, grid rails, and emoji-era context badges into compact command-workbench surfaces.
+- Completed: Research and Explorer hub shells now use compact command-workbench headers and horizontal tab rails instead of legacy section headers and pill-wrap navigation.
 - Completed: wider icon cleanup pass replaced emoji-driven tool catalog icons with short professional visual codes and updated the Workflow directory, Favorites panel, and tools nav tier label rendering.
 - Completed: deeper Dashboard refinement pass added a command-dashboard header, stable queue/data-health/event/news metrics, direct Scanner/Golden Egg/Journal actions, and canonical Backtest/Journal handoffs from Continue Workflow.
 - Completed: screenshot-driven Dashboard refinement compacted the command header, made the live research queue the primary workbench, reduced disclaimer weight, and collapsed empty Edge Profile history into a small non-distracting state.
