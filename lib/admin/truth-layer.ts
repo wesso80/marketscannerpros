@@ -28,7 +28,7 @@ import type { Permission } from "@/types/operator";
 export type FinalVerdict = "ALLOW" | "ALLOW_REDUCED" | "WAIT" | "BLOCK";
 
 export type OperatorAction =
-  | "EXECUTE"
+  | "RESEARCH_READY"
   | "WATCH"
   | "WAIT_FOR_TRIGGER"
   | "IGNORE"
@@ -61,7 +61,7 @@ export interface TruthFreshness {
 
 export interface TruthReadiness {
   setupValid: boolean;
-  executionReady: boolean;
+  researchReady: boolean;
   triggerHit: boolean;
   thesisState: "STRONG" | "DEGRADED" | "INVALID" | "UNKNOWN";
 }
@@ -190,7 +190,7 @@ function resolveOperatorAction(
   switch (verdict) {
     case "ALLOW":
     case "ALLOW_REDUCED":
-      return readiness.executionReady ? "EXECUTE" : "WAIT_FOR_TRIGGER";
+      return readiness.researchReady ? "RESEARCH_READY" : "WAIT_FOR_TRIGGER";
     case "WAIT":
       return readiness.setupValid ? "WATCH" : "NO_ACTION";
     case "BLOCK":
@@ -423,7 +423,7 @@ function resolveReadiness(pipeline: CandidatePipeline): TruthReadiness {
   const c = pipeline.candidate;
 
   const setupValid = c.candidateState === "CANDIDATE" || c.candidateState === "VALIDATED" || c.candidateState === "READY";
-  const executionReady =
+  const researchReady =
     (g.finalPermission === "ALLOW" || g.finalPermission === "ALLOW_REDUCED") &&
     v.confidenceScore >= 0.55;
   const triggerHit = c.entryZone != null;
@@ -437,7 +437,7 @@ function resolveReadiness(pipeline: CandidatePipeline): TruthReadiness {
     thesisState = "INVALID";
   }
 
-  return { setupValid, executionReady, triggerHit, thesisState };
+  return { setupValid, researchReady, triggerHit, thesisState };
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -539,7 +539,7 @@ export function emptyTruth(symbol: string, reason?: string): TruthObject {
       readinessAgeSec: 0, dataState: "UNAVAILABLE",
     },
     readiness: {
-      setupValid: false, executionReady: false, triggerHit: false,
+      setupValid: false, researchReady: false, triggerHit: false,
       thesisState: "UNKNOWN",
     },
     sourceRefs: { candidateId: "", verdictId: "", governanceDecisionId: "" },

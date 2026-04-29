@@ -313,16 +313,16 @@ export type MorningOpenRescore = {
   brief: MorningBrief;
 };
 
-export type MorningBrokerFillSyncReport = {
+export type JournalTagReconciliationReport = {
   generatedAt: string;
   workspaceId: string | null;
   source: "journal_broker_fields" | "portfolio_journal" | "unavailable";
-  brokerLinked: boolean;
-  brokerTaggedTrades: number;
-  openBrokerTaggedTrades: number;
+  journalTagged: boolean;
+  taggedTrades: number;
+  openTaggedTrades: number;
   portfolioPositions: number;
   unmatchedOpenTrades: number;
-  totalBrokerTaggedPl: number;
+  totalTaggedPl: number;
   notes: string[];
 };
 
@@ -336,7 +336,7 @@ export type MorningDailyReview = {
   riskGovernor: MorningRiskGovernor;
   feedbackByAction: Record<string, number>;
   recentBriefs: MorningBriefHistoryItem[];
-  brokerSync: MorningBrokerFillSyncReport;
+  journalTagSync: JournalTagReconciliationReport;
   lessons: string[];
 };
 
@@ -659,7 +659,7 @@ export async function buildOpenRescore(brief: MorningBrief): Promise<MorningOpen
   };
 }
 
-export async function buildBrokerFillSyncReport(): Promise<MorningBrokerFillSyncReport> {
+export async function buildJournalTagReconciliationReport(): Promise<JournalTagReconciliationReport> {
   const generatedAt = new Date().toISOString();
   const workspaceId = await resolveOperatorWorkspaceId();
   if (!workspaceId) {
@@ -667,13 +667,13 @@ export async function buildBrokerFillSyncReport(): Promise<MorningBrokerFillSync
       generatedAt,
       workspaceId: null,
       source: "unavailable",
-      brokerLinked: false,
-      brokerTaggedTrades: 0,
-      openBrokerTaggedTrades: 0,
+      journalTagged: false,
+      taggedTrades: 0,
+      openTaggedTrades: 0,
       portfolioPositions: 0,
       unmatchedOpenTrades: 0,
-      totalBrokerTaggedPl: 0,
-      notes: ["No operator workspace found, so broker/fill reconciliation could not run."],
+      totalTaggedPl: 0,
+      notes: ["No operator workspace found, so journal tag reconciliation could not run."],
     };
   }
 
@@ -705,21 +705,21 @@ export async function buildBrokerFillSyncReport(): Promise<MorningBrokerFillSync
     ]);
     const broker = brokerRows[0];
     const positions = Number(positionRows[0]?.positions ?? 0);
-    const brokerTaggedTrades = Number(broker?.broker_tagged ?? 0);
-    const openBrokerTaggedTrades = Number(broker?.open_broker_tagged ?? 0);
+    const taggedTrades = Number(broker?.broker_tagged ?? 0);
+    const openTaggedTrades = Number(broker?.open_broker_tagged ?? 0);
     const unmatchedOpenTrades = Number(unmatchedRows[0]?.unmatched ?? 0);
-    const report: MorningBrokerFillSyncReport = {
+    const report: JournalTagReconciliationReport = {
       generatedAt,
       workspaceId,
-      source: brokerTaggedTrades > 0 ? "journal_broker_fields" : "portfolio_journal",
-      brokerLinked: brokerTaggedTrades > 0,
-      brokerTaggedTrades,
-      openBrokerTaggedTrades,
+      source: taggedTrades > 0 ? "journal_broker_fields" : "portfolio_journal",
+      journalTagged: taggedTrades > 0,
+      taggedTrades,
+      openTaggedTrades,
       portfolioPositions: positions,
       unmatchedOpenTrades,
-      totalBrokerTaggedPl: Number(broker?.total_pl ?? 0),
+      totalTaggedPl: Number(broker?.total_pl ?? 0),
       notes: [
-        brokerTaggedTrades > 0 ? `${brokerTaggedTrades} journal trade${brokerTaggedTrades === 1 ? "" : "s"} include broker/live fill markers.` : "No broker-tagged fills found yet; using portfolio/journal reconciliation.",
+        taggedTrades > 0 ? `${taggedTrades} journal trade${taggedTrades === 1 ? "" : "s"} include broker/live fill markers.` : "No tagged fills found yet; using portfolio/journal reconciliation.",
         `${positions} portfolio position${positions === 1 ? "" : "s"}; ${unmatchedOpenTrades} open journal trade${unmatchedOpenTrades === 1 ? "" : "s"} without matching portfolio position.`,
       ],
     };
@@ -727,7 +727,7 @@ export async function buildBrokerFillSyncReport(): Promise<MorningBrokerFillSync
     await q(
       `INSERT INTO admin_broker_fill_sync_runs (workspace_id, source, broker_linked, broker_tagged_trades, open_broker_tagged_trades, portfolio_positions, unmatched_open_trades, total_broker_tagged_pl, report)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb)`,
-      [workspaceId, report.source, report.brokerLinked, report.brokerTaggedTrades, report.openBrokerTaggedTrades, report.portfolioPositions, report.unmatchedOpenTrades, report.totalBrokerTaggedPl, JSON.stringify(report)],
+      [workspaceId, report.source, report.journalTagged, report.taggedTrades, report.openTaggedTrades, report.portfolioPositions, report.unmatchedOpenTrades, report.totalTaggedPl, JSON.stringify(report)],
     );
     return report;
   } catch (error) {
@@ -735,29 +735,29 @@ export async function buildBrokerFillSyncReport(): Promise<MorningBrokerFillSync
       generatedAt,
       workspaceId,
       source: "unavailable",
-      brokerLinked: false,
-      brokerTaggedTrades: 0,
-      openBrokerTaggedTrades: 0,
+      journalTagged: false,
+      taggedTrades: 0,
+      openTaggedTrades: 0,
       portfolioPositions: 0,
       unmatchedOpenTrades: 0,
-      totalBrokerTaggedPl: 0,
-      notes: [`Broker/fill reconciliation failed: ${error instanceof Error ? error.message : "unknown error"}.`],
+      totalTaggedPl: 0,
+      notes: [`Journal tag reconciliation failed: ${error instanceof Error ? error.message : "unknown error"}.`],
     };
   }
 }
 
 export async function buildDailyReview(): Promise<MorningDailyReview> {
-  const [sessionScore, risk, learning, recentBriefs, brokerSync, outcomeGrade, expectancy] = await Promise.all([
+  const [sessionScore, risk, learning, recentBriefs, journalTagSync, outcomeGrade, expectancy] = await Promise.all([
     loadSessionScoreReport(),
     loadRiskState(),
     loadLearningSnapshot(),
     loadRecentBriefs(),
-    buildBrokerFillSyncReport(),
+    buildJournalTagReconciliationReport(),
     buildPreviousBriefOutcomeGrade(),
     loadExpectancyDashboard(),
   ]);
   const riskGovernor = buildMorningRiskGovernor(risk, sessionScore, expectancy);
-  const lessons = buildDailyReviewLessons(sessionScore, risk, learning, brokerSync);
+  const lessons = buildDailyReviewLessons(sessionScore, risk, learning, journalTagSync);
   return {
     generatedAt: new Date().toISOString(),
     reviewDate: sessionScore.reviewDate,
@@ -768,7 +768,7 @@ export async function buildDailyReview(): Promise<MorningDailyReview> {
     riskGovernor,
     feedbackByAction: learning.briefFeedbackByAction,
     recentBriefs,
-    brokerSync,
+    journalTagSync,
     lessons,
   };
 }
@@ -791,7 +791,7 @@ export function renderDailyReviewEmail(review: MorningDailyReview): string {
     ${section("Tomorrow Risk Governor", `<table style="width:100%;border-collapse:collapse;"><tr>${miniCell("Mode", review.riskGovernor.mode)}${miniCell("Trades Left", `${review.riskGovernor.remainingTrades}/${review.riskGovernor.maxTradesToday}`)}${miniCell("Risk / Idea", formatUsd(review.riskGovernor.maxRiskPerTradeUsd))}${miniCell("Heat", `${formatUsd(review.riskGovernor.currentHeatUsd)} / ${formatUsd(review.riskGovernor.portfolioHeatLimitUsd)}`)}</tr></table>`)}
     ${section("Expectancy", `<p style="margin:0;color:#cbd5e1;line-height:1.55;">${escapeHtml(review.expectancy.notes.join(" "))}</p>`)}
     ${section("Risk Close", `<table style="width:100%;border-collapse:collapse;"><tr>${miniCell("Equity", formatUsd(review.risk.equity))}${miniCell("Daily P&L", formatUsd(review.risk.dailyPnl))}${miniCell("Open Risk", formatUsd(review.risk.openRiskUsd))}${miniCell("Source", review.risk.source.replace("_", " ").toUpperCase())}</tr></table>`)}
-    ${section("Fill Sync", `<p style="margin:0 0 10px;color:#cbd5e1;line-height:1.55;">${escapeHtml(review.brokerSync.notes.join(" "))}</p><table style="width:100%;border-collapse:collapse;"><tr>${miniCell("Broker Tagged", String(review.brokerSync.brokerTaggedTrades))}${miniCell("Open Tagged", String(review.brokerSync.openBrokerTaggedTrades))}${miniCell("Portfolio Positions", String(review.brokerSync.portfolioPositions))}${miniCell("Unmatched", String(review.brokerSync.unmatchedOpenTrades))}</tr></table>`)}
+    ${section("Fill Sync", `<p style="margin:0 0 10px;color:#cbd5e1;line-height:1.55;">${escapeHtml(review.journalTagSync.notes.join(" "))}</p><table style="width:100%;border-collapse:collapse;"><tr>${miniCell("Tagged Trades", String(review.journalTagSync.taggedTrades))}${miniCell("Open Tagged", String(review.journalTagSync.openTaggedTrades))}${miniCell("Portfolio Positions", String(review.journalTagSync.portfolioPositions))}${miniCell("Unmatched", String(review.journalTagSync.unmatchedOpenTrades))}</tr></table>`)}
     ${section("Feedback Labels", `<table style="width:100%;border-collapse:collapse;">${feedbackRows}</table>`)}
     ${section("Tomorrow's Adjustments", `<ul style="padding-left:18px;margin:0;">${lessonRows}</ul>`)}
     <div style="text-align:center;margin-top:24px;"><a href="${appUrl}/admin/morning-brief" style="display:inline-block;background:#10b981;color:#07111f;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:900;">Open Morning Brief</a></div>
@@ -1725,14 +1725,14 @@ function buildDailyReviewLessons(
   sessionScore: MorningSessionScoreReport,
   risk: MorningRiskState,
   learning: MorningLearningSnapshot,
-  brokerSync: MorningBrokerFillSyncReport,
+  journalTagSync: JournalTagReconciliationReport,
 ) {
   const lessons: string[] = [];
   if (sessionScore.ruleBreaks > 0) lessons.push(`Rule breaks detected (${sessionScore.ruleBreaks}). Tomorrow's brief should reduce aggression until discipline score recovers.`);
   if (sessionScore.missed > 0) lessons.push(`${sessionScore.missed} missed setup${sessionScore.missed === 1 ? "" : "s"}; add those playbooks to the deliberate watch list.`);
   if (sessionScore.failed > sessionScore.worked) lessons.push("Failed labels exceeded worked labels. Demand stronger confirmation and smaller initial size tomorrow.");
   if (risk.dailyPnl < 0) lessons.push(`Daily P&L closed negative (${formatUsd(risk.dailyPnl)}). Start tomorrow with risk permission checked before scanning plays.`);
-  if (brokerSync.unmatchedOpenTrades > 0) lessons.push(`${brokerSync.unmatchedOpenTrades} open journal trade${brokerSync.unmatchedOpenTrades === 1 ? "" : "s"} did not match portfolio positions. Reconcile before relying on exposure.`);
+  if (journalTagSync.unmatchedOpenTrades > 0) lessons.push(`${journalTagSync.unmatchedOpenTrades} open journal trade${journalTagSync.unmatchedOpenTrades === 1 ? "" : "s"} did not match portfolio positions. Reconcile before relying on exposure.`);
   if (learning.playbookEvolution.promotedPlaybooks.length) lessons.push(`Promote proven playbooks: ${learning.playbookEvolution.promotedPlaybooks.map((item) => item.key).join(", ")}.`);
   if (learning.playbookEvolution.suppressedSymbols.length) lessons.push(`Suppress noisy symbols until confirmation improves: ${learning.playbookEvolution.suppressedSymbols.map((item) => item.key).join(", ")}.`);
   return lessons.length ? lessons : ["No major adjustment detected. Keep labelling plays so the model has a sharper personal sample."];

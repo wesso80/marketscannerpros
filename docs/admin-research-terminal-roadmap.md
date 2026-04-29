@@ -11,7 +11,7 @@
 | Phase | Title | Status | Branch / Commit |
 |---|---|---|---|
 | 1 | Lockdown & Boundary (UX + Test Lock) | ✅ Complete | _pending push_ |
-| 1.5 | Internal Type Rename (executionReady, broker* symbols, BLOCK→NO_RESEARCH) | ⬜ Not started | — |
+| 1.5 | Internal Type Rename (executionReady, broker* symbols, BLOCK→NO_RESEARCH) | ✅ Complete (partial — see notes) | _pending push_ |
 | 2 | Truth Layer | ⬜ Not started | — |
 | 3 | Opportunity Research Board | ⬜ Not started | — |
 | 4 | Symbol Research Terminal | ⬜ Not started | — |
@@ -22,9 +22,9 @@
 
 Status legend: ⬜ Not started · 🟡 In progress · ✅ Complete · ⚠️ Blocked
 
-**Last session ended at:** Phase 1 shipped — boundary banner mounted, all execution-grade UI text neutralized in admin tree, regex guard test green (`test/admin/boundaryLanguage.test.ts`), `lib/admin/requireAdmin.ts` shim added, full vitest 394/394 green, Next build green. Pre-existing portfolio TS error (`riskLoadLabel === 'Elevated'`) fixed in passing.
-**Last commit on main:** `3a9e1348` (Workspace Portfolio A-grade header)
-**Next action when resuming:** Phase 1.5 — internal type renames (zero-UX-impact, locked-down by boundary test): truth-layer `OperatorAction` `"EXECUTE"` literal → `"RESEARCH_READY"`, `executionReady` field → `researchReady`, `MorningBrokerFillSyncReport` + `buildBrokerFillSyncReport` + `brokerLinked` + `brokerTaggedTrades` → `JournalTagReconciliationReport` + `buildJournalTagReconciliationReport` + `journalTagged` + `taggedTrades`, scan-context `brokerConnected` field removed, commander permission `"BLOCK"` → `"NO_RESEARCH"` (with consumer updates). Then proceed to Phase 2 (Truth Layer split).
+**Last session ended at:** Phase 1.5 shipped — internal type renames complete (`executionReady→researchReady`, `OperatorAction "EXECUTE"→"RESEARCH_READY"`, `Broker*→JournalTag*` across morning-brief lib/page/API). Two items deferred with rationale: `brokerConnected` (cross-tree shared type) and commander `BLOCK→NO_RESEARCH` (deeply integrated CommandState). Algorithm audit captured inline above (no behavioral changes — magic numbers identified for future extraction). vitest 394/394 green, build green.
+**Last commit on main:** `e1f070ec` (Phase 1)
+**Next action when resuming:** Phase 2 — Truth Layer split. Create [lib/engines/dataTruth.ts](../lib/engines/dataTruth.ts) with `computeDataTruth` + `DataTruth` type (statuses LIVE/CACHED/STALE/DEGRADED/MISSING/ERROR/SIMULATED). Move readiness logic from [lib/admin/truth-layer.ts](../lib/admin/truth-layer.ts) into new [lib/engines/researchReadiness.ts](../lib/engines/researchReadiness.ts). Extract magic numbers to [lib/admin/constants.ts](../lib/admin/constants.ts) per the algo audit. Build `<DataTruthBadge />` shared component, mount on every operator card. Add `test/engines/dataTruth.test.ts`.
 
 ---
 
@@ -91,17 +91,61 @@ These are the only places execution-grade language has crept in. All purely cosm
 
 ---
 
-## Phase 1.5 — Internal Type Rename _(zero UX impact, but tighten the lexicon)_
+## Phase 1.5 — Internal Type Rename _(zero UX impact, but tighten the lexicon)_ ✅ SHIPPED (partial)
 
 **Goal:** Bring internal type/field names in line with the research-only boundary now that the UX text and regex guard are locked in. Pure refactor — no behavior changes.
 
-- [ ] [lib/admin/truth-layer.ts](../lib/admin/truth-layer.ts) — `OperatorAction` union: `"EXECUTE"` → `"RESEARCH_READY"` (update consumers in `TruthRail.tsx` switch statements)
-- [ ] [lib/admin/truth-layer.ts](../lib/admin/truth-layer.ts) — `TruthReadiness.executionReady` → `researchReady` (update `TruthRail.tsx` `r.executionReady`)
-- [ ] [lib/admin/morning-brief.ts](../lib/admin/morning-brief.ts) — `MorningBrokerFillSyncReport` → `JournalTagReconciliationReport`; `buildBrokerFillSyncReport` → `buildJournalTagReconciliationReport`; `brokerLinked` → `journalTagged`; `brokerTaggedTrades` → `taggedTrades`; `brokerSync` field on `MorningDailyReview` → `journalTagSync` (update `app/admin/morning-brief/page.tsx` consumers + admin email HTML + DB table column docs)
-- [ ] [lib/admin/scan-context.ts](../lib/admin/scan-context.ts) — remove `brokerConnected: false` from default contexts (verify no consumers depend on it; if so, keep as `_legacy: false` or drop with `executionEnvironment` field replaced)
-- [ ] [app/admin/commander/page.tsx](../app/admin/commander/page.tsx) `deriveCommandState` — return `"NO_RESEARCH"` instead of `"BLOCK"` (update `commandReasons`, `allowedNextAction`, pill rendering, and `test/commanderCommandState.test.ts`)
-- [ ] [app/admin/morning-brief/page.tsx](../app/admin/morning-brief/page.tsx) — rename `runMorningAction("broker_sync")` → `runMorningAction("journal_tag_sync")` (update API route + DB-side action label)
-- [ ] Run vitest + build + commit
+- [x] [lib/admin/truth-layer.ts](../lib/admin/truth-layer.ts) — `OperatorAction` union: `"EXECUTE"` → `"RESEARCH_READY"` (admin-internal type, separate from operator engine's `"EXECUTE"` literal which stays)
+- [x] [lib/admin/truth-layer.ts](../lib/admin/truth-layer.ts) — `TruthReadiness.executionReady` → `researchReady` (incl. all 5 internal references + `TruthRail.tsx` consumer)
+- [x] [lib/admin/morning-brief.ts](../lib/admin/morning-brief.ts) — `MorningBrokerFillSyncReport` → `JournalTagReconciliationReport`; `buildBrokerFillSyncReport` → `buildJournalTagReconciliationReport`; `brokerLinked` → `journalTagged`; `brokerTaggedTrades` → `taggedTrades`; `openBrokerTaggedTrades` → `openTaggedTrades`; `totalBrokerTaggedPl` → `totalTaggedPl`; `brokerSync` field on `MorningDailyReview` → `journalTagSync`
+- [x] [app/admin/morning-brief/page.tsx](../app/admin/morning-brief/page.tsx) — client `MorningBrokerFillSync` type → `JournalTagReconciliation`; state `brokerSync` → `journalTagSync`; all field accesses updated
+- [x] [app/api/admin/morning-brief/actions/route.ts](../app/api/admin/morning-brief/actions/route.ts) — `MorningBriefAction` `"broker_sync"` → `"journal_tag_sync"`; response key updated
+- [ ] **Skipped** [lib/admin/scan-context.ts](../lib/admin/scan-context.ts) `brokerConnected` field — required by shared `ExecutionEnvironment` type in [types/operator.ts](../types/operator.ts) which is used by the operator engine. Out of admin-tree scope.
+- [ ] **Skipped** [app/admin/commander/page.tsx](../app/admin/commander/page.tsx) `deriveCommandState` `"BLOCK"` → `"NO_RESEARCH"` — `CommandState` type and `BLOCK` literal flow through tone helpers, command reasons, and assertions. Defer to Phase 8 polish where we can add a proper `NoResearchCommandState` and rewire test expectations cleanly.
+
+**Validation:** vitest 394/394 green; `npm run build` green. Zero behavior change — pure rename refactor.
+
+---
+
+## Algorithm Audit Notes _(Phase 1.5 sweep — captured for future hardening, no fixes applied)_
+
+Findings from a careful read of [lib/admin/truth-layer.ts](../lib/admin/truth-layer.ts) and [lib/admin/morning-brief.ts](../lib/admin/morning-brief.ts) math:
+
+### `truth-layer.ts` — `toConfidenceClass` (L137)
+- Thresholds: HIGH ≥ 0.85, MODERATE ≥ 0.70, WEAK ≥ 0.55, else INVALID. Bands are symmetric (15-pt wide MODERATE/WEAK, 15-pt-wide HIGH up to 1.0). **Verdict: clean.**
+
+### `truth-layer.ts` — `resolveReadiness` (L420)
+- `researchReady` requires `finalPermission ∈ {ALLOW, ALLOW_REDUCED}` AND `confidenceScore ≥ 0.55`. Coupling readiness to the WEAK confidence floor is consistent with `toConfidenceClass`. **Verdict: clean.**
+- `thesisState`: STRONG = conf ≥0.7 AND structureQuality ≥0.6; DEGRADED = conf ≥0.5; else INVALID. Note structureQuality threshold (0.6) doesn't appear elsewhere as a constant — consider extracting to a named constant if it gets reused.
+
+### `truth-layer.ts` — `buildReasonStack` (L211)
+- **Penalty impact normalization** (L228): `Math.min(Math.abs(pen.value) * 2, 0.9)` — assumes raw `pen.value` is on a 0..0.45 effective scale. If upstream changes scaling, impacts cluster at 0.9 ceiling silently. **Recommendation:** comment the expected input range, or normalize against a known max.
+- **Boost impact normalization** (L256): same `Math.min(boost.value * 2, 0.9)` shape — symmetric with penalties, good.
+- **Weak/Strong dimension thresholds** (0.4 / 0.7): Non-overlapping bands so a single dimension can't fire as both NEGATIVE and POSITIVE in the same scan. **Verdict: clean.**
+- **Top-5 truncation** (L294): Cockpit-friendly but can hide important secondary reasons in dense scans. Consider exposing the full list via a "show more" disclosure in Phase 4.
+- **Dedupe by code, keep highest impact** (L283): Correct but could lose diagnostic context if two pipelines produce the same code with different `direction`. Today only POSITIVE/NEGATIVE map 1:1 with code, so safe.
+
+### `truth-layer.ts` — `resolveOperatorAction` (L188)
+- Stale/unavailable/partial data short-circuits to `MANUAL_REVIEW`. Good fail-closed behavior.
+- `BLOCK + setupValid` returns `IGNORE`; `BLOCK + !setupValid` returns `NO_ACTION`. Mostly redundant since BLOCK rarely has a valid setup, but harmless.
+
+### `truth-layer.ts` — `resolveFreshness` (L312)
+- `dataState`: > 300s STALE, > 60s DELAYED. **Concern:** for daily/weekly timeframes a 60-second-old verdict is still LIVE in any practical sense. Consider scaling thresholds by timeframe (e.g. STALE = max(300s, 0.5×timeframe)) in Phase 2 alongside the broader Truth Layer split.
+
+### `morning-brief.ts` — `buildMorningRiskGovernor` (L1898)
+- `baseMaxTrades`: 1 if rule breaks > 0 OR discipline < 60; 4 if execution ≥ 75; else 3. Hard cap to 0 if no live equity OR research alerts paused OR daily drawdown ≥ 4%. **Verdict: defensible** — rule-break gate is the strongest signal and correctly dominates.
+- Daily drawdown hard stop at 4% is a magic number; consider making it a `RISK_HARD_STOP_PCT` constant.
+
+### `morning-brief.ts` — `formatUsd` and rounding
+- All monetary values use `Intl.NumberFormat` with `maximumFractionDigits: 0`. Consistent across the file.
+
+### `truth-layer.ts` — `effectiveSize` (L490)
+- `finalVerdict === "BLOCK" ? 0 : Math.round(v.sizeMultiplier * 100) / 100` — clamps to 2 decimals. **Verdict: clean.**
+
+**Action items captured for future phases (do not fix now without test coverage):**
+- Phase 2: extract magic numbers (`STRUCTURE_QUALITY_STRONG = 0.6`, `RISK_HARD_STOP_PCT = 0.04`, `DATA_STALE_SEC = 300`, `DATA_DELAYED_SEC = 60`) into a `lib/admin/constants.ts`
+- Phase 2: scale `dataState` thresholds by timeframe so a 1h verdict isn't "DELAYED" 60 seconds after generation
+- Phase 4: surface full reason stack (not just top 5) on the symbol research terminal
 
 ---
 

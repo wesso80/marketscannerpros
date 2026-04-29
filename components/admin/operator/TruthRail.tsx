@@ -20,7 +20,7 @@ function verdictColor(v: string) {
 
 function actionLabel(a: string) {
   switch (a) {
-    case "EXECUTE": return "Research-ready signal";
+    case "RESEARCH_READY": return "Research-ready signal";
     case "WATCH": return "Watch — setup valid";
     case "WAIT_FOR_TRIGGER": return "Wait for trigger";
     case "IGNORE": return "Ignore — no edge";
@@ -32,7 +32,7 @@ function actionLabel(a: string) {
 
 function actionColor(a: string) {
   switch (a) {
-    case "EXECUTE": return "#10B981";
+    case "RESEARCH_READY": return "#10B981";
     case "WATCH": return "#3B82F6";
     case "WAIT_FOR_TRIGGER": return "#FBBF24";
     case "IGNORE": return "#EF4444";
@@ -356,7 +356,7 @@ function FreshnessBlock({ truth }: { truth: TruthObject }) {
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginTop: 4 }}>
         {[
           ["Setup", r.setupValid],
-          ["Research Ready", r.executionReady],
+          ["Research Ready", r.researchReady],
           ["Trigger", r.triggerHit],
         ].map(([label, ok]) => (
           <span

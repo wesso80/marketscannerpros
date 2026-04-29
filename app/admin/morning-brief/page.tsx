@@ -284,16 +284,16 @@ type MorningOpenRescore = {
   brief: MorningBrief;
 };
 
-type MorningBrokerFillSync = {
+type JournalTagReconciliation = {
   generatedAt: string;
   workspaceId: string | null;
   source: "journal_broker_fields" | "portfolio_journal" | "unavailable";
-  brokerLinked: boolean;
-  brokerTaggedTrades: number;
-  openBrokerTaggedTrades: number;
+  journalTagged: boolean;
+  taggedTrades: number;
+  openTaggedTrades: number;
   portfolioPositions: number;
   unmatchedOpenTrades: number;
-  totalBrokerTaggedPl: number;
+  totalTaggedPl: number;
   notes: string[];
 };
 
@@ -301,7 +301,7 @@ type MorningDailyReview = {
   generatedAt: string;
   reviewDate: string;
   sessionScore: MorningBrief["sessionScore"];
-  brokerSync: MorningBrokerFillSync;
+  journalTagSync: JournalTagReconciliation;
   lessons: string[];
 };
 
@@ -407,7 +407,7 @@ export default function MorningBriefPage() {
   const [actionStatus, setActionStatus] = useState<string | null>(null);
   const [tradePlans, setTradePlans] = useState<Record<string, MorningTradePlan>>({});
   const [openRescore, setOpenRescore] = useState<MorningOpenRescore | null>(null);
-  const [brokerSync, setBrokerSync] = useState<MorningBrokerFillSync | null>(null);
+  const [journalTagSync, setJournalTagSync] = useState<JournalTagReconciliation | null>(null);
   const [dailyReview, setDailyReview] = useState<MorningDailyReview | null>(null);
 
   const refresh = async () => {
@@ -508,8 +508,8 @@ export default function MorningBriefPage() {
         setOpenRescore(data.rescore as MorningOpenRescore);
         setBrief(data.rescore.brief);
         setActionStatus(data.rescore.summary || "Open re-score complete");
-      } else if (data.brokerSync) {
-        setBrokerSync(data.brokerSync as MorningBrokerFillSync);
+      } else if (data.journalTagSync) {
+        setJournalTagSync(data.journalTagSync as JournalTagReconciliation);
         setActionStatus("Broker/fill reconciliation complete");
       } else if (data.review) {
         setDailyReview(data.review as MorningDailyReview);
@@ -562,8 +562,8 @@ export default function MorningBriefPage() {
           <button onClick={() => brief && runMorningAction("open_rescore", { brief })} disabled={!brief || Boolean(actionBusy)} className="rounded-md border border-amber-400/30 px-4 py-2 text-sm font-black text-amber-200 disabled:opacity-60">
             {actionBusy === "open_rescore" ? "Re-scoring..." : "At Open Re-score"}
           </button>
-          <button onClick={() => runMorningAction("broker_sync")} disabled={Boolean(actionBusy)} className="rounded-md border border-white/10 px-4 py-2 text-sm font-black text-slate-200 disabled:opacity-60">
-            {actionBusy === "broker_sync" ? "Reconciling..." : "Reconcile Tags"}
+          <button onClick={() => runMorningAction("journal_tag_sync")} disabled={Boolean(actionBusy)} className="rounded-md border border-white/10 px-4 py-2 text-sm font-black text-slate-200 disabled:opacity-60">
+            {actionBusy === "journal_tag_sync" ? "Reconciling..." : "Reconcile Tags"}
           </button>
           <button onClick={() => runMorningAction("review_email")} disabled={Boolean(actionBusy)} className="rounded-md border border-red-400/30 px-4 py-2 text-sm font-black text-red-200 disabled:opacity-60">
             {actionBusy === "review_email" ? "Sending..." : "Review Email"}
@@ -717,7 +717,7 @@ export default function MorningBriefPage() {
             </AdminCard>
           </section>
 
-          {(openRescore || brokerSync || dailyReview) ? (
+          {(openRescore || journalTagSync || dailyReview) ? (
             <section className="mb-5 grid gap-4 xl:grid-cols-3">
               {openRescore ? (
                 <AdminCard>
@@ -735,19 +735,19 @@ export default function MorningBriefPage() {
                 </AdminCard>
               ) : null}
 
-              {brokerSync ? (
+              {journalTagSync ? (
                 <AdminCard>
                   <SectionTitle title="Journal Tag Reconciliation" subtitle="Reconciles tagged journal fills against portfolio positions." />
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    <Metric label="Journal Tagged" value={brokerSync.brokerLinked ? "YES" : "NO"} tone={brokerSync.brokerLinked ? "green" : "yellow"} />
-                    <Metric label="Source" value={brokerSync.source.replace(/_/g, " ")} />
-                    <Metric label="Tagged Trades" value={String(brokerSync.brokerTaggedTrades)} />
-                    <Metric label="Open Tagged" value={String(brokerSync.openBrokerTaggedTrades)} />
-                    <Metric label="Positions" value={String(brokerSync.portfolioPositions)} />
-                    <Metric label="Unmatched" value={String(brokerSync.unmatchedOpenTrades)} tone={brokerSync.unmatchedOpenTrades > 0 ? "yellow" : "green"} />
+                    <Metric label="Journal Tagged" value={journalTagSync.journalTagged ? "YES" : "NO"} tone={journalTagSync.journalTagged ? "green" : "yellow"} />
+                    <Metric label="Source" value={journalTagSync.source.replace(/_/g, " ")} />
+                    <Metric label="Tagged Trades" value={String(journalTagSync.taggedTrades)} />
+                    <Metric label="Open Tagged" value={String(journalTagSync.openTaggedTrades)} />
+                    <Metric label="Positions" value={String(journalTagSync.portfolioPositions)} />
+                    <Metric label="Unmatched" value={String(journalTagSync.unmatchedOpenTrades)} tone={journalTagSync.unmatchedOpenTrades > 0 ? "yellow" : "green"} />
                   </div>
                   <div className="mt-3 space-y-2 text-xs leading-5 text-slate-400">
-                    {brokerSync.notes.map((note) => <div key={note} className="rounded border border-white/10 bg-slate-950/40 p-2">{note}</div>)}
+                    {journalTagSync.notes.map((note) => <div key={note} className="rounded border border-white/10 bg-slate-950/40 p-2">{note}</div>)}
                   </div>
                 </AdminCard>
               ) : null}

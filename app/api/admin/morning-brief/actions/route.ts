@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
 import { sendAlertEmail } from "@/lib/email";
 import {
-  buildBrokerFillSyncReport,
+  buildJournalTagReconciliationReport,
   buildDailyReview,
   buildMorningTradePlan,
   buildOpenRescore,
@@ -16,7 +16,7 @@ import type { ScannerHit } from "@/lib/admin/types";
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-type MorningBriefAction = "run_prewake" | "trade_plan" | "open_rescore" | "broker_sync" | "review_email";
+type MorningBriefAction = "run_prewake" | "trade_plan" | "open_rescore" | "journal_tag_sync" | "review_email";
 
 export async function POST(req: NextRequest) {
   const admin = await requireAdmin(req);
@@ -66,9 +66,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, action, rescore });
     }
 
-    if (action === "broker_sync") {
-      const brokerSync = await buildBrokerFillSyncReport();
-      return NextResponse.json({ ok: true, action, brokerSync });
+    if (action === "journal_tag_sync") {
+      const journalTagSync = await buildJournalTagReconciliationReport();
+      return NextResponse.json({ ok: true, action, journalTagSync });
     }
 
     if (action === "review_email") {
