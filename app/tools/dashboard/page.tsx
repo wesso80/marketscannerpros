@@ -11,7 +11,7 @@ import { useSearchParams } from 'next/navigation';
 import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useRegime, useMarketMovers, useNews, useEconomicCalendar, type Mover, type NewsArticle, type EconomicEvent } from '@/app/v2/_lib/api';
 import { REGIME_COLORS, CROSS_MARKET } from '@/app/v2/_lib/constants';
-import { Card, Badge, ImpactDot, AuthPrompt, UpgradeGate } from '@/app/v2/_components/ui';
+import { Card, ImpactDot, AuthPrompt, UpgradeGate } from '@/app/v2/_components/ui';
 import { useUserTier } from '@/lib/useUserTier';
 import { useCachedTopSymbols, type CachedSymbol } from '@/hooks/useCachedTopSymbols';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
@@ -148,8 +148,13 @@ export default function DashboardPage() {
   const highImpactEventCount = highImpactEvents.length;
   const headlineCount = articles.length;
   const dataHealthLabel = degradedFeeds.length ? `${degradedFeeds.length} issue${degradedFeeds.length === 1 ? '' : 's'}` : loadingFeeds ? `${loadingFeeds} loading` : 'Ready';
-  const dataHealthTone = degradedFeeds.length ? '#F59E0B' : loadingFeeds ? '#38BDF8' : '#10B981';
+  const dataHealthTone = degradedFeeds.length ? '#F59E0B' : loadingFeeds ? '#94A3B8' : '#10B981';
   const topQueueSymbol = scannerQueue[0]?.symbol || moverQueue[0]?.ticker || 'None';
+  const hasQueue = researchQueueCount > 0;
+  const nextCheckValue = hasQueue ? `Validate ${topQueueSymbol}` : loadingFeeds ? 'Loading feeds…' : 'Run Scanner first';
+  const nextCheckDetail = hasQueue ? 'Open Golden Egg from queue below' : loadingFeeds ? 'Cached scanner data syncing' : 'No cached candidates yet';
+  const nextCheckTone = hasQueue ? '#FBBF24' : '#94A3B8';
+  const topSymbolHref = hasQueue ? `/tools/golden-egg?symbol=${encodeURIComponent(topQueueSymbol)}` : '/tools/golden-egg';
 
   // Show sign-in prompt if all data hooks report auth errors
   const allAuthError = movers.isAuthError && news.isAuthError;
@@ -171,44 +176,37 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-4">
-      {/* -- Regime Banner ---------------------------------------------- */}
-      {regime.data && (
-        <div className="flex items-center gap-2 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 flex-wrap">
-          <span className="text-[11px] uppercase tracking-wider text-slate-500">Market Regime</span>
-          <Badge
-            label={regime.data.regime.replace(/_/g, ' ')}
-            color={
-              regime.data.regime.includes('UP') ? '#10B981'
-              : regime.data.regime.includes('DOWN') || regime.data.regime.includes('STRESS') ? '#EF4444'
-              : regime.data.regime.includes('EXPANSION') ? '#F59E0B'
-              : '#6366F1'
-            }
-          />
-          <Badge label={`Risk: ${regime.data.riskLevel}`} color={regime.data.riskLevel === 'low' ? '#10B981' : regime.data.riskLevel === 'moderate' ? '#F59E0B' : '#EF4444'} small />
-          <Badge label={`Sizing: ${regime.data.sizing}`} color="#94A3B8" small />
-        </div>
-      )}
-
       <section className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]" aria-label="Dashboard command header">
         <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(26rem,0.9fr)]">
           <div>
-            <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.16em] text-emerald-300">Morning command dashboard</div>
+            <div className="flex flex-wrap items-center gap-2 text-[0.68rem] font-extrabold uppercase tracking-[0.16em]">
+              <span className="text-emerald-300">Morning command dashboard</span>
+              {regime.data && (
+                <span className="flex items-center gap-1.5 rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-300">
+                  <span style={{ color: regime.data.regime.includes('UP') ? '#10B981' : regime.data.regime.includes('DOWN') || regime.data.regime.includes('STRESS') ? '#EF4444' : regime.data.regime.includes('EXPANSION') ? '#F59E0B' : '#A5B4FC' }}>{regime.data.regime.replace(/_/g, ' ')}</span>
+                  <span className="text-slate-600">·</span>
+                  <span className="text-slate-400">Risk <span style={{ color: regime.data.riskLevel === 'low' ? '#10B981' : regime.data.riskLevel === 'moderate' ? '#F59E0B' : '#EF4444' }}>{regime.data.riskLevel}</span></span>
+                  <span className="text-slate-600">·</span>
+                  <span className="text-slate-400">Sizing <span className="text-slate-200">{regime.data.sizing}</span></span>
+                </span>
+              )}
+            </div>
             <h1 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Open the research queue, then validate one symbol.</h1>
             <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">
               Scanner cache, movers, calendar risk, and headlines are compressed into a morning review path.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <a href="/tools/scanner" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15">Start Scanner</a>
-              <a href="/tools/golden-egg" className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15">Validate Symbol</a>
+              <a href={topSymbolHref} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15">{hasQueue ? `Validate ${topQueueSymbol}` : 'Validate Symbol'}</a>
               <a href="/tools/workspace?tab=journal" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Open Journal</a>
             </div>
           </div>
 
           <div className="grid self-start gap-1.5 sm:grid-cols-2">
-            <DashboardMetric label="Queue" value={researchQueueCount ? `${researchQueueCount} items` : 'Empty'} tone={researchQueueCount ? '#10B981' : '#94A3B8'} detail={`Top focus: ${topQueueSymbol}`} />
-            <DashboardMetric label="Data Health" value={dataHealthLabel} tone={dataHealthTone} detail={degradedFeeds.length ? degradedFeeds.join(', ') : 'No feed errors reported'} />
-            <DashboardMetric label="High Impact" value={String(highImpactEventCount)} tone={highImpactEventCount ? '#F59E0B' : '#94A3B8'} detail="Calendar events in queue" />
-            <DashboardMetric label="Headlines" value={String(headlineCount)} tone={headlineCount ? '#38BDF8' : '#94A3B8'} detail="Latest news items loaded" />
+            <DashboardMetric label="Queue" value={researchQueueCount ? `${researchQueueCount} items` : 'Empty'} tone={researchQueueCount ? '#10B981' : '#94A3B8'} detail={hasQueue ? `Top focus: ${topQueueSymbol}` : 'Run Scanner to populate'} />
+            <DashboardMetric label="Data Health" value={dataHealthLabel} tone={dataHealthTone} detail={degradedFeeds.length ? degradedFeeds.join(', ') : loadingFeeds ? 'Feeds syncing' : 'No feed errors reported'} />
+            <DashboardMetric label="High Impact" value={String(highImpactEventCount)} tone={highImpactEventCount ? '#F59E0B' : '#94A3B8'} detail={highImpactEventCount ? 'Calendar events in queue' : 'No high-impact events'} />
+            <DashboardMetric label="Next Check" value={nextCheckValue} tone={nextCheckTone} detail={nextCheckDetail} />
           </div>
         </div>
       </section>
@@ -282,8 +280,8 @@ export default function DashboardPage() {
           <Card>
             <div className="text-[0.65rem] font-extrabold uppercase tracking-[0.14em] text-amber-300">Continue Workflow</div>
             <div className="mt-3 grid gap-2 text-xs">
-              <button type="button" onClick={() => navigateTo('scanner')} className="rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2 text-left text-slate-200 hover:border-emerald-400/30">1. Find scenarios in Scanner</button>
-              <button type="button" onClick={() => navigateTo('golden-egg')} className="rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2 text-left text-slate-200 hover:border-emerald-400/30">2. Validate one symbol in Golden Egg</button>
+              <button type="button" onClick={() => navigateTo('scanner')} className={`rounded-lg border px-3 py-2 text-left no-underline ${hasQueue ? 'border-emerald-400/25 bg-emerald-400/[0.06] text-emerald-200' : 'border-white/10 bg-white/[0.035] text-slate-200 hover:border-emerald-400/30'}`}>{hasQueue ? `✓ ${researchQueueCount} scenarios queued` : '1. Find scenarios in Scanner'}</button>
+              <a href={topSymbolHref} className="rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2 text-left text-slate-200 no-underline hover:border-amber-400/30">{hasQueue ? `2. Validate ${topQueueSymbol} in Golden Egg` : '2. Validate one symbol in Golden Egg'}</a>
               <a href="/tools/workspace?tab=backtest" className="rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2 text-left text-slate-200 no-underline hover:border-emerald-400/30">3. Test history in Backtest</a>
               <a href="/tools/workspace?tab=journal" className="rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2 text-left text-slate-200 no-underline hover:border-emerald-400/30">4. Save notes in Journal</a>
             </div>

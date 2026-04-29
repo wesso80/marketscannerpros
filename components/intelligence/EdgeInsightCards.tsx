@@ -156,6 +156,14 @@ export default function EdgeInsightCards({ compact = false }: { compact?: boolea
   }
 
   if (isEmpty || !profile) {
+    if (compact) {
+      return (
+        <div className="rounded-md border border-slate-800/60 bg-[var(--msp-panel)] px-3 py-1.5 flex items-center justify-between gap-3 text-xs">
+          <span className="font-semibold text-slate-300">Edge Profile</span>
+          <span className="text-[11px] text-slate-500">0/10 closed trades — unlocks after 10 journal closes</span>
+        </div>
+      );
+    }
     return (
       <div className="rounded-lg border border-slate-800/60 bg-[var(--msp-panel)] p-3">
         <h3 className="text-sm font-semibold text-white mb-1">

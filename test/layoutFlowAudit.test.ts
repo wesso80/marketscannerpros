@@ -678,6 +678,16 @@ describe('layout and flow audit regressions', () => {
     expect(edgeInsightCards).toContain('const INSIGHT_CODES');
     expect(edgeInsightCards).toContain('Edge Profile');
     expect(edgeInsightCards).toContain('Not enough closed trades yet. Close at least 10 trades in your journal to unlock edge insights.');
+    // Dashboard polish — single-source regime in eyebrow, Next Check tile, adaptive workflow,
+    // empty Edge Profile collapses to one-liner.
+    expect(dashboardPage).not.toContain('flex items-center gap-2 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 flex-wrap');
+    expect(dashboardPage).not.toContain('label={`Risk: ${regime.data.riskLevel}`}');
+    expect(dashboardPage).toContain('label="Next Check"');
+    expect(dashboardPage).not.toContain('label="Headlines"');
+    expect(dashboardPage).toContain('const hasQueue = researchQueueCount > 0;');
+    expect(dashboardPage).toContain('const nextCheckValue = hasQueue');
+    expect(dashboardPage).toContain('scenarios queued');
+    expect(edgeInsightCards).toContain('0/10 closed trades');
     expect(edgeInsightCards).not.toContain('Your Historical Patterns');
     expect(edgeInsightCards).not.toContain('📊');
     expect(edgeInsightCards).not.toContain('🔒');
