@@ -22,9 +22,9 @@
 
 Status legend: ⬜ Not started · 🟡 In progress · ✅ Complete · ⚠️ Blocked
 
-**Last session ended at:** Phase 6 shipped — ARCA Admin Research Copilot. Created [lib/admin/arcaTypes.ts](../lib/admin/arcaTypes.ts) (`ArcaAdminMode` 9-mode union, `ArcaAdminContext`, `ArcaAdminResearchOutput`, `validateArcaOutput` with forbidden-phrase scan), [lib/admin/arcaPrompt.ts](../lib/admin/arcaPrompt.ts) (`buildArcaSystemPrompt` with explicit refusal clause + every forbidden verb + JSON contract; `buildArcaUserPrompt` per-mode), [app/api/admin/arca/route.ts](../app/api/admin/arca/route.ts) (POST, OpenAI gpt-4o-mini, JSON response_format, server-side classification override, validator-rejected outputs fall back to a deterministic safe payload), and [components/admin/AdminARCAPanel.tsx](../components/admin/AdminARCAPanel.tsx) (mode select + Ask ARCA button + headline/reasoning/evidence/risks/classification rendering). Mounted on the canonical [/admin/symbol/[symbol]](../app/admin/symbol/[symbol]/page.tsx) page below the Scenario Map. vitest 38 files / 461 tests green (+14 new), build green, boundary guard green.
-**Last commit on main:** `c06c93ad` (Phase 5)
-**Next action when resuming:** Phase 7 — Journal Learning. Create [lib/engines/journalLearning.ts](../lib/engines/journalLearning.ts) to mine `admin_research_cases` for repeat patterns, [app/admin/journal-learning/page.tsx](../app/admin/journal-learning/page.tsx) cockpit, `<AdminJournalDNAPanel />`, and surface a "Journal Pattern Match" boost inside `internalResearchScore`.
+**Last session ended at:** Phase 7 shipped — Journal Learning. Created [lib/engines/journalLearning.ts](../lib/engines/journalLearning.ts) (pure pattern-detection: `buildPatternGroups`, `findJournalMatches`, `buildJournalDNA`, `computeJournalPatternBoost`; groups by setup×market×bias; ≥3 in-band cases required for boost; bounded weight 2..6), [app/api/admin/journal-learning/route.ts](../app/api/admin/journal-learning/route.ts) (GET, mines `admin_research_cases`, returns DNA summary + boost; degrades to empty summary when table missing), [app/admin/journal-learning/page.tsx](../app/admin/journal-learning/page.tsx) (workspace-wide rollup cockpit), and [components/admin/AdminJournalDNAPanel.tsx](../components/admin/AdminJournalDNAPanel.tsx). Wired optional `journalPatternBoost` into [lib/engines/internalResearchScore.ts](../lib/engines/internalResearchScore.ts) as `JOURNAL_PATTERN_MATCH` boost. Mounted DNA panel on canonical [/admin/symbol/[symbol]](../app/admin/symbol/[symbol]/page.tsx). Added `Journal Learning (JL)` nav entry. vitest 39 files / 473 tests green (+12 new), build green, boundary guard green.
+**Last commit on main:** `5bf69dd7` (Phase 6)
+**Next action when resuming:** Phase 8 — Elite UI Polish. Create `<AdminCommandPalette />` (Cmd-K), keyboard shortcuts in `<AdminTerminalShell />` (`/` palette, `S` symbol search, `O` opportunity board, `G` Golden Egg, `T` time confluence, `V` DVE, `A` alerts, `D` data health, `J` journal learning, `Esc` close, `Enter` open). Create `<AdminProviderHealthGrid />` and `<AdminWebhookStatusPanel />`. Consolidate `/admin/diagnostics` + `/admin/system` → `/admin/data-health`. Create `/admin/model-diagnostics` and `/admin/backtest-lab` (or rename `/admin/quant`).
 
 ---
 
@@ -233,15 +233,18 @@ Findings from a careful read of [lib/admin/truth-layer.ts](../lib/admin/truth-la
 
 ---
 
-## Phase 7 — Journal Learning
+## Phase 7 — Journal Learning ✅ SHIPPED
 
 **Goal:** Pattern detection from past saved research cases.
 
-- [ ] Create [lib/engines/journalLearning.ts](../lib/engines/journalLearning.ts)
-- [ ] Create [app/admin/journal-learning/page.tsx](../app/admin/journal-learning/page.tsx)
-- [ ] Create `<AdminJournalDNAPanel />`
-- [ ] Surface "Journal Pattern Match" boost in `internalResearchScore`
-- [ ] Build + commit
+- [x] [lib/engines/journalLearning.ts](../lib/engines/journalLearning.ts) — pure: groups by setup×market×bias, finds matches, computes bounded boost (2..6) when ≥3 in-band cases
+- [x] [app/api/admin/journal-learning/route.ts](../app/api/admin/journal-learning/route.ts) — GET mines `admin_research_cases`; degrades to empty summary when table missing
+- [x] [app/admin/journal-learning/page.tsx](../app/admin/journal-learning/page.tsx) — workspace rollup cockpit
+- [x] [components/admin/AdminJournalDNAPanel.tsx](../components/admin/AdminJournalDNAPanel.tsx) — mounted on canonical Symbol Research page above ARCA
+- [x] `JOURNAL_PATTERN_MATCH` boost wired into [lib/engines/internalResearchScore.ts](../lib/engines/internalResearchScore.ts) (optional input)
+- [x] `Journal Learning (JL)` nav entry under Markets
+- [x] Tests: grouping, dedup+cap on sample symbols, sort order, score-band tolerance, bias mismatch ⇒ no match, boost requires ≥3 in-band, weight bounded 2..6, empty input safe
+- [x] vitest 39 / 473 green · build green · boundary guard green
 
 ---
 

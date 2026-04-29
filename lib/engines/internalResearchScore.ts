@@ -48,6 +48,8 @@ export interface ResearchScoreInput {
   dataTruth: DataTruth;
   /** Optional previous composite score for change-since-last-scan. */
   previousScore?: number | null;
+  /** Optional journal-learning boost from `computeJournalPatternBoost`. */
+  journalPatternBoost?: { weight: number; reason: string } | null;
 }
 
 /* ───────────── Helpers ───────────── */
@@ -219,6 +221,13 @@ export function computeInternalResearchScore(input: ResearchScoreInput): Interna
   }
   if (dataTruth.status === "LIVE" && dataTruth.trustScore >= 90) {
     boosts.push({ code: "HIGH_DATA_TRUST", label: "Live, high-trust data", weight: BOOST_HIGH_TRUST });
+  }
+  if (input.journalPatternBoost && input.journalPatternBoost.weight > 0) {
+    boosts.push({
+      code: "JOURNAL_PATTERN_MATCH",
+      label: `Journal pattern match — ${input.journalPatternBoost.reason}`,
+      weight: input.journalPatternBoost.weight,
+    });
   }
 
   // Apply penalties + boosts

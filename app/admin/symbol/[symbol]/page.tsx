@@ -6,6 +6,7 @@ import AdminEvidenceStack from "@/components/admin/AdminEvidenceStack";
 import AdminResearchScoreBreakdown from "@/components/admin/AdminResearchScoreBreakdown";
 import AdminScenarioMap from "@/components/admin/AdminScenarioMap";
 import AdminARCAPanel from "@/components/admin/AdminARCAPanel";
+import AdminJournalDNAPanel from "@/components/admin/AdminJournalDNAPanel";
 import type { AdminSymbolIntelligence } from "@/lib/admin/types";
 import type { InternalResearchScore, SetupDefinition } from "@/lib/admin/adminTypes";
 import type { DataTruth } from "@/lib/engines/dataTruth";
@@ -160,6 +161,15 @@ export default function SymbolResearchTerminalPage({
           </div>
 
           <AdminScenarioMap snapshot={data} setup={data.research.setup} />
+
+          <AdminJournalDNAPanel
+            symbol={data.symbol}
+            market={market}
+            timeframe={timeframe}
+            bias={data.bias}
+            setupType={data.research.setup.type}
+            score={data.research.score.score}
+          />
 
           <AdminARCAPanel
             context={{
