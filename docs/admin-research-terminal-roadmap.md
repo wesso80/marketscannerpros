@@ -22,9 +22,9 @@
 
 Status legend: ⬜ Not started · 🟡 In progress · ✅ Complete · ⚠️ Blocked
 
-**Last session ended at:** Phase 2 shipped — Truth Layer split. Created [lib/admin/constants.ts](../lib/admin/constants.ts) (centralized confidence/evidence/risk/freshness magic numbers from the audit), [lib/engines/dataTruth.ts](../lib/engines/dataTruth.ts) (`computeDataTruth` with timeframe-aware staleness scaling — fixes the audit issue where 1h verdicts went DELAYED after 60s), [lib/engines/researchReadiness.ts](../lib/engines/researchReadiness.ts) (`classifyConfidence` / `isResearchReady` / `classifyThesis` extracted), and [components/admin/shared/DataTruthBadge.tsx](../components/admin/shared/DataTruthBadge.tsx). Badge mounted in [TruthRail.tsx](../components/admin/operator/TruthRail.tsx) header. truth-layer.ts now consumes constants (zero behavioral change). vitest 414/414 green (+20 new), build green.
+**Last session ended at:** Phase 3 shipped — Opportunity Research Board. Created [lib/admin/adminTypes.ts](../lib/admin/adminTypes.ts) (`InternalResearchScore`, `AdminOpportunityRow`, `SetupDefinition`, `AdminResearchAlert` skeleton), [lib/engines/setupClassifier.ts](../lib/engines/setupClassifier.ts) (16 setup types from indicators/DVE/levels), [lib/engines/internalResearchScore.ts](../lib/engines/internalResearchScore.ts) (composite scorer with the **dataTrustScore < 50 ⇒ DATA_DEGRADED** hard floor and **one-axis 25% cap**), [app/api/admin/opportunities/route.ts](../app/api/admin/opportunities/route.ts), [components/admin/AdminOpportunityBoard.tsx](../components/admin/AdminOpportunityBoard.tsx), and [app/admin/opportunity-board/page.tsx](../app/admin/opportunity-board/page.tsx). Mounted in admin nav as "Opportunity Board (OB)". vitest 35 files / 431 tests green (+17 new), build green, boundary guard green.
 **Last commit on main:** `e1f070ec` (Phase 1)
-**Next action when resuming:** Phase 3 — Opportunity Research Board. Create [lib/admin/adminTypes.ts](../lib/admin/adminTypes.ts) (`InternalResearchScore`, `AdminResearchAlert`, `SetupDefinition` from brief Sections 10/11/16), [lib/engines/internalResearchScore.ts](../lib/engines/internalResearchScore.ts) (pure scorer with `dataTrustScore < 50 ⇒ DATA_DEGRADED` hard floor, one-axis 25% cap, stale-data penalty — wire into `computeDataTruth().trustScore`), [lib/engines/setupClassifier.ts](../lib/engines/setupClassifier.ts) (16 setup types), and [app/api/admin/opportunities/route.ts](../app/api/admin/opportunities/route.ts). />` shared component, mount on every operator card. Add `test/engines/dataTruth.test.ts`.
+**Next action when resuming:** Phase 4 — Symbol Research Terminal. Promote `/admin/terminal/[symbol]` → `/admin/symbol/[symbol]` (with redirect). Build `<AdminResearchVerdictPanel />`, `<AdminEvidenceStack />` (9 axes), `<AdminResearchScoreBreakdown />` consuming the centralized [InternalResearchScore](../lib/engines/internalResearchScore.ts). Add Scenario Map. Refactor existing cockpit cards (ConfidenceCard, VerdictHeaderCard, RiskGovernorCard, IndicatorMatrixCard) to consume the centralized score. "Save Research Case" → journal. />` shared component, mount on every operator card. Add `test/engines/dataTruth.test.ts`.
 
 ---
 
@@ -163,23 +163,24 @@ Findings from a careful read of [lib/admin/truth-layer.ts](../lib/admin/truth-la
 
 ---
 
-## Phase 3 — Opportunity Research Board
+## Phase 3 — Opportunity Research Board ✅ SHIPPED
 
 **Goal:** One screen ranks every symbol by Research Score × Data Trust.
 
-- [ ] Create [lib/admin/adminTypes.ts](../lib/admin/adminTypes.ts) — exports `InternalResearchScore`, `AdminResearchAlert`, `SetupDefinition` (full shapes from brief Sections 10, 11, 16)
-- [ ] Create [lib/engines/internalResearchScore.ts](../lib/engines/internalResearchScore.ts) — pure `computeInternalResearchScore(input): InternalResearchScore`
-  - Hard floor: `dataTrustScore < 50` ⇒ `lifecycle = DATA_DEGRADED`
-  - One-axis cap: no single sub-score contributes > 25%
-  - Stale data ⇒ heavy penalty
-- [ ] Create [lib/engines/setupClassifier.ts](../lib/engines/setupClassifier.ts) — 16 setup types from brief Section 11
-- [ ] Create [app/api/admin/opportunities/route.ts](../app/api/admin/opportunities/route.ts)
-- [ ] Create [app/admin/opportunity-board/page.tsx](../app/admin/opportunity-board/page.tsx)
-- [ ] Create `<AdminOpportunityBoard />` component with columns: Rank, Symbol, Asset, Setup Type, Bias, Research Score, Cleanliness, Volatility State, Time Confluence, Options Context, Liquidity State, Data Trust, Lifecycle, Change Since Last Scan, Alert State, Review CTA (no "Trade"/"Execute"/"Order"/"Enter")
-- [ ] Filters: Asset class, lifecycle, setup type, data-trust min, score min, "changed since last scan"
-- [ ] Suppress rows where lifecycle ∈ {EXHAUSTED, TRAPPED, INVALIDATED, NO_EDGE, DATA_DEGRADED} unless toggled
-- [ ] Tests for score engine + classifier
-- [ ] Build + commit
+- [x] Create [lib/admin/adminTypes.ts](../lib/admin/adminTypes.ts) — exports `InternalResearchScore`, `AdminOpportunityRow`, `SetupDefinition`, `AdminResearchAlert` skeleton
+- [x] Create [lib/engines/internalResearchScore.ts](../lib/engines/internalResearchScore.ts) — pure `computeInternalResearchScore(input): InternalResearchScore`
+  - **Hard floor**: `dataTrustScore < 50` ⇒ `lifecycle = DATA_DEGRADED`, score capped at 35
+  - **One-axis cap**: no single axis (of 9) contributes > 25% of composite
+  - **Stale data penalty**: -25 (STALE), -15 (DEGRADED/MISSING/ERROR), -8 (DELAYED)
+- [x] Create [lib/engines/setupClassifier.ts](../lib/engines/setupClassifier.ts) — 16 setup types (TREND_CONTINUATION, SQUEEZE_EXPANSION, FAILED_BREAKOUT, EXHAUSTION_FADE, MOMENTUM_IGNITION, RECLAIM_AND_HOLD, BREAKDOWN_RETEST, LIQUIDITY_SWEEP, RANGE_REVERSION, RANGE_BREAKOUT, VOLATILITY_CONTRACTION, GAP_FILL, HIGHER_TIMEFRAME_REJECTION, TREND_PULLBACK, MEAN_REVERSION_TRAP, NO_SETUP)
+- [x] Create [app/api/admin/opportunities/route.ts](../app/api/admin/opportunities/route.ts) — ranked rows API
+- [x] Create [app/admin/opportunity-board/page.tsx](../app/admin/opportunity-board/page.tsx)
+- [x] Create [components/admin/AdminOpportunityBoard.tsx](../components/admin/AdminOpportunityBoard.tsx) — columns: Rank, Symbol, Bias, Setup, Score, Lifecycle, Dominant Axis, Data Trust badge, Penalties, Boosts, Review CTA (no "Trade"/"Execute"/"Order"/"Enter")
+- [x] Filters: Market, Timeframe, Min Score, Min Data Trust, Show Suppressed toggle
+- [x] Suppress rows where lifecycle ∈ {EXHAUSTED, TRAPPED, INVALIDATED, NO_EDGE, DATA_DEGRADED} unless toggled
+- [x] Tests: [test/engines/internalResearchScore.test.ts](../test/engines/internalResearchScore.test.ts) (17 tests) — score engine + classifier (axis cap, hard floor, penalties, boosts, lifecycle)
+- [x] Mounted in admin nav under Markets section
+- [x] vitest 35 files / 431 tests green, build green
 
 ---
 
