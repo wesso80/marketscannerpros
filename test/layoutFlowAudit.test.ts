@@ -447,7 +447,7 @@ describe('layout and flow audit regressions', () => {
     expect(terminalPage).toContain("'crypto-terminal': 'Crypto'");
     expect(terminalPage).toContain("'time-scanner': 'Time Confluence'");
     expect(terminalPage).toContain('useSearchParams');
-    expect(terminalPage).toContain('if (requestedTab && requestedTab !== tab) setTab(requestedTab);');
+    expect(terminalPage).toContain('if (requestedTab) setTab(requestedTab);');
     expect(terminalPage).toContain('Mechanics workbench');
     expect(terminalPage).toContain('Timing first, then positioning, flow, and final confluence before Backtest.');
     expect(terminalPage).toContain('grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-5');
@@ -563,8 +563,8 @@ describe('layout and flow audit regressions', () => {
     expect(workspacePage).toContain('grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-7');
     expect(workspacePage).not.toContain('<SectionHeader title="Workspace"');
     expect(workspacePage).toContain('useEffect(() => {');
-    expect(workspacePage).toContain("const requestedTab = TABS.find(t => t.toLowerCase() === searchParams.get('tab')?.toLowerCase());");
-    expect(workspacePage).toContain('if (requestedTab && requestedTab !== tab) setTab(requestedTab);');
+    expect(workspacePage).toContain("const requestedTab = TABS.find(t => t.toLowerCase() === urlTabParam);");
+    expect(workspacePage).toContain('if (requestedTab) setTab(requestedTab);');
     expect(backtestHub).toContain('embeddedInWorkspace = false');
     expect(backtestHub).toContain('Backtest method');
     expect(backtestHub).toContain('Choose one engine, then read the full result stack below.');
@@ -686,7 +686,7 @@ describe('layout and flow audit regressions', () => {
     expect(explorerPage).toContain("'crypto-explorer': 'Crypto Deep-Dive'");
     expect(explorerPage).toContain("'crypto-intel': 'Crypto Intel'");
     expect(explorerPage).toContain("tab === 'Crypto Intel'");
-    expect(explorerPage).toContain('if (requestedTab && requestedTab !== tab) setTab(requestedTab);');
+    expect(explorerPage).toContain('if (requestedTab) setTab(requestedTab);');
     expect(dashboardPage).toContain('aria-label="Morning research start"');
     expect(dashboardPage).toContain('Highest-evidence symbols first.');
     expect(dashboardPage).toContain('Click a symbol to open Golden Egg. Review context only; no trade instructions.');

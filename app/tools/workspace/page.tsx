@@ -89,13 +89,16 @@ export default function WorkspacePage() {
 function WorkspaceContent() {
   const { tier } = useUserTier();
   const searchParams = useSearchParams();
-  const initialTab = TABS.find(t => t.toLowerCase() === searchParams.get('tab')?.toLowerCase()) || 'Watchlists';
+  const urlTabParam = searchParams.get('tab')?.toLowerCase() ?? null;
+  const initialTab = TABS.find(t => t.toLowerCase() === urlTabParam) || 'Watchlists';
   const [tab, setTab] = useState<typeof TABS[number]>(initialTab);
 
+  // Only re-sync from URL when the URL param itself changes (e.g. external nav).
+  // Do NOT depend on `tab` here — that would force user clicks back to the URL value.
   useEffect(() => {
-    const requestedTab = TABS.find(t => t.toLowerCase() === searchParams.get('tab')?.toLowerCase());
-    if (requestedTab && requestedTab !== tab) setTab(requestedTab);
-  }, [searchParams, tab]);
+    const requestedTab = TABS.find(t => t.toLowerCase() === urlTabParam);
+    if (requestedTab) setTab(requestedTab);
+  }, [urlTabParam]);
 
   const activeMeta = WORKSPACE_TAB_META[tab];
   const tierLabel = tier === 'pro_trader' ? 'Pro Trader' : tier === 'pro' ? 'Pro' : 'Free';

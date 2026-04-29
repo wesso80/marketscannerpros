@@ -127,8 +127,11 @@ export default function ResearchPage() {
 
   useEffect(() => {
     const requestedTab = TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()];
-    if (requestedTab && requestedTab !== tab) setTab(requestedTab);
-  }, [searchParams, tab]);
+    if (requestedTab) setTab(requestedTab);
+    // Only re-sync when the URL tab param changes; including `tab` here would force
+    // user clicks back to the URL value.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const articles = news.data?.articles || [];
   const events = useMemo(() => {
