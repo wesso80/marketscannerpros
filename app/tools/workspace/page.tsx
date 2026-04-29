@@ -46,12 +46,6 @@ function WorkspaceMetric({ label, value, tone = '#CBD5E1', detail }: { label: st
 function WorkspaceTabRail({ activeTab, onSelectTab }: { activeTab: WorkspaceTab; onSelectTab: (tab: WorkspaceTab) => void }) {
   return (
     <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2" aria-label="Workspace tabs">
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Workspace memory</div>
-          <div className="text-[0.72rem] text-slate-500">Watchlists, journal, portfolio, learning, backtest, alerts, and settings.</div>
-        </div>
-      </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-7">
         {TABS.map((t) => {
           const meta = WORKSPACE_TAB_META[t];
