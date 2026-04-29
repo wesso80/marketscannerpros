@@ -623,7 +623,7 @@ export default function MarketMoversPage() {
                       ? 'text-amber-300'
                       : 'text-rose-300'
                   }`}>
-                    {environment.deploymentMode === 'YES' ? '🟢 ALIGNED' : environment.deploymentMode === 'CONDITIONAL' ? '🟡 CONDITIONAL' : '🔴 NOT ALIGNED'}
+                    {environment.deploymentMode === 'YES' ? 'ALIGNED' : environment.deploymentMode === 'CONDITIONAL' ? 'CONDITIONAL' : 'NOT ALIGNED'}
                   </h2>
                   <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
                     <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Adaptive Confidence: {environment.adaptiveConfidence}%</span>

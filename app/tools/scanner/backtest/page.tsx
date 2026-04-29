@@ -184,8 +184,8 @@ function ScoreChart({ data, minScore }: { data: ScorePoint[]; minScore: number }
       <div className="mb-2 flex items-center justify-between">
         <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Scanner Score Over Time</div>
         <div className="flex gap-3 text-[10px] text-slate-500">
-          <span>🟢 Long ≥ {minScore}</span>
-          <span>🔴 Short ≤ {bearThresh}</span>
+          <span>BULL ≥ {minScore}</span>
+          <span>BEAR ≤ {bearThresh}</span>
         </div>
       </div>
       <svg viewBox={`0 0 ${w} ${h}`} className="w-full" preserveAspectRatio="none">
@@ -581,13 +581,13 @@ function ScannerBacktestContent() {
                       }`}
                       title="Create alerts that notify you when this strategy scenario opens or closes historically similar conditions"
                     >
-                      {alertStatus === 'created' ? '✓ Alerts Created' : alertStatus === 'creating' ? 'Creating…' : '🔔 Alert Me on Scenario Conditions'}
+                      {alertStatus === 'created' ? 'Alerts Created' : alertStatus === 'creating' ? 'Creating…' : 'Alert Me on Scenario Conditions'}
                     </button>
                   </div>
                 </div>
                 {alertStatus === 'created' && (
                   <div className="mb-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-300">
-                    ✓ Scenario open/close alerts created for <strong>{symbol}</strong> using this strategy config. You&apos;ll get email + push notifications every 15 min when matching conditions appear or fade.
+                    Scenario open/close alerts created for <strong>{symbol}</strong> using this strategy config. You&apos;ll get email and push notifications every 15 min when matching conditions appear or fade.
                   </div>
                 )}
                 {alertStatus === 'error' && alertError && (

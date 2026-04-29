@@ -130,7 +130,7 @@ export default function ReferralsPage() {
                   onClick={copyLink}
                   className="shrink-0 rounded-lg border border-emerald-500/40 bg-emerald-500/20 px-4 py-2.5 text-sm font-semibold text-emerald-400 hover:bg-emerald-500/30 transition-colors"
                 >
-                  {copied ? '✓ Copied' : 'Copy'}
+                  {copied ? 'Copied' : 'Copy'}
                 </button>
               </div>
               <p className="mt-2 text-xs text-slate-500">
@@ -155,7 +155,7 @@ export default function ReferralsPage() {
               <div className="flex items-start justify-between">
                 <div>
                   <h2 className="text-sm font-bold text-amber-400 mb-1">
-                    🏆 Monthly $500 Draw — {data.contest.period}
+                    Monthly $500 Draw — {data.contest.period}
                   </h2>
                   <p className="text-xs text-slate-400">
                     Every 5 qualifying referrals = 1 draw entry. Draw date:{' '}
@@ -196,7 +196,7 @@ export default function ReferralsPage() {
             {/* ─── Leaderboard ─── */}
             {data.leaderboard.length > 0 && (
               <section className="rounded-xl border border-slate-700 bg-slate-900/50 p-5">
-                <h2 className="text-sm font-bold text-slate-100 mb-3">🏅 This Month&apos;s Top Referrers</h2>
+                <h2 className="text-sm font-bold text-slate-100 mb-3">This Month&apos;s Top Referrers</h2>
                 <div className="space-y-2">
                   {data.leaderboard.map((entry) => (
                     <div

@@ -373,12 +373,12 @@ export default function GainersLosersPage() {
           badge="MARKET MOVERS"
           title="Top Gainers & Losers"
           subtitle="Real-time mover analysis with institutional-grade filtering."
-          icon="📊"
+          icon="MOV"
           backHref="/dashboard"
         />
         <main style={{ padding: "24px 16px", display: "flex", justifyContent: "center" }}>
           <div style={{ width: "100%", maxWidth: 960 }}>
-            <ComplianceDisclaimer collapsible />
+            <ComplianceDisclaimer compact />
             <div style={{ marginTop: 16, display: "flex", justifyContent: "center" }}>
               <UpgradeGate feature="Market Movers" requiredTier="pro" />
             </div>
@@ -394,16 +394,16 @@ export default function GainersLosersPage() {
         badge="MARKET MOVERS"
         title="Top Gainers & Losers"
         subtitle="Real-time mover analysis with institutional-grade filtering."
-        icon="📊"
+        icon="MOV"
         backHref="/dashboard"
       />
       <main style={{ padding: "24px 16px", width: "100%" }}>
         <div style={{ maxWidth: "none", margin: "0 auto", width: "100%" }}>
-          <ComplianceDisclaimer collapsible />
+          <ComplianceDisclaimer compact />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
             <div style={{ color: "#64748b", fontSize: 13 }}>
-              {marketDate && <div>📅 Market data: {marketDate}</div>}
-              {lastUpdated && <div style={{ marginTop: 2 }}>🔄 Fetched: {lastUpdated.toLocaleTimeString()}</div>}
+              {marketDate && <div>Market data: {marketDate}</div>}
+              {lastUpdated && <div style={{ marginTop: 2 }}>Fetched: {lastUpdated.toLocaleTimeString()}</div>}
             </div>
             <button
               type="button"
@@ -422,7 +422,7 @@ export default function GainersLosersPage() {
                 cursor: refreshing ? "wait" : "pointer",
               }}
             >
-              🔄 {refreshing ? "Refreshing..." : "Refresh Data"}
+              {refreshing ? "Refreshing..." : "Refresh Data"}
             </button>
           </div>
 
@@ -430,7 +430,7 @@ export default function GainersLosersPage() {
             <div style={{ padding: "12px 14px", background: "var(--msp-panel)", border: "1px solid var(--msp-border)", borderRadius: 10 }}>
               <div style={{ fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase", color: "#64748B", fontWeight: 700 }}>Market Analysis Status</div>
               <div style={{ marginTop: 6, fontSize: 18, fontWeight: 800, color: environment.deploymentMode === "YES" ? "#10B981" : environment.deploymentMode === "CONDITIONAL" ? "#FBBF24" : "#EF4444" }}>
-                {environment.deploymentMode === "YES" ? "🟢 ALIGNED" : environment.deploymentMode === "CONDITIONAL" ? "🟡 CONDITIONAL" : "🔴 NOT ALIGNED"}
+                {environment.deploymentMode === "YES" ? "ALIGNED" : environment.deploymentMode === "CONDITIONAL" ? "CONDITIONAL" : "NOT ALIGNED"}
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
                 <span style={{ padding: "2px 8px", border: "1px solid #334155", borderRadius: 999, fontSize: 11, color: "#CBD5E1" }}>Adaptive Confidence: {environment.adaptiveConfidence}%</span>
@@ -452,9 +452,9 @@ export default function GainersLosersPage() {
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(140px, 100%), 1fr))", gap: 12, marginBottom: 16 }}>
-            <button type="button" onClick={() => setActiveTab("gainers")} style={{ padding: "14px 20px", background: activeTab === "gainers" ? "rgba(16,185,129,0.2)" : "rgba(15,23,42,0.8)", border: activeTab === "gainers" ? "1px solid rgba(16,185,129,0.5)" : "1px solid rgba(51,65,85,0.8)", borderRadius: 12, color: activeTab === "gainers" ? "#10B981" : "#94A3B8", fontWeight: 600, cursor: "pointer" }}>🚀 Top Gainers</button>
-            <button type="button" onClick={() => setActiveTab("losers")} style={{ padding: "14px 20px", background: activeTab === "losers" ? "rgba(239,68,68,0.2)" : "rgba(15,23,42,0.8)", border: activeTab === "losers" ? "1px solid rgba(239,68,68,0.5)" : "1px solid rgba(51,65,85,0.8)", borderRadius: 12, color: activeTab === "losers" ? "#EF4444" : "#94A3B8", fontWeight: 600, cursor: "pointer" }}>📉 Top Losers</button>
-            <button type="button" onClick={() => setActiveTab("active")} style={{ padding: "14px 20px", background: activeTab === "active" ? "var(--msp-panel)" : "rgba(15,23,42,0.8)", border: activeTab === "active" ? "1px solid var(--msp-border)" : "1px solid rgba(51,65,85,0.8)", borderRadius: 12, color: activeTab === "active" ? "var(--msp-accent)" : "#94A3B8", fontWeight: 600, cursor: "pointer" }}>🔥 Most Active</button>
+            <button type="button" onClick={() => setActiveTab("gainers")} style={{ padding: "14px 20px", background: activeTab === "gainers" ? "rgba(16,185,129,0.2)" : "rgba(15,23,42,0.8)", border: activeTab === "gainers" ? "1px solid rgba(16,185,129,0.5)" : "1px solid rgba(51,65,85,0.8)", borderRadius: 12, color: activeTab === "gainers" ? "#10B981" : "#94A3B8", fontWeight: 600, cursor: "pointer" }}>Top Gainers</button>
+            <button type="button" onClick={() => setActiveTab("losers")} style={{ padding: "14px 20px", background: activeTab === "losers" ? "rgba(239,68,68,0.2)" : "rgba(15,23,42,0.8)", border: activeTab === "losers" ? "1px solid rgba(239,68,68,0.5)" : "1px solid rgba(51,65,85,0.8)", borderRadius: 12, color: activeTab === "losers" ? "#EF4444" : "#94A3B8", fontWeight: 600, cursor: "pointer" }}>Top Losers</button>
+            <button type="button" onClick={() => setActiveTab("active")} style={{ padding: "14px 20px", background: activeTab === "active" ? "var(--msp-panel)" : "rgba(15,23,42,0.8)", border: activeTab === "active" ? "1px solid var(--msp-border)" : "1px solid rgba(51,65,85,0.8)", borderRadius: 12, color: activeTab === "active" ? "var(--msp-accent)" : "#94A3B8", fontWeight: 600, cursor: "pointer" }}>Most Active</button>
           </div>
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
@@ -502,7 +502,7 @@ export default function GainersLosersPage() {
 
           {environment.deploymentMode === "NO" && (
             <div style={{ padding: "10px 14px", background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.2)", borderRadius: 8, marginBottom: 16, color: "#FBBF24", fontSize: 12 }}>
-              ⚠ No Aligned Movers — environment conditions are not suitable for momentum analysis.
+              No Aligned Movers — environment conditions are not suitable for momentum analysis.
             </div>
           )}
 

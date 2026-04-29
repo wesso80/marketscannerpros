@@ -32,7 +32,7 @@ export default function ToolsSettingsPage() {
         badge="TOOLS SETTINGS"
         title="Settings"
         subtitle="Configure educational guardrails and platform behavior for your workspace."
-        icon="⚙️"
+        icon="SET"
         backHref="/tools"
       />
 
@@ -81,7 +81,7 @@ export default function ToolsSettingsPage() {
             {/* Cooldown Warning */}
             {guardPendingDisable && (
               <div className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
-                <div className="font-semibold">⏳ Disable Cooldown Active</div>
+                <div className="font-semibold">Cooldown Active</div>
                 <div className="mt-1 text-amber-400">
                   Rule Guard will disable in {cooldownMin}:{cooldownRemSec.toString().padStart(2, '0')}. 
                   Click &quot;Cancel Disable&quot; to abort. This 10-minute delay prevents impulsive deactivation during drawdown.
@@ -92,7 +92,7 @@ export default function ToolsSettingsPage() {
             {/* R Budget Halved Warning */}
             {guardRBudgetHalved && !guardEnabled && (
               <div className="mt-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
-                <div className="font-semibold">⚠️ Daily R Budget Halved</div>
+                <div className="font-semibold">Daily R Budget Halved</div>
                 <div className="mt-1 text-red-400">
                   While Rule Guard is disabled, your daily R budget is automatically halved to limit exposure. 
                   Re-enable the guard to restore full budget. Guard auto-re-enables after 24 hours.

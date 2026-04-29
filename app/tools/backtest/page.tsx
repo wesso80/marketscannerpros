@@ -1434,7 +1434,7 @@ function BacktestContent() {
               borderRadius: '8px',
               padding: '6px 8px',
               fontSize: '14px'
-            }}>⚙️</span>
+            }}>CFG</span>
             Backtest Configuration
           </h2>
           
@@ -1606,7 +1606,7 @@ function BacktestContent() {
               </div>
               {timeframe !== 'daily' && (
                 <p style={{ fontSize: '11px', color: '#10b981', marginTop: '4px' }}>
-                  ✓ Custom intraday timeframes may be resampled from base bars.
+                  OK Custom intraday timeframes may be resampled from base bars.
                 </p>
               )}
             </div>
@@ -1802,7 +1802,7 @@ function BacktestContent() {
                 opacity: isLoading || isScanningTimeframes || isScanningUniverse ? 0.65 : 1,
               }}
             >
-              {isScanningTimeframes ? 'Scanning timeframes…' : '🔎 Scan Best Timeframe'}
+              {isScanningTimeframes ? 'Scanning timeframes…' : 'Scan Best Timeframe'}
             </button>
 
             <button
@@ -1823,7 +1823,7 @@ function BacktestContent() {
                 opacity: isLoading || isScanningTimeframes || isScanningUniverse || timeframeScanResults.length === 0 ? 0.65 : 1,
               }}
             >
-              ⚡ Use Best & Rerun
+              Use Best & Rerun
             </button>
 
             <button
@@ -1846,7 +1846,7 @@ function BacktestContent() {
                 opacity: isLoading || isScanningTimeframes || isScanningUniverse ? 0.65 : 1,
               }}
             >
-              {isScanningUniverse ? 'Scanning universe…' : '🌐 Scan Universe'}
+              {isScanningUniverse ? 'Scanning universe…' : 'Scan Universe'}
             </button>
 
             <button
@@ -1867,7 +1867,7 @@ function BacktestContent() {
                 opacity: isLoading || isScanningTimeframes || isScanningUniverse ? 0.65 : 1,
               }}
             >
-              🏛️ Scan Top 10 Stocks
+              Scan Top 10 Stocks
             </button>
 
             <button
@@ -1887,7 +1887,7 @@ function BacktestContent() {
                 opacity: isLoading || isScanningTimeframes || isScanningUniverse ? 0.65 : 1,
               }}
             >
-              🪙 Scan Crypto (BTC)
+              Scan Crypto (BTC)
             </button>
 
             <button
@@ -1908,7 +1908,7 @@ function BacktestContent() {
                 opacity: isLoading || isScanningTimeframes || isScanningUniverse || universeScanResults.length === 0 ? 0.65 : 1,
               }}
             >
-              🧭 Use Best Pair & Rerun
+              Use Best Pair & Rerun
             </button>
           </div>
 
@@ -2023,7 +2023,7 @@ function BacktestContent() {
               gap: '10px',
               flexWrap: 'wrap',
             }}>
-              <span>⚠️ {backtestError}</span>
+              <span><strong>WARN</strong> {backtestError}</span>
               {(backtestError.toLowerCase().includes('insufficient data') || backtestError.toLowerCase().includes('too short')) && (
                 <button
                   onClick={applySuggestedDateRange}
@@ -2834,11 +2834,11 @@ function BacktestContent() {
                   {(() => {
                     const hasPositiveExpectancy = results.totalReturn > 0 && scoreProfitFactor(results.profitFactor) > 1;
                     const hasNeutralExpectancy = results.totalReturn >= -5 && results.totalReturn <= 5;
-                    const verdict = hasPositiveExpectancy 
-                      ? { label: '✅ Positive Expectancy', color: '#10b981', bg: 'rgba(16,185,129,0.15)' }
+                    const verdict = hasPositiveExpectancy
+                      ? { label: 'Positive Expectancy', color: '#10b981', bg: 'rgba(16,185,129,0.15)' }
                       : hasNeutralExpectancy
-                      ? { label: '⚠️ Marginal Edge', color: '#fbbf24', bg: 'rgba(251,191,36,0.15)' }
-                      : { label: '❌ Negative Expectancy', color: '#ef4444', bg: 'rgba(239,68,68,0.15)' };
+                      ? { label: 'Marginal Edge', color: '#fbbf24', bg: 'rgba(251,191,36,0.15)' }
+                      : { label: 'Negative Expectancy', color: '#ef4444', bg: 'rgba(239,68,68,0.15)' };
 
                     return (
                       <div style={{
@@ -2938,7 +2938,7 @@ function BacktestContent() {
                   borderRadius: '8px',
                   padding: '6px 8px',
                   fontSize: '14px'
-                }}>📈</span>
+                }}>BT</span>
                 Backtest Performance Analysis
               </h2>
               
@@ -3167,7 +3167,7 @@ function BacktestContent() {
             padding: '60px 24px',
             textAlign: 'center'
           }}>
-            <div style={{ fontSize: '64px', marginBottom: '20px' }}>📈</div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '64px', height: '64px', borderRadius: '18px', border: '1px solid rgba(16,185,129,0.35)', background: 'rgba(16,185,129,0.08)', color: '#6ee7b7', fontSize: '18px', fontWeight: 800, marginBottom: '20px' }}>BT</div>
             <h2 style={{ fontSize: '24px', fontWeight: '600', color: '#f9fafb', marginBottom: '12px' }}>
               Ready to validate your edge
             </h2>
@@ -3187,7 +3187,7 @@ function BacktestContent() {
           textAlign: 'center',
         }}>
           <p style={{ fontSize: '12px', color: '#D97706', margin: 0 }}>
-            ⚠️ <strong>Important:</strong> Backtesting results are hypothetical and do not guarantee future performance. 
+            <strong>Important:</strong> Backtesting results are hypothetical and do not guarantee future performance.
             Past performance is not indicative of future results. This tool is for educational purposes only and does not constitute investment advice. 
             Trading involves substantial risk of loss.
           </p>

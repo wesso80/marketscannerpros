@@ -971,11 +971,42 @@ describe('layout and flow audit regressions', () => {
 
   it('keeps Backtest page-local chrome free of emoji-era badges', () => {
     const backtestPage = read('app/tools/backtest/page.tsx');
+    const scannerBacktestPage = read('app/tools/scanner/backtest/page.tsx');
+    const settingsPage = read('app/tools/settings/page.tsx');
 
     expect(backtestPage).toContain('icon="BT"');
     expect(backtestPage).toContain('>CTX</span>');
+    expect(backtestPage).toContain('>CFG</span>');
+    expect(backtestPage).toContain('Scan Best Timeframe');
+    expect(backtestPage).toContain('Use Best Pair & Rerun');
+    expect(backtestPage).toContain('Strategy Verdict: {verdict.label}');
+    expect(backtestPage).toContain('Positive Expectancy');
+    expect(backtestPage).toContain('Marginal Edge');
+    expect(backtestPage).toContain('Negative Expectancy');
     expect(backtestPage).not.toContain('icon="🧪"');
     expect(backtestPage).not.toContain('>🔬</span>');
+    expect(backtestPage).not.toContain('🔎 Scan Best Timeframe');
+    expect(backtestPage).not.toContain('⚡ Use Best & Rerun');
+    expect(backtestPage).not.toContain('🌐 Scan Universe');
+    expect(backtestPage).not.toContain('🏛️ Scan Top 10 Stocks');
+    expect(backtestPage).not.toContain('🪙 Scan Crypto (BTC)');
+    expect(backtestPage).not.toContain('🧭 Use Best Pair & Rerun');
+    expect(backtestPage).not.toContain('✅ Positive Expectancy');
+    expect(backtestPage).not.toContain('⚠️ Marginal Edge');
+    expect(backtestPage).not.toContain('❌ Negative Expectancy');
+    expect(backtestPage).not.toContain('⚠️ <strong>Important:</strong>');
+    expect(scannerBacktestPage).toContain('BULL ≥ {minScore}');
+    expect(scannerBacktestPage).toContain('BEAR ≤ {bearThresh}');
+    expect(scannerBacktestPage).toContain('Alert Me on Scenario Conditions');
+    expect(scannerBacktestPage).not.toContain('🟢 Long');
+    expect(scannerBacktestPage).not.toContain('🔴 Short');
+    expect(scannerBacktestPage).not.toContain('🔔 Alert Me');
+    expect(settingsPage).toContain('icon="SET"');
+    expect(settingsPage).toContain('Cooldown Active');
+    expect(settingsPage).toContain('Daily R Budget Halved');
+    expect(settingsPage).not.toContain('icon="⚙️"');
+    expect(settingsPage).not.toContain('⏳ Disable Cooldown Active');
+    expect(settingsPage).not.toContain('⚠️ Daily R Budget Halved');
   });
 
   it('keeps market context routes on compact tool chrome', () => {
@@ -983,6 +1014,7 @@ describe('layout and flow audit regressions', () => {
     const newsPage = read('app/tools/news/page.tsx');
     const commoditiesPage = read('app/tools/commodities/page.tsx');
     const referralsPage = read('app/tools/referrals/page.tsx');
+    const gainersLosersPage = read('app/tools/gainers-losers/page.tsx');
 
     expect(marketMoversPage).toContain('icon="MM"');
     expect(marketMoversPage).toContain('<ComplianceDisclaimer compact />');
@@ -1009,8 +1041,27 @@ describe('layout and flow audit regressions', () => {
     expect(commoditiesPage).not.toContain('<ComplianceDisclaimer collapsible />');
     expect(referralsPage).toContain('icon="REF"');
     expect(referralsPage).toContain('<ComplianceDisclaimer compact />');
+    expect(referralsPage).toContain('Monthly $500 Draw');
+    expect(referralsPage).toContain('This Month&apos;s Top Referrers');
     expect(referralsPage).not.toContain('icon="🎁"');
     expect(referralsPage).not.toContain('<ComplianceDisclaimer collapsible />');
+    expect(referralsPage).not.toContain('🏆 Monthly $500 Draw');
+    expect(referralsPage).not.toContain('🏅 This Month&apos;s Top Referrers');
+    expect(gainersLosersPage).toContain('icon="MOV"');
+    expect(gainersLosersPage).toContain('<ComplianceDisclaimer compact />');
+    expect(gainersLosersPage).toContain('Market data: {marketDate}');
+    expect(gainersLosersPage).toContain('Fetched: {lastUpdated.toLocaleTimeString()}');
+    expect(gainersLosersPage).toContain('Top Gainers</button>');
+    expect(gainersLosersPage).toContain('Top Losers</button>');
+    expect(gainersLosersPage).toContain('Most Active</button>');
+    expect(gainersLosersPage).toContain('No Aligned Movers — environment conditions are not suitable for momentum analysis.');
+    expect(gainersLosersPage).not.toContain('icon="📊"');
+    expect(gainersLosersPage).not.toContain('<ComplianceDisclaimer collapsible />');
+    expect(gainersLosersPage).not.toContain('📅 Market data');
+    expect(gainersLosersPage).not.toContain('🔄 Fetched');
+    expect(gainersLosersPage).not.toContain('🚀 Top Gainers');
+    expect(gainersLosersPage).not.toContain('📉 Top Losers');
+    expect(gainersLosersPage).not.toContain('🔥 Most Active');
   });
 
   it('keeps secondary market routes on text-code visual identity', () => {
