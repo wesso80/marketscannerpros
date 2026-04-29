@@ -8,7 +8,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
-import { Card, SectionHeader, UpgradeGate } from '@/app/v2/_components/ui';
+import { Card, UpgradeGate } from '@/app/v2/_components/ui';
 import { useUserTier } from '@/lib/useUserTier';
 import { RiskPermissionProvider } from '@/components/risk/RiskPermissionContext';
 
@@ -42,16 +42,29 @@ function WorkspaceContent() {
   }, [searchParams, tab]);
 
   return (
-    <div className="space-y-6">
-      <SectionHeader title="Workspace" subtitle="Your personal trading workspace" />
+    <div className="space-y-3">
+      <Card>
+        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+          <div>
+            <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Workflow memory</div>
+            <h1 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Workspace</h1>
+            <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">Watchlists, journal, portfolio, learning, backtest, alerts, and account settings in one compact workbench.</p>
+          </div>
+          <div className="rounded-md border border-slate-700/70 bg-slate-950/60 px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.12em] text-slate-500">
+            {tab} tab
+          </div>
+        </div>
+      </Card>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 overflow-x-auto pb-1">
-        {TABS.map(t => (
-          <button key={t} onClick={() => setTab(t)} className={`px-2.5 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap transition-colors ${tab === t ? 'bg-[rgba(16,185,129,0.1)] text-[var(--msp-accent)] border border-[rgba(16,185,129,0.4)]' : 'text-[var(--msp-text-muted)] hover:bg-slate-800/60 border border-transparent'}`}>
-            {t}
-          </button>
-        ))}
+      <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2">
+        <div className="flex items-center gap-1 overflow-x-auto">
+          {TABS.map(t => (
+            <button key={t} onClick={() => setTab(t)} className={`shrink-0 rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors ${tab === t ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300' : 'border-slate-800 bg-slate-950/35 text-slate-400 hover:border-slate-600 hover:text-slate-200'}`}>
+              {t}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* ── WATCHLISTS ─────────────────────────────────────────────── */}

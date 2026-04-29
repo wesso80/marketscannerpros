@@ -504,6 +504,11 @@ describe('layout and flow audit regressions', () => {
     const backtestHub = read('components/backtest/BacktestHub.tsx');
 
     expect(workspacePage).toContain('<BacktestPage embeddedInWorkspace />');
+    expect(workspacePage).toContain('Workflow memory');
+    expect(workspacePage).toContain('Watchlists, journal, portfolio, learning, backtest, alerts, and account settings in one compact workbench.');
+    expect(workspacePage).toContain('rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2');
+    expect(workspacePage).toContain('shrink-0 rounded-md border px-3 py-1.5 text-[11px]');
+    expect(workspacePage).not.toContain('<SectionHeader title="Workspace"');
     expect(workspacePage).toContain('useEffect(() => {');
     expect(workspacePage).toContain("const requestedTab = TABS.find(t => t.toLowerCase() === searchParams.get('tab')?.toLowerCase());");
     expect(workspacePage).toContain('if (requestedTab && requestedTab !== tab) setTab(requestedTab);');
@@ -521,17 +526,21 @@ describe('layout and flow audit regressions', () => {
   it('keeps Workspace Journal compact with a focused drawer', () => {
     const workspacePage = read('app/tools/workspace/page.tsx');
     const journalPage = read('components/journal/JournalPage.tsx');
+    const journalRoute = read('app/tools/journal/page.tsx');
     const journalLayout = read('components/journal/layout/JournalLayout.tsx');
     const journalCommand = read('components/journal/layer1/JournalCommandBar.tsx');
     const tradeDrawer = read('components/journal/drawer/TradeDrawer.tsx');
 
     expect(workspacePage).toContain('<JournalPageV1 tier={tier} embeddedInWorkspace />');
+    expect(journalRoute).toContain('<ComplianceDisclaimer compact />');
+    expect(journalRoute).not.toContain('<ComplianceDisclaimer collapsible />');
     expect(journalPage).toContain('embeddedInWorkspace = false');
     expect(journalPage).toContain("embeddedInWorkspace ? 'px-0 py-0' : 'px-4 py-4 md:px-6'");
     expect(journalPage).toContain('embeddedInWorkspace={embeddedInWorkspace}');
     expect(journalLayout).toContain('embeddedInWorkspace?: boolean');
     expect(journalCommand).toContain('Journal review');
     expect(journalCommand).toContain('Historical journal, live open P&L, and review evidence for your saved trades.');
+    expect(journalCommand).toContain('rounded-md border border-emerald-500/30 bg-emerald-500/20 px-3 py-1.5 text-xs');
     expect(journalCommand).toContain('New Trade</button>');
     expect(journalCommand).toContain('Export</button>');
     expect(tradeDrawer).toContain('embeddedInWorkspace = false');
@@ -918,6 +927,14 @@ describe('layout and flow audit regressions', () => {
 
     expect(scannerPage).toContain("type ScannerStage = ScannerMode | 'analysis'");
     expect(scannerPage).toContain('function ScannerFlowRail');
+    expect(scannerPage).toContain('Workflow step 1 · Market queue');
+    expect(scannerPage).toContain('Find the highest-evidence research queue.');
+    expect(scannerPage).toContain('Ranked scan triages the market. Pro scan lets you configure conditions, then Analysis sends one symbol into Golden Egg.');
+    expect(scannerPage).toContain('<ComplianceDisclaimer compact />');
+    expect(scannerPage).toContain('flex gap-1 overflow-x-auto');
+    expect(scannerPage).toContain('h-full min-w-[9rem] rounded-md border px-3 py-1.5');
+    expect(scannerPage).not.toContain('<SectionHeader title="Scanner"');
+    expect(scannerPage).not.toContain('<ComplianceDisclaimer collapsible />');
     expect(scannerPage).toContain("{ id: 'ranked', label: 'Ranked'");
     expect(scannerPage).toContain("{ id: 'pro', label: 'Pro'");
     expect(scannerPage).toContain("{ id: 'analysis', label: 'Analysis'");
@@ -941,6 +958,15 @@ describe('layout and flow audit regressions', () => {
     expect(scannerPage).toContain('function ProScannerCards');
     expect(scannerPage).toContain("proBulkViewMode === 'cards'");
     expect(scannerPage).toContain("returnLabel={mode === 'ranked' ? 'Back to Ranked' : 'Back to Pro Scanner'}");
+  });
+
+  it('keeps Backtest page-local chrome free of emoji-era badges', () => {
+    const backtestPage = read('app/tools/backtest/page.tsx');
+
+    expect(backtestPage).toContain('icon="BT"');
+    expect(backtestPage).toContain('>CTX</span>');
+    expect(backtestPage).not.toContain('icon="🧪"');
+    expect(backtestPage).not.toContain('>🔬</span>');
   });
 
   it('treats Golden Egg as a focused validation workbench with Liquidity Sweep separated', () => {

@@ -10,7 +10,7 @@ import { useMemo, useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useScannerResults, useRegime, type ScanResult, type ScanTimeframe, SCAN_TIMEFRAMES } from '@/app/v2/_lib/api';
-import { Card, SectionHeader, Badge, UpgradeGate } from '@/app/v2/_components/ui';
+import { Card, Badge, UpgradeGate } from '@/app/v2/_components/ui';
 import { REGIME_COLORS, REGIME_WEIGHTS, LIFECYCLE_COLORS } from '@/app/v2/_lib/constants';
 import type { RegimePriority, LifecycleState } from '@/app/v2/_lib/types';
 import { useUserTier, FREE_DAILY_SCAN_LIMIT, canAccessUnlimitedScanning } from '@/lib/useUserTier';
@@ -254,13 +254,13 @@ function ScannerFlowRail({
   ];
 
   return (
-    <div className="grid gap-2 md:grid-cols-3" aria-label="Scanner workflow views">
+    <div className="flex gap-1 overflow-x-auto" aria-label="Scanner workflow views">
       {stages.map((stage) => {
         const isActive = activeStage === stage.id;
         const isAnalysis = stage.id === 'analysis';
         const disabled = isAnalysis && !canOpenAnalysis;
         const content = (
-          <div className={`h-full rounded-lg border px-3 py-2 text-left transition ${
+          <div className={`h-full min-w-[9rem] rounded-md border px-3 py-1.5 text-left transition ${
             isActive
               ? 'border-emerald-400/40 bg-emerald-400/10 text-white'
               : disabled
@@ -268,8 +268,8 @@ function ScannerFlowRail({
                 : 'border-white/10 bg-white/[0.035] text-slate-300 hover:border-emerald-400/30 hover:bg-emerald-400/[0.05]'
           }`}>
             <div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{stage.eyebrow}</div>
-            <div className={`mt-1 text-sm font-black ${isActive ? 'text-emerald-200' : disabled ? 'text-slate-600' : 'text-white'}`}>{stage.label}</div>
-            <div className="mt-0.5 text-[11px] leading-4 text-slate-500">{stage.detail}</div>
+            <div className={`mt-0.5 text-sm font-black ${isActive ? 'text-emerald-200' : disabled ? 'text-slate-600' : 'text-white'}`}>{stage.label}</div>
+            <div className="mt-0.5 truncate text-[11px] leading-4 text-slate-500" title={stage.detail}>{stage.detail}</div>
           </div>
         );
 
@@ -1213,10 +1213,25 @@ export default function ScannerPage() {
 
   /* ═══════════════════════════════════════════════════════════════════════ */
   return (
-    <div className="space-y-4">
-      {/* ─── Header ─── */}
-      <SectionHeader title="Scanner" subtitle="Technical analysis scanner — educational scan results" />
-      <ComplianceDisclaimer collapsible />
+    <div className="space-y-3">
+      <Card>
+        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+          <div>
+            <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Workflow step 1 · Market queue</div>
+            <h1 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Find the highest-evidence research queue.</h1>
+            <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">Ranked scan triages the market. Pro scan lets you configure conditions, then Analysis sends one symbol into Golden Egg.</p>
+          </div>
+          <div className="flex flex-wrap gap-2 md:justify-end">
+            <Link href="/tools/golden-egg" className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-amber-200 no-underline hover:bg-amber-400/15">
+              Open Golden Egg
+            </Link>
+            <Link href="/tools/terminal" className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-slate-400 no-underline hover:bg-slate-700/50">
+              Terminal
+            </Link>
+          </div>
+        </div>
+      </Card>
+      <ComplianceDisclaimer compact />
 
       <ScannerFlowRail
         activeStage={activeScannerStage}

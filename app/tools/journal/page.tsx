@@ -13,14 +13,14 @@ export default function Page() {
       <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
     </div>
   );
-  if (!canAccessJournal(tier)) return <><ComplianceDisclaimer collapsible /><UpgradeGate requiredTier="pro" feature="Trade Journal" /></>;
+  if (!canAccessJournal(tier)) return <><ComplianceDisclaimer compact /><UpgradeGate requiredTier="pro" feature="Trade Journal" /></>;
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-[var(--msp-bg)] flex items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
       </div>
     }>
-      <ComplianceDisclaimer collapsible />
+      <ComplianceDisclaimer compact />
       <JournalPage tier={tier} />
     </Suspense>
   );

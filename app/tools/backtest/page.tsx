@@ -717,7 +717,7 @@ function BacktestContent() {
           badge="ELITE STRATEGY LAB"
           title="Strategy Backtester"
           subtitle="Pro Trader exclusive: Test and iterate trading ideas with historical data."
-          icon="🧪"
+          icon="BT"
           backHref="/dashboard"
         />
         <UpgradeGate requiredTier="pro_trader" feature="Elite Strategy Backtesting">
@@ -1268,7 +1268,7 @@ function BacktestContent() {
         badge="ELITE STRATEGY LAB"
         title="Strategy Backtester"
         subtitle="Evaluate historical strategy behavior in simulation (educational mode)."
-        icon="🧪"
+        icon="BT"
         backHref="/dashboard"
       />
       <div style={{ maxWidth: 'none', margin: '0 auto', padding: '20px' }}>
@@ -1306,7 +1306,7 @@ function BacktestContent() {
             gap: '12px',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '1.5rem' }}>🔬</span>
+              <span style={{ border: '1px solid var(--msp-border)', borderRadius: 8, padding: '4px 6px', color: 'var(--msp-accent)', fontSize: '11px', fontWeight: 800 }}>CTX</span>
               <div>
                 <div style={{ 
                   color: 'var(--msp-accent)', 

@@ -18,27 +18,27 @@ function healthTone(health?: JournalHeaderModel['health']) {
 export default function JournalCommandBar({ embeddedInWorkspace = false, header, actions, viewMode, onToggleViewMode }: JournalCommandBarProps) {
   const headerActions = (
     <>
-      <button onClick={actions.onNewTrade} className="rounded-lg border border-emerald-500/30 bg-emerald-500/20 px-3 py-2 text-sm font-semibold text-emerald-200">New Trade</button>
-      <button onClick={actions.onExport} className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-sm text-slate-100">Export</button>
+      <button onClick={actions.onNewTrade} className="rounded-md border border-emerald-500/30 bg-emerald-500/20 px-3 py-1.5 text-xs font-semibold text-emerald-200">New Trade</button>
+      <button onClick={actions.onExport} className="rounded-md border border-white/10 bg-white/10 px-3 py-1.5 text-xs text-slate-100">Export</button>
       {actions.onImport && (
-        <button onClick={actions.onImport} className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-sm text-slate-100">Import</button>
+        <button onClick={actions.onImport} className="rounded-md border border-white/10 bg-white/10 px-3 py-1.5 text-xs text-slate-100">Import</button>
       )}
       {actions.onClear && (
-        <button onClick={actions.onClear} className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">Clear All</button>
+        <button onClick={actions.onClear} className="rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs text-rose-200">Clear All</button>
       )}
-      <button onClick={onToggleViewMode} className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100">{viewMode === 'normal' ? 'Compact' : 'Normal'}</button>
+      <button onClick={onToggleViewMode} className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs text-slate-100">{viewMode === 'normal' ? 'Compact' : 'Normal'}</button>
     </>
   );
 
   const headerMeta = (
-    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs ${healthTone(header?.health)}`}>
+    <span className={`inline-flex rounded-md px-2 py-0.5 text-[11px] ${healthTone(header?.health)}`}>
       Data Health: {header?.health || 'ok'}
     </span>
   );
 
   if (embeddedInWorkspace) {
     return (
-      <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-4 py-3">
+      <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Journal review</div>
