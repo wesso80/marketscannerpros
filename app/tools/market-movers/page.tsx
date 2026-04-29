@@ -717,7 +717,7 @@ export default function MarketMoversPage() {
 
                 {environment.deploymentMode === 'NO' && (
                   <div className="mb-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-[11px] text-amber-200">
-                    ⚠ No Aligned Movers — environment conditions are not suitable for momentum analysis.
+                    No aligned movers: environment conditions are not suitable for momentum analysis.
                   </div>
                 )}
 

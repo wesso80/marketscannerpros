@@ -852,7 +852,7 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
               transition: "all 0.2s"
             }}
           >
-            📅 Earnings Calendar
+            Earnings Calendar
           </button>
         </div>
 
@@ -1330,7 +1330,7 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
 
             {!earningsLoading && earnings.length === 0 && !earningsError && (
               <div className="rounded-xl border border-white/10 bg-white/5 p-10 text-center">
-                <div className="mb-2 text-4xl">📅</div>
+                <div className="mb-2 text-xs font-black uppercase tracking-[0.14em] text-emerald-300">EARNINGS</div>
                 <h3 className="mb-1 text-lg font-semibold text-white/90">Search for Earnings Catalysts</h3>
                 <p className="text-sm text-white/55">Enter symbols or run all-market search to generate catalyst analysis output.</p>
               </div>
