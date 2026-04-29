@@ -17,6 +17,9 @@ import { alphaVantageProvider } from "@/lib/operator/market-data";
 import { pipelineToSymbolIntelligence } from "@/lib/admin/serializer";
 import { emptyTruth } from "@/lib/admin/truth-layer";
 import { buildAdminScanContext } from "@/lib/admin/scan-context";
+import { computeDataTruth } from "@/lib/engines/dataTruth";
+import { computeInternalResearchScore } from "@/lib/engines/internalResearchScore";
+import { classifySetup } from "@/lib/engines/setupClassifier";
 
 export const runtime = "nodejs";
 
@@ -94,6 +97,18 @@ export async function GET(
       riskSource: risk.source,
     };
 
+    // Phase 4 — centralized research artifacts
+    const lastBarTime = bars.length > 0 ? new Date(bars[bars.length - 1].timestamp).getTime() : new Date(result.timestamp).getTime();
+    const ageSec = Math.max(0, Math.round((Date.now() - lastBarTime) / 1000));
+    const dataTruth = computeDataTruth({
+      marketDataAgeSec: ageSec,
+      timeframe,
+      isCached: false,
+      sourceErrors: result.errors.filter((e) => e.symbol === symbol).map((e) => e.error),
+    });
+    const researchScore = computeInternalResearchScore({ snapshot: intelligence, dataTruth });
+    const setup = classifySetup(intelligence);
+
     // Include bar data for charting (last 200 bars max)
     const chartBars = bars.slice(-200).map((b) => ({
       timestamp: b.timestamp,
@@ -107,6 +122,11 @@ export async function GET(
     return NextResponse.json({
       ...intelligence,
       bars: chartBars,
+      research: {
+        dataTruth,
+        score: researchScore,
+        setup,
+      },
       meta: {
         pipelinesCount: result.pipelines.length,
         errors: result.errors,

@@ -191,7 +191,7 @@ export default function AdminOpportunityBoard() {
                   {row.score.boosts.length > 0 ? row.score.boosts.length : "—"}
                 </td>
                 <td style={tdStyle}>
-                  <a href={`/admin/terminal/${row.symbol}?market=${row.market}&timeframe=${row.timeframe}`}
+                  <a href={`/admin/symbol/${row.symbol}?market=${row.market}&timeframe=${row.timeframe}`}
                     style={{
                       padding: "0.3rem 0.6rem", borderRadius: "0.4rem",
                       background: "rgba(59,130,246,0.15)", border: "1px solid rgba(59,130,246,0.3)",

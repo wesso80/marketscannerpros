@@ -22,9 +22,9 @@
 
 Status legend: ⬜ Not started · 🟡 In progress · ✅ Complete · ⚠️ Blocked
 
-**Last session ended at:** Phase 3 shipped — Opportunity Research Board. Created [lib/admin/adminTypes.ts](../lib/admin/adminTypes.ts) (`InternalResearchScore`, `AdminOpportunityRow`, `SetupDefinition`, `AdminResearchAlert` skeleton), [lib/engines/setupClassifier.ts](../lib/engines/setupClassifier.ts) (16 setup types from indicators/DVE/levels), [lib/engines/internalResearchScore.ts](../lib/engines/internalResearchScore.ts) (composite scorer with the **dataTrustScore < 50 ⇒ DATA_DEGRADED** hard floor and **one-axis 25% cap**), [app/api/admin/opportunities/route.ts](../app/api/admin/opportunities/route.ts), [components/admin/AdminOpportunityBoard.tsx](../components/admin/AdminOpportunityBoard.tsx), and [app/admin/opportunity-board/page.tsx](../app/admin/opportunity-board/page.tsx). Mounted in admin nav as "Opportunity Board (OB)". vitest 35 files / 431 tests green (+17 new), build green, boundary guard green.
-**Last commit on main:** `e1f070ec` (Phase 1)
-**Next action when resuming:** Phase 4 — Symbol Research Terminal. Promote `/admin/terminal/[symbol]` → `/admin/symbol/[symbol]` (with redirect). Build `<AdminResearchVerdictPanel />`, `<AdminEvidenceStack />` (9 axes), `<AdminResearchScoreBreakdown />` consuming the centralized [InternalResearchScore](../lib/engines/internalResearchScore.ts). Add Scenario Map. Refactor existing cockpit cards (ConfidenceCard, VerdictHeaderCard, RiskGovernorCard, IndicatorMatrixCard) to consume the centralized score. "Save Research Case" → journal. />` shared component, mount on every operator card. Add `test/engines/dataTruth.test.ts`.
+**Last session ended at:** Phase 4 shipped — Symbol Research Terminal. Extended [app/api/admin/symbol/[symbol]/route.ts](../app/api/admin/symbol/[symbol]/route.ts) to attach `research: { dataTruth, score, setup }`. New endpoint [app/api/admin/research-cases/route.ts](../app/api/admin/research-cases/route.ts) (POST + GET, auto-creates `admin_research_cases` table with JSONB scenarios/evidence/penalties/boosts). Built 4 new cockpit panels: [AdminResearchVerdictPanel](../components/admin/AdminResearchVerdictPanel.tsx), [AdminEvidenceStack](../components/admin/AdminEvidenceStack.tsx) (9-axis bars), [AdminResearchScoreBreakdown](../components/admin/AdminResearchScoreBreakdown.tsx) (raw/penalty/boost math), [AdminScenarioMap](../components/admin/AdminScenarioMap.tsx) (Bullish/Bearish/Neutral/Invalidation). Created canonical [/admin/symbol/[symbol]](../app/admin/symbol/[symbol]/page.tsx) page wiring all 4 + Save Research Case form. Updated `AdminOpportunityBoard` Review CTA to `/admin/symbol/...`. Added Symbol Research (SR) nav entry; legacy Symbol Terminal kept (relabeled). vitest 36 files / 434 tests green (+3 new), build green, boundary guard green.
+**Last commit on main:** `69cd190c` (Phase 3)
+**Next action when resuming:** Phase 5 — Alerts & Discord. Create [lib/engines/researchAlertEngine.ts](../lib/engines/researchAlertEngine.ts), [lib/alerts/discord.ts](../lib/alerts/discord.ts) with `PRIVATE RESEARCH ALERT — NOT BROKER EXECUTION` header, [lib/alerts/email.ts](../lib/alerts/email.ts), [lib/alerts/alertSuppression.ts](../lib/alerts/alertSuppression.ts) (cooldown/duplicate/evidence-threshold). Upgrade [app/admin/alerts/page.tsx](../app/admin/alerts/page.tsx) to render the `AdminResearchAlert` log. Test: payload header asserted; suppression blocks duplicates inside cooldown.
 
 ---
 
@@ -184,18 +184,22 @@ Findings from a careful read of [lib/admin/truth-layer.ts](../lib/admin/truth-la
 
 ---
 
-## Phase 4 — Symbol Research Terminal
+## Phase 4 — Symbol Research Terminal ✅ SHIPPED
 
 **Goal:** One-symbol research cockpit that consumes the centralized score.
 
-- [ ] Promote `/admin/terminal/[symbol]` → `/admin/symbol/[symbol]` (redirect old path)
-- [ ] Create `<AdminResearchVerdictPanel />` (top of page)
-- [ ] Create `<AdminEvidenceStack />` — 9 axes: trend, momentum, volatility, time, options, liquidity, macro, sentiment, fundamentals
-- [ ] Create `<AdminResearchScoreBreakdown />` — show every penalty + boost from the score engine
-- [ ] Add Scenario Map (Bullish / Bearish / Neutral / Invalidation conditions)
-- [ ] Refactor existing cards (`ConfidenceCard`, `VerdictHeaderCard`, `RiskGovernorCard`, `IndicatorMatrixCard`) to consume centralized `InternalResearchScore`
-- [ ] Save Research Case button → writes to journal
-- [ ] Build + commit
+- [x] Canonical `/admin/symbol/[symbol]` page (legacy `/admin/terminal/[symbol]` kept + relabeled in nav)
+- [x] `<AdminResearchVerdictPanel />` — top-of-page summary (symbol/setup/score/lifecycle/dominant axis + DataTruthBadge)
+- [x] `<AdminEvidenceStack />` — 9-axis horizontal bars with dominant marker
+- [x] `<AdminResearchScoreBreakdown />` — raw / penalties / boosts / final math + per-row lists
+- [x] `<AdminScenarioMap />` — Bullish / Bearish / Neutral / Invalidation cards from levels + targets
+- [x] Symbol API extended with `research: { dataTruth, score, setup }`
+- [x] Save Research Case → POST `/api/admin/research-cases` (auto-creates `admin_research_cases` table)
+- [x] Opportunity Board Review CTA repointed to `/admin/symbol/...`
+- [x] `Symbol Research (SR)` nav entry added
+- [x] Tests: `test/admin/symbolResearchArtifact.test.ts` (artifact composition + JSON round-trip + DATA_DEGRADED path)
+- [x] vitest 36 / 434 green · build green · boundary guard green
+- [ ] (Deferred) Refactor legacy ConfidenceCard / VerdictHeaderCard / RiskGovernorCard / IndicatorMatrixCard to consume `InternalResearchScore` (legacy cockpit kept as-is; canonical page is the new surface)
 
 ---
 
