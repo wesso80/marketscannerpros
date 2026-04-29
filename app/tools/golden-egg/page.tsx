@@ -63,18 +63,18 @@ const GE_TAB_META: Record<GETab, { eyebrow: string; description: string }> = {
 
 function GoldenEggTabRail({ activeTab, onSelectTab }: { activeTab: GETab; onSelectTab: (tab: GETab) => void }) {
   return (
-    <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2" aria-label="Golden Egg validation views">
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
+    <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2" aria-label="Golden Egg validation views">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <div>
           <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-amber-300">Validation workbench</div>
-          <div className="text-[0.72rem] text-slate-500">Move left to right: verdict, chart, evidence detail, then business context.</div>
+          <div className="text-[0.72rem] text-slate-500">Verdict first, then inspect chart, evidence detail, and business context.</div>
         </div>
-        <a href="/tools/liquidity-sweep" className="rounded-md border border-slate-700/70 bg-slate-900/60 px-3 py-1.5 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-400 no-underline transition hover:border-emerald-400/30 hover:text-emerald-300">
+        <a href="/tools/liquidity-sweep" className="rounded-md border border-slate-700/70 bg-slate-900/60 px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.12em] text-slate-400 no-underline transition hover:border-emerald-400/30 hover:text-emerald-300">
           Open Liquidity Sweep
         </a>
       </div>
 
-      <div className="grid gap-2 lg:grid-cols-4">
+      <div className="flex gap-1 overflow-x-auto">
         {GE_TABS.map((tab) => {
           const meta = GE_TAB_META[tab];
           const isActive = activeTab === tab;
@@ -84,15 +84,14 @@ function GoldenEggTabRail({ activeTab, onSelectTab }: { activeTab: GETab; onSele
               type="button"
               aria-pressed={isActive}
               onClick={() => onSelectTab(tab)}
-              className={`rounded-lg border px-3 py-2 text-left transition ${
+              className={`min-w-[9rem] shrink-0 rounded-md border px-3 py-1.5 text-left transition ${
                 isActive
                   ? 'border-emerald-400/40 bg-emerald-400/10 text-white'
                   : 'border-white/10 bg-white/[0.025] text-slate-300 hover:border-emerald-400/30 hover:bg-emerald-400/[0.05]'
               }`}
             >
               <div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{meta.eyebrow}</div>
-              <div className={`mt-1 text-sm font-black ${isActive ? 'text-emerald-200' : 'text-white'}`}>{tab}</div>
-              <div className="mt-1 text-[11px] leading-4 text-slate-500">{meta.description}</div>
+              <div className={`mt-0.5 text-sm font-black ${isActive ? 'text-emerald-200' : 'text-white'}`}>{tab}</div>
             </button>
           );
         })}
@@ -141,9 +140,9 @@ const GOLDEN_EGG_WORKFLOW_CHECKS = [
 
 function FlagshipMetric({ label, value, tone = '#94A3B8', title }: { label: string; value: string; tone?: string; title?: string }) {
   return (
-    <div title={title} className="rounded-lg border border-white/10 bg-slate-950/45 px-3 py-2">
+    <div title={title} className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
       <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
-      <div className="mt-1 truncate text-sm font-black" style={{ color: tone }}>{value}</div>
+      <div className="mt-0.5 truncate text-sm font-black" style={{ color: tone }}>{value}</div>
     </div>
   );
 }
@@ -560,25 +559,25 @@ export default function GoldenEggPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-lg border border-amber-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.22)]">
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(22rem,0.8fr)]">
+    <div className="space-y-3">
+      <div className="rounded-lg border border-amber-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]">
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)]">
           <div>
             <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.16em] text-amber-300">Golden Egg validation workbench</div>
-            <h1 className="mt-2 text-2xl font-black tracking-normal text-white md:text-3xl">Validate one symbol before testing history.</h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-              Golden Egg compresses regime, data trust, volatility, options or derivatives context, timing, and invalidation into one educational research packet.
+            <h1 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Validate one symbol before testing history.</h1>
+            <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">
+              Regime, data trust, volatility, flow, timing, and invalidation are compressed into one research packet.
             </p>
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap gap-1.5">
               {GOLDEN_EGG_WORKFLOW_CHECKS.map((check) => (
-                <span key={check} className="rounded-md border border-amber-400/20 bg-amber-400/10 px-2.5 py-1 text-[0.68rem] font-bold uppercase tracking-[0.1em] text-amber-100">
+                <span key={check} className="rounded-md border border-amber-400/20 bg-amber-400/10 px-2 py-0.5 text-[0.64rem] font-bold uppercase tracking-[0.1em] text-amber-100">
                   {check}
                 </span>
               ))}
             </div>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid self-start gap-1.5 sm:grid-cols-2">
             <FlagshipMetric label="Symbol" value={sym} tone="#FBBF24" />
             <FlagshipMetric label="Assessment" value={ge ? geAssessmentLabel : loading ? 'Loading' : 'Awaiting data'} tone={verdictColor(geAssessment || 'WATCH')} />
             <FlagshipMetric label="Confluence" value={ge ? `${geConfluenceScore}%` : 'Pending'} tone={verdictColor(geAssessment || 'WATCH')} />
@@ -587,8 +586,8 @@ export default function GoldenEggPage() {
         </div>
 
         {!isAuthBlocked && (
-          <div className="mt-4 rounded-lg border border-white/10 bg-black/20 p-3">
-            <div className="grid gap-3 lg:grid-cols-[minmax(18rem,0.9fr)_minmax(0,1.1fr)_auto] lg:items-center">
+          <div className="mt-3 rounded-lg border border-white/10 bg-black/20 p-2.5">
+            <div className="grid gap-2 lg:grid-cols-[minmax(18rem,0.8fr)_minmax(0,1.1fr)_auto] lg:items-center">
               <div className="flex min-w-0 items-center gap-2">
                 <input
                   type="text"
@@ -596,9 +595,9 @@ export default function GoldenEggPage() {
                   onChange={(event) => setSymbolInput(event.target.value.toUpperCase())}
                   onKeyDown={(event) => event.key === 'Enter' && handleSymbolSubmit()}
                   placeholder="Enter symbol..."
-                  className="min-w-0 flex-1 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2 text-sm text-white placeholder-slate-600 focus:border-amber-400 focus:outline-none"
+                  className="min-w-0 flex-1 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-sm text-white placeholder-slate-600 focus:border-amber-400 focus:outline-none"
                 />
-                <button type="button" onClick={handleSymbolSubmit} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-2 text-xs font-black uppercase tracking-[0.08em] text-amber-200 transition-colors hover:bg-amber-400/15">Review</button>
+                <button type="button" onClick={handleSymbolSubmit} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.08em] text-amber-200 transition-colors hover:bg-amber-400/15">Review</button>
               </div>
 
               <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
@@ -647,13 +646,13 @@ export default function GoldenEggPage() {
               </div>
             </div>
 
-            <div className="mt-3 rounded-md border border-slate-800 bg-slate-950/35 px-3 py-2 text-xs leading-5 text-slate-400">
+            <div className="mt-2 rounded-md border border-slate-800 bg-slate-950/35 px-3 py-1.5 text-xs leading-5 text-slate-400">
               <span className="font-bold text-slate-200">Next useful check:</span> {ge ? geNextUsefulCheck : 'Choose a symbol to build the verdict packet.'}
             </div>
           </div>
         )}
       </div>
-      <ComplianceDisclaimer collapsible />
+      <ComplianceDisclaimer compact />
 
       {isAuthBlocked && (
         <Card>
@@ -736,7 +735,6 @@ export default function GoldenEggPage() {
               )}
             </div>
           )}
-          <ComplianceDisclaimer />
           {/* -- VERDICT HEADER (Section 0 — Answer First) ------------ */}
           <Card className="border-l-4" style={{ borderLeftColor: verdictColor(geAssessment || 'WATCH') }}>
             <div className="flex flex-col gap-4">
