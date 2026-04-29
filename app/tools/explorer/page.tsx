@@ -22,12 +22,14 @@ const CryptoExplorer = dynamic(() => import('@/app/tools/crypto-explorer/page'),
 const CryptoCommand = dynamic(() => import('@/app/tools/crypto/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Crypto Command…</div> });
 const MarketMoversV1 = dynamic(() => import('@/app/tools/market-movers/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Market Movers…</div> });
 const CommoditiesV1 = dynamic(() => import('@/app/tools/commodities/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Commodities Intelligence…</div> });
+const CryptoNewsWidget = dynamic(() => import('@/components/CryptoNewsWidget'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Crypto News…</div> });
+const PublicTreasuryWidget = dynamic(() => import('@/components/PublicTreasuryWidget'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Treasury Holdings…</div> });
 
 function Skel({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
   return <div className={`${h} ${w} bg-slate-700/50 rounded animate-pulse`} />;
 }
 
-const TABS = ['Overview', 'Sectors', 'Commodities', 'Cross-Market', 'Equity Deep-Dive', 'Crypto Deep-Dive', 'Crypto Command', 'Movers'] as const;
+const TABS = ['Overview', 'Sectors', 'Commodities', 'Cross-Market', 'Equity Deep-Dive', 'Crypto Deep-Dive', 'Crypto Command', 'Crypto Intel', 'Movers'] as const;
 type ExplorerTab = typeof TABS[number];
 
 const EXPLORER_TAB_PARAM_MAP: Record<string, ExplorerTab> = {
@@ -45,6 +47,10 @@ const EXPLORER_TAB_PARAM_MAP: Record<string, ExplorerTab> = {
   'crypto-explorer': 'Crypto Deep-Dive',
   'crypto-search': 'Crypto Deep-Dive',
   'crypto-command': 'Crypto Command',
+  'crypto-intel': 'Crypto Intel',
+  intel: 'Crypto Intel',
+  news: 'Crypto Intel',
+  treasury: 'Crypto Intel',
   movers: 'Movers',
   'market-movers': 'Movers',
   'movers-intelligence': 'Movers',
@@ -494,6 +500,12 @@ export default function ExplorerPage() {
       )}
       {tab === 'Crypto Command' && (
         <CryptoCommand />
+      )}
+      {tab === 'Crypto Intel' && (
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+          <CryptoNewsWidget title="Crypto News & Guides" />
+          <PublicTreasuryWidget />
+        </div>
       )}
       {tab === 'Movers' && (
         <MarketMoversV1 />

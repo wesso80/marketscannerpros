@@ -667,6 +667,8 @@ describe('layout and flow audit regressions', () => {
     expect(explorerPage).toContain("'market-movers': 'Movers'");
     expect(explorerPage).toContain("'equity-explorer': 'Equity Deep-Dive'");
     expect(explorerPage).toContain("'crypto-explorer': 'Crypto Deep-Dive'");
+    expect(explorerPage).toContain("'crypto-intel': 'Crypto Intel'");
+    expect(explorerPage).toContain("tab === 'Crypto Intel'");
     expect(explorerPage).toContain('if (requestedTab && requestedTab !== tab) setTab(requestedTab);');
     expect(dashboardPage).toContain('aria-label="Morning research start"');
     expect(dashboardPage).toContain('Highest-evidence symbols first.');

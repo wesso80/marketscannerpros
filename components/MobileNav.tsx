@@ -114,7 +114,7 @@ export default function MobileNav() {
           <a href="/tools/terminal?tab=time-confluence" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Confluence Scanner</a>
           <a href="/tools/terminal?tab=options-confluence" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Options Confluence Scanner</a>
           <a href="/tools/explorer?tab=crypto" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Crypto Explorer</a>
-          <a href="/tools/crypto-intel" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Crypto Intelligence</a>
+          <a href="/tools/explorer?tab=crypto-intel" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Crypto Intelligence</a>
           <a href="/tools/explorer?tab=equity" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Equity Explorer</a>
           <a href="/tools/research?tab=calendar" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Economic Calendar</a>
           <a href="/tools/research?tab=earnings" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Earnings Calendar</a>
