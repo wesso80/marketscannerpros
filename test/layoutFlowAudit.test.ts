@@ -1314,6 +1314,10 @@ describe('layout and flow audit regressions', () => {
     expect(goldenEggPage).toContain('Verdict Packet');
     expect(goldenEggPage).toContain('Validation workbench');
     expect(goldenEggPage).toContain('Open Liquidity Sweep');
+    expect(goldenEggPage).toContain('aria-label="Golden Egg command header"');
+    expect(goldenEggPage).toContain('Open Terminal');
+    expect(goldenEggPage).toContain('Open Scanner');
+    expect(goldenEggPage).toContain('Open Backtest');
     expect(goldenEggPage).toContain('Verdict first, then inspect chart, evidence detail, and business context.');
     expect(goldenEggPage).toContain('flex gap-1 overflow-x-auto');
     expect(goldenEggPage).toContain('min-w-[9rem] shrink-0 rounded-md border px-3 py-1.5');

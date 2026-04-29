@@ -560,10 +560,22 @@ export default function GoldenEggPage() {
 
   return (
     <div className="space-y-3">
-      <div className="rounded-lg border border-amber-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]">
+      <section
+        className="rounded-lg border border-amber-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
+        aria-label="Golden Egg command header"
+      >
         <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)]">
           <div>
-            <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.16em] text-amber-300">Golden Egg validation workbench</div>
+            <div className="flex flex-wrap items-center gap-2 text-[0.68rem] font-extrabold uppercase tracking-[0.16em]">
+              <span className="text-amber-300">Golden Egg validation workbench</span>
+              {regime.data?.regime ? (
+                <span className="rounded-md border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-amber-200">Regime {String(regime.data.regime).toUpperCase()}</span>
+              ) : null}
+              {ge ? (
+                <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">Confluence {geConfluenceScore}%</span>
+              ) : null}
+              <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">Data {geDataQuality}</span>
+            </div>
             <h1 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Validate one symbol before testing history.</h1>
             <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">
               Regime, data trust, volatility, flow, timing, and invalidation are compressed into one research packet.
@@ -574,6 +586,11 @@ export default function GoldenEggPage() {
                   {check}
                 </span>
               ))}
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <a href={`/tools/terminal?symbol=${encodeURIComponent(sym)}`} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15">Open Terminal</a>
+              <a href="/tools/scanner" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15">Open Scanner</a>
+              <a href="/tools/workspace?tab=backtest" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Open Backtest</a>
             </div>
           </div>
 
@@ -651,7 +668,7 @@ export default function GoldenEggPage() {
             </div>
           </div>
         )}
-      </div>
+      </section>
       <ComplianceDisclaimer compact />
 
       {isAuthBlocked && (
