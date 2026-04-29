@@ -22,9 +22,9 @@
 
 Status legend: ⬜ Not started · 🟡 In progress · ✅ Complete · ⚠️ Blocked
 
-**Last session ended at:** Phase 5 shipped — Alerts & Discord. Created [lib/alerts/alertSuppression.ts](../lib/alerts/alertSuppression.ts) (cooldown / duplicate / score+trust thresholds / DATA_DEGRADED + NO_EDGE blocks), [lib/alerts/discord.ts](../lib/alerts/discord.ts) (`PRIVATE RESEARCH ALERT — NOT BROKER EXECUTION` header in `content` + embed + classification field), [lib/alerts/email.ts](../lib/alerts/email.ts) (subject prefix + text/html body), [lib/engines/researchAlertEngine.ts](../lib/engines/researchAlertEngine.ts) (build → suppress → dispatch → outcome), and [app/api/admin/research-alerts/route.ts](../app/api/admin/research-alerts/route.ts) (POST evaluate+log, GET log; auto-creates `admin_research_alerts` table). Upgraded [app/admin/alerts/page.tsx](../app/admin/alerts/page.tsx) with a Research Alerts (Internal) panel that shows FIRED/SUPPRESSED rows linked to `/admin/symbol/...`. vitest 37 files / 447 tests green (+13 new), build green, boundary guard green.
-**Last commit on main:** `e560338a` (Phase 4)
-**Next action when resuming:** Phase 6 — ARCA Admin Research. Create `<AdminARCAPanel />` with 9 modes (Explain Rank, Challenge Setup, Find Missing Evidence, Summarize Watchlist, Detect Contradictions, Prepare Research Alert, Review Journal Mistake, Compare Two Symbols, What Changed Since Last Scan). Server prompt must explicitly forbid execution verbs. Output enforced to `ArcaAdminResearchOutput` shape. Auto-bind `InternalResearchScore` + `EvidenceStack` + `DataTruth` to context. Test: prompt content asserted to contain forbidden-verb refusal clause.
+**Last session ended at:** Phase 6 shipped — ARCA Admin Research Copilot. Created [lib/admin/arcaTypes.ts](../lib/admin/arcaTypes.ts) (`ArcaAdminMode` 9-mode union, `ArcaAdminContext`, `ArcaAdminResearchOutput`, `validateArcaOutput` with forbidden-phrase scan), [lib/admin/arcaPrompt.ts](../lib/admin/arcaPrompt.ts) (`buildArcaSystemPrompt` with explicit refusal clause + every forbidden verb + JSON contract; `buildArcaUserPrompt` per-mode), [app/api/admin/arca/route.ts](../app/api/admin/arca/route.ts) (POST, OpenAI gpt-4o-mini, JSON response_format, server-side classification override, validator-rejected outputs fall back to a deterministic safe payload), and [components/admin/AdminARCAPanel.tsx](../components/admin/AdminARCAPanel.tsx) (mode select + Ask ARCA button + headline/reasoning/evidence/risks/classification rendering). Mounted on the canonical [/admin/symbol/[symbol]](../app/admin/symbol/[symbol]/page.tsx) page below the Scenario Map. vitest 38 files / 461 tests green (+14 new), build green, boundary guard green.
+**Last commit on main:** `c06c93ad` (Phase 5)
+**Next action when resuming:** Phase 7 — Journal Learning. Create [lib/engines/journalLearning.ts](../lib/engines/journalLearning.ts) to mine `admin_research_cases` for repeat patterns, [app/admin/journal-learning/page.tsx](../app/admin/journal-learning/page.tsx) cockpit, `<AdminJournalDNAPanel />`, and surface a "Journal Pattern Match" boost inside `internalResearchScore`.
 
 ---
 
@@ -218,16 +218,18 @@ Findings from a careful read of [lib/admin/truth-layer.ts](../lib/admin/truth-la
 
 ---
 
-## Phase 6 — ARCA Admin Research
+## Phase 6 — ARCA Admin Research ✅ SHIPPED
 
 **Goal:** Private research copilot bound to score + evidence + truth.
 
-- [ ] Create `<AdminARCAPanel />` with 9 modes: Explain Rank, Challenge Setup, Find Missing Evidence, Summarize Watchlist, Detect Contradictions, Prepare Research Alert, Review Journal Mistake, Compare Two Symbols, What Changed Since Last Scan
-- [ ] Server prompt explicitly forbids execution verbs (`buy`, `sell`, `execute`, `place order`, `position size`, `deploy`)
-- [ ] Output enforced to `ArcaAdminResearchOutput` shape
-- [ ] Auto-binds `InternalResearchScore` + `EvidenceStack` + `DataTruth` to context
-- [ ] Test: prompt content asserted to contain forbidden-verb refusal clause
-- [ ] Build + commit
+- [x] `<AdminARCAPanel />` with 9 modes: Explain Rank, Challenge Setup, Find Missing Evidence, Summarize Watchlist, Detect Contradictions, Prepare Research Alert, Review Journal Mistake, Compare Two Symbols, What Changed Since Last Scan
+- [x] Server system prompt explicitly forbids execution verbs (`buy`, `sell`, `execute`, `place order`, `position size`, `deploy`) + carries `ARCA_REFUSAL_CLAUSE`
+- [x] Output enforced to `ArcaAdminResearchOutput` shape via `validateArcaOutput` (rejects forbidden phrases in any text field)
+- [x] Server-side override force-stamps `mode`, `symbol`, and `classification` so the model can never break the contract
+- [x] Validation failures fall back to a deterministic safe payload (no broken UI, no risky text)
+- [x] Auto-binds `InternalResearchScore` + `EvidenceStack` + `DataTruth` via the cockpit page
+- [x] Tests: refusal clause present, every forbidden verb in prompt, validator accepts canonical, validator rejects each forbidden phrase across headline + reasoning + evidence + risks, mode catalog locked at 9
+- [x] vitest 38 / 461 green · build green · boundary guard green
 
 ---
 

@@ -5,6 +5,7 @@ import AdminResearchVerdictPanel from "@/components/admin/AdminResearchVerdictPa
 import AdminEvidenceStack from "@/components/admin/AdminEvidenceStack";
 import AdminResearchScoreBreakdown from "@/components/admin/AdminResearchScoreBreakdown";
 import AdminScenarioMap from "@/components/admin/AdminScenarioMap";
+import AdminARCAPanel from "@/components/admin/AdminARCAPanel";
 import type { AdminSymbolIntelligence } from "@/lib/admin/types";
 import type { InternalResearchScore, SetupDefinition } from "@/lib/admin/adminTypes";
 import type { DataTruth } from "@/lib/engines/dataTruth";
@@ -159,6 +160,26 @@ export default function SymbolResearchTerminalPage({
           </div>
 
           <AdminScenarioMap snapshot={data} setup={data.research.setup} />
+
+          <AdminARCAPanel
+            context={{
+              symbol: data.symbol,
+              market,
+              timeframe,
+              bias: data.bias,
+              setup: data.research.setup.type,
+              score: {
+                score: data.research.score.score,
+                lifecycle: data.research.score.lifecycle,
+                axes: data.research.score.axes,
+                dominantAxis: data.research.score.dominantAxis,
+              },
+              dataTruth: {
+                status: data.research.dataTruth.status,
+                trustScore: data.research.dataTruth.trustScore,
+              },
+            }}
+          />
 
           {/* Save Research Case */}
           <div style={{
