@@ -327,7 +327,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
           title="Macro Dashboard"
           subtitle="Global regime layer for analysis, sizing, and cross-asset assessment"
           badge="Economic Data"
-          icon="🏛️"
+          icon="MAC"
         />
       )}
 
@@ -358,7 +358,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
             <p className="text-slate-400">Finding macro regime data...</p>
           </div>
         ) : error ? (
-          <div className="rounded-lg border border-red-500/50 bg-red-500/20 p-6 text-center text-red-400">⚠️ {error}</div>
+          <div className="rounded-lg border border-red-500/50 bg-red-500/20 p-6 text-center text-red-400"><span className="font-bold text-red-200">WARN</span> {error}</div>
         ) : data && gate ? (
           <>
             <section id="decision" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
@@ -600,7 +600,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                     </div>
                     <div className="rounded-lg border border-white/10 bg-black/20 p-2">
                       <div className="text-[11px] text-white/50">Gold Safe Haven</div>
-                      <div className="mt-1 text-xs text-white/80">{correlationRegime.components?.goldSafeHaven ? '⚠️ Active' : 'Inactive'}</div>
+                      <div className="mt-1 text-xs text-white/80">{correlationRegime.components?.goldSafeHaven ? 'Active' : 'Inactive'}</div>
                     </div>
                   </div>
                   {correlationRegime.warnings?.length > 0 && (

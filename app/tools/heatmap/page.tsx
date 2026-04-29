@@ -17,7 +17,7 @@ export default function HeatmapPage() {
         title="Sector Heat Map"
         subtitle="Spot risk-on vs risk-off in seconds. Green sectors show leadership, red sectors show weakness."
         badge="Sectors"
-        icon="📊"
+        icon="HM"
       />
       <div className="max-w-none mx-auto px-4 py-8">
 
@@ -33,7 +33,7 @@ export default function HeatmapPage() {
         <div className="grid md:grid-cols-3 gap-4 mt-8">
           <div className="msp-card rounded-xl p-5">
             <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
-              <span>🎯</span> How to Read
+              <span className="rounded-md border border-white/10 bg-black/20 px-2 py-0.5 text-[11px] font-black text-emerald-300">READ</span> How to Read
             </h3>
             <ul className="text-sm text-slate-400 space-y-1">
               <li>• <span className="text-emerald-400">Green</span> = sector is up</li>
@@ -45,7 +45,7 @@ export default function HeatmapPage() {
 
           <div className="msp-card rounded-xl p-5">
             <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
-              <span>📈</span> Pro Tips
+              <span className="rounded-md border border-white/10 bg-black/20 px-2 py-0.5 text-[11px] font-black text-emerald-300">TIP</span> Pro Tips
             </h3>
             <ul className="text-sm text-slate-400 space-y-1">
               <li>• Sector rotation signals market shifts</li>
@@ -57,7 +57,7 @@ export default function HeatmapPage() {
 
           <div className="msp-card rounded-xl p-5">
             <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
-              <span>🔄</span> Sector ETFs
+              <span className="rounded-md border border-white/10 bg-black/20 px-2 py-0.5 text-[11px] font-black text-emerald-300">ETF</span> Sector ETFs
             </h3>
             <div className="text-sm text-slate-400 space-y-1">
               <p>Each sector is tracked via SPDR ETFs:</p>

@@ -156,15 +156,15 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
     const nearLow = low52 > 0 && (price / low52) < 1.05;
     
     if (aboveBothMAs && nearHigh) {
-      return { bias: "Bullish", detail: `Strong uptrend, near 52-week high`, color: "var(--msp-bull)", bg: "var(--msp-bull-tint)", border: "var(--msp-bull)", icon: "📈" };
+      return { bias: "Bullish", detail: `Strong uptrend, near 52-week high`, color: "var(--msp-bull)", bg: "var(--msp-bull-tint)", border: "var(--msp-bull)", icon: "UP" };
     } else if (aboveBothMAs) {
-      return { bias: "Bullish", detail: `Trading above key moving averages ($${ma50.toFixed(0)} / $${ma200.toFixed(0)})`, color: "var(--msp-bull)", bg: "var(--msp-bull-tint)", border: "var(--msp-bull)", icon: "📈" };
+      return { bias: "Bullish", detail: `Trading above key moving averages ($${ma50.toFixed(0)} / $${ma200.toFixed(0)})`, color: "var(--msp-bull)", bg: "var(--msp-bull-tint)", border: "var(--msp-bull)", icon: "UP" };
     } else if (belowBothMAs && nearLow) {
-      return { bias: "Bearish", detail: `Downtrend, near 52-week low`, color: "var(--msp-bear)", bg: "var(--msp-bear-tint)", border: "var(--msp-bear)", icon: "📉" };
+      return { bias: "Bearish", detail: `Downtrend, near 52-week low`, color: "var(--msp-bear)", bg: "var(--msp-bear-tint)", border: "var(--msp-bear)", icon: "DN" };
     } else if (belowBothMAs) {
-      return { bias: "Bearish", detail: `Trading below key moving averages`, color: "var(--msp-bear)", bg: "var(--msp-bear-tint)", border: "var(--msp-bear)", icon: "📉" };
+      return { bias: "Bearish", detail: `Trading below key moving averages`, color: "var(--msp-bear)", bg: "var(--msp-bear-tint)", border: "var(--msp-bear)", icon: "DN" };
     } else {
-      return { bias: "Neutral", detail: `Mixed signals between 50 & 200 MA`, color: "var(--msp-warn)", bg: "var(--msp-warn-tint)", border: "var(--msp-warn)", icon: "↔️" };
+      return { bias: "Neutral", detail: `Mixed signals between 50 & 200 MA`, color: "var(--msp-warn)", bg: "var(--msp-warn-tint)", border: "var(--msp-warn)", icon: "MID" };
     }
   };
 
@@ -330,7 +330,7 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
             badge="FUNDAMENTALS"
             title="Company Overview"
             subtitle="Find key fundamentals, technical levels, and valuation context fast."
-            icon="🏢"
+            icon="CO"
             backHref="/dashboard"
           />
         )}
@@ -348,7 +348,7 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
           badge="FUNDAMENTALS"
           title="Company Overview"
           subtitle="Find key fundamentals, technical levels, and valuation context fast."
-          icon="🏢"
+          icon="CO"
           backHref="/dashboard"
         />
       )}
@@ -442,7 +442,7 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
             {decisionLens && canAccessPortfolioInsights(tier) && (
               <div style={{ background: "var(--msp-panel)", borderRadius: "16px", border: "1px solid var(--msp-border)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
                 <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "var(--msp-accent)", marginBottom: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
-                  <span style={{ fontSize: "1.5rem" }}>🧠</span> AI Decision Lens
+                  <span style={{ border: "1px solid var(--msp-border)", borderRadius: 8, padding: "3px 6px", color: "var(--msp-accent)", fontSize: "11px", fontWeight: 800 }}>AI</span> AI Decision Lens
                 </h3>
                 <p style={{ color: "var(--msp-text)", lineHeight: "1.8", fontSize: "15px", marginBottom: "12px" }}>
                   <strong>Overall View:</strong> {decisionLens.summary}
@@ -461,7 +461,7 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
                 {/* Bull Case */}
                 <div style={{ background: "var(--msp-bull-tint)", borderRadius: "16px", border: "1px solid var(--msp-bull)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
                   <h3 style={{ fontSize: "1.1rem", fontWeight: "bold", color: "var(--msp-bull)", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span>📈</span> Bull Case
+                    <span>BULL</span> Bull Case
                   </h3>
                   {bullCase.length > 0 ? (
                     <ul style={{ margin: 0, paddingLeft: "20px", color: "var(--msp-text-muted)", lineHeight: "2" }}>
@@ -477,7 +477,7 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
                 {/* Bear Case */}
                 <div style={{ background: "var(--msp-bear-tint)", borderRadius: "16px", border: "1px solid var(--msp-bear)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
                   <h3 style={{ fontSize: "1.1rem", fontWeight: "bold", color: "var(--msp-bear)", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span>⚠️</span> Risk Case
+                    <span>RISK</span> Risk Case
                   </h3>
                   {bearCase.length > 0 ? (
                     <ul style={{ margin: 0, paddingLeft: "20px", color: "var(--msp-text-muted)", lineHeight: "2" }}>
@@ -519,7 +519,7 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
             {/* Valuation Metrics */}
             <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid var(--msp-border)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
-                <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "var(--msp-bull)", margin: 0 }}>📊 Valuation</h3>
+                <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "var(--msp-bull)", margin: 0 }}>Valuation</h3>
                 {valuation && (
                   <span style={{ 
                     padding: "6px 14px", 
@@ -557,7 +557,7 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
 
             {/* Profitability */}
             <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid var(--msp-border)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
-              <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "var(--msp-bull)", marginBottom: "20px" }}>💰 Profitability</h3>
+              <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "var(--msp-bull)", marginBottom: "20px" }}>Profitability</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(180px, 100%), 1fr))", gap: "1rem" }}>
                 <MetricCard label="Profit Margin" value={formatPercentRaw(data.profitMargin)} />
                 <MetricCard label="Operating Margin" value={formatPercentRaw(data.operatingMargin)} />
@@ -569,7 +569,7 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
 
             {/* Growth & Revenue */}
             <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid var(--msp-border)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
-              <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "var(--msp-bull)", marginBottom: "20px" }}>📈 Growth & Revenue</h3>
+              <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "var(--msp-bull)", marginBottom: "20px" }}>Growth & Revenue</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(180px, 100%), 1fr))", gap: "1rem" }}>
                 <MetricCard label="Revenue TTM" value={formatMarketCap(data.revenue)} />
                 <MetricCard label="Gross Profit TTM" value={formatMarketCap(data.grossProfit)} />
@@ -588,7 +588,7 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
 
             {/* Technical Indicators */}
             <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid var(--msp-border)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
-              <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "var(--msp-bull)", marginBottom: "20px" }}>📉 Technical</h3>
+              <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "var(--msp-bull)", marginBottom: "20px" }}>Technical</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(180px, 100%), 1fr))", gap: "1rem" }}>
                 <MetricCard label="50-Day MA" value={`$${formatValue(data.day50MA)}`} />
                 <MetricCard label="200-Day MA" value={`$${formatValue(data.day200MA)}`} />
@@ -600,7 +600,7 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
             {/* Dividends */}
             {data.dividendYield && parseFloat(data.dividendYield) > 0 && (
               <div style={{ background: "var(--msp-card)", borderRadius: "16px", border: "1px solid var(--msp-border)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
-                <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "var(--msp-bull)", marginBottom: "20px" }}>💵 Dividends</h3>
+                <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "var(--msp-bull)", marginBottom: "20px" }}>Dividends</h3>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(180px, 100%), 1fr))", gap: "1rem" }}>
                   <MetricCard label="Dividend Yield" value={formatPercentRaw(data.dividendYield)} />
                 </div>
@@ -616,7 +616,7 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
               marginTop: "8px"
             }}>
               <p style={{ color: "var(--msp-warn)", fontSize: "13px", margin: 0, lineHeight: "1.6" }}>
-                <strong>⚠️ Disclaimer:</strong> This analysis is algorithmic and for informational purposes only. It does not constitute investment advice. Always conduct your own research and consult a financial advisor before making investment decisions.
+                <strong>Research disclaimer:</strong> This analysis is algorithmic and for informational purposes only. It does not constitute investment advice. Always conduct your own research and consult a financial advisor before making investment decisions.
               </p>
             </div>
           </div>

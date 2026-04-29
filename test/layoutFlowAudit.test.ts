@@ -1008,6 +1008,41 @@ describe('layout and flow audit regressions', () => {
     expect(referralsPage).not.toContain('<ComplianceDisclaimer collapsible />');
   });
 
+  it('keeps secondary market routes on text-code visual identity', () => {
+    const companyOverviewPage = read('app/tools/company-overview/page.tsx');
+    const heatmapPage = read('app/tools/heatmap/page.tsx');
+    const economicCalendarPage = read('app/tools/economic-calendar/page.tsx');
+    const macroPage = read('app/tools/macro/page.tsx');
+
+    expect(companyOverviewPage).toContain('icon="CO"');
+    expect(companyOverviewPage).toContain('icon: "UP"');
+    expect(companyOverviewPage).toContain('icon: "DN"');
+    expect(companyOverviewPage).toContain('icon: "MID"');
+    expect(companyOverviewPage).toContain('AI Decision Lens');
+    expect(companyOverviewPage).toContain('Research disclaimer:');
+    expect(companyOverviewPage).not.toContain('icon="🏢"');
+    expect(companyOverviewPage).not.toContain('📈');
+    expect(companyOverviewPage).not.toContain('📉');
+    expect(companyOverviewPage).not.toContain('⚠️ Disclaimer');
+    expect(heatmapPage).toContain('icon="HM"');
+    expect(heatmapPage).toContain('>READ</span> How to Read');
+    expect(heatmapPage).toContain('>TIP</span> Pro Tips');
+    expect(heatmapPage).toContain('>ETF</span> Sector ETFs');
+    expect(heatmapPage).not.toContain('icon="📊"');
+    expect(heatmapPage).not.toContain('🎯');
+    expect(economicCalendarPage).toContain('icon="EC"');
+    expect(economicCalendarPage).toContain("employment: 'JOBS'");
+    expect(economicCalendarPage).toContain("central_bank: 'CB'");
+    expect(economicCalendarPage).not.toContain('icon="📅"');
+    expect(economicCalendarPage).not.toContain("inflation: '📈'");
+    expect(macroPage).toContain('icon="MAC"');
+    expect(macroPage).toContain('<span className="font-bold text-red-200">WARN</span> {error}');
+    expect(macroPage).toContain("correlationRegime.components?.goldSafeHaven ? 'Active' : 'Inactive'");
+    expect(macroPage).not.toContain('icon="🏛️"');
+    expect(macroPage).not.toContain('⚠️ {error}');
+    expect(macroPage).not.toContain("'⚠️ Active'");
+  });
+
   it('treats Golden Egg as a focused validation workbench with Liquidity Sweep separated', () => {
     const goldenEggPage = read('app/tools/golden-egg/page.tsx');
     const goldenEggLayout = read('app/tools/golden-egg/layout.tsx');

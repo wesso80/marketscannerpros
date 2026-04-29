@@ -30,12 +30,12 @@ type SessionTag = 'PRE' | 'RTH' | 'AH';
 type ReviewState = 'CLEAR' | 'CAUTION' | 'BLOCKED';
 
 const CATEGORY_ICONS: Record<string, string> = {
-  employment: '👔',
-  inflation: '📈',
-  central_bank: '🏛️',
-  gdp: '📊',
-  consumer: '🛒',
-  manufacturing: '🏭',
+  employment: 'JOBS',
+  inflation: 'CPI',
+  central_bank: 'CB',
+  gdp: 'GDP',
+  consumer: 'CONS',
+  manufacturing: 'MFG',
 };
 
 const categoryList = ['employment', 'inflation', 'central_bank', 'gdp', 'consumer', 'manufacturing'];
@@ -257,7 +257,7 @@ export default function EconomicCalendarPage({ embeddedInResearch = false }: { e
         badge="MACRO CALENDAR"
         title="Economic Calendar"
         subtitle="Market-moving events fast — FOMC, jobs, inflation, rates."
-        icon="📅"
+        icon="EC"
         actions={
           <div className="flex items-center gap-2">
             <select
