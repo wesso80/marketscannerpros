@@ -610,6 +610,7 @@ describe('layout and flow audit regressions', () => {
     expect(workspacePage).toContain('<PortfolioV1 embeddedInWorkspace />');
     expect(portfolioPage).toContain('embeddedInWorkspace = false');
     expect(portfolioPage).toContain('Portfolio review');
+    expect(portfolioPage).toContain('aria-label="Portfolio command header"');
     expect(portfolioPage).toContain('Recorded paper positions, exposure, cash controls, and descriptive risk analytics.');
     expect(portfolioPage).toContain('Kelly Criterion Parameters');
     expect(portfolioPage).toContain('Position Estimate Results');
