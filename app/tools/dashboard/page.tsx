@@ -344,7 +344,7 @@ export default function DashboardPage() {
       <div className={!isPro ? 'pointer-events-none select-none' : undefined}>
 
       {/* -- Edge Intelligence (v3.1) ----------------------------------- */}
-      <div className={isPro ? 'grid gap-3 xl:grid-cols-[minmax(17rem,0.7fr)_minmax(0,1.3fr)]' : ''}>
+      <div className={isPro ? 'grid items-start gap-3 xl:grid-cols-[minmax(16rem,0.55fr)_minmax(0,1.45fr)]' : ''}>
       {isPro && <EdgeInsightCards compact />}
 
       {/* -- Best Setups (from worker cache) ------------------------------ */}
@@ -458,9 +458,9 @@ export default function DashboardPage() {
           {articles.length === 0 ? (
             <div className="text-xs text-slate-500 py-4 text-center">No recent news</div>
           ) : (
-            <div className="space-y-2">
+            <div className="grid gap-x-4 gap-y-1 xl:grid-cols-2">
               {articles.map((n: NewsArticle, i: number) => (
-                <div key={i} className="flex items-start gap-2 text-xs py-1">
+                <div key={i} className="flex min-w-0 items-start gap-2 rounded-md px-1 py-1 text-xs hover:bg-slate-800/35">
                   <ImpactDot impact={n.sentiment.score > 0.2 ? 'high' : n.sentiment.score > 0 ? 'medium' : 'low'} />
                   <div className="flex-1 min-w-0">
                     <a href={n.url} target="_blank" rel="noopener noreferrer" className="text-white hover:text-emerald-400 transition-colors line-clamp-1">

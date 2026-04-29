@@ -614,8 +614,9 @@ describe('layout and flow audit regressions', () => {
     expect(dashboardPage).toContain('Dashboard lens');
     expect(dashboardPage).toContain('Switch between saved pages, live market desk, derivatives, and macro context.');
     expect(dashboardPage).toContain('rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap');
-    expect(dashboardPage).toContain("className={isPro ? 'grid gap-3 xl:grid-cols-[minmax(17rem,0.7fr)_minmax(0,1.3fr)]' : ''}");
+    expect(dashboardPage).toContain("className={isPro ? 'grid items-start gap-3 xl:grid-cols-[minmax(16rem,0.55fr)_minmax(0,1.45fr)]' : ''}");
     expect(dashboardPage).toContain('<EdgeInsightCards compact />');
+    expect(dashboardPage).toContain('grid gap-x-4 gap-y-1 xl:grid-cols-2');
     expect(dashboardPage).not.toContain('grid grid-cols-[5rem_1fr_6rem]');
     expect(dashboardPage).toContain('<FavoritesPanel embeddedInDashboard />');
     expect(dashboardPage).toContain('<CryptoDashboard embeddedInDashboard />');
