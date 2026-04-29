@@ -20,6 +20,15 @@
 
 import type { CandidatePipeline } from "@/lib/operator/orchestrator";
 import type { Permission } from "@/types/operator";
+import {
+  CONFIDENCE_HIGH_MIN,
+  CONFIDENCE_MODERATE_MIN,
+  CONFIDENCE_WEAK_MIN,
+  RESEARCH_READY_CONFIDENCE_MIN,
+  THESIS_DEGRADED_CONFIDENCE_MIN,
+  THESIS_STRONG_CONFIDENCE_MIN,
+  THESIS_STRONG_STRUCTURE_MIN,
+} from "@/lib/admin/constants";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    TYPES
@@ -169,9 +178,9 @@ function labelForCode(code: string): string {
    ═══════════════════════════════════════════════════════════════════════ */
 
 function toConfidenceClass(score: number): ConfidenceClass {
-  if (score >= 0.85) return "HIGH";
-  if (score >= 0.70) return "MODERATE";
-  if (score >= 0.55) return "WEAK";
+  if (score >= CONFIDENCE_HIGH_MIN) return "HIGH";
+  if (score >= CONFIDENCE_MODERATE_MIN) return "MODERATE";
+  if (score >= CONFIDENCE_WEAK_MIN) return "WEAK";
   return "INVALID";
 }
 
@@ -425,13 +434,13 @@ function resolveReadiness(pipeline: CandidatePipeline): TruthReadiness {
   const setupValid = c.candidateState === "CANDIDATE" || c.candidateState === "VALIDATED" || c.candidateState === "READY";
   const researchReady =
     (g.finalPermission === "ALLOW" || g.finalPermission === "ALLOW_REDUCED") &&
-    v.confidenceScore >= 0.55;
+    v.confidenceScore >= RESEARCH_READY_CONFIDENCE_MIN;
   const triggerHit = c.entryZone != null;
 
   let thesisState: TruthReadiness["thesisState"] = "UNKNOWN";
-  if (v.confidenceScore >= 0.7 && v.evidence.structureQuality >= 0.6) {
+  if (v.confidenceScore >= THESIS_STRONG_CONFIDENCE_MIN && v.evidence.structureQuality >= THESIS_STRONG_STRUCTURE_MIN) {
     thesisState = "STRONG";
-  } else if (v.confidenceScore >= 0.5) {
+  } else if (v.confidenceScore >= THESIS_DEGRADED_CONFIDENCE_MIN) {
     thesisState = "DEGRADED";
   } else {
     thesisState = "INVALID";

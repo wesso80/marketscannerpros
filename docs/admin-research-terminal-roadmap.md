@@ -22,9 +22,9 @@
 
 Status legend: ⬜ Not started · 🟡 In progress · ✅ Complete · ⚠️ Blocked
 
-**Last session ended at:** Phase 1.5 shipped — internal type renames complete (`executionReady→researchReady`, `OperatorAction "EXECUTE"→"RESEARCH_READY"`, `Broker*→JournalTag*` across morning-brief lib/page/API). Two items deferred with rationale: `brokerConnected` (cross-tree shared type) and commander `BLOCK→NO_RESEARCH` (deeply integrated CommandState). Algorithm audit captured inline above (no behavioral changes — magic numbers identified for future extraction). vitest 394/394 green, build green.
+**Last session ended at:** Phase 2 shipped — Truth Layer split. Created [lib/admin/constants.ts](../lib/admin/constants.ts) (centralized confidence/evidence/risk/freshness magic numbers from the audit), [lib/engines/dataTruth.ts](../lib/engines/dataTruth.ts) (`computeDataTruth` with timeframe-aware staleness scaling — fixes the audit issue where 1h verdicts went DELAYED after 60s), [lib/engines/researchReadiness.ts](../lib/engines/researchReadiness.ts) (`classifyConfidence` / `isResearchReady` / `classifyThesis` extracted), and [components/admin/shared/DataTruthBadge.tsx](../components/admin/shared/DataTruthBadge.tsx). Badge mounted in [TruthRail.tsx](../components/admin/operator/TruthRail.tsx) header. truth-layer.ts now consumes constants (zero behavioral change). vitest 414/414 green (+20 new), build green.
 **Last commit on main:** `e1f070ec` (Phase 1)
-**Next action when resuming:** Phase 2 — Truth Layer split. Create [lib/engines/dataTruth.ts](../lib/engines/dataTruth.ts) with `computeDataTruth` + `DataTruth` type (statuses LIVE/CACHED/STALE/DEGRADED/MISSING/ERROR/SIMULATED). Move readiness logic from [lib/admin/truth-layer.ts](../lib/admin/truth-layer.ts) into new [lib/engines/researchReadiness.ts](../lib/engines/researchReadiness.ts). Extract magic numbers to [lib/admin/constants.ts](../lib/admin/constants.ts) per the algo audit. Build `<DataTruthBadge />` shared component, mount on every operator card. Add `test/engines/dataTruth.test.ts`.
+**Next action when resuming:** Phase 3 — Opportunity Research Board. Create [lib/admin/adminTypes.ts](../lib/admin/adminTypes.ts) (`InternalResearchScore`, `AdminResearchAlert`, `SetupDefinition` from brief Sections 10/11/16), [lib/engines/internalResearchScore.ts](../lib/engines/internalResearchScore.ts) (pure scorer with `dataTrustScore < 50 ⇒ DATA_DEGRADED` hard floor, one-axis 25% cap, stale-data penalty — wire into `computeDataTruth().trustScore`), [lib/engines/setupClassifier.ts](../lib/engines/setupClassifier.ts) (16 setup types), and [app/api/admin/opportunities/route.ts](../app/api/admin/opportunities/route.ts). />` shared component, mount on every operator card. Add `test/engines/dataTruth.test.ts`.
 
 ---
 
@@ -149,16 +149,17 @@ Findings from a careful read of [lib/admin/truth-layer.ts](../lib/admin/truth-la
 
 ---
 
-## Phase 2 — Truth Layer
+## Phase 2 — Truth Layer ✅ SHIPPED
 
 **Goal:** Single source of truth for "is this data trustworthy?" surfaced on every panel.
 
-- [ ] Create [lib/engines/dataTruth.ts](../lib/engines/dataTruth.ts) exporting `computeDataTruth(input): DataTruth` (statuses: `LIVE`, `CACHED`, `STALE`, `DEGRADED`, `MISSING`, `ERROR`, `SIMULATED`)
-- [ ] Split [lib/admin/truth-layer.ts](../lib/admin/truth-layer.ts) → keep readiness logic in new `lib/engines/researchReadiness.ts`
-- [ ] Create `<DataTruthBadge truth={...} />` shared component
-- [ ] Mount badge on every operator card via prop
-- [ ] Add `test/engines/dataTruth.test.ts`
-- [ ] Build + commit
+- [x] Create [lib/engines/dataTruth.ts](../lib/engines/dataTruth.ts) exporting `computeDataTruth(input): DataTruth` (statuses: `LIVE`, `CACHED`, `DELAYED`, `STALE`, `DEGRADED`, `MISSING`, `ERROR`, `SIMULATED`) with **timeframe-aware staleness scaling** (audit fix)
+- [x] Split [lib/admin/truth-layer.ts](../lib/admin/truth-layer.ts) → readiness logic now in [lib/engines/researchReadiness.ts](../lib/engines/researchReadiness.ts) (`classifyConfidence`, `isResearchReady`, `classifyThesis`, `computeReadiness`)
+- [x] Extract magic numbers to [lib/admin/constants.ts](../lib/admin/constants.ts) (confidence bands, evidence thresholds, risk governor stops, freshness windows)
+- [x] Create [components/admin/shared/DataTruthBadge.tsx](../components/admin/shared/DataTruthBadge.tsx) shared component
+- [x] Mount badge in [TruthRail.tsx](../components/admin/operator/TruthRail.tsx) header (further cards adopt in Phase 3+)
+- [x] Add [test/engines/dataTruth.test.ts](../test/engines/dataTruth.test.ts) (20 tests covering decision tree, timeframe scaling, UI helpers)
+- [x] vitest 414/414 green, build green
 
 ---
 

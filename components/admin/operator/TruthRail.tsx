@@ -2,6 +2,8 @@
 
 import type { TruthObject } from "@/lib/admin/truth-layer";
 import type { AdminSymbolIntelligence } from "@/lib/admin/types";
+import DataTruthBadge from "@/components/admin/shared/DataTruthBadge";
+import { computeDataTruth } from "@/lib/engines/dataTruth";
 import { useState } from "react";
 
 /* ═════════════════════════════════════════════════════
@@ -153,12 +155,22 @@ function FinalDecisionBlock({ truth, data }: { truth: TruthObject; data?: AdminS
         }}>
           {truth.finalVerdict}
         </span>
-        <span style={{
-          fontSize: "0.7rem", fontWeight: 600,
-          color: dataStateColor(truth.freshness.dataState),
-        }}>
-          {dataStateLabel(truth.freshness.dataState)} · {ageFmt(truth.freshness.verdictAgeSec)}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <DataTruthBadge
+            truth={computeDataTruth({
+              marketDataAgeSec: truth.freshness.marketDataAgeSec,
+              timeframe: truth.timeframe,
+              missingFields: truth.freshness.dataState === "PARTIAL" ? ["partial"] : [],
+              upstreamState: truth.freshness.dataState === "UNAVAILABLE" ? "ERROR" : null,
+            })}
+          />
+          <span style={{
+            fontSize: "0.7rem", fontWeight: 600,
+            color: dataStateColor(truth.freshness.dataState),
+          }}>
+            {ageFmt(truth.freshness.verdictAgeSec)}
+          </span>
+        </div>
       </div>
 
       {/* Action — clickable button that copies trade params */}
