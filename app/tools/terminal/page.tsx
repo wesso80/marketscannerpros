@@ -29,7 +29,7 @@ import {
   type ForwardCloseCluster,
   type ForwardCloseCalendar,
 } from '@/app/v2/_lib/api';
-import { Card, SectionHeader, Badge, UpgradeGate } from '@/app/v2/_components/ui';
+import { Card, Badge, UpgradeGate } from '@/app/v2/_components/ui';
 
 function Skel({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
   return <div className={`${h} ${w} bg-slate-700/50 rounded animate-pulse`} />;
@@ -104,17 +104,17 @@ function TerminalTabRail({
   const visibleTabs = TABS.filter(t => !(asset === 'crypto' && (t === 'Options Terminal' || t === 'Options Confluence' || t === 'Options Flow')));
 
   return (
-    <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-2" aria-label="Terminal market mechanics views">
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
+    <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2" aria-label="Terminal market mechanics views">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <div>
           <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Mechanics workbench</div>
-          <div className="text-[0.72rem] text-slate-500">Move from timing to positioning, flow, and final confluence before Backtest.</div>
+          <div className="text-[0.72rem] text-slate-500">Timing first, then positioning, flow, and final confluence before Backtest.</div>
         </div>
-        <div className="rounded-full border border-slate-700/70 bg-slate-950/60 px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-500">
+        <div className="rounded-md border border-slate-700/70 bg-slate-950/60 px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.12em] text-slate-500">
           {asset === 'crypto' ? 'Crypto path' : 'Equity path'}
         </div>
       </div>
-      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+      <div className="flex gap-1 overflow-x-auto">
         {visibleTabs.map((terminalTab) => {
           const meta = TERMINAL_TAB_META[terminalTab];
           const isActive = activeTab === terminalTab;
@@ -124,15 +124,14 @@ function TerminalTabRail({
               type="button"
               aria-pressed={isActive}
               onClick={() => onSelectTab(terminalTab)}
-              className={`rounded-lg border px-3 py-2 text-left transition ${
+              className={`min-w-[9rem] shrink-0 rounded-md border px-3 py-1.5 text-left transition ${
                 isActive
                   ? 'border-emerald-400/40 bg-emerald-400/10 text-white'
                   : 'border-white/10 bg-white/[0.025] text-slate-300 hover:border-emerald-400/30 hover:bg-emerald-400/[0.05]'
               }`}
             >
               <div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{meta.eyebrow}</div>
-              <div className={`mt-1 text-sm font-black ${isActive ? 'text-emerald-200' : 'text-white'}`}>{terminalTab}</div>
-              <div className="mt-1 text-[11px] leading-4 text-slate-500">{meta.description}</div>
+              <div className={`mt-0.5 text-sm font-black ${isActive ? 'text-emerald-200' : 'text-white'}`}>{terminalTab}</div>
             </button>
           );
         })}
@@ -270,15 +269,14 @@ export default function TerminalPage() {
   const flow = useFlow(sym, asset);
 
   return (
-    <div className="space-y-6">
-      <SectionHeader title="Terminal" subtitle={asset === 'crypto' ? 'Close Calendar — Crypto — Flow' : 'Close Calendar — Options Terminal — Crypto — Flow'} />
-      <ComplianceDisclaimer collapsible variant={asset === 'crypto' ? 'cryptoDerivatives' : 'options'} />
+    <div className="space-y-3">
+      <ComplianceDisclaimer compact variant={asset === 'crypto' ? 'cryptoDerivatives' : 'options'} />
 
       <Card>
-        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
           <div>
             <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Workflow step 3 · Market mechanics check</div>
-            <h2 className="mt-1 text-lg font-black text-white">Use Terminal before Backtest.</h2>
+            <h1 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Use Terminal before Backtest.</h1>
             <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">
               Golden Egg validates the symbol. Terminal checks whether timing, options positioning, flow, crypto derivatives, and close-calendar pressure support the scenario before you test it historically.
             </p>

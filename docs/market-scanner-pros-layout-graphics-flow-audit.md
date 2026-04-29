@@ -18,6 +18,8 @@ Implementation status update: 2026-04-29
 - Completed: Terminal, Explorer, Research, Dashboard, Macro, and Golden Egg duplicate route promotions now land on canonical hub URLs with query-tab support. Redirects, catalog/workflow links, mobile/tools nav, partner/resource CTAs, sitemap entries, platform knowledge, guide routes, workflow events, image mappings, symbol action links, and redirected child-route metadata were canonicalized/noindexed while preserving embedded legacy page modules used by the hubs.
 - Completed: first Golden Egg flagship polish pass added a proper validation-workbench header, consolidated symbol/timeframe/asset controls, surfaced verdict/data-trust/confluence metrics above the fold, and renamed the main decision packet framing to verdict packet.
 - Completed: screenshot-driven Golden Egg refinement compacted the validation header, metrics, symbol controls, tab rail, and duplicate compliance treatment so the verdict packet reaches the first viewport faster.
+- Completed: shared tool-header treatment now uses the compact command-workbench shell, tighter actions/help, and text-code identity blocks for pages using `ToolsPageHeader`.
+- Completed: Terminal route now uses the same compact command-workbench treatment as Dashboard and Golden Egg: slim compliance, command handoff header, and horizontal workbench rail.
 - Completed: wider icon cleanup pass replaced emoji-driven tool catalog icons with short professional visual codes and updated the Workflow directory, Favorites panel, and tools nav tier label rendering.
 - Completed: deeper Dashboard refinement pass added a command-dashboard header, stable queue/data-health/event/news metrics, direct Scanner/Golden Egg/Journal actions, and canonical Backtest/Journal handoffs from Continue Workflow.
 - Completed: screenshot-driven Dashboard refinement compacted the command header, made the live research queue the primary workbench, reduced disclaimer weight, and collapsed empty Edge Profile history into a small non-distracting state.
@@ -35,7 +37,7 @@ Implementation status update: 2026-04-29
 - Completed: additional direct-admin cleanup removed icon text from AI usage, cost tracking, income/expense, and delete-request admin pages.
 - Completed: deeper direct-admin cleanup removed icon/status emoji from Discord Bridge, trial grants, signal outcomes, and admin scalper pages.
 - Completed: public website cleanup removed remaining icon text and directive wording from the Open Interest guide, partner demo compliance proof, resource guide process checks, and public home risk-analysis warning copy.
-- Still open: real screenshot asset system, remaining lower-traffic page-local emoji migration, broader Golden Egg visual QA, broader mobile QA, and the self-learning playbook layer after enough labeled outcomes exist.
+- Still open: apply the compact command-workbench treatment route-by-route to legacy pages that do not use `ToolsPageHeader`, real screenshot asset system, remaining lower-traffic page-local emoji migration, broader Golden Egg visual QA, broader mobile QA, and the self-learning playbook layer after enough labeled outcomes exist.
 
 Important visual note: this is a code-and-asset audit. It is strong enough to set priorities, but final visual grades should be tightened with screenshots or Playwright captures for desktop and mobile because rendered spacing, cropping, image blur, table overflow, and real contrast cannot be fully proven from source alone.
 

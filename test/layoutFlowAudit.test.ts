@@ -425,6 +425,7 @@ describe('layout and flow audit regressions', () => {
     expect(terminalPage).toContain('Workflow step 3 · Market mechanics check');
     expect(terminalPage).toContain('Use Terminal before Backtest.');
     expect(terminalPage).toContain('Golden Egg validates the symbol. Terminal checks whether timing, options positioning, flow, crypto derivatives, and close-calendar pressure support the scenario before you test it historically.');
+    expect(terminalPage).toContain('<ComplianceDisclaimer compact variant={asset === \'crypto\' ? \'cryptoDerivatives\' : \'options\'} />');
     expect(terminalPage).toContain('function TerminalTabRail');
     expect(terminalPage).toContain('const TERMINAL_TAB_PARAM_MAP');
     expect(terminalPage).toContain("'options-confluence': 'Options Confluence'");
@@ -433,6 +434,9 @@ describe('layout and flow audit regressions', () => {
     expect(terminalPage).toContain('useSearchParams');
     expect(terminalPage).toContain('if (requestedTab && requestedTab !== tab) setTab(requestedTab);');
     expect(terminalPage).toContain('Mechanics workbench');
+    expect(terminalPage).toContain('Timing first, then positioning, flow, and final confluence before Backtest.');
+    expect(terminalPage).toContain('flex gap-1 overflow-x-auto');
+    expect(terminalPage).toContain('min-w-[9rem] shrink-0 rounded-md border px-3 py-1.5');
     expect(terminalPage).toContain('Terminal subview');
     expect(terminalPage).toContain('<TerminalSubviewFrame tab="Time Gravity" symbol={sym}>');
     expect(terminalPage).toContain('Back to Golden Egg');
@@ -441,6 +445,8 @@ describe('layout and flow audit regressions', () => {
     expect(terminalPage).toContain('<OptionsConfluence embeddedInTerminal />');
     expect(terminalPage).toContain('<OptionsFlow embeddedInTerminal />');
     expect(terminalPage).toContain('<ConfluenceScanner embeddedInTerminal />');
+    expect(terminalPage).not.toContain('<SectionHeader title="Terminal"');
+    expect(terminalPage).not.toContain('ComplianceDisclaimer collapsible variant');
     expect(terminalPage).not.toContain("'? Refresh'");
     expect(terminalShell).toContain('embedded?: boolean');
     expect(terminalShell).toContain("{!embedded && <header");
@@ -974,6 +980,23 @@ describe('layout and flow audit regressions', () => {
     expect(goldenEggPage).not.toContain('rounded-t-md whitespace-nowrap transition-colors');
     expect(goldenEggLayout).not.toContain('liquidity');
     expect(workflows).toContain("{ href: '/tools/liquidity-sweep', label: 'Liquidity Sweep', description: 'Broad sweep/reclaim scanner for liquidity-zone research.', tier: 'pro_trader', role: 'specialist' }");
+  });
+
+  it('keeps shared tool headers aligned with the compact command treatment', () => {
+    const toolsPageHeader = read('components/ToolsPageHeader.tsx');
+    const terminalPageHeader = read('components/terminal/TerminalPageHeader.tsx');
+
+    expect(terminalPageHeader).toContain('function headerCode');
+    expect(terminalPageHeader).toContain('style={{ padding: 12, borderRadius: 8');
+    expect(terminalPageHeader).toContain('linear-gradient(135deg, rgba(15,23,42,0.98), rgba(8,13,24,0.98))');
+    expect(terminalPageHeader).toContain('h-8 w-8');
+    expect(terminalPageHeader).toContain('text-[1.08rem] font-black tracking-normal');
+    expect(terminalPageHeader).toContain('max-w-3xl text-xs leading-5');
+    expect(terminalPageHeader).not.toContain('text-[20px] leading-none');
+    expect(toolsPageHeader).toContain('msp-container py-3');
+    expect(toolsPageHeader).toContain('rounded-md border border-msp-border bg-msp-panel px-3 py-1.5');
+    expect(toolsPageHeader).toContain('Educational Only • Not Financial Advice');
+    expect(toolsPageHeader).toContain('rounded-md border border-msp-warn/30');
   });
 
   it('keeps Golden Egg nested pages in embedded validation mode', () => {

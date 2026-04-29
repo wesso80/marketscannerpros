@@ -28,9 +28,9 @@ export function ToolsPageHeader({ badge, title, subtitle, icon, actions, backHre
       {backHref && (
         <Link
           href={backHref}
-          className="rounded-panel border border-msp-border bg-msp-panel px-4 py-2.5 text-[13px] font-semibold text-msp-text no-underline"
+          className="rounded-md border border-msp-border bg-msp-panel px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-msp-text no-underline"
         >
-          ← Back
+          Back
         </Link>
       )}
       {actions}
@@ -39,17 +39,17 @@ export function ToolsPageHeader({ badge, title, subtitle, icon, actions, backHre
 
   const headerMeta = (
     <>
-      <div className="inline-flex items-center gap-1.5 rounded-full border border-msp-warn/30 bg-msp-warnTint px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.04em] text-msp-warn">
+      <div className="inline-flex items-center gap-1.5 rounded-md border border-msp-warn/30 bg-msp-warnTint px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-msp-warn">
         Educational Only • Not Financial Advice
       </div>
       {pageGuide ? (
-        <div className="mt-2">
+        <div className="mt-1.5">
           <button
             type="button"
             onClick={() => setHelpOpen((current) => !current)}
             aria-expanded={helpOpen}
             aria-controls="tool-page-guide"
-            className="rounded-lg border border-msp-borderStrong bg-msp-panel px-3 py-1.5 text-[11px] font-semibold text-msp-accent"
+            className="rounded-md border border-msp-borderStrong bg-msp-panel px-2.5 py-1 text-[11px] font-semibold text-msp-accent"
           >
             {helpOpen ? 'Hide How It Works' : 'How It Works'}
           </button>
@@ -59,7 +59,7 @@ export function ToolsPageHeader({ badge, title, subtitle, icon, actions, backHre
   );
 
   return (
-    <div className="msp-container py-4">
+    <div className="msp-container py-3">
       <TerminalPageHeader
         badge={badge}
         title={title}
@@ -71,7 +71,7 @@ export function ToolsPageHeader({ badge, title, subtitle, icon, actions, backHre
       />
 
       {pageGuide && helpOpen ? (
-        <div id="tool-page-guide" className="mx-auto mt-4 max-w-none rounded-lg border border-msp-borderStrong bg-msp-panel p-4">
+        <div id="tool-page-guide" className="mx-auto mt-3 max-w-none rounded-lg border border-msp-borderStrong bg-msp-panel p-3">
           <div className="mb-2 flex items-center gap-2">
             <span className="rounded-full border border-msp-borderStrong bg-msp-card px-2 py-0.5 text-[11px] uppercase tracking-[0.04em] text-msp-accent">
               {pageGuide.badge}
