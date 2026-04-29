@@ -978,6 +978,36 @@ describe('layout and flow audit regressions', () => {
     expect(backtestPage).not.toContain('>🔬</span>');
   });
 
+  it('keeps market context routes on compact tool chrome', () => {
+    const marketMoversPage = read('app/tools/market-movers/page.tsx');
+    const newsPage = read('app/tools/news/page.tsx');
+    const commoditiesPage = read('app/tools/commodities/page.tsx');
+    const referralsPage = read('app/tools/referrals/page.tsx');
+
+    expect(marketMoversPage).toContain('icon="MM"');
+    expect(marketMoversPage).toContain('<ComplianceDisclaimer compact />');
+    expect(marketMoversPage).toContain("mover.asset_class === 'equity' ? 'EQ Equity' : 'CR Crypto'");
+    expect(marketMoversPage).not.toContain('icon="📈"');
+    expect(marketMoversPage).not.toContain('<ComplianceDisclaimer collapsible />');
+    expect(newsPage).toContain('icon="NI"');
+    expect(newsPage).toContain('!embeddedInResearch && <ComplianceDisclaimer compact />');
+    expect(newsPage).toContain("label: 'TOP 10'");
+    expect(newsPage).toContain('News & Sentiment');
+    expect(newsPage).not.toContain('icon="📰"');
+    expect(newsPage).not.toContain('<ComplianceDisclaimer collapsible />');
+    expect(commoditiesPage).toContain('icon="CMD"');
+    expect(commoditiesPage).toContain('<ComplianceDisclaimer compact />');
+    expect(commoditiesPage).toContain("Energy: { icon: 'EN'");
+    expect(commoditiesPage).toContain("WTI: 'WTI'");
+    expect(commoditiesPage).toContain('EN · MT · AG');
+    expect(commoditiesPage).not.toContain('icon="🛢️"');
+    expect(commoditiesPage).not.toContain('<ComplianceDisclaimer collapsible />');
+    expect(referralsPage).toContain('icon="REF"');
+    expect(referralsPage).toContain('<ComplianceDisclaimer compact />');
+    expect(referralsPage).not.toContain('icon="🎁"');
+    expect(referralsPage).not.toContain('<ComplianceDisclaimer collapsible />');
+  });
+
   it('treats Golden Egg as a focused validation workbench with Liquidity Sweep separated', () => {
     const goldenEggPage = read('app/tools/golden-egg/page.tsx');
     const goldenEggLayout = read('app/tools/golden-egg/layout.tsx');

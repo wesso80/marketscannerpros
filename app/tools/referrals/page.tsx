@@ -91,12 +91,12 @@ export default function ReferralsPage() {
         badge="REFERRAL PROGRAM"
         title="Refer & Earn"
         subtitle="Share your link — earn credit for every friend who subscribes. They get $5 off Pro or $10 off Pro Trader at checkout! 5 referrals = $500 draw entry."
-        icon="🎁"
+        icon="REF"
         backHref="/tools"
       />
 
       <main className="mx-auto w-full max-w-4xl space-y-6 px-4 py-6 md:px-6">
-        <ComplianceDisclaimer collapsible />
+        <ComplianceDisclaimer compact />
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />

@@ -567,7 +567,7 @@ export default function MarketMoversPage() {
   };
 
   if (tierLoading) return <div className="min-h-screen bg-[var(--msp-bg)]" />;
-  if (!canAccessPortfolioInsights(tier)) return <><ComplianceDisclaimer collapsible /><UpgradeGate requiredTier="pro" feature="Market Movers" /></>;
+  if (!canAccessPortfolioInsights(tier)) return <><ComplianceDisclaimer compact /><UpgradeGate requiredTier="pro" feature="Market Movers" /></>;
 
   return (
     <div className="min-h-screen bg-[var(--msp-bg)] text-white">
@@ -575,11 +575,11 @@ export default function MarketMoversPage() {
         title="Market Movers"
         subtitle="Status → Action Console → Audit Log → Capabilities"
         badge="Live"
-        icon="📈"
+        icon="MM"
       />
 
       <main className="mx-auto w-full max-w-none space-y-2 px-2 pb-6 pt-3 md:px-3">
-        <ComplianceDisclaimer collapsible />
+        <ComplianceDisclaimer compact />
         <section className="z-20 flex flex-wrap items-center gap-1 rounded-lg border border-slate-700 bg-slate-900/95 p-1 backdrop-blur md:sticky md:top-2 md:gap-1.5 md:p-1.5">
           {[
             ['Mode', environment.marketMode],
@@ -607,7 +607,7 @@ export default function MarketMoversPage() {
           </div>
         ) : error ? (
           <div className="rounded-lg border border-red-500/50 bg-red-500/20 p-4 text-center">
-            <p className="text-sm text-red-300">⚠️ {error}</p>
+            <p className="text-sm text-red-300"><span className="font-bold text-red-200">WARN</span> {error}</p>
             <p className="mt-1 text-xs text-slate-400">Market data may be unavailable outside trading hours.</p>
           </div>
         ) : data ? (
@@ -764,7 +764,7 @@ export default function MarketMoversPage() {
                       <div className="border-t border-slate-700/50 px-2.5 pb-2.5 pt-2">
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[11px]">
                           <div className="text-slate-400">Cluster</div><div className="text-slate-200">{toTitleCluster(mover.cluster)}</div>
-                          <div className="text-slate-400">Asset</div><div className="text-slate-200">{mover.asset_class === 'equity' ? '📈 Equity' : '₿ Crypto'}</div>
+                          <div className="text-slate-400">Asset</div><div className="text-slate-200">{mover.asset_class === 'equity' ? 'EQ Equity' : 'CR Crypto'}</div>
                           <div className="text-slate-400">RelVol</div><div className="text-slate-200">{(mover.relVolume || 0).toFixed(2)}x</div>
                           <div className="text-slate-400">Structure</div><div className="text-slate-300">{mover.structureBias}</div>
                           <div className="text-slate-400">RSI</div><div className={mover.rsi14 != null ? (mover.rsi14 > 70 ? 'text-rose-300' : mover.rsi14 < 30 ? 'text-emerald-300' : 'text-slate-200') : 'text-slate-500'}>{mover.rsi14 != null ? mover.rsi14.toFixed(1) : '—'}</div>

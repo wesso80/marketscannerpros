@@ -162,13 +162,13 @@ const TOP_100_COMPANIES = [...TOP_25_COMPANIES, 'KO', 'ADBE', 'WMT', 'BAC', 'CRM
 function getMarketCapRank(symbol: string): { rank: 'top10' | 'top25' | 'top100' | null; label: string; color: string; bgColor: string } {
   const sym = symbol.toUpperCase();
   if (TOP_10_COMPANIES.includes(sym)) {
-    return { rank: 'top10', label: '🔥 TOP 10', color: '#F59E0B', bgColor: 'rgba(245,158,11,0.2)' };
+    return { rank: 'top10', label: 'TOP 10', color: '#F59E0B', bgColor: 'rgba(245,158,11,0.2)' };
   }
   if (TOP_25_COMPANIES.includes(sym)) {
-    return { rank: 'top25', label: '⚡ TOP 25', color: 'var(--msp-accent)', bgColor: 'rgba(16,185,129,0.2)' };
+    return { rank: 'top25', label: 'TOP 25', color: 'var(--msp-accent)', bgColor: 'rgba(16,185,129,0.2)' };
   }
   if (TOP_100_COMPANIES.includes(sym)) {
-    return { rank: 'top100', label: '📊 TOP 100', color: '#94A3B8', bgColor: 'rgba(148,163,184,0.2)' };
+    return { rank: 'top100', label: 'TOP 100', color: '#94A3B8', bgColor: 'rgba(148,163,184,0.2)' };
   }
   return { rank: null, label: '', color: '', bgColor: '' };
 }
@@ -780,12 +780,12 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
           badge="INTELLIGENCE"
           title="Market Intelligence"
           subtitle="Find news sentiment, earnings catalysts, and insider activity in one view."
-          icon="📰"
+          icon="NI"
           backHref="/dashboard"
         />}
         <main style={{ padding: embeddedInResearch ? "0" : "24px 16px", display: "flex", justifyContent: "center" }}>
           <div style={{ width: "100%", maxWidth: 960 }}>
-            {!embeddedInResearch && <ComplianceDisclaimer collapsible />}
+            {!embeddedInResearch && <ComplianceDisclaimer compact />}
             <div style={{ marginTop: 16, display: "flex", justifyContent: "center" }}>
               <UpgradeGate feature="Market Intelligence" requiredTier="pro" />
             </div>
@@ -801,12 +801,12 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
         badge="INTELLIGENCE"
         title="Market Intelligence"
         subtitle="Find news sentiment, earnings catalysts, and insider activity in one view."
-        icon="📰"
+        icon="NI"
         backHref="/dashboard"
       />}
       <main style={{ minHeight: embeddedInResearch ? undefined : "100vh", padding: embeddedInResearch ? "0" : "24px 16px", width: '100%' }}>
         <div style={{ maxWidth: "none", margin: "0 auto", padding: 0, width: '100%' }}>
-        {!embeddedInResearch && <ComplianceDisclaimer collapsible />}
+        {!embeddedInResearch && <ComplianceDisclaimer compact />}
 
         {/* Tabs */}
         <div
@@ -835,7 +835,7 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
               transition: "all 0.2s"
             }}
           >
-            📰 News & Sentiment
+            News & Sentiment
           </button>
           <button
             type="button"
@@ -1015,7 +1015,7 @@ export default function NewsSentimentPage({ embeddedInResearch = false }: { embe
 
             {!loading && filteredNews.length === 0 && (
               <section className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
-                <div className="mb-2 text-3xl">📰</div>
+                <div className="mb-2 text-xs font-black uppercase tracking-[0.14em] text-emerald-300">NEWS</div>
                 <h3 className="text-lg font-semibold text-white/90">No high-evidence news objects</h3>
                 <p className="mt-1 text-sm text-white/60">Run a scan or relax filters to build your narrative stack.</p>
               </section>

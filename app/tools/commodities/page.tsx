@@ -92,21 +92,21 @@ interface DerivedState {
   categoryAvg: Record<CategoryKey, number>;
 }
 
-// Category icons and colors
+// Category codes and colors
 const CATEGORY_CONFIG = {
-  Energy: { icon: '⛽', color: '#f59e0b', bgColor: 'rgba(245, 158, 11, 0.1)' },
-  Metals: { icon: '🔩', color: '#94a3b8', bgColor: 'rgba(148, 163, 184, 0.1)' },
-  Agriculture: { icon: '🌾', color: '#22c55e', bgColor: 'rgba(34, 197, 94, 0.1)' },
+  Energy: { icon: 'EN', color: '#f59e0b', bgColor: 'rgba(245, 158, 11, 0.1)' },
+  Metals: { icon: 'MT', color: '#94a3b8', bgColor: 'rgba(148, 163, 184, 0.1)' },
+  Agriculture: { icon: 'AG', color: '#22c55e', bgColor: 'rgba(34, 197, 94, 0.1)' },
 };
 
-// Commodity-specific icons (6 core commodities)
+// Commodity-specific codes (6 core commodities)
 const COMMODITY_ICONS: { [key: string]: string } = {
-  WTI: '🛢️',
-  NATURAL_GAS: '🔥',
-  GOLD: '🥇',
-  SILVER: '🥈',
-  COPPER: '🟤',
-  WHEAT: '🌾',
+  WTI: 'WTI',
+  NATURAL_GAS: 'NG',
+  GOLD: 'AU',
+  SILVER: 'AG',
+  COPPER: 'CU',
+  WHEAT: 'WHT',
 };
 
 const reviewBadge = {
@@ -454,11 +454,11 @@ export default function CommoditiesPage() {
           badge="Commodities"
           title="Commodities Dashboard" 
           subtitle="Find real-time commodity prices with live energy, metals, and agriculture context"
-          icon="🛢️"
+          icon="CMD"
         />
         <main style={{ padding: '24px 16px', display: 'flex', justifyContent: 'center' }}>
           <div style={{ width: '100%', maxWidth: 960 }}>
-            <ComplianceDisclaimer collapsible />
+            <ComplianceDisclaimer compact />
             <div style={{ marginTop: 16, display: 'flex', justifyContent: 'center' }}>
               <UpgradeGate feature="Commodities Dashboard" requiredTier="pro" />
             </div>
@@ -475,11 +475,11 @@ export default function CommoditiesPage() {
           badge="Commodities"
           title="Commodities Dashboard" 
           subtitle="Real-time commodity impulse, rotation, and inflation/growth confirmation"
-          icon="🛢️"
+          icon="CMD"
         />
         <div className="flex h-[50vh] items-center justify-center">
           <div className="text-center">
-            <div className="mb-4 text-5xl animate-pulse">⛽🔩🌾</div>
+            <div className="mb-4 text-xs font-black uppercase tracking-[0.18em] text-emerald-300 animate-pulse">EN · MT · AG</div>
             <div className="text-white/60">Loading commodity data...</div>
           </div>
         </div>
@@ -494,10 +494,10 @@ export default function CommoditiesPage() {
           badge="Commodities"
           title="Commodities Dashboard" 
           subtitle="Real-time commodity impulse, rotation, and inflation/growth confirmation"
-          icon="🛢️"
+          icon="CMD"
         />
         <div className="mx-auto mt-8 max-w-xl rounded-xl border border-rose-400/30 bg-rose-500/10 p-8 text-center">
-          <div className="mb-3 text-3xl">⚠️</div>
+          <div className="mb-3 text-xs font-black uppercase tracking-[0.14em] text-rose-200">WARN</div>
           <div className="mb-4 text-rose-300">{error}</div>
           <button
             type="button"
@@ -517,7 +517,7 @@ export default function CommoditiesPage() {
         badge="Commodities"
         title="Commodities Dashboard" 
         subtitle="Real-time commodity impulse, rotation, and inflation/growth confirmation"
-        icon="🛢️"
+        icon="CMD"
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/60">US/Eastern aligned</span>
@@ -539,7 +539,7 @@ export default function CommoditiesPage() {
         }
       />
       <main className="mx-auto max-w-none px-4 py-6 sm:px-6 lg:px-8">
-        <ComplianceDisclaimer collapsible />
+        <ComplianceDisclaimer compact />
         {derivedState && (
           <>
             <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -727,7 +727,7 @@ export default function CommoditiesPage() {
                     <article key={commodity.symbol} className="rounded-xl border border-white/10 bg-white/5 p-4 transition hover:bg-white/[0.07]">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
-                          <span className="text-2xl">{COMMODITY_ICONS[commodity.symbol] || '📊'}</span>
+                          <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] font-black text-white/70">{COMMODITY_ICONS[commodity.symbol] || 'CMD'}</span>
                           <div>
                             <div className="text-sm font-semibold text-white/90">{commodity.name}</div>
                             <div
