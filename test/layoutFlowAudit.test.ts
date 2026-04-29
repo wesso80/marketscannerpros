@@ -568,6 +568,7 @@ describe('layout and flow audit regressions', () => {
     const dashboardPage = read('app/tools/dashboard/page.tsx');
     const explorerPage = read('app/tools/explorer/page.tsx');
     const favoritesPanel = read('components/FavoritesPanel.tsx');
+    const edgeInsightCards = read('components/intelligence/EdgeInsightCards.tsx');
     const cryptoDashboard = read('app/tools/crypto-dashboard/page.tsx');
     const macroDashboard = read('app/tools/macro/page.tsx');
 
@@ -575,8 +576,8 @@ describe('layout and flow audit regressions', () => {
     expect(dashboardPage).toContain('function DashboardMetric');
     expect(dashboardPage).toContain('aria-label="Dashboard command header"');
     expect(dashboardPage).toContain('Morning command dashboard');
-    expect(dashboardPage).toContain('Open with the highest-evidence research queue.');
-    expect(dashboardPage).toContain('Start from real scanner cache, mover data, calendar events, and news availability.');
+    expect(dashboardPage).toContain('Open the research queue, then validate one symbol.');
+    expect(dashboardPage).toContain('Scanner cache, movers, calendar risk, and headlines are compressed into a morning review path.');
     expect(dashboardPage).toContain('Start Scanner');
     expect(dashboardPage).toContain('Validate Symbol');
     expect(dashboardPage).toContain('Open Journal');
@@ -593,17 +594,28 @@ describe('layout and flow audit regressions', () => {
     expect(explorerPage).toContain("'equity-explorer': 'Equity Search'");
     expect(explorerPage).toContain('if (requestedTab && requestedTab !== tab) setTab(requestedTab);');
     expect(dashboardPage).toContain('aria-label="Morning research start"');
-    expect(dashboardPage).toContain('Start with evidence, then choose the next research step.');
+    expect(dashboardPage).toContain('Highest-evidence symbols first.');
+    expect(dashboardPage).toContain('Click a symbol to open Golden Egg. Review context only; no trade instructions.');
+    expect(dashboardPage).toContain('<ComplianceDisclaimer compact />');
+    expect(dashboardPage).toContain('2xl:grid-cols-3');
     expect(dashboardPage).toContain('Data Health Strip');
     expect(dashboardPage).toContain('Continue Workflow');
     expect(dashboardPage).toContain('Next: review in Golden Egg');
     expect(dashboardPage).toContain('Dashboard lens');
     expect(dashboardPage).toContain('Switch between saved pages, live market desk, derivatives, and macro context.');
     expect(dashboardPage).toContain('rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap');
+    expect(dashboardPage).toContain("className={isPro ? 'grid gap-3 xl:grid-cols-[minmax(17rem,0.7fr)_minmax(0,1.3fr)]' : ''}");
+    expect(dashboardPage).toContain('<EdgeInsightCards compact />');
     expect(dashboardPage).toContain('<FavoritesPanel embeddedInDashboard />');
     expect(dashboardPage).toContain('<CryptoDashboard embeddedInDashboard />');
     expect(dashboardPage).toContain('<MacroDashboard embeddedInDashboard />');
     expect(dashboardPage).not.toContain('rounded-t-md whitespace-nowrap transition-colors');
+    expect(edgeInsightCards).toContain('const INSIGHT_CODES');
+    expect(edgeInsightCards).toContain('Edge Profile');
+    expect(edgeInsightCards).toContain('Not enough closed trades yet. Close at least 10 trades in your journal to unlock edge insights.');
+    expect(edgeInsightCards).not.toContain('Your Historical Patterns');
+    expect(edgeInsightCards).not.toContain('📊');
+    expect(edgeInsightCards).not.toContain('🔒');
     expect(favoritesPanel).toContain('embeddedInDashboard = false');
     expect(favoritesPanel).toContain('Saved workspace');
     expect(favoritesPanel).toContain('Manage Pages');

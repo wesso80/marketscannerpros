@@ -10,13 +10,13 @@
 import { useEdgeProfile } from '@/hooks/useEdgeProfile';
 import type { EdgeInsight, EdgeSlice } from '@/lib/intelligence/edgeProfile';
 
-/* ── Icon map for insight types ─────────────────────────────────────── */
+/* ── Compact visual codes for insight types ─────────────────────────── */
 
-const INSIGHT_ICONS: Record<string, string> = {
-  strength: '\u2B06',   // ⬆
-  weakness: '\u2B07',   // ⬇
-  pattern: '\uD83D\uDD0D',  // 🔍
-  caution: '\u26A0',    // ⚠
+const INSIGHT_CODES: Record<string, string> = {
+  strength: 'STR',
+  weakness: 'WEAK',
+  pattern: 'PAT',
+  caution: 'CAUT',
 };
 
 const INSIGHT_COLORS: Record<string, { border: string; bg: string; text: string }> = {
@@ -30,7 +30,7 @@ const INSIGHT_COLORS: Record<string, { border: string; bg: string; text: string 
 
 function InsightCard({ insight }: { insight: EdgeInsight }) {
   const colors = INSIGHT_COLORS[insight.type] ?? INSIGHT_COLORS.pattern;
-  const icon = INSIGHT_ICONS[insight.type] ?? '';
+  const code = INSIGHT_CODES[insight.type] ?? 'EDGE';
   const edgeLabel = insight.confidence >= 0.7 ? 'Established pattern' : insight.confidence >= 0.4 ? 'Developing pattern' : 'Early observation';
   const edgeLabelColor = insight.confidence >= 0.7 ? '#10B981' : insight.confidence >= 0.4 ? '#F59E0B' : '#6B7280';
 
@@ -40,7 +40,7 @@ function InsightCard({ insight }: { insight: EdgeInsight }) {
       style={{ borderColor: colors.border, backgroundColor: colors.bg }}
     >
       <div className="flex items-start gap-2">
-        <span className="text-base mt-0.5">{icon}</span>
+        <span className="mt-0.5 flex h-7 w-8 shrink-0 items-center justify-center rounded-md border border-slate-700 bg-slate-950/55 text-[9px] font-black uppercase tracking-[0.06em] text-slate-400">{code}</span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <div className="text-xs font-semibold" style={{ color: colors.text }}>
@@ -101,11 +101,10 @@ function StatCell({ label, value, color }: { label: string; value: string; color
   );
 }
 
-function EmptyState() {
+function EmptyState({ compact = false }: { compact?: boolean }) {
   return (
-    <div className="text-center py-6">
-      <div className="text-2xl mb-2">📊</div>
-      <div className="text-xs text-slate-400">
+    <div className={`${compact ? 'py-2 text-left' : 'py-5 text-center'}`}>
+      <div className="text-xs leading-5 text-slate-400">
         Not enough closed trades yet. Close at least 10 trades in your journal to unlock edge insights.
       </div>
     </div>
@@ -116,8 +115,7 @@ function EmptyState() {
 
 function PremiumGate() {
   return (
-    <div className="text-center py-6">
-      <div className="text-2xl mb-2">🔒</div>
+    <div className="py-4 text-center">
       <div className="text-xs text-slate-400 mb-3">
         Edge Profile insights require a Pro or Pro Trader subscription.
       </div>
@@ -131,12 +129,12 @@ function PremiumGate() {
   );
 }
 
-export default function EdgeInsightCards() {
+export default function EdgeInsightCards({ compact = false }: { compact?: boolean } = {}) {
   const { data: profile, loading, isEmpty, isPremiumRequired } = useEdgeProfile();
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-slate-800/60 bg-[var(--msp-panel)] p-4">
+      <div className="rounded-lg border border-slate-800/60 bg-[var(--msp-panel)] p-3">
         <div className="h-4 w-32 bg-slate-700/50 rounded animate-pulse mb-3" />
         <div className="space-y-3">
           <div className="h-16 bg-slate-700/30 rounded animate-pulse" />
@@ -148,9 +146,9 @@ export default function EdgeInsightCards() {
 
   if (isPremiumRequired) {
     return (
-      <div className="rounded-xl border border-slate-800/60 bg-[var(--msp-panel)] p-4">
+      <div className="rounded-lg border border-slate-800/60 bg-[var(--msp-panel)] p-3">
         <h3 className="text-sm font-semibold text-white mb-2">
-          Your Historical Patterns
+          Edge Profile
         </h3>
         <PremiumGate />
       </div>
@@ -159,11 +157,11 @@ export default function EdgeInsightCards() {
 
   if (isEmpty || !profile) {
     return (
-      <div className="rounded-xl border border-slate-800/60 bg-[var(--msp-panel)] p-4">
-        <h3 className="text-sm font-semibold text-white mb-2">
-          Your Historical Patterns
+      <div className="rounded-lg border border-slate-800/60 bg-[var(--msp-panel)] p-3">
+        <h3 className="text-sm font-semibold text-white mb-1">
+          Edge Profile
         </h3>
-        <EmptyState />
+        <EmptyState compact={compact} />
       </div>
     );
   }
@@ -173,10 +171,10 @@ export default function EdgeInsightCards() {
   const summary = profile.edgeSummary;
 
   return (
-    <div className="rounded-xl border border-slate-800/60 bg-[var(--msp-panel)] p-4 space-y-4">
+    <div className="rounded-lg border border-slate-800/60 bg-[var(--msp-panel)] p-3 space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-white">
-          Your Historical Patterns
+          Edge Profile
         </h3>
         <span className="text-[10px] text-slate-500">
           {profile.totalOutcomes} trades analyzed

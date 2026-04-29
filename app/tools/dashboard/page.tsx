@@ -73,9 +73,9 @@ function CardSkeleton({ rows = 4 }: { rows?: number }) {
 
 function DashboardMetric({ label, value, tone = '#CBD5E1', detail }: { label: string; value: string; tone?: string; detail: string }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-slate-950/45 px-3 py-2">
+    <div className="rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
       <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
-      <div className="mt-1 text-sm font-black" style={{ color: tone }}>{value}</div>
+      <div className="mt-0.5 text-sm font-black" style={{ color: tone }}>{value}</div>
       <div className="mt-0.5 truncate text-[11px] text-slate-500" title={detail}>{detail}</div>
     </div>
   );
@@ -148,10 +148,10 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* -- Regime Banner ---------------------------------------------- */}
       {regime.data && (
-        <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-[var(--msp-panel-2)] border border-[var(--msp-border)] flex-wrap">
+        <div className="flex items-center gap-2 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 flex-wrap">
           <span className="text-[11px] uppercase tracking-wider text-slate-500">Market Regime</span>
           <Badge
             label={regime.data.regime.replace(/_/g, ' ')}
@@ -167,18 +167,18 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <section className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.22)]" aria-label="Dashboard command header">
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(24rem,0.85fr)]">
+      <section className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]" aria-label="Dashboard command header">
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(26rem,0.9fr)]">
           <div>
             <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.16em] text-emerald-300">Morning command dashboard</div>
-            <h1 className="mt-2 text-2xl font-black tracking-normal text-white md:text-3xl">Open with the highest-evidence research queue.</h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-              Start from real scanner cache, mover data, calendar events, and news availability. This view shows what needs research first, what data is degraded, and where the next workflow step lives.
+            <h1 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Open the research queue, then validate one symbol.</h1>
+            <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">
+              Scanner cache, movers, calendar risk, and headlines are compressed into a morning review path.
             </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <a href="/tools/scanner" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-2 text-xs font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15">Start Scanner</a>
-              <a href="/tools/golden-egg" className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-2 text-xs font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15">Validate Symbol</a>
-              <a href="/tools/workspace?tab=journal" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-2 text-xs font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Open Journal</a>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <a href="/tools/scanner" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15">Start Scanner</a>
+              <a href="/tools/golden-egg" className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15">Validate Symbol</a>
+              <a href="/tools/workspace?tab=journal" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Open Journal</a>
             </div>
           </div>
 
@@ -191,16 +191,16 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <ComplianceDisclaimer collapsible />
+      <ComplianceDisclaimer compact />
 
       {/* ─── Morning Research Start ----------------------------------- */}
-      <section className="grid gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.8fr)]" aria-label="Morning research start">
+      <section className="grid gap-3 lg:grid-cols-[minmax(0,1.65fr)_minmax(18rem,0.72fr)]" aria-label="Morning research start">
         <Card>
           <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
             <div>
               <div className="text-[0.65rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Today&apos;s Research Queue</div>
-              <h2 className="mt-1 text-lg font-black text-white">Start with evidence, then choose the next research step.</h2>
-              <p className="mt-1 text-xs leading-5 text-slate-400">Built from scanner cache, movers, events, and news availability. Review context only; no trade instructions.</p>
+              <h2 className="mt-1 text-lg font-black text-white">Highest-evidence symbols first.</h2>
+              <p className="mt-1 text-xs leading-5 text-slate-400">Click a symbol to open Golden Egg. Review context only; no trade instructions.</p>
             </div>
             <button type="button" onClick={() => navigateTo('scanner')} className="rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-3 py-2 text-xs font-bold text-emerald-200 hover:bg-emerald-400/15">
               Open Scanner
@@ -212,7 +212,7 @@ export default function DashboardPage() {
               No queue yet. Run Scanner or review movers to create a research list.
             </div>
           ) : (
-            <div className="grid gap-2 md:grid-cols-2">
+            <div className="grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
               {scannerQueue.map((row: CachedSymbol) => (
                 <button key={`queue-${row.symbol}`} type="button" onClick={() => openGoldenEgg(row.symbol)} className="rounded-lg border border-white/10 bg-white/[0.035] p-3 text-left hover:border-emerald-400/30 hover:bg-emerald-400/[0.05]">
                   <div className="flex items-center justify-between gap-3">
@@ -322,7 +322,8 @@ export default function DashboardPage() {
       <div className={!isPro ? 'pointer-events-none select-none' : undefined}>
 
       {/* -- Edge Intelligence (v3.1) ----------------------------------- */}
-      {isPro && <EdgeInsightCards />}
+      <div className={isPro ? 'grid gap-3 xl:grid-cols-[minmax(17rem,0.7fr)_minmax(0,1.3fr)]' : ''}>
+      {isPro && <EdgeInsightCards compact />}
 
       {/* -- Best Setups (from worker cache) ------------------------------ */}
       {cached.loading ? <CardSkeleton rows={5} /> : (
@@ -349,8 +350,9 @@ export default function DashboardPage() {
         )}
       </Card>
       )}
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {/* -- Equity Movers -------------------------------------------- */}
         {movers.loading ? <CardSkeleton rows={5} /> : (
           <Card>

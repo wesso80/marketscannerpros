@@ -19,6 +19,7 @@ Implementation status update: 2026-04-29
 - Completed: first Golden Egg flagship polish pass added a proper validation-workbench header, consolidated symbol/timeframe/asset controls, surfaced verdict/data-trust/confluence metrics above the fold, and renamed the main decision packet framing to verdict packet.
 - Completed: wider icon cleanup pass replaced emoji-driven tool catalog icons with short professional visual codes and updated the Workflow directory, Favorites panel, and tools nav tier label rendering.
 - Completed: deeper Dashboard refinement pass added a command-dashboard header, stable queue/data-health/event/news metrics, direct Scanner/Golden Egg/Journal actions, and canonical Backtest/Journal handoffs from Continue Workflow.
+- Completed: screenshot-driven Dashboard refinement compacted the command header, made the live research queue the primary workbench, reduced disclaimer weight, and collapsed empty Edge Profile history into a small non-distracting state.
 - Completed: shared-surface emoji cleanup removed emoji from onboarding progress badges, pricing feature lists, options structure examples, regime stale-signal banner, and push notification titles.
 - Completed: Portfolio page-local emoji cleanup replaced calculator, risk-state, signed-out, header, add/refresh, and concentration-warning emoji with text labels or compact badges.
 - Completed: canonical advanced tool-surface emoji cleanup removed icon text from Options Flow, Liquidity Sweep, Close Calendar, and Time Scanner labels/loading/error/footer surfaces.
@@ -31,7 +32,7 @@ Implementation status update: 2026-04-29
 - Completed: additional direct-admin cleanup removed icon text from AI usage, cost tracking, income/expense, and delete-request admin pages.
 - Completed: deeper direct-admin cleanup removed icon/status emoji from Discord Bridge, trial grants, signal outcomes, and admin scalper pages.
 - Completed: public website cleanup removed remaining icon text and directive wording from the Open Interest guide, partner demo compliance proof, resource guide process checks, and public home risk-analysis warning copy.
-- Still open: final Dashboard refinement from real screenshots, real screenshot asset system, remaining lower-traffic page-local emoji migration, broader Golden Egg visual QA, broader mobile QA, and the self-learning playbook layer after enough labeled outcomes exist.
+- Still open: real screenshot asset system, remaining lower-traffic page-local emoji migration, broader Golden Egg visual QA, broader mobile QA, and the self-learning playbook layer after enough labeled outcomes exist.
 
 Important visual note: this is a code-and-asset audit. It is strong enough to set priorities, but final visual grades should be tightened with screenshots or Playwright captures for desktop and mobile because rendered spacing, cropping, image blur, table overflow, and real contrast cannot be fully proven from source alone.
 
