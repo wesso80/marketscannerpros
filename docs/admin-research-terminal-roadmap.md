@@ -22,9 +22,9 @@
 
 Status legend: ⬜ Not started · 🟡 In progress · ✅ Complete · ⚠️ Blocked
 
-**Last session ended at:** Phase 4 shipped — Symbol Research Terminal. Extended [app/api/admin/symbol/[symbol]/route.ts](../app/api/admin/symbol/[symbol]/route.ts) to attach `research: { dataTruth, score, setup }`. New endpoint [app/api/admin/research-cases/route.ts](../app/api/admin/research-cases/route.ts) (POST + GET, auto-creates `admin_research_cases` table with JSONB scenarios/evidence/penalties/boosts). Built 4 new cockpit panels: [AdminResearchVerdictPanel](../components/admin/AdminResearchVerdictPanel.tsx), [AdminEvidenceStack](../components/admin/AdminEvidenceStack.tsx) (9-axis bars), [AdminResearchScoreBreakdown](../components/admin/AdminResearchScoreBreakdown.tsx) (raw/penalty/boost math), [AdminScenarioMap](../components/admin/AdminScenarioMap.tsx) (Bullish/Bearish/Neutral/Invalidation). Created canonical [/admin/symbol/[symbol]](../app/admin/symbol/[symbol]/page.tsx) page wiring all 4 + Save Research Case form. Updated `AdminOpportunityBoard` Review CTA to `/admin/symbol/...`. Added Symbol Research (SR) nav entry; legacy Symbol Terminal kept (relabeled). vitest 36 files / 434 tests green (+3 new), build green, boundary guard green.
-**Last commit on main:** `69cd190c` (Phase 3)
-**Next action when resuming:** Phase 5 — Alerts & Discord. Create [lib/engines/researchAlertEngine.ts](../lib/engines/researchAlertEngine.ts), [lib/alerts/discord.ts](../lib/alerts/discord.ts) with `PRIVATE RESEARCH ALERT — NOT BROKER EXECUTION` header, [lib/alerts/email.ts](../lib/alerts/email.ts), [lib/alerts/alertSuppression.ts](../lib/alerts/alertSuppression.ts) (cooldown/duplicate/evidence-threshold). Upgrade [app/admin/alerts/page.tsx](../app/admin/alerts/page.tsx) to render the `AdminResearchAlert` log. Test: payload header asserted; suppression blocks duplicates inside cooldown.
+**Last session ended at:** Phase 5 shipped — Alerts & Discord. Created [lib/alerts/alertSuppression.ts](../lib/alerts/alertSuppression.ts) (cooldown / duplicate / score+trust thresholds / DATA_DEGRADED + NO_EDGE blocks), [lib/alerts/discord.ts](../lib/alerts/discord.ts) (`PRIVATE RESEARCH ALERT — NOT BROKER EXECUTION` header in `content` + embed + classification field), [lib/alerts/email.ts](../lib/alerts/email.ts) (subject prefix + text/html body), [lib/engines/researchAlertEngine.ts](../lib/engines/researchAlertEngine.ts) (build → suppress → dispatch → outcome), and [app/api/admin/research-alerts/route.ts](../app/api/admin/research-alerts/route.ts) (POST evaluate+log, GET log; auto-creates `admin_research_alerts` table). Upgraded [app/admin/alerts/page.tsx](../app/admin/alerts/page.tsx) with a Research Alerts (Internal) panel that shows FIRED/SUPPRESSED rows linked to `/admin/symbol/...`. vitest 37 files / 447 tests green (+13 new), build green, boundary guard green.
+**Last commit on main:** `e560338a` (Phase 4)
+**Next action when resuming:** Phase 6 — ARCA Admin Research. Create `<AdminARCAPanel />` with 9 modes (Explain Rank, Challenge Setup, Find Missing Evidence, Summarize Watchlist, Detect Contradictions, Prepare Research Alert, Review Journal Mistake, Compare Two Symbols, What Changed Since Last Scan). Server prompt must explicitly forbid execution verbs. Output enforced to `ArcaAdminResearchOutput` shape. Auto-bind `InternalResearchScore` + `EvidenceStack` + `DataTruth` to context. Test: prompt content asserted to contain forbidden-verb refusal clause.
 
 ---
 
@@ -203,17 +203,18 @@ Findings from a careful read of [lib/admin/truth-layer.ts](../lib/admin/truth-la
 
 ---
 
-## Phase 5 — Alerts & Discord
+## Phase 5 — Alerts & Discord ✅ SHIPPED
 
 **Goal:** Threshold-fired research alerts with cooldown + duplicate suppression.
 
-- [ ] Create [lib/engines/researchAlertEngine.ts](../lib/engines/researchAlertEngine.ts)
-- [ ] Create [lib/alerts/discord.ts](../lib/alerts/discord.ts) — payload header: `PRIVATE RESEARCH ALERT — NOT BROKER EXECUTION`
-- [ ] Create [lib/alerts/email.ts](../lib/alerts/email.ts)
-- [ ] Create [lib/alerts/alertSuppression.ts](../lib/alerts/alertSuppression.ts) — cooldown, duplicate, evidence threshold
-- [ ] Upgrade [app/admin/alerts/page.tsx](../app/admin/alerts/page.tsx) to render `AdminResearchAlert` log
-- [ ] Test: payload contains required header; suppression blocks duplicates inside cooldown window
-- [ ] Build + commit
+- [x] Create [lib/engines/researchAlertEngine.ts](../lib/engines/researchAlertEngine.ts)
+- [x] Create [lib/alerts/discord.ts](../lib/alerts/discord.ts) — payload header: `PRIVATE RESEARCH ALERT — NOT BROKER EXECUTION`
+- [x] Create [lib/alerts/email.ts](../lib/alerts/email.ts)
+- [x] Create [lib/alerts/alertSuppression.ts](../lib/alerts/alertSuppression.ts) — cooldown, duplicate, evidence threshold, DATA_DEGRADED block
+- [x] New [app/api/admin/research-alerts/route.ts](../app/api/admin/research-alerts/route.ts) — POST evaluate+log; GET log (auto-creates `admin_research_alerts` table)
+- [x] Upgrade [app/admin/alerts/page.tsx](../app/admin/alerts/page.tsx) — Research Alerts (Internal) panel; FIRED/SUPPRESSED rows link to `/admin/symbol/...`
+- [x] Tests: payload header verbatim, embed classification, email subject prefix, suppression duplicate-in-cooldown, lifecycle blocks, threshold blocks, engine FIRED + SUPPRESSED outcomes
+- [x] vitest 37 / 447 green · build green · boundary guard green
 
 ---
 

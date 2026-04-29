@@ -29,6 +29,21 @@ interface RiskState {
   sizeMultiplier: number;
 }
 
+interface ResearchAlertLogEntry {
+  alertId: string;
+  symbol: string;
+  market: string;
+  timeframe: string;
+  setup: string;
+  bias: string;
+  score: number;
+  dataTrustScore: number;
+  classification: string;
+  status: "FIRED" | "SUPPRESSED";
+  suppressionReason: string | null;
+  createdAt: string;
+}
+
 function authHeaders(): HeadersInit {
   const secret = typeof window !== "undefined" ? sessionStorage.getItem("admin_secret") : null;
   return secret ? { Authorization: `Bearer ${secret}` } : {};
@@ -44,21 +59,27 @@ function permissionTone(permission: string): "green" | "yellow" | "red" | "neutr
 export default function AlertsPage() {
   const [hits, setHits] = useState<ScannerHit[]>([]);
   const [risk, setRisk] = useState<RiskState | null>(null);
+  const [researchLog, setResearchLog] = useState<ResearchAlertLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const refresh = async () => {
     setError("");
     try {
-      const [scanRes, riskRes] = await Promise.all([
+      const [scanRes, riskRes, alertRes] = await Promise.all([
         fetch("/api/admin/scanner/live?market=CRYPTO&timeframe=15m", { headers: authHeaders() }),
         fetch("/api/admin/risk/state", { headers: authHeaders() }),
+        fetch("/api/admin/research-alerts?limit=25", { headers: authHeaders() }),
       ]);
       if (scanRes.ok) {
         const data = await scanRes.json();
         setHits(data.hits || []);
       }
       if (riskRes.ok) setRisk(await riskRes.json());
+      if (alertRes.ok) {
+        const data = await alertRes.json();
+        setResearchLog(data.alerts || []);
+      }
       if (!scanRes.ok || !riskRes.ok) setError("One or more alert feeds failed to load.");
     } catch {
       setError("Alert refresh failed.");
@@ -108,6 +129,39 @@ export default function AlertsPage() {
           </div>
         ) : (
           <p className="text-white/40 text-sm">No active risk alerts.</p>
+        )}
+      </AdminCard>
+
+      <AdminCard title="Research Alerts (Internal)">
+        <p className="mb-2 text-[11px] uppercase tracking-wider text-amber-300/80">
+          PRIVATE RESEARCH ALERT — NOT BROKER EXECUTION
+        </p>
+        {researchLog.length ? (
+          <div className="space-y-1.5">
+            {researchLog.slice(0, 12).map((row) => (
+              <Link
+                key={row.alertId}
+                href={`/admin/symbol/${encodeURIComponent(row.symbol)}`}
+                className={`grid grid-cols-[70px_70px_1fr_90px_60px_70px] items-center gap-2 rounded-lg border px-3 py-2 text-xs no-underline ${
+                  row.status === "FIRED"
+                    ? "border-emerald-500/15 bg-emerald-500/5 hover:bg-emerald-500/10"
+                    : "border-white/10 bg-white/5 hover:bg-white/10"
+                }`}
+              >
+                <span className="font-black text-white">{row.symbol}</span>
+                <span className={row.bias === "LONG" ? "font-semibold text-emerald-300" : row.bias === "SHORT" ? "font-semibold text-red-300" : "font-semibold text-white/50"}>{row.bias}</span>
+                <span className="truncate text-white/55">{row.setup} · {row.timeframe}</span>
+                <StatusPill
+                  label={row.status === "FIRED" ? "FIRED" : (row.suppressionReason || "SUPPRESSED")}
+                  tone={row.status === "FIRED" ? "green" : "neutral"}
+                />
+                <span className="text-right font-mono text-white/70">{Math.round(row.score)}</span>
+                <span className="text-right font-mono text-white/45">{Math.round(row.dataTrustScore)}</span>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <p className="text-white/40 text-sm">No research alerts logged yet.</p>
         )}
       </AdminCard>
 
