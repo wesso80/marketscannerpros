@@ -574,6 +574,9 @@ describe('layout and flow audit regressions', () => {
 
     expect(dashboardPage).toContain('Morning Research Start');
     expect(dashboardPage).toContain('function DashboardMetric');
+    expect(dashboardPage).toContain('function PanelHeader');
+    expect(dashboardPage).toContain('function MoverRow');
+    expect(dashboardPage).toContain('min-h-[3.1rem] rounded-md border border-white/10');
     expect(dashboardPage).toContain('aria-label="Dashboard command header"');
     expect(dashboardPage).toContain('Morning command dashboard');
     expect(dashboardPage).toContain('Open the research queue, then validate one symbol.');
@@ -601,11 +604,19 @@ describe('layout and flow audit regressions', () => {
     expect(dashboardPage).toContain('Data Health Strip');
     expect(dashboardPage).toContain('Continue Workflow');
     expect(dashboardPage).toContain('Next: review in Golden Egg');
+    expect(dashboardPage).toContain('Validated queue');
+    expect(dashboardPage).toContain('Live movement');
+    expect(dashboardPage).toContain('Calendar risk');
+    expect(dashboardPage).toContain('Context map');
+    expect(dashboardPage).toContain('News context');
+    expect(dashboardPage).toContain('eqGainers.slice(0, 4)');
+    expect(dashboardPage).toContain('crLosers.slice(0, 4)');
     expect(dashboardPage).toContain('Dashboard lens');
     expect(dashboardPage).toContain('Switch between saved pages, live market desk, derivatives, and macro context.');
     expect(dashboardPage).toContain('rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap');
     expect(dashboardPage).toContain("className={isPro ? 'grid gap-3 xl:grid-cols-[minmax(17rem,0.7fr)_minmax(0,1.3fr)]' : ''}");
     expect(dashboardPage).toContain('<EdgeInsightCards compact />');
+    expect(dashboardPage).not.toContain('grid grid-cols-[5rem_1fr_6rem]');
     expect(dashboardPage).toContain('<FavoritesPanel embeddedInDashboard />');
     expect(dashboardPage).toContain('<CryptoDashboard embeddedInDashboard />');
     expect(dashboardPage).toContain('<MacroDashboard embeddedInDashboard />');

@@ -20,6 +20,7 @@ Implementation status update: 2026-04-29
 - Completed: wider icon cleanup pass replaced emoji-driven tool catalog icons with short professional visual codes and updated the Workflow directory, Favorites panel, and tools nav tier label rendering.
 - Completed: deeper Dashboard refinement pass added a command-dashboard header, stable queue/data-health/event/news metrics, direct Scanner/Golden Egg/Journal actions, and canonical Backtest/Journal handoffs from Continue Workflow.
 - Completed: screenshot-driven Dashboard refinement compacted the command header, made the live research queue the primary workbench, reduced disclaimer weight, and collapsed empty Edge Profile history into a small non-distracting state.
+- Completed: second screenshot Dashboard refinement stopped command metrics from stretching and converted lower Command Center tables into curated panels with compact headers and capped mover rows.
 - Completed: shared-surface emoji cleanup removed emoji from onboarding progress badges, pricing feature lists, options structure examples, regime stale-signal banner, and push notification titles.
 - Completed: Portfolio page-local emoji cleanup replaced calculator, risk-state, signed-out, header, add/refresh, and concentration-warning emoji with text labels or compact badges.
 - Completed: canonical advanced tool-surface emoji cleanup removed icon text from Options Flow, Liquidity Sweep, Close Calendar, and Time Scanner labels/loading/error/footer surfaces.

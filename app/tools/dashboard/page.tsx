@@ -73,10 +73,32 @@ function CardSkeleton({ rows = 4 }: { rows?: number }) {
 
 function DashboardMetric({ label, value, tone = '#CBD5E1', detail }: { label: string; value: string; tone?: string; detail: string }) {
   return (
-    <div className="rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+    <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
       <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
       <div className="mt-0.5 text-sm font-black" style={{ color: tone }}>{value}</div>
       <div className="mt-0.5 truncate text-[11px] text-slate-500" title={detail}>{detail}</div>
+    </div>
+  );
+}
+
+function PanelHeader({ title, eyebrow, action }: { title: string; eyebrow?: string; action?: React.ReactNode }) {
+  return (
+    <div className="mb-2 flex items-start justify-between gap-3">
+      <div>
+        {eyebrow ? <div className="text-[0.62rem] font-black uppercase tracking-[0.14em] text-slate-500">{eyebrow}</div> : null}
+        <h3 className="text-sm font-semibold text-white">{title}</h3>
+      </div>
+      {action ? <div className="shrink-0">{action}</div> : null}
+    </div>
+  );
+}
+
+function MoverRow({ mover, tone, onOpen, onKeyOpen }: { mover: Mover; tone: 'up' | 'down'; onOpen: () => void; onKeyOpen: (event: React.KeyboardEvent) => void }) {
+  return (
+    <div role="button" tabIndex={0} aria-label={`Open Golden Egg for ${mover.ticker}`} className="grid grid-cols-[4.5rem_1fr_5.5rem] items-center rounded-md px-2 py-1 text-xs hover:bg-slate-800/40 focus:bg-slate-800/40 focus:outline-none" onClick={onOpen} onKeyDown={onKeyOpen}>
+      <span className="font-semibold text-white">{mover.ticker}</span>
+      <span className="text-right font-mono tabular-nums text-slate-300">{fmtPrice(parseFloat(mover.price))}</span>
+      <span className={`${tone === 'up' ? 'text-emerald-400' : 'text-red-400'} text-right font-mono tabular-nums`}>{tone === 'up' ? '+' : ''}{mover.change_percentage}</span>
     </div>
   );
 }
@@ -182,7 +204,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid self-start gap-1.5 sm:grid-cols-2">
             <DashboardMetric label="Queue" value={researchQueueCount ? `${researchQueueCount} items` : 'Empty'} tone={researchQueueCount ? '#10B981' : '#94A3B8'} detail={`Top focus: ${topQueueSymbol}`} />
             <DashboardMetric label="Data Health" value={dataHealthLabel} tone={dataHealthTone} detail={degradedFeeds.length ? degradedFeeds.join(', ') : 'No feed errors reported'} />
             <DashboardMetric label="High Impact" value={String(highImpactEventCount)} tone={highImpactEventCount ? '#F59E0B' : '#94A3B8'} detail="Calendar events in queue" />
@@ -328,22 +350,23 @@ export default function DashboardPage() {
       {/* -- Best Setups (from worker cache) ------------------------------ */}
       {cached.loading ? <CardSkeleton rows={5} /> : (
       <Card>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-white">Top Confluence Now</h3>
-          <button type="button" onClick={() => navigateTo('scanner')} className="text-[11px] text-emerald-400 hover:underline">Full Scanner &#x203A;</button>
-        </div>
+        <PanelHeader title="Top Confluence Now" eyebrow="Validated queue" action={<button type="button" onClick={() => navigateTo('scanner')} className="text-[11px] text-emerald-400 hover:underline">Full Scanner &#x203A;</button>} />
         {[...cached.equity, ...cached.crypto].length === 0 ? (
           <div className="text-xs text-slate-500 py-4 text-center">
             No cached data yet — <button type="button" onClick={() => navigateTo('scanner')} className="text-emerald-400 hover:underline">run the Scanner</button>
           </div>
         ) : (
-          <div className="space-y-1">
+          <div className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
             {[...cached.equity.slice(0, 3), ...cached.crypto.slice(0, 2)].map((r: CachedSymbol) => (
-              <div key={r.symbol} role="button" tabIndex={0} aria-label={`Open Golden Egg for ${r.symbol}`} className="grid grid-cols-[5rem_3rem_1fr_4rem] items-center text-xs py-0.5 cursor-pointer hover:bg-slate-800/40 focus:bg-slate-800/40 focus:outline-none px-1 rounded" onClick={() => openGoldenEgg(r.symbol)} onKeyDown={(e) => onSymbolRowKey(e, r.symbol)}>
-                <span className="font-semibold text-white">{r.symbol}</span>
-                <span className="text-[11px]" style={{ color: directionColor(r.direction) }}>{r.direction === 'bullish' ? '▲' : r.direction === 'bearish' ? '▼' : '●'} {r.score}</span>
-                <span className="text-slate-300 text-right font-mono tabular-nums">{fmtPrice(r.price)}</span>
-                <span className={`font-mono text-right tabular-nums ${r.changePct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{r.changePct >= 0 ? '+' : ''}{r.changePct.toFixed(2)}%</span>
+              <div key={r.symbol} role="button" tabIndex={0} aria-label={`Open Golden Egg for ${r.symbol}`} className="rounded-md border border-white/10 bg-slate-950/30 px-2 py-1.5 text-xs cursor-pointer hover:border-emerald-400/25 hover:bg-emerald-400/[0.04] focus:bg-slate-800/40 focus:outline-none" onClick={() => openGoldenEgg(r.symbol)} onKeyDown={(e) => onSymbolRowKey(e, r.symbol)}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-semibold text-white">{r.symbol}</span>
+                  <span className={`font-mono tabular-nums ${r.changePct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{r.changePct >= 0 ? '+' : ''}{r.changePct.toFixed(2)}%</span>
+                </div>
+                <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-slate-500">
+                  <span style={{ color: directionColor(r.direction) }}>{r.direction === 'bullish' ? 'Bullish' : r.direction === 'bearish' ? 'Bearish' : 'Neutral'} · {r.score}</span>
+                  <span className="font-mono tabular-nums text-slate-300">{fmtPrice(r.price)}</span>
+                </div>
               </div>
             ))}
           </div>
@@ -356,28 +379,16 @@ export default function DashboardPage() {
         {/* -- Equity Movers -------------------------------------------- */}
         {movers.loading ? <CardSkeleton rows={5} /> : (
           <Card>
-            <h3 className="text-sm font-semibold text-white mb-3">Equity Movers</h3>
+            <PanelHeader title="Equity Movers" eyebrow="Live movement" />
             <div className="space-y-1">
               <div className="mb-1 text-[11px] uppercase tracking-wider text-emerald-500">Gainers</div>
               {eqGainers.length === 0 ? (
                 <div className="text-xs text-slate-500 py-1">No equity data</div>
-              ) : eqGainers.map((m: Mover) => (
-                <div key={`eg-${m.ticker}`} role="button" tabIndex={0} aria-label={`Open Golden Egg for ${m.ticker}`} className="grid grid-cols-[5rem_1fr_6rem] items-center text-xs py-0.5 cursor-pointer hover:bg-slate-800/40 focus:bg-slate-800/40 focus:outline-none px-1 rounded" onClick={() => openGoldenEgg(m.ticker)} onKeyDown={(e) => onSymbolRowKey(e, m.ticker)}>
-                  <span className="font-semibold text-white">{m.ticker}</span>
-                  <span className="text-slate-300 text-right font-mono tabular-nums">{fmtPrice(parseFloat(m.price))}</span>
-                  <span className="text-emerald-400 font-mono text-right tabular-nums">+{m.change_percentage}</span>
-                </div>
-              ))}
+              ) : eqGainers.slice(0, 4).map((m: Mover) => <MoverRow key={`eg-${m.ticker}`} mover={m} tone="up" onOpen={() => openGoldenEgg(m.ticker)} onKeyOpen={(e) => onSymbolRowKey(e, m.ticker)} />)}
               <div className="mb-1 mt-2 text-[11px] uppercase tracking-wider text-red-500">Losers</div>
               {eqLosers.length === 0 ? (
                 <div className="text-xs text-slate-500 py-1">No equity data</div>
-              ) : eqLosers.map((m: Mover) => (
-                <div key={`el-${m.ticker}`} role="button" tabIndex={0} aria-label={`Open Golden Egg for ${m.ticker}`} className="grid grid-cols-[5rem_1fr_6rem] items-center text-xs py-0.5 cursor-pointer hover:bg-slate-800/40 focus:bg-slate-800/40 focus:outline-none px-1 rounded" onClick={() => openGoldenEgg(m.ticker)} onKeyDown={(e) => onSymbolRowKey(e, m.ticker)}>
-                  <span className="font-semibold text-white">{m.ticker}</span>
-                  <span className="text-slate-300 text-right font-mono tabular-nums">{fmtPrice(parseFloat(m.price))}</span>
-                  <span className="text-red-400 font-mono text-right tabular-nums">{m.change_percentage}</span>
-                </div>
-              ))}
+              ) : eqLosers.slice(0, 4).map((m: Mover) => <MoverRow key={`el-${m.ticker}`} mover={m} tone="down" onOpen={() => openGoldenEgg(m.ticker)} onKeyOpen={(e) => onSymbolRowKey(e, m.ticker)} />)}
             </div>
           </Card>
         )}
@@ -385,28 +396,16 @@ export default function DashboardPage() {
         {/* -- Crypto Movers -------------------------------------------- */}
         {movers.loading ? <CardSkeleton rows={5} /> : (
           <Card>
-            <h3 className="text-sm font-semibold text-white mb-3">Crypto Movers</h3>
+            <PanelHeader title="Crypto Movers" eyebrow="Live movement" />
             <div className="space-y-1">
               <div className="mb-1 text-[11px] uppercase tracking-wider text-emerald-500">Gainers</div>
               {crGainers.length === 0 ? (
                 <div className="text-xs text-slate-500 py-1">No crypto data</div>
-              ) : crGainers.map((m: Mover) => (
-                <div key={`cg-${m.ticker}`} role="button" tabIndex={0} aria-label={`Open Golden Egg for ${m.ticker}`} className="grid grid-cols-[5rem_1fr_6rem] items-center text-xs py-0.5 cursor-pointer hover:bg-slate-800/40 focus:bg-slate-800/40 focus:outline-none px-1 rounded" onClick={() => openGoldenEgg(m.ticker)} onKeyDown={(e) => onSymbolRowKey(e, m.ticker)}>
-                  <span className="font-semibold text-white">{m.ticker}</span>
-                  <span className="text-slate-300 text-right font-mono tabular-nums">{fmtPrice(parseFloat(m.price))}</span>
-                  <span className="text-emerald-400 font-mono text-right">+{m.change_percentage}</span>
-                </div>
-              ))}
+              ) : crGainers.slice(0, 4).map((m: Mover) => <MoverRow key={`cg-${m.ticker}`} mover={m} tone="up" onOpen={() => openGoldenEgg(m.ticker)} onKeyOpen={(e) => onSymbolRowKey(e, m.ticker)} />)}
               <div className="mb-1 mt-2 text-[11px] uppercase tracking-wider text-red-500">Losers</div>
               {crLosers.length === 0 ? (
                 <div className="text-xs text-slate-500 py-1">No crypto data</div>
-              ) : crLosers.map((m: Mover) => (
-                <div key={`cl-${m.ticker}`} role="button" tabIndex={0} aria-label={`Open Golden Egg for ${m.ticker}`} className="grid grid-cols-[5rem_1fr_6rem] items-center text-xs py-0.5 cursor-pointer hover:bg-slate-800/40 focus:bg-slate-800/40 focus:outline-none px-1 rounded" onClick={() => openGoldenEgg(m.ticker)} onKeyDown={(e) => onSymbolRowKey(e, m.ticker)}>
-                  <span className="font-semibold text-white">{m.ticker}</span>
-                  <span className="text-slate-300 text-right font-mono tabular-nums">{fmtPrice(parseFloat(m.price))}</span>
-                  <span className="text-red-400 font-mono text-right">{m.change_percentage}</span>
-                </div>
-              ))}
+              ) : crLosers.slice(0, 4).map((m: Mover) => <MoverRow key={`cl-${m.ticker}`} mover={m} tone="down" onOpen={() => openGoldenEgg(m.ticker)} onKeyOpen={(e) => onSymbolRowKey(e, m.ticker)} />)}
             </div>
           </Card>
         )}
@@ -414,7 +413,7 @@ export default function DashboardPage() {
         {/* -- Economic Calendar ---------------------------------------- */}
         {calendar.loading ? <CardSkeleton rows={4} /> : (
           <Card>
-            <h3 className="text-sm font-semibold text-white mb-3">Upcoming Events</h3>
+            <PanelHeader title="Upcoming Events" eyebrow="Calendar risk" />
             {highImpactEvents.length === 0 ? (
               <div className="text-xs text-slate-500 py-4 text-center">No high-impact events this period</div>
             ) : (
@@ -439,7 +438,7 @@ export default function DashboardPage() {
 
         {/* -- Cross-Market --------------------------------------------- */}
         <Card>
-          <h3 className="text-sm font-semibold text-white mb-3">Cross-Market Influence</h3>
+          <PanelHeader title="Cross-Market Influence" eyebrow="Context map" />
           <div className="space-y-2">
             {CROSS_MARKET.slice(0, 5).map(cm => (
               <div key={cm.from} className="flex items-center justify-between text-xs">
@@ -455,10 +454,7 @@ export default function DashboardPage() {
       {/* -- Latest News ------------------------------------------------ */}
       {news.loading ? <CardSkeleton rows={4} /> : (
         <Card>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-white">Latest Headlines</h3>
-            <button type="button" onClick={() => navigateTo('research')} className="text-[11px] text-emerald-400 hover:underline">All News &#x203A;</button>
-          </div>
+          <PanelHeader title="Latest Headlines" eyebrow="News context" action={<button type="button" onClick={() => navigateTo('research')} className="text-[11px] text-emerald-400 hover:underline">All News &#x203A;</button>} />
           {articles.length === 0 ? (
             <div className="text-xs text-slate-500 py-4 text-center">No recent news</div>
           ) : (
