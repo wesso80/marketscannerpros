@@ -22,7 +22,7 @@ export const SCAN_TEMPLATES: ScanTemplate[] = [
   {
     id: 'momentum',
     label: 'Momentum',
-    icon: '🚀',
+    icon: 'MOM',
     description: 'Strong trend + high ADX + RSI 55–70 zone',
     config: {
       minConfidence: 65,
@@ -35,7 +35,7 @@ export const SCAN_TEMPLATES: ScanTemplate[] = [
   {
     id: 'breakout',
     label: 'Breakout',
-    icon: '💥',
+    icon: 'BRK',
     description: 'Volatility expansion from compression zones',
     config: {
       minConfidence: 60,
@@ -48,7 +48,7 @@ export const SCAN_TEMPLATES: ScanTemplate[] = [
   {
     id: 'mean_reversion',
     label: 'Mean Reversion',
-    icon: '🔄',
+    icon: 'REV',
     description: 'Oversold/overbought RSI + low ADX choppy markets',
     config: {
       minConfidence: 55,
@@ -61,7 +61,7 @@ export const SCAN_TEMPLATES: ScanTemplate[] = [
   {
     id: 'squeeze',
     label: 'Squeeze Play',
-    icon: '🔥',
+    icon: 'SQZ',
     description: 'Bollinger inside Keltner compression — imminent expansion',
     config: {
       minConfidence: 50,
@@ -74,7 +74,7 @@ export const SCAN_TEMPLATES: ScanTemplate[] = [
   {
     id: 'relative_strength',
     label: 'Relative Strength',
-    icon: '💪',
+    icon: 'RS',
     description: 'Outperforming benchmark (BTC for crypto, SPY for equities)',
     config: {
       minConfidence: 60,
@@ -88,7 +88,7 @@ export const SCAN_TEMPLATES: ScanTemplate[] = [
   {
     id: 'high_conviction',
     label: 'High Alignment',
-    icon: '🎯',
+    icon: 'ALN',
     description: 'Only A-setups: 70%+ confidence, 3+ MTF alignment, high quality',
     config: {
       minConfidence: 70,
@@ -131,7 +131,7 @@ export default function ScanTemplatesBar({ onSelect, activeId }: ScanTemplatesBa
               whiteSpace: 'nowrap',
             }}
           >
-            <span style={{ fontSize: 14 }}>{tmpl.icon}</span>
+            <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.08em', opacity: 0.85 }}>{tmpl.icon}</span>
             {tmpl.label}
           </button>
         );

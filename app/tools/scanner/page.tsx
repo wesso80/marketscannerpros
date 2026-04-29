@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useScannerResults, useRegime, type ScanResult, type ScanTimeframe, SCAN_TIMEFRAMES } from '@/app/v2/_lib/api';
 import { Card, Badge, UpgradeGate } from '@/app/v2/_components/ui';
-import { REGIME_COLORS, REGIME_WEIGHTS, LIFECYCLE_COLORS } from '@/app/v2/_lib/constants';
+import { REGIME_WEIGHTS, LIFECYCLE_COLORS } from '@/app/v2/_lib/constants';
 import type { RegimePriority, LifecycleState } from '@/app/v2/_lib/types';
 import { useUserTier, FREE_DAILY_SCAN_LIMIT, canAccessUnlimitedScanning } from '@/lib/useUserTier';
 import ScreenerTable, { type ScreenerRow } from '@/components/scanner/ScreenerTable';
@@ -71,10 +71,22 @@ function dataQualityColor(label: string): string {
   return '#EF4444';
 }
 
+function ScannerMetric({ label, value, tone = '#CBD5E1', detail }: { label: string; value: string; tone?: string; detail: string }) {
+  return (
+    <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+      <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
+      <div className="mt-0.5 text-sm font-black" style={{ color: tone }}>{value}</div>
+      <div className="mt-0.5 truncate text-[11px] text-slate-500" title={detail}>{detail}</div>
+    </div>
+  );
+}
+
 type ProviderStatus = NonNullable<NonNullable<ReturnType<typeof useScannerResults>['data']>['metadata']['dataQuality']>['providerStatus'];
 
 function summarizeRankedReason(r: ScanResult, lifecycle: LifecycleState, regimeCompatible: boolean, activeRegime: string): string {
-  if (r.rankExplanation?.summary) return r.rankExplanation.summary;
+  if (r.rankExplanation?.summary) {
+    return r.rankExplanation.summary.replace(/;\s*rank is reduced when evidence is missing, stale, or liquidity is thin\.?\s*$/i, '').trim();
+  }
   if (r.scoreV2?.regimeScore?.gated) return 'Gated by regime';
   if (!regimeCompatible) {
     const setup = r.direction === 'bullish' ? 'Bull trend setup' : r.direction === 'bearish' ? 'Bear trend setup' : 'Directional setup';
@@ -254,13 +266,13 @@ function ScannerFlowRail({
   ];
 
   return (
-    <div className="flex gap-1 overflow-x-auto" aria-label="Scanner workflow views">
+    <div className="grid grid-cols-3 gap-2" aria-label="Scanner workflow views">
       {stages.map((stage) => {
         const isActive = activeStage === stage.id;
         const isAnalysis = stage.id === 'analysis';
         const disabled = isAnalysis && !canOpenAnalysis;
         const content = (
-          <div className={`h-full min-w-[9rem] rounded-md border px-3 py-1.5 text-left transition ${
+          <div className={`h-full rounded-md border px-3 py-1.5 text-left transition ${
             isActive
               ? 'border-emerald-400/40 bg-emerald-400/10 text-white'
               : disabled
@@ -650,7 +662,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
         </div>
         <div className="flex items-center gap-2">
         <Link href={`/tools/workspace?tab=Backtest&symbol=${encodeURIComponent(detail.symbol)}`}
-          className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-slate-400 no-underline hover:bg-slate-700/50 transition-colors">
+          className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-amber-200 no-underline hover:bg-amber-400/15 transition-colors">
           Open Historical Test
         </Link>
         <button type="button" onClick={onClose}
@@ -668,7 +680,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
             {direction === 'bullish' ? 'Bullish' : direction === 'bearish' ? 'Bearish' : 'Neutral'} structure, {quality.toLowerCase()} setup quality. {nextUsefulCheck}
           </div>
           <div className={`mt-1 text-[0.82rem] font-extrabold uppercase ${direction === 'bullish' ? 'text-emerald-400' : direction === 'bearish' ? 'text-red-400' : 'text-amber-400'}`}>
-            Bias: {direction.toUpperCase()}
+            Bias: {direction === 'bullish' ? 'Bullish' : direction === 'bearish' ? 'Bearish' : 'Neutral'}
           </div>
           <div className="mt-1 text-[0.76rem] font-bold uppercase tracking-[0.06em] text-slate-400">
             Pattern: {direction === 'bullish' ? 'Trend Continuation Structure' : direction === 'bearish' ? 'Trend Reversal Structure' : 'Structure Developing'}
@@ -771,10 +783,16 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
             </div>
             <div className="rounded-lg border border-slate-700/50 bg-[var(--msp-panel-2)] p-2.5 text-[0.74rem] text-slate-400">
               <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-slate-500">Key Levels (Educational)</div>
-              <div>Invalidation: <span className="font-bold text-red-400">{formatLevel(stop)}</span></div>
-              <div>Reaction Zone 1: <span className="font-bold text-emerald-400">{formatLevel(target1)}</span></div>
-              <div>Reaction Zone 2: <span className="font-bold text-emerald-400">{formatLevel(target2)}</span></div>
-              <div>Hypothetical R:R: <span className={`font-bold ${rr != null && rr >= 1.8 ? 'text-emerald-400' : 'text-amber-400'}`}>{rr != null && hasScenarioLevels ? rr.toFixed(1) : 'Unavailable'}</span></div>
+              {!isUsableNumber(stop) && !isUsableNumber(target1) && !isUsableNumber(target2) && (rr == null || !hasScenarioLevels) ? (
+                <div className="text-slate-500">All four levels unavailable — refresh scanner inputs.</div>
+              ) : (
+                <>
+                  <div>Invalidation: <span className="font-bold text-red-400">{formatLevel(stop)}</span></div>
+                  <div>Reaction Zone 1: <span className="font-bold text-emerald-400">{formatLevel(target1)}</span></div>
+                  <div>Reaction Zone 2: <span className="font-bold text-emerald-400">{formatLevel(target2)}</span></div>
+                  <div>Hypothetical R:R: <span className={`font-bold ${rr != null && rr >= 1.8 ? 'text-emerald-400' : 'text-amber-400'}`}>{rr != null && hasScenarioLevels ? rr.toFixed(1) : 'Unavailable'}</span></div>
+                </>
+              )}
             </div>
             <div className="rounded-lg border border-blue-500/25 bg-blue-500/10 p-2.5 text-[0.74rem] text-blue-100">
               <div className="mb-1 text-[0.66rem] font-extrabold uppercase tracking-[0.07em] text-blue-300">Next Useful Check</div>
@@ -1211,26 +1229,116 @@ export default function ScannerPage() {
     );
   }
 
+  /* ─── Command header derived values ─── */
+  const queueCount = mode === 'ranked' ? filtered.length : proScreenerRows.length;
+  const universeCount = proScanResults?.scanned ?? null;
+  const headerStage: ScannerStage = activeScannerStage;
+  const modeLabel = headerStage === 'ranked' ? 'Ranked queue' : headerStage === 'pro' ? 'Pro scan' : 'Symbol analysis';
+  const modeDetail = headerStage === 'ranked'
+    ? 'Auto-ranked market queue'
+    : headerStage === 'pro'
+      ? 'Manual scan filters'
+      : selectedSymbol ? `Reviewing ${selectedSymbol}` : 'Reviewing case';
+  const queueValue = headerStage === 'analysis' && selectedSymbol
+    ? selectedSymbol
+    : queueCount > 0
+      ? `${queueCount} ${headerStage === 'pro' ? 'candidates' : 'symbols'}`
+      : 'Empty';
+  const queueTone = queueCount > 0 || headerStage === 'analysis' ? '#10B981' : '#94A3B8';
+  const queueDetail = headerStage === 'analysis'
+    ? 'Active analysis case'
+    : headerStage === 'pro'
+      ? universeCount != null ? `Scanned ${universeCount} symbols` : 'Run Educational Scan to populate'
+      : v2Loading ? 'Loading market data…' : queueCount > 0 ? 'Sorted by MSP score' : 'Awaiting scan results';
+  const dataIssues = [
+    rankedLocalDemo ? 'Local demo rows' : null,
+    proScanResults?.dataQuality?.source === 'local_demo' ? 'Pro demo rows' : null,
+    equity.error ? 'Equity feed' : null,
+    crypto.error ? 'Crypto feed' : null,
+    proScanError ? 'Pro scan error' : null,
+  ].filter(Boolean) as string[];
+  const dataLoadingCount = [equity.loading, crypto.loading, proScanLoading, detailLoading].filter(Boolean).length;
+  const dataHealthValue = dataIssues.length ? `${dataIssues.length} issue${dataIssues.length === 1 ? '' : 's'}` : dataLoadingCount ? `${dataLoadingCount} loading` : 'Ready';
+  const dataHealthTone = dataIssues.length ? '#F59E0B' : dataLoadingCount ? '#94A3B8' : '#10B981';
+  const dataHealthDetail = dataIssues.length ? dataIssues.join(', ') : dataLoadingCount ? 'Feeds syncing' : 'No feed errors reported';
+  const topRankedSymbol = filtered[0]?.symbol;
+  const topProSymbol = proScreenerRows[0]?.symbol;
+  const headerTopSymbol = selectedSymbol || (mode === 'ranked' ? topRankedSymbol : topProSymbol);
+  const nextCheckValue = headerStage === 'analysis'
+    ? 'Validate in Golden Egg'
+    : headerStage === 'pro'
+      ? proScanResults
+        ? topProSymbol ? `Review ${topProSymbol}` : 'Tighten filters'
+        : 'Run Educational Scan'
+      : topRankedSymbol ? `Review ${topRankedSymbol}` : v2Loading ? 'Loading queue…' : 'Awaiting ranked data';
+  const nextCheckDetail = headerStage === 'analysis'
+    ? 'Open Golden Egg from this case'
+    : headerStage === 'pro'
+      ? proScanResults ? 'Click a row to inspect a candidate' : 'Configure filters then run scan'
+      : topRankedSymbol ? 'Top-ranked candidate' : 'Cached scanner data syncing';
+  const nextCheckTone = (headerStage === 'analysis' || headerTopSymbol) ? '#FBBF24' : '#94A3B8';
+  const goldenEggHref = headerTopSymbol ? `/tools/golden-egg?symbol=${encodeURIComponent(headerTopSymbol)}` : '/tools/golden-egg';
+  const showRegimeChip = Boolean(regime.data);
+  const regimeColor = currentRegime === 'trend' || currentRegime === 'risk_on' || currentRegime === 'expansion'
+    ? '#10B981'
+    : currentRegime === 'risk_off'
+      ? '#EF4444'
+      : currentRegime === 'compression' || currentRegime === 'transition'
+        ? '#F59E0B'
+        : '#A5B4FC';
+  const riskLevel = regime.data?.riskLevel || 'moderate';
+  const riskColor = riskLevel === 'low' ? '#10B981' : riskLevel === 'moderate' ? '#F59E0B' : '#EF4444';
+  const permission = regime.data?.permission || 'full';
+  const permissionLabel = permission === 'full' ? 'Allowed' : permission === 'reduced' ? 'Reduced' : 'Blocked';
+  const permissionColor = permission === 'full' ? '#10B981' : permission === 'reduced' ? '#F59E0B' : '#EF4444';
+  const weightTooltip = Object.entries(REGIME_WEIGHTS[currentRegime] || {}).map(([k, v]) => `${k}: ${v}`).join(' · ');
+
   /* ═══════════════════════════════════════════════════════════════════════ */
   return (
     <div className="space-y-3">
-      <Card>
-        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+      <section
+        className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
+        aria-label="Scanner command header"
+      >
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(26rem,0.9fr)]">
           <div>
-            <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Workflow step 1 · Market queue</div>
+            <div className="flex flex-wrap items-center gap-2 text-[0.68rem] font-extrabold uppercase tracking-[0.16em]">
+              <span className="text-emerald-300">Workflow step 1 · Market research queue</span>
+              {showRegimeChip && (
+                <span
+                  className="flex items-center gap-1.5 rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-300"
+                  title={weightTooltip ? `Regime weights — ${weightTooltip}` : undefined}
+                >
+                  <span style={{ color: regimeColor }}>{String(regime.data?.regime || '').replace(/_/g, ' ')}</span>
+                  <span className="text-slate-600">·</span>
+                  <span className="text-slate-400">Risk <span style={{ color: riskColor }}>{riskLevel}</span></span>
+                  <span className="text-slate-600">·</span>
+                  <span className="text-slate-400">Regime <span style={{ color: permissionColor }}>{permissionLabel}</span></span>
+                </span>
+              )}
+            </div>
             <h1 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Find the highest-evidence research queue.</h1>
-            <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">Ranked scan triages the market. Pro scan lets you configure conditions, then Analysis sends one symbol into Golden Egg.</p>
+            <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">Ranked auto-triages the market. Pro lets you configure conditions. Analysis sends one symbol into Golden Egg.</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {headerStage === 'analysis' ? (
+                <button type="button" onClick={() => { setSelectedSymbol(null); setSymbolDetail(null); }} className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 transition-colors hover:bg-emerald-400/15">Back to {mode === 'ranked' ? 'Ranked' : 'Pro'}</button>
+              ) : (
+                <button type="button" onClick={() => selectScannerMode(mode === 'pro' ? 'pro' : 'ranked')} className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 transition-colors hover:bg-emerald-400/15">{mode === 'pro' ? 'Configure Pro Scan' : 'Refresh Ranked Queue'}</button>
+              )}
+              <Link href={goldenEggHref} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15">{headerTopSymbol ? `Validate ${headerTopSymbol}` : 'Open Golden Egg'}</Link>
+              <Link href="/tools/terminal" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Open Terminal</Link>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2 md:justify-end">
-            <Link href="/tools/golden-egg" className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-amber-200 no-underline hover:bg-amber-400/15">
-              Open Golden Egg
-            </Link>
-            <Link href="/tools/terminal" className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-slate-400 no-underline hover:bg-slate-700/50">
-              Terminal
-            </Link>
+
+          <div className="grid self-start gap-1.5 sm:grid-cols-2">
+            <ScannerMetric label="Mode" value={modeLabel} tone="#A5B4FC" detail={modeDetail} />
+            <ScannerMetric label={headerStage === 'analysis' ? 'Symbol' : 'Queue'} value={queueValue} tone={queueTone} detail={queueDetail} />
+            <ScannerMetric label="Data Health" value={dataHealthValue} tone={dataHealthTone} detail={dataHealthDetail} />
+            <ScannerMetric label="Next Check" value={nextCheckValue} tone={nextCheckTone} detail={nextCheckDetail} />
           </div>
         </div>
-      </Card>
+      </section>
+
       <ComplianceDisclaimer compact />
 
       <ScannerFlowRail
@@ -1240,18 +1348,6 @@ export default function ScannerPage() {
         onSelectAnalysis={openScannerAnalysis}
         canOpenAnalysis={canOpenAnalysis}
       />
-
-      {/* ─── Active Regime Context ─── */}
-      {regime.data && (
-        <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] flex-wrap">
-          <span className="text-[11px] uppercase tracking-wider text-slate-500">Active Regime</span>
-          <Badge label={regime.data.regime} color={REGIME_COLORS[currentRegime] || '#64748B'} small />
-          <span className="text-[11px] text-slate-500">Risk: <span className="text-white">{regime.data.riskLevel}</span></span>
-          <span className="text-[11px] text-slate-500">Regime State: <span className={regime.data.permission === 'full' ? 'text-emerald-400' : regime.data.permission === 'reduced' ? 'text-yellow-400' : 'text-red-400'}>{regime.data.permission}</span></span>
-          <div className="h-3 w-px bg-slate-700 mx-1" />
-          <span className="text-[11px] text-slate-600">Weights: {Object.entries(REGIME_WEIGHTS[currentRegime] || {}).map(([k, v]) => `${k}:${v}`).join(' · ')}</span>
-        </div>
-      )}
 
       {/* ═══════════════════════════════ V2 RANKED SCAN ═══════════════════════════════ */}
       {mode === 'ranked' && !selectedSymbol && (
@@ -1555,16 +1651,17 @@ export default function ScannerPage() {
             </div>
 
             {/* Scan Button */}
-            <button type="button" onClick={runProScan} disabled={proScanLoading}
-              className="mt-4 w-full rounded-lg py-3.5 text-sm font-bold uppercase tracking-[0.1em] transition-all"
-              style={{
-                background: proScanLoading ? 'rgba(16, 185, 129, 0.25)' : 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                color: proScanLoading ? 'rgba(255,255,255,0.6)' : '#0F172A',
-                border: '1px solid rgba(16, 185, 129, 0.4)',
-                boxShadow: proScanLoading ? 'none' : '0 0 20px rgba(16, 185, 129, 0.25), 0 4px 12px rgba(0, 0, 0, 0.3)',
-                cursor: proScanLoading ? 'not-allowed' : 'pointer',
-              }}>
-              {proScanLoading ? 'Analyzing...' : 'Run Educational Scan'}
+            <button
+              type="button"
+              onClick={runProScan}
+              disabled={proScanLoading}
+              className={`mt-4 w-full rounded-md border px-3 py-2 text-[12px] font-black uppercase tracking-[0.1em] transition-colors ${
+                proScanLoading
+                  ? 'cursor-not-allowed border-amber-400/20 bg-amber-400/5 text-amber-200/60'
+                  : 'border-amber-400/35 bg-amber-400/10 text-amber-200 hover:bg-amber-400/15'
+              }`}
+            >
+              {proScanLoading ? 'Analyzing…' : 'Run Educational Scan'}
             </button>
           </div>
 

@@ -456,7 +456,7 @@ describe('layout and flow audit regressions', () => {
     expect(terminalPage).not.toContain('<SectionHeader title="Terminal"');
     expect(terminalPage).not.toContain('ComplianceDisclaimer collapsible variant');
     expect(terminalPage).not.toContain("'? Refresh'");
-    expect(toolsLayoutClient).toContain("const showFavoriteButton = pageKey !== 'dashboard' && pathname !== '/tools/terminal';");
+    expect(toolsLayoutClient).toContain("const showFavoriteButton = pageKey !== 'dashboard' && pathname !== '/tools/terminal' && pathname !== '/tools/scanner';");
     expect(toolsLayoutClient).not.toContain("'/tools/terminal',");
     expect(terminalShell).toContain('embedded?: boolean');
     expect(terminalShell).toContain("{!embedded && <header");
@@ -714,7 +714,41 @@ describe('layout and flow audit regressions', () => {
     expect(macroDashboard).toContain('Macro lens');
     expect(macroDashboard).toContain("embeddedInDashboard ? 'px-0 pb-6 pt-3' : 'px-4 pb-24 pt-6 md:px-6'");
     expect(macroDashboard).toContain('isAdmin && !embeddedInDashboard');
+
+    // Scanner — match Dashboard A-grade command standard.
+    const scannerPageStandard = read('app/tools/scanner/page.tsx');
+    const scanTemplatesBar = read('components/scanner/ScanTemplatesBar.tsx');
+    const toolsLayoutClient = read('app/tools/ToolsLayoutClient.tsx');
+    const rankExplanation = read('lib/scanner/rankExplanation.ts');
+    expect(scannerPageStandard).toContain('aria-label="Scanner command header"');
+    expect(scannerPageStandard).toContain('function ScannerMetric');
+    expect(scannerPageStandard).toContain('label="Mode"');
+    expect(scannerPageStandard).toContain('label="Data Health"');
+    expect(scannerPageStandard).toContain('label="Next Check"');
+    expect(scannerPageStandard).toContain('grid grid-cols-3 gap-2');
+    expect(scannerPageStandard).not.toContain('flex gap-1 overflow-x-auto');
+    expect(scannerPageStandard).not.toContain('min-w-[9rem] rounded-md border px-3 py-1.5 text-left transition');
+    expect(scannerPageStandard).not.toContain('Active Regime Context');
+    expect(scannerPageStandard).not.toContain('Regime State:');
+    expect(scannerPageStandard).not.toContain('Bias: {direction.toUpperCase()}');
+    expect(scannerPageStandard).toContain("Bias: {direction === 'bullish' ? 'Bullish' : direction === 'bearish' ? 'Bearish' : 'Neutral'}");
+    expect(scannerPageStandard).toContain('All four levels unavailable');
+    expect(scannerPageStandard).toContain('replace(/;\\s*rank is reduced when evidence is missing, stale, or liquidity is thin');
+    expect(scannerPageStandard).not.toContain("background: proScanLoading ? 'rgba(16, 185, 129, 0.25)' : 'linear-gradient(135deg, #10B981 0%, #059669 100%)'");
+    expect(scanTemplatesBar).not.toContain("icon: '🚀'");
+    expect(scanTemplatesBar).not.toContain("icon: '💥'");
+    expect(scanTemplatesBar).not.toContain("icon: '🔥'");
+    expect(scanTemplatesBar).not.toContain("icon: '💪'");
+    expect(scanTemplatesBar).not.toContain("icon: '🎯'");
+    expect(scanTemplatesBar).toContain("icon: 'MOM'");
+    expect(scanTemplatesBar).toContain("icon: 'BRK'");
+    expect(scanTemplatesBar).toContain("icon: 'SQZ'");
+    expect(scanTemplatesBar).toContain("icon: 'ALN'");
+    expect(toolsLayoutClient).toContain("pathname !== '/tools/scanner'");
+    // Boilerplate suffix in rank explanations is stripped at render-time in summarizeRankedReason.
+    expect(rankExplanation).toContain('rank is reduced when evidence is missing');
   });
+
 
   it('keeps Research intelligence views embedded and compliance-safe', () => {
     const researchPage = read('app/tools/research/page.tsx');
@@ -1044,12 +1078,13 @@ describe('layout and flow audit regressions', () => {
 
     expect(scannerPage).toContain("type ScannerStage = ScannerMode | 'analysis'");
     expect(scannerPage).toContain('function ScannerFlowRail');
-    expect(scannerPage).toContain('Workflow step 1 · Market queue');
+    expect(scannerPage).toContain('Workflow step 1 · Market research queue');
     expect(scannerPage).toContain('Find the highest-evidence research queue.');
-    expect(scannerPage).toContain('Ranked scan triages the market. Pro scan lets you configure conditions, then Analysis sends one symbol into Golden Egg.');
+    expect(scannerPage).toContain('Ranked auto-triages the market. Pro lets you configure conditions. Analysis sends one symbol into Golden Egg.');
     expect(scannerPage).toContain('<ComplianceDisclaimer compact />');
-    expect(scannerPage).toContain('flex gap-1 overflow-x-auto');
-    expect(scannerPage).toContain('h-full min-w-[9rem] rounded-md border px-3 py-1.5');
+    expect(scannerPage).toContain('grid grid-cols-3 gap-2');
+    expect(scannerPage).not.toContain('flex gap-1 overflow-x-auto');
+    expect(scannerPage).not.toContain('h-full min-w-[9rem] rounded-md border px-3 py-1.5');
     expect(scannerPage).not.toContain('<SectionHeader title="Scanner"');
     expect(scannerPage).not.toContain('<ComplianceDisclaimer collapsible />');
     expect(scannerPage).toContain("{ id: 'ranked', label: 'Ranked'");
