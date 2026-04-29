@@ -462,6 +462,7 @@ describe('layout and flow audit regressions', () => {
     expect(terminalPage).toContain('<TerminalSubviewFrame tab="Options Flow" symbol={sym} asset={asset} onSelectTab={setTab}>');
     expect(terminalPage).toContain('<TerminalSubviewFrame tab="Crypto" symbol={sym} asset={asset} onSelectTab={setTab}>');
     expect(terminalPage).toContain('<TerminalSubviewFrame tab="Time Confluence" symbol={sym} asset={asset} onSelectTab={setTab}>');
+    expect(terminalPage).toContain('<TerminalSubviewFrame tab="Flow" symbol={sym} asset={asset} onSelectTab={setTab}>');
     expect(terminalPage).toContain('<TerminalSubviewMetric label="Symbol" value={symbol}');
     expect(terminalPage).toContain('<TerminalSubviewMetric label="View" value={tab}');
     expect(terminalPage).toContain('<TerminalSubviewMetric label="Focus" value={focusLabel}');

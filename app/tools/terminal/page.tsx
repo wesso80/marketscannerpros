@@ -565,6 +565,7 @@ export default function TerminalPage() {
         const gammaColor = fd?.gamma_state === 'Positive' ? 'text-emerald-400' : fd?.gamma_state === 'Negative' ? 'text-red-400' : 'text-amber-400';
 
         return (
+        <TerminalSubviewFrame tab="Flow" symbol={sym} asset={asset} onSelectTab={setTab}>
         <div className="space-y-4">
           {flow.loading ? (
             <Card><div className="space-y-3 py-8">{[1,2,3].map(i => <Skel key={i} h="h-10" />)}</div></Card>
@@ -869,6 +870,7 @@ export default function TerminalPage() {
             <Card><div className="text-xs text-slate-500 py-8 text-center">Enter a symbol above and load to see capital flow data</div></Card>
           )}
         </div>
+        </TerminalSubviewFrame>
         );
       })()}
 

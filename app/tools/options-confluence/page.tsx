@@ -2315,7 +2315,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false }:
       subtitle="Get intelligent strike & expiration analysis based on Time Confluence data. Uses 50% levels, decompression timing, and Greeks-aware risk assessment."
       embedded={embeddedInTerminal}
     >
-      <ComplianceDisclaimer compact variant="options" />
+      {!embeddedInTerminal && <ComplianceDisclaimer compact variant="options" />}
       <div className="mb-3 rounded-lg border border-blue-500/25 bg-blue-500/10 px-3 py-2 text-[11px] leading-relaxed text-blue-100">
         <strong>Why this can fail:</strong> options flow, Greeks, dealer exposure, expected move, and cross-asset readings are derived estimates. They can break during news, liquidity gaps, volatility repricing, stale data, or regime shifts. Treat all outputs as educational scenario context only.
       </div>
