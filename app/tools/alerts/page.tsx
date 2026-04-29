@@ -484,7 +484,7 @@ export default function AlertsPage() {
         badge="TOOLS"
         title="Alert Intelligence"
         subtitle="Detect, validate, execute, and learn from triggered market events"
-        icon="🔔"
+        icon="ALR"
       />
       <div className="max-w-none mx-auto px-4 pt-4">
         <RegimeBanner />

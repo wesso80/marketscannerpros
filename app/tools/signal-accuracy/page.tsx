@@ -188,8 +188,8 @@ export default function SignalAccuracyPage() {
                 {thresholds.map(t => (
                   <div key={t.horizon_minutes} className="bg-slate-900/50 rounded-lg px-3 py-1.5 text-[11px]">
                     <span className="text-white font-medium">{t.horizon_label}</span>
-                    <span className="text-slate-500 ml-2">✓ &ge;{t.correct_threshold}%</span>
-                    <span className="text-slate-500 ml-2">✗ &le;{t.wrong_threshold}%</span>
+                    <span className="text-slate-500 ml-2">OK &ge;{t.correct_threshold}%</span>
+                    <span className="text-slate-500 ml-2">NO &le;{t.wrong_threshold}%</span>
                   </div>
                 ))}
               </div>

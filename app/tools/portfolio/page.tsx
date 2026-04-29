@@ -1766,7 +1766,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
       {syncError && (
         <div className="mx-4 mt-2 flex items-center justify-between rounded-md border border-amber-500/40 bg-amber-900/20 px-4 py-2 text-[13px] text-amber-300">
           <span>{syncError}</span>
-          <button onClick={() => setSyncError(null)} className="ml-4 text-amber-400 hover:text-white">✕</button>
+          <button onClick={() => setSyncError(null)} className="ml-4 text-xs font-semibold uppercase text-amber-400 hover:text-white">Close</button>
         </div>
       )}
       {embeddedInWorkspace ? (
@@ -1792,7 +1792,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
       )}
 
       <div className={embeddedInWorkspace ? 'mt-2' : 'mx-4 mt-2'}>
-        {!embeddedInWorkspace && <ComplianceDisclaimer collapsible />}
+        {!embeddedInWorkspace && <ComplianceDisclaimer compact />}
         <div className={`${embeddedInWorkspace ? '' : 'mt-2'} rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-2.5 text-[11px] leading-relaxed text-slate-400`}>
           This page displays user-entered simulation records and descriptive analytics only. It is not guidance for future portfolio decisions or allocation changes.
         </div>
@@ -1859,7 +1859,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
           >
             <div className="mb-3 flex items-center justify-between">
               <div className="font-bold text-slate-200">Update price for {manualPosition.symbol}</div>
-              <button onClick={closeManual} className="cursor-pointer border-none bg-transparent text-[20px] text-slate-400">✕</button>
+              <button onClick={closeManual} className="cursor-pointer border-none bg-transparent text-xs font-semibold uppercase text-slate-400">Close</button>
             </div>
             <div className="mb-2.5 text-[13px] text-slate-400">Enter a price. This showed because the API didn’t return a value for this symbol.</div>
             <input
@@ -2465,7 +2465,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                               <button onClick={() => closePosition(position.id)} className="rounded border border-red-500/40 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-red-300">Record Full Close</button>
                               <button onClick={() => reducePositionHalf(position.id)} className="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-300">Record Partial Close</button>
                               <button onClick={() => moveStopToBreakeven(position.id)} className="rounded border border-blue-500/40 bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-blue-300">Edit Stop</button>
-                              <button onClick={() => deletePosition(position.id)} className="rounded border border-zinc-500/40 bg-zinc-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-zinc-400 hover:text-red-300 hover:border-red-500/40" title="Delete this position (mistake entry)">✕ Delete</button>
+                              <button onClick={() => deletePosition(position.id)} className="rounded border border-zinc-500/40 bg-zinc-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-zinc-400 hover:text-red-300 hover:border-red-500/40" title="Delete this position (mistake entry)">Delete</button>
                             </div>
                           </td>
                         </tr>
@@ -2585,7 +2585,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                           <td className="px-2 py-2">{trade.strategy || '—'}</td>
                           <td className="px-2 py-2">{outcomeType}</td>
                           <td className="px-2 py-2 text-center">
-                            <button onClick={() => deleteClosedTrade(trade.id)} className="rounded border border-zinc-500/40 bg-zinc-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-zinc-400 hover:text-red-300 hover:border-red-500/40" title="Delete this closed trade">✕</button>
+                            <button onClick={() => deleteClosedTrade(trade.id)} className="rounded border border-zinc-500/40 bg-zinc-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-zinc-400 hover:text-red-300 hover:border-red-500/40" title="Delete this closed trade">Delete</button>
                           </td>
                         </tr>
                       );

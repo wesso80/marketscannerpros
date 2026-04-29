@@ -586,14 +586,19 @@ describe('layout and flow audit regressions', () => {
     expect(portfolioPage).toContain("embeddedInWorkspace ? 'flex gap-2 overflow-x-auto pb-1' : 'grid gap-2 md:grid-cols-5'");
     expect(portfolioPage).toContain("embeddedInWorkspace ? 'min-w-fit shrink-0 px-3 py-1.5 text-[11px]' : 'px-3 py-2 text-xs'");
     expect(portfolioPage).toContain("{ key: 'add-manual', label: 'Add Position' }");
-    expect(portfolioPage).toContain('{!embeddedInWorkspace && <ComplianceDisclaimer collapsible />}');
+    expect(portfolioPage).toContain('{!embeddedInWorkspace && <ComplianceDisclaimer compact />}');
     expect(portfolioPage).toContain('{!embeddedInWorkspace && (');
+    expect(portfolioPage).toContain('>Close</button>');
+    expect(portfolioPage).toContain('>Delete</button>');
     expect(portfolioPage).not.toContain('📐 Kelly Criterion');
     expect(portfolioPage).not.toContain('📊 Position Estimate Results');
     expect(portfolioPage).not.toContain('riskStateIcon');
     expect(portfolioPage).not.toContain('🔒');
     expect(portfolioPage).not.toContain('➕ Add Position');
     expect(portfolioPage).not.toContain('🔄');
+    expect(portfolioPage).not.toContain('<ComplianceDisclaimer collapsible />');
+    expect(portfolioPage).not.toContain('>✕</button>');
+    expect(portfolioPage).not.toContain('>✕ Delete</button>');
     expect(portfolioPage).not.toContain("{ key: 'add-manual', label: '➕ Add Position' }");
   });
 
@@ -740,6 +745,8 @@ describe('layout and flow audit regressions', () => {
     expect(alertsPage).toContain('Alerts review');
     expect(alertsPage).toContain("embeddedInWorkspace ? 'px-0 py-0' : 'px-4 py-6 md:px-6'");
     expect(alertsPage).toContain('{!embeddedInWorkspace && <ComplianceDisclaimer compact />}');
+    expect(alertsPage).toContain('icon="ALR"');
+    expect(alertsPage).not.toContain('icon="🔔"');
   });
 
   it('keeps specialist tools in research wording instead of recommendation wording', () => {
@@ -935,7 +942,11 @@ describe('layout and flow audit regressions', () => {
     expect(intradayChartsPage).not.toContain('day-trade setups');
     expect(signalAccuracyPage).toContain('<th className="text-left px-4 py-2">Context</th>');
     expect(signalAccuracyPage).toContain("{s.direction === 'bullish' ? 'Bullish' : s.direction === 'bearish' ? 'Bearish' : 'Neutral'}");
+    expect(signalAccuracyPage).toContain('OK &ge;{t.correct_threshold}%');
+    expect(signalAccuracyPage).toContain('NO &le;{t.wrong_threshold}%');
     expect(signalAccuracyPage).not.toContain('<th className="text-left px-4 py-2">Direction</th>');
+    expect(signalAccuracyPage).not.toContain('✓ &ge;{t.correct_threshold}%');
+    expect(signalAccuracyPage).not.toContain('✗ &le;{t.wrong_threshold}%');
     expect(goldenEggSignalHero).toContain('STRONG EVIDENCE');
     expect(goldenEggSignalHero).toContain('INSUFFICIENT EVIDENCE');
     expect(goldenEggSignalHero).toContain("{ label: 'Structure', value: setupLabel(setupType), color: 'text-sky-400' }");
