@@ -1293,6 +1293,9 @@ describe('layout and flow audit regressions', () => {
   it('treats Golden Egg as a focused validation workbench with Liquidity Sweep separated', () => {
     const goldenEggPage = read('app/tools/golden-egg/page.tsx');
     const goldenEggLayout = read('app/tools/golden-egg/layout.tsx');
+    const intradayChartsPage = read('app/tools/intraday-charts/page.tsx');
+    const deepAnalysisPage = read('app/tools/deep-analysis/page.tsx');
+    const companyOverviewPage = read('app/tools/company-overview/page.tsx');
     const workflows = read('lib/toolWorkflows.ts');
 
     expect(goldenEggPage).toContain("const GE_TABS = ['Verdict', 'Chart', 'Deep Analysis', 'Fundamentals'] as const");
@@ -1319,8 +1322,16 @@ describe('layout and flow audit regressions', () => {
     expect(goldenEggPage).toContain('Open Scanner');
     expect(goldenEggPage).toContain('Open Backtest');
     expect(goldenEggPage).toContain('Verdict first, then inspect chart, evidence detail, and business context.');
-    expect(goldenEggPage).toContain('flex gap-1 overflow-x-auto');
-    expect(goldenEggPage).toContain('min-w-[9rem] shrink-0 rounded-md border px-3 py-1.5');
+    expect(goldenEggPage).toContain('grid grid-cols-2 gap-2 md:grid-cols-4');
+    expect(goldenEggPage).toContain('function GoldenEggSubviewMetric');
+    expect(goldenEggPage).toContain('aria-label={`Golden Egg ${tab} command header`}');
+    expect(goldenEggPage).toContain('Review Verdict');
+    expect(goldenEggPage).toContain('Open {adjacentTab}');
+    expect(goldenEggPage).toContain('label="Focus"');
+    expect(goldenEggPage).toContain('label="Next Check"');
+    expect(goldenEggPage).toContain('onSelectTab={setActiveTab}');
+    expect(goldenEggPage).not.toContain('flex gap-1 overflow-x-auto');
+    expect(goldenEggPage).not.toContain('min-w-[9rem] shrink-0 rounded-md border px-3 py-1.5');
     expect(goldenEggPage).toContain('Answer first: alignment, data trust, reference, invalidation, and next check.');
     expect(goldenEggPage).toContain('<GoldenEggTabRail activeTab={activeTab} onSelectTab={setActiveTab} />');
     expect(goldenEggPage).not.toContain('<SectionHeader title="Golden Egg"');
@@ -1329,6 +1340,11 @@ describe('layout and flow audit regressions', () => {
     expect(goldenEggPage).not.toContain("activeTab === 'Liquidity'");
     expect(goldenEggPage).not.toContain('Loading Liquidity Sweep');
     expect(goldenEggPage).not.toContain('rounded-t-md whitespace-nowrap transition-colors');
+    expect(intradayChartsPage).toContain("embeddedInGoldenEgg ? 'px-0 pb-0 pt-0' : 'px-2 pb-6 pt-3 md:px-3'");
+    expect(deepAnalysisPage).toContain("embeddedInGoldenEgg ? '' : 'min-h-screen'");
+    expect(deepAnalysisPage).toContain("embeddedInGoldenEgg ? 'px-0 py-0' : 'px-4 py-8'");
+    expect(companyOverviewPage).toContain('const embeddedInGoldenEgg = Boolean(propSymbol);');
+    expect(companyOverviewPage).toContain('padding: embeddedInGoldenEgg ? "8px 0 0" : "24px 16px"');
     expect(goldenEggLayout).not.toContain('liquidity');
     expect(workflows).toContain("{ href: '/tools/liquidity-sweep', label: 'Liquidity Sweep', description: 'Broad sweep/reclaim scanner for liquidity-zone research.', tier: 'pro_trader', role: 'specialist' }");
   });
@@ -1353,14 +1369,17 @@ describe('layout and flow audit regressions', () => {
   it('keeps Golden Egg nested pages in embedded validation mode', () => {
     const goldenEggPage = read('app/tools/golden-egg/page.tsx');
     const chartPage = read('app/tools/intraday-charts/page.tsx');
+    const deepAnalysisPage = read('app/tools/deep-analysis/page.tsx');
     const fundamentalsPage = read('app/tools/company-overview/page.tsx');
 
-    expect(goldenEggPage).toContain('<GoldenEggSubviewFrame tab="Chart" symbol={sym}>');
-    expect(goldenEggPage).toContain('<GoldenEggSubviewFrame tab="Deep Analysis" symbol={sym}>');
-    expect(goldenEggPage).toContain('<GoldenEggSubviewFrame tab="Fundamentals" symbol={sym}>');
+    expect(goldenEggPage).toContain('<GoldenEggSubviewFrame tab="Chart" symbol={sym} onSelectTab={setActiveTab}>');
+    expect(goldenEggPage).toContain('<GoldenEggSubviewFrame tab="Deep Analysis" symbol={sym} onSelectTab={setActiveTab}>');
+    expect(goldenEggPage).toContain('<GoldenEggSubviewFrame tab="Fundamentals" symbol={sym} onSelectTab={setActiveTab}>');
     expect(chartPage).toContain('{!embeddedInGoldenEgg && <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-700 bg-slate-900 p-2">');
+    expect(chartPage).toContain("embeddedInGoldenEgg ? 'px-0 pb-0 pt-0' : 'px-2 pb-6 pt-3 md:px-3'");
     expect(chartPage).toContain('Educational caution: elevated session risk; review only until conditions improve.');
     expect(chartPage).toContain('<div className="text-xs text-slate-400 uppercase tracking-wide">Intraday Console</div>');
+    expect(deepAnalysisPage).toContain("embeddedInGoldenEgg ? 'px-0 py-0' : 'px-4 py-8'");
     expect(fundamentalsPage).toContain('const embeddedInGoldenEgg = Boolean(propSymbol);');
     expect(fundamentalsPage).toContain('{!embeddedInGoldenEgg && (');
     expect(fundamentalsPage).toContain('padding: embeddedInGoldenEgg ? "8px 0 0" : "24px 16px"');

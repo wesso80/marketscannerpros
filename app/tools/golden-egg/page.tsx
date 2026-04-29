@@ -74,7 +74,7 @@ function GoldenEggTabRail({ activeTab, onSelectTab }: { activeTab: GETab; onSele
         </a>
       </div>
 
-      <div className="flex gap-1 overflow-x-auto">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         {GE_TABS.map((tab) => {
           const meta = GE_TAB_META[tab];
           const isActive = activeTab === tab;
@@ -84,7 +84,7 @@ function GoldenEggTabRail({ activeTab, onSelectTab }: { activeTab: GETab; onSele
               type="button"
               aria-pressed={isActive}
               onClick={() => onSelectTab(tab)}
-              className={`min-w-[9rem] shrink-0 rounded-md border px-3 py-1.5 text-left transition ${
+              className={`rounded-md border px-3 py-1.5 text-left transition ${
                 isActive
                   ? 'border-emerald-400/40 bg-emerald-400/10 text-white'
                   : 'border-white/10 bg-white/[0.025] text-slate-300 hover:border-emerald-400/30 hover:bg-emerald-400/[0.05]'
@@ -100,31 +100,60 @@ function GoldenEggTabRail({ activeTab, onSelectTab }: { activeTab: GETab; onSele
   );
 }
 
+function GoldenEggSubviewMetric({ label, value, tone = '#CBD5E1', detail }: { label: string; value: string; tone?: string; detail: string }) {
+  return (
+    <div className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+      <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
+      <div className="mt-0.5 truncate text-sm font-black" style={{ color: tone }}>{value}</div>
+      <div className="mt-0.5 truncate text-[11px] text-slate-500" title={detail}>{detail}</div>
+    </div>
+  );
+}
+
 function GoldenEggSubviewFrame({
   tab,
   symbol,
+  onSelectTab,
   children,
 }: {
   tab: Exclude<GETab, 'Verdict'>;
   symbol: string;
+  onSelectTab: (tab: GETab) => void;
   children: React.ReactNode;
 }) {
   const meta = GE_TAB_META[tab];
+  const adjacentTab: GETab = tab === 'Chart' ? 'Deep Analysis' : tab === 'Deep Analysis' ? 'Fundamentals' : 'Chart';
 
   return (
     <div className="space-y-3">
-      <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+      <section
+        className="rounded-lg border border-amber-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
+        aria-label={`Golden Egg ${tab} command header`}
+      >
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)]">
           <div>
-            <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Golden Egg subview</div>
-            <h2 className="mt-1 text-base font-black text-white">{tab} check for {symbol}</h2>
+            <div className="flex flex-wrap items-center gap-2 text-[0.68rem] font-extrabold uppercase tracking-[0.16em]">
+              <span className="text-amber-300">Golden Egg subview</span>
+              <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">{meta.eyebrow}</span>
+              <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">Symbol {symbol}</span>
+            </div>
+            <h2 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">{tab} check for {symbol}</h2>
             <p className="mt-1 text-xs leading-5 text-slate-400">{meta.description}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button type="button" onClick={() => onSelectTab('Verdict')} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 transition-colors hover:bg-amber-400/15">Review Verdict</button>
+              <button type="button" onClick={() => onSelectTab(adjacentTab)} className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 transition-colors hover:bg-emerald-400/15">Open {adjacentTab}</button>
+              <a href={`/tools/terminal?symbol=${encodeURIComponent(symbol)}`} className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Open Terminal</a>
+            </div>
           </div>
-          <div className="rounded-full border border-slate-700/70 bg-slate-950/60 px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-500">
-            {meta.eyebrow}
+
+          <div className="grid self-start gap-1.5 sm:grid-cols-2">
+            <GoldenEggSubviewMetric label="Symbol" value={symbol} tone="#FBBF24" detail="Single-symbol validation context" />
+            <GoldenEggSubviewMetric label="View" value={tab} tone="#10B981" detail={meta.eyebrow} />
+            <GoldenEggSubviewMetric label="Focus" value={tab === 'Chart' ? 'Price Action' : tab === 'Deep Analysis' ? 'Evidence Detail' : 'Business Context'} tone="#A5B4FC" detail="Completes the Verdict packet" />
+            <GoldenEggSubviewMetric label="Next Check" value={adjacentTab} tone="#F59E0B" detail="Continue the validation sequence" />
           </div>
         </div>
-      </div>
+      </section>
       {children}
     </div>
   );
@@ -698,17 +727,17 @@ export default function GoldenEggPage() {
 
       {/* ─── Deep-dive Tabs (v1 components) ─── */}
       {!isAuthBlocked && activeTab === 'Chart' && (
-        <GoldenEggSubviewFrame tab="Chart" symbol={sym}>
+        <GoldenEggSubviewFrame tab="Chart" symbol={sym} onSelectTab={setActiveTab}>
           <IntradayCharts symbol={sym} />
         </GoldenEggSubviewFrame>
       )}
       {!isAuthBlocked && activeTab === 'Deep Analysis' && (
-        <GoldenEggSubviewFrame tab="Deep Analysis" symbol={sym}>
+        <GoldenEggSubviewFrame tab="Deep Analysis" symbol={sym} onSelectTab={setActiveTab}>
           <DeepAnalysis symbol={sym} />
         </GoldenEggSubviewFrame>
       )}
       {!isAuthBlocked && activeTab === 'Fundamentals' && (
-        <GoldenEggSubviewFrame tab="Fundamentals" symbol={sym}>
+        <GoldenEggSubviewFrame tab="Fundamentals" symbol={sym} onSelectTab={setActiveTab}>
           <CompanyOverview symbol={sym} />
         </GoldenEggSubviewFrame>
       )}

@@ -733,9 +733,9 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
   // Pro Trader feature gate
   if (!canAccessDeepAnalysis(tier)) {
     return (
-      <div className="min-h-screen bg-[var(--msp-bg)]">
+      <div className={`${embeddedInGoldenEgg ? '' : 'min-h-screen'} bg-[var(--msp-bg)]`}>
         {!embeddedInGoldenEgg && <ToolsPageHeader badge="PRO TRADER" title="Golden Egg Deep Analysis" subtitle="AI-assisted educational research with structured multi-factor context" icon="GE" />}
-        <main className={`max-w-none px-4 ${embeddedInGoldenEgg ? 'py-2' : 'py-8'}`}>
+        <main className={`max-w-none ${embeddedInGoldenEgg ? 'px-0 py-0' : 'px-4 py-8'}`}>
           <UpgradeGate requiredTier="pro_trader" feature="Deep Analysis" />
         </main>
       </div>
@@ -787,10 +787,10 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
   };
 
   return (
-    <div className="min-h-screen bg-[var(--msp-bg)]">
+    <div className={`${embeddedInGoldenEgg ? '' : 'min-h-screen'} bg-[var(--msp-bg)]`}>
       {!embeddedInGoldenEgg && <ToolsPageHeader badge="PRO TRADER" title="Golden Egg Deep Analysis" subtitle="AI-assisted educational research with structured multi-factor context" icon="GE" />}
       
-      <main className={`max-w-none px-4 ${embeddedInGoldenEgg ? 'py-3' : 'py-8'}`}>
+      <main className={`max-w-none ${embeddedInGoldenEgg ? 'px-0 py-0' : 'px-4 py-8'}`}>
         {!embeddedInGoldenEgg && (
           <div className="mb-4">
             <ComplianceDisclaimer variant="aiData" />

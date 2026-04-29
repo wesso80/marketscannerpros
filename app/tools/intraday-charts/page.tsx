@@ -938,7 +938,7 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
 
   return (
     <div className={`${embeddedInGoldenEgg ? '' : 'min-h-screen'} bg-[var(--msp-bg)] text-white`}>
-      <main className="mx-auto w-full max-w-none space-y-2 px-2 pb-6 pt-3 md:px-3">
+      <main className={`mx-auto w-full max-w-none space-y-2 ${embeddedInGoldenEgg ? 'px-0 pb-0 pt-0' : 'px-2 pb-6 pt-3 md:px-3'}`}>
         {!embeddedInGoldenEgg && <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-700 bg-slate-900 p-2">
           <div>
             <div className="text-xs text-slate-400 uppercase tracking-wide">Intraday Console</div>
