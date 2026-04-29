@@ -3,6 +3,7 @@
 import { useState, useEffect, createContext, useContext } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import AdminBoundaryBanner from "@/components/admin/AdminBoundaryBanner";
 
 // Admin auth context
 const AdminContext = createContext<{
@@ -275,22 +276,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </aside>
 
         {/* Main content */}
-        <main style={{ flex: 1, padding: "2rem", overflow: "auto" }}>
-          <div style={{
-            marginBottom: "1rem",
-            border: "1px solid rgba(16,185,129,0.22)",
-            background: "rgba(16,185,129,0.08)",
-            color: "#A7F3D0",
-            borderRadius: "0.5rem",
-            padding: "0.65rem 0.8rem",
-            fontSize: "0.78rem",
-            fontWeight: 800,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-          }}>
-            Private admin research terminal. Internal use only; execution decisions remain outside MarketScanner Pros.
+        <main style={{ flex: 1, padding: "0", overflow: "auto", display: "flex", flexDirection: "column" }}>
+          <AdminBoundaryBanner />
+          <div style={{ padding: "1.5rem 2rem 2rem", flex: 1 }}>
+            {children}
           </div>
-          {children}
         </main>
       </div>
     </AdminContext.Provider>

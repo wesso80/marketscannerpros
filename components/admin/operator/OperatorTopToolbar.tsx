@@ -73,7 +73,7 @@ export default function OperatorTopToolbar({
           onClick={onKillSwitch}
           style={killActive ? { background: "rgba(239,68,68,0.3)", borderColor: "rgba(239,68,68,0.5)" } : {}}
         >
-          {killActive ? "⛔ Kill Active" : "Kill Switch"}
+          {killActive ? "⏸ Alerts Paused" : "Pause Alerts"}
         </button>
       </div>
     </div>

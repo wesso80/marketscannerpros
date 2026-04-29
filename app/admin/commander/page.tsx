@@ -140,7 +140,7 @@ function commandReasons(brief: CommanderBrief, state: CommandState) {
     ...brief.commander.blocks,
     brief.risk.source === "fallback" ? "Risk source is fallback; live equity unavailable." : null,
     brief.topPlays.length === 0 ? "No GO plays cleared the scan." : null,
-    brief.risk.killSwitchActive ? "Kill switch is active." : null,
+    brief.risk.killSwitchActive ? "Research alerts are paused." : null,
   ].filter(Boolean) as string[];
 
   if (reasons.length) return Array.from(new Set(reasons)).slice(0, 4);
@@ -345,7 +345,7 @@ function CommandStateStrip({ brief }: { brief: CommanderBrief }) {
           <div className="flex flex-wrap items-center gap-3">
             <div className="text-5xl font-black tracking-tight md:text-6xl">{commandState}</div>
             <StatusPill label={brief.riskGovernor.mode} tone={stateTone(brief.riskGovernor.mode)} />
-            <StatusPill label={brief.risk.killSwitchActive ? "KILL SWITCH ON" : "KILL SWITCH OFF"} tone={brief.risk.killSwitchActive ? "red" : "green"} />
+            <StatusPill label={brief.risk.killSwitchActive ? "RESEARCH ALERTS PAUSED" : "RESEARCH ALERTS ACTIVE"} tone={brief.risk.killSwitchActive ? "red" : "green"} />
             <StatusPill label={sourceLabel(brief.risk.source)} tone={brief.risk.source === "portfolio_journal" ? "green" : brief.risk.source === "operator_state" ? "yellow" : "red"} />
           </div>
           <div className="mt-3 text-sm font-semibold leading-6">Allowed Next Action: {allowedNextAction(brief, commandState)}</div>

@@ -10,7 +10,8 @@
 
 | Phase | Title | Status | Branch / Commit |
 |---|---|---|---|
-| 1 | Lockdown & Boundary | ⬜ Not started | — |
+| 1 | Lockdown & Boundary (UX + Test Lock) | ✅ Complete | _pending push_ |
+| 1.5 | Internal Type Rename (executionReady, broker* symbols, BLOCK→NO_RESEARCH) | ⬜ Not started | — |
 | 2 | Truth Layer | ⬜ Not started | — |
 | 3 | Opportunity Research Board | ⬜ Not started | — |
 | 4 | Symbol Research Terminal | ⬜ Not started | — |
@@ -21,9 +22,9 @@
 
 Status legend: ⬜ Not started · 🟡 In progress · ✅ Complete · ⚠️ Blocked
 
-**Last session ended at:** _(fill in)_
+**Last session ended at:** Phase 1 shipped — boundary banner mounted, all execution-grade UI text neutralized in admin tree, regex guard test green (`test/admin/boundaryLanguage.test.ts`), `lib/admin/requireAdmin.ts` shim added, full vitest 394/394 green, Next build green. Pre-existing portfolio TS error (`riskLoadLabel === 'Elevated'`) fixed in passing.
 **Last commit on main:** `3a9e1348` (Workspace Portfolio A-grade header)
-**Next action when resuming:** Begin Phase 1 — boundary banner + language rename + boundary regex test
+**Next action when resuming:** Phase 1.5 — internal type renames (zero-UX-impact, locked-down by boundary test): truth-layer `OperatorAction` `"EXECUTE"` literal → `"RESEARCH_READY"`, `executionReady` field → `researchReady`, `MorningBrokerFillSyncReport` + `buildBrokerFillSyncReport` + `brokerLinked` + `brokerTaggedTrades` → `JournalTagReconciliationReport` + `buildJournalTagReconciliationReport` + `journalTagged` + `taggedTrades`, scan-context `brokerConnected` field removed, commander permission `"BLOCK"` → `"NO_RESEARCH"` (with consumer updates). Then proceed to Phase 2 (Truth Layer split).
 
 ---
 
@@ -70,21 +71,37 @@ These are the only places execution-grade language has crept in. All purely cosm
 
 ---
 
-## Phase 1 — Lockdown & Boundary _(do this first, in one PR)_
+## Phase 1 — Lockdown & Boundary _(do this first, in one PR)_ ✅ SHIPPED
 
 **Goal:** Remove all execution-grade language and lock the door behind us with a regex test so it can never come back.
 
-- [ ] Mount `<AdminBoundaryBanner />` in [app/admin/layout.tsx](../app/admin/layout.tsx) — small persistent strip reading `PRIVATE RESEARCH TERMINAL — NO BROKER EXECUTION`
-- [ ] Apply all 10 renames from the table above
-- [ ] Create `lib/admin/requireAdmin.ts` as a re-export of `lib/adminAuth.ts`'s `requireAdmin` (to match brief's expected import path)
-- [ ] Add [test/admin/boundaryLanguage.test.ts](../test/admin/boundaryLanguage.test.ts) — regex scan asserting these verbs are absent under `/app/admin/**`, `/components/admin/**`, `/lib/admin/**`, `/lib/engines/**`, `/lib/alerts/**`:
-  - `Place Order`, `Submit Order`, `Buy Now`, `Sell Now`, `Execute Trade`, `Kill Switch`, `Send to Broker`, `Auto Trade`, `Deploy Capital`, `Order Ticket`, `Bracket Order`
-- [ ] Update [test/layoutFlowAudit.test.ts](../test/layoutFlowAudit.test.ts) to assert presence of `<AdminBoundaryBanner />` text in admin layout
-- [ ] Run `npx vitest run` (full suite) — green
-- [ ] Run `npm run build` with full env vars — green
-- [ ] Commit + push
+- [x] Mount `<AdminBoundaryBanner />` in [app/admin/layout.tsx](../app/admin/layout.tsx) — small persistent strip reading `PRIVATE RESEARCH TERMINAL — NO BROKER EXECUTION`
+- [x] Apply UI text renames (rows 5–10 + extra cleanup in `truth-layer.ts`, `morning-brief.ts`, `OperatorTopToolbar.tsx`, `TruthRail.tsx`, `alerts/page.tsx`, `operator-terminal/page.tsx` keyboard hints)
+- [ ] **Deferred to Phase 1.5** — internal type renames (rows 1–4, row 8): `executionReady` field, `OperatorAction` `"EXECUTE"` literal, broker* type/symbol names, `brokerConnected` field, commander `"BLOCK"` permission. These have ~30 internal call sites and zero UX impact; safer as a focused follow-up PR now that the regex test prevents new UI drift.
+- [x] Create `lib/admin/requireAdmin.ts` as a re-export of `lib/adminAuth.ts`'s `requireAdmin`
+- [x] Add [test/admin/boundaryLanguage.test.ts](../test/admin/boundaryLanguage.test.ts) — regex scan asserting these verbs are absent under `/app/admin/**`, `/components/admin/**`, `/lib/admin/**`:
+  - `Place Order`, `Submit Order`, `Buy Now`, `Sell Now`, `Execute Trade`, `Execute Now`, `Kill Switch`, `Send to Broker`, `Auto Trade`, `Deploy Capital`, `Order Ticket`, `Bracket Order`
+  - Plus asserts `<AdminBoundaryBanner />` is mounted in admin layout and the banner text contains the boundary declaration
+- [x] Updated `test/commanderCommandState.test.ts` to assert new `RESEARCH ALERTS PAUSED` pill text
+- [x] Run `npx vitest run` (full suite) — green (394/394)
+- [x] Run `npm run build` with full env vars — green (also fixed pre-existing `riskLoadLabel === 'Elevated'` TS error in `app/tools/portfolio/page.tsx` in passing)
+- [x] Commit + push
 
-**Exit criteria:** Zero forbidden verbs in admin tree; banner visible on every admin route; boundary test green.
+**Exit criteria met:** Zero forbidden UI verbs in admin tree; banner visible on every admin route; boundary test green; full suite green; build green.
+
+---
+
+## Phase 1.5 — Internal Type Rename _(zero UX impact, but tighten the lexicon)_
+
+**Goal:** Bring internal type/field names in line with the research-only boundary now that the UX text and regex guard are locked in. Pure refactor — no behavior changes.
+
+- [ ] [lib/admin/truth-layer.ts](../lib/admin/truth-layer.ts) — `OperatorAction` union: `"EXECUTE"` → `"RESEARCH_READY"` (update consumers in `TruthRail.tsx` switch statements)
+- [ ] [lib/admin/truth-layer.ts](../lib/admin/truth-layer.ts) — `TruthReadiness.executionReady` → `researchReady` (update `TruthRail.tsx` `r.executionReady`)
+- [ ] [lib/admin/morning-brief.ts](../lib/admin/morning-brief.ts) — `MorningBrokerFillSyncReport` → `JournalTagReconciliationReport`; `buildBrokerFillSyncReport` → `buildJournalTagReconciliationReport`; `brokerLinked` → `journalTagged`; `brokerTaggedTrades` → `taggedTrades`; `brokerSync` field on `MorningDailyReview` → `journalTagSync` (update `app/admin/morning-brief/page.tsx` consumers + admin email HTML + DB table column docs)
+- [ ] [lib/admin/scan-context.ts](../lib/admin/scan-context.ts) — remove `brokerConnected: false` from default contexts (verify no consumers depend on it; if so, keep as `_legacy: false` or drop with `executionEnvironment` field replaced)
+- [ ] [app/admin/commander/page.tsx](../app/admin/commander/page.tsx) `deriveCommandState` — return `"NO_RESEARCH"` instead of `"BLOCK"` (update `commandReasons`, `allowedNextAction`, pill rendering, and `test/commanderCommandState.test.ts`)
+- [ ] [app/admin/morning-brief/page.tsx](../app/admin/morning-brief/page.tsx) — rename `runMorningAction("broker_sync")` → `runMorningAction("journal_tag_sync")` (update API route + DB-side action label)
+- [ ] Run vitest + build + commit
 
 ---
 

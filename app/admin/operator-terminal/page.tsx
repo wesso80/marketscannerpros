@@ -25,7 +25,7 @@ export default function OperatorTerminalPage() {
     }
   }, [hits, focusSymbol]);
 
-  // Kill switch handler
+  // Pause-alerts handler
   const handleKillSwitch = useCallback(() => {
     setKillActive((prev) => !prev);
   }, []);
@@ -84,7 +84,7 @@ export default function OperatorTerminalPage() {
 
       {killActive && (
         <div className="text-center py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-red-300 text-xs font-medium">
-          ⛔ Kill Switch Active — All execution paused
+          ⏸ Auto-Scan Paused — Research alerts suppressed
         </div>
       )}
 
@@ -99,7 +99,7 @@ export default function OperatorTerminalPage() {
       {/* Keyboard shortcut hint */}
       <div className="flex justify-center gap-4 text-[9px] text-white/15 pb-1">
         <span>R = rescan</span>
-        <span>K = kill switch</span>
+        <span>K = pause alerts</span>
         <span>↑↓ = navigate symbols</span>
       </div>
     </div>

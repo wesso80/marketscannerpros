@@ -20,10 +20,10 @@ function verdictColor(v: string) {
 
 function actionLabel(a: string) {
   switch (a) {
-    case "EXECUTE": return "Execute now";
+    case "EXECUTE": return "Research-ready signal";
     case "WATCH": return "Watch — setup valid";
     case "WAIT_FOR_TRIGGER": return "Wait for trigger";
-    case "IGNORE": return "Ignore — no trade";
+    case "IGNORE": return "Ignore — no edge";
     case "MANUAL_REVIEW": return "Manual review required";
     case "NO_ACTION": return "No action";
     default: return a;
@@ -175,7 +175,7 @@ function FinalDecisionBlock({ truth, data }: { truth: TruthObject; data?: AdminS
         }}
       >
         <span style={{ fontSize: "0.75rem", fontWeight: 700, color: actionColor(truth.operatorAction) }}>
-          {copied ? "✓ Opened TradingView · Params copied" : actionLabel(truth.operatorAction)}
+          {copied ? "✓ Opened TradingView · Research notes copied" : actionLabel(truth.operatorAction)}
         </span>
       </button>
 
@@ -356,7 +356,7 @@ function FreshnessBlock({ truth }: { truth: TruthObject }) {
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginTop: 4 }}>
         {[
           ["Setup", r.setupValid],
-          ["Exec Ready", r.executionReady],
+          ["Research Ready", r.executionReady],
           ["Trigger", r.triggerHit],
         ].map(([label, ok]) => (
           <span

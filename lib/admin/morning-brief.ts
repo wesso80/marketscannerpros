@@ -578,7 +578,7 @@ export async function buildMorningTradePlan(brief: MorningBrief, play: ScannerHi
     `Desk state ${brief.deskState}; risk permission ${brief.risk.permission}; size multiplier ${brief.risk.sizeMultiplier.toFixed(2)}x.`,
     `Open risk ${formatUsd(brief.risk.openRiskUsd)} on ${formatUsd(brief.risk.equity)} equity; daily P&L ${formatUsd(brief.risk.dailyPnl)}.`,
   ];
-  if (brief.risk.killSwitchActive) riskNotes.unshift("Kill switch active. Plan is review-only until risk permission resets.");
+  if (brief.risk.killSwitchActive) riskNotes.unshift("Research alerts paused. Plan is review-only until risk permission resets.");
   if (brief.risk.correlationRisk >= 0.65) riskNotes.push("Correlation is elevated; reduce size or wait for exposure to compress.");
 
   return {
@@ -600,7 +600,7 @@ export async function buildMorningTradePlan(brief: MorningBrief, play: ScannerHi
       ? symbolCatalysts.map((event) => `${event.impactLabel} ${event.impactScore}: ${event.headline}`)
       : ["No fresh scanned catalyst attached to this symbol."],
     checklist: [
-      { label: "Risk", status: brief.risk.killSwitchActive ? "BLOCK" : "PASS", instruction: brief.risk.killSwitchActive ? "Do not trade while kill switch is active." : "Confirm size before entry." },
+      { label: "Risk", status: brief.risk.killSwitchActive ? "BLOCK" : "PASS", instruction: brief.risk.killSwitchActive ? "Do not act while research alerts are paused." : "Confirm size before entry." },
       { label: "Trigger", status: play.permission === "GO" ? "PASS" : "WAIT", instruction: play.permission === "GO" ? "Use planned trigger only; no late chase." : "Wait for permission to clear before action." },
       { label: "Catalyst", status: highImpactCatalysts.length ? "WAIT" : "PASS", instruction: highImpactCatalysts.length ? "Review high-impact catalyst before committing size." : "No high-impact catalyst conflict found." },
       { label: "Review", status: "INFO", instruction: "After the session, label worked, failed, missed, invalidated, or rule broken." },
@@ -1901,7 +1901,7 @@ function buildMorningRiskGovernor(
   const remainingTrades = Math.max(0, maxTradesToday - sessionScore.closedTrades);
   const lockouts: string[] = [];
   if (!hasLiveEquity) lockouts.push("Live equity unavailable");
-  if (risk.killSwitchActive) lockouts.push("Kill switch active");
+  if (risk.killSwitchActive) lockouts.push("Research alerts paused");
   if (risk.dailyDrawdown >= 0.04) lockouts.push("Daily drawdown hard stop reached");
   if (hasLiveEquity && Math.abs(Math.min(0, risk.dailyPnl)) >= dailyStopUsd) lockouts.push("Daily loss cap reached");
   if (hasLiveEquity && risk.openRiskUsd >= portfolioHeatLimitUsd) lockouts.push("Portfolio heat cap reached");
@@ -2107,7 +2107,7 @@ function buildExecutionChecklist(
         label: "Risk Permission",
         status: state === "BLOCK" ? "BLOCK" : state === "DEFENSIVE" ? "WAIT" : "PASS",
         instruction: risk.killSwitchActive
-          ? "Kill switch is active. Stand down."
+          ? "Research alerts are paused. Stand down."
           : `Desk permission is ${risk.permission}; active positions ${risk.activePositions}/${risk.maxPositions}.`,
       },
       {

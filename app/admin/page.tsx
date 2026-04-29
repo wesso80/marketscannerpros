@@ -310,7 +310,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
   )));
   const operatorState = operatorScore >= 75 ? "READY" : operatorScore >= 50 ? "WATCH" : "CHECK";
   const actionQueue = [
-    riskPermission === "KILL" ? "Kill switch active: stand down" : riskAllowsTrading ? `Risk governor ${riskPermission}` : `Risk governor says ${riskPermission}`,
+    riskPermission === "KILL" ? "Research alerts paused — suppress notifications" : riskAllowsTrading ? `Risk governor ${riskPermission}` : `Risk governor says ${riskPermission}`,
     topScannerHits.length > 0 ? `${topScannerHits.length} live scanner candidates ranked` : "No live scanner candidates",
     systemHealth?.dbConnected === false ? "Database health check failed" : "Database connected",
     pendingLearning > 0 ? `${pendingLearning} learning predictions need processing` : "Learning queue clear",

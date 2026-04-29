@@ -6,14 +6,14 @@ const root = process.cwd();
 const read = (path: string) => readFileSync(join(root, path), 'utf8');
 
 describe('admin commander command state strip', () => {
-  it('surfaces hard command state, risk source, kill switch, data age, and allowed action', () => {
+  it('surfaces hard command state, risk source, alert posture, data age, and allowed action', () => {
     const page = read('app/admin/commander/page.tsx');
 
     expect(page).toContain('CommandStateStrip');
     expect(page).toContain('Command State');
     expect(page).toContain('deriveCommandState');
     expect(page).toContain('Allowed Next Action');
-    expect(page).toContain('KILL SWITCH ON');
+    expect(page).toContain('RESEARCH ALERTS PAUSED');
     expect(page).toContain('Data Age');
     expect(page).toContain('Risk Age');
     expect(page).toContain('sourceLabel(brief.risk.source)');

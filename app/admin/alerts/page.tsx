@@ -77,7 +77,7 @@ export default function AlertsPage() {
   const goHits = sortedHits.filter((hit) => hit.permission === "GO");
   const watchHits = sortedHits.filter((hit) => hit.permission === "WAIT");
   const riskAlerts = [
-    risk?.killSwitchActive ? "Kill switch is active" : null,
+    risk?.killSwitchActive ? "Research alerts are paused" : null,
     risk && risk.dailyDrawdown > 0.015 ? `Daily drawdown elevated: ${(risk.dailyDrawdown * 100).toFixed(2)}%` : null,
     risk && risk.correlationRisk > 0.6 ? `Correlation risk high: ${(risk.correlationRisk * 100).toFixed(0)}%` : null,
     risk && risk.activePositions >= risk.maxPositions ? "Max position count reached" : null,

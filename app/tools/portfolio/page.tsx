@@ -1828,7 +1828,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
               </div>
               <div className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
                 <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Risk Load</div>
-                <div className="mt-0.5 truncate text-sm font-black" style={{ color: riskLoadLabel === 'Elevated' ? '#EF4444' : riskLoadLabel === 'Moderate' ? '#FBBF24' : '#10B981' }} title={riskLoadLabel}>{riskLoadLabel}</div>
+                <div className="mt-0.5 truncate text-sm font-black" style={{ color: riskLoadLabel === 'High' ? '#EF4444' : riskLoadLabel === 'Medium' ? '#FBBF24' : '#10B981' }} title={riskLoadLabel}>{riskLoadLabel}</div>
                 <div className="mt-0.5 truncate text-[11px] text-slate-500">{`Bias ${biasLabel}`}</div>
               </div>
             </div>

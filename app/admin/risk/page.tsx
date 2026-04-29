@@ -54,9 +54,9 @@ export default function RiskPage() {
             <span className="text-white/90 text-sm font-mono">{risk?.sizeMultiplier?.toFixed(2) ?? "—"}×</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-white/55 text-sm">Kill Switch</span>
+            <span className="text-white/55 text-sm">Alert Posture</span>
             <StatusPill
-              label={killActive ? "ACTIVE" : "OFF"}
+              label={killActive ? "ALERTS PAUSED" : "ALERTS ACTIVE"}
               tone={killActive ? "red" : "green"}
             />
           </div>

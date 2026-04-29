@@ -563,7 +563,7 @@ export default function MorningBriefPage() {
             {actionBusy === "open_rescore" ? "Re-scoring..." : "At Open Re-score"}
           </button>
           <button onClick={() => runMorningAction("broker_sync")} disabled={Boolean(actionBusy)} className="rounded-md border border-white/10 px-4 py-2 text-sm font-black text-slate-200 disabled:opacity-60">
-            {actionBusy === "broker_sync" ? "Syncing..." : "Sync Fills"}
+            {actionBusy === "broker_sync" ? "Reconciling..." : "Reconcile Tags"}
           </button>
           <button onClick={() => runMorningAction("review_email")} disabled={Boolean(actionBusy)} className="rounded-md border border-red-400/30 px-4 py-2 text-sm font-black text-red-200 disabled:opacity-60">
             {actionBusy === "review_email" ? "Sending..." : "Review Email"}
@@ -737,9 +737,9 @@ export default function MorningBriefPage() {
 
               {brokerSync ? (
                 <AdminCard>
-                  <SectionTitle title="Broker / Fill Sync" subtitle="Reconciles broker-tagged journal fills against portfolio positions." />
+                  <SectionTitle title="Journal Tag Reconciliation" subtitle="Reconciles tagged journal fills against portfolio positions." />
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    <Metric label="Broker Linked" value={brokerSync.brokerLinked ? "YES" : "NO"} tone={brokerSync.brokerLinked ? "green" : "yellow"} />
+                    <Metric label="Journal Tagged" value={brokerSync.brokerLinked ? "YES" : "NO"} tone={brokerSync.brokerLinked ? "green" : "yellow"} />
                     <Metric label="Source" value={brokerSync.source.replace(/_/g, " ")} />
                     <Metric label="Tagged Trades" value={String(brokerSync.brokerTaggedTrades)} />
                     <Metric label="Open Tagged" value={String(brokerSync.openBrokerTaggedTrades)} />
@@ -1042,7 +1042,7 @@ function DataTruthStrip({ brief }: { brief: MorningBrief }) {
   ].filter(Boolean) as string[];
   const riskWarnings = [
     !hasLiveRisk ? `Risk source is ${formatSource(brief.risk.source)}.` : null,
-    brief.risk.killSwitchActive ? "Risk kill switch active." : null,
+    brief.risk.killSwitchActive ? "Research alerts paused." : null,
     ...brief.risk.notes.slice(0, 2),
   ].filter(Boolean) as string[];
   const learningWarnings = [
@@ -1125,7 +1125,7 @@ function DataTruthStrip({ brief }: { brief: MorningBrief }) {
     },
   ];
   const riskFlags = [
-    brief.risk.killSwitchActive ? "Risk kill switch active." : null,
+    brief.risk.killSwitchActive ? "Research alerts paused." : null,
     !hasLiveRisk ? `Risk source is ${formatSource(brief.risk.source)}.` : null,
     workerFreshness !== "fresh" ? `Worker freshness is ${workerFreshness}.` : null,
     (brief.health.errorsCount ?? 0) > 0 ? `${brief.health.errorsCount ?? 0} scanner errors.` : null,
