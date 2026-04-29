@@ -150,23 +150,77 @@ function TerminalTabRail({
   );
 }
 
-function TerminalSubviewFrame({ tab, symbol, children }: { tab: Exclude<TerminalTab, 'Close Calendar'>; symbol: string; children: React.ReactNode }) {
+const TERMINAL_SUBVIEW_FOCUS: Record<Exclude<TerminalTab, 'Close Calendar'>, string> = {
+  'Options Terminal': 'Chain Quality',
+  'Options Confluence': 'Setup Alignment',
+  'Options Flow': 'Flow Estimate',
+  Crypto: 'Derivatives Map',
+  Flow: 'Capital Pressure',
+  'Time Gravity': 'Gravity Map',
+  'Time Confluence': 'Final Timing Check',
+};
+
+function TerminalSubviewMetric({ label, value, tone = '#CBD5E1', detail }: { label: string; value: string; tone?: string; detail: string }) {
+  return (
+    <div className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+      <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
+      <div className="mt-0.5 truncate text-sm font-black" style={{ color: tone }} title={value}>{value}</div>
+      <div className="mt-0.5 truncate text-[11px] text-slate-500" title={detail}>{detail}</div>
+    </div>
+  );
+}
+
+function TerminalSubviewFrame({
+  tab,
+  symbol,
+  asset,
+  onSelectTab,
+  children,
+}: {
+  tab: Exclude<TerminalTab, 'Close Calendar'>;
+  symbol: string;
+  asset: 'crypto' | 'equity';
+  onSelectTab: (tab: TerminalTab) => void;
+  children: React.ReactNode;
+}) {
   const meta = TERMINAL_TAB_META[tab];
+  const sequence: TerminalTab[] = asset === 'crypto'
+    ? ['Crypto', 'Flow', 'Time Gravity', 'Time Confluence']
+    : ['Options Terminal', 'Options Confluence', 'Options Flow', 'Flow', 'Time Gravity', 'Time Confluence'];
+  const idx = sequence.indexOf(tab);
+  const adjacentTab: TerminalTab = idx >= 0 && idx < sequence.length - 1 ? sequence[idx + 1] : sequence[0];
+  const focusLabel = TERMINAL_SUBVIEW_FOCUS[tab];
 
   return (
     <div className="space-y-3">
-      <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+      <section
+        className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
+        aria-label={`Terminal ${tab} command header`}
+      >
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)]">
           <div>
-            <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Terminal subview</div>
-            <h2 className="mt-1 text-base font-black text-white">{tab} check for {symbol}</h2>
+            <div className="flex flex-wrap items-center gap-2 text-[0.68rem] font-extrabold uppercase tracking-[0.16em]">
+              <span className="text-emerald-300">Terminal subview</span>
+              <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">{meta.eyebrow}</span>
+              <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">Symbol {symbol}</span>
+            </div>
+            <h2 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">{tab} check for {symbol}</h2>
             <p className="mt-1 text-xs leading-5 text-slate-400">{meta.description}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button type="button" onClick={() => onSelectTab('Close Calendar')} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 transition-colors hover:bg-amber-400/15">Back to Calendar</button>
+              <button type="button" onClick={() => onSelectTab(adjacentTab)} className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 transition-colors hover:bg-emerald-400/15">Open {adjacentTab}</button>
+              <a href={`/tools/workspace?tab=backtest&symbol=${encodeURIComponent(symbol)}`} className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Open Backtest</a>
+            </div>
           </div>
-          <div className="rounded-full border border-slate-700/70 bg-slate-950/60 px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-500">
-            {meta.eyebrow}
+
+          <div className="grid self-start gap-1.5 sm:grid-cols-2">
+            <TerminalSubviewMetric label="Symbol" value={symbol} tone={asset === 'crypto' ? '#F59E0B' : '#818CF8'} detail={`${asset.toUpperCase()} mechanics path`} />
+            <TerminalSubviewMetric label="View" value={tab} tone="#10B981" detail={meta.eyebrow} />
+            <TerminalSubviewMetric label="Focus" value={focusLabel} tone="#A5B4FC" detail="Completes the mechanics packet" />
+            <TerminalSubviewMetric label="Next Check" value={adjacentTab} tone="#38BDF8" detail="Continue the mechanics sequence" />
           </div>
         </div>
-      </div>
+      </section>
       {children}
     </div>
   );
@@ -314,6 +368,9 @@ export default function TerminalPage() {
             </Link>
             <Link href="/tools/workspace?tab=backtest" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15">
               Continue to Backtest
+            </Link>
+            <Link href="/tools/workflow" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">
+              Open Workflow
             </Link>
             </div>
           </div>
@@ -474,7 +531,7 @@ export default function TerminalPage() {
       {/* -- OPTIONS TERMINAL ----------------------------------------------- */}
       {tab === 'Options Terminal' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Options Terminal">
-          <TerminalSubviewFrame tab="Options Terminal" symbol={sym}>
+          <TerminalSubviewFrame tab="Options Terminal" symbol={sym} asset={asset} onSelectTab={setTab}>
             <Suspense fallback={<div className="py-12 text-center text-xs text-slate-500">Loading Options Terminal…</div>}>
               <OptionsTerminalView />
             </Suspense>
@@ -485,7 +542,7 @@ export default function TerminalPage() {
       {/* -- CRYPTO TERMINAL ------------------------------------------------ */}
       {tab === 'Crypto' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Crypto Terminal">
-          <TerminalSubviewFrame tab="Crypto" symbol={sym}>
+          <TerminalSubviewFrame tab="Crypto" symbol={sym} asset={asset} onSelectTab={setTab}>
             <Suspense fallback={<div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminal…</div>}>
               <CryptoTerminalView />
             </Suspense>
@@ -818,7 +875,7 @@ export default function TerminalPage() {
       {/* ─── Options Confluence (v1 flagship decision engine) ─── */}
       {tab === 'Options Confluence' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Options Confluence Engine">
-          <TerminalSubviewFrame tab="Options Confluence" symbol={sym}>
+          <TerminalSubviewFrame tab="Options Confluence" symbol={sym} asset={asset} onSelectTab={setTab}>
             <OptionsConfluence embeddedInTerminal />
           </TerminalSubviewFrame>
         </UpgradeGate>
@@ -827,7 +884,7 @@ export default function TerminalPage() {
       {/* ─── Options Flow (v1 flow intelligence) ─── */}
       {tab === 'Options Flow' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Options Flow Intelligence">
-          <TerminalSubviewFrame tab="Options Flow" symbol={sym}>
+          <TerminalSubviewFrame tab="Options Flow" symbol={sym} asset={asset} onSelectTab={setTab}>
             <OptionsFlow embeddedInTerminal />
           </TerminalSubviewFrame>
         </UpgradeGate>
@@ -836,7 +893,7 @@ export default function TerminalPage() {
       {/* ─── Time Gravity Map (v1 time scanner) ─── */}
       {tab === 'Time Gravity' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Time Gravity Map">
-          <TerminalSubviewFrame tab="Time Gravity" symbol={sym}>
+          <TerminalSubviewFrame tab="Time Gravity" symbol={sym} asset={asset} onSelectTab={setTab}>
             <TimeScanner symbol={sym} embeddedInTerminal />
           </TerminalSubviewFrame>
         </UpgradeGate>
@@ -845,7 +902,7 @@ export default function TerminalPage() {
       {/* ─── Time Confluence Scanner ─── */}
       {tab === 'Time Confluence' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Time Confluence Scanner">
-          <TerminalSubviewFrame tab="Time Confluence" symbol={sym}>
+          <TerminalSubviewFrame tab="Time Confluence" symbol={sym} asset={asset} onSelectTab={setTab}>
             <ConfluenceScanner embeddedInTerminal />
             <div className="mt-6">
               <TimeConfluenceWidget showMacro showMicro showCalendar assetClass={asset} />
