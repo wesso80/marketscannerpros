@@ -542,7 +542,7 @@ function CryptoDetailPageContent() {
 
         {error && (
           <div className="rounded-lg border border-rose-500/50 bg-rose-500/10 p-4 text-center">
-            <p className="text-sm text-rose-300">❌ {error}</p>
+            <p className="text-sm text-rose-300"><strong>ERROR</strong> {error}</p>
             <button
               type="button"
               onClick={() => selectedCoin && loadCoinBySymbolOrId(selectedCoin)}

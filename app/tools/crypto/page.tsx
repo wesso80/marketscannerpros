@@ -89,16 +89,16 @@ interface SidebarItem {
 }
 
 const sectionItems: SidebarItem[] = [
-  { id: 'overview', label: 'Overview', icon: '📊', description: 'Market cap, dominance & global metrics' },
-  { id: 'search', label: 'Coin Search', icon: '🔍', description: 'Find any cryptocurrency' },
-  { id: 'market', label: 'Market Heatmap', icon: '🗺️', description: 'Visual market performance' },
-  { id: 'trending', label: 'Trending', icon: '🔥', description: 'Hot coins & searches' },
-  { id: 'movers', label: 'Top Movers', icon: '📈', description: 'Biggest gainers & losers' },
-  { id: 'sectors', label: 'Sectors', icon: '🏷️', description: 'Category performance' },
-  { id: 'defi', label: 'DeFi', icon: '🏦', description: 'Decentralized finance stats' },
-  { id: 'dex', label: 'DEX Pools', icon: '🔄', description: 'Hot trading pairs' },
-  { id: 'newpools', label: 'New Pools', icon: '🌱', description: 'Just created liquidity' },
-  { id: 'listings', label: 'New Coins', icon: '🆕', description: 'Newly listed tokens' },
+  { id: 'overview', label: 'Overview', icon: 'OVR', description: 'Market cap, dominance & global metrics' },
+  { id: 'search', label: 'Coin Search', icon: 'SRC', description: 'Find any cryptocurrency' },
+  { id: 'market', label: 'Market Heatmap', icon: 'MAP', description: 'Visual market performance' },
+  { id: 'trending', label: 'Trending', icon: 'TRD', description: 'Hot coins & searches' },
+  { id: 'movers', label: 'Top Movers', icon: 'MOV', description: 'Biggest gainers & losers' },
+  { id: 'sectors', label: 'Sectors', icon: 'SEC', description: 'Category performance' },
+  { id: 'defi', label: 'DeFi', icon: 'DFI', description: 'Decentralized finance stats' },
+  { id: 'dex', label: 'DEX Pools', icon: 'DEX', description: 'Hot trading pairs' },
+  { id: 'newpools', label: 'New Pools', icon: 'NEW', description: 'Just created liquidity' },
+  { id: 'listings', label: 'New Coins', icon: 'LST', description: 'Newly listed tokens' },
 ];
 
 function clampScore(value: number): number {
@@ -433,8 +433,8 @@ function CryptoCommandCenterContent() {
     <div className="min-h-screen bg-[var(--msp-bg)] text-slate-100">
       {fetchError && (
         <div className="mx-2 mt-2 flex items-center justify-between rounded-md border border-red-500/40 bg-red-900/20 px-4 py-2 text-[13px] text-red-300">
-          <span>⚠️ {fetchError}</span>
-          <button type="button" onClick={() => setFetchError(null)} className="ml-4 text-red-400 hover:text-white">✕</button>
+          <span><strong>WARN</strong> {fetchError}</span>
+          <button type="button" onClick={() => setFetchError(null)} className="ml-4 text-red-400 hover:text-white">Close</button>
         </div>
       )}
       <main className="mx-auto w-full max-w-none space-y-2 px-2 pb-6 pt-3 md:px-3">

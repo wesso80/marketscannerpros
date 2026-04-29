@@ -253,28 +253,28 @@ function getQuickSignals(data: EquityData): {
   // Trend: based on price vs MAs
   const above50 = data.technicals.priceVs50MA > 0;
   const above200 = data.technicals.priceVs200MA > 0;
-  const trend = above50 && above200 
-    ? { label: 'Bullish' as const, icon: '📈', color: 'text-green-400' }
-    : !above50 && !above200 
-      ? { label: 'Bearish' as const, icon: '📉', color: 'text-red-400' }
-      : { label: 'Neutral' as const, icon: '➖', color: 'text-yellow-400' };
+  const trend = above50 && above200
+    ? { label: 'Bullish' as const, icon: 'UP', color: 'text-green-400' }
+    : !above50 && !above200
+      ? { label: 'Bearish' as const, icon: 'DN', color: 'text-red-400' }
+      : { label: 'Neutral' as const, icon: 'MID', color: 'text-yellow-400' };
   
   // Momentum: based on price change and 52-week position
   const weekPos = data.technicals.week52Position;
   const changePercent = data.quote.changePercent || 0;
   const momentum = weekPos > 70 && changePercent > 0
-    ? { label: 'Strong' as const, icon: '🔥', color: 'text-green-400' }
+    ? { label: 'Strong' as const, icon: 'STR', color: 'text-green-400' }
     : weekPos < 30 || changePercent < -2
-      ? { label: 'Weak' as const, icon: '❄️', color: 'text-red-400' }
-      : { label: 'Neutral' as const, icon: '⚖️', color: 'text-slate-400' };
+      ? { label: 'Weak' as const, icon: 'WK', color: 'text-red-400' }
+      : { label: 'Neutral' as const, icon: 'MID', color: 'text-slate-400' };
   
   // Volatility: based on beta
   const beta = data.technicals.beta || 1;
   const volatility = beta > 1.5
-    ? { label: 'High' as const, icon: '⚡', color: 'text-yellow-400' }
+    ? { label: 'High' as const, icon: 'HI', color: 'text-yellow-400' }
     : beta < 0.8
-      ? { label: 'Low' as const, icon: '🛡️', color: 'text-teal-300' }
-      : { label: 'Normal' as const, icon: '📊', color: 'text-slate-400' };
+      ? { label: 'Low' as const, icon: 'LO', color: 'text-teal-300' }
+      : { label: 'Normal' as const, icon: 'NORM', color: 'text-slate-400' };
   
   return { trend, momentum, volatility };
 }
@@ -503,7 +503,7 @@ export default function EquityExplorerPage() {
                 className="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 transition-colors hover:bg-slate-800 disabled:bg-slate-800"
                 title="Refresh data"
               >
-                {refreshing ? '⏳' : '🔄'}
+                {refreshing ? 'Loading' : 'Refresh'}
               </button>
             )}
             </div>
@@ -533,7 +533,7 @@ export default function EquityExplorerPage() {
         {/* Error Display */}
         {error && (
           <div className="rounded-lg border border-rose-500/50 bg-rose-500/10 p-4">
-            <p className="text-sm text-rose-300">❌ {error}</p>
+            <p className="text-sm text-rose-300"><strong>ERROR</strong> {error}</p>
           </div>
         )}
 

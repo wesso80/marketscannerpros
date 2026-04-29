@@ -158,40 +158,40 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
     if (data.fundingRates) {
       if (data.fundingRates.avgRate > 0.01) {
         bearishScore += 1;
-        signals.push('⚠️ Funding elevated - longs paying shorts');
+        signals.push('WARN Funding elevated - longs paying shorts');
       } else if (data.fundingRates.avgRate < -0.01) {
         bullishScore += 1;
-        signals.push('🟢 Negative funding - shorts paying longs');
+        signals.push('BULL Negative funding - shorts paying longs');
       }
     }
 
     if (data.longShort) {
       if (data.longShort.overall === 'Bullish') {
         bullishScore += 1;
-        signals.push('🟢 L/S ratio favors bulls');
+        signals.push('BULL L/S ratio favors bulls');
       } else if (data.longShort.overall === 'Bearish') {
         bearishScore += 1;
-        signals.push('🔴 L/S ratio favors bears');
+        signals.push('BEAR L/S ratio favors bears');
       }
     }
 
     if (data.openInterest?.summary) {
       if (data.openInterest.summary.marketSignal === 'risk_on') {
         bullishScore += 1;
-        signals.push('🟢 OI building - risk-on mode');
+        signals.push('BULL OI building - risk-on mode');
       } else if (data.openInterest.summary.marketSignal === 'risk_off') {
         bearishScore += 1;
-        signals.push('🔴 OI declining - deleveraging');
+        signals.push('BEAR OI declining - deleveraging');
       }
     }
 
     if (data.liquidations?.summary) {
       if (data.liquidations.summary.marketBias === 'shorts_liquidated') {
         bullishScore += 1;
-        signals.push('🟢 Shorts getting liquidated - bullish');
+        signals.push('BULL Shorts getting liquidated - bullish');
       } else if (data.liquidations.summary.marketBias === 'longs_liquidated') {
         bearishScore += 1;
-        signals.push('🔴 Longs getting liquidated - bearish');
+        signals.push('BEAR Longs getting liquidated - bearish');
       }
     }
 

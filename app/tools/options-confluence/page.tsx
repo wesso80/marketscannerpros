@@ -1299,9 +1299,9 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false }:
 
   type LadderState = 'valid' | 'partial' | 'fail';
   const stateVisual = (state: LadderState) => {
-    if (state === 'valid') return { label: 'VALID', icon: '✔', containerClass: 'border border-emerald-500/40 bg-emerald-500/15', textClass: 'text-emerald-500' };
+    if (state === 'valid') return { label: 'VALID', icon: 'OK', containerClass: 'border border-emerald-500/40 bg-emerald-500/15', textClass: 'text-emerald-500' };
     if (state === 'partial') return { label: 'PARTIAL', icon: '!', containerClass: 'border border-amber-500/40 bg-amber-500/15', textClass: 'text-amber-500' };
-    return { label: 'FAIL', icon: '✖', containerClass: 'border border-red-500/40 bg-red-500/15', textClass: 'text-red-500' };
+    return { label: 'FAIL', icon: 'NO', containerClass: 'border border-red-500/40 bg-red-500/15', textClass: 'text-red-500' };
   };
 
   const ladderSteps = result ? (() => {
@@ -2682,7 +2682,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false }:
                       <span key={tf} className={`inline-flex items-center gap-[0.2rem] rounded-full border px-[0.45rem] py-[0.12rem] text-[0.64rem] font-bold ${level && !level.tagged ? 'border-violet-500/40 bg-violet-500/20 text-violet-200' : 'border-slate-500/30 bg-slate-500/15 text-slate-400'}`}>
                         {tf}
                         {level && <span className="text-[0.58rem]">{level.score.toFixed(0)}</span>}
-                        {level?.tagged && <span className="text-[0.54rem] text-slate-500">✓tag</span>}
+                        {level?.tagged && <span className="text-[0.54rem] text-slate-500">tagged</span>}
                       </span>
                     );
                   }) : (
@@ -2843,7 +2843,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false }:
                       <div className="text-[0.74rem] font-extrabold text-slate-200">
                         {item.label}
                         {copilotPresence?.watchSet.includes(item.label) && (
-                          <span className="ml-1.5 text-[0.66rem] font-bold text-[var(--msp-accent)]">★ AI Watching</span>
+                          <span className="ml-1.5 text-[0.66rem] font-bold text-[var(--msp-accent)]">AI Watching</span>
                         )}
                       </div>
                       <div className="text-[0.74rem] font-extrabold text-[var(--msp-muted)]">{item.score}%</div>
@@ -2978,7 +2978,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false }:
                 <div className={`text-[0.92rem] font-black tracking-[0.4px] ${modeAccentClass}`}>{lensDisplayMode}</div>
               </div>
               <div className="mt-[0.4rem] text-[0.78rem] text-slate-300">
-                {marketRegimeIntel?.regime === 'CHAOTIC_NEWS' && '🚫 CAUTION ENVIRONMENT — chaotic/news-dominated phase detected. Preserve capital and monitor for stability.'}
+                {marketRegimeIntel?.regime === 'CHAOTIC_NEWS' && 'CAUTION ENVIRONMENT — chaotic/news-dominated phase detected. Preserve capital and monitor for stability.'}
                 {institutionalLensMode === 'OBSERVE' && marketRegimeIntel?.regime !== 'CHAOTIC_NEWS' && 'Market reading mode: structure, flow, and regime first. Analysis prioritized over action.'}
                 {institutionalLensMode === 'WATCH' && 'Setup identified but not permitted. Focus on pattern, confluence, and confirmation triggers.'}
                 {institutionalLensMode === 'ARMED' && 'Institutional alignment confirmed. Primary analysis panel prioritized; non-essential analysis collapsed.'}
@@ -3016,7 +3016,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false }:
 
                 {result.institutionalIntent.primary_intent === 'UNKNOWN' ? (
                   <div className="mt-2 text-[0.8rem] text-red-300">
-                    🚫 {result.institutionalIntent.reason === 'DATA_INSUFFICIENT' ? 'Intent unavailable — DATA_INSUFFICIENT' : 'Intent unavailable'}
+                    {result.institutionalIntent.reason === 'DATA_INSUFFICIENT' ? 'Intent unavailable — DATA_INSUFFICIENT' : 'Intent unavailable'}
                   </div>
                 ) : (
                   <>
@@ -3044,10 +3044,10 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false }:
                       <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
                         <div className="text-[0.64rem] font-bold uppercase text-slate-500">Expected Path</div>
                         <div className="text-[0.77rem] font-extrabold text-slate-200">
-                          {result.institutionalIntent.expected_path === 'chop' ? '↔ CHOP' :
-                           result.institutionalIntent.expected_path === 'mean-revert' ? '↩ MEAN REVERT' :
-                           result.institutionalIntent.expected_path === 'expand' ? '↗ EXPAND' :
-                           '🚀 EXPANSION CONTINUATION'}
+                          {result.institutionalIntent.expected_path === 'chop' ? 'CHOP' :
+                           result.institutionalIntent.expected_path === 'mean-revert' ? 'MEAN REVERT' :
+                           result.institutionalIntent.expected_path === 'expand' ? 'EXPAND' :
+                           'EXPANSION CONTINUATION'}
                         </div>
                       </div>
                       <div className="rounded-lg bg-black/20 p-[0.42rem_0.5rem]">
@@ -3325,7 +3325,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false }:
                     <div className="mt-[0.25rem] flex flex-wrap gap-[0.35rem]">
                       {result.institutionalIntent.key_levels.liquidity_pools.map((pool, idx) => (
                         <span key={idx} className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-[0.5rem] py-[3px] text-[0.7rem] font-bold text-cyan-300">
-                          🏊 {pool}
+                          {pool}
                         </span>
                       ))}
                     </div>
@@ -3535,7 +3535,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false }:
                   {/* Bear Scenario */}
                   <div className="rounded-[10px] border border-red-500/25 bg-red-500/5 p-[0.55rem_0.65rem]">
                     <div className="flex items-center justify-between gap-2">
-                      <div className="text-[0.66rem] font-extrabold uppercase text-red-400">🐻 Bear Case</div>
+                      <div className="text-[0.66rem] font-extrabold uppercase text-red-400">Bear Case</div>
                       {result.aiMarketState.scenarios.bear?.probability != null && (
                         <div className="text-[0.78rem] font-black text-red-300">{result.aiMarketState.scenarios.bear.probability}%</div>
                       )}
@@ -3601,7 +3601,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false }:
                 {/* Invalidation Level */}
                 {result.aiMarketState.thesis?.invalidationLevel != null && (
                   <div className="mt-[0.45rem] text-[0.74rem] font-bold text-red-300/80">
-                    ⛔ Framework invalidation: Below ${result.aiMarketState.thesis.invalidationLevel.toFixed(2)} — all scenarios void
+                    Framework invalidation: Below ${result.aiMarketState.thesis.invalidationLevel.toFixed(2)} — all scenarios void
                   </div>
                 )}
               </div>
@@ -3678,7 +3678,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false }:
 
                 <div className="grid gap-1">
                   {(adaptiveMatch?.reasons || ['Build profile by logging and closing trades in Trade Journal']).map((reason, idx) => (
-                    <div key={idx} className="text-[0.78rem] text-slate-200">✔ {reason}</div>
+                    <div key={idx} className="text-[0.78rem] text-slate-200">OK {reason}</div>
                   ))}
                 </div>
               </div>
@@ -3725,7 +3725,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false }:
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-2 text-[0.72rem]">
-                <div className="text-emerald-200">LIVE DATA STATUS: Nasdaq BX ✔ • FMV Options ✔</div>
+                <div className="text-emerald-200">LIVE DATA STATUS: Nasdaq BX OK • FMV Options OK</div>
                 <div className="text-slate-400">
                   {liveLatencySeconds !== null ? `Latency: ${liveLatencySeconds.toFixed(1)}s` : 'Latency: n/a'}
                 </div>
@@ -3738,7 +3738,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false }:
             <div className="rounded-[14px] border border-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[0.9rem_1rem]">
               <div className="mb-[0.8rem] flex flex-wrap items-center justify-between gap-3">
                 <div className="text-[0.9rem] font-extrabold tracking-[0.4px] text-slate-200">
-                  🪜 DECISION LADDER
+                  DECISION LADDER
                 </div>
                 <div className="flex items-center gap-2 text-[0.74rem]">
                   <span className="font-bold uppercase text-slate-400">Trade Pipeline:</span>
