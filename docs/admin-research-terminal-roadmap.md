@@ -12,19 +12,19 @@
 |---|---|---|---|
 | 1 | Lockdown & Boundary (UX + Test Lock) | ✅ Complete | _pending push_ |
 | 1.5 | Internal Type Rename (executionReady, broker* symbols, BLOCK→NO_RESEARCH) | ✅ Complete (partial — see notes) | _pending push_ |
-| 2 | Truth Layer | ⬜ Not started | — |
-| 3 | Opportunity Research Board | ⬜ Not started | — |
-| 4 | Symbol Research Terminal | ⬜ Not started | — |
-| 5 | Alerts & Discord | ⬜ Not started | — |
-| 6 | ARCA Admin Research | ⬜ Not started | — |
-| 7 | Journal Learning | ⬜ Not started | — |
-| 8 | Elite UI Polish | ⬜ Not started | — |
+| 2 | Truth Layer | ✅ Complete | `b27ac1df` |
+| 3 | Opportunity Research Board | ✅ Complete | `69cd190c` |
+| 4 | Symbol Research Terminal | ✅ Complete | `e560338a` |
+| 5 | Alerts & Discord | ✅ Complete | `c06c93ad` |
+| 6 | ARCA Admin Research | ✅ Complete | `5bf69dd7` |
+| 7 | Journal Learning | ✅ Complete | `c77bd4a3` |
+| 8 | Elite UI Polish | ✅ Complete | `pending commit` |
 
 Status legend: ⬜ Not started · 🟡 In progress · ✅ Complete · ⚠️ Blocked
 
-**Last session ended at:** Phase 7 shipped — Journal Learning. Created [lib/engines/journalLearning.ts](../lib/engines/journalLearning.ts) (pure pattern-detection: `buildPatternGroups`, `findJournalMatches`, `buildJournalDNA`, `computeJournalPatternBoost`; groups by setup×market×bias; ≥3 in-band cases required for boost; bounded weight 2..6), [app/api/admin/journal-learning/route.ts](../app/api/admin/journal-learning/route.ts) (GET, mines `admin_research_cases`, returns DNA summary + boost; degrades to empty summary when table missing), [app/admin/journal-learning/page.tsx](../app/admin/journal-learning/page.tsx) (workspace-wide rollup cockpit), and [components/admin/AdminJournalDNAPanel.tsx](../components/admin/AdminJournalDNAPanel.tsx). Wired optional `journalPatternBoost` into [lib/engines/internalResearchScore.ts](../lib/engines/internalResearchScore.ts) as `JOURNAL_PATTERN_MATCH` boost. Mounted DNA panel on canonical [/admin/symbol/[symbol]](../app/admin/symbol/[symbol]/page.tsx). Added `Journal Learning (JL)` nav entry. vitest 39 files / 473 tests green (+12 new), build green, boundary guard green.
-**Last commit on main:** `5bf69dd7` (Phase 6)
-**Next action when resuming:** Phase 8 — Elite UI Polish. Create `<AdminCommandPalette />` (Cmd-K), keyboard shortcuts in `<AdminTerminalShell />` (`/` palette, `S` symbol search, `O` opportunity board, `G` Golden Egg, `T` time confluence, `V` DVE, `A` alerts, `D` data health, `J` journal learning, `Esc` close, `Enter` open). Create `<AdminProviderHealthGrid />` and `<AdminWebhookStatusPanel />`. Consolidate `/admin/diagnostics` + `/admin/system` → `/admin/data-health`. Create `/admin/model-diagnostics` and `/admin/backtest-lab` (or rename `/admin/quant`).
+**Last session ended at:** Phase 8 shipped — Elite UI Polish. Added [components/admin/AdminCommandPalette.tsx](../components/admin/AdminCommandPalette.tsx) + [lib/admin/commandPaletteCommands.ts](../lib/admin/commandPaletteCommands.ts) with Cmd/Ctrl+K launcher, `/` open, `Esc` close, `Enter` open selected, and single-letter route jumps (`S/O/G/T/V/A/D/J`). Added [components/admin/AdminProviderHealthGrid.tsx](../components/admin/AdminProviderHealthGrid.tsx) and [components/admin/AdminWebhookStatusPanel.tsx](../components/admin/AdminWebhookStatusPanel.tsx). Consolidated diagnostics into [app/admin/data-health/page.tsx](../app/admin/data-health/page.tsx) + [app/api/admin/data-health/route.ts](../app/api/admin/data-health/route.ts). Created [app/admin/model-diagnostics/page.tsx](../app/admin/model-diagnostics/page.tsx) + [app/api/admin/model-diagnostics/route.ts](../app/api/admin/model-diagnostics/route.ts). Created [app/admin/backtest-lab/page.tsx](../app/admin/backtest-lab/page.tsx) + [app/api/admin/backtest-lab/route.ts](../app/api/admin/backtest-lab/route.ts). Updated [app/admin/layout.tsx](../app/admin/layout.tsx) nav to include Data Health, Model Diagnostics, Backtest Lab; legacy Diagnostics/System retained and relabeled. vitest 40 files / 482 tests green (+9 new), build green, boundary guard green.
+**Last commit on main:** `c77bd4a3` (Phase 7)
+**Next action when resuming:** Roadmap phases 1-8 are complete. Optional follow-ups: retire legacy `/admin/diagnostics` + `/admin/system` once parity is confirmed, and migrate `/admin/quant` workflows into `/admin/backtest-lab` if desired.
 
 ---
 
@@ -248,19 +248,21 @@ Findings from a careful read of [lib/admin/truth-layer.ts](../lib/admin/truth-la
 
 ---
 
-## Phase 8 — Elite UI Polish
+## Phase 8 — Elite UI Polish ✅ SHIPPED
 
 **Goal:** Command palette, shortcuts, missing pages, consolidated diagnostics.
 
-- [ ] Create `<AdminCommandPalette />` — bind Cmd-K
-- [ ] Keyboard shortcuts in `<AdminTerminalShell />`:
+- [x] Create `<AdminCommandPalette />` — bind Cmd-K
+- [x] Keyboard shortcuts in `<AdminTerminalShell />`:
   - `/` palette · `S` symbol search · `O` opportunity board · `G` Golden Egg · `T` time confluence · `V` DVE · `A` alerts · `D` data health · `J` journal learning · `Esc` close · `Enter` open selected
-- [ ] Create `<AdminProviderHealthGrid />`
-- [ ] Create `<AdminWebhookStatusPanel />`
-- [ ] Consolidate `/admin/diagnostics` + `/admin/system` → [/admin/data-health](../app/admin/data-health)
-- [ ] Create [/admin/model-diagnostics](../app/admin/model-diagnostics)
-- [ ] Create [/admin/backtest-lab](../app/admin/backtest-lab) (or rename `/admin/quant`)
-- [ ] Build + commit
+- [x] Create `<AdminProviderHealthGrid />`
+- [x] Create `<AdminWebhookStatusPanel />`
+- [x] Consolidate `/admin/diagnostics` + `/admin/system` → [/admin/data-health](../app/admin/data-health)
+- [x] Create [/admin/model-diagnostics](../app/admin/model-diagnostics)
+- [x] Create [/admin/backtest-lab](../app/admin/backtest-lab) (kept `/admin/quant` as legacy companion)
+- [x] Tests: [test/admin/commandPaletteCommands.test.ts](../test/admin/commandPaletteCommands.test.ts)
+- [x] Build + commit
+- [x] vitest 40 / 482 green · build green · boundary guard green
 
 ---
 

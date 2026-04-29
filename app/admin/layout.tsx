@@ -4,6 +4,7 @@ import { useState, useEffect, createContext, useContext } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import AdminBoundaryBanner from "@/components/admin/AdminBoundaryBanner";
+import AdminCommandPalette from "@/components/admin/AdminCommandPalette";
 
 // Admin auth context
 const AdminContext = createContext<{
@@ -83,6 +84,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { href: "/admin/quant", label: "Quant Terminal", code: "QT" },
         { href: "/admin/outcomes", label: "Signal Outcomes", code: "SO" },
         { href: "/admin/journal-learning", label: "Journal Learning", code: "JL" },
+        { href: "/admin/backtest-lab", label: "Backtest Lab", code: "BL" },
       ],
     },
     {
@@ -109,8 +111,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     {
       label: "System",
       items: [
-        { href: "/admin/diagnostics", label: "Diagnostics", code: "DX" },
-        { href: "/admin/system", label: "System", code: "SY" },
+        { href: "/admin/data-health", label: "Data Health", code: "DH" },
+        { href: "/admin/model-diagnostics", label: "Model Diagnostics", code: "MD" },
+        { href: "/admin/diagnostics", label: "Diagnostics (legacy)", code: "DX" },
+        { href: "/admin/system", label: "System (legacy)", code: "SY" },
         { href: "/admin/logs", label: "Logs", code: "LG" },
         { href: "/admin/settings", label: "Settings", code: "SE" },
       ],
@@ -286,6 +290,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </main>
       </div>
+      <AdminCommandPalette />
     </AdminContext.Provider>
   );
 }
