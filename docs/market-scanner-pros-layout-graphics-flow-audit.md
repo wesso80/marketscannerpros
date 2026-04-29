@@ -3,6 +3,36 @@
 Audit date: 2026-04-28  
 Scope: App Router pages, current public platform, private admin terminal, shared UI components, graphics assets, navigation flow, trader-grade usability, mobile/readability, and educational safety.
 
+Implementation status update: 2026-04-29
+- Completed: public/admin/operator chrome separation is regression-tested; `/operator` is middleware-gated, noindexed, and explicitly dynamic/no-store; stale static `public/tools-preview.html` now noindexes and redirects to `/tools`.
+- Completed: top nav now labels `/tools` as Workflow; `/tools` now starts with the guided workflow and keeps direct tool access as a secondary directory.
+- Completed: landing hero and preview language now use educational market-intelligence wording, no broker execution wording, provider non-endorsement wording, and workflow-map CTAs.
+- Completed: Scanner ranked results now use Bias, Alignment, Review, Aligned Scenarios, Why This Rank, and mobile-ranked cards instead of a phone-shrunk table as the only result UI.
+- Completed: Dashboard now opens with a morning research start layer: research queue, data health strip, and continue-workflow actions before secondary dashboard lenses.
+- Completed: public account/resource/prompt copy no longer exposes private operator/permission-engine wording, and parked fake fallback scanner candidates were removed.
+- Completed: first emoji cleanup pass on high-visibility professional surfaces: Signal Accuracy title, Portfolio calculator header/method/exposure controls, Portfolio record-close wording, and Backtest gate/action copy.
+- Completed: `/tools/watchlists` is now a noindex redirect into `/tools/workspace?tab=watchlists`; catalog, sitemap, guide, platform knowledge, and symbol action links now point to the Workspace Watchlists tab.
+- Completed: `/tools/ai-analyst`, `/tools/ai-tools`, `/tools/earnings`, and `/tools/earnings-calendar` are noindex legacy redirects; live catalog, mobile nav, guide, email, Discord, and sitemap links now point to Scanner, Workflow, or Research directly. Research now honors `?tab=earnings`, so earnings redirects land on the Earnings tab rather than the default News tab.
+- Completed: Portfolio, Journal, Backtest, Alerts, and Settings remain available as embedded Workspace tabs; discovery links now point to `/tools/workspace?tab=...` instead of the standalone redirect URLs, including catalog, workflow, mobile nav, onboarding, partner demo, email, Discord, push, sitemap, Terminal handoff, and platform knowledge.
+- Completed: Workspace-owned action links now preserve existing query params while landing on canonical Workspace tabs: Golden Egg quick actions, Scanner alert actions, alert history journal/backtest actions, options-terminal journal prefills, options scanner journal prefills, derivatives/explorer/watchlist action grids, operator shortcuts, alert emails/toasts, workflow events, test emails, and trade notifications.
+- Completed: Terminal, Explorer, Research, Dashboard, Macro, and Golden Egg duplicate route promotions now land on canonical hub URLs with query-tab support. Redirects, catalog/workflow links, mobile/tools nav, partner/resource CTAs, sitemap entries, platform knowledge, guide routes, workflow events, image mappings, symbol action links, and redirected child-route metadata were canonicalized/noindexed while preserving embedded legacy page modules used by the hubs.
+- Completed: first Golden Egg flagship polish pass added a proper validation-workbench header, consolidated symbol/timeframe/asset controls, surfaced verdict/data-trust/confluence metrics above the fold, and renamed the main decision packet framing to verdict packet.
+- Completed: wider icon cleanup pass replaced emoji-driven tool catalog icons with short professional visual codes and updated the Workflow directory, Favorites panel, and tools nav tier label rendering.
+- Completed: deeper Dashboard refinement pass added a command-dashboard header, stable queue/data-health/event/news metrics, direct Scanner/Golden Egg/Journal actions, and canonical Backtest/Journal handoffs from Continue Workflow.
+- Completed: shared-surface emoji cleanup removed emoji from onboarding progress badges, pricing feature lists, options structure examples, regime stale-signal banner, and push notification titles.
+- Completed: Portfolio page-local emoji cleanup replaced calculator, risk-state, signed-out, header, add/refresh, and concentration-warning emoji with text labels or compact badges.
+- Completed: canonical advanced tool-surface emoji cleanup removed icon text from Options Flow, Liquidity Sweep, Close Calendar, and Time Scanner labels/loading/error/footer surfaces.
+- Completed: outbound notification emoji cleanup replaced email and Discord subject/header/embed icon text with compact text codes and plain status labels.
+- Completed: component-level research cleanup removed icon text from the scanner research case modal and correlation confluence card.
+- Completed: volatility engine surface cleanup replaced section/card/state icon text with compact layer codes and plain volatility extremes.
+- Completed: Time Scanner route/shell and Options Terminal cleanup removed remaining icon text from headers, legends, and error/watchlist messages.
+- Completed: admin usage analytics cleanup removed emoji from admin headings and feature adoption labels.
+- Completed: derivatives widget cleanup replaced sentiment/funding icon text with compact codes and research-context tooltip wording.
+- Completed: additional direct-admin cleanup removed icon text from AI usage, cost tracking, income/expense, and delete-request admin pages.
+- Completed: deeper direct-admin cleanup removed icon/status emoji from Discord Bridge, trial grants, signal outcomes, and admin scalper pages.
+- Completed: public website cleanup removed remaining icon text and directive wording from the Open Interest guide, partner demo compliance proof, resource guide process checks, and public home risk-analysis warning copy.
+- Still open: final Dashboard refinement from real screenshots, real screenshot asset system, remaining lower-traffic page-local emoji migration, broader Golden Egg visual QA, broader mobile QA, and the self-learning playbook layer after enough labeled outcomes exist.
+
 Important visual note: this is a code-and-asset audit. It is strong enough to set priorities, but final visual grades should be tightened with screenshots or Playwright captures for desktop and mobile because rendered spacing, cropping, image blur, table overflow, and real contrast cannot be fully proven from source alone.
 
 ## 1. Executive Design Verdict
@@ -54,22 +84,22 @@ Important visual note: this is a code-and-asset audit. It is strong enough to se
 | `/tools/dashboard` | authenticated | Command Center start page | B- | C+ | REBUILD |
 | `/tools/scanner` | public-app | Ranked educational scan candidates | B | B- | REFINE |
 | `/tools/golden-egg` | pro_trader | Single-symbol confluence packet | B | B | REFINE |
-| `/tools/backtest` | pro_trader | Historical simulation lab | B- | B- | REFINE |
-| `/tools/journal` | pro | Learning and trade review log | B | B | REFINE |
+| `/tools/backtest` | pro_trader | Historical simulation lab | B- | B- | REDIRECTED into Workspace |
+| `/tools/journal` | pro | Learning and trade review log | B | B | REDIRECTED into Workspace |
 | `/tools/workspace` | pro | Saved research/workflow hub | B- | B- | REFINE |
-| `/tools/portfolio` | pro | User-entered holdings analytics | C+ | C+ | REFINE |
-| `/tools/alerts` | pro | Educational condition alerts | C+ | C+ | REFINE |
-| `/tools/watchlists` | public-app | Saved symbols/watchlists | C+ | C+ | MERGE into Workspace |
-| `/tools/settings` | authenticated | User app settings | C+ | B- | KEEP |
+| `/tools/portfolio` | pro | User-entered holdings analytics | C+ | C+ | REDIRECTED into Workspace |
+| `/tools/alerts` | pro | Educational condition alerts | C+ | C+ | REDIRECTED into Workspace |
+| `/tools/watchlists` | public-app | Saved symbols/watchlists | C+ | C+ | REDIRECTED into Workspace |
+| `/tools/settings` | authenticated | User app settings | C+ | B- | REDIRECTED into Workspace |
 | `/tools/referrals` | authenticated | Referral management | B- | B | KEEP |
-| `/tools/ai-analyst` | pro | AI research assistant page | B- | B- | MERGE into ARCA panel |
-| `/tools/ai-tools` | pro | AI tool collection | C | C | MERGE |
+| `/tools/ai-analyst` | pro | AI research assistant page | B- | B- | REDIRECTED into Scanner / ARCA panel |
+| `/tools/ai-tools` | pro | AI tool collection | C | C | REDIRECTED into Workflow |
 | `/tools/research` | public-app | Research hub | B- | B- | REFINE |
 | `/tools/news` | public-app | News feed | C+ | C+ | MERGE into Research |
 | `/tools/macro` | pro | Macro dashboard | B- | B- | REFINE |
 | `/tools/economic-calendar` | public-app | Macro event calendar | B- | B | MERGE into Research/Macro |
-| `/tools/earnings-calendar` | public-app | Earnings calendar | B- | B | MERGE into Research |
-| `/tools/earnings` | public-app | Earnings research | C+ | C+ | MERGE |
+| `/tools/earnings-calendar` | public-app | Earnings calendar | B- | B | REDIRECTED into Research |
+| `/tools/earnings` | public-app | Earnings research | C+ | C+ | REDIRECTED into Research |
 | `/tools/markets` | public-app | Market overview | B- | B- | REFINE |
 | `/tools/market-movers` | public-app | Gainers/losers and movers | C+ | C | MERGE into Markets |
 | `/tools/gainers-losers` | public-app | Duplicative movers view | C | C | MERGE |

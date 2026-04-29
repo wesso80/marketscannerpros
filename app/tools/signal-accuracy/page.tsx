@@ -130,7 +130,7 @@ export default function SignalAccuracyPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">🎯 Historical Observation Accuracy</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Historical Research Accuracy</h1>
           <p className="text-slate-400 text-sm mt-1">Review how educational AI research observations behaved after scanner horizons elapsed.</p>
         </div>
         <div className="flex items-center gap-3">
@@ -211,7 +211,7 @@ export default function SignalAccuracyPage() {
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="text-[11px] text-slate-500 uppercase tracking-wider border-b border-slate-700/30">
-                          <th className="text-left px-4 py-2">Direction</th>
+                          <th className="text-left px-4 py-2">Context</th>
                           <th className="text-left px-3 py-2">Horizon</th>
                           <th className="text-right px-3 py-2">Observations</th>
                           <th className="text-right px-3 py-2">Win Rate</th>
@@ -232,7 +232,7 @@ export default function SignalAccuracyPage() {
                                 <span className={`inline-flex items-center gap-1 font-medium ${
                                   s.direction === 'bullish' ? 'text-emerald-400' : s.direction === 'bearish' ? 'text-red-400' : 'text-amber-400'
                                 }`}>
-                                  {s.direction === 'bullish' ? '▲' : s.direction === 'bearish' ? '▼' : '●'} {s.direction}
+                                  {s.direction === 'bullish' ? 'Bullish' : s.direction === 'bearish' ? 'Bearish' : 'Neutral'}
                                 </span>
                               </td>
                               <td className="px-3 py-2 text-slate-300">{s.horizon_label || `${s.horizon_minutes}m`}</td>
@@ -274,7 +274,7 @@ export default function SignalAccuracyPage() {
                   <thead>
                     <tr className="text-[11px] text-slate-500 uppercase tracking-wider border-b border-slate-700/30">
                       <th className="text-left px-4 py-2">Symbol</th>
-                      <th className="text-left px-3 py-2">Direction</th>
+                      <th className="text-left px-3 py-2">Context</th>
                       <th className="text-left px-3 py-2">Scanner</th>
                       <th className="text-right px-3 py-2">Score</th>
                       <th className="text-right px-3 py-2">Move</th>
@@ -288,7 +288,7 @@ export default function SignalAccuracyPage() {
                         <td className="px-4 py-2 font-medium text-white">{s.symbol}</td>
                         <td className="px-3 py-2">
                           <span className={s.direction === 'bullish' ? 'text-emerald-400' : s.direction === 'bearish' ? 'text-red-400' : 'text-amber-400'}>
-                            {s.direction === 'bullish' ? '▲' : s.direction === 'bearish' ? '▼' : '●'} {s.direction}
+                            {s.direction === 'bullish' ? 'Bullish' : s.direction === 'bearish' ? 'Bearish' : 'Neutral'}
                           </span>
                         </td>
                         <td className="px-3 py-2 text-slate-400">{s.scanner_type}</td>

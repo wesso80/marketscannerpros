@@ -98,7 +98,7 @@ function avgTriggerInterval(history: AlertHistoryItem[]) {
   return `${hours}h`;
 }
 
-export function AlertsContent() {
+export function AlertsContent({ embeddedInWorkspace = false }: { embeddedInWorkspace?: boolean } = {}) {
   const { tier, isLoading } = useUserTier();
   const { isLocked: riskLocked } = useRiskPermission();
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
@@ -248,11 +248,17 @@ export function AlertsContent() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-none space-y-4 px-4 py-6 md:px-6">
+    <div className={`mx-auto w-full max-w-none space-y-4 ${embeddedInWorkspace ? 'px-0 py-0' : 'px-4 py-6 md:px-6'}`}>
+      {embeddedInWorkspace && (
+        <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2">
+          <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Alerts review</div>
+          <div className="mt-1 text-xs text-slate-400">User-defined notifications, delivery status, triggered history, and alert cleanup.</div>
+        </div>
+      )}
       <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-100">
         Alerts are user-defined notifications only. Triggered alerts are not trading signals, financial advice, or recommendations to buy, sell, hold, short, or trade any asset.
       </div>
-      <ComplianceDisclaimer compact />
+      {!embeddedInWorkspace && <ComplianceDisclaimer compact />}
 
       <section className="rounded-xl border border-slate-800 bg-slate-900/40 px-3 py-3 md:h-[88px] md:px-6">
         <div className="grid h-full grid-cols-1 items-center gap-3 md:grid-cols-[1.2fr_1fr_1fr]">
@@ -363,7 +369,7 @@ export function AlertsContent() {
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2">
               <a href="/tools/scanner" className="rounded-xl border border-slate-800 bg-slate-200/5 px-3 py-2 text-center text-xs font-semibold text-slate-100">Scanner</a>
-              <a href="/tools/journal" className="rounded-xl border border-slate-800 bg-slate-200/5 px-3 py-2 text-center text-xs font-semibold text-slate-100">Journal</a>
+              <a href="/tools/workspace?tab=journal" className="rounded-xl border border-slate-800 bg-slate-200/5 px-3 py-2 text-center text-xs font-semibold text-slate-100">Journal</a>
             </div>
           </div>
         </div>

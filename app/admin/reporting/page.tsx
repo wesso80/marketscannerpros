@@ -271,7 +271,7 @@ export default function AdminReportingPage() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
         <div>
           <h1 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#E5E7EB", margin: 0 }}>
-            📋 Nasdaq Usage Reporting
+            Nasdaq Usage Reporting
           </h1>
           <p style={{ color: "#9CA3AF", fontSize: "0.85rem", margin: "0.25rem 0 0" }}>
             Nasdaq Reporting Policy v2.23 — Monthly subscriber usage reports
@@ -283,7 +283,7 @@ export default function AdminReportingPage() {
           rel="noopener noreferrer"
           style={{ ...btnSecondary, textDecoration: "none", fontSize: "0.8rem" }}
         >
-          📖 Nasdaq Data-Client Portal
+          Nasdaq Data-Client Portal
         </a>
       </div>
 
@@ -305,7 +305,7 @@ export default function AdminReportingPage() {
       {/* ========== LIVE SNAPSHOT ========== */}
       <div style={cardStyle}>
         <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#10B981", marginTop: 0, marginBottom: "1rem" }}>
-          📡 Live Subscriber Snapshot
+          Live Subscriber Snapshot
         </h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(140px, 100%), 1fr))", gap: "0.75rem" }}>
           <div style={statBox}>
@@ -348,7 +348,7 @@ export default function AdminReportingPage() {
       {/* ========== GENERATE REPORT ========== */}
       <div style={cardStyle}>
         <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#10B981", marginTop: 0, marginBottom: "1rem" }}>
-          ⚡ Generate Monthly Report
+          Generate Monthly Report
         </h2>
         <div style={{ display: "flex", alignItems: "flex-end", gap: "1rem", flexWrap: "wrap" }}>
           <div style={{ flex: "0 0 200px" }}>
@@ -378,7 +378,7 @@ export default function AdminReportingPage() {
           background: "rgba(245, 158, 11, 0.08)",
         }}>
           <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#F59E0B", marginTop: 0, marginBottom: "0.75rem" }}>
-            ⚠️ Upcoming Deadlines
+            Upcoming Deadlines
           </h2>
           {reports.filter(r => r.status === "draft" && daysUntilDue(r) <= 10).map(r => {
             const days = daysUntilDue(r);
@@ -407,7 +407,7 @@ export default function AdminReportingPage() {
       {/* ========== REPORTS TABLE ========== */}
       <div style={cardStyle}>
         <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#10B981", marginTop: 0, marginBottom: "1rem" }}>
-          📑 Reports History
+          Reports History
         </h2>
 
         {reports.length === 0 ? (
@@ -500,7 +500,7 @@ export default function AdminReportingPage() {
       {reports.length > 0 && (
         <div style={cardStyle}>
           <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#10B981", marginTop: 0, marginBottom: "1rem" }}>
-            📊 Tier Breakdown (Latest Report)
+            Tier Breakdown (Latest Report)
           </h2>
           {(() => {
             const latest = reports[0];
@@ -531,7 +531,7 @@ export default function AdminReportingPage() {
       {monthlyHistory.length > 0 && (
         <div style={cardStyle}>
           <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#10B981", marginTop: 0, marginBottom: "1rem" }}>
-            📈 Monthly Subscriber History (Last 12 Months)
+            Monthly Subscriber History (Last 12 Months)
           </h2>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
@@ -564,7 +564,7 @@ export default function AdminReportingPage() {
       {/* ========== POLICY REFERENCE ========== */}
       <div style={cardStyle}>
         <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#10B981", marginTop: 0, marginBottom: "1rem" }}>
-          📖 Nasdaq Reporting Policy Reference
+          Nasdaq Reporting Policy Reference
         </h2>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", fontSize: "0.85rem" }}>
           <div>
@@ -594,7 +594,7 @@ export default function AdminReportingPage() {
           fontSize: "0.8rem",
           color: "#93C5FD",
         }}>
-          ℹ️ Report at least one Subscriber for each Nasdaq data product received (regardless of technical or administrative use waivers).
+          Report at least one Subscriber for each Nasdaq data product received (regardless of technical or administrative use waivers).
           Submit via the <a href="https://data.nasdaq.com" target="_blank" rel="noopener noreferrer" style={{ color: "#60A5FA" }}>Nasdaq Data-Client Portal</a>.
           Contact <a href="mailto:DataOps@Nasdaq.com" style={{ color: "#60A5FA" }}>DataOps@Nasdaq.com</a> with questions.
         </div>
@@ -603,7 +603,7 @@ export default function AdminReportingPage() {
       {/* ========== SQL MIGRATION ========== */}
       <div style={cardStyle}>
         <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#10B981", marginTop: 0, marginBottom: "0.75rem" }}>
-          🗄️ Database Migration (041)
+          Database Migration (041)
         </h2>
         <p style={{ color: "#9CA3AF", fontSize: "0.8rem", marginBottom: "0.75rem" }}>
           Run this SQL in your Neon console if the <code style={{ color: "#10B981" }}>nasdaq_usage_reports</code> table doesn&apos;t exist yet:

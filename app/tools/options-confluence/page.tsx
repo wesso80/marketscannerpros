@@ -604,7 +604,7 @@ type AdaptiveConfidenceBand = 'LOW' | 'MEDIUM' | 'HIGH' | 'EXTREME';
 type OperatorViewMode = 'guided' | 'advanced';
 type TrapDoorKey = 'evidence' | 'contracts' | 'narrative' | 'logs';
 
-export default function OptionsConfluenceScanner() {
+export default function OptionsConfluenceScanner({ embeddedInTerminal = false }: { embeddedInTerminal?: boolean } = {}) {
   const { tier, isLoading: isTierLoading } = useUserTier();
   const { setPageData } = useAIPageContext();
   const [symbol, setSymbol] = useState("");
@@ -890,7 +890,7 @@ export default function OptionsConfluenceScanner() {
     const signalEvent = createWorkflowEvent<UnifiedSignal>({
       eventType: 'signal.created',
       workflowId,
-      route: '/tools/options-confluence',
+      route: '/tools/terminal?tab=options-confluence',
       module: 'options_confluence',
       entity: {
         entity_type: 'signal',
@@ -926,7 +926,7 @@ export default function OptionsConfluenceScanner() {
       eventType: 'candidate.created',
       workflowId,
       parentEventId: signalEvent.event_id,
-      route: '/tools/options-confluence',
+      route: '/tools/terminal?tab=options-confluence',
       module: 'options_confluence',
       entity: {
         entity_type: 'candidate',
@@ -963,7 +963,7 @@ export default function OptionsConfluenceScanner() {
         eventType: 'trade.plan.created',
         workflowId,
         parentEventId: candidateEvent.event_id,
-        route: '/tools/options-confluence',
+        route: '/tools/terminal?tab=options-confluence',
         module: 'options_confluence',
         entity: {
           entity_type: 'trade_plan',
@@ -2313,6 +2313,7 @@ export default function OptionsConfluenceScanner() {
       title="Options Confluence Scanner"
       image="/assets/scanners/options-confluence.png"
       subtitle="Get intelligent strike & expiration analysis based on Time Confluence data. Uses 50% levels, decompression timing, and Greeks-aware risk assessment."
+      embedded={embeddedInTerminal}
     >
       <ComplianceDisclaimer compact variant="options" />
       <div className="mb-3 rounded-lg border border-blue-500/25 bg-blue-500/10 px-3 py-2 text-[11px] leading-relaxed text-blue-100">

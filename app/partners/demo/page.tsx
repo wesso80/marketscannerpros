@@ -4,61 +4,61 @@ import Link from "next/link";
 /* ─── Platform capabilities for broker pitch ─── */
 const capabilities = [
   {
-    icon: "📊",
+    icon: "SCAN",
     title: "Multi-Asset Scanner",
     description: "Scan 10,000+ equities, crypto, options, and commodities with 15+ technical indicators. Returns structured alignment labels — never buy/sell directives.",
     tier: "All tiers",
   },
   {
-    icon: "🥚",
+    icon: "GE",
     title: "Golden Egg Analysis",
     description: "Single-symbol deep analysis combining technicals, macro regime, options flow, time confluence, and AI commentary into a structured scenario report.",
     tier: "Pro Trader",
   },
   {
-    icon: "🤖",
+    icon: "AI",
     title: "ARCA AI Analyst",
     description: "GPT-4.1 powered Q&A system for market analysis, technical commentary, and Pine Script development. Mandatory disclaimers on every response.",
     tier: "All tiers",
   },
   {
-    icon: "⏱",
+    icon: "TIME",
     title: "Time Confluence Engine",
     description: "Multi-timeframe candle close analysis with 50% retracement levels and weighted decompression targets. Unique analytical edge.",
     tier: "Pro Trader",
   },
   {
-    icon: "📈",
+    icon: "OPT",
     title: "Options Flow & Confluence",
     description: "Put/call ratios, IV rank, max pain, unusual activity detection, and open interest distribution. Full options analytics dashboard.",
     tier: "Pro Trader",
   },
   {
-    icon: "🔬",
+    icon: "BT",
     title: "Strategy Backtesting",
     description: "User-defined strategy backtester against historical data. Returns win rate, profit factor, max drawdown, and equity curves with mandatory limitations disclaimer.",
     tier: "Pro Trader",
   },
   {
-    icon: "📋",
+    icon: "JRNL",
     title: "Portfolio & Journal",
     description: "Paper trade portfolio tracker with P&L, plus a trade journal with analytics, streak tracking, and pattern recognition across historical entries.",
     tier: "Pro+",
   },
   {
-    icon: "🌍",
+    icon: "MACRO",
     title: "Macro Intelligence",
     description: "Fear/greed indices, sector heatmaps, market breadth, economic calendar, earnings calendar, news sentiment — all in one dashboard.",
     tier: "Pro+",
   },
   {
-    icon: "🛡",
+    icon: "RISK",
     title: "Risk Metrics Engine",
     description: "Rule-based risk evaluation for simulated positions: daily loss limits, portfolio heat caps, R:R minimums, position count limits.",
     tier: "Pro Trader",
   },
   {
-    icon: "💹",
+    icon: "CRYP",
     title: "Crypto Terminal",
     description: "Crypto-specific command center with derivatives data, liquidation analysis, DeFi stats, dominance tracking, and new listings monitor.",
     tier: "Pro+",
@@ -70,30 +70,30 @@ const integrations = [
   {
     model: "White-Label Embed",
     description: "Full MSP platform embedded in your client portal via iframe or subdomain. Your branding, our engine.",
-    icon: "🏷",
+    icon: "WL",
     effort: "Low",
   },
 
   {
     model: "Co-Branded Platform",
     description: "Joint-branded instance with your logo, colours, and domain. Full customisation of the user experience.",
-    icon: "🤝",
+    icon: "CO",
     effort: "Medium",
   },
   {
     model: "Authorised Rep Model",
     description: "MSP operates under your AFSL as an authorised representative. Your licence, our technology — fully covered by your existing compliance framework.",
-    icon: "📜",
+    icon: "LEGAL",
     effort: "Legal review",
   },
 ];
 
 /* ─── Revenue models ─── */
 const revenueModels = [
-  { model: "SaaS Fee", description: "Fixed monthly/annual fee for platform access", icon: "💰" },
-  { model: "Per-Seat Pricing", description: "Pay per active user accessing MSP tools", icon: "👤" },
-  { model: "Revenue Share", description: "Percentage of premium tier fees from your clients", icon: "📊" },
-  { model: "Custom Enterprise", description: "Tailored pricing for large-scale deployments", icon: "🏢" },
+  { model: "SaaS Fee", description: "Fixed monthly/annual fee for platform access", icon: "SaaS" },
+  { model: "Per-Seat Pricing", description: "Pay per active user accessing MSP tools", icon: "SEAT" },
+  { model: "Revenue Share", description: "Percentage of premium tier fees from your clients", icon: "REV" },
+  { model: "Custom Enterprise", description: "Tailored pricing for large-scale deployments", icon: "ENT" },
 ];
 
 export default function PartnerDemoPage() {
@@ -417,15 +417,15 @@ export default function PartnerDemoPage() {
               What We&apos;ve Already Done
             </h3>
             <ul style={{ fontSize: 14, color: "#cbd5e1", lineHeight: 2, margin: 0, padding: 0, listStyle: "none" }}>
-              <li>✅ 350+ text changes across 95+ source files — removing directive, advisory, and predictive language</li>
-              <li>✅ All outputs use educational framing: &quot;Conditions Aligned&quot; not &quot;Buy Signal&quot;</li>
-              <li>✅ Mandatory disclaimers on every AI response, backtest result, and tool page</li>
-              <li>✅ No execution capability — zero broker connections, zero order submission</li>
-              <li>✅ Paper trade simulation only — clearly labelled throughout</li>
-              <li>✅ General Advice Warning, footer disclaimer, and dedicated disclaimer page — MSP does not hold an AFSL and operates under the partner&apos;s licence</li>
-              <li>✅ Risk metrics engine uses &quot;simulated entries&quot; language — never permission/execution</li>
-              <li>✅ AI system prompts explicitly forbid financial advice, directive language</li>
-              <li>✅ Full Legal Briefing Pack (v1.3) prepared for external counsel review</li>
+              <li>Completed: 350+ text changes across 95+ source files removing directive, advisory, and predictive language</li>
+              <li>Completed: outputs use educational framing such as &quot;Conditions Aligned&quot; rather than &quot;Buy Signal&quot;</li>
+              <li>Completed: mandatory disclaimers on every AI response, backtest result, and tool page</li>
+              <li>Completed: no execution capability, broker connections, or order submission</li>
+              <li>Completed: paper trade simulation only, clearly labelled throughout</li>
+              <li>Completed: General Advice Warning, footer disclaimer, and dedicated disclaimer page; MSP does not hold an AFSL and operates under the partner&apos;s licence</li>
+              <li>Completed: risk metrics engine uses simulation-language and review-state wording</li>
+              <li>Completed: AI system prompts explicitly forbid financial advice and directive language</li>
+              <li>Completed: Full Legal Briefing Pack (v1.3) prepared for external counsel review</li>
             </ul>
           </div>
 
@@ -512,12 +512,12 @@ export default function PartnerDemoPage() {
             {[
               { href: "/tools/scanner", label: "Market Scanner" },
               { href: "/tools/golden-egg", label: "Golden Egg" },
-              { href: "/tools/ai-analyst", label: "ARCA AI Analyst" },
-              { href: "/tools/options-confluence", label: "Options Terminal" },
-              { href: "/tools/crypto", label: "Crypto Terminal" },
-              { href: "/tools/backtest", label: "Backtester" },
-              { href: "/tools/portfolio", label: "Portfolio Tracker" },
-              { href: "/tools/journal", label: "Trade Journal" },
+              { href: "/tools/scanner", label: "ARCA AI Panel" },
+              { href: "/tools/terminal?tab=options-confluence", label: "Options Terminal" },
+              { href: "/tools/explorer?tab=crypto-command", label: "Crypto Terminal" },
+              { href: "/tools/workspace?tab=backtest", label: "Backtester" },
+              { href: "/tools/workspace?tab=portfolio", label: "Portfolio Tracker" },
+              { href: "/tools/workspace?tab=journal", label: "Trade Journal" },
             ].map((tool, i) => (
               <Link key={i} href={tool.href} style={{
                 display: "block",

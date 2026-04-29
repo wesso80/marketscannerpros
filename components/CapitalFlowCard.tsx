@@ -364,14 +364,14 @@ export default function CapitalFlowCard({
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
             <div style={{ color: 'var(--msp-text-faint)', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>Risk Metrics Engine</div>
             <div style={{ color: flow.institutional_risk_governor.executionAllowed ? '#10B981' : '#EF4444', fontSize: '0.72rem', fontWeight: 800 }}>
-              {flow.institutional_risk_governor.executionAllowed ? 'CONDITIONS MET' : 'CONDITIONS NOT MET'}
+              {flow.institutional_risk_governor.executionAllowed ? 'REVIEW CLEAR' : 'REVIEW BLOCKED'}
             </div>
           </div>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.8rem', color: '#CBD5E1', fontSize: '0.72rem' }}>
             <span><strong>Risk Mode:</strong> {flow.institutional_risk_governor.riskMode.replace('_', ' ')}</span>
             <span><strong>IRS:</strong> {toNum(flow.institutional_risk_governor.irs).toFixed(2)}</span>
-            <span><strong>Capital:</strong> {Math.round(toNum(flow.institutional_risk_governor.capital?.usedPercent) * 100)}% used</span>
+            <span><strong>Exposure Context:</strong> {Math.round(toNum(flow.institutional_risk_governor.capital?.usedPercent) * 100)}% used</span>
             <span><strong>Correlation:</strong> {flow.institutional_risk_governor.correlation?.severity || 'N/A'}</span>
             <span><strong>Drawdown:</strong> {toNum(flow.institutional_risk_governor.drawdown?.dailyR).toFixed(1)}R</span>
           </div>
@@ -387,7 +387,7 @@ export default function CapitalFlowCard({
           )}
 
           <div style={{ color: '#A7F3D0', fontSize: '0.7rem' }}>
-            <strong>Size Formula:</strong>{' '}
+            <strong>Context Formula:</strong>{' '}
             {toNum(flow.institutional_risk_governor.sizing?.baseSize).toFixed(2)} × {toNum(flow.institutional_risk_governor.sizing?.flowStateMultiplier).toFixed(2)} × {toNum(flow.institutional_risk_governor.sizing?.riskGovernorMultiplier).toFixed(2)} × {toNum(flow.institutional_risk_governor.sizing?.personalPerformanceMultiplier).toFixed(2)} = {toNum(flow.institutional_risk_governor.sizing?.finalSize).toFixed(2)}
           </div>
 

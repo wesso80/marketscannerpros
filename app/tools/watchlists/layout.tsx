@@ -1,27 +1,31 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Watchlists',
+  title: 'Watchlists | Workspace',
   description:
-    'Monitor and organize symbols for educational market scanning, watchlists, live quotes, and research workflow staging.',
+    'Watchlists now live inside Workspace for saved research, alerts, journal notes, and workflow organization.',
   openGraph: {
-    title: 'Watchlists | MarketScanner Pros',
+    title: 'Workspace Watchlists | MarketScanner Pros',
     description:
-      'Monitor and organize symbols for tactical scanning with live market data.',
-    url: 'https://marketscannerpros.app/tools/watchlists',
+      'Organize symbols inside the MarketScanner Pros Workspace workflow.',
+    url: 'https://marketscannerpros.app/tools/workspace?tab=watchlists',
     siteName: 'MarketScanner Pros',
     images: [{ url: '/scan-banner.png', width: 1200, height: 630, alt: 'MarketScanner Pros — Watchlists' }],
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Watchlists | MarketScanner Pros',
+    title: 'Workspace Watchlists | MarketScanner Pros',
     description:
-      'Monitor and organize symbols for tactical scanning with live market data.',
+      'Organize symbols inside the MarketScanner Pros Workspace workflow.',
     images: ['/scan-banner.png'],
   },
   alternates: {
-    canonical: 'https://marketscannerpros.app/tools/watchlists',
+    canonical: 'https://marketscannerpros.app/tools/workspace?tab=watchlists',
+  },
+  robots: {
+    index: false,
+    follow: true,
   },
 };
 

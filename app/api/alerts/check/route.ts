@@ -300,7 +300,7 @@ async function triggerAlert(alert: Alert, triggerPrice: number) {
               </p>
             </div>
             
-            <a href="https://marketscannerpros.app/tools/alerts" 
+            <a href="https://marketscannerpros.app/tools/workspace?tab=alerts"
                style="display: inline-block; background: #10b981; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">
               View All Alerts →
             </a>
@@ -311,7 +311,7 @@ async function triggerAlert(alert: Alert, triggerPrice: number) {
             
             <hr style="border: none; border-top: 1px solid #334155; margin: 20px 0;" />
             <p style="color: #64748b; font-size: 11px;">
-              MarketScanner Pros • <a href="https://marketscannerpros.app/tools/alerts" style="color: #64748b;">Manage Alerts</a>
+              MarketScanner Pros • <a href="https://marketscannerpros.app/tools/workspace?tab=alerts" style="color: #64748b;">Manage Alerts</a>
             </p>
           </div>
         `,

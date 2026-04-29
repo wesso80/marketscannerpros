@@ -54,7 +54,7 @@ interface EconomicIndicatorsResponse {
 }
 
 type CategoryKey = 'Energy' | 'Metals' | 'Agriculture';
-type PermissionState = 'YES' | 'CONDITIONAL' | 'NO';
+type ReviewState = 'YES' | 'CONDITIONAL' | 'NO';
 type ImpulseType = 'INFLATION' | 'GROWTH' | 'DEFLATION' | 'MIXED';
 type TrendDirection = 'UP' | 'FLAT' | 'DOWN';
 type DriverState = 'TAILWIND' | 'NEUTRAL' | 'HEADWIND';
@@ -64,8 +64,8 @@ type VolRegime = 'COMPRESSION' | 'EXPANSION';
 interface DerivedState {
   impulseType: ImpulseType;
   rotationLeader: CategoryKey;
-  permission: PermissionState;
-  permissionReason: string;
+  reviewState: ReviewState;
+  reviewReason: string;
   usdImpact: DriverState;
   realRatesImpact: RateState;
   volRegime: VolRegime;
@@ -109,7 +109,7 @@ const COMMODITY_ICONS: { [key: string]: string } = {
   WHEAT: '🌾',
 };
 
-const permissionBadge = {
+const reviewBadge = {
   YES: 'border-emerald-400/40 bg-emerald-500/10 text-emerald-300',
   CONDITIONAL: 'border-amber-400/40 bg-amber-500/10 text-amber-300',
   NO: 'border-rose-400/40 bg-rose-500/10 text-rose-300',
@@ -337,19 +337,19 @@ export default function CommoditiesPage() {
         volSuitability * 0.15
     );
 
-    const permission: PermissionState = score >= 70 ? 'YES' : score >= 45 ? 'CONDITIONAL' : 'NO';
-    const longsAllowed = permission !== 'NO' && impulseType !== 'DEFLATION';
-    const shortsAllowed = permission === 'YES' || impulseType === 'DEFLATION';
-    const breakoutsAllowed = permission === 'YES' && volRegime === 'EXPANSION';
-    const meanReversionAllowed = permission !== 'NO' && (volRegime === 'EXPANSION' || impulseType === 'MIXED');
+    const reviewState: ReviewState = score >= 70 ? 'YES' : score >= 45 ? 'CONDITIONAL' : 'NO';
+    const longsAllowed = reviewState !== 'NO' && impulseType !== 'DEFLATION';
+    const shortsAllowed = reviewState === 'YES' || impulseType === 'DEFLATION';
+    const breakoutsAllowed = reviewState === 'YES' && volRegime === 'EXPANSION';
+    const meanReversionAllowed = reviewState !== 'NO' && (volRegime === 'EXPANSION' || impulseType === 'MIXED');
 
     const signalQuality: 'HIGH' | 'MEDIUM' | 'LOW' = score >= 72 ? 'HIGH' : score >= 50 ? 'MEDIUM' : 'LOW';
     const impulseStability: 'STABLE' | 'CHOPPY' = rotationClarity >= 40 && breadthScore >= 55 ? 'STABLE' : 'CHOPPY';
 
-    const permissionReason =
-      permission === 'YES'
+    const reviewReason =
+      reviewState === 'YES'
         ? `${impulseType === 'MIXED' ? 'Mixed but trending' : impulseType} impulse observed with broad participation.`
-        : permission === 'CONDITIONAL'
+        : reviewState === 'CONDITIONAL'
           ? `${impulseType} conditions are incomplete; indicators suggest caution.`
           : `Low participation and poor alignment with USD/rates backdrop; conditions unclear.`;
 
@@ -363,8 +363,8 @@ export default function CommoditiesPage() {
     return {
       impulseType,
       rotationLeader,
-      permission,
-      permissionReason,
+      reviewState,
+      reviewReason,
       usdImpact,
       realRatesImpact,
       volRegime,
@@ -408,7 +408,7 @@ export default function CommoditiesPage() {
         `Commodities: ${data.summary.gainers} gainers, ${data.summary.losers} losers. ` +
         `Top Gainer: ${topGainerName} (${topGainerPct === 'N/A' ? 'N/A' : `+${topGainerPct}%`}). ` +
         `Top Loser: ${topLoserName} (${topLoserPct === 'N/A' ? 'N/A' : `${topLoserPct}%`}). ` +
-        `Impulse: ${derivedState?.impulseType || 'MIXED'} | Status: ${derivedState?.permission || 'CONDITIONAL'}` : 
+        `Impulse: ${derivedState?.impulseType || 'MIXED'} | Review: ${derivedState?.reviewState || 'CONDITIONAL'}` :
         'Loading commodity data...';
       
       setPageData({
@@ -546,8 +546,8 @@ export default function CommoditiesPage() {
               <article className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <h2 className="text-sm font-semibold text-white/90">Commodities Analysis Gate</h2>
-                  <span className={`rounded-md border px-2 py-1 text-[11px] font-semibold ${permissionBadge[derivedState.permission]}`}>
-                    STATUS: {derivedState.permission}
+                  <span className={`rounded-md border px-2 py-1 text-[11px] font-semibold ${reviewBadge[derivedState.reviewState]}`}>
+                    REVIEW: {derivedState.reviewState === 'YES' ? 'CLEAR' : derivedState.reviewState === 'CONDITIONAL' ? 'CAUTION' : 'BLOCKED'}
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-2 text-xs">
@@ -567,30 +567,30 @@ export default function CommoditiesPage() {
                     Vol: {derivedState.volRegime}
                   </span>
                 </div>
-                <p className="mt-3 text-sm text-white/70">{derivedState.permissionReason}</p>
+                <p className="mt-3 text-sm text-white/70">{derivedState.reviewReason}</p>
                 <div className="mt-3 grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
                   <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
-                    <span className="text-white/60">Longs</span>
+                    <span className="text-white/60">Long Evidence</span>
                     <span className={derivedState.longsAllowed ? 'text-emerald-300' : 'text-rose-300'}>
-                      {derivedState.longsAllowed ? 'Allowed' : 'Restricted'}
+                      {derivedState.longsAllowed ? 'Clear' : 'Limited'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
-                    <span className="text-white/60">Shorts</span>
+                    <span className="text-white/60">Short Evidence</span>
                     <span className={derivedState.shortsAllowed ? 'text-emerald-300' : 'text-rose-300'}>
-                      {derivedState.shortsAllowed ? 'Allowed' : 'Restricted'}
+                      {derivedState.shortsAllowed ? 'Clear' : 'Limited'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
                     <span className="text-white/60">Breakouts</span>
                     <span className={derivedState.breakoutsAllowed ? 'text-emerald-300' : 'text-amber-300'}>
-                      {derivedState.breakoutsAllowed ? 'Allowed' : 'Restricted'}
+                      {derivedState.breakoutsAllowed ? 'Supportive' : 'Mixed'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
                     <span className="text-white/60">Mean Reversion</span>
                     <span className={derivedState.meanReversionAllowed ? 'text-emerald-300' : 'text-amber-300'}>
-                      {derivedState.meanReversionAllowed ? 'Allowed' : 'Restricted'}
+                      {derivedState.meanReversionAllowed ? 'Supportive' : 'Mixed'}
                     </span>
                   </div>
                 </div>
@@ -763,12 +763,12 @@ export default function CommoditiesPage() {
 
                       <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
                         <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
-                          <span className="text-white/55">Long</span>
-                          <span className={longAllowed ? 'text-emerald-300' : 'text-amber-300'}>{longAllowed ? 'Allowed' : 'Restricted'}</span>
+                          <span className="text-white/55">Long Evidence</span>
+                          <span className={longAllowed ? 'text-emerald-300' : 'text-amber-300'}>{longAllowed ? 'Clear' : 'Limited'}</span>
                         </div>
                         <div className="flex items-center justify-between rounded-md border border-white/10 bg-black/20 px-2 py-1">
-                          <span className="text-white/55">Short</span>
-                          <span className={shortAllowed ? 'text-emerald-300' : 'text-amber-300'}>{shortAllowed ? 'Allowed' : 'Restricted'}</span>
+                          <span className="text-white/55">Short Evidence</span>
+                          <span className={shortAllowed ? 'text-emerald-300' : 'text-amber-300'}>{shortAllowed ? 'Clear' : 'Limited'}</span>
                         </div>
                       </div>
 
@@ -798,35 +798,35 @@ export default function CommoditiesPage() {
             </section>
 
             <section className="mt-4 rounded-xl border border-white/10 bg-white/5 p-4">
-              <h3 className="mb-3 text-sm font-semibold text-white/90">Trading Implications</h3>
+              <h3 className="mb-3 text-sm font-semibold text-white/90">Scenario Implications</h3>
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 text-sm">
                 <div className="rounded-md border border-white/10 bg-black/20 p-3">
-                  <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/70">If You&apos;re Long</div>
+                  <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/70">Long Scenario</div>
                   <p className="text-white/75">
-                    {derivedState.rotationLeader === 'Energy' ? 'Prefer Energy leaders.' : `Prefer ${derivedState.rotationLeader} leaders.`}{' '}
-                    {derivedState.realRatesTrend === 'UP' ? 'Avoid aggressive Gold breakout longs.' : 'Gold longs can be tactical if breadth improves.'}
+                    {derivedState.rotationLeader === 'Energy' ? 'Review Energy leaders.' : `Review ${derivedState.rotationLeader} leaders.`}{' '}
+                    {derivedState.realRatesTrend === 'UP' ? 'Gold breakout evidence is weaker while real rates rise.' : 'Gold evidence improves if breadth confirms.'}
                   </p>
                 </div>
                 <div className="rounded-md border border-white/10 bg-black/20 p-3">
-                  <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/70">If You&apos;re Short</div>
+                  <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/70">Short Scenario</div>
                   <p className="text-white/75">
                     {derivedState.impulseType === 'DEFLATION'
-                      ? 'Deflation pressure supports tactical shorts in weakest complex.'
-                      : 'Fade only overextended spikes when volatility expands and breadth weakens.'}
+                      ? 'Deflation pressure adds evidence for weakness in the weakest complex.'
+                      : 'Overextended spikes need volatility expansion and weaker breadth before relying on a reversal scenario.'}
                   </p>
                 </div>
                 <div className="rounded-md border border-white/10 bg-black/20 p-3">
-                  <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/70">Portfolio Positioning</div>
+                  <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/70">Portfolio Review</div>
                   <p className="text-white/75">
-                    {derivedState.impulseType === 'INFLATION' && 'Inflation impulse building; reduce duration risk and overweight real assets.'}
-                    {derivedState.impulseType === 'GROWTH' && 'Growth impulse active; favor cyclicals and copper-linked exposure.'}
-                    {derivedState.impulseType === 'DEFLATION' && 'Deflation pressure rising; de-risk high beta and avoid weak breakouts.'}
-                    {derivedState.impulseType === 'MIXED' && 'Mixed impulse; keep sizing smaller and prioritize confirmation over anticipation.'}
+                    {derivedState.impulseType === 'INFLATION' && 'Inflation impulse building; review duration risk and real-asset evidence.'}
+                    {derivedState.impulseType === 'GROWTH' && 'Growth impulse active; review cyclicals and copper-linked evidence.'}
+                    {derivedState.impulseType === 'DEFLATION' && 'Deflation pressure rising; high-beta and weak breakout evidence needs extra scrutiny.'}
+                    {derivedState.impulseType === 'MIXED' && 'Mixed impulse; keep assumptions conservative and prioritize confirmation over anticipation.'}
                   </p>
                 </div>
               </div>
               <div className="mt-3 rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm text-white/75">
-                Analysis summary: {derivedState.impulseType} impulse, {derivedState.rotationLeader} leading, status {derivedState.permission.toLowerCase()} ({derivedState.score}/100).
+                Analysis summary: {derivedState.impulseType} impulse, {derivedState.rotationLeader} leading, review {derivedState.reviewState.toLowerCase()} ({derivedState.score}/100).
               </div>
             </section>
 

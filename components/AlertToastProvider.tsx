@@ -104,7 +104,7 @@ function AlertToast({
         {/* Action buttons */}
         <div className="mt-3 flex gap-2">
           <a
-            href="/tools/alerts"
+            href="/tools/workspace?tab=alerts"
             className="flex-1 text-center text-xs font-medium bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded px-3 py-1.5 transition-colors"
           >
             View Alerts

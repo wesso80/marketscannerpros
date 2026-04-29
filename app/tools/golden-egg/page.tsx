@@ -9,7 +9,7 @@ import { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useGoldenEgg, useDVE, useQuote, useRegime, type ScanTimeframe, SCAN_TIMEFRAMES } from '@/app/v2/_lib/api';
-import { Card, SectionHeader, Badge, ScoreBar, UpgradeGate } from '@/app/v2/_components/ui';
+import { Card, Badge, ScoreBar, UpgradeGate } from '@/app/v2/_components/ui';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { REGIME_COLORS, VERDICT_COLORS, CROSS_MARKET, LIFECYCLE_COLORS, REGIME_WEIGHTS } from '@/app/v2/_lib/constants';
 import type { RegimePriority, Verdict, LifecycleState } from '@/app/v2/_lib/types';
@@ -44,7 +44,7 @@ type GETab = typeof GE_TABS[number];
 
 const GE_TAB_META: Record<GETab, { eyebrow: string; description: string }> = {
   Verdict: {
-    eyebrow: '1. Decision packet',
+    eyebrow: '1. Verdict packet',
     description: 'Answer first: alignment, data trust, reference, invalidation, and next check.',
   },
   Chart: {
@@ -57,7 +57,7 @@ const GE_TAB_META: Record<GETab, { eyebrow: string; description: string }> = {
   },
   Fundamentals: {
     eyebrow: '4. Business context',
-    description: 'Check company or asset fundamentals before trusting the setup.',
+    description: 'Check company or asset fundamentals before relying on the setup.',
   },
 };
 
@@ -67,7 +67,7 @@ function GoldenEggTabRail({ activeTab, onSelectTab }: { activeTab: GETab; onSele
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
         <div>
           <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-amber-300">Validation workbench</div>
-          <div className="text-[0.72rem] text-slate-500">Move left to right: verdict, chart, evidence, then fundamentals.</div>
+          <div className="text-[0.72rem] text-slate-500">Move left to right: verdict, chart, evidence detail, then business context.</div>
         </div>
         <a href="/tools/liquidity-sweep" className="rounded-md border border-slate-700/70 bg-slate-900/60 px-3 py-1.5 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-400 no-underline transition hover:border-emerald-400/30 hover:text-emerald-300">
           Open Liquidity Sweep
@@ -127,6 +127,23 @@ function GoldenEggSubviewFrame({
         </div>
       </div>
       {children}
+    </div>
+  );
+}
+
+const GOLDEN_EGG_WORKFLOW_CHECKS = [
+  'Verdict first',
+  'Data trust',
+  'Reference level',
+  'Invalidation',
+  'Next check',
+] as const;
+
+function FlagshipMetric({ label, value, tone = '#94A3B8', title }: { label: string; value: string; tone?: string; title?: string }) {
+  return (
+    <div title={title} className="rounded-lg border border-white/10 bg-slate-950/45 px-3 py-2">
+      <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
+      <div className="mt-1 truncate text-sm font-black" style={{ color: tone }}>{value}</div>
     </div>
   );
 }
@@ -544,7 +561,98 @@ export default function GoldenEggPage() {
 
   return (
     <div className="space-y-4">
-      <SectionHeader title="Golden Egg" subtitle="Single-symbol confluence: regime, bias, volatility, and scenario context" />
+      <div className="rounded-lg border border-amber-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.22)]">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(22rem,0.8fr)]">
+          <div>
+            <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.16em] text-amber-300">Golden Egg validation workbench</div>
+            <h1 className="mt-2 text-2xl font-black tracking-normal text-white md:text-3xl">Validate one symbol before testing history.</h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+              Golden Egg compresses regime, data trust, volatility, options or derivatives context, timing, and invalidation into one educational research packet.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {GOLDEN_EGG_WORKFLOW_CHECKS.map((check) => (
+                <span key={check} className="rounded-md border border-amber-400/20 bg-amber-400/10 px-2.5 py-1 text-[0.68rem] font-bold uppercase tracking-[0.1em] text-amber-100">
+                  {check}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-2">
+            <FlagshipMetric label="Symbol" value={sym} tone="#FBBF24" />
+            <FlagshipMetric label="Assessment" value={ge ? geAssessmentLabel : loading ? 'Loading' : 'Awaiting data'} tone={verdictColor(geAssessment || 'WATCH')} />
+            <FlagshipMetric label="Confluence" value={ge ? `${geConfluenceScore}%` : 'Pending'} tone={verdictColor(geAssessment || 'WATCH')} />
+            <FlagshipMetric label="Data Trust" value={geDataQuality} tone={geDataQualityColor(geDataQuality)} title={geDataQualityTitle} />
+          </div>
+        </div>
+
+        {!isAuthBlocked && (
+          <div className="mt-4 rounded-lg border border-white/10 bg-black/20 p-3">
+            <div className="grid gap-3 lg:grid-cols-[minmax(18rem,0.9fr)_minmax(0,1.1fr)_auto] lg:items-center">
+              <div className="flex min-w-0 items-center gap-2">
+                <input
+                  type="text"
+                  value={symbolInput}
+                  onChange={(event) => setSymbolInput(event.target.value.toUpperCase())}
+                  onKeyDown={(event) => event.key === 'Enter' && handleSymbolSubmit()}
+                  placeholder="Enter symbol..."
+                  className="min-w-0 flex-1 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2 text-sm text-white placeholder-slate-600 focus:border-amber-400 focus:outline-none"
+                />
+                <button type="button" onClick={handleSymbolSubmit} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-2 text-xs font-black uppercase tracking-[0.08em] text-amber-200 transition-colors hover:bg-amber-400/15">Review</button>
+              </div>
+
+              <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
+                {quickSymbols.map((symbol) => (
+                  <button
+                    key={symbol}
+                    type="button"
+                    aria-pressed={symbol === sym}
+                    onClick={() => selectSymbol(symbol)}
+                    className={`shrink-0 rounded-md border px-2.5 py-1.5 text-[11px] font-bold transition-colors ${
+                      symbol === sym ? 'border-amber-400/40 bg-amber-400/10 text-amber-200' : 'border-white/10 bg-white/[0.025] text-slate-400 hover:border-slate-600 hover:text-slate-200'
+                    }`}
+                  >
+                    {symbol}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                <div className="flex overflow-hidden rounded-md border border-[var(--msp-border)]">
+                  {(['auto', 'equity', 'crypto'] as const).map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      aria-pressed={assetType === type}
+                      onClick={() => setAssetType(type)}
+                      className={`px-2.5 py-1.5 text-[11px] font-bold uppercase transition-colors ${assetType === type ? 'bg-emerald-500/20 text-emerald-300' : 'text-slate-500 hover:bg-slate-800/60'}`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex flex-wrap items-center gap-1">
+                  {SCAN_TIMEFRAMES.map((timeframeOption) => (
+                    <button
+                      key={timeframeOption.value}
+                      type="button"
+                      aria-pressed={timeframe === timeframeOption.value}
+                      onClick={() => setTimeframe(timeframeOption.value)}
+                      className={`rounded-md border px-2.5 py-1.5 text-[11px] font-bold transition-colors ${timeframe === timeframeOption.value ? 'border-emerald-500/35 bg-emerald-500/15 text-emerald-300' : 'border-[var(--msp-border)] text-slate-400 hover:bg-slate-800/60'}`}
+                    >
+                      {timeframeOption.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3 rounded-md border border-slate-800 bg-slate-950/35 px-3 py-2 text-xs leading-5 text-slate-400">
+              <span className="font-bold text-slate-200">Next useful check:</span> {ge ? geNextUsefulCheck : 'Choose a symbol to build the verdict packet.'}
+            </div>
+          </div>
+        )}
+      </div>
       <ComplianceDisclaimer collapsible />
 
       {isAuthBlocked && (
@@ -568,70 +676,6 @@ export default function GoldenEggPage() {
           </div>
         </Card>
       )}
-
-      {/* Symbol picker */}
-      {!isAuthBlocked && <div className="flex items-center gap-2 flex-wrap">
-        <div className="flex items-center gap-1">
-          <input
-            type="text"
-            value={symbolInput}
-            onChange={(e) => setSymbolInput(e.target.value.toUpperCase())}
-            onKeyDown={(e) => e.key === 'Enter' && handleSymbolSubmit()}
-            placeholder="Enter symbol..."
-            className="px-3 py-1.5 bg-[var(--msp-panel-2)] border border-[var(--msp-border)] rounded-md text-sm text-white placeholder-slate-600 w-32 focus:border-emerald-500 focus:outline-none"
-          />
-          <button type="button" onClick={handleSymbolSubmit} className="px-3 py-1.5 bg-emerald-500/20 text-emerald-400 rounded-md text-xs hover:bg-emerald-500/30 transition-colors">Go</button>
-        </div>
-        {/* Asset type toggle — always visible for disambiguation */}
-        <div className="flex items-center gap-0 border border-[var(--msp-border)] rounded-md overflow-hidden">
-          {(['auto', 'equity', 'crypto'] as const).map(t => (
-            <button
-              key={t}
-              type="button"
-              aria-pressed={assetType === t}
-              onClick={() => setAssetType(t)}
-              className={`px-2.5 py-1.5 text-[11px] uppercase transition-colors ${
-                assetType === t
-                  ? 'bg-emerald-500/20 text-emerald-400'
-                  : 'text-slate-500 hover:bg-slate-800/60'
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-1 overflow-x-auto max-w-full">
-          {quickSymbols.map((s: string) => (
-            <button
-              key={s}
-              type="button"
-              aria-pressed={s === sym}
-              onClick={() => selectSymbol(s)}
-              className={`px-2 py-1 rounded text-[11px] whitespace-nowrap transition-colors ${
-                s === sym ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-transparent'
-              }`}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      </div>}
-
-      {/* Timeframe selector */}
-      {!isAuthBlocked && <div className="flex items-center gap-1">
-        <span className="text-[11px] text-slate-500 mr-1 uppercase">Timeframe</span>
-        {SCAN_TIMEFRAMES.map(tf => (
-          <button
-            key={tf.value}
-            type="button"
-            aria-pressed={timeframe === tf.value}
-            onClick={() => setTimeframe(tf.value)}
-            className={`px-2.5 py-1 text-[11px] rounded-md transition-colors ${timeframe === tf.value ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-[var(--msp-border)]'}`}
-          >
-            {tf.label}
-          </button>
-        ))}
-      </div>}
 
       {/* ─── Tab Bar ─── */}
       {!isAuthBlocked && <GoldenEggTabRail activeTab={activeTab} onSelectTab={setActiveTab} />}
@@ -684,7 +728,7 @@ export default function GoldenEggPage() {
         <>
           {geLocalDemo && (
             <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-200">
-              <strong>Local demo Golden Egg payload:</strong> live data is unavailable in this local environment, so this decision packet is sample data for workflow testing only. Do not treat it as live market output.
+              <strong>Local demo Golden Egg payload:</strong> live data is unavailable in this local environment, so this verdict packet is sample data for workflow testing only. Do not treat it as live market output.
               {geWarnings.length > 0 && (
                 <ul className="mt-1 list-disc pl-4 text-[11px] text-amber-300/90">
                   {geWarnings.slice(0, 2).map((warning) => <li key={warning}>{warning}</li>)}
@@ -735,7 +779,7 @@ export default function GoldenEggPage() {
 
               <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-3">
                 <div className="mb-2 flex items-center justify-between gap-3 border-b border-slate-800/50 pb-2">
-                  <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-slate-500">Decision Packet</div>
+                  <div className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-slate-500">Verdict Packet</div>
                   <div className="text-[11px] text-slate-500">{ge.meta.assetClass} · {ge.meta.timeframe}</div>
                 </div>
                 <div className="grid gap-2 md:grid-cols-6">

@@ -27,7 +27,7 @@ interface CalendarData {
 }
 
 type SessionTag = 'PRE' | 'RTH' | 'AH';
-type PermissionState = 'YES' | 'CONDITIONAL' | 'NO';
+type ReviewState = 'CLEAR' | 'CAUTION' | 'BLOCKED';
 
 const CATEGORY_ICONS: Record<string, string> = {
   employment: '👔',
@@ -90,8 +90,9 @@ function isJobsOrCpiEvent(eventName: string) {
   return normalized.includes('payroll') || normalized.includes('unemployment') || normalized.includes('cpi');
 }
 
-export default function EconomicCalendarPage() {
+export default function EconomicCalendarPage({ embeddedInResearch = false }: { embeddedInResearch?: boolean } = {}) {
   const { isAdmin, tier, isLoading: tierLoading } = useUserTier();
+  const showAdminTools = isAdmin && !embeddedInResearch;
   const [data, setData] = useState<CalendarData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -182,9 +183,9 @@ export default function EconomicCalendarPage() {
       return mins >= 0 && mins <= 120;
     });
 
-    let permission: PermissionState = 'YES';
-    if (closestHighMinutes <= 30) permission = 'NO';
-    else if (highImpactCountNext24h >= 2 || isFedDay) permission = 'CONDITIONAL';
+    let reviewState: ReviewState = 'CLEAR';
+    if (closestHighMinutes <= 30) reviewState = 'BLOCKED';
+    else if (highImpactCountNext24h >= 2 || isFedDay) reviewState = 'CAUTION';
 
     const volRegime = closestHighMinutes <= 60 || isFedDay
       ? 'Event Shock'
@@ -195,7 +196,7 @@ export default function EconomicCalendarPage() {
     const riskState = isFedDay || isJobsOrCpi ? 'Risk-Off' : highImpactCountNext24h ? 'Neutral' : 'Risk-On';
     const liquidity = closestHighMinutes <= 60 ? 'Spiky' : highImpactCountNext24h >= 2 ? 'Thin' : 'Stable';
     const density = highImpactCountNext24h >= 3 ? 'High' : highImpactCountNext24h >= 1 ? 'Medium' : 'Low';
-    const executionMode = permission === 'NO' ? 'Sit Out' : volRegime === 'Compression' ? 'Trend' : 'Mean Revert';
+    const researchMode = reviewState === 'BLOCKED' ? 'Observation' : volRegime === 'Compression' ? 'Trend review' : 'Mean-reversion review';
 
     const nextMajorEvent = enrichedEvents.find((event) => event.impact === 'high') || null;
     const countdown = (() => {
@@ -213,12 +214,12 @@ export default function EconomicCalendarPage() {
     const dangerWindow = shockEvent ? 'T-30 → T+30' : 'T-15 → T+15';
 
     return {
-      permission,
+      reviewState,
       riskState,
       volRegime,
       liquidity,
       density,
-      executionMode,
+      researchMode,
       highImpactCountNext24h,
       highImpactWithinNext120m,
       isFedDay,
@@ -228,11 +229,11 @@ export default function EconomicCalendarPage() {
       countdown,
       dangerWindow,
       reason:
-        permission === 'NO'
-          ? 'High-impact print is inside immediate danger window; conditions suggest caution.'
-          : permission === 'CONDITIONAL'
-            ? 'Catalyst density is elevated; conditions warrant tighter risk parameters.'
-            : 'No immediate high-impact shock window; normal conditions apply.',
+        reviewState === 'BLOCKED'
+          ? 'High-impact print is inside the immediate shock window; treat this as observation context.'
+          : reviewState === 'CAUTION'
+            ? 'Catalyst density is elevated; require stronger evidence before using the scenario.'
+            : 'No immediate high-impact shock window is detected in the selected horizon.',
     };
   }, [enrichedEvents]);
 
@@ -251,8 +252,8 @@ export default function EconomicCalendarPage() {
   if (!canAccessPortfolioInsights(tier)) return <UpgradeGate requiredTier="pro" feature="Economic Calendar" />;
 
   return (
-    <div className="min-h-screen bg-[var(--msp-bg)] text-white">
-      <ToolsPageHeader
+    <div className={`${embeddedInResearch ? '' : 'min-h-screen bg-[var(--msp-bg)]'} text-white`}>
+      {!embeddedInResearch && <ToolsPageHeader
         badge="MACRO CALENDAR"
         title="Economic Calendar"
         subtitle="Market-moving events fast — FOMC, jobs, inflation, rates."
@@ -273,9 +274,9 @@ export default function EconomicCalendarPage() {
             </button>
           </div>
         }
-      />
+      />}
 
-      <main className="mx-auto max-w-none px-4 pb-16">
+      <main className={embeddedInResearch ? 'mx-auto max-w-none pb-6' : 'mx-auto max-w-none px-4 pb-16'}>
         {loading && <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-8 text-center text-sm text-white/60">Loading macro catalyst map...</div>}
         {error && <div className="mt-6 rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-300">{error}</div>}
 
@@ -286,13 +287,13 @@ export default function EconomicCalendarPage() {
                 <div className="mb-2 flex items-center justify-between">
                   <h2 className="text-sm font-semibold text-white/90">Macro Analysis Gate</h2>
                   <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
-                    gate.permission === 'YES'
+                    gate.reviewState === 'CLEAR'
                       ? 'bg-emerald-500/20 text-emerald-300'
-                      : gate.permission === 'NO'
+                      : gate.reviewState === 'BLOCKED'
                         ? 'bg-rose-500/20 text-rose-300'
                         : 'bg-amber-500/20 text-amber-300'
                   }`}>
-                    STATUS: {gate.permission}
+                    REVIEW: {gate.reviewState}
                   </span>
                 </div>
                 <p className="mb-3 text-sm text-white/70">{gate.reason}</p>
@@ -302,7 +303,7 @@ export default function EconomicCalendarPage() {
                     `Volatility Risk: ${gate.volRegime}`,
                     `Liquidity Window: ${gate.liquidity}`,
                     `Catalyst Density: ${gate.density}`,
-                    `Execution Mode: ${gate.executionMode}`,
+                    `Research Mode: ${gate.researchMode}`,
                   ].map((chip) => (
                     <span key={chip} className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-semibold text-white/80">
                       {chip}
@@ -310,9 +311,9 @@ export default function EconomicCalendarPage() {
                   ))}
                 </div>
                 <ul className="space-y-1 text-xs text-white/70">
-                  <li>• No new size 15 min pre/post high-impact prints.</li>
-                  <li>• Focus on leaders and consider reduced leverage during expansion.</li>
-                  <li>• Avoid breakout chasing when event shock risk is active.</li>
+                  <li>• Treat the 15 min pre/post high-impact window as elevated uncertainty.</li>
+                  <li>• Compare leaders against breadth before relying on a scenario.</li>
+                  <li>• Require post-window confirmation when event shock risk is active.</li>
                 </ul>
               </article>
 
@@ -466,7 +467,7 @@ export default function EconomicCalendarPage() {
                           <div className="col-span-8 sm:col-span-2 flex flex-wrap justify-end gap-1">
                             <button type="button" onClick={() => { /* Future: create alert for this event */ }} className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/70">Set Alert</button>
                             <Link href="/tools/macro" className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/70">Open Macro</Link>
-                            {isAdmin ? <button type="button" onClick={() => { /* Future: post event to Discord */ }} className="rounded-md border border-amber-400/30 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-300">Post</button> : null}
+                            {showAdminTools ? <button type="button" onClick={() => { /* Future: post event to Discord */ }} className="rounded-md border border-amber-400/30 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-300">Post</button> : null}
                           </div>
                         </div>
                       ))}
@@ -480,28 +481,28 @@ export default function EconomicCalendarPage() {
               <article className="rounded-xl border border-white/10 bg-white/5 p-4">
                 <h3 className="mb-2 text-sm font-semibold text-white/90">If High Impact Today</h3>
                 <ul className="space-y-1 text-xs text-white/65">
-                  <li>• Expect vol expansion and opening whipsaw around print windows.</li>
-                  <li>• Focus on leaders; note that volatility is historically elevated.</li>
-                  <li>• Avoid breakout chasing until post-window confirmation.</li>
+                  <li>• Expect volatility expansion and opening whipsaw around print windows.</li>
+                  <li>• Compare leaders with market breadth; volatility is historically elevated.</li>
+                  <li>• Wait for post-window confirmation before escalating a scenario.</li>
                 </ul>
               </article>
               <article className="rounded-xl border border-white/10 bg-white/5 p-4">
                 <h3 className="mb-2 text-sm font-semibold text-white/90">If Low Impact Today</h3>
                 <ul className="space-y-1 text-xs text-white/65">
-                  <li>• Trend-following conditions are generally aligned.</li>
-                  <li>• Normal conditions apply with standard risk awareness.</li>
+                  <li>• Trend-following context is generally cleaner.</li>
+                  <li>• Standard risk review assumptions apply.</li>
                   <li>• Best windows are post-open trend continuation and power hour.</li>
                 </ul>
               </article>
             </section>
 
-            {isAdmin ? (
+            {showAdminTools ? (
               <details className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3">
                 <summary className="cursor-pointer text-sm font-semibold text-white/85">Admin Tools</summary>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button type="button" className="rounded-md border border-amber-400/30 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-300">Post daily macro summary to Discord</button>
                   <button type="button" className="rounded-md border border-amber-400/30 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-300">Schedule pre/post alerts</button>
-                  <button type="button" className="rounded-md border border-rose-400/30 bg-rose-500/10 px-3 py-1.5 text-xs text-rose-300">Override permission output</button>
+                  <button type="button" className="rounded-md border border-rose-400/30 bg-rose-500/10 px-3 py-1.5 text-xs text-rose-300">Override review state</button>
                 </div>
               </details>
             ) : null}

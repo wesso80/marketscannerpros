@@ -210,8 +210,9 @@ type EnrichedNewsItem = DecisionNewsItem & {
   macroMentions: boolean;
 };
 
-export default function NewsSentimentPage() {
+export default function NewsSentimentPage({ embeddedInResearch = false }: { embeddedInResearch?: boolean } = {}) {
   const { tier, isAdmin } = useUserTier();
+  const showAdminTools = isAdmin && !embeddedInResearch;
   const [activeTab, setActiveTab] = useState<TabType>("news");
 
   useEffect(() => {
@@ -396,9 +397,9 @@ export default function NewsSentimentPage() {
     const headlineRisk = aTier24 >= 2 || meanImpact >= 78 ? 'Elevated' : 'Low';
     const liquidityWindow: SessionTag = pre24 >= ah24 && pre24 > 0 ? 'PRE' : ah24 > 0 ? 'AH' : 'RTH';
 
-    let executionMode: 'Trend' | 'Mean-Reversion' | 'Sit Out' = 'Trend';
-    if (volRisk === 'Compression') executionMode = 'Mean-Reversion';
-    if (densityScore >= 78 && volRisk === 'Expansion' && pre24 >= 3) executionMode = 'Sit Out';
+    let researchMode: 'Trend review' | 'Mean-reversion review' | 'Observation' = 'Trend review';
+    if (volRisk === 'Compression') researchMode = 'Mean-reversion review';
+    if (densityScore >= 78 && volRisk === 'Expansion' && pre24 >= 3) researchMode = 'Observation';
 
     const permission: PermissionState =
       densityScore >= 78 && volRisk === 'Expansion' && pre24 >= 3
@@ -429,7 +430,7 @@ export default function NewsSentimentPage() {
       volRisk,
       headlineRisk,
       liquidityWindow,
-      executionMode,
+      researchMode,
       permission,
       reason,
       watchlist24,
@@ -730,7 +731,7 @@ export default function NewsSentimentPage() {
           ? 'CONDITIONAL'
           : 'YES';
 
-    const executionMode = permission === 'NO' ? 'Sit Out' : volRegime === 'Compression' ? 'Trend' : 'Mean Revert';
+    const executionMode = permission === 'NO' ? 'Observation' : volRegime === 'Compression' ? 'Trend review' : 'Mean-reversion review';
     const confidencePct = clamp(Math.round((topNarrativeShare * 100) + Math.min(25, (topNarrative?.avgImpact || 0) / 4)));
 
     const rotationLeaders = groupedNarratives.slice(0, 3).map((group) => group.narrative);
@@ -758,12 +759,12 @@ export default function NewsSentimentPage() {
         permission === 'NO'
           ? ['Observation only until shock window clears.', 'Study mode only, no fresh activity.']
           : permission === 'CONDITIONAL'
-            ? ['Long leaders with tighter risk.', 'Fade overstretched moves only on confirmation.']
-            : ['Trend continuation in confirmed leaders.', 'Normal sizing with discipline.'],
+            ? ['Leaders carry the cleaner research evidence.', 'Overstretched moves need confirmation evidence.']
+              : ['Confirmed leaders show the cleanest continuation context.', 'Use standard risk review assumptions.'],
       briefAvoid:
         volRegime === 'Event Shock'
-          ? ['Breakout chasing into headline spikes.', 'Oversized trades in mixed breadth.']
-          : ['Low quality laggards without catalyst support.', 'Overtrading around conflicting narratives.'],
+            ? ['Headline spikes without confirmation.', 'Mixed-breadth ideas with weak evidence.']
+            : ['Low quality laggards without catalyst support.', 'Repeated entries around conflicting narratives.'],
     };
   }, [filteredNews, groupedNarratives, macroEventCard]);
 
@@ -774,17 +775,17 @@ export default function NewsSentimentPage() {
   // Gate entire page for Pro+ users
   if (!canAccessPortfolioInsights(tier)) {
     return (
-      <div style={{ minHeight: "100vh", background: "#0f172a" }}>
-        <ToolsPageHeader
+      <div style={{ minHeight: embeddedInResearch ? undefined : "100vh", background: embeddedInResearch ? 'transparent' : "#0f172a" }}>
+        {!embeddedInResearch && <ToolsPageHeader
           badge="INTELLIGENCE"
           title="Market Intelligence"
           subtitle="Find news sentiment, earnings catalysts, and insider activity in one view."
           icon="📰"
           backHref="/dashboard"
-        />
-        <main style={{ padding: "24px 16px", display: "flex", justifyContent: "center" }}>
+        />}
+        <main style={{ padding: embeddedInResearch ? "0" : "24px 16px", display: "flex", justifyContent: "center" }}>
           <div style={{ width: "100%", maxWidth: 960 }}>
-            <ComplianceDisclaimer collapsible />
+            {!embeddedInResearch && <ComplianceDisclaimer collapsible />}
             <div style={{ marginTop: 16, display: "flex", justifyContent: "center" }}>
               <UpgradeGate feature="Market Intelligence" requiredTier="pro" />
             </div>
@@ -795,17 +796,17 @@ export default function NewsSentimentPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0f172a" }}>
-      <ToolsPageHeader
+    <div style={{ minHeight: embeddedInResearch ? undefined : "100vh", background: embeddedInResearch ? 'transparent' : "#0f172a" }}>
+      {!embeddedInResearch && <ToolsPageHeader
         badge="INTELLIGENCE"
         title="Market Intelligence"
         subtitle="Find news sentiment, earnings catalysts, and insider activity in one view."
         icon="📰"
         backHref="/dashboard"
-      />
-      <main style={{ minHeight: "100vh", padding: "24px 16px", width: '100%' }}>
+      />}
+      <main style={{ minHeight: embeddedInResearch ? undefined : "100vh", padding: embeddedInResearch ? "0" : "24px 16px", width: '100%' }}>
         <div style={{ maxWidth: "none", margin: "0 auto", padding: 0, width: '100%' }}>
-        <ComplianceDisclaimer collapsible />
+        {!embeddedInResearch && <ComplianceDisclaimer collapsible />}
 
         {/* Tabs */}
         <div
@@ -948,7 +949,7 @@ export default function NewsSentimentPage() {
                     disabled={loading}
                     className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-200"
                   >
-                    {loading ? 'Scanning...' : 'Find News Setup'}
+                    {loading ? 'Scanning...' : 'Find News Evidence'}
                   </button>
                 </div>
               </div>
@@ -967,7 +968,7 @@ export default function NewsSentimentPage() {
                     <div className="mt-2 space-y-1 text-xs text-white/70">
                       <div>• If status is NO: observation mode only.</div>
                       <div>• If Event Shock: defined risk only.</div>
-                      <div>• Trade leaders, not mid-pack laggards.</div>
+                      <div>• Track leaders before lower-quality laggards.</div>
                     </div>
                     <div className="mt-3 grid grid-cols-2 gap-2">
                       <button type="button" className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs hover:bg-white/10">Create Alert</button>
@@ -982,7 +983,7 @@ export default function NewsSentimentPage() {
                       key={group.narrative}
                       group={group}
                       gate={newsGate}
-                      isAdmin={isAdmin}
+                      isAdmin={showAdminTools}
                       expandedDecisionIds={expandedDecisionIds}
                       onToggleDecision={handleToggleDecision}
                     />
@@ -1001,11 +1002,11 @@ export default function NewsSentimentPage() {
                     <div>• Volatility Warning: {newsGate.volRegime} ({newsGate.warnings.join(', ') || 'none'}).</div>
                   </div>
                   <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-white/75">
-                    <div className="mb-1">Allowed Trades:</div>
+                    <div className="mb-1">Scenario Notes:</div>
                     {newsGate.briefAllowed.map((line) => <div key={line}>• {line}</div>)}
                     <div className="mt-2 mb-1">Avoid:</div>
                     {newsGate.briefAvoid.map((line) => <div key={line}>• {line}</div>)}
-                    {isAdmin ? <button type="button" className="mt-3 rounded-xl border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-xs text-amber-200 hover:bg-amber-300/20">Post Daily Brief (Admin)</button> : null}
+                    {showAdminTools ? <button type="button" className="mt-3 rounded-xl border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-xs text-amber-200 hover:bg-amber-300/20">Post Daily Brief (Admin)</button> : null}
                   </div>
                 </div>
                 <div className="mt-3 rounded-xl border border-white/10 bg-black/20 p-3 text-xs text-white/70 whitespace-pre-wrap">{newsAIAnalysis}</div>
@@ -1015,7 +1016,7 @@ export default function NewsSentimentPage() {
             {!loading && filteredNews.length === 0 && (
               <section className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
                 <div className="mb-2 text-3xl">📰</div>
-                <h3 className="text-lg font-semibold text-white/90">No decision-ready news objects</h3>
+                <h3 className="text-lg font-semibold text-white/90">No high-evidence news objects</h3>
                 <p className="mt-1 text-sm text-white/60">Run a scan or relax filters to build your narrative stack.</p>
               </section>
             )}
@@ -1035,7 +1036,7 @@ export default function NewsSentimentPage() {
                         ? 'border-rose-400/40 bg-rose-500/10 text-rose-300'
                         : 'border-amber-400/40 bg-amber-500/10 text-amber-300'
                   }`}>
-                    STATUS: {catalystState.permission}
+                    REVIEW: {catalystState.permission === 'YES' ? 'CLEAR' : catalystState.permission === 'NO' ? 'BLOCKED' : 'CAUTION'}
                   </span>
                 </div>
                 <p className="mb-3 text-sm text-white/70">{catalystState.reason}</p>
@@ -1044,12 +1045,12 @@ export default function NewsSentimentPage() {
                   <span className="rounded-md border border-white/15 bg-black/20 px-2 py-1 text-white/70">Volatility Risk: {catalystState.volRisk}</span>
                   <span className="rounded-md border border-white/15 bg-black/20 px-2 py-1 text-white/70">Liquidity Window: {catalystState.liquidityWindow}</span>
                   <span className="rounded-md border border-white/15 bg-black/20 px-2 py-1 text-white/70">Headline Risk: {catalystState.headlineRisk}</span>
-                  <span className="rounded-md border border-white/15 bg-black/20 px-2 py-1 text-white/70">Execution Mode: {catalystState.executionMode}</span>
+                  <span className="rounded-md border border-white/15 bg-black/20 px-2 py-1 text-white/70">Research Mode: {catalystState.researchMode}</span>
                 </div>
                 <ul className="space-y-1 text-xs text-white/70">
-                  <li>• Avoid first 15 minutes when catalyst density is high.</li>
-                  <li>• Focus on A-tier setups when status is conditional.</li>
-                  <li>• No counter-trend scalps during expansion windows.</li>
+                  <li>• Treat the first 15 minutes as noisy when catalyst density is high.</li>
+                  <li>• Compare A-tier catalysts with liquidity and breadth evidence.</li>
+                  <li>• Require stronger confirmation during expansion windows.</li>
                 </ul>
               </article>
 
@@ -1240,10 +1241,10 @@ export default function NewsSentimentPage() {
                               <div>Impact: {event.impactScore}</div>
                             </div>
                             <div className="flex flex-wrap items-center gap-1">
-                              <Link href={`/tools/equity-explorer?symbol=${event.symbol}`} className="rounded-md border border-white/15 bg-black/20 px-2 py-1 text-[11px] text-white/75">Open Explorer</Link>
-                              <Link href={`/tools/intraday-charts?symbol=${event.symbol}`} className="rounded-md border border-white/15 bg-black/20 px-2 py-1 text-[11px] text-white/75">Open Chart</Link>
+                              <Link href={`/tools/explorer?tab=equity&symbol=${event.symbol}`} className="rounded-md border border-white/15 bg-black/20 px-2 py-1 text-[11px] text-white/75">Open Explorer</Link>
+                              <Link href={`/tools/golden-egg?symbol=${event.symbol}`} className="rounded-md border border-white/15 bg-black/20 px-2 py-1 text-[11px] text-white/75">Open Chart</Link>
                               <button type="button" onClick={() => fetchAnalystData(event)} className="rounded-md border border-white/15 bg-black/20 px-2 py-1 text-[11px] text-white/75">Analyst Data</button>
-                              <Link href={`/tools/journal?symbol=${event.symbol}`} className="rounded-md border border-white/15 bg-black/20 px-2 py-1 text-[11px] text-white/75">Journal Draft</Link>
+                              <Link href={`/tools/workspace?tab=journal&symbol=${event.symbol}`} className="rounded-md border border-white/15 bg-black/20 px-2 py-1 text-[11px] text-white/75">Journal Draft</Link>
                             </div>
                           </div>
                         ))}
@@ -1257,26 +1258,26 @@ export default function NewsSentimentPage() {
                     <h4 className="mb-2 text-sm font-semibold text-white/85">What Matters Today</h4>
                     <p className="text-xs text-white/65">
                       {catalystState.aTier24 > 0
-                        ? `${catalystState.aTier24} A-tier catalysts in next 24h; prioritize high-liquidity leaders.`
-                        : 'No A-tier catalysts in next 24h; reduce urgency and wait for confirmation.'}
+                        ? `${catalystState.aTier24} A-tier catalysts in next 24h; compare high-liquidity leaders first.`
+                        : 'No A-tier catalysts in next 24h; lower urgency and wait for stronger confirmation.'}
                     </p>
                   </article>
                   <article className="rounded-xl border border-white/10 bg-white/5 p-3">
                     <h4 className="mb-2 text-sm font-semibold text-white/85">Risk to Avoid</h4>
                     <p className="text-xs text-white/65">
                       {catalystState.volRisk === 'Expansion'
-                        ? 'Expansion regime active: avoid low-liquidity counter-trend setups around catalyst windows.'
-                        : 'Compression regime: avoid forcing breakout trades without volume confirmation.'}
+                        ? 'Expansion regime active: low-liquidity counter-trend ideas need extra evidence around catalyst windows.'
+                        : 'Compression regime: breakout scenarios need volume confirmation before escalation.'}
                     </p>
                   </article>
                   <article className="rounded-xl border border-white/10 bg-white/5 p-3">
                     <h4 className="mb-2 text-sm font-semibold text-white/85">Best Hunting Ground</h4>
                     <p className="text-xs text-white/65">
                       {catalystState.liquidityWindow === 'PRE'
-                        ? 'Pre-market is catalyst-heavy: wait for open structure then trade only leaders.'
+                        ? 'Pre-market is catalyst-heavy: wait for open structure and compare leaders.'
                         : catalystState.liquidityWindow === 'AH'
-                          ? 'After-hours carries the catalyst cluster; prepare next-session continuation plans.'
-                          : 'RTH concentration favors cleaner intraday continuation setups.'}
+                          ? 'After-hours carries the catalyst cluster; map next-session continuation scenarios.'
+                          : 'RTH concentration gives cleaner intraday continuation context.'}
                     </p>
                   </article>
                 </section>

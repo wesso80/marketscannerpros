@@ -198,7 +198,7 @@ export default function CloseCalendar({ symbol: propSymbol, onClusterClick, acti
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="text-sm font-semibold text-slate-100">
-            {isPriorDay ? '📋 Close Calendar — Prior Day Closes' : '📅 Close Calendar — Forward Schedule'}
+            {isPriorDay ? 'Close Calendar — Prior Day Closes' : 'Close Calendar — Forward Schedule'}
           </div>
           <div className="text-xs text-slate-400">
             {isPriorDay
@@ -312,7 +312,7 @@ export default function CloseCalendar({ symbol: propSymbol, onClusterClick, acti
           {/* ── Forward Close Clusters (the money shot) ── */}
           {data.forwardClusters.length > 0 && (
             <div>
-              <div className="mb-2 text-xs font-semibold text-slate-300">🔥 Close Cluster Timeline</div>
+              <div className="mb-2 text-xs font-semibold text-slate-300">Close Cluster Timeline</div>
               <div className="flex flex-wrap gap-2">
                 {data.forwardClusters.slice(0, 8).map((cluster, i) => (
                   <ClusterCard

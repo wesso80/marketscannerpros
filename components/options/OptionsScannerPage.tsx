@@ -175,7 +175,7 @@ function OptionsScannerPageContent() {
           source: 'options-scanner',
           confidence: String(payload?.decision?.confidence || 50),
         });
-        window.location.href = `/tools/journal?${params.toString()}`;
+        window.location.href = `/tools/workspace?tab=journal&${params.toString()}`;
       },
     }),
     [payload, symbol],

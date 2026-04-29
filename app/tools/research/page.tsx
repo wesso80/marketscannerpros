@@ -7,6 +7,7 @@
 
 import { useState, useMemo, useEffect, useCallback, type KeyboardEvent } from 'react';
 import dynamic from 'next/dynamic';
+import { useSearchParams } from 'next/navigation';
 import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useNews, useEconomicCalendar, useEarningsCalendar, type NewsArticle, type EconomicEvent, type EarningsEntry } from '@/app/v2/_lib/api';
 import { Card, SectionHeader, Badge, ImpactDot, UpgradeGate } from '@/app/v2/_components/ui';
@@ -25,6 +26,17 @@ function SkeletonRows({ n = 6 }: { n?: number }) {
 }
 
 const TABS = ['News', 'Economic Calendar', 'Earnings', 'Saved Cases', 'News Intelligence', 'Calendar Intelligence'] as const;
+type ResearchTab = typeof TABS[number];
+
+const TAB_PARAM_MAP: Record<string, ResearchTab> = {
+  news: 'News',
+  calendar: 'Economic Calendar',
+  economic: 'Economic Calendar',
+  earnings: 'Earnings',
+  saved: 'Saved Cases',
+  cases: 'Saved Cases',
+  intelligence: 'News Intelligence',
+};
 
 function readCaseString(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value.trim() : null;
@@ -80,7 +92,9 @@ const OUTCOME_ACTIONS: Array<{ label: string; status: SavedResearchCaseOutcome }
 export default function ResearchPage() {
   const { tier } = useUserTier();
   const { navigateTo, selectSymbol } = useV2();
-  const [tab, setTab] = useState<typeof TABS[number]>('News');
+  const searchParams = useSearchParams();
+  const initialTab = TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()] || 'News';
+  const [tab, setTab] = useState<ResearchTab>(initialTab);
   const [calFilter, setCalFilter] = useState<string>('all');
   const [savedCases, setSavedCases] = useState<SavedResearchCaseSummary[]>([]);
   const [savedLoading, setSavedLoading] = useState(false);
@@ -91,6 +105,11 @@ export default function ResearchPage() {
   const news = useNews();
   const calendar = useEconomicCalendar();
   const earnings = useEarningsCalendar();
+
+  useEffect(() => {
+    const requestedTab = TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()];
+    if (requestedTab && requestedTab !== tab) setTab(requestedTab);
+  }, [searchParams, tab]);
 
   const articles = news.data?.articles || [];
   const events = useMemo(() => {
@@ -191,21 +210,28 @@ export default function ResearchPage() {
 
   return (
     <div className="space-y-6">
-      <SectionHeader title="Research" subtitle="News, events & catalysts — live data" />
+      <SectionHeader title="Research" subtitle="News, events, catalysts, and saved research evidence." />
 
-      {/* Tabs */}
-      <div className="flex items-center gap-1 flex-wrap">
+      <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Research lens</div>
+            <div className="text-[0.72rem] text-slate-500">Switch between catalyst feeds, macro calendar, earnings, saved cases, and deeper intelligence views.</div>
+          </div>
+        </div>
+      <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
         {TABS.map(t => (
           <button
             key={t}
             type="button"
             aria-pressed={tab === t}
             onClick={() => setTab(t)}
-            className={`px-2.5 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap transition-colors ${tab === t ? 'bg-[rgba(16,185,129,0.1)] text-[var(--msp-accent)] border border-[rgba(16,185,129,0.4)]' : 'text-[var(--msp-text-muted)] hover:bg-slate-800/60 border border-transparent'}`}
+            className={`shrink-0 rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors ${tab === t ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300' : 'border-slate-800 bg-slate-950/35 text-slate-400 hover:border-slate-600 hover:text-slate-200'}`}
           >
             {t}
           </button>
         ))}
+      </div>
       </div>
 
       {(tier === 'free' || tier === 'anonymous') && (
@@ -457,10 +483,10 @@ export default function ResearchPage() {
 
       {/* ─── Deep-dive Tabs (v1 rich components) ─── */}
       {tab === 'News Intelligence' && (
-        <NewsIntelligence />
+        <NewsIntelligence embeddedInResearch />
       )}
       {tab === 'Calendar Intelligence' && (
-        <EconCalendarV1 />
+        <EconCalendarV1 embeddedInResearch />
       )}
 
       </div>}

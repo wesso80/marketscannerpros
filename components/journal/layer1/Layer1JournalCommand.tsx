@@ -3,6 +3,7 @@ import JournalKpiRow from '@/components/journal/layer1/JournalKpiRow';
 import { JournalHeaderActions, JournalHeaderModel, JournalKpisModel } from '@/types/journal';
 
 type Layer1JournalCommandProps = {
+  embeddedInWorkspace?: boolean;
   header?: JournalHeaderModel;
   kpis?: JournalKpisModel;
   actions: JournalHeaderActions;
@@ -10,10 +11,10 @@ type Layer1JournalCommandProps = {
   onToggleViewMode: () => void;
 };
 
-export default function Layer1JournalCommand({ header, kpis, actions, viewMode, onToggleViewMode }: Layer1JournalCommandProps) {
+export default function Layer1JournalCommand({ embeddedInWorkspace, header, kpis, actions, viewMode, onToggleViewMode }: Layer1JournalCommandProps) {
   return (
     <section className="space-y-3">
-      <JournalCommandBar header={header} actions={actions} viewMode={viewMode} onToggleViewMode={onToggleViewMode} />
+      <JournalCommandBar embeddedInWorkspace={embeddedInWorkspace} header={header} actions={actions} viewMode={viewMode} onToggleViewMode={onToggleViewMode} />
       <JournalKpiRow kpis={kpis} />
     </section>
   );

@@ -18,21 +18,21 @@ const steps = [
     title: 'Add to Watchlist',
     description: 'Search a ticker above, then add it to your watchlist to track it.',
     href: null, // action is on current page
-    icon: '🔍',
+    code: 'WL',
   },
   {
     key: 'hasJournal' as const,
     title: 'Log Your First Trade',
     description: 'Record a trade in the journal to start tracking your performance.',
-    href: '/tools/journal',
-    icon: '📝',
+    href: '/tools/workspace?tab=journal',
+    code: 'JR',
   },
   {
     key: 'hasPortfolio' as const,
     title: 'Track a Position',
     description: 'Add an open position to your portfolio for live P&L tracking.',
-    href: '/tools/portfolio',
-    icon: '📊',
+    href: '/tools/workspace?tab=portfolio',
+    code: 'PF',
   },
 ];
 
@@ -109,7 +109,9 @@ export default function OnboardingChecklist() {
                   : 'border-slate-600/40 bg-slate-800/50 hover:border-emerald-500/40 hover:bg-slate-800/80'
               }`}
             >
-              <span className="mt-0.5 text-base">{done ? '✅' : step.icon}</span>
+              <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border text-[9px] font-black uppercase ${done ? 'border-emerald-500/35 bg-emerald-500/10 text-emerald-300' : 'border-slate-600/60 bg-slate-950/40 text-slate-400'}`}>
+                {done ? 'OK' : step.code}
+              </span>
               <div className="min-w-0">
                 <p className={`text-xs font-medium ${done ? 'text-emerald-400 line-through' : 'text-slate-200'}`}>
                   {step.title}

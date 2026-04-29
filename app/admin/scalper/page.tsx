@@ -56,11 +56,11 @@ function fmtP(n: number | null | undefined): string {
   if (Math.abs(n) >= 1) return `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   return `$${n.toPrecision(4)}`;
 }
-function signalDot(signal: string) {
-  if (signal === 'bullish' || signal === 'above' || signal === 'long') return '🟢';
-  if (signal === 'bearish' || signal === 'below' || signal === 'short' || signal === 'overbought') return '🔴';
-  if (signal === 'oversold') return '🟡';
-  return '⚪';
+function signalCode(signal: string) {
+  if (signal === 'bullish' || signal === 'above' || signal === 'long') return 'BULL';
+  if (signal === 'bearish' || signal === 'below' || signal === 'short' || signal === 'overbought') return 'BEAR';
+  if (signal === 'oversold') return 'OS';
+  return 'NEUT';
 }
 
 /* ─── Component (no tier gate — admin layout handles auth) ─── */
@@ -126,7 +126,7 @@ export default function AdminScalperPage() {
       {/* ─── Header ─── */}
       <div className="border-b border-slate-800 bg-[#0F172A]/80 backdrop-blur-sm sticky top-0 z-20">
         <div className="max-w-[1600px] mx-auto px-4 py-3 flex flex-wrap items-center gap-3">
-          <h1 className="text-lg font-bold text-emerald-400 mr-4">⚡ Scalping Scanner</h1>
+          <h1 className="text-lg font-bold text-emerald-400 mr-4">Scalping Scanner</h1>
 
           {/* Asset class toggle */}
           <div className="flex bg-[#1E293B] rounded-lg p-0.5 border border-slate-700/50">
@@ -136,7 +136,7 @@ export default function AdminScalperPage() {
                 onClick={() => { setAssetClass(ac); setResults([]); setSelectedRow(null); }}
                 className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${assetClass === ac ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'}`}
               >
-                {ac === 'crypto' ? '₿ Crypto' : '📈 Equities'}
+                {ac === 'crypto' ? 'Crypto' : 'Equities'}
               </button>
             ))}
           </div>
@@ -169,7 +169,7 @@ export default function AdminScalperPage() {
             disabled={loading}
             className="px-4 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-500 disabled:opacity-50 transition-colors"
           >
-            {loading ? 'Scanning…' : '🔍 Scan Now'}
+            {loading ? 'Scanning…' : 'Scan Now'}
           </button>
 
           {/* Auto-refresh */}
@@ -202,7 +202,7 @@ export default function AdminScalperPage() {
         {/* ─── Empty state ─── */}
         {results.length === 0 && !loading && (
           <div className="text-center py-20">
-            <div className="text-5xl mb-4">⚡</div>
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-md border border-slate-700 bg-slate-950 text-xs font-black text-slate-400">SCLP</div>
             <h2 className="text-xl font-bold text-white mb-2">Intraday Scalping Scanner</h2>
             <p className="text-slate-400 text-sm mb-1">Scan {assetClass === 'crypto' ? 'crypto' : 'equity'} markets on {timeframe} timeframe</p>
             <p className="text-slate-500 text-xs mb-6">
@@ -260,18 +260,18 @@ export default function AdminScalperPage() {
                           <StrengthBar value={r.strength} />
                         </td>
                         <td className="py-2.5 px-2 text-right font-mono text-slate-300">{fmtP(r.price)}</td>
-                        <td className="py-2.5 px-2 text-center">{signalDot(r.signals.emaCross)}</td>
+                        <td className="py-2.5 px-2 text-center">{signalCode(r.signals.emaCross)}</td>
                         <td className="py-2.5 px-2 text-center">
                           <span style={{ color: dirColor(r.signals.rsiSignal) }}>{r.signals.rsi7?.toFixed(0) ?? '—'}</span>
                         </td>
-                        <td className="py-2.5 px-2 text-center">{signalDot(r.signals.vwapSignal)}</td>
+                        <td className="py-2.5 px-2 text-center">{signalCode(r.signals.vwapSignal)}</td>
                         <td className="py-2.5 px-2 text-center">
-                          {r.signals.volSpike ? <span title={`${r.signals.volRatio}x avg`}>🔥</span> : <span className="text-slate-600">—</span>}
+                          {r.signals.volSpike ? <span title={`${r.signals.volRatio}x avg`}>SPIKE</span> : <span className="text-slate-600">—</span>}
                         </td>
                         <td className="py-2.5 px-2 text-center">
-                          {r.signals.bbSqueeze ? '🔶' : r.signals.bbBreakout ? (r.signals.bbBreakout === 'upper' ? '🟢' : '🔴') : <span className="text-slate-600">—</span>}
+                          {r.signals.bbSqueeze ? 'SQZ' : r.signals.bbBreakout ? (r.signals.bbBreakout === 'upper' ? 'UP' : 'DOWN') : <span className="text-slate-600">—</span>}
                         </td>
-                        <td className="py-2.5 px-2 text-center">{signalDot(r.signals.macdSignal)}</td>
+                        <td className="py-2.5 px-2 text-center">{signalCode(r.signals.macdSignal)}</td>
                         <td className="py-2.5 px-2 text-right font-mono" style={{ color: r.riskReward >= 1.5 ? '#10B981' : r.riskReward >= 1 ? '#F59E0B' : '#94A3B8' }}>
                           {r.riskReward > 0 ? `${r.riskReward}:1` : '—'}
                         </td>
@@ -328,7 +328,7 @@ function DetailPanel({ result: r }: { result: ScalpResult }) {
           <span className="text-xs text-slate-400">{r.timeframe} · {r.assetClass}</span>
         </div>
         <span className="px-2.5 py-1 rounded-full text-xs font-bold" style={{ backgroundColor: dirColor(r.direction) + '22', color: dirColor(r.direction) }}>
-          {r.direction === 'long' ? '▲ LONG' : r.direction === 'short' ? '▼ SHORT' : '— NEUTRAL'}
+          {r.direction === 'long' ? 'LONG' : r.direction === 'short' ? 'SHORT' : 'NEUTRAL'}
         </span>
       </div>
 
@@ -363,13 +363,13 @@ function DetailPanel({ result: r }: { result: ScalpResult }) {
       <div className="px-4 py-3">
         <div className="text-[10px] text-slate-500 mb-2 font-semibold uppercase tracking-wider">Signal Breakdown</div>
         <div className="space-y-2 text-xs">
-          <SignalRow icon={signalDot(s.emaCross)} label="EMA Crossover" value={s.emaDetail} color={dirColor(s.emaCross)} />
-          <SignalRow icon={signalDot(s.rsiSignal)} label="RSI(7)" value={s.rsi7 != null ? `${s.rsi7.toFixed(1)} — ${s.rsiSignal}` : '—'} color={dirColor(s.rsiSignal)} />
-          <SignalRow icon={signalDot(s.vwapSignal)} label="VWAP" value={s.vwapDev != null ? `${s.vwapDev > 0 ? '+' : ''}${s.vwapDev.toFixed(2)}% ${s.vwapSignal}` : '—'} color={dirColor(s.vwapSignal)} />
-          <SignalRow icon={s.volSpike ? '🔥' : '⚪'} label="Volume" value={`${s.volRatio.toFixed(1)}x avg${s.volSpike ? ' — SPIKE' : ''}`} color={s.volSpike ? '#F59E0B' : '#94A3B8'} />
-          <SignalRow icon={s.bbSqueeze ? '🔶' : s.bbBreakout ? '💥' : '⚪'} label="Bollinger" value={s.bbSqueeze ? `SQUEEZE (width: ${s.bbWidth?.toFixed(1)}%)` : s.bbBreakout ? `Breakout ${s.bbBreakout}` : s.bbWidth != null ? `Width: ${s.bbWidth.toFixed(1)}%` : '—'} color={s.bbSqueeze ? '#F59E0B' : s.bbBreakout === 'upper' ? '#10B981' : s.bbBreakout === 'lower' ? '#EF4444' : '#94A3B8'} />
-          <SignalRow icon={signalDot(s.macdSignal)} label="MACD" value={s.macdHist != null ? `Hist: ${s.macdHist > 0 ? '+' : ''}${s.macdHist.toFixed(4)} — ${s.macdSignal}` : '—'} color={dirColor(s.macdSignal)} />
-          <SignalRow icon="📏" label="ATR(14)" value={s.atr != null ? fmtP(s.atr) : '—'} color="#94A3B8" />
+          <SignalRow code={signalCode(s.emaCross)} label="EMA Crossover" value={s.emaDetail} color={dirColor(s.emaCross)} />
+          <SignalRow code={signalCode(s.rsiSignal)} label="RSI(7)" value={s.rsi7 != null ? `${s.rsi7.toFixed(1)} — ${s.rsiSignal}` : '—'} color={dirColor(s.rsiSignal)} />
+          <SignalRow code={signalCode(s.vwapSignal)} label="VWAP" value={s.vwapDev != null ? `${s.vwapDev > 0 ? '+' : ''}${s.vwapDev.toFixed(2)}% ${s.vwapSignal}` : '—'} color={dirColor(s.vwapSignal)} />
+          <SignalRow code={s.volSpike ? 'VOL' : 'NEUT'} label="Volume" value={`${s.volRatio.toFixed(1)}x avg${s.volSpike ? ' — SPIKE' : ''}`} color={s.volSpike ? '#F59E0B' : '#94A3B8'} />
+          <SignalRow code={s.bbSqueeze ? 'SQZ' : s.bbBreakout ? 'BRK' : 'NEUT'} label="Bollinger" value={s.bbSqueeze ? `SQUEEZE (width: ${s.bbWidth?.toFixed(1)}%)` : s.bbBreakout ? `Breakout ${s.bbBreakout}` : s.bbWidth != null ? `Width: ${s.bbWidth.toFixed(1)}%` : '—'} color={s.bbSqueeze ? '#F59E0B' : s.bbBreakout === 'upper' ? '#10B981' : s.bbBreakout === 'lower' ? '#EF4444' : '#94A3B8'} />
+          <SignalRow code={signalCode(s.macdSignal)} label="MACD" value={s.macdHist != null ? `Hist: ${s.macdHist > 0 ? '+' : ''}${s.macdHist.toFixed(4)} — ${s.macdSignal}` : '—'} color={dirColor(s.macdSignal)} />
+          <SignalRow code="ATR" label="ATR(14)" value={s.atr != null ? fmtP(s.atr) : '—'} color="#94A3B8" />
         </div>
       </div>
 
@@ -382,10 +382,10 @@ function DetailPanel({ result: r }: { result: ScalpResult }) {
   );
 }
 
-function SignalRow({ icon, label, value, color }: { icon: string; label: string; value: string; color: string }) {
+function SignalRow({ code, label, value, color }: { code: string; label: string; value: string; color: string }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-sm">{icon}</span>
+      <span className="w-9 text-[10px] font-black uppercase text-slate-500">{code}</span>
       <span className="text-slate-400 w-24 flex-shrink-0">{label}</span>
       <span className="font-mono truncate" style={{ color }}>{value}</span>
     </div>

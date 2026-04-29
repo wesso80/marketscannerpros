@@ -48,7 +48,7 @@ export default function TimeScannerPage({ symbol: propSymbol, embeddedInTerminal
         {/* Hero Header */}
         {!embeddedInTerminal && <div className="text-center mb-8">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">
-            ⏰ Time Scanner
+            Time Scanner
             <span className="ml-3 text-2xl text-cyan-400">ELITE</span>
           </h1>
           <p className="text-lg text-gray-400 max-w-3xl mx-auto">
@@ -114,7 +114,7 @@ export default function TimeScannerPage({ symbol: propSymbol, embeddedInTerminal
         {!embeddedInTerminal && <div className="max-w-7xl mx-auto mt-12 grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* What is Time Gravity Map? */}
           <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
-            <h3 className="text-lg font-bold text-white mb-3">🎯 What is Time Gravity Map?</h3>
+            <h3 className="text-lg font-bold text-white mb-3">What is Time Gravity Map?</h3>
             <div className="text-sm text-gray-400 space-y-2">
               <p>
                 Time Gravity Map models price movement as a gravitational field where each timeframe
@@ -132,7 +132,7 @@ export default function TimeScannerPage({ symbol: propSymbol, embeddedInTerminal
 
           {/* Decompression Windows */}
           <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
-            <h3 className="text-lg font-bold text-white mb-3">⏱️ Decompression Windows</h3>
+            <h3 className="text-lg font-bold text-white mb-3">Decompression Windows</h3>
             <div className="text-sm text-gray-400 space-y-2">
               <p>
                 Each timeframe has a specific window near candle close where price is most
@@ -146,14 +146,14 @@ export default function TimeScannerPage({ symbol: propSymbol, embeddedInTerminal
                 <li>• <span className="text-cyan-400">1M</span>: ~26 hours before close</li>
               </ul>
               <p className="text-purple-400">
-                💡 Active windows get 5x gravity multiplier
+                Active windows get 5x gravity multiplier
               </p>
             </div>
           </div>
 
           {/* Midpoint Debt */}
           <div className="bg-gray-900 border border-gray-800 rounded-lg p-6">
-            <h3 className="text-lg font-bold text-white mb-3">🔴 Midpoint Debt</h3>
+            <h3 className="text-lg font-bold text-white mb-3">Midpoint Debt</h3>
             <div className="text-sm text-gray-400 space-y-2">
               <p>
                 Unresolved midpoints that haven&apos;t been tagged create &quot;debt&quot; that price
@@ -164,10 +164,10 @@ export default function TimeScannerPage({ symbol: propSymbol, embeddedInTerminal
                 form a high-priority AOI zone.
               </p>
               <p className="text-red-400">
-                🔴 Debt midpoints get 2x gravity multiplier
+                Debt midpoints get 2x gravity multiplier
               </p>
               <p className="text-green-400">
-                🟢 Tagged midpoints have reduced pull
+                Tagged midpoints have reduced pull
               </p>
             </div>
           </div>
@@ -175,26 +175,26 @@ export default function TimeScannerPage({ symbol: propSymbol, embeddedInTerminal
 
         {/* Legend */}
         {!embeddedInTerminal && <div className="max-w-7xl mx-auto mt-8 bg-gray-900 border border-gray-800 rounded-lg p-6">
-          <h3 className="text-lg font-bold text-white mb-4">📊 Status Indicators</h3>
+          <h3 className="text-lg font-bold text-white mb-4">Status Indicators</h3>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
             <div className="flex items-center gap-2">
-              <span className="text-red-400 text-xl">🔴</span>
+              <span className="text-red-400 text-xs font-bold">DEBT</span>
               <span className="text-gray-300">Debt (Unresolved)</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-blue-400 text-xl">🔵</span>
+              <span className="text-blue-400 text-xs font-bold">ACTIVE</span>
               <span className="text-gray-300">Active Decompression</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-yellow-400 text-xl">🟡</span>
+              <span className="text-yellow-400 text-xs font-bold">PRE</span>
               <span className="text-gray-300">Pre-Window</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-green-400 text-xl">🟢</span>
+              <span className="text-green-400 text-xs font-bold">TAG</span>
               <span className="text-gray-300">Tagged</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-gray-400 text-xl">⚪</span>
+              <span className="text-gray-400 text-xs font-bold">COMP</span>
               <span className="text-gray-300">Compression</span>
             </div>
           </div>

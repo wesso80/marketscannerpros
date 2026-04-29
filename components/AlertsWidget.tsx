@@ -414,7 +414,7 @@ export default function AlertsWidget({
       strategy: entry.condition_type || 'alert_trigger',
       score: entry.condition_value ? String(entry.condition_value) : '',
     });
-    return `/tools/journal?${params.toString()}`;
+    return `/tools/workspace?tab=journal&${params.toString()}`;
   };
 
   const autoLogTriggeredAlert = async (entry: AlertHistory) => {
@@ -1389,7 +1389,7 @@ export default function AlertsWidget({
                           Open Scanner
                         </a>
                         <a
-                          href={`/tools/backtest?symbol=${encodeURIComponent(h.symbol)}`}
+                          href={`/tools/workspace?tab=backtest&symbol=${encodeURIComponent(h.symbol)}`}
                           className="px-2 py-1 text-xs rounded bg-purple-500/20 text-purple-300 hover:bg-purple-500/30"
                         >
                           Backtest
@@ -1413,7 +1413,7 @@ export default function AlertsWidget({
                         </button>
                         {(loggedHistoryEntries[h.id] || h.user_action === 'journal_logged') && (
                           <a
-                            href={loggedHistoryEntries[h.id] ? `/tools/journal?entryId=${loggedHistoryEntries[h.id]}&source=auto_log` : '/tools/journal?source=auto_log'}
+                            href={loggedHistoryEntries[h.id] ? `/tools/workspace?tab=journal&entryId=${loggedHistoryEntries[h.id]}&source=auto_log` : '/tools/workspace?tab=journal&source=auto_log'}
                             className="px-2 py-1 text-xs rounded bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30"
                           >
                             Open Logged Draft

@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Earnings Scanner | MarketScanner Pros',
+  title: 'Earnings | Research',
   description:
-    'Monitor upcoming earnings and risk events with technical context to avoid low-quality entries and time better setups.',
-  robots: 'noindex,follow',
-  alternates: { canonical: 'https://marketscannerpros.app/tools/news' },
+    'Legacy earnings route. Earnings now live inside Market Intelligence for catalyst and event research.',
+  robots: { index: false, follow: true },
+  alternates: { canonical: 'https://marketscannerpros.app/tools/research?tab=earnings' },
 };
 
 export default function EarningsLayout({ children }: { children: React.ReactNode }) {

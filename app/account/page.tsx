@@ -192,7 +192,7 @@ export default function AccountPage() {
       return [
         "Everything in Pro",
         "ARCA AI Analyst — GPT-4.1 (50/day)",
-        "Brain / Permission Engine",
+        "Research risk framework",
         "AI + Derivatives Intelligence",
         "Golden Egg Deep Analysis",
       ];

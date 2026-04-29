@@ -30,15 +30,15 @@ const TF_TO_MINUTES: Record<ScanModeType, number> = {
 };
 
 const SCAN_MODE_LABELS: Record<ScanModeType, string> = {
-  scalping: '⚡ Scalp 15m',
-  intraday_30m: '📊 30min',
-  intraday_1h: '📊 1H',
-  intraday_4h: '📊 4H',
-  swing_1d: '📅 Daily',
-  swing_3d: '📅 3-Day',
-  swing_1w: '📅 Weekly',
-  macro_monthly: '🏛️ Monthly',
-  macro_yearly: '🏛️ Yearly',
+  scalping: 'Scalp 15m',
+  intraday_30m: '30min',
+  intraday_1h: '1H',
+  intraday_4h: '4H',
+  swing_1d: 'Daily',
+  swing_3d: '3-Day',
+  swing_1w: 'Weekly',
+  macro_monthly: 'Monthly',
+  macro_yearly: 'Yearly',
 };
 
 const TIMEFRAME_OPTIONS: ScanModeType[] = [
@@ -136,7 +136,7 @@ function ConfluenceRow({ label, score }: { label: string; score: number }) {
   );
 }
 
-function ExecutionField({ label, value }: { label: string; value: string }) {
+function TimingField({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2">
       <div className="text-[11px] uppercase tracking-wider text-slate-400">{label}</div>
@@ -367,7 +367,7 @@ function mapScanToInput(symbol: string, scanMode: ScanModeType, scan: any): Time
 /** Adaptive price formatting: 2 decimals for > $1, up to 8 for sub-cent */
 // formatPrice imported from shared lib/formatPrice.ts
 
-export default function TimeScannerPage() {
+export default function TimeScannerPage({ embeddedInTerminal = false }: { embeddedInTerminal?: boolean } = {}) {
   const { tier, isLoading: tierLoading } = useUserTier();
   const searchParams = useSearchParams();
   const [symbol, setSymbol] = useState('BTCUSD');
@@ -537,7 +537,7 @@ export default function TimeScannerPage() {
   const confluenceRows = [
     { label: 'Trend Alignment', score: out.contextScore },
     { label: 'Flow Strength', score: out.setupScore },
-    { label: 'Close Confirmation', score: out.executionScore },
+    { label: 'Close Evidence', score: out.executionScore },
     { label: 'Cluster Integrity', score: input.setup.window.clusterIntegrity * 100 },
     { label: 'Window Quality', score: input.execution.entryWindowQuality * 100 },
   ];
@@ -545,22 +545,22 @@ export default function TimeScannerPage() {
   // Tier gate: require Pro Trader
   if (tierLoading) {
     return (
-      <TimeScannerShell>
-        <div className="flex min-h-[60vh] items-center justify-center text-slate-500">Loading…</div>
+      <TimeScannerShell embedded={embeddedInTerminal}>
+        <div className={`flex ${embeddedInTerminal ? 'min-h-[12rem]' : 'min-h-[60vh]'} items-center justify-center text-slate-500`}>Loading…</div>
       </TimeScannerShell>
     );
   }
   if (!canAccessTimeScanner(tier)) {
     return (
-      <TimeScannerShell>
+      <TimeScannerShell embedded={embeddedInTerminal}>
         <UpgradeGate requiredTier="pro_trader" feature="Time Scanner" />
       </TimeScannerShell>
     );
   }
 
   return (
-    <TimeScannerShell>
-      <main className="mx-auto w-full max-w-none space-y-5 px-4 py-4 lg:px-6 lg:py-6">
+    <TimeScannerShell embedded={embeddedInTerminal}>
+      <main className={`mx-auto w-full max-w-none space-y-5 ${embeddedInTerminal ? 'px-0 py-0' : 'px-4 py-4 lg:px-6 lg:py-6'}`}>
 
         {error && (
           <div className="rounded-lg border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">
@@ -815,7 +815,7 @@ export default function TimeScannerPage() {
             <summary className="cursor-pointer list-none px-3 py-3 lg:px-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-sm font-semibold text-slate-100">🔥 Market Pressure Engine</span>
+                  <span className="text-sm font-semibold text-slate-100">Market Pressure Engine</span>
                   <span className="ml-2 text-xs text-slate-400">Composite pressure from time, volatility, liquidity & options</span>
                 </div>
                 <div className="text-xs text-slate-500">▾ expand</div>
@@ -835,7 +835,7 @@ export default function TimeScannerPage() {
         {!isCrypto && (
           <section className="w-full rounded-2xl border border-slate-800 bg-slate-900/30 p-3 lg:p-5">
             <div className="mb-3">
-              <div className="text-sm font-semibold text-slate-100">🕐 Intraday Equity Close Schedule</div>
+              <div className="text-sm font-semibold text-slate-100">Intraday Equity Close Schedule</div>
               <div className="text-xs text-slate-400">
                 Fixed candle closes every trading day ({sessionMode === 'regular' ? 'RTH 9:30–16:00 ET' : sessionMode === 'extended' ? 'Extended 4:00–20:00 ET' : 'Full 00:00–24:00 ET'}) — these never change
               </div>
@@ -1021,12 +1021,12 @@ export default function TimeScannerPage() {
           }}
         />
 
-        {/* ═══ ROW 3: CONFLUENCE ENGINE + EXECUTION (collapsible — collapsed by default) ═══ */}
+        {/* ═══ ROW 3: CONFLUENCE ENGINE + TIMING (collapsible — collapsed by default) ═══ */}
         <details className="w-full rounded-2xl border border-slate-800 bg-slate-900/30">
           <summary className="cursor-pointer list-none px-3 py-3 lg:px-5">
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-sm font-semibold text-slate-100">⏱ Time Confluence Engine</span>
+                <span className="text-sm font-semibold text-slate-100">Time Confluence Engine</span>
                 <span className="ml-2 text-xs text-slate-400">Alignment score, decompression & structure</span>
               </div>
               <div className="text-xs text-slate-500">▾ expand</div>
@@ -1064,9 +1064,9 @@ export default function TimeScannerPage() {
 
               <div className="rounded-2xl border border-slate-700 bg-slate-950/35 p-3 shadow-sm">
                 <div className="space-y-2">
-                  <ExecutionField label="Close" value={input.execution.closeConfirmation} />
-                  <ExecutionField label="Risk" value={input.execution.riskState} />
-                  <ExecutionField label="Liquidity" value={input.execution.liquidityOK ? 'OK' : 'THIN'} />
+                  <TimingField label="Close" value={input.execution.closeConfirmation} />
+                  <TimingField label="Risk" value={input.execution.riskState} />
+                  <TimingField label="Liquidity" value={input.execution.liquidityOK ? 'OK' : 'THIN'} />
 
                   <div className="grid grid-cols-3 gap-2 pt-1">
                     <MetricPill label="Gate" value={`${Math.round(out.gateScore)}%`} />
@@ -1089,7 +1089,7 @@ export default function TimeScannerPage() {
           <summary className="cursor-pointer list-none px-3 py-3 lg:px-5">
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-sm font-semibold text-slate-100">🧲 Time Gravity Map</span>
+                <span className="text-sm font-semibold text-slate-100">Time Gravity Map</span>
                 <span className="ml-2 text-xs text-slate-400">Midpoint debt, decompression windows & gravity fields</span>
               </div>
               <div className="text-xs text-slate-500">▾ expand</div>

@@ -90,7 +90,7 @@ function getCrowdingRisk(lsRatio: number, fundingRate: number): {
 
 // Get directional insight based on positioning
 function getPositioningInsight(lsRatio: number, fundingRate: number): {
-  icon: string;
+  code: string;
   text: string;
   color: string;
 } {
@@ -100,24 +100,24 @@ function getPositioningInsight(lsRatio: number, fundingRate: number): {
   const highNegativeFunding = fundingRate < -0.03;
   
   if (isLongCrowded && highPositiveFunding) {
-    return { icon: '⚠️', text: 'Longs crowded — squeeze down risk', color: 'text-red-400' };
+    return { code: 'RISK', text: 'Longs crowded — squeeze down risk', color: 'text-red-400' };
   }
   if (isShortCrowded && highNegativeFunding) {
-    return { icon: '⚠️', text: 'Shorts crowded — squeeze up risk', color: 'text-green-400' };
+    return { code: 'RISK', text: 'Shorts crowded — squeeze up risk', color: 'text-green-400' };
   }
   if (isLongCrowded) {
-    return { icon: '📊', text: 'Long bias — watching for exhaustion', color: 'text-yellow-400' };
+    return { code: 'LONG', text: 'Long bias — watching for exhaustion', color: 'text-yellow-400' };
   }
   if (isShortCrowded) {
-    return { icon: '📊', text: 'Short bias — elevated short positioning', color: 'text-yellow-400' };
+    return { code: 'SHORT', text: 'Short bias — elevated short positioning', color: 'text-yellow-400' };
   }
   if (highPositiveFunding) {
-    return { icon: '💰', text: 'Longs paying premium — bullish sentiment', color: 'text-green-400' };
+    return { code: 'FUND', text: 'Longs paying premium — bullish sentiment', color: 'text-green-400' };
   }
   if (highNegativeFunding) {
-    return { icon: '💰', text: 'Shorts paying premium — bearish sentiment', color: 'text-red-400' };
+    return { code: 'FUND', text: 'Shorts paying premium — bearish sentiment', color: 'text-red-400' };
   }
-  return { icon: '⚖️', text: 'Neutral positioning — no crowding', color: 'text-slate-400' };
+  return { code: 'NEUT', text: 'Neutral positioning — no crowding', color: 'text-slate-400' };
 }
 
 export default function DerivativesWidget({
@@ -132,21 +132,21 @@ export default function DerivativesWidget({
 
   const lsTooltipText = `Long/Short Ratio = Ratio of long vs short traders.
 
-🟢 Ratio > 1: More longs than shorts (bullish positioning)
-🔴 Ratio < 1: More shorts than longs (bearish positioning)
+GREEN: Ratio > 1 means more longs than shorts (bullish positioning)
+RED: Ratio < 1 means more shorts than longs (bearish positioning)
 
-⚠️ Contrarian signal: Extreme ratios often precede reversals!
+Research context: Extreme ratios often precede reversals.
 Very high L/S → Crowded long trade → Vulnerable to long squeeze
 Very low L/S → Crowded short trade → Vulnerable to short squeeze`;
 
   const fundingTooltipText = `Funding Rate = Fee paid between long/short traders every 8 hours.
 
-🟢 Positive: Longs pay shorts (bullish market, longs paying premium)
-🔴 Negative: Shorts pay longs (bearish market, shorts paying premium)
+GREEN: Positive means longs pay shorts (bullish market, longs paying premium)
+RED: Negative means shorts pay longs (bearish market, shorts paying premium)
 
-💡 Trading insight:
+Research context:
 • High positive funding → Market overheated, correction risk
-• Deep negative funding → Oversold, bounce potential
+• Deep negative funding → Oversold context to review
 • Near 0% → Balanced market, no strong directional bias`;
 
   useEffect(() => {
@@ -167,10 +167,10 @@ Very low L/S → Crowded short trade → Vulnerable to short squeeze`;
     return 'text-slate-400';
   };
 
-  const getSentimentEmoji = (sentiment: string) => {
-    if (sentiment === 'Bullish') return '🟢';
-    if (sentiment === 'Bearish') return '🔴';
-    return '⚪';
+  const getSentimentCode = (sentiment: string) => {
+    if (sentiment === 'Bullish') return 'BULL';
+    if (sentiment === 'Bearish') return 'BEAR';
+    return 'NEUT';
   };
 
   if (loading) {
@@ -192,7 +192,7 @@ Very low L/S → Crowded short trade → Vulnerable to short squeeze`;
           {/* Long/Short Ratio */}
           {lsData && (
             <div className="flex items-center gap-2 flex-1 relative">
-              <span className="text-sm">{getSentimentEmoji(lsData.average.sentiment)}</span>
+              <span className="text-[0.62rem] font-bold text-slate-400">{getSentimentCode(lsData.average.sentiment)}</span>
               <div>
                 <div className="text-xs text-slate-400 flex items-center gap-1">
                   L/S Ratio
@@ -232,7 +232,7 @@ Very low L/S → Crowded short trade → Vulnerable to short squeeze`;
           {/* Funding Rate */}
           {fundingData && (
             <div className="flex items-center gap-2 flex-1 relative">
-              <span className="text-sm">💰</span>
+              <span className="text-[0.62rem] font-bold text-slate-400">FUND</span>
               <div>
                 <div className="text-xs text-slate-400 flex items-center gap-1">
                   Funding
@@ -279,7 +279,7 @@ Very low L/S → Crowded short trade → Vulnerable to short squeeze`;
   return (
     <div className={`bg-slate-800/50 rounded-xl p-6 border border-slate-700 ${className}`}>
       <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-        <span>📈</span>
+        <span className="text-[0.62rem] font-bold text-slate-400">DER</span>
         Derivatives Sentiment
       </h3>
 
@@ -311,7 +311,7 @@ Very low L/S → Crowded short trade → Vulnerable to short squeeze`;
             </div>
             {/* Insight */}
             <div className={`text-sm flex items-center gap-2 ${insight.color}`}>
-              <span>{insight.icon}</span>
+              <span className="text-[0.62rem] font-bold uppercase">{insight.code}</span>
               <span>{insight.text}</span>
             </div>
           </div>
@@ -399,7 +399,7 @@ Very low L/S → Crowded short trade → Vulnerable to short squeeze`;
       {/* Interpretation */}
       <div className="mt-4 p-3 bg-slate-900/50 rounded-lg">
         <p className="text-xs text-slate-400">
-          💡 <strong className="text-slate-300">L/S &gt; 1.2</strong> = Crowded longs, squeeze risk down.
+          <strong className="text-slate-300">L/S &gt; 1.2</strong> = Crowded longs, squeeze risk down.
           <strong className="text-slate-300"> Positive funding</strong> = Longs pay shorts (bullish bias).
         </p>
       </div>

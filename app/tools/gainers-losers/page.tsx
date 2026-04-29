@@ -555,7 +555,7 @@ export default function GainersLosersPage() {
                               <span title={item.blockReason || "Blocked by governance"} style={{ fontSize: 11, color: "#64748B", border: "1px solid #334155", borderRadius: 999, padding: "3px 10px" }}>Blocked</span>
                             ) : (
                               <Link
-                                href={`/tools/options-confluence?symbol=${item.ticker}&setupClass=${encodeURIComponent(item.setupClass)}&eligibility=${item.deployment.toLowerCase()}&confluence=${item.confluenceScore}&deploymentMode=${environment.deploymentMode}`}
+                                href={`/tools/terminal?tab=options-confluence&symbol=${item.ticker}&setupClass=${encodeURIComponent(item.setupClass)}&eligibility=${item.deployment.toLowerCase()}&confluence=${item.confluenceScore}&deploymentMode=${environment.deploymentMode}`}
                                 style={{ fontSize: 11, color: "#10B981", border: "1px solid rgba(16,185,129,0.4)", borderRadius: 999, padding: "3px 10px" }}
                               >
                                 Open Confluence Panel

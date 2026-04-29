@@ -133,7 +133,7 @@ function PositionSizerCalculator() {
     }}>
       <div style={{ marginBottom: '24px' }}>
         <h2 style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: '700', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          🎯 Position Calculator (Educational)
+          Position Metrics Calculator (Educational)
         </h2>
         <p style={{ color: 'var(--msp-text-muted)', fontSize: '14px' }}>
           Estimate position metrics for study purposes.
@@ -157,7 +157,7 @@ function PositionSizerCalculator() {
             transition: 'all 0.2s'
           }}
         >
-          📊 Fixed Fractional
+          Fixed Fractional
         </button>
         <button
           onClick={() => setMethod('kelly')}
@@ -174,7 +174,7 @@ function PositionSizerCalculator() {
             transition: 'all 0.2s'
           }}
         >
-          📐 Kelly Criterion
+          Kelly Criterion
         </button>
       </div>
 
@@ -222,10 +222,10 @@ function PositionSizerCalculator() {
           />
         </div>
 
-        {/* Side Toggle */}
+        {/* Exposure Toggle */}
         <div style={{ gridColumn: 'span 2' }}>
           <label style={{ display: 'block', color: '#94a3b8', fontSize: '13px', marginBottom: '6px' }}>
-            Position Side
+            Exposure Type
           </label>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
@@ -241,7 +241,7 @@ function PositionSizerCalculator() {
                 cursor: 'pointer'
               }}
             >
-              📈 LONG
+              Long Exposure
             </button>
             <button
               onClick={() => setSide('SHORT')}
@@ -256,7 +256,7 @@ function PositionSizerCalculator() {
                 cursor: 'pointer'
               }}
             >
-              📉 SHORT
+              Short Exposure
             </button>
           </div>
         </div>
@@ -341,7 +341,7 @@ function PositionSizerCalculator() {
           marginBottom: '24px'
         }}>
           <h4 style={{ color: '#a78bfa', fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>
-            📐 Kelly Criterion Parameters
+            Kelly Criterion Parameters
           </h4>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))', gap: '12px' }}>
             <div>
@@ -419,7 +419,7 @@ function PositionSizerCalculator() {
         padding: '24px'
       }}>
         <h3 style={{ color: '#10b981', fontSize: '16px', fontWeight: '700', marginBottom: '16px' }}>
-          📊 Position Estimate Results
+          Position Estimate Results
         </h3>
         
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))', gap: '16px', marginBottom: '20px' }}>
@@ -487,7 +487,7 @@ function PositionSizerCalculator() {
         borderRadius: '8px'
       }}>
         <div style={{ color: '#fbbf24', fontSize: '12px' }}>
-          ⚠️ <strong>Disclaimer:</strong> This calculator is for educational and informational purposes only. 
+          <strong>Disclaimer:</strong> This calculator is for educational and informational purposes only.
           It displays mathematical outputs based on user-entered data and does not constitute investment advice.
         </div>
       </div>
@@ -495,7 +495,7 @@ function PositionSizerCalculator() {
   );
 }
 
-export function PortfolioContent() {
+export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWorkspace?: boolean } = {}) {
   const { isLocked: riskLocked } = useRiskPermission();
   const tradeExecutionEventMapRef = useRef<Record<number, string>>({});
 
@@ -724,7 +724,7 @@ export function PortfolioContent() {
       eventType: 'trade.updated',
       workflowId: buildPortfolioWorkflowId(position.symbol),
       parentEventId,
-      route: '/tools/portfolio',
+      route: '/tools/workspace?tab=portfolio',
       module: 'portfolio',
       entity: {
         entity_type: 'trade',
@@ -1027,7 +1027,7 @@ export function PortfolioContent() {
     const tradeExecutionEvent = createWorkflowEvent<TradePayload>({
       eventType: 'trade.executed',
       workflowId: buildPortfolioWorkflowId(position.symbol),
-      route: '/tools/portfolio',
+      route: '/tools/workspace?tab=portfolio',
       module: 'portfolio',
       entity: {
         entity_type: 'trade',
@@ -1090,7 +1090,7 @@ export function PortfolioContent() {
     const tradeExecutionEvent = createWorkflowEvent<TradePayload>({
       eventType: 'trade.executed',
       workflowId: buildPortfolioWorkflowId(position.symbol),
-      route: '/tools/portfolio',
+      route: '/tools/workspace?tab=portfolio',
       module: 'portfolio',
       entity: {
         entity_type: 'trade',
@@ -1153,7 +1153,7 @@ export function PortfolioContent() {
       eventType: 'trade.closed',
       workflowId: buildPortfolioWorkflowId(position.symbol),
       parentEventId,
-      route: '/tools/portfolio',
+      route: '/tools/workspace?tab=portfolio',
       module: 'portfolio',
       entity: {
         entity_type: 'trade',
@@ -1419,7 +1419,7 @@ export function PortfolioContent() {
     ? 'Medium'
     : 'Low';
   const portfolioHealthLabel = totalReturn < -20
-    ? '⚠ Elevated Drawdown'
+    ? 'Elevated Drawdown'
     : totalReturn < -5
     ? 'Below Baseline'
     : totalReturn > 12
@@ -1518,7 +1518,7 @@ export function PortfolioContent() {
   const isRiskElevated = !isRiskEvent && (currentDrawdownPct > (riskSettings.maxDrawdownThreshold * 0.6) || correlationRiskPct > (riskSettings.maxCorrelatedExposure * 0.75) || deploymentPct > 75);
   const riskStateLabel = isRiskEvent ? 'RISK EVENT' : isRiskElevated ? 'ELEVATED' : 'STABLE';
   const riskStateTone = isRiskEvent ? '#ef4444' : isRiskElevated ? '#f59e0b' : '#10b981';
-  const riskStateIcon = isRiskEvent ? '🔴' : isRiskElevated ? '🟡' : '🟢';
+  const riskStateCode = isRiskEvent ? 'RISK' : isRiskElevated ? 'ELEVATED' : 'STABLE';
   const portfolioRiskProfile = isRiskEvent ? 'Aggressive' : isRiskElevated ? 'Moderate' : 'Low';
   const longExposurePct = capitalBase > 0 ? (longExposureValue / capitalBase) * 100 : 0;
   const shortExposurePct = capitalBase > 0 ? (shortExposureValue / capitalBase) * 100 : 0;
@@ -1605,7 +1605,7 @@ export function PortfolioContent() {
 
   const modeItems = [
     { key: 'overview', label: 'Overview' },
-    { key: 'add-manual', label: '➕ Add Position' },
+    { key: 'add-manual', label: 'Add Position' },
     { key: 'deploy-capital', label: 'Model Allocation' },
     { key: 'risk-model', label: 'Risk Model' },
     { key: 'active-positions', label: 'Active Positions' },
@@ -1665,6 +1665,71 @@ export function PortfolioContent() {
     ? [...positions].sort((a, b) => a.plPercent - b.plPercent)[0]
     : null;
 
+  const portfolioHeaderActions = (
+    <>
+      {positions.length > 0 && (
+        <button
+          onClick={() => {
+            if (canExportCSV(tier)) {
+              exportPositionsToCSV();
+            } else {
+              alert('CSV export is a Pro feature. Upgrade to Pro or Pro Trader to export your data.');
+            }
+          }}
+          className={`rounded-md border px-3 py-1.5 text-[12px] font-medium transition ${canExportCSV(tier) ? 'border-emerald-500 text-emerald-500 opacity-100' : 'border-slate-600 text-slate-500 opacity-60'}`}
+        >
+          Export Positions {!canExportCSV(tier) && 'Locked'}
+        </button>
+      )}
+      {closedPositions.length > 0 && (
+        <button
+          onClick={() => {
+            if (canExportCSV(tier)) {
+              exportHistoryToCSV();
+            } else {
+              alert('CSV export is a Pro feature. Upgrade to Pro or Pro Trader to export your data.');
+            }
+          }}
+          className={`rounded-md border border-[var(--msp-border)] px-3 py-1.5 text-[12px] font-medium transition ${canExportCSV(tier) ? 'text-[var(--msp-text-muted)]' : 'text-slate-500'}`}
+        >
+          Export History
+        </button>
+      )}
+      {(positions.length > 0 || closedPositions.length > 0) && (
+        <button
+          onClick={clearAllData}
+          className="rounded-md border border-slate-500/40 bg-transparent px-3 py-1.5 text-[12px] font-semibold text-red-500"
+        >
+          Clear All Data
+        </button>
+      )}
+      <button
+        onClick={() => setActiveTab('add-manual')}
+        className="rounded-md border border-emerald-500 px-3 py-1.5 text-[12px] font-semibold text-emerald-400"
+      >
+        Add Position
+      </button>
+      <button
+        onClick={() => {
+          const inDrawdown = totalReturn < -20 && positions.length > 0;
+          if (inDrawdown && activeTab !== 'deploy-capital' && !drawdownAcknowledged) {
+            const proceed = confirm(
+              'Your portfolio data shows a significant drawdown (-' + Math.abs(totalReturn).toFixed(1) + '%).\n\n' +
+              'Click OK to proceed, or Cancel to go back.'
+            );
+            if (!proceed) return;
+            setDrawdownAcknowledged(true);
+          }
+          setActiveTab('deploy-capital');
+        }}
+        disabled={riskLocked}
+        className="rounded-md bg-emerald-500 px-3 py-1.5 text-[12px] font-semibold text-white shadow-[var(--msp-shadow)] disabled:opacity-40"
+      >
+        Model Allocation
+      </button>
+    </>
+  );
+
   if (tier === 'anonymous') {
     return (
       <div className="min-h-screen bg-[var(--msp-bg)]">
@@ -1675,7 +1740,7 @@ export function PortfolioContent() {
               <p className="text-slate-400">Track live prices, modeled allocation, and performance in real-time (educational mode).</p>
             </div>
             <div className="mx-auto max-w-md rounded-xl border border-slate-700 bg-slate-900/80 p-8 text-center">
-              <div className="mb-4 text-4xl">🔒</div>
+              <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-md border border-slate-700 bg-slate-950 text-xs font-black uppercase text-slate-400">PF</div>
               <h2 className="mb-2 text-xl font-bold text-white">Sign in to access Portfolio</h2>
               <p className="mb-6 text-sm text-slate-400">Track positions, performance, and risk by signing in with your MarketScanner Pros account.</p>
               <Link href="/login" className="inline-block rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500 transition-colors">
@@ -1697,94 +1762,43 @@ export function PortfolioContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--msp-bg)]">
+    <div className={`${embeddedInWorkspace ? '' : 'min-h-screen'} bg-[var(--msp-bg)]`}>
       {syncError && (
         <div className="mx-4 mt-2 flex items-center justify-between rounded-md border border-amber-500/40 bg-amber-900/20 px-4 py-2 text-[13px] text-amber-300">
-          <span>⚠️ {syncError}</span>
+          <span>{syncError}</span>
           <button onClick={() => setSyncError(null)} className="ml-4 text-amber-400 hover:text-white">✕</button>
         </div>
       )}
-      <ToolsPageHeader
-        badge="PORTFOLIO TRACKER"
-        title="Portfolio Tracking"
-        subtitle="Track live prices, modeled allocation, and performance in real-time (educational mode)."
-        icon="📊"
-        backHref="/dashboard"
-        actions={
-          <>
-            {positions.length > 0 && (
-              <button
-                onClick={() => {
-                  if (canExportCSV(tier)) {
-                    exportPositionsToCSV();
-                  } else {
-                    alert('CSV export is a Pro feature. Upgrade to Pro or Pro Trader to export your data.');
-                  }
-                }}
-                className={`rounded-md border px-4 py-2 text-[13px] font-medium transition ${canExportCSV(tier) ? 'border-emerald-500 text-emerald-500 opacity-100' : 'border-slate-600 text-slate-500 opacity-60'}`}
-              >
-                📥 Export Positions {!canExportCSV(tier) && '🔒'}
-              </button>
-            )}
-            {closedPositions.length > 0 && (
-              <button
-                onClick={() => {
-                  if (canExportCSV(tier)) {
-                    exportHistoryToCSV();
-                  } else {
-                    alert('CSV export is a Pro feature. Upgrade to Pro or Pro Trader to export your data.');
-                  }
-                }}
-                className={`rounded-md border border-[var(--msp-border)] px-4 py-2 text-[13px] font-medium transition ${canExportCSV(tier) ? 'text-[var(--msp-text-muted)]' : 'text-slate-500'}`}
-              >
-                📥 Export History
-              </button>
-            )}
-            {(positions.length > 0 || closedPositions.length > 0) && (
-              <button
-                onClick={clearAllData}
-                className="rounded-[10px] border border-slate-500/40 bg-transparent px-4 py-2.5 text-[13px] font-semibold text-red-500"
-              >
-                🗑️ Clear All Data
-              </button>
-            )}
-            <button
-              onClick={() => setActiveTab('add-manual')}
-              className="rounded-[10px] border border-emerald-500 px-4 py-2.5 text-[13px] font-semibold text-emerald-400"
-            >
-              + Add Position
-            </button>
-            <button
-              onClick={() => {
-                // Soft friction: warn during drawdown
-                const inDrawdown = totalReturn < -20 && positions.length > 0;
-                if (inDrawdown && activeTab !== 'deploy-capital' && !drawdownAcknowledged) {
-                  const proceed = confirm(
-                    '⚠️ Your portfolio data shows a significant drawdown (-' + Math.abs(totalReturn).toFixed(1) + '%).\n\n' +
-                    'Click OK to proceed, or Cancel to go back.'
-                  );
-                  if (!proceed) return;
-                  setDrawdownAcknowledged(true);
-                }
-                setActiveTab('deploy-capital');
-              }}
-              disabled={riskLocked}
-              className="rounded-[10px] bg-emerald-500 px-4 py-2.5 text-[13px] font-semibold text-white shadow-[var(--msp-shadow)]"
-            >
-              + Model Allocation
-            </button>
-          </>
-        }
-      />
+      {embeddedInWorkspace ? (
+        <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Portfolio review</div>
+              <h2 className="mt-1 text-base font-black text-white">Portfolio Tracking</h2>
+              <p className="mt-1 text-xs leading-5 text-slate-400">Recorded paper positions, exposure, cash controls, and descriptive risk analytics.</p>
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-2">{portfolioHeaderActions}</div>
+          </div>
+        </div>
+      ) : (
+        <ToolsPageHeader
+          badge="PORTFOLIO TRACKER"
+          title="Portfolio Tracking"
+          subtitle="Track live prices, modeled allocation, and performance in real-time (educational mode)."
+          icon="PF"
+          backHref="/dashboard"
+          actions={portfolioHeaderActions}
+        />
+      )}
 
-      <div className="mx-4 mt-2">
-        <ComplianceDisclaimer collapsible />
-        <div className="mt-2 rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-2.5 text-[11px] leading-relaxed text-slate-400">
+      <div className={embeddedInWorkspace ? 'mt-2' : 'mx-4 mt-2'}>
+        {!embeddedInWorkspace && <ComplianceDisclaimer collapsible />}
+        <div className={`${embeddedInWorkspace ? '' : 'mt-2'} rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-2.5 text-[11px] leading-relaxed text-slate-400`}>
           This page displays user-entered simulation records and descriptive analytics only. It is not guidance for future portfolio decisions or allocation changes.
         </div>
       </div>
 
-      <div className="w-full max-w-none px-4 pt-3">
+      <div className={`w-full max-w-none pt-3 ${embeddedInWorkspace ? 'px-0' : 'px-4'}`}>
         <CommandCenterStateBar
           mode="OBSERVE"
           actionableNow={positions.length > 0
@@ -1824,11 +1838,13 @@ export function PortfolioContent() {
           ]}
         />
 
-        <AdaptivePersonalityCard
-          skill="portfolio"
-          setupText={`Portfolio return ${totalReturn.toFixed(2)}% with ${positions.length} open positions`}
-          baseScore={Math.max(20, Math.min(90, 50 + totalReturn))}
-        />
+        {!embeddedInWorkspace && (
+          <AdaptivePersonalityCard
+            skill="portfolio"
+            setupText={`Portfolio return ${totalReturn.toFixed(2)}% with ${positions.length} open positions`}
+            baseScore={Math.max(20, Math.min(90, 50 + totalReturn))}
+          />
+        )}
       </div>
 
       {/* Manual entry modal (fallback when API has no price) */}
@@ -1861,7 +1877,7 @@ export function PortfolioContent() {
         </div>
       )}
 
-      <div className="px-4 pb-6">
+      <div className={`${embeddedInWorkspace ? 'px-0' : 'px-4'} pb-6`}>
         <div className="rounded-xl border border-slate-700/60 bg-[var(--msp-panel)] p-4">
           <div className="grid gap-3 md:grid-cols-3">
             <div>
@@ -1872,7 +1888,8 @@ export function PortfolioContent() {
             </div>
             <div className="rounded-lg border border-slate-700 bg-slate-900/50 p-3 text-center">
               <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500">Portfolio Risk State</div>
-              <div className="mt-1 text-lg font-black" style={{ color: riskStateTone }}>{riskStateIcon} {riskStateLabel}</div>
+              <div className="mt-1 text-lg font-black" style={{ color: riskStateTone }}>{riskStateLabel}</div>
+              <div className="mt-1 text-[10px] font-black uppercase tracking-[0.1em]" style={{ color: riskStateTone }}>{riskStateCode}</div>
               <div className="text-xs text-slate-300">{portfolioRiskProfile}</div>
             </div>
             <div className="text-right">
@@ -1947,14 +1964,14 @@ export function PortfolioContent() {
           ))}
         </div>
 
-        <div className="mt-3 grid gap-2 md:grid-cols-5">
+        <div className={`mt-3 ${embeddedInWorkspace ? 'flex gap-2 overflow-x-auto pb-1' : 'grid gap-2 md:grid-cols-5'}`}>
           {modeItems.map((item) => {
             const isActive = activeTab === item.key;
             return (
               <button
                 key={item.key}
                 onClick={() => setActiveTab(item.key)}
-                className={`rounded-lg border px-3 py-2 text-xs font-bold uppercase tracking-[0.06em] transition ${isActive ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-300' : 'border-slate-700 bg-slate-900/40 text-slate-300 hover:border-slate-500'}`}
+                className={`${embeddedInWorkspace ? 'min-w-fit shrink-0 px-3 py-1.5 text-[11px]' : 'px-3 py-2 text-xs'} rounded-lg border font-bold uppercase tracking-[0.06em] transition ${isActive ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-300' : 'border-slate-700 bg-slate-900/40 text-slate-300 hover:border-slate-500'}`}
               >
                 {item.label}
               </button>
@@ -1962,7 +1979,7 @@ export function PortfolioContent() {
           })}
         </div>
 
-        <div className="mt-4 rounded-xl border border-slate-700/60 bg-[var(--msp-panel)] p-4">
+        <div className={`mt-4 rounded-xl border border-slate-700/60 bg-[var(--msp-panel)] ${embeddedInWorkspace ? 'p-3' : 'p-4'}`}>
           {activeTab === 'overview' && (
             <div className="space-y-4">
               <div className="grid gap-4 lg:grid-cols-5">
@@ -2071,7 +2088,7 @@ export function PortfolioContent() {
                       </div>
                     );
                   })()}
-                  <div className="mt-2 text-xs text-slate-500">Risk event markers: {isRiskEvent ? '🔴 Active' : isRiskElevated ? '🟡 Elevated' : '🟢 Stable'}</div>
+                  <div className="mt-2 text-xs text-slate-500">Risk event markers: {isRiskEvent ? 'Active' : isRiskElevated ? 'Elevated' : 'Stable'}</div>
                 </div>
                 <div className="lg:col-span-2 space-y-3">
                   <div className="rounded-lg border border-slate-700 bg-slate-900/40 p-3">
@@ -2191,8 +2208,8 @@ export function PortfolioContent() {
                       onChange={(e) => setNewPosition({ ...newPosition, side: e.target.value as 'LONG' | 'SHORT' })}
                       className="rounded border border-slate-700 bg-slate-900 px-3 py-2.5 text-sm text-slate-100 [&>option]:bg-slate-900 [&>option]:text-slate-100"
                     >
-                      <option value="LONG">LONG</option>
-                      <option value="SHORT">SHORT</option>
+                      <option value="LONG">Long exposure</option>
+                      <option value="SHORT">Short exposure</option>
                     </select>
                     <select
                       value={newPosition.strategy || ''}
@@ -2246,7 +2263,7 @@ export function PortfolioContent() {
                     disabled={!newPosition.symbol || !newPosition.quantity || !newPosition.entryPrice || !newPosition.currentPrice}
                     className="w-full rounded-md bg-emerald-500 px-4 py-3 text-sm font-bold uppercase tracking-[0.06em] text-white transition hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    ➕ Add Position
+                    Add Position
                   </button>
                 </div>
               </div>
@@ -2260,7 +2277,7 @@ export function PortfolioContent() {
                   <div className="text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Trade Input Panel</div>
                   <input value={deployDraft.symbol} onChange={(e) => setDeployDraft((prev) => ({ ...prev, symbol: e.target.value.toUpperCase() }))} placeholder="Symbol" className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100" />
                   <div className="grid grid-cols-2 gap-2">
-                    <select value={deployDraft.side} onChange={(e) => setDeployDraft((prev) => ({ ...prev, side: e.target.value as 'LONG' | 'SHORT' }))} className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"><option value="LONG">LONG</option><option value="SHORT">SHORT</option></select>
+                    <select value={deployDraft.side} onChange={(e) => setDeployDraft((prev) => ({ ...prev, side: e.target.value as 'LONG' | 'SHORT' }))} className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100"><option value="LONG">Long exposure</option><option value="SHORT">Short exposure</option></select>
                     <input value={deployDraft.strategyTag} onChange={(e) => setDeployDraft((prev) => ({ ...prev, strategyTag: e.target.value }))} placeholder="Strategy Tag" className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100" />
                   </div>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -2359,7 +2376,7 @@ export function PortfolioContent() {
                           <td className="px-2 py-1.5 font-semibold text-slate-100">{risk.symbol}</td>
                           <td className="px-2 py-1.5 text-right">{risk.concentrationPct.toFixed(1)}%</td>
                           <td className="px-2 py-1.5 text-right">{formatMoney(risk.dollarRisk)}</td>
-                          <td className="px-2 py-1.5">{risk.concentrationPct > riskSettings.maxPositionSize ? '⚠ Concentration warning' : 'Normal'}</td>
+                          <td className="px-2 py-1.5">{risk.concentrationPct > riskSettings.maxPositionSize ? 'Concentration warning' : 'Normal'}</td>
                         </tr>
                       ))}
                       {riskContributors.length === 0 && (
@@ -2387,7 +2404,7 @@ export function PortfolioContent() {
                   disabled={refreshingAll}
                   className="flex items-center gap-1.5 rounded border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:border-emerald-500/50 hover:text-emerald-300 disabled:opacity-50 transition-colors"
                 >
-                  <span className={refreshingAll ? 'animate-spin' : ''}>🔄</span>
+                  <span className={refreshingAll ? 'animate-pulse' : ''}>Refresh</span>
                   {refreshingAll ? 'Refreshing…' : 'Refresh Prices'}
                 </button>
               </div>
@@ -2446,7 +2463,7 @@ export function PortfolioContent() {
                             </div>
                             <div className="flex flex-wrap gap-1">
                               <button onClick={() => closePosition(position.id)} className="rounded border border-red-500/40 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-red-300">Record Full Close</button>
-                              <button onClick={() => reducePositionHalf(position.id)} className="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-300">Record 50% Close</button>
+                              <button onClick={() => reducePositionHalf(position.id)} className="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-300">Record Partial Close</button>
                               <button onClick={() => moveStopToBreakeven(position.id)} className="rounded border border-blue-500/40 bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-blue-300">Edit Stop</button>
                               <button onClick={() => deletePosition(position.id)} className="rounded border border-zinc-500/40 bg-zinc-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-zinc-400 hover:text-red-300 hover:border-red-500/40" title="Delete this position (mistake entry)">✕ Delete</button>
                             </div>

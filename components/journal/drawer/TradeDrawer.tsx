@@ -16,11 +16,12 @@ type TradeDrawerProps = {
   onRequestSnapshot?: () => void;
   onCreateTrade?: (payload: TradeEntryPayload) => Promise<void>;
   prefillValues?: TradeEntryInitialValues;
+  embeddedInWorkspace?: boolean;
 };
 
 type TabKey = 'overview' | 'intelligence' | 'snapshots' | 'notes';
 
-export default function TradeDrawer({ open, trade, onClose, onRequestCloseTrade, onRequestSnapshot, onCreateTrade, prefillValues }: TradeDrawerProps) {
+export default function TradeDrawer({ open, trade, onClose, onRequestCloseTrade, onRequestSnapshot, onCreateTrade, prefillValues, embeddedInWorkspace = false }: TradeDrawerProps) {
   const [tab, setTab] = useState<TabKey>('overview');
   if (!open) return null;
 
@@ -28,18 +29,18 @@ export default function TradeDrawer({ open, trade, onClose, onRequestCloseTrade,
 
   return (
     <div
-      className="fixed inset-0 z-[100] bg-black/40"
+      className={`fixed inset-0 z-[100] ${embeddedInWorkspace ? 'bg-black/55 backdrop-blur-[1px]' : 'bg-black/40'}`}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
       role="dialog"
       aria-modal="true"
       aria-label={trade ? `Trade drawer for ${trade.symbol}` : 'New trade drawer'}
     >
-      <div className="absolute right-0 top-0 h-full w-full max-w-2xl overflow-y-auto border-l border-white/10 bg-slate-950 p-4">
-        <div className="mb-3 flex items-center justify-between">
+      <div className={`absolute right-0 top-0 h-full w-full overflow-y-auto border-l border-white/10 bg-slate-950 shadow-2xl ${embeddedInWorkspace ? 'max-w-xl p-5 md:rounded-l-xl' : 'max-w-2xl p-4'}`}>
+        <div className="sticky top-0 z-10 mb-3 flex items-center justify-between border-b border-white/10 bg-slate-950/95 pb-3">
           <div>
-            <div className="text-sm text-slate-400">{isNewTrade ? 'New Trade' : 'Trade Drawer'}</div>
-            <div className="text-lg font-semibold text-slate-100">{trade?.symbol || 'Create Manual Trade'}</div>
+            <div className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">{isNewTrade ? 'New journal entry' : 'Trade review'}</div>
+            <div className="mt-1 text-lg font-semibold text-slate-100">{trade?.symbol || 'Manual Trade'}</div>
           </div>
           <div className="flex gap-2">
             {!isNewTrade && (
@@ -48,7 +49,7 @@ export default function TradeDrawer({ open, trade, onClose, onRequestCloseTrade,
                 <button onClick={onRequestCloseTrade} className="rounded bg-rose-500/20 px-3 py-1 text-sm text-rose-200">Close</button>
               </>
             )}
-            <button onClick={onClose} className="rounded bg-white/10 px-3 py-1 text-sm text-slate-100">Done</button>
+            <button onClick={onClose} className="rounded bg-white/10 px-3 py-1 text-sm text-slate-100">Close Panel</button>
           </div>
         </div>
 

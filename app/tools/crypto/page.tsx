@@ -79,7 +79,7 @@ function PageLoadingSkeleton() {
 
 type Section = 'overview' | 'search' | 'market' | 'trending' | 'movers' | 'sectors' | 'defi' | 'dex' | 'newpools' | 'listings';
 type LogTab = 'alerts' | 'regime' | 'scanner' | 'notrade' | 'data';
-type PermissionVerdict = 'ALIGNED' | 'CONDITIONAL' | 'NOT ALIGNED';
+type ReviewVerdict = 'ALIGNED' | 'CONDITIONAL' | 'NOT ALIGNED';
 
 interface SidebarItem {
   id: Section;
@@ -111,16 +111,16 @@ function getDominanceValue(dominance: Array<{ symbol: string; dominance: number 
   return typeof row?.dominance === 'number' ? row.dominance : 0;
 }
 
-function permissionColor(verdict: PermissionVerdict): string {
+function reviewColor(verdict: ReviewVerdict): string {
   if (verdict === 'ALIGNED') return 'text-emerald-300';
   if (verdict === 'CONDITIONAL') return 'text-amber-300';
   return 'text-red-300';
 }
 
-function permissionBadge(verdict: PermissionVerdict): string {
-  if (verdict === 'ALIGNED') return '🟢';
-  if (verdict === 'CONDITIONAL') return '🟡';
-  return '🔴';
+function reviewLabel(verdict: ReviewVerdict): string {
+  if (verdict === 'ALIGNED') return 'Aligned';
+  if (verdict === 'CONDITIONAL') return 'Mixed';
+  return 'Not aligned';
 }
 
 export default function CryptoCommandCenter() {
@@ -277,7 +277,7 @@ function CryptoCommandCenterContent() {
       (breadthScore * 0.2),
     );
 
-    let verdict: PermissionVerdict = 'CONDITIONAL';
+    let verdict: ReviewVerdict = 'CONDITIONAL';
     if (hardBlockTriggered) verdict = 'NOT ALIGNED';
     else if (adaptiveConfidence >= 65) verdict = 'ALIGNED';
     else if (adaptiveConfidence < 40) verdict = 'NOT ALIGNED';
@@ -285,31 +285,31 @@ function CryptoCommandCenterContent() {
 
     if (verdict === 'ALIGNED' && (!longsAllowed || !shortsAllowed)) verdict = 'CONDITIONAL';
 
-    const capitalMode = verdict === 'ALIGNED' ? 'Normal Exposure' : verdict === 'CONDITIONAL' ? 'Reduced Exposure' : 'Minimal Exposure';
+    const riskContext = verdict === 'ALIGNED' ? 'Standard review' : verdict === 'CONDITIONAL' ? 'Reduced conviction' : 'Observation';
 
     const subClusters = [
       {
         name: 'Large Caps',
-        permission: riskState === 'Risk-Off' ? 'Restricted' : leadership === 'Defensive Rotation' ? 'Conditional' : 'Allowed',
+        review: riskState === 'Risk-Off' ? 'Weak' : leadership === 'Defensive Rotation' ? 'Mixed' : 'Supportive',
       },
       {
         name: 'Mid/Alts',
-        permission: !longsAllowed || breadthScore < 45 ? 'Restricted' : breadthScore >= 60 ? 'Allowed' : 'Conditional',
+        review: !longsAllowed || breadthScore < 45 ? 'Weak' : breadthScore >= 60 ? 'Supportive' : 'Mixed',
       },
       {
         name: 'Meme/High Beta',
-        permission: verdict === 'ALIGNED' && liquidity === 'Expanding' && volatility !== 'Dislocation' ? 'Allowed' : 'Restricted',
+        review: verdict === 'ALIGNED' && liquidity === 'Expanding' && volatility !== 'Dislocation' ? 'Supportive' : 'Weak',
       },
       {
         name: 'DeFi',
-        permission: liquidity === 'Expanding' && breadthScore >= 50 ? 'Allowed' : liquidity === 'Contracting' ? 'Restricted' : 'Conditional',
+        review: liquidity === 'Expanding' && breadthScore >= 50 ? 'Supportive' : liquidity === 'Contracting' ? 'Weak' : 'Mixed',
       },
     ];
 
     const explanation =
       `${riskState} bias with ${leadership.toLowerCase()}. ` +
       `Liquidity is ${liquidity.toLowerCase()} and volatility is ${volatility.toLowerCase()}. ` +
-      `${verdict === 'ALIGNED' ? 'Indicators are broadly aligned.' : verdict === 'CONDITIONAL' ? 'Partial alignment — review conditions before acting.' : 'Indicators suggest caution — prioritize observation.'}`;
+      `${verdict === 'ALIGNED' ? 'Indicators are broadly aligned.' : verdict === 'CONDITIONAL' ? 'Partial alignment — review more evidence before relying on the scenario.' : 'Indicators suggest caution — prioritize observation.'}`;
 
     return {
       verdict,
@@ -317,7 +317,7 @@ function CryptoCommandCenterContent() {
       hardBlocks: [...hardBlocksLong, ...hardBlocksShort],
       longsAllowed,
       shortsAllowed,
-      capitalMode,
+      riskContext,
       riskState,
       leadership,
       liquidity,
@@ -360,7 +360,7 @@ function CryptoCommandCenterContent() {
         change24h: marketData.market?.marketCapChange24h,
         trending: marketData.trending?.coins?.slice(0, 5),
         dominance: marketData.market?.dominance,
-        permission: morningDecision.verdict,
+        reviewState: morningDecision.verdict,
         confidence: morningDecision.adaptiveConfidence,
       },
       summary: `Crypto ${morningDecision.verdict} (${morningDecision.adaptiveConfidence}% confluence). Market: ${marketData.market?.totalMarketCapFormatted || 'N/A'} (${marketData.market?.marketCapChange24h?.toFixed(2) || '0'}% 24h)`,
@@ -465,23 +465,22 @@ function CryptoCommandCenterContent() {
             <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
               <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Crypto Analysis Gate</p>
               <div className="mt-1 flex items-center gap-2">
-                <span className="text-xl">{permissionBadge(morningDecision.verdict)}</span>
-                <h2 className={`text-base font-extrabold ${permissionColor(morningDecision.verdict)}`}>
-                  STATUS: {morningDecision.verdict}
+                <h2 className={`text-base font-extrabold ${reviewColor(morningDecision.verdict)}`}>
+                  REVIEW: {reviewLabel(morningDecision.verdict)}
                 </h2>
               </div>
               <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
                 <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Adaptive Confluence: {morningDecision.adaptiveConfidence}%</span>
-                <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Capital Mode: {morningDecision.capitalMode}</span>
-                <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Longs: {morningDecision.longsAllowed ? 'Allowed' : 'Restricted'}</span>
-                <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Shorts: {morningDecision.shortsAllowed ? 'Allowed' : 'Restricted'}</span>
+                <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Risk Context: {morningDecision.riskContext}</span>
+                <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Long Evidence: {morningDecision.longsAllowed ? 'Clear' : 'Limited'}</span>
+                <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Short Evidence: {morningDecision.shortsAllowed ? 'Clear' : 'Limited'}</span>
               </div>
               <p className="mt-2 text-[11px] text-slate-400">{morningDecision.explanation}</p>
               <div className="mt-2 grid grid-cols-2 gap-1.5 md:grid-cols-4">
                 {morningDecision.subClusters.map((cluster) => (
                   <div key={cluster.name} className="rounded border border-slate-700 bg-slate-900/70 px-2 py-1 text-[11px]">
                     <p className="text-slate-500">{cluster.name}</p>
-                    <p className={`font-semibold ${cluster.permission === 'Allowed' ? 'text-emerald-300' : cluster.permission === 'Conditional' ? 'text-amber-300' : 'text-red-300'}`}>{cluster.permission}</p>
+                    <p className={`font-semibold ${cluster.review === 'Supportive' ? 'text-emerald-300' : cluster.review === 'Mixed' ? 'text-amber-300' : 'text-red-300'}`}>{cluster.review}</p>
                   </div>
                 ))}
               </div>
@@ -571,7 +570,7 @@ function CryptoCommandCenterContent() {
                 <p className="text-[11px] text-slate-300">
                   24h: {typeof marketData?.market?.marketCapChange24h === 'number' ? `${marketData.market.marketCapChange24h.toFixed(2)}%` : 'N/A'}
                 </p>
-                <p className="text-[11px] text-slate-300">Mode: {morningDecision.capitalMode}</p>
+                <p className="text-[11px] text-slate-300">Review: {morningDecision.riskContext}</p>
               </div>
 
               <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
@@ -587,10 +586,10 @@ function CryptoCommandCenterContent() {
               </div>
 
               <div className="grid grid-cols-2 gap-1.5">
-                <Link href="/tools/crypto-dashboard" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[11px] text-slate-300">Derivatives</Link>
-                <Link href="/tools/crypto-heatmap" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[11px] text-slate-300">Full Heatmap</Link>
-                <Link href="/tools/crypto-explorer" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[11px] text-slate-300">Explorer</Link>
-                <Link href="/tools/alerts" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[11px] text-slate-300">Create Alert</Link>
+                <Link href="/tools/dashboard?tab=crypto" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[11px] text-slate-300">Derivatives</Link>
+                <Link href="/tools/explorer?tab=crypto-command&section=heatmap" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[11px] text-slate-300">Full Heatmap</Link>
+                <Link href="/tools/explorer?tab=crypto" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[11px] text-slate-300">Explorer</Link>
+                <Link href="/tools/workspace?tab=alerts" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[11px] text-slate-300">Create Alert</Link>
               </div>
 
               <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
@@ -599,8 +598,8 @@ function CryptoCommandCenterContent() {
                     <p className="text-[11px] uppercase text-red-300">Caution Mode</p>
                     <p className="mt-1 text-[11px] text-slate-400">Indicators not aligned. Focus on volatility alerts and observation.</p>
                     <div className="mt-1.5 flex gap-1.5">
-                      <Link href="/tools/alerts" className="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-300">Volatility Alerts</Link>
-                      <Link href="/tools/journal" className="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-300">Journal Review</Link>
+                      <Link href="/tools/workspace?tab=alerts" className="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-300">Volatility Alerts</Link>
+                      <Link href="/tools/workspace?tab=journal" className="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-300">Journal Review</Link>
                     </div>
                   </>
                 ) : (

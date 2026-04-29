@@ -104,38 +104,38 @@ const nextConfig = {
 
       // ── Old v1 standalone routes → unified surfaces ──
       // Terminal surface
-      { source: '/tools/options-terminal', destination: '/tools/terminal', permanent: true },
-      { source: '/tools/crypto-terminal', destination: '/tools/terminal', permanent: true },
-      { source: '/tools/options-flow', destination: '/tools/terminal', permanent: true },
-      { source: '/tools/options', destination: '/tools/terminal', permanent: true },
+      { source: '/tools/options-terminal', destination: '/tools/terminal?tab=options-terminal', permanent: true },
+      { source: '/tools/crypto-terminal', destination: '/tools/terminal?tab=crypto-terminal', permanent: true },
+      { source: '/tools/options-flow', destination: '/tools/terminal?tab=options-flow', permanent: true },
+      { source: '/tools/options', destination: '/tools/terminal?tab=options-terminal', permanent: true },
 
       // Explorer surface
-      { source: '/tools/equity-explorer', destination: '/tools/explorer', permanent: true },
-      { source: '/tools/crypto-explorer', destination: '/tools/explorer', permanent: true },
-      { source: '/tools/commodities', destination: '/tools/explorer', permanent: true },
-      { source: '/tools/market-movers', destination: '/tools/explorer', permanent: true },
-      { source: '/tools/gainers-losers', destination: '/tools/explorer', permanent: true },
-      { source: '/tools/heatmap', destination: '/tools/explorer', permanent: true },
+      { source: '/tools/equity-explorer', destination: '/tools/explorer?tab=equity', permanent: true },
+      { source: '/tools/crypto-explorer', destination: '/tools/explorer?tab=crypto', permanent: true },
+      { source: '/tools/commodities', destination: '/tools/explorer?tab=commodities', permanent: true },
+      { source: '/tools/market-movers', destination: '/tools/explorer?tab=movers', permanent: true },
+      { source: '/tools/gainers-losers', destination: '/tools/explorer?tab=movers', permanent: true },
+      { source: '/tools/heatmap', destination: '/tools/explorer?tab=heatmap', permanent: true },
       { source: '/tools/markets', destination: '/tools/explorer', permanent: true },
 
       // Research surface
       { source: '/tools/news', destination: '/tools/research', permanent: true },
       { source: '/tools/economic-calendar', destination: '/tools/research', permanent: true },
-      { source: '/tools/earnings', destination: '/tools/research', permanent: true },
-      { source: '/tools/earnings-calendar', destination: '/tools/research', permanent: true },
+      { source: '/tools/earnings', destination: '/tools/research?tab=earnings', permanent: true },
+      { source: '/tools/earnings-calendar', destination: '/tools/research?tab=earnings', permanent: true },
 
       // Dashboard surface
-      { source: '/tools/crypto-dashboard', destination: '/tools/dashboard', permanent: true },
-      { source: '/tools/crypto', destination: '/tools/explorer', permanent: true },
-      { source: '/tools/macro', destination: '/tools/explorer', permanent: true },
+      { source: '/tools/crypto-dashboard', destination: '/tools/dashboard?tab=crypto', permanent: true },
+      { source: '/tools/crypto', destination: '/tools/explorer?tab=crypto-command', permanent: true },
+      { source: '/tools/macro', destination: '/tools/explorer?tab=macro', permanent: true },
       { source: '/tools/volatility-engine', destination: '/tools/golden-egg', permanent: true },
 
       // Scanner surface
       { source: '/tools/ai-analyst', destination: '/tools/scanner', permanent: true },
-      { source: '/tools/confluence-scanner', destination: '/tools/terminal', permanent: true },
-      { source: '/tools/options-confluence', destination: '/tools/terminal', permanent: true },
-      { source: '/tools/crypto-time-confluence', destination: '/tools/terminal', permanent: true },
-      { source: '/tools/time-scanner', destination: '/tools/terminal', permanent: true },
+      { source: '/tools/confluence-scanner', destination: '/tools/terminal?tab=time-confluence', permanent: true },
+      { source: '/tools/options-confluence', destination: '/tools/terminal?tab=options-confluence', permanent: true },
+      { source: '/tools/crypto-time-confluence', destination: '/tools/terminal?tab=time-confluence', permanent: true },
+      { source: '/tools/time-scanner', destination: '/tools/terminal?tab=time-scanner', permanent: true },
       { source: '/tools/deep-analysis', destination: '/tools/golden-egg', permanent: true },
       { source: '/tools/intraday-charts', destination: '/tools/golden-egg', permanent: true },
 

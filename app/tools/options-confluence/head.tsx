@@ -6,7 +6,7 @@ export default function Head() {
         name="description"
         content="Analyze options flow, put/call positioning, max pain, and confluence signals to plan higher-probability options trades."
       />
-      <link rel="canonical" href="https://marketscannerpros.app/tools/options-confluence" />
+      <link rel="canonical" href="https://marketscannerpros.app/tools/terminal?tab=options-confluence" />
     </>
   );
 }

@@ -14,7 +14,7 @@ import TradeIdeasSection from '@/components/derivatives/TradeIdeasSection';
 import DerivativesContextSection from '@/components/derivatives/DerivativesContextSection';
 import type { DashboardData, DerivativesTradeIdea } from '@/components/derivatives/types';
 
-export default function CryptoDashboard() {
+export default function CryptoDashboard({ embeddedInDashboard = false }: { embeddedInDashboard?: boolean } = {}) {
   const { tier } = useUserTier();
   const [data, setData] = useState<DashboardData>({
     fundingRates: null,
@@ -144,7 +144,7 @@ export default function CryptoDashboard() {
   // Must be after ALL hooks to comply with React rules
   if (!canAccessCryptoCommandCenter(tier)) {
     return (
-      <div className="min-h-screen bg-[var(--msp-bg)] text-white flex items-center justify-center">
+      <div className={`${embeddedInDashboard ? 'min-h-[16rem]' : 'min-h-screen'} bg-[var(--msp-bg)] text-white flex items-center justify-center`}>
         <UpgradeGate feature="Crypto Derivatives Dashboard" requiredTier="pro" />
       </div>
     );
@@ -347,21 +347,22 @@ export default function CryptoDashboard() {
   const decisionDrivers = [fundingDriver, oiDriver, liquidationDriver];
 
   return (
-    <div className="mx-auto w-full max-w-none px-4 pb-24 pt-6 md:px-6">
+    <div className={`mx-auto w-full max-w-none ${embeddedInDashboard ? 'px-0 pb-6 pt-0' : 'px-4 pb-24 pt-6 md:px-6'}`}>
       {/* Page Header */}
-      <div className="mb-4">
+      <div className={embeddedInDashboard ? 'mb-3 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-4 py-3' : 'mb-4'}>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 flex-shrink-0 rounded-xl overflow-hidden"><img src="/assets/platform-tools/crypto-derivatives.png" alt="" className="h-full w-full object-contain p-0.5" /></div>
+              {!embeddedInDashboard && <div className="h-10 w-10 flex-shrink-0 rounded-xl overflow-hidden"><img src="/assets/platform-tools/crypto-derivatives.png" alt="" className="h-full w-full object-contain p-0.5" /></div>}
               <div>
-                <h1 className="text-3xl font-bold text-white mb-2">Crypto Derivatives Dashboard</h1>
-                <p className="text-gray-400">Bias → Rotation → Volatility → Scenario Review</p>
+                {embeddedInDashboard && <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Derivatives lens</div>}
+                <h1 className={`${embeddedInDashboard ? 'mt-1 text-base' : 'text-3xl mb-2'} font-bold text-white`}>Crypto Derivatives Dashboard</h1>
+                <p className={`${embeddedInDashboard ? 'mt-1 text-xs' : ''} text-gray-400`}>Bias, rotation, volatility, and scenario review.</p>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
               <input
                 type="checkbox"
                 checked={autoRefresh}
@@ -375,9 +376,9 @@ export default function CryptoDashboard() {
               type="button"
               onClick={fetchData}
               disabled={loading}
-              className="px-4 py-2 bg-[#10B981] text-white rounded-lg hover:bg-[#059669] disabled:opacity-50 transition-all"
+              className="rounded-lg bg-[#10B981] px-3 py-1.5 text-xs font-semibold text-white transition-all hover:bg-[#059669] disabled:opacity-50"
             >
-              {loading ? 'Refreshing Dashboard...' : '🔄 Refresh Dashboard'}
+              {loading ? 'Refreshing...' : 'Refresh'}
             </button>
           </div>
         </div>
@@ -387,7 +388,7 @@ export default function CryptoDashboard() {
       </div>
 
       <div className="mb-4">
-        <ComplianceDisclaimer variant="cryptoDerivatives" />
+        <ComplianceDisclaimer compact={embeddedInDashboard} variant="cryptoDerivatives" />
       </div>
 
       {/* Zone 0: keep state anchor */}

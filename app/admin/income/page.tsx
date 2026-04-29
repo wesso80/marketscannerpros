@@ -109,13 +109,13 @@ export default function AdminIncomePage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
       <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "#E5E7EB", marginBottom: "1.5rem" }}>
-        💵 Income & Expenses
+        Income & Expenses
       </h1>
 
       {/* Profit Summary */}
       <div style={{ ...cardStyle, marginBottom: "1.5rem" }}>
         <h2 style={{ fontSize: "1.25rem", fontWeight: 600, color: "#10B981", marginBottom: "1rem" }}>
-          📈 This Month&apos;s Summary
+          This Month&apos;s Summary
         </h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(150px, 100%), 1fr))", gap: "1rem" }}>
           <div style={statBoxStyle}>
@@ -167,7 +167,7 @@ export default function AdminIncomePage() {
         {/* Revenue Section */}
         <div style={cardStyle}>
           <h2 style={{ fontSize: "1.25rem", fontWeight: 600, color: "#10B981", marginBottom: "1rem" }}>
-            💰 Revenue
+            Revenue
           </h2>
           
           {/* Subscription breakdown */}
@@ -241,7 +241,7 @@ export default function AdminIncomePage() {
         {/* Expenses Section */}
         <div style={cardStyle}>
           <h2 style={{ fontSize: "1.25rem", fontWeight: 600, color: "#EF4444", marginBottom: "1rem" }}>
-            📤 Expenses
+            Expenses
           </h2>
           
           {/* Fixed costs */}
@@ -311,7 +311,7 @@ export default function AdminIncomePage() {
       {stats.history.length > 0 && (
         <div style={{ ...cardStyle, marginTop: "1.5rem" }}>
           <h2 style={{ fontSize: "1.25rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>
-            📊 Revenue History
+            Revenue History
           </h2>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>

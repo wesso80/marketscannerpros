@@ -64,6 +64,12 @@ function signalDot(signal: string) {
   return '⚪';
 }
 
+function directionLabel(direction: ScalpResult['direction']) {
+  if (direction === 'long') return 'Bullish';
+  if (direction === 'short') return 'Bearish';
+  return 'Neutral';
+}
+
 /* ─── Component ─── */
 export default function ScalperPage() {
   const { tier, isLoading: tierLoading, isLoggedIn } = useUserTier();
@@ -270,7 +276,7 @@ export default function ScalperPage() {
                 <thead>
                   <tr className="border-b border-slate-700/50 text-slate-400">
                     <th className="text-left py-2 px-2">Symbol</th>
-                    <th className="text-left py-2 px-2">Direction</th>
+                    <th className="text-left py-2 px-2">Context</th>
                     <th className="text-right py-2 px-2">Strength</th>
                     <th className="text-right py-2 px-2">Price</th>
                     <th className="text-center py-2 px-2">EMA</th>
@@ -294,7 +300,7 @@ export default function ScalperPage() {
                         <td className="py-2.5 px-2 font-bold text-white">{r.symbol}</td>
                         <td className="py-2.5 px-2">
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold" style={{ backgroundColor: dirColor(r.direction) + '22', color: dirColor(r.direction) }}>
-                            {r.direction === 'long' ? '▲' : r.direction === 'short' ? '▼' : '—'} {r.direction.toUpperCase()}
+                            {directionLabel(r.direction)}
                           </span>
                         </td>
                         <td className="py-2.5 px-2 text-right">
@@ -370,7 +376,7 @@ function DetailPanel({ result: r }: { result: ScalpResult }) {
           <span className="text-xs text-slate-400">{r.timeframe} · {r.assetClass}</span>
         </div>
         <span className="px-2.5 py-1 rounded-full text-xs font-bold" style={{ backgroundColor: dirColor(r.direction) + '22', color: dirColor(r.direction) }}>
-          {r.direction === 'long' ? '▲ LONG' : r.direction === 'short' ? '▼ SHORT' : '— NEUTRAL'}
+          {directionLabel(r.direction)} context
         </span>
       </div>
 

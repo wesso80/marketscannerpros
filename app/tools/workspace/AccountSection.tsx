@@ -243,7 +243,7 @@ export default function AccountSection() {
   ];
 
   const planFeatures = useMemo(() => {
-    if (normalizedTier === 'pro_trader') return ['Everything in Pro', 'ARCA AI Analyst — GPT-4.1 (50/day)', 'Brain / Permission Engine', 'AI + Derivatives Intelligence', 'Golden Egg Deep Analysis'];
+    if (normalizedTier === 'pro_trader') return ['Everything in Pro', 'ARCA AI Analyst — GPT-4.1 (50/day)', 'Research risk framework', 'AI + Derivatives Intelligence', 'Golden Egg Deep Analysis'];
     if (normalizedTier === 'pro') return ['Everything in Free', 'Unlimited symbol scanning', 'MSP AI Analyst (50/day)', 'Market Movers + Intelligence', 'Portfolio / Journal insights'];
     return ['Top 10 equities + Top 10 crypto', 'MSP AI Analyst (10/day)', 'Basic portfolio tracker', 'Basic journal logging', 'Community support'];
   }, [normalizedTier]);

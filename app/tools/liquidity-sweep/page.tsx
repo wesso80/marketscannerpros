@@ -49,12 +49,12 @@ function fmtPrice(n: number): string {
   return `$${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 }
 
-function setupBadge(type: SweepResult['setupType']): { label: string; bg: string; color: string } {
+function observationBadge(type: SweepResult['setupType']): { label: string; bg: string; color: string } {
   switch (type) {
-    case 'active_sweep': return { label: '🔴 ACTIVE SWEEP', bg: 'rgba(239,68,68,0.12)', color: '#ef4444' };
-    case 'at_level': return { label: '🟡 AT LEVEL', bg: 'rgba(245,158,11,0.12)', color: '#f59e0b' };
-    case 'near_level': return { label: '🟠 NEAR LEVEL', bg: 'rgba(249,115,22,0.12)', color: '#f97316' };
-    default: return { label: '⚪ NO SETUP', bg: 'rgba(100,116,139,0.1)', color: '#64748b' };
+    case 'active_sweep': return { label: 'ACTIVE SWEEP', bg: 'rgba(239,68,68,0.12)', color: '#ef4444' };
+    case 'at_level': return { label: 'AT LEVEL', bg: 'rgba(245,158,11,0.12)', color: '#f59e0b' };
+    case 'near_level': return { label: 'NEAR LEVEL', bg: 'rgba(249,115,22,0.12)', color: '#f97316' };
+    default: return { label: 'NO OBSERVATION', bg: 'rgba(100,116,139,0.1)', color: '#64748b' };
   }
 }
 
@@ -135,7 +135,7 @@ export default function LiquiditySweepPage() {
                       border: `1px solid ${scanType === t ? 'var(--msp-accent)' : 'var(--msp-border)'}`,
                     }}
                   >
-                    {t === 'equity' ? '📊 Equity' : '₿ Crypto'}
+                    {t === 'equity' ? 'Equity' : 'Crypto'}
                   </button>
                 ))}
               </div>
@@ -150,7 +150,7 @@ export default function LiquiditySweepPage() {
               >
                 <option value="all">All Results</option>
                 <option value="sweep">Sweeps Only</option>
-                <option value="near">Setups (Sweep + Near Level)</option>
+                <option value="near">Observations (Sweep + Near Level)</option>
               </select>
 
               {/* Scan button */}
@@ -164,7 +164,7 @@ export default function LiquiditySweepPage() {
                   textTransform: 'uppercase',
                 }}
               >
-                {loading ? 'Scanning...' : '🔍 Scan for Sweeps'}
+                {loading ? 'Scanning...' : 'Scan for Sweeps'}
               </button>
 
               {data && (
@@ -181,7 +181,7 @@ export default function LiquiditySweepPage() {
               background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)',
               borderRadius: '12px', padding: '14px 18px', fontSize: '13px', color: '#ef4444',
             }}>
-              ⚠️ {error}
+              {error}
             </div>
           )}
 
@@ -191,7 +191,7 @@ export default function LiquiditySweepPage() {
               background: 'var(--msp-panel)', borderRadius: '12px', padding: '48px',
               textAlign: 'center', color: 'var(--msp-text-muted)',
             }}>
-              <div style={{ fontSize: '32px', marginBottom: '12px' }}>🔎</div>
+              <div style={{ margin: '0 auto 12px', width: '40px', height: '40px', borderRadius: '8px', border: '1px solid var(--msp-border)', display: 'grid', placeItems: 'center', fontSize: '12px', fontWeight: 800 }}>LS</div>
               <div style={{ fontSize: '14px', fontWeight: 600 }}>Scanning {scanType === 'equity' ? '40 equities' : '29 crypto'} for liquidity sweeps...</div>
               <div style={{ fontSize: '12px', color: 'var(--msp-text-faint)', marginTop: '6px' }}>
                 Computing PDH/PDL, WEEK, EQH/EQL, ROUND levels and running pattern detection
@@ -205,14 +205,14 @@ export default function LiquiditySweepPage() {
               background: 'var(--msp-panel)', borderRadius: '12px', padding: '32px',
               textAlign: 'center', color: 'var(--msp-text-muted)',
             }}>
-              No {filter === 'sweep' ? 'active sweeps' : 'setups'} detected. Try broadening the filter.
+              No {filter === 'sweep' ? 'active sweeps' : 'observations'} detected. Try broadening the filter.
             </div>
           )}
 
           {!loading && data && filtered.length > 0 && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '14px' }}>
               {filtered.map((r) => {
-                const badge = setupBadge(r.setupType);
+                const badge = observationBadge(r.setupType);
                 return (
                   <div key={r.symbol} style={{
                     background: 'var(--msp-panel)',
@@ -259,7 +259,7 @@ export default function LiquiditySweepPage() {
                         color: dirColor(r.direction),
                         textTransform: 'uppercase',
                       }}>
-                        {r.direction === 'bullish' ? '↑ LONG' : '↓ SHORT'} bias
+                        {r.direction === 'bullish' ? 'Bullish' : 'Bearish'} context
                       </div>
                     )}
 
@@ -329,7 +329,7 @@ export default function LiquiditySweepPage() {
               background: 'var(--msp-panel)', borderRadius: '12px', padding: '48px',
               textAlign: 'center', color: 'var(--msp-text-muted)',
             }}>
-              <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔍</div>
+              <div style={{ margin: '0 auto 12px', width: '44px', height: '44px', borderRadius: '8px', border: '1px solid var(--msp-border)', display: 'grid', placeItems: 'center', fontSize: '12px', fontWeight: 800 }}>LS</div>
               <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--msp-text)' }}>
                 Scan for Liquidity Sweeps
               </div>
@@ -345,8 +345,8 @@ export default function LiquiditySweepPage() {
           fontSize: '11px', color: 'var(--msp-text-faint)', textAlign: 'center',
           padding: '12px 0',
         }}>
-          ⚠️ Liquidity sweep detection is for educational purposes only. Sweeps are technical price-pattern observations and do not predict future direction or provide buy/sell signals. Not financial advice.
-          Sweep setups detect institutional stop hunts but do not guarantee reversal.
+          Liquidity sweep detection is for educational purposes only. Sweeps are technical price-pattern observations and do not predict future direction or provide buy/sell signals. Not financial advice.
+          Sweep observations describe possible stop-hunt behavior but do not guarantee reversal.
         </div>
       }
     />

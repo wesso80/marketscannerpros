@@ -69,7 +69,7 @@ const ALL_STRATEGIES = V2_STRATEGY_CATEGORIES.flatMap(c => c.strategies);
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
-export default function BacktestPage() {
+export default function BacktestPage({ embeddedInWorkspace = false }: { embeddedInWorkspace?: boolean } = {}) {
   const { tier } = useUserTier();
   const { selectedSymbol } = useV2();
 
@@ -168,6 +168,8 @@ export default function BacktestPage() {
   };
 
   // ─── Render ──────────────────────────────────────────────────────────
+  const resultTabs = ['Summary', 'Equity Curve', 'Trades', ...(result?.diagnostics ? ['Diagnostics'] : [])];
+  const showTabbedResults = !embeddedInWorkspace;
 
   return (
     <div className="space-y-6">
@@ -175,7 +177,7 @@ export default function BacktestPage() {
 
       <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Strategy Backtesting Engine">
         {/* ── Mode Toggle ──────────────────────────────────────── */}
-        <div className="flex gap-1 mb-4">
+        {!embeddedInWorkspace && <div className="flex gap-1 mb-4">
           {(['strategy', 'scanner'] as const).map(m => (
             <button
               key={m}
@@ -189,11 +191,36 @@ export default function BacktestPage() {
               {m === 'strategy' ? '🧪 Strategy Backtest' : '📡 Scanner Backtest'}
             </button>
           ))}
-        </div>
+        </div>}
 
         {/* ── Configuration Panel ──────────────────────────────── */}
         <Card>
           <div className="space-y-4">
+            {embeddedInWorkspace && (
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/60 pb-3">
+                <div>
+                  <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">Backtest method</div>
+                  <div className="mt-0.5 text-xs text-slate-400">Choose one engine, then read the full result stack below.</div>
+                </div>
+                <div className="flex gap-1">
+                  {(['strategy', 'scanner'] as const).map(m => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => { setMode(m); setResult(null); setError(null); }}
+                      className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                        mode === m
+                          ? 'border-emerald-500/30 bg-emerald-500/20 text-emerald-300'
+                          : 'border-slate-800 text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
+                      }`}
+                    >
+                      {m === 'strategy' ? 'Strategy' : 'Scanner'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Top row: Symbol + Timeframe */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <div>
@@ -382,14 +409,16 @@ export default function BacktestPage() {
             </Card>
 
             {/* Result tabs */}
-            <TabBar
-              tabs={['Summary', 'Equity Curve', 'Trades', ...(result.diagnostics ? ['Diagnostics'] : [])]}
-              active={resultTab}
-              onChange={setResultTab}
-            />
+            {showTabbedResults && (
+              <TabBar
+                tabs={resultTabs}
+                active={resultTab}
+                onChange={setResultTab}
+              />
+            )}
 
             {/* ─── SUMMARY ──────────────────────────────────── */}
-            {resultTab === 'Summary' && (
+            {(!showTabbedResults || resultTab === 'Summary') && (
               <div className="space-y-4">
                 {/* Key metrics grid */}
                 <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-3">
@@ -448,7 +477,7 @@ export default function BacktestPage() {
             )}
 
             {/* ─── EQUITY CURVE ─────────────────────────────── */}
-            {resultTab === 'Equity Curve' && (
+            {(!showTabbedResults || resultTab === 'Equity Curve') && (
               <Card>
                 <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Equity Curve</h3>
                 {result.equityCurve && result.equityCurve.length > 1 ? (
@@ -460,7 +489,7 @@ export default function BacktestPage() {
             )}
 
             {/* ─── TRADES ───────────────────────────────────── */}
-            {resultTab === 'Trades' && (
+            {(!showTabbedResults || resultTab === 'Trades') && (
               <Card>
                 <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
                   Trade History ({result.trades?.length || 0} trades)
@@ -474,7 +503,7 @@ export default function BacktestPage() {
             )}
 
             {/* ─── DIAGNOSTICS ──────────────────────────────── */}
-            {resultTab === 'Diagnostics' && result.diagnostics && (
+            {(!showTabbedResults || resultTab === 'Diagnostics') && result.diagnostics && (
               <Card>
                 <div className="flex items-center gap-3 mb-3">
                   <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Strategy Diagnostics</h3>

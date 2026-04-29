@@ -36,6 +36,14 @@ function toneForAction(value: OperatorState['action']) {
   return '#94a3b8';
 }
 
+function stageLabel(mode: OperatorFlowMode) {
+  if (mode === 'EXECUTE') return 'Timing Review';
+  if (mode === 'EVALUATE') return 'Evidence Review';
+  if (mode === 'ORIENT') return 'Discovery';
+  if (mode === 'MANAGE') return 'Outcome Review';
+  return 'Market Review';
+}
+
 interface CommandCenterStateBarProps {
   mode: OperatorFlowMode;
   actionableNow: string;
@@ -112,7 +120,7 @@ export default function CommandCenterStateBar({ mode, actionableNow, nextStep, h
 
         <div style={{ background: 'rgba(30,41,59,0.55)', border: '1px solid rgba(51,65,85,0.5)', borderRadius: '10px', padding: '10px 12px' }}>
           <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>Analysis Mode</div>
-          <div style={{ color: toneForAction(state.action), fontSize: '14px', fontWeight: 700 }}>{mode}</div>
+          <div style={{ color: toneForAction(state.action), fontSize: '14px', fontWeight: 700 }}>{stageLabel(mode)}</div>
         </div>
       </div>
 

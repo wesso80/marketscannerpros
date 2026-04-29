@@ -320,7 +320,7 @@ export default function ResearchCaseModal({ pick, assetType, timeframe, onClose 
         }}>
           <div>
             <div style={{ fontSize: '18px', fontWeight: '700', color: 'var(--msp-text)' }}>
-              📋 Research Case — {pick.symbol}
+              Research Case — {pick.symbol}
             </div>
             <div style={{ fontSize: '12px', color: 'var(--msp-text-faint)', marginTop: '2px' }}>
               Generated {new Date().toLocaleDateString('en-AU', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
@@ -350,7 +350,7 @@ export default function ResearchCaseModal({ pick, assetType, timeframe, onClose 
                 border: '1px solid var(--msp-accent)', borderRadius: '8px', cursor: 'pointer',
               }}
             >
-              📥 Export CSV
+              Export CSV
             </button>
             <button
               type="button"
@@ -470,7 +470,7 @@ export default function ResearchCaseModal({ pick, assetType, timeframe, onClose 
               background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)',
               color: 'var(--msp-text)',
             }}>
-              ⚠️ {invalidation}
+              {invalidation}
             </div>
           </Section>
 

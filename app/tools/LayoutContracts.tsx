@@ -5,17 +5,7 @@ export type ToolsContainerVariant = 'standard' | 'wide' | 'full';
 
 export function isTerminalModePath(pathname: string): boolean {
   const terminalPrefixes = [
-    '/tools/options-confluence',
-    '/tools/options-terminal',
     '/tools/scanner',
-    '/tools/deep-analysis',
-    '/tools/portfolio',
-    '/tools/ai-analyst',
-    '/tools/journal',
-    '/tools/backtest',
-    '/tools/confluence-scanner',
-    '/tools/markets',
-    '/tools/crypto-terminal',
     '/tools/dashboard',
     '/tools/terminal',
     '/tools/explorer',
@@ -34,14 +24,7 @@ export function getToolsLayoutMode(pathname: string): ToolsLayoutMode {
 
 export function getToolsContainerVariant(pathname: string): ToolsContainerVariant {
   const fullWidthPaths = [
-    '/tools/portfolio',
-    '/tools/backtest',
     '/tools/scanner',
-    '/tools/journal',
-    '/tools/confluence-scanner',
-    '/tools/markets',
-    '/tools/options-terminal',
-    '/tools/crypto-terminal',
     '/tools/dashboard',
     '/tools/terminal',
     '/tools/explorer',
@@ -52,10 +35,6 @@ export function getToolsContainerVariant(pathname: string): ToolsContainerVarian
   ];
   if (fullWidthPaths.some((p) => pathname.startsWith(p))) {
     return 'full';
-  }
-
-  if (pathname.startsWith('/tools/ai-analyst') || pathname.startsWith('/tools/deep-analysis')) {
-    return 'wide';
   }
 
   return 'standard';

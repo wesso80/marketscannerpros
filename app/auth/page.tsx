@@ -32,7 +32,7 @@ function AdminLoginSection() {
         return;
       }
       setAdminStatus({ tone: "success", text: "Admin access granted. Redirecting..." });
-      setTimeout(() => router.push("/tools/markets"), 600);
+      setTimeout(() => router.push("/tools/explorer"), 600);
     } catch {
       setAdminStatus({ tone: "error", text: "Network error." });
     } finally {

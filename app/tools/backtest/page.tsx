@@ -307,7 +307,7 @@ function BacktestContent() {
   }, [results, showInverseComparison]);
 
   const journalDraftHref = useMemo(() => {
-    if (!results) return '/tools/journal';
+    if (!results) return '/tools/workspace?tab=journal';
 
     const bias = results.totalReturn > 2 ? 'bullish' : results.totalReturn < -2 ? 'bearish' : 'neutral';
     const score = Math.max(
@@ -331,7 +331,7 @@ function BacktestContent() {
       parentEventId: planEventId || '',
     });
 
-    return `/tools/journal?${params.toString()}`;
+    return `/tools/workspace?tab=journal&${params.toString()}`;
   }, [results, symbol, strategy, strategyMeta, timeframe, workflowId, planEventId]);
 
   useEffect(() => {
@@ -487,7 +487,7 @@ function BacktestContent() {
     const event = createWorkflowEvent({
       eventType: 'trade.plan.created',
       workflowId,
-      route: '/tools/backtest',
+      route: '/tools/workspace?tab=backtest',
       module: 'backtest',
       entity: {
         entity_type: 'trade_plan',
@@ -546,7 +546,7 @@ function BacktestContent() {
       eventType: 'journal.draft.created',
       workflowId,
       parentEventId: planEventId,
-      route: '/tools/backtest',
+      route: '/tools/workspace?tab=backtest',
       module: 'backtest',
       entity: {
         entity_type: 'journal',
@@ -722,12 +722,12 @@ function BacktestContent() {
         />
         <UpgradeGate requiredTier="pro_trader" feature="Elite Strategy Backtesting">
           <ul style={{ textAlign: 'left', color: '#94a3b8', fontSize: '14px', marginBottom: '24px', paddingLeft: '20px' }}>
-            <li>🔥 25+ elite trading strategies (MSP, scalping, swing)</li>
-            <li>⏱️ Multi-timeframe testing (15m, 30m, 1h, daily)</li>
-            <li>📊 Real Alpha Vantage market data</li>
-            <li>📈 Full performance metrics & equity curves</li>
-            <li>🤖 AI-powered backtest analysis</li>
-            <li>💹 Intraday scalping & swing trade strategies</li>
+            <li>25+ historical strategy templates (MSP, scalping, swing)</li>
+            <li>Multi-timeframe testing (15m, 30m, 1h, daily)</li>
+            <li>Alpha Vantage market data with assumptions shown</li>
+            <li>Performance metrics and equity curves</li>
+            <li>AI-assisted historical result review</li>
+            <li>Intraday scalping and swing strategy templates</li>
           </ul>
         </UpgradeGate>
       </div>
@@ -1338,7 +1338,7 @@ function BacktestContent() {
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
               <Link
-                href={`/tools/options-confluence?symbol=${symbol}`}
+                href={`/tools/terminal?tab=options-confluence&symbol=${symbol}`}
                 style={{
                   padding: '8px 14px',
                   background: 'var(--msp-panel)',
@@ -1372,9 +1372,9 @@ function BacktestContent() {
         )}
 
         {/* Navigation Tabs */}
-        <nav aria-label="Trading tools">
+        <nav aria-label="Research workflow tools">
         <div role="tablist" style={{ display: 'flex', gap: '8px', borderBottom: '1px solid #1f2937', paddingBottom: '2px', marginBottom: '30px' }}>
-          <Link href="/tools/portfolio" role="tab" aria-selected={false} style={{
+          <Link href="/tools/workspace?tab=portfolio" role="tab" aria-selected={false} style={{
             padding: '10px 20px',
             color: '#9ca3af',
             textDecoration: 'none',
@@ -1384,7 +1384,7 @@ function BacktestContent() {
             Portfolio
           </Link>
 
-          <Link href="/tools/backtest" role="tab" aria-selected={true} aria-current="page" style={{
+          <Link href="/tools/workspace?tab=backtest" role="tab" aria-selected={true} aria-current="page" style={{
             padding: '10px 20px',
             color: '#10b981',
             textDecoration: 'none',
@@ -1394,7 +1394,7 @@ function BacktestContent() {
           }}>
             Backtest
           </Link>
-          <Link href="/tools/journal" role="tab" aria-selected={false} style={{
+          <Link href="/tools/workspace?tab=journal" role="tab" aria-selected={false} style={{
             padding: '10px 20px',
             color: '#9ca3af',
             textDecoration: 'none',
@@ -1780,7 +1780,7 @@ function BacktestContent() {
               opacity: isLoading ? 0.6 : 1
             }}
           >
-            {isLoading ? '⏳ Validating Strategy...' : '🚀 Validate Strategy'}
+            {isLoading ? 'Validating Strategy...' : 'Validate Strategy'}
           </button>
 
           <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>

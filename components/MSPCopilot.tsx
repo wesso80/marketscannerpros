@@ -447,7 +447,7 @@ export default function MSPCopilot({
     }
   };
 
-  if (pathname?.startsWith('/tools/scanner') || pathname?.startsWith('/tools/golden-egg') || pathname?.startsWith('/tools/options-confluence')) return null;
+  if (pathname?.startsWith('/tools/scanner') || pathname?.startsWith('/tools/golden-egg') || pathname?.startsWith('/tools/terminal')) return null;
 
   if (!isOpen) {
     // Minimized state: tiny chip icon only

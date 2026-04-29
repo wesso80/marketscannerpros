@@ -18,7 +18,7 @@ import { canAccessJournalIntelligence } from '@/lib/useUserTier';
 import { JournalDockKey, TradeModel } from '@/types/journal';
 import type { UserTier } from '@/lib/useUserTier';
 
-export default function JournalPage({ tier }: { tier: UserTier }) {
+export default function JournalPage({ tier, embeddedInWorkspace = false }: { tier: UserTier; embeddedInWorkspace?: boolean }) {
   const { query, sort, onQueryChange, onSort, onResetFilters } = useJournalState();
   const { payload, pageRows, total, loading, error, refresh } = useJournalData(query, sort);
 
@@ -210,9 +210,10 @@ export default function JournalPage({ tier }: { tier: UserTier }) {
   const isProTrader = canAccessJournalIntelligence(tier);
 
   return (
-    <div className="min-h-screen bg-[var(--msp-bg)] text-slate-100">
-      <main className="mx-auto w-full max-w-none space-y-4 px-4 py-4 md:px-6">
+    <div className={`${embeddedInWorkspace ? '' : 'min-h-screen'} bg-[var(--msp-bg)] text-slate-100`}>
+      <main className={`mx-auto w-full max-w-none space-y-4 ${embeddedInWorkspace ? 'px-0 py-0' : 'px-4 py-4 md:px-6'}`}>
         <JournalLayout
+          embeddedInWorkspace={embeddedInWorkspace}
           header={payload?.header}
           kpis={enrichedKpis}
           actions={headerActions}
@@ -254,6 +255,7 @@ export default function JournalPage({ tier }: { tier: UserTier }) {
       <TradeDrawer
         open={drawerOpen}
         trade={selectedTrade}
+        embeddedInWorkspace={embeddedInWorkspace}
         onClose={() => { setDrawerOpen(false); setPrefillValues(undefined); }}
         onRequestCloseTrade={() => setCloseModalOpen(true)}
         onRequestSnapshot={isProTrader ? () => setSnapshotModalOpen(true) : undefined}

@@ -20,10 +20,10 @@ import { buildMarketDataProviderStatus } from '@/lib/scanner/providerStatus';
 
 const QUICK_SYMBOLS = ['BTC', 'ETH', 'AAPL', 'TSLA', 'NVDA', 'SPX', 'GOLD'];
 
-function SectionTitle({ icon, title }: { icon: string; title: string }) {
+function SectionTitle({ code, title }: { code: string; title: string }) {
   return (
     <div className="mb-4 flex items-center gap-2">
-      <span className="text-base">{icon}</span>
+      <span className="rounded border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[0.62rem] font-bold uppercase tracking-wide text-amber-300">{code}</span>
       <h2 className="text-xs font-semibold uppercase tracking-widest text-amber-400">{title}</h2>
     </div>
   );
@@ -163,7 +163,7 @@ export default function VolatilityEnginePage() {
       {/* Header */}
       <header className="border-b border-white/10 bg-white/[0.02] px-4 py-4">
         <div className="mx-auto flex max-w-[1280px] items-center gap-3">
-          <span className="text-xl">⚡</span>
+          <span className="rounded border border-amber-400/30 bg-amber-400/10 px-2 py-1 text-[0.65rem] font-bold uppercase tracking-wide text-amber-300">DVE</span>
           <div>
             <h1 className="text-sm font-bold tracking-wide text-white">Phase Intelligence Console</h1>
             <p className="text-[0.62rem] text-white/40">Directional Volatility Engine — 5-Layer Analysis</p>
@@ -269,7 +269,7 @@ export default function VolatilityEnginePage() {
 
             {/* LAYER 1: Volatility State */}
             <section>
-              <SectionTitle icon="🌡️" title="Layer 1 — Volatility State" />
+              <SectionTitle code="VOL" title="Layer 1 — Volatility State" />
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <VEHeatmapGauge vol={reading.volatility} />
                 <VEBreakoutPanel breakout={reading.breakout} missingInputs={reading.dataQuality.missing} />
@@ -278,19 +278,19 @@ export default function VolatilityEnginePage() {
 
             {/* LAYER 2: Directional Bias */}
             <section>
-              <SectionTitle icon="🧭" title="Layer 2 — Directional Bias" />
+              <SectionTitle code="DIR" title="Layer 2 — Directional Bias" />
               <VEDirectionalCompass dir={reading.direction} missingInputs={reading.dataQuality.missing} />
             </section>
 
             {/* LAYER 3: Phase Persistence */}
             <section>
-              <SectionTitle icon="⏱️" title="Layer 3 — Phase Persistence" />
+              <SectionTitle code="PH" title="Layer 3 — Phase Persistence" />
               <VEPhasePanel phase={reading.phasePersistence} />
             </section>
 
             {/* LAYER 4: Signal + Invalidation */}
             <section>
-              <SectionTitle icon="📡" title="Layer 4 — Signal &amp; Invalidation" />
+              <SectionTitle code="SIG" title="Layer 4 — Signal &amp; Invalidation" />
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <VESignalCard
                 signal={reading.signal}
@@ -304,7 +304,7 @@ export default function VolatilityEnginePage() {
 
             {/* LAYER 5: Outcome Projection */}
             <section>
-              <SectionTitle icon="📊" title="Layer 5 — Outcome Projection" />
+              <SectionTitle code="PROJ" title="Layer 5 — Outcome Projection" />
               <VEProjectionCard
                 proj={reading.projection}
                 volatility={reading.volatility}
@@ -315,7 +315,7 @@ export default function VolatilityEnginePage() {
 
             {/* Supporting: Regime Outlook */}
             <section>
-              <SectionTitle icon="🎯" title="Supporting Analysis" />
+              <SectionTitle code="SUP" title="Supporting Analysis" />
               <VERegimeTimeline
                 transition={reading.transition}
                 exhaustion={reading.exhaustion}

@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
           </div>
           
           <div style="text-align: center; padding: 20px 0;">
-            <a href="https://app.marketscannerpros.app/tools/alerts" 
+            <a href="https://app.marketscannerpros.app/tools/workspace?tab=alerts"
                style="display: inline-block; background: #10b981; color: #fff; padding: 12px 24px; 
                       text-decoration: none; border-radius: 8px; font-weight: bold;">
               Set Up Price Alerts →

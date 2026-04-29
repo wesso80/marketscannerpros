@@ -36,7 +36,7 @@ export default function VEHeatmapGauge({ vol }: { vol: VolatilityState }) {
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-4 sm:p-5">
       <div className="mb-3 flex items-center gap-2">
-        <span className="text-base">🌡️</span>
+        <span className="rounded border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[0.62rem] font-bold text-amber-300">VOL</span>
         <h3 className="text-xs font-semibold uppercase tracking-widest text-amber-400">
           BBWP Gauge
         </h3>
@@ -122,7 +122,7 @@ export default function VEHeatmapGauge({ vol }: { vol: VolatilityState }) {
           </div>
           {vol.extremeAlert && (
             <div className={`font-semibold ${vol.extremeAlert === 'low' ? 'text-blue-400' : 'text-red-400'}`}>
-              {vol.extremeAlert === 'low' ? '❄️ Extreme Low' : '🔥 Extreme High'}
+              {vol.extremeAlert === 'low' ? 'Extreme Low' : 'Extreme High'}
             </div>
           )}
           <div>Confluence: <span className="font-semibold text-white/70">{vol.regimeConfidence.toFixed(0)}%</span></div>

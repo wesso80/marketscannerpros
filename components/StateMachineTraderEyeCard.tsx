@@ -114,6 +114,15 @@ export default function StateMachineTraderEyeCard({
     return '#94A3B8';
   }, [stateMachine]);
 
+  const stateLabel = useMemo(() => {
+    const state = stateMachine?.state;
+    if (!state) return loading ? 'LOADING' : 'NO STATE';
+    if (state === 'EXECUTE' || state === 'ARMED') return 'READY TO REVIEW';
+    if (state === 'STALK' || state === 'WATCH') return 'WATCHING';
+    if (state === 'MANAGE') return 'OUTCOME REVIEW';
+    return state.replace('_', ' ');
+  }, [loading, stateMachine]);
+
   if (!symbol) return null;
 
   return (
@@ -128,10 +137,10 @@ export default function StateMachineTraderEyeCard({
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
         <div style={{ color: 'var(--msp-accent)', fontSize: '0.68rem', textTransform: 'uppercase', fontWeight: 800 }}>
-          Trader Eye State
+          Scenario State
         </div>
         <div style={{ color: stateColor, fontSize: '0.72rem', fontWeight: 800 }}>
-          {stateMachine?.state ?? (loading ? 'LOADING' : 'NO STATE')}
+          {stateLabel}
         </div>
       </div>
 
@@ -147,8 +156,8 @@ export default function StateMachineTraderEyeCard({
       </div>
 
       <div style={{ color: '#A7F3D0', fontSize: '0.7rem' }}>
-        <strong>CONDITION:</strong>{' '}
-        {stateMachine?.gates?.risk_governor?.permission === 'ALLOW' ? 'ALIGNED' : stateMachine?.gates?.risk_governor?.permission === 'ALLOW_SMALL' ? 'REDUCED' : stateMachine?.gates?.risk_governor?.permission === 'BLOCK' ? 'NOT ALIGNED' : 'N/A'} ({Math.round((stateMachine?.gates?.risk_governor?.size_multiplier ?? 0) * 100)}x)
+        <strong>REVIEW:</strong>{' '}
+        {stateMachine?.gates?.risk_governor?.permission === 'ALLOW' ? 'ALIGNED' : stateMachine?.gates?.risk_governor?.permission === 'ALLOW_SMALL' ? 'REDUCED CONTEXT' : stateMachine?.gates?.risk_governor?.permission === 'BLOCK' ? 'NOT ALIGNED' : 'N/A'} ({Math.round((stateMachine?.gates?.risk_governor?.size_multiplier ?? 0) * 100)}% context)
       </div>
 
       {stateMachine?.gates?.setup_quality?.invalidate_level !== null && stateMachine?.gates?.setup_quality?.invalidate_level !== undefined && (

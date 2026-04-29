@@ -1043,7 +1043,7 @@ async function autoGenerateCoachEventForClosedTrade(workspaceId: string, event: 
         build: event.context?.app?.build,
       },
       page: {
-        route: '/tools/journal',
+        route: '/tools/workspace?tab=journal',
         module: 'coach_engine',
       },
       device: {},

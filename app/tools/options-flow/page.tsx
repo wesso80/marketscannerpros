@@ -101,10 +101,10 @@ function dirColor(d: string): string {
   return 'var(--msp-text-muted)';
 }
 
-function patternEmoji(p: string): string {
-  if (p === 'block') return '🧱';
-  if (p === 'sweep') return '🌊';
-  return '📊';
+function patternCode(p: string): string {
+  if (p === 'block') return 'BLK';
+  if (p === 'sweep') return 'SWP';
+  return 'FLOW';
 }
 
 function tierBadge(tier: string): { bg: string; color: string } {
@@ -117,14 +117,14 @@ function tierBadge(tier: string): { bg: string; color: string } {
 }
 
 function skewLabel(signal: string): { label: string; color: string } {
-  if (signal === 'bearish_hedging') return { label: '🛡️ Bearish Hedging', color: 'var(--msp-bear)' };
-  if (signal === 'bullish_demand') return { label: '🚀 Bullish Demand', color: 'var(--msp-bull)' };
-  return { label: '⚖️ Neutral', color: 'var(--msp-text-muted)' };
+  if (signal === 'bearish_hedging') return { label: 'Bearish Hedging', color: 'var(--msp-bear)' };
+  if (signal === 'bullish_demand') return { label: 'Bullish Demand', color: 'var(--msp-bull)' };
+  return { label: 'Neutral', color: 'var(--msp-text-muted)' };
 }
 
 /* ── Page ── */
 
-export default function OptionsFlowPage() {
+export default function OptionsFlowPage({ embeddedInTerminal = false }: { embeddedInTerminal?: boolean } = {}) {
   const { tier } = useUserTier();
   const [symbol, setSymbol] = useState('SPY');
   const [loading, setLoading] = useState(false);
@@ -159,20 +159,9 @@ export default function OptionsFlowPage() {
 
   const lastUpdated = data ? new Date(data.timestamp).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' }) : '—';
 
-  return (
-    <ToolPageLayout
-      identity={
-        <ToolIdentityHeader
-          toolName="Options Flow Intelligence"
-          description="Research bias classification, block/sweep detection, net premium flow, IV skew analysis, and large-flow estimation."
-          modeLabel="Flow Analysis"
-          confidenceLabel={data ? `${data.smartMoney.direction}` : '—'}
-          lastUpdatedLabel={lastUpdated}
-        />
-      }
-      primary={
+  const primaryContent = (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <ComplianceDisclaimer variant="options" />
+          {!embeddedInTerminal && <ComplianceDisclaimer variant="options" />}
           <div style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: '12px', padding: '12px 14px', fontSize: '12px', color: '#BFDBFE', lineHeight: 1.55 }}>
             Flow classifications are estimates derived from public options-chain data. “Large flow” labels may not reflect actual institutional positioning, hedging intent, or future price direction.
           </div>
@@ -202,7 +191,7 @@ export default function OptionsFlowPage() {
                   border: 'none', textTransform: 'uppercase', letterSpacing: '0.04em',
                 }}
               >
-                {loading ? 'Analyzing...' : '🔍 Analyze Flow'}
+                {loading ? 'Analyzing...' : 'Analyze Flow'}
               </button>
               {data && (
                 <span style={{ fontSize: '11px', color: 'var(--msp-text-faint)', marginLeft: 'auto' }}>
@@ -215,14 +204,14 @@ export default function OptionsFlowPage() {
           {/* Error */}
           {error && (
             <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '12px', padding: '14px 18px', fontSize: '13px', color: '#ef4444' }}>
-              ⚠️ {error}
+              {error}
             </div>
           )}
 
           {/* Loading */}
           {loading && (
             <div style={{ background: 'var(--msp-panel)', borderRadius: '12px', padding: '48px', textAlign: 'center', color: 'var(--msp-text-muted)' }}>
-              <div style={{ fontSize: '32px', marginBottom: '12px' }}>📊</div>
+              <div style={{ margin: '0 auto 12px', width: '40px', height: '40px', borderRadius: '8px', border: '1px solid var(--msp-border)', display: 'grid', placeItems: 'center', fontSize: '12px', fontWeight: 800 }}>OF</div>
               <div style={{ fontSize: '14px', fontWeight: 600 }}>Analyzing options flow for {symbol}...</div>
               <div style={{ fontSize: '12px', color: 'var(--msp-text-faint)', marginTop: '6px' }}>Classifying trade direction, detecting flow patterns, computing IV skew</div>
             </div>
@@ -263,7 +252,7 @@ export default function OptionsFlowPage() {
                 {/* Net Premium Flow */}
                 <div style={{ background: 'var(--msp-panel)', borderRadius: '14px', padding: '16px 18px', border: '1px solid var(--msp-border)' }}>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--msp-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
-                    💰 Net Premium Flow
+                    Net Premium Flow
                   </div>
                   <div style={{ fontSize: '24px', fontWeight: 800, color: data.aggregate.netPremium >= 0 ? 'var(--msp-bull)' : 'var(--msp-bear)', marginBottom: '8px' }}>
                     {data.aggregate.netPremium >= 0 ? '+' : ''}{fmtUSD(data.aggregate.netPremium)}
@@ -294,7 +283,7 @@ export default function OptionsFlowPage() {
                 {/* Flow Pattern */}
                 <div style={{ background: 'var(--msp-panel)', borderRadius: '14px', padding: '16px 18px', border: '1px solid var(--msp-border)' }}>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--msp-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
-                    {patternEmoji(data.flowPattern.pattern)} Flow Pattern
+                    {patternCode(data.flowPattern.pattern)} Flow Pattern
                   </div>
                   <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--msp-text)', textTransform: 'uppercase', marginBottom: '6px' }}>
                     {data.flowPattern.pattern}
@@ -311,7 +300,7 @@ export default function OptionsFlowPage() {
                 {/* IV Skew */}
                 <div style={{ background: 'var(--msp-panel)', borderRadius: '14px', padding: '16px 18px', border: '1px solid var(--msp-border)' }}>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--msp-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
-                    📐 IV Skew Analysis
+                    IV Skew Analysis
                   </div>
                   {(() => {
                     const { label, color } = skewLabel(data.ivSkew.skewSignal);
@@ -342,7 +331,7 @@ export default function OptionsFlowPage() {
                 {/* Large flow estimate */}
                 <div style={{ background: 'var(--msp-panel)', borderRadius: '14px', padding: '16px 18px', border: '1px solid var(--msp-border)' }}>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--msp-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>
-                    🧠 Large Flow Estimate
+                    Large Flow Estimate
                   </div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '8px' }}>
                     <span style={{ fontSize: '18px', fontWeight: 800, color: dirColor(data.smartMoney.direction), textTransform: 'uppercase' }}>
@@ -355,12 +344,12 @@ export default function OptionsFlowPage() {
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', fontSize: '11px' }}>
                     {data.smartMoney.whaleCount > 0 && (
                       <span style={{ padding: '2px 8px', borderRadius: '6px', background: 'rgba(139,92,246,0.12)', color: '#8b5cf6', fontWeight: 700 }}>
-                        🐋 {data.smartMoney.whaleCount} large-flow estimate
+                        {data.smartMoney.whaleCount} large-flow estimate
                       </span>
                     )}
                     {data.smartMoney.institutionalCount > 0 && (
                       <span style={{ padding: '2px 8px', borderRadius: '6px', background: 'rgba(59,130,246,0.12)', color: '#3b82f6', fontWeight: 700 }}>
-                        🏦 {data.smartMoney.institutionalCount} institutional proxy
+                        {data.smartMoney.institutionalCount} institutional proxy
                       </span>
                     )}
                   </div>
@@ -376,7 +365,7 @@ export default function OptionsFlowPage() {
               {data.topFlows.length > 0 && (
                 <div style={{ background: 'var(--msp-panel)', borderRadius: '14px', padding: '16px 18px', border: '1px solid var(--msp-border)' }}>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--msp-text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px' }}>
-                    🔥 Top Flows by Premium
+                    Top Flows by Premium
                   </div>
                   <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
                     <table style={{ width: '100%', minWidth: 700, borderCollapse: 'collapse', fontSize: '12px', whiteSpace: 'nowrap' }}>
@@ -430,7 +419,7 @@ export default function OptionsFlowPage() {
           {/* Empty state */}
           {!loading && !data && !error && (
             <div style={{ background: 'var(--msp-panel)', borderRadius: '12px', padding: '48px', textAlign: 'center', color: 'var(--msp-text-muted)' }}>
-              <div style={{ fontSize: '40px', marginBottom: '12px' }}>📊</div>
+              <div style={{ margin: '0 auto 12px', width: '44px', height: '44px', borderRadius: '8px', border: '1px solid var(--msp-border)', display: 'grid', placeItems: 'center', fontSize: '12px', fontWeight: 800 }}>OF</div>
               <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--msp-text)' }}>Options Flow Intelligence</div>
               <div style={{ fontSize: '12px', color: 'var(--msp-text-faint)', marginTop: '6px', maxWidth: '520px', margin: '6px auto 0' }}>
                 Enter a symbol to analyze real-money options flow. Classifies trade direction (bought/sold at bid/ask),
@@ -440,13 +429,32 @@ export default function OptionsFlowPage() {
             </div>
           )}
         </div>
-      }
-      footer={
+  );
+
+  const footerContent = (
         <div style={{ fontSize: '11px', color: 'var(--msp-text-faint)', textAlign: 'center', padding: '12px 0' }}>
-          ⚠️ Options flow classification uses bid/ask inference from snapshot data, not real-time trade prints.
+          Options flow classification uses bid/ask inference from snapshot data, not real-time trade prints.
           Direction classification is approximate. Not financial advice.
         </div>
+  );
+
+  if (embeddedInTerminal) {
+    return <div className="space-y-4">{primaryContent}{footerContent}</div>;
+  }
+
+  return (
+    <ToolPageLayout
+      identity={
+        <ToolIdentityHeader
+          toolName="Options Flow Intelligence"
+          description="Research bias classification, block/sweep detection, net premium flow, IV skew analysis, and large-flow estimation."
+          modeLabel="Flow Analysis"
+          confidenceLabel={data ? `${data.smartMoney.direction}` : '—'}
+          lastUpdatedLabel={lastUpdated}
+        />
       }
+      primary={primaryContent}
+      footer={footerContent}
     />
   );
 }

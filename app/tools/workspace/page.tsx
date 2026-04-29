@@ -5,7 +5,7 @@
    Real APIs: /api/watchlists, /api/journal, links to v1 portfolio & settings
    ═══════════════════════════════════════════════════════════════════════════ */
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import { Card, SectionHeader, UpgradeGate } from '@/app/v2/_components/ui';
@@ -36,6 +36,11 @@ function WorkspaceContent() {
   const initialTab = TABS.find(t => t.toLowerCase() === searchParams.get('tab')?.toLowerCase()) || 'Watchlists';
   const [tab, setTab] = useState<typeof TABS[number]>(initialTab);
 
+  useEffect(() => {
+    const requestedTab = TABS.find(t => t.toLowerCase() === searchParams.get('tab')?.toLowerCase());
+    if (requestedTab && requestedTab !== tab) setTab(requestedTab);
+  }, [searchParams, tab]);
+
   return (
     <div className="space-y-6">
       <SectionHeader title="Workspace" subtitle="Your personal trading workspace" />
@@ -55,12 +60,12 @@ function WorkspaceContent() {
       {/* ── JOURNAL ────────────────────────────────────────────────── */}
       {tab === 'Journal' && (
         <UpgradeGate requiredTier="pro" currentTier={tier} feature="Trade Journal">
-          <JournalPageV1 tier={tier} />
+          <JournalPageV1 tier={tier} embeddedInWorkspace />
         </UpgradeGate>
       )}
 
       {/* ── PORTFOLIO ──────────────────────────────────────────────── */}
-      {tab === 'Portfolio' && <RiskPermissionProvider><PortfolioV1 /></RiskPermissionProvider>}
+      {tab === 'Portfolio' && <RiskPermissionProvider><PortfolioV1 embeddedInWorkspace /></RiskPermissionProvider>}
 
       {/* ── LEARNING ───────────────────────────────────────────────── */}
       {tab === 'Learning' && (
@@ -72,12 +77,12 @@ function WorkspaceContent() {
       {/* ── BACKTEST ───────────────────────────────────────────────── */}
       {tab === 'Backtest' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Backtest Engine">
-          <BacktestPage />
+          <BacktestPage embeddedInWorkspace />
         </UpgradeGate>
       )}
 
       {/* ── ALERTS ─────────────────────────────────────────────────── */}
-      {tab === 'Alerts' && <RiskPermissionProvider><AlertsContentV1 /></RiskPermissionProvider>}
+      {tab === 'Alerts' && <RiskPermissionProvider><AlertsContentV1 embeddedInWorkspace /></RiskPermissionProvider>}
 
       {/* ── SETTINGS / ACCOUNT ────────────────────────────────────── */}
       {tab === 'Settings' && <AccountSection />}

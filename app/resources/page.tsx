@@ -58,7 +58,7 @@ export default function ResourcesHome() {
         <HubCard
           badge="Frameworks"
           title="Trading Guides"
-          description="Bias → Rotation → Volatility → Scenario frameworks and operator checklists."
+          description="Bias → Rotation → Volatility → Scenario frameworks and research checklists."
           href="/resources/trading-guides"
         />
         <HubCard

@@ -6,7 +6,7 @@ export default function MarketsHead() {
         name="description"
         content="Institutional-style markets flow: regime context, heatmap, benchmark compare, flow intelligence, watchlist, news, calendar, and alerts."
       />
-      <link rel="canonical" href="https://marketscannerpros.app/tools/markets" />
+      <link rel="canonical" href="https://marketscannerpros.app/tools/explorer" />
     </>
   );
 }

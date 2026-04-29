@@ -56,7 +56,7 @@ function VerifyMagicLinkContent() {
           ? "Signed in! Redirecting to scanner..."
           : "Signed in successfully. Redirecting to command center...");
         setTimeout(() => {
-          router.push(isFree ? "/tools/scanner" : "/tools/markets");
+          router.push(isFree ? "/tools/scanner" : "/tools/explorer");
         }, 900);
       } catch {
         setState("error");

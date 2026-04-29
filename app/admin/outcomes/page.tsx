@@ -193,7 +193,7 @@ export default function OutcomesPage() {
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
         <div>
-          <h1 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#F9FAFB" }}>🎯 Signal Outcomes</h1>
+          <h1 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#F9FAFB" }}>Signal Outcomes</h1>
           <p style={{ fontSize: "0.8rem", color: "#6B7280", marginTop: 2 }}>
             Every scanner signal logged · Outcome tracking across regimes & verdicts
           </p>
@@ -209,7 +209,7 @@ export default function OutcomesPage() {
               cursor: labelerRunning ? "wait" : "pointer", opacity: labelerRunning ? 0.6 : 1,
             }}
           >
-            {labelerRunning ? "⏳ Labeling…" : "⚡ Run Labeler Now"}
+            {labelerRunning ? "Labeling…" : "Run Labeler Now"}
           </button>
           <button
             onClick={() => { fetchStats(); fetchSignals(); }}
@@ -234,14 +234,14 @@ export default function OutcomesPage() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               {labelerResult.success
-                ? `✅ Labeled ${labelerResult.labeled ?? 0} signals`
-                : `❌ ${labelerResult.error ?? "Labeling failed"}`}
+                ? `Labeled ${labelerResult.labeled ?? 0} signals`
+                : `${labelerResult.error ?? "Labeling failed"}`}
               {labelerResult.breakdown ? (
                 <span style={{ color: "#9CA3AF", marginLeft: 8 }}>
                   (✓{(labelerResult.breakdown as Record<string, number>).correct ?? 0}
                   {" "}✗{(labelerResult.breakdown as Record<string, number>).wrong ?? 0}
                   {" "}~{(labelerResult.breakdown as Record<string, number>).neutral ?? 0}
-                  {" "}⏰{(labelerResult.breakdown as Record<string, number>).expired ?? 0}
+                  {" "}expired:{(labelerResult.breakdown as Record<string, number>).expired ?? 0}
                   {(labelerResult.breakdown as Record<string, number>).skippedNoPrice > 0
                     ? ` | ${(labelerResult.breakdown as Record<string, number>).skippedNoPrice} skipped (no price)`
                     : ""})
@@ -255,7 +255,7 @@ export default function OutcomesPage() {
           </div>
           {labelerResult.status === 401 && (
             <div style={{ color: "#FBBF24", marginTop: 4, fontSize: "0.75rem" }}>
-              ⚠️ Auth failed — check that ADMIN_SECRET is set in Render env vars and matches your admin login secret.
+              Auth failed — check that ADMIN_SECRET is set in Render env vars and matches your admin login secret.
             </div>
           )}
         </div>

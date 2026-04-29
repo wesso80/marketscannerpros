@@ -87,23 +87,23 @@ const AVATAR_URL = 'https://app.marketscannerpros.app/favicon-192x192.png';
 const BOT_NAME   = 'MSP Command Center';
 const APP_BASE   = 'https://app.marketscannerpros.app';
 
-const CHANNEL_META: Record<string, { emoji: string; color: number; label: string }> = {
-  'msp-dashboard':     { emoji: '🧠', color: MSP_GREEN,  label: 'Dashboard' },
-  'msp-scanner':       { emoji: '🔎', color: MSP_BLUE,   label: 'Scanner' },
-  'golden-egg':        { emoji: '🥇', color: MSP_GOLD,   label: 'Golden Egg' },
-  'trade-terminal':    { emoji: '💻', color: MSP_CYAN,   label: 'Terminal' },
-  'market-explorer':   { emoji: '🌍', color: MSP_BLUE,   label: 'Explorer' },
-  'research':          { emoji: '📰', color: MSP_PURPLE, label: 'Research' },
-  'workspace':         { emoji: '🧾', color: MSP_GREEN,  label: 'Workspace' },
-  'volatility-engine': { emoji: '🌪️', color: MSP_RED,    label: 'DVE' },
-  'time-confluence':   { emoji: '⏱️', color: MSP_CYAN,   label: 'Time Confluence' },
-  'market-pressure':   { emoji: '🧲', color: MSP_PURPLE, label: 'MPE' },
-  'confluence-engine':  { emoji: '🧬', color: MSP_GOLD,   label: 'Confluence' },
-  'msp-alerts':        { emoji: '🚨', color: MSP_RED,    label: 'Alert' },
-  'breakout-watch':    { emoji: '👀', color: MSP_GOLD,   label: 'Breakout Watch' },
-  'trap-detection':    { emoji: '⚠️', color: MSP_RED,    label: 'Trap Detection' },
-  'ai-analyst':        { emoji: '🧠', color: MSP_PURPLE, label: 'AI Analyst' },
-  'trade-reviews':     { emoji: '📈', color: MSP_GREEN,  label: 'Trade Review' },
+const CHANNEL_META: Record<string, { code: string; color: number; label: string }> = {
+  'msp-dashboard':     { code: 'DB', color: MSP_GREEN,  label: 'Dashboard' },
+  'msp-scanner':       { code: 'SCAN', color: MSP_BLUE,   label: 'Scanner' },
+  'golden-egg':        { code: 'GE', color: MSP_GOLD,   label: 'Golden Egg' },
+  'trade-terminal':    { code: 'TERM', color: MSP_CYAN,   label: 'Terminal' },
+  'market-explorer':   { code: 'EXP', color: MSP_BLUE,   label: 'Explorer' },
+  'research':          { code: 'RES', color: MSP_PURPLE, label: 'Research' },
+  'workspace':         { code: 'WS', color: MSP_GREEN,  label: 'Workspace' },
+  'volatility-engine': { code: 'DVE', color: MSP_RED,    label: 'DVE' },
+  'time-confluence':   { code: 'TIME', color: MSP_CYAN,   label: 'Time Confluence' },
+  'market-pressure':   { code: 'MPE', color: MSP_PURPLE, label: 'MPE' },
+  'confluence-engine':  { code: 'CONF', color: MSP_GOLD,   label: 'Confluence' },
+  'msp-alerts':        { code: 'ALERT', color: MSP_RED,    label: 'Alert' },
+  'breakout-watch':    { code: 'BRK', color: MSP_GOLD,   label: 'Breakout Watch' },
+  'trap-detection':    { code: 'TRAP', color: MSP_RED,    label: 'Trap Detection' },
+  'ai-analyst':        { code: 'AI', color: MSP_PURPLE, label: 'AI Analyst' },
+  'trade-reviews':     { code: 'REV', color: MSP_GREEN,  label: 'Trade Review' },
 };
 
 /* ── Schema bootstrap ──────────────────────────────────────────────────── */
@@ -248,14 +248,14 @@ export function buildScannerEmbed(picks: Array<{
       `**${p.side.toUpperCase()}** • Score: ${p.score}/100`,
       p.rsi != null ? `RSI ${Number(p.rsi).toFixed(1)}` : null,
       p.adx != null ? `ADX ${Number(p.adx).toFixed(1)}` : null,
-      p.squeeze ? '🔥 Squeeze' : null,
+      p.squeeze ? 'Squeeze active' : null,
     ].filter(Boolean).join(' | '),
     inline: true,
   }));
 
   return {
     embeds: [{
-      title: '🔎 Scanner — Top Setups',
+      title: 'Scanner — Top Setups',
       description: `${picks.length} high-confluence setup${picks.length !== 1 ? 's' : ''} detected across all markets.`,
       color: MSP_BLUE,
       fields,
@@ -283,16 +283,16 @@ export function buildGoldenEggEmbed(egg: {
     'NO TRADE': MSP_RED,
   };
 
-  const verdictEmoji: Record<string, string> = {
-    'ALIGNED': '🟢',
-    'TRADE': '🟢',
-    'WATCH': '🟡',
-    'NOT ALIGNED': '🔴',
-    'NO TRADE': '🔴',
+  const verdictLabel: Record<string, string> = {
+    'ALIGNED': 'GREEN',
+    'TRADE': 'GREEN',
+    'WATCH': 'AMBER',
+    'NOT ALIGNED': 'RED',
+    'NO TRADE': 'RED',
   };
 
   const fields: DiscordEmbedField[] = [
-    { name: 'Verdict', value: `${verdictEmoji[egg.verdict] || '⬜'} **${egg.verdict}**`, inline: true },
+    { name: 'Verdict', value: `${verdictLabel[egg.verdict] || 'NEUTRAL'} **${egg.verdict}**`, inline: true },
     { name: 'Bias', value: egg.bias, inline: true },
     { name: 'Confluence', value: `${egg.confluenceScore}/100`, inline: true },
   ];
@@ -303,7 +303,7 @@ export function buildGoldenEggEmbed(egg: {
 
   return {
     embeds: [{
-      title: `🥇 Golden Egg — ${egg.symbol}`,
+      title: `Golden Egg — ${egg.symbol}`,
       description: egg.reasoning.slice(0, 300),
       color: verdictColors[egg.verdict] || MSP_GOLD,
       fields,
@@ -321,21 +321,21 @@ export function buildVolatilityEmbed(state: {
   bbWidth?: number;
   atr?: number;
 }): DiscordPost {
-  const stateEmoji: Record<string, string> = {
-    compression: '🔵',
-    expansion: '🔴',
-    exhaustion: '🟡',
-    breakout: '🟢',
+  const stateLabel: Record<string, string> = {
+    compression: 'BLUE',
+    expansion: 'RED',
+    exhaustion: 'AMBER',
+    breakout: 'GREEN',
   };
 
   return {
     embeds: [{
-      title: `🌪️ DVE — ${state.symbol}`,
-      description: `Volatility regime: **${state.regime.toUpperCase()}** ${stateEmoji[state.regime] || '⬜'}`,
+      title: `DVE — ${state.symbol}`,
+      description: `Volatility regime: **${state.regime.toUpperCase()}** ${stateLabel[state.regime] || 'NEUTRAL'}`,
       color: state.squeeze ? MSP_RED : MSP_CYAN,
       fields: [
         { name: 'Regime', value: state.regime, inline: true },
-        { name: 'Squeeze', value: state.squeeze ? '🔥 Active' : 'Inactive', inline: true },
+        { name: 'Squeeze', value: state.squeeze ? 'Active' : 'Inactive', inline: true },
         state.expansionPhase ? { name: 'Phase', value: state.expansionPhase, inline: true } : null,
         state.bbWidth != null ? { name: 'BB Width', value: state.bbWidth.toFixed(4), inline: true } : null,
         state.atr != null ? { name: 'ATR', value: state.atr.toFixed(2), inline: true } : null,
@@ -356,14 +356,14 @@ export function buildPressureEmbed(pressure: {
   const isAbsorption = pressure.imbalance === 'absorption';
   return {
     embeds: [{
-      title: `🧲 MPE — ${pressure.symbol}`,
+      title: `MPE — ${pressure.symbol}`,
       description: `Pressure imbalance: **${pressure.imbalance.toUpperCase()}**`,
       color: pressure.netPressure > 0 ? MSP_GREEN : MSP_RED,
       fields: [
         { name: 'Buy Pressure', value: `${pressure.buyPressure.toFixed(1)}%`, inline: true },
         { name: 'Sell Pressure', value: `${pressure.sellPressure.toFixed(1)}%`, inline: true },
         { name: 'Net', value: `${pressure.netPressure > 0 ? '+' : ''}${pressure.netPressure.toFixed(1)}%`, inline: true },
-        { name: 'Signal', value: isAbsorption ? '🧱 Absorption detected' : '⚡ Directional shift', inline: false },
+        { name: 'Signal', value: isAbsorption ? 'Absorption detected' : 'Directional shift', inline: false },
       ],
       url: `${APP_BASE}/tools/terminal`,
     }],
@@ -379,12 +379,12 @@ export function buildTimeConfluenceEmbed(pivot: {
 }): DiscordPost {
   return {
     embeds: [{
-      title: `⏱️ Macro Pivot — ${pivot.assetClass.toUpperCase()}`,
+      title: `Macro Pivot — ${pivot.assetClass.toUpperCase()}`,
       description: `Next major macro confluence: **${pivot.nextDate}** (${pivot.daysAway === 0 ? 'TODAY' : `${pivot.daysAway}d`})`,
       color: pivot.daysAway === 0 ? MSP_RED : MSP_CYAN,
       fields: [
         { name: 'Asset Class', value: pivot.assetClass, inline: true },
-        { name: 'Days Away', value: pivot.daysAway === 0 ? '🔴 TODAY' : `${pivot.daysAway}d`, inline: true },
+        { name: 'Days Away', value: pivot.daysAway === 0 ? 'TODAY' : `${pivot.daysAway}d`, inline: true },
         { name: 'Candles Closing', value: pivot.closingCandles.join(', ') || 'None', inline: false },
       ],
       url: `${APP_BASE}/tools/terminal`,
@@ -403,7 +403,7 @@ export function buildConfluenceEmbed(result: {
 
   return {
     embeds: [{
-      title: `🧬 Confluence — ${result.symbol}`,
+      title: `Confluence — ${result.symbol}`,
       description: `Composite score: **${result.score}/100** (${tier})`,
       color,
       fields: [
@@ -427,7 +427,7 @@ export function buildAlertEmbed(alert: {
 }): DiscordPost {
   return {
     embeds: [{
-      title: `🚨 Alert Triggered — ${alert.symbol}`,
+      title: `Alert Triggered — ${alert.symbol}`,
       description: alert.condition,
       color: MSP_RED,
       fields: [
@@ -435,7 +435,7 @@ export function buildAlertEmbed(alert: {
         alert.confluenceScore != null ? { name: 'Confluence', value: `${alert.confluenceScore}/100`, inline: true } : null,
         alert.volatilityState ? { name: 'Vol State', value: alert.volatilityState, inline: true } : null,
       ].filter(Boolean) as DiscordEmbedField[],
-      url: `${APP_BASE}/tools/alerts`,
+      url: `${APP_BASE}/tools/workspace?tab=alerts`,
     }],
   };
 }
@@ -450,11 +450,11 @@ export function buildBreakoutEmbed(setup: {
 }): DiscordPost {
   return {
     embeds: [{
-      title: `👀 Breakout Watch — ${setup.symbol}`,
+      title: `Breakout Watch — ${setup.symbol}`,
       description: `Approaching key ${setup.direction === 'up' ? 'resistance' : 'support'} at **$${setup.level}** (${setup.distance})`,
       color: MSP_GOLD,
       fields: [
-        { name: 'Direction', value: setup.direction === 'up' ? '🟢 Upside' : '🔴 Downside', inline: true },
+        { name: 'Direction', value: setup.direction === 'up' ? 'Upside' : 'Downside', inline: true },
         { name: 'Level', value: `$${setup.level}`, inline: true },
         { name: 'Distance', value: setup.distance, inline: true },
         setup.timeframe ? { name: 'Timeframe', value: setup.timeframe, inline: true } : null,
@@ -472,16 +472,16 @@ export function buildTrapEmbed(trap: {
   severity: 'high' | 'medium' | 'low';
 }): DiscordPost {
   const labels: Record<string, string> = {
-    bull_trap: '🐂 Bull Trap',
-    bear_trap: '🐻 Bear Trap',
-    fakeout: '🎭 Fakeout',
-    exhaustion: '😤 Exhaustion',
-    liquidity_grab: '💰 Liquidity Grab',
+    bull_trap: 'Bull Trap',
+    bear_trap: 'Bear Trap',
+    fakeout: 'Fakeout',
+    exhaustion: 'Exhaustion',
+    liquidity_grab: 'Liquidity Grab',
   };
 
   return {
     embeds: [{
-      title: `⚠️ Trap — ${trap.symbol}`,
+      title: `Trap — ${trap.symbol}`,
       description: trap.description.slice(0, 300),
       color: trap.severity === 'high' ? MSP_RED : trap.severity === 'medium' ? MSP_GOLD : MSP_CYAN,
       fields: [
@@ -501,15 +501,15 @@ export function buildResearchEmbed(event: {
   symbols?: string[];
   source?: string;
 }): DiscordPost {
-  const impactEmoji = { high: '🔴', medium: '🟡', low: '🟢' };
+  const impactLabel = { high: 'HIGH', medium: 'MEDIUM', low: 'LOW' };
 
   return {
     embeds: [{
-      title: `📰 ${event.title}`,
+      title: event.title,
       description: event.summary.slice(0, 400),
       color: event.impact === 'high' ? MSP_RED : event.impact === 'medium' ? MSP_GOLD : MSP_GREEN,
       fields: [
-        { name: 'Impact', value: `${impactEmoji[event.impact]} ${event.impact.toUpperCase()}`, inline: true },
+        { name: 'Impact', value: impactLabel[event.impact], inline: true },
         event.symbols?.length ? { name: 'Symbols', value: event.symbols.join(', '), inline: true } : null,
         event.source ? { name: 'Source', value: event.source, inline: true } : null,
       ].filter(Boolean) as DiscordEmbedField[],
@@ -536,7 +536,7 @@ export function buildDashboardEmbed(regime: {
 
   return {
     embeds: [{
-      title: `🧠 Daily Market Regime`,
+      title: 'Daily Market Regime',
       description: `Market status: **${regime.status}** | Bias: **${regime.bias}**`,
       color: riskColors[regime.riskLevel] || MSP_BLUE,
       fields: [
@@ -558,13 +558,13 @@ export function buildAIAnalystEmbed(analysis: {
 }): DiscordPost {
   return {
     embeds: [{
-      title: `🧠 AI Analysis — ${analysis.symbol}`,
+      title: `AI Analysis — ${analysis.symbol}`,
       description: analysis.summary.slice(0, 500),
       color: MSP_PURPLE,
       fields: [
         { name: 'Query', value: analysis.question.slice(0, 200), inline: false },
       ],
-      url: `${APP_BASE}/tools/ai-analyst`,
+      url: `${APP_BASE}/tools/scanner`,
     }],
   };
 }
@@ -634,18 +634,18 @@ export async function testBridgeChannel(
   channelKey: ChannelKey,
   webhookUrl?: string
 ): Promise<DiscordPostResult> {
-  const meta = CHANNEL_META[channelKey] || { emoji: '📡', color: MSP_GREEN, label: channelKey };
+  const meta = CHANNEL_META[channelKey] || { code: 'MSP', color: MSP_GREEN, label: channelKey };
 
   const embed: DiscordPost = {
     username: BOT_NAME,
     avatar_url: AVATAR_URL,
     embeds: [{
-      title: `${meta.emoji} ${meta.label} — Connection Test`,
+      title: `${meta.code} ${meta.label} — Connection Test`,
       description: 'MSP Command Center bridge is connected and active.',
       color: meta.color,
       fields: [
         { name: 'Channel', value: channelKey, inline: true },
-        { name: 'Status', value: '✅ Connected', inline: true },
+        { name: 'Status', value: 'Connected', inline: true },
       ],
       footer: { text: `MSP ${meta.label} • Educational analysis only` },
       timestamp: new Date().toISOString(),

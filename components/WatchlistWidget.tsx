@@ -95,9 +95,9 @@ export default function WatchlistWidget() {
     const encodedSymbol = encodeURIComponent(symbol);
     const routes = {
       scan: `/tools/scanner?symbol=${encodedSymbol}`,
-      deep: `/tools/deep-analysis?symbol=${encodedSymbol}`,
-      flow: `/tools/options-confluence?symbol=${encodedSymbol}`,
-      alert: `/tools/alerts?symbol=${encodedSymbol}`,
+      deep: `/tools/golden-egg?symbol=${encodedSymbol}`,
+      flow: `/tools/terminal?tab=options-confluence&symbol=${encodedSymbol}`,
+      alert: `/tools/workspace?tab=alerts&symbol=${encodedSymbol}`,
     };
     router.push(routes[tool]);
   };

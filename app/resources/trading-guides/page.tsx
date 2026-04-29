@@ -9,8 +9,8 @@ const GUIDES = [
     summary: "Define Risk-On / Neutral / Risk-Off before you look for setups.",
     checks: ["Macro dashboard", "Market mood and breadth", "Rates / event context"],
     links: [
-      { label: "Macro Dashboard", href: "/tools/macro" },
-      { label: "Markets Dashboard", href: "/tools/markets" },
+      { label: "Macro Dashboard", href: "/tools/explorer?tab=macro" },
+      { label: "Markets Dashboard", href: "/tools/explorer" },
     ],
   },
   {
@@ -19,8 +19,8 @@ const GUIDES = [
     summary: "Confirm where flows are rotating before positioning size.",
     checks: ["Crypto market dashboard", "Category performance", "Relative strength"],
     links: [
-      { label: "Crypto Derivatives", href: "/tools/crypto-dashboard" },
-      { label: "Crypto Explorer", href: "/tools/crypto-explorer" },
+      { label: "Crypto Derivatives", href: "/tools/dashboard?tab=crypto" },
+      { label: "Crypto Explorer", href: "/tools/explorer?tab=crypto" },
     ],
   },
   {
@@ -29,18 +29,18 @@ const GUIDES = [
     summary: "Use event risk and derivatives stress to avoid low-quality entries.",
     checks: ["Economic calendar", "Funding / OI pressure", "Liquidation clusters"],
     links: [
-      { label: "Economic Calendar", href: "/tools/economic-calendar" },
-      { label: "Crypto Derivatives", href: "/tools/crypto-dashboard" },
+      { label: "Economic Calendar", href: "/tools/research?tab=calendar" },
+      { label: "Crypto Derivatives", href: "/tools/dashboard?tab=crypto" },
     ],
   },
   {
     category: "Process",
     title: "Process Sequence with Confirmation",
     summary: "Force sequence: context first, setup second, trigger last.",
-    checks: ["Permission state", "Catalyst alignment", "Defined invalidation"],
+    checks: ["Review state", "Catalyst alignment", "Defined invalidation"],
     links: [
-      { label: "Equity Explorer", href: "/tools/equity-explorer" },
-      { label: "Market Movers", href: "/tools/market-movers" },
+      { label: "Equity Explorer", href: "/tools/explorer?tab=equity" },
+      { label: "Market Movers", href: "/tools/explorer?tab=movers" },
     ],
   },
 ];
@@ -70,7 +70,7 @@ function GuidePlaybookCard({
       <p className="mt-2 text-sm text-white/60">{summary}</p>
 
       <div className="mt-4">
-        <div className="text-xs font-semibold text-white/70">Operator checklist</div>
+        <div className="text-xs font-semibold text-white/70">Research checklist</div>
         <ul className="mt-2 space-y-2 text-sm text-white/65">
           {checks.map((c) => (
             <li key={c} className="flex gap-2">

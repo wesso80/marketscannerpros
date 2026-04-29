@@ -4,7 +4,7 @@ import { useRegime, regimeBadgeColor, regimeLabel } from '@/lib/useRegime';
 
 /**
  * Compact regime awareness banner for any tool page.
- * Shows current regime, risk level, permission status, and sizing guidance.
+ * Shows current regime, risk level, review status, and risk context.
  * Drop this into any page that needs regime context.
  */
 export default function RegimeBanner() {
@@ -22,7 +22,7 @@ export default function RegimeBanner() {
     extreme: 'text-red-400',
   };
 
-  const permissionColors: Record<string, string> = {
+  const reviewColors: Record<string, string> = {
     YES: 'text-emerald-400',
     CONDITIONAL: 'text-amber-400',
     NO: 'text-red-400',
@@ -40,17 +40,17 @@ export default function RegimeBanner() {
         {data.riskLevel.toUpperCase()}
       </span>
       <span className="text-slate-600">|</span>
-      <span className="text-slate-500">Alignment:</span>
-      <span className={`font-semibold ${permissionColors[data.permission] || 'text-slate-400'}`}>
-        {data.permission}
+      <span className="text-slate-500">Review:</span>
+      <span className={`font-semibold ${reviewColors[data.permission] || 'text-slate-400'}`}>
+        {data.permission === 'YES' ? 'CLEAR' : data.permission === 'CONDITIONAL' ? 'CAUTION' : 'BLOCKED'}
       </span>
       <span className="text-slate-600">|</span>
-      <span className="text-slate-500">Sizing:</span>
+      <span className="text-slate-500">Risk Context:</span>
       <span className="text-slate-300 font-medium">{data.sizing}</span>
       {data.signals.some(s => s.stale) && (
         <>
           <span className="text-slate-600">|</span>
-          <span className="text-amber-500 font-medium">⚠ Stale signals</span>
+          <span className="text-amber-500 font-medium">Stale signals</span>
         </>
       )}
     </div>

@@ -172,7 +172,7 @@ export default function HomePreviewStrip() {
             href="/tools"
             className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:border-white/20 hover:bg-slate-900"
           >
-            See all tools <span aria-hidden="true">→</span>
+            Open workflow map <span aria-hidden="true">→</span>
           </Link>
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">

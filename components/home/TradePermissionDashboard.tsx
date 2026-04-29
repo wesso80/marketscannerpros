@@ -23,14 +23,7 @@ type Candidate = {
   event_severity: 'none' | 'medium' | 'high';
 };
 
-/** Static fallback shown when no live scanner data is available. */
-const FALLBACK_CANDIDATES: Candidate[] = [
-  { symbol: 'BTCUSD', structure: 'Volatility Expansion', strategy_tag: 'BREAKOUT_CONTINUATION', direction: 'LONG', confidence: 77, asset_class: 'crypto', entry_price: 64420, stop_price: 63770, atr: 620, event_severity: 'none' },
-  { symbol: 'NVDA', structure: 'Trend Pullback', strategy_tag: 'TREND_PULLBACK', direction: 'LONG', confidence: 74, asset_class: 'equities', entry_price: 937, stop_price: 928, atr: 14, event_severity: 'none' },
-  { symbol: 'MSFT', structure: 'Range Reclaim', strategy_tag: 'MEAN_REVERSION', direction: 'LONG', confidence: 69, asset_class: 'equities', entry_price: 421, stop_price: 415.2, atr: 8.5, event_severity: 'none' },
-  { symbol: 'AAPL', structure: 'Compression Resolve', strategy_tag: 'BREAKOUT_CONTINUATION', direction: 'LONG', confidence: 61, asset_class: 'equities', entry_price: 208.4, stop_price: 206.9, atr: 3.6, event_severity: 'medium' },
-  { symbol: 'TSLA', structure: 'Range Fade', strategy_tag: 'RANGE_FADE', direction: 'SHORT', confidence: 58, asset_class: 'equities', entry_price: 231.8, stop_price: 235.4, atr: 6.1, event_severity: 'none' },
-];
+const FALLBACK_CANDIDATES: Candidate[] = [];
 
 const STRATEGIES: StrategyTag[] = [
   'BREAKOUT_CONTINUATION',
@@ -50,19 +43,20 @@ function permissionStyle(permission: Permission) {
 }
 
 function permissionLabel(permission: Permission) {
+  if (permission === 'ALLOW') return 'ALIGNED';
   if (permission === 'ALLOW_REDUCED') return 'REDUCED';
   if (permission === 'ALLOW_TIGHTENED') return 'TIGHT';
-  return permission;
+  return 'NOT ALIGNED';
 }
 
 function reasonCodeCopy(code: string): string {
   const map: Record<string, string> = {
     DAILY_LOSS_LIMIT: 'Daily loss limit hit (LOCKED).',
-    OPEN_RISK_CAP: 'Open risk cap reached. Reduce exposure.',
+    OPEN_RISK_CAP: 'Open risk cap reached. Review exposure.',
     CORR_CLUSTER_HIGH: 'Correlation cluster cap breached.',
     REGIME_STRATEGY_BLOCK: 'Strategy not permitted in current regime.',
-    EVENT_BLOCK: 'Event window blocks new trades.',
-    DATA_STALE: 'Market data stale. Trading disabled.',
+    EVENT_BLOCK: 'Event window blocks new scenario review.',
+    DATA_STALE: 'Market data stale. Scenario review disabled.',
     STOP_TOO_TIGHT: 'Stop inside noise band (ATR floor).',
     RISK_MODE_LOCKED: 'Risk analysis locked. Only reduce-risk actions.',
     CONFIDENCE_BELOW_THRESHOLD: 'Confidence below analysis threshold.',
@@ -76,7 +70,7 @@ export default function TradePermissionDashboard() {
   const [permissionFilter, setPermissionFilter] = useState<'ALL' | Permission>('ALL');
   const [matrixMessage, setMatrixMessage] = useState<string>('');
   const [liveCandidates, setLiveCandidates] = useState<Candidate[]>(FALLBACK_CANDIDATES);
-  const [candidateSource, setCandidateSource] = useState<string>('fallback');
+  const [candidateSource, setCandidateSource] = useState<string>('none');
 
   // Fetch live candidates from scanner
   useEffect(() => {
@@ -197,7 +191,7 @@ export default function TradePermissionDashboard() {
     if (!snapshot) return;
     const permission = snapshot.matrix[strategy][direction];
     if (permission === 'BLOCK') {
-      setMatrixMessage('Blocked by global policy for current regime.');
+      setMatrixMessage('Not aligned with current research policy.');
       return;
     }
     setMatrixMessage('');
@@ -218,21 +212,21 @@ export default function TradePermissionDashboard() {
               <div style={{ border: '1px solid var(--msp-border)', borderRadius: 10, padding: '0.45rem 0.55rem' }}><strong>Open Risk:</strong> {snapshot ? `${snapshot.session.open_risk_R}R / ${snapshot.session.max_open_risk_R}R` : '...'}</div>
               <div style={{ border: '1px solid var(--msp-border)', borderRadius: 10, padding: '0.45rem 0.55rem' }}><strong>Data:</strong> {snapshot?.data_health.status || '...'}</div>
               <div style={{ border: '1px solid var(--msp-border)', borderRadius: 10, padding: '0.45rem 0.55rem' }}><strong>Add-ons:</strong> {snapshot?.caps.add_ons_allowed ? 'Enabled' : 'Disabled'}</div>
-              <div style={{ border: '1px solid var(--msp-border)', borderRadius: 10, padding: '0.45rem 0.55rem' }}><strong>Risk/Trade:</strong> {snapshot ? `${(snapshot.caps.risk_per_trade * 100).toFixed(2)}%` : '...'}</div>
+              <div style={{ border: '1px solid var(--msp-border)', borderRadius: 10, padding: '0.45rem 0.55rem' }}><strong>Risk Unit:</strong> {snapshot ? `${(snapshot.caps.risk_per_trade * 100).toFixed(2)}%` : '...'}</div>
             </div>
             {snapshot?.global_blocks?.length ? (
-              <div style={{ color: '#fca5a5', fontSize: '0.78rem' }}>⚠ {snapshot.global_blocks[0].msg}</div>
+              <div style={{ color: '#fca5a5', fontSize: '0.78rem' }}>{snapshot.global_blocks[0].msg}</div>
             ) : null}
             {globalLocked ? (
               <div style={{ border: '1px solid rgba(239,68,68,0.45)', borderRadius: 10, background: 'rgba(239,68,68,0.12)', color: '#fecaca', padding: '0.5rem 0.6rem', fontSize: '0.8rem', fontWeight: 800 }}>
-                Execution Locked — only reduce-risk actions are available.
+                Research guard active — only risk-reduction review is available.
               </div>
             ) : null}
           </section>
 
           <section className="col-span-12 xl:col-span-4" style={{ borderRadius: 14, border: '1px solid var(--msp-border)', background: 'var(--msp-card)', padding: '0.9rem' }}>
             <div style={{ fontSize: '0.82rem', letterSpacing: '0.06em', color: 'var(--msp-text-faint)', textTransform: 'uppercase', fontWeight: 800, marginBottom: '0.65rem' }}>
-              Trade Permission Matrix
+              Research Alignment Matrix
             </div>
             <div style={{ display: 'grid', gap: '0.45rem' }}>
               {STRATEGIES.map((strategy) => (
@@ -260,10 +254,10 @@ export default function TradePermissionDashboard() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.7rem', flexWrap: 'wrap', marginBottom: '0.65rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <span style={{ fontSize: '0.82rem', letterSpacing: '0.06em', color: 'var(--msp-text-faint)', textTransform: 'uppercase', fontWeight: 800 }}>
-                  Permission-Filtered Candidates
+                  Alignment-Filtered Observations
                 </span>
-                <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.12rem 0.4rem', borderRadius: 999, background: candidateSource === 'daily_picks' ? 'rgba(16,185,129,0.18)' : 'rgba(251,191,36,0.15)', color: candidateSource === 'daily_picks' ? '#10b981' : '#fbbf24' }}>
-                  {candidateSource === 'daily_picks' ? 'LIVE' : 'DEMO'}
+                <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '0.12rem 0.4rem', borderRadius: 999, background: candidateSource === 'none' ? 'rgba(148,163,184,0.15)' : 'rgba(16,185,129,0.18)', color: candidateSource === 'none' ? '#cbd5e1' : '#10b981' }}>
+                  {candidateSource === 'none' ? 'NO LIVE DATA' : 'LIVE'}
                 </span>
               </div>
               <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
@@ -291,7 +285,7 @@ export default function TradePermissionDashboard() {
               {candidates.map((candidate) => {
                 const p = candidate.permission;
                 const blocked = globalLocked || p === 'BLOCK';
-                const cta = p === 'ALLOW' ? 'Enter' : p === 'ALLOW_REDUCED' ? 'Enter (Reduced Size)' : p === 'ALLOW_TIGHTENED' ? 'Enter (Trigger Only)' : 'View Analysis';
+                const cta = p === 'ALLOW' ? 'Review Framework' : p === 'ALLOW_REDUCED' ? 'Review Reduced Context' : p === 'ALLOW_TIGHTENED' ? 'Review Trigger Evidence' : 'View Analysis';
 
                 return (
                   <div key={candidate.symbol} style={{ border: '1px solid var(--msp-border)', borderRadius: 12, background: 'var(--msp-panel)', padding: '0.6rem' }}>
@@ -312,7 +306,7 @@ export default function TradePermissionDashboard() {
 
                     {candidate.evaluated ? (
                       <div style={{ marginTop: '0.28rem', color: '#94a3b8', fontSize: '0.72rem' }}>
-                        Size cap: {candidate.evaluated.max_position_size} · Stop floor: {candidate.evaluated.required_stop_min_distance.toFixed(2)}
+                        Exposure cap: {candidate.evaluated.max_position_size} · Invalidation floor: {candidate.evaluated.required_stop_min_distance.toFixed(2)}
                       </div>
                     ) : null}
 
@@ -346,7 +340,7 @@ export default function TradePermissionDashboard() {
                         Set Alert
                       </button>
                       <Link
-                        href={`/tools/markets?symbol=${candidate.symbol}`}
+                        href={`/tools/explorer?symbol=${candidate.symbol}`}
                         style={{
                           textDecoration: 'none',
                           borderRadius: 8,

@@ -46,7 +46,7 @@ export default function ExecutionPlanCard({ plan, permission, onCopyPlan, onSend
 
             {!compact && (
               <div className="rounded-xl border border-slate-800 bg-slate-950/25 px-3 py-2 text-xs text-slate-300">
-                Capital Exposure: {plan.positionSuggestion || 'N/A'}
+                Exposure Context: {plan.positionSuggestion || 'N/A'}
               </div>
             )}
 

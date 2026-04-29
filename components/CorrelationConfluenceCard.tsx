@@ -307,7 +307,7 @@ export default function CorrelationConfluenceCard({ symbol, type, className = ''
             <span className={`text-[11px] font-medium ${regime.color}`}>{regime.label}</span>
             {data.divergenceBadge && (
               <span className="rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[11px] text-amber-400">
-                ⚡ Divergence
+                Divergence
               </span>
             )}
           </div>
@@ -460,7 +460,7 @@ export default function CorrelationConfluenceCard({ symbol, type, className = ''
         {/* Operator summary line */}
         {data && !loading && (
           <div className="mt-2 text-[11px] text-zinc-500">
-            {data.type === 'crypto' ? '🔗 Crypto majors' : data.type === 'forex' ? '💱 Forex pairs' : '📊 Equity peers'}
+            {data.type === 'crypto' ? 'Crypto majors' : data.type === 'forex' ? 'Forex pairs' : 'Equity peers'}
             {customSymbols.length > 0 ? ` + ${customSymbols.length} custom` : ''}
             {' • '}
             Refreshed {new Date(data.cachedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

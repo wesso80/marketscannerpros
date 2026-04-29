@@ -118,7 +118,7 @@ export default function AdminCostsPage() {
     <div className="mx-auto max-w-7xl px-4 py-6">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
         <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "#E5E7EB" }}>
-          💰 AI Cost Tracker
+          AI Cost Tracker
         </h1>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
           <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "#9CA3AF", fontSize: "0.875rem" }}>
@@ -203,7 +203,7 @@ export default function AdminCostsPage() {
         {/* Last 7 days breakdown */}
         <div style={cardStyle}>
           <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>
-            📅 Last 7 Days
+            Last 7 Days
           </h2>
           {stats?.last7Days.length ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
@@ -247,7 +247,7 @@ export default function AdminCostsPage() {
         {/* Cost by tier */}
         <div style={cardStyle}>
           <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>
-            👥 Cost by Tier (30 Days)
+            Cost by Tier (30 Days)
           </h2>
           {stats?.byTier.length ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
@@ -289,7 +289,7 @@ export default function AdminCostsPage() {
         {/* Top cost users */}
         <div style={{ ...cardStyle, gridColumn: "span 2" }}>
           <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>
-            🏆 Top Cost Users (30 Days)
+            Top Cost Users (30 Days)
           </h2>
           {stats?.topCostUsers.length ? (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.5rem" }}>
@@ -351,7 +351,7 @@ export default function AdminCostsPage() {
         fontSize: "0.875rem",
         color: "#6B7280"
       }}>
-        <strong style={{ color: "#9CA3AF" }}>📊 30-Day Token Breakdown:</strong>
+        <strong style={{ color: "#9CA3AF" }}>30-Day Token Breakdown:</strong>
         <div style={{ marginTop: "0.5rem", display: "flex", gap: "2rem" }}>
           <span>Input: {formatTokens(stats?.last30Days.promptTokens || 0)} tokens</span>
           <span>Output: {formatTokens(stats?.last30Days.completionTokens || 0)} tokens</span>

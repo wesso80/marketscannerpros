@@ -367,7 +367,7 @@ export default function CryptoSearchWidget() {
               </div>
 
               <a
-                href={`/tools/crypto-explorer?coin=${coinData.id}`}
+                href={`/tools/explorer?tab=crypto&coin=${coinData.id}`}
                 style={{
                   display: 'block',
                   marginTop: '12px',

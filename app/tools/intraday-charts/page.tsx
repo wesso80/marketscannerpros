@@ -911,27 +911,27 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
         : 'Neutral'
     : 'Unavailable';
 
-  const permissionState: 'Yes' | 'Conditional' | 'No' = !stats
-    ? 'Conditional'
+  const reviewState: 'Clear' | 'Caution' | 'Blocked' = !stats
+    ? 'Caution'
     : dealerOverlay?.regime === 'SHORT_GAMMA' && volatilityState === 'Expansion'
-      ? 'No'
+      ? 'Blocked'
       : dealerOverlay?.regime === 'LONG_GAMMA' && volatilityState !== 'Expansion' && liquidityState !== 'Thin'
-        ? 'Yes'
-        : 'Conditional';
+        ? 'Clear'
+        : 'Caution';
 
-  const permissionReason = permissionState === 'Yes'
+  const reviewReason = reviewState === 'Clear'
     ? 'Structure supports intraday analysis.'
-    : permissionState === 'No'
+    : reviewState === 'Blocked'
       ? 'Short-gamma expansion risk is elevated.'
-      : 'Mixed structure. Size down and wait for confirmation.';
+      : 'Mixed structure. Wait for additional confirmation evidence.';
 
-  const playbook = permissionState === 'Yes'
-    ? 'Trend continuation on pullback to VWAP/EMA cluster.'
-    : permissionState === 'No'
-      ? 'Stand down or hedge only. Avoid fresh directional risk.'
-      : 'Wait for reclaim/reject at VWAP before committing.';
+  const scenarioNote = reviewState === 'Clear'
+    ? 'Educational scenario: trend continuation around VWAP/EMA reference areas.'
+    : reviewState === 'Blocked'
+      ? 'Educational caution: elevated session risk; review only until conditions improve.'
+      : 'Monitor VWAP reclaim/reject behavior before treating the scenario as stronger.';
 
-  const blockedActionReason = permissionState === 'No' ? 'Conditions not met due to session risk state' : '';
+  const reviewBlockReason = reviewState === 'Blocked' ? 'Conditions are not aligned due to session risk state' : '';
 
   if (tierLoading) return <div className="min-h-screen bg-[var(--msp-bg)]" />;
   if (!canAccessPortfolioInsights(tier)) return <UpgradeGate requiredTier="pro" feature="Intraday Charts" />;
@@ -939,29 +939,26 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
   return (
     <div className={`${embeddedInGoldenEgg ? '' : 'min-h-screen'} bg-[var(--msp-bg)] text-white`}>
       <main className="mx-auto w-full max-w-none space-y-2 px-2 pb-6 pt-3 md:px-3">
-        <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-700 bg-slate-900 p-2">
+        {!embeddedInGoldenEgg && <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-700 bg-slate-900 p-2">
           <div>
-            <div className="text-xs text-slate-400 uppercase tracking-wide">{embeddedInGoldenEgg ? 'Golden Egg Chart Check' : 'Intraday Console'}</div>
-            {embeddedInGoldenEgg ? <div className="mt-1 text-[11px] text-slate-500">Validate price action around the Golden Egg scenario levels.</div> : null}
+            <div className="text-xs text-slate-400 uppercase tracking-wide">Intraday Console</div>
           </div>
-          {!embeddedInGoldenEgg && (
-            <Link href="/dashboard" className="text-sm text-slate-400 hover:text-white">
-              ← Dashboard
-            </Link>
-          )}
-        </div>
+          <Link href="/dashboard" className="text-sm text-slate-400 hover:text-white">
+            ← Dashboard
+          </Link>
+        </div>}
 
         {stats && (
           <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
             <div className="grid gap-2 lg:grid-cols-4">
               <div className="rounded-lg border border-slate-700 bg-slate-800/70 p-3">
-                <div className="text-[11px] uppercase tracking-wide text-slate-400">Indicator Alignment</div>
+                <div className="text-[11px] uppercase tracking-wide text-slate-400">Indicator Review</div>
                 <div className={`mt-1 text-lg font-semibold ${
-                  permissionState === 'Yes' ? 'text-emerald-400' : permissionState === 'No' ? 'text-rose-400' : 'text-amber-300'
+                  reviewState === 'Clear' ? 'text-emerald-400' : reviewState === 'Blocked' ? 'text-rose-400' : 'text-amber-300'
                 }`}>
-                  {permissionState}
+                  {reviewState}
                 </div>
-                <div className="mt-1 text-xs text-slate-400">{permissionReason}</div>
+                <div className="mt-1 text-xs text-slate-400">{reviewReason}</div>
               </div>
               <div className="rounded-lg border border-slate-700 bg-slate-800/70 p-3">
                 <div className="text-[11px] uppercase tracking-wide text-slate-400">Volatility</div>
@@ -987,7 +984,7 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
               </div>
               <div className="rounded-lg border border-slate-700 bg-slate-800/70 p-3">
                 <div className="text-[11px] uppercase tracking-wide text-slate-400">Scenario Notes</div>
-                <div className="mt-1 text-xs text-slate-100 leading-5">{playbook}</div>
+                <div className="mt-1 text-xs text-slate-100 leading-5">{scenarioNote}</div>
               </div>
             </div>
           </div>
@@ -1393,8 +1390,8 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
                 <ExplorerActionGrid
                   assetType={assetType === 'crypto' ? 'crypto' : 'equity'}
                   symbol={symbol}
-                  blocked={permissionState === 'No'}
-                  blockReason={blockedActionReason}
+                  blocked={reviewState === 'Blocked'}
+                  blockReason={reviewBlockReason}
                 />
                 <div className="mt-2 text-[11px] text-slate-400">
                   Last refresh {new Date(data.lastRefreshed).toLocaleString()}
@@ -1422,7 +1419,7 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
               <div className="mb-2 font-medium text-white">Intervals</div>
               <ul className="space-y-1">
                 <li>• 1m for high-frequency reads.</li>
-                <li>• 5m for standard day-trade setups.</li>
+                <li>• 5m for short-timeframe scenario review.</li>
                 <li>• 15m for slower intraday structure.</li>
                 <li>• 30m and 60m for higher-timeframe bias.</li>
               </ul>

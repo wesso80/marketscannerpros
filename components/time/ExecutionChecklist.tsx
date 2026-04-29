@@ -16,7 +16,7 @@ export default function ExecutionChecklist({ execution }: { execution: TimeExecu
     <div className="rounded-xl border border-white/5 bg-white/2 p-4">
       <div className="text-sm font-semibold text-slate-200">Timing Checklist</div>
       <div className="mt-3 space-y-2">
-        <ChecklistRow label="Close Confirmation" ok={execution.closeConfirmation === 'CONFIRMED'} note={execution.closeConfirmation} />
+        <ChecklistRow label="Close Evidence" ok={execution.closeConfirmation === 'CONFIRMED'} note={execution.closeConfirmation} />
         <ChecklistRow label="Close Strength" ok={execution.closeStrength >= 0.55} note={`${pct(execution.closeStrength)}%`} />
         <ChecklistRow label="Window Quality" ok={execution.entryWindowQuality >= 0.6} note={`${pct(execution.entryWindowQuality)}%`} />
         <ChecklistRow label="Liquidity OK" ok={execution.liquidityOK} />

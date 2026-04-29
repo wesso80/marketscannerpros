@@ -119,7 +119,7 @@ export default function UsageAnalyticsPage() {
   return (
     <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "1.5rem 1rem" }}>
       <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "#E5E7EB", marginBottom: "1.5rem" }}>
-        📈 Usage Analytics
+        Usage Analytics
       </h1>
 
       {error && (
@@ -169,7 +169,7 @@ export default function UsageAnalyticsPage() {
       {/* ─── Conversion Funnel ──────────────────────────────── */}
       <div style={{ ...card, marginBottom: "1.5rem" }}>
         <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>
-          🔄 Conversion Funnel (Last 30 Days)
+          Conversion Funnel (Last 30 Days)
         </h2>
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
           {/* Funnel stages */}
@@ -225,20 +225,20 @@ export default function UsageAnalyticsPage() {
         {/* Feature Adoption */}
         <div style={card}>
           <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>
-            🧩 Feature Adoption (30d)
+            Feature Adoption (30d)
           </h2>
           {[
-            { label: "Scanner", users: safeAdoption.scanner_users, icon: "🔍" },
-            { label: "AI Analyst", users: safeAdoption.ai_users, icon: "🤖" },
-            { label: "Journal", users: safeAdoption.journal_users, icon: "📓" },
-            { label: "Portfolio", users: safeAdoption.portfolio_users, icon: "💼" },
-            { label: "Trade Outcomes", users: safeAdoption.trade_outcome_users, icon: "🎯" },
+            { label: "Scanner", users: safeAdoption.scanner_users, code: "SCN" },
+            { label: "AI Analyst", users: safeAdoption.ai_users, code: "AI" },
+            { label: "Journal", users: safeAdoption.journal_users, code: "JRN" },
+            { label: "Portfolio", users: safeAdoption.portfolio_users, code: "PF" },
+            { label: "Trade Outcomes", users: safeAdoption.trade_outcome_users, code: "OUT" },
           ].map((f) => {
             const pct = totalActive > 0 ? (f.users / totalActive) * 100 : 0;
             return (
               <div key={f.label} style={{ marginBottom: "0.75rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.25rem" }}>
-                  <span style={{ fontSize: "0.85rem", color: "#D1D5DB" }}>{f.icon} {f.label}</span>
+                  <span style={{ fontSize: "0.85rem", color: "#D1D5DB" }}>{f.code} · {f.label}</span>
                   <span style={{ fontSize: "0.8rem", color: "#9CA3AF" }}>
                     {f.users} users ({pct.toFixed(0)}%)
                   </span>
@@ -260,7 +260,7 @@ export default function UsageAnalyticsPage() {
         {/* Trade Activity */}
         <div style={card}>
           <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>
-            📊 Trade Activity
+            Trade Activity
           </h2>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
             <div>
@@ -297,7 +297,7 @@ export default function UsageAnalyticsPage() {
         {/* Scan Volume */}
         <div style={card}>
           <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "0.5rem" }}>
-            🔍 Scan Volume (30d)
+            Scan Volume (30d)
           </h2>
           <div style={{ display: "flex", gap: "2rem", marginBottom: "1rem" }}>
             <div>
@@ -338,7 +338,7 @@ export default function UsageAnalyticsPage() {
         {/* Retention */}
         <div style={card}>
           <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "0.5rem" }}>
-            🔁 Weekly Active Users (8 weeks)
+            Weekly Active Users (8 weeks)
           </h2>
           {retention.map((w) => {
             const pct = (Number(w.active_users) / maxRetUsers) * 100;
@@ -365,7 +365,7 @@ export default function UsageAnalyticsPage() {
       {/* ─── Tier Distribution ──────────────────────────────── */}
       <div style={{ ...card, marginBottom: "1.5rem" }}>
         <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>
-          👥 Tier Distribution
+          Tier Distribution
         </h2>
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           {tierDist.map((t) => (
@@ -388,7 +388,7 @@ export default function UsageAnalyticsPage() {
       {/* ─── Top Active Workspaces ──────────────────────────── */}
       <div style={card}>
         <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>
-          🏆 Top Active Users (7d)
+          Top Active Users (7d)
         </h2>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>

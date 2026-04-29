@@ -287,17 +287,17 @@ export default function MarketMoversPage() {
       medianVol,
       avgAbsMove,
       activeBreadthPct,
-      breakoutPolicy: deploymentMode === 'NO' ? 'Restricted' : deploymentMode === 'YES' ? 'Allowed' : 'Conditional',
+      breakoutPolicy: deploymentMode === 'NO' ? 'Weak' : deploymentMode === 'YES' ? 'Supportive' : 'Mixed',
       meanReversionPolicy:
         deploymentMode === 'NO'
-          ? 'Preferred'
+          ? 'Supportive'
           : volatilityState === 'Elevated'
-          ? 'Preferred'
-          : 'Allowed',
+          ? 'Supportive'
+          : 'Mixed',
       highBetaPolicy:
         deploymentMode === 'YES' && liquidityState !== 'Thin' && volatilityState !== 'Elevated'
-          ? 'Conditional'
-          : 'Restricted',
+          ? 'Mixed'
+          : 'Weak',
     };
   }, [data]);
 
@@ -627,7 +627,7 @@ export default function MarketMoversPage() {
                   </h2>
                   <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
                     <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Adaptive Confidence: {environment.adaptiveConfidence}%</span>
-                    <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Capital Mode: {environment.deploymentMode === 'YES' ? 'Normal Exposure' : environment.deploymentMode === 'CONDITIONAL' ? 'Reduced Exposure' : 'Minimal Exposure'}</span>
+                    <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Risk Context: {environment.deploymentMode === 'YES' ? 'Standard review' : environment.deploymentMode === 'CONDITIONAL' ? 'Reduced conviction' : 'Observation'}</span>
                     <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">High Beta: {environment.highBetaPolicy}</span>
                     <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Breakouts: {environment.breakoutPolicy}</span>
                     <span className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">Mean Reversion: {environment.meanReversionPolicy}</span>
@@ -650,8 +650,8 @@ export default function MarketMoversPage() {
               <div className="rounded-lg border border-slate-700 bg-slate-900 p-2">
                 <div className="mb-1 flex flex-wrap items-start justify-between gap-1.5 md:items-center">
                   <div>
-                    <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Action</p>
-                    <h2 className="text-xs font-bold">Today&apos;s Plays / Movers Queue</h2>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • Review</p>
+                    <h2 className="text-xs font-bold">Today&apos;s Movers Review Queue</h2>
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {([
@@ -726,7 +726,7 @@ export default function MarketMoversPage() {
                   <span>Showing <span className="font-semibold text-white">{evaluatedRows.length}</span> movers</span>
                   {permissionedCount > 0 && (
                     <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">
-                      {permissionedCount} eligible
+                      {permissionedCount} aligned
                     </span>
                   )}
                 </div>
@@ -779,7 +779,7 @@ export default function MarketMoversPage() {
                             <span className="text-[11px] text-slate-500">{mover.overlayReasons?.map(toReasonLabel).join(' • ') || mover.blockReason || 'Blocked by governance'}</span>
                           ) : (
                             <Link
-                              href={`/tools/options-confluence?symbol=${mover.ticker}&setupClass=${encodeURIComponent(mover.setupClass)}&eligibility=${mover.deployment}&confluence=${mover.confluenceScore}&deploymentMode=${environment.deploymentMode}`}
+                              href={`/tools/terminal?tab=options-confluence&symbol=${mover.ticker}&setupClass=${encodeURIComponent(mover.setupClass)}&eligibility=${mover.deployment}&confluence=${mover.confluenceScore}&deploymentMode=${environment.deploymentMode}`}
                               className="inline-block rounded border border-emerald-500/50 bg-emerald-500/10 px-3 py-1 text-[11px] text-emerald-200"
                             >
                               Open Confluence Panel
@@ -893,7 +893,7 @@ export default function MarketMoversPage() {
                               </button>
                             ) : (
                               <Link
-                                href={`/tools/options-confluence?symbol=${mover.ticker}&setupClass=${encodeURIComponent(mover.setupClass)}&eligibility=${mover.deployment}&confluence=${mover.confluenceScore}&deploymentMode=${environment.deploymentMode}`}
+                                href={`/tools/terminal?tab=options-confluence&symbol=${mover.ticker}&setupClass=${encodeURIComponent(mover.setupClass)}&eligibility=${mover.deployment}&confluence=${mover.confluenceScore}&deploymentMode=${environment.deploymentMode}`}
                                 className="rounded border border-emerald-500/50 bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-medium text-emerald-200 transition-colors hover:bg-emerald-500/25"
                               >
                                 Open Confluence →
@@ -934,9 +934,9 @@ export default function MarketMoversPage() {
 
                   <div className="grid grid-cols-2 gap-1.5">
                     <Link href="/tools/scanner" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[11px] text-slate-300">Open Scanner</Link>
-                    <Link href="/tools/alerts" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[11px] text-slate-300">Create Alert</Link>
-                    <Link href="/tools/news" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[11px] text-slate-300">News Context</Link>
-                    <Link href="/tools/journal" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[11px] text-slate-300">Save Research Note</Link>
+                    <Link href="/tools/workspace?tab=alerts" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[11px] text-slate-300">Create Alert</Link>
+                    <Link href="/tools/research" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[11px] text-slate-300">News Context</Link>
+                    <Link href="/tools/workspace?tab=journal" className="rounded border border-slate-700 bg-slate-950/60 px-2 py-1 text-center text-[11px] text-slate-300">Save Research Note</Link>
                   </div>
                 </div>
               </div>

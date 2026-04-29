@@ -71,7 +71,7 @@ function notificationCopy(event: TradeEventRow, payload: Record<string, any>) {
     return {
       title: `${symbol || 'Trade'} entered`,
       body: `${side || 'Position'} opened${payload.entryPrice != null ? ` at ${payload.entryPrice}` : ''}.`,
-      href: '/tools/journal',
+      href: '/tools/workspace?tab=journal',
     };
   }
 
@@ -80,14 +80,14 @@ function notificationCopy(event: TradeEventRow, payload: Record<string, any>) {
     return {
       title: `${symbol || 'Trade'} closed`,
       body: `${outcome ? `Outcome: ${outcome}.` : 'Trade closed.'}${plLabel}`,
-      href: '/tools/journal',
+      href: '/tools/workspace?tab=journal',
     };
   }
 
   return {
     title: `${symbol || 'Trade'} close failed`,
     body: asString(payload.error || 'Close attempt failed.').slice(0, 250),
-    href: '/tools/journal',
+    href: '/tools/workspace?tab=journal',
   };
 }
 
@@ -279,7 +279,7 @@ async function deliverEmail(event: TradeEventRow, prefs: NotificationPrefs, titl
     <div style="font-family: Arial, sans-serif; line-height: 1.45; color: #0f172a;">
       <h2>${title}</h2>
       <p>${body}</p>
-      <p><a href="https://app.marketscannerpros.app${href || '/tools/journal'}">Open in MarketScanner Pros</a></p>
+      <p><a href="https://app.marketscannerpros.app${href || '/tools/workspace?tab=journal'}">Open in MarketScanner Pros</a></p>
       <p style="color:#64748b;font-size:12px;">Event: ${event.event_type} • ID: ${event.id}</p>
     </div>
   `.trim();
@@ -332,7 +332,7 @@ async function deliverDiscord(event: TradeEventRow, prefs: NotificationPrefs, ti
   if (await alreadyDelivered(event.workspace_id, event.id, 'discord', recipient)) return;
 
   const payload = {
-    content: `**${title}**\n${body}\n<https://app.marketscannerpros.app${href || '/tools/journal'}>`,
+    content: `**${title}**\n${body}\n<https://app.marketscannerpros.app${href || '/tools/workspace?tab=journal'}>`,
   };
 
   try {

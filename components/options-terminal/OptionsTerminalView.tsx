@@ -372,7 +372,7 @@ export default function OptionsTerminalView() {
       {chain.error && (
         <div className="w-full px-4 pt-4">
           <div className="rounded-2xl border border-red-600/30 bg-red-600/10 px-4 py-3 text-sm text-red-300">
-            ⚠️ {chain.error}
+            {chain.error}
           </div>
         </div>
       )}
@@ -691,7 +691,7 @@ export default function OptionsTerminalView() {
                           setWatchlistMsg('✓ Added to watchlist');
                           setTimeout(() => setWatchlistMsg(''), 3000);
                         } catch (e: any) {
-                          setWatchlistMsg(`⚠ ${e.message}`);
+                          setWatchlistMsg(e.message);
                           setTimeout(() => setWatchlistMsg(''), 3000);
                         }
                       }}
@@ -703,7 +703,7 @@ export default function OptionsTerminalView() {
                       onClick={() => {
                         const c = selectedContract!;
                         const label = `${ticker} ${c.expiration} ${c.strike}${selected!.side === 'CALL' ? 'C' : 'P'}`;
-                        const notes = `Options play: ${label}\nMark: $${c.mark.toFixed(2)}\nIV: ${(c.iv * 100).toFixed(1)}%\nDelta: ${c.delta.toFixed(3)}\nOI: ${c.openInterest.toLocaleString()}\nSpread: $${c.spread.toFixed(2)} (${c.spreadPct.toFixed(1)}%)`;
+                        const notes = `Options scenario: ${label}\nMark: $${c.mark.toFixed(2)}\nIV: ${(c.iv * 100).toFixed(1)}%\nDelta: ${c.delta.toFixed(3)}\nOI: ${c.openInterest.toLocaleString()}\nSpread: $${c.spread.toFixed(2)} (${c.spreadPct.toFixed(1)}%)`;
                         const params = new URLSearchParams({
                           symbol: ticker,
                           side: selected!.side === 'CALL' ? 'LONG' : 'SHORT',
@@ -712,11 +712,11 @@ export default function OptionsTerminalView() {
                           strategy: 'Options',
                           setup: label,
                         });
-                        router.push(`/tools/journal?prefill=true&${params.toString()}`);
+                        router.push(`/tools/workspace?tab=journal&prefill=true&${params.toString()}`);
                       }}
                       className="w-full rounded-2xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm font-semibold hover:bg-zinc-800 transition"
                     >
-                      Save Play
+                      Save Scenario
                     </button>
                     <button
                       onClick={() => {
@@ -736,7 +736,7 @@ export default function OptionsTerminalView() {
                           expirationDate: c.expiration,
                           premium: c.mark.toFixed(2),
                         });
-                        router.push(`/tools/journal?prefill=true&${params.toString()}`);
+                        router.push(`/tools/workspace?tab=journal&prefill=true&${params.toString()}`);
                       }}
                       className="w-full rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-zinc-950 hover:bg-emerald-500 transition"
                     >
@@ -766,10 +766,10 @@ export default function OptionsTerminalView() {
                 <div className="text-xs text-zinc-400">Desk Read</div>
                 <div className="mt-1 text-sm font-semibold">
                   {chain.ivMetrics.ivLevel === 'high' || chain.ivMetrics.ivLevel === 'extreme'
-                    ? 'Elevated IV: defined-risk structures preferred over naked longs. Credit spreads are rich.'
+                    ? 'Elevated IV: defined-risk structures may deserve closer review than naked long premium exposure.'
                     : chain.ivMetrics.ivLevel === 'low'
-                      ? 'Low IV: options are cheap. Long options (debit) may be attractive if directional thesis is strong.'
-                      : 'Normal IV: balanced environment. Debit spreads and defined-risk plays both viable.'}
+                      ? 'Low IV: debit structures cost less relative to history, but still need a validated directional thesis.'
+                      : 'Normal IV: balanced environment. Compare debit spreads and defined-risk structures against liquidity.'}
                 </div>
               </div>
             </Card>
@@ -976,38 +976,38 @@ function OIHeatmapInline({ heatmap, spot }: { heatmap: OIHeatmapRow[]; spot: num
 
 /* ─── Inline Strategy Scenarios ─────────────────────────────────── */
 function SuggestedPlaysInline({ ivLevel }: { ivLevel: IVMetrics['ivLevel'] }) {
-  const plays = useMemo(() => {
+  const frameworks = useMemo(() => {
     if (ivLevel === 'high' || ivLevel === 'extreme') {
       return [
-        { title: 'Directional + Elevated IV', desc: 'Elevated IV typically benefits credit structures (bull put / bear call). Premium is rich — sellers historically have an edge here.' },
-        { title: 'Neutral + Elevated IV', desc: 'Iron condor around expected move zone. High IV inflates credit received; wider wings reduce risk of breach.' },
-        { title: 'Directional + Low IV', desc: 'Currently IV is high — naked long options face headwinds unless a further vol expansion event is expected.' },
+        { title: 'Directional + Elevated IV', desc: 'Elevated IV can make defined-risk credit structures worth reviewing, but spread width and event risk still control quality.' },
+        { title: 'Neutral + Elevated IV', desc: 'Iron-condor frameworks can be compared against the expected move zone; wider wings change risk and reward assumptions.' },
+        { title: 'Directional + Low IV', desc: 'When IV is high, naked long premium can face headwinds unless a further volatility expansion scenario is credible.' },
       ];
     }
     if (ivLevel === 'low') {
       return [
-        { title: 'Directional + Low IV', desc: 'Low premium environment — debit structures cost less and define risk clearly.' },
-        { title: 'Calendar Spread', desc: 'Near-dated short / further-dated long benefits from IV expansion and theta differential.' },
-        { title: 'Neutral', desc: 'Low IV compresses credits — premium-selling structures offer thin reward relative to risk here.' },
+        { title: 'Directional + Low IV', desc: 'Low premium environment: debit structures cost less, but the directional scenario still needs evidence.' },
+        { title: 'Calendar Spread', desc: 'Calendar frameworks depend on IV expansion assumptions and theta differential; validate event timing first.' },
+        { title: 'Neutral', desc: 'Low IV compresses credits, so neutral premium frameworks may offer thin reward relative to risk.' },
       ];
     }
     return [
-      { title: 'Directional', desc: 'Balanced IV: debit spreads offer defined risk/reward. Liquid strikes near 25–40Δ tend to have tighter spreads.' },
-      { title: 'Range-Bound', desc: 'Butterfly or iron condor around expected move — moderate premium available in balanced IV.' },
-      { title: 'Event Play', desc: 'Earnings/catalyst proximity matters. Near-term events create IV crush risk for long options holders.' },
+      { title: 'Directional', desc: 'Balanced IV: debit spreads are a defined-risk framework to compare against liquidity and spread width.' },
+      { title: 'Range-Bound', desc: 'Butterfly or iron-condor frameworks can be reviewed around the expected move in balanced IV.' },
+      { title: 'Event Framework', desc: 'Earnings/catalyst proximity matters. Near-term events create IV crush risk for long premium holders.' },
     ];
   }, [ivLevel]);
 
   return (
     <div className="space-y-3">
-      {plays.map((p, i) => (
+      {frameworks.map((p, i) => (
         <div key={i} className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4">
           <div className="text-sm font-semibold">{p.title}</div>
           <div className="mt-1 text-sm text-zinc-400 leading-relaxed">{p.desc}</div>
         </div>
       ))}
       <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4 text-xs text-zinc-400">
-        These are educational frameworks only — not personal advice. Validate structure, event risk, and liquidity independently before any trade.
+        These are educational frameworks only — not personal advice. Validate structure, event risk, and liquidity independently before relying on any scenario.
       </div>
     </div>
   );

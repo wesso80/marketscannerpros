@@ -2,6 +2,7 @@ import { JournalHeaderActions, JournalHeaderModel } from '@/types/journal';
 import TerminalPageHeader from '@/components/terminal/TerminalPageHeader';
 
 type JournalCommandBarProps = {
+  embeddedInWorkspace?: boolean;
   header?: JournalHeaderModel;
   actions: JournalHeaderActions;
   viewMode: 'normal' | 'compact';
@@ -14,11 +15,11 @@ function healthTone(health?: JournalHeaderModel['health']) {
   return 'bg-emerald-500/20 text-emerald-200';
 }
 
-export default function JournalCommandBar({ header, actions, viewMode, onToggleViewMode }: JournalCommandBarProps) {
+export default function JournalCommandBar({ embeddedInWorkspace = false, header, actions, viewMode, onToggleViewMode }: JournalCommandBarProps) {
   const headerActions = (
     <>
-      <button onClick={actions.onNewTrade} className="rounded-lg border border-emerald-500/30 bg-emerald-500/20 px-3 py-2 text-sm font-semibold text-emerald-200">+ New Trade</button>
-      <button onClick={actions.onExport} className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-sm text-slate-100">Export CSV</button>
+      <button onClick={actions.onNewTrade} className="rounded-lg border border-emerald-500/30 bg-emerald-500/20 px-3 py-2 text-sm font-semibold text-emerald-200">New Trade</button>
+      <button onClick={actions.onExport} className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-sm text-slate-100">Export</button>
       {actions.onImport && (
         <button onClick={actions.onImport} className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-sm text-slate-100">Import</button>
       )}
@@ -34,6 +35,24 @@ export default function JournalCommandBar({ header, actions, viewMode, onToggleV
       Data Health: {header?.health || 'ok'}
     </span>
   );
+
+  if (embeddedInWorkspace) {
+    return (
+      <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Journal review</div>
+            <h2 className="mt-1 text-base font-black text-white">{header?.title || 'Trade Journal'}</h2>
+            <p className="mt-1 text-xs leading-5 text-slate-400">Historical journal, live open P&L, and review evidence for your saved trades.</p>
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {headerMeta}
+            {headerActions}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <TerminalPageHeader

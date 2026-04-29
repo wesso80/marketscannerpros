@@ -672,7 +672,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
           <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#E5E7EB" }}>
-            🟢 Live Users Online
+            Live Users Online
           </h2>
           <span style={{ color: "#6B7280", fontSize: "0.75rem" }}>Auto-refreshes every 30s</span>
         </div>
@@ -787,7 +787,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
           border: "1px solid rgba(16, 185, 129, 0.3)",
         }}>
           <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>
-            💰 Financial Summary
+            Financial Summary
           </h2>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
             {/* Monthly */}
@@ -838,7 +838,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
         {/* Subscriptions by tier */}
         <div style={cardStyle}>
           <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>
-            💳 Subscriptions by Tier
+            Subscriptions by Tier
           </h2>
           {stats?.overview.subscriptionsByTier.length ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
@@ -874,7 +874,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
         {/* AI Usage (last 7 days) */}
         <div style={cardStyle}>
           <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>
-            🤖 AI Usage (Last 7 Days)
+            AI Usage (Last 7 Days)
           </h2>
           {stats?.aiUsage.last7Days.length ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
@@ -900,7 +900,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
         {/* Recent signups */}
         <div style={cardStyle}>
           <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>
-            👤 New Users (Last 7 Days)
+            New Users (Last 7 Days)
           </h2>
           {stats?.signups.last7Days.length ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
@@ -926,7 +926,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
         {/* Top AI users */}
         <div style={cardStyle}>
           <h2 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>
-            🏆 Top AI Users Today
+            Top AI Users Today
           </h2>
           {stats?.aiUsage.topUsersToday.length ? (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
@@ -967,7 +967,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
       <div style={{ marginTop: "2rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
           <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "#E5E7EB" }}>
-            🧠 Learning Machine Data
+            Learning Machine Data
           </h2>
           <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
             {learningResult && (
@@ -994,7 +994,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
                 fontWeight: 600
               }}
             >
-              {processingLearning ? "⏳ Processing..." : "⚡ Process Now"}
+              {processingLearning ? "Processing..." : "Process Now"}
             </button>
           </div>
         </div>
@@ -1037,7 +1037,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
           {/* Per-Symbol Stats */}
           <div style={cardStyle}>
             <h3 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>
-              📊 Symbol Win Rates
+              Symbol Win Rates
             </h3>
             {stats?.learning?.stats?.length ? (
               <div style={{ maxHeight: "300px", overflowY: "auto", overflowX: "auto" }}>
@@ -1079,7 +1079,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
           {/* Recent Predictions */}
           <div style={cardStyle}>
             <h3 style={{ fontSize: "1.125rem", fontWeight: 600, color: "#E5E7EB", marginBottom: "1rem" }}>
-              🔮 Recent Predictions
+              Recent Predictions
             </h3>
             {stats?.learning?.recentPredictions?.length ? (
               <div style={{ maxHeight: "300px", overflowY: "auto", overflowX: "auto" }}>
@@ -1102,16 +1102,16 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
                           textAlign: "center",
                           color: p.prediction_direction === "bullish" ? "#10B981" : p.prediction_direction === "bearish" ? "#EF4444" : "#9CA3AF"
                         }}>
-                          {p.prediction_direction === "bullish" ? "🟢" : p.prediction_direction === "bearish" ? "🔴" : "⚪"}
+                          {p.prediction_direction === "bullish" ? "BULL" : p.prediction_direction === "bearish" ? "BEAR" : "NEUT"}
                         </td>
                         <td style={{ padding: "0.4rem", textAlign: "right", color: "#FBBF24" }}>{p.confidence}%</td>
                         <td style={{ padding: "0.4rem", textAlign: "center" }}>
                           {p.status === "pending" ? (
-                            <span style={{ color: "#FBBF24" }}>⏳</span>
+                            <span style={{ color: "#FBBF24" }}>PENDING</span>
                           ) : p.hit_target ? (
-                            <span style={{ color: "#10B981" }}>✅</span>
+                            <span style={{ color: "#10B981" }}>TARGET</span>
                           ) : p.hit_stop ? (
-                            <span style={{ color: "#EF4444" }}>❌</span>
+                            <span style={{ color: "#EF4444" }}>STOP</span>
                           ) : (
                             <span style={{ color: "#9CA3AF" }}>—</span>
                           )}

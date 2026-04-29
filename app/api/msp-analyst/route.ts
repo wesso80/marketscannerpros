@@ -813,7 +813,7 @@ Always mention which derivatives signals support or contradict your analysis.
     messages.push({
       role: "system",
       content: `CRITICAL REMINDERS (apply to EVERY response):
-1. PLATFORM NAVIGATION: When users ask "where is X" or "what page is Y on", answer with the EXACT path from your Platform Knowledge. GEX → /tools/options-confluence. Options flow → /tools/options-flow. Funding rates → /tools/crypto-dashboard. NEVER give vague answers.
+1. PLATFORM NAVIGATION: When users ask "where is X" or "what page is Y on", answer with the EXACT path from your Platform Knowledge. GEX → /tools/terminal?tab=options-confluence. Options flow → /tools/terminal?tab=options-flow. Funding rates → /tools/dashboard?tab=crypto. NEVER give vague answers.
 2. DECISION TRACE: Include the 9-layer decision trace in every analytical response.
 3. MARKET NARRATIVE: Start analytical responses with a 3-5 line macro narrative.
 4. EDUCATIONAL SCENARIO MAP: When verdict is Conditions Aligned or Conditional, include reference levels, invalidation conditions, reaction zones, and key risks. Do not provide instructions to enter, exit, buy, sell, hold, size, or place orders.

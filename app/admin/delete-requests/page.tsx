@@ -103,7 +103,7 @@ export default function AdminDeleteRequestsPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
       <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "#E5E7EB", marginBottom: "1.5rem" }}>
-        🗑️ Delete Requests {pendingCount > 0 && (
+        Delete Requests {pendingCount > 0 && (
           <span style={{
             fontSize: "1rem",
             background: "rgba(239, 68, 68, 0.2)",
@@ -152,7 +152,7 @@ export default function AdminDeleteRequestsPage() {
           textAlign: "center",
           color: "#6B7280",
         }}>
-          <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>✅</div>
+          <div style={{ fontSize: "0.8rem", fontWeight: 800, color: "#10B981", marginBottom: "1rem" }}>CLEAR</div>
           <p>No delete requests. All caught up!</p>
         </div>
       ) : (
@@ -238,7 +238,7 @@ export default function AdminDeleteRequestsPage() {
                       cursor: "pointer",
                     }}
                   >
-                    ✓ Mark Completed
+                    Mark Completed
                   </button>
                   <button
                     onClick={() => {
@@ -276,7 +276,7 @@ export default function AdminDeleteRequestsPage() {
                       cursor: "pointer",
                     }}
                   >
-                    ✓ Mark Completed
+                    Mark Completed
                   </button>
                 </div>
               )}
@@ -292,7 +292,7 @@ export default function AdminDeleteRequestsPage() {
         border: "1px solid rgba(59, 130, 246, 0.2)",
         borderRadius: "0.75rem",
       }}>
-        <h3 style={{ color: "var(--msp-accent)", fontWeight: 600, marginBottom: "0.75rem" }}>📋 GDPR Deletion Checklist</h3>
+        <h3 style={{ color: "var(--msp-accent)", fontWeight: 600, marginBottom: "0.75rem" }}>GDPR Deletion Checklist</h3>
         <ul style={{ color: "#9CA3AF", fontSize: "0.875rem", margin: 0, paddingLeft: "1.25rem" }}>
           <li>Delete from <code>workspaces</code> table</li>
           <li>Delete from <code>user_subscriptions</code> table</li>

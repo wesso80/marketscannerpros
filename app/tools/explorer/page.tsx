@@ -6,8 +6,9 @@
               /api/market-movers + /api/commodities + /api/economic-indicators
    --------------------------------------------------------------------------- */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { useSearchParams } from 'next/navigation';
 import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useSectorsHeatmap, useCryptoOverview, useCryptoCategories, useMarketMovers, useCommodities, useRegime, type SectorData, type Mover, type CommodityData, type CryptoCategory } from '@/app/v2/_lib/api';
 import { CROSS_MARKET, REGIME_COLORS } from '@/app/v2/_lib/constants';
@@ -28,6 +29,24 @@ function Skel({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
 }
 
 const TABS = ['Overview', 'Sectors', 'Commodities', 'Cross-Market', 'Equity Search', 'Crypto Search', 'Crypto Command', 'Movers Intelligence', 'Commodities Deep', 'Macro'] as const;
+type ExplorerTab = typeof TABS[number];
+
+const EXPLORER_TAB_PARAM_MAP: Record<string, ExplorerTab> = {
+  overview: 'Overview',
+  sectors: 'Sectors',
+  heatmap: 'Sectors',
+  commodities: 'Commodities Deep',
+  commodity: 'Commodities Deep',
+  cross: 'Cross-Market',
+  equity: 'Equity Search',
+  'equity-explorer': 'Equity Search',
+  crypto: 'Crypto Search',
+  'crypto-explorer': 'Crypto Search',
+  'crypto-command': 'Crypto Command',
+  movers: 'Movers Intelligence',
+  'market-movers': 'Movers Intelligence',
+  macro: 'Macro',
+};
 
 function pctColor(v: number) {
   if (v > 0) return 'text-emerald-400';
@@ -38,7 +57,14 @@ function pctColor(v: number) {
 export default function ExplorerPage() {
   const { tier } = useUserTier();
   const { navigateTo, selectSymbol } = useV2();
-  const [tab, setTab] = useState<typeof TABS[number]>('Overview');
+  const searchParams = useSearchParams();
+  const requestedInitialTab = EXPLORER_TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()] || 'Overview';
+  const [tab, setTab] = useState<ExplorerTab>(requestedInitialTab);
+
+  useEffect(() => {
+    const requestedTab = EXPLORER_TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()];
+    if (requestedTab && requestedTab !== tab) setTab(requestedTab);
+  }, [searchParams, tab]);
 
   const openGoldenEgg = (symbol: string) => {
     selectSymbol(symbol);

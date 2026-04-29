@@ -6,7 +6,7 @@ import { useState } from 'react';
 const oiScenarios = [
   {
     scenario: "Rising OI + Rising Price",
-    emoji: "📈",
+    code: "UP",
     interpretation: "New money entering the market",
     meaning: "Strong bullish trend - new longs are opening positions, confirming the uptrend with fresh capital.",
     action: "Research note: analysts often monitor pullbacks in the direction of the observed trend.",
@@ -14,7 +14,7 @@ const oiScenarios = [
   },
   {
     scenario: "Rising OI + Falling Price",
-    emoji: "📉",
+    code: "DN",
     interpretation: "New shorts entering the market",
     meaning: "Strong bearish trend - new shorts are opening, confirming selling pressure with fresh capital.",
     action: "Research note: analysts often treat bounces as areas for extra caution and confirmation checks.",
@@ -22,7 +22,7 @@ const oiScenarios = [
   },
   {
     scenario: "Falling OI + Rising Price",
-    emoji: "⚠️",
+    code: "SQZ",
     interpretation: "Short squeeze / weak rally",
     meaning: "Shorts are closing (covering) causing price to rise. No new buyers entering - rally may be unsustainable.",
     action: "Research note: analysts often watch whether the rally exhausts as short-covering fades.",
@@ -30,7 +30,7 @@ const oiScenarios = [
   },
   {
     scenario: "Falling OI + Falling Price",
-    emoji: "💨",
+    code: "LIQ",
     interpretation: "Long liquidation / capitulation",
     meaning: "Longs are closing (selling) causing price to fall. Deleveraging event - could signal a bottom forming.",
     action: "Research note: analysts often monitor for capitulation exhaustion and reversal evidence.",
@@ -49,13 +49,13 @@ const fundingExplainer = [
     rate: "Negative (< 0%)",
     meaning: "Shorts pay longs",
     interpretation: "Bearish sentiment - traders are willing to pay to stay short.",
-    warning: "Deep negative funding (< -0.05%) suggests oversold conditions - bounce potential."
+    warning: "Deep negative funding (< -0.05%) suggests oversold positioning and rebound-risk context."
   },
   {
     rate: "Near Zero (±0.01%)",
     meaning: "Balanced market",
     interpretation: "No extreme positioning. Market is in equilibrium.",
-    warning: "Breakout in either direction more likely to be genuine."
+    warning: "A breakout in either direction deserves extra confirmation because positioning is balanced."
   }
 ];
 
@@ -92,10 +92,10 @@ export default function OpenInterestGuidePage() {
             ← Back to User Guide
           </Link>
           <h1 className="text-3xl md:text-4xl font-bold mb-2">
-            📊 How to Read Open Interest
+            How to Read Open Interest
           </h1>
           <p className="text-slate-300 text-lg">
-            Master derivatives data to gain an edge in your crypto trading
+            Understand derivatives positioning data for crypto market research.
           </p>
         </div>
       </div>
@@ -105,11 +105,11 @@ export default function OpenInterestGuidePage() {
         <div className="max-w-5xl mx-auto px-4">
           <div className="flex gap-1 overflow-x-auto">
             {[
-              { id: 'basics', label: '📚 Basics' },
-              { id: 'scenarios', label: '🎯 OI + Price' },
-              { id: 'funding', label: '💰 Funding Rates' },
-              { id: 'longshort', label: '⚖️ Long/Short' },
-              { id: 'tips', label: '💡 Pro Tips' },
+              { id: 'basics', label: 'Basics' },
+              { id: 'scenarios', label: 'OI + Price' },
+              { id: 'funding', label: 'Funding Rates' },
+              { id: 'longshort', label: 'Long/Short' },
+              { id: 'tips', label: 'Research Tips' },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -167,21 +167,21 @@ export default function OpenInterestGuidePage() {
               <h2 className="text-2xl font-bold mb-4">Why Does OI Matter?</h2>
               <div className="grid md:grid-cols-3 gap-4">
                 <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700">
-                  <div className="text-3xl mb-3">🔍</div>
+                  <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-700 bg-slate-950 text-xs font-black text-slate-400">OI</div>
                   <h3 className="font-semibold mb-2">Trend Confirmation</h3>
                   <p className="text-slate-400 text-sm">
                     Rising OI confirms that the current trend has conviction. Falling OI suggests the move may be exhausting.
                   </p>
                 </div>
                 <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700">
-                  <div className="text-3xl mb-3">⚡</div>
+                  <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-700 bg-slate-950 text-xs font-black text-slate-400">SQZ</div>
                   <h3 className="font-semibold mb-2">Squeeze Detection</h3>
                   <p className="text-slate-400 text-sm">
                     Falling OI during price moves often indicates forced liquidations - short squeezes or long liquidations.
                   </p>
                 </div>
                 <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700">
-                  <div className="text-3xl mb-3">📊</div>
+                  <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-700 bg-slate-950 text-xs font-black text-slate-400">POS</div>
                   <h3 className="font-semibold mb-2">Market Positioning</h3>
                   <p className="text-slate-400 text-sm">
                     High OI at certain price levels indicates where liquidations may cluster - potential support/resistance.
@@ -257,7 +257,7 @@ export default function OpenInterestGuidePage() {
                   }`}
                 >
                   <div className="flex items-center gap-3 mb-3">
-                    <span className="text-3xl">{item.emoji}</span>
+                    <span className="inline-flex h-9 w-10 items-center justify-center rounded-md border border-slate-700 bg-slate-950 text-xs font-black text-slate-400">{item.code}</span>
                     <div>
                       <h3 className="font-bold text-white">{item.scenario}</h3>
                       <p className={`text-sm ${
@@ -279,7 +279,7 @@ export default function OpenInterestGuidePage() {
             </div>
 
             <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-5 mt-6">
-              <h4 className="font-semibold text-blue-400 mb-2">💡 Key Insight</h4>
+              <h4 className="font-semibold text-blue-400 mb-2">Key Insight</h4>
               <p className="text-slate-300 text-sm">
                 The <strong>strongest trends</strong> have rising OI + price moving in the trend direction.
                 When OI falls during a price move, it's often shorts/longs being <strong>forced out</strong>, 
@@ -302,12 +302,12 @@ export default function OpenInterestGuidePage() {
               <h3 className="font-semibold mb-4">How Funding Works</h3>
               <div className="flex items-center justify-center gap-4 text-center mb-4">
                 <div className="bg-green-500/20 rounded-lg p-4 flex-1">
-                  <div className="text-2xl mb-2">🐂</div>
+                  <div className="mb-2 text-xs font-black uppercase tracking-wide">Long</div>
                   <div className="text-green-400 font-semibold">Longs</div>
                 </div>
-                <div className="text-2xl">↔️</div>
+                <div className="text-sm font-black text-slate-400">Pays</div>
                 <div className="bg-red-500/20 rounded-lg p-4 flex-1">
-                  <div className="text-2xl mb-2">🐻</div>
+                  <div className="mb-2 text-xs font-black uppercase tracking-wide">Short</div>
                   <div className="text-red-400 font-semibold">Shorts</div>
                 </div>
               </div>
@@ -326,13 +326,13 @@ export default function OpenInterestGuidePage() {
                     <span className="text-sm text-slate-400">{item.meaning}</span>
                   </div>
                   <p className="text-slate-300 text-sm mb-2">{item.interpretation}</p>
-                  <p className="text-amber-400 text-sm">⚠️ {item.warning}</p>
+                  <p className="text-amber-400 text-sm">{item.warning}</p>
                 </div>
               ))}
             </div>
 
             <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-5 mt-6">
-              <h4 className="font-semibold text-emerald-400 mb-2">📊 Annualized Funding</h4>
+              <h4 className="font-semibold text-emerald-400 mb-2">Annualized Funding</h4>
               <p className="text-slate-300 text-sm">
                 MSP shows funding as annualized percentage. <strong>Annualized &gt; 50%</strong> is extremely high 
                 and historically unsustainable - often precedes mean reversion. This is the "cost" of holding 
@@ -364,7 +364,7 @@ export default function OpenInterestGuidePage() {
                     </div>
                   </div>
                   <div className="bg-amber-500/10 rounded-lg p-3">
-                    <span className="text-xs text-amber-400 uppercase">Contrarian Signal:</span>
+                    <span className="text-xs text-amber-400 uppercase">Positioning Lens:</span>
                     <p className="text-slate-300 text-sm">{item.contrarian}</p>
                   </div>
                 </div>
@@ -372,7 +372,7 @@ export default function OpenInterestGuidePage() {
             </div>
 
             <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-5 mt-6">
-              <h4 className="font-semibold text-red-400 mb-2">⚠️ Important Caveat</h4>
+              <h4 className="font-semibold text-red-400 mb-2">Important Caveat</h4>
               <p className="text-slate-300 text-sm">
                 L/S ratio alone is NOT a trading signal. Extreme readings can persist during strong trends. 
                       Use it to <strong>review scenario risk</strong> and <strong>stress-test invalidation levels</strong>
@@ -390,7 +390,7 @@ export default function OpenInterestGuidePage() {
             <div className="grid gap-4">
               <div className="bg-gradient-to-r from-emerald-900/30 to-emerald-800/10 rounded-xl p-5 border border-emerald-500/30">
                 <div className="flex items-start gap-3">
-                  <span className="text-2xl">1️⃣</span>
+                  <span className="text-xs font-black text-emerald-300">01</span>
                   <div>
                     <h3 className="font-bold text-white mb-2">Combine All Three Metrics</h3>
                     <p className="text-slate-300 text-sm">
@@ -407,7 +407,7 @@ export default function OpenInterestGuidePage() {
 
               <div className="bg-gradient-to-r from-blue-900/30 to-blue-800/10 rounded-xl p-5 border border-blue-500/30">
                 <div className="flex items-start gap-3">
-                  <span className="text-2xl">2️⃣</span>
+                  <span className="text-xs font-black text-blue-300">02</span>
                   <div>
                     <h3 className="font-bold text-white mb-2">Watch for OI Divergences</h3>
                     <p className="text-slate-300 text-sm">
@@ -421,7 +421,7 @@ export default function OpenInterestGuidePage() {
 
               <div className="bg-gradient-to-r from-purple-900/30 to-purple-800/10 rounded-xl p-5 border border-purple-500/30">
                 <div className="flex items-start gap-3">
-                  <span className="text-2xl">3️⃣</span>
+                  <span className="text-xs font-black text-purple-300">03</span>
                   <div>
                     <h3 className="font-bold text-white mb-2">Use 24h OI Change for Timing</h3>
                     <p className="text-slate-300 text-sm">
@@ -435,7 +435,7 @@ export default function OpenInterestGuidePage() {
 
               <div className="bg-gradient-to-r from-amber-900/30 to-amber-800/10 rounded-xl p-5 border border-amber-500/30">
                 <div className="flex items-start gap-3">
-                  <span className="text-2xl">4️⃣</span>
+                  <span className="text-xs font-black text-amber-300">04</span>
                   <div>
                     <h3 className="font-bold text-white mb-2">Monitor BTC Dominance</h3>
                     <p className="text-slate-300 text-sm">
@@ -448,7 +448,7 @@ export default function OpenInterestGuidePage() {
 
               <div className="bg-gradient-to-r from-pink-900/30 to-pink-800/10 rounded-xl p-5 border border-pink-500/30">
                 <div className="flex items-start gap-3">
-                  <span className="text-2xl">5️⃣</span>
+                  <span className="text-xs font-black text-pink-300">05</span>
                   <div>
                     <h3 className="font-bold text-white mb-2">Funding as a Carry Trade</h3>
                     <p className="text-slate-300 text-sm">
@@ -462,7 +462,7 @@ export default function OpenInterestGuidePage() {
             </div>
 
             <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700 mt-8">
-              <h3 className="font-bold text-white mb-4">🎓 Summary Cheat Sheet</h3>
+              <h3 className="font-bold text-white mb-4">Summary Cheat Sheet</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -501,12 +501,12 @@ export default function OpenInterestGuidePage() {
                     <tr className="border-b border-slate-700">
                       <td className="py-2">Funding &lt; -0.05%</td>
                       <td>Oversold</td>
-                      <td className="text-green-400">Look for longs</td>
+                      <td className="text-green-400">Review bullish reversal evidence</td>
                     </tr>
                     <tr>
                       <td className="py-2">L/S &gt; 1.5</td>
                       <td>Crowded long</td>
-                      <td className="text-amber-400">Tighten stops</td>
+                      <td className="text-amber-400">Stress-test invalidation</td>
                     </tr>
                   </tbody>
                 </table>
@@ -521,7 +521,7 @@ export default function OpenInterestGuidePage() {
             href="/tools/scanner" 
             className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
           >
-            📊 View Live OI Data in Scanner
+            View Live OI Data in Scanner
           </Link>
         </div>
       </div>

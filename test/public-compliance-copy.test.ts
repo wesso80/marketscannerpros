@@ -28,7 +28,9 @@ const PUBLIC_SURFACES = [
   'lib/backtest/diagnostics.ts',
   'lib/plan-builder.ts',
   'lib/prompts/scannerExplainerRules.ts',
+  'lib/prompts/mspAnalystV2.ts',
   'lib/prompts/mspAnalystV11.ts',
+  'lib/prompts/arcaV3Engine.ts',
 ];
 
 const BLOCKED_PUBLIC_PHRASES = [
@@ -73,6 +75,14 @@ const BLOCKED_PUBLIC_PHRASES = [
   'RISK PARAMETERS',
   'Risk : Reward',
   'Key Level 1',
+  'No edge here. Stand aside.',
+  'No edge. Stand aside.',
+  'entry trigger',
+  'Position sizing must reference',
+  'BLOCKED NEW ENTRIES',
+  'Factor convergence windows into entry timing analysis',
+  'reduce size or wait',
+  'Capital:         [% allocation context',
 ];
 
 describe('public educational compliance copy', () => {
@@ -109,7 +119,7 @@ describe('public educational compliance copy', () => {
     });
 
     expect(violations).toEqual([]);
-    expect(portfolioPage).toContain('Record 50% Close');
+    expect(portfolioPage).toContain('Record Partial Close');
     expect(portfolioAnalyzeRoute).toContain('buildDeterministicPortfolioDescription');
     expect(portfolioAnalyzeRoute).toContain('Restate the simulation records in plain English only');
   });

@@ -16,6 +16,7 @@ import {
 } from '@/types/journal';
 
 type JournalLayoutProps = {
+  embeddedInWorkspace?: boolean;
   header?: JournalHeaderModel;
   kpis?: JournalKpisModel;
   actions: JournalHeaderActions;
@@ -52,6 +53,7 @@ export default function JournalLayout(props: JournalLayoutProps) {
       </div>
 
       <Layer1JournalCommand
+        embeddedInWorkspace={props.embeddedInWorkspace}
         header={props.header}
         kpis={props.kpis}
         actions={props.actions}

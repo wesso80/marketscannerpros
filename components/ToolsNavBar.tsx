@@ -6,13 +6,13 @@ import { useUserTier } from "@/lib/useUserTier";
 
 const NAV_LINKS: [string, string][] = [
   ["Home", "/tools"],
-  ["Markets", "/tools/markets"],
+  ["Markets", "/tools/explorer"],
   ["Scanner", "/tools/scanner"],
-  ["Options", "/tools/options-terminal"],
-  ["Derivatives", "/tools/crypto-terminal"],
-  ["Crypto", "/tools/crypto"],
-  ["Portfolio", "/tools/portfolio"],
-  ["Journal", "/tools/journal"],
+  ["Options", "/tools/terminal?tab=options-terminal"],
+  ["Derivatives", "/tools/terminal?tab=crypto"],
+  ["Crypto", "/tools/explorer?tab=crypto-command"],
+  ["Portfolio", "/tools/workspace?tab=portfolio"],
+  ["Journal", "/tools/workspace?tab=journal"],
   ["Volatility", "/tools/volatility-engine"],
   ["Referrals", "/tools/referrals"],
 ];
@@ -58,7 +58,7 @@ export default function ToolsNavBar() {
         {tierLoading ? null : isLoggedIn ? (
           <>
             <span className="flex items-center bg-teal-500/10 border border-slate-700 rounded-lg text-teal-300 text-[11px] px-2 py-0.5">
-              {tier === 'pro_trader' ? '⭐ Pro Trader' : tier === 'pro' ? '✨ Pro' : 'Free'}
+              {tier === 'pro_trader' ? 'Pro Trader' : tier === 'pro' ? 'Pro' : 'Free'}
             </span>
             <button
               onClick={async () => {

@@ -29,7 +29,7 @@ export default function Pricing({ loading, onLaunch, onCheckout }: Props) {
             <p className="mt-1 text-2xl font-bold">$0</p>
             <ul className="mt-6 space-y-3">
               <li className={featureItem}>• Top 10 equities + Top 10 crypto</li>
-              <li className={featureItem}>• 🤖 ARCA AI (10/day)</li>
+              <li className={featureItem}>• ARCA AI (10/day)</li>
               <li className={featureItem}>• Portfolio tracker (3 positions)</li>
               <li className={featureItem}>• Trade journal</li>
             </ul>
@@ -62,11 +62,11 @@ export default function Pricing({ loading, onLaunch, onCheckout }: Props) {
             <ul className="mt-6 space-y-3">
               <li className={featureItem}>• Everything in Free</li>
               <li className={featureItem}>• Unlimited symbol scanning</li>
-              <li className={featureItem}>• 🤖 ARCA AI (50/day)</li>
-              <li className={featureItem}>• 📊 Market Movers & News</li>
-              <li className={featureItem}>• 🏢 Company Overview</li>
-              <li className={featureItem}>• 🤖 AI Tools & Insights</li>
-              <li className={featureItem}>• CSV exports (all tools)</li>
+              <li className={featureItem}>• ARCA AI (50/day)</li>
+              <li className={featureItem}>• Market Movers & News</li>
+              <li className={featureItem}>• Company Overview</li>
+              <li className={featureItem}>• AI Tools & Insights</li>
+              <li className={featureItem}>• CSV exports across the research workflow</li>
             </ul>
             <button
               onClick={() => onCheckout("pro")}
@@ -97,8 +97,8 @@ export default function Pricing({ loading, onLaunch, onCheckout }: Props) {
             </p>
             <ul className="mt-6 space-y-3">
               <li className={featureItem}>• Everything in Pro</li>
-              <li className={featureItem}>• 🤖 ARCA AI (200/day)</li>
-              <li className={featureItem}>• 📈 Full backtesting engine</li>
+              <li className={featureItem}>• ARCA AI (200/day)</li>
+              <li className={featureItem}>• Full backtesting engine</li>
               <li className={featureItem}>• Golden Egg Deep Analysis</li>
               <li className={featureItem}>• AI Confluence Scanner</li>
               <li className={featureItem}>• Options Confluence Scanner</li>

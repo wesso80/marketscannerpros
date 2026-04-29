@@ -3,7 +3,7 @@ import LayerSection from '@/components/time/LayerSection';
 import { MiniScore } from '@/components/time/atoms';
 import { TimeConfluenceV2Output, TimeExecutionInputs } from '@/components/time/types';
 
-function ExecutionSummary({ execution, permission }: { execution: TimeExecutionInputs; permission: TimeConfluenceV2Output['permission'] }) {
+function TimingSummary({ execution, permission }: { execution: TimeExecutionInputs; permission: TimeConfluenceV2Output['permission'] }) {
   const tone =
     permission === 'ALLOW'
       ? 'border-emerald-500/20 bg-emerald-500/10'
@@ -29,10 +29,10 @@ function ExecutionSummary({ execution, permission }: { execution: TimeExecutionI
 
 export default function ExecutionLayer({ execution, out }: { execution: TimeExecutionInputs; out: TimeConfluenceV2Output }) {
   return (
-    <LayerSection title="Layer 3 — Timing (Validity Check)" tone="execution" right={<MiniScore label="Exec" value={out.executionScore} />}>
+    <LayerSection title="Layer 3 — Timing (Validity Check)" tone="execution" right={<MiniScore label="Timing" value={out.executionScore} />}>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ExecutionChecklist execution={execution} />
-        <ExecutionSummary execution={execution} permission={out.permission} />
+        <TimingSummary execution={execution} permission={out.permission} />
       </div>
     </LayerSection>
   );

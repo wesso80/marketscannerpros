@@ -15,11 +15,11 @@ interface BridgeChannel {
   post_count: number;
 }
 
-const CATEGORY_LABELS: Record<string, { label: string; emoji: string }> = {
-  core: { label: "📊 CORE MSP PAGES", emoji: "📊" },
-  engine: { label: "⚙️ ADVANCED ENGINES", emoji: "⚙️" },
-  signal: { label: "🚨 SIGNAL / ALERT FLOW", emoji: "🚨" },
-  education: { label: "📚 EDUCATION", emoji: "📚" },
+const CATEGORY_LABELS: Record<string, { label: string; code: string }> = {
+  core: { label: "CORE MSP PAGES", code: "CORE" },
+  engine: { label: "ADVANCED ENGINES", code: "ENG" },
+  signal: { label: "SIGNAL / ALERT FLOW", code: "SIG" },
+  education: { label: "EDUCATION", code: "EDU" },
 };
 
 const CATEGORY_ORDER = ["core", "engine", "signal", "education"];
@@ -142,7 +142,7 @@ export default function DiscordBridgePage() {
       });
       const data = await res.json();
       setMessage({
-        text: data.sent ? `✅ Test sent to ${channelKey}` : `❌ Test failed for ${channelKey} — check webhook URL`,
+        text: data.sent ? `Test sent to ${channelKey}` : `Test failed for ${channelKey} — check webhook URL`,
         type: data.sent ? "ok" : "err",
       });
     } catch {
@@ -166,7 +166,7 @@ export default function DiscordBridgePage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <span className="text-3xl">📡</span> Discord Bridge
+            <span className="rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-xs font-black text-cyan-300">DC</span> Discord Bridge
           </h1>
           <p className="text-sm text-slate-400 mt-1">
             Configure MSP → Discord channel webhooks. Each channel maps to a Discord webhook URL.
@@ -319,7 +319,7 @@ export default function DiscordBridgePage() {
   #faq
 
 ── MSP COMMAND CENTER ──        ← NEW
-  📊 Core Pages
+  Core Pages
     #msp-dashboard          → Market regime, daily briefing
     #msp-scanner            → Top scanner setups
     #golden-egg             → Institutional verdict (TRADE/WATCH/NO TRADE)
@@ -328,18 +328,18 @@ export default function DiscordBridgePage() {
     #research               → Macro, news, catalysts
     #workspace              → Personal environment links
 
-  ⚙️ Advanced Engines
+  Advanced Engines
     #volatility-engine      → DVE compression/expansion/exhaustion alerts
     #time-confluence        → Macro pivot timing windows
     #market-pressure        → MPE buy/sell imbalance
     #confluence-engine      → Composite score (0-100) alerts
 
-  🚨 Signals
+  Signals
     #msp-alerts             → Multi-system alignment only
     #breakout-watch         → Approaching key levels
     #trap-detection         → Fakeouts, liquidity traps
 
-  📚 Education
+  Education
     #how-to-use-msp         → Platform guides (manual)
     #disclaimer-read        → Legal disclaimers (manual)
     #ai-analyst             → AI breakdowns (why, not what)
@@ -352,7 +352,7 @@ export default function DiscordBridgePage() {
 
       {/* Legal reminder */}
       <div className="bg-red-950/30 border border-red-800/30 rounded-xl p-4">
-        <h3 className="text-sm font-semibold text-red-300 mb-2">⚠️ Compliance Reminder</h3>
+        <h3 className="text-sm font-semibold text-red-300 mb-2">Compliance Reminder</h3>
         <p className="text-xs text-red-300/70">
           All Discord posts include &quot;Educational analysis only&quot; footers automatically.
           Never use language like &quot;take this trade&quot;, &quot;buy/sell now&quot;, or &quot;this will go up&quot;.

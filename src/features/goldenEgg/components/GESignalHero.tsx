@@ -10,11 +10,11 @@ type Props = {
 };
 
 function signalLabel(confidence: number): string {
-  if (confidence >= 75) return 'STRONG SETUP';
-  if (confidence >= 60) return 'MODERATE SETUP';
-  if (confidence >= 45) return 'NEUTRAL SETUP';
-  if (confidence >= 30) return 'WEAK SETUP';
-  return 'NO SETUP';
+  if (confidence >= 75) return 'STRONG EVIDENCE';
+  if (confidence >= 60) return 'MODERATE EVIDENCE';
+  if (confidence >= 45) return 'NEUTRAL EVIDENCE';
+  if (confidence >= 30) return 'WEAK EVIDENCE';
+  return 'INSUFFICIENT EVIDENCE';
 }
 
 function signalGlow(confidence: number): string {
@@ -53,7 +53,7 @@ function setupLabel(type: string): string {
     breakout: 'Breakout',
     mean_reversion: 'Mean Reversion',
     reversal: 'Reversal',
-    squeeze: 'Squeeze Play',
+    squeeze: 'Squeeze Structure',
     range: 'Range Bound',
   };
   return map[type] || type;
@@ -67,7 +67,7 @@ export default function GESignalHero({ meta, layer1, setupType, volatility }: Pr
   const pillData = [
     { label: 'Bias', value: biasLabel(direction), color: direction === 'LONG' ? 'text-emerald-400' : direction === 'SHORT' ? 'text-rose-400' : 'text-amber-300' },
     { label: 'Risk', value: riskLabel(confidence), color: confidence >= 70 ? 'text-emerald-400' : confidence >= 50 ? 'text-amber-300' : 'text-rose-400' },
-    { label: 'Setup', value: setupLabel(setupType), color: 'text-sky-400' },
+    { label: 'Structure', value: setupLabel(setupType), color: 'text-sky-400' },
   ];
 
   // DVE volatility pills (if available)

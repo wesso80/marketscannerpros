@@ -141,42 +141,42 @@ export async function sendPushToUsers(
  */
 export const PushTemplates = {
   priceAlert: (symbol: string, condition: string, price: number) => ({
-    title: `📊 Price Alert: ${symbol}`,
+    title: `Price Alert: ${symbol}`,
     body: `${symbol} ${condition} $${price.toLocaleString()}`,
     tag: `price-alert-${symbol}`,
     data: { url: '/tools/scanner', type: 'price_alert', symbol }
   }),
   
   oiAlert: (symbol: string, change: number) => ({
-    title: `📈 OI Alert: ${symbol}`,
+    title: `OI Alert: ${symbol}`,
     body: `${symbol} Open Interest ${change > 0 ? 'surged' : 'dropped'} ${Math.abs(change).toFixed(1)}%`,
     tag: `oi-alert-${symbol}`,
     data: { url: '/tools/scanner', type: 'oi_alert', symbol }
   }),
   
   fundingAlert: (symbol: string, rate: number) => ({
-    title: `⚠️ Funding Alert: ${symbol}`,
+    title: `Funding Alert: ${symbol}`,
     body: `${symbol} funding rate ${rate > 0 ? 'high' : 'negative'}: ${(rate * 100).toFixed(4)}%`,
     tag: `funding-alert-${symbol}`,
     data: { url: '/tools/scanner', type: 'funding_alert', symbol }
   }),
   
   fearGreedAlert: (index: number, level: string) => ({
-    title: `🎭 Market Sentiment: ${level}`,
+    title: `Market Sentiment: ${level}`,
     body: `Fear & Greed Index at ${index} (${level})`,
     tag: 'fear-greed-alert',
     data: { url: '/tools/scanner', type: 'fear_greed_alert' }
   }),
   
   portfolioAlert: (symbol: string, pnlPercent: number) => ({
-    title: pnlPercent > 0 ? `🚀 ${symbol} Gain` : `⚠️ ${symbol} Loss`,
+    title: pnlPercent > 0 ? `${symbol} Gain` : `${symbol} Loss`,
     body: `Your ${symbol} position is ${pnlPercent > 0 ? 'up' : 'down'} ${Math.abs(pnlPercent).toFixed(1)}%`,
     tag: `portfolio-${symbol}`,
-    data: { url: '/tools/portfolio', type: 'portfolio_alert', symbol }
+    data: { url: '/tools/workspace?tab=portfolio', type: 'portfolio_alert', symbol }
   }),
   
   scannerAlert: (count: number, assetType: string) => ({
-    title: '🔍 New Scanner Signals',
+    title: 'New Scanner Signals',
     body: `${count} ${assetType} symbols match your criteria`,
     tag: 'scanner-alert',
     data: { url: '/tools/scanner', type: 'scanner_alert' }

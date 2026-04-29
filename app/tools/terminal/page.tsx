@@ -8,6 +8,7 @@
 import { useState, useMemo, useEffect, useCallback, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useUserTier } from '@/lib/useUserTier';
 import { useCachedTopSymbols } from '@/hooks/useCachedTopSymbols';
@@ -36,6 +37,25 @@ function Skel({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
 
 const TABS = ['Close Calendar', 'Options Terminal', 'Options Confluence', 'Options Flow', 'Crypto', 'Flow', 'Time Gravity', 'Time Confluence'] as const;
 type TerminalTab = typeof TABS[number];
+
+const TERMINAL_TAB_PARAM_MAP: Record<string, TerminalTab> = {
+  close: 'Close Calendar',
+  calendar: 'Close Calendar',
+  options: 'Options Terminal',
+  'options-terminal': 'Options Terminal',
+  confluence: 'Options Confluence',
+  'options-confluence': 'Options Confluence',
+  flow: 'Options Flow',
+  'options-flow': 'Options Flow',
+  crypto: 'Crypto',
+  'crypto-terminal': 'Crypto',
+  capital: 'Flow',
+  gravity: 'Time Gravity',
+  'time-gravity': 'Time Gravity',
+  time: 'Time Confluence',
+  'time-scanner': 'Time Confluence',
+  'time-confluence': 'Time Confluence',
+};
 
 const TERMINAL_TAB_META: Record<TerminalTab, { eyebrow: string; description: string }> = {
   'Close Calendar': {
@@ -197,12 +217,19 @@ function clusterColors(s: number) {
 export default function TerminalPage() {
   const { tier } = useUserTier();
   const { selectedSymbol, selectSymbol, navigateTo } = useV2();
-  const [tab, setTab] = useState<TerminalTab>('Close Calendar');
+  const searchParams = useSearchParams();
+  const requestedInitialTab = TERMINAL_TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()] || 'Close Calendar';
+  const [tab, setTab] = useState<TerminalTab>(requestedInitialTab);
   const [symInput, setSymInput] = useState(selectedSymbol || 'BTCUSD');
 
   /* Symbol management */
   const sym = selectedSymbol || symInput || 'BTCUSD';
   const asset = detectAssetClass(sym);
+
+  useEffect(() => {
+    const requestedTab = TERMINAL_TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()];
+    if (requestedTab && requestedTab !== tab) setTab(requestedTab);
+  }, [searchParams, tab]);
 
   /* Auto-switch away from Options Terminal for crypto symbols */
   useEffect(() => {
@@ -260,7 +287,7 @@ export default function TerminalPage() {
             <Link href="/tools/golden-egg" className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-slate-400 no-underline hover:bg-slate-700/50">
               Back to Golden Egg
             </Link>
-            <Link href="/tools/backtest" className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-emerald-300 no-underline hover:bg-emerald-500/20">
+            <Link href="/tools/workspace?tab=backtest" className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-emerald-300 no-underline hover:bg-emerald-500/20">
               Continue to Backtest
             </Link>
           </div>
@@ -312,7 +339,7 @@ export default function TerminalPage() {
                 </div>
               </div>
               <button onClick={() => calendar.refetch()} disabled={calendar.loading} className="rounded-lg border border-slate-700 bg-slate-950/50 px-2.5 py-1.5 text-xs font-semibold text-slate-100 disabled:opacity-40">
-                {calendar.loading ? 'Loading…' : '? Refresh'}
+                {calendar.loading ? 'Loading…' : 'Refresh'}
               </button>
             </div>
 
@@ -463,7 +490,7 @@ export default function TerminalPage() {
                   <div className="flex items-center gap-2">
                     {fd.asof && <span className="text-[11px] text-slate-500">as of {new Date(fd.asof).toLocaleTimeString()}</span>}
                     <button onClick={() => flow.refetch()} className="px-2 py-1 text-[11px] rounded border border-slate-700 text-slate-300 hover:bg-slate-800">
-                      ?
+                      Refresh
                     </button>
                   </div>
                 </div>
@@ -760,7 +787,7 @@ export default function TerminalPage() {
       {tab === 'Options Confluence' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Options Confluence Engine">
           <TerminalSubviewFrame tab="Options Confluence" symbol={sym}>
-            <OptionsConfluence />
+            <OptionsConfluence embeddedInTerminal />
           </TerminalSubviewFrame>
         </UpgradeGate>
       )}
@@ -769,7 +796,7 @@ export default function TerminalPage() {
       {tab === 'Options Flow' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Options Flow Intelligence">
           <TerminalSubviewFrame tab="Options Flow" symbol={sym}>
-            <OptionsFlow />
+            <OptionsFlow embeddedInTerminal />
           </TerminalSubviewFrame>
         </UpgradeGate>
       )}
@@ -787,7 +814,7 @@ export default function TerminalPage() {
       {tab === 'Time Confluence' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Time Confluence Scanner">
           <TerminalSubviewFrame tab="Time Confluence" symbol={sym}>
-            <ConfluenceScanner />
+            <ConfluenceScanner embeddedInTerminal />
             <div className="mt-6">
               <TimeConfluenceWidget showMacro showMicro showCalendar assetClass={asset} />
             </div>

@@ -179,7 +179,7 @@ export default function AdminTrialsPage() {
               color: "#6ee7b7",
               marginBottom: "16px",
             }}>
-              ✅ {success}
+              {success}
             </div>
           )}
 
@@ -286,7 +286,7 @@ export default function AdminTrialsPage() {
                 cursor: loading ? "not-allowed" : "pointer",
               }}
             >
-              {loading ? "Processing..." : "🎟️ Grant Trial Access"}
+              {loading ? "Processing..." : "Grant Trial Access"}
             </button>
           </form>
         </div>
@@ -300,7 +300,7 @@ export default function AdminTrialsPage() {
         }}>
           <div style={{ padding: "20px 24px", borderBottom: "1px solid #334155" }}>
             <h2 style={{ color: "#f1f5f9", fontSize: "16px", margin: 0 }}>
-              📋 All Trials ({trials.length})
+              All Trials ({trials.length})
             </h2>
           </div>
 

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { TOOL_CATALOG, TOOL_CATEGORIES, type ToolPage } from '@/lib/toolCatalog';
 import { toolWorkflows, type ToolWorkflow, type WorkflowTool } from '@/lib/toolWorkflows';
 
 const tierLabel = {
@@ -36,6 +37,13 @@ const workflowJumpCards = coreWorkflows.map((workflow) => ({
   label: cleanWorkflowTitle(workflow.title),
   desc: workflow.subtitle,
   startTool: getPrimaryTool(workflow),
+}));
+
+const featuredDirectoryKeys = new Set(['dashboard', 'scanner', 'golden-egg', 'terminal', 'backtest', 'journal', 'portfolio', 'crypto-dashboard', 'macro', 'options-flow', 'liquidity-sweep', 'alerts']);
+const directoryTools = TOOL_CATALOG.filter((tool) => featuredDirectoryKeys.has(tool.key));
+const toolsByCategory = TOOL_CATEGORIES.map((category) => ({
+  category,
+  tools: TOOL_CATALOG.filter((tool) => tool.category === category),
 }));
 
 function cleanWorkflowTitle(title: string) {
@@ -99,6 +107,28 @@ function ToolCard({ tool, workflow, primary = false }: { tool: WorkflowTool; wor
   );
 }
 
+function DirectoryToolCard({ tool, compact = false }: { tool: ToolPage; compact?: boolean }) {
+  return (
+    <Link
+      href={tool.href}
+      className={`group rounded-lg border border-white/10 bg-white/[0.035] transition hover:-translate-y-0.5 hover:border-emerald-400/35 hover:bg-emerald-400/[0.06] ${compact ? 'p-3' : 'p-4'}`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-700 bg-slate-950/50 text-[10px] font-black uppercase tracking-[0.08em] text-emerald-300" aria-hidden="true">{tool.icon}</span>
+          <div className="min-w-0">
+            <div className="font-bold text-white group-hover:text-emerald-200">{tool.label}</div>
+            <p className="mt-1 text-xs leading-5 text-slate-400">{tool.description}</p>
+          </div>
+        </div>
+        <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] ${tierTone[tool.tier ?? 'free']}`}>
+          {tierLabel[tool.tier ?? 'free']}
+        </span>
+      </div>
+    </Link>
+  );
+}
+
 function WorkflowSection({ workflow }: { workflow: ToolWorkflow }) {
   const primaryTool = getPrimaryTool(workflow);
   const supportingTools = workflow.tools.filter((tool) => tool.href !== primaryTool?.href);
@@ -142,8 +172,12 @@ export default function ToolsPage() {
               Your MSP research workflow.
             </h1>
             <p className="mt-4 max-w-3xl text-base leading-7 text-slate-300 sm:text-lg">
-              Start with one clear path: find scenarios, validate one symbol, inspect market mechanics, test the idea, then track outcomes. Specialist tools stay available without overwhelming the core process.
+              Start with the guided path when you want structure, then open specialist tools only when a research question needs more evidence.
             </p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              <a href="#workflow" className="rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-sm font-bold text-emerald-200 no-underline hover:bg-emerald-400/15">Start Workflow</a>
+              <a href="#all-tools" className="rounded-lg border border-sky-400/30 bg-sky-400/10 px-4 py-2 text-sm font-bold text-sky-200 no-underline hover:bg-sky-400/15">Open Tool Directory</a>
+            </div>
           </div>
           <div className="rounded-lg border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-100">
             <div className="text-xs font-black uppercase tracking-[0.12em] text-emerald-300">Recommended start</div>
@@ -152,7 +186,7 @@ export default function ToolsPage() {
           </div>
         </div>
 
-        <div className="mt-8 grid gap-3 md:grid-cols-5">
+        <div id="workflow" className="mt-8 grid gap-3 md:grid-cols-5 scroll-mt-24">
           {workflowJumpCards.map((step, index) => (
             <a
               key={step.id}
@@ -201,6 +235,41 @@ export default function ToolsPage() {
             </div>
           </details>
         ) : null}
+
+        <section id="all-tools" className="mt-8 rounded-lg border border-white/10 bg-white/[0.03] p-5 scroll-mt-24">
+          <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <div className="text-xs font-black uppercase tracking-[0.14em] text-sky-300">Tool directory</div>
+              <h2 className="mt-1 text-2xl font-black text-white">Tool directory for direct access.</h2>
+            </div>
+            <p className="max-w-xl text-sm leading-6 text-slate-400">Use this after the core path is clear. Access does not depend on My Pages.</p>
+          </div>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {directoryTools.map((tool) => (
+              <DirectoryToolCard key={tool.key} tool={tool} />
+            ))}
+          </div>
+
+          <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {toolsByCategory.map(({ category, tools }) => (
+              <section key={category} className="rounded-lg border border-white/10 bg-slate-950/35 p-3">
+                <h3 className="text-xs font-black uppercase tracking-[0.12em] text-slate-300">{category}</h3>
+                <div className="mt-3 grid gap-2">
+                  {tools.map((tool) => (
+                    <Link key={tool.key} href={tool.href} className="group flex items-center justify-between gap-2 rounded-md border border-white/5 bg-white/[0.025] px-3 py-2 no-underline hover:border-emerald-400/25 hover:bg-emerald-400/[0.05]">
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded border border-slate-700 bg-slate-950/50 text-[9px] font-black uppercase text-slate-400" aria-hidden="true">{tool.icon}</span>
+                        <span className="truncate text-xs font-semibold text-slate-200 group-hover:text-emerald-200">{tool.label}</span>
+                      </span>
+                      <span className="text-[10px] font-bold uppercase text-slate-500">{tierLabel[tool.tier ?? 'free']}</span>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        </section>
 
         <div className="mt-8 rounded-lg border border-amber-400/20 bg-amber-400/10 p-5 text-sm leading-6 text-amber-100">
           <strong className="text-amber-200">Educational use only:</strong> These tools provide research, scenario analysis,

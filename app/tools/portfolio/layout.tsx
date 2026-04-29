@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     title: 'Portfolio Tracker | MarketScanner Pros',
     description:
       'Track open positions, performance, risk, and hypothetical exposure with an educational portfolio workflow.',
-    url: 'https://marketscannerpros.app/tools/portfolio',
+    url: 'https://marketscannerpros.app/tools/workspace?tab=portfolio',
     siteName: 'MarketScanner Pros',
     images: [{ url: '/scan-banner.png', width: 1200, height: 630, alt: 'MarketScanner Pros — Portfolio Tracker' }],
     type: 'website',
@@ -21,8 +21,9 @@ export const metadata: Metadata = {
     images: ['/scan-banner.png'],
   },
   alternates: {
-    canonical: 'https://marketscannerpros.app/tools/portfolio',
+    canonical: 'https://marketscannerpros.app/tools/workspace?tab=portfolio',
   },
+  robots: { index: false, follow: true },
 };
 
 export default function PortfolioLayout({ children }: { children: React.ReactNode }) {

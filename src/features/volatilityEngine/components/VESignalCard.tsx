@@ -2,12 +2,12 @@
 
 import type { DVESignal, VolatilityState, DirectionalPressure, ExhaustionRisk } from '@/src/features/volatilityEngine/types';
 
-function stateIcon(state: string): string {
+function stateCode(state: string): string {
   switch (state) {
-    case 'fired': return '🟢';
-    case 'armed': return '🟡';
-    case 'invalidated': return '🔴';
-    default: return '⚪';
+    case 'fired': return 'LIVE';
+    case 'armed': return 'ARM';
+    case 'invalidated': return 'INV';
+    default: return 'IDLE';
   }
 }
 
@@ -96,13 +96,13 @@ export default function VESignalCard({ signal, volatility, direction, exhaustion
     <div className={`rounded-xl border p-5 ${isActive ? 'border-amber-500/30 bg-amber-500/5' : 'border-white/10 bg-white/5'}`}>
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-base">📡</span>
+          <span className="rounded border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[0.62rem] font-bold text-amber-300">SIG</span>
           <h3 className="text-xs font-semibold uppercase tracking-widest text-amber-400">
             Signal Status
           </h3>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="text-sm">{stateIcon(signal.state)}</span>
+          <span className="rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[0.6rem] font-bold uppercase text-white/50">{stateCode(signal.state)}</span>
           <span className="text-[0.65rem] font-bold uppercase text-white/60">{signal.state}</span>
         </div>
       </div>

@@ -837,7 +837,7 @@ export default function OperatorDashboardPage() {
           }),
         ]);
         setHeartbeatDrift(createData?.alertId ? `Alert created for ${primary} (${createData.alertId})` : `Alert action triggered for ${primary}`);
-        router.push(`/tools/alerts?symbol=${encodeURIComponent(primary)}&from=operator&source=focus_strip${createData?.alertId ? `&alertId=${encodeURIComponent(createData.alertId)}` : ''}`);
+        router.push(`/tools/workspace?tab=alerts&symbol=${encodeURIComponent(primary)}&from=operator&source=focus_strip${createData?.alertId ? `&alertId=${encodeURIComponent(createData.alertId)}` : ''}`);
         return;
       }
 
@@ -865,7 +865,7 @@ export default function OperatorDashboardPage() {
           }),
         ]);
         setHeartbeatDrift(draftData?.planId ? `Draft plan created for ${primary} (${draftData.planId})` : `Draft plan action triggered for ${primary}`);
-        router.push(`/tools/backtest?symbol=${encodeURIComponent(primary)}&from=operator&source=focus_strip${draftData?.planId ? `&planId=${encodeURIComponent(draftData.planId)}` : ''}`);
+        router.push(`/tools/workspace?tab=backtest&symbol=${encodeURIComponent(primary)}&from=operator&source=focus_strip${draftData?.planId ? `&planId=${encodeURIComponent(draftData.planId)}` : ''}`);
         return;
       }
 
@@ -1083,14 +1083,14 @@ export default function OperatorDashboardPage() {
     const biasLabel = bias || 'neutral';
 
     return {
-      markets: '/tools/markets',
-      movers: '/tools/market-movers',
+      markets: '/tools/explorer',
+      movers: '/tools/explorer?tab=movers',
       scanner: `/tools/scanner?symbol=${encodeURIComponent(symbol)}`,
-      chart: `/tools/intraday-charts?symbol=${encodeURIComponent(symbol)}&from=operator&mode=${operatorMode.toLowerCase()}`,
-      alerts: `/tools/alerts?symbol=${encodeURIComponent(symbol)}&from=operator&stage=${currentStage.toLowerCase()}`,
-      backtest: `/tools/backtest?symbol=${encodeURIComponent(symbol)}&from=operator`,
-      portfolio: `/tools/portfolio?symbol=${encodeURIComponent(symbol)}&from=operator`,
-      journalDraft: `/tools/journal?source=operator&symbol=${encodeURIComponent(symbol)}&setup=${encodeURIComponent(setup)}&strategy=operator_flow&timeframe=intraday&bias=${encodeURIComponent(biasLabel)}&score=${edgeScore}`,
+      chart: `/tools/golden-egg?symbol=${encodeURIComponent(symbol)}&from=operator&mode=${operatorMode.toLowerCase()}`,
+      alerts: `/tools/workspace?tab=alerts&symbol=${encodeURIComponent(symbol)}&from=operator&stage=${currentStage.toLowerCase()}`,
+      backtest: `/tools/workspace?tab=backtest&symbol=${encodeURIComponent(symbol)}&from=operator`,
+      portfolio: `/tools/workspace?tab=portfolio&symbol=${encodeURIComponent(symbol)}&from=operator`,
+      journalDraft: `/tools/workspace?tab=journal&source=operator&symbol=${encodeURIComponent(symbol)}&setup=${encodeURIComponent(setup)}&strategy=operator_flow&timeframe=intraday&bias=${encodeURIComponent(biasLabel)}&score=${edgeScore}`,
     };
   }, [focusSignal, bias, currentStage, edgeScore, operatorMode]);
 

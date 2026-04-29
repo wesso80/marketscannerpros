@@ -5,11 +5,16 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { DEFAULT_OPERATOR_STATE, readOperatorState, writeOperatorState, type OperatorFlowMode, type OperatorState } from '@/lib/operatorState';
 
 function modeFromPath(pathname: string): OperatorFlowMode {
-  if (pathname.startsWith('/tools/portfolio') || pathname.startsWith('/tools/journal')) return 'MANAGE';
-  if (pathname.startsWith('/tools/confluence-scanner') || pathname.startsWith('/tools/backtest')) return 'EXECUTE';
-  if (pathname.startsWith('/tools/deep-analysis') || pathname.startsWith('/tools/options-confluence') || pathname.startsWith('/tools/ai-analyst')) return 'EVALUATE';
-  if (pathname.startsWith('/tools/scanner') || pathname.startsWith('/tools/watchlists') || pathname.startsWith('/tools/alerts')) return 'ORIENT';
+  if (pathname.startsWith('/tools/workspace')) return 'MANAGE';
+  if (pathname.startsWith('/tools/terminal')) return 'EXECUTE';
+  if (pathname.startsWith('/tools/golden-egg') || pathname.startsWith('/tools/scanner')) return 'EVALUATE';
   return 'OBSERVE';
+}
+
+function displayAction(action: OperatorState['action']) {
+  if (action === 'EXECUTE') return 'Review';
+  if (action === 'PREP') return 'Prepare';
+  return action.charAt(0) + action.slice(1).toLowerCase();
 }
 
 function toneClass(value: string, type: 'bias' | 'action' | 'risk' | 'edge') {
@@ -58,10 +63,10 @@ export default function OperatorCommandStrip() {
       : mode === 'ORIENT'
       ? '✓ Market Context  ✓ Opportunity Found  → Qualification Active'
       : mode === 'EVALUATE'
-      ? '✓ Context  ✓ Opportunity  → Evaluation Active  ○ Awaiting Execution'
+      ? '✓ Context  ✓ Opportunity  → Evaluation Active  ○ Awaiting Timing Review'
       : mode === 'EXECUTE'
-      ? '✓ Context  ✓ Evaluation  → Execution Timing Active'
-      : '✓ Context  ✓ Evaluation  ✓ Execution  → Manage/Learn Active';
+      ? '✓ Context  ✓ Evaluation  → Timing Review Active'
+      : '✓ Context  ✓ Evaluation  ✓ Review  → Manage/Learn Active';
 
   return (
     <div className="sticky top-12 z-[95] mb-3 rounded-xl border border-slate-700/70 bg-slate-900/85 px-3 py-2 backdrop-blur">
@@ -70,12 +75,12 @@ export default function OperatorCommandStrip() {
         <span className="rounded-full border border-slate-700 bg-slate-800/70 px-2 py-0.5 text-[11px] font-semibold text-slate-300">Symbol {state.symbol}</span>
         <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${toneClass(String(state.edge), 'edge')}`}>Edge {state.edge}%</span>
         <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${toneClass(state.bias, 'bias')}`}>Bias {state.bias}</span>
-        <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${toneClass(state.action, 'action')}`}>Action {state.action}</span>
+        <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${toneClass(state.action, 'action')}`}>Review {displayAction(state.action)}</span>
         <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${toneClass(state.risk, 'risk')}`}>Risk {state.risk}</span>
         <span className="rounded-full border border-slate-700 bg-slate-800/70 px-2 py-0.5 text-[11px] font-semibold text-slate-300">Next {state.next}</span>
       </div>
       <div className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
-        Operator Flow: {flowStatus}
+        Research Flow: {flowStatus}
       </div>
     </div>
   );

@@ -4,86 +4,6 @@ import Link from 'next/link';
 import Hero from './Hero';
 import HomePreviewStrip from './HomePreviewStrip';
 import SocialProof from './SocialProof';
-import WhyMSP from './WhyMSP';
-
-
-/* ─── Featured scanners (big tiles) ─── */
-const featuredTools = [
-  {
-    href: '/tools/scanner',
-    icon: '📊',
-    image: '/assets/scanners/multi-market-scanner.png',
-    title: 'Market Scanner',
-    description: 'Review equities, crypto, and forex with structured filters across all markets.',
-    gradient: 'from-slate-800/70 to-slate-950/40',
-    border: 'border-emerald-500/30',
-    glow: 'hover:border-emerald-500/45',
-  },
-  {
-    href: '/tools/golden-egg',
-    icon: '🥚',
-    image: '/assets/scanners/golden-egg.png',
-    title: 'Golden Egg',
-    description: 'Evidence-layered scenario scoring with narrative and data-quality context.',
-    gradient: 'from-slate-800/70 to-slate-950/40',
-    border: 'border-amber-500/30',
-    glow: 'hover:border-amber-500/45',
-  },
-];
-
-/* ─── v2 Platform surfaces ─── */
-const v2Surfaces = [
-  {
-    href: '/tools/dashboard',
-    icon: '🧭',
-    image: '/assets/platform-tools/operator-dashboard.png',
-    title: 'Command Center',
-    description: 'Unified dashboard with market overview, regime context, and live research flow.',
-    gradient: 'from-slate-800/70 to-slate-950/40',
-    border: 'border-emerald-500/30',
-    glow: 'hover:border-emerald-500/45',
-  },
-  {
-    href: '/tools/terminal',
-    icon: '💹',
-    image: '/assets/platform-tools/crypto-command.png',
-    title: 'Terminal',
-    description: 'Advanced charting, session analysis, and multi-asset analytical surface.',
-    gradient: 'from-slate-800/70 to-slate-950/40',
-    border: 'border-cyan-500/30',
-    glow: 'hover:border-cyan-500/45',
-  },
-  {
-    href: '/tools/explorer',
-    icon: '🔍',
-    image: '/assets/platform-tools/equity-explorer.png',
-    title: 'Market Explorer',
-    description: 'Research assets with fundamentals, technicals, and on-chain data where available.',
-    gradient: 'from-slate-800/70 to-slate-950/40',
-    border: 'border-violet-500/30',
-    glow: 'hover:border-violet-500/45',
-  },
-  {
-    href: '/tools/research',
-    icon: '📰',
-    image: '/assets/platform-tools/news-sentiment.png',
-    title: 'Research',
-    description: 'News, sentiment, macro data, earnings, and commodities in one research hub.',
-    gradient: 'from-slate-800/70 to-slate-950/40',
-    border: 'border-blue-500/30',
-    glow: 'hover:border-blue-500/45',
-  },
-  {
-    href: '/tools/workspace',
-    icon: '📋',
-    image: '/assets/platform-tools/portfolio.png',
-    title: 'Workspace',
-    description: 'Watchlists, journal, portfolio, alerts, and settings — all in one place.',
-    gradient: 'from-slate-800/70 to-slate-950/40',
-    border: 'border-rose-500/30',
-    glow: 'hover:border-rose-500/45',
-  },
-];
 
 const valueStack = [
   { label: 'Scan faster', detail: 'Rank equities, crypto, forex, and options context with one research workflow.' },
@@ -95,53 +15,31 @@ const valueStack = [
 const guidedPaths = [
   { goal: 'Find new market scenarios', href: '/tools/scanner', tool: 'Market Scanner', detail: 'Ranked research candidates and Pro Scanner filters.' },
   { goal: 'Analyse one symbol deeply', href: '/tools/golden-egg', tool: 'Golden Egg', detail: 'Multi-factor scenario packet with data-quality context.' },
-  { goal: 'Review options flow', href: '/tools/options-flow', tool: 'Options Flow', detail: 'Large-flow estimates, IV skew, and chain context.' },
-  { goal: 'Test a strategy', href: '/tools/backtest', tool: 'Backtest', detail: 'Historical paper simulation with overfitting warnings.' },
+  { goal: 'Review options flow', href: '/tools/terminal?tab=options-flow', tool: 'Options Flow', detail: 'Large-flow estimates, IV skew, and chain context.' },
+  { goal: 'Test a strategy', href: '/tools/workspace?tab=backtest', tool: 'Backtest', detail: 'Historical paper simulation with overfitting warnings.' },
   { goal: 'Track process and outcomes', href: '/tools/workspace', tool: 'Workspace', detail: 'Journal, portfolio, watchlists, and alerts.' },
-  { goal: 'Study crypto derivatives', href: '/tools/crypto-dashboard', tool: 'Crypto Dashboard', detail: 'Funding, OI, liquidations, and long/short context.' },
+  { goal: 'Study crypto derivatives', href: '/tools/dashboard?tab=crypto', tool: 'Crypto Dashboard', detail: 'Funding, OI, liquidations, and long/short context.' },
 ];
 
-/* ─── Featured tile component ─── */
-function FeaturedTile({
-  href,
-  image,
-  title,
-  description,
-  gradient,
-  border,
-  glow,
-}: {
-  href: string;
-  image: string;
-  title: string;
-  description: string;
-  gradient: string;
-  border: string;
-  glow: string;
-}) {
+const workflowSteps = [
+  { step: '01', href: '/tools/scanner', title: 'Scanner', detail: 'Find ranked market scenarios across equities, crypto, forex, and options context.' },
+  { step: '02', href: '/tools/golden-egg', title: 'Golden Egg', detail: 'Validate one symbol with evidence, data quality, reference zones, and invalidation context.' },
+  { step: '03', href: '/tools/terminal', title: 'Terminal', detail: 'Check timing, options, flow, crypto derivatives, and close-calendar pressure.' },
+  { step: '04', href: '/tools/workspace?tab=backtest', title: 'Backtest', detail: 'Run historical paper simulations with assumptions, sample quality, and limitations visible.' },
+  { step: '05', href: '/tools/workspace', title: 'Workspace', detail: 'Save research, track journal outcomes, watchlists, alerts, and review loops.' },
+];
+
+function WorkflowStepCard({ step, href, title, detail }: { step: string; href: string; title: string; detail: string }) {
   return (
-    <Link
-      href={href}
-      className={`group relative flex flex-col overflow-hidden rounded-lg border ${border} bg-slate-950/40 transition-colors duration-200 ${glow}`}
-    >
-      {/* Image hero */}
-      <div className="relative h-48 w-full overflow-hidden bg-slate-950/40">
-        <img
-          src={image}
-          alt={title}
-          className="h-full w-full object-contain object-center p-1"
-        />
-      </div>
-      {/* Content */}
-      <div className="flex flex-1 flex-col justify-between p-5">
-        <div>
-          <h3 className="text-lg font-bold text-white">{title}</h3>
-          <p className="mt-1.5 text-sm leading-relaxed text-slate-300">{description}</p>
+    <Link href={href} className="group rounded-lg border border-white/10 bg-white/[0.035] p-4 transition hover:-translate-y-0.5 hover:border-emerald-400/35 hover:bg-emerald-400/[0.06]">
+      <div className="flex items-start justify-between gap-3">
+        <div className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-200">
+          Step {step}
         </div>
-        <div className="mt-4 flex items-center gap-1 text-sm font-semibold text-white/70 transition group-hover:text-white">
-          Explore <span className="transition-transform group-hover:translate-x-1">→</span>
-        </div>
+        <span className="text-xs font-bold text-emerald-300/80 transition group-hover:text-emerald-200">Open</span>
       </div>
+      <h3 className="mt-3 text-base font-black text-white group-hover:text-emerald-200">{title}</h3>
+      <p className="mt-2 text-sm leading-6 text-slate-400">{detail}</p>
     </Link>
   );
 }
@@ -182,6 +80,26 @@ export default function CommandHub() {
       {/* ─── Stats Bar ─── */}
       <SocialProof />
 
+      {/* ─── Core workflow tools ─── */}
+      <section className="border-b border-white/5 bg-slate-950/45">
+        <div className="mx-auto max-w-7xl px-4 py-8 md:px-6">
+          <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-400">Core workflow tools</p>
+              <h2 className="mt-1 text-2xl font-bold text-white">One research path, five decisions.</h2>
+            </div>
+            <p className="max-w-xl text-sm leading-relaxed text-slate-400">
+              The homepage points users into the workflow first. Specialist tools stay available after the main research path is clear.
+            </p>
+          </div>
+          <div className="grid gap-3 md:grid-cols-5">
+            {workflowSteps.map((step) => (
+              <WorkflowStepCard key={step.href} {...step} />
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ─── 30-second value stack ─── */}
       <section className="border-y border-white/5 bg-slate-950/60">
         <div className="mx-auto max-w-7xl px-4 py-8 md:px-6">
@@ -204,21 +122,6 @@ export default function CommandHub() {
           </div>
         </div>
       </section>
-
-      {/* ─── Core Scanners ─── */}
-      <div className="mx-auto w-full max-w-7xl px-4 pb-4 pt-10 md:px-6">
-        <section>
-          <h2 className="mb-6 text-2xl font-bold text-white">Core Scanners</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {featuredTools.map((tool) => (
-              <FeaturedTile key={tool.href} {...tool} />
-            ))}
-          </div>
-        </section>
-      </div>
-
-      {/* ─── Why MSP ─── */}
-      <WhyMSP />
 
       {/* ─── ARCxA Intelligence Engine (rewritten) ─── */}
       <section className="relative overflow-hidden border-b border-white/5">
@@ -258,18 +161,6 @@ export default function CommandHub() {
           </Link>
         </div>
       </section>
-
-      {/* ─── v2 Platform Surfaces ─── */}
-      <div className="mx-auto w-full max-w-7xl px-4 pb-8 pt-10 md:px-6">
-        <section>
-          <h2 className="mb-6 text-2xl font-bold text-white">Platform</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {v2Surfaces.map((surface) => (
-              <FeaturedTile key={surface.href} {...surface} />
-            ))}
-          </div>
-        </section>
-      </div>
 
       {/* ─── Referral Promo ─── */}
       <section className="border-t border-white/5 bg-slate-950/70">

@@ -48,18 +48,18 @@ export default function ExplorerActionGrid({ assetType, symbol, blocked, blockRe
 
   return (
     <div className="mt-2 grid grid-cols-2 gap-1.5">
-      <ActionItem blocked={blocked} blockReason={blockReason} href={`/tools/watchlists?symbol=${upper}`} label="Add to Watchlist" />
-      <ActionItem blocked={blocked} blockReason={blockReason} href={`/tools/alerts?symbol=${upper}`} label="Create Alert" />
+      <ActionItem blocked={blocked} blockReason={blockReason} href={`/tools/workspace?tab=watchlists&symbol=${upper}`} label="Add to Watchlist" />
+      <ActionItem blocked={blocked} blockReason={blockReason} href={`/tools/workspace?tab=alerts&symbol=${upper}`} label="Create Alert" />
       <ActionItem
         blocked={blocked}
         blockReason={blockReason}
-        href={assetType === 'crypto' ? `/tools/scanner?asset=crypto&symbol=${upper}` : `/tools/confluence-scanner?symbol=${upper}`}
+        href={assetType === 'crypto' ? `/tools/scanner?asset=crypto&symbol=${upper}` : `/tools/terminal?tab=time-confluence&symbol=${upper}`}
         label="Run Confluence Scan"
       />
       <ActionItem
         blocked={blocked}
         blockReason={blockReason}
-        href={`/tools/journal?note=${encodeURIComponent(`Review ${upper} setup`)}`}
+        href={`/tools/workspace?tab=journal&note=${encodeURIComponent(`Review ${upper} setup`)}`}
         label="Open Journal Draft"
       />
     </div>

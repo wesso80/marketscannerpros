@@ -108,7 +108,7 @@ export default function AdminAIUsagePage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
       <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "#E5E7EB", marginBottom: "1.5rem" }}>
-        🤖 AI Usage Analytics
+        AI Usage Analytics
       </h1>
 
       {error && (
@@ -147,9 +147,9 @@ export default function AdminAIUsagePage() {
       {/* Tab navigation */}
       <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem" }}>
         {[
-          { id: "overview", label: "📊 Daily Stats" },
-          { id: "users", label: "👥 Top Users" },
-          { id: "questions", label: "💬 Recent Questions" },
+          { id: "overview", label: "Daily Stats" },
+          { id: "users", label: "Top Users" },
+          { id: "questions", label: "Recent Questions" },
         ].map((t) => (
           <button
             key={t.id}

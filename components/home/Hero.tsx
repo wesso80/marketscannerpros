@@ -6,12 +6,12 @@ export default function Hero() {
   return (
     <section className="relative overflow-hidden border-b border-white/5">
       {/* Background layers */}
-      <div className="absolute inset-0 bg-gradient-to-b from-emerald-950/20 via-[var(--msp-bg)] to-[var(--msp-bg)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(16,185,129,0.12),transparent)]" />
+      <div className="absolute inset-0 bg-[var(--msp-bg)]" />
+      <div className="absolute inset-x-0 top-0 h-40 bg-emerald-950/10" />
       {/* Top accent line */}
       <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-emerald-500/50 to-transparent" />
 
-      <div className="relative mx-auto flex max-w-6xl flex-col items-center px-4 pb-14 pt-16 text-center md:pb-20 md:pt-24">
+      <div className="relative mx-auto flex max-w-6xl flex-col items-center px-4 pb-12 pt-14 text-center md:pb-16 md:pt-20">
         {/* Badge */}
         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-4 py-1.5 text-xs font-medium text-emerald-400">
           <span className="relative flex h-2 w-2">
@@ -56,7 +56,7 @@ export default function Hero() {
         {/* Data provider logos */}
         <div className="mt-10 flex flex-col items-center gap-3">
           <p className="text-xs font-medium uppercase tracking-widest text-slate-500">
-            Trusted Market Data Providers
+            Market data sources, not endorsements
           </p>
           <div className="flex items-center gap-8 sm:gap-10">
             {/* NASDAQ */}

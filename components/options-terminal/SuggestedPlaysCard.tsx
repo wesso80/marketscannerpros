@@ -8,38 +8,38 @@ interface Props {
   mode: TerminalMode;
 }
 
-interface Play {
+interface StructureExample {
   title: string;
   description: string;
-  condition: string;
-  icon: string;
+  context: string;
+  code: string;
 }
 
 export default function SuggestedPlaysCard({ ivMetrics, mode }: Props) {
   const { ivLevel } = ivMetrics;
 
-  const plays: Play[] = useMemo(() => {
-    const result: Play[] = [];
+  const examples: StructureExample[] = useMemo(() => {
+    const result: StructureExample[] = [];
 
     // Bullish + high IV
     if (ivLevel === 'high' || ivLevel === 'extreme') {
       result.push({
         title: 'Bull Put Credit Spread',
-        description: 'Sell elevated premium with defined risk. Collect credit, profit if underlying stays above short strike.',
-        condition: `Bullish bias, IV is ${ivLevel}`,
-        icon: '🐂',
+        description: 'Defined-risk credit framework to review when IV is elevated and downside reference levels are clear.',
+        context: `Bullish research bias, IV is ${ivLevel}`,
+        code: 'BP',
       });
       result.push({
         title: 'Iron Condor (Neutral)',
-        description: 'Sell both sides — high IV makes credit spreads wider and more rewarding for neutral views.',
-        condition: `Neutral bias, IV is ${ivLevel}`,
-        icon: '⚖️',
+        description: 'Neutral framework for comparing expected-move boundaries, wing width, and event risk.',
+        context: `Neutral research bias, IV is ${ivLevel}`,
+        code: 'IC',
       });
       result.push({
         title: 'Bear Call Credit Spread',
-        description: 'Sell call spread above resistance. High IV inflates the credit received.',
-        condition: `Bearish bias, IV is ${ivLevel}`,
-        icon: '🐻',
+        description: 'Defined-risk bearish framework to compare against upside reference levels and liquidity.',
+        context: `Bearish research bias, IV is ${ivLevel}`,
+        code: 'BC',
       });
     }
 
@@ -47,15 +47,15 @@ export default function SuggestedPlaysCard({ ivMetrics, mode }: Props) {
     if (ivLevel === 'low') {
       result.push({
         title: 'Long Call / Long Put',
-        description: 'Options are cheap relative to history. Defined-risk directional bets are attractive when IV is low.',
-        condition: `Directional view, IV is ${ivLevel}`,
-        icon: '🎯',
+        description: 'Debit framework to review when premium is lower relative to history and directional evidence is strong.',
+        context: `Directional research view, IV is ${ivLevel}`,
+        code: 'DR',
       });
       result.push({
         title: 'Calendar Spread',
-        description: 'Buy further-dated option, sell near-dated. Benefits from IV expansion and time decay difference.',
-        condition: `Expecting IV increase, IV is ${ivLevel}`,
-        icon: '📅',
+        description: 'Calendar framework for studying IV expansion assumptions and time-decay differences.',
+        context: `IV expansion scenario, IV is ${ivLevel}`,
+        code: 'CA',
       });
     }
 
@@ -63,24 +63,24 @@ export default function SuggestedPlaysCard({ ivMetrics, mode }: Props) {
     if (ivLevel === 'normal') {
       result.push({
         title: 'Debit Spread (Directional)',
-        description: 'Balanced risk/reward with moderate premium. Define your risk with a spread.',
-        condition: `Directional view, IV is ${ivLevel}`,
-        icon: '↗️',
+        description: 'Defined-risk debit framework for comparing directional evidence, spread width, and liquidity.',
+        context: `Directional research view, IV is ${ivLevel}`,
+        code: 'DB',
       });
       result.push({
         title: 'Butterfly Spread (Precision)',
-        description: 'Low-cost structure for pinpoint targets. Use around expected move zone for expiration plays.',
-        condition: `Range-bound view, IV is ${ivLevel}`,
-        icon: '🦋',
+        description: 'Range framework for studying expected-move zones and expiration sensitivity.',
+        context: `Range-bound research view, IV is ${ivLevel}`,
+        code: 'BF',
       });
     }
 
     // Always show educational disclaimer entry
     result.push({
       title: 'Educational Only',
-      description: 'These are structure examples based on IV regime — not personal advice. Always evaluate your own risk tolerance, scenario exposure, and thesis.',
-      condition: 'All conditions',
-      icon: '📚',
+      description: 'These are structure examples based on IV regime, not personal advice. Evaluate liquidity, event risk, and assumptions independently.',
+      context: 'All market contexts',
+      code: 'ED',
     });
 
     return result;
@@ -101,14 +101,14 @@ export default function SuggestedPlaysCard({ ivMetrics, mode }: Props) {
       </div>
 
       <div className="flex flex-col gap-2">
-        {plays.map((p, i) => (
+        {examples.map((p, i) => (
           <div
             key={i}
             className="rounded-lg p-3 transition-colors"
             style={{ background: 'var(--msp-panel-2)', border: '1px solid var(--msp-border)' }}
           >
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-sm">{p.icon}</span>
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-slate-700 bg-slate-950/50 text-[9px] font-black uppercase tracking-[0.08em] text-slate-400">{p.code}</span>
               <span className="text-xs font-bold" style={{ color: 'var(--msp-text)' }}>
                 {p.title}
               </span>
@@ -117,7 +117,7 @@ export default function SuggestedPlaysCard({ ivMetrics, mode }: Props) {
               {p.description}
             </p>
             <p className="text-[9px] mt-1 font-semibold" style={{ color: 'var(--msp-text-faint)' }}>
-              {p.condition}
+              {p.context}
             </p>
           </div>
         ))}

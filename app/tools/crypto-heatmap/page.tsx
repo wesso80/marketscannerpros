@@ -8,7 +8,7 @@ export default function CryptoHeatmapPage() {
   const router = useRouter();
   
   useEffect(() => {
-    router.replace('/tools/crypto?section=heatmap');
+    router.replace('/tools/explorer?tab=crypto-command&section=heatmap');
   }, [router]);
 
   return (

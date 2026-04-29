@@ -5,12 +5,13 @@
    Real API data from v1 endpoints.
    --------------------------------------------------------------------------- */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { useSearchParams } from 'next/navigation';
 import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useRegime, useMarketMovers, useNews, useEconomicCalendar, type Mover, type NewsArticle, type EconomicEvent } from '@/app/v2/_lib/api';
 import { REGIME_COLORS, CROSS_MARKET } from '@/app/v2/_lib/constants';
-import { Card, SectionHeader, Badge, ImpactDot, AuthPrompt, UpgradeGate } from '@/app/v2/_components/ui';
+import { Card, Badge, ImpactDot, AuthPrompt, UpgradeGate } from '@/app/v2/_components/ui';
 import { useUserTier } from '@/lib/useUserTier';
 import { useCachedTopSymbols, type CachedSymbol } from '@/hooks/useCachedTopSymbols';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
@@ -23,6 +24,15 @@ const FavoritesPanel = dynamic(() => import('@/components/FavoritesPanel'), { ss
 
 const DASH_TABS = ['My Pages', 'Command Center', 'Crypto Derivatives', 'Macro'] as const;
 type DashTab = typeof DASH_TABS[number];
+
+const DASH_TAB_PARAM_MAP: Record<string, DashTab> = {
+  pages: 'My Pages',
+  saved: 'My Pages',
+  command: 'Command Center',
+  crypto: 'Crypto Derivatives',
+  derivatives: 'Crypto Derivatives',
+  macro: 'Macro',
+};
 
 /* -- helpers -------------------------------------------------------------- */
 function directionColor(d?: string) {
@@ -61,11 +71,28 @@ function CardSkeleton({ rows = 4 }: { rows?: number }) {
   );
 }
 
+function DashboardMetric({ label, value, tone = '#CBD5E1', detail }: { label: string; value: string; tone?: string; detail: string }) {
+  return (
+    <div className="rounded-lg border border-white/10 bg-slate-950/45 px-3 py-2">
+      <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
+      <div className="mt-1 text-sm font-black" style={{ color: tone }}>{value}</div>
+      <div className="mt-0.5 truncate text-[11px] text-slate-500" title={detail}>{detail}</div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const { navigateTo, selectSymbol } = useV2();
-  const [dashTab, setDashTab] = useState<DashTab>('Command Center');
+  const searchParams = useSearchParams();
+  const requestedInitialTab = DASH_TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()] || 'Command Center';
+  const [dashTab, setDashTab] = useState<DashTab>(requestedInitialTab);
   const { tier } = useUserTier();
   const isPro = tier === 'pro' || tier === 'pro_trader';
+
+  useEffect(() => {
+    const requestedTab = DASH_TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()];
+    if (requestedTab && requestedTab !== dashTab) setDashTab(requestedTab);
+  }, [searchParams, dashTab]);
 
   /* -- Real API calls --------------------------------------------------- */
   const regime = useRegime();
@@ -86,6 +113,21 @@ export default function DashboardPage() {
   const crGainers = allGainers.filter((m: Mover) => m.asset_class === 'crypto').slice(0, 5);
   const crLosers = allLosers.filter((m: Mover) => m.asset_class === 'crypto').slice(0, 5);
   const articles = (news.data?.articles || []).slice(0, 6);
+  const scannerQueue = [...cached.equity.slice(0, 3), ...cached.crypto.slice(0, 2)];
+  const moverQueue = [...eqGainers.slice(0, 2), ...crGainers.slice(0, 2)];
+  const degradedFeeds = [
+    cached.error ? 'Scanner cache' : null,
+    movers.error ? 'Movers' : null,
+    news.error ? 'News' : null,
+    calendar.error ? 'Calendar' : null,
+  ].filter(Boolean);
+  const loadingFeeds = [cached.loading, movers.loading, news.loading, calendar.loading].filter(Boolean).length;
+  const researchQueueCount = scannerQueue.length + moverQueue.length;
+  const highImpactEventCount = highImpactEvents.length;
+  const headlineCount = articles.length;
+  const dataHealthLabel = degradedFeeds.length ? `${degradedFeeds.length} issue${degradedFeeds.length === 1 ? '' : 's'}` : loadingFeeds ? `${loadingFeeds} loading` : 'Ready';
+  const dataHealthTone = degradedFeeds.length ? '#F59E0B' : loadingFeeds ? '#38BDF8' : '#10B981';
+  const topQueueSymbol = scannerQueue[0]?.symbol || moverQueue[0]?.ticker || 'None';
 
   // Show sign-in prompt if all data hooks report auth errors
   const allAuthError = movers.isAuthError && news.isAuthError;
@@ -125,33 +167,140 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <SectionHeader title="Command Center" subtitle="What matters today — live data" />
+      <section className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.22)]" aria-label="Dashboard command header">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(24rem,0.85fr)]">
+          <div>
+            <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.16em] text-emerald-300">Morning command dashboard</div>
+            <h1 className="mt-2 text-2xl font-black tracking-normal text-white md:text-3xl">Open with the highest-evidence research queue.</h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+              Start from real scanner cache, mover data, calendar events, and news availability. This view shows what needs research first, what data is degraded, and where the next workflow step lives.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <a href="/tools/scanner" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-2 text-xs font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15">Start Scanner</a>
+              <a href="/tools/golden-egg" className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-2 text-xs font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15">Validate Symbol</a>
+              <a href="/tools/workspace?tab=journal" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-2 text-xs font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Open Journal</a>
+            </div>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-2">
+            <DashboardMetric label="Queue" value={researchQueueCount ? `${researchQueueCount} items` : 'Empty'} tone={researchQueueCount ? '#10B981' : '#94A3B8'} detail={`Top focus: ${topQueueSymbol}`} />
+            <DashboardMetric label="Data Health" value={dataHealthLabel} tone={dataHealthTone} detail={degradedFeeds.length ? degradedFeeds.join(', ') : 'No feed errors reported'} />
+            <DashboardMetric label="High Impact" value={String(highImpactEventCount)} tone={highImpactEventCount ? '#F59E0B' : '#94A3B8'} detail="Calendar events in queue" />
+            <DashboardMetric label="Headlines" value={String(headlineCount)} tone={headlineCount ? '#38BDF8' : '#94A3B8'} detail="Latest news items loaded" />
+          </div>
+        </div>
+      </section>
+
       <ComplianceDisclaimer collapsible />
 
-      {/* ─── Tab Bar ─── */}
-      <div className="flex items-center gap-1 flex-wrap border-b border-slate-800/50 pb-1">
+      {/* ─── Morning Research Start ----------------------------------- */}
+      <section className="grid gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.8fr)]" aria-label="Morning research start">
+        <Card>
+          <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="text-[0.65rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Today&apos;s Research Queue</div>
+              <h2 className="mt-1 text-lg font-black text-white">Start with evidence, then choose the next research step.</h2>
+              <p className="mt-1 text-xs leading-5 text-slate-400">Built from scanner cache, movers, events, and news availability. Review context only; no trade instructions.</p>
+            </div>
+            <button type="button" onClick={() => navigateTo('scanner')} className="rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-3 py-2 text-xs font-bold text-emerald-200 hover:bg-emerald-400/15">
+              Open Scanner
+            </button>
+          </div>
+
+          {scannerQueue.length === 0 && moverQueue.length === 0 ? (
+            <div className="rounded-lg border border-slate-800 bg-slate-950/35 px-4 py-5 text-center text-xs text-slate-500">
+              No queue yet. Run Scanner or review movers to create a research list.
+            </div>
+          ) : (
+            <div className="grid gap-2 md:grid-cols-2">
+              {scannerQueue.map((row: CachedSymbol) => (
+                <button key={`queue-${row.symbol}`} type="button" onClick={() => openGoldenEgg(row.symbol)} className="rounded-lg border border-white/10 bg-white/[0.035] p-3 text-left hover:border-emerald-400/30 hover:bg-emerald-400/[0.05]">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-black text-white">{row.symbol}</span>
+                    <span className="text-xs font-bold" style={{ color: directionColor(row.direction) }}>{row.direction === 'bullish' ? 'Bullish bias' : row.direction === 'bearish' ? 'Bearish bias' : 'Neutral bias'}</span>
+                  </div>
+                  <div className="mt-2 grid grid-cols-3 gap-2 text-[11px] text-slate-500">
+                    <span>Score <strong className="text-slate-200">{row.score}</strong></span>
+                    <span>Price <strong className="text-slate-200">{fmtPrice(row.price)}</strong></span>
+                    <span className={pctColor(row.changePct)}>Move {row.changePct >= 0 ? '+' : ''}{row.changePct.toFixed(2)}%</span>
+                  </div>
+                  <div className="mt-2 text-[11px] font-semibold text-emerald-300">Next: review in Golden Egg</div>
+                </button>
+              ))}
+              {moverQueue.map((m: Mover) => (
+                <button key={`mover-queue-${m.ticker}`} type="button" onClick={() => openGoldenEgg(m.ticker)} className="rounded-lg border border-white/10 bg-white/[0.035] p-3 text-left hover:border-sky-400/30 hover:bg-sky-400/[0.05]">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-black text-white">{m.ticker}</span>
+                    <span className="text-xs font-bold text-sky-300">Mover evidence</span>
+                  </div>
+                  <div className="mt-2 text-[11px] text-slate-400">{m.asset_class} · {m.change_percentage} · price {fmtPrice(parseFloat(m.price))}</div>
+                  <div className="mt-2 text-[11px] font-semibold text-emerald-300">Next: validate movement context</div>
+                </button>
+              ))}
+            </div>
+          )}
+        </Card>
+
+        <div className="grid gap-3">
+          <Card>
+            <div className="text-[0.65rem] font-extrabold uppercase tracking-[0.14em] text-sky-300">Data Health Strip</div>
+            <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+              <div className="rounded-lg border border-white/10 bg-slate-950/35 p-3">
+                <div className="text-slate-500">Loading feeds</div>
+                <div className="mt-1 text-lg font-black text-white">{loadingFeeds}</div>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-slate-950/35 p-3">
+                <div className="text-slate-500">Degraded feeds</div>
+                <div className={`mt-1 text-lg font-black ${degradedFeeds.length ? 'text-amber-300' : 'text-emerald-300'}`}>{degradedFeeds.length}</div>
+              </div>
+            </div>
+            <p className="mt-2 text-[11px] leading-5 text-slate-500">{degradedFeeds.length ? `Review feed issues: ${degradedFeeds.join(', ')}.` : 'Scanner, movers, news, and calendar feeds have no reported errors.'}</p>
+          </Card>
+
+          <Card>
+            <div className="text-[0.65rem] font-extrabold uppercase tracking-[0.14em] text-amber-300">Continue Workflow</div>
+            <div className="mt-3 grid gap-2 text-xs">
+              <button type="button" onClick={() => navigateTo('scanner')} className="rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2 text-left text-slate-200 hover:border-emerald-400/30">1. Find scenarios in Scanner</button>
+              <button type="button" onClick={() => navigateTo('golden-egg')} className="rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2 text-left text-slate-200 hover:border-emerald-400/30">2. Validate one symbol in Golden Egg</button>
+              <a href="/tools/workspace?tab=backtest" className="rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2 text-left text-slate-200 no-underline hover:border-emerald-400/30">3. Test history in Backtest</a>
+              <a href="/tools/workspace?tab=journal" className="rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2 text-left text-slate-200 no-underline hover:border-emerald-400/30">4. Save notes in Journal</a>
+            </div>
+          </Card>
+        </div>
+      </section>
+
+      {/* ─── Dashboard Lens Rail ─── */}
+      <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div className="text-[0.65rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Dashboard lens</div>
+            <div className="text-[0.72rem] text-slate-500">Switch between saved pages, live market desk, derivatives, and macro context.</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
         {DASH_TABS.map(t => (
           <button
             key={t}
             type="button"
             aria-pressed={dashTab === t}
             onClick={() => setDashTab(t)}
-            className={`px-3 py-1.5 text-[11px] rounded-t-md whitespace-nowrap transition-colors ${
+            className={`shrink-0 rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors ${
               dashTab === t
-                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 border-b-0'
-                : 'text-slate-400 hover:bg-slate-800/60 border border-transparent'
+                ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
+                : 'border-slate-800 bg-slate-950/35 text-slate-400 hover:border-slate-600 hover:text-slate-200'
             }`}
           >
             {t}
           </button>
         ))}
+        </div>
       </div>
 
       {/* ─── My Pages Tab ─── */}
-      {dashTab === 'My Pages' && <FavoritesPanel />}
+      {dashTab === 'My Pages' && <FavoritesPanel embeddedInDashboard />}
 
       {/* ─── Crypto Derivatives Tab ─── */}
-      {dashTab === 'Crypto Derivatives' && <UpgradeGate requiredTier="pro" currentTier={tier} feature="Crypto Derivatives"><CryptoDashboard /></UpgradeGate>}
+      {dashTab === 'Crypto Derivatives' && <UpgradeGate requiredTier="pro" currentTier={tier} feature="Crypto Derivatives"><CryptoDashboard embeddedInDashboard /></UpgradeGate>}
 
       {/* ─── Macro Tab ─── */}
       {dashTab === 'Macro' && (!isPro ? (
@@ -159,9 +308,9 @@ export default function DashboardPage() {
           <div className="text-xs text-center text-slate-400 bg-slate-800/50 border border-slate-700/30 rounded-lg px-3 py-2 mb-3">
             <span className="text-emerald-400 font-semibold">Pro required:</span> upgrade to interact with the Macro Dashboard
           </div>
-          <div className="pointer-events-none select-none"><MacroDashboard /></div>
+          <div className="pointer-events-none select-none"><MacroDashboard embeddedInDashboard /></div>
         </div>
-      ) : <MacroDashboard />)}
+      ) : <MacroDashboard embeddedInDashboard />)}
 
       {/* ─── Command Center Tab (default) ─── */}
       {dashTab === 'Command Center' && <>

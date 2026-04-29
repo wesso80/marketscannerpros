@@ -141,6 +141,12 @@ function biasLabel(direction?: string | null): string {
   return 'Neutral bias';
 }
 
+function compactBiasLabel(direction?: string | null): string {
+  if (direction === 'bullish' || direction === 'LONG') return 'Bullish';
+  if (direction === 'bearish' || direction === 'SHORT') return 'Bearish';
+  return 'Neutral';
+}
+
 function lifecycleLabel(lifecycle: LifecycleState): string {
   if (lifecycle === 'READY') return 'Multi-confirmed pattern';
   if (lifecycle === 'SETTING_UP') return 'Developing';
@@ -232,10 +238,14 @@ function ScannerFlowRail({
   activeStage,
   selectedSymbol,
   onSelectMode,
+  onSelectAnalysis,
+  canOpenAnalysis,
 }: {
   activeStage: ScannerStage;
   selectedSymbol: string | null;
   onSelectMode: (mode: ScannerMode) => void;
+  onSelectAnalysis: () => void;
+  canOpenAnalysis: boolean;
 }) {
   const stages: Array<{ id: ScannerStage; label: string; eyebrow: string; detail: string }> = [
     { id: 'ranked', label: 'Ranked', eyebrow: '1. Triage', detail: 'Auto-ranked market queue' },
@@ -248,7 +258,7 @@ function ScannerFlowRail({
       {stages.map((stage) => {
         const isActive = activeStage === stage.id;
         const isAnalysis = stage.id === 'analysis';
-        const disabled = isAnalysis && !selectedSymbol;
+        const disabled = isAnalysis && !canOpenAnalysis;
         const content = (
           <div className={`h-full rounded-lg border px-3 py-2 text-left transition ${
             isActive
@@ -272,7 +282,135 @@ function ScannerFlowRail({
           );
         }
 
-        return <div key={stage.id} aria-disabled={disabled}>{content}</div>;
+        return (
+          <button
+            key={stage.id}
+            type="button"
+            onClick={onSelectAnalysis}
+            disabled={disabled}
+            aria-pressed={isActive}
+            className="block w-full disabled:cursor-not-allowed"
+          >
+            {content}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ProScannerCards({ rows, onRowClick }: { rows: ScreenerRow[]; onRowClick: (row: ScreenerRow) => void }) {
+  if (!rows.length) {
+    return <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-4 py-8 text-center text-sm text-slate-500">No card results match the current filters.</div>;
+  }
+
+  return (
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      {rows.map((row) => {
+        const biasColor = row.direction === 'LONG' ? 'text-emerald-300' : row.direction === 'SHORT' ? 'text-rose-300' : 'text-slate-300';
+        const trustTone = row.dataQuality === 'GOOD' ? 'text-emerald-300 border-emerald-500/35 bg-emerald-500/10' : row.dataQuality === 'MISSING' ? 'text-rose-300 border-rose-500/35 bg-rose-500/10' : 'text-amber-300 border-amber-500/35 bg-amber-500/10';
+        const researchTone = row.permission === 'COMPLIANT' ? 'text-emerald-300 border-emerald-500/35 bg-emerald-500/10' : row.permission === 'BLOCKED' ? 'text-rose-300 border-rose-500/35 bg-rose-500/10' : 'text-amber-300 border-amber-500/35 bg-amber-500/10';
+
+        return (
+          <button
+            key={row.symbol}
+            type="button"
+            onClick={() => onRowClick(row)}
+            className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-4 text-left transition hover:border-emerald-400/35 hover:bg-emerald-400/[0.05]"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Rank {row.rank}</div>
+                <div className="mt-1 text-lg font-black text-white">{row.symbol}</div>
+              </div>
+              <div className={`rounded-md border px-2 py-1 text-[11px] font-black uppercase ${researchTone}`}>
+                {row.permission === 'COMPLIANT' ? 'Aligned' : row.permission === 'BLOCKED' ? 'Not aligned' : 'Mixed'}
+              </div>
+            </div>
+            <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+              <div className="rounded-lg bg-slate-950/45 px-2 py-2">
+                <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">Bias</div>
+                <div className={`mt-1 text-xs font-black ${biasColor}`}>{compactBiasLabel(row.direction)}</div>
+              </div>
+              <div className="rounded-lg bg-slate-950/45 px-2 py-2">
+                <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">Alignment</div>
+                <div className="mt-1 text-xs font-black text-white">{row.confidence}%</div>
+              </div>
+              <div className="rounded-lg bg-slate-950/45 px-2 py-2">
+                <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">MTF</div>
+                <div className="mt-1 text-xs font-black text-white">{row.tfAlignment ?? '—'}/4</div>
+              </div>
+            </div>
+            <p className="mt-3 line-clamp-2 text-xs leading-5 text-slate-400">{row.reason || 'Mixed evidence'}</p>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <span className={`rounded-md border px-2 py-0.5 text-[10px] font-black uppercase ${trustTone}`}>{row.dataQuality || 'DEGRADED'}</span>
+              <span className="text-xs font-bold text-emerald-300">Review Scenario</span>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function RankedMobileCards({ rows, activeRegime, onRowClick }: { rows: ScanResult[]; activeRegime: string; onRowClick: (row: ScanResult) => void }) {
+  if (!rows.length) {
+    return <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-4 py-8 text-center text-sm text-slate-500 md:hidden">No ranked scenarios match this filter.</div>;
+  }
+
+  return (
+    <div className="grid gap-3 md:hidden">
+      {rows.map((row, index) => {
+        const lifecycle = deriveLifecycleState(row, activeRegime);
+        const msp = computeMspScore(row, activeRegime);
+        const trust = rankedTrustLabel(row);
+        const trustDetail = rankedTrustDetail(row);
+        const reason = summarizeRankedReason(row, lifecycle, isRegimeCompatibleForRegime(row, activeRegime), activeRegime);
+        const mspColor = msp >= 70 ? '#10B981' : msp >= 50 ? '#F59E0B' : msp >= 30 ? '#94A3B8' : '#EF4444';
+
+        return (
+          <button
+            key={`${row.symbol}-${index}`}
+            type="button"
+            onClick={() => onRowClick(row)}
+            className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-4 text-left transition hover:border-emerald-400/35 hover:bg-emerald-400/[0.05]"
+            aria-label={`Review scenario for ${row.symbol}`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">Rank {index + 1}</div>
+                <div className="mt-1 text-xl font-black text-white">{row.symbol}</div>
+                <div className="mt-0.5 text-xs text-slate-500">{row.scoreV2?.regime?.label || row.type || 'Market scenario'}</div>
+              </div>
+              <span className="rounded-md border px-2 py-1 text-[11px] font-black uppercase" style={{ color: dataQualityColor(trust), borderColor: dataQualityColor(trust) + '55', backgroundColor: dataQualityColor(trust) + '15' }} title={trustDetail}>
+                {trust}
+              </span>
+            </div>
+
+            <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+              <div className="rounded-lg bg-slate-950/45 px-2 py-2">
+                <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">MSP</div>
+                <div className="mt-1 text-sm font-black" style={{ color: mspColor }}>{msp}</div>
+              </div>
+              <div className="rounded-lg bg-slate-950/45 px-2 py-2">
+                <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">Bias</div>
+                <div className="mt-1 text-xs font-black text-white">{compactBiasLabel(row.direction)}</div>
+              </div>
+              <div className="rounded-lg bg-slate-950/45 px-2 py-2">
+                <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">Alignment</div>
+                <div className="mt-1 text-xs font-black text-white">{row.confidence != null ? `${row.confidence}%` : 'Mixed'}</div>
+              </div>
+            </div>
+
+            <p className="mt-3 text-xs leading-5 text-slate-400">{reason}</p>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <span className="rounded-md border px-2 py-0.5 text-[10px] font-black uppercase" style={{ color: LIFECYCLE_COLORS[lifecycle], borderColor: LIFECYCLE_COLORS[lifecycle] + '40', backgroundColor: LIFECYCLE_COLORS[lifecycle] + '15' }}>
+                {lifecycleLabel(lifecycle)}
+              </span>
+              <span className="text-xs font-bold text-emerald-300">Why This Rank / Review</span>
+            </div>
+          </button>
+        );
       })}
     </div>
   );
@@ -610,7 +748,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
             </div>
             {detail.rankExplanation && (
               <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-2.5">
-                <div className="mb-1 text-[0.68rem] font-extrabold uppercase tracking-[0.07em] text-emerald-300">Rank Explanation</div>
+                <div className="mb-1 text-[0.68rem] font-extrabold uppercase tracking-[0.07em] text-emerald-300">Why This Rank</div>
                 <div className="text-[0.74rem] leading-relaxed text-emerald-50">{detail.rankExplanation.summary}</div>
                 <div className="mt-2 grid gap-1 text-[0.7rem] text-emerald-100/80">
                   {detail.rankExplanation.strengths.slice(0, 3).map((item) => <div key={item}>+ {item}</div>)}
@@ -654,7 +792,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
                 className="rounded-md border border-blue-500/40 bg-blue-500/10 px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-blue-300 hover:bg-blue-500/20 disabled:cursor-wait disabled:opacity-70">
                 {savingCase ? 'Saving...' : 'Save Case'}
               </button>
-              <Link href={`/tools/alerts?symbol=${encodeURIComponent(detail.symbol)}&price=${detail.price || ''}&direction=${direction}`}
+              <Link href={`/tools/workspace?tab=alerts&symbol=${encodeURIComponent(detail.symbol)}&price=${detail.price || ''}&direction=${direction}`}
                 className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-slate-400 no-underline hover:bg-slate-700/50 transition-colors">
                 Set Alert
               </Link>
@@ -1046,6 +1184,17 @@ export default function ScannerPage() {
     setSelectedSymbol(null);
     setSymbolDetail(null);
   }, []);
+  const canOpenAnalysis = Boolean(selectedSymbol) || (mode === 'ranked' ? filtered.length > 0 : proScreenerRows.length > 0);
+  const openScannerAnalysis = useCallback(() => {
+    if (selectedSymbol) return;
+    if (mode === 'ranked') {
+      const firstResult = filtered[0];
+      if (firstResult) handleV2RowClick(firstResult);
+      return;
+    }
+    const firstResult = proScreenerRows[0];
+    if (firstResult) handleProRowClick(firstResult);
+  }, [selectedSymbol, mode, filtered, proScreenerRows, handleV2RowClick, handleProRowClick]);
 
   function SortHeader({ k, label, w }: { k: SortKey; label: string; w: string }) {
     return (
@@ -1069,7 +1218,13 @@ export default function ScannerPage() {
       <SectionHeader title="Scanner" subtitle="Technical analysis scanner — educational scan results" />
       <ComplianceDisclaimer collapsible />
 
-      <ScannerFlowRail activeStage={activeScannerStage} selectedSymbol={selectedSymbol} onSelectMode={selectScannerMode} />
+      <ScannerFlowRail
+        activeStage={activeScannerStage}
+        selectedSymbol={selectedSymbol}
+        onSelectMode={selectScannerMode}
+        onSelectAnalysis={openScannerAnalysis}
+        canOpenAnalysis={canOpenAnalysis}
+      />
 
       {/* ─── Active Regime Context ─── */}
       {regime.data && (
@@ -1125,7 +1280,7 @@ export default function ScannerPage() {
           <div className="grid gap-2 md:grid-cols-5">
             {[
               ['Symbols', String(filtered.length), '#CBD5E1'],
-              ['Ready Setups', String(filtered.filter(r => deriveLifecycleState(r, currentRegime) === 'READY').length), '#10B981'],
+              ['Aligned Scenarios', String(filtered.filter(r => deriveLifecycleState(r, currentRegime) === 'READY').length), '#10B981'],
               ['Developing', String(filtered.filter(r => deriveLifecycleState(r, currentRegime) === 'SETTING_UP').length), '#A855F7'],
               ['Needs Review', String(filtered.filter(r => r.scoreV2?.regimeScore?.gated).length), '#EF4444'],
               ['Degraded Data', String(filtered.filter(r => rankedTrustLabel(r) !== 'GOOD').length), '#F59E0B'],
@@ -1154,7 +1309,7 @@ export default function ScannerPage() {
             }))}
           />
 
-          {/* Table */}
+          {/* Results */}
           <Card>
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
               <span>{v2PartialLoading ? 'Showing available rows while the other market finishes loading.' : 'Click or press Enter on a row to open symbol analysis.'}</span>
@@ -1165,23 +1320,23 @@ export default function ScannerPage() {
             ) : filtered.length === 0 ? (
               <div className="text-xs text-slate-500 py-12 text-center">No results match this filter.</div>
             ) : (
-              <div className="overflow-x-auto -mx-1">
+              <>
+              <RankedMobileCards rows={filtered} activeRegime={currentRegime} onRowClick={handleV2RowClick} />
+              <div className="hidden overflow-x-auto -mx-1 md:block">
                 <table className="w-full text-xs" style={{ minWidth: 1040 }} aria-label="Ranked scanner results">
                   <thead>
                     <tr className="border-b border-[var(--msp-border)]">
                       <SortHeader k="symbol" label="Symbol" w="w-20" />
                       <SortHeader k="mspScore" label="MSP" w="w-14" />
                       <SortHeader k="price" label="Price" w="w-20" />
-                      <SortHeader k="direction" label="Direction" w="w-16" />
-                      <SortHeader k="score" label="Raw" w="w-12" />
-                      <SortHeader k="confidence" label="Conf" w="w-12" />
-                      <SortHeader k="dveBbwp" label="BBWP" w="w-12" />
+                      <SortHeader k="direction" label="Bias" w="w-16" />
+                      <SortHeader k="confidence" label="Alignment" w="w-16" />
                       <th className="w-24 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Reason</th>
                       <th className="w-16 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Trust</th>
                       <th className="w-20 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">DVE</th>
                       <th className="w-16 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Regime</th>
                       <th className="w-16 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Lifecycle</th>
-                      <th className="w-16 text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Action</th>
+                      <th className="w-16 text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Review</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1207,19 +1362,13 @@ export default function ScannerPage() {
                               handleV2RowClick(r);
                             }
                           }}
-                          aria-label={`Analyze ${r.symbol}`}
+                          aria-label={`Review scenario for ${r.symbol}`}
                         >
                           <td className="py-2.5 px-2 whitespace-nowrap"><div className="font-bold text-white">{r.symbol}</div><div className="text-[11px] text-slate-600">{regimeLabel}</div></td>
                           <td className="py-2.5 px-2 text-center whitespace-nowrap"><span className="text-sm font-black" style={{ color: mspColor }}>{msp}</span></td>
                           <td className="py-2.5 px-2 text-slate-300 font-mono whitespace-nowrap">{formatPrice(r.price)}</td>
-                          <td className="py-2.5 px-2 whitespace-nowrap"><Badge label={r.direction || 'neutral'} color={dirColor(r.direction)} small /></td>
-                          <td className="py-2.5 px-2 text-slate-400 text-[11px] whitespace-nowrap">{r.score}</td>
+                          <td className="py-2.5 px-2 whitespace-nowrap"><Badge label={compactBiasLabel(r.direction)} color={dirColor(r.direction)} small /></td>
                           <td className="py-2.5 px-2 text-slate-400 text-[11px] whitespace-nowrap">{r.confidence != null ? `${r.confidence}%` : '—'}</td>
-                          <td className="py-2.5 px-2 whitespace-nowrap">
-                            <span className={r.dveBbwp != null ? (r.dveBbwp < 20 ? 'text-cyan-400' : r.dveBbwp > 80 ? 'text-orange-400' : 'text-slate-300') : 'text-slate-600'}>
-                              {r.dveBbwp != null ? r.dveBbwp.toFixed(0) : '—'}
-                            </span>
-                          </td>
                           <td className="py-2.5 px-2 text-[11px] whitespace-nowrap max-w-[110px] truncate text-slate-300" title={[reason, ...(r.rankExplanation?.strengths ?? []), ...(r.rankExplanation?.penalties ?? []), ...(r.rankExplanation?.warnings ?? [])].filter(Boolean).join(' · ')}>{reason}</td>
                           <td className="py-2.5 px-2 whitespace-nowrap">
                             <span title={trustDetail} className="rounded border px-1.5 py-0.5 text-[11px] font-bold" style={{ color: dataQualityColor(trust), borderColor: dataQualityColor(trust) + '55', backgroundColor: dataQualityColor(trust) + '15' }}>
@@ -1250,7 +1399,7 @@ export default function ScannerPage() {
                             </span>
                           </td>
                           <td className="py-2.5 px-2 text-center whitespace-nowrap">
-                            <button type="button" onClick={(e) => { e.stopPropagation(); handleV2RowClick(r); }} className="px-2.5 py-1.5 bg-emerald-500/10 text-emerald-400 rounded text-[11px] font-semibold hover:bg-emerald-500/20 transition-colors">Analyze</button>
+                            <button type="button" onClick={(e) => { e.stopPropagation(); handleV2RowClick(r); }} className="px-2.5 py-1.5 bg-emerald-500/10 text-emerald-400 rounded text-[11px] font-semibold hover:bg-emerald-500/20 transition-colors">Review</button>
                           </td>
                         </tr>
                       );
@@ -1258,6 +1407,7 @@ export default function ScannerPage() {
                   </tbody>
                 </table>
               </div>
+              </>
             )}
             <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-800/40">
               <div className="flex items-center gap-3 text-[11px] text-slate-500">
@@ -1410,10 +1560,10 @@ export default function ScannerPage() {
           {proScanResults && (
             <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-3">
               <div className="flex items-center gap-2">
-                <label className="text-[11px] uppercase text-slate-500">Direction:</label>
+                <label className="text-[11px] uppercase text-slate-500">Bias:</label>
                 <select value={proDirection} onChange={e => setProDirection(e.target.value as any)}
                   className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200">
-                  <option value="all">All</option><option value="long">Long</option><option value="short">Short</option>
+                  <option value="all">All</option><option value="long">Bullish</option><option value="short">Bearish</option>
                 </select>
               </div>
               <div className="flex items-center gap-2">
@@ -1471,7 +1621,9 @@ export default function ScannerPage() {
                 <span>Mode: {proScanResults.mode ?? proDepth}</span>
                 {proScanResults.effectiveUniverseSize && <span>Universe: {proScanResults.effectiveUniverseSize}</span>}
               </div>
-              <ScreenerTable rows={proScreenerRows} onRowClick={handleProRowClick} selectedSymbol={selectedSymbol ?? undefined} />
+              {proBulkViewMode === 'cards'
+                ? <ProScannerCards rows={proScreenerRows} onRowClick={handleProRowClick} />
+                : <ScreenerTable rows={proScreenerRows} onRowClick={handleProRowClick} selectedSymbol={selectedSymbol ?? undefined} />}
               <div className="mt-2 text-[11px] text-slate-600">
                 Market Bias Context · Regime: {currentRegime.toUpperCase()} · Most observations: {proScreenerRows.filter(r => r.direction === 'LONG').length > proScreenerRows.filter(r => r.direction === 'SHORT').length ? 'Bullish bias' : 'Bearish bias'}
               </div>

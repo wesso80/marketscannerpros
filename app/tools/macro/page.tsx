@@ -198,7 +198,7 @@ function Sparkline({ data, stroke }: { data?: { date: string; value: number }[];
   );
 }
 
-export default function MacroDashboardPage() {
+export default function MacroDashboardPage({ embeddedInDashboard = false }: { embeddedInDashboard?: boolean } = {}) {
   const [data, setData] = useState<MacroData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -315,16 +315,24 @@ export default function MacroDashboardPage() {
   }, [data, gate, setPageData]);
 
   return (
-    <div className="min-h-screen bg-[var(--msp-bg)] text-white">
-      <ToolsPageHeader
-        title="Macro Dashboard"
-        subtitle="Global regime layer for analysis, sizing, and cross-asset assessment"
-        badge="Economic Data"
-        icon="🏛️"
-      />
+    <div className={`${embeddedInDashboard ? '' : 'min-h-screen'} bg-[var(--msp-bg)] text-white`}>
+      {embeddedInDashboard ? (
+        <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-4 py-3">
+          <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Macro lens</div>
+          <h2 className="mt-1 text-base font-black text-white">Macro Dashboard</h2>
+          <p className="mt-1 text-xs leading-5 text-slate-400">Global regime layer for liquidity, rates, inflation, growth, and cross-asset context.</p>
+        </div>
+      ) : (
+        <ToolsPageHeader
+          title="Macro Dashboard"
+          subtitle="Global regime layer for analysis, sizing, and cross-asset assessment"
+          badge="Economic Data"
+          icon="🏛️"
+        />
+      )}
 
-      <div className="mx-auto w-full max-w-none space-y-4 px-4 pb-24 pt-6 md:px-6">
-        <div className="sticky top-2 z-20 rounded-xl border border-white/10 bg-slate-950/95 p-3 backdrop-blur">
+      <div className={`mx-auto w-full max-w-none space-y-4 ${embeddedInDashboard ? 'px-0 pb-6 pt-3' : 'px-4 pb-24 pt-6 md:px-6'}`}>
+        <div className={`${embeddedInDashboard ? 'rounded-lg' : 'sticky top-2 z-20 rounded-xl'} border border-white/10 bg-slate-950/95 p-3 backdrop-blur`}>
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-3">
               <MarketStatusBadge showGlobal />
@@ -719,7 +727,7 @@ export default function MacroDashboardPage() {
               </div>
             </details>
 
-            {isAdmin && (
+            {isAdmin && !embeddedInDashboard && (
               <details className="rounded-xl border border-emerald-500/30 bg-emerald-500/5" open={false}>
                 <summary className="cursor-pointer list-none px-3 py-3 md:px-4 text-sm font-semibold text-emerald-300">Admin: Macro Gate Debug</summary>
                 <div className="border-t border-emerald-500/20 p-3 md:p-4 text-xs text-emerald-100/90">

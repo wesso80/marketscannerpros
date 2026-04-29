@@ -45,10 +45,10 @@ export async function sendAlertEmail(params: SendEmailParams | SendAlertEmailPar
   const { to, alertName, symbol, message, value, threshold, alertType = 'price' } = params;
   
   const isSmartAlert = alertType === 'smart';
-  const emoji = isSmartAlert ? '🧠' : '🔔';
+  const alertCode = isSmartAlert ? 'AI' : 'PX';
   const typeLabel = isSmartAlert ? 'Smart Alert' : 'Price Alert';
   
-  const subject = `${emoji} ${alertName} - ${symbol}`;
+  const subject = `${typeLabel}: ${alertName} - ${symbol}`;
   
   const html = `
 <!DOCTYPE html>
@@ -60,7 +60,7 @@ export async function sendAlertEmail(params: SendEmailParams | SendAlertEmailPar
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0f172a; color: #e2e8f0; padding: 20px;">
   <div style="max-width: 500px; margin: 0 auto; background: #1e293b; border-radius: 12px; padding: 24px; border: 1px solid #334155;">
     <div style="text-align: center; margin-bottom: 20px;">
-      <span style="font-size: 48px;">${emoji}</span>
+      <span style="display:inline-block;font-size:16px;font-weight:800;color:#10b981;border:1px solid #10b981;border-radius:999px;padding:10px 14px;letter-spacing:0.5px;">${alertCode}</span>
     </div>
     
     <h1 style="color: #10b981; margin: 0 0 8px 0; font-size: 24px; text-align: center;">
@@ -88,7 +88,7 @@ export async function sendAlertEmail(params: SendEmailParams | SendAlertEmailPar
     </div>
     
     <div style="text-align: center; margin-top: 24px;">
-      <a href="https://app.marketscannerpros.app/tools/alerts" 
+      <a href="https://app.marketscannerpros.app/tools/workspace?tab=alerts"
          style="display: inline-block; background: #10b981; color: #0f172a; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">
         View Alerts Dashboard
       </a>
@@ -106,21 +106,21 @@ export async function sendAlertEmail(params: SendEmailParams | SendAlertEmailPar
 }
 
 const PRO_FEATURES = [
-  ['📊', 'Unlimited Scanner', 'Run unlimited technical scans across the full market'],
-  ['🤖', 'AI Analyst (50/day)', 'GPT-powered market analysis and research tools'],
-  ['📈', 'Options Confluence', 'Multi-signal options flow analysis'],
-  ['📥', 'CSV Exports', 'Download scan results and journal data'],
-  ['📰', 'Real-Time News', 'Curated market news feed with alerts'],
+  ['SCAN', 'Unlimited Scanner', 'Run unlimited technical scans across the full market'],
+  ['AI', 'AI Analyst (50/day)', 'GPT-powered market analysis and research tools'],
+  ['OPT', 'Options Confluence', 'Multi-signal options flow analysis'],
+  ['CSV', 'CSV Exports', 'Download scan results and journal data'],
+  ['NEWS', 'Real-Time News', 'Curated market news feed with alerts'],
 ];
 
 const PRO_TRADER_FEATURES = [
-  ['📊', 'Everything in Pro', 'Full access to all Pro features'],
-  ['🔬', 'Strategy Backtester', 'Test strategies against historical data'],
-  ['📓', 'Trade Journal', 'Log, review, and analyze every trade'],
-  ['⚡', 'Options Terminal', 'Full options chain with Greeks and IV analysis'],
-  ['🔗', 'Crypto Derivatives', 'Perpetuals, funding rates, and open interest'],
-  ['🤖', 'Unlimited AI', 'No daily limit on AI Analyst questions'],
-  ['🧠', 'Operator Intelligence', 'Workflow automation and decision packets'],
+  ['PRO', 'Everything in Pro', 'Full access to all Pro features'],
+  ['BT', 'Strategy Backtester', 'Test strategies against historical data'],
+  ['JRNL', 'Trade Journal', 'Log, review, and analyze every trade'],
+  ['OPT', 'Options Terminal', 'Full options chain with Greeks and IV analysis'],
+  ['CRYP', 'Crypto Derivatives', 'Perpetuals, funding rates, and open interest'],
+  ['AI', 'Unlimited AI', 'No daily limit on AI Analyst questions'],
+  ['OPS', 'Operator Intelligence', 'Workflow automation and decision packets'],
 ];
 
 export async function sendWelcomeEmail(to: string, tier: 'pro' | 'pro_trader') {
@@ -131,9 +131,9 @@ export async function sendWelcomeEmail(to: string, tier: 'pro' | 'pro_trader') {
 
   const featureRows = features
     .map(
-      ([emoji, title, desc]) =>
+      ([code, title, desc]) =>
         `<tr>
-          <td style="padding:8px 12px 8px 0;font-size:22px;vertical-align:top;width:36px;">${emoji}</td>
+          <td style="padding:8px 12px 8px 0;font-size:11px;font-weight:800;color:${accent};vertical-align:top;width:48px;letter-spacing:0.4px;">${code}</td>
           <td style="padding:8px 0;">
             <div style="font-size:15px;font-weight:600;color:#f1f5f9;">${title}</div>
             <div style="font-size:13px;color:#94a3b8;margin-top:2px;">${desc}</div>
@@ -144,9 +144,9 @@ export async function sendWelcomeEmail(to: string, tier: 'pro' | 'pro_trader') {
 
   const quickLinks = [
     ['Scanner', '/tools/scanner'],
-    ['Portfolio', '/tools/portfolio'],
-    ['AI Analyst', '/tools/ai-analyst'],
-    ...(isPT ? [['Journal', '/tools/journal'], ['Backtester', '/tools/backtest']] : []),
+    ['Portfolio', '/tools/workspace?tab=portfolio'],
+    ['ARCA AI Panel', '/tools/scanner'],
+    ...(isPT ? [['Journal', '/tools/workspace?tab=journal'], ['Backtester', '/tools/workspace?tab=backtest']] : []),
   ]
     .map(
       ([label, path]) =>
@@ -154,7 +154,7 @@ export async function sendWelcomeEmail(to: string, tier: 'pro' | 'pro_trader') {
     )
     .join('');
 
-  const subject = `🎉 Welcome to MarketScanner Pros ${planName}!`;
+  const subject = `Welcome to MarketScanner Pros ${planName}`;
 
   const html = `
 <!DOCTYPE html>
@@ -163,7 +163,7 @@ export async function sendWelcomeEmail(to: string, tier: 'pro' | 'pro_trader') {
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background-color:#0f172a;color:#e2e8f0;padding:20px;margin:0;">
   <div style="max-width:560px;margin:0 auto;background:#1e293b;border-radius:16px;padding:32px;border:1px solid #334155;">
     <div style="text-align:center;margin-bottom:24px;">
-      <span style="font-size:56px;">🚀</span>
+      <span style="display:inline-block;font-size:16px;font-weight:800;color:${accent};border:1px solid ${accent};border-radius:999px;padding:10px 16px;letter-spacing:0.5px;">MSP</span>
     </div>
 
     <h1 style="color:${accent};margin:0 0 8px;font-size:26px;text-align:center;font-weight:700;">
@@ -202,7 +202,7 @@ export async function sendWelcomeEmail(to: string, tier: 'pro' | 'pro_trader') {
 }
 
 export async function sendNewSignupNotification(email: string, tier: string) {
-  const subject = `🆕 New MSP Signup: ${email}`;
+  const subject = `New MSP Signup: ${email}`;
   const now = new Date().toLocaleString('en-AU', { timeZone: 'Australia/Sydney' });
   const html = `
 <!DOCTYPE html>
@@ -249,7 +249,7 @@ async function sendEmail({ to, subject, html }: SendEmailParams) {
       throw new Error(error.message || "Resend send failed");
     }
     
-    console.log(`📧 Email sent to ${to}: ${subject}`);
+    console.log(`Email sent to ${to}: ${subject}`);
     return data?.id ?? null;
   } catch (err) {
     console.error("Email send failed:", err);

@@ -556,7 +556,7 @@ export default function EquityExplorerPage() {
                   </div>
                   <div className="mb-2 flex flex-wrap gap-1">
                     <span className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-300">Status: <span className={`${upeSignal?.eligibilityUser === 'eligible' ? 'text-emerald-300' : upeSignal?.eligibilityUser === 'conditional' ? 'text-amber-300' : 'text-rose-300'} font-semibold`}>{upeSignal ? (upeSignal.eligibilityUser === 'eligible' ? 'Aligned' : upeSignal.eligibilityUser === 'conditional' ? 'Conditional' : 'Not aligned') : 'Pending'}</span></span>
-                    <span className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-300">Capital Mode: <span className="font-semibold text-slate-100">{upeGlobal?.capitalMode || 'reduced'}</span></span>
+                    <span className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-300">Risk Context: <span className="font-semibold text-slate-100">{upeGlobal?.capitalMode === 'normal' ? 'Standard review' : upeGlobal?.capitalMode === 'defensive' ? 'Observation' : 'Reduced conviction'}</span></span>
                     <span className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-300">Vol Regime: <span className="font-semibold text-slate-100">{upeGlobal?.volatilityState || 'unknown'}</span></span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
@@ -714,7 +714,7 @@ export default function EquityExplorerPage() {
                           </button>
                         ) : (
                           <Link
-                            href={`/tools/confluence-scanner?symbol=${data.company.symbol}&eligibility=${upeSignal.eligibilityUser}&crcs=${upeSignal.crcsUser.toFixed(1)}`}
+                            href={`/tools/terminal?tab=time-confluence&symbol=${data.company.symbol}&eligibility=${upeSignal.eligibilityUser}&crcs=${upeSignal.crcsUser.toFixed(1)}`}
                             className="rounded border border-emerald-500/50 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-200"
                           >
                             Open Scanner

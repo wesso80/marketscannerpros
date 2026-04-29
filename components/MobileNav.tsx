@@ -105,20 +105,20 @@ export default function MobileNav() {
             ✕
           </button>
           <a href="/tools/scanner" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Scanner</a>
-          <a href="/tools/crypto" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Crypto Command Center</a>
-          <a href="/tools/portfolio" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Portfolio</a>
-          <a href="/tools/backtest" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Backtest</a>
-          <a href="/tools/journal" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Journal</a>
-          <a href="/tools/ai-analyst" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>AI Analyst</a>
-          <a href="/tools/deep-analysis" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Golden Egg</a>
-          <a href="/tools/confluence-scanner" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Confluence Scanner</a>
-          <a href="/tools/options-confluence" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Options Confluence Scanner</a>
-          <a href="/tools/crypto-explorer" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Crypto Explorer</a>
+          <a href="/tools/explorer?tab=crypto-command" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Crypto Command Center</a>
+          <a href="/tools/workspace?tab=portfolio" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Portfolio</a>
+          <a href="/tools/workspace?tab=backtest" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Backtest</a>
+          <a href="/tools/workspace?tab=journal" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Journal</a>
+          <a href="/tools/scanner" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>ARCA AI Panel</a>
+          <a href="/tools/golden-egg" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Golden Egg</a>
+          <a href="/tools/terminal?tab=time-confluence" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Confluence Scanner</a>
+          <a href="/tools/terminal?tab=options-confluence" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Options Confluence Scanner</a>
+          <a href="/tools/explorer?tab=crypto" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Crypto Explorer</a>
           <a href="/tools/crypto-intel" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Crypto Intelligence</a>
-          <a href="/tools/equity-explorer" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Equity Explorer</a>
-          <a href="/tools/economic-calendar" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Economic Calendar</a>
-          <a href="/tools/news?tab=earnings" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Earnings Calendar</a>
-          <a href="/tools/news" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Market News</a>
+          <a href="/tools/explorer?tab=equity" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Equity Explorer</a>
+          <a href="/tools/research?tab=calendar" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Economic Calendar</a>
+          <a href="/tools/research?tab=earnings" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Earnings Calendar</a>
+          <a href="/tools/research" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Market News</a>
           <a href="/pricing" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Pricing</a>
           <a href="/account" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>Account</a>
           <a href="/guide" className="py-2 hover:text-emerald-400" onClick={() => setIsOpen(false)}>User Guide</a>

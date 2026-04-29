@@ -34,19 +34,19 @@ export default function TradeIdeasSection({ ideas }: TradeIdeasSectionProps) {
 
             <div className="mt-3 grid grid-cols-3 gap-2 overflow-hidden">
               <a
-                href={`/tools/alerts?symbol=${encodeURIComponent(idea.symbol)}`}
+                href={`/tools/workspace?tab=alerts&symbol=${encodeURIComponent(idea.symbol)}`}
                 className="h-9 rounded-lg border border-white/10 bg-black/20 text-xs font-semibold text-white/80 hover:bg-white/10 flex items-center justify-center"
               >
                 Alert
               </a>
               <a
-                href={`/tools/watchlists?symbol=${encodeURIComponent(idea.symbol)}`}
+                href={`/tools/workspace?tab=watchlists&symbol=${encodeURIComponent(idea.symbol)}`}
                 className="h-9 rounded-lg border border-white/10 bg-black/20 text-xs font-semibold text-white/80 hover:bg-white/10 flex items-center justify-center"
               >
                 Watch
               </a>
               <a
-                href={`/tools/journal?note=${encodeURIComponent(`Scenario note: ${idea.symbol} ${idea.direction}`)}`}
+                href={`/tools/workspace?tab=journal&note=${encodeURIComponent(`Scenario note: ${idea.symbol} ${idea.direction}`)}`}
                 className="h-9 rounded-lg border border-white/10 bg-black/20 text-xs font-semibold text-white/80 hover:bg-white/10 flex items-center justify-center"
               >
                 Journal

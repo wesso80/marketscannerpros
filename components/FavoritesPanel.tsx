@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useFavorites } from '@/hooks/useFavorites';
 import { TOOL_CATALOG, TOOL_CATEGORIES, type ToolPage } from '@/lib/toolCatalog';
 
-export default function FavoritesPanel() {
+export default function FavoritesPanel({ embeddedInDashboard = false }: { embeddedInDashboard?: boolean } = {}) {
   const { favorites, loading, toggleFavorite, isFavorite } = useFavorites();
   const [showBrowser, setShowBrowser] = useState(false);
   const [filterCat, setFilterCat] = useState<string | null>(null);
@@ -26,6 +26,23 @@ export default function FavoritesPanel() {
 
   return (
     <div className="space-y-4">
+      {embeddedInDashboard && (
+        <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Saved workspace</div>
+              <h2 className="mt-1 text-base font-black text-white">My Pages</h2>
+              <p className="mt-1 text-xs leading-5 text-slate-400">Pinned research pages for the tools you open most often.</p>
+            </div>
+            <button
+              onClick={() => setShowBrowser((current) => !current)}
+              className="rounded-md border border-emerald-500/35 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300"
+            >
+              {showBrowser ? 'Close Browser' : 'Manage Pages'}
+            </button>
+          </div>
+        </div>
+      )}
       {/* ─── Favorite Cards ─── */}
       {favoriteTools.length > 0 ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -43,7 +60,7 @@ export default function FavoritesPanel() {
                 ★
               </button>
               <div className="flex items-center gap-2">
-                <span className="text-lg">{tool.icon}</span>
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-700 bg-slate-950/50 text-[10px] font-black uppercase tracking-[0.08em] text-emerald-300">{tool.icon}</span>
                 <span className="text-xs font-semibold text-white truncate">{tool.label}</span>
               </div>
               <span className="text-[10px] text-slate-400 line-clamp-2 leading-relaxed">{tool.description}</span>
@@ -56,17 +73,17 @@ export default function FavoritesPanel() {
           ))}
 
           {/* Add more button */}
-          <button
+          {!embeddedInDashboard && <button
             onClick={() => setShowBrowser(true)}
             className="rounded-xl border border-dashed border-slate-600/50 hover:border-emerald-500/40 transition-colors p-3 flex flex-col items-center justify-center gap-1 min-h-[80px]"
           >
             <span className="text-xl text-slate-500">+</span>
             <span className="text-[10px] text-slate-500">Add Page</span>
-          </button>
+          </button>}
         </div>
       ) : (
         <div className="text-center py-12 rounded-xl border border-slate-700/30 bg-slate-800/20">
-          <div className="text-3xl mb-3">⭐</div>
+          <div className="mx-auto mb-3 flex h-9 w-9 items-center justify-center rounded-md border border-slate-700 bg-slate-950/50 text-xs font-black uppercase text-slate-400">MY</div>
           <h3 className="text-sm font-semibold text-white mb-1">No favourites yet</h3>
           <p className="text-xs text-slate-400 mb-4 max-w-sm mx-auto">
             Add your most-used tools here for quick access. Your favourites sync across all your devices.
@@ -75,7 +92,7 @@ export default function FavoritesPanel() {
             onClick={() => setShowBrowser(true)}
             className="px-4 py-2 text-xs font-semibold rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors"
           >
-            Browse Tools
+            {embeddedInDashboard ? 'Manage Pages' : 'Browse Tools'}
           </button>
         </div>
       )}
@@ -84,7 +101,7 @@ export default function FavoritesPanel() {
       {showBrowser && (
         <div className="rounded-xl border border-slate-700/50 bg-[rgba(15,23,42,0.8)] p-4 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-white">Browse All Tools</h3>
+            <h3 className="text-sm font-semibold text-white">Browse Workflow Tools</h3>
             <button
               onClick={() => setShowBrowser(false)}
               className="text-xs text-slate-400 hover:text-white transition-colors"
@@ -124,7 +141,7 @@ export default function FavoritesPanel() {
                     className={`flex items-center gap-2 rounded-lg p-2 border transition-colors cursor-pointer ${faved ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-slate-700/30 bg-slate-800/20 hover:border-slate-600/50'}`}
                     onClick={() => toggleFavorite(tool.key)}
                   >
-                    <span className="text-base flex-shrink-0">{tool.icon}</span>
+                    <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border border-slate-700 bg-slate-950/50 text-[10px] font-black uppercase tracking-[0.08em] text-slate-400">{tool.icon}</span>
                     <div className="flex-1 min-w-0">
                       <div className="text-xs font-semibold text-white truncate">{tool.label}</div>
                       <div className="text-[10px] text-slate-500 truncate">{tool.description}</div>
