@@ -715,7 +715,27 @@ describe('layout and flow audit regressions', () => {
     expect(macroDashboard).toContain("embeddedInDashboard ? 'px-0 pb-6 pt-3' : 'px-4 pb-24 pt-6 md:px-6'");
     expect(macroDashboard).toContain('isAdmin && !embeddedInDashboard');
 
-    // Scanner — match Dashboard A-grade command standard.
+    // Dashboard lenses (My Pages / Crypto Derivatives / Macro) match the A-grade command standard.
+    expect(favoritesPanel).toContain('aria-label="My Pages command header"');
+    expect(favoritesPanel).toContain('function MyPagesMetric');
+    expect(favoritesPanel).toContain('label="Saved"');
+    expect(favoritesPanel).toContain('label="Catalog"');
+    expect(favoritesPanel).toContain('label="Coverage"');
+    expect(favoritesPanel).toContain('label="Next Check"');
+    expect(cryptoDashboard).toContain('aria-label="Crypto Derivatives command header"');
+    expect(cryptoDashboard).toContain('Bias, rotation, and volatility for the morning derivatives review.');
+    expect(cryptoDashboard).toContain('>Bias<');
+    expect(cryptoDashboard).toContain('>Liquidity<');
+    expect(cryptoDashboard).toContain('>Funding<');
+    expect(cryptoDashboard).toContain('>Next Check<');
+    expect(cryptoDashboard).not.toContain("h1 className={`${embeddedInDashboard ? 'mt-1 text-base'");
+    expect(macroDashboard).toContain('aria-label="Macro command header"');
+    expect(macroDashboard).toContain('Global regime gate for liquidity, rates, growth, and cross-asset context.');
+    expect(macroDashboard).toContain('>Permission<');
+    expect(macroDashboard).toContain('>Risk State<');
+    expect(macroDashboard).toContain('>Liquidity<');
+    expect(macroDashboard).toContain('>Next Check<');
+    expect(macroDashboard).toContain('!embeddedInDashboard && (');
     const scannerPageStandard = read('app/tools/scanner/page.tsx');
     const scanTemplatesBar = read('components/scanner/ScanTemplatesBar.tsx');
     const toolsLayoutClient = read('app/tools/ToolsLayoutClient.tsx');

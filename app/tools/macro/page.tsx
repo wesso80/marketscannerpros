@@ -317,11 +317,64 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
   return (
     <div className={`${embeddedInDashboard ? '' : 'min-h-screen'} bg-[var(--msp-bg)] text-white`}>
       {embeddedInDashboard ? (
-        <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-4 py-3">
-          <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Macro lens</div>
-          <h2 className="mt-1 text-base font-black text-white">Macro Dashboard</h2>
-          <p className="mt-1 text-xs leading-5 text-slate-400">Global regime layer for liquidity, rates, inflation, growth, and cross-asset context.</p>
-        </div>
+        <section
+          className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
+          aria-label="Macro command header"
+        >
+          <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(26rem,0.9fr)]">
+            <div>
+              <div className="flex flex-wrap items-center gap-2 text-[0.68rem] font-extrabold uppercase tracking-[0.16em]">
+                <span className="text-emerald-300">Macro lens</span>
+                {gate && (
+                  <span className="flex items-center gap-1.5 rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-300">
+                    <span style={{ color: gate.permission === 'yes' ? '#10B981' : gate.permission === 'conditional' ? '#F59E0B' : '#EF4444' }}>{gate.permission.toUpperCase()}</span>
+                    <span className="text-slate-600">·</span>
+                    <span className="text-slate-400">Risk <span style={{ color: gate.riskState === 'risk_on' ? '#10B981' : gate.riskState === 'risk_off' ? '#EF4444' : '#F59E0B' }}>{gate.riskState.replace('_', '-')}</span></span>
+                    <span className="text-slate-600">·</span>
+                    <span className="text-slate-400">Vol <span className="text-slate-200">{gate.volRegime}</span></span>
+                  </span>
+                )}
+                <label className="flex items-center gap-1.5 rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">
+                  <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} className="h-3 w-3" aria-label="Toggle auto refresh" />
+                  Auto refresh
+                </label>
+              </div>
+              <h2 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Global regime gate for liquidity, rates, growth, and cross-asset context.</h2>
+              <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">Macro evidence compressed into a single permission gate. Educational only; not a trade signal.</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <a href="#decision" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15">Open Decision</a>
+                <a href="#commodities" className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15">Commodities</a>
+                <a href="#sentiment" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Sentiment</a>
+              </div>
+              {lastRefresh && (
+                <p className="mt-2 text-[11px] text-slate-500">US ET · Last refresh {lastRefresh}</p>
+              )}
+            </div>
+
+            <div className="grid self-start gap-1.5 sm:grid-cols-2">
+              <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+                <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Permission</div>
+                <div className="mt-0.5 truncate text-sm font-black" style={{ color: gate ? (gate.permission === 'yes' ? '#10B981' : gate.permission === 'conditional' ? '#F59E0B' : '#EF4444') : '#94A3B8' }}>{gate ? gate.permission.toUpperCase() : 'Loading'}</div>
+                <div className="mt-0.5 truncate text-[11px] text-slate-500">Macro gate state</div>
+              </div>
+              <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+                <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Risk State</div>
+                <div className="mt-0.5 truncate text-sm font-black" style={{ color: gate ? (gate.riskState === 'risk_on' ? '#10B981' : gate.riskState === 'risk_off' ? '#EF4444' : '#F59E0B') : '#94A3B8' }}>{gate ? gate.riskState.replace('_', '-').toUpperCase() : 'Loading'}</div>
+                <div className="mt-0.5 truncate text-[11px] text-slate-500">USD {gate?.usdRegime ?? '—'} · Rates {gate?.ratesRegime ?? '—'}</div>
+              </div>
+              <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+                <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Liquidity</div>
+                <div className="mt-0.5 truncate text-sm font-black" style={{ color: '#A5B4FC' }}>{gate?.liquidity ?? 'Loading'}</div>
+                <div className="mt-0.5 truncate text-[11px] text-slate-500">Volatility {gate?.volRegime ?? '—'}</div>
+              </div>
+              <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+                <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Next Check</div>
+                <div className="mt-0.5 truncate text-sm font-black" style={{ color: error ? '#EF4444' : loading ? '#94A3B8' : '#FBBF24' }}>{error ? 'Refresh feed' : loading ? 'Loading…' : 'Review Decision'}</div>
+                <div className="mt-0.5 truncate text-[11px] text-slate-500">{error ? 'Macro feed degraded' : 'Open the decision section below'}</div>
+              </div>
+            </div>
+          </div>
+        </section>
       ) : (
         <ToolsPageHeader
           title="Macro Dashboard"
@@ -339,10 +392,12 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
               <span className="text-xs text-white/60">US ET {lastRefresh ? `• Last refresh ${lastRefresh}` : ''}</span>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <label className="flex items-center gap-2 text-xs text-white/70">
-                <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} className="h-4 w-4" />
-                Auto refresh
-              </label>
+              {!embeddedInDashboard && (
+                <label className="flex items-center gap-2 text-xs text-white/70">
+                  <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} className="h-4 w-4" />
+                  Auto refresh
+                </label>
+              )}
               {['decision', 'rates', 'yieldcurve', 'commodities', 'correlation', 'sentiment', 'inflation', 'growth', 'employment', 'implications'].map((tab) => (
                 <a key={tab} href={`#${tab}`} className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/70 hover:bg-white/10">
                   {tab.charAt(0).toUpperCase() + tab.slice(1)}

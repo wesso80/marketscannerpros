@@ -349,43 +349,103 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
   return (
     <div className={`mx-auto w-full max-w-none ${embeddedInDashboard ? 'px-0 pb-6 pt-0' : 'px-4 pb-24 pt-6 md:px-6'}`}>
       {/* Page Header */}
-      <div className={embeddedInDashboard ? 'mb-3 rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-4 py-3' : 'mb-4'}>
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3">
-              {!embeddedInDashboard && <div className="h-10 w-10 flex-shrink-0 rounded-xl overflow-hidden"><img src="/assets/platform-tools/crypto-derivatives.png" alt="" className="h-full w-full object-contain p-0.5" /></div>}
-              <div>
-                {embeddedInDashboard && <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Derivatives lens</div>}
-                <h1 className={`${embeddedInDashboard ? 'mt-1 text-base' : 'text-3xl mb-2'} font-bold text-white`}>Crypto Derivatives Dashboard</h1>
-                <p className={`${embeddedInDashboard ? 'mt-1 text-xs' : ''} text-gray-400`}>Bias, rotation, volatility, and scenario review.</p>
+      {embeddedInDashboard ? (
+        <section
+          className="mb-3 rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
+          aria-label="Crypto Derivatives command header"
+        >
+          <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(26rem,0.9fr)]">
+            <div>
+              <div className="flex flex-wrap items-center gap-2 text-[0.68rem] font-extrabold uppercase tracking-[0.16em]">
+                <span className="text-emerald-300">Derivatives lens</span>
+                <span className="flex items-center gap-1.5 rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-300">
+                  <span style={{ color: permission === 'Yes' ? '#10B981' : permission === 'Conditional' ? '#F59E0B' : '#EF4444' }}>Permission {permission}</span>
+                  <span className="text-slate-600">·</span>
+                  <span className="text-slate-400">{rotation}</span>
+                  <span className="text-slate-600">·</span>
+                  <span className="text-slate-400">Vol <span className="text-slate-200">{volRegime}</span></span>
+                </span>
+                <label className="flex items-center gap-1.5 rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">
+                  <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} className="h-3 w-3" aria-label="Toggle auto-refresh" />
+                  Auto 60s
+                </label>
+              </div>
+              <h2 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Bias, rotation, and volatility for the morning derivatives review.</h2>
+              <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">Funding, open interest, and liquidations compressed into a single bias gate. Educational only; not a trade signal.</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button type="button" onClick={fetchData} disabled={loading} className={`rounded-md border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] transition-colors ${loading ? 'cursor-not-allowed border-amber-400/20 bg-amber-400/5 text-amber-200/60' : 'border-amber-400/35 bg-amber-400/10 text-amber-200 hover:bg-amber-400/15'}`}>
+                  {loading ? 'Refreshing…' : 'Refresh data'}
+                </button>
+                <a href="/tools/options" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15">Open Options</a>
+                <a href="/tools/scanner" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Open Scanner</a>
+              </div>
+              {lastUpdate && (
+                <p className="mt-2 text-[11px] text-slate-500">Last updated {lastUpdate.toLocaleTimeString()}</p>
+              )}
+            </div>
+
+            <div className="grid self-start gap-1.5 sm:grid-cols-2">
+              <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+                <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Bias</div>
+                <div className="mt-0.5 truncate text-sm font-black" style={{ color: biasLabel.includes('Bullish') ? '#10B981' : biasLabel.includes('Bearish') ? '#EF4444' : '#94A3B8' }}>{biasLabel}</div>
+                <div className="mt-0.5 truncate text-[11px] text-slate-500">Confidence {marketBias.confidence}%</div>
+              </div>
+              <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+                <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Liquidity</div>
+                <div className="mt-0.5 truncate text-sm font-black" style={{ color: liquidityState === 'Expanding' ? '#10B981' : liquidityState === 'Contracting' ? '#EF4444' : '#94A3B8' }}>{liquidityState}</div>
+                <div className="mt-0.5 truncate text-[11px] text-slate-500" title={oiDriver}>{oiDriver}</div>
+              </div>
+              <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+                <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Funding</div>
+                <div className="mt-0.5 truncate text-sm font-black" style={{ color: data.fundingRates ? (data.fundingRates.avgRate > 0.01 ? '#F59E0B' : data.fundingRates.avgRate < -0.01 ? '#10B981' : '#94A3B8') : '#94A3B8' }}>{data.fundingRates ? `${data.fundingRates.avgRate.toFixed(3)}%` : 'Pending'}</div>
+                <div className="mt-0.5 truncate text-[11px] text-slate-500" title={fundingDriver}>{fundingDriver}</div>
+              </div>
+              <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+                <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Next Check</div>
+                <div className="mt-0.5 truncate text-sm font-black" style={{ color: permission === 'No' ? '#EF4444' : '#FBBF24' }}>{playbook}</div>
+                <div className="mt-0.5 truncate text-[11px] text-slate-500" title={liquidationDriver}>{liquidationDriver}</div>
               </div>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="w-4 h-4 rounded bg-gray-700 border-gray-600"
-                aria-label="Toggle auto-refresh"
-              />
-              Auto-refresh (60s)
-            </label>
-            <button
-              type="button"
-              onClick={fetchData}
-              disabled={loading}
-              className="rounded-lg bg-[#10B981] px-3 py-1.5 text-xs font-semibold text-white transition-all hover:bg-[#059669] disabled:opacity-50"
-            >
-              {loading ? 'Refreshing...' : 'Refresh'}
-            </button>
+        </section>
+      ) : (
+        <div className="mb-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 flex-shrink-0 rounded-xl overflow-hidden"><img src="/assets/platform-tools/crypto-derivatives.png" alt="" className="h-full w-full object-contain p-0.5" /></div>
+                <div>
+                  <h1 className="text-3xl mb-2 font-bold text-white">Crypto Derivatives Dashboard</h1>
+                  <p className="text-gray-400">Bias, rotation, volatility, and scenario review.</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={autoRefresh}
+                  onChange={(e) => setAutoRefresh(e.target.checked)}
+                  className="w-4 h-4 rounded bg-gray-700 border-gray-600"
+                  aria-label="Toggle auto-refresh"
+                />
+                Auto-refresh (60s)
+              </label>
+              <button
+                type="button"
+                onClick={fetchData}
+                disabled={loading}
+                className="rounded-lg bg-[#10B981] px-3 py-1.5 text-xs font-semibold text-white transition-all hover:bg-[#059669] disabled:opacity-50"
+              >
+                {loading ? 'Refreshing...' : 'Refresh'}
+              </button>
+            </div>
           </div>
+          {lastUpdate && (
+            <p className="text-xs text-gray-500 mt-2">Last updated: {lastUpdate.toLocaleTimeString()}</p>
+          )}
         </div>
-        {lastUpdate && (
-          <p className="text-xs text-gray-500 mt-2">Last updated: {lastUpdate.toLocaleTimeString()}</p>
-        )}
-      </div>
+      )}
 
       <div className="mb-4">
         <ComplianceDisclaimer compact={embeddedInDashboard} variant="cryptoDerivatives" />

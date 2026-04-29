@@ -5,6 +5,16 @@ import Link from 'next/link';
 import { useFavorites } from '@/hooks/useFavorites';
 import { TOOL_CATALOG, TOOL_CATEGORIES, type ToolPage } from '@/lib/toolCatalog';
 
+function MyPagesMetric({ label, value, tone = '#CBD5E1', detail }: { label: string; value: string; tone?: string; detail: string }) {
+  return (
+    <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+      <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
+      <div className="mt-0.5 truncate text-sm font-black" style={{ color: tone }}>{value}</div>
+      <div className="mt-0.5 truncate text-[11px] text-slate-500" title={detail}>{detail}</div>
+    </div>
+  );
+}
+
 export default function FavoritesPanel({ embeddedInDashboard = false }: { embeddedInDashboard?: boolean } = {}) {
   const { favorites, loading, toggleFavorite, isFavorite } = useFavorites();
   const [showBrowser, setShowBrowser] = useState(false);
@@ -27,21 +37,39 @@ export default function FavoritesPanel({ embeddedInDashboard = false }: { embedd
   return (
     <div className="space-y-4">
       {embeddedInDashboard && (
-        <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-4 py-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        <section
+          className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
+          aria-label="My Pages command header"
+        >
+          <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(26rem,0.9fr)]">
             <div>
-              <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Saved workspace</div>
-              <h2 className="mt-1 text-base font-black text-white">My Pages</h2>
-              <p className="mt-1 text-xs leading-5 text-slate-400">Pinned research pages for the tools you open most often.</p>
+              <div className="flex flex-wrap items-center gap-2 text-[0.68rem] font-extrabold uppercase tracking-[0.16em]">
+                <span className="text-emerald-300">Saved workspace</span>
+                <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">{favoriteTools.length} pinned</span>
+              </div>
+              <h2 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">My Pages.</h2>
+              <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">Pinned research pages for the tools you open most often. Pages persist across devices.</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {favoriteTools[0] ? (
+                  <Link href={favoriteTools[0].href} className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15">Open {favoriteTools[0].label}</Link>
+                ) : (
+                  <Link href="/tools/scanner" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15">Open Scanner</Link>
+                )}
+                <button type="button" onClick={() => setShowBrowser((current) => !current)} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 transition-colors hover:bg-amber-400/15">
+                  {showBrowser ? 'Close Browser' : 'Manage Pages'}
+                </button>
+                <Link href="/tools" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">All Tools</Link>
+              </div>
             </div>
-            <button
-              onClick={() => setShowBrowser((current) => !current)}
-              className="rounded-md border border-emerald-500/35 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300"
-            >
-              {showBrowser ? 'Close Browser' : 'Manage Pages'}
-            </button>
+
+            <div className="grid self-start gap-1.5 sm:grid-cols-2">
+              <MyPagesMetric label="Saved" value={favoriteTools.length ? `${favoriteTools.length} pages` : 'Empty'} tone={favoriteTools.length ? '#10B981' : '#94A3B8'} detail={favoriteTools.length ? `Top: ${favoriteTools[0]?.label}` : 'Use Manage Pages to pin tools'} />
+              <MyPagesMetric label="Catalog" value={`${TOOL_CATALOG.length} tools`} tone="#A5B4FC" detail={`${TOOL_CATEGORIES.length} categories available`} />
+              <MyPagesMetric label="Coverage" value={favoriteTools.length ? `${Math.round((favoriteTools.length / TOOL_CATALOG.length) * 100)}%` : '0%'} tone="#F59E0B" detail="Share of catalog pinned" />
+              <MyPagesMetric label="Next Check" value={favoriteTools[0] ? `Open ${favoriteTools[0].label}` : 'Pin a page'} tone={favoriteTools[0] ? '#FBBF24' : '#94A3B8'} detail={favoriteTools[0] ? 'Resume from your top page' : 'Click Manage Pages to start'} />
+            </div>
           </div>
-        </div>
+        </section>
       )}
       {/* ─── Favorite Cards ─── */}
       {favoriteTools.length > 0 ? (
