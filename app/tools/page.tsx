@@ -50,6 +50,16 @@ function cleanWorkflowTitle(title: string) {
   return title.replace(/^\d+\.\s*/, '');
 }
 
+function WorkflowMetric({ label, value, tone = '#CBD5E1', detail }: { label: string; value: string; tone?: string; detail: string }) {
+  return (
+    <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+      <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
+      <div className="mt-0.5 truncate text-sm font-black" style={{ color: tone }}>{value}</div>
+      <div className="mt-0.5 truncate text-[11px] text-slate-500" title={detail}>{detail}</div>
+    </div>
+  );
+}
+
 function getWorkflowNumber(title: string) {
   return title.match(/^\d+/)?.[0] ?? '';
 }
@@ -160,31 +170,43 @@ function WorkflowSection({ workflow }: { workflow: ToolWorkflow }) {
 }
 
 export default function ToolsPage() {
+  const totalWorkflowTools = new Set(toolWorkflows.flatMap((wf) => wf.tools.map((t) => t.href))).size;
+  const startTool = workflowJumpCards[0]?.startTool;
+
   return (
     <main className="min-h-screen bg-[#0F172A] text-white">
       <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-end">
-          <div>
-            <div className="mb-4 inline-flex rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">
-              Workflow map
+        <section
+          className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
+          aria-label="Workflow command header"
+        >
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(26rem,0.9fr)]">
+            <div>
+              <div className="flex flex-wrap items-center gap-2 text-[0.68rem] font-extrabold uppercase tracking-[0.16em]">
+                <span className="text-emerald-300">Workflow map</span>
+                <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">{coreWorkflows.length} steps</span>
+                <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">{TOOL_CATALOG.length} tools</span>
+                <span className="rounded-md border border-emerald-400/30 bg-emerald-400/10 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-emerald-200">Recommended start: Market Scanner</span>
+              </div>
+              <h1 className="mt-1 text-3xl font-black tracking-normal text-white md:text-4xl">Your MSP research workflow.</h1>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
+                Start with the guided path when you want structure, then open specialist tools only when a research question needs more evidence.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <a href="#workflow" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15">Start Workflow</a>
+                <Link href="/tools/scanner" className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15">Open Market Scanner</Link>
+                <a href="#all-tools" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Open Tool Directory</a>
+              </div>
             </div>
-            <h1 className="max-w-4xl text-4xl font-black tracking-tight sm:text-5xl">
-              Your MSP research workflow.
-            </h1>
-            <p className="mt-4 max-w-3xl text-base leading-7 text-slate-300 sm:text-lg">
-              Start with the guided path when you want structure, then open specialist tools only when a research question needs more evidence.
-            </p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              <a href="#workflow" className="rounded-lg border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-sm font-bold text-emerald-200 no-underline hover:bg-emerald-400/15">Start Workflow</a>
-              <a href="#all-tools" className="rounded-lg border border-sky-400/30 bg-sky-400/10 px-4 py-2 text-sm font-bold text-sky-200 no-underline hover:bg-sky-400/15">Open Tool Directory</a>
+
+            <div className="grid self-start gap-1.5 sm:grid-cols-2">
+              <WorkflowMetric label="Steps" value={`${coreWorkflows.length} stages`} tone="#10B981" detail="Find -> Validate -> Mechanics -> Test -> Track" />
+              <WorkflowMetric label="Tools" value={`${totalWorkflowTools} mapped`} tone="#A5B4FC" detail={`${TOOL_CATALOG.length} total in catalog`} />
+              <WorkflowMetric label="Categories" value={`${TOOL_CATEGORIES.length} groups`} tone="#F59E0B" detail="Markets, Scanning, Crypto, Options, Research, Macro, Advanced, Portfolio" />
+              <WorkflowMetric label="Next Check" value={startTool ? `Open ${startTool.label}` : 'Open Scanner'} tone="#FBBF24" detail="Build a short research queue first" />
             </div>
           </div>
-          <div className="rounded-lg border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-100">
-            <div className="text-xs font-black uppercase tracking-[0.12em] text-emerald-300">Recommended start</div>
-            <div className="mt-1 font-bold text-white">Open Market Scanner first.</div>
-            <p className="mt-1 text-xs text-emerald-100/80">Use the broad scan to create a short research queue before opening deeper tools.</p>
-          </div>
-        </div>
+        </section>
 
         <div id="workflow" className="mt-8 grid gap-3 md:grid-cols-5 scroll-mt-24">
           {workflowJumpCards.map((step, index) => (

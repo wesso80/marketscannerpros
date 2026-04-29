@@ -236,6 +236,14 @@ describe('layout and flow audit regressions', () => {
     expect(toolsPage).toContain('Recommended start');
     expect(toolsPage).toContain('Start here');
     expect(toolsPage).toContain('Recommended next:');
+    expect(toolsPage).toContain('aria-label="Workflow command header"');
+    expect(toolsPage).toContain('function WorkflowMetric');
+    expect(toolsPage).toContain('label="Steps"');
+    expect(toolsPage).toContain('label="Tools"');
+    expect(toolsPage).toContain('label="Categories"');
+    expect(toolsPage).toContain('label="Next Check"');
+    expect(toolsPage).toContain('Open Market Scanner');
+    expect(toolsPage).not.toContain('text-4xl font-black tracking-tight sm:text-5xl');
     expect(workflows).toContain('Inspect market mechanics');
     expect(toolsPage).toContain("mechanics: 'Next: test the research idea in Backtest.'");
     expect(toolsPage).toContain('<details id="advanced"');
