@@ -35,6 +35,16 @@ function Skel({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
   return <div className={`${h} ${w} bg-slate-700/50 rounded animate-pulse`} />;
 }
 
+function TerminalMetric({ label, value, tone = '#CBD5E1', detail }: { label: string; value: string; tone?: string; detail: string }) {
+  return (
+    <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+      <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
+      <div className="mt-0.5 truncate text-sm font-black" style={{ color: tone }} title={value}>{value}</div>
+      <div className="mt-0.5 truncate text-[11px] text-slate-500" title={detail}>{detail}</div>
+    </div>
+  );
+}
+
 const TABS = ['Close Calendar', 'Options Terminal', 'Options Confluence', 'Options Flow', 'Crypto', 'Flow', 'Time Gravity', 'Time Confluence'] as const;
 type TerminalTab = typeof TABS[number];
 
@@ -114,7 +124,7 @@ function TerminalTabRail({
           {asset === 'crypto' ? 'Crypto path' : 'Equity path'}
         </div>
       </div>
-      <div className="flex gap-1 overflow-x-auto">
+      <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-5">
         {visibleTabs.map((terminalTab) => {
           const meta = TERMINAL_TAB_META[terminalTab];
           const isActive = activeTab === terminalTab;
@@ -124,7 +134,7 @@ function TerminalTabRail({
               type="button"
               aria-pressed={isActive}
               onClick={() => onSelectTab(terminalTab)}
-              className={`min-w-[9rem] shrink-0 rounded-md border px-3 py-1.5 text-left transition ${
+              className={`rounded-md border px-3 py-1.5 text-left transition ${
                 isActive
                   ? 'border-emerald-400/40 bg-emerald-400/10 text-white'
                   : 'border-white/10 bg-white/[0.025] text-slate-300 hover:border-emerald-400/30 hover:bg-emerald-400/[0.05]'
@@ -267,30 +277,54 @@ export default function TerminalPage() {
 
   /* Flow */
   const flow = useFlow(sym, asset);
+  const activeMeta = TERMINAL_TAB_META[tab];
+  const terminalDataState = tab === 'Close Calendar'
+    ? calendar.error
+      ? 'Calendar issue'
+      : calendar.loading
+        ? 'Loading'
+        : calData
+          ? 'Ready'
+          : 'Waiting'
+    : 'Lens ready';
+  const terminalDataTone = terminalDataState.includes('issue') ? '#F59E0B' : terminalDataState === 'Loading' ? '#38BDF8' : '#10B981';
+  const nextTerminalAction = tab === 'Close Calendar'
+    ? 'Review close cluster timing'
+    : tab === 'Crypto'
+      ? 'Check derivatives pressure'
+      : tab === 'Flow'
+        ? 'Review capital pressure'
+        : 'Validate mechanics context';
 
   return (
     <div className="space-y-3">
       <ComplianceDisclaimer compact variant={asset === 'crypto' ? 'cryptoDerivatives' : 'options'} />
 
-      <Card>
-        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+      <section className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]" aria-label="Terminal command header">
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(24rem,0.9fr)]">
           <div>
-            <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Workflow step 3 · Market mechanics check</div>
+            <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.16em] text-emerald-300">Workflow step 3 · Market mechanics check</div>
             <h1 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Use Terminal before Backtest.</h1>
             <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">
               Golden Egg validates the symbol. Terminal checks whether timing, options positioning, flow, crypto derivatives, and close-calendar pressure support the scenario before you test it historically.
             </p>
-          </div>
-          <div className="flex flex-wrap gap-2 md:justify-end">
-            <Link href="/tools/golden-egg" className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-slate-400 no-underline hover:bg-slate-700/50">
+            <div className="mt-3 flex flex-wrap gap-2">
+            <Link href="/tools/golden-egg" className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15">
               Back to Golden Egg
             </Link>
-            <Link href="/tools/workspace?tab=backtest" className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-emerald-300 no-underline hover:bg-emerald-500/20">
+            <Link href="/tools/workspace?tab=backtest" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15">
               Continue to Backtest
             </Link>
+            </div>
+          </div>
+          <div className="grid self-start gap-1.5 sm:grid-cols-2">
+            <TerminalMetric label="Symbol" value={sym} tone={asset === 'crypto' ? '#F59E0B' : '#818CF8'} detail={`${asset.toUpperCase()} mechanics path`} />
+            <TerminalMetric label="Active Lens" value={tab} tone="#10B981" detail={activeMeta.eyebrow} />
+            <TerminalMetric label="Data State" value={terminalDataState} tone={terminalDataTone} detail={calendar.error || 'No blocking route errors'} />
+            <TerminalMetric label="Next Check" value={nextTerminalAction} tone="#38BDF8" detail="Complete before historical testing" />
           </div>
         </div>
-      </Card>
+      </section>
 
       {/* Symbol Bar */}
       <Card>

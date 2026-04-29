@@ -426,6 +426,12 @@ describe('layout and flow audit regressions', () => {
     expect(terminalPage).toContain('Workflow step 3 · Market mechanics check');
     expect(terminalPage).toContain('Use Terminal before Backtest.');
     expect(terminalPage).toContain('Golden Egg validates the symbol. Terminal checks whether timing, options positioning, flow, crypto derivatives, and close-calendar pressure support the scenario before you test it historically.');
+    expect(terminalPage).toContain('function TerminalMetric');
+    expect(terminalPage).toContain('aria-label="Terminal command header"');
+    expect(terminalPage).toContain('<TerminalMetric label="Symbol" value={sym}');
+    expect(terminalPage).toContain('<TerminalMetric label="Active Lens" value={tab}');
+    expect(terminalPage).toContain('<TerminalMetric label="Data State" value={terminalDataState}');
+    expect(terminalPage).toContain('<TerminalMetric label="Next Check" value={nextTerminalAction}');
     expect(terminalPage).toContain('<ComplianceDisclaimer compact variant={asset === \'crypto\' ? \'cryptoDerivatives\' : \'options\'} />');
     expect(terminalPage).toContain('function TerminalTabRail');
     expect(terminalPage).toContain('const TERMINAL_TAB_PARAM_MAP');
@@ -436,8 +442,9 @@ describe('layout and flow audit regressions', () => {
     expect(terminalPage).toContain('if (requestedTab && requestedTab !== tab) setTab(requestedTab);');
     expect(terminalPage).toContain('Mechanics workbench');
     expect(terminalPage).toContain('Timing first, then positioning, flow, and final confluence before Backtest.');
-    expect(terminalPage).toContain('flex gap-1 overflow-x-auto');
-    expect(terminalPage).toContain('min-w-[9rem] shrink-0 rounded-md border px-3 py-1.5');
+    expect(terminalPage).toContain('grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-5');
+    expect(terminalPage).toContain('rounded-md border px-3 py-1.5 text-left transition');
+    expect(terminalPage).not.toContain('min-w-[9rem] shrink-0 rounded-md border px-3 py-1.5');
     expect(terminalPage).toContain('Terminal subview');
     expect(terminalPage).toContain('<TerminalSubviewFrame tab="Time Gravity" symbol={sym}>');
     expect(terminalPage).toContain('Back to Golden Egg');
