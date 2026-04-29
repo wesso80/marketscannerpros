@@ -21,7 +21,6 @@ const GLOBAL_COMPLIANCE_ROUTES = new Set([
   '/tools/liquidity-sweep',
   '/tools/research',
   '/tools/settings',
-  '/tools/terminal',
   '/tools/volatility-engine',
   '/tools/workspace',
 ]);
@@ -69,6 +68,7 @@ export default function ToolsLayoutClient({
   const containerVariant = getToolsContainerVariant(pathname);
   // Extract page key from pathname for favorites (e.g. /tools/scanner → scanner)
   const pageKey = pathname.replace(/^\/tools\//, '').replace(/\/.*$/, '') || 'dashboard';
+  const showFavoriteButton = pageKey !== 'dashboard' && pathname !== '/tools/terminal';
   const wrappedChildren = layoutMode === 'terminal'
     ? <TerminalLayout containerVariant={containerVariant}>{children}</TerminalLayout>
     : <CommandLayout>{children}</CommandLayout>;
@@ -85,7 +85,7 @@ export default function ToolsLayoutClient({
 
         <ErrorBoundary>
           {/* Favourite toggle — lets users pin this page to My Pages */}
-          {pageKey !== 'dashboard' && (
+          {showFavoriteButton && (
             <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '4px 12px 0' }}>
               <FavoriteButton pageKey={pageKey} />
             </div>

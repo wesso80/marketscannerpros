@@ -416,6 +416,7 @@ describe('layout and flow audit regressions', () => {
   it('makes Terminal the handoff from Golden Egg to Backtest', () => {
     const terminalPage = read('app/tools/terminal/page.tsx');
     const terminalLayout = read('app/tools/terminal/layout.tsx');
+    const toolsLayoutClient = read('app/tools/ToolsLayoutClient.tsx');
     const terminalShell = read('components/terminal/TerminalShell.tsx');
     const optionsConfluencePage = read('app/tools/options-confluence/page.tsx');
     const optionsFlowPage = read('app/tools/options-flow/page.tsx');
@@ -448,6 +449,8 @@ describe('layout and flow audit regressions', () => {
     expect(terminalPage).not.toContain('<SectionHeader title="Terminal"');
     expect(terminalPage).not.toContain('ComplianceDisclaimer collapsible variant');
     expect(terminalPage).not.toContain("'? Refresh'");
+    expect(toolsLayoutClient).toContain("const showFavoriteButton = pageKey !== 'dashboard' && pathname !== '/tools/terminal';");
+    expect(toolsLayoutClient).not.toContain("'/tools/terminal',");
     expect(terminalShell).toContain('embedded?: boolean');
     expect(terminalShell).toContain("{!embedded && <header");
     expect(optionsConfluencePage).toContain('embeddedInTerminal = false');
