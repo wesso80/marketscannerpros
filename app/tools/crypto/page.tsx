@@ -438,6 +438,56 @@ function CryptoCommandCenterContent() {
         </div>
       )}
       <main className="mx-auto w-full max-w-none space-y-2 px-2 pb-6 pt-3 md:px-3">
+        <section
+          className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
+          aria-label="Crypto Command Center command header"
+        >
+          <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(26rem,0.9fr)]">
+            <div>
+              <div className="flex flex-wrap items-center gap-2 text-[0.68rem] font-extrabold uppercase tracking-[0.16em]">
+                <span className="text-emerald-300">Crypto command</span>
+                <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">Verdict {reviewLabel(morningDecision.verdict)}</span>
+                <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">Risk {morningDecision.riskState}</span>
+                <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">Vol {morningDecision.volatility}</span>
+                {marketData ? (
+                  <span className="rounded-md border border-emerald-400/30 bg-emerald-400/10 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-emerald-200">CoinGecko Live</span>
+                ) : (
+                  <span className="rounded-md border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-amber-200">Loading</span>
+                )}
+              </div>
+              <h1 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Crypto Command Center.</h1>
+              <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">Permission, leadership, liquidity, volatility, and breadth across crypto. Drop into Scanner or Derivatives once the gate is clear.</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Link href="/tools/scanner?asset=crypto" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15">Open Scanner</Link>
+                <Link href="/tools/dashboard?tab=crypto" className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15">Open Crypto Derivatives</Link>
+                <Link href="/tools/dashboard?tab=macro" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Open Macro Lens</Link>
+              </div>
+            </div>
+
+            <div className="grid self-start gap-1.5 sm:grid-cols-2">
+              <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+                <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Verdict</div>
+                <div className={`mt-0.5 truncate text-sm font-black ${reviewColor(morningDecision.verdict)}`}>{reviewLabel(morningDecision.verdict)}</div>
+                <div className="mt-0.5 truncate text-[11px] text-slate-500">Confluence {morningDecision.adaptiveConfidence}%</div>
+              </div>
+              <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+                <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Breadth</div>
+                <div className="mt-0.5 truncate text-sm font-black" style={{ color: '#A5B4FC' }}>{morningDecision.breadthLabel}</div>
+                <div className="mt-0.5 truncate text-[11px] text-slate-500">Score {morningDecision.breadthScore}%</div>
+              </div>
+              <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+                <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Dominance</div>
+                <div className="mt-0.5 truncate text-sm font-black" style={{ color: '#F59E0B' }}>{(() => { const v = getDominanceValue(marketData?.market?.dominance, 'BTC'); return v ? `${v.toFixed(1)}% BTC` : '—'; })()}</div>
+                <div className="mt-0.5 truncate text-[11px] text-slate-500">{marketData?.market?.totalMarketCapFormatted || 'Mkt cap loading'}</div>
+              </div>
+              <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+                <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">Next Check</div>
+                <div className="mt-0.5 truncate text-sm font-black" style={{ color: '#FBBF24' }}>{currentSection?.label || 'Pick a section'}</div>
+                <div className="mt-0.5 truncate text-[11px] text-slate-500">{lastUpdate ? `Refreshed ${lastUpdate.toLocaleTimeString()}` : 'Awaiting first refresh'}</div>
+              </div>
+            </div>
+          </div>
+        </section>
         <section className="sticky top-2 z-20 flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900/95 p-1.5 backdrop-blur">
           {[
             ['Regime', morningDecision.riskState === 'Risk-On' ? 'Crypto Risk-On' : morningDecision.riskState === 'Risk-Off' ? 'Crypto Risk-Off' : 'Crypto Neutral'],
@@ -528,22 +578,29 @@ function CryptoCommandCenterContent() {
             </div>
 
             <div className="max-h-[590px] overflow-y-auto rounded-md border border-slate-700 bg-slate-950/60 p-1.5">
-              <div className="mb-2 grid grid-cols-2 gap-1.5 md:grid-cols-5">
-                {sectionItems.map((item) => (
-                  <button
-                    type="button"
-                    key={item.id}
-                    onClick={() => setActiveSection(item.id)}
-                    className={`rounded-md border px-1.5 py-1 text-left ${
-                      activeSection === item.id
-                        ? 'border-emerald-400 bg-emerald-500/10 text-emerald-200'
-                        : 'border-slate-700 bg-slate-900 text-slate-300'
-                    }`}
-                  >
-                    <div className="text-[11px] font-semibold sm:text-[11px]">{item.icon} {item.label}</div>
-                    <div className="mt-0.5 text-[11px] text-slate-500 sm:text-[11px]">{item.description}</div>
-                  </button>
-                ))}
+              <div className="mb-2 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
+                {sectionItems.map((item) => {
+                  const overlapsMarkets = item.id === 'overview' || item.id === 'market' || item.id === 'movers' || item.id === 'sectors';
+                  return (
+                    <button
+                      type="button"
+                      key={item.id}
+                      onClick={() => setActiveSection(item.id)}
+                      className={`rounded-md border px-2 py-1.5 text-left transition-colors ${
+                        activeSection === item.id
+                          ? 'border-emerald-400/50 bg-emerald-500/15 text-emerald-200'
+                          : 'border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500 hover:text-slate-100'
+                      }`}
+                      aria-pressed={activeSection === item.id}
+                    >
+                      <div className="text-[11px] font-semibold">{item.icon} {item.label}</div>
+                      <div className="mt-0.5 text-[10px] text-slate-500 leading-tight">{item.description}</div>
+                      {overlapsMarkets ? (
+                        <div className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-sky-300/80">Also in Markets</div>
+                      ) : null}
+                    </button>
+                  );
+                })}
               </div>
 
               <div className="rounded-md border border-slate-700 bg-slate-900/70 p-1.5">

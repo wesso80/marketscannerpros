@@ -20,7 +20,6 @@ import { useUserTier } from '@/lib/useUserTier';
 const EquityExplorer = dynamic(() => import('@/app/tools/equity-explorer/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Equity Explorer…</div> });
 const CryptoExplorer = dynamic(() => import('@/app/tools/crypto-explorer/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Crypto Explorer…</div> });
 const CryptoCommand = dynamic(() => import('@/app/tools/crypto/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Crypto Command…</div> });
-const MacroDashboard = dynamic(() => import('@/app/tools/macro/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Macro Dashboard…</div> });
 const MarketMoversV1 = dynamic(() => import('@/app/tools/market-movers/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Market Movers…</div> });
 const CommoditiesV1 = dynamic(() => import('@/app/tools/commodities/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Commodities Intelligence…</div> });
 
@@ -28,25 +27,39 @@ function Skel({ h = 'h-4', w = 'w-full' }: { h?: string; w?: string }) {
   return <div className={`${h} ${w} bg-slate-700/50 rounded animate-pulse`} />;
 }
 
-const TABS = ['Overview', 'Sectors', 'Commodities', 'Cross-Market', 'Equity Search', 'Crypto Search', 'Crypto Command', 'Movers Intelligence', 'Commodities Deep', 'Macro'] as const;
+const TABS = ['Overview', 'Sectors', 'Commodities', 'Cross-Market', 'Equity Deep-Dive', 'Crypto Deep-Dive', 'Crypto Command', 'Movers'] as const;
 type ExplorerTab = typeof TABS[number];
 
 const EXPLORER_TAB_PARAM_MAP: Record<string, ExplorerTab> = {
   overview: 'Overview',
   sectors: 'Sectors',
   heatmap: 'Sectors',
-  commodities: 'Commodities Deep',
-  commodity: 'Commodities Deep',
+  commodities: 'Commodities',
+  commodity: 'Commodities',
+  'commodities-deep': 'Commodities',
   cross: 'Cross-Market',
-  equity: 'Equity Search',
-  'equity-explorer': 'Equity Search',
-  crypto: 'Crypto Search',
-  'crypto-explorer': 'Crypto Search',
+  equity: 'Equity Deep-Dive',
+  'equity-explorer': 'Equity Deep-Dive',
+  'equity-search': 'Equity Deep-Dive',
+  crypto: 'Crypto Deep-Dive',
+  'crypto-explorer': 'Crypto Deep-Dive',
+  'crypto-search': 'Crypto Deep-Dive',
   'crypto-command': 'Crypto Command',
-  movers: 'Movers Intelligence',
-  'market-movers': 'Movers Intelligence',
-  macro: 'Macro',
+  movers: 'Movers',
+  'market-movers': 'Movers',
+  'movers-intelligence': 'Movers',
+  // Macro is owned by Dashboard -> Macro lens to avoid duplication.
 };
+
+function MarketsMetric({ label, value, tone = '#CBD5E1', detail }: { label: string; value: string; tone?: string; detail: string }) {
+  return (
+    <div className="min-h-[3.1rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+      <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
+      <div className="mt-0.5 truncate text-sm font-black" style={{ color: tone }}>{value}</div>
+      <div className="mt-0.5 truncate text-[11px] text-slate-500" title={detail}>{detail}</div>
+    </div>
+  );
+}
 
 function pctColor(v: number) {
   if (v > 0) return 'text-emerald-400';
@@ -91,13 +104,57 @@ export default function ExplorerPage() {
 
   return (
     <div className="space-y-3">
-      <Card>
-        <div>
-          <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-300">Cross-market map</div>
-          <h1 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Market Explorer</h1>
-          <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">Scan sector heat, crypto breadth, commodity context, macro pressure, and mover evidence before selecting one symbol.</p>
+      <section
+        className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
+        aria-label="Markets command header"
+      >
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(26rem,0.9fr)]">
+          <div>
+            <div className="flex flex-wrap items-center gap-2 text-[0.68rem] font-extrabold uppercase tracking-[0.16em]">
+              <span className="text-emerald-300">Cross-market map</span>
+              <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">{TABS.length} lenses</span>
+              <span className="rounded-md border border-white/10 bg-slate-950/40 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-slate-400">Tier {tier === 'pro_trader' ? 'Pro Trader' : tier === 'pro' ? 'Pro' : 'Free'}</span>
+              {regime.data?.regime ? (
+                <span className="rounded-md border border-emerald-400/30 bg-emerald-400/10 px-1.5 py-0.5 text-[0.6rem] tracking-[0.12em] text-emerald-200">Regime {String(regime.data.regime).toUpperCase()}</span>
+              ) : null}
+            </div>
+            <h1 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Markets.</h1>
+            <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">Scan sector heat, crypto breadth, commodity context, and mover evidence before selecting one symbol. Macro context lives in the Dashboard Macro lens.</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <a href="/tools/scanner" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15">Open Scanner</a>
+              <a href="/tools/golden-egg" className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15">Open Golden Egg</a>
+              <a href="/tools/dashboard?tab=macro" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Open Macro Lens</a>
+            </div>
+          </div>
+
+          <div className="grid self-start gap-1.5 sm:grid-cols-2">
+            <MarketsMetric
+              label="Sectors Leading"
+              value={sectorData.length ? `${sectorData.filter((s: SectorData) => (s.changePercent ?? 0) > 0).length}/${sectorData.length} green` : '—'}
+              tone="#10B981"
+              detail={sectorData.length ? `Top: ${[...sectorData].sort((a: SectorData, b: SectorData) => (b.changePercent ?? 0) - (a.changePercent ?? 0))[0]?.name}` : 'Sector data loading'}
+            />
+            <MarketsMetric
+              label="Crypto Cap"
+              value={cryptoData?.totalMarketCapFormatted || '—'}
+              tone="#A5B4FC"
+              detail={cryptoData ? `BTC ${cryptoData.btcDominance.toFixed(1)}% · ETH ${cryptoData.ethDominance.toFixed(1)}%` : 'Crypto market loading'}
+            />
+            <MarketsMetric
+              label="Top Gainer"
+              value={allGainers[0]?.ticker || '—'}
+              tone="#F59E0B"
+              detail={allGainers[0] ? `+${allGainers[0].change_percentage} (${allGainers[0].asset_class})` : 'Movers loading'}
+            />
+            <MarketsMetric
+              label="Next Check"
+              value={tab}
+              tone="#FBBF24"
+              detail="Pick one lens, then drop into Scanner or Golden Egg"
+            />
+          </div>
         </div>
-      </Card>
+      </section>
 
       {/* Tabs */}
       <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2">
@@ -324,33 +381,39 @@ export default function ExplorerPage() {
         </Card>
       )}
 
-      {/* -- CRYPTO --------------------------------------------------- */}
-      {/* -- COMMODITIES ---------------------------------------------- */}
+      {/* -- COMMODITIES (merged: simple grid for free, deep view for Pro) ------ */}
       {tab === 'Commodities' && (
-        <Card>
-          {commodities.loading ? <div className="space-y-3">{[1,2,3].map(i => <Skel key={i} h="h-12" />)}</div> : commodList.length === 0 ? (
-            <div className="text-xs text-slate-500 py-8 text-center">No commodity data available</div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {commodList.map((c: CommodityData) => (
-                <div key={c.symbol} className="bg-[var(--msp-panel-2)] rounded-lg p-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <div>
-                      <div className="text-sm font-bold text-white">{c.name}</div>
-                      <div className="text-[11px] text-slate-500">{c.category} — {c.unit}</div>
+        tier === 'pro' || tier === 'pro_trader' ? (
+          <CommoditiesV1 />
+        ) : (
+          <Card>
+            {commodities.loading ? <div className="space-y-3">{[1,2,3].map(i => <Skel key={i} h="h-12" />)}</div> : commodList.length === 0 ? (
+              <div className="text-xs text-slate-500 py-8 text-center">No commodity data available</div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {commodList.map((c: CommodityData) => (
+                  <div key={c.symbol} className="bg-[var(--msp-panel-2)] rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <div>
+                        <div className="text-sm font-bold text-white">{c.name}</div>
+                        <div className="text-[11px] text-slate-500">{c.category} — {c.unit}</div>
+                      </div>
+                      <Badge label={c.changePercent > 0 ? 'UP' : c.changePercent < 0 ? 'DOWN' : 'FLAT'} color={c.changePercent > 0 ? '#10B981' : c.changePercent < 0 ? '#EF4444' : '#94A3B8'} small />
                     </div>
-                    <Badge label={c.changePercent > 0 ? 'UP' : c.changePercent < 0 ? 'DOWN' : 'FLAT'} color={c.changePercent > 0 ? '#10B981' : c.changePercent < 0 ? '#EF4444' : '#94A3B8'} small />
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-lg font-bold text-white">${c.price.toFixed(2)}</span>
+                      <span className={`text-xs ${pctColor(c.changePercent)}`}>{c.changePercent > 0 ? '+' : ''}{c.changePercent.toFixed(2)}%</span>
+                    </div>
                   </div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-lg font-bold text-white">${c.price.toFixed(2)}</span>
-                    <span className={`text-xs ${pctColor(c.changePercent)}`}>{c.changePercent > 0 ? '+' : ''}{c.changePercent.toFixed(2)}%</span>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            )}
+            {commodities.error && <div className="text-[11px] text-red-400/60 mt-2">Error: {commodities.error}</div>}
+            <div className="mt-3 rounded-md border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-[11px] text-amber-200">
+              <strong>Pro unlocks the deep commodities view</strong> with rotation leaders, breadth scoring, and scenario implications.
             </div>
-          )}
-          {commodities.error && <div className="text-[11px] text-red-400/60 mt-2">Error: {commodities.error}</div>}
-        </Card>
+          </Card>
+        )
       )}
 
       {/* -- CROSS-MARKET (Phase 5 — Dynamic + Static) -------------- */}
@@ -419,12 +482,12 @@ export default function ExplorerPage() {
       )}
 
       {/* ─── Deep-dive Tabs (v1 components) ─── */}
-      {tab === 'Equity Search' && (
+      {tab === 'Equity Deep-Dive' && (
         <UpgradeGate requiredTier="pro" currentTier={tier} feature="Equity Deep-Dive Explorer">
           <EquityExplorer />
         </UpgradeGate>
       )}
-      {tab === 'Crypto Search' && (
+      {tab === 'Crypto Deep-Dive' && (
         <UpgradeGate requiredTier="pro" currentTier={tier} feature="Crypto Deep-Dive Explorer">
           <CryptoExplorer />
         </UpgradeGate>
@@ -432,14 +495,8 @@ export default function ExplorerPage() {
       {tab === 'Crypto Command' && (
         <CryptoCommand />
       )}
-      {tab === 'Movers Intelligence' && (
+      {tab === 'Movers' && (
         <MarketMoversV1 />
-      )}
-      {tab === 'Commodities Deep' && (
-        <CommoditiesV1 />
-      )}
-      {tab === 'Macro' && (
-        <MacroDashboard />
       )}
 
       </div>
