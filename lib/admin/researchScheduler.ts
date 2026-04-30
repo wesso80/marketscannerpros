@@ -1,7 +1,8 @@
 import type { Market } from "@/types/operator";
 import { q } from "@/lib/db";
 import { getAdminResearchPacketsForSymbols, type AdminResearchPacket } from "@/lib/admin/getAdminResearchPacket";
-import { appendResearchEvent } from "@/lib/admin/researchEventTape";
+import { appendResearchEvent, type ResearchEventType } from "@/lib/admin/researchEventTape";
+import { snapshotResearchPacket, loadPriorPacketSnapshot } from "@/lib/admin/researchPacketHistory";
 
 export type SchedulerMode =
   | "CRYPTO_CONTINUOUS"
@@ -33,10 +34,13 @@ export interface SchedulerRunResult {
   symbolsScanned: number;
   errors: Array<{ symbol: string; error: string }>;
   staleData: number;
-  alertsFired: number;
+  alertsEligible: number;
   alertsSuppressed: number;
+  alertsDispatched: number;
+  alertsFailedDispatch: number;
   runtimeMs: number;
   packets: AdminResearchPacket[];
+  perSymbolEvents: number; // count of per-symbol lifecycle events emitted
 }
 
 let schemaReady = false;
@@ -81,6 +85,7 @@ export async function runResearchScheduler(input: SchedulerRunInput): Promise<Sc
 
   const errors: Array<{ symbol: string; error: string }> = [];
   let packets: AdminResearchPacket[] = [];
+  const perSymbolEvents: Array<{ symbol: string; eventType: ResearchEventType; message: string }> = [];
 
   try {
     packets = await getAdminResearchPacketsForSymbols({
@@ -95,13 +100,124 @@ export async function runResearchScheduler(input: SchedulerRunInput): Promise<Sc
         errors.push({ symbol: symbol.toUpperCase(), error: "PACKET_BUILD_FAILED" });
       }
     }
+
+    // Phase 10: Per-symbol event emission and packet snapshotting
+    for (const packet of packets) {
+      try {
+        // Snapshot this packet
+        const snapshot = await snapshotResearchPacket({
+          workspaceId: input.workspaceId,
+          packet,
+          schedulerRunId: runId,
+          scanMode: input.mode,
+        });
+
+        // Load prior packet for delta
+        const priorSnapshot = snapshot
+          ? await loadPriorPacketSnapshot({
+              workspaceId: input.workspaceId,
+              symbol: packet.symbol,
+              market: packet.market,
+              timeframe: packet.timeframe,
+              excludeId: snapshot.id,
+            })
+          : null;
+
+        // Emit per-symbol lifecycle events
+        if (priorSnapshot && priorSnapshot.packetJson) {
+          const priorScore = priorSnapshot.trustAdjustedScore || 0;
+          const currentScore = packet.trustAdjustedScore;
+          const scoreDelta = currentScore - priorScore;
+
+          if (scoreDelta > 5) {
+            perSymbolEvents.push({
+              symbol: packet.symbol,
+              eventType: "SCORE_UPGRADED",
+              message: `${packet.symbol} score improved: ${priorScore.toFixed(1)} → ${currentScore.toFixed(1)}`,
+            });
+          } else if (scoreDelta < -5) {
+            perSymbolEvents.push({
+              symbol: packet.symbol,
+              eventType: "SCORE_DOWNGRADED",
+              message: `${packet.symbol} score declined: ${priorScore.toFixed(1)} → ${currentScore.toFixed(1)}`,
+            });
+          }
+
+          if (priorSnapshot.lifecycle !== packet.lifecycle) {
+            perSymbolEvents.push({
+              symbol: packet.symbol,
+              eventType: "LIFECYCLE_CHANGE",
+              message: `${packet.symbol} lifecycle: ${priorSnapshot.lifecycle} → ${packet.lifecycle}`,
+            });
+          }
+
+          if (priorSnapshot.dataTrustStatus !== packet.dataTruth.status) {
+            perSymbolEvents.push({
+              symbol: packet.symbol,
+              eventType: "DATA_TRUST_CHANGED",
+              message: `${packet.symbol} data trust: ${priorSnapshot.dataTrustStatus} → ${packet.dataTruth.status}`,
+            });
+          }
+
+          if ((priorSnapshot.packetJson.trapDetection?.trapRiskScore || 0) < packet.trapDetection.trapRiskScore) {
+            if (packet.trapDetection.trapRiskScore > 65) {
+              perSymbolEvents.push({
+                symbol: packet.symbol,
+                eventType: "TRAP_RISK_CHANGED",
+                message: `${packet.symbol} trap risk elevated: ${packet.trapDetection.trapRiskScore.toFixed(0)}%`,
+              });
+            }
+          }
+
+          // Options pressure changed
+          if (
+            (priorSnapshot.packetJson.optionsIntelligence?.optionsPressureScore || 0) !==
+            packet.optionsIntelligence.optionsPressureScore
+          ) {
+            if (packet.optionsIntelligence.optionsPressureScore > 70) {
+              perSymbolEvents.push({
+                symbol: packet.symbol,
+                eventType: "OPTIONS_PRESSURE_CHANGED",
+                message: `${packet.symbol} options pressure elevated: ${packet.optionsIntelligence.optionsPressureScore.toFixed(0)}%`,
+              });
+            }
+          }
+        } else if (packet.alertEligibility.eligible) {
+          // First scan of symbol
+          perSymbolEvents.push({
+            symbol: packet.symbol,
+            eventType: "PACKET_BUILD_NEW",
+            message: `${packet.symbol} first scan in this window: score ${packet.trustAdjustedScore.toFixed(1)}, lifecycle ${packet.lifecycle}`,
+          });
+        }
+
+        // Emit alert eligibility events
+        if (packet.alertEligibility.eligible) {
+          perSymbolEvents.push({
+            symbol: packet.symbol,
+            eventType: "ALERT_ELIGIBLE",
+            message: `${packet.symbol} eligible for research alert at score ${packet.trustAdjustedScore.toFixed(1)}`,
+          });
+        } else if (packet.alertEligibility.reasons.length > 0) {
+          perSymbolEvents.push({
+            symbol: packet.symbol,
+            eventType: "ALERT_SUPPRESSED",
+            message: `${packet.symbol} suppressed: ${packet.alertEligibility.reasons[0]}`,
+          });
+        }
+      } catch (error) {
+        console.error(`[scheduler] Error processing symbol ${packet.symbol}:`, error);
+      }
+    }
   } catch (error) {
     errors.push({ symbol: "*", error: error instanceof Error ? error.message : "SCHEDULER_FAILED" });
   }
 
   const staleData = packets.filter((p) => ["STALE", "DEGRADED", "MISSING", "SIMULATED"].includes(p.dataTruth.status)).length;
-  const alertsFired = packets.filter((p) => p.alertEligibility.eligible).length;
-  const alertsSuppressed = packets.length - alertsFired;
+  const alertsEligible = packets.filter((p) => p.alertEligibility.eligible).length;
+  const alertsSuppressed = packets.length - alertsEligible;
+  const alertsDispatched = alertsEligible; // In Phase 10+, would be updated when alerts actually dispatch
+  const alertsFailedDispatch = 0;
   const completedAtIso = new Date().toISOString();
   const runtimeMs = Date.now() - startedAtMs;
 
@@ -121,27 +237,46 @@ export async function runResearchScheduler(input: SchedulerRunInput): Promise<Sc
       packets.length,
       JSON.stringify(errors),
       staleData,
-      alertsFired,
+      alertsEligible,
       alertsSuppressed,
       runtimeMs,
     ],
   );
 
+  // Append per-symbol events to event tape
+  for (const event of perSymbolEvents) {
+    await appendResearchEvent({
+      workspaceId: input.workspaceId,
+      market: input.market,
+      eventType: event.eventType,
+      severity: event.eventType === "SCORE_UPGRADED" ? "INFO" : event.eventType === "TRAP_RISK_CHANGED" ? "WATCH" : "INFO",
+      message: event.message,
+      payload: {
+        symbol: event.symbol,
+        runId,
+        mode: input.mode,
+      },
+    }).catch(() => undefined);
+  }
+
+  // Append run-level DATA_HEALTH event
   await appendResearchEvent({
     workspaceId: input.workspaceId,
     market: input.market,
     eventType: "DATA_HEALTH",
     severity: staleData > 0 ? "WATCH" : "INFO",
-    message: `Scheduler ${input.mode} completed: ${packets.length} packets, ${staleData} stale/degraded.`,
+    message: `Scheduler ${input.mode} completed: ${packets.length} packets, ${staleData} stale/degraded, ${alertsEligible} eligible.`,
     payload: {
       runId,
       mode: input.mode,
       timeframe: input.timeframe,
       staleData,
-      alertsFired,
+      alertsEligible,
       alertsSuppressed,
+      alertsDispatched,
       errors,
       runtimeMs,
+      perSymbolEventsCount: perSymbolEvents.length,
     },
   }).catch(() => undefined);
 
@@ -155,10 +290,13 @@ export async function runResearchScheduler(input: SchedulerRunInput): Promise<Sc
     symbolsScanned: packets.length,
     errors,
     staleData,
-    alertsFired,
+    alertsEligible,
     alertsSuppressed,
+    alertsDispatched,
+    alertsFailedDispatch,
     runtimeMs,
     packets,
+    perSymbolEvents: perSymbolEvents.length,
   };
 }
 

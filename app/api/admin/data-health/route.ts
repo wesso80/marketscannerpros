@@ -12,6 +12,7 @@ import { requireAdmin } from "@/lib/adminAuth";
 import { getSessionFromCookie } from "@/lib/auth";
 import { isOperator } from "@/lib/quant/operatorAuth";
 import { q } from "@/lib/db";
+import { getProviderHealthSummary } from "@/lib/admin/providerTelemetry";
 
 export const runtime = "nodejs";
 
@@ -182,11 +183,34 @@ export async function GET(req: NextRequest) {
     },
   ];
 
+  // Phase 10: Provider telemetry — success/failure/latency tracking
+  const providerTelemetry = getProviderHealthSummary();
+
   return NextResponse.json({
     ok: true,
     generatedAt: new Date().toISOString(),
     database: db,
     providers,
     webhooks,
+    providerTelemetry: providerTelemetry.map((summary) => ({
+      provider: summary.provider,
+      overallHealth: summary.overallHealth,
+      successRate: summary.successRate.toFixed(1) + "%",
+      rateLimitRate: summary.rateLimitRate.toFixed(1) + "%",
+      avgLatencyMs: summary.avgLatencyMs.toFixed(0),
+      familyMetrics: summary.familyMetrics.map((m) => ({
+        family: m.endpointFamily,
+        requests: m.requestCount,
+        success: m.successCount,
+        failures: m.failureCount,
+        cacheHits: m.cacheHitCount,
+        rateLimitHits: m.rateLimitHitCount,
+        successRate: m.successRate.toFixed(1) + "%",
+        avgLatency: m.latencyMs.mean.toFixed(0) + "ms",
+        p95Latency: m.latencyMs.p95.toFixed(0) + "ms",
+        lastSuccess: m.lastSuccessAt,
+        lastFailure: m.lastFailureAt,
+      })),
+    })),
   });
 }

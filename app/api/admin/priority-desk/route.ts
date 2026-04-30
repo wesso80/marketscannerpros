@@ -40,11 +40,11 @@ export async function GET(req: NextRequest) {
 
   const bestEquities = topBy(all, (p) => p.assetClass === "equity");
   const bestCrypto = topBy(all, (p) => p.assetClass === "crypto");
-  const bestOptionsPressure = topBy(all, (p) => p.optionsIntelligence.score >= 65);
+  const bestOptionsPressure = topBy(all, (p) => p.optionsIntelligence.optionsPressureScore >= 65);
   const bestVolatilityCompression = topBy(all, (p) => p.volatilityState.breakoutReadiness >= 60 && !p.volatilityState.exhaustion);
   const bestTimeConfluence = topBy(all, (p) => p.timeConfluence.score >= 0.7 || p.timeConfluence.hotWindow);
   const bestNewsDriven = topBy(all, (p) => p.newsContext.status === "ELEVATED");
-  const bestEarningsWatch = topBy(all, (p) => p.earningsContext.risk === "HIGH" || p.earningsContext.risk === "MEDIUM");
+  const bestEarningsWatch = topBy(all, (p) => p.earningsContext.riskLevel === "HIGH" || p.earningsContext.riskLevel === "MEDIUM");
   const avoidTrapList = topBy(all, (p) => p.trapDetection.trapRiskScore >= 60, 8);
   const dataDegradedList = topBy(all, (p) => ["STALE", "DEGRADED", "MISSING", "ERROR", "SIMULATED"].includes(p.dataTruth.status), 8);
   const arcaTopCandidate = all.slice().sort((a, b) => b.trustAdjustedScore - a.trustAdjustedScore)[0] ?? null;

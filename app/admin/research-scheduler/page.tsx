@@ -20,7 +20,19 @@ interface SchedulerRun {
   created_at: string;
 }
 
-const MODES = ["WATCHLIST", "FULL_SWEEP", "HIGH_PRIORITY_RESCAN", "SECTOR_ROTATION", "VOLATILITY_SCAN"];
+// Phase 10: Ensure frontend modes exactly match backend SchedulerMode enum
+const MODES = [
+  "CRYPTO_CONTINUOUS",
+  "EQUITIES_MARKET_HOURS",
+  "PRE_MARKET",
+  "POST_MARKET",
+  "EARNINGS",
+  "MACRO_EVENT",
+  "NEWS",
+  "OPTIONS",
+  "WATCHLIST",
+  "HIGH_PRIORITY_RESCAN",
+];
 const MARKETS = ["CRYPTO", "EQUITIES"];
 const TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1d"];
 

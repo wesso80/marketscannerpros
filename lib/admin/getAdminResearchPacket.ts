@@ -8,6 +8,10 @@ import { computeInternalResearchScore } from "@/lib/engines/internalResearchScor
 import { classifySetup } from "@/lib/engines/setupClassifier";
 import { detectTrapRisk, type TrapDetectionResult } from "@/lib/engines/trapDetection";
 import { buildJournalDNA, computeJournalPatternBoost, type JournalCaseRow } from "@/lib/engines/journalLearning";
+import { computeOptionsIntelligence, type OptionsIntelligence } from "@/lib/engines/optionsIntelligence";
+import { computeCryptoRegimeIntelligence, type CryptoRegimeIntelligence } from "@/lib/engines/cryptoRegimeIntelligence";
+import { computeEarningsRisk, type EarningsRisk } from "@/lib/engines/earningsRisk";
+import { snapshotResearchPacket, loadPriorPacketSnapshot } from "@/lib/admin/researchPacketHistory";
 import { q } from "@/lib/db";
 import type { ArcaAdminContext } from "@/lib/admin/arcaTypes";
 import type { AdminSymbolIntelligence } from "@/lib/admin/types";
@@ -49,11 +53,7 @@ export interface AdminResearchPacket {
     alignmentCount: number;
     nextClusterAt: string;
   };
-  optionsIntelligence: {
-    score: number;
-    crowdedOptionsRisk: number;
-    note: string;
-  };
+  optionsIntelligence: OptionsIntelligence;
   macroContext: {
     regime: "RISK_ON" | "RISK_OFF" | "NEUTRAL";
     note: string;
@@ -62,15 +62,8 @@ export interface AdminResearchPacket {
     status: "CALM" | "ELEVATED" | "UNKNOWN";
     note: string;
   };
-  earningsContext: {
-    windowHours: number | null;
-    risk: "LOW" | "MEDIUM" | "HIGH" | "UNKNOWN";
-    note: string;
-  };
-  cryptoContext: {
-    enabled: boolean;
-    note: string;
-  };
+  earningsContext: EarningsRisk;
+  cryptoContext: CryptoRegimeIntelligence | { enabled: false; note: string };
   liquidityLevels: {
     pdh: number;
     pdl: number;
@@ -172,13 +165,6 @@ function deriveNewsContext(snapshot: AdminSymbolIntelligence) {
     status: elevated ? ("ELEVATED" as const) : ("CALM" as const),
     note: elevated ? "Volatility profile suggests elevated event/news sensitivity." : "No elevated news shock signature detected in volatility profile.",
   };
-}
-
-function deriveEarningsContext(assetClass: AdminAssetClass) {
-  if (assetClass !== "equity") {
-    return { windowHours: null, risk: "UNKNOWN" as const, note: "Earnings context not applicable for this asset class." };
-  }
-  return { windowHours: null, risk: "UNKNOWN" as const, note: "Earnings window unavailable from packet inputs; treat as unknown." };
 }
 
 function buildArcaContext(packet: {
@@ -319,7 +305,34 @@ export async function getAdminResearchPacket(params: {
   const macroContext = deriveMacroContext(snapshot);
   const newsContext = deriveNewsContext(snapshot);
   const assetClass = toAssetClass(market);
-  const earningsContext = deriveEarningsContext(assetClass);
+  
+  // Phase 10: Wire rich intelligence engines
+  const optionsIntelligence = await computeOptionsIntelligence({
+    symbol,
+    assetClass,
+    market,
+    currentPrice: snapshot.price,
+    indicators: snapshot.indicators,
+    crossMarketConfidenceProxy: snapshot.evidence?.crossMarketConfirmation,
+    dataTruth,
+  });
+
+  const earningsContext = await computeEarningsRisk({
+    symbol,
+    assetClass,
+    market,
+    dataTruth,
+  });
+
+  const cryptoContextData: CryptoRegimeIntelligence | { enabled: false; note: string } =
+    assetClass === "crypto"
+      ? await computeCryptoRegimeIntelligence({
+          currentPrice: snapshot.price,
+          marketCapChange: 0, // Not available from snapshot; would need external API
+          btcDominance: 45, // Not available from snapshot; would need external API
+          dataTruth,
+        })
+      : { enabled: false as const, note: "Crypto context not applicable for equities." };
 
   const eligibility = assessAlertEligibility({
     score: internalResearchScore,
@@ -381,18 +394,11 @@ export async function getAdminResearchPacket(params: {
       alignmentCount: snapshot.timeConfluence.alignmentCount,
       nextClusterAt: snapshot.timeConfluence.nextClusterAt,
     },
-    optionsIntelligence: {
-      score: optionsScore,
-      crowdedOptionsRisk: Math.round(optionsScore * 0.75),
-      note: optionsScore >= 70 ? "Elevated options pressure detected." : "No elevated options pressure signature.",
-    },
+    optionsIntelligence,
     macroContext,
     newsContext,
     earningsContext,
-    cryptoContext: {
-      enabled: assetClass === "crypto",
-      note: assetClass === "crypto" ? "Crypto context active for continuous market regime." : "Crypto context not applicable.",
-    },
+    cryptoContext: cryptoContextData,
     liquidityLevels: {
       pdh: snapshot.levels.pdh,
       pdl: snapshot.levels.pdl,
