@@ -22,27 +22,20 @@ import { PUBLIC_AI_SAFETY_GUARDRAILS, appendPublicAISafetyCorrection, buildPubli
 import { getEdgeContext } from '@/lib/intelligence/edgeContextBuilder';
 import { computePerformanceThrottle, applyPerformanceDampener } from '@/lib/ai/performanceThrottle';
 import { computeSessionPhaseOverlay } from '@/lib/ai/sessionPhase';
-import { AI_MODEL_BY_TIER, normalizeTier } from '@/lib/entitlements';
+import { AI_MODEL_BY_TIER, normalizeTier, getDailyAiLimit } from '@/lib/entitlements';
 import { getVerifiedTier } from '@/lib/apiMiddleware';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Tier-based daily limits (database-backed for persistence)
-const TIER_LIMITS: Record<string, number> = {
-  free: 5,       // Free users: 5/day
-  pro: 50,       // Pro subscribers: 50/day
-  pro_trader: 50, // Pro Trader: 50/day (GPT-4.1 model)
-};
-
-// Check daily usage against tier limit (database-backed)
+// Check daily usage against canonical tier limit (database-backed)
 async function checkTierQuota(workspaceId: string, tier: string): Promise<{
   allowed: boolean;
   usageCount: number;
   dailyLimit: number;
 }> {
-  const dailyLimit = TIER_LIMITS[tier] || 5;
+  const dailyLimit = getDailyAiLimit(tier);
   const today = new Date().toISOString().split('T')[0];
   
   try {

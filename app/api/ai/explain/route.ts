@@ -11,6 +11,7 @@ import { q } from '@/lib/db';
 import OpenAI from 'openai';
 import type { ExplainRequest, ExplainResponse, PageSkill } from '@/lib/ai/types';
 import { CONTEXT_VERSION, SKILL_VERSION_PREFIX } from '@/lib/ai/types';
+import { getDailyAiLimit } from '@/lib/entitlements';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -164,6 +165,23 @@ export async function POST(req: NextRequest) {
         actionableInsight: extractActionable(knowledgeMatch[0].content, metricValue),
       };
     } else {
+      // Generate with AI — check per-user quota before spending tokens
+      const today = new Date().toISOString().split('T')[0];
+      const usageResult = await q(
+        `SELECT COUNT(*) as count FROM ai_usage WHERE workspace_id = $1 AND DATE(created_at) = $2`,
+        [session.workspaceId, today]
+      );
+      const usageCount = parseInt(usageResult[0]?.count || '0');
+      const dailyLimit = getDailyAiLimit(session.tier);
+      if (usageCount >= dailyLimit) {
+        return NextResponse.json({
+          error: `Daily AI limit reached (${usageCount}/${dailyLimit}). Cached explanations still available.`,
+          limitReached: true,
+          dailyLimit,
+          usageCount,
+        }, { status: 429 });
+      }
+
       // Generate with AI
       const startTime = Date.now();
       

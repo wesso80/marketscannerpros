@@ -103,9 +103,12 @@ export interface VolatilityState {
 export type DirectionalBias = 'bullish' | 'bearish' | 'neutral';
 
 export interface DirectionalPressure {
+  /** Net directional score in the range -100..+100. Positive = bullish, negative = bearish. */
   score: number;
   bias: DirectionalBias;
+  /** Confidence in the bias direction, 0-100. */
   confidence: number;
+  /** Individual component scores. Each component is bounded by its own DIRECTION_WEIGHTS max (see engine constants). */
   components: {
     stochasticMomentum: number;
     trendStructure: number;

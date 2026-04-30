@@ -600,9 +600,8 @@ export function detectSignal(
   const recentBars = Math.min(STOCHASTIC.RECENT_BARS, bbwpSeries.length);
   const recentSlice = bbwpSeries.slice(-recentBars);
   const wasInCompression = recentSlice.some(v => v <= VOL_REGIME.COMPRESSION_THRESHOLD);
-  const stochMom = computeStochasticMomentum({ stochK: null, stochD: null, stochMomentum: null, ...({} as DVEIndicatorInput) });
 
-  // Compute stoch momentum from direction components (since we already have the score)
+  // Use stochastic momentum directly from direction components (already computed)
   const stochBullish = direction.components.stochasticMomentum > 0;
   const stochBearish = direction.components.stochasticMomentum < 0;
 
