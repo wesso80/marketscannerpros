@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import DataTruthBadge from "@/components/admin/shared/DataTruthBadge";
+import WhyThisRankDrawer from "@/components/admin/WhyThisRankDrawer";
+import { ScoreTypeBadge } from "@/components/ui";
 import type { AdminOpportunityRow } from "@/lib/admin/adminTypes";
 
 type Market = "CRYPTO" | "EQUITIES";
@@ -38,6 +40,7 @@ export default function AdminOpportunityBoard() {
   const [rows, setRows] = useState<AdminOpportunityRow[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedRow, setSelectedRow] = useState<AdminOpportunityRow | null>(null);
   const [timestamp, setTimestamp] = useState<string | null>(null);
 
   async function load() {
@@ -78,6 +81,9 @@ export default function AdminOpportunityBoard() {
 
   return (
     <div style={{ padding: "1rem 1.25rem", color: "#E5E7EB", maxWidth: 1400, margin: "0 auto" }}>
+      {/* Why This Rank Drawer */}
+      <WhyThisRankDrawer row={selectedRow} onClose={() => setSelectedRow(null)} />
+
       <header style={{ marginBottom: "1rem" }}>
         <h1 style={{ fontSize: "1.5rem", fontWeight: 800, margin: 0 }}>Opportunity Research Board</h1>
         <p style={{ fontSize: "0.75rem", color: "#9CA3AF", marginTop: 4 }}>
@@ -144,17 +150,78 @@ export default function AdminOpportunityBoard() {
         </div>
       )}
 
+      {/* Row count */}
       <div style={{ fontSize: "0.7rem", color: "#6B7280", marginBottom: 8 }}>
         {filtered.length} of {rows.length} rows
         {timestamp && <> · scan {new Date(timestamp).toLocaleTimeString()}</>}
       </div>
 
-      {/* Table */}
-      <div style={{ overflowX: "auto", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "0.75rem" }}>
+      {/* ── Mobile card view (hidden on md+) ── */}
+      <div className="block md:hidden space-y-3 mb-4">
+        {filtered.map((row) => (
+          <div key={`card-${row.symbol}`}
+            className="rounded-xl border border-white/[0.07] bg-slate-900/60 p-4 space-y-2">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-black text-white">{row.symbol}</span>
+                  <span className="text-[11px] font-bold rounded border px-1.5 py-0.5 uppercase"
+                    style={{ color: biasColor(row.bias), borderColor: `${biasColor(row.bias)}40`, background: `${biasColor(row.bias)}12` }}>
+                    {row.bias}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  <span className="rounded border px-1.5 py-0.5 text-[10px] font-bold uppercase"
+                    style={{ color: lifecycleColor(row.score.lifecycle), borderColor: `${lifecycleColor(row.score.lifecycle)}40`, background: `${lifecycleColor(row.score.lifecycle)}12` }}>
+                    {row.score.lifecycle}
+                  </span>
+                  <ScoreTypeBadge type="heuristic" compact />
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-black tabular-nums"
+                  style={{ color: row.score.score >= 70 ? "#10B981" : row.score.score >= 50 ? "#FBBF24" : "#9CA3AF" }}>
+                  {row.score.score}
+                </div>
+                <div className="text-[10px] text-slate-600">Research Score</div>
+              </div>
+            </div>
+            <div className="text-xs text-slate-400">{row.setup.label} · {row.score.dominantAxis ?? "—"}</div>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-slate-500">Data Trust</span>
+              <DataTruthBadge truth={row.dataTruth} />
+              {row.score.penalties.length > 0 && (
+                <span className="text-red-400">{row.score.penalties.length} penalty{row.score.penalties.length > 1 ? 'ies' : ''}</span>
+              )}
+            </div>
+            {row.alertState && row.alertState !== "NONE" && (
+              <div className="text-[10px] font-bold text-amber-300 uppercase">Alert: {row.alertState}</div>
+            )}
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setSelectedRow(row)}
+                className="flex-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[11px] font-bold text-emerald-300 hover:bg-emerald-500/15">
+                Why This Rank &#x203A;
+              </button>
+              <a href={`/admin/symbol/${row.symbol}?market=${row.market}&timeframe=${row.timeframe}`}
+                className="flex-1 rounded-lg border border-blue-500/25 bg-blue-500/[0.08] px-3 py-2 text-center text-[11px] font-bold text-blue-300 no-underline hover:bg-blue-500/12">
+                Review &#x203A;
+              </a>
+            </div>
+          </div>
+        ))}
+        {filtered.length === 0 && !loading && (
+          <div className="rounded-xl border border-white/[0.06] bg-slate-900/40 px-4 py-8 text-center text-xs text-slate-500">
+            No rows match filters.
+          </div>
+        )}
+      </div>
+
+      {/* ── Desktop table (hidden on mobile) ── */}
+      <div className="hidden md:block overflow-x-auto border border-white/[0.06] rounded-xl">
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
           <thead style={{ background: "rgba(17,24,39,0.8)" }}>
             <tr>
-              {["#", "Symbol", "Bias", "Setup", "Score", "Lifecycle", "Dominant Axis", "Data Trust", "Penalties", "Boosts", ""].map((h) => (
+              {["#", "Symbol", "Bias", "Setup", "Score", "Type", "Lifecycle", "Dominant Axis", "Data Trust", "Penalties", "Boosts", ""].map((h) => (
                 <th key={h} style={thStyle}>{h}</th>
               ))}
             </tr>
@@ -177,6 +244,7 @@ export default function AdminOpportunityBoard() {
                   </span>
                   <span style={{ color: "#6B7280", marginLeft: 4 }}>/100</span>
                 </td>
+                <td style={tdStyle}><ScoreTypeBadge type="heuristic" compact /></td>
                 <td style={tdStyle}>
                   <span style={{ color: lifecycleColor(row.score.lifecycle), fontWeight: 700, fontSize: "0.7rem" }}>
                     {row.score.lifecycle}
@@ -191,21 +259,33 @@ export default function AdminOpportunityBoard() {
                   {row.score.boosts.length > 0 ? row.score.boosts.length : "—"}
                 </td>
                 <td style={tdStyle}>
-                  <a href={`/admin/symbol/${row.symbol}?market=${row.market}&timeframe=${row.timeframe}`}
-                    style={{
-                      padding: "0.3rem 0.6rem", borderRadius: "0.4rem",
-                      background: "rgba(59,130,246,0.15)", border: "1px solid rgba(59,130,246,0.3)",
-                      color: "#93C5FD", fontSize: "0.7rem", fontWeight: 700,
-                      textDecoration: "none", whiteSpace: "nowrap",
-                    }}>
-                    Review →
-                  </a>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button
+                      onClick={() => setSelectedRow(row)}
+                      style={{
+                        padding: "0.3rem 0.6rem", borderRadius: "0.4rem",
+                        background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.3)",
+                        color: "#6EE7B7", fontSize: "0.7rem", fontWeight: 700,
+                        cursor: "pointer", whiteSpace: "nowrap",
+                      }}>
+                      Why This Rank
+                    </button>
+                    <a href={`/admin/symbol/${row.symbol}?market=${row.market}&timeframe=${row.timeframe}`}
+                      style={{
+                        padding: "0.3rem 0.6rem", borderRadius: "0.4rem",
+                        background: "rgba(59,130,246,0.15)", border: "1px solid rgba(59,130,246,0.3)",
+                        color: "#93C5FD", fontSize: "0.7rem", fontWeight: 700,
+                        textDecoration: "none", whiteSpace: "nowrap",
+                      }}>
+                      Review →
+                    </a>
+                  </div>
                 </td>
               </tr>
             ))}
             {filtered.length === 0 && !loading && (
               <tr>
-                <td colSpan={11} style={{ ...tdStyle, textAlign: "center", color: "#6B7280", padding: "2rem" }}>
+                <td colSpan={12} style={{ ...tdStyle, textAlign: "center", color: "#6B7280", padding: "2rem" }}>
                   No rows match filters.
                 </td>
               </tr>

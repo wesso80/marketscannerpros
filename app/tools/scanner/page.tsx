@@ -21,6 +21,7 @@ import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 import { saveResearchCase } from '@/lib/clientResearchCases';
 import DataFreshnessBadge from '@/components/market/DataFreshnessBadge';
 import MarketStatusStrip from '@/components/market/MarketStatusStrip';
+import ScoreTypeBadge from '@/components/ui/ScoreTypeBadge';
 
 /* ─── Helpers ─── */
 function dirColor(d?: string) {
@@ -469,6 +470,23 @@ function RankedFallbackList({ rows, activeRegime, onRowClick }: { rows: ScanResu
                 <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">Alignment</div>
                 <div className="mt-1 text-xs font-black text-white">{row.confidence != null ? `${row.confidence}%` : 'Mixed'}</div>
               </div>
+            </div>
+            {/* Algorithm truth labels */}
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <ScoreTypeBadge
+                type={row.scoreQuality?.staleDataPenalty ? 'stale' : row.scoreQuality?.missingEvidencePenalty ? 'partial' : 'heuristic'}
+                compact
+              />
+              {row.scoreQuality?.missingEvidencePenalty != null && row.scoreQuality.missingEvidencePenalty > 0 && (
+                <span className="inline-flex items-center rounded border border-amber-500/25 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold uppercase text-amber-300">
+                  −{row.scoreQuality.missingEvidencePenalty} missing evidence
+                </span>
+              )}
+              {row.scoreQuality?.liquidityPenalty != null && row.scoreQuality.liquidityPenalty > 0 && (
+                <span className="inline-flex items-center rounded border border-slate-600/40 bg-slate-800/40 px-1.5 py-0.5 text-[10px] font-bold uppercase text-slate-400">
+                  −{row.scoreQuality.liquidityPenalty} liquidity
+                </span>
+              )}
             </div>
             <p className="mt-3 text-xs leading-5 text-slate-400">{reason}</p>
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2">

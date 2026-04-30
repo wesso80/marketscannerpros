@@ -289,6 +289,113 @@ export default function DashboardPage() {
         </div>
       </section>
 
+      {/* ─── Volatility Watch + Time Confluence + ARCA Summary ─── */}
+      <section className="grid gap-3 md:grid-cols-3" aria-label="Volatility and research context panels">
+        {/* Volatility Watch */}
+        <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-4">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <div>
+              <div className="text-[0.62rem] font-extrabold uppercase tracking-[0.14em] text-purple-300">Volatility Watch</div>
+              <div className="mt-0.5 text-sm font-black text-white">Compression &amp; expansion signals</div>
+            </div>
+            <a href="/tools/volatility-engine" className="rounded border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 text-[10px] font-bold uppercase text-purple-300 no-underline hover:bg-purple-500/15">DVE &#x203A;</a>
+          </div>
+          {cached.loading ? (
+            <div className="space-y-2">
+              {[1,2,3].map(i => <div key={i} className="h-6 animate-pulse rounded bg-slate-700/40" />)}
+            </div>
+          ) : (
+            <div className="space-y-1.5 text-xs">
+              {/* High ADX = trending (expansion); low ADX = compression candidate */}
+              {([...cached.equity.slice(0,3), ...cached.crypto.slice(0,2)] as CachedSymbol[])
+                .sort((a, b) => Math.abs(b.adx) - Math.abs(a.adx))
+                .slice(0, 4)
+                .map((r: CachedSymbol) => {
+                  const phase = r.adx >= 30 ? 'Trending' : r.adx >= 20 ? 'Developing' : 'Compression';
+                  const phaseColor = r.adx >= 30 ? '#10B981' : r.adx >= 20 ? '#F59E0B' : '#A78BFA';
+                  return (
+                    <button key={`vol-${r.symbol}`} type="button" onClick={() => openGoldenEgg(r.symbol)}
+                      className="flex w-full items-center justify-between rounded-md border border-white/[0.06] bg-slate-900/30 px-2.5 py-1.5 hover:border-purple-400/20 hover:bg-purple-400/[0.04]">
+                      <span className="font-bold text-white">{r.symbol}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono tabular-nums text-slate-400">ADX {Math.round(r.adx)}</span>
+                        <span className="rounded border px-1.5 py-0 text-[10px] font-bold uppercase"
+                          style={{ color: phaseColor, borderColor: `${phaseColor}40`, background: `${phaseColor}12` }}>{phase}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              {[...cached.equity, ...cached.crypto].length === 0 && (
+                <div className="py-3 text-center text-slate-500">Run Scanner to populate volatility watch</div>
+              )}
+              <div className="pt-1 text-[10px] text-slate-600">ADX ≥ 30 trending · 20–29 developing · &lt;20 compression. Heuristic only.</div>
+            </div>
+          )}
+        </div>
+
+        {/* Time Confluence Watch */}
+        <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-4">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <div>
+              <div className="text-[0.62rem] font-extrabold uppercase tracking-[0.14em] text-sky-300">Time Confluence Watch</div>
+              <div className="mt-0.5 text-sm font-black text-white">Upcoming close clusters</div>
+            </div>
+            <a href="/tools/time-scanner" className="rounded border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[10px] font-bold uppercase text-sky-300 no-underline hover:bg-sky-500/15">Time &#x203A;</a>
+          </div>
+          <div className="space-y-2 text-xs">
+            {regime.data ? (
+              <>
+                <div className="rounded-md border border-sky-400/15 bg-sky-400/[0.06] px-3 py-2">
+                  <div className="font-bold text-sky-200">Regime Context</div>
+                  <div className="mt-1 text-slate-400">{regime.data.regime.replace(/_/g, ' ')} · {regime.data.riskLevel} risk environment</div>
+                </div>
+                <div className="rounded-md border border-white/[0.06] bg-slate-900/30 px-3 py-2 text-slate-400">
+                  <div className="font-bold text-white mb-1">What to check</div>
+                  <div>· Weekly/monthly closes within next 3 sessions</div>
+                  <div>· High-impact calendar events ({highImpactEventCount} queued)</div>
+                  <div>· Crypto: UTC Saturday close risk</div>
+                </div>
+              </>
+            ) : (
+              <div className="py-3 text-center text-slate-500">Regime loading…</div>
+            )}
+            <a href="/tools/time-scanner" className="block rounded-md border border-sky-500/20 bg-sky-500/[0.06] px-3 py-1.5 text-center text-[11px] font-bold text-sky-300 no-underline hover:bg-sky-500/10">
+              Open Time Scanner for close calendar &#x203A;
+            </a>
+          </div>
+        </div>
+
+        {/* ARCA Research Summary */}
+        <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-4">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <div>
+              <div className="text-[0.62rem] font-extrabold uppercase tracking-[0.14em] text-teal-300">ARCA Research Context</div>
+              <div className="mt-0.5 text-sm font-black text-white">AI analyst briefing</div>
+            </div>
+            <a href="/tools/ai-analyst" className="rounded border border-teal-500/30 bg-teal-500/10 px-2 py-0.5 text-[10px] font-bold uppercase text-teal-300 no-underline hover:bg-teal-500/15">Ask &#x203A;</a>
+          </div>
+          <div className="space-y-2 text-xs">
+            <div className="rounded-md border border-teal-400/15 bg-teal-400/[0.06] px-3 py-2">
+              <div className="font-bold text-teal-200">MSP Analyst</div>
+              <div className="mt-1 text-slate-400">
+                {regime.data
+                  ? `Regime is ${regime.data.regime.replace(/_/g, ' ')}. ${regime.data.riskLevel === 'high' ? 'Elevated risk — review evidence carefully before queuing any scenario.' : 'Normal risk conditions. Review evidence for each queued symbol.'}`
+                  : 'Loading regime context…'}
+              </div>
+            </div>
+            <div className="rounded-md border border-white/[0.06] bg-slate-900/30 px-3 py-2 text-slate-400">
+              <div className="font-bold text-white mb-1">Today&apos;s research questions</div>
+              <div>· Which symbols have the most aligned evidence?</div>
+              <div>· What invalidates the top setup?</div>
+              <div>· What does the volatility phase suggest?</div>
+            </div>
+            <a href="/tools/ai-analyst" className="block rounded-md border border-teal-500/20 bg-teal-500/[0.06] px-3 py-1.5 text-center text-[11px] font-bold text-teal-300 no-underline hover:bg-teal-500/10">
+              Open MSP Analyst &#x203A;
+            </a>
+          </div>
+        </div>
+      </section>
+
       {/* ─── Dashboard Lens Rail ─── */}
       <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">

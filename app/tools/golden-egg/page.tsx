@@ -20,6 +20,7 @@ import EvidenceStack from '@/components/market/EvidenceStack';
 import MarketStatusStrip from '@/components/market/MarketStatusStrip';
 import RiskFlagPanel, { type RiskFlag } from '@/components/market/RiskFlagPanel';
 import { buildMarketDataProviderStatus } from '@/lib/scanner/providerStatus';
+import ScoreTypeBadge from '@/components/ui/ScoreTypeBadge';
 
 /** Client-safe copy of known crypto symbols for asset type detection */
 const CRYPTO_SET = new Set([
@@ -818,6 +819,10 @@ export default function GoldenEggPage() {
                     <div className="text-3xl font-bold" style={{ color: verdictColor(geAssessment || 'WATCH') }}>{geConfluenceScore}%</div>
                     <div className="text-[11px] text-slate-500 uppercase">Confluence</div>
                   </div>
+                  <ScoreTypeBadge
+                    type={geDataQuality === 'MISSING' ? 'partial' : geDataQuality === 'DEGRADED' ? 'partial' : 'evidence-alignment'}
+                    compact
+                  />
                 </div>
               </div>
 
