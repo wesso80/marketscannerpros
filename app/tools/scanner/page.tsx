@@ -430,28 +430,52 @@ function RankedMobileCards({ rows, activeRegime, onRowClick }: { rows: ScanResul
 
 function RankedFallbackList({ rows, activeRegime, onRowClick }: { rows: ScanResult[]; activeRegime: string; onRowClick: (row: ScanResult) => void }) {
   return (
-    <div className="space-y-1.5">
+    <div className="grid gap-3">
       {rows.map((row, index) => {
-        const msp = computeMspScore(row, activeRegime);
         const lifecycle = deriveLifecycleState(row, activeRegime);
+        const msp = computeMspScore(row, activeRegime);
         const trust = rankedTrustLabel(row);
+        const trustDetail = rankedTrustDetail(row);
+        const reason = summarizeRankedReason(row, lifecycle, isRegimeCompatibleForRegime(row, activeRegime), activeRegime);
+        const mspColor = msp >= 70 ? '#10B981' : msp >= 50 ? '#F59E0B' : msp >= 30 ? '#94A3B8' : '#EF4444';
         return (
           <button
             key={`${(row as any)._assetClass || 'asset'}-${row.symbol || 'unknown'}-${index}`}
             type="button"
             onClick={() => onRowClick(row)}
-            className="w-full rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2 text-left transition hover:border-emerald-400/30 hover:bg-emerald-400/[0.05]"
+            className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-4 text-left transition hover:border-emerald-400/35 hover:bg-emerald-400/[0.05]"
             aria-label={`Review scenario for ${row.symbol || 'symbol'}`}
           >
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="truncate text-sm font-black text-white">{row.symbol || 'Unknown symbol'}</div>
-                <div className="truncate text-[11px] text-slate-500">{compactBiasLabel(row.direction)} · {lifecycleLabel(lifecycle)}</div>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">Rank {index + 1}</div>
+                <div className="mt-1 text-xl font-black text-white">{row.symbol || 'Unknown'}</div>
+                <div className="mt-0.5 text-xs text-slate-500">{row.scoreV2?.regime?.label || row.type || 'Market scenario'}</div>
               </div>
-              <div className="shrink-0 text-right">
-                <div className="text-sm font-black text-emerald-300">{msp}</div>
-                <div className="text-[11px] text-slate-500">{trust}</div>
+              <span className="rounded-md border px-2 py-1 text-[11px] font-black uppercase" style={{ color: dataQualityColor(trust), borderColor: dataQualityColor(trust) + '55', backgroundColor: dataQualityColor(trust) + '15' }} title={trustDetail}>
+                {trust}
+              </span>
+            </div>
+            <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+              <div className="rounded-lg bg-slate-950/45 px-2 py-2">
+                <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">MSP</div>
+                <div className="mt-1 text-sm font-black" style={{ color: mspColor }}>{msp}</div>
               </div>
+              <div className="rounded-lg bg-slate-950/45 px-2 py-2">
+                <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">Bias</div>
+                <div className="mt-1 text-xs font-black text-white">{compactBiasLabel(row.direction)}</div>
+              </div>
+              <div className="rounded-lg bg-slate-950/45 px-2 py-2">
+                <div className="text-[10px] uppercase tracking-[0.1em] text-slate-500">Alignment</div>
+                <div className="mt-1 text-xs font-black text-white">{row.confidence != null ? `${row.confidence}%` : 'Mixed'}</div>
+              </div>
+            </div>
+            <p className="mt-3 text-xs leading-5 text-slate-400">{reason}</p>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <span className="rounded-md border px-2 py-0.5 text-[10px] font-black uppercase" style={{ color: LIFECYCLE_COLORS[lifecycle], borderColor: LIFECYCLE_COLORS[lifecycle] + '40', backgroundColor: LIFECYCLE_COLORS[lifecycle] + '15' }}>
+                {lifecycleLabel(lifecycle)}
+              </span>
+              <span className="text-xs font-bold text-emerald-300">Why This Rank / Review</span>
             </div>
           </button>
         );
@@ -1465,7 +1489,6 @@ export default function ScannerPage() {
             ) : (
               <>
               <RankedFallbackList rows={filtered} activeRegime={currentRegime} onRowClick={handleV2RowClick} />
-              <RankedMobileCards rows={filtered} activeRegime={currentRegime} onRowClick={handleV2RowClick} />
               <div className="hidden overflow-x-auto -mx-1 md:block">
                 <table className="w-full text-xs" style={{ minWidth: 1040 }} aria-label="Ranked scanner results">
                   <thead>
