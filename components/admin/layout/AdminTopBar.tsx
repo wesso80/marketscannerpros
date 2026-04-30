@@ -9,7 +9,7 @@ export default function AdminTopBar({ health }: { health?: SystemHealth | null }
     <header className="flex h-11 items-center justify-between border-b border-white/10 bg-[#0b1220] px-4">
       <div className="flex items-center gap-3">
         <div className="text-sm font-bold text-white tracking-wide">
-          MSP Operator <span className="font-light text-white/50">Terminal</span>
+          MSP <span className="font-light text-white/50">Private Research Desk</span>
         </div>
         <div className="hidden sm:flex items-center gap-2">
           <StatusPill label={`Feed ${h?.feed ?? "—"}`} tone={h?.feed === "HEALTHY" ? "green" : "yellow"} />

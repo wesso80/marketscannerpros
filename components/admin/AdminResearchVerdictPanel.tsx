@@ -12,9 +12,14 @@ const lifecycleColors: Record<string, string> = {
 };
 
 function biasColor(b: string): string {
-  if (b === "LONG") return "#10B981";
-  if (b === "SHORT") return "#EF4444";
+  if (b === "LONG" || b === "BULLISH_RESEARCH") return "#10B981";
+  if (b === "SHORT" || b === "BEARISH_RESEARCH") return "#EF4444";
   return "#9CA3AF";
+}
+function formatBias(b: string): string {
+  if (b === "LONG" || b === "BULLISH_RESEARCH") return "Bullish Bias";
+  if (b === "SHORT" || b === "BEARISH_RESEARCH") return "Bearish Bias";
+  return b;
 }
 
 /**
@@ -47,7 +52,7 @@ export default function AdminResearchVerdictPanel({
         </div>
         <div style={{ fontSize: "2rem", fontWeight: 800, letterSpacing: "0.02em" }}>{symbol}</div>
         <div style={{ marginTop: 4, fontSize: "0.8rem", color: biasColor(bias), fontWeight: 700 }}>
-          {bias} · {setup.label}
+          {formatBias(bias)} · {setup.label}
         </div>
         <div style={{ fontSize: "0.7rem", color: "#9CA3AF", marginTop: 2, maxWidth: 320 }}>
           {setup.description}

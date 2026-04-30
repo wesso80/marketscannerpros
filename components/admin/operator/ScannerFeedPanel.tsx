@@ -34,7 +34,7 @@ export default function ScannerFeedPanel({ hits, activeSymbol, onSelect }: {
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-sm text-white">{hit.symbol}</span>
-                <span className="text-xs text-emerald-400">{hit.bias}</span>
+                <span className="text-xs text-emerald-400">{hit.bias === "LONG" ? "Bullish" : hit.bias === "SHORT" ? "Bearish" : hit.bias}</span>
               </div>
               <StatusPill label={hit.permission} tone={permissionTone(hit.permission)} />
             </div>

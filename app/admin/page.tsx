@@ -297,8 +297,9 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
     .filter((item) => item.status === "pending")
     .sort((a, b) => Number(b.confidence || 0) - Number(a.confidence || 0))
     .slice(0, 5);
-  const riskPermission = riskState?.killSwitchActive ? "KILL" : riskState?.permission || "WAIT";
-  const riskAllowsTrading = ["ALLOW", "GO", "ALLOW_REDUCED"].includes(riskPermission);
+  const riskPermissionRaw = riskState?.killSwitchActive ? "KILL" : riskState?.permission || "WAIT";
+  const riskPermission = riskPermissionRaw === "KILL" ? "ALERTS PAUSED" : riskPermissionRaw === "BLOCK" ? "SYSTEM GUARD ACTIVE" : riskPermissionRaw;
+  const riskAllowsTrading = ["ALLOW", "GO", "ALLOW_REDUCED"].includes(riskPermissionRaw);
   const topScannerHits = [...scannerHits]
     .sort((a, b) => (Number(b.confidence || 0) + Number(b.symbolTrust || 0)) - (Number(a.confidence || 0) + Number(a.symbolTrust || 0)))
     .slice(0, 5);
@@ -312,12 +313,13 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
   )));
   const operatorState = operatorScore >= 75 ? "READY" : operatorScore >= 50 ? "WATCH" : "CHECK";
   const actionQueue = [
-    riskPermission === "KILL" ? "Research alerts paused — suppress notifications" : riskAllowsTrading ? `Risk governor ${riskPermission}` : `Risk governor says ${riskPermission}`,
+    riskPermissionRaw === "KILL" ? "Research alerts paused — suppress notifications" : riskAllowsTrading ? `Research gate open — ${riskPermission}` : `Research gate says ${riskPermission}`,
+
     topScannerHits.length > 0 ? `${topScannerHits.length} live scanner candidates ranked` : "No live scanner candidates",
     systemHealth?.dbConnected === false ? "Database health check failed" : "Database connected",
     pendingLearning > 0 ? `${pendingLearning} learning predictions need processing` : "Learning queue clear",
     (stats?.overview.pendingDeleteRequests || 0) > 0 ? `${stats?.overview.pendingDeleteRequests} delete requests pending` : "No deletion backlog",
-    financials && financials.monthlyProfit < 0 ? `Monthly burn ${formatCurrency(Math.abs(financials.monthlyProfit))}` : "Monthly P/L stable",
+    financials && financials.monthlyProfit < 0 ? `Monthly burn ${formatCurrency(Math.abs(financials.monthlyProfit))}` : "Business P/L stable",
     pendingPredictions.length > 0 ? `${pendingPredictions.length} pending high-confidence predictions` : "No pending prediction cluster",
   ];
 
@@ -325,7 +327,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
     <div className="mx-auto max-w-7xl px-4 py-6">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
         <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: "#E5E7EB" }}>
-          Operator Command Center
+          Private Research Command Centre
         </h1>
         <span style={{ color: "#9CA3AF", fontSize: "0.9rem" }}>
           {new Date().toLocaleDateString('en-AU', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
@@ -371,7 +373,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: "1rem", alignItems: "flex-start", marginBottom: "1rem" }}>
             <div>
-              <div style={{ color: "#94A3B8", fontSize: "0.75rem", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "0.35rem" }}>Private operator state</div>
+              <div style={{ color: "#94A3B8", fontSize: "0.75rem", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "0.35rem" }}>Senior desk state</div>
               <div style={{ display: "flex", gap: "0.75rem", alignItems: "baseline", flexWrap: "wrap" }}>
                 <span style={{ color: operatorState === "READY" ? "#10B981" : operatorState === "WATCH" ? "#F59E0B" : "#EF4444", fontSize: "2.4rem", fontWeight: 800, lineHeight: 1 }}>{operatorState}</span>
                 <span style={{ color: "#CBD5E1", fontSize: "1rem" }}>{operatorScore}/100 readiness</span>
@@ -396,16 +398,16 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(150px, 100%), 1fr))", gap: "0.75rem", marginBottom: "1rem" }}>
             <div style={statBoxStyle}>
-              <div style={{ color: riskAllowsTrading ? "#10B981" : riskPermission === "KILL" || riskPermission === "BLOCK" ? "#EF4444" : "#F59E0B", fontSize: "1.35rem", fontWeight: 800 }}>
+              <div style={{ color: riskAllowsTrading ? "#10B981" : riskPermissionRaw === "KILL" || riskPermissionRaw === "BLOCK" ? "#EF4444" : "#F59E0B", fontSize: "1.1rem", fontWeight: 800 }}>
                 {riskPermission}
               </div>
-              <div style={{ color: "#94A3B8", fontSize: "0.75rem" }}>Risk Permission</div>
+              <div style={{ color: "#94A3B8", fontSize: "0.75rem" }}>Alert Posture</div>
             </div>
             <div style={statBoxStyle}>
               <div style={{ color: financials && financials.monthlyProfit >= 0 ? "#10B981" : "#EF4444", fontSize: "1.35rem", fontWeight: 800 }}>
                 {financials ? formatCurrency(financials.monthlyProfit) : "$0"}
               </div>
-              <div style={{ color: "#94A3B8", fontSize: "0.75rem" }}>Monthly P/L</div>
+              <div style={{ color: "#94A3B8", fontSize: "0.75rem" }}>Business P/L</div>
             </div>
             <div style={statBoxStyle}>
               <div style={{ color: pendingLearning > 0 ? "#F59E0B" : "#10B981", fontSize: "1.35rem", fontWeight: 800 }}>{pendingLearning}</div>
@@ -415,7 +417,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
               <div style={{ color: learningWinRate >= 55 ? "#10B981" : learningWinRate >= 45 ? "#F59E0B" : "#EF4444", fontSize: "1.35rem", fontWeight: 800 }}>
                 {learningOutcomes ? `${learningWinRate.toFixed(1)}%` : "No data"}
               </div>
-              <div style={{ color: "#94A3B8", fontSize: "0.75rem" }}>Hit Rate</div>
+              <div style={{ color: "#94A3B8", fontSize: "0.75rem" }}>Research Hit Rate</div>
             </div>
             <div style={statBoxStyle}>
               <div style={{ color: systemHealth?.dbConnected ? "#10B981" : "#EF4444", fontSize: "1.35rem", fontWeight: 800 }}>
@@ -462,15 +464,15 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
         </section>
 
         <section style={{ ...cardStyle, border: "1px solid rgba(59,130,246,0.32)" }}>
-          <div style={{ color: "#94A3B8", fontSize: "0.75rem", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "0.6rem" }}>Launch deck</div>
+          <div style={{ color: "#94A3B8", fontSize: "0.75rem", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "0.6rem" }}>Command Deck</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "0.55rem", marginBottom: "1rem" }}>
             {[
               ["/admin/live-scanner", "Live Scanner"],
-              ["/admin/operator-terminal", "Operator Terminal"],
-              ["/admin/risk", "Risk Governor"],
+              ["/admin/operator-terminal", "Research Terminal"],
+              ["/admin/risk", "Research Guard"],
               ["/admin/outcomes", "Signal Outcomes"],
-              ["/admin/quant", "Quant Terminal"],
-              ["/admin/system", "System Health"],
+              ["/admin/backtest-lab", "Backtest Lab"],
+              ["/admin/data-health", "Data Health"],
             ].map(([href, label]) => (
               <Link key={href} href={href} style={{
                 border: "1px solid rgba(148,163,184,0.18)",
@@ -488,7 +490,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
           </div>
           <div style={{ borderTop: "1px solid rgba(148,163,184,0.14)", paddingTop: "1rem", marginBottom: "1rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", marginBottom: "0.55rem" }}>
-              <span style={{ color: "#94A3B8", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.12em" }}>Live candidates</span>
+              <span style={{ color: "#94A3B8", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.12em" }}>Best Play Candidates</span>
               <span style={{ color: "#64748B", fontSize: "0.75rem" }}>15m crypto</span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
@@ -512,7 +514,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
                   }}
                 >
                   <span style={{ fontWeight: 900 }}>{hit.symbol}</span>
-                  <span style={{ color: hit.bias === "LONG" ? "#10B981" : hit.bias === "SHORT" ? "#EF4444" : "#94A3B8", fontWeight: 800 }}>{hit.bias}</span>
+                  <span style={{ color: hit.bias === "LONG" ? "#10B981" : hit.bias === "SHORT" ? "#EF4444" : "#94A3B8", fontWeight: 800 }}>{hit.bias === "LONG" ? "Bullish Bias" : hit.bias === "SHORT" ? "Bearish Bias" : hit.bias}</span>
                   <span style={{ color: hit.permission === "GO" ? "#10B981" : hit.permission === "BLOCK" ? "#EF4444" : "#F59E0B", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {hit.playbook || hit.regime || "—"}
                   </span>
@@ -522,7 +524,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
             </div>
           </div>
           <div style={{ borderTop: "1px solid rgba(148,163,184,0.14)", paddingTop: "1rem" }}>
-            <label style={{ display: "block", color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.45rem" }}>Symbol terminal jump</label>
+            <label style={{ display: "block", color: "#94A3B8", fontSize: "0.75rem", marginBottom: "0.45rem" }}>Symbol Research Jump</label>
             <div style={{ display: "flex", gap: "0.5rem" }}>
               <input
                 value={symbolJump}
@@ -552,13 +554,13 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
                   cursor: "pointer",
                 }}
               >
-                Open
+                Review
               </button>
             </div>
           </div>
           <div style={{ borderTop: "1px solid rgba(148,163,184,0.14)", marginTop: "1rem", paddingTop: "1rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: "0.75rem", marginBottom: "0.55rem" }}>
-              <span style={{ color: "#94A3B8", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.12em" }}>Edge watchlist</span>
+              <span style={{ color: "#94A3B8", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.12em" }}>Senior Desk Watchlist</span>
               <span style={{ color: "#64748B", fontSize: "0.75rem" }}>{bestSymbols.length} ranked</span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>

@@ -70,7 +70,7 @@ function SignalsTable({ hits }: { hits: ScannerHit[] }) {
           <div key={`${row.symbol}-${row.bias}`} className="grid grid-cols-[120px_60px_80px_120px_80px_auto] gap-2 px-4 py-2 items-center hover:bg-white/[0.02] transition text-[11px]">
             <span className="font-medium text-white">{row.symbol}</span>
             <span className={row.bias === "LONG" ? "text-emerald-400" : row.bias === "SHORT" ? "text-red-400" : "text-white/40"}>
-              {row.bias}
+              {row.bias === "LONG" ? "Bullish" : row.bias === "SHORT" ? "Bearish" : row.bias}
             </span>
             <span className="text-white/60">{row.confidence}%</span>
             <StatusPill label={String(row.regime)} tone="purple" />

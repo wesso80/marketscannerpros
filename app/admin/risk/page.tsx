@@ -16,16 +16,16 @@ export default function RiskPage() {
 
   return (
     <div className="p-4 space-y-4">
-      <SectionTitle title="Risk Governor" subtitle={error ? `Error: ${error}` : undefined} />
+      <SectionTitle title="Research Guard" subtitle={error ? `Error: ${error}` : undefined} />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <MiniStat label="Open Risk" value={`$${openRiskUsd.toLocaleString()}`} />
         <MiniStat label="Daily Drawdown" value={`${(drawdown * 100).toFixed(2)}%`} />
         <MiniStat label="Correlation Risk" value={risk ? `${(risk.correlationRisk * 100).toFixed(0)}%` : "—"} />
-        <MiniStat label="Positions" value={risk ? `${risk.activePositions} / ${risk.maxPositions}` : "— / —"} />
+        <MiniStat label="Open Scenarios" value={risk ? `${risk.activePositions} / ${risk.maxPositions}` : "\u2014 / \u2014"} />
       </div>
 
-      <AdminCard title="Risk Status" actions={
+      <AdminCard title="Alert Posture" actions={
         <button
           onClick={refetch}
           className="rounded-lg bg-white/10 px-3 py-1 text-xs font-medium text-white/60 hover:bg-white/20 transition"
@@ -35,14 +35,14 @@ export default function RiskPage() {
       }>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-white/55 text-sm">Permission</span>
+            <span className="text-white/55 text-sm">Research Gate</span>
             <StatusPill
               label={risk?.permission ?? "WAIT"}
               tone={risk?.permission === "GO" ? "green" : risk?.permission === "BLOCK" ? "red" : "yellow"}
             />
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-white/55 text-sm">Risk Source</span>
+            <span className="text-white/55 text-sm">Data Source</span>
             <span className="text-white/60 text-xs font-mono">{risk?.source ?? "fallback"}</span>
           </div>
           <div className="flex items-center justify-between">
@@ -63,22 +63,22 @@ export default function RiskPage() {
         </div>
       </AdminCard>
 
-      <AdminCard title="Position Limits">
+      <AdminCard title="Research Scenario Limits">
         <div className="space-y-2 text-sm">
           <div className="flex items-center justify-between">
-            <span className="text-white/55">Max Concurrent Positions</span>
+            <span className="text-white/55">Max Concurrent Scenarios</span>
             <span className="text-white/90 font-mono">{risk?.maxPositions ?? 10}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-white/55">Active Positions</span>
+            <span className="text-white/55">Active Research Scenarios</span>
             <span className="text-white/90 font-mono">{risk?.activePositions ?? 0}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-white/55">Max Daily Loss</span>
+            <span className="text-white/55">Daily Drawdown Guard</span>
             <span className="text-white/90 font-mono">2.0%</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-white/55">Max Drawdown</span>
+            <span className="text-white/55">Hard Drawdown Cap</span>
             <span className="text-white/90 font-mono">6.0%</span>
           </div>
         </div>

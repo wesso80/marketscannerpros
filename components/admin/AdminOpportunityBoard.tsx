@@ -26,9 +26,17 @@ function lifecycleColor(lc: string): string {
 }
 
 function biasColor(b: string): string {
-  if (b === "LONG") return "#10B981";
-  if (b === "SHORT") return "#EF4444";
+  if (b === "LONG" || b === "BULLISH_RESEARCH") return "#10B981";
+  if (b === "SHORT" || b === "BEARISH_RESEARCH") return "#EF4444";
   return "#9CA3AF";
+}
+
+function formatBias(b: string): string {
+  if (b === "LONG" || b === "BULLISH_RESEARCH") return "Bullish Bias";
+  if (b === "SHORT" || b === "BEARISH_RESEARCH") return "Bearish Bias";
+  if (b === "NEUTRAL") return "Neutral";
+  if (b === "MIXED") return "Mixed";
+  return b;
 }
 
 export default function AdminOpportunityBoard() {
@@ -167,7 +175,7 @@ export default function AdminOpportunityBoard() {
                   <span className="text-lg font-black text-white">{row.symbol}</span>
                   <span className="text-[11px] font-bold rounded border px-1.5 py-0.5 uppercase"
                     style={{ color: biasColor(row.bias), borderColor: `${biasColor(row.bias)}40`, background: `${biasColor(row.bias)}12` }}>
-                    {row.bias}
+                    {formatBias(row.bias)}
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-1 mt-1">
@@ -232,7 +240,7 @@ export default function AdminOpportunityBoard() {
                 <td style={tdStyle}>{row.rank}</td>
                 <td style={{ ...tdStyle, fontWeight: 700 }}>{row.symbol}</td>
                 <td style={tdStyle}>
-                  <span style={{ color: biasColor(row.bias), fontWeight: 700 }}>{row.bias}</span>
+                  <span style={{ color: biasColor(row.bias), fontWeight: 700 }}>{formatBias(row.bias)}</span>
                 </td>
                 <td style={tdStyle} title={row.setup.description}>{row.setup.label}</td>
                 <td style={tdStyle}>

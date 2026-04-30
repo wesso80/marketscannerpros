@@ -5,32 +5,51 @@ import { usePathname } from "next/navigation";
 
 const sections = [
   {
-    label: "TERMINAL",
+    label: "RESEARCH",
     items: [
-      { href: "/admin/operator", label: "Operator", icon: "⚡" },
+      { href: "/admin", label: "Command Centre", icon: "▣" },
+      { href: "/admin/priority-desk", label: "Priority Desk", icon: "★" },
+      { href: "/admin/opportunity-board", label: "Best Plays", icon: "◈" },
       { href: "/admin/live-scanner", label: "Live Scanner", icon: "📡" },
-      { href: "/admin/risk", label: "Risk", icon: "🛡️" },
-      { href: "/admin/diagnostics", label: "Diagnostics", icon: "🔬" },
+      { href: "/admin/operator-terminal", label: "Research Terminal", icon: "⚡" },
     ],
   },
   {
-    label: "SYSTEM",
+    label: "INTELLIGENCE",
     items: [
-      { href: "/admin/system", label: "System", icon: "🖥️" },
-      { href: "/admin/logs", label: "Logs", icon: "📋" },
+      { href: "/admin/symbol", label: "Symbol Research", icon: "🔬" },
+      { href: "/admin/journal-learning", label: "Journal Learning", icon: "🧠" },
+      { href: "/admin/outcomes", label: "Signal Outcomes", icon: "📊" },
+      { href: "/admin/morning-brief", label: "Morning Brief", icon: "☀" },
+      { href: "/admin/backtest-lab", label: "Backtest Lab", icon: "🧪" },
+    ],
+  },
+  {
+    label: "RISK & ALERTS",
+    items: [
+      { href: "/admin/risk", label: "Research Guard", icon: "🛡️" },
       { href: "/admin/alerts", label: "Alerts", icon: "🔔" },
-      { href: "/admin/settings", label: "Settings", icon: "⚙️" },
+      { href: "/admin/discord-bridge", label: "Discord Bridge", icon: "⚡" },
+      { href: "/admin/research-scheduler", label: "Scheduler Runs", icon: "⏱" },
     ],
   },
   {
     label: "BUSINESS",
     items: [
-      { href: "/admin", label: "Overview", icon: "📊" },
       { href: "/admin/usage-analytics", label: "Analytics", icon: "📈" },
       { href: "/admin/income", label: "Income", icon: "💵" },
       { href: "/admin/costs", label: "AI Costs", icon: "💰" },
       { href: "/admin/subscriptions", label: "Subs", icon: "💳" },
       { href: "/admin/trials", label: "Trials", icon: "🎁" },
+    ],
+  },
+  {
+    label: "SYSTEM",
+    items: [
+      { href: "/admin/data-health", label: "Data Health", icon: "❤" },
+      { href: "/admin/model-diagnostics", label: "Model Diag.", icon: "⚙️" },
+      { href: "/admin/logs", label: "Logs", icon: "📋" },
+      { href: "/admin/settings", label: "Settings", icon: "⚙️" },
     ],
   },
 ];

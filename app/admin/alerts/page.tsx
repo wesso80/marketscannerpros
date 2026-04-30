@@ -149,7 +149,7 @@ export default function AlertsPage() {
                 }`}
               >
                 <span className="font-black text-white">{row.symbol}</span>
-                <span className={row.bias === "LONG" ? "font-semibold text-emerald-300" : row.bias === "SHORT" ? "font-semibold text-red-300" : "font-semibold text-white/50"}>{row.bias}</span>
+                <span className={row.bias === "LONG" ? "font-semibold text-emerald-300" : row.bias === "SHORT" ? "font-semibold text-red-300" : "font-semibold text-white/50"}>{row.bias === "LONG" ? "Bullish" : row.bias === "SHORT" ? "Bearish" : row.bias}</span>
                 <span className="truncate text-white/55">{row.setup} · {row.timeframe}</span>
                 <StatusPill
                   label={row.status === "FIRED" ? "FIRED" : (row.suppressionReason || "SUPPRESSED")}
@@ -171,7 +171,7 @@ export default function AlertsPage() {
             {goHits.slice(0, 8).map((hit) => (
               <Link key={hit.symbol} href={`/admin/terminal/${encodeURIComponent(hit.symbol)}`} className="grid grid-cols-[70px_70px_1fr_70px_60px] items-center gap-2 rounded-lg border border-emerald-500/15 bg-emerald-500/5 px-3 py-2 text-sm no-underline hover:bg-emerald-500/10">
                 <span className="font-black text-white">{hit.symbol}</span>
-                <span className={hit.bias === "LONG" ? "font-semibold text-emerald-300" : hit.bias === "SHORT" ? "font-semibold text-red-300" : "font-semibold text-white/50"}>{hit.bias}</span>
+                <span className={hit.bias === "LONG" ? "font-semibold text-emerald-300" : hit.bias === "SHORT" ? "font-semibold text-red-300" : "font-semibold text-white/50"}>{hit.bias === "LONG" ? "Bullish" : hit.bias === "SHORT" ? "Bearish" : hit.bias}</span>
                 <span className="truncate text-white/55">{hit.playbook || hit.regime}</span>
                 <StatusPill label={hit.permission} tone={permissionTone(hit.permission)} />
                 <span className="text-right font-mono text-white/70">{Number(hit.confidence || 0).toFixed(0)}%</span>
@@ -193,7 +193,7 @@ export default function AlertsPage() {
                   <StatusPill label={hit.permission} tone={permissionTone(hit.permission)} />
                 </div>
                 <div className="mt-1 flex items-center justify-between gap-2 text-xs text-white/45">
-                  <span className="truncate">{hit.bias} - {hit.playbook || hit.regime}</span>
+                  <span className="truncate">{hit.bias === "LONG" ? "Bullish Bias" : hit.bias === "SHORT" ? "Bearish Bias" : hit.bias} - {hit.playbook || hit.regime}</span>
                   <span className="font-mono">{Number(hit.confidence || 0).toFixed(0)}%</span>
                 </div>
               </Link>

@@ -19,9 +19,14 @@ function lifecycleColor(lc: string): string {
 }
 
 function biasColor(b: string): string {
-  if (b === "LONG") return "#10B981";
-  if (b === "SHORT") return "#EF4444";
+  if (b === "LONG" || b === "BULLISH_RESEARCH") return "#10B981";
+  if (b === "SHORT" || b === "BEARISH_RESEARCH") return "#EF4444";
   return "#9CA3AF";
+}
+function formatBias(b: string): string {
+  if (b === "LONG" || b === "BULLISH_RESEARCH") return "Bullish Bias";
+  if (b === "SHORT" || b === "BEARISH_RESEARCH") return "Bearish Bias";
+  return b;
 }
 
 function ScoreBar({ value, max = 100 }: { value: number; max?: number }) {
@@ -96,7 +101,7 @@ export default function WhyThisRankDrawer({ row, onClose }: Props) {
                 className="rounded border px-1.5 py-0.5 text-[10px] font-black uppercase"
                 style={{ color: biasColor(bias), borderColor: `${biasColor(bias)}40`, background: `${biasColor(bias)}12` }}
               >
-                {bias}
+                {formatBias(bias)}
               </span>
               <span
                 className="rounded border px-1.5 py-0.5 text-[10px] font-black uppercase"
