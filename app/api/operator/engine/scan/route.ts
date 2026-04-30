@@ -23,15 +23,17 @@ import { radarState } from '@/lib/operator/radar-state';
 
 export const runtime = 'nodejs';
 
+// Conservative fallback context — used only when caller provides no context.
+// Signals WAIT/BLOCK to prevent fake $100k account state influencing outputs.
 const DEFAULT_CONTEXT: ScanContext = {
   portfolioState: {
-    equity: 100000,
+    equity: 0,
     dailyPnl: 0,
     drawdownPct: 0,
     openRisk: 0,
     correlationRisk: 0,
     activePositions: 0,
-    killSwitchActive: false,
+    killSwitchActive: true,
   },
   riskPolicy: {
     maxDailyLossPct: 0.02,
@@ -40,13 +42,13 @@ const DEFAULT_CONTEXT: ScanContext = {
     maxCorrelationRisk: 0.7,
   },
   executionEnvironment: {
-    brokerConnected: true,
+    brokerConnected: false,
     estimatedSlippageBps: 10,
-    minLiquidityOk: true,
+    minLiquidityOk: false,
   },
   accountState: {
-    buyingPower: 100000,
-    accountRiskUnit: 0.01,
+    buyingPower: 0,
+    accountRiskUnit: 0,
   },
   instrumentMeta: {},
   healthContext: {
@@ -81,6 +83,7 @@ export async function POST(req: NextRequest) {
     const timeframe: string = body.timeframe || '1D';
 
     const scanRequest: ScanRequest = { symbols, market, timeframe };
+    const contextProvided = !!body.context;
     const context: ScanContext = { ...DEFAULT_CONTEXT, ...body.context };
 
     const result = await runScan(scanRequest, context, alphaVantageProvider);
@@ -88,6 +91,9 @@ export async function POST(req: NextRequest) {
     // Update shared radar state
     radarState.liveRadar = result.radar;
     radarState.lastScanAt = new Date().toISOString();
+    if (!contextProvided) {
+      console.warn('[operator:engine:scan] No context provided — fallback conservative context used (WAIT/BLOCK only).');
+    }
 
     // Fire ops alert for actionable signals
     const actionable = result.radar.filter(r => r.permission === 'ALLOW' || r.permission === 'ALLOW_REDUCED');
@@ -107,7 +113,11 @@ export async function POST(req: NextRequest) {
       }).catch(() => { /* never block on alert failure */ });
     }
 
-    return NextResponse.json(createScanEnvelope(result));
+    return NextResponse.json({
+      ...createScanEnvelope(result),
+      contextSource: contextProvided ? 'caller' : 'fallback_conservative',
+      ...(contextProvided ? {} : { contextWarning: 'No context provided. Fallback conservative context used (zero equity, broker disconnected). All signals default to WAIT/BLOCK.' }),
+    });
   } catch (err: unknown) {
     console.error('[operator:engine:scan] Error:', err);
     return NextResponse.json(

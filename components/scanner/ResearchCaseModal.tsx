@@ -255,7 +255,7 @@ export default function ResearchCaseModal({ pick, assetType, timeframe, onClose 
       ['Reaction Zone 1', fmtPrice(targets[0])],
       ['Reaction Zone 2', fmtPrice(targets[1])],
       ['Reaction Zone 3', fmtPrice(targets[2])],
-      ['Hypothetical R:R', `${rr.toFixed(1)}:1`],
+      ['Scenario R:R example', `${rr.toFixed(1)}:1 — hypothetical illustration only`],
       ['ATR', fmt(atr)],
       [],
       ['TRUTH LAYER'],
@@ -410,7 +410,7 @@ export default function ResearchCaseModal({ pick, assetType, timeframe, onClose 
               <KV label="Reaction Zone 1 (1R)" value={fmtPrice(targets[0])} accent="var(--msp-bull)" />
               <KV label="Reaction Zone 2 (2R)" value={fmtPrice(targets[1])} accent="var(--msp-bull)" />
               <KV label="Reaction Zone 3 (3R)" value={fmtPrice(targets[2])} accent="var(--msp-bull)" />
-              <KV label="Hypothetical R:R" value={`${rr.toFixed(1)} : 1`} accent={rr >= 2 ? 'var(--msp-bull)' : rr >= 1 ? 'var(--msp-warn)' : 'var(--msp-bear)'} />
+              <KV label="Scenario R:R example" value={`${rr.toFixed(1)} : 1 — illustrative only`} accent={rr >= 2 ? 'var(--msp-bull)' : rr >= 1 ? 'var(--msp-warn)' : 'var(--msp-bear)'} />
             </div>
           </Section>
 

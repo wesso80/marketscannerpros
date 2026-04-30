@@ -427,7 +427,7 @@ export async function POST(req: NextRequest) {
   
   // Yahoo Finance can handle more requests per minute
   const CRYPTO_BATCH_SIZE = 10;
-  const CRYPTO_DELAY = 1000; // 1s between batches
+  const CRYPTO_DELAY = 150; // ms between batches (reduced to avoid timeout)
   
   for (let i = 0; i < CRYPTO_UNIVERSE.length; i += CRYPTO_BATCH_SIZE) {
     const batch = CRYPTO_UNIVERSE.slice(i, i + CRYPTO_BATCH_SIZE);

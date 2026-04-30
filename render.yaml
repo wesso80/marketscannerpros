@@ -114,7 +114,7 @@
     runtime: node
     schedule: "35 19 * * *"  # 7:35 PM UTC daily - refresh broad universe before morning brief
     buildCommand: echo "Cron job ready"
-    startCommand: curl -fL --retry 2 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 290 -X POST "$WEB_URL/api/jobs/scan-universe" -H "Authorization:Bearer $CRON_SECRET" -H "Content-Type:application/json"
+    startCommand: curl -fL --retry 2 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 290 -X POST "$WEB_URL/api/jobs/scan-universe" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
     envVars:
       - key: WEB_URL
         value: "https://marketscannerpros.app"

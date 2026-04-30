@@ -862,7 +862,7 @@ export default function GoldenEggPage() {
                   <div className="text-[11px] text-slate-500 mt-0.5">{geSafeScenario?.invalidationLevel.logic}</div>
                 </div>
                 <div className="bg-[var(--msp-panel-2)] rounded-lg p-3">
-                  <div className="text-[11px] text-slate-500 uppercase">Key Levels</div>
+                  <div className="text-[11px] text-slate-500 uppercase">Reaction Zones</div>
                   <div className="flex items-center gap-2 flex-wrap">
                     {geSafeScenario?.reactionZones.map((t: any, i: number) => (
                       <span key={i} className="text-sm font-mono text-emerald-400">
@@ -870,7 +870,7 @@ export default function GoldenEggPage() {
                       </span>
                     ))}
                   </div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">Hypothetical R:R {isUsableNumber(geSafeScenario?.hypotheticalRr?.expectedR) ? geSafeScenario.hypotheticalRr.expectedR.toFixed(1) : 'Unavailable'}</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">Scenario R:R example {isUsableNumber(geSafeScenario?.hypotheticalRr?.expectedR) ? geSafeScenario.hypotheticalRr.expectedR.toFixed(1) : 'Unavailable'} — hypothetical illustration only, not a trade recommendation</div>
                 </div>
               </div>
 

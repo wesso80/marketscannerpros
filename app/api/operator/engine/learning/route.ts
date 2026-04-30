@@ -31,7 +31,12 @@ export async function GET(req: NextRequest) {
     // Load persisted weights (falls back to defaults if no DB rows)
     const currentWeights = await loadActiveWeights();
 
-    // TODO: Pull actual trade metrics from review history
+    // TODO: Pull actual trade metrics from review history; until then, return insufficient_history status.
+    // Do NOT surface these zeros as model learning results.
+    const tradeCount = 0; // replace with real DB query when history exists
+    const MINIMUM_SAMPLE = 30;
+    const hasEnoughHistory = tradeCount >= MINIMUM_SAMPLE;
+
     const placeholderMetrics = {
       winRate: 0,
       expectancyR: 0,
@@ -44,17 +49,22 @@ export async function GET(req: NextRequest) {
       window: {
         start: new Date(Date.now() - 30 * 86400000).toISOString(),
         end: new Date().toISOString(),
-        minSampleSize: 30,
+        minSampleSize: MINIMUM_SAMPLE,
       },
     };
 
-    const result = analyzeLearningWindow(windowReq, placeholderMetrics, 0);
+    const result = analyzeLearningWindow(windowReq, placeholderMetrics, tradeCount);
 
     return NextResponse.json({
       ok: true,
+      learningStatus: hasEnoughHistory ? 'active' : 'insufficient_history',
+      tradeCount,
+      minimumSampleRequired: MINIMUM_SAMPLE,
       currentWeights,
-      learningWindow: result,
-      note: 'No trade history yet. Requires 30+ reviewed trades for adaptive adjustments.',
+      learningWindow: hasEnoughHistory ? result : null,
+      note: hasEnoughHistory
+        ? 'Learning active. Adaptive weight adjustments available.'
+        : `Insufficient history. Requires ${MINIMUM_SAMPLE} reviewed trades for adaptive adjustments. Current: ${tradeCount}. Weights shown are defaults only \u2014 not calibrated from outcomes.`,
     });
   } catch (err: unknown) {
     console.error('[operator:engine:learning] Error:', err);
