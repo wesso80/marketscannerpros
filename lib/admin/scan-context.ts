@@ -20,6 +20,10 @@ export type AdminRiskSnapshot = {
   workspaceId: string | null;
   lastUpdatedAt: string | null;
   notes: string[];
+  /** True when portfolio/risk state would restrict NEW trade execution. Discovery unaffected. */
+  operatorGuardActive: boolean;
+  /** Human-readable reasons for operator guard (warnings only, not discovery blocks). */
+  operatorGuardReasons: string[];
 };
 
 const UNKNOWN_EQUITY = 0;
@@ -76,6 +80,8 @@ export const FALLBACK_ADMIN_RISK: AdminRiskSnapshot = {
   workspaceId: null,
   lastUpdatedAt: null,
   notes: ["No live portfolio or operator risk state found; scanner permissions are research-only WAIT with no sizing context."],
+  operatorGuardActive: false,
+  operatorGuardReasons: [],
 };
 
 function formatUsd(value: number) {
@@ -128,6 +134,13 @@ async function loadOperatorRiskState(): Promise<AdminRiskSnapshot> {
       notes: [
         "Risk read from latest operator state; portfolio/journal sync was unavailable.",
         ...(hasLiveEquity ? [] : ["Operator state has no live equity value; sizing is disabled and permission is capped at WAIT."]),
+      ],
+      operatorGuardActive: permission === "BLOCK" || permission === "WAIT",
+      operatorGuardReasons: [
+        ...(killSwitchActive ? ["Kill switch active"] : []),
+        ...(dailyDrawdown >= 0.02 ? [`Daily drawdown ${(dailyDrawdown * 100).toFixed(1)}%`] : []),
+        ...(correlationRisk >= 0.65 ? ["Correlation risk elevated"] : []),
+        ...(!hasLiveEquity ? ["No live equity value"] : []),
       ],
     };
   } catch {
@@ -240,6 +253,14 @@ export async function loadAdminRiskSnapshot(): Promise<AdminRiskSnapshot> {
           ? [`Open risk ${formatUsd(openRiskUsd)} on ${formatUsd(equity)} equity; exposure ${formatUsd(exposureUsd)}.`]
           : ["No live portfolio equity value found; sizing is disabled and permission is capped at WAIT."]),
       ],
+      operatorGuardActive: permission === "BLOCK" || permission === "WAIT",
+      operatorGuardReasons: [
+        ...(killSwitchActive ? ["Kill switch / drawdown hard stop active"] : []),
+        ...(dailyDrawdown >= 0.02 ? [`Daily drawdown ${(dailyDrawdown * 100).toFixed(1)}%`] : []),
+        ...(correlationRisk >= 0.65 ? [`Correlation risk ${(correlationRisk * 100).toFixed(0)}%`] : []),
+        ...(activePositions >= operatorRisk.maxPositions ? [`Max positions (${activePositions}) reached`] : []),
+        ...(!hasLiveEquity ? ["No live equity - sizing disabled"] : []),
+      ],
     };
   } catch {
     return operatorRisk;
@@ -249,7 +270,8 @@ export async function loadAdminRiskSnapshot(): Promise<AdminRiskSnapshot> {
 export async function buildAdminScanContext(): Promise<{ context: ScanContext; risk: AdminRiskSnapshot }> {
   const risk = await loadAdminRiskSnapshot();
   const fallbackThrottle = risk.source === "fallback" ? 0.25 : 1.0;
-  const riskThrottle = risk.permission === "BLOCK" ? 0 : risk.permission === "WAIT" ? 0.5 : risk.sizeMultiplier;
+  // metaHealthThrottle controls discovery scoring. Portfolio risk (drawdown, kill
+  // switch, permission) must NOT throttle it -- those are operator guard warnings only.
   const context: ScanContext = {
     ...DEFAULT_ADMIN_SCAN_CONTEXT,
     portfolioState: {
@@ -267,7 +289,7 @@ export async function buildAdminScanContext(): Promise<{ context: ScanContext; r
       buyingPower: risk.equity > 0 ? Math.max(0, risk.equity - risk.exposureUsd) : 0,
       accountRiskUnit: risk.equity > 0 && risk.source !== "fallback" ? LIVE_ACCOUNT_RISK_UNIT : 0,
     },
-    metaHealthThrottle: Math.min(fallbackThrottle, riskThrottle),
+    metaHealthThrottle: fallbackThrottle,
   };
   return { context, risk };
 }

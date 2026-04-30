@@ -1704,7 +1704,7 @@ function buildTradePlanEntryTrigger(play: ScannerHit, brief: MorningBrief) {
       ? "Wait for a clean reclaim/continuation trigger; no entry after the move is already stretched."
       : "Wait for directional bias to resolve before entry.";
   if (brief.deskState === "DEFENSIVE") return `${base} Use defensive confirmation and reduced size.`;
-  if (brief.deskState === "BLOCK") return "Desk is BLOCK. This is a watch-only plan until risk permission changes.";
+  if (brief.deskState === "BLOCK") return "Operator guard active — trade execution paused. Market discovery remains live. Review personal risk context before acting on any setup.";
   return base;
 }
 
@@ -2046,7 +2046,7 @@ function resolveDeskState(
 }
 
 function buildHeadline(state: DeskState, topPlays: ScannerHit[], catalysts: MorningCatalyst[]): string {
-  if (state === "BLOCK") return "Risk is blocking new action this morning";
+  if (state === "BLOCK") return "Operator guard active — outbound alerts paused, discovery running";
   if (state === "DEFENSIVE") return "Defensive session: only clean triggers deserve attention";
   if (topPlays.length > 0) return `${topPlays.length} live play candidate${topPlays.length === 1 ? "" : "s"} on deck`;
   if (catalysts.length > 0) return "Catalysts are active, but scanner wants patience";
@@ -2063,7 +2063,7 @@ function buildOperatorNote(
   const learningText = learning.accuracyRate == null
     ? "Learning sample is still building."
     : `Recent signal accuracy is ${learning.accuracyRate.toFixed(1)}%.`;
-  if (state === "BLOCK") return `Stand down until risk clears. Drawdown ${(risk.dailyDrawdown * 100).toFixed(1)}%, correlation ${(risk.correlationRisk * 100).toFixed(0)}%. ${learningText}`;
+  if (state === "BLOCK") return `Operator guard active — execution paused. Drawdown ${(risk.dailyDrawdown * 100).toFixed(1)}%, correlation ${(risk.correlationRisk * 100).toFixed(0)}%. Discovery remains live. ${learningText}`;
   if (state === "DEFENSIVE") return `Trade smaller, require clean trigger confirmation, and avoid correlated exposure. ${learningText}`;
   if (topPlays.length > 0) return `Start with ${topPlays[0].symbol}; confirm trigger, invalidation, and catalyst risk before taking any exposure. ${learningText}`;
   if (watchlist.length > 0) return `${watchlist.length} setups are worth watching, but none are green-lit yet. ${learningText}`;
@@ -2107,8 +2107,8 @@ function buildExecutionChecklist(
         label: "Risk Permission",
         status: state === "BLOCK" ? "BLOCK" : state === "DEFENSIVE" ? "WAIT" : "PASS",
         instruction: risk.killSwitchActive
-          ? "Research alerts are paused. Stand down."
-          : `Desk permission is ${risk.permission}; active positions ${risk.activePositions}/${risk.maxPositions}.`,
+          ? "Operator guard active — outbound alerts paused. Discovery and opportunity ranking continue."
+          : `Execution permission: ${risk.permission}; active positions ${risk.activePositions}/${risk.maxPositions}.`,
       },
       {
         label: "Setup Quality",
@@ -2152,7 +2152,7 @@ function buildBlockedConditions(
     "Do not enter without a defined invalidation before the order.",
     "Do not chase a move after the planned trigger has already stretched.",
   ];
-  if (state === "BLOCK") blocked.unshift("No new trades while the desk is BLOCK.");
+  if (state === "BLOCK") blocked.unshift("No new trade execution while operator guard is active. Discovery, scoring, and Priority Desk remain live.");
   if (risk.dailyDrawdown >= 0.02) blocked.push("No full-size trades while daily drawdown is elevated.");
   if (risk.correlationRisk >= 0.65) blocked.push("Do not add correlated exposure until risk compresses.");
   if (catalysts.length > 0) blocked.push("Do not trade through unresolved catalyst risk without reducing size.");
@@ -2167,7 +2167,7 @@ function buildFirstAction(
   primary: ScannerHit | null,
   comparison: MorningBriefComparison,
 ) {
-  if (state === "BLOCK") return "Stand down, review risk, and wait for the next brief or manual risk reset.";
+  if (state === "BLOCK") return "Operator guard active — pause new execution, reconcile risk, and review the Priority Desk for incoming opportunities.";
   if (!primary) return "Do nothing at the open. Re-scan after the first market impulse forms.";
   if (state === "DEFENSIVE") return `Watch ${primary.symbol}, but only act after confirmation and with reduced size.`;
   if (comparison.newTopPlays.includes(primary.symbol)) return `Prioritize fresh candidate ${primary.symbol}; confirm it is not a one-scan spike before entry.`;
@@ -2366,6 +2366,8 @@ function buildResearchSetups(
   watchlist: ScannerHit[],
   risk: MorningRiskState,
 ) {
+  // researchSetups: market-discovered setups shown even when execution is paused.
+  // Operator guard (drawdown, kill switch) does NOT suppress research setup discovery.
   const executionBlocked = risk.killSwitchActive || risk.permission === "BLOCK" || risk.dailyDrawdown >= 0.02;
   if (!executionBlocked) return [];
   const used = new Set([...topPlays, ...watchlist].map((hit) => hit.symbol));
@@ -2376,7 +2378,7 @@ function buildResearchSetups(
       ...hit,
       permission: "WAIT" as const,
       blockReasons: [
-        "Research only while risk is blocked or locked.",
+        "Operator guard active — review only. Discovery remains live.",
         ...(hit.blockReasons ?? []).slice(0, 3),
       ],
     }));

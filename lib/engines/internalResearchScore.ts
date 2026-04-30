@@ -34,9 +34,31 @@ const DATA_TRUST_HARD_FLOOR = 50;
 const PENALTY_STALE_DATA = 25;
 const PENALTY_DEGRADED_DATA = 15;
 const PENALTY_DELAYED_DATA = 8;
+/**
+ * Penalty per blockReason that is data/setup quality related.
+ * Governance/execution blockReasons (portfolio drawdown, kill switch, position
+ * limits) are excluded — those belong to the Personal Operator Guard lane only
+ * and must not suppress market discovery scoring.
+ */
 const PENALTY_BLOCK_REASON = 12;
 const PENALTY_INVALIDATION = 30;
 const PENALTY_SIMULATED_DATA = 35;
+
+/**
+ * Governance/execution block reason codes that originate from portfolio risk
+ * state. These must NOT penalise the research/discovery score.
+ */
+const EXECUTION_BLOCK_CODES = new Set([
+  "KILL_SWITCH_ACTIVE",
+  "DAILY_LOSS_LIMIT_HIT",
+  "MAX_DRAWDOWN_HIT",
+  "OPEN_RISK_LIMIT_HIT",
+  "MAX_POSITION_LIMIT_HIT",
+  "BROKER_DISCONNECTED",
+  "META_HEALTH_THROTTLED",
+  "DRAWDOWN_LOCKOUT",
+  "PORTFOLIO_CORRELATED",
+]);
 
 /** Boosts. */
 const BOOST_HIGH_CONFLUENCE = 6;
@@ -199,8 +221,12 @@ export function computeInternalResearchScore(input: ResearchScoreInput): Interna
     penalties.push({ code: "DATA_DELAYED", label: "Data is delayed", weight: PENALTY_DELAYED_DATA });
   }
 
-  // Block-reason penalties (one penalty per reason, capped at 3 to prevent stacking)
-  const blockReasons = (snapshot.blockReasons ?? []).slice(0, 3);
+  // Block-reason penalties — data/setup quality only.
+  // Execution/governance block reasons (kill switch, drawdown, position limits)
+  // are filtered out here and surfaced instead via the Operator Guard lane.
+  const blockReasons = (snapshot.blockReasons ?? [])
+    .filter((r) => !EXECUTION_BLOCK_CODES.has(r))
+    .slice(0, 3);
   for (const reason of blockReasons) {
     penalties.push({
       code: "BLOCK_REASON",

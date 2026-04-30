@@ -149,7 +149,7 @@ function commandReasons(brief: CommanderBrief, state: CommandState) {
 }
 
 function allowedNextAction(brief: CommanderBrief, state: CommandState) {
-  if (state === "BLOCK") return "Stand down. Reconcile risk, review outcomes, or wait for the next session.";
+  if (state === "BLOCK") return "Operator guard active — new trade execution paused. Market discovery remains live. Review personal risk context in the Operator Guard panel below.";
   if (state === "WAIT") return brief.commander.primaryAction || "Monitor scenarios and wait for risk/data confirmation.";
   return brief.commander.primaryAction || "Review the top play only after scenario confirmation and risk checks.";
 }
@@ -215,7 +215,42 @@ export default function CommanderPage() {
         <>
           <CommandStateStrip brief={brief} />
 
-          <section className="mb-5 grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+          {/* Two-Lane Status Panels */}
+          <section className="mb-5 grid gap-4 md:grid-cols-2">
+            {/* Lane 1: Market Discovery */}
+            <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/5 p-4">
+              <div className="mb-3 text-xs font-black uppercase tracking-[0.16em] text-emerald-400">Market Discovery Engine</div>
+              <div className="mb-2 flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_6px_2px_rgba(16,185,129,0.4)]" />
+                <span className="text-sm font-bold text-emerald-200">Discovery Active</span>
+              </div>
+              <div className="space-y-1 text-xs text-slate-300">
+                <div>Scanner: <span className="font-semibold text-white">Running</span></div>
+                <div>Opportunities: <span className="font-semibold text-white">{brief.topPlays.length + brief.watchlist.length + brief.researchSetups.length} candidates</span></div>
+                {brief.topPlays[0] ? <div>Top candidate: <span className="font-semibold text-white">{brief.topPlays[0].symbol}</span></div> : null}
+              </div>
+              <div className="mt-3 text-xs text-emerald-300">Discovery is never blocked by personal risk state.</div>
+            </div>
+            {/* Lane 2: Personal Operator Guard */}
+            <div className={`rounded-lg border p-4 ${brief.risk.killSwitchActive || brief.risk.permission === "BLOCK" ? "border-red-500/30 bg-red-500/5" : brief.risk.permission === "WAIT" ? "border-amber-500/25 bg-amber-500/5" : "border-emerald-500/20 bg-emerald-500/5"}`}>
+              <div className="mb-3 text-xs font-black uppercase tracking-[0.16em] text-slate-400">Personal Operator Guard</div>
+              <div className="mb-2 flex items-center gap-2">
+                <span className={`h-2.5 w-2.5 rounded-full shadow-[0_0_6px_2px_rgba(248,113,113,0.4)] ${brief.risk.killSwitchActive || brief.risk.permission === "BLOCK" ? "bg-red-400" : brief.risk.permission === "WAIT" ? "bg-amber-400" : "bg-emerald-400"}`} />
+                <span className={`text-sm font-bold ${brief.risk.killSwitchActive || brief.risk.permission === "BLOCK" ? "text-red-200" : brief.risk.permission === "WAIT" ? "text-amber-200" : "text-emerald-200"}`}>
+                  {brief.risk.killSwitchActive ? "Alerts Paused — Kill Switch" : brief.risk.permission === "BLOCK" ? "Trade Execution Paused" : brief.risk.permission === "WAIT" ? "Reduced Sizing Mode" : "Execution Permitted"}
+                </span>
+              </div>
+              <div className="space-y-1 text-xs text-slate-300">
+                <div>Drawdown: <span className={`font-semibold ${brief.risk.dailyDrawdown >= 0.02 ? "text-amber-200" : "text-white"}`}>{(brief.risk.dailyDrawdown * 100).toFixed(1)}%</span></div>
+                <div>Open positions: <span className="font-semibold text-white">{brief.risk.activePositions}</span></div>
+                <div>Daily P&L: <span className={`font-semibold ${brief.risk.dailyPnl < 0 ? "text-red-300" : "text-emerald-300"}`}>{money(brief.risk.dailyPnl)}</span></div>
+              </div>
+              {(brief.risk.killSwitchActive || brief.risk.permission === "BLOCK") ? (
+                <div className="mt-3 text-xs text-amber-300">Outbound alerts paused. Discovery &amp; Priority Desk remain active.</div>
+              ) : null}
+            </div>
+          </section>
+
             <AdminCard>
               <div className="mb-2 text-xs uppercase tracking-[0.18em] text-emerald-300">Generated {generated}</div>
               <div className="text-2xl font-black text-white">{brief.headline}</div>
@@ -238,7 +273,6 @@ export default function CommanderPage() {
                 <Metric label="Correlation" value={`${(brief.risk.correlationRisk * 100).toFixed(0)}%`} tone={brief.risk.correlationRisk >= 0.65 ? "yellow" : "green"} />
               </div>
             </AdminCard>
-          </section>
 
           <section className="mb-5 grid gap-4 xl:grid-cols-[1fr_1.1fr]">
             <AdminCard>
@@ -343,9 +377,14 @@ function CommandStateStrip({ brief }: { brief: CommanderBrief }) {
         <div className="min-w-0 flex-1">
           <div className="mb-2 text-xs font-black uppercase tracking-[0.16em] opacity-70">Command State</div>
           <div className="flex flex-wrap items-center gap-3">
-            <div className="text-5xl font-black tracking-tight md:text-6xl">{commandState}</div>
-            <StatusPill label={brief.riskGovernor.mode} tone={stateTone(brief.riskGovernor.mode)} />
-            <StatusPill label={brief.risk.killSwitchActive ? "RESEARCH ALERTS PAUSED" : "RESEARCH ALERTS ACTIVE"} tone={brief.risk.killSwitchActive ? "red" : "green"} />
+            <div className="text-5xl font-black tracking-tight md:text-6xl">{commandState === "BLOCK" ? "GUARD" : commandState}</div>
+            {commandState === "BLOCK" ? (
+              <StatusPill label="OPERATOR GUARD ACTIVE" tone="red" />
+            ) : (
+              <StatusPill label={brief.riskGovernor.mode} tone={stateTone(brief.riskGovernor.mode)} />
+            )}
+            <StatusPill label="DISCOVERY ACTIVE" tone="green" />
+            <StatusPill label={brief.risk.killSwitchActive ? "ALERTS PAUSED" : "ALERTS ACTIVE"} tone={brief.risk.killSwitchActive ? "yellow" : "green"} />
             <StatusPill label={sourceLabel(brief.risk.source)} tone={brief.risk.source === "portfolio_journal" ? "green" : brief.risk.source === "operator_state" ? "yellow" : "red"} />
           </div>
           <div className="mt-3 text-sm font-semibold leading-6">Allowed Next Action: {allowedNextAction(brief, commandState)}</div>

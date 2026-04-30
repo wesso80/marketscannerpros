@@ -4,6 +4,7 @@ import { getSessionFromCookie } from "@/lib/auth";
 import { isOperator } from "@/lib/quant/operatorAuth";
 import { getAdminResearchPacketsForSymbols, type AdminResearchPacket } from "@/lib/admin/getAdminResearchPacket";
 import { appendResearchEvent } from "@/lib/admin/researchEventTape";
+import { buildAdminScanContext } from "@/lib/admin/scan-context";
 
 export const runtime = "nodejs";
 
@@ -31,9 +32,12 @@ export async function GET(req: NextRequest) {
 
   const timeframe = req.nextUrl.searchParams.get("timeframe") || "15m";
 
-  const [equityPackets, cryptoPackets] = await Promise.all([
-    getAdminResearchPacketsForSymbols({ symbols: EQUITIES, market: "EQUITIES", timeframe }),
-    getAdminResearchPacketsForSymbols({ symbols: CRYPTO, market: "CRYPTO", timeframe }),
+  const [{ risk }, [equityPackets, cryptoPackets]] = await Promise.all([
+    buildAdminScanContext(),
+    Promise.all([
+      getAdminResearchPacketsForSymbols({ symbols: EQUITIES, market: "EQUITIES", timeframe }),
+      getAdminResearchPacketsForSymbols({ symbols: CRYPTO, market: "CRYPTO", timeframe }),
+    ]),
   ]);
 
   const all = [...equityPackets, ...cryptoPackets];
@@ -76,5 +80,18 @@ export async function GET(req: NextRequest) {
     avoidTrapList,
     dataDegradedList,
     arcaTopCandidate,
+    // Operator guard context — discovery and ranking are unaffected.
+    // Portfolio/risk state appears here as warnings only.
+    operatorGuard: {
+      active: risk.operatorGuardActive,
+      reasons: risk.operatorGuardReasons,
+      alertsDeliveryPaused: risk.killSwitchActive || risk.permission === "BLOCK",
+      message: risk.operatorGuardActive
+        ? "Operator guard active — discovery remains live. Personal exposure warnings shown separately."
+        : null,
+      riskSource: risk.source,
+      drawdownPct: risk.dailyDrawdown,
+      activePositions: risk.activePositions,
+    },
   });
 }
