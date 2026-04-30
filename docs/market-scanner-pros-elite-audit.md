@@ -246,10 +246,10 @@ Missing data handling: decent in places, but not clean enough around optional op
 Recommended fixes:
 - Completed: `detectVolatilityTrap(...)` now uses actual current price from `computeDVE`, with regression tests for near/far gamma-wall behavior.
 - Completed first pass: `/tools/volatility-engine` now has a Volatility Phase Card showing phase age, continuation, exit risk, breakout readiness, trap state, exhaustion, invalidation, and read-limit warnings.
-- Remove unused `stochMom` or wire it into signal detection deliberately.
+- Completed: Remove unused `stochMom` — removed dead `computeStochasticMomentum` call at line 603; `direction.components.stochasticMomentum` already populated via `stochBullish`/`stochBearish`.
 - Completed first pass: add `projectionQuality`, `projectionQualityScore`, `dispersionPct`, and `projectionWarning` based on sample size and return dispersion; surface it in the DVE projection card.
 - Completed: added strict DVE boundary regressions for BBWP percentile bounds, compression/transition/expansion/climax thresholds, stretched expansion exit risk, missing-input data quality, and exhaustion label boundaries.
-- Document whether all DVE sub-scores are 0..1 or 0..100 and enforce with TypeScript branded helpers.
+- Completed: Document DVE sub-score scales — `DirectionalPressure.score` = -100..+100, `.confidence` = 0-100 (JSDoc in `lib/directionalVolatilityEngine.types.ts`). `ExhaustionRisk.level` = 0-100 already annotated.
 
 ## 11. Options Engine Audit
 

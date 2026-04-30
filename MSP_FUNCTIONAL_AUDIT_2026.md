@@ -191,6 +191,14 @@
 
 > **Fix (commit `4377a408`):** JSDoc in `msp-analyst/route.ts` corrected from 200 to 50. Code already enforced 50 via `AI_DAILY_LIMITS[tier]`.
 
+### P2-1b: AI copilot used private `TIER_LIMITS` (free:5) instead of canonical `AI_DAILY_LIMITS` (free:10) — ✅ RESOLVED
+
+> **Fix (commit `a5a4fae3`):** `app/api/ai/copilot/route.ts` replaced local `TIER_LIMITS` constant with `getDailyAiLimit()` from `lib/entitlements.ts`. Single source of truth; free tier correctly gets 10/day.
+
+### P2-1c: `explain` AI route had no per-user rate limit on OpenAI cache-miss path — ✅ RESOLVED
+
+> **Fix (commit `a5a4fae3`):** `app/api/ai/explain/route.ts` now checks `ai_usage` count against `getDailyAiLimit(session.tier)` before calling OpenAI. Cached responses (DB and memory) bypass the quota check, preserving the shared-cache benefit for educational content.
+
 ### P2-2: Missing loading states on some pages — ✅ NO CHANGE NEEDED
 - `app/tools/time-scanner/page.tsx` — No loading skeleton during initial data fetch
 - `app/tools/terminal/page.tsx` — Terminal widgets render empty without skeleton
