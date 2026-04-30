@@ -29,7 +29,7 @@ export const ARCA_REFUSAL_CLAUSE =
 
 export const ARCA_OUTPUT_SCHEMA_HINT = `Return STRICT JSON matching this TypeScript shape exactly:
 {
-  "mode": "<one of EXPLAIN_RANK | CHALLENGE_SETUP | FIND_MISSING_EVIDENCE | SUMMARIZE_WATCHLIST | DETECT_CONTRADICTIONS | PREPARE_RESEARCH_ALERT | REVIEW_JOURNAL_MISTAKE | COMPARE_TWO_SYMBOLS | WHAT_CHANGED_SINCE_LAST_SCAN>",
+  "mode": "<one of BEST_PLAYS | ATTENTION_NOW | RED_TEAM_SETUP | CHALLENGE_MY_BIAS | MARKET_REGIME_BRIEF | EARNINGS_RISK_BRIEF | CRYPTO_RISK_BRIEF | OPTIONS_PRESSURE_BRIEF | WHAT_CHANGED_SINCE_LAST_SCAN | WHY_IS_THIS_RANKED | WHAT_AM_I_MISSING>",
   "symbol": "<symbol passed in context, uppercase>",
   "headline": "<one to two short research-grade sentences. Never an instruction.>",
   "reasoning": ["<bullet>", "<bullet>", "..."],
@@ -73,7 +73,10 @@ export function buildArcaUserPrompt(mode: ArcaAdminMode, ctx: ArcaAdminContext):
     `SETUP: ${ctx.setup}\n` +
     `SCORE: ${ctx.score.score} (lifecycle=${ctx.score.lifecycle}, dominant=${ctx.score.dominantAxis ?? "none"})\n` +
     `AXES: ${fmtAxes(ctx.score.axes)}\n` +
-    `DATA_TRUTH: status=${ctx.dataTruth.status}, trustScore=${ctx.dataTruth.trustScore}`;
+    `DATA_TRUTH: status=${ctx.dataTruth.status}, trustScore=${ctx.dataTruth.trustScore}` +
+    (ctx.packet
+      ? `\nPACKET: trustAdjustedScore=${ctx.packet.trustAdjustedScore}, scoreDecayReason=${ctx.packet.scoreDecayReason}, trapRiskScore=${ctx.packet.trapRiskScore}, contradictionFlags=${ctx.packet.contradictionFlags.join(" | ") || "none"}, nextResearchChecks=${ctx.packet.nextResearchChecks.join(" | ") || "none"}, invalidationConditions=${ctx.packet.invalidationConditions.join(" | ") || "none"}`
+      : "");
 
   const compare = ctx.compareTo
     ? `\nCOMPARE_TO: ${ctx.compareTo.symbol} score=${ctx.compareTo.score} axes={${fmtAxes(ctx.compareTo.axes)}}`
@@ -83,15 +86,17 @@ export function buildArcaUserPrompt(mode: ArcaAdminMode, ctx: ArcaAdminContext):
     : "";
 
   const taskByMode: Record<ArcaAdminMode, string> = {
-    EXPLAIN_RANK: "Explain why this symbol earns its current score. Cite the dominant axis and any penalties or boosts implied by the axes distribution.",
-    CHALLENGE_SETUP: "Argue against the current setup. What would have to be true for this thesis to be wrong? List the most plausible failure modes.",
-    FIND_MISSING_EVIDENCE: "Identify which axes are weakest or absent. What additional research evidence would meaningfully strengthen or weaken the verdict?",
-    SUMMARIZE_WATCHLIST: "Summarise this symbol as a single line a senior operator could read in 5 seconds, then list 3 supporting bullets.",
-    DETECT_CONTRADICTIONS: "Identify contradictions inside the evidence (e.g. high trend axis but weak momentum axis, high score but degraded data truth).",
-    PREPARE_RESEARCH_ALERT: "Draft a research-only alert summary. It must carry research framing, never broker instructions. Headline ≤ 90 chars.",
-    REVIEW_JOURNAL_MISTAKE: "Treat this as a post-mortem of a past research case. What pattern in the axes likely led to a mistaken verdict? What would you weight differently next time?",
-    COMPARE_TWO_SYMBOLS: "Compare this symbol with the COMPARE_TO context. Which has the stronger research thesis right now and why? Be specific about which axes diverge.",
+    BEST_PLAYS: "Rank this symbol against current packet strength and explain whether it belongs in the best-plays cohort.",
+    ATTENTION_NOW: "Explain what deserves immediate attention in this packet and what can wait.",
+    RED_TEAM_SETUP: "Attack the setup as a red-team reviewer. Focus on hidden failure paths and trap signatures.",
+    CHALLENGE_MY_BIAS: "Challenge directional bias assumptions and highlight disconfirming evidence.",
+    MARKET_REGIME_BRIEF: "Summarize the market regime implications for this symbol from packet data only.",
+    EARNINGS_RISK_BRIEF: "Assess earnings-adjacent risk and uncertainty using packet context only.",
+    CRYPTO_RISK_BRIEF: "Assess crypto-specific regime/liquidity/time risks using packet context only.",
+    OPTIONS_PRESSURE_BRIEF: "Interpret options pressure and crowding implications from packet context only.",
     WHAT_CHANGED_SINCE_LAST_SCAN: "Compare current vs PREVIOUS_SCAN. Identify the largest axis movements and whether they strengthen or weaken the thesis.",
+    WHY_IS_THIS_RANKED: "Explain why this symbol is ranked where it is using trust-adjusted score, dominant axis, and penalties.",
+    WHAT_AM_I_MISSING: "List missing evidence and the next highest-value research checks before escalation.",
   };
 
   return `${header}${compare}${prev}\n\nTASK: ${taskByMode[mode]}\n\nRespond with the strict JSON object only.`;

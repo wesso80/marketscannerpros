@@ -355,7 +355,7 @@ export default function DiscordBridgePage() {
         <h3 className="text-sm font-semibold text-red-300 mb-2">Compliance Reminder</h3>
         <p className="text-xs text-red-300/70">
           All Discord posts include &quot;Educational analysis only&quot; footers automatically.
-          Never use language like &quot;take this trade&quot;, &quot;buy/sell now&quot;, or &quot;this will go up&quot;.
+          Never use language like &quot;take this trade&quot;, &quot;enter immediately&quot;, or &quot;this will go up&quot;.
           Use: &quot;high confluence setup&quot;, &quot;conditions align&quot;, &quot;educational analysis&quot;.
         </p>
       </div>

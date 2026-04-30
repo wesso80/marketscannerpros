@@ -20,6 +20,7 @@ import {
   type ResearchAlertCandidate,
 } from "@/lib/engines/researchAlertEngine";
 import type { AdminResearchAlert } from "@/lib/admin/adminTypes";
+import { appendResearchEvent } from "@/lib/admin/researchEventTape";
 
 export const runtime = "nodejs";
 
@@ -139,6 +140,43 @@ export async function POST(req: NextRequest) {
         outcome.alert.createdAt,
       ],
     );
+
+    await appendResearchEvent({
+      workspaceId: auth.workspaceId,
+      symbol: outcome.alert.symbol,
+      market: outcome.alert.market,
+      eventType: outcome.status === "FIRED" ? "ALERT_FIRED" : "ALERT_SUPPRESSED",
+      severity: outcome.status === "FIRED" ? "HIGH" : "WATCH",
+      message: `${outcome.status} ${outcome.alert.symbol} ${outcome.alert.setup} (${outcome.alert.score.toFixed(0)}/${outcome.alert.dataTrustScore.toFixed(0)})`,
+      payload: {
+        reason: outcome.decision.reason || null,
+        channels: outcome.channels,
+      },
+    }).catch(() => undefined);
+
+    if (outcome.channels.discord.ok || outcome.channels.discord.error || outcome.channels.discord.skipped) {
+      await appendResearchEvent({
+        workspaceId: auth.workspaceId,
+        symbol: outcome.alert.symbol,
+        market: outcome.alert.market,
+        eventType: "DISCORD_STATUS",
+        severity: outcome.channels.discord.ok ? "INFO" : "WATCH",
+        message: outcome.channels.discord.ok ? "Discord dispatch succeeded" : "Discord dispatch did not succeed",
+        payload: outcome.channels.discord,
+      }).catch(() => undefined);
+    }
+
+    if (outcome.channels.email.ok || outcome.channels.email.error || outcome.channels.email.skipped) {
+      await appendResearchEvent({
+        workspaceId: auth.workspaceId,
+        symbol: outcome.alert.symbol,
+        market: outcome.alert.market,
+        eventType: "EMAIL_STATUS",
+        severity: outcome.channels.email.ok ? "INFO" : "WATCH",
+        message: outcome.channels.email.ok ? "Email dispatch succeeded" : "Email dispatch did not succeed",
+        payload: outcome.channels.email,
+      }).catch(() => undefined);
+    }
 
     return NextResponse.json({
       ok: true,

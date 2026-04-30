@@ -12,15 +12,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
 import { getSessionFromCookie } from "@/lib/auth";
 import { isOperator } from "@/lib/quant/operatorAuth";
-import { runScan } from "@/lib/operator/orchestrator";
-import type { Bar, Market } from "@/types/operator";
-import { alphaVantageProvider } from "@/lib/operator/market-data";
-import { pipelineToSymbolIntelligence } from "@/lib/admin/serializer";
-import { buildAdminScanContext } from "@/lib/admin/scan-context";
-import { computeDataTruth } from "@/lib/engines/dataTruth";
-import { computeInternalResearchScore } from "@/lib/engines/internalResearchScore";
-import { classifySetup } from "@/lib/engines/setupClassifier";
+import type { Market } from "@/types/operator";
 import type { AdminOpportunityRow } from "@/lib/admin/adminTypes";
+import { getAdminResearchPacketsForSymbols } from "@/lib/admin/getAdminResearchPacket";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,65 +46,33 @@ export async function GET(req: NextRequest) {
     if (symbols.length === 0) {
       return NextResponse.json({ rows: [], errors: [], timestamp: new Date().toISOString() });
     }
-
-    const { context, risk } = await buildAdminScanContext();
-    const result = await runScan({ symbols, market, timeframe }, context, alphaVantageProvider);
-    const scanTime = new Date(result.timestamp).getTime();
-
-    const rows: AdminOpportunityRow[] = [];
-
-    for (const pipeline of result.pipelines) {
-      const symbol = pipeline.candidate.symbol;
-      let bars: Bar[];
-      try {
-        bars = await alphaVantageProvider.getBars(symbol, market, timeframe);
-      } catch {
-        bars = [];
-      }
-      const snapshot = pipelineToSymbolIntelligence(pipeline, bars, [], result.timestamp);
-
-      const lastBarTime = bars.length > 0 ? new Date(bars[bars.length - 1].timestamp).getTime() : scanTime;
-      const ageSec = Math.max(0, Math.round((Date.now() - lastBarTime) / 1000));
-
-      const dataTruth = computeDataTruth({
-        marketDataAgeSec: ageSec,
-        timeframe,
-        isCached: false,
-        sourceErrors: result.errors.filter((e) => e.symbol === symbol).map((e) => e.error),
-      });
-
-      const score = computeInternalResearchScore({ snapshot, dataTruth });
-      const setup = classifySetup(snapshot);
-
-      rows.push({
-        rank: 0, // assigned after sort
-        symbol,
-        market,
-        timeframe,
-        bias: snapshot.bias,
-        setup,
-        score,
-        dataTruth,
-        changeSinceLastScan: 0, // Phase 5 will diff from previous scan log
-        alertState: "NONE",
-      });
-    }
+    const packets = await getAdminResearchPacketsForSymbols({ symbols, market, timeframe });
+    const rows: AdminOpportunityRow[] = packets.map((packet) => ({
+      rank: 0,
+      symbol: packet.symbol,
+      market: packet.market,
+      timeframe: packet.timeframe,
+      bias: packet.snapshot.bias,
+      setup: packet.setup,
+      score: packet.internalResearchScore,
+      dataTruth: packet.dataTruth,
+      changeSinceLastScan: 0,
+      alertState: packet.alertEligibility.eligible ? "PENDING" : "SUPPRESSED",
+    }));
 
     // Rank: highest score first; DATA_DEGRADED rows pinned to bottom
     rows.sort((a, b) => {
       const aDegraded = a.score.lifecycle === "DATA_DEGRADED" ? 1 : 0;
       const bDegraded = b.score.lifecycle === "DATA_DEGRADED" ? 1 : 0;
       if (aDegraded !== bDegraded) return aDegraded - bDegraded;
-      return b.score.score - a.score.score;
+      return b.score.trustAdjustedScore - a.score.trustAdjustedScore;
     });
     rows.forEach((row, idx) => { row.rank = idx + 1; });
 
     return NextResponse.json({
       rows,
-      errors: result.errors,
-      timestamp: result.timestamp,
-      environmentMode: result.environmentMode,
-      risk,
+      errors: [],
+      timestamp: new Date().toISOString(),
       meta: {
         symbolsRequested: symbols.length,
         symbolsScored: rows.length,

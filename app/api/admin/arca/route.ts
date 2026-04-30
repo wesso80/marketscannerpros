@@ -37,6 +37,9 @@ interface RequestBody {
 }
 
 function fallbackOutput(mode: ArcaAdminMode, ctx: ArcaAdminContext, reason: string): ArcaAdminResearchOutput {
+  const reliabilityNote = ctx.dataTruth.status === "STALE" || ctx.dataTruth.status === "DEGRADED" || ctx.dataTruth.status === "MISSING" || ctx.dataTruth.status === "SIMULATED"
+    ? `Data reliability warning: status=${ctx.dataTruth.status}, trust=${ctx.dataTruth.trustScore}.`
+    : "Data reliability appears acceptable for research context.";
   return {
     mode,
     symbol: ctx.symbol.toUpperCase(),
@@ -53,6 +56,7 @@ function fallbackOutput(mode: ArcaAdminMode, ctx: ArcaAdminContext, reason: stri
       ctx.dataTruth.status === "DEGRADED" || ctx.dataTruth.status === "MISSING" || ctx.dataTruth.status === "ERROR"
         ? "Data truth is degraded — research conclusions are not reliable."
         : "Operator must form the research verdict manually.",
+      reliabilityNote,
     ],
     classification: "ADMIN_RESEARCH_COPILOT_NOT_BROKER_EXECUTION",
   };
@@ -79,8 +83,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `mode must be one of ${ARCA_ADMIN_MODES.join(", ")}` }, { status: 400 });
   }
   const ctx = body.context;
-  if (!ctx?.symbol || !ctx?.score?.axes || !ctx?.dataTruth) {
-    return NextResponse.json({ error: "context.symbol, context.score.axes, context.dataTruth are required" }, { status: 400 });
+  if (!ctx?.symbol || !ctx?.score?.axes || !ctx?.dataTruth || !ctx?.packet) {
+    return NextResponse.json({ error: "context.symbol, context.score.axes, context.dataTruth, and context.packet are required" }, { status: 400 });
   }
 
   const apiKey = process.env.OPENAI_API_KEY;

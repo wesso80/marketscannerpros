@@ -19,12 +19,27 @@
 | 6 | ARCA Admin Research | ✅ Complete | `5bf69dd7` |
 | 7 | Journal Learning | ✅ Complete | `c77bd4a3` |
 | 8 | Elite UI Polish | ✅ Complete | `pending commit` |
+| 9 | Institutional Intelligence Upgrade | ✅ Complete | `pending commit` |
 
 Status legend: ⬜ Not started · 🟡 In progress · ✅ Complete · ⚠️ Blocked
 
-**Last session ended at:** Phase 8 shipped — Elite UI Polish. Added [components/admin/AdminCommandPalette.tsx](../components/admin/AdminCommandPalette.tsx) + [lib/admin/commandPaletteCommands.ts](../lib/admin/commandPaletteCommands.ts) with Cmd/Ctrl+K launcher, `/` open, `Esc` close, `Enter` open selected, and single-letter route jumps (`S/O/G/T/V/A/D/J`). Added [components/admin/AdminProviderHealthGrid.tsx](../components/admin/AdminProviderHealthGrid.tsx) and [components/admin/AdminWebhookStatusPanel.tsx](../components/admin/AdminWebhookStatusPanel.tsx). Consolidated diagnostics into [app/admin/data-health/page.tsx](../app/admin/data-health/page.tsx) + [app/api/admin/data-health/route.ts](../app/api/admin/data-health/route.ts). Created [app/admin/model-diagnostics/page.tsx](../app/admin/model-diagnostics/page.tsx) + [app/api/admin/model-diagnostics/route.ts](../app/api/admin/model-diagnostics/route.ts). Created [app/admin/backtest-lab/page.tsx](../app/admin/backtest-lab/page.tsx) + [app/api/admin/backtest-lab/route.ts](../app/api/admin/backtest-lab/route.ts). Updated [app/admin/layout.tsx](../app/admin/layout.tsx) nav to include Data Health, Model Diagnostics, Backtest Lab; legacy Diagnostics/System retained and relabeled. vitest 40 files / 482 tests green (+9 new), build green, boundary guard green.
-**Last commit on main:** `c77bd4a3` (Phase 7)
-**Next action when resuming:** Roadmap phases 1-8 are complete. Optional follow-ups: retire legacy `/admin/diagnostics` + `/admin/system` once parity is confirmed, and migrate `/admin/quant` workflows into `/admin/backtest-lab` if desired.
+**Last session ended at:** Phase 9 shipped — Institutional Intelligence Upgrade. Delivered 12 tracks:
+1. **Canonical Admin Research Packet** — `lib/admin/getAdminResearchPacket.ts` + `getAdminResearchPacketsForSymbols` (all symbol/opportunities APIs now packet-driven)
+2. **24/7 Research Scheduler** — `lib/admin/researchScheduler.ts` + `app/api/admin/research-scheduler/route.ts` with run logging (DB table `admin_research_scheduler_runs`)
+3. **Priority Desk page** — `app/admin/priority-desk/page.tsx` + `app/api/admin/priority-desk/route.ts` with category boards, trap/degraded lists, ARCA top candidate, 60-second auto-refresh
+4. **Research Event Tape** — `lib/admin/researchEventTape.ts` + `app/api/admin/research-events/route.ts` + `components/admin/AdminResearchEventTape.tsx` (DB table `admin_research_event_tape`)
+5. **Trust-adjusted score model** — `InternalResearchScore` extended with `rawResearchScore`, `dataTrustScore`, `trustAdjustedScore`, `scoreDecayReason`; new `DATA_SIMULATED` penalty (-35), stale/delayed caps
+6. **What Changed Since Last Scan** — `lib/admin/researchDelta.ts` + `components/admin/AdminResearchDeltaPanel.tsx` (localStorage delta on symbol terminal)
+7. **ARCA Senior Research Advisor modes** — 11 new modes (BEST_PLAYS / ATTENTION_NOW / RED_TEAM_SETUP / CHALLENGE_MY_BIAS / MARKET_REGIME_BRIEF / EARNINGS_RISK_BRIEF / CRYPTO_RISK_BRIEF / OPTIONS_PRESSURE_BRIEF / WHAT_CHANGED_SINCE_LAST_SCAN / WHY_IS_THIS_RANKED / WHAT_AM_I_MISSING), packet grounding, reliability disclosure in fallback
+8. **Trap Detection Engine** — `lib/engines/trapDetection.ts` (10 trap types, `trapRiskScore 0-100`)
+9. **Operator Bias Check Layer** — `lib/admin/operatorBiasCheck.ts` + `components/admin/AdminBiasCheckPanel.tsx` (mounted in command centre, journal learning, ARCA panel)
+10. **Alert suppression gating** — stale/simulated, contradiction-count, trap-risk-excessive, late-setup gates; richer Discord payload (why/now/changed/risk/next-check/link)
+11. **Daily Research Brief** — `components/admin/AdminDailyResearchBrief.tsx` (mounted on admin home)
+12. **Production audit command** — `scripts/admin-audit.ts` + `npm run admin:audit` — static boundary/auth/packet/suppression checks then full vitest + build
+- Also fixed pre-existing public compliance copy failure in `app/tools/golden-egg/page.tsx`
+- All-green: **503/503 tests · build succeeds · `admin:audit` exits 0**
+**Last commit on main:** `c77bd4a3` (Phase 7 — Phase 8 + Phase 9 pending commit)
+**Next action when resuming:** commit + push Phase 8 and Phase 9 changes. Optional follow-ups: retire legacy `/admin/diagnostics` + `/admin/system` once parity confirmed; migrate `/admin/quant` into `/admin/backtest-lab`; add scheduler run history UI page; wire live DB migrations for the two new tables (`admin_research_event_tape`, `admin_research_scheduler_runs`).
 
 ---
 
@@ -263,6 +278,75 @@ Findings from a careful read of [lib/admin/truth-layer.ts](../lib/admin/truth-la
 - [x] Tests: [test/admin/commandPaletteCommands.test.ts](../test/admin/commandPaletteCommands.test.ts)
 - [x] Build + commit
 - [x] vitest 40 / 482 green · build green · boundary guard green
+
+---
+
+## Phase 9 — Institutional Intelligence Upgrade ✅ SHIPPED
+
+**Goal:** Convert the admin terminal into a private 24/7 multi-market research intelligence machine with canonical data flow, strict trust-adjusted scoring, and operator governance tooling.
+
+### 9.1 Canonical Admin Research Packet
+- [x] Create [lib/admin/getAdminResearchPacket.ts](../lib/admin/getAdminResearchPacket.ts) — `getAdminResearchPacket()` + `getAdminResearchPacketsForSymbols()` as the single canonical aggregator for all symbol research
+- [x] Refactor `app/api/admin/symbol/[symbol]/route.ts` to consume packet
+- [x] Refactor `app/api/admin/opportunities/route.ts` to derive ranked rows from packets (trust-adjusted sort)
+- [x] New [app/api/admin/research-packet/route.ts](../app/api/admin/research-packet/route.ts) — GET single or batch packets
+
+### 9.2 24/7 Research Scheduler
+- [x] Create [lib/admin/researchScheduler.ts](../lib/admin/researchScheduler.ts) — `runResearchScheduler()` + `listSchedulerRuns()`, DB table `admin_research_scheduler_runs`
+- [x] Create [app/api/admin/research-scheduler/route.ts](../app/api/admin/research-scheduler/route.ts) — GET list + POST run
+- [x] Modes: `CRYPTO_CONTINUOUS / EQUITIES_MARKET_HOURS / PRE_MARKET / POST_MARKET / EARNINGS / MACRO_EVENT / NEWS / OPTIONS / WATCHLIST / HIGH_PRIORITY_RESCAN`
+
+### 9.3 Priority Research Desk
+- [x] Create [app/admin/priority-desk/page.tsx](../app/admin/priority-desk/page.tsx) — grouped category boards, trap/degraded lists, ARCA top candidate, 60-second auto-refresh
+- [x] Create [app/api/admin/priority-desk/route.ts](../app/api/admin/priority-desk/route.ts) — best equities/crypto/options/volatility/time-confluence/news/earnings/trap/degraded lists
+- [x] Event tape mounted at bottom of Priority Desk
+
+### 9.4 Research Event Tape
+- [x] Create [lib/admin/researchEventTape.ts](../lib/admin/researchEventTape.ts) — `appendResearchEvent()` + `listResearchEvents()`, DB table `admin_research_event_tape`
+- [x] Create [app/api/admin/research-events/route.ts](../app/api/admin/research-events/route.ts) — GET + POST
+- [x] Create [components/admin/AdminResearchEventTape.tsx](../components/admin/AdminResearchEventTape.tsx) — live feed with severity colors, 30-second auto-refresh
+- [x] Alert route now logs ALERT_FIRED / ALERT_SUPPRESSED / DISCORD_STATUS / EMAIL_STATUS events
+
+### 9.5 Trust-Adjusted Score Model
+- [x] Extended `InternalResearchScore` in [lib/admin/adminTypes.ts](../lib/admin/adminTypes.ts): `rawResearchScore`, `dataTrustScore`, `trustAdjustedScore`, `scoreDecayReason`
+- [x] Updated [lib/engines/internalResearchScore.ts](../lib/engines/internalResearchScore.ts): new `DATA_SIMULATED` penalty (-35); stale cap (60), delayed cap (75), degraded cap (55)
+
+### 9.6 What Changed Since Last Scan (Research Delta)
+- [x] Create [lib/admin/researchDelta.ts](../lib/admin/researchDelta.ts) — `computeResearchDelta()` diffing score / lifecycle / dataTrust / evidence / contradictions / risks / context keys
+- [x] Create [components/admin/AdminResearchDeltaPanel.tsx](../components/admin/AdminResearchDeltaPanel.tsx)
+- [x] Wired into `app/admin/symbol/[symbol]/page.tsx` via `localStorage` packet cache
+
+### 9.7 ARCA Senior Research Advisor Modes
+- [x] Expanded mode catalog to 11: `BEST_PLAYS / ATTENTION_NOW / RED_TEAM_SETUP / CHALLENGE_MY_BIAS / MARKET_REGIME_BRIEF / EARNINGS_RISK_BRIEF / CRYPTO_RISK_BRIEF / OPTIONS_PRESSURE_BRIEF / WHAT_CHANGED_SINCE_LAST_SCAN / WHY_IS_THIS_RANKED / WHAT_AM_I_MISSING`
+- [x] Packet grounding via `ctx.packet` field in `ArcaAdminContext` — every ARCA response must carry trust-adjusted score + contradictions + next checks + invalidation conditions
+- [x] Reliability disclosure in fallback output for degraded data trust states
+- [x] ARCA route now requires `context.packet` in addition to `context.score` and `context.dataTruth`
+- [x] Default mode changed to `ATTENTION_NOW`
+
+### 9.8 Trap Detection Engine
+- [x] Create [lib/engines/trapDetection.ts](../lib/engines/trapDetection.ts) — 10 trap types: `LATE_MOVE / LOW_LIQUIDITY / VOLATILITY_TRAP / NEWS_TRAP / EARNINGS_TRAP / CROWDED_OPTIONS / FALSE_BREAKOUT / OVEREXTENSION / CONFLICTING_TIMEFRAMES / STALE_DATA_FALSE_CONFIDENCE`
+- [x] `detectTrapRisk()` returns `trapRiskScore` (0-100), `trapType[]`, `reasons`, `evidence`, `whatWouldReduceTrapRisk`
+- [x] Wired into canonical packet builder
+
+### 9.9 Operator Bias Check Layer
+- [x] Create [lib/admin/operatorBiasCheck.ts](../lib/admin/operatorBiasCheck.ts) — 7 bias signal codes with severity; `biasScore` (0-100)
+- [x] Create [components/admin/AdminBiasCheckPanel.tsx](../components/admin/AdminBiasCheckPanel.tsx) — mounted in admin home, journal learning, and ARCA panel
+
+### 9.10 Alert Suppression Upgrade
+- [x] Added to `alertSuppression.ts`: `BELOW_TRUST_ADJUSTED_THRESHOLD / CONTRADICTION_LIMIT / TRAP_RISK_EXCESSIVE / LATE_SETUP / STALE_OR_SIMULATED_DATA` suppression reasons
+- [x] `AdminResearchAlert` extended with `whyThis / whyNow / whatChanged / evidence / missingEvidence / mainRisk / nextResearchCheck / researchLink`
+- [x] Discord payload now renders all contextual alert fields
+
+### 9.11 Daily Research Brief
+- [x] Create [components/admin/AdminDailyResearchBrief.tsx](../components/admin/AdminDailyResearchBrief.tsx) — mounted on admin home page
+- [x] Pulls from priority desk and event tape; surfaces top equities/crypto, regime changes, avoid list, next actions
+
+### 9.12 Production Audit Command
+- [x] Create [scripts/admin-audit.ts](../scripts/admin-audit.ts) — static checks (boundary phrases, auth guards, packet shape, suppression guards, ARCA validator, Discord webhook config) then `vitest run` then `next build`
+- [x] `npm run admin:audit` — exits 0 with valid env; exits 1 and prints violation list on any failure
+- [x] Tests: [test/engines/trapDetection.test.ts](../test/engines/trapDetection.test.ts) · [test/admin/researchDelta.test.ts](../test/admin/researchDelta.test.ts) · [test/admin/operatorBiasCheck.test.ts](../test/admin/operatorBiasCheck.test.ts)
+- [x] Also fixed pre-existing public compliance copy failure in `app/tools/golden-egg/page.tsx` and `app/admin/discord-bridge/page.tsx`
+- [x] **503/503 tests · build green · `admin:audit` exits 0**
 
 ---
 

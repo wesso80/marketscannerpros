@@ -37,8 +37,21 @@ export interface ResearchAlertCandidate {
   setup: SetupType;
   bias: BiasState;
   score: number;
+  trustAdjustedScore?: number;
   dataTrustScore: number;
   lifecycle: ResearchLifecycle;
+  contradictionCount?: number;
+  trapRiskScore?: number;
+  setupLate?: boolean;
+  dataTruthStatus?: string;
+  whyThis?: string;
+  whyNow?: string;
+  whatChanged?: string;
+  evidence?: string[];
+  missingEvidence?: string[];
+  mainRisk?: string;
+  nextResearchCheck?: string;
+  researchLink?: string;
 }
 
 export interface ResearchAlertContext {
@@ -71,6 +84,14 @@ function buildAlert(candidate: ResearchAlertCandidate, now: number): AdminResear
     bias: candidate.bias,
     score: candidate.score,
     dataTrustScore: candidate.dataTrustScore,
+    whyThis: candidate.whyThis,
+    whyNow: candidate.whyNow,
+    whatChanged: candidate.whatChanged,
+    evidence: candidate.evidence,
+    missingEvidence: candidate.missingEvidence,
+    mainRisk: candidate.mainRisk,
+    nextResearchCheck: candidate.nextResearchCheck,
+    researchLink: candidate.researchLink,
     classification: "PRIVATE_RESEARCH_ALERT_NOT_BROKER_EXECUTION",
     createdAt: new Date(now).toISOString(),
   };
@@ -89,8 +110,13 @@ export async function runResearchAlertEngine(
     timeframe: candidate.timeframe,
     setup: candidate.setup,
     score: candidate.score,
+    trustAdjustedScore: candidate.trustAdjustedScore,
     dataTrustScore: candidate.dataTrustScore,
     lifecycle: candidate.lifecycle,
+    contradictionCount: candidate.contradictionCount,
+    trapRiskScore: candidate.trapRiskScore,
+    setupLate: candidate.setupLate,
+    dataTruthStatus: candidate.dataTruthStatus,
     recentAlerts: ctx.recentAlerts,
     thresholds: ctx.thresholds,
     now,

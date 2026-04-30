@@ -20,38 +20,44 @@ import type { DataTruth } from "@/lib/engines/dataTruth";
 /* ───────────── Modes ───────────── */
 
 export type ArcaAdminMode =
-  | "EXPLAIN_RANK"
-  | "CHALLENGE_SETUP"
-  | "FIND_MISSING_EVIDENCE"
-  | "SUMMARIZE_WATCHLIST"
-  | "DETECT_CONTRADICTIONS"
-  | "PREPARE_RESEARCH_ALERT"
-  | "REVIEW_JOURNAL_MISTAKE"
-  | "COMPARE_TWO_SYMBOLS"
-  | "WHAT_CHANGED_SINCE_LAST_SCAN";
+  | "BEST_PLAYS"
+  | "ATTENTION_NOW"
+  | "RED_TEAM_SETUP"
+  | "CHALLENGE_MY_BIAS"
+  | "MARKET_REGIME_BRIEF"
+  | "EARNINGS_RISK_BRIEF"
+  | "CRYPTO_RISK_BRIEF"
+  | "OPTIONS_PRESSURE_BRIEF"
+  | "WHAT_CHANGED_SINCE_LAST_SCAN"
+  | "WHY_IS_THIS_RANKED"
+  | "WHAT_AM_I_MISSING";
 
 export const ARCA_ADMIN_MODES: readonly ArcaAdminMode[] = [
-  "EXPLAIN_RANK",
-  "CHALLENGE_SETUP",
-  "FIND_MISSING_EVIDENCE",
-  "SUMMARIZE_WATCHLIST",
-  "DETECT_CONTRADICTIONS",
-  "PREPARE_RESEARCH_ALERT",
-  "REVIEW_JOURNAL_MISTAKE",
-  "COMPARE_TWO_SYMBOLS",
+  "BEST_PLAYS",
+  "ATTENTION_NOW",
+  "RED_TEAM_SETUP",
+  "CHALLENGE_MY_BIAS",
+  "MARKET_REGIME_BRIEF",
+  "EARNINGS_RISK_BRIEF",
+  "CRYPTO_RISK_BRIEF",
+  "OPTIONS_PRESSURE_BRIEF",
   "WHAT_CHANGED_SINCE_LAST_SCAN",
+  "WHY_IS_THIS_RANKED",
+  "WHAT_AM_I_MISSING",
 ] as const;
 
 export const ARCA_MODE_LABELS: Record<ArcaAdminMode, string> = {
-  EXPLAIN_RANK: "Explain Rank",
-  CHALLENGE_SETUP: "Challenge Setup",
-  FIND_MISSING_EVIDENCE: "Find Missing Evidence",
-  SUMMARIZE_WATCHLIST: "Summarize Watchlist",
-  DETECT_CONTRADICTIONS: "Detect Contradictions",
-  PREPARE_RESEARCH_ALERT: "Prepare Research Alert",
-  REVIEW_JOURNAL_MISTAKE: "Review Journal Mistake",
-  COMPARE_TWO_SYMBOLS: "Compare Two Symbols",
+  BEST_PLAYS: "Best Plays",
+  ATTENTION_NOW: "What Deserves Attention Now",
+  RED_TEAM_SETUP: "Red Team Setup",
+  CHALLENGE_MY_BIAS: "Challenge My Bias",
+  MARKET_REGIME_BRIEF: "Market Regime Brief",
+  EARNINGS_RISK_BRIEF: "Earnings Risk Brief",
+  CRYPTO_RISK_BRIEF: "Crypto Risk Brief",
+  OPTIONS_PRESSURE_BRIEF: "Options Pressure Brief",
   WHAT_CHANGED_SINCE_LAST_SCAN: "What Changed Since Last Scan",
+  WHY_IS_THIS_RANKED: "Why Is This Ranked?",
+  WHAT_AM_I_MISSING: "What Am I Missing?",
 };
 
 /* ───────────── Context bound to the cockpit ───────────── */
@@ -64,7 +70,16 @@ export interface ArcaAdminContext {
   setup: string;
   score: Pick<InternalResearchScore, "score" | "lifecycle" | "axes" | "dominantAxis">;
   dataTruth: Pick<DataTruth, "status" | "trustScore">;
-  /** Optional comparison context (used by COMPARE_TWO_SYMBOLS). */
+  /** Canonical research packet subset to ground every response. */
+  packet?: {
+    trustAdjustedScore: number;
+    scoreDecayReason: string;
+    contradictionFlags: string[];
+    nextResearchChecks: string[];
+    invalidationConditions: string[];
+    trapRiskScore: number;
+  };
+  /** Optional comparison context for cross-symbol briefing modes. */
   compareTo?: {
     symbol: string;
     score: number;

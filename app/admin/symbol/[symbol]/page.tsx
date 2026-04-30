@@ -7,9 +7,11 @@ import AdminResearchScoreBreakdown from "@/components/admin/AdminResearchScoreBr
 import AdminScenarioMap from "@/components/admin/AdminScenarioMap";
 import AdminARCAPanel from "@/components/admin/AdminARCAPanel";
 import AdminJournalDNAPanel from "@/components/admin/AdminJournalDNAPanel";
+import AdminResearchDeltaPanel from "@/components/admin/AdminResearchDeltaPanel";
 import type { AdminSymbolIntelligence } from "@/lib/admin/types";
 import type { InternalResearchScore, SetupDefinition } from "@/lib/admin/adminTypes";
 import type { DataTruth } from "@/lib/engines/dataTruth";
+import { computeResearchDelta } from "@/lib/admin/researchDelta";
 
 type SymbolResponse = AdminSymbolIntelligence & {
   research?: {
@@ -17,6 +19,7 @@ type SymbolResponse = AdminSymbolIntelligence & {
     score: InternalResearchScore;
     setup: SetupDefinition;
   };
+  researchPacket?: Record<string, unknown>;
 };
 
 export default function SymbolResearchTerminalPage({
@@ -50,6 +53,51 @@ export default function SymbolResearchTerminalPage({
         throw new Error(body?.error || `HTTP ${res.status}`);
       }
       const json = (await res.json()) as SymbolResponse;
+      if (json?.researchPacket && typeof window !== "undefined") {
+        const key = `msp:research-packet:${symbol}:${market}:${timeframe}`;
+        const prevRaw = localStorage.getItem(key);
+        const prev = prevRaw ? JSON.parse(prevRaw) : null;
+        const next = json.researchPacket as Record<string, any>;
+        const nextNotes = Array.isArray(next?.internalResearchScore?.notes) ? next.internalResearchScore.notes : [];
+        const nextRisks = Array.isArray(next?.trapDetection?.reasons) ? next.trapDetection.reasons : [];
+        const delta = computeResearchDelta({
+          previous: prev,
+          current: {
+            score: Number(next.trustAdjustedScore || next.internalResearchScore?.score || 0),
+            trustAdjustedScore: Number(next.trustAdjustedScore || 0),
+            lifecycle: String(next.lifecycle || "UNKNOWN"),
+            dataTrustScore: Number(next.dataTrustScore || 0),
+            evidence: nextNotes,
+            contradictionFlags: Array.isArray(next.contradictionFlags) ? next.contradictionFlags : [],
+            risks: nextRisks,
+            macroContext: next.macroContext,
+            newsContext: next.newsContext,
+            earningsContext: next.earningsContext,
+            volatilityState: next.volatilityState,
+            timeConfluence: next.timeConfluence,
+            optionsIntelligence: next.optionsIntelligence,
+          },
+        });
+        (json as SymbolResponse & { _delta?: ReturnType<typeof computeResearchDelta> })._delta = delta;
+        localStorage.setItem(
+          key,
+          JSON.stringify({
+            score: Number(next.trustAdjustedScore || 0),
+            trustAdjustedScore: Number(next.trustAdjustedScore || 0),
+            lifecycle: String(next.lifecycle || "UNKNOWN"),
+            dataTrustScore: Number(next.dataTrustScore || 0),
+            evidence: nextNotes,
+            contradictionFlags: Array.isArray(next.contradictionFlags) ? next.contradictionFlags : [],
+            risks: nextRisks,
+            macroContext: next.macroContext,
+            newsContext: next.newsContext,
+            earningsContext: next.earningsContext,
+            volatilityState: next.volatilityState,
+            timeConfluence: next.timeConfluence,
+            optionsIntelligence: next.optionsIntelligence,
+          }),
+        );
+      }
       setData(json);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load symbol intelligence");
@@ -172,14 +220,14 @@ export default function SymbolResearchTerminalPage({
           />
 
           <AdminARCAPanel
-            context={{
+            context={(data.researchPacket as Record<string, any> | undefined)?.arcaContext || {
               symbol: data.symbol,
               market,
               timeframe,
               bias: data.bias,
               setup: data.research.setup.type,
               score: {
-                score: data.research.score.score,
+                score: data.research.score.trustAdjustedScore,
                 lifecycle: data.research.score.lifecycle,
                 axes: data.research.score.axes,
                 dominantAxis: data.research.score.dominantAxis,
@@ -188,8 +236,22 @@ export default function SymbolResearchTerminalPage({
                 status: data.research.dataTruth.status,
                 trustScore: data.research.dataTruth.trustScore,
               },
+              packet: {
+                trustAdjustedScore: data.research.score.trustAdjustedScore,
+                scoreDecayReason: data.research.score.scoreDecayReason,
+                contradictionFlags: [],
+                nextResearchChecks: [],
+                invalidationConditions: [],
+                trapRiskScore: 0,
+              },
             }}
           />
+
+          {(data as SymbolResponse & { _delta?: Parameters<typeof AdminResearchDeltaPanel>[0]["delta"] })._delta && (
+            <AdminResearchDeltaPanel
+              delta={(data as SymbolResponse & { _delta?: Parameters<typeof AdminResearchDeltaPanel>[0]["delta"] })._delta!}
+            />
+          )}
 
           {/* Save Research Case */}
           <div style={{

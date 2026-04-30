@@ -43,6 +43,8 @@ export const ADMIN_COMMANDS: AdminCommand[] = [
 
   // Markets
   { id: "cmd:opportunity-board", shortcut: "O", label: "Opportunity Board", category: "Markets", href: "/admin/opportunity-board", keywords: ["scanner", "ranked"] },
+  { id: "cmd:priority-desk", shortcut: "P", label: "Priority Desk", description: "Best plays ranked across all markets", category: "Markets", href: "/admin/priority-desk", keywords: ["best", "plays", "ranked", "institutional", "category", "trap"] },
+  { id: "cmd:research-scheduler", shortcut: "R", label: "Research Scheduler", description: "24/7 scan run history and manual control", category: "Markets", href: "/admin/research-scheduler", keywords: ["scheduler", "scan", "history", "cron", "runs"] },
   { id: "cmd:golden-egg", shortcut: "G", label: "Golden Egg", description: "Top conviction research call", category: "Markets", href: "/admin/opportunity-board?focus=golden-egg", keywords: ["top", "conviction"] },
   { id: "cmd:time-confluence", shortcut: "T", label: "Time Confluence", category: "Markets", href: "/admin/symbol/ADA?panel=time-confluence", keywords: ["session", "tof"] },
   { id: "cmd:dve", shortcut: "V", label: "DVE Detail", category: "Markets", href: "/admin/symbol/ADA?panel=dve", keywords: ["volume", "exhaustion"] },

@@ -875,7 +875,7 @@ export default function GoldenEggPage() {
                       </span>
                     ))}
                   </div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">Scenario R:R example {isUsableNumber(geSafeScenario?.hypotheticalRr?.expectedR) ? geSafeScenario.hypotheticalRr.expectedR.toFixed(1) : 'Unavailable'} — hypothetical illustration only, not a trade recommendation</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">Scenario R:R example {isUsableNumber(geSafeScenario?.hypotheticalRr?.expectedR) ? geSafeScenario.hypotheticalRr.expectedR.toFixed(1) : 'Unavailable'} — hypothetical illustration only, not a trading instruction</div>
                 </div>
               </div>
 

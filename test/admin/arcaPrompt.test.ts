@@ -7,7 +7,7 @@
  *   2. The output validator accepts a canonical good payload.
  *   3. The output validator rejects payloads containing forbidden
  *      execution phrasing in any text field.
- *   4. All 9 modes are enumerable and labelled.
+ *   4. All required modes are enumerable and labelled.
  */
 
 import { describe, expect, it } from "vitest";
@@ -51,7 +51,7 @@ describe("Phase 6 — ARCA system prompt", () => {
 
 describe("Phase 6 — ARCA user prompt", () => {
   it("embeds bound score, axes, and data truth context", () => {
-    const user = buildArcaUserPrompt("EXPLAIN_RANK", {
+    const user = buildArcaUserPrompt("WHY_IS_THIS_RANKED", {
       symbol: "AAPL",
       market: "EQUITIES",
       timeframe: "15m",
@@ -74,7 +74,7 @@ describe("Phase 6 — ARCA user prompt", () => {
 
 describe("Phase 6 — output validator", () => {
   const good: ArcaAdminResearchOutput = {
-    mode: "EXPLAIN_RANK",
+    mode: "WHY_IS_THIS_RANKED",
     symbol: "AAPL",
     headline: "Trend axis dominates a READY-state research thesis on 15m.",
     reasoning: ["Trend=80 is the dominant axis.", "Momentum at 70 supports continuation."],
@@ -84,25 +84,25 @@ describe("Phase 6 — output validator", () => {
   };
 
   it("accepts a canonical, well-formed payload", () => {
-    const v = validateArcaOutput(good, "EXPLAIN_RANK", "AAPL");
+    const v = validateArcaOutput(good, "WHY_IS_THIS_RANKED", "AAPL");
     expect(v.ok).toBe(true);
     expect(v.errors).toEqual([]);
   });
 
   it("rejects mode mismatch", () => {
-    const v = validateArcaOutput({ ...good, mode: "CHALLENGE_SETUP" }, "EXPLAIN_RANK", "AAPL");
+    const v = validateArcaOutput({ ...good, mode: "RED_TEAM_SETUP" }, "WHY_IS_THIS_RANKED", "AAPL");
     expect(v.ok).toBe(false);
     expect(v.errors.join(" ")).toContain("mode mismatch");
   });
 
   it("rejects symbol mismatch", () => {
-    const v = validateArcaOutput({ ...good, symbol: "MSFT" }, "EXPLAIN_RANK", "AAPL");
+    const v = validateArcaOutput({ ...good, symbol: "MSFT" }, "WHY_IS_THIS_RANKED", "AAPL");
     expect(v.ok).toBe(false);
     expect(v.errors.join(" ")).toContain("symbol mismatch");
   });
 
   it("rejects wrong classification", () => {
-    const v = validateArcaOutput({ ...good, classification: "WHATEVER" as never }, "EXPLAIN_RANK", "AAPL");
+    const v = validateArcaOutput({ ...good, classification: "WHATEVER" as never }, "WHY_IS_THIS_RANKED", "AAPL");
     expect(v.ok).toBe(false);
     expect(v.errors.join(" ")).toContain("classification");
   });
@@ -112,7 +112,7 @@ describe("Phase 6 — output validator", () => {
     for (const phrase of phrases) {
       const v = validateArcaOutput(
         { ...good, headline: `You should ${phrase} immediately.` },
-        "EXPLAIN_RANK",
+        "WHY_IS_THIS_RANKED",
         "AAPL",
       );
       expect(v.ok, `expected reject for "${phrase}"`).toBe(false);
@@ -123,21 +123,21 @@ describe("Phase 6 — output validator", () => {
   it("rejects forbidden phrasing inside reasoning bullets", () => {
     const v = validateArcaOutput(
       { ...good, reasoning: ["Trend looks great.", "Operator should buy now to capture move."] },
-      "EXPLAIN_RANK",
+      "WHY_IS_THIS_RANKED",
       "AAPL",
     );
     expect(v.ok).toBe(false);
   });
 
   it("rejects non-array reasoning / evidence / risks", () => {
-    const v = validateArcaOutput({ ...good, reasoning: "not an array" }, "EXPLAIN_RANK", "AAPL");
+    const v = validateArcaOutput({ ...good, reasoning: "not an array" }, "WHY_IS_THIS_RANKED", "AAPL");
     expect(v.ok).toBe(false);
   });
 });
 
 describe("Phase 6 — mode catalog", () => {
-  it("exposes exactly 9 modes", () => {
-    expect(ARCA_ADMIN_MODES.length).toBe(9);
+  it("exposes exactly 11 modes", () => {
+    expect(ARCA_ADMIN_MODES.length).toBe(11);
   });
 
   it("provides a label for every mode", () => {

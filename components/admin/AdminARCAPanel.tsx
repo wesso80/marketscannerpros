@@ -19,6 +19,7 @@ import {
   type ArcaAdminMode,
   type ArcaAdminResearchOutput,
 } from "@/lib/admin/arcaTypes";
+import AdminBiasCheckPanel from "@/components/admin/AdminBiasCheckPanel";
 
 interface Props {
   context: ArcaAdminContext;
@@ -30,7 +31,7 @@ function authHeaders(): HeadersInit {
 }
 
 export default function AdminARCAPanel({ context }: Props) {
-  const [mode, setMode] = useState<ArcaAdminMode>("EXPLAIN_RANK");
+  const [mode, setMode] = useState<ArcaAdminMode>("ATTENTION_NOW");
   const [output, setOutput] = useState<ArcaAdminResearchOutput | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -140,9 +141,13 @@ export default function AdminARCAPanel({ context }: Props) {
 
       {!output && !error && !loading && (
         <p className="text-xs text-white/45">
-          Pick a mode and click Ask ARCA. Bound to the current symbol&apos;s research score, evidence stack, and data truth.
+          Pick a mode and click Ask ARCA. ARCA is grounded only in the current Admin Research Packet context.
         </p>
       )}
+
+      <div className="mt-3">
+        <AdminBiasCheckPanel />
+      </div>
     </div>
   );
 }

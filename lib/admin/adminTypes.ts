@@ -101,8 +101,16 @@ export interface ResearchScoreBoost {
 export interface InternalResearchScore {
   /** Composite 0..100 score (after cap, penalties, boosts, and floors). */
   score: number;
+  /** Alias retained for consumers expecting explicit naming. */
+  rawResearchScore: number;
   /** Raw uncapped composite (for debug / audit). */
   rawScore: number;
+  /** Data trust score copied from DataTruth to keep scoring payload self-contained. */
+  dataTrustScore: number;
+  /** Effective score after trust decay/caps (used for ranking + alert gating). */
+  trustAdjustedScore: number;
+  /** Human-readable explanation for the trust decay/cap that was applied. */
+  scoreDecayReason: string;
   /** Lifecycle classification. */
   lifecycle: ResearchLifecycle;
   /** Per-axis sub-scores (0..100). */
@@ -145,6 +153,14 @@ export interface AdminResearchAlert {
   bias: BiasState;
   score: number;
   dataTrustScore: number;
+  whyThis?: string;
+  whyNow?: string;
+  whatChanged?: string;
+  evidence?: string[];
+  missingEvidence?: string[];
+  mainRisk?: string;
+  nextResearchCheck?: string;
+  researchLink?: string;
   /** Always present, always exactly this string. */
   classification: "PRIVATE_RESEARCH_ALERT_NOT_BROKER_EXECUTION";
   createdAt: string;

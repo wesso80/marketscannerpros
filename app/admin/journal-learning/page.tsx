@@ -9,6 +9,7 @@
 
 import { useEffect, useState } from "react";
 import type { JournalDNASummary } from "@/lib/engines/journalLearning";
+import AdminBiasCheckPanel from "@/components/admin/AdminBiasCheckPanel";
 
 function authHeaders(): HeadersInit {
   const secret = typeof window !== "undefined" ? sessionStorage.getItem("admin_secret") : null;
@@ -88,6 +89,10 @@ export default function JournalLearningPage() {
 
       {summary && (
         <>
+          <div style={{ marginBottom: "1rem" }}>
+            <AdminBiasCheckPanel />
+          </div>
+
           <div style={{
             background: "rgba(17,24,39,0.6)",
             border: "1px solid rgba(255,255,255,0.06)",

@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import AdminDailyResearchBrief from "@/components/admin/AdminDailyResearchBrief";
+import AdminBiasCheckPanel from "@/components/admin/AdminBiasCheckPanel";
 
 interface Stats {
   overview: {
@@ -347,6 +349,14 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
           </div>
         </div>
       )}
+
+      <div style={{ marginBottom: "1rem" }}>
+        <AdminDailyResearchBrief />
+      </div>
+
+      <div style={{ marginBottom: "1rem" }}>
+        <AdminBiasCheckPanel />
+      </div>
 
       <div style={{
         display: "grid",

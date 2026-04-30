@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
+import { requireAdmin } from '@/lib/adminAuth';
 import { q } from '@/lib/db';
 import Stripe from 'stripe';
 
@@ -9,6 +10,23 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
 
+async function authorize(req: NextRequest): Promise<{ ok: boolean; workspaceId?: string }> {
+  const admin = await requireAdmin(req);
+  if (admin.ok) return { ok: true, workspaceId: admin.workspaceId };
+
+  const session = await getSessionFromCookie();
+  if (!session?.workspaceId) return { ok: false };
+
+  const userRow = await q(
+    `SELECT email FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1`,
+    [session.workspaceId]
+  );
+  const email = (userRow[0]?.email || '').toLowerCase();
+  if (!ADMIN_EMAILS.includes(email)) return { ok: false };
+
+  return { ok: true, workspaceId: session.workspaceId };
+}
+
 /**
  * GET /api/admin/contest — List entries for current or specified period
  * POST /api/admin/contest — { action: 'draw' | 'close_period' }
@@ -16,18 +34,8 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map((e) => e.tr
  * Admin-only (checked via session email + ADMIN_EMAILS env var).
  */
 export async function GET(req: NextRequest) {
-  const session = await getSessionFromCookie();
-  if (!session?.workspaceId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  // Check admin
-  const userRow = await q(
-    `SELECT email FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1`,
-    [session.workspaceId]
-  );
-  const email = (userRow[0]?.email || '').toLowerCase();
-  if (!ADMIN_EMAILS.includes(email)) {
+  const auth = await authorize(req);
+  if (!auth.ok) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -52,17 +60,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getSessionFromCookie();
-  if (!session?.workspaceId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const userRow = await q(
-    `SELECT email FROM user_subscriptions WHERE workspace_id = $1 LIMIT 1`,
-    [session.workspaceId]
-  );
-  const email = (userRow[0]?.email || '').toLowerCase();
-  if (!ADMIN_EMAILS.includes(email)) {
+  const auth = await authorize(req);
+  if (!auth.ok) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 

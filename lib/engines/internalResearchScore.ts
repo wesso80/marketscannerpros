@@ -36,6 +36,7 @@ const PENALTY_DEGRADED_DATA = 15;
 const PENALTY_DELAYED_DATA = 8;
 const PENALTY_BLOCK_REASON = 12;
 const PENALTY_INVALIDATION = 30;
+const PENALTY_SIMULATED_DATA = 35;
 
 /** Boosts. */
 const BOOST_HIGH_CONFLUENCE = 6;
@@ -188,7 +189,9 @@ export function computeInternalResearchScore(input: ResearchScoreInput): Interna
   const notes: string[] = [];
 
   // Data-truth penalties
-  if (dataTruth.status === "STALE") {
+  if (dataTruth.status === "SIMULATED") {
+    penalties.push({ code: "DATA_SIMULATED", label: "Data is simulated", weight: PENALTY_SIMULATED_DATA });
+  } else if (dataTruth.status === "STALE") {
     penalties.push({ code: "DATA_STALE", label: "Data is stale", weight: PENALTY_STALE_DATA });
   } else if (dataTruth.status === "DEGRADED" || dataTruth.status === "MISSING" || dataTruth.status === "ERROR") {
     penalties.push({ code: "DATA_DEGRADED", label: "Data is degraded or missing", weight: PENALTY_DEGRADED_DATA });
@@ -240,16 +243,38 @@ export function computeInternalResearchScore(input: ResearchScoreInput): Interna
   // Hard-floor enforcement: DATA_DEGRADED collapses the visible score to
   // make ranking obvious without losing the audit trail.
   let finalScore = composite;
+  let scoreDecayReason = "No trust decay applied";
   if (lifecycle === "DATA_DEGRADED") {
     finalScore = Math.min(composite, 35);
     notes.push(`Data trust ${dataTruth.trustScore} below hard floor ${DATA_TRUST_HARD_FLOOR} — score capped.`);
+    scoreDecayReason = `Data trust below ${DATA_TRUST_HARD_FLOOR}; capped to degraded ceiling`;
+  } else if (dataTruth.status === "SIMULATED") {
+    finalScore = Math.min(finalScore, 45);
+    scoreDecayReason = "Simulated data; high-priority scoring disabled";
+  } else if (dataTruth.status === "STALE") {
+    finalScore = Math.min(finalScore, 60);
+    scoreDecayReason = "Stale market data reduced effective score";
+  } else if (dataTruth.status === "DELAYED") {
+    finalScore = Math.min(finalScore, 75);
+    scoreDecayReason = "Delayed market data reduced effective score";
+  } else if (dataTruth.status === "MISSING" || dataTruth.status === "DEGRADED" || dataTruth.status === "ERROR") {
+    finalScore = Math.min(finalScore, 55);
+    scoreDecayReason = "Partial or unreliable inputs capped effective score";
+  }
+
+  if (dataTruth.status === "MISSING" || dataTruth.status === "DEGRADED") {
+    notes.push("Warning: partial data detected; trust-adjusted score should be treated conservatively.");
   }
 
   notes.push(...dataTruth.notes);
 
   return {
     score: finalScore,
+    rawResearchScore: rawComposite,
     rawScore: rawComposite,
+    dataTrustScore: dataTruth.trustScore,
+    trustAdjustedScore: finalScore,
+    scoreDecayReason,
     lifecycle,
     axes,
     dominantAxis: dominant,
