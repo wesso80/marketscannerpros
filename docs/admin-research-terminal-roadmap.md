@@ -18,8 +18,8 @@
 | 5 | Alerts & Discord | ✅ Complete | `c06c93ad` |
 | 6 | ARCA Admin Research | ✅ Complete | `5bf69dd7` |
 | 7 | Journal Learning | ✅ Complete | `c77bd4a3` |
-| 8 | Elite UI Polish | ✅ Complete | `pending commit` |
-| 9 | Institutional Intelligence Upgrade | ✅ Complete | `pending commit` |
+| 8 | Elite UI Polish | ✅ Complete | `9afa74ff` |
+| 9 | Institutional Intelligence Upgrade | ✅ Complete | `9afa74ff` |
 
 Status legend: ⬜ Not started · 🟡 In progress · ✅ Complete · ⚠️ Blocked
 
@@ -38,8 +38,8 @@ Status legend: ⬜ Not started · 🟡 In progress · ✅ Complete · ⚠️ Blo
 12. **Production audit command** — `scripts/admin-audit.ts` + `npm run admin:audit` — static boundary/auth/packet/suppression checks then full vitest + build
 - Also fixed pre-existing public compliance copy failure in `app/tools/golden-egg/page.tsx`
 - All-green: **503/503 tests · build succeeds · `admin:audit` exits 0**
-**Last commit on main:** `c77bd4a3` (Phase 7 — Phase 8 + Phase 9 pending commit)
-**Next action when resuming:** commit + push Phase 8 and Phase 9 changes. Optional follow-ups: retire legacy `/admin/diagnostics` + `/admin/system` once parity confirmed; migrate `/admin/quant` into `/admin/backtest-lab`; add scheduler run history UI page; wire live DB migrations for the two new tables (`admin_research_event_tape`, `admin_research_scheduler_runs`).
+**Last commit on main:** `9afa74ff` (Phase 8 + Phase 9 — all shipped and pushed)
+**Next action when resuming:** `git pull && npm run build && npm run admin:audit` to confirm green on home machine. Optional follow-ups: retire legacy `/admin/diagnostics` + `/admin/system` once parity confirmed; migrate `/admin/quant` into `/admin/backtest-lab`; run DB migrations 069+070 on Render Postgres.
 
 ---
 
