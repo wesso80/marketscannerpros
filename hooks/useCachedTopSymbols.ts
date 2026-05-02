@@ -48,7 +48,7 @@ export function useCachedTopSymbols(limit = 10): CachedTopSymbolsResult {
     setLoading(true);
     setError(null);
 
-    fetch(`/api/scanner/top-cached?type=all&limit=${limit}`)
+    fetch(`/api/scanner/top-cached?type=all&limit=${limit}&_ts=${Date.now()}`, { cache: 'no-store' })
       .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();

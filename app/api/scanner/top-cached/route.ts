@@ -13,6 +13,8 @@ import { q } from '@/lib/db';
 import { scannerComplianceMetadata, scannerDataQualityMetadata } from '@/lib/scanner/compliance';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 /* Crypto symbol detection */
 const CRYPTO_SYMBOLS = new Set([
@@ -124,7 +126,7 @@ export async function GET(req: NextRequest) {
 
   try {
     // Join quotes + indicators + symbol_universe — only enabled symbols with fresh data
-    const rows = await q<Record<string, unknown>>(`
+    let rows = await q<Record<string, unknown>>(`
       SELECT
         ql.symbol,
         ql.price,
@@ -152,6 +154,37 @@ export async function GET(req: NextRequest) {
       ORDER BY ql.fetched_at DESC NULLS LAST
       LIMIT 200
     `);
+
+    // Fallback when worker cache tables are temporarily empty: use latest daily scanner picks.
+    if (rows.length === 0) {
+      rows = await q<Record<string, unknown>>(`
+        WITH latest AS (SELECT MAX(scan_date) AS d FROM daily_picks)
+        SELECT
+          dp.symbol,
+          dp.price,
+          NULL::numeric AS change_amount,
+          dp.change_percent,
+          NULL::numeric AS volume,
+          dp.scan_date::text AS latest_trading_day,
+          NOW() AS fetched_at,
+          (dp.indicators->>'rsi')::numeric AS rsi14,
+          (dp.indicators->>'macd_hist')::numeric AS macd_hist,
+          (dp.indicators->>'ema200')::numeric AS ema200,
+          (dp.indicators->>'adx')::numeric AS adx14,
+          (dp.indicators->>'stoch_k')::numeric AS stoch_k,
+          (dp.indicators->>'atr')::numeric AS atr14,
+          (dp.indicators->>'macd_line')::numeric AS macd_line,
+          (dp.indicators->>'macd_signal')::numeric AS macd_signal
+        FROM daily_picks dp
+        JOIN latest l ON dp.scan_date = l.d
+        WHERE dp.asset_class IN ('equity', 'crypto')
+          AND dp.price IS NOT NULL
+          AND dp.price > 0
+          AND dp.indicators IS NOT NULL
+        ORDER BY dp.score DESC
+        LIMIT 200
+      `);
+    }
 
     // Determine staleness — warn if oldest row used is > 2 hours old
     const now = Date.now();
