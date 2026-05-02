@@ -1,3 +1,5 @@
+import { buildFuturesSessionState } from './futuresSessionEngine';
+
 export type FuturesAnchorMode = 'globex' | 'rth' | 'cash_bridge';
 
 export type FuturesCloseCalendarRow = {
@@ -272,12 +274,34 @@ export function buildFuturesCloseCalendar(
   horizonDays = 1,
   now: Date = new Date(),
 ): FuturesCloseCalendarResponse {
-  const etNowParts = getEtParts(now);
-  const etNow = new Date(now);
+  // Check whether Globex is currently in the weekend close window (Fri 17:00 – Sun 18:00 ET).
+  // If so, offset all computations forward to the next Globex reopen so minute counts
+  // reflect real wall-clock time from now, not from inside the dead window.
+  const session = buildFuturesSessionState(symbol, now);
+  const isClosed = session.currentSession === 'closed';
+  const minutesUntilReopen = isClosed ? session.minutesToNextSessionEvent : 0;
+  const effectiveNow = isClosed
+    ? new Date(now.getTime() + minutesUntilReopen * 60_000)
+    : now;
 
-  const rows = [...buildIntradayRows(etNow, anchorMode), ...buildHigherRows(etNow)]
+  const rawRows = [...buildIntradayRows(effectiveNow, anchorMode), ...buildHigherRows(effectiveNow)];
+
+  // When closed, add the reopen gap to every minutesToClose so values are relative to real now.
+  const rows = rawRows
+    .map((row) =>
+      isClosed ? { ...row, minutesToClose: row.minutesToClose + minutesUntilReopen } : row,
+    )
     .filter((row) => row.minutesToClose <= horizonDays * 24 * 60 + 52 * 7 * 24 * 60)
     .sort((a, b) => a.minutesToClose - b.minutesToClose);
+
+  const warnings: string[] = [];
+  if (isClosed) {
+    const h = Math.floor(minutesUntilReopen / 60);
+    const m = minutesUntilReopen % 60;
+    warnings.push(
+      `Globex is currently closed. Next open: Sunday 18:00 ET (in ${h}h ${m > 0 ? ` ${m}m` : ''}).`,
+    );
+  }
 
   return {
     symbol: symbol.toUpperCase().trim(),
@@ -287,9 +311,6 @@ export function buildFuturesCloseCalendar(
     schedule: rows,
     clusters: buildClusters(rows),
     timeline: buildTimeline(anchorMode),
-    warnings:
-      etNowParts.weekday === 6
-        ? ['Weekend session context can compress intraday rotation cadence.']
-        : [],
+    warnings,
   };
 }
