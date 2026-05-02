@@ -13,9 +13,12 @@ import { useV2 } from '@/app/v2/_lib/V2Context';
 import { useUserTier } from '@/lib/useUserTier';
 import { useCachedTopSymbols } from '@/hooks/useCachedTopSymbols';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
+import { detectMarketPath, type MarketPath } from '@/lib/terminal/marketPath';
+import { hasCommoditySessionMap } from '@/lib/terminal/futures/cashBridgeMap';
 
 const OptionsTerminalView = dynamic(() => import('@/components/options-terminal/OptionsTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Options Terminal…</div> });
 const CryptoTerminalView = dynamic(() => import('@/components/crypto-terminal/CryptoTerminalView'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminal…</div> });
+const FuturesTerminalPanel = dynamic(() => import('@/components/terminal/futures/FuturesTerminalPanel'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500">Loading Futures Terminal…</div> });
 const OptionsConfluence = dynamic(() => import('@/app/tools/options-confluence/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Confluence Engine…</div> });
 const OptionsFlow = dynamic(() => import('@/app/tools/options-flow/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Options Flow…</div> });
 const TimeScanner = dynamic(() => import('@/app/tools/time-scanner/page'), { ssr: false, loading: () => <div className="py-12 text-center text-xs text-slate-500 animate-pulse">Loading Time Gravity…</div> });
@@ -24,7 +27,9 @@ const TimeConfluenceWidget = dynamic(() => import('@/components/TimeConfluenceWi
 import {
   useCloseCalendar,
   useFlow,
+  useFuturesTerminal,
   type CloseCalendarAnchor,
+  type FuturesAnchorMode,
   type ForwardCloseScheduleRow,
   type ForwardCloseCluster,
   type ForwardCloseCalendar,
@@ -45,7 +50,20 @@ function TerminalMetric({ label, value, tone = '#CBD5E1', detail }: { label: str
   );
 }
 
-const TABS = ['Close Calendar', 'Options Terminal', 'Options Confluence', 'Options Flow', 'Crypto', 'Flow', 'Time Gravity', 'Time Confluence'] as const;
+const TABS = [
+  'Close Calendar',
+  'Options Terminal',
+  'Options Confluence',
+  'Options Flow',
+  'Crypto',
+  'Futures Session',
+  'Cash Bridge',
+  'Commodity Session Map',
+  'Liquidity & Volume',
+  'Capital Pressure',
+  'Time Gravity',
+  'Time Confluence',
+] as const;
 type TerminalTab = typeof TABS[number];
 
 const TERMINAL_TAB_PARAM_MAP: Record<string, TerminalTab> = {
@@ -59,7 +77,11 @@ const TERMINAL_TAB_PARAM_MAP: Record<string, TerminalTab> = {
   'options-flow': 'Options Flow',
   crypto: 'Crypto',
   'crypto-terminal': 'Crypto',
-  capital: 'Flow',
+  capital: 'Capital Pressure',
+  futures: 'Futures Session',
+  session: 'Futures Session',
+  bridge: 'Cash Bridge',
+  liquidity: 'Liquidity & Volume',
   gravity: 'Time Gravity',
   'time-gravity': 'Time Gravity',
   time: 'Time Confluence',
@@ -88,7 +110,23 @@ const TERMINAL_TAB_META: Record<TerminalTab, { eyebrow: string; description: str
     eyebrow: '2. Derivatives map',
     description: 'Inspect funding, open interest, liquidations, exchanges, and stablecoin context.',
   },
-  Flow: {
+  'Futures Session': {
+    eyebrow: '2. Futures session map',
+    description: 'Track Globex, pre-RTH, RTH, post-RTH, and maintenance break transitions.',
+  },
+  'Cash Bridge': {
+    eyebrow: '3. Cash bridge',
+    description: 'Map futures, ETF, and cash-index timing alignment.',
+  },
+  'Commodity Session Map': {
+    eyebrow: '3. Commodity session map',
+    description: 'Use commodity-specific session context when no cash-index bridge exists.',
+  },
+  'Liquidity & Volume': {
+    eyebrow: '4. Liquidity and volume',
+    description: 'Compare RTH and overnight participation context.',
+  },
+  'Capital Pressure': {
     eyebrow: '5. Capital pressure',
     description: 'Read flow, probability, gamma, liquidity, and session context together.',
   },
@@ -102,16 +140,37 @@ const TERMINAL_TAB_META: Record<TerminalTab, { eyebrow: string; description: str
   },
 };
 
+function visibleTabsForPath(marketPath: MarketPath, commodityFutures: boolean): TerminalTab[] {
+  if (marketPath === 'crypto') {
+    return ['Close Calendar', 'Crypto', 'Capital Pressure', 'Time Gravity', 'Time Confluence'];
+  }
+  if (marketPath === 'futures') {
+    return [
+      'Close Calendar',
+      'Futures Session',
+      commodityFutures ? 'Commodity Session Map' : 'Cash Bridge',
+      'Liquidity & Volume',
+      'Capital Pressure',
+      'Time Gravity',
+      'Time Confluence',
+    ];
+  }
+  return ['Close Calendar', 'Options Terminal', 'Options Confluence', 'Options Flow', 'Capital Pressure', 'Time Gravity', 'Time Confluence'];
+}
+
 function TerminalTabRail({
   activeTab,
-  asset,
+  marketPath,
+  commodityFutures,
   onSelectTab,
 }: {
   activeTab: TerminalTab;
-  asset: 'crypto' | 'equity';
+  marketPath: MarketPath;
+  commodityFutures: boolean;
   onSelectTab: (tab: TerminalTab) => void;
 }) {
-  const visibleTabs = TABS.filter(t => !(asset === 'crypto' && (t === 'Options Terminal' || t === 'Options Confluence' || t === 'Options Flow')));
+  const visibleTabs = visibleTabsForPath(marketPath, commodityFutures);
+  const pathLabel = marketPath === 'crypto' ? 'Crypto path' : marketPath === 'futures' ? 'Futures path' : 'Equity path';
 
   return (
     <div className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2" aria-label="Terminal market mechanics views">
@@ -121,7 +180,7 @@ function TerminalTabRail({
           <div className="text-[0.72rem] text-slate-500">Timing first, then positioning, flow, and final confluence before Backtest.</div>
         </div>
         <div className="rounded-md border border-slate-700/70 bg-slate-950/60 px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.12em] text-slate-500">
-          {asset === 'crypto' ? 'Crypto path' : 'Equity path'}
+          {pathLabel}
         </div>
       </div>
       <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-5">
@@ -155,7 +214,11 @@ const TERMINAL_SUBVIEW_FOCUS: Record<Exclude<TerminalTab, 'Close Calendar'>, str
   'Options Confluence': 'Setup Alignment',
   'Options Flow': 'Flow Estimate',
   Crypto: 'Derivatives Map',
-  Flow: 'Capital Pressure',
+  'Futures Session': 'Session Transitions',
+  'Cash Bridge': 'Bridge Alignment',
+  'Commodity Session Map': 'Commodity Session Logic',
+  'Liquidity & Volume': 'Participation Context',
+  'Capital Pressure': 'Capital Pressure',
   'Time Gravity': 'Gravity Map',
   'Time Confluence': 'Final Timing Check',
 };
@@ -173,23 +236,24 @@ function TerminalSubviewMetric({ label, value, tone = '#CBD5E1', detail }: { lab
 function TerminalSubviewFrame({
   tab,
   symbol,
-  asset,
+  marketPath,
+  commodityFutures,
   onSelectTab,
   children,
 }: {
   tab: Exclude<TerminalTab, 'Close Calendar'>;
   symbol: string;
-  asset: 'crypto' | 'equity';
+  marketPath: MarketPath;
+  commodityFutures: boolean;
   onSelectTab: (tab: TerminalTab) => void;
   children: React.ReactNode;
 }) {
   const meta = TERMINAL_TAB_META[tab];
-  const sequence: TerminalTab[] = asset === 'crypto'
-    ? ['Crypto', 'Flow', 'Time Gravity', 'Time Confluence']
-    : ['Options Terminal', 'Options Confluence', 'Options Flow', 'Flow', 'Time Gravity', 'Time Confluence'];
+  const sequence: TerminalTab[] = visibleTabsForPath(marketPath, commodityFutures).filter((t): t is Exclude<TerminalTab, 'Close Calendar'> => t !== 'Close Calendar');
   const idx = sequence.indexOf(tab);
   const adjacentTab: TerminalTab = idx >= 0 && idx < sequence.length - 1 ? sequence[idx + 1] : sequence[0];
   const focusLabel = TERMINAL_SUBVIEW_FOCUS[tab];
+  const pathTone = marketPath === 'crypto' ? '#F59E0B' : marketPath === 'futures' ? '#22D3EE' : '#818CF8';
 
   return (
     <div className="space-y-3">
@@ -214,7 +278,7 @@ function TerminalSubviewFrame({
           </div>
 
           <div className="grid self-start gap-1.5 sm:grid-cols-2">
-            <TerminalSubviewMetric label="Symbol" value={symbol} tone={asset === 'crypto' ? '#F59E0B' : '#818CF8'} detail={`${asset.toUpperCase()} mechanics path`} />
+            <TerminalSubviewMetric label="Symbol" value={symbol} tone={pathTone} detail={`${marketPath.toUpperCase()} mechanics path`} />
             <TerminalSubviewMetric label="View" value={tab} tone="#10B981" detail={meta.eyebrow} />
             <TerminalSubviewMetric label="Focus" value={focusLabel} tone="#A5B4FC" detail="Completes the mechanics packet" />
             <TerminalSubviewMetric label="Next Check" value={adjacentTab} tone="#38BDF8" detail="Continue the mechanics sequence" />
@@ -236,11 +300,8 @@ const HORIZON_OPTIONS = [1, 3, 7, 14, 30] as const;
 
 /* --- Close Calendar helpers --------------------------------------- */
 
-function detectAssetClass(sym: string): 'crypto' | 'equity' {
-  const s = sym.toUpperCase();
-  if (s.endsWith('USD') && !['AUDUSD', 'EURUSD', 'NZDUSD', 'GBPUSD'].includes(s)) return 'crypto';
-  if (['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'DOGE', 'ADA', 'AVAX', 'DOT', 'MATIC', 'LINK'].includes(s)) return 'crypto';
-  return 'equity';
+function marketPathToLegacyAsset(path: MarketPath): 'crypto' | 'equity' {
+  return path === 'crypto' ? 'crypto' : 'equity';
 }
 
 function formatCalDate(iso: string, asset: 'crypto' | 'equity'): string {
@@ -279,7 +340,7 @@ function clusterColors(s: number) {
 
 export default function TerminalPage() {
   const { tier } = useUserTier();
-  const { selectedSymbol, selectSymbol, navigateTo } = useV2();
+  const { selectedSymbol, selectSymbol } = useV2();
   const searchParams = useSearchParams();
   const requestedInitialTab = TERMINAL_TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()] || 'Close Calendar';
   const [tab, setTab] = useState<TerminalTab>(requestedInitialTab);
@@ -287,7 +348,15 @@ export default function TerminalPage() {
 
   /* Symbol management */
   const sym = selectedSymbol || symInput || 'BTCUSD';
-  const asset = detectAssetClass(sym);
+  const marketPath = detectMarketPath(sym);
+  const commodityFutures = marketPath === 'futures' && hasCommoditySessionMap(sym);
+  const asset = marketPathToLegacyAsset(marketPath);
+  const flowMarketType = marketPath === 'futures' ? 'futures' : marketPath;
+  const visibleTabs = visibleTabsForPath(marketPath, commodityFutures);
+
+  const FUTURES_QUICK = ['/ES', '/NQ', '/YM', '/RTY', '/CL', '/GC', '/SI', '/M2K', '/MES', '/MNQ', '/MCL', '/MGC'];
+  const fallbackCryptoQuick = ['BTCUSD', 'ETHUSD', 'SOLUSD', 'XRPUSD', 'BNBUSD'];
+  const fallbackEquityQuick = ['AAPL', 'MSFT', 'NVDA', 'GOOGL', 'AMZN'];
 
   useEffect(() => {
     const requestedTab = TERMINAL_TAB_PARAM_MAP[(searchParams.get('tab') || '').toLowerCase()];
@@ -297,30 +366,37 @@ export default function TerminalPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  /* Auto-switch away from Options Terminal for crypto symbols */
+  /* Keep current tab aligned with active market path */
   useEffect(() => {
-    if (asset === 'crypto' && tab === 'Options Terminal') setTab('Crypto');
-  }, [asset, tab]);
+    if (!visibleTabs.includes(tab)) {
+      setTab(visibleTabs[0]);
+    }
+  }, [tab, visibleTabs]);
 
   const handleSymSubmit = () => {
     const s = symInput.trim().toUpperCase();
     if (s) { selectSymbol(s); }
   };
 
-  /* Quick symbols — from worker cache, falls back to defaults */
+  /* Quick symbols */
   const cached = useCachedTopSymbols(5);
-  const FALLBACK_QS = ['BTC', 'ETH', 'SOL', 'XRP', 'BNB', 'AAPL', 'MSFT', 'NVDA', 'GOOGL', 'AMZN'];
-  const quickSymbols = useMemo(() => {
-    const syms = [...cached.crypto.map(c => c.symbol), ...cached.equity.map(c => c.symbol)];
-    return syms.length > 0 ? syms.slice(0, 10) : FALLBACK_QS;
-  }, [cached.crypto, cached.equity]);
+  const quickCrypto = useMemo(
+    () => (cached.crypto.length > 0 ? cached.crypto.map((c) => c.symbol).slice(0, 8) : fallbackCryptoQuick),
+    [cached.crypto],
+  );
+  const quickEquity = useMemo(
+    () => (cached.equity.length > 0 ? cached.equity.map((c) => c.symbol).slice(0, 8) : fallbackEquityQuick),
+    [cached.equity],
+  );
 
   /* Close Calendar state */
   const [anchor, setAnchor] = useState<CloseCalendarAnchor>('TODAY');
   const [horizon, setHorizon] = useState(1);
+  const [futuresAnchorMode, setFuturesAnchorMode] = useState<FuturesAnchorMode>('globex');
   const [calFilter, setCalFilter] = useState<'all'|'daily'|'weekly'|'monthly'|'yearly'>('all');
   const [showAnchorDay, setShowAnchorDay] = useState(true);
   const calendar = useCloseCalendar(sym, anchor, horizon);
+  const futuresTerminal = useFuturesTerminal(marketPath === 'futures' ? sym : null, futuresAnchorMode, horizon);
   const calData = calendar.data as ForwardCloseCalendar | null;
 
   const isPriorDay = anchor === 'PRIOR_DAY';
@@ -333,25 +409,39 @@ export default function TerminalPage() {
   useEffect(() => { if (anchor === 'PRIOR_DAY') setShowAnchorDay(true); }, [anchor]);
 
   /* Flow */
-  const flow = useFlow(sym, asset);
+  const flow = useFlow(sym, flowMarketType);
   const activeMeta = TERMINAL_TAB_META[tab];
-  const terminalDataState = tab === 'Close Calendar'
-    ? calendar.error
-      ? 'Calendar issue'
-      : calendar.loading
-        ? 'Loading'
-        : calData
-          ? 'Ready'
-          : 'Waiting'
-    : 'Lens ready';
+  const terminalDataState = marketPath === 'futures'
+    ? tab === 'Close Calendar'
+      ? futuresTerminal.error
+        ? 'Calendar issue'
+        : futuresTerminal.loading
+          ? 'Loading'
+          : futuresTerminal.data
+            ? `Futures ${futuresTerminal.data.dataState}`
+            : 'Waiting'
+      : futuresTerminal.data?.dataState === 'partial'
+        ? 'Futures partial'
+        : 'Lens ready'
+    : tab === 'Close Calendar'
+      ? calendar.error
+        ? 'Calendar issue'
+        : calendar.loading
+          ? 'Loading'
+          : calData
+            ? 'Ready'
+            : 'Waiting'
+      : 'Lens ready';
   const terminalDataTone = terminalDataState.includes('issue') ? '#F59E0B' : terminalDataState === 'Loading' ? '#38BDF8' : '#10B981';
-  const nextTerminalAction = tab === 'Close Calendar'
-    ? 'Review close cluster timing'
-    : tab === 'Crypto'
-      ? 'Check derivatives pressure'
-      : tab === 'Flow'
-        ? 'Review capital pressure'
-        : 'Validate mechanics context';
+  const nextTerminalAction = marketPath === 'futures' && tab === 'Close Calendar'
+    ? 'Review Phantom Time / Cash Bridge'
+    : tab === 'Close Calendar'
+      ? 'Review close cluster timing'
+      : tab === 'Crypto'
+        ? 'Check derivatives pressure'
+        : tab === 'Capital Pressure'
+          ? 'Review capital pressure'
+          : 'Validate mechanics context';
 
   return (
     <div className="space-y-3">
@@ -388,34 +478,96 @@ export default function TerminalPage() {
 
       {/* Symbol Bar */}
       <Card>
-        <div className="flex items-center gap-2 flex-wrap">
-          <input
-            value={symInput}
-            onChange={e => setSymInput(e.target.value.toUpperCase())}
-            onKeyDown={e => e.key === 'Enter' && handleSymSubmit()}
-            placeholder="Symbol..."
-            className="w-28 bg-[#0A101C] border border-[var(--msp-border)] rounded-lg text-xs px-3 py-2 text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-600/40 font-mono"
-          />
-          <button type="button" onClick={handleSymSubmit} className="px-3 py-2 text-xs rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600/30 transition-colors">
-            Load
-          </button>
-          <span className="text-xs text-slate-400 ml-1">{sym}</span>
-          <Badge label={asset.toUpperCase()} color={asset === 'crypto' ? '#F59E0B' : '#6366F1'} small />
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <input
+              value={symInput}
+              onChange={e => setSymInput(e.target.value.toUpperCase())}
+              onKeyDown={e => e.key === 'Enter' && handleSymSubmit()}
+              placeholder="Symbol..."
+              className="w-28 bg-[#0A101C] border border-[var(--msp-border)] rounded-lg text-xs px-3 py-2 text-white placeholder:text-slate-600 focus:outline-none focus:border-emerald-600/40 font-mono"
+            />
+            <button type="button" onClick={handleSymSubmit} className="px-3 py-2 text-xs rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-600/30 transition-colors">
+              Load
+            </button>
+            <span className="text-xs text-slate-400 ml-1">{sym}</span>
+            <Badge label={marketPath.toUpperCase()} color={marketPath === 'crypto' ? '#F59E0B' : marketPath === 'futures' ? '#22D3EE' : '#6366F1'} small />
+            <div className="ml-auto rounded-md border border-cyan-500/35 bg-cyan-500/10 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-cyan-200">
+              {marketPath === 'futures' ? 'FUTURES PATH' : marketPath === 'crypto' ? 'CRYPTO PATH' : 'EQUITY PATH'}
+            </div>
+          </div>
 
-          <div className="flex gap-1 ml-auto flex-wrap">
-            {quickSymbols.map(s => (
-              <button key={s} type="button" aria-pressed={sym === s} onClick={() => { selectSymbol(s); setSymInput(s); }} className={`px-2 py-1 text-[11px] rounded border transition-colors ${sym === s ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'text-slate-500 border-slate-800 hover:text-slate-300'}`}>
-                {s}
-              </button>
-            ))}
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-1">
+              <span className="w-20 text-[10px] font-bold uppercase tracking-[0.1em] text-cyan-300">Futures</span>
+              {FUTURES_QUICK.map((s) => (
+                <button key={s} type="button" aria-pressed={sym === s} onClick={() => { selectSymbol(s); setSymInput(s); }} className={`px-2 py-1 text-[11px] rounded border transition-colors ${sym === s ? 'bg-cyan-500/20 text-cyan-200 border-cyan-500/30' : 'text-slate-500 border-slate-800 hover:text-slate-300'}`}>
+                  {s}
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-1">
+              <span className="w-20 text-[10px] font-bold uppercase tracking-[0.1em] text-amber-300">Crypto</span>
+              {quickCrypto.map((s) => (
+                <button key={s} type="button" aria-pressed={sym === s} onClick={() => { selectSymbol(s); setSymInput(s); }} className={`px-2 py-1 text-[11px] rounded border transition-colors ${sym === s ? 'bg-amber-500/20 text-amber-200 border-amber-500/30' : 'text-slate-500 border-slate-800 hover:text-slate-300'}`}>
+                  {s}
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-1">
+              <span className="w-20 text-[10px] font-bold uppercase tracking-[0.1em] text-indigo-300">Equity</span>
+              {quickEquity.map((s) => (
+                <button key={s} type="button" aria-pressed={sym === s} onClick={() => { selectSymbol(s); setSymInput(s); }} className={`px-2 py-1 text-[11px] rounded border transition-colors ${sym === s ? 'bg-indigo-500/20 text-indigo-200 border-indigo-500/30' : 'text-slate-500 border-slate-800 hover:text-slate-300'}`}>
+                  {s}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </Card>
 
-      <TerminalTabRail activeTab={tab} asset={asset} onSelectTab={setTab} />
+      <TerminalTabRail activeTab={tab} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab} />
 
       {/* -- CLOSE CALENDAR ------------------------------------------- */}
-      {tab === 'Close Calendar' && (
+      {tab === 'Close Calendar' && (marketPath === 'futures' ? (
+        <div className="space-y-3">
+          <Card>
+            <div className="flex flex-wrap items-end gap-3">
+              <div>
+                <label className="mb-1 block text-[11px] uppercase tracking-wider text-slate-500">Anchor</label>
+                <div className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-[11px] font-bold uppercase text-cyan-200">Today</div>
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] uppercase tracking-wider text-slate-500">Horizon</label>
+                <div className="flex gap-1">
+                  {HORIZON_OPTIONS.map((d) => (
+                    <button key={d} onClick={() => setHorizon(d)} className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${horizon === d ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'bg-slate-950/40 text-slate-400 border border-slate-800 hover:text-slate-200'}`}>
+                      {d}d
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] uppercase tracking-wider text-slate-500">Anchor Mode</label>
+                <div className="flex gap-1">
+                  {(['globex', 'rth', 'cash_bridge'] as const).map((mode) => (
+                    <button key={mode} onClick={() => setFuturesAnchorMode(mode)} className={`rounded-lg px-2.5 py-1.5 text-xs font-medium uppercase transition-colors ${futuresAnchorMode === mode ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-950/40 text-slate-400 border border-slate-800 hover:text-slate-200'}`}>
+                      {mode.replace('_', ' ')}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Card>
+          <FuturesTerminalPanel
+            data={futuresTerminal.data}
+            loading={futuresTerminal.loading}
+            error={futuresTerminal.error}
+            tab="Close Calendar"
+            symbol={sym}
+          />
+        </div>
+      ) : (
         <div className="space-y-4">
           {/* Controls */}
           <Card>
@@ -529,12 +681,68 @@ export default function TerminalPage() {
             </>
           )}
         </div>
+      ))}
+
+      {tab === 'Futures Session' && (
+        <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Futures Session Map">
+          <TerminalSubviewFrame tab="Futures Session" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>
+            <FuturesTerminalPanel
+              data={futuresTerminal.data}
+              loading={futuresTerminal.loading}
+              error={futuresTerminal.error}
+              tab="Futures Session"
+              symbol={sym}
+            />
+          </TerminalSubviewFrame>
+        </UpgradeGate>
+      )}
+
+      {tab === 'Cash Bridge' && (
+        <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Cash Bridge Map">
+          <TerminalSubviewFrame tab="Cash Bridge" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>
+            <FuturesTerminalPanel
+              data={futuresTerminal.data}
+              loading={futuresTerminal.loading}
+              error={futuresTerminal.error}
+              tab="Cash Bridge"
+              symbol={sym}
+            />
+          </TerminalSubviewFrame>
+        </UpgradeGate>
+      )}
+
+      {tab === 'Commodity Session Map' && (
+        <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Commodity Session Map">
+          <TerminalSubviewFrame tab="Commodity Session Map" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>
+            <FuturesTerminalPanel
+              data={futuresTerminal.data}
+              loading={futuresTerminal.loading}
+              error={futuresTerminal.error}
+              tab="Commodity Session Map"
+              symbol={sym}
+            />
+          </TerminalSubviewFrame>
+        </UpgradeGate>
+      )}
+
+      {tab === 'Liquidity & Volume' && (
+        <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Futures Liquidity and Volume">
+          <TerminalSubviewFrame tab="Liquidity & Volume" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>
+            <FuturesTerminalPanel
+              data={futuresTerminal.data}
+              loading={futuresTerminal.loading}
+              error={futuresTerminal.error}
+              tab="Liquidity & Volume"
+              symbol={sym}
+            />
+          </TerminalSubviewFrame>
+        </UpgradeGate>
       )}
 
       {/* -- OPTIONS TERMINAL ----------------------------------------------- */}
       {tab === 'Options Terminal' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Options Terminal">
-          <TerminalSubviewFrame tab="Options Terminal" symbol={sym} asset={asset} onSelectTab={setTab}>
+          <TerminalSubviewFrame tab="Options Terminal" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>
             <Suspense fallback={<div className="py-12 text-center text-xs text-slate-500">Loading Options Terminal…</div>}>
               <OptionsTerminalView />
             </Suspense>
@@ -545,7 +753,7 @@ export default function TerminalPage() {
       {/* -- CRYPTO TERMINAL ------------------------------------------------ */}
       {tab === 'Crypto' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Crypto Terminal">
-          <TerminalSubviewFrame tab="Crypto" symbol={sym} asset={asset} onSelectTab={setTab}>
+          <TerminalSubviewFrame tab="Crypto" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>
             <Suspense fallback={<div className="py-12 text-center text-xs text-slate-500">Loading Crypto Terminal…</div>}>
               <CryptoTerminalView />
             </Suspense>
@@ -553,7 +761,7 @@ export default function TerminalPage() {
         </UpgradeGate>
       )}
       {/* -- FLOW ----------------------------------------------------- */}
-      {tab === 'Flow' && (() => {
+      {tab === 'Capital Pressure' && (() => {
         const proTraderRequired = tier !== 'pro_trader';
         if (proTraderRequired) return <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Capital Flow Analysis"><div className="py-12" /></UpgradeGate>;
         const fd = flow.data?.data;
@@ -568,7 +776,7 @@ export default function TerminalPage() {
         const gammaColor = fd?.gamma_state === 'Positive' ? 'text-emerald-400' : fd?.gamma_state === 'Negative' ? 'text-red-400' : 'text-amber-400';
 
         return (
-        <TerminalSubviewFrame tab="Flow" symbol={sym} asset={asset} onSelectTab={setTab}>
+        <TerminalSubviewFrame tab="Capital Pressure" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>
         <div className="space-y-4">
           {flow.loading ? (
             <Card><div className="space-y-3 py-8">{[1,2,3].map(i => <Skel key={i} h="h-10" />)}</div></Card>
@@ -880,7 +1088,7 @@ export default function TerminalPage() {
       {/* ─── Options Confluence (v1 flagship decision engine) ─── */}
       {tab === 'Options Confluence' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Options Confluence Engine">
-          <TerminalSubviewFrame tab="Options Confluence" symbol={sym} asset={asset} onSelectTab={setTab}>
+          <TerminalSubviewFrame tab="Options Confluence" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>
             <OptionsConfluence embeddedInTerminal />
           </TerminalSubviewFrame>
         </UpgradeGate>
@@ -889,7 +1097,7 @@ export default function TerminalPage() {
       {/* ─── Options Flow (v1 flow intelligence) ─── */}
       {tab === 'Options Flow' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Options Flow Intelligence">
-          <TerminalSubviewFrame tab="Options Flow" symbol={sym} asset={asset} onSelectTab={setTab}>
+          <TerminalSubviewFrame tab="Options Flow" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>
             <OptionsFlow embeddedInTerminal />
           </TerminalSubviewFrame>
         </UpgradeGate>
@@ -898,7 +1106,7 @@ export default function TerminalPage() {
       {/* ─── Time Gravity Map (v1 time scanner) ─── */}
       {tab === 'Time Gravity' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Time Gravity Map">
-          <TerminalSubviewFrame tab="Time Gravity" symbol={sym} asset={asset} onSelectTab={setTab}>
+          <TerminalSubviewFrame tab="Time Gravity" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>
             <TimeScanner symbol={sym} embeddedInTerminal />
           </TerminalSubviewFrame>
         </UpgradeGate>
@@ -907,7 +1115,7 @@ export default function TerminalPage() {
       {/* ─── Time Confluence Scanner ─── */}
       {tab === 'Time Confluence' && (
         <UpgradeGate requiredTier="pro_trader" currentTier={tier} feature="Time Confluence Scanner">
-          <TerminalSubviewFrame tab="Time Confluence" symbol={sym} asset={asset} onSelectTab={setTab}>
+          <TerminalSubviewFrame tab="Time Confluence" symbol={sym} marketPath={marketPath} commodityFutures={commodityFutures} onSelectTab={setTab}>
             <ConfluenceScanner embeddedInTerminal />
             <div className="mt-6">
               <TimeConfluenceWidget showMacro showMicro showCalendar assetClass={asset} />

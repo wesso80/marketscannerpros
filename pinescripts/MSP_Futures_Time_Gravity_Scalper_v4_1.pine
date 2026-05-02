@@ -1,0 +1,804 @@
+// This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
+// © MarketScanner Pros
+// MSP — Futures Time Gravity Scalper v4.1 (Globex)
+// Futures-first execution version with TP1 quick scalp + TP2 gravity target.
+// One active trade at a time, large HUD, clean BUY/SELL label, entry / TP1 / TP2 / SL lines.
+
+//@version=6
+indicator("MSP — Futures Time Gravity Scalper v4.1 (Globex)", shorttitle="MSP TGS v4.1", overlay=true, max_lines_count=500, max_labels_count=500, max_boxes_count=200)
+
+// ═══════════════════════════════════════════════════════════════
+// INPUTS
+// ═══════════════════════════════════════════════════════════════
+
+grp_core = "Scalper Core"
+scalpMode = input.string("Aggressive", "Scalping Sensitivity", options=["Aggressive", "Balanced", "Strict"], group=grp_core)
+maxTicks = input.int(180, "Max Gravity Distance / ticks", minval=10, maxval=2000, group=grp_core)
+reactionTicks = input.int(8, "Reaction Zone / ticks", minval=1, maxval=200, group=grp_core)
+minGravity = input.float(0.03, "Minimum Gravity Strength", minval=0.001, step=0.001, group=grp_core)
+signalCooldownBars = input.int(12, "Signal Cooldown Bars", minval=1, maxval=100, group=grp_core)
+oneTradeAtATime = input.bool(true, "Only One Active Trade At A Time", group=grp_core)
+
+grp_tf = "Time Gravity Sources"
+use15m = input.bool(true, "15m Gravity", group=grp_tf)
+use30m = input.bool(true, "30m Gravity", group=grp_tf)
+use1H  = input.bool(true, "1H Gravity", group=grp_tf)
+use2H  = input.bool(true, "2H Gravity", group=grp_tf)
+use4H  = input.bool(true, "4H Gravity", group=grp_tf)
+use1D  = input.bool(true, "1D Gravity", group=grp_tf)
+use1W  = input.bool(false, "1W Gravity", group=grp_tf)
+
+grp_exec = "Execution Filters"
+emaFastLen = input.int(9, "Fast EMA", minval=1, group=grp_exec)
+emaSlowLen = input.int(21, "Slow EMA", minval=2, group=grp_exec)
+useVWAP = input.bool(true, "Use VWAP Filter", group=grp_exec)
+useRelVolume = input.bool(false, "Use Relative Volume Filter", group=grp_exec)
+relVolMin = input.float(0.80, "Minimum Relative Volume", minval=0.1, step=0.05, group=grp_exec)
+allowCounterTrendReactions = input.bool(true, "Allow Counter-Trend Reaction Scalps", group=grp_exec)
+requireCloseDirection = input.bool(true, "Require Bull/Bear Candle Direction", group=grp_exec)
+
+grp_risk = "Risk / Target"
+atrLen = input.int(14, "ATR Length", minval=1, group=grp_risk)
+stopATR = input.float(0.75, "ATR Stop Multiplier", minval=0.1, step=0.05, group=grp_risk)
+fallbackTargetATR = input.float(1.25, "Fallback ATR Target", minval=0.1, step=0.05, group=grp_risk)
+minRewardTicks = input.int(4, "Minimum Reward / ticks", minval=1, maxval=100, group=grp_risk)
+tp1Ticks = input.int(6, "TP1 Quick Scalp / ticks", minval=1, maxval=100, group=grp_risk)
+showTP1 = input.bool(true, "Show TP1 Quick Scalp", group=grp_risk)
+
+grp_time = "Decompression Timing"
+decompPct = input.float(15.0, "Decompression Window % of Candle", minval=5.0, maxval=40.0, step=1.0, group=grp_time)
+preWindowPct = input.float(5.0, "Pre-Window % Advance", minval=1.0, maxval=20.0, step=1.0, group=grp_time)
+decompBoost = input.float(3.0, "Active Decompression Boost", minval=1.0, maxval=10.0, step=0.25, group=grp_time)
+preBoost = input.float(1.6, "Pre-Window Boost", minval=1.0, maxval=5.0, step=0.25, group=grp_time)
+debtBoost = input.float(1.5, "Untouched Midpoint Debt Boost", minval=1.0, maxval=5.0, step=0.1, group=grp_time)
+
+grp_session = "Session Filter"
+useSession = input.bool(true, "Limit To Session", group=grp_session)
+tradeSession = input.session("1700-1600:1234567", "Futures Session (Exchange TZ)", group=grp_session)
+
+grp_vis = "Visuals"
+showHUD = input.bool(true, "Show Large Execution HUD", group=grp_vis)
+showCloseCalendar = input.bool(true, "Show Close Calendar", group=grp_vis)
+showGravityLines = input.bool(true, "Show Gravity Lines", group=grp_vis)
+showLatestBuySellLabel = input.bool(true, "Show Latest BUY / SELL Label", group=grp_vis)
+showHistoricalBuySellLabels = input.bool(false, "Show Historical BUY / SELL Labels", group=grp_vis)
+showReactionDots = input.bool(false, "Show Reaction Dots", group=grp_vis)
+showTargetZone = input.bool(true, "Show Target Reaction Zone", group=grp_vis)
+showTradeLines = input.bool(true, "Show Entry / TP1 / TP2 / SL Lines", group=grp_vis)
+showTP_SL_Hits = input.bool(false, "Show TP / SL Hit Labels", group=grp_vis)
+showTP1Hits = input.bool(false, "Show TP1 Hit Label", group=grp_vis)
+
+grp_read = "Readability"
+tableTextSizeInput = input.string("Large", "Table Text Size", options=["Tiny", "Small", "Normal", "Large"], group=grp_read)
+signalTextSizeInput = input.string("Large", "Signal Label Size", options=["Small", "Normal", "Large", "Huge"], group=grp_read)
+tradeLineExtendBars = input.int(40, "Extend Trade Lines Bars", minval=5, maxval=200, group=grp_read)
+targetBoxForwardBars = input.int(35, "Target Box Forward Bars", minval=5, maxval=150, group=grp_read)
+labelOffsetATR = input.float(0.25, "Signal Label Offset ATR", minval=0.05, maxval=2.0, step=0.05, group=grp_read)
+
+// ═══════════════════════════════════════════════════════════════
+// SIZE HELPERS
+// ═══════════════════════════════════════════════════════════════
+
+f_tableSize(sizeInput) =>
+    sizeInput == "Tiny" ? size.tiny :
+     sizeInput == "Small" ? size.small :
+     sizeInput == "Large" ? size.large :
+     size.normal
+
+f_labelSize(sizeInput) =>
+    sizeInput == "Small" ? size.small :
+     sizeInput == "Large" ? size.large :
+     sizeInput == "Huge" ? size.huge :
+     size.normal
+
+tblSize = f_tableSize(tableTextSizeInput)
+sigSize = f_labelSize(signalTextSizeInput)
+
+// ═══════════════════════════════════════════════════════════════
+// BASE SERIES
+// ═══════════════════════════════════════════════════════════════
+
+tick = syminfo.mintick
+emaFast = ta.ema(close, emaFastLen)
+emaSlow = ta.ema(close, emaSlowLen)
+vwapVal = ta.vwap(hlc3)
+atr = ta.atr(atrLen)
+
+relVol = volume / math.max(ta.sma(volume, 20), 1)
+volOK = not useRelVolume or relVol >= relVolMin
+inSession = not useSession or not na(time(timeframe.period, tradeSession, syminfo.timezone))
+
+trendBull = close > emaFast and emaFast > emaSlow and (not useVWAP or close >= vwapVal)
+trendBear = close < emaFast and emaFast < emaSlow and (not useVWAP or close <= vwapVal)
+
+needHeat = scalpMode == "Aggressive" ? 0 : scalpMode == "Balanced" ? 1 : 2
+
+bullCandleOK = not requireCloseDirection or close > open
+bearCandleOK = not requireCloseDirection or close < open
+
+// ═══════════════════════════════════════════════════════════════
+// ACTIVE TRADE STATE
+// ═══════════════════════════════════════════════════════════════
+
+var int tradeDir = 0
+var float tradeEntry = na
+var float tradeTP1 = na
+var float tradeTP = na
+var float tradeSL = na
+var int tradeStartBar = na
+var int lastSignalBar = na
+var bool tp1AlreadyHit = false
+
+activeLong = tradeDir == 1
+activeShort = tradeDir == -1
+activeTrade = tradeDir != 0
+
+// ═══════════════════════════════════════════════════════════════
+// FUNCTIONS
+// ═══════════════════════════════════════════════════════════════
+
+f_midpoint(h, l) =>
+    (h + l) / 2.0
+
+f_distTicks(price, level) =>
+    math.abs(price - level) / tick
+
+f_validLevel(level) =>
+    not na(level) and level > 0
+
+f_wasTagged(level, lookbackBars, bufferTicks) =>
+    tagged = false
+    buf = bufferTicks * tick
+    for i = 0 to lookbackBars - 1
+        if high[i] >= level - buf and low[i] <= level + buf
+            tagged := true
+    tagged
+
+f_status(untilMin, durationMin) =>
+    windowMin = durationMin * decompPct / 100.0
+    preMin = durationMin * preWindowPct / 100.0
+    status = 0
+    if not na(untilMin) and untilMin > 0 and untilMin <= windowMin
+        status := 2
+    else if not na(untilMin) and untilMin > 0 and untilMin <= windowMin + preMin
+        status := 1
+    status
+
+f_statusText(status) =>
+    status == 2 ? "ACTIVE" : status == 1 ? "PRE" : "NORMAL"
+
+f_statusMult(status) =>
+    status == 2 ? decompBoost : status == 1 ? preBoost : 1.0
+
+f_fmtMin(mins) =>
+    result = "—"
+    if not na(mins) and mins >= 0
+        if mins < 60
+            result := str.tostring(int(math.round(mins))) + "m"
+        else if mins < 1440
+            hh = int(math.floor(mins / 60))
+            mm = int(math.round(mins - hh * 60))
+            result := str.tostring(hh) + "h " + str.tostring(mm) + "m"
+        else
+            dd = int(math.floor(mins / 1440))
+            hh = int(math.round((mins - dd * 1440) / 60))
+            result := str.tostring(dd) + "d " + str.tostring(hh) + "h"
+    result
+
+f_gravity(level, weight, status, valid) =>
+    d = f_distTicks(close, level)
+    touched = f_wasTagged(level, 5, reactionTicks)
+    debtMult = touched ? 1.0 : debtBoost
+    valid ? weight / (d + 1.0) * f_statusMult(status) * debtMult : 0.0
+
+f_fmtLevel(level) =>
+    na(level) ? "—" : str.tostring(level, format.mintick)
+
+f_tfBg(status, weight) =>
+    status == 2 ? color.new(color.blue, 25) :
+     status == 1 ? color.new(color.yellow, 45) :
+     weight >= 8 ? color.new(color.purple, 55) :
+     weight >= 5 ? color.new(color.blue, 60) :
+     color.new(color.teal, 65)
+
+// ═══════════════════════════════════════════════════════════════
+// HTF DATA — NON-REPAINTING
+// ═══════════════════════════════════════════════════════════════
+
+[h15, l15, tc15] = request.security(syminfo.tickerid, "15", [high[1], low[1], time_close], barmerge.gaps_off, barmerge.lookahead_off)
+[h30, l30, tc30] = request.security(syminfo.tickerid, "30", [high[1], low[1], time_close], barmerge.gaps_off, barmerge.lookahead_off)
+[h60, l60, tc60] = request.security(syminfo.tickerid, "60", [high[1], low[1], time_close], barmerge.gaps_off, barmerge.lookahead_off)
+[h120, l120, tc120] = request.security(syminfo.tickerid, "120", [high[1], low[1], time_close], barmerge.gaps_off, barmerge.lookahead_off)
+[h240, l240, tc240] = request.security(syminfo.tickerid, "240", [high[1], low[1], time_close], barmerge.gaps_off, barmerge.lookahead_off)
+[hD, lD, tcD] = request.security(syminfo.tickerid, "D", [high[1], low[1], time_close], barmerge.gaps_off, barmerge.lookahead_off)
+[hW, lW, tcW] = request.security(syminfo.tickerid, "W", [high[1], low[1], time_close], barmerge.gaps_off, barmerge.lookahead_off)
+
+until15 = (tc15 - timenow) / 60000.0
+until30 = (tc30 - timenow) / 60000.0
+until60 = (tc60 - timenow) / 60000.0
+until120 = (tc120 - timenow) / 60000.0
+until240 = (tc240 - timenow) / 60000.0
+untilD = (tcD - timenow) / 60000.0
+untilW = (tcW - timenow) / 60000.0
+
+dur15 = 15.0
+dur30 = 30.0
+dur60 = 60.0
+dur120 = 120.0
+dur240 = 240.0
+durD = 1440.0
+durW = 10080.0
+
+mid15 = f_midpoint(h15, l15)
+mid30 = f_midpoint(h30, l30)
+mid60 = f_midpoint(h60, l60)
+mid120 = f_midpoint(h120, l120)
+mid240 = f_midpoint(h240, l240)
+midD = f_midpoint(hD, lD)
+midW = f_midpoint(hW, lW)
+
+st15 = f_status(until15, dur15)
+st30 = f_status(until30, dur30)
+st60 = f_status(until60, dur60)
+st120 = f_status(until120, dur120)
+st240 = f_status(until240, dur240)
+stD = f_status(untilD, durD)
+stW = f_status(untilW, durW)
+
+valid15 = use15m and f_validLevel(mid15) and f_distTicks(close, mid15) <= maxTicks
+valid30 = use30m and f_validLevel(mid30) and f_distTicks(close, mid30) <= maxTicks
+valid60 = use1H and f_validLevel(mid60) and f_distTicks(close, mid60) <= maxTicks
+valid120 = use2H and f_validLevel(mid120) and f_distTicks(close, mid120) <= maxTicks
+valid240 = use4H and f_validLevel(mid240) and f_distTicks(close, mid240) <= maxTicks
+validD = use1D and f_validLevel(midD) and f_distTicks(close, midD) <= maxTicks
+validW = use1W and f_validLevel(midW) and f_distTicks(close, midW) <= maxTicks
+
+wt15 = 1.4
+wt30 = 1.8
+wt60 = 2.6
+wt120 = 3.2
+wt240 = 4.8
+wtD = 7.5
+wtW = 11.0
+
+g15 = f_gravity(mid15, wt15, st15, valid15)
+g30 = f_gravity(mid30, wt30, st30, valid30)
+g60 = f_gravity(mid60, wt60, st60, valid60)
+g120 = f_gravity(mid120, wt120, st120, valid120)
+g240 = f_gravity(mid240, wt240, st240, valid240)
+gD = f_gravity(midD, wtD, stD, validD)
+gW = f_gravity(midW, wtW, stW, validW)
+
+// ═══════════════════════════════════════════════════════════════
+// STRONGEST GRAVITY ABOVE / BELOW
+// ═══════════════════════════════════════════════════════════════
+
+float gravityAbove = na
+float gravityBelow = na
+float gravityAboveScore = 0.0
+float gravityBelowScore = 0.0
+string gravityAboveTF = ""
+string gravityBelowTF = ""
+
+if valid15 and mid15 > close and g15 > gravityAboveScore and g15 >= minGravity
+    gravityAbove := mid15
+    gravityAboveScore := g15
+    gravityAboveTF := "15m"
+
+if valid30 and mid30 > close and g30 > gravityAboveScore and g30 >= minGravity
+    gravityAbove := mid30
+    gravityAboveScore := g30
+    gravityAboveTF := "30m"
+
+if valid60 and mid60 > close and g60 > gravityAboveScore and g60 >= minGravity
+    gravityAbove := mid60
+    gravityAboveScore := g60
+    gravityAboveTF := "1H"
+
+if valid120 and mid120 > close and g120 > gravityAboveScore and g120 >= minGravity
+    gravityAbove := mid120
+    gravityAboveScore := g120
+    gravityAboveTF := "2H"
+
+if valid240 and mid240 > close and g240 > gravityAboveScore and g240 >= minGravity
+    gravityAbove := mid240
+    gravityAboveScore := g240
+    gravityAboveTF := "4H"
+
+if validD and midD > close and gD > gravityAboveScore and gD >= minGravity
+    gravityAbove := midD
+    gravityAboveScore := gD
+    gravityAboveTF := "1D"
+
+if validW and midW > close and gW > gravityAboveScore and gW >= minGravity
+    gravityAbove := midW
+    gravityAboveScore := gW
+    gravityAboveTF := "1W"
+
+if valid15 and mid15 < close and g15 > gravityBelowScore and g15 >= minGravity
+    gravityBelow := mid15
+    gravityBelowScore := g15
+    gravityBelowTF := "15m"
+
+if valid30 and mid30 < close and g30 > gravityBelowScore and g30 >= minGravity
+    gravityBelow := mid30
+    gravityBelowScore := g30
+    gravityBelowTF := "30m"
+
+if valid60 and mid60 < close and g60 > gravityBelowScore and g60 >= minGravity
+    gravityBelow := mid60
+    gravityBelowScore := g60
+    gravityBelowTF := "1H"
+
+if valid120 and mid120 < close and g120 > gravityBelowScore and g120 >= minGravity
+    gravityBelow := mid120
+    gravityBelowScore := g120
+    gravityBelowTF := "2H"
+
+if valid240 and mid240 < close and g240 > gravityBelowScore and g240 >= minGravity
+    gravityBelow := mid240
+    gravityBelowScore := g240
+    gravityBelowTF := "4H"
+
+if validD and midD < close and gD > gravityBelowScore and gD >= minGravity
+    gravityBelow := midD
+    gravityBelowScore := gD
+    gravityBelowTF := "1D"
+
+if validW and midW < close and gW > gravityBelowScore and gW >= minGravity
+    gravityBelow := midW
+    gravityBelowScore := gW
+    gravityBelowTF := "1W"
+
+// ═══════════════════════════════════════════════════════════════
+// TIME HEAT
+// ═══════════════════════════════════════════════════════════════
+
+timeHeat = 0
+timeHeat += valid15 and st15 > 0 ? 1 : 0
+timeHeat += valid30 and st30 > 0 ? 1 : 0
+timeHeat += valid60 and st60 > 0 ? 1 : 0
+timeHeat += valid120 and st120 > 0 ? 1 : 0
+timeHeat += valid240 and st240 > 0 ? 1 : 0
+timeHeat += validD and stD > 0 ? 1 : 0
+timeHeat += validW and stW > 0 ? 1 : 0
+
+activeDecompCount = 0
+activeDecompCount += valid15 and st15 == 2 ? 1 : 0
+activeDecompCount += valid30 and st30 == 2 ? 1 : 0
+activeDecompCount += valid60 and st60 == 2 ? 1 : 0
+activeDecompCount += valid120 and st120 == 2 ? 1 : 0
+activeDecompCount += valid240 and st240 == 2 ? 1 : 0
+activeDecompCount += validD and stD == 2 ? 1 : 0
+activeDecompCount += validW and stW == 2 ? 1 : 0
+
+hasHeat = timeHeat >= needHeat
+
+// ═══════════════════════════════════════════════════════════════
+// TARGET / REACTION ZONE
+// ═══════════════════════════════════════════════════════════════
+
+targetLevel = gravityAboveScore >= gravityBelowScore ? gravityAbove : gravityBelow
+targetTF = gravityAboveScore >= gravityBelowScore ? gravityAboveTF : gravityBelowTF
+targetTicks = not na(targetLevel) ? math.abs(targetLevel - close) / tick : na
+
+targetEntered = not na(targetLevel) and math.abs(close - targetLevel) <= reactionTicks * tick
+reactionPulse = targetEntered and not targetEntered[1]
+
+// ═══════════════════════════════════════════════════════════════
+// SCALP SIGNAL LOGIC
+// ═══════════════════════════════════════════════════════════════
+
+reclaimBelow = not na(gravityBelow) and low <= gravityBelow + reactionTicks * tick and close > gravityBelow and bullCandleOK
+rejectAbove = not na(gravityAbove) and high >= gravityAbove - reactionTicks * tick and close < gravityAbove and bearCandleOK
+
+breakoutLong = not na(gravityAbove) and ta.crossover(close, gravityAbove) and bullCandleOK
+breakdownShort = not na(gravityBelow) and ta.crossunder(close, gravityBelow) and bearCandleOK
+
+vwapReclaimLong = useVWAP and low <= vwapVal and close > vwapVal and close > emaFast and bullCandleOK
+vwapRejectShort = useVWAP and high >= vwapVal and close < vwapVal and close < emaFast and bearCandleOK
+
+emaReclaimLong = low <= emaFast and close > emaFast and close > close[1] and bullCandleOK
+emaRejectShort = high >= emaFast and close < emaFast and close < close[1] and bearCandleOK
+
+longTrendOK = trendBull or allowCounterTrendReactions
+shortTrendOK = trendBear or allowCounterTrendReactions
+
+cooldownOK = na(lastSignalBar) or bar_index - lastSignalBar >= signalCooldownBars
+canOpenNewTrade = not oneTradeAtATime or tradeDir == 0
+
+longRaw = inSession and volOK and hasHeat and longTrendOK and cooldownOK and canOpenNewTrade and (reclaimBelow or breakoutLong or vwapReclaimLong or emaReclaimLong)
+shortRaw = inSession and volOK and hasHeat and shortTrendOK and cooldownOK and canOpenNewTrade and (rejectAbove or breakdownShort or vwapRejectShort or emaRejectShort)
+
+longTarget = not na(gravityAbove) and gravityAbove > close ? gravityAbove : close + atr * fallbackTargetATR
+shortTarget = not na(gravityBelow) and gravityBelow < close ? gravityBelow : close - atr * fallbackTargetATR
+
+longTP1 = close + tp1Ticks * tick
+shortTP1 = close - tp1Ticks * tick
+
+longStop = not na(gravityBelow) and gravityBelow < close ? math.min(gravityBelow - reactionTicks * tick, close - atr * stopATR) : close - atr * stopATR
+shortStop = not na(gravityAbove) and gravityAbove > close ? math.max(gravityAbove + reactionTicks * tick, close + atr * stopATR) : close + atr * stopATR
+
+longRewardTicks = math.abs(longTarget - close) / tick
+shortRewardTicks = math.abs(close - shortTarget) / tick
+
+newBuySignal = longRaw and longRewardTicks >= minRewardTicks and not shortRaw
+newSellSignal = shortRaw and shortRewardTicks >= minRewardTicks and not longRaw
+
+if newBuySignal or newSellSignal
+    lastSignalBar := bar_index
+
+// ═══════════════════════════════════════════════════════════════
+// UPDATE ACTIVE TRADE
+// ═══════════════════════════════════════════════════════════════
+
+if newBuySignal
+    tradeDir := 1
+    tradeEntry := close
+    tradeTP1 := longTP1
+    tradeTP := longTarget
+    tradeSL := longStop
+    tradeStartBar := bar_index
+    tp1AlreadyHit := false
+
+if newSellSignal
+    tradeDir := -1
+    tradeEntry := close
+    tradeTP1 := shortTP1
+    tradeTP := shortTarget
+    tradeSL := shortStop
+    tradeStartBar := bar_index
+    tp1AlreadyHit := false
+
+activeLong := tradeDir == 1
+activeShort := tradeDir == -1
+activeTrade := tradeDir != 0
+
+tp1HitActive = activeTrade and not tp1AlreadyHit and bar_index > tradeStartBar and (activeLong ? high >= tradeTP1 : activeShort ? low <= tradeTP1 : false)
+tpHitActive = activeTrade and bar_index > tradeStartBar and (activeLong ? high >= tradeTP : activeShort ? low <= tradeTP : false)
+slHitActive = activeTrade and bar_index > tradeStartBar and (activeLong ? low <= tradeSL : activeShort ? high >= tradeSL : false)
+
+if tp1HitActive
+    tp1AlreadyHit := true
+
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+
+state = newBuySignal ? "BUY" :
+     newSellSignal ? "SELL" :
+     activeLong ? "IN BUY" :
+     activeShort ? "IN SELL" :
+     targetEntered ? "REACTION" :
+     hasHeat ? "WATCH" :
+     "NO TRADE"
+
+bias = newBuySignal ? "BUY RECLAIM" :
+     newSellSignal ? "SELL REJECT" :
+     activeLong ? "LONG ACTIVE" :
+     activeShort ? "SHORT ACTIVE" :
+     targetEntered ? "TARGET REACTION" :
+     trendBull ? "BULLISH PULL" :
+     trendBear ? "BEARISH PULL" :
+     "NEUTRAL"
+
+// ═══════════════════════════════════════════════════════════════
+// PLOTS
+// ═══════════════════════════════════════════════════════════════
+
+plot(emaFast, "Fast EMA", color=color.new(color.aqua, 0), linewidth=1)
+plot(emaSlow, "Slow EMA", color=color.new(color.orange, 0), linewidth=1)
+plot(useVWAP ? vwapVal : na, "VWAP", color=color.new(color.white, 25), linewidth=1)
+
+plot(showGravityLines ? gravityAbove : na, "Gravity Above", color=color.new(color.green, 0), linewidth=2, style=plot.style_linebr)
+plot(showGravityLines ? gravityBelow : na, "Gravity Below", color=color.new(color.red, 0), linewidth=2, style=plot.style_linebr)
+
+plotshape(showHistoricalBuySellLabels and newBuySignal, title="Historical BUY", text="BUY", style=shape.labelup, location=location.belowbar, color=color.new(color.green, 0), textcolor=color.white, size=size.small)
+plotshape(showHistoricalBuySellLabels and newSellSignal, title="Historical SELL", text="SELL", style=shape.labeldown, location=location.abovebar, color=color.new(color.red, 0), textcolor=color.white, size=size.small)
+plotshape(showReactionDots and reactionPulse, title="Reaction", text="R", style=shape.circle, location=location.abovebar, color=color.new(color.yellow, 0), textcolor=color.black, size=size.tiny)
+
+barcolor(newBuySignal ? color.new(color.green, 50) : newSellSignal ? color.new(color.red, 50) : targetEntered ? color.new(color.yellow, 84) : hasHeat ? color.new(color.blue, 92) : na)
+
+// ═══════════════════════════════════════════════════════════════
+// TARGET BOX
+// ═══════════════════════════════════════════════════════════════
+
+var box targetBox = na
+
+if barstate.islast and showTargetZone and not na(targetLevel)
+    if not na(targetBox)
+        box.delete(targetBox)
+
+    zoneHigh = targetLevel + reactionTicks * tick
+    zoneLow = targetLevel - reactionTicks * tick
+    zoneCol = targetLevel > close ? color.green : color.red
+
+    targetBox := box.new(
+         bar_index - 15,
+         zoneHigh,
+         bar_index + targetBoxForwardBars,
+         zoneLow,
+         bgcolor=color.new(zoneCol, 88),
+         border_color=color.new(zoneCol, 25),
+         border_width=2
+     )
+
+// ═══════════════════════════════════════════════════════════════
+// LATEST BUY / SELL LABEL ONLY
+// ═══════════════════════════════════════════════════════════════
+
+var label latestSignalLabel = na
+
+if showLatestBuySellLabel and (newBuySignal or newSellSignal)
+    if not na(latestSignalLabel)
+        label.delete(latestSignalLabel)
+
+    sigText = newBuySignal ?
+         "BUY\nEntry: " + f_fmtLevel(tradeEntry) + "\nTP1: " + f_fmtLevel(tradeTP1) + "\nTP2: " + f_fmtLevel(tradeTP) + "\nSL: " + f_fmtLevel(tradeSL) :
+         "SELL\nEntry: " + f_fmtLevel(tradeEntry) + "\nTP1: " + f_fmtLevel(tradeTP1) + "\nTP2: " + f_fmtLevel(tradeTP) + "\nSL: " + f_fmtLevel(tradeSL)
+
+    sigY = newBuySignal ? low - atr * labelOffsetATR : high + atr * labelOffsetATR
+    sigStyle = newBuySignal ? label.style_label_up : label.style_label_down
+    sigCol = newBuySignal ? color.new(color.green, 0) : color.new(color.red, 0)
+
+    latestSignalLabel := label.new(
+         bar_index,
+         sigY,
+         sigText,
+         style=sigStyle,
+         color=sigCol,
+         textcolor=color.white,
+         size=sigSize
+     )
+
+// ═══════════════════════════════════════════════════════════════
+// ACTIVE ENTRY / TP1 / TP2 / SL LINES
+// ═══════════════════════════════════════════════════════════════
+
+var line activeEntryLine = na
+var line activeTP1Line = na
+var line activeTPLine = na
+var line activeSLLine = na
+var label activeEntryLabel = na
+var label activeTP1Label = na
+var label activeTPLabel = na
+var label activeSLLabel = na
+
+if barstate.islast and showTradeLines
+    if not na(activeEntryLine)
+        line.delete(activeEntryLine)
+    if not na(activeTP1Line)
+        line.delete(activeTP1Line)
+    if not na(activeTPLine)
+        line.delete(activeTPLine)
+    if not na(activeSLLine)
+        line.delete(activeSLLine)
+    if not na(activeEntryLabel)
+        label.delete(activeEntryLabel)
+    if not na(activeTP1Label)
+        label.delete(activeTP1Label)
+    if not na(activeTPLabel)
+        label.delete(activeTPLabel)
+    if not na(activeSLLabel)
+        label.delete(activeSLLabel)
+
+    if activeTrade
+        activeEntryLine := line.new(bar_index, tradeEntry, bar_index + tradeLineExtendBars, tradeEntry, color=color.new(color.white, 0), width=2, style=line.style_dashed)
+
+        if showTP1
+            activeTP1Line := line.new(bar_index, tradeTP1, bar_index + tradeLineExtendBars, tradeTP1, color=color.new(color.lime, 0), width=2, style=line.style_dashed)
+            tp1Text = tp1AlreadyHit ? "TP1 HIT " + f_fmtLevel(tradeTP1) : "TP1 " + f_fmtLevel(tradeTP1)
+            tp1Bg = tp1AlreadyHit ? color.new(color.gray, 10) : color.new(color.lime, 0)
+            tp1TxtCol = tp1AlreadyHit ? color.white : color.black
+            activeTP1Label := label.new(bar_index + tradeLineExtendBars, tradeTP1, tp1Text, style=label.style_label_left, color=tp1Bg, textcolor=tp1TxtCol, size=tblSize)
+
+        activeTPLine := line.new(bar_index, tradeTP, bar_index + tradeLineExtendBars, tradeTP, color=color.new(color.green, 0), width=3, style=line.style_solid)
+        activeSLLine := line.new(bar_index, tradeSL, bar_index + tradeLineExtendBars, tradeSL, color=color.new(color.red, 0), width=3, style=line.style_solid)
+
+        activeEntryLabel := label.new(bar_index + tradeLineExtendBars, tradeEntry, "ENTRY " + f_fmtLevel(tradeEntry), style=label.style_label_left, color=color.new(color.black, 10), textcolor=color.white, size=tblSize)
+        activeTPLabel := label.new(bar_index + tradeLineExtendBars, tradeTP, "TP2 / GRAVITY " + f_fmtLevel(tradeTP), style=label.style_label_left, color=color.new(color.green, 0), textcolor=color.white, size=tblSize)
+        activeSLLabel := label.new(bar_index + tradeLineExtendBars, tradeSL, "STOP LOSS " + f_fmtLevel(tradeSL), style=label.style_label_left, color=color.new(color.red, 0), textcolor=color.white, size=tblSize)
+
+// ═══════════════════════════════════════════════════════════════
+// TP1 / TP2 / SL HIT RESET
+// ═══════════════════════════════════════════════════════════════
+
+var label latestExitLabel = na
+
+if tp1HitActive and showTP1Hits
+    if not na(latestExitLabel)
+        label.delete(latestExitLabel)
+    latestExitLabel := label.new(
+         bar_index,
+         tradeTP1,
+         "TP1 HIT\n" + f_fmtLevel(tradeTP1),
+         style=label.style_label_left,
+         color=color.new(color.lime, 0),
+         textcolor=color.black,
+         size=sigSize
+     )
+
+if tpHitActive
+    if showTP_SL_Hits
+        if not na(latestExitLabel)
+            label.delete(latestExitLabel)
+        latestExitLabel := label.new(
+             bar_index,
+             tradeTP,
+             "TP2 HIT\n" + f_fmtLevel(tradeTP),
+             style=label.style_label_left,
+             color=color.new(color.green, 0),
+             textcolor=color.white,
+             size=sigSize
+         )
+
+    tradeDir := 0
+    tradeEntry := na
+    tradeTP1 := na
+    tradeTP := na
+    tradeSL := na
+    tradeStartBar := na
+    tp1AlreadyHit := false
+
+if slHitActive
+    if showTP_SL_Hits
+        if not na(latestExitLabel)
+            label.delete(latestExitLabel)
+        latestExitLabel := label.new(
+             bar_index,
+             tradeSL,
+             "SL HIT\n" + f_fmtLevel(tradeSL),
+             style=label.style_label_left,
+             color=color.new(color.red, 0),
+             textcolor=color.white,
+             size=sigSize
+         )
+
+    tradeDir := 0
+    tradeEntry := na
+    tradeTP1 := na
+    tradeTP := na
+    tradeSL := na
+    tradeStartBar := na
+    tp1AlreadyHit := false
+
+// ═══════════════════════════════════════════════════════════════
+// HUD
+// ═══════════════════════════════════════════════════════════════
+
+if showHUD and barstate.islast
+    var table hud = table.new(position.top_right, 2, 13, bgcolor=color.new(color.black, 5), border_width=2, border_color=color.new(color.gray, 45), frame_width=2, frame_color=color.new(color.aqua, 45))
+
+    hudActiveLong = tradeDir == 1
+    hudActiveShort = tradeDir == -1
+    hudActiveTrade = tradeDir != 0
+
+    hudState = newBuySignal ? "BUY" :
+         newSellSignal ? "SELL" :
+         hudActiveLong ? "IN BUY" :
+         hudActiveShort ? "IN SELL" :
+         targetEntered ? "REACTION" :
+         hasHeat ? "WATCH" :
+         "NO TRADE"
+
+    hudBias = newBuySignal ? "BUY RECLAIM" :
+         newSellSignal ? "SELL REJECT" :
+         hudActiveLong ? "LONG ACTIVE" :
+         hudActiveShort ? "SHORT ACTIVE" :
+         targetEntered ? "TARGET REACTION" :
+         trendBull ? "BULLISH PULL" :
+         trendBear ? "BEARISH PULL" :
+         "NEUTRAL"
+
+    stateCol = hudState == "BUY" or hudState == "IN BUY" ? color.green :
+         hudState == "SELL" or hudState == "IN SELL" ? color.red :
+         hudState == "REACTION" ? color.yellow :
+         hudState == "WATCH" ? color.aqua :
+         color.gray
+
+    table.cell(hud, 0, 0, "MSP FUTURES GLOBEX SCALPER", text_color=color.aqua, text_size=tblSize, text_halign=text.align_left, bgcolor=color.new(color.black, 0))
+    table.cell(hud, 1, 0, syminfo.ticker, text_color=color.white, text_size=tblSize, text_halign=text.align_right, bgcolor=color.new(color.black, 0))
+
+    table.cell(hud, 0, 1, "SIGNAL", text_color=color.white, text_size=tblSize, text_halign=text.align_left, bgcolor=color.new(stateCol, 75))
+    table.cell(hud, 1, 1, hudState, text_color=stateCol, text_size=tblSize, text_halign=text.align_right, bgcolor=color.new(stateCol, 85))
+
+    table.cell(hud, 0, 2, "Bias", text_color=color.gray, text_size=tblSize, text_halign=text.align_left)
+    table.cell(hud, 1, 2, hudBias, text_color=stateCol, text_size=tblSize, text_halign=text.align_right)
+
+    table.cell(hud, 0, 3, "Target", text_color=color.gray, text_size=tblSize, text_halign=text.align_left)
+    table.cell(hud, 1, 3, targetTF + " " + f_fmtLevel(targetLevel), text_color=not na(targetLevel) and targetLevel > close ? color.green : color.red, text_size=tblSize, text_halign=text.align_right)
+
+    table.cell(hud, 0, 4, "Distance", text_color=color.gray, text_size=tblSize, text_halign=text.align_left)
+    table.cell(hud, 1, 4, na(targetTicks) ? "—" : str.tostring(targetTicks, "#") + " ticks", text_color=color.white, text_size=tblSize, text_halign=text.align_right)
+
+    table.cell(hud, 0, 5, "Entry", text_color=color.gray, text_size=tblSize, text_halign=text.align_left)
+    table.cell(hud, 1, 5, hudActiveTrade ? f_fmtLevel(tradeEntry) : "Waiting", text_color=color.white, text_size=tblSize, text_halign=text.align_right)
+
+    table.cell(hud, 0, 6, "TP1 / TP2", text_color=color.gray, text_size=tblSize, text_halign=text.align_left)
+    tpText = hudActiveTrade ? f_fmtLevel(tradeTP1) + " / " + f_fmtLevel(tradeTP) : "—"
+    table.cell(hud, 1, 6, tpText, text_color=color.green, text_size=tblSize, text_halign=text.align_right)
+
+    table.cell(hud, 0, 7, "Stop Loss", text_color=color.gray, text_size=tblSize, text_halign=text.align_left)
+    table.cell(hud, 1, 7, hudActiveTrade ? f_fmtLevel(tradeSL) : "—", text_color=color.red, text_size=tblSize, text_halign=text.align_right)
+
+    riskDisplay = hudActiveTrade ? math.abs(tradeEntry - tradeSL) / tick : na
+    rewardDisplay = hudActiveTrade ? math.abs(tradeTP - tradeEntry) / tick : na
+    tp1Display = hudActiveTrade ? math.abs(tradeTP1 - tradeEntry) / tick : na
+
+    table.cell(hud, 0, 8, "Risk", text_color=color.gray, text_size=tblSize, text_halign=text.align_left)
+    table.cell(hud, 1, 8, na(riskDisplay) ? "—" : str.tostring(riskDisplay, "#") + " ticks", text_color=stateCol, text_size=tblSize, text_halign=text.align_right)
+
+    table.cell(hud, 0, 9, "Reward", text_color=color.gray, text_size=tblSize, text_halign=text.align_left)
+    rewardText = hudActiveTrade ? "TP1 " + str.tostring(tp1Display, "#") + " / TP2 " + str.tostring(rewardDisplay, "#") : "—"
+    table.cell(hud, 1, 9, rewardText, text_color=color.green, text_size=tblSize, text_halign=text.align_right)
+
+    table.cell(hud, 0, 10, "Time Heat", text_color=color.gray, text_size=tblSize, text_halign=text.align_left)
+    table.cell(hud, 1, 10, str.tostring(timeHeat) + " heat | " + str.tostring(activeDecompCount) + " active", text_color=hasHeat ? color.green : color.gray, text_size=tblSize, text_halign=text.align_right)
+
+    trendText = trendBull ? "BULL" : trendBear ? "BEAR" : "MIXED"
+    trendCol = trendBull ? color.green : trendBear ? color.red : color.gray
+
+    table.cell(hud, 0, 11, "Trend / Volume", text_color=color.gray, text_size=tblSize, text_halign=text.align_left)
+    table.cell(hud, 1, 11, trendText + " | " + str.tostring(relVol, "#.##") + "x", text_color=volOK ? trendCol : color.red, text_size=tblSize, text_halign=text.align_right)
+
+    table.cell(hud, 0, 12, "Exchange TZ", text_color=color.gray, text_size=tblSize, text_halign=text.align_left)
+    table.cell(hud, 1, 12, syminfo.timezone, text_color=color.white, text_size=tblSize, text_halign=text.align_right)
+
+// ═══════════════════════════════════════════════════════════════
+// CLOSE CALENDAR
+// ═══════════════════════════════════════════════════════════════
+
+if showCloseCalendar and barstate.islast
+    var table cal = table.new(position.bottom_right, 4, 8, bgcolor=color.new(color.black, 8), border_width=2, border_color=color.new(color.gray, 50), frame_width=2, frame_color=color.new(color.blue, 60))
+
+    table.cell(cal, 0, 0, "TF", text_color=color.gray, text_size=tblSize, text_halign=text.align_center)
+    table.cell(cal, 1, 0, "Session Close In", text_color=color.gray, text_size=tblSize, text_halign=text.align_center)
+    table.cell(cal, 2, 0, "Decomp", text_color=color.gray, text_size=tblSize, text_halign=text.align_center)
+    table.cell(cal, 3, 0, "Weight", text_color=color.gray, text_size=tblSize, text_halign=text.align_center)
+
+    table.cell(cal, 0, 1, "15m", bgcolor=f_tfBg(st15, wt15), text_color=color.white, text_size=tblSize)
+    table.cell(cal, 1, 1, f_fmtMin(until15), text_color=color.white, text_size=tblSize)
+    table.cell(cal, 2, 1, f_statusText(st15), text_color=st15 == 2 ? color.blue : st15 == 1 ? color.yellow : color.gray, text_size=tblSize)
+    table.cell(cal, 3, 1, str.tostring(wt15, "#.#"), text_color=color.white, text_size=tblSize)
+
+    table.cell(cal, 0, 2, "30m", bgcolor=f_tfBg(st30, wt30), text_color=color.white, text_size=tblSize)
+    table.cell(cal, 1, 2, f_fmtMin(until30), text_color=color.white, text_size=tblSize)
+    table.cell(cal, 2, 2, f_statusText(st30), text_color=st30 == 2 ? color.blue : st30 == 1 ? color.yellow : color.gray, text_size=tblSize)
+    table.cell(cal, 3, 2, str.tostring(wt30, "#.#"), text_color=color.white, text_size=tblSize)
+
+    table.cell(cal, 0, 3, "1H", bgcolor=f_tfBg(st60, wt60), text_color=color.white, text_size=tblSize)
+    table.cell(cal, 1, 3, f_fmtMin(until60), text_color=color.white, text_size=tblSize)
+    table.cell(cal, 2, 3, f_statusText(st60), text_color=st60 == 2 ? color.blue : st60 == 1 ? color.yellow : color.gray, text_size=tblSize)
+    table.cell(cal, 3, 3, str.tostring(wt60, "#.#"), text_color=color.white, text_size=tblSize)
+
+    table.cell(cal, 0, 4, "2H", bgcolor=f_tfBg(st120, wt120), text_color=color.white, text_size=tblSize)
+    table.cell(cal, 1, 4, f_fmtMin(until120), text_color=color.white, text_size=tblSize)
+    table.cell(cal, 2, 4, f_statusText(st120), text_color=st120 == 2 ? color.blue : st120 == 1 ? color.yellow : color.gray, text_size=tblSize)
+    table.cell(cal, 3, 4, str.tostring(wt120, "#.#"), text_color=color.white, text_size=tblSize)
+
+    table.cell(cal, 0, 5, "4H", bgcolor=f_tfBg(st240, wt240), text_color=color.white, text_size=tblSize)
+    table.cell(cal, 1, 5, f_fmtMin(until240), text_color=color.white, text_size=tblSize)
+    table.cell(cal, 2, 5, f_statusText(st240), text_color=st240 == 2 ? color.blue : st240 == 1 ? color.yellow : color.gray, text_size=tblSize)
+    table.cell(cal, 3, 5, str.tostring(wt240, "#.#"), text_color=color.white, text_size=tblSize)
+
+    table.cell(cal, 0, 6, "S-Day", bgcolor=f_tfBg(stD, wtD), text_color=color.white, text_size=tblSize)
+    table.cell(cal, 1, 6, f_fmtMin(untilD), text_color=color.white, text_size=tblSize)
+    table.cell(cal, 2, 6, f_statusText(stD), text_color=stD == 2 ? color.blue : stD == 1 ? color.yellow : color.gray, text_size=tblSize)
+    table.cell(cal, 3, 6, str.tostring(wtD, "#.#"), text_color=color.white, text_size=tblSize)
+
+    table.cell(cal, 0, 7, "W-Close", bgcolor=f_tfBg(stW, wtW), text_color=color.white, text_size=tblSize)
+    table.cell(cal, 1, 7, f_fmtMin(untilW), text_color=color.white, text_size=tblSize)
+    table.cell(cal, 2, 7, f_statusText(stW), text_color=stW == 2 ? color.blue : stW == 1 ? color.yellow : color.gray, text_size=tblSize)
+    table.cell(cal, 3, 7, str.tostring(wtW, "#.#"), text_color=color.white, text_size=tblSize)
+
+// ═══════════════════════════════════════════════════════════════
+// ALERTS
+// ═══════════════════════════════════════════════════════════════
+
+alertcondition(newBuySignal, title="MSP TGS BUY", message="MSP Futures Scalper v4.1: BUY setup on {{ticker}} at {{close}}")
+alertcondition(newSellSignal, title="MSP TGS SELL", message="MSP Futures Scalper v4.1: SELL setup on {{ticker}} at {{close}}")
+alertcondition(tp1HitActive, title="MSP TGS TP1 Hit", message="MSP Futures Scalper v4.1: TP1 hit on {{ticker}} at {{close}}")
+alertcondition(tpHitActive, title="MSP TGS TP2 Hit", message="MSP Futures Scalper v4.1: TP2 / Gravity target hit on {{ticker}} at {{close}}")
+alertcondition(slHitActive, title="MSP TGS Stop Loss Hit", message="MSP Futures Scalper v4.1: STOP LOSS hit on {{ticker}} at {{close}}")
+alertcondition(reactionPulse, title="MSP TGS Reaction Zone", message="MSP Futures Scalper v4.1: price entered reaction zone on {{ticker}} at {{close}}")
+alertcondition(activeDecompCount > 0, title="MSP TGS Decompression Active", message="MSP Futures Scalper v4.1: decompression active on {{ticker}}")

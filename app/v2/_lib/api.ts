@@ -650,6 +650,111 @@ export function fetchFlow(symbol: string, marketType = 'equity'): Promise<{ succ
   return apiFetch(`/api/flow?symbol=${encodeURIComponent(symbol)}&marketType=${marketType}`);
 }
 
+// --- Futures Terminal ---
+export type FuturesSessionState = {
+  symbol: string;
+  exchange: 'CME' | 'NYMEX' | 'COMEX' | 'CBOT';
+  currentSession:
+    | 'globex_overnight'
+    | 'pre_rth'
+    | 'rth'
+    | 'post_rth'
+    | 'maintenance_break'
+    | 'closed';
+  timezone: 'America/New_York';
+  sessionOpenET: string;
+  sessionCloseET: string;
+  maintenanceStartET: string;
+  maintenanceEndET: string;
+  minutesToNextSessionEvent: number;
+  nextSessionEvent:
+    | 'globex_open'
+    | 'rth_open'
+    | 'rth_close'
+    | 'maintenance_start'
+    | 'maintenance_end';
+  isRTH: boolean;
+  isGlobex: boolean;
+  isMaintenanceBreak: boolean;
+};
+
+export type FuturesAnchorMode = 'globex' | 'rth' | 'cash_bridge';
+
+export type FuturesCloseCalendarRow = {
+  timeframe: string;
+  category: 'intraday' | 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+  nextCloseISO: string;
+  minutesToClose: number;
+  weight: number;
+};
+
+export type FuturesCloseCluster = {
+  label: string;
+  timeISO: string;
+  timeEtLabel: string;
+  timeframes: string[];
+  weight: number;
+  clusterScore: number;
+};
+
+export type FuturesCloseCalendarResponse = {
+  symbol: string;
+  anchorMode: FuturesAnchorMode;
+  timezone: 'America/New_York';
+  horizonDays: number;
+  schedule: FuturesCloseCalendarRow[];
+  clusters: FuturesCloseCluster[];
+  timeline: string[];
+  warnings: string[];
+};
+
+export type PhantomTimeState = {
+  symbol: string;
+  bridgeSymbol: string;
+  cashIndexSymbol: string;
+  phantomZone:
+    | 'pre_market_bridge'
+    | 'post_close_bridge'
+    | 'pure_futures'
+    | 'cash_session'
+    | 'maintenance_break';
+  activeInstruments: string[];
+  inactiveInstruments: string[];
+  phantomChargeScore: number;
+  overnightRangeBuilt: boolean;
+  cashGapRisk: 'low' | 'moderate' | 'high' | 'extreme';
+  interpretation: string;
+};
+
+export type CashBridgeState = {
+  future: string;
+  etf: string;
+  cashIndex: string;
+  label: string;
+};
+
+export type FuturesTerminalResponse = {
+  symbol: string;
+  marketPath: 'futures';
+  session: FuturesSessionState;
+  closeCalendar: FuturesCloseCalendarResponse;
+  phantomTime?: PhantomTimeState;
+  cashBridge?: CashBridgeState;
+  riskNotice: string;
+  dataState: 'ready' | 'partial' | 'error';
+  errors: string[];
+};
+
+export function fetchFuturesTerminal(
+  symbol: string,
+  anchorMode: FuturesAnchorMode = 'globex',
+  horizon: number = 1,
+): Promise<FuturesTerminalResponse> {
+  return apiFetch(
+    `/api/terminal/futures?symbol=${encodeURIComponent(symbol)}&anchorMode=${encodeURIComponent(anchorMode)}&horizon=${encodeURIComponent(String(horizon))}`,
+  );
+}
+
 // --- Close Calendar (Confluence Scan) ---
 export type CloseCalendarAnchor = 'NOW' | 'TODAY' | 'PRIOR_DAY' | 'EOW' | 'EOM' | 'CUSTOM';
 export type CloseCalendarScheduleModel = 'crypto_247' | 'equity_session' | 'forex_session';
@@ -819,6 +924,13 @@ export function useOptionsScan(symbol: string | null) {
 
 export function useFlow(symbol: string | null, marketType = 'equity') {
   return useApi(() => symbol ? fetchFlow(symbol, marketType) : Promise.resolve(null as any), [symbol, marketType]);
+}
+
+export function useFuturesTerminal(symbol: string | null, anchorMode: FuturesAnchorMode = 'globex', horizon: number = 1) {
+  return useApi(
+    () => symbol ? fetchFuturesTerminal(symbol, anchorMode, horizon) : Promise.resolve(null as any),
+    [symbol, anchorMode, horizon],
+  );
 }
 
 export function useCloseCalendar(symbol: string | null, anchor: CloseCalendarAnchor = 'TODAY', horizonDays = 1) {
