@@ -431,7 +431,7 @@ function RankedMobileCards({ rows, activeRegime, onRowClick }: { rows: ScanResul
 
 function RankedFallbackList({ rows, activeRegime, onRowClick }: { rows: ScanResult[]; activeRegime: string; onRowClick: (row: ScanResult) => void }) {
   return (
-    <div className="grid gap-3 md:hidden">
+    <div className="grid gap-3">
       {rows.map((row, index) => {
         const lifecycle = deriveLifecycleState(row, activeRegime);
         const msp = computeMspScore(row, activeRegime);
@@ -1511,6 +1511,11 @@ export default function ScannerPage() {
               <div className="text-xs text-slate-500 py-12 text-center">No results match this filter.</div>
             ) : (
               <>
+              {v2PartialLoading && (
+                <div className="mb-3">
+                  <RankedFallbackList rows={rankedRows} activeRegime={currentRegime} onRowClick={handleV2RowClick} />
+                </div>
+              )}
               <RankedMobileCards rows={rankedRows} activeRegime={currentRegime} onRowClick={handleV2RowClick} />
               <div className="hidden overflow-x-auto -mx-1 md:block">
                 <table className="w-full text-xs" style={{ minWidth: 1040 }} aria-label="Ranked scanner results">
