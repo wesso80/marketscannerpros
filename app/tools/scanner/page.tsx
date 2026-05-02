@@ -995,6 +995,11 @@ export default function ScannerPage() {
     return items;
   }, [allResults, activeTab, sortKey, sortDir]);
 
+  const rankedRows = useMemo(
+    () => filtered.filter((r): r is ScanResult => Boolean(r && typeof r === 'object' && typeof r.symbol === 'string' && r.symbol.trim().length > 0)),
+    [filtered],
+  );
+
   const tabCounts = useMemo(() => ({
     All: allResults.length,
     Equities: allResults.filter(r => (r as any)._assetClass === 'equity').length,
@@ -1007,8 +1012,8 @@ export default function ScannerPage() {
     'Regime Match': allResults.filter(r => isRegimeCompatible(r)).length,
   }), [allResults, currentRegime]);
 
-  const v2Loading = allResults.length === 0 && (equity.loading || crypto.loading);
-  const v2PartialLoading = allResults.length > 0 && (equity.loading || crypto.loading);
+  const v2Loading = rankedRows.length === 0 && (equity.loading || crypto.loading);
+  const v2PartialLoading = rankedRows.length > 0 && (equity.loading || crypto.loading);
 
   /* ─── Track last successful scan timestamp (E) ─── */
   const [lastScanAt, setLastScanAt] = useState<Date | null>(null);
@@ -1021,7 +1026,7 @@ export default function ScannerPage() {
 
   /* ─── Register scanner data for Arca AI context ─── */
   const aiData = useMemo(() => {
-    const topPicks = filtered.slice(0, 20).map(r => ({
+    const topPicks = rankedRows.slice(0, 20).map(r => ({
       symbol: r.symbol,
       score: r.score,
       mspScore: computeMspScore(r, currentRegime),
@@ -1034,14 +1039,14 @@ export default function ScannerPage() {
       lifecycle: deriveLifecycleState(r, currentRegime),
       setup: r.setup,
     }));
-    const bullish = filtered.filter(r => r.direction === 'bullish').length;
-    const bearish = filtered.filter(r => r.direction === 'bearish').length;
+    const bullish = rankedRows.filter(r => r.direction === 'bullish').length;
+    const bearish = rankedRows.filter(r => r.direction === 'bearish').length;
     return {
       mode,
       regime: currentRegime,
       timeframe: mode === 'ranked' ? v2Timeframe : proTimeframe,
       assetClass: mode === 'ranked' ? 'all' : proAsset,
-      totalResults: filtered.length,
+      totalResults: rankedRows.length,
       bullishCount: bullish,
       bearishCount: bearish,
       topPicks,
@@ -1066,21 +1071,21 @@ export default function ScannerPage() {
         selectedInstitutionalFilter: symbolDetail.institutionalFilter,
       }),
     };
-  }, [mode, currentRegime, v2Timeframe, proTimeframe, proAsset, filtered, proScanResults, symbolDetail]);
+  }, [mode, currentRegime, v2Timeframe, proTimeframe, proAsset, rankedRows, proScanResults, symbolDetail]);
 
   const aiSymbols = useMemo(() =>
-    selectedSymbol ? [selectedSymbol] : filtered.slice(0, 5).map(r => r.symbol),
-    [selectedSymbol, filtered]
+    selectedSymbol ? [selectedSymbol] : rankedRows.slice(0, 5).map(r => r.symbol),
+    [selectedSymbol, rankedRows]
   );
 
   const aiSummary = useMemo(() => {
     if (symbolDetail) {
       return `${symbolDetail.symbol} — Score: ${symbolDetail.score}, Direction: ${symbolDetail.direction}, RSI: ${symbolDetail.rsi ?? 'N/A'}, ADX: ${symbolDetail.adx ?? 'N/A'}`;
     }
-    const bullish = filtered.filter(r => r.direction === 'bullish').length;
-    const bearish = filtered.filter(r => r.direction === 'bearish').length;
-    return `Scanner: ${filtered.length} results, ${bullish} bullish / ${bearish} bearish, Regime: ${currentRegime}, Timeframe: ${mode === 'ranked' ? v2Timeframe : proTimeframe}`;
-  }, [symbolDetail, filtered, currentRegime, mode, v2Timeframe, proTimeframe]);
+    const bullish = rankedRows.filter(r => r.direction === 'bullish').length;
+    const bearish = rankedRows.filter(r => r.direction === 'bearish').length;
+    return `Scanner: ${rankedRows.length} results, ${bullish} bullish / ${bearish} bearish, Regime: ${currentRegime}, Timeframe: ${mode === 'ranked' ? v2Timeframe : proTimeframe}`;
+  }, [symbolDetail, rankedRows, currentRegime, mode, v2Timeframe, proTimeframe]);
 
   useRegisterPageData('scanner', aiData, aiSymbols, aiSummary);
 
@@ -1276,17 +1281,17 @@ export default function ScannerPage() {
     setSelectedSymbol(null);
     setSymbolDetail(null);
   }, []);
-  const canOpenAnalysis = Boolean(selectedSymbol) || (mode === 'ranked' ? filtered.length > 0 : proScreenerRows.length > 0);
+  const canOpenAnalysis = Boolean(selectedSymbol) || (mode === 'ranked' ? rankedRows.length > 0 : proScreenerRows.length > 0);
   const openScannerAnalysis = useCallback(() => {
     if (selectedSymbol) return;
     if (mode === 'ranked') {
-      const firstResult = filtered[0];
+      const firstResult = rankedRows[0];
       if (firstResult) handleV2RowClick(firstResult);
       return;
     }
     const firstResult = proScreenerRows[0];
     if (firstResult) handleProRowClick(firstResult);
-  }, [selectedSymbol, mode, filtered, proScreenerRows, handleV2RowClick, handleProRowClick]);
+  }, [selectedSymbol, mode, rankedRows, proScreenerRows, handleV2RowClick, handleProRowClick]);
 
   function SortHeader({ k, label, w }: { k: SortKey; label: string; w: string }) {
     return (
@@ -1304,7 +1309,7 @@ export default function ScannerPage() {
   }
 
   /* ─── Command header derived values ─── */
-  const queueCount = mode === 'ranked' ? filtered.length : proScreenerRows.length;
+  const queueCount = mode === 'ranked' ? rankedRows.length : proScreenerRows.length;
   const universeCount = proScanResults?.scanned ?? null;
   const headerStage: ScannerStage = activeScannerStage;
   const modeLabel = headerStage === 'ranked' ? 'Ranked queue' : headerStage === 'pro' ? 'Pro scan' : 'Symbol analysis';
@@ -1335,7 +1340,7 @@ export default function ScannerPage() {
   const dataHealthValue = dataIssues.length ? `${dataIssues.length} issue${dataIssues.length === 1 ? '' : 's'}` : dataLoadingCount ? `${dataLoadingCount} loading` : 'Ready';
   const dataHealthTone = dataIssues.length ? '#F59E0B' : dataLoadingCount ? '#94A3B8' : '#10B981';
   const dataHealthDetail = dataIssues.length ? dataIssues.join(', ') : dataLoadingCount ? 'Feeds syncing' : 'No feed errors reported';
-  const topRankedSymbol = filtered[0]?.symbol;
+  const topRankedSymbol = rankedRows[0]?.symbol;
   const topProSymbol = proScreenerRows[0]?.symbol;
   const headerTopSymbol = selectedSymbol || (mode === 'ranked' ? topRankedSymbol : topProSymbol);
   const nextCheckValue = headerStage === 'analysis'
@@ -1502,11 +1507,11 @@ export default function ScannerPage() {
             </div>
             {v2Loading ? (
               <div className="space-y-3 py-4">{Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-8 bg-slate-700/30 rounded animate-pulse" />)}</div>
-            ) : filtered.length === 0 ? (
+            ) : rankedRows.length === 0 ? (
               <div className="text-xs text-slate-500 py-12 text-center">No results match this filter.</div>
             ) : (
               <>
-              <RankedMobileCards rows={filtered} activeRegime={currentRegime} onRowClick={handleV2RowClick} />
+              <RankedMobileCards rows={rankedRows} activeRegime={currentRegime} onRowClick={handleV2RowClick} />
               <div className="hidden overflow-x-auto -mx-1 md:block">
                 <table className="w-full text-xs" style={{ minWidth: 1040 }} aria-label="Ranked scanner results">
                   <thead>
@@ -1525,7 +1530,7 @@ export default function ScannerPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.map((r) => {
+                    {rankedRows.map((r) => {
                       const regimeLabel = r.scoreV2?.regime?.label || r.type || '';
                       const msp = computeMspScore(r, currentRegime);
                       const lifecycle = deriveLifecycleState(r, currentRegime);
@@ -1596,7 +1601,7 @@ export default function ScannerPage() {
             )}
             <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-800/40">
               <div className="flex items-center gap-3 text-[11px] text-slate-500">
-                <span>{filtered.length} symbols</span>
+                <span>{rankedRows.length} symbols</span>
                 {lastScanAt && (
                   <span className="text-slate-600">
                     · Last scan: {lastScanAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
