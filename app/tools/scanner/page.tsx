@@ -431,7 +431,7 @@ function RankedMobileCards({ rows, activeRegime, onRowClick }: { rows: ScanResul
 
 function RankedFallbackList({ rows, activeRegime, onRowClick }: { rows: ScanResult[]; activeRegime: string; onRowClick: (row: ScanResult) => void }) {
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-3 md:hidden">
       {rows.map((row, index) => {
         const lifecycle = deriveLifecycleState(row, activeRegime);
         const msp = computeMspScore(row, activeRegime);
@@ -498,6 +498,48 @@ function RankedFallbackList({ rows, activeRegime, onRowClick }: { rows: ScanResu
           </button>
         );
       })}
+    </div>
+  );
+}
+
+function RankedDesktopFallbackTable({ rows, activeRegime, onRowClick }: { rows: ScanResult[]; activeRegime: string; onRowClick: (row: ScanResult) => void }) {
+  return (
+    <div className="hidden overflow-x-auto -mx-1 md:block">
+      <table className="w-full text-xs" style={{ minWidth: 840 }} aria-label="Ranked scanner fallback rows">
+        <thead>
+          <tr className="border-b border-[var(--msp-border)]">
+            <th className="text-left py-2 px-2 text-[11px] uppercase tracking-wider text-slate-500">Symbol</th>
+            <th className="text-left py-2 px-2 text-[11px] uppercase tracking-wider text-slate-500">MSP</th>
+            <th className="text-left py-2 px-2 text-[11px] uppercase tracking-wider text-slate-500">Bias</th>
+            <th className="text-left py-2 px-2 text-[11px] uppercase tracking-wider text-slate-500">Alignment</th>
+            <th className="text-left py-2 px-2 text-[11px] uppercase tracking-wider text-slate-500">Lifecycle</th>
+            <th className="text-right py-2 px-2 text-[11px] uppercase tracking-wider text-slate-500">Review</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => {
+            const lifecycle = deriveLifecycleState(row, activeRegime);
+            const msp = computeMspScore(row, activeRegime);
+            const mspColor = msp >= 70 ? '#10B981' : msp >= 50 ? '#F59E0B' : msp >= 30 ? '#94A3B8' : '#EF4444';
+            return (
+              <tr key={`fallback-${row.symbol}`} className="border-b border-slate-800/40 hover:bg-slate-800/30">
+                <td className="py-2.5 px-2 font-bold text-white whitespace-nowrap">{row.symbol}</td>
+                <td className="py-2.5 px-2 font-black whitespace-nowrap" style={{ color: mspColor }}>{msp}</td>
+                <td className="py-2.5 px-2 whitespace-nowrap"><Badge label={compactBiasLabel(row.direction)} color={dirColor(row.direction)} small /></td>
+                <td className="py-2.5 px-2 text-slate-300 whitespace-nowrap">{row.confidence != null ? `${row.confidence}%` : '—'}</td>
+                <td className="py-2.5 px-2 whitespace-nowrap">
+                  <span className="text-[11px] px-1.5 py-0.5 rounded border" style={{ color: LIFECYCLE_COLORS[lifecycle], borderColor: LIFECYCLE_COLORS[lifecycle] + '40', backgroundColor: LIFECYCLE_COLORS[lifecycle] + '15' }}>
+                    {lifecycleLabel(lifecycle)}
+                  </span>
+                </td>
+                <td className="py-2.5 px-2 text-right whitespace-nowrap">
+                  <button type="button" onClick={() => onRowClick(row)} className="px-2.5 py-1.5 bg-emerald-500/10 text-emerald-400 rounded text-[11px] font-semibold hover:bg-emerald-500/20 transition-colors">Review</button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -1509,13 +1551,13 @@ export default function ScannerPage() {
               <div className="space-y-3 py-4">{Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-8 bg-slate-700/30 rounded animate-pulse" />)}</div>
             ) : rankedRows.length === 0 ? (
               <div className="text-xs text-slate-500 py-12 text-center">No results match this filter.</div>
+            ) : v2PartialLoading ? (
+              <>
+                <RankedFallbackList rows={rankedRows} activeRegime={currentRegime} onRowClick={handleV2RowClick} />
+                <RankedDesktopFallbackTable rows={rankedRows} activeRegime={currentRegime} onRowClick={handleV2RowClick} />
+              </>
             ) : (
               <>
-              {v2PartialLoading && (
-                <div className="mb-3">
-                  <RankedFallbackList rows={rankedRows} activeRegime={currentRegime} onRowClick={handleV2RowClick} />
-                </div>
-              )}
               <RankedMobileCards rows={rankedRows} activeRegime={currentRegime} onRowClick={handleV2RowClick} />
               <div className="hidden overflow-x-auto -mx-1 md:block">
                 <table className="w-full text-xs" style={{ minWidth: 1040 }} aria-label="Ranked scanner results">
