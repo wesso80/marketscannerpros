@@ -16,9 +16,43 @@ export const runtime = 'nodejs';
 
 /* Crypto symbol detection */
 const CRYPTO_SYMBOLS = new Set([
+  // Large-caps
   'BTC','ETH','SOL','BNB','XRP','DOGE','ADA','AVAX','DOT','MATIC',
   'LINK','UNI','LTC','ATOM','NEAR','APT','OP','ARB','FIL','INJ',
+  // USD-suffixed large-caps
   'BTCUSD','ETHUSD','SOLUSD','BNBUSD','XRPUSD','DOGEUSD',
+  'ADAUSD','AVAXUSD','DOTUSD','MATICUSD','LINKUSD','UNIUSD',
+  'LTCUSD','ATOMUSD','NEARUSD','APTUSD','OPUSD','ARBUSD','FILUSD','INJUSD',
+  // Mid-caps & meme coins
+  'BONK','BONKUSD','BONKUSDT',
+  'PEPE','PEPEUSD','PEPEUSDT',
+  'WIF','WIFUSD','WIFUSDT',
+  'FLOKI','FLOKIUSD',
+  'SHIB','SHIBUSD',
+  'TRX','TRXUSD',
+  'HBAR','HBARUSD',
+  'VET','VETUSD',
+  'IMX','IMXUSD',
+  'GRT','GRTUSD',
+  'AAVE','AAVEUSD',
+  'ALGO','ALGOUSD',
+  'FTM','FTMUSD',
+  'RUNE','RUNEUSD',
+  'SUI','SUIUSD',
+  'SEI','SEIUSD',
+  'TIA','TIAUSD',
+  'JUP','JUPUSD',
+  'RAY','RAYUSD',
+  'ORCA','ORCAUSD',
+  'ENA','ENAUSD',
+  'RENDER','RENDERUSD','RNDR','RNDRUSD',
+  'ICP','ICPUSD',
+  'THETA','THETAUSD',
+  'FET','FETUSD',
+  'BCH','BCHUSD',
+  'ETC','ETCUSD',
+  'XLM','XLMUSD',
+  'CRO','CROUSD',
 ]);
 
 function isCrypto(sym: string): boolean {
