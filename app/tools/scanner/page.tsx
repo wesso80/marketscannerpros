@@ -504,7 +504,7 @@ function RankedFallbackList({ rows, activeRegime, onRowClick }: { rows: ScanResu
 
 function RankedDesktopFallbackTable({ rows, activeRegime, onRowClick }: { rows: ScanResult[]; activeRegime: string; onRowClick: (row: ScanResult) => void }) {
   return (
-    <div className="hidden overflow-x-auto -mx-1 md:block">
+    <div className="overflow-x-auto -mx-1">
       <table className="w-full text-xs" style={{ minWidth: 840 }} aria-label="Ranked scanner fallback rows">
         <thead>
           <tr className="border-b border-[var(--msp-border)]">
@@ -1552,14 +1552,10 @@ export default function ScannerPage() {
             ) : rankedRows.length === 0 ? (
               <div className="text-xs text-slate-500 py-12 text-center">No results match this filter.</div>
             ) : v2PartialLoading ? (
-              <>
-                <RankedFallbackList rows={rankedRows} activeRegime={currentRegime} onRowClick={handleV2RowClick} />
-                <RankedDesktopFallbackTable rows={rankedRows} activeRegime={currentRegime} onRowClick={handleV2RowClick} />
-              </>
+              <RankedDesktopFallbackTable rows={rankedRows} activeRegime={currentRegime} onRowClick={handleV2RowClick} />
             ) : (
               <>
-              <RankedMobileCards rows={rankedRows} activeRegime={currentRegime} onRowClick={handleV2RowClick} />
-              <div className="hidden overflow-x-auto -mx-1 md:block">
+              <div className="overflow-x-auto -mx-1">
                 <table className="w-full text-xs" style={{ minWidth: 1040 }} aria-label="Ranked scanner results">
                   <thead>
                     <tr className="border-b border-[var(--msp-border)]">
