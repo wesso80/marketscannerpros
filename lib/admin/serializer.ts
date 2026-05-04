@@ -62,7 +62,10 @@ export function pipelineToScannerHit(p: CandidatePipeline): ScannerHit {
     symbol: v.symbol,
     bias: toBiasState(v.direction),
     regime: v.regime,
+    // Governance-final permission (portfolio-aware). Risk-desk only.
     permission: toPermissionState(g.finalPermission),
+    // Market-only permission (pre-governance). Use for discovery filtering.
+    marketPermission: toPermissionState(v.permission),
     confidence: Math.round(v.confidenceScore * 10) / 10,
     eliteScore: elite.score,
     eliteGrade: elite.grade,
@@ -117,7 +120,10 @@ export function pipelineToSymbolIntelligence(
     changePercent: Math.round(changePercent * 100) / 100,
     bias: toBiasState(v.direction),
     regime: v.regime,
+    // Governance-final permission (portfolio-aware). Risk-desk only.
     permission: toPermissionState(g.finalPermission),
+    // Market-only permission (pre-governance). Use for discovery filtering.
+    marketPermission: toPermissionState(v.permission),
     confidence: Math.round(v.confidenceScore * 10) / 10,
     eliteScore: elite.score,
     eliteGrade: elite.grade,

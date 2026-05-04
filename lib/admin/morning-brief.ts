@@ -481,9 +481,14 @@ export async function buildMorningBrief(options: {
   const catalysts = await loadCatalysts(symbols, hits);
   const rankedHits = rankHitsWithLearning(hits, learning, catalysts);
 
-  const topPlays = rankedHits.filter((hit) => hit.permission === "GO").slice(0, 5);
-  const watchlist = rankedHits.filter((hit) => hit.permission === "WAIT").slice(0, 8);
-  const avoidList = rankedHits.filter((hit) => hit.permission === "BLOCK").slice(0, 6);
+  // Discovery filtering MUST use the market-only permission (pre-portfolio overlay).
+  // Per admin doctrine (lib/admin/modes.ts), personal portfolio exposure cannot
+  // suppress, hide, or downgrade opportunities outside `risk-desk` mode. The
+  // governance-modified `permission` field remains available on each hit and is
+  // surfaced through the Risk Governor / executionChecklist for risk-desk consumers.
+  const topPlays = rankedHits.filter((hit) => hit.marketPermission === "GO").slice(0, 5);
+  const watchlist = rankedHits.filter((hit) => hit.marketPermission === "WAIT").slice(0, 8);
+  const avoidList = rankedHits.filter((hit) => hit.marketPermission === "BLOCK").slice(0, 6);
   const researchSetups = buildResearchSetups(rankedHits, topPlays, watchlist, risk);
   const deskState = resolveDeskState(risk, health, topPlays, watchlist);
   const comparison = await buildBriefComparison(briefId, market, timeframe, deskState, topPlays, catalysts);

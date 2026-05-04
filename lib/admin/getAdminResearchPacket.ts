@@ -249,6 +249,7 @@ export async function getAdminResearchPacket(params: {
         bias: "NEUTRAL",
         regime: "ROTATIONAL_RANGE",
         permission: "WAIT",
+        marketPermission: "WAIT",
         confidence: 0,
         symbolTrust: 50,
         sizeMultiplier: 0,

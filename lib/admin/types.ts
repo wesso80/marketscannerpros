@@ -33,7 +33,19 @@ export type ScannerHit = {
   symbol: string;
   bias: BiasState;
   regime: Regime | string;
+  /**
+   * Final permission AFTER governance/portfolio risk overlay.
+   * Use this only for risk-desk / execution surfaces.
+   * Per doctrine (lib/admin/modes.ts), this MUST NOT be used to filter
+   * discovery/opportunity surfaces outside `risk-desk` mode.
+   */
   permission: PermissionState;
+  /**
+   * Market-only permission BEFORE personal portfolio/governance overlay.
+   * Use this for opportunity discovery, scanner, scout, and morning-brief
+   * topPlays/watchlist filtering so personal exposure cannot suppress setups.
+   */
+  marketPermission: PermissionState;
   confidence: number;
   eliteScore?: number;
   eliteGrade?: EliteGrade;
@@ -77,7 +89,10 @@ export type AdminSymbolIntelligence = {
   changePercent: number;
   bias: BiasState;
   regime: Regime | string;
+  /** Final permission AFTER governance/portfolio overlay. Risk-desk only for filtering. */
   permission: PermissionState;
+  /** Market-only permission BEFORE portfolio overlay. Use for discovery surfaces. */
+  marketPermission: PermissionState;
   confidence: number;
   eliteScore?: number;
   eliteGrade?: EliteGrade;
