@@ -30,6 +30,10 @@ export const metadata: Metadata = {
   alternates: {
     canonical: 'https://marketscannerpros.app/tools/scanner',
   },
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default function ScannerLayout({ children }: { children: React.ReactNode }) {

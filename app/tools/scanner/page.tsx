@@ -289,7 +289,7 @@ function ScannerFlowRail({
         if (stage.id === 'ranked' || stage.id === 'pro') {
           const selectableStage = stage.id;
           return (
-            <button key={stage.id} type="button" onClick={() => onSelectMode(selectableStage)} aria-pressed={isActive} className="block w-full">
+            <button key={stage.id} type="button" onClick={() => onSelectMode(selectableStage)} aria-pressed={isActive} className="block w-full rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50">
               {content}
             </button>
           );
@@ -303,7 +303,7 @@ function ScannerFlowRail({
             disabled={disabled}
             aria-disabled={disabled}
             aria-pressed={isActive}
-            className="block w-full disabled:cursor-not-allowed"
+            className="block w-full rounded-md disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
           >
             {content}
           </button>
@@ -767,7 +767,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
       {flashMsg && (
         <div className={`rounded-lg px-4 py-2.5 text-sm font-semibold ${flashMsg.type === 'success' ? 'border-emerald-500/40 bg-emerald-950/90 text-emerald-300 border' : 'border-rose-500/40 bg-rose-950/90 text-rose-300 border'}`}>
           {flashMsg.text}
-          <button type="button" onClick={() => setFlashMsg(null)} className="ml-3 text-xs opacity-70 hover:opacity-100">&times;</button>
+          <button type="button" aria-label="Dismiss" onClick={() => setFlashMsg(null)} className="ml-3 text-xs opacity-70 hover:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-current rounded">&times;</button>
         </div>
       )}
 
@@ -779,11 +779,11 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
         </div>
         <div className="flex items-center gap-2">
         <Link href={`/tools/workspace?tab=Backtest&symbol=${encodeURIComponent(detail.symbol)}`}
-          className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-amber-200 no-underline hover:bg-amber-400/15 transition-colors">
+          className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-amber-200 no-underline hover:bg-amber-400/15 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60">
           Open Historical Test
         </Link>
         <button type="button" onClick={onClose}
-          className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-muted)]">
+          className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60">
           {returnLabel ?? 'Back to Scanner'}
         </button>
         </div>
@@ -924,15 +924,15 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={handleSaveCase} disabled={savingCase} aria-disabled={savingCase}
-                className="rounded-md border border-blue-500/40 bg-blue-500/10 px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-blue-300 hover:bg-blue-500/20 disabled:cursor-wait disabled:opacity-70">
+                className="rounded-md border border-blue-500/40 bg-blue-500/10 px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-blue-300 hover:bg-blue-500/20 disabled:cursor-wait disabled:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60">
                 {savingCase ? 'Saving...' : 'Save Case'}
               </button>
               <Link href={`/tools/workspace?tab=alerts&symbol=${encodeURIComponent(detail.symbol)}&price=${detail.price || ''}&direction=${direction}`}
-                className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-slate-400 no-underline hover:bg-slate-700/50 transition-colors">
+                className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-slate-400 no-underline hover:bg-slate-700/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/50">
                 Set Alert
               </Link>
               <button type="button" onClick={handleAddToWatchlist}
-                className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-slate-400 hover:bg-slate-700/50 transition-colors">
+                className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-slate-400 hover:bg-slate-700/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/50">
                 Add to Watchlist
               </button>
             </div>
@@ -1342,7 +1342,7 @@ export default function ScannerPage() {
         <button
           type="button"
           onClick={() => toggleSort(k)}
-          className="text-left text-[11px] uppercase tracking-wider text-slate-500 hover:text-slate-300"
+          className="text-left text-[11px] uppercase tracking-wider text-slate-500 hover:text-slate-300 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400/50 rounded"
           aria-label={`Sort scanner table by ${label}`}
         >
           {label} {sortKey === k ? (sortDir === 'desc' ? '▼' : '▲') : ''}
@@ -1443,12 +1443,12 @@ export default function ScannerPage() {
             <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">Ranked auto-triages the market. Pro lets you configure conditions. Analysis sends one symbol into Golden Egg.</p>
             <div className="mt-3 flex flex-wrap gap-2">
               {headerStage === 'analysis' ? (
-                <button type="button" onClick={() => { setSelectedSymbol(null); setSymbolDetail(null); }} className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 transition-colors hover:bg-emerald-400/15">Back to {mode === 'ranked' ? 'Ranked' : 'Pro'}</button>
+                <button type="button" onClick={() => { setSelectedSymbol(null); setSymbolDetail(null); }} className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 transition-colors hover:bg-emerald-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">Back to {mode === 'ranked' ? 'Ranked' : 'Pro'}</button>
               ) : (
-                <button type="button" onClick={() => selectScannerMode(mode === 'pro' ? 'pro' : 'ranked')} className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 transition-colors hover:bg-emerald-400/15">{mode === 'pro' ? 'Configure Pro Scan' : 'Refresh Ranked Queue'}</button>
+                <button type="button" onClick={() => selectScannerMode(mode === 'pro' ? 'pro' : 'ranked')} className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 transition-colors hover:bg-emerald-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">{mode === 'pro' ? 'Configure Pro Scan' : 'Refresh Ranked Queue'}</button>
               )}
-              <Link href={goldenEggHref} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15">{headerTopSymbol ? `Validate ${headerTopSymbol}` : 'Open Golden Egg'}</Link>
-              <Link href="/tools/terminal" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Open Terminal</Link>
+              <Link href={goldenEggHref} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60">{headerTopSymbol ? `Validate ${headerTopSymbol}` : 'Open Golden Egg'}</Link>
+              <Link href="/tools/terminal" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60">Open Terminal</Link>
             </div>
           </div>
 
@@ -1479,7 +1479,7 @@ export default function ScannerPage() {
             <span className="text-[11px] text-slate-500 mr-1 uppercase">Timeframe</span>
             {SCAN_TIMEFRAMES.map(tf => (
               <button key={tf.value} type="button" aria-pressed={v2Timeframe === tf.value} onClick={() => setV2Timeframe(tf.value)}
-                className={`px-2.5 py-1 text-[11px] rounded-md transition-colors ${v2Timeframe === tf.value ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-[var(--msp-border)]'}`}>
+                className={`px-2.5 py-1 text-[11px] rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50 ${v2Timeframe === tf.value ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-[var(--msp-border)]'}`}>
                 {tf.label}
               </button>
             ))}
@@ -1503,7 +1503,7 @@ export default function ScannerPage() {
           <div className="hidden md:flex items-center gap-1 overflow-x-auto pb-1">
             {TABS.map(tab => (
               <button key={tab} type="button" aria-pressed={activeTab === tab} onClick={() => setActiveTab(tab)}
-                className={`px-2.5 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap transition-colors ${activeTab === tab ? 'bg-[rgba(16,185,129,0.1)] text-[var(--msp-accent)] border border-[rgba(16,185,129,0.4)]' : 'text-[var(--msp-text-muted)] hover:bg-slate-800/60 border border-transparent'}`}>
+                className={`px-2.5 py-1 text-[11px] font-semibold rounded-full whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50 ${activeTab === tab ? 'bg-[rgba(16,185,129,0.1)] text-[var(--msp-accent)] border border-[rgba(16,185,129,0.4)]' : 'text-[var(--msp-text-muted)] hover:bg-slate-800/60 border border-transparent'}`}>
                 {tab}
                 <span className="ml-1 text-[11px] text-slate-600">
                   {tabCounts[tab]}
@@ -1635,7 +1635,7 @@ export default function ScannerPage() {
                             </span>
                           </td>
                           <td className="py-2.5 px-2 text-center whitespace-nowrap">
-                            <button type="button" onClick={(e) => { e.stopPropagation(); handleV2RowClick(r); }} className="px-2.5 py-1.5 bg-emerald-500/10 text-emerald-400 rounded text-[11px] font-semibold hover:bg-emerald-500/20 transition-colors">Review</button>
+                            <button type="button" onClick={(e) => { e.stopPropagation(); handleV2RowClick(r); }} className="px-2.5 py-1.5 bg-emerald-500/10 text-emerald-400 rounded text-[11px] font-semibold hover:bg-emerald-500/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">Review</button>
                           </td>
                         </tr>
                       );
@@ -1660,7 +1660,7 @@ export default function ScannerPage() {
                     Free: {FREE_DAILY_SCAN_LIMIT}/day — Upgrade
                   </a>
                 )}
-                <button type="button" onClick={() => { equity.refetch(); crypto.refetch(); }} className="text-[11px] text-emerald-400 hover:underline">Rescan</button>
+                <button type="button" onClick={() => { equity.refetch(); crypto.refetch(); }} className="text-[11px] text-emerald-400 hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400/60 rounded px-1">Rescan</button>
               </div>
             </div>
           </Card>
@@ -1781,7 +1781,7 @@ export default function ScannerPage() {
               onClick={runProScan}
               disabled={proScanLoading}
               aria-disabled={proScanLoading}
-              className={`mt-4 w-full rounded-md border px-3 py-2 text-[12px] font-black uppercase tracking-[0.1em] transition-colors ${
+              className={`mt-4 w-full rounded-md border px-3 py-2 text-[12px] font-black uppercase tracking-[0.1em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 ${
                 proScanLoading
                   ? 'cursor-not-allowed border-amber-400/20 bg-amber-400/5 text-amber-200/60'
                   : 'border-amber-400/35 bg-amber-400/10 text-amber-200 hover:bg-amber-400/15'
@@ -1819,8 +1819,8 @@ export default function ScannerPage() {
                 </select>
               </div>
               <div className="ml-auto flex gap-1">
-                <button onClick={() => setProBulkViewMode('table')} className={`rounded px-2 py-1 text-[11px] font-bold ${proBulkViewMode === 'table' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-500'}`}>Table</button>
-                <button onClick={() => setProBulkViewMode('cards')} className={`rounded px-2 py-1 text-[11px] font-bold ${proBulkViewMode === 'cards' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-500'}`}>Cards</button>
+                <button onClick={() => setProBulkViewMode('table')} className={`rounded px-2 py-1 text-[11px] font-bold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400/50 ${proBulkViewMode === 'table' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-500'}`}>Table</button>
+                <button onClick={() => setProBulkViewMode('cards')} className={`rounded px-2 py-1 text-[11px] font-bold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400/50 ${proBulkViewMode === 'cards' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-500'}`}>Cards</button>
               </div>
             </div>
           )}
