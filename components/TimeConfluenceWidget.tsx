@@ -128,10 +128,10 @@ export default function TimeConfluenceWidget({
     const { bg, text } = colors[state.sessionType];
     return (
       <span style={{ background: bg, color: text, padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600 }}>
-        {state.sessionType === 'pre' ? '🌅 Pre-Market' :
-         state.sessionType === 'regular' ? '🟢 Market Open' :
-         state.sessionType === 'after' ? '🌙 After Hours' :
-         '🔴 Closed'}
+        {state.sessionType === 'pre' ? <><span aria-hidden="true">🌅 </span>Pre-Market</> :
+         state.sessionType === 'regular' ? <><span aria-hidden="true">🟢 </span>Market Open</> :
+         state.sessionType === 'after' ? <><span aria-hidden="true">🌙 </span>After Hours</> :
+         <><span aria-hidden="true">🔴 </span>Closed</>}
       </span>
     );
   };
@@ -214,7 +214,7 @@ export default function TimeConfluenceWidget({
         gap: '0.5rem',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <span style={{ fontSize: '1.3rem' }}>⏰</span>
+          <span aria-hidden="true" style={{ fontSize: '1.3rem' }}>⏰</span>
           <h3 style={{ margin: 0, color: '#E2E8F0', fontSize: '1.1rem', fontWeight: 600 }}>
             Time Confluence Engine
           </h3>
@@ -223,19 +223,22 @@ export default function TimeConfluenceWidget({
       </div>
 
       {/* Tabs */}
-      <div style={{
+      <div role="tablist" style={{
         display: 'flex',
         borderBottom: '1px solid rgba(168,85,247,0.2)',
       }}>
         {[
-          { id: 'now', label: '🔴 Live' },
-          { id: 'today', label: '📅 Today' },
-          { id: 'fib', label: '🔢 Fib' },
-          { id: 'macro', label: '📊 Macro' },
-          { id: 'calendar', label: '🗓️ Calendar' },
+          { id: 'now', icon: '🔴', text: 'Live' },
+          { id: 'today', icon: '📅', text: 'Today' },
+          { id: 'fib', icon: '🔢', text: 'Fib' },
+          { id: 'macro', icon: '📊', text: 'Macro' },
+          { id: 'calendar', icon: '🗓️', text: 'Calendar' },
         ].map((tab) => (
           <button
             key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab.id}
             onClick={() => setActiveTab(tab.id as typeof activeTab)}
             style={{
               flex: 1,
@@ -250,7 +253,7 @@ export default function TimeConfluenceWidget({
               transition: 'all 0.2s',
             }}
           >
-            {tab.label}
+            <span aria-hidden="true">{tab.icon} </span>{tab.text}
           </button>
         ))}
       </div>
@@ -277,16 +280,20 @@ export default function TimeConfluenceWidget({
                 gap: '0.5rem',
               }}>
                 CONFLUENCE SCORE
-                <span
+                <button
+                  type="button"
                   onMouseEnter={() => setShowTooltip(true)}
                   onMouseLeave={() => setShowTooltip(false)}
                   onClick={() => setShowTooltip(!showTooltip)}
+                  aria-expanded={showTooltip}
+                  aria-label="Score breakdown info"
                   style={{
                     cursor: 'pointer',
                     width: '18px',
                     height: '18px',
                     borderRadius: '50%',
                     background: 'rgba(168,85,247,0.3)',
+                    border: 'none',
                     color: '#A855F7',
                     fontSize: '0.7rem',
                     display: 'inline-flex',
@@ -296,7 +303,7 @@ export default function TimeConfluenceWidget({
                   }}
                 >
                   ?
-                </span>
+                </button>
               </div>
               
               {/* Confidence Explanation Tooltip */}
@@ -317,7 +324,7 @@ export default function TimeConfluenceWidget({
                   boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
                 }}>
                   <div style={{ color: '#A855F7', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.5rem' }}>
-                    📊 Score Breakdown
+                    <span aria-hidden="true">📊 </span>Score Breakdown
                   </div>
                   <div style={{ color: '#E2E8F0', fontSize: '0.8rem', lineHeight: 1.5 }}>
                     {getConfidenceExplanation(state)}
@@ -361,7 +368,7 @@ export default function TimeConfluenceWidget({
                     justifyContent: 'center',
                     gap: '0.5rem',
                   }}>
-                    <span style={{ fontSize: '1.1rem' }}>📈</span>
+                    <span aria-hidden="true" style={{ fontSize: '1.1rem' }}>📈</span>
                     <span style={{ color: '#10B981', fontWeight: 600, fontSize: '1.1rem' }}>
                       {getHistoricalHitRate(state.nowConfluenceScore).rate}%
                     </span>
@@ -370,7 +377,7 @@ export default function TimeConfluenceWidget({
                     </span>
                   </div>
                   <div style={{ color: '#64748B', fontSize: '0.7rem', marginTop: '0.25rem' }}>
-                    Based on {getHistoricalHitRate(state.nowConfluenceScore).samples} similar setups (30d)
+                    Simulated — modelled from {getHistoricalHitRate(state.nowConfluenceScore).samples} pattern setups
                   </div>
                 </div>
               )}
@@ -388,7 +395,7 @@ export default function TimeConfluenceWidget({
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ color: '#E2E8F0', fontSize: '0.85rem', fontWeight: 500 }}>
-                      🔔 Set Confluence Alert
+                      <span aria-hidden="true">🔔 </span>Set Confluence Alert
                     </div>
                     <div style={{ color: '#64748B', fontSize: '0.75rem' }}>
                       Notify when score hits strong again
@@ -414,6 +421,7 @@ export default function TimeConfluenceWidget({
                     <option value={15}>Score ≥ 15</option>
                   </select>
                   <button
+                    type="button"
                     onClick={() => {
                       setAlertSet(true);
                       // In production, this would call push notification API
@@ -439,7 +447,7 @@ export default function TimeConfluenceWidget({
               ) : (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '1.1rem' }}>✅</span>
+                    <span aria-hidden="true" style={{ fontSize: '1.1rem' }}>✅</span>
                     <div>
                       <div style={{ color: '#10B981', fontSize: '0.85rem', fontWeight: 500 }}>
                         Alert Active
@@ -450,6 +458,7 @@ export default function TimeConfluenceWidget({
                     </div>
                   </div>
                   <button
+                    type="button"
                     onClick={() => setAlertSet(false)}
                     style={{
                       background: 'transparent',
@@ -507,7 +516,7 @@ export default function TimeConfluenceWidget({
                 marginBottom: '1rem',
               }}>
                 <div style={{ color: '#A855F7', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
-                  ⏳ NEXT MAJOR CONFLUENCE
+                  <span aria-hidden="true">⏳ </span>NEXT MAJOR CONFLUENCE
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
@@ -537,7 +546,7 @@ export default function TimeConfluenceWidget({
                 padding: '1rem',
               }}>
                 <div style={{ color: '#64748B', fontSize: '0.75rem', marginBottom: '0.75rem' }}>
-                  🏦 INSTITUTIONAL TWAP WINDOWS
+                  <span aria-hidden="true">🏦 </span>INSTITUTIONAL TWAP WINDOWS
                 </div>
                 <div style={{ display: 'grid', gap: '0.5rem' }}>
                   {state.twapWindows.slice(0, 3).map((window, i) => (
