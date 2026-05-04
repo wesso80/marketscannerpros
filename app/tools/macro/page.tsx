@@ -271,19 +271,18 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
         const res = await fetch('/api/options-chain?symbol=SPY');
         if (!res.ok) { setSpyPCRError(`Options feed unavailable (${res.status})`); return; }
         const json = await res.json();
-          const contracts = json.contracts || [];
-          let totalCalls = 0;
-          let totalPuts = 0;
-          for (const opt of contracts) {
-            const oi = Number(opt.openInterest || 0);
-            if (opt.type === 'call') totalCalls += oi;
-            else if (opt.type === 'put') totalPuts += oi;
-          }
-          const ratio = totalCalls > 0 ? totalPuts / totalCalls : 0;
-          const signal = ratio > 1.0 ? 'Bearish (elevated put buying)' : ratio < 0.7 ? 'Bullish (low put/call)' : 'Neutral';
-          setSpyPCRatio({ ratio: Number(ratio.toFixed(2)), signal, totalCalls, totalPuts });
-          setSpyPCRFetched(new Date().toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: false }));
+        const contracts = json.contracts || [];
+        let totalCalls = 0;
+        let totalPuts = 0;
+        for (const opt of contracts) {
+          const oi = Number(opt.openInterest || 0);
+          if (opt.type === 'call') totalCalls += oi;
+          else if (opt.type === 'put') totalPuts += oi;
         }
+        const ratio = totalCalls > 0 ? totalPuts / totalCalls : 0;
+        const signal = ratio > 1.0 ? 'Bearish (elevated put buying)' : ratio < 0.7 ? 'Bullish (low put/call)' : 'Neutral';
+        setSpyPCRatio({ ratio: Number(ratio.toFixed(2)), signal, totalCalls, totalPuts });
+        setSpyPCRFetched(new Date().toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: false }));
       } catch (e: unknown) {
         setSpyPCRError(String(e));
       }

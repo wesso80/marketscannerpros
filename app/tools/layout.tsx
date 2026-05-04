@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   description:
     'The MSP market research workflow: scan, validate, test, journal, monitor alerts, and review macro context. Educational tools only — no advice or execution.',
   alternates: {
-    canonical: '/tools',
+    canonical: 'https://marketscannerpros.app/tools',
   },
   openGraph: {
     type: 'website',

@@ -144,13 +144,13 @@ function WorkflowSection({ workflow }: { workflow: ToolWorkflow }) {
   const supportingTools = workflow.tools.filter((tool) => tool.href !== primaryTool?.href);
 
   return (
-    <section id={workflow.id} className="scroll-mt-24 border-t border-white/10 py-8 first:border-t-0">
+    <section id={workflow.id} aria-labelledby={`wf-title-${workflow.id}`} className="scroll-mt-24 border-t border-white/10 py-8 first:border-t-0">
       <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,2fr)] lg:items-start">
         <div className="lg:sticky lg:top-16">
           <div className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-emerald-400/30 bg-emerald-400/10 text-sm font-black text-emerald-200">
             {getWorkflowNumber(workflow.title)}
           </div>
-          <h2 className="mt-3 text-2xl font-black text-white">{cleanWorkflowTitle(workflow.title)}</h2>
+          <h2 id={`wf-title-${workflow.id}`} className="mt-3 text-2xl font-black text-white">{cleanWorkflowTitle(workflow.title)}</h2>
           <p className="mt-2 text-sm leading-6 text-slate-300">{workflow.subtitle}</p>
           <div className="mt-4 rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-xs leading-5 text-emerald-100">
             <div><span className="font-bold text-emerald-300">Outcome:</span> {workflow.outcome}</div>
@@ -193,9 +193,9 @@ export default function ToolsPage() {
                 Start with the guided path when you want structure, then open specialist tools only when a research question needs more evidence.
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
-                <a href="#workflow" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15">Start Workflow</a>
-                <Link href="/tools/scanner" className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15">Open Market Scanner</Link>
-                <a href="#all-tools" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Open Tool Directory</a>
+                <a href="#workflow" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">Start Workflow</a>
+                <Link href="/tools/scanner" className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60">Open Market Scanner</Link>
+                <a href="#all-tools" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60">Open Tool Directory</a>
               </div>
             </div>
 
@@ -208,13 +208,13 @@ export default function ToolsPage() {
           </div>
         </section>
 
-        <div id="workflow" className="mt-8 grid gap-3 md:grid-cols-5 scroll-mt-24">
+        <nav id="workflow" aria-label="Workflow steps" className="mt-8 grid gap-3 md:grid-cols-5 scroll-mt-24">
           {workflowJumpCards.map((step, index) => (
             <a
               key={step.id}
               href={`#${step.id}`}
               aria-label={`Jump to ${step.label}`}
-              className="group rounded-lg border border-white/10 bg-white/[0.04] p-4 transition hover:-translate-y-0.5 hover:border-emerald-400/35 hover:bg-emerald-400/[0.06]"
+              className="group rounded-lg border border-white/10 bg-white/[0.04] p-4 transition hover:-translate-y-0.5 hover:border-emerald-400/35 hover:bg-emerald-400/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
             >
               <div className="mb-3 flex items-center gap-2">
                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-400/15 text-xs font-black text-emerald-300">
@@ -229,7 +229,7 @@ export default function ToolsPage() {
               </div>
             </a>
           ))}
-        </div>
+        </nav>
 
         <div className="mt-10">
           {coreWorkflows.map((workflow) => (
@@ -239,7 +239,7 @@ export default function ToolsPage() {
 
         {advancedWorkflow ? (
           <details id="advanced" className="mt-4 rounded-lg border border-white/10 bg-white/[0.03] p-5">
-            <summary className="cursor-pointer list-none">
+            <summary className="cursor-pointer list-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/50 rounded-lg" aria-label="Toggle specialist tools section">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                   <div className="text-xs font-black uppercase tracking-[0.14em] text-violet-300">Advanced research</div>
@@ -275,8 +275,8 @@ export default function ToolsPage() {
 
           <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {toolsByCategory.map(({ category, tools }) => (
-              <section key={category} className="rounded-lg border border-white/10 bg-slate-950/35 p-3">
-                <h3 className="text-xs font-black uppercase tracking-[0.12em] text-slate-300">{category}</h3>
+              <section key={category} aria-labelledby={`cat-${category.toLowerCase().replace(/\s+/g, '-')}`} className="rounded-lg border border-white/10 bg-slate-950/35 p-3">
+                <h3 id={`cat-${category.toLowerCase().replace(/\s+/g, '-')}`} className="text-xs font-black uppercase tracking-[0.12em] text-slate-300">{category}</h3>
                 <div className="mt-3 grid gap-2">
                   {tools.map((tool) => (
                     <Link key={tool.key} href={tool.href} className="group flex items-center justify-between gap-2 rounded-md border border-white/5 bg-white/[0.025] px-3 py-2 no-underline hover:border-emerald-400/25 hover:bg-emerald-400/[0.05]">
