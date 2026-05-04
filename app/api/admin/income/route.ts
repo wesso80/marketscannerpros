@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminAuth';
+import { wrapTruth } from '@/lib/admin';
 
 // Subscription pricing
 const SUBSCRIPTION_PRICES = {
@@ -220,6 +221,7 @@ export async function GET(req: NextRequest) {
         month,
         ...data,
       })).sort((a, b) => a.month.localeCompare(b.month)),
+      truth: wrapTruth({}, { source: 'admin:stripe+postgres', freshness: 'real-time' }),
     });
   } catch (error) {
     console.error('Income stats error:', error);

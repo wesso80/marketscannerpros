@@ -1,27 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
-import { getSessionFromCookie } from '@/lib/auth';
-import { isOperator } from '@/lib/quant/operatorAuth';
 import { getBarCacheStats } from '@/lib/barCache';
 import { getAlphaVantageProviderStatus } from '@/lib/avRateGovernor';
 import { getCoinGeckoProviderStatus } from '@/lib/coingecko';
 import { q } from '@/lib/db';
+import { wrapTruth } from '@/lib/admin';
 import { logger, generateTraceId } from '@/lib/logger';
 
 export const runtime = 'nodejs';
-
-async function authorized(req: NextRequest) {
-  const adminAuth = (await requireAdmin(req)).ok;
-  if (adminAuth) return true;
-  const session = await getSessionFromCookie();
-  return Boolean(session && isOperator(session.cid, session.workspaceId));
-}
 
 export async function GET(req: NextRequest) {
   const traceId = generateTraceId();
   const log = logger.withTrace(traceId);
 
-  if (!(await authorized(req))) {
+  if (!(await requireAdmin(req)).ok) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
@@ -80,6 +72,7 @@ export async function GET(req: NextRequest) {
         staleEntries,
         freshest: barCache.entries.sort((a, b) => a.ageMs - b.ageMs).slice(0, 8),
       },
+      truth: wrapTruth({}, { source: 'admin:diagnostics', freshness: 'real-time' }),
     });
   } catch (err) {
     log.error('diagnostics scanners failed', err);

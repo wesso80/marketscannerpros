@@ -14,9 +14,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
-import { getSessionFromCookie } from "@/lib/auth";
-import { isOperator } from "@/lib/quant/operatorAuth";
 import { q } from "@/lib/db";
+import { wrapTruth } from "@/lib/admin";
 import {
   buildJournalDNA,
   computeJournalPatternBoost,
@@ -40,13 +39,8 @@ interface DbRow {
 }
 
 async function authorize(req: NextRequest): Promise<{ ok: boolean; workspaceId: string }> {
-  const adminAuth = (await requireAdmin(req)).ok;
-  if (adminAuth) return { ok: true, workspaceId: "admin" };
-  const session = await getSessionFromCookie();
-  if (!session || !isOperator(session.cid, session.workspaceId)) {
-    return { ok: false, workspaceId: "" };
-  }
-  return { ok: true, workspaceId: session.workspaceId };
+  if (!(await requireAdmin(req)).ok) return { ok: false, workspaceId: "" };
+  return { ok: true, workspaceId: "admin" };
 }
 
 export async function GET(req: NextRequest) {
@@ -104,5 +98,5 @@ export async function GET(req: NextRequest) {
   const summary = buildJournalDNA(cases, current);
   const boost = current ? computeJournalPatternBoost(summary.matches) : null;
 
-  return NextResponse.json({ ok: true, summary, boost });
+  return NextResponse.json({ ok: true, summary, boost, truth: wrapTruth({}, { source: 'admin:postgres', freshness: 'real-time' }) });
 }

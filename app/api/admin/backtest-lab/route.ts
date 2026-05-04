@@ -10,9 +10,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
-import { getSessionFromCookie } from "@/lib/auth";
-import { isOperator } from "@/lib/quant/operatorAuth";
 import { q } from "@/lib/db";
+import { wrapTruth } from "@/lib/admin";
 
 export const runtime = "nodejs";
 
@@ -61,12 +60,8 @@ async function loadRows(): Promise<CaseRow[]> {
 }
 
 export async function GET(req: NextRequest) {
-  const adminAuth = (await requireAdmin(req)).ok;
-  if (!adminAuth) {
-    const session = await getSessionFromCookie();
-    if (!session || !isOperator(session.cid, session.workspaceId)) {
-      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 403 });
-    }
+  if (!(await requireAdmin(req)).ok) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 403 });
   }
 
   const rows = await loadRows();
@@ -136,5 +131,6 @@ export async function GET(req: NextRequest) {
       totalCases === 0
         ? "No historical cases yet. Save research cases from the Symbol Research terminal to populate the Backtest Lab."
         : null,
+    truth: wrapTruth({ totalCases }, { source: 'admin:postgres', freshness: 'real-time' }),
   });
 }

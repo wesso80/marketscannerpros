@@ -12,9 +12,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
-import { getSessionFromCookie } from "@/lib/auth";
-import { isOperator } from "@/lib/quant/operatorAuth";
 import { q } from "@/lib/db";
+import { wrapTruth } from "@/lib/admin";
 import {
   runResearchAlertEngine,
   type ResearchAlertCandidate,
@@ -65,13 +64,8 @@ async function ensureTable(): Promise<void> {
 }
 
 async function authorize(req: NextRequest): Promise<{ ok: boolean; workspaceId: string }> {
-  const adminAuth = (await requireAdmin(req)).ok;
-  if (adminAuth) return { ok: true, workspaceId: "admin" };
-  const session = await getSessionFromCookie();
-  if (!session || !isOperator(session.cid, session.workspaceId)) {
-    return { ok: false, workspaceId: "" };
-  }
-  return { ok: true, workspaceId: session.workspaceId };
+  if (!(await requireAdmin(req)).ok) return { ok: false, workspaceId: "" };
+  return { ok: true, workspaceId: "admin" };
 }
 
 export async function POST(req: NextRequest) {
@@ -184,6 +178,7 @@ export async function POST(req: NextRequest) {
       alert: outcome.alert,
       decision: outcome.decision,
       channels: outcome.channels,
+      truth: wrapTruth({}, { source: 'admin:research-alert-engine', freshness: 'real-time' }),
     });
   } catch (err) {
     return NextResponse.json(
@@ -242,6 +237,7 @@ export async function GET(req: NextRequest) {
         channels: r.channels,
         createdAt: typeof r.created_at === "string" ? r.created_at : new Date(r.created_at).toISOString(),
       })),
+      truth: wrapTruth({}, { source: 'admin:postgres', freshness: 'real-time' }),
     });
   } catch (err) {
     return NextResponse.json(

@@ -17,8 +17,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { requireAdmin } from "@/lib/adminAuth";
-import { getSessionFromCookie } from "@/lib/auth";
-import { isOperator } from "@/lib/quant/operatorAuth";
+import { wrapTruth } from "@/lib/admin";
 import {
   ARCA_ADMIN_MODES,
   validateArcaOutput,
@@ -63,13 +62,8 @@ function fallbackOutput(mode: ArcaAdminMode, ctx: ArcaAdminContext, reason: stri
 }
 
 export async function POST(req: NextRequest) {
-  // Auth — admin secret OR operator session
-  const adminAuth = (await requireAdmin(req)).ok;
-  if (!adminAuth) {
-    const session = await getSessionFromCookie();
-    if (!session || !isOperator(session.cid, session.workspaceId)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
+  if (!(await requireAdmin(req)).ok) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
   let body: RequestBody;
@@ -132,7 +126,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    return NextResponse.json({ ok: true, output: validation.output });
+    return NextResponse.json({ ok: true, output: validation.output, truth: wrapTruth({}, { source: 'admin:openai', freshness: 'real-time' }) });
   } catch (err) {
     return NextResponse.json({
       ok: true,

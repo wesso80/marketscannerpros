@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
 import { q } from "@/lib/db";
+import { wrapTruth } from "@/lib/admin";
 
 export const runtime = "nodejs";
 
@@ -32,7 +33,7 @@ export async function GET(req: NextRequest) {
       params,
     );
 
-    return NextResponse.json({ ok: true, feedback: rows });
+    return NextResponse.json({ ok: true, feedback: rows, truth: wrapTruth({}, { source: 'admin:postgres', freshness: 'real-time' }) });
   } catch (err: unknown) {
     console.error("[admin:morning-brief:feedback:get] Error:", err);
     return NextResponse.json({ error: "Feedback fetch failed" }, { status: 500 });
@@ -78,7 +79,7 @@ export async function POST(req: NextRequest) {
       ],
     );
 
-    return NextResponse.json({ ok: true, feedback: rows[0] });
+    return NextResponse.json({ ok: true, feedback: rows[0], truth: wrapTruth({}, { source: 'admin:postgres', freshness: 'real-time' }) });
   } catch (err: unknown) {
     console.error("[admin:morning-brief:feedback:post] Error:", err);
     return NextResponse.json(

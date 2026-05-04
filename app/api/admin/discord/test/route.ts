@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
 import { q } from '@/lib/db';
+import { wrapTruth } from '@/lib/admin';
 
 export const runtime = 'nodejs';
 
@@ -109,6 +110,7 @@ export async function POST(req: NextRequest) {
       discordStatus: response.status,
       discordStatusText: response.statusText,
       responseSnippet: responseText.slice(0, 300),
+      truth: wrapTruth({}, { source: 'admin:discord-test', freshness: 'real-time' }),
     }, { status: response.ok ? 200 : 502 });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Discord webhook request failed';

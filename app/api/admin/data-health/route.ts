@@ -9,9 +9,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
-import { getSessionFromCookie } from "@/lib/auth";
-import { isOperator } from "@/lib/quant/operatorAuth";
 import { q } from "@/lib/db";
+import { wrapTruth } from "@/lib/admin";
 import { getProviderHealthSummary } from "@/lib/admin/providerTelemetry";
 
 export const runtime = "nodejs";
@@ -88,12 +87,8 @@ async function probeWebhookCounts(table: string): Promise<{ count: number; failu
 }
 
 export async function GET(req: NextRequest) {
-  const adminAuth = (await requireAdmin(req)).ok;
-  if (!adminAuth) {
-    const session = await getSessionFromCookie();
-    if (!session || !isOperator(session.cid, session.workspaceId)) {
-      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 403 });
-    }
+  if (!(await requireAdmin(req)).ok) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 403 });
   }
 
   const db = await probeDatabase();
@@ -212,5 +207,6 @@ export async function GET(req: NextRequest) {
         lastFailure: m.lastFailureAt,
       })),
     })),
+    truth: wrapTruth({}, { source: 'admin:data-health', freshness: 'real-time' }),
   });
 }

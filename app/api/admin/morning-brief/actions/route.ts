@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
 import { sendAlertEmail } from "@/lib/email";
+import { wrapTruth } from "@/lib/admin";
 import {
   buildJournalTagReconciliationReport,
   buildDailyReview,

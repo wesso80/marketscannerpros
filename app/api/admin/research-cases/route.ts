@@ -9,9 +9,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
-import { getSessionFromCookie } from "@/lib/auth";
-import { isOperator } from "@/lib/quant/operatorAuth";
 import { q } from "@/lib/db";
+import { wrapTruth } from "@/lib/admin";
 
 export const runtime = "nodejs";
 
@@ -63,16 +62,11 @@ async function ensureTable(): Promise<void> {
 }
 
 export async function POST(req: NextRequest) {
-  // Auth gate (mirrors other admin endpoints)
-  const adminAuth = (await requireAdmin(req)).ok;
-  let workspaceId = "admin";
-  if (!adminAuth) {
-    const session = await getSessionFromCookie();
-    if (!session || !isOperator(session.cid, session.workspaceId)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
-    workspaceId = session.workspaceId;
+  // Auth gate — admin only
+  if (!(await requireAdmin(req)).ok) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
+  const workspaceId = "admin";
 
   try {
     const body = (await req.json()) as ResearchCaseInput;
@@ -127,15 +121,10 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const adminAuth = (await requireAdmin(req)).ok;
-  let workspaceId = "admin";
-  if (!adminAuth) {
-    const session = await getSessionFromCookie();
-    if (!session || !isOperator(session.cid, session.workspaceId)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
-    workspaceId = session.workspaceId;
+  if (!(await requireAdmin(req)).ok) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
+  const workspaceId = "admin";
 
   try {
     await ensureTable();
@@ -153,7 +142,7 @@ export async function GET(req: NextRequest) {
           [workspaceId, limit],
         );
 
-    return NextResponse.json({ cases: rows });
+    return NextResponse.json({ cases: rows, truth: wrapTruth({ count: rows.length }, { source: 'admin:postgres', freshness: 'real-time' }) });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Failed to load research cases" },
