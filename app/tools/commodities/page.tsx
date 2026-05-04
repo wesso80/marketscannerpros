@@ -169,7 +169,7 @@ function sparklineBars(history: { date: string; value: number }[], isPositive: b
   );
 }
 
-export default function CommoditiesPage() {
+export default function CommoditiesPage({ embedded = false }: { embedded?: boolean }) {
   const { tier } = useUserTier();
   const { setPageData } = useAIPageContext();
   const [data, setData] = useState<CommoditiesResponse | null>(null);
@@ -448,6 +448,7 @@ export default function CommoditiesPage() {
 
   // Gate for Pro+ users
   if (!canAccessPortfolioInsights(tier)) {
+    if (embedded) return null;
     return (
       <div style={{ padding: '2rem', color: '#fff', minHeight: '100vh', background: '#0f172a' }}>
         <ToolsPageHeader 
@@ -469,6 +470,16 @@ export default function CommoditiesPage() {
   }
 
   if (loading) {
+    if (embedded) {
+      return (
+        <div className="flex h-[30vh] items-center justify-center text-white">
+          <div className="text-center">
+            <div className="mb-4 text-xs font-black uppercase tracking-[0.18em] text-emerald-300 animate-pulse">EN · MT · AG</div>
+            <div className="text-white/60">Loading commodity data...</div>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="min-h-screen bg-[var(--msp-bg)] p-6 text-white">
         <ToolsPageHeader 
@@ -488,6 +499,20 @@ export default function CommoditiesPage() {
   }
 
   if (error) {
+    const errorContent = (
+      <div className="mt-4 max-w-xl rounded-xl border border-rose-400/30 bg-rose-500/10 p-8 text-center">
+        <div className="mb-3 text-xs font-black uppercase tracking-[0.14em] text-rose-200">WARN</div>
+        <div className="mb-4 text-rose-300">{error}</div>
+        <button
+          type="button"
+          onClick={fetchCommodities}
+          className="rounded-md border border-emerald-400/40 bg-emerald-500/20 px-4 py-2 text-sm font-semibold text-emerald-200"
+        >
+          Retry
+        </button>
+      </div>
+    );
+    if (embedded) return errorContent;
     return (
       <div className="min-h-screen bg-[var(--msp-bg)] p-6 text-white">
         <ToolsPageHeader 
@@ -511,34 +536,36 @@ export default function CommoditiesPage() {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-[var(--msp-bg)] text-white">
-      <ToolsPageHeader 
-        badge="Commodities"
-        title="Commodities Dashboard" 
-        subtitle="Real-time commodity impulse, rotation, and inflation/growth confirmation"
-        icon="CMD"
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/60">US/Eastern aligned</span>
-            <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/60">
-              {data?.lastUpdate ? `Updated ${new Date(data.lastUpdate).toLocaleTimeString()}` : 'Awaiting update'}
-            </span>
-            <label className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/70">
-              <input id="auto-refresh" name="autoRefresh" type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />
-              Auto refresh (15m)
-            </label>
-            <button
-              type="button"
-              onClick={fetchCommodities}
-              className="rounded-md border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold text-emerald-200"
-            >
-              Refresh
-            </button>
-          </div>
-        }
-      />
-      <main className="mx-auto max-w-none px-4 py-6 sm:px-6 lg:px-8">
+  const mainContent = (
+    <div className={embedded ? 'text-white' : 'min-h-screen bg-[var(--msp-bg)] text-white'}>
+      {!embedded && (
+        <ToolsPageHeader 
+          badge="Commodities"
+          title="Commodities Dashboard" 
+          subtitle="Real-time commodity impulse, rotation, and inflation/growth confirmation"
+          icon="CMD"
+          actions={
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/60">US/Eastern aligned</span>
+              <span className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/60">
+                {data?.lastUpdate ? `Updated ${new Date(data.lastUpdate).toLocaleTimeString()}` : 'Awaiting update'}
+              </span>
+              <label className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/70">
+                <input id="auto-refresh" name="autoRefresh" type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />
+                Auto refresh (15m)
+              </label>
+              <button
+                type="button"
+                onClick={fetchCommodities}
+                className="rounded-md border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold text-emerald-200"
+              >
+                Refresh
+              </button>
+            </div>
+          }
+        />
+      )}
+      <main className={embedded ? 'py-2' : 'mx-auto max-w-none px-4 py-6 sm:px-6 lg:px-8'}>
         <ComplianceDisclaimer compact />
         {derivedState && (
           <>
@@ -850,4 +877,5 @@ export default function CommoditiesPage() {
       </main>
     </div>
   );
+  return mainContent;
 }

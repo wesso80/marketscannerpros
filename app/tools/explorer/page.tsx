@@ -393,7 +393,7 @@ export default function ExplorerPage() {
       {/* -- COMMODITIES (merged: simple grid for free, deep view for Pro) ------ */}
       {tab === 'Commodities' && (
         tier === 'pro' || tier === 'pro_trader' ? (
-          <CommoditiesV1 />
+          <CommoditiesV1 embedded />
         ) : (
           <Card>
             {commodities.loading ? <div className="space-y-3">{[1,2,3].map(i => <Skel key={i} h="h-12" />)}</div> : commodList.length === 0 ? (
