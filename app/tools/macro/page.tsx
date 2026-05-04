@@ -207,6 +207,10 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
   const [commodities, setCommodities] = useState<any[] | null>(null);
   const [correlationRegime, setCorrelationRegime] = useState<any | null>(null);
   const [spyPCRatio, setSpyPCRatio] = useState<{ ratio: number; signal: string; totalCalls: number; totalPuts: number } | null>(null);
+  const [commoditiesError, setCommoditiesError] = useState<string | null>(null);
+  const [correlationError, setCorrelationError] = useState<string | null>(null);
+  const [spyPCRError, setSpyPCRError] = useState<string | null>(null);
+  const [spyPCRFetched, setSpyPCRFetched] = useState<string | null>(null);
 
   const { isAdmin } = useUserTier();
   const { setPageData } = useAIPageContext();
@@ -237,11 +241,12 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
     (async () => {
       try {
         const res = await fetch('/api/commodities');
-        if (res.ok) {
-          const json = await res.json();
-          setCommodities(json.commodities || json.data || []);
-        }
-      } catch {}
+        if (!res.ok) { setCommoditiesError(`Commodities feed unavailable (${res.status})`); return; }
+        const json = await res.json();
+        setCommodities(json.commodities || json.data || []);
+      } catch (e: unknown) {
+        setCommoditiesError(String(e));
+      }
     })();
   }, []);
 
@@ -250,11 +255,12 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
     (async () => {
       try {
         const res = await fetch('/api/correlation-regime');
-        if (res.ok) {
-          const json = await res.json();
-          setCorrelationRegime(json);
-        }
-      } catch {}
+        if (!res.ok) { setCorrelationError(`Correlation feed unavailable (${res.status})`); return; }
+        const json = await res.json();
+        setCorrelationRegime(json);
+      } catch (e: unknown) {
+        setCorrelationError(String(e));
+      }
     })();
   }, []);
 
@@ -263,8 +269,8 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
     (async () => {
       try {
         const res = await fetch('/api/options-chain?symbol=SPY');
-        if (res.ok) {
-          const json = await res.json();
+        if (!res.ok) { setSpyPCRError(`Options feed unavailable (${res.status})`); return; }
+        const json = await res.json();
           const contracts = json.contracts || [];
           let totalCalls = 0;
           let totalPuts = 0;
@@ -276,8 +282,11 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
           const ratio = totalCalls > 0 ? totalPuts / totalCalls : 0;
           const signal = ratio > 1.0 ? 'Bearish (elevated put buying)' : ratio < 0.7 ? 'Bullish (low put/call)' : 'Neutral';
           setSpyPCRatio({ ratio: Number(ratio.toFixed(2)), signal, totalCalls, totalPuts });
+          setSpyPCRFetched(new Date().toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: false }));
         }
-      } catch {}
+      } catch (e: unknown) {
+        setSpyPCRError(String(e));
+      }
     })();
   }, []);
 
@@ -342,9 +351,9 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
               <h2 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Global regime gate for liquidity, rates, growth, and cross-asset context.</h2>
               <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">Macro evidence compressed into a single permission gate. Educational only; not a trade signal.</p>
               <div className="mt-3 flex flex-wrap gap-2">
-                <a href="#decision" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15">Open Decision</a>
-                <a href="#commodities" className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15">Commodities</a>
-                <a href="#sentiment" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Sentiment</a>
+                <a href="#decision" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">Open Decision</a>
+                <a href="#commodities" className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60">Commodities</a>
+                <a href="#sentiment" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60">Sentiment</a>
               </div>
               {lastRefresh && (
                 <p className="mt-2 text-[11px] text-slate-500">US ET · Last refresh {lastRefresh}</p>
@@ -399,7 +408,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                 </label>
               )}
               {['decision', 'rates', 'yieldcurve', 'commodities', 'correlation', 'sentiment', 'inflation', 'growth', 'employment', 'implications'].map((tab) => (
-                <a key={tab} href={`#${tab}`} className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/70 hover:bg-white/10">
+                <a key={tab} href={`#${tab}`} className="rounded-md border border-white/10 bg-black/20 px-2 py-1 text-[11px] text-white/70 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30">
                   {tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </a>
               ))}
@@ -587,6 +596,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
             <section id="commodities" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
               <div className="text-sm font-semibold text-white">Commodities Monitor</div>
               <div className="mt-1 text-xs text-white/50">Oil, metals, agriculture — growth proxy and inflation signals</div>
+              <div className="mt-0.5 text-[11px] text-white/30">Market data · delayed snapshot · educational context only</div>
               {commodities && commodities.length > 0 ? (
                 <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4">
                   {commodities.map((c: any) => (
@@ -603,7 +613,9 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                   ))}
                 </div>
               ) : (
-                <div className="mt-3 text-xs text-white/40">{commodities === null ? 'Loading commodities data…' : 'No commodity data available'}</div>
+                <div className="mt-3 text-xs text-amber-400/80">
+                  {commoditiesError ? `Feed unavailable: ${commoditiesError}` : commodities === null ? 'Loading commodities data…' : 'No commodity data available'}
+                </div>
               )}
             </section>
 
@@ -611,6 +623,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
             <section id="correlation" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
               <div className="text-sm font-semibold text-white">Cross-Asset Correlation Regime</div>
               <div className="mt-1 text-xs text-white/50">BTC↔SPY correlation, VIX regime, DXY trend, sector rotation</div>
+              <div className="mt-0.5 text-[11px] text-white/30">Heuristic model · educational context · not a live reading</div>
               {correlationRegime ? (
                 <div className="mt-3">
                   <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
@@ -670,7 +683,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                   </div>
                 </div>
               ) : (
-                <div className="mt-3 text-xs text-white/40">Loading correlation regime…</div>
+                <div className="mt-3 text-xs text-amber-400/80">{correlationError ? `Feed unavailable: ${correlationError}` : 'Loading correlation regime…'}</div>
               )}
             </section>
 
@@ -678,6 +691,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
             <section id="sentiment" className="rounded-xl border border-white/10 bg-white/5 p-3 md:p-4">
               <div className="text-sm font-semibold text-white">Market Sentiment — SPY Put/Call Ratio</div>
               <div className="mt-1 text-xs text-white/50">Aggregate options positioning as a contrarian sentiment indicator</div>
+              {spyPCRFetched && <div className="mt-0.5 text-[11px] text-white/30">Computed from options OI · fetched {spyPCRFetched} ET · educational indicator only</div>}
               {spyPCRatio ? (
                 <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
                   <div className="rounded-lg border border-white/10 bg-black/20 p-3">
@@ -702,7 +716,7 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
                   </div>
                 </div>
               ) : (
-                <div className="mt-3 text-xs text-white/40">Loading SPY options data…</div>
+                <div className="mt-3 text-xs text-amber-400/80">{spyPCRError ? `Feed unavailable: ${spyPCRError}` : 'Loading SPY options data…'}</div>
               )}
             </section>
 
@@ -755,28 +769,28 @@ export default function MacroDashboardPage({ embeddedInDashboard = false }: { em
             </section>
 
             <details className="rounded-xl border border-white/10 bg-white/5" open={false}>
-              <summary className="cursor-pointer list-none px-3 py-3 md:px-4 text-sm font-semibold text-white">Deep Dive: Rates</summary>
+              <summary className="cursor-pointer list-none px-3 py-3 md:px-4 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 rounded-xl">Deep Dive: Rates</summary>
               <div className="border-t border-white/10 p-3 md:p-4 text-xs text-white/75">
                 10Y: {toPct(data.rates.treasury10y.value)} • 2Y: {toPct(data.rates.treasury2y.value)} • Curve: {toPct(data.rates.yieldCurve.value)} ({data.rates.yieldCurve.label})
               </div>
             </details>
 
             <details className="rounded-xl border border-white/10 bg-white/5" open={false}>
-              <summary className="cursor-pointer list-none px-3 py-3 md:px-4 text-sm font-semibold text-white">Deep Dive: Inflation</summary>
+              <summary className="cursor-pointer list-none px-3 py-3 md:px-4 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 rounded-xl">Deep Dive: Inflation</summary>
               <div className="border-t border-white/10 p-3 md:p-4 text-xs text-white/75">
                 CPI: {safeNumber(data.inflation.cpi.value).toFixed(1)} • Inflation YoY: {toPct(data.inflation.inflationRate.value, 1)} • Trend: {data.inflation.trend}
               </div>
             </details>
 
             <details className="rounded-xl border border-white/10 bg-white/5" open={false}>
-              <summary className="cursor-pointer list-none px-3 py-3 md:px-4 text-sm font-semibold text-white">Deep Dive: Employment</summary>
+              <summary className="cursor-pointer list-none px-3 py-3 md:px-4 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 rounded-xl">Deep Dive: Employment</summary>
               <div className="border-t border-white/10 p-3 md:p-4 text-xs text-white/75">
                 Unemployment: {toPct(data.employment.unemployment.value, 1)} • Trend: {data.employment.trend}
               </div>
             </details>
 
             <details className="rounded-xl border border-white/10 bg-white/5" open={false}>
-              <summary className="cursor-pointer list-none px-3 py-3 md:px-4 text-sm font-semibold text-white">Deep Dive: Growth</summary>
+              <summary className="cursor-pointer list-none px-3 py-3 md:px-4 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/30 rounded-xl">Deep Dive: Growth</summary>
               <div className="border-t border-white/10 p-3 md:p-4 text-xs text-white/75">
                 Real GDP: ${((safeNumber(data.growth.realGDP.value)) / 1000).toFixed(1)}T • Trend: {trendDirection(data.growth.realGDP.history)}
               </div>
