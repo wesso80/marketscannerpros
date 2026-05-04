@@ -123,10 +123,19 @@ async function ensureSchema() {
       cooldown_minutes INTEGER NOT NULL DEFAULT 15,
       last_posted_at TIMESTAMPTZ,
       post_count INTEGER NOT NULL DEFAULT 0,
+      last_attempt_at TIMESTAMPTZ,
+      last_status_code INTEGER,
+      last_skip_reason VARCHAR(40),
+      last_error TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
+  // Add diagnostic columns to existing tables (idempotent)
+  await q(`ALTER TABLE discord_bridge_channels ADD COLUMN IF NOT EXISTS last_attempt_at TIMESTAMPTZ`).catch(() => {});
+  await q(`ALTER TABLE discord_bridge_channels ADD COLUMN IF NOT EXISTS last_status_code INTEGER`).catch(() => {});
+  await q(`ALTER TABLE discord_bridge_channels ADD COLUMN IF NOT EXISTS last_skip_reason VARCHAR(40)`).catch(() => {});
+  await q(`ALTER TABLE discord_bridge_channels ADD COLUMN IF NOT EXISTS last_error TEXT`).catch(() => {});
   schemaReady = true;
 }
 
@@ -154,13 +163,31 @@ export async function postToDiscordDetailed(
     );
 
     const channel = rows[0];
-    if (!channel?.webhook_url) return { ok: false, sent: false, skippedReason: 'not_configured' };
-    if (!channel.enabled) return { ok: false, sent: false, skippedReason: 'disabled' };
+    if (!channel?.webhook_url) {
+      await q(
+        `UPDATE discord_bridge_channels SET last_attempt_at = NOW(), last_skip_reason = 'not_configured', updated_at = NOW() WHERE channel_key = $1`,
+        [channelKey]
+      ).catch(() => {});
+      return { ok: false, sent: false, skippedReason: 'not_configured' };
+    }
+    if (!channel.enabled) {
+      await q(
+        `UPDATE discord_bridge_channels SET last_attempt_at = NOW(), last_skip_reason = 'disabled', updated_at = NOW() WHERE id = $1`,
+        [channel.id]
+      ).catch(() => {});
+      return { ok: false, sent: false, skippedReason: 'disabled' };
+    }
 
     // Cooldown check
     if (!options?.forceSend && channel.last_posted_at) {
       const elapsed = Date.now() - new Date(channel.last_posted_at).getTime();
-      if (elapsed < channel.cooldown_minutes * 60_000) return { ok: false, sent: false, skippedReason: 'cooldown' };
+      if (elapsed < channel.cooldown_minutes * 60_000) {
+        await q(
+          `UPDATE discord_bridge_channels SET last_attempt_at = NOW(), last_skip_reason = 'cooldown', updated_at = NOW() WHERE id = $1`,
+          [channel.id]
+        ).catch(() => {});
+        return { ok: false, sent: false, skippedReason: 'cooldown' };
+      }
     }
 
     // Apply MSP branding defaults
@@ -190,23 +217,31 @@ export async function postToDiscordDetailed(
     const responseText = await res.text().catch(() => '');
 
     if (!res.ok) {
-      console.error(`[discord-bridge] ${channelKey} webhook ${res.status}`, responseText.slice(0, 300));
+      const snippet = responseText.slice(0, 300);
+      console.error(`[discord-bridge] ${channelKey} webhook ${res.status}`, snippet);
+      await q(
+        `UPDATE discord_bridge_channels
+         SET last_attempt_at = NOW(), last_status_code = $2, last_skip_reason = 'request_failed', last_error = $3, updated_at = NOW()
+         WHERE id = $1`,
+        [channel.id, res.status, snippet]
+      ).catch(() => {});
       return {
         ok: false,
         sent: false,
         status: res.status,
         statusText: res.statusText,
-        responseSnippet: responseText.slice(0, 300),
+        responseSnippet: snippet,
         skippedReason: 'request_failed',
       };
     }
 
-    // Update stats
+    // Update stats — clear any previous error on success
     await q(
       `UPDATE discord_bridge_channels
-       SET last_posted_at = NOW(), post_count = post_count + 1, updated_at = NOW()
+       SET last_posted_at = NOW(), post_count = post_count + 1, last_attempt_at = NOW(),
+           last_status_code = $2, last_skip_reason = NULL, last_error = NULL, updated_at = NOW()
        WHERE id = $1`,
-      [channel.id]
+      [channel.id, res.status]
     ).catch(() => {});
 
     return {
@@ -217,8 +252,14 @@ export async function postToDiscordDetailed(
       responseSnippet: responseText.slice(0, 300),
     };
   } catch (err) {
+    const errMsg = err instanceof Error ? err.message.slice(0, 300) : String(err).slice(0, 300);
     console.error(`[discord-bridge] ${channelKey} error:`, err);
-    return { ok: false, sent: false, skippedReason: 'unknown', responseSnippet: err instanceof Error ? err.message.slice(0, 300) : undefined };
+    // Best-effort persist diagnostics (channel.id may not be set if lookup failed)
+    await q(
+      `UPDATE discord_bridge_channels SET last_attempt_at = NOW(), last_skip_reason = 'unknown', last_error = $2, updated_at = NOW() WHERE channel_key = $1`,
+      [channelKey, errMsg]
+    ).catch(() => {});
+    return { ok: false, sent: false, skippedReason: 'unknown', responseSnippet: errMsg };
   }
 }
 
@@ -581,13 +622,19 @@ export interface BridgeChannelConfig {
   cooldown_minutes: number;
   last_posted_at: string | null;
   post_count: number;
+  last_attempt_at: string | null;
+  last_status_code: number | null;
+  last_skip_reason: string | null;
+  last_error: string | null;
 }
 
 /** List all bridge channel configs */
 export async function listBridgeChannels(): Promise<BridgeChannelConfig[]> {
   await ensureSchema();
   return q<BridgeChannelConfig>(
-    `SELECT id, channel_key, label, category, webhook_url, enabled, cooldown_minutes, last_posted_at, post_count
+    `SELECT id, channel_key, label, category, webhook_url, enabled, cooldown_minutes,
+            last_posted_at, post_count,
+            last_attempt_at, last_status_code, last_skip_reason, last_error
      FROM discord_bridge_channels
      ORDER BY category, channel_key`
   );

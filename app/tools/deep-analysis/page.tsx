@@ -1591,14 +1591,32 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                 {result.company && (result.company.strongBuy + result.company.buy + result.company.hold + result.company.sell + result.company.strongSell) > 0 && (
                   <div style={{ marginTop: "1rem" }}>
                     <div style={{ fontSize: "0.75rem", color: "#94A3B8", marginBottom: "0.5rem" }}>
-                      Analyst Ratings ({result.company.strongBuy + result.company.buy + result.company.hold + result.company.sell + result.company.strongSell} analysts)
+                      Third-party Analyst Ratings ({result.company.strongBuy + result.company.buy + result.company.hold + result.company.sell + result.company.strongSell} analysts) — not financial advice
                     </div>
-                    <div style={{ display: "flex", height: "20px", borderRadius: "4px", overflow: "hidden" }}>
-                      {result.company.strongBuy > 0 && <div style={{ flex: result.company.strongBuy, background: "#059669" }} />}
-                      {result.company.buy > 0 && <div style={{ flex: result.company.buy, background: "#10B981" }} />}
-                      {result.company.hold > 0 && <div style={{ flex: result.company.hold, background: "#F59E0B" }} />}
-                      {result.company.sell > 0 && <div style={{ flex: result.company.sell, background: "#F87171" }} />}
-                      {result.company.strongSell > 0 && <div style={{ flex: result.company.strongSell, background: "#DC2626" }} />}
+                    <div
+                      role="img"
+                      aria-label={`Analyst ratings: ${result.company.strongBuy} strong buy, ${result.company.buy} buy, ${result.company.hold} hold, ${result.company.sell} sell, ${result.company.strongSell} strong sell`}
+                      style={{ display: "flex", height: "20px", borderRadius: "4px", overflow: "hidden" }}
+                    >
+                      {result.company.strongBuy > 0 && <div title={`Strong Buy: ${result.company.strongBuy}`} style={{ flex: result.company.strongBuy, background: "#059669" }} />}
+                      {result.company.buy > 0 && <div title={`Buy: ${result.company.buy}`} style={{ flex: result.company.buy, background: "#10B981" }} />}
+                      {result.company.hold > 0 && <div title={`Hold: ${result.company.hold}`} style={{ flex: result.company.hold, background: "#F59E0B" }} />}
+                      {result.company.sell > 0 && <div title={`Sell: ${result.company.sell}`} style={{ flex: result.company.sell, background: "#F87171" }} />}
+                      {result.company.strongSell > 0 && <div title={`Strong Sell: ${result.company.strongSell}`} style={{ flex: result.company.strongSell, background: "#DC2626" }} />}
+                    </div>
+                    <div style={{ display: "flex", gap: "0.75rem", marginTop: "0.35rem", flexWrap: "wrap" }}>
+                      {[
+                        { label: "Strong Buy", color: "#059669", count: result.company.strongBuy },
+                        { label: "Buy", color: "#10B981", count: result.company.buy },
+                        { label: "Hold", color: "#F59E0B", count: result.company.hold },
+                        { label: "Sell", color: "#F87171", count: result.company.sell },
+                        { label: "Strong Sell", color: "#DC2626", count: result.company.strongSell },
+                      ].filter(item => item.count > 0).map(item => (
+                        <div key={item.label} style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
+                          <div style={{ width: "8px", height: "8px", borderRadius: "2px", background: item.color, flexShrink: 0 }} />
+                          <span style={{ fontSize: "0.65rem", color: "#64748B" }}>{item.label} ({item.count})</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}

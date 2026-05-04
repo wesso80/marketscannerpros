@@ -27,9 +27,6 @@ export const metadata: Metadata = {
       'Ranked market scanner with regime context and educational scenario analysis.',
     images: ['/scan-banner.png'],
   },
-  alternates: {
-    canonical: 'https://marketscannerpros.app/tools/scanner',
-  },
   robots: {
     index: false,
     follow: false,

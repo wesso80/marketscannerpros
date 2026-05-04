@@ -13,6 +13,10 @@ interface BridgeChannel {
   cooldown_minutes: number;
   last_posted_at: string | null;
   post_count: number;
+  last_attempt_at: string | null;
+  last_status_code: number | null;
+  last_skip_reason: string | null;
+  last_error: string | null;
 }
 
 const CATEGORY_LABELS: Record<string, { label: string; code: string }> = {
@@ -225,8 +229,12 @@ export default function DiscordBridgePage() {
                     <div className="flex items-start gap-4">
                       {/* Toggle */}
                       <button
+                        type="button"
+                        role="switch"
+                        aria-checked={edited.enabled}
+                        aria-label={`${edited.enabled ? 'Disable' : 'Enable'} ${ch.channel_key} channel`}
                         onClick={() => setEdit(ch.channel_key, "enabled", !edited.enabled)}
-                        className={`mt-1 w-10 h-5 rounded-full transition-colors flex-shrink-0 relative ${
+                        className={`mt-1 w-10 h-5 rounded-full transition-colors flex-shrink-0 relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50 ${
                           edited.enabled ? "bg-emerald-500" : "bg-slate-700"
                         }`}
                       >
@@ -287,14 +295,37 @@ export default function DiscordBridgePage() {
                             <option value={120}>2h</option>
                           </select>
                           <button
+                            type="button"
                             onClick={() => void testChannel(ch.channel_key)}
                             disabled={!edited.webhook_url || !edited.enabled || testing === ch.channel_key}
                             className="px-3 py-1.5 text-xs rounded border border-cyan-500/30 text-cyan-300
-                              hover:bg-cyan-500/10 disabled:opacity-30 disabled:cursor-not-allowed"
+                              hover:bg-cyan-500/10 disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
                           >
                             {testing === ch.channel_key ? "…" : "Test"}
                           </button>
                         </div>
+
+                        {/* Diagnostic row — last attempt details */}
+                        {ch.last_attempt_at && (
+                          <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px]">
+                            <span className="text-slate-600">Last attempt: {new Date(ch.last_attempt_at).toLocaleString()}</span>
+                            {ch.last_status_code != null && (
+                              <span className={`px-1.5 py-0.5 rounded font-mono font-bold ${ch.last_status_code >= 200 && ch.last_status_code < 300 ? 'bg-emerald-900/50 text-emerald-400' : 'bg-red-900/50 text-red-400'}`}>
+                                HTTP {ch.last_status_code}
+                              </span>
+                            )}
+                            {ch.last_skip_reason && ch.last_skip_reason !== 'null' && (
+                              <span className="px-1.5 py-0.5 rounded bg-amber-900/40 text-amber-400 font-bold uppercase">
+                                {ch.last_skip_reason.replace(/_/g, ' ')}
+                              </span>
+                            )}
+                            {ch.last_error && (
+                              <span className="text-red-400 max-w-xs truncate" title={ch.last_error}>
+                                {ch.last_error.slice(0, 80)}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
