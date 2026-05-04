@@ -94,11 +94,11 @@ export default function LearningTab() {
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-[var(--msp-text-muted)] border-b border-slate-700/50">
-                  <th className="text-left py-2">Doctrine</th>
-                  <th className="text-right py-2">Trades</th>
-                  <th className="text-right py-2">Win%</th>
-                  <th className="text-right py-2">Avg R</th>
-                  <th className="text-right py-2">PF</th>
+                  <th scope="col" className="text-left py-2">Doctrine</th>
+                  <th scope="col" className="text-right py-2">Trades</th>
+                  <th scope="col" className="text-right py-2">Win%</th>
+                  <th scope="col" className="text-right py-2">Avg R</th>
+                  <th scope="col" className="text-right py-2">PF</th>
                 </tr>
               </thead>
               <tbody>
@@ -124,6 +124,8 @@ export default function LearningTab() {
           {playbooks.map(pb => (
             <button
               key={pb.id}
+              type="button"
+              aria-expanded={activePlaybook === pb.id}
               onClick={() => setActivePlaybook(activePlaybook === pb.id ? null : pb.id)}
               className={`text-left p-3 rounded-lg border transition-colors ${activePlaybook === pb.id ? 'border-[rgba(16,185,129,0.5)] bg-[rgba(16,185,129,0.05)]' : 'border-slate-700/50 hover:border-slate-600/50 bg-slate-800/30'}`}
             >

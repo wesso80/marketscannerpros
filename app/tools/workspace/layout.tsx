@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Workspace',
   description: 'Command workspace for watchlists, journal notes, portfolio research, alerts, and educational workflow organization.',
-  alternates: { canonical: 'https://marketscannerpros.app/tools/workspace' },
+  robots: { index: false, follow: false },
   openGraph: {
     title: 'Workspace | MarketScanner Pros',
     description: 'Organize watchlists, journal notes, portfolio research, alerts, and workflow context.',
