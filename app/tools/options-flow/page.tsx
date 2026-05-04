@@ -3,7 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import ToolPageLayout from '@/components/tools/ToolPageLayout';
 import ToolIdentityHeader from '@/components/tools/ToolIdentityHeader';
-import { useUserTier, canAccessScanner } from '@/lib/useUserTier';
+import { useUserTier, canAccessOptionsTerminal } from '@/lib/useUserTier';
 import UpgradeGate from '@/components/UpgradeGate';
 import ComplianceDisclaimer from '@/components/ComplianceDisclaimer';
 
@@ -153,8 +153,8 @@ export default function OptionsFlowPage({ embeddedInTerminal = false }: { embedd
     }
   }, [symbol]);
 
-  if (!canAccessScanner(tier)) {
-    return <UpgradeGate requiredTier="pro" feature="Options Flow Intelligence" />;
+  if (!canAccessOptionsTerminal(tier)) {
+    return <UpgradeGate requiredTier="pro_trader" feature="Options Flow Intelligence" />;
   }
 
   const lastUpdated = data ? new Date(data.timestamp).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' }) : '—';
@@ -171,10 +171,13 @@ export default function OptionsFlowPage({ embeddedInTerminal = false }: { embedd
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
               <input
                 type="text"
+                id="flow-symbol"
+                aria-label="Ticker symbol"
                 value={symbol}
                 onChange={e => setSymbol(e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 5))}
                 onKeyDown={e => e.key === 'Enter' && runScan()}
                 placeholder="SPY"
+                className="focus-visible:ring-2 focus-visible:ring-emerald-500/50"
                 style={{
                   padding: '8px 14px', fontSize: '14px', fontWeight: 700,
                   borderRadius: '8px', width: '120px', textTransform: 'uppercase',
@@ -372,7 +375,7 @@ export default function OptionsFlowPage({ embeddedInTerminal = false }: { embedd
                       <thead>
                         <tr style={{ borderBottom: '1px solid var(--msp-border)' }}>
                           {['Strike', 'Type', 'Direction', 'Volume', 'OI', 'Premium', 'Tier', 'IV', 'Delta', 'Moneyness'].map(h => (
-                            <th key={h} style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 700, color: 'var(--msp-text-faint)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            <th key={h} scope="col" style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 700, color: 'var(--msp-text-faint)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                               {h}
                             </th>
                           ))}

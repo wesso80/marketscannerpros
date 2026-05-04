@@ -56,6 +56,9 @@ export async function GET(req: NextRequest) {
   if (!session?.workspaceId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+  if (session.tier !== 'pro_trader') {
+    return NextResponse.json({ error: 'Options Flow requires Pro Trader subscription' }, { status: 403 });
+  }
 
   const symbol = req.nextUrl.searchParams.get('symbol')?.toUpperCase().trim();
   if (!symbol || !/^[A-Z]{1,5}$/.test(symbol)) {
