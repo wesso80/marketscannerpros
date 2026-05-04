@@ -446,11 +446,18 @@ export default function ExplorerPage() {
                         <span className="text-sm font-semibold text-white">{sig.source}</span>
                         <div className="flex items-center gap-1">
                           <Badge label={sig.regime} color={REGIME_COLORS[r as RegimePriority] || '#64748B'} small />
-                          {sig.stale && <span className="text-[11px] text-yellow-500 border border-yellow-500/30 px-1 rounded">stale</span>}
+                          {sig.stale && <span role="status" className="text-[11px] text-yellow-500 border border-yellow-500/30 px-1 rounded">stale</span>}
                         </div>
                       </div>
                       <div className="flex items-center gap-2 mt-1.5">
-                        <div className="h-1.5 flex-1 bg-slate-800 rounded-full overflow-hidden">
+                        <div
+                          role="progressbar"
+                          aria-valuenow={Math.round(Math.min(sig.weight * 100, 100))}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-label={`${sig.source} signal weight`}
+                          className="h-1.5 flex-1 bg-slate-800 rounded-full overflow-hidden"
+                        >
                           <div className="h-full rounded-full" style={{ width: `${Math.min(sig.weight * 100, 100)}%`, backgroundColor: color }} />
                         </div>
                         <span className="text-[11px] font-semibold" style={{ color }}>{isHeadwind ? 'Headwind' : isTailwind ? 'Tailwind' : 'Neutral'}</span>
@@ -477,6 +484,7 @@ export default function ExplorerPage() {
               </div>
             ))}
           </div>
+          <p className="mt-2 text-[10px] text-slate-600">Static heuristics — not live readings. Educational context only.</p>
         </Card>
       )}
 
