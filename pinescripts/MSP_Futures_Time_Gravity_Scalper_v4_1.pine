@@ -1,11 +1,12 @@
 // This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
 // © MarketScanner Pros
-// MSP — Futures Time Gravity Scalper v4.1 (Globex)
+// MSP — Futures Time Gravity Scalper v4.2 (Globex)
 // Futures-first execution version with TP1 quick scalp + TP2 gravity target.
 // One active trade at a time, large HUD, clean BUY/SELL label, entry / TP1 / TP2 / SL lines.
+// v4.2: Gravity weights as user inputs, R:R ratio signal filter, volume NA guard, HUD + label R:R display.
 
 //@version=6
-indicator("MSP — Futures Time Gravity Scalper v4.1 (Globex)", shorttitle="MSP TGS v4.1", overlay=true, max_lines_count=500, max_labels_count=500, max_boxes_count=200)
+indicator("MSP — Futures Time Gravity Scalper v4.2 (Globex)", shorttitle="MSP TGS v4.2", overlay=true, max_lines_count=500, max_labels_count=500, max_boxes_count=200)
 
 // ═══════════════════════════════════════════════════════════════
 // INPUTS
@@ -38,12 +39,13 @@ allowCounterTrendReactions = input.bool(true, "Allow Counter-Trend Reaction Scal
 requireCloseDirection = input.bool(true, "Require Bull/Bear Candle Direction", group=grp_exec)
 
 grp_risk = "Risk / Target"
-atrLen = input.int(14, "ATR Length", minval=1, group=grp_risk)
-stopATR = input.float(0.75, "ATR Stop Multiplier", minval=0.1, step=0.05, group=grp_risk)
-fallbackTargetATR = input.float(1.25, "Fallback ATR Target", minval=0.1, step=0.05, group=grp_risk)
-minRewardTicks = input.int(4, "Minimum Reward / ticks", minval=1, maxval=100, group=grp_risk)
-tp1Ticks = input.int(6, "TP1 Quick Scalp / ticks", minval=1, maxval=100, group=grp_risk)
-showTP1 = input.bool(true, "Show TP1 Quick Scalp", group=grp_risk)
+atrLen            = input.int(14,    "ATR Length",              minval=1,   maxval=100,  group=grp_risk, tooltip="ATR period for stops and fallback targets (uses Wilder/RMA smoothing)")
+stopATR           = input.float(0.75, "ATR Stop Multiplier",    minval=0.1, step=0.05,   group=grp_risk, tooltip="Stop = entry ± ATR × multiplier. If gravity level gives a wider stop, that is used instead.")
+fallbackTargetATR = input.float(1.25, "Fallback ATR Target",    minval=0.1, step=0.05,   group=grp_risk, tooltip="TP2 fallback when no gravity level is within maxTicks above/below price")
+minRewardTicks    = input.int(4,     "Minimum Reward / ticks",  minval=1,   maxval=100,  group=grp_risk, tooltip="Signal requires at least this many ticks from entry to TP2")
+minRR             = input.float(1.5,  "Minimum R:R Ratio",      minval=0.5, maxval=5.0,  step=0.1, group=grp_risk, tooltip="Signal requires (TP2 distance) ÷ (stop distance) ≥ this value. Filters poor-quality setups.")
+tp1Ticks          = input.int(6,     "TP1 Quick Scalp / ticks", minval=1,   maxval=100,  group=grp_risk, tooltip="Quick scalp target at this many ticks from entry price")
+showTP1           = input.bool(true,  "Show TP1 Quick Scalp",   group=grp_risk)
 
 grp_time = "Decompression Timing"
 decompPct = input.float(15.0, "Decompression Window % of Candle", minval=5.0, maxval=40.0, step=1.0, group=grp_time)
@@ -55,6 +57,15 @@ debtBoost = input.float(1.5, "Untouched Midpoint Debt Boost", minval=1.0, maxval
 grp_session = "Session Filter"
 useSession = input.bool(true, "Limit To Session", group=grp_session)
 tradeSession = input.session("1700-1600:1234567", "Futures Session (Exchange TZ)", group=grp_session)
+
+grp_weights = "Gravity Weights"
+wt15  = input.float(1.4,  "15m Weight", minval=0.1, maxval=20.0, step=0.1, group=grp_weights, tooltip="Pull strength for 15m candle midpoints. Higher = stronger gravity magnet effect.")
+wt30  = input.float(1.8,  "30m Weight", minval=0.1, maxval=20.0, step=0.1, group=grp_weights)
+wt60  = input.float(2.6,  "1H Weight",  minval=0.1, maxval=20.0, step=0.1, group=grp_weights)
+wt120 = input.float(3.2,  "2H Weight",  minval=0.1, maxval=20.0, step=0.1, group=grp_weights)
+wt240 = input.float(4.8,  "4H Weight",  minval=0.1, maxval=20.0, step=0.1, group=grp_weights)
+wtD   = input.float(7.5,  "1D Weight",  minval=0.1, maxval=20.0, step=0.1, group=grp_weights)
+wtW   = input.float(11.0, "1W Weight",  minval=0.1, maxval=20.0, step=0.1, group=grp_weights)
 
 grp_vis = "Visuals"
 showHUD = input.bool(true, "Show Large Execution HUD", group=grp_vis)
@@ -104,7 +115,7 @@ emaSlow = ta.ema(close, emaSlowLen)
 vwapVal = ta.vwap(hlc3)
 atr = ta.atr(atrLen)
 
-relVol = volume / math.max(ta.sma(volume, 20), 1)
+relVol = volume / math.max(nz(ta.sma(volume, 20), volume), 1)
 volOK = not useRelVolume or relVol >= relVolMin
 inSession = not useSession or not na(time(timeframe.period, tradeSession, syminfo.timezone))
 
@@ -203,6 +214,10 @@ f_tfBg(status, weight) =>
 
 // ═══════════════════════════════════════════════════════════════
 // HTF DATA — NON-REPAINTING
+// NOTE: until* values use timenow (real-time clock). On historical
+// bars timenow reflects the current moment, so all until* values
+// are negative (past closes) and hasHeat is always false. This is
+// by design — the indicator is intended for live session use only.
 // ═══════════════════════════════════════════════════════════════
 
 [h15, l15, tc15] = request.security(syminfo.tickerid, "15", [high[1], low[1], time_close], barmerge.gaps_off, barmerge.lookahead_off)
@@ -252,14 +267,6 @@ valid120 = use2H and f_validLevel(mid120) and f_distTicks(close, mid120) <= maxT
 valid240 = use4H and f_validLevel(mid240) and f_distTicks(close, mid240) <= maxTicks
 validD = use1D and f_validLevel(midD) and f_distTicks(close, midD) <= maxTicks
 validW = use1W and f_validLevel(midW) and f_distTicks(close, midW) <= maxTicks
-
-wt15 = 1.4
-wt30 = 1.8
-wt60 = 2.6
-wt120 = 3.2
-wt240 = 4.8
-wtD = 7.5
-wtW = 11.0
 
 g15 = f_gravity(mid15, wt15, st15, valid15)
 g30 = f_gravity(mid30, wt30, st30, valid30)
@@ -422,8 +429,11 @@ shortStop = not na(gravityAbove) and gravityAbove > close ? math.max(gravityAbov
 longRewardTicks = math.abs(longTarget - close) / tick
 shortRewardTicks = math.abs(close - shortTarget) / tick
 
-newBuySignal = longRaw and longRewardTicks >= minRewardTicks and not shortRaw
-newSellSignal = shortRaw and shortRewardTicks >= minRewardTicks and not longRaw
+longRR  = math.abs(longTarget - close)  / math.max(math.abs(close - longStop),  tick)
+shortRR = math.abs(close - shortTarget) / math.max(math.abs(shortStop - close), tick)
+
+newBuySignal  = longRaw  and longRewardTicks  >= minRewardTicks and longRR  >= minRR and not shortRaw
+newSellSignal = shortRaw and shortRewardTicks >= minRewardTicks and shortRR >= minRR and not longRaw
 
 if newBuySignal or newSellSignal
     lastSignalBar := bar_index
@@ -533,9 +543,10 @@ if showLatestBuySellLabel and (newBuySignal or newSellSignal)
     if not na(latestSignalLabel)
         label.delete(latestSignalLabel)
 
+    tradeRR = newBuySignal ? longRR : shortRR
     sigText = newBuySignal ?
-         "BUY\nEntry: " + f_fmtLevel(tradeEntry) + "\nTP1: " + f_fmtLevel(tradeTP1) + "\nTP2: " + f_fmtLevel(tradeTP) + "\nSL: " + f_fmtLevel(tradeSL) :
-         "SELL\nEntry: " + f_fmtLevel(tradeEntry) + "\nTP1: " + f_fmtLevel(tradeTP1) + "\nTP2: " + f_fmtLevel(tradeTP) + "\nSL: " + f_fmtLevel(tradeSL)
+         "BUY\nEntry: " + f_fmtLevel(tradeEntry) + "\nTP1: " + f_fmtLevel(tradeTP1) + "\nTP2: " + f_fmtLevel(tradeTP) + "\nSL: " + f_fmtLevel(tradeSL) + "\nR:R " + str.tostring(tradeRR, "#.#") :
+         "SELL\nEntry: " + f_fmtLevel(tradeEntry) + "\nTP1: " + f_fmtLevel(tradeTP1) + "\nTP2: " + f_fmtLevel(tradeTP) + "\nSL: " + f_fmtLevel(tradeSL) + "\nR:R " + str.tostring(tradeRR, "#.#")
 
     sigY = newBuySignal ? low - atr * labelOffsetATR : high + atr * labelOffsetATR
     sigStyle = newBuySignal ? label.style_label_up : label.style_label_down
@@ -696,7 +707,7 @@ if showHUD and barstate.islast
          hudState == "WATCH" ? color.aqua :
          color.gray
 
-    table.cell(hud, 0, 0, "MSP FUTURES GLOBEX SCALPER", text_color=color.aqua, text_size=tblSize, text_halign=text.align_left, bgcolor=color.new(color.black, 0))
+    table.cell(hud, 0, 0, "MSP FUTURES GLOBEX SCALPER v4.2", text_color=color.aqua, text_size=tblSize, text_halign=text.align_left, bgcolor=color.new(color.black, 0))
     table.cell(hud, 1, 0, syminfo.ticker, text_color=color.white, text_size=tblSize, text_halign=text.align_right, bgcolor=color.new(color.black, 0))
 
     table.cell(hud, 0, 1, "SIGNAL", text_color=color.white, text_size=tblSize, text_halign=text.align_left, bgcolor=color.new(stateCol, 75))
@@ -728,8 +739,9 @@ if showHUD and barstate.islast
     table.cell(hud, 0, 8, "Risk", text_color=color.gray, text_size=tblSize, text_halign=text.align_left)
     table.cell(hud, 1, 8, na(riskDisplay) ? "—" : str.tostring(riskDisplay, "#") + " ticks", text_color=stateCol, text_size=tblSize, text_halign=text.align_right)
 
-    table.cell(hud, 0, 9, "Reward", text_color=color.gray, text_size=tblSize, text_halign=text.align_left)
-    rewardText = hudActiveTrade ? "TP1 " + str.tostring(tp1Display, "#") + " / TP2 " + str.tostring(rewardDisplay, "#") : "—"
+    table.cell(hud, 0, 9, "Reward / R:R", text_color=color.gray, text_size=tblSize, text_halign=text.align_left)
+    rrDisplay  = hudActiveTrade ? math.abs(tradeTP - tradeEntry) / math.max(math.abs(tradeEntry - tradeSL), tick) : na
+    rewardText = hudActiveTrade ? "TP1 " + str.tostring(tp1Display, "#") + " / TP2 " + str.tostring(rewardDisplay, "#") + " | " + str.tostring(rrDisplay, "#.#") + "R" : "—"
     table.cell(hud, 1, 9, rewardText, text_color=color.green, text_size=tblSize, text_halign=text.align_right)
 
     table.cell(hud, 0, 10, "Time Heat", text_color=color.gray, text_size=tblSize, text_halign=text.align_left)
@@ -795,10 +807,10 @@ if showCloseCalendar and barstate.islast
 // ALERTS
 // ═══════════════════════════════════════════════════════════════
 
-alertcondition(newBuySignal, title="MSP TGS BUY", message="MSP Futures Scalper v4.1: BUY setup on {{ticker}} at {{close}}")
-alertcondition(newSellSignal, title="MSP TGS SELL", message="MSP Futures Scalper v4.1: SELL setup on {{ticker}} at {{close}}")
-alertcondition(tp1HitActive, title="MSP TGS TP1 Hit", message="MSP Futures Scalper v4.1: TP1 hit on {{ticker}} at {{close}}")
-alertcondition(tpHitActive, title="MSP TGS TP2 Hit", message="MSP Futures Scalper v4.1: TP2 / Gravity target hit on {{ticker}} at {{close}}")
-alertcondition(slHitActive, title="MSP TGS Stop Loss Hit", message="MSP Futures Scalper v4.1: STOP LOSS hit on {{ticker}} at {{close}}")
-alertcondition(reactionPulse, title="MSP TGS Reaction Zone", message="MSP Futures Scalper v4.1: price entered reaction zone on {{ticker}} at {{close}}")
-alertcondition(activeDecompCount > 0, title="MSP TGS Decompression Active", message="MSP Futures Scalper v4.1: decompression active on {{ticker}}")
+alertcondition(newBuySignal, title="MSP TGS BUY", message="MSP Futures Scalper v4.2: BUY setup on {{ticker}} at {{close}}")
+alertcondition(newSellSignal, title="MSP TGS SELL", message="MSP Futures Scalper v4.2: SELL setup on {{ticker}} at {{close}}")
+alertcondition(tp1HitActive, title="MSP TGS TP1 Hit", message="MSP Futures Scalper v4.2: TP1 hit on {{ticker}} at {{close}}")
+alertcondition(tpHitActive, title="MSP TGS TP2 Hit", message="MSP Futures Scalper v4.2: TP2 / Gravity target hit on {{ticker}} at {{close}}")
+alertcondition(slHitActive, title="MSP TGS Stop Loss Hit", message="MSP Futures Scalper v4.2: STOP LOSS hit on {{ticker}} at {{close}}")
+alertcondition(reactionPulse, title="MSP TGS Reaction Zone", message="MSP Futures Scalper v4.2: price entered reaction zone on {{ticker}} at {{close}}")
+alertcondition(activeDecompCount > 0, title="MSP TGS Decompression Active", message="MSP Futures Scalper v4.2: decompression active on {{ticker}}")

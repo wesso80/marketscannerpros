@@ -1,5 +1,3 @@
-'use client';
-
 import { Fragment } from 'react';
 import Link from 'next/link';
 
@@ -176,13 +174,13 @@ export default function HomePreviewStrip() {
           </Link>
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <Link href="/tools/scanner" className="block transition hover:-translate-y-0.5">
+          <Link href="/tools/scanner" className="block transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 rounded-xl">
             <ScannerPreview />
           </Link>
-          <Link href="/tools/golden-egg" className="block transition hover:-translate-y-0.5">
+          <Link href="/tools/golden-egg" className="block transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 rounded-xl">
             <GoldenEggPreview />
           </Link>
-          <Link href="/tools/dashboard" className="block transition hover:-translate-y-0.5">
+          <Link href="/tools/dashboard" className="block transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 rounded-xl">
             <DashboardPreview />
           </Link>
         </div>

@@ -1,6 +1,5 @@
-'use client';
-
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Hero() {
   return (
@@ -23,9 +22,9 @@ export default function Hero() {
 
         {/* H1 */}
         <h1 className="mx-auto max-w-4xl text-4xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-5xl md:text-6xl">
-          Educational market intelligence{' '}
+          Market scanner for stocks,{' '}
           <span className="bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
-            for cleaner context
+            crypto &amp; options
           </span>
         </h1>
 
@@ -37,8 +36,8 @@ export default function Hero() {
         {/* CTAs */}
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
           <Link
-            href="/pricing"
-            className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-8 py-3.5 text-base font-bold text-white shadow-lg shadow-emerald-500/20 transition-colors hover:bg-emerald-400 active:bg-emerald-500"
+            href="/auth/signup"
+            className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-8 py-3.5 text-base font-bold text-white shadow-lg shadow-emerald-500/20 transition-colors hover:bg-emerald-400 active:bg-emerald-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
           >
             Start Free — No Card
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -64,10 +63,10 @@ export default function Hero() {
               href="https://www.nasdaq.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2.5 opacity-60 transition-opacity hover:opacity-100"
+              className="flex items-center gap-2.5 opacity-60 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400/60 rounded"
               title="NASDAQ"
             >
-              <img src="/logos/nasdaq-logo.png" alt="NASDAQ" width={28} height={28} className="rounded" />
+              <Image src="/logos/nasdaq-logo.png" alt="NASDAQ" width={28} height={28} className="rounded" />
               <span className="text-sm font-semibold text-slate-400">NASDAQ</span>
             </a>
 
@@ -76,10 +75,10 @@ export default function Hero() {
               href="https://www.coingecko.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2.5 opacity-60 transition-opacity hover:opacity-100"
+              className="flex items-center gap-2.5 opacity-60 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400/60 rounded"
               title="CoinGecko"
             >
-              <img src="/logos/coingecko-logo.png" alt="CoinGecko" width={28} height={28} className="rounded" />
+              <Image src="/logos/coingecko-logo.png" alt="CoinGecko" width={28} height={28} className="rounded" />
               <span className="text-sm font-semibold text-slate-400">CoinGecko</span>
             </a>
 
@@ -88,10 +87,10 @@ export default function Hero() {
               href="https://www.alphavantage.co"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2.5 opacity-60 transition-opacity hover:opacity-100"
+              className="flex items-center gap-2.5 opacity-60 transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400/60 rounded"
               title="Alpha Vantage"
             >
-              <img src="/logos/alphavantage-logo.png" alt="Alpha Vantage" width={28} height={28} className="rounded" />
+              <Image src="/logos/alphavantage-logo.png" alt="Alpha Vantage" width={28} height={28} className="rounded" />
               <span className="text-sm font-semibold text-slate-400">Alpha Vantage</span>
             </a>
           </div>
