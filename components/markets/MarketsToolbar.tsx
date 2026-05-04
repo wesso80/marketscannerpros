@@ -61,6 +61,7 @@ export default function MarketsToolbar({
             <button
               type="button"
               key={key}
+              aria-pressed={assetClass === key}
               onClick={() => onAssetClassChange(key)}
               className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors ${
                 assetClass === key
@@ -105,6 +106,7 @@ export default function MarketsToolbar({
           <button
             type="button"
             key={ticker}
+            aria-pressed={symbol === ticker}
             onClick={() => onSymbolChange(ticker)}
             className={`rounded-md border px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
               symbol === ticker

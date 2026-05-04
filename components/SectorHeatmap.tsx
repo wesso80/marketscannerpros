@@ -175,6 +175,7 @@ export default function SectorHeatmap() {
       <div className="bg-slate-800/50 rounded-xl border border-slate-700 p-6">
         <p className="text-red-400">{error}</p>
         <button
+          type="button"
           onClick={fetchSectorData}
           className="mt-2 text-emerald-400 hover:text-emerald-300 text-sm"
         >
@@ -190,6 +191,7 @@ export default function SectorHeatmap() {
         <p className="text-slate-300 font-medium">No sector data available right now.</p>
         <p className="text-slate-500 text-sm mt-1">Try refreshing in a few seconds.</p>
         <button
+          type="button"
           onClick={fetchSectorData}
           className="mt-3 px-4 py-2 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-sm hover:bg-emerald-500/30"
         >
@@ -228,6 +230,7 @@ export default function SectorHeatmap() {
               </span>
             )}
             <button
+              type="button"
               onClick={fetchSectorData}
               className="text-xs px-3 py-1.5 rounded border border-slate-600 text-slate-300 hover:text-white hover:border-slate-500"
               disabled={refreshing}
@@ -241,7 +244,9 @@ export default function SectorHeatmap() {
             <div className="flex items-center gap-1 bg-slate-900/50 rounded-lg p-1">
               {timeFrameOptions.map(opt => (
                 <button
+                  type="button"
                   key={opt.value}
+                  aria-pressed={timeFrame === opt.value}
                   onClick={() => setTimeFrame(opt.value)}
                   className={`px-2 py-1 text-xs rounded transition-all ${
                     timeFrame === opt.value
