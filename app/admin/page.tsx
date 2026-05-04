@@ -170,7 +170,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
 
     try {
       const res = await fetch("/api/admin/stats", {
-        headers: { Authorization: `Bearer ${secret}` },
+        headers: secret ? { Authorization: `Bearer ${secret}` } : {},
       });
       const data = await res.json();
       if (res.ok) {
@@ -189,7 +189,7 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
     const secret = sessionStorage.getItem("admin_secret");
     try {
       const res = await fetch("/api/analytics/online", {
-        headers: { Authorization: `Bearer ${secret}` },
+        headers: secret ? { Authorization: `Bearer ${secret}` } : {},
       });
       if (res.ok) setLiveUsers(await res.json());
     } catch { /* ignore */ }
@@ -714,30 +714,6 @@ COMMENT ON TABLE learning_stats IS 'Rolling learning stats per symbol';
               <div>
                 <h3 style={{ fontSize: "0.875rem", fontWeight: 600, color: "#94A3B8", marginBottom: "0.5rem" }}>
                   Active by Section
-
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(min(180px, 100%), 1fr))",
-            gap: "0.5rem",
-            marginBottom: "1rem",
-          }}>
-            {[
-              ["Exposure", riskState ? `$${Number(riskState.openExposure || 0).toLocaleString()}` : "—"],
-              ["Drawdown", riskState ? `${(Number(riskState.dailyDrawdown || 0) * 100).toFixed(2)}%` : "—"],
-              ["Correlation", riskState ? `${(Number(riskState.correlationRisk || 0) * 100).toFixed(0)}%` : "—"],
-              ["Positions", riskState ? `${riskState.activePositions} / ${riskState.maxPositions}` : "—"],
-            ].map(([label, value]) => (
-              <div key={label} style={{
-                border: "1px solid rgba(148,163,184,0.13)",
-                background: "rgba(2,6,23,0.32)",
-                borderRadius: 8,
-                padding: "0.55rem 0.65rem",
-              }}>
-                <div style={{ color: "#64748B", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.12em" }}>{label}</div>
-                <div style={{ color: label === "Drawdown" && Number(riskState?.dailyDrawdown || 0) > 0.015 ? "#EF4444" : "#CBD5E1", fontSize: "0.86rem", fontWeight: 800, marginTop: "0.2rem" }}>{value}</div>
-              </div>
-            ))}
-          </div>
                 </h3>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
                   {liveUsers.sections.map((s) => (

@@ -150,6 +150,27 @@ export async function middleware(req: NextRequest) {
 
   const cookie = req.cookies.get('ms_auth')?.value;
 
+  // ── Phase 6: Belt-and-suspenders protection for /api/admin/** routes ──
+  // Individual handlers already call requireAdmin() internally (admin-only.md rule),
+  // but this middleware layer enforces the auth check at the edge BEFORE the handler runs.
+  // This prevents timing attacks and information leakage from handler-level errors
+  // when the request is clearly unauthenticated.
+  if (pathname.startsWith('/api/admin/')) {
+    const adminSession = await verifyAdminSessionToken(req.cookies.get('ms_admin')?.value);
+    let appIsAdmin = false;
+
+    if (!adminSession && cookie) {
+      appIsAdmin = sessionMatchesAdminList(await verify(cookie), ADMIN_EMAILS_MW, ADMIN_CIDS);
+    }
+
+    if (!adminSession && !appIsAdmin) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401, headers: { 'X-Robots-Tag': 'noindex, nofollow' } },
+      );
+    }
+  }
+
   if (pathname === '/admin' || pathname.startsWith('/admin/')) {
     const adminSession = await verifyAdminSessionToken(req.cookies.get('ms_admin')?.value);
     let appSessionIsAdmin = false;

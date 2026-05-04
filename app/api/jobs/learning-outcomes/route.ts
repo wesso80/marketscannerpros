@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { timingSafeEqual } from 'crypto';
 import { alertCronFailure } from '@/lib/opsAlerting';
+import { requireAdmin } from '@/lib/adminAuth';
 
 function safeCompare(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
@@ -121,17 +122,18 @@ function directionFromMove(movePct: number): 'up' | 'down' | 'flat' {
 }
 
 export async function POST(_req: NextRequest) {
-  // SECURITY: Accept cron secret (automated jobs) or admin secret (manual trigger)
+  // Accept: cron secret (automated jobs) OR admin session (cookie or ADMIN_SECRET bearer)
   const cronSecret = process.env.CRON_SECRET;
-  const adminSecret = process.env.ADMIN_SECRET;
   const headerCron = _req.headers.get('x-cron-secret');
   const headerAuth = _req.headers.get('authorization')?.replace('Bearer ', '');
 
   const cronOk = cronSecret && headerCron && safeCompare(headerCron, cronSecret);
-  const adminOk = adminSecret && headerAuth && safeCompare(headerAuth, adminSecret);
 
-  if (!cronOk && !adminOk) {
-    return NextResponse.json({ ok: false, processed: 0, errors: ['Unauthorized'] }, { status: 401 });
+  if (!cronOk) {
+    const adminAuth = await requireAdmin(_req);
+    if (!adminAuth.ok) {
+      return NextResponse.json({ ok: false, processed: 0, errors: ['Unauthorized'] }, { status: 401 });
+    }
   }
 
   await ensureLearningSchema();

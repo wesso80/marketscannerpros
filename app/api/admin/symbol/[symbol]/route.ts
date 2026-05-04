@@ -52,7 +52,7 @@ export async function GET(
         packetId: packet.packetId,
         alertEligibility: packet.alertEligibility,
       },
-      truth: wrapTruth(
+      adminTruth: wrapTruth(
         { source: 'admin:symbol', symbol, packetId: packet.packetId },
         {
           source: 'admin:symbol',

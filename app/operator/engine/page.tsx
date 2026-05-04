@@ -171,7 +171,7 @@ function RadarCard({ opp }: { opp: RadarOpportunity }) {
 
 export default function OperatorEnginePage() {
   const router = useRouter();
-  const { tier } = useUserTier();
+  const { isAdmin, isLoading: tierLoading } = useUserTier();
   const [authorized, setAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<TabMode>('auto');
@@ -207,25 +207,31 @@ export default function OperatorEnginePage() {
 
   // Auth check + health fetch + auto-scan state
   useEffect(() => {
-    if (!tier) return;
+    if (tierLoading) return;
+    if (!isAdmin) {
+      setAuthorized(false);
+      setLoading(false);
+      return;
+    }
     Promise.all([
-      fetch('/api/operator/engine/radar').then(r => r.ok),
       fetch('/api/operator/engine/health').then(r => r.ok ? r.json() : null),
       fetch('/api/operator/engine/auto-scan').then(r => r.ok ? r.json() : null),
-    ]).then(([authOk, healthResp, autoResp]) => {
-      setAuthorized(authOk);
+      fetch('/api/operator/engine/kill-switch').then(r => r.ok ? r.json() : null),
+    ]).then(([healthResp, autoResp, ksResp]) => {
+      setAuthorized(true);
       if (healthResp?.data) setHealth(healthResp.data);
       if (autoResp?.data) {
         setAutoScan(autoResp.data);
         setAutoWatchlist(autoResp.data.watchlistKey || 'us-mega-cap');
         setAutoTimeframe(autoResp.data.timeframe || '1D');
       }
+      if (ksResp?.killSwitch) setKillSwitch(ksResp.killSwitch);
       setLoading(false);
     }).catch(() => {
       setAuthorized(false);
       setLoading(false);
     });
-  }, [tier]);
+  }, [isAdmin, tierLoading]);
 
   // Run one auto-scan cycle
   const runAutoScanCycle = useCallback(async () => {

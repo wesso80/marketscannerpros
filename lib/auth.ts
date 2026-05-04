@@ -48,6 +48,15 @@ export async function getSessionFromCookie(): Promise<SessionPayload | null> {
       (process.env.NODE_ENV === 'development' && !isProductionRuntime && process.env.DEV_AUTH_BYPASS === 'true') ||
       isFreeForAllMode()
     ) {
+      // Guard: this branch is unreachable in production because isProductionRuntime is true
+      if (isProductionRuntime) {
+        console.error('[auth] CRITICAL: dev bypass triggered in production runtime — request denied');
+        return null;
+      }
+      console.warn(
+        '[auth] ⚠️  DEV BYPASS ACTIVE — granting pro_trader tier automatically. ' +
+        'This must NEVER run in production. Set DEV_AUTH_BYPASS=false or unset it before deploying.',
+      );
       // Use ms_anon cookie (set by middleware) so each browser gets its own workspace
       const anonId = cookieStore.get('ms_anon')?.value || 'anonymous';
       return {

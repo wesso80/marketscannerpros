@@ -251,7 +251,7 @@ export default function CommanderPage() {
             </div>
           </section>
 
-            <AdminCard>
+            <AdminCard className="mb-4">
               <div className="mb-2 text-xs uppercase tracking-[0.18em] text-emerald-300">Generated {generated}</div>
               <div className="text-2xl font-black text-white">{brief.headline}</div>
               <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -262,7 +262,7 @@ export default function CommanderPage() {
               </div>
             </AdminCard>
 
-            <AdminCard>
+            <AdminCard className="mb-5">
               <SectionTitle title="Risk Box" subtitle="Hard limits for this session." />
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <Metric label="Trades Left" value={`${brief.riskGovernor.remainingTrades}/${brief.riskGovernor.maxTradesToday}`} tone={brief.riskGovernor.remainingTrades > 0 ? "green" : "red"} />
@@ -351,7 +351,9 @@ export default function CommanderPage() {
             <AdminCard>
               <SectionTitle title="Stand-Down Rules" subtitle="Do not override these during the session." />
               <div className="space-y-2 text-sm leading-5 text-red-100">
-                {brief.commander.blocks.slice(0, 6).map((block) => <div key={block} className="rounded-md border border-red-500/15 bg-red-500/5 p-3">{block}</div>)}
+                {brief.commander.blocks.length > 0
+                  ? brief.commander.blocks.slice(0, 6).map((block) => <div key={block} className="rounded-md border border-red-500/15 bg-red-500/5 p-3">{block}</div>)
+                  : <Empty text="No active stand-down rules for this session." />}
               </div>
             </AdminCard>
           </section>

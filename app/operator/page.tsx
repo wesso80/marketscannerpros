@@ -485,9 +485,25 @@ function layerToneLabel(score: number, yellowFloor = 60): { tone: Tone; label: s
 }
 
 export default function OperatorDashboardPage() {
-  const { tier, isLoading: tierLoading } = useUserTier();
+  const { tier, isLoading: tierLoading, isAdmin } = useUserTier();
   const router = useRouter();
   const canUseBrain = canAccessBrain(tier);
+
+  // Defense-in-depth: redirect non-admin users even if middleware is bypassed.
+  // Primary protection is in middleware.ts (operator route guard).
+  useEffect(() => {
+    if (!tierLoading && !isAdmin) {
+      router.replace('/auth?next=/operator');
+    }
+  }, [tierLoading, isAdmin, router]);
+
+  if (tierLoading || !isAdmin) {
+    return (
+      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+      </div>
+    );
+  }
   const lastSignalEventKeyRef = useRef('');
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);

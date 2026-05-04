@@ -1,23 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
-import crypto from 'crypto';
-
-function timingSafeCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
-}
+import { requireAdmin } from '@/lib/adminAuth';
 
 /**
  * GET /api/analytics/online
- * Returns live user counts. Admin-only (requires ADMIN_SECRET Bearer token).
+ * Returns live user counts. Admin-only — accepts admin session cookie or ADMIN_SECRET bearer token.
  */
 export async function GET(req: NextRequest) {
-  // Admin auth gate
-  const authHeader = req.headers.get('authorization');
-  const secret = authHeader?.replace('Bearer ', '');
-  const adminSecret = process.env.ADMIN_SECRET || '';
-
-  if (!secret || !adminSecret || !timingSafeCompare(secret, adminSecret)) {
+  const auth = await requireAdmin(req);
+  if (!auth.ok) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

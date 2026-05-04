@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import AdminResearchVerdictPanel from "@/components/admin/AdminResearchVerdictPanel";
 import AdminEvidenceStack from "@/components/admin/AdminEvidenceStack";
 import AdminResearchScoreBreakdown from "@/components/admin/AdminResearchScoreBreakdown";
@@ -29,6 +30,8 @@ export default function SymbolResearchTerminalPage({
 }) {
   const { symbol: rawSymbol } = use(params);
   const symbol = decodeURIComponent(rawSymbol).toUpperCase();
+  const router = useRouter();
+  const [symbolInput, setSymbolInput] = useState("");
 
   const [market, setMarket] = useState<string>("CRYPTO");
   const [timeframe, setTimeframe] = useState<string>("15m");
@@ -156,6 +159,30 @@ export default function SymbolResearchTerminalPage({
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
         <h1 style={{ fontSize: "1.25rem", fontWeight: 800, margin: 0 }}>Symbol Research Terminal</h1>
         <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: "0.75rem" }}>
+          {/* Symbol search */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const sym = symbolInput.trim().toUpperCase();
+              if (sym) {
+                setSymbolInput("");
+                router.push(`/admin/symbol/${encodeURIComponent(sym)}`);
+              }
+            }}
+            style={{ display: "flex", gap: 4 }}
+          >
+            <input
+              value={symbolInput}
+              onChange={(e) => setSymbolInput(e.target.value.toUpperCase())}
+              placeholder={symbol}
+              style={{ ...selectStyle, width: 90, textTransform: "uppercase" }}
+            />
+            <button type="submit" style={{
+              padding: "0.4rem 0.6rem", borderRadius: "0.4rem",
+              background: "rgba(255,255,255,0.08)", color: "#E5E7EB",
+              border: "1px solid rgba(255,255,255,0.1)", fontWeight: 700, cursor: "pointer",
+            }}>Go</button>
+          </form>
           <select value={market} onChange={(e) => setMarket(e.target.value)} style={selectStyle}>
             <option value="CRYPTO">Crypto</option>
             <option value="EQUITIES">Equities</option>

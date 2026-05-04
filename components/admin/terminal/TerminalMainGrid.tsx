@@ -17,12 +17,20 @@ import EventRiskCard from "./EventRiskCard";
 import FlowCard from "./FlowCard";
 import type { AdminSymbolIntelligence } from "@/lib/admin/types";
 
-export default function TerminalMainGrid({ data }: { data: AdminSymbolIntelligence | null }) {
+export default function TerminalMainGrid({
+  data,
+  timeframe = "15m",
+  onTimeframeChange,
+}: {
+  data: AdminSymbolIntelligence | null;
+  timeframe?: string;
+  onTimeframeChange?: (tf: string) => void;
+}) {
   return (
     <div className="grid gap-3 xl:grid-cols-[minmax(0,1.2fr)_380px]">
       {/* Left: Chart + Detail cards */}
       <div className="space-y-3">
-        <ChartToolbar />
+        <ChartToolbar timeframe={timeframe} onTimeframeChange={onTimeframeChange} />
         <LiveChartPanel data={data} />
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           <KeyLevelsCard data={data} />

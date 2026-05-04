@@ -44,8 +44,13 @@ export default function DisclosureGate({ children }: { children: React.ReactNode
     setSaving(false);
   };
 
-  // Still loading
-  if (accepted === null) return null;
+  // Still loading — show minimal spinner rather than blank page
+  if (accepted === null) return (
+    <div style={{ minHeight: '100vh', background: '#0F172A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid #10B981', borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite' }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
 
   // Already accepted
   if (accepted) return <>{children}</>;

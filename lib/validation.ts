@@ -30,9 +30,12 @@ export const analystRequestSchema = z.object({
     .array(
       z.object({
         role: z.enum(["user", "assistant"]),
-        content: z.string(),
+        // Cap each message to prevent token-exhaustion via history stuffing
+        content: z.string().max(1000, "History message content too long (max 1000 characters)"),
       })
     )
+    // Cap total history depth to prevent context-window DoS
+    .max(50, "History too long (max 50 messages)")
     .optional(),
   context: z
     .object({
@@ -48,6 +51,21 @@ export const analystRequestSchema = z.object({
       signal: z.string().optional(),
       direction: z.string().optional(),
       score: z.number().optional(),
+      // Data freshness contract — required for verdict downgrade enforcement
+      freshness: z
+        .object({
+          provider: z.string().optional(),
+          source: z.enum(['LIVE', 'CACHED', 'DELAYED', 'DEGRADED', 'SIMULATED', 'UNAVAILABLE']).optional(),
+          fetchedAt: z.string().datetime({ offset: true }).optional(),
+          cachedAt: z.string().datetime({ offset: true }).optional(),
+          ttlSeconds: z.number().int().nonnegative().optional(),
+          ttlExpiry: z.string().datetime({ offset: true }).optional(),
+          stale: z.boolean().optional(),
+          simulated: z.boolean().optional(),
+          degraded: z.boolean().optional(),
+          reason: z.string().optional(),
+        })
+        .optional(),
       // Full scan data for strict explainer rules
       scanData: z
         .object({

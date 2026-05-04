@@ -1,4 +1,5 @@
 /**
+ * GET  /api/operator/engine/kill-switch — Read current kill switch state
  * POST /api/operator/engine/kill-switch — Toggle kill switch
  * PRIVATE — requires operator authentication.
  */
@@ -10,6 +11,46 @@ import { requireAdmin } from '@/lib/adminAuth';
 import { q } from '@/lib/db';
 
 export const runtime = 'nodejs';
+
+export async function GET(req: NextRequest) {
+  const adminAuth = (await requireAdmin(req)).ok;
+  let workspaceId: string | undefined;
+
+  if (!adminAuth) {
+    const session = await getSessionFromCookie();
+    if (!session || !isOperator(session.cid, session.workspaceId)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+    workspaceId = session.workspaceId;
+  }
+
+  try {
+    let killSwitch = { active: false, reason: '', toggledAt: null as string | null };
+
+    if (workspaceId) {
+      const rows = await q(
+        `SELECT context_state FROM operator_state WHERE workspace_id = $1 LIMIT 1`,
+        [workspaceId],
+      );
+      const stored = rows[0]?.context_state?.killSwitch;
+      if (stored) {
+        killSwitch = {
+          active: Boolean(stored.active),
+          reason: String(stored.reason || ''),
+          toggledAt: stored.toggledAt ?? null,
+        };
+      }
+    }
+
+    return NextResponse.json({ ok: true, killSwitch });
+  } catch (err: unknown) {
+    console.error('[operator:engine:kill-switch:get] Error:', err);
+    return NextResponse.json(
+      { error: 'Kill switch read failed', detail: err instanceof Error ? err.message : 'Unknown error' },
+      { status: 500 },
+    );
+  }
+}
 
 export async function POST(req: NextRequest) {
   const adminAuth = (await requireAdmin(req)).ok;

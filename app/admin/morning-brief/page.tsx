@@ -536,7 +536,7 @@ export default function MorningBriefPage() {
   }, [brief?.generatedAt]);
 
   if (loading && !brief) {
-    return <main className="min-h-screen p-6 text-white">Building morning brief...</main>;
+    return <main className="min-h-screen bg-[#0F172A] p-6 text-white">Building morning brief...</main>;
   }
 
   return (
@@ -917,19 +917,26 @@ export default function MorningBriefPage() {
           <section className="mb-5 grid gap-4 xl:grid-cols-[1.3fr_1fr]">
             <AdminCard>
               <SectionTitle title="End-Of-Session Review" subtitle="Close the loop after trading so tomorrow's brief learns from what actually happened." />
-              <div className="space-y-3">
-                {[...brief.topPlays, ...brief.watchlist.slice(0, 4), ...brief.researchSetups.slice(0, 3)].length > 0 ? [...brief.topPlays, ...brief.watchlist.slice(0, 4), ...brief.researchSetups.slice(0, 3)].map((play) => (
-                  <ReviewPlay
-                    key={`review-${play.symbol}`}
-                    play={play}
-                    note={reviewNotes[play.symbol] ?? ""}
-                    feedback={feedbackStatus[play.symbol]}
-                    savingFeedback={savingFeedback}
-                    onNote={(value) => setReviewNotes((current) => ({ ...current, [play.symbol]: value }))}
-                    onFeedback={(action) => markFeedback(play, action, reviewNotes[play.symbol])}
-                  />
-                )) : <EmptyState text="No candidates to review yet." />}
-              </div>
+              {(() => {
+                const seen = new Set<string>();
+                const reviewPlays = [...brief.topPlays, ...brief.watchlist.slice(0, 4), ...brief.researchSetups.slice(0, 3)]
+                  .filter((p) => { if (seen.has(p.symbol)) return false; seen.add(p.symbol); return true; });
+                return (
+                  <div className="space-y-3">
+                    {reviewPlays.length > 0 ? reviewPlays.map((play) => (
+                      <ReviewPlay
+                        key={`review-${play.symbol}`}
+                        play={play}
+                        note={reviewNotes[play.symbol] ?? ""}
+                        feedback={feedbackStatus[play.symbol]}
+                        savingFeedback={savingFeedback}
+                        onNote={(value) => setReviewNotes((current) => ({ ...current, [play.symbol]: value }))}
+                        onFeedback={(action) => markFeedback(play, action, reviewNotes[play.symbol])}
+                      />
+                    )) : <EmptyState text="No candidates to review yet." />}
+                  </div>
+                );
+              })()}
             </AdminCard>
 
             <AdminCard>

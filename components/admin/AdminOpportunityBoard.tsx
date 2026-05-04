@@ -44,7 +44,7 @@ export default function AdminOpportunityBoard() {
   const [timeframe, setTimeframe] = useState<string>("15m");
   const [minScore, setMinScore] = useState<number>(0);
   const [minTrust, setMinTrust] = useState<number>(0);
-  const [showSuppressed, setShowSuppressed] = useState<boolean>(false);
+  const [showSuppressed, setShowSuppressed] = useState<boolean>(true);
   const [rows, setRows] = useState<AdminOpportunityRow[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -137,15 +137,28 @@ export default function AdminOpportunityBoard() {
             onChange={(e) => setShowSuppressed(e.target.checked)} />
           Show suppressed (degraded / no-edge / trapped)
         </label>
-        <button onClick={load} disabled={loading}
-          style={{
-            marginLeft: "auto", marginTop: 14,
-            padding: "0.5rem 1rem", borderRadius: "0.5rem",
-            background: "#10B981", color: "#0F172A", border: "none",
-            fontWeight: 700, cursor: loading ? "wait" : "pointer", opacity: loading ? 0.6 : 1,
-          }}>
-          {loading ? "Scanning…" : "Refresh"}
-        </button>
+        <div style={{ display: "flex", gap: 8, marginLeft: "auto", marginTop: 14 }}>
+          {(minScore > 0 || minTrust > 0 || !showSuppressed) && (
+            <button
+              onClick={() => { setMinScore(0); setMinTrust(0); setShowSuppressed(true); }}
+              style={{
+                padding: "0.5rem 0.9rem", borderRadius: "0.5rem",
+                background: "rgba(239,68,68,0.12)", color: "#FCA5A5",
+                border: "1px solid rgba(239,68,68,0.3)",
+                fontWeight: 700, cursor: "pointer", fontSize: "0.8rem",
+              }}>
+              Reset Filters
+            </button>
+          )}
+          <button onClick={load} disabled={loading}
+            style={{
+              padding: "0.5rem 1rem", borderRadius: "0.5rem",
+              background: "#10B981", color: "#0F172A", border: "none",
+              fontWeight: 700, cursor: loading ? "wait" : "pointer", opacity: loading ? 0.6 : 1,
+            }}>
+            {loading ? "Scanning…" : "Refresh"}
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -161,71 +174,19 @@ export default function AdminOpportunityBoard() {
       {/* Row count */}
       <div style={{ fontSize: "0.7rem", color: "#6B7280", marginBottom: 8 }}>
         {filtered.length} of {rows.length} rows
+        {rows.length > 0 && (
+          <> · scores {Math.min(...rows.map(r => r.score.score))}–{Math.max(...rows.map(r => r.score.score))}</>
+        )}
         {timestamp && <> · scan {new Date(timestamp).toLocaleTimeString()}</>}
-      </div>
-
-      {/* ── Mobile card view (hidden on md+) ── */}
-      <div className="block md:hidden space-y-3 mb-4">
-        {filtered.map((row) => (
-          <div key={`card-${row.symbol}`}
-            className="rounded-xl border border-white/[0.07] bg-slate-900/60 p-4 space-y-2">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-lg font-black text-white">{row.symbol}</span>
-                  <span className="text-[11px] font-bold rounded border px-1.5 py-0.5 uppercase"
-                    style={{ color: biasColor(row.bias), borderColor: `${biasColor(row.bias)}40`, background: `${biasColor(row.bias)}12` }}>
-                    {formatBias(row.bias)}
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  <span className="rounded border px-1.5 py-0.5 text-[10px] font-bold uppercase"
-                    style={{ color: lifecycleColor(row.score.lifecycle), borderColor: `${lifecycleColor(row.score.lifecycle)}40`, background: `${lifecycleColor(row.score.lifecycle)}12` }}>
-                    {row.score.lifecycle}
-                  </span>
-                  <ScoreTypeBadge type="heuristic" compact />
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-2xl font-black tabular-nums"
-                  style={{ color: row.score.score >= 70 ? "#10B981" : row.score.score >= 50 ? "#FBBF24" : "#9CA3AF" }}>
-                  {row.score.score}
-                </div>
-                <div className="text-[10px] text-slate-600">Research Score</div>
-              </div>
-            </div>
-            <div className="text-xs text-slate-400">{row.setup.label} · {row.score.dominantAxis ?? "—"}</div>
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-slate-500">Data Trust</span>
-              <DataTruthBadge truth={row.dataTruth} />
-              {row.score.penalties.length > 0 && (
-                <span className="text-red-400">{row.score.penalties.length} penalty{row.score.penalties.length > 1 ? 'ies' : ''}</span>
-              )}
-            </div>
-            {row.alertState && row.alertState !== "NONE" && (
-              <div className="text-[10px] font-bold text-amber-300 uppercase">Alert: {row.alertState}</div>
-            )}
-            <div className="flex gap-2 pt-1">
-              <button onClick={() => setSelectedRow(row)}
-                className="flex-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[11px] font-bold text-emerald-300 hover:bg-emerald-500/15">
-                Why This Rank &#x203A;
-              </button>
-              <a href={`/admin/symbol/${row.symbol}?market=${row.market}&timeframe=${row.timeframe}`}
-                className="flex-1 rounded-lg border border-blue-500/25 bg-blue-500/[0.08] px-3 py-2 text-center text-[11px] font-bold text-blue-300 no-underline hover:bg-blue-500/12">
-                Review &#x203A;
-              </a>
-            </div>
-          </div>
-        ))}
-        {filtered.length === 0 && !loading && (
-          <div className="rounded-xl border border-white/[0.06] bg-slate-900/40 px-4 py-8 text-center text-xs text-slate-500">
-            No rows match filters.
-          </div>
+        {rows.length > 0 && filtered.length < rows.length && (
+          <span style={{ color: "#F59E0B", marginLeft: 6 }}>
+            ({rows.length - filtered.length} hidden by filters)
+          </span>
         )}
       </div>
 
-      {/* ── Desktop table (hidden on mobile) ── */}
-      <div className="hidden md:block overflow-x-auto border border-white/[0.06] rounded-xl">
+      {/* ── Results table ── */}
+      <div style={{ overflowX: "auto", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "0.75rem" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
           <thead style={{ background: "rgba(17,24,39,0.8)" }}>
             <tr>
@@ -294,7 +255,9 @@ export default function AdminOpportunityBoard() {
             {filtered.length === 0 && !loading && (
               <tr>
                 <td colSpan={12} style={{ ...tdStyle, textAlign: "center", color: "#6B7280", padding: "2rem" }}>
-                  No rows match filters.
+                  {rows.length === 0
+                    ? "No opportunities loaded. Hit Refresh to run a scan."
+                    : `All ${rows.length} rows hidden (minScore=${minScore}, minTrust=${minTrust}) — hit Reset Filters.`}
                 </td>
               </tr>
             )}

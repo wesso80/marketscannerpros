@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import SymbolHeader from "@/components/admin/terminal/SymbolHeader";
 import TerminalMainGrid from "@/components/admin/terminal/TerminalMainGrid";
 import TerminalBottomWorkspace from "@/components/admin/terminal/TerminalBottomWorkspace";
@@ -13,13 +13,15 @@ export default function SymbolTerminalPage({
 }) {
   const { symbol } = use(params);
   const ticker = decodeURIComponent(symbol).toUpperCase();
-  const { data, loading } = useSymbolIntelligence(ticker, "CRYPTO", "15m");
+  const [timeframe, setTimeframe] = useState("15m");
+  const [market] = useState("CRYPTO");
+  const { data, loading } = useSymbolIntelligence(ticker, market, timeframe);
 
   return (
     <div className="flex flex-col gap-2 p-3 h-full">
       <SymbolHeader symbol={ticker} data={data} />
       {loading && <div className="text-center text-white/30 text-xs py-1">Fetching intelligence…</div>}
-      <TerminalMainGrid data={data} />
+      <TerminalMainGrid data={data} timeframe={timeframe} onTimeframeChange={setTimeframe} />
       <TerminalBottomWorkspace />
     </div>
   );

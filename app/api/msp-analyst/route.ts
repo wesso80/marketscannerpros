@@ -36,6 +36,7 @@ import { getSessionFromCookie } from "@/lib/auth";
 import { q } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { analystRequestSchema } from "../../../lib/validation";
+import type { AnalystRequest } from "../../../lib/validation";
 import { ZodError } from "zod";
 import { runMigrations } from "@/lib/migrations";
 import { aiLimiter, getClientIP } from "@/lib/rateLimit";
@@ -53,6 +54,9 @@ import { getEdgeContext } from '@/lib/intelligence/edgeContextBuilder';
 import { openAICircuit, CircuitBreakerOpenError } from '@/lib/circuitBreaker';
 import { fetchIntelligenceContext } from '@/lib/ai/intelligenceContext';
 import type { PromptMode } from "@/lib/ai/types";
+import { enforceVerdictDowngrade, validateOutputStructure } from '@/lib/ai/outputValidator';
+import { aggregateFreshness, buildFreshnessPromptInjection } from '@/lib/dataFreshness';
+import type { DataFreshness } from '@/lib/dataFreshness';
 
 export const runtime = "nodejs";
 
@@ -90,7 +94,9 @@ function inferRegimeFromData(scanData: any, query: string): string {
         if (rsi >= 55) return 'TREND_UP';
         if (rsi <= 45) return 'TREND_DOWN';
       }
-      return 'TREND_UP'; // Strong ADX defaults bullish
+      // Phase 5 fix: Strong ADX with no clear directional indicator is UNKNOWN, not bullish.
+      // Defaulting to TREND_UP when direction is ambiguous produces wrong confidence boosts.
+      return 'UNKNOWN';
     }
 
     // Weak ADX → range bound
@@ -100,16 +106,24 @@ function inferRegimeFromData(scanData: any, query: string): string {
     if (!isNaN(adx)) return 'RANGE_NEUTRAL';
   }
 
-  // Priority 2: Query text heuristics (fallback when no indicator data)
-  const q = query.toLowerCase();
-  if (/risk.?off|stress|crash|sell.?off|panic|capitulat/.test(q)) return 'RISK_OFF_STRESS';
-  if (/vol(?:atile|atility)?.*(?:spike|expan|high|extreme)|vix.*(?:spike|high)/.test(q)) return 'VOL_EXPANSION';
-  if (/bear(?:ish)?|down.?trend|sell(?:ing)?.*pressure/.test(q)) return 'TREND_DOWN';
-  if (/bull(?:ish)?|up.?trend|break.?out|momentum|rally/.test(q)) return 'TREND_UP';
-  if (/range|chop|sideways|flat|consolidat/.test(q)) return 'RANGE_NEUTRAL';
-  if (/contract|compress|squeeze|tight|low.?vol/.test(q)) return 'VOL_CONTRACTION';
+  // Priority 2: Query text heuristics (fallback when no indicator data).
+  // Phase 5 fix: Words like "breakout", "momentum", "rally" are directionally ambiguous —
+  // they describe market events that can go either way. Only classify directionally when
+  // the text is unambiguously bearish/bullish (confirmed with directional qualifier).
+  const qLower = query.toLowerCase();
+  if (/risk.?off|stress|crash|sell.?off|panic|capitulat/.test(qLower)) return 'RISK_OFF_STRESS';
+  if (/vol(?:atile|atility)?.*(?:spike|expan|high|extreme)|vix.*(?:spike|high)/.test(qLower)) return 'VOL_EXPANSION';
+  if (/bear(?:ish)?|down.?trend|sell(?:ing)?.*pressure/.test(qLower)) return 'TREND_DOWN';
+  // Only classify TREND_UP from text when the signal is explicitly directional upward —
+  // removed: "break.?out", "momentum", "rally" (ambiguous — can precede breakdowns too)
+  if (/bull(?:ish)?|up.?trend|buying.*pressure/.test(qLower)) return 'TREND_UP';
+  if (/range|chop|sideways|flat|consolidat/.test(qLower)) return 'RANGE_NEUTRAL';
+  if (/contract|compress|squeeze|tight|low.?vol/.test(qLower)) return 'VOL_CONTRACTION';
 
-  return 'RANGE_NEUTRAL';
+  // Phase 5 fix: Final fallback must be UNKNOWN, not RANGE_NEUTRAL.
+  // RANGE_NEUTRAL implies a classified regime. UNKNOWN makes it explicit that
+  // regime is unclassified and confidence must be reduced.
+  return 'UNKNOWN';
 }
 
 /** Count real indicator data points available from scanner */
@@ -162,7 +176,7 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    let body;
+    let body: AnalystRequest;
     try {
       body = analystRequestSchema.parse(json);
     } catch (zodErr) {
@@ -179,7 +193,17 @@ export async function POST(req: NextRequest) {
     }
     
     const { query, mode, history, context, scanner } = body;
-    
+
+    // ── Phase 1 fix: validate query before any quota checks ──
+    // Previously this check was ~100 lines later, after the daily-usage DB read.
+    // An empty query would burn a quota slot before being rejected.
+    if (!query || !query.trim()) {
+      return new Response(
+        JSON.stringify({ error: "Missing 'query' in request body" }),
+        { status: 400 }
+      );
+    }
+
     if (!process.env.OPENAI_API_KEY) {
       return new Response(
         JSON.stringify({ 
@@ -198,10 +222,11 @@ export async function POST(req: NextRequest) {
     // Get user session for tier checking; allow free-for-all mode to bypass auth
     const freeForAll = isFreeForAllMode();
     let session = await getSessionFromCookie();
-    let isAnonymous = false;
     
     if (!session && freeForAll) {
-      // Temporary open-access session for free mode
+      // Temporary open-access session for free mode (staging/demo only).
+      // All requests in free-for-all mode share a single workspaceId — that is intentional
+      // for demo environments where per-user quota isolation is not required.
       session = {
         workspaceId: "free-mode",
         tier: "pro_trader",
@@ -248,7 +273,7 @@ export async function POST(req: NextRequest) {
       regime: regimeInferred === 'RANGE_NEUTRAL' || regimeInferred === 'VOL_CONTRACTION' ? 'ranging'
             : regimeInferred.startsWith('TREND') ? 'trending'
             : regimeInferred === 'VOL_EXPANSION' || regimeInferred === 'RISK_OFF_STRESS' ? 'high_volatility_chaos'
-            : 'unknown',
+            : 'unknown', // Phase 5: UNKNOWN maps to 'unknown' — conservative path
       liquidity: {
         session: 'regular',
       },
@@ -265,6 +290,14 @@ export async function POST(req: NextRequest) {
       },
       newsEventSoon: /fomc|cpi|nfp|earnings|news/.test(query.toLowerCase()),
     });
+
+    // Phase 5: If regime is UNKNOWN, inject a confidence-reduction note into the context block.
+    // This is surfaced in the system prompt so ARCA explicitly states unclassified regime.
+    const unknownRegimeNote = regimeInferred === 'UNKNOWN'
+      ? 'REGIME STATUS: UNCLASSIFIED — No indicator data was available to classify the market regime. ' +
+        'Confidence scores must be reduced by at least 15%. Do NOT state a directional bias. ' +
+        'Explicitly tell the user that regime classification requires scanner indicator data.'
+      : null;
 
     // Define tier limits (fair-use caps to prevent abuse)
     const dailyLimit = AI_DAILY_LIMITS[tier];
@@ -315,41 +348,48 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (!query) {
-      return new Response(
-        JSON.stringify({ error: "Missing 'query' in request body" }),
-        { status: 400 }
-      );
-    }
-
     // ===== V2 DUAL-MODE PROMPT ROUTING =====
     const promptMode: PromptMode = isPineScriptRequest(query) ? 'pine_script' : 'analyst';
     const basePrompt = promptMode === 'pine_script' ? PINE_SCRIPT_V2_PROMPT : MSP_ANALYST_V2_PROMPT;
 
     // ===== V3 ENGINE: Fetch signal memory for edge learning =====
+    // Phase 7: All four independent DB reads batched with Promise.all.
+    // Batching: signal_log x3 + portfolio_closed x1 — eliminates 3 sequential round-trips.
+    // Note: portfolio_closed results are consumed later in the perf-throttle section.
     let signalMemory: { totalSignals: number; regimeStats: Array<{ regime: string; count: number; winRate: number }>; recentSignals: Array<{ symbol: string; verdict: string; confidence: number; outcome?: string }> } | null = null;
+    let rawRecentTrades: Array<{ pnl_r: string | number; created_at: string }> = [];
     try {
-      const regimeStats = await q(
-        `SELECT regime, COUNT(*) as count,
-                ROUND(100.0 * COUNT(*) FILTER (WHERE outcome = 'correct') / NULLIF(COUNT(*) FILTER (WHERE outcome != 'pending'), 0), 1) as win_rate
-         FROM ai_signal_log WHERE workspace_id = $1 AND signal_at > NOW() - INTERVAL '90 days'
-         GROUP BY regime ORDER BY count DESC`,
-        [workspaceId]
-      );
-      const recentSignals = await q(
-        `SELECT symbol, verdict, confidence, outcome FROM ai_signal_log
-         WHERE workspace_id = $1 ORDER BY signal_at DESC LIMIT 5`,
-        [workspaceId]
-      );
-      const totalResult = await q(
-        `SELECT COUNT(*) as total FROM ai_signal_log WHERE workspace_id = $1`,
-        [workspaceId]
-      );
+      const [regimeStats, recentSignals, totalResult, recentTradesResult] = await Promise.all([
+        q(
+          `SELECT regime, COUNT(*) as count,
+                  ROUND(100.0 * COUNT(*) FILTER (WHERE outcome = 'correct') / NULLIF(COUNT(*) FILTER (WHERE outcome != 'pending'), 0), 1) as win_rate
+           FROM ai_signal_log WHERE workspace_id = $1 AND signal_at > NOW() - INTERVAL '90 days'
+           GROUP BY regime ORDER BY count DESC`,
+          [workspaceId]
+        ),
+        q(
+          `SELECT symbol, verdict, confidence, outcome FROM ai_signal_log
+           WHERE workspace_id = $1 ORDER BY signal_at DESC LIMIT 5`,
+          [workspaceId]
+        ),
+        q(
+          `SELECT COUNT(*) as total FROM ai_signal_log WHERE workspace_id = $1`,
+          [workspaceId]
+        ),
+        // portfolio_closed: independent of signal_log — batch here to avoid second round-trip later
+        q(
+          `SELECT pnl_r, created_at FROM portfolio_closed
+           WHERE workspace_id = $1 AND created_at > NOW() - INTERVAL '24 hours'
+           ORDER BY created_at DESC LIMIT 20`,
+          [workspaceId]
+        ).catch(() => []), // Non-critical: table may not exist yet
+      ]);
       signalMemory = {
         totalSignals: parseInt(totalResult[0]?.total || '0'),
         regimeStats: (regimeStats || []).map((r: any) => ({ regime: r.regime, count: parseInt(r.count), winRate: parseFloat(r.win_rate || '0') })),
         recentSignals: (recentSignals || []).map((s: any) => ({ symbol: s.symbol, verdict: s.verdict, confidence: parseInt(s.confidence), outcome: s.outcome })),
       };
+      rawRecentTrades = recentTradesResult || [];
     } catch {
       // ai_signal_log table may not exist yet — use null (prompt will say "no history")
     }
@@ -454,15 +494,11 @@ export async function POST(req: NextRequest) {
     });
 
     // ===== GAP 2: PERFORMANCE-LINKED THROTTLE =====
-    // Fetch session P&L from recent trades (last 24h) for this workspace
+    // Phase 7: Uses rawRecentTrades pre-fetched in the batched DB read above.
+    // No additional DB round-trip needed here.
     let perfThrottle = computePerformanceThrottle({ sessionPnlR: 0, consecutiveLosses: 0 });
     try {
-      const recentTrades = await q(
-        `SELECT pnl_r, created_at FROM portfolio_closed 
-         WHERE workspace_id = $1 AND created_at > NOW() - INTERVAL '24 hours'
-         ORDER BY created_at DESC LIMIT 20`,
-        [workspaceId]
-      );
+      const recentTrades = rawRecentTrades;
       if (recentTrades && recentTrades.length > 0) {
         let sessionPnlR = 0;
         let consecutiveLosses = 0;
@@ -484,9 +520,8 @@ export async function POST(req: NextRequest) {
         const rolling5WinRate = last5.length > 0 ? wins / last5.length : undefined;
         perfThrottle = computePerformanceThrottle({ sessionPnlR, consecutiveLosses, rolling5WinRate });
       }
-    } catch (dbErr) {
-      // Non-critical: if portfolio_closed table doesn't exist or query fails, use default
-      logger.debug('Performance throttle DB query skipped', { error: (dbErr as any)?.message });
+    } catch {
+      // rawRecentTrades defaults to [] on DB error — perfThrottle stays at default
     }
 
     // Apply session phase multiplier to throttle
@@ -516,6 +551,11 @@ export async function POST(req: NextRequest) {
     
     if (v2StateInjection) {
       messages.push({ role: "system", content: v2StateInjection });
+    }
+
+    // Phase 5: Inject UNKNOWN regime confidence-reduction directive
+    if (unknownRegimeNote) {
+      messages.push({ role: "system", content: unknownRegimeNote });
     }
 
     // ===== V3 INSTITUTIONAL OVERLAYS: Session Phase + Performance Throttle =====
@@ -982,6 +1022,35 @@ Always mention which derivatives signals support or contradict your analysis.
     }
 
     validatedText = appendPublicAISafetyCorrection(validatedText);
+
+    // ── Phase 3: Verdict enforcement ──
+    // Collect freshness descriptors from scanner payload (if provided)
+    const freshnessInputs: DataFreshness[] = [];
+    if (scanner?.freshness) {
+      freshnessInputs.push(scanner.freshness as DataFreshness);
+    }
+    if (freshnessInputs.length > 0) {
+      const freshnessSummary = aggregateFreshness(freshnessInputs);
+      const verdictResult = enforceVerdictDowngrade(validatedText, freshnessSummary);
+      if (verdictResult.downgraded) {
+        logger.warn('Verdict downgraded by freshness enforcement', {
+          reasons: verdictResult.reasons,
+          symbol: context?.symbol,
+        });
+      }
+      validatedText = verdictResult.response;
+    }
+
+    // ── Phase 4: Structural output validator ──
+    const structureResult = validateOutputStructure(validatedText, promptMode);
+    if (structureResult.warningAppended) {
+      logger.warn('ARCA output missing required sections', {
+        missing: structureResult.missingSecions,
+        symbol: context?.symbol,
+        promptMode,
+      });
+    }
+    validatedText = structureResult.response;
 
     return new Response(
       JSON.stringify({

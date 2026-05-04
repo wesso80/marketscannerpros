@@ -13,17 +13,16 @@ import type { AdminSymbolIntelligence, ScannerHit, SystemHealth } from "./types"
 function getAdminHeaders(): HeadersInit {
   const secret =
     typeof window !== "undefined"
-      ? sessionStorage.getItem("admin_secret") ?? ""
-      : "";
-  return {
-    Authorization: `Bearer ${secret}`,
-    "Content-Type": "application/json",
-  };
+      ? sessionStorage.getItem("admin_secret")
+      : null;
+  return secret
+    ? { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" }
+    : { "Content-Type": "application/json" };
 }
 
 /* ── Generic fetcher ── */
 async function adminFetch<T>(url: string): Promise<T> {
-  const res = await fetch(url, { headers: getAdminHeaders() });
+  const res = await fetch(url, { headers: getAdminHeaders(), credentials: "include" });
   if (!res.ok) {
     throw new Error(`Admin API ${res.status}: ${await res.text()}`);
   }
