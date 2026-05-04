@@ -10,20 +10,15 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { isOperator } from "@/lib/quant/operatorAuth";
 import { requireAdmin } from "@/lib/adminAuth";
-import { getSessionFromCookie } from "@/lib/auth";
 import { q } from "@/lib/db";
+import { wrapTruth } from "@/lib/admin";
 
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
-  const adminAuth = (await requireAdmin(req)).ok;
-  if (!adminAuth) {
-    const session = await getSessionFromCookie();
-    if (!session || !isOperator(session.cid, session.workspaceId)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
+  if (!(await requireAdmin(req)).ok) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
   try {
@@ -86,6 +81,16 @@ export async function GET(req: NextRequest) {
       total: countRows[0]?.total ?? 0,
       limit,
       offset,
+      truth: wrapTruth(
+        { rows: rows.length, total: countRows[0]?.total ?? 0 },
+        {
+          source: 'admin:postgres:ai_signal_log',
+          freshness: 'real-time',
+          simulated: false,
+          confidence: 'high',
+          confidenceReason: 'Live DB read of signal log.',
+        },
+      ),
     });
   } catch (err: unknown) {
     console.error("[admin:signals] Error:", err);

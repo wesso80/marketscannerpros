@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { q } from "@/lib/db";
 import { requireAdmin } from '@/lib/adminAuth';
+import { wrapTruth } from '@/lib/admin';
 
 type DegradationState = {
   failedQueries: string[];
@@ -164,6 +165,17 @@ export async function GET(req: NextRequest) {
         failedQueries: degradation.failedQueries,
         warnings: degradation.warnings,
       },
+      truth: wrapTruth(
+        { source: 'admin:postgres', degradedQueries: degradation.failedQueries.length },
+        {
+          source: 'admin:postgres',
+          freshness: degradation.failedQueries.length > 0 ? 'stale' : 'real-time',
+          simulated: false,
+          missingFields: degradation.failedQueries,
+          confidence: degradation.failedQueries.length > 3 ? 'low' : degradation.failedQueries.length > 0 ? 'medium' : 'high',
+          confidenceReason: degradation.failedQueries.length === 0 ? 'All DB queries succeeded.' : `${degradation.failedQueries.length} queries failed: ${degradation.failedQueries.join(', ')}`,
+        },
+      ),
     });
   } catch (error: any) {
     console.error("Admin stats error:", error);

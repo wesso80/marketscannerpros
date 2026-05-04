@@ -58,7 +58,7 @@ export function calculateSMA(prices: number[], period: number): number[] {
  * Returns array same length as `prices`; indices before warmup are undefined.
  */
 export function calculateRSI(prices: number[], period: number = 14): number[] {
-  const rsi: number[] = new Array(prices.length);
+  const rsi: number[] = new Array(prices.length).fill(NaN);
   if (prices.length <= period) return rsi;
 
   // 1) Accumulate initial gains & losses

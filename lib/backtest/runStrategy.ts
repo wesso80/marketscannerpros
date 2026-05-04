@@ -162,6 +162,7 @@ export function runStrategy(
   }
 
   const closes = dates.map(d => priceData[d].close);
+  const opens = dates.map(d => priceData[d].open);
   const trades: Trade[] = [];
   let position: Position | null = null;
 
@@ -278,12 +279,17 @@ export function runStrategy(
   for (let i = startIdx; i < dates.length - 1; i++) {
     const date = dates[i];
     const close = closes[i];
+    // Next bar's open is the realistic entry fill price (no lookahead bias)
+    const nextOpen = opens[i + 1];
+    const nextDate = dates[i + 1];
 
     const coreStep = runCoreStrategyStep({
       strategy,
       i,
       date,
       close,
+      nextOpen,
+      nextDate,
       initialCapital,
       symbol,
       position,
@@ -334,9 +340,9 @@ export function runStrategy(
       const tpATR = 3.0;
 
       if (!position && longSignal) {
-        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
       } else if (!position && shortSignal) {
-        position = { side: 'SHORT', entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'SHORT', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
       } else if (position) {
         const side = position.side;
         const entryPrice = position.entry;
@@ -448,9 +454,9 @@ export function runStrategy(
       const tpATR = 3.5;
 
       if (!position && longSignal) {
-        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
       } else if (!position && shortSignal) {
-        position = { side: 'SHORT', entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'SHORT', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
       } else if (position) {
         const side = position.side;
         const entryPrice = position.entry;
@@ -500,7 +506,7 @@ export function runStrategy(
       const bounceUp = close > closes[i - 1] && lows[i] <= vwap * 1.003;
 
       if (!position && nearVWAP && bounceUp && rsi[i] > 40 && rsi[i] < 60) {
-        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
       } else if (position) {
         const gain = (close - position.entry) / position.entry;
         const barsHeld = i - position.entryIdx;
@@ -525,7 +531,7 @@ export function runStrategy(
       const breakoutUp = close > orbHigh && volumes[i] > (volSMA[i] || 0) * 1.2;
 
       if (!position && breakoutUp && i > 3) {
-        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
       } else if (position) {
         const target = position.entry + orbRange;
         const stop = position.entry - orbRange * 0.5;
@@ -553,7 +559,7 @@ export function runStrategy(
         && volumes[i] > (volSMA[i] || 0) * 1.5;
 
       if (!position && momentumBurst) {
-        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
       } else if (position) {
         const gain = (close - position.entry) / position.entry;
         const barsHeld = i - position.entryIdx;
@@ -575,7 +581,7 @@ export function runStrategy(
     if (strategy === 'scalp_mean_revert' && bbands) {
       const oversold = close <= bbands.lower[i] && rsi[i] < 30;
       if (!position && oversold) {
-        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
       } else if (position) {
         const revertedToMean = close >= bbands.middle[i];
         const gain = (close - position.entry) / position.entry;
@@ -603,7 +609,7 @@ export function runStrategy(
       const pullback = close < ema21[i] && close > ema55[i];
       const reversing = close > closes[i - 1] && rsi[i] > 40;
       if (!position && uptrend && pullback && reversing) {
-        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
       } else if (position) {
         const gain = (close - position.entry) / position.entry;
         const barsHeld = i - position.entryIdx;
@@ -627,7 +633,7 @@ export function runStrategy(
       const breakout = close > resistance && volumes[i] > (volSMA[i] || 0) * 1.5;
       const trendConfirm = ema21[i] > ema55[i];
       if (!position && breakout && trendConfirm) {
-        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
       } else if (position) {
         const gain = (close - position.entry) / position.entry;
         const barsHeld = i - position.entryIdx;
@@ -651,7 +657,7 @@ export function runStrategy(
       const positiveGap = gap > 0.03;
       const volumeSpike = volumes[i] > (volSMA[i] || 0) * 3;
       if (!position && positiveGap && volumeSpike) {
-        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
       } else if (position) {
         const gain = (close - position.entry) / position.entry;
         const barsHeld = i - position.entryIdx;
@@ -677,7 +683,7 @@ export function runStrategy(
       const ribbonBull = ema9[i] > ema21[i] && ema21[i] > ema55[i];
       const ribbonBullPrev = ema9[i - 1] <= ema21[i - 1] || ema21[i - 1] <= ema55[i - 1];
       if (!position && ribbonBull && ribbonBullPrev) {
-        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
       } else if (position) {
         const ribbonBear = ema9[i] < ema21[i];
         const barsHeld = i - position.entryIdx;
@@ -701,7 +707,7 @@ export function runStrategy(
       const superTrendBull = close > lowerBand;
       const superTrendBullPrev = closes[i - 1] <= ((highs[i - 1] + lows[i - 1]) / 2 - atrMultiplier * (atr[i - 1] || closes[i - 1] * 0.02));
       if (!position && superTrendBull && superTrendBullPrev) {
-        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
       } else if (position) {
         const superTrendBear = close < lowerBand;
         const barsHeld = i - position.entryIdx;
@@ -723,7 +729,7 @@ export function runStrategy(
       const priceBreakout = close > Math.max(...highs.slice(Math.max(0, i - 10), i));
       const volumeBreakout = volumes[i] > (volSMA[i] || 0) * 2;
       if (!position && priceBreakout && volumeBreakout) {
-        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
       } else if (position) {
         const gain = (close - position.entry) / position.entry;
         const volumeDry = volumes[i] < (volSMA[i] || 0) * 0.5;
@@ -748,7 +754,7 @@ export function runStrategy(
       const longWick = (highs[i] - Math.max(close, priceData[dates[i]].open)) > Math.abs(close - priceData[dates[i]].open) * 2;
       const potentialReversal = climaxVolume && bearishCandle && longWick && rsi[i] < 35;
       if (!position && potentialReversal) {
-        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
       } else if (position) {
         const gain = (close - position.entry) / position.entry;
         const barsHeld = i - position.entryIdx;
@@ -772,7 +778,7 @@ export function runStrategy(
       const lowestLow = Math.min(...lows.slice(Math.max(0, i - period + 1), i + 1));
       const williamsR = ((highestHigh - close) / (highestHigh - lowestLow)) * -100;
       if (!position && williamsR < -80 && close > closes[i - 1]) {
-        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
       } else if (position) {
         const williamsROverbought = williamsR > -20;
         const barsHeld = i - position.entryIdx;
@@ -795,7 +801,7 @@ export function runStrategy(
       const { histogram } = macdData;
       const histReversalUp = histogram[i] > histogram[i - 1] && histogram[i - 1] < histogram[i - 2] && histogram[i] < 0;
       if (!position && histReversalUp) {
-        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
       } else if (position) {
         const histPeaked = histogram[i] < histogram[i - 1] && histogram[i] > 0;
         const barsHeld = i - position.entryIdx;
@@ -819,7 +825,7 @@ export function runStrategy(
       const rsiHigherLow = rsi[i] > Math.min(...rsi.slice(Math.max(0, i - 10), i).filter(r => r !== undefined));
       const bullishDivergence = priceLowerLow && rsiHigherLow && rsi[i] < 40;
       if (!position && bullishDivergence) {
-        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
       } else if (position) {
         const gain = (close - position.entry) / position.entry;
         const barsHeld = i - position.entryIdx;
@@ -842,7 +848,7 @@ export function runStrategy(
       const keltnerUpper = keltnerMid + 2 * (atr[i] || close * 0.02);
       const breakoutUp = close > keltnerUpper && closes[i - 1] <= (ema21[i - 1] + 2 * (atr[i - 1] || closes[i - 1] * 0.02));
       if (!position && breakoutUp) {
-        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
       } else if (position) {
         const backInsideChannel = close < ema21[i];
         const barsHeld = i - position.entryIdx;
@@ -869,7 +875,7 @@ export function runStrategy(
       const adxStrong = adxData.adx[i] > 25 && adxData.diPlus[i] > adxData.diMinus[i];
       const confluenceScore = [emaBull, rsiBull, macdBull, aboveBBMid, adxStrong].filter(Boolean).length;
       if (!position && confluenceScore >= 4) {
-        position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
+        position = { side: 'LONG', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
       } else if (position) {
         const exitScore = [emaBull, rsiBull, macdBull, aboveBBMid, adxStrong].filter(Boolean).length;
         const barsHeld = i - position.entryIdx;
@@ -935,7 +941,7 @@ export function runStrategy(
         if (!position && isLoneDailyEvent) {
           // Enter toward the daily 50%
           const side: 'LONG' | 'SHORT' = priceBelowDailyMid ? 'LONG' : 'SHORT';
-          position = { side, entry: close, entryDate: date, entryIdx: i };
+          position = { side, entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
         } else if (position) {
           const side = position.side;
           const entryPrice = position.entry;
@@ -979,7 +985,7 @@ export function runStrategy(
         if (!position && isLowStack) {
           const side: 'LONG' | 'SHORT' = emaBullish ? 'LONG' : emaBearish ? 'SHORT' : 'LONG';
           if (emaBullish || emaBearish) {
-            position = { side, entry: close, entryDate: date, entryIdx: i };
+            position = { side, entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
           }
         } else if (position) {
           const side = position.side;
@@ -1021,9 +1027,9 @@ export function runStrategy(
         if (!position && isHighStack) {
           // Breakout direction from MACD momentum
           if (macdBullish && close > dailyMid) {
-            position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
+            position = { side: 'LONG', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
           } else if (macdBearish && close < dailyMid) {
-            position = { side: 'SHORT', entry: close, entryDate: date, entryIdx: i };
+            position = { side: 'SHORT', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
           }
         } else if (position) {
           const side = position.side;
@@ -1074,7 +1080,7 @@ export function runStrategy(
           && tenkan[i - 1] <= kijun[i - 1];
 
         if (!position && tkCrossBull && priceAboveCloud) {
-          position = { side: 'LONG', entry: close, entryDate: date, entryIdx: i };
+          position = { side: 'LONG', entry: nextOpen, entryDate: nextDate, entryIdx: i + 1 };
         } else if (position) {
           const tkCrossBear = tenkanVal < kijunVal
             && !isNaN(tenkan[i - 1]) && !isNaN(kijun[i - 1])
