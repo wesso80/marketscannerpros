@@ -143,6 +143,8 @@ function PositionSizerCalculator() {
       {/* Method Toggle */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
         <button
+          type="button"
+          aria-pressed={method === 'fixed'}
           onClick={() => setMethod('fixed')}
           style={{
             flex: 1,
@@ -160,6 +162,8 @@ function PositionSizerCalculator() {
           Fixed Fractional
         </button>
         <button
+          type="button"
+          aria-pressed={method === 'kelly'}
           onClick={() => setMethod('kelly')}
           style={{
             flex: 1,
@@ -229,6 +233,8 @@ function PositionSizerCalculator() {
           </label>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
+              type="button"
+              aria-pressed={side === 'LONG'}
               onClick={() => setSide('LONG')}
               style={{
                 flex: 1,
@@ -244,6 +250,8 @@ function PositionSizerCalculator() {
               Long Exposure
             </button>
             <button
+              type="button"
+              aria-pressed={side === 'SHORT'}
               onClick={() => setSide('SHORT')}
               style={{
                 flex: 1,
@@ -1669,6 +1677,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
     <>
       {positions.length > 0 && (
         <button
+          type="button"
           onClick={() => {
             if (canExportCSV(tier)) {
               exportPositionsToCSV();
@@ -1683,6 +1692,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
       )}
       {closedPositions.length > 0 && (
         <button
+          type="button"
           onClick={() => {
             if (canExportCSV(tier)) {
               exportHistoryToCSV();
@@ -1697,6 +1707,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
       )}
       {(positions.length > 0 || closedPositions.length > 0) && (
         <button
+          type="button"
           onClick={clearAllData}
           className="rounded-md border border-slate-500/40 bg-transparent px-3 py-1.5 text-[12px] font-semibold text-red-500"
         >
@@ -1704,12 +1715,14 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
         </button>
       )}
       <button
+        type="button"
         onClick={() => setActiveTab('add-manual')}
         className="rounded-md border border-emerald-500 px-3 py-1.5 text-[12px] font-semibold text-emerald-400"
       >
         Add Position
       </button>
       <button
+        type="button"
         onClick={() => {
           const inDrawdown = totalReturn < -20 && positions.length > 0;
           if (inDrawdown && activeTab !== 'deploy-capital' && !drawdownAcknowledged) {
@@ -1766,7 +1779,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
       {syncError && (
         <div className="mx-4 mt-2 flex items-center justify-between rounded-md border border-amber-500/40 bg-amber-900/20 px-4 py-2 text-[13px] text-amber-300">
           <span>{syncError}</span>
-          <button onClick={() => setSyncError(null)} className="ml-4 text-xs font-semibold uppercase text-amber-400 hover:text-white">Close</button>
+          <button type="button" onClick={() => setSyncError(null)} className="ml-4 text-xs font-semibold uppercase text-amber-400 hover:text-white">Close</button>
         </div>
       )}
       {embeddedInWorkspace ? (
@@ -1904,6 +1917,9 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
       {/* Manual entry modal (fallback when API has no price) */}
       {manualOpen && manualPosition && (
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="manual-price-modal-title"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
           onClick={closeManual}
         >
@@ -1912,8 +1928,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
             className="w-[min(92vw,520px)] rounded-xl border border-slate-700 bg-[#0b1220] p-5 shadow-[var(--msp-shadow)]"
           >
             <div className="mb-3 flex items-center justify-between">
-              <div className="font-bold text-slate-200">Update price for {manualPosition.symbol}</div>
-              <button onClick={closeManual} className="cursor-pointer border-none bg-transparent text-xs font-semibold uppercase text-slate-400">Close</button>
+              <div id="manual-price-modal-title" className="font-bold text-slate-200">Update price for {manualPosition.symbol}</div>
+              <button type="button" onClick={closeManual} className="cursor-pointer border-none bg-transparent text-xs font-semibold uppercase text-slate-400">Close</button>
             </div>
             <div className="mb-2.5 text-[13px] text-slate-400">Enter a price. This showed because the API didn’t return a value for this symbol.</div>
             <input
@@ -1924,8 +1940,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
               className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2.5 text-slate-200 outline-none"
             />
             <div className="mt-3.5 flex justify-end gap-2">
-              <button onClick={closeManual} className="cursor-pointer rounded-lg border border-slate-700 bg-transparent px-3 py-2 text-slate-400">Cancel</button>
-              <button onClick={submitManual} className="cursor-pointer rounded-lg border-none bg-emerald-500 px-3 py-2 text-white">OK</button>
+              <button type="button" onClick={closeManual} className="cursor-pointer rounded-lg border border-slate-700 bg-transparent px-3 py-2 text-slate-400">Cancel</button>
+              <button type="button" onClick={submitManual} className="cursor-pointer rounded-lg border-none bg-emerald-500 px-3 py-2 text-white">OK</button>
             </div>
           </div>
         </div>
@@ -1993,6 +2009,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
           <div className="rounded-lg border border-slate-700/60 bg-[var(--msp-panel)] px-3 py-2">
             <div className="text-[10px] uppercase tracking-[0.06em] text-slate-500">Cash Controls</div>
             <button
+              type="button"
               onClick={applyCashFlow}
               className="mt-1.5 w-full rounded border border-emerald-500/50 bg-emerald-500/15 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.06em] text-emerald-300"
             >
@@ -2024,6 +2041,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
             return (
               <button
                 key={item.key}
+                type="button"
+                aria-pressed={isActive}
                 onClick={() => setActiveTab(item.key)}
                 className={`${embeddedInWorkspace ? 'min-w-fit shrink-0 px-3 py-1.5 text-[11px]' : 'px-3 py-2 text-xs'} rounded-lg border font-bold uppercase tracking-[0.06em] transition ${isActive ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-300' : 'border-slate-700 bg-slate-900/40 text-slate-300 hover:border-slate-500'}`}
               >
@@ -2040,7 +2059,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                 <div className="lg:col-span-3 rounded-lg border border-slate-700 bg-slate-900/40 p-3">
                   <div className="mb-2 flex items-center justify-between">
                     <div className="text-xs font-semibold uppercase tracking-[0.06em] text-slate-400">Equity Curve</div>
-                    <button onClick={() => setShowDrawdownOverlay((prev) => !prev)} className="rounded border border-slate-700 px-2 py-1 text-[10px] font-semibold uppercase text-slate-300">
+                    <button type="button" aria-pressed={showDrawdownOverlay} onClick={() => setShowDrawdownOverlay((prev) => !prev)} className="rounded border border-slate-700 px-2 py-1 text-[10px] font-semibold uppercase text-slate-300">
                       {showDrawdownOverlay ? 'Hide Drawdown Overlay' : 'Show Drawdown Overlay'}
                     </button>
                   </div>
@@ -2314,6 +2333,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                   </div>
                   <button
                     onClick={addPosition}
+                    type="button"
                     disabled={!newPosition.symbol || !newPosition.quantity || !newPosition.entryPrice || !newPosition.currentPrice}
                     className="w-full rounded-md bg-emerald-500 px-4 py-3 text-sm font-bold uppercase tracking-[0.06em] text-white transition hover:bg-emerald-600 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
@@ -2356,6 +2376,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                 <div className="mt-1">Projected gross exposure {projectedDeploymentPct.toFixed(2)}% • Risk budget used {formatMoney(draftRiskBudget)}</div>
               </div>
               <button
+                type="button"
                 onClick={() => deployCapitalTrade(Math.max(0, suggestedQuantity), draftEntry)}
                 disabled={riskLocked || !deployDraft.symbol || draftEntry <= 0 || suggestedQuantity <= 0}
                 className="rounded-md border border-emerald-500/50 bg-emerald-500/15 px-4 py-2 text-sm font-bold uppercase tracking-[0.06em] text-emerald-300 disabled:opacity-40"
@@ -2381,6 +2402,8 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                     ].map((framework) => (
                       <button
                         key={framework.key}
+                        type="button"
+                        aria-pressed={riskFramework === framework.key}
                         onClick={() => setRiskFramework(framework.key as 'fixed_fractional' | 'kelly' | 'volatility_adjusted')}
                         className={`rounded border px-2 py-2 text-[11px] font-semibold uppercase ${riskFramework === framework.key ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-300' : 'border-slate-700 bg-slate-900 text-slate-300'}`}
                       >
@@ -2418,10 +2441,10 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="border-b border-slate-700 text-slate-500">
-                        <th className="px-2 py-1 text-left">Symbol</th>
-                        <th className="px-2 py-1 text-right">Concentration</th>
-                        <th className="px-2 py-1 text-right">Dollar Risk</th>
-                        <th className="px-2 py-1 text-left">Warning</th>
+                        <th scope="col" className="px-2 py-1 text-left">Symbol</th>
+                        <th scope="col" className="px-2 py-1 text-right">Concentration</th>
+                        <th scope="col" className="px-2 py-1 text-right">Dollar Risk</th>
+                        <th scope="col" className="px-2 py-1 text-left">Warning</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2454,6 +2477,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
               <div className="flex items-center justify-between mb-2">
                 <div className="text-xs text-slate-500">Prices refresh every 2 min</div>
                 <button
+                  type="button"
                   onClick={() => refreshAllPrices(positions)}
                   disabled={refreshingAll}
                   className="flex items-center gap-1.5 rounded border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:border-emerald-500/50 hover:text-emerald-300 disabled:opacity-50 transition-colors"
@@ -2466,16 +2490,16 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                 <table className="w-full text-xs" style={{ minWidth: '640px' }}>
                   <thead>
                     <tr className="border-b border-slate-700 text-slate-500">
-                      <th className="px-2 py-2 text-left">Symbol</th>
-                      <th className="px-2 py-2 text-left">Side</th>
-                      <th className="px-2 py-2 text-right">Size %</th>
-                      <th className="px-2 py-2 text-right">Cost</th>
-                      <th className="px-2 py-2 text-right">Current</th>
-                      <th className="px-2 py-2 text-right">R Multiple</th>
-                      <th className="px-2 py-2 text-right">P&L %</th>
-                      <th className="px-2 py-2 text-right">Risk Remaining</th>
-                      <th className="px-2 py-2 text-right">Inval Dist %</th>
-                      <th className="px-2 py-2 text-left">Actions</th>
+                      <th scope="col" className="px-2 py-2 text-left">Symbol</th>
+                      <th scope="col" className="px-2 py-2 text-left">Side</th>
+                      <th scope="col" className="px-2 py-2 text-right">Size %</th>
+                      <th scope="col" className="px-2 py-2 text-right">Cost</th>
+                      <th scope="col" className="px-2 py-2 text-right">Current</th>
+                      <th scope="col" className="px-2 py-2 text-right">R Multiple</th>
+                      <th scope="col" className="px-2 py-2 text-right">P&L %</th>
+                      <th scope="col" className="px-2 py-2 text-right">Risk Remaining</th>
+                      <th scope="col" className="px-2 py-2 text-right">Inval Dist %</th>
+                      <th scope="col" className="px-2 py-2 text-left">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2516,10 +2540,10 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                               <div className="h-full bg-emerald-400" style={{ width: `${Math.max(5, Math.min(100, riskRemainingPct))}%` }} />
                             </div>
                             <div className="flex flex-wrap gap-1">
-                              <button onClick={() => closePosition(position.id)} className="rounded border border-red-500/40 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-red-300">Record Full Close</button>
-                              <button onClick={() => reducePositionHalf(position.id)} className="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-300">Record Partial Close</button>
-                              <button onClick={() => moveStopToBreakeven(position.id)} className="rounded border border-blue-500/40 bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-blue-300">Edit Stop</button>
-                              <button onClick={() => deletePosition(position.id)} className="rounded border border-zinc-500/40 bg-zinc-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-zinc-400 hover:text-red-300 hover:border-red-500/40" title="Delete this position (mistake entry)">Delete</button>
+                              <button type="button" onClick={() => closePosition(position.id)} className="rounded border border-red-500/40 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-red-300">Record Full Close</button>
+                              <button type="button" onClick={() => reducePositionHalf(position.id)} className="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-300">Record Partial Close</button>
+                              <button type="button" onClick={() => moveStopToBreakeven(position.id)} className="rounded border border-blue-500/40 bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-blue-300">Edit Stop</button>
+                              <button type="button" onClick={() => deletePosition(position.id)} className="rounded border border-zinc-500/40 bg-zinc-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-zinc-400 hover:text-red-300 hover:border-red-500/40" title="Delete this position (mistake entry)">Delete</button>
                             </div>
                           </td>
                         </tr>
@@ -2614,13 +2638,13 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                 <table className="w-full text-xs" style={{ minWidth: '600px' }}>
                   <thead>
                     <tr className="border-b border-slate-700 text-slate-500">
-                      <th className="px-2 py-2 text-left">Open</th>
-                      <th className="px-2 py-2 text-left">Exit</th>
-                      <th className="px-2 py-2 text-right">R Multiple</th>
-                      <th className="px-2 py-2 text-right">Holding Time</th>
-                      <th className="px-2 py-2 text-left">Setup Tag</th>
-                      <th className="px-2 py-2 text-left">Outcome</th>
-                      <th className="px-2 py-2 text-center"></th>
+                      <th scope="col" className="px-2 py-2 text-left">Open</th>
+                      <th scope="col" className="px-2 py-2 text-left">Exit</th>
+                      <th scope="col" className="px-2 py-2 text-right">R Multiple</th>
+                      <th scope="col" className="px-2 py-2 text-right">Holding Time</th>
+                      <th scope="col" className="px-2 py-2 text-left">Setup Tag</th>
+                      <th scope="col" className="px-2 py-2 text-left">Outcome</th>
+                      <th scope="col" className="px-2 py-2 text-center"></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2639,7 +2663,7 @@ export function PortfolioContent({ embeddedInWorkspace = false }: { embeddedInWo
                           <td className="px-2 py-2">{trade.strategy || '—'}</td>
                           <td className="px-2 py-2">{outcomeType}</td>
                           <td className="px-2 py-2 text-center">
-                            <button onClick={() => deleteClosedTrade(trade.id)} className="rounded border border-zinc-500/40 bg-zinc-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-zinc-400 hover:text-red-300 hover:border-red-500/40" title="Delete this closed trade">Delete</button>
+                            <button type="button" onClick={() => deleteClosedTrade(trade.id)} className="rounded border border-zinc-500/40 bg-zinc-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-zinc-400 hover:text-red-300 hover:border-red-500/40" title="Delete this closed trade">Delete</button>
                           </td>
                         </tr>
                       );

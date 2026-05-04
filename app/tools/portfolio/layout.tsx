@@ -20,10 +20,7 @@ export const metadata: Metadata = {
       'Track open positions, performance, risk, and hypothetical exposure with an educational portfolio workflow.',
     images: ['/scan-banner.png'],
   },
-  alternates: {
-    canonical: 'https://marketscannerpros.app/tools/workspace?tab=portfolio',
-  },
-  robots: { index: false, follow: true },
+  robots: { index: false, follow: false },
 };
 
 export default function PortfolioLayout({ children }: { children: React.ReactNode }) {
