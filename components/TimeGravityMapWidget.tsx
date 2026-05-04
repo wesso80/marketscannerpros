@@ -137,7 +137,7 @@ function TargetStatusBanner({ tgm }: { tgm: TimeGravityMap }) {
     <div className={`${cfg.bg} border ${cfg.border} rounded-lg p-3 mb-3`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-lg">{cfg.icon}</span>
+          <span aria-hidden="true" className="text-lg">{cfg.icon}</span>
           <span className={`text-sm font-bold ${cfg.textColor}`}>{cfg.text}</span>
         </div>
         {tgm.targetPrice && status === 'ACTIVE' && (
@@ -157,7 +157,7 @@ function TargetStatusBanner({ tgm }: { tgm: TimeGravityMap }) {
           )}
           {stats.overshotTagged > 0 && (
             <span className="text-amber-500">
-              🚀 {stats.overshotTagged} overshot
+              <span aria-hidden="true">🚀</span> {stats.overshotTagged} overshot
             </span>
           )}
           <span>
@@ -199,7 +199,7 @@ function MomentumOverrideBanner({ override }: { override: MomentumOverrideState 
     <div className="bg-gradient-to-r from-purple-950/60 to-red-950/40 border border-purple-500 rounded-lg p-3 mb-3 animate-pulse">
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
-          <span className="text-lg">⚡</span>
+          <span aria-hidden="true" className="text-lg">⚡</span>
           <span className="text-sm font-bold text-purple-300">MOMENTUM OVERRIDE: ON</span>
         </div>
         <span className="text-xs text-purple-400 font-mono">
@@ -279,12 +279,12 @@ function AOITargetBox({ zones }: { zones: GravityZone[] }) {
                 <span>{zone.dominantTimeframes.slice(0, 3).join(' • ')}</span>
                 {zone.activeDecompressionCount > 0 && (
                   <span className="text-orange-400">
-                    🔥 {zone.activeDecompressionCount} active
+                    <span aria-hidden="true">🔥</span> {zone.activeDecompressionCount} active
                   </span>
                 )}
                 {zone.debtCount > 0 && (
                   <span className="text-red-400">
-                    ⚠️ {zone.debtCount} debt
+                    <span aria-hidden="true">⚠️</span> {zone.debtCount} debt
                   </span>
                 )}
               </div>
@@ -357,7 +357,7 @@ function MidpointLadder({ points }: { points: GravityPoint[] }) {
             return (
               <div key={`${tf}-${i}`} className="flex items-center gap-2">
                 <span className="w-8 text-gray-300">{tf}</span>
-                <span className={iconColor}>{icon}</span>
+                <span aria-hidden="true" className={iconColor}>{icon}</span>
                 <span className="text-white">{point.midpoint.toFixed(2)}</span>
                 <span className="text-gray-600 text-[10px]">
                   ({point.zoneLow.toFixed(0)}–{point.zoneHigh.toFixed(0)})
@@ -378,7 +378,7 @@ function MidpointLadder({ points }: { points: GravityPoint[] }) {
       </div>
       
       <div className="text-[10px] text-gray-600 mt-1">
-        🔴 Debt | 🔵 Active | 🟡 Pre-Window | 🟢 Tagged | ⚪ Compression
+        <span aria-hidden="true">🔴 Debt | 🔵 Active | 🟡 Pre-Window | 🟢 Tagged | ⚪ Compression</span>
       </div>
     </div>
   );
@@ -524,7 +524,7 @@ function AIAnalystCommentary({ tgm }: { tgm: TimeGravityMap }) {
         
         {tgm.topZone && tgm.topZone.confidence >= 60 && (
           <div className="mt-2 text-xs text-purple-300">
-            💡 {tgm.topZone.activeDecompressionCount > 0
+            <span aria-hidden="true">💡 </span>{tgm.topZone.activeDecompressionCount > 0
               ? `${tgm.topZone.activeDecompressionCount} decompression window${tgm.topZone.activeDecompressionCount > 1 ? 's' : ''} active — multiple timeframes aligned`
               : 'Monitor for decompression window activation'}
           </div>
@@ -572,7 +572,7 @@ function CoverageBar({ coverage }: { coverage: CoverageDiagnostics }) {
       </div>
       {coverage.missing.length > 0 && (
         <div className="text-[10px] text-amber-500 mt-0.5">
-          ⚠️ Missing: {coverage.missing.join(', ')}
+          <span aria-hidden="true">⚠️ </span>Missing: {coverage.missing.join(', ')}
         </div>
       )}
     </div>
@@ -601,7 +601,7 @@ function CloseConfluencePanel({ confluence }: { confluence: CloseConfluence }) {
         {/* Today closes summary */}
         {confluence.todayCloses.length > 0 && (
           <div className="flex items-center gap-2 text-xs">
-            <span className="text-cyan-400">📅</span>
+            <span aria-hidden="true" className="text-cyan-400">📅</span>
             <span className="text-gray-300">
               {confluence.todayCloses.length} TF{confluence.todayCloses.length > 1 ? 's' : ''} close today
             </span>
@@ -618,7 +618,7 @@ function CloseConfluencePanel({ confluence }: { confluence: CloseConfluence }) {
           <div key={i} className="border-t border-gray-800 pt-1.5">
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-1.5">
-                <span className="text-orange-400">⚡</span>
+                <span aria-hidden="true" className="text-orange-400">⚡</span>
                 <span className="text-gray-300 font-mono">
                   {stack.entries.map(e => e.timeframe).join(' + ')}
                 </span>
@@ -744,15 +744,16 @@ function ForwardSchedulePanel({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="text-xs text-gray-400">
-          ⏰ CLOSE CALENDAR — {showFull ? 'FULL SCHEDULE' : 'CLOSES TODAY'}
+          <span aria-hidden="true">⏰ </span>CLOSE CALENDAR — {showFull ? 'FULL SCHEDULE' : 'CLOSES TODAY'}
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-gray-500">
             {anchorDayRows.length} today • {schedule.length} total
           </span>
           <button
+            type="button"
             onClick={() => setShowFull(!showFull)}
-            className="text-[10px] text-cyan-400 hover:text-cyan-300 transition-colors"
+            className="text-[10px] text-cyan-400 hover:text-cyan-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 rounded"
           >
             {showFull ? 'Today Only' : 'Full Schedule'}
           </button>
@@ -791,8 +792,10 @@ function ForwardSchedulePanel({
       {/* Category filter pills */}
       <div className="flex gap-1 flex-wrap">
         <button
+          type="button"
           onClick={() => setCatFilter(null)}
-          className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${
+          aria-pressed={!catFilter}
+          className={`text-[10px] px-2 py-0.5 rounded border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/50 ${
             !catFilter ? 'bg-gray-700 border-gray-500 text-white' : 'bg-black/30 border-gray-700 text-gray-500 hover:text-gray-300'
           }`}
         >
@@ -801,8 +804,10 @@ function ForwardSchedulePanel({
         {categories.map(cat => catCounts[cat] > 0 && (
           <button
             key={cat}
+            type="button"
             onClick={() => setCatFilter(catFilter === cat ? null : cat)}
-            className={`text-[10px] px-2 py-0.5 rounded border transition-colors capitalize ${
+            aria-pressed={catFilter === cat}
+            className={`text-[10px] px-2 py-0.5 rounded border transition-colors capitalize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/50 ${
               catFilter === cat
                 ? `${catBg(cat)} ${catColor(cat)}`
                 : 'bg-black/30 border-gray-700 text-gray-500 hover:text-gray-300'
@@ -1049,7 +1054,7 @@ export default function TimeGravityMapWidget({
     return (
       <div className={`bg-slate-900/60 border border-slate-800 rounded-lg p-6 ${className}`}>
         <div className="text-center">
-          <div className="text-slate-400 text-sm mb-2">🧲 Time Gravity Map</div>
+          <div className="text-slate-400 text-sm mb-2"><span aria-hidden="true">🧲 </span>Time Gravity Map</div>
           <div className="animate-pulse text-cyan-400 text-sm mb-1">Generating midpoint data for {symbol}...</div>
           <div className="text-slate-500 text-xs">Fetching candles across multiple timeframes (1H, 4H, 1D, 1W)</div>
         </div>
@@ -1061,13 +1066,14 @@ export default function TimeGravityMapWidget({
     return (
       <div className={`bg-slate-900/60 border border-slate-800 rounded-lg p-6 ${className}`}>
         <div className="text-center">
-          <div className="text-slate-400 text-sm mb-2">🧲 Time Gravity Map</div>
+          <div className="text-slate-400 text-sm mb-2"><span aria-hidden="true">🧲 </span>Time Gravity Map</div>
           <div className="text-amber-400/80 text-xs mb-2">{error}</div>
-          <button 
+          <button
+            type="button"
             onClick={() => fetchTGM(true)}
-            className="mt-1 px-4 py-2 text-xs font-semibold border border-cyan-600 bg-cyan-950/40 rounded-lg text-cyan-300 hover:bg-cyan-900/60 transition-colors"
+            className="mt-1 px-4 py-2 text-xs font-semibold border border-cyan-600 bg-cyan-950/40 rounded-lg text-cyan-300 hover:bg-cyan-900/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50"
           >
-            🔄 Generate Data for {symbol}
+            <span aria-hidden="true">🔄 </span>Generate Data for {symbol}
           </button>
         </div>
       </div>
@@ -1106,8 +1112,8 @@ export default function TimeGravityMapWidget({
               tgm.targetStatus === 'EXPANSION' ? 'text-purple-400' :
               'text-white'
             }`}>
-              {tgm.targetStatus === 'TARGET_HIT' ? '✅ HIT' :
-               tgm.targetStatus === 'OVERSHOT' ? '🚀 OVERSHOT' :
+              {tgm.targetStatus === 'TARGET_HIT' ? <><span aria-hidden="true">✅ </span>HIT</> :
+               tgm.targetStatus === 'OVERSHOT' ? <><span aria-hidden="true">🚀 </span>OVERSHOT</> :
                tgm.targetPrice?.toFixed(2) || '—'}
             </div>
             <div className="text-xs text-gray-400">
@@ -1133,7 +1139,7 @@ export default function TimeGravityMapWidget({
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h2 className="text-lg font-bold text-white">⏰ Time Gravity Map</h2>
+          <h2 className="text-lg font-bold text-white"><span aria-hidden="true">⏰ </span>Time Gravity Map</h2>
           <p className="text-sm text-gray-400">{symbol} • {resolvedPrice > 0 ? resolvedPrice.toFixed(2) : '—'}</p>
         </div>
         <div className="text-right">
@@ -1143,10 +1149,13 @@ export default function TimeGravityMapWidget({
             tgm.targetStatus === 'EXPANSION' ? 'text-purple-400' :
             'text-cyan-400'
           }`}>
+            <span aria-hidden="true">
             {tgm.targetStatus === 'TARGET_HIT' ? '✅' :
              tgm.targetStatus === 'OVERSHOT' ? '🚀' :
              tgm.targetStatus === 'EXPANSION' ? '⚡' :
-             `${tgm.confidence}%`}
+             null}
+            </span>
+            {tgm.targetStatus === 'ACTIVE' || (tgm.targetStatus !== 'TARGET_HIT' && tgm.targetStatus !== 'OVERSHOT' && tgm.targetStatus !== 'EXPANSION') ? `${tgm.confidence}%` : null}
           </div>
           <div className="text-xs text-gray-400">
             {tgm.targetStatus === 'ACTIVE' ? 'Confidence' : tgm.targetStatus}
@@ -1188,9 +1197,10 @@ export default function TimeGravityMapWidget({
             </p>
           )}
           <button
+            type="button"
             onClick={() => fetchTGM(true)}
             disabled={generating}
-            className="px-5 py-2.5 text-sm font-semibold border border-cyan-600 bg-cyan-950/40 rounded-lg text-cyan-300 hover:bg-cyan-900/60 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="px-5 py-2.5 text-sm font-semibold border border-cyan-600 bg-cyan-950/40 rounded-lg text-cyan-300 hover:bg-cyan-900/60 disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50"
           >
             {generating ? (
               <span className="flex items-center gap-2">
@@ -1198,9 +1208,9 @@ export default function TimeGravityMapWidget({
                 Generating...
               </span>
             ) : wasRateLimited ? (
-              '🔄 Retry Generation'
+              <><span aria-hidden="true">🔄 </span>Retry Generation</>
             ) : (
-              '🧲 Generate Gravity Map Data'
+              <><span aria-hidden="true">🧲 </span>Generate Gravity Map Data</>
             )}
           </button>
           <p className="text-slate-600 text-[10px] mt-2">
@@ -1213,7 +1223,7 @@ export default function TimeGravityMapWidget({
       {/* Generation success banner (when data was just generated for the first time) */}
       {generationInfo?.attempted && generationInfo.stored > 0 && !hasNoData && (
         <div className="bg-green-950/30 border border-green-600/40 rounded-lg px-3 py-2 mb-3 text-xs text-green-400 flex items-center gap-2">
-          <span>✅</span>
+          <span aria-hidden="true">✅</span>
           <span>Generated {generationInfo.stored} midpoints ({generationInfo.timeframes.join(', ')}) — data is now stored for future scans</span>
         </div>
       )}

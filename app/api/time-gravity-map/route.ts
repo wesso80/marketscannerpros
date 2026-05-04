@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSessionFromCookie } from '@/lib/auth';
+import { hasProTraderAccess } from '@/lib/proTraderAccess';
 import { computeTimeGravityMap, type CoverageDiagnostics } from '@/lib/time/timeGravityMap';
 import { TF_WEIGHTS, type MidpointRecord } from '@/lib/time/midpointDebt';
 import { getMidpointService } from '@/lib/midpointService';
@@ -380,6 +382,14 @@ async function generateMidpointsOnDemand(symbol: string, assetType: 'crypto' | '
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await getSessionFromCookie();
+    if (!session?.workspaceId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (!hasProTraderAccess(session.tier)) {
+      return NextResponse.json({ error: 'Time Gravity Map requires Pro Trader subscription' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     
     const symbol = searchParams.get('symbol')?.toUpperCase().replace(/\s+/g, '').trim() || '';
