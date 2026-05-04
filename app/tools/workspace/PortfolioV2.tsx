@@ -879,5 +879,5 @@ function MetricCell({ label, value, color = 'text-white' }: { label: string; val
 }
 
 function TH({ children, align = 'right' }: { children: React.ReactNode; align?: 'left' | 'right' }) {
-  return <th className={`${align === 'left' ? 'text-left' : 'text-right'} py-3 px-3 text-[11px] uppercase text-slate-500 font-medium tracking-wider`}>{children}</th>;
+  return <th scope="col" className={`${align === 'left' ? 'text-left' : 'text-right'} py-3 px-3 text-[11px] uppercase text-slate-500 font-medium tracking-wider`}>{children}</th>;
 }

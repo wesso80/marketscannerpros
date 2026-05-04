@@ -558,10 +558,10 @@ export default function AccountSection() {
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="border-b border-slate-700 text-left text-[11px] text-slate-500 uppercase tracking-wider">
-                          <th className="pb-2 pr-3">Email</th>
-                          <th className="pb-2 pr-3">Status</th>
-                          <th className="pb-2 pr-3">Date</th>
-                          <th className="pb-2 text-right">Credit</th>
+                          <th scope="col" className="pb-2 pr-3">Email</th>
+                          <th scope="col" className="pb-2 pr-3">Status</th>
+                          <th scope="col" className="pb-2 pr-3">Date</th>
+                          <th scope="col" className="pb-2 text-right">Credit</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-800">
