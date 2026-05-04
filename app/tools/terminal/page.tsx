@@ -978,7 +978,7 @@ export default function TerminalPage() {
                       </div>
                       {rg.hardBlocked && rg.hardBlockReasons?.length > 0 && (
                         <div className="mt-2 text-[11px] text-red-400 bg-red-500/10 rounded px-2 py-1">
-                          ? {rg.hardBlockReasons.join('; ')}
+                          <span aria-hidden="true">? </span>{rg.hardBlockReasons.join('; ')}
                         </div>
                       )}
                     </div>
