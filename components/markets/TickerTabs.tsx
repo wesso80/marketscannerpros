@@ -43,6 +43,7 @@ export default function TickerTabs({ ctx }: TickerTabsProps) {
           <button
             type="button"
             key={key}
+            aria-pressed={activeTab === key}
             onClick={() => setActiveTab(key)}
             className={`whitespace-nowrap rounded-t-md px-3 py-1.5 text-[11px] font-semibold transition-colors ${
               activeTab === key

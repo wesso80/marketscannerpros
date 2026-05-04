@@ -362,13 +362,13 @@ export default function ExplorerPage() {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-[var(--msp-border)]">
-                    <th className="text-left py-2 px-2 text-[11px] uppercase text-slate-500">Sector</th>
-                    <th className="text-left py-2 px-2 text-[11px] uppercase text-slate-500">ETF</th>
-                    <th className="text-right py-2 px-2 text-[11px] uppercase text-slate-500">Change %</th>
-                    <th className="text-right py-2 px-2 text-[11px] uppercase text-slate-500">Weekly</th>
-                    <th className="text-right py-2 px-2 text-[11px] uppercase text-slate-500">Monthly</th>
-                    <th className="text-right py-2 px-2 text-[11px] uppercase text-slate-500">YTD</th>
-                    <th className="text-right py-2 px-2 text-[11px] uppercase text-slate-500">Weight</th>
+                    <th scope="col" className="text-left py-2 px-2 text-[11px] uppercase text-slate-500">Sector</th>
+                    <th scope="col" className="text-left py-2 px-2 text-[11px] uppercase text-slate-500">ETF</th>
+                    <th scope="col" className="text-right py-2 px-2 text-[11px] uppercase text-slate-500">Change %</th>
+                    <th scope="col" className="text-right py-2 px-2 text-[11px] uppercase text-slate-500">Weekly</th>
+                    <th scope="col" className="text-right py-2 px-2 text-[11px] uppercase text-slate-500">Monthly</th>
+                    <th scope="col" className="text-right py-2 px-2 text-[11px] uppercase text-slate-500">YTD</th>
+                    <th scope="col" className="text-right py-2 px-2 text-[11px] uppercase text-slate-500">Weight</th>
                   </tr>
                 </thead>
                 <tbody>
