@@ -195,6 +195,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Please log in to access the Options Terminal' } as Partial<OptionsChainResponse>, { status: 401 });
   }
 
+  if (session.tier !== 'pro_trader') {
+    return NextResponse.json({ success: false, error: 'Options Terminal requires a Pro Trader subscription' } as Partial<OptionsChainResponse>, { status: 403 });
+  }
+
   const { searchParams } = new URL(request.url);
   const rawSymbol = searchParams.get('symbol');
   const expirationFilter = searchParams.get('expiration') || undefined;

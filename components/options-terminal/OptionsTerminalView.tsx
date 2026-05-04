@@ -285,8 +285,9 @@ export default function OptionsTerminalView() {
           {['AAPL', 'SPY', 'TSLA', 'NVDA', 'QQQ', 'AMZN'].map((t) => (
             <button
               key={t}
+              type="button"
               onClick={() => handleTickerChange(t)}
-              className="rounded-xl border border-emerald-600/30 bg-emerald-600/10 px-4 py-2 text-sm font-semibold text-emerald-300 hover:bg-emerald-600/20 transition"
+              className="rounded-xl border border-emerald-600/30 bg-emerald-600/10 px-4 py-2 text-sm font-semibold text-emerald-300 hover:bg-emerald-600/20 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
             >
               {t}
             </button>
@@ -398,8 +399,10 @@ export default function OptionsTerminalView() {
                   {chain.expirations.slice(0, 4).map((exp) => (
                     <button
                       key={exp.date}
+                      type="button"
+                      aria-pressed={exp.date === selectedExpiry}
                       onClick={() => setSelectedExpiry(exp.date)}
-                      className={`rounded-2xl border p-3 text-left transition ${
+                      className={`rounded-2xl border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 ${
                         exp.date === selectedExpiry
                           ? 'border-emerald-600/40 bg-emerald-600/10'
                           : 'border-zinc-800 bg-zinc-950/40 hover:bg-zinc-900'
@@ -657,6 +660,7 @@ export default function OptionsTerminalView() {
                   {/* Actions */}
                   <div className="grid grid-cols-1 gap-3">
                     <button
+                      type="button"
                       onClick={async () => {
                         try {
                           // Fetch user's watchlists, pick first or create "Options"
@@ -695,11 +699,12 @@ export default function OptionsTerminalView() {
                           setTimeout(() => setWatchlistMsg(''), 3000);
                         }
                       }}
-                      className="w-full rounded-2xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm font-semibold hover:bg-zinc-800 transition"
+                      className="w-full rounded-2xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm font-semibold hover:bg-zinc-800 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
                     >
                       {watchlistMsg || 'Add to Watchlist'}
                     </button>
                     <button
+                      type="button"
                       onClick={() => {
                         const c = selectedContract!;
                         const label = `${ticker} ${c.expiration} ${c.strike}${selected!.side === 'CALL' ? 'C' : 'P'}`;
@@ -714,11 +719,12 @@ export default function OptionsTerminalView() {
                         });
                         router.push(`/tools/workspace?tab=journal&prefill=true&${params.toString()}`);
                       }}
-                      className="w-full rounded-2xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm font-semibold hover:bg-zinc-800 transition"
+                      className="w-full rounded-2xl bg-zinc-950/40 border border-zinc-800 px-4 py-3 text-sm font-semibold hover:bg-zinc-800 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
                     >
                       Save Scenario
                     </button>
                     <button
+                      type="button"
                       onClick={() => {
                         const c = selectedContract!;
                         const label = `${ticker} ${c.expiration} ${c.strike}${selected!.side === 'CALL' ? 'C' : 'P'}`;
@@ -738,7 +744,7 @@ export default function OptionsTerminalView() {
                         });
                         router.push(`/tools/workspace?tab=journal&prefill=true&${params.toString()}`);
                       }}
-                      className="w-full rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-zinc-950 hover:bg-emerald-500 transition"
+                      className="w-full rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-zinc-950 hover:bg-emerald-500 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
                     >
                       Log to Journal
                     </button>
@@ -828,8 +834,10 @@ function Badge({ children, tone = 'neutral' }: { children: React.ReactNode; tone
 function Chip({ children, active, onClick }: { children: React.ReactNode; active?: boolean; onClick?: () => void }) {
   return (
     <button
+      type="button"
+      aria-pressed={active ?? false}
       onClick={onClick}
-      className={`rounded-full border px-3 py-1 text-xs transition ${active ? 'border-emerald-600/40 bg-emerald-600/20 text-emerald-300' : 'border-zinc-800 bg-zinc-950/40 text-zinc-300 hover:bg-zinc-800'}`}
+      className={`rounded-full border px-3 py-1 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 ${active ? 'border-emerald-600/40 bg-emerald-600/20 text-emerald-300' : 'border-zinc-800 bg-zinc-950/40 text-zinc-300 hover:bg-zinc-800'}`}
     >
       {children}
     </button>
@@ -853,7 +861,7 @@ function BestStrikeCard({ label, value, sub, tone, onClick }: {
     : tone === 'warn' ? 'border-yellow-600/30 bg-yellow-600/10 text-yellow-300'
     : 'border-indigo-600/30 bg-indigo-600/10 text-indigo-300';
   return (
-    <button onClick={onClick} className={`rounded-2xl border p-3 text-left transition hover:opacity-80 ${cls}`}>
+    <button type="button" onClick={onClick} className={`rounded-2xl border p-3 text-left transition hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 ${cls}`}>
       <div className="text-[11px] uppercase tracking-wide opacity-80">{label}</div>
       <div className="mt-1 text-sm font-semibold">{value}</div>
       <div className="text-[10px] opacity-70">{sub}</div>
@@ -864,10 +872,10 @@ function BestStrikeCard({ label, value, sub, tone, onClick }: {
 function ModeToggle({ mode, setMode }: { mode: Mode; setMode: (m: Mode) => void }) {
   return (
     <div className="flex rounded-xl border border-zinc-800 overflow-hidden">
-      <button onClick={() => setMode('retail')} className={`px-4 py-2 text-sm font-semibold transition ${mode === 'retail' ? 'bg-emerald-600/20 text-emerald-300' : 'text-zinc-400 hover:bg-zinc-900'}`}>
+      <button type="button" aria-pressed={mode === 'retail'} onClick={() => setMode('retail')} className={`px-4 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500/50 ${mode === 'retail' ? 'bg-emerald-600/20 text-emerald-300' : 'text-zinc-400 hover:bg-zinc-900'}`}>
         Retail
       </button>
-      <button onClick={() => setMode('institutional')} className={`px-4 py-2 text-sm font-semibold transition ${mode === 'institutional' ? 'bg-indigo-600/20 text-indigo-300' : 'text-zinc-400 hover:bg-zinc-900'}`}>
+      <button type="button" aria-pressed={mode === 'institutional'} onClick={() => setMode('institutional')} className={`px-4 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500/50 ${mode === 'institutional' ? 'bg-indigo-600/20 text-indigo-300' : 'text-zinc-400 hover:bg-zinc-900'}`}>
         Institutional
       </button>
     </div>
@@ -878,8 +886,8 @@ function Segmented<T extends string>({ value, onChange, options }: { value: T; o
   return (
     <div className="inline-flex rounded-xl border border-zinc-800 overflow-hidden bg-zinc-950/40">
       {options.map((o) => (
-        <button key={o.value} onClick={() => onChange(o.value)}
-          className={`px-4 py-2 text-sm font-semibold transition ${o.value === value ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-400 hover:bg-zinc-900'}`}>
+        <button key={o.value} type="button" aria-pressed={o.value === value} onClick={() => onChange(o.value)}
+          className={`px-4 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500/50 ${o.value === value ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-400 hover:bg-zinc-900'}`}>
           {o.label}
         </button>
       ))}
@@ -898,13 +906,17 @@ function NumberField({ label, value, setValue, min, max }: { label: string; valu
 }
 
 function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <th className={`px-3 py-3 text-[11px] uppercase tracking-wide text-zinc-400 ${className}`}>{children}</th>;
+  return <th scope="col" className={`px-3 py-3 text-[11px] uppercase tracking-wide text-zinc-400 ${className}`}>{children}</th>;
 }
 
 function Td({ children, clickable, selected, onClick }: { children: React.ReactNode; clickable?: boolean; selected?: boolean; onClick?: () => void }) {
   return (
-    <td onClick={onClick}
-      className={`px-3 py-3 text-sm ${clickable ? 'cursor-pointer hover:bg-zinc-900' : ''} ${selected ? 'bg-indigo-600/10' : ''}`}>
+    <td
+      onClick={onClick}
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onKeyDown={clickable && onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
+      className={`px-3 py-3 text-sm ${clickable ? 'cursor-pointer hover:bg-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-indigo-500/50' : ''} ${selected ? 'bg-indigo-600/10' : ''}`}>
       <span className="text-zinc-200">{children}</span>
     </td>
   );

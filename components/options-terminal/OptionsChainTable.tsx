@@ -182,12 +182,15 @@ export default function OptionsChainTable({
     cols.map((col) => (
       <td
         key={`${side}-${col.key}`}
-        className="px-1.5 py-0 text-right font-mono text-[11px] tabular-nums whitespace-nowrap cursor-pointer"
+        role="button"
+        tabIndex={c ? 0 : undefined}
+        className="px-1.5 py-0 text-right font-mono text-[11px] tabular-nums whitespace-nowrap cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500/50"
         style={{
           color: c ? 'var(--msp-text)' : 'var(--msp-text-faint)',
           opacity: c ? 1 : 0.4,
         }}
         onClick={() => c && onSelectContract(c)}
+        onKeyDown={(e) => { if (c && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onSelectContract(c); } }}
       >
         {contractCell(c, col.field, col.decimals)}
       </td>
@@ -207,8 +210,10 @@ export default function OptionsChainTable({
         {/* Calls / Puts toggle */}
         <div className="flex items-center gap-1">
           <button
+            type="button"
+            aria-pressed={showCalls}
             onClick={onToggleCalls}
-            className="text-[10px] font-bold px-2 py-1 rounded transition-all"
+            className="text-[10px] font-bold px-2 py-1 rounded transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
             style={{
               background: showCalls ? 'var(--msp-bull-tint)' : 'transparent',
               color: showCalls ? 'var(--msp-bull)' : 'var(--msp-text-faint)',
@@ -218,8 +223,10 @@ export default function OptionsChainTable({
             CALLS
           </button>
           <button
+            type="button"
+            aria-pressed={showPuts}
             onClick={onTogglePuts}
-            className="text-[10px] font-bold px-2 py-1 rounded transition-all"
+            className="text-[10px] font-bold px-2 py-1 rounded transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
             style={{
               background: showPuts ? 'var(--msp-bear-tint)' : 'transparent',
               color: showPuts ? 'var(--msp-bear)' : 'var(--msp-text-faint)',
@@ -298,15 +305,15 @@ export default function OptionsChainTable({
             <thead>
               <tr>
                 {showCalls && cols.map((col) => (
-                  <th key={`ch-${col.key}`} className="px-1.5 py-1 text-right font-bold" style={{ color: 'var(--msp-bull)', width: `${100 / (cols.length * (showCalls && showPuts ? 2 : 1) + 3)}%` }}>
+                  <th key={`ch-${col.key}`} scope="col" className="px-1.5 py-1 text-right font-bold" style={{ color: 'var(--msp-bull)', width: `${100 / (cols.length * (showCalls && showPuts ? 2 : 1) + 3)}%` }}>
                     {col.label}
                   </th>
                 ))}
-                <th className="px-1.5 py-1 text-center font-bold" style={{ color: 'var(--msp-text)', width: '60px' }}>Strike</th>
-                <th className="px-1.5 py-1 text-center font-bold" style={{ color: 'var(--msp-text-faint)', width: '40px' }}>Dist</th>
-                <th className="px-1 py-1 text-center" style={{ width: '28px' }}></th>
+                <th scope="col" className="px-1.5 py-1 text-center font-bold" style={{ color: 'var(--msp-text)', width: '60px' }}>Strike</th>
+                <th scope="col" className="px-1.5 py-1 text-center font-bold" style={{ color: 'var(--msp-text-faint)', width: '40px' }}>Dist</th>
+                <th scope="col" className="px-1 py-1 text-center" style={{ width: '28px' }}></th>
                 {showPuts && cols.map((col) => (
-                  <th key={`ph-${col.key}`} className="px-1.5 py-1 text-right font-bold" style={{ color: 'var(--msp-bear)', width: `${100 / (cols.length * (showCalls && showPuts ? 2 : 1) + 3)}%` }}>
+                  <th key={`ph-${col.key}`} scope="col" className="px-1.5 py-1 text-right font-bold" style={{ color: 'var(--msp-bear)', width: `${100 / (cols.length * (showCalls && showPuts ? 2 : 1) + 3)}%` }}>
                     {col.label}
                   </th>
                 ))}
