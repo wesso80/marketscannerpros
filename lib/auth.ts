@@ -42,8 +42,9 @@ export async function getSessionFromCookie(): Promise<SessionPayload | null> {
   const c = cookieStore.get("ms_auth")?.value;
   if (!c) {
     // DEV BYPASS: auto-authenticate as pro_trader for local testing
+    // Requires NODE_ENV=development AND DEV_AUTH_BYPASS=true (double gate — production runtime blocks it)
     if (
-      (process.env.NODE_ENV === 'development' && process.env.DEV_AUTH_BYPASS === 'true') ||
+      (process.env.NODE_ENV === 'development' && !isProductionRuntime && process.env.DEV_AUTH_BYPASS === 'true') ||
       isFreeForAllMode()
     ) {
       // Use ms_anon cookie (set by middleware) so each browser gets its own workspace

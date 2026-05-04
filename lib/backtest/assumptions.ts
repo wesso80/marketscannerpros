@@ -1,5 +1,17 @@
 export const BACKTEST_SLIPPAGE_BPS = 5;
 
+/** Per-leg commission in basis points by asset class (applied on entry AND exit). */
+export const BACKTEST_COMMISSION_BPS: Record<'stock' | 'crypto' | 'forex', number> = {
+  stock: 1,   // 1bp — typical retail broker
+  crypto: 20, // 20bp — typical CEX taker fee
+  forex: 2,   // 2 pips on a 1.0000 price
+};
+
+/** Returns total round-trip cost bps (entry + exit commission + 2× slippage). */
+export function roundTripCostBps(assetType: 'stock' | 'crypto' | 'forex'): number {
+  return BACKTEST_SLIPPAGE_BPS * 2 + BACKTEST_COMMISSION_BPS[assetType] * 2;
+}
+
 export type BacktestSampleQuality = 'thin' | 'developing' | 'adequate';
 
 export interface BacktestAssumptionsMetadata {
@@ -18,8 +30,11 @@ export interface BacktestAssumptionsMetadata {
   costs: {
     slippageBps: number;
     slippageApplied: true;
+    commissionBps: number;
+    commissionApplied: true;
+    commissionNote: string;
     spreadModel: 'not_modeled';
-    commissionModel: 'not_modeled';
+    commissionModel: 'per_leg_bps';
     feeModel: 'not_modeled';
     borrowCostsModel: 'not_modeled';
     marketImpactModel: 'not_modeled';
@@ -97,8 +112,11 @@ export function buildBacktestAssumptionsMetadata(args: {
     costs: {
       slippageBps: BACKTEST_SLIPPAGE_BPS,
       slippageApplied: true,
+      commissionBps: BACKTEST_COMMISSION_BPS[args.assetType],
+      commissionApplied: true,
+      commissionNote: `${BACKTEST_COMMISSION_BPS[args.assetType]}bp per leg applied on entry and exit (${args.assetType}).`,
       spreadModel: 'not_modeled',
-      commissionModel: 'not_modeled',
+      commissionModel: 'per_leg_bps',
       feeModel: 'not_modeled',
       borrowCostsModel: 'not_modeled',
       marketImpactModel: 'not_modeled',

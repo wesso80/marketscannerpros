@@ -12,7 +12,7 @@ import type { BacktestTrade } from './engine';
 import { runCoreStrategyStep } from './strategyExecutors';
 import { parseBacktestTimeframe } from './timeframe';
 import { enrichTradesWithMetadata } from './tradeForensics';
-import { BACKTEST_SLIPPAGE_BPS } from './assumptions';
+import { BACKTEST_SLIPPAGE_BPS, BACKTEST_COMMISSION_BPS } from './assumptions';
 import {
   calculateEMA,
   calculateSMA,
@@ -63,8 +63,9 @@ type Position = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
-function calcReturnDollars(side: 'LONG' | 'SHORT', entry: number, exit: number, qty: number) {
-  return side === 'LONG' ? (exit - entry) * qty : (entry - exit) * qty;
+function calcReturnDollars(side: 'LONG' | 'SHORT', entry: number, exit: number, qty: number, commissionCost = 0) {
+  const rawPnl = side === 'LONG' ? (exit - entry) * qty : (entry - exit) * qty;
+  return rawPnl - commissionCost;
 }
 
 function calcReturnPercent(side: 'LONG' | 'SHORT', entry: number, exit: number) {
@@ -118,6 +119,22 @@ function applyExitSlippage(price: number, side: 'LONG' | 'SHORT'): number {
   return side === 'LONG' ? price - slip : price + slip;
 }
 
+// ─── Commission Model ─────────────────────────────────────────────────────
+// Per-leg commission deducted from P&L.
+// Asset type inferred from symbol suffix (USDT/USDC = crypto, else equity).
+function inferAssetType(symbol: string): 'stock' | 'crypto' | 'forex' {
+  const s = symbol.toUpperCase();
+  if (s.endsWith('USDT') || s.endsWith('USDC') || s.endsWith('BTC') || s.endsWith('ETH')) return 'crypto';
+  if (s.includes('/') || s.endsWith('USD') || s.endsWith('EUR') || s.endsWith('JPY')) return 'forex';
+  return 'stock';
+}
+
+/** Returns total commission cost in dollars for a round-trip trade (entry + exit). */
+function calcCommissionCost(entry: number, exit: number, qty: number, assetType: 'stock' | 'crypto' | 'forex'): number {
+  const bps = BACKTEST_COMMISSION_BPS[assetType];
+  return (entry * qty + Math.abs(exit * qty)) * (bps / 10_000);
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────
 
 export function runStrategy(
@@ -165,6 +182,8 @@ export function runStrategy(
   const opens = dates.map(d => priceData[d].open);
   const trades: Trade[] = [];
   let position: Position | null = null;
+
+  const assetType = inferAssetType(symbol);
 
   const highs = dates.map(d => priceData[d].high);
   const lows = dates.map(d => priceData[d].low);
@@ -361,7 +380,7 @@ export function runStrategy(
           trades.push({
             entryDate: position.entryDate, exitDate: date, symbol, side,
             entry: entryPrice, exit: exitPrice,
-            return: calcReturnDollars(side, entryPrice, exitPrice, shares),
+            return: calcReturnDollars(side, entryPrice, exitPrice, shares, calcCommissionCost(entryPrice, exitPrice, shares, assetType)),
             returnPercent: calcReturnPercent(side, entryPrice, exitPrice),
             exitReason, holdingPeriodDays: barsHeld + 1,
           });
@@ -480,7 +499,7 @@ export function runStrategy(
           trades.push({
             entryDate: position.entryDate, exitDate: date, symbol, side,
             entry: entryPrice, exit: exitPrice,
-            return: calcReturnDollars(side, entryPrice, exitPrice, shares),
+            return: calcReturnDollars(side, entryPrice, exitPrice, shares, calcCommissionCost(entryPrice, exitPrice, shares, assetType)),
             returnPercent: calcReturnPercent(side, entryPrice, exitPrice),
             exitReason, holdingPeriodDays: barsHeld + 1,
           });
@@ -965,7 +984,7 @@ export function runStrategy(
             trades.push({
               entryDate: position.entryDate, exitDate: date, symbol, side,
               entry: entryPrice, exit: exitPrice,
-              return: calcReturnDollars(side, entryPrice, exitPrice, shares),
+              return: calcReturnDollars(side, entryPrice, exitPrice, shares, calcCommissionCost(entryPrice, exitPrice, shares, assetType)),
               returnPercent: calcReturnPercent(side, entryPrice, exitPrice),
               exitReason, holdingPeriodDays: barsHeld + 1,
             });
@@ -1005,7 +1024,7 @@ export function runStrategy(
             trades.push({
               entryDate: position.entryDate, exitDate: date, symbol, side,
               entry: entryPrice, exit: exitPrice,
-              return: calcReturnDollars(side, entryPrice, exitPrice, shares),
+              return: calcReturnDollars(side, entryPrice, exitPrice, shares, calcCommissionCost(entryPrice, exitPrice, shares, assetType)),
               returnPercent: calcReturnPercent(side, entryPrice, exitPrice),
               exitReason, holdingPeriodDays: barsHeld + 1,
             });
@@ -1049,7 +1068,7 @@ export function runStrategy(
             trades.push({
               entryDate: position.entryDate, exitDate: date, symbol, side,
               entry: entryPrice, exit: exitPrice,
-              return: calcReturnDollars(side, entryPrice, exitPrice, shares),
+              return: calcReturnDollars(side, entryPrice, exitPrice, shares, calcCommissionCost(entryPrice, exitPrice, shares, assetType)),
               returnPercent: calcReturnPercent(side, entryPrice, exitPrice),
               exitReason, holdingPeriodDays: barsHeld + 1,
             });
@@ -1115,7 +1134,7 @@ export function runStrategy(
     trades.push({
       entryDate: position.entryDate, exitDate, symbol, side,
       entry: position.entry, exit: exitPrice,
-      return: calcReturnDollars(side, position.entry, exitPrice, shares),
+      return: calcReturnDollars(side, position.entry, exitPrice, shares, calcCommissionCost(position.entry, exitPrice, shares, assetType)),
       returnPercent: calcReturnPercent(side, position.entry, exitPrice),
       exitReason: 'end_of_data', holdingPeriodDays: barsHeld + 1,
     });
@@ -1129,7 +1148,7 @@ export function runStrategy(
     const shares = (initialCapital * 0.95) / slippedEntry;
     t.entry = slippedEntry;
     t.exit = slippedExit;
-    t.return = calcReturnDollars(t.side, slippedEntry, slippedExit, shares);
+    t.return = calcReturnDollars(t.side, slippedEntry, slippedExit, shares, calcCommissionCost(slippedEntry, slippedExit, shares, assetType));
     t.returnPercent = calcReturnPercent(t.side, slippedEntry, slippedExit);
   }
 

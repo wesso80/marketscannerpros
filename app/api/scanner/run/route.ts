@@ -2707,12 +2707,19 @@ export async function POST(req: NextRequest) {
     // Return results with cache-prevention headers
     const providerSource = type === 'crypto' ? 'coingecko' : type === 'equity' ? 'alpha_vantage_or_worker_cache' : 'alpha_vantage';
     const providerWarnings = errors.slice(0, 5);
+    const isStale = results.some((result) => result.scoreQuality?.freshnessStatus === 'stale' || result.scoreQuality?.freshnessStatus === 'missing');
     return NextResponse.json({
       success: true,
       message: results.length ? "OK" : "No symbols matched the minimum score (showing first for debug)",
       redirect: null,
       results,
       errors,
+      dataFreshness: {
+        source: providerSource,
+        fetchedAt: new Date().toISOString(),
+        stale: isStale,
+        fallbackActive: isStale,
+      },
       metadata: {
         compliance: scannerComplianceMetadata(),
         timestamp: new Date().toISOString(),
@@ -2723,13 +2730,13 @@ export async function POST(req: NextRequest) {
         dataQuality: scannerDataQualityMetadata({
           source: providerSource,
           computedAt: new Date(),
-          stale: results.some((result) => result.scoreQuality?.freshnessStatus === 'stale' || result.scoreQuality?.freshnessStatus === 'missing'),
+          stale: isStale,
           coverageScore: results.length ? Math.max(0, 100 - Math.min(50, errors.length * 5)) : 0,
           warnings: providerWarnings,
           providerStatus: buildMarketDataProviderStatus({
             source: providerSource,
             provider: providerSource,
-            stale: results.some((result) => result.scoreQuality?.freshnessStatus === 'stale' || result.scoreQuality?.freshnessStatus === 'missing'),
+            stale: isStale,
             degraded: errors.length > 0,
             warnings: providerWarnings,
           }),
