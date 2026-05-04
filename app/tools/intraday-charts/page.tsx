@@ -943,7 +943,7 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
           <div>
             <div className="text-xs text-slate-400 uppercase tracking-wide">Intraday Console</div>
           </div>
-          <Link href="/dashboard" className="text-sm text-slate-400 hover:text-white">
+          <Link href="/dashboard" className="text-sm text-slate-400 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/50 rounded">
             ← Dashboard
           </Link>
         </div>}
@@ -996,11 +996,12 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
               <div className="flex rounded-lg bg-slate-800 p-1">
                 <button
                   type="button"
+                  aria-pressed={assetType === 'stocks'}
                   onClick={() => {
                     setAssetType('stocks');
                     fetchData('AAPL', interval);
                   }}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 ${
                     assetType === 'stocks'
                       ? 'bg-emerald-600 text-white'
                       : 'text-gray-400 hover:text-white hover:bg-slate-700'
@@ -1010,11 +1011,12 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
                 </button>
                 <button
                   type="button"
+                  aria-pressed={assetType === 'crypto'}
                   onClick={() => {
                     setAssetType('crypto');
                     fetchData('BTC', interval);
                   }}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/60 ${
                     assetType === 'crypto'
                       ? 'bg-orange-500 text-white'
                       : 'text-gray-400 hover:text-white hover:bg-slate-700'
@@ -1035,12 +1037,12 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
                 onChange={(e) => setSearchInput(e.target.value.toUpperCase())}
                 placeholder={assetType === 'crypto' ? 'Symbol (e.g., BTC)' : 'Symbol (e.g., AAPL)'}
                 aria-label="Symbol"
-                className="h-10 flex-1 rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none"
+                className="h-10 flex-1 rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm text-white placeholder-gray-500 focus:outline-none focus-visible:border-emerald-500 focus-visible:ring-2 focus-visible:ring-emerald-500/30"
               />
               <button
                 type="submit"
                 disabled={loading}
-                className="h-10 rounded-lg bg-emerald-600 px-4 text-sm font-medium transition hover:bg-emerald-700 disabled:bg-slate-700"
+                className="h-10 rounded-lg bg-emerald-600 px-4 text-sm font-medium transition hover:bg-emerald-700 disabled:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
               >
                 {loading ? 'Loading...' : 'Load'}
               </button>
@@ -1052,11 +1054,12 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
               <button
                 type="button"
                 key={item.symbol}
+                aria-pressed={symbol === item.symbol}
                 onClick={() => {
                   setSearchInput(item.symbol);
                   fetchData(item.symbol, interval);
                 }}
-                className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-colors ${
+                className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50 ${
                   symbol === item.symbol
                     ? assetType === 'crypto'
                       ? 'border-orange-400 bg-orange-500/10 text-orange-200'
@@ -1105,8 +1108,9 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
                         <button
                           type="button"
                           key={int.value}
+                          aria-pressed={interval === int.value}
                           onClick={() => handleIntervalChange(int.value)}
-                          className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                          className={`rounded-md px-3 py-1.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 ${
                             interval === int.value
                               ? 'bg-emerald-600 text-white'
                               : 'text-gray-400 hover:bg-slate-700 hover:text-white'
@@ -1135,7 +1139,8 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
                   <button
                     type="button"
                     onClick={() => toggleIndicator('ema9')}
-                    className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+                    aria-pressed={indicators.includes('ema9')}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/50 ${
                       indicators.includes('ema9')
                         ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/50'
                         : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
@@ -1146,9 +1151,9 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
                   <button
                     type="button"
                     onClick={() => toggleIndicator('ema21')}
-                    className={`px-3 py-1 rounded-full text-xs font-medium transition ${
-                      indicators.includes('ema21')
-                        ? 'bg-orange-500/20 text-orange-400 border border-orange-500/50'
+                    aria-pressed={indicators.includes('ema21')}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/50 ${
+                      indicators.includes('ema21') ? 'bg-orange-500/20 text-orange-400 border border-orange-500/50'
                         : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
                     }`}
                   >
@@ -1157,9 +1162,9 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
                   <button
                     type="button"
                     onClick={() => toggleIndicator('sma20')}
-                    className={`px-3 py-1 rounded-full text-xs font-medium transition ${
-                      indicators.includes('sma20')
-                        ? 'bg-blue-500/20 text-blue-400 border border-blue-500/50'
+                    aria-pressed={indicators.includes('sma20')}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 ${
+                      indicators.includes('sma20') ? 'bg-blue-500/20 text-blue-400 border border-blue-500/50'
                         : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
                     }`}
                   >
@@ -1168,9 +1173,9 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
                   <button
                     type="button"
                     onClick={() => toggleIndicator('sma50')}
-                    className={`px-3 py-1 rounded-full text-xs font-medium transition ${
-                      indicators.includes('sma50')
-                        ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/50'
+                    aria-pressed={indicators.includes('sma50')}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 ${
+                      indicators.includes('sma50') ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/50'
                         : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
                     }`}
                   >
@@ -1179,9 +1184,9 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
                   <button
                     type="button"
                     onClick={() => toggleIndicator('vwap')}
-                    className={`px-3 py-1 rounded-full text-xs font-medium transition ${
-                      indicators.includes('vwap')
-                        ? 'bg-purple-500/20 text-purple-400 border border-purple-500/50'
+                    aria-pressed={indicators.includes('vwap')}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/50 ${
+                      indicators.includes('vwap') ? 'bg-purple-500/20 text-purple-400 border border-purple-500/50'
                         : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
                     }`}
                   >
@@ -1190,9 +1195,9 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
                   <button
                     type="button"
                     onClick={() => toggleIndicator('bollinger')}
-                    className={`px-3 py-1 rounded-full text-xs font-medium transition ${
-                      indicators.includes('bollinger')
-                        ? 'bg-gray-500/20 text-gray-300 border border-gray-500/50'
+                    aria-pressed={indicators.includes('bollinger')}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/50 ${
+                      indicators.includes('bollinger') ? 'bg-gray-500/20 text-gray-300 border border-gray-500/50'
                         : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
                     }`}
                   >
@@ -1202,7 +1207,7 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
                     <button
                       type="button"
                       onClick={() => setIndicators([])}
-                      className="ml-1 px-2 py-1 text-xs text-gray-500 hover:text-red-400 transition"
+                      className="ml-1 px-2 py-1 text-xs text-gray-500 hover:text-red-400 transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-red-400/50 rounded"
                     >
                       Clear
                     </button>
@@ -1212,9 +1217,9 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
                     <button
                       type="button"
                       onClick={() => setShowSessionMarkers(p => !p)}
-                      className={`px-3 py-1 rounded-full text-xs font-medium transition ${
-                        showSessionMarkers
-                          ? 'bg-sky-500/20 text-sky-400 border border-sky-500/50'
+                      aria-pressed={showSessionMarkers}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/50 ${
+                          showSessionMarkers ? 'bg-sky-500/20 text-sky-400 border border-sky-500/50'
                           : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
                       }`}
                     >
@@ -1224,9 +1229,9 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
                   <button
                     type="button"
                     onClick={() => setShowJournalOverlay(p => !p)}
-                    className={`px-3 py-1 rounded-full text-xs font-medium transition ${
-                      showJournalOverlay
-                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/50'
+                    aria-pressed={showJournalOverlay}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50 ${
+                        showJournalOverlay ? 'bg-amber-500/20 text-amber-400 border border-amber-500/50'
                         : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
                     }`}
                   >
@@ -1235,9 +1240,9 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
                   <button
                     type="button"
                     onClick={() => setCompareEnabled(p => !p)}
-                    className={`px-3 py-1 rounded-full text-xs font-medium transition ${
-                      compareEnabled
-                        ? 'bg-violet-500/20 text-violet-400 border border-violet-500/50'
+                    aria-pressed={compareEnabled}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/50 ${
+                        compareEnabled ? 'bg-violet-500/20 text-violet-400 border border-violet-500/50'
                         : 'bg-slate-700 text-gray-400 hover:bg-slate-600'
                     }`}
                   >
@@ -1275,8 +1280,9 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
                           <button
                             key={int.value}
                             type="button"
+                            aria-pressed={compareInterval === int.value}
                             onClick={() => setCompareInterval(int.value)}
-                            className={`rounded px-2 py-0.5 text-[10px] font-medium transition ${
+                            className={`rounded px-2 py-0.5 text-[10px] font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400/50 ${
                               compareInterval === int.value
                                 ? 'bg-violet-600 text-white'
                                 : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
@@ -1402,7 +1408,7 @@ export default function IntradayChartsPage({ symbol: propSymbol }: { symbol?: st
         )}
 
         <details className="rounded-lg border border-slate-700 bg-slate-900 p-2">
-          <summary className="cursor-pointer list-none text-sm font-medium text-slate-200">
+          <summary className="cursor-pointer list-none rounded text-sm font-medium text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/50">
             Help & methodology
           </summary>
           <div className="mt-4 grid gap-4 md:grid-cols-2 text-sm text-gray-400">
