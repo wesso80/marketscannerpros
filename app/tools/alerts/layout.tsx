@@ -20,10 +20,7 @@ export const metadata: Metadata = {
       'Smart price alerts with multi-condition logic, strategy-linked triggers, and live trigger logging.',
     images: ['/scan-banner.png'],
   },
-  alternates: {
-    canonical: 'https://marketscannerpros.app/tools/workspace?tab=alerts',
-  },
-  robots: { index: false, follow: true },
+  robots: { index: false, follow: false },
 };
 
 export default function AlertsLayout({ children }: { children: React.ReactNode }) {
