@@ -24,7 +24,7 @@ export default function DerivativesMarketStrip({ items }: DerivativesMarketStrip
                     </div>
                   </div>
                 ) : (
-                  <div className="text-gray-500 text-xs">Refreshing...</div>
+                  <div className="text-amber-400/70 text-xs">No data</div>
                 )}
               </div>
 

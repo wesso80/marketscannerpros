@@ -26,16 +26,18 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(false);
+  const [fetchErrors, setFetchErrors] = useState<string[]>([]);
 
   const fetchData = useCallback(async () => {
+    setLoading(true);
+    setFetchErrors([]);
     try {
-      // Use internal APIs that leverage CoinGecko commercial plan
       const [fundingRes, lsRes, oiRes, liqRes, heatmapRes] = await Promise.all([
-        fetch('/api/funding-rates').then(r => r.json()).catch(() => null),
-        fetch('/api/long-short-ratio').then(r => r.json()).catch(() => null),
-        fetch('/api/crypto/open-interest').then(r => r.json()).catch(() => null),
-        fetch('/api/crypto/liquidations').then(r => r.json()).catch(() => null),
-        fetch('/api/crypto/heatmap').then(r => r.json()).catch(() => null),
+        fetch('/api/funding-rates').then(r => r.ok ? r.json() : Promise.reject(`Funding ${r.status}`)).catch((e: unknown) => { setFetchErrors(prev => [...prev, String(e)]); return null; }),
+        fetch('/api/long-short-ratio').then(r => r.ok ? r.json() : Promise.reject(`Long/Short ${r.status}`)).catch((e: unknown) => { setFetchErrors(prev => [...prev, String(e)]); return null; }),
+        fetch('/api/crypto/open-interest').then(r => r.ok ? r.json() : Promise.reject(`OI ${r.status}`)).catch((e: unknown) => { setFetchErrors(prev => [...prev, String(e)]); return null; }),
+        fetch('/api/crypto/liquidations').then(r => r.ok ? r.json() : Promise.reject(`Liquidations ${r.status}`)).catch((e: unknown) => { setFetchErrors(prev => [...prev, String(e)]); return null; }),
+        fetch('/api/crypto/heatmap').then(r => r.ok ? r.json() : Promise.reject(`Heatmap ${r.status}`)).catch((e: unknown) => { setFetchErrors(prev => [...prev, String(e)]); return null; }),
       ]);
 
       // Extract BTC, ETH, SOL prices from heatmap (uses CoinGecko)
@@ -48,7 +50,7 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
         }
       }
 
-      setData({
+      const newData: DashboardData = {
         fundingRates: fundingRes?.coins ? { 
           coins: fundingRes.coins, 
           avgRate: parseFloat(fundingRes.average?.fundingRatePercent || '0'), 
@@ -63,10 +65,13 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
         openInterest: oiRes?.summary ? oiRes : null,
         liquidations: liqRes?.summary ? liqRes : null,
         prices,
-      });
-      setLastUpdate(new Date());
+      };
+      setData(newData);
+      // Only stamp lastUpdate when at least one data source returned real data
+      const hasData = newData.fundingRates || newData.longShort || newData.openInterest || newData.liquidations || Object.keys(prices).length > 0;
+      if (hasData) setLastUpdate(new Date());
     } catch (error) {
-      console.error('Failed to fetch crypto data:', error);
+      setFetchErrors(prev => [...prev, String(error)]);
     } finally {
       setLoading(false);
     }
@@ -87,11 +92,12 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
   const cryptoAutoLogRef = useRef<string>('');
   useEffect(() => {
     if (!data.prices.BTC) return; // data not loaded yet
+    // Only log when 24h move is meaningful (≥ 1%) to avoid noise from sub-tick moves
     const ideas = [
-      { sym: 'BTC', dir: (data.prices.BTC?.change24h || 0) > 0 ? 'Long' : 'Short', price: data.prices.BTC?.price },
-      { sym: 'ETH', dir: (data.prices.ETH?.change24h || 0) > 0 ? 'Long' : 'Short', price: data.prices.ETH?.price },
-      { sym: 'SOL', dir: (data.prices.SOL?.change24h || 0) > 0 ? 'Long' : 'Short', price: data.prices.SOL?.price },
-    ].filter(i => i.price && i.price > 0);
+      { sym: 'BTC', dir: (data.prices.BTC?.change24h || 0) > 0 ? 'Long' : 'Short', price: data.prices.BTC?.price, change: data.prices.BTC?.change24h || 0 },
+      { sym: 'ETH', dir: (data.prices.ETH?.change24h || 0) > 0 ? 'Long' : 'Short', price: data.prices.ETH?.price, change: data.prices.ETH?.change24h || 0 },
+      { sym: 'SOL', dir: (data.prices.SOL?.change24h || 0) > 0 ? 'Long' : 'Short', price: data.prices.SOL?.price, change: data.prices.SOL?.change24h || 0 },
+    ].filter(i => i.price && i.price > 0 && Math.abs(i.change) >= 1.0);
     for (const idea of ideas) {
       const key = `${idea.sym}:${idea.dir}`;
       if (cryptoAutoLogRef.current.includes(key)) continue;
@@ -373,11 +379,11 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
               <h2 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">Bias, rotation, and volatility for the morning derivatives review.</h2>
               <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-400">Funding, open interest, and liquidations compressed into a single bias gate. Educational only; not a trade signal.</p>
               <div className="mt-3 flex flex-wrap gap-2">
-                <button type="button" onClick={fetchData} disabled={loading} className={`rounded-md border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] transition-colors ${loading ? 'cursor-not-allowed border-amber-400/20 bg-amber-400/5 text-amber-200/60' : 'border-amber-400/35 bg-amber-400/10 text-amber-200 hover:bg-amber-400/15'}`}>
+                <button type="button" onClick={fetchData} disabled={loading} className={`rounded-md border px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 ${loading ? 'cursor-not-allowed border-amber-400/20 bg-amber-400/5 text-amber-200/60' : 'border-amber-400/35 bg-amber-400/10 text-amber-200 hover:bg-amber-400/15'}`}>
                   {loading ? 'Refreshing…' : 'Refresh data'}
                 </button>
-                <a href="/tools/options" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15">Open Options</a>
-                <a href="/tools/scanner" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Open Scanner</a>
+                <a href="/tools/options" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">Open Options</a>
+                <a href="/tools/scanner" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60">Open Scanner</a>
               </div>
               {lastUpdate && (
                 <p className="mt-2 text-[11px] text-slate-500">Last updated {lastUpdate.toLocaleTimeString()}</p>
@@ -435,7 +441,7 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
                 type="button"
                 onClick={fetchData}
                 disabled={loading}
-                className="rounded-lg bg-[#10B981] px-3 py-1.5 text-xs font-semibold text-white transition-all hover:bg-[#059669] disabled:opacity-50"
+                className="rounded-lg bg-[#10B981] px-3 py-1.5 text-xs font-semibold text-white transition-all hover:bg-[#059669] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
               >
                 {loading ? 'Refreshing...' : 'Refresh'}
               </button>
@@ -450,6 +456,13 @@ export default function CryptoDashboard({ embeddedInDashboard = false }: { embed
       <div className="mb-4">
         <ComplianceDisclaimer compact={embeddedInDashboard} variant="cryptoDerivatives" />
       </div>
+
+      {fetchErrors.length > 0 && (
+        <div role="alert" className="mb-4 rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-200">
+          <span className="font-semibold">Some data feeds unavailable:</span>{' '}
+          {fetchErrors.join(' · ')}. Displayed values may be incomplete or from a prior snapshot.
+        </div>
+      )}
 
       {/* Zone 0: keep state anchor */}
       <div className="mb-4">

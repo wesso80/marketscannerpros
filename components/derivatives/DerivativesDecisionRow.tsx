@@ -38,7 +38,7 @@ export default function DerivativesDecisionRow({
 
         <div className="rounded-xl border border-white/10 bg-black/10 p-3">
           <div className="text-sm font-semibold text-white">Why</div>
-          <div className="text-xs text-white/50">3 factors in today's analysis</div>
+          <div className="text-xs text-white/50">{drivers.filter(Boolean).length} factor{drivers.filter(Boolean).length !== 1 ? 's' : ''} in today's analysis</div>
           <div className="mt-3 grid gap-2">
             {drivers.map((item, idx) => (
               <div key={idx} className="rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-white">
