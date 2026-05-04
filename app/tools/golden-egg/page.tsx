@@ -70,7 +70,7 @@ function GoldenEggTabRail({ activeTab, onSelectTab }: { activeTab: GETab; onSele
           <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-amber-300">Validation workbench</div>
           <div className="text-[0.72rem] text-slate-500">Verdict first, then inspect chart, evidence detail, and business context.</div>
         </div>
-        <a href="/tools/liquidity-sweep" className="rounded-md border border-slate-700/70 bg-slate-900/60 px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.12em] text-slate-400 no-underline transition hover:border-emerald-400/30 hover:text-emerald-300">
+        <a href="/tools/liquidity-sweep" className="rounded-md border border-slate-700/70 bg-slate-900/60 px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.12em] text-slate-400 no-underline transition hover:border-emerald-400/30 hover:text-emerald-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50">
           Open Liquidity Sweep
         </a>
       </div>
@@ -85,7 +85,7 @@ function GoldenEggTabRail({ activeTab, onSelectTab }: { activeTab: GETab; onSele
               type="button"
               aria-pressed={isActive}
               onClick={() => onSelectTab(tab)}
-              className={`rounded-md border px-3 py-1.5 text-left transition ${
+              className={`rounded-md border px-3 py-1.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50 ${
                 isActive
                   ? 'border-emerald-400/40 bg-emerald-400/10 text-white'
                   : 'border-white/10 bg-white/[0.025] text-slate-300 hover:border-emerald-400/30 hover:bg-emerald-400/[0.05]'
@@ -141,9 +141,9 @@ function GoldenEggSubviewFrame({
             <h2 className="mt-1 text-xl font-black tracking-normal text-white md:text-2xl">{tab} check for {symbol}</h2>
             <p className="mt-1 text-xs leading-5 text-slate-400">{meta.description}</p>
             <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" onClick={() => onSelectTab('Verdict')} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 transition-colors hover:bg-amber-400/15">Review Verdict</button>
-              <button type="button" onClick={() => onSelectTab(adjacentTab)} className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 transition-colors hover:bg-emerald-400/15">Open {adjacentTab}</button>
-              <a href={`/tools/terminal?symbol=${encodeURIComponent(symbol)}`} className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Open Terminal</a>
+              <button type="button" onClick={() => onSelectTab('Verdict')} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 transition-colors hover:bg-amber-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60">Review Verdict</button>
+              <button type="button" onClick={() => onSelectTab(adjacentTab)} className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 transition-colors hover:bg-emerald-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">Open {adjacentTab}</button>
+              <a href={`/tools/terminal?symbol=${encodeURIComponent(symbol)}`} className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60">Open Terminal</a>
             </div>
           </div>
 
@@ -168,9 +168,9 @@ const GOLDEN_EGG_WORKFLOW_CHECKS = [
   'Next check',
 ] as const;
 
-function FlagshipMetric({ label, value, tone = '#94A3B8', title }: { label: string; value: string; tone?: string; title?: string }) {
+function FlagshipMetric({ label, value, tone = '#94A3B8', ariaLabel }: { label: string; value: string; tone?: string; ariaLabel?: string }) {
   return (
-    <div title={title} className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
+    <div aria-label={ariaLabel} className="min-h-[3.05rem] rounded-md border border-white/10 bg-slate-950/45 px-3 py-1.5">
       <div className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</div>
       <div className="mt-0.5 truncate text-sm font-black" style={{ color: tone }}>{value}</div>
     </div>
@@ -618,9 +618,9 @@ export default function GoldenEggPage() {
               ))}
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
-              <a href={`/tools/terminal?symbol=${encodeURIComponent(sym)}`} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15">Open Terminal</a>
-              <a href="/tools/scanner" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15">Open Scanner</a>
-              <a href="/tools/workspace?tab=backtest" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Open Backtest</a>
+              <a href={`/tools/terminal?symbol=${encodeURIComponent(sym)}`} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60">Open Terminal</a>
+              <a href="/tools/scanner" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">Open Scanner</a>
+              <a href="/tools/workspace?tab=backtest" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60">Open Backtest</a>
             </div>
           </div>
 
@@ -628,7 +628,7 @@ export default function GoldenEggPage() {
             <FlagshipMetric label="Symbol" value={sym} tone="#FBBF24" />
             <FlagshipMetric label="Assessment" value={ge ? geAssessmentLabel : loading ? 'Loading' : 'Awaiting data'} tone={verdictColor(geAssessment || 'WATCH')} />
             <FlagshipMetric label="Confluence" value={ge ? `${geConfluenceScore}%` : 'Pending'} tone={verdictColor(geAssessment || 'WATCH')} />
-            <FlagshipMetric label="Data Trust" value={geDataQuality} tone={geDataQualityColor(geDataQuality)} title={geDataQualityTitle} />
+            <FlagshipMetric label="Data Trust" value={geDataQuality} tone={geDataQualityColor(geDataQuality)} ariaLabel={geDataQualityTitle} />
           </div>
         </div>
 
@@ -642,9 +642,9 @@ export default function GoldenEggPage() {
                   onChange={(event) => setSymbolInput(event.target.value.toUpperCase())}
                   onKeyDown={(event) => event.key === 'Enter' && handleSymbolSubmit()}
                   placeholder="Enter symbol..."
-                  className="min-w-0 flex-1 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-sm text-white placeholder-slate-600 focus:border-amber-400 focus:outline-none"
+                  className="min-w-0 flex-1 rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-sm text-white placeholder-slate-600 focus:outline-none focus-visible:border-amber-400 focus-visible:ring-2 focus-visible:ring-amber-400/30"
                 />
-                <button type="button" onClick={handleSymbolSubmit} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.08em] text-amber-200 transition-colors hover:bg-amber-400/15">Review</button>
+                <button type="button" onClick={handleSymbolSubmit} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.08em] text-amber-200 transition-colors hover:bg-amber-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60">Review</button>
               </div>
 
               <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
@@ -654,7 +654,7 @@ export default function GoldenEggPage() {
                     type="button"
                     aria-pressed={symbol === sym}
                     onClick={() => selectSymbol(symbol)}
-                    className={`shrink-0 rounded-md border px-2.5 py-1.5 text-[11px] font-bold transition-colors ${
+                    className={`shrink-0 rounded-md border px-2.5 py-1.5 text-[11px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50 ${
                       symbol === sym ? 'border-amber-400/40 bg-amber-400/10 text-amber-200' : 'border-white/10 bg-white/[0.025] text-slate-400 hover:border-slate-600 hover:text-slate-200'
                     }`}
                   >
@@ -671,7 +671,7 @@ export default function GoldenEggPage() {
                       type="button"
                       aria-pressed={assetType === type}
                       onClick={() => setAssetType(type)}
-                      className={`px-2.5 py-1.5 text-[11px] font-bold uppercase transition-colors ${assetType === type ? 'bg-emerald-500/20 text-emerald-300' : 'text-slate-500 hover:bg-slate-800/60'}`}
+                      className={`px-2.5 py-1.5 text-[11px] font-bold uppercase transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50 ${assetType === type ? 'bg-emerald-500/20 text-emerald-300' : 'text-slate-500 hover:bg-slate-800/60'}`}
                     >
                       {type}
                     </button>
@@ -684,7 +684,7 @@ export default function GoldenEggPage() {
                       type="button"
                       aria-pressed={timeframe === timeframeOption.value}
                       onClick={() => setTimeframe(timeframeOption.value)}
-                      className={`rounded-md border px-2.5 py-1.5 text-[11px] font-bold transition-colors ${timeframe === timeframeOption.value ? 'border-emerald-500/35 bg-emerald-500/15 text-emerald-300' : 'border-[var(--msp-border)] text-slate-400 hover:bg-slate-800/60'}`}
+                      className={`rounded-md border px-2.5 py-1.5 text-[11px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50 ${timeframe === timeframeOption.value ? 'border-emerald-500/35 bg-emerald-500/15 text-emerald-300' : 'border-[var(--msp-border)] text-slate-400 hover:bg-slate-800/60'}`}
                     >
                       {timeframeOption.label}
                     </button>
@@ -716,8 +716,8 @@ export default function GoldenEggPage() {
               <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">Volatility, flow, and timing context</div>
             </div>
             <div className="mt-6 flex flex-col items-center justify-center gap-2 sm:flex-row">
-              <a href="/auth" className="inline-flex rounded-lg bg-emerald-500/20 px-4 py-2 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500/30">Sign In</a>
-              <a href="/pricing" className="inline-flex rounded-lg border border-white/10 px-4 py-2 text-xs font-semibold text-slate-300 transition hover:border-white/20 hover:text-white">See Pricing</a>
+              <a href="/auth" className="inline-flex rounded-lg bg-emerald-500/20 px-4 py-2 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">Sign In</a>
+              <a href="/pricing" className="inline-flex rounded-lg border border-white/10 px-4 py-2 text-xs font-semibold text-slate-300 transition hover:border-white/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/50">See Pricing</a>
             </div>
           </div>
         </Card>
@@ -763,7 +763,7 @@ export default function GoldenEggPage() {
           <div className="py-8 text-center">
             <div className="text-amber-300 text-sm mb-2">Market data unavailable for {sym}</div>
             <div className="text-[11px] text-slate-500 mb-4">{goldenEgg.error}</div>
-            <button type="button" onClick={() => goldenEgg.refetch()} className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-xs hover:bg-emerald-500/30">Retry</button>
+            <button type="button" onClick={() => goldenEgg.refetch()} className="px-4 py-2 bg-emerald-500/20 text-emerald-400 rounded-lg text-xs hover:bg-emerald-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">Retry</button>
           </div>
         </Card>
       )}
@@ -900,11 +900,11 @@ export default function GoldenEggPage() {
                   type="button"
                   onClick={handleSaveResearchCase}
                   disabled={savingCase}
-                  className="rounded-md border border-blue-500/40 bg-blue-500/10 px-3 py-1.5 text-xs font-extrabold uppercase tracking-[0.06em] text-blue-300 hover:bg-blue-500/20 transition-colors disabled:cursor-wait disabled:opacity-70 ml-auto"
+                  className="rounded-md border border-blue-500/40 bg-blue-500/10 px-3 py-1.5 text-xs font-extrabold uppercase tracking-[0.06em] text-blue-300 hover:bg-blue-500/20 transition-colors disabled:cursor-wait disabled:opacity-70 ml-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
                 >
                   {savingCase ? 'Saving...' : 'Save Case'}
                 </button>
-                <button onClick={() => navigateTo('terminal', sym)} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-xs font-extrabold uppercase tracking-[0.06em] text-slate-400 hover:bg-slate-700/50 transition-colors">
+                <button type="button" onClick={() => navigateTo('terminal', sym)} className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-xs font-extrabold uppercase tracking-[0.06em] text-slate-400 hover:bg-slate-700/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/50">
                   Open Terminal
                 </button>
               </div>
@@ -938,7 +938,7 @@ export default function GoldenEggPage() {
           {/* -- CROSS-MARKET INFLUENCE (Phase 5 — Dynamic + Static) ------- */}
           <Card>
             <details>
-              <summary className="cursor-pointer text-xs font-semibold text-emerald-400">Cross-Market Influence</summary>
+              <summary className="cursor-pointer rounded text-xs font-semibold text-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50">Cross-Market Influence</summary>
               <div className="mt-3">
 
             {/* Dynamic signals from regime API */}
@@ -1347,8 +1347,9 @@ export default function GoldenEggPage() {
                   ))}
                   {ge.meta.assetClass !== 'crypto' && (
                     <button
+                      type="button"
                       onClick={() => navigateTo('terminal', sym)}
-                      className="mt-2 text-[11px] text-emerald-400 hover:underline"
+                      className="mt-2 text-[11px] text-emerald-400 hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400/60 rounded"
                     >
                         Open Options Terminal
                     </button>
@@ -1394,7 +1395,7 @@ export default function GoldenEggPage() {
                 <span className="text-[11px] text-slate-500">Hypothetical R:R</span>
                 <span className="text-sm font-bold text-white ml-2">{isUsableNumber(geSafeScenario?.hypotheticalRr?.expectedR) ? `${geSafeScenario.hypotheticalRr.expectedR.toFixed(1)}R` : 'Unavailable'}</span>
               </div>
-              <button onClick={() => navigateTo('terminal', sym)} className="px-4 py-2 bg-slate-700/50 text-slate-400 rounded-lg text-xs hover:bg-slate-700/70 transition-colors">
+              <button type="button" onClick={() => navigateTo('terminal', sym)} className="px-4 py-2 bg-slate-700/50 text-slate-400 rounded-lg text-xs hover:bg-slate-700/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/50">
                 Open in Terminal
               </button>
             </div>

@@ -4,6 +4,7 @@ export const metadata: Metadata = {
   title: "Golden Egg",
   description:
     "Single-symbol educational confluence view: regime, bias, volatility, scenario levels, and data-quality context.",
+  robots: { index: false, follow: false },
   alternates: { canonical: "https://marketscannerpros.app/tools/golden-egg" },
   openGraph: {
     title: "Golden Egg | MarketScanner Pros",
