@@ -35,6 +35,7 @@ export interface SessionPayload {
   workspaceId: string;
   exp: number;
   iat?: number;
+  is_admin?: boolean;
 }
 
 export async function getSessionFromCookie(): Promise<SessionPayload | null> {

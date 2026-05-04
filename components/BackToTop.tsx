@@ -11,7 +11,7 @@ export default function BackToTop() {
   return (
     <button onClick={() => window.scrollTo({top:0,behavior:"smooth"})} aria-label="Back to top"
       style={{position:"fixed",right:"16px",bottom:"16px",padding:".6rem .8rem",borderRadius:".8rem",
-      border:"1px solid #27272a",background:"#111827",color:"#e5e5e5",cursor:"pointer",zIndex:50}}>
+      border:"1px solid var(--msp-border-strong)",background:"var(--msp-panel)",color:"var(--msp-text)",cursor:"pointer",zIndex:50}}>
       ↑ Top
     </button>
   );

@@ -207,7 +207,7 @@ export async function POST(req: NextRequest) {
       // User has an active trial - grant access without Stripe
       const workspaceId = hashWorkspaceId(normalizedEmail);
       const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * sessionDays;
-      const token = signSessionToken({ cid: `trial_${normalizedEmail}`, tier: trial.tier, workspaceId, exp });
+      const token = signSessionToken({ cid: `trial_${normalizedEmail}`, tier: trial.tier, workspaceId, exp, ...(admin ? { is_admin: true } : {}) });
       
       const daysLeft = Math.ceil((trial.expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
       
@@ -252,7 +252,7 @@ export async function POST(req: NextRequest) {
       // No Stripe customer — grant free tier access so user can explore and upgrade
       const workspaceId = hashWorkspaceId(normalizedEmail);
       const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * sessionDays;
-      const token = signSessionToken({ cid: `free_${normalizedEmail}`, tier: 'free', workspaceId, exp });
+      const token = signSessionToken({ cid: `free_${normalizedEmail}`, tier: 'free', workspaceId, exp, ...(admin ? { is_admin: true } : {}) });
       
       await trackSubscription(workspaceId, normalizedEmail, 'free', 'active', null, null, null, false);
       
@@ -273,9 +273,7 @@ export async function POST(req: NextRequest) {
       // Stripe customer exists but no active subscription — grant free tier
       const workspaceId = hashWorkspaceId(normalizedEmail);
       const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * sessionDays;
-      const token = signSessionToken({ cid: customerId, tier: 'free', workspaceId, exp });
-      
-      await trackSubscription(workspaceId, normalizedEmail, 'free', 'inactive', customerId, null, null, false);
+      const token = signSessionToken({ cid: customerId, tier: 'free', workspaceId, exp, ...(admin ? { is_admin: true } : {}) });
       
       loginLimiter.reset(ip);
       const body = { ok: true, tier: 'free', workspaceId, message: 'Welcome back! Your subscription is inactive. Upgrade to restore full access.' };
@@ -311,7 +309,7 @@ export async function POST(req: NextRequest) {
       metadata: { marketscanner_tier: tier, workspace_id: workspaceId },
     });
     const exp = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * sessionDays;
-    const token = signSessionToken({ cid: customerId, tier, workspaceId, exp });
+    const token = signSessionToken({ cid: customerId, tier, workspaceId, exp, ...(admin ? { is_admin: true } : {}) });
     const url = new URL(req.url);
     const debug = url.searchParams.get("debug") === "1";
     const isAdminDebug = debug && isValidAdminSecret(req.headers.get("x-admin-secret"), process.env.ADMIN_SECRET);

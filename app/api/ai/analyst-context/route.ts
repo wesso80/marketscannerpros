@@ -309,8 +309,8 @@ Generate the 4-tab analysis as JSON. Remember: if authorization is BLOCKED, Plan
     // Track usage
     try {
       await q(
-        `INSERT INTO ai_usage (workspace_id, question, response_length, tier, prompt_tokens, completion_tokens, total_tokens, model, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`,
+        `INSERT INTO ai_usage (workspace_id, question, response_length, tier, prompt_tokens, completion_tokens, total_tokens, model, feature, cache_hit, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())`,
         [
           workspaceId,
           `[auto-context] ${ctx.ticker || 'no-ticker'} ${ctx.pageSkill || ''}`.substring(0, 500),
@@ -320,6 +320,8 @@ Generate the 4-tab analysis as JSON. Remember: if authorization is BLOCKED, Plan
           response.usage?.completion_tokens || 0,
           response.usage?.total_tokens || 0,
           'gpt-4o-mini',
+          'analyst_context',
+          false,
         ],
       );
     } catch {

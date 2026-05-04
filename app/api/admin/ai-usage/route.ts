@@ -63,6 +63,8 @@ export async function GET(req: NextRequest) {
             tier,
             SUBSTRING(question, 1, 100) as question_preview,
             response_length,
+            feature,
+            cache_hit,
             created_at
           FROM ai_usage 
           ORDER BY created_at DESC

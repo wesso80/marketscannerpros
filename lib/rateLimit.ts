@@ -158,7 +158,9 @@ export const deepAnalysisLimiter = createRateLimiter("deep-analysis", {
  * Get client IP from Next.js request
  */
 export function getClientIP(req: Request): string {
-  // Render sets these headers
+  // Render sits behind a single trusted reverse proxy; leftmost IP in
+  // x-forwarded-for is the real client. If topology changes, validate
+  // the trusted proxy CIDR before trusting this header.
   const forwarded = req.headers.get("x-forwarded-for");
   if (forwarded) {
     return forwarded.split(",")[0].trim();

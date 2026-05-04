@@ -63,6 +63,7 @@ async function verify(token: string) {
     tier: string;
     workspaceId: string;
     exp: number;
+    is_admin?: boolean;
   };
 
   if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) return null;
@@ -81,10 +82,13 @@ function withNoIndexHeaders(res: NextResponse) {
 }
 
 function sessionMatchesAdminList(
-  session: { cid?: string } | null,
+  session: { cid?: string; is_admin?: boolean } | null,
   adminEmails: string[],
   adminCids: string[],
 ) {
+  // Prefer explicit is_admin flag encoded in the JWT at login time
+  if (session?.is_admin === true) return true;
+  // Fallback: CID-prefix check for sessions issued before is_admin was added
   const cid = session?.cid?.toLowerCase() || '';
   return Boolean(cid && (adminCids.includes(cid) || adminEmails.includes(cid)));
 }
@@ -96,6 +100,9 @@ const GLOBAL_API_MAX = 300;
 const apiHits = new Map<string, { count: number; windowStart: number }>();
 
 function getClientIP(req: NextRequest): string {
+  // Render sits behind a single trusted reverse proxy, so the leftmost IP in
+  // x-forwarded-for is the real client (not spoofable through the proxy chain).
+  // If the deployment topology changes, validate the CIDR of the trusted proxy first.
   return (
     req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
     req.headers.get('x-real-ip') ||

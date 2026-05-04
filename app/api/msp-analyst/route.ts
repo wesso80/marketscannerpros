@@ -893,8 +893,8 @@ Always mention which derivatives signals support or contradict your analysis.
     // Track usage in database (including tokens for cost tracking)
     try {
       await q(
-        `INSERT INTO ai_usage (workspace_id, question, response_length, tier, prompt_tokens, completion_tokens, total_tokens, model, created_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`,
+        `INSERT INTO ai_usage (workspace_id, question, response_length, tier, prompt_tokens, completion_tokens, total_tokens, model, feature, cache_hit, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())`,
         [
           workspaceId, 
           query.substring(0, 500), 
@@ -903,7 +903,9 @@ Always mention which derivatives signals support or contradict your analysis.
           usage?.prompt_tokens || 0,
           usage?.completion_tokens || 0,
           usage?.total_tokens || 0,
-          aiModel
+          aiModel,
+          'msp_analyst',
+          false,
         ]
       );
     } catch (dbErr) {

@@ -72,9 +72,9 @@ async function logAIUsage(
 ): Promise<void> {
   try {
     await q(
-      `INSERT INTO ai_usage (workspace_id, question, response_length, tier, prompt_tokens, completion_tokens, total_tokens, model, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`,
-      [workspaceId, question.slice(0, 500), responseLength, tier, promptTokens, completionTokens, totalTokens, AI_MODEL_BY_TIER[normalizeTier(tier)] || 'gpt-4o-mini']
+      `INSERT INTO ai_usage (workspace_id, question, response_length, tier, prompt_tokens, completion_tokens, total_tokens, model, feature, cache_hit, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())`,
+      [workspaceId, question.slice(0, 500), responseLength, tier, promptTokens, completionTokens, totalTokens, AI_MODEL_BY_TIER[normalizeTier(tier)] || 'gpt-4o-mini', 'copilot', false]
     );
   } catch (error) {
     console.error('Error logging AI usage:', error);

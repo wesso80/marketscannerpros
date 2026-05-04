@@ -113,6 +113,14 @@ export async function POST(req: NextRequest) {
     const workspaceId = session?.workspaceId || "free-mode";
     const tier = normalizeTier(session?.tier);
 
+    // Tier gate — portfolio AI analysis requires Pro or Pro Trader
+    if (tier === 'free' && !freeForAll) {
+      return NextResponse.json({
+        error: 'Portfolio AI analysis requires a Pro or Pro Trader subscription.',
+        upgradeRequired: true,
+      }, { status: 403 });
+    }
+
     // Check AI usage limits
     if (workspaceId !== "free-mode") {
       const dailyLimit = getDailyAiLimit(tier);
@@ -172,9 +180,9 @@ export async function POST(req: NextRequest) {
     if (workspaceId !== "free-mode") {
       try {
         await q(
-          `INSERT INTO ai_usage (workspace_id, question, response_length, tier, created_at)
-          VALUES ($1, $2, $3, $4, NOW())`,
-          [workspaceId, 'Portfolio Analysis', analysis.length, tier]
+          `INSERT INTO ai_usage (workspace_id, question, response_length, tier, feature, cache_hit, created_at)
+          VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+          [workspaceId, 'Portfolio Analysis', analysis.length, tier, 'portfolio_analyze', false]
         );
       } catch (e) {
         logger.error("Failed to log AI usage", e);
