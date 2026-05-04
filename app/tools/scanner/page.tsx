@@ -763,7 +763,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
   };
 
   return (
-    <div className="space-y-4 mt-4">
+    <section aria-label={`Analysis: ${detail.symbol}`} className="space-y-4 mt-4">
       {flashMsg && (
         <div className={`rounded-lg px-4 py-2.5 text-sm font-semibold ${flashMsg.type === 'success' ? 'border-emerald-500/40 bg-emerald-950/90 text-emerald-300 border' : 'border-rose-500/40 bg-rose-950/90 text-rose-300 border'}`}>
           {flashMsg.text}
@@ -783,7 +783,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
           Open Historical Test
         </Link>
         <button type="button" onClick={onClose}
-          className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60">
+          className="rounded-md border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-1.5 text-[0.68rem] font-extrabold uppercase tracking-[0.06em] text-[var(--msp-text-muted)] hover:bg-slate-700/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60">
           {returnLabel ?? 'Back to Scanner'}
         </button>
         </div>
@@ -810,7 +810,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
           <div className="text-[0.68rem] font-extrabold uppercase tracking-[0.08em] text-slate-500">Setup Quality</div>
           <div className="mt-1 text-[1.25rem] font-black text-white md:text-[1.45rem]">{confidence >= 75 ? 'A' : confidence >= 60 ? 'B' : confidence >= 45 ? 'C' : 'D'} Setup</div>
           <div className="text-[0.72rem] font-semibold text-slate-400">{confidence}% · {quality}</div>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-800">
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-800" role="progressbar" aria-valuenow={confidence} aria-valuemin={0} aria-valuemax={100} aria-label={`Setup confidence: ${confidence}%`}>
             <div style={{ width: `${confidence}%`, background: confBarColor, height: '100%' }} />
           </div>
         </div>
@@ -818,7 +818,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
           <div className="rounded-lg border p-3" style={{ borderColor: statusColor + '66', background: 'var(--msp-panel-2)' }}>
             <div className="text-[0.66rem] font-extrabold uppercase tracking-[0.08em] text-slate-500">Setup Alignment</div>
             <div className="mt-1 text-[0.88rem] font-black uppercase" style={{ color: statusColor }}>{researchStatus}</div>
-            <div title={dataQualityTitle} className="mt-2 inline-flex rounded border px-2 py-0.5 text-[11px] font-bold uppercase" style={{ color: dataQualityColor(dataQuality), borderColor: dataQualityColor(dataQuality) + '55', backgroundColor: dataQualityColor(dataQuality) + '15' }}>
+            <div title={dataQualityTitle} aria-label={`Data quality: ${dataQuality}${scoreQualityWarnings.length ? '. ' + scoreQualityWarnings.join('. ') : ''}`} className="mt-2 inline-flex rounded border px-2 py-0.5 text-[11px] font-bold uppercase" style={{ color: dataQualityColor(dataQuality), borderColor: dataQualityColor(dataQuality) + '55', backgroundColor: dataQualityColor(dataQuality) + '15' }}>
               Data {dataQuality}
             </div>
             {detail.providerStatus && (
@@ -939,7 +939,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
           </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
