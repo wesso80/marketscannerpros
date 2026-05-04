@@ -2350,8 +2350,9 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false }:
             rightSlot={
               <button
                 type="button"
+                aria-pressed={focusMode}
                 onClick={() => setFocusMode((prev) => !prev)}
-                className={`rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wide ${focusMode ? 'border-[var(--msp-border-strong)] bg-[var(--msp-panel)] text-[var(--msp-accent)]' : 'border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text-muted)]'}`}
+                className={`rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wide focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--msp-accent)]/50 ${focusMode ? 'border-[var(--msp-border-strong)] bg-[var(--msp-panel)] text-[var(--msp-accent)]' : 'border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text-muted)]'}`}
               >
                 {focusMode ? 'Focus On' : 'Focus'}
               </button>
@@ -2411,15 +2412,17 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false }:
             <span className="text-[0.66rem] font-bold uppercase tracking-[0.05em] text-slate-500">View Mode</span>
             <button
               type="button"
+              aria-pressed={operatorViewMode === 'guided'}
               onClick={() => setOperatorViewMode('guided')}
-              className={`rounded-full border px-2.5 py-1 text-[0.66rem] font-extrabold uppercase tracking-[0.04em] ${operatorViewMode === 'guided' ? 'border-[var(--msp-border-strong)] bg-[var(--msp-accent-glow)] text-[var(--msp-accent)]' : 'border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text-muted)]'}`}
+              className={`rounded-full border px-2.5 py-1 text-[0.66rem] font-extrabold uppercase tracking-[0.04em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--msp-accent)]/50 ${operatorViewMode === 'guided' ? 'border-[var(--msp-border-strong)] bg-[var(--msp-accent-glow)] text-[var(--msp-accent)]' : 'border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text-muted)]'}`}
             >
               Guided
             </button>
             <button
               type="button"
+              aria-pressed={operatorViewMode === 'advanced'}
               onClick={() => setOperatorViewMode('advanced')}
-              className={`rounded-full border px-2.5 py-1 text-[0.66rem] font-extrabold uppercase tracking-[0.04em] ${operatorViewMode === 'advanced' ? 'border-[var(--msp-border-strong)] bg-[var(--msp-accent-glow)] text-[var(--msp-accent)]' : 'border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text-muted)]'}`}
+              className={`rounded-full border px-2.5 py-1 text-[0.66rem] font-extrabold uppercase tracking-[0.04em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--msp-accent)]/50 ${operatorViewMode === 'advanced' ? 'border-[var(--msp-border-strong)] bg-[var(--msp-accent-glow)] text-[var(--msp-accent)]' : 'border-[var(--msp-border)] bg-[var(--msp-panel-2)] text-[var(--msp-text-muted)]'}`}
             >
               Advanced
             </button>
@@ -2728,7 +2731,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false }:
                   <button
                     type="button"
                     onClick={() => setOperatorViewMode('advanced')}
-                    className="rounded-full border border-[var(--msp-border-strong)] bg-[var(--msp-accent-glow)] px-3 py-1 text-[0.66rem] font-extrabold uppercase tracking-[0.05em] text-[var(--msp-accent)]"
+                    className="rounded-full border border-[var(--msp-border-strong)] bg-[var(--msp-accent-glow)] px-3 py-1 text-[0.66rem] font-extrabold uppercase tracking-[0.05em] text-[var(--msp-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--msp-accent)]/50"
                   >
                     Show Full Analysis
                   </button>
@@ -2747,9 +2750,10 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false }:
                 .map((section) => (
                 <button
                   type="button"
+                  aria-pressed={trapDoors[section.key]}
                   key={section.key}
                   onClick={() => activateSection(section.key)}
-                  className={`inline-flex cursor-pointer items-center gap-[0.35rem] rounded-full border border-[var(--msp-border)] px-[0.6rem] py-[0.3rem] text-[0.68rem] font-extrabold uppercase tracking-[0.04em] ${trapDoors[section.key] ? 'bg-[var(--msp-panel)] text-[var(--msp-text)]' : 'bg-[var(--msp-panel-2)] text-[var(--msp-text-muted)]'}`}
+                  className={`inline-flex cursor-pointer items-center gap-[0.35rem] rounded-full border border-[var(--msp-border)] px-[0.6rem] py-[0.3rem] text-[0.68rem] font-extrabold uppercase tracking-[0.04em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--msp-border-strong)]/50 ${trapDoors[section.key] ? 'bg-[var(--msp-panel)] text-[var(--msp-text)]' : 'bg-[var(--msp-panel-2)] text-[var(--msp-text-muted)]'}`}
                 >
                   <span>{section.label}</span>
                   <span className="font-bold normal-case text-slate-500">({section.count})</span>
@@ -2771,7 +2775,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false }:
                     type="button"
                     key={`collapsed-${door.key}`}
                     onClick={() => activateSection(door.key)}
-                    className="grid w-full cursor-pointer gap-[0.18rem] rounded-[10px] border border-dashed border-[var(--msp-border)] bg-[var(--msp-panel)] p-[0.58rem_0.7rem] text-left"
+                    className="grid w-full cursor-pointer gap-[0.18rem] rounded-[10px] border border-dashed border-[var(--msp-border)] bg-[var(--msp-panel)] p-[0.58rem_0.7rem] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--msp-border-strong)]/50"
                   >
                     <div className="text-[0.75rem] font-extrabold uppercase tracking-[0.04em] text-slate-200">
                       {door.title} • Collapsed
@@ -3615,7 +3619,7 @@ export default function OptionsConfluenceScanner({ embeddedInTerminal = false }:
             <div className="grid min-h-[clamp(220px,32vh,380px)] gap-[0.8rem] rounded-[18px] border border-[var(--msp-border-strong)] border-l-[3px] border-l-[var(--msp-border-strong)] bg-[var(--msp-panel)] p-[1.1rem_1.2rem] shadow-[var(--msp-shadow)]">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="text-[0.95rem] font-black tracking-[0.4px] text-slate-50">
-                  ⭐ MSP AI SETUP
+                  <span aria-hidden="true">⭐ </span>MSP AI SETUP
                 </div>
                 <div className="rounded-full border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-2 py-[2px] text-[0.72rem] font-bold text-[var(--msp-muted)]">
                   Powered by Nasdaq BX + FMV Options (LIVE)
