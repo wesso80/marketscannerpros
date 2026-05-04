@@ -5,15 +5,29 @@ import { useState, useEffect, useCallback } from 'react';
 export function useFavorites() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [degraded, setDegraded] = useState(false);
 
   const refresh = useCallback(async () => {
+    setError(null);
+    setDegraded(false);
     try {
       const res = await fetch('/api/favorites');
-      if (!res.ok) return;
+      if (res.status === 401) {
+        setError('Sign in to load your saved pages.');
+        setLoading(false);
+        return;
+      }
+      if (!res.ok) {
+        setError(`Failed to load pages (${res.status}).`);
+        setLoading(false);
+        return;
+      }
       const data = await res.json();
       setFavorites(data.favorites || []);
+      if (data.degraded) setDegraded(true);
     } catch {
-      // silent
+      setError('Network error — could not load saved pages.');
     } finally {
       setLoading(false);
     }
@@ -49,5 +63,5 @@ export function useFavorites() {
 
   const isFavorite = useCallback((pageKey: string) => favorites.includes(pageKey), [favorites]);
 
-  return { favorites, loading, addFavorite, removeFavorite, toggleFavorite, isFavorite, refresh };
+  return { favorites, loading, error, degraded, addFavorite, removeFavorite, toggleFavorite, isFavorite, refresh };
 }

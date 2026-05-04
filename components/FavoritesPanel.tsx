@@ -16,7 +16,7 @@ function MyPagesMetric({ label, value, tone = '#CBD5E1', detail }: { label: stri
 }
 
 export default function FavoritesPanel({ embeddedInDashboard = false }: { embeddedInDashboard?: boolean } = {}) {
-  const { favorites, loading, toggleFavorite, isFavorite } = useFavorites();
+  const { favorites, loading, error, degraded, toggleFavorite, isFavorite } = useFavorites();
   const [showBrowser, setShowBrowser] = useState(false);
   const [filterCat, setFilterCat] = useState<string | null>(null);
 
@@ -34,8 +34,21 @@ export default function FavoritesPanel({ embeddedInDashboard = false }: { embedd
     );
   }
 
+  if (error) {
+    return (
+      <div className="rounded-xl border border-amber-700/30 bg-amber-900/10 px-4 py-5 text-center">
+        <p className="text-sm font-semibold text-amber-300">{error}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
+      {degraded && (
+        <div className="rounded-lg border border-amber-700/30 bg-amber-900/10 px-3 py-2 text-xs text-amber-300">
+          Saved pages loaded from cache — database temporarily unavailable.
+        </div>
+      )}
       {embeddedInDashboard && (
         <section
           className="rounded-lg border border-emerald-400/20 bg-[linear-gradient(135deg,rgba(15,23,42,0.98),rgba(8,13,24,0.98))] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.18)]"
@@ -75,29 +88,35 @@ export default function FavoritesPanel({ embeddedInDashboard = false }: { embedd
       {favoriteTools.length > 0 ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {favoriteTools.map(tool => (
-            <Link
+            <div
               key={tool.key}
-              href={tool.href}
-              className="group relative rounded-xl border border-slate-700/50 bg-[rgba(15,23,42,0.6)] hover:border-emerald-500/40 hover:bg-[rgba(16,185,129,0.05)] transition-all p-3 flex flex-col gap-1.5"
+              className="group relative rounded-xl border border-slate-700/50 bg-[rgba(15,23,42,0.6)] hover:border-emerald-500/40 hover:bg-[rgba(16,185,129,0.05)] transition-all"
             >
+              <Link
+                href={tool.href}
+                className="flex flex-col gap-1.5 p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 rounded-xl"
+                aria-label={`Open ${tool.label}`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-700 bg-slate-950/50 text-[10px] font-black uppercase tracking-[0.08em] text-emerald-300">{tool.icon}</span>
+                  <span className="text-xs font-semibold text-white truncate">{tool.label}</span>
+                </div>
+                <span className="text-[10px] text-slate-400 line-clamp-2 leading-relaxed">{tool.description}</span>
+                {tool.tier && (
+                  <span className="text-[9px] uppercase tracking-wider mt-auto" style={{ color: tool.tier === 'pro_trader' ? '#A78BFA' : '#10B981' }}>
+                    {tool.tier.replace('_', ' ')}
+                  </span>
+                )}
+              </Link>
               <button
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(tool.key); }}
-                className="absolute top-2 right-2 text-amber-400 hover:text-amber-300 text-sm opacity-0 group-hover:opacity-100 transition-opacity"
-                title="Remove from favourites"
+                type="button"
+                onClick={() => toggleFavorite(tool.key)}
+                aria-label={`Remove ${tool.label} from My Pages`}
+                className="absolute top-2 right-2 text-amber-400 hover:text-amber-300 text-sm opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 rounded transition-opacity"
               >
                 ★
               </button>
-              <div className="flex items-center gap-2">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-700 bg-slate-950/50 text-[10px] font-black uppercase tracking-[0.08em] text-emerald-300">{tool.icon}</span>
-                <span className="text-xs font-semibold text-white truncate">{tool.label}</span>
-              </div>
-              <span className="text-[10px] text-slate-400 line-clamp-2 leading-relaxed">{tool.description}</span>
-              {tool.tier && (
-                <span className="text-[9px] uppercase tracking-wider mt-auto" style={{ color: tool.tier === 'pro_trader' ? '#A78BFA' : '#10B981' }}>
-                  {tool.tier.replace('_', ' ')}
-                </span>
-              )}
-            </Link>
+            </div>
           ))}
 
           {/* Add more button */}
@@ -139,18 +158,20 @@ export default function FavoritesPanel({ embeddedInDashboard = false }: { embedd
           </div>
 
           {/* Category filters */}
-          <div className="flex items-center gap-1 flex-wrap">
+          <div className="flex items-center gap-1 flex-wrap" role="group" aria-label="Filter by category">
             <button
+              type="button"
               onClick={() => setFilterCat(null)}
-              className={`px-2 py-0.5 text-[10px] rounded-full transition-colors ${!filterCat ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-transparent'}`}
+              className={`px-2 py-0.5 text-[10px] rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 ${!filterCat ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-transparent'}`}
             >
               All
             </button>
             {TOOL_CATEGORIES.map(cat => (
               <button
                 key={cat}
+                type="button"
                 onClick={() => setFilterCat(cat)}
-                className={`px-2 py-0.5 text-[10px] rounded-full transition-colors ${filterCat === cat ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-transparent'}`}
+                className={`px-2 py-0.5 text-[10px] rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 ${filterCat === cat ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:bg-slate-800/60 border border-transparent'}`}
               >
                 {cat}
               </button>
@@ -164,9 +185,12 @@ export default function FavoritesPanel({ embeddedInDashboard = false }: { embedd
               .map(tool => {
                 const faved = isFavorite(tool.key);
                 return (
-                  <div
+                  <button
                     key={tool.key}
-                    className={`flex items-center gap-2 rounded-lg p-2 border transition-colors cursor-pointer ${faved ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-slate-700/30 bg-slate-800/20 hover:border-slate-600/50'}`}
+                    type="button"
+                    aria-pressed={faved}
+                    aria-label={`${faved ? 'Remove' : 'Add'} ${tool.label} ${faved ? 'from' : 'to'} My Pages`}
+                    className={`flex items-center gap-2 rounded-lg p-2 border transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 ${faved ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-slate-700/30 bg-slate-800/20 hover:border-slate-600/50'}`}
                     onClick={() => toggleFavorite(tool.key)}
                   >
                     <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border border-slate-700 bg-slate-950/50 text-[10px] font-black uppercase tracking-[0.08em] text-slate-400">{tool.icon}</span>
@@ -174,10 +198,10 @@ export default function FavoritesPanel({ embeddedInDashboard = false }: { embedd
                       <div className="text-xs font-semibold text-white truncate">{tool.label}</div>
                       <div className="text-[10px] text-slate-500 truncate">{tool.description}</div>
                     </div>
-                    <span className={`text-sm flex-shrink-0 ${faved ? 'text-amber-400' : 'text-slate-600'}`}>
+                    <span className={`text-sm flex-shrink-0 ${faved ? 'text-amber-400' : 'text-slate-600'}`} aria-hidden="true">
                       {faved ? '★' : '☆'}
                     </span>
-                  </div>
+                  </button>
                 );
               })}
           </div>
