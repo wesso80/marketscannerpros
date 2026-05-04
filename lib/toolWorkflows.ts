@@ -22,8 +22,8 @@ export const primaryNavTools = [
   { href: '/tools/scanner', label: 'Scanner' },
   { href: '/tools/golden-egg', label: 'Golden Egg' },
   { href: '/tools/terminal', label: 'Terminal' },
-  { href: '/tools/workspace?tab=backtest', label: 'Backtest' },
-  { href: '/tools/workspace?tab=journal', label: 'Journal' },
+  { href: '/tools/explorer', label: 'Markets' },
+  { href: '/tools/research', label: 'Research' },
   { href: '/tools/workspace', label: 'Workspace' },
 ];
 
