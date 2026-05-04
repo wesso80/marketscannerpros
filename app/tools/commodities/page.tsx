@@ -693,6 +693,7 @@ export default function CommoditiesPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
+                    aria-pressed={selectedCategory === 'all'}
                     onClick={() => setSelectedCategory('all')}
                     className={`rounded-md border px-3 py-1 text-xs ${selectedCategory === 'all' ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-200' : 'border-white/15 bg-black/20 text-white/70'}`}
                   >
@@ -702,6 +703,7 @@ export default function CommoditiesPage() {
                     <button
                       type="button"
                       key={cat}
+                      aria-pressed={selectedCategory === cat}
                       onClick={() => setSelectedCategory(cat)}
                       className={`rounded-md border px-3 py-1 text-xs ${selectedCategory === cat ? 'border-white/30 bg-white/10 text-white' : 'border-white/15 bg-black/20 text-white/70'}`}
                     >
