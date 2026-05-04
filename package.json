@@ -34,7 +34,10 @@
     "worker:upe:global:close": "npx tsx worker/upe-global-regime.ts --type=close",
     "worker:upe:global:dry": "npx tsx worker/upe-global-regime.ts --type=open --dry-run",
     "worker:upe:crcs:hourly": "npx tsx worker/upe-crcs-hourly.ts",
-    "admin:audit": "npx tsx scripts/admin-audit.ts"
+    "admin:audit": "npx tsx scripts/admin-audit.ts",
+    "audit:admin:mock": "npx tsx scripts/audit/detect-mock-data.ts",
+    "audit:admin:freshness": "npx tsx scripts/audit/verify-data-freshness.ts",
+    "audit:admin": "npx tsx scripts/audit/detect-mock-data.ts && npx tsx scripts/audit/verify-data-freshness.ts"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

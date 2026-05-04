@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import AdminBoundaryBanner from "@/components/admin/AdminBoundaryBanner";
 import AdminCommandPalette from "@/components/admin/AdminCommandPalette";
+import { AdminModeProvider, AdminModeSwitcher } from "@/components/admin/AdminModeSwitcher";
 
 // Admin auth context
 const AdminContext = createContext<{
@@ -187,6 +188,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <AdminContext.Provider value={{ secret, setSecret, isAuthed, setIsAuthed }}>
+      <AdminModeProvider>
       <div style={{
         minHeight: "100vh",
         background: "var(--msp-bg)",
@@ -212,6 +214,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div style={{ color: "#10B981" }}>MSP Operator</div>
             <div style={{ color: "#64748B", fontSize: "0.72rem", letterSpacing: "0.16em", textTransform: "uppercase", marginTop: "0.25rem" }}>
               Private desk
+            </div>
+            <div style={{ marginTop: "0.75rem" }}>
+              <AdminModeSwitcher compact />
             </div>
           </div>
           
@@ -293,6 +298,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </main>
       </div>
       <AdminCommandPalette />
+      </AdminModeProvider>
     </AdminContext.Provider>
   );
 }

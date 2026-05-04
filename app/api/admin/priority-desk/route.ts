@@ -5,6 +5,7 @@ import { isOperator } from "@/lib/quant/operatorAuth";
 import { getAdminResearchPacketsForSymbols, type AdminResearchPacket } from "@/lib/admin/getAdminResearchPacket";
 import { appendResearchEvent } from "@/lib/admin/researchEventTape";
 import { buildAdminScanContext } from "@/lib/admin/scan-context";
+import { wrapTruth } from "@/lib/admin";
 
 export const runtime = "nodejs";
 
@@ -93,5 +94,21 @@ export async function GET(req: NextRequest) {
       drawdownPct: risk.dailyDrawdown,
       activePositions: risk.activePositions,
     },
+    // Truth Layer envelope — see .claude/ADMIN_TRUTH_LAYER.md.
+    // Lets the UI render freshness/source/missing-data badges without inferring them.
+    truth: wrapTruth(
+      { equities: bestEquities.length, crypto: bestCrypto.length, degraded: dataDegradedList.length },
+      {
+        source: "admin:priority-desk",
+        freshness: dataDegradedList.length > 0 ? "stale" : "real-time",
+        simulated: false,
+        missingFields: dataDegradedList.map((p) => p.symbol),
+        confidence: dataDegradedList.length > all.length / 3 ? "low" : dataDegradedList.length > 0 ? "medium" : "high",
+        confidenceReason:
+          dataDegradedList.length === 0
+            ? "All packets returned fresh data."
+            : `${dataDegradedList.length}/${all.length} packets degraded; downgraded confidence.`,
+      },
+    ),
   });
 }
