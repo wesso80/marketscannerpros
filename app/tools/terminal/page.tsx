@@ -541,7 +541,7 @@ export default function TerminalPage() {
                 <label className="mb-1 block text-[11px] uppercase tracking-wider text-slate-500">Horizon</label>
                 <div className="flex gap-1">
                   {HORIZON_OPTIONS.map((d) => (
-                    <button key={d} onClick={() => setHorizon(d)} className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${horizon === d ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'bg-slate-950/40 text-slate-400 border border-slate-800 hover:text-slate-200'}`}>
+                    <button key={d} type="button" aria-pressed={horizon === d} onClick={() => setHorizon(d)} className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 ${horizon === d ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'bg-slate-950/40 text-slate-400 border border-slate-800 hover:text-slate-200'}`}>
                       {d}d
                     </button>
                   ))}
@@ -551,7 +551,7 @@ export default function TerminalPage() {
                 <label className="mb-1 block text-[11px] uppercase tracking-wider text-slate-500">Anchor Mode</label>
                 <div className="flex gap-1">
                   {(['globex', 'rth', 'cash_bridge'] as const).map((mode) => (
-                    <button key={mode} onClick={() => setFuturesAnchorMode(mode)} className={`rounded-lg px-2.5 py-1.5 text-xs font-medium uppercase transition-colors ${futuresAnchorMode === mode ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-950/40 text-slate-400 border border-slate-800 hover:text-slate-200'}`}>
+                    <button key={mode} type="button" aria-pressed={futuresAnchorMode === mode} onClick={() => setFuturesAnchorMode(mode)} className={`rounded-lg px-2.5 py-1.5 text-xs font-medium uppercase transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 ${futuresAnchorMode === mode ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-950/40 text-slate-400 border border-slate-800 hover:text-slate-200'}`}>
                       {mode.replace('_', ' ')}
                     </button>
                   ))}
@@ -582,8 +582,8 @@ export default function TerminalPage() {
                     : 'Which timeframes close on your target day? Where do closes stack?'}
                 </div>
               </div>
-              <button onClick={() => calendar.refetch()} disabled={calendar.loading} className="rounded-lg border border-slate-700 bg-slate-950/50 px-2.5 py-1.5 text-xs font-semibold text-slate-100 disabled:opacity-40">
-                {calendar.loading ? 'Loading…' : 'Refresh'}
+              <button type="button" onClick={() => calendar.refetch()} disabled={calendar.loading} className="rounded-lg border border-slate-700 bg-slate-950/50 px-2.5 py-1.5 text-xs font-semibold text-slate-100 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50">
+                {calendar.loading ? 'Loading…' : '↻ Refresh'}
               </button>
             </div>
 
@@ -593,7 +593,7 @@ export default function TerminalPage() {
                 <label className="mb-1 block text-[11px] uppercase tracking-wider text-slate-500">Anchor</label>
                 <div className="flex gap-1 overflow-x-auto">
                   {ANCHOR_OPTIONS.map(o => (
-                    <button key={o.value} onClick={() => setAnchor(o.value)} className={`shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${anchor === o.value ? 'bg-[rgba(16,185,129,0.1)] text-[var(--msp-accent)] border border-[rgba(16,185,129,0.4)]' : 'bg-[var(--msp-panel-2)] text-[var(--msp-text-muted)] border border-[var(--msp-border)] hover:text-slate-200'}`}>
+                    <button key={o.value} type="button" aria-pressed={anchor === o.value} onClick={() => setAnchor(o.value)} className={`shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 ${anchor === o.value ? 'bg-[rgba(16,185,129,0.1)] text-[var(--msp-accent)] border border-[rgba(16,185,129,0.4)]' : 'bg-[var(--msp-panel-2)] text-[var(--msp-text-muted)] border border-[var(--msp-border)] hover:text-slate-200'}`}>
                       {o.label}
                     </button>
                   ))}
@@ -604,7 +604,7 @@ export default function TerminalPage() {
                   <label className="mb-1 block text-[11px] uppercase tracking-wider text-slate-500">Horizon</label>
                   <div className="flex gap-1">
                     {HORIZON_OPTIONS.map(d => (
-                      <button key={d} onClick={() => setHorizon(d)} className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${horizon === d ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40' : 'bg-slate-950/40 text-slate-400 border border-slate-800 hover:text-slate-200'}`}>
+                      <button key={d} type="button" aria-pressed={horizon === d} onClick={() => setHorizon(d)} className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 ${horizon === d ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40' : 'bg-slate-950/40 text-slate-400 border border-slate-800 hover:text-slate-200'}`}>
                         {d}d
                       </button>
                     ))}
@@ -637,7 +637,7 @@ export default function TerminalPage() {
                   <div className="mb-2 text-xs font-semibold text-slate-300">Close Cluster Timeline</div>
                   <div className="flex flex-wrap gap-2">
                     {calData.forwardClusters.slice(0, 8).map((cluster, i) => (
-                      <div key={i} className={`rounded-xl border px-3 py-2 cursor-pointer hover:ring-1 hover:ring-slate-500/40 transition-all ${clusterColors(cluster.clusterScore)}`}>
+                      <div key={i} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.currentTarget.click(); }} className={`rounded-xl border px-3 py-2 cursor-pointer hover:ring-1 hover:ring-slate-500/40 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 ${clusterColors(cluster.clusterScore)}`}>
                         <div className="text-[11px] font-semibold text-slate-100">{cluster.label}</div>
                         <div className="mt-0.5 flex flex-wrap gap-1">
                           {cluster.tfs.map(tf => (<span key={tf} className="rounded bg-slate-800/60 px-1.5 py-0.5 text-[11px] font-semibold text-slate-200">{tf}</span>))}
@@ -651,18 +651,18 @@ export default function TerminalPage() {
 
               {/* Toggle anchor day vs full schedule */}
               <div className="flex items-center gap-2 px-1">
-                <button onClick={() => setShowAnchorDay(true)} className={`rounded-lg px-3 py-1.5 text-xs font-medium ${showAnchorDay ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-400 hover:text-slate-200'}`}>
+                <button type="button" aria-pressed={showAnchorDay} onClick={() => setShowAnchorDay(true)} className={`rounded-lg px-3 py-1.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 ${showAnchorDay ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-400 hover:text-slate-200'}`}>
                   {isPriorDay ? 'Prior Day Closes' : 'Closes on Anchor Day'} ({anchorDayRows.length})
                 </button>
                 {!isPriorDay && (
-                  <button onClick={() => setShowAnchorDay(false)} className={`rounded-lg px-3 py-1.5 text-xs font-medium ${!showAnchorDay ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-slate-200'}`}>
+                  <button type="button" aria-pressed={!showAnchorDay} onClick={() => setShowAnchorDay(false)} className={`rounded-lg px-3 py-1.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 ${!showAnchorDay ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-slate-200'}`}>
                     Full Schedule ({filteredSchedule.length})
                   </button>
                 )}
                 {!showAnchorDay && (
                   <div className="ml-auto flex gap-1">
                     {(['all','daily','weekly','monthly','yearly'] as const).map(f => (
-                      <button key={f} onClick={() => setCalFilter(f)} className={`rounded px-2 py-1 text-[11px] font-medium uppercase ${calFilter === f ? 'bg-slate-700 text-slate-100' : 'text-slate-500 hover:text-slate-300'}`}>
+                      <button key={f} type="button" aria-pressed={calFilter === f} onClick={() => setCalFilter(f)} className={`rounded px-2 py-1 text-[11px] font-medium uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500/50 ${calFilter === f ? 'bg-slate-700 text-slate-100' : 'text-slate-500 hover:text-slate-300'}`}>
                         {f}
                       </button>
                     ))}
@@ -790,8 +790,8 @@ export default function TerminalPage() {
                   <h3 className="text-sm font-semibold text-white">Capital Flow — {sym}</h3>
                   <div className="flex items-center gap-2">
                     {fd.asof && <span className="text-[11px] text-slate-500">as of {new Date(fd.asof).toLocaleTimeString()}</span>}
-                    <button onClick={() => flow.refetch()} className="px-2 py-1 text-[11px] rounded border border-slate-700 text-slate-300 hover:bg-slate-800">
-                      Refresh
+                    <button type="button" onClick={() => flow.refetch()} className="px-2 py-1 text-[11px] rounded border border-slate-700 text-slate-300 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500/50">
+                      ↻ Refresh
                     </button>
                   </div>
                 </div>
@@ -994,9 +994,9 @@ export default function TerminalPage() {
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="border-b border-[var(--msp-border)]">
-                          <th className="text-left py-2 px-2 text-[11px] uppercase text-slate-500">Level</th>
-                          <th className="text-left py-2 px-2 text-[11px] uppercase text-slate-500">Label</th>
-                          <th className="text-right py-2 px-2 text-[11px] uppercase text-slate-500">Probability</th>
+                          <th scope="col" className="text-left py-2 px-2 text-[11px] uppercase text-slate-500">Level</th>
+                          <th scope="col" className="text-left py-2 px-2 text-[11px] uppercase text-slate-500">Label</th>
+                          <th scope="col" className="text-right py-2 px-2 text-[11px] uppercase text-slate-500">Probability</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1149,10 +1149,10 @@ function AnchorDayTable({ rows, asset }: { rows: ForwardCloseScheduleRow[]; asse
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead><tr className="border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-500">
-                  <th className="pb-1.5 pr-3 font-medium">TF</th>
-                  <th className="pb-1.5 pr-3 font-medium">Close Time</th>
-                  <th className="pb-1.5 pr-3 font-medium">In</th>
-                  <th className="pb-1.5 font-medium">Weight</th>
+                  <th scope="col" className="pb-1.5 pr-3 font-medium">TF</th>
+                  <th scope="col" className="pb-1.5 pr-3 font-medium">Close Time</th>
+                  <th scope="col" className="pb-1.5 pr-3 font-medium">In</th>
+                  <th scope="col" className="pb-1.5 font-medium">Weight</th>
                 </tr></thead>
                 <tbody>{catRows.map(row => (
                   <tr key={row.tf} className={`border-b border-slate-800/50 ${catBg(cat)}`}>
@@ -1177,13 +1177,13 @@ function FullScheduleTable({ rows, asset }: { rows: ForwardCloseScheduleRow[]; a
     <div className="overflow-x-auto">
       <table className="w-full text-left text-xs" style={{ minWidth: 600 }}>
         <thead><tr className="border-b border-slate-800 text-[11px] uppercase tracking-wider text-slate-500">
-          <th className="pb-1.5 pr-3 font-medium">TF</th>
-          <th className="pb-1.5 pr-3 font-medium">Category</th>
-          <th className="pb-1.5 pr-3 font-medium">Next Close</th>
-          <th className="pb-1.5 pr-3 font-medium">In</th>
-          <th className="pb-1.5 pr-3 font-medium">Closes</th>
-          <th className="pb-1.5 pr-3 font-medium">Anchor Day</th>
-          <th className="pb-1.5 font-medium">Weight</th>
+          <th scope="col" className="pb-1.5 pr-3 font-medium">TF</th>
+          <th scope="col" className="pb-1.5 pr-3 font-medium">Category</th>
+          <th scope="col" className="pb-1.5 pr-3 font-medium">Next Close</th>
+          <th scope="col" className="pb-1.5 pr-3 font-medium">In</th>
+          <th scope="col" className="pb-1.5 pr-3 font-medium">Closes</th>
+          <th scope="col" className="pb-1.5 pr-3 font-medium">Anchor Day</th>
+          <th scope="col" className="pb-1.5 font-medium">Weight</th>
         </tr></thead>
         <tbody>{rows.map(row => (
           <tr key={row.tf} className={`border-b border-slate-800/50 ${row.closesOnAnchorDay ? catBg(row.category) : ''}`}>

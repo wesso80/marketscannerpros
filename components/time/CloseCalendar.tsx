@@ -442,10 +442,10 @@ function AnchorDayTable({ rows, assetClass }: { rows: ForwardCloseScheduleRow[];
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-slate-800 text-[10px] uppercase tracking-wider text-slate-500">
-                    <th className="pb-1.5 pr-3 font-medium">TF</th>
-                    <th className="pb-1.5 pr-3 font-medium">Close Time</th>
-                    <th className="pb-1.5 pr-3 font-medium">In</th>
-                    <th className="pb-1.5 font-medium">Weight</th>
+                    <th scope="col" className="pb-1.5 pr-3 font-medium">TF</th>
+                    <th scope="col" className="pb-1.5 pr-3 font-medium">Close Time</th>
+                    <th scope="col" className="pb-1.5 pr-3 font-medium">In</th>
+                    <th scope="col" className="pb-1.5 font-medium">Weight</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -478,16 +478,18 @@ function FullScheduleTable({ rows, assetClass }: { rows: ForwardCloseScheduleRow
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-left text-xs" style={{ minWidth: '600px' }}>
+      <table className="w-full text-left text-xs" style={{ minWidth: '600px' }}
+      aria-label="Full close schedule"
+    >
         <thead>
           <tr className="border-b border-slate-800 text-[10px] uppercase tracking-wider text-slate-500">
-            <th className="pb-1.5 pr-3 font-medium">TF</th>
-            <th className="pb-1.5 pr-3 font-medium">Category</th>
-            <th className="pb-1.5 pr-3 font-medium">Next Close</th>
-            <th className="pb-1.5 pr-3 font-medium">In</th>
-            <th className="pb-1.5 pr-3 font-medium">Closes in Window</th>
-            <th className="pb-1.5 pr-3 font-medium">On Anchor Day</th>
-            <th className="pb-1.5 font-medium">Weight</th>
+            <th scope="col" className="pb-1.5 pr-3 font-medium">TF</th>
+            <th scope="col" className="pb-1.5 pr-3 font-medium">Category</th>
+            <th scope="col" className="pb-1.5 pr-3 font-medium">Next Close</th>
+            <th scope="col" className="pb-1.5 pr-3 font-medium">In</th>
+            <th scope="col" className="pb-1.5 pr-3 font-medium">Closes in Window</th>
+            <th scope="col" className="pb-1.5 pr-3 font-medium">On Anchor Day</th>
+            <th scope="col" className="pb-1.5 font-medium">Weight</th>
           </tr>
         </thead>
         <tbody>
