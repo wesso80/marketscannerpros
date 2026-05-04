@@ -662,6 +662,7 @@ export default function MarketMoversPage() {
                       <button
                         type="button"
                         key={id}
+                        aria-pressed={activeTab === id}
                         onClick={() => setActiveTab(id)}
                         className={`rounded-full border px-2 py-0.5 text-[11px] ${
                           activeTab === id
@@ -681,6 +682,7 @@ export default function MarketMoversPage() {
                       <button
                         type="button"
                         key={id}
+                        aria-pressed={assetFilter === id}
                         onClick={() => setAssetFilter(id)}
                         className={`rounded-full border px-2 py-0.5 text-[11px] ${
                           assetFilter === id
@@ -703,6 +705,7 @@ export default function MarketMoversPage() {
                     <button
                       type="button"
                       key={id}
+                      aria-pressed={setupMode === id}
                       onClick={() => setSetupMode(id)}
                       className={`rounded-full border px-2 py-0.5 text-[11px] ${
                         setupMode === id
@@ -796,18 +799,18 @@ export default function MarketMoversPage() {
                   <table className="w-full min-w-[900px] text-xs">
                     <thead className="sticky top-0 z-10 bg-slate-900">
                       <tr className="text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-700">
-                        <th className="px-2.5 py-2 text-left">Symbol</th>
-                        <th className="px-2.5 py-2 text-right">%Chg</th>
-                        <th className="px-2.5 py-2 text-right">RelVol</th>
-                        <th className="px-2.5 py-2 text-left">Structure</th>
-                        <th className="px-2.5 py-2 text-right">RSI</th>
-                        <th className="px-2.5 py-2 text-right">EMA200</th>
-                        <th className="px-2.5 py-2 text-center">RS</th>
-                        <th className="px-2.5 py-2 text-center">Accel</th>
-                        <th className="px-2.5 py-2 text-right">CRCS</th>
-                        <th className="px-2.5 py-2 text-right">Confluence</th>
-                        <th className="px-2.5 py-2 text-center">Deploy</th>
-                        <th className="px-2.5 py-2 text-center">Action</th>
+                        <th scope="col" className="px-2.5 py-2 text-left">Symbol</th>
+                        <th scope="col" className="px-2.5 py-2 text-right">%Chg</th>
+                        <th scope="col" className="px-2.5 py-2 text-right">RelVol</th>
+                        <th scope="col" className="px-2.5 py-2 text-left">Structure</th>
+                        <th scope="col" className="px-2.5 py-2 text-right">RSI</th>
+                        <th scope="col" className="px-2.5 py-2 text-right">EMA200</th>
+                        <th scope="col" className="px-2.5 py-2 text-center">RS</th>
+                        <th scope="col" className="px-2.5 py-2 text-center">Accel</th>
+                        <th scope="col" className="px-2.5 py-2 text-right">CRCS</th>
+                        <th scope="col" className="px-2.5 py-2 text-right">Confluence</th>
+                        <th scope="col" className="px-2.5 py-2 text-center">Deploy</th>
+                        <th scope="col" className="px-2.5 py-2 text-center">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800">
@@ -961,6 +964,7 @@ export default function MarketMoversPage() {
                     <button
                       type="button"
                       key={id}
+                      aria-pressed={logTab === id}
                       onClick={() => setLogTab(id)}
                       className={`rounded-full border px-2 py-0.5 text-[11px] ${
                         logTab === id
