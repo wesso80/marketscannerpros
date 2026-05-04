@@ -472,7 +472,7 @@ export default function DashboardPage() {
         ) : (
           <div className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
             {[...cached.equity.slice(0, 3), ...cached.crypto.slice(0, 2)].map((r: CachedSymbol) => (
-              <div key={r.symbol} role="button" tabIndex={0} aria-label={`Open Golden Egg for ${r.symbol}`} className="rounded-md border border-white/10 bg-slate-950/30 px-2 py-1.5 text-xs cursor-pointer hover:border-emerald-400/25 hover:bg-emerald-400/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50" onClick={() => openGoldenEgg(r.symbol)} onKeyDown={(e) => onSymbolRowKey(e, r.symbol)}>
+              <button key={r.symbol} type="button" aria-label={`Open Golden Egg for ${r.symbol}`} className="rounded-md border border-white/10 bg-slate-950/30 px-2 py-1.5 text-xs text-left cursor-pointer hover:border-emerald-400/25 hover:bg-emerald-400/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50" onClick={() => openGoldenEgg(r.symbol)}>
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-semibold text-white">{r.symbol}</span>
                   <span className={`font-mono tabular-nums ${r.changePct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{r.changePct >= 0 ? '+' : ''}{r.changePct.toFixed(2)}%</span>
@@ -481,7 +481,7 @@ export default function DashboardPage() {
                   <span style={{ color: directionColor(r.direction) }}>{r.direction === 'bullish' ? 'Bullish' : r.direction === 'bearish' ? 'Bearish' : 'Neutral'} · {r.score}</span>
                   <span className="font-mono tabular-nums text-slate-300">{fmtPrice(r.price)}</span>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}
