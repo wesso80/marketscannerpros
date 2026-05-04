@@ -402,7 +402,8 @@ export default function TimeScannerPage({ embeddedInTerminal = false }: { embedd
   } | null>(null);
 
   const runScan = async (overrides?: { symbol?: string; scanMode?: ScanModeType }) => {
-    const effectiveSymbol = (overrides?.symbol ?? symbol).trim().toUpperCase();
+    // Strip leading slash from CME-style futures tickers (e.g. /ES → ES, /NQ → NQ)
+    const effectiveSymbol = (overrides?.symbol ?? symbol).trim().toUpperCase().replace(/^\//, '');
     const effectiveMode = overrides?.scanMode ?? scanMode;
     if (!effectiveSymbol) return;
 

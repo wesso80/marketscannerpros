@@ -77,8 +77,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScanRespo
       }, { status: 400 });
     }
 
-    // Normalize symbol
-    const normalizedSymbol = symbol.toUpperCase().trim();
+    // Normalize symbol — strip leading slash from CME-style futures tickers (e.g. /ES → ES, /NQ → NQ)
+    const normalizedSymbol = symbol.toUpperCase().trim().replace(/^\//, '');
 
     // Calendar mode is pure computation (no API calls) — skip cache entirely
     // so anchor / horizon / date changes always return fresh data
