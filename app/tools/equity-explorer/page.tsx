@@ -217,7 +217,7 @@ function MiniChart({ data }: { data: Array<{ close: number }> }) {
   }).join(' ');
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="block w-full max-w-[200px]" preserveAspectRatio="none">
+    <svg viewBox={`0 0 ${width} ${height}`} className="block w-full max-w-[200px]" preserveAspectRatio="none" aria-hidden="true">
       <polyline
         fill="none"
         stroke={color}
@@ -514,6 +514,7 @@ export default function EquityExplorerPage() {
               <button
                 type="button"
                 key={stock.symbol}
+                aria-pressed={symbol === stock.symbol}
                 onClick={() => {
                   setSearchInput(stock.symbol);
                   fetchEquityData(stock.symbol);
@@ -892,7 +893,14 @@ export default function EquityExplorerPage() {
                       <span className="text-gray-400">52-Week Range</span>
                       <span className="text-gray-300">{formatPrice(data.technicals.week52Low)} - {formatPrice(data.technicals.week52High)}</span>
                     </div>
-                    <div className="relative h-2 bg-slate-700 rounded-full">
+                    <div
+                      role="progressbar"
+                      aria-valuenow={Math.round(Math.min(Math.max(data.technicals.week52Position, 0), 100))}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label="52-week price position"
+                      className="relative h-2 bg-slate-700 rounded-full"
+                    >
                       <div 
                         className="absolute h-full bg-emerald-500 rounded-full"
                         style={{ width: `${Math.min(Math.max(data.technicals.week52Position, 0), 100)}%` }}
@@ -966,11 +974,11 @@ export default function EquityExplorerPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-gray-400 border-b border-slate-700">
-                        <th className="text-left py-2">Quarter</th>
-                        <th className="text-right py-2">Reported</th>
-                        <th className="text-right py-2">Estimated</th>
-                        <th className="text-right py-2">Actual</th>
-                        <th className="text-right py-2">Surprise</th>
+                        <th scope="col" className="text-left py-2">Quarter</th>
+                        <th scope="col" className="text-right py-2">Reported</th>
+                        <th scope="col" className="text-right py-2">Estimated</th>
+                        <th scope="col" className="text-right py-2">Actual</th>
+                        <th scope="col" className="text-right py-2">Surprise</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1010,7 +1018,14 @@ export default function EquityExplorerPage() {
                         <span className={`font-bold ${sentiment.color}`}>
                           {sentiment.score}% {sentiment.label}
                         </span>
-                        <div className="w-16 h-2 bg-slate-600 rounded-full overflow-hidden">
+                        <div
+                          role="progressbar"
+                          aria-valuenow={sentiment.score}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-label={`News sentiment score: ${sentiment.score}%`}
+                          className="w-16 h-2 bg-slate-600 rounded-full overflow-hidden"
+                        >
                           <div 
                             className={`h-full rounded-full ${
                               sentiment.score > 60 ? 'bg-green-500' : 
