@@ -509,12 +509,12 @@ function RankedDesktopFallbackTable({ rows, activeRegime, onRowClick }: { rows: 
       <table className="w-full text-xs" style={{ minWidth: 840 }} aria-label="Ranked scanner fallback rows">
         <thead>
           <tr className="border-b border-[var(--msp-border)]">
-            <th className="text-left py-2 px-2 text-[11px] uppercase tracking-wider text-slate-500">Symbol</th>
-            <th className="text-left py-2 px-2 text-[11px] uppercase tracking-wider text-slate-500">MSP</th>
-            <th className="text-left py-2 px-2 text-[11px] uppercase tracking-wider text-slate-500">Bias</th>
-            <th className="text-left py-2 px-2 text-[11px] uppercase tracking-wider text-slate-500">Alignment</th>
-            <th className="text-left py-2 px-2 text-[11px] uppercase tracking-wider text-slate-500">Lifecycle</th>
-            <th className="text-right py-2 px-2 text-[11px] uppercase tracking-wider text-slate-500">Review</th>
+            <th scope="col" className="text-left py-2 px-2 text-[11px] uppercase tracking-wider text-slate-500">Symbol</th>
+            <th scope="col" className="text-left py-2 px-2 text-[11px] uppercase tracking-wider text-slate-500">MSP</th>
+            <th scope="col" className="text-left py-2 px-2 text-[11px] uppercase tracking-wider text-slate-500">Bias</th>
+            <th scope="col" className="text-left py-2 px-2 text-[11px] uppercase tracking-wider text-slate-500">Alignment</th>
+            <th scope="col" className="text-left py-2 px-2 text-[11px] uppercase tracking-wider text-slate-500">Lifecycle</th>
+            <th scope="col" className="text-right py-2 px-2 text-[11px] uppercase tracking-wider text-slate-500">Review</th>
           </tr>
         </thead>
         <tbody>
@@ -1338,7 +1338,7 @@ export default function ScannerPage() {
 
   function SortHeader({ k, label, w }: { k: SortKey; label: string; w: string }) {
     return (
-      <th className={`${w} text-left py-2 px-2 whitespace-nowrap`}>
+      <th scope="col" className={`${w} text-left py-2 px-2 whitespace-nowrap`}>
         <button
           type="button"
           onClick={() => toggleSort(k)}
@@ -1567,12 +1567,12 @@ export default function ScannerPage() {
                       <SortHeader k="price" label="Price" w="w-20" />
                       <SortHeader k="direction" label="Bias" w="w-16" />
                       <SortHeader k="confidence" label="Alignment" w="w-16" />
-                      <th className="w-24 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Reason</th>
-                      <th className="w-16 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Trust</th>
-                      <th className="w-20 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">DVE</th>
-                      <th className="w-16 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Regime</th>
-                      <th className="w-16 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Lifecycle</th>
-                      <th className="w-16 text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Review</th>
+                      <th scope="col" className="w-24 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Reason</th>
+                      <th scope="col" className="w-16 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Trust</th>
+                      <th scope="col" className="w-20 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">DVE</th>
+                      <th scope="col" className="w-16 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Regime</th>
+                      <th scope="col" className="w-16 text-left text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Lifecycle</th>
+                      <th scope="col" className="w-16 text-[11px] uppercase tracking-wider text-slate-500 py-2 px-2 whitespace-nowrap">Review</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1588,7 +1588,6 @@ export default function ScannerPage() {
                       return (
                         <tr
                           key={r.symbol}
-                          role="button"
                           tabIndex={0}
                           className="border-b border-slate-800/40 hover:bg-slate-800/30 focus:bg-slate-800/40 focus:outline-none cursor-pointer transition-colors"
                           onClick={() => handleV2RowClick(r)}
@@ -1598,7 +1597,6 @@ export default function ScannerPage() {
                               handleV2RowClick(r);
                             }
                           }}
-                          aria-label={`Review scenario for ${r.symbol}`}
                         >
                           <td className="py-2.5 px-2 whitespace-nowrap"><div className="font-bold text-white">{r.symbol}</div><div className="text-[11px] text-slate-600">{regimeLabel}</div></td>
                           <td className="py-2.5 px-2 text-center whitespace-nowrap"><span className="text-sm font-black" style={{ color: mspColor }}>{msp}</span></td>

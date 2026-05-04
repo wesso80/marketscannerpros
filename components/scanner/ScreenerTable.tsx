@@ -273,6 +273,7 @@ export default function ScreenerTable({ rows, onRowClick, selectedSymbol }: Scre
           <tr>
             {COLUMNS.map((col) => (
               <th
+                scope="col"
                 key={col.key}
                 onClick={() => toggleSort(col.key)}
                 style={{
