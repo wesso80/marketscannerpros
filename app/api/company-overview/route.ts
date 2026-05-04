@@ -5,11 +5,21 @@ import { apiLimiter, getClientIP } from '@/lib/rateLimit';
 
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY;
 
+// Inline tier check — Pro or Pro Trader required (mirrors canAccessPortfolioInsights)
+function hasFundamentalsAccess(tier: string | undefined): boolean {
+  return tier === 'pro' || tier === 'pro_trader';
+}
+
 export async function GET(request: NextRequest) {
   // Auth guard: AV license requires authenticated users only
   const session = await getSessionFromCookie();
   if (!session?.workspaceId) {
     return NextResponse.json({ error: 'Please log in to access company data' }, { status: 401 });
+  }
+
+  // Tier gate: Company Overview is a Pro feature — enforce server-side
+  if (!hasFundamentalsAccess(session.tier)) {
+    return NextResponse.json({ error: 'Pro subscription required for company fundamentals' }, { status: 403 });
   }
 
   // Rate limit
@@ -44,16 +54,23 @@ export async function GET(request: NextRequest) {
       quoteData = await quoteResponse.json();
     }
     
-    if (data['Error Message'] || data['Note']) {
+    if (data['Error Message']) {
       return NextResponse.json(
-        { error: data['Error Message'] || data['Note'] },
+        { error: data['Error Message'] },
+        { status: 400 }
+      );
+    }
+    if (data['Note'] || data['Information']) {
+      // AV rate limit or quota message — return 429 with clear message
+      return NextResponse.json(
+        { error: 'Market data provider rate limit reached. Please try again in a moment.' },
         { status: 429 }
       );
     }
     
     if (!data.Symbol) {
       return NextResponse.json(
-        { error: 'Company not found' },
+        { error: 'Company not found or symbol not supported' },
         { status: 404 }
       );
     }
@@ -106,6 +123,9 @@ export async function GET(request: NextRequest) {
         // New: current price data
         currentPrice,
         changePercent,
+        // Data provenance — when MSP fetched this from Alpha Vantage
+        fetchedAt: new Date().toISOString(),
+        dataSource: 'alpha_vantage',
       }
     });
   } catch (error) {

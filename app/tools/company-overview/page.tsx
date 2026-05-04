@@ -37,6 +37,8 @@ interface CompanyData {
   beta: string;
   currentPrice: string | null;
   changePercent: string | null;
+  fetchedAt?: string | null;
+  dataSource?: string | null;
 }
 
 function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
@@ -438,11 +440,11 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
               <p style={{ color: "var(--msp-text-muted)", lineHeight: "1.7", fontSize: "14px", overflowWrap: "anywhere", wordBreak: "break-word" }}>{data.description}</p>
             </div>
 
-            {/* AI Decision Lens - Pro feature */}
+            {/* Research Lens - Pro feature */}
             {decisionLens && canAccessPortfolioInsights(tier) && (
               <div style={{ background: "var(--msp-panel)", borderRadius: "16px", border: "1px solid var(--msp-border)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
                 <h3 style={{ fontSize: "1.25rem", fontWeight: "bold", color: "var(--msp-accent)", marginBottom: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
-                  <span style={{ border: "1px solid var(--msp-border)", borderRadius: 8, padding: "3px 6px", color: "var(--msp-accent)", fontSize: "11px", fontWeight: 800 }}>AI</span> AI Decision Lens
+                  <span aria-hidden="true" style={{ border: "1px solid var(--msp-border)", borderRadius: 8, padding: "3px 6px", color: "var(--msp-accent)", fontSize: "11px", fontWeight: 800 }}>FX</span> Research Lens
                 </h3>
                 <p style={{ color: "var(--msp-text)", lineHeight: "1.8", fontSize: "15px", marginBottom: "12px" }}>
                   <strong>Overall View:</strong> {decisionLens.summary}
@@ -452,6 +454,9 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
                     {decisionLens.fit}
                   </p>
                 )}
+                <p style={{ color: "var(--msp-text-faint)", fontSize: "12px", marginTop: "10px" }}>
+                  Algorithmically derived from reported financial metrics. Not AI-generated or investment advice.
+                </p>
               </div>
             )}
 
@@ -461,7 +466,7 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
                 {/* Bull Case */}
                 <div style={{ background: "var(--msp-bull-tint)", borderRadius: "16px", border: "1px solid var(--msp-bull)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
                   <h3 style={{ fontSize: "1.1rem", fontWeight: "bold", color: "var(--msp-bull)", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span>BULL</span> Bull Case
+                    <span aria-hidden="true">BULL</span> Bull Case
                   </h3>
                   {bullCase.length > 0 ? (
                     <ul style={{ margin: 0, paddingLeft: "20px", color: "var(--msp-text-muted)", lineHeight: "2" }}>
@@ -477,7 +482,7 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
                 {/* Bear Case */}
                 <div style={{ background: "var(--msp-bear-tint)", borderRadius: "16px", border: "1px solid var(--msp-bear)", boxShadow: "var(--msp-shadow)", padding: "24px" }}>
                   <h3 style={{ fontSize: "1.1rem", fontWeight: "bold", color: "var(--msp-bear)", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span>RISK</span> Risk Case
+                    <span aria-hidden="true">RISK</span> Risk Case
                   </h3>
                   {bearCase.length > 0 ? (
                     <ul style={{ margin: 0, paddingLeft: "20px", color: "var(--msp-text-muted)", lineHeight: "2" }}>
@@ -504,7 +509,7 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
                 gap: "12px",
                 flexWrap: "wrap"
               }}>
-                <span style={{ fontSize: "1.5rem" }}>{technicalBias.icon}</span>
+                <span aria-hidden="true" style={{ fontSize: "1.5rem" }}>{technicalBias.icon}</span>
                 <div>
                   <span style={{ color: technicalBias.color, fontWeight: "bold", fontSize: "15px" }}>
                     Technical Bias: {technicalBias.bias}
@@ -553,6 +558,11 @@ function CompanyOverviewContent({ propSymbol }: { propSymbol?: string }) {
               <p style={{ color: "var(--msp-text-faint)", fontSize: "12px", marginTop: "10px" }}>
                 Analyst targets and valuation comparisons are third-party data points for educational research only. They are not MarketScanner Pros recommendations or price forecasts.
               </p>
+              {data.fetchedAt && (
+                <p style={{ color: "var(--msp-text-faint)", fontSize: "11px", marginTop: "6px" }}>
+                  Data retrieved {new Date(data.fetchedAt).toLocaleString()} · Source: Alpha Vantage
+                </p>
+              )}
             </div>
 
             {/* Profitability */}
@@ -652,10 +662,10 @@ function MetricCard({
   valueColor?: string;
 }) {
   return (
-    <div style={{ padding: "16px", background: "var(--msp-panel)", borderRadius: "12px", border: "1px solid var(--msp-border)" }}>
-      <div style={{ fontSize: "13px", color: "var(--msp-text-muted)", marginBottom: "8px" }}>{label}</div>
-      <div style={{ fontSize: "1.15rem", fontWeight: "bold", color: valueColor || "var(--msp-text)" }}>{value}</div>
-      {subValue && <div style={{ marginTop: "4px" }}>{subValue}</div>}
-    </div>
+    <dl style={{ padding: "16px", background: "var(--msp-panel)", borderRadius: "12px", border: "1px solid var(--msp-border)", margin: 0 }}>
+      <dt style={{ fontSize: "13px", color: "var(--msp-text-muted)", marginBottom: "8px" }}>{label}</dt>
+      <dd style={{ fontSize: "1.15rem", fontWeight: "bold", color: valueColor || "var(--msp-text)", margin: 0 }}>{value}</dd>
+      {subValue && <dd style={{ marginTop: "4px", margin: 0 }}>{subValue}</dd>}
+    </dl>
   );
 }
