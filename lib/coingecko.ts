@@ -409,6 +409,17 @@ export interface CoinGeckoPrice {
   usd_24h_change?: number;
   usd_24h_vol?: number;
   usd_market_cap?: number;
+  /** Unix timestamp (seconds) from CoinGecko — present when include_last_updated_at=true */
+  last_updated_at?: number;
+}
+
+/**
+ * Returns true if a CoinGecko snapshot is considered fresh (< 60 seconds old).
+ * Use this wherever a coingecko-usage.md rule requires delayed-snapshot labelling.
+ */
+export function cgIsFresh(price: CoinGeckoPrice, maxAgeSeconds = 60): boolean {
+  if (!price.last_updated_at) return false; // missing timestamp = treat as unknown / not fresh
+  return (Date.now() / 1000 - price.last_updated_at) < maxAgeSeconds;
 }
 
 export interface CoinGeckoMarketData {
@@ -422,7 +433,8 @@ export interface CoinGeckoMarketData {
   price_change_percentage_1h_in_currency?: number;
   price_change_percentage_7d_in_currency?: number;
   price_change_24h: number;
-  total_volume: number;
+  /** null when CoinGecko does not supply volume for this asset */
+  total_volume: number | null;
   high_24h: number;
   low_24h: number;
   circulating_supply: number;
@@ -546,7 +558,7 @@ export async function getOHLCWithVolume(
   coinId: string,
   days: 1 | 7 | 14 | 30 | 90 | 180 | 365 = 7,
   requestOptions?: { retries?: number; timeoutMs?: number }
-): Promise<{ t: number; o: number; h: number; l: number; c: number; v: number }[] | null> {
+): Promise<{ t: number; o: number; h: number; l: number; c: number; v: number; volumeMissing?: boolean }[] | null> {
   try {
     // Fetch OHLC and market_chart (which has total_volumes) in parallel
     const [ohlc, chart] = await Promise.all([
@@ -610,15 +622,16 @@ export async function getOHLCWithVolume(
       v: findNearestVol(row[0]),
     })).filter(c => Number.isFinite(c.c));
 
-    // Volume quality check: warn if >50% of candles have zero volume
+    // Volume quality check: warn and mark volumeMissing if >50% of candles have zero volume
     const zeroVolCount = merged.filter(c => c.v === 0).length;
-    if (merged.length > 0 && zeroVolCount / merged.length > 0.5) {
+    const volumeMissing = merged.length > 0 && zeroVolCount / merged.length > 0.5;
+    if (volumeMissing) {
       console.warn(
         `[CoinGecko] Volume quality warning for ${coinId}: ${zeroVolCount}/${merged.length} candles have zero volume`
       );
     }
 
-    return merged;
+    return merged.map(c => volumeMissing ? { ...c, volumeMissing: true } : c);
   } catch (error) {
     console.error('[CoinGecko] OHLC+Volume fetch error:', error);
     return null;

@@ -11,22 +11,17 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { isOperator } from "@/lib/quant/operatorAuth";
 import { requireAdmin } from "@/lib/adminAuth";
-import { getSessionFromCookie } from "@/lib/auth";
 import { q } from "@/lib/db";
+import { wrapTruth } from "@/lib/admin";
 
 export const runtime = "nodejs";
 
 const WS = "operator-terminal";
 
 export async function GET(req: NextRequest) {
-  const adminAuth = (await requireAdmin(req)).ok;
-  if (!adminAuth) {
-    const session = await getSessionFromCookie();
-    if (!session || !isOperator(session.cid, session.workspaceId)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
+  if (!(await requireAdmin(req)).ok) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
   try {
@@ -165,6 +160,7 @@ export async function GET(req: NextRequest) {
               : null,
         },
       },
+      truth: wrapTruth({}, { source: 'admin:postgres', freshness: 'real-time' }),
     });
   } catch (err: unknown) {
     console.error("[admin:signals:stats] Error:", err);

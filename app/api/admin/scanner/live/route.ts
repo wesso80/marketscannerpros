@@ -10,9 +10,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
-import { getSessionFromCookie } from "@/lib/auth";
-import { isOperator } from "@/lib/quant/operatorAuth";
 import { runScan } from "@/lib/operator/orchestrator";
+import { wrapTruth } from "@/lib/admin";
 import type { Market } from "@/types/operator";
 import { alphaVantageProvider } from "@/lib/operator/market-data";
 import { scanResultToHits, scanResultToHealth } from "@/lib/admin/serializer";
@@ -26,12 +25,8 @@ const DEFAULT_SYMBOLS = ["ADA", "SUI", "MATIC", "FET", "SOL", "AVAX", "DOT", "LI
 
 export async function GET(req: NextRequest) {
   // Auth gate
-  const adminAuth = (await requireAdmin(req)).ok;
-  if (!adminAuth) {
-    const session = await getSessionFromCookie();
-    if (!session || !isOperator(session.cid, session.workspaceId)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
+  if (!(await requireAdmin(req)).ok) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
   try {
@@ -72,6 +67,7 @@ export async function GET(req: NextRequest) {
         environmentMode: result.environmentMode,
         risk,
       },
+      truth: wrapTruth({ hits }, { source: 'admin:live-scanner', freshness: 'real-time' }),
     });
   } catch (err: unknown) {
     console.error("[admin:scanner:live] Error:", err);

@@ -1,24 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
-import { getSessionFromCookie } from '@/lib/auth';
-import { isOperator } from '@/lib/quant/operatorAuth';
 import { q } from '@/lib/db';
 import { logger, generateTraceId } from '@/lib/logger';
+import { wrapTruth } from '@/lib/admin';
 
 export const runtime = 'nodejs';
-
-async function authorized(req: NextRequest) {
-  const adminAuth = (await requireAdmin(req)).ok;
-  if (adminAuth) return true;
-  const session = await getSessionFromCookie();
-  return Boolean(session && isOperator(session.cid, session.workspaceId));
-}
 
 export async function GET(req: NextRequest) {
   const traceId = generateTraceId();
   const log = logger.withTrace(traceId);
 
-  if (!(await authorized(req))) {
+  if (!(await requireAdmin(req)).ok) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
@@ -46,7 +38,10 @@ export async function GET(req: NextRequest) {
       [minSample],
     );
 
-    return NextResponse.json({ ok: true, traceId, minSample, rows });
+    return NextResponse.json({
+      ok: true, traceId, minSample, rows,
+      truth: wrapTruth({ rows }, { source: 'admin:postgres', freshness: 'real-time' }),
+    });
   } catch (err) {
     log.error('admin signal scorecard failed', err);
     return NextResponse.json({ ok: false, traceId, error: 'Failed to load signal scorecard' }, { status: 500 });

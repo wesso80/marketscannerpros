@@ -10,9 +10,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
-import { getSessionFromCookie } from "@/lib/auth";
-import { isOperator } from "@/lib/quant/operatorAuth";
 import type { Market } from "@/types/operator";
+import { wrapTruth } from "@/lib/admin";
 import type { AdminOpportunityRow } from "@/lib/admin/adminTypes";
 import { getAdminResearchPacketsForSymbols } from "@/lib/admin/getAdminResearchPacket";
 
@@ -24,12 +23,8 @@ const DEFAULT_EQUITY = ["SPY", "QQQ", "AAPL", "MSFT", "NVDA", "META", "AMZN", "T
 
 export async function GET(req: NextRequest) {
   // Auth gate (mirrors /api/admin/symbol/[symbol] pattern)
-  const adminAuth = (await requireAdmin(req)).ok;
-  if (!adminAuth) {
-    const session = await getSessionFromCookie();
-    if (!session || !isOperator(session.cid, session.workspaceId)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
+  if (!(await requireAdmin(req)).ok) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
   try {
@@ -79,6 +74,7 @@ export async function GET(req: NextRequest) {
         market,
         timeframe,
       },
+      truth: wrapTruth({ rows }, { source: 'admin:operator-engine', freshness: 'real-time' }),
     });
   } catch (err) {
     return NextResponse.json(

@@ -88,7 +88,7 @@ export async function GET(req: NextRequest) {
         changePercent: coin.price_change_percentage_24h || 0,
         weight: config.weight,
         color: config.color,
-        volume: coin.total_volume,
+        volume: coin.total_volume ?? undefined,
         marketCap: coin.market_cap,
         sector: CRYPTO_SECTORS[sym] || 'Other',
       };
