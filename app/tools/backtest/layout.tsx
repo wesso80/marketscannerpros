@@ -20,10 +20,7 @@ export const metadata: Metadata = {
       'Educational strategy backtesting with assumptions, equity curves, and performance metrics.',
     images: ['/scan-banner.png'],
   },
-  alternates: {
-    canonical: 'https://marketscannerpros.app/tools/workspace?tab=backtest',
-  },
-  robots: { index: false, follow: true },
+  robots: { index: false, follow: false },
 };
 
 export default function BacktestLayout({ children }: { children: React.ReactNode }) {

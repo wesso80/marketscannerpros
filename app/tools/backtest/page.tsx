@@ -1353,6 +1353,7 @@ function BacktestContent() {
                 ← Back to Scanner
               </Link>
               <button
+                type="button"
                 onClick={() => setShowOptionsBanner(false)}
                 aria-label="Dismiss options scanner banner"
                 style={{
@@ -2026,6 +2027,7 @@ function BacktestContent() {
               <span><strong>WARN</strong> {backtestError}</span>
               {(backtestError.toLowerCase().includes('insufficient data') || backtestError.toLowerCase().includes('too short')) && (
                 <button
+                  type="button"
                   onClick={applySuggestedDateRange}
                   aria-label="Auto-fix date range for insufficient data"
                   style={{
@@ -2074,6 +2076,7 @@ function BacktestContent() {
                   Command Layer
                 </div>
                 <button
+                  type="button"
                   onClick={() => setShowInverseComparison((previous) => !previous)}
                   aria-label={showInverseComparison ? 'Hide inverse comparison' : 'Show inverse short comparison'}
                   style={{
@@ -2232,6 +2235,7 @@ function BacktestContent() {
                             <div style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: 600 }}>{alternative.strategyId}</div>
                             <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                               <button
+                                type="button"
                                 onClick={() => loadSuggestionToRunner(alternative.strategyId)}
                                 disabled={isLoading}
                                 style={{
@@ -2249,6 +2253,7 @@ function BacktestContent() {
                                 Load
                               </button>
                               <button
+                                type="button"
                                 onClick={() => applySuggestedAlternative(alternative.strategyId)}
                                 disabled={isLoading}
                                 style={{
@@ -2478,6 +2483,7 @@ function BacktestContent() {
                           <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '2px' }}>{adjustment.reason}</div>
                           <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                             <button
+                              type="button"
                               onClick={() => applyCoachAdjustment(adjustment.key)}
                               style={{
                                 padding: '6px 10px',
@@ -2495,6 +2501,7 @@ function BacktestContent() {
                               Apply
                             </button>
                             <button
+                              type="button"
                               onClick={() => applyCoachAdjustmentAndRerun(adjustment.key)}
                               disabled={isLoading}
                               style={{
@@ -2694,6 +2701,7 @@ function BacktestContent() {
                       </span>
                     )}
                     <button
+                      type="button"
                       onClick={() => setShowReplayDetails((prev) => !prev)}
                       aria-label={showReplayDetails ? 'Hide signal replay details' : 'Show signal replay details'}
                       style={{
@@ -2801,6 +2809,7 @@ function BacktestContent() {
                     Auto Journal Draft
                   </Link>
                   <button
+                    type="button"
                     onClick={summarizeBacktest}
                     disabled={aiLoading}
                     aria-label={aiLoading ? 'Building AI analysis brief' : 'Generate AI analysis brief'}
@@ -2890,6 +2899,7 @@ function BacktestContent() {
                   <div style={{ color: '#64748b', fontSize: '12px' }}>Performance curve, metrics, and trade log</div>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setShowEvidenceLayer((prev) => !prev)}
                   aria-label={showEvidenceLayer ? 'Hide evidence layer' : 'Show evidence layer'}
                   style={{
