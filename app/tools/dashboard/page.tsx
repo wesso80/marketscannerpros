@@ -95,11 +95,11 @@ function PanelHeader({ title, eyebrow, action }: { title: string; eyebrow?: stri
 
 function MoverRow({ mover, tone, onOpen, onKeyOpen }: { mover: Mover; tone: 'up' | 'down'; onOpen: () => void; onKeyOpen: (event: React.KeyboardEvent) => void }) {
   return (
-    <div role="button" tabIndex={0} aria-label={`Open Golden Egg for ${mover.ticker}`} className="grid grid-cols-[4.5rem_1fr_5.5rem] items-center rounded-md px-2 py-1 text-xs hover:bg-slate-800/40 focus:bg-slate-800/40 focus:outline-none" onClick={onOpen} onKeyDown={onKeyOpen}>
+    <button type="button" aria-label={`Open Golden Egg for ${mover.ticker}`} className="grid w-full grid-cols-[4.5rem_1fr_5.5rem] items-center rounded-md px-2 py-1 text-xs hover:bg-slate-800/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50" onClick={onOpen} onKeyDown={onKeyOpen}>
       <span className="font-semibold text-white">{mover.ticker}</span>
       <span className="text-right font-mono tabular-nums text-slate-300">{fmtPrice(parseFloat(mover.price))}</span>
       <span className={`${tone === 'up' ? 'text-emerald-400' : 'text-red-400'} text-right font-mono tabular-nums`}>{tone === 'up' ? '+' : ''}{mover.change_percentage}</span>
-    </div>
+    </button>
   );
 }
 
@@ -122,6 +122,7 @@ export default function DashboardPage() {
   const news = useNews();
   const calendar = useEconomicCalendar();
   const cached = useCachedTopSymbols(5);
+  const { stale: cacheStale, ageMinutes: cacheAgeMinutes } = cached;
 
   /* -- Derived data ----------------------------------------------------- */
   const highImpactEvents = useMemo(
@@ -139,6 +140,7 @@ export default function DashboardPage() {
   const moverQueue = [...eqGainers.slice(0, 2), ...crGainers.slice(0, 2)];
   const degradedFeeds = [
     cached.error ? 'Scanner cache' : null,
+    cacheStale ? `Scanner cache stale (${cacheAgeMinutes != null ? `${cacheAgeMinutes}m old` : 'age unknown'})` : null,
     movers.error ? 'Movers' : null,
     news.error ? 'News' : null,
     calendar.error ? 'Calendar' : null,
@@ -196,9 +198,9 @@ export default function DashboardPage() {
               Scanner cache, movers, calendar risk, and headlines are compressed into a morning review path.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
-              <a href="/tools/scanner" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15">Start Scanner</a>
-              <a href={topSymbolHref} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15">{hasQueue ? `Validate ${topQueueSymbol}` : 'Validate Symbol'}</a>
-              <a href="/tools/workspace?tab=journal" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15">Open Journal</a>
+              <a href="/tools/scanner" className="rounded-md border border-emerald-400/35 bg-emerald-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-emerald-200 no-underline transition-colors hover:bg-emerald-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">Start Scanner</a>
+              <a href={topSymbolHref} className="rounded-md border border-amber-400/35 bg-amber-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-amber-200 no-underline transition-colors hover:bg-amber-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60">{hasQueue ? `Validate ${topQueueSymbol}` : 'Validate Symbol'}</a>
+              <a href="/tools/workspace?tab=journal" className="rounded-md border border-sky-400/35 bg-sky-400/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.08em] text-sky-200 no-underline transition-colors hover:bg-sky-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60">Open Journal</a>
             </div>
           </div>
 
@@ -234,7 +236,7 @@ export default function DashboardPage() {
           ) : (
             <div className="grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
               {scannerQueue.map((row: CachedSymbol) => (
-                <button key={`queue-${row.symbol}`} type="button" onClick={() => openGoldenEgg(row.symbol)} className="rounded-lg border border-white/10 bg-white/[0.035] p-3 text-left hover:border-emerald-400/30 hover:bg-emerald-400/[0.05]">
+                <button key={`queue-${row.symbol}`} type="button" aria-label={`Validate ${row.symbol} in Golden Egg`} onClick={() => openGoldenEgg(row.symbol)} className="rounded-lg border border-white/10 bg-white/[0.035] p-3 text-left hover:border-emerald-400/30 hover:bg-emerald-400/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50">
                   <div className="flex items-center justify-between gap-3">
                     <span className="font-black text-white">{row.symbol}</span>
                     <span className="text-xs font-bold" style={{ color: directionColor(row.direction) }}>{row.direction === 'bullish' ? 'Bullish bias' : row.direction === 'bearish' ? 'Bearish bias' : 'Neutral bias'}</span>
@@ -248,7 +250,7 @@ export default function DashboardPage() {
                 </button>
               ))}
               {moverQueue.map((m: Mover) => (
-                <button key={`mover-queue-${m.ticker}`} type="button" onClick={() => openGoldenEgg(m.ticker)} className="rounded-lg border border-white/10 bg-white/[0.035] p-3 text-left hover:border-sky-400/30 hover:bg-sky-400/[0.05]">
+                <button key={`mover-queue-${m.ticker}`} type="button" aria-label={`Validate ${m.ticker} in Golden Egg`} onClick={() => openGoldenEgg(m.ticker)} className="rounded-lg border border-white/10 bg-white/[0.035] p-3 text-left hover:border-sky-400/30 hover:bg-sky-400/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/50">
                   <div className="flex items-center justify-between gap-3">
                     <span className="font-black text-white">{m.ticker}</span>
                     <span className="text-xs font-bold text-sky-300">Mover evidence</span>
@@ -274,6 +276,12 @@ export default function DashboardPage() {
                 <div className={`mt-1 text-lg font-black ${degradedFeeds.length ? 'text-amber-300' : 'text-emerald-300'}`}>{degradedFeeds.length}</div>
               </div>
             </div>
+            {cacheAgeMinutes != null && !cached.error && (
+              <div className={`mt-2 flex items-center gap-1.5 text-[11px] ${cacheStale ? 'text-amber-400' : 'text-slate-500'}`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${cacheStale ? 'bg-amber-400' : 'bg-emerald-400'}`} aria-hidden="true" />
+                Scanner cache: {cacheAgeMinutes < 60 ? `${cacheAgeMinutes}m` : `${Math.round(cacheAgeMinutes / 60)}h`} old{cacheStale ? ' — stale' : ' — fresh'}
+              </div>
+            )}
             <p className="mt-2 text-[11px] leading-5 text-slate-500">{degradedFeeds.length ? `Review feed issues: ${degradedFeeds.join(', ')}.` : 'Scanner, movers, news, and calendar feeds have no reported errors.'}</p>
           </Card>
 
@@ -298,7 +306,7 @@ export default function DashboardPage() {
               <div className="text-[0.62rem] font-extrabold uppercase tracking-[0.14em] text-purple-300">Volatility Watch</div>
               <div className="mt-0.5 text-sm font-black text-white">Compression &amp; expansion signals</div>
             </div>
-            <a href="/tools/volatility-engine" className="rounded border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 text-[10px] font-bold uppercase text-purple-300 no-underline hover:bg-purple-500/15">DVE &#x203A;</a>
+            <a href="/tools/volatility-engine" aria-label="Open Dynamic Volatility Engine" className="rounded border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 text-[10px] font-bold uppercase text-purple-300 no-underline hover:bg-purple-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60">DVE &#x203A;</a>
           </div>
           {cached.loading ? (
             <div className="space-y-2">
@@ -314,8 +322,8 @@ export default function DashboardPage() {
                   const phase = r.adx >= 30 ? 'Trending' : r.adx >= 20 ? 'Developing' : 'Compression';
                   const phaseColor = r.adx >= 30 ? '#10B981' : r.adx >= 20 ? '#F59E0B' : '#A78BFA';
                   return (
-                    <button key={`vol-${r.symbol}`} type="button" onClick={() => openGoldenEgg(r.symbol)}
-                      className="flex w-full items-center justify-between rounded-md border border-white/[0.06] bg-slate-900/30 px-2.5 py-1.5 hover:border-purple-400/20 hover:bg-purple-400/[0.04]">
+                    <button key={`vol-${r.symbol}`} type="button" aria-label={`Open Golden Egg for ${r.symbol}`} onClick={() => openGoldenEgg(r.symbol)}
+                      className="flex w-full items-center justify-between rounded-md border border-white/[0.06] bg-slate-900/30 px-2.5 py-1.5 hover:border-purple-400/20 hover:bg-purple-400/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/50">
                       <span className="font-bold text-white">{r.symbol}</span>
                       <div className="flex items-center gap-2">
                         <span className="font-mono tabular-nums text-slate-400">ADX {Math.round(r.adx)}</span>
@@ -340,7 +348,7 @@ export default function DashboardPage() {
               <div className="text-[0.62rem] font-extrabold uppercase tracking-[0.14em] text-sky-300">Time Confluence Watch</div>
               <div className="mt-0.5 text-sm font-black text-white">Upcoming close clusters</div>
             </div>
-            <a href="/tools/time-scanner" className="rounded border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[10px] font-bold uppercase text-sky-300 no-underline hover:bg-sky-500/15">Time &#x203A;</a>
+            <a href="/tools/time-scanner" aria-label="Open Time Scanner" className="rounded border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[10px] font-bold uppercase text-sky-300 no-underline hover:bg-sky-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60">Time &#x203A;</a>
           </div>
           <div className="space-y-2 text-xs">
             {regime.data ? (
@@ -372,7 +380,7 @@ export default function DashboardPage() {
               <div className="text-[0.62rem] font-extrabold uppercase tracking-[0.14em] text-teal-300">ARCA Research Context</div>
               <div className="mt-0.5 text-sm font-black text-white">AI analyst briefing</div>
             </div>
-            <a href="/tools/ai-analyst" className="rounded border border-teal-500/30 bg-teal-500/10 px-2 py-0.5 text-[10px] font-bold uppercase text-teal-300 no-underline hover:bg-teal-500/15">Ask &#x203A;</a>
+            <a href="/tools/ai-analyst" aria-label="Open MSP Analyst" className="rounded border border-teal-500/30 bg-teal-500/10 px-2 py-0.5 text-[10px] font-bold uppercase text-teal-300 no-underline hover:bg-teal-500/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60">Ask &#x203A;</a>
           </div>
           <div className="space-y-2 text-xs">
             <div className="rounded-md border border-teal-400/15 bg-teal-400/[0.06] px-3 py-2">
@@ -404,14 +412,15 @@ export default function DashboardPage() {
             <div className="text-[0.72rem] text-slate-500">Switch between saved pages, live market desk, derivatives, and macro context.</div>
           </div>
         </div>
-        <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
+        <div role="tablist" aria-label="Dashboard lens" className="flex items-center gap-2 overflow-x-auto pb-0.5">
         {DASH_TABS.map(t => (
           <button
             key={t}
             type="button"
-            aria-pressed={dashTab === t}
+            role="tab"
+            aria-selected={dashTab === t}
             onClick={() => setDashTab(t)}
-            className={`shrink-0 rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors ${
+            className={`shrink-0 rounded-md border px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 ${
               dashTab === t
                 ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
                 : 'border-slate-800 bg-slate-950/35 text-slate-400 hover:border-slate-600 hover:text-slate-200'
@@ -463,7 +472,7 @@ export default function DashboardPage() {
         ) : (
           <div className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
             {[...cached.equity.slice(0, 3), ...cached.crypto.slice(0, 2)].map((r: CachedSymbol) => (
-              <div key={r.symbol} role="button" tabIndex={0} aria-label={`Open Golden Egg for ${r.symbol}`} className="rounded-md border border-white/10 bg-slate-950/30 px-2 py-1.5 text-xs cursor-pointer hover:border-emerald-400/25 hover:bg-emerald-400/[0.04] focus:bg-slate-800/40 focus:outline-none" onClick={() => openGoldenEgg(r.symbol)} onKeyDown={(e) => onSymbolRowKey(e, r.symbol)}>
+              <div key={r.symbol} role="button" tabIndex={0} aria-label={`Open Golden Egg for ${r.symbol}`} className="rounded-md border border-white/10 bg-slate-950/30 px-2 py-1.5 text-xs cursor-pointer hover:border-emerald-400/25 hover:bg-emerald-400/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50" onClick={() => openGoldenEgg(r.symbol)} onKeyDown={(e) => onSymbolRowKey(e, r.symbol)}>
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-semibold text-white">{r.symbol}</span>
                   <span className={`font-mono tabular-nums ${r.changePct >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{r.changePct >= 0 ? '+' : ''}{r.changePct.toFixed(2)}%</span>
@@ -553,6 +562,7 @@ export default function DashboardPage() {
             ))}
             <button type="button" onClick={() => navigateTo('explorer')} className="mt-1 block text-[11px] text-emerald-400 hover:underline">Market Explorer &#x203A;</button>
           </div>
+          <p className="mt-2 text-[10px] text-slate-600">Educational context only — static heuristics, not live readings.</p>
         </Card>
       </div>
 
