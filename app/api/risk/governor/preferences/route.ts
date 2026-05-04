@@ -95,7 +95,7 @@ export async function PUT(req: NextRequest) {
       }
       console.info(`[risk-governor] Guard CANCEL_PENDING_DISABLE for workspace ${session?.workspaceId ?? 'unknown'}`);
       const res = NextResponse.json({ enabled: true, pendingDisable: false, cooldownRemainingMs: 0, rBudgetHalved: false });
-      res.cookies.set({ name: COOKIE_NAME, value: 'on', path: '/', httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 60 * 60 * 24 * 365 });
+      res.cookies.set({ name: COOKIE_NAME, value: 'on', path: '/', httpOnly: true, sameSite: 'lax', domain: process.env.NODE_ENV === 'production' ? '.marketscannerpros.app' : undefined, secure: process.env.NODE_ENV === 'production', maxAge: 60 * 60 * 24 * 365 });
       return res;
     }
 
@@ -115,7 +115,7 @@ export async function PUT(req: NextRequest) {
       }
       console.info(`[risk-governor] Guard ENABLED for workspace ${session?.workspaceId ?? 'unknown'}`);
       const res = NextResponse.json({ enabled: true, pendingDisable: false, cooldownRemainingMs: 0, rBudgetHalved: false });
-      res.cookies.set({ name: COOKIE_NAME, value: 'on', path: '/', httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 60 * 60 * 24 * 365 });
+      res.cookies.set({ name: COOKIE_NAME, value: 'on', path: '/', httpOnly: true, sameSite: 'lax', domain: process.env.NODE_ENV === 'production' ? '.marketscannerpros.app' : undefined, secure: process.env.NODE_ENV === 'production', maxAge: 60 * 60 * 24 * 365 });
       return res;
     }
 
@@ -172,6 +172,7 @@ export async function PUT(req: NextRequest) {
       path: '/',
       httpOnly: true,
       sameSite: 'lax',
+      domain: process.env.NODE_ENV === 'production' ? '.marketscannerpros.app' : undefined,
       secure: process.env.NODE_ENV === 'production',
       maxAge: 60 * 60 * MAX_DISABLE_HOURS, // Full window including cooldown + disable period
     });

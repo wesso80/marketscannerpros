@@ -43,6 +43,8 @@ export interface DealerIntelligence {
   setupType: 'momentum' | 'mean_reversion' | 'neutral';
   setupScoreMultiplier: number;
   adjustedScore: number;
+  evidenceQualityDegraded: boolean;
+  evidenceQualityNote?: string;
   dealerStructure: DealerStructureLevels;
   attention: DealerAttentionTrigger;
 }
@@ -169,7 +171,11 @@ export function buildDealerIntelligence(args: {
 
   const setupType = classifySetupType(setupDescriptor);
   const setupScoreMultiplier = getSetupMultiplier(snapshot.regime, setupType);
-  const adjustedScore = Math.max(1, Math.min(99, Math.round(baseScore * setupScoreMultiplier)));
+
+  // When options data is missing (coverage:'none'), the Evidence Quality is degraded.
+  // Per options-data-rules: missing data must reduce Evidence Quality Score, not fabricate a proxy.
+  const noCoverageMultiplier = snapshot.coverage === 'none' ? 0.5 : 1.0;
+  const adjustedScore = Math.max(1, Math.min(99, Math.round(baseScore * setupScoreMultiplier * noCoverageMultiplier)));
 
   const callWall = snapshot.topPositiveStrikes[0]?.strike ?? null;
   const putWall = snapshot.topNegativeStrikes[0]?.strike ?? null;
@@ -200,6 +206,8 @@ export function buildDealerIntelligence(args: {
     setupType,
     setupScoreMultiplier,
     adjustedScore,
+    evidenceQualityDegraded: snapshot.coverage === 'none',
+    evidenceQualityNote: snapshot.coverage === 'none' ? 'Options data unavailable for this symbol — GEX metrics are absent and score has been reduced.' : undefined,
     dealerStructure: {
       callWall,
       putWall,

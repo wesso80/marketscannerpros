@@ -1011,6 +1011,7 @@ export async function getAggregatedFundingRates(symbols: string[]): Promise<{
   annualized: number;
   exchanges: number;
   sentiment: 'Bullish' | 'Bearish' | 'Neutral';
+  fundingRateMissing?: boolean;
 }[]> {
   const tickers = await getDerivativesForSymbols(symbols);
   if (!tickers.length) return [];
@@ -1026,12 +1027,14 @@ export async function getAggregatedFundingRates(symbols: string[]): Promise<{
   return Object.entries(grouped).map(([symbol, exchanges]) => {
     // Average funding rate across exchanges
     const rates = exchanges.map(e => e.funding_rate).filter(r => r !== null && !isNaN(r));
-    const avgRate = rates.length > 0 ? rates.reduce((a, b) => a + b, 0) / rates.length : 0;
+    const fundingRateMissing = rates.length === 0;
+    const avgRate = fundingRateMissing ? 0 : rates.reduce((a, b) => a + b, 0) / rates.length;
     const ratePercent = avgRate * 100;
     const annualized = ratePercent * 3 * 365; // 3 funding periods per day
 
     let sentiment: 'Bullish' | 'Bearish' | 'Neutral';
-    if (ratePercent > 0.03) sentiment = 'Bullish';
+    if (fundingRateMissing) sentiment = 'Neutral';
+    else if (ratePercent > 0.03) sentiment = 'Bullish';
     else if (ratePercent < -0.01) sentiment = 'Bearish';
     else sentiment = 'Neutral';
 
@@ -1042,6 +1045,7 @@ export async function getAggregatedFundingRates(symbols: string[]): Promise<{
       annualized,
       exchanges: exchanges.length,
       sentiment,
+      fundingRateMissing: fundingRateMissing || undefined,
     };
   });
 }

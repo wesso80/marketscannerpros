@@ -72,7 +72,7 @@ async function fetchOptionsData(symbol: string) {
     // Alpha Vantage options endpoint — REALTIME_OPTIONS_FMV (FMV) preferred, HISTORICAL_OPTIONS fallback
     // Rate governed to protect 600 RPM quota
     let optionsData: any = null;
-    const realtimeUrl = `https://www.alphavantage.co/query?function=REALTIME_OPTIONS_FMV&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
+    const realtimeUrl = `https://www.alphavantage.co/query?function=REALTIME_OPTIONS_FMV&symbol=${symbol}&require_greeks=true&apikey=${ALPHA_VANTAGE_API_KEY}`;
     optionsData = await avFetch(realtimeUrl, `REALTIME_OPTIONS_FMV ${symbol}`);
     if (!optionsData?.data?.length) {
       const historicalUrl = `https://www.alphavantage.co/query?function=HISTORICAL_OPTIONS&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;

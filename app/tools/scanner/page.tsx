@@ -301,6 +301,7 @@ function ScannerFlowRail({
             type="button"
             onClick={onSelectAnalysis}
             disabled={disabled}
+            aria-disabled={disabled}
             aria-pressed={isActive}
             className="block w-full disabled:cursor-not-allowed"
           >
@@ -922,7 +923,7 @@ function SymbolDetailPanel({ detail, timeframeLabel, onClose, assetType, activeR
 
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={handleSaveCase} disabled={savingCase}
+              <button type="button" onClick={handleSaveCase} disabled={savingCase} aria-disabled={savingCase}
                 className="rounded-md border border-blue-500/40 bg-blue-500/10 px-3 py-1.5 text-[0.72rem] font-extrabold uppercase tracking-[0.06em] text-blue-300 hover:bg-blue-500/20 disabled:cursor-wait disabled:opacity-70">
                 {savingCase ? 'Saving...' : 'Save Case'}
               </button>
@@ -1486,7 +1487,9 @@ export default function ScannerPage() {
 
           {/* Tabs — dropdown on mobile, pills on desktop */}
           <div className="md:hidden">
+            <label htmlFor="scanner-tab-select" className="sr-only">Scanner tab</label>
             <select
+              id="scanner-tab-select"
               value={activeTab}
               onChange={(e) => setActiveTab(e.target.value as typeof activeTab)}
               className="w-full rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none"
@@ -1687,8 +1690,8 @@ export default function ScannerPage() {
                 </div>
                 {proAsset === 'crypto' && proDepth === 'light' && (
                   <div className="mb-3">
-                    <label className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Universe</label>
-                    <select value={proUniverseSize} onChange={e => setProUniverseSize(Number(e.target.value))}
+                    <label htmlFor="scanner-universe-select" className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Universe</label>
+                    <select id="scanner-universe-select" value={proUniverseSize} onChange={e => setProUniverseSize(Number(e.target.value))}
                       className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm text-slate-200">
                       <option value={100}>100</option>
                       <option value={250}>250</option>
@@ -1777,6 +1780,7 @@ export default function ScannerPage() {
               type="button"
               onClick={runProScan}
               disabled={proScanLoading}
+              aria-disabled={proScanLoading}
               className={`mt-4 w-full rounded-md border px-3 py-2 text-[12px] font-black uppercase tracking-[0.1em] transition-colors ${
                 proScanLoading
                   ? 'cursor-not-allowed border-amber-400/20 bg-amber-400/5 text-amber-200/60'

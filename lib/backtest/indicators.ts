@@ -224,8 +224,11 @@ export function calculateADX(
 
     if (i === period) {
       adx[i] = dx;
-    } else if (adx[i - 1] !== undefined) {
+    } else if (adx[i - 1] !== undefined && Number.isFinite(adx[i - 1])) {
       adx[i] = (adx[i - 1] * (period - 1) + dx) / period;
+    } else {
+      // Recover from NaN in prior bar by restarting ADX with current dx
+      adx[i] = dx;
     }
   }
 
@@ -260,6 +263,10 @@ export function calculateBollingerBands(
     bands.middle[i] = avg;
     bands.upper[i] = avg + stdDev * std;
     bands.lower[i] = avg - stdDev * std;
+
+    // Guard against pathological inversion (e.g. floating-point edge cases when std≈0)
+    if (bands.upper[i] < bands.middle[i]) bands.upper[i] = bands.middle[i];
+    if (bands.lower[i] > bands.middle[i]) bands.lower[i] = bands.middle[i];
   }
 
   return bands;
