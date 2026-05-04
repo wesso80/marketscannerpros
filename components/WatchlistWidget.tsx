@@ -480,7 +480,7 @@ export default function WatchlistWidget() {
         {error && (
           <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
             {error}
-            <button onClick={() => setError(null)} className="ml-2 underline">Dismiss</button>
+            <button type="button" aria-label="Dismiss error message" onClick={() => setError(null)} className="ml-2 underline">Dismiss</button>
           </div>
         )}
 
@@ -490,6 +490,7 @@ export default function WatchlistWidget() {
             <p className="mb-1 text-slate-300">No active watchlists</p>
             <p className="mb-4 text-sm text-slate-500">Initialize your first idea pipeline</p>
             <button
+              type="button"
               onClick={() => setShowCreate(true)}
               className="rounded-lg bg-emerald-600 px-4 py-2 text-white transition-colors hover:bg-emerald-500"
             >
@@ -504,6 +505,8 @@ export default function WatchlistWidget() {
                   {watchlists.map((w) => (
                     <button
                       key={w.id}
+                      type="button"
+                      aria-pressed={selectedWatchlist.id === w.id}
                       onClick={() => setSelectedWatchlist(w)}
                       className={`rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.06em] ${
                         selectedWatchlist.id === w.id
@@ -511,7 +514,7 @@ export default function WatchlistWidget() {
                           : 'border border-slate-700 bg-slate-800 text-slate-300'
                       }`}
                     >
-                      {ICONS[w.icon] || '⭐'} {w.name} ({w.item_count})
+                      <span aria-hidden="true">{ICONS[w.icon] || '⭐'}</span> {w.name} ({w.item_count})
                     </button>
                   ))}
                 </div>
@@ -570,6 +573,7 @@ export default function WatchlistWidget() {
                   )}
                   <div className="flex w-full flex-wrap gap-2 md:justify-end">
                     <button
+                      type="button"
                       onClick={() => setShowAddSymbol(true)}
                       disabled={items.length >= currentLimits.items}
                       className="rounded-md border border-slate-600 bg-slate-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
@@ -577,6 +581,7 @@ export default function WatchlistWidget() {
                       + Add Symbol
                     </button>
                     <button
+                      type="button"
                       onClick={() => setShowCreate(true)}
                       disabled={watchlists.length >= currentLimits.watchlists}
                       className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-300 disabled:opacity-50"
@@ -647,12 +652,12 @@ export default function WatchlistWidget() {
               </div>
               <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2">
-                  <button onClick={() => setReadyOnly((prev) => !prev)} className={`rounded-md border px-2.5 py-1 text-[11px] font-semibold uppercase ${readyOnly ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300' : 'border-slate-700 bg-slate-800 text-slate-300'}`}>
+                  <button type="button" aria-pressed={readyOnly} onClick={() => setReadyOnly((prev) => !prev)} className={`rounded-md border px-2.5 py-1 text-[11px] font-semibold uppercase ${readyOnly ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300' : 'border-slate-700 bg-slate-800 text-slate-300'}`}>
                     {readyOnly ? 'Ready Only: On' : 'Ready Only'}
                   </button>
                   <span className="text-xs text-slate-500">{filteredIdeas.length} visible</span>
                 </div>
-                <button onClick={() => setCompactView((prev) => !prev)} className="rounded-md border border-slate-700 bg-slate-800 px-2.5 py-1 text-[11px] font-semibold uppercase text-slate-300">
+                <button type="button" aria-pressed={compactView} onClick={() => setCompactView((prev) => !prev)} className="rounded-md border border-slate-700 bg-slate-800 px-2.5 py-1 text-[11px] font-semibold uppercase text-slate-300">
                   {compactView ? 'Compact View' : 'Grid View'}
                 </button>
               </div>
@@ -667,7 +672,7 @@ export default function WatchlistWidget() {
             ) : filteredIdeas.length === 0 ? (
               <div className="rounded-xl border border-slate-700/60 bg-slate-900/40 py-10 text-center text-slate-400">
                 <p>No symbols match current filters</p>
-                <button onClick={() => { setStageFilter('all'); setBiasFilter('all'); setReadyOnly(false); }} className="mt-2 text-sm text-emerald-400 hover:text-emerald-300">
+                <button type="button" onClick={() => { setStageFilter('all'); setBiasFilter('all'); setReadyOnly(false); }} className="mt-2 text-sm text-emerald-400 hover:text-emerald-300">
                   Reset filters
                 </button>
               </div>
@@ -733,14 +738,14 @@ export default function WatchlistWidget() {
                       </div>
 
                       <div className="mt-3 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-                        <button onClick={() => launchTool('scan', item.symbol)} className="rounded border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-1 text-[11px] font-semibold uppercase text-emerald-300">Scan</button>
-                        <button onClick={() => launchTool('deep', item.symbol)} className="rounded border border-slate-600 bg-slate-800 px-1.5 py-1 text-[11px] font-semibold uppercase text-slate-200">Deep</button>
-                        <button onClick={() => launchTool('flow', item.symbol)} className="rounded border border-purple-500/40 bg-purple-500/10 px-1.5 py-1 text-[11px] font-semibold uppercase text-purple-300">Options</button>
-                        <button onClick={() => launchTool('alert', item.symbol)} className="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-1 text-[11px] font-semibold uppercase text-amber-300">Alert</button>
+                        <button type="button" aria-label={`Scan ${item.symbol}`} onClick={() => launchTool('scan', item.symbol)} className="rounded border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-1 text-[11px] font-semibold uppercase text-emerald-300">Scan</button>
+                        <button type="button" aria-label={`Deep analysis ${item.symbol}`} onClick={() => launchTool('deep', item.symbol)} className="rounded border border-slate-600 bg-slate-800 px-1.5 py-1 text-[11px] font-semibold uppercase text-slate-200">Deep</button>
+                        <button type="button" aria-label={`Options flow ${item.symbol}`} onClick={() => launchTool('flow', item.symbol)} className="rounded border border-purple-500/40 bg-purple-500/10 px-1.5 py-1 text-[11px] font-semibold uppercase text-purple-300">Options</button>
+                        <button type="button" aria-label={`Set alert for ${item.symbol}`} onClick={() => launchTool('alert', item.symbol)} className="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-1 text-[11px] font-semibold uppercase text-amber-300">Alert</button>
                       </div>
                       <div className="mt-2 flex items-center gap-2">
-                        <button onClick={() => router.push(`/tools/scanner?symbol=${encodeURIComponent(item.symbol)}`)} className="flex-1 rounded border border-blue-500/40 bg-blue-500/10 px-2 py-1 text-[11px] font-semibold uppercase text-blue-300">Open Cockpit</button>
-                        <button onClick={() => removeSymbol(item.id)} className="rounded border border-red-500/40 bg-red-500/10 px-2 py-1 text-[11px] font-semibold uppercase text-red-300">Remove</button>
+                        <button type="button" aria-label={`Open scanner cockpit for ${item.symbol}`} onClick={() => router.push(`/tools/scanner?symbol=${encodeURIComponent(item.symbol)}`)} className="flex-1 rounded border border-blue-500/40 bg-blue-500/10 px-2 py-1 text-[11px] font-semibold uppercase text-blue-300">Open Cockpit</button>
+                        <button type="button" aria-label={`Remove ${item.symbol} from watchlist`} onClick={() => removeSymbol(item.id)} className="rounded border border-red-500/40 bg-red-500/10 px-2 py-1 text-[11px] font-semibold uppercase text-red-300">Remove</button>
                       </div>
                     </div>
                   );
@@ -751,11 +756,11 @@ export default function WatchlistWidget() {
             <div className="rounded-lg border border-slate-700 bg-slate-900/50 p-3">
               <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">Bulk Actions</div>
               <div className="flex flex-wrap gap-2">
-                <button onClick={runScanAll} className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-emerald-300">Open Scanner</button>
-                <button onClick={runConfluenceCheck} className="rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-cyan-300">Refresh Prices</button>
-                <button onClick={() => setReadyOnly(true)} className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-amber-300">Filter Ready Only</button>
-                <button onClick={exportWatchlist} disabled={!canExportCSV(tier)} title={canExportCSV(tier) ? undefined : 'Pro plan required for CSV export'} className="rounded-md border border-purple-500/40 bg-purple-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-purple-300 disabled:cursor-not-allowed disabled:opacity-50">Export Watchlist</button>
-                <button onClick={() => launchTool('alert', filteredIdeas[0]?.item.symbol || '')} disabled={filteredIdeas.length === 0 || riskLocked} className="rounded-md border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs font-semibold uppercase text-slate-200 disabled:opacity-50">Send Alerts for Ready</button>
+                <button type="button" onClick={runScanAll} className="rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-emerald-300">Open Scanner</button>
+                <button type="button" onClick={runConfluenceCheck} className="rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-cyan-300">Refresh Prices</button>
+                <button type="button" onClick={() => setReadyOnly(true)} className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-amber-300">Filter Ready Only</button>
+                <button type="button" onClick={exportWatchlist} disabled={!canExportCSV(tier)} title={canExportCSV(tier) ? undefined : 'Pro plan required for CSV export'} className="rounded-md border border-purple-500/40 bg-purple-500/10 px-3 py-1.5 text-xs font-semibold uppercase text-purple-300 disabled:cursor-not-allowed disabled:opacity-50">Export Watchlist</button>
+                <button type="button" onClick={() => launchTool('alert', filteredIdeas[0]?.item.symbol || '')} disabled={filteredIdeas.length === 0 || riskLocked} className="rounded-md border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs font-semibold uppercase text-slate-200 disabled:opacity-50">Send Alerts for Ready</button>
               </div>
               {riskLocked && <div className="mt-2 text-[11px] text-rose-300">Send Alerts for Ready is disabled while Tracking Lock is active.</div>}
             </div>
@@ -766,8 +771,13 @@ export default function WatchlistWidget() {
       {/* Create Watchlist Modal */}
       {showCreate && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-xl p-6 w-full max-w-md border border-slate-700">
-            <h3 className="text-lg font-semibold text-white mb-4">Create Watchlist</h3>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="create-watchlist-title"
+            className="bg-slate-800 rounded-xl p-6 w-full max-w-md border border-slate-700"
+          >
+            <h3 id="create-watchlist-title" className="text-lg font-semibold text-white mb-4">Create Watchlist</h3>
             
             <div className="space-y-4">
               <div>
@@ -802,6 +812,9 @@ export default function WatchlistWidget() {
                   {COLORS.map((c) => (
                     <button
                       key={c.name}
+                      type="button"
+                      aria-label={`Select ${c.name} color`}
+                      aria-pressed={newColor === c.name}
                       onClick={() => setNewColor(c.name)}
                       className={`w-8 h-8 rounded-full ${c.class} transition-transform
                         ${newColor === c.name ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-800 scale-110' : ''}`}
@@ -816,12 +829,15 @@ export default function WatchlistWidget() {
                   {Object.entries(ICONS).map(([key, icon]) => (
                     <button
                       key={key}
+                      type="button"
+                      aria-label={`Select ${key} icon`}
+                      aria-pressed={newIcon === key}
                       onClick={() => setNewIcon(key)}
                       className={`w-10 h-10 rounded-lg bg-slate-700 flex items-center justify-center 
                         text-xl transition-all
                         ${newIcon === key ? 'ring-2 ring-emerald-500 scale-110' : 'hover:bg-slate-600'}`}
                     >
-                      {icon}
+                      <span aria-hidden="true">{icon}</span>
                     </button>
                   ))}
                 </div>
@@ -830,12 +846,14 @@ export default function WatchlistWidget() {
 
             <div className="flex gap-3 mt-6">
               <button
+                type="button"
                 onClick={() => setShowCreate(false)}
                 className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={createWatchlist}
                 disabled={!newName.trim()}
                 className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-600 
@@ -851,8 +869,13 @@ export default function WatchlistWidget() {
       {/* Add Symbol Modal */}
       {showAddSymbol && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-xl p-6 w-full max-w-md border border-slate-700">
-            <h3 className="text-lg font-semibold text-white mb-4">Add Symbol</h3>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="add-symbol-title"
+            className="bg-slate-800 rounded-xl p-6 w-full max-w-md border border-slate-700"
+          >
+            <h3 id="add-symbol-title" className="text-lg font-semibold text-white mb-4">Add Symbol</h3>
             
             <div className="space-y-4">
               <div>
@@ -887,12 +910,14 @@ export default function WatchlistWidget() {
 
             <div className="flex gap-3 mt-6">
               <button
+                type="button"
                 onClick={() => { setShowAddSymbol(false); setNewSymbol(''); }}
                 className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={addSymbol}
                 disabled={!newSymbol.trim()}
                 className="flex-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-600 
