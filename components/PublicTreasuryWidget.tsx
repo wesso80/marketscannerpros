@@ -76,41 +76,26 @@ export default function PublicTreasuryWidget() {
   const coinSymbol = COINS.find(c => c.id === coin)?.symbol || 'BTC';
 
   return (
-    <div style={{
-      background: 'var(--msp-card)',
-      borderRadius: '12px',
-      padding: '20px',
-      border: '1px solid #334155',
-    }}>
+    <div className="rounded-lg border border-slate-700 bg-slate-900 p-3">
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '14px', color: '#10b981', fontWeight: 700 }}>TREASURY</span>
-          <div>
-            <h3 style={{ color: '#f1f5f9', fontSize: '16px', fontWeight: 600, margin: 0 }}>
-              Institutional Treasury Holdings
-            </h3>
-            <p style={{ color: '#64748b', fontSize: '11px', margin: 0 }}>
-              Public companies &amp; governments holding crypto
-            </p>
-          </div>
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.1em] text-emerald-400">Treasury</p>
+          <h3 className="text-sm font-bold text-slate-100">Institutional Holdings</h3>
+          <p className="text-[11px] text-slate-500">Public companies &amp; governments holding crypto</p>
         </div>
-        <div style={{ display: 'flex', gap: '4px' }}>
+        <div className="flex gap-1">
           {COINS.map(c => (
             <button
               key={c.id}
               type="button"
+              aria-pressed={coin === c.id}
               onClick={() => setCoin(c.id as 'bitcoin' | 'ethereum')}
-              style={{
-                padding: '6px 14px',
-                background: coin === c.id ? 'rgba(16, 185, 129, 0.2)' : 'transparent',
-                border: coin === c.id ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid #334155',
-                borderRadius: '8px',
-                color: coin === c.id ? '#10b981' : '#64748b',
-                fontSize: '12px',
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
+              className={`rounded-md border px-3 py-1.5 text-[11px] font-bold transition-colors ${
+                coin === c.id
+                  ? 'border-emerald-400/50 bg-emerald-500/15 text-emerald-300'
+                  : 'border-slate-700 bg-transparent text-slate-500 hover:border-slate-500 hover:text-slate-300'
+              }`}
             >
               {c.symbol}
             </button>
@@ -120,25 +105,17 @@ export default function PublicTreasuryWidget() {
 
       {loading && (
         <div className="animate-pulse space-y-3">
-          <div className="grid grid-cols-4 gap-3">
-            {[1, 2, 3, 4].map(i => <div key={i} className="h-16 bg-slate-700 rounded-lg" />)}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {[1, 2, 3, 4].map(i => <div key={i} className="h-16 rounded-lg bg-slate-700" />)}
           </div>
           <div className="space-y-2">
-            {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-12 bg-slate-700/50 rounded" />)}
+            {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-11 rounded bg-slate-700/50" />)}
           </div>
         </div>
       )}
 
       {error && (
-        <div style={{
-          padding: '16px',
-          background: 'rgba(239, 68, 68, 0.1)',
-          border: '1px solid rgba(239, 68, 68, 0.3)',
-          borderRadius: '8px',
-          color: '#ef4444',
-          fontSize: '13px',
-          textAlign: 'center',
-        }}>
+        <div className="rounded-md border border-rose-500/30 bg-rose-500/10 p-4 text-center text-[13px] text-rose-300">
           {error}
         </div>
       )}
@@ -146,93 +123,48 @@ export default function PublicTreasuryWidget() {
       {!loading && !error && data && (
         <>
           {/* Summary Cards */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: '10px',
-            marginBottom: '16px',
-          }}>
-            <div style={{
-              padding: '14px',
-              background: 'rgba(0,0,0,0.2)',
-              borderRadius: '8px',
-              border: '1px solid #334155',
-            }}>
-              <div style={{ color: '#64748b', fontSize: '10px', marginBottom: '4px' }}>
-                TOTAL HOLDINGS
-              </div>
-              <div style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: 700 }}>
-                {data.summary.totalHoldings.toLocaleString()}
-              </div>
-              <div style={{ color: '#64748b', fontSize: '11px' }}>{coinSymbol}</div>
+          <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
+              <p className="text-[10px] uppercase text-slate-500">Total Holdings</p>
+              <p className="mt-0.5 text-lg font-bold text-slate-100">{data.summary.totalHoldings.toLocaleString()}</p>
+              <p className="text-[10px] text-slate-500">{coinSymbol}</p>
             </div>
-            <div style={{
-              padding: '14px',
-              background: 'rgba(0,0,0,0.2)',
-              borderRadius: '8px',
-              border: '1px solid #334155',
-            }}>
-              <div style={{ color: '#64748b', fontSize: '10px', marginBottom: '4px' }}>
-                TOTAL VALUE
-              </div>
-              <div style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: 700 }}>
-                {formatUsd(data.summary.totalValueUsd)}
-              </div>
-              <div style={{ color: '#64748b', fontSize: '11px' }}>USD</div>
+            <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
+              <p className="text-[10px] uppercase text-slate-500">Total Value</p>
+              <p className="mt-0.5 text-lg font-bold text-slate-100">{formatUsd(data.summary.totalValueUsd)}</p>
+              <p className="text-[10px] text-slate-500">USD</p>
             </div>
-            <div style={{
-              padding: '14px',
-              background: 'rgba(0,0,0,0.2)',
-              borderRadius: '8px',
-              border: '1px solid #334155',
-            }}>
-              <div style={{ color: '#64748b', fontSize: '10px', marginBottom: '4px' }}>
-                COMPANIES
-              </div>
-              <div style={{ color: '#f1f5f9', fontSize: '22px', fontWeight: 700 }}>
-                {data.summary.companyCount}
-              </div>
-              <div style={{ color: '#64748b', fontSize: '11px' }}>Entities</div>
+            <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
+              <p className="text-[10px] uppercase text-slate-500">Entities</p>
+              <p className="mt-0.5 text-lg font-bold text-slate-100">{data.summary.companyCount}</p>
+              <p className="text-[10px] text-slate-500">Companies</p>
             </div>
-            <div style={{
-              padding: '14px',
-              background: 'rgba(0,0,0,0.2)',
-              borderRadius: '8px',
-              border: '1px solid #334155',
-            }}>
-              <div style={{ color: '#64748b', fontSize: '10px', marginBottom: '4px' }}>
-                SUPPLY HELD
-              </div>
-              <div style={{ color: '#f59e0b', fontSize: '22px', fontWeight: 700 }}>
-                {data.summary.marketCapDominance?.toFixed(2)}%
-              </div>
-              <div style={{ color: '#64748b', fontSize: '11px' }}>Of Total Supply</div>
+            <div className="rounded-md border border-slate-700 bg-slate-950/60 p-2">
+              <p className="text-[10px] uppercase text-slate-500">Supply Held</p>
+              <p className="mt-0.5 text-lg font-bold text-amber-300">{data.summary.marketCapDominance?.toFixed(2)}%</p>
+              <p className="text-[10px] text-slate-500">Of Total Supply</p>
             </div>
           </div>
 
           {/* Sort Controls */}
-          <div style={{ display: 'flex', gap: '4px', marginBottom: '12px', flexWrap: 'wrap' }}>
-            <span style={{ color: '#64748b', fontSize: '10px', alignSelf: 'center', marginRight: '4px' }}>Sort by:</span>
-            {[
+          <div className="mb-2 flex flex-wrap items-center gap-1">
+            <span className="mr-1 text-[10px] text-slate-500">Sort:</span>
+            {([
               { key: 'currentValueUsd', label: 'Value' },
               { key: 'holdings', label: 'Holdings' },
               { key: 'profitLossUsd', label: 'P&L $' },
               { key: 'profitLossPercent', label: 'P&L %' },
-            ].map(({ key, label }) => (
+            ] as const).map(({ key, label }) => (
               <button
                 key={key}
                 type="button"
-                onClick={() => setSortCol(key as typeof sortCol)}
-                style={{
-                  padding: '4px 10px',
-                  background: sortCol === key ? 'rgba(16, 185, 129, 0.2)' : 'transparent',
-                  border: sortCol === key ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid #334155',
-                  borderRadius: '6px',
-                  color: sortCol === key ? '#10b981' : '#64748b',
-                  fontSize: '10px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
+                aria-pressed={sortCol === key}
+                onClick={() => setSortCol(key)}
+                className={`rounded border px-2 py-0.5 text-[10px] font-semibold transition-colors ${
+                  sortCol === key
+                    ? 'border-emerald-400/50 bg-emerald-500/15 text-emerald-300'
+                    : 'border-slate-700 bg-transparent text-slate-500 hover:border-slate-500 hover:text-slate-300'
+                }`}
               >
                 {label}
               </button>
@@ -240,59 +172,41 @@ export default function PublicTreasuryWidget() {
           </div>
 
           {/* Table */}
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+          <div className="overflow-x-auto rounded-md border border-slate-700">
+            <table className="w-full border-collapse text-[12px]">
               <thead>
-                <tr style={{ borderBottom: '1px solid #334155' }}>
-                  <th style={{ padding: '8px 6px', color: '#64748b', fontWeight: 600, textAlign: 'left' }}>Entity</th>
-                  <th style={{ padding: '8px 6px', color: '#64748b', fontWeight: 600, textAlign: 'right' }}>Holdings</th>
-                  <th style={{ padding: '8px 6px', color: '#64748b', fontWeight: 600, textAlign: 'right' }}>Value</th>
-                  <th style={{ padding: '8px 6px', color: '#64748b', fontWeight: 600, textAlign: 'right' }}>P&L</th>
-                  <th style={{ padding: '8px 6px', color: '#64748b', fontWeight: 600, textAlign: 'right' }}>% Supply</th>
+                <tr className="border-b border-slate-700 bg-slate-950/60">
+                  <th scope="col" className="px-2 py-2 text-left text-[10px] font-semibold text-slate-500">Entity</th>
+                  <th scope="col" className="px-2 py-2 text-right text-[10px] font-semibold text-slate-500">Holdings</th>
+                  <th scope="col" className="px-2 py-2 text-right text-[10px] font-semibold text-slate-500">Value</th>
+                  <th scope="col" className="px-2 py-2 text-right text-[10px] font-semibold text-slate-500">P&L</th>
+                  <th scope="col" className="px-2 py-2 text-right text-[10px] font-semibold text-slate-500">% Supply</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-800">
                 {sorted.map((co, i) => {
-                  const plColor = co.profitLossUsd >= 0 ? '#10b981' : '#ef4444';
+                  const isProfit = co.profitLossUsd >= 0;
                   const countryCode = (co.country || '--').toUpperCase().slice(0, 2);
                   return (
-                    <tr
-                      key={`${co.name}-${i}`}
-                      style={{ borderBottom: '1px solid #1e293b' }}
-                      className="hover:bg-slate-800/30"
-                    >
-                      <td style={{ padding: '10px 6px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{
-                            fontSize: '10px',
-                            color: '#94a3b8',
-                            border: '1px solid #334155',
-                            borderRadius: '4px',
-                            padding: '2px 5px',
-                            minWidth: '28px',
-                            textAlign: 'center',
-                          }}>{countryCode}</span>
+                    <tr key={`${co.name}-${i}`} className="hover:bg-slate-800/30">
+                      <td className="px-2 py-2">
+                        <div className="flex items-center gap-2">
+                          <span className="min-w-[28px] rounded border border-slate-700 px-1 py-px text-center text-[10px] text-slate-400">
+                            {countryCode}
+                          </span>
                           <div>
-                            <div style={{ color: '#e2e8f0', fontWeight: 600 }}>{co.name}</div>
-                            {co.symbol && (
-                              <div style={{ color: '#64748b', fontSize: '10px' }}>{co.symbol}</div>
-                            )}
+                            <p className="font-semibold text-slate-200">{co.name}</p>
+                            {co.symbol && <p className="text-[10px] text-slate-500">{co.symbol}</p>}
                           </div>
                         </div>
                       </td>
-                      <td style={{ padding: '10px 6px', textAlign: 'right', color: '#f1f5f9' }}>
-                        {co.holdings.toLocaleString()}
+                      <td className="px-2 py-2 text-right text-slate-200">{co.holdings.toLocaleString()}</td>
+                      <td className="px-2 py-2 text-right text-slate-200">{formatUsd(co.currentValueUsd)}</td>
+                      <td className="px-2 py-2 text-right">
+                        <p className={`font-semibold ${isProfit ? 'text-emerald-300' : 'text-rose-300'}`}>{formatUsd(co.profitLossUsd)}</p>
+                        <p className={`text-[10px] ${isProfit ? 'text-emerald-400' : 'text-rose-400'}`}>{formatPct(co.profitLossPercent)}</p>
                       </td>
-                      <td style={{ padding: '10px 6px', textAlign: 'right', color: '#f1f5f9' }}>
-                        {formatUsd(co.currentValueUsd)}
-                      </td>
-                      <td style={{ padding: '10px 6px', textAlign: 'right' }}>
-                        <div style={{ color: plColor, fontWeight: 600 }}>{formatUsd(co.profitLossUsd)}</div>
-                        <div style={{ color: plColor, fontSize: '10px' }}>{formatPct(co.profitLossPercent)}</div>
-                      </td>
-                      <td style={{ padding: '10px 6px', textAlign: 'right', color: '#94a3b8' }}>
-                        {co.percentOfSupply?.toFixed(3)}%
-                      </td>
+                      <td className="px-2 py-2 text-right text-slate-400">{co.percentOfSupply?.toFixed(3)}%</td>
                     </tr>
                   );
                 })}
@@ -300,9 +214,7 @@ export default function PublicTreasuryWidget() {
             </table>
           </div>
 
-          <div style={{ marginTop: '12px', color: '#475569', fontSize: '10px', textAlign: 'right' }}>
-            Source: CoinGecko Public Treasury
-          </div>
+          <p className="mt-2 text-right text-[10px] text-slate-600">Source: CoinGecko Public Treasury</p>
         </>
       )}
     </div>

@@ -513,9 +513,32 @@ export default function ExplorerPage() {
         <CryptoCommand />
       )}
       {tab === 'Crypto Intel' && (
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-          <CryptoNewsWidget title="Crypto News & Guides" />
-          <PublicTreasuryWidget />
+        <div className="space-y-2">
+          <header className="rounded-lg border border-slate-700 bg-slate-900 p-2">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-slate-800 text-base" aria-hidden="true">📰</div>
+              <div>
+                <h1 className="text-lg font-bold text-teal-300">Crypto Intel</h1>
+                <p className="text-xs text-slate-400">Live news, guides, and institutional treasury holdings for crypto markets.</p>
+              </div>
+            </div>
+          </header>
+
+          <section className="rounded-lg border border-slate-700 bg-slate-900 p-2">
+            <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Zone 2 • News &amp; Guides</p>
+            <CryptoNewsWidget title="Crypto News &amp; Guides" />
+          </section>
+
+          <details className="group rounded-lg border border-slate-700 bg-slate-900 p-2" open>
+            <summary className="flex list-none cursor-pointer items-center justify-between text-xs font-bold">
+              <span>Zone 3 • Institutional Treasury Holdings</span>
+              <span className="text-[11px] text-slate-500 group-open:hidden">Expand</span>
+              <span className="hidden text-[11px] text-slate-500 group-open:inline">Collapse</span>
+            </summary>
+            <div className="mt-2">
+              <PublicTreasuryWidget />
+            </div>
+          </details>
         </div>
       )}
       {tab === 'Movers' && (

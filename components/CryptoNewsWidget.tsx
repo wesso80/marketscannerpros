@@ -64,37 +64,25 @@ export default function CryptoNewsWidget({ coinId, title = 'Crypto News' }: Prop
   }, [coinId, filter]);
 
   return (
-    <div style={{
-      background: 'var(--msp-card)',
-      borderRadius: '12px',
-      padding: '20px',
-      border: '1px solid #334155',
-    }}>
+    <div className="rounded-lg border border-slate-700 bg-slate-900 p-3">
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '20px' }}>📰</span>
-          <h3 style={{ color: '#f1f5f9', fontSize: '16px', fontWeight: 600, margin: 0 }}>
-            {title}
-          </h3>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span aria-hidden="true" className="text-lg leading-none">📰</span>
+          <h3 className="text-sm font-bold text-slate-100">{title}</h3>
         </div>
-        <div style={{ display: 'flex', gap: '4px' }}>
+        <div className="flex gap-1">
           {(['all', 'news', 'guides'] as const).map((f) => (
             <button
               key={f}
               type="button"
+              aria-pressed={filter === f}
               onClick={() => setFilter(f)}
-              style={{
-                padding: '4px 10px',
-                background: filter === f ? 'rgba(16, 185, 129, 0.2)' : 'transparent',
-                border: filter === f ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid #334155',
-                borderRadius: '6px',
-                color: filter === f ? '#10b981' : '#64748b',
-                fontSize: '11px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                textTransform: 'capitalize',
-              }}
+              className={`rounded-md border px-2.5 py-1 text-[11px] font-semibold capitalize transition-colors ${
+                filter === f
+                  ? 'border-emerald-400/50 bg-emerald-500/15 text-emerald-300'
+                  : 'border-slate-700 bg-transparent text-slate-500 hover:border-slate-500 hover:text-slate-300'
+              }`}
             >
               {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
             </button>
@@ -105,11 +93,11 @@ export default function CryptoNewsWidget({ coinId, title = 'Crypto News' }: Prop
       {loading && (
         <div className="animate-pulse space-y-3">
           {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} style={{ display: 'flex', gap: '12px', padding: '10px 0', borderBottom: '1px solid #1e293b' }}>
-              <div className="h-16 w-16 bg-slate-700 rounded" style={{ flexShrink: 0 }} />
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <div className="h-4 bg-slate-700 rounded w-full" />
-                <div className="h-3 bg-slate-700/50 rounded w-3/4" />
+            <div key={i} className="flex gap-3 border-b border-slate-800 py-2.5">
+              <div className="h-12 w-[72px] flex-shrink-0 rounded-md bg-slate-700" />
+              <div className="flex flex-1 flex-col gap-2">
+                <div className="h-3.5 w-full rounded bg-slate-700" />
+                <div className="h-3 w-3/4 rounded bg-slate-700/60" />
               </div>
             </div>
           ))}
@@ -117,94 +105,45 @@ export default function CryptoNewsWidget({ coinId, title = 'Crypto News' }: Prop
       )}
 
       {error && (
-        <div style={{
-          padding: '16px',
-          background: 'rgba(239, 68, 68, 0.1)',
-          border: '1px solid rgba(239, 68, 68, 0.3)',
-          borderRadius: '8px',
-          color: '#ef4444',
-          fontSize: '13px',
-          textAlign: 'center',
-        }}>
+        <div className="rounded-md border border-rose-500/30 bg-rose-500/10 p-4 text-center text-[13px] text-rose-300">
           Unable to load news: {error}
         </div>
       )}
 
       {!loading && !error && articles.length === 0 && (
-        <div style={{ color: '#475569', fontSize: '13px', textAlign: 'center', padding: '24px' }}>
-          No articles found
-        </div>
+        <div className="py-6 text-center text-[13px] text-slate-500">No articles found</div>
       )}
 
       {!loading && !error && articles.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+        <div className="divide-y divide-slate-800">
           {articles.map((article, i) => (
             <a
               key={`${article.url}-${i}`}
               href={article.url}
               target="_blank"
               rel="noopener noreferrer"
-              style={{
-                display: 'flex',
-                gap: '12px',
-                padding: '12px 0',
-                borderBottom: i < articles.length - 1 ? '1px solid #1e293b' : 'none',
-                textDecoration: 'none',
-                transition: 'background 0.15s',
-              }}
-              className="hover:bg-slate-800/30 rounded group"
+              className="group flex gap-3 rounded py-2.5 transition-colors hover:bg-slate-800/40"
             >
               {article.image && (
                 <img
                   src={article.image}
                   alt=""
-                  style={{
-                    width: '72px',
-                    height: '48px',
-                    borderRadius: '6px',
-                    objectFit: 'cover',
-                    flexShrink: 0,
-                    background: '#1e293b',
-                  }}
+                  className="h-12 w-[72px] flex-shrink-0 rounded-md bg-slate-800 object-cover"
                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
               )}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
-                  color: '#e2e8f0',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  lineHeight: '1.4',
-                  marginBottom: '4px',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                }}>
+              <div className="min-w-0 flex-1">
+                <p className="mb-1 line-clamp-2 text-[13px] font-semibold leading-snug text-slate-200 group-hover:text-white">
                   {article.title}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                  <span style={{ color: '#64748b', fontSize: '10px' }}>
-                    {article.source_name}
-                  </span>
+                </p>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10px] text-slate-500">{article.source_name}</span>
                   {article.author && (
-                    <span style={{ color: '#475569', fontSize: '10px' }}>
-                      by {article.author}
-                    </span>
+                    <span className="text-[10px] text-slate-600">by {article.author}</span>
                   )}
-                  <span style={{ color: '#475569', fontSize: '10px' }}>
-                    · {timeAgo(article.posted_at)}
-                  </span>
+                  <span className="text-[10px] text-slate-600">· {timeAgo(article.posted_at)}</span>
                   {article.type === 'guides' && (
-                    <span style={{
-                      padding: '1px 6px',
-                      background: 'rgba(99, 102, 241, 0.2)',
-                      border: '1px solid rgba(99, 102, 241, 0.3)',
-                      borderRadius: '4px',
-                      color: '#818cf8',
-                      fontSize: '9px',
-                      fontWeight: 700,
-                    }}>
+                    <span className="rounded border border-indigo-400/30 bg-indigo-500/15 px-1.5 py-px text-[9px] font-bold text-indigo-300">
                       GUIDE
                     </span>
                   )}
@@ -215,11 +154,7 @@ export default function CryptoNewsWidget({ coinId, title = 'Crypto News' }: Prop
         </div>
       )}
 
-      <div style={{ marginTop: '12px', textAlign: 'right' }}>
-        <span style={{ color: '#475569', fontSize: '10px' }}>
-          Powered by CoinGecko News
-        </span>
-      </div>
+      <p className="mt-3 text-right text-[10px] text-slate-600">Powered by CoinGecko News</p>
     </div>
   );
 }
