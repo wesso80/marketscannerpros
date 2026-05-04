@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
 import { buildMorningBrief, saveMorningBriefSnapshot } from "@/lib/admin/morning-brief";
+import { wrapTruth } from "@/lib/admin";
 import type { Market } from "@/types/operator";
 
 export const runtime = "nodejs";
@@ -22,7 +23,20 @@ export async function GET(req: NextRequest) {
     const scanLimit = Number(searchParams.get("scanLimit") || searchParams.get("limit") || 50);
     const brief = await buildMorningBrief({ symbols, market, timeframe, scanLimit });
     await saveMorningBriefSnapshot(brief, "admin");
-    return NextResponse.json({ ok: true, brief });
+    return NextResponse.json({
+      ok: true,
+      brief,
+      truth: wrapTruth(
+        { source: 'admin:morning-brief', briefId: brief.briefId },
+        {
+          source: 'admin:morning-brief',
+          freshness: 'real-time',
+          simulated: false,
+          confidence: 'high',
+          confidenceReason: 'Brief built from live scanner + journal pipeline at request time.',
+        },
+      ),
+    });
   } catch (err: unknown) {
     console.error("[admin:morning-brief] Error:", err);
     return NextResponse.json(

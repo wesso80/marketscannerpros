@@ -29,9 +29,9 @@ export interface CoreStrategyStepContext {
   i: number;
   date: string;
   close: number;
-  /** Next bar's open price — used as entry fill to avoid lookahead bias */
+  /** Next bar's open price ï¿½ used as entry fill to avoid lookahead bias */
   nextOpen: number;
-  /** Next bar's date — used as entry date */
+  /** Next bar's date ï¿½ used as entry date */
   nextDate: string;
   initialCapital: number;
   symbol: string;

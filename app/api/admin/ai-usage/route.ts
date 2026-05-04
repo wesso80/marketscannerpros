@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { q } from "@/lib/db";
 import { requireAdmin } from '@/lib/adminAuth';
+import { wrapTruth } from '@/lib/admin';
 
 // Helper to safely run a query and return empty on error
 async function safeQuery<T = any>(queryFn: () => Promise<T[]>, defaultValue: T[] = []): Promise<T[]> {
@@ -71,11 +72,28 @@ export async function GET(req: NextRequest) {
           LIMIT 50`)),
     ]);
 
+    const failed: string[] = [];
+    if (!dailyStats?.length) failed.push('dailyStats');
+    if (!tierBreakdown?.length) failed.push('tierBreakdown');
+    if (!topUsers?.length) failed.push('topUsers');
+    if (!recentQuestions?.length) failed.push('recentQuestions');
+
     return NextResponse.json({
       dailyStats: dailyStats || [],
       tierBreakdown: tierBreakdown || [],
       topUsers: topUsers || [],
       recentQuestions: recentQuestions || [],
+      truth: wrapTruth(
+        { source: 'admin:postgres', degradedQueries: failed.length },
+        {
+          source: 'admin:postgres',
+          freshness: failed.length > 0 ? 'stale' : 'real-time',
+          simulated: false,
+          missingFields: failed,
+          confidence: failed.length > 2 ? 'low' : failed.length > 0 ? 'medium' : 'high',
+          confidenceReason: failed.length === 0 ? 'All ai_usage queries succeeded.' : `${failed.length} queries returned no rows: ${failed.join(', ')}`,
+        },
+      ),
     });
   } catch (error: any) {
     console.error("Admin AI usage error:", error);

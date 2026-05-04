@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
 import { getSessionFromCookie } from "@/lib/auth";
 import { isOperator } from "@/lib/quant/operatorAuth";
+import { wrapTruth } from "@/lib/admin";
 import { listSchedulerRuns, runResearchScheduler, type SchedulerMode } from "@/lib/admin/researchScheduler";
 
 export const runtime = "nodejs";
@@ -30,7 +31,22 @@ export async function GET(req: NextRequest) {
 
   const limit = Math.max(1, Math.min(200, Number(req.nextUrl.searchParams.get("limit") || 50)));
   const runs = await listSchedulerRuns(auth.workspaceId, limit);
-  return NextResponse.json({ ok: true, runs });
+  return NextResponse.json({
+    ok: true,
+    runs,
+    truth: wrapTruth(
+      { source: 'admin:research-scheduler', count: runs.length },
+      {
+        source: 'admin:research-scheduler',
+        freshness: 'real-time',
+        simulated: false,
+        confidence: runs.length > 0 ? 'high' : 'medium',
+        confidenceReason: runs.length > 0
+          ? `${runs.length} scheduler run${runs.length === 1 ? '' : 's'} listed.`
+          : 'No scheduler runs recorded yet.',
+      },
+    ),
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -53,5 +69,18 @@ export async function POST(req: NextRequest) {
     symbols,
   });
 
-  return NextResponse.json({ ok: true, result });
+  return NextResponse.json({
+    ok: true,
+    result,
+    truth: wrapTruth(
+      { source: 'admin:research-scheduler', mode, market },
+      {
+        source: 'admin:research-scheduler',
+        freshness: 'real-time',
+        simulated: false,
+        confidence: 'high',
+        confidenceReason: `Scheduler executed in ${mode} mode against ${symbols.length} symbol${symbols.length === 1 ? '' : 's'}.`,
+      },
+    ),
+  });
 }

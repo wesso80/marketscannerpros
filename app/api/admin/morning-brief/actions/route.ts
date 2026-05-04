@@ -29,6 +29,17 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const action = String(body.action || "") as MorningBriefAction;
 
+    const truth = wrapTruth(
+      { source: 'admin:morning-brief:actions', action },
+      {
+        source: 'admin:morning-brief:actions',
+        freshness: 'real-time',
+        simulated: false,
+        confidence: 'high',
+        confidenceReason: 'Action invoked against live admin pipeline.',
+      },
+    );
+
     if (action === "run_prewake") {
       const token = process.env.CRON_SECRET || process.env.ADMIN_SECRET;
       if (!token) {
@@ -43,7 +54,7 @@ export async function POST(req: NextRequest) {
       if (!scanRes.ok) {
         return NextResponse.json({ error: "Prewake scan failed", result }, { status: scanRes.status });
       }
-      return NextResponse.json({ ok: true, action, result });
+      return NextResponse.json({ ok: true, action, result, truth });
     }
 
     if (action === "trade_plan") {
@@ -54,7 +65,7 @@ export async function POST(req: NextRequest) {
       }
       const plan = await buildMorningTradePlan(brief, play);
       await saveMorningTradePlan(plan);
-      return NextResponse.json({ ok: true, action, plan });
+      return NextResponse.json({ ok: true, action, plan, truth });
     }
 
     if (action === "open_rescore") {
@@ -64,12 +75,12 @@ export async function POST(req: NextRequest) {
       }
       const rescore = await buildOpenRescore(brief);
       await saveMorningBriefSnapshot(rescore.brief, "admin");
-      return NextResponse.json({ ok: true, action, rescore });
+      return NextResponse.json({ ok: true, action, rescore, truth });
     }
 
     if (action === "journal_tag_sync") {
       const journalTagSync = await buildJournalTagReconciliationReport();
-      return NextResponse.json({ ok: true, action, journalTagSync });
+      return NextResponse.json({ ok: true, action, journalTagSync, truth });
     }
 
     if (action === "review_email") {
@@ -78,7 +89,7 @@ export async function POST(req: NextRequest) {
       const recipients = resolveRecipients(body.to);
       const subject = `MSP Daily Review: execution ${review.sessionScore.executionScore}/100, discipline ${review.sessionScore.disciplineScore}/100`;
       const sent = await Promise.all(recipients.map((to) => sendAlertEmail({ to, subject, html })));
-      return NextResponse.json({ ok: true, action, recipients, sent, review });
+      return NextResponse.json({ ok: true, action, recipients, sent, review, truth });
     }
 
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });

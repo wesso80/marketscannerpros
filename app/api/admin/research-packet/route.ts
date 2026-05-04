@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
 import { getSessionFromCookie } from "@/lib/auth";
 import { isOperator } from "@/lib/quant/operatorAuth";
+import { wrapTruth } from "@/lib/admin";
 import { getAdminResearchPacket, getAdminResearchPacketsForSymbols } from "@/lib/admin/getAdminResearchPacket";
 
 export const runtime = "nodejs";
@@ -26,12 +27,38 @@ export async function GET(req: NextRequest) {
 
   if (symbol) {
     const packet = await getAdminResearchPacket({ symbol, market, timeframe });
-    return NextResponse.json({ ok: true, packet });
+    return NextResponse.json({
+      ok: true,
+      packet,
+      truth: wrapTruth(
+        { source: 'admin:research-packet', symbol },
+        {
+          source: 'admin:research-packet',
+          freshness: 'real-time',
+          simulated: false,
+          confidence: 'high',
+          confidenceReason: `Packet built from live research engine for ${symbol}.`,
+        },
+      ),
+    });
   }
 
   if (symbols.length > 0) {
     const packets = await getAdminResearchPacketsForSymbols({ symbols, market, timeframe });
-    return NextResponse.json({ ok: true, packets });
+    return NextResponse.json({
+      ok: true,
+      packets,
+      truth: wrapTruth(
+        { source: 'admin:research-packet', count: symbols.length },
+        {
+          source: 'admin:research-packet',
+          freshness: 'real-time',
+          simulated: false,
+          confidence: 'high',
+          confidenceReason: `Packets built for ${symbols.length} symbol${symbols.length === 1 ? '' : 's'}.`,
+        },
+      ),
+    });
   }
 
   return NextResponse.json({ error: "Provide symbol or symbols" }, { status: 400 });

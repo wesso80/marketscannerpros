@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
 import { getSessionFromCookie } from "@/lib/auth";
 import { isOperator } from "@/lib/quant/operatorAuth";
+import { wrapTruth } from "@/lib/admin";
 import type { Market } from "@/types/operator";
 import { getAdminResearchPacket } from "@/lib/admin/getAdminResearchPacket";
 
@@ -51,6 +52,16 @@ export async function GET(
         packetId: packet.packetId,
         alertEligibility: packet.alertEligibility,
       },
+      truth: wrapTruth(
+        { source: 'admin:symbol', symbol, packetId: packet.packetId },
+        {
+          source: 'admin:symbol',
+          freshness: 'real-time',
+          simulated: false,
+          confidence: 'high',
+          confidenceReason: `Packet built from live research engine for ${symbol} on ${timeframe}.`,
+        },
+      ),
     });
   } catch (err: unknown) {
     console.error("[admin:symbol] Error:", err);

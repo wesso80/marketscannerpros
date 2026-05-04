@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
 import { getSessionFromCookie } from "@/lib/auth";
 import { isOperator } from "@/lib/quant/operatorAuth";
+import { wrapTruth } from "@/lib/admin";
 import { appendResearchEvent, listResearchEvents, type ResearchEventType } from "@/lib/admin/researchEventTape";
 
 export const runtime = "nodejs";
@@ -29,7 +30,22 @@ export async function GET(req: NextRequest) {
     eventType,
   });
 
-  return NextResponse.json({ ok: true, events });
+  return NextResponse.json({
+    ok: true,
+    events,
+    truth: wrapTruth(
+      { source: 'admin:research-events', count: events.length },
+      {
+        source: 'admin:research-events',
+        freshness: 'real-time',
+        simulated: false,
+        confidence: events.length > 0 ? 'high' : 'medium',
+        confidenceReason: events.length > 0
+          ? `${events.length} event${events.length === 1 ? '' : 's'} returned from research event tape.`
+          : 'No events match the requested filter.',
+      },
+    ),
+  });
 }
 
 export async function POST(req: NextRequest) {
