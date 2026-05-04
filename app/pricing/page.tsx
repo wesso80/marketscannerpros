@@ -284,13 +284,13 @@ export default function PricingPage() {
             </p>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-sm">
+            <table role="table" className="w-full min-w-[720px] text-left text-sm">
               <thead className="bg-slate-950/50 text-xs uppercase tracking-[0.08em] text-white/50">
                 <tr>
-                  <th className="px-5 py-3">Feature</th>
-                  <th className="px-5 py-3">Free</th>
-                  <th className="px-5 py-3">Pro</th>
-                  <th className="px-5 py-3">Pro Trader</th>
+                  <th scope="col" className="px-5 py-3">Feature</th>
+                  <th scope="col" className="px-5 py-3">Free</th>
+                  <th scope="col" className="px-5 py-3">Pro</th>
+                  <th scope="col" className="px-5 py-3">Pro Trader</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10">

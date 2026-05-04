@@ -33,9 +33,9 @@ export async function POST(req: Request) {
     };
 
     // Call the alert endpoint
-    const baseUrl = req.headers.get('host');
-    const protocol = req.headers.get('x-forwarded-proto') || 'https';
-    const alertUrl = `${protocol}://${baseUrl}/api/ai-scanner/alert`;
+    // Use APP_BASE_URL env var so the protocol is not sourced from the (potentially spoofed) request.
+    const baseUrl = process.env.APP_BASE_URL || `https://${req.headers.get('host')}`;
+    const alertUrl = `${baseUrl}/api/ai-scanner/alert`;
 
     const response = await fetch(alertUrl, {
       method: 'POST',

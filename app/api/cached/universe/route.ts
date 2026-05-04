@@ -13,6 +13,17 @@ export async function GET(req: NextRequest) {
   const tier = searchParams.get('tier'); // 1, 2, 3
   const enabled = searchParams.get('enabled'); // true, false
 
+  const VALID_ASSET_TYPES = new Set(['equity', 'crypto', 'forex']);
+  const VALID_TIERS = new Set([1, 2, 3]);
+
+  if (assetType !== null && !VALID_ASSET_TYPES.has(assetType)) {
+    return NextResponse.json({ error: 'Invalid asset_type. Must be one of: equity, crypto, forex' }, { status: 400 });
+  }
+  const tierNum = tier !== null ? parseInt(tier, 10) : null;
+  if (tierNum !== null && (!Number.isInteger(tierNum) || !VALID_TIERS.has(tierNum))) {
+    return NextResponse.json({ error: 'Invalid tier. Must be one of: 1, 2, 3' }, { status: 400 });
+  }
+
   try {
     let query = 'SELECT * FROM symbol_universe WHERE 1=1';
     const params: any[] = [];
@@ -23,9 +34,9 @@ export async function GET(req: NextRequest) {
       params.push(assetType);
     }
 
-    if (tier) {
+    if (tierNum !== null) {
       query += ` AND tier = $${paramIndex++}`;
-      params.push(parseInt(tier, 10));
+      params.push(tierNum);
     }
 
     if (enabled !== null && enabled !== undefined) {

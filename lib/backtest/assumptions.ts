@@ -61,8 +61,8 @@ export interface BacktestAssumptionsMetadata {
 }
 
 function sampleQuality(totalTrades: number): BacktestSampleQuality {
-  if (totalTrades >= 50) return 'adequate';
-  if (totalTrades >= 20) return 'developing';
+  if (totalTrades >= 100) return 'adequate';
+  if (totalTrades >= 30) return 'developing';
   return 'thin';
 }
 

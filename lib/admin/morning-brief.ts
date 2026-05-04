@@ -1915,7 +1915,7 @@ function buildMorningRiskGovernor(
     ? "LOCKED"
     : risk.dailyDrawdown >= 0.02 || risk.correlationRisk >= 0.65 || sessionScore.disciplineScore < 70
       ? "DEFENSIVE"
-      : expectancy.sampleTrades < 10
+      : expectancy.sampleTrades < 30
         ? "THROTTLED"
         : "NORMAL";
   const maxRiskPerTradePct = mode === "NORMAL" ? 0.01 : mode === "THROTTLED" ? 0.0075 : mode === "DEFENSIVE" ? 0.005 : 0;
@@ -2606,8 +2606,15 @@ function buildExpectancyNotes(
   if (sampleTrades === 0) return ["No closed-trade sample found yet; use scanner evidence and manual review labels first."];
   const bestSymbol = symbols.filter((item) => item.sample >= 2).sort((a, b) => b.avgR - a.avgR)[0];
   const weakPlaybook = playbooks.filter((item) => item.sample >= 2).sort((a, b) => a.avgR - b.avgR)[0];
+  const sampleNote =
+    sampleTrades < 30
+      ? `Sample is critically thin (${sampleTrades} trades). Do not treat any metric as calibrated; use scanner evidence and manual confirmation only.`
+      : sampleTrades < 100
+        ? `Sample is still developing (${sampleTrades} trades). Treat metrics as directional indicators, not stable calibrations.`
+        : null;
   return [
     `${sampleTrades} closed journal trades are feeding expectancy over the last 90 days.`,
+    ...(sampleNote ? [sampleNote] : []),
     bestSymbol ? `Best symbol expectancy: ${bestSymbol.key} at ${bestSymbol.avgR.toFixed(2)}R average.` : "Need at least two trades per symbol before symbol expectancy becomes meaningful.",
     weakPlaybook ? `Weakest playbook sample: ${weakPlaybook.key} at ${weakPlaybook.avgR.toFixed(2)}R average; demand stronger confirmation.` : "Playbook expectancy still needs a deeper sample.",
   ];
