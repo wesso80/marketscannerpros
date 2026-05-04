@@ -163,7 +163,7 @@ function MiniSparkline({ data, color = '#10B981' }: { data: number[]; color?: st
     .join(' ');
 
   return (
-    <svg viewBox="0 0 100 100" className="h-16 w-full" preserveAspectRatio="none">
+    <svg viewBox="0 0 100 100" className="h-16 w-full" preserveAspectRatio="none" aria-hidden="true">
       <polyline fill="none" stroke={color} strokeWidth="2" points={points} />
     </svg>
   );
@@ -189,6 +189,7 @@ function OHLCChart({ data, height = 220 }: { data: [number, number, number, numb
       <svg
         viewBox={`0 0 ${Math.max(chartWidth, data.length * spacing + 40)} ${height}`}
         className="w-full"
+        aria-hidden="true"
         style={{ minWidth: 'min(420px, 100%)', maxHeight: `${height}px` }}
       >
         {[0, 0.25, 0.5, 0.75, 1].map((pct, i) => {
@@ -522,6 +523,7 @@ function CryptoDetailPageContent() {
               <button
                 type="button"
                 key={coin.symbol}
+                aria-pressed={selectedCoin === coin.symbol}
                 onClick={() => loadCoinBySymbolOrId(coin.symbol)}
                 className={`rounded-full border px-2 py-0.5 text-[11px] ${
                   selectedCoin === coin.symbol ? 'border-emerald-400 bg-emerald-500/10 text-emerald-200' : 'border-slate-700 text-slate-300'
@@ -603,6 +605,7 @@ function CryptoDetailPageContent() {
                     <div className="mb-2 flex gap-1 rounded bg-slate-800/70 p-1">
                       <button
                         type="button"
+                        aria-pressed={chartView === 'ohlc'}
                         onClick={() => setChartView('ohlc')}
                         className={`rounded px-2 py-1 text-[11px] ${chartView === 'ohlc' ? 'bg-emerald-500 text-white' : 'text-slate-300'}`}
                       >
@@ -610,6 +613,7 @@ function CryptoDetailPageContent() {
                       </button>
                       <button
                         type="button"
+                        aria-pressed={chartView === 'sparkline'}
                         onClick={() => setChartView('sparkline')}
                         className={`rounded px-2 py-1 text-[11px] ${chartView === 'sparkline' ? 'bg-emerald-500 text-white' : 'text-slate-300'}`}
                       >
