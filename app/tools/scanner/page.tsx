@@ -330,7 +330,7 @@ function ProScannerCards({ rows, onRowClick }: { rows: ScreenerRow[]; onRowClick
             key={row.symbol}
             type="button"
             onClick={() => onRowClick(row)}
-            className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-4 text-left transition hover:border-emerald-400/35 hover:bg-emerald-400/[0.05]"
+            className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-4 text-left transition hover:border-emerald-400/35 hover:bg-emerald-400/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
           >
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -387,7 +387,7 @@ function RankedMobileCards({ rows, activeRegime, onRowClick }: { rows: ScanResul
             key={`${row.symbol}-${index}`}
             type="button"
             onClick={() => onRowClick(row)}
-            className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-4 text-left transition hover:border-emerald-400/35 hover:bg-emerald-400/[0.05]"
+            className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-4 text-left transition hover:border-emerald-400/35 hover:bg-emerald-400/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
             aria-label={`Review scenario for ${row.symbol}`}
           >
             <div className="flex items-start justify-between gap-3">
@@ -445,7 +445,7 @@ function RankedFallbackList({ rows, activeRegime, onRowClick }: { rows: ScanResu
             key={`${(row as any)._assetClass || 'asset'}-${row.symbol || 'unknown'}-${index}`}
             type="button"
             onClick={() => onRowClick(row)}
-            className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-4 text-left transition hover:border-emerald-400/35 hover:bg-emerald-400/[0.05]"
+            className="rounded-lg border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-4 text-left transition hover:border-emerald-400/35 hover:bg-emerald-400/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40"
             aria-label={`Review scenario for ${row.symbol || 'symbol'}`}
           >
             <div className="flex items-start justify-between gap-3">
@@ -534,7 +534,7 @@ function RankedDesktopFallbackTable({ rows, activeRegime, onRowClick }: { rows: 
                   </span>
                 </td>
                 <td className="py-2.5 px-2 text-right whitespace-nowrap">
-                  <button type="button" onClick={() => onRowClick(row)} className="px-2.5 py-1.5 bg-emerald-500/10 text-emerald-400 rounded text-[11px] font-semibold hover:bg-emerald-500/20 transition-colors">Review</button>
+                  <button type="button" onClick={() => onRowClick(row)} className="px-2.5 py-1.5 bg-emerald-500/10 text-emerald-400 rounded text-[11px] font-semibold hover:bg-emerald-500/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60">Review</button>
                 </td>
               </tr>
             );
@@ -1681,8 +1681,8 @@ export default function ScannerPage() {
                   <div className="mb-1 text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Asset Class</div>
                   <div className="flex gap-1.5">
                     {(['crypto', 'equity', 'forex'] as const).map(ac => (
-                      <button key={ac} onClick={() => setProAsset(ac)}
-                        className={`rounded-md border px-3 py-1.5 text-xs font-bold uppercase ${proAsset === ac ? 'border-slate-500 bg-slate-800 text-white' : 'border-[var(--msp-border)] text-slate-500 hover:text-slate-300'}`}>
+                      <button key={ac} type="button" aria-pressed={proAsset === ac} onClick={() => setProAsset(ac)}
+                        className={`rounded-md border px-3 py-1.5 text-xs font-bold uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60 ${proAsset === ac ? 'border-slate-500 bg-slate-800 text-white' : 'border-[var(--msp-border)] text-slate-500 hover:text-slate-300'}`}>
                         {ac}
                       </button>
                     ))}
@@ -1702,8 +1702,8 @@ export default function ScannerPage() {
                   </div>
                 )}
                 <div>
-                  <label className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Sector Filter</label>
-                  <select className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm text-slate-200">
+                  <label htmlFor="pro-sector-filter" className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Sector Filter</label>
+                  <select id="pro-sector-filter" className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm text-slate-200">
                     <option value="all">All</option>
                   </select>
                 </div>
@@ -1714,37 +1714,37 @@ export default function ScannerPage() {
                 <div className="mb-2 text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Structure</div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Timeframe</label>
-                    <select value={proTimeframe} onChange={e => setProTimeframe(e.target.value as any)}
+                    <label htmlFor="pro-timeframe" className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Timeframe</label>
+                    <select id="pro-timeframe" value={proTimeframe} onChange={e => setProTimeframe(e.target.value as any)}
                       className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm text-slate-200">
                       <option value="1d">1d</option><option value="1h">1h</option><option value="30m">30m</option><option value="15m">15m</option>
                     </select>
                   </div>
                   <div>
-                    <label className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">MTF Alignment</label>
-                    <select value={proMtfAlignment} onChange={e => setProMtfAlignment(Number(e.target.value))}
+                    <label htmlFor="pro-mtf-alignment" className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">MTF Alignment</label>
+                    <select id="pro-mtf-alignment" value={proMtfAlignment} onChange={e => setProMtfAlignment(Number(e.target.value))}
                       className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm text-slate-200">
                       <option value={2}>2/4+</option><option value={3}>3/4+</option><option value={4}>4/4</option>
                     </select>
                   </div>
                   <div>
-                    <label className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Min Confidence</label>
-                    <select value={proMinConfidence} onChange={e => setProMinConfidence(Number(e.target.value))}
+                    <label htmlFor="pro-min-confidence" className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Min Confidence</label>
+                    <select id="pro-min-confidence" value={proMinConfidence} onChange={e => setProMinConfidence(Number(e.target.value))}
                       className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm text-slate-200">
                       <option value={50}>50</option><option value={60}>60</option><option value={70}>70</option><option value={80}>80</option>
                     </select>
                   </div>
                   <div>
-                    <label className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Vol State</label>
-                    <select value={proVolState} onChange={e => setProVolState(e.target.value)}
+                    <label htmlFor="pro-vol-state" className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Vol State</label>
+                    <select id="pro-vol-state" value={proVolState} onChange={e => setProVolState(e.target.value)}
                       className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm text-slate-200">
                       <option value="all">All</option><option value="low">Low</option><option value="moderate">Moderate</option><option value="high">High</option>
                     </select>
                   </div>
                 </div>
                 <div className="mt-3">
-                  <label className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Squeeze</label>
-                  <select value={proSqueeze} onChange={e => setProSqueeze(e.target.value as any)}
+                  <label htmlFor="pro-squeeze" className="mb-1 block text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Squeeze</label>
+                  <select id="pro-squeeze" value={proSqueeze} onChange={e => setProSqueeze(e.target.value as any)}
                     className="w-full rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm text-slate-200">
                     <option value="all">All</option><option value="squeeze">In Squeeze</option>
                   </select>
@@ -1758,8 +1758,8 @@ export default function ScannerPage() {
                 <div className="mb-1 text-[0.66rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Mode</div>
                 <div className="flex gap-1.5">
                   {(['light', 'deep'] as const).map(d => (
-                    <button key={d} onClick={() => setProDepth(d)}
-                      className={`rounded-md border px-3 py-1.5 text-xs font-bold uppercase ${proDepth === d ? 'border-slate-500 bg-slate-800 text-white' : 'border-[var(--msp-border)] text-slate-500 hover:text-slate-300'}`}>
+                    <button key={d} type="button" aria-pressed={proDepth === d} onClick={() => setProDepth(d)}
+                      className={`rounded-md border px-3 py-1.5 text-xs font-bold uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60 ${proDepth === d ? 'border-slate-500 bg-slate-800 text-white' : 'border-[var(--msp-border)] text-slate-500 hover:text-slate-300'}`}>
                       {d === 'light' ? 'Fast' : 'Deep'}
                     </button>
                   ))}
@@ -1767,8 +1767,8 @@ export default function ScannerPage() {
               </div>
               <div className="flex gap-1.5">
                 {(['observe', 'review'] as const).map(i => (
-                  <button key={i} onClick={() => setProIntent(i)}
-                    className={`rounded-md border px-3 py-1.5 text-xs font-bold uppercase ${proIntent === i ? 'border-slate-500 bg-slate-800 text-white' : 'border-[var(--msp-border)] text-slate-500 hover:text-slate-300'}`}>
+                  <button key={i} type="button" aria-pressed={proIntent === i} onClick={() => setProIntent(i)}
+                    className={`rounded-md border px-3 py-1.5 text-xs font-bold uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60 ${proIntent === i ? 'border-slate-500 bg-slate-800 text-white' : 'border-[var(--msp-border)] text-slate-500 hover:text-slate-300'}`}>
                     {i}
                   </button>
                 ))}
@@ -1798,29 +1798,29 @@ export default function ScannerPage() {
           {proScanResults && (
             <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel-2)] p-3">
               <div className="flex items-center gap-2">
-                <label className="text-[11px] uppercase text-slate-500">Bias:</label>
-                <select value={proDirection} onChange={e => setProDirection(e.target.value as any)}
+                <label htmlFor="pro-filter-bias" className="text-[11px] uppercase text-slate-500">Bias:</label>
+                <select id="pro-filter-bias" value={proDirection} onChange={e => setProDirection(e.target.value as any)}
                   className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200">
                   <option value="all">All</option><option value="long">Bullish</option><option value="short">Bearish</option>
                 </select>
               </div>
               <div className="flex items-center gap-2">
-                <label className="text-[11px] uppercase text-slate-500">Quality:</label>
-                <select value={proQuality} onChange={e => setProQuality(e.target.value as any)}
+                <label htmlFor="pro-filter-quality" className="text-[11px] uppercase text-slate-500">Quality:</label>
+                <select id="pro-filter-quality" value={proQuality} onChange={e => setProQuality(e.target.value as any)}
                   className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200">
                   <option value="all">All</option><option value="high">High</option><option value="medium">Medium</option>
                 </select>
               </div>
               <div className="flex items-center gap-2">
-                <label className="text-[11px] uppercase text-slate-500">Sort:</label>
-                <select value={proSort} onChange={e => setProSort(e.target.value as any)}
+                <label htmlFor="pro-filter-sort" className="text-[11px] uppercase text-slate-500">Sort:</label>
+                <select id="pro-filter-sort" value={proSort} onChange={e => setProSort(e.target.value as any)}
                   className="rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200">
                   <option value="rank">Rank</option><option value="confidence">Confluence</option><option value="volatility">Volatility</option><option value="trend">Trend</option>
                 </select>
               </div>
               <div className="ml-auto flex gap-1">
-                <button onClick={() => setProBulkViewMode('table')} className={`rounded px-2 py-1 text-[11px] font-bold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400/50 ${proBulkViewMode === 'table' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-500'}`}>Table</button>
-                <button onClick={() => setProBulkViewMode('cards')} className={`rounded px-2 py-1 text-[11px] font-bold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400/50 ${proBulkViewMode === 'cards' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-500'}`}>Cards</button>
+                <button type="button" onClick={() => setProBulkViewMode('table')} className={`rounded px-2 py-1 text-[11px] font-bold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400/50 ${proBulkViewMode === 'table' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-500'}`}>Table</button>
+                <button type="button" onClick={() => setProBulkViewMode('cards')} className={`rounded px-2 py-1 text-[11px] font-bold focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400/50 ${proBulkViewMode === 'cards' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-500'}`}>Cards</button>
               </div>
             </div>
           )}
