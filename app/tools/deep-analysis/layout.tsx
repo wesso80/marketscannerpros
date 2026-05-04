@@ -4,7 +4,7 @@ export const metadata: Metadata = {
   title: "Deep Analysis",
   description:
     "Educational single-symbol deep analysis combining technical indicators, AI context, options flow, news sentiment, and earnings data.",
-  robots: { index: false, follow: true },
+  robots: { index: false, follow: false },
   alternates: { canonical: 'https://marketscannerpros.app/tools/golden-egg' },
 };
 

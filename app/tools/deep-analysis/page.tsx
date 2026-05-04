@@ -851,13 +851,13 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
               onKeyDown={(e) => e.key === "Enter" && handleAnalyze()}
               placeholder="Enter symbol: AAPL, BTC, EURUSD..."
               aria-label="Stock or crypto symbol"
-              className="flex-1 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel)] px-5 py-3.5 text-base text-[var(--msp-text)] outline-none"
+              className="flex-1 rounded-xl border border-[var(--msp-border)] bg-[var(--msp-panel)] px-5 py-3.5 text-base text-[var(--msp-text)] outline-none focus-visible:border-emerald-500 focus-visible:ring-2 focus-visible:ring-emerald-500/30"
             />
             <button
               type="button"
               onClick={handleAnalyze}
               disabled={loading}
-              className={`flex shrink-0 items-center gap-2 rounded-xl px-6 py-3.5 text-base font-bold text-[#061018] ${loading ? 'cursor-wait bg-[var(--msp-panel)]' : 'cursor-pointer bg-[var(--msp-accent)]'}`}
+              className={`flex shrink-0 items-center gap-2 rounded-xl px-6 py-3.5 text-base font-bold text-[#061018] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 ${loading ? 'cursor-wait bg-[var(--msp-panel)]' : 'cursor-pointer bg-[var(--msp-accent)]'}`}
             >
               {loading ? (
                 <>Running Research...</>
@@ -871,8 +871,9 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
               <button
                 type="button"
                 key={s}
+                aria-pressed={symbol === s}
                 onClick={() => { setSymbol(s); }}
-                className={`cursor-pointer rounded-md border border-[var(--msp-border)] px-3 py-1.5 text-[0.85rem] text-[var(--msp-muted)] ${symbol === s ? 'bg-[var(--msp-panel)]' : 'bg-transparent'}`}
+                className={`cursor-pointer rounded-md border border-[var(--msp-border)] px-3 py-1.5 text-[0.85rem] text-[var(--msp-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50 ${symbol === s ? 'bg-[var(--msp-panel)]' : 'bg-transparent'}`}
               >
                 {s}
               </button>
@@ -1930,6 +1931,7 @@ export default function DeepAnalysisPage({ symbol: propSymbol }: { symbol?: stri
                       href={item.url}
                       target="_blank"
                       rel="noopener noreferrer"
+                      className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/50 rounded-[10px]"
                       style={{ 
                         display: "block",
                         padding: "1rem",
