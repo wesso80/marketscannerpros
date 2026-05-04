@@ -13,10 +13,9 @@ export const AI_MODEL_BY_TIER: Record<AppTier, string> = {
   pro_trader: 'gpt-4.1',
 };
 
-// Admin emails — hardcoded + env var for guaranteed access
-const HARDCODED_ADMINS = ['xxneutronxx@yahoo.com', 'bradleywessling@yahoo.com.au'];
-const ENV_ADMINS = (process.env.ADMIN_EMAILS || "").split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
-const ADMIN_EMAILS = [...new Set([...HARDCODED_ADMINS, ...ENV_ADMINS])];
+// Admin emails — env var only (ADMIN_EMAILS=a@b.com,c@d.com)
+// Hardcoded fallbacks have been removed; configure via environment variable.
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "").split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
 
 export function isFreeForAllMode(): boolean {
   if (process.env.FREE_FOR_ALL_MODE !== "true") return false;

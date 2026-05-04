@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSessionFromCookie } from '@/lib/auth';
-import { isOperator } from '@/lib/quant/operatorAuth';
 import { requireAdmin } from '@/lib/adminAuth';
 import { getApiUsage } from '@/lib/coingecko';
 
@@ -11,12 +9,8 @@ import { getApiUsage } from '@/lib/coingecko';
  * Protected: requires admin/operator auth.
  */
 export async function GET(req: NextRequest) {
-  const adminAuth = (await requireAdmin(req)).ok;
-  if (!adminAuth) {
-    const session = await getSessionFromCookie();
-    if (!session || !isOperator(session.cid, session.workspaceId)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
+  if (!(await requireAdmin(req)).ok) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
   }
 
   const accountUsage = await getApiUsage();

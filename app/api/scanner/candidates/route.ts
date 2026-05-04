@@ -129,10 +129,11 @@ export async function GET() {
         const strategy_tag = deriveStrategy(pick);
         const stopPrice = computeStop(price, safeAtr, direction);
 
-        // Normalize confidence to 0-100 from the raw score (50 = neutral)
+        // Confidence reflects signal conviction (distance from neutral 50), not direction.
+        // Capped at 90 to avoid implying certainty; minimum 30 for weak signals.
         const rawScore = Number(pick.score || 50);
         const confidence = Math.round(
-          Math.min(100, Math.max(30, 50 + (Math.abs(rawScore - 50) * 1.0)))
+          Math.min(90, Math.max(30, 50 + (Math.abs(rawScore - 50) * 0.8)))
         );
 
         const assetClass: 'equities' | 'crypto' = pick.asset_class === 'crypto' ? 'crypto' : 'equities';

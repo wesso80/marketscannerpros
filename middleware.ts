@@ -34,8 +34,28 @@ async function verify(token: string) {
   if (!token) return null;
   const [body, sig] = token.split('.');
   if (!body || !sig) return null;
-  const expected = await hmacSha256(APP_SIGNING_SECRET, body);
-  if (sig !== expected) return null;
+
+  // Timing-safe HMAC verification — crypto.subtle.verify() is constant-time
+  // (avoids timing attack from naive string equality comparison)
+  const encoder = new TextEncoder();
+  let sigBytes: Uint8Array;
+  try {
+    sigBytes = Uint8Array.from(
+      atob(sig.replace(/-/g, '+').replace(/_/g, '/')),
+      c => c.charCodeAt(0),
+    );
+  } catch {
+    return null; // Malformed base64url
+  }
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(APP_SIGNING_SECRET),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['verify'],
+  );
+  const valid = await crypto.subtle.verify('HMAC', cryptoKey, sigBytes.buffer as ArrayBuffer, encoder.encode(body));
+  if (!valid) return null;
 
   const json = atob(body.replace(/-/g, '+').replace(/_/g, '/'));
   const payload = JSON.parse(json) as {

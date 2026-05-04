@@ -71,11 +71,14 @@ function atr(highs: number[], lows: number[], closes: number[], period = 14): nu
     trs.push(Math.max(highs[i] - lows[i], Math.abs(highs[i] - closes[i - 1]), Math.abs(lows[i] - closes[i - 1])));
   }
   const out: number[] = new Array(trs.length).fill(NaN);
-  let sum = 0;
-  for (let i = 0; i < trs.length; i++) {
-    sum += trs[i];
-    if (i >= period) sum -= trs[i - period];
-    out[i] = (i + 1 >= period) ? sum / period : NaN;
+  if (trs.length < period) return out;
+  // Seed: SMA of first `period` true ranges (Wilder convention)
+  let atrVal = trs.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  out[period - 1] = atrVal;
+  for (let i = period; i < trs.length; i++) {
+    // Wilder smoothing: ATR = (prev * (n-1) + TR) / n
+    atrVal = (atrVal * (period - 1) + trs[i]) / period;
+    out[i] = atrVal;
   }
   return out;
 }
@@ -121,7 +124,9 @@ function stochastic(highs: number[], lows: number[], closes: number[], period = 
   for (let i = period - 1; i < closes.length; i++) {
     const hMax = Math.max(...highs.slice(i - period + 1, i + 1));
     const lMin = Math.min(...lows.slice(i - period + 1, i + 1));
-    const k = ((closes[i] - lMin) / (hMax - lMin || 1e-9)) * 100;
+    const range = hMax - lMin;
+    // Flat-candle guard: zero range means no price movement — return NaN, not inflated %K
+    const k = range === 0 ? NaN : ((closes[i] - lMin) / range) * 100;
     kVals.push(Number.isFinite(k) ? k : 50);
   }
   const kSmooth = ema(kVals, smooth);

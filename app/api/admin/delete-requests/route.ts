@@ -8,6 +8,9 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    // tenant-audit: allow-global-admin-only
+    // This is an intentional cross-workspace view — platform admins must see
+    // all deletion requests regardless of workspace. No workspace_id filter.
     const result = await q(`
       SELECT * FROM delete_requests 
       ORDER BY 
