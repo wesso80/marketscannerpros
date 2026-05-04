@@ -28,8 +28,8 @@ export default function DockHeader({ summary, onExpandAll, onCollapseAll }: Dock
         )}
       </div>
       <div className="flex gap-2">
-        <button onClick={onExpandAll} className="rounded-lg bg-white/10 px-3 py-1.5 text-xs text-slate-100">Expand all</button>
-        <button onClick={onCollapseAll} className="rounded-lg bg-white/10 px-3 py-1.5 text-xs text-slate-100">Collapse all</button>
+        <button type="button" onClick={onExpandAll} className="rounded-lg bg-white/10 px-3 py-1.5 text-xs text-slate-100">Expand all</button>
+        <button type="button" onClick={onCollapseAll} className="rounded-lg bg-white/10 px-3 py-1.5 text-xs text-slate-100">Collapse all</button>
       </div>
     </div>
   );

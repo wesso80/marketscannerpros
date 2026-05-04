@@ -20,10 +20,7 @@ export const metadata: Metadata = {
       'Educational trade journal for logging decisions, reviewing outcomes, and tracking risk metrics.',
     images: ['/scan-banner.png'],
   },
-  alternates: {
-    canonical: 'https://marketscannerpros.app/tools/workspace?tab=journal',
-  },
-  robots: { index: false, follow: true },
+  robots: { index: false, follow: false },
 };
 
 export default function JournalLayout({ children }: { children: React.ReactNode }) {

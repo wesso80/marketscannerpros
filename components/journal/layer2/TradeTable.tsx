@@ -25,7 +25,7 @@ type TradeTableProps = {
 
 function SortButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
-    <button onClick={onClick} className={`text-left ${active ? 'text-slate-100' : 'text-slate-400'}`}>
+    <button type="button" onClick={onClick} className={`text-left ${active ? 'text-slate-100' : 'text-slate-400'}`}>
       {label}
     </button>
   );
@@ -69,9 +69,9 @@ export default function TradeTable({ rows, sort, onSort, onSelectTrade, onQuickC
               <div><span className="text-slate-500">R</span> <span className="text-slate-200 font-mono">{row.rMultiple != null ? row.rMultiple.toFixed(2) : '—'}</span></div>
               <div className="col-span-2"><span className="text-slate-500">Strategy</span> <span className="text-slate-200">{row.strategyTag || '—'}</span></div>
               <div className="col-span-2 flex gap-1.5 pt-1">
-                <button onClick={() => onSelectTrade(row.id)} className="rounded bg-white/10 px-2 py-1 text-xs text-slate-100">View</button>
-                {onSnapshot && <button onClick={() => onSnapshot(row.id)} className="rounded bg-white/10 px-2 py-1 text-xs text-slate-100">Snapshot</button>}
-                <button onClick={() => onQuickClose(row.id)} className="rounded bg-rose-500/20 px-2 py-1 text-xs text-rose-200">Close</button>
+                <button type="button" onClick={() => onSelectTrade(row.id)} className="rounded bg-white/10 px-2 py-1 text-xs text-slate-100">View</button>
+                {onSnapshot && <button type="button" onClick={() => onSnapshot(row.id)} className="rounded bg-white/10 px-2 py-1 text-xs text-slate-100">Snapshot</button>}
+                <button type="button" onClick={() => onQuickClose(row.id)} className="rounded bg-rose-500/20 px-2 py-1 text-xs text-rose-200">Close</button>
               </div>
             </div>
           </details>
@@ -83,34 +83,34 @@ export default function TradeTable({ rows, sort, onSort, onSelectTrade, onQuickC
       <table className="w-full min-w-[640px] text-sm">
         <thead className="border-b border-white/5 bg-white/5 text-slate-300">
           <tr>
-            <th className="px-3 py-2 text-left">Symbol</th>
-            <th className="px-3 py-2 text-left">Status</th>
-            <th className="px-3 py-2 text-left">Side</th>
-            <th className="px-3 py-2 text-left">
+            <th scope="col" className="px-3 py-2 text-left">Symbol</th>
+            <th scope="col" className="px-3 py-2 text-left">Status</th>
+            <th scope="col" className="px-3 py-2 text-left">Side</th>
+            <th scope="col" className="px-3 py-2 text-left">
               <SortButton
                 label="Entry"
                 active={sort.key === 'entry_ts'}
                 onClick={() => onSort({ key: 'entry_ts', dir: sort.key === 'entry_ts' && sort.dir === 'desc' ? 'asc' : 'desc' })}
               />
             </th>
-            <th className="px-3 py-2 text-left">Stop</th>
-            <th className="px-3 py-2 text-left">Current/Exit</th>
-            <th className="px-3 py-2 text-left">
+            <th scope="col" className="px-3 py-2 text-left">Stop</th>
+            <th scope="col" className="px-3 py-2 text-left">Current/Exit</th>
+            <th scope="col" className="px-3 py-2 text-left">
               <SortButton
                 label="P&L"
                 active={sort.key === 'pnl_usd'}
                 onClick={() => onSort({ key: 'pnl_usd', dir: sort.key === 'pnl_usd' && sort.dir === 'desc' ? 'asc' : 'desc' })}
               />
             </th>
-            <th className="px-3 py-2 text-left">
+            <th scope="col" className="px-3 py-2 text-left">
               <SortButton
                 label="R"
                 active={sort.key === 'r_multiple'}
                 onClick={() => onSort({ key: 'r_multiple', dir: sort.key === 'r_multiple' && sort.dir === 'desc' ? 'asc' : 'desc' })}
               />
             </th>
-            <th className="px-3 py-2 text-left">Strategy</th>
-            <th className="px-3 py-2 text-left">Actions</th>
+            <th scope="col" className="px-3 py-2 text-left">Strategy</th>
+            <th scope="col" className="px-3 py-2 text-left">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -163,10 +163,10 @@ export default function TradeTable({ rows, sort, onSort, onSelectTrade, onQuickC
                 <td className="px-3 py-2 text-slate-300">{row.strategyTag || '—'}</td>
                 <td className="px-3 py-2">
                   <div className="flex gap-1">
-                    <button onClick={() => onSelectTrade(row.id)} className="rounded bg-white/10 px-2 py-1 text-xs text-slate-100">View</button>
-                    {onSnapshot && <button onClick={() => onSnapshot(row.id)} className="rounded bg-white/10 px-2 py-1 text-xs text-slate-100">Snapshot</button>}
-                    <button onClick={() => onQuickClose(row.id)} className="rounded bg-rose-500/20 px-2 py-1 text-xs text-rose-200">Close</button>
-                    <button onClick={() => setExpandedId((prev) => (prev === row.id ? null : row.id))} className="rounded bg-white/10 px-2 py-1 text-xs text-slate-100">Expand</button>
+                    <button type="button" onClick={() => onSelectTrade(row.id)} className="rounded bg-white/10 px-2 py-1 text-xs text-slate-100">View</button>
+                    {onSnapshot && <button type="button" onClick={() => onSnapshot(row.id)} className="rounded bg-white/10 px-2 py-1 text-xs text-slate-100">Snapshot</button>}
+                    <button type="button" onClick={() => onQuickClose(row.id)} className="rounded bg-rose-500/20 px-2 py-1 text-xs text-rose-200">Close</button>
+                    <button type="button" onClick={() => setExpandedId((prev) => (prev === row.id ? null : row.id))} className="rounded bg-white/10 px-2 py-1 text-xs text-slate-100">Expand</button>
                   </div>
                 </td>
               </tr>

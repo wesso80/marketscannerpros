@@ -45,11 +45,11 @@ export default function TradeDrawer({ open, trade, onClose, onRequestCloseTrade,
           <div className="flex gap-2">
             {!isNewTrade && (
               <>
-                {onRequestSnapshot && <button onClick={onRequestSnapshot} className="rounded bg-white/10 px-3 py-1 text-sm text-slate-100">Snapshot</button>}
-                <button onClick={onRequestCloseTrade} className="rounded bg-rose-500/20 px-3 py-1 text-sm text-rose-200">Close</button>
+                {onRequestSnapshot && <button type="button" onClick={onRequestSnapshot} className="rounded bg-white/10 px-3 py-1 text-sm text-slate-100">Snapshot</button>}
+                <button type="button" onClick={onRequestCloseTrade} className="rounded bg-rose-500/20 px-3 py-1 text-sm text-rose-200">Close</button>
               </>
             )}
-            <button onClick={onClose} className="rounded bg-white/10 px-3 py-1 text-sm text-slate-100">Close Panel</button>
+            <button type="button" onClick={onClose} className="rounded bg-white/10 px-3 py-1 text-sm text-slate-100">Close Panel</button>
           </div>
         </div>
 
@@ -61,6 +61,8 @@ export default function TradeDrawer({ open, trade, onClose, onRequestCloseTrade,
               {(['overview', 'intelligence', 'snapshots', 'notes'] as TabKey[]).map((key) => (
                 <button
                   key={key}
+                  type="button"
+                  aria-pressed={tab === key}
                   onClick={() => setTab(key)}
                   className={`rounded px-3 py-1.5 text-sm ${tab === key ? 'bg-emerald-500/20 text-emerald-200' : 'bg-white/10 text-slate-100'}`}
                 >
