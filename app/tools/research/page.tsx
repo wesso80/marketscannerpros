@@ -345,13 +345,13 @@ export default function ResearchPage() {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-[var(--msp-border)]">
-                    <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Date</th>
-                    <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Time</th>
-                    <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Impact</th>
-                    <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Event</th>
-                    <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Forecast</th>
-                    <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Previous</th>
-                    <th className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Actual</th>
+                    <th scope="col" className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Date</th>
+                    <th scope="col" className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Time</th>
+                    <th scope="col" className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Impact</th>
+                    <th scope="col" className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Event</th>
+                    <th scope="col" className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Forecast</th>
+                    <th scope="col" className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Previous</th>
+                    <th scope="col" className="text-left py-2 px-2 text-[10px] uppercase text-slate-500">Actual</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -398,15 +398,15 @@ export default function ResearchPage() {
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b border-[var(--msp-border)]">
-                            <th className="text-left py-1.5 px-2 text-[10px] uppercase text-slate-500">Symbol</th>
-                            <th className="text-left py-1.5 px-2 text-[10px] uppercase text-slate-500">Company</th>
-                            <th className="text-left py-1.5 px-2 text-[10px] uppercase text-slate-500">Report Date</th>
-                            <th className="text-left py-1.5 px-2 text-[10px] uppercase text-slate-500">Estimate</th>
+                            <th scope="col" className="text-left py-1.5 px-2 text-[10px] uppercase text-slate-500">Symbol</th>
+                            <th scope="col" className="text-left py-1.5 px-2 text-[10px] uppercase text-slate-500">Company</th>
+                            <th scope="col" className="text-left py-1.5 px-2 text-[10px] uppercase text-slate-500">Report Date</th>
+                            <th scope="col" className="text-left py-1.5 px-2 text-[10px] uppercase text-slate-500">Estimate</th>
                           </tr>
                         </thead>
                         <tbody>
                           {group.items.map((e: EarningsEntry, i: number) => (
-                            <tr key={i} className="border-b border-slate-800/30 hover:bg-slate-800/20 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(e.symbol)} onKeyDown={(event) => onSymbolRowKey(event, e.symbol)} role="button" tabIndex={0} aria-label={`Open ${e.symbol} earnings in Golden Egg`}>
+                            <tr key={i} className="border-b border-slate-800/30 hover:bg-slate-800/20 cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400/60" onClick={() => openGoldenEgg(e.symbol)} onKeyDown={(event) => onSymbolRowKey(event, e.symbol)} tabIndex={0} aria-label={`Open ${e.symbol} earnings in Golden Egg`}>
                               <td className="py-1.5 px-2 text-emerald-400 font-semibold">{e.symbol}</td>
                               <td className="py-1.5 px-2 text-white">{e.name}</td>
                               <td className="py-1.5 px-2 text-slate-400">{e.reportDate}</td>
