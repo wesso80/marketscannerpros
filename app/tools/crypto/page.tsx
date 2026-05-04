@@ -698,6 +698,7 @@ function CryptoCommandCenterContent() {
                 <button
                   type="button"
                   key={id}
+                  aria-pressed={logTab === id}
                   onClick={() => setLogTab(id)}
                   className={`rounded-full border px-2 py-0.5 text-[11px] ${
                     logTab === id
