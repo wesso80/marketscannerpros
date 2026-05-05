@@ -29,6 +29,7 @@ import { computeDVE } from '@/lib/directionalVolatilityEngine';
 import type { DVEInput, DVEReading } from '@/lib/directionalVolatilityEngine.types';
 import { classifyBestDoctrine, type ClassifierInput } from '@/lib/doctrine/classifier';
 import { recordSignal, type RecordSignalParams } from '@/lib/signalRecorder';
+import { recordEngineEvent } from '@/lib/brain/engineBridge';
 import type { GoldenEggPayload, Direction, Verdict } from '@/src/features/goldenEgg/types';
 import { buildMarketDataProviderStatus, emitProductionDemoDataAlert, isLocalDemoMarketDataAllowed } from '@/lib/scanner/providerStatus';
 
@@ -1013,6 +1014,43 @@ export async function GET(request: NextRequest) {
         },
       }).catch(() => {}); // never block response
     }
+
+    // ── Brain layer: admin-only event with full provenance ──
+    void recordEngineEvent({
+      workspaceId: session.workspaceId,
+      engine: 'golden_egg',
+      eventType: 'golden_egg.analysis_generated',
+      symbol,
+      assetClass: assetClass === 'crypto' ? 'crypto' : assetClass === 'forex' ? 'fx' : 'equities',
+      timeframe: tfLabel,
+      source: 'golden_egg',
+      dataFreshness: (priceData as any)?.stale ? 'stale' : 'real-time',
+      inputs: {
+        symbol,
+        assetClass,
+        timeframe: tfLabel,
+        price: priceData?.price,
+        rsi: indData?.rsi,
+        macdHist: indData?.macdHist,
+        adx: indData?.adx,
+        mpeComposite: mpeData?.composite,
+        macroRegime: macroRegime?.riskState,
+      },
+      scoreSnapshot: {
+        direction: payload.layer1.direction,
+        assessment: payload.layer1.assessment,
+        confidence: payload.layer1.confidence,
+        weightedScore: (payload.layer1 as any).weightedScore ?? null,
+        coverageFactor: (payload.layer1 as any).coverageFactor ?? null,
+        directionalLayers: (payload.layer1 as any).directionalLayers ?? null,
+        invalidation: (payload.layer1 as any).invalidationLevel?.price ?? null,
+      },
+      meta: {
+        primaryBlocker: payload.layer1.primaryBlocker,
+        components: (payload.layer1 as any).components ?? null,
+      },
+      adminOnly: true,
+    }).catch(() => {});
 
     // Cache result
     cache.set(cacheKey, { data: payload, ts: Date.now() });

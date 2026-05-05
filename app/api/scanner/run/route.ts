@@ -9,6 +9,7 @@ import { getCachedScanData, getBulkCachedScanData, CachedScanData } from "@/lib/
 import { verifyCronAuth } from "@/lib/adminAuth";
 import { isFreeForAllMode, getEffectiveTier } from "@/lib/entitlements";
 import { recordSignalsBatch, RecordSignalParams } from "@/lib/signalRecorder";
+import { recordEngineEvent } from "@/lib/brain/engineBridge";
 import { getRuntimeRiskSnapshotInput } from "@/lib/risk/runtimeSnapshot";
 import { buildPermissionSnapshot } from "@/lib/risk-governor-hard";
 import { getAdaptiveLayer } from "@/lib/adaptiveTrader";
@@ -2131,6 +2132,11 @@ export async function POST(req: NextRequest) {
               obv: NaN,
               lastCandleTime: new Date().toISOString(),
             };
+            // Mark as cache-sourced so the post-pass can apply the cached
+            // missing-features / freshness floor (cache cannot be treated as
+            // truly real-time even when it just landed).
+            (item as any)._fromCache = true;
+            (item as any)._cacheSource = cachedData.source;
 
             // Fetch chartData from ohlcv_bars (populated by worker alongside the cache)
             try {
@@ -2677,6 +2683,26 @@ export async function POST(req: NextRequest) {
     for (const result of results) {
       const freshness = evaluateScannerFreshness(result.lastCandleTime, timeframe);
       const liquidity = evaluateScannerLiquidity({ type, averageVolume: result.avgVolume });
+
+      // ── Cached-source freshness floor ──
+      // Cached data cannot be presented as 'fresh' even when it just landed,
+      // because we don't know the cache producer's age. Force at least 'delayed'
+      // and add a small evidence penalty so cached confidence never matches
+      // truly real-time confidence.
+      const fromCache = Boolean((result as any)._fromCache);
+      let cachedSourcePenalty = 0;
+      if (fromCache) {
+        if (freshness.status === 'fresh') {
+          freshness.status = 'delayed' as any;
+          freshness.warnings = [
+            ...(freshness.warnings ?? []),
+            'Source: cached indicators (treat as delayed, not real-time).',
+          ];
+        }
+        cachedSourcePenalty = 4;
+        result.score = Math.max(0, result.score - cachedSourcePenalty);
+      }
+
       if (freshness.penalty > 0) {
         result.score = Math.max(0, result.score - freshness.penalty);
       }
@@ -2689,7 +2715,8 @@ export async function POST(req: NextRequest) {
         freshnessStatus: freshness.status,
         liquidityPenalty: liquidity.penalty,
         liquidityStatus: liquidity.status,
-      };
+        ...(fromCache ? { cachedSourcePenalty, source: 'cache' } : {}),
+      } as any;
       const rankWarnings = [...freshness.warnings, ...liquidity.warnings];
       if (rankWarnings.length) {
         result.rankWarnings = [...(result.rankWarnings ?? []), ...rankWarnings];
@@ -2734,8 +2761,29 @@ export async function POST(req: NextRequest) {
       });
     });
 
+    // ── Risk Governor enforcement gate ──
+    // When the institutional Risk Governor is LOCKED, scanner output becomes
+    // strictly informational: drop personalization boosts back to raw score,
+    // tag every result, and refuse to feed signals into the learning loop.
+    // This is the single execution-layer check that honours the "no broker
+    // execution under lockdown" rule even though we don't actually route orders.
+    const rgLocked = riskSnapshot?.risk_mode === 'LOCKED';
+    if (rgLocked) {
+      for (const result of results) {
+        const raw = (result as any).rawScore;
+        if (typeof raw === 'number') result.score = raw;
+        (result as any).riskGovernorBlocked = true;
+        (result as any).riskGovernorReason =
+          'Risk governor LOCKED — informational only, no auto-log, no learning record.';
+        result.rankWarnings = [
+          ...(result.rankWarnings ?? []),
+          'Risk governor LOCKED — signal is informational only.',
+        ];
+      }
+    }
+
     // Record signals for AI learning (async, non-blocking)
-    if (results.length > 0) {
+    if (results.length > 0 && !rgLocked) {
       const signalsToRecord: RecordSignalParams[] = results
         .filter(r => r.price && r.direction && r.direction !== 'neutral' && ((r as any).rawScore ?? r.score) >= 50) // Only record high-conviction bullish/bearish signals
         .map(r => {
@@ -2767,6 +2815,75 @@ export async function POST(req: NextRequest) {
       // Fire and forget - don't slow down the response
       recordSignalsBatch(signalsToRecord).catch(err => 
         console.warn('[scanner] Signal recording failed:', err)
+      );
+    }
+
+    // ── Brain layer: record one admin-only event per scanner result ──
+    // Best-effort, non-blocking. Captures full provenance + score snapshot
+    // so brain_outcomes can grade these events later.
+    if (results.length > 0) {
+      void Promise.all(
+        results.slice(0, 5).map(async (r) => {
+          try {
+            const learningScore = (r as any).rawScore ?? r.score;
+            const sq: any = r.scoreQuality ?? {};
+            const fromCache = Boolean((r as any)._fromCache);
+            const fresh =
+              sq.freshnessStatus === 'fresh'
+                ? 'real-time'
+                : sq.freshnessStatus === 'delayed'
+                ? 'delayed'
+                : sq.freshnessStatus === 'stale'
+                ? 'stale'
+                : 'unknown';
+            await recordEngineEvent({
+              workspaceId: session.workspaceId,
+              engine: 'scanner',
+              eventType: 'scanner.result_generated',
+              symbol: r.symbol,
+              assetClass: type === 'crypto' ? 'crypto' : type === 'forex' ? 'fx' : 'equities',
+              timeframe,
+              source: fromCache ? 'scanner:cached' : `scanner:${type}`,
+              dataFreshness: fresh as any,
+              inputs: {
+                symbol: r.symbol,
+                timeframe,
+                rsi: r.rsi,
+                macd_hist: r.macd_hist,
+                ema200: r.ema200,
+                atr: r.atr,
+                adx: r.adx,
+                stoch_k: r.stoch_k,
+                stoch_d: r.stoch_d,
+                cci: r.cci,
+                aroon_up: r.aroon_up,
+                aroon_down: r.aroon_down,
+                price: r.price,
+              },
+              scoreSnapshot: {
+                score: learningScore,            // pre-personalization
+                personalized: r.score,           // post-personalization
+                confidence: r.confidence,
+                direction: r.direction,
+                evidenceLayers: sq.evidenceLayers ?? null,
+                missingEvidencePenalty: sq.missingEvidencePenalty ?? null,
+                staleDataPenalty: sq.staleDataPenalty ?? null,
+                liquidityPenalty: sq.liquidityPenalty ?? null,
+                cachedSourcePenalty: sq.cachedSourcePenalty ?? null,
+                rMultiple: r.rMultiple,
+                riskGovernorBlocked: Boolean((r as any).riskGovernorBlocked),
+              },
+              meta: {
+                setup: (r as any).setup,
+                personalEdgeBoost: (r as any).personalEdgeBoost ?? 0,
+                cacheSource: (r as any)._cacheSource ?? null,
+              },
+              adminOnly: true,
+            });
+          } catch {
+            /* swallow — engines never break on brain write fail */
+          }
+        }),
       );
     }
 

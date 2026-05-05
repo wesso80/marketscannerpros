@@ -146,6 +146,52 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Symbol is required' }, { status: 400 });
     }
 
+    // ── Brain layer: record source-engine event for auto-logged scenarios ──
+    // Best-effort, non-blocking. This is the brain hook for time_scanner /
+    // scanner / strategy auto-logs that fire from client-side tools.
+    void (async () => {
+      try {
+        const { recordEngineEvent } = await import('@/lib/brain/engineBridge');
+        const ct = String(conditionType || '').toLowerCase();
+        const engine =
+          ct === 'time_scanner' ? 'time_confluence'
+          : ct.startsWith('scanner') ? 'scanner'
+          : ct.startsWith('strategy_') ? 'backtest'
+          : null;
+        const eventType =
+          engine === 'time_confluence' ? 'time.confluence_cluster_generated'
+          : engine === 'scanner' ? 'scanner.result_generated'
+          : engine === 'backtest' ? 'backtest.completed'
+          : null;
+        if (engine && eventType) {
+          await recordEngineEvent({
+            workspaceId: session.workspaceId,
+            engine: engine as any,
+            eventType: eventType as any,
+            symbol: String(symbol).toUpperCase(),
+            assetClass:
+              assetClass === 'crypto' ? 'crypto'
+              : assetClass === 'forex' ? 'fx'
+              : 'equities',
+            source: `auto_log:${source || engine}`,
+            dataFreshness: 'real-time',
+            inputs: { symbol, conditionType, conditionMet, triggerPrice },
+            scoreSnapshot: {
+              conditionMet,
+              triggerPrice: Number(triggerPrice) || null,
+              operatorMode,
+              operatorBias,
+              operatorRisk,
+              operatorEdge,
+            },
+            adminOnly: true,
+          });
+        }
+      } catch {
+        /* swallow */
+      }
+    })();
+
     await ensureJournalSchema();
 
     const safeSymbol = String(symbol).toUpperCase().slice(0, 20);

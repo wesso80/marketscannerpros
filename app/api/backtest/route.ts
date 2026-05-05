@@ -169,6 +169,62 @@ export async function POST(req: NextRequest) {
       totalReturn: result.totalReturn.toFixed(2)
     });
 
+    // ── Brain layer: admin-only event with sample-size aware metrics ──
+    void (async () => {
+      try {
+        const { recordEngineEvent } = await import('@/lib/brain/engineBridge');
+        const session2 = await getSessionFromCookie();
+        if (!session2?.workspaceId) return;
+        // Coverage-aware confidence: tiny samples produce low confidence
+        // regardless of headline win rate. Honours "win rate alone never
+        // produces high confidence — sample size required".
+        const n = result.totalTrades || 0;
+        const sampleFactor = Math.min(1, n / 40);     // 40+ trades = full
+        const coverageFactor = Math.min(1, coverage.bars / 250);
+        const wr = Math.max(0, Math.min(1, (result.winRate || 0) / 100));
+        const confidence = Math.round(
+          Math.max(0, Math.min(99, wr * 100 * Math.max(0.4, sampleFactor) * Math.max(0.5, coverageFactor))),
+        );
+        await recordEngineEvent({
+          workspaceId: session2.workspaceId,
+          engine: 'backtest',
+          eventType: 'backtest.completed',
+          symbol: normalizedSymbol,
+          assetClass: isCrypto ? 'crypto' : 'equities',
+          timeframe: parsedTimeframe.normalized,
+          source: 'backtest',
+          dataFreshness: 'real-time',
+          inputs: {
+            strategyId: strategyDefinition.id,
+            symbol: normalizedSymbol,
+            timeframe: parsedTimeframe.normalized,
+            startDate: coverage.appliedStartDate,
+            endDate: coverage.appliedEndDate,
+            initialCapital,
+          },
+          scoreSnapshot: {
+            totalTrades: result.totalTrades,
+            winRate: result.winRate,
+            totalReturn: result.totalReturn,
+            maxDrawdown: result.maxDrawdown,
+            sharpeRatio: (result as any).sharpeRatio ?? null,
+            confidence,
+            sampleFactor,
+            coverageFactor,
+            bars: coverage.bars,
+            volumeUnavailable,
+          },
+          meta: {
+            strategy: strategyDefinition.id,
+            direction: strategyDirection,
+          },
+          adminOnly: true,
+        });
+      } catch {
+        /* swallow */
+      }
+    })();
+
     return NextResponse.json({
       ...result,
       dataSources: {

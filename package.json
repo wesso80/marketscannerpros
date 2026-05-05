@@ -37,7 +37,10 @@
     "admin:audit": "npx tsx scripts/admin-audit.ts",
     "audit:admin:mock": "npx tsx scripts/audit/detect-mock-data.ts",
     "audit:admin:freshness": "npx tsx scripts/audit/verify-data-freshness.ts",
-    "audit:admin": "npx tsx scripts/audit/detect-mock-data.ts && npx tsx scripts/audit/verify-data-freshness.ts"
+    "audit:admin": "npx tsx scripts/audit/detect-mock-data.ts && npx tsx scripts/audit/verify-data-freshness.ts",
+    "brain:edge-decay": "npx tsx scripts/brain/edge-decay-job.ts",
+    "brain:replay": "npx tsx scripts/brain/replay.ts",
+    "brain:register-versions": "npx tsx scripts/brain/register-versions.ts"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
