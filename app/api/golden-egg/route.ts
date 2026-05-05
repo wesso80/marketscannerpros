@@ -213,24 +213,52 @@ function buildPayload(
 
   // ── Layer 1: Decision Permission ──────────────────────────────────
   // Score breakdown: Structure (30%), Flow (25%), Momentum (20%), Risk (25%)
+  // Each component reports a presence flag (0/1) so the weighted score is
+  // renormalised over what's *actually available*. Missing inputs no longer
+  // pass through as a neutral 50 (which would silently inflate confidence).
   const structureScore = computeStructureScore(ind, price);
   const flowScore = computeFlowScore(opts, mpe, cryptoDerivs);
   const momentumScore = computeMomentumScore(ind, price);
   const riskScore = computeRiskScore(ind, price, mpe);
 
-  const weightedScore = structureScore * 0.30 + flowScore * 0.25 + momentumScore * 0.20 + riskScore * 0.25;
-  const confidence = Math.max(1, Math.min(99, Math.round(weightedScore)));
+  const components = [
+    { key: 'Structure', weight: 0.30, value: structureScore, present: ind != null },
+    { key: 'Flow',      weight: 0.25, value: flowScore,      present: opts != null || cryptoDerivs != null || mpe != null },
+    { key: 'Momentum',  weight: 0.20, value: momentumScore,  present: ind != null },
+    { key: 'Risk',      weight: 0.25, value: riskScore,      present: ind != null }, // ATR-driven
+  ];
+  const presentWeight = components.reduce((s, c) => s + (c.present ? c.weight : 0), 0);
+  const weightedScore = presentWeight > 0
+    ? components.reduce((s, c) => s + (c.present ? c.value * c.weight : 0), 0) / presentWeight
+    : 50;
+
+  // Coverage factor = fraction of weight that had real evidence backing it.
+  // Drives confidence honesty (data-integrity rule). NEVER inflates score.
+  const coverageFactor = presentWeight; // already in [0..1]
+  const confidence = Math.max(1, Math.min(99, Math.round(weightedScore * Math.max(0.4, coverageFactor))));
   const grade = scoreToGrade(confidence);
 
   // Direction from momentum indicators
   let bullish = 0; let bearish = 0;
-  if (ind?.rsi != null) { if (ind.rsi > 55) bullish++; else if (ind.rsi < 45) bearish++; }
-  if (ind?.macd != null) { if (ind.macd > 0) bullish++; else bearish++; }
-  if (ind?.macdHist != null) { if (ind.macdHist > 0) bullish++; else bearish++; }
-  if (price.changePct > 1) bullish++; else if (price.changePct < -1) bearish++;
-  if (opts) { if (opts.putCallRatio < 0.8) bullish++; else if (opts.putCallRatio > 1.2) bearish++; }
+  let directionalLayers = 0;
+  if (ind?.rsi != null) { directionalLayers++; if (ind.rsi > 55) bullish++; else if (ind.rsi < 45) bearish++; }
+  if (ind?.macd != null) { directionalLayers++; if (ind.macd > 0) bullish++; else bearish++; }
+  if (ind?.macdHist != null) { directionalLayers++; if (ind.macdHist > 0) bullish++; else bearish++; }
+  if (Math.abs(price.changePct) > 0.1) { directionalLayers++; if (price.changePct > 1) bullish++; else if (price.changePct < -1) bearish++; }
+  if (opts) { directionalLayers++; if (opts.putCallRatio < 0.8) bullish++; else if (opts.putCallRatio > 1.2) bearish++; }
 
-  const direction: Direction = bullish > bearish + 1 ? 'LONG' : bearish > bullish + 1 ? 'SHORT' : 'NEUTRAL';
+  // Direction needs both a relative gap AND a minimum evidence floor.
+  // Prevents calling LONG/SHORT off only 2 indicators agreeing.
+  let direction: Direction;
+  if (directionalLayers < 3 || Math.abs(bullish - bearish) < 2) {
+    direction = 'NEUTRAL';
+  } else if (bullish > bearish + 1) {
+    direction = 'LONG';
+  } else if (bearish > bullish + 1) {
+    direction = 'SHORT';
+  } else {
+    direction = 'NEUTRAL';
+  }
 
   // Permission
   let permission: InternalPermission = 'WATCH';
@@ -298,8 +326,36 @@ function buildPayload(
   // Cap ATR-based distances to prevent absurd targets on volatile / low-priced assets
   const maxStopPct = 0.15; // max 15% stop distance
   const rawStopDist = atr * 1.5;
-  const stopDistance = Math.min(rawStopDist, p * maxStopPct);
-  const stopPrice = isLong ? p - stopDistance : p + stopDistance;
+  let stopDistance = Math.min(rawStopDist, p * maxStopPct);
+  let stopPrice = isLong ? p - stopDistance : p + stopDistance;
+  let stopAnchor: string | undefined;
+
+  // Structure-aware stop refinement.
+  // Snap the invalidation to the nearest *structural* keyLevel within
+  // [1.0, 2.0]·ATR on the invalidation side (with a 0.15·ATR buffer beyond it),
+  // because the trade thesis is wrong at that level — not at an arbitrary
+  // ATR offset. Falls back to ATR placement when no eligible level exists.
+  if (atr > 0 && keyLevels.length > 0) {
+    const minDist = atr * 1.0;
+    const maxDist = Math.min(atr * 2.0, p * maxStopPct);
+    const candidates = keyLevels
+      .map((l) => ({ ...l, dist: Math.abs(p - l.price) }))
+      .filter((l) => Number.isFinite(l.price) && l.price > 0)
+      .filter((l) => isLong ? l.price < p : l.price > p)
+      .filter((l) => l.dist >= minDist && l.dist <= maxDist)
+      .sort((a, b) => a.dist - b.dist);
+    if (candidates.length > 0) {
+      const anchor = candidates[0];
+      const buffer = atr * 0.15;
+      const refined = isLong ? anchor.price - buffer : anchor.price + buffer;
+      const refinedDist = Math.abs(p - refined);
+      if (refined > 0 && refinedDist > 0 && refinedDist <= p * maxStopPct) {
+        stopPrice = refined;
+        stopDistance = refinedDist;
+        stopAnchor = anchor.label;
+      }
+    }
+  }
 
   // Use decompression target from time confluence if available and directionally aligned
   const decompTarget = tcData?.decompressionTarget;
@@ -619,7 +675,7 @@ function buildPayload(
       scenario: {
         referenceTrigger,
         referenceLevel: { type: permission === 'TRADE' ? 'reference' : 'confirmation', price: referencePrice ? roundPrice(referencePrice) : undefined },
-        invalidationLevel: { price: roundPrice(stopPrice), logic: `${(1.5).toFixed(1)}x ATR from reference — beyond recent structure` },
+        invalidationLevel: { price: roundPrice(stopPrice), logic: stopAnchor ? `Beyond ${stopAnchor} (structure-anchored, ${(stopDistance / atr).toFixed(2)}x ATR buffer)` : `1.5x ATR from reference — beyond recent structure` },
         reactionZones: [
           { price: roundPrice(t1), rMultiple: stopDistance > 0 ? Math.round(Math.abs(t1 - p) / stopDistance * 10) / 10 : 1, note: 'First reaction zone' },
           { price: roundPrice(t2), rMultiple: stopDistance > 0 ? Math.round(Math.abs(t2 - p) / stopDistance * 10) / 10 : 2, note: decompAligned ? `Primary level — Decomp zone (${decompTarget!.contributingTFs.length} TFs)` : 'Primary level' },
@@ -936,23 +992,27 @@ export async function GET(request: NextRequest) {
 
     const payload = buildPayload(symbol, assetClass, priceData, indData, optsData, mpeData, tfLabel, cryptoDerivsData, tcData, macroRegime);
 
-    // Record signal for outcome tracking (fire-and-forget)
-    recordSignal({
-      symbol,
-      signalType: 'golden_egg',
-      direction: payload.layer1.direction === 'LONG' ? 'bullish' : payload.layer1.direction === 'SHORT' ? 'bearish' : 'bullish',
-      score: payload.layer1.confidence,
-      priceAtSignal: priceData.price,
-      timeframe: tfLabel,
-      features: {
-        assessment: payload.layer1.assessment,
-        rsi: indData?.rsi ?? undefined,
-        macd_hist: indData?.macdHist ?? undefined,
-        adx: indData?.adx ?? undefined,
-        mpe_composite: mpeData?.composite ?? undefined,
-        macro_regime: macroRegime?.riskState ?? undefined,
-      },
-    }).catch(() => {}); // never block response
+    // Record signal for outcome tracking (fire-and-forget).
+    // Anti-bias: do NOT record NEUTRAL — we'd otherwise have to coerce a
+    // synthetic direction and feed unfounded labels into the learning loop.
+    if (payload.layer1.direction !== 'NEUTRAL') {
+      recordSignal({
+        symbol,
+        signalType: 'golden_egg',
+        direction: payload.layer1.direction === 'LONG' ? 'bullish' : 'bearish',
+        score: payload.layer1.confidence,
+        priceAtSignal: priceData.price,
+        timeframe: tfLabel,
+        features: {
+          assessment: payload.layer1.assessment,
+          rsi: indData?.rsi ?? undefined,
+          macd_hist: indData?.macdHist ?? undefined,
+          adx: indData?.adx ?? undefined,
+          mpe_composite: mpeData?.composite ?? undefined,
+          macro_regime: macroRegime?.riskState ?? undefined,
+        },
+      }).catch(() => {}); // never block response
+    }
 
     // Cache result
     cache.set(cacheKey, { data: payload, ts: Date.now() });
