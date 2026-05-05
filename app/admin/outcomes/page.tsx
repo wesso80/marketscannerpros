@@ -138,7 +138,7 @@ export default function OutcomesPage() {
 
   const fetchStats = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/signals/stats", { headers: authHeaders() });
+      const res = await fetch("/api/admin/signals/stats", { headers: authHeaders(), credentials: "include" });
       if (res.ok) setStats(await res.json());
     } catch { /* ignore */ }
   }, []);
@@ -152,7 +152,7 @@ export default function OutcomesPage() {
       params.set("limit", String(LIMIT));
       params.set("offset", String(page * LIMIT));
 
-      const res = await fetch(`/api/admin/signals?${params}`, { headers: authHeaders() });
+      const res = await fetch(`/api/admin/signals?${params}`, { headers: authHeaders(), credentials: "include" });
       if (res.ok) {
         const data = await res.json();
         setSignals(data.signals);
@@ -168,6 +168,7 @@ export default function OutcomesPage() {
       const res = await fetch("/api/cron/label-ai-outcomes", {
         method: "POST",
         headers: { ...authHeaders(), "Content-Type": "application/json" },
+        credentials: "include",
       });
       const data = await res.json();
       setLabelerResult({ status: res.status, ...data });

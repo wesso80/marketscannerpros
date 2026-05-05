@@ -317,6 +317,99 @@ function StrengthBar({ value }: { value: number }) {
   );
 }
 
+function PriceLadder({ result: r }: { result: ScalpResult }) {
+  const isLong = r.direction === 'long';
+  const levels = [
+    { label: 'T2', price: r.target2, color: '#6EE7B7' },
+    { label: 'T1', price: r.target1, color: '#10B981' },
+    { label: 'Entry', price: r.entry, color: '#FFFFFF' },
+    { label: 'Stop', price: r.stop, color: '#EF4444' },
+  ].filter((l) => l.price > 0 && Number.isFinite(l.price));
+
+  if (levels.length < 2) return null;
+
+  const prices = levels.map((l) => l.price);
+  const minP = Math.min(...prices);
+  const maxP = Math.max(...prices);
+  const range = maxP - minP || 1;
+  const pad = range * 0.18;
+  const lo = minP - pad;
+  const hi = maxP + pad;
+  const svgH = 180;
+  const svgW = 240;
+  const axisX = 48;
+  const labelX = axisX + 10;
+
+  function toY(price: number) {
+    return ((hi - price) / (hi - lo)) * svgH;
+  }
+
+  const pctFromEntry = (price: number) => {
+    if (!r.entry || !Number.isFinite(r.entry)) return '';
+    const pct = ((price - r.entry) / r.entry) * 100;
+    return `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`;
+  };
+
+  return (
+    <div style={{ padding: "0.75rem 1rem 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+      <div style={{ fontSize: "0.625rem", color: "rgba(148,163,184,0.7)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.5rem" }}>
+        Price Ladder {isLong ? '(Long)' : r.direction === 'short' ? '(Short)' : ''}
+      </div>
+      <svg width={svgW} height={svgH} style={{ overflow: "visible", display: "block", margin: "0 auto" }}>
+        {/* Axis line */}
+        <line x1={axisX} y1={0} x2={axisX} y2={svgH} stroke="rgba(255,255,255,0.08)" strokeWidth={1} />
+
+        {/* Zones: fill between entry and targets (upside), entry and stop (downside) */}
+        {r.entry > 0 && r.target1 > 0 && (
+          <rect
+            x={axisX - 8} y={Math.min(toY(r.entry), toY(r.target2 > 0 ? r.target2 : r.target1))}
+            width={16} height={Math.abs(toY(r.entry) - toY(r.target2 > 0 ? r.target2 : r.target1))}
+            fill="rgba(16,185,129,0.12)" rx={2}
+          />
+        )}
+        {r.entry > 0 && r.stop > 0 && (
+          <rect
+            x={axisX - 8} y={Math.min(toY(r.entry), toY(r.stop))}
+            width={16} height={Math.abs(toY(r.entry) - toY(r.stop))}
+            fill="rgba(239,68,68,0.10)" rx={2}
+          />
+        )}
+
+        {/* Level ticks + labels */}
+        {levels.map((lv) => {
+          const y = toY(lv.price);
+          const pct = pctFromEntry(lv.price);
+          const isEntry = lv.label === 'Entry';
+          return (
+            <g key={lv.label}>
+              {/* Dashed horizontal guide */}
+              <line x1={axisX - 14} y1={y} x2={svgW - 4} y2={y}
+                stroke={lv.color} strokeWidth={isEntry ? 1.5 : 1}
+                strokeDasharray={isEntry ? "none" : "3 3"} opacity={isEntry ? 0.9 : 0.55} />
+              {/* Dot on axis */}
+              <circle cx={axisX} cy={y} r={isEntry ? 4 : 3} fill={lv.color} opacity={isEntry ? 1 : 0.85} />
+              {/* Label (left of axis) */}
+              <text x={axisX - 18} y={y + 4} textAnchor="end" fontSize={9} fontWeight={isEntry ? 700 : 600} fill={lv.color} opacity={0.9}>
+                {lv.label}
+              </text>
+              {/* Price (right of axis) */}
+              <text x={labelX} y={y - 5} fontSize={9} fontFamily="monospace" fill={lv.color} opacity={0.85}>
+                {fmtP(lv.price)}
+              </text>
+              {/* % from entry */}
+              {!isEntry && (
+                <text x={labelX} y={y + 9} fontSize={8} fontFamily="monospace" fill={lv.color} opacity={0.55}>
+                  {pct}
+                </text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
 function DetailPanel({ result: r }: { result: ScalpResult }) {
   const s = r.signals;
   return (
@@ -331,6 +424,9 @@ function DetailPanel({ result: r }: { result: ScalpResult }) {
           {r.direction === 'long' ? 'LONG' : r.direction === 'short' ? 'SHORT' : 'NEUTRAL'}
         </span>
       </div>
+
+      {/* Price Ladder */}
+      <PriceLadder result={r} />
 
       {/* Execution Levels */}
       <div className="px-4 py-3 border-b border-slate-700/30">

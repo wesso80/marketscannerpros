@@ -58,7 +58,8 @@ export default function AdminIncomePage() {
 
     try {
       const res = await fetch("/api/admin/income", {
-        headers: { Authorization: `Bearer ${secret}` },
+        headers: secret ? { Authorization: `Bearer ${secret}` } : {},
+        credentials: "include",
       });
       const data = await res.json();
       if (res.ok) {

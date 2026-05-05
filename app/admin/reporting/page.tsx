@@ -148,7 +148,8 @@ export default function AdminReportingPage() {
     const secret = sessionStorage.getItem("admin_secret");
     try {
       const res = await fetch("/api/admin/reporting", {
-        headers: { Authorization: `Bearer ${secret}` },
+        headers: secret ? { Authorization: `Bearer ${secret}` } : {},
+        credentials: "include",
       });
       const data = await res.json();
       if (res.ok) {
@@ -176,9 +177,10 @@ export default function AdminReportingPage() {
       const res = await fetch("/api/admin/reporting", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${secret}`,
+          ...(secret ? { Authorization: `Bearer ${secret}` } : {}),
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify(body),
       });
       const data = await res.json();

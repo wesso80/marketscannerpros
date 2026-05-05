@@ -31,7 +31,8 @@ export default function AdminSubscriptionsPage() {
 
     try {
       const res = await fetch("/api/admin/subscriptions", {
-        headers: { Authorization: `Bearer ${secret}` },
+        headers: secret ? { Authorization: `Bearer ${secret}` } : {},
+        credentials: "include",
       });
       const data = await res.json();
       if (res.ok) {
@@ -57,7 +58,8 @@ export default function AdminSubscriptionsPage() {
     try {
       const res = await fetch("/api/admin/sync-stripe", {
         method: "POST",
-        headers: { Authorization: `Bearer ${secret}` },
+        headers: secret ? { Authorization: `Bearer ${secret}` } : {},
+        credentials: "include",
       });
       const data = await res.json();
       if (res.ok) {

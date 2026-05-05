@@ -83,6 +83,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { href: "/admin/live-scanner", label: "Live Scanner", code: "LS" },
         { href: "/admin/scalper", label: "Scalper", code: "SC" },
         { href: "/admin/quant", label: "Quant Terminal", code: "QT" },
+        { href: "/admin/learning-engine", label: "Learning Engine", code: "LE" },
         { href: "/admin/outcomes", label: "Signal Outcomes", code: "SO" },
         { href: "/admin/priority-desk", label: "Priority Desk", code: "PD" },
         { href: "/admin/research-scheduler", label: "Research Scheduler", code: "RS" },

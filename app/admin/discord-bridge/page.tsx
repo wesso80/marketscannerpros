@@ -60,6 +60,7 @@ export default function DiscordBridgePage() {
     try {
       const res = await fetch("/api/admin/discord-bridge", {
         headers: { "x-admin-secret": secret },
+        credentials: "include",
       });
       if (!res.ok) return;
       const data = await res.json();
@@ -106,6 +107,7 @@ export default function DiscordBridgePage() {
           "Content-Type": "application/json",
           "x-admin-secret": secret,
         },
+        credentials: "include",
         body: JSON.stringify({ action: "bulk-update", channels: updates }),
       });
 
@@ -142,6 +144,7 @@ export default function DiscordBridgePage() {
           "Content-Type": "application/json",
           "x-admin-secret": secret,
         },
+        credentials: "include",
         body: JSON.stringify({ action: "test", channelKey, webhookUrl }),
       });
       const data = await res.json();

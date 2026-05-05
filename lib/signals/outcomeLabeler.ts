@@ -73,7 +73,9 @@ export async function labelSignalOutcomes(workspaceId: string): Promise<{ labele
 
     for (const signal of unlabeled) {
       try {
-        // 2a. Try matching against closed journal entries
+        // 2a. Try matching against closed journal entries.
+        // Forward-only window: entry_date must be AT OR AFTER signal_at and within +60min.
+        // (Previously used ABS(...) which accepted entries placed BEFORE the signal — look-ahead bias.)
         const journalMatch = await q<{
           exit_price: number;
           close_date: string;
@@ -84,12 +86,14 @@ export async function labelSignalOutcomes(workspaceId: string): Promise<{ labele
             AND UPPER(symbol) = UPPER($2)
             AND exit_price IS NOT NULL
             AND close_date IS NOT NULL
-            AND ABS(EXTRACT(EPOCH FROM (entry_date - $3::timestamptz))) <= 3600
+            AND entry_date >= $3::timestamptz
+            AND entry_date <= $3::timestamptz + INTERVAL '60 minutes'
+            AND close_date >= $3::timestamptz
           ORDER BY close_date ASC
           LIMIT 1
         `, [workspaceId, signal.symbol, signal.signal_at]);
 
-        // 2b. Try matching against closed portfolio positions
+        // 2b. Try matching against closed portfolio positions (forward-only window).
         const portfolioMatch = journalMatch.length === 0
           ? await q<{
               exit_price: number;
@@ -100,7 +104,9 @@ export async function labelSignalOutcomes(workspaceId: string): Promise<{ labele
             WHERE workspace_id = $1
               AND UPPER(symbol) = UPPER($2)
               AND exit_price IS NOT NULL
-              AND ABS(EXTRACT(EPOCH FROM (entered_at - $3::timestamptz))) <= 3600
+              AND entered_at >= $3::timestamptz
+              AND entered_at <= $3::timestamptz + INTERVAL '60 minutes'
+              AND closed_at >= $3::timestamptz
             ORDER BY closed_at ASC
             LIMIT 1
           `, [workspaceId, signal.symbol, signal.signal_at])

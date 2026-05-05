@@ -18,7 +18,7 @@ export default function RiskPage() {
     <div className="p-4 space-y-4">
       <SectionTitle title="Research Guard" subtitle={error ? `Error: ${error}` : undefined} />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.75rem" }}>
         <MiniStat label="Open Risk" value={`$${openRiskUsd.toLocaleString()}`} />
         <MiniStat label="Daily Drawdown" value={`${(drawdown * 100).toFixed(2)}%`} />
         <MiniStat label="Correlation Risk" value={risk ? `${(risk.correlationRisk * 100).toFixed(0)}%` : "—"} />

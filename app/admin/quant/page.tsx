@@ -107,9 +107,13 @@ export default function QuantTerminal() {
     setLoading(true);
     setError(null);
     try {
+      const authHeaders: HeadersInit = secret
+        ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${secret}` }
+        : { 'Content-Type': 'application/json' };
       const resp = await fetch('/api/quant/scan', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${secret}` },
+        headers: authHeaders,
+        credentials: 'include',
         body: JSON.stringify({ assetTypes, timeframe }),
       });
       if (!resp.ok) {
@@ -129,7 +133,8 @@ export default function QuantTerminal() {
     setEvidenceLoading(true);
     try {
       const resp = await fetch(`/api/quant/evidence/${encodeURIComponent(symbol)}`, {
-        headers: { 'Authorization': `Bearer ${secret}` },
+        headers: secret ? { 'Authorization': `Bearer ${secret}` } : {},
+        credentials: 'include',
       });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json();

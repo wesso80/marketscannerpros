@@ -57,7 +57,7 @@ export default function ResearchSchedulerPage() {
   async function fetchRuns() {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/research-scheduler?limit=100");
+      const res = await fetch("/api/admin/research-scheduler?limit=100", { credentials: "include" });
       const data = await res.json();
       if (data.ok) setRuns(data.runs ?? []);
     } finally {
@@ -72,6 +72,7 @@ export default function ResearchSchedulerPage() {
       const res = await fetch("/api/admin/research-scheduler", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ mode, market, timeframe }),
       });
       const data = await res.json();

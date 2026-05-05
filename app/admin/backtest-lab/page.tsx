@@ -39,7 +39,7 @@ export default function BacktestLabPage() {
   const refresh = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/backtest-lab", { headers: authHeaders() });
+      const res = await fetch("/api/admin/backtest-lab", { headers: authHeaders(), credentials: "include" });
       const json = (await res.json().catch(() => ({}))) as BacktestLabResponse;
       if (!res.ok || !json.ok) {
         setError(json.error || "Failed to load Backtest Lab.");

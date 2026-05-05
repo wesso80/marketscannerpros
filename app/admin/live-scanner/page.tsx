@@ -17,15 +17,15 @@ function permTone(p: string): "green" | "yellow" | "red" {
 
 function HitRow({ hit }: { hit: ScannerHit }) {
   return (
-    <div className="grid grid-cols-[1fr_60px_1fr] md:grid-cols-[80px_60px_70px_1fr_80px_70px_70px_90px] items-center gap-2 border-b border-white/5 py-2 text-sm">
-      <span className="font-semibold text-white/90">{hit.symbol}</span>
+    <div style={{ display: "grid", gridTemplateColumns: "80px 60px 70px 1fr 80px 70px 70px 90px", alignItems: "center", gap: "0.5rem", borderBottom: "1px solid rgba(255,255,255,0.05)", padding: "0.5rem 0", fontSize: "0.875rem" }}>
+      <span style={{ fontWeight: 600, color: "rgba(255,255,255,0.9)" }}>{hit.symbol}</span>
       <StatusPill label={hit.bias} tone={hit.bias === "LONG" ? "green" : hit.bias === "SHORT" ? "red" : "neutral"} />
-      <span className="hidden md:block text-right font-mono text-emerald-300">{hit.eliteScore != null ? `${hit.eliteScore.toFixed(1)}` : "—"}</span>
-      <span className="truncate text-white/50 text-xs">{hit.playbook ?? "—"}</span>
-      <span className="hidden md:block"><StatusPill label={hit.permission} tone={permTone(hit.permission)} /></span>
-      <span className="hidden md:block text-right font-mono text-white/70">{hit.confidence.toFixed(1)}%</span>
-      <span className="hidden md:block text-right font-mono text-white/50">{hit.symbolTrust}%</span>
-      <span className="hidden md:block text-right text-[10px] text-white/40">{hit.setupState ?? "—"}</span>
+      <span style={{ textAlign: "right", fontFamily: "monospace", color: "#6EE7B7" }}>{hit.eliteScore != null ? hit.eliteScore.toFixed(1) : "—"}</span>
+      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "rgba(255,255,255,0.5)", fontSize: "0.75rem" }}>{hit.playbook ?? "—"}</span>
+      <span><StatusPill label={hit.permission} tone={permTone(hit.permission)} /></span>
+      <span style={{ textAlign: "right", fontFamily: "monospace", color: "rgba(255,255,255,0.7)" }}>{hit.confidence.toFixed(1)}%</span>
+      <span style={{ textAlign: "right", fontFamily: "monospace", color: "rgba(255,255,255,0.5)" }}>{hit.symbolTrust}%</span>
+      <span style={{ textAlign: "right", fontSize: "0.625rem", color: "rgba(255,255,255,0.4)" }}>{hit.setupState ?? "—"}</span>
     </div>
   );
 }
@@ -76,15 +76,15 @@ export default function LiveScannerPage() {
           </p>
         ) : (
           <div>
-            <div className="grid grid-cols-[80px_60px_70px_1fr_80px_70px_70px_90px] gap-2 pb-2 text-xs text-white/40 border-b border-white/10">
+            <div style={{ display: "grid", gridTemplateColumns: "80px 60px 70px 1fr 80px 70px 70px 90px", gap: "0.5rem", paddingBottom: "0.5rem", fontSize: "0.75rem", color: "rgba(255,255,255,0.4)", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
               <span>Symbol</span>
               <span>Bias</span>
-              <span className="text-right">Elite</span>
+              <span style={{ textAlign: "right" }}>Elite</span>
               <span>Playbook</span>
               <span>Verdict</span>
-              <span className="text-right">Score</span>
-              <span className="text-right">Trust</span>
-              <span className="text-right">State</span>
+              <span style={{ textAlign: "right" }}>Score</span>
+              <span style={{ textAlign: "right" }}>Trust</span>
+              <span style={{ textAlign: "right" }}>State</span>
             </div>
             {hits.map((hit) => (
               <HitRow key={hit.symbol} hit={hit} />

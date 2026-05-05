@@ -67,9 +67,9 @@ export default function AlertsPage() {
     setError("");
     try {
       const [scanRes, riskRes, alertRes] = await Promise.all([
-        fetch("/api/admin/scanner/live?market=CRYPTO&timeframe=15m", { headers: authHeaders() }),
-        fetch("/api/admin/risk/state", { headers: authHeaders() }),
-        fetch("/api/admin/research-alerts?limit=25", { headers: authHeaders() }),
+        fetch("/api/admin/scanner/live?market=CRYPTO&timeframe=15m", { headers: authHeaders(), credentials: "include" }),
+        fetch("/api/admin/risk/state", { headers: authHeaders(), credentials: "include" }),
+        fetch("/api/admin/research-alerts?limit=25", { headers: authHeaders(), credentials: "include" }),
       ]);
       if (scanRes.ok) {
         const data = await scanRes.json();
@@ -185,7 +185,7 @@ export default function AlertsPage() {
 
       <AdminCard title="Watchlist Alerts">
         {watchHits.length ? (
-          <div className="grid gap-2 md:grid-cols-2">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
             {watchHits.slice(0, 10).map((hit) => (
               <Link key={hit.symbol} href={`/admin/terminal/${encodeURIComponent(hit.symbol)}`} className="rounded-lg border border-amber-500/15 bg-amber-500/5 px-3 py-2 text-sm no-underline hover:bg-amber-500/10">
                 <div className="flex items-center justify-between gap-2">

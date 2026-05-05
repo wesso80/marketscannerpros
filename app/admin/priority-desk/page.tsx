@@ -121,7 +121,7 @@ function Row({ packet }: { packet: Packet }) {
         <div className="font-semibold text-emerald-300">{packet.symbol}</div>
         <div className="text-white/60">{packet.assetClass}</div>
       </div>
-      <div className="mt-1 grid gap-1 md:grid-cols-2">
+      <div className="mt-1 grid gap-1" style={{ gridTemplateColumns: "1fr 1fr" }}>
         <div>Setup: <span className="text-white/80">{packet.setup.label || packet.setup.type}</span></div>
         <div>Trust-Adjusted: <span className="text-white/80">{packet.trustAdjustedScore.toFixed(1)}</span></div>
         <div>Data Trust: <span className="text-white/80">{packet.dataTrustScore.toFixed(1)}</span></div>
