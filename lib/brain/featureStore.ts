@@ -55,10 +55,10 @@ function snapshotHash(buckets: Record<string, unknown>): string {
   return createHash('sha256').update(JSON.stringify(buckets)).digest('hex');
 }
 
-function countMissing(features: Record<string, unknown> | undefined): number {
+function countMissing(features: object | undefined | null): number {
   if (!features) return 0;
   let n = 0;
-  for (const v of Object.values(features)) {
+  for (const v of Object.values(features as Record<string, unknown>)) {
     if (v === null || v === undefined) n++;
   }
   return n;
