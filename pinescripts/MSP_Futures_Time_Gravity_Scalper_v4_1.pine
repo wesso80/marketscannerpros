@@ -80,7 +80,7 @@ showTP_SL_Hits = input.bool(false, "Show TP / SL Hit Labels", group=grp_vis)
 showTP1Hits = input.bool(false, "Show TP1 Hit Label", group=grp_vis)
 
 grp_read = "Readability"
-tableTextSizeInput = input.string("Small", "Table Text Size", options=["Tiny", "Small", "Normal", "Large"], group=grp_read)
+tableTextSizeInput = input.string("Tiny", "Table Text Size", options=["Tiny", "Small", "Normal", "Large"], group=grp_read)
 signalTextSizeInput = input.string("Large", "Signal Label Size", options=["Small", "Normal", "Large", "Huge"], group=grp_read)
 tradeLineExtendBars = input.int(40, "Extend Trade Lines Bars", minval=5, maxval=200, group=grp_read)
 targetBoxForwardBars = input.int(35, "Target Box Forward Bars", minval=5, maxval=150, group=grp_read)
@@ -92,9 +92,9 @@ labelOffsetATR = input.float(0.25, "Signal Label Offset ATR", minval=0.05, maxva
 
 f_tableSize(sizeInput) =>
     sizeInput == "Tiny" ? size.tiny :
-     sizeInput == "Small" ? size.small :
-     sizeInput == "Large" ? size.large :
-     size.normal
+     sizeInput == "Small" ? size.tiny :
+     sizeInput == "Large" ? size.small :
+     size.small
 
 f_labelSize(sizeInput) =>
     sizeInput == "Small" ? size.small :
