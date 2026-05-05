@@ -6,7 +6,26 @@ All scripts are **Pine Script v6** and ready to paste into TradingView's Pine Ed
 
 ---
 
-## 📊 Indicators (4)
+## 📊 Indicators (5)
+
+### 0. [MSP Futures Time Gravity Scalper v4.3](MSP_Futures_Time_Gravity_Scalper_v4_3.pine) ⭐ Flagship
+**Index-Futures Scalper** — Globex-session scalper for ES / NQ / MES / MNQ on the 1m–5m chart.
+
+Maps the midpoints of higher-timeframe candles (15m → 1W) as gravity levels, then times entries to the **decompression window** before each HTF close.
+
+| Feature | Details |
+|---------|---------|
+| Gravity sources | 15m, 30m, 1H, 2H, 4H, 1D, 1W (each toggleable, weighted) |
+| Trade structure | One active trade at a time: Entry / TP1 quick scalp / TP2 gravity / SL |
+| Filters | Trend (EMA9/21), VWAP, relative volume, R:R floor, session gate |
+| HUD | Top-right: state, bias, target, distance, R:R, time heat, trend |
+| Close calendar | Bottom-right: minutes-to-close + decomp state per timeframe |
+| Alerts | 8 conditions (combined BUY/SELL, BUY, SELL, TP1, TP2, SL, Reaction, Decomp) |
+| v4.3 fix | Historical signals now render (was live-session-only in v4.2) |
+
+> v4.1 / v4.2 are kept in this folder for rollback. **v4.3 is the canonical publish target.**
+
+---
 
 ### 1. [MSP DVE Complete](MSP_DVE_Complete.pine)
 **Dynamic Volatility Engine** — The core volatility analysis system.
