@@ -34,6 +34,7 @@ const ENGINES: Array<{ engine: string; eventType: string }> = [
   { engine: 'dve',              eventType: 'dve.output_generated' },
   { engine: 'options',          eventType: 'options.confluence_generated' },
   { engine: 'backtest',         eventType: 'backtest.completed' },
+  { engine: 'catalyst',         eventType: 'catalyst.event_study_generated' },
   { engine: 'arca',             eventType: 'arca.conditional_verdict' },
 ];
 

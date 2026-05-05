@@ -1701,8 +1701,32 @@ export async function POST(req: NextRequest) {
             }
           }
         }
+      } else if (type === 'equity' && ALPHA_KEY) {
+        // SPY 20-day relative-strength baseline. One extra AV call per scan
+        // (not per symbol) — cheap and rate-limit-safe. Per
+        // alpha-vantage-usage rules: explicit failure mode, no silent
+        // fabrication if quota / data missing.
+        try {
+          const spyUrl = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=SPY&outputsize=compact&entitlement=realtime&apikey=${ALPHA_KEY}`;
+          const spyJson = await fetchAlphaJson(spyUrl, 'SPY_BENCHMARK');
+          const spyKey = Object.keys(spyJson).find((k) => k.startsWith('Time Series ('));
+          const spyTs = spyKey ? spyJson[spyKey] : null;
+          if (spyTs) {
+            const spyCloses = Object.entries(spyTs)
+              .sort(([a], [b]) => (a < b ? 1 : -1)) // newest first
+              .slice(0, 21) // last 21 sessions → 20 returns
+              .map(([, v]: any) => Number(v['4. close'] ?? v['5. adjusted close'] ?? NaN))
+              .filter((n) => Number.isFinite(n) && n > 0);
+            if (spyCloses.length >= 2) {
+              const last = spyCloses[0];
+              const first = spyCloses[spyCloses.length - 1];
+              benchmarkChangePct = ((last - first) / first) * 100;
+            }
+          }
+        } catch (spyErr) {
+          console.warn('[scanner] SPY benchmark fetch failed, RS baseline=0:', (spyErr as any)?.message);
+        }
       }
-      // For equities, benchmarkChangePct stays 0 (SPY data would require an extra AV call)
     } catch (bmErr) {
       console.warn('[scanner] Benchmark fetch for RS failed, using 0:', bmErr);
     }

@@ -32,6 +32,8 @@ export type BrainEventType =
   | 'user.journaled_setup'
   // Backtest
   | 'backtest.completed'
+  // Catalyst event-study surface
+  | 'catalyst.event_study_generated'
   // Setup lifecycle (from outcome labeller / forward tests)
   | 'setup.reached_key_level'
   | 'setup.hit_invalidation'

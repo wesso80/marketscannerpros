@@ -14,6 +14,7 @@ import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
 import { getOrComputeStudy, computeDistribution } from '@/lib/catalyst/eventStudy';
 import { CatalystSubtype, type StudyCohort, type EventStudyResult } from '@/lib/catalyst/types';
+import { recordEngineEvent, coverageAwareConfidence } from '@/lib/brain/engineBridge';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60; // Allow inline compute up to 25s + overhead
@@ -188,6 +189,49 @@ export async function GET(req: NextRequest) {
   if (cohortParam === 'auto' && cohort === 'MARKET') {
     warnings.push(`AUTO_COHORT_FALLBACK: Ticker-specific sample too small. Using MARKET cohort.`);
   }
+
+  // ── Brain layer: admin-only event with sample-aware confidence ─────────
+  // Coverage = sample size factor; freshness reflects price-data pendingness.
+  void recordEngineEvent({
+    workspaceId: session.workspaceId,
+    engine: 'catalyst',
+    eventType: 'catalyst.event_study_generated',
+    symbol: ticker,
+    assetClass: 'equities',
+    timeframe: 'event',
+    source: cached ? 'catalyst:cache' : 'catalyst:fresh',
+    dataFreshness: isPending ? 'delayed' : study.dataQuality.percentMissingBars > 0.2 ? 'stale' : 'real-time',
+    inputs: { ticker, subtype: subtypeParam, cohort, lookbackDays },
+    scoreSnapshot: (() => {
+      // Sample-size & quality aware confidence (no thesis-direction here).
+      const sampleFactor = Math.min(1, study.sampleN / 20); // need ~20 events for full credit
+      const qualityFactor = Math.max(0.3, 1 - (study.dataQuality.percentMissingBars || 0));
+      const coverage = coverageAwareConfidence(
+        Math.round((study.dataQuality.score || 0) * 100),
+        {
+          presentLayers: Math.max(1, study.sampleN),
+          expectedLayers: 20,
+          freshness: isPending ? 'delayed' : 'fresh',
+          liquidity: 'not_applicable',
+          directionFloorMet: study.sampleN >= 5,
+        },
+      );
+      return {
+        sampleN: study.sampleN,
+        cohort,
+        sampleFactor: Math.round(sampleFactor * 1000) / 1000,
+        qualityFactor: Math.round(qualityFactor * 1000) / 1000,
+        dataQualityScore: study.dataQuality.score,
+        percentMissingBars: study.dataQuality.percentMissingBars,
+        confoundedCount: study.dataQuality.confoundedCount,
+        confidence: coverage.confidence,
+        directionFloorMet: study.sampleN >= 5,
+        warnings,
+      };
+    })(),
+    meta: { lookbackDays, cached, cacheAge, isPending },
+    adminOnly: true,
+  }).catch(() => {});
 
   return NextResponse.json({
     ticker,
