@@ -56,7 +56,11 @@ describe('backtest execution assumptions payload', () => {
     expect(metadata.costs.slippageApplied).toBe(true);
     expect(metadata.costs.slippageBps).toBe(BACKTEST_SLIPPAGE_BPS);
     expect(metadata.costs.spreadModel).toBe('not_modeled');
-    expect(metadata.costs.commissionModel).toBe('not_modeled');
+    // Commission for stock is modeled per-leg in bps (see lib/backtest/assumptions.ts).
+    // The honest-disclosure contract is preserved via commissionApplied + commissionNote
+    // and the warnings string still calls out spread / fees / borrow / impact as not modeled.
+    expect(metadata.costs.commissionModel).toBe('per_leg_bps');
+    expect(metadata.costs.commissionApplied).toBe(true);
     expect(metadata.liquidity.volumeData).toBe('unavailable');
     expect(metadata.sampleQuality.label).toBe('thin');
     expect(metadata.fillModel.intrabarPriority).toContain('stop is resolved before target');

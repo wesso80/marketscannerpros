@@ -89,16 +89,16 @@ describe('tier and role access helpers', () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     process.env.NODE_ENV = 'development';
-    process.env.PRO_TRADER_BYPASS_UNTIL = '2026-05-01T00:00:00.000Z';
+    process.env.PRO_TRADER_BYPASS_UNTIL = '2099-05-01T00:00:00.000Z';
 
     const developmentBypass = await import('../lib/proTraderAccess');
     expect(developmentBypass.hasProTraderAccess('free')).toBe(true);
-    expect(developmentBypass.isTemporaryProTraderBypassActive(Date.parse('2026-05-02T00:00:00.000Z'))).toBe(false);
+    expect(developmentBypass.isTemporaryProTraderBypassActive(Date.parse('2099-05-02T00:00:00.000Z'))).toBe(false);
     expect(logSpy.mock.calls.some((call) => String(call[0]).includes('Temporary Pro Trader bypass ACTIVE'))).toBe(true);
 
     resetAccessEnv();
     process.env.NODE_ENV = 'production';
-    process.env.PRO_TRADER_BYPASS_UNTIL = '2026-05-01T00:00:00.000Z';
+    process.env.PRO_TRADER_BYPASS_UNTIL = '2099-05-01T00:00:00.000Z';
     const productionBypass = await import('../lib/proTraderAccess');
 
     expect(productionBypass.hasProTraderAccess('free')).toBe(false);

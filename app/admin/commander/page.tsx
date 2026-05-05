@@ -237,7 +237,7 @@ export default function CommanderPage() {
               <div className="mb-2 flex items-center gap-2">
                 <span className={`h-2.5 w-2.5 rounded-full shadow-[0_0_6px_2px_rgba(248,113,113,0.4)] ${brief.risk.killSwitchActive || brief.risk.permission === "BLOCK" ? "bg-red-400" : brief.risk.permission === "WAIT" ? "bg-amber-400" : "bg-emerald-400"}`} />
                 <span className={`text-sm font-bold ${brief.risk.killSwitchActive || brief.risk.permission === "BLOCK" ? "text-red-200" : brief.risk.permission === "WAIT" ? "text-amber-200" : "text-emerald-200"}`}>
-                  {brief.risk.killSwitchActive ? "Alerts Paused — Kill Switch" : brief.risk.permission === "BLOCK" ? "Trade Execution Paused" : brief.risk.permission === "WAIT" ? "Reduced Sizing Mode" : "Execution Permitted"}
+                  {brief.risk.killSwitchActive ? "Research Alerts Paused" : brief.risk.permission === "BLOCK" ? "Discovery Hold — Operator Guard" : brief.risk.permission === "WAIT" ? "Reduced Conviction Mode" : "Operator Guard Clear"}
                 </span>
               </div>
               <div className="space-y-1 text-xs text-slate-300">
@@ -386,7 +386,7 @@ function CommandStateStrip({ brief }: { brief: CommanderBrief }) {
               <StatusPill label={brief.riskGovernor.mode} tone={stateTone(brief.riskGovernor.mode)} />
             )}
             <StatusPill label="DISCOVERY ACTIVE" tone="green" />
-            <StatusPill label={brief.risk.killSwitchActive ? "ALERTS PAUSED" : "ALERTS ACTIVE"} tone={brief.risk.killSwitchActive ? "yellow" : "green"} />
+            <StatusPill label={brief.risk.killSwitchActive ? "RESEARCH ALERTS PAUSED" : "RESEARCH ALERTS ACTIVE"} tone={brief.risk.killSwitchActive ? "yellow" : "green"} />
             <StatusPill label={sourceLabel(brief.risk.source)} tone={brief.risk.source === "portfolio_journal" ? "green" : brief.risk.source === "operator_state" ? "yellow" : "red"} />
           </div>
           <div className="mt-3 text-sm font-semibold leading-6">Allowed Next Action: {allowedNextAction(brief, commandState)}</div>

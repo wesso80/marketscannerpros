@@ -81,12 +81,13 @@ function makeEmaCrossoverPriceData(): { data: PriceData; startDate: string; endD
 
 describe('signal formation — source code invariants', () => {
   it('entry is recorded at the signal bar close, not the next-bar open', () => {
-    // EMA crossover in strategyExecutors must set entry = close (current bar),
-    // not closes[i+1] or priceData[dates[i+1]]
+    // EMA crossover in strategyExecutors must enter on the NEXT bar's open
+    // (no same-bar lookahead). The signal is detected at bar i, the position
+    // is opened at bar i+1's open.
     const executors = read('lib/backtest/strategyExecutors.ts');
-    // Entry line: position = { ..., entry: close, ... }
-    // "close" is the variable bound at bar i; no i+1 anywhere in the entry block
-    expect(executors).toContain("entry: close, entryDate: date, entryIdx: i");
+    expect(executors).toContain("entry: nextOpen, entryDate: nextDate, entryIdx: i + 1");
+    // No same-bar entry where entry equals current bar close + entryIdx i.
+    expect(executors).not.toContain("entry: close, entryDate: date, entryIdx: i,");
   });
 
   it('EMA crossover uses previous-bar confirmation to prevent same-bar lookahead', () => {
