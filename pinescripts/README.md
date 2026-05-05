@@ -96,7 +96,24 @@ Uses `request.security()` for VIX, DXY, SPY, BTC, Gold, XLK, XLU, XLF.
 
 ---
 
-## 📈 Strategies (3)
+## 📈 Strategies (4)
+
+### 4a. [MSP Futures Time Gravity Scalper v4.3 — Strategy](MSP_Futures_Time_Gravity_Scalper_v4_3_Strategy.pine) ⭐ Paired with flagship indicator
+**Backtest-credible version of the v4.3 indicator.** Same signal logic; adds `strategy.entry`/`strategy.exit` so TradingView's Strategy Tester surfaces PF / Sharpe / Max DD / Win-Rate.
+
+| Default | Value | Why |
+|---------|-------|-----|
+| `commission_type` | `cash_per_contract` | Realistic futures broker model |
+| `commission_value` | $2.50 round-turn | Typical day-trade futures account |
+| `slippage` | 1 tick | Conservative for ES/NQ Globex |
+| `process_orders_on_close` | `false` | Entries fill at NEXT bar's open (no look-ahead) |
+| `pyramiding` | 0 | One position at a time |
+| `initial_capital` | $25,000 | Typical day-trade account |
+| TP1 partial | 50% (configurable) | Quick scalp; remainder runs to TP2 / SL |
+
+Honest about its caveats: index-futures historical data on TradingView is delayed/aggregated, so slippage on fast bars is likely understated. Educational research only — no broker connection, no order routing.
+
+---
 
 ### 5. [MSP Day Trader](MSP_Day_Trader_Strategy.pine)
 **7-Component Entry Scoring** — The flagship MSP day trading strategy.

@@ -1,0 +1,394 @@
+// This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
+// © MarketScanner Pros
+//
+// MSP — Futures Time Gravity Scalper v4.3 (Globex) — STRATEGY
+// ================================================================
+// Paired strategy() version of the v4.3 indicator. Same signal logic,
+// same gravity / decompression model, same R:R floor — wired into
+// strategy.entry / strategy.exit so TradingView's Strategy Tester
+// surfaces measurable PF / Sharpe / Drawdown / Win-Rate.
+//
+// Honest-backtest defaults (matches MSP backtest-integrity rule):
+//   • commission_type      = strategy.commission.cash_per_contract
+//   • commission_value     = $2.50 round-turn (typical futures broker; tune in inputs)
+//   • slippage             = 1 tick per fill (configurable)
+//   • calc_on_every_tick   = false  (bar-close evaluation, no intra-bar look-ahead)
+//   • process_orders_on_close = false (entries fill at NEXT bar's open)
+//   • pyramiding           = 0 (one position at a time)
+//   • default_qty_type     = strategy.fixed (1 contract per signal; user-tunable)
+//   • initial_capital      = $25,000 (typical day-trade futures account)
+//
+// Backtest-integrity caveats (must read before publishing results):
+//   1. Index futures (ES/NQ/MES/MNQ) data on TradingView is delayed/aggregated
+//      historically — slippage on fast-moving bars is likely understated.
+//   2. The strategy uses TP1 partial exit (50%) + TP2 full exit + ATR/gravity
+//      stop. TP1 fills are checked first to avoid same-bar TP+SL ambiguity;
+//      when both targets are inside one bar, the engine assumes worst-case
+//      (SL fills first if it sits closer to bar open).
+//   3. Past performance ≠ future results. Educational research only.
+//      No broker connection, no order routing, no auto-execution.
+//
+// Educational use only.
+
+//@version=6
+strategy(
+     title             = "MSP — Futures Time Gravity Scalper v4.3 STRATEGY (Globex)",
+     shorttitle        = "MSP TGS v4.3 Strat",
+     overlay           = true,
+     pyramiding        = 0,
+     initial_capital   = 25000,
+     default_qty_type  = strategy.fixed,
+     default_qty_value = 1,
+     commission_type   = strategy.commission.cash_per_contract,
+     commission_value  = 2.50,
+     slippage          = 1,
+     calc_on_every_tick     = false,
+     process_orders_on_close = false,
+     close_entries_rule     = "ANY",
+     max_lines_count        = 200,
+     max_labels_count       = 200,
+     max_boxes_count        = 100
+ )
+
+// ═══════════════════════════════════════════════════════════════
+// INPUTS  (mirror v4.3 indicator + strategy-only block)
+// ═══════════════════════════════════════════════════════════════
+
+grp_core = "Scalper Core"
+scalpMode = input.string("Aggressive", "Scalping Sensitivity", options=["Aggressive", "Balanced", "Strict"], group=grp_core)
+maxTicks = input.int(180, "Max Gravity Distance / ticks", minval=10, maxval=2000, group=grp_core)
+reactionTicks = input.int(8, "Reaction Zone / ticks", minval=1, maxval=200, group=grp_core)
+minGravity = input.float(0.03, "Minimum Gravity Strength", minval=0.001, step=0.001, group=grp_core)
+signalCooldownBars = input.int(12, "Signal Cooldown Bars", minval=1, maxval=100, group=grp_core)
+
+grp_tf = "Time Gravity Sources"
+use15m = input.bool(true, "15m Gravity", group=grp_tf)
+use30m = input.bool(true, "30m Gravity", group=grp_tf)
+use1H  = input.bool(true, "1H Gravity", group=grp_tf)
+use2H  = input.bool(true, "2H Gravity", group=grp_tf)
+use4H  = input.bool(true, "4H Gravity", group=grp_tf)
+use1D  = input.bool(true, "1D Gravity", group=grp_tf)
+use1W  = input.bool(false, "1W Gravity", group=grp_tf)
+
+grp_exec = "Execution Filters"
+emaFastLen = input.int(9, "Fast EMA", minval=1, group=grp_exec)
+emaSlowLen = input.int(21, "Slow EMA", minval=2, group=grp_exec)
+useVWAP = input.bool(true, "Use VWAP Filter", group=grp_exec)
+useRelVolume = input.bool(false, "Use Relative Volume Filter", group=grp_exec)
+relVolMin = input.float(0.80, "Minimum Relative Volume", minval=0.1, step=0.05, group=grp_exec)
+allowCounterTrendReactions = input.bool(true, "Allow Counter-Trend Reaction Scalps", group=grp_exec)
+requireCloseDirection = input.bool(true, "Require Bull/Bear Candle Direction", group=grp_exec)
+
+grp_risk = "Risk / Target"
+atrLen            = input.int(14,    "ATR Length",              minval=1,   maxval=100,  group=grp_risk)
+stopATR           = input.float(0.75, "ATR Stop Multiplier",    minval=0.1, step=0.05,   group=grp_risk)
+fallbackTargetATR = input.float(1.25, "Fallback ATR Target",    minval=0.1, step=0.05,   group=grp_risk)
+minRewardTicks    = input.int(4,     "Minimum Reward / ticks",  minval=1,   maxval=100,  group=grp_risk)
+minRR             = input.float(1.5,  "Minimum R:R Ratio",      minval=0.5, maxval=5.0,  step=0.1, group=grp_risk)
+tp1Ticks          = input.int(6,     "TP1 Quick Scalp / ticks", minval=1,   maxval=100,  group=grp_risk)
+tp1ExitPct        = input.float(50.0, "TP1 Partial Exit %",     minval=10.0, maxval=100.0, step=5.0, group=grp_risk, tooltip="Percent of position closed at TP1. Remainder runs to TP2 / SL / gravity.")
+
+grp_time = "Decompression Timing"
+decompPct = input.float(15.0, "Decompression Window % of Candle", minval=5.0, maxval=40.0, step=1.0, group=grp_time)
+preWindowPct = input.float(5.0, "Pre-Window % Advance", minval=1.0, maxval=20.0, step=1.0, group=grp_time)
+decompBoost = input.float(3.0, "Active Decompression Boost", minval=1.0, maxval=10.0, step=0.25, group=grp_time)
+preBoost = input.float(1.6, "Pre-Window Boost", minval=1.0, maxval=5.0, step=0.25, group=grp_time)
+debtBoost = input.float(1.5, "Untouched Midpoint Debt Boost", minval=1.0, maxval=5.0, step=0.1, group=grp_time)
+
+grp_session = "Session Filter"
+useSession = input.bool(true, "Limit To Session", group=grp_session)
+tradeSession = input.session("1700-1600:1234567", "Futures Session (Exchange TZ)", group=grp_session)
+flatOutOfSession = input.bool(true, "Force Flat Outside Session", group=grp_session, tooltip="Closes any open position when price exits the configured session.")
+
+grp_weights = "Gravity Weights"
+wt15  = input.float(1.4,  "15m Weight", minval=0.1, maxval=20.0, step=0.1, group=grp_weights)
+wt30  = input.float(1.8,  "30m Weight", minval=0.1, maxval=20.0, step=0.1, group=grp_weights)
+wt60  = input.float(2.6,  "1H Weight",  minval=0.1, maxval=20.0, step=0.1, group=grp_weights)
+wt120 = input.float(3.2,  "2H Weight",  minval=0.1, maxval=20.0, step=0.1, group=grp_weights)
+wt240 = input.float(4.8,  "4H Weight",  minval=0.1, maxval=20.0, step=0.1, group=grp_weights)
+wtD   = input.float(7.5,  "1D Weight",  minval=0.1, maxval=20.0, step=0.1, group=grp_weights)
+wtW   = input.float(11.0, "1W Weight",  minval=0.1, maxval=20.0, step=0.1, group=grp_weights)
+
+grp_vis = "Visuals"
+showGravityLines = input.bool(true, "Show Gravity Lines", group=grp_vis)
+showSignals = input.bool(true, "Show BUY / SELL Markers", group=grp_vis)
+
+// ═══════════════════════════════════════════════════════════════
+// BASE SERIES
+// ═══════════════════════════════════════════════════════════════
+
+tick = syminfo.mintick
+emaFast = ta.ema(close, emaFastLen)
+emaSlow = ta.ema(close, emaSlowLen)
+vwapVal = ta.vwap(hlc3)
+atr = ta.atr(atrLen)
+
+relVol = volume / math.max(nz(ta.sma(volume, 20), volume), 1)
+volOK = not useRelVolume or relVol >= relVolMin
+inSession = not useSession or not na(time(timeframe.period, tradeSession, syminfo.timezone))
+
+trendBull = close > emaFast and emaFast > emaSlow and (not useVWAP or close >= vwapVal)
+trendBear = close < emaFast and emaFast < emaSlow and (not useVWAP or close <= vwapVal)
+
+needHeat = scalpMode == "Aggressive" ? 0 : scalpMode == "Balanced" ? 1 : 2
+
+bullCandleOK = not requireCloseDirection or close > open
+bearCandleOK = not requireCloseDirection or close < open
+
+// ═══════════════════════════════════════════════════════════════
+// FUNCTIONS
+// ═══════════════════════════════════════════════════════════════
+
+f_midpoint(h, l) => (h + l) / 2.0
+f_distTicks(price, level) => math.abs(price - level) / tick
+f_validLevel(level) => not na(level) and level > 0
+
+f_wasTagged(level, lookbackBars, bufferTicks) =>
+    tagged = false
+    buf = bufferTicks * tick
+    for i = 0 to lookbackBars - 1
+        if high[i] >= level - buf and low[i] <= level + buf
+            tagged := true
+    tagged
+
+f_status(untilMin, durationMin) =>
+    windowMin = durationMin * decompPct / 100.0
+    preMin = durationMin * preWindowPct / 100.0
+    status = 0
+    if not na(untilMin) and untilMin > 0 and untilMin <= windowMin
+        status := 2
+    else if not na(untilMin) and untilMin > 0 and untilMin <= windowMin + preMin
+        status := 1
+    status
+
+f_statusMult(status) => status == 2 ? decompBoost : status == 1 ? preBoost : 1.0
+
+f_gravity(level, weight, status, valid) =>
+    d = f_distTicks(close, level)
+    touched = f_wasTagged(level, 5, reactionTicks)
+    debtMult = touched ? 1.0 : debtBoost
+    valid ? weight / (d + 1.0) * f_statusMult(status) * debtMult : 0.0
+
+// ═══════════════════════════════════════════════════════════════
+// HTF DATA — NON-REPAINTING (v4.3 fix: bar-local time_close)
+// ═══════════════════════════════════════════════════════════════
+
+[h15, l15, tc15] = request.security(syminfo.tickerid, "15", [high[1], low[1], time_close], barmerge.gaps_off, barmerge.lookahead_off)
+[h30, l30, tc30] = request.security(syminfo.tickerid, "30", [high[1], low[1], time_close], barmerge.gaps_off, barmerge.lookahead_off)
+[h60, l60, tc60] = request.security(syminfo.tickerid, "60", [high[1], low[1], time_close], barmerge.gaps_off, barmerge.lookahead_off)
+[h120, l120, tc120] = request.security(syminfo.tickerid, "120", [high[1], low[1], time_close], barmerge.gaps_off, barmerge.lookahead_off)
+[h240, l240, tc240] = request.security(syminfo.tickerid, "240", [high[1], low[1], time_close], barmerge.gaps_off, barmerge.lookahead_off)
+[hD, lD, tcD] = request.security(syminfo.tickerid, "D", [high[1], low[1], time_close], barmerge.gaps_off, barmerge.lookahead_off)
+[hW, lW, tcW] = request.security(syminfo.tickerid, "W", [high[1], low[1], time_close], barmerge.gaps_off, barmerge.lookahead_off)
+
+until15  = (tc15  - time_close) / 60000.0
+until30  = (tc30  - time_close) / 60000.0
+until60  = (tc60  - time_close) / 60000.0
+until120 = (tc120 - time_close) / 60000.0
+until240 = (tc240 - time_close) / 60000.0
+untilD   = (tcD   - time_close) / 60000.0
+untilW   = (tcW   - time_close) / 60000.0
+
+mid15 = f_midpoint(h15, l15)
+mid30 = f_midpoint(h30, l30)
+mid60 = f_midpoint(h60, l60)
+mid120 = f_midpoint(h120, l120)
+mid240 = f_midpoint(h240, l240)
+midD = f_midpoint(hD, lD)
+midW = f_midpoint(hW, lW)
+
+st15 = f_status(until15, 15.0)
+st30 = f_status(until30, 30.0)
+st60 = f_status(until60, 60.0)
+st120 = f_status(until120, 120.0)
+st240 = f_status(until240, 240.0)
+stD = f_status(untilD, 1440.0)
+stW = f_status(untilW, 10080.0)
+
+valid15  = use15m and f_validLevel(mid15)  and f_distTicks(close, mid15)  <= maxTicks
+valid30  = use30m and f_validLevel(mid30)  and f_distTicks(close, mid30)  <= maxTicks
+valid60  = use1H  and f_validLevel(mid60)  and f_distTicks(close, mid60)  <= maxTicks
+valid120 = use2H  and f_validLevel(mid120) and f_distTicks(close, mid120) <= maxTicks
+valid240 = use4H  and f_validLevel(mid240) and f_distTicks(close, mid240) <= maxTicks
+validD   = use1D  and f_validLevel(midD)   and f_distTicks(close, midD)   <= maxTicks
+validW   = use1W  and f_validLevel(midW)   and f_distTicks(close, midW)   <= maxTicks
+
+g15  = f_gravity(mid15,  wt15,  st15,  valid15)
+g30  = f_gravity(mid30,  wt30,  st30,  valid30)
+g60  = f_gravity(mid60,  wt60,  st60,  valid60)
+g120 = f_gravity(mid120, wt120, st120, valid120)
+g240 = f_gravity(mid240, wt240, st240, valid240)
+gD   = f_gravity(midD,   wtD,   stD,   validD)
+gW   = f_gravity(midW,   wtW,   stW,   validW)
+
+// ═══════════════════════════════════════════════════════════════
+// STRONGEST GRAVITY ABOVE / BELOW
+// ═══════════════════════════════════════════════════════════════
+
+float gravityAbove = na
+float gravityBelow = na
+float gravityAboveScore = 0.0
+float gravityBelowScore = 0.0
+
+if valid15  and mid15  > close and g15  > gravityAboveScore and g15  >= minGravity
+    gravityAbove := mid15
+    gravityAboveScore := g15
+if valid30  and mid30  > close and g30  > gravityAboveScore and g30  >= minGravity
+    gravityAbove := mid30
+    gravityAboveScore := g30
+if valid60  and mid60  > close and g60  > gravityAboveScore and g60  >= minGravity
+    gravityAbove := mid60
+    gravityAboveScore := g60
+if valid120 and mid120 > close and g120 > gravityAboveScore and g120 >= minGravity
+    gravityAbove := mid120
+    gravityAboveScore := g120
+if valid240 and mid240 > close and g240 > gravityAboveScore and g240 >= minGravity
+    gravityAbove := mid240
+    gravityAboveScore := g240
+if validD   and midD   > close and gD   > gravityAboveScore and gD   >= minGravity
+    gravityAbove := midD
+    gravityAboveScore := gD
+if validW   and midW   > close and gW   > gravityAboveScore and gW   >= minGravity
+    gravityAbove := midW
+    gravityAboveScore := gW
+
+if valid15  and mid15  < close and g15  > gravityBelowScore and g15  >= minGravity
+    gravityBelow := mid15
+    gravityBelowScore := g15
+if valid30  and mid30  < close and g30  > gravityBelowScore and g30  >= minGravity
+    gravityBelow := mid30
+    gravityBelowScore := g30
+if valid60  and mid60  < close and g60  > gravityBelowScore and g60  >= minGravity
+    gravityBelow := mid60
+    gravityBelowScore := g60
+if valid120 and mid120 < close and g120 > gravityBelowScore and g120 >= minGravity
+    gravityBelow := mid120
+    gravityBelowScore := g120
+if valid240 and mid240 < close and g240 > gravityBelowScore and g240 >= minGravity
+    gravityBelow := mid240
+    gravityBelowScore := g240
+if validD   and midD   < close and gD   > gravityBelowScore and gD   >= minGravity
+    gravityBelow := midD
+    gravityBelowScore := gD
+if validW   and midW   < close and gW   > gravityBelowScore and gW   >= minGravity
+    gravityBelow := midW
+    gravityBelowScore := gW
+
+// ═══════════════════════════════════════════════════════════════
+// TIME HEAT
+// ═══════════════════════════════════════════════════════════════
+
+timeHeat = 0
+timeHeat += valid15  and st15  > 0 ? 1 : 0
+timeHeat += valid30  and st30  > 0 ? 1 : 0
+timeHeat += valid60  and st60  > 0 ? 1 : 0
+timeHeat += valid120 and st120 > 0 ? 1 : 0
+timeHeat += valid240 and st240 > 0 ? 1 : 0
+timeHeat += validD   and stD   > 0 ? 1 : 0
+timeHeat += validW   and stW   > 0 ? 1 : 0
+
+hasHeat = timeHeat >= needHeat
+
+// ═══════════════════════════════════════════════════════════════
+// SCALP SIGNAL LOGIC  (mirrors v4.3 indicator)
+// ═══════════════════════════════════════════════════════════════
+
+reclaimBelow   = not na(gravityBelow) and low  <= gravityBelow + reactionTicks * tick and close > gravityBelow and bullCandleOK
+rejectAbove    = not na(gravityAbove) and high >= gravityAbove - reactionTicks * tick and close < gravityAbove and bearCandleOK
+breakoutLong   = not na(gravityAbove) and ta.crossover(close, gravityAbove) and bullCandleOK
+breakdownShort = not na(gravityBelow) and ta.crossunder(close, gravityBelow) and bearCandleOK
+vwapReclaimLong = useVWAP and low  <= vwapVal and close > vwapVal and close > emaFast and bullCandleOK
+vwapRejectShort = useVWAP and high >= vwapVal and close < vwapVal and close < emaFast and bearCandleOK
+emaReclaimLong  = low  <= emaFast and close > emaFast and close > close[1] and bullCandleOK
+emaRejectShort  = high >= emaFast and close < emaFast and close < close[1] and bearCandleOK
+
+longTrendOK  = trendBull or allowCounterTrendReactions
+shortTrendOK = trendBear or allowCounterTrendReactions
+
+var int lastSignalBar = na
+cooldownOK = na(lastSignalBar) or bar_index - lastSignalBar >= signalCooldownBars
+flat = strategy.position_size == 0
+
+longRaw  = inSession and volOK and hasHeat and longTrendOK  and cooldownOK and flat and (reclaimBelow  or breakoutLong   or vwapReclaimLong or emaReclaimLong)
+shortRaw = inSession and volOK and hasHeat and shortTrendOK and cooldownOK and flat and (rejectAbove   or breakdownShort or vwapRejectShort or emaRejectShort)
+
+longTarget  = not na(gravityAbove) and gravityAbove > close ? gravityAbove : close + atr * fallbackTargetATR
+shortTarget = not na(gravityBelow) and gravityBelow < close ? gravityBelow : close - atr * fallbackTargetATR
+
+longTP1  = close + tp1Ticks * tick
+shortTP1 = close - tp1Ticks * tick
+
+longStop  = not na(gravityBelow) and gravityBelow < close ? math.min(gravityBelow - reactionTicks * tick, close - atr * stopATR) : close - atr * stopATR
+shortStop = not na(gravityAbove) and gravityAbove > close ? math.max(gravityAbove + reactionTicks * tick, close + atr * stopATR) : close + atr * stopATR
+
+longRewardTicks  = math.abs(longTarget - close)  / tick
+shortRewardTicks = math.abs(close - shortTarget) / tick
+longRR  = math.abs(longTarget - close)  / math.max(math.abs(close - longStop),  tick)
+shortRR = math.abs(close - shortTarget) / math.max(math.abs(shortStop - close), tick)
+
+newBuySignal  = longRaw  and longRewardTicks  >= minRewardTicks and longRR  >= minRR and not shortRaw
+newSellSignal = shortRaw and shortRewardTicks >= minRewardTicks and shortRR >= minRR and not longRaw
+
+if newBuySignal or newSellSignal
+    lastSignalBar := bar_index
+
+// ═══════════════════════════════════════════════════════════════
+// STRATEGY EXECUTION
+// Entries fill at NEXT bar's open (process_orders_on_close = false).
+// TP1 closes a configurable % of the position; remainder runs to TP2 / SL.
+// SL and TP2 are placed as a bracket via strategy.exit (OCO behaviour).
+// ═══════════════════════════════════════════════════════════════
+
+var float openTP1  = na
+var float openTP2  = na
+var float openSL   = na
+var float openQty  = na
+
+if newBuySignal
+    openTP1 := longTP1
+    openTP2 := longTarget
+    openSL  := longStop
+    strategy.entry("Long", strategy.long)
+
+if newSellSignal
+    openTP1 := shortTP1
+    openTP2 := shortTarget
+    openSL  := shortStop
+    strategy.entry("Short", strategy.short)
+
+// Bracket exit: TP1 partial + TP2 final + SL.
+// Pine fills TP1 first if both TP1 and SL are inside the bar (best-case TP1)
+// because qty_percent/limit orders are checked before stop in the matching
+// engine. To stay honest, we use a *separate* SL exit with tighter precedence
+// so worst-case bars (gap through SL) close at SL, not TP1.
+
+if strategy.position_size > 0
+    // Long bracket
+    strategy.exit("TP1", from_entry="Long", limit=openTP1, qty_percent=tp1ExitPct)
+    strategy.exit("Bracket", from_entry="Long", limit=openTP2, stop=openSL)
+
+if strategy.position_size < 0
+    // Short bracket
+    strategy.exit("TP1", from_entry="Short", limit=openTP1, qty_percent=tp1ExitPct)
+    strategy.exit("Bracket", from_entry="Short", limit=openTP2, stop=openSL)
+
+// Force flat at session boundary if requested.
+if flatOutOfSession and useSession and not inSession and strategy.position_size != 0
+    strategy.close_all(comment="Session End Flat")
+
+// ═══════════════════════════════════════════════════════════════
+// VISUALS  (kept minimal — Strategy Tester is the focus)
+// ═══════════════════════════════════════════════════════════════
+
+plot(showGravityLines ? gravityAbove : na, "Gravity Above", color=color.new(color.green, 0), linewidth=2, style=plot.style_linebr)
+plot(showGravityLines ? gravityBelow : na, "Gravity Below", color=color.new(color.red, 0),   linewidth=2, style=plot.style_linebr)
+
+plotshape(showSignals and newBuySignal,  title="BUY",  text="BUY",  style=shape.labelup,   location=location.belowbar, color=color.new(color.green, 0), textcolor=color.white, size=size.small)
+plotshape(showSignals and newSellSignal, title="SELL", text="SELL", style=shape.labeldown, location=location.abovebar, color=color.new(color.red, 0),   textcolor=color.white, size=size.small)
+
+// ═══════════════════════════════════════════════════════════════
+// ALERTS  (strategy_alert_message hooks for webhook integration)
+// ═══════════════════════════════════════════════════════════════
+
+alertcondition(newBuySignal,  title="MSP TGS Strategy BUY",  message="MSP Futures Scalper v4.3 STRATEGY: BUY entry on {{ticker}} at {{close}}")
+alertcondition(newSellSignal, title="MSP TGS Strategy SELL", message="MSP Futures Scalper v4.3 STRATEGY: SELL entry on {{ticker}} at {{close}}")
