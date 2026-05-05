@@ -112,6 +112,7 @@ wtW   = input.float(11.0, "1W Weight",  minval=0.1, maxval=20.0, step=0.1, group
 grp_vis = "Visuals"
 showGravityLines = input.bool(true, "Show Gravity Lines", group=grp_vis)
 showSignals = input.bool(true, "Show BUY / SELL Markers", group=grp_vis)
+showDiag = input.bool(true, "Show Strategy Diagnostic Panel", group=grp_vis, tooltip="Bottom-left counter: shows why no trades fired (heat / session / cooldown / R:R / direction).")
 
 // ═══════════════════════════════════════════════════════════════
 // BASE SERIES
@@ -392,3 +393,68 @@ plotshape(showSignals and newSellSignal, title="SELL", text="SELL", style=shape.
 
 alertcondition(newBuySignal,  title="MSP TGS Strategy BUY",  message="MSP Futures Scalper v4.3 STRATEGY: BUY entry on {{ticker}} at {{close}}")
 alertcondition(newSellSignal, title="MSP TGS Strategy SELL", message="MSP Futures Scalper v4.3 STRATEGY: SELL entry on {{ticker}} at {{close}}")
+
+// ═══════════════════════════════════════════════════════════════
+// DIAGNOSTIC PANEL  —  "Why didn't a trade fire?"
+// Counts how many bars passed / failed each gate. If you see 0 trades in
+// the Strategy Tester, this panel tells you which filter is the bottleneck.
+// ═══════════════════════════════════════════════════════════════
+
+var int diagBars         = 0
+var int diagInSession    = 0
+var int diagVolOK        = 0
+var int diagHasHeat      = 0
+var int diagCooldownOK   = 0
+var int diagFlat         = 0
+var int diagAnyTrigger   = 0
+var int diagRRPass       = 0
+var int diagBuyFired     = 0
+var int diagSellFired    = 0
+
+diagBars         += 1
+diagInSession    += inSession  ? 1 : 0
+diagVolOK        += volOK      ? 1 : 0
+diagHasHeat      += hasHeat    ? 1 : 0
+diagCooldownOK   += cooldownOK ? 1 : 0
+diagFlat         += flat       ? 1 : 0
+diagAnyTrigger   += (reclaimBelow or breakoutLong or vwapReclaimLong or emaReclaimLong or rejectAbove or breakdownShort or vwapRejectShort or emaRejectShort) ? 1 : 0
+diagRRPass       += ((longRR >= minRR) or (shortRR >= minRR)) ? 1 : 0
+diagBuyFired     += newBuySignal  ? 1 : 0
+diagSellFired    += newSellSignal ? 1 : 0
+
+if showDiag and barstate.islast
+    var table diag = table.new(position.bottom_left, 2, 11, bgcolor=color.new(color.black, 10), border_width=1, border_color=color.new(color.gray, 50))
+    f_pct(n) => diagBars > 0 ? str.tostring(math.round(100.0 * n / diagBars)) + "%" : "—"
+
+    table.cell(diag, 0, 0,  "Strategy Gate Diagnostics", text_color=color.aqua, text_size=size.small, text_halign=text.align_left)
+    table.cell(diag, 1, 0,  "bars: " + str.tostring(diagBars), text_color=color.white, text_size=size.small, text_halign=text.align_right)
+
+    table.cell(diag, 0, 1,  "In Session",         text_color=color.gray, text_size=size.small, text_halign=text.align_left)
+    table.cell(diag, 1, 1,  f_pct(diagInSession),   text_color=diagInSession > 0 ? color.green : color.red, text_size=size.small, text_halign=text.align_right)
+
+    table.cell(diag, 0, 2,  "Volume OK",          text_color=color.gray, text_size=size.small, text_halign=text.align_left)
+    table.cell(diag, 1, 2,  f_pct(diagVolOK),      text_color=diagVolOK > 0 ? color.green : color.red, text_size=size.small, text_halign=text.align_right)
+
+    table.cell(diag, 0, 3,  "Has Heat",           text_color=color.gray, text_size=size.small, text_halign=text.align_left)
+    table.cell(diag, 1, 3,  f_pct(diagHasHeat),    text_color=diagHasHeat > 0 ? color.green : color.red, text_size=size.small, text_halign=text.align_right)
+
+    table.cell(diag, 0, 4,  "Cooldown OK",        text_color=color.gray, text_size=size.small, text_halign=text.align_left)
+    table.cell(diag, 1, 4,  f_pct(diagCooldownOK), text_color=diagCooldownOK > 0 ? color.green : color.red, text_size=size.small, text_halign=text.align_right)
+
+    table.cell(diag, 0, 5,  "Flat (no position)", text_color=color.gray, text_size=size.small, text_halign=text.align_left)
+    table.cell(diag, 1, 5,  f_pct(diagFlat),       text_color=diagFlat > 0 ? color.green : color.red, text_size=size.small, text_halign=text.align_right)
+
+    table.cell(diag, 0, 6,  "Any Trigger Pattern",text_color=color.gray, text_size=size.small, text_halign=text.align_left)
+    table.cell(diag, 1, 6,  f_pct(diagAnyTrigger), text_color=diagAnyTrigger > 0 ? color.green : color.red, text_size=size.small, text_halign=text.align_right)
+
+    table.cell(diag, 0, 7,  "R:R ≥ " + str.tostring(minRR, "#.#"), text_color=color.gray, text_size=size.small, text_halign=text.align_left)
+    table.cell(diag, 1, 7,  f_pct(diagRRPass),     text_color=diagRRPass > 0 ? color.green : color.red, text_size=size.small, text_halign=text.align_right)
+
+    table.cell(diag, 0, 8,  "BUY signals fired",  text_color=color.gray, text_size=size.small, text_halign=text.align_left)
+    table.cell(diag, 1, 8,  str.tostring(diagBuyFired),  text_color=diagBuyFired > 0 ? color.green : color.red, text_size=size.small, text_halign=text.align_right)
+
+    table.cell(diag, 0, 9,  "SELL signals fired", text_color=color.gray, text_size=size.small, text_halign=text.align_left)
+    table.cell(diag, 1, 9,  str.tostring(diagSellFired), text_color=diagSellFired > 0 ? color.green : color.red, text_size=size.small, text_halign=text.align_right)
+
+    table.cell(diag, 0, 10, "Strategy trades closed", text_color=color.gray, text_size=size.small, text_halign=text.align_left)
+    table.cell(diag, 1, 10, str.tostring(strategy.closedtrades), text_color=strategy.closedtrades > 0 ? color.green : color.red, text_size=size.small, text_halign=text.align_right)
