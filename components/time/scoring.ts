@@ -98,13 +98,19 @@ export function computeSetupScore(setup: TimeSetupInputs): {
   score: number;
   reasons: string[];
   breakdown: Record<string, number>;
+  coverage: number;
 } {
   const reasons: string[] = [];
 
-  const tfCount = Math.max(1, setup.window.tfCount || setup.decomposition.length || 1);
+  const decomp = Array.isArray(setup.decomposition) ? setup.decomposition : [];
+  const presentTFs = decomp.length;
+  const declaredTFs = Math.max(0, setup.window.tfCount || 0);
+  const tfCount = Math.max(1, declaredTFs || presentTFs || 1);
+  const hasDecomp = presentTFs > 0;
+
   const alignmentRatio01 = clamp01((setup.window.alignmentCount || 0) / tfCount);
 
-  const aligned = setup.decomposition.filter((row) => row.alignedToPrimary);
+  const aligned = decomp.filter((row) => row.alignedToPrimary);
   const alignedStrength01 =
     aligned.length === 0
       ? 0
@@ -114,26 +120,37 @@ export function computeSetupScore(setup: TimeSetupInputs): {
   const clusterIntegrity01 = clamp01(setup.window.clusterIntegrity);
   const windowStrength01 = clamp01(setup.window.strength);
 
-  const opposed = setup.decomposition.filter((row) => !row.alignedToPrimary && row.closeBias !== 'neutral').length;
-  const opposeRatio = opposed / tfCount;
+  const opposed = decomp.filter((row) => !row.alignedToPrimary && row.closeBias !== 'neutral').length;
+  const opposeRatio = hasDecomp ? opposed / tfCount : 0;
   const mixedPenalty01 = opposeRatio >= 0.5 ? 0.2 : opposeRatio >= 0.35 ? 0.1 : 0;
 
   if (alignmentRatio01 < 0.5) reasons.push('Low multi-timeframe alignment count.');
-  if (alignedStrength01 < 0.55) reasons.push('Aligned timeframes are weak (low strength).');
+  if (hasDecomp && aligned.length > 0 && alignedStrength01 < 0.55) reasons.push('Aligned timeframes are weak (low strength).');
   if (clusterIntegrity01 < 0.55) reasons.push('Cluster integrity is low (noisy/unstable windows).');
   if (directionConsistency01 < 0.55) reasons.push('Direction consistency is weak across timeframes.');
   if (windowStrength01 < 0.55) reasons.push('Active window strength is weak.');
+  if (!hasDecomp) reasons.push('Decomposition data missing — setup score computed on window only.');
 
-  let score01 = weightedAvg([
+  // Evidence-renormalized blend: only weight components with real input evidence.
+  const parts: Array<{ v: number; w: number }> = [
     { v: alignmentRatio01, w: 0.25 },
-    { v: alignedStrength01, w: 0.25 },
     { v: directionConsistency01, w: 0.15 },
     { v: clusterIntegrity01, w: 0.15 },
     { v: windowStrength01, w: 0.2 },
-  ]);
+  ];
+  if (hasDecomp && aligned.length > 0) parts.push({ v: alignedStrength01, w: 0.25 });
 
-  score01 = clamp01(score01 - mixedPenalty01);
-  if (mixedPenalty01 > 0) reasons.push('Mixed-direction decomposition detected (penalized).');
+  let score01 = weightedAvg(parts);
+
+  if (hasDecomp) {
+    score01 = clamp01(score01 - mixedPenalty01);
+    if (mixedPenalty01 > 0) reasons.push('Mixed-direction decomposition detected (penalized).');
+  }
+
+  // Coverage proxy: how much of the intended setup signal we actually have.
+  const presentWeight = parts.reduce((s, p) => s + p.w, 0);
+  const totalWeight = 0.25 + 0.15 + 0.15 + 0.2 + 0.25;
+  const coverage = clamp01(presentWeight / totalWeight) * (hasDecomp ? 1 : 0.7);
 
   const breakdown = {
     alignmentRatio: pct(alignmentRatio01),
@@ -142,9 +159,11 @@ export function computeSetupScore(setup: TimeSetupInputs): {
     clusterIntegrity: pct(clusterIntegrity01),
     windowStrength: pct(windowStrength01),
     mixedPenalty: pct(mixedPenalty01),
+    presentTFs,
+    coverage: pct(coverage),
   };
 
-  return { score: pct(score01), reasons, breakdown };
+  return { score: pct(score01), reasons, breakdown, coverage };
 }
 
 export function computeExecutionScore(exec: TimeExecutionInputs): {
@@ -187,13 +206,35 @@ export function computeExecutionScore(exec: TimeExecutionInputs): {
 }
 
 export function computeTimeConfluenceV2(input: TimeConfluenceV2Inputs): TimeConfluenceV2Output {
-  const direction = input.setup.primaryDirection;
+  const rawDirection = input.setup.primaryDirection;
 
-  const ctx = computeContextScore(input.context, direction);
+  const ctx = computeContextScore(input.context, rawDirection);
   const setup = computeSetupScore(input.setup);
   const exec = computeExecutionScore(input.execution);
 
   const timeConfluenceScore = clamp100(round(0.25 * ctx.score + 0.55 * setup.score + 0.2 * exec.score));
+
+  // ── Direction evidence floor ──
+  // A non-neutral direction must be supported by enough aligned TFs AND a
+  // meaningful directional gap vs opposed TFs. Otherwise the engine reports
+  // NEUTRAL rather than committing to a side on thin evidence.
+  const decomp = Array.isArray(input.setup.decomposition) ? input.setup.decomposition : [];
+  const alignedDir = decomp.filter(
+    (r) => r.alignedToPrimary && r.closeBias === rawDirection && rawDirection !== 'neutral',
+  ).length;
+  const opposedDir = decomp.filter(
+    (r) =>
+      r.closeBias !== 'neutral' &&
+      rawDirection !== 'neutral' &&
+      r.closeBias !== rawDirection,
+  ).length;
+  const dirGap = alignedDir - opposedDir;
+  const MIN_ALIGNED = 3;
+  const MIN_GAP = 2;
+  const floorMet =
+    rawDirection !== 'neutral' && alignedDir >= MIN_ALIGNED && dirGap >= MIN_GAP;
+  const direction: Direction =
+    rawDirection === 'neutral' ? 'neutral' : floorMet ? rawDirection : 'neutral';
 
   let gateScore = clamp100(round(0.15 * ctx.score + 0.35 * setup.score + 0.5 * exec.score));
   const reasons: string[] = [];
@@ -236,12 +277,36 @@ export function computeTimeConfluenceV2(input: TimeConfluenceV2Inputs): TimeConf
     reasons.push('WAIT: Structure exists but timing conditions are not fully confirmed.');
   }
 
+  // Downgrade ALLOW → WAIT when the directional evidence floor isn't met.
+  // We will NOT auto-execute on a side the engine just demoted to neutral.
+  if (permission === 'ALLOW' && rawDirection !== 'neutral' && !floorMet) {
+    permission = 'WAIT';
+    reasons.push(
+      `WAIT: Direction evidence floor not met (need ≥${MIN_ALIGNED} aligned TFs and ≥${MIN_GAP} net; have aligned=${alignedDir}, opposed=${opposedDir}).`,
+    );
+  }
+
   const top = (arr: string[]) => arr.slice(0, 3);
   reasons.push(...top(setup.reasons));
   reasons.push(...top(exec.reasons));
   reasons.push(...top(ctx.reasons));
 
   const gateScorePrePenalty = clamp100(round(0.15 * ctx.score + 0.35 * setup.score + 0.5 * exec.score));
+
+  // ── Coverage / freshness aware confidence (separate from raw score) ──
+  const dataFreshness01 = clamp01(1 - input.context.dataIntegrity.freshnessSec / 600);
+  const dataCoverage01 = clamp01(input.context.dataIntegrity.coveragePct);
+  const tfCoverage01 = clamp01((decomp.length || 0) / 5);
+  const setupCoverage01 = clamp01(setup.coverage);
+  const dirCoverage01 =
+    rawDirection === 'neutral' ? 0.6 : floorMet ? 1 : clamp01(alignedDir / MIN_ALIGNED);
+  const coverageFactor = clamp01(
+    (dataFreshness01 + dataCoverage01 + tfCoverage01 + setupCoverage01 + dirCoverage01) / 5,
+  );
+  const directionFactor = direction === 'neutral' ? 0.6 : 1;
+  const confidence = clamp100(
+    round(timeConfluenceScore * Math.max(0.4, coverageFactor) * directionFactor),
+  );
 
   return {
     contextScore: ctx.score,
@@ -251,13 +316,29 @@ export function computeTimeConfluenceV2(input: TimeConfluenceV2Inputs): TimeConf
     permission,
     gateScore,
     direction,
+    confidence,
+    directionEvidence: {
+      aligned: alignedDir,
+      opposed: opposedDir,
+      gap: dirGap,
+      floorMet,
+    },
     reasons: Array.from(new Set(reasons)).slice(0, 12),
     debug: {
+      rawDirection,
       contextBreakdown: ctx.breakdown,
       setupBreakdown: setup.breakdown,
       executionBreakdown: exec.breakdown,
       penalties,
       gateScorePrePenalty,
+      coverageFactor: pct(coverageFactor),
+      coverageParts: {
+        dataFreshness: pct(dataFreshness01),
+        dataCoverage: pct(dataCoverage01),
+        tfCoverage: pct(tfCoverage01),
+        setupCoverage: pct(setupCoverage01),
+        dirCoverage: pct(dirCoverage01),
+      },
     },
   };
 }

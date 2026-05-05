@@ -477,9 +477,19 @@ export default function TimeScannerPage({ embeddedInTerminal = false }: { embedd
       });
 
       // ── Auto-log to execution engine (paper trade) ──
+      // Use the engine's post-floor direction (NEUTRAL if evidence floor failed)
+      // and the raw, unmodified timeConfluenceScore. We additionally require a
+      // coverage/freshness-aware confidence ≥ 50 so we never auto-log a high
+      // raw score that was actually computed on thin or stale evidence.
       const tOut = computeTimeConfluenceV2(mapped);
-      const dir = mapped.setup.primaryDirection;
-      if (tOut.permission === 'ALLOW' && dir !== 'neutral' && tOut.timeConfluenceScore >= 60) {
+      const dir = tOut.direction;
+      const conf = typeof tOut.confidence === 'number' ? tOut.confidence : tOut.timeConfluenceScore;
+      if (
+        tOut.permission === 'ALLOW' &&
+        dir !== 'neutral' &&
+        tOut.timeConfluenceScore >= 60 &&
+        conf >= 50
+      ) {
         const key = `${effectiveSymbol}:${dir}:${Math.round(tOut.timeConfluenceScore)}`;
         if (timeAutoLogRef.current !== key) {
           timeAutoLogRef.current = key;

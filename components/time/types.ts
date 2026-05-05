@@ -98,5 +98,14 @@ export interface TimeConfluenceV2Output {
   gateScore: number;
   direction: Direction;
   reasons: string[];
+  /** Coverage/freshness-aware confidence. Separate from raw timeConfluenceScore. */
+  confidence?: number;
+  /** Directional evidence floor diagnostics. */
+  directionEvidence?: {
+    aligned: number;
+    opposed: number;
+    gap: number;
+    floorMet: boolean;
+  };
   debug?: Record<string, unknown>;
 }
