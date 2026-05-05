@@ -1573,10 +1573,36 @@ export async function POST(req: NextRequest) {
       bearishSignals += derivativesContribution.bearishSignal;
 
       // =================================================================
-      // DIRECTION DETERMINATION — 15% threshold for hysteresis
+      // EVIDENCE LAYERS — count what was *actually scored* (not just a fixed 9)
+      // Mirrors the inputs that contributed weight above so confluence/penalty
+      // accurately reflect coverage. NOTE: must be computed BEFORE direction
+      // gating so we can require a minimum evidence floor.
       // =================================================================
+      const layersContributing = [
+        Number.isFinite(ema200) && Number.isFinite(close),               // 1a
+        Number.isFinite(plusDI) && Number.isFinite(minusDI),             // 1b
+        Number.isFinite(hist),                                           // 1c
+        Number.isFinite(macd) && Number.isFinite(sig),                   // 1d
+        Number.isFinite(aroonUp) && Number.isFinite(aroonDown),          // 1e
+        Number.isFinite(obvCurrent) && Number.isFinite(obvPrev),         // 2a
+        Number.isFinite(mfiVal),                                         // 2b
+        Number.isFinite(vwapVal) && Number.isFinite(close),              // 2c
+        Number.isFinite(rsi),                                            // 3a
+        Number.isFinite(stochK),                                         // 3b (D optional)
+        Number.isFinite(cciVal),                                         // 3c
+        Number.isFinite(dveBbwp) || Number.isFinite(dveBreakoutScore),   // 4 (DVE)
+        Number.isFinite(adxVal),                                         // trend multiplier source
+      ].filter(Boolean).length;
+
+      // =================================================================
+      // DIRECTION DETERMINATION — relative gap + absolute evidence floor
+      // Prevents flipping on tiny signal mass when only 1-2 layers fire.
+      // =================================================================
+      const totalDirectionalRaw = bullishSignals + bearishSignals;
       let direction: 'bullish' | 'bearish' | 'neutral';
-      if (bullishSignals > bearishSignals * 1.15) {
+      if (totalDirectionalRaw < 4 || layersContributing < 4) {
+        direction = 'neutral';
+      } else if (bullishSignals > bearishSignals * 1.15) {
         direction = 'bullish';
       } else if (bearishSignals > bullishSignals * 1.15) {
         direction = 'bearish';
@@ -1592,9 +1618,10 @@ export async function POST(req: NextRequest) {
       const dominantSignals = Math.max(bullishSignals, bearishSignals);
       const opposingSignals = Math.min(bullishSignals, bearishSignals);
       const totalDirectional = dominantSignals + opposingSignals;
-      // maxSignals is the theoretical max one side could achieve
-      // ~13 base weight + up to 40% ADX boost ≈ 18 at max
-      const maxSignals = 14 * trendMultiplier;
+      // Theoretical max for ONE side at trendMultiplier=1.0 (constant baseline).
+      // Using a fixed denominator avoids inflating agreementRatio in choppy
+      // regimes (where trendMultiplier=0.6 would otherwise shrink the divisor).
+      const maxSignals = 14;
 
       // Net conviction: how much one side wins over the other (0 to 1)
       const netConviction = totalDirectional > 0
@@ -1602,17 +1629,12 @@ export async function POST(req: NextRequest) {
         : 0;
 
       // Agreement ratio: how much of the theoretical max is achieved (0 to 1)
-      const agreementRatio = dominantSignals / maxSignals;
+      const agreementRatio = Math.min(1, dominantSignals / maxSignals);
 
-      // Confluence bonus: when many independent signals agree, boost confidence
-      // Count signal layers that contributed (rough proxy)
-      const layersContributing = [
-        Number.isFinite(ema200), Number.isFinite(hist), Number.isFinite(rsi),
-        Number.isFinite(stochK), Number.isFinite(cciVal), Number.isFinite(obvCurrent),
-        Number.isFinite(mfiVal), Number.isFinite(adxVal), Number.isFinite(aroonUp),
-      ].filter(Boolean).length;
-      const confluenceBonus = layersContributing >= 7 ? 8 : layersContributing >= 5 ? 4 : 0;
-      const missingEvidencePenalty = layersContributing < 5 ? (5 - layersContributing) * 6 : 0;
+      // Confluence bonus / missing-evidence penalty now use the accurate layer
+      // count above. Thresholds rescaled for the wider 13-layer surface.
+      const confluenceBonus = layersContributing >= 10 ? 8 : layersContributing >= 7 ? 4 : 0;
+      const missingEvidencePenalty = layersContributing < 7 ? (7 - layersContributing) * 4 : 0;
 
       // Base score: blend of net conviction (50%) and agreement strength (50%)
       let score = Math.round((netConviction * 0.5 + agreementRatio * 0.5) * 85);
@@ -2483,6 +2505,56 @@ export async function POST(req: NextRequest) {
           })
         : null;
 
+      // ── Structure-aware stop refinement ──
+      // If a structural level (PDL/PDH/ONL/ONH/EQL/EQH/swing) sits within
+      // [1.0, 2.0]·ATR of entry on the invalidation side, snap the stop to
+      // just-beyond that level. Otherwise keep the prior 1.5·ATR fallback.
+      // Rationale: an invalidation anchored to actual liquidity prints has
+      // far better expectancy than a synthetic ATR offset because the level
+      // is *where the trade thesis is wrong*, not an arbitrary distance.
+      try {
+        const dir = result.direction;
+        const entry = Number(result.entry);
+        const atr = Number(result.atr);
+        if (
+          (dir === 'bullish' || dir === 'bearish') &&
+          Number.isFinite(entry) && entry > 0 &&
+          Number.isFinite(atr) && atr > 0 &&
+          liquidityContext.levels?.length
+        ) {
+          const minDist = atr * 1.0;
+          const maxDist = atr * 2.0;
+          const isLong = dir === 'bullish';
+          // Invalidation candidates are levels BELOW entry (long) or ABOVE entry (short)
+          const candidates = liquidityContext.levels
+            .map((l) => ({ ...l, dist: Math.abs(entry - l.level) }))
+            .filter((l) => Number.isFinite(l.level) && l.level > 0)
+            .filter((l) => isLong ? l.level < entry : l.level > entry)
+            .filter((l) => l.dist >= minDist && l.dist <= maxDist)
+            .sort((a, b) => a.dist - b.dist);
+          if (candidates.length > 0) {
+            const anchor = candidates[0];
+            const buffer = atr * 0.15; // small buffer beyond the level
+            const refinedStop = isLong ? anchor.level - buffer : anchor.level + buffer;
+            // Maintain the original target distance (target was 3·ATR from entry);
+            // recompute rMultiple from the refined risk.
+            const target = Number(result.target);
+            if (Number.isFinite(target) && Number.isFinite(refinedStop) && refinedStop > 0) {
+              const refinedRisk = Math.abs(entry - refinedStop);
+              if (refinedRisk > 0) {
+                const refinedR = Math.abs(target - entry) / refinedRisk;
+                result.stop = Math.max(0, refinedStop);
+                result.rMultiple = Math.round(refinedR * 10) / 10;
+                (result as any).stopAnchor = anchor.label;
+              }
+            }
+          }
+        }
+      } catch (stopErr) {
+        // non-fatal — keep ATR-based stop on any failure
+        console.warn('[scanner] structure-aware stop refinement failed for', result.symbol, stopErr);
+      }
+
       return {
         ...result,
         institutionalFilter,
@@ -2579,6 +2651,7 @@ export async function POST(req: NextRequest) {
 
         if (clamped > 0) {
           const beforeScore = r.score;
+          (r as any).rawScore = beforeScore; // preserve pre-personalization score for learning loop
           r.score = Math.min(100, r.score + clamped);
           (r as any).personalEdgeBoost = clamped;
           boostCount++;
@@ -2621,6 +2694,24 @@ export async function POST(req: NextRequest) {
       if (rankWarnings.length) {
         result.rankWarnings = [...(result.rankWarnings ?? []), ...rankWarnings];
       }
+
+      // ── Recompute confidence as evidence- and freshness-aware (ai-output-standards rule) ──
+      // Previous logic was confidence = |score|, which is a no-op since score is already 0-100.
+      // Now: confidence = score × evidenceFactor × freshnessFactor × liquidityFactor.
+      // This makes confidence honest about data coverage and staleness instead of mirroring score.
+      const evidenceLayers = result.scoreQuality?.evidenceLayers ?? 0;
+      const evidenceFactor = Math.max(0.4, Math.min(1, evidenceLayers / 10)); // 10+ layers = full confidence
+      const freshnessFactor = freshness.status === 'fresh' ? 1
+        : freshness.status === 'stale' ? 0.7
+        : 0.4;
+      const liquidityFactor = liquidity.status === 'sufficient' ? 1
+        : liquidity.status === 'thin' ? 0.8
+        : liquidity.status === 'not_applicable' ? 1
+        : 0.6;
+      const directionFactor = result.direction === 'neutral' ? 0.5 : 1;
+      result.confidence = Math.max(0, Math.min(99,
+        Math.round(result.score * evidenceFactor * freshnessFactor * liquidityFactor * directionFactor)
+      ));
     }
 
     // Return only the top 5 results by score
@@ -2646,12 +2737,14 @@ export async function POST(req: NextRequest) {
     // Record signals for AI learning (async, non-blocking)
     if (results.length > 0) {
       const signalsToRecord: RecordSignalParams[] = results
-        .filter(r => r.price && r.direction && r.direction !== 'neutral' && r.score >= 50) // Only record high-conviction bullish/bearish signals
-        .map(r => ({
+        .filter(r => r.price && r.direction && r.direction !== 'neutral' && ((r as any).rawScore ?? r.score) >= 50) // Only record high-conviction bullish/bearish signals
+        .map(r => {
+          const learningScore = (r as any).rawScore ?? r.score; // anti-bias: never feed personalized score back into the brain
+          return {
           symbol: r.symbol,
           signalType: type,
           direction: r.direction as 'bullish' | 'bearish',
-          score: r.score,
+          score: learningScore,
           priceAtSignal: r.price!,
           timeframe,
           features: {
@@ -2666,9 +2759,10 @@ export async function POST(req: NextRequest) {
             aroon_up: r.aroon_up,
             aroon_down: r.aroon_down,
             price: r.price,
-            score: r.score
+            score: learningScore
           }
-        }));
+        };
+        });
       
       // Fire and forget - don't slow down the response
       recordSignalsBatch(signalsToRecord).catch(err => 
