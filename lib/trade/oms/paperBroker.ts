@@ -152,7 +152,7 @@ export class PaperBroker implements BrokerAdapter {
       symbol: o.symbol,
       refTable: 'trade_orders',
       refId: Number(o.id),
-      payload: fill,
+      payload: { ...fill },
     });
 
     for (const h of this.fillHandlers) {
