@@ -126,10 +126,36 @@ export class DatabentoProvider implements MarketDataProvider {
 
   async resolveSymbol(input: string): Promise<SymbolMeta | null> {
     // Minimal stub: caller passes a Databento-native symbol (e.g. "ES.c.0"
-    // continuous front-month, or "ESM6"). Tick metadata for ES; extend per
-    // contract as you onboard more symbols. Do NOT fabricate metadata for
-    // symbols we haven't verified.
+    // continuous front-month, or "ESM6"). Tick metadata for the four CME
+    // index-future contracts currently funded on the historical bundle.
+    // Do NOT fabricate metadata for symbols we haven't verified.
     const id = input.toUpperCase();
+    if (id.startsWith('MES')) {
+      return {
+        id,
+        display: id,
+        description: 'Micro E-mini S&P 500',
+        tickSize: 0.25,
+        tickValue: 1.25,
+        assetClass: 'future',
+        exchange: this.dataset,
+        sessionTz: 'America/Chicago 17:00-16:00',
+        currency: 'USD',
+      };
+    }
+    if (id.startsWith('MNQ')) {
+      return {
+        id,
+        display: id,
+        description: 'Micro E-mini Nasdaq-100',
+        tickSize: 0.25,
+        tickValue: 0.5,
+        assetClass: 'future',
+        exchange: this.dataset,
+        sessionTz: 'America/Chicago 17:00-16:00',
+        currency: 'USD',
+      };
+    }
     if (id.startsWith('ES')) {
       return {
         id,
