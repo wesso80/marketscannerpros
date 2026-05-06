@@ -154,8 +154,23 @@ export class DatabentoProvider implements MarketDataProvider {
     url.searchParams.set('symbols', req.symbol);
     url.searchParams.set('stype_in', 'continuous');
     url.searchParams.set('encoding', 'json');
+    // Databento historical data lags real-time by a few minutes. Clamp `end`
+    // to that lag window so requests for "now" don't 422 with
+    // data_end_after_available_end.
+    const lagMs = Number(process.env.DATABENTO_HIST_LAG_MS ?? '600000'); // 10 min default
+    const clampedEnd = Math.min(req.to, Date.now() - lagMs);
+    if (clampedEnd <= req.from) {
+      return {
+        symbol: req.symbol,
+        resolution: req.resolution,
+        bars: [],
+        source: 'databento',
+        fetchedAt: Date.now(),
+        noData: true,
+      };
+    }
     url.searchParams.set('start', new Date(req.from).toISOString());
-    url.searchParams.set('end', new Date(req.to).toISOString());
+    url.searchParams.set('end', new Date(clampedEnd).toISOString());
 
     const res = await fetch(url, {
       headers: { Authorization: authHeader() },
