@@ -72,18 +72,28 @@ function authHeader(): string {
 }
 
 /**
- * Parse Databento's `available_end` ISO timestamp out of a 422 error body.
- * Databento returns JSON like:
- *   {"detail":"data_end_after_available_end: ...; available_end=2026-05-06T09:30:00.000000000Z"}
- * but the exact wrapping varies, so we accept any ISO-8601 substring labelled
- * `available_end`. Returns epoch ms or null.
+ * Parse Databento's available-end boundary out of a 422 error body.
+ * Databento returns it in two shapes depending on the error case:
+ *   1) Human: "...data available up to '2026-05-06 09:50:00+00:00'..."
+ *   2) Field: "available_end=2026-05-06T09:50:00.000Z" or "\"available_end\":\"...\""
+ * The human form uses a space separator and `+HH:MM` offset which `Date.parse`
+ * handles unevenly across runtimes, so we normalize the space to `T` before
+ * parsing. Returns epoch ms or null.
  */
 function parseAvailableEnd(body: string): number | null {
   if (!body) return null;
-  const m = body.match(/available_end[^0-9A-Z]*([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z)/i);
-  if (!m) return null;
-  const t = Date.parse(m[1]);
-  return Number.isFinite(t) ? t : null;
+  const patterns: RegExp[] = [
+    /available up to ['"]?([0-9]{4}-[0-9]{2}-[0-9]{2}[ T][0-9:.]+(?:[+\-][0-9:]{2,5}|Z)?)/i,
+    /available_end[^0-9]*([0-9]{4}-[0-9]{2}-[0-9]{2}[ T][0-9:.]+(?:[+\-][0-9:]{2,5}|Z)?)/i,
+  ];
+  for (const re of patterns) {
+    const m = body.match(re);
+    if (!m) continue;
+    const iso = m[1].replace(' ', 'T');
+    const t = Date.parse(iso);
+    if (Number.isFinite(t)) return t;
+  }
+  return null;
 }
 
 function aggregate(bars: Bar[], stepMs: number): Bar[] {
