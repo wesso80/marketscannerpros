@@ -2,6 +2,7 @@
 // Defaults to "mock" so a missing key never silently fabricates real-looking data.
 
 import { DatabentoProvider } from './databento';
+import { DbnLocalProvider } from './dbnLocal';
 import { MockProvider } from './mock';
 import type { MarketDataProvider } from './types';
 
@@ -13,6 +14,11 @@ export function getMarketDataProvider(): MarketDataProvider {
   switch (choice) {
     case 'databento':
       cached = new DatabentoProvider();
+      break;
+    case 'dbn-local':
+    case 'dbnlocal':
+    case 'local':
+      cached = new DbnLocalProvider();
       break;
     case 'mock':
     default:

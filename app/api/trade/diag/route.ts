@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
 import { DatabentoProvider } from '@/lib/trade/marketdata/databento';
+import { DbnLocalProvider, dbnLocalDiag } from '@/lib/trade/marketdata/dbnLocal';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -60,7 +61,60 @@ export async function GET(req: NextRequest) {
         noData: r.noData,
       };
     } catch (e) {
-      providerProbe = { ok: false, error: e instanceof Error ? e.message : 'provider probe failed' };
+      providerProbe = {
+        ok: false,
+        error: e instanceof Error ? e.message : 'provider probe failed',
+        stack: e instanceof Error ? (e.stack ?? '').split('\n').slice(0, 5) : undefined,
+      };
+    }
+  }
+
+  // Standalone regex sanity check: run parseAvailableEnd against the raw
+  // databento 422 body so we can see whether the boundary string parses.
+  let parseCheck: unknown = 'skipped';
+  if (probe && typeof probe === 'object' && 'body' in probe && typeof (probe as { body?: string }).body === 'string') {
+    const body = (probe as { body: string }).body;
+    const patterns = [
+      /available up to ['"]?([0-9]{4}-[0-9]{2}-[0-9]{2}[ T][0-9:.]+(?:[+\-][0-9:]{2,5}|Z)?)/i,
+      /available_end[^0-9]*([0-9]{4}-[0-9]{2}-[0-9]{2}[ T][0-9:.]+(?:[+\-][0-9:]{2,5}|Z)?)/i,
+    ];
+    const matches: Array<{ pattern: number; raw: string; iso: string; parsedMs: number; valid: boolean }> = [];
+    patterns.forEach((re, i) => {
+      const m = body.match(re);
+      if (m) {
+        const iso = m[1].replace(' ', 'T');
+        const t = Date.parse(iso);
+        matches.push({ pattern: i, raw: m[1], iso, parsedMs: t, valid: Number.isFinite(t) });
+      }
+    });
+    parseCheck = { matches, bodyLength: body.length };
+  }
+// Local file provider probe.
+  let localProbe: unknown = 'skipped';
+  if (provider === 'dbn-local' || provider === 'dbnlocal' || provider === 'local') {
+    try {
+      const diag = dbnLocalDiag();
+      const p = new DbnLocalProvider();
+      const to = Date.now();
+      const from = to - 60 * 24 * 60 * 60 * 1000; // last 60d to cover bundled file
+      const r = await p.getBars({ symbol: 'ES.c.0', resolution: '1', from, to });
+      localProbe = {
+        ok: true,
+        index: diag,
+        es_c_0: {
+          barCount: r.bars.length,
+          firstBarTime: r.bars[0] ? new Date(r.bars[0].time).toISOString() : null,
+          lastBarTime: r.bars.length
+            ? new Date(r.bars[r.bars.length - 1].time).toISOString()
+            : null,
+          noData: r.noData,
+        },
+      };
+    } catch (e) {
+      localProbe = {
+        ok: false,
+        error: e instanceof Error ? e.message : 'local probe failed',
+      };
     }
   }
 
@@ -70,9 +124,13 @@ export async function GET(req: NextRequest) {
       DATABENTO_API_KEY: hasDbKey ? 'set' : 'MISSING',
       TRADE_TGS_WEBHOOK_SECRET: hasTgsSecret ? 'set' : 'MISSING',
       TRADE_BROKER: hasOmsBroker,
+      TRADE_LOCAL_DATA_FILE: process.env.TRADE_LOCAL_DATA_FILE ?? '(default ./data/...)',
       DATABENTO_HIST_LAG_MS: process.env.DATABENTO_HIST_LAG_MS ?? '600000 (default)',
     },
     databentoProbe: provider === 'databento' ? probe : 'skipped (provider != databento)',
     providerProbe,
+    localoProbe: provider === 'databento' ? probe : 'skipped (provider != databento)',
+    providerProbe,
+    parseCheck,
   });
 }
