@@ -22,7 +22,14 @@ export class TradeDatafeed {
     url.searchParams.set('to', String(to));
     if (limit) url.searchParams.set('limit', String(limit));
     const res = await fetch(url, { credentials: 'include' });
-    if (!res.ok) throw new Error(`bars ${res.status}`);
+    if (!res.ok) {
+      let detail = '';
+      try {
+        const body = await res.json();
+        detail = body?.error ? `: ${body.error}` : '';
+      } catch { /* ignore */ }
+      throw new Error(`bars ${res.status}${detail}`);
+    }
     return (await res.json()) as BarsResponse;
   }
 }
