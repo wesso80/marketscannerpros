@@ -71,6 +71,21 @@ function authHeader(): string {
   return 'Basic ' + Buffer.from(`${key}:`).toString('base64');
 }
 
+/**
+ * Parse Databento's `available_end` ISO timestamp out of a 422 error body.
+ * Databento returns JSON like:
+ *   {"detail":"data_end_after_available_end: ...; available_end=2026-05-06T09:30:00.000000000Z"}
+ * but the exact wrapping varies, so we accept any ISO-8601 substring labelled
+ * `available_end`. Returns epoch ms or null.
+ */
+function parseAvailableEnd(body: string): number | null {
+  if (!body) return null;
+  const m = body.match(/available_end[^0-9A-Z]*([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z)/i);
+  if (!m) return null;
+  const t = Date.parse(m[1]);
+  return Number.isFinite(t) ? t : null;
+}
+
 function aggregate(bars: Bar[], stepMs: number): Bar[] {
   if (bars.length === 0) return bars;
   const out: Bar[] = [];
@@ -169,18 +184,40 @@ export class DatabentoProvider implements MarketDataProvider {
         noData: true,
       };
     }
-    url.searchParams.set('start', new Date(req.from).toISOString());
-    url.searchParams.set('end', new Date(clampedEnd).toISOString());
+    const fetchRange = async (startMs: number, endMs: number) => {
+      url.searchParams.set('start', new Date(startMs).toISOString());
+      url.searchParams.set('end', new Date(endMs).toISOString());
+      return fetch(url, {
+        headers: { Authorization: authHeader() },
+        cache: 'no-store',
+      });
+    };
 
-    const res = await fetch(url, {
-      headers: { Authorization: authHeader() },
-      // Databento responses can be large; let Node stream them.
-      cache: 'no-store',
-    });
+    let res = await fetchRange(req.from, clampedEnd);
+    let usedAvailableEnd = false;
 
     if (!res.ok) {
       const body = await res.text().catch(() => '');
-      throw new Error(`Databento ${res.status}: ${body.slice(0, 200)}`);
+      // Auto-detect available_end from Databento's 422 and retry once.
+      // Usage-based plans expose only fixed historical snapshots whose
+      // available_end may sit far behind real-time. Parse the boundary
+      // out of the error body and retry with that as the new end.
+      const availableEnd = parseAvailableEnd(body);
+      if (availableEnd && availableEnd > req.from) {
+        const retryEnd = Math.min(clampedEnd, availableEnd);
+        if (retryEnd > req.from) {
+          res = await fetchRange(req.from, retryEnd);
+          usedAvailableEnd = true;
+          if (!res.ok) {
+            const body2 = await res.text().catch(() => '');
+            throw new Error(`Databento ${res.status} (after available_end retry): ${body2.slice(0, 200)}`);
+          }
+        } else {
+          throw new Error(`Databento ${res.status}: available_end ${new Date(availableEnd).toISOString()} precedes requested start; ${body.slice(0, 200)}`);
+        }
+      } else {
+        throw new Error(`Databento ${res.status}: ${body.slice(0, 200)}`);
+      }
     }
 
     // JSON encoding returns NDJSON (one row per line).
@@ -215,6 +252,8 @@ export class DatabentoProvider implements MarketDataProvider {
       source: 'databento',
       fetchedAt: Date.now(),
       noData: bars.length === 0,
+      effectiveEnd: Number(url.searchParams.get('end') ? Date.parse(url.searchParams.get('end') as string) : clampedEnd),
+      usedAvailableEnd,
     };
   }
 

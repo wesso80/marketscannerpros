@@ -75,6 +75,10 @@ export interface BarsResponse {
   fetchedAt: number;
   /** True when no bars exist for the range (vs. empty due to error). */
   noData: boolean;
+  /** Effective end (epoch ms) actually used for the request, if it was clamped to the provider's available_end. */
+  effectiveEnd?: number;
+  /** True when the request was retried using available_end parsed from a provider 422. */
+  usedAvailableEnd?: boolean;
 }
 
 export type TickHandler = (tick: Tick) => void;
