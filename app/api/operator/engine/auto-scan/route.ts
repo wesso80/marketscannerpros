@@ -12,14 +12,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { isOperator } from '@/lib/quant/operatorAuth';
-import { requireAdmin } from '@/lib/adminAuth';
+import { requireAdmin, verifyCronAuth } from '@/lib/adminAuth';
 import { runScan, createScanEnvelope } from '@/lib/operator/orchestrator';
-import type { ScanContext } from '@/lib/operator/orchestrator';
 import type { Market, RadarOpportunity } from '@/types/operator';
 import { alphaVantageProvider } from '@/lib/operator/market-data';
 import { DEFAULT_WATCHLISTS } from '@/lib/operator/watchlists';
 import { opsAlert } from '@/lib/opsAlerting';
 import { radarState } from '@/lib/operator/radar-state';
+import { DEFAULT_ADMIN_SCAN_CONTEXT } from '@/lib/admin/scan-context';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -54,43 +54,15 @@ const autoState: AutoScanState = {
   errors: [],
 };
 
-const DEFAULT_CONTEXT: ScanContext = {
-  portfolioState: {
-    equity: 100000,
-    dailyPnl: 0,
-    drawdownPct: 0,
-    openRisk: 0,
-    correlationRisk: 0,
-    activePositions: 0,
-    killSwitchActive: false,
-  },
-  riskPolicy: {
-    maxDailyLossPct: 0.02,
-    maxDrawdownPct: 0.06,
-    maxOpenRiskPct: 0.05,
-    maxCorrelationRisk: 0.7,
-  },
-  executionEnvironment: {
-    brokerConnected: true,
-    estimatedSlippageBps: 10,
-    minLiquidityOk: true,
-  },
-  accountState: {
-    buyingPower: 100000,
-    accountRiskUnit: 0.01,
-  },
-  instrumentMeta: {},
-  healthContext: {
-    symbolTrustScore: 0.7,
-    playbookHealthScore: 0.7,
-    modelHealthScore: 0.7,
-  },
-  metaHealthThrottle: 1.0,
-};
+// Conservative admin context: zero equity / WAIT permission / no execution.
+// Discovery analytics only — never represents live account state.
+const DEFAULT_CONTEXT = DEFAULT_ADMIN_SCAN_CONTEXT;
 
 /* ── Auth helper ────────────────────────────────────────────── */
 
 async function checkAuth(req: NextRequest): Promise<boolean> {
+  // Cron-driven server scan (Render cron) — no browser tab required.
+  if (verifyCronAuth(req)) return true;
   const adminAuth = (await requireAdmin(req)).ok;
   if (adminAuth) return true;
   const session = await getSessionFromCookie();

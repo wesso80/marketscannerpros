@@ -133,6 +133,45 @@
       - key: CRON_SECRET
         sync: false
 
+  # Admin radar — always-on opportunity finder (research only, no execution).
+  # Refreshes the in-memory liveRadar visible at /admin/live-scanner and /admin/opportunity-board
+  # so the radar is fresh even when no admin tab is open. Discovery analytics only.
+  - type: cron
+    name: admin-radar-crypto
+    runtime: node
+    schedule: "*/15 * * * *"  # Crypto: every 15 minutes (24/7 markets)
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -fL --retry 2 --retry-delay 10 --retry-all-errors --connect-timeout 10 --max-time 60 -X POST "$WEB_URL/api/operator/engine/auto-scan" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json" --data '{"watchlist":"crypto-majors","timeframe":"15m"}'
+    envVars:
+      - key: WEB_URL
+        value: "https://marketscannerpros.app"
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
+    name: admin-radar-equity-megacap
+    runtime: node
+    schedule: "5,35 13-20 * * 1-5"  # US session only (9:05a–4:35p ET, every 30 min, M–F)
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -fL --retry 2 --retry-delay 10 --retry-all-errors --connect-timeout 10 --max-time 90 -X POST "$WEB_URL/api/operator/engine/auto-scan" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json" --data '{"watchlist":"us-mega-cap","timeframe":"15m"}'
+    envVars:
+      - key: WEB_URL
+        value: "https://marketscannerpros.app"
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
+    name: admin-radar-equity-momentum
+    runtime: node
+    schedule: "20,50 13-20 * * 1-5"  # US session only, offset 30 min from megacap to spread AV calls
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -fL --retry 2 --retry-delay 10 --retry-all-errors --connect-timeout 10 --max-time 90 -X POST "$WEB_URL/api/operator/engine/auto-scan" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json" --data '{"watchlist":"us-momentum","timeframe":"15m"}'
+    envVars:
+      - key: WEB_URL
+        value: "https://marketscannerpros.app"
+      - key: CRON_SECRET
+        sync: false
+
   - type: cron
     name: catalyst-study-compute
     runtime: node
