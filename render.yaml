@@ -223,6 +223,20 @@
         sync: false
 
   - type: cron
+    name: daily-best-opportunities-email
+    runtime: node
+    schedule: "0 12 * * *"  # 12:00 PM UTC daily (~7 AM ET pre-bell) - best crypto/equity/options digest
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 290 -X POST "$WEB_URL/api/jobs/email-best-opportunities" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
+    envVars:
+      - key: WEB_URL
+        value: "https://marketscannerpros.app"
+      - key: CRON_SECRET
+        sync: false
+      - key: ADMIN_DAILY_BRIEF_EMAILS
+        sync: false
+
+  - type: cron
     name: daily-operator-review-email
     runtime: node
     schedule: "30 7 * * 1-5"  # 7:30 AM UTC weekdays - post-session execution review
