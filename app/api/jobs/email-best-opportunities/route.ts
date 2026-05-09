@@ -15,7 +15,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, verifyCronAuth } from '@/lib/adminAuth';
 import { sendAlertEmail } from '@/lib/email';
-import { runScan } from '@/lib/operator/orchestrator';
+import { runScan, type CandidatePipeline } from '@/lib/operator/orchestrator';
 import { alphaVantageProvider } from '@/lib/operator/market-data';
 import { DEFAULT_WATCHLISTS } from '@/lib/operator/watchlists';
 import { DEFAULT_ADMIN_SCAN_CONTEXT } from '@/lib/admin/scan-context';
@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
     const bestCrypto = pickTopRadar(cryptoScan.radar);
     const cryptoReasoning = bestCrypto
       ? radarToReasoning(bestCrypto, 'CRYPTO', 'Alpha Vantage CRYPTO_INTRADAY/Digital Currency Daily')
-      : null;
+      : pipelineToObservation(cryptoScan.pipelines, 'CRYPTO', 'Alpha Vantage CRYPTO_INTRADAY/Digital Currency Daily');
 
     /* ── 2. Best equity from us-mega-cap ∪ us-momentum ───────── */
     const eqMega = DEFAULT_WATCHLISTS['us-mega-cap'];
@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
     const bestEquity = pickTopRadar(equityScan.radar);
     const equityReasoning = bestEquity
       ? radarToReasoning(bestEquity, 'EQUITIES', 'Alpha Vantage TIME_SERIES_DAILY/INTRADAY')
-      : null;
+      : pipelineToObservation(equityScan.pipelines, 'EQUITIES', 'Alpha Vantage TIME_SERIES_DAILY/INTRADAY');
 
     /* ── 3. Best options play ────────────────────────────────── */
     // Use the top equity pick (or override). Options chain from Alpha Vantage; if
@@ -115,7 +115,9 @@ export async function POST(req: NextRequest) {
     let optionsReasoning: PickReasoning | null = null;
     const optionsSymbol = (typeof body.optionsSymbol === 'string' && body.optionsSymbol)
       || bestEquity?.symbol
+      || equityReasoning?.symbol
       || equityScan.radar[1]?.symbol
+      || equityScan.pipelines[0]?.candidate.symbol
       || 'SPY';
     try {
       const setup = await optionsAnalyzer.analyzeForOptions(optionsSymbol, 'intraday_1h', undefined, 'equity');
@@ -231,6 +233,67 @@ function radarToReasoning(r: RadarOpportunity, market: Market, source: string): 
     lastUpdated: new Date().toISOString(),
     freshness: 'fresh',
     fallbackUsed: false,
+  };
+}
+
+/**
+ * Observation-only fallback when the radar (post-BLOCK filter) is empty.
+ * Selects the top pipeline by confidence × symbolTrust regardless of governance
+ * permission, and labels it clearly as below execution threshold. Per
+ * risk-language-private + ai-output-standards: evidence-backed, uncertainty-aware,
+ * non-executional, with what-confirms / what-invalidates / main-risk preserved.
+ */
+function pipelineToObservation(
+  pipelines: CandidatePipeline[],
+  market: Market,
+  source: string,
+): PickReasoning | null {
+  if (!pipelines.length) return null;
+  const ranked = [...pipelines].sort((a, b) => {
+    const sa = (a.verdict.confidenceScore || 0) * Math.max(0.1, a.verdict.evidence?.symbolTrust || 0.5);
+    const sb = (b.verdict.confidenceScore || 0) * Math.max(0.1, b.verdict.evidence?.symbolTrust || 0.5);
+    return sb - sa;
+  });
+  const p = ranked[0];
+  const v = p.verdict;
+  const g = p.governance;
+
+  const opportunityScore = Math.round((v.confidenceScore || 0) * 100);
+  // Below-threshold candidate → cap evidence quality at 50 (per ai-output-standards: never overstate confidence beyond source support).
+  const evidenceQuality = Math.min(50, Math.round((v.evidence?.symbolTrust || 0) * 100));
+
+  const govReasons: string[] = [
+    ...(g.blockReasons || []).slice(0, 3),
+    ...(g.throttleReasons || []).slice(0, 3),
+    ...(v.reasonCodes || []).slice(0, 4),
+  ];
+  const why = govReasons.length
+    ? govReasons
+    : [`Pipeline produced no actionable reason codes — ${g.finalPermission} permission`];
+
+  return {
+    symbol: p.candidate.symbol,
+    market,
+    bias: p.candidate.direction,
+    permission: `OBSERVATION (${g.finalPermission})`,
+    opportunityScore,
+    evidenceQuality,
+    confidence: 'low — below execution threshold, observation only',
+    playbook: p.candidate.playbook,
+    why,
+    whatConfirms: `Permission lifts to ALLOW or ALLOW_REDUCED with confidence ≥ 60% on ${v.regime} regime`,
+    whatInvalidates: `${v.regime} regime breaks down or confidence falls below ${Math.max(20, opportunityScore - 10)}%`,
+    mainRisk: g.finalPermission === 'BLOCK'
+      ? `Setup is currently blocked by governance — engagement would violate risk policy`
+      : `Setup is below execution threshold — premature engagement risk; insufficient evidence for sizing`,
+    source,
+    lastUpdated: new Date().toISOString(),
+    freshness: 'fresh',
+    fallbackUsed: true,
+    notes: [
+      'Observation fallback: radar returned no permissioned setup; this is the highest-ranked filtered candidate.',
+      `Governance permission: ${g.finalPermission}. Not a recommendation — research only.`,
+    ],
   };
 }
 
