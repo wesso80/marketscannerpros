@@ -25,6 +25,28 @@ import type { RadarOpportunity, Market } from '@/types/operator';
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
+/**
+ * GET — friendly status response so opening the URL in a browser does not
+ * show a confusing 405. The actual digest is POST-only and requires cron/admin auth.
+ */
+export async function GET() {
+  return NextResponse.json({
+    ok: true,
+    endpoint: '/api/jobs/email-best-opportunities',
+    method: 'POST only',
+    description: 'Daily admin email digest — best crypto, best equity, best options play with reasoning.',
+    auth: 'x-cron-secret header (Render cron) or admin session',
+    body: {
+      preview: 'boolean (optional)',
+      to: 'string | string[] (optional, defaults to ADMIN_DAILY_BRIEF_EMAILS)',
+      cryptoTimeframe: 'string (optional, default 1H)',
+      equityTimeframe: 'string (optional, default 1D)',
+      optionsSymbol: 'string (optional, defaults to top equity pick)',
+    },
+    note: 'This URL is intentionally not browser-accessible. Use the Render cron Trigger Run button or POST from a terminal.',
+  });
+}
+
 interface PickReasoning {
   symbol: string;
   market: Market | 'OPTIONS';
