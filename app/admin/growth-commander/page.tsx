@@ -38,12 +38,26 @@ export default function GrowthCommanderPage() {
   const [loading, setLoading] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [lastGeneratedIds, setLastGeneratedIds] = useState<Set<number>>(new Set());
+  const [postsApiMessage, setPostsApiMessage] = useState<string | null>(null);
+  const [postsApiError, setPostsApiError] = useState<string | null>(null);
 
   const refreshPosts = useCallback(async () => {
-    const res = await fetch("/api/admin/growth/posts?limit=300", { cache: "no-store" });
-    if (!res.ok) return;
-    const data = await res.json();
-    setPosts(data.posts ?? []);
+    try {
+      const res = await fetch("/api/admin/growth/posts?limit=300", { cache: "no-store" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setPostsApiError(data?.error ?? `HTTP ${res.status}`);
+        setPostsApiMessage(null);
+        setPosts([]);
+        return;
+      }
+      setPostsApiError(null);
+      setPostsApiMessage(typeof data.message === "string" ? data.message : null);
+      setPosts(Array.isArray(data.posts) ? data.posts : []);
+    } catch (err: any) {
+      setPostsApiError(err?.message ?? "network error");
+      setPosts([]);
+    }
   }, []);
 
   useEffect(() => {
@@ -120,6 +134,17 @@ export default function GrowthCommanderPage() {
           Claude-drafted social content. Compliance-gated, human-approved, never auto-posted.
         </p>
       </header>
+
+      {postsApiError && (
+        <div style={{ marginBottom: "0.85rem", padding: "0.7rem 0.9rem", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.35)", color: "#FCA5A5", borderRadius: "0.5rem", fontSize: "0.85rem" }}>
+          API error: {postsApiError}
+        </div>
+      )}
+      {postsApiMessage && (
+        <div style={{ marginBottom: "0.85rem", padding: "0.7rem 0.9rem", background: "rgba(251, 191, 36, 0.08)", border: "1px solid rgba(251, 191, 36, 0.3)", color: "#FBBF24", borderRadius: "0.5rem", fontSize: "0.85rem" }}>
+          {postsApiMessage}
+        </div>
+      )}
 
       <nav style={{ display: "flex", gap: "0.4rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
         {(["compose", "queue", "calendar", "performance"] as Tab[]).map((t) => (

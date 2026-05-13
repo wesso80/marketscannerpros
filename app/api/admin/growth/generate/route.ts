@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: brief.error }, { status: 400 });
   }
 
-  const workspaceId = auth.workspaceId ?? 'admin';
+  const workspaceId = 'admin';
   const createdBy = auth.cid ?? 'admin';
 
   let generation;

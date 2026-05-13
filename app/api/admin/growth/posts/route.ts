@@ -32,7 +32,8 @@ export async function GET(req: NextRequest) {
   const limit =
     limitParam && Number.isFinite(Number(limitParam)) ? Number(limitParam) : 100;
 
-  const workspaceId = auth.workspaceId ?? 'admin';
+  // Growth Centre is single-tenant admin-only — all rows live under workspace_id='admin'.
+  const workspaceId = 'admin';
 
   try {
     const posts = await listPosts({ workspaceId, status, platform, campaignId, limit });

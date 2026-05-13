@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const limitParam = url.searchParams.get('limit');
   const limit = limitParam && Number.isFinite(Number(limitParam)) ? Number(limitParam) : 50;
-  const workspaceId = auth.workspaceId ?? 'admin';
+  const workspaceId = 'admin';
 
   try {
     const rows = await listPerformance(workspaceId, limit);

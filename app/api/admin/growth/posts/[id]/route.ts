@@ -18,7 +18,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const id = parseId(idStr);
   if (id === null) return NextResponse.json({ error: 'invalid id' }, { status: 400 });
 
-  const workspaceId = auth.workspaceId ?? 'admin';
+  const workspaceId = 'admin';
   const post = await getPost(workspaceId, id);
   if (!post) return NextResponse.json({ error: 'not found' }, { status: 404 });
   return NextResponse.json({ post });
@@ -39,7 +39,7 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     return NextResponse.json({ error: 'invalid JSON body' }, { status: 400 });
   }
 
-  const workspaceId = auth.workspaceId ?? 'admin';
+  const workspaceId = 'admin';
   const status = body?.status;
   if (status !== undefined && !VALID_STATUSES.includes(status)) {
     return NextResponse.json(
@@ -89,7 +89,7 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: stri
   const id = parseId(idStr);
   if (id === null) return NextResponse.json({ error: 'invalid id' }, { status: 400 });
 
-  const workspaceId = auth.workspaceId ?? 'admin';
+  const workspaceId = 'admin';
   const ok = await deletePost(workspaceId, id);
   if (!ok) return NextResponse.json({ error: 'not found' }, { status: 404 });
   return NextResponse.json({ ok: true });

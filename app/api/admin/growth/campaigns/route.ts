@@ -8,7 +8,7 @@ const VALID_PLATFORMS: Platform[] = ['x', 'instagram'];
 export async function GET(req: NextRequest) {
   const auth = await requireAdmin(req);
   if (!auth.ok) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const workspaceId = auth.workspaceId ?? 'admin';
+  const workspaceId = 'admin';
   try {
     const campaigns = await listCampaigns(workspaceId);
     return NextResponse.json({ campaigns });
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     ? platforms.filter((p: unknown): p is Platform => typeof p === 'string' && VALID_PLATFORMS.includes(p as Platform))
     : undefined;
 
-  const workspaceId = auth.workspaceId ?? 'admin';
+  const workspaceId = 'admin';
   const createdBy = auth.cid ?? 'admin';
 
   const campaign = await createCampaign({
