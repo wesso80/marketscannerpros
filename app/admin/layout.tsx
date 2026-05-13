@@ -103,6 +103,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     {
       label: "Business",
       items: [
+        { href: "/admin/growth-commander", label: "Growth Centre", code: "GC" },
         { href: "/admin/usage-analytics", label: "Usage Analytics", code: "UA" },
         { href: "/admin/income", label: "Income", code: "IN" },
         { href: "/admin/costs", label: "AI Costs", code: "AC" },
