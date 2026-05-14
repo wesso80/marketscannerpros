@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTrendingPools, getNewPools } from '@/lib/coingecko';
+import { buildCoinGeckoResponseMeta, getTrendingPools, getNewPools } from '@/lib/coingecko';
 import { getSessionFromCookie } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -49,12 +49,17 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    const meta = buildCoinGeckoResponseMeta({ endpointFamily: 'ONCHAIN', lastUpdated: new Date().toISOString(), maxAgeMs: 300_000 });
+
     return NextResponse.json({
       success: true,
       type,
       pools,
       count: pools.length,
-      timestamp: new Date().toISOString(),
+      timestamp: meta.lastUpdated,
+      source: meta.provider,
+      freshnessStatus: meta.freshnessStatus,
+      meta,
     });
 
   } catch (error) {

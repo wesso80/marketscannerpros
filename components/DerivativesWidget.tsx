@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import CryptoDataStatus from '@/components/CryptoDataStatus';
 
 interface LSData {
   average: {
@@ -129,6 +130,8 @@ export default function DerivativesWidget({
   const [loading, setLoading] = useState(true);
   const [showLsTooltip, setShowLsTooltip] = useState(false);
   const [showFundingTooltip, setShowFundingTooltip] = useState(false);
+  const [lsMeta, setLsMeta] = useState<{ source?: string; freshnessStatus?: string; lastUpdated?: string | null }>({});
+  const [fundingMeta, setFundingMeta] = useState<{ source?: string; freshnessStatus?: string; lastUpdated?: string | null }>({});
 
   const lsTooltipText = `Long/Short Ratio = Ratio of long vs short traders.
 
@@ -155,8 +158,22 @@ Research context:
       fetch('/api/funding-rates').then(r => r.json())
     ])
       .then(([ls, funding]) => {
-        if (!ls.error) setLsData(ls);
-        if (!funding.error) setFundingData(funding);
+        if (!ls.error) {
+          setLsData(ls);
+          setLsMeta({
+            source: ls.source ?? ls.meta?.provider,
+            freshnessStatus: ls.freshnessStatus ?? ls.meta?.freshnessStatus,
+            lastUpdated: ls.meta?.lastUpdated ?? ls.timestamp ?? null,
+          });
+        }
+        if (!funding.error) {
+          setFundingData(funding);
+          setFundingMeta({
+            source: funding.source ?? funding.meta?.provider,
+            freshnessStatus: funding.freshnessStatus ?? funding.meta?.freshnessStatus,
+            lastUpdated: funding.meta?.lastUpdated ?? funding.timestamp ?? null,
+          });
+        }
       })
       .finally(() => setLoading(false));
   }, []);
@@ -188,6 +205,13 @@ Research context:
   if (compact) {
     return (
       <div className={`bg-slate-800/50 rounded-lg p-3 border border-slate-700 relative ${className}`}>
+        <div className="mb-2 flex justify-end">
+          <CryptoDataStatus
+            source={fundingMeta.source || lsMeta.source}
+            freshnessStatus={fundingMeta.freshnessStatus || lsMeta.freshnessStatus}
+            lastUpdated={fundingMeta.lastUpdated || lsMeta.lastUpdated}
+          />
+        </div>
         <div className="flex items-center justify-between gap-4">
           {/* Long/Short Ratio */}
           {lsData && (
@@ -278,10 +302,17 @@ Research context:
   // Full version
   return (
     <div className={`bg-slate-800/50 rounded-xl p-6 border border-slate-700 ${className}`}>
-      <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-        <span className="text-[0.62rem] font-bold text-slate-400">DER</span>
-        Derivatives Sentiment
-      </h3>
+      <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
+        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+          <span className="text-[0.62rem] font-bold text-slate-400">DER</span>
+          Derivatives Sentiment
+        </h3>
+        <CryptoDataStatus
+          source={fundingMeta.source || lsMeta.source}
+          freshnessStatus={fundingMeta.freshnessStatus || lsMeta.freshnessStatus}
+          lastUpdated={fundingMeta.lastUpdated || lsMeta.lastUpdated}
+        />
+      </div>
 
       {/* Crowding Risk Meter */}
       {lsData && fundingData && (() => {

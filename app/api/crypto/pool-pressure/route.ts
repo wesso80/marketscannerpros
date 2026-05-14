@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getPoolWithVolumeBreakdown } from '@/lib/coingecko';
+import { buildCoinGeckoResponseMeta, getPoolWithVolumeBreakdown } from '@/lib/coingecko';
 
 export const runtime = 'nodejs';
 
@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
       sellVolumeUsd: parseFloat(vb[tf]?.sells ?? '0'),
       netVolumeUsd: parseFloat(vb[tf]?.buys ?? '0') - parseFloat(vb[tf]?.sells ?? '0'),
     }));
+    const meta = buildCoinGeckoResponseMeta({ endpointFamily: 'ONCHAIN', lastUpdated: new Date().toISOString(), maxAgeMs: 300_000 });
 
     return NextResponse.json({
       poolName: attrs.name,
@@ -37,6 +38,10 @@ export async function GET(req: NextRequest) {
       address,
       network,
       breakdown,
+      source: meta.provider,
+      freshnessStatus: meta.freshnessStatus,
+      timestamp: meta.lastUpdated,
+      meta,
     });
   } catch {
     return NextResponse.json({ error: 'Failed to fetch pool pressure data' }, { status: 500 });

@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
-import { getTrendingCoins, getSimplePrices } from '@/lib/coingecko';
+import {
+  buildCoinGeckoResponseMeta,
+  getSimplePrices,
+  getTrendingCoins,
+} from '@/lib/coingecko';
 import { getSessionFromCookie } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -27,6 +31,10 @@ export async function GET() {
       include_24h_change: true,
       include_market_cap: true 
     });
+    const priceUpdatedAt = Object.values(prices || {}).reduce<number | null>((latest, price) => {
+      if (!price?.last_updated_at) return latest;
+      return latest == null || price.last_updated_at > latest ? price.last_updated_at : latest;
+    }, null);
 
     // Format response with prices
     const coins = trending.coins.map(({ item }) => ({
@@ -48,11 +56,20 @@ export async function GET() {
       change1h: cat.market_cap_1h_change,
     })) || [];
 
+    const meta = buildCoinGeckoResponseMeta({
+      endpointFamily: 'SEARCH',
+      lastUpdated: priceUpdatedAt,
+      maxAgeMs: 300_000,
+    });
+
     return NextResponse.json({
       success: true,
       coins,
       categories,
-      timestamp: new Date().toISOString(),
+      timestamp: meta.lastUpdated,
+      source: meta.provider,
+      freshnessStatus: meta.freshnessStatus,
+      meta,
     });
 
   } catch (error) {

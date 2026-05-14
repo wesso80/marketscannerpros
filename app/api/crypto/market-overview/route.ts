@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
-import { getGlobalData, getGlobalMarketCapChart } from '@/lib/coingecko';
+import {
+  buildCoinGeckoResponseMeta,
+  getGlobalData,
+  getGlobalMarketCapChart,
+} from '@/lib/coingecko';
 import { getSessionFromCookie } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -12,15 +16,22 @@ export async function GET() {
   }
 
   try {
+    const fetchedAt = new Date().toISOString();
     const [globalData, chartData] = await Promise.all([
       getGlobalData(),
       getGlobalMarketCapChart(30),
     ]);
     
     if (!globalData) {
+      const meta = buildCoinGeckoResponseMeta({
+        endpointFamily: 'GLOBAL',
+        lastUpdated: fetchedAt,
+        maxAgeMs: 300_000,
+      });
       return NextResponse.json({ 
         success: false, 
-        error: 'No market data available' 
+        error: 'No market data available',
+        meta,
       }, { status: 500 });
     }
 
@@ -47,6 +58,12 @@ export async function GET() {
       }));
     }
 
+    const meta = buildCoinGeckoResponseMeta({
+      endpointFamily: 'GLOBAL',
+      lastUpdated: fetchedAt,
+      maxAgeMs: 300_000,
+    });
+
     return NextResponse.json({
       success: true,
       data: {
@@ -63,7 +80,10 @@ export async function GET() {
         dominance: topCoins,
         sparkline,
       },
-      timestamp: new Date().toISOString(),
+      timestamp: meta.lastUpdated,
+      source: meta.provider,
+      freshnessStatus: meta.freshnessStatus,
+      meta,
     });
 
   } catch (error) {

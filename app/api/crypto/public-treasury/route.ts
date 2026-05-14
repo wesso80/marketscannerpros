@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { getPublicTreasury } from '@/lib/coingecko';
+import { buildCoinGeckoResponseMeta, getPublicTreasury } from '@/lib/coingecko';
 
 /**
  * /api/crypto/public-treasury?coin=bitcoin   (or ?coin=ethereum)
@@ -46,6 +46,8 @@ export async function GET(req: NextRequest) {
       : 0,
   }));
 
+  const meta = buildCoinGeckoResponseMeta({ endpointFamily: 'GENERAL', lastUpdated: new Date().toISOString(), maxAgeMs: 300_000 });
+
   return NextResponse.json({
     coin: coinParam,
     summary: {
@@ -55,5 +57,9 @@ export async function GET(req: NextRequest) {
       companyCount: companies.length,
     },
     companies,
+    source: meta.provider,
+    freshnessStatus: meta.freshnessStatus,
+    timestamp: meta.lastUpdated,
+    meta,
   });
 }

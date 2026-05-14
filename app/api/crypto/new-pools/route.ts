@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getNewPools } from '@/lib/coingecko';
+import { buildCoinGeckoResponseMeta, getNewPools } from '@/lib/coingecko';
 import { getSessionFromCookie } from '@/lib/auth';
 
 export async function GET() {
@@ -33,7 +33,8 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json({ pools });
+    const meta = buildCoinGeckoResponseMeta({ endpointFamily: 'ONCHAIN', lastUpdated: new Date().toISOString(), maxAgeMs: 300_000 });
+    return NextResponse.json({ pools, source: meta.provider, freshnessStatus: meta.freshnessStatus, timestamp: meta.lastUpdated, meta });
   } catch (error) {
     console.error('[NewPools] Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

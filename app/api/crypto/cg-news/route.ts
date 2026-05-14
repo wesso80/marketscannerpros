@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { getCryptoNews } from '@/lib/coingecko';
+import { buildCoinGeckoResponseMeta, getCryptoNews } from '@/lib/coingecko';
 
 /**
  * GET /api/crypto/cg-news?coin_id=bitcoin&type=news&page=1&per_page=20
@@ -28,11 +28,23 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to fetch crypto news' }, { status: 502 });
   }
 
+  const lastUpdated = articles.reduce<string | null>((latest, article: any) => {
+    const published = article?.published_at ?? article?.created_at ?? null;
+    if (!published) return latest;
+    if (!latest) return published;
+    return new Date(published).getTime() > new Date(latest).getTime() ? published : latest;
+  }, null);
+  const meta = buildCoinGeckoResponseMeta({ endpointFamily: 'GENERAL', lastUpdated, maxAgeMs: 300_000 });
+
   return NextResponse.json({
     articles,
     count: articles.length,
     page,
     per_page,
     coin_id: coin_id || null,
+    source: meta.provider,
+    freshnessStatus: meta.freshnessStatus,
+    timestamp: meta.lastUpdated,
+    meta,
   });
 }

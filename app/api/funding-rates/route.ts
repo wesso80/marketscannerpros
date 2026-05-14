@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAggregatedFundingRates } from '@/lib/coingecko';
+import { buildCoinGeckoResponseMeta, getAggregatedFundingRates } from '@/lib/coingecko';
 
 const CACHE_DURATION = 900; // 15 minute cache (funding rates update every 8 hours)
 let cache: { data: any; timestamp: number } | null = null;
@@ -20,7 +20,19 @@ export async function GET(req: NextRequest) {
   
   if (cache && Date.now() - cache.timestamp < CACHE_DURATION * 1000) {
     console.log('[Funding Rates API] Returning cached data');
-    return NextResponse.json(cache.data);
+    const meta = buildCoinGeckoResponseMeta({
+      endpointFamily: 'DERIVATIVES',
+      lastUpdated: cache.data?.meta?.lastUpdated ?? new Date(cache.timestamp).toISOString(),
+      maxAgeMs: CACHE_DURATION * 1000,
+      fallbackUsed: Boolean(cache.data?.meta?.fallbackUsed),
+    });
+    return NextResponse.json({
+      ...cache.data,
+      timestamp: meta.lastUpdated,
+      source: meta.provider,
+      freshnessStatus: meta.freshnessStatus,
+      meta,
+    });
   }
 
   try {
@@ -49,6 +61,13 @@ export async function GET(req: NextRequest) {
     else if (avgRate < -0.01) overallSentiment = 'Bearish';
     else overallSentiment = 'Neutral';
 
+    const fetchedAt = new Date().toISOString();
+    const meta = buildCoinGeckoResponseMeta({
+      endpointFamily: 'DERIVATIVES',
+      lastUpdated: fetchedAt,
+      maxAgeMs: CACHE_DURATION * 1000,
+    });
+
     const result = {
       average: {
         fundingRatePercent: avgRate.toFixed(4),
@@ -61,9 +80,11 @@ export async function GET(req: NextRequest) {
         timeUntilFormatted: null,
       },
       coins: rates.sort((a, b) => b.fundingRatePercent - a.fundingRatePercent),
-      source: 'coingecko',
+      source: meta.provider,
       exchange: 'Multiple Exchanges',
-      timestamp: new Date().toISOString(),
+      timestamp: meta.lastUpdated,
+      freshnessStatus: meta.freshnessStatus,
+      meta,
     };
 
     cache = { data: result, timestamp: Date.now() };
@@ -74,7 +95,20 @@ export async function GET(req: NextRequest) {
     console.error('[Funding Rates API] Error:', error);
     
     if (cache) {
-      return NextResponse.json({ ...cache.data, stale: true });
+      const meta = buildCoinGeckoResponseMeta({
+        endpointFamily: 'DERIVATIVES',
+        lastUpdated: cache.data?.meta?.lastUpdated ?? new Date(cache.timestamp).toISOString(),
+        maxAgeMs: CACHE_DURATION * 1000,
+        fallbackUsed: true,
+      });
+      return NextResponse.json({
+        ...cache.data,
+        stale: true,
+        timestamp: meta.lastUpdated,
+        source: meta.provider,
+        freshnessStatus: meta.freshnessStatus,
+        meta,
+      });
     }
     
     return NextResponse.json({ error: 'Failed to fetch funding rates' }, { status: 500 });

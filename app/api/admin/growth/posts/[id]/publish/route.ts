@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/adminAuth';
 import { getPost, markPostPublished } from '@/lib/growth/db';
 import { publishToX, isXEnabled } from '@/lib/growth/twitter';
 import { publishToInstagram, isInstagramEnabled } from '@/lib/growth/instagram';
+import { publishToBuffer, isBufferEnabled } from '@/lib/growth/buffer';
 import { MIN_PUBLISH_SCORE } from '@/lib/growth/types';
 
 function parseId(idStr: string): number | null {
@@ -38,7 +39,42 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     );
   }
 
-  // ── Build platform-specific payload ──
+  // ── Preferred path: route everything through Buffer when enabled. ──
+  // Buffer holds the OAuth tokens for X/IG and shows a queue/calendar UI for
+  // a final human check before anything leaves to the platforms. This matches
+  // the user's existing workflow (Buffer channel @ publish.buffer.com).
+  if (isBufferEnabled()) {
+    if (post.platform !== 'x' && post.platform !== 'instagram') {
+      return NextResponse.json({ error: `unsupported platform for Buffer: ${post.platform}` }, { status: 400 });
+    }
+    const text = post.platform === 'x' ? composeXText(post) : composeIgCaption(post);
+    const result = await publishToBuffer({
+      platform: post.platform,
+      text,
+      mediaUrl: post.media_url ?? undefined,
+      // 'draft' = posts land in Buffer awaiting your final approval there.
+      // Switch to 'queue' once you trust the pipeline.
+      mode: (process.env.BUFFER_DEFAULT_MODE as 'draft' | 'queue' | 'now') ?? 'draft',
+    });
+    if (!result.ok) {
+      return NextResponse.json(
+        { error: result.error ?? 'Buffer publish failed', rateLimited: result.rateLimited },
+        { status: result.rateLimited ? 429 : 502 },
+      );
+    }
+    // We mark the MSP post as 'posted' once it's safely in Buffer — Buffer
+    // owns the actual live-publish step. external_url points to the Buffer
+    // queue item so you can jump to it.
+    const updated = await markPostPublished({
+      workspaceId: 'admin',
+      id,
+      externalId: result.updateId!,
+      externalUrl: result.bufferUrl ?? null,
+    });
+    return NextResponse.json({ post: updated, bufferUrl: result.bufferUrl, via: 'buffer' });
+  }
+
+  // ── Fallback: direct X / IG integration (only if Buffer is disabled). ──
   if (post.platform === 'x') {
     if (!isXEnabled()) {
       return NextResponse.json(

@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getMarketData, CoinGeckoMarketData, getDefiData } from '@/lib/coingecko';
+import {
+  buildCoinGeckoResponseMeta,
+  CoinGeckoMarketData,
+  getDefiData,
+  getMarketData,
+} from '@/lib/coingecko';
 import { getSessionFromCookie } from '@/lib/auth';
 import { q } from '@/lib/db';
 
@@ -61,6 +66,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const fetchedAt = new Date().toISOString();
     // Fetch market data + DeFi stats in parallel (both from CoinGecko)
     const [marketData, defiData] = await Promise.all([
       getMarketData({ ids: CRYPTO_IDS, per_page: 20 }),
@@ -68,10 +74,17 @@ export async function GET(req: NextRequest) {
     ]);
     
     if (!marketData || marketData.length === 0) {
+      const meta = buildCoinGeckoResponseMeta({
+        endpointFamily: 'MARKETS',
+        lastUpdated: fetchedAt,
+        maxAgeMs: 60_000,
+      });
       return NextResponse.json({
         cryptos: [],
-        timestamp: new Date().toISOString(),
-        source: 'coingecko',
+        timestamp: meta.lastUpdated,
+        source: meta.provider,
+        freshnessStatus: meta.freshnessStatus,
+        meta,
         error: 'Failed to fetch market data'
       }, { status: 500 });
     }
@@ -143,11 +156,19 @@ export async function GET(req: NextRequest) {
     // Sort by weight (market cap proxy)
     cryptos.sort((a, b) => b.weight - a.weight);
 
+    const meta = buildCoinGeckoResponseMeta({
+      endpointFamily: 'MARKETS',
+      lastUpdated: fetchedAt,
+      maxAgeMs: 60_000,
+    });
+
     return NextResponse.json({
       cryptos,
       defi: defiData ?? null,
-      timestamp: new Date().toISOString(),
-      source: 'coingecko'
+      timestamp: meta.lastUpdated,
+      source: meta.provider,
+      freshnessStatus: meta.freshnessStatus,
+      meta,
     });
     
   } catch (error) {

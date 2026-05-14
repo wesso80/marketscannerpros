@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import CryptoDataStatus from '@/components/CryptoDataStatus';
 
 interface DominanceCoin {
   symbol: string;
@@ -21,6 +22,7 @@ export default function MarketOverviewWidget() {
   const [data, setData] = useState<MarketData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [meta, setMeta] = useState<{ source?: string; freshnessStatus?: string; lastUpdated?: string | null }>({});
 
   useEffect(() => {
     async function fetchMarket() {
@@ -30,6 +32,11 @@ export default function MarketOverviewWidget() {
         const result = await res.json();
         if (result.success) {
           setData(result.data);
+          setMeta({
+            source: result.source ?? result.meta?.provider,
+            freshnessStatus: result.freshnessStatus ?? result.meta?.freshnessStatus,
+            lastUpdated: result.meta?.lastUpdated ?? result.timestamp ?? null,
+          });
           setError(null);
         } else {
           throw new Error(result.error);
@@ -132,19 +139,30 @@ export default function MarketOverviewWidget() {
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
-        marginBottom: '16px'
+        marginBottom: '16px',
+        gap: '8px',
+        flexWrap: 'wrap'
       }}>
-        <h3 style={{ 
-          color: '#f1f5f9', 
-          fontSize: '16px', 
-          fontWeight: 600,
-          margin: 0,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          📈 Market Overview
-        </h3>
+        <div>
+          <h3 style={{ 
+            color: '#f1f5f9', 
+            fontSize: '16px', 
+            fontWeight: 600,
+            margin: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            📈 Market Overview
+          </h3>
+          <div style={{ marginTop: '8px' }}>
+            <CryptoDataStatus
+              source={meta.source}
+              freshnessStatus={meta.freshnessStatus}
+              lastUpdated={meta.lastUpdated}
+            />
+          </div>
+        </div>
         <span style={{
           fontSize: '12px',
           color: (data.marketCapChange24h ?? 0) >= 0 ? '#10b981' : '#ef4444',

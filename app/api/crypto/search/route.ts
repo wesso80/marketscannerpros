@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { searchCoins } from '@/lib/coingecko';
+import { buildCoinGeckoResponseMeta, searchCoins } from '@/lib/coingecko';
 import { getSessionFromCookie } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
@@ -11,7 +11,8 @@ export async function GET(request: NextRequest) {
   const query = searchParams.get('q');
 
   if (!query || query.length < 2) {
-    return NextResponse.json({ coins: [] });
+    const meta = buildCoinGeckoResponseMeta({ endpointFamily: 'SEARCH', lastUpdated: null, maxAgeMs: 300_000 });
+    return NextResponse.json({ coins: [], meta, freshnessStatus: meta.freshnessStatus, source: meta.provider, timestamp: meta.lastUpdated });
   }
 
   try {
@@ -30,7 +31,8 @@ export async function GET(request: NextRequest) {
       marketCapRank: coin.market_cap_rank,
     }));
 
-    return NextResponse.json({ coins });
+    const meta = buildCoinGeckoResponseMeta({ endpointFamily: 'SEARCH', lastUpdated: new Date().toISOString(), maxAgeMs: 300_000 });
+    return NextResponse.json({ coins, meta, freshnessStatus: meta.freshnessStatus, source: meta.provider, timestamp: meta.lastUpdated });
   } catch (error) {
     console.error('[CryptoSearch] Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

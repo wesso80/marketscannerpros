@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type ConditionVerdict = 'ALIGNED' | 'CONDITIONAL' | 'NOT ALIGNED';
+type FreshnessStatus = 'fresh' | 'delayed' | 'stale' | 'unknown';
 
 function clampScore(value: number): number {
   return Math.max(0, Math.min(100, value));
@@ -26,6 +27,20 @@ function conditionBadge(verdict: ConditionVerdict): string {
   return '🔴';
 }
 
+function freshnessClass(status: FreshnessStatus): string {
+  if (status === 'fresh') return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300';
+  if (status === 'delayed') return 'border-amber-500/30 bg-amber-500/10 text-amber-300';
+  if (status === 'stale') return 'border-red-500/30 bg-red-500/10 text-red-300';
+  return 'border-slate-700 bg-slate-900 text-slate-400';
+}
+
+function freshnessLabel(status: FreshnessStatus): string {
+  if (status === 'fresh') return 'Fresh';
+  if (status === 'delayed') return 'Delayed';
+  if (status === 'stale') return 'Stale';
+  return 'Unknown';
+}
+
 export default function CryptoMorningDecisionCard() {
   const [marketData, setMarketData] = useState<any>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
@@ -39,8 +54,21 @@ export default function CryptoMorningDecisionCard() {
         fetch('/api/open-interest').then((r) => r.json()).catch(() => null),
       ]);
 
-      setMarketData({ market: marketRes?.data, trending: trendingRes, funding: fundingRes, oi: oiRes });
-      setLastUpdate(new Date());
+      setMarketData({
+        market: marketRes?.data,
+        marketMeta: marketRes?.meta,
+        trending: trendingRes,
+        trendingMeta: trendingRes?.meta,
+        funding: fundingRes,
+        fundingMeta: fundingRes?.meta,
+        oi: oiRes,
+        oiMeta: oiRes?.meta,
+      });
+      const timestamps = [marketRes?.meta?.lastUpdated, trendingRes?.meta?.lastUpdated, fundingRes?.meta?.lastUpdated, oiRes?.meta?.lastUpdated]
+        .filter((value): value is string => typeof value === 'string' && value.length > 0)
+        .map((value) => new Date(value).getTime())
+        .filter((value) => Number.isFinite(value));
+      setLastUpdate(timestamps.length ? new Date(Math.max(...timestamps)) : new Date());
     } catch (error) {
       console.error('Failed to fetch crypto gate data:', error);
     }
@@ -192,6 +220,19 @@ export default function CryptoMorningDecisionCard() {
     };
   }, [marketData]);
 
+  const freshnessBadges = useMemo(() => {
+    const entries = [
+      { label: 'Market', status: marketData?.marketMeta?.freshnessStatus as FreshnessStatus | undefined },
+      { label: 'Trending', status: marketData?.trendingMeta?.freshnessStatus as FreshnessStatus | undefined },
+      { label: 'Funding', status: marketData?.fundingMeta?.freshnessStatus as FreshnessStatus | undefined },
+      { label: 'OI', status: marketData?.oiMeta?.freshnessStatus as FreshnessStatus | undefined },
+    ];
+    return entries.map((entry) => ({
+      ...entry,
+      status: entry.status ?? 'unknown',
+    }));
+  }, [marketData]);
+
   return (
     <section className="rounded-lg border border-slate-700 bg-slate-900 p-2">
       <div className="mb-2 grid gap-2 xl:grid-cols-[1.1fr_1fr]">
@@ -199,6 +240,13 @@ export default function CryptoMorningDecisionCard() {
           <div className="flex items-center justify-between">
             <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-500">Crypto Review Gate</p>
             <span className="text-[11px] text-slate-500">{lastUpdate ? lastUpdate.toLocaleTimeString() : 'Loading'}</span>
+          </div>
+          <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
+            {freshnessBadges.map((badge) => (
+              <span key={badge.label} className={`rounded border px-2 py-0.5 ${freshnessClass(badge.status)}`}>
+                {badge.label}: {freshnessLabel(badge.status)}
+              </span>
+            ))}
           </div>
           <div className="mt-1 flex items-center gap-2">
             <span className="text-xl">{conditionBadge(decision.verdict)}</span>

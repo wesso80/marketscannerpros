@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import CryptoDataStatus from '@/components/CryptoDataStatus';
 
 interface DominanceData {
   btc: number;
@@ -33,17 +34,21 @@ export default function MarketPulseHero() {
   const [fearGreed, setFearGreed] = useState<FearGreedData | null>(null);
   const [openInterest, setOpenInterest] = useState<OpenInterestData | null>(null);
   const [derivatives, setDerivatives] = useState<DerivativesData | null>(null);
+  const [dominanceMeta, setDominanceMeta] = useState<{ source?: string; freshnessStatus?: string; lastUpdated?: string | null }>({});
+  const [oiMeta, setOiMeta] = useState<{ source?: string; freshnessStatus?: string; lastUpdated?: string | null }>({});
+  const [derivativesMeta, setDerivativesMeta] = useState<{ source?: string; freshnessStatus?: string; lastUpdated?: string | null }>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
       try {
         // Fetch all data in parallel
-        const [globalRes, fgRes, oiRes, derivRes] = await Promise.all([
+        const [globalRes, fgRes, oiRes, fundingRes, lsRes] = await Promise.all([
           fetch('/api/crypto/market-overview', { cache: 'no-store' }).then(r => r.json()).catch(() => null),
           fetch('/api/fear-greed-custom?market=crypto').then(r => r.json()).catch(() => null),
           fetch('/api/open-interest').then(r => r.json()).catch(() => null),
           fetch('/api/funding-rates').then(r => r.json()).catch(() => null),
+          fetch('/api/long-short-ratio').then(r => r.json()).catch(() => null),
         ]);
 
         if (globalRes?.data) {
@@ -54,6 +59,11 @@ export default function MarketPulseHero() {
             stablecoin: (globalRes.data.usdtDominance ?? mcap.usdt ?? 0) + (globalRes.data.usdcDominance ?? mcap.usdc ?? 0),
             totalMarketCap: globalRes.data.totalMarketCap || 0,
             change24h: globalRes.data.marketCapChange24h || 0,
+          });
+          setDominanceMeta({
+            source: globalRes.source ?? globalRes.meta?.provider,
+            freshnessStatus: globalRes.freshnessStatus ?? globalRes.meta?.freshnessStatus,
+            lastUpdated: globalRes.meta?.lastUpdated ?? globalRes.timestamp ?? null,
           });
         }
 
@@ -72,15 +82,25 @@ export default function MarketPulseHero() {
             ethDominance: oiRes.total.ethDominance,
             change24h: oiRes.total.change24h || 0,
           });
+          setOiMeta({
+            source: oiRes.source ?? oiRes.meta?.provider,
+            freshnessStatus: oiRes.freshnessStatus ?? oiRes.meta?.freshnessStatus,
+            lastUpdated: oiRes.meta?.lastUpdated ?? oiRes.timestamp ?? null,
+          });
         }
 
-        if (derivRes?.coins) {
-          // Get BTC data for L/S ratio and funding
-          const btc = derivRes.coins?.find((c: { symbol: string }) => c.symbol === 'BTC');
-          if (btc) {
+        if (fundingRes?.coins && lsRes?.coins) {
+          const btcFunding = fundingRes.coins.find((c: { symbol: string }) => c.symbol === 'BTC');
+          const btcLs = lsRes.coins.find((c: { symbol: string }) => c.symbol === 'BTC');
+          if (btcFunding || btcLs) {
             setDerivatives({
-              longShortRatio: btc.longShortRatio || 0,
-              fundingRate: btc.fundingRate || 0,
+              longShortRatio: Number(btcLs?.longShortRatio ?? lsRes?.average?.longShortRatio ?? 0),
+              fundingRate: Number(btcFunding?.fundingRatePercent ?? fundingRes?.average?.fundingRatePercent ?? 0) / 100,
+            });
+            setDerivativesMeta({
+              source: fundingRes.source ?? lsRes.source ?? fundingRes.meta?.provider ?? lsRes.meta?.provider,
+              freshnessStatus: fundingRes.freshnessStatus ?? lsRes.freshnessStatus ?? fundingRes.meta?.freshnessStatus ?? lsRes.meta?.freshnessStatus,
+              lastUpdated: fundingRes.meta?.lastUpdated ?? lsRes.meta?.lastUpdated ?? fundingRes.timestamp ?? lsRes.timestamp ?? null,
             });
           }
         }
@@ -144,6 +164,13 @@ export default function MarketPulseHero() {
             <div className="flex items-center gap-2 mb-3">
               <span className="text-xl">₿</span>
               <span className="text-sm font-medium text-gray-400">Market Dominance</span>
+            </div>
+            <div className="mb-3">
+              <CryptoDataStatus
+                source={dominanceMeta.source}
+                freshnessStatus={dominanceMeta.freshnessStatus}
+                lastUpdated={dominanceMeta.lastUpdated}
+              />
             </div>
             {dominance ? (
               <div className="space-y-2">
@@ -227,6 +254,13 @@ export default function MarketPulseHero() {
               <span className="text-xl">📈</span>
               <span className="text-sm font-medium text-gray-400">Open Interest</span>
             </div>
+            <div className="mb-3">
+              <CryptoDataStatus
+                source={oiMeta.source}
+                freshnessStatus={oiMeta.freshnessStatus}
+                lastUpdated={oiMeta.lastUpdated}
+              />
+            </div>
             {openInterest ? (
               <div className="space-y-2">
                 <div className="flex items-baseline gap-2">
@@ -257,6 +291,13 @@ export default function MarketPulseHero() {
             <div className="flex items-center gap-2 mb-3">
               <span className="text-xl">⚖️</span>
               <span className="text-sm font-medium text-gray-400">BTC Derivatives</span>
+            </div>
+            <div className="mb-3">
+              <CryptoDataStatus
+                source={derivativesMeta.source}
+                freshnessStatus={derivativesMeta.freshnessStatus}
+                lastUpdated={derivativesMeta.lastUpdated}
+              />
             </div>
             {derivatives ? (
               <div className="space-y-3">

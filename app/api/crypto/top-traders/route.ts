@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { getTopTraders, type TopTrader } from '@/lib/coingecko';
+import { buildCoinGeckoResponseMeta, getTopTraders, type TopTrader } from '@/lib/coingecko';
 
 /**
  * GET /api/crypto/top-traders?network=eth&address=0x...&period=24h
@@ -48,11 +48,17 @@ export async function GET(req: NextRequest) {
     explorerUrl: t.explorer_url,
   }));
 
+  const meta = buildCoinGeckoResponseMeta({ endpointFamily: 'ONCHAIN', lastUpdated: new Date().toISOString(), maxAgeMs: 300_000 });
+
   return NextResponse.json({
     network,
     address,
     period,
     traders: formatted,
     count: formatted.length,
+    source: meta.provider,
+    freshnessStatus: meta.freshnessStatus,
+    timestamp: meta.lastUpdated,
+    meta,
   });
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { getTokenInfo } from '@/lib/coingecko';
+import { buildCoinGeckoResponseMeta, getTokenInfo } from '@/lib/coingecko';
 
 /**
  * GET /api/crypto/token-info?network=eth&address=0x...
@@ -32,6 +32,8 @@ export async function GET(req: NextRequest) {
 
   const attrs = tokenInfo.attributes;
 
+  const meta = buildCoinGeckoResponseMeta({ endpointFamily: 'ONCHAIN', lastUpdated: new Date().toISOString(), maxAgeMs: 300_000 });
+
   return NextResponse.json({
     address: attrs.address,
     name: attrs.name,
@@ -52,5 +54,9 @@ export async function GET(req: NextRequest) {
       telegram: attrs.telegram_handle,
       discord: attrs.discord_url,
     },
+    source: meta.provider,
+    freshnessStatus: meta.freshnessStatus,
+    timestamp: meta.lastUpdated,
+    meta,
   });
 }

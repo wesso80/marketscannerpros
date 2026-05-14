@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import CryptoDataStatus from '@/components/CryptoDataStatus';
 
 interface NewCoin {
   id: string;
@@ -18,6 +19,7 @@ export default function NewListingsWidget() {
   const [coins, setCoins] = useState<NewCoin[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [meta, setMeta] = useState<{ source?: string; freshnessStatus?: string; lastUpdated?: string | null }>({});
 
   useEffect(() => {
     async function fetchNewListings() {
@@ -27,6 +29,11 @@ export default function NewListingsWidget() {
         const data = await res.json();
         if (data.success) {
           setCoins(data.coins || []);
+          setMeta({
+            source: data.source ?? data.meta?.provider,
+            freshnessStatus: data.freshnessStatus ?? data.meta?.freshnessStatus,
+            lastUpdated: data.meta?.lastUpdated ?? data.timestamp ?? null,
+          });
           setError(null);
         } else {
           throw new Error(data.error);
@@ -96,7 +103,9 @@ export default function NewListingsWidget() {
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
-        marginBottom: '16px'
+        marginBottom: '16px',
+        gap: '8px',
+        flexWrap: 'wrap'
       }}>
         <h3 style={{ 
           color: '#f1f5f9', 
@@ -109,15 +118,22 @@ export default function NewListingsWidget() {
         }}>
           🆕 New Listings
         </h3>
-        <span style={{
-          fontSize: '11px',
-          color: '#64748b',
-          background: '#0f172a',
-          padding: '4px 8px',
-          borderRadius: '4px'
-        }}>
-          Latest 200+
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <span style={{
+            fontSize: '11px',
+            color: '#64748b',
+            background: '#0f172a',
+            padding: '4px 8px',
+            borderRadius: '4px'
+          }}>
+            Latest 200+
+          </span>
+          <CryptoDataStatus
+            source={meta.source}
+            freshnessStatus={meta.freshnessStatus}
+            lastUpdated={meta.lastUpdated}
+          />
+        </div>
       </div>
 
       {/* Listings */}

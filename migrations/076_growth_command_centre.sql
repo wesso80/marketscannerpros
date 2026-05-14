@@ -105,6 +105,26 @@ CREATE TABLE IF NOT EXISTS social_posts (
   -- posted_at may only be set if status='posted'; rejected_reason only if status='rejected'
   CONSTRAINT social_posts_posted_state_chk
     CHECK ((posted_at IS NULL) OR status = 'posted'),
+  CONSTRAINT social_posts_approved_state_chk
+    CHECK (
+      (approved_at IS NULL AND approved_by IS NULL)
+      OR status IN ('approved','posted')
+    ),
+  CONSTRAINT social_posts_approval_min_score_chk
+    CHECK (
+      status NOT IN ('approved','posted')
+      OR compliance_score >= 85
+    ),
+  CONSTRAINT social_posts_posted_requires_approval_chk
+    CHECK (
+      status <> 'posted'
+      OR (
+        posted_at IS NOT NULL
+        AND approved_at IS NOT NULL
+        AND approved_by IS NOT NULL
+        AND compliance_score >= 85
+      )
+    ),
   CONSTRAINT social_posts_rejected_state_chk
     CHECK ((rejected_reason IS NULL) OR status = 'rejected')
 );
@@ -117,6 +137,8 @@ CREATE INDEX IF NOT EXISTS social_posts_scheduled_idx
   ON social_posts (scheduled_for) WHERE scheduled_for IS NOT NULL AND status = 'approved';
 CREATE INDEX IF NOT EXISTS social_posts_platform_idx
   ON social_posts (platform, status);
+CREATE INDEX IF NOT EXISTS social_posts_ws_updated_idx
+  ON social_posts (workspace_id, updated_at DESC);
 
 COMMENT ON TABLE social_posts IS
   'Growth Command Centre — generated social posts. status flow: draft->review->approved->posted|rejected. compliance_score >= 85 required to publish.';
@@ -144,6 +166,8 @@ CREATE TABLE IF NOT EXISTS social_compliance_checks (
 
 CREATE INDEX IF NOT EXISTS social_compliance_post_idx
   ON social_compliance_checks (post_id, checked_at DESC);
+CREATE INDEX IF NOT EXISTS social_compliance_ws_idx
+  ON social_compliance_checks (workspace_id, checked_at DESC);
 
 COMMENT ON TABLE social_compliance_checks IS
   'Append-only audit log of compliance scans. Never UPDATE rows. New scan = new row.';
@@ -170,14 +194,79 @@ CREATE TABLE IF NOT EXISTS social_post_metrics (
   -- Provenance
   source          VARCHAR(60)  NOT NULL,             -- 'twitter_api' | 'instagram_graph' | 'manual'
   data_freshness  VARCHAR(20)  NOT NULL DEFAULT 'unknown',
-  snapshot_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+  snapshot_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+
+  CONSTRAINT social_post_metrics_platform_chk
+    CHECK (platform IN ('x','instagram')),
+  CONSTRAINT social_post_metrics_counts_nonneg_chk
+    CHECK (
+      impressions >= 0
+      AND likes >= 0
+      AND replies >= 0
+      AND reposts >= 0
+      AND saves >= 0
+      AND link_clicks >= 0
+      AND profile_visits >= 0
+    ),
+  CONSTRAINT social_post_metrics_freshness_chk
+    CHECK (data_freshness IN ('fresh','delayed','stale','unknown'))
 );
 
 CREATE INDEX IF NOT EXISTS social_post_metrics_post_idx
   ON social_post_metrics (post_id, snapshot_at DESC);
+CREATE INDEX IF NOT EXISTS social_post_metrics_ws_idx
+  ON social_post_metrics (workspace_id, snapshot_at DESC);
 
 COMMENT ON TABLE social_post_metrics IS
   'Performance metrics snapshots. Append a new row per pull — do not UPDATE.';
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Shared trigger functions
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION set_updated_at_timestamp()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  NEW.updated_at := NOW();
+  RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION block_update_delete_append_only()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RAISE EXCEPTION 'Table % is append-only; % is not allowed', TG_TABLE_NAME, TG_OP;
+END;
+$$;
+
+-- Keep updated_at consistent without relying on API routes.
+DROP TRIGGER IF EXISTS trg_social_campaigns_set_updated_at ON social_campaigns;
+CREATE TRIGGER trg_social_campaigns_set_updated_at
+BEFORE UPDATE ON social_campaigns
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at_timestamp();
+
+DROP TRIGGER IF EXISTS trg_social_posts_set_updated_at ON social_posts;
+CREATE TRIGGER trg_social_posts_set_updated_at
+BEFORE UPDATE ON social_posts
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at_timestamp();
+
+-- Audit and metrics tables are append-only by design.
+DROP TRIGGER IF EXISTS trg_social_compliance_checks_block_ud ON social_compliance_checks;
+CREATE TRIGGER trg_social_compliance_checks_block_ud
+BEFORE UPDATE OR DELETE ON social_compliance_checks
+FOR EACH ROW
+EXECUTE FUNCTION block_update_delete_append_only();
+
+DROP TRIGGER IF EXISTS trg_social_post_metrics_block_ud ON social_post_metrics;
+CREATE TRIGGER trg_social_post_metrics_block_ud
+BEFORE UPDATE OR DELETE ON social_post_metrics
+FOR EACH ROW
+EXECUTE FUNCTION block_update_delete_append_only();
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Seed — first launch campaign (idempotent)

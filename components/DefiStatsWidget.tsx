@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import CryptoDataStatus from '@/components/CryptoDataStatus';
 
 interface DefiData {
   marketCap: number;
@@ -16,6 +17,7 @@ export default function DefiStatsWidget() {
   const [data, setData] = useState<DefiData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [meta, setMeta] = useState<{ source?: string; freshnessStatus?: string; lastUpdated?: string | null }>({});
 
   useEffect(() => {
     async function fetchDefi() {
@@ -25,6 +27,11 @@ export default function DefiStatsWidget() {
         const result = await res.json();
         if (result.success) {
           setData(result.data);
+          setMeta({
+            source: result.source ?? result.meta?.provider,
+            freshnessStatus: result.freshnessStatus ?? result.meta?.freshnessStatus,
+            lastUpdated: result.meta?.lastUpdated ?? result.timestamp ?? null,
+          });
           setError(null);
         } else {
           throw new Error(result.error);
@@ -98,7 +105,9 @@ export default function DefiStatsWidget() {
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
-        marginBottom: '16px'
+        marginBottom: '16px',
+        gap: '8px',
+        flexWrap: 'wrap'
       }}>
         <h3 style={{ 
           color: '#f1f5f9', 
@@ -111,17 +120,24 @@ export default function DefiStatsWidget() {
         }}>
           🏦 DeFi Market
         </h3>
-        <span style={{
-          fontSize: '11px',
-          padding: '4px 10px',
-          borderRadius: '12px',
-          fontWeight: 600,
-          background: `${healthColor}22`,
-          color: healthColor,
-          border: `1px solid ${healthColor}44`
-        }}>
-          {defiHealth}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <span style={{
+            fontSize: '11px',
+            padding: '4px 10px',
+            borderRadius: '12px',
+            fontWeight: 600,
+            background: `${healthColor}22`,
+            color: healthColor,
+            border: `1px solid ${healthColor}44`
+          }}>
+            {defiHealth}
+          </span>
+          <CryptoDataStatus
+            source={meta.source}
+            freshnessStatus={meta.freshnessStatus}
+            lastUpdated={meta.lastUpdated}
+          />
+        </div>
       </div>
 
       {/* Stats Grid */}

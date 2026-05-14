@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import CryptoDataStatus from '@/components/CryptoDataStatus';
 
 interface DominanceData {
   btc: number;
@@ -25,6 +26,7 @@ export default function DominanceWidget() {
     totalMarketCapChange24h: 0,
     loading: true,
   });
+  const [meta, setMeta] = useState<{ source?: string; freshnessStatus?: string; lastUpdated?: string | null }>({});
 
   useEffect(() => {
     async function fetchDominance() {
@@ -44,6 +46,11 @@ export default function DominanceWidget() {
           totalMarketCap: payload.totalMarketCap || 0,
           totalMarketCapChange24h: payload.marketCapChange24h || 0,
           loading: false,
+        });
+        setMeta({
+          source: json.source ?? json.meta?.provider,
+          freshnessStatus: json.freshnessStatus ?? json.meta?.freshnessStatus,
+          lastUpdated: json.meta?.lastUpdated ?? json.timestamp ?? null,
         });
       } catch (err: any) {
         setData(prev => ({ ...prev, loading: false, error: err.message }));
@@ -105,19 +112,30 @@ export default function DominanceWidget() {
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
-        marginBottom: '16px'
+        marginBottom: '16px',
+        gap: '8px',
+        flexWrap: 'wrap'
       }}>
-        <h3 style={{ 
-          color: '#f1f5f9', 
-          fontSize: '16px', 
-          fontWeight: 600,
-          margin: 0,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          📊 Market Dominance
-        </h3>
+        <div>
+          <h3 style={{ 
+            color: '#f1f5f9', 
+            fontSize: '16px', 
+            fontWeight: 600,
+            margin: 0,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            📊 Market Dominance
+          </h3>
+          <div style={{ marginTop: '8px' }}>
+            <CryptoDataStatus
+              source={meta.source}
+              freshnessStatus={meta.freshnessStatus}
+              lastUpdated={meta.lastUpdated}
+            />
+          </div>
+        </div>
         <div style={{
           fontSize: '11px',
           color: '#64748b',

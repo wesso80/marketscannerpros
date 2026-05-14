@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import CryptoDataStatus from '@/components/CryptoDataStatus';
 
 interface NewPool {
   id: string;
@@ -31,6 +32,7 @@ export default function NewPoolsWidget() {
   const [pools, setPools] = useState<NewPool[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [meta, setMeta] = useState<{ source?: string; freshnessStatus?: string; lastUpdated?: string | null }>({});
 
   useEffect(() => {
     async function fetchPools() {
@@ -39,6 +41,11 @@ export default function NewPoolsWidget() {
         if (!res.ok) throw new Error('Failed to fetch');
         const data = await res.json();
         setPools(data.pools || []);
+        setMeta({
+          source: data.source ?? data.meta?.provider,
+          freshnessStatus: data.freshnessStatus ?? data.meta?.freshnessStatus,
+          lastUpdated: data.meta?.lastUpdated ?? data.timestamp ?? null,
+        });
       } catch (e) {
         setError('Failed to load new pools');
         console.error(e);
@@ -108,7 +115,9 @@ export default function NewPoolsWidget() {
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
-        marginBottom: '16px'
+        marginBottom: '16px',
+        gap: '8px',
+        flexWrap: 'wrap'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '20px' }}>🌱</span>
@@ -116,16 +125,23 @@ export default function NewPoolsWidget() {
             New DEX Pools
           </h3>
         </div>
-        <span style={{
-          fontSize: '10px',
-          color: '#10b981',
-          background: 'rgba(16, 185, 129, 0.15)',
-          padding: '4px 8px',
-          borderRadius: '12px',
-          fontWeight: 600
-        }}>
-          JUST CREATED
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <span style={{
+            fontSize: '10px',
+            color: '#10b981',
+            background: 'rgba(16, 185, 129, 0.15)',
+            padding: '4px 8px',
+            borderRadius: '12px',
+            fontWeight: 600
+          }}>
+            JUST CREATED
+          </span>
+          <CryptoDataStatus
+            source={meta.source}
+            freshnessStatus={meta.freshnessStatus}
+            lastUpdated={meta.lastUpdated}
+          />
+        </div>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { getExchanges, getDerivativesExchangesData } from '@/lib/coingecko';
+import { buildCoinGeckoResponseMeta, getExchanges, getDerivativesExchangesData } from '@/lib/coingecko';
 
 /**
  * /api/crypto/exchanges?type=spot  or  ?type=derivatives
@@ -39,11 +39,17 @@ export async function GET(req: NextRequest) {
       url: ex.url,
     }));
 
+    const meta = buildCoinGeckoResponseMeta({ endpointFamily: 'DERIVATIVES', lastUpdated: new Date().toISOString(), maxAgeMs: 300_000 });
+
     return NextResponse.json({
       type: 'derivatives',
       count: exchanges.length,
       page,
       exchanges,
+      source: meta.provider,
+      freshnessStatus: meta.freshnessStatus,
+      timestamp: meta.lastUpdated,
+      meta,
     });
   }
 
@@ -66,10 +72,16 @@ export async function GET(req: NextRequest) {
     url: ex.url,
   }));
 
+  const meta = buildCoinGeckoResponseMeta({ endpointFamily: 'GENERAL', lastUpdated: new Date().toISOString(), maxAgeMs: 300_000 });
+
   return NextResponse.json({
     type: 'spot',
     count: exchanges.length,
     page,
     exchanges,
+    source: meta.provider,
+    freshnessStatus: meta.freshnessStatus,
+    timestamp: meta.lastUpdated,
+    meta,
   });
 }

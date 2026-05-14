@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getNewListings, getSimplePrices, symbolToId } from '@/lib/coingecko';
+import { buildCoinGeckoResponseMeta, getNewListings, getSimplePrices, symbolToId } from '@/lib/coingecko';
 import { getSessionFromCookie } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -60,11 +60,19 @@ export async function GET() {
       };
     });
 
+    const latestListing = latest.reduce<number | null>((max, listing) => {
+      return max == null || listing.activated_at > max ? listing.activated_at : max;
+    }, null);
+    const meta = buildCoinGeckoResponseMeta({ endpointFamily: 'GENERAL', lastUpdated: latestListing, maxAgeMs: 600_000 });
+
     return NextResponse.json({
       success: true,
       coins,
       totalNew: listings.length,
-      timestamp: new Date().toISOString(),
+      timestamp: meta.lastUpdated,
+      source: meta.provider,
+      freshnessStatus: meta.freshnessStatus,
+      meta,
     });
 
   } catch (error) {

@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAggregatedOpenInterest, getMarketData, symbolToId } from '@/lib/coingecko';
+import {
+  buildCoinGeckoResponseMeta,
+  getAggregatedOpenInterest,
+  getMarketData,
+  symbolToId,
+} from '@/lib/coingecko';
 
 const CACHE_DURATION = 600; // 10 minute cache
 let cache: { data: any; timestamp: number } | null = null;
@@ -27,7 +32,19 @@ interface CoinOI {
 export async function GET(req: NextRequest) {
   // Check cache
   if (cache && Date.now() - cache.timestamp < CACHE_DURATION * 1000) {
-    return NextResponse.json(cache.data);
+    const meta = buildCoinGeckoResponseMeta({
+      endpointFamily: 'DERIVATIVES',
+      lastUpdated: cache.data?.meta?.lastUpdated ?? new Date(cache.timestamp).toISOString(),
+      maxAgeMs: CACHE_DURATION * 1000,
+      fallbackUsed: Boolean(cache.data?.meta?.fallbackUsed),
+    });
+    return NextResponse.json({
+      ...cache.data,
+      timestamp: meta.lastUpdated,
+      source: meta.provider,
+      freshnessStatus: meta.freshnessStatus,
+      meta,
+    });
   }
 
   try {
@@ -82,6 +99,13 @@ export async function GET(req: NextRequest) {
     const ethOI = ethData?.openInterest || 0;
     const altOI = totalOI - btcOI - ethOI;
 
+    const fetchedAt = new Date().toISOString();
+    const meta = buildCoinGeckoResponseMeta({
+      endpointFamily: 'DERIVATIVES',
+      lastUpdated: fetchedAt,
+      maxAgeMs: CACHE_DURATION * 1000,
+    });
+
     const result = {
       total: {
         openInterest: totalOI,
@@ -104,10 +128,12 @@ export async function GET(req: NextRequest) {
         change24h: ethData.change24h,
       } : null,
       coins: oiData.sort((a, b) => b.openInterest - a.openInterest),
-      source: 'coingecko',
+      source: meta.provider,
       exchange: 'Aggregated (Multiple Exchanges)',
-      timestamp: new Date().toISOString(),
-      cachedAt: new Date().toISOString(),
+      timestamp: meta.lastUpdated,
+      cachedAt: meta.lastUpdated,
+      freshnessStatus: meta.freshnessStatus,
+      meta,
     };
 
     cache = { data: result, timestamp: Date.now() };
@@ -118,10 +144,20 @@ export async function GET(req: NextRequest) {
 
     // Return cached data if available
     if (cache) {
+      const meta = buildCoinGeckoResponseMeta({
+        endpointFamily: 'DERIVATIVES',
+        lastUpdated: cache.data?.meta?.lastUpdated ?? new Date(cache.timestamp).toISOString(),
+        maxAgeMs: CACHE_DURATION * 1000,
+        fallbackUsed: true,
+      });
       return NextResponse.json({
         ...cache.data,
         stale: true,
         error: 'Using cached data due to API error',
+        timestamp: meta.lastUpdated,
+        source: meta.provider,
+        freshnessStatus: meta.freshnessStatus,
+        meta,
       });
     }
 

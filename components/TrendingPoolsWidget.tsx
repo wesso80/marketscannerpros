@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import CryptoDataStatus from '@/components/CryptoDataStatus';
 
 interface TrendingPool {
   id: string;
@@ -22,6 +23,7 @@ export default function TrendingPoolsWidget() {
   const [pools, setPools] = useState<TrendingPool[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [meta, setMeta] = useState<{ source?: string; freshnessStatus?: string; lastUpdated?: string | null }>({});
 
   useEffect(() => {
     async function fetchPools() {
@@ -31,6 +33,11 @@ export default function TrendingPoolsWidget() {
         const data = await res.json();
         if (data.success) {
           setPools(data.pools || []);
+          setMeta({
+            source: data.source ?? data.meta?.provider,
+            freshnessStatus: data.freshnessStatus ?? data.meta?.freshnessStatus,
+            lastUpdated: data.meta?.lastUpdated ?? data.timestamp ?? null,
+          });
           setError(null);
         } else {
           throw new Error(data.error);
@@ -121,7 +128,9 @@ export default function TrendingPoolsWidget() {
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
-        marginBottom: '16px'
+        marginBottom: '16px',
+        gap: '8px',
+        flexWrap: 'wrap'
       }}>
         <h3 style={{ 
           color: '#f1f5f9', 
@@ -134,16 +143,23 @@ export default function TrendingPoolsWidget() {
         }}>
           🌊 Trending DEX Pools
         </h3>
-        <span style={{
-          fontSize: '10px',
-          color: '#9945ff',
-          background: 'rgba(153, 69, 255, 0.15)',
-          padding: '4px 8px',
-          borderRadius: '4px',
-          border: '1px solid rgba(153, 69, 255, 0.3)'
-        }}>
-          GeckoTerminal
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <span style={{
+            fontSize: '10px',
+            color: '#9945ff',
+            background: 'rgba(153, 69, 255, 0.15)',
+            padding: '4px 8px',
+            borderRadius: '4px',
+            border: '1px solid rgba(153, 69, 255, 0.3)'
+          }}>
+            GeckoTerminal
+          </span>
+          <CryptoDataStatus
+            source={meta.source}
+            freshnessStatus={meta.freshnessStatus}
+            lastUpdated={meta.lastUpdated}
+          />
+        </div>
       </div>
 
       {/* Pools List */}

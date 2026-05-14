@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import CryptoDataStatus from '@/components/CryptoDataStatus';
 
 interface CoinOI {
   symbol: string;
@@ -53,6 +54,7 @@ export default function OpenInterestWidget({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showTooltip, setShowTooltip] = useState(false);
+  const [meta, setMeta] = useState<{ source?: string; freshnessStatus?: string; lastUpdated?: string | null }>({});
 
   const tooltipText = `Open Interest (OI) = Total value of all open futures contracts.
 
@@ -81,6 +83,11 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
             }
           } else {
             setData(result);
+            setMeta({
+              source: result.source ?? result.meta?.provider,
+              freshnessStatus: result.freshnessStatus ?? result.meta?.freshnessStatus,
+              lastUpdated: result.meta?.lastUpdated ?? result.timestamp ?? null,
+            });
             setLoading(false);
           }
         })
@@ -215,6 +222,11 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
                   ?
                 </button>
               </div>
+              <CryptoDataStatus
+                source={meta.source}
+                freshnessStatus={meta.freshnessStatus}
+                lastUpdated={meta.lastUpdated}
+              />
               <div className="flex items-center gap-2">
                 <span className="font-bold text-white">
                   {data.total.formatted}
@@ -265,10 +277,19 @@ High Alt dominance = Risk-on sentiment, altseason potential.`;
   // Full version
   return (
     <div className={`bg-slate-800/50 rounded-xl p-6 border border-slate-700 ${className}`}>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-          📊 Global Open Interest
-        </h3>
+      <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+        <div>
+          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+            📊 Global Open Interest
+          </h3>
+          <div className="mt-2">
+            <CryptoDataStatus
+              source={meta.source}
+              freshnessStatus={meta.freshnessStatus}
+              lastUpdated={meta.lastUpdated}
+            />
+          </div>
+        </div>
         <div className="flex items-center gap-2">
           {data.stale && (
             <span className="text-xs text-amber-400 bg-amber-400/10 px-2 py-1 rounded">

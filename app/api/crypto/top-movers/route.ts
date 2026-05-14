@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTopGainersLosers } from '@/lib/coingecko';
+import { buildCoinGeckoResponseMeta, getTopGainersLosers } from '@/lib/coingecko';
 import { getSessionFromCookie } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -56,12 +56,17 @@ export async function GET(request: NextRequest) {
       rank: coin.market_cap_rank ?? 0,
     }));
 
+    const meta = buildCoinGeckoResponseMeta({ endpointFamily: 'MARKETS', lastUpdated: new Date().toISOString(), maxAgeMs: 300_000 });
+
     return NextResponse.json({
       success: true,
       duration,
       gainers,
       losers,
-      timestamp: new Date().toISOString(),
+      timestamp: meta.lastUpdated,
+      source: meta.provider,
+      freshnessStatus: meta.freshnessStatus,
+      meta,
     });
 
   } catch (error) {

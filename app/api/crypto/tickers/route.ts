@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { getCoinTickers, COINGECKO_ID_MAP, resolveSymbolToId } from '@/lib/coingecko';
+import { buildCoinGeckoResponseMeta, getCoinTickers, COINGECKO_ID_MAP, resolveSymbolToId } from '@/lib/coingecko';
 
 /**
  * /api/crypto/tickers?symbol=BTC  or  ?id=bitcoin
@@ -63,6 +63,13 @@ export async function GET(req: NextRequest) {
       )
     : tickers[0] || null;
 
+  const lastUpdated = tickers.reduce<string | null>((latest, ticker) => {
+    if (!ticker.lastTraded) return latest;
+    if (!latest) return ticker.lastTraded;
+    return new Date(ticker.lastTraded).getTime() > new Date(latest).getTime() ? ticker.lastTraded : latest;
+  }, null);
+  const meta = buildCoinGeckoResponseMeta({ endpointFamily: 'TICKERS', lastUpdated, maxAgeMs: 300_000 });
+
   return NextResponse.json({
     coinId,
     count: tickers.length,
@@ -73,5 +80,9 @@ export async function GET(req: NextRequest) {
       tradeUrl: bestExchange.tradeUrl,
     } : null,
     tickers,
+    source: meta.provider,
+    freshnessStatus: meta.freshnessStatus,
+    timestamp: meta.lastUpdated,
+    meta,
   });
 }

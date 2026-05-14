@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
-import { getExchangeRates, getSimplePrices } from '@/lib/coingecko';
+import { buildCoinGeckoResponseMeta, getExchangeRates, getSimplePrices } from '@/lib/coingecko';
 
 /**
  * /api/crypto/exchange-rates?symbols=BTC,ETH&currencies=aud,eur,gbp,jpy
@@ -54,6 +54,9 @@ export async function GET(req: NextRequest) {
     btcUsd,
     currencies: fiatRates,
     availableFiat,
+    source: 'coingecko',
+    freshnessStatus: buildCoinGeckoResponseMeta({ endpointFamily: 'GENERAL', lastUpdated: new Date().toISOString(), maxAgeMs: 300_000 }).freshnessStatus,
     timestamp: new Date().toISOString(),
+    meta: buildCoinGeckoResponseMeta({ endpointFamily: 'GENERAL', lastUpdated: new Date().toISOString(), maxAgeMs: 300_000 }),
   });
 }

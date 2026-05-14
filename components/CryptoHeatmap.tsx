@@ -38,6 +38,7 @@ export default function CryptoHeatmap() {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
   const [dataSource, setDataSource] = useState('CoinGecko');
+  const [freshnessStatus, setFreshnessStatus] = useState<'fresh' | 'delayed' | 'stale' | 'unknown'>('unknown');
   const [hoveredCrypto, setHoveredCrypto] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'weight' | 'change'>('weight');
 
@@ -54,9 +55,16 @@ export default function CryptoHeatmap() {
       const data = await res.json();
       setCryptos(data.cryptos);
       setDefi(data.defi ?? null);
-      setLastUpdate(data.timestamp);
+      setLastUpdate(data.meta?.lastUpdated ?? data.timestamp ?? null);
       if (typeof data.source === 'string' && data.source.trim()) {
         setDataSource(data.source.toLowerCase() === 'coingecko' ? 'CoinGecko' : data.source);
+      }
+      if (typeof data.meta?.freshnessStatus === 'string') {
+        setFreshnessStatus(data.meta.freshnessStatus);
+      } else if (typeof data.freshnessStatus === 'string') {
+        setFreshnessStatus(data.freshnessStatus);
+      } else {
+        setFreshnessStatus('unknown');
       }
       setError(null);
     } catch (err) {
@@ -179,6 +187,20 @@ export default function CryptoHeatmap() {
   const sortedByChange = [...cryptos].sort((a, b) => b.changePercent - a.changePercent);
   const bestPerformer = sortedByChange[0];
   const worstPerformer = sortedByChange[sortedByChange.length - 1];
+  const freshnessTone = freshnessStatus === 'fresh'
+    ? 'text-emerald-400'
+    : freshnessStatus === 'delayed'
+      ? 'text-amber-400'
+      : freshnessStatus === 'stale'
+        ? 'text-red-400'
+        : 'text-slate-500';
+  const freshnessLabel = freshnessStatus === 'fresh'
+    ? 'Fresh'
+    : freshnessStatus === 'delayed'
+      ? 'Delayed'
+      : freshnessStatus === 'stale'
+        ? 'Stale'
+        : 'Unknown freshness';
 
   return (
     <div className="bg-slate-800/50 rounded-xl border border-slate-700 overflow-hidden">
@@ -402,9 +424,12 @@ export default function CryptoHeatmap() {
               Last updated: {new Date(lastUpdate).toLocaleTimeString()}
             </p>
           )}
-          <span className="text-xs text-slate-500">
-            Data by {dataSource}
-          </span>
+          <div className="flex items-center gap-3 text-xs">
+            <span className={freshnessTone}>{freshnessLabel}</span>
+            <span className="text-slate-500">
+              Data by {dataSource}
+            </span>
+          </div>
         </div>
       </div>
 

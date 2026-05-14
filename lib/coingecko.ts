@@ -22,6 +22,10 @@ const getWebSocketUrl = () => process.env.COINGECKO_WS_URL || '';
 
 // Circuit breaker — trips after repeated non-429 failures (500s, timeouts)
 import { coinGeckoCircuit } from '@/lib/circuitBreaker';
+import {
+  recordProviderFailure,
+  recordProviderSuccess,
+} from '@/lib/admin/providerTelemetry';
 
 // Request headers with API key
 const getHeaders = (): HeadersInit => {
@@ -61,6 +65,82 @@ class CoinGeckoProviderError extends Error {
     super(message);
     this.name = 'CoinGeckoProviderError';
   }
+}
+
+export type CoinGeckoFreshnessStatus = 'fresh' | 'delayed' | 'stale' | 'unknown';
+
+export interface CoinGeckoResponseMeta {
+  provider: 'coingecko';
+  sourceAttribution: 'CoinGecko API';
+  planMode: 'pro' | 'public';
+  endpointFamily: string;
+  lastUpdated: string | null;
+  freshnessStatus: CoinGeckoFreshnessStatus;
+  stale: boolean;
+  fallbackUsed: boolean;
+  simulationUsed: false;
+}
+
+function getCoinGeckoEndpointFamily(path: string): string {
+  if (path.startsWith('/coins/markets')) return 'MARKETS';
+  if (path.startsWith('/simple/price')) return 'PRICE';
+  if (path.startsWith('/derivatives')) return 'DERIVATIVES';
+  if (path.startsWith('/coins/categories')) return 'CATEGORIES';
+  if (path.startsWith('/global/decentralized_finance_defi')) return 'DEFI';
+  if (path.startsWith('/global/market_cap_chart')) return 'GLOBAL_CHART';
+  if (path.startsWith('/global')) return 'GLOBAL';
+  if (path.startsWith('/search')) return 'SEARCH';
+  if (path.includes('/ohlc')) return 'OHLC';
+  if (path.includes('/market_chart')) return 'MARKET_CHART';
+  if (path.includes('/tickers')) return 'TICKERS';
+  if (path.startsWith('/onchain/')) return 'ONCHAIN';
+  return 'GENERAL';
+}
+
+function normalizeMetaTimestamp(value?: string | number | Date | null): string | null {
+  if (value == null) return null;
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value.toISOString();
+  if (typeof value === 'number') {
+    const millis = value > 1_000_000_000_000 ? value : value * 1000;
+    const date = new Date(millis);
+    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+export function getCoinGeckoFreshnessStatus(
+  lastUpdated?: string | number | Date | null,
+  maxAgeMs = 5 * 60 * 1000,
+): CoinGeckoFreshnessStatus {
+  const normalized = normalizeMetaTimestamp(lastUpdated);
+  if (!normalized) return 'unknown';
+
+  const ageMs = Date.now() - new Date(normalized).getTime();
+  if (ageMs <= maxAgeMs) return 'fresh';
+  if (ageMs <= maxAgeMs * 3) return 'delayed';
+  return 'stale';
+}
+
+export function buildCoinGeckoResponseMeta(options: {
+  endpointFamily: string;
+  lastUpdated?: string | number | Date | null;
+  maxAgeMs?: number;
+  fallbackUsed?: boolean;
+}): CoinGeckoResponseMeta {
+  const lastUpdated = normalizeMetaTimestamp(options.lastUpdated ?? null);
+  const freshnessStatus = getCoinGeckoFreshnessStatus(lastUpdated, options.maxAgeMs);
+  return {
+    provider: 'coingecko',
+    sourceAttribution: 'CoinGecko API',
+    planMode: getApiKey() ? 'pro' : 'public',
+    endpointFamily: options.endpointFamily,
+    lastUpdated,
+    freshnessStatus,
+    stale: freshnessStatus === 'stale',
+    fallbackUsed: Boolean(options.fallbackUsed),
+    simulationUsed: false,
+  };
 }
 
 function sleep(ms: number): Promise<void> {
@@ -141,6 +221,7 @@ async function cgFetch<T>(
   const cooldownKey = getCooldownKey(path, options?.params);
   const retries = options?.retries ?? 3;
   const timeoutMs = options?.timeoutMs ?? 12_000;
+  const endpointFamily = getCoinGeckoEndpointFamily(path);
 
   const cooledDown = providerErrorCooldown.get(cooldownKey);
   if (cooledDown && cooledDown.expiresAt > Date.now()) {
@@ -151,6 +232,7 @@ async function cgFetch<T>(
   const execute = async (remainingRetries: number): Promise<T> => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    const startedAt = Date.now();
 
     try {
       const response = await coinGeckoCircuit.call(() => fetch(url, {
@@ -163,6 +245,7 @@ async function cgFetch<T>(
       }));
 
       if (response.status === 429) {
+        recordProviderFailure('COINGECKO', endpointFamily, 'RATE_LIMIT', Date.now() - startedAt);
         const retryAfterSeconds = Number(response.headers.get('retry-after') || '0');
         const jitterMs = Math.floor(Math.random() * 250);
         const backoffMs = retryAfterSeconds > 0
@@ -197,6 +280,7 @@ async function cgFetch<T>(
           response.status >= 500,
         );
         if (isNonRetryableCoinGeckoError(providerCode)) {
+          recordProviderFailure('COINGECKO', endpointFamily, 'UNAVAILABLE', Date.now() - startedAt);
           providerErrorCooldown.set(cooldownKey, {
             error: statusError,
             expiresAt: Date.now() + ERROR_COOLDOWN_TTL_MS,
@@ -204,13 +288,16 @@ async function cgFetch<T>(
           throw statusError;
         }
         if (response.status >= 500 && remainingRetries > 0) {
+          recordProviderFailure('COINGECKO', endpointFamily, 'ERROR', Date.now() - startedAt);
           const jitterMs = Math.floor(Math.random() * 250);
           await sleep((4 - remainingRetries) * 500 + jitterMs);
           return execute(remainingRetries - 1);
         }
+        recordProviderFailure('COINGECKO', endpointFamily, 'ERROR', Date.now() - startedAt);
         throw statusError;
       }
 
+      recordProviderSuccess('COINGECKO', endpointFamily, Date.now() - startedAt);
       return (await response.json()) as T;
     } catch (error) {
       if (remainingRetries > 0) {
@@ -222,11 +309,24 @@ async function cgFetch<T>(
           message.includes('ECONNRESET') ||
           message.includes('ETIMEDOUT');
         if (retryable) {
+          recordProviderFailure(
+            'COINGECKO',
+            endpointFamily,
+            message.includes('aborted') || message.includes('ETIMEDOUT') ? 'TIMEOUT' : 'ERROR',
+            Date.now() - startedAt,
+          );
           const jitterMs = Math.floor(Math.random() * 250);
           await sleep((4 - remainingRetries) * 500 + jitterMs);
           return execute(remainingRetries - 1);
         }
       }
+      const message = error instanceof Error ? error.message : String(error);
+      recordProviderFailure(
+        'COINGECKO',
+        endpointFamily,
+        message.includes('aborted') || message.includes('ETIMEDOUT') ? 'TIMEOUT' : 'ERROR',
+        Date.now() - startedAt,
+      );
       throw error;
     } finally {
       clearTimeout(timeout);

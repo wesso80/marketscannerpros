@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import {
+  buildCoinGeckoResponseMeta,
   COINGECKO_ID_MAP,
   getOHLC,
   getAggregatedFundingRates,
@@ -111,7 +112,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Coin not found' }, { status: 404 });
     }
     console.log('[CryptoDetail] Success:', coinIdParam, coinDetail.name);
-    return NextResponse.json(coinDetail);
+    const meta = buildCoinGeckoResponseMeta({
+      endpointFamily: 'GENERAL',
+      lastUpdated: coinDetail.market_data?.last_updated ?? null,
+      maxAgeMs: 300_000,
+    });
+    return NextResponse.json({ ...coinDetail, source: meta.provider, freshnessStatus: meta.freshnessStatus, timestamp: meta.lastUpdated, meta });
   }
   
   // Protected routes require auth
@@ -129,7 +135,8 @@ export async function GET(req: NextRequest) {
       name: c.name,
       thumb: c.thumb,
     }));
-    return NextResponse.json({ coins });
+    const meta = buildCoinGeckoResponseMeta({ endpointFamily: 'SEARCH', lastUpdated: new Date().toISOString(), maxAgeMs: 300_000 });
+    return NextResponse.json({ coins, source: meta.provider, freshnessStatus: meta.freshnessStatus, timestamp: meta.lastUpdated, meta });
   }
   
   // Get comprehensive coin detail
@@ -171,6 +178,12 @@ export async function GET(req: NextRequest) {
     }
     
     // Structure comprehensive response
+    const meta = buildCoinGeckoResponseMeta({
+      endpointFamily: fundingRates || openInterest ? 'DERIVATIVES' : 'GENERAL',
+      lastUpdated: coinDetail.market_data?.last_updated ?? null,
+      maxAgeMs: 300_000,
+    });
+
     return NextResponse.json({
       coin: {
         id: coinDetail.id,
@@ -262,6 +275,10 @@ export async function GET(req: NextRequest) {
         volume_24h: openInterest?.avgVolume24h,
       } : null,
       last_updated: coinDetail.market_data?.last_updated,
+      source: meta.provider,
+      freshnessStatus: meta.freshnessStatus,
+      timestamp: meta.lastUpdated,
+      meta,
     });
   }
   

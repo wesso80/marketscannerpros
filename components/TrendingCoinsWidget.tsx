@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import CryptoDataStatus from '@/components/CryptoDataStatus';
 
 interface TrendingCoin {
   id: string;
@@ -25,6 +26,7 @@ export default function TrendingCoinsWidget() {
   const [categories, setCategories] = useState<TrendingCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [meta, setMeta] = useState<{ source?: string; freshnessStatus?: string; lastUpdated?: string | null }>({});
 
   useEffect(() => {
     async function fetchTrending() {
@@ -35,6 +37,11 @@ export default function TrendingCoinsWidget() {
         if (data.success) {
           setCoins(data.coins || []);
           setCategories(data.categories || []);
+          setMeta({
+            source: data.source ?? data.meta?.provider,
+            freshnessStatus: data.freshnessStatus ?? data.meta?.freshnessStatus,
+            lastUpdated: data.meta?.lastUpdated ?? data.timestamp ?? null,
+          });
         } else {
           throw new Error(data.error);
         }
@@ -103,7 +110,9 @@ export default function TrendingCoinsWidget() {
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
-        marginBottom: '16px'
+        marginBottom: '16px',
+        gap: '8px',
+        flexWrap: 'wrap'
       }}>
         <h3 style={{ 
           color: '#f1f5f9', 
@@ -116,15 +125,22 @@ export default function TrendingCoinsWidget() {
         }}>
           🔥 Trending Now
         </h3>
-        <span style={{
-          fontSize: '11px',
-          color: '#64748b',
-          background: '#0f172a',
-          padding: '4px 8px',
-          borderRadius: '4px'
-        }}>
-          Last 24h
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <span style={{
+            fontSize: '11px',
+            color: '#64748b',
+            background: '#0f172a',
+            padding: '4px 8px',
+            borderRadius: '4px'
+          }}>
+            Last 24h
+          </span>
+          <CryptoDataStatus
+            source={meta.source}
+            freshnessStatus={meta.freshnessStatus}
+            lastUpdated={meta.lastUpdated}
+          />
+        </div>
       </div>
 
       {/* Coins List */}

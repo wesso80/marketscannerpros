@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import CryptoDataStatus from '@/components/CryptoDataStatus';
 
 interface Category {
   id: string;
@@ -16,6 +17,7 @@ export default function CategoryHeatmapWidget() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'marketCap' | 'change24h'>('marketCap');
+  const [meta, setMeta] = useState<{ source?: string; freshnessStatus?: string; lastUpdated?: string | null }>({});
 
   useEffect(() => {
     async function fetchCategories() {
@@ -25,6 +27,11 @@ export default function CategoryHeatmapWidget() {
         const data = await res.json();
         if (data.success) {
           setCategories(data.highlighted || []);
+          setMeta({
+            source: data.source ?? data.meta?.provider,
+            freshnessStatus: data.freshnessStatus ?? data.meta?.freshnessStatus,
+            lastUpdated: data.meta?.lastUpdated ?? data.timestamp ?? null,
+          });
           setError(null);
         } else {
           throw new Error(data.error);
@@ -144,8 +151,10 @@ export default function CategoryHeatmapWidget() {
       <div style={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
-        alignItems: 'center',        flexWrap: 'wrap',
-        gap: '8px',        marginBottom: '16px'
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '8px',
+        marginBottom: '16px'
       }}>
         <h3 style={{ 
           color: '#f1f5f9', 
@@ -158,17 +167,24 @@ export default function CategoryHeatmapWidget() {
         }}>
           📊 Sector Performance
         </h3>
-        <div style={{
-          fontSize: '11px',
-          padding: '4px 10px',
-          borderRadius: '12px',
-          fontWeight: 600,
-          background: marketSentiment === 'RISK ON' ? 'rgba(16, 185, 129, 0.2)' : 
-                      marketSentiment === 'RISK OFF' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(100, 116, 139, 0.2)',
-          color: marketSentiment === 'RISK ON' ? '#10b981' : 
-                 marketSentiment === 'RISK OFF' ? '#ef4444' : '#94a3b8'
-        }}>
-          {marketSentiment}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <div style={{
+            fontSize: '11px',
+            padding: '4px 10px',
+            borderRadius: '12px',
+            fontWeight: 600,
+            background: marketSentiment === 'RISK ON' ? 'rgba(16, 185, 129, 0.2)' : 
+                        marketSentiment === 'RISK OFF' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(100, 116, 139, 0.2)',
+            color: marketSentiment === 'RISK ON' ? '#10b981' : 
+                   marketSentiment === 'RISK OFF' ? '#ef4444' : '#94a3b8'
+          }}>
+            {marketSentiment}
+          </div>
+          <CryptoDataStatus
+            source={meta.source}
+            freshnessStatus={meta.freshnessStatus}
+            lastUpdated={meta.lastUpdated}
+          />
         </div>
       </div>
 

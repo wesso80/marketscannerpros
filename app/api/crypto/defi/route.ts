@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDefiData } from '@/lib/coingecko';
+import { buildCoinGeckoResponseMeta, getDefiData } from '@/lib/coingecko';
 import { getSessionFromCookie } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -12,12 +12,15 @@ export async function GET() {
   }
 
   try {
+    const fetchedAt = new Date().toISOString();
     const defi = await getDefiData();
     
     if (!defi) {
+      const meta = buildCoinGeckoResponseMeta({ endpointFamily: 'DEFI', lastUpdated: fetchedAt, maxAgeMs: 300_000 });
       return NextResponse.json({ 
         success: false, 
-        error: 'No DeFi data available' 
+        error: 'No DeFi data available',
+        meta,
       }, { status: 500 });
     }
 
@@ -27,6 +30,8 @@ export async function GET() {
     const tradingVolume = parseFloat(defi.trading_volume_24h);
     const defiDominance = parseFloat(defi.defi_dominance);
     const defiToEthRatio = parseFloat(defi.defi_to_eth_ratio);
+
+    const meta = buildCoinGeckoResponseMeta({ endpointFamily: 'DEFI', lastUpdated: fetchedAt, maxAgeMs: 300_000 });
 
     return NextResponse.json({
       success: true,
@@ -42,7 +47,10 @@ export async function GET() {
         topCoin: defi.top_coin_name,
         topCoinDominance: defi.top_coin_defi_dominance,
       },
-      timestamp: new Date().toISOString(),
+      timestamp: meta.lastUpdated,
+      source: meta.provider,
+      freshnessStatus: meta.freshnessStatus,
+      meta,
     });
 
   } catch (error) {

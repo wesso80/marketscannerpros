@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getCoinCategories } from '@/lib/coingecko';
+import { buildCoinGeckoResponseMeta, getCoinCategories } from '@/lib/coingecko';
 import { getSessionFromCookie } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -13,11 +13,22 @@ export async function GET() {
 
   try {
     const categories = await getCoinCategories();
+    const upstreamUpdatedAt = categories?.reduce<string | null>((latest, cat) => {
+      if (!cat.updated_at) return latest;
+      if (!latest) return cat.updated_at;
+      return new Date(cat.updated_at).getTime() > new Date(latest).getTime() ? cat.updated_at : latest;
+    }, null);
     
     if (!categories?.length) {
+      const meta = buildCoinGeckoResponseMeta({
+        endpointFamily: 'CATEGORIES',
+        lastUpdated: upstreamUpdatedAt,
+        maxAgeMs: 300_000,
+      });
       return NextResponse.json({ 
         success: false, 
-        error: 'No category data available' 
+        error: 'No category data available',
+        meta,
       }, { status: 500 });
     }
 
@@ -41,11 +52,20 @@ export async function GET() {
       keySectors.some(key => cat.id.includes(key))
     );
 
+    const meta = buildCoinGeckoResponseMeta({
+      endpointFamily: 'CATEGORIES',
+      lastUpdated: upstreamUpdatedAt,
+      maxAgeMs: 300_000,
+    });
+
     return NextResponse.json({
       success: true,
       categories: formatted,
       highlighted: highlighted.length > 0 ? highlighted : formatted.slice(0, 8),
-      timestamp: new Date().toISOString(),
+      timestamp: meta.lastUpdated,
+      source: meta.provider,
+      freshnessStatus: meta.freshnessStatus,
+      meta,
     });
 
   } catch (error) {

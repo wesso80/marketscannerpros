@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionFromCookie } from '@/lib/auth';
 import { hasProAccess } from '@/lib/entitlements';
-import { getAggregatedFundingRates } from '@/lib/coingecko';
+import { buildCoinGeckoResponseMeta, getAggregatedFundingRates } from '@/lib/coingecko';
 
 const CACHE_DURATION = 600;
 let cache: { data: any; timestamp: number } | null = null;
@@ -30,7 +30,19 @@ export async function GET(req: NextRequest) {
   }
 
   if (cache && Date.now() - cache.timestamp < CACHE_DURATION * 1000) {
-    return NextResponse.json(cache.data);
+    const meta = buildCoinGeckoResponseMeta({
+      endpointFamily: 'DERIVATIVES',
+      lastUpdated: cache.data?.meta?.lastUpdated ?? new Date(cache.timestamp).toISOString(),
+      maxAgeMs: CACHE_DURATION * 1000,
+      fallbackUsed: Boolean(cache.data?.meta?.fallbackUsed),
+    });
+    return NextResponse.json({
+      ...cache.data,
+      source: meta.provider,
+      freshnessStatus: meta.freshnessStatus,
+      timestamp: meta.lastUpdated,
+      meta,
+    });
   }
 
   try {
@@ -63,6 +75,13 @@ export async function GET(req: NextRequest) {
     else if (avgRatio < 0.8) sentiment = 'Bearish';
     else sentiment = 'Neutral';
 
+    const fetchedAt = new Date().toISOString();
+    const meta = buildCoinGeckoResponseMeta({
+      endpointFamily: 'DERIVATIVES',
+      lastUpdated: fetchedAt,
+      maxAgeMs: CACHE_DURATION * 1000,
+    });
+
     const result = {
       average: {
         longShortRatio: avgRatio.toFixed(2),
@@ -71,10 +90,12 @@ export async function GET(req: NextRequest) {
         sentiment,
       },
       coins: ratios.sort((a, b) => b.longShortRatio - a.longShortRatio),
-      source: 'coingecko',
+      source: meta.provider,
       exchange: 'CoinGecko Derivatives Aggregate',
       model: 'funding-rate-positioning-proxy',
-      timestamp: new Date().toISOString(),
+      timestamp: meta.lastUpdated,
+      freshnessStatus: meta.freshnessStatus,
+      meta,
     };
 
     cache = { data: result, timestamp: Date.now() };
@@ -83,7 +104,20 @@ export async function GET(req: NextRequest) {
     console.error('[L/S Ratio API] Error:', error);
 
     if (cache) {
-      return NextResponse.json({ ...cache.data, stale: true });
+      const meta = buildCoinGeckoResponseMeta({
+        endpointFamily: 'DERIVATIVES',
+        lastUpdated: cache.data?.meta?.lastUpdated ?? new Date(cache.timestamp).toISOString(),
+        maxAgeMs: CACHE_DURATION * 1000,
+        fallbackUsed: true,
+      });
+      return NextResponse.json({
+        ...cache.data,
+        stale: true,
+        source: meta.provider,
+        freshnessStatus: meta.freshnessStatus,
+        timestamp: meta.lastUpdated,
+        meta,
+      });
     }
 
     return NextResponse.json({ error: 'Failed to fetch L/S ratio' }, { status: 500 });
