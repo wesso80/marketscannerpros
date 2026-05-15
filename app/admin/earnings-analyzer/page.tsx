@@ -236,6 +236,20 @@ export default function EarningsAnalyzerPage() {
           </div>
         )}
 
+        {resp && !note && (
+          <div style={{ background: "#1E293B", border: "1px solid #F59E0B", borderRadius: 8, padding: 16, marginBottom: 16, fontSize: 13, color: "#E2E8F0" }}>
+            <div style={{ color: "#FBBF24", fontWeight: 700, marginBottom: 8 }}>Note not produced — diagnostic snapshot</div>
+            <div style={{ marginBottom: 4 }}><strong>AI error:</strong> {resp.data.aiError ?? "none"}</div>
+            <div style={{ marginBottom: 4 }}><strong>Confidence:</strong> {resp.meta.confidence} — {resp.meta.confidenceReason}</div>
+            <div style={{ marginBottom: 4 }}><strong>Freshness:</strong> {resp.meta.freshness} · <strong>Source:</strong> {resp.meta.source}</div>
+            <div style={{ marginBottom: 8 }}><strong>Missing fields:</strong> {resp.meta.missingFields.join(" · ") || "none"}</div>
+            <details style={{ marginTop: 8 }}>
+              <summary style={{ cursor: "pointer", color: "#94A3B8" }}>Raw snapshot (click to expand)</summary>
+              <pre style={{ marginTop: 8, padding: 8, background: "#0F172A", borderRadius: 6, fontSize: 11, overflow: "auto", maxHeight: 400 }}>{JSON.stringify(resp.data.snapshot, null, 2)}</pre>
+            </details>
+          </div>
+        )}
+
         {note && resp && (
           <>
             {/* Decision Summary header strip */}

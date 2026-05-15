@@ -14,6 +14,8 @@
  * NEVER hides a quota / 429 / network failure — surfaces it explicitly.
  */
 
+import { fetchWithTimeout } from "./fetchWithTimeout";
+
 const AV_BASE = "https://www.alphavantage.co/query";
 
 export interface FundamentalsBundle {
@@ -46,7 +48,7 @@ async function avCall<T = unknown>({
 }> {
   const url = `${AV_BASE}?function=${encodeURIComponent(fn)}&symbol=${encodeURIComponent(symbol)}&apikey=${encodeURIComponent(apiKey)}`;
   try {
-    const res = await fetch(url, { cache: "no-store" });
+    const res = await fetchWithTimeout(url, { cache: "no-store" }, 25000);
     if (!res.ok) {
       return { status: "error", body: null, error: `HTTP ${res.status}` };
     }

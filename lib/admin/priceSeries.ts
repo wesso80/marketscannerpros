@@ -10,6 +10,8 @@
  * that field is null and added to missingFields.
  */
 
+import { fetchWithTimeout } from "./fetchWithTimeout";
+
 const AV_BASE = "https://www.alphavantage.co/query";
 
 export interface OhlcBar {
@@ -133,7 +135,7 @@ export async function fetchDailyOhlcv(symbol: string): Promise<{
   }
   const url = `${AV_BASE}?function=TIME_SERIES_DAILY&symbol=${encodeURIComponent(symbol)}&outputsize=full&apikey=${encodeURIComponent(apiKey)}`;
   try {
-    const res = await fetch(url, { cache: "no-store" });
+    const res = await fetchWithTimeout(url, { cache: "no-store" }, 25000);
     if (!res.ok) {
       return { status: "error", bars: [], error: `HTTP ${res.status}` };
     }

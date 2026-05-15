@@ -10,6 +10,7 @@
  */
 
 import { fetchDailyOhlcv, type OhlcBar } from "./priceSeries";
+import { fetchWithTimeout } from "./fetchWithTimeout";
 
 const AV_BASE = "https://www.alphavantage.co/query";
 
@@ -196,7 +197,7 @@ interface OverviewResult {
 async function fetchOverview(symbol: string, apiKey: string): Promise<OverviewResult> {
   try {
     const url = `${AV_BASE}?function=OVERVIEW&symbol=${encodeURIComponent(symbol)}&apikey=${encodeURIComponent(apiKey)}`;
-    const r = await fetch(url, { cache: "no-store" });
+    const r = await fetchWithTimeout(url, { cache: "no-store" }, 25000);
     if (!r.ok) return { status: "error", body: null, error: `HTTP ${r.status}` };
     const j = (await r.json()) as Record<string, unknown>;
     if (typeof j["Note"] === "string" || typeof j["Information"] === "string") {
