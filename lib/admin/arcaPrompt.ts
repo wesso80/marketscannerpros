@@ -108,6 +108,8 @@ export function buildArcaUserPrompt(mode: ArcaAdminMode, ctx: ArcaAdminContext):
     WHAT_CHANGED_SINCE_LAST_SCAN: "Compare current vs PREVIOUS_SCAN. Identify the largest axis movements and whether they strengthen or weaken the thesis.",
     WHY_IS_THIS_RANKED: "Explain why this symbol is ranked where it is using trust-adjusted score, dominant axis, and penalties.",
     WHAT_AM_I_MISSING: "List missing evidence and the next highest-value research checks before escalation.",
+    DESK_READ:
+      "Act as the chief desk officer. Produce a tight desk read covering: best current idea (research-grade headline only), biggest trap, what changed since prior scan, what to ignore as noise, what needs confirmation before escalation, what would invalidate the thesis, and the setup age (early|active|late|dead). Use ONLY packet + brain evidence. No execution language.",
   };
 
   return `${header}${compare}${prev}${brain}\n\nTASK: ${taskByMode[mode]}\n\nRespond with the strict JSON object only.`;

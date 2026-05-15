@@ -67,6 +67,7 @@ const MODE_LABELS: Record<AdminMode, string> = {
   "strategy-lab": "Strategy Lab",
   "alert-command": "Alert Command",
   "truth-layer": "Truth Layer",
+  "post-trade-review": "Post-Trade Review",
 };
 
 export function AdminModeSwitcher({ compact = false }: { compact?: boolean }) {

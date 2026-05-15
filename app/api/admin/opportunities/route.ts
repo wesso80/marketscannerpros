@@ -10,10 +10,14 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/adminAuth";
+import { getSessionFromCookie } from "@/lib/auth";
 import type { Market } from "@/types/operator";
 import { wrapTruth } from "@/lib/admin";
 import type { AdminOpportunityRow } from "@/lib/admin/adminTypes";
 import { getAdminResearchPacketsForSymbols } from "@/lib/admin/getAdminResearchPacket";
+import { projectEdgePacket, type AdminEdgePacket } from "@/lib/admin/edgePacket";
+import { syncQueueFromPacket } from "@/lib/admin/queueStore";
+import { detectChangeTapeEvents, persistChangeTapeEvents } from "@/lib/admin/changeTape";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,6 +30,7 @@ export async function GET(req: NextRequest) {
   if (!(await requireAdmin(req)).ok) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
+  const session = await getSessionFromCookie();
 
   try {
     const { searchParams } = new URL(req.url);
@@ -39,10 +44,35 @@ export async function GET(req: NextRequest) {
         : DEFAULT_CRYPTO;
 
     if (symbols.length === 0) {
-      return NextResponse.json({ rows: [], errors: [], timestamp: new Date().toISOString() });
+      return NextResponse.json({ rows: [], edgePackets: [], errors: [], timestamp: new Date().toISOString() });
     }
     const packets = await getAdminResearchPacketsForSymbols({ symbols, market, timeframe });
-    const rows: AdminOpportunityRow[] = packets.map((packet) => ({
+
+    // Project to canonical AdminEdgePacket[] (Admin Edge Layer contract).
+    const edgePackets: AdminEdgePacket[] = packets.map((p) => projectEdgePacket(p));
+
+    // Rank by opportunityRankScore descending; pin do-nothing/IGNORE to bottom.
+    edgePackets.sort((a, b) => {
+      const aOut = a.adminState === "IGNORE" ? 1 : 0;
+      const bOut = b.adminState === "IGNORE" ? 1 : 0;
+      if (aOut !== bOut) return aOut - bOut;
+      return b.opportunityRankScore - a.opportunityRankScore;
+    });
+    edgePackets.forEach((p, i) => { p.opportunityRank = i + 1; });
+
+    // Side-effects: sync queue state + emit change-tape events. Best-effort.
+    if (session?.workspaceId) {
+      const ws = session.workspaceId;
+      await Promise.allSettled(edgePackets.map((p) => syncQueueFromPacket({ workspaceId: ws, packet: p })));
+      const allEvents = await Promise.all(
+        packets.map((p) => detectChangeTapeEvents({ workspaceId: ws, packet: p }).catch(() => [])),
+      );
+      const flat = allEvents.flat();
+      if (flat.length) await persistChangeTapeEvents(flat).catch(() => 0);
+    }
+
+    // Legacy AdminOpportunityRow[] retained for components that still consume it.
+    const rows: AdminOpportunityRow[] = packets.map((packet, idx) => ({
       rank: 0,
       symbol: packet.symbol,
       market: packet.market,
@@ -53,9 +83,9 @@ export async function GET(req: NextRequest) {
       dataTruth: packet.dataTruth,
       changeSinceLastScan: 0,
       alertState: packet.alertEligibility.eligible ? "PENDING" : "SUPPRESSED",
-    }));
+      _edgeRank: edgePackets[idx]?.opportunityRank,
+    }) as AdminOpportunityRow & { _edgeRank?: number });
 
-    // Rank: highest score first; DATA_DEGRADED rows pinned to bottom
     rows.sort((a, b) => {
       const aDegraded = a.score.lifecycle === "DATA_DEGRADED" ? 1 : 0;
       const bDegraded = b.score.lifecycle === "DATA_DEGRADED" ? 1 : 0;
@@ -66,6 +96,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       rows,
+      edgePackets,
       errors: [],
       timestamp: new Date().toISOString(),
       meta: {
@@ -74,7 +105,7 @@ export async function GET(req: NextRequest) {
         market,
         timeframe,
       },
-      truth: wrapTruth({ rows }, { source: 'admin:operator-engine', freshness: 'real-time' }),
+      truth: wrapTruth({ rows, edgePackets }, { source: 'admin:operator-engine', freshness: 'real-time' }),
     });
   } catch (err) {
     return NextResponse.json(
