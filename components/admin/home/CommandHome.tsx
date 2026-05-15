@@ -668,6 +668,9 @@ export default function CommandHome() {
           <Link href="/admin/equity-research" style={navLink}>
             Equity Research
           </Link>
+          <Link href="/admin/earnings-analyzer" style={navLink}>
+            Earnings
+          </Link>
           <Link href="/admin/system" style={navLink}>
             System
           </Link>
