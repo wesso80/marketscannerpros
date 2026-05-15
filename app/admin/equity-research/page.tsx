@@ -40,6 +40,13 @@ interface ResearchNote {
     bullTarget: number | null;
     bearTarget: number | null;
   };
+  recommendedAction: {
+    action: "accumulate" | "initiate" | "add" | "hold" | "trim" | "exit" | "avoid" | "short";
+    sizing: string;
+    timeHorizon: string;
+    triggerCondition: string;
+    rationale: string;
+  };
   opportunityScore: number;
   evidenceQualityScore: number;
   personalExposureFlag: ExposureFlag;
@@ -301,6 +308,24 @@ function ResearchNoteView({
       </section>
 
       {/* Note body */}
+      <Card title="Recommended Action (operator-grade · system does not execute)">
+        <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 8 }}>
+          <span style={{
+            fontSize: 22,
+            fontWeight: 800,
+            color: actionColor(note.recommendedAction.action),
+          }}>
+            {note.recommendedAction.action.toUpperCase()}
+          </span>
+          <span style={{ fontSize: 12, color: "#9CA3AF" }}>
+            horizon: {note.recommendedAction.timeHorizon}
+          </span>
+        </div>
+        <KV k="Sizing" v={note.recommendedAction.sizing} />
+        <KV k="Trigger" v={note.recommendedAction.triggerCondition} />
+        <p style={paraStyle}>{note.recommendedAction.rationale}</p>
+      </Card>
+
       <Card title="Business Model">
         <p style={paraStyle}>{note.businessModel}</p>
       </Card>
@@ -490,6 +515,12 @@ function Pillar({ label, v }: { label: string; v: number }) {
 
 function fmtTarget(n: number | null): string {
   return n == null ? "n/a" : `$${n.toFixed(2)}`;
+}
+
+function actionColor(a: string): string {
+  if (["accumulate", "initiate", "add"].includes(a)) return "#10B981";
+  if (["trim", "exit", "avoid", "short"].includes(a)) return "#EF4444";
+  return "#F59E0B";
 }
 
 const navLink: React.CSSProperties = {

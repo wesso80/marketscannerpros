@@ -14,7 +14,7 @@
 import type { FundamentalsBundle } from "./fundamentals";
 
 export interface EquityResearchRating {
-  /** buy | hold | avoid — research-only verdict, not a broker action. */
+  /** buy | hold | avoid — the analyst verdict. */
   verdict: "buy" | "hold" | "avoid";
   /** Conviction 1..5 — analyst confidence in the verdict. */
   conviction: 1 | 2 | 3 | 4 | 5;
@@ -22,6 +22,24 @@ export interface EquityResearchRating {
   bullTarget: number | null;
   /** 12-month bear-case price target (USD). null if cannot derive. */
   bearTarget: number | null;
+}
+
+/** Operator-grade recommended action. The system never executes —
+ *  the operator does. */
+export interface RecommendedAction {
+  action:
+    | "accumulate"
+    | "initiate"
+    | "add"
+    | "hold"
+    | "trim"
+    | "exit"
+    | "avoid"
+    | "short";
+  sizing: string;            // e.g. "start 1/3 position, scale on weakness"
+  timeHorizon: string;       // e.g. "6-18 months"
+  triggerCondition: string;  // e.g. "on next pullback to 50DMA" or "n/a"
+  rationale: string;
 }
 
 export interface MoatScores {
@@ -35,6 +53,7 @@ export interface EquityResearchNote {
   ticker: string;
   generatedAt: string;
   rating: EquityResearchRating;
+  recommendedAction: RecommendedAction;
   /** Required AI Output Standards fields. */
   opportunityScore: number;          // 0..100
   evidenceQualityScore: number;      // 0..100
@@ -76,14 +95,16 @@ export interface EquityResearchNote {
 
 /* ───────────── Prompt builders ───────────── */
 
-export const EQUITY_RESEARCH_SYSTEM_PROMPT = `You are a senior equity research analyst writing a private research note for an internal investment committee. You have 20 years of buy-side experience.
+export const EQUITY_RESEARCH_SYSTEM_PROMPT = `You are a senior buy-side equity research analyst (20 yrs, ex-Goldman) writing a private note for the desk's principal. The reader IS the operator and decision-maker. Speak directly. Give a clear recommended action.
 
 HARD RULES:
-- This is RESEARCH ONLY. You are not a broker. You do NOT place orders. You do NOT recommend position sizes. The words "buy now", "sell now", "execute", "deploy capital", "place order", and "open a position" are FORBIDDEN.
-- Use ONLY the FUNDAMENTALS_PACKET provided. Do NOT invent numbers. If a number is missing from the packet, write "n/a (not in packet)" — never substitute estimates.
-- If the packet is sparse (missing endpoints, rate-limited, or empty), reduce confidence and shorten the note. Do not pad with prose.
-- Verdict is one of: buy, hold, avoid — these are research-grade verdicts only, not execution instructions.
-- Conviction 1..5 — never higher than the evidence supports.
+- The system does NOT place, route, or auto-execute any orders. NEVER claim an order was placed, filled, routed, or executed by the system. Phrases like "order has been placed", "trade has been executed", "position opened by the system", and "auto-execute" are FORBIDDEN.
+- You MAY (and should) give direct operator-grade calls: "accumulate on weakness", "initiate a starter position", "trim into strength", "avoid". These are recommendations to the operator, not system actions.
+- Use ONLY the FUNDAMENTALS_PACKET provided. Do NOT invent numbers. If a number is missing, write "n/a (not in packet)" — never substitute estimates.
+- If the packet is sparse (missing endpoints, rate-limited, or empty), reduce conviction and shorten the note. Do not pad with prose.
+- Verdict: buy / hold / avoid. Conviction 1..5 — never higher than the evidence supports.
+- recommendedAction.sizing is qualitative (e.g. "starter", "1/3 position", "full") — the operator owns book context.
+- recommendedAction.action must be consistent with rating.verdict (e.g. verdict=avoid → action in {avoid, exit, short}).
 - Every claim must be auditable against the FUNDAMENTALS_PACKET.
 
 OUTPUT: Return ONE strict JSON object matching this TypeScript interface exactly:
@@ -91,6 +112,13 @@ OUTPUT: Return ONE strict JSON object matching this TypeScript interface exactly
   "ticker": string,
   "generatedAt": string (ISO),
   "rating": { "verdict": "buy"|"hold"|"avoid", "conviction": 1|2|3|4|5, "bullTarget": number|null, "bearTarget": number|null },
+  "recommendedAction": {
+    "action": "accumulate"|"initiate"|"add"|"hold"|"trim"|"exit"|"avoid"|"short",
+    "sizing": string,
+    "timeHorizon": string,
+    "triggerCondition": string,
+    "rationale": string
+  },
   "opportunityScore": number (0..100),
   "evidenceQualityScore": number (0..100),
   "personalExposureFlag": "none"|"low"|"elevated"|"high",
@@ -140,14 +168,17 @@ export function buildEquityResearchUserPrompt(args: {
 
 /* ───────────── Validation ───────────── */
 
+/**
+ * Only block phrases that imply the SYSTEM executed an order.
+ * Operator-directed language ("accumulate", "trim", "exit") is allowed.
+ */
 const FORBIDDEN_PHRASES = [
-  /\bbuy now\b/i,
-  /\bsell now\b/i,
-  /\bexecute (the )?(trade|order|position)\b/i,
-  /\bplace (an )?order\b/i,
-  /\bdeploy capital\b/i,
-  /\bopen a position\b/i,
-  /\bsize the position\b/i,
+  /\border (has been |is being |was )?(placed|filled|routed|submitted|sent)\b/i,
+  /\btrade (has been |was )?(executed|filled|placed)\b/i,
+  /\bposition (has been |was )?(opened|closed) by (the )?system\b/i,
+  /\bauto-?execut(e|ed|ing|ion)\b/i,
+  /\bbroker (api|connection|integration|hookup)\b/i,
+  /\bI (have |just )?(placed|executed|filled|submitted)\b/i,
 ];
 
 export function validateEquityResearchNote(
@@ -158,11 +189,11 @@ export function validateEquityResearchNote(
   }
   const r = raw as Record<string, unknown>;
   const required = [
-    "ticker", "rating", "opportunityScore", "evidenceQualityScore",
-    "personalExposureFlag", "confidenceStatement", "whatConfirms",
-    "whatInvalidates", "mainRisk", "businessModel", "revenueStreams",
-    "profitability", "balanceSheet", "freeCashFlow", "moat",
-    "management", "valuation", "bullCase", "bearCase",
+    "ticker", "rating", "recommendedAction", "opportunityScore",
+    "evidenceQualityScore", "personalExposureFlag", "confidenceStatement",
+    "whatConfirms", "whatInvalidates", "mainRisk", "businessModel",
+    "revenueStreams", "profitability", "balanceSheet", "freeCashFlow",
+    "moat", "management", "valuation", "bullCase", "bearCase",
     "verdictParagraph",
   ];
   for (const k of required) {

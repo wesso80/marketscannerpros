@@ -1,10 +1,11 @@
 /**
  * Morgan Stanley–style technical analysis note schema + prompt.
  *
- * Boundary: research-only. No order, no execution language. Price
- * levels (entry, stop, targets) are ANALYTICAL price levels — they
- * are NOT instructions to trade. The schema includes a hard-required
- * disclaimer field; the validator rejects any forbidden phrasing.
+ * Boundary: this is a private operator desktop. The system itself
+ * never places, routes, or auto-executes orders — that is the only
+ * hard rule. The note speaks operator-grade: explicit entry/stop/
+ * targets, sizing in R-multiples, and a recommendedAction verb. The
+ * operator decides whether to act.
  */
 
 export interface TechnicalNote {
@@ -22,6 +23,22 @@ export interface TechnicalNote {
     target2: number | null;
     riskRewardRatio: string;     // e.g. "1:2.4"
     timeframe: string;           // e.g. "swing 2-6 weeks"
+  };
+
+  /** Operator-grade recommended action. */
+  recommendedAction: {
+    action:
+      | "enter-long"
+      | "enter-short"
+      | "add"
+      | "trim"
+      | "exit"
+      | "stand-aside"
+      | "hold";
+    sizing: string;            // e.g. "1.0R initial, add 0.5R on confirmation"
+    urgency: "now" | "on-trigger" | "patient" | "n/a";
+    triggerCondition: string;  // e.g. "break $X on >1.5x avg volume" or "n/a"
+    rationale: string;
   };
 
   /** Required AI Output Standards. */
@@ -58,19 +75,19 @@ export interface TechnicalNote {
 }
 
 export const TECHNICAL_NOTE_DISCLAIMER =
-  "Price levels in this note are analytical references derived from chart structure, not orders. Operator must independently decide whether to act. No broker execution is implied.";
+  "Operator-grade technical note for private desktop research. The system does not place, route, or auto-execute orders — all actions remain operator-driven.";
 
-export const TECHNICAL_NOTE_SYSTEM_PROMPT = `You are a senior technical strategist producing a private chart-pattern note for an internal trading desk. You have 20 years of experience.
+export const TECHNICAL_NOTE_SYSTEM_PROMPT = `You are a senior technical strategist (20 yrs experience) writing a private operator-grade chart note for the desk's principal trader. The reader IS the operator. Speak directly. Give a clear trade plan.
 
 HARD RULES:
-- This is RESEARCH ONLY. You are not a broker. You do NOT place orders. You do NOT recommend position sizes.
-- The phrases "buy now", "sell now", "execute the trade", "place an order", "deploy capital", "open a position", and "size the position" are FORBIDDEN.
-- Levels (entry, stop, target1, target2) are ANALYTICAL chart levels derived from support/resistance/Fibonacci, NOT instructions to trade.
-- Use ONLY the TECHNICAL_PACKET provided. Do NOT invent indicator values.
-- If a value is missing in the packet, write "n/a (not in packet)" and lower confidence.
+- The system does NOT place, route, or auto-execute any orders. NEVER claim an order was placed, filled, routed, or executed by the system. Phrases like "order has been placed", "trade has been executed", "position opened by the system", and "auto-execute" are FORBIDDEN.
+- You MAY (and should) give direct operator-grade calls: "enter long at $X", "cut if it breaks $Y", "trim half at $Z", "size at 1R", "stand aside". These are recommendations to the operator, not system actions.
+- Use ONLY the TECHNICAL_PACKET provided. Do NOT invent indicator values. If a value is missing, write "n/a (not in packet)" and lower confidence.
 - Risk-reward must be computed from the levels you choose, not asserted.
 - Setup quality 1..5 — never higher than the evidence supports. If indicators conflict, cap at 2.
-- Bias must align with at least 2 of: trend, MACD, price-vs-200SMA. If they conflict, bias=neutral.
+- Bias must align with at least 2 of: trend, MACD, price-vs-200SMA. If they conflict, bias=neutral and recommendedAction.action="stand-aside".
+- recommendedAction.sizing is in R-multiples (1R = the dollar risk between entry and stop). Never give absolute % portfolio sizing — the operator owns book context.
+- recommendedAction.urgency: "now" only if price is at the entry level AND triggers are confirmed; otherwise "on-trigger" or "patient".
 
 OUTPUT: Return ONE strict JSON object matching this TypeScript interface exactly:
 {
@@ -86,6 +103,13 @@ OUTPUT: Return ONE strict JSON object matching this TypeScript interface exactly
     "target2": number|null,
     "riskRewardRatio": string,
     "timeframe": string
+  },
+  "recommendedAction": {
+    "action": "enter-long"|"enter-short"|"add"|"trim"|"exit"|"stand-aside"|"hold",
+    "sizing": string,
+    "urgency": "now"|"on-trigger"|"patient"|"n/a",
+    "triggerCondition": string,
+    "rationale": string
   },
   "opportunityScore": number (0..100),
   "evidenceQualityScore": number (0..100),
@@ -134,14 +158,17 @@ export function buildTechnicalUserPrompt(args: {
   return lines.join("\n");
 }
 
+/**
+ * Only block phrases that imply the SYSTEM executed an order.
+ * Operator-directed language ("enter long", "exit", "size at 1R") is allowed.
+ */
 const FORBIDDEN = [
-  /\bbuy now\b/i,
-  /\bsell now\b/i,
-  /\bexecute (the )?(trade|order|position)\b/i,
-  /\bplace (an )?order\b/i,
-  /\bdeploy capital\b/i,
-  /\bopen a position\b/i,
-  /\bsize the position\b/i,
+  /\border (has been |is being |was )?(placed|filled|routed|submitted|sent)\b/i,
+  /\btrade (has been |was )?(executed|filled|placed)\b/i,
+  /\bposition (has been |was )?(opened|closed) by (the )?system\b/i,
+  /\bauto-?execut(e|ed|ing|ion)\b/i,
+  /\bbroker (api|connection|integration|hookup)\b/i,
+  /\bI (have |just )?(placed|executed|filled|submitted)\b/i,
 ];
 
 export function validateTechnicalNote(
@@ -152,11 +179,11 @@ export function validateTechnicalNote(
   }
   const r = raw as Record<string, unknown>;
   const required = [
-    "ticker", "tradePlanSummary", "opportunityScore", "evidenceQualityScore",
-    "personalExposureFlag", "confidenceStatement", "whatConfirms",
-    "whatInvalidates", "mainRisk", "trendAnalysis", "supportResistance",
-    "movingAverages", "rsi", "macd", "bbands", "volume", "fibonacci",
-    "chartPattern", "verdictParagraph",
+    "ticker", "tradePlanSummary", "recommendedAction", "opportunityScore",
+    "evidenceQualityScore", "personalExposureFlag", "confidenceStatement",
+    "whatConfirms", "whatInvalidates", "mainRisk", "trendAnalysis",
+    "supportResistance", "movingAverages", "rsi", "macd", "bbands",
+    "volume", "fibonacci", "chartPattern", "verdictParagraph",
   ];
   for (const k of required) {
     if (!(k in r)) return { ok: false, reason: `missing field: ${k}` };

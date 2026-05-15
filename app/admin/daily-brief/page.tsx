@@ -20,6 +20,13 @@ interface ResearchNote {
     bullTarget: number | null;
     bearTarget: number | null;
   };
+  recommendedAction: {
+    action: "accumulate" | "initiate" | "add" | "hold" | "trim" | "exit" | "avoid" | "short";
+    sizing: string;
+    timeHorizon: string;
+    triggerCondition: string;
+    rationale: string;
+  };
   opportunityScore: number;
   evidenceQualityScore: number;
   personalExposureFlag: ExposureFlag;
@@ -53,6 +60,13 @@ interface TechnicalNote {
     target2: number | null;
     riskRewardRatio: string;
     timeframe: string;
+  };
+  recommendedAction: {
+    action: "enter-long" | "enter-short" | "add" | "trim" | "exit" | "stand-aside" | "hold";
+    sizing: string;
+    urgency: "now" | "on-trigger" | "patient" | "n/a";
+    triggerCondition: string;
+    rationale: string;
   };
   opportunityScore: number;
   evidenceQualityScore: number;
@@ -272,6 +286,14 @@ function BriefView({ resp }: { resp: BriefResponse }) {
       {/* Trade plan summary (technical) */}
       {d.technicalNote ? <TradePlanCard note={d.technicalNote} /> : null}
 
+      {/* Operator-grade action recommendations */}
+      {d.technicalNote || d.fundamentalsNote ? (
+        <ActionRecommendationsCard
+          fundamental={d.fundamentalsNote}
+          technical={d.technicalNote}
+        />
+      ) : null}
+
       {/* Two-column main brief */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         <div style={{ display: "grid", gap: 16 }}>
@@ -292,6 +314,65 @@ function BriefView({ resp }: { resp: BriefResponse }) {
       </Card>
     </article>
   );
+}
+
+/* ───────── Action recommendations ───────── */
+
+function ActionRecommendationsCard({
+  fundamental,
+  technical,
+}: {
+  fundamental: ResearchNote | null;
+  technical: TechnicalNote | null;
+}) {
+  const fa = fundamental?.recommendedAction;
+  const ta = technical?.recommendedAction;
+  return (
+    <section style={{ padding: 14, background: "#0F172A", border: "1px solid #10B98155", borderRadius: 12 }}>
+      <div style={{ fontSize: 11, color: "#10B981", letterSpacing: 0.4, textTransform: "uppercase", marginBottom: 10 }}>
+        Recommended Action (operator-grade · system does not execute)
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        {fa ? (
+          <div style={actionBox}>
+            <div style={actionLbl}>Fundamental call</div>
+            <div style={{ ...actionVerb, color: actionColor(fa.action) }}>
+              {fa.action.replace("-", " ").toUpperCase()}
+            </div>
+            <KV k="Sizing" v={fa.sizing} />
+            <KV k="Horizon" v={fa.timeHorizon} />
+            <KV k="Trigger" v={fa.triggerCondition} />
+            <p style={{ ...para, marginTop: 6 }}>{fa.rationale}</p>
+          </div>
+        ) : (
+          <div style={{ ...actionBox, opacity: 0.5 }}>No fundamental call.</div>
+        )}
+        {ta ? (
+          <div style={actionBox}>
+            <div style={actionLbl}>Technical call</div>
+            <div style={{ ...actionVerb, color: actionColor(ta.action) }}>
+              {ta.action.replace("-", " ").toUpperCase()}
+              <span style={{ fontSize: 11, marginLeft: 8, color: "#9CA3AF", fontWeight: 500 }}>
+                urgency: {ta.urgency}
+              </span>
+            </div>
+            <KV k="Sizing (R)" v={ta.sizing} />
+            <KV k="Trigger" v={ta.triggerCondition} />
+            <p style={{ ...para, marginTop: 6 }}>{ta.rationale}</p>
+          </div>
+        ) : (
+          <div style={{ ...actionBox, opacity: 0.5 }}>No technical call.</div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function actionColor(a: string): string {
+  if (["accumulate", "initiate", "add", "enter-long"].includes(a)) return "#10B981";
+  if (["trim", "exit", "avoid", "short", "enter-short"].includes(a)) return "#EF4444";
+  if (["stand-aside"].includes(a)) return "#6B7280";
+  return "#F59E0B";
 }
 
 /* ───────── Trade plan ───────── */
@@ -538,3 +619,6 @@ const inp: React.CSSProperties = { padding: "8px 10px", background: "#0B1220", b
 const para: React.CSSProperties = { margin: "4px 0 0", fontSize: 13, color: "#E5E7EB", lineHeight: 1.55 };
 const ul: React.CSSProperties = { listStyle: "none", padding: 0, margin: "4px 0 0" };
 const li: React.CSSProperties = { padding: "3px 0", fontSize: 12, color: "#E5E7EB", borderBottom: "1px solid #1F2937" };
+const actionBox: React.CSSProperties = { background: "#0B1220", border: "1px solid #1F2937", borderRadius: 8, padding: 12 };
+const actionLbl: React.CSSProperties = { fontSize: 10, color: "#9CA3AF", textTransform: "uppercase", letterSpacing: 0.4 };
+const actionVerb: React.CSSProperties = { fontSize: 20, fontWeight: 800, margin: "4px 0 8px" };
