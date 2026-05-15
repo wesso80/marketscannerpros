@@ -31,7 +31,8 @@ export type ArcaAdminMode =
   | "OPTIONS_PRESSURE_BRIEF"
   | "WHAT_CHANGED_SINCE_LAST_SCAN"
   | "WHY_IS_THIS_RANKED"
-  | "WHAT_AM_I_MISSING";
+  | "WHAT_AM_I_MISSING"
+  | "DESK_READ";
 
 export const ARCA_ADMIN_MODES: readonly ArcaAdminMode[] = [
   "BEST_PLAYS",
@@ -45,6 +46,7 @@ export const ARCA_ADMIN_MODES: readonly ArcaAdminMode[] = [
   "WHAT_CHANGED_SINCE_LAST_SCAN",
   "WHY_IS_THIS_RANKED",
   "WHAT_AM_I_MISSING",
+  "DESK_READ",
 ] as const;
 
 export const ARCA_MODE_LABELS: Record<ArcaAdminMode, string> = {
@@ -59,7 +61,27 @@ export const ARCA_MODE_LABELS: Record<ArcaAdminMode, string> = {
   WHAT_CHANGED_SINCE_LAST_SCAN: "What Changed Since Last Scan",
   WHY_IS_THIS_RANKED: "Why Is This Ranked?",
   WHAT_AM_I_MISSING: "What Am I Missing?",
+  DESK_READ: "Desk Read",
 };
+
+/* ───────────── Desk Read schema ───────────── */
+
+export type SetupAge = "early" | "active" | "late" | "dead";
+
+/**
+ * Fixed-schema chief-analyst desk read. Rendered by the homepage
+ * <ArcaDeskReadPanel/>. Every field is research-only language.
+ */
+export interface ArcaDeskRead {
+  bestIdea: string | null;
+  biggestTrap: string | null;
+  whatChanged: string | null;
+  whatToIgnore: string | null;
+  whatNeedsConfirmation: string | null;
+  whatInvalidates: string | null;
+  setupAge: SetupAge;
+  classification: "ADMIN_RESEARCH_COPILOT_NOT_BROKER_EXECUTION";
+}
 
 /* ───────────── Context bound to the cockpit ───────────── */
 

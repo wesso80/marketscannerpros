@@ -1,0 +1,880 @@
+// This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
+// © MarketScanner Pros — MSP Operator Cockpit v1.1
+// Unified private operator indicator combining best logic from the full MSP pinescript suite.
+// PRIVATE / OPERATOR-GRADE: not for public distribution. Strips no diagnostics.
+//
+// v1.1 hardening:
+//   • Breakout readiness now includes directional pressure (full 100% weighting)
+//   • Chop split into soft (filter) vs hard (block) with multi-condition gating
+//   • Trap detection separated into 3 distinct states with multi-factor confirmation
+//   • Reversal logic requires sweep + reclaim + momentum flip + RSI cross + wick rejection
+//   • Dual scoring: bullScore vs bearScore — verdict picks the dominant qualified side
+//   • Macro: informational only with small ±3 bonus (when enabled), never forces direction
+//   • Master alert events: any GO, any WATCH, any warning, any verdict change
+//   • Diagnostic mode exposes bullScore, bearScore, baseScore, penalty, chop type
+//   • All HTF data uses lookahead_off + close[1]; signals fire on confirmed bar only
+//
+// Modules consolidated:
+//   1. Volatility Engine        — DVE_Complete       (BBWP, VHM, squeeze, regime, breakout readiness, exhaustion, trap)
+//   2. Directional Pressure     — Scanner_Score      (EMA stack, ADX/DMI bias, body/close pressure)
+//   3. HTF Confirmation         — Day_Trader_v2_AL   (close[1] + lookahead_off, EMA50/200 alignment, ADX)
+//   4. Structure                — Day_Trader_v2_AL   (FVG proxy, swing sweep, prior swing reference)
+//   5. Chop Filter              — Day_Trader_v2_AL   (ADX floor + EMA compression + ATR weakness)
+//   6. Momentum                 — Cypher_Momentum    (RSI/MACD/Stoch fused pulse + acceleration)
+//   7. Volume Participation     — Cypher_Intel       (vol ratio, absorption, exhaustion candle, vol-decline divergence)
+//   8. Macro / Cycle (optional) — Cypher_Macro       (BTC.D / DXY / USDT.D — BTC-only by default)
+//   9. Operator Dashboard       — Golden_Egg / DVE   (verdict-first table, A+/A/B/C/D grade)
+//  10. Alerts                   — Cypher_State       (transition-gated, ticker + TF + verdict + score)
+//
+// Key fixes vs source scripts:
+//   • Day_Trader_v2_AL.shortRevSignalRaw bug fixed (was blocking on bullContinuation, now bearContinuation)
+//   • All HTF security calls use close[1] + lookahead_off (no repaint)
+//   • Signals confirmed-bar only (barstate.isconfirmed)
+//   • Pre-computed table cell colors outside if blocks (Pine v6 parser-safe)
+//   • State accumulators use `var bool prev` (avoids nz(series bool) CE10123)
+//   • No tuple ternaries (avoids CE10163)
+//   • SRC freshness footer (data integrity rule)
+//   • hasVolume guard for FX/index symbols
+//   • warmup gate before signals fire
+
+//@version=6
+indicator("MSP — Operator Cockpit v1.1", shorttitle="MSP Cockpit", overlay=true,
+     max_labels_count=200, max_lines_count=50, max_bars_back=500)
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ INPUTS ░░░
+// ═══════════════════════════════════════════════════════════════
+
+grp_mode = "Display"
+uiMode    = input.string("Pro", "Mode", options=["Clean", "Pro", "Diagnostic"], group=grp_mode)
+tablePos  = input.string("top_right", "Table Position",
+     options=["top_right", "top_left", "bottom_right", "bottom_left", "middle_right"], group=grp_mode)
+showTable = input.bool(true,  "Show Operator Dashboard",  group=grp_mode)
+showBg    = input.bool(true,  "Show Verdict Background",   group=grp_mode)
+showEMAs  = input.bool(true,  "Show EMA Stack (Pro/Diag)", group=grp_mode)
+showSig   = input.bool(true,  "Show Signal Markers",        group=grp_mode)
+bgAlpha   = input.int(92, "Background Transparency", minval=80, maxval=100, group=grp_mode)
+
+isClean = uiMode == "Clean"
+isPro   = uiMode == "Pro"
+isDiag  = uiMode == "Diagnostic"
+
+grp_htf = "HTF Confirmation"
+useHTF      = input.bool(true,  "Use HTF Confirmation",                 group=grp_htf)
+htfTF       = input.timeframe("60", "HTF Timeframe",                     group=grp_htf)
+htfEmaFast  = input.int(50,     "HTF EMA Fast", minval=10, maxval=100,   group=grp_htf)
+htfEmaSlow  = input.int(200,    "HTF EMA Slow", minval=50, maxval=400,   group=grp_htf)
+
+grp_trend = "Trend / Structure"
+emaFastLen  = input.int(9,   "EMA Fast",   minval=3,  maxval=50,  group=grp_trend)
+emaMidLen   = input.int(21,  "EMA Mid",    minval=10, maxval=100, group=grp_trend)
+emaSlowLen  = input.int(50,  "EMA Slow",   minval=20, maxval=200, group=grp_trend)
+emaTrendLen = input.int(200, "EMA Trend",  minval=100, maxval=400, group=grp_trend)
+adxLen      = input.int(14,  "ADX Length", minval=7,  maxval=30,  group=grp_trend)
+
+grp_dve = "Volatility Engine (DVE)"
+bbLen          = input.int(20,    "BB Length",            minval=5,  maxval=50, group=grp_dve)
+bbStd          = input.float(2.0, "BB Std Mult",          minval=0.5, maxval=4.0, step=0.5, group=grp_dve)
+kcMult         = input.float(1.5, "KC ATR Mult",          minval=1.0, maxval=3.0, step=0.5, group=grp_dve)
+bbwpLookback   = input.int(252,   "BBWP Lookback",        minval=50, maxval=500, group=grp_dve)
+compThreshold  = input.float(15,  "Compression < %",      minval=5,  maxval=40, group=grp_dve)
+expThreshold   = input.float(80,  "Expansion > %",        minval=60, maxval=95, group=grp_dve)
+vhmLen         = input.int(5,     "VHM Smoothing",        minval=2,  maxval=20, group=grp_dve)
+
+grp_mom = "Momentum"
+rsiLen     = input.int(14, "RSI Length",   minval=5,  maxval=30, group=grp_mom)
+macdFast   = input.int(12, "MACD Fast",    minval=5,  maxval=20, group=grp_mom)
+macdSlow   = input.int(26, "MACD Slow",    minval=15, maxval=40, group=grp_mom)
+macdSig    = input.int(9,  "MACD Signal",  minval=3,  maxval=15, group=grp_mom)
+stochLen   = input.int(14, "Stoch Length", minval=5,  maxval=30, group=grp_mom)
+
+grp_vol = "Volume Participation"
+volSmaLen   = input.int(20,    "Volume SMA",         minval=5,  maxval=100, group=grp_vol)
+volHiMult   = input.float(1.5, "High Vol Multiplier", minval=1.1, maxval=4.0, step=0.1, group=grp_vol)
+volLoMult   = input.float(0.7, "Low Vol Multiplier",  minval=0.3, maxval=0.9, step=0.05, group=grp_vol)
+
+grp_struct = "Structure (FVG / Sweep)"
+fvgLookback = input.int(2,  "FVG Bars Back",      minval=1, maxval=5,   group=grp_struct)
+swingLen    = input.int(20, "Swing Lookback",     minval=5, maxval=100, group=grp_struct)
+
+grp_chop = "Chop Filter"
+chopAdxMin     = input.float(18, "Min ADX", minval=10, maxval=30, group=grp_chop)
+chopEmaSpread  = input.float(0.3, "Min EMA Spread (× ATR)", minval=0.1, maxval=2.0, step=0.1, group=grp_chop)
+chopAtrPctMin  = input.float(0.4, "Min ATR % of price", minval=0.1, maxval=2.0, step=0.1, group=grp_chop)
+
+grp_macro = "Macro (BTC-only optional)"
+useMacro    = input.bool(false, "Enable Macro Module",                 group=grp_macro)
+btcDomSym   = input.symbol("CRYPTOCAP:BTC.D",  "BTC.D Symbol",         group=grp_macro)
+dxySym      = input.symbol("TVC:DXY",          "DXY Symbol",            group=grp_macro)
+usdtDomSym  = input.symbol("CRYPTOCAP:USDT.D", "USDT.D Symbol",         group=grp_macro)
+macroMaLen  = input.int(50, "Macro MA Length", minval=10, maxval=200,    group=grp_macro)
+
+grp_score = "Scoring & Verdicts"
+goVerdictMin     = input.float(78, "GO Threshold",                  minval=60, maxval=95, group=grp_score)
+watchVerdictMin  = input.float(62, "WATCH Threshold",               minval=45, maxval=80, group=grp_score)
+minScoreForSig   = input.float(60, "Min Score for Signal Markers",  minval=0,  maxval=95, group=grp_score)
+requireVerdictOk = input.bool(true, "Suppress markers when verdict = WAIT/AVOID/NO TRADE", group=grp_score)
+warmupBars       = input.int(220,  "Warmup Bars",                    minval=50, maxval=500, group=grp_score)
+
+grp_alerts = "Alerts"
+alertOnConfirm = input.bool(true, "Fire alerts only on confirmed bar", group=grp_alerts)
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ HELPERS ░░░
+// ═══════════════════════════════════════════════════════════════
+
+clamp(v, lo, hi) => math.max(lo, math.min(hi, v))
+
+// Percentile rank — count of bars with width <= current
+countBelowF(src, length) =>
+    cnt = 0
+    for i = 1 to length
+        cnt += src[i] <= src ? 1 : 0
+    cnt
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ CORE SERIES ░░░
+// ═══════════════════════════════════════════════════════════════
+
+emaFast  = ta.ema(close, emaFastLen)
+emaMid   = ta.ema(close, emaMidLen)
+emaSlow  = ta.ema(close, emaSlowLen)
+emaTrend = ta.ema(close, emaTrendLen)
+atrVal   = ta.atr(14)
+[diPlus, diMinus, adxVal] = ta.dmi(adxLen, adxLen)
+
+rsiVal = ta.rsi(close, rsiLen)
+[macdLine, macdSignal, macdHist] = ta.macd(close, macdFast, macdSlow, macdSig)
+stochK = ta.sma(ta.stoch(close, high, low, stochLen), 3)
+
+volSma   = ta.sma(volume, volSmaLen)
+hasVolume = nz(volSma) > 0
+volRatio = hasVolume and volSma > 0 ? volume / volSma : 1.0
+
+// Candle anatomy (used by trap, reversal, exhaustion logic)
+candleRange = high - low
+bodyAbs = math.abs(close - open)
+bodyPct = candleRange > 0 ? bodyAbs / candleRange * 100.0 : 0.0
+upperWick = high - math.max(close, open)
+lowerWick = math.min(close, open) - low
+upperWickPct = candleRange > 0 ? upperWick / candleRange * 100.0 : 0.0
+lowerWickPct = candleRange > 0 ? lowerWick / candleRange * 100.0 : 0.0
+
+confirmedBar = barstate.isconfirmed
+warmupOK = bar_index > warmupBars
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ MODULE 1 — VOLATILITY ENGINE (DVE) ░░░
+// ═══════════════════════════════════════════════════════════════
+
+bbBasis = ta.sma(close, bbLen)
+bbDev   = ta.stdev(close, bbLen) * bbStd
+bbUpper = bbBasis + bbDev
+bbLower = bbBasis - bbDev
+bbWidth = bbBasis != 0 ? (bbUpper - bbLower) / bbBasis : 0.0
+
+kcBasis = ta.sma(close, bbLen)
+kcRange = ta.atr(bbLen) * kcMult
+kcUpper = kcBasis + kcRange
+kcLower = kcBasis - kcRange
+
+// BBWP percentile rank (0-100)
+bbwpRaw = bbwpLookback > 0 ? countBelowF(bbWidth, bbwpLookback) / bbwpLookback * 100.0 : 50.0
+bbwp = clamp(bbwpRaw, 0.0, 100.0)
+bbwpRoc = bbwp - nz(bbwp[1])
+vhm = ta.sma(bbwpRoc, vhmLen)
+vhmAccel = vhm - nz(vhm[1])
+
+// Squeeze (BB inside KC)
+inSqueeze = bbLower > kcLower and bbUpper < kcUpper
+squeezeFire = not inSqueeze and inSqueeze[1]   // rising-edge release
+
+// Squeeze countdown — bars consecutively in squeeze (resets when not in squeeze)
+var int squeezeBars = 0
+squeezeBars := inSqueeze ? squeezeBars + 1 : 0
+
+// Regime: 1=COMPRESSION 2=NEUTRAL 3=EXPANSION 4=CLIMAX 5=TRANSITION
+regime = bbwp < compThreshold ? 1 :
+     bbwp > 95 ? 4 :
+     bbwp > expThreshold ? 3 :
+     math.abs(vhm) > 5 ? 5 : 2
+regimeLabel = regime == 1 ? "COMPRESS" :
+     regime == 2 ? "NEUTRAL" :
+     regime == 3 ? "EXPAND" :
+     regime == 4 ? "CLIMAX" : "TRANSITION"
+
+volStateLabel = inSqueeze ? "SQUEEZE" :
+     regime == 1 ? "COIL" :
+     regime == 3 ? "RELEASE" :
+     regime == 4 ? "OVEREXTENDED" :
+     regime == 5 ? "TRANSITION" : "NEUTRAL"
+
+// Compression depth (deeper = stronger spring): 100 - bbwp when in compression
+compDepth = bbwp < compThreshold ? 100.0 - bbwp : 0.0
+
+// Persistence (how many recent bars in compression — capped at 30)
+persistBars = 0
+for i = 0 to 29
+    persistBars += bbwp[i] < compThreshold ? 1 : 0
+
+// Breakout readiness (DVE weighted, 0-100) — v1.1 includes directional pressure
+// brDir is computed AFTER dirScore is available (placeholder here, finalized below)
+
+// Exhaustion score (0-100)
+exhRsiHi = rsiVal > 78
+exhRsiLo = rsiVal < 22
+exhBbwpHi = bbwp > 85
+exhAdxHi  = adxVal > 35
+exhVhmDn  = vhm < 0
+exhScore = (exhBbwpHi ? 30.0 : 0.0) + (exhRsiHi or exhRsiLo ? 25.0 : 0.0) +
+     (exhAdxHi and exhVhmDn ? 25.0 : 0.0) + (exhVhmDn ? 20.0 : 0.0)
+exhausted = exhScore >= 60
+
+// Trap state — v1.1 upgraded detection moved to dedicated module after directional/volume modules.
+// Only the exhaustion-candidate flag is computed here (uses Module 1 internals).
+exhCandidate = exhausted
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ MODULE 2 — DIRECTIONAL PRESSURE ░░░
+// ═══════════════════════════════════════════════════════════════
+
+dirRaw = 0.0
+dirRaw += close > emaFast  ? 8 : close < emaFast  ? -8 : 0
+dirRaw += emaFast > emaMid ? 7 : emaFast < emaMid ? -7 : 0
+dirRaw += emaMid > emaSlow ? 7 : emaMid < emaSlow ? -7 : 0
+dirRaw += diPlus > diMinus ? 5 : -5
+dirRaw += close > open      ? 3 : close < open ? -3 : 0
+// Range: ±30. Map to 0-100 with 50 center
+dirScore = clamp(50.0 + (dirRaw / 30.0) * 50.0, 0, 100)
+dirBias = dirScore >= 60 ? 1 : dirScore <= 40 ? -1 : 0
+biasLabel = dirBias == 1 ? "BULL" : dirBias == -1 ? "BEAR" : "NEUTRAL"
+
+// Now finalize breakoutReadiness with directional pressure component (sums to 100%)
+brComp    = clamp(compDepth / 100.0 * 100.0, 0, 100)
+brPersist = clamp(persistBars / 30.0 * 100.0, 0, 100)
+brVhm     = clamp(50.0 + vhmAccel * 5.0, 0, 100)
+brSqz     = inSqueeze ? 100.0 : (squeezeFire ? 80.0 : 0.0)
+brDir     = clamp(math.abs(dirScore - 50.0) * 2.0, 0, 100)
+breakoutReadiness = brComp * 0.30 + brPersist * 0.20 + brVhm * 0.20 + brSqz * 0.15 + brDir * 0.15
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ MODULE 3 — HTF CONFIRMATION (no-repaint) ░░░
+// ═══════════════════════════════════════════════════════════════
+
+// Single-call tuple via udf — flat 5-element tuple (Pine v6 disallows nested tuples
+// AND disallows ternaries returning tuples — so we always call request.security and
+// gate the *use* of its outputs with `useHTF` downstream).
+htfPack() =>
+    [diP_, diM_, adx_] = ta.dmi(adxLen, adxLen)
+    htfDirBias = diP_ > diM_ ? 1.0 : -1.0
+    [ta.ema(close[1], htfEmaFast), ta.ema(close[1], htfEmaSlow), close[1], htfDirBias]
+
+[htfFast, htfSlow, htfClose, htfDirBiasS] =
+     request.security(syminfo.tickerid, htfTF, htfPack(), lookahead=barmerge.lookahead_off)
+
+htfBull = useHTF and not na(htfClose) ? (htfClose > htfFast and htfFast > htfSlow and htfDirBiasS > 0) : false
+htfBear = useHTF and not na(htfClose) ? (htfClose < htfFast and htfFast < htfSlow and htfDirBiasS < 0) : false
+htfState = not useHTF ? "OFF" : htfBull ? "BULL" : htfBear ? "BEAR" : "MIXED"
+htfConflict = useHTF and ((dirBias == 1 and htfBear) or (dirBias == -1 and htfBull))
+
+// HTF score — adds conviction when LTF aligns with HTF
+htfScore = not useHTF ? 50.0 :
+     (dirBias == 1 and htfBull) ? 90.0 :
+     (dirBias == -1 and htfBear) ? 90.0 :
+     htfConflict ? 15.0 :
+     50.0
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ MODULE 4 — STRUCTURE (FVG / SWEEP) ░░░
+// ═══════════════════════════════════════════════════════════════
+
+// FVG proxy: 3-bar gap. Bull FVG when low > high[2]; bear FVG when high < low[2]
+bullFvg = low > high[fvgLookback]
+bearFvg = high < low[fvgLookback]
+
+// Sweep proxy: prior swing low/high broken intrabar then reclaimed
+priorLow  = ta.lowest(low[1],  swingLen)
+priorHigh = ta.highest(high[1], swingLen)
+bullSweep = low < priorLow and close > priorLow
+bearSweep = high > priorHigh and close < priorHigh
+
+structScore = 50.0
+structScore += bullFvg ? 15.0 : 0.0
+structScore += bearFvg ? -15.0 : 0.0
+structScore += bullSweep ? 20.0 : 0.0
+structScore += bearSweep ? -20.0 : 0.0
+structScore := clamp(structScore, 0, 100)
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ MODULE 5 — CHOP FILTER (soft vs hard) ░░░
+// ═══════════════════════════════════════════════════════════════
+
+emaSpreadAtr = atrVal > 0 ? math.abs(emaFast - emaSlow) / atrVal : 0.0
+atrPct       = close > 0 ? atrVal / close * 100.0 : 0.0
+
+chopByAdx       = adxVal < chopAdxMin
+chopByEmaCompr  = emaSpreadAtr < chopEmaSpread
+chopByAtrWeak   = atrPct < chopAtrPctMin
+
+chopHits = (chopByAdx ? 1 : 0) + (chopByEmaCompr ? 1 : 0) + (chopByAtrWeak ? 1 : 0)
+
+// Soft chop — informational filter (any single chop condition)
+isSoftChop = chopHits >= 1
+
+// Squeeze/release escape valve: low ADX + compression CAN be a loaded breakout state.
+// Hard chop only when multiple dead-market conditions align AND there is no squeeze fire,
+// no volume expansion, and no strong directional pressure.
+squeezeContext   = inSqueeze or squeezeFire or regime == 1
+volExpansion     = hasVolume and volRatio >= volHiMult
+strongDirection  = math.abs(dirScore - 50.0) >= 20
+isHardChop = chopHits >= 2 and not squeezeContext and not volExpansion and not strongDirection
+
+// Exposed for dashboard
+chopType = isHardChop ? "HARD" : isSoftChop ? "SOFT" : "OFF"
+// Backwards-compat alias used by score/verdict gates
+isChop = isHardChop
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ MODULE 6 — MOMENTUM ░░░
+// ═══════════════════════════════════════════════════════════════
+
+momRaw = 0.0
+momRaw += rsiVal > 55 ? 5 : rsiVal < 45 ? -5 : 0
+macdHistAccel = macdHist - nz(macdHist[1])
+macdMomPts = macdHist > 0 and macdHistAccel > 0 ? 6 : macdHist > 0 ? 3 : macdHist < 0 and macdHistAccel < 0 ? -6 : macdHist < 0 ? -3 : 0
+momRaw += macdMomPts
+momRaw += stochK > 60 ? 4 : stochK < 40 ? -4 : 0
+// Range ±15
+momScore = clamp(50.0 + (momRaw / 15.0) * 50.0, 0, 100)
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ MODULE 7 — VOLUME PARTICIPATION ░░░
+// ═══════════════════════════════════════════════════════════════
+
+volPart = 50.0
+if hasVolume
+    volPart := volRatio > 2.0 ? 90.0 :
+         volRatio > volHiMult ? 75.0 :
+         volRatio < volLoMult ? 25.0 :
+         50.0
+
+// Exhaustion candle (Cypher_Intel pattern)
+bullExhaustCdl = hasVolume and rsiVal > 78 and upperWickPct > 60 and volRatio > 2.0
+bearExhaustCdl = hasVolume and rsiVal < 22 and lowerWickPct > 60 and volRatio > 2.0
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ MODULE 7B — TRAP DETECTION (v1.1 upgraded, multi-factor) ░░░
+// ═══════════════════════════════════════════════════════════════
+
+// High-volume rejection candle: heavy participation but small body + opposing wick
+highVolRejUp = hasVolume and volRatio >= volHiMult and bodyPct < 35.0 and upperWickPct >= 50.0
+highVolRejDn = hasVolume and volRatio >= volHiMult and bodyPct < 35.0 and lowerWickPct >= 50.0
+highVolRejection = highVolRejUp or highVolRejDn
+
+// Conflicted direction: candle direction disagrees with DMI bias
+conflictedDir = (diPlus > diMinus and close < open) or (diMinus > diPlus and close > open)
+
+// Failed follow-through after squeeze release: squeezeFire on prior bar, current bar reverses
+var bool squeezeFirePrev = false
+failedFollowThrough = squeezeFirePrev and ((close[1] > bbBasis[1] and close < open) or (close[1] < bbBasis[1] and close > open))
+if barstate.isconfirmed
+    squeezeFirePrev := squeezeFire
+
+// 1. Pre-release trap risk: requires multi-factor confirmation (≥4 of 8 conditions).
+// Single-factor compression with weak VHM is normal coil behaviour, not a trap.
+preTrapHits = 0
+preTrapHits += (inSqueeze or regime == 1) ? 1 : 0
+preTrapHits += adxVal < 18 ? 1 : 0
+preTrapHits += conflictedDir ? 1 : 0
+preTrapHits += vhm < 0 ? 1 : 0
+preTrapHits += hasVolume and volRatio < volLoMult ? 1 : 0
+preTrapHits += breakoutReadiness < 60 ? 1 : 0
+preTrapHits += failedFollowThrough ? 1 : 0
+preTrapHits += highVolRejection ? 1 : 0
+
+// Informational only — does NOT force TRAP RISK verdict
+compressionCaution = (inSqueeze or regime == 1) and adxVal < 22 and (vhm < 0 or conflictedDir)
+preReleaseTrap = preTrapHits >= 4
+
+// 2. Fakeout risk: squeeze just fired but with weak conviction OR rejection wick
+fakeoutRisk = (squeezeFire or squeezeFirePrev) and (adxVal < 20 or (hasVolume and volRatio < 1.0) or highVolRejection or failedFollowThrough)
+
+// 3. Exhaustion trap: exhausted regime + price rejection at extreme
+exhaustionTrap = (exhausted or bullExhaustCdl or bearExhaustCdl) and (highVolRejection or rsiVal > 80 or rsiVal < 20)
+
+// Confirmed release — the opposite of trap (used for color/label only)
+confirmedRelease = squeezeFire and adxVal >= 22 and (not hasVolume or volRatio >= 1.0) and not conflictedDir
+
+trapState = exhaustionTrap ? "EXHAUSTION TRAP" :
+     fakeoutRisk ? "FAKEOUT RISK" :
+     preReleaseTrap ? "PRE-RELEASE TRAP" :
+     compressionCaution ? "COMPRESSION CAUTION" :
+     confirmedRelease ? "CONFIRMED RELEASE" : "—"
+
+// Note: compressionCaution intentionally excluded from anyTrap so it does not block verdict
+anyTrap = exhaustionTrap or fakeoutRisk or preReleaseTrap
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ MODULE 8 — MACRO (optional, BTC-only by default) ░░░
+// ═══════════════════════════════════════════════════════════════
+
+isBtcSymbol = str.contains(str.upper(syminfo.ticker), "BTC")
+macroOn = useMacro and isBtcSymbol
+
+btcDClose  = macroOn ? request.security(btcDomSym,  "D", close[1], lookahead=barmerge.lookahead_off) : na
+btcDMa     = macroOn ? request.security(btcDomSym,  "D", ta.sma(close, macroMaLen)[1], lookahead=barmerge.lookahead_off) : na
+dxyClose   = macroOn ? request.security(dxySym,     "D", close[1], lookahead=barmerge.lookahead_off) : na
+dxyMa      = macroOn ? request.security(dxySym,     "D", ta.sma(close, macroMaLen)[1], lookahead=barmerge.lookahead_off) : na
+usdtDClose = macroOn ? request.security(usdtDomSym, "D", close[1], lookahead=barmerge.lookahead_off) : na
+usdtDMa    = macroOn ? request.security(usdtDomSym, "D", ta.sma(close, macroMaLen)[1], lookahead=barmerge.lookahead_off) : na
+
+macroBullPts = 0
+macroBearPts = 0
+if macroOn and not na(btcDClose) and not na(btcDMa)
+    if btcDClose < btcDMa
+        macroBullPts += 1
+    else
+        macroBearPts += 1
+if macroOn and not na(dxyClose) and not na(dxyMa)
+    if dxyClose < dxyMa
+        macroBullPts += 1
+    else
+        macroBearPts += 1
+if macroOn and not na(usdtDClose) and not na(usdtDMa)
+    if usdtDClose < usdtDMa
+        macroBullPts += 1
+    else
+        macroBearPts += 1
+
+macroState = not macroOn ? "OFF" :
+     macroBullPts >= 2 ? "RISK ON" :
+     macroBearPts >= 2 ? "RISK OFF" : "MIXED"
+macroBull = macroOn and macroBullPts >= 2
+macroBear = macroOn and macroBearPts >= 2
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ COMPOSITE SCORE — DUAL bull/bear (v1.1) ░░░
+// ═══════════════════════════════════════════════════════════════
+
+// Vol/comp component — direction-agnostic. Favors compression (spring) AND confirmed release.
+volCompScore = inSqueeze ? 85.0 :
+     regime == 1 ? 80.0 :
+     squeezeFire ? 78.0 :
+     regime == 3 ? 60.0 :
+     regime == 4 ? 25.0 :
+     50.0
+
+// Side-specific components
+bullDirScore = clamp((dirRaw + 30.0) / 60.0 * 100.0, 0, 100)
+bearDirScore = 100.0 - bullDirScore
+
+bullHtfScore = not useHTF ? 50.0 : htfBull ? 90.0 : htfBear ? 15.0 : 50.0
+bearHtfScore = not useHTF ? 50.0 : htfBear ? 90.0 : htfBull ? 15.0 : 50.0
+
+bullMomScore = momScore
+bearMomScore = 100.0 - momScore
+
+bullStructScore = clamp(50.0 + (bullFvg ? 15.0 : 0.0) + (bullSweep ? 20.0 : 0.0), 0, 100)
+bearStructScore = clamp(50.0 + (bearFvg ? 15.0 : 0.0) + (bearSweep ? 20.0 : 0.0), 0, 100)
+
+// Base scores per side (weights sum to 100)
+bullBase = volCompScore * 0.20 + breakoutReadiness * 0.15 + bullDirScore * 0.20 + bullHtfScore * 0.15 + bullMomScore * 0.10 + volPart * 0.10 + bullStructScore * 0.10
+bearBase = volCompScore * 0.20 + breakoutReadiness * 0.15 + bearDirScore * 0.20 + bearHtfScore * 0.15 + bearMomScore * 0.10 + volPart * 0.10 + bearStructScore * 0.10
+
+// Shared penalties (apply to both sides)
+softChopPen = isHardChop ? 15.0 : isSoftChop ? 5.0 : 0.0
+exhPen      = exhausted ? 10.0 : 0.0
+trapPen     = anyTrap ? 15.0 : 0.0
+volWeakPen  = hasVolume and volRatio < volLoMult ? 5.0 : 0.0
+penalty = softChopPen + exhPen + trapPen + volWeakPen
+
+// Side-specific HTF conflict penalty (only the side fighting HTF gets penalised)
+bullHtfPen = useHTF and htfBear ? 10.0 : 0.0
+bearHtfPen = useHTF and htfBull ? 10.0 : 0.0
+
+// Macro: informational small bonus only (±3), never forces direction
+bullMacroBonus = macroBull ? 3.0 : macroBear ? -3.0 : 0.0
+bearMacroBonus = macroBear ? 3.0 : macroBull ? -3.0 : 0.0
+
+bullScore = clamp(bullBase - penalty - bullHtfPen + bullMacroBonus, 0, 100)
+bearScore = clamp(bearBase - penalty - bearHtfPen + bearMacroBonus, 0, 100)
+
+// Dominant qualified side
+dominantSide = bullScore >= bearScore ? 1 : -1
+finalScore = math.max(bullScore, bearScore)
+
+// Legacy aggregate baseScore (diagnostic only)
+baseScore = math.max(bullBase, bearBase)
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ VERDICT (9 states) — uses dominantSide ░░░
+// ═══════════════════════════════════════════════════════════════
+
+htfConflictDom = useHTF and ((dominantSide == 1 and htfBear) or (dominantSide == -1 and htfBull))
+
+verdict = "NO TRADE"
+if not warmupOK
+    verdict := "NO TRADE"
+else if exhaustionTrap
+    verdict := "EXHAUSTION"
+else if fakeoutRisk or preReleaseTrap
+    verdict := "TRAP RISK"
+else if isHardChop
+    verdict := "WAIT"
+else if htfConflictDom or (hasVolume and volRatio < volLoMult)
+    verdict := "AVOID"
+else if finalScore >= goVerdictMin and dominantSide == 1
+    verdict := "GO LONG"
+else if finalScore >= goVerdictMin and dominantSide == -1
+    verdict := "GO SHORT"
+else if finalScore >= watchVerdictMin and dominantSide == 1
+    verdict := "WATCH LONG"
+else if finalScore >= watchVerdictMin and dominantSide == -1
+    verdict := "WATCH SHORT"
+else
+    verdict := "NO TRADE"
+
+// Setup grade
+setupGrade = verdict == "GO LONG" or verdict == "GO SHORT" ?
+     (finalScore >= 88 and not isHardChop and not exhausted ? "A+" :
+      finalScore >= 80 ? "A" : "B") :
+     verdict == "WATCH LONG" or verdict == "WATCH SHORT" ? "C" :
+     verdict == "WAIT" or verdict == "NO TRADE" ? "D" :
+     "F"
+
+// Bias label reflects dominant qualified side (used in dashboard)
+biasLabelDom = dominantSide == 1 ? "BULL" : "BEAR"
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ SIGNAL CLASSIFICATION (11 types) — v1.1 ░░░
+// ═══════════════════════════════════════════════════════════════
+
+// Continuation = dominant side aligned + HTF aligned + ADX OK + not hard chop
+bullCont = dominantSide == 1  and (not useHTF or htfBull) and adxVal >= chopAdxMin and not isHardChop
+bearCont = dominantSide == -1 and (not useHTF or htfBear) and adxVal >= chopAdxMin and not isHardChop
+
+// Reversal v1.1: sweep + reclaim + momentum flip + RSI cross/rise + wick rejection (when vol available)
+rsiPrev = nz(rsiVal[1])
+rsiRising  = rsiVal > rsiPrev
+rsiFalling = rsiVal < rsiPrev
+rsiReclaim50Up   = rsiPrev < 50.0 and rsiVal >= 50.0
+rsiReclaim50Down = rsiPrev > 50.0 and rsiVal <= 50.0
+
+bullRev = bullSweep and close > priorLow and macdHist > nz(macdHist[1]) and (rsiRising or rsiReclaim50Up) and (lowerWickPct >= 35.0 or (hasVolume and volRatio >= volHiMult))
+bearRev = bearSweep and close < priorHigh and macdHist < nz(macdHist[1]) and (rsiFalling or rsiReclaim50Down) and (upperWickPct >= 35.0 or (hasVolume and volRatio >= volHiMult))
+
+// FIX: Day_Trader_v2_AL bug — short reversal must check bear continuation, not bull
+longContSig  = bullCont and not bullRev
+shortContSig = bearCont and not bearRev
+longRevSig   = bullRev  and not bullCont
+shortRevSig  = bearRev  and not bearCont
+
+// Compression release (uses dominantSide)
+compReleaseLong  = squeezeFire and dominantSide == 1  and adxVal >= 22 and (not hasVolume or volRatio >= 1.0)
+compReleaseShort = squeezeFire and dominantSide == -1 and adxVal >= 22 and (not hasVolume or volRatio >= 1.0)
+
+// Expansion (already in expansion regime)
+expansionLong  = regime == 3 and dominantSide == 1  and momScore > 60 and (not hasVolume or volRatio > volHiMult)
+expansionShort = regime == 3 and dominantSide == -1 and momScore < 40 and (not hasVolume or volRatio > volHiMult)
+
+// Warnings
+trapWarn = fakeoutRisk or preReleaseTrap
+exhWarn  = exhausted or bullExhaustCdl or bearExhaustCdl
+
+signalType = not warmupOK or not confirmedBar ? "NO_TRADE" :
+     compReleaseLong  ? "COMP_RELEASE_LONG" :
+     compReleaseShort ? "COMP_RELEASE_SHORT" :
+     expansionLong    ? "EXPANSION_LONG" :
+     expansionShort   ? "EXPANSION_SHORT" :
+     longContSig      ? "LONG_CONT" :
+     shortContSig     ? "SHORT_CONT" :
+     longRevSig       ? "LONG_REV" :
+     shortRevSig      ? "SHORT_REV" :
+     trapWarn         ? "TRAP_WARNING" :
+     exhWarn          ? "EXHAUSTION_WARNING" :
+     "NO_TRADE"
+
+// Setup label for the table
+setupLabel = signalType == "LONG_CONT"        ? "Long Continuation" :
+     signalType == "SHORT_CONT"               ? "Short Continuation" :
+     signalType == "LONG_REV"                 ? "Long Reversal (sweep)" :
+     signalType == "SHORT_REV"                ? "Short Reversal (sweep)" :
+     signalType == "COMP_RELEASE_LONG"        ? "Compression Release Long" :
+     signalType == "COMP_RELEASE_SHORT"       ? "Compression Release Short" :
+     signalType == "EXPANSION_LONG"           ? "Expansion Long" :
+     signalType == "EXPANSION_SHORT"          ? "Expansion Short" :
+     signalType == "TRAP_WARNING"             ? "Trap Risk" :
+     signalType == "EXHAUSTION_WARNING"       ? "Exhaustion" :
+     "No Setup"
+
+// Derived display label — fills in WATCH/GO context when signalType hasn't fired a hard signal
+displaySetupLabel = signalType != "NO_TRADE" ? setupLabel :
+     verdict == "WATCH LONG"  and breakoutReadiness >= 65 and (inSqueeze or regime == 1) ? "Bullish Compression Watch" :
+     verdict == "WATCH SHORT" and breakoutReadiness >= 65 and (inSqueeze or regime == 1) ? "Bearish Compression Watch" :
+     verdict == "WATCH LONG"  and breakoutReadiness >= 65 ? "Breakout Watch Long" :
+     verdict == "WATCH SHORT" and breakoutReadiness >= 65 ? "Breakout Watch Short" :
+     verdict == "WATCH LONG"  ? "Watch Long — Building" :
+     verdict == "WATCH SHORT" ? "Watch Short — Building" :
+     verdict == "GO LONG"     ? "Bullish Continuation" :
+     verdict == "GO SHORT"    ? "Bearish Continuation" :
+     verdict == "TRAP RISK"   ? trapState :
+     verdict == "EXHAUSTION"  ? "Exhaustion Risk" :
+     "No Setup"
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ COLORS (precomputed for parser-safety) ░░░
+// ═══════════════════════════════════════════════════════════════
+
+cGreen  = #10B981
+cRed    = #EF4444
+cAmber  = #F59E0B
+cBlue   = #3B82F6
+cPurple = #A855F7
+cDim    = #94A3B8
+cWhite  = #E2E8F0
+cBg     = #0F172A
+
+verdictColor = verdict == "GO LONG"      ? cGreen :
+     verdict == "GO SHORT"               ? cRed :
+     verdict == "WATCH LONG"             ? color.new(cGreen, 35) :
+     verdict == "WATCH SHORT"            ? color.new(cRed, 35) :
+     verdict == "WAIT"                   ? cAmber :
+     verdict == "AVOID"                  ? cAmber :
+     verdict == "TRAP RISK"              ? cPurple :
+     verdict == "EXHAUSTION"             ? cPurple :
+     cDim
+
+biasColor = dominantSide == 1 ? cGreen : cRed
+htfColor  = not useHTF ? cDim : htfBull ? cGreen : htfBear ? cRed : htfConflictDom ? cRed : cAmber
+gradeColor = setupGrade == "A+" ? color.new(cGreen, 0) :
+     setupGrade == "A"  ? cGreen :
+     setupGrade == "B"  ? cBlue :
+     setupGrade == "C"  ? cAmber :
+     setupGrade == "D"  ? cDim :
+     cRed
+chopColor = chopType == "HARD" ? cRed : chopType == "SOFT" ? cAmber : cGreen
+trapColor = trapState == "EXHAUSTION TRAP" ? cRed :
+     trapState == "FAKEOUT RISK" ? cRed :
+     trapState == "PRE-RELEASE TRAP" ? cAmber :
+     trapState == "COMPRESSION CAUTION" ? cAmber :
+     trapState == "CONFIRMED RELEASE" ? cGreen : cDim
+exhColor  = exhausted ? cRed : cGreen
+volStateColor = inSqueeze ? cBlue :
+     regime == 1 ? cBlue :
+     regime == 3 ? cGreen :
+     regime == 4 ? cRed :
+     regime == 5 ? cAmber : cDim
+breakoutColor = breakoutReadiness >= 70 ? cGreen :
+     breakoutReadiness >= 50 ? cAmber : cDim
+scoreColor = finalScore >= goVerdictMin ? cGreen :
+     finalScore >= watchVerdictMin ? cAmber :
+     cRed
+macroColor = macroBull ? cGreen : macroBear ? cRed : cDim
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ VISUALS ░░░
+// ═══════════════════════════════════════════════════════════════
+
+// Verdict background — only for GO/TRAP/EXHAUSTION/WAIT
+bgcolor(showBg and (verdict == "GO LONG"   ) ? color.new(cGreen,  bgAlpha) : na, title="GO LONG bg")
+bgcolor(showBg and (verdict == "GO SHORT"  ) ? color.new(cRed,    bgAlpha) : na, title="GO SHORT bg")
+bgcolor(showBg and (verdict == "TRAP RISK" ) ? color.new(cPurple, bgAlpha) : na, title="TRAP bg")
+bgcolor(showBg and (verdict == "EXHAUSTION") ? color.new(cPurple, math.min(bgAlpha + 1, 100)) : na, title="EXH bg")
+bgcolor(showBg and isDiag and verdict == "WAIT" ? color.new(cAmber, math.min(bgAlpha + 2, 100)) : na, title="WAIT bg")
+
+// EMAs (Pro/Diag)
+plot(showEMAs and not isClean ? emaFast  : na, "EMA Fast",  color=color.new(cGreen, 30),  linewidth=1)
+plot(showEMAs and not isClean ? emaMid   : na, "EMA Mid",   color=color.new(cBlue, 35),   linewidth=1)
+plot(showEMAs and not isClean ? emaSlow  : na, "EMA Slow",  color=color.new(cAmber, 35),  linewidth=1)
+plot(showEMAs and isDiag      ? emaTrend : na, "EMA Trend", color=color.new(cWhite, 60), linewidth=1)
+
+// Squeeze marker (Diag only)
+plotshape(isDiag and squeezeFire and confirmedBar, "Squeeze Fire",
+     style=shape.triangleup, location=location.belowbar, color=color.new(cBlue, 0), size=size.tiny)
+
+// Signal markers — entries only on transition, gated by min score and verdict alignment
+var string prevSignal = "NO_TRADE"
+isNewSignal = confirmedBar and signalType != prevSignal and signalType != "NO_TRADE"
+if confirmedBar
+    prevSignal := signalType
+
+// Verdict-marker alignment gate
+verdictBlocksSignal = requireVerdictOk and (verdict == "WAIT" or verdict == "AVOID" or verdict == "NO TRADE")
+scoreOkForSig = finalScore >= minScoreForSig
+sigOk = isNewSignal and scoreOkForSig and not verdictBlocksSignal
+// Warnings remain visible regardless of score gate (they ARE the warning)
+warnOk = isNewSignal and not isClean
+
+plotshape(showSig and sigOk and (signalType == "LONG_CONT" or signalType == "COMP_RELEASE_LONG" or signalType == "EXPANSION_LONG" or signalType == "LONG_REV"),
+     "Long Signal", style=shape.labelup, location=location.belowbar,
+     color=color.new(cGreen, 0), textcolor=color.white, text="L", size=size.small)
+plotshape(showSig and sigOk and (signalType == "SHORT_CONT" or signalType == "COMP_RELEASE_SHORT" or signalType == "EXPANSION_SHORT" or signalType == "SHORT_REV"),
+     "Short Signal", style=shape.labeldown, location=location.abovebar,
+     color=color.new(cRed, 0), textcolor=color.white, text="S", size=size.small)
+plotshape(showSig and warnOk and signalType == "TRAP_WARNING",
+     "Trap Warning", style=shape.xcross, location=location.abovebar,
+     color=color.new(cPurple, 0), text="TRAP", textcolor=color.white, size=size.tiny)
+plotshape(showSig and warnOk and signalType == "EXHAUSTION_WARNING",
+     "Exhaustion Warning", style=shape.diamond, location=location.abovebar,
+     color=color.new(cPurple, 0), text="EXH", textcolor=color.white, size=size.tiny)
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ OPERATOR DASHBOARD TABLE ░░░
+// ═══════════════════════════════════════════════════════════════
+
+tblPos = tablePos == "top_right"    ? position.top_right :
+     tablePos == "top_left"         ? position.top_left :
+     tablePos == "bottom_right"     ? position.bottom_right :
+     tablePos == "bottom_left"      ? position.bottom_left :
+     position.middle_right
+
+// Cell styling (precomputed)
+headerBg = color.new(#1E293B, 0)
+panelBg  = color.new(cBg, 10)
+dim      = color.new(cDim, 0)
+
+var table tb = table.new(tblPos, 2, 18, bgcolor=color.new(cBg, 5),
+     frame_color=color.new(cGreen, 60), frame_width=1,
+     border_color=color.new(#334155, 30), border_width=1)
+
+if showTable and barstate.islast
+    // Row 0 — header
+    table.cell(tb, 0, 0, "MSP COCKPIT", text_color=cGreen, text_size=size.tiny, bgcolor=headerBg)
+    table.cell(tb, 1, 0, syminfo.ticker + " · " + timeframe.period, text_color=dim, text_size=size.tiny, bgcolor=headerBg)
+
+    // Row 1 — VERDICT (the headline)
+    table.cell(tb, 0, 1, "ACTION", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tb, 1, 1, verdict, text_color=verdictColor, text_size=size.normal,
+         text_font_family=font.family_monospace, bgcolor=panelBg)
+
+    // Row 2 — GRADE
+    table.cell(tb, 0, 2, "GRADE", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tb, 1, 2, setupGrade, text_color=gradeColor, text_size=size.small, bgcolor=panelBg)
+
+    // Row 3 — SCORE (with GO gap when below threshold)
+    goGap = goVerdictMin - finalScore
+    scoreText = str.tostring(finalScore, "#.0") + " / 100" + (finalScore < goVerdictMin ? " · GO +" + str.tostring(goGap, "#.0") : "")
+    table.cell(tb, 0, 3, "SCORE", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tb, 1, 3, scoreText,
+         text_color=scoreColor, text_size=size.normal, text_font_family=font.family_monospace, bgcolor=panelBg)
+
+    // Row 4 — BIAS (dominant qualified side)
+    table.cell(tb, 0, 4, "BIAS", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tb, 1, 4, biasLabelDom + (htfConflictDom ? " (HTF conflict)" : ""),
+         text_color=biasColor, text_size=size.small, bgcolor=panelBg)
+
+    // Row 5 — SETUP
+    table.cell(tb, 0, 5, "SETUP", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tb, 1, 5, displaySetupLabel, text_color=cWhite, text_size=size.small, bgcolor=panelBg)
+
+    // Pro / Diag rows
+    if not isClean
+        table.cell(tb, 0, 6, "VOL STATE", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+        table.cell(tb, 1, 6, volStateLabel, text_color=volStateColor, text_size=size.small, bgcolor=panelBg)
+
+        table.cell(tb, 0, 7, "PHASE", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+        table.cell(tb, 1, 7, regimeLabel, text_color=volStateColor, text_size=size.small, bgcolor=panelBg)
+
+        breakoutDetail = inSqueeze ? " · sqz · " + str.tostring(squeezeBars) + "b" : squeezeFire ? " · fire" : ""
+        table.cell(tb, 0, 8, "BREAKOUT", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+        table.cell(tb, 1, 8, str.tostring(breakoutReadiness, "#.0") + breakoutDetail,
+             text_color=breakoutColor, text_size=size.small, bgcolor=panelBg)
+
+        table.cell(tb, 0, 9, "TRAP", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+        table.cell(tb, 1, 9, trapState, text_color=trapColor, text_size=size.small, bgcolor=panelBg)
+
+        table.cell(tb, 0, 10, "EXHAUST", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+        table.cell(tb, 1, 10, exhausted ? "YES (" + str.tostring(exhScore, "#") + ")" : "—",
+             text_color=exhColor, text_size=size.small, bgcolor=panelBg)
+
+        table.cell(tb, 0, 11, "HTF", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+        table.cell(tb, 1, 11, useHTF ? (htfTF + " " + htfState) : "OFF",
+             text_color=htfColor, text_size=size.small, bgcolor=panelBg)
+
+        table.cell(tb, 0, 12, "CHOP", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+        table.cell(tb, 1, 12, chopType, text_color=chopColor, text_size=size.small, bgcolor=panelBg)
+
+        table.cell(tb, 0, 13, "MACRO", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+        table.cell(tb, 1, 13, macroState, text_color=macroColor, text_size=size.small, bgcolor=panelBg)
+
+    // Diag-only rows: BBWP/VHM, dual scores, penalty, base
+    if isDiag
+        table.cell(tb, 0, 14, "BBWP / VHM", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+        table.cell(tb, 1, 14, str.tostring(bbwp, "#.0") + " / " + str.tostring(vhm, "#.1"),
+             text_color=cWhite, text_size=size.small, bgcolor=panelBg)
+
+        bullColor = bullScore >= bearScore ? cGreen : cDim
+        bearColor = bearScore >  bullScore ? cRed   : cDim
+        table.cell(tb, 0, 15, "BULL / BEAR", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+        table.cell(tb, 1, 15, str.tostring(bullScore, "#.0") + "  /  " + str.tostring(bearScore, "#.0"),
+             text_color=cWhite, text_size=size.small, text_font_family=font.family_monospace, bgcolor=panelBg)
+
+        table.cell(tb, 0, 16, "BASE / PEN", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+        table.cell(tb, 1, 16, str.tostring(baseScore, "#.0") + "  -  " + str.tostring(penalty, "#.0"),
+             text_color=cWhite, text_size=size.small, text_font_family=font.family_monospace, bgcolor=panelBg)
+
+    // Always show SRC freshness footer (data integrity rule)
+    srcRow = isDiag ? 17 : (isClean ? 6 : 14)
+    srcText = "live · " + (hasVolume ? "vol OK" : "NO VOL") + (warmupOK ? "" : " · warming") + (htfConflictDom ? " · HTF≠" : "")
+    srcColor = (not hasVolume) or (not warmupOK) or htfConflictDom ? cAmber : dim
+    table.cell(tb, 0, srcRow, "SRC", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tb, 1, srcRow, srcText, text_color=srcColor, text_size=size.tiny, bgcolor=panelBg)
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ ALERTS — transition-gated, includes operator context ░░░
+// ═══════════════════════════════════════════════════════════════
+
+var string prevVerdict = ""
+verdictChanged = confirmedBar and verdict != prevVerdict
+if confirmedBar
+    prevVerdict := verdict
+
+// Build a single rich alert message (per spec)
+alertMsg = "MSP Cockpit | " + syminfo.ticker + " " + timeframe.period +
+     " | " + verdict + " (" + setupGrade + ")" +
+     " | Score " + str.tostring(finalScore, "#.0") +
+     " | Bull " + str.tostring(bullScore, "#.0") + "/Bear " + str.tostring(bearScore, "#.0") +
+     " | Bias " + biasLabelDom +
+     " | Vol " + volStateLabel +
+     " | Setup " + displaySetupLabel
+
+alertGate = alertOnConfirm ? confirmedBar : true
+
+// Verdict transitions — dynamic alert() messages
+if alertGate and verdictChanged and (verdict == "GO LONG" or verdict == "GO SHORT")
+    alert(alertMsg, alert.freq_once_per_bar_close)
+
+if alertGate and verdictChanged and (verdict == "WATCH LONG" or verdict == "WATCH SHORT")
+    alert(alertMsg, alert.freq_once_per_bar_close)
+
+if alertGate and verdictChanged and (verdict == "TRAP RISK" or verdict == "EXHAUSTION")
+    alert(alertMsg, alert.freq_once_per_bar_close)
+
+if alertGate and verdictChanged
+    alert(alertMsg, alert.freq_once_per_bar_close)
+
+// Master alert events (for one-rule-per-symbol setup)
+anyGo    = verdict == "GO LONG"   or verdict == "GO SHORT"
+anyWatch = verdict == "WATCH LONG" or verdict == "WATCH SHORT"
+anyWarn  = verdict == "TRAP RISK" or verdict == "EXHAUSTION"
+
+alertcondition(verdictChanged and anyGo,    "MASTER — Any GO Verdict",        "MSP Cockpit: ANY GO")
+alertcondition(verdictChanged and anyWatch, "MASTER — Any WATCH Verdict",     "MSP Cockpit: ANY WATCH")
+alertcondition(verdictChanged and anyWarn,  "MASTER — Any Trap/Exhaustion",   "MSP Cockpit: ANY WARNING")
+alertcondition(verdictChanged,               "MASTER — Any Verdict Change",    "MSP Cockpit: VERDICT CHANGE")
+
+// Per-signal alertconditions
+alertcondition(isNewSignal and signalType == "LONG_CONT",          "Long Continuation",     "MSP Cockpit: LONG CONT")
+alertcondition(isNewSignal and signalType == "SHORT_CONT",         "Short Continuation",    "MSP Cockpit: SHORT CONT")
+alertcondition(isNewSignal and signalType == "LONG_REV",           "Long Reversal",         "MSP Cockpit: LONG REV")
+alertcondition(isNewSignal and signalType == "SHORT_REV",          "Short Reversal",        "MSP Cockpit: SHORT REV")
+alertcondition(isNewSignal and signalType == "COMP_RELEASE_LONG",  "Comp Release Long",     "MSP Cockpit: COMP RELEASE LONG")
+alertcondition(isNewSignal and signalType == "COMP_RELEASE_SHORT", "Comp Release Short",    "MSP Cockpit: COMP RELEASE SHORT")
+alertcondition(isNewSignal and signalType == "EXPANSION_LONG",     "Expansion Long",        "MSP Cockpit: EXPANSION LONG")
+alertcondition(isNewSignal and signalType == "EXPANSION_SHORT",    "Expansion Short",       "MSP Cockpit: EXPANSION SHORT")
+alertcondition(isNewSignal and signalType == "TRAP_WARNING",       "Trap Warning",          "MSP Cockpit: TRAP WARNING")
+alertcondition(isNewSignal and signalType == "EXHAUSTION_WARNING", "Exhaustion Warning",    "MSP Cockpit: EXHAUSTION WARNING")
+alertcondition(verdictChanged and verdict == "GO LONG",            "Verdict GO LONG",       "MSP Cockpit: VERDICT → GO LONG")
+alertcondition(verdictChanged and verdict == "GO SHORT",           "Verdict GO SHORT",      "MSP Cockpit: VERDICT → GO SHORT")
+alertcondition(verdictChanged and verdict == "AVOID",              "Verdict AVOID",         "MSP Cockpit: VERDICT → AVOID")
+alertcondition(verdictChanged and verdict == "WAIT",               "Verdict WAIT",          "MSP Cockpit: VERDICT → WAIT")

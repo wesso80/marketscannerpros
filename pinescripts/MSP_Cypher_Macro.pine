@@ -1,11 +1,11 @@
 // This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
-// © MarketScanner Pros — Cypher Macro Filters v1
+// © MarketScanner Pros —  Macro Filters v1
 // Replicates: MACRO FILTERS panel — BTC.D, BTC Price, DXY Index, USDT.D
 // Cross-asset correlation dashboard for crypto trading context
 // Overlay indicator with table-only display
 
 //@version=6
-indicator("MSP — Cypher Macro Filters", shorttitle="MSP Macro", overlay=true, max_labels_count=50)
+indicator("MSP — Macro Filters", shorttitle="MSP Macro", overlay=true)
 
 // ═══════════════════════════════════════════════════════════════
 // INPUTS
@@ -24,7 +24,6 @@ maLen      = input.int(50,  "MA Length for Bias", minval=10, maxval=200, group=g
 grp_vis = "Display"
 showTable  = input.bool(true,  "Show Macro Table",  group=grp_vis)
 tablePos   = input.string("top_right", "Table Position", options=["top_right", "top_left", "bottom_right", "bottom_left"], group=grp_vis)
-showAlertLabels = input.bool(false, "Show Alert Labels on Chart", group=grp_vis)
 
 // ═══════════════════════════════════════════════════════════════
 // DATA FETCHING
@@ -74,12 +73,15 @@ btcD_up = btcD > btcD_sma
 btcPrice_up = btcPrice > btcPrice_sma
 marketFlow = btcPrice_up and not btcD_up ? "ALT SEASON" : btcPrice_up and btcD_up ? "BTC SEASON" : not btcPrice_up and btcD_up ? "CAPITULATION" : "MARKET FLOW"
 
+// Data availability guard
+dataAvailable = not na(btcD) and not na(btcPrice) and not na(dxy) and not na(usdtD)
+
 // --- DXY Analysis ---
 // Rising DXY = bearish for risk assets (crypto)
 // Falling DXY = bullish for risk assets
 dxyTrend = dxy > dxy_sma ? "UP" : "DOWN"
 dxyStrength = dxy_rsi > 60 ? "STRONG" : dxy_rsi < 40 ? "WEAK" : "NEUTRAL"
-dxyLabel = "STRENGTH [" + str.tostring(math.round(dxy_rsi * 10) / 10) + "]"
+dxyLabel = "STRENGTH [" + str.tostring(math.round(dxy_rsi)) + "]"  // 0-100 scale
 dxyWind = dxy > dxy_sma ? "BEAR WIND" : "BULL WIND"
 
 // --- USDT.D Analysis ---
@@ -103,14 +105,11 @@ scoreUsdtD = usdtD > usdtD_sma ? -0.75 : 0.75 // falling USDT.D = bullish
 macroScore = (scoreBtcD + scoreBtcPrice + scoreDxy + scoreUsdtD) / 4.0 * 100
 macroState = macroScore > 30 ? "RISK ON" : macroScore < -30 ? "RISK OFF" : "TRANSITIONAL"
 
-// Moderate bull bias flag
-isBullBias = not usdtD[0] and usdtD_chg < 0 and btcPrice_up
-
 // ═══════════════════════════════════════════════════════════════
 // TABLE DISPLAY
 // ═══════════════════════════════════════════════════════════════
 
-if showTable and barstate.islast
+if showTable and barstate.islast and dataAvailable
     tblPos = tablePos == "top_right" ? position.top_right : tablePos == "top_left" ? position.top_left : tablePos == "bottom_right" ? position.bottom_right : position.bottom_left
 
     var tbl = table.new(tblPos, 4, 7, bgcolor=color.new(#0F172A, 5), border_color=color.new(#334155, 30), border_width=1, frame_color=color.new(#10B981, 60), frame_width=1)
@@ -126,9 +125,9 @@ if showTable and barstate.islast
 
     // Header
     table.cell(tbl, 0, 0, "MACRO FILTERS", text_color=green, text_size=size.tiny, bgcolor=headerBg)
-    table.cell(tbl, 1, 0, "", bgcolor=headerBg)
-    table.cell(tbl, 2, 0, "", bgcolor=headerBg)
-    table.cell(tbl, 3, 0, "", bgcolor=headerBg)
+    table.cell(tbl, 1, 0, "Trend", text_color=dim, text_size=size.tiny, bgcolor=headerBg)
+    table.cell(tbl, 2, 0, "Signal", text_color=dim, text_size=size.tiny, bgcolor=headerBg)
+    table.cell(tbl, 3, 0, "Flow", text_color=dim, text_size=size.tiny, bgcolor=headerBg)
 
     // BTC.D
     btcDclr = btcD_up ? red : green
@@ -141,7 +140,7 @@ if showTable and barstate.islast
     btcClr = btcPrice_up ? green : red
     table.cell(tbl, 0, 2, "BTC Price", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
     table.cell(tbl, 1, 2, btcSignal, text_color=btcClr, text_size=size.tiny, bgcolor=panelBg)
-    table.cell(tbl, 2, 2, str.tostring(math.round(btcPrice)), text_color=btcClr, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 2, 2, str.tostring(math.round(btcPrice * 100) / 100), text_color=btcClr, text_size=size.tiny, bgcolor=panelBg)
     table.cell(tbl, 3, 2, btcPrice_chg > 0 ? "+" + str.tostring(math.round(btcPrice_chg * 100) / 100) + "%" : str.tostring(math.round(btcPrice_chg * 100) / 100) + "%", text_color=btcPrice_chg > 0 ? green : red, text_size=size.tiny, bgcolor=panelBg)
 
     // DXY

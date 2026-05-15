@@ -52,7 +52,6 @@ volSpikeMult     = input.float(1.4, "Volume Spike Mult", minval=1.0, maxval=5.0,
 
 grp_structure = "Structure / FVG / Sweep"
 swingLen         = input.int(5, "Swing Length", minval=2, maxval=20, group=grp_structure)
-fvgLookback      = input.int(12, "FVG Lookback", minval=3, maxval=50, group=grp_structure)
 fvgAtrTol        = input.float(0.35, "Near FVG ATR Tolerance", minval=0.1, maxval=2.0, step=0.05, group=grp_structure)
 useSweepFilter   = input.bool(true, "Use Sweep Logic", group=grp_structure)
 
@@ -98,6 +97,7 @@ emaSlow = ta.ema(close, emaSlowLen)
 // HTF trend
 htfClose = request.security(syminfo.tickerid, htfTf, close)
 htfEma   = request.security(syminfo.tickerid, htfTf, ta.ema(close, htfEmaLen))
+htfDataOkay = not na(htfClose) and not na(htfEma)
 
 // DMI / ADX
 [diPlus, diMinus, adxVal] = ta.dmi(adxLen, adxLen)
@@ -118,8 +118,8 @@ atrSma = ta.sma(atr, 20)
 emaBull = emaFast > emaMid and emaMid > emaSlow and close > emaFast
 emaBear = emaFast < emaMid and emaMid < emaSlow and close < emaFast
 
-htfBull = htfClose > htfEma
-htfBear = htfClose < htfEma
+htfBull = htfDataOkay and htfClose > htfEma
+htfBear = htfDataOkay and htfClose < htfEma
 
 adxBull = adxVal >= minADX and diPlus > diMinus
 adxBear = adxVal >= minADX and diMinus > diPlus
@@ -130,35 +130,57 @@ rsiBear = rsiVal < rsiBearTh
 macdBull = macdHist > 0 and macdHist > nz(macdHist[1])
 macdBear = macdHist < 0 and macdHist < nz(macdHist[1])
 
-// ═══════════════════════════════════════════════════════════════
-// FVG PROXY
-// ═══════════════════════════════════════════════════════════════
+// FVG PROXY — improved 3-bar validation + lookback limit
+grp_fvg_exp = "FVG Expiry"
+fvgMaxLookback = input.int(20, "FVG Max Age (bars)", minval=5, maxval=100, group=grp_fvg_exp)
 
-// Simple 3-candle FVG proxies
-bullFVG = low > high[2]
-bearFVG = high < low[2]
+// True FVG: current low gaps above 2-bar-old high (and candles don't overlap)
+bullFVG = low > high[2] and low > high[1]  // True gap: current low above both prior candles
+bearFVG = high < low[2] and high < low[1]  // True gap: current high below both prior candles
 
 var float lastBullFVG = na
+var int bullFVGBar = na
 var float lastBearFVG = na
+var int bearFVGBar = na
 
 if bullFVG
     lastBullFVG := (low + high[2]) / 2.0
+    bullFVGBar := bar_index
 
 if bearFVG
     lastBearFVG := (high + low[2]) / 2.0
+    bearFVGBar := bar_index
+
+// Expire FVG if older than max lookback
+if not na(bullFVGBar) and (bar_index - bullFVGBar) > fvgMaxLookback
+    lastBullFVG := na
+    bullFVGBar := na
+
+if not na(bearFVGBar) and (bar_index - bearFVGBar) > fvgMaxLookback
+    lastBearFVG := na
+    bearFVGBar := na
 
 nearBullFVG = not na(lastBullFVG) and math.abs(close - lastBullFVG) <= atr * fvgAtrTol
 nearBearFVG = not na(lastBearFVG) and math.abs(close - lastBearFVG) <= atr * fvgAtrTol
 
 // ═══════════════════════════════════════════════════════════════
-// LIQUIDITY SWEEP PROXY
+// LIQUIDITY SWEEP PROXY — with minimum separation filter
 // ═══════════════════════════════════════════════════════════════
+
+// Add minimum separation input to prevent signal spam
+minSweepSep      = input.int(3, "Min Bars Between Sweeps", minval=1, maxval=20, group=grp_structure)
 
 priorSwingLow  = ta.lowest(low[1], swingLen)
 priorSwingHigh = ta.highest(high[1], swingLen)
 
-sweepBull = useSweepFilter and low < priorSwingLow and close > priorSwingLow
-sweepBear = useSweepFilter and high > priorSwingHigh and close < priorSwingHigh
+var int lastSweepBar = na
+sweepCooldownActive = not na(lastSweepBar) and (bar_index - lastSweepBar) < minSweepSep
+
+sweepBull = useSweepFilter and not sweepCooldownActive and low < priorSwingLow and close > priorSwingLow
+sweepBear = useSweepFilter and not sweepCooldownActive and high > priorSwingHigh and close < priorSwingHigh
+
+if sweepBull or sweepBear
+    lastSweepBar := bar_index
 
 // ═══════════════════════════════════════════════════════════════
 // LOCAL REGIME / CHOP FILTERS
@@ -308,8 +330,9 @@ timeoutBars = str.contains(setupType, "_CONT") ? contTimeoutBars : revTimeoutBar
 timeoutActive = strategy.position_size != 0 and barsInTrade >= timeoutBars
 
 // Timeout condition: if trade is not moving enough after timeout
-stuckLong = strategy.position_size > 0 and timeoutActive and close <= strategy.position_avg_price + atr * 0.2
-stuckShort = strategy.position_size < 0 and timeoutActive and close >= strategy.position_avg_price - atr * 0.2
+// Increased from 0.2 to 0.5 ATR to avoid aggressive liquidation
+stuckLong = strategy.position_size > 0 and timeoutActive and close <= strategy.position_avg_price + atr * 0.5
+stuckShort = strategy.position_size < 0 and timeoutActive and close >= strategy.position_avg_price - atr * 0.5
 
 if stuckLong
     strategy.close("Long", comment="Timeout")
@@ -317,12 +340,48 @@ if stuckLong
 if stuckShort
     strategy.close("Short", comment="Timeout")
 
-// Basic invalidation upgrades
-contLongInvalid = strategy.position_size > 0 and setupType == "LONG_CONT" and (not emaBull or not htfBull)
-contShortInvalid = strategy.position_size < 0 and setupType == "SHORT_CONT" and (not emaBear or not htfBear)
+// Invalidation requires 2+ consecutive bars for robustness (avoid whipsaws)
+var int contLongInvalidBars = 0
+var int contShortInvalidBars = 0
+var int revLongInvalidBars = 0
+var int revShortInvalidBars = 0
 
-revLongInvalid = strategy.position_size > 0 and setupType == "LONG_REV" and macdHist < 0
-revShortInvalid = strategy.position_size < 0 and setupType == "SHORT_REV" and macdHist > 0
+if strategy.position_size > 0 and setupType == "LONG_CONT"
+    if (not emaBull or not htfBull)
+        contLongInvalidBars += 1
+    else
+        contLongInvalidBars := 0
+else
+    contLongInvalidBars := 0
+
+if strategy.position_size < 0 and setupType == "SHORT_CONT"
+    if (not emaBear or not htfBear)
+        contShortInvalidBars += 1
+    else
+        contShortInvalidBars := 0
+else
+    contShortInvalidBars := 0
+
+if strategy.position_size > 0 and setupType == "LONG_REV"
+    if macdHist < 0
+        revLongInvalidBars += 1
+    else
+        revLongInvalidBars := 0
+else
+    revLongInvalidBars := 0
+
+if strategy.position_size < 0 and setupType == "SHORT_REV"
+    if macdHist > 0
+        revShortInvalidBars += 1
+    else
+        revShortInvalidBars := 0
+else
+    revShortInvalidBars := 0
+
+contLongInvalid = contLongInvalidBars >= 2
+contShortInvalid = contShortInvalidBars >= 2
+revLongInvalid = revLongInvalidBars >= 2
+revShortInvalid = revShortInvalidBars >= 2
 
 if contLongInvalid or revLongInvalid
     strategy.close("Long", comment="Invalidation")
@@ -359,14 +418,14 @@ bgColor = showBg ? (
 ) : na
 bgcolor(bgColor)
 
-plotshape(showLabels and enterLongCont, title="Long Cont", style=shape.labelup, location=location.belowbar, color=color.new(#10B981, 0), text="LONG C", size=size.tiny)
-plotshape(showLabels and enterShortCont, title="Short Cont", style=shape.labeldown, location=location.abovebar, color=color.new(color.red, 0), text="SHORT C", size=size.tiny)
+plotshape(showLabels and enterLongCont and barstate.islast, title="Long Cont", style=shape.labelup, location=location.belowbar, color=color.new(#10B981, 0), text="LONG C", size=size.tiny)
+plotshape(showLabels and enterShortCont and barstate.islast, title="Short Cont", style=shape.labeldown, location=location.abovebar, color=color.new(color.red, 0), text="SHORT C", size=size.tiny)
 
-plotshape(showLabels and enterLongRev, title="Long Rev", style=shape.labelup, location=location.belowbar, color=color.new(color.teal, 0), text="LONG R", size=size.tiny)
-plotshape(showLabels and enterShortRev, title="Short Rev", style=shape.labeldown, location=location.abovebar, color=color.new(color.maroon, 0), text="SHORT R", size=size.tiny)
+plotshape(showLabels and enterLongRev and barstate.islast, title="Long Rev", style=shape.labelup, location=location.belowbar, color=color.new(color.teal, 0), text="LONG R", size=size.tiny)
+plotshape(showLabels and enterShortRev and barstate.islast, title="Short Rev", style=shape.labeldown, location=location.abovebar, color=color.new(color.maroon, 0), text="SHORT R", size=size.tiny)
 
-plotshape(showLabels and sweepBull, title="Sweep Bull", style=shape.triangleup, location=location.belowbar, color=color.new(color.aqua, 15), size=size.tiny)
-plotshape(showLabels and sweepBear, title="Sweep Bear", style=shape.triangledown, location=location.abovebar, color=color.new(color.fuchsia, 15), size=size.tiny)
+plotshape(showLabels and sweepBull and barstate.islast, title="Sweep Bull", style=shape.triangleup, location=location.belowbar, color=color.new(color.aqua, 15), size=size.tiny)
+plotshape(showLabels and sweepBear and barstate.islast, title="Sweep Bear", style=shape.triangledown, location=location.abovebar, color=color.new(color.fuchsia, 15), size=size.tiny)
 
 // ═══════════════════════════════════════════════════════════════
 // STATE TABLE

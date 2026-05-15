@@ -1,0 +1,400 @@
+// This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
+// © MarketScanner Pros
+//
+// MSP Bitcoin 4-Year Cycle Timing Guide v3
+// ══════════════════════════════════════════════════════════════
+// What it does
+//   Macro-cycle overlay for Bitcoin weekly / monthly charts.
+//   Maps the four BTC halvings (2012 → 2024), backgrounds each
+//   phase of the post-halving cycle, and keeps a live dashboard
+//   showing the current phase, week count, and next milestone.
+//
+// Changes from v2
+//   • Upgraded to Pine v6
+//   • Dashboard: text_size added to all cells (was defaulting to
+//     size.auto — inconsistent rendering across resolutions)
+//   • DCA background zone: now ends at the estimated 2028 halving
+//     (~Apr 2028) instead of running forever into the next cycle
+//   • Safety label: y= was set to high (dead code with yloc.abovebar);
+//     now correctly uses y=na
+//   • Fib reference levels: repaint warning added to plot titles and
+//     code comment — levels float with rolling lookback window
+//   • weeksUntilProfitStart / End / Dca: clamped to na when already
+//     past (avoids confusing negative values in scope)
+//   • drawVerticalLine: removed ignored return value (Pine v6 lint)
+//   • All halving vertical lines now consistently use extend.none
+//     (extend.both on historical markers was visually cluttered)
+//
+// Non-repainting: all halving dates are fixed timestamps.
+// The Fibonacci reference levels DO repaint (rolling lookback).
+// Educational use only. Not financial advice.
+
+//@version=6
+indicator("MSP Bitcoin 4-Year Cycle Timing Guide v3", overlay=true, max_lines_count=500, max_labels_count=500, max_boxes_count=100)
+
+// ═══════════════════════════════════════════════════════════════
+// INPUTS
+// ═══════════════════════════════════════════════════════════════
+
+groupCore = "Core Cycle Settings"
+showHistoricalHalvings = input.bool(true,  "Show Historical Halvings",              group=groupCore)
+showCurrentCycle       = input.bool(true,  "Show Current 2024 Cycle",               group=groupCore)
+showDashboard          = input.bool(true,  "Show Cycle Dashboard",                  group=groupCore)
+showCycleLabels        = input.bool(true,  "Show Cycle Labels",                     group=groupCore)
+
+profitStartWeek = input.int(40,  "Historical Profit Window Opens — Week", minval=1, group=groupCore)
+profitEndWeek   = input.int(80,  "Historical Late-Cycle Risk Window — Week", minval=1, group=groupCore)
+dcaStartWeek    = input.int(135, "Historical DCA / Accumulation Zone — Week", minval=1, group=groupCore)
+
+groupVisual = "Visual Settings"
+showBackgroundZones = input.bool(true,  "Show Background Cycle Zones",     group=groupVisual)
+showMarkerLines     = input.bool(true,  "Show Vertical Marker Lines",      group=groupVisual)
+showDcaLadder       = input.bool(true,  "Show DCA Ladder",                 group=groupVisual)
+showCycleFibLevels  = input.bool(true,  "Show Cycle Reference Levels (repainting rolling range)", group=groupVisual)
+minimalMode         = input.bool(false, "Minimal Mode",                    group=groupVisual)
+lookbackBars        = input.int(300,    "Reference Level Lookback Bars",   minval=50, maxval=1000, group=groupVisual)
+
+groupColors = "Colors"
+halvingColor     = input.color(color.rgb(255, 140,   0), "Halving Color",           group=groupColors)
+profitStartColor = input.color(color.rgb(  0, 220,  80), "Profit Window Color",     group=groupColors)
+lateCycleColor   = input.color(color.rgb(255,  70,  70), "Late-Cycle Risk Color",   group=groupColors)
+dcaColor         = input.color(color.rgb(255, 220,   0), "DCA Zone Color",          group=groupColors)
+textColor        = input.color(color.white,              "Dashboard Text Color",     group=groupColors)
+tableBgDark      = input.color(color.rgb( 20,  20,  20), "Dashboard Bg (dark row)", group=groupColors)
+tableBgMid       = input.color(color.rgb( 35,  35,  35), "Dashboard Bg (mid row)",  group=groupColors)
+
+groupAdvanced = "Advanced"
+showOnlyOnBTC = input.bool(false, "Only Show On BTC Symbols",  group=groupAdvanced)
+extendLines   = input.bool(false, "Extend Marker Lines (current cycle)", group=groupAdvanced)
+
+// ═══════════════════════════════════════════════════════════════
+// SYMBOL FILTER
+// ═══════════════════════════════════════════════════════════════
+
+isBTC   = str.contains(str.upper(syminfo.ticker), "BTC")
+canShow = showOnlyOnBTC ? isBTC : true
+
+// ═══════════════════════════════════════════════════════════════
+// FIXED HALVING DATES  (non-repainting — timestamps never change)
+// ═══════════════════════════════════════════════════════════════
+
+halving1 = timestamp("UTC", 2012, 11, 28, 0, 0)
+halving2 = timestamp("UTC", 2016,  7,  9, 0, 0)
+halving3 = timestamp("UTC", 2020,  5, 11, 0, 0)
+halving4 = timestamp("UTC", 2024,  4, 19, 0, 0)
+// Estimated next halving — update when confirmed (~April 2028)
+halving5Est = timestamp("UTC", 2028, 4, 15, 0, 0)
+
+currentHalving = halving4
+
+// ═══════════════════════════════════════════════════════════════
+// TIME HELPERS
+// ═══════════════════════════════════════════════════════════════
+
+MS_IN_DAY  = 24 * 60 * 60 * 1000
+MS_IN_WEEK = 7 * MS_IN_DAY
+
+weeksToMs(weeks) => weeks * MS_IN_WEEK
+
+// timenow usage: only used in dashboard display variables (not per-bar logic)
+// so there is no repainting risk from timenow here.
+daysSince(ts)   => math.floor((timenow - ts) / MS_IN_DAY)
+weeksSince(ts)  => math.floor((timenow - ts) / MS_IN_WEEK)
+
+markerDate(ts, weeks)  => ts + weeksToMs(weeks)
+isMarkerBar(ts)        => time >= ts and time[1] < ts
+isBetween(startTs, endTs) => time >= startTs and time < endTs
+
+formatDate(ts) => str.format("{0,date,dd MMM yyyy}", ts)
+
+lineExtendMode = extendLines ? extend.right : extend.none
+
+// ═══════════════════════════════════════════════════════════════
+// CURRENT CYCLE MARKER DATES
+// ═══════════════════════════════════════════════════════════════
+
+profitStartDate = markerDate(currentHalving, profitStartWeek)
+profitEndDate   = markerDate(currentHalving, profitEndWeek)
+dcaStartDate    = markerDate(currentHalving, dcaStartWeek)
+
+currentWeeksSinceHalving = weeksSince(currentHalving)
+currentDaysSinceHalving  = daysSince(currentHalving)
+
+// Clamp countdown values to na when the milestone has already passed
+weeksUntilProfitStart = currentWeeksSinceHalving < profitStartWeek ? profitStartWeek - currentWeeksSinceHalving : na
+weeksUntilProfitEnd   = currentWeeksSinceHalving >= profitStartWeek and currentWeeksSinceHalving < profitEndWeek ? profitEndWeek - currentWeeksSinceHalving : na
+weeksUntilDca         = currentWeeksSinceHalving >= profitEndWeek and currentWeeksSinceHalving < dcaStartWeek ? dcaStartWeek - currentWeeksSinceHalving : na
+
+// ═══════════════════════════════════════════════════════════════
+// CYCLE PHASE ENGINE
+// ═══════════════════════════════════════════════════════════════
+
+cyclePhase =
+     currentWeeksSinceHalving < 0                  ? "Pre-Halving" :
+     currentWeeksSinceHalving < profitStartWeek     ? "Early Post-Halving / Expansion Build" :
+     currentWeeksSinceHalving < profitEndWeek       ? "Historical Profit Window" :
+     currentWeeksSinceHalving < dcaStartWeek        ? "Late-Cycle / Distribution Risk" :
+                                                      "Historical DCA / Accumulation Zone"
+
+phaseColor =
+     currentWeeksSinceHalving < 0                  ? color.gray :
+     currentWeeksSinceHalving < profitStartWeek     ? color.rgb(0, 120, 255) :
+     currentWeeksSinceHalving < profitEndWeek       ? profitStartColor :
+     currentWeeksSinceHalving < dcaStartWeek        ? lateCycleColor :
+                                                      dcaColor
+
+nextMarker =
+     currentWeeksSinceHalving < profitStartWeek     ? "Profit Window Opens" :
+     currentWeeksSinceHalving < profitEndWeek       ? "Late-Cycle Risk Window" :
+     currentWeeksSinceHalving < dcaStartWeek        ? "DCA / Accumulation Zone" :
+                                                      "Next Halving Cycle (~Apr 2028)"
+
+weeksUntilNext =
+     currentWeeksSinceHalving < profitStartWeek     ? weeksUntilProfitStart :
+     currentWeeksSinceHalving < profitEndWeek       ? weeksUntilProfitEnd :
+     currentWeeksSinceHalving < dcaStartWeek        ? weeksUntilDca :
+                                                      na
+
+// ═══════════════════════════════════════════════════════════════
+// DRAWING HELPERS
+// ═══════════════════════════════════════════════════════════════
+
+// Returns void — object is created as side effect; return value intentionally discarded
+drawVerticalLine(ts, lineColor, style, width, extMode) =>
+    if canShow and showMarkerLines and isMarkerBar(ts)
+        line.new(
+             x1     = bar_index,
+             y1     = low,
+             x2     = bar_index,
+             y2     = high,
+             xloc   = xloc.bar_index,
+             extend = extMode,
+             color  = lineColor,
+             style  = style,
+             width  = width
+        )
+
+drawEventLabel(ts, labelText, labelColor, labelStyle, yLocation) =>
+    if canShow and showCycleLabels and not minimalMode and isMarkerBar(ts)
+        label.new(
+             x         = bar_index,
+             y         = na,
+             text      = labelText,
+             xloc      = xloc.bar_index,
+             yloc      = yLocation,
+             style     = labelStyle,
+             textcolor = color.black,
+             color     = labelColor,
+             size      = size.normal,
+             textalign = text.align_center
+        )
+
+// ═══════════════════════════════════════════════════════════════
+// HISTORICAL HALVING MARKERS
+// ═══════════════════════════════════════════════════════════════
+
+if canShow and showHistoricalHalvings
+    drawVerticalLine(halving1, halvingColor, line.style_dashed, 2, extend.none)
+    drawVerticalLine(halving2, halvingColor, line.style_dashed, 2, extend.none)
+    drawVerticalLine(halving3, halvingColor, line.style_dashed, 2, extend.none)
+
+    drawEventLabel(halving1, "⛏\nBTC Halving\n28 Nov 2012", halvingColor, label.style_label_lower_right, yloc.abovebar)
+    drawEventLabel(halving2, "⛏\nBTC Halving\n9 Jul 2016",  halvingColor, label.style_label_lower_right, yloc.abovebar)
+    drawEventLabel(halving3, "⛏\nBTC Halving\n11 May 2020", halvingColor, label.style_label_lower_right, yloc.abovebar)
+
+// ═══════════════════════════════════════════════════════════════
+// CURRENT 2024 CYCLE MARKERS
+// ═══════════════════════════════════════════════════════════════
+
+if canShow and showCurrentCycle
+    drawVerticalLine(halving4,       halvingColor,     line.style_dashed, 3, extend.none)
+    drawVerticalLine(profitStartDate, profitStartColor, line.style_dotted, 2, lineExtendMode)
+    drawVerticalLine(profitEndDate,   lateCycleColor,   line.style_dotted, 2, lineExtendMode)
+    drawVerticalLine(dcaStartDate,    dcaColor,         line.style_dotted, 2, lineExtendMode)
+
+    drawEventLabel(halving4, "⛏\nBTC Halving\n19 Apr 2024", halvingColor, label.style_label_lower_right, yloc.abovebar)
+
+    drawEventLabel(
+         profitStartDate,
+         "Historical\nProfit Window\nOpens\nWeek " + str.tostring(profitStartWeek),
+         profitStartColor,
+         label.style_label_lower_right,
+         yloc.abovebar
+    )
+
+    drawEventLabel(
+         profitEndDate,
+         "Late-Cycle\nRisk Window\nWeek " + str.tostring(profitEndWeek),
+         lateCycleColor,
+         label.style_label_lower_left,
+         yloc.abovebar
+    )
+
+    drawEventLabel(
+         dcaStartDate,
+         "Historical\nDCA / Accumulation\nZone\nWeek " + str.tostring(dcaStartWeek),
+         dcaColor,
+         label.style_label_up,
+         yloc.belowbar
+    )
+
+// ═══════════════════════════════════════════════════════════════
+// BACKGROUND ZONES
+// DCA zone now ends at the estimated 2028 halving — not open-ended
+// ═══════════════════════════════════════════════════════════════
+
+earlyZone    = canShow and showCurrentCycle and showBackgroundZones and isBetween(halving4, profitStartDate)
+profitZone   = canShow and showCurrentCycle and showBackgroundZones and isBetween(profitStartDate, profitEndDate)
+lateRiskZone = canShow and showCurrentCycle and showBackgroundZones and isBetween(profitEndDate, dcaStartDate)
+dcaZone      = canShow and showCurrentCycle and showBackgroundZones and isBetween(dcaStartDate, halving5Est)
+
+bgcolor(earlyZone    ? color.new(color.rgb(0, 120, 255), 92) : na, title="Early Post-Halving Zone")
+bgcolor(profitZone   ? color.new(profitStartColor,        88) : na, title="Historical Profit Window")
+bgcolor(lateRiskZone ? color.new(lateCycleColor,          90) : na, title="Late-Cycle Risk Window")
+bgcolor(dcaZone      ? color.new(dcaColor,                91) : na, title="Historical DCA Zone")
+
+// ═══════════════════════════════════════════════════════════════
+// DCA LADDER
+// ═══════════════════════════════════════════════════════════════
+
+dcaStep1 = dcaStartDate
+dcaStep2 = markerDate(currentHalving, dcaStartWeek + 12)
+dcaStep3 = markerDate(currentHalving, dcaStartWeek + 24)
+dcaStep4 = markerDate(currentHalving, dcaStartWeek + 36)
+dcaStep5 = markerDate(currentHalving, dcaStartWeek + 48)
+
+if canShow and showCurrentCycle and showDcaLadder and not minimalMode
+    drawVerticalLine(dcaStep1, color.new(dcaColor,  0), line.style_dotted, 1, extend.none)
+    drawVerticalLine(dcaStep2, color.new(dcaColor, 20), line.style_dotted, 1, extend.none)
+    drawVerticalLine(dcaStep3, color.new(dcaColor, 35), line.style_dotted, 1, extend.none)
+    drawVerticalLine(dcaStep4, color.new(dcaColor, 50), line.style_dotted, 1, extend.none)
+    drawVerticalLine(dcaStep5, color.new(dcaColor, 60), line.style_dotted, 1, extend.none)
+
+    if isMarkerBar(dcaStep1)
+        label.new(bar_index, na, "DCA\nLadder 1", yloc=yloc.belowbar, style=label.style_circle, color=color.new(dcaColor,  0), textcolor=color.black, size=size.tiny)
+    if isMarkerBar(dcaStep2)
+        label.new(bar_index, na, "DCA\nLadder 2", yloc=yloc.belowbar, style=label.style_circle, color=color.new(dcaColor, 20), textcolor=color.black, size=size.tiny)
+    if isMarkerBar(dcaStep3)
+        label.new(bar_index, na, "DCA\nLadder 3", yloc=yloc.belowbar, style=label.style_circle, color=color.new(dcaColor, 35), textcolor=color.black, size=size.tiny)
+    if isMarkerBar(dcaStep4)
+        label.new(bar_index, na, "DCA\nLadder 4", yloc=yloc.belowbar, style=label.style_circle, color=color.new(dcaColor, 50), textcolor=color.black, size=size.tiny)
+    if isMarkerBar(dcaStep5)
+        label.new(bar_index, na, "DCA\nLadder 5", yloc=yloc.belowbar, style=label.style_circle, color=color.new(dcaColor, 60), textcolor=color.black, size=size.tiny)
+
+// ═══════════════════════════════════════════════════════════════
+// FIBONACCI REFERENCE LEVELS
+// ⚠ These levels REPAINT — they float with the rolling lookback
+// high/low and will shift as new bars print. Use as rough visual
+// context only, not as fixed price targets.
+// ═══════════════════════════════════════════════════════════════
+
+cycleHigh = ta.highest(high, lookbackBars)
+cycleLow  = ta.lowest(low,  lookbackBars)
+cycleRange = cycleHigh - cycleLow
+
+level0    = cycleLow
+level236  = cycleLow + cycleRange * 0.236
+level382  = cycleLow + cycleRange * 0.382
+level618  = cycleLow + cycleRange * 0.618
+level786  = cycleLow + cycleRange * 0.786
+level100  = cycleHigh
+level1618 = cycleLow + cycleRange * 1.618
+level2618 = cycleLow + cycleRange * 2.618
+level3618 = cycleLow + cycleRange * 3.618
+level4618 = cycleLow + cycleRange * 4.618
+
+showFib = canShow and showCycleFibLevels
+plot(showFib ? level0    : na, "0.00% (repaint — rolling range)",   color=color.new(color.gray,   65), linewidth=1)
+plot(showFib ? level236  : na, "23.6% (repaint — rolling range)",   color=color.new(color.yellow, 50), linewidth=1)
+plot(showFib ? level382  : na, "38.2% (repaint — rolling range)",   color=color.new(color.orange, 50), linewidth=1)
+plot(showFib ? level618  : na, "61.8% (repaint — rolling range)",   color=color.new(color.aqua,   50), linewidth=1)
+plot(showFib ? level786  : na, "78.6% (repaint — rolling range)",   color=color.new(color.red,    50), linewidth=1)
+plot(showFib ? level100  : na, "100% (repaint — rolling range)",    color=color.new(color.teal,   40), linewidth=1)
+plot(showFib ? level1618 : na, "161.8% (repaint — rolling range)",  color=color.new(color.purple, 35), linewidth=1)
+plot(showFib ? level2618 : na, "261.8% (repaint — rolling range)",  color=color.new(color.fuchsia,35), linewidth=1)
+plot(showFib ? level3618 : na, "361.8% (repaint — rolling range)",  color=color.new(color.gray,   45), linewidth=1)
+plot(showFib ? level4618 : na, "461.8% (repaint — rolling range)",  color=color.new(color.gray,   45), linewidth=1)
+
+// ═══════════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+
+var table dash = table.new(position.top_right, 2, 9, border_width=1)
+
+tblSz = size.small
+
+if canShow and showDashboard and barstate.islast
+    table.cell(dash, 0, 0, "MSP BTC Cycle Guide", text_color=color.white,  bgcolor=tableBgDark, text_size=tblSz)
+    table.cell(dash, 1, 0, "v3",                  text_color=color.white,  bgcolor=tableBgDark, text_size=tblSz)
+
+    table.cell(dash, 0, 1, "Current Halving",   text_color=textColor, bgcolor=tableBgMid,  text_size=tblSz)
+    table.cell(dash, 1, 1, formatDate(currentHalving), text_color=textColor, bgcolor=tableBgMid, text_size=tblSz)
+
+    table.cell(dash, 0, 2, "Weeks Since",       text_color=textColor, bgcolor=tableBgDark, text_size=tblSz)
+    table.cell(dash, 1, 2, str.tostring(currentWeeksSinceHalving), text_color=color.white, bgcolor=phaseColor, text_size=tblSz)
+
+    table.cell(dash, 0, 3, "Current Phase",     text_color=textColor, bgcolor=tableBgMid,  text_size=tblSz)
+    table.cell(dash, 1, 3, cyclePhase,          text_color=color.black, bgcolor=phaseColor, text_size=tblSz)
+
+    table.cell(dash, 0, 4, "Profit Window",     text_color=textColor, bgcolor=tableBgDark, text_size=tblSz)
+    table.cell(dash, 1, 4, "W" + str.tostring(profitStartWeek) + " → W" + str.tostring(profitEndWeek), text_color=textColor, bgcolor=tableBgDark, text_size=tblSz)
+
+    table.cell(dash, 0, 5, "Profit Opens",      text_color=textColor, bgcolor=tableBgMid,  text_size=tblSz)
+    table.cell(dash, 1, 5, formatDate(profitStartDate), text_color=textColor, bgcolor=tableBgMid, text_size=tblSz)
+
+    table.cell(dash, 0, 6, "Late Risk",         text_color=textColor, bgcolor=tableBgDark, text_size=tblSz)
+    table.cell(dash, 1, 6, formatDate(profitEndDate), text_color=textColor, bgcolor=tableBgDark, text_size=tblSz)
+
+    table.cell(dash, 0, 7, "DCA Zone",          text_color=textColor, bgcolor=tableBgMid,  text_size=tblSz)
+    table.cell(dash, 1, 7, formatDate(dcaStartDate), text_color=textColor, bgcolor=tableBgMid, text_size=tblSz)
+
+    table.cell(dash, 0, 8, "Next Marker",       text_color=textColor, bgcolor=tableBgDark, text_size=tblSz)
+    table.cell(
+         dash, 1, 8,
+         na(weeksUntilNext) ? nextMarker : nextMarker + " / " + str.tostring(weeksUntilNext) + "w",
+         text_color=color.white,
+         bgcolor=tableBgDark,
+         text_size=tblSz
+    )
+
+// ═══════════════════════════════════════════════════════════════
+// ALERT CONDITIONS
+// ═══════════════════════════════════════════════════════════════
+
+alertcondition(
+     canShow and isMarkerBar(profitStartDate),
+     title="BTC Cycle: Historical Profit Window Opens",
+     message="BTC has entered the historical post-halving profit-window timing area."
+)
+
+alertcondition(
+     canShow and isMarkerBar(profitEndDate),
+     title="BTC Cycle: Late-Cycle Risk Window",
+     message="BTC has entered the historical late-cycle risk timing area."
+)
+
+alertcondition(
+     canShow and isMarkerBar(dcaStartDate),
+     title="BTC Cycle: Historical DCA Zone",
+     message="BTC has entered the historical DCA / accumulation timing area."
+)
+
+// ═══════════════════════════════════════════════════════════════
+// EDUCATIONAL SAFETY LABEL
+// ═══════════════════════════════════════════════════════════════
+
+var label safetyLabel = na
+
+if canShow and barstate.islast and not minimalMode
+    label.delete(safetyLabel)
+    safetyLabel := label.new(
+         x         = bar_index,
+         y         = na,                   // y ignored when yloc=yloc.abovebar; use na
+         text      = "Cycle timing reference only — not predictive or financial advice",
+         xloc      = xloc.bar_index,
+         yloc      = yloc.abovebar,
+         style     = label.style_label_left,
+         color     = color.new(color.black, 20),
+         textcolor = color.white,
+         size      = size.small
+    )

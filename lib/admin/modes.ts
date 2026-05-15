@@ -16,7 +16,8 @@ export type AdminMode =
   | 'data-integrity'
   | 'strategy-lab'
   | 'alert-command'
-  | 'truth-layer';
+  | 'truth-layer'
+  | 'post-trade-review';
 
 export const ADMIN_MODES: readonly AdminMode[] = [
   'opportunity-scout',
@@ -26,7 +27,30 @@ export const ADMIN_MODES: readonly AdminMode[] = [
   'strategy-lab',
   'alert-command',
   'truth-layer',
+  'post-trade-review',
 ] as const;
+
+/**
+ * Spec aliases (DISCOVERY/DECISION/RISK_REVIEW/POST_TRADE_REVIEW) per
+ * the Admin Edge Layer doctrine. Map onto the canonical AdminMode enum.
+ */
+export type AdminModeSpec =
+  | 'DISCOVERY'
+  | 'DECISION'
+  | 'RISK_REVIEW'
+  | 'POST_TRADE_REVIEW';
+
+export const ADMIN_MODE_ALIASES: Record<AdminModeSpec, AdminMode> = {
+  DISCOVERY:         'opportunity-scout',
+  DECISION:          'research-desk',
+  RISK_REVIEW:       'risk-desk',
+  POST_TRADE_REVIEW: 'post-trade-review',
+};
+
+export function resolveAdminMode(input: AdminMode | AdminModeSpec): AdminMode {
+  if ((ADMIN_MODES as readonly string[]).includes(input)) return input as AdminMode;
+  return ADMIN_MODE_ALIASES[input as AdminModeSpec] ?? 'opportunity-scout';
+}
 
 /**
  * Returns true ONLY when the current mode is allowed to use personal
