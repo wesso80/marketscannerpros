@@ -671,6 +671,9 @@ export default function CommandHome() {
           <Link href="/admin/earnings-analyzer" style={navLink}>
             Earnings
           </Link>
+          <Link href="/admin/sector-rotation" style={navLink}>
+            Sectors
+          </Link>
           <Link href="/admin/system" style={navLink}>
             System
           </Link>
