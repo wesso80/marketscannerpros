@@ -674,6 +674,9 @@ export default function CommandHome() {
           <Link href="/admin/sector-rotation" style={navLink}>
             Sectors
           </Link>
+          <Link href="/admin/quant-screener" style={navLink}>
+            Quant
+          </Link>
           <Link href="/admin/system" style={navLink}>
             System
           </Link>
