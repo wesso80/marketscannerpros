@@ -5,7 +5,7 @@
 // Real-time trade intelligence with signal strength scoring
 
 //@version=6
-indicator("MSP — Intel", shorttitle="MSP Cypher Intel", overlay=true, max_labels_count=500, max_bars_back=500)
+indicator("MSP — Intel", shorttitle="MSP Intel", overlay=true, max_labels_count=500, max_bars_back=500, max_lines_count=50)
 
 // ═══════════════════════════════════════════════════════════════
 // INPUTS
@@ -27,16 +27,23 @@ grp_spot = "Spot Pump / Dump"
 spotVolThresh = input.float(1.8, "Spot Vol Threshold", minval=1.2, maxval=4.0, step=0.2, group=grp_spot)
 spotBodyPct   = input.float(65, "Spot Body % of Range", minval=40, maxval=90, group=grp_spot)
 
+grp_absorb = "Absorption"
+absVolMult   = input.float(2.0, "Absorption Vol Multiplier", minval=1.2, maxval=5.0, step=0.2, group=grp_absorb)
+absBodyPctMax = input.float(30,  "Absorption Max Body %",     minval=10,  maxval=50, step=5, group=grp_absorb)
+absWickMin    = input.float(40,  "Absorption Min Wick %",     minval=20,  maxval=65, step=5, group=grp_absorb)
+
 grp_voldec = "Volume Decline"
 volDecLen    = input.int(5,   "Vol Decline Lookback", minval=3, maxval=10, group=grp_voldec)
 volDecThresh = input.float(0.6, "Vol Decline Threshold", minval=0.3, maxval=0.9, step=0.1, group=grp_voldec)
+
+grp_filt = "Filters"
+useHtfTrend = input.bool(true, "Use HTF (EMA200) trend gate for scalp signals", group=grp_filt)
 
 grp_vis = "Display"
 showSignalLabels = input.bool(true,  "Show Signal Labels", group=grp_vis)
 showTable        = input.bool(true,  "Show Intel Table", group=grp_vis)
 showEMAs         = input.bool(true,  "Show Scalp EMAs", group=grp_vis)
 tablePos         = input.string("top_right", "Table Position", options=["top_right", "top_left", "bottom_right", "bottom_left"], group=grp_vis)
-maxLabels        = input.int(30,     "Max Labels to Show", minval=5, maxval=100, group=grp_vis)
 
 // ═══════════════════════════════════════════════════════════════
 // CORE CALCULATIONS
@@ -49,8 +56,10 @@ rsi14 = ta.rsi(close, 14)
 
 emaFast = ta.ema(close, scalpEmaFast)
 emaSlow = ta.ema(close, scalpEmaSlow)
-ema50   = ta.ema(close, 50)
 ema200  = ta.ema(close, 200)
+
+// Volume-data guard: many FX/index symbols have no real volume
+hasVolume = nz(ta.sma(volume, 20)) > 0
 
 bodySize = math.abs(close - open)
 candleRange = high - low
@@ -71,15 +80,19 @@ volRatio = avgVol > 0 ? volume / avgVol : 1.0
 // ADX for trend confirmation
 [diP, diM, adx_val] = ta.dmi(14, 14)
 
-scalpBull = emaFast > emaSlow and close > emaFast and rsi7 > 50
-scalpBear = emaFast < emaSlow and close < emaFast and rsi7 < 50
+// HTF trend filter (optional) and ATR-spread confirmation
+htfBull = not useHtfTrend or close > ema200
+htfBear = not useHtfTrend or close < ema200
+emaSpreadOk = atr14 > 0 and math.abs(emaFast - emaSlow) >= atr14 * scalpAtrMult
+
+scalpBull = emaFast > emaSlow and close > emaFast and rsi7 > 50 and htfBull and emaSpreadOk
+scalpBear = emaFast < emaSlow and close < emaFast and rsi7 < 50 and htfBear and emaSpreadOk
 
 // Strength: minor/moderate/strong
-scalpStrength = math.abs(emaFast - emaSlow) / atr14
+scalpStrength = atr14 > 0 ? math.abs(emaFast - emaSlow) / atr14 : 0.0
 isStrongScalp = scalpStrength > 0.5 and adx_val > 25
-isModScalp = scalpStrength > 0.25
 
-scalpDir = scalpBull ? "SCALPING (UP)" : scalpBear ? "SCALPING (DN)" : "NEUTRAL"
+scalpDir = scalpBull ? (isStrongScalp ? "STRONG UP" : "SCALP UP") : scalpBear ? (isStrongScalp ? "STRONG DN" : "SCALP DN") : "NEUTRAL"
 scalpIcon = scalpBull ? "🟢" : scalpBear ? "🔴" : "⚪"
 
 // ═══════════════════════════════════════════════════════════════
@@ -87,13 +100,13 @@ scalpIcon = scalpBull ? "🟢" : scalpBear ? "🔴" : "⚪"
 // ═══════════════════════════════════════════════════════════════
 
 // Bull exhaustion: high RSI + long upper wick + high volume
-bullExhaust = rsi14 > exhRsiHigh and upperWickPct > exhWickPct and volRatio > exhVolMult
+bullExhaust = hasVolume and rsi14 > exhRsiHigh and upperWickPct > exhWickPct and volRatio > exhVolMult
 // Bear exhaustion: low RSI + long lower wick + high volume
-bearExhaust = rsi14 < exhRsiLow and lowerWickPct > exhWickPct and volRatio > exhVolMult
+bearExhaust = hasVolume and rsi14 < exhRsiLow and lowerWickPct > exhWickPct and volRatio > exhVolMult
 
 // Climactic volume exhaustion (even without wick — pure volume spike)
-climacticBull = rsi14 > exhRsiHigh and volRatio > exhVolMult * 1.5 and isBullCandle
-climacticBear = rsi14 < exhRsiLow and volRatio > exhVolMult * 1.5 and isBearCandle
+climacticBull = hasVolume and rsi14 > exhRsiHigh and volRatio > exhVolMult * 1.5 and isBullCandle
+climacticBear = hasVolume and rsi14 < exhRsiLow and volRatio > exhVolMult * 1.5 and isBearCandle
 
 isExhausted = bullExhaust or bearExhaust or climacticBull or climacticBear
 exhLabel = bullExhaust or climacticBull ? "BULL EXHAUSTION" : bearExhaust or climacticBear ? "BEAR EXHAUSTION" : "NONE"
@@ -104,12 +117,11 @@ exhIcon = bullExhaust or climacticBull ? "🟠" : bearExhaust or climacticBear ?
 // ═══════════════════════════════════════════════════════════════
 
 // Spot pump: big body bullish candle with above-average volume
-spotPump = isBullCandle and bodyPctOfRange > spotBodyPct and volRatio > spotVolThresh and bodySize > atr14 * 0.5
+spotPump = hasVolume and isBullCandle and bodyPctOfRange > spotBodyPct and volRatio > spotVolThresh and bodySize > atr14 * 0.5
 // Spot dump: big body bearish candle with above-average volume
-spotDump = isBearCandle and bodyPctOfRange > spotBodyPct and volRatio > spotVolThresh and bodySize > atr14 * 0.5
+spotDump = hasVolume and isBearCandle and bodyPctOfRange > spotBodyPct and volRatio > spotVolThresh and bodySize > atr14 * 0.5
 
 spotLabel = spotPump ? "SPOT PUMP" : spotDump ? "SPOT DUMP" : "NONE"
-spotActive = spotPump or spotDump
 spotIcon = spotPump ? "🟪" : spotDump ? "🟪" : "⬜"
 
 // ═══════════════════════════════════════════════════════════════
@@ -118,37 +130,41 @@ spotIcon = spotPump ? "🟪" : spotDump ? "🟪" : "⬜"
 
 // Track if volume is declining while price continues (divergence)
 volSma3 = ta.sma(volume, 3)
-volSma_prev = ta.sma(volume[volDecLen], 3)
-volDeclining = volSma_prev > 0 ? volSma3 / volSma_prev < volDecThresh : false
+volSmaPrev = volSma3[volDecLen]
+volDeclining = hasVolume and nz(volSmaPrev) > 0 and volSma3 / volSmaPrev < volDecThresh
 
-priceRising = close > close[volDecLen] and close > open
-priceFalling = close < close[volDecLen] and close < open
+priceRising = close > close[volDecLen]
+priceFalling = close < close[volDecLen]
 
 buyVolDec = volDeclining and priceRising  // price up but volume fading — bearish divergence
 sellVolDec = volDeclining and priceFalling // price down but volume fading — bullish divergence
 
 volDecLabel = buyVolDec ? "BUY VOL DEC" : sellVolDec ? "SELL VOL DEC" : "NONE"
-volDecActive = buyVolDec or sellVolDec
-volDecIcon = buyVolDec ? "⬜" : sellVolDec ? "⬜" : "⬜"
+volDecIcon = buyVolDec ? "🔽" : sellVolDec ? "🔼" : "⬜"
 
 // ═══════════════════════════════════════════════════════════════
 // SIGNAL 5: ABSORPTION (Hidden Limit Orders)
 // ═══════════════════════════════════════════════════════════════
 
 // Absorption: high volume but small body (limit orders absorbing market orders)
-absorption = volRatio > 2.0 and bodyPctOfRange < 30 and candleRange > 0
-bullAbsorption = absorption and lowerWickPct > 40 // buying absorption below
-bearAbsorption = absorption and upperWickPct > 40 // selling absorption above
+absorption = hasVolume and volRatio > absVolMult and bodyPctOfRange < absBodyPctMax and candleRange > 0
+bullAbsorption = absorption and lowerWickPct > absWickMin // buying absorption below
+bearAbsorption = absorption and upperWickPct > absWickMin // selling absorption above
 
 absLabel = bullAbsorption ? "BUY ABSORPTION" : bearAbsorption ? "SELL ABSORPTION" : "NONE"
 
 // ═══════════════════════════════════════════════════════════════
 // COMPOSITE INTEL SCORE
 // ═══════════════════════════════════════════════════════════════
+// Note: bear-exhaustion contributes to BULL points (mean-reversion logic)
+// because exhausted selling typically precedes a reversal. Same for the inverse.
 
 bullPoints = (scalpBull ? 2 : 0) + (spotPump ? 3 : 0) + (sellVolDec ? 1 : 0) + (bullAbsorption ? 2 : 0) + (bearExhaust or climacticBear ? 2 : 0)
 bearPoints = (scalpBear ? 2 : 0) + (spotDump ? 3 : 0) + (buyVolDec ? 1 : 0) + (bearAbsorption ? 2 : 0) + (bullExhaust or climacticBull ? 2 : 0)
 netIntel = bullPoints - bearPoints
+
+// Graded edge tiers (max possible: ±10)
+edgeTier = netIntel >= 6 ? "STRONG BULL" : netIntel >= 4 ? "BULL" : netIntel >= 2 ? "WEAK BULL" : netIntel <= -6 ? "STRONG BEAR" : netIntel <= -4 ? "BEAR" : netIntel <= -2 ? "WEAK BEAR" : "NEUTRAL"
 
 // ═══════════════════════════════════════════════════════════════
 // PLOTS: EMA RIBBONS
@@ -161,33 +177,39 @@ plot(showEMAs ? emaSlow : na, "Scalp EMA Slow", color=color.new(#F59E0B, 30), li
 // SIGNAL LABELS ON CHART
 // ═══════════════════════════════════════════════════════════════
 
+// Only emit labels on signal transitions to prevent label-cap exhaustion
+bullExhaustNew = (bullExhaust or climacticBull) and not (bullExhaust[1] or climacticBull[1])
+bearExhaustNew = (bearExhaust or climacticBear) and not (bearExhaust[1] or climacticBear[1])
+spotPumpNew    = spotPump and not spotPump[1]
+spotDumpNew    = spotDump and not spotDump[1]
+bullAbsNew     = bullAbsorption and not bullAbsorption[1]
+bearAbsNew     = bearAbsorption and not bearAbsorption[1]
+buyVolDecNew   = buyVolDec and not buyVolDec[1]
+sellVolDecNew  = sellVolDec and not sellVolDec[1]
+
 if showSignalLabels
-    // Exhaustion labels
-    if bullExhaust or climacticBull
+    if bullExhaustNew
         label.new(bar_index, high + atr14 * 0.3, "BULL\nEXHAUST", color=color.new(#F97316, 10), textcolor=color.white, size=size.tiny, style=label.style_label_down)
 
-    if bearExhaust or climacticBear
+    if bearExhaustNew
         label.new(bar_index, low - atr14 * 0.3, "BEAR\nEXHAUST", color=color.new(#F97316, 10), textcolor=color.white, size=size.tiny, style=label.style_label_up)
 
-    // Spot pump/dump
-    if spotPump
+    if spotPumpNew
         label.new(bar_index, low - atr14 * 0.5, "SPOT\nPUMP", color=color.new(#A855F7, 10), textcolor=color.white, size=size.tiny, style=label.style_label_up)
 
-    if spotDump
+    if spotDumpNew
         label.new(bar_index, high + atr14 * 0.5, "SPOT\nDUMP", color=color.new(#A855F7, 10), textcolor=color.white, size=size.tiny, style=label.style_label_down)
 
-    // Absorption
-    if bullAbsorption
+    if bullAbsNew
         label.new(bar_index, low - atr14 * 0.2, "ABSORB", color=color.new(#3B82F6, 20), textcolor=color.white, size=size.tiny, style=label.style_label_up)
 
-    if bearAbsorption
+    if bearAbsNew
         label.new(bar_index, high + atr14 * 0.2, "ABSORB", color=color.new(#3B82F6, 20), textcolor=color.white, size=size.tiny, style=label.style_label_down)
 
-    // Volume decline divergence
-    if buyVolDec
+    if buyVolDecNew
         label.new(bar_index, high + atr14 * 0.1, "VOL\nDEC", color=color.new(#64748B, 30), textcolor=color.white, size=size.tiny, style=label.style_label_down)
 
-    if sellVolDec
+    if sellVolDecNew
         label.new(bar_index, low - atr14 * 0.1, "VOL\nDEC", color=color.new(#64748B, 30), textcolor=color.white, size=size.tiny, style=label.style_label_up)
 
 // ═══════════════════════════════════════════════════════════════
@@ -197,75 +219,71 @@ if showSignalLabels
 if showTable and barstate.islast
     tblPos = tablePos == "top_right" ? position.top_right : tablePos == "top_left" ? position.top_left : tablePos == "bottom_right" ? position.bottom_right : position.bottom_left
 
-    var tbl = table.new(tblPos, 3, 8, bgcolor=color.new(#0F172A, 5), border_color=color.new(#334155, 30), border_width=1, frame_color=color.new(#10B981, 60), frame_width=1)
+    // 2-column table — third column removed (was always empty)
+    var tbl = table.new(tblPos, 2, 9, bgcolor=color.new(#0F172A, 5), frame_color=color.new(#10B981, 60), frame_width=1)
 
     headerBg = color.new(#1E293B, 0)
     green   = color.new(#10B981, 0)
     red     = color.new(#EF4444, 0)
     amber   = color.new(#F59E0B, 0)
-    purple  = color.new(#A855F7, 0)
-    white   = color.new(#E2E8F0, 0)
     dim     = color.new(#94A3B8, 0)
     panelBg = color.new(#0F172A, 10)
 
     // Header
-    table.cell(tbl, 0, 0, "CYPHER INTEL", text_color=green, text_size=size.tiny, bgcolor=headerBg)
-    table.cell(tbl, 1, 0, "", bgcolor=headerBg)
-    table.cell(tbl, 2, 0, "", bgcolor=headerBg)
+    table.cell(tbl, 0, 0, "MSP INTEL", text_color=green, text_size=size.tiny, bgcolor=headerBg)
+    table.cell(tbl, 1, 0, syminfo.ticker,  text_color=dim,   text_size=size.tiny, bgcolor=headerBg)
 
     // Scalping direction
     scalpClr = scalpBull ? green : scalpBear ? red : dim
     table.cell(tbl, 0, 1, scalpIcon, text_size=size.tiny, bgcolor=panelBg)
     table.cell(tbl, 1, 1, scalpDir, text_color=scalpClr, text_size=size.tiny, bgcolor=panelBg)
-    table.cell(tbl, 2, 1, "", bgcolor=panelBg)
 
     // Exhaustion
     exhClr = isExhausted ? amber : dim
-    table.cell(tbl, 0, 2, exhIcon, text_size=size.tiny, bgcolor=panelBg)
-    table.cell(tbl, 1, 2, exhLabel, text_color=exhClr, text_size=size.tiny, bgcolor=panelBg)
-    table.cell(tbl, 2, 2, "", bgcolor=panelBg)
+    table.cell(tbl, 0, 2, exhIcon,  text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 1, 2, exhLabel, text_color=exhClr,  text_size=size.tiny, bgcolor=panelBg)
 
     // Spot Pump/Dump
     spotClr = spotPump ? green : spotDump ? red : dim
-    table.cell(tbl, 0, 3, spotIcon, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 0, 3, spotIcon,  text_size=size.tiny, bgcolor=panelBg)
     table.cell(tbl, 1, 3, spotLabel, text_color=spotClr, text_size=size.tiny, bgcolor=panelBg)
-    table.cell(tbl, 2, 3, "", bgcolor=panelBg)
 
     // Volume Decline
     vdClr = buyVolDec ? red : sellVolDec ? green : dim
-    table.cell(tbl, 0, 4, volDecIcon, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 0, 4, volDecIcon,  text_size=size.tiny, bgcolor=panelBg)
     table.cell(tbl, 1, 4, volDecLabel, text_color=vdClr, text_size=size.tiny, bgcolor=panelBg)
-    table.cell(tbl, 2, 4, "", bgcolor=panelBg)
 
     // Absorption
     absClr = bullAbsorption ? green : bearAbsorption ? red : dim
     table.cell(tbl, 0, 5, bullAbsorption or bearAbsorption ? "🔵" : "⬜", text_size=size.tiny, bgcolor=panelBg)
     table.cell(tbl, 1, 5, absLabel, text_color=absClr, text_size=size.tiny, bgcolor=panelBg)
-    table.cell(tbl, 2, 5, "", bgcolor=panelBg)
 
     // Separator
     table.cell(tbl, 0, 6, "", bgcolor=headerBg)
     table.cell(tbl, 1, 6, "", bgcolor=headerBg)
-    table.cell(tbl, 2, 6, "", bgcolor=headerBg)
 
-    // Net Intel Score
-    netClr = netIntel > 2 ? green : netIntel < -2 ? red : amber
-    netLabel = netIntel > 2 ? "BULLISH EDGE" : netIntel < -2 ? "BEARISH EDGE" : "NEUTRAL"
+    // Net Intel Score — graded tiers
+    netClr = netIntel >= 6 ? green : netIntel >= 4 ? green : netIntel >= 2 ? amber : netIntel <= -6 ? red : netIntel <= -4 ? red : netIntel <= -2 ? amber : dim
     table.cell(tbl, 0, 7, "NET", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
-    table.cell(tbl, 1, 7, netLabel, text_color=netClr, text_size=size.tiny, bgcolor=panelBg)
-    table.cell(tbl, 2, 7, str.tostring(netIntel), text_color=netClr, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 1, 7, edgeTier + " " + str.tostring(netIntel), text_color=netClr, text_size=size.tiny, bgcolor=panelBg)
+
+    // Source / freshness footer (data integrity per repo rules)
+    srcText = "chart " + timeframe.period + (hasVolume ? " • vol OK" : " • NO VOL")
+    srcClr = hasVolume ? dim : amber
+    table.cell(tbl, 0, 8, "SRC", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tbl, 1, 8, srcText, text_color=srcClr, text_size=size.tiny, bgcolor=panelBg)
 
 // ═══════════════════════════════════════════════════════════════
 // ALERTS
 // ═══════════════════════════════════════════════════════════════
 
-alertcondition(bullExhaust or climacticBull, "Bull Exhaustion", "MSP Cypher: Bull exhaustion detected — potential reversal")
-alertcondition(bearExhaust or climacticBear, "Bear Exhaustion", "MSP Cypher: Bear exhaustion detected — potential reversal")
-alertcondition(spotPump, "Spot Pump", "MSP Cypher: Spot pump detected — strong buying pressure")
-alertcondition(spotDump, "Spot Dump", "MSP Cypher: Spot dump detected — strong selling pressure")
-alertcondition(buyVolDec, "Buy Volume Decline", "MSP Cypher: Buy volume declining — price rise losing conviction")
-alertcondition(sellVolDec, "Sell Volume Decline", "MSP Cypher: Sell volume declining — drop losing conviction")
-alertcondition(bullAbsorption, "Buy Absorption", "MSP Cypher: Buy-side absorption — hidden limit bid support")
-alertcondition(bearAbsorption, "Sell Absorption", "MSP Cypher: Sell-side absorption — hidden limit ask resistance")
-alertcondition(ta.crossover(emaFast, emaSlow) and rsi7 > 50, "Scalp Long", "MSP Cypher: Scalp long signal — fast EMA crossed above slow")
-alertcondition(ta.crossunder(emaFast, emaSlow) and rsi7 < 50, "Scalp Short", "MSP Cypher: Scalp short signal — fast EMA crossed below slow")
+alertcondition(bullExhaust or climacticBull, "Bull Exhaustion", "MSP Intel: Bull exhaustion detected — potential reversal")
+alertcondition(bearExhaust or climacticBear, "Bear Exhaustion", "MSP Intel: Bear exhaustion detected — potential reversal")
+alertcondition(spotPump, "Spot Pump", "MSP Intel: Spot pump detected — strong buying pressure")
+alertcondition(spotDump, "Spot Dump", "MSP Intel: Spot dump detected — strong selling pressure")
+alertcondition(buyVolDec, "Buy Volume Decline", "MSP Intel: Buy volume declining — price rise losing conviction")
+alertcondition(sellVolDec, "Sell Volume Decline", "MSP Intel: Sell volume declining — drop losing conviction")
+alertcondition(bullAbsorption, "Buy Absorption", "MSP Intel: Buy-side absorption — hidden limit bid support")
+alertcondition(bearAbsorption, "Sell Absorption", "MSP Intel: Sell-side absorption — hidden limit ask resistance")
+alertcondition(ta.crossover(emaFast, emaSlow) and rsi7 > 50, "Scalp Long", "MSP Intel: Scalp long signal — fast EMA crossed above slow")
+alertcondition(ta.crossunder(emaFast, emaSlow) and rsi7 < 50, "Scalp Short", "MSP Intel: Scalp short signal — fast EMA crossed below slow")

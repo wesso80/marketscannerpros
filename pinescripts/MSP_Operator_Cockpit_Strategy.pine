@@ -1,0 +1,914 @@
+// This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
+// © MarketScanner Pros — MSP Operator Cockpit STRATEGY v1.1
+// Backtest companion to MSP_Operator_Cockpit v1.1.
+//
+// v1.1 hardening (post first-pass HBARUSDT backtest):
+//   • Post-entry TRAP grace period (default 5 bars) — early trap right after
+//     entry IS the release we bought into. Don't bail.
+//   • Sustained-trap exit gate: trap state must persist N consecutive confirmed
+//     bars before exit fires (default 2). Eliminates micro-flip noise.
+//   • PRE-RELEASE TRAP excluded from exit set entirely (it's an entry-side
+//     warning, not a position-management signal).
+//   • Min breakout readiness gate on entries (default 65) — kills low-conviction
+//     stabs into chop.
+//   • Default minimum grade kept at A (A+ tested too restrictive on alts:
+//     2 trades in 6+ years on HBARUSDT 1H, both winners but no sample size).
+//   • Default min breakout readiness 50 (was 65 — same restrictiveness issue).
+//   • ATR defaults rebalanced: stop 1.0× / target 2.5× (winners' MFE 1.46%
+//     justifies room to run; v1.1.1 captured 1.33% / left 0.13%).
+//   • Strict HTF-alignment entry gate — was a score boost only, now hard gate.
+//     v1.1.1 had 247 shorts on a symbol that grinded sideways (32% WR -$404)
+//     vs 195 longs (36% WR -$165). HTF gate should kill counter-trend stabs.
+//   • Diagnostic counters split: trap exits / exh exits / opp-go / htf-flip /
+//     time stop — instead of one combined PROACTIVE EXITS bucket.
+// PRIVATE / OPERATOR-GRADE: research & validation only. Not for live order routing.
+//
+// Purpose:
+//   Validate whether the cockpit's verdict/score/setup engine actually produces
+//   tradeable edge — measured in win rate, profit factor, expectancy, drawdown,
+//   and trap-avoidance — versus simply looking smart on a chart.
+//
+// Engine parity:
+//   ALL 10 modules from the indicator are copied verbatim (DVE, directional,
+//   HTF, structure, chop, momentum, volume, trap, macro, dashboard logic).
+//   Composite scoring, verdict, signal classification, displaySetupLabel,
+//   trap state machine — identical. No behavioural drift between this and
+//   the live cockpit.
+//
+// Entry/exit layer (added on top of the engine):
+//   ENTRIES (transition-only):
+//     • Verdict transitions from non-GO into GO LONG → open long
+//     • Verdict transitions from non-GO into GO SHORT → open short
+//     • Optional: require a WATCH on the same side within last N bars (anti-stab)
+//     • Optional: minimum grade gate (A+, A, or B)
+//     • Optional: long-only / short-only / both
+//   EXITS (priority order, first match wins):
+//     1. Trap state fires (EXHAUSTION TRAP / FAKEOUT RISK / PRE-RELEASE TRAP)
+//     2. Exhaustion warning fires
+//     3. Opposite-side GO verdict (regime flip)
+//     4. HTF bias flips against position
+//     5. ATR-based hard stop
+//     6. ATR-based take profit
+//     7. Max bars in trade (time stop)
+//
+// Backtest hygiene (per Backtest Integrity rule):
+//   • process_orders_on_close = true       (no intra-bar peek)
+//   • calc_on_every_tick      = false      (deterministic close-only eval)
+//   • barstate.isconfirmed gate on entries (no repaint)
+//   • request.security uses lookahead_off + close[1] (already in engine)
+//   • Commission + slippage configurable inputs
+//   • percent_of_equity sizing (no martingale)
+//   • pyramiding = 0
+//
+// Stats overlay:
+//   Replaces operator dashboard with backtest stats:
+//   net P&L, win rate, profit factor, avg R, max DD, total trades,
+//   avg bars in trade, trap-avoidance counter, verdict reached.
+
+//@version=6
+strategy("MSP — Cockpit Strategy v1.1", shorttitle="MSP Strat", overlay=true,
+     initial_capital=10000,
+     default_qty_type=strategy.percent_of_equity,
+     default_qty_value=10,
+     commission_type=strategy.commission.percent,
+     commission_value=0.075,
+     slippage=2,
+     pyramiding=0,
+     process_orders_on_close=true,
+     calc_on_every_tick=false,
+     calc_on_order_fills=false,
+     close_entries_rule="ANY",
+     max_labels_count=200, max_lines_count=50, max_bars_back=500)
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ INPUTS — engine (parity with indicator v1.1) ░░░
+// ═══════════════════════════════════════════════════════════════
+
+grp_mode = "Display"
+showTable = input.bool(true,  "Show Backtest Stats Table",  group=grp_mode)
+showBg    = input.bool(true,  "Show Verdict Background",    group=grp_mode)
+showEMAs  = input.bool(false, "Show EMA Stack",             group=grp_mode)
+showSig   = input.bool(false, "Show Signal Markers",        group=grp_mode)
+bgAlpha   = input.int(94, "Background Transparency", minval=80, maxval=100, group=grp_mode)
+tablePos  = input.string("top_right", "Table Position",
+     options=["top_right", "top_left", "bottom_right", "bottom_left", "middle_right"], group=grp_mode)
+
+grp_htf = "HTF Confirmation"
+useHTF      = input.bool(true,  "Use HTF Confirmation",                 group=grp_htf)
+htfTF       = input.timeframe("60", "HTF Timeframe",                     group=grp_htf)
+htfEmaFast  = input.int(50,     "HTF EMA Fast", minval=10, maxval=100,   group=grp_htf)
+htfEmaSlow  = input.int(200,    "HTF EMA Slow", minval=50, maxval=400,   group=grp_htf)
+
+grp_trend = "Trend / Structure"
+emaFastLen  = input.int(9,   "EMA Fast",   minval=3,  maxval=50,  group=grp_trend)
+emaMidLen   = input.int(21,  "EMA Mid",    minval=10, maxval=100, group=grp_trend)
+emaSlowLen  = input.int(50,  "EMA Slow",   minval=20, maxval=200, group=grp_trend)
+emaTrendLen = input.int(200, "EMA Trend",  minval=100, maxval=400, group=grp_trend)
+adxLen      = input.int(14,  "ADX Length", minval=7,  maxval=30,  group=grp_trend)
+
+grp_dve = "Volatility Engine (DVE)"
+bbLen          = input.int(20,    "BB Length",            minval=5,  maxval=50, group=grp_dve)
+bbStd          = input.float(2.0, "BB Std Mult",          minval=0.5, maxval=4.0, step=0.5, group=grp_dve)
+kcMult         = input.float(1.5, "KC ATR Mult",          minval=1.0, maxval=3.0, step=0.5, group=grp_dve)
+bbwpLookback   = input.int(252,   "BBWP Lookback",        minval=50, maxval=500, group=grp_dve)
+compThreshold  = input.float(15,  "Compression < %",      minval=5,  maxval=40, group=grp_dve)
+expThreshold   = input.float(80,  "Expansion > %",        minval=60, maxval=95, group=grp_dve)
+vhmLen         = input.int(5,     "VHM Smoothing",        minval=2,  maxval=20, group=grp_dve)
+
+grp_mom = "Momentum"
+rsiLen     = input.int(14, "RSI Length",   minval=5,  maxval=30, group=grp_mom)
+macdFast   = input.int(12, "MACD Fast",    minval=5,  maxval=20, group=grp_mom)
+macdSlow   = input.int(26, "MACD Slow",    minval=15, maxval=40, group=grp_mom)
+macdSig    = input.int(9,  "MACD Signal",  minval=3,  maxval=15, group=grp_mom)
+stochLen   = input.int(14, "Stoch Length", minval=5,  maxval=30, group=grp_mom)
+
+grp_vol = "Volume Participation"
+volSmaLen   = input.int(20,    "Volume SMA",         minval=5,  maxval=100, group=grp_vol)
+volHiMult   = input.float(1.5, "High Vol Multiplier", minval=1.1, maxval=4.0, step=0.1, group=grp_vol)
+volLoMult   = input.float(0.7, "Low Vol Multiplier",  minval=0.3, maxval=0.9, step=0.05, group=grp_vol)
+
+grp_struct = "Structure (FVG / Sweep)"
+fvgLookback = input.int(2,  "FVG Bars Back",      minval=1, maxval=5,   group=grp_struct)
+swingLen    = input.int(20, "Swing Lookback",     minval=5, maxval=100, group=grp_struct)
+
+grp_chop = "Chop Filter"
+chopAdxMin     = input.float(18, "Min ADX", minval=10, maxval=30, group=grp_chop)
+chopEmaSpread  = input.float(0.3, "Min EMA Spread (× ATR)", minval=0.1, maxval=2.0, step=0.1, group=grp_chop)
+chopAtrPctMin  = input.float(0.4, "Min ATR % of price", minval=0.1, maxval=2.0, step=0.1, group=grp_chop)
+
+grp_macro = "Macro (BTC-only optional)"
+useMacro    = input.bool(false, "Enable Macro Module",                 group=grp_macro)
+btcDomSym   = input.symbol("CRYPTOCAP:BTC.D",  "BTC.D Symbol",         group=grp_macro)
+dxySym      = input.symbol("TVC:DXY",          "DXY Symbol",            group=grp_macro)
+usdtDomSym  = input.symbol("CRYPTOCAP:USDT.D", "USDT.D Symbol",         group=grp_macro)
+macroMaLen  = input.int(50, "Macro MA Length", minval=10, maxval=200,    group=grp_macro)
+
+grp_score = "Scoring & Verdicts"
+goVerdictMin     = input.float(78, "GO Threshold",                  minval=60, maxval=95, group=grp_score)
+watchVerdictMin  = input.float(62, "WATCH Threshold",               minval=45, maxval=80, group=grp_score)
+minScoreForSig   = input.float(60, "Min Score for Signal Markers",  minval=0,  maxval=95, group=grp_score)
+requireVerdictOk = input.bool(true, "Suppress markers when verdict = WAIT/AVOID/NO TRADE", group=grp_score)
+warmupBars       = input.int(220,  "Warmup Bars",                    minval=50, maxval=500, group=grp_score)
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ INPUTS — strategy layer ░░░
+// ═══════════════════════════════════════════════════════════════
+
+grp_st = "Strategy — Direction & Filters"
+enableLongs       = input.bool(true,  "Enable Longs",                    group=grp_st)
+enableShorts      = input.bool(true,  "Enable Shorts",                   group=grp_st)
+minGradeForEntry  = input.string("A", "Minimum Grade for Entry",
+     options=["A+", "A", "B"],                                            group=grp_st)
+requireWatchFirst = input.bool(true,  "Require prior WATCH (anti-stab)", group=grp_st)
+watchLookback     = input.int(8, "Bars to Look Back for WATCH",
+     minval=1, maxval=30,                                                 group=grp_st)
+allowReentryBars  = input.int(3, "Min Bars Between Entries (same dir)",
+     minval=0, maxval=20,                                                 group=grp_st)
+minBreakoutForEntry = input.float(50, "Min Breakout Readiness for Entry",
+     minval=0, maxval=100, step=5,                                        group=grp_st)
+requireSoftChopClear = input.bool(true, "Require not in SOFT chop at entry", group=grp_st)
+requireHtfAlign      = input.bool(true, "Require HTF alignment at entry (strict)", group=grp_st)
+
+grp_sx = "Strategy — Exits"
+useTrapExit         = input.bool(true,  "Exit on TRAP state",              group=grp_sx)
+trapGraceBars       = input.int(5, "TRAP exit grace period (bars after entry)",
+     minval=0, maxval=30,                                                  group=grp_sx)
+trapPersistBars     = input.int(2, "Bars trap must persist to exit",
+     minval=1, maxval=10,                                                  group=grp_sx)
+includePreReleaseInExit = input.bool(false, "Include PRE-RELEASE TRAP in exit set",
+     group=grp_sx)
+useExhExit          = input.bool(true,  "Exit on EXHAUSTION",              group=grp_sx)
+useOppositeGoExit   = input.bool(true,  "Exit on opposite GO verdict",     group=grp_sx)
+useHtfFlipExit      = input.bool(true,  "Exit on HTF flip against pos",    group=grp_sx)
+useAtrStop          = input.bool(true,  "Use ATR Hard Stop",               group=grp_sx)
+atrStopMult         = input.float(1.0, "ATR Stop Multiplier",
+     minval=0.5, maxval=5.0, step=0.1,                                     group=grp_sx)
+useAtrTarget        = input.bool(true,  "Use ATR Take Profit",             group=grp_sx)
+atrTargetMult       = input.float(2.5, "ATR Target Multiplier",
+     minval=1.0, maxval=10.0, step=0.5,                                    group=grp_sx)
+maxBarsInTrade      = input.int(48, "Max Bars In Trade (time stop)",
+     minval=5, maxval=500,                                                 group=grp_sx)
+
+grp_dt = "Strategy — Backtest Window"
+useDateRange = input.bool(false, "Limit to Date Range", group=grp_dt)
+fromDate     = input.time(timestamp("01 Jan 2024 00:00 +0000"), "From", group=grp_dt)
+toDate       = input.time(timestamp("01 Jan 2030 00:00 +0000"), "To",   group=grp_dt)
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ HELPERS ░░░
+// ═══════════════════════════════════════════════════════════════
+
+clamp(v, lo, hi) => math.max(lo, math.min(hi, v))
+
+countBelowF(src, length) =>
+    cnt = 0
+    for i = 1 to length
+        cnt += src[i] <= src ? 1 : 0
+    cnt
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ CORE SERIES ░░░
+// ═══════════════════════════════════════════════════════════════
+
+emaFast  = ta.ema(close, emaFastLen)
+emaMid   = ta.ema(close, emaMidLen)
+emaSlow  = ta.ema(close, emaSlowLen)
+emaTrend = ta.ema(close, emaTrendLen)
+atrVal   = ta.atr(14)
+[diPlus, diMinus, adxVal] = ta.dmi(adxLen, adxLen)
+
+rsiVal = ta.rsi(close, rsiLen)
+[macdLine, macdSignal, macdHist] = ta.macd(close, macdFast, macdSlow, macdSig)
+stochK = ta.sma(ta.stoch(close, high, low, stochLen), 3)
+
+volSma   = ta.sma(volume, volSmaLen)
+hasVolume = nz(volSma) > 0
+volRatio = hasVolume and volSma > 0 ? volume / volSma : 1.0
+
+candleRange = high - low
+bodyAbs = math.abs(close - open)
+bodyPct = candleRange > 0 ? bodyAbs / candleRange * 100.0 : 0.0
+upperWick = high - math.max(close, open)
+lowerWick = math.min(close, open) - low
+upperWickPct = candleRange > 0 ? upperWick / candleRange * 100.0 : 0.0
+lowerWickPct = candleRange > 0 ? lowerWick / candleRange * 100.0 : 0.0
+
+confirmedBar = barstate.isconfirmed
+warmupOK = bar_index > warmupBars
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ MODULE 1 — VOLATILITY ENGINE (DVE) ░░░
+// ═══════════════════════════════════════════════════════════════
+
+bbBasis = ta.sma(close, bbLen)
+bbDev   = ta.stdev(close, bbLen) * bbStd
+bbUpper = bbBasis + bbDev
+bbLower = bbBasis - bbDev
+bbWidth = bbBasis != 0 ? (bbUpper - bbLower) / bbBasis : 0.0
+
+kcBasis = ta.sma(close, bbLen)
+kcRange = ta.atr(bbLen) * kcMult
+kcUpper = kcBasis + kcRange
+kcLower = kcBasis - kcRange
+
+bbwpRaw = bbwpLookback > 0 ? countBelowF(bbWidth, bbwpLookback) / bbwpLookback * 100.0 : 50.0
+bbwp = clamp(bbwpRaw, 0.0, 100.0)
+bbwpRoc = bbwp - nz(bbwp[1])
+vhm = ta.sma(bbwpRoc, vhmLen)
+vhmAccel = vhm - nz(vhm[1])
+
+inSqueeze = bbLower > kcLower and bbUpper < kcUpper
+squeezeFire = not inSqueeze and inSqueeze[1]
+
+var int squeezeBars = 0
+squeezeBars := inSqueeze ? squeezeBars + 1 : 0
+
+regime = bbwp < compThreshold ? 1 :
+     bbwp > 95 ? 4 :
+     bbwp > expThreshold ? 3 :
+     math.abs(vhm) > 5 ? 5 : 2
+regimeLabel = regime == 1 ? "COMPRESS" :
+     regime == 2 ? "NEUTRAL" :
+     regime == 3 ? "EXPAND" :
+     regime == 4 ? "CLIMAX" : "TRANSITION"
+
+volStateLabel = inSqueeze ? "SQUEEZE" :
+     regime == 1 ? "COIL" :
+     regime == 3 ? "RELEASE" :
+     regime == 4 ? "OVEREXTENDED" :
+     regime == 5 ? "TRANSITION" : "NEUTRAL"
+
+compDepth = bbwp < compThreshold ? 100.0 - bbwp : 0.0
+
+persistBars = 0
+for i = 0 to 29
+    persistBars += bbwp[i] < compThreshold ? 1 : 0
+
+exhRsiHi = rsiVal > 78
+exhRsiLo = rsiVal < 22
+exhBbwpHi = bbwp > 85
+exhAdxHi  = adxVal > 35
+exhVhmDn  = vhm < 0
+exhScore = (exhBbwpHi ? 30.0 : 0.0) + (exhRsiHi or exhRsiLo ? 25.0 : 0.0) +
+     (exhAdxHi and exhVhmDn ? 25.0 : 0.0) + (exhVhmDn ? 20.0 : 0.0)
+exhausted = exhScore >= 60
+exhCandidate = exhausted
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ MODULE 2 — DIRECTIONAL PRESSURE ░░░
+// ═══════════════════════════════════════════════════════════════
+
+dirRaw = 0.0
+dirRaw += close > emaFast  ? 8 : close < emaFast  ? -8 : 0
+dirRaw += emaFast > emaMid ? 7 : emaFast < emaMid ? -7 : 0
+dirRaw += emaMid > emaSlow ? 7 : emaMid < emaSlow ? -7 : 0
+dirRaw += diPlus > diMinus ? 5 : -5
+dirRaw += close > open      ? 3 : close < open ? -3 : 0
+dirScore = clamp(50.0 + (dirRaw / 30.0) * 50.0, 0, 100)
+dirBias = dirScore >= 60 ? 1 : dirScore <= 40 ? -1 : 0
+biasLabel = dirBias == 1 ? "BULL" : dirBias == -1 ? "BEAR" : "NEUTRAL"
+
+brComp    = clamp(compDepth / 100.0 * 100.0, 0, 100)
+brPersist = clamp(persistBars / 30.0 * 100.0, 0, 100)
+brVhm     = clamp(50.0 + vhmAccel * 5.0, 0, 100)
+brSqz     = inSqueeze ? 100.0 : (squeezeFire ? 80.0 : 0.0)
+brDir     = clamp(math.abs(dirScore - 50.0) * 2.0, 0, 100)
+breakoutReadiness = brComp * 0.30 + brPersist * 0.20 + brVhm * 0.20 + brSqz * 0.15 + brDir * 0.15
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ MODULE 3 — HTF CONFIRMATION (no-repaint) ░░░
+// ═══════════════════════════════════════════════════════════════
+
+htfPack() =>
+    [diP_, diM_, adx_] = ta.dmi(adxLen, adxLen)
+    htfDirBias = diP_ > diM_ ? 1.0 : -1.0
+    [ta.ema(close[1], htfEmaFast), ta.ema(close[1], htfEmaSlow), close[1], htfDirBias]
+
+[htfFast, htfSlow, htfClose, htfDirBiasS] =
+     request.security(syminfo.tickerid, htfTF, htfPack(), lookahead=barmerge.lookahead_off)
+
+htfBull = useHTF and not na(htfClose) ? (htfClose > htfFast and htfFast > htfSlow and htfDirBiasS > 0) : false
+htfBear = useHTF and not na(htfClose) ? (htfClose < htfFast and htfFast < htfSlow and htfDirBiasS < 0) : false
+htfState = not useHTF ? "OFF" : htfBull ? "BULL" : htfBear ? "BEAR" : "MIXED"
+htfConflict = useHTF and ((dirBias == 1 and htfBear) or (dirBias == -1 and htfBull))
+
+htfScore = not useHTF ? 50.0 :
+     (dirBias == 1 and htfBull) ? 90.0 :
+     (dirBias == -1 and htfBear) ? 90.0 :
+     htfConflict ? 15.0 :
+     50.0
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ MODULE 4 — STRUCTURE (FVG / SWEEP) ░░░
+// ═══════════════════════════════════════════════════════════════
+
+bullFvg = low > high[fvgLookback]
+bearFvg = high < low[fvgLookback]
+
+priorLow  = ta.lowest(low[1],  swingLen)
+priorHigh = ta.highest(high[1], swingLen)
+bullSweep = low < priorLow and close > priorLow
+bearSweep = high > priorHigh and close < priorHigh
+
+structScore = 50.0
+structScore += bullFvg ? 15.0 : 0.0
+structScore += bearFvg ? -15.0 : 0.0
+structScore += bullSweep ? 20.0 : 0.0
+structScore += bearSweep ? -20.0 : 0.0
+structScore := clamp(structScore, 0, 100)
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ MODULE 5 — CHOP FILTER (soft vs hard) ░░░
+// ═══════════════════════════════════════════════════════════════
+
+emaSpreadAtr = atrVal > 0 ? math.abs(emaFast - emaSlow) / atrVal : 0.0
+atrPct       = close > 0 ? atrVal / close * 100.0 : 0.0
+
+chopByAdx       = adxVal < chopAdxMin
+chopByEmaCompr  = emaSpreadAtr < chopEmaSpread
+chopByAtrWeak   = atrPct < chopAtrPctMin
+chopHits = (chopByAdx ? 1 : 0) + (chopByEmaCompr ? 1 : 0) + (chopByAtrWeak ? 1 : 0)
+
+isSoftChop = chopHits >= 1
+squeezeContext   = inSqueeze or squeezeFire or regime == 1
+volExpansion     = hasVolume and volRatio >= volHiMult
+strongDirection  = math.abs(dirScore - 50.0) >= 20
+isHardChop = chopHits >= 2 and not squeezeContext and not volExpansion and not strongDirection
+chopType = isHardChop ? "HARD" : isSoftChop ? "SOFT" : "OFF"
+isChop = isHardChop
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ MODULE 6 — MOMENTUM ░░░
+// ═══════════════════════════════════════════════════════════════
+
+momRaw = 0.0
+momRaw += rsiVal > 55 ? 5 : rsiVal < 45 ? -5 : 0
+macdHistAccel = macdHist - nz(macdHist[1])
+macdMomPts = macdHist > 0 and macdHistAccel > 0 ? 6 : macdHist > 0 ? 3 : macdHist < 0 and macdHistAccel < 0 ? -6 : macdHist < 0 ? -3 : 0
+momRaw += macdMomPts
+momRaw += stochK > 60 ? 4 : stochK < 40 ? -4 : 0
+momScore = clamp(50.0 + (momRaw / 15.0) * 50.0, 0, 100)
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ MODULE 7 — VOLUME PARTICIPATION ░░░
+// ═══════════════════════════════════════════════════════════════
+
+volPart = 50.0
+if hasVolume
+    volPart := volRatio > 2.0 ? 90.0 :
+         volRatio > volHiMult ? 75.0 :
+         volRatio < volLoMult ? 25.0 :
+         50.0
+
+bullExhaustCdl = hasVolume and rsiVal > 78 and upperWickPct > 60 and volRatio > 2.0
+bearExhaustCdl = hasVolume and rsiVal < 22 and lowerWickPct > 60 and volRatio > 2.0
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ MODULE 7B — TRAP DETECTION (v1.1 multi-factor) ░░░
+// ═══════════════════════════════════════════════════════════════
+
+highVolRejUp = hasVolume and volRatio >= volHiMult and bodyPct < 35.0 and upperWickPct >= 50.0
+highVolRejDn = hasVolume and volRatio >= volHiMult and bodyPct < 35.0 and lowerWickPct >= 50.0
+highVolRejection = highVolRejUp or highVolRejDn
+
+conflictedDir = (diPlus > diMinus and close < open) or (diMinus > diPlus and close > open)
+
+var bool squeezeFirePrev = false
+failedFollowThrough = squeezeFirePrev and ((close[1] > bbBasis[1] and close < open) or (close[1] < bbBasis[1] and close > open))
+if barstate.isconfirmed
+    squeezeFirePrev := squeezeFire
+
+preTrapHits = 0
+preTrapHits += (inSqueeze or regime == 1) ? 1 : 0
+preTrapHits += adxVal < 18 ? 1 : 0
+preTrapHits += conflictedDir ? 1 : 0
+preTrapHits += vhm < 0 ? 1 : 0
+preTrapHits += hasVolume and volRatio < volLoMult ? 1 : 0
+preTrapHits += breakoutReadiness < 60 ? 1 : 0
+preTrapHits += failedFollowThrough ? 1 : 0
+preTrapHits += highVolRejection ? 1 : 0
+
+compressionCaution = (inSqueeze or regime == 1) and adxVal < 22 and (vhm < 0 or conflictedDir)
+preReleaseTrap = preTrapHits >= 4
+
+fakeoutRisk = (squeezeFire or squeezeFirePrev) and (adxVal < 20 or (hasVolume and volRatio < 1.0) or highVolRejection or failedFollowThrough)
+exhaustionTrap = (exhausted or bullExhaustCdl or bearExhaustCdl) and (highVolRejection or rsiVal > 80 or rsiVal < 20)
+confirmedRelease = squeezeFire and adxVal >= 22 and (not hasVolume or volRatio >= 1.0) and not conflictedDir
+
+trapState = exhaustionTrap ? "EXHAUSTION TRAP" :
+     fakeoutRisk ? "FAKEOUT RISK" :
+     preReleaseTrap ? "PRE-RELEASE TRAP" :
+     compressionCaution ? "COMPRESSION CAUTION" :
+     confirmedRelease ? "CONFIRMED RELEASE" : "—"
+
+anyTrap = exhaustionTrap or fakeoutRisk or preReleaseTrap
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ MODULE 8 — MACRO (optional, BTC-only by default) ░░░
+// ═══════════════════════════════════════════════════════════════
+
+isBtcSymbol = str.contains(str.upper(syminfo.ticker), "BTC")
+macroOn = useMacro and isBtcSymbol
+
+btcDClose  = macroOn ? request.security(btcDomSym,  "D", close[1], lookahead=barmerge.lookahead_off) : na
+btcDMa     = macroOn ? request.security(btcDomSym,  "D", ta.sma(close, macroMaLen)[1], lookahead=barmerge.lookahead_off) : na
+dxyClose   = macroOn ? request.security(dxySym,     "D", close[1], lookahead=barmerge.lookahead_off) : na
+dxyMa      = macroOn ? request.security(dxySym,     "D", ta.sma(close, macroMaLen)[1], lookahead=barmerge.lookahead_off) : na
+usdtDClose = macroOn ? request.security(usdtDomSym, "D", close[1], lookahead=barmerge.lookahead_off) : na
+usdtDMa    = macroOn ? request.security(usdtDomSym, "D", ta.sma(close, macroMaLen)[1], lookahead=barmerge.lookahead_off) : na
+
+macroBullPts = 0
+macroBearPts = 0
+if macroOn and not na(btcDClose) and not na(btcDMa)
+    if btcDClose < btcDMa
+        macroBullPts += 1
+    else
+        macroBearPts += 1
+if macroOn and not na(dxyClose) and not na(dxyMa)
+    if dxyClose < dxyMa
+        macroBullPts += 1
+    else
+        macroBearPts += 1
+if macroOn and not na(usdtDClose) and not na(usdtDMa)
+    if usdtDClose < usdtDMa
+        macroBullPts += 1
+    else
+        macroBearPts += 1
+
+macroState = not macroOn ? "OFF" :
+     macroBullPts >= 2 ? "RISK ON" :
+     macroBearPts >= 2 ? "RISK OFF" : "MIXED"
+macroBull = macroOn and macroBullPts >= 2
+macroBear = macroOn and macroBearPts >= 2
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ COMPOSITE SCORE — DUAL bull/bear ░░░
+// ═══════════════════════════════════════════════════════════════
+
+volCompScore = inSqueeze ? 85.0 :
+     regime == 1 ? 80.0 :
+     squeezeFire ? 78.0 :
+     regime == 3 ? 60.0 :
+     regime == 4 ? 25.0 :
+     50.0
+
+bullDirScore = clamp((dirRaw + 30.0) / 60.0 * 100.0, 0, 100)
+bearDirScore = 100.0 - bullDirScore
+
+bullHtfScore = not useHTF ? 50.0 : htfBull ? 90.0 : htfBear ? 15.0 : 50.0
+bearHtfScore = not useHTF ? 50.0 : htfBear ? 90.0 : htfBull ? 15.0 : 50.0
+
+bullMomScore = momScore
+bearMomScore = 100.0 - momScore
+
+bullStructScore = clamp(50.0 + (bullFvg ? 15.0 : 0.0) + (bullSweep ? 20.0 : 0.0), 0, 100)
+bearStructScore = clamp(50.0 + (bearFvg ? 15.0 : 0.0) + (bearSweep ? 20.0 : 0.0), 0, 100)
+
+bullBase = volCompScore * 0.20 + breakoutReadiness * 0.15 + bullDirScore * 0.20 + bullHtfScore * 0.15 + bullMomScore * 0.10 + volPart * 0.10 + bullStructScore * 0.10
+bearBase = volCompScore * 0.20 + breakoutReadiness * 0.15 + bearDirScore * 0.20 + bearHtfScore * 0.15 + bearMomScore * 0.10 + volPart * 0.10 + bearStructScore * 0.10
+
+softChopPen = isHardChop ? 15.0 : isSoftChop ? 5.0 : 0.0
+exhPen      = exhausted ? 10.0 : 0.0
+trapPen     = anyTrap ? 15.0 : 0.0
+volWeakPen  = hasVolume and volRatio < volLoMult ? 5.0 : 0.0
+penalty = softChopPen + exhPen + trapPen + volWeakPen
+
+bullHtfPen = useHTF and htfBear ? 10.0 : 0.0
+bearHtfPen = useHTF and htfBull ? 10.0 : 0.0
+
+bullMacroBonus = macroBull ? 3.0 : macroBear ? -3.0 : 0.0
+bearMacroBonus = macroBear ? 3.0 : macroBull ? -3.0 : 0.0
+
+bullScore = clamp(bullBase - penalty - bullHtfPen + bullMacroBonus, 0, 100)
+bearScore = clamp(bearBase - penalty - bearHtfPen + bearMacroBonus, 0, 100)
+
+dominantSide = bullScore >= bearScore ? 1 : -1
+finalScore = math.max(bullScore, bearScore)
+baseScore = math.max(bullBase, bearBase)
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ VERDICT (9 states) — uses dominantSide ░░░
+// ═══════════════════════════════════════════════════════════════
+
+htfConflictDom = useHTF and ((dominantSide == 1 and htfBear) or (dominantSide == -1 and htfBull))
+
+verdict = "NO TRADE"
+if not warmupOK
+    verdict := "NO TRADE"
+else if exhaustionTrap
+    verdict := "EXHAUSTION"
+else if fakeoutRisk or preReleaseTrap
+    verdict := "TRAP RISK"
+else if isHardChop
+    verdict := "WAIT"
+else if htfConflictDom or (hasVolume and volRatio < volLoMult)
+    verdict := "AVOID"
+else if finalScore >= goVerdictMin and dominantSide == 1
+    verdict := "GO LONG"
+else if finalScore >= goVerdictMin and dominantSide == -1
+    verdict := "GO SHORT"
+else if finalScore >= watchVerdictMin and dominantSide == 1
+    verdict := "WATCH LONG"
+else if finalScore >= watchVerdictMin and dominantSide == -1
+    verdict := "WATCH SHORT"
+else
+    verdict := "NO TRADE"
+
+setupGrade = verdict == "GO LONG" or verdict == "GO SHORT" ?
+     (finalScore >= 88 and not isHardChop and not exhausted ? "A+" :
+      finalScore >= 80 ? "A" : "B") :
+     verdict == "WATCH LONG" or verdict == "WATCH SHORT" ? "C" :
+     verdict == "WAIT" or verdict == "NO TRADE" ? "D" :
+     "F"
+
+biasLabelDom = dominantSide == 1 ? "BULL" : "BEAR"
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ SIGNAL CLASSIFICATION (parity with indicator) ░░░
+// ═══════════════════════════════════════════════════════════════
+
+bullCont = dominantSide == 1  and (not useHTF or htfBull) and adxVal >= chopAdxMin and not isHardChop
+bearCont = dominantSide == -1 and (not useHTF or htfBear) and adxVal >= chopAdxMin and not isHardChop
+
+rsiPrev = nz(rsiVal[1])
+rsiRising  = rsiVal > rsiPrev
+rsiFalling = rsiVal < rsiPrev
+rsiReclaim50Up   = rsiPrev < 50.0 and rsiVal >= 50.0
+rsiReclaim50Down = rsiPrev > 50.0 and rsiVal <= 50.0
+
+bullRev = bullSweep and close > priorLow and macdHist > nz(macdHist[1]) and (rsiRising or rsiReclaim50Up) and (lowerWickPct >= 35.0 or (hasVolume and volRatio >= volHiMult))
+bearRev = bearSweep and close < priorHigh and macdHist < nz(macdHist[1]) and (rsiFalling or rsiReclaim50Down) and (upperWickPct >= 35.0 or (hasVolume and volRatio >= volHiMult))
+
+longContSig  = bullCont and not bullRev
+shortContSig = bearCont and not bearRev
+longRevSig   = bullRev  and not bullCont
+shortRevSig  = bearRev  and not bearCont
+
+compReleaseLong  = squeezeFire and dominantSide == 1  and adxVal >= 22 and (not hasVolume or volRatio >= 1.0)
+compReleaseShort = squeezeFire and dominantSide == -1 and adxVal >= 22 and (not hasVolume or volRatio >= 1.0)
+
+expansionLong  = regime == 3 and dominantSide == 1  and momScore > 60 and (not hasVolume or volRatio > volHiMult)
+expansionShort = regime == 3 and dominantSide == -1 and momScore < 40 and (not hasVolume or volRatio > volHiMult)
+
+trapWarn = fakeoutRisk or preReleaseTrap
+exhWarn  = exhausted or bullExhaustCdl or bearExhaustCdl
+
+signalType = not warmupOK or not confirmedBar ? "NO_TRADE" :
+     compReleaseLong  ? "COMP_RELEASE_LONG" :
+     compReleaseShort ? "COMP_RELEASE_SHORT" :
+     expansionLong    ? "EXPANSION_LONG" :
+     expansionShort   ? "EXPANSION_SHORT" :
+     longContSig      ? "LONG_CONT" :
+     shortContSig     ? "SHORT_CONT" :
+     longRevSig       ? "LONG_REV" :
+     shortRevSig      ? "SHORT_REV" :
+     trapWarn         ? "TRAP_WARNING" :
+     exhWarn          ? "EXHAUSTION_WARNING" :
+     "NO_TRADE"
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ STRATEGY — entry/exit layer ░░░
+// ═══════════════════════════════════════════════════════════════
+
+// Date window gate
+inDateWindow = not useDateRange or (time >= fromDate and time <= toDate)
+
+// Verdict transition tracking
+var string prevVerdict = ""
+verdictChanged = confirmedBar and verdict != prevVerdict
+if confirmedBar
+    prevVerdict := verdict
+
+// WATCH-first anti-stab gate
+//   Track bars-since-last-WATCH per side; entry requires WATCH within `watchLookback`
+var int barsSinceWatchLong  = 9999
+var int barsSinceWatchShort = 9999
+if confirmedBar
+    barsSinceWatchLong  := (verdict == "WATCH LONG"  or verdict == "GO LONG")  ? 0 : barsSinceWatchLong  + 1
+    barsSinceWatchShort := (verdict == "WATCH SHORT" or verdict == "GO SHORT") ? 0 : barsSinceWatchShort + 1
+
+watchOkLong  = not requireWatchFirst or barsSinceWatchLong  <= watchLookback
+watchOkShort = not requireWatchFirst or barsSinceWatchShort <= watchLookback
+
+// Grade gate
+gradeRank = setupGrade == "A+" ? 3 : setupGrade == "A" ? 2 : setupGrade == "B" ? 1 : 0
+minGradeRank = minGradeForEntry == "A+" ? 3 : minGradeForEntry == "A" ? 2 : 1
+gradeOk = gradeRank >= minGradeRank
+
+// Re-entry cooldown per side
+var int barsSinceLongEntry  = 9999
+var int barsSinceShortEntry = 9999
+if confirmedBar
+    barsSinceLongEntry  := barsSinceLongEntry  + 1
+    barsSinceShortEntry := barsSinceShortEntry + 1
+
+cooldownOkLong  = barsSinceLongEntry  >= allowReentryBars
+cooldownOkShort = barsSinceShortEntry >= allowReentryBars
+
+// Additional entry quality gates
+breakoutOk      = breakoutReadiness >= minBreakoutForEntry
+softChopClearOk = not requireSoftChopClear or not isSoftChop
+htfAlignOkLong  = not requireHtfAlign or not useHTF or htfBull
+htfAlignOkShort = not requireHtfAlign or not useHTF or htfBear
+
+// Entry triggers — confirmed-bar transitions only
+goLongTrigger  = confirmedBar and inDateWindow and verdictChanged and verdict == "GO LONG"  and enableLongs  and watchOkLong  and gradeOk and cooldownOkLong  and breakoutOk and softChopClearOk and htfAlignOkLong
+goShortTrigger = confirmedBar and inDateWindow and verdictChanged and verdict == "GO SHORT" and enableShorts and watchOkShort and gradeOk and cooldownOkShort and breakoutOk and softChopClearOk and htfAlignOkShort
+
+// Track entry context for stats
+var float entryPrice    = na
+var int   entryBarIdx   = na
+var string entryReason  = ""
+var int totalLongEntries  = 0
+var int totalShortEntries = 0
+var int exitTrapCount   = 0
+var int exitExhCount    = 0
+var int exitOppCount    = 0
+var int exitHtfCount    = 0
+var int exitTimeCount   = 0
+
+// Open long
+if goLongTrigger
+    // Flatten any short first
+    if strategy.position_size < 0
+        strategy.close_all(comment="flip→long")
+    strategy.entry("L", strategy.long, comment="GO LONG " + setupGrade)
+    barsSinceLongEntry := 0
+
+// Open short
+if goShortTrigger
+    if strategy.position_size > 0
+        strategy.close_all(comment="flip→short")
+    strategy.entry("S", strategy.short, comment="GO SHORT " + setupGrade)
+    barsSinceShortEntry := 0
+
+// Capture entry context (one bar after fill, when position_size is reflected)
+if strategy.position_size != 0 and na(entryPrice)
+    entryPrice  := strategy.position_avg_price
+    entryBarIdx := bar_index
+    entryReason := strategy.position_size > 0 ? "LONG" : "SHORT"
+    if strategy.position_size > 0
+        totalLongEntries  += 1
+    else
+        totalShortEntries += 1
+
+// Exit conditions (priority order)
+inLong  = strategy.position_size > 0
+inShort = strategy.position_size < 0
+barsInTrade = (inLong or inShort) and not na(entryBarIdx) ? bar_index - entryBarIdx : 0
+
+// Trap exit set — by default, PRE-RELEASE TRAP is excluded (it's an entry warning,
+// not a position-management signal; firing it during a held breakout is just noise).
+trapExitSet = includePreReleaseInExit ? anyTrap : (exhaustionTrap or fakeoutRisk)
+
+// Sustained trap counter — trap state must hold for N consecutive confirmed bars
+var int trapPersistCount = 0
+if confirmedBar
+    trapPersistCount := trapExitSet ? trapPersistCount + 1 : 0
+
+trapSustained = trapPersistCount >= trapPersistBars
+graceClear    = barsInTrade >= trapGraceBars
+
+// 1+2. TRAP / EXHAUSTION exits (apply to both sides) — gated by grace + persistence
+trapExitFire = (inLong or inShort) and confirmedBar and useTrapExit and trapSustained and graceClear
+exhExitFire  = (inLong or inShort) and confirmedBar and useExhExit  and (exhausted or bullExhaustCdl or bearExhaustCdl) and graceClear
+
+// 3. Opposite GO verdict
+oppExitLong  = inLong  and confirmedBar and useOppositeGoExit and verdict == "GO SHORT"
+oppExitShort = inShort and confirmedBar and useOppositeGoExit and verdict == "GO LONG"
+
+// 4. HTF flip against position
+htfExitLong  = inLong  and confirmedBar and useHtfFlipExit and useHTF and htfBear
+htfExitShort = inShort and confirmedBar and useHtfFlipExit and useHTF and htfBull
+
+// 5+6. ATR stop + target (broker-managed via strategy.exit)
+stopLong   = useAtrStop   and not na(entryPrice) ? entryPrice - atrVal * atrStopMult   : na
+targetLong = useAtrTarget and not na(entryPrice) ? entryPrice + atrVal * atrTargetMult : na
+stopShort  = useAtrStop   and not na(entryPrice) ? entryPrice + atrVal * atrStopMult   : na
+targetShort= useAtrTarget and not na(entryPrice) ? entryPrice - atrVal * atrTargetMult : na
+
+if inLong and not na(entryPrice)
+    strategy.exit("XL", from_entry="L", stop=useAtrStop ? stopLong : na, limit=useAtrTarget ? targetLong : na, comment_loss="ATR stop", comment_profit="ATR target")
+if inShort and not na(entryPrice)
+    strategy.exit("XS", from_entry="S", stop=useAtrStop ? stopShort : na, limit=useAtrTarget ? targetShort : na, comment_loss="ATR stop", comment_profit="ATR target")
+
+// 7. Time stop
+timeExit = (inLong or inShort) and barsInTrade >= maxBarsInTrade
+
+// Signal-based exits (close immediately at bar close)
+if trapExitFire
+    strategy.close_all(comment="TRAP")
+    exitTrapCount += 1
+else if exhExitFire
+    strategy.close_all(comment="EXH")
+    exitExhCount += 1
+else if oppExitLong or oppExitShort
+    strategy.close_all(comment="OPP GO")
+    exitOppCount += 1
+else if htfExitLong or htfExitShort
+    strategy.close_all(comment="HTF flip")
+    exitHtfCount += 1
+else if timeExit
+    strategy.close_all(comment="time stop")
+    exitTimeCount += 1
+
+// Reset entry context after flat
+if strategy.position_size == 0
+    entryPrice  := na
+    entryBarIdx := na
+    entryReason := ""
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ COLORS ░░░
+// ═══════════════════════════════════════════════════════════════
+
+cGreen  = #10B981
+cRed    = #EF4444
+cAmber  = #F59E0B
+cBlue   = #3B82F6
+cPurple = #A855F7
+cDim    = #94A3B8
+cWhite  = #E2E8F0
+cBg     = #0F172A
+
+verdictColor = verdict == "GO LONG"      ? cGreen :
+     verdict == "GO SHORT"               ? cRed :
+     verdict == "WATCH LONG"             ? color.new(cGreen, 35) :
+     verdict == "WATCH SHORT"            ? color.new(cRed, 35) :
+     verdict == "WAIT"                   ? cAmber :
+     verdict == "AVOID"                  ? cAmber :
+     verdict == "TRAP RISK"              ? cPurple :
+     verdict == "EXHAUSTION"             ? cPurple :
+     cDim
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ VISUALS (lightweight in strategy mode) ░░░
+// ═══════════════════════════════════════════════════════════════
+
+bgcolor(showBg and verdict == "GO LONG"    ? color.new(cGreen,  bgAlpha) : na, title="GO LONG bg")
+bgcolor(showBg and verdict == "GO SHORT"   ? color.new(cRed,    bgAlpha) : na, title="GO SHORT bg")
+bgcolor(showBg and verdict == "TRAP RISK"  ? color.new(cPurple, bgAlpha) : na, title="TRAP bg")
+bgcolor(showBg and verdict == "EXHAUSTION" ? color.new(cPurple, math.min(bgAlpha + 1, 100)) : na, title="EXH bg")
+
+plot(showEMAs ? emaFast : na, "EMA Fast", color=color.new(cGreen, 30), linewidth=1)
+plot(showEMAs ? emaMid  : na, "EMA Mid",  color=color.new(cBlue, 35),  linewidth=1)
+plot(showEMAs ? emaSlow : na, "EMA Slow", color=color.new(cAmber, 35), linewidth=1)
+
+// Entry markers (strategy already plots its own, but these are colour-coded)
+plotshape(showSig and goLongTrigger,  "Entry L", style=shape.labelup,   location=location.belowbar, color=color.new(cGreen, 0), textcolor=color.white, text="L", size=size.small)
+plotshape(showSig and goShortTrigger, "Entry S", style=shape.labeldown, location=location.abovebar, color=color.new(cRed, 0),   textcolor=color.white, text="S", size=size.small)
+
+// ═══════════════════════════════════════════════════════════════
+// ░░░ BACKTEST STATS TABLE ░░░
+// ═══════════════════════════════════════════════════════════════
+
+tblPos = tablePos == "top_right"    ? position.top_right :
+     tablePos == "top_left"         ? position.top_left :
+     tablePos == "bottom_right"     ? position.bottom_right :
+     tablePos == "bottom_left"      ? position.bottom_left :
+     position.middle_right
+
+headerBg = color.new(#1E293B, 0)
+panelBg  = color.new(cBg, 10)
+dim      = color.new(cDim, 0)
+
+var table tb = table.new(tblPos, 2, 18, bgcolor=color.new(cBg, 5),
+     frame_color=color.new(cGreen, 60), frame_width=1,
+     border_color=color.new(#334155, 30), border_width=1)
+
+if showTable and barstate.islast
+    // Aggregate stats
+    netProfit  = strategy.netprofit
+    grossProf  = strategy.grossprofit
+    grossLoss  = strategy.grossloss
+    pf         = grossLoss > 0 ? grossProf / grossLoss : na
+    totalTr    = strategy.closedtrades
+    winTr      = strategy.wintrades
+    lossTr     = strategy.losstrades
+    winRate    = totalTr > 0 ? (winTr / totalTr) * 100.0 : na
+    avgTrade   = totalTr > 0 ? netProfit / totalTr : na
+    avgWin     = winTr > 0 ? grossProf / winTr : na
+    avgLoss    = lossTr > 0 ? grossLoss / lossTr : na
+    avgRR      = (not na(avgWin)) and (not na(avgLoss)) and avgLoss > 0 ? avgWin / avgLoss : na
+    maxDD      = strategy.max_drawdown
+    eqPct      = strategy.initial_capital > 0 ? netProfit / strategy.initial_capital * 100.0 : na
+
+    // Header
+    table.cell(tb, 0, 0, "MSP STRAT v1.0", text_color=cGreen, text_size=size.tiny, bgcolor=headerBg)
+    table.cell(tb, 1, 0, syminfo.ticker + " · " + timeframe.period, text_color=dim, text_size=size.tiny, bgcolor=headerBg)
+
+    // Current verdict (live cockpit context)
+    table.cell(tb, 0, 1, "VERDICT", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tb, 1, 1, verdict + " · " + setupGrade, text_color=verdictColor, text_size=size.small,
+         text_font_family=font.family_monospace, bgcolor=panelBg)
+
+    // Net P&L
+    netColor = netProfit >= 0 ? cGreen : cRed
+    netText = "$" + str.tostring(netProfit, "#.##") + (na(eqPct) ? "" : "  (" + str.tostring(eqPct, "#.#") + "%)")
+    table.cell(tb, 0, 2, "NET P&L", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tb, 1, 2, netText, text_color=netColor, text_size=size.normal,
+         text_font_family=font.family_monospace, bgcolor=panelBg)
+
+    // Profit factor
+    pfColor = na(pf) ? cDim : pf >= 1.5 ? cGreen : pf >= 1.0 ? cAmber : cRed
+    table.cell(tb, 0, 3, "PROFIT FACTOR", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tb, 1, 3, na(pf) ? "—" : str.tostring(pf, "#.##"),
+         text_color=pfColor, text_size=size.small, bgcolor=panelBg)
+
+    // Win rate
+    wrColor = na(winRate) ? cDim : winRate >= 55 ? cGreen : winRate >= 45 ? cAmber : cRed
+    table.cell(tb, 0, 4, "WIN RATE", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tb, 1, 4, na(winRate) ? "—" : str.tostring(winRate, "#.#") + "%  (" + str.tostring(winTr) + "/" + str.tostring(totalTr) + ")",
+         text_color=wrColor, text_size=size.small, bgcolor=panelBg)
+
+    // Avg R:R
+    rrColor = na(avgRR) ? cDim : avgRR >= 1.5 ? cGreen : avgRR >= 1.0 ? cAmber : cRed
+    table.cell(tb, 0, 5, "AVG WIN/LOSS", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tb, 1, 5, na(avgRR) ? "—" : str.tostring(avgRR, "#.##") + "R", text_color=rrColor, text_size=size.small, bgcolor=panelBg)
+
+    // Avg trade
+    table.cell(tb, 0, 6, "AVG TRADE", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tb, 1, 6, na(avgTrade) ? "—" : "$" + str.tostring(avgTrade, "#.##"),
+         text_color=cWhite, text_size=size.small, bgcolor=panelBg)
+
+    // Max DD
+    ddPct = strategy.initial_capital > 0 ? maxDD / strategy.initial_capital * 100.0 : na
+    table.cell(tb, 0, 7, "MAX DD", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tb, 1, 7, "$" + str.tostring(maxDD, "#.##") + (na(ddPct) ? "" : "  (" + str.tostring(ddPct, "#.#") + "%)"),
+         text_color=cRed, text_size=size.small, bgcolor=panelBg)
+
+    // Trades L / S split
+    table.cell(tb, 0, 8, "TRADES L/S", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tb, 1, 8, str.tostring(totalLongEntries) + " / " + str.tostring(totalShortEntries),
+         text_color=cWhite, text_size=size.small, bgcolor=panelBg)
+
+    // Exit reason breakdown
+    exitBreakdown = "T:" + str.tostring(exitTrapCount) +
+         " E:" + str.tostring(exitExhCount) +
+         " O:" + str.tostring(exitOppCount) +
+         " H:" + str.tostring(exitHtfCount) +
+         " t:" + str.tostring(exitTimeCount)
+    table.cell(tb, 0, 9, "EXITS T/E/O/H/t", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tb, 1, 9, exitBreakdown,
+         text_color=cAmber, text_size=size.small, text_font_family=font.family_monospace, bgcolor=panelBg)
+
+    // Bars in current trade
+    table.cell(tb, 0, 10, "BARS IN POS", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tb, 1, 10, (inLong or inShort) ? str.tostring(barsInTrade) + " / " + str.tostring(maxBarsInTrade) : "flat",
+         text_color=cWhite, text_size=size.small, bgcolor=panelBg)
+
+    // Filters in effect
+    filterTxt = (enableLongs ? "L" : "·") + (enableShorts ? "S" : "·") + " · ≥" + minGradeForEntry +
+         (requireWatchFirst ? " · WATCH≤" + str.tostring(watchLookback) : "") +
+         " · BR≥" + str.tostring(minBreakoutForEntry, "#") +
+         " · ATR " + str.tostring(atrStopMult, "#.#") + "/" + str.tostring(atrTargetMult, "#.#") +
+         " · TrapGrace " + str.tostring(trapGraceBars) + "b/" + str.tostring(trapPersistBars) + "b"
+    table.cell(tb, 0, 11, "FILTERS", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tb, 1, 11, filterTxt, text_color=cBlue, text_size=size.tiny, bgcolor=panelBg)
+
+    // SRC / freshness
+    srcText = "live · " + (hasVolume ? "vol OK" : "NO VOL") + (warmupOK ? "" : " · warming") +
+         (useDateRange ? " · windowed" : "") + " · sim only"
+    srcColor = (not hasVolume) or (not warmupOK) ? cAmber : dim
+    table.cell(tb, 0, 12, "SRC", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
+    table.cell(tb, 1, 12, srcText, text_color=srcColor, text_size=size.tiny, bgcolor=panelBg)

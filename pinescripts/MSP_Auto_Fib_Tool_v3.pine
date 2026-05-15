@@ -1,0 +1,434 @@
+//@version=6
+indicator("Marketscannerpros Auto Fib Tool - Locked & Alerts v3", overlay = true, max_lines_count = 100, max_boxes_count = 20, max_labels_count = 60)
+
+//──────────── SETTINGS ────────────//
+grp_piv   = "Swing Detection"
+leftBars  = input.int(5,  "Pivot Left",  minval = 1, maxval = 50, group = grp_piv)
+rightBars = input.int(5,  "Pivot Right", minval = 1, maxval = 50, group = grp_piv)
+lockSwing = input.bool(false, "🔒 Lock Current Swing", group = grp_piv)
+showPivotMarkers = input.bool(true, "Show Pivot Markers", group = grp_piv)
+
+grp_fib   = "Fibonacci Levels"
+showNeg61 = input.bool(false, "-61.8% ext", group = grp_fib)
+showNeg23 = input.bool(false, "-23.6% ext", group = grp_fib)
+show0     = input.bool(true,  "0% (start)", group = grp_fib)
+show23    = input.bool(true,  "23.6%",      group = grp_fib)
+show38    = input.bool(true,  "38.2%",      group = grp_fib)
+show50    = input.bool(true,  "50%",        group = grp_fib)
+show61    = input.bool(true,  "61.8%",      group = grp_fib)
+show78    = input.bool(true,  "78.6%",      group = grp_fib)
+show100   = input.bool(true,  "100% (end)", group = grp_fib)
+show127   = input.bool(true,  "127.2% ext", group = grp_fib)
+show161   = input.bool(true,  "161.8% ext", group = grp_fib)
+show261   = input.bool(true,  "261.8% ext", group = grp_fib)
+show361   = input.bool(false, "361.8% ext", group = grp_fib)
+show461   = input.bool(false, "461.8% ext", group = grp_fib)
+
+grp_gpocket = "Golden Pocket"
+showGP      = input.bool(true, "Highlight Golden Pocket", group = grp_gpocket)
+gpLow       = input.float(0.618, "GP Low",  step = 0.001, group = grp_gpocket)
+gpHigh      = input.float(0.65,  "GP High", step = 0.001, group = grp_gpocket)
+
+grp_table = "Info Table"
+showTable    = input.bool(true, "Show Levels Table", group = grp_table)
+tablePos     = input.string("Top Right", "Table Position", options = ["Top Right", "Top Left", "Bottom Right", "Bottom Left"], group = grp_table)
+tableSize    = input.string("Small", "Table Size", options = ["Tiny", "Small", "Normal"], group = grp_table)
+
+grp_alerts = "Proximity Alerts"
+proximityPct = input.float(0.5, "Proximity % for Alert", minval = 0.1, maxval = 5.0, step = 0.1, group = grp_alerts, tooltip = "Alert when price is within this % of any fib level")
+
+grp_display = "Display"
+labelOffset    = input.int(3,  "Label Offset (bars)", minval = 0, maxval = 20, group = grp_display, tooltip = "Push fib labels N bars right of the current bar so they clear the live price tag")
+staleSwingBars = input.int(50, "Stale Swing After (bars)", minval = 5, maxval = 1000, group = grp_display, tooltip = "Color SRC footer yellow when current swing is older than N bars on this TF")
+
+//──────────── COLORS ────────────//
+colNeg61 = color.new(#FF6B6B, 0)   // coral red
+colNeg23 = color.new(#4ECDC4, 0)   // teal
+col0     = color.new(color.blue,   0)
+col23    = color.new(color.aqua,   0)
+col38    = color.new(color.lime,   0)
+col50    = color.new(color.yellow, 0)
+col61    = color.new(color.orange, 0)
+col78    = color.new(color.red,    0)
+col100   = color.new(color.purple, 0)
+col127   = color.new(color.fuchsia,40)
+col161   = color.new(color.maroon, 20)
+col261   = color.new(#00FFC3, 0)   // teal-cyan
+col361   = color.new(#FF00A6, 0)   // deep pink
+col461   = color.new(#FFD700, 0)   // gold
+colGP    = color.new(color.yellow, 85)
+
+//──────────── PIVOT LOGIC ────────────//
+ph = ta.pivothigh(high, leftBars, rightBars)
+pl = ta.pivotlow(low,  leftBars, rightBars)
+
+var float lastHigh    = na
+var float lastLow     = na
+var int   lastHighBar = na
+var int   lastLowBar  = na
+
+if (not lockSwing) or (not barstate.isrealtime)
+    if not na(ph)
+        lastHigh    := high[rightBars]
+        lastHighBar := bar_index - rightBars
+    if not na(pl)
+        lastLow     := low[rightBars]
+        lastLowBar  := bar_index - rightBars
+
+hasRange = not na(lastHigh) and not na(lastLow)
+bool isBull = hasRange and (lastLowBar < lastHighBar)
+
+float startPrice = na
+float endPrice   = na
+int   startBar   = na
+
+if hasRange
+    if isBull
+        startPrice := lastLow
+        endPrice   := lastHigh
+        startBar   := lastLowBar
+    else
+        startPrice := lastHigh
+        endPrice   := lastLow
+        startBar   := lastHighBar
+
+fibRange = hasRange ? (endPrice - startPrice) : na
+fibPrice(level) => hasRange ? (startPrice + fibRange * level) : na
+
+//──────────── PIVOT MARKERS ────────────//
+// Cap marker labels with a FIFO so older pivots are pruned predictably
+// instead of being silently dropped when max_labels_count fills.
+int maxPivotMarkers = 30
+var label[] pivotMarkers = array.new_label()
+
+f_pushPivot(label lab) =>
+    array.push(pivotMarkers, lab)
+    if array.size(pivotMarkers) > maxPivotMarkers
+        label old = array.shift(pivotMarkers)
+        if not na(old)
+            label.delete(old)
+
+if showPivotMarkers and not na(ph)
+    f_pushPivot(label.new(bar_index - rightBars, high[rightBars], "▼", 
+              style = label.style_none, textcolor = color.red, size = size.small))
+if showPivotMarkers and not na(pl)
+    f_pushPivot(label.new(bar_index - rightBars, low[rightBars], "▲", 
+              style = label.style_none, textcolor = color.green, size = size.small))
+
+//──────────── OBJECTS ────────────//
+var line[]  lines  = array.new_line(14)   // extended for neg levels
+var label[] labels = array.new_label(14)
+var box   gpBox    = na
+var label dirLabel = na
+
+//──────────── DRAWER ────────────//
+updateFibLevel(int idx, float y, bool show, color lineColor, string txt) =>
+    if hasRange and show and not na(y)
+        line ln = array.get(lines, idx)
+        if na(ln)
+            ln := line.new(startBar, y, bar_index, y, extend = extend.right, color = lineColor, width = 2)
+            array.set(lines, idx, ln)
+        else
+            line.set_xy1(ln, startBar, y)
+            line.set_xy2(ln, bar_index, y)
+            line.set_color(ln, lineColor)
+        label lab = array.get(labels, idx)
+        string t = txt + " " + str.tostring(y, format.mintick)
+        int labX = bar_index + labelOffset
+        if na(lab)
+            lab := label.new(labX, y, t, style = label.style_label_left, textcolor = color.white, color = lineColor, size = size.small)
+            array.set(labels, idx, lab)
+        else
+            label.set_xy(lab, labX, y)
+            label.set_text(lab, t)
+            label.set_color(lab, lineColor)
+    else
+        line ln2 = array.get(lines, idx)
+        if not na(ln2)
+            line.delete(ln2)
+            array.set(lines, idx, na)
+        label lab2 = array.get(labels, idx)
+        if not na(lab2)
+            label.delete(lab2)
+            array.set(labels, idx, na)
+
+//──────────── LEVEL PRICES ────────────//
+pNeg61 = fibPrice(-0.618)
+pNeg23 = fibPrice(-0.236)
+p0     = fibPrice(0.0)
+p23    = fibPrice(0.236)
+p38    = fibPrice(0.382)
+p50    = fibPrice(0.5)
+p61    = fibPrice(0.618)
+p78    = fibPrice(0.786)
+p100   = fibPrice(1.0)
+p127   = fibPrice(1.272)
+p161   = fibPrice(1.618)
+p261   = fibPrice(2.618)
+p361   = fibPrice(3.618)
+p461   = fibPrice(4.618)
+
+//──────────── DRAW LEVELS ────────────//
+updateFibLevel(0,  pNeg61, showNeg61, colNeg61, "-61.8%")
+updateFibLevel(1,  pNeg23, showNeg23, colNeg23, "-23.6%")
+updateFibLevel(2,  p0,     show0,     col0,     "0%")
+updateFibLevel(3,  p23,    show23,    col23,    "23.6%")
+updateFibLevel(4,  p38,    show38,    col38,    "38.2%")
+updateFibLevel(5,  p50,    show50,    col50,    "50%")
+updateFibLevel(6,  p61,    show61,    col61,    "61.8%")
+updateFibLevel(7,  p78,    show78,    col78,    "78.6%")
+updateFibLevel(8,  p100,   show100,   col100,   "100%")
+updateFibLevel(9,  p127,   show127,   col127,   "127.2%")
+updateFibLevel(10, p161,   show161,   col161,   "161.8%")
+updateFibLevel(11, p261,   show261,   col261,   "261.8%")
+updateFibLevel(12, p361,   show361,   col361,   "361.8%")
+updateFibLevel(13, p461,   show461,   col461,   "461.8%")
+
+//──────────── GOLDEN POCKET BOX ────────────//
+gpLowPrice  = fibPrice(gpLow)
+gpHighPrice = fibPrice(gpHigh)
+
+if hasRange and showGP and not na(gpLowPrice) and not na(gpHighPrice)
+    float bottom = math.min(gpLowPrice, gpHighPrice)
+    float top    = math.max(gpLowPrice, gpHighPrice)
+    if na(gpBox)
+        gpBox := box.new(startBar, top, bar_index, bottom,
+                         border_color = color.new(color.orange, 20),
+                         bgcolor      = colGP,
+                         extend       = extend.right)
+    else
+        box.set_lefttop(gpBox, startBar, top)
+        box.set_rightbottom(gpBox, bar_index, bottom)
+        box.set_bgcolor(gpBox, colGP)
+else
+    if not na(gpBox)
+        box.delete(gpBox)
+        gpBox := na
+
+//──────────── DIRECTION LABEL ────────────//
+if hasRange
+    string lockTag = lockSwing ? " 🔒" : ""
+    string dirText = (isBull ? "UP LEG" : "DOWN LEG") + lockTag
+    color bg = color.new(isBull ? color.green : color.red, 70)
+    string info = dirText + "\nStart: " + str.tostring(startPrice, format.mintick) + "\nEnd: " + str.tostring(endPrice, format.mintick) + "\nRange: " + str.tostring(fibRange, format.mintick)
+
+    if na(dirLabel)
+        dirLabel := label.new(startBar, startPrice, info,
+                              style = label.style_label_right,
+                              textcolor = color.white,
+                              color = bg,
+                              size = size.normal)
+    else
+        label.set_xy(dirLabel, startBar, startPrice)
+        label.set_text(dirLabel, info)
+        label.set_color(dirLabel, bg)
+else
+    if not na(dirLabel)
+        label.delete(dirLabel)
+        dirLabel := na
+
+//──────────── INFO TABLE ────────────//
+calcDistance(float level) =>
+    hasRange and not na(level) ? ((level - close) / close) * 100 : na
+
+getTablePos() =>
+    switch tablePos
+        "Top Right"    => position.top_right
+        "Top Left"     => position.top_left
+        "Bottom Right" => position.bottom_right
+        "Bottom Left"  => position.bottom_left
+        => position.top_right
+
+getTableSize() =>
+    switch tableSize
+        "Tiny"   => size.tiny
+        "Small"  => size.small
+        "Normal" => size.normal
+        => size.small
+
+var table infoTable = na
+
+if showTable and hasRange
+    if na(infoTable)
+        infoTable := table.new(getTablePos(), 3, 17, bgcolor = color.new(#1a1a2e, 10), border_color = color.gray, border_width = 1)
+    
+    table.cell(infoTable, 0, 0, "Level", text_color = color.white, text_size = getTableSize(), bgcolor = color.new(#16213e, 0))
+    table.cell(infoTable, 1, 0, "Price", text_color = color.white, text_size = getTableSize(), bgcolor = color.new(#16213e, 0))
+    table.cell(infoTable, 2, 0, "Dist %", text_color = color.white, text_size = getTableSize(), bgcolor = color.new(#16213e, 0))
+    
+    // Row 1: -61.8%
+    if showNeg61 and not na(pNeg61)
+        d1 = calcDistance(pNeg61)
+        table.cell(infoTable, 0, 1, "-61.8%", text_color = colNeg61, text_size = getTableSize())
+        table.cell(infoTable, 1, 1, str.tostring(pNeg61, format.mintick), text_color = color.white, text_size = getTableSize())
+        table.cell(infoTable, 2, 1, str.tostring(d1, "#.##") + "%", text_color = color.white, text_size = getTableSize(), bgcolor = d1 > 0 ? color.new(color.green, 50) : color.new(color.red, 50))
+    
+    // Row 2: -23.6%
+    if showNeg23 and not na(pNeg23)
+        d2 = calcDistance(pNeg23)
+        table.cell(infoTable, 0, 2, "-23.6%", text_color = colNeg23, text_size = getTableSize())
+        table.cell(infoTable, 1, 2, str.tostring(pNeg23, format.mintick), text_color = color.white, text_size = getTableSize())
+        table.cell(infoTable, 2, 2, str.tostring(d2, "#.##") + "%", text_color = color.white, text_size = getTableSize(), bgcolor = d2 > 0 ? color.new(color.green, 50) : color.new(color.red, 50))
+    
+    // Row 3: 0%
+    if show0 and not na(p0)
+        d3 = calcDistance(p0)
+        table.cell(infoTable, 0, 3, "0%", text_color = col0, text_size = getTableSize())
+        table.cell(infoTable, 1, 3, str.tostring(p0, format.mintick), text_color = color.white, text_size = getTableSize())
+        table.cell(infoTable, 2, 3, str.tostring(d3, "#.##") + "%", text_color = color.white, text_size = getTableSize(), bgcolor = d3 > 0 ? color.new(color.green, 50) : color.new(color.red, 50))
+    
+    // Row 4: 23.6%
+    if show23 and not na(p23)
+        d4 = calcDistance(p23)
+        table.cell(infoTable, 0, 4, "23.6%", text_color = col23, text_size = getTableSize())
+        table.cell(infoTable, 1, 4, str.tostring(p23, format.mintick), text_color = color.white, text_size = getTableSize())
+        table.cell(infoTable, 2, 4, str.tostring(d4, "#.##") + "%", text_color = color.white, text_size = getTableSize(), bgcolor = d4 > 0 ? color.new(color.green, 50) : color.new(color.red, 50))
+    
+    // Row 5: 38.2%
+    if show38 and not na(p38)
+        d5 = calcDistance(p38)
+        table.cell(infoTable, 0, 5, "38.2%", text_color = col38, text_size = getTableSize())
+        table.cell(infoTable, 1, 5, str.tostring(p38, format.mintick), text_color = color.white, text_size = getTableSize())
+        table.cell(infoTable, 2, 5, str.tostring(d5, "#.##") + "%", text_color = color.white, text_size = getTableSize(), bgcolor = d5 > 0 ? color.new(color.green, 50) : color.new(color.red, 50))
+    
+    // Row 6: 50%
+    if show50 and not na(p50)
+        d6 = calcDistance(p50)
+        table.cell(infoTable, 0, 6, "50%", text_color = col50, text_size = getTableSize())
+        table.cell(infoTable, 1, 6, str.tostring(p50, format.mintick), text_color = color.white, text_size = getTableSize())
+        table.cell(infoTable, 2, 6, str.tostring(d6, "#.##") + "%", text_color = color.white, text_size = getTableSize(), bgcolor = d6 > 0 ? color.new(color.green, 50) : color.new(color.red, 50))
+    
+    // Row 7: 61.8%
+    if show61 and not na(p61)
+        d7 = calcDistance(p61)
+        table.cell(infoTable, 0, 7, "61.8%", text_color = col61, text_size = getTableSize())
+        table.cell(infoTable, 1, 7, str.tostring(p61, format.mintick), text_color = color.white, text_size = getTableSize())
+        table.cell(infoTable, 2, 7, str.tostring(d7, "#.##") + "%", text_color = color.white, text_size = getTableSize(), bgcolor = d7 > 0 ? color.new(color.green, 50) : color.new(color.red, 50))
+    
+    // Row 8: 78.6%
+    if show78 and not na(p78)
+        d8 = calcDistance(p78)
+        table.cell(infoTable, 0, 8, "78.6%", text_color = col78, text_size = getTableSize())
+        table.cell(infoTable, 1, 8, str.tostring(p78, format.mintick), text_color = color.white, text_size = getTableSize())
+        table.cell(infoTable, 2, 8, str.tostring(d8, "#.##") + "%", text_color = color.white, text_size = getTableSize(), bgcolor = d8 > 0 ? color.new(color.green, 50) : color.new(color.red, 50))
+    
+    // Row 9: 100%
+    if show100 and not na(p100)
+        d9 = calcDistance(p100)
+        table.cell(infoTable, 0, 9, "100%", text_color = col100, text_size = getTableSize())
+        table.cell(infoTable, 1, 9, str.tostring(p100, format.mintick), text_color = color.white, text_size = getTableSize())
+        table.cell(infoTable, 2, 9, str.tostring(d9, "#.##") + "%", text_color = color.white, text_size = getTableSize(), bgcolor = d9 > 0 ? color.new(color.green, 50) : color.new(color.red, 50))
+    
+    // Row 10: 127.2%
+    if show127 and not na(p127)
+        d10 = calcDistance(p127)
+        table.cell(infoTable, 0, 10, "127.2%", text_color = col127, text_size = getTableSize())
+        table.cell(infoTable, 1, 10, str.tostring(p127, format.mintick), text_color = color.white, text_size = getTableSize())
+        table.cell(infoTable, 2, 10, str.tostring(d10, "#.##") + "%", text_color = color.white, text_size = getTableSize(), bgcolor = d10 > 0 ? color.new(color.green, 50) : color.new(color.red, 50))
+    
+    // Row 11: 161.8%
+    if show161 and not na(p161)
+        d11 = calcDistance(p161)
+        table.cell(infoTable, 0, 11, "161.8%", text_color = col161, text_size = getTableSize())
+        table.cell(infoTable, 1, 11, str.tostring(p161, format.mintick), text_color = color.white, text_size = getTableSize())
+        table.cell(infoTable, 2, 11, str.tostring(d11, "#.##") + "%", text_color = color.white, text_size = getTableSize(), bgcolor = d11 > 0 ? color.new(color.green, 50) : color.new(color.red, 50))
+    
+    // Row 12: 261.8%
+    if show261 and not na(p261)
+        d12 = calcDistance(p261)
+        table.cell(infoTable, 0, 12, "261.8%", text_color = col261, text_size = getTableSize())
+        table.cell(infoTable, 1, 12, str.tostring(p261, format.mintick), text_color = color.white, text_size = getTableSize())
+        table.cell(infoTable, 2, 12, str.tostring(d12, "#.##") + "%", text_color = color.white, text_size = getTableSize(), bgcolor = d12 > 0 ? color.new(color.green, 50) : color.new(color.red, 50))
+    
+    // Row 13: 361.8%
+    if show361 and not na(p361)
+        d13 = calcDistance(p361)
+        table.cell(infoTable, 0, 13, "361.8%", text_color = col361, text_size = getTableSize())
+        table.cell(infoTable, 1, 13, str.tostring(p361, format.mintick), text_color = color.white, text_size = getTableSize())
+        table.cell(infoTable, 2, 13, str.tostring(d13, "#.##") + "%", text_color = color.white, text_size = getTableSize(), bgcolor = d13 > 0 ? color.new(color.green, 50) : color.new(color.red, 50))
+    
+    // Row 14: 461.8%
+    if show461 and not na(p461)
+        d14 = calcDistance(p461)
+        table.cell(infoTable, 0, 14, "461.8%", text_color = col461, text_size = getTableSize())
+        table.cell(infoTable, 1, 14, str.tostring(p461, format.mintick), text_color = color.white, text_size = getTableSize())
+        table.cell(infoTable, 2, 14, str.tostring(d14, "#.##") + "%", text_color = color.white, text_size = getTableSize(), bgcolor = d14 > 0 ? color.new(color.green, 50) : color.new(color.red, 50))
+
+    // Row 15: SRC / freshness footer (data integrity) — chart TF, lock state, swing age in bars
+    swingAge = hasRange ? bar_index - math.max(nz(lastHighBar), nz(lastLowBar)) : 0
+    bool   isStale  = swingAge > staleSwingBars
+    string lockStr  = lockSwing ? "🔒 LOCKED" : (isStale ? "stale" : "live")
+    color  srcCol   = lockSwing ? color.orange : (isStale ? color.yellow : color.gray)
+    color  ageCol   = isStale ? color.yellow : color.gray
+    table.cell(infoTable, 0, 15, "SRC", text_color = color.gray, text_size = getTableSize(), bgcolor = color.new(#16213e, 0))
+    table.cell(infoTable, 1, 15, timeframe.period + " • " + lockStr, text_color = srcCol, text_size = getTableSize(), bgcolor = color.new(#16213e, 0))
+    table.cell(infoTable, 2, 15, str.tostring(swingAge) + "b old", text_color = ageCol, text_size = getTableSize(), bgcolor = color.new(#16213e, 0))
+
+else
+    if not na(infoTable)
+        table.delete(infoTable)
+        infoTable := na
+//──────────── PROXIMITY DETECTION ────────────//
+isNearLevel(float level) =>
+    not na(level) and math.abs((close - level) / level) * 100 <= proximityPct
+
+// Aggregates honor each level's show flag so toggling levels off also
+// silences combo (Any / Near) alerts and the background flash.
+nearAnyFib = (showNeg61 and isNearLevel(pNeg61)) or (showNeg23 and isNearLevel(pNeg23)) or
+             (show0  and isNearLevel(p0))  or (show23 and isNearLevel(p23)) or
+             (show38 and isNearLevel(p38)) or (show50 and isNearLevel(p50)) or
+             (show61 and isNearLevel(p61)) or (show78 and isNearLevel(p78)) or
+             (show100 and isNearLevel(p100)) or (show127 and isNearLevel(p127)) or
+             (show161 and isNearLevel(p161)) or (show261 and isNearLevel(p261)) or
+             (show361 and isNearLevel(p361)) or (show461 and isNearLevel(p461))
+
+//──────────── BACKGROUND FLASH ON LEVEL HIT ────────────//
+hitLevel = (showNeg61 and ta.cross(close, pNeg61)) or (showNeg23 and ta.cross(close, pNeg23)) or
+           (show0  and ta.cross(close, p0))  or (show23 and ta.cross(close, p23)) or
+           (show38 and ta.cross(close, p38)) or (show50 and ta.cross(close, p50)) or
+           (show61 and ta.cross(close, p61)) or (show78 and ta.cross(close, p78)) or
+           (show100 and ta.cross(close, p100)) or (show127 and ta.cross(close, p127)) or
+           (show161 and ta.cross(close, p161)) or (show261 and ta.cross(close, p261)) or
+           (show361 and ta.cross(close, p361)) or (show461 and ta.cross(close, p461))
+
+bgcolor(hitLevel ? color.new(color.yellow, 90) : na, title = "Level Hit Flash")
+
+//──────────── ALERTS ────────────//
+inRange  = hasRange
+inGP     = inRange and not na(gpLowPrice) and close >= math.min(gpLowPrice, gpHighPrice) and close <= math.max(gpLowPrice, gpHighPrice)
+wasInGP  = inRange and not na(gpLowPrice[1]) and close[1] >= math.min(gpLowPrice[1], gpHighPrice[1]) and close[1] <= math.max(gpLowPrice[1], gpHighPrice[1])
+enterGP  = inGP and not wasInGP
+exitGP   = wasInGP and not inGP
+
+// per-level touch alerts — each gated by its show flag so hidden levels stay silent
+alertcondition(showNeg61 and ta.cross(close, pNeg61), "Fib -61.8% touched", "Price touched -61.8% Fibonacci level")
+alertcondition(showNeg23 and ta.cross(close, pNeg23), "Fib -23.6% touched", "Price touched -23.6% Fibonacci level")
+alertcondition(show0    and ta.cross(close, p0),     "Fib 0% touched",     "Price touched 0% Fibonacci level")
+alertcondition(show23   and ta.cross(close, p23),    "Fib 23.6% touched",  "Price touched 23.6% Fibonacci level")
+alertcondition(show38   and ta.cross(close, p38),    "Fib 38.2% touched",  "Price touched 38.2% Fibonacci level")
+alertcondition(show50   and ta.cross(close, p50),    "Fib 50% touched",    "Price touched 50% Fibonacci level")
+alertcondition(show61   and ta.cross(close, p61),    "Fib 61.8% touched",  "Price touched 61.8% Fibonacci level")
+alertcondition(show78   and ta.cross(close, p78),    "Fib 78.6% touched",  "Price touched 78.6% Fibonacci level")
+alertcondition(show100  and ta.cross(close, p100),   "Fib 100% touched",   "Price touched 100% Fibonacci level")
+alertcondition(show127  and ta.cross(close, p127),   "Fib 127.2% touched", "Price touched 127.2% Fibonacci level")
+alertcondition(show161  and ta.cross(close, p161),   "Fib 161.8% touched", "Price touched 161.8% Fibonacci level")
+alertcondition(show261  and ta.cross(close, p261),   "Fib 261.8% touched", "Price touched 261.8% Fibonacci level")
+alertcondition(show361  and ta.cross(close, p361),   "Fib 361.8% touched", "Price touched 361.8% Fibonacci level")
+alertcondition(show461  and ta.cross(close, p461),   "Fib 461.8% touched", "Price touched 461.8% Fibonacci level")
+
+// combo alerts
+alertcondition(hitLevel,   "Any Fib Level Touched",   "Price crossed any Fibonacci level")
+// Transition-gated: fire once on entry into proximity, not every bar while inside.
+// (Pine v6: nz() does not accept a bool source — compare to true instead.)
+var bool prevNearAnyFib = false
+enterNearFib = nearAnyFib and not prevNearAnyFib
+prevNearAnyFib := nearAnyFib
+alertcondition(enterNearFib, "Near Fib Level",          "Price entered proximity of a Fibonacci level")
+alertcondition(enterGP,    "Entered Golden Pocket",   "Price entered the golden pocket zone")
+alertcondition(exitGP,     "Exited Golden Pocket",    "Price exited the golden pocket zone")
+
+// new swing detected
+newSwingHigh = not na(ph) and not lockSwing
+newSwingLow  = not na(pl) and not lockSwing
+alertcondition(newSwingHigh, "New Swing High", "New swing high detected - Fibonacci levels updated")
+alertcondition(newSwingLow,  "New Swing Low",  "New swing low detected - Fibonacci levels updated")

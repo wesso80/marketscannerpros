@@ -1,10 +1,10 @@
 // This Pine Script™ source code is subject to the terms of the Mozilla Public License 2.0
-// © MarketScanner Pros — Cypher Momentum & Conviction Engine v1
+// © MarketScanner Pros — Momentum & Conviction Engine v1
 // Replicates: Momentum (Volatility) + Conviction (Effort) + Interest (Pressure) panels
 // 3-layer momentum scoring with multi-timeframe pulse detection
 
 //@version=6
-indicator("MSP — Cypher Momentum Engine", shorttitle="MSP Cypher Mom", overlay=false, max_labels_count=200)
+indicator("MSP — Momentum Engine", shorttitle="MSP Momentum", overlay=false, max_labels_count=200)
 
 // ═══════════════════════════════════════════════════════════════
 // INPUTS
@@ -27,6 +27,13 @@ oiSym       = input.symbol("", "Open Interest Symbol (optional)", group=grp_vol)
 grp_efrt = "Effort / Pressure"
 effortLen   = input.int(10,  "Effort Lookback",   minval=5,  maxval=30,  group=grp_efrt)
 pressureLen = input.int(14,  "Pressure Lookback",  minval=5,  maxval=30,  group=grp_efrt)
+atrLen      = input.int(14,  "ATR Length (Whale)", minval=7,  maxval=21,  group=grp_efrt)
+
+grp_comp = "Composite"
+pulseWeight   = input.float(0.35, "Pulse Weight",   minval=0.1, maxval=0.6, step=0.05, group=grp_comp)
+trendWeight   = input.float(0.35, "Trend Weight",   minval=0.1, maxval=0.6, step=0.05, group=grp_comp)
+macroWeight   = input.float(0.30, "Macro Weight",   minval=0.1, maxval=0.6, step=0.05, group=grp_comp)
+compSmoothLen = input.int(3,     "Composite Smooth", minval=1,  maxval=10,  group=grp_comp)
 
 grp_vis = "Display"
 showTable   = input.bool(true, "Show Dashboard Table", group=grp_vis)
@@ -148,20 +155,15 @@ sellVol = isSellBar ? volume * bodyRatio : volume * (1 - bodyRatio)
 buyVolSma = ta.sma(buyVol, effortLen)
 sellVolSma = ta.sma(sellVol, effortLen)
 
-// Effort classification
-effortRatio = buyVolSma > 0 ? sellVolSma / buyVolSma : 1.0
 volIsHigh = volRatio > 1.5
 volIsLow = volRatio < 0.7
 
 convLongLabel = volIsHigh and isBuyBar ? "BUYS LONG" : isBuyBar ? "BUYS LONG" : "FLAT SIT"
-convShortLabel = volIsHigh and isSellBar ? "SELLS SHORT" : isSellBar ? "SELLS SHORT" : "FLAT SIT"
 
 // 15m effort
 eff15 = volIsHigh and isBuyBar ? "HIGH EFFORT" : volIsHigh and isSellBar ? "HIGH EFFORT" : "NOISE"
 // 10m effort
 eff10 = volRatio > 1.2 and isBuyBar ? "TREND EFFORT" : volRatio > 1.2 and isSellBar ? "TREND EFFORT" : "LOW EFFORT"
-// 5m effort
-eff5 = volIsLow ? "NOISE" : "ACTIVE"
 
 // ═══════════════════════════════════════════════════════════════
 // INTEREST (PRESSURE) LAYER
@@ -181,15 +183,15 @@ cvdPressure = cvdHittingAsk ? "STRUCTURAL PUSH" : cvdHittingBid ? "STRUCTURAL DU
 
 // OI Fuel (if OI symbol provided)
 oiAvail = oiSym != ""
-oiVal = oiAvail ? request.security(oiSym, timeframe.period, close) : 0.0
-oiPrev = oiAvail ? request.security(oiSym, timeframe.period, close[1]) : 0.0
-oiChange = oiAvail ? (oiVal - oiPrev) / math.max(oiPrev, 1) * 100 : 0.0
-oiLabel = not oiAvail ? "N/A" : oiChange > 0.5 ? "NEW MONEY" : oiChange < -0.5 ? "CLOSING" : "FLAT"
-oiPct = not oiAvail ? "" : str.tostring(math.round(oiChange * 100) / 100) + "%"
+oiVal = oiAvail ? request.security(oiSym, timeframe.period, close) : na
+oiPrev = oiAvail ? request.security(oiSym, timeframe.period, close[1]) : na
+oiChange = oiAvail and not na(oiVal) and not na(oiPrev) ? (oiVal - oiPrev) / math.max(oiPrev, 1) * 100 : 0.0
+oiLabel = not oiAvail ? "N/A" : na(oiVal) ? "ERROR" : oiChange > 0.5 ? "NEW MONEY" : oiChange < -0.5 ? "CLOSING" : "FLAT"
+oiPct = not oiAvail ? "" : na(oiVal) ? "--" : str.tostring(math.round(oiChange * 100) / 100) + "%"
 
 // Whale detection (volume spike + directional candle)
 volSpike = volume > avgVol * 2.5
-whaleBar = volSpike and math.abs(close - open) > ta.atr(14) * 0.8
+whaleBar = volSpike and math.abs(close - open) > ta.atr(atrLen) * 0.8
 whaleLabel = whaleBar and isBuyBar ? "WHALE FORCE" : whaleBar and isSellBar ? "WHALE DUMP" : "NORMAL"
 
 // ═══════════════════════════════════════════════════════════════
@@ -201,8 +203,8 @@ pulseNorm = (pulsePct + 100) / 2
 trendNorm = (trendPct + 100) / 2
 macroNorm = (macroPct + 100) / 2
 
-compositeScore = pulseNorm * 0.35 + trendNorm * 0.35 + macroNorm * 0.30
-compSmooth = ta.ema(compositeScore, 3)
+compositeScore = pulseNorm * pulseWeight + trendNorm * trendWeight + macroNorm * macroWeight
+compSmooth = ta.ema(compositeScore, compSmoothLen)
 
 // ═══════════════════════════════════════════════════════════════
 // PLOTS
@@ -225,9 +227,9 @@ plot(showHist ? pulseNorm : na, "Pulse", color=histColor, style=plot.style_colum
 bgColor = compSmooth > 65 ? color.new(#10B981, bgAlpha) : compSmooth < 35 ? color.new(#EF4444, bgAlpha) : color.new(color.gray, 97)
 bgcolor(showBg ? bgColor : na)
 
-// Whale markers
-plotshape(whaleBar and isBuyBar, "Whale Buy", shape.diamond, location.top, color.new(#10B981, 20), size=size.tiny)
-plotshape(whaleBar and isSellBar, "Whale Sell", shape.diamond, location.bottom, color.new(#EF4444, 20), size=size.tiny)
+// Whale markers — only plot on last bar to prevent label saturation
+plotshape(barstate.islast and whaleBar and isBuyBar, "Whale Buy", shape.diamond, location.top, color.new(#10B981, 20), size=size.tiny)
+plotshape(barstate.islast and whaleBar and isSellBar, "Whale Sell", shape.diamond, location.bottom, color.new(#EF4444, 20), size=size.tiny)
 
 // ═══════════════════════════════════════════════════════════════
 // DASHBOARD TABLE
@@ -236,7 +238,7 @@ plotshape(whaleBar and isSellBar, "Whale Sell", shape.diamond, location.bottom, 
 if showTable and barstate.islast
     tblPos = tablePos == "top_right" ? position.top_right : tablePos == "top_left" ? position.top_left : tablePos == "bottom_right" ? position.bottom_right : position.bottom_left
 
-    var tbl = table.new(tblPos, 4, 12, bgcolor=color.new(#0F172A, 5), border_color=color.new(#334155, 30), border_width=1, frame_color=color.new(#10B981, 60), frame_width=1)
+    var tbl = table.new(tblPos, 3, 12, bgcolor=color.new(#0F172A, 5), border_color=color.new(#334155, 30), border_width=1, frame_color=color.new(#10B981, 60), frame_width=1)
 
     headerBg = color.new(#1E293B, 0)
     green = color.new(#10B981, 0)
@@ -255,82 +257,70 @@ if showTable and barstate.islast
     table.cell(tbl, 0, 0, "METRIC", text_color=dim, text_size=size.tiny, bgcolor=headerBg)
     table.cell(tbl, 1, 0, "LIVE SIGNAL", text_color=dim, text_size=size.tiny, bgcolor=headerBg)
     table.cell(tbl, 2, 0, "ANALYSIS", text_color=dim, text_size=size.tiny, bgcolor=headerBg)
-    table.cell(tbl, 3, 0, "", bgcolor=headerBg)
 
     table.cell(tbl, 0, 1, "MOMENTUM (VOLATILITY)", text_color=green, text_size=size.tiny, bgcolor=headerBg)
     table.cell(tbl, 1, 1, "", bgcolor=headerBg)
     table.cell(tbl, 2, 1, "", bgcolor=headerBg)
-    table.cell(tbl, 3, 1, "", bgcolor=headerBg)
 
     // Pulse (fast)
     pulseClr = pulseIsBull ? bullActive : pulseIsBear ? bearActive : neutral
     table.cell(tbl, 0, 2, "Pulse", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
     table.cell(tbl, 1, 2, pulseLabel, text_color=pulseClr, text_size=size.tiny, bgcolor=panelBg)
     table.cell(tbl, 2, 2, "ACTIVE PULSE", text_color=pulseClr, text_size=size.tiny, bgcolor=panelBg)
-    table.cell(tbl, 3, 2, "", bgcolor=panelBg)
 
     // Trend
     trendClr = trendIsBull ? bullActive : trendIsBear ? bearActive : neutral
     table.cell(tbl, 0, 3, "Trend", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
     table.cell(tbl, 1, 3, trendLabel, text_color=trendClr, text_size=size.tiny, bgcolor=panelBg)
     table.cell(tbl, 2, 3, trendType, text_color=trendClr, text_size=size.tiny, bgcolor=panelBg)
-    table.cell(tbl, 3, 3, "", bgcolor=panelBg)
 
     // Macro
     macroClr = macroIsBull ? bullActive : macroIsBear ? bearActive : neutral
     table.cell(tbl, 0, 4, "Macro", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
     table.cell(tbl, 1, 4, macroLabel, text_color=macroClr, text_size=size.tiny, bgcolor=panelBg)
     table.cell(tbl, 2, 4, macroType, text_color=macroClr, text_size=size.tiny, bgcolor=panelBg)
-    table.cell(tbl, 3, 4, "", bgcolor=panelBg)
 
     // ── CONVICTION (EFFORT) ──
     table.cell(tbl, 0, 5, "CONVICTION (EFFORT)", text_color=green, text_size=size.tiny, bgcolor=headerBg)
     table.cell(tbl, 1, 5, "", bgcolor=headerBg)
     table.cell(tbl, 2, 5, "", bgcolor=headerBg)
-    table.cell(tbl, 3, 5, "", bgcolor=headerBg)
 
     effClr = volIsHigh ? green : volIsLow ? red : amber
     table.cell(tbl, 0, 6, "Vol Effort", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
     table.cell(tbl, 1, 6, convLongLabel, text_color=isBuyBar ? green : red, text_size=size.tiny, bgcolor=panelBg)
     table.cell(tbl, 2, 6, eff15, text_color=effClr, text_size=size.tiny, bgcolor=panelBg)
-    table.cell(tbl, 3, 6, "", bgcolor=panelBg)
 
     table.cell(tbl, 0, 7, "Vol Ratio", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
     table.cell(tbl, 1, 7, str.tostring(math.round(volRatio * 100) / 100) + "x", text_color=volRatio > 1.5 ? green : volRatio < 0.7 ? red : white, text_size=size.tiny, bgcolor=panelBg)
     table.cell(tbl, 2, 7, eff10, text_color=effClr, text_size=size.tiny, bgcolor=panelBg)
-    table.cell(tbl, 3, 7, "", bgcolor=panelBg)
 
     // ── INTEREST (PRESSURE) ──
     table.cell(tbl, 0, 8, "INTEREST (PRESSURE)", text_color=green, text_size=size.tiny, bgcolor=headerBg)
     table.cell(tbl, 1, 8, "", bgcolor=headerBg)
     table.cell(tbl, 2, 8, "", bgcolor=headerBg)
-    table.cell(tbl, 3, 8, "", bgcolor=headerBg)
 
     cvdClr = cvdHittingAsk ? green : cvdHittingBid ? red : neutral
     table.cell(tbl, 0, 9, "CVD Delta", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
     table.cell(tbl, 1, 9, cvdLabel, text_color=cvdClr, text_size=size.tiny, bgcolor=panelBg)
     table.cell(tbl, 2, 9, cvdPressure, text_color=cvdClr, text_size=size.tiny, bgcolor=panelBg)
-    table.cell(tbl, 3, 9, "", bgcolor=panelBg)
 
     oiClr = oiChange > 0.5 ? green : oiChange < -0.5 ? red : neutral
     table.cell(tbl, 0, 10, "OI Fuel", text_color=dim, text_size=size.tiny, bgcolor=panelBg)
     table.cell(tbl, 1, 10, oiLabel + " [" + oiPct + "]", text_color=oiClr, text_size=size.tiny, bgcolor=panelBg)
     table.cell(tbl, 2, 10, whaleLabel, text_color=whaleBar ? (isBuyBar ? green : red) : neutral, text_size=size.tiny, bgcolor=panelBg)
-    table.cell(tbl, 3, 10, "", bgcolor=panelBg)
 
     // ── COMPOSITE ──
     compClr = compSmooth > 65 ? green : compSmooth > 55 ? color.new(#3B82F6, 0) : compSmooth > 45 ? amber : compSmooth > 35 ? color.new(#F97316, 0) : red
     table.cell(tbl, 0, 11, "COMPOSITE", text_color=dim, text_size=size.tiny, bgcolor=headerBg)
     table.cell(tbl, 1, 11, str.tostring(math.round(compSmooth)) + "/100", text_color=compClr, text_size=size.tiny, bgcolor=headerBg)
     table.cell(tbl, 2, 11, compSmooth > 65 ? "STRONG MOMENTUM" : compSmooth > 50 ? "BUILDING" : compSmooth > 35 ? "FADING" : "WEAK", text_color=compClr, text_size=size.tiny, bgcolor=headerBg)
-    table.cell(tbl, 3, 11, "", bgcolor=headerBg)
 
 // ═══════════════════════════════════════════════════════════════
 // ALERTS
 // ═══════════════════════════════════════════════════════════════
 
-alertcondition(ta.crossover(compSmooth, 65), "Momentum Bull Cross", "MSP Cypher: Momentum crossed above 65 — bull regime")
-alertcondition(ta.crossunder(compSmooth, 35), "Momentum Bear Cross", "MSP Cypher: Momentum crossed below 35 — bear regime")
-alertcondition(whaleBar and isBuyBar, "Whale Buy Detected", "MSP Cypher: Whale buy volume detected")
-alertcondition(whaleBar and isSellBar, "Whale Sell Detected", "MSP Cypher: Whale sell volume detected")
-alertcondition(cvdHittingAsk and volIsHigh, "Strong Ask Pressure", "MSP Cypher: CVD hitting ask with high effort")
+alertcondition(ta.crossover(compSmooth, 65), "Momentum Bull Cross", "MSP Momentum: Momentum crossed above 65 — bull regime")
+alertcondition(ta.crossunder(compSmooth, 35), "Momentum Bear Cross", "MSP Momentum: Momentum crossed below 35 — bear regime")
+alertcondition(whaleBar and isBuyBar, "Whale Buy Detected", "MSP Momentum: Whale buy volume detected")
+alertcondition(whaleBar and isSellBar, "Whale Sell Detected", "MSP Momentum: Whale sell volume detected")
+alertcondition(cvdHittingAsk and volIsHigh, "Strong Ask Pressure", "MSP Momentum: CVD hitting ask with high effort")

@@ -71,6 +71,7 @@ minRewardTicks    = input.int(4,     "Minimum Reward / ticks",  minval=1,   maxv
 minRR             = input.float(1.5,  "Minimum R:R Ratio",      minval=0.5, maxval=5.0,  step=0.1, group=grp_risk, tooltip="Signal requires (TP2 distance) ÷ (stop distance) ≥ this value. Filters poor-quality setups.")
 tp1Ticks          = input.int(6,     "TP1 Quick Scalp / ticks", minval=1,   maxval=100,  group=grp_risk, tooltip="Quick scalp target at this many ticks from entry price")
 showTP1           = input.bool(true,  "Show TP1 Quick Scalp",   group=grp_risk)
+breakevenOnTP1    = input.bool(true,  "Move stop to entry on TP1 hit", group=grp_risk, tooltip="When TP1 prints, the stop loss is pulled up (longs) or down (shorts) to the entry price so the remainder is risk-free. Standard scalper risk management.")
 
 grp_time = "Decompression Timing"
 decompPct = input.float(15.0, "Decompression Window % of Candle", minval=5.0, maxval=40.0, step=1.0, group=grp_time)
@@ -109,6 +110,7 @@ tableTextSizeInput = input.string("Tiny", "Table Text Size", options=["Tiny", "S
 signalTextSizeInput = input.string("Large", "Signal Label Size", options=["Small", "Normal", "Large", "Huge"], group=grp_read)
 tradeLineExtendBars = input.int(40, "Extend Trade Lines Bars", minval=5, maxval=200, group=grp_read)
 targetBoxForwardBars = input.int(35, "Target Box Forward Bars", minval=5, maxval=150, group=grp_read)
+targetBoxBackBars = input.int(15, "Target Box Back Bars", minval=0, maxval=100, group=grp_read)
 labelOffsetATR = input.float(0.25, "Signal Label Offset ATR", minval=0.05, maxval=2.0, step=0.05, group=grp_read)
 
 // ═══════════════════════════════════════════════════════════════
@@ -116,10 +118,10 @@ labelOffsetATR = input.float(0.25, "Signal Label Offset ATR", minval=0.05, maxva
 // ═══════════════════════════════════════════════════════════════
 
 f_tableSize(sizeInput) =>
-    sizeInput == "Tiny" ? size.tiny :
-     sizeInput == "Small" ? size.tiny :
-     sizeInput == "Large" ? size.small :
-     size.small
+    sizeInput == "Tiny"   ? size.tiny :
+     sizeInput == "Small" ? size.small :
+     sizeInput == "Large" ? size.large :
+     size.normal
 
 f_labelSize(sizeInput) =>
     sizeInput == "Small" ? size.small :
@@ -442,9 +444,10 @@ shortTrendOK = trendBear or allowCounterTrendReactions
 
 cooldownOK = na(lastSignalBar) or bar_index - lastSignalBar >= signalCooldownBars
 canOpenNewTrade = not oneTradeAtATime or tradeDir == 0
+warmupOK = bar_index >= math.max(math.max(emaSlowLen, atrLen), 20)
 
-longRaw = inSession and volOK and hasHeat and longTrendOK and cooldownOK and canOpenNewTrade and (reclaimBelow or breakoutLong or vwapReclaimLong or emaReclaimLong)
-shortRaw = inSession and volOK and hasHeat and shortTrendOK and cooldownOK and canOpenNewTrade and (rejectAbove or breakdownShort or vwapRejectShort or emaRejectShort)
+longRaw = warmupOK and inSession and volOK and hasHeat and longTrendOK and cooldownOK and canOpenNewTrade and (reclaimBelow or breakoutLong or vwapReclaimLong or emaReclaimLong)
+shortRaw = warmupOK and inSession and volOK and hasHeat and shortTrendOK and cooldownOK and canOpenNewTrade and (rejectAbove or breakdownShort or vwapRejectShort or emaRejectShort)
 
 longTarget = not na(gravityAbove) and gravityAbove > close ? gravityAbove : close + atr * fallbackTargetATR
 shortTarget = not na(gravityBelow) and gravityBelow < close ? gravityBelow : close - atr * fallbackTargetATR
@@ -452,8 +455,12 @@ shortTarget = not na(gravityBelow) and gravityBelow < close ? gravityBelow : clo
 longTP1 = close + tp1Ticks * tick
 shortTP1 = close - tp1Ticks * tick
 
-longStop = not na(gravityBelow) and gravityBelow < close ? math.min(gravityBelow - reactionTicks * tick, close - atr * stopATR) : close - atr * stopATR
-shortStop = not na(gravityAbove) and gravityAbove > close ? math.max(gravityAbove + reactionTicks * tick, close + atr * stopATR) : close + atr * stopATR
+// Minimum 3-tick stop guard prevents sub-spread stops when gravity is extremely close
+minStopDist = 3 * tick
+longStopRaw  = not na(gravityBelow) and gravityBelow < close ? math.min(gravityBelow - reactionTicks * tick, close - atr * stopATR) : close - atr * stopATR
+shortStopRaw = not na(gravityAbove) and gravityAbove > close ? math.max(gravityAbove + reactionTicks * tick, close + atr * stopATR) : close + atr * stopATR
+longStop  = math.min(longStopRaw,  close - minStopDist)
+shortStop = math.max(shortStopRaw, close + minStopDist)
 
 longRewardTicks = math.abs(longTarget - close) / tick
 shortRewardTicks = math.abs(close - shortTarget) / tick
@@ -494,11 +501,24 @@ activeShort := tradeDir == -1
 activeTrade := tradeDir != 0
 
 tp1HitActive = activeTrade and not tp1AlreadyHit and bar_index > tradeStartBar and (activeLong ? high >= tradeTP1 : activeShort ? low <= tradeTP1 : false)
-tpHitActive = activeTrade and bar_index > tradeStartBar and (activeLong ? high >= tradeTP : activeShort ? low <= tradeTP : false)
-slHitActive = activeTrade and bar_index > tradeStartBar and (activeLong ? low <= tradeSL : activeShort ? high >= tradeSL : false)
+tpRawHit = activeTrade and bar_index > tradeStartBar and (activeLong ? high >= tradeTP : activeShort ? low <= tradeTP : false)
+slRawHit = activeTrade and bar_index > tradeStartBar and (activeLong ? low <= tradeSL : activeShort ? high >= tradeSL : false)
+// Single-exit precedence: when both TP2 and SL trigger on the same bar,
+// resolve as STOP LOSS. Conservative for risk reporting and matches the
+// realistic outcome that the wider stop bracket gets hit first on a
+// volatile reversal that pierces both levels.
+slHitActive = slRawHit
+tpHitActive = tpRawHit and not slRawHit
 
 if tp1HitActive
     tp1AlreadyHit := true
+    if breakevenOnTP1
+        // Pull the stop to entry so the remainder of the trade is risk-free.
+        // Longs: only ratchet up (never widen); shorts: only ratchet down.
+        if activeLong and tradeSL < tradeEntry
+            tradeSL := tradeEntry
+        if activeShort and tradeSL > tradeEntry
+            tradeSL := tradeEntry
 
 // ═══════════════════════════════════════════════════════════════
 // STATE
@@ -553,7 +573,7 @@ if barstate.islast and showTargetZone and not na(targetLevel)
     zoneCol = targetLevel > close ? color.green : color.red
 
     targetBox := box.new(
-         bar_index - 15,
+         bar_index - targetBoxBackBars,
          zoneHigh,
          bar_index + targetBoxForwardBars,
          zoneLow,
@@ -709,26 +729,9 @@ if slHitActive
 if showHUD and barstate.islast
     var table hud = table.new(position.top_right, 2, 13, bgcolor=color.new(color.black, 5), border_width=2, border_color=color.new(color.gray, 45), frame_width=2, frame_color=color.new(color.aqua, 45))
 
-    hudActiveLong = tradeDir == 1
-    hudActiveShort = tradeDir == -1
     hudActiveTrade = tradeDir != 0
-
-    hudState = newBuySignal ? "BUY" :
-         newSellSignal ? "SELL" :
-         hudActiveLong ? "IN BUY" :
-         hudActiveShort ? "IN SELL" :
-         targetEntered ? "REACTION" :
-         hasHeat ? "WATCH" :
-         "NO TRADE"
-
-    hudBias = newBuySignal ? "BUY RECLAIM" :
-         newSellSignal ? "SELL REJECT" :
-         hudActiveLong ? "LONG ACTIVE" :
-         hudActiveShort ? "SHORT ACTIVE" :
-         targetEntered ? "TARGET REACTION" :
-         trendBull ? "BULLISH PULL" :
-         trendBear ? "BEARISH PULL" :
-         "NEUTRAL"
+    hudState = state
+    hudBias  = bias
 
     stateCol = hudState == "BUY" or hudState == "IN BUY" ? color.green :
          hudState == "SELL" or hudState == "IN SELL" ? color.red :
@@ -790,7 +793,7 @@ if showHUD and barstate.islast
 // ═══════════════════════════════════════════════════════════════
 
 if showCloseCalendar and barstate.islast
-    var table cal = table.new(position.bottom_right, 4, 8, bgcolor=color.new(color.black, 8), border_width=2, border_color=color.new(color.gray, 50), frame_width=2, frame_color=color.new(color.blue, 60))
+    var table cal = table.new(position.bottom_right, 4, 9, bgcolor=color.new(color.black, 8), border_width=2, border_color=color.new(color.gray, 50), frame_width=2, frame_color=color.new(color.blue, 60))
 
     table.cell(cal, 0, 0, "TF", text_color=color.gray, text_size=tblSize, text_halign=text.align_center)
     table.cell(cal, 1, 0, "Session Close In", text_color=color.gray, text_size=tblSize, text_halign=text.align_center)
@@ -832,6 +835,15 @@ if showCloseCalendar and barstate.islast
     table.cell(cal, 2, 7, f_statusText(stW), text_color=stW == 2 ? color.blue : stW == 1 ? color.yellow : color.gray, text_size=tblSize)
     table.cell(cal, 3, 7, str.tostring(wtW, "#.#"), text_color=color.white, text_size=tblSize)
 
+    // Source / freshness footer (data integrity)
+    anyHtfMissing = na(mid15) or na(mid30) or na(mid60) or na(mid120) or na(mid240) or na(midD)
+    srcText = "chart " + timeframe.period + (inSession ? " \u2022 IN SESSION" : " \u2022 OUT OF SESSION") + (anyHtfMissing ? " \u2022 HTF WARMUP" : "")
+    srcClr = anyHtfMissing ? color.yellow : inSession ? color.gray : color.orange
+    table.cell(cal, 0, 8, "SRC", text_color=color.gray, text_size=tblSize, text_halign=text.align_center)
+    table.cell(cal, 1, 8, srcText, text_color=srcClr, text_size=tblSize, text_halign=text.align_center)
+    table.cell(cal, 2, 8, "", text_color=color.gray, text_size=tblSize)
+    table.cell(cal, 3, 8, "", text_color=color.gray, text_size=tblSize)
+
 // ═══════════════════════════════════════════════════════════════
 // ALERTS
 // ═══════════════════════════════════════════════════════════════
@@ -843,4 +855,5 @@ alertcondition(tp1HitActive, title="MSP TGS TP1 Hit", message="MSP Futures Scalp
 alertcondition(tpHitActive, title="MSP TGS TP2 Hit", message="MSP Futures Scalper v4.3: TP2 / Gravity target hit on {{ticker}} at {{close}}")
 alertcondition(slHitActive, title="MSP TGS Stop Loss Hit", message="MSP Futures Scalper v4.3: STOP LOSS hit on {{ticker}} at {{close}}")
 alertcondition(reactionPulse, title="MSP TGS Reaction Zone", message="MSP Futures Scalper v4.3: price entered reaction zone on {{ticker}} at {{close}}")
-alertcondition(activeDecompCount > 0, title="MSP TGS Decompression Active", message="MSP Futures Scalper v4.3: decompression active on {{ticker}}")
+decompTransition = activeDecompCount > 0 and nz(activeDecompCount[1], 0) == 0
+alertcondition(decompTransition, title="MSP TGS Decompression Active", message="MSP Futures Scalper v4.3: decompression window opened on {{ticker}}")

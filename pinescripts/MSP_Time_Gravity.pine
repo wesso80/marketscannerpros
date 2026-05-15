@@ -267,9 +267,6 @@ f_finalizeZone(mids_arr, starts, ends) =>
 f_htfHL(tf) =>
     request.security(syminfo.tickerid, tf, [high[1], low[1]], barmerge.gaps_off, barmerge.lookahead_on)
 
-f_htfClose(tf) =>
-    request.security(syminfo.tickerid, tf, [time_close - time, time_close - time_close[1]], barmerge.gaps_off, barmerge.lookahead_on)
-
 // Fetch candle data (Pine v6: ternary cannot return tuples, must use if/else)
 [h1H,  l1H]  = f_htfHL("60")
 [h2H,  l2H]  = f_htfHL("120")
@@ -281,18 +278,7 @@ f_htfClose(tf) =>
 [h1M,  l1M]  = f_htfHL("M")
 [h3M,  l3M]  = f_htfHL("3M")
 
-// Fetch decompression timing (ms to close, candle duration)
-[mc1H,  cd1H]  = f_htfClose("60")
-[mc2H,  cd2H]  = f_htfClose("120")
-[mc4H,  cd4H]  = f_htfClose("240")
-[mc6H,  cd6H]  = f_htfClose("360")
-[mc8H,  cd8H]  = f_htfClose("480")
-[mc1D,  cd1D]  = f_htfClose("D")
-[mc1W,  cd1W]  = f_htfClose("W")
-[mc1M,  cd1M]  = f_htfClose("M")
-[mc3M,  cd3M]  = f_htfClose("3M")
-
-// Fetch actual close timestamps for calendar display
+// Fetch actual close timestamps for calendar display + decomp computation
 tc1H = request.security(syminfo.tickerid, "60",  time_close, barmerge.gaps_off, barmerge.lookahead_on)
 tc2H = request.security(syminfo.tickerid, "120", time_close, barmerge.gaps_off, barmerge.lookahead_on)
 tc4H = request.security(syminfo.tickerid, "240", time_close, barmerge.gaps_off, barmerge.lookahead_on)
@@ -302,6 +288,48 @@ tc1D = request.security(syminfo.tickerid, "D",   time_close, barmerge.gaps_off, 
 tc1W = request.security(syminfo.tickerid, "W",   time_close, barmerge.gaps_off, barmerge.lookahead_on)
 tc1M = request.security(syminfo.tickerid, "M",   time_close, barmerge.gaps_off, barmerge.lookahead_on)
 tc3M = request.security(syminfo.tickerid, "3M",  time_close, barmerge.gaps_off, barmerge.lookahead_on)
+
+// Derive ms-until-close + candle-duration on the CHART context.
+// BUG FIX vs prior versions: the previous f_htfClose() helper computed
+//   `time_close - time`   (== HTF candle duration)
+//   `time_close - time_close[1]` (== HTF candle duration)
+// inside request.security, so msUntilClose always equalled candleDuration
+// and f_decompStatus() never returned ACTIVE/PRE_WINDOW. Decompression
+// boosts and the "Decompression Active" alert silently never fired.
+// Now msUntilClose = (HTF close time) - (this bar's close time), which is
+// the correct distance from THIS bar to the next HTF close. Non-repainting
+// because tc* uses [1]-shifted high/low pattern (lookahead_on offsets the
+// shift to avoid future-leak). Candle durations are known constants.
+minMs = 60000.0
+dur1H_ms = 60.0    * minMs
+dur2H_ms = 120.0   * minMs
+dur4H_ms = 240.0   * minMs
+dur6H_ms = 360.0   * minMs
+dur8H_ms = 480.0   * minMs
+dur1D_ms = 1440.0  * minMs
+dur1W_ms = 10080.0 * minMs
+dur1M_ms = 43200.0 * minMs
+dur3M_ms = 129600.0 * minMs
+
+mc1H = na(tc1H) ? na : tc1H - time_close
+mc2H = na(tc2H) ? na : tc2H - time_close
+mc4H = na(tc4H) ? na : tc4H - time_close
+mc6H = na(tc6H) ? na : tc6H - time_close
+mc8H = na(tc8H) ? na : tc8H - time_close
+mc1D = na(tc1D) ? na : tc1D - time_close
+mc1W = na(tc1W) ? na : tc1W - time_close
+mc1M = na(tc1M) ? na : tc1M - time_close
+mc3M = na(tc3M) ? na : tc3M - time_close
+
+cd1H = dur1H_ms
+cd2H = dur2H_ms
+cd4H = dur4H_ms
+cd6H = dur6H_ms
+cd8H = dur8H_ms
+cd1D = dur1D_ms
+cd1W = dur1W_ms
+cd1M = dur1M_ms
+cd3M = dur3M_ms
 
 // ═══════════════════════════════════════════════════════════════
 // SELF-LEARNING ENGINE — runs every confirmed bar
@@ -693,7 +721,7 @@ if barstate.islast
           tablePos == "bottom_right" ? position.bottom_right :
           position.bottom_left
 
-        nRows = isCleanMode ? 5 : isDiagMode ? 8 + validCount : 6 + validCount
+        nRows = (isCleanMode ? 5 : isDiagMode ? 8 + validCount : 6 + validCount) + 1   // +1 for SRC footer
         var table tbl = table.new(tblPos, 2, nRows, bgcolor=color.new(color.black, 30), border_width=1, border_color=color.new(color.gray, 70))
 
         // Header
@@ -718,6 +746,9 @@ if barstate.islast
 
         table.cell(tbl, 0, 4, "Debt / Today", text_color=color.gray, text_size=size.tiny, text_halign=text.align_left)
         table.cell(tbl, 1, 4, str.tostring(debtCount) + " debt | " + str.tostring(todayCloseCount) + " today", text_color=color.orange, text_size=size.tiny, text_halign=text.align_right)
+
+        // Source / freshness footer (data integrity) — surface HTF coverage so operators see when data is missing
+        anyHtfMissing = (use1H and na(h1H)) or (use2H and na(h2H)) or (use4H and na(h4H)) or (use1D and na(h1D)) or (use1W and na(h1W)) or (use1M and na(h1M))
 
         // Per-TF rows (Pro and Diagnostic modes)
         if not isCleanMode
@@ -779,6 +810,14 @@ if barstate.islast
                         table.cell(tbl, 0, zRow, "Zones", text_color=color.gray, text_size=size.tiny, text_halign=text.align_left)
                         zText = numZones > 0 ? str.tostring(numZones) + " zones" : "No zones"
                         table.cell(tbl, 1, zRow, zText, text_color=color.white, text_size=size.tiny, text_halign=text.align_right)
+
+        // SRC footer (data integrity) — always last row
+        srcRow = nRows - 1
+        warmupOK = bar_index >= 50
+        srcCol = anyHtfMissing or not warmupOK ? color.orange : color.gray
+        srcTxt = "chart " + timeframe.period + (anyHtfMissing ? " • HTF missing" : " • HTF ok") + (warmupOK ? "" : " • WARMUP")
+        table.cell(tbl, 0, srcRow, "SRC", text_color=color.gray, text_size=size.tiny, text_halign=text.align_left)
+        table.cell(tbl, 1, srcRow, srcTxt, text_color=srcCol, text_size=size.tiny, text_halign=text.align_right)
 
     // ═══════════════════════════════════════════════════════════════
     // CLOSE CALENDAR — Forward Schedule (matches website)
@@ -1043,7 +1082,12 @@ if barstate.islast
         mp = array.get(mids, i)
         if not na(mp.mid) and mp.decompStatus == "ACTIVE"
             hasActiveDecomp := true
-alertcondition(hasActiveDecomp, title="TGM Decompression Active", message="⏰ Decompression window ACTIVE on {{ticker}}")
+// Transition-gated: only fire on the bar decompression first becomes active,
+// not every bar throughout the window. Prevents alert spam.
+var bool prevActiveDecomp = false
+decompEntered = hasActiveDecomp and not prevActiveDecomp
+prevActiveDecomp := hasActiveDecomp
+alertcondition(decompEntered, title="TGM Decompression Active", message="⏰ Decompression window ACTIVE on {{ticker}}")
 
 highConfluence = false
 if barstate.islast and numZones > 0
