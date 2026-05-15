@@ -662,6 +662,9 @@ export default function CommandHome() {
           <Link href="/admin/daily-brief" style={navLink}>
             Daily Brief
           </Link>
+          <Link href="/admin/risk-assessment" style={navLink}>
+            Risk Memo
+          </Link>
           <Link href="/admin/equity-research" style={navLink}>
             Equity Research
           </Link>
