@@ -2,12 +2,12 @@
  * POST /api/admin/options-architect
  *
  * D.E. Shaw-style options strategy memo. Pulls AV TIME_SERIES_DAILY +
- * TREASURY_YIELD (3M) + OVERVIEW (for dividend yield) for one ticker,
- * computes HV20/HV60/HV252 (IV proxy), ATR, 52w hi/lo, then locally
- * constructs a candidate set of 10 option strategies with theoretical
- * Black-Scholes pricing + Greeks + max P/L + breakevens + POP, and
- * sends the packet to gpt-4.1 which selects ONE primary strategy and
- * writes the operator-grade memo.
+ * HISTORICAL_OPTIONS (full chain, EOD T-1) + OVERVIEW (dividend yield)
+ * for one ticker, then locally constructs a candidate set of 11 option
+ * strategies built from REAL chain contracts (real bid/ask, real IV per
+ * contract, real per-contract Greeks, real OI/volume), then sends the
+ * packet to gpt-4.1 which selects ONE primary strategy and writes the
+ * operator-grade memo.
  *
  * Body:
  *   { ticker: string,
@@ -18,8 +18,8 @@
  *     operatorNotes?: string }
  *
  * Boundary: research-only. System never executes orders.
- * Hard-flagged unavailable: real options chain, real IV surface,
- * bid/ask spreads, open interest, options volume.
+ * Chain data is EOD T-1 — operator must re-validate live bid/ask
+ * at the broker before order entry.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
   }
   const client = new OpenAI({ apiKey });
 
-  // 1. Build options packet (BS-priced candidates).
+  // 1. Build options packet (REAL AV HISTORICAL_OPTIONS chain).
   const snapshot = await buildOptionsSnapshot(ticker, directionalView, timeHorizonDays);
   const serialized = serializeOptionsSnapshot(snapshot);
 
@@ -106,13 +106,13 @@ export async function POST(req: NextRequest) {
       wrapTruth(
         { memo: null, snapshot, aiError: snapshot.error || "snapshot build failed" },
         {
-          source: "alpha-vantage:daily+treasury+overview",
+          source: "alpha-vantage:daily+historical_options+overview",
           fetchedAt: new Date().toISOString(),
           freshness: "stale",
           simulated: false,
           missingFields: snapshot.missingFields,
           confidence: "low",
-          confidenceReason: snapshot.error || "no candidate strategies could be priced",
+          confidenceReason: snapshot.error || "no candidate strategies could be built from the chain",
         },
       ),
       { status: 422 },
@@ -163,7 +163,7 @@ export async function POST(req: NextRequest) {
       wrapTruth(
         { memo: null, snapshot, aiError: aiResult.reason },
         {
-          source: "alpha-vantage:daily+treasury+overview+openai:gpt-4.1",
+          source: "alpha-vantage:daily+historical_options+overview+openai:gpt-4.1",
           fetchedAt: new Date().toISOString(),
           freshness: "stale",
           simulated: false,
@@ -176,24 +176,25 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Confidence band.
+  // Confidence band based on chain depth + selected-expiration OI.
   let confidence: "high" | "medium" | "low" = "medium";
-  let confidenceReason = `HV20=${snapshot.hv20Pct}% used as IV proxy, ${snapshot.candidates.length} candidates priced, risk-free=${snapshot.riskFreeSource}.`;
-  if (snapshot.hv20Pct != null && snapshot.hv60Pct != null && snapshot.riskFreeSource === "treasury-3m") {
+  const avgOI = snapshot.expirationAvgOI ?? 0;
+  let confidenceReason = `Chain asOf ${snapshot.chainAsOfDate ?? "n/a"}, ${snapshot.chainContractCount} contracts, selected expiration ${snapshot.selectedExpiration ?? "n/a"} (${snapshot.selectedExpirationDte ?? "?"}d, avg OI ${avgOI}), ATM IV ${snapshot.atmIVPct ?? "n/a"}%, ${snapshot.candidates.length} candidates built.`;
+  if (snapshot.chainContractCount >= 500 && avgOI >= 500 && snapshot.atmIVPct != null) {
     confidence = "high";
-  } else if (snapshot.hv20Pct == null) {
+  } else if (snapshot.chainContractCount < 100 || avgOI < 50) {
     confidence = "low";
-    confidenceReason = "HV20 unavailable — cannot price options.";
+    confidenceReason += " Low chain depth / thin OI — fills may be poor.";
   }
-  confidenceReason += " Real options chain, IV surface, bid/ask, and OI are NOT in source data — operator must validate at broker.";
+  confidenceReason += " Chain is EOD T-1; operator MUST re-validate live bid/ask at the broker before order entry.";
 
   return NextResponse.json(
     wrapTruth(
       { memo: aiResult.memo.ok ? aiResult.memo.memo : null, snapshot },
       {
-        source: "alpha-vantage:daily+treasury+overview+openai:gpt-4.1",
+        source: "alpha-vantage:daily+historical_options+overview+openai:gpt-4.1",
         fetchedAt: new Date().toISOString(),
-        freshness: snapshot.status === "ok" ? "delayed" : "stale",
+        freshness: "delayed",
         simulated: false,
         missingFields: snapshot.missingFields,
         confidence,

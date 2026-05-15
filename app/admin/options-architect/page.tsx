@@ -7,8 +7,9 @@
  * directional view + horizon + risk budget; gets ONE recommended
  * strategy (legs/Greeks/P&L/breakeven/POP), payoff narrative, Greeks
  * interpretation, adjustment plan, exit rules, and alternatives
- * considered. All option prices are THEORETICAL Black-Scholes from
- * HV20 IV proxy — real options chain/IV are not in source data.
+ * considered. Option prices, IV, and Greeks are REAL per-contract
+ * values from AV HISTORICAL_OPTIONS (EOD T-1). Operator MUST
+ * re-validate live at the broker before order entry.
  */
 
 import React, { useState } from "react";
@@ -22,14 +23,22 @@ type StrategyCategory =
 interface OptionsLegOut {
   type: "call" | "put";
   side: "long" | "short";
+  contractID: string;
   strike: number;
   dte: number;
   qty: number;
-  theoreticalPremium: number;
+  bid: number;
+  ask: number;
+  mid: number;
+  impliedVolatilityPct: number;
   delta: number;
   gamma: number;
   theta: number;
   vega: number;
+  volume: number;
+  openInterest: number;
+  liquidity: "high" | "ok" | "thin" | "no-quote";
+  spreadPct: number | null;
 }
 
 interface OptionsArchitectMemo {
@@ -52,6 +61,7 @@ interface OptionsArchitectMemo {
     underlyingPrice: number;
     impliedMoveOneSigma: number;
     hvRegime: string;
+    ivVsHvNote: string;
     direction: Outlook;
     rationale: string;
   };
@@ -69,6 +79,9 @@ interface OptionsArchitectMemo {
     positionGreeks: { delta: number; gamma: number; theta: number; vega: number };
     contractsToOpen: number;
     totalCapitalAtRisk: number;
+    worstLegLiquidity: "high" | "ok" | "thin" | "no-quote";
+    avgSpreadPct: number | null;
+    liquidityAssessment: string;
   };
   payoffNarrative: {
     bullCaseDescription: string;
@@ -86,10 +99,11 @@ interface OptionsArchitectMemo {
   exitRules: Array<{ condition: string; action: string; threshold: string }>;
   riskManagementRules: string[];
   alternativesConsidered: Array<{ category: StrategyCategory; description: string; whyConsidered: string; whyRejected: string }>;
-  realOptionsChain: { available: boolean; note: string };
-  realImpliedVolatility: { available: boolean; note: string };
-  bidAskSpread: { available: boolean; note: string };
-  openInterest: { available: boolean; note: string };
+  chainDataAsOfDate: string | null;
+  chainContractCount: number;
+  selectedExpiration: string | null;
+  selectedExpirationDte: number | null;
+  requiresLiveRepricing: { required: boolean; note: string };
   earlyExerciseRisk: { applies: boolean; note: string };
   classification: string;
   disclaimer: string;
@@ -178,7 +192,7 @@ export default function OptionsArchitectPage() {
         <header style={{ marginBottom: 24 }}>
           <h1 style={{ fontSize: 28, fontWeight: 700, color: "#F1F5F9", margin: 0 }}>Options Strategy Architect</h1>
           <p style={{ color: "#94A3B8", marginTop: 4 }}>
-            D.E. Shaw-style options memo. Black-Scholes-priced candidates from HV20 IV proxy. Real options chain / IV / bid-ask / OI are NOT in source data — operator must validate at the broker.
+            D.E. Shaw-style options memo. Strategy candidates built from the REAL Alpha Vantage options chain (EOD T-1) — real bid/ask, per-contract IV, per-contract Greeks, OI, and volume. Operator MUST re-validate live at the broker before order entry.
           </p>
         </header>
 
@@ -298,34 +312,50 @@ export default function OptionsArchitectPage() {
                   <thead>
                     <tr style={{ borderBottom: "1px solid #334155", color: "#94A3B8", textAlign: "left" }}>
                       <th style={th}>Side</th>
-                      <th style={th}>Type</th>
-                      <th style={th}>Strike</th>
-                      <th style={th}>DTE</th>
-                      <th style={th}>Qty</th>
-                      <th style={th}>Premium</th>
-                      <th style={th}>Δ delta</th>
-                      <th style={th}>γ gamma</th>
-                      <th style={th}>θ theta/d</th>
-                      <th style={th}>ν vega</th>
+                      <th style={th}>Contract</th>
+                      <th style={th}>Type / K / DTE</th>
+                      <th style={th}>Bid / Ask</th>
+                      <th style={th}>Mid</th>
+                      <th style={th}>IV %</th>
+                      <th style={th}>Δ</th>
+                      <th style={th}>γ</th>
+                      <th style={th}>θ/d</th>
+                      <th style={th}>ν</th>
+                      <th style={th}>Vol / OI</th>
+                      <th style={th}>Liquidity</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {memo.tradeSetup.legs.map((lg, i) => (
-                      <tr key={i} style={{ borderBottom: "1px solid #0F172A" }}>
-                        <td style={{ ...td, color: sideColor(lg.side), fontWeight: 700 }}>{lg.side.toUpperCase()}</td>
-                        <td style={td}>{lg.type.toUpperCase()}</td>
-                        <td style={{ ...td, fontWeight: 600 }}>${lg.strike}</td>
-                        <td style={td}>{lg.dte}</td>
-                        <td style={td}>{lg.qty}</td>
-                        <td style={td}>${lg.theoreticalPremium.toFixed(2)}</td>
-                        <td style={td}>{lg.delta.toFixed(3)}</td>
-                        <td style={td}>{lg.gamma.toFixed(4)}</td>
-                        <td style={td}>{lg.theta.toFixed(3)}</td>
-                        <td style={td}>{lg.vega.toFixed(3)}</td>
-                      </tr>
-                    ))}
+                    {memo.tradeSetup.legs.map((lg, i) => {
+                      const liqColor = lg.liquidity === "high" ? "#10B981" : lg.liquidity === "ok" ? "#60A5FA" : lg.liquidity === "thin" ? "#F59E0B" : "#EF4444";
+                      return (
+                        <tr key={i} style={{ borderBottom: "1px solid #0F172A" }}>
+                          <td style={{ ...td, color: sideColor(lg.side), fontWeight: 700 }}>{lg.side.toUpperCase()} ×{lg.qty}</td>
+                          <td style={{ ...td, fontSize: 10, fontFamily: "ui-monospace, monospace", color: "#94A3B8" }}>{lg.contractID}</td>
+                          <td style={{ ...td, fontWeight: 600 }}>{lg.type.toUpperCase()} ${lg.strike} / {lg.dte}d</td>
+                          <td style={td}>${lg.bid.toFixed(2)} / ${lg.ask.toFixed(2)}{lg.spreadPct != null && <span style={{ fontSize: 10, color: "#64748B" }}> ({lg.spreadPct.toFixed(1)}%)</span>}</td>
+                          <td style={{ ...td, fontWeight: 600 }}>${lg.mid.toFixed(2)}</td>
+                          <td style={td}>{lg.impliedVolatilityPct.toFixed(1)}%</td>
+                          <td style={td}>{lg.delta.toFixed(3)}</td>
+                          <td style={td}>{lg.gamma.toFixed(4)}</td>
+                          <td style={td}>{lg.theta.toFixed(3)}</td>
+                          <td style={td}>{lg.vega.toFixed(3)}</td>
+                          <td style={td}>{lg.volume} / {lg.openInterest}</td>
+                          <td style={{ ...td }}><span style={{ ...pillStyle, fontSize: 10, padding: "2px 8px", background: liqColor + "33", color: liqColor, border: "1px solid " + liqColor }}>{lg.liquidity}</span></td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
+              </div>
+
+              <div style={{ background: "#0F172A", border: "1px solid #334155", borderRadius: 6, padding: 10, marginBottom: 12, fontSize: 12 }}>
+                <span style={{ color: "#94A3B8", textTransform: "uppercase", letterSpacing: 0.3, fontSize: 10 }}>Liquidity assessment</span>
+                <div style={{ color: "#E2E8F0", marginTop: 4 }}>
+                  Worst leg: <strong style={{ color: memo.tradeSetup.worstLegLiquidity === "high" ? "#10B981" : memo.tradeSetup.worstLegLiquidity === "ok" ? "#60A5FA" : memo.tradeSetup.worstLegLiquidity === "thin" ? "#F59E0B" : "#EF4444" }}>{memo.tradeSetup.worstLegLiquidity}</strong>
+                  {" · "}Avg spread: <strong>{memo.tradeSetup.avgSpreadPct != null ? `${memo.tradeSetup.avgSpreadPct.toFixed(1)}%` : "n/a"}</strong>
+                </div>
+                <div style={{ color: "#CBD5E1", marginTop: 6, fontSize: 12 }}>{memo.tradeSetup.liquidityAssessment}</div>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10, marginBottom: 12 }}>
@@ -458,19 +488,26 @@ export default function OptionsArchitectPage() {
               </Card>
             </section>
 
-            {/* Outlook rationale + Data availability flags */}
+            {/* Outlook rationale + Chain metadata */}
             <section style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
               <Card title="Outlook Rationale">
                 <div style={{ fontSize: 13, color: "#E2E8F0", marginBottom: 8 }}>{memo.outlookAssessment.rationale}</div>
                 <Field label="Spot" value={`$${memo.outlookAssessment.underlyingPrice.toFixed(2)}`} />
                 <Field label="Direction" value={memo.outlookAssessment.direction} valueColor={outlookColor(memo.outlookAssessment.direction)} />
+                <Field label="IV vs HV" value={memo.outlookAssessment.ivVsHvNote} />
               </Card>
-              <Card title="Data Availability (hard flags)">
-                <Flag label="Real options chain" available={memo.realOptionsChain.available} note={memo.realOptionsChain.note} />
-                <Flag label="Real implied volatility" available={memo.realImpliedVolatility.available} note={memo.realImpliedVolatility.note} />
-                <Flag label="Bid/ask spread" available={memo.bidAskSpread.available} note={memo.bidAskSpread.note} />
-                <Flag label="Open interest" available={memo.openInterest.available} note={memo.openInterest.note} />
-                <Flag label={`Early-exercise risk applies: ${memo.earlyExerciseRisk.applies ? "yes" : "no"}`} available={!memo.earlyExerciseRisk.applies} note={memo.earlyExerciseRisk.note} forceColor={memo.earlyExerciseRisk.applies ? "#F59E0B" : "#10B981"} />
+              <Card title="Chain Metadata (AV HISTORICAL_OPTIONS)">
+                <Field label="Chain as of (EOD)" value={memo.chainDataAsOfDate ?? "n/a"} valueColor="#FBBF24" />
+                <Field label="Contracts in chain" value={String(memo.chainContractCount)} />
+                <Field label="Selected expiration" value={`${memo.selectedExpiration ?? "n/a"} (${memo.selectedExpirationDte ?? "?"}d)`} valueColor="#60A5FA" />
+                <div style={{ marginTop: 10, padding: 8, background: "#7F1D1D33", border: "1px solid #F59E0B", borderRadius: 4 }}>
+                  <div style={{ fontSize: 11, color: "#FBBF24", fontWeight: 700, marginBottom: 4 }}>⚠ LIVE REPRICING REQUIRED</div>
+                  <div style={{ fontSize: 11, color: "#FECACA" }}>{memo.requiresLiveRepricing?.note}</div>
+                </div>
+                <div style={{ marginTop: 8, padding: 8, background: memo.earlyExerciseRisk.applies ? "#7F1D1D33" : "#06402333", border: `1px solid ${memo.earlyExerciseRisk.applies ? "#F59E0B" : "#10B981"}`, borderRadius: 4 }}>
+                  <div style={{ fontSize: 11, color: memo.earlyExerciseRisk.applies ? "#FBBF24" : "#10B981", fontWeight: 700, marginBottom: 4 }}>Early-exercise risk: {memo.earlyExerciseRisk.applies ? "YES" : "low"}</div>
+                  <div style={{ fontSize: 11, color: "#CBD5E1" }}>{memo.earlyExerciseRisk.note}</div>
+                </div>
               </Card>
             </section>
 
@@ -540,16 +577,4 @@ function GreekBox({ letter, name, body, color }: { letter: string; name: string;
   );
 }
 
-function Flag({ label, available, note, forceColor }: { label: string; available: boolean; note: string; forceColor?: string }) {
-  const c = forceColor || (available ? "#10B981" : "#F59E0B");
-  return (
-    <div style={{ marginBottom: 8 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <span style={{ width: 8, height: 8, borderRadius: "50%", background: c }} />
-        <span style={{ fontSize: 12, color: "#E2E8F0", fontWeight: 600 }}>{label}</span>
-        <span style={{ fontSize: 10, color: c, marginLeft: "auto", fontWeight: 700, textTransform: "uppercase" }}>{available ? "OK" : "FLAG"}</span>
-      </div>
-      <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 2, paddingLeft: 14 }}>{note}</div>
-    </div>
-  );
-}
+
