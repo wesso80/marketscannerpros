@@ -659,6 +659,9 @@ export default function CommandHome() {
           <Link href="/admin/overview" style={navLink}>
             Stats Overview
           </Link>
+          <Link href="/admin/daily-brief" style={navLink}>
+            Daily Brief
+          </Link>
           <Link href="/admin/equity-research" style={navLink}>
             Equity Research
           </Link>
