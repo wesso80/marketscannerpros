@@ -92,6 +92,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       ],
     },
     {
+      label: "ARCA Portfolio Lab",
+      items: [
+        { href: "/admin/portfolio-lab", label: "ARCA Dashboard", code: "PL" },
+        { href: "/admin/portfolio-lab/positions", label: "Open Positions", code: "PP" },
+        { href: "/admin/portfolio-lab/orders", label: "Sim Orders", code: "PO" },
+        { href: "/admin/portfolio-lab/trades", label: "Closed Trades", code: "PT" },
+        { href: "/admin/portfolio-lab/journal", label: "ARCA Journal", code: "PJ" },
+      ],
+    },
+    {
       label: "Research",
       items: [
         { href: "/admin/daily-brief", label: "Daily Brief", code: "DB" },
