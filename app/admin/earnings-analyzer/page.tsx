@@ -64,6 +64,9 @@ interface EarningsNote {
   };
   optionsImpliedMove: {
     available: boolean;
+    impliedMovePct: number | null;
+    expiry: string | null;
+    source: string;
     note: string;
     historicalProxyAvgPct: number | null;
     historicalProxyMedianPct: number | null;
@@ -374,11 +377,20 @@ export default function EarningsAnalyzerPage() {
                 <div style={{ borderTop: "1px solid #334155", marginTop: 8, paddingTop: 8, fontSize: 12, color: "#CBD5E1" }}>{note.historicalPattern.pattern}</div>
               </Card>
               <Card title="Options Implied Move">
-                <div style={{ background: "#7F1D1D33", border: "1px solid #B91C1C", color: "#FECACA", padding: 8, borderRadius: 4, fontSize: 11, marginBottom: 8 }}>
-                  Not in packet — Alpha Vantage has no options chain on free tier.
-                </div>
-                <Field label="Hist proxy avg" value={note.optionsImpliedMove.historicalProxyAvgPct != null ? `±${note.optionsImpliedMove.historicalProxyAvgPct.toFixed(2)}%` : "n/a"} />
-                <Field label="Hist proxy median" value={note.optionsImpliedMove.historicalProxyMedianPct != null ? `±${note.optionsImpliedMove.historicalProxyMedianPct.toFixed(2)}%` : "n/a"} />
+                {note.optionsImpliedMove.available ? (
+                  <div style={{ background: "#064E3B33", border: "1px solid #10B981", color: "#A7F3D0", padding: 8, borderRadius: 4, fontSize: 11, marginBottom: 8 }}>
+                    Live ATM straddle{note.optionsImpliedMove.expiry ? ` · expiry ${note.optionsImpliedMove.expiry}` : ""}{note.optionsImpliedMove.source ? ` · ${note.optionsImpliedMove.source}` : ""}
+                  </div>
+                ) : (
+                  <div style={{ background: "#7F1D1D33", border: "1px solid #B91C1C", color: "#FECACA", padding: 8, borderRadius: 4, fontSize: 11, marginBottom: 8 }}>
+                    Options chain unavailable on this Alpha Vantage plan — using historical earnings-day move as proxy.
+                  </div>
+                )}
+                {note.optionsImpliedMove.available && note.optionsImpliedMove.impliedMovePct != null && (
+                  <Field label="Implied move" value={`\u00B1${note.optionsImpliedMove.impliedMovePct.toFixed(2)}%`} valueColor="#10B981" />
+                )}
+                <Field label="Hist proxy avg" value={note.optionsImpliedMove.historicalProxyAvgPct != null ? `\u00B1${note.optionsImpliedMove.historicalProxyAvgPct.toFixed(2)}%` : "n/a"} />
+                <Field label="Hist proxy median" value={note.optionsImpliedMove.historicalProxyMedianPct != null ? `\u00B1${note.optionsImpliedMove.historicalProxyMedianPct.toFixed(2)}%` : "n/a"} />
                 <div style={{ borderTop: "1px solid #334155", marginTop: 8, paddingTop: 8, fontSize: 11, color: "#94A3B8" }}>{note.optionsImpliedMove.note}</div>
               </Card>
             </section>

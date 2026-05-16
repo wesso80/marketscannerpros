@@ -20,6 +20,7 @@
 
 import { fetchDailyOhlcv, type OhlcBar } from "./priceSeries";
 import { avFetchAdmin } from "@/lib/avRateGovernor";
+import { fetchEarningsImpliedMove, type EarningsImpliedMove } from "./optionsImpliedMove";
 
 const AV_BASE = "https://www.alphavantage.co/query";
 
@@ -102,6 +103,9 @@ export interface EarningsHistorySnapshot {
   /** Endpoint statuses for diagnostics. */
   endpointStatus: Record<string, string>;
   errors: string[];
+
+  /** Live ATM-straddle implied move (Alpha Vantage options endpoint). */
+  optionsIV: EarningsImpliedMove | null;
 }
 
 /* ───────────── Public entry ───────────── */
@@ -114,7 +118,6 @@ export async function buildEarningsHistorySnapshot(
   const generatedAt = new Date().toISOString();
 
   const baseMissing = [
-    "options-implied-move (no AV options chain)",
     "whisper-number (no AV source)",
     "intraday-pre-market-move (AV daily only)",
     "segment-revenue-breakdown (not in AV INCOME_STATEMENT)",
@@ -154,15 +157,23 @@ export async function buildEarningsHistorySnapshot(
   const revenueHistory = buildRevenueHistory(incomeRes.body);
   const reactionStats = computeReactionStats(earningsHistory);
 
+  // Live options-IV (ATM straddle). Run after we know the underlying price.
+  const nextEarningsDateAVProbe = extractNextEarningsDate(earningsRes.body);
+  const optionsIV = await fetchEarningsImpliedMove(symbol, {
+    earningsDate: nextEarningsDateAVProbe,
+    underlying: lastBar ? lastBar.close : null,
+  });
+
   const missing = [...baseMissing];
   if (earningsRes.status !== "ok") missing.push(`earnings-endpoint:${earningsRes.status}`);
   if (incomeRes.status !== "ok") missing.push(`income-statement-endpoint:${incomeRes.status}`);
   if (overviewRes.status !== "ok") missing.push(`overview-endpoint:${overviewRes.status}`);
   if (dailyRes.status !== "ok") missing.push(`daily-series:${dailyRes.status}`);
+  if (!optionsIV.available) missing.push(`options-implied-move:${optionsIV.reason ?? "unavailable"}`);
 
   // AV's EARNINGS endpoint sometimes embeds an upcoming row (estimatedEPS only,
   // reportedEPS null, fiscalDateEnding in future). Surface separately.
-  const nextEarningsDateAV = extractNextEarningsDate(earningsRes.body);
+  const nextEarningsDateAV = nextEarningsDateAVProbe;
 
   const status: "ok" | "partial" | "error" =
     earningsRes.status === "ok" && dailyRes.status === "ok"
@@ -195,6 +206,7 @@ export async function buildEarningsHistorySnapshot(
     missingFields: missing,
     endpointStatus,
     errors,
+    optionsIV,
   };
 }
 
@@ -451,6 +463,20 @@ export function serializeEarningsHistory(s: EarningsHistorySnapshot): string {
 
   L.push("ENDPOINT_STATUS:");
   for (const [k, v] of Object.entries(s.endpointStatus)) L.push(`  ${k}: ${v}`);
+  L.push("");
+  L.push("OPTIONS_IV (ATM straddle for expiry on/after earnings; null when unavailable):");
+  if (s.optionsIV && s.optionsIV.available) {
+    L.push(`  available: true`);
+    L.push(`  source: ${s.optionsIV.source}`);
+    L.push(`  expiry: ${s.optionsIV.expiry} (DTE ${s.optionsIV.daysToExpiry})`);
+    L.push(`  underlying: ${fmtNum(s.optionsIV.underlying)} | atm_strike: ${fmtNum(s.optionsIV.atmStrike)}`);
+    L.push(`  atm_call_mark: ${fmtNum(s.optionsIV.atmCallMark)} | atm_put_mark: ${fmtNum(s.optionsIV.atmPutMark)}`);
+    L.push(`  atm_call_iv: ${fmtNum(s.optionsIV.atmCallIV)} | atm_put_iv: ${fmtNum(s.optionsIV.atmPutIV)}`);
+    L.push(`  implied_move_pct: ${fmtPct(s.optionsIV.impliedMovePct)}`);
+  } else {
+    L.push(`  available: false`);
+    L.push(`  reason: ${s.optionsIV?.reason ?? "not-fetched"}`);
+  }
   if (s.errors.length) {
     L.push("");
     L.push("ERRORS:");
@@ -515,6 +541,7 @@ function emptySnapshot(
     missingFields: baseMissing,
     endpointStatus: {},
     errors,
+    optionsIV: null,
   };
 }
 

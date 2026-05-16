@@ -171,7 +171,7 @@ export async function POST(req: NextRequest) {
     confidence = "high";
   } else if (completeness < 0.5 || snapshot.reactionStats.sampleSize < 2) {
     confidence = "low";
-    confidenceReason += " Consensus + whisper + options-IV not in packet — operator must supply if material.";
+    confidenceReason += " Consensus + whisper not in packet — operator must supply if material.";
   }
 
   return NextResponse.json(
