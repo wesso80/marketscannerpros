@@ -5,6 +5,7 @@ import DataTruthBadge from "@/components/admin/shared/DataTruthBadge";
 import WhyThisRankDrawer from "@/components/admin/WhyThisRankDrawer";
 import { ScoreTypeBadge } from "@/components/ui";
 import type { AdminOpportunityRow } from "@/lib/admin/adminTypes";
+import type { AdminEdgePacket } from "@/lib/admin/edgePacket";
 
 type Market = "CRYPTO" | "EQUITIES";
 
@@ -46,6 +47,7 @@ export default function AdminOpportunityBoard() {
   const [minTrust, setMinTrust] = useState<number>(0);
   const [showSuppressed, setShowSuppressed] = useState<boolean>(true);
   const [rows, setRows] = useState<AdminOpportunityRow[]>([]);
+  const [edgeBySymbol, setEdgeBySymbol] = useState<Record<string, AdminEdgePacket>>({});
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedRow, setSelectedRow] = useState<AdminOpportunityRow | null>(null);
@@ -64,6 +66,11 @@ export default function AdminOpportunityBoard() {
       }
       const json = await res.json();
       setRows(json.rows ?? []);
+      const map: Record<string, AdminEdgePacket> = {};
+      for (const p of (json.edgePackets ?? []) as AdminEdgePacket[]) {
+        map[p.symbol] = p;
+      }
+      setEdgeBySymbol(map);
       setTimestamp(json.timestamp ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load opportunities");
@@ -190,7 +197,7 @@ export default function AdminOpportunityBoard() {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
           <thead style={{ background: "rgba(17,24,39,0.8)" }}>
             <tr>
-              {["#", "Symbol", "Bias", "Setup", "Score", "Type", "Lifecycle", "Dominant Axis", "Data Trust", "Penalties", "Boosts", ""].map((h) => (
+              {["#", "Symbol", "Bias", "Setup", "Score", "Type", "Lifecycle", "Entry", "Stop", "TP1", "TP2", "TP3", "R:R", "Data Trust", ""].map((h) => (
                 <th key={h} style={thStyle}>{h}</th>
               ))}
             </tr>
@@ -220,13 +227,27 @@ export default function AdminOpportunityBoard() {
                   </span>
                 </td>
                 <td style={{ ...tdStyle, color: "#9CA3AF" }}>{row.score.dominantAxis ?? "—"}</td>
+                {(() => {
+                  const ep = edgeBySymbol[row.symbol];
+                  const fmt = (n: number | null | undefined) =>
+                    n == null || !Number.isFinite(n) ? "—" : n >= 1000 ? n.toFixed(0) : n.toFixed(2);
+                  const rrColor = (rr: number | null | undefined) =>
+                    rr == null ? "#6B7280" : rr >= 2 ? "#10B981" : rr >= 1 ? "#FBBF24" : "#F97316";
+                  const bestRR = ep?.riskReward?.rrToTp1 ?? null;
+                  return (
+                    <>
+                      <td style={{ ...tdStyle, fontFamily: "monospace" }}>{fmt(ep?.entry?.trigger ?? null)}</td>
+                      <td style={{ ...tdStyle, fontFamily: "monospace", color: "#FCA5A5" }}>{fmt(ep?.stopLoss?.level ?? null)}</td>
+                      <td style={{ ...tdStyle, fontFamily: "monospace", color: "#86EFAC" }}>{fmt(ep?.takeProfit?.tp1 ?? null)}</td>
+                      <td style={{ ...tdStyle, fontFamily: "monospace", color: "#86EFAC" }}>{fmt(ep?.takeProfit?.tp2 ?? null)}</td>
+                      <td style={{ ...tdStyle, fontFamily: "monospace", color: "#86EFAC" }}>{fmt(ep?.takeProfit?.tp3 ?? null)}</td>
+                      <td style={{ ...tdStyle, fontFamily: "monospace", color: rrColor(bestRR), fontWeight: 700 }}>
+                        {bestRR == null ? "—" : bestRR.toFixed(2) + "R"}
+                      </td>
+                    </>
+                  );
+                })()}
                 <td style={tdStyle}><DataTruthBadge truth={row.dataTruth} /></td>
-                <td style={{ ...tdStyle, color: "#FCA5A5", fontSize: "0.7rem" }}>
-                  {row.score.penalties.length > 0 ? row.score.penalties.length : "—"}
-                </td>
-                <td style={{ ...tdStyle, color: "#86EFAC", fontSize: "0.7rem" }}>
-                  {row.score.boosts.length > 0 ? row.score.boosts.length : "—"}
-                </td>
                 <td style={tdStyle}>
                   <div style={{ display: "flex", gap: 6 }}>
                     <button
@@ -254,7 +275,7 @@ export default function AdminOpportunityBoard() {
             ))}
             {filtered.length === 0 && !loading && (
               <tr>
-                <td colSpan={12} style={{ ...tdStyle, textAlign: "center", color: "#6B7280", padding: "2rem" }}>
+                <td colSpan={15} style={{ ...tdStyle, textAlign: "center", color: "#6B7280", padding: "2rem" }}>
                   {rows.length === 0
                     ? "No opportunities loaded. Hit Refresh to run a scan."
                     : `All ${rows.length} rows hidden (minScore=${minScore}, minTrust=${minTrust}) — hit Reset Filters.`}

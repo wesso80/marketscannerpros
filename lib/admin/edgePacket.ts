@@ -79,6 +79,32 @@ export interface AdminEdgePacket {
   trapRiskScore: number;              // higher = worse
   invalidationClarityScore: number;
 
+  /* explicit decision levels (research-only, no execution) — per
+   * AdminEdgePacket spec. All numbers may be null if the underlying
+   * snapshot did not produce a level. */
+  entry: {
+    trigger: number | null;
+    aggressiveEntry: number | null;
+    conservativeEntry: number | null;
+    explanation: string;
+  };
+  stopLoss: {
+    level: number | null;
+    reason: string;
+  };
+  takeProfit: {
+    tp1: number | null;
+    tp2: number | null;
+    tp3: number | null;
+    runner: number | null;
+    reason: string;
+  };
+  riskReward: {
+    rrToTp1: number | null;
+    rrToTp2: number | null;
+    rrToTp3: number | null;
+  };
+
   /* narrative — short, factual, evidence-bound */
   whyNow: string;
   whatChanged: string;
@@ -197,6 +223,8 @@ export function projectEdgePacket(
     trapRiskScore,
     invalidationClarityScore,
 
+    ...buildDecisionLevels(packet),
+
     whyNow: packet.primaryReason ?? "",
     whatChanged: packet.whatChanged ?? "",
     bearCase: packet.mainRisk ?? "",
@@ -224,6 +252,90 @@ export function projectEdgePacket(
 function clamp01to100(x: number): number {
   if (!Number.isFinite(x)) return 0;
   return Math.max(0, Math.min(100, Math.round(x)));
+}
+
+/**
+ * Project the snapshot's targets/invalidation into the explicit
+ * entry/stopLoss/takeProfit/riskReward blocks the AdminEdgePacket spec
+ * requires. Bias-aware: for SHORT/BEARISH bias, TP levels are below
+ * entry and stop is above; reward/risk math is computed in absolute
+ * terms so RR is always positive.
+ *
+ * Numbers stay null if the underlying snapshot did not provide a level.
+ * No fabricated levels — strict per data-integrity rules.
+ */
+function buildDecisionLevels(packet: AdminResearchPacket): {
+  entry: AdminEdgePacket["entry"];
+  stopLoss: AdminEdgePacket["stopLoss"];
+  takeProfit: AdminEdgePacket["takeProfit"];
+  riskReward: AdminEdgePacket["riskReward"];
+} {
+  const t = packet.snapshot?.targets;
+  const px = packet.snapshot?.price ?? null;
+  const bias = (packet.snapshot?.bias ?? "NEUTRAL") as string;
+  const isShort = bias === "SHORT" || bias === "BEARISH_RESEARCH";
+
+  const valid = (n: unknown): n is number =>
+    typeof n === "number" && Number.isFinite(n) && n > 0;
+
+  const entryTrigger = t && valid(t.entry) ? t.entry : null;
+  const stopLevel = t && valid(t.invalidation) ? t.invalidation : null;
+  const tp1 = t && valid(t.target1) ? t.target1 : null;
+  const tp2 = t && valid(t.target2) ? t.target2 : null;
+  const tp3 = t && valid(t.target3) ? t.target3 : null;
+
+  // Aggressive = current price if it leads the trigger; conservative =
+  // a structure pullback level (PDH/PDL or VWAP). Null if uncertain.
+  let aggressive: number | null = null;
+  let conservative: number | null = null;
+  if (entryTrigger != null && px != null) {
+    if (isShort) {
+      if (px < entryTrigger) aggressive = px;
+      const vwap = packet.liquidityLevels?.vwap;
+      if (valid(vwap) && vwap > entryTrigger) conservative = vwap;
+    } else {
+      if (px > entryTrigger) aggressive = px;
+      const vwap = packet.liquidityLevels?.vwap;
+      if (valid(vwap) && vwap < entryTrigger) conservative = vwap;
+    }
+  }
+
+  const rr = (target: number | null): number | null => {
+    if (entryTrigger == null || stopLevel == null || target == null) return null;
+    const risk = Math.abs(entryTrigger - stopLevel);
+    if (risk <= 0) return null;
+    const reward = Math.abs(target - entryTrigger);
+    return Math.round((reward / risk) * 100) / 100;
+  };
+
+  return {
+    entry: {
+      trigger: entryTrigger,
+      aggressiveEntry: aggressive,
+      conservativeEntry: conservative,
+      explanation: entryTrigger != null
+        ? `Trigger from research snapshot (${isShort ? "short" : "long"} bias).`
+        : "No structured entry level derived from snapshot.",
+    },
+    stopLoss: {
+      level: stopLevel,
+      reason: stopLevel != null
+        ? "Snapshot invalidation level (structural)."
+        : "No invalidation level derived from snapshot.",
+    },
+    takeProfit: {
+      tp1, tp2, tp3,
+      runner: null, // runner concept not derived by snapshot engine yet
+      reason: tp1 != null
+        ? "Snapshot targets (target1/target2/target3)."
+        : "No targets derived from snapshot.",
+    },
+    riskReward: {
+      rrToTp1: rr(tp1),
+      rrToTp2: rr(tp2),
+      rrToTp3: rr(tp3),
+    },
+  };
 }
 
 function deriveAsymmetry(packet: AdminResearchPacket): number {
