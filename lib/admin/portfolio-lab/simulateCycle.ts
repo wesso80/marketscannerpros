@@ -72,6 +72,15 @@ function narrowFreshness(s: string | null | undefined): DataFreshnessStatus {
   }
 }
 
+/**
+ * Sizing/debate engines use upper-case "LONG" | "SHORT";
+ * `recordNoTradeDecisionFromCandidate` expects the lower-case journal form.
+ * Centralised here so the cast is honest and reviewable.
+ */
+function narrowSide(s: "LONG" | "SHORT"): "long" | "short" {
+  return s === "LONG" ? "long" : "short";
+}
+
 export interface SimulateCycleOptions {
   workspaceId: string;
   maxNewIdeas?: number;
@@ -184,7 +193,7 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
         portfolioId: portfolio.id,
         symbol: cand.row.symbol,
         setupType: cand.row.setupType || null,
-        side: cand.side,
+        side: narrowSide(cand.side),
         assetClass: cand.assetClass,
         rejectionStage: "SIZING_FAILED",
         rejectionReason: `Could not size: ${sizing.reason ?? "unknown"}`,
@@ -226,7 +235,7 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
         portfolioId: portfolio.id,
         symbol: cand.row.symbol,
         setupType: cand.row.setupType || null,
-        side: cand.side,
+        side: narrowSide(cand.side),
         assetClass: cand.assetClass,
         rejectionStage: stage,
         rejectionReason: `Pre-trade risk check failed: ${pre.reasons.join(", ")}`,
@@ -284,7 +293,7 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
         portfolioId: portfolio.id,
         symbol: cand.row.symbol,
         setupType: cand.row.setupType || null,
-        side: cand.side,
+        side: narrowSide(cand.side),
         assetClass: cand.assetClass,
         rejectionStage: stage,
         rejectionReason: regimeDecision.reason,
@@ -387,7 +396,7 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
         portfolioId: portfolio.id,
         symbol: cand.row.symbol,
         setupType: cand.row.setupType || null,
-        side: cand.side,
+        side: narrowSide(cand.side),
         assetClass: cand.assetClass,
         rejectionStage: stage,
         rejectionReason: reason,
@@ -454,8 +463,11 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
     if (!debateOutcome.shouldCreateOrder) {
       rejections++;
       const debateReason = debateOutcome.record.rejectedReason ?? debateOutcome.record.prosecutorCase;
+      // DebateDecision union has no "PROSECUTOR_WIN"; the prosecutor wins
+      // by producing a SKIP. WAIT_FOR_CONFIRMATION is a deferral, not a
+      // prosecutor verdict — record it as a generic debate reject.
       const stage: RejectionStage =
-        debateOutcome.record.finalDecision === "PROSECUTOR_WIN"
+        debateOutcome.record.finalDecision === "SKIP"
           ? "PROSECUTOR_REJECT"
           : "DEBATE_REJECT";
       const res = await recordNoTradeDecisionFromCandidate({
@@ -463,7 +475,7 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
         portfolioId: portfolio.id,
         symbol: cand.row.symbol,
         setupType: cand.row.setupType || null,
-        side: cand.side,
+        side: narrowSide(cand.side),
         assetClass: cand.assetClass,
         rejectionStage: stage,
         rejectionReason: debateReason,
