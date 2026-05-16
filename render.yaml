@@ -534,6 +534,35 @@
       - key: ADMIN_NOTIFY_EMAIL
         sync: false
 
+  # ARCA cycle reads candidates from admin_edge_packets. Without these two
+  # persister crons the table would only be populated when an admin's browser
+  # hits /api/admin/opportunities, so the cycle would loop the same handful
+  # of tickers. These crons fan out the full DEFAULT_WATCHLISTS union per
+  # market across every ACTIVE arca_portfolios workspace.
+  - type: cron
+    name: persist-edge-packets-crypto
+    runtime: node
+    schedule: "*/15 * * * *"  # Every 15m, 24/7 — crypto markets are 24/7
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -fL --retry 2 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 540 -X POST "$WEB_URL/api/cron/persist-edge-packets" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json" --data '{"market":"CRYPTO","timeframe":"15m"}'
+    envVars:
+      - key: WEB_URL
+        value: "https://marketscannerpros.app"
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
+    name: persist-edge-packets-equity
+    runtime: node
+    schedule: "10,40 13-20 * * 1-5"  # Every 30m, US session only (~9:10a–4:40p ET, M–F)
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -fL --retry 2 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 540 -X POST "$WEB_URL/api/cron/persist-edge-packets" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json" --data '{"market":"EQUITIES","timeframe":"15m"}'
+    envVars:
+      - key: WEB_URL
+        value: "https://marketscannerpros.app"
+      - key: CRON_SECRET
+        sync: false
+
   - type: cron
     name: arca-cycle
     runtime: node

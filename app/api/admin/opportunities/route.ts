@@ -20,12 +20,39 @@ import { syncQueueFromPacket } from "@/lib/admin/queueStore";
 import { detectChangeTapeEvents, persistChangeTapeEvents, severityOf, type ChangeTapeEvent, type ChangeTapeSeverity } from "@/lib/admin/changeTape";
 import { persistEdgePackets } from "@/lib/admin/edgePacketSnapshots";
 import { buildCrossAssetReport } from "@/lib/crossAsset/confluence";
+import { DEFAULT_WATCHLISTS } from "@/lib/operator/watchlists";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const DEFAULT_CRYPTO = ["BTC", "ETH", "SOL", "ADA", "AVAX", "LINK", "DOT", "MATIC", "ARB", "INJ"];
-const DEFAULT_EQUITY = ["SPY", "QQQ", "AAPL", "MSFT", "NVDA", "META", "AMZN", "TSLA", "GOOGL", "AMD"];
+/**
+ * Universe sources — derived from DEFAULT_WATCHLISTS so the ARCA cycle
+ * sees the same broad symbol set the admin radar already scans. Previously
+ * these were hardcoded to ~10 symbols each, which is why the cockpit kept
+ * cycling the same handful of tickers.
+ *
+ * Diversity > breadth-per-call: we union every market-matching watchlist
+ * and dedupe. SPY/QQQ are pinned because they anchor the macro reports.
+ */
+function unionWatchlists(market: "CRYPTO" | "EQUITIES", pinned: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const sym of pinned) {
+    const s = sym.toUpperCase();
+    if (!seen.has(s)) { seen.add(s); out.push(s); }
+  }
+  for (const wl of Object.values(DEFAULT_WATCHLISTS)) {
+    if (wl.market !== market) continue;
+    for (const sym of wl.symbols) {
+      const s = sym.toUpperCase();
+      if (!seen.has(s)) { seen.add(s); out.push(s); }
+    }
+  }
+  return out;
+}
+
+const DEFAULT_CRYPTO: string[] = unionWatchlists("CRYPTO", ["BTC", "ETH", "SOL", "ADA", "AVAX", "LINK", "DOT", "MATIC", "ARB", "INJ"]);
+const DEFAULT_EQUITY: string[] = unionWatchlists("EQUITIES", ["SPY", "QQQ", "AAPL", "MSFT", "NVDA", "META", "AMZN", "TSLA", "GOOGL", "AMD"]);
 
 export async function GET(req: NextRequest) {
   // Auth gate (mirrors /api/admin/symbol/[symbol] pattern)
