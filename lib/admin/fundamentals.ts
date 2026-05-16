@@ -12,9 +12,12 @@
  *
  * NEVER substitutes synthetic numbers when a field is missing.
  * NEVER hides a quota / 429 / network failure — surfaces it explicitly.
+ *
+ * Stage 2: all AV calls now go through `avFetch` so this module shares
+ * the same rate-limit + circuit breaker as the rest of the admin layer.
  */
 
-import { fetchWithTimeout } from "./fetchWithTimeout";
+import { avFetch } from "@/lib/avRateGovernor";
 
 const AV_BASE = "https://www.alphavantage.co/query";
 
@@ -48,11 +51,13 @@ async function avCall<T = unknown>({
 }> {
   const url = `${AV_BASE}?function=${encodeURIComponent(fn)}&symbol=${encodeURIComponent(symbol)}&apikey=${encodeURIComponent(apiKey)}`;
   try {
-    const res = await fetchWithTimeout(url, { cache: "no-store" }, 25000);
-    if (!res.ok) {
-      return { status: "error", body: null, error: `HTTP ${res.status}` };
+    // avFetch enforces the global AV rate limit + circuit breaker and
+    // translates Note/Information quota responses into thrown errors.
+    const json = await avFetch<Record<string, unknown> | null>(url, `${fn} ${symbol}`);
+    if (!json) {
+      // avFetch returns null for HTTP 404 / AV Error Message — treat as missing.
+      return { status: "missing", body: null, error: "no data" };
     }
-    const json = (await res.json()) as Record<string, unknown>;
     if (typeof json["Note"] === "string" || typeof json["Information"] === "string") {
       const note = (json["Note"] || json["Information"]) as string;
       if (/limit|frequency|quota|premium/i.test(note)) {

@@ -22,6 +22,7 @@ import {
   serializeFundamentalsForPrompt,
   deriveBundleTruth,
 } from "@/lib/admin/fundamentals";
+import { buildAndPersistEquityResearchPacket } from "@/lib/admin/equityResearchPacket";
 import {
   EQUITY_RESEARCH_SYSTEM_PROMPT,
   buildEquityResearchUserPrompt,
@@ -63,8 +64,12 @@ export async function POST(req: NextRequest) {
   const exposure = body.personalExposureFlag ?? "none";
   const operatorNotes = (body.operatorNotes || "").slice(0, 1000);
 
-  // 1. Fetch fundamentals
-  const bundle = await fetchFundamentalsBundle(ticker);
+  // 1. Fetch fundamentals — if we have a workspaceId, also persist a packet
+  //    snapshot so the Daily Operator Packet / ARCA can cite the exact JSON
+  //    the model saw. Falls back to a plain fetch when no workspace context.
+  const bundle = admin.workspaceId
+    ? (await buildAndPersistEquityResearchPacket(admin.workspaceId, ticker)).bundle
+    : await fetchFundamentalsBundle(ticker);
   const bundleTruth = deriveBundleTruth(bundle);
 
   // 2. Build prompt
