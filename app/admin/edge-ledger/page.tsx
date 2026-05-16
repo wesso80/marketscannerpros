@@ -16,7 +16,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 
-type Dimension = 'playbook' | 'regime' | 'sector' | 'iv_bucket' | 'catalyst_proximity';
+type Dimension = 'playbook' | 'regime' | 'sector' | 'iv_bucket' | 'catalyst_proximity' | 'setup_type';
 type Band = 'tight' | 'wide' | 'insufficient';
 
 interface MatrixCell {
@@ -73,6 +73,7 @@ interface ApiResponse {
 }
 
 const DIMENSIONS: { key: Dimension; label: string }[] = [
+  { key: 'setup_type', label: 'Setup Type' },
   { key: 'playbook', label: 'Playbook' },
   { key: 'regime', label: 'Regime' },
   { key: 'sector', label: 'Sector' },

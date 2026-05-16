@@ -21,7 +21,7 @@ import { q } from '@/lib/db';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-type Dimension = 'playbook' | 'regime' | 'sector' | 'iv_bucket' | 'catalyst_proximity';
+type Dimension = 'playbook' | 'regime' | 'sector' | 'iv_bucket' | 'catalyst_proximity' | 'setup_type';
 
 export async function GET(req: NextRequest) {
   const session = await requireAdmin(req);
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const dimensionParam = url.searchParams.get('dimension');
   const dimension = dimensionParam &&
-    ['playbook', 'regime', 'sector', 'iv_bucket', 'catalyst_proximity'].includes(dimensionParam)
+    ['playbook', 'regime', 'sector', 'iv_bucket', 'catalyst_proximity', 'setup_type'].includes(dimensionParam)
       ? (dimensionParam as Dimension)
       : undefined;
   const statusParam = url.searchParams.get('status');

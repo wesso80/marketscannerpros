@@ -20,7 +20,7 @@
 
 import { q } from '@/lib/db';
 
-type Dimension = 'playbook' | 'regime' | 'sector' | 'iv_bucket' | 'catalyst_proximity';
+type Dimension = 'playbook' | 'regime' | 'sector' | 'iv_bucket' | 'catalyst_proximity' | 'setup_type';
 
 interface AggRow {
   cell_key: string;
@@ -68,6 +68,7 @@ function cellExpr(dim: Dimension): string {
     case 'playbook': return `COALESCE(playbook, 'unspecified')`;
     case 'regime': return `COALESCE(regime, 'unknown')`;
     case 'sector': return `COALESCE(sector, 'unknown')`;
+    case 'setup_type': return `COALESCE(setup_type, 'unspecified')`;
     case 'iv_bucket': return ivBucketExpr();
     case 'catalyst_proximity': return catBucketExpr();
   }
@@ -128,7 +129,7 @@ async function aggregateDimension(workspaceId: string, dim: Dimension): Promise<
 }
 
 export async function rebuildMatrixForWorkspace(workspaceId: string): Promise<{ dim: Dimension; cells: number }[]> {
-  const dims: Dimension[] = ['playbook', 'regime', 'sector', 'iv_bucket', 'catalyst_proximity'];
+  const dims: Dimension[] = ['playbook', 'regime', 'sector', 'iv_bucket', 'catalyst_proximity', 'setup_type'];
   const out: { dim: Dimension; cells: number }[] = [];
   for (const dim of dims) {
     const rows = await aggregateDimension(workspaceId, dim);
