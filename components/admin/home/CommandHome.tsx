@@ -27,6 +27,7 @@ type PersonalExposureFlag = AdminEdgePacket["personalExposureFlag"];
 import type { AdminLifecycleState } from "@/lib/admin/lifecycle";
 import type { ChangeTapeEvent } from "@/lib/admin/changeTape";
 import { TERMINAL_STATES } from "@/lib/admin/lifecycle";
+import DriftCard from "./DriftCard";
 
 /* ─────────────────── Truth badge ─────────────────── */
 
@@ -734,6 +735,10 @@ export default function CommandHome() {
       >
         <InvalidatedSetupsList packets={packets} />
         <UpcomingTimingWindows packets={packets} />
+      </div>
+
+      <div style={{ marginTop: 16 }}>
+        <DriftCard />
       </div>
 
       {(opps.error || tape.error) && (
