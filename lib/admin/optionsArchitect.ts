@@ -22,7 +22,7 @@
  */
 
 import { fetchDailyOhlcv, type OhlcBar } from "./priceSeries";
-import { avFetch } from "@/lib/avRateGovernor";
+import { avFetchAdmin } from "@/lib/avRateGovernor";
 
 const AV_BASE = "https://www.alphavantage.co/query";
 
@@ -728,7 +728,7 @@ async function fetchHistoricalOptions(
 ): Promise<{ status: string; asOfDate: string | null; contracts: OptionContract[]; error?: string }> {
   const url = `${AV_BASE}?function=HISTORICAL_OPTIONS&symbol=${encodeURIComponent(symbol)}&apikey=${encodeURIComponent(apiKey)}`;
   try {
-    const j = await avFetch<AvOptionsResponse | null>(url, `HISTORICAL_OPTIONS ${symbol}`);
+    const j = await avFetchAdmin<AvOptionsResponse | null>(url, `HISTORICAL_OPTIONS ${symbol}`);
     if (!j) return { status: "missing", asOfDate: null, contracts: [], error: "no data" };
     if (j.Note || j.Information) {
       const msg = (j.Note || j.Information) as string;
@@ -782,7 +782,7 @@ function numOr0(v: string | undefined): number {
 async function fetchOverview(symbol: string, apiKey: string): Promise<{ status: string; body: Record<string, string> | null }> {
   const url = `${AV_BASE}?function=OVERVIEW&symbol=${encodeURIComponent(symbol)}&apikey=${encodeURIComponent(apiKey)}`;
   try {
-    const j = await avFetch<Record<string, unknown> | null>(url, `OVERVIEW ${symbol}`);
+    const j = await avFetchAdmin<Record<string, unknown> | null>(url, `OVERVIEW ${symbol}`);
     if (!j) return { status: "missing", body: null };
     if (typeof j.Note === "string" || typeof j.Information === "string") {
       const n = String(j.Note || j.Information);

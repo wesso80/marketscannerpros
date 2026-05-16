@@ -10,7 +10,7 @@
  * that field is null and added to missingFields.
  */
 
-import { avFetch } from "@/lib/avRateGovernor";
+import { avFetchAdmin } from "@/lib/avRateGovernor";
 
 const AV_BASE = "https://www.alphavantage.co/query";
 
@@ -135,7 +135,7 @@ export async function fetchDailyOhlcv(symbol: string): Promise<{
   }
   const url = `${AV_BASE}?function=TIME_SERIES_DAILY&symbol=${encodeURIComponent(symbol)}&outputsize=full&apikey=${encodeURIComponent(apiKey)}`;
   try {
-    const json = await avFetch<AvDailyResponse | null>(url, `TIME_SERIES_DAILY ${symbol}`);
+    const json = await avFetchAdmin<AvDailyResponse | null>(url, `TIME_SERIES_DAILY ${symbol}`);
     if (!json) {
       return { status: "missing", bars: [], error: "no data" };
     }

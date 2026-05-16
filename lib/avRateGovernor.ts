@@ -155,7 +155,34 @@ export async function avFetch<T = any>(
 ): Promise<T | null> {
   // Wait for rate-limit slot
   await avTakeToken();
+  return _avFetchCore<T>(url, label, options);
+}
 
+/**
+ * Admin-only AV fetch that BYPASSES the shared rate-limit governor.
+ *
+ * Rationale: admin user count is tiny and admin reports can otherwise sit
+ * blocked behind public-tier traffic. The circuit breaker, timeout, and
+ * AV-payload error parsing still apply — only the per-minute token bucket
+ * is skipped.
+ *
+ * Do NOT call this from public/user-facing routes.
+ */
+export async function avFetchAdmin<T = any>(
+  url: string,
+  label?: string,
+  options?: RequestInit,
+): Promise<T | null> {
+  // Skip avTakeToken — admin traffic is privileged.
+  trackCall();
+  return _avFetchCore<T>(url, label, options);
+}
+
+async function _avFetchCore<T>(
+  url: string,
+  label?: string,
+  options?: RequestInit,
+): Promise<T | null> {
   const tag = label || url.match(/function=([A-Z_]+)/)?.[1] || 'AV';
 
   try {

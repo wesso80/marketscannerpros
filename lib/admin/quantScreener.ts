@@ -23,7 +23,7 @@
  */
 
 import { fetchDailyOhlcv, type OhlcBar } from "./priceSeries";
-import { avFetch } from "@/lib/avRateGovernor";
+import { avFetchAdmin } from "@/lib/avRateGovernor";
 
 const AV_BASE = "https://www.alphavantage.co/query";
 
@@ -435,7 +435,7 @@ async function avOverview(
 ): Promise<{ status: "ok" | "rate-limited" | "error" | "missing"; body: OverviewRaw | null; error?: string }> {
   const url = `${AV_BASE}?function=OVERVIEW&symbol=${encodeURIComponent(symbol)}&apikey=${encodeURIComponent(apiKey)}`;
   try {
-    const json = await avFetch<Record<string, unknown> | null>(url, `OVERVIEW ${symbol}`);
+    const json = await avFetchAdmin<Record<string, unknown> | null>(url, `OVERVIEW ${symbol}`);
     if (!json) return { status: "missing", body: null, error: "no data" };
     if (typeof json.Note === "string" || typeof json.Information === "string") {
       const note = (json.Note || json.Information) as string;

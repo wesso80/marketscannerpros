@@ -17,7 +17,7 @@
  * the same rate-limit + circuit breaker as the rest of the admin layer.
  */
 
-import { avFetch } from "@/lib/avRateGovernor";
+import { avFetchAdmin } from "@/lib/avRateGovernor";
 
 const AV_BASE = "https://www.alphavantage.co/query";
 
@@ -53,7 +53,7 @@ async function avCall<T = unknown>({
   try {
     // avFetch enforces the global AV rate limit + circuit breaker and
     // translates Note/Information quota responses into thrown errors.
-    const json = await avFetch<Record<string, unknown> | null>(url, `${fn} ${symbol}`);
+    const json = await avFetchAdmin<Record<string, unknown> | null>(url, `${fn} ${symbol}`);
     if (!json) {
       // avFetch returns null for HTTP 404 / AV Error Message — treat as missing.
       return { status: "missing", body: null, error: "no data" };

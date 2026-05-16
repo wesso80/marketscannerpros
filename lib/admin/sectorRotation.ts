@@ -25,7 +25,7 @@
  */
 
 import { fetchDailyOhlcv, type OhlcBar } from "./priceSeries";
-import { avFetch } from "@/lib/avRateGovernor";
+import { avFetchAdmin } from "@/lib/avRateGovernor";
 
 const AV_BASE = "https://www.alphavantage.co/query";
 
@@ -390,7 +390,7 @@ async function fetchFedFundsRate(apiKey: string): Promise<MacroSeriesResult> {
 }
 async function fetchMacroSeries(url: string): Promise<MacroSeriesResult> {
   try {
-    const j = await avFetch<Record<string, unknown> | null>(url, 'MACRO_SERIES');
+    const j = await avFetchAdmin<Record<string, unknown> | null>(url, 'MACRO_SERIES');
     if (!j) return { status: "missing", latest: null, oneMonthAgo: null, deltaBps: null };
     if (typeof j["Note"] === "string" || typeof j["Information"] === "string") {
       const note = String(j["Note"] || j["Information"]);
