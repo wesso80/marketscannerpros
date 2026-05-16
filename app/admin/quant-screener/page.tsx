@@ -92,6 +92,22 @@ interface ApiResponse {
   };
 }
 
+// wrapTruth() returns truth fields at top-level; adapt to nested {data, meta} shape.
+function toEnvelope(j: any): ApiResponse {
+  return {
+    data: (j?.data ?? {}) as ApiResponse["data"],
+    meta: {
+      source: j?.source ?? "unknown",
+      fetchedAt: j?.fetchedAt ?? new Date().toISOString(),
+      freshness: j?.freshness ?? "unknown",
+      simulated: !!j?.simulated,
+      missingFields: Array.isArray(j?.missingFields) ? j.missingFields : [],
+      confidence: j?.confidence ?? "low",
+      confidenceReason: j?.confidenceReason ?? "no_envelope",
+    },
+  };
+}
+
 const flagColor = (s: string): string => {
   if (s === "concentrated") return "#EF4444";
   if (s === "diversified") return "#10B981";
@@ -149,9 +165,10 @@ export default function QuantScreenerPage() {
           operatorNotes,
         }),
       });
-      const j = (await r.json()) as ApiResponse;
-      setResp(j);
-      if (!r.ok && j.data?.aiError) setError(j.data.aiError);
+      const j = await r.json();
+      const env = toEnvelope(j);
+      setResp(env);
+      if (!r.ok && env.data?.aiError) setError(env.data.aiError);
     } catch (e) {
       setError(e instanceof Error ? e.message : "request failed");
     } finally {

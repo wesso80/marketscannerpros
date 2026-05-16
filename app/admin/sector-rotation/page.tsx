@@ -70,6 +70,22 @@ interface ApiResponse {
   };
 }
 
+// wrapTruth() returns truth fields at top-level; adapt to nested {data, meta} shape.
+function toEnvelope(j: any): ApiResponse {
+  return {
+    data: (j?.data ?? {}) as ApiResponse["data"],
+    meta: {
+      source: j?.source ?? "unknown",
+      fetchedAt: j?.fetchedAt ?? new Date().toISOString(),
+      freshness: j?.freshness ?? "unknown",
+      simulated: !!j?.simulated,
+      missingFields: Array.isArray(j?.missingFields) ? j.missingFields : [],
+      confidence: j?.confidence ?? "low",
+      confidenceReason: j?.confidenceReason ?? "no_envelope",
+    },
+  };
+}
+
 const stanceColor = (s: string): string => {
   if (s === "overweight") return "#10B981";
   if (s === "underweight") return "#EF4444";
@@ -126,8 +142,8 @@ export default function SectorRotationPage() {
       const j = await r.json();
       if (!r.ok) {
         setError(j.error || j.detail || `HTTP ${r.status}`);
-        if (j.data) setResp(j as ApiResponse);
-      } else setResp(j as ApiResponse);
+        if (j.data) setResp(toEnvelope(j));
+      } else setResp(toEnvelope(j));
     } catch (e) {
       setError(e instanceof Error ? e.message : "request_failed");
     } finally { setLoading(false); }
