@@ -41,6 +41,14 @@ export interface OpenSetup {
   surfacedAt: string;
 }
 
+export interface SetupDiff {
+  todayCount: number;
+  yesterdayCount: number;
+  newSymbols: string[];      // surfaced today but not yesterday
+  persistedSymbols: string[]; // surfaced both days
+  droppedSymbols: string[];   // surfaced yesterday but not today
+}
+
 export interface DailyOperatorPacket {
   generatedAt: string;
   workspaceId: string;
@@ -49,6 +57,8 @@ export interface DailyOperatorPacket {
   universeSize: number;
   openSetups: OpenSetup[];
   openSetupSection: DailyPacketSection;
+  bestSetupToday: OpenSetup | null;       // highest opportunityScore among today's surfaced setups
+  setupDiff: SetupDiff;                   // today vs yesterday
   macro: MacroSnapshot[];
   macroSection: DailyPacketSection;
   drift: DriftReport | null;
@@ -184,6 +194,8 @@ export async function buildDailyPacket(workspaceId: string): Promise<DailyOperat
     universeSize: universe.length,
     openSetups,
     openSetupSection,
+    bestSetupToday: pickBestToday(openSetups),
+    setupDiff: computeSetupDiff(openSetups),
     macro,
     macroSection,
     drift,
@@ -191,5 +203,44 @@ export async function buildDailyPacket(workspaceId: string): Promise<DailyOperat
     calibration,
     calibrationSection,
     warnings,
+  };
+}
+
+function isSameUtcDay(iso: string, ref: Date): boolean {
+  const d = new Date(iso);
+  return d.getUTCFullYear() === ref.getUTCFullYear()
+    && d.getUTCMonth() === ref.getUTCMonth()
+    && d.getUTCDate() === ref.getUTCDate();
+}
+
+function pickBestToday(setups: OpenSetup[]): OpenSetup | null {
+  const now = new Date();
+  const todays = setups.filter((s) => isSameUtcDay(s.surfacedAt, now));
+  if (todays.length === 0) return null;
+  return todays.reduce<OpenSetup>((best, cur) => {
+    const a = cur.opportunityScore ?? -Infinity;
+    const b = best.opportunityScore ?? -Infinity;
+    return a > b ? cur : best;
+  }, todays[0]);
+}
+
+function computeSetupDiff(setups: OpenSetup[]): SetupDiff {
+  const now = new Date();
+  const yest = new Date(now.getTime() - 86400_000);
+  const todaySyms = new Set<string>();
+  const yestSyms = new Set<string>();
+  for (const s of setups) {
+    if (isSameUtcDay(s.surfacedAt, now)) todaySyms.add(s.symbol);
+    else if (isSameUtcDay(s.surfacedAt, yest)) yestSyms.add(s.symbol);
+  }
+  const newSymbols = [...todaySyms].filter((s) => !yestSyms.has(s)).sort();
+  const persistedSymbols = [...todaySyms].filter((s) => yestSyms.has(s)).sort();
+  const droppedSymbols = [...yestSyms].filter((s) => !todaySyms.has(s)).sort();
+  return {
+    todayCount: todaySyms.size,
+    yesterdayCount: yestSyms.size,
+    newSymbols,
+    persistedSymbols,
+    droppedSymbols,
   };
 }

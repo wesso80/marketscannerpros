@@ -168,6 +168,9 @@ export function renderDailyPacketHtml(p: DailyOperatorPacket): string {
   ${warningsHtml}
   ${killBlock}
 
+  ${bestBlock(p)}
+  ${diffBlock(p)}
+
   <section>${sectionHeader('Open setups (last 7 days)', p.openSetupSection)}${setupsHtml}</section>
   <section>${sectionHeader('Macro Pulse', p.macroSection)}${macroHtml}</section>
   <section>${sectionHeader('Behavioral drift (last 30 days)', p.driftSection)}${driftHtml}</section>
@@ -182,4 +185,33 @@ export function renderDailyPacketHtml(p: DailyOperatorPacket): string {
     Stale or missing data cannot be represented as current truth.
   </div>
 </body></html>`;
+}
+
+function bestBlock(p: DailyOperatorPacket): string {
+  const b = p.bestSetupToday;
+  if (!b) {
+    return `<section><div class="sec-head"><h2>Best setup today</h2></div><div class="muted">No setups surfaced today.</div></section>`;
+  }
+  return `<section>
+    <div class="sec-head"><h2>Best setup today</h2></div>
+    <div style="border:2px solid #10B981;border-radius:6px;padding:12px;background:#0F172A0d">
+      <div style="font-size:18px;font-weight:700">${esc(b.symbol)} — ${esc(b.setupType)} ${esc(b.direction)}</div>
+      <div class="muted">Playbook: ${esc(b.playbook ?? '—')} · Regime: ${esc(b.regime ?? '—')}</div>
+      <div>Opportunity: <strong>${b.opportunityScore?.toFixed(0) ?? '—'}</strong> · Evidence: <strong>${b.evidenceQuality?.toFixed(0) ?? '—'}</strong></div>
+      <div class="muted">Surfaced: ${esc(new Date(b.surfacedAt).toLocaleString())}</div>
+    </div>
+  </section>`;
+}
+
+function diffBlock(p: DailyOperatorPacket): string {
+  const d = p.setupDiff;
+  const fmt = (arr: string[]) => arr.length === 0 ? '<span class="muted">—</span>' : arr.map((s) => `<code>${esc(s)}</code>`).join(' ');
+  return `<section>
+    <div class="sec-head"><h2>Today vs yesterday</h2>
+      <div class="sec-meta"><span>today: ${d.todayCount}</span><span>yesterday: ${d.yesterdayCount}</span></div>
+    </div>
+    <div><strong>New today:</strong> ${fmt(d.newSymbols)}</div>
+    <div><strong>Persisted:</strong> ${fmt(d.persistedSymbols)}</div>
+    <div><strong>Dropped:</strong> ${fmt(d.droppedSymbols)}</div>
+  </section>`;
 }
