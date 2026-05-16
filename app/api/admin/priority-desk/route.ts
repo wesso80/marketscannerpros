@@ -36,8 +36,8 @@ export async function GET(req: NextRequest) {
   const [{ risk }, [equityPackets, cryptoPackets]] = await Promise.all([
     buildAdminScanContext(),
     Promise.all([
-      getAdminResearchPacketsForSymbols({ symbols: EQUITIES, market: "EQUITIES", timeframe }),
-      getAdminResearchPacketsForSymbols({ symbols: CRYPTO, market: "CRYPTO", timeframe }),
+      getAdminResearchPacketsForSymbols({ symbols: EQUITIES, market: "EQUITIES", timeframe, workspaceId: auth.workspaceId }),
+      getAdminResearchPacketsForSymbols({ symbols: CRYPTO, market: "CRYPTO", timeframe, workspaceId: auth.workspaceId }),
     ]),
   ]);
 

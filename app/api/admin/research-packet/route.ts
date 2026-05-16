@@ -25,8 +25,11 @@ export async function GET(req: NextRequest) {
     .map((s) => s.trim().toUpperCase())
     .filter(Boolean);
 
+  const session = await getSessionFromCookie();
+  const workspaceId = session?.workspaceId;
+
   if (symbol) {
-    const packet = await getAdminResearchPacket({ symbol, market, timeframe });
+    const packet = await getAdminResearchPacket({ symbol, market, timeframe, workspaceId });
     return NextResponse.json({
       ok: true,
       packet,
@@ -44,7 +47,7 @@ export async function GET(req: NextRequest) {
   }
 
   if (symbols.length > 0) {
-    const packets = await getAdminResearchPacketsForSymbols({ symbols, market, timeframe });
+    const packets = await getAdminResearchPacketsForSymbols({ symbols, market, timeframe, workspaceId });
     return NextResponse.json({
       ok: true,
       packets,

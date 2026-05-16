@@ -36,7 +36,8 @@ export async function GET(
     const { searchParams } = new URL(req.url);
     const market = (searchParams.get("market") || "CRYPTO") as Market;
     const timeframe = searchParams.get("timeframe") || "15m";
-    const packet = await getAdminResearchPacket({ symbol, market, timeframe });
+    const session = await getSessionFromCookie();
+    const packet = await getAdminResearchPacket({ symbol, market, timeframe, workspaceId: session?.workspaceId });
 
     return NextResponse.json({
       ...packet.snapshot,

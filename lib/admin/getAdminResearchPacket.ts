@@ -12,6 +12,7 @@ import { computeOptionsIntelligence, type OptionsIntelligence } from "@/lib/engi
 import { computeCryptoRegimeIntelligence, type CryptoRegimeIntelligence } from "@/lib/engines/cryptoRegimeIntelligence";
 import { computeEarningsRisk, type EarningsRisk } from "@/lib/engines/earningsRisk";
 import { snapshotResearchPacket, loadPriorPacketSnapshot } from "@/lib/admin/researchPacketHistory";
+import { computeResearchDelta, summarizeResearchDelta } from "@/lib/admin/researchDelta";
 import { q } from "@/lib/db";
 import type { ArcaAdminContext } from "@/lib/admin/arcaTypes";
 import type { AdminSymbolIntelligence } from "@/lib/admin/types";
@@ -228,6 +229,13 @@ export async function getAdminResearchPacket(params: {
   symbol: string;
   market?: Market | string;
   timeframe?: string;
+  /**
+   * Optional workspaceId used to look up the prior packet snapshot and
+   * compute a real `whatChanged` summary. When omitted the field falls
+   * back to an honest "first scan in this context" message — never a
+   * fabricated delta (per data-integrity rule).
+   */
+  workspaceId?: string;
 }): Promise<AdminResearchPacket> {
   const symbol = params.symbol.toUpperCase();
   const market = (params.market || "CRYPTO").toUpperCase() as Market;
@@ -362,6 +370,47 @@ export async function getAdminResearchPacket(params: {
     trapRiskScore: trap.trapRiskScore,
   };
 
+  // Real whatChanged: diff against prior persisted packet snapshot for
+  // this (workspace, symbol, market, timeframe). Honest fallback when
+  // no workspace context or no prior snapshot exists.
+  let whatChanged = "First scan in this context - no prior packet for delta comparison.";
+  if (params.workspaceId) {
+    try {
+      const prior = await loadPriorPacketSnapshot({
+        workspaceId: params.workspaceId,
+        symbol,
+        market,
+        timeframe,
+      });
+      if (prior?.packetJson) {
+        const currentForDelta: Record<string, unknown> = {
+          trustAdjustedScore: internalResearchScore.trustAdjustedScore,
+          dataTrustScore: internalResearchScore.dataTrustScore,
+          lifecycle: internalResearchScore.lifecycle,
+          contradictionFlags: contradictions,
+          risks: trap.reasons,
+          evidence: checks,
+          macroContext,
+          newsContext,
+          earningsContext,
+          volatilityState: {
+            state: snapshot.dve.state,
+            trap: snapshot.dve.trap,
+            exhaustion: snapshot.dve.exhaustion,
+          },
+          timeConfluence: { score: snapshot.timeConfluence.score },
+          optionsIntelligence,
+        };
+        const previousForDelta = prior.packetJson as unknown as Record<string, unknown>;
+        const delta = computeResearchDelta({ previous: previousForDelta, current: currentForDelta });
+        whatChanged = summarizeResearchDelta(delta, prior.createdAt);
+      }
+    } catch {
+      // Loader already logs internally; surface honest fallback rather than fabricating.
+      whatChanged = "Delta comparison unavailable - prior snapshot lookup failed.";
+    }
+  }
+
   return {
     packetId: `${symbol}:${market}:${timeframe}:${Date.now()}`,
     createdAt: new Date().toISOString(),
@@ -422,7 +471,7 @@ export async function getAdminResearchPacket(params: {
     bias: snapshot.bias,
     primaryReason: internalResearchScore.dominantAxis ? `Dominant evidence axis: ${internalResearchScore.dominantAxis}` : "No dominant evidence axis.",
     mainRisk: trap.reasons[0] ?? "No acute trap signature detected.",
-    whatChanged: "Previous packet unavailable for direct delta comparison.",
+    whatChanged,
     alertEligibility: eligibility,
     arcaContext,
   };
@@ -432,6 +481,7 @@ export async function getAdminResearchPacketsForSymbols(params: {
   symbols: string[];
   market?: Market | string;
   timeframe?: string;
+  workspaceId?: string;
 }): Promise<AdminResearchPacket[]> {
   const packets: AdminResearchPacket[] = [];
   for (const symbol of params.symbols) {
@@ -440,6 +490,7 @@ export async function getAdminResearchPacketsForSymbols(params: {
         symbol,
         market: params.market,
         timeframe: params.timeframe,
+        workspaceId: params.workspaceId,
       });
       packets.push(packet);
     } catch {

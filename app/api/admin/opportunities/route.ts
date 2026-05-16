@@ -43,11 +43,12 @@ export async function GET(req: NextRequest) {
     // No symbols override allowed in ALL mode (would be ambiguous which market each belongs to).
     const isCrossAsset = marketParam === "ALL" && !symbolsParam;
 
+    const workspaceId = session?.workspaceId;
     let packets: Awaited<ReturnType<typeof getAdminResearchPacketsForSymbols>> = [];
     if (isCrossAsset) {
       const [cryptoPackets, equityPackets] = await Promise.all([
-        getAdminResearchPacketsForSymbols({ symbols: DEFAULT_CRYPTO, market: "CRYPTO" as Market, timeframe }).catch(() => []),
-        getAdminResearchPacketsForSymbols({ symbols: DEFAULT_EQUITY, market: "EQUITIES" as Market, timeframe }).catch(() => []),
+        getAdminResearchPacketsForSymbols({ symbols: DEFAULT_CRYPTO, market: "CRYPTO" as Market, timeframe, workspaceId }).catch(() => []),
+        getAdminResearchPacketsForSymbols({ symbols: DEFAULT_EQUITY, market: "EQUITIES" as Market, timeframe, workspaceId }).catch(() => []),
       ]);
       packets = [...cryptoPackets, ...equityPackets];
     } else {
@@ -61,7 +62,7 @@ export async function GET(req: NextRequest) {
       if (symbols.length === 0) {
         return NextResponse.json({ rows: [], edgePackets: [], errors: [], timestamp: new Date().toISOString() });
       }
-      packets = await getAdminResearchPacketsForSymbols({ symbols, market, timeframe });
+      packets = await getAdminResearchPacketsForSymbols({ symbols, market, timeframe, workspaceId });
     }
 
     if (packets.length === 0) {

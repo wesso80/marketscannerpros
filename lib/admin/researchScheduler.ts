@@ -92,6 +92,7 @@ export async function runResearchScheduler(input: SchedulerRunInput): Promise<Sc
       symbols: input.symbols,
       market: input.market,
       timeframe: input.timeframe,
+      workspaceId: input.workspaceId,
     });
 
     const returnedSymbols = new Set(packets.map((p) => p.symbol));
