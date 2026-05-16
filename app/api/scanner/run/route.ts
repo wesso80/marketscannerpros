@@ -1736,15 +1736,24 @@ export async function POST(req: NextRequest) {
         if (type === "crypto") {
           const baseSym = sym;
           
-          // Use AV for intraday / weekly crypto; CoinGecko for daily
-          const isIntraday = timeframe === '15m' || timeframe === '1h' || timeframe === '30m';
+          // CoinGecko is the canonical crypto provider. AV is fallback only
+          // (its crypto endpoints are flaky and often return empty on our plan).
           const isWeekly = timeframe === 'weekly';
           let candles: Candle[];
           try {
-            if ((isIntraday || isWeekly) && ALPHA_KEY) {
-              candles = await fetchCryptoAV(baseSym, timeframe);
-            } else {
+            try {
               candles = await fetchCryptoCoinGecko(baseSym, timeframe);
+            } catch (cgErr: any) {
+              if (ALPHA_KEY) {
+                console.warn(`[scanner] CoinGecko miss for ${baseSym}, falling back to AV:`, cgErr?.message);
+                candles = await fetchCryptoAV(baseSym, timeframe);
+              } else {
+                throw cgErr;
+              }
+            }
+            // Empty result → try AV as secondary
+            if ((!candles || candles.length === 0) && ALPHA_KEY && isWeekly) {
+              candles = await fetchCryptoAV(baseSym, timeframe);
             }
           } catch (cgErr: any) {
             errors.push(`${baseSym}: ${cgErr.message}`);

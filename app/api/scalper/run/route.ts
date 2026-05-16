@@ -13,6 +13,7 @@ import { apiLimiter, getClientIP } from '@/lib/rateLimit';
 import { avTryToken } from '@/lib/avRateGovernor';
 import { avCircuit } from '@/lib/circuitBreaker';
 import { getCachedBarsOnly, setCachedBars } from '@/lib/barCache';
+import { getOHLCWithVolume, resolveSymbolToId, COINGECKO_ID_MAP } from '@/lib/coingecko';
 import {
   calculateAllIndicators,
   rsi,
@@ -81,10 +82,39 @@ async function fetchCryptoIntraday(
   const cached = getCachedBarsOnly(symbol, 'crypto', interval);
   if (cached) return cached.bars;
 
+  // Primary: CoinGecko (canonical crypto provider in this codebase).
+  // CG free tier on days=1 yields ~5-min candles which works for 5min/15min scalp.
+  const base = symbol.replace(/-?USD(T)?$/i, '').toUpperCase();
+  try {
+    const coinId = COINGECKO_ID_MAP[base] || (await resolveSymbolToId(base));
+    if (coinId) {
+      const ohlcv = await getOHLCWithVolume(coinId, 1);
+      if (ohlcv && ohlcv.length > 0) {
+        const bars: OHLCVBar[] = ohlcv
+          .filter(c => Number.isFinite(c.c) && c.c > 0)
+          .map(c => ({
+            timestamp: new Date(c.t).toISOString(),
+            open: c.o,
+            high: c.h,
+            low: c.l,
+            close: c.c,
+            volume: Math.round(c.v || 0),
+          }))
+          .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        if (bars.length >= 20) {
+          setCachedBars(symbol, 'crypto', interval, bars);
+          return bars;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn(`[scalper] CoinGecko fetch failed for ${base}:`, err);
+  }
+
+  // Fallback: Alpha Vantage CRYPTO_INTRADAY
   if (!AV_KEY()) return null;
   if (!(await avTryToken())) return null;
 
-  const base = symbol.replace(/-?USD(T)?$/i, '').toUpperCase();
   const url =
     `https://www.alphavantage.co/query?function=CRYPTO_INTRADAY` +
     `&symbol=${encodeURIComponent(base)}&market=USD` +

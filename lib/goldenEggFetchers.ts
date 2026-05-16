@@ -16,7 +16,7 @@ import {
   type OptionsPressureInput,
 } from '@/lib/marketPressureEngine';
 import { confluenceLearningAgent, type ScanMode, type SessionMode } from '@/lib/confluence-learning-agent';
-import { getAggregatedFundingRates, getAggregatedOpenInterest, resolveSymbolToId, getCoinDetail, getOHLC, getMarketChartHistory } from '@/lib/coingecko';
+import { getAggregatedFundingRates, getAggregatedOpenInterest, resolveSymbolToId, getCoinDetail, getOHLC, getMarketChartHistory, getOHLCWithVolume, COINGECKO_ID_MAP } from '@/lib/coingecko';
 
 const AV_KEY = process.env.ALPHA_VANTAGE_API_KEY || '';
 
@@ -146,7 +146,40 @@ export async function fetchPrice(
 
     if (assetClass === 'crypto') {
       if (isIntraday) {
-        // Use Alpha Vantage CRYPTO_INTRADAY for non-daily timeframes
+        // Primary: CoinGecko (days=1 gives ~5-min candles).
+        try {
+          const base = symbol.replace(/-?USD$/i, '').toUpperCase();
+          const coinId = COINGECKO_ID_MAP[base] || (await resolveSymbolToId(base));
+          if (coinId) {
+            const ohlcv = await getOHLCWithVolume(coinId, 1);
+            if (ohlcv && ohlcv.length >= 2) {
+              const sorted = ohlcv
+                .filter(c => Number.isFinite(c.c) && c.c > 0)
+                .sort((a, b) => a.t - b.t);
+              if (sorted.length >= 2) {
+                const latest = sorted[sorted.length - 1];
+                const prev = sorted[sorted.length - 2];
+                const histLen = opts?.requireHistoricals ? 300 : 50;
+                const tail = sorted.slice(-histLen);
+                return {
+                  price: latest.c,
+                  change: latest.c - prev.c,
+                  changePct: prev.c !== 0 ? ((latest.c - prev.c) / prev.c) * 100 : 0,
+                  high: latest.h,
+                  low: latest.l,
+                  volume: latest.v || 0,
+                  historicalCloses: tail.map(c => c.c),
+                  historicalHighs: tail.map(c => c.h),
+                  historicalLows: tail.map(c => c.l),
+                };
+              }
+            }
+          }
+        } catch (cgErr) {
+          console.warn(`[goldenEgg] CoinGecko intraday fallback for ${symbol}:`, cgErr);
+        }
+
+        // Fallback: Alpha Vantage CRYPTO_INTRADAY.
         const avSym = symbol.replace(/-?USD$/, '');
         const url = `https://www.alphavantage.co/query?function=CRYPTO_INTRADAY&symbol=${encodeURIComponent(avSym)}&market=USD&interval=${interval}&outputsize=full&apikey=${AV_KEY}`;
         const data = await avFetch<Record<string, any>>(url, `CRYPTO_INTRADAY ${avSym} ${interval}`);
