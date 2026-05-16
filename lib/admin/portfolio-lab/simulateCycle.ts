@@ -36,6 +36,10 @@ import { captureBenchmarkSnapshot } from "./benchmarkEngine";
 import { rollupPlaybookPerformance } from "./playbookEngine";
 import { loadEdgePackets } from "@/lib/admin/edgePacketSnapshots";
 import type { ArcaPortfolio, ArcaPosition, SimulateCycleResult } from "./types";
+import { runDebateAndRecord, linkDebateToOrder } from "@/lib/admin/arca-brain/adversarialDebate";
+import { recordNoTradeRejection } from "@/lib/admin/arca-brain/noTradeAlpha";
+import { recentMistakeFrequency } from "@/lib/admin/arca-brain/mistakeLabeler";
+import { q } from "@/lib/db";
 
 export interface SimulateCycleOptions {
   workspaceId: string;
@@ -161,8 +165,72 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
       continue;
     }
 
+    // ── Adversarial debate gate (ARCA meta-brain) ──
+    // No simulated order may be created without a debate record.
+    const mistakes7d = await recentMistakeFrequency(opts.workspaceId, 7).catch(() => 0);
+    const debateOutcome = await runDebateAndRecord(
+      {
+        symbol: cand.row.symbol,
+        assetClass: cand.assetClass,
+        side: cand.side,
+        entry: cand.entry,
+        stop: cand.stop,
+        takeProfit: cand.tp1 ?? null,
+        playbookId: cand.row.setupType || null,
+        sourceEdgePacketId: cand.row.packetId,
+        confidence: clamp(cand.row.trustAdjustedScore, 0, 100),
+        opportunityRank: clamp(cand.row.opportunityRankScore, 0, 100),
+        trustAdjusted: clamp(cand.row.trustAdjustedScore, 0, 100),
+        thesis: String((cand.row as unknown as { thesisStatus?: string }).thesisStatus ?? ""),
+      },
+      {
+        workspaceId: opts.workspaceId,
+        portfolioId: portfolio.id,
+        freshness: "fresh",
+        informationEdgeScore: null,
+        informationEdgeBand: null,
+        regimeQuality: 60,
+        recentMistakeFrequency: mistakes7d,
+        correlationExposure: 0,
+        eventRisk: "none",
+        repeatedLossSamePlaybook: false,
+        doctrineConflictRuleId: null,
+        preExistingRiskBlocks: [],
+      },
+    );
+
+    if (!debateOutcome.shouldCreateOrder) {
+      rejections++;
+      await recordNoTradeRejection({
+        workspaceId: opts.workspaceId,
+        symbol: cand.row.symbol,
+        rejectionSource: "DEBATE",
+        rejectionReason: debateOutcome.record.rejectedReason ?? debateOutcome.record.prosecutorCase,
+        debateId: debateOutcome.record.id,
+        hypotheticalEntry: cand.entry,
+        hypotheticalStop: cand.stop,
+        hypotheticalTarget: cand.tp1 ?? null,
+        hypotheticalSizeDollars: sizing.notional,
+      }).catch(() => undefined);
+      await writeJournal({
+        workspaceId: opts.workspaceId,
+        portfolioId: portfolio.id,
+        journalType: "REJECTED",
+        title: `DEBATE SKIP ${cand.row.symbol} — ${debateOutcome.record.finalDecision}`,
+        symbol: cand.row.symbol,
+        reasoning: debateOutcome.record.rejectedReason ?? debateOutcome.record.prosecutorCase,
+        sourcePacketIds: [cand.row.packetId],
+      });
+      continue;
+    }
+
+    // Apply size multiplier from the debate (SIZE_DOWN may shrink notional).
+    const mult = Math.max(0.1, Math.min(1, debateOutcome.sizeMultiplier || 1));
+    const debatedQty = sizing.quantity * mult;
+    const debatedNotional = sizing.notional * mult;
+
     // Create as LIMIT_SIM with trigger = entry, waiting for price to come.
-    await createSimulatedOrder({
+    const order = await createSimulatedOrder({
       portfolio: runningPortfolio,
       symbol: cand.row.symbol,
       assetClass: cand.assetClass,
@@ -170,17 +238,28 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
       orderType: "LIMIT_SIM",
       plannedEntry: cand.entry,
       triggerPrice: cand.entry,
-      quantity: sizing.quantity,
-      notional: sizing.notional,
+      quantity: debatedQty,
+      notional: debatedNotional,
       stopLoss: cand.stop,
       takeProfit1: cand.tp1,
       takeProfit2: cand.tp2,
       takeProfit3: cand.tp3,
       sourceEdgePacketId: cand.row.packetId,
       playbookId: cand.row.setupType || null,
-      createdReason: `ARCA selected: rank=${cand.row.opportunityRankScore.toFixed(1)} thesis=${cand.row.thesisStatus} rr1=${cand.rrToTp1 ?? "n/a"}`,
-      arcaConfidence: clamp(cand.row.trustAdjustedScore, 0, 100),
+      createdReason: `ARCA selected: rank=${cand.row.opportunityRankScore.toFixed(1)} thesis=${cand.row.thesisStatus} rr1=${cand.rrToTp1 ?? "n/a"} debate=${debateOutcome.record.finalDecision}(x${mult})`,
+      arcaConfidence: debateOutcome.record.confidenceAfterDebate,
     });
+
+    // Stamp the order with its authorising debate id, and link back.
+    try {
+      await q(
+        `UPDATE arca_simulated_orders SET debate_id = $1 WHERE workspace_id = $2 AND id = $3`,
+        [debateOutcome.record.id, opts.workspaceId, (order as unknown as { id: string }).id],
+      );
+      await linkDebateToOrder(opts.workspaceId, debateOutcome.record.id, (order as unknown as { id: string }).id);
+    } catch {
+      // Soft-fail: the cycle continues; an admin alert is preferable to a hard cycle break.
+    }
     ordersCreated++;
   }
 
