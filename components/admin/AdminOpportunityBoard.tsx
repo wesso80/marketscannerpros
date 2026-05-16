@@ -7,7 +7,7 @@ import { ScoreTypeBadge } from "@/components/ui";
 import type { AdminOpportunityRow } from "@/lib/admin/adminTypes";
 import type { AdminEdgePacket } from "@/lib/admin/edgePacket";
 
-type Market = "CRYPTO" | "EQUITIES";
+type Market = "CRYPTO" | "EQUITIES" | "ALL";
 
 const SUPPRESSED_LIFECYCLES = new Set(["EXHAUSTED", "TRAPPED", "INVALIDATED", "NO_EDGE", "DATA_DEGRADED"]);
 
@@ -119,6 +119,7 @@ export default function AdminOpportunityBoard() {
           <select value={market} onChange={(e) => setMarket(e.target.value as Market)} style={selectStyle}>
             <option value="CRYPTO">Crypto</option>
             <option value="EQUITIES">Equities</option>
+            <option value="ALL">All (Cross-Asset)</option>
           </select>
         </label>
         <label style={{ display: "flex", flexDirection: "column", fontSize: "0.65rem", color: "#9CA3AF" }}>
@@ -208,7 +209,24 @@ export default function AdminOpportunityBoard() {
             {filtered.map((row) => (
               <tr key={row.symbol} style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
                 <td style={tdStyle}>{row.rank}</td>
-                <td style={{ ...tdStyle, fontWeight: 700 }}>{row.symbol}</td>
+                <td style={{ ...tdStyle, fontWeight: 700 }}>
+                  {row.symbol}
+                  {market === "ALL" && (
+                    <span style={{
+                      marginLeft: 6,
+                      fontSize: "0.55rem",
+                      padding: "1px 4px",
+                      borderRadius: 3,
+                      background: row.market === "CRYPTO" ? "rgba(245,158,11,0.15)" : "rgba(59,130,246,0.15)",
+                      color: row.market === "CRYPTO" ? "#FCD34D" : "#93C5FD",
+                      border: `1px solid ${row.market === "CRYPTO" ? "rgba(245,158,11,0.3)" : "rgba(59,130,246,0.3)"}`,
+                      fontWeight: 700,
+                      verticalAlign: "middle",
+                    }}>
+                      {row.market === "CRYPTO" ? "CR" : "EQ"}
+                    </span>
+                  )}
+                </td>
                 <td style={tdStyle}>
                   <span style={{ color: biasColor(row.bias), fontWeight: 700 }}>{formatBias(row.bias)}</span>
                 </td>

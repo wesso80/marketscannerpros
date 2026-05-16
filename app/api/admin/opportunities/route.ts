@@ -34,19 +34,38 @@ export async function GET(req: NextRequest) {
 
   try {
     const { searchParams } = new URL(req.url);
-    const market = (searchParams.get("market") || "CRYPTO").toUpperCase() as Market;
+    const marketParam = (searchParams.get("market") || "CRYPTO").toUpperCase();
     const timeframe = searchParams.get("timeframe") || "15m";
     const symbolsParam = searchParams.get("symbols");
-    const symbols = symbolsParam
-      ? symbolsParam.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean)
-      : market === "EQUITIES"
-        ? DEFAULT_EQUITY
-        : DEFAULT_CRYPTO;
 
-    if (symbols.length === 0) {
-      return NextResponse.json({ rows: [], edgePackets: [], errors: [], timestamp: new Date().toISOString() });
+    // Cross-asset mode: fetch both crypto + equities and interleave by opportunityRankScore.
+    // No symbols override allowed in ALL mode (would be ambiguous which market each belongs to).
+    const isCrossAsset = marketParam === "ALL" && !symbolsParam;
+
+    let packets: Awaited<ReturnType<typeof getAdminResearchPacketsForSymbols>> = [];
+    if (isCrossAsset) {
+      const [cryptoPackets, equityPackets] = await Promise.all([
+        getAdminResearchPacketsForSymbols({ symbols: DEFAULT_CRYPTO, market: "CRYPTO" as Market, timeframe }).catch(() => []),
+        getAdminResearchPacketsForSymbols({ symbols: DEFAULT_EQUITY, market: "EQUITIES" as Market, timeframe }).catch(() => []),
+      ]);
+      packets = [...cryptoPackets, ...equityPackets];
+    } else {
+      const market = (marketParam === "ALL" ? "CRYPTO" : marketParam) as Market;
+      const symbols = symbolsParam
+        ? symbolsParam.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean)
+        : market === "EQUITIES"
+          ? DEFAULT_EQUITY
+          : DEFAULT_CRYPTO;
+
+      if (symbols.length === 0) {
+        return NextResponse.json({ rows: [], edgePackets: [], errors: [], timestamp: new Date().toISOString() });
+      }
+      packets = await getAdminResearchPacketsForSymbols({ symbols, market, timeframe });
     }
-    const packets = await getAdminResearchPacketsForSymbols({ symbols, market, timeframe });
+
+    if (packets.length === 0) {
+      return NextResponse.json({ rows: [], edgePackets: [], changesBySymbol: {}, errors: [], timestamp: new Date().toISOString() });
+    }
 
     // Project to canonical AdminEdgePacket[] (Admin Edge Layer contract).
     const edgePackets: AdminEdgePacket[] = packets.map((p) => projectEdgePacket(p));
@@ -113,10 +132,11 @@ export async function GET(req: NextRequest) {
       errors: [],
       timestamp: new Date().toISOString(),
       meta: {
-        symbolsRequested: symbols.length,
+        symbolsRequested: packets.length,
         symbolsScored: rows.length,
-        market,
+        market: isCrossAsset ? "ALL" : marketParam,
         timeframe,
+        crossAsset: isCrossAsset,
       },
       truth: wrapTruth({ rows, edgePackets }, { source: 'admin:operator-engine', freshness: 'real-time' }),
     });
