@@ -239,6 +239,36 @@ export default function AdminOpportunityBoard() {
                     {row.score.score}
                   </span>
                   <span style={{ color: "#6B7280", marginLeft: 4 }}>/100</span>
+                  {(() => {
+                    // Tier 1 #4: surface evidence-quality cap visibly.
+                    // computeRankScore multiplies the raw axis-weighted sum
+                    // by (evidenceQualityScore / 100) so degraded data can
+                    // never out-rank live. Make that haircut explicit when
+                    // the cap is biting (evidence < 85).
+                    const eq = edgeBySymbol[row.symbol]?.evidenceQualityScore;
+                    if (typeof eq !== "number" || eq >= 85) return null;
+                    const haircut = Math.round(100 - eq);
+                    const color = eq < 60 ? "#EF4444" : eq < 75 ? "#FBBF24" : "#9CA3AF";
+                    return (
+                      <span
+                        title={`Rank score capped: evidenceQualityScore=${Math.round(eq)} produces a ${haircut}% haircut on the raw axis-weighted sum.`}
+                        style={{
+                          marginLeft: 6,
+                          padding: "1px 5px",
+                          borderRadius: 3,
+                          fontSize: "0.55rem",
+                          fontWeight: 700,
+                          color,
+                          border: `1px solid ${color}`,
+                          background: "rgba(17,24,39,0.6)",
+                          whiteSpace: "nowrap",
+                          verticalAlign: "middle",
+                        }}
+                      >
+                        −{haircut}% EV-CAP
+                      </span>
+                    );
+                  })()}
                 </td>
                 <td style={tdStyle}><ScoreTypeBadge type="heuristic" compact /></td>
                 <td style={tdStyle}>
