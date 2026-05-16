@@ -45,6 +45,22 @@ interface CalibrationReport {
   generatedAt: string;
 }
 
+interface TimeToDecisionReport {
+  status: 'ok' | 'insufficient' | 'error';
+  workspaceId: string;
+  windowDays: number;
+  sampleSize: number;
+  minRequired: number;
+  surfacedCount: number;
+  takenCount: number;
+  skippedCount: number;
+  actionRate: number | null;
+  skipRate: number | null;
+  latencyMinutes: { p50: number | null; p75: number | null; p90: number | null; max: number | null; mean: number | null } | null;
+  notes: string[];
+  computedAt: string;
+}
+
 function sevColor(s: DriftSignal['severity']): string {
   if (s === 'high') return '#EF4444';
   if (s === 'medium') return '#F59E0B';
@@ -63,24 +79,30 @@ export default function OperatorHealthPage() {
   const [days, setDays] = useState(30);
   const [drift, setDrift] = useState<DriftReport | null>(null);
   const [calib, setCalib] = useState<CalibrationReport | null>(null);
+  const [ttd, setTtd] = useState<TimeToDecisionReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchAll = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const [dRes, cRes] = await Promise.all([
+      const [dRes, cRes, tRes] = await Promise.all([
         fetch(`/api/admin/behavioral-drift?days=${days}`, { cache: 'no-store' }),
         fetch(`/api/admin/calibration`, { cache: 'no-store' }),
+        fetch(`/api/admin/time-to-decision?days=${days}`, { cache: 'no-store' }),
       ]);
       if (!dRes.ok) throw new Error(`drift HTTP ${dRes.status}`);
       if (!cRes.ok) throw new Error(`calibration HTTP ${cRes.status}`);
+      if (!tRes.ok) throw new Error(`time-to-decision HTTP ${tRes.status}`);
       const dJson = await dRes.json();
       const cJson = await cRes.json();
+      const tJson = await tRes.json();
       if (!dJson.ok) throw new Error(dJson.error);
       if (!cJson.ok) throw new Error(cJson.error);
+      if (!tJson.ok) throw new Error(tJson.error);
       setDrift(dJson.report as DriftReport);
       setCalib(cJson.report as CalibrationReport);
+      setTtd(tJson.report as TimeToDecisionReport);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e));
     } finally { setLoading(false); }
@@ -139,6 +161,31 @@ export default function OperatorHealthPage() {
               </div>
             ))}
           </div>
+        </section>
+      )}
+
+      {ttd && (
+        <section style={{ marginBottom: 28 }}>
+          <h2 style={{ fontSize: 16, color: '#F3F4F6', margin: '0 0 10px' }}>
+            Time to Decision (last {ttd.windowDays}d)
+          </h2>
+          {ttd.status === 'ok' && ttd.latencyMinutes ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
+              <TtdCard label="Surfaced" value={String(ttd.surfacedCount)} sub="setups in window" color="#9CA3AF" />
+              <TtdCard label="Taken" value={String(ttd.takenCount)} sub={ttd.actionRate != null ? `action rate ${(ttd.actionRate * 100).toFixed(1)}%` : '—'} color="#10B981" />
+              <TtdCard label="Skipped" value={String(ttd.skippedCount)} sub={ttd.skipRate != null ? `skip rate ${(ttd.skipRate * 100).toFixed(1)}%` : '—'} color="#F59E0B" />
+              <TtdCard label="p50 latency" value={fmtMin(ttd.latencyMinutes.p50)} sub="median READY -> taken" color="#60A5FA" />
+              <TtdCard label="p75 latency" value={fmtMin(ttd.latencyMinutes.p75)} sub="3 in 4 within" color="#60A5FA" />
+              <TtdCard label="p90 latency" value={fmtMin(ttd.latencyMinutes.p90)} sub="9 in 10 within" color="#60A5FA" />
+            </div>
+          ) : (
+            <div style={{ background: '#0B1220', border: '1px solid #1F2937', borderRadius: 8, padding: 14, fontSize: 12, color: '#9CA3AF' }}>
+              {ttd.notes[0] ?? (ttd.status === 'error' ? 'Time-to-decision query failed.' : 'Insufficient data yet.')}
+            </div>
+          )}
+          <p style={{ marginTop: 8, fontSize: 11, color: '#6B7280' }}>
+            Measured as <code>taken_at − surfaced_at</code> on <code>edge_ledger_setups</code>. Only setups with status=&apos;taken&apos; contribute to the latency distribution; skips are reported separately. Honest sample floor: {ttd.minRequired} taken setups.
+          </p>
         </section>
       )}
 
@@ -206,4 +253,23 @@ function Th({ children, align }: { children: React.ReactNode; align?: 'left' | '
 }
 function Td({ children, align }: { children: React.ReactNode; align?: 'left' | 'right' }) {
   return <td style={{ textAlign: align ?? 'left', padding: '6px 8px', color: '#E5E7EB' }}>{children}</td>;
+}
+
+function fmtMin(v: number | null): string {
+  if (v == null || !Number.isFinite(v)) return '—';
+  if (v < 1) return `${Math.round(v * 60)}s`;
+  if (v < 60) return `${v.toFixed(1)}m`;
+  const h = v / 60;
+  if (h < 24) return `${h.toFixed(1)}h`;
+  return `${(h / 24).toFixed(1)}d`;
+}
+
+function TtdCard({ label, value, sub, color }: { label: string; value: string; sub: string; color: string }) {
+  return (
+    <div style={{ background: '#0B1220', border: '1px solid #1F2937', borderRadius: 8, padding: 14 }}>
+      <div style={{ fontSize: 11, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</div>
+      <div style={{ fontSize: 22, fontWeight: 700, color, marginTop: 6 }}>{value}</div>
+      <div style={{ fontSize: 11, color: '#6B7280', marginTop: 4 }}>{sub}</div>
+    </div>
+  );
 }
