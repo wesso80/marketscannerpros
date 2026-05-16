@@ -273,4 +273,7 @@ export interface SimulateCycleResult {
   riskEventsCreated: number;
   rejections: number;
   notes: string[];
+  benchmarkCaptured?: boolean;
+  benchmarkSymbol?: string;
+  playbooksUpdated?: number;
 }

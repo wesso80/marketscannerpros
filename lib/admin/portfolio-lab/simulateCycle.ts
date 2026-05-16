@@ -32,6 +32,8 @@ import { markAndMaybeExit } from "./positionEngine";
 import { sizeForPortfolio } from "./positionSizing";
 import { checkPreTrade, emitRiskEventIfBreached } from "./riskEngine";
 import { writeJournal } from "./journalEngine";
+import { captureBenchmarkSnapshot } from "./benchmarkEngine";
+import { rollupPlaybookPerformance } from "./playbookEngine";
 import { loadEdgePackets } from "@/lib/admin/edgePacketSnapshots";
 import type { ArcaPortfolio, ArcaPosition, SimulateCycleResult } from "./types";
 
@@ -228,6 +230,27 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
     openRiskPct,
   });
 
+  // 6. Benchmark + playbook rollup (best-effort; never block the cycle).
+  let benchmarkCaptured = false;
+  let benchmarkSymbol: string | undefined;
+  let playbooksUpdated: number | undefined;
+  try {
+    const refreshed = (await getDefaultPortfolio(opts.workspaceId, runningPortfolio.name)) ?? finalPortfolio;
+    const bm = await captureBenchmarkSnapshot({ portfolio: refreshed });
+    benchmarkCaptured = bm.ok;
+    benchmarkSymbol = bm.benchmarkSymbol;
+    if (!bm.ok) notes.push(`benchmark: ${bm.reason ?? "unavailable"}`);
+  } catch (err) {
+    notes.push(`benchmark error: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  try {
+    const refreshed = (await getDefaultPortfolio(opts.workspaceId, runningPortfolio.name)) ?? finalPortfolio;
+    const pb = await rollupPlaybookPerformance(refreshed);
+    playbooksUpdated = pb.playbooksUpdated;
+  } catch (err) {
+    notes.push(`playbook rollup error: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
   return {
     portfolioId: finalPortfolio.id,
     cycleAt: new Date().toISOString(),
@@ -240,6 +263,9 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
     riskEventsCreated,
     rejections,
     notes,
+    benchmarkCaptured,
+    benchmarkSymbol,
+    playbooksUpdated,
   };
 }
 

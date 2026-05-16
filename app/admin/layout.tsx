@@ -99,6 +99,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { href: "/admin/portfolio-lab/orders", label: "Sim Orders", code: "PO" },
         { href: "/admin/portfolio-lab/trades", label: "Closed Trades", code: "PT" },
         { href: "/admin/portfolio-lab/journal", label: "ARCA Journal", code: "PJ" },
+        { href: "/admin/portfolio-lab/performance", label: "Performance", code: "PF" },
+        { href: "/admin/portfolio-lab/reports", label: "Reports", code: "PR" },
       ],
     },
     {
