@@ -281,4 +281,7 @@ export interface SimulateCycleResult {
   uniqueSymbolsSeen?: number;
   gateRejections?: number;
   gateRejectionReasons?: Record<string, number>;
+  /** Count of arca_no_trade_alpha rows written this cycle (one per
+   *  rejected candidate, deduped on `${symbol}::${stage}`). */
+  noTradeRowsWritten?: number;
 }

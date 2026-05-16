@@ -37,7 +37,10 @@ import { rollupPlaybookPerformance } from "./playbookEngine";
 import { loadEdgePackets } from "@/lib/admin/edgePacketSnapshots";
 import type { ArcaPortfolio, ArcaPosition, SimulateCycleResult } from "./types";
 import { runDebateAndRecord, linkDebateToOrder } from "@/lib/admin/arca-brain/adversarialDebate";
-import { recordNoTradeRejection } from "@/lib/admin/arca-brain/noTradeAlpha";
+import {
+  recordNoTradeDecisionFromCandidate,
+  type RejectionStage,
+} from "@/lib/admin/arca-brain/recordNoTradeDecisionFromCandidate";
 import { recentMistakeFrequency } from "@/lib/admin/arca-brain/mistakeLabeler";
 import { gradeCandidate, recordAllocationDecision } from "@/lib/admin/arca-brain/capitalAllocation";
 import { computeInformationEdge, scoreInformationEdge } from "@/lib/admin/arca-brain/informationEdge";
@@ -92,6 +95,12 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
   let positionsClosed = 0;
   let riskEventsCreated = 0;
   let rejections = 0;
+  let noTradeRowsWritten = 0;
+
+  // Shared dedupe set so the same symbol+stage isn't journaled twice
+  // in one cycle (e.g. when a row trips both a gate and a downstream
+  // block). Keys are `${symbol}::${stage}`. Lives only for this cycle.
+  const rejectionLog = new Set<string>();
 
   // Build a symbol → latest price map from recent edge-packet snapshots.
   const recent = await loadEdgePackets({
@@ -170,15 +179,25 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
     });
     if (!sizing.ok) {
       rejections++;
-      await writeJournal({
+      const res = await recordNoTradeDecisionFromCandidate({
         workspaceId: opts.workspaceId,
         portfolioId: portfolio.id,
-        journalType: "REJECTED",
-        title: `REJECTED ${cand.row.symbol} — sizing_${sizing.reason ?? "failed"}`,
         symbol: cand.row.symbol,
-        reasoning: `Could not size: ${sizing.reason ?? "unknown"}. entry=${cand.entry} stop=${cand.stop}`,
-        sourcePacketIds: [cand.row.packetId],
+        setupType: cand.row.setupType || null,
+        side: cand.side,
+        assetClass: cand.assetClass,
+        rejectionStage: "SIZING_FAILED",
+        rejectionReason: `Could not size: ${sizing.reason ?? "unknown"}`,
+        edgePacketId: cand.row.packetId,
+        playbookId: cand.row.setupType || null,
+        regime: opts.currentRegime ?? null,
+        entry: cand.entry,
+        stopLoss: cand.stop,
+        takeProfit: cand.tp1 ?? null,
+        confidence: cand.row.trustAdjustedScore,
+        dedupeKeys: rejectionLog,
       });
+      if (res.written) noTradeRowsWritten++;
       continue;
     }
     const pre = await checkPreTrade({
@@ -189,15 +208,40 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
     });
     if (!pre.ok) {
       rejections++;
-      await writeJournal({
+      // Map portfolio_heat-style reasons to a more specific stage when
+      // detectable; otherwise fall back to PRE_TRADE_RISK.
+      const reasonText = pre.reasons.join("|").toLowerCase();
+      const stage: RejectionStage =
+        reasonText.includes("heat") || reasonText.includes("open_risk")
+          ? "PORTFOLIO_HEAT"
+          : reasonText.includes("cap") || reasonText.includes("cash")
+            ? "RISK_CAP"
+            : reasonText.includes("event")
+              ? "EVENT_RISK"
+              : reasonText.includes("dup") || reasonText.includes("exists")
+                ? "DUPLICATE_EXPOSURE"
+                : "PRE_TRADE_RISK";
+      const res = await recordNoTradeDecisionFromCandidate({
         workspaceId: opts.workspaceId,
         portfolioId: portfolio.id,
-        journalType: "RISK_BLOCK",
-        title: `RISK BLOCK ${cand.row.symbol} — ${pre.reasons.join("|")}`,
         symbol: cand.row.symbol,
-        reasoning: `Pre-trade risk check failed: ${pre.reasons.join(", ")}.`,
-        sourcePacketIds: [cand.row.packetId],
+        setupType: cand.row.setupType || null,
+        side: cand.side,
+        assetClass: cand.assetClass,
+        rejectionStage: stage,
+        rejectionReason: `Pre-trade risk check failed: ${pre.reasons.join(", ")}`,
+        edgePacketId: cand.row.packetId,
+        playbookId: cand.row.setupType || null,
+        regime: opts.currentRegime ?? null,
+        entry: cand.entry,
+        stopLoss: cand.stop,
+        takeProfit: cand.tp1 ?? null,
+        hypotheticalSizeDollars: sizing.notional,
+        confidence: cand.row.trustAdjustedScore,
+        metadata: { riskDollars: sizing.riskDollars, notional: sizing.notional },
+        dedupeKeys: rejectionLog,
       });
+      if (res.written) noTradeRowsWritten++;
       await emitRiskEventIfBreached({
         portfolio: runningPortfolio,
         eventType: "PRE_TRADE_BLOCK",
@@ -231,41 +275,33 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
         side: cand.side,
         assetClass: cand.assetClass,
       });
-      await recordNoTradeRejection({
-        workspaceId: opts.workspaceId,
-        symbol: cand.row.symbol,
-        rejectionSource: "REGIME_MATRIX",
-        rejectionReason:
-          `regime_playbook=${regimeDecision.status} ` +
-          `regime=${regimeDecision.regime ?? "null"} playbook=${playbookId ?? "null"} ` +
-          `reason="${regimeDecision.reason}" ` +
-          `required_confirmations=[${regimeDecision.requiredConfirmations.join(",")}] ` +
-          `disqualifiers=[${regimeDecision.disqualifiers.join(",")}]`,
-        debateId: null,
-        hypotheticalEntry: cand.entry,
-        hypotheticalStop: cand.stop,
-        hypotheticalTarget: cand.tp1 ?? null,
-        hypotheticalSizeDollars: sizingForRow.notional,
-      }).catch(() => undefined);
-      await writeJournal({
+      const stage: RejectionStage =
+        regimeDecision.status === "DISABLED" ? "DISABLED_PLAYBOOK" :
+        regimeDecision.status === "WAIT_FOR_CONFIRMATION" ? "WAIT_FOR_CONFIRMATION" :
+        "UNKNOWN_REGIME";
+      const res = await recordNoTradeDecisionFromCandidate({
         workspaceId: opts.workspaceId,
         portfolioId: portfolio.id,
-        journalType: "REJECTED",
-        title:
-          `REGIME-MATRIX ${regimeDecision.status} ${cand.row.symbol} ` +
-          `(regime=${regimeDecision.regime ?? "unknown"}, playbook=${playbookId ?? "unknown"})`,
         symbol: cand.row.symbol,
-        reasoning:
-          `${regimeDecision.reason}. ` +
-          (regimeDecision.requiredConfirmations.length
-            ? `Required: ${regimeDecision.requiredConfirmations.join(", ")}. `
-            : "") +
-          (regimeDecision.disqualifiers.length
-            ? `Disqualifiers: ${regimeDecision.disqualifiers.join(", ")}. `
-            : "") +
-          `source_rule_id=${regimeDecision.sourceRuleId ?? "none"}.`,
-        sourcePacketIds: [cand.row.packetId],
+        setupType: cand.row.setupType || null,
+        side: cand.side,
+        assetClass: cand.assetClass,
+        rejectionStage: stage,
+        rejectionReason: regimeDecision.reason,
+        edgePacketId: cand.row.packetId,
+        playbookId,
+        regime: regimeDecision.regime ?? opts.currentRegime ?? null,
+        regimePlaybookDecision: regimeDecision,
+        dataFreshness: narrowFreshness(cand.row.freshness),
+        entry: cand.entry,
+        stopLoss: cand.stop,
+        takeProfit: cand.tp1 ?? null,
+        hypotheticalSizeDollars: sizingForRow.ok ? sizingForRow.notional : null,
+        confidence: cand.row.trustAdjustedScore,
+        metadata: { sourceRuleId: regimeDecision.sourceRuleId ?? null },
+        dedupeKeys: rejectionLog,
       });
+      if (res.written) noTradeRowsWritten++;
       continue;
     }
 
@@ -340,35 +376,45 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
 
     if (allocPre.grade === "NO_TRADE" || infoEdgeOverride) {
       rejections++;
+      const stage: RejectionStage = infoEdgeOverride
+        ? "INFO_EDGE_OBVIOUS_NOISE"
+        : "CAPITAL_ALLOCATION";
       const reason = infoEdgeOverride
         ? infoEdgeOverride.reason
         : `capital_allocation=NO_TRADE: ${allocPre.reason}`;
-      await recordNoTradeRejection({
-        workspaceId: opts.workspaceId,
-        symbol: cand.row.symbol,
-        rejectionSource: "CAP_ALLOC",
-        rejectionReason: reason,
-        debateId: null,
-        hypotheticalEntry: cand.entry,
-        hypotheticalStop: cand.stop,
-        hypotheticalTarget: cand.tp1 ?? null,
-        hypotheticalSizeDollars: sizing.notional,
-      }).catch(() => undefined);
-      await writeJournal({
+      const res = await recordNoTradeDecisionFromCandidate({
         workspaceId: opts.workspaceId,
         portfolioId: portfolio.id,
-        journalType: "REJECTED",
-        title: infoEdgeOverride
-          ? `INFO-EDGE SKIP ${cand.row.symbol} — band=OBVIOUS_NOISE`
-          : `CAP-ALLOC SKIP ${cand.row.symbol} — ${allocPre.reason}`,
         symbol: cand.row.symbol,
-        reasoning:
-          `${reason}. ` +
-          `info_edge_score=${edgeScore} band=${edgeBand} ` +
-          `derivation_confidence=${derived.confidence} ` +
-          `missing_inputs=[${derived.missingInputs.join(",")}].`,
-        sourcePacketIds: [cand.row.packetId],
+        setupType: cand.row.setupType || null,
+        side: cand.side,
+        assetClass: cand.assetClass,
+        rejectionStage: stage,
+        rejectionReason: reason,
+        edgePacketId: cand.row.packetId,
+        playbookId,
+        regime: regimeDecision.regime ?? opts.currentRegime ?? null,
+        regimePlaybookDecision: regimeDecision,
+        informationEdge: {
+          score: edgeScore,
+          band: edgeBand as InformationEdgeBand,
+          missingInputs: derived.missingInputs,
+          derivationConfidence: derived.confidence,
+        },
+        capitalAllocation: {
+          grade: allocPre.grade,
+          reason: allocPre.reason,
+          riskPercent: allocPre.riskPercent,
+        },
+        dataFreshness: realFreshness,
+        entry: cand.entry,
+        stopLoss: cand.stop,
+        takeProfit: cand.tp1 ?? null,
+        hypotheticalSizeDollars: sizing.notional,
+        confidence: cand.row.trustAdjustedScore,
+        dedupeKeys: rejectionLog,
       });
+      if (res.written) noTradeRowsWritten++;
       continue;
     }
 
@@ -408,30 +454,48 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
     if (!debateOutcome.shouldCreateOrder) {
       rejections++;
       const debateReason = debateOutcome.record.rejectedReason ?? debateOutcome.record.prosecutorCase;
-      await recordNoTradeRejection({
-        workspaceId: opts.workspaceId,
-        symbol: cand.row.symbol,
-        rejectionSource: "DEBATE",
-        rejectionReason: `${debateReason} | info_edge=${edgeScore}(${edgeBand})`,
-        debateId: debateOutcome.record.id,
-        hypotheticalEntry: cand.entry,
-        hypotheticalStop: cand.stop,
-        hypotheticalTarget: cand.tp1 ?? null,
-        hypotheticalSizeDollars: sizing.notional,
-      }).catch(() => undefined);
-      await writeJournal({
+      const stage: RejectionStage =
+        debateOutcome.record.finalDecision === "PROSECUTOR_WIN"
+          ? "PROSECUTOR_REJECT"
+          : "DEBATE_REJECT";
+      const res = await recordNoTradeDecisionFromCandidate({
         workspaceId: opts.workspaceId,
         portfolioId: portfolio.id,
-        journalType: "REJECTED",
-        title: `DEBATE SKIP ${cand.row.symbol} — ${debateOutcome.record.finalDecision}`,
         symbol: cand.row.symbol,
-        reasoning:
-          `${debateReason} ` +
-          `info_edge_score=${edgeScore} band=${edgeBand} ` +
-          `derivation_confidence=${derived.confidence} ` +
-          `missing_inputs=[${derived.missingInputs.join(",")}].`,
-        sourcePacketIds: [cand.row.packetId],
+        setupType: cand.row.setupType || null,
+        side: cand.side,
+        assetClass: cand.assetClass,
+        rejectionStage: stage,
+        rejectionReason: debateReason,
+        edgePacketId: cand.row.packetId,
+        playbookId,
+        regime: regimeDecision.regime ?? opts.currentRegime ?? null,
+        regimePlaybookDecision: regimeDecision,
+        informationEdge: {
+          score: edgeScore,
+          band: edgeBand as InformationEdgeBand,
+          missingInputs: derived.missingInputs,
+          derivationConfidence: derived.confidence,
+        },
+        capitalAllocation: {
+          grade: allocPre.grade,
+          reason: allocPre.reason,
+          riskPercent: allocPre.riskPercent,
+        },
+        debate: {
+          id: debateOutcome.record.id,
+          reason: debateReason,
+          finalDecision: debateOutcome.record.finalDecision,
+        },
+        dataFreshness: realFreshness,
+        entry: cand.entry,
+        stopLoss: cand.stop,
+        takeProfit: cand.tp1 ?? null,
+        hypotheticalSizeDollars: sizing.notional,
+        confidence: clamp(cand.row.trustAdjustedScore, 0, 100),
+        dedupeKeys: rejectionLog,
       });
+      if (res.written) noTradeRowsWritten++;
       continue;
     }
 
@@ -510,7 +574,11 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
     ordersCreated++;
   }
 
-  // Journal rejections in bulk (no DB row per — single REJECTED summary).
+  // Per-row no-trade rejections from the decision-engine gate. Every
+  // candidate that the gate dropped must produce its own
+  // arca_no_trade_alpha row AND its own REJECTED journal entry — no
+  // silent drops. The summary journal below is in addition to (not
+  // instead of) the per-symbol rows.
   const gateReasonHistogram: Record<string, number> = {};
   for (const r of decision.rejected) {
     for (const reason of r.reasons) {
@@ -518,6 +586,24 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
       const bucket = reason.replace(/(_\d+(\.\d+)?)+$/, "").replace(/_(lt|gt)_.*$/, "");
       gateReasonHistogram[bucket] = (gateReasonHistogram[bucket] ?? 0) + 1;
     }
+    const dominant = mapGateReasonToStage(r.reasons);
+    const res = await recordNoTradeDecisionFromCandidate({
+      workspaceId: opts.workspaceId,
+      portfolioId: portfolio.id,
+      symbol: r.symbol,
+      rejectionStage: dominant,
+      rejectionReason: r.reasons.join(", "),
+      edgePacketId: r.packetId ?? null,
+      regime: opts.currentRegime ?? null,
+      // Freshness reasons are explicit in the gate list — surface them.
+      dataFreshness:
+        r.reasons.some((x) => x === "freshness_stale") ? "stale" :
+        r.reasons.some((x) => x === "freshness_unknown") ? "unknown" :
+        null,
+      metadata: { gateReasons: r.reasons },
+      dedupeKeys: rejectionLog,
+    });
+    if (res.written) noTradeRowsWritten++;
   }
   if (decision.rejected.length > 0) {
     const topHist = Object.entries(gateReasonHistogram)
@@ -610,6 +696,7 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
     uniqueSymbolsSeen: new Set([...decision.rejected.map((r) => r.symbol), ...decision.selected.map((s) => s.row.symbol)]).size,
     gateRejections: decision.rejected.length,
     gateRejectionReasons: gateReasonHistogram,
+    noTradeRowsWritten,
   };
 }
 
@@ -634,4 +721,24 @@ function round3(n: number): number { return Math.round(n * 1000) / 1000; }
 function clamp(n: number, lo: number, hi: number): number {
   if (!Number.isFinite(n)) return lo;
   return Math.max(lo, Math.min(hi, n));
+}
+
+/**
+ * Map a list of `decisionEngine.gateRow` reason tokens to the
+ * dominant `RejectionStage`. Order of checks matters — data-quality
+ * issues outrank thesis/scoring/asset-class blocks because freshness
+ * makes every other signal unreliable.
+ */
+function mapGateReasonToStage(reasons: string[]): RejectionStage {
+  const has = (prefix: string) => reasons.some((r) => r.startsWith(prefix));
+  if (has("freshness_stale")) return "STALE_DATA";
+  if (has("freshness_unknown")) return "MISSING_DATA";
+  if (reasons.includes("entry_or_stop_missing")) return "MISSING_TRADE_STRUCTURE";
+  if (has("playbook_") && reasons.some((r) => r.endsWith("_disabled"))) return "DISABLED_PLAYBOOK";
+  if (has("asset_class_")) return "CAPITAL_ALLOCATION";
+  if (has("admin_state_")) return "DATA_TRUST";
+  if (reasons.includes("do_nothing_flag")) return "DO_NOTHING";
+  if (has("thesis_status_")) return "DO_NOTHING";
+  if (has("rank_score_") || has("evidence_") || has("trap_risk_")) return "DATA_TRUST";
+  return "DATA_TRUST";
 }

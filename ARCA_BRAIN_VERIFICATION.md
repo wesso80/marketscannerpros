@@ -13,7 +13,7 @@ Verdict summary:
 | 5 | Capital Allocation | W | DEAD — engine exists, **never called anywhere** in the cycle or any route (PATCHED below) |
 | 6 | Regime-Playbook Matrix | W | PARTIAL — engine + decision wrapper wired into live `simulateCycle.ts`; UI editor + default-seed still missing |
 | 7 | Information Edge | B | PARTIAL (live-cycle fixed; UI/report still missing) — engine + route + 4 deriver tests + cycle integration; opportunity board does not consume |
-| 8 | No-Trade Alpha | B | PARTIAL — `recordNoTradeRejection` called only for debate rejections; pre-trade risk blocks and decisionEngine gate rejections do not log; no UI; no outcome cron |
+| 8 | No-Trade Alpha | B | PARTIAL+ — every cycle rejection path now writes an `arca_no_trade_alpha` row + journal entry via `recordNoTradeDecisionFromCandidate`; outcome cron + UI still missing |
 | 9 | Self-Critique | S | STUB — table + engine + route; no UI; no scheduled writer; no test |
 | 10 | Commander Mode | B | PARTIAL — page exists at `/admin/command`, **not in nav**, panels render but use heuristic evidence values and have no source links |
 
@@ -27,6 +27,7 @@ Failure-mode coverage status:
 - ⚠ Survivorship bias → table exists, nothing writes to it
 - ⚠ Improvement amnesia → table exists, nothing writes to it
 - ⚠ Silent doctrine drift → append-only enforced at DB, but no auto-promotion writer
+- ✅ Silent rejection drops → blocked (every cycle rejection path writes an `arca_no_trade_alpha` row + journal entry via `recordNoTradeDecisionFromCandidate`, P0-D)
 
 ---
 
@@ -201,22 +202,33 @@ Failure-mode coverage status:
 ## 8. No-Trade Alpha
 
 - **Claimed status**: B
-- **Verified status**: PARTIAL
-- **Files inspected**: [lib/admin/arca-brain/noTradeAlpha.ts](lib/admin/arca-brain/noTradeAlpha.ts), [app/api/admin/no-trade-alpha/route.ts](app/api/admin/no-trade-alpha/route.ts)
-- **Tables inspected**: `arca_no_trade_alpha` (partial index on `outcome_class IS NULL`)
+- **Verified status**: PARTIAL+ (live-cycle covers ALL rejection paths; UI + outcome cron still missing)
+- **Files inspected**: [lib/admin/arca-brain/noTradeAlpha.ts](lib/admin/arca-brain/noTradeAlpha.ts), [lib/admin/arca-brain/recordNoTradeDecisionFromCandidate.ts](lib/admin/arca-brain/recordNoTradeDecisionFromCandidate.ts), [lib/admin/portfolio-lab/simulateCycle.ts](lib/admin/portfolio-lab/simulateCycle.ts), [app/api/admin/no-trade-alpha/route.ts](app/api/admin/no-trade-alpha/route.ts)
+- **Tables inspected**: `arca_no_trade_alpha` (partial index on `outcome_class IS NULL`; CHECK on `rejection_source IN ('DEBATE','DOCTRINE','REGIME_MATRIX','CAP_ALLOC','DATA_QUALITY','MANUAL')` — still narrow today)
 - **Routes inspected**: GET pending, POST evaluate / record, `requireAdmin` ✓
 - **UI inspected**: none
 - **Reports inspected**: none
-- **Tests inspected**: none
+- **Tests inspected**: [test/admin/recordNoTradeDecisionFromCandidate.test.ts](test/admin/recordNoTradeDecisionFromCandidate.test.ts) — 29 unit tests (stage→source mapping for all 21 stages, journal type per stage, dedupe, optional-field surfacing, soft-fail)
 
-- **What is real**: `recordNoTradeRejection`, `evaluateNoTradeOutcome`, `pendingNoTradeEvaluations`; called by `simulateCycle` when the debate returns SKIP
-- **What is missing**: logging on pre-trade risk-block rejections; logging on `decisionEngine` gate rejections (only debate rejections are logged today); outcome evaluator cron; UI
+- **What is real**: `recordNoTradeRejection`, `evaluateNoTradeOutcome`, `pendingNoTradeEvaluations`; **every** non-order outcome in `simulateCycle` now flows through `recordNoTradeDecisionFromCandidate`:
+  - decisionEngine gate rejections (per row, not just the bulk summary)
+  - sizing failures
+  - pre-trade risk blocks (mapped to PRE_TRADE_RISK / PORTFOLIO_HEAT / RISK_CAP / EVENT_RISK / DUPLICATE_EXPOSURE by reason keywords)
+  - regime-playbook DISABLED / WAIT_FOR_CONFIRMATION / strict UNKNOWN_REGIME
+  - capital-allocation NO_TRADE and info-edge OBVIOUS_NOISE override
+  - debate SKIP / PROSECUTOR_WIN
+  - Each candidate's `${symbol}::${stage}` is deduped via an in-memory `Set` so the same setup can't double-count in one cycle.
+  - Cycle result now exposes `noTradeRowsWritten` for observability.
+- **What is missing**: outcome evaluator cron; UI; expansion of the DB `rejection_source` CHECK to admit the richer 21-stage vocabulary directly (today the exact stage is preserved as a `[STAGE=...]` prefix inside `rejection_reason` — forwards-compatible)
 - **What is dead/orphaned**: `evaluateNoTradeOutcome` is never called from any route or cron
-- **What is unsafe**: every gate-rejected and risk-blocked candidate is silently dropped from the learning loop
-- **What is untested**: insert + evaluate round trip
+- **What is unsafe**: silent rejection drops are now blocked at the cycle layer; the remaining gap is purely the outcome-classification cron + the operator UI
+- **What is untested**: insert + evaluate round trip; outcome evaluator (does not exist yet)
 - **Mock data**: none
-- **What breaks if this runs live**: only debate SKIPs accumulate evidence; doctrine / risk / decision-gate rejections do not, so half the rejection learning is lost
-- **Exact patch required**: (a) in `simulateCycle`, add `recordNoTradeRejection(source='CAP_ALLOC' | 'DATA_QUALITY' | 'DOCTRINE' | ...)` to every existing `rejections++` path; (b) cron route that evaluates pending rows older than the planned hold window
+- **What breaks if this runs live**: nothing in the rejection pipeline — every candidate that doesn't become an order produces an `arca_no_trade_alpha` row + a REJECTED/RISK_BLOCK/DEFERRED journal entry. The outcome classifier still has to be wired to close the loop.
+- **Exact patch required (remaining)**:
+  1. Cron route that pulls `pendingNoTradeEvaluations(workspaceId)`, looks up the symbol price at `rejected_at + N days`, and writes one of `AVOIDED_LOSS | MISSED_WIN | CORRECT_REJECTION | INCORRECT_REJECTION` via `evaluateNoTradeOutcome`.
+  2. Admin UI surface on the existing route to show distributions by `rejection_source` and `outcome_class`.
+  3. Migration to expand the `rejection_source` CHECK to the 21-stage vocabulary documented in [recordNoTradeDecisionFromCandidate.ts](lib/admin/arca-brain/recordNoTradeDecisionFromCandidate.ts) (`MIGRATION_NOTE` block). The funnel's `mapStageToSource()` then collapses to identity.
 - **Estimated effort**: small
 - **Priority**: P1
 
@@ -278,7 +290,7 @@ Failure-mode coverage status:
 |---|---|
 | Calls Adversarial Debate | ✅ line 171 `runDebateAndRecord` |
 | Calls Capital Allocation | ❌ before patch → ✅ after patch |
-| Calls No-Trade Alpha on rejection | ⚠ only debate SKIPs; not for risk-blocks or gate-rejects |
+| Calls No-Trade Alpha on rejection | ✅ every rejection path (gate, sizing, pre-trade risk, regime, cap-alloc, info-edge, debate) via `recordNoTradeDecisionFromCandidate` with per-cycle dedupe |
 | Writes journal entries | ✅ `writeJournal` on REJECTED, RISK_BLOCK, DEBATE SKIP |
 | Respects `do_nothing` | ✅ enforced upstream in `decisionEngine.gateRow` |
 | Rejects stale/missing data | ✅ upstream in `gateRow`; but cycle then **lies to debate context as `freshness:'fresh'`** |
@@ -366,7 +378,7 @@ Both are reachable by URL only.
 | 5 | Capital Allocation | PARTIAL (now wired, no UI, no test) |
 | 6 | Regime-Playbook Matrix | PARTIAL (live; UI + seed pending) |
 | 7 | Information Edge | PARTIAL (engine alive, not yet computed per packet in cycle) |
-| 8 | No-Trade Alpha | PARTIAL (logs debate SKIPs + cap-alloc NO_TRADE; not other rejections) |
+| 8 | No-Trade Alpha | PARTIAL+ (live-cycle covers all rejection paths; UI + outcome cron still missing) |
 | 9 | Self-Critique | STUB |
 | 10 | Commander Mode | PARTIAL |
 
