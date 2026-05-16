@@ -111,10 +111,14 @@ export function deriveInformationEdge(
 
   // crossAssetConfirmation: prefer the explicit summary when present;
   // otherwise fall back to neutral and record as missing.
-  const cross = packet.crossAssetConfluence;
+  const cross = packet.crossAssetConfluence as unknown;
+  const crossScore =
+    cross && typeof cross === "object" && "score" in cross
+      ? (cross as { score: unknown }).score
+      : undefined;
   let crossAssetConfirmation: number;
-  if (cross && typeof (cross as { score?: number }).score === "number") {
-    crossAssetConfirmation = Math.max(0, Math.min(100, (cross as { score: number }).score));
+  if (typeof crossScore === "number" && Number.isFinite(crossScore)) {
+    crossAssetConfirmation = Math.max(0, Math.min(100, crossScore));
   } else {
     missing.push("crossAssetConfirmation");
     crossAssetConfirmation = NEUTRAL;
