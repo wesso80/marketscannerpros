@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AdminOpportunityRow } from "@/lib/admin/adminTypes";
 
 function lifecycleColor(lc: string): string {
@@ -284,6 +284,9 @@ export default function WhyThisRankDrawer({ row, onClose }: Props) {
             </div>
           </section>
 
+          {/* Historical analogues */}
+          <AnaloguesSection row={row} />
+
         </div>
 
         {/* Footer */}
@@ -295,5 +298,102 @@ export default function WhyThisRankDrawer({ row, onClose }: Props) {
         </div>
       </div>
     </>
+  );
+}
+
+interface AnalogueHit {
+  setupId: number;
+  symbol: string;
+  setupType: string;
+  similarity: number;
+  realisedR5d: number | null;
+  realisedR20d: number | null;
+  hitTarget5d: boolean | null;
+  hitStop5d: boolean | null;
+  surfacedAt: string;
+}
+
+function AnaloguesSection({ row }: { row: AdminOpportunityRow }) {
+  const [hits, setHits] = useState<AnalogueHit[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    setHits(null);
+    (async () => {
+      try {
+        const features = {
+          regime: null,
+          setupType: row.setup?.type ?? null,
+          direction: row.bias === "LONG" ? "long" : row.bias === "SHORT" ? "short" : null,
+          market: row.market.toLowerCase(),
+          opportunityScore: typeof row.score?.score === "number" ? row.score.score : null,
+          evidenceQuality: typeof row.dataTruth?.trustScore === "number" ? row.dataTruth.trustScore : null,
+        };
+        const res = await fetch("/api/admin/analogues", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ features, k: 5 }),
+        });
+        const json = await res.json().catch(() => null) as
+          | { ok: true; hits: AnalogueHit[] }
+          | { ok: false; reason?: string; error?: string }
+          | null;
+        if (cancelled) return;
+        if (!res.ok || !json || json.ok === false) {
+          const reason = json && json.ok === false ? (json.reason ?? json.error) : null;
+          setError(reason ?? `HTTP ${res.status}`);
+        } else {
+          setHits(json.hits ?? []);
+        }
+      } catch (e: unknown) {
+        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [row.symbol, row.market, row.bias, row.setup?.type, row.score?.score, row.dataTruth?.trustScore]);
+
+  return (
+    <section>
+      <div className="mb-2 text-[0.62rem] font-extrabold uppercase tracking-[0.12em] text-slate-500">
+        Historical Analogues
+      </div>
+      {loading && <div className="text-[11px] text-slate-500">Searching prior setups…</div>}
+      {error && (
+        <div className="rounded-md border border-amber-500/25 bg-amber-500/[0.06] px-2.5 py-1.5 text-[11px] text-amber-300">
+          Analogue search unavailable: {error}
+        </div>
+      )}
+      {!loading && !error && hits && hits.length === 0 && (
+        <div className="text-[11px] text-slate-500">No similar prior setups found in the embedding index.</div>
+      )}
+      {!loading && !error && hits && hits.length > 0 && (
+        <ul className="grid gap-1.5">
+          {hits.map((h) => {
+            const r = h.realisedR5d ?? h.realisedR20d;
+            const rColor = r === null ? "#9CA3AF" : r > 0 ? "#10B981" : r < 0 ? "#F87171" : "#9CA3AF";
+            const outcome = h.hitTarget5d ? "hit target" : h.hitStop5d ? "hit stop" : r === null ? "unresolved" : "open";
+            return (
+              <li key={h.setupId} className="flex items-center justify-between gap-2 rounded-md border border-white/[0.06] bg-slate-900/30 px-2.5 py-1.5 text-[11px]">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-white">{h.symbol}</span>
+                  <span className="text-slate-500">{h.setupType}</span>
+                  <span className="text-slate-600">sim {(h.similarity * 100).toFixed(0)}%</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span style={{ color: rColor }}>{r === null ? "—" : `${r >= 0 ? "+" : ""}${r.toFixed(2)}R`}</span>
+                  <span className="text-slate-500">{outcome}</span>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 }
