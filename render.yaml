@@ -337,3 +337,72 @@
         value: production
       - key: DATABASE_URL
         sync: false
+
+  # -----------------------------------------------------------------
+  # Admin Edge Layer crons (HTTP endpoints under app/api/cron/*).
+  # All five POST against the production web service with CRON_SECRET.
+  # WEB_URL must match the rest of this file.
+  # Required env on the WEB service (not these cron jobs):
+  #   FRED_API_KEY            - admin-macro-ingest (no fallback)
+  #   ALPHA_VANTAGE_API_KEY   - admin-edge-label-outcomes, admin-label-ai-outcomes
+  # -----------------------------------------------------------------
+
+  - type: cron
+    name: admin-edge-label-outcomes
+    runtime: node
+    schedule: "0 */4 * * *"  # Every 4h - label MFE/MAE/realised R for pending setups
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 300 -X POST "$WEB_URL/api/cron/edge-label-outcomes?limit=500" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
+    envVars:
+      - key: WEB_URL
+        value: "https://marketscannerpros.app"
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
+    name: admin-edge-rebuild-matrix
+    runtime: node
+    schedule: "0 6 * * *"  # Daily 06:00 UTC - rebuild edge_ledger_matrix aggregates
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 300 -X POST "$WEB_URL/api/cron/edge-rebuild-matrix" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
+    envVars:
+      - key: WEB_URL
+        value: "https://marketscannerpros.app"
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
+    name: admin-macro-ingest
+    runtime: node
+    schedule: "0 9 * * 1-5"  # Weekdays 09:00 UTC - pull FRED macro series (FRED_API_KEY required on web service)
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 300 -X POST "$WEB_URL/api/cron/macro-ingest" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
+    envVars:
+      - key: WEB_URL
+        value: "https://marketscannerpros.app"
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
+    name: admin-label-ai-outcomes
+    runtime: node
+    schedule: "11 */6 * * *"  # Every 6h offset :11 - resolve outcomes on AI-recommended setups
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 300 -X POST "$WEB_URL/api/cron/label-ai-outcomes" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
+    envVars:
+      - key: WEB_URL
+        value: "https://marketscannerpros.app"
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
+    name: admin-evening-packet
+    runtime: node
+    schedule: "0 22 * * *"  # Daily 22:00 UTC (~17:00 ET, after US close) - build + persist Evening Reconciliation Packet
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -fL --retry 3 --retry-delay 15 --retry-all-errors --connect-timeout 10 --max-time 300 -X POST "$WEB_URL/api/cron/evening-packet" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json"
+    envVars:
+      - key: WEB_URL
+        value: "https://marketscannerpros.app"
+      - key: CRON_SECRET
+        sync: false
