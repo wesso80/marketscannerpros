@@ -39,12 +39,46 @@ import type { ArcaPortfolio, ArcaPosition, SimulateCycleResult } from "./types";
 import { runDebateAndRecord, linkDebateToOrder } from "@/lib/admin/arca-brain/adversarialDebate";
 import { recordNoTradeRejection } from "@/lib/admin/arca-brain/noTradeAlpha";
 import { recentMistakeFrequency } from "@/lib/admin/arca-brain/mistakeLabeler";
+import { gradeCandidate, recordAllocationDecision } from "@/lib/admin/arca-brain/capitalAllocation";
+import { computeInformationEdge, scoreInformationEdge } from "@/lib/admin/arca-brain/informationEdge";
+import { deriveInformationEdge } from "@/lib/admin/arca-brain/deriveInformationEdge";
+import { getRegimeMatrix } from "@/lib/admin/arca-brain/regimePlaybookMatrix";
+import { evaluateRegimePlaybook } from "@/lib/admin/arca-brain/regimePlaybookDecision";
+import type { DataFreshnessStatus, InformationEdgeBand, RegimePlaybookMatrixRow } from "@/lib/admin/arca-brain/types";
 import { q } from "@/lib/db";
+
+/**
+ * Narrow the free-text freshness on an edge-packet row to the
+ * DataFreshnessStatus union the brain expects. Anything unknown
+ * collapses to "unknown" so prosecutor weighting cannot be silently
+ * skipped by malformed input.
+ */
+function narrowFreshness(s: string | null | undefined): DataFreshnessStatus {
+  switch ((s || "").toLowerCase()) {
+    case "fresh":
+    case "realtime":
+    case "real-time":
+      return "fresh";
+    case "delayed":
+    case "eod":
+      return "delayed";
+    case "stale":
+      return "stale";
+    default:
+      return "unknown";
+  }
+}
 
 export interface SimulateCycleOptions {
   workspaceId: string;
   maxNewIdeas?: number;
   sinceMinutes?: number;
+  /** Current market regime label (e.g. RISK_ON_TREND). When omitted,
+   *  every candidate is evaluated against an UNKNOWN_REGIME decision. */
+  currentRegime?: string | null;
+  /** When true (default) UNKNOWN_REGIME blocks the trade. When false
+   *  it runs at reduced size. */
+  strictUnknownRegime?: boolean;
 }
 
 export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<SimulateCycleResult> {
@@ -117,6 +151,16 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
     sinceMinutes: opts.sinceMinutes ?? 720,
   });
 
+  // Load the Regime-Playbook Matrix row once per cycle. If no regime
+  // was supplied, every candidate will resolve to UNKNOWN_REGIME and
+  // the strict policy will gate it.
+  const currentRegime = opts.currentRegime ?? null;
+  const strictUnknownRegime = opts.strictUnknownRegime !== false;
+  let regimeMatrixRow: RegimePlaybookMatrixRow | null = null;
+  if (currentRegime) {
+    regimeMatrixRow = await getRegimeMatrix(opts.workspaceId, currentRegime).catch(() => null);
+  }
+
   for (const cand of decision.selected) {
     const sizing = sizeForPortfolio(runningPortfolio, {
       entry: cand.entry,
@@ -165,9 +209,171 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
       continue;
     }
 
+    // ── Regime-Playbook Matrix gate (ARCA meta-brain) ──
+    // Block / reduce / wait based on whether the current regime allows
+    // this candidate's playbook. Runs before Information Edge so that
+    // disabled playbooks never spend compute on the brain stack.
+    const playbookId = cand.row.setupType || null;
+    const regimeDecision = evaluateRegimePlaybook(regimeMatrixRow, playbookId, {
+      strict: strictUnknownRegime,
+      assetClass: cand.assetClass,
+    });
+
+    if (
+      regimeDecision.status === "DISABLED" ||
+      regimeDecision.status === "WAIT_FOR_CONFIRMATION" ||
+      (regimeDecision.status === "UNKNOWN_REGIME" && strictUnknownRegime)
+    ) {
+      rejections++;
+      const sizingForRow = sizeForPortfolio(runningPortfolio, {
+        entry: cand.entry,
+        stop: cand.stop,
+        side: cand.side,
+        assetClass: cand.assetClass,
+      });
+      await recordNoTradeRejection({
+        workspaceId: opts.workspaceId,
+        symbol: cand.row.symbol,
+        rejectionSource: "REGIME_MATRIX",
+        rejectionReason:
+          `regime_playbook=${regimeDecision.status} ` +
+          `regime=${regimeDecision.regime ?? "null"} playbook=${playbookId ?? "null"} ` +
+          `reason="${regimeDecision.reason}" ` +
+          `required_confirmations=[${regimeDecision.requiredConfirmations.join(",")}] ` +
+          `disqualifiers=[${regimeDecision.disqualifiers.join(",")}]`,
+        debateId: null,
+        hypotheticalEntry: cand.entry,
+        hypotheticalStop: cand.stop,
+        hypotheticalTarget: cand.tp1 ?? null,
+        hypotheticalSizeDollars: sizingForRow.notional,
+      }).catch(() => undefined);
+      await writeJournal({
+        workspaceId: opts.workspaceId,
+        portfolioId: portfolio.id,
+        journalType: "REJECTED",
+        title:
+          `REGIME-MATRIX ${regimeDecision.status} ${cand.row.symbol} ` +
+          `(regime=${regimeDecision.regime ?? "unknown"}, playbook=${playbookId ?? "unknown"})`,
+        symbol: cand.row.symbol,
+        reasoning:
+          `${regimeDecision.reason}. ` +
+          (regimeDecision.requiredConfirmations.length
+            ? `Required: ${regimeDecision.requiredConfirmations.join(", ")}. `
+            : "") +
+          (regimeDecision.disqualifiers.length
+            ? `Disqualifiers: ${regimeDecision.disqualifiers.join(", ")}. `
+            : "") +
+          `source_rule_id=${regimeDecision.sourceRuleId ?? "none"}.`,
+        sourcePacketIds: [cand.row.packetId],
+      });
+      continue;
+    }
+
+    // ── Information Edge Score (ARCA meta-brain) ──
+    // Compute BEFORE capital allocation and debate so both gates see
+    // the real band. Missing inputs are reported honestly via
+    // derivation confidence and recorded in the journal/no-trade row.
+    const derived = deriveInformationEdge(cand.row.packetJson);
+    const { score: edgeScore, band: edgeBand } = computeInformationEdge(derived.inputs);
+    // Persist best-effort — never break the cycle on a failed insert.
+    scoreInformationEdge({
+      workspaceId: opts.workspaceId,
+      packetId: cand.row.packetId,
+      symbol: cand.row.symbol,
+      playbookId: cand.row.setupType || null,
+      inputs: derived.inputs,
+    }).catch(() => undefined);
+
+    // ── Capital Allocation gate (ARCA meta-brain) ──
+    // Grade the candidate BEFORE the debate so a NO_TRADE grade
+    // short-circuits without spending debate state, and so the
+    // grade-derived risk % can scale the prosecutor's view of size.
+    const mistakes7d = await recentMistakeFrequency(opts.workspaceId, 7).catch(() => 0);
+    const realFreshness = narrowFreshness(cand.row.freshness);
+    const baseRiskPct = Math.max(0.1, Math.min(2, portfolio.settings.maxSingleTradeRiskPct ?? portfolio.settings.riskPerTradePct ?? 1));
+    // Translate the regime decision into a 0..100 quality score the
+    // brain's grading + debate inputs expect. Decisions that block the
+    // trade outright have already been handled above.
+    const regimeQualityScore =
+      regimeDecision.status === "ENABLED" ? 75 :
+      regimeDecision.status === "REDUCE_SIZE" ? 50 :
+      regimeDecision.status === "UNKNOWN_PLAYBOOK" ? 45 :
+      40; // UNKNOWN_REGIME (non-strict)
+    const regimeSizeAdjustmentReason =
+      regimeDecision.status === "ENABLED"
+        ? null
+        : `regime_matrix=${regimeDecision.status} regime=${regimeDecision.regime ?? "null"} playbook=${playbookId ?? "null"} reason="${regimeDecision.reason}"`;
+    const allocPre = gradeCandidate({
+      workspaceId: opts.workspaceId,
+      portfolioId: portfolio.id,
+      debateId: null,
+      symbol: cand.row.symbol,
+      playbookId: cand.row.setupType || null,
+      playbookExpectancy: null,
+      regimeQuality: regimeQualityScore,
+      dataFreshness: realFreshness,
+      confidence: clamp(cand.row.trustAdjustedScore, 0, 100),
+      informationEdgeScore: edgeScore,
+      personalFitScore: null,
+      drawdownState: "normal",
+      correlationExposure: null,
+      eventRisk: "none",
+      recentMistakeFrequency: mistakes7d,
+      maxRiskPercent: baseRiskPct,
+      equityDollars: runningPortfolio.totalEquity,
+    });
+
+    // OBVIOUS_NOISE override: information edge gates the allocation
+    // even when the composite formula doesn't fall below floor. This
+    // codifies the rule "if everyone sees it, don't take it" unless
+    // confidence is exceptional (>=90) AND data is fresh.
+    let infoEdgeOverride: { grade: "NO_TRADE"; reason: string } | null = null;
+    if (edgeBand === "OBVIOUS_NOISE") {
+      const exceptional = clamp(cand.row.trustAdjustedScore, 0, 100) >= 90 && realFreshness === "fresh";
+      if (!exceptional) {
+        infoEdgeOverride = {
+          grade: "NO_TRADE",
+          reason: `information_edge_band=OBVIOUS_NOISE score=${edgeScore} missing=[${derived.missingInputs.join(",")}]`,
+        };
+      }
+    }
+
+    if (allocPre.grade === "NO_TRADE" || infoEdgeOverride) {
+      rejections++;
+      const reason = infoEdgeOverride
+        ? infoEdgeOverride.reason
+        : `capital_allocation=NO_TRADE: ${allocPre.reason}`;
+      await recordNoTradeRejection({
+        workspaceId: opts.workspaceId,
+        symbol: cand.row.symbol,
+        rejectionSource: "CAP_ALLOC",
+        rejectionReason: reason,
+        debateId: null,
+        hypotheticalEntry: cand.entry,
+        hypotheticalStop: cand.stop,
+        hypotheticalTarget: cand.tp1 ?? null,
+        hypotheticalSizeDollars: sizing.notional,
+      }).catch(() => undefined);
+      await writeJournal({
+        workspaceId: opts.workspaceId,
+        portfolioId: portfolio.id,
+        journalType: "REJECTED",
+        title: infoEdgeOverride
+          ? `INFO-EDGE SKIP ${cand.row.symbol} — band=OBVIOUS_NOISE`
+          : `CAP-ALLOC SKIP ${cand.row.symbol} — ${allocPre.reason}`,
+        symbol: cand.row.symbol,
+        reasoning:
+          `${reason}. ` +
+          `info_edge_score=${edgeScore} band=${edgeBand} ` +
+          `derivation_confidence=${derived.confidence} ` +
+          `missing_inputs=[${derived.missingInputs.join(",")}].`,
+        sourcePacketIds: [cand.row.packetId],
+      });
+      continue;
+    }
+
     // ── Adversarial debate gate (ARCA meta-brain) ──
     // No simulated order may be created without a debate record.
-    const mistakes7d = await recentMistakeFrequency(opts.workspaceId, 7).catch(() => 0);
     const debateOutcome = await runDebateAndRecord(
       {
         symbol: cand.row.symbol,
@@ -186,10 +392,10 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
       {
         workspaceId: opts.workspaceId,
         portfolioId: portfolio.id,
-        freshness: "fresh",
-        informationEdgeScore: null,
-        informationEdgeBand: null,
-        regimeQuality: 60,
+        freshness: realFreshness,
+        informationEdgeScore: edgeScore,
+        informationEdgeBand: edgeBand as InformationEdgeBand,
+        regimeQuality: regimeQualityScore,
         recentMistakeFrequency: mistakes7d,
         correlationExposure: 0,
         eventRisk: "none",
@@ -201,11 +407,12 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
 
     if (!debateOutcome.shouldCreateOrder) {
       rejections++;
+      const debateReason = debateOutcome.record.rejectedReason ?? debateOutcome.record.prosecutorCase;
       await recordNoTradeRejection({
         workspaceId: opts.workspaceId,
         symbol: cand.row.symbol,
         rejectionSource: "DEBATE",
-        rejectionReason: debateOutcome.record.rejectedReason ?? debateOutcome.record.prosecutorCase,
+        rejectionReason: `${debateReason} | info_edge=${edgeScore}(${edgeBand})`,
         debateId: debateOutcome.record.id,
         hypotheticalEntry: cand.entry,
         hypotheticalStop: cand.stop,
@@ -218,16 +425,28 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
         journalType: "REJECTED",
         title: `DEBATE SKIP ${cand.row.symbol} — ${debateOutcome.record.finalDecision}`,
         symbol: cand.row.symbol,
-        reasoning: debateOutcome.record.rejectedReason ?? debateOutcome.record.prosecutorCase,
+        reasoning:
+          `${debateReason} ` +
+          `info_edge_score=${edgeScore} band=${edgeBand} ` +
+          `derivation_confidence=${derived.confidence} ` +
+          `missing_inputs=[${derived.missingInputs.join(",")}].`,
         sourcePacketIds: [cand.row.packetId],
       });
       continue;
     }
 
-    // Apply size multiplier from the debate (SIZE_DOWN may shrink notional).
+    // Apply size multiplier from the debate (SIZE_DOWN may shrink notional),
+    // then further scale by the Capital Allocation grade's risk % so an
+    // A_GRADE uses full size and B/C/EXPERIMENTAL are throttled. The
+    // regime-playbook decision multiplies on top: REDUCE_SIZE or any
+    // UNKNOWN_* result throttles the position even when the debate would
+    // green-light full size.
     const mult = Math.max(0.1, Math.min(1, debateOutcome.sizeMultiplier || 1));
-    const debatedQty = sizing.quantity * mult;
-    const debatedNotional = sizing.notional * mult;
+    const allocRatio = baseRiskPct > 0 ? allocPre.riskPercent / baseRiskPct : 1;
+    const regimeMult = Math.max(0, Math.min(1, regimeDecision.sizeMultiplier));
+    const combined = Math.max(0.05, Math.min(1, mult * allocRatio * regimeMult));
+    const debatedQty = sizing.quantity * combined;
+    const debatedNotional = sizing.notional * combined;
 
     // Create as LIMIT_SIM with trigger = entry, waiting for price to come.
     const order = await createSimulatedOrder({
@@ -246,7 +465,7 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
       takeProfit3: cand.tp3,
       sourceEdgePacketId: cand.row.packetId,
       playbookId: cand.row.setupType || null,
-      createdReason: `ARCA selected: rank=${cand.row.opportunityRankScore.toFixed(1)} thesis=${cand.row.thesisStatus} rr1=${cand.rrToTp1 ?? "n/a"} debate=${debateOutcome.record.finalDecision}(x${mult})`,
+      createdReason: `ARCA selected: rank=${cand.row.opportunityRankScore.toFixed(1)} thesis=${cand.row.thesisStatus} rr1=${cand.rrToTp1 ?? "n/a"} debate=${debateOutcome.record.finalDecision}(x${mult}) info_edge=${edgeScore}(${edgeBand}) regime=${regimeDecision.regime ?? "unknown"}/${regimeDecision.status}(x${regimeMult})`,
       arcaConfidence: debateOutcome.record.confidenceAfterDebate,
     });
 
@@ -259,6 +478,34 @@ export async function simulateArcaCycle(opts: SimulateCycleOptions): Promise<Sim
       await linkDebateToOrder(opts.workspaceId, debateOutcome.record.id, (order as unknown as { id: string }).id);
     } catch {
       // Soft-fail: the cycle continues; an admin alert is preferable to a hard cycle break.
+    }
+
+    // Persist the Capital Allocation decision tied to this debate so the
+    // grade distribution is auditable per cycle and per symbol.
+    try {
+      await recordAllocationDecision({
+        workspaceId: opts.workspaceId,
+        portfolioId: portfolio.id,
+        debateId: debateOutcome.record.id,
+        symbol: cand.row.symbol,
+        playbookId: cand.row.setupType || null,
+        playbookExpectancy: null,
+        regimeQuality: regimeQualityScore,
+        dataFreshness: realFreshness,
+        confidence: clamp(cand.row.trustAdjustedScore, 0, 100),
+        informationEdgeScore: edgeScore,
+        personalFitScore: null,
+        drawdownState: "normal",
+        correlationExposure: null,
+        eventRisk: "none",
+        recentMistakeFrequency: mistakes7d,
+        maxRiskPercent: baseRiskPct,
+        equityDollars: runningPortfolio.totalEquity,
+        sizeAdjustmentReason: regimeSizeAdjustmentReason,
+        externalSizeMultiplier: regimeMult,
+      });
+    } catch {
+      // Soft-fail.
     }
     ordersCreated++;
   }

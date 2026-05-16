@@ -32,6 +32,10 @@ export interface AllocationInputs {
   maxRiskPercent?: number;
   /** Equity for max-loss calc. */
   equityDollars: number;
+  /** Optional human-readable reason for any size adjustment (e.g. regime REDUCE_SIZE). */
+  sizeAdjustmentReason?: string | null;
+  /** Optional multiplier (0..1) applied externally to the graded risk % (e.g. regime/debate). */
+  externalSizeMultiplier?: number;
 }
 
 export function gradeCandidate(i: AllocationInputs): {
@@ -84,7 +88,9 @@ export function gradeCandidate(i: AllocationInputs): {
 
 export async function recordAllocationDecision(i: AllocationInputs): Promise<CapitalAllocationDecision> {
   const { grade, riskPercent, reason } = gradeCandidate(i);
-  const maxLoss = Math.max(0, (riskPercent / 100) * i.equityDollars);
+  const mult = typeof i.externalSizeMultiplier === "number" ? Math.max(0, Math.min(1, i.externalSizeMultiplier)) : 1;
+  const adjustedRiskPercent = riskPercent * mult;
+  const maxLoss = Math.max(0, (adjustedRiskPercent / 100) * i.equityDollars);
 
   const rows = await q<Record<string, unknown>>(
     `INSERT INTO arca_capital_allocation_decisions
@@ -93,8 +99,8 @@ export async function recordAllocationDecision(i: AllocationInputs): Promise<Cap
         playbook_expectancy, regime_quality, data_freshness,
         confidence, information_edge_score, personal_fit_score,
         drawdown_state, correlation_exposure, event_risk,
-        recent_mistake_frequency, allocation_reason)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+        recent_mistake_frequency, allocation_reason, size_adjustment_reason)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
      RETURNING *`,
     [
       i.workspaceId,
@@ -103,7 +109,7 @@ export async function recordAllocationDecision(i: AllocationInputs): Promise<Cap
       i.symbol,
       i.playbookId,
       grade,
-      riskPercent,
+      adjustedRiskPercent,
       maxLoss,
       i.playbookExpectancy,
       i.regimeQuality,
@@ -116,6 +122,7 @@ export async function recordAllocationDecision(i: AllocationInputs): Promise<Cap
       i.eventRisk,
       i.recentMistakeFrequency,
       reason,
+      i.sizeAdjustmentReason ?? null,
     ],
   );
   return mapCapitalAllocation(rows[0]);

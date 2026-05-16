@@ -10,6 +10,7 @@
  * NO broker integration. NO order routing. Pure ledger.
  */
 
+import Link from "next/link";
 import React, { useCallback, useEffect, useState } from "react";
 
 interface Portfolio {
@@ -245,6 +246,8 @@ export default function PortfolioLabPage() {
           </div>
         </div>
 
+        {portfolio && <SubNav />}
+
         {error && <ErrorBox text={error} />}
         {cycleResult && (
           <div style={{ background: "#064E3B", border: "1px solid #10B981", color: "#A7F3D0", padding: 10, borderRadius: 8, fontSize: 13, marginBottom: 12, whiteSpace: "pre-wrap", fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" }}>
@@ -373,6 +376,49 @@ export default function PortfolioLabPage() {
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ---- sub-navigation ---- */
+
+const SUB_NAV_LINKS: Array<{ href: string; label: string; emphasis?: boolean }> = [
+  { href: "/admin/portfolio-lab", label: "Dashboard" },
+  { href: "/admin/portfolio-lab/analytics", label: "Quant Cockpit", emphasis: true },
+  { href: "/admin/portfolio-lab/positions", label: "Positions" },
+  { href: "/admin/portfolio-lab/orders", label: "Orders" },
+  { href: "/admin/portfolio-lab/trades", label: "Trades" },
+  { href: "/admin/portfolio-lab/journal", label: "Journal" },
+  { href: "/admin/portfolio-lab/performance", label: "Performance" },
+  { href: "/admin/portfolio-lab/playbooks", label: "Playbooks" },
+  { href: "/admin/portfolio-lab/risk", label: "Risk" },
+  { href: "/admin/portfolio-lab/reports", label: "Reports" },
+  { href: "/admin/portfolio-lab/edge-packets", label: "Edge Packets" },
+  { href: "/admin/portfolio-lab/settings", label: "Settings" },
+];
+
+function SubNav() {
+  return (
+    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
+      {SUB_NAV_LINKS.map((l) => (
+        <Link
+          key={l.href}
+          href={l.href}
+          style={{
+            padding: "5px 10px",
+            background: l.emphasis ? "#064E3B" : "transparent",
+            color: l.emphasis ? "#A7F3D0" : "#94A3B8",
+            border: `1px solid ${l.emphasis ? "#10B981" : "#1F2937"}`,
+            borderRadius: 6,
+            fontSize: 11,
+            fontWeight: 500,
+            textDecoration: "none",
+            letterSpacing: 0.3,
+          }}
+        >
+          {l.label}
+        </Link>
+      ))}
     </div>
   );
 }
