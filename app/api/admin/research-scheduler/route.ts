@@ -4,15 +4,23 @@ import { getSessionFromCookie } from "@/lib/auth";
 import { isOperator } from "@/lib/quant/operatorAuth";
 import { wrapTruth } from "@/lib/admin";
 import { listSchedulerRuns, runResearchScheduler, type SchedulerMode } from "@/lib/admin/researchScheduler";
+import { unionWatchlistSymbols } from "@/lib/operator/watchlists";
 
 export const runtime = "nodejs";
 
-const CRYPTO_UNIVERSE = ["BTC", "ETH", "SOL", "ADA", "AVAX", "LINK", "DOT", "MATIC", "ARB", "INJ"];
-const EQUITY_UNIVERSE = ["SPY", "QQQ", "AAPL", "MSFT", "NVDA", "META", "AMZN", "TSLA", "GOOGL", "AMD"];
+// Pinned anchors live at the head; the rest is the deduped DEFAULT_WATCHLISTS
+// union per market so the research scheduler covers the same operator
+// universe as the cockpit (admin-only — see no-public-leakage).
+const CRYPTO_UNIVERSE = unionWatchlistSymbols("CRYPTO", ["BTC", "ETH", "SOL", "ADA", "AVAX", "LINK", "DOT", "MATIC", "ARB", "INJ"]);
+const EQUITY_UNIVERSE = unionWatchlistSymbols("EQUITIES", ["SPY", "QQQ", "AAPL", "MSFT", "NVDA", "META", "AMZN", "TSLA", "GOOGL", "AMD"]);
+// HIGH_PRIORITY_RESCAN and WATCHLIST stay narrow on purpose — they exist to
+// re-poll anchors fast without burning AV/CG quota on the full universe.
+const HIGH_PRIORITY_ANCHORS = ["SPY", "QQQ", "BTC", "ETH", "AAPL", "NVDA"];
+const WATCHLIST_ANCHORS = ["AAPL", "MSFT", "NVDA", "BTC", "ETH", "SOL"];
 
 function defaultSymbols(mode: SchedulerMode, market: string): string[] {
-  if (mode === "HIGH_PRIORITY_RESCAN") return ["SPY", "QQQ", "BTC", "ETH", "AAPL", "NVDA"];
-  if (mode === "WATCHLIST") return ["AAPL", "MSFT", "NVDA", "BTC", "ETH", "SOL"];
+  if (mode === "HIGH_PRIORITY_RESCAN") return HIGH_PRIORITY_ANCHORS;
+  if (mode === "WATCHLIST") return WATCHLIST_ANCHORS;
   if (market === "CRYPTO") return CRYPTO_UNIVERSE;
   return EQUITY_UNIVERSE;
 }

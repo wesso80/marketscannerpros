@@ -6,8 +6,11 @@ import AdminCard from "@/components/admin/shared/AdminCard";
 import StatusPill from "@/components/admin/shared/StatusPill";
 import { useScannerFeed } from "@/lib/admin/hooks";
 import type { ScannerHit } from "@/lib/admin/types";
+import { unionWatchlistSymbols } from "@/lib/operator/watchlists";
 
-const DEFAULT_SYMBOLS = ["BTC", "ETH", "SOL", "ADA", "AVAX", "DOT", "SUI", "LINK", "MATIC", "XRP"];
+// Full deduped crypto universe (DEFAULT_WATCHLISTS) — anchors pinned first.
+// Admin-only page; safe to leak the wider universe (see no-public-leakage).
+const DEFAULT_SYMBOLS = unionWatchlistSymbols("CRYPTO", ["BTC", "ETH", "SOL", "ADA", "AVAX", "DOT", "SUI", "LINK", "MATIC", "XRP"]);
 
 function permTone(p: string): "green" | "yellow" | "red" {
   if (p === "GO") return "green";

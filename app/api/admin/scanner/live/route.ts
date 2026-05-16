@@ -18,10 +18,13 @@ import { scanResultToHits, scanResultToHealth } from "@/lib/admin/serializer";
 import { recordSignals } from "@/lib/admin/signal-recorder";
 import { buildAdminScanContext } from "@/lib/admin/scan-context";
 import { enrichHitsWithExpectancy } from "@/lib/admin/expectancy";
+import { unionWatchlistSymbols } from "@/lib/operator/watchlists";
 
 export const runtime = "nodejs";
 
-const DEFAULT_SYMBOLS = ["ADA", "SUI", "MATIC", "FET", "SOL", "AVAX", "DOT", "LINK"];
+// Default when no ?symbols= is passed: full deduped crypto universe with
+// the small-cap altcoin anchors (ADA/SUI/MATIC/FET) pinned at the head.
+const DEFAULT_SYMBOLS = unionWatchlistSymbols("CRYPTO", ["ADA", "SUI", "MATIC", "FET", "SOL", "AVAX", "DOT", "LINK"]);
 
 export async function GET(req: NextRequest) {
   // Auth gate

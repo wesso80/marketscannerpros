@@ -6,11 +6,14 @@ import { getAdminResearchPacketsForSymbols, type AdminResearchPacket } from "@/l
 import { appendResearchEvent } from "@/lib/admin/researchEventTape";
 import { buildAdminScanContext } from "@/lib/admin/scan-context";
 import { wrapTruth } from "@/lib/admin";
+import { unionWatchlistSymbols } from "@/lib/operator/watchlists";
 
 export const runtime = "nodejs";
 
-const EQUITIES = ["SPY", "QQQ", "AAPL", "MSFT", "NVDA", "META", "AMZN", "TSLA", "GOOGL", "AMD"];
-const CRYPTO = ["BTC", "ETH", "SOL", "ADA", "AVAX", "LINK", "DOT", "MATIC", "ARB", "INJ"];
+// Admin Priority Desk surveys the full DEFAULT_WATCHLISTS union per market
+// (deduped, anchors first) so promising names outside the mega-caps surface.
+const EQUITIES = unionWatchlistSymbols("EQUITIES", ["SPY", "QQQ", "AAPL", "MSFT", "NVDA", "META", "AMZN", "TSLA", "GOOGL", "AMD"]);
+const CRYPTO = unionWatchlistSymbols("CRYPTO", ["BTC", "ETH", "SOL", "ADA", "AVAX", "LINK", "DOT", "MATIC", "ARB", "INJ"]);
 
 async function authorize(req: NextRequest): Promise<{ ok: boolean; workspaceId: string }> {
   const adminAuth = await requireAdmin(req);

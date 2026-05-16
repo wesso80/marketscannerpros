@@ -180,3 +180,28 @@ export function getWatchlistsForMarket(market: Market): string[] {
     .filter(([, wl]) => wl.market === market)
     .map(([key]) => key);
 }
+
+/**
+ * Deduped union of every DEFAULT_WATCHLISTS symbol whose market matches.
+ * `pinned` symbols are placed at the head in given order (used to keep
+ * SPY/QQQ/BTC/ETH anchors in front of the diamonds-in-the-rough lists).
+ *
+ * Admin-only: this returns the full operator universe (~120 equities,
+ * ~70 crypto). Do not expose to public endpoints — see no-public-leakage.
+ */
+export function unionWatchlistSymbols(market: Market, pinned: string[] = []): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const sym of pinned) {
+    const s = sym.toUpperCase();
+    if (!seen.has(s)) { seen.add(s); out.push(s); }
+  }
+  for (const wl of Object.values(DEFAULT_WATCHLISTS)) {
+    if (wl.market !== market) continue;
+    for (const sym of wl.symbols) {
+      const s = sym.toUpperCase();
+      if (!seen.has(s)) { seen.add(s); out.push(s); }
+    }
+  }
+  return out;
+}

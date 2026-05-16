@@ -27,7 +27,7 @@ import type { Market } from "@/types/operator";
 import { getAdminResearchPacketsForSymbols } from "@/lib/admin/getAdminResearchPacket";
 import { projectEdgePacket, type AdminEdgePacket } from "@/lib/admin/edgePacket";
 import { persistEdgePackets } from "@/lib/admin/edgePacketSnapshots";
-import { DEFAULT_WATCHLISTS } from "@/lib/operator/watchlists";
+import { unionWatchlistSymbols } from "@/lib/operator/watchlists";
 import { notifyAdmin } from "@/lib/admin/notifyAdmin";
 
 export const runtime = "nodejs";
@@ -50,25 +50,8 @@ function authorise(req: NextRequest): boolean {
   return !!cronSecret && timingSafeCompare(headerCron, cronSecret);
 }
 
-function unionWatchlists(market: Market, pinned: string[]): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const sym of pinned) {
-    const s = sym.toUpperCase();
-    if (!seen.has(s)) { seen.add(s); out.push(s); }
-  }
-  for (const wl of Object.values(DEFAULT_WATCHLISTS)) {
-    if (wl.market !== market) continue;
-    for (const sym of wl.symbols) {
-      const s = sym.toUpperCase();
-      if (!seen.has(s)) { seen.add(s); out.push(s); }
-    }
-  }
-  return out;
-}
-
-const CRYPTO_UNIVERSE = unionWatchlists("CRYPTO", ["BTC", "ETH", "SOL", "ADA", "AVAX", "LINK", "DOT", "MATIC", "ARB", "INJ"]);
-const EQUITY_UNIVERSE = unionWatchlists("EQUITIES", ["SPY", "QQQ", "AAPL", "MSFT", "NVDA", "META", "AMZN", "TSLA", "GOOGL", "AMD"]);
+const CRYPTO_UNIVERSE = unionWatchlistSymbols("CRYPTO", ["BTC", "ETH", "SOL", "ADA", "AVAX", "LINK", "DOT", "MATIC", "ARB", "INJ"]);
+const EQUITY_UNIVERSE = unionWatchlistSymbols("EQUITIES", ["SPY", "QQQ", "AAPL", "MSFT", "NVDA", "META", "AMZN", "TSLA", "GOOGL", "AMD"]);
 
 export async function POST(req: NextRequest) {
   if (!authorise(req)) {
