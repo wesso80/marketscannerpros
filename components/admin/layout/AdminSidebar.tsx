@@ -46,7 +46,8 @@ const sections = [
   {
     label: "SYSTEM",
     items: [
-      { href: "/admin/data-health", label: "Data Health", icon: "❤" },
+      { href: "/admin/health", label: "Health Center", icon: "❤" },
+      { href: "/admin/data-health", label: "Data Health", icon: "📡" },
       { href: "/admin/model-diagnostics", label: "Model Diag.", icon: "⚙️" },
       { href: "/admin/logs", label: "Logs", icon: "📋" },
       { href: "/admin/settings", label: "Settings", icon: "⚙️" },
