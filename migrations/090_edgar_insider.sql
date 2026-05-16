@@ -27,9 +27,19 @@ CREATE TABLE IF NOT EXISTS insider_transactions (
   filing_url TEXT,
   filed_at TIMESTAMPTZ,
   ingest_source VARCHAR(32) NOT NULL DEFAULT 'edgar',
-  ingest_ts TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE (filing_accession, reporter_cik, transaction_date, transaction_code, COALESCE(shares, 0))
+  ingest_ts TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Expression-based uniqueness must be a UNIQUE INDEX in Postgres,
+-- not a table-level UNIQUE constraint.
+CREATE UNIQUE INDEX IF NOT EXISTS insider_tx_unique_idx
+  ON insider_transactions (
+    filing_accession,
+    COALESCE(reporter_cik, ''),
+    transaction_date,
+    COALESCE(transaction_code, ''),
+    COALESCE(shares, 0)
+  );
 
 CREATE INDEX IF NOT EXISTS insider_tx_symbol_date_idx
   ON insider_transactions (symbol, transaction_date DESC);
@@ -52,9 +62,16 @@ CREATE TABLE IF NOT EXISTS institutional_holdings_13f (
   filing_url TEXT,
   filed_at TIMESTAMPTZ,
   ingest_source VARCHAR(32) NOT NULL DEFAULT 'edgar',
-  ingest_ts TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE (filing_accession, filer_cik, symbol, COALESCE(put_call, '-'))
+  ingest_ts TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS holdings_13f_unique_idx
+  ON institutional_holdings_13f (
+    filing_accession,
+    COALESCE(filer_cik, ''),
+    symbol,
+    COALESCE(put_call, '-')
+  );
 
 CREATE INDEX IF NOT EXISTS holdings_13f_symbol_period_idx
   ON institutional_holdings_13f (symbol, report_period DESC);
