@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'crypto';
 import { requireAdmin } from '@/lib/adminAuth';
 import { ingestFred } from '@/lib/macro/fred';
+import { notifyAdmin } from '@/lib/admin/notifyAdmin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -45,6 +46,13 @@ export async function POST(req: NextRequest) {
     const result = await ingestFred({ sinceISO: since, only });
     return NextResponse.json({ ...result, durationMs: Date.now() - started });
   } catch (e: unknown) {
-    return NextResponse.json({ ok: false, error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+    const msg = e instanceof Error ? e.message : String(e);
+    notifyAdmin({
+      subject: 'macro-ingest failed',
+      body: `FRED ingest failed: ${msg}`,
+      severity: 'error',
+      context: { since: since ?? null, only: only ? only.join(',') : null, durationMs: Date.now() - started },
+    }).catch(() => {});
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
 }

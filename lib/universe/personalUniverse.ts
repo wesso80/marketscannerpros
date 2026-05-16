@@ -12,6 +12,7 @@
  */
 
 import { q } from '@/lib/db';
+import { notifyAdmin } from '@/lib/admin/notifyAdmin';
 
 export interface UniverseEntry {
   id: number;
@@ -190,6 +191,23 @@ export async function setKillSwitch(opts: {
      VALUES ($1, $2, $3, $4)`,
     [opts.workspaceId, opts.enabled, opts.reason ?? null, opts.actor ?? 'admin'],
   );
+  // Fire admin notification (never throws). Toggle ON => critical, OFF => warn.
+  notifyAdmin({
+    subject: opts.enabled
+      ? `Kill switch ENABLED · ${opts.workspaceId.slice(0, 8)}`
+      : `Kill switch cleared · ${opts.workspaceId.slice(0, 8)}`,
+    body: opts.enabled
+      ? `Research alerts paused for workspace ${opts.workspaceId}.\nReason: ${opts.reason ?? '(none)'}\nActor: ${opts.actor ?? 'admin'}`
+      : `Research alerts resumed for workspace ${opts.workspaceId}.\nActor: ${opts.actor ?? 'admin'}`,
+    severity: opts.enabled ? 'critical' : 'warn',
+    context: {
+      workspaceId: opts.workspaceId,
+      enabled: opts.enabled,
+      reason: opts.reason ?? null,
+      actor: opts.actor ?? 'admin',
+    },
+    link: { label: 'Open Risk Console', url: 'https://app.marketscannerpros.app/admin/risk' },
+  }).catch((e) => console.warn('[killSwitch] notifyAdmin failed:', e));
   return getKillSwitchState(opts.workspaceId);
 }
 

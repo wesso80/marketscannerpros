@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'crypto';
 import { requireAdmin } from '@/lib/adminAuth';
 import { labelAllPending } from '@/lib/edge/outcomeLabeller';
+import { notifyAdmin } from '@/lib/admin/notifyAdmin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -53,6 +54,12 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
+    notifyAdmin({
+      subject: 'edge-label-outcomes failed',
+      body: `Outcome labeller failed: ${message}`,
+      severity: 'error',
+      context: { limit, durationMs: Date.now() - started },
+    }).catch(() => {});
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

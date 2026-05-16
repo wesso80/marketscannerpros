@@ -18,6 +18,7 @@ import { requireAdmin } from '@/lib/adminAuth';
 import { q } from '@/lib/db';
 import { buildEveningPacket } from '@/lib/eveningPacket/builder';
 import { pruneEdgePackets } from '@/lib/admin/edgePacketSnapshots';
+import { notifyAdmin } from '@/lib/admin/notifyAdmin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -143,6 +144,42 @@ export async function POST(req: NextRequest) {
   // days. Best-effort; failure is logged inside pruneEdgePackets and
   // never blocks the evening packet response.
   const edgePacketsPruned = await pruneEdgePackets(30).catch(() => 0);
+
+  // Notify operator with one consolidated email/Discord ping per cron run.
+  const ok = summaries.filter((s) => s.ok).length;
+  const failed = summaries.filter((s) => !s.ok);
+  const totalReconciled = summaries.reduce((a, s) => a + (s.reconciledCount ?? 0), 0);
+  const warningCount = summaries.reduce((a, s) => a + (s.warnings?.length ?? 0), 0);
+  const severity = failed.length > 0 ? "error" : warningCount > 0 ? "warn" : "info";
+  const bodyLines = [
+    `Evening reconciliation for ${dateISO} complete.`,
+    `Workspaces processed: ${summaries.length} (${ok} ok / ${failed.length} failed)`,
+    `Setups + invalidations reconciled: ${totalReconciled}`,
+    `Warnings surfaced: ${warningCount}`,
+    `Edge-packet snapshots pruned (>30d): ${edgePacketsPruned}`,
+    `Duration: ${Date.now() - started}ms`,
+  ];
+  if (failed.length > 0) {
+    bodyLines.push("", "Failed workspaces:");
+    for (const f of failed.slice(0, 10)) {
+      bodyLines.push(`  - ${f.workspaceId}: ${f.error}`);
+    }
+  }
+  await notifyAdmin({
+    subject: `Evening Packet ${dateISO} · ${summaries.length} workspaces`,
+    body: bodyLines.join("\n"),
+    severity,
+    link: { label: "Open Evening Packet", url: "https://app.marketscannerpros.app/admin/evening-packet" },
+    context: {
+      date: dateISO,
+      workspaces: summaries.length,
+      ok,
+      failed: failed.length,
+      reconciled: totalReconciled,
+      warnings: warningCount,
+      edgePacketsPruned,
+    },
+  }).catch((e) => console.error("[evening-packet] notify failed:", e));
 
   return NextResponse.json({
     ok: true,

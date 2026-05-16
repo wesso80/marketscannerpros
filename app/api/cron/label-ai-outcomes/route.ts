@@ -3,6 +3,7 @@ import { q } from '@/lib/db';
 import { timingSafeEqual } from 'crypto';
 import { alertCronFailure } from '@/lib/opsAlerting';
 import { requireAdmin } from '@/lib/adminAuth';
+import { notifyAdmin } from '@/lib/admin/notifyAdmin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -228,6 +229,12 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Labeling failed';
     await alertCronFailure('label-ai-outcomes', message);
+    notifyAdmin({
+      subject: 'label-ai-outcomes failed',
+      body: `AI outcome labeller failed: ${message}`,
+      severity: 'error',
+      context: { source: 'label-ai-outcomes' },
+    }).catch(() => {});
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
