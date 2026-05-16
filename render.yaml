@@ -172,6 +172,129 @@
       - key: CRON_SECRET
         sync: false
 
+  # Diamonds-in-the-rough radar — small/mid-cap, biotech, fintech,
+  # AI infrastructure, energy transition, defensive cashflow, and
+  # secondary crypto. Staggered minutes spread the AV API load.
+  - type: cron
+    name: admin-radar-equity-smallcap-value
+    runtime: node
+    schedule: "8,38 13-20 * * 1-5"
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -fL --retry 2 --retry-delay 10 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/operator/engine/auto-scan" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json" --data '{"watchlist":"us-small-cap-value","timeframe":"15m"}'
+    envVars:
+      - key: WEB_URL
+        value: "https://marketscannerpros.app"
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
+    name: admin-radar-equity-midcap-momentum
+    runtime: node
+    schedule: "12,42 13-20 * * 1-5"
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -fL --retry 2 --retry-delay 10 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/operator/engine/auto-scan" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json" --data '{"watchlist":"us-mid-cap-momentum","timeframe":"15m"}'
+    envVars:
+      - key: WEB_URL
+        value: "https://marketscannerpros.app"
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
+    name: admin-radar-equity-biotech
+    runtime: node
+    schedule: "17,47 13-20 * * 1-5"
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -fL --retry 2 --retry-delay 10 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/operator/engine/auto-scan" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json" --data '{"watchlist":"us-biotech","timeframe":"15m"}'
+    envVars:
+      - key: WEB_URL
+        value: "https://marketscannerpros.app"
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
+    name: admin-radar-equity-fintech
+    runtime: node
+    schedule: "23,53 13-20 * * 1-5"
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -fL --retry 2 --retry-delay 10 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/operator/engine/auto-scan" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json" --data '{"watchlist":"us-fintech-disruptors","timeframe":"15m"}'
+    envVars:
+      - key: WEB_URL
+        value: "https://marketscannerpros.app"
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
+    name: admin-radar-equity-ai-infra
+    runtime: node
+    schedule: "27,57 13-20 * * 1-5"
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -fL --retry 2 --retry-delay 10 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/operator/engine/auto-scan" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json" --data '{"watchlist":"us-ai-infrastructure","timeframe":"15m"}'
+    envVars:
+      - key: WEB_URL
+        value: "https://marketscannerpros.app"
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
+    name: admin-radar-equity-energy-transition
+    runtime: node
+    schedule: "33,3 13-20 * * 1-5"
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -fL --retry 2 --retry-delay 10 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/operator/engine/auto-scan" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json" --data '{"watchlist":"us-energy-transition","timeframe":"15m"}'
+    envVars:
+      - key: WEB_URL
+        value: "https://marketscannerpros.app"
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
+    name: admin-radar-equity-defensive
+    runtime: node
+    schedule: "0 14,18 * * 1-5"  # twice during US session — slower-moving names
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -fL --retry 2 --retry-delay 10 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/operator/engine/auto-scan" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json" --data '{"watchlist":"us-defensive-cashflow","timeframe":"15m"}'
+    envVars:
+      - key: WEB_URL
+        value: "https://marketscannerpros.app"
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
+    name: admin-radar-crypto-altcoins
+    runtime: node
+    schedule: "*/20 * * * *"  # 24/7, every 20 min, offset from crypto-majors
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -fL --retry 2 --retry-delay 10 --retry-all-errors --connect-timeout 10 --max-time 120 -X POST "$WEB_URL/api/operator/engine/auto-scan" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json" --data '{"watchlist":"crypto-altcoins","timeframe":"15m"}'
+    envVars:
+      - key: WEB_URL
+        value: "https://marketscannerpros.app"
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
+    name: admin-radar-crypto-ai
+    runtime: node
+    schedule: "7,37 * * * *"  # 24/7, offset minutes
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -fL --retry 2 --retry-delay 10 --retry-all-errors --connect-timeout 10 --max-time 90 -X POST "$WEB_URL/api/operator/engine/auto-scan" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json" --data '{"watchlist":"crypto-ai-tokens","timeframe":"15m"}'
+    envVars:
+      - key: WEB_URL
+        value: "https://marketscannerpros.app"
+      - key: CRON_SECRET
+        sync: false
+
+  - type: cron
+    name: admin-radar-crypto-gaming
+    runtime: node
+    schedule: "23,53 * * * *"
+    buildCommand: echo "Cron job ready"
+    startCommand: curl -fL --retry 2 --retry-delay 10 --retry-all-errors --connect-timeout 10 --max-time 90 -X POST "$WEB_URL/api/operator/engine/auto-scan" -H "x-cron-secret:$CRON_SECRET" -H "Content-Type:application/json" --data '{"watchlist":"crypto-gaming-meta","timeframe":"15m"}'
+    envVars:
+      - key: WEB_URL
+        value: "https://marketscannerpros.app"
+      - key: CRON_SECRET
+        sync: false
+
   - type: cron
     name: catalyst-study-compute
     runtime: node

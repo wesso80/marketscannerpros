@@ -83,7 +83,7 @@ export async function runDecisionEngine(opts: DecisionEngineOptions): Promise<De
   return { selected, rejected, scannedPackets: rows.length };
 }
 
-function gateRow(row: EdgePacketRow, portfolio: ArcaPortfolio): string[] {
+export function gateRow(row: EdgePacketRow, portfolio: ArcaPortfolio): string[] {
   const reasons: string[] = [];
   const s = portfolio.settings;
 

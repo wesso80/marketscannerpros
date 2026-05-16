@@ -101,6 +101,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { href: "/admin/portfolio-lab/journal", label: "ARCA Journal", code: "PJ" },
         { href: "/admin/portfolio-lab/performance", label: "Performance", code: "PF" },
         { href: "/admin/portfolio-lab/reports", label: "Reports", code: "PR" },
+        { href: "/admin/portfolio-lab/edge-packets", label: "Edge Packets", code: "EI" },
       ],
     },
     {
