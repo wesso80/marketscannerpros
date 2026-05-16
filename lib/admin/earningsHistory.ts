@@ -19,7 +19,7 @@
  */
 
 import { fetchDailyOhlcv, type OhlcBar } from "./priceSeries";
-import { fetchWithTimeout } from "./fetchWithTimeout";
+import { avFetch } from "@/lib/avRateGovernor";
 
 const AV_BASE = "https://www.alphavantage.co/query";
 
@@ -472,16 +472,15 @@ async function avCall(
 ): Promise<{ status: "ok" | "rate-limited" | "error" | "missing"; body: unknown; error?: string }> {
   const url = `${AV_BASE}?function=${encodeURIComponent(fn)}&symbol=${encodeURIComponent(symbol)}&apikey=${encodeURIComponent(apiKey)}`;
   try {
-    const r = await fetchWithTimeout(url, { cache: "no-store" }, 25000);
-    if (!r.ok) return { status: "error", body: null, error: `HTTP ${r.status}` };
-    const j = (await r.json()) as Record<string, unknown>;
+    const j = await avFetch<Record<string, unknown> | null>(url, `${fn} ${symbol}`);
+    if (!j) return { status: "missing", body: null, error: "no data" };
     if (typeof j["Note"] === "string" || typeof j["Information"] === "string") {
       const note = String(j["Note"] || j["Information"]);
       if (/limit|frequency|quota|premium/i.test(note)) {
         return { status: "rate-limited", body: null, error: note.slice(0, 240) };
       }
     }
-    if (!j || Object.keys(j).length === 0) {
+    if (Object.keys(j).length === 0) {
       return { status: "missing", body: null, error: "empty response" };
     }
     return { status: "ok", body: j };

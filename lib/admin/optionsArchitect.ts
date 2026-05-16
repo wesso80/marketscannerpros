@@ -22,7 +22,7 @@
  */
 
 import { fetchDailyOhlcv, type OhlcBar } from "./priceSeries";
-import { fetchWithTimeout } from "./fetchWithTimeout";
+import { avFetch } from "@/lib/avRateGovernor";
 
 const AV_BASE = "https://www.alphavantage.co/query";
 
@@ -728,9 +728,8 @@ async function fetchHistoricalOptions(
 ): Promise<{ status: string; asOfDate: string | null; contracts: OptionContract[]; error?: string }> {
   const url = `${AV_BASE}?function=HISTORICAL_OPTIONS&symbol=${encodeURIComponent(symbol)}&apikey=${encodeURIComponent(apiKey)}`;
   try {
-    const r = await fetchWithTimeout(url, { cache: "no-store" }, 25000);
-    if (!r.ok) return { status: `error-${r.status}`, asOfDate: null, contracts: [] };
-    const j = (await r.json()) as AvOptionsResponse;
+    const j = await avFetch<AvOptionsResponse | null>(url, `HISTORICAL_OPTIONS ${symbol}`);
+    if (!j) return { status: "missing", asOfDate: null, contracts: [], error: "no data" };
     if (j.Note || j.Information) {
       const msg = (j.Note || j.Information) as string;
       if (/limit|frequency|quota|premium/i.test(msg)) {
@@ -783,9 +782,8 @@ function numOr0(v: string | undefined): number {
 async function fetchOverview(symbol: string, apiKey: string): Promise<{ status: string; body: Record<string, string> | null }> {
   const url = `${AV_BASE}?function=OVERVIEW&symbol=${encodeURIComponent(symbol)}&apikey=${encodeURIComponent(apiKey)}`;
   try {
-    const r = await fetchWithTimeout(url, { cache: "no-store" }, 15000);
-    if (!r.ok) return { status: `error-${r.status}`, body: null };
-    const j = (await r.json()) as Record<string, unknown>;
+    const j = await avFetch<Record<string, unknown> | null>(url, `OVERVIEW ${symbol}`);
+    if (!j) return { status: "missing", body: null };
     if (typeof j.Note === "string" || typeof j.Information === "string") {
       const n = String(j.Note || j.Information);
       if (/limit|frequency|quota|premium/i.test(n)) return { status: "rate-limited", body: null };
