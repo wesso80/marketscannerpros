@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Admin Daily Brief — Goldman fundamental + Morgan Stanley technical
+ * Admin Daily Brief — MSP fundamental + MSP technical
  * combined research note. Research-only. No execution.
  */
 
@@ -167,7 +167,7 @@ export default function DailyBriefPage() {
         <div>
           <h1 style={{ margin: 0, fontSize: 22, color: "#F9FAFB" }}>Daily Brief</h1>
           <p style={{ margin: "4px 0 0", fontSize: 13, color: "#9CA3AF" }}>
-            Goldman fundamentals + Morgan Stanley technicals · research-only · no execution.
+            MSP fundamentals + MSP technicals · research-only · no execution.
           </p>
         </div>
         <Link href="/admin" style={navLink}>← Command Home</Link>
@@ -297,11 +297,11 @@ function BriefView({ resp }: { resp: BriefResponse }) {
       {/* Two-column main brief */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         <div style={{ display: "grid", gap: 16 }}>
-          <SectionHeader title="Fundamental view (Goldman-style)" />
+          <SectionHeader title="Fundamental view (MSP)" />
           {d.fundamentalsNote ? <FundamentalsBlock note={d.fundamentalsNote} /> : <SkippedCard label="Fundamentals not generated." />}
         </div>
         <div style={{ display: "grid", gap: 16 }}>
-          <SectionHeader title="Technical view (Morgan Stanley-style)" />
+          <SectionHeader title="Technical view (MSP)" />
           {d.technicalNote ? <TechnicalBlock note={d.technicalNote} /> : <SkippedCard label="Technical not generated." />}
         </div>
       </div>

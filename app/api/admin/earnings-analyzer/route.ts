@@ -1,7 +1,7 @@
 /**
  * POST /api/admin/earnings-analyzer
  *
- * JPMorgan-style earnings preview/recap note. Pulls AV EARNINGS +
+ * MSP earnings preview/recap note. Pulls AV EARNINGS +
  * INCOME_STATEMENT + OVERVIEW + TIME_SERIES_DAILY for one ticker,
  * computes 6Q EPS surprise + price reaction + 8Q reaction stats,
  * then sends the packet to gpt-4.1.

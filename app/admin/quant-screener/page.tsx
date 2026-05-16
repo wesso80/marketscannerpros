@@ -3,7 +3,7 @@
 /**
  * /admin/quant-screener
  *
- * Renaissance-style multi-factor quant screen. Operator-grade top-10
+ * MSP multi-factor quant screen. Operator-grade top-10
  * ranking with factor breakdown + sector distribution + watch list.
  */
 
@@ -183,7 +183,7 @@ export default function QuantScreenerPage() {
     <div style={{ minHeight: "100vh", background: "#0F172A", color: "#E2E8F0", padding: 24 }}>
       <div style={{ maxWidth: 1400, margin: "0 auto" }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 4 }}>
-          Renaissance Quant Screener
+          MSP Quant Screener
         </h1>
         <p style={{ color: "#94A3B8", marginBottom: 24, fontSize: 13 }}>
           Multi-factor screen (value · quality · momentum · growth) over a custom

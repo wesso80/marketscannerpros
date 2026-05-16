@@ -1,7 +1,7 @@
 /**
  * POST /api/admin/sector-rotation
  *
- * Citadel-style sector rotation memo. Pulls SPY + 11 SPDR sector ETFs
+ * MSP sector rotation memo. Pulls SPY + 11 SPDR sector ETFs
  * + 10Y treasury + Fed funds (14 AV calls), computes RS / momentum /
  * breadth locally, then sends the packet to gpt-4.1.
  *

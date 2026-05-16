@@ -3,7 +3,7 @@
 /**
  * /admin/earnings-analyzer
  *
- * JPMorgan-style earnings preview / recap. Operator inputs ticker +
+ * MSP earnings preview / recap. Operator inputs ticker +
  * (optional) earnings date + framing, gets a full decision summary at
  * the top, plus 6Q history, key metrics, segment expectations,
  * management guidance read, options-IV proxy, historical pattern,
@@ -202,7 +202,7 @@ export default function EarningsAnalyzerPage() {
       <div style={{ maxWidth: 1280, margin: "0 auto" }}>
         <header style={{ marginBottom: 24 }}>
           <h1 style={{ fontSize: 28, fontWeight: 700, color: "#F1F5F9", margin: 0 }}>Earnings Analyzer</h1>
-          <p style={{ color: "#94A3B8", marginTop: 4 }}>JPMorgan-style pre/post-earnings note. Decision summary + trade plan at the top, full history + scenario playbook below.</p>
+          <p style={{ color: "#94A3B8", marginTop: 4 }}>MSP pre/post-earnings note. Decision summary + trade plan at the top, full history + scenario playbook below.</p>
         </header>
 
         {/* Input panel */}

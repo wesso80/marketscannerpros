@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Admin Risk Assessment — Bridgewater-style portfolio risk memo.
+ * Admin Risk Assessment — MSP portfolio risk memo.
  * Operator-grade. System never executes orders.
  */
 
@@ -179,7 +179,7 @@ export default function RiskAssessmentPage() {
         <div>
           <h1 style={{ margin: 0, fontSize: 22, color: "#F9FAFB" }}>Risk Assessment</h1>
           <p style={{ margin: "4px 0 0", fontSize: 13, color: "#9CA3AF" }}>
-            Bridgewater-style portfolio risk memo · operator-grade · system does not execute.
+            MSP portfolio risk memo · operator-grade · system does not execute.
           </p>
         </div>
         <Link href="/admin" style={navLink}>← Command Home</Link>

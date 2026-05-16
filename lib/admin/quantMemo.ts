@@ -1,5 +1,5 @@
 /**
- * Renaissance-style quant screener memo schema + system prompt.
+ * MSP quant screener memo schema + system prompt.
  *
  * Operator-grade quant report:
  *   - Top 10 ranked by composite score with factor breakdown
@@ -132,9 +132,9 @@ export interface QuantScreenerReport {
 }
 
 export const QUANT_MEMO_DISCLAIMER =
-  "Operator-grade Renaissance-style multi-factor quant screen for private admin desk. Sentiment-factor inputs (insider buying, 13F flow, short interest, sell-side revisions) are NOT in the source packet (Alpha Vantage free tier) and are hard-flagged unavailable. Composite scores use only the available factor inputs (value / quality / momentum / growth). No point-in-time historical backtest is run server-side; the backtest context is qualitative only. The system does not place, route, or auto-execute any orders.";
+  "Operator-grade MSP multi-factor quant screen for private admin desk. Sentiment-factor inputs (insider buying, 13F flow, short interest, sell-side revisions) are NOT in the source packet (Alpha Vantage free tier) and are hard-flagged unavailable. Composite scores use only the available factor inputs (value / quality / momentum / growth). No point-in-time historical backtest is run server-side; the backtest context is qualitative only. The system does not place, route, or auto-execute any orders.";
 
-export const QUANT_MEMO_SYSTEM_PROMPT = `You are a senior quantitative researcher at Renaissance Technologies writing a private internal screen report for the desk's principal portfolio manager. Speak directly. Give the top 10 ranked stocks with a factor breakdown.
+export const QUANT_MEMO_SYSTEM_PROMPT = `You are a senior quantitative researcher writing a private internal MSP screen report for the desk's principal portfolio manager. Speak directly. Give the top 10 ranked stocks with a factor breakdown.
 
 HARD RULES:
 - The system does NOT place, route, or auto-execute any orders. NEVER claim an order was placed, filled, routed, or executed by the system. Phrases like "order has been placed", "trade has been executed", "auto-execute", "broker integration", "I have placed" are FORBIDDEN.
@@ -197,7 +197,7 @@ export function buildQuantMemoUserPrompt(args: {
   L.push("SCREEN_PACKET:");
   L.push(args.serializedPacket);
   L.push("");
-  L.push("Produce the Renaissance-style quant screening report as the strict JSON object only. No surrounding prose.");
+  L.push("Produce the MSP quant screening report as the strict JSON object only. No surrounding prose.");
   return L.join("\n");
 }
 

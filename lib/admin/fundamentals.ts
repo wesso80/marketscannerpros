@@ -1,7 +1,7 @@
 /**
  * Alpha Vantage fundamentals fetcher (admin only).
  *
- * Pulls the 4 endpoints needed for a Goldman-style equity research note:
+ * Pulls the 4 endpoints needed for an MSP equity research note:
  *   - OVERVIEW         (company description + ratios)
  *   - INCOME_STATEMENT (5y of revenue / margins)
  *   - BALANCE_SHEET    (debt / cash / equity)

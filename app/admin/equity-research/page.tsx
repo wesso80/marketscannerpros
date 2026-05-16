@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Admin Equity Research Brief — Goldman-style daily research note.
+ * Admin Equity Research Brief — MSP daily research note.
  *
  * Boundary: research-only. NO order, NO size, NO execution language.
  * Personal exposure is operator-set and DOES NOT alter the verdict.
@@ -147,7 +147,7 @@ export default function EquityResearchPage() {
             Equity Research Brief
           </h1>
           <p style={{ margin: "4px 0 0", fontSize: 13, color: "#9CA3AF" }}>
-            Goldman-style fundamental analysis · research-only · no execution.
+            MSP fundamental analysis · research-only · no execution.
           </p>
         </div>
         <Link href="/admin" style={navLink}>← Command Home</Link>

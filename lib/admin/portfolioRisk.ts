@@ -1,5 +1,5 @@
 /**
- * Portfolio risk engine — Bridgewater-style metrics computed locally
+ * Portfolio risk engine — MSP risk metrics computed locally
  * from one Alpha Vantage TIME_SERIES_DAILY fetch per holding plus SPY
  * benchmark and per-ticker OVERVIEW.
  *

@@ -1,5 +1,5 @@
 /**
- * Morgan Stanley–style technical analysis note schema + prompt.
+ * MSP technical analysis note schema + prompt.
  *
  * Boundary: this is a private operator desktop. The system itself
  * never places, routes, or auto-executes orders — that is the only
@@ -154,7 +154,7 @@ export function buildTechnicalUserPrompt(args: {
   lines.push("TECHNICAL_PACKET:");
   lines.push(args.technicalSerialized);
   lines.push("");
-  lines.push("Produce the Morgan Stanley-style technical note as the strict JSON object only. No surrounding prose.");
+  lines.push("Produce the MSP technical note as the strict JSON object only. No surrounding prose.");
   return lines.join("\n");
 }
 

@@ -1,5 +1,5 @@
 /**
- * Equity Research Note — Goldman Sachs–style fundamental brief.
+ * Equity Research Note — MSP fundamental brief.
  *
  * Strict, fixed-schema research output for the admin terminal. NEVER
  * an order, NEVER execution language. All AI Output Standards fields
@@ -62,7 +62,7 @@ export interface EquityResearchNote {
   whatConfirms: string[];
   whatInvalidates: string[];
   mainRisk: string;
-  /** Goldman-style research note body, fielded. */
+  /** MSP research note body, fielded. */
   businessModel: string;
   revenueStreams: Array<{ segment: string; share: string; growth: string }>;
   profitability: {
@@ -95,7 +95,7 @@ export interface EquityResearchNote {
 
 /* ───────────── Prompt builders ───────────── */
 
-export const EQUITY_RESEARCH_SYSTEM_PROMPT = `You are a senior buy-side equity research analyst (20 yrs, ex-Goldman) writing a private note for the desk's principal. The reader IS the operator and decision-maker. Speak directly. Give a clear recommended action.
+export const EQUITY_RESEARCH_SYSTEM_PROMPT = `You are a senior buy-side equity research analyst (20 yrs) writing a private MSP research note for the desk's principal. The reader IS the operator and decision-maker. Speak directly. Give a clear recommended action.
 
 HARD RULES:
 - The system does NOT place, route, or auto-execute any orders. NEVER claim an order was placed, filled, routed, or executed by the system. Phrases like "order has been placed", "trade has been executed", "position opened by the system", and "auto-execute" are FORBIDDEN.
@@ -161,7 +161,7 @@ export function buildEquityResearchUserPrompt(args: {
   lines.push(args.fundamentalsSerialized);
   lines.push("");
   lines.push(
-    "Produce the Goldman-style research note as the strict JSON object only. No surrounding prose.",
+    "Produce the MSP research note as the strict JSON object only. No surrounding prose.",
   );
   return lines.join("\n");
 }

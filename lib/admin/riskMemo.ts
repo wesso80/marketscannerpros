@@ -1,5 +1,5 @@
 /**
- * Bridgewater-style risk memo schema + system prompt.
+ * MSP risk memo schema + system prompt.
  *
  * Operator-grade admin output. Speaks directly to the principal,
  * gives concrete hedging recommendations. The system never executes
@@ -46,7 +46,7 @@ export interface HedgingRecommendation {
 
 export interface RiskMemo {
   generatedAt: string;
-  /** Bridgewater-style executive summary (3-5 sentences). */
+  /** MSP executive summary (3-5 sentences). */
   executiveSummary: string;
 
   /** Required AI Output Standards. */
@@ -103,9 +103,9 @@ export interface RiskMemo {
 }
 
 export const RISK_MEMO_DISCLAIMER =
-  "Operator-grade Bridgewater-style risk memo for private desktop. The system does not place, route, or auto-execute orders — all hedging actions remain operator-driven. Levels and structures are analytical references.";
+  "Operator-grade MSP risk memo for private desktop. The system does not place, route, or auto-execute orders — all hedging actions remain operator-driven. Levels and structures are analytical references.";
 
-export const RISK_MEMO_SYSTEM_PROMPT = `You are a senior portfolio risk analyst at Bridgewater Associates with 25 years of experience, trained in Ray Dalio's All-Weather principles. You are writing a private internal risk memo for the desk's principal portfolio manager. Speak directly. Give clear hedging recommendations.
+export const RISK_MEMO_SYSTEM_PROMPT = `You are a senior portfolio risk analyst with 25 years of experience in all-weather portfolio construction. You are writing a private internal MSP risk memo for the desk's principal portfolio manager. Speak directly. Give clear hedging recommendations.
 
 HARD RULES:
 - The system does NOT place, route, or auto-execute any orders. NEVER claim an order was placed, filled, routed, or executed by the system. Phrases like "order has been placed", "trade has been executed", "position opened by the system", "auto-execute" are FORBIDDEN.
@@ -175,7 +175,7 @@ export function buildRiskMemoUserPrompt(args: {
   L.push("RISK_PACKET:");
   L.push(args.serializedRiskPacket);
   L.push("");
-  L.push("Produce the Bridgewater-style risk memo as the strict JSON object only. No surrounding prose.");
+  L.push("Produce the MSP risk memo as the strict JSON object only. No surrounding prose.");
   return L.join("\n");
 }
 

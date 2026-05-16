@@ -1,7 +1,7 @@
 /**
  * POST /api/admin/risk-assessment
  *
- * Bridgewater-style portfolio risk memo. One AV TIME_SERIES_DAILY +
+ * MSP portfolio risk memo. One AV TIME_SERIES_DAILY +
  * OVERVIEW per holding plus SPY benchmark, all metrics computed
  * locally, then sent to gpt-4.1 for the narrative memo.
  *

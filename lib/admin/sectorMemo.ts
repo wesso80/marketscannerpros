@@ -1,5 +1,5 @@
 /**
- * Citadel-style sector rotation memo schema + system prompt.
+ * MSP sector rotation memo schema + system prompt.
  *
  * Operator-grade admin output. Gives explicit overweight / underweight
  * calls + a model allocation in percentage points. The system never
@@ -131,9 +131,9 @@ export interface SectorRotationMemo {
 }
 
 export const SECTOR_MEMO_DISCLAIMER =
-  "Operator-grade Citadel-style sector rotation memo for private desktop. Forward sector earnings growth, sector forward P/E, and institutional fund flows are NOT in the source packet (Alpha Vantage limitation) and are explicitly marked missing. The system does not place, route, or auto-execute any orders — all allocation decisions remain operator-driven. Levels and ETF references are analytical only.";
+  "Operator-grade MSP sector rotation memo for private desktop. Forward sector earnings growth, sector forward P/E, and institutional fund flows are NOT in the source packet (Alpha Vantage limitation) and are explicitly marked missing. The system does not place, route, or auto-execute any orders — all allocation decisions remain operator-driven. Levels and ETF references are analytical only.";
 
-export const SECTOR_MEMO_SYSTEM_PROMPT = `You are a senior macro strategist at Citadel managing sector rotation strategies. You are writing a private internal memo for the desk's principal portfolio manager. Speak directly. Give explicit overweight / underweight calls and a model allocation that sums to 100%.
+export const SECTOR_MEMO_SYSTEM_PROMPT = `You are a senior macro strategist managing sector rotation strategies. You are writing a private internal MSP memo for the desk's principal portfolio manager. Speak directly. Give explicit overweight / underweight calls and a model allocation that sums to 100%.
 
 HARD RULES:
 - The system does NOT place, route, or auto-execute any orders. NEVER claim an order was placed, filled, routed, or executed by the system. Phrases like "order has been placed", "trade has been executed", "auto-execute", "broker integration", "I have placed" are FORBIDDEN.
@@ -205,7 +205,7 @@ export function buildSectorMemoUserPrompt(args: {
   L.push("SECTOR_PACKET:");
   L.push(args.serializedPacket);
   L.push("");
-  L.push("Produce the Citadel-style sector rotation memo as the strict JSON object only. No surrounding prose.");
+  L.push("Produce the MSP sector rotation memo as the strict JSON object only. No surrounding prose.");
   return L.join("\n");
 }
 

@@ -1,7 +1,7 @@
 /**
  * POST /api/admin/quant-screener
  *
- * Renaissance-style multi-factor quant screen. Pulls OVERVIEW + DAILY for
+ * MSP multi-factor quant screen. Pulls OVERVIEW + DAILY for
  * each ticker in the supplied universe (capped at 30) plus SPY benchmark
  * — quota footprint = 2 × n + 1 AV calls. Computes value/quality/momentum/
  * growth factor scores locally, then sends to gpt-4.1 for ranking + memo.

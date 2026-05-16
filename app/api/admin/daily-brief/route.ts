@@ -1,7 +1,7 @@
 /**
  * POST /api/admin/daily-brief
  *
- * Combined Goldman-style fundamental + Morgan Stanley-style technical
+ * Combined MSP fundamental + MSP technical
  * brief for a single ticker. Runs both data fetches in parallel,
  * sends each to gpt-4.1 with strict schemas, returns one envelope.
  *

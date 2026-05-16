@@ -1,5 +1,5 @@
 /**
- * Renaissance-style multi-factor quant screener engine (admin only).
+ * MSP multi-factor quant screener engine (admin only).
  *
  * For each ticker in the universe we pull two Alpha Vantage calls:
  *   - OVERVIEW            (P/E, P/B, EV/EBITDA, ROE, margins, growth, beta)

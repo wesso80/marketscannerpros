@@ -1,5 +1,5 @@
 /**
- * Sector rotation engine — Citadel-style relative strength + macro
+ * Sector rotation engine — MSP relative strength + macro
  * positioning across the 11 GICS sectors via SPDR sector ETFs.
  *
  * For each sector ETF (XLK/XLV/XLF/XLY/XLC/XLI/XLP/XLE/XLU/XLRE/XLB)

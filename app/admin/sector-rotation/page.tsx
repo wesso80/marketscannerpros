@@ -3,7 +3,7 @@
 /**
  * /admin/sector-rotation
  *
- * Citadel-style sector rotation memo. Operator-grade overweight /
+ * MSP sector rotation memo. Operator-grade overweight /
  * underweight calls + a model allocation pie summing to 100%.
  */
 
@@ -156,7 +156,7 @@ export default function SectorRotationPage() {
       <div style={{ maxWidth: 1320, margin: "0 auto" }}>
         <header style={{ marginBottom: 24 }}>
           <h1 style={{ fontSize: 28, fontWeight: 700, color: "#F1F5F9", margin: 0 }}>Sector Rotation</h1>
-          <p style={{ color: "#94A3B8", marginTop: 4 }}>Citadel-style memo across the 11 GICS sectors via SPDR ETFs. Decision summary + ranking table + model allocation.</p>
+          <p style={{ color: "#94A3B8", marginTop: 4 }}>MSP memo across the 11 GICS sectors via SPDR ETFs. Decision summary + ranking table + model allocation.</p>
         </header>
 
         {/* Input panel */}

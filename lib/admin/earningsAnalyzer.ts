@@ -1,5 +1,5 @@
 /**
- * JPMorgan-style earnings analyzer schema + system prompt.
+ * MSP earnings analyzer schema + system prompt.
  *
  * Operator-grade admin output. Speaks directly to the principal with
  * a decision summary and trade plan at the top. The system never
@@ -154,9 +154,9 @@ export interface EarningsAnalyzerNote {
 }
 
 export const EARNINGS_NOTE_DISCLAIMER =
-  "Operator-grade JPMorgan-style earnings analysis for private desktop. Consensus + whisper + options implied move are NOT in the source packet (Alpha Vantage limitation) and are explicitly marked missing. The system does not place, route, or auto-execute any orders — all trade plans remain operator-driven. Levels and structures are analytical references.";
+  "Operator-grade MSP earnings analysis for private desktop. Consensus + whisper + options implied move are NOT in the source packet (Alpha Vantage limitation) and are explicitly marked missing. The system does not place, route, or auto-execute any orders — all trade plans remain operator-driven. Levels and structures are analytical references.";
 
-export const EARNINGS_NOTE_SYSTEM_PROMPT = `You are a senior equity research analyst at JPMorgan Chase with 20 years of experience writing pre- and post-earnings notes for the firm's institutional trading clients managing billions in assets. You speak directly to the principal portfolio manager. You give clear trade plans.
+export const EARNINGS_NOTE_SYSTEM_PROMPT = `You are a senior equity research analyst with 20 years of experience writing pre- and post-earnings notes for institutional trading clients managing billions in assets. You speak directly to the principal portfolio manager. You give clear trade plans. This is an MSP earnings note.
 
 HARD RULES:
 - The system does NOT place, route, or auto-execute any orders. NEVER claim an order was placed, filled, routed, or executed by the system. Phrases like "order has been placed", "trade has been executed", "auto-execute", "broker integration", "I have placed" are FORBIDDEN.
@@ -220,7 +220,7 @@ export function buildEarningsNoteUserPrompt(args: {
   L.push("EARNINGS_PACKET:");
   L.push(args.serializedPacket);
   L.push("");
-  L.push("Produce the JPMorgan-style earnings note as the strict JSON object only. No surrounding prose.");
+  L.push("Produce the MSP earnings note as the strict JSON object only. No surrounding prose.");
   return L.join("\n");
 }
 
