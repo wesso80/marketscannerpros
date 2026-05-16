@@ -110,6 +110,22 @@ export async function POST(req: NextRequest) {
   const snapshot = await buildPortfolioRiskSnapshot(holdings);
   const serialized = serializePortfolioRisk(snapshot);
 
+  // Stage 3: persist a packet snapshot so ARCA can be invoked against the exact state.
+  if (admin.workspaceId) {
+    const { persistMemoPacket } = await import("@/lib/admin/memoPacketPersister");
+    void persistMemoPacket({
+      workspaceId: admin.workspaceId,
+      scope: "portfolio",
+      scopeKey: `portfolio-${holdings.length}-positions`,
+      packetType: "risk",
+      sources: [{
+        source: "alpha-vantage:portfolio-risk-snapshot",
+        ok: snapshot.missingFields.length === 0,
+        missingFields: snapshot.missingFields ?? [],
+      }],
+    });
+  }
+
   // 2. Run AI memo
   const userPrompt = buildRiskMemoUserPrompt({
     serializedRiskPacket: serialized,

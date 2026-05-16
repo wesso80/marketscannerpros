@@ -84,6 +84,22 @@ export async function POST(req: NextRequest) {
   const snapshot = await buildQuantScreenSnapshot(universe);
   const serialized = serializeQuantScreen(snapshot);
 
+  // Stage 3: persist a packet snapshot for ARCA + recall.
+  if (admin.workspaceId) {
+    const { persistMemoPacket } = await import("@/lib/admin/memoPacketPersister");
+    void persistMemoPacket({
+      workspaceId: admin.workspaceId,
+      scope: "multi",
+      scopeKey: `universe-${universe.length}-symbols`,
+      packetType: "quant",
+      sources: [{
+        source: "alpha-vantage:quant-screen-snapshot",
+        ok: snapshot.missingFields.length === 0,
+        missingFields: snapshot.missingFields ?? [],
+      }],
+    });
+  }
+
   // 2. AI memo.
   const userPrompt = buildQuantMemoUserPrompt({
     serializedPacket: serialized,

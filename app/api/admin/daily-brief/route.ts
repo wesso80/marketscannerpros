@@ -98,6 +98,21 @@ export async function POST(req: NextRequest) {
     body.skipTechnical ? null : fetchDailyOhlcv(ticker),
   ]);
 
+  // Stage 3: persist a daily-brief packet snapshot for ARCA + recall.
+  if (admin.workspaceId) {
+    const { persistMemoPacket } = await import("@/lib/admin/memoPacketPersister");
+    void persistMemoPacket({
+      workspaceId: admin.workspaceId,
+      scope: "symbol",
+      scopeKey: ticker,
+      packetType: "daily-brief",
+      sources: [
+        { source: "alpha-vantage:fundamentals-bundle", ok: !!bundle && bundle.missingFields.length < 4 },
+        { source: "alpha-vantage:daily-ohlcv", ok: !!ohlcv && ohlcv.status === "ok" },
+      ],
+    });
+  }
+
   // 2. Build snapshots + prompts
   const fundamentalsTruth = bundle ? deriveBundleTruth(bundle) : null;
   const techSnapshot = ohlcv

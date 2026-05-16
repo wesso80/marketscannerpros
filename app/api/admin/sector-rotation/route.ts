@@ -70,6 +70,22 @@ export async function POST(req: NextRequest) {
   const snapshot = await buildSectorRotationSnapshot();
   const serialized = serializeSectorRotation(snapshot);
 
+  // Stage 3: persist a packet snapshot for ARCA + recall.
+  if (admin.workspaceId) {
+    const { persistMemoPacket } = await import("@/lib/admin/memoPacketPersister");
+    void persistMemoPacket({
+      workspaceId: admin.workspaceId,
+      scope: "sector",
+      scopeKey: "all-sectors",
+      packetType: "sector",
+      sources: [{
+        source: "alpha-vantage:sector-rotation-snapshot",
+        ok: snapshot.missingFields.length === 0,
+        missingFields: snapshot.missingFields ?? [],
+      }],
+    });
+  }
+
   // 2. Run AI memo.
   const userPrompt = buildSectorMemoUserPrompt({
     serializedPacket: serialized,

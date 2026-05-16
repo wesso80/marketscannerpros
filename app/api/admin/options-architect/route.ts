@@ -100,6 +100,22 @@ export async function POST(req: NextRequest) {
   const snapshot = await buildOptionsSnapshot(ticker, directionalView, timeHorizonDays);
   const serialized = serializeOptionsSnapshot(snapshot);
 
+  // Stage 3: persist a packet snapshot for ARCA + recall.
+  if (admin.workspaceId) {
+    const { persistMemoPacket } = await import("@/lib/admin/memoPacketPersister");
+    void persistMemoPacket({
+      workspaceId: admin.workspaceId,
+      scope: "symbol",
+      scopeKey: ticker,
+      packetType: "options",
+      sources: [{
+        source: "alpha-vantage:historical_options+overview+daily",
+        ok: snapshot.status === "ok",
+        missingFields: snapshot.missingFields ?? [],
+      }],
+    });
+  }
+
   // If snapshot itself failed, return early with diagnostic envelope.
   if (snapshot.status === "error" || snapshot.candidates.length === 0) {
     return NextResponse.json(

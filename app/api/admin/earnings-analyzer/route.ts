@@ -82,6 +82,22 @@ export async function POST(req: NextRequest) {
   const snapshot = await buildEarningsHistorySnapshot(ticker);
   const serialized = serializeEarningsHistory(snapshot);
 
+  // Stage 3: persist a packet snapshot for ARCA grounding + recall.
+  if (admin.workspaceId) {
+    const { persistMemoPacket } = await import("@/lib/admin/memoPacketPersister");
+    void persistMemoPacket({
+      workspaceId: admin.workspaceId,
+      scope: "symbol",
+      scopeKey: ticker,
+      packetType: "earnings",
+      sources: [{
+        source: "alpha-vantage:earnings-history-snapshot",
+        ok: snapshot.status === "ok",
+        missingFields: snapshot.missingFields ?? [],
+      }],
+    });
+  }
+
   // 2. Run AI note.
   const userPrompt = buildEarningsNoteUserPrompt({
     serializedPacket: serialized,
