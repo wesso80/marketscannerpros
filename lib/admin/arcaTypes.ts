@@ -128,7 +128,7 @@ export interface ArcaAdminContext {
 export interface ArcaAdminResearchOutput {
   mode: ArcaAdminMode;
   symbol: string;
-  /** 1–2 sentence research-grade headline. Never an instruction. */
+  /** 1–2 sentence operator-grade headline. Direct desk language allowed. Never claim execution. */
   headline: string;
   /** Bullet points of the reasoning the operator can audit. */
   reasoning: string[];
@@ -136,8 +136,14 @@ export interface ArcaAdminResearchOutput {
   evidence: string[];
   /** Risks / counter-thesis the operator should weigh. */
   risks: string[];
-  /** Always present, always exactly this string. */
-  classification: "ADMIN_RESEARCH_COPILOT_NOT_BROKER_EXECUTION";
+  /** Field paths or keys from the bound context that grounded each claim. */
+  groundingCitations?: string[];
+  /** 'No stored data supports that.'-style notices for any dropped/ungrounded claim, else empty string. */
+  unsupportedClaimNotice?: string;
+  /** Either of two acceptable classifications (legacy + admin-desk). */
+  classification:
+    | "ADMIN_RESEARCH_COPILOT_NOT_BROKER_EXECUTION"
+    | "ADMIN_DESK_COPILOT_NOT_BROKER_EXECUTION";
 }
 
 /* ───────────── Output validation ───────────── */
@@ -150,15 +156,23 @@ export interface ArcaValidationResult {
 
 const FORBIDDEN_OUTPUT_PHRASES = [
   // Substring match, case-insensitive. Any of these in any field => reject.
-  "buy now",
-  "sell now",
+  // These all imply broker execution — still hard-banned even in admin desk mode.
   "place order",
-  "execute trade",
-  "execute now",
+  "placed order",
   "send to broker",
-  "position size",
-  "deploy capital",
+  "route to broker",
+  "submit order",
+  "submitted order",
+  "executed order",
+  "order has been placed",
+  "order has been routed",
   "auto trade",
+  "auto-trade",
+  "auto execute",
+  "auto-execute",
+  "trade has been executed",
+  "position has been opened",
+  "position has been closed",
 ];
 
 function isStringArray(v: unknown): v is string[] {
@@ -201,8 +215,11 @@ export function validateArcaOutputWithEvidence(
   if (!isStringArray(o.reasoning)) errors.push("reasoning must be string[]");
   if (!isStringArray(o.evidence)) errors.push("evidence must be string[]");
   if (!isStringArray(o.risks)) errors.push("risks must be string[]");
-  if (o.classification !== "ADMIN_RESEARCH_COPILOT_NOT_BROKER_EXECUTION") {
-    errors.push("classification must be ADMIN_RESEARCH_COPILOT_NOT_BROKER_EXECUTION");
+  if (
+    o.classification !== "ADMIN_RESEARCH_COPILOT_NOT_BROKER_EXECUTION" &&
+    o.classification !== "ADMIN_DESK_COPILOT_NOT_BROKER_EXECUTION"
+  ) {
+    errors.push("classification must be ADMIN_RESEARCH_COPILOT_NOT_BROKER_EXECUTION or ADMIN_DESK_COPILOT_NOT_BROKER_EXECUTION");
   }
 
   // Forbidden-phrase scan across all text fields.
