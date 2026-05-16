@@ -348,16 +348,8 @@ const DEFAULT_SYMBOLS_BY_MARKET: Record<string, string[]> = {
 const DEFAULT_SCAN_LIMIT = 50;
 const MAX_SCAN_LIMIT = 80;
 const STABLE_CRYPTO_SYMBOLS = new Set(["USDT", "USDC", "DAI", "FDUSD", "TUSD", "BUSD"]);
-const AV_CRYPTO_SYMBOLS = new Set([
-  "BTC", "ETH", "BNB", "SOL", "XRP", "ADA", "DOGE", "AVAX", "TRX", "LINK",
-  "DOT", "MATIC", "SHIB", "LTC", "BCH", "UNI", "XLM", "NEAR", "ATOM", "XMR",
-  "ETC", "APT", "ARB", "OP", "FIL", "VET", "HBAR", "INJ", "AAVE", "GRT",
-  "ALGO", "FTM", "SAND", "MANA", "AXS", "THETA", "XTZ", "EOS", "FLOW", "CHZ",
-  "CRV", "LDO", "MKR", "SNX", "COMP", "SUSHI", "YFI", "BAL", "ENS", "LRC",
-  "IMX", "FET", "RNDR", "OCEAN", "AGIX", "TAO", "WLD", "SEI", "SUI", "TIA",
-  "PYTH", "JUP", "BONK", "PEPE", "FLOKI", "GALA", "ENJ", "GMT", "RAY", "ORCA",
-  "JTO", "ZRO", "STRK", "ZK", "KAS",
-]);
+// AV_CRYPTO_SYMBOLS removed — crypto data now flows through CoinGecko (see
+// lib/operator/market-data.ts). CG supports thousands of symbols; no whitelist needed.
 
 const DEFAULT_CONTEXT: ScanContext = {
   portfolioState: {
@@ -1609,7 +1601,11 @@ function normalizeUniverseSymbol(raw: string, market: Market) {
     .replace(/[^A-Z0-9.]/g, "");
   if (!symbol) return "";
   if (market === "CRYPTO" && STABLE_CRYPTO_SYMBOLS.has(symbol)) return "";
-  if (market === "CRYPTO" && !AV_CRYPTO_SYMBOLS.has(symbol)) return "";
+  // Note: We previously gated CRYPTO symbols by AV_CRYPTO_SYMBOLS because the
+  // upstream data provider was Alpha Vantage. Crypto data now flows through
+  // CoinGecko (with AV as a fallback only) — see lib/operator/market-data.ts.
+  // CG supports thousands of symbols, so the whitelist would only cause false
+  // negatives. The CG resolver will reject anything it cannot map.
   return symbol;
 }
 

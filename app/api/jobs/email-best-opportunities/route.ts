@@ -92,8 +92,8 @@ export async function POST(req: NextRequest) {
     );
     const bestCrypto = pickTopRadar(cryptoScan.radar);
     const cryptoReasoning = bestCrypto
-      ? radarToReasoning(bestCrypto, 'CRYPTO', 'Alpha Vantage CRYPTO_INTRADAY/Digital Currency Daily')
-      : pipelineToObservation(cryptoScan.pipelines, 'CRYPTO', 'Alpha Vantage CRYPTO_INTRADAY/Digital Currency Daily');
+      ? radarToReasoning(bestCrypto, 'CRYPTO', 'CoinGecko OHLC + market_chart (Alpha Vantage fallback)')
+      : pipelineToObservation(cryptoScan.pipelines, 'CRYPTO', 'CoinGecko OHLC + market_chart (Alpha Vantage fallback)');
 
     /* ── 2. Best equity from us-mega-cap ∪ us-momentum ───────── */
     const eqMega = DEFAULT_WATCHLISTS['us-mega-cap'];
