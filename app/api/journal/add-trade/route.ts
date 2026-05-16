@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { q } from '@/lib/db';
 import { getSessionFromCookie } from '@/lib/auth';
+import { getKillSwitchState } from '@/lib/universe/personalUniverse';
 
 /**
  * POST /api/journal/add-trade
  * Creates a single journal entry (manual trade).
+ *
+ * Kill-switch gate: when the workspace kill switch is ON, the operator
+ * MUST acknowledge via body.killSwitchAck === true (with optional
+ * killSwitchAckReason). Without the explicit ack we refuse the write
+ * with HTTP 409 + structured error so the UI can prompt for confirmation.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -15,6 +21,25 @@ export async function POST(req: NextRequest) {
 
     const workspaceId = session.workspaceId;
     const body = await req.json();
+
+    // Kill-switch acknowledgement gate
+    try {
+      const ks = await getKillSwitchState(workspaceId);
+      if (ks.enabled && body.killSwitchAck !== true) {
+        return NextResponse.json({
+          error: 'kill_switch_active',
+          requiresAck: true,
+          killSwitch: {
+            enabled: true,
+            reason: ks.reason ?? null,
+            setAt: ks.setAt ?? null,
+          },
+          message: 'Kill switch is ON. Acknowledge with { killSwitchAck: true, killSwitchAckReason: "..." } to override.',
+        }, { status: 409 });
+      }
+    } catch {
+      // Best-effort: if kill-switch lookup fails we do not block writes.
+    }
 
     // Validate required fields
     const symbol = String(body.symbol || '').toUpperCase().trim();
