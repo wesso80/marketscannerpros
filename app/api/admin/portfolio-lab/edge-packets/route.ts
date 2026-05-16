@@ -158,7 +158,7 @@ export async function GET(req: NextRequest) {
       minEdgePacketRankScore: portfolio.settings.minEdgePacketRankScore,
       minEvidenceQualityScore: portfolio.settings.minEvidenceQualityScore,
       maxTrapRiskScore: 70,
-      allowedThesis: ["PRIME", "TRIGGERED", "CONFIRMED", "DEVELOPING"],
+      allowedThesis: ["alive", "weakening", "crowded"],
     },
   };
 

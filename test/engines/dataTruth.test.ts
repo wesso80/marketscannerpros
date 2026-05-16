@@ -40,9 +40,9 @@ describe("scaledFreshnessThresholds", () => {
   });
 
   it("scales stale threshold up for long timeframes", () => {
-    const t = scaledFreshnessThresholds("1h"); // 3600s * 0.5 = 1800
-    expect(t.staleSec).toBe(1800);
-    expect(t.liveSec).toBe(900); // 3600 * 0.25
+    const t = scaledFreshnessThresholds("1h"); // 3600s * 2.0 = 7200
+    expect(t.staleSec).toBe(7200);
+    expect(t.liveSec).toBe(1800); // 3600 * 0.5
   });
 
   it("never falls below the minimum live/stale bounds", () => {

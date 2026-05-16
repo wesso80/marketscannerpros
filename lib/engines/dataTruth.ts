@@ -90,7 +90,13 @@ export function scaledFreshnessThresholds(
   if (!tfSec) {
     return { liveSec: DATA_FRESH_LIVE_SEC, staleSec: DATA_FRESH_STALE_SEC };
   }
-  const liveSec = Math.max(DATA_FRESH_LIVE_SEC, Math.round(tfSec * 0.25));
+  // Bar-cadence-aware thresholds. For an X-second timeframe, the most
+  // recently *closed* bar is naturally up to X seconds old before the next
+  // one closes, so live/stale floors must be expressed relative to that
+  // cadence. Live = up to half a bar; Stale = older than two full bars.
+  // The hard minima (60s live, 300s stale) still apply for sub-minute
+  // timeframes.
+  const liveSec = Math.max(DATA_FRESH_LIVE_SEC, Math.round(tfSec * 0.5));
   const staleSec = Math.max(DATA_FRESH_STALE_SEC, Math.round(tfSec * DATA_STALE_TIMEFRAME_MULTIPLIER));
   return { liveSec, staleSec };
 }

@@ -105,7 +105,7 @@ function edgeRow(over: Partial<EdgePacketRow> = {}): EdgePacketRow {
     opportunityRank: 1,
     opportunityRankScore: 80,
     adminState: "PRIME",
-    thesisStatus: "PRIME",
+    thesisStatus: "alive",
     setupType: "TREND_CONTINUATION",
     bias: "LONG",
     trustAdjustedScore: 75,

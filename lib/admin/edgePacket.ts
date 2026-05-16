@@ -235,7 +235,7 @@ export function projectEdgePacket(
     opportunityRankScore,
     adminState: mapResearchLifecycleToAdminState(
       packet.internalResearchScore.lifecycle as ResearchLifecycle,
-      { score: opportunityRankScore, doNothing: !!doNothing },
+      { score: opportunityRankScore, doNothing: !!doNothing, doNothingSeverity: doNothing?.severity },
     ),
     thesisStatus: deriveThesisStatus(packet, !!doNothing),
     setupType: packet.setup?.type ?? "NO_SETUP",

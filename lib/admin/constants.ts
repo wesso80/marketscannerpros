@@ -57,7 +57,7 @@ export const DATA_FRESH_LIVE_SEC = 60;
 export const DATA_FRESH_STALE_SEC = 300;
 
 /** Multiplier applied to timeframe-in-seconds to derive a scaled stale cutoff. */
-export const DATA_STALE_TIMEFRAME_MULTIPLIER = 0.5;
+export const DATA_STALE_TIMEFRAME_MULTIPLIER = 2.0;
 
 /* ───────────── Risk governor (buildMorningRiskGovernor) ───────────── */
 

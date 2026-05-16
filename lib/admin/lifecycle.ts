@@ -35,6 +35,13 @@ export interface MapLifecycleContext {
   score: number;
   /** True if a DoNothingVerdict is active for this packet. */
   doNothing: boolean;
+  /**
+   * Severity of the active DoNothingVerdict (1..3). Only severity-3
+   * (hard-no) demotes to IGNORE — a severity-1 caution (e.g.
+   * INSIDE_VALUE on a quiet tape) should keep the symbol visible on
+   * the watchlist tier so the operator can still see it forming.
+   */
+  doNothingSeverity?: 1 | 2 | 3;
 }
 
 export function mapResearchLifecycleToAdminState(
@@ -48,12 +55,18 @@ export function mapResearchLifecycleToAdminState(
   if (lc === "NO_EDGE")     return "IGNORE";
   if (lc === "DATA_DEGRADED") return "IGNORE";
 
-  // DoNothing demotes anything not yet TRIGGERED to IGNORE.
-  if (ctx.doNothing && lc !== "TRIGGERED") return "IGNORE";
+  // Hard-no DoNothing demotes anything not yet TRIGGERED to IGNORE.
+  // Severity defaults to 3 when missing (back-compat with callers that
+  // don't yet pass it) so existing strictness is preserved.
+  const severity = ctx.doNothingSeverity ?? 3;
+  if (ctx.doNothing && severity >= 3 && lc !== "TRIGGERED") return "IGNORE";
 
   if (lc === "TRIGGERED") return "TRIGGERED";
 
-  // FRESH / DEVELOPING / READY → score-tiered
+  // FRESH / DEVELOPING / READY → score-tiered. A soft DoNothing (sev 1–2)
+  // caps the published state at WATCH so the symbol stays observable
+  // without being promoted into the actionable tier.
+  if (ctx.doNothing && severity < 3) return "WATCH";
   if (ctx.score >= 80) return "PRIME";
   if (ctx.score >= 65) return "BUILDING";
   if (ctx.score >= 50) return "WATCH";

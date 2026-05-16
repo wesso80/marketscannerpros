@@ -42,13 +42,24 @@ describe("mapResearchLifecycleToAdminState", () => {
     ).toBe("IGNORE");
   });
 
-  it("DoNothing demotes a high-scoring FRESH packet to IGNORE", () => {
+  it("severity-3 DoNothing demotes a high-scoring FRESH packet to IGNORE", () => {
     expect(
       mapResearchLifecycleToAdminState("FRESH", {
         score: 85,
         doNothing: true,
+        doNothingSeverity: 3,
       }),
     ).toBe("IGNORE");
+  });
+
+  it("severity-1 DoNothing caps a high-scoring FRESH packet at WATCH (not IGNORE)", () => {
+    expect(
+      mapResearchLifecycleToAdminState("FRESH", {
+        score: 85,
+        doNothing: true,
+        doNothingSeverity: 1,
+      }),
+    ).toBe("WATCH");
   });
 
   it("score >= 80 with no DoNothing → PRIME", () => {

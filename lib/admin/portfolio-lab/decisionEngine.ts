@@ -42,7 +42,16 @@ export interface DecisionEngineOptions {
   sinceMinutes?: number;
 }
 
-const ALLOWED_THESIS = new Set(["PRIME", "TRIGGERED", "CONFIRMED", "DEVELOPING"]);
+// `thesisStatus` is the lowercase enum emitted by `deriveThesisStatus` in
+// `lib/admin/edgePacket.ts`. Valid pass-through values are the ones that
+// represent a thesis still worth scoring; everything else (invalidated,
+// reversed, stale, paid, no_edge) is a hard reject because the underlying
+// thesis is broken or already-played.
+//
+// Prior to 2026-05-16 this set held lifecycle-state names
+// ("PRIME"/"TRIGGERED"/"CONFIRMED"/"DEVELOPING") which were the wrong
+// vocabulary entirely — the result was a 100% rejection rate on the gate.
+const ALLOWED_THESIS = new Set(["alive", "weakening", "crowded"]);
 const ALLOWED_BIAS_LONG = new Set(["BULL", "LONG", "STRONG_BULL"]);
 const ALLOWED_BIAS_SHORT = new Set(["BEAR", "SHORT", "STRONG_BEAR"]);
 
