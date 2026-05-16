@@ -529,6 +529,10 @@
         value: "https://marketscannerpros.app"
       - key: CRON_SECRET
         sync: false
+      # notifyAdmin() inside evening-packet reads this; if unset, falls back
+      # to wesso@marketscannerpros.app (lib/admin/notifyAdmin.ts).
+      - key: ADMIN_NOTIFY_EMAIL
+        sync: false
 
   - type: cron
     name: arca-cycle
