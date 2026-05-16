@@ -48,6 +48,7 @@ export default function AdminOpportunityBoard() {
   const [showSuppressed, setShowSuppressed] = useState<boolean>(true);
   const [rows, setRows] = useState<AdminOpportunityRow[]>([]);
   const [edgeBySymbol, setEdgeBySymbol] = useState<Record<string, AdminEdgePacket>>({});
+  const [changesBySymbol, setChangesBySymbol] = useState<Record<string, Array<{ eventType: string; severity: "critical" | "notable" | "info"; magnitude: number }>>>({});
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedRow, setSelectedRow] = useState<AdminOpportunityRow | null>(null);
@@ -71,6 +72,7 @@ export default function AdminOpportunityBoard() {
         map[p.symbol] = p;
       }
       setEdgeBySymbol(map);
+      setChangesBySymbol(json.changesBySymbol ?? {});
       setTimestamp(json.timestamp ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load opportunities");
@@ -197,7 +199,7 @@ export default function AdminOpportunityBoard() {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
           <thead style={{ background: "rgba(17,24,39,0.8)" }}>
             <tr>
-              {["#", "Symbol", "Bias", "Setup", "Score", "Type", "Lifecycle", "Entry", "Stop", "TP1", "TP2", "TP3", "R:R", "Data Trust", ""].map((h) => (
+              {["#", "Symbol", "Bias", "Setup", "Score", "Type", "Lifecycle", "Entry", "Stop", "TP1", "TP2", "TP3", "R:R", "Changes", "Data Trust", ""].map((h) => (
                 <th key={h} style={thStyle}>{h}</th>
               ))}
             </tr>
@@ -226,7 +228,6 @@ export default function AdminOpportunityBoard() {
                     {row.score.lifecycle}
                   </span>
                 </td>
-                <td style={{ ...tdStyle, color: "#9CA3AF" }}>{row.score.dominantAxis ?? "—"}</td>
                 {(() => {
                   const ep = edgeBySymbol[row.symbol];
                   const fmt = (n: number | null | undefined) =>
@@ -247,6 +248,39 @@ export default function AdminOpportunityBoard() {
                     </>
                   );
                 })()}
+                <td style={tdStyle}>
+                  {(() => {
+                    const evs = changesBySymbol[row.symbol] ?? [];
+                    if (evs.length === 0) return <span style={{ color: "#6B7280", fontSize: "0.7rem" }}>—</span>;
+                    const sevColor = (s: string) =>
+                      s === "critical" ? "#EF4444" : s === "notable" ? "#FBBF24" : "#6B7280";
+                    return (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 3, maxWidth: 180 }}>
+                        {evs.slice(0, 4).map((ev, i) => (
+                          <span
+                            key={i}
+                            title={`${ev.eventType} (mag ${ev.magnitude})`}
+                            style={{
+                              padding: "1px 5px",
+                              borderRadius: 3,
+                              fontSize: "0.6rem",
+                              fontWeight: 700,
+                              background: "rgba(17,24,39,0.6)",
+                              border: `1px solid ${sevColor(ev.severity)}`,
+                              color: sevColor(ev.severity),
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {ev.eventType.replace(/_/g, " ")}
+                          </span>
+                        ))}
+                        {evs.length > 4 && (
+                          <span style={{ color: "#9CA3AF", fontSize: "0.6rem" }}>+{evs.length - 4}</span>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </td>
                 <td style={tdStyle}><DataTruthBadge truth={row.dataTruth} /></td>
                 <td style={tdStyle}>
                   <div style={{ display: "flex", gap: 6 }}>
@@ -275,7 +309,7 @@ export default function AdminOpportunityBoard() {
             ))}
             {filtered.length === 0 && !loading && (
               <tr>
-                <td colSpan={15} style={{ ...tdStyle, textAlign: "center", color: "#6B7280", padding: "2rem" }}>
+                <td colSpan={16} style={{ ...tdStyle, textAlign: "center", color: "#6B7280", padding: "2rem" }}>
                   {rows.length === 0
                     ? "No opportunities loaded. Hit Refresh to run a scan."
                     : `All ${rows.length} rows hidden (minScore=${minScore}, minTrust=${minTrust}) — hit Reset Filters.`}

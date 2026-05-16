@@ -23,7 +23,24 @@ export type ChangeTapeEventType =
   | "SCORE_JUMP"
   | "TIME_CLUSTER"
   | "VOLATILITY_REGIME"
-  | "TRAP_FIRED";
+  | "TRAP_FIRED"
+  | "FRESHNESS_DOWNGRADE";
+
+/** Three-tier severity for UI grouping. Derived from event type + magnitude. */
+export type ChangeTapeSeverity = "critical" | "notable" | "info";
+
+/**
+ * Map event type + magnitude to a severity bucket.
+ * INVALIDATION and TRAP_FIRED are always critical (decision-altering).
+ * Magnitude >= 75 promotes to critical; 40-74 is notable; below is info.
+ */
+export function severityOf(eventType: ChangeTapeEventType, magnitude: number): ChangeTapeSeverity {
+  if (eventType === "INVALIDATION" || eventType === "TRAP_FIRED") return "critical";
+  if (eventType === "FRESHNESS_DOWNGRADE" && magnitude >= 30) return "critical";
+  if (magnitude >= 75) return "critical";
+  if (magnitude >= 40) return "notable";
+  return "info";
+}
 
 export interface ChangeTapeEvent {
   id?: number;
@@ -149,7 +166,21 @@ export async function detectChangeTapeEvents(input: {
     });
   }
 
-  // 7. GAMMA_FLIP / UOA_SPIKE — only if optionsIntelligence has the
+  // 7. FRESHNESS_DOWNGRADE — trustScore dropped meaningfully between scans.
+  // Per data-integrity rule: stale data must be visibly degraded, not silently used.
+  const prevTrust = num(prev.dataTruth?.trustScore ?? prev.trustAdjustedScore);
+  const currTrust = num(packet.dataTruth?.trustScore ?? packet.trustAdjustedScore);
+  if (prevTrust > 0 && currTrust > 0 && prevTrust - currTrust >= 15) {
+    events.push({
+      ...base,
+      eventType: "FRESHNESS_DOWNGRADE",
+      prevValue: prevTrust,
+      nextValue: currTrust,
+      magnitude: clamp(prevTrust - currTrust, 0, 100),
+    });
+  }
+
+  // 8. GAMMA_FLIP / UOA_SPIKE — only if optionsIntelligence has the
   // relevant fields. Per options-data-rules, missing data is recorded
   // as a NULL prev/next, never substituted.
   const prevOpts = prev.optionsIntelligence as { gammaFlip?: number; uoaScore?: number } | undefined;

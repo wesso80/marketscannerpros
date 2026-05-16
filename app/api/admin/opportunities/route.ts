@@ -17,7 +17,7 @@ import type { AdminOpportunityRow } from "@/lib/admin/adminTypes";
 import { getAdminResearchPacketsForSymbols } from "@/lib/admin/getAdminResearchPacket";
 import { projectEdgePacket, type AdminEdgePacket } from "@/lib/admin/edgePacket";
 import { syncQueueFromPacket } from "@/lib/admin/queueStore";
-import { detectChangeTapeEvents, persistChangeTapeEvents } from "@/lib/admin/changeTape";
+import { detectChangeTapeEvents, persistChangeTapeEvents, severityOf, type ChangeTapeEvent, type ChangeTapeSeverity } from "@/lib/admin/changeTape";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -61,14 +61,26 @@ export async function GET(req: NextRequest) {
     edgePackets.forEach((p, i) => { p.opportunityRank = i + 1; });
 
     // Side-effects: sync queue state + emit change-tape events. Best-effort.
+    const changesBySymbol: Record<string, Array<{ eventType: string; severity: ChangeTapeSeverity; magnitude: number }>> = {};
     if (session?.workspaceId) {
       const ws = session.workspaceId;
       await Promise.allSettled(edgePackets.map((p) => syncQueueFromPacket({ workspaceId: ws, packet: p })));
-      const allEvents = await Promise.all(
-        packets.map((p) => detectChangeTapeEvents({ workspaceId: ws, packet: p }).catch(() => [])),
+      const allEvents: ChangeTapeEvent[][] = await Promise.all(
+        packets.map((p) => detectChangeTapeEvents({ workspaceId: ws, packet: p }).catch(() => [] as ChangeTapeEvent[])),
       );
       const flat = allEvents.flat();
       if (flat.length) await persistChangeTapeEvents(flat).catch(() => 0);
+      // Group events by symbol with severity for board surface.
+      for (const ev of flat) {
+        const sev = severityOf(ev.eventType, ev.magnitude);
+        const list = changesBySymbol[ev.symbol] ?? (changesBySymbol[ev.symbol] = []);
+        list.push({ eventType: ev.eventType, severity: sev, magnitude: ev.magnitude });
+      }
+      // Sort each symbol's changes critical-first.
+      const sevRank: Record<ChangeTapeSeverity, number> = { critical: 0, notable: 1, info: 2 };
+      for (const sym of Object.keys(changesBySymbol)) {
+        changesBySymbol[sym].sort((a, b) => sevRank[a.severity] - sevRank[b.severity] || b.magnitude - a.magnitude);
+      }
     }
 
     // Legacy AdminOpportunityRow[] retained for components that still consume it.
@@ -97,6 +109,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       rows,
       edgePackets,
+      changesBySymbol,
       errors: [],
       timestamp: new Date().toISOString(),
       meta: {
