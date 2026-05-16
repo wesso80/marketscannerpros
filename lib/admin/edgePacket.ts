@@ -109,6 +109,8 @@ export interface AdminEdgePacket {
   whyNow: string;
   whatChanged: string;
   bearCase: string;
+  /** Concrete data points that argue AGAINST the thesis (separate from invalidation triggers). */
+  contradictionEvidence: string[];
   doNotTradeReasons: string[];        // empty if none
 
   /* maps + structure */
@@ -225,9 +227,7 @@ export function projectEdgePacket(
 
     ...buildDecisionLevels(packet),
 
-    whyNow: packet.primaryReason ?? "",
-    whatChanged: packet.whatChanged ?? "",
-    bearCase: packet.mainRisk ?? "",
+    ...buildNarrative(packet),
     doNotTradeReasons: doNothing ? [doNothing.code, ...doNothing.detail] : [],
 
     liquidityTargets: buildLiquidityMap(packet),
@@ -409,4 +409,56 @@ function computeRankScore(s: {
     0.20 * s.trapRiskScore;
   // Evidence cap: degraded data can never out-rank live.
   return clamp01to100((raw * s.evidenceQualityScore) / 100);
+}
+
+/**
+ * Build the narrative quartet (whyNow, whatChanged, bearCase, contradictionEvidence)
+ * by stitching together fields already present on the AdminResearchPacket.
+ * Never invents — only re-projects existing evidence.
+ */
+function buildNarrative(packet: AdminResearchPacket): {
+  whyNow: string;
+  whatChanged: string;
+  bearCase: string;
+  contradictionEvidence: string[];
+} {
+  const axes = (packet.internalResearchScore?.axes ?? {}) as unknown as Record<string, number>;
+  const dominant = packet.internalResearchScore?.dominantAxis;
+  const topAxes = Object.entries(axes)
+    .filter(([, v]) => typeof v === "number" && Number.isFinite(v))
+    .sort((a, b) => (b[1] as number) - (a[1] as number))
+    .slice(0, 3)
+    .map(([k, v]) => `${k}=${Math.round(v as number)}`);
+
+  const whyParts: string[] = [];
+  if (packet.primaryReason) whyParts.push(packet.primaryReason);
+  if (dominant && !whyParts.join(" ").toLowerCase().includes(String(dominant).toLowerCase())) {
+    whyParts.push(`Dominant axis: ${dominant}`);
+  }
+  if (topAxes.length) whyParts.push(`Top axes: ${topAxes.join(", ")}`);
+  const whyNow = whyParts.join(" | ") || "No dominant evidence yet.";
+
+  let whatChanged = packet.whatChanged ?? "";
+  if (!whatChanged || /previous packet unavailable/i.test(whatChanged)) {
+    whatChanged = "No prior packet to diff against - first scan in window.";
+  }
+
+  const bearParts: string[] = [];
+  if (packet.mainRisk) bearParts.push(packet.mainRisk);
+  const trapReason = packet.trapDetection?.reasons?.[0];
+  if (trapReason && !bearParts.join(" ").toLowerCase().includes(trapReason.toLowerCase())) {
+    bearParts.push(`Trap signal: ${trapReason}`);
+  }
+  const firstContradiction = packet.contradictionFlags?.[0];
+  if (firstContradiction && !bearParts.join(" ").toLowerCase().includes(firstContradiction.toLowerCase())) {
+    bearParts.push(`Contradiction: ${firstContradiction}`);
+  }
+  const bearCase = bearParts.join(" | ") || "No acute risk signal in current snapshot.";
+
+  const contradictionEvidence: string[] = [
+    ...(packet.contradictionFlags ?? []),
+    ...((packet.trapDetection?.reasons ?? []).slice(1)),
+  ];
+
+  return { whyNow, whatChanged, bearCase, contradictionEvidence };
 }
